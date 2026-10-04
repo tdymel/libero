@@ -85,6 +85,7 @@ the player from outside.
 | `poster` | `Option<String>` | `None` | A picture shown until playing starts. |
 | `aspect_ratio` | `Option<String>` | `16 / 9` | The picture's CSS `aspect-ratio`, which the box holds before the file loads, poster or not. A portrait clip wants `"9 / 16"`; `"auto"` follows the file, and the box jumps as it loads. A picture of another shape is letterboxed. |
 | `tracks` | `Vec<MediaTrack>` | `[]` | WebVTT files: `src`, `kind` (`Captions`, `Subtitles`, `Descriptions`, `Chapters`), `srclang`, `label`, `default`. A captions or subtitles track enables the captions button; two or more make it a menu of them. |
+| `chapters` | `Vec<Chapter>` | `[]` | `Chapter::new(start_seconds, title)`: splits the seek track into segments with gaps, names the chapter in the slider's value, shows the current one beside the time and adds a chapters menu. Wins over a `Chapters` track, which is otherwise fetched and read. |
 | `media` | `Option<MediaHandle>` | `None` | A handle from `use_media()`, to drive or read the player from outside. |
 | `autoplay` | `bool` | `false` | Starts on load. Browsers refuse it with sound: pair it with `muted`; a debug build warns otherwise. |
 | `muted` | `bool` | `false` | Starts muted. |
@@ -111,6 +112,7 @@ explains how parts work.
 | `VideoPart::Media` | `media` | The `<video>` element. |
 | `VideoPart::Controls` | `controls` | The bar of controls over the bottom of the picture, a named `group`. |
 | `VideoPart::Time` | `time` | The elapsed and total time. |
+| `VideoPart::Chapter` | `chapter` | The current chapter's title beside the time, hidden below 22rem. |
 | `VideoPart::Seek` | `seek` | The seek slider's wrapper. |
 | `VideoPart::Volume` | `volume` | The mute button and the volume menu's trigger. |
 | `VideoPart::Message` | `message` | The error text, or the fallback where nothing plays media. |
@@ -130,6 +132,7 @@ screen, from [use_fullscreen](use_fullscreen.md).
 | `M` | Mutes or unmutes. |
 | `C` | Shows or hides the captions, with a captions or subtitles track: the last one chosen in the track menu. |
 | `F` | Enters or leaves fullscreen. |
+| `Ctrl+Right`, `Ctrl+Left` | With chapters: the next chapter, or back to the start of this one (the previous one in its first 3 seconds). Swapped in a right-to-left page. |
 | `Shift+?` | Lists these keys in a `ShortcutHelp` dialog, inside the player in fullscreen. |
 | `Escape` | Closes the speed or volume menu and returns to its button; else leaves fullscreen. |
 | `Left` or `Right` | On the seek slider: 1 second; on the volume slider: 5%. |

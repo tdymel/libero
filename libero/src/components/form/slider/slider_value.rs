@@ -101,6 +101,33 @@ impl From<f64> for SliderMark {
     }
 }
 
+/// A stretch of a segmented track, from `start` to the next segment's start
+/// or `max`. A labeled one names the values inside it, as a video's chapter.
+#[derive(Clone, Debug, PartialEq)]
+pub struct SliderSegment<V = f64> {
+    pub start: V,
+    pub label: Option<String>,
+}
+
+impl<V> SliderSegment<V> {
+    pub fn new(start: V) -> Self {
+        Self { start, label: None }
+    }
+
+    pub fn labeled(start: V, label: impl Into<String>) -> Self {
+        Self {
+            start,
+            label: Some(label.into()),
+        }
+    }
+}
+
+impl From<f64> for SliderSegment {
+    fn from(start: f64) -> Self {
+        Self::new(start)
+    }
+}
+
 /// Where the value went and how far along the interaction is. `Start`/`End`
 /// bracket a drag; a key press emits `Change` then `End`, so commit on `End`.
 #[derive(Clone, Copy, Debug, PartialEq)]

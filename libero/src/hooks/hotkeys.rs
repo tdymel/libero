@@ -226,7 +226,7 @@ pub fn use_hotkeys(bindings: impl IntoIterator<Item = Hotkey>) {
         })
         .collect();
     let bound = !entries.is_empty();
-    let chords: Vec<Chord> = entries.iter().filter_map(|e| e.chord.clone()).collect();
+    let chords = global_chords(&entries);
 
     let shared: Rc<RefCell<Vec<Entry>>> = use_hook(|| Rc::new(RefCell::new(Vec::new())));
     *shared.borrow_mut() = entries;
@@ -350,6 +350,15 @@ pub(crate) fn aria_keyshortcuts(chord: &str, apple: bool) -> Option<String> {
         other => other.to_string(),
     });
     Some(keys.join("+"))
+}
+
+/// The chords bound page-wide; a `within` chord overrides only its own region, so it is not warned about.
+fn global_chords(entries: &[Entry]) -> Vec<Chord> {
+    entries
+        .iter()
+        .filter(|entry| entry.within.is_empty())
+        .filter_map(|entry| entry.chord.clone())
+        .collect()
 }
 
 fn held_modifiers(chord: &Chord) -> Modifiers {
@@ -483,6 +492,28 @@ mod tests {
             let unmounted = ElementHandle::new();
             assert!(!entry(vec![unmounted]).in_scope(&press, popups));
             assert!(!entry(vec![unmounted, ElementHandle::new()]).in_scope(&press, popups));
+        });
+    }
+
+    #[test]
+    fn only_a_global_reserved_chord_is_warned_about() {
+        let mut dom = VirtualDom::new(|| rsx! {});
+        dom.rebuild_in_place();
+        dom.in_scope(ScopeId::ROOT, || {
+            let entry = |within| Entry {
+                chord: Chord::parse("ctrl+ArrowRight", false),
+                ..entry(within)
+            };
+            let warned = |entries: &[Entry]| {
+                global_chords(entries)
+                    .iter()
+                    .filter_map(|chord| {
+                        crate::platform::reserved_chord_warning(&chord.key, held_modifiers(chord))
+                    })
+                    .count()
+            };
+            assert_eq!(warned(&[entry(Vec::new())]), 1);
+            assert_eq!(warned(&[entry(vec![ElementHandle::new()])]), 0);
         });
     }
 

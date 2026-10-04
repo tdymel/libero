@@ -236,6 +236,9 @@ mod tests {
                 "track",
                 "bar",
                 "bars",
+                "segments",
+                "segment",
+                "segment-fill",
                 "mark",
                 "mark-label",
                 "thumb"

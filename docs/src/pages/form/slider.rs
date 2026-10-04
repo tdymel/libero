@@ -302,6 +302,9 @@ pub fn SliderPage() -> Element {
                     prop("marks", "Vec<SliderMark<V>>")
                         .default("one per option, discretely")
                         .doc("Ticks on the track. A labeled one gets a caption below it. Replaces the marks a discrete scale draws itself. Past about six options the derived captions touch on a phone, so pass your own `marks`, or a `step` that skips options."),
+                    prop("segments", "Vec<SliderSegment<V>>")
+                        .default("[]")
+                        .doc("Splits a line track into stretches with 2px gaps, each from its `start` to the next one's, as `Video`'s chapters. A labeled one is named after the value in the bubble and `aria-valuetext` (`slider.segment`, \"{value}, {segment}\"). Sorted for you; a start outside the track or a repeat is dropped, and an unlabeled stretch fills from `min` to the first start."),
                     prop("aria_label", "String")
                         .doc("Names the thumb when the field has no `label`. Put in `attributes`, it would land on the wrapper instead."),
                     prop("name", "FieldName<V>")
@@ -338,11 +341,18 @@ pub fn SliderPage() -> Element {
                     (SliderPart::Track, "The rail the thumbs run along."),
                     (SliderPart::Bar, "The filled stretch of the track."),
                     (SliderPart::Bars, "The row of bars of a `SliderTrack::Bars` track."),
+                    (SliderPart::Segments, "The row of segments a `segments` track draws."),
+                    (SliderPart::Segment, "One stretch of a segmented track."),
+                    (SliderPart::SegmentFill, "The filled part of a segment."),
                     (SliderPart::Mark, "One tick on the track."),
                     (SliderPart::MarkLabel, "A tick's caption."),
                     (SliderPart::Thumb, "The handle; a range has two."),
                     (SliderPart::Helper, "The caption under the control."),
                     (SliderPart::Status, "The validation message."),
+                ]),
+                props("SliderSegment", vec![
+                    prop("start", "V").doc("Where the stretch starts; it ends at the next one's start, or `max`."),
+                    prop("label", "Option<String>").doc("Names the values inside it. `SliderSegment::labeled(start, label)`."),
                 ]),
                 props("SliderMark", vec![
                     prop("value", "V").doc("Where the tick sits on the track."),

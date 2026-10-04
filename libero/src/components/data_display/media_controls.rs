@@ -5,12 +5,13 @@ use dioxus::core::{Attribute, AttributeValue};
 use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
 
+use super::video::Chapter;
 use crate::{
     components::{
         accessibility::VisuallyHidden,
         buttons::{ActionIcon, Button, TooltipOpenDelay},
         common::{Glyph, HtmlTag, Input},
-        form::{Slider, SliderChangeEvent, SliderTrack},
+        form::{Slider, SliderChangeEvent, SliderSegment, SliderTrack},
         layout::{paper_sx, use_box},
         overlay::{Menu, MenuItem, Shortcut, ShortcutHelp, use_menu},
     },
@@ -29,6 +30,7 @@ use crate::{
 /// The part slots both players name alike.
 pub(super) const CONTROLS: &str = "controls";
 pub(super) const TIME: &str = "time";
+pub(super) const CHAPTER: &str = "chapter";
 pub(super) const SEEK: &str = "seek";
 pub(super) const VOLUME: &str = "volume";
 pub(super) const MESSAGE: &str = "message";
@@ -166,6 +168,30 @@ pub(super) fn use_media_keys(
     );
 }
 
+/// The chapter holding `time`, by index into `chapters` (sorted).
+fn current_chapter(chapters: &[Chapter], time: f64) -> Option<usize> {
+    chapters.iter().rposition(|chapter| chapter.start <= time)
+}
+
+/// Past this far into a chapter, "previous" restarts it, as native players do.
+const RESTART_AFTER: f64 = 3.0;
+
+/// Where a chapter key goes from `time`: the next start, or the current
+/// chapter's start (the previous one's within its first 3 s). `None` past the last.
+pub(super) fn chapter_jump(starts: &[f64], time: f64, forward: bool) -> Option<f64> {
+    // A seek lands a hair off a start, which still counts as on it.
+    let time = time + 0.01;
+    let current = starts.iter().rposition(|start| *start <= time);
+    if forward {
+        return starts.iter().copied().find(|start| *start > time);
+    }
+    match current {
+        Some(index) if time - starts[index] > RESTART_AFTER || index == 0 => Some(starts[index]),
+        Some(index) => Some(starts[index - 1]),
+        None => starts.first().map(|_| 0.0),
+    }
+}
+
 /// Matches the `?` a layout produces, Shift+/ or Shift+ß alike.
 const HELP: &str = "shift+?";
 
@@ -220,6 +246,10 @@ pub(super) fn MediaControls(
     /// more: the captions button then opens a menu of them.
     #[props(default)]
     caption_tracks: Vec<(usize, String)>,
+    /// A video's chapters, sorted: segments on the seek track, the current
+    /// one's title beside the time, and a menu of them.
+    #[props(default)]
+    chapters: Vec<Chapter>,
     #[props(default)] fullscreen: Option<FullscreenHandle>,
     #[props(default)] overlay: bool,
     /// The row's border-box height, each time it changes.
@@ -247,7 +277,7 @@ pub(super) fn MediaControls(
     };
     let seek = rsx! {
         div { "data-slot": SEEK, onkeydown: space_toggles,
-            MediaSeek { media, size: size.clone() }
+            MediaSeek { media, size: size.clone(), chapters: chapters.clone() }
         }
     };
     let sound_controls = rsx! {
@@ -256,6 +286,16 @@ pub(super) fn MediaControls(
     let speed = rsx! {
         MediaSpeed { media, size: size.clone(), overlay }
     };
+    let chapter = (!chapters.is_empty()).then(|| {
+        rsx! {
+            MediaChapter { media, chapters: chapters.clone() }
+        }
+    });
+    let chapters_menu = (!chapters.is_empty()).then(|| {
+        rsx! {
+            ChaptersMenu { media, chapters: chapters.clone(), size: size.clone() }
+        }
+    });
     let captions_button = rsx! {
         if let (Some(captions), false) = (captions, caption_tracks.is_empty()) {
             CaptionsMenu { media, captions, tracks: caption_tracks, size: size.clone() }
@@ -315,6 +355,8 @@ pub(super) fn MediaControls(
                 {play}
                 {sound_controls}
                 MediaTime { media }
+                {chapter}
+                {chapters_menu}
                 {captions_button}
                 {speed}
                 {fullscreen_button}
@@ -323,6 +365,7 @@ pub(super) fn MediaControls(
                 MediaTime { media }
                 {seek}
                 {sound_controls}
+                {chapters_menu}
                 {speed}
                 {captions_button}
                 {fullscreen_button}
@@ -411,6 +454,47 @@ fn MediaTime(media: MediaHandle) -> Element {
     rsx! {
         // The total in its own span, so a narrow player can drop it.
         span { "data-slot": TIME, "aria-hidden": "true", "{time}", span { " / {total}" } }
+    }
+}
+
+/// The current chapter's title; hidden from AT, which hears it in the seek value.
+#[component]
+fn MediaChapter(media: MediaHandle, chapters: Vec<Chapter>) -> Element {
+    let title =
+        current_chapter(&chapters, media.current_time()).map(|index| chapters[index].title.clone());
+    rsx! {
+        span { "data-slot": CHAPTER, "aria-hidden": "true", {title} }
+    }
+}
+
+/// A menu of the chapters, each its start and title; picking one seeks there.
+/// The way to them without the chord keys, and on touch.
+#[component]
+fn ChaptersMenu(media: MediaHandle, chapters: Vec<Chapter>, size: Input<Size>) -> Element {
+    let labels = use_localization().media;
+    let menu = use_menu();
+    let current = current_chapter(&chapters, media.current_time());
+    let items = chapters
+        .into_iter()
+        .enumerate()
+        .map(|(index, chapter)| {
+            let start = chapter.start;
+            MenuItem::new(format!("{} {}", clock(start), chapter.title))
+                .radio(current == Some(index))
+                .onselect(move |_| media.seek(start))
+                .into()
+        })
+        .collect();
+    rsx! {
+        Menu { state: menu, items, size: size.clone(),
+            ActionIcon {
+                attributes: menu.a11y_attributes(),
+                aria_label: labels.chapters,
+                tooltip: true,
+                size: icon_size(&size),
+                Glyph { slot: IconSlot::Chapters, icon: lucide::list_video::outlined }
+            }
+        }
     }
 }
 
@@ -574,10 +658,19 @@ pub(super) fn MediaSeek(
     media: MediaHandle,
     size: Input<Size>,
     #[props(default)] track: SliderTrack,
+    #[props(default)] chapters: Vec<Chapter>,
 ) -> Element {
     let labels = use_localization().media;
     let mut scrub = use_signal(|| None::<f64>);
     let duration = media.duration();
+    // Only once the duration is known: till then `max` is 1, which would drop every later chapter.
+    let segments = match duration {
+        Some(_) => chapters
+            .into_iter()
+            .map(|chapter| SliderSegment::labeled(chapter.start, chapter.title))
+            .collect(),
+        None => Vec::new(),
+    };
     let value = scrub().unwrap_or_else(|| media.current_time());
     let total = duration.map_or_else(|| "--:--".to_string(), clock);
     let format = use_callback(move |seconds: f64| {
@@ -597,6 +690,7 @@ pub(super) fn MediaSeek(
             aria_label: labels.seek,
             format,
             track,
+            segments,
             oninput: move |event: SliderChangeEvent| match event {
                 // A press on the track seeks at once: a click sends no `Change`.
                 SliderChangeEvent::Start(seconds) => {
@@ -652,6 +746,35 @@ mod tests {
         assert_eq!(clock(3599.0), "59:59");
         assert_eq!(clock(3725.0), "1:02:05");
         assert_eq!(clock(-3.0), "0:00");
+    }
+
+    #[test]
+    fn the_chapter_keys_go_to_the_next_start_or_back_one() {
+        let starts = [0.0, 10.0, 30.0];
+        assert_eq!(chapter_jump(&starts, 5.0, true), Some(10.0));
+        assert_eq!(
+            chapter_jump(&starts, 9.995, true),
+            Some(30.0),
+            "on a start counts as in it"
+        );
+        assert_eq!(chapter_jump(&starts, 31.0, true), None);
+        assert_eq!(
+            chapter_jump(&starts, 15.0, false),
+            Some(10.0),
+            "restarts the chapter"
+        );
+        assert_eq!(
+            chapter_jump(&starts, 11.0, false),
+            Some(0.0),
+            "early: the previous one"
+        );
+        assert_eq!(chapter_jump(&starts, 1.0, false), Some(0.0));
+        assert_eq!(
+            chapter_jump(&[5.0], 1.0, false),
+            Some(0.0),
+            "before the first"
+        );
+        assert_eq!(chapter_jump(&[], 1.0, false), None);
     }
 
     #[test]

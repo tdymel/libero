@@ -104,6 +104,8 @@ pub(crate) use keyboard::caret_edges;
 pub(crate) use keyboard::key_taken;
 pub(crate) use keyboard::logical_key;
 pub(crate) use keyboard::mod_is_meta;
+#[cfg(test)]
+pub(crate) use keyboard::reserved_chord_warning;
 pub(crate) use keyboard::soft_keyboard_app;
 pub(crate) use keyboard::typing_target;
 pub(crate) use keyboard::warn_reserved_chord;

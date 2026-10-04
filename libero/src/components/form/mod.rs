@@ -89,7 +89,7 @@ pub use select::{
 };
 pub use slider::{
     RangeSlider, RangeSliderProps, Slider, SliderChangeEvent, SliderMark, SliderPart, SliderProps,
-    SliderStep, SliderTrack, SliderValue,
+    SliderSegment, SliderStep, SliderTrack, SliderValue,
 };
 pub use switch::{Switch, SwitchPart, SwitchProps};
 pub use tags_field::{TagRejectReason, TagRejection, TagsField, TagsFieldPart, TagsFieldProps};

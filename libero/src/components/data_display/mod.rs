@@ -46,6 +46,6 @@ pub use table::{
     TableFilterButton, TableProps, TableSort, TypedColumnHeader, column, table_csv, table_text,
 };
 pub use timeline::{Timeline, TimelineEvent, TimelineLine, TimelinePart, TimelineProps};
-pub use video::{MediaTrack, TrackKind, Video, VideoPart, VideoProps};
+pub use video::{Chapter, MediaTrack, TrackKind, Video, VideoPart, VideoProps};
 
 pub(crate) use image::LinkedImageScope;

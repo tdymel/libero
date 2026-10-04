@@ -51,6 +51,46 @@ async fn thumb_follows<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     .await
 }
 
+const SEGMENT: &str = "#segments [data-slot=segment]";
+
+/// Todo 2136: segments as wide as their spans, 2px apart; the one holding 50
+/// filled a quarter and named in the value; End fills the last.
+async fn segments_fill<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let nth = |n: usize| format!("{SEGMENT}:nth-child({n})");
+    let fill = |n: usize| format!("{SEGMENT}:nth-child({n}) > [data-slot=segment-fill]");
+    eventually(
+        d,
+        "three segments, the second a quarter filled",
+        async |d| {
+            let (first, second, third) = (
+                d.rect(&nth(1)).await?,
+                d.rect(&nth(2)).await?,
+                d.rect(&nth(3)).await?,
+            );
+            let filled = d.rect(&fill(2)).await?;
+            Ok((second.x - (first.x + first.width) - 2.0).abs() < 1.0
+                && (third.width / second.width - 0.5).abs() < 0.1
+                && (filled.width / second.width - 0.25).abs() < 0.05)
+        },
+    )
+    .await?;
+    let text = d.attr(THUMB, "aria-valuetext").await?.unwrap_or_default();
+    ensure!(text.ends_with("Middle"), "the value reads {text:?}");
+    d.focus(THUMB).await?;
+    d.press(keyboard::END).await?;
+    eventually(d, "End to fill the last segment", async |d| {
+        let (third, filled) = (d.rect(&nth(3)).await?, d.rect(&fill(3)).await?);
+        Ok(third.width > 0.0 && (filled.width - third.width).abs() < 1.0)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_segmented_track_fills_up_to_the_value,
+    "/slider/segments",
+    segments_fill
+);
+
 e2e::scenario!(
     pressing_the_track_centre_and_dragging_right_follows_the_pointer,
     "/slider/drag",

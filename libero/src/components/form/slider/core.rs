@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use super::slider_value::{SliderChangeEvent, SliderMark};
+use super::slider_value::{SliderChangeEvent, SliderMark, SliderSegment};
 use super::value::{SliderCoreValue, fraction, grid_bounds, on_track};
 use crate::{
     CssLayer,
@@ -15,8 +15,10 @@ use crate::{
     },
     hooks::{
         DragMove, DragOptions, DragStart, ElementHandle, Rect, sideways_drag_sx, use_css,
-        use_element, use_formats, use_id, use_local_state, use_sideways_drag, use_theme,
+        use_element, use_formats, use_id, use_local_state, use_localization, use_sideways_drag,
+        use_theme,
     },
+    localization::fill,
     platform::{Dimensions, ElementApi, logical_key, next_task},
     sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, sx},
     theme::NamedColorCss,
@@ -39,6 +41,15 @@ const SLIDER_FILLED_SPAN: CssVar = CssVar::new("--lsx-slider-filled-span");
 const SLIDER_THUMB_AT: CssVar = CssVar::new("--lsx-slider-thumb-at");
 const SLIDER_COLOR: CssVar = CssVar::new("--lsx-slider-color");
 const SLIDER_MARK_AT: CssVar = CssVar::new("--lsx-slider-mark-at");
+/// A segment's start and length as 0-1 fractions, and how much of it is filled.
+const SLIDER_SEGMENT_AT: CssVar = CssVar::new("--lsx-slider-segment-at");
+const SLIDER_SEGMENT_SPAN: CssVar = CssVar::new("--lsx-slider-segment-span");
+const SLIDER_SEGMENT_FILLED: CssVar = CssVar::new("--lsx-slider-segment-filled");
+/// The first and last segment reach out to the track's ends, past the thumb's inset.
+const SLIDER_SEGMENT_REACH_START: CssVar = CssVar::new("--lsx-slider-segment-reach-start");
+const SLIDER_SEGMENT_REACH_END: CssVar = CssVar::new("--lsx-slider-segment-reach-end");
+/// Between two segments, as YouTube's chapters. A literal: a theme field breaks `SliderDefaults` literals.
+const SEGMENT_GAP: &str = "2px";
 /// A plain slider's thumb face - the color the track is pointing at.
 const SLIDER_THUMB_FILL: CssVar = CssVar::new("--lsx-slider-thumb-fill");
 /// The side of the thumb's invisible hit area. 24px unless a skin whose
@@ -67,6 +78,12 @@ field_parts_enum! {
         Bar = "bar" => "& > [data-slot='control'] > [data-slot='track'] > [data-slot='bar']",
         /// The row of bars a `SliderTrack::Bars` track draws.
         Bars = "bars" => "& > [data-slot='control'] > [data-slot='track'] > [data-slot='bars']",
+        /// The row of segments a `segments` track draws.
+        Segments = "segments" => "& > [data-slot='control'] > [data-slot='track'] > [data-slot='segments']",
+        /// One stretch of a segmented track.
+        Segment = "segment" => "& > [data-slot='control'] > [data-slot='track'] > [data-slot='segments'] > [data-slot='segment']",
+        /// The filled part of a segment.
+        SegmentFill = "segment-fill" => "& > [data-slot='control'] > [data-slot='track'] > [data-slot='segments'] > [data-slot='segment'] > [data-slot='segment-fill']",
         /// One tick on the track.
         Mark = "mark" => "& > [data-slot='control'] > [data-slot='track'] > [data-slot='mark']",
         /// A tick's caption.
@@ -107,6 +124,14 @@ static SLIDER_ROOT_SX: StaticSx = StaticSx::new(|| {
             sx().selector(
                 format!("& > [data-slot='{}']", SliderPart::Track.slot()),
                 sx().background("transparent").height("1.5rem"),
+            ),
+        )
+        // Gaps between the segments show through, so the rail itself goes.
+        .when(
+            "segments",
+            sx().selector(
+                format!("& > [data-slot='{}']", SliderPart::Track.slot()),
+                sx().background("transparent"),
             ),
         )
         .when(
@@ -179,6 +204,112 @@ static SLIDER_BARS_SX: StaticSx = StaticSx::new(|| {
                 .media(FORCED_COLORS, sx().background("Highlight")),
         )
 });
+
+/// The `Bars` row's inset, so a segment's fractions line up with the thumb's centre.
+static SLIDER_SEGMENTS_SX: StaticSx = StaticSx::new(|| {
+    let inset = format!("calc({} / 2)", SLIDER_THUMB.value());
+    sx().position("absolute")
+        .top("0")
+        .bottom("0")
+        .left(inset.clone())
+        .right(inset)
+        .pointer_events("none")
+});
+
+/// Placed by exact fractions, not flex weights, which would drift the fill off the thumb.
+static SLIDER_SEGMENT_SX: StaticSx = StaticSx::new(|| {
+    let start = SLIDER_SEGMENT_REACH_START.value_or("0px");
+    let end = SLIDER_SEGMENT_REACH_END.value_or("0px");
+    let at = format!(
+        "calc({} * 100% + {SEGMENT_GAP} / 2 - {start})",
+        SLIDER_SEGMENT_AT.value_or("0")
+    );
+    let reach = format!("calc({SEGMENT_GAP} / 2 + {} / 2)", SLIDER_THUMB.value());
+    sx().position("absolute")
+        .top("0")
+        .bottom("0")
+        .left(at.clone())
+        .width(format!(
+            "calc({} * 100% - {SEGMENT_GAP} + {start} + {end})",
+            SLIDER_SEGMENT_SPAN.value_or("0")
+        ))
+        .background(ColorValue::Shade(Color::Muted, ColorShade::S6).value())
+        .border_radius("999px")
+        .overflow("hidden")
+        .outline("1px solid transparent")
+        .selector(
+            "&:first-child",
+            sx().var(SLIDER_SEGMENT_REACH_START, reach.clone()),
+        )
+        .selector("&:last-child", sx().var(SLIDER_SEGMENT_REACH_END, reach))
+        .rtl(sx().left("auto").right(at))
+});
+
+static SLIDER_SEGMENT_FILL_SX: StaticSx = StaticSx::new(|| {
+    sx().position("absolute")
+        .top("0")
+        .bottom("0")
+        .left("0")
+        .width(format!(
+            "calc({} * 100%)",
+            SLIDER_SEGMENT_FILLED.value_or("0")
+        ))
+        .background(SLIDER_COLOR.value())
+        .media(FORCED_COLORS, sx().background("Highlight"))
+        .rtl(sx().left("auto").right("0"))
+});
+
+/// A segment on the track: its value range and label.
+#[derive(Clone, Debug, PartialEq)]
+struct TrackSegment {
+    start: f64,
+    end: f64,
+    label: Option<String>,
+}
+
+/// Sorted and bounded: a start outside `min..max` or a repeat is dropped (the
+/// `bool`), and an unlabelled segment fills from `min` to the first start.
+fn track_segments(segments: &[SliderSegment], min: f64, max: f64) -> (Vec<TrackSegment>, bool) {
+    let mut starts: Vec<&SliderSegment> = segments
+        .iter()
+        .filter(|segment| segment.start >= min && segment.start < max)
+        .collect();
+    starts.sort_by(|a, b| a.start.total_cmp(&b.start));
+    starts.dedup_by(|later, earlier| later.start == earlier.start);
+    let dropped = starts.len() < segments.len();
+    if starts.is_empty() {
+        return (Vec::new(), dropped);
+    }
+    let lead = (starts[0].start > min).then(|| TrackSegment {
+        start: min,
+        end: starts[0].start,
+        label: None,
+    });
+    let ends = starts.iter().skip(1).map(|next| next.start).chain([max]);
+    let rest = starts.iter().zip(ends).map(|(segment, end)| TrackSegment {
+        start: segment.start,
+        end,
+        label: segment.label.clone(),
+    });
+    (lead.into_iter().chain(rest).collect(), dropped)
+}
+
+/// The label of the segment holding `value`.
+fn segment_label(segments: &[TrackSegment], value: f64) -> Option<&str> {
+    segments
+        .iter()
+        .rev()
+        .find(|segment| segment.start <= value)
+        .and_then(|segment| segment.label.as_deref())
+}
+
+/// How much of a segment is filled when the bar reaches `filled` (0-1 of the track).
+fn segment_filled(start: f64, end: f64, filled: f64) -> f64 {
+    if end <= start {
+        return 0.0;
+    }
+    ((filled - start) / (end - start)).clamp(0.0, 1.0)
+}
 
 /// How many of `count` bars are filled at `fraction`: the `Audio` track's rule.
 fn filled_bars(fraction: f64, count: usize) -> usize {
@@ -383,6 +514,9 @@ pub(in crate::components::form) struct SliderCoreProps {
     /// The bar heights of a `SliderTrack::Bars` track, drawn in place of the filled line.
     #[props(default)]
     bars: Option<Vec<f64>>,
+    /// Splits the line track into segments with gaps; a labelled one joins the value's text.
+    #[props(default)]
+    segments: Vec<SliderSegment>,
 }
 
 /// What a value move changes. Only the thumbs' scope reads it, so the rest of
@@ -769,6 +903,11 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         );
     }
     let marks_labeled = marks.iter().any(|mark| mark.label.is_some());
+    let (segments, dropped) = track_segments(&props.segments, min, max);
+    if dropped {
+        warn("Slider: a segment starting outside `min..max`, or at another's start, is dropped.");
+    }
+    let segment_text = use_localization().slider.segment;
 
     let states: Input<States> = props
         .states
@@ -780,6 +919,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         .with("marks-labeled", marks_labeled)
         .with("plain", props.plain)
         .with("bars", props.bars.is_some())
+        .with("segments", !segments.is_empty())
         .into();
 
     let root_variables: Input<Variables> =
@@ -847,6 +987,8 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
                         readonly: props.readonly,
                         plain: props.plain,
                         bars: props.bars,
+                        segments,
+                        segment_text,
                         focusable,
                         bubble_id,
                         thumb_elements,
@@ -883,6 +1025,8 @@ struct SliderThumbsProps {
     readonly: bool,
     plain: bool,
     bars: Option<Vec<f64>>,
+    segments: Vec<TrackSegment>,
+    segment_text: &'static str,
     focusable: bool,
     bubble_id: Signal<String>,
     thumb_elements: [ElementHandle; 2],
@@ -970,9 +1114,16 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
         // Only a custom label is worth an `aria-valuetext` - the bare value
         // is already in `aria-valuenow`.
         let text = props.label.map(|label| label.call(thumb_value));
-        let bubble_text = text
-            .clone()
-            .unwrap_or_else(|| thumb_value.to_string().replacen('.', decimal_separator, 1));
+        let bare = || thumb_value.to_string().replacen('.', decimal_separator, 1);
+        // A labelled segment names itself after the value, so it is heard too.
+        let text = match segment_label(&props.segments, thumb_value) {
+            Some(segment) => Some(fill(
+                props.segment_text,
+                &[("value", &text.unwrap_or_else(bare)), ("segment", &segment)],
+            )),
+            None => text,
+        };
+        let bubble_text = text.clone().unwrap_or_else(bare);
         // `aria-labelledby` beats `aria-label`, so a range thumb lists itself
         // after the label ("Price Minimum"); a single thumb's label wins alone.
         let aria_label = aria_labels[index].clone();
@@ -1094,10 +1245,42 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
         }
     });
 
+    let segments_class = use_css(Some(&SLIDER_SEGMENTS_SX), CssLayer::Framework);
+    let segment_class = use_css(Some(&SLIDER_SEGMENT_SX), CssLayer::Framework);
+    let segment_fill_class = use_css(Some(&SLIDER_SEGMENT_FILL_SX), CssLayer::Framework);
+    let segmented = !props.segments.is_empty();
+    let segments = segmented.then(|| {
+        let pieces = props.segments.iter().map(|segment| {
+            let (start, end) = (fraction(segment.start, min, max), fraction(segment.end, min, max));
+            let at = variables()
+                .with(SLIDER_SEGMENT_AT, Some(start.to_string()))
+                .with(SLIDER_SEGMENT_SPAN, Some((end - start).to_string()))
+                .render();
+            let filled = variables()
+                .with(SLIDER_SEGMENT_FILLED, Some(segment_filled(start, end, bar.1).to_string()))
+                .render();
+            rsx! {
+                span { class: segment_class.clone(), "data-slot": SliderPart::Segment.slot(), style: at,
+                    span {
+                        class: segment_fill_class.clone(),
+                        "data-slot": SliderPart::SegmentFill.slot(),
+                        style: filled,
+                    }
+                }
+            }
+        });
+        rsx! {
+            div { class: segments_class, "data-slot": SliderPart::Segments.slot(), "aria-hidden": "true",
+                {pieces}
+            }
+        }
+    });
+
     let bar_style = bar_variables(bar);
     rsx! {
         {bars}
-        if !props.plain && props.bars.is_none() {
+        {segments}
+        if !props.plain && props.bars.is_none() && !segmented {
             div { class: bar_class, "data-slot": SliderPart::Bar.slot(), style: bar_style }
         }
         {marks}
@@ -1127,7 +1310,63 @@ fn SliderHidden(live: Signal<Live>, name: String, disabled: bool) -> Element {
 
 #[cfg(test)]
 mod tests {
-    use super::filled_bars;
+    use super::{
+        SliderSegment, TrackSegment, filled_bars, segment_filled, segment_label, track_segments,
+    };
+
+    fn starts(segments: &[TrackSegment]) -> Vec<(f64, f64, Option<&str>)> {
+        segments
+            .iter()
+            .map(|segment| (segment.start, segment.end, segment.label.as_deref()))
+            .collect()
+    }
+
+    #[test]
+    fn the_segments_are_sorted_bounded_and_led_from_min() {
+        let given = [
+            SliderSegment::labeled(30.0, "Outro"),
+            SliderSegment::labeled(10.0, "Intro"),
+            SliderSegment::labeled(10.0, "Again"),
+            SliderSegment::labeled(-5.0, "Before"),
+            SliderSegment::labeled(40.0, "At max"),
+        ];
+        let (segments, dropped) = track_segments(&given, 0.0, 40.0);
+        assert!(dropped);
+        assert_eq!(
+            starts(&segments),
+            [
+                (0.0, 10.0, None),
+                (10.0, 30.0, Some("Intro")),
+                (30.0, 40.0, Some("Outro"))
+            ]
+        );
+        let (none, dropped) = track_segments(&[SliderSegment::new(5.0)], 0.0, 1.0);
+        assert!(
+            none.is_empty() && dropped,
+            "before the duration loads, `max` is 1"
+        );
+    }
+
+    #[test]
+    fn a_value_takes_its_segments_label() {
+        let (segments, _) = track_segments(
+            &[SliderSegment::new(0.0), SliderSegment::labeled(5.0, "Two")],
+            0.0,
+            10.0,
+        );
+        assert_eq!(segment_label(&segments, 0.0), None);
+        assert_eq!(segment_label(&segments, 4.9), None);
+        assert_eq!(segment_label(&segments, 5.0), Some("Two"));
+        assert_eq!(segment_label(&segments, 10.0), Some("Two"));
+    }
+
+    #[test]
+    fn a_segment_fills_up_to_the_value() {
+        assert_eq!(segment_filled(0.25, 0.75, 0.0), 0.0);
+        assert_eq!(segment_filled(0.25, 0.75, 0.5), 0.5);
+        assert_eq!(segment_filled(0.25, 0.75, 1.0), 1.0);
+        assert_eq!(segment_filled(0.5, 0.5, 0.7), 0.0, "an empty segment");
+    }
 
     #[test]
     fn the_filled_bars_follow_the_value() {

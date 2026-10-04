@@ -1,9 +1,27 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Anchor, Code, CodeBlock, Input, MediaTrack, Text, TrackKind, Video, VideoPart},
+    components::{
+        Anchor, Chapter, Code, CodeBlock, Input, MediaTrack, Text, TrackKind, Video, VideoPart,
+    },
     theme::Size,
 };
+
+const CHAPTERS: &str = r#"vec![
+    Chapter::new(0.0, "Morning"),
+    Chapter::new(115.0, "The bullies"),
+    Chapter::new(300.0, "The plan"),
+    Chapter::new(480.0, "Payback"),
+]"#;
+
+fn chapters() -> Vec<Chapter> {
+    vec![
+        Chapter::new(0.0, "Morning"),
+        Chapter::new(115.0, "The bullies"),
+        Chapter::new(300.0, "The plan"),
+        Chapter::new(480.0, "Payback"),
+    ]
+}
 
 const FORMATS: &str = r#"Video {
     src: "/launch.mp4",
@@ -35,7 +53,10 @@ pub fn VideoPage() -> Element {
                         .doc("The picture's CSS `aspect-ratio`, which the box holds before the file loads, poster or not. A portrait clip wants `\"9 / 16\"`; `\"auto\"` follows the file, and the box jumps as it loads. A picture of another shape is letterboxed."),
                     prop("tracks", "Vec<MediaTrack>")
                         .default("[]")
-                        .doc("WebVTT files: `src`, `kind` (`Captions`, `Subtitles`, `Descriptions`, `Chapters`), `srclang`, `label`, `default`. A captions or subtitles track enables the captions button; two or more make it a menu of them."),
+                        .doc("WebVTT files: `src`, `kind` (`Captions`, `Subtitles`, `Descriptions`, `Chapters`), `srclang`, `label`, `default`. A captions or subtitles track enables the captions button; two or more make it a menu of them. A `Chapters` track (the `default` one, else the first) is fetched and read for the chapters when `chapters` is empty."),
+                    prop("chapters", "Vec<Chapter>")
+                        .default("[]")
+                        .doc("`Chapter::new(start_seconds, title)`: splits the seek track into segments with gaps, names the chapter in the slider's value, shows the current one beside the time and adds a chapters menu. Wins over a `Chapters` track."),
                     prop("media", "Option<MediaHandle>")
                         .default("None")
                         .doc("A handle from `use_media()`, to drive or read the player from outside."),
@@ -62,6 +83,7 @@ pub fn VideoPage() -> Element {
                     (VideoPart::Media, "The `<video>` element."),
                     (VideoPart::Controls, "The bar of controls over the bottom of the picture, a named `group`."),
                     (VideoPart::Time, "The elapsed and total time."),
+                    (VideoPart::Chapter, "The current chapter's title beside the time, hidden below 22rem."),
                     (VideoPart::Seek, "The seek slider's wrapper."),
                     (VideoPart::Volume, "The mute button and the volume menu's trigger."),
                     (VideoPart::Message, "The error text, or the fallback where nothing plays media."),
@@ -74,6 +96,7 @@ pub fn VideoPage() -> Element {
                 .key(["M"], "Mutes or unmutes.")
                 .key(["C"], "Shows or hides the captions, with a captions or subtitles track: the last one chosen in the track menu.")
                 .key(["F"], "Enters or leaves fullscreen.")
+                .key(["Ctrl+Right", "Ctrl+Left"], "With chapters: the next chapter, or back to the start of this one (the previous one in its first 3 seconds). Swapped in a right-to-left page.")
                 .key(["Shift+?"], "Lists these keys in a `ShortcutHelp` dialog, inside the player in fullscreen.")
                 .key(["Escape"], "Closes the speed or volume menu and returns to its button; else leaves fullscreen.")
                 .key(["Left", "Right"], "On the seek slider: 1 second; on the volume slider: 5%.")
@@ -93,7 +116,8 @@ pub fn VideoPage() -> Element {
                     "A click on the picture plays or pauses, as YouTube's. A tap on it while the controls are faded only shows them; once shown, a tap plays or pauses.",
                     "No control leaves the player at any width: the seek track has a row of its own and shrinks with the player, below 22rem the total time goes, and below 15rem the bar moves under the picture and wraps, so it fits at 320px and 200% zoom (WCAG 1.4.10).",
                     "A black scrim under the bar keeps its white text at 4.5:1 and its icons, tracks and thumbs at 3:1 over any picture, a white one included, in light and dark (WCAG 1.4.3, 1.4.11).",
-                    "The seek slider's `aria-valuetext` reads \"1:05 of 4:56\" (the localization's `media.position`).",
+                    "The seek slider's `aria-valuetext` reads \"1:05 of 4:56\" (the localization's `media.position`), with chapters \"1:05 of 4:56, The plan\" (`slider.segment`); the bubble shows the same.",
+                    "With chapters a menu button, named \"Chapters\", lists each start and title as radio items, the current one checked; picking one seeks there. It is the way to a chapter on touch and without the chord keys.",
                     "A polite status says \"Loading\" while playing waits for data; a failed source shows an alert.",
                     "No autoplay unless asked, and a debug warning for autoplay with sound (WCAG 1.4.2).",
                 ])
@@ -106,6 +130,7 @@ pub fn VideoPage() -> Element {
                 .limits([
                     "Blitz plays no media: the controls give way to `children`, by default a link to the file.",
                     "On a WebView each command and state change crosses the IPC, so the time trails by a moment.",
+                    "The seek slider moves in whole seconds, so a chapter starting at 12.4 s is named from 13 s in the slider's value; the label beside the time follows the exact time. A chapters track on another origin needs CORS.",
                     "The shown controls cover the bottom of the picture. Chromium-based browsers draw the captions above them, through the WebKit captions box Safari shares; Firefox offers no hook to move them, so there the bar covers them until it fades.",
                     "Captions show once playing starts: browsers draw none over the poster.",
                     "Fullscreen is libero's own `use_fullscreen` over the browser's Fullscreen API, no library; where the API is refused, a fixed box over the window. A floating mini player is the browser's own Picture-in-Picture (Firefox's button on the video, Chrome's context menu): its window is outside the page, so focus cannot follow it.",
@@ -153,6 +178,7 @@ pub fn VideoPage() -> Element {
                         crate::site::SAMPLE_CAPTIONS,
                         crate::site::SAMPLE_UNTERTITEL,
                     ),
+                    format!("chapters: {CHAPTERS}"),
                 ],
                 controls: vec![
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl"]).default("md"),
@@ -185,6 +211,7 @@ pub fn VideoPage() -> Element {
                                     default: false,
                                 },
                             ],
+                            chapters: chapters(),
                             size: Input::from(Size::from(values.str("size").as_str())),
                             muted: muted == "true",
                             looping: values.str("looping") == "true",

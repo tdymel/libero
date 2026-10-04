@@ -2,7 +2,7 @@
 //! subtitle track, plus one without tracks.
 
 use dioxus::prelude::*;
-use libero::components::{Flex, MediaPreload, MediaTrack, Text, TrackKind, Video};
+use libero::components::{Chapter, Flex, MediaPreload, MediaTrack, Text, TrackKind, Video};
 use libero::theme::Size;
 
 use crate::Routes;
@@ -28,7 +28,50 @@ pub const ROUTES: Routes = &[
     ("/video/variants", || rsx! { VariantsPage {} }),
     // Todo 1284: two languages turn the captions button into a track menu.
     ("/video/languages", || rsx! { LanguagesPage {} }),
+    // Todo 2136: chapters from the prop, from a chapters track, both, right to left and narrow.
+    ("/video/chapters", || rsx! { ChaptersPage {} }),
 ];
+
+const CHAPTERS_VTT: &str = "data:text/vtt,WEBVTT%0A%0A00:00.000 --> 00:02.000%0AOpening%0A%0A00:02.000 --> 00:04.000%0AEnding";
+
+fn chapters() -> Vec<Chapter> {
+    vec![
+        Chapter::new(0.0, "Intro"),
+        Chapter::new(1.5, "Middle"),
+        Chapter::new(3.0, "Outro"),
+    ]
+}
+
+#[component]
+fn ChaptersPage() -> Element {
+    let src = use_hook(|| silent_wav(4));
+    let track = || {
+        vec![MediaTrack {
+            src: CHAPTERS_VTT.into(),
+            kind: TrackKind::Chapters,
+            srclang: "en".into(),
+            label: "Chapters".into(),
+            default: false,
+        }]
+    };
+    rsx! {
+        div { id: "prop", width: "32rem",
+            Video { src: src.clone(), label: "Chapters", chapters: chapters() }
+        }
+        div { id: "vtt", width: "32rem",
+            Video { src: src.clone(), label: "Chapters track", tracks: track() }
+        }
+        div { id: "both", width: "32rem",
+            Video { src: src.clone(), label: "Both", tracks: track(), chapters: chapters() }
+        }
+        div { id: "rtl", dir: "rtl", width: "32rem",
+            Video { src: src.clone(), label: "Right to left", chapters: chapters() }
+        }
+        div { id: "narrow", width: "20rem",
+            Video { src, label: "Narrow", chapters: chapters() }
+        }
+    }
+}
 
 /// Todos 1378 and 1379: a player muted from the start, one in a right-to-left page.
 #[component]

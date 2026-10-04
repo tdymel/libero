@@ -108,6 +108,8 @@ pub enum IconSlot {
     ExitFullscreen,
     /// A video player's captions toggle.
     Captions,
+    /// A video player's chapters menu.
+    Chapters,
     /// A rich text editor's bold toggle.
     Bold,
     /// A rich text editor's italic toggle.

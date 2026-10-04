@@ -2,7 +2,9 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Flex, RangeSlider, Slider, SliderChangeEvent, SliderTrack, SliderValue, Text},
+    components::{
+        Flex, RangeSlider, Slider, SliderChangeEvent, SliderSegment, SliderTrack, SliderValue, Text,
+    },
     sx::sx,
 };
 
@@ -15,7 +17,29 @@ pub const ROUTES: Routes = &[
     ("/slider/scroll", || rsx! { SliderScrollPage {} }),
     ("/slider/edges", || rsx! { SliderEdgesPage {} }),
     ("/slider/bars", || rsx! { SliderBarsPage {} }),
+    ("/slider/segments", || rsx! { SliderSegmentsPage {} }),
 ];
+
+/// Todo 2136: a 400px track in segments from 0, 40 and 80, at 50.
+#[component]
+fn SliderSegmentsPage() -> Element {
+    let mut value = use_signal(|| 50.0f64);
+    rsx! {
+        div { width: "400px",
+            Slider {
+                id: "segments",
+                label: "Position",
+                value: value(),
+                segments: vec![
+                    SliderSegment::labeled(0.0, "Intro"),
+                    SliderSegment::labeled(40.0, "Middle"),
+                    SliderSegment::labeled(80.0, "Outro"),
+                ],
+                oninput: move |e: SliderChangeEvent<f64>| value.set(e.value()),
+            }
+        }
+    }
+}
 
 /// Todo 2004: a bars track at 25, left to right and right to left.
 #[component]

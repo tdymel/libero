@@ -2,6 +2,7 @@
 //! controls and the captions have modules of their own.
 
 mod captions;
+mod chapters;
 mod fade;
 mod fullscreen;
 

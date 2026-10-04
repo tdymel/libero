@@ -6,6 +6,8 @@ pub struct SliderLabels {
     pub maximum: &'static str,
     /// Said after a required slider's label; a thumb takes no `aria-required`.
     pub required: &'static str,
+    /// A value inside a labelled segment: `{value}`, then the `{segment}`'s label.
+    pub segment: &'static str,
 }
 
 impl SliderLabels {
@@ -13,11 +15,13 @@ impl SliderLabels {
         minimum: "Minimum",
         maximum: "Maximum",
         required: "required",
+        segment: "{value}, {segment}",
     };
 
     pub const GERMAN: Self = Self {
         minimum: "Minimum",
         maximum: "Maximum",
         required: "erforderlich",
+        segment: "{value}, {segment}",
     };
 }

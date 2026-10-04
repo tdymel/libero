@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use super::core::{SliderCore, SliderPart};
 use super::scale::{Scale, control_spacing};
-use super::slider_value::{SliderChangeEvent, SliderMark, SliderValue};
+use super::slider_value::{SliderChangeEvent, SliderMark, SliderSegment, SliderValue};
 use super::value::SliderCoreValue;
 use crate::{
     components::{
@@ -41,6 +41,10 @@ field_props! {
         /// one outside the track (past an off-grid `max`'s last step too) is dropped.
         #[props(default)]
         marks: Vec<SliderMark<V>>,
+        /// Splits a line track into stretches with gaps, each from its `start` to
+        /// the next; a labeled one joins the bubble and `aria-valuetext`.
+        #[props(default)]
+        segments: Vec<SliderSegment<V>>,
         /// Names the thumb without a `label`; one in `attributes` lands on the wrapper.
         #[props(default)]
         aria_label: Option<String>,
@@ -208,6 +212,14 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
             // The same `use_callback` every render, so the core's props can
             // compare equal.
             oninput: (props.oninput.is_some() || bound.is_bound()).then_some(emit),
+            segments: props
+                .segments
+                .iter()
+                .map(|segment| SliderSegment {
+                    start: segment.start.position(),
+                    label: segment.label.clone(),
+                })
+                .collect::<Vec<_>>(),
             bars: match props.track {
                 SliderTrack::Line => None,
                 SliderTrack::Bars(heights) => Some(heights),

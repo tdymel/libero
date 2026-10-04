@@ -1,7 +1,9 @@
 use dioxus::core::{Attribute, AttributeValue};
 use dioxus::prelude::*;
 
-use super::media_controls::{Captions, MediaControls, MediaFallback, use_media_keys, use_sound};
+use super::media_controls::{
+    Captions, MediaControls, MediaFallback, chapter_jump, use_media_keys, use_sound,
+};
 use super::{
     MediaPreload, MediaSource,
     audio::{media_sources, use_source_reload},
@@ -14,9 +16,10 @@ use crate::{
     },
     context::{HostOutlet, PortalHost},
     hooks::{
-        FULLSCREEN_ATTR, Hotkey, MediaError, MediaHandle, listener, use_element, use_fullscreen,
-        use_localization, use_media, use_portal_slot, use_scroll_lock, use_timeout,
+        FULLSCREEN_ATTR, Hotkey, MediaError, MediaHandle, listener, use_cache, use_element,
+        use_fullscreen, use_localization, use_media, use_portal_slot, use_scroll_lock, use_timeout,
     },
+    platform,
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, sx},
     theme::{ACTION_ICON_SIZE, BUTTON_HEIGHT, ColorCss, ColorShade, Size, SizeCss, Z_INDEX_MODAL},
     utils::warn,
@@ -31,6 +34,8 @@ parts_enum! {
         Controls = "controls" => "& > [data-slot='controls']",
         /// The elapsed and total time.
         Time = "time" => "& [data-slot='time']",
+        /// The current chapter's title, beside the time.
+        Chapter = "chapter" => "& [data-slot='chapter']",
         /// The seek slider's wrapper.
         Seek = "seek" => "& [data-slot='seek']",
         /// The mute button and the volume menu's trigger.
@@ -40,6 +45,8 @@ parts_enum! {
     }
 }
 
+const NEXT_CHAPTER: &str = "ctrl+ArrowRight";
+const PREVIOUS_CHAPTER: &str = "ctrl+ArrowLeft";
 /// Set on the player while its controls are faded out.
 const CONTROLS_ATTR: &str = "data-controls";
 /// How long the controls stay after the last pointer move or key while playing.
@@ -72,7 +79,7 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
         VideoPart::Media.selector(),
         sx().height("100%").aspect_ratio("auto"),
     );
-    let light_track = sx().background(LIGHT_TRACK);
+    let light_track = || sx().background(LIGHT_TRACK);
     sx().position("relative")
         // A size container has no content width: in a shrink-wrapping parent it collapsed (todo 1369).
         .width("100%")
@@ -124,7 +131,22 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
                 .transition("opacity 200ms ease")
                 .media(REDUCED_MOTION, sx().transition("none"))
                 .selector("& > *", sx().flex_shrink("0"))
-                .selector("& [data-slot='track']", light_track)
+                // A narrow bar fits the chapters button too: wrapping happens before any shrinking.
+                .selector(
+                    "& button",
+                    sx().container_query(
+                        CONTROLS_CONTAINER,
+                        NARROWEST,
+                        sx().max_width("2.25rem").max_height("2.25rem"),
+                    ),
+                )
+                .selector("& [data-slot='track']", light_track())
+                // Chapters: the gaps between the light segments show the scrim.
+                .selector(
+                    "& [data-state~='segments'] > [data-slot='track']",
+                    sx().background("transparent"),
+                )
+                .selector("& [data-slot='segment']", light_track())
                 // The theme's light state tint left the white text under 3:1 (todo 1388).
                 .selector(
                     "& button:is(:hover, :active, [aria-expanded='true']):not(:disabled)",
@@ -172,6 +194,16 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
                     "& > span",
                     sx().container_query(CONTROLS_CONTAINER, NARROWEST, sx().display("none")),
                 ),
+        )
+        // Grows from nothing, so it never wraps and takes the room the time's margin would.
+        .selector(
+            VideoPart::Chapter.selector(),
+            sx().flex("1 1 0")
+                .min_width("0")
+                .overflow("hidden")
+                .text_overflow("ellipsis")
+                .white_space("nowrap")
+                .container_query(CONTROLS_CONTAINER, NARROWEST, sx().display("none")),
         )
         .selector(
             VideoPart::Seek.selector(),
@@ -231,6 +263,81 @@ impl TrackKind {
     }
 }
 
+/// A stretch of a [`Video`], from `start` (in seconds) to the next chapter's.
+///
+/// ```rust
+/// # use libero::components::Chapter;
+/// let chapters = vec![Chapter::new(0.0, "Intro"), Chapter::new(42.0, "Setup")];
+/// ```
+#[derive(Clone, Debug, PartialEq)]
+pub struct Chapter {
+    pub start: f64,
+    pub title: String,
+}
+
+impl Chapter {
+    pub fn new(start: f64, title: impl Into<String>) -> Self {
+        Self {
+            start,
+            title: title.into(),
+        }
+    }
+
+    /// The cues of a WebVTT chapters file, each its start and text; a cue
+    /// without a readable start or text is skipped.
+    pub(crate) fn parse_vtt(text: &str) -> Vec<Self> {
+        let text = text.replace("\r\n", "\n").replace('\r', "\n");
+        text.split("\n\n")
+            .filter_map(|block| {
+                let mut lines = block.lines().skip_while(|line| !line.contains("-->"));
+                let start = lines.next()?.split("-->").next().and_then(vtt_time)?;
+                let title = lines.map(cue_text).collect::<Vec<_>>().join(" ");
+                let title = title.trim();
+                (!title.is_empty()).then(|| Self::new(start, title))
+            })
+            .collect()
+    }
+}
+
+/// `mm:ss.ttt` or `hh:mm:ss.ttt`, in seconds.
+fn vtt_time(text: &str) -> Option<f64> {
+    let (clock, fraction) = text.trim().split_once('.').unwrap_or((text.trim(), "0"));
+    let mut seconds = 0.0;
+    for part in clock.split(':') {
+        seconds = seconds * 60.0 + part.parse::<u32>().ok()? as f64;
+    }
+    let fraction = format!("0.{fraction}").parse::<f64>().ok()?;
+    (clock.split(':').count() >= 2).then_some(seconds + fraction)
+}
+
+/// A cue line without its tags, entities decoded.
+fn cue_text(line: &str) -> String {
+    let mut text = String::with_capacity(line.len());
+    let mut in_tag = false;
+    for character in line.chars() {
+        match character {
+            '<' => in_tag = true,
+            '>' if in_tag => in_tag = false,
+            _ if !in_tag => text.push(character),
+            _ => {}
+        }
+    }
+    text.replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&nbsp;", "\u{a0}")
+        .replace("&lrm;", "\u{200e}")
+        .replace("&rlm;", "\u{200f}")
+        .replace("&amp;", "&")
+}
+
+/// In order, one per start, none before 0 or not a number.
+fn sorted_chapters(mut chapters: Vec<Chapter>) -> Vec<Chapter> {
+    chapters.retain(|chapter| chapter.start.is_finite() && chapter.start >= 0.0);
+    chapters.sort_by(|a, b| a.start.total_cmp(&b.start));
+    chapters.dedup_by(|later, earlier| later.start == earlier.start);
+    chapters
+}
+
 /// A WebVTT file for a [`Video`], rendered as its `<track>`.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct MediaTrack {
@@ -265,9 +372,14 @@ base_props! {
         /// Portrait clips: pass their ratio, or `"auto"` (the box then jumps as the file loads).
         #[props(default, into)]
         aspect_ratio: Option<String>,
-        /// Captions, subtitles and more, as WebVTT files.
+        /// Captions, subtitles and more, as WebVTT files. A `Chapters` one is read
+        /// for the chapters, unless `chapters` lists them.
         #[props(default)]
         tracks: Vec<MediaTrack>,
+        /// Splits the seek track into chapters, named in its value, beside the time
+        /// and in a chapters menu. Wins over a `Chapters` track.
+        #[props(default)]
+        chapters: Vec<Chapter>,
         /// Your own handle, to drive or read the player from outside.
         #[props(default)]
         media: Option<MediaHandle>,
@@ -304,7 +416,8 @@ base_props! {
 /// captions and fullscreen.
 ///
 /// Keys while focus is inside: K, or Space on a slider, play and pause; J and L
-/// jump 10 seconds, M mutes, C toggles captions, F fullscreen; Shift+? lists them.
+/// jump 10 seconds, M mutes, C toggles captions, F fullscreen, Ctrl+ArrowRight
+/// and Ctrl+ArrowLeft go to the next and previous chapter; Shift+? lists them.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -391,6 +504,47 @@ pub fn Video(props: VideoProps) -> Element {
             .collect(),
     };
 
+    // The chapters track is read only when the prop lists none; a late answer for an old `src` is dropped.
+    let chapters_src = props
+        .tracks
+        .iter()
+        .filter(|track| track.kind == TrackKind::Chapters)
+        .min_by_key(|track| !track.default)
+        .map(|track| track.src.clone())
+        .filter(|_| props.chapters.is_empty());
+    let mut read = use_signal(|| None::<(String, Vec<Chapter>)>);
+    use_cache(chapters_src.clone(), |src| {
+        if let Some(src) = src.clone() {
+            let fetched = platform::fetch_text(&src);
+            spawn(async move {
+                let chapters = fetched
+                    .await
+                    .map_or_else(Vec::new, |body| Chapter::parse_vtt(&body));
+                read.set(Some((src, chapters)));
+            });
+        }
+    });
+    let chapters = sorted_chapters(match &chapters_src {
+        Some(src) => read()
+            .filter(|(read_src, _)| read_src == src)
+            .map(|(_, chapters)| chapters)
+            .unwrap_or_default(),
+        None => props.chapters.clone(),
+    });
+    let starts: Vec<f64> = chapters.iter().map(|chapter| chapter.start).collect();
+    let has_chapters = !starts.is_empty();
+    // Next is the way the track runs: ArrowLeft under RTL.
+    let chapter_key = move |chord: &str, ahead_in_ltr: bool| {
+        let starts = starts.clone();
+        Hotkey::new(chord, move || {
+            let forward = ahead_in_ltr != player.is_rtl();
+            if let Some(start) = chapter_jump(&starts, media.current_time(), forward) {
+                media.seek(start);
+            }
+        })
+        .when(move || has_chapters)
+    };
+
     let sound = use_sound(media);
     // After the `PortalHost`: in fullscreen the help shows inside the player.
     let labels = use_localization().media;
@@ -407,6 +561,15 @@ pub fn Video(props: VideoProps) -> Element {
             (
                 Hotkey::new("f", move || fullscreen.toggle()),
                 Some(Shortcut::new("f", labels.shortcut_fullscreen)),
+            ),
+            (
+                chapter_key(NEXT_CHAPTER, true),
+                has_chapters.then(|| Shortcut::new(NEXT_CHAPTER, labels.shortcut_next_chapter)),
+            ),
+            (
+                chapter_key(PREVIOUS_CHAPTER, false),
+                has_chapters
+                    .then(|| Shortcut::new(PREVIOUS_CHAPTER, labels.shortcut_previous_chapter)),
             ),
         ],
     );
@@ -576,6 +739,7 @@ pub fn Video(props: VideoProps) -> Element {
                 size: props.size.clone(),
                 captions: Some(captions),
                 caption_tracks,
+                chapters,
                 fullscreen: Some(fullscreen),
                 overlay: true,
                 onheight: move |height: f64| {
@@ -606,7 +770,7 @@ pub fn Video(props: VideoProps) -> Element {
 
 #[cfg(test)]
 mod tests {
-    use super::super::media_controls::{CONTROLS, MESSAGE, SEEK, TIME, VOLUME};
+    use super::super::media_controls::{CHAPTER, CONTROLS, MESSAGE, SEEK, TIME, VOLUME};
     use super::*;
     use crate::components::common::part_table;
 
@@ -619,6 +783,7 @@ mod tests {
                 ("media", "& > [data-slot='media']"),
                 ("controls", "& > [data-slot='controls']"),
                 ("time", "& [data-slot='time']"),
+                ("chapter", "& [data-slot='chapter']"),
                 ("seek", "& [data-slot='seek']"),
                 ("volume", "& [data-slot='volume']"),
                 ("message", "& > [data-slot='message']"),
@@ -629,15 +794,45 @@ mod tests {
     #[test]
     fn the_shared_controls_use_the_part_names() {
         assert_eq!(
-            [CONTROLS, TIME, SEEK, VOLUME, MESSAGE],
+            [CONTROLS, TIME, CHAPTER, SEEK, VOLUME, MESSAGE],
             [
                 VideoPart::Controls.slot(),
                 VideoPart::Time.slot(),
+                VideoPart::Chapter.slot(),
                 VideoPart::Seek.slot(),
                 VideoPart::Volume.slot(),
                 VideoPart::Message.slot(),
             ]
         );
+    }
+
+    #[test]
+    fn a_vtt_file_reads_as_chapters() {
+        let vtt = "WEBVTT\r\n\r\nNOTE made by hand\r\n\r\nintro\r\n00:00.000 --> 00:01.500\r\nIntro\r\n\r\n\
+                   00:00:01.500 --> 00:00:03.000 align:start\r\n<b>Tom &amp; Jerry</b>\r\nPart two\r\n\r\n\
+                   01:02:03.250 --> 01:02:04.000\r\n\r\nbroken --> 00:05.000\r\nNo start\r\n";
+        assert_eq!(
+            Chapter::parse_vtt(vtt),
+            [
+                Chapter::new(0.0, "Intro"),
+                Chapter::new(1.5, "Tom & Jerry Part two"),
+            ]
+        );
+        assert_eq!(vtt_time("01:02:03.250"), Some(3723.25));
+        assert_eq!(vtt_time("2:03"), Some(123.0));
+        assert_eq!(vtt_time("3"), None);
+    }
+
+    #[test]
+    fn the_chapters_are_sorted_and_cleaned() {
+        let chapters = sorted_chapters(vec![
+            Chapter::new(5.0, "B"),
+            Chapter::new(f64::NAN, "Nan"),
+            Chapter::new(0.0, "A"),
+            Chapter::new(5.0, "B again"),
+            Chapter::new(-1.0, "Before"),
+        ]);
+        assert_eq!(chapters, [Chapter::new(0.0, "A"), Chapter::new(5.0, "B")]);
     }
 
     fn alpha(rgba: &str) -> f32 {
