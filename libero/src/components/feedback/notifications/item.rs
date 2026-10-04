@@ -33,7 +33,10 @@ static ITEM_SX: StaticSx = StaticSx::new(|| {
                 .visibility("hidden")
                 .pointer_events("none")
                 .animation(animation(NOTIFICATION_OUT, "ease-in"))
-                .media(REDUCED_MOTION, sx().animation("none")),
+                // A delayed flip, not a keyframe: an animated `visibility` keeps the
+                // fade off the compositor and restyles every frame (todo 2159).
+                .transition(format!("visibility 0s {}", NOTIFICATION_TRANSITION.value()))
+                .media(REDUCED_MOTION, sx().animation("none").transition("none")),
         )
 });
 

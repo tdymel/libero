@@ -485,15 +485,34 @@ async fn exercise(page: &Page, path: &str, c: &Control, round: usize, rows: &mut
         }
         "drag" => {
             let value = format!("String({el}.getAttribute('aria-valuenow'))");
-            for (step, dx) in [("forth", 60.0), ("back", -60.0)] {
+            // A separator's orientation is its line's, across the drag (todo 2162).
+            let horizontal: bool = js(
+                page,
+                &format!(
+                    "(() => {{ const e = {el}; const v = e.getAttribute('aria-orientation') === 'vertical'; \
+                     return e.getAttribute('role') === 'separator' ? v : !v; }})()"
+                ),
+            )
+            .await
+            .unwrap_or(true);
+            // At least one step of an index slider (0..3 over 460 px), towards the far end.
+            let reach: f64 = js(
+                page,
+                &format!(
+                    "(() => {{ const e = {el}; const n = (a) => Number(e.getAttribute(a)); \
+                     const t = e.closest('[data-slot=track]')?.getBoundingClientRect(); \
+                     const span = n('aria-valuemax') - n('aria-valuemin'); \
+                     const px = t && span > 0 ? ({horizontal} ? t.width : t.height) / span : 0; \
+                     const far = n('aria-valuenow') * 2 < n('aria-valuemax') + n('aria-valuemin') ? 1 : -1; \
+                     return far * Math.max(60, Math.ceil(px)); }})()"
+                ),
+            )
+            .await
+            .unwrap_or(60.0);
+            for (step, dx) in [("forth", reach), ("back", -reach)] {
                 let outcome = rep(page, async || {
                     let before: String = js(page, &value).await?;
                     let from = pointer::centre_of(page, &sel).await?;
-                    let horizontal: bool = js(
-                        page,
-                        &format!("{el}.getAttribute('aria-orientation') !== 'vertical'"),
-                    )
-                    .await?;
                     let to = match horizontal {
                         true => Point {
                             x: from.x + dx,

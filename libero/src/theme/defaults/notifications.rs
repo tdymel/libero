@@ -10,11 +10,11 @@ pub const NOTIFICATION_OFFSET: CssVar = CssVar::new("--lsx-notification-offset")
 /// The entry and the exit, as a CSS `<time>`.
 pub const NOTIFICATION_TRANSITION: CssVar = CssVar::new("--lsx-notification-transition");
 
-/// Keyframes, not a transition: no "mounted, not yet visible" render, and the exit
-/// ends on a timer. `visibility: hidden` lands with the fade's end, leaving the a11y tree.
+/// Keyframes, not a transition: no "mounted, not yet visible" render. Compositor-only
+/// properties; the item's delayed `visibility` flip leaves the a11y tree at the fade's end.
 pub const NOTIFICATION_KEYFRAMES: &str = concat!(
     "@keyframes lsx-notification-in{from{opacity:0;transform:translateY(8px);}}",
-    "@keyframes lsx-notification-out{from{opacity:1;visibility:visible;}to{opacity:0;visibility:hidden;}}",
+    "@keyframes lsx-notification-out{from{opacity:1;}to{opacity:0;}}",
 );
 pub const NOTIFICATION_IN: &str = "lsx-notification-in";
 pub const NOTIFICATION_OUT: &str = "lsx-notification-out";
