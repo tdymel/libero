@@ -13,5 +13,5 @@ pub use notifications::{
     NotificationScope, Notifications, NotificationsProps, use_notifications,
     use_notifications_with,
 };
-pub use progress_bar::{ProgressBar, ProgressBarPart, ProgressBarProps};
+pub use progress_bar::{ProgressBar, ProgressBarPart, ProgressBarProps, ProgressBarSegment};
 pub use skeleton::{Skeleton, SkeletonProps};

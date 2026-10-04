@@ -3,8 +3,8 @@ use dioxus::prelude::*;
 use libero::components::SliderPart;
 use libero::{
     components::{
-        Code, FieldStatus, Flex, Slider, SliderChangeEvent, SliderMark, SliderTrack, SliderValue,
-        Text,
+        Code, FieldStatus, Flex, Slider, SliderChangeEvent, SliderMark, SliderSegment, SliderTrack,
+        SliderValue, Text,
     },
     sx::sx,
     use_theme,
@@ -210,6 +210,60 @@ fn marks_code(_control: &Control, values: &DemoValues) -> Vec<String> {
     }
 }
 
+/// On by default, so the gaps show; a `Bars` track draws no segments, so they go quiet there.
+fn segments_on(values: &DemoValues) -> bool {
+    is_on(values, "segments") && !is_on(values, "bars")
+}
+
+/// "Loud" from 70% of the *current* range, as `mark_values` follows it too.
+fn loud_from(values: &DemoValues) -> f64 {
+    let [min, _, max] = mark_values(values);
+    // Not `min + 0.7 * span`, whose float tail would print in the code.
+    (min * 3.0 + max * 7.0) / 10.0
+}
+
+fn segments_code(_control: &Control, values: &DemoValues) -> Vec<String> {
+    if !segments_on(values) {
+        return vec![];
+    }
+    match discrete(values) {
+        true => vec![
+            r#"segments: vec![SliderSegment::labeled(Quality::Low, "Free"), SliderSegment::labeled(Quality::High, "Paid")]"#
+                .to_string(),
+        ],
+        false => {
+            let [min, _, _] = mark_values(values);
+            vec![format!(
+                "segments: vec![SliderSegment::labeled({min:?}, \"Comfortable\"), SliderSegment::labeled({:?}, \"Loud\")]",
+                loud_from(values)
+            )]
+        }
+    }
+}
+
+fn discrete_segments(values: &DemoValues) -> Vec<SliderSegment<Quality>> {
+    match segments_on(values) {
+        true => vec![
+            SliderSegment::labeled(Quality::Low, "Free"),
+            SliderSegment::labeled(Quality::High, "Paid"),
+        ],
+        false => Vec::new(),
+    }
+}
+
+fn continuous_segments(values: &DemoValues) -> Vec<SliderSegment> {
+    match segments_on(values) {
+        true => {
+            let [min, _, _] = mark_values(values);
+            vec![
+                SliderSegment::labeled(min, "Comfortable"),
+                SliderSegment::labeled(loud_from(values), "Loud"),
+            ]
+        }
+        false => Vec::new(),
+    }
+}
+
 fn format_code(_control: &Control, values: &DemoValues) -> Vec<String> {
     match (is_on(values, "format"), discrete(values)) {
         (false, _) => vec![],
@@ -304,7 +358,7 @@ pub fn SliderPage() -> Element {
                         .doc("Ticks on the track. A labeled one gets a caption below it. Replaces the marks a discrete scale draws itself. Past about six options the derived captions touch on a phone, so pass your own `marks`, or a `step` that skips options."),
                     prop("segments", "Vec<SliderSegment<V>>")
                         .default("[]")
-                        .doc("Splits a line track into stretches with 2px gaps, each from its `start` to the next one's, as `Video`'s chapters. A labeled one is named after the value in the bubble and `aria-valuetext` (`slider.segment`, \"{value}, {segment}\"). Sorted for you; a start outside the track or a repeat is dropped, and an unlabeled stretch fills from `min` to the first start."),
+                        .doc("Splits a line track into stretches with 2px gaps, each from its `start` to the next one's, as `Video`'s chapters. A labeled one is named after the value in the bubble and `aria-valuetext` (`slider.segment`, \"{value}, {segment}\"). Sorted for you; a start outside the track or a repeat is dropped, and an unlabeled stretch fills from `min` to the first start. A mark where two stretches meet keeps its caption but draws no dot: the gap is the tick."),
                     prop("aria_label", "String")
                         .doc("Names the thumb when the field has no `label`. Put in `attributes`, it would land on the wrapper instead."),
                     prop("name", "FieldName<V>")
@@ -435,6 +489,7 @@ pub fn SliderPage() -> Element {
                         }),
                     Control::switch("bars").code(bars_code),
                     Control::switch("marks").code(marks_code),
+                    Control::switch("segments").default("true").code(segments_code),
                     Control::switch("format").code(format_code),
                     Control::switch("label").default("true").code(|_, values| {
                         match (values.str("label").as_str(), discrete(values)) {
@@ -474,6 +529,7 @@ pub fn SliderPage() -> Element {
                                     max: quality_of(&values, "max"),
                                     step: values.str("step").parse::<usize>().unwrap_or(1),
                                     marks: discrete_marks(&values),
+                                    segments: discrete_segments(&values),
                                     track: track(&values),
                                     format: is_on(&values, "format")
                                         .then(|| {
@@ -517,6 +573,7 @@ pub fn SliderPage() -> Element {
                                     max: number(&values, "max_value"),
                                     step: number(&values, "step_value"),
                                     marks: continuous_marks(&values),
+                                    segments: continuous_segments(&values),
                                     track: track(&values),
                                     format: is_on(&values, "format")
                                         .then(|| Callback::new(|value: f64| format!("{value}%"))),

@@ -910,18 +910,17 @@ mod dispatched {
         /// guard, so a read-only field still committed a mouse-picked tag.
         #[test]
         fn a_tags_field_made_readonly_while_open_takes_no_mouse_pick() {
-            let (mut dom, find) = mount(topics);
-            let mut rows = FindClickListener::default();
+            let (mut dom, mut find) = mount(topics);
             dom.runtime().handle_event(
                 "input",
                 Event::new(input_event("rust"), true),
                 input_listener(&find),
             );
-            settle(&mut dom, &mut rows);
+            settle(&mut dom, &mut find);
             assert_listbox(&dom, "editable");
-            let row = option_click(&rows).expect("the row registered no click listener");
+            let row = option_click(&find).expect("the row registered no click listener");
 
-            lock(&mut dom, &mut rows);
+            lock(&mut dom, &mut find);
             assert_no_listbox_claimed(&dom, "readonly");
             dom.runtime()
                 .handle_event("click", Event::new(click_event(), true), row);

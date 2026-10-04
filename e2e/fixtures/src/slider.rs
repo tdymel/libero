@@ -3,7 +3,8 @@
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Flex, RangeSlider, Slider, SliderChangeEvent, SliderSegment, SliderTrack, SliderValue, Text,
+        Flex, RangeSlider, Slider, SliderChangeEvent, SliderMark, SliderSegment, SliderTrack,
+        SliderValue, Text,
     },
     sx::sx,
 };
@@ -20,7 +21,7 @@ pub const ROUTES: Routes = &[
     ("/slider/segments", || rsx! { SliderSegmentsPage {} }),
 ];
 
-/// Todo 2136: a 400px track in segments from 0, 40 and 80, at 50.
+/// Todo 2136: a 400px track in segments from 0, 40 and 80, at 50; marks at 40 and 100 (todo 2168).
 #[component]
 fn SliderSegmentsPage() -> Element {
     let mut value = use_signal(|| 50.0f64);
@@ -35,6 +36,7 @@ fn SliderSegmentsPage() -> Element {
                     SliderSegment::labeled(40.0, "Middle"),
                     SliderSegment::labeled(80.0, "Outro"),
                 ],
+                marks: vec![SliderMark::labeled(40.0, "40"), SliderMark::labeled(100.0, "100")],
                 oninput: move |e: SliderChangeEvent<f64>| value.set(e.value()),
             }
         }

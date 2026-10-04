@@ -639,14 +639,11 @@ mod dispatched {
         }
 
         fn mount(value: &'static str, own_selection: bool) -> (VirtualDom, ElementId) {
-            dioxus::html::set_event_converter(Box::new(TestConverter));
             PICKS.with_borrow_mut(Vec::clear);
-            let mut dom = VirtualDom::new_with_props(city, (value, own_selection));
-            let mut find = FindClickListener::default();
-            dom.rebuild(&mut find);
-            dom.render_immediate(&mut find);
-            let trigger = *find.keydown.last().expect("the trigger takes keys");
-            (dom, trigger)
+            let mut page = Page::build_with_props(city, (value, own_selection));
+            page.render();
+            let trigger = *page.rec.keydown.last().expect("the trigger takes keys");
+            (page.dom, trigger)
         }
 
         fn rerender(dom: &mut VirtualDom, generation: u32) {
@@ -732,12 +729,10 @@ mod dispatched {
 
         #[test]
         fn a_renamed_or_disabled_row_redraws_in_an_open_list() {
-            dioxus::html::set_event_converter(Box::new(TestConverter));
-            let mut dom = VirtualDom::new_with_props(city, ());
-            let mut find = FindClickListener::default();
-            dom.rebuild(&mut find);
-            dom.render_immediate(&mut find);
-            let trigger = *find.keydown.last().expect("the trigger takes keys");
+            let mut page = Page::build_with_props(city, ());
+            page.render();
+            let trigger = *page.rec.keydown.last().expect("the trigger takes keys");
+            let mut dom = page.dom;
             press_twice(&mut dom, trigger, Key::ArrowDown);
             press_twice(&mut dom, trigger, Key::ArrowDown);
             let html = body(&dioxus_ssr::render(&dom));

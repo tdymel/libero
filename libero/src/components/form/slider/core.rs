@@ -261,15 +261,19 @@ static SLIDER_SEGMENT_FILL_SX: StaticSx = StaticSx::new(|| {
 
 /// A segment on the track: its value range and label.
 #[derive(Clone, Debug, PartialEq)]
-struct TrackSegment {
-    start: f64,
-    end: f64,
-    label: Option<String>,
+pub(crate) struct TrackSegment {
+    pub(crate) start: f64,
+    pub(crate) end: f64,
+    pub(crate) label: Option<String>,
 }
 
 /// Sorted and bounded: a start outside `min..max` or a repeat is dropped (the
 /// `bool`), and an unlabelled segment fills from `min` to the first start.
-fn track_segments(segments: &[SliderSegment], min: f64, max: f64) -> (Vec<TrackSegment>, bool) {
+pub(crate) fn track_segments(
+    segments: &[SliderSegment],
+    min: f64,
+    max: f64,
+) -> (Vec<TrackSegment>, bool) {
     let mut starts: Vec<&SliderSegment> = segments
         .iter()
         .filter(|segment| segment.start >= min && segment.start < max)
@@ -294,6 +298,14 @@ fn track_segments(segments: &[SliderSegment], min: f64, max: f64) -> (Vec<TrackS
     (lead.into_iter().chain(rest).collect(), dropped)
 }
 
+/// Where two segments meet: the gap is the tick there, so a mark draws no dot.
+fn on_boundary(segments: &[TrackSegment], value: f64) -> bool {
+    segments
+        .iter()
+        .skip(1)
+        .any(|segment| segment.start == value)
+}
+
 /// The label of the segment holding `value`.
 fn segment_label(segments: &[TrackSegment], value: f64) -> Option<&str> {
     segments
@@ -304,7 +316,7 @@ fn segment_label(segments: &[TrackSegment], value: f64) -> Option<&str> {
 }
 
 /// How much of a segment is filled when the bar reaches `filled` (0-1 of the track).
-fn segment_filled(start: f64, end: f64, filled: f64) -> f64 {
+pub(crate) fn segment_filled(start: f64, end: f64, filled: f64) -> f64 {
     if end <= start {
         return 0.0;
     }
@@ -1097,11 +1109,13 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
             }
         });
         rsx! {
-            span {
-                class: mark_class.clone(),
-                "data-slot": SliderPart::Mark.slot(),
-                "data-state": filled,
-                style: "{at}",
+            if !on_boundary(&props.segments, mark.value) {
+                span {
+                    class: mark_class.clone(),
+                    "data-slot": SliderPart::Mark.slot(),
+                    "data-state": filled,
+                    style: "{at}",
+                }
             }
             {caption}
         }
@@ -1311,7 +1325,8 @@ fn SliderHidden(live: Signal<Live>, name: String, disabled: bool) -> Element {
 #[cfg(test)]
 mod tests {
     use super::{
-        SliderSegment, TrackSegment, filled_bars, segment_filled, segment_label, track_segments,
+        SliderSegment, TrackSegment, filled_bars, on_boundary, segment_filled, segment_label,
+        track_segments,
     };
 
     fn starts(segments: &[TrackSegment]) -> Vec<(f64, f64, Option<&str>)> {
@@ -1358,6 +1373,16 @@ mod tests {
         assert_eq!(segment_label(&segments, 4.9), None);
         assert_eq!(segment_label(&segments, 5.0), Some("Two"));
         assert_eq!(segment_label(&segments, 10.0), Some("Two"));
+    }
+
+    /// Todo 2168: a mark where two segments meet would cover their gap.
+    #[test]
+    fn only_a_mark_between_two_segments_is_on_a_boundary() {
+        let (segments, _) = track_segments(&[SliderSegment::labeled(2.0, "Paid")], 0.0, 3.0);
+        assert!(on_boundary(&segments, 2.0));
+        assert!(!on_boundary(&segments, 0.0), "the track's start");
+        assert!(!on_boundary(&segments, 1.0));
+        assert!(!on_boundary(&segments, 3.0), "the track's end");
     }
 
     #[test]

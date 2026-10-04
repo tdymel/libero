@@ -1,15 +1,17 @@
 use dioxus::prelude::*;
 
 use crate::{
+    CssLayer,
     components::{
         common::{
             HtmlTag, Input, Part, States, Variables, base_color, base_props, names_itself,
             parts_enum, text_color, use_name_warning, variables,
         },
+        form::{SliderSegment, segment_filled, track_segments},
         layout::use_box,
     },
-    hooks::use_theme,
-    sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
+    hooks::{use_css, use_theme},
+    sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         Color, ColorShade, ColorValue, CssVar, INDETERMINATE_WIDTH, PROGRESS_BAR_ANIMATION,
         PROGRESS_BAR_COLOR, PROGRESS_BAR_FILL, PROGRESS_BAR_INDETERMINATE_STATE,
@@ -27,6 +29,18 @@ const SWEEP_DURATION: &str = "1.4s";
 /// The whole inset shadow, unset for most fills, so they paint none.
 const PROGRESS_BAR_EDGE: CssVar = CssVar::new("--lsx-progress-bar-edge");
 
+const SEGMENTED_STATE: &str = "segmented";
+/// A segment's start and length as 0-1 fractions, and how much of it is filled.
+const PROGRESS_BAR_SEGMENT_AT: CssVar = CssVar::new("--lsx-progress-bar-segment-at");
+const PROGRESS_BAR_SEGMENT_SPAN: CssVar = CssVar::new("--lsx-progress-bar-segment-span");
+const PROGRESS_BAR_SEGMENT_FILLED: CssVar = CssVar::new("--lsx-progress-bar-segment-filled");
+/// The first and last segment reach the track's ends: no half gap outside them.
+const PROGRESS_BAR_SEGMENT_REACH_START: CssVar =
+    CssVar::new("--lsx-progress-bar-segment-reach-start");
+const PROGRESS_BAR_SEGMENT_REACH_END: CssVar = CssVar::new("--lsx-progress-bar-segment-reach-end");
+/// As Slider's; a literal, as a theme field breaks `ProgressBarDefaults` literals.
+const SEGMENT_GAP: &str = "2px";
+
 static PROGRESS_BAR_TRACK_SX: StaticSx = StaticSx::new(|| {
     ProgressBarDefaults::theme_vars()
         .display("block")
@@ -39,16 +53,87 @@ static PROGRESS_BAR_TRACK_SX: StaticSx = StaticSx::new(|| {
         // Forced colours drop the background but paint a transparent outline
         // (todo 506).
         .outline("1px solid transparent")
+        // The gaps show through, and each segment draws its own edge.
+        .when(
+            SEGMENTED_STATE,
+            sx().position("relative")
+                .overflow("visible")
+                .background("transparent")
+                .outline("none"),
+        )
+});
+
+/// The fill's paint, shared by the plain fill and a segment's.
+fn fill_paint_sx() -> Sx {
+    sx().background(
+        PROGRESS_BAR_COLOR.value_or(ColorValue::Text(Color::Primary, ColorShade::S6).value()),
+    )
+    .box_shadow(PROGRESS_BAR_EDGE.value_or("none"))
+    .media(FORCED_COLORS, sx().background("Highlight"))
+}
+
+static PROGRESS_BAR_SEGMENTS_SX: StaticSx = StaticSx::new(|| {
+    sx().position("absolute")
+        .top("0")
+        .right("0")
+        .bottom("0")
+        .left("0")
+});
+
+/// Placed by exact fractions, as Slider's segments, so the gaps sit on the starts.
+static PROGRESS_BAR_SEGMENT_SX: StaticSx = StaticSx::new(|| {
+    let start = PROGRESS_BAR_SEGMENT_REACH_START.value_or("0px");
+    let end = PROGRESS_BAR_SEGMENT_REACH_END.value_or("0px");
+    let at = format!(
+        "calc({} * 100% + {SEGMENT_GAP} / 2 - {start})",
+        PROGRESS_BAR_SEGMENT_AT.value_or("0")
+    );
+    let reach = format!("calc({SEGMENT_GAP} / 2)");
+    sx().position("absolute")
+        .top("0")
+        .bottom("0")
+        .left(at.clone())
+        .width(format!(
+            "calc({} * 100% - {SEGMENT_GAP} + {start} + {end})",
+            PROGRESS_BAR_SEGMENT_SPAN.value_or("0")
+        ))
+        .overflow("hidden")
+        .border_radius(PROGRESS_BAR_RADIUS.value())
+        .background(PROGRESS_BAR_TRACK.value())
+        .outline("1px solid transparent")
+        .selector(
+            "&:first-child",
+            sx().var(PROGRESS_BAR_SEGMENT_REACH_START, reach.clone()),
+        )
+        .selector(
+            "&:last-child",
+            sx().var(PROGRESS_BAR_SEGMENT_REACH_END, reach),
+        )
+        .rtl(sx().left("auto").right(at))
+});
+
+static PROGRESS_BAR_SEGMENT_FILL_SX: StaticSx = StaticSx::new(|| {
+    fill_paint_sx()
+        .position("absolute")
+        .top("0")
+        .bottom("0")
+        .left("0")
+        .width(format!(
+            "calc({} * 100%)",
+            PROGRESS_BAR_SEGMENT_FILLED.value_or("0")
+        ))
+        .transition(format!(
+            "width {} ease",
+            PROGRESS_BAR_TRANSITION.value_or("100ms")
+        ))
+        .media(REDUCED_MOTION, sx().transition("none"))
+        .rtl(sx().left("auto").right("0"))
 });
 
 static PROGRESS_BAR_FILL_SX: StaticSx = StaticSx::new(|| {
-    sx().height("100%")
+    fill_paint_sx()
+        .height("100%")
         .border_radius("inherit")
-        .background(
-            PROGRESS_BAR_COLOR.value_or(ColorValue::Text(Color::Primary, ColorShade::S6).value()),
-        )
-        .box_shadow(PROGRESS_BAR_EDGE.value_or("none"))
-        .media(FORCED_COLORS, sx().background("Highlight"))
         .when(
             DETERMINATE_STATE,
             sx().width(PROGRESS_BAR_FILL.value_or("0%"))
@@ -143,6 +228,39 @@ parts_enum! {
     pub enum ProgressBarPart {
         /// The drawn share, or the indeterminate sweep.
         Fill = "fill" => "& > [data-slot='fill']",
+        /// The row of segments a `segments` bar draws instead of the fill.
+        Segments = "segments" => "& > [data-slot='segments']",
+        /// One stretch of a segmented bar.
+        Segment = "segment" => "& > [data-slot='segments'] > [data-slot='segment']",
+        /// The filled part of a segment.
+        SegmentFill = "segment-fill" => "& > [data-slot='segments'] > [data-slot='segment'] > [data-slot='segment-fill']",
+    }
+}
+
+/// A stretch of a segmented [`ProgressBar`], from `start` to the next
+/// segment's start or `max`, as a [`SliderSegment`].
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProgressBarSegment {
+    pub start: f64,
+    pub label: Option<String>,
+}
+
+impl ProgressBarSegment {
+    pub fn new(start: f64) -> Self {
+        Self { start, label: None }
+    }
+
+    pub fn labeled(start: f64, label: impl Into<String>) -> Self {
+        Self {
+            start,
+            label: Some(label.into()),
+        }
+    }
+}
+
+impl From<f64> for ProgressBarSegment {
+    fn from(start: f64) -> Self {
+        Self::new(start)
     }
 }
 
@@ -171,6 +289,11 @@ base_props! {
         /// Announced instead of the percentage, e.g. `"4.2 MB of 12 MB"`.
         #[props(default, into)]
         aria_valuetext: Option<String>,
+        /// Splits the track into stretches with gaps, each from its `start` to the next,
+        /// as a Slider's. A label does not change what the bar reports: name the stage
+        /// in `aria_valuetext`. Indeterminate, the plain sweep runs.
+        #[props(default)]
+        segments: Vec<ProgressBarSegment>,
     }
 }
 
@@ -211,6 +334,13 @@ pub fn ProgressBar(props: ProgressBarProps) -> Element {
         .value
         .map(|value| fraction(value, props.min, props.max));
     let percentage = fraction.map(percentage);
+    let segments = match fraction {
+        Some(filled) if !props.segments.is_empty() => {
+            segment_pieces(&props.segments, props.min, props.max, filled)
+        }
+        _ => Vec::new(),
+    };
+    let segmented = !segments.is_empty();
 
     let states: Input<States> = props
         .states
@@ -219,6 +349,7 @@ pub fn ProgressBar(props: ProgressBarProps) -> Element {
         .with(radius.radius_state_name(), true)
         .with(DETERMINATE_STATE, fraction.is_some())
         .with(PROGRESS_BAR_INDETERMINATE_STATE, fraction.is_none())
+        .with(SEGMENTED_STATE, segmented)
         .into();
 
     let vars: Input<Variables> = progress_bar_variables(&color, percentage.clone()).into();
@@ -229,8 +360,26 @@ pub fn ProgressBar(props: ProgressBarProps) -> Element {
         .states(&states)
         .prepare()
         .attr("data-slot", ProgressBarPart::Fill.slot())
-        .attr("aria-hidden", "true")
-        .render(HtmlTag::Div, Vec::new(), ());
+        .attr("aria-hidden", "true");
+    let segments_class = use_css(Some(&PROGRESS_BAR_SEGMENTS_SX), CssLayer::Framework);
+    let segment_class = use_css(Some(&PROGRESS_BAR_SEGMENT_SX), CssLayer::Framework);
+    let segment_fill_class = use_css(Some(&PROGRESS_BAR_SEGMENT_FILL_SX), CssLayer::Framework);
+    let inner = match segmented {
+        false => fill.render(HtmlTag::Div, Vec::new(), ()),
+        true => rsx! {
+            div { class: segments_class, "data-slot": ProgressBarPart::Segments.slot(), "aria-hidden": "true",
+                for piece in segments {
+                    span { class: segment_class.clone(), "data-slot": ProgressBarPart::Segment.slot(), style: piece.at,
+                        span {
+                            class: segment_fill_class.clone(),
+                            "data-slot": ProgressBarPart::SegmentFill.slot(),
+                            style: piece.filled,
+                        }
+                    }
+                }
+            }
+        },
+    };
 
     let track = use_box()
         .framework_sx(&PROGRESS_BAR_TRACK_SX)
@@ -257,7 +406,58 @@ pub fn ProgressBar(props: ProgressBarProps) -> Element {
         None => track.attr_default("aria-valuetext", percentage),
     };
 
-    track.render(HtmlTag::Div, props.attributes, fill)
+    track.render(HtmlTag::Div, props.attributes, inner)
+}
+
+/// One segment's place and fill, as inline vars.
+#[derive(Clone, Debug, PartialEq)]
+struct SegmentPiece {
+    at: String,
+    filled: String,
+}
+
+/// Normalised as Slider's (sorted, out-of-range and repeated starts dropped); `filled` is
+/// the drawn share of the whole track.
+fn segment_pieces(
+    segments: &[ProgressBarSegment],
+    min: f64,
+    max: f64,
+    filled: f64,
+) -> Vec<SegmentPiece> {
+    let given: Vec<SliderSegment> = segments
+        .iter()
+        .map(|segment| SliderSegment {
+            start: segment.start,
+            label: segment.label.clone(),
+        })
+        .collect();
+    let (stretches, dropped) = track_segments(&given, min, max);
+    if dropped {
+        warn(
+            "ProgressBar: a segment starting outside `min..max`, or at another's start, is dropped.",
+        );
+    }
+    stretches
+        .iter()
+        .map(|stretch| {
+            let (start, end) = (
+                (stretch.start - min) / (max - min),
+                (stretch.end - min) / (max - min),
+            );
+            SegmentPiece {
+                at: variables()
+                    .with(PROGRESS_BAR_SEGMENT_AT, Some(start.to_string()))
+                    .with(PROGRESS_BAR_SEGMENT_SPAN, Some((end - start).to_string()))
+                    .render(),
+                filled: variables()
+                    .with(
+                        PROGRESS_BAR_SEGMENT_FILLED,
+                        Some(segment_filled(start, end, filled).to_string()),
+                    )
+                    .render(),
+            }
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -272,7 +472,53 @@ mod tests {
             .map(|part| (part.slot(), part.selector()))
             .collect();
 
-        assert_eq!(table, [("fill", "& > [data-slot='fill']")]);
+        assert_eq!(
+            table,
+            [
+                ("fill", "& > [data-slot='fill']"),
+                ("segments", "& > [data-slot='segments']"),
+                (
+                    "segment",
+                    "& > [data-slot='segments'] > [data-slot='segment']"
+                ),
+                (
+                    "segment-fill",
+                    "& > [data-slot='segments'] > [data-slot='segment'] > [data-slot='segment-fill']"
+                ),
+            ]
+        );
+    }
+
+    /// Todo 2167: led from `min`, out-of-range starts dropped, filled up to the value.
+    #[test]
+    fn the_segments_split_the_range_and_fill_up_to_the_value() {
+        let pieces = segment_pieces(
+            &[
+                ProgressBarSegment::labeled(50.0, "Upload"),
+                ProgressBarSegment::new(150.0),
+            ],
+            0.0,
+            100.0,
+            0.75,
+        );
+        let var = |name: CssVar, value: &str| format!("{}:{value};", name.name());
+        assert_eq!(pieces.len(), 2, "{pieces:?}");
+        assert!(
+            pieces[0]
+                .at
+                .contains(&var(PROGRESS_BAR_SEGMENT_SPAN, "0.5"))
+        );
+        assert!(
+            pieces[0]
+                .filled
+                .contains(&var(PROGRESS_BAR_SEGMENT_FILLED, "1"))
+        );
+        assert!(pieces[1].at.contains(&var(PROGRESS_BAR_SEGMENT_AT, "0.5")));
+        assert!(
+            pieces[1]
+                .filled
+                .contains(&var(PROGRESS_BAR_SEGMENT_FILLED, "0.5"))
+        );
     }
 
     #[test]

@@ -135,6 +135,32 @@ fn Demo() -> Element {
 }
 ```
 
+`segments` splits the line track into stretches with gaps, as a video's
+chapters. A labeled one joins the value in the bubble and `aria-valuetext`:
+"75, Loud".
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Slider, SliderChangeEvent, SliderSegment};
+
+#[component]
+fn Demo() -> Element {
+    let mut volume = use_signal(|| 40.0);
+
+    rsx! {
+        Slider {
+            aria_label: "Volume",
+            value: volume(),
+            segments: vec![
+                SliderSegment::labeled(0.0, "Comfortable"),
+                SliderSegment::labeled(70.0, "Loud"),
+            ],
+            oninput: move |event: SliderChangeEvent| volume.set(event.value()),
+        }
+    }
+}
+```
+
 ## Props
 
 ### `Slider`
@@ -150,7 +176,7 @@ fn Demo() -> Element {
 | `step` | `V::Step` | - | How far one step goes from `min`. A count of options on a discrete scale, a value on a continuous one. Also sets how many decimals a value keeps. |
 | `format` | `Callback<V, String>` | `bare value, or SliderValue::label` | Text of the bubble and the thumb's `aria-valuetext`. On a discrete scale it also names the marks, so this is where a translation goes. |
 | `marks` | `Vec<SliderMark<V>>` | `one per option, discretely` | Ticks on the track. A labeled one gets a caption below it. Replaces the marks a discrete scale draws itself. Past about six options the derived captions touch on a phone, so pass your own `marks`, or a `step` that skips options. |
-| `segments` | `Vec<SliderSegment<V>>` | `[]` | Splits a line track into stretches with 2px gaps, each from its `start` to the next one's, as `Video`'s chapters. A labeled one is named after the value in the bubble and `aria-valuetext` (`slider.segment`, "{value}, {segment}"). Sorted for you; a start outside the track or a repeat is dropped, and an unlabeled stretch fills from `min` to the first start. |
+| `segments` | `Vec<SliderSegment<V>>` | `[]` | Splits a line track into stretches with 2px gaps, each from its `start` to the next one's, as `Video`'s chapters. A labeled one is named after the value in the bubble and `aria-valuetext` (`slider.segment`, "{value}, {segment}"). Sorted for you; a start outside the track or a repeat is dropped, and an unlabeled stretch fills from `min` to the first start. A mark where two stretches meet keeps its caption but draws no dot: the gap is the tick. |
 | `aria_label` | `String` | - | Names the thumb when the field has no `label`. Put in `attributes`, it would land on the wrapper instead. |
 | `name` | `FieldName<V>` | - | Posts the value in a hidden input of that name. A path such as `Settings::FIELDS.volume()` also binds the value to the surrounding `Form`'s value when there is no `oninput`. |
 | `validate` | `Validators<V>` | - | Rules over the value, shown once the slider loses focus or its form is submitted. |

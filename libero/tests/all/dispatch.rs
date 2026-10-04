@@ -26,8 +26,16 @@ impl Page {
 
     /// Builds `app` only: what the first pass registered, before any effect re-renders.
     pub fn build(app: fn() -> Element) -> Self {
+        Self::record(VirtualDom::new(app))
+    }
+
+    /// [`Page::build`] for a root that takes props.
+    pub fn build_with_props<P: Clone + 'static>(app: fn(P) -> Element, props: P) -> Self {
+        Self::record(VirtualDom::new_with_props(app, props))
+    }
+
+    fn record(mut dom: VirtualDom) -> Self {
         dioxus::html::set_event_converter(Box::new(TestConverter));
-        let mut dom = VirtualDom::new(app);
         let mut rec = FindClickListener::default();
         dom.rebuild(&mut rec);
         Self { dom, rec }
@@ -43,6 +51,12 @@ impl Page {
 
     pub fn render(&mut self) {
         self.dom.render_immediate(&mut self.rec);
+    }
+
+    /// Renders once into an empty recorder: what this pass alone wrote.
+    pub fn render_fresh(&mut self) {
+        self.rec = FindClickListener::default();
+        self.render();
     }
 }
 

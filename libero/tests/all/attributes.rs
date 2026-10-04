@@ -4,7 +4,7 @@
 //! went away. SSR cannot show this - it re-serialises the tree - so the check
 //! has to read the mutations dioxus emits on the re-render.
 
-use crate::dispatch::FindClickListener;
+use crate::dispatch::Page;
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
@@ -20,12 +20,11 @@ fn app() -> Element {
 
 #[test]
 fn a_disabled_button_that_becomes_enabled_clears_the_attribute() {
-    let mut dom = VirtualDom::new(app);
-    dom.rebuild_in_place();
+    let mut page = Page::build(app);
 
-    dom.in_runtime(|| *DISABLED.write() = false);
-    let mut writes = FindClickListener::default();
-    dom.render_immediate(&mut writes);
+    page.dom.in_runtime(|| *DISABLED.write() = false);
+    page.render_fresh();
+    let writes = page.rec;
 
     let disabled = writes
         .writes
@@ -54,12 +53,11 @@ fn header_app() -> Element {
 /// what an absent var would.
 #[test]
 fn a_colored_header_that_becomes_unset_reverts_its_variables() {
-    let mut dom = VirtualDom::new(header_app);
-    dom.rebuild_in_place();
+    let mut page = Page::build(header_app);
 
-    dom.in_runtime(|| *COLOR.write() = Input::None);
-    let mut writes = FindClickListener::default();
-    dom.render_immediate(&mut writes);
+    page.dom.in_runtime(|| *COLOR.write() = Input::None);
+    page.render_fresh();
+    let writes = page.rec;
 
     let style = writes
         .writes

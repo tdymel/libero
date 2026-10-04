@@ -35,6 +35,32 @@ indeterminate bar.
 ProgressBar { aria_label: "Connecting", value: None }
 ```
 
+`segments` splits the track into stretches with gaps, one per stage, and fills
+them up to the value. A label does not change what the bar reports: name the
+stage in `aria_valuetext`.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{ProgressBar, ProgressBarSegment};
+
+#[component]
+fn Demo() -> Element {
+    let uploaded = use_signal(|| 40.0);
+
+    rsx! {
+        ProgressBar {
+            aria_label: "Upload",
+            value: uploaded(),
+            aria_valuetext: format!("{}%, sending", uploaded()),
+            segments: vec![
+                ProgressBarSegment::labeled(25.0, "Send"),
+                ProgressBarSegment::labeled(75.0, "Verify"),
+            ],
+        }
+    }
+}
+```
+
 ## Props
 
 | Prop | Type | Default | Description |
@@ -46,10 +72,18 @@ ProgressBar { aria_label: "Connecting", value: None }
 | `size` | `Size` | `md` | Track height, 3px at `xs` to 20px at `xxl`. |
 | `radius` | `Size` | `xl` | Corner of the track and the fill. On a thin track most steps draw the same pill. |
 | `aria_valuetext` | `String` | - | Read instead of the rounded percentage, such as "4.2 MB of 12 MB". |
+| `segments` | `Vec<ProgressBarSegment>` | `[]` | Splits the track into stretches with 2px gaps, each from its `start` to the next one's, as a `Slider`'s `segments`, and fills them up to the value. A label does not change what the bar reports: name the stage in `aria_valuetext`. Sorted for you; a start outside the range or a repeat is dropped, and an unlabeled stretch fills from `min` to the first start. An indeterminate bar sweeps as without them. |
 | `parts` | `Parts<ProgressBarPart>` | - | Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(ProgressBarPart::Fill, sx().background("success.6"))`. |
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes, `aria_label` among them.
+
+### `ProgressBarSegment`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `start` | `f64` | - | Where the stretch starts; it ends at the next one's start, or `max`. |
+| `label` | `Option<String>` | - | Names the stretch. `ProgressBarSegment::labeled(start, label)`. |
 
 ## Style API
 
@@ -60,6 +94,9 @@ explains how parts work.
 | Part | `data-slot` | Description |
 |---|---|---|
 | `ProgressBarPart::Fill` | `fill` | The drawn share, or the indeterminate sweep. The root is the track. |
+| `ProgressBarPart::Segments` | `segments` | The row of segments a `segments` bar draws instead of the fill. |
+| `ProgressBarPart::Segment` | `segment` | One stretch of a segmented bar. |
+| `ProgressBarPart::SegmentFill` | `segment-fill` | The filled part of a segment. |
 
 ## Accessibility
 
@@ -120,5 +157,5 @@ theme stylesheet.
 ## Data attributes
 
 `data-state` on the root and on the fill carries `size-*`, `radius-*`, and
-either `determinate` or `indeterminate`. `data-slot="fill"` marks the fill, see
-[Style API](#style-api).
+either `determinate` or `indeterminate`; the root also carries `segmented` while
+it draws segments. `data-slot="fill"` marks the fill, see [Style API](#style-api).

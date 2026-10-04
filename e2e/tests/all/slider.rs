@@ -54,7 +54,7 @@ async fn thumb_follows<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 const SEGMENT: &str = "#segments [data-slot=segment]";
 
 /// Todo 2136: segments as wide as their spans, 2px apart; the one holding 50
-/// filled a quarter and named in the value; End fills the last.
+/// filled a quarter and named in the value; End fills the last. A mark on a boundary draws no dot.
 async fn segments_fill<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let nth = |n: usize| format!("{SEGMENT}:nth-child({n})");
     let fill = |n: usize| format!("{SEGMENT}:nth-child({n}) > [data-slot=segment-fill]");
@@ -74,6 +74,23 @@ async fn segments_fill<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         },
     )
     .await?;
+    // Todo 2168: the mark at 40 keeps its caption but no dot, which would cover the gap.
+    let (second, dot, caption) = (
+        d.rect(&nth(2)).await?,
+        d.rect("#segments [data-slot=mark]").await?,
+        d.rect("#segments [data-slot=mark-label]").await?,
+    );
+    ensure!(
+        dot.x > second.x + second.width,
+        "the first dot sits at {}, not at 100",
+        dot.x
+    );
+    ensure!(
+        (caption.x + caption.width / 2.0 - second.x).abs() < 4.0,
+        "the 40 caption is at {}, the gap at {}",
+        caption.x,
+        second.x
+    );
     let text = d.attr(THUMB, "aria-valuetext").await?.unwrap_or_default();
     ensure!(text.ends_with("Middle"), "the value reads {text:?}");
     d.focus(THUMB).await?;

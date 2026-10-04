@@ -1,9 +1,24 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Code, Input, ProgressBar, ProgressBarPart, Text};
+use libero::components::{Code, Input, ProgressBar, ProgressBarPart, ProgressBarSegment, Text};
 
 fn indeterminate(values: &DemoValues) -> bool {
     values.str("indeterminate") == "true"
+}
+
+fn segmented(values: &DemoValues) -> bool {
+    values.str("segments") == "true"
+}
+
+/// An upload's stages: preparing up to 25, sending to 75, verifying after.
+fn segments(values: &DemoValues) -> Vec<ProgressBarSegment> {
+    match segmented(values) {
+        true => vec![
+            ProgressBarSegment::labeled(25.0, "Send"),
+            ProgressBarSegment::labeled(75.0, "Verify"),
+        ],
+        false => Vec::new(),
+    }
 }
 
 #[component]
@@ -28,12 +43,23 @@ pub fn ProgressBarPage() -> Element {
                     .doc("Corner of the track and the fill. On a thin track most steps draw the same pill."),
                 prop("aria_valuetext", "String")
                     .doc("Read instead of the rounded percentage, such as \"4.2 MB of 12 MB\"."),
+                prop("segments", "Vec<ProgressBarSegment>")
+                    .default("[]")
+                    .doc("Splits the track into stretches with 2px gaps, each from its `start` to the next one's, as a `Slider`'s `segments`, and fills them up to the value. A label does not change what the bar reports: name the stage in `aria_valuetext`. Sorted for you; a start outside the range or a repeat is dropped, and an unlabeled stretch fills from `min` to the first start. An indeterminate bar sweeps as without them."),
                 prop("parts", "Parts<ProgressBarPart>")
                     .doc("Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(ProgressBarPart::Fill, sx().background(\"success.6\"))`."),
             ])
             .parts("ProgressBarPart", vec![
                 (ProgressBarPart::Fill, "The drawn share, or the indeterminate sweep. The root is the track."),
-            ])],
+                (ProgressBarPart::Segments, "The row of segments a `segments` bar draws instead of the fill."),
+                (ProgressBarPart::Segment, "One stretch of a segmented bar."),
+                (ProgressBarPart::SegmentFill, "The filled part of a segment."),
+            ]),
+            props("ProgressBarSegment", vec![
+                prop("start", "f64").doc("Where the stretch starts; it ends at the next one's start, or `max`."),
+                prop("label", "Option<String>").doc("Names the stretch. `ProgressBarSegment::labeled(start, label)`."),
+            ])
+            .without_base_props()],
             accessibility: a11y()
                 .handles([
                     "A screen reader reads the rounded percentage, or `aria_valuetext` when you set it.",
@@ -81,6 +107,15 @@ pub fn ProgressBarPage() -> Element {
                     Control::color("color"),
                     Control::sizes("size").default("md"),
                     Control::sizes("radius").default("xl"),
+                    Control::switch("segments").default("true").code(|_, values| {
+                        match segmented(values) {
+                            true => vec![
+                                r#"segments: vec![ProgressBarSegment::labeled(25.0, "Send"), ProgressBarSegment::labeled(75.0, "Verify")]"#
+                                    .to_string(),
+                            ],
+                            false => vec![],
+                        }
+                    }),
                 ],
                 render: move |values: DemoValues| rsx! {
                     ProgressBar {
@@ -93,6 +128,7 @@ pub fn ProgressBarPage() -> Element {
                         color: Input::from(values.str("color")),
                         size: values.str("size"),
                         radius: values.str("radius"),
+                        segments: segments(&values),
                     }
                 },
             }

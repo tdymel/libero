@@ -1,7 +1,9 @@
 //! `ProgressBar`: under reduced motion the fill jumps instead of easing, and
 //! the indeterminate sweep becomes a dimmed full track.
 
+use anyhow::Result;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually};
 use e2e::passes::{motion, pointer};
 use e2e::{Fixture, Suite, Viewport, wait};
 
@@ -16,6 +18,50 @@ fn it_meets_the_baseline() {
         .targets(ADD)
         .run();
 }
+
+/// Todo 2167: three segments 2px apart, as wide as their spans, the middle one half
+/// filled from the start side; under RTL the first segment and each fill start at the right.
+async fn segments_fill<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    for (bar, rtl) in [("#segments", false), ("#segments-rtl", true)] {
+        let nth = |n: usize| format!("{bar} [data-slot=segment]:nth-child({n})");
+        let fill = format!("{} > [data-slot=segment-fill]", nth(2));
+        eventually(
+            d,
+            &format!("{bar}: three segments, the middle half filled"),
+            async |d| {
+                let (first, second, third) = (
+                    d.rect(&nth(1)).await?,
+                    d.rect(&nth(2)).await?,
+                    d.rect(&nth(3)).await?,
+                );
+                let filled = d.rect(&fill).await?;
+                let (left, right) = if rtl {
+                    (&third, &first)
+                } else {
+                    (&first, &third)
+                };
+                let gap = second.x - (left.x + left.width);
+                let from_start = match rtl {
+                    false => filled.x - second.x,
+                    true => (second.x + second.width) - (filled.x + filled.width),
+                };
+                Ok((gap - 2.0).abs() < 1.0
+                    && (right.x - (second.x + second.width) - 2.0).abs() < 1.0
+                    && (second.width / first.width - 2.0).abs() < 0.1
+                    && (filled.width / second.width - 0.5).abs() < 0.05
+                    && from_start.abs() < 1.0)
+            },
+        )
+        .await?;
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    a_segmented_bar_fills_up_to_the_value,
+    "/progress-bar/segments",
+    segments_fill
+);
 
 /// `[fill width / track width, fill opacity]` for the bar at `selector`.
 fn fill(selector: &str) -> String {
