@@ -289,8 +289,8 @@ pub fn Tooltip(props: TooltipProps) -> Element {
     wrapper.render(HtmlTag::Span, Vec::new(), vec![props.children, bubble])
 }
 
-/// A forced-open bubble on a rect its caller works out each render, a slider
-/// thumb's from its value: portaled, but measured once per open (1065).
+/// A bubble on a rect its caller works out each render, a slider thumb's from
+/// its value: portaled, measured once per show, and hidden, not unmounted (2188).
 #[component]
 pub(crate) fn TooltipPinned(
     label: Element,
@@ -300,6 +300,7 @@ pub(crate) fn TooltipPinned(
     gap: Size,
     id: Option<String>,
     rtl: bool,
+    shown: bool,
 ) -> Element {
     let theme = use_theme();
     let options = PopoverOptions::new(theme.spacing.get(gap).into(), theme.popover.padding)
@@ -310,9 +311,9 @@ pub(crate) fn TooltipPinned(
     // The bubble's size and the viewport, which a drag does not change.
     let mut measured = use_signal(|| None::<(Dimensions, Dimensions)>);
     let retry = use_signal(|| 0u8);
-    use_effect(move || {
+    use_effect(use_reactive!(|shown| {
         let tries = retry();
-        if floating.mount_token().is_none() || measured.peek().is_some() {
+        if !shown || floating.mount_token().is_none() {
             return;
         }
         let Some(document) = document() else {
@@ -333,9 +334,9 @@ pub(crate) fn TooltipPinned(
             }
             measured.set(Some((size, viewport)));
         });
-    });
+    }));
 
-    let placed = measured().map(|(size, viewport)| {
+    let placed = measured().filter(|_| shown).map(|(size, viewport)| {
         let placed = place(anchor, size, viewport, &options, rtl);
         (placed, size)
     });
@@ -352,12 +353,15 @@ pub(crate) fn TooltipPinned(
             _ => (x, y + height / 2.0, "flex-start", "center"),
         }
     });
+    // `display: none` while hidden, so the next show replays the enter animation.
+    // Every branch sets every property: the interpreter keeps a dropped one.
+    let display = if shown { "flex" } else { "none" };
     let style = match point {
         Some((x, y, justify, align)) => format!(
-            "left:{x}px;top:{y}px;justify-content:{justify};align-items:{align};visibility:visible;"
+            "display:{display};left:{x}px;top:{y}px;justify-content:{justify};align-items:{align};visibility:visible;"
         ),
-        None => String::from(
-            "left:0px;top:0px;justify-content:flex-start;align-items:flex-start;visibility:hidden;",
+        None => format!(
+            "display:{display};left:0px;top:0px;justify-content:flex-start;align-items:flex-start;visibility:hidden;",
         ),
     };
 
@@ -371,7 +375,7 @@ pub(crate) fn TooltipPinned(
         .states(&states)
         .prepare()
         .element(&floating)
-        .attr("role", "tooltip")
+        .attr("role", shown.then_some("tooltip"))
         .attr("id", id)
         .render(HtmlTag::Span, Vec::new(), label);
     slot.show(Some(rsx! {

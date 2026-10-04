@@ -587,6 +587,8 @@ struct ThumbTrack {
     top: f64,
     thumb: Dimensions,
     rtl: bool,
+    /// From the press till the new measure: the bubble stays mounted, hidden (2188).
+    stale: bool,
 }
 
 impl ThumbTrack {
@@ -757,8 +759,12 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
                 (track_left.clone(), track_width.clone(), thumb_width.clone());
             let rtl = root_element.is_rtl();
             track_rtl.set(rtl);
-            if thumb_track.peek().is_some() {
-                thumb_track.set(None);
+            let track = *thumb_track.peek();
+            if let Some(track) = track.filter(|track| !track.stale) {
+                thumb_track.set(Some(ThumbTrack {
+                    stale: true,
+                    ..track
+                }));
             }
             // Any focus till the task ends is the pointer's, the web's focus of
             // a pressed thumb too: a touch matches `:focus-visible` (1058).
@@ -795,6 +801,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
                         top,
                         thumb,
                         rtl,
+                        stale: false,
                     }));
                 }
 
@@ -1205,22 +1212,23 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
         // up to 6px: the bubble took those presses (todo 649).
         let gap = Size::Sm;
         // A drag's bubble is pinned to the value, and takes over the id; a
-        // disabled thumb opens none (todo 596).
-        let pinned = thumb_track()
-            .filter(|_| !props.disabled && dragging() && active() == index)
-            .map(|track| {
-                rsx! {
-                    TooltipPinned {
-                        label: rsx! { {bubble_text.clone()} },
-                        anchor: track.at(fraction(thumb_value, min, max)),
-                        size,
-                        gap,
-                        id: bubble_id.clone(),
-                        rtl: track.rtl,
-                    }
+        // disabled thumb opens none (todo 596). Kept mounted after its first drag.
+        let track = thumb_track().filter(|_| !props.disabled);
+        let shown = track.is_some_and(|track| !track.stale && dragging() && active() == index);
+        let pinned = track.map(|track| {
+            rsx! {
+                TooltipPinned {
+                    label: rsx! { {bubble_text.clone()} },
+                    anchor: track.at(fraction(thumb_value, min, max)),
+                    size,
+                    gap,
+                    id: if shown { bubble_id.clone() } else { None },
+                    rtl: track.rtl,
+                    shown,
                 }
-            });
-        let (open, label_id) = match (props.disabled, pinned.is_some()) {
+            }
+        });
+        let (open, label_id) = match (props.disabled, shown) {
             (true, _) => (Some(false), bubble_id),
             (false, true) => (Some(false), None),
             (false, false) => (None, bubble_id),

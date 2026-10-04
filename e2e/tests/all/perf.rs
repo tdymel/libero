@@ -625,7 +625,8 @@ fn a_slider_drag_stays_in_budget() {
             .unwrap();
         let renders = settled(page, "dragging").await;
         // Ten moves, the press and the release each redraw the page, the slider, its
-        // thumbs and the pinned bubble; the closed tooltip takes the new label too.
+        // thumbs and the pinned bubble; the closed tooltip takes the new label too. The
+        // release hides the pinned bubble, one render instead of an unmount (2188).
         assert_within(
             &renders,
             &[
@@ -636,8 +637,8 @@ fn a_slider_drag_stays_in_budget() {
                 ("SliderThumbs", 12),
                 ("Tooltip", 15),
                 ("TooltipBubble", 4),
-                ("TooltipPinned", 12),
-                ("Fragment", 16),
+                ("TooltipPinned", 13),
+                ("Fragment", 19),
                 ("PortalOutlet", 17),
                 ("StyleOutlet", 4),
             ],
