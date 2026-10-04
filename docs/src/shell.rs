@@ -54,6 +54,8 @@ pub(crate) fn AppShell() -> Element {
     let mut open = use_signal(|| false);
     let burger = use_element();
     let content = use_element();
+    // The skip link's target.
+    let main = use_element();
     // The home page is full width: the nav is a drawer at every width there. A memo, so a
     // navigation re-renders the shell only on the way to or from Home (todo 2148).
     let router = router();
@@ -109,7 +111,7 @@ pub(crate) fn AppShell() -> Element {
             onkeydown: move |event: KeyboardEvent| {
                 if open() && event.key() == Key::Escape {
                     open.set(false);
-                    let _ = burger.query_selector("button").and_then(|button| button.focus());
+                    let _ = burger.focus();
                 }
             },
             RouteEffects { open, area, content, section }
@@ -134,7 +136,7 @@ pub(crate) fn AppShell() -> Element {
                     href: "#docs-main",
                     onclick: move |event: MouseEvent| {
                         event.prevent_default();
-                        let _ = content.query_selector("main").and_then(|main| main.focus());
+                        let _ = main.focus();
                     },
                     "Skip to content"
                 }
@@ -146,22 +148,21 @@ pub(crate) fn AppShell() -> Element {
                 glass: true,
                 // Tighter on a phone: the seven controls just miss 320px at `md`.
                 sx: sx().gap("sm").breakpoint(Size::Sm, sx().gap("md")),
-                // Focus target when a page link closes the drawer. `Burger` takes no
-                // `onmounted`, so a `display: contents` wrapper holds the handle.
-                div { display: "contents", onmounted: burger.mount(),
-                    Burger {
-                        open: open(),
-                        "aria-controls": "docs-nav",
-                        onclick: move |_| open.set(!open()),
-                        // Hidden from `Sm` up, so the drawer can't open on desktop.
-                        // The home page has no sidebar, so its burger stays.
-                        sx: if home {
-                            sx().hover(sx().background("muted.1"))
-                        } else {
-                            sx().hover(sx().background("muted.1"))
-                                .breakpoint(Size::Sm, sx().display("none"))
-                        },
-                    }
+                // Focus target when a page link closes the drawer. On the button itself, not a
+                // wrapper: a WebView focuses a handle but cannot query below it (2213).
+                Burger {
+                    open: open(),
+                    "aria-controls": "docs-nav",
+                    onclick: move |_| open.set(!open()),
+                    onmounted: burger.mount(),
+                    // Hidden from `Sm` up, so the drawer can't open on desktop.
+                    // The home page has no sidebar, so its burger stays.
+                    sx: if home {
+                        sx().hover(sx().background("muted.1"))
+                    } else {
+                        sx().hover(sx().background("muted.1"))
+                            .breakpoint(Size::Sm, sx().display("none"))
+                    },
                 }
                 // The way home: the nav has no entry for it.
                 Anchor {
@@ -313,13 +314,14 @@ pub(crate) fn AppShell() -> Element {
                         // Default `min-width: auto` let the longest code line push the row
                         // wider instead of that block scrolling.
                         .min_width("0"),
-                    // The skip link's handle on `main`, as `burger` is on the burger.
+                    // Above `main`: the section scroll queries `main` below it.
                     div { display: "contents", onmounted: content.mount(),
                         Container {
                             component: "main",
                             id: "docs-main",
                             // Focusable by the skip link only, with no ring round the page.
                             tabindex: "-1",
+                            onmounted: main.mount(),
                             size: "xl",
                             // Inert behind the open drawer. A boolean attribute: omitted when
                             // closed, since even `"false"` enables it.

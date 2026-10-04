@@ -309,6 +309,10 @@ pub(crate) struct DismissHandle {
     left_tick: Signal<u64>,
     marker: PressMarker,
     popups: OpenPopups,
+    /// `open` as of the last render, for a dismissal heard after the close.
+    live: CopyValue<bool>,
+    /// Counts the openings, so a check queued in one cannot close the next.
+    opening: CopyValue<u64>,
 }
 
 impl DismissHandle {
@@ -409,8 +413,13 @@ impl DismissHandle {
                 // moves focus first and cannot answer from a task: ask here.
                 let early = self.focus_inside();
                 let handle = *self;
+                let opening = *self.opening.peek();
                 spawn(async move {
                     next_task().await;
+                    // Reopened since: this focus-out left the box that closed (todo 1656).
+                    if *handle.opening.peek() != opening {
+                        return;
+                    }
                     if handle.focus_inside().or(early) == Some(false) {
                         handle.close(Dismissal::FocusMoved);
                     }
@@ -468,6 +477,10 @@ impl DismissHandle {
     /// Never pops the layer: the press that closed it is still bubbling, and an
     /// enclosing `Modal` would close too. The `open` effect's guard owns membership.
     fn close(&self, reason: Dismissal) {
+        // A press or focus-out heard just before the close lands after it: the box is gone (todo 1656).
+        if reason != Dismissal::FromInside && !*self.live.peek() {
+            return;
+        }
         let restore = self.return_focus
             && match reason {
                 Dismissal::FromInside => true,
@@ -513,6 +526,15 @@ pub(crate) fn use_dismiss(
     let global = use_global_escape();
     let focus = use_focus_within(Vec::new, |_| {});
     let left_tick = use_signal(|| 0u64);
+    let mut left_seen = use_hook(|| CopyValue::new(0u64));
+    let mut live = use_hook(|| CopyValue::new(false));
+    let mut opening = use_hook(|| CopyValue::new(0u64));
+    // A press heard for an earlier opening must not close this one.
+    if open && !*live.peek() {
+        left_seen.set(*left_tick.peek());
+        *opening.write() += 1;
+    }
+    live.set(open);
     let own_marker = use_press_marker();
     let popups = use_open_popups();
 
@@ -533,6 +555,8 @@ pub(crate) fn use_dismiss(
         left_tick,
         marker: options.marker.unwrap_or(own_marker),
         popups,
+        live,
+        opening,
     };
 
     use_document_escape(open && options.escape, global, move || {
@@ -555,7 +579,6 @@ pub(crate) fn use_dismiss(
         },
         move |change| handle.focus_changed(change),
     );
-    let mut left_seen = use_signal(|| 0u64);
     use_effect(move || {
         let tick = left_tick();
         if tick == *left_seen.peek() {

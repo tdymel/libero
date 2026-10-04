@@ -1999,8 +1999,7 @@ async fn the_filter_panel_edits_every_filter<D: Driver>(d: &mut D, _route: &str)
         bail!("the button does not name the active count");
     }
 
-    // What the close queued runs first: a press in the same task lost its menu (todo 1632).
-    d.settle().await?;
+    // No settle: the closed panel's late focus-out check took focus from the reopened one (1656).
     d.click("[aria-label=\"Stock column options\"]").await?;
     // Kept from the read that found it, not read again (1675).
     let item = menu_entry(d, "Filter").await?;

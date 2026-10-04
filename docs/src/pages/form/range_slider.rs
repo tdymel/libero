@@ -78,13 +78,11 @@ fn is_on(values: &DemoValues, name: &str) -> bool {
 fn mode_code(_control: &Control, values: &DemoValues) -> Vec<String> {
     match discrete(values) {
         true => vec![
-            r#"aria_label: "Price""#.to_string(),
             "value: quality()".to_string(),
             "oninput: move |event: SliderChangeEvent<(Quality, Quality)>| { quality.set(event.value()); last_quality.set(event) }"
                 .to_string(),
         ],
         false => vec![
-            r#"aria_label: "Price""#.to_string(),
             "value: price()".to_string(),
             "oninput: move |event: SliderChangeEvent<(f64, f64)>| { price.set(event.value()); last.set(event) }"
                 .to_string(),

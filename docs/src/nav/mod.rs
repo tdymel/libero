@@ -162,9 +162,7 @@ pub fn DocsNav(
                                 onclick: move |_| {
                                     if open() {
                                         open.set(false);
-                                        let _ = burger
-                                            .query_selector("button")
-                                            .and_then(|button| button.focus());
+                                        let _ = burger.focus();
                                     }
                                 },
                                 NavLink {
