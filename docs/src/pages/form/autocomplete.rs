@@ -1,8 +1,8 @@
 use super::CLEAR_NAME;
 use super::dropdown_parts::{SUGGESTION_DROPDOWN, list_dropdown_parts};
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls, field_props, prop,
-    props, readonly_prop, required_prop, status_prop,
+    Control, Demo, DemoFile, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls,
+    field_props, prop, props, readonly_prop, required_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::FieldPart;
@@ -21,61 +21,11 @@ impl FieldCopy for CityCopy {
     const ERROR: &'static str = "Pick a city from the list.";
 }
 
-/// The suggestion list is runtime data, so every snippet has to show it.
-// snippet: mirrors CITIES, cities, country
-const CITIES_CONST: &str = r#"const CITIES: [(&str, &str); 6] = [
-    ("Amsterdam", "Netherlands"),
-    ("Antwerp", "Belgium"),
-    ("Berlin", "Germany"),
-    ("Bern", "Switzerland"),
-    ("Copenhagen", "Denmark"),
-    ("Cologne", "Germany"),
-];
+/// The page's own source: the printed parts are cut from its live demo.
+const FILE: DemoFile = DemoFile(include_str!("autocomplete.rs"));
 
-fn cities() -> Vec<String> {
-    CITIES.iter().map(|(city, _)| city.to_string()).collect()
-}
-
-fn country(city: &str) -> &'static str {
-    CITIES
-        .iter()
-        .find(|(name, _)| *name == city)
-        .map(|(_, country)| *country)
-        .unwrap_or("")
-}
-
-"#;
-
-// snippet: after CITIES_CONST
-// snippet: let mut value = use_signal(String::new);
-// snippet: in Autocomplete { options: cities(), value: value(), oninput: move |next| value.set(next), .. }
-// snippet: mirrors city_row
-const CUSTOM_OPTION: &str = r#"option: move |o: AutocompleteOptionArgs<String>| rsx! {
-    Flex {
-        direction: "column",
-        align: "flex-start",
-        sx: sx().gap("0"),
-        Text { component: "span", size: "sm", "{o.value}" }
-        Text { component: "span", size: "xs", sx: sx().color("muted.7"), "{country(&o.value)}" }
-    }
-}"#;
-
-/// Prefix rather than the default `contains` - the same list, narrowed by a
-/// different rule.
-// snippet: after CITIES_CONST
-// snippet: let mut value = use_signal(String::new);
-// snippet: in Autocomplete { options: cities(), value: value(), oninput: move |next| value.set(next), .. }
-// snippet: mirrors starts_with
-const CUSTOM_FILTER: &str = r#"filter: move |f: AutocompleteFilterArgs<String>| {
-    f.value.to_lowercase().starts_with(&f.query.to_lowercase())
-}"#;
-
-// snippet: after CITIES_CONST
-// snippet: let mut value = use_signal(String::new);
-// snippet: let mut picked = use_signal(|| None::<&'static str>);
-// snippet: in Autocomplete { options: cities(), value: value(), oninput: move |next| value.set(next), .. }
-const ONPICK: &str = r#"onpick: move |city: String| picked.set(Some(country(&city)))"#;
-
+/// The suggestion list is runtime data, so every snippet prints it.
+// demo-code: cities start
 const CITIES: [(&str, &str); 6] = [
     ("Amsterdam", "Netherlands"),
     ("Antwerp", "Belgium"),
@@ -96,12 +46,14 @@ fn country(city: &str) -> &'static str {
         .map(|(_, country)| *country)
         .unwrap_or("")
 }
+// demo-code: cities end
 
 fn custom(values: &DemoValues) -> bool {
     values.str("custom") == "true"
 }
 
 fn city_row(o: AutocompleteOptionArgs<String>) -> Element {
+    // demo-code: row start
     rsx! {
         Flex {
             direction: "column",
@@ -117,10 +69,14 @@ fn city_row(o: AutocompleteOptionArgs<String>) -> Element {
             }
         }
     }
+    // demo-code: row end
 }
 
+/// Prefix rather than the default `contains`: the same list, narrowed by a different rule.
 fn starts_with(f: AutocompleteFilterArgs<String>) -> bool {
+    // demo-code: filter start
     f.value.to_lowercase().starts_with(&f.query.to_lowercase())
+    // demo-code: filter end
 }
 
 #[component]
@@ -245,7 +201,9 @@ pub fn AutocompletePage() -> Element {
                 children_text: "",
                 // `country` only exists in the snippet while the rows or the
                 // pick handler call it.
-                wrap: Wrap(|_values: &DemoValues, source: &str| format!("{CITIES_CONST}{source}")),
+                wrap: Wrap(|_values: &DemoValues, source: &str| {
+                    format!("{}\n\n{source}", FILE.section("cities"))
+                }),
                 fixed: vec![
                     "sx: sx().width(\"280px\")".to_string(),
                     "options: cities()".to_string(),
@@ -260,13 +218,22 @@ pub fn AutocompletePage() -> Element {
                     // A row drawn with `option`, and the `onpick` that reaches
                     // the record behind the text.
                     Control::switch("custom").code(|_, values| match custom(values) {
-                        true => vec![CUSTOM_OPTION.to_string(), ONPICK.to_string()],
+                        true => vec![
+                            format!(
+                                "option: move |o: AutocompleteOptionArgs<String>| {}",
+                                FILE.section("row")
+                            ),
+                            format!("onpick: {}", FILE.section("onpick")),
+                        ],
                         false => vec![],
                     }),
                     // Prefix instead of the default `contains`.
                     Control::switch("filter").code(|_, values| {
                         match values.str("filter").as_str() {
-                            "true" => vec![CUSTOM_FILTER.to_string()],
+                            "true" => vec![format!(
+                                "filter: move |f: AutocompleteFilterArgs<String>| {{\n    {}\n}}",
+                                FILE.section("filter")
+                            )],
                             _ => vec![],
                         }
                     }),
@@ -296,7 +263,11 @@ pub fn AutocompletePage() -> Element {
                         status: field.status,
                         option: custom(&values).then(|| Callback::new(city_row)),
                         onpick: custom(&values).then(|| {
-                            Callback::new(move |city: String| picked.set(Some(country(&city))))
+                            Callback::new(
+                                // demo-code: onpick start
+                                move |city: String| picked.set(Some(country(&city)))
+                                // demo-code: onpick end
+                            )
                         }),
                         filter: (values.str("filter") == "true")
                             .then(|| Callback::new(starts_with)),

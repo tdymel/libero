@@ -1,9 +1,6 @@
-use crate::components::{DocPage, DocSection};
+use crate::components::{DemoFile, DocPage, DocSection};
 use dioxus::prelude::*;
-use libero::components::{
-    Button, Checkbox, Code, CodeBlock, FieldName, Fields, Fieldset, Form, Rule, Text, TextField,
-    Validators, is_email, not_empty,
-};
+use libero::components::{Code, CodeBlock, Text};
 
 // snippet: ignore - a diagram
 const SHAPE_CODE: &str = r#"TextField                      // a field, one value with its label and rules
@@ -12,100 +9,6 @@ AddressFieldset                // a composed part, fields grouped into one value
   └ Fieldset { path: .. }
 OrderForm                      // the whole value, its parts submitted together
   └ Form { value: order }"#;
-
-// snippet: mirrors EmailField
-const SPECIALIZE_CODE: &str = r#"use libero::components::{FieldName, Rule, TextField, Validators, is_email};
-
-/// A text field that only accepts email addresses.
-#[component]
-fn EmailField(
-    #[props(into)] label: String,
-    #[props(default, into)] name: FieldName<String>,
-    #[props(default, into)] validate: Validators<String>,
-) -> Element {
-    // The caller's rules go first, so a missing email shows before a malformed
-    // one. Then the rule that makes this an email field.
-    let rules: Vec<_> = validate
-        .iter()
-        .cloned()
-        .chain(std::iter::once(is_email.error("That is not an email address.")))
-        .collect();
-    rsx! {
-        TextField { r#type: "email", autocomplete: "email", label, name, validate: rules, placeholder: "you@example.com" }
-    }
-}"#;
-
-// snippet: mirrors AddressFieldset, Address
-const COMPOSE_CODE: &str = r#"use libero::components::{FieldName, Fields, Fieldset, Rule, TextField, not_empty};
-
-#[derive(Clone, PartialEq, Default, Fields)]
-struct Address {
-    street: String,
-    zip: String,
-    city: String,
-}
-
-/// The address block, for any form whose value holds an `Address` somewhere.
-#[component]
-fn AddressFieldset(#[props(into)] label: String, #[props(into)] path: FieldName<Address>) -> Element {
-    rsx! {
-        Fieldset {
-            label,
-            path,
-            validate: (|a: &Address| a.city.is_empty() || !a.zip.is_empty())
-                .error("A city needs its zip code.")
-                .on([Address::FIELDS.zip()]),
-            // Paths relative to the group work wherever the group sits.
-            TextField { label: "Street", autocomplete: "street-address", name: Address::FIELDS.street(), validate: not_empty.error("Enter a street.") }
-            TextField { label: "Zip code", autocomplete: "postal-code", name: Address::FIELDS.zip() }
-            TextField { label: "City", autocomplete: "address-level2", name: Address::FIELDS.city() }
-        }
-    }
-}"#;
-
-// snippet: ignore - builds on the page's earlier snippets
-// snippet: mirrors OrderForm, Order
-const FORM_CODE: &str = r#"use libero::components::{Button, Checkbox, Fields, Form, Rule, Text, not_empty};
-
-#[derive(Clone, PartialEq, Default, Fields)]
-struct Order {
-    email: String,
-    #[fields(nested)]
-    shipping: Address,
-    same_billing: bool,
-    #[fields(nested)]
-    billing: Address,
-}
-
-#[component]
-fn OrderForm() -> Element {
-    let order = use_store(|| Order { same_billing: true, ..Default::default() });
-    let mut placed = use_signal(|| false);
-
-    rsx! {
-        Form {
-            value: order,
-            // Only the whole order knows whether a billing address is needed.
-            validate: (|o: &Order| o.same_billing || !o.billing.street.is_empty())
-                .error("Enter a billing address, or bill to the shipping address.")
-                .on([Order::FIELDS.billing().street()]),
-            onsubmit: move |_| placed.set(true),
-            EmailField { label: "Email", name: Order::FIELDS.email(), validate: not_empty.error("Enter your email.") }
-            AddressFieldset { label: "Shipping address", path: Order::FIELDS.shipping() }
-            Checkbox { label: "Bill to the shipping address", name: Order::FIELDS.same_billing() }
-            // Rendered only while unticked: ticked, the billing fields neither validate nor
-            // post, though `order().billing` keeps what was typed.
-            if !order().same_billing {
-                AddressFieldset { label: "Billing address", path: Order::FIELDS.billing() }
-            }
-            Button { r#type: "submit", "Place order" }
-            // Mounted before the submit, so a screen reader hears the text it gains.
-            Text { role: "status",
-                if placed() { "Order placed for {order().email}." }
-            }
-        }
-    }
-}"#;
 
 const RULES_CODE: &str = r#"use libero::components::{Rule, Validator, max_length, not_empty};
 
@@ -180,22 +83,20 @@ Form {
     }
 }"#;
 
-#[derive(Clone, PartialEq, Default, Fields)]
-pub struct Address {
-    pub street: String,
-    pub zip: String,
-    pub city: String,
-}
+// Each file prints from its `demo-code: start` marker, below the imports it compiles with.
+#[rustfmt::skip]
+mod address_fieldset;
+#[rustfmt::skip]
+mod email_field;
+#[rustfmt::skip]
+mod order_form;
+use address_fieldset::{Address, AddressFieldset};
+use email_field::EmailField;
+use order_form::OrderForm;
 
-#[derive(Clone, PartialEq, Default, Fields)]
-pub struct Order {
-    pub email: String,
-    #[fields(nested)]
-    pub shipping: Address,
-    pub same_billing: bool,
-    #[fields(nested)]
-    pub billing: Address,
-}
+const SPECIALIZE_CODE: DemoFile = DemoFile(include_str!("getting_started/email_field.rs"));
+const COMPOSE_CODE: DemoFile = DemoFile(include_str!("getting_started/address_fieldset.rs"));
+const FORM_CODE: DemoFile = DemoFile(include_str!("getting_started/order_form.rs"));
 
 #[component]
 pub fn FormGettingStartedPage() -> Element {
@@ -252,7 +153,7 @@ pub fn FormGettingStartedPage() -> Element {
                     " with a reveal button. Build your own domain fields the same way, such as an "
                     "email, an IBAN or a phone number. Their rules are built in, so no form repeats them."
                 }
-                CodeBlock { source: SPECIALIZE_CODE, language: "rust" }
+                CodeBlock { source: SPECIALIZE_CODE.shown(), language: "rust" }
                 Text {
                     "Forward "
                     Code { source: "name" }
@@ -274,9 +175,9 @@ pub fn FormGettingStartedPage() -> Element {
                     "carries the rules over its own fields. It knows nothing about the form around "
                     "it, so the same part serves the shipping and the billing address."
                 }
-                CodeBlock { source: COMPOSE_CODE, language: "rust" }
+                CodeBlock { source: COMPOSE_CODE.shown(), language: "rust" }
                 Text { "The form then arranges the parts and adds the rules only the whole value can decide." }
-                CodeBlock { source: FORM_CODE, language: "rust" }
+                CodeBlock { source: FORM_CODE.shown(), language: "rust" }
             }
             DocSection { title: "Validators",
                 Text {
@@ -418,74 +319,6 @@ pub fn FormGettingStartedPage() -> Element {
                     " only posts. A path rooted at a different type than the form's value warns in "
                     "debug builds and leaves the field unbound."
                 }
-            }
-        }
-    }
-}
-
-/// A text field that only accepts email addresses.
-#[component]
-fn EmailField(
-    #[props(into)] label: String,
-    #[props(default, into)] name: FieldName<String>,
-    #[props(default, into)] validate: Validators<String>,
-) -> Element {
-    let rules: Vec<_> = validate
-        .iter()
-        .cloned()
-        .chain(std::iter::once(
-            is_email.error("That is not an email address."),
-        ))
-        .collect();
-    rsx! {
-        TextField { r#type: "email", autocomplete: "email", label, name, validate: rules, placeholder: "you@example.com" }
-    }
-}
-
-#[component]
-fn AddressFieldset(
-    #[props(into)] label: String,
-    #[props(into)] path: FieldName<Address>,
-) -> Element {
-    rsx! {
-        Fieldset {
-            label,
-            path,
-            validate: (|a: &Address| a.city.is_empty() || !a.zip.is_empty())
-                .error("A city needs its zip code.")
-                .on([Address::FIELDS.zip()]),
-            TextField { label: "Street", autocomplete: "street-address", name: Address::FIELDS.street(), validate: not_empty.error("Enter a street.") }
-            TextField { label: "Zip code", autocomplete: "postal-code", name: Address::FIELDS.zip() }
-            TextField { label: "City", autocomplete: "address-level2", name: Address::FIELDS.city() }
-        }
-    }
-}
-
-#[component]
-fn OrderForm() -> Element {
-    let order = use_store(|| Order {
-        same_billing: true,
-        ..Default::default()
-    });
-    let mut placed = use_signal(|| false);
-
-    rsx! {
-        Form {
-            value: order,
-            validate: (|o: &Order| o.same_billing || !o.billing.street.is_empty())
-                .error("Enter a billing address, or bill to the shipping address.")
-                .on([Order::FIELDS.billing().street()]),
-            onsubmit: move |_| placed.set(true),
-            EmailField { label: "Email", name: Order::FIELDS.email(), validate: not_empty.error("Enter your email.") }
-            AddressFieldset { label: "Shipping address", path: Order::FIELDS.shipping() }
-            Checkbox { label: "Bill to the shipping address", name: Order::FIELDS.same_billing() }
-            if !order().same_billing {
-                AddressFieldset { label: "Billing address", path: Order::FIELDS.billing() }
-            }
-            Button { r#type: "submit", "Place order" }
-            // Mounted before the submit, so a screen reader hears the text it gains.
-            Text { role: "status",
-                if placed() { "Order placed for {order().email}." }
             }
         }
     }

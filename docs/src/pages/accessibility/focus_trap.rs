@@ -1,60 +1,17 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
+use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Button, Code, Flex, FocusTrap, Text};
 
-// snippet: mirrors Preview
-const TRAPPED: &str = r#"Flex {
-    direction: "row",
-    gap: "sm",
-    Button { variant: "outlined", "First" }
-    Button { variant: "outlined", "Second" }
-    Button { variant: "outlined", "Third" }
-}"#;
+/// The page's own source: the printed code is the live `Preview`'s.
+const FILE: DemoFile = DemoFile(include_str!("focus_trap.rs"));
 
-/// The trap as `Preview` wires it: Release and Escape switch it off, and `restore_focus` hands
-/// focus back to the button that switched it on.
-// snippet: mirrors Preview except trapped use_signal "Trap focus"
-const RELEASABLE: &str = r#"let mut trapped = use_signal(|| true);
-
-rsx! {
-    Flex {
-        direction: "column",
-        gap: "sm",
-        align: "flex-start",
-        Button { variant: "text", "Before" }
-        if trapped() {
-            FocusTrap {
-                restore_focus: true,
-                Flex {
-                    direction: "row",
-                    gap: "sm",
-                    onkeydown: move |event: KeyboardEvent| {
-                        if event.key() == Key::Escape {
-                            trapped.set(false);
-                        }
-                    },
-                    Button { variant: "outlined", "First" }
-                    Button { variant: "outlined", "Second" }
-                    Button { variant: "outlined", "Third" }
-                    Button { variant: "filled", onclick: move |_| trapped.set(false), "Release" }
-                }
-            }
-        } else {
-            Button { variant: "outlined", onclick: move |_| trapped.set(true), "Trap focus" }
-        }
-        Button { variant: "text", "After" }
-    }
-}"#;
-
-/// The switch is whether the `FocusTrap` exists at all. The two outside buttons always print:
-/// "focus cannot leave" is measured against them.
+/// Prints `Preview` with its signal: on, Release and Escape switch the trap off, and
+/// `restore_focus` hands focus back to the button that switched it on.
 fn wrap_page(values: &DemoValues, _code: &str) -> String {
-    if values.str("activate_focus_trap") == "true" {
-        return RELEASABLE.to_string();
-    }
+    let on = values.str("activate_focus_trap") == "true";
     format!(
-        "Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    align: \"flex-start\",\n    Button {{ variant: \"text\", \"Before\" }}\n{}    Button {{ variant: \"text\", \"After\" }}\n}}",
-        indent(TRAPPED),
+        "let mut trapped = use_signal(|| {on});\n\n{}",
+        FILE.section("preview")
     )
 }
 
@@ -102,7 +59,6 @@ pub fn FocusTrapPage() -> Element {
             Demo {
                 component: "FocusTrap",
                 children_text: "",
-                children_code: TRAPPED.to_string(),
                 controls: vec![
                     // Not a prop: whether the trap exists. It prints nothing,
                     // and `wrap_page` drops the component itself.
@@ -117,24 +73,23 @@ pub fn FocusTrapPage() -> Element {
     }
 }
 
-/// Before, the three buttons and After. On, the buttons sit in a trap that Release or
-/// Escape switches off; `restore_focus` hands focus back to the switch (2.1.2, todos 1528, 1534).
+/// Before, the trap and After. The switch and the preview's own buttons move one state; Release
+/// or Escape switches the trap off and `restore_focus` hands focus back (2.1.2, todos 1528, 1534).
 #[component]
 fn Preview(values: DemoValues) -> Element {
-    let release = {
-        let values = values.clone();
-        move || values.set("activate_focus_trap", "false")
-    };
-    let on_escape = release.clone();
-    let on_click = release;
+    let on = values.str("activate_focus_trap") == "true";
+    let mut trapped = use_signal(|| on);
+    use_effect(use_reactive!(|on| trapped.set(on)));
+    use_effect(move || values.set("activate_focus_trap", trapped().to_string()));
 
+    // demo-code: preview start
     rsx! {
         Flex {
             direction: "column",
             gap: "sm",
             align: "flex-start",
             Button { variant: "text", "Before" }
-            if values.str("activate_focus_trap") == "true" {
+            if trapped() {
                 FocusTrap {
                     restore_focus: true,
                     Flex {
@@ -142,25 +97,20 @@ fn Preview(values: DemoValues) -> Element {
                         gap: "sm",
                         onkeydown: move |event: KeyboardEvent| {
                             if event.key() == Key::Escape {
-                                on_escape();
+                                trapped.set(false);
                             }
                         },
                         Button { variant: "outlined", "First" }
                         Button { variant: "outlined", "Second" }
                         Button { variant: "outlined", "Third" }
-                        Button { variant: "filled", onclick: move |_| on_click(), "Release" }
+                        Button { variant: "filled", onclick: move |_| trapped.set(false), "Release" }
                     }
                 }
             } else {
-                Flex {
-                    direction: "row",
-                    gap: "sm",
-                    Button { variant: "outlined", "First" }
-                    Button { variant: "outlined", "Second" }
-                    Button { variant: "outlined", "Third" }
-                }
+                Button { variant: "outlined", onclick: move |_| trapped.set(true), "Trap focus" }
             }
             Button { variant: "text", "After" }
         }
     }
+    // demo-code: preview end
 }

@@ -1,7 +1,9 @@
 use std::time::Duration;
 
 use super::dropdown_parts::{COMBOBOX_DROPDOWN, list_dropdown_parts};
-use crate::components::{Child, Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
+use crate::components::{
+    Child, Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::use_theme;
 use libero::{
@@ -13,183 +15,8 @@ use libero::{
     sx::sx,
 };
 
-/// The fake server the preview asks, printed so the snippet calls nothing it
-/// does not show.
-// snippet: after FRUIT_ENUM
-// snippet: mirrors LATENCY,matching
-const FETCHING_SEARCH: &str = r#"/// How long the fake search takes.
-const LATENCY: Duration = Duration::from_millis(700);
-
-/// The fruit whose label contains `query`, case-insensitively.
-fn matching(query: &str) -> Vec<Fruit> {
-    let query = query.to_lowercase();
-    Fruit::options()
-        .iter()
-        .copied()
-        .filter(|fruit| fruit.label().to_lowercase().contains(&query))
-        .collect()
-}
-
-"#;
-
-/// A fetch per keystroke. `None` is the search in flight, and it is what keeps
-/// `empty` from flashing between the keystroke and the answer.
-// snippet: after FRUIT_ENUM
-// snippet: mirrors FetchingDemo
-const FETCHING_STATE: &str = r#"let suggestions = use_combobox();
-let mut text = use_signal(String::new);
-// One signal, not a list plus a `loading` flag: `None` *is* the search in
-// flight, so the two can never disagree.
-let mut results = use_signal(|| Some(Vec::<Fruit>::new()));
-// The answer still on its way. Replacing it drops the older one, so a slow
-// answer never overwrites a newer query's.
-let mut pending = use_signal(|| None::<Box<dyn TimerSubscription>>);
-use_drop(move || pending.set(None));
-
-"#;
-
-// snippet: after FRUIT_ENUM, FETCHING_SEARCH, FETCHING_STATE
-// snippet: mirrors FetchingDemo
-const FETCHING_TRIGGER: &str = r#"TextField {
-    sx: sx().width("280px"),
-    label: "Fruit",
-    placeholder: "Type a fruit",
-    value: text(),
-    attributes: suggestions.a11y_attributes(),
-    onblur: move |_| suggestions.close(),
-    oninput: move |next: String| {
-        text.set(next.clone());
-        suggestions.open();
-        results.set(None);
-        let answer = timer().map(|timer| {
-            timer.after(LATENCY, Box::new(move || results.set(Some(matching(&next)))))
-        });
-        pending.set(answer);
-    },
-}"#;
-
-/// How long the fake search takes - long enough to see, short enough to type
-/// through.
-const LATENCY: Duration = Duration::from_millis(700);
-
-/// The enum is the option list, so every snippet has to show it.
-// snippet: mirrors Fruit
-const FRUIT_ENUM: &str = r#"#[derive(Clone, Copy, PartialEq, Options)]
-enum Fruit {
-    Apple,
-    Banana,
-    Cherry,
-    #[option(label = "Dragon fruit")]
-    Dragon,
-    Elderberry,
-    Mango,
-    Grape,
-}
-
-"#;
-
-// snippet: after FRUIT_ENUM
-// snippet: mirrors SelectDemo
-const SELECT_STATE: &str = r#"let fruit = use_combobox();
-let mut picked = use_signal(|| None::<Fruit>);
-// A `combobox` role takes no name from its content, so the label names it.
-let label = format!("{}-label", fruit.id());
-
-"#;
-
-// snippet: after FRUIT_ENUM
-// snippet: mirrors SuggestionsDemo
-const SUGGESTIONS_STATE: &str = r#"let suggestions = use_combobox();
-let mut text = use_signal(String::new);
-
-let matches: Vec<Fruit> = Fruit::options()
-    .iter()
-    .copied()
-    .filter(|fruit| fruit.label().to_lowercase().contains(&text().to_lowercase()))
-    .collect();
-
-"#;
-
-// snippet: after FRUIT_ENUM, SELECT_STATE
-// snippet: mirrors SelectDemo
-const SELECT_TRIGGER: &str = r#"Text { id: "{label}", size: "sm", "Fruit" }
-Button {
-    variant: "outlined",
-    sx: sx().width("280px"),
-    attributes: [
-        fruit.a11y_attributes(),
-        vec![Attribute::new("aria-labelledby", label, None, false)],
-    ]
-    .concat(),
-    onclick: move |_| fruit.toggle(),
-    onblur: move |_| fruit.close(),
-    match picked() {
-        Some(fruit) => rsx! { "{fruit.label()}" },
-        None => rsx! { "Pick a fruit" },
-    }
-}"#;
-
-// snippet: after FRUIT_ENUM, SUGGESTIONS_STATE
-// snippet: mirrors SuggestionsDemo
-const SUGGESTIONS_TRIGGER: &str = r#"TextField {
-    sx: sx().width("280px"),
-    label: "Fruit",
-    placeholder: "Type a fruit",
-    value: text(),
-    attributes: suggestions.a11y_attributes(),
-    onblur: move |_| suggestions.close(),
-    oninput: move |next| {
-        text.set(next);
-        suggestions.open();
-    },
-}
-input { r#type: "hidden", name: "fruit", value: "{text()}" }"#;
-
-/// A row is four combinations of two choices, so the snippet is composed
-/// rather than written out four times.
-// snippet: after FRUIT_ENUM, SELECT_STATE
-// snippet: in Combobox { state: fruit, options: Fruit::options().to_vec(), option: move |o: ComboboxOptionArgs<Fruit>| rsx! { ComboboxOption { .. "{o.value.label()}" } } }
-// snippet: mirrors SelectDemo
-const SELECT_WIRING: &str = r#"        selected: picked() == Some(o.value),
-        onpick: move |_| {
-            picked.set(Some(o.value));
-            fruit.close();
-        },"#;
-
-/// No `selected`: a suggestion is not a selection.
-// snippet: after FRUIT_ENUM, SUGGESTIONS_STATE
-// snippet: in Combobox { state: suggestions, options: matches, option: move |o: ComboboxOptionArgs<Fruit>| rsx! { ComboboxOption { .. "{o.value.label()}" } } }
-// snippet: mirrors SuggestionsDemo,FetchingDemo
-const SUGGESTION_WIRING: &str = r#"        onpick: move |_| {
-            text.set(o.value.label());
-            suggestions.close();
-        },"#;
-
-// snippet: after FRUIT_ENUM
-// snippet: item impl Fruit { fn emoji(self) -> &'static str { "" } fn note(self) -> &'static str { "" } }
-// snippet: let fruit = use_combobox();
-// snippet: in Combobox { state: fruit, options: Fruit::options().to_vec(), option: move |o: ComboboxOptionArgs<Fruit>| rsx! { ComboboxOption { .. } } }
-const PLAIN_ROW: &str = r#"        "{o.value.label()}""#;
-
-// snippet: after FRUIT_ENUM
-// snippet: item impl Fruit { fn emoji(self) -> &'static str { "" } fn note(self) -> &'static str { "" } }
-// snippet: let fruit = use_combobox();
-// snippet: in Combobox { state: fruit, options: Fruit::options().to_vec(), option: move |o: ComboboxOptionArgs<Fruit>| rsx! { ComboboxOption { .. } } }
-// snippet: mirrors RowContent,SelectDemo
-const RICH_ROW: &str = r#"        Text { component: "span", size: "xl", "aria-hidden": "true", "{o.value.emoji()}" }
-        Flex {
-            direction: "column",
-            justify: "center",
-            align: "flex-start",
-            sx: sx().gap("0"),
-            Text { component: "span", size: "sm", "{o.value.label()}" }
-            Text {
-                component: "span",
-                size: "xs",
-                sx: sx().color("text-dimmed"),
-                "{o.value.note()}"
-            }
-        }"#;
+/// The page's own source: the printed parts are cut from its live demo.
+const FILE: DemoFile = DemoFile(include_str!("combobox.rs"));
 
 /// Suggestions and fetching wire their rows the same way: picking one fills
 /// the text.
@@ -227,13 +54,15 @@ fn mode_code(_: &Control, values: &DemoValues) -> Vec<String> {
 
 fn option_code(_: &Control, values: &DemoValues) -> Vec<String> {
     let wiring = match suggesting(values) {
-        true => SUGGESTION_WIRING,
-        false => SELECT_WIRING,
+        true => FILE.section("suggestion_wiring"),
+        false => FILE.section("select_wiring"),
     };
     let row = match values.str("option").as_str() {
-        "true" => RICH_ROW,
-        _ => PLAIN_ROW,
+        "true" => FILE.section("rich_row"),
+        _ => FILE.section("plain_row"),
     };
+    let (wiring, row) = (indent(&indent(&wiring)), indent(&indent(&row)));
+    let (wiring, row) = (wiring.trim_end(), row.trim_end());
     vec![format!(
         "option: move |o: ComboboxOptionArgs<Fruit>| rsx! {{\n    \
          ComboboxOption {{\n{wiring}\n{row}\n    }}\n}}"
@@ -243,28 +72,31 @@ fn option_code(_: &Control, values: &DemoValues) -> Vec<String> {
 /// The trigger, disabled along with the combobox as the `disabled` row asks.
 fn trigger_code(values: &DemoValues) -> String {
     let trigger = if fetching(values) {
-        FETCHING_TRIGGER
+        FILE.section("fetching_trigger")
     } else if suggesting(values) {
-        SUGGESTIONS_TRIGGER
+        FILE.section("suggestions_trigger")
     } else {
-        SELECT_TRIGGER
+        FILE.section("select_trigger")
     };
-    let width = "    sx: sx().width(\"280px\"),\n";
-    match values.str("disabled") == "true" {
-        true => trigger.replacen(width, &format!("{width}    disabled: true,\n"), 1),
-        false => trigger.to_string(),
-    }
+    let disabled = match values.str("disabled") == "true" {
+        true => "\n    disabled: true,\n",
+        false => "\n",
+    };
+    trigger.replacen("\n    disabled,\n", disabled, 1)
 }
 
 fn preamble(values: &DemoValues, source: &str) -> String {
     let (search, state) = match values.str("mode").as_str() {
-        "fetching" => (FETCHING_SEARCH, FETCHING_STATE),
-        "suggestions" => ("", SUGGESTIONS_STATE),
-        _ => ("", SELECT_STATE),
+        "fetching" => (Some("search"), "fetching_state"),
+        "suggestions" => (None, "suggestions_state"),
+        _ => (None, "select_state"),
     };
-    format!("{FRUIT_ENUM}{search}{state}{source}")
+    let search = search.map_or(String::new(), |search| FILE.section(search) + "\n\n");
+    let (fruit, state) = (FILE.section("fruit"), FILE.section(state));
+    format!("{fruit}\n\n{search}{state}\n\n{source}")
 }
 
+// demo-code: fruit start
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Fruit {
     Apple,
@@ -276,6 +108,7 @@ enum Fruit {
     Mango,
     Grape,
 }
+// demo-code: fruit end
 
 impl Fruit {
     fn emoji(self) -> &'static str {
@@ -305,26 +138,29 @@ impl Fruit {
 }
 
 /// What a row draws, plain or rich - the same either side of the mode toggle.
-#[component]
-fn RowContent(fruit: Fruit, rich: bool) -> Element {
+fn row(o: &ComboboxOptionArgs<Fruit>, rich: bool) -> Element {
     rsx! {
         if rich {
-            Text { component: "span", size: "xl", "aria-hidden": "true", "{fruit.emoji()}" }
+            // demo-code: rich_row start
+            Text { component: "span", size: "xl", "aria-hidden": "true", "{o.value.emoji()}" }
             Flex {
                 direction: "column",
                 justify: "center",
                 align: "flex-start",
                 sx: sx().gap("0"),
-                Text { component: "span", size: "sm", "{fruit.label()}" }
+                Text { component: "span", size: "sm", "{o.value.label()}" }
                 Text {
                     component: "span",
                     size: "xs",
                     sx: sx().color("text-dimmed"),
-                    "{fruit.note()}"
+                    "{o.value.note()}"
                 }
             }
+            // demo-code: rich_row end
         } else {
-            "{fruit.label()}"
+            // demo-code: plain_row start
+            "{o.value.label()}"
+            // demo-code: plain_row end
         }
     }
 }
@@ -332,13 +168,14 @@ fn RowContent(fruit: Fruit, rich: bool) -> Element {
 /// A button opens the list, a pick closes it, and the pick is shown below.
 #[component]
 fn SelectDemo(values: DemoValues) -> Element {
-    let fruit = use_combobox();
-    let mut picked = use_signal(|| None::<Fruit>);
     let rich = values.str("option") == "true";
     let disabled = values.str("disabled") == "true";
-
+    // demo-code: select_state start
+    let fruit = use_combobox();
+    let mut picked = use_signal(|| None::<Fruit>);
     // A `combobox` role takes no name from its content, so the label names it.
     let label = format!("{}-label", fruit.id());
+    // demo-code: select_state end
     rsx! {
         Flex {
             direction: "column",
@@ -353,14 +190,17 @@ fn SelectDemo(values: DemoValues) -> Element {
                 labelled_by: label.clone(),
                 option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
                     ComboboxOption {
+                        // demo-code: select_wiring start
                         selected: picked() == Some(o.value),
                         onpick: move |_| {
                             picked.set(Some(o.value));
                             fruit.close();
                         },
-                        RowContent { fruit: o.value, rich }
+                        // demo-code: select_wiring end
+                        {row(&o, rich)}
                     }
                 },
+                // demo-code: select_trigger start
                 Text { id: "{label}", size: "sm", "Fruit" }
                 Button {
                     variant: "outlined",
@@ -378,6 +218,7 @@ fn SelectDemo(values: DemoValues) -> Element {
                         None => rsx! { "Pick a fruit" },
                     }
                 }
+                // demo-code: select_trigger end
             }
             Text {
                 size: "sm",
@@ -391,6 +232,10 @@ fn SelectDemo(values: DemoValues) -> Element {
     }
 }
 
+// demo-code: search start
+/// How long the fake search takes: long enough to see, short enough to type through.
+const LATENCY: Duration = Duration::from_millis(700);
+
 /// The fruit whose label contains `query`, case-insensitively.
 fn matching(query: &str) -> Vec<Fruit> {
     let query = query.to_lowercase();
@@ -400,20 +245,25 @@ fn matching(query: &str) -> Vec<Fruit> {
         .filter(|fruit| fruit.label().to_lowercase().contains(&query))
         .collect()
 }
+// demo-code: search end
 
 /// Every keystroke starts a fake search that answers after [`LATENCY`], and a
 /// newer keystroke cancels the older one by dropping its timer.
 #[component]
 fn FetchingDemo(values: DemoValues) -> Element {
-    let suggestions = use_combobox();
     let rich = values.str("option") == "true";
     let disabled = values.str("disabled") == "true";
+    // demo-code: fetching_state start
+    let suggestions = use_combobox();
     let mut text = use_signal(String::new);
     // One signal, not a list plus a `loading` flag: `None` *is* the search in
     // flight, so the two can never disagree.
     let mut results = use_signal(|| Some(Vec::<Fruit>::new()));
+    // The answer still on its way. Replacing it drops the older one, so a slow
+    // answer never overwrites a newer query's.
     let mut pending = use_signal(|| None::<Box<dyn TimerSubscription>>);
     use_drop(move || pending.set(None));
+    // demo-code: fetching_state end
 
     rsx! {
         Combobox {
@@ -431,15 +281,16 @@ fn FetchingDemo(values: DemoValues) -> Element {
                         text.set(o.value.label());
                         suggestions.close();
                     },
-                    RowContent { fruit: o.value, rich }
+                    {row(&o, rich)}
                 }
             },
+            // demo-code: fetching_trigger start
             TextField {
                 sx: sx().width("280px"),
+                disabled,
                 label: "Fruit",
                 placeholder: "Type a fruit",
                 value: text(),
-                disabled,
                 attributes: suggestions.a11y_attributes(),
                 onblur: move |_| suggestions.close(),
                 oninput: move |next: String| {
@@ -447,14 +298,12 @@ fn FetchingDemo(values: DemoValues) -> Element {
                     suggestions.open();
                     results.set(None);
                     let answer = timer().map(|timer| {
-                        timer.after(
-                            LATENCY,
-                            Box::new(move || results.set(Some(matching(&next)))),
-                        )
+                        timer.after(LATENCY, Box::new(move || results.set(Some(matching(&next)))))
                     });
                     pending.set(answer);
                 },
             }
+            // demo-code: fetching_trigger end
         }
     }
 }
@@ -462,10 +311,11 @@ fn FetchingDemo(values: DemoValues) -> Element {
 /// Typing filters the list; picking a suggestion fills the field.
 #[component]
 fn SuggestionsDemo(values: DemoValues) -> Element {
-    let suggestions = use_combobox();
-    let mut text = use_signal(String::new);
     let rich = values.str("option") == "true";
     let disabled = values.str("disabled") == "true";
+    // demo-code: suggestions_state start
+    let suggestions = use_combobox();
+    let mut text = use_signal(String::new);
 
     let matches: Vec<Fruit> = Fruit::options()
         .iter()
@@ -477,6 +327,7 @@ fn SuggestionsDemo(values: DemoValues) -> Element {
                 .contains(&text().to_lowercase())
         })
         .collect();
+    // demo-code: suggestions_state end
 
     rsx! {
         Combobox {
@@ -487,19 +338,22 @@ fn SuggestionsDemo(values: DemoValues) -> Element {
             options: matches,
             option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
                 ComboboxOption {
+                    // demo-code: suggestion_wiring start
                     onpick: move |_| {
                         text.set(o.value.label());
                         suggestions.close();
                     },
-                    RowContent { fruit: o.value, rich }
+                    // demo-code: suggestion_wiring end
+                    {row(&o, rich)}
                 }
             },
+            // demo-code: suggestions_trigger start
             TextField {
                 sx: sx().width("280px"),
+                disabled,
                 label: "Fruit",
                 placeholder: "Type a fruit",
                 value: text(),
-                disabled,
                 attributes: suggestions.a11y_attributes(),
                 onblur: move |_| suggestions.close(),
                 oninput: move |next| {
@@ -508,6 +362,7 @@ fn SuggestionsDemo(values: DemoValues) -> Element {
                 },
             }
             input { r#type: "hidden", name: "fruit", value: "{text()}" }
+            // demo-code: suggestions_trigger end
         }
     }
 }

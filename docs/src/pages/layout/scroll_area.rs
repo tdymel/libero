@@ -15,17 +15,6 @@ use libero::{
 /// The page's own source: the printed parts are cut from its live demo.
 const FILE: DemoFile = DemoFile(include_str!("scroll_area.rs"));
 
-/// Fixed wiring; `area`, `position` and `edge` are declared in the `state` section. The plain content
-/// makes the area a tab stop, so it needs a name.
-// snippet: mirrors ScrollAreaPage
-const FIXED: [&str; 5] = [
-    r#"aria_label: "Items""#,
-    "handle: area",
-    "onscroll: move |event: ScrollPositionEvent| position.set(event)",
-    r#"ontopreached: move |_| edge.set("top")"#,
-    r#"onbottomreached: move |_| edge.set("bottom")"#,
-];
-
 // demo-code: readout start
 /// Rounded percentages: a raw `{event:?}` reflows the row every tick.
 fn readout(event: ScrollPositionEvent) -> String {
@@ -144,7 +133,11 @@ pub fn ScrollAreaPage() -> Element {
                     "true" => FILE.section("virtual").to_string(),
                     _ => FILE.section("content").to_string(),
                 }),
-                fixed: FIXED.map(str::to_string).to_vec(),
+                fixed: FILE
+                    .section("wiring")
+                    .lines()
+                    .map(|line| line.trim_end_matches(',').to_string())
+                    .collect(),
                 controls: vec![
                     Control::toggle("scrollbars", ["vertical", "horizontal", "both", "none"])
                         .labels(["Vertical", "Horizontal", "Both", "None"])
@@ -182,13 +175,14 @@ pub fn ScrollAreaPage() -> Element {
                                     UNSET => Input::None,
                                     color => Input::from(color),
                                 },
+                                // The plain content makes the area a tab stop, so it needs a name.
+                                // demo-code: wiring start
                                 aria_label: "Items",
                                 handle: area,
-                                onscroll: move |event: ScrollPositionEvent| {
-                                    position.set(event)
-                                },
+                                onscroll: move |event: ScrollPositionEvent| position.set(event),
                                 ontopreached: move |_| edge.set("top"),
                                 onbottomreached: move |_| edge.set("bottom"),
+                                // demo-code: wiring end
                                 if values.str("virtualize") == "true" {
                                     // demo-code: virtual start
                                     List {

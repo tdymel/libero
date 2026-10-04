@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props};
+use crate::components::{
+    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, Wrap, a11y, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::components::{
     Button, Checkbox, Code, FieldName, Fields, Fieldset, Flex, Form, FormPart, PasswordField, Rule,
@@ -64,50 +66,15 @@ __BUTTONS__
     }
 }"#;
 
-// snippet: ignore - spliced into `FORM_CODE`
-// snippet: mirrors SignupForm
-const COMPANY_FIELDS: &str = r#"
-            Checkbox { label: "Sign up as a company", name: Signup::FIELDS.company() }
-            // Rendered only while ticked, so its rules leave with it.
-            if signup.read().company {
-                TextField {
-                    label: "Company name",
-                    name: Signup::FIELDS.company_name(),
-                    validate: not_empty.error("Enter the company name."),
-                }
-            }"#;
+/// The page's own source: the printed parts are cut from its live demo.
+const FILE: DemoFile = DemoFile(include_str!("form.rs"));
 
-// snippet: mirrors SignupForm
-const SUBMIT_BUTTON: &str = r#"            Button { r#type: "submit", "Create account" }"#;
-
-// snippet: ignore - spliced into `FORM_CODE`
-// snippet: mirrors SignupForm
-const HANDLE_BUTTONS: &str = r#"            Text { role: "status", if form.is_valid() { "Ready to send." } else { "Not ready yet." } }
-            Flex { gap: "sm",
-                Button { r#type: "submit", "Create account" }
-                CheckButton {}
-                Button { variant: "outlined", onclick: move |_| form.reset(), "Clear" }
-            }"#;
-
-// snippet: mirrors CheckButton
-const CHECK_BUTTON: &str = r#"
-
-/// Anything inside a form reaches its handle without a prop.
-#[component]
-fn CheckButton() -> Element {
-    let form = use_form_context();
-    rsx! {
-        Button {
-            variant: "tonal",
-            onclick: move |_| {
-                if let Some(form) = form {
-                    form.validate();
-                }
-            },
-            "Check"
-        }
-    }
-}"#;
+/// A section of the live form at the depth `FORM_CODE` splices it in.
+fn nest(name: &str) -> String {
+    indent(&indent(&indent(&FILE.section(name))))
+        .trim_end()
+        .to_string()
+}
 
 fn form_code(values: &DemoValues, _: &str) -> String {
     let handle = values.str("form") == "true";
@@ -118,6 +85,10 @@ fn form_code(values: &DemoValues, _: &str) -> String {
         } else {
             ""
         }
+    };
+    let company_fields = match values.str("company") == "true" {
+        true => format!("\n{}", nest("company")),
+        false => String::new(),
     };
     let code = FORM_CODE
         .replace(
@@ -139,19 +110,15 @@ fn form_code(values: &DemoValues, _: &str) -> String {
             "__COMPANY_FIELDS__",
             company("\n    company: bool,\n    company_name: String,"),
         )
-        .replace("__COMPANY__", company(COMPANY_FIELDS))
+        .replace("__COMPANY__", &company_fields)
         .replace("__HANDLE__", pick("\n    let form = use_form();"))
         .replace("__FORM__", pick("\n            form,"))
         .replace(
             "__BUTTONS__",
-            if handle {
-                HANDLE_BUTTONS
-            } else {
-                SUBMIT_BUTTON
-            },
+            &nest(if handle { "handle_buttons" } else { "submit" }),
         );
     match handle {
-        true => format!("{code}{CHECK_BUTTON}"),
+        true => format!("{code}\n\n{}", FILE.section("check_button")),
         false => code,
     }
 }
@@ -295,7 +262,9 @@ fn SignupForm(summary_title: bool, handle: bool, company: bool) -> Element {
             EmailField { label: "Email", name: Signup::FIELDS.email(), validate: not_empty.error("Enter your email.") }
             NewPasswordFieldset { path: Signup::FIELDS.password() }
             if company {
+                // demo-code: company start
                 Checkbox { label: "Sign up as a company", name: Signup::FIELDS.company() }
+                // Rendered only while ticked, so its rules leave with it.
                 if signup.read().company {
                     TextField {
                         label: "Company name",
@@ -303,6 +272,7 @@ fn SignupForm(summary_title: bool, handle: bool, company: bool) -> Element {
                         validate: not_empty.error("Enter the company name."),
                     }
                 }
+                // demo-code: company end
             }
             Checkbox {
                 label: "I accept the terms",
@@ -310,14 +280,18 @@ fn SignupForm(summary_title: bool, handle: bool, company: bool) -> Element {
                 validate: not_empty.error("Accept the terms to continue."),
             }
             if handle {
+                // demo-code: handle_buttons start
                 Text { role: "status", if form.is_valid() { "Ready to send." } else { "Not ready yet." } }
                 Flex { gap: "sm",
                     Button { r#type: "submit", "Create account" }
                     CheckButton {}
                     Button { variant: "outlined", onclick: move |_| form.reset(), "Clear" }
                 }
+                // demo-code: handle_buttons end
             } else {
+                // demo-code: submit start
                 Button { r#type: "submit", "Create account" }
+                // demo-code: submit end
             }
             Text { role: "status",
                 if sent() { "Account created." }
@@ -326,6 +300,8 @@ fn SignupForm(summary_title: bool, handle: bool, company: bool) -> Element {
     }
 }
 
+// demo-code: check_button start
+/// Anything inside a form reaches its handle without a prop.
 #[component]
 fn CheckButton() -> Element {
     let form = use_form_context();
@@ -341,6 +317,7 @@ fn CheckButton() -> Element {
         }
     }
 }
+// demo-code: check_button end
 
 /// The specialized field the example uses, the one Getting started builds.
 #[component]

@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props};
+use crate::components::{
+    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props,
+};
 use libero::components::Pictogram;
 use pictogram_icons_lucide as lucide;
 
@@ -11,92 +13,10 @@ use libero::{
     sx::sx,
 };
 
-/// The flag sits on the option, inside the one `options` prop. A section
-/// this list refuses, rather than a step the type refuses everywhere.
-// snippet: after STEP_ENUM
-// snippet: let mut open = use_signal(|| AccordionOpen::One(Some(Step::Shipping)));
-// snippet: in Accordion { open: open(), onchange: move |next| open.set(next), panel: |_: Step| rsx! {}, .. }
-const DISABLED_OPTION: &str =
-    r#"options: OptionList::from_options().disabling(|step| *step == Step::Review)"#;
+/// The page's own source: the printed parts are cut from its live demo.
+const FILE: DemoFile = DemoFile(include_str!("accordion.rs"));
 
-/// The sections are the enum, so the snippet is a lie without it.
-// snippet: mirrors Step
-const STEP_ENUM: &str = r#"#[derive(Clone, PartialEq, Options)]
-enum Step {
-    Shipping,
-    #[option(label = "Payment method")]
-    Payment,
-    Review,
-}
-
-"#;
-
-/// In `One` mode each step's button opens the next, which closes this one
-/// with focus inside it - the case the component hands focus back for.
-// snippet: after STEP_ENUM
-// snippet: let mut open = use_signal(|| AccordionOpen::One(Some(Step::Shipping)));
-// snippet: in Accordion { open: open(), onchange: move |next| open.set(next), .. }
-// snippet: mirrors AccordionPage
-const ONE_PANEL: &str = r#"panel: move |step: Step| match step {
-    Step::Shipping => rsx! {
-        Flex { gap: "sm", align: "flex-start",
-            Text { "Where should the parcel go?" }
-            Button { onclick: move |_| open.set(Some(Step::Payment).into()), "Continue" }
-        }
-    },
-    Step::Payment => rsx! {
-        Flex { gap: "sm", align: "flex-start",
-            Text { "Card, invoice or bank transfer." }
-            Button { onclick: move |_| open.set(Some(Step::Review).into()), "Continue" }
-        }
-    },
-    Step::Review => rsx! { Text { "Check the order, then place it." } },
-}"#;
-
-// snippet: after STEP_ENUM
-// snippet: let mut open = use_signal(|| AccordionOpen::Many(vec![Step::Shipping]));
-// snippet: in Accordion { open: open(), onchange: move |next| open.set(next), .. }
-// snippet: mirrors AccordionPage
-const MANY_PANEL: &str = r#"panel: |step: Step| match step {
-    Step::Shipping => rsx! { Text { "Where should the parcel go?" } },
-    Step::Payment => rsx! { Text { "Card, invoice or bank transfer." } },
-    Step::Review => rsx! { Text { "Check the order, then place it." } },
-}"#;
-
-// A trigger is a `button`, so its content stays phrasing: a `span` `Box`, not a `Flex` `div`.
-// The inline-flex row centres the icon on the label.
-// snippet: after STEP_ENUM
-// snippet: item impl Step { fn icon(&self) -> Element { rsx! {} } }
-// snippet: let mut open = use_signal(|| AccordionOpen::One(Some(Step::Shipping)));
-// snippet: in Accordion { open: open(), onchange: move |next| open.set(next), panel: |_: Step| rsx! {}, .. }
-// snippet: mirrors rich
-const RICH: &str = r#"option_label: |step: Step| OptionLabel::rich(
-    step.label(),
-    rsx! {
-        Box {
-            component: "span",
-            sx: sx().display("inline-flex").align_items("center").gap("sm"),
-            Icon { variant: "standard", size: "sm", {step.icon()} }
-            "{step.label()}"
-        }
-    },
-)"#;
-
-/// Printed with the rich label, which calls it.
-// snippet: after STEP_ENUM
-// snippet: mirrors Step
-const STEP_ICON: &str = r#"impl Step {
-    fn icon(&self) -> Element {
-        match self {
-            Step::Shipping => rsx! { Pictogram { icon: lucide::truck::outlined } },
-            Step::Payment => rsx! { Pictogram { icon: lucide::credit_card::outlined } },
-            Step::Review => rsx! { Pictogram { icon: lucide::clipboard_check::outlined } },
-        }
-    }
-}
-
-"#;
-
+// demo-code: step start
 #[derive(Clone, PartialEq, Options)]
 enum Step {
     Shipping,
@@ -104,7 +24,9 @@ enum Step {
     Payment,
     Review,
 }
+// demo-code: step end
 
+// demo-code: icon start
 impl Step {
     fn icon(&self) -> Element {
         match self {
@@ -114,8 +36,12 @@ impl Step {
         }
     }
 }
+// demo-code: icon end
 
+// A trigger is a `button`, so its content stays phrasing: a `span` `Box`, not a `Flex` `div`.
+// The inline-flex row centres the icon on the label.
 fn rich(step: Step) -> OptionLabel {
+    // demo-code: rich start
     OptionLabel::rich(
         step.label(),
         rsx! {
@@ -127,6 +53,7 @@ fn rich(step: Step) -> OptionLabel {
             }
         },
     )
+    // demo-code: rich end
 }
 
 fn many(values: &DemoValues) -> bool {
@@ -202,10 +129,11 @@ pub fn AccordionPage() -> Element {
                         "AccordionOpen::One(Some(Step::Shipping))"
                     };
                     let icon = match values.str("rich_label") == "true" {
-                        true => STEP_ICON,
-                        false => "",
+                        true => format!("{}\n\n", FILE.section("icon")),
+                        false => String::new(),
                     };
-                    format!("{STEP_ENUM}{icon}let mut open = use_signal(|| {initial});\n\n{source}")
+                    let step = FILE.section("step");
+                    format!("{step}\n\n{icon}let mut open = use_signal(|| {initial});\n\n{source}")
                 }),
                 fixed: vec![
                     "open: open()".to_string(),
@@ -215,7 +143,8 @@ pub fn AccordionPage() -> Element {
                     Control::toggle("mode", ["one", "many"])
                         .labels(["One", "Many"])
                         .code(|_, values| {
-                            vec![if many(values) { MANY_PANEL } else { ONE_PANEL }.to_string()]
+                            let mode = if many(values) { "many" } else { "one" };
+                            vec![format!("panel: {}", FILE.section(mode).trim_end_matches(','))]
                         }),
                     Control::sizes("size")
                         .default("md"),
@@ -226,14 +155,14 @@ pub fn AccordionPage() -> Element {
                     // for one named section rather than for a prop of its own.
                     Control::switch("disabled_option").code(|_, values| {
                         if values.str("disabled_option") == "true" {
-                            vec![DISABLED_OPTION.to_string()]
+                            vec![format!("options: {}", FILE.section("disabled"))]
                         } else {
                             vec![]
                         }
                     }),
                     Control::switch("rich_label").code(|_, values| {
                         if values.str("rich_label") == "true" {
-                            vec![RICH.to_string()]
+                            vec![format!("option_label: |step: Step| {}", FILE.section("rich"))]
                         } else {
                             vec![]
                         }
@@ -242,28 +171,43 @@ pub fn AccordionPage() -> Element {
                 render: move |values: DemoValues| {
                     let is_many = many(&values);
                     let mut open = if is_many { several } else { one };
-                    let panel = move |step: Step| match step {
-                        Step::Shipping if !is_many => rsx! {
-                            Flex { gap: "sm", align: "flex-start",
-                                Text { "Where should the parcel go?" }
-                                Button {
-                                    onclick: move |_| open.set(Some(Step::Payment).into()),
-                                    "Continue"
-                                }
-                            }
-                        },
-                        Step::Payment if !is_many => rsx! {
-                            Flex { gap: "sm", align: "flex-start",
-                                Text { "Card, invoice or bank transfer." }
-                                Button {
-                                    onclick: move |_| open.set(Some(Step::Review).into()),
-                                    "Continue"
-                                }
-                            }
-                        },
-                        Step::Shipping => rsx! { Text { "Where should the parcel go?" } },
-                        Step::Payment => rsx! { Text { "Card, invoice or bank transfer." } },
-                        Step::Review => rsx! { Text { "Check the order, then place it." } },
+                    let panel = if is_many {
+                        Callback::new(
+                            // demo-code: many start
+                            |step: Step| match step {
+                                Step::Shipping => rsx! { Text { "Where should the parcel go?" } },
+                                Step::Payment => rsx! { Text { "Card, invoice or bank transfer." } },
+                                Step::Review => rsx! { Text { "Check the order, then place it." } },
+                            },
+                            // demo-code: many end
+                        )
+                    } else {
+                        Callback::new(
+                            // demo-code: one start
+                            move |step: Step| match step {
+                                Step::Shipping => rsx! {
+                                    Flex { gap: "sm", align: "flex-start",
+                                        Text { "Where should the parcel go?" }
+                                        Button { onclick: move |_| open.set(Some(Step::Payment).into()), "Continue" }
+                                    }
+                                },
+                                Step::Payment => rsx! {
+                                    Flex { gap: "sm", align: "flex-start",
+                                        Text { "Card, invoice or bank transfer." }
+                                        Button { onclick: move |_| open.set(Some(Step::Review).into()), "Continue" }
+                                    }
+                                },
+                                Step::Review => rsx! { Text { "Check the order, then place it." } },
+                            },
+                            // demo-code: one end
+                        )
+                    };
+                    let options = if values.str("disabled_option") == "true" {
+                        // demo-code: disabled start
+                        OptionList::from_options().disabling(|step| *step == Step::Review)
+                        // demo-code: disabled end
+                    } else {
+                        OptionList::from_options()
                     };
                     // Keyed by mode, so a switch remounts it: `panel` captures `is_many` and
                     // the mode's signal, and a section redraws only when it changes.
@@ -273,11 +217,7 @@ pub fn AccordionPage() -> Element {
                                 key: "{mode}",
                                 size: values.str("size"),
                                 heading: values.str("heading"),
-                                options: {
-                                    let off = values.str("disabled_option") == "true";
-                                    OptionList::from_options()
-                                        .disabling(move |step| off && *step == Step::Review)
-                                },
+                                options: options.clone(),
                                 option_label: (values.str("rich_label") == "true").then(|| Callback::new(rich)),
                                 open: open(),
                                 onchange: move |next| open.set(next),

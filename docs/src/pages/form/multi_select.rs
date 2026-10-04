@@ -1,8 +1,8 @@
 use super::CLEAR_NAME;
 use super::dropdown_parts::{SELECT_DROPDOWN, list_dropdown_parts};
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls, field_props, prop,
-    props, readonly_prop, required_prop, status_prop,
+    Control, Demo, DemoFile, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls,
+    field_props, indent, prop, props, readonly_prop, required_prop, status_prop,
 };
 use dioxus::prelude::*;
 
@@ -27,145 +27,10 @@ use libero::{
     sx::sx,
 };
 
-/// The enum is the option list, so the snippet has to show it.
-// snippet: mirrors Topping
-const TOPPING_ENUM: &str = r#"#[derive(Clone, Copy, PartialEq, Options)]
-enum Topping {
-    Cheese,
-    Mushrooms,
-    Olives,
-    Onions,
-    Peppers,
-    Pineapple,
-}
+/// The page's own source: the printed parts are cut from its live demo.
+const FILE: DemoFile = DemoFile(include_str!("multi_select.rs"));
 
-"#;
-
-/// Only printed while the custom rows are on - the plain snippet never calls it.
-// snippet: after TOPPING_ENUM
-// snippet: mirrors Topping
-const TOPPING_IMPL: &str = r#"impl Topping {
-    fn emoji(self) -> &'static str {
-        match self {
-            Self::Cheese => "🧀",
-            Self::Mushrooms => "🍄",
-            Self::Olives => "🫒",
-            Self::Onions => "🧅",
-            Self::Peppers => "🫑",
-            Self::Pineapple => "🍍",
-        }
-    }
-
-    fn note(self) -> &'static str {
-        match self {
-            Self::Cheese => "Melts over everything",
-            Self::Mushrooms => "Earthy, browns well",
-            Self::Olives => "Salty, cures the dough",
-            Self::Onions => "Sharp raw, sweet cooked",
-            Self::Peppers => "Crisp, mild heat",
-            Self::Pineapple => "Divides the table",
-        }
-    }
-}
-
-"#;
-
-// snippet: after TOPPING_ENUM
-// snippet: item impl Topping { fn emoji(self) -> &'static str { "" } fn note(self) -> &'static str { "" } }
-// snippet: let mut value = use_signal(Vec::<Topping>::new);
-// snippet: in MultiSelect { value: value(), onchange: move |next| value.set(next), .. }
-// snippet: mirrors topping_row
-const CUSTOM_OPTION: &str = r#"option: move |o: SelectOptionArgs<Topping>| rsx! {
-    Text { component: "span", size: "lg", "aria-hidden": "true", "{o.value.emoji()}" }
-    Text { component: "span", sx: sx().flex("1 1 auto"), "{o.value.label()}" }
-    if o.selected {
-        Text { component: "span", "aria-hidden": "true", "✓" }
-    }
-}"#;
-
-// snippet: after TOPPING_ENUM
-// snippet: item impl Topping { fn emoji(self) -> &'static str { "" } fn note(self) -> &'static str { "" } }
-// snippet: let mut value = use_signal(Vec::<Topping>::new);
-// snippet: let words = use_localization();
-// snippet: in MultiSelect { value: value(), onchange: move |next| value.set(next), .. }
-// snippet: mirrors topping_selection
-const CUSTOM_SELECTION: &str = r#"selection: move |s: SelectionArgs<Topping>| rsx! {
-    // Unclipped, so the x's 24px hit area reaches past the pill.
-    Chip { size: "xs", variant: "outlined", sx: sx().overflow("visible"),
-        // The chip is the caller's, remove control included. The keys stay
-        // the control's either way.
-        trailing: rsx! {
-            // A disabled or read-only field's chip has no remove control.
-            if !s.disabled && !s.readonly {
-                // Keeps focus in the field, and the click off the field.
-                span { onmousedown: move |event| event.prevent_default(),
-                    onclick: move |event| event.stop_propagation(),
-                    ActionIcon {
-                        // `words` is `use_localization()`, read in the component.
-                        aria_label: fill(words.common.remove, &[("label", &s.value.label())]),
-                        size: "16px",
-                        // A `<button>` inherits no colour of its own.
-                        sx: sx().color("inherit"),
-                        tabindex: "-1",
-                        onclick: move |_| s.remove.call(()),
-                        "x"
-                    }
-                }
-            }
-        },
-        span { "aria-hidden": "true", "{s.value.emoji()} " }
-        "{s.value.label()}"
-    }
-}"#;
-
-/// A filter can test anything the caller knows: this one searches the note too.
-// snippet: after TOPPING_ENUM
-// snippet: item impl Topping { fn emoji(self) -> &'static str { "" } fn note(self) -> &'static str { "" } }
-// snippet: let mut value = use_signal(Vec::<Topping>::new);
-// snippet: in MultiSelect { value: value(), onchange: move |next| value.set(next), .. }
-// snippet: mirrors topping_filter
-const CUSTOM_FILTER: &str = r#"filter: move |f: SelectFilterArgs<Topping>| {
-    let query = f.query.to_lowercase();
-    f.value.label().to_lowercase().contains(&query)
-        || f.value.note().to_lowercase().contains(&query)
-}"#;
-
-/// Named runs, built explicitly: the caller is the only one who knows both
-/// the order the groups go in and what each is called.
-// snippet: after TOPPING_ENUM
-// snippet: let mut value = use_signal(Vec::<Topping>::new);
-// snippet: in MultiSelect { value: value(), onchange: move |next| value.set(next), .. }
-// snippet: mirrors topping_options
-const GROUPED: &str = r#"options: OptionList::grouped()
-    .group("Dairy", [Topping::Cheese])
-    .group("Vegetables", [Topping::Mushrooms, Topping::Olives, Topping::Onions, Topping::Peppers])
-    .group("Fruit", [Topping::Pineapple])"#;
-
-/// The flag sits on the option, in the same builder as the group - a row the
-/// list refuses, rather than a value the type refuses everywhere.
-// snippet: after TOPPING_ENUM
-// snippet: let mut value = use_signal(Vec::<Topping>::new);
-// snippet: in MultiSelect { value: value(), onchange: move |next| value.set(next), .. }
-// snippet: mirrors topping_options
-const SOLD_OUT: &str = r#"options: OptionList::new([
-    OptionItem::new(Topping::Cheese),
-    OptionItem::new(Topping::Mushrooms),
-    OptionItem::new(Topping::Olives),
-    OptionItem::new(Topping::Onions),
-    OptionItem::new(Topping::Peppers),
-    OptionItem::new(Topping::Pineapple).disabled(true),
-])"#;
-
-/// Both at once, since the two switches share the one `options` prop.
-// snippet: after TOPPING_ENUM
-// snippet: let mut value = use_signal(Vec::<Topping>::new);
-// snippet: in MultiSelect { value: value(), onchange: move |next| value.set(next), .. }
-// snippet: mirrors topping_options
-const GROUPED_SOLD_OUT: &str = r#"options: OptionList::grouped()
-    .group("Dairy", [Topping::Cheese])
-    .group("Vegetables", [Topping::Mushrooms, Topping::Olives, Topping::Onions, Topping::Peppers])
-    .group("Fruit", [OptionItem::new(Topping::Pineapple).disabled(true)])"#;
-
+// demo-code: topping start
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Topping {
     Cheese,
@@ -175,32 +40,69 @@ enum Topping {
     Peppers,
     Pineapple,
 }
+// demo-code: topping end
 
 /// The two switches drive one prop, so the list is built once from both. Pineapple sells out,
 /// matching `status: warning`.
 fn topping_options(values: &DemoValues) -> OptionList<Topping> {
-    let pineapple = OptionItem::new(Topping::Pineapple).disabled(values.str("sold_out") == "true");
-    let vegetables = [
-        Topping::Mushrooms,
-        Topping::Olives,
-        Topping::Onions,
-        Topping::Peppers,
-    ];
-    match values.str("grouped") == "true" {
-        true => OptionList::grouped()
-            .group("Dairy", [Topping::Cheese])
-            .group("Vegetables", vegetables)
-            .group("Fruit", [pineapple]),
-        false => OptionList::new(
-            [Topping::Cheese]
-                .into_iter()
-                .chain(vegetables)
-                .map(OptionItem::new)
-                .chain([pineapple]),
-        ),
+    match (
+        values.str("grouped") == "true",
+        values.str("sold_out") == "true",
+    ) {
+        (true, true) => {
+            // demo-code: grouped_sold_out start
+            OptionList::grouped()
+                .group("Dairy", [Topping::Cheese])
+                .group(
+                    "Vegetables",
+                    [
+                        Topping::Mushrooms,
+                        Topping::Olives,
+                        Topping::Onions,
+                        Topping::Peppers,
+                    ],
+                )
+                .group(
+                    "Fruit",
+                    [OptionItem::new(Topping::Pineapple).disabled(true)],
+                )
+            // demo-code: grouped_sold_out end
+        }
+        (true, false) => {
+            // Named runs, built explicitly: only the caller knows their order and names.
+            // demo-code: grouped start
+            OptionList::grouped()
+                .group("Dairy", [Topping::Cheese])
+                .group(
+                    "Vegetables",
+                    [
+                        Topping::Mushrooms,
+                        Topping::Olives,
+                        Topping::Onions,
+                        Topping::Peppers,
+                    ],
+                )
+                .group("Fruit", [Topping::Pineapple])
+            // demo-code: grouped end
+        }
+        (false, true) => {
+            // The flag sits on the option: a row the list refuses, not a value the type refuses.
+            // demo-code: sold_out start
+            OptionList::new([
+                OptionItem::new(Topping::Cheese),
+                OptionItem::new(Topping::Mushrooms),
+                OptionItem::new(Topping::Olives),
+                OptionItem::new(Topping::Onions),
+                OptionItem::new(Topping::Peppers),
+                OptionItem::new(Topping::Pineapple).disabled(true),
+            ])
+            // demo-code: sold_out end
+        }
+        (false, false) => OptionList::from_options(),
     }
 }
 
+// demo-code: impl start
 impl Topping {
     fn emoji(self) -> &'static str {
         match self {
@@ -226,6 +128,7 @@ impl Topping {
         }
     }
 }
+// demo-code: impl end
 
 fn custom(values: &DemoValues) -> bool {
     values.str("custom") == "true"
@@ -239,13 +142,16 @@ fn filtering(values: &DemoValues) -> bool {
 
 /// Matches the note as well as the label: "earthy" finds Mushrooms.
 fn topping_filter(f: SelectFilterArgs<Topping>) -> bool {
+    // demo-code: filter start
     let query = f.query.to_lowercase();
     f.value.label().to_lowercase().contains(&query)
         || f.value.note().to_lowercase().contains(&query)
+    // demo-code: filter end
 }
 
 /// A checkmark as well as the tint: `selected` is on the args for exactly this.
 fn topping_row(o: SelectOptionArgs<Topping>) -> Element {
+    // demo-code: row start
     rsx! {
         Text { component: "span", size: "lg", "aria-hidden": "true", "{o.value.emoji()}" }
         Text { component: "span", sx: sx().flex("1 1 auto"), "{o.value.label()}" }
@@ -253,41 +159,42 @@ fn topping_row(o: SelectOptionArgs<Topping>) -> Element {
             Text { component: "span", "aria-hidden": "true", "✓" }
         }
     }
+    // demo-code: row end
 }
 
 /// The chip's inside is the caller's, the remove control with it - `remove` on
 /// the args is the wiring. The keyboard stays `MultiSelect`'s either way.
 fn topping_selection(words: &'static Localization, s: SelectionArgs<Topping>) -> Element {
-    let label = s.value.label();
-    let remove_label = fill(words.common.remove, &[("label", &label)]);
-    if s.disabled || s.readonly {
-        return rsx! {
-            Chip { size: "xs", variant: "outlined",
-                span { "aria-hidden": "true", "{s.value.emoji()} " }
-                "{label}"
-            }
-        };
-    }
+    // demo-code: selection start
     rsx! {
+        // Unclipped, so the x's 24px hit area reaches past the pill.
         Chip { size: "xs", variant: "outlined", sx: sx().overflow("visible"),
+            // The chip is the caller's, remove control included. The keys stay
+            // the control's either way.
             trailing: rsx! {
-                span {
-                    onmousedown: move |event: MouseEvent| event.prevent_default(),
-                    onclick: move |event: MouseEvent| event.stop_propagation(),
-                    ActionIcon {
-                        aria_label: remove_label,
-                        size: "16px",
-                        sx: sx().color("inherit"),
-                        tabindex: "-1",
-                        onclick: move |_| s.remove.call(()),
-                        "x"
+                // A disabled or read-only field's chip has no remove control.
+                if !s.disabled && !s.readonly {
+                    // Keeps focus in the field, and the click off the field.
+                    span { onmousedown: move |event| event.prevent_default(),
+                        onclick: move |event| event.stop_propagation(),
+                        ActionIcon {
+                            // `words` is `use_localization()`, read in the component.
+                            aria_label: fill(words.common.remove, &[("label", &s.value.label())]),
+                            size: "16px",
+                            // A `<button>` inherits no colour of its own.
+                            sx: sx().color("inherit"),
+                            tabindex: "-1",
+                            onclick: move |_| s.remove.call(()),
+                            "x"
+                        }
                     }
                 }
             },
             span { "aria-hidden": "true", "{s.value.emoji()} " }
-            "{label}"
+            "{s.value.label()}"
         }
     }
+    // demo-code: selection end
 }
 
 #[component]
@@ -412,8 +319,8 @@ pub fn MultiSelectPage() -> Element {
                 wrap: Wrap(|values: &DemoValues, source: &str| match custom(values)
                     || filtering(values)
                 {
-                    true => format!("{TOPPING_ENUM}{TOPPING_IMPL}{source}"),
-                    false => format!("{TOPPING_ENUM}{source}"),
+                    true => format!("{}\n\n{}\n\n{source}", FILE.section("topping"), FILE.section("impl")),
+                    false => format!("{}\n\n{source}", FILE.section("topping")),
                 }),
                 fixed: vec![
                     "sx: sx().width(\"280px\")".to_string(),
@@ -429,8 +336,8 @@ pub fn MultiSelectPage() -> Element {
                     // `selection`.
                     Control::switch("custom").code(|_, values| match custom(values) {
                         true => vec![
-                            CUSTOM_OPTION.to_string(),
-                            CUSTOM_SELECTION.to_string(),
+                            format!("option: move |o: SelectOptionArgs<Topping>| {}", FILE.section("row")),
+                            format!("selection: move |s: SelectionArgs<Topping>| {}", FILE.section("selection")),
                         ],
                         false => vec![],
                     }),
@@ -450,17 +357,23 @@ pub fn MultiSelectPage() -> Element {
                     Control::switch("filter")
                         .hidden_when(|values| values.str("searchable") != "true")
                         .code(|_, values| match filtering(values) {
-                            true => vec![CUSTOM_FILTER.to_string()],
+                            true => vec![format!(
+                                "filter: move |f: SelectFilterArgs<Topping>| {{\n{}}}",
+                                indent(&FILE.section("filter"))
+                            )],
                             false => vec![],
                         }),
                     // Named runs, drawn as `role="group"` with a heading each.
                     Control::switch("grouped").code(|_, values| {
                         match (values.str("grouped").as_str(), values.str("sold_out").as_str()) {
-                            ("true", "true") => vec![GROUPED_SOLD_OUT.to_string()],
-                            ("true", _) => vec![GROUPED.to_string()],
-                            (_, "true") => vec![SOLD_OUT.to_string()],
+                            ("true", "true") => vec!["grouped_sold_out"],
+                            ("true", _) => vec!["grouped"],
+                            (_, "true") => vec!["sold_out"],
                             _ => vec![],
                         }
+                        .into_iter()
+                        .map(|name| format!("options: {}", FILE.section(name)))
+                        .collect()
                     }),
                     // Prints through `grouped` above: the two share the one `options` prop.
                     Control::switch("sold_out").code(|_, _| vec![]),

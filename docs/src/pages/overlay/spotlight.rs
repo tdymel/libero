@@ -1,5 +1,5 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, indent, prop, props,
+    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, Wrap, a11y, indent, prop, props,
 };
 use libero::components::Pictogram;
 use pictogram_icons_lucide as lucide;
@@ -14,22 +14,10 @@ use libero::{
 };
 use std::time::Duration;
 
-/// Each example's actions, printed verbatim above the hook - keep every one in
-/// step with the fn below it.
-// snippet: mirrors commands
-const COMMANDS_CODE: &str = r#"fn commands(mut last: Signal<String>) -> Vec<SpotlightAction> {
-    let run = move |name: &'static str| move |_| last.set(name.to_string());
-    vec![
-        SpotlightAction::new("Home").group("Pages").description("The start page").onclick(run("Home")),
-        SpotlightAction::new("Components").group("Pages").onclick(run("Components")),
-        SpotlightAction::new("Changelog").group("Pages").keywords(["releases", "news"]).onclick(run("Changelog")),
-        SpotlightAction::new("New file").group("Commands").shortcut("Ctrl N").onclick(run("New file")),
-        SpotlightAction::new("Toggle sidebar").group("Commands").shortcut("Ctrl B").onclick(run("Toggle sidebar")),
-        SpotlightAction::new("Sign out").group("Account").onclick(run("Sign out")),
-    ]
-}
-"#;
+/// The page's own source: each example's actions fn prints above its hook.
+const FILE: DemoFile = DemoFile(include_str!("spotlight.rs"));
 
+// demo-code: commands start
 fn commands(mut last: Signal<String>) -> Vec<SpotlightAction> {
     let run = move |name: &'static str| move |_| last.set(name.to_string());
     vec![
@@ -57,19 +45,9 @@ fn commands(mut last: Signal<String>) -> Vec<SpotlightAction> {
             .onclick(run("Sign out")),
     ]
 }
+// demo-code: commands end
 
-// snippet: mirrors files
-const FILES_CODE: &str = r#"fn files(mut last: Signal<String>) -> Vec<SpotlightAction> {
-    ["src", "src/main.rs", "src/lib.rs", "tests", "Cargo.toml", "README.md"]
-        .into_iter()
-        .map(|path| {
-            let icon = if path.contains('.') { rsx! { Pictogram { icon: lucide::file::outlined } } } else { rsx! { Pictogram { icon: lucide::folder::outlined } } };
-            SpotlightAction::new(path).icon(icon).onclick(move |_| last.set(path.to_string()))
-        })
-        .collect()
-}
-"#;
-
+// demo-code: files start
 fn files(mut last: Signal<String>) -> Vec<SpotlightAction> {
     [
         "src",
@@ -92,19 +70,9 @@ fn files(mut last: Signal<String>) -> Vec<SpotlightAction> {
     })
     .collect()
 }
+// demo-code: files end
 
-// snippet: mirrors issues
-const ISSUES_CODE: &str = r#"fn issues(mut last: Signal<String>) -> Vec<SpotlightAction> {
-    (1..=200)
-        .map(|n| {
-            SpotlightAction::new(format!("Issue #{n}"))
-                .description(if n % 2 == 0 { "Open" } else { "Closed" })
-                .onclick(move |_| last.set(format!("Issue #{n}")))
-        })
-        .collect()
-}
-"#;
-
+// demo-code: issues start
 fn issues(mut last: Signal<String>) -> Vec<SpotlightAction> {
     (1..=200)
         .map(|n| {
@@ -114,25 +82,19 @@ fn issues(mut last: Signal<String>) -> Vec<SpotlightAction> {
         })
         .collect()
 }
-
-/// A fake fetch per keystroke. `onquery` runs from the input event, so `loading` is set before
-/// the next frame and "nothing found" never flashes.
-// snippet: mirrors SpotlightDemo
-const SEARCH_CODE: &str = r#"let mut results = use_signal(Vec::<SpotlightAction>::new);
-let mut loading = use_signal(|| false);
-"#;
+// demo-code: issues end
 
 /// How long the fake search takes - long enough to see, short enough to type
 /// through.
 const LATENCY: Duration = Duration::from_millis(700);
 
 /// The four examples: the name of the handle and the actions fn in the
-/// printed code, the actions fn's source, and the dialog's `aria_label`.
+/// printed code, the section of the actions fn's source, and the dialog's `aria_label`.
 const EXAMPLES: [(&str, &str, &str, &str); 4] = [
-    ("commands", "commands", COMMANDS_CODE, "Commands"),
-    ("files", "files", FILES_CODE, "Files"),
-    ("issues", "issues", ISSUES_CODE, "Issues"),
-    ("search", "issues", ISSUES_CODE, "Issue search"),
+    ("commands", "commands", "commands", "Commands"),
+    ("files", "files", "files", "Files"),
+    ("issues", "issues", "issues", "Issues"),
+    ("search", "issues", "issues", "Issue search"),
 ];
 
 fn dialog_name(example: &str) -> &'static str {
@@ -177,7 +139,7 @@ fn wrap_example(values: &DemoValues, _: &str) -> String {
     let mut setup = format!("let all = use_hook(|| {actions}(last));\n");
     let mut options = vec![];
     if handle == "search" {
-        setup.push_str(SEARCH_CODE);
+        setup.push_str(&(FILE.section("search") + "\n"));
         options.push(
             "actions: Some(Callback::new(move |query: String| match query.trim().is_empty() {\n    \
              true => vec![],\n    \
@@ -219,8 +181,9 @@ fn wrap_example(values: &DemoValues, _: &str) -> String {
             key.to_uppercase()
         )
     };
+    let actions_code = FILE.section(actions_code);
     format!(
-        "{actions_code}\nlet last = use_signal(|| String::from(\"nothing yet\"));\n\
+        "{actions_code}\n\nlet last = use_signal(|| String::from(\"nothing yet\"));\n\
          {setup}\
          let {handle} = use_spotlight(SpotlightOptions {{\n{}}});\n\n\
          rsx! {{\n    \
@@ -291,8 +254,10 @@ fn SpotlightDemo(props: SpotlightDemoProps) -> Element {
 
     // The printed `spawn` is a timer here, so a newer keystroke cancels the
     // older search by dropping it, and a slow answer never lands late.
+    // demo-code: search start
     let mut results = use_signal(Vec::<SpotlightAction>::new);
     let mut loading = use_signal(|| false);
+    // demo-code: search end
     let mut pending = use_signal(|| None::<Box<dyn TimerSubscription>>);
     use_drop(move || pending.set(None));
     let search_actions = use_callback(move |query: String| match query.trim().is_empty() {

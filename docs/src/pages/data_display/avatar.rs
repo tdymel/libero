@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::components::{Avatar, AvatarGroup, AvatarPart, AvatarSpec, Code, Flex, Input, Text};
 
@@ -6,34 +8,12 @@ static AVATAR_IMAGE: Asset = asset!("/assets/avatar.svg");
 
 const MISSING_SRC: &str = "/does-not-exist.png";
 
-/// The group demo's six people, printed verbatim by `Wrap`. One field per line: the code
-/// block does not wrap.
-// snippet: item const AVATAR_IMAGE: &str = "/ada.png";
-// snippet: in AvatarGroup { .. }
-// snippet: mirrors people
-const PEOPLE: &str = r#"people: vec![
-    AvatarSpec {
-        name: "Ada Lovelace".into(),
-        src: Some(AVATAR_IMAGE.to_string()),
-        ..Default::default()
-    },
-    AvatarSpec {
-        name: "Grace Hopper".into(),
-        initials: Some("GH".into()),
-        ..Default::default()
-    },
-    AvatarSpec {
-        name: "Katherine Johnson".into(),
-        initials: Some("KJ".into()),
-        color: Some("secondary".into()),
-        ..Default::default()
-    },
-    AvatarSpec::from("Radia Perlman"),
-    AvatarSpec::from("Barbara Liskov"),
-    AvatarSpec::from("Margaret Hamilton"),
-]"#;
+/// The page's own source: the printed parts are cut from its live demo.
+const FILE: DemoFile = DemoFile(include_str!("avatar.rs"));
 
+/// One field per line: the code block does not wrap.
 fn people() -> Vec<AvatarSpec> {
+    // demo-code: people start
     vec![
         AvatarSpec {
             name: "Ada Lovelace".into(),
@@ -55,6 +35,7 @@ fn people() -> Vec<AvatarSpec> {
         AvatarSpec::from("Barbara Liskov"),
         AvatarSpec::from("Margaret Hamilton"),
     ]
+    // demo-code: people end
 }
 
 /// In group mode, renames the block to `AvatarGroup` and splices in `people`, which
@@ -70,7 +51,7 @@ fn wrap_group(values: &DemoValues, source: &str) -> String {
         return source.to_string();
     }
     let source = source.replacen("Avatar {", "AvatarGroup {", 1);
-    let people = indent(PEOPLE);
+    let people = indent(&format!("people: {}", FILE.section("people")));
     match source.strip_suffix('}') {
         Some(open) if source.contains('\n') => format!("{open}{people}}}"),
         _ => format!("AvatarGroup {{\n{people}}}"),

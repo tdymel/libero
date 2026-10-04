@@ -1,6 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls, field_props, indent,
-    prop, props, readonly_prop, status_prop,
+    Control, Demo, DemoFile, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls,
+    field_props, indent, prop, props, readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::SliderPart;
@@ -20,11 +20,15 @@ impl FieldCopy for PriceCopy {
     const ERROR: &'static str = "Pick a narrower range.";
 }
 
+/// The page's own source: the printed parts are cut from its live demo.
+const FILE: DemoFile = DemoFile(include_str!("range_slider.rs"));
+
 const MIN_VALUES: [&str; 4] = ["auto", "0.0", "10.0", "50.0"];
 const MAX_VALUES: [&str; 4] = ["auto", "50.0", "100.0", "200.0"];
 
 /// The demo's own discrete type - a range slides over the same values a
-/// single-thumb `Slider` does.
+/// single-thumb `Slider` does. Printed above the rsx in discrete mode.
+// demo-code: quality start
 #[derive(Clone, Copy, Debug, PartialEq, SliderValue)]
 enum Quality {
     Low,
@@ -33,6 +37,7 @@ enum Quality {
     #[slider(label = "Max")]
     Ultra,
 }
+// demo-code: quality end
 
 impl Quality {
     const ALL: [&'static str; 4] = ["low", "medium", "high", "ultra"];
@@ -46,20 +51,6 @@ impl Quality {
         }
     }
 }
-
-/// Printed above the rsx in discrete mode: without the derive there is no
-/// discrete range, so it is part of the example, not a separate section.
-// snippet: mirrors Quality
-const QUALITY: &str = r#"#[derive(Clone, Copy, Debug, PartialEq, SliderValue)]
-enum Quality {
-    Low,
-    Medium,
-    High,
-    #[slider(label = "Max")]
-    Ultra,
-}
-
-"#;
 
 fn discrete(values: &DemoValues) -> bool {
     values.str("mode") == "discrete"
@@ -244,8 +235,12 @@ fn continuous_marks(values: &DemoValues) -> Vec<SliderMark> {
 /// The readout, the other half of a controlled range, shows the thumbs never cross. Printed too.
 fn wrap_readout(values: &DemoValues, code: &str) -> String {
     let (declaration, signal, last) = match discrete(values) {
-        true => (QUALITY, "quality():?", "last_quality()"),
-        false => ("", "price():?", "last()"),
+        true => (
+            FILE.section("quality") + "\n\n",
+            "quality():?",
+            "last_quality()",
+        ),
+        false => (String::new(), "price():?", "last()"),
     };
     format!(
         "{declaration}Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    sx: sx().width(\"100%\"),\n{}    Text {{ size: \"sm\", \"value: {{{signal}}} - last event: {{{last}:?}}\" }}\n}}",

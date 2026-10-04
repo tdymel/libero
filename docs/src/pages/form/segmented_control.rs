@@ -1,6 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls, field_props,
-    or_unset, prop, props, readonly_prop, status_prop,
+    Control, Demo, DemoFile, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls,
+    field_props, indent, or_unset, prop, props, readonly_prop, status_prop,
 };
 use libero::components::Pictogram;
 use libero::components::SegmentedControlPart;
@@ -24,61 +24,10 @@ impl FieldCopy for AlignmentCopy {
     const ARIA_LABEL: &'static str = "\"aria-label\"";
 }
 
-/// The enum is the strip, so the snippet has to show it.
-// snippet: mirrors Alignment
-const ALIGNMENT_ENUM: &str = r#"#[derive(Clone, Copy, PartialEq, Options)]
-enum Alignment {
-    Left,
-    Center,
-    #[option(label = "Right edge")]
-    Right,
-}
+/// The page's own source: the printed parts are cut from its live demo.
+const FILE: DemoFile = DemoFile(include_str!("segmented_control.rs"));
 
-"#;
-
-/// Printed verbatim when the `labels` control asks for it, and rendered by the
-/// closure right below - the block is a promise that the two are the same.
-// snippet: after ALIGNMENT_ENUM
-// snippet: let mut alignment = use_signal(|| Alignment::Left);
-// snippet: in SegmentedControl { value: alignment(), onchange: move |next| alignment.set(next), .. }
-// snippet: mirrors renamed
-const RENAMED: &str = r#"option_label: |alignment: Alignment| -> OptionLabel {
-    match alignment {
-        Alignment::Left => "Links".into(),
-        Alignment::Center => "Mitte".into(),
-        Alignment::Right => "Rechts".into(),
-    }
-}"#;
-
-// A segment is a `label`, so its content stays phrasing: `Icon` is a `span`, a `Flex` a `div`.
-// snippet: after ALIGNMENT_ENUM
-// snippet: let mut alignment = use_signal(|| Alignment::Left);
-// snippet: in SegmentedControl { value: alignment(), onchange: move |next| alignment.set(next), .. }
-// snippet: mirrors rich
-const RICH: &str = r#"option_label: |alignment: Alignment| OptionLabel::rich(
-    alignment.label(),
-    rsx! {
-        Icon {
-            variant: "standard",
-            size: "sm",
-            match alignment {
-                Alignment::Left => rsx! { Pictogram { icon: lucide::text_align_start::outlined } },
-                Alignment::Center => rsx! { Pictogram { icon: lucide::text_align_center::outlined } },
-                Alignment::Right => rsx! { Pictogram { icon: lucide::text_align_end::outlined } },
-            }
-        }
-        "{alignment.label()}"
-    },
-)"#;
-
-/// The flag sits on the option, inside the one `options` prop - a segment
-/// this control refuses, rather than an alignment the type refuses everywhere.
-// snippet: after ALIGNMENT_ENUM
-// snippet: let mut alignment = use_signal(|| Alignment::Left);
-// snippet: in SegmentedControl { value: alignment(), onchange: move |next| alignment.set(next), .. }
-const DISABLED_OPTION: &str =
-    r#"options: OptionList::from_options().disabling(|align| *align == Alignment::Center)"#;
-
+// demo-code: alignment start
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Alignment {
     Left,
@@ -86,16 +35,21 @@ enum Alignment {
     #[option(label = "Right edge")]
     Right,
 }
+// demo-code: alignment end
 
 fn renamed(alignment: Alignment) -> OptionLabel {
+    // demo-code: renamed start
     match alignment {
         Alignment::Left => "Links".into(),
         Alignment::Center => "Mitte".into(),
         Alignment::Right => "Rechts".into(),
     }
+    // demo-code: renamed end
 }
 
+// A segment is a `label`, so its content stays phrasing: `Icon` is a `span`, a `Flex` a `div`.
 fn rich(alignment: Alignment) -> OptionLabel {
+    // demo-code: rich start
     OptionLabel::rich(
         alignment.label(),
         rsx! {
@@ -111,6 +65,7 @@ fn rich(alignment: Alignment) -> OptionLabel {
             "{alignment.label()}"
         },
     )
+    // demo-code: rich end
 }
 
 fn is_on(values: &DemoValues, name: &str) -> bool {
@@ -226,7 +181,7 @@ pub fn SegmentedControlPage() -> Element {
                 children_text: "",
                 // Printed above the snippet: the strip is the enum, so the
                 // code block is a lie without it.
-                wrap: Wrap(|_: &DemoValues, source: &str| format!("{ALIGNMENT_ENUM}{source}")),
+                wrap: Wrap(|_: &DemoValues, source: &str| format!("{}\n\n{source}", FILE.section("alignment"))),
                 // Required as a pair, and neither is a value a control varies -
                 // the control is only ever as selected as its owner.
                 fixed: vec![
@@ -237,8 +192,14 @@ pub fn SegmentedControlPage() -> Element {
                     Control::toggle("labels", ["derived", "renamed", "rich"])
                         .labels(["Derived", "Renamed", "Rich"])
                         .code(|_, values| match values.str("labels").as_str() {
-                            "renamed" => vec![RENAMED.to_string()],
-                            "rich" => vec![RICH.to_string()],
+                            "renamed" => vec![format!(
+                                "option_label: |alignment: Alignment| -> OptionLabel {{\n{}}}",
+                                indent(&FILE.section("renamed"))
+                            )],
+                            "rich" => vec![format!(
+                                "option_label: |alignment: Alignment| {}",
+                                FILE.section("rich")
+                            )],
                             _ => vec![],
                         }),
                     Control::toggle(
@@ -266,13 +227,21 @@ pub fn SegmentedControlPage() -> Element {
                     // for one named segment rather than for a prop of its own.
                     Control::switch("disabled_option").code(|_, values| {
                         match values.str("disabled_option") == "true" {
-                            true => vec![DISABLED_OPTION.to_string()],
+                            true => vec![format!("options: {}", FILE.section("disabled"))],
                             false => vec![],
                         }
                     }),
                 ]].concat(),
                 render: move |values: DemoValues| {
                     let field = field_props::<AlignmentCopy>(&values);
+                    // A segment this control refuses, not an alignment the type refuses everywhere.
+                    let options = if is_on(&values, "disabled_option") {
+                        // demo-code: disabled start
+                        OptionList::from_options().disabling(|align| *align == Alignment::Center)
+                        // demo-code: disabled end
+                    } else {
+                        OptionList::from_options()
+                    };
                     rsx! {
                         SegmentedControl {
                             variant: values.str("variant"),
@@ -297,11 +266,7 @@ pub fn SegmentedControlPage() -> Element {
                                 "rich" => Some(Callback::new(rich)),
                                 _ => None,
                             },
-                            options: {
-                                let off = is_on(&values, "disabled_option");
-                                OptionList::from_options()
-                                    .disabling(move |align| off && *align == Alignment::Center)
-                            },
+                            options,
                             value: alignment(),
                             onchange: move |next| alignment.set(next),
                         }

@@ -2,7 +2,8 @@ use pictogram_icons_lucide as lucide;
 use std::collections::HashSet;
 
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, indent, or_unset, prop, props,
+    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, Wrap, a11y, indent, or_unset, prop,
+    props,
 };
 use dioxus::prelude::*;
 use libero::{
@@ -107,43 +108,29 @@ fn file_icon(entry: &FileEntry, expanded: Option<bool>) -> SvgData {
     }
 }
 
+/// The page's own source: the printed parts are cut from its live demo.
+const FILE: DemoFile = DemoFile(include_str!("tree.rs"));
+
 /// The data, the controlled expansion and the row renderer are the demo's
 /// fixture, not controls, but the code block has to print them.
-// snippet: mirrors TreePage
-const FIXED: [&str; 6] = [
-    r#"aria_label: "Project files""#,
-    "data: file_tree()",
-    "expanded: expanded()",
-    "onexpandedchange: move |next| expanded.set(next)",
-    "current: selected()",
-    r#"render_node: move |args: TreeNodeRenderArgs<FileEntry>| {
-        let id = args.id.clone();
-        rsx! {
-            TreeItem {
-                onclick: move |_| selected.set(Some(id.clone())),
-                icon: file_icon(&args.data, args.expanded),
-                "{args.data.name}"
-            }
-        }
-    }"#,
-];
+fn fixed() -> Vec<String> {
+    let (wiring, render) = (FILE.section("wiring"), FILE.section("render"));
+    let lines = wiring.lines().chain([render.as_str()]);
+    lines
+        .map(|line| line.trim_end_matches(',').to_string())
+        .collect()
+}
 
 /// The expansion and the selection are the page's state, not `Tree`'s, so the
 /// buttons and the readout are part of the example.
 fn wrap_selection(_: &DemoValues, code: &str) -> String {
     format!(
-        "Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    sx: sx().width(\"100%\").max_width(\"320px\"),\n{EXPAND_BUTTONS}{}    // Always mounted, so a screen reader hears the text it gains.\n    Text {{ role: \"status\",\n        if let Some(selected) = selected() {{ \"Selected: \" Code {{ source: \"{{selected}}\" }} }}\n    }}\n}}",
-        indent(code)
+        "Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    sx: sx().width(\"100%\").max_width(\"320px\"),\n{}{}    // Always mounted, so a screen reader hears the text it gains.\n{}}}",
+        indent(&FILE.section("buttons")),
+        indent(code),
+        indent(&FILE.section("status"))
     )
 }
-
-// snippet: ignore - a fragment of the Demo's code block, compiled there
-// snippet: mirrors TreePage
-const EXPAND_BUTTONS: &str = r#"    Flex { direction: "row", gap: "xs",
-        Button { size: "xs", onclick: move |_| expanded.set(folders()), "Expand all" }
-        Button { size: "xs", onclick: move |_| expanded.set(HashSet::new()), "Collapse all" }
-    }
-"#;
 
 /// Every branch of `file_tree()`.
 fn folders() -> HashSet<String> {
@@ -269,7 +256,7 @@ pub fn TreePage() -> Element {
             Demo {
                 component: "Tree",
                 children_text: "",
-                fixed: FIXED.map(str::to_string).to_vec(),
+                fixed: fixed(),
                 controls: vec![
                     Control::switch("guides"),
                     Control::sizes("size")
@@ -282,18 +269,23 @@ pub fn TreePage() -> Element {
                         // Pinned, so the selection readout does not reflow the
                         // preview under the pointer.
                         sx: sx().width("100%").max_width("320px"),
+                        // demo-code: buttons start
                         Flex { direction: "row", gap: "xs",
                             Button { size: "xs", onclick: move |_| expanded.set(folders()), "Expand all" }
                             Button { size: "xs", onclick: move |_| expanded.set(HashSet::new()), "Collapse all" }
                         }
+                        // demo-code: buttons end
                         Tree {
+                            // demo-code: wiring start
                             aria_label: "Project files",
                             data: file_tree(),
                             expanded: expanded(),
                             onexpandedchange: move |next| expanded.set(next),
                             current: selected(),
+                            // demo-code: wiring end
                             guides: values.str("guides") == "true",
                             size: or_unset(values.str("size")),
+                            // demo-code: render start
                             render_node: move |args: TreeNodeRenderArgs<FileEntry>| {
                                 let id = args.id.clone();
                                 rsx! {
@@ -304,13 +296,16 @@ pub fn TreePage() -> Element {
                                     }
                                 }
                             },
+                            // demo-code: render end
                         }
+                        // demo-code: status start
                         Text { role: "status",
                             if let Some(selected) = selected() {
                                 "Selected: "
                                 Code { source: "{selected}" }
                             }
                         }
+                        // demo-code: status end
                     }
                 },
                 wrap: Wrap(wrap_selection),
