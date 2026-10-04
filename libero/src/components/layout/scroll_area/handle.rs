@@ -38,9 +38,12 @@ impl ScrollAreaHandle {
     /// Scrolls to an offset in px, clamped by the browser to the range. `x`
     /// counts from the inline start, the right edge under `dir="rtl"`.
     pub fn scroll_to(&self, x: f64, y: f64) {
-        let _ = self
-            .element
-            .scroll_to(physical_x(x, self.element.is_rtl()), y);
+        // Zero is the start either way; the direction read forces a style recalc (todo 2148).
+        let x = match x == 0.0 {
+            true => 0.0,
+            false => physical_x(x, self.element.is_rtl()),
+        };
+        let _ = self.element.scroll_to(x, y);
     }
 
     /// Scrolls to a percent (0-100) of each axis's range. `None` leaves that

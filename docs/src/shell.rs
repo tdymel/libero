@@ -2,10 +2,13 @@ use dioxus::prelude::*;
 use libero::{
     components::{
         ActionIcon, Anchor, Box, Burger, Button, ButtonGroup, Container, DirectionToggle, Flex,
-        Header, Icon, Kbd, Pictogram, Repository, ScrollArea, SpotlightOptions, ThemeSwitcher,
-        Title, spotlight_filter, use_scroll_area, use_spotlight,
+        Header, Icon, Kbd, Pictogram, Repository, ScrollArea, ScrollAreaHandle, SpotlightOptions,
+        ThemeSwitcher, Title, spotlight_filter, use_scroll_area, use_spotlight,
     },
-    hooks::{EdgeSwipeOptions, edge_swipe_sx, use_edge_swipe, use_element, use_media_query},
+    hooks::{
+        EdgeSwipeOptions, ElementHandle, edge_swipe_sx, use_edge_swipe, use_element,
+        use_media_query,
+    },
     platform::ElementApi,
     sx::{Sx, sx},
     theme::{
@@ -28,14 +31,36 @@ fn first_item_sx() -> Sx {
         .margin_inline_start("0")
 }
 
+/// What a route change does to the shell, apart so a navigation re-renders this, not the shell.
+#[component]
+fn RouteEffects(
+    mut open: Signal<bool>,
+    area: ScrollAreaHandle,
+    content: ElementHandle,
+    section: Signal<Option<String>>,
+) -> Element {
+    let route = use_route::<Route>();
+    heading_focus::use_scroll_reset(route.clone(), area, content, section);
+    heading_focus::use_heading_focus(route.clone(), open(), content, section);
+    // Any route change closes the drawer (search, pager, TLDR, body link, back); focus stays put.
+    use_effect(use_reactive!(|route| {
+        let _ = route;
+        if *open.peek() {
+            open.set(false);
+        }
+    }));
+    rsx! {}
+}
+
 #[component]
 pub(crate) fn AppShell() -> Element {
     let mut open = use_signal(|| false);
     let burger = use_element();
     let content = use_element();
-    // The home page is full width: the nav is a drawer at every width there.
-    let route = use_route::<Route>();
-    let home = route == Route::Home {};
+    // The home page is full width: the nav is a drawer at every width there. A memo, so a
+    // navigation re-renders the shell only on the way to or from Home (todo 2148).
+    let router = router();
+    let home = use_memo(move || router.current::<Route>() == Route::Home {})();
     let section = use_context_provider(|| heading_focus::PendingSection(Signal::new(None))).0;
     // The docs search: every page, Ctrl/Cmd+K from anywhere.
     let pages = use_hook(|| nav::page_actions(section));
@@ -60,17 +85,8 @@ pub(crate) fn AppShell() -> Element {
         "Ctrl"
     };
     let area = use_scroll_area();
-    heading_focus::use_scroll_reset(route.clone(), area, content, section);
-    heading_focus::use_heading_focus(route.clone(), open(), content, section);
     heading_focus::use_fragment_landing(area, content);
     use_context_provider(|| heading_focus::SectionLanding { area, content });
-    // Any route change closes the drawer (search, pager, TLDR, body link, back); focus stays put.
-    use_effect(use_reactive!(|route| {
-        let _ = route;
-        if *open.peek() {
-            open.set(false);
-        }
-    }));
     // From `Sm` up the sidebar shows and the burger hides (not on Home): an open drawer
     // would leave `main` inert with no way to close it.
     let wide = use_media_query(&format!("(min-width: {})", Size::Sm.breakpoint_value()));
@@ -104,6 +120,7 @@ pub(crate) fn AppShell() -> Element {
                     let _ = burger.query_selector("button").and_then(|button| button.focus());
                 }
             },
+            RouteEffects { open, area, content, section }
             // WCAG 2.4.1 skip link, off-screen until focused. The click moves focus itself,
             // so the router never sees the fragment.
             Box {

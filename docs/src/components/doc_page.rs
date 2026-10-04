@@ -104,6 +104,12 @@ pub fn DocPage(
         pending.set(None);
         shell.land(id.as_deref().unwrap_or_default());
     });
+    // The tabs shown so far: their panels stay mounted, hidden (todo 2150).
+    let mut visited = use_hook(|| CopyValue::new(Vec::<DocTab>::new()));
+    let current = tab();
+    if !visited.peek().contains(&current) {
+        visited.write().push(current);
+    }
     let tabs: Vec<DocTab> = DocTab::options()
         .iter()
         .filter(|tab| match tab {
@@ -235,15 +241,21 @@ pub fn DocPage(
                             }
                         },
                     ),
-                    panel: move |selected| match selected {
-                        // The sections carry no spacing of their own - outside
-                        // the tabs the page's own column `Flex` gaps them.
-                        DocTab::Usage => rsx! {
-                            Flex { direction: "column", gap: "xxl", sx: prose_sx(), {children.clone()} }
-                        },
-                        // No heading: the tab already names it (1358).
-                        DocTab::Extra => match extra_tab.clone() {
-                            Some(extra) => rsx! {
+                    // One template for every tab, so a switch flips `hidden` instead of remounting
+                    // a panel it showed before (todo 2150). `Extra` still remounts: its landing waits on `onmounted`.
+                    panel: move |selected: DocTab| {
+                        let off = |tab: DocTab| (selected != tab).then_some(true);
+                        let kept = |tab: DocTab| visited.peek().contains(&tab);
+                        rsx! {
+                            div { hidden: off(DocTab::Usage),
+                                if kept(DocTab::Usage) {
+                                    // The sections carry no spacing of their own - outside
+                                    // the tabs the page's own column `Flex` gaps them.
+                                    Flex { direction: "column", gap: "xxl", sx: prose_sx(), {children.clone()} }
+                                }
+                            }
+                            // No heading: the tab already names it (1358).
+                            if let (DocTab::Extra, Some(extra)) = (&selected, extra_tab.clone()) {
                                 Flex {
                                     id: extra.id,
                                     direction: "column",
@@ -258,18 +270,23 @@ pub fn DocPage(
                                     onmounted: move |_| extra_mounted.set(true),
                                     {extra.content}
                                 }
-                            },
-                            None => rsx! {},
-                        },
-                        DocTab::Properties => rsx! {
-                            PropertyTable { properties: properties.clone() }
-                        },
-                        DocTab::Accessibility => rsx! {
-                            A11yPanel { doc: accessibility.clone().unwrap_or_default() }
-                        },
-                        DocTab::StyleApi => rsx! {
-                            PartsPanel { properties: properties.clone() }
-                        },
+                            }
+                            div { hidden: off(DocTab::Properties),
+                                if kept(DocTab::Properties) {
+                                    PropertyTable { properties: properties.clone() }
+                                }
+                            }
+                            div { hidden: off(DocTab::StyleApi),
+                                if kept(DocTab::StyleApi) {
+                                    PartsPanel { properties: properties.clone() }
+                                }
+                            }
+                            div { hidden: off(DocTab::Accessibility),
+                                if kept(DocTab::Accessibility) {
+                                    A11yPanel { doc: accessibility.clone().unwrap_or_default() }
+                                }
+                            }
+                        }
                     },
                 }
             }
