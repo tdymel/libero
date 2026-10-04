@@ -6,7 +6,7 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use chromiumoxide::cdp::browser_protocol::emulation::{
     MediaFeature, SetDeviceMetricsOverrideParams, SetEmulatedMediaParams,
-    SetFocusEmulationEnabledParams,
+    SetFocusEmulationEnabledParams, SetTouchEmulationEnabledParams,
 };
 use chromiumoxide::cdp::browser_protocol::page::{
     CaptureScreenshotFormat, CaptureScreenshotParams,
@@ -477,6 +477,10 @@ impl Fixture {
         page.execute(SetFocusEmulationEnabledParams::new(true))
             .await
             .context("emulate a focused page")?;
+        // A page opened while another emulated touch started with a coarse pointer (todo 2164).
+        page.execute(SetTouchEmulationEnabledParams::new(false))
+            .await
+            .context("start without touch emulation")?;
 
         // chromiumoxide auto-attaches with waitForDebuggerOnStart: a new service worker in
         // this origin then waits until every open page resumes it, which can be never (todo 1354).

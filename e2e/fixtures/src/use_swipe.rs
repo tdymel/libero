@@ -3,10 +3,11 @@
 
 use dioxus::prelude::*;
 use libero::{
+    LiberoProvider,
     components::{Box, ScrollArea},
     hooks::{
-        EdgeSwipeOptions, SwipeDirection, SwipeEvent, SwipeOptions, edge_swipe_sx, use_direction,
-        use_edge_swipe, use_swipe,
+        EdgeSwipeOptions, SwipeDirection, SwipeEvent, SwipeOptions, edge_swipe_sx, use_edge_swipe,
+        use_swipe,
     },
     sx::sx,
     theme::Direction,
@@ -63,11 +64,11 @@ fn EdgePage() -> Element {
     }
 }
 
-/// The app turned right to left through `use_direction`, put back on leaving.
+/// Right to left by a provider's start direction: `use_direction().set` kept it in
+/// `localStorage`, turning every later page on the origin (todo 2164).
 #[component]
 fn EdgeRtlPage() -> Element {
-    let direction = use_direction();
-    use_hook(|| direction.set(Direction::Rtl));
-    use_drop(move || direction.clear());
-    rsx! { EdgePage {} }
+    rsx! {
+        LiberoProvider { direction: Direction::Rtl, EdgePage {} }
+    }
 }
