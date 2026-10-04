@@ -47,6 +47,7 @@ e2e::scenario!(
 /// Todo 2015: a finger 18px inside the header's end edge, past the old 8px grip, still resizes.
 #[test]
 fn a_touch_in_the_grip_lane_resizes_the_column() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
     use e2e::browser::{Fixture, Viewport, block_on};
     use e2e::passes::pointer::{Point, touch_drag};
     use e2e::wait;
@@ -55,6 +56,17 @@ fn a_touch_in_the_grip_lane_resizes_the_column() {
             .await
             .unwrap();
         let page = &fixture.page;
+        // The 24px lane is coarse-only: measure the edge once the page took the touch screen.
+        page.execute(SetTouchEmulationEnabledParams::new(true))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(pointer: coarse)').matches",
+            "a coarse pointer",
+        )
+        .await
+        .unwrap();
         let edge: (f64, f64) = page
             .evaluate(format!(
                 "(r => [r.right, r.y + r.height / 2])(document.querySelector('{NAME}').getBoundingClientRect())"

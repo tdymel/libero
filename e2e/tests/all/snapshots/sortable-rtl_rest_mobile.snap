@@ -6,28 +6,28 @@ expression: tree
 list
   listitem [level=1]
     button "Reorder Alpha"
-      description "Use the move buttons to reorder the item."
+      description "Press Space to lift the item, the arrow keys to move it, Space again to drop it, Escape to cancel."
     paragraph
       StaticText "Alpha"
     button "Move Alpha backward" [disabled]
     button "Move Alpha forward"
   listitem [level=1]
     button "Reorder Beta"
-      description "Use the move buttons to reorder the item."
+      description "Press Space to lift the item, the arrow keys to move it, Space again to drop it, Escape to cancel."
     paragraph
       StaticText "Beta"
     button "Move Beta backward"
     button "Move Beta forward"
   listitem [level=1]
     button "Reorder Gamma"
-      description "Use the move buttons to reorder the item."
+      description "Press Space to lift the item, the arrow keys to move it, Space again to drop it, Escape to cancel."
     paragraph
       StaticText "Gamma"
     button "Move Gamma backward"
     button "Move Gamma forward"
   listitem [level=1]
     button "Reorder Delta"
-      description "Use the move buttons to reorder the item."
+      description "Press Space to lift the item, the arrow keys to move it, Space again to drop it, Escape to cancel."
     paragraph
       StaticText "Delta"
     button "Move Delta backward"
