@@ -82,6 +82,8 @@ pub(super) struct ScrollViewport {
     pub spec: Signal<Option<WindowSpec>>,
     /// Set by a `Virtualize`: the content box becomes a real box for the offsets.
     pub virtualized: Signal<bool>,
+    /// Set by a windowed table among its rows: the content then reserves them in its body.
+    pub table: Signal<bool>,
     // Not a signal: claimed in a child's first render, where dirtying the area
     // would cost a render pass for nothing drawn.
     claimed: Rc<Cell<bool>>,
@@ -99,6 +101,7 @@ impl ScrollViewport {
             geometry,
             spec,
             virtualized,
+            table: Signal::new(false),
             claimed: Rc::new(Cell::new(false)),
         }
     }

@@ -7,7 +7,10 @@ use super::{
     row_reorder::RowReorder,
 };
 use crate::{
-    components::{common::attr, layout::Virtualize},
+    components::{
+        common::attr,
+        layout::{RowsInTable, Virtualize},
+    },
     hooks::{ElementHandle, listener, use_silent_focus_within},
     platform::{ElementApi, next_task},
     sx::{Sx, sx},
@@ -183,6 +186,7 @@ pub(super) fn render_window(
     let keep_rendered = focused().and_then(|index| order.iter().position(|&at| at == index));
     let keyed = order.clone();
     rsx! {
+        RowsInTable {}
         Virtualize {
             count: order.len(),
             item_size: row_height,

@@ -34,12 +34,12 @@ pub use header::{Header, HeaderPosition, HeaderProps};
 // A `Box` rendered as a link, here so buttons and navigation share it one-way.
 pub(crate) use internal_anchor::{InternalAnchor, render_anchor};
 pub use paper::{Paper, PaperProps, paper_sx};
+pub(crate) use scroll_area::{
+    RowsInTable, ScrollAreaBase, inline_x, physical_x, scroll_area_base, use_kept_slot,
+};
 pub use scroll_area::{
     ScrollArea, ScrollAreaHandle, ScrollAreaPart, ScrollAreaProps, ScrollPositionEvent, Virtualize,
     use_scroll_area,
-};
-pub(crate) use scroll_area::{
-    ScrollAreaBase, inline_x, physical_x, scroll_area_base, use_kept_slot,
 };
 pub use scroller::{
     Scroller, ScrollerControls, ScrollerEdges, ScrollerHandle, ScrollerPart, ScrollerProps,

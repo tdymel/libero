@@ -159,9 +159,11 @@ static SCROLL_AREA_CONTENT_SX: StaticSx = StaticSx::new(|| {
 
 /// A table's skipped rows reserved in its body, not around it: a sticky `th` holds
 /// only inside the table box, and a fling ahead of the rows left it below the pane (todo 2176).
+/// A state, not `:has(> table)`: Blitz never matches `:has` (todo 2201).
 fn table_body_reserve_sx() -> Sx {
     let row = |height: String| sx().content("\"\"").display("table-row").height(height);
-    sx().selector("&:has(> table)", sx().padding_block("0"))
+    let reserve = sx()
+        .padding_block("0")
         .selector(
             "& > table > tbody:first-of-type::before",
             row(SCROLL_AREA_LEADING_VAR.value_or("0px")),
@@ -169,7 +171,8 @@ fn table_body_reserve_sx() -> Sx {
         .selector(
             "& > table > tbody:last-of-type::after",
             row(SCROLL_AREA_TRAILING_VAR.value_or("0px")),
-        )
+        );
+    sx().when("table", reserve)
 }
 
 /// Skeleton bars, one per pitch, in the padding only: a fast fling outruns the
@@ -450,6 +453,7 @@ fn ScrollAreaContent(content: ElementHandle, children: Element) -> Element {
             States::default()
                 .with("virtualized", true)
                 .with("windowed", spec.is_some())
+                .with("table", (viewport.table)())
                 .into(),
             scroll_area_content_variables(offsets, spec.map(|spec| spec.pitch)).into(),
         )

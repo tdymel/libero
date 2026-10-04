@@ -10,4 +10,4 @@ pub(crate) use handle::{inline_x, physical_x};
 pub use scroll_area::{ScrollArea, ScrollAreaPart, ScrollAreaProps, ScrollPositionEvent};
 pub(crate) use scroll_area::{ScrollAreaBase, scroll_area_base};
 pub use virtualize::Virtualize;
-pub(crate) use virtualize::use_kept_slot;
+pub(crate) use virtualize::{RowsInTable, use_kept_slot};

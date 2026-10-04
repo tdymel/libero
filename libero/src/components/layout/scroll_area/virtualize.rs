@@ -20,6 +20,28 @@ pub(crate) fn use_kept_slot() -> Option<Signal<Option<(usize, usize)>>> {
     try_use_context::<KeptSlot>().map(|kept| kept.0)
 }
 
+/// Rendered beside a windowed table's rows: the `ScrollArea` around the table then
+/// reserves the skipped rows inside its body (todo 2201).
+#[component]
+pub(crate) fn RowsInTable() -> Element {
+    let table = try_use_context::<ScrollViewport>().map(|viewport| viewport.table);
+    use_effect(move || {
+        if let Some(mut table) = table
+            && !*table.peek()
+        {
+            table.set(true);
+        }
+    });
+    use_drop(move || {
+        if let Some(mut table) = table
+            && let Ok(mut table) = table.try_write()
+        {
+            *table = false;
+        }
+    });
+    VNode::empty()
+}
+
 /// How the row pitch is being arrived at.
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Probe {
