@@ -43,6 +43,7 @@ mod tags_field;
 mod textarea;
 mod theme_switcher;
 mod tldr;
+mod tour;
 
 pub use anchor::AnchorLabels;
 pub use avatar::AvatarLabels;
@@ -86,3 +87,4 @@ pub use tags_field::TagsFieldLabels;
 pub use textarea::TextareaLabels;
 pub use theme_switcher::ThemeSwitcherLabels;
 pub use tldr::TldrLabels;
+pub use tour::TourLabels;

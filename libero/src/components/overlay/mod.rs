@@ -9,6 +9,7 @@ mod overlay;
 mod shortcut_help;
 mod spotlight;
 mod tooltip;
+mod tour;
 // The hooks that render an overlay. Exported once, through `hooks`.
 pub(crate) mod use_drawer;
 pub(crate) mod use_floating_window;
@@ -35,3 +36,4 @@ pub use spotlight::{
 };
 pub(crate) use tooltip::{PressFocus, TooltipPinned};
 pub use tooltip::{Tooltip, TooltipProps};
+pub use tour::{MaskClick, TourHandle, TourOptions, TourPart, TourStep, TourView, use_tour};

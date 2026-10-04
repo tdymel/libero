@@ -108,7 +108,8 @@ const: `CommonLabels`, `DateLocale`, `PaginationLabels`, `AvatarLabels`,
 `CodeBlockLabels`, `CopyLabels`, `ColorLabels`, `PhoneFieldLabels`,
 `PasswordFieldLabels`, `NumberFieldLabels`, `FileFieldLabels`,
 `ImageCropperLabels`, `TextareaLabels`, `SliderLabels`, `RatingLabels`,
-`MenuLabels`, `TableLabels`, `ShortcutHelpLabels` and `RichTextEditorLabels`.
+`MenuLabels`, `TableLabels`, `ShortcutHelpLabels`, `RichTextEditorLabels` and
+`TourLabels`.
 `DateLocale` holds the month and weekday names and every date and time
 component's labels.
 

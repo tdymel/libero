@@ -11,9 +11,9 @@ use crate::{
         ColorCode, ColorPicker, ColorSwatch, Dialog, Drawer, FloatingWindowOptions, HoverCard,
         HueSlider, ProgressBar, Radio, RadioGroup, RangeSlider, Rating, RichTextEditor, ScrollArea,
         SegmentedControl, Slider, Splitter, SpotlightOptions, Switch, Table, Tabs, Toolbar,
-        ToolbarGroup, Video, column,
+        ToolbarGroup, TourOptions, TourStep, Video, column,
         rich_text::{NodeViewProps, NodeViews, use_rich_text_editor},
-        use_spotlight,
+        use_spotlight, use_tour,
     },
     hooks::{LightboxItem, LightboxOptions, use_floating_window, use_lightbox},
     utils::{take_warnings, warnings_of},
@@ -617,6 +617,29 @@ fn an_unnamed_hover_card_warns() {
     assert!(!warns(
         || rsx! { LiberoProvider { HoverCard { content: rsx! { "c" }, "aria-label": "Profile", "x" } } },
         prefix
+    ));
+}
+
+/// The card falls back to the localized "Tour", which names no step.
+#[test]
+fn an_untitled_tour_step_without_an_aria_label_warns() {
+    #[component]
+    fn Tour(named: bool) -> Element {
+        let tour = use_tour(TourOptions {
+            steps: vec![TourStep::new("a").description("Untitled")],
+            aria_label: named.then(|| "Getting started".to_string()),
+            ..Default::default()
+        });
+        use_hook(|| tour.start());
+        rsx! {}
+    }
+    assert!(warns(
+        || rsx! { LiberoProvider { Tour { named: false } } },
+        "use_tour:"
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Tour { named: true } } },
+        "use_tour:"
     ));
 }
 

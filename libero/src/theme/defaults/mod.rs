@@ -92,6 +92,7 @@ mod timeline;
 mod title;
 mod tldr;
 mod tooltip;
+mod tour;
 mod transition;
 mod tree;
 mod variant;
@@ -359,6 +360,7 @@ pub use tooltip::{
     TOOLTIP_BACKGROUND, TOOLTIP_COLOR, TOOLTIP_DURATION, TOOLTIP_FONT_SIZE, TooltipDefaults,
 };
 pub(crate) use tooltip::{TOOLTIP_IN, TOOLTIP_KEYFRAMES};
+pub use tour::TourDefaults;
 pub(crate) use transition::{TRANSITION_APPEAR, TRANSITION_KEYFRAMES};
 pub use transition::{
     TRANSITION_DISTANCE, TRANSITION_DURATION, TRANSITION_EASING, TRANSITION_POP_SCALE,

@@ -7,6 +7,7 @@ mod direction;
 mod dismiss;
 mod drag;
 mod element;
+mod element_rect;
 mod focus_return;
 mod focus_within;
 mod formats;
@@ -75,6 +76,7 @@ pub(crate) use drag::{
 };
 pub use element::{ElementHandle, use_element};
 pub(crate) use element::{use_content_changes, use_form_owner, use_resize_fallback};
+pub(crate) use element_rect::{ElementRect, use_element_rect};
 pub use focus_return::{FocusReturn, use_focus_return};
 pub(crate) use focus_within::{FocusChange, FocusWithin, use_focus_within};
 pub(crate) use formats::current_formats;

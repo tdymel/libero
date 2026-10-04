@@ -71,6 +71,7 @@ pub struct Localization {
     pub table: TableLabels,
     pub shortcut_help: ShortcutHelpLabels,
     pub rich_text_editor: RichTextEditorLabels,
+    pub tour: TourLabels,
 }
 
 impl Localization {
@@ -120,6 +121,7 @@ impl Localization {
         table: TableLabels::ENGLISH,
         shortcut_help: ShortcutHelpLabels::ENGLISH,
         rich_text_editor: RichTextEditorLabels::ENGLISH,
+        tour: TourLabels::ENGLISH,
     };
 
     /// Hand it to `LiberoProvider { localization }`; German dates are `Formats::GERMAN`.
@@ -168,6 +170,7 @@ impl Localization {
         table: TableLabels::GERMAN,
         shortcut_help: ShortcutHelpLabels::GERMAN,
         rich_text_editor: RichTextEditorLabels::GERMAN,
+        tour: TourLabels::GERMAN,
     };
 }
 
@@ -176,9 +179,10 @@ mod tests {
     use super::*;
 
     /// Every template with a hole, in one order for every language.
-    fn templates(words: &Localization) -> [&'static str; 42] {
+    fn templates(words: &Localization) -> [&'static str; 43] {
         [
             words.media.position,
+            words.tour.progress,
             words.common.remove,
             words.image_cropper.value,
             words.rating.value,

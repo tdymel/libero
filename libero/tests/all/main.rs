@@ -134,6 +134,7 @@ mod timeline;
 mod title;
 mod toolbar;
 mod tooltip;
+mod tour;
 mod transition;
 mod tree;
 mod user_media;
