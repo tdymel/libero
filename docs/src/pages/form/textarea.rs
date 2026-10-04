@@ -1,10 +1,20 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, a11y, disabled_prop, prop, props, readonly_prop,
-    status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, a11y, disabled_prop, field_controls,
+    field_props, prop, props, readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::TextareaPart;
-use libero::components::{Code, FieldStatus, Text, Textarea};
+use libero::components::{Code, Text, Textarea};
+
+struct NotesCopy;
+
+impl FieldCopy for NotesCopy {
+    const LABEL: &'static str = "Notes";
+    const DESCRIPTION: &'static str = "Anything the team should know.";
+    const HELPER: &'static str = "Markdown is not rendered.";
+    const WARNING: &'static str = "That is getting long.";
+    const ERROR: &'static str = "Say something.";
+}
 
 #[component]
 pub fn TextareaPage() -> Element {
@@ -85,7 +95,7 @@ pub fn TextareaPage() -> Element {
                     "value: value()".to_string(),
                     "oninput: move |next| value.set(next)".to_string(),
                 ],
-                controls: vec![
+                controls: [vec![
                     Control::sizes("size")
                         .default("md"),
                     Control::sizes("radius")
@@ -97,34 +107,7 @@ pub fn TextareaPage() -> Element {
                             rows => vec![format!("rows: {rows}")],
                         },
                     ),
-                    Control::toggle("status", ["valid", "warning", "error"])
-                        .labels(["Valid", "Warning", "Error"])
-                        .default("valid")
-                        .code(|_, values| match values.str("status").as_str() {
-                            "warning" => vec![
-                                "status: FieldStatus::Warning(\"That is getting long.\".into())".to_string(),
-                            ],
-                            "error" => vec!["status: \"Say something.\"".to_string()],
-                            _ => vec![],
-                        }),
-                    Control::switch("label").default("true").code(|_, values| {
-                        match values.str("label").as_str() {
-                            "true" => vec!["label: \"Notes\"".to_string()],
-                            _ => vec!["aria_label: \"Notes\"".to_string()],
-                        }
-                    }),
-                    Control::switch("description").code(|_, values| {
-                        match values.str("description").as_str() {
-                            "true" => vec!["description: \"Anything the team should know.\"".to_string()],
-                            _ => vec![],
-                        }
-                    }),
-                    Control::switch("helper").code(|_, values| {
-                        match values.str("helper").as_str() {
-                            "true" => vec!["helper: \"Markdown is not rendered.\"".to_string()],
-                            _ => vec![],
-                        }
-                    }),
+                ], field_controls::<NotesCopy>(), vec![
                     Control::switch("placeholder").default("true").code(|_, values| {
                         match values.str("placeholder").as_str() {
                             "true" => vec!["placeholder: \"Start typing\"".to_string()],
@@ -139,23 +122,19 @@ pub fn TextareaPage() -> Element {
                     }),
                     Control::switch("required"),
                     Control::switch("disabled"),
-                ],
-                render: move |values: DemoValues| rsx! {
+                ]].concat(),
+                render: move |values: DemoValues| {
+                    let field = field_props::<NotesCopy>(&values);
+                    rsx! {
                     Textarea {
                         size: values.str("size"),
                         radius: values.str("radius"),
                         rows: values.str("rows").parse::<u32>().unwrap_or(3),
-                        label: (values.str("label") == "true").then(|| "Notes".to_string()),
-                        aria_label: (values.str("label") != "true").then_some("Notes"),
-                        description: (values.str("description") == "true")
-                            .then(|| "Anything the team should know.".to_string()),
-                        helper: (values.str("helper") == "true")
-                            .then(|| "Markdown is not rendered.".to_string()),
-                        status: match values.str("status").as_str() {
-                            "warning" => FieldStatus::Warning("That is getting long.".to_string()),
-                            "error" => FieldStatus::Error("Say something.".to_string()),
-                            _ => FieldStatus::Valid,
-                        },
+                        label: field.label,
+                        aria_label: field.aria_label,
+                        description: field.description,
+                        helper: field.helper,
+                        status: field.status,
                         placeholder: (values.str("placeholder") == "true")
                             .then(|| "Start typing".to_string()),
                         required: (values.str("required") == "true").then_some(true),
@@ -165,6 +144,7 @@ pub fn TextareaPage() -> Element {
                         value: value(),
                         oninput: move |next| value.set(next),
                     }
+                }
                 },
             }
         }

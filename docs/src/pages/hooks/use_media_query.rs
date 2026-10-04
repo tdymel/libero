@@ -6,6 +6,7 @@ use libero::{
 };
 
 /// The two hooks in one component, as `Layout` renders them.
+// snippet: mirrors Layout
 fn code(_: &DemoValues, _: &str) -> String {
     r#"let mobile = use_is_mobile();
 let wide = use_media_query("(min-width: 1024px)");

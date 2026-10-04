@@ -10,6 +10,7 @@ const MISSING_SRC: &str = "/does-not-exist.png";
 /// block does not wrap.
 // snippet: item const AVATAR_IMAGE: &str = "/ada.png";
 // snippet: in AvatarGroup { .. }
+// snippet: mirrors people
 const PEOPLE: &str = r#"people: vec![
     AvatarSpec {
         name: "Ada Lovelace".into(),

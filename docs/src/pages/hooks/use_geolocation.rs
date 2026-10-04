@@ -2,10 +2,11 @@ use crate::components::{Demo, DemoValues, DocPage, Wrap, a11y};
 use dioxus::prelude::*;
 use libero::{
     components::{Button, Code, Flex, Text},
-    hooks::{Geolocation, GeolocationError, PermissionState, use_geolocation},
+    hooks::{Geolocation, GeolocationError, GeolocationOptions, PermissionState, use_geolocation},
 };
 
 /// The hook in one component, as `ShareLocation` renders it.
+// snippet: mirrors status,ShareLocation
 fn code(_: &DemoValues, _: &str) -> String {
     r#"let mut location = use_geolocation(GeolocationOptions::default());
 // Announced once per outcome, never per fix.
@@ -58,7 +59,7 @@ fn status(location: &Geolocation) -> &'static str {
 
 #[component]
 fn ShareLocation() -> Element {
-    let mut location = use_geolocation(Default::default());
+    let mut location = use_geolocation(GeolocationOptions::default());
     let status = status(&location);
     let permission = match location.permission() {
         PermissionState::Granted => "granted",

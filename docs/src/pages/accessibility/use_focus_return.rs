@@ -7,6 +7,7 @@ use libero::{
 };
 
 /// The hook call and the panel it returns focus from, as `Filters` renders them.
+// snippet: mirrors Filters
 fn code(_: &DemoValues, _: &str) -> String {
     r#"let mut open = use_signal(|| false);
 let mut in_stock = use_signal(|| false);

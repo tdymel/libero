@@ -6,6 +6,7 @@ use libero::{
 };
 
 /// One field and the two delayed copies of it, as `LiveSearch` renders them.
+// snippet: mirrors LiveSearch
 fn code(_: &DemoValues, _: &str) -> String {
     r#"let mut query = use_signal(String::new);
 let settled = use_debounced_value(query.into(), 400);

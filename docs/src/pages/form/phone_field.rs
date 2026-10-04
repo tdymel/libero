@@ -1,14 +1,24 @@
 use super::dropdown_parts::{PHONE_DROPDOWN, list_dropdown_parts};
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, a11y, disabled_prop, prop, props, readonly_prop,
-    status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, a11y, disabled_prop, field_controls,
+    field_props, prop, props, readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::PhoneFieldPart;
 use libero::{
-    components::{Code, FieldStatus, Flex, PhoneField, Text},
+    components::{Code, Flex, PhoneField, Text},
     sx::sx,
 };
+
+struct MobileCopy;
+
+impl FieldCopy for MobileCopy {
+    const LABEL: &'static str = "Mobile";
+    const DESCRIPTION: &'static str = "We only text you about deliveries.";
+    const HELPER: &'static str = "Include the area code.";
+    const WARNING: &'static str = "That looks short.";
+    const ERROR: &'static str = "Enter a phone number.";
+}
 
 /// The flag emoji for an ISO 3166-1 alpha-2 code: two regional indicator symbols.
 fn flag_emoji(iso: &str) -> String {
@@ -138,7 +148,7 @@ pub fn PhoneFieldPage() -> Element {
                     "value: phone()".to_string(),
                     "oninput: move |next| phone.set(next)".to_string(),
                 ],
-                controls: vec![
+                controls: [vec![
                     Control::sizes("size")
                         .default("md"),
                     Control::sizes("radius")
@@ -149,34 +159,7 @@ pub fn PhoneFieldPage() -> Element {
                         .code(|_, values| {
                             vec![format!("country: \"{}\"", values.str("country").to_uppercase())]
                         }),
-                    Control::toggle("status", ["valid", "warning", "error"])
-                        .labels(["Valid", "Warning", "Error"])
-                        .default("valid")
-                        .code(|_, values| match values.str("status").as_str() {
-                            "warning" => vec![
-                                "status: FieldStatus::Warning(\"That looks short.\".into())".to_string(),
-                            ],
-                            "error" => vec!["status: \"Enter a phone number.\"".to_string()],
-                            _ => vec![],
-                        }),
-                    Control::switch("label").default("true").code(|_, values| {
-                        match values.str("label").as_str() {
-                            "true" => vec!["label: \"Mobile\"".to_string()],
-                            _ => vec!["aria_label: \"Mobile\"".to_string()],
-                        }
-                    }),
-                    Control::switch("description").code(|_, values| {
-                        match values.str("description").as_str() {
-                            "true" => vec!["description: \"We only text you about deliveries.\"".to_string()],
-                            _ => vec![],
-                        }
-                    }),
-                    Control::switch("helper").code(|_, values| {
-                        match values.str("helper").as_str() {
-                            "true" => vec!["helper: \"Include the area code.\"".to_string()],
-                            _ => vec![],
-                        }
-                    }),
+                ], field_controls::<MobileCopy>(), vec![
                     Control::switch("placeholder").code(|_, values| {
                         match values.str("placeholder").as_str() {
                             "true" => vec!["placeholder: \"213 373 4253\"".to_string()],
@@ -194,8 +177,9 @@ pub fn PhoneFieldPage() -> Element {
                     Control::switch("country_select").default("true"),
                     Control::switch("required"),
                     Control::switch("disabled"),
-                ],
+                ]].concat(),
                 render: move |values: DemoValues| {
+                    let field = field_props::<MobileCopy>(&values);
                     let flag: Option<Callback<String, Element>> = (values.str("flag") == "true")
                         .then(|| Callback::new(move |iso: String| rsx! { Flag { iso } }));
                     let e164 = value();
@@ -207,19 +191,13 @@ pub fn PhoneFieldPage() -> Element {
                                 size: values.str("size"),
                                 radius: values.str("radius"),
                                 country: values.str("country").to_uppercase(),
-                                label: (values.str("label") == "true").then(|| "Mobile".to_string()),
-                                aria_label: (values.str("label") != "true").then_some("Mobile"),
-                                description: (values.str("description") == "true")
-                                    .then(|| "We only text you about deliveries.".to_string()),
-                                helper: (values.str("helper") == "true")
-                                    .then(|| "Include the area code.".to_string()),
+                                label: field.label,
+                                aria_label: field.aria_label,
+                                description: field.description,
+                                helper: field.helper,
                                 placeholder: (values.str("placeholder") == "true")
                                     .then(|| "213 373 4253".to_string()),
-                                status: match values.str("status").as_str() {
-                                    "warning" => FieldStatus::Warning("That looks short.".to_string()),
-                                    "error" => FieldStatus::Error("Enter a phone number.".to_string()),
-                                    _ => FieldStatus::Valid,
-                                },
+                                status: field.status,
                                 country_select: values.str("country_select") == "true",
                                 required: (values.str("required") == "true").then_some(true),
                                 disabled: (values.str("disabled") == "true").then_some(true),

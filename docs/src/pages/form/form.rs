@@ -64,6 +64,7 @@ __BUTTONS__
 }"#;
 
 // snippet: ignore - spliced into `FORM_CODE`
+// snippet: mirrors SignupForm
 const COMPANY_FIELDS: &str = r#"
             Checkbox { label: "Sign up as a company", name: Signup::FIELDS.company() }
             // Rendered only while ticked, so its rules leave with it.
@@ -75,9 +76,11 @@ const COMPANY_FIELDS: &str = r#"
                 }
             }"#;
 
+// snippet: mirrors SignupForm
 const SUBMIT_BUTTON: &str = r#"            Button { r#type: "submit", "Create account" }"#;
 
 // snippet: ignore - spliced into `FORM_CODE`
+// snippet: mirrors SignupForm
 const HANDLE_BUTTONS: &str = r#"            Text { role: "status", if form.is_valid() { "Ready to send." } else { "Not ready yet." } }
             Flex { gap: "sm",
                 Button { r#type: "submit", "Create account" }
@@ -85,6 +88,7 @@ const HANDLE_BUTTONS: &str = r#"            Text { role: "status", if form.is_va
                 Button { variant: "outlined", onclick: move |_| form.reset(), "Clear" }
             }"#;
 
+// snippet: mirrors CheckButton
 const CHECK_BUTTON: &str = r#"
 
 /// Anything inside a form reaches its handle without a prop.

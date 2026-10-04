@@ -15,6 +15,7 @@ const DEMO_VAPID_KEY: &str =
     "BEApFB2FJLU4nU88TlwcYxftQLOwEfitLq0Soa1vU2frFGcPu9AAabiV8zj0k7J-WrGOUMAaAmsMnnlNrMsWHZk";
 
 /// The hooks in one component, as `Notify` renders them.
+// snippet: mirrors status,permission_text,Notify except "<your server's VAPID public key>" "/icon.png"
 fn code(_: &DemoValues, _: &str) -> String {
     r#"let mut notifier = use_system_notification();
 let mut push = use_push_subscription(PushOptions {

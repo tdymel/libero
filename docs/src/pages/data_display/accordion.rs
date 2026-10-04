@@ -20,6 +20,7 @@ const DISABLED_OPTION: &str =
     r#"options: OptionList::from_options().disabling(|step| *step == Step::Review)"#;
 
 /// The sections are the enum, so the snippet is a lie without it.
+// snippet: mirrors Step
 const STEP_ENUM: &str = r#"#[derive(Clone, PartialEq, Options)]
 enum Step {
     Shipping,
@@ -35,6 +36,7 @@ enum Step {
 // snippet: after STEP_ENUM
 // snippet: let mut open = use_signal(|| AccordionOpen::One(Some(Step::Shipping)));
 // snippet: in Accordion { open: open(), onchange: move |next| open.set(next), .. }
+// snippet: mirrors AccordionPage
 const ONE_PANEL: &str = r#"panel: move |step: Step| match step {
     Step::Shipping => rsx! {
         Flex { gap: "sm", align: "flex-start",
@@ -54,6 +56,7 @@ const ONE_PANEL: &str = r#"panel: move |step: Step| match step {
 // snippet: after STEP_ENUM
 // snippet: let mut open = use_signal(|| AccordionOpen::Many(vec![Step::Shipping]));
 // snippet: in Accordion { open: open(), onchange: move |next| open.set(next), .. }
+// snippet: mirrors AccordionPage
 const MANY_PANEL: &str = r#"panel: |step: Step| match step {
     Step::Shipping => rsx! { Text { "Where should the parcel go?" } },
     Step::Payment => rsx! { Text { "Card, invoice or bank transfer." } },
@@ -66,6 +69,7 @@ const MANY_PANEL: &str = r#"panel: |step: Step| match step {
 // snippet: item impl Step { fn icon(&self) -> Element { rsx! {} } }
 // snippet: let mut open = use_signal(|| AccordionOpen::One(Some(Step::Shipping)));
 // snippet: in Accordion { open: open(), onchange: move |next| open.set(next), panel: |_: Step| rsx! {}, .. }
+// snippet: mirrors rich
 const RICH: &str = r#"option_label: |step: Step| OptionLabel::rich(
     step.label(),
     rsx! {
@@ -80,6 +84,7 @@ const RICH: &str = r#"option_label: |step: Step| OptionLabel::rich(
 
 /// Printed with the rich label, which calls it.
 // snippet: after STEP_ENUM
+// snippet: mirrors Step
 const STEP_ICON: &str = r#"impl Step {
     fn icon(&self) -> Element {
         match self {

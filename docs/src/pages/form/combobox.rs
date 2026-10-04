@@ -16,6 +16,7 @@ use libero::{
 /// The fake server the preview asks, printed so the snippet calls nothing it
 /// does not show.
 // snippet: after FRUIT_ENUM
+// snippet: mirrors LATENCY,matching
 const FETCHING_SEARCH: &str = r#"/// How long the fake search takes.
 const LATENCY: Duration = Duration::from_millis(700);
 
@@ -34,6 +35,7 @@ fn matching(query: &str) -> Vec<Fruit> {
 /// A fetch per keystroke. `None` is the search in flight, and it is what keeps
 /// `empty` from flashing between the keystroke and the answer.
 // snippet: after FRUIT_ENUM
+// snippet: mirrors FetchingDemo
 const FETCHING_STATE: &str = r#"let suggestions = use_combobox();
 let mut text = use_signal(String::new);
 // One signal, not a list plus a `loading` flag: `None` *is* the search in
@@ -47,6 +49,7 @@ use_drop(move || pending.set(None));
 "#;
 
 // snippet: after FRUIT_ENUM, FETCHING_SEARCH, FETCHING_STATE
+// snippet: mirrors FetchingDemo
 const FETCHING_TRIGGER: &str = r#"TextField {
     sx: sx().width("280px"),
     label: "Fruit",
@@ -70,6 +73,7 @@ const FETCHING_TRIGGER: &str = r#"TextField {
 const LATENCY: Duration = Duration::from_millis(700);
 
 /// The enum is the option list, so every snippet has to show it.
+// snippet: mirrors Fruit
 const FRUIT_ENUM: &str = r#"#[derive(Clone, Copy, PartialEq, Options)]
 enum Fruit {
     Apple,
@@ -85,6 +89,7 @@ enum Fruit {
 "#;
 
 // snippet: after FRUIT_ENUM
+// snippet: mirrors SelectDemo
 const SELECT_STATE: &str = r#"let fruit = use_combobox();
 let mut picked = use_signal(|| None::<Fruit>);
 // A `combobox` role takes no name from its content, so the label names it.
@@ -93,6 +98,7 @@ let label = format!("{}-label", fruit.id());
 "#;
 
 // snippet: after FRUIT_ENUM
+// snippet: mirrors SuggestionsDemo
 const SUGGESTIONS_STATE: &str = r#"let suggestions = use_combobox();
 let mut text = use_signal(String::new);
 
@@ -105,6 +111,7 @@ let matches: Vec<Fruit> = Fruit::options()
 "#;
 
 // snippet: after FRUIT_ENUM, SELECT_STATE
+// snippet: mirrors SelectDemo
 const SELECT_TRIGGER: &str = r#"Text { id: "{label}", size: "sm", "Fruit" }
 Button {
     variant: "outlined",
@@ -123,6 +130,7 @@ Button {
 }"#;
 
 // snippet: after FRUIT_ENUM, SUGGESTIONS_STATE
+// snippet: mirrors SuggestionsDemo
 const SUGGESTIONS_TRIGGER: &str = r#"TextField {
     sx: sx().width("280px"),
     label: "Fruit",
@@ -141,6 +149,7 @@ input { r#type: "hidden", name: "fruit", value: "{text()}" }"#;
 /// rather than written out four times.
 // snippet: after FRUIT_ENUM, SELECT_STATE
 // snippet: in Combobox { state: fruit, options: Fruit::options().to_vec(), option: move |o: ComboboxOptionArgs<Fruit>| rsx! { ComboboxOption { .. "{o.value.label()}" } } }
+// snippet: mirrors SelectDemo
 const SELECT_WIRING: &str = r#"        selected: picked() == Some(o.value),
         onpick: move |_| {
             picked.set(Some(o.value));
@@ -150,6 +159,7 @@ const SELECT_WIRING: &str = r#"        selected: picked() == Some(o.value),
 /// No `selected`: a suggestion is not a selection.
 // snippet: after FRUIT_ENUM, SUGGESTIONS_STATE
 // snippet: in Combobox { state: suggestions, options: matches, option: move |o: ComboboxOptionArgs<Fruit>| rsx! { ComboboxOption { .. "{o.value.label()}" } } }
+// snippet: mirrors SuggestionsDemo,FetchingDemo
 const SUGGESTION_WIRING: &str = r#"        onpick: move |_| {
             text.set(o.value.label());
             suggestions.close();
@@ -165,6 +175,7 @@ const PLAIN_ROW: &str = r#"        "{o.value.label()}""#;
 // snippet: item impl Fruit { fn emoji(self) -> &'static str { "" } fn note(self) -> &'static str { "" } }
 // snippet: let fruit = use_combobox();
 // snippet: in Combobox { state: fruit, options: Fruit::options().to_vec(), option: move |o: ComboboxOptionArgs<Fruit>| rsx! { ComboboxOption { .. } } }
+// snippet: mirrors RowContent,SelectDemo
 const RICH_ROW: &str = r#"        Text { component: "span", size: "xl", "aria-hidden": "true", "{o.value.emoji()}" }
         Flex {
             direction: "column",

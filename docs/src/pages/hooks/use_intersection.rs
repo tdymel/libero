@@ -7,6 +7,7 @@ use libero::{
 };
 
 /// The hook in one component, as `Reveal` renders it.
+// snippet: mirrors Reveal
 fn code(_: &DemoValues, _: &str) -> String {
     r#"let seen = use_intersection(IntersectionOptions {
     thresholds: vec![0.0, 0.5, 1.0],

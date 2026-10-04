@@ -6,6 +6,7 @@ use libero::{
 };
 
 /// The id is per instance, so the snippet is the component and two of it.
+// snippet: mirrors Disclosure,UseIdPage
 fn code(_: &DemoValues, _: &str) -> String {
     r#"#[component]
 fn Disclosure(title: String, children: Element) -> Element {

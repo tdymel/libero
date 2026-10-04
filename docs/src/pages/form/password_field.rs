@@ -1,9 +1,20 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, a11y, prop, props, readonly_prop, status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, a11y, field_controls, field_props, prop, props,
+    readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::FieldPart;
-use libero::components::{Code, FieldStatus, PasswordField, Text};
+use libero::components::{Code, PasswordField, Text};
+
+struct PasswordCopy;
+
+impl FieldCopy for PasswordCopy {
+    const LABEL: &'static str = "Password";
+    const DESCRIPTION: &'static str = "Used to sign you in.";
+    const HELPER: &'static str = "At least 8 characters.";
+    const WARNING: &'static str = "That password is weak.";
+    const ERROR: &'static str = "Too short.";
+}
 
 #[component]
 pub fn PasswordFieldPage() -> Element {
@@ -88,39 +99,12 @@ pub fn PasswordFieldPage() -> Element {
                     "value: value()".to_string(),
                     "oninput: move |next| value.set(next)".to_string(),
                 ],
-                controls: vec![
+                controls: [vec![
                     Control::sizes("size")
                         .default("md"),
                     Control::sizes("radius")
                         .default("sm"),
-                    Control::toggle("status", ["valid", "warning", "error"])
-                        .labels(["Valid", "Warning", "Error"])
-                        .default("valid")
-                        .code(|_, values| match values.str("status").as_str() {
-                            "warning" => vec![
-                                "status: FieldStatus::Warning(\"That password is weak.\".into())".to_string(),
-                            ],
-                            "error" => vec!["status: \"Too short.\"".to_string()],
-                            _ => vec![],
-                        }),
-                    Control::switch("label").default("true").code(|_, values| {
-                        match values.str("label").as_str() {
-                            "true" => vec!["label: \"Password\"".to_string()],
-                            _ => vec!["aria_label: \"Password\"".to_string()],
-                        }
-                    }),
-                    Control::switch("description").code(|_, values| {
-                        match values.str("description").as_str() {
-                            "true" => vec!["description: \"Used to sign you in.\"".to_string()],
-                            _ => vec![],
-                        }
-                    }),
-                    Control::switch("helper").default("true").code(|_, values| {
-                        match values.str("helper").as_str() {
-                            "true" => vec!["helper: \"At least 8 characters.\"".to_string()],
-                            _ => vec![],
-                        }
-                    }),
+                ], field_controls::<PasswordCopy>(), vec![
                     Control::switch("placeholder").code(|_, values| {
                         match values.str("placeholder").as_str() {
                             "true" => vec!["placeholder: \"Your password\"".to_string()],
@@ -130,24 +114,18 @@ pub fn PasswordFieldPage() -> Element {
                     Control::switch("reveal_button").default("true"),
                     Control::switch("required"),
                     Control::switch("disabled"),
-                ],
-                render: move |values: DemoValues| rsx! {
+                ]].concat(),
+                render: move |values: DemoValues| {
+                    let field = field_props::<PasswordCopy>(&values);
+                    rsx! {
                     PasswordField {
                         size: values.str("size"),
                         radius: values.str("radius"),
-                        label: (values.str("label") == "true").then(|| "Password".to_string()),
-                        aria_label: (values.str("label") != "true").then_some("Password"),
-                        description: (values.str("description") == "true")
-                            .then(|| "Used to sign you in.".to_string()),
-                        helper: (values.str("helper") == "true")
-                            .then(|| "At least 8 characters.".to_string()),
-                        status: match values.str("status").as_str() {
-                            "warning" => {
-                                FieldStatus::Warning("That password is weak.".to_string())
-                            }
-                            "error" => FieldStatus::Error("Too short.".to_string()),
-                            _ => FieldStatus::Valid,
-                        },
+                        label: field.label,
+                        aria_label: field.aria_label,
+                        description: field.description,
+                        helper: field.helper,
+                        status: field.status,
                         placeholder: (values.str("placeholder") == "true")
                             .then(|| "Your password".to_string()),
                         reveal_button: values.str("reveal_button") == "true",
@@ -157,6 +135,7 @@ pub fn PasswordFieldPage() -> Element {
                         value: value(),
                         oninput: move |next| value.set(next),
                     }
+                }
                 },
             }
         }

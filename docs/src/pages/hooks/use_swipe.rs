@@ -7,6 +7,7 @@ use libero::{
 };
 
 /// The hook in one component, as `SwipePad` renders it.
+// snippet: mirrors SwipePad
 fn code(_: &DemoValues, _: &str) -> String {
     r#"let mut last = use_signal(|| None::<SwipeDirection>);
 let swipe = use_swipe(

@@ -282,63 +282,56 @@ shows Ctrl.
 
 ### Libero handles
 
-- The text is a `role="textbox"` with `aria-multiline`, named by `label`
-  through `aria-labelledby` and described by `description` and `helper`.
-  Clicking the label focuses the text. A debug build warns when nothing names
-  it.
-- The text stays a tab stop while `readonly`; while `disabled` it carries
-  `aria-disabled` and is skipped.
-- The text is described by a hint read on focus: in a list Tab indents, and
+- The text is a multiline `role="textbox"`, named by `label` and described by
+  `description`, `helper` and a hint read on focus: in a list Tab indents, and
   Escape, then Tab leaves (`RichTextEditorLabels::leave_hint`).
-- The toolbar is one tab stop with arrow-key movement, named by the
-  localization's `rich_text_editor` words. Each mark and block button reports
-  `aria-pressed`.
-- The toolbar keeps focus and the selection in the text when clicked.
-- Each toolbar button shows its name and its chord in a tooltip on hover and
-  keyboard focus, and carries the chord as `aria-keyshortcuts`.
+- The toolbar is one tab stop, moved through with the arrows. Clicking it
+  keeps focus and the selection in the text. Each mark and block button
+  reports `aria-pressed`, shows its name and chord in a tooltip on hover and
+  focus, and carries the chord as `aria-keyshortcuts`.
 - In a narrow column the toolbar stays one row: the less used buttons move
-  into a "More formatting" menu as `menuitemcheckbox` items, so the arrow keys
-  only reach what is shown. Bold, italic and the text type menu always stay.
-- A shortcut, toolbar button or menu item that toggles a mark, list, quote or
-  block type is announced through a polite live region ("Bold on",
-  "Heading 2").
-- The link dialog focuses its labelled URL field; a refused scheme shows as
+  into a "More formatting" menu, so the arrows only reach what is shown. Bold,
+  italic and the text type menu always stay.
+- A shortcut that toggles a mark, list, quote or block type is said in a
+  polite live region, "Bold on", "Heading 2".
+- The text type menu and a code block's language menu are menu buttons whose
+  name includes the current choice, "Code language: Rust". The language button
+  on the fence is not a tab stop; `Ctrl+Shift+L` reaches it.
+- The link dialog focuses its labelled URL field and shows a refused scheme as
   that field's error. Closing it puts the caret back in the text.
-- The text type menu is a menu button whose name includes the current type,
-  with `menuitemradio` items. So is the language menu of a code block, in
-  the toolbar and on its opening fence, whose name starts with the fence text
-  it shows ("rust, Code language"); the fence button is not a tab stop,
-  `Ctrl+Shift+L` reaches it.
 - Every edit goes through the document model, so undo, the `onchange` value
-  and the screen stay in step. Input methods (IME) compose natively and are
-  taken in when the composition ends.
-- While `overlay` is set, the text carries `aria-controls` naming it,
+  and the screen stay in step. Input methods (IME) compose natively.
+- While `overlay` is set, the text carries `aria-controls`,
   `aria-autocomplete="list"` and `aria-activedescendant` from
-  `active_descendant`, so a screen reader announces the highlighted option.
-- With `overlay_results`, the overlay's option count is announced through the
-  polite live region whenever it changes while the overlay shows ("2
-  results").
+  `active_descendant`, so a screen reader reads the highlighted option.
+  `overlay_results` says the option count, "2 results", in the live region
+  when it changes.
 
 ### You must
 
 - Leave `label` unset only when something else names the editor, such as an
-  `aria-label` or `aria-labelledby` attribute.
-- Document custom chords you bind in `keymap` for your users.
-- Bind chords the browser leaves to the page. `Ctrl+N`, `Ctrl+T`, `Ctrl+W`,
-  `Ctrl+Tab` and their Shift forms never reach it (on a Mac also `Cmd+Q`,
-  `Cmd+H`, `Cmd+M`). A chord you unbind goes back to the browser: without
-  Underline, `Ctrl+U` opens the page source. `Ctrl+P`, `Ctrl+S`, `Ctrl+D`,
-  `Ctrl+F`, `Ctrl+L` and `Ctrl+Shift+I`/`J`/`C` belong to the browser too. On
-  Windows `Ctrl+Alt` is AltGr, which types characters on many layouts: where it
-  types one, the character wins over the chord (`Ctrl+Alt+2` types `²` on a
-  German layout).
-- Make a `NodeViews` atom name its node in text (a mention shows `@name`): it
-  is a non-editable island a screen reader reads as is.
+  `aria_label`.
+- Tell your users about the chords you bind in `keymap`.
+- Bind only chords the browser leaves to the page. `Ctrl+N`, `Ctrl+T`,
+  `Ctrl+W`, `Ctrl+Tab` and their Shift forms never reach it (on a Mac also
+  `Cmd+Q`, `Cmd+H`, `Cmd+M`), and `Ctrl+P`, `Ctrl+S`, `Ctrl+D`, `Ctrl+F`,
+  `Ctrl+L` and `Ctrl+Shift+I`/`J`/`C` belong to the browser too. A chord you
+  unbind goes back to the browser: without Underline, `Ctrl+U` opens the page
+  source. On Windows `Ctrl+Alt` is AltGr, and where it types a character the
+  character wins (`Ctrl+Alt+2` types `²` on a German layout).
+- Make a `NodeViews` atom show its node's name as text (a mention shows
+  `@name`). A screen reader reads the non-editable island as it is.
 - Give an `overlay` list `role="listbox"` with an id per `role="option"`, pass
   the highlighted one as `active_descendant` and the count as
-  `overlay_results`, and steer it with the keyboard through `intercept`;
+  `overlay_results`, and steer it with the keyboard through `intercept`.
   Escape should close it.
 - Name each `RichTextTool` with its `label`: the button shows only its icon.
+
+### Example
+
+Release notes with `label: "Notes"`: a screen reader reads a multiline "Notes"
+text box. `Ctrl+B` says "Bold on", and `Alt+F10` moves to the toolbar, where
+the Bold button reads as pressed.
 
 ### Limits
 

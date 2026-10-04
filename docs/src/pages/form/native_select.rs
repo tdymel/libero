@@ -1,10 +1,20 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, Wrap, a11y, disabled_prop, prop, props, required_prop,
-    status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, disabled_prop, field_controls,
+    field_props, prop, props, required_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::FieldPart;
-use libero::components::{Code, FieldStatus, NativeSelect, OptionList, Options, Text};
+use libero::components::{Code, NativeSelect, OptionList, Options, Text};
+
+struct SizeCopy;
+
+impl FieldCopy for SizeCopy {
+    const LABEL: &'static str = "Size";
+    const DESCRIPTION: &'static str = "Applies to body text.";
+    const HELPER: &'static str = "You can change this later.";
+    const WARNING: &'static str = "Large sizes reflow the page.";
+    const ERROR: &'static str = "Pick a size.";
+}
 
 /// The enum is the option list, so the snippet has to show it.
 const SIZE_ENUM: &str = r#"#[derive(Clone, Copy, PartialEq, Options)]
@@ -113,44 +123,15 @@ pub fn NativeSelectPage() -> Element {
                     "value: value()".to_string(),
                     "onchange: move |next| value.set(Some(next))".to_string(),
                 ],
-                controls: vec![
+                controls: [vec![
                     Control::sizes("size")
                         .default("md"),
                     Control::sizes("radius")
                         .default("sm"),
-                    Control::toggle("status", ["valid", "warning", "error"])
-                        .labels(["Valid", "Warning", "Error"])
-                        .default("valid")
-                        .code(|_, values| match values.str("status").as_str() {
-                            "warning" => vec![
-                                "status: FieldStatus::Warning(\"Large sizes reflow the page.\".into())".to_string(),
-                            ],
-                            "error" => vec!["status: \"Pick a size.\"".to_string()],
-                            _ => vec![],
-                        }),
-                    // Each caption is a whole element, not a style: unset,
-                    // the slot is not in the markup at all.
-                    Control::switch("label").default("true").code(|_, values| {
-                        match values.str("label").as_str() {
-                            "true" => vec!["label: \"Size\"".to_string()],
-                            _ => vec!["aria_label: \"Size\"".to_string()],
-                        }
-                    }),
+                ], field_controls::<SizeCopy>(), vec![
                     Control::switch("placeholder").code(|_, values| {
                         match values.str("placeholder").as_str() {
                             "true" => vec!["placeholder: \"Pick a size\"".to_string()],
-                            _ => vec![],
-                        }
-                    }),
-                    Control::switch("description").code(|_, values| {
-                        match values.str("description").as_str() {
-                            "true" => vec!["description: \"Applies to body text.\"".to_string()],
-                            _ => vec![],
-                        }
-                    }),
-                    Control::switch("helper").code(|_, values| {
-                        match values.str("helper").as_str() {
-                            "true" => vec!["helper: \"You can change this later.\"".to_string()],
                             _ => vec![],
                         }
                     }),
@@ -164,8 +145,9 @@ pub fn NativeSelectPage() -> Element {
                             _ => vec![],
                         }
                     }),
-                ],
+                ]].concat(),
                 render: move |values: DemoValues| {
+                    let field = field_props::<SizeCopy>(&values);
                     let placeholder = values.str("placeholder") == "true";
                     let mut current = if placeholder { unpicked } else { value };
                     rsx! {
@@ -173,19 +155,11 @@ pub fn NativeSelectPage() -> Element {
                             placeholder: placeholder.then(|| "Pick a size".to_string()),
                             size: values.str("size"),
                             radius: values.str("radius"),
-                            label: (values.str("label") == "true").then(|| "Size".to_string()),
-                            aria_label: (values.str("label") != "true").then_some("Size"),
-                            description: (values.str("description") == "true")
-                                .then(|| "Applies to body text.".to_string()),
-                            helper: (values.str("helper") == "true")
-                                .then(|| "You can change this later.".to_string()),
-                            status: match values.str("status").as_str() {
-                                "warning" => {
-                                    FieldStatus::Warning("Large sizes reflow the page.".to_string())
-                                }
-                                "error" => FieldStatus::Error("Pick a size.".to_string()),
-                                _ => FieldStatus::Valid,
-                            },
+                            label: field.label,
+                            aria_label: field.aria_label,
+                            description: field.description,
+                            helper: field.helper,
+                            status: field.status,
                             required: (values.str("required") == "true").then_some(true),
                             disabled: (values.str("disabled") == "true").then_some(true),
                             options: match values.str("disabled_option").as_str() {

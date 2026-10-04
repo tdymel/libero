@@ -8,6 +8,7 @@ use libero::components::{
 
 /// Everything above the `rsx!`, the pick handler and the menus. `generate_code`
 /// only emits props, and the list is a `let`.
+// snippet: mirrors MenubarDemo
 const PREAMBLE: &str = r#"let mut last = use_signal(|| String::from("nothing yet"));
 let pick = move |name: &'static str| move |_| last.set(name.to_string());
 let item = move |name: &'static str| -> MenuEntry {

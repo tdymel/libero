@@ -9,6 +9,7 @@ use libero::{
 };
 
 /// The hook call and the markup it measures, as `Measure` renders them.
+// snippet: mirrors Measure
 fn code(_: &DemoValues, _: &str) -> String {
     r#"let panel = use_element();
 let mut size = use_signal(String::new);

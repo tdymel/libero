@@ -6,6 +6,7 @@ use libero::{
 };
 
 /// The hook in one component, as `HoldToDelete` renders it.
+// snippet: mirrors HoldToCount
 fn code(_: &DemoValues, _: &str) -> String {
     r#"let mut taps = use_signal(|| 0);
 let mut holds = use_signal(|| 0);

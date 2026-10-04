@@ -7,6 +7,7 @@ use libero::{
 use web_time::Instant;
 
 /// The two hooks in one component, as `Stopwatch` renders them.
+// snippet: mirrors Stopwatch
 fn code(_: &DemoValues, _: &str) -> String {
     r#"// `std::time::Instant` panics on wasm; this one reads the browser's clock there.
 use web_time::Instant;

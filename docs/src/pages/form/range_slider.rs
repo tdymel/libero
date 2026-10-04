@@ -40,6 +40,7 @@ impl Quality {
 
 /// Printed above the rsx in discrete mode: without the derive there is no
 /// discrete range, so it is part of the example, not a separate section.
+// snippet: mirrors Quality
 const QUALITY: &str = r#"#[derive(Clone, Copy, Debug, PartialEq, SliderValue)]
 enum Quality {
     Low,

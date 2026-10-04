@@ -5,6 +5,7 @@ use libero::{
     hooks::use_accessibility,
 };
 
+// snippet: mirrors Settings
 fn code(_: &DemoValues, _: &str) -> String {
     r#"let accessibility = use_accessibility();
 

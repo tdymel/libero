@@ -50,6 +50,7 @@ const METHODS: [(&str, &str); 10] = [
 ];
 
 /// The hook in one component, as `OwnPlayer` renders it.
+// snippet: mirrors OwnPlayer except "/podcast.mp3"
 fn code(_: &DemoValues, _: &str) -> String {
     r#"let media = use_media();
 let time = media.current_time() as u64;

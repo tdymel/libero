@@ -938,116 +938,76 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 
 ### Libero handles
 
-- An unnamed table warns in a debug build.
-- With `scroll` or `max_height`, an overflowing scroll area with no button in
-  it is a tab stop, a `role="region"` named like the table. With sort or menu
-  buttons in the header it is no stop: the arrows scroll it from a focused
-  button.
-- The column menu button shows on its header's hover or focus with a mouse,
-  always on a touch screen. An end-aligned header puts it first, in the DOM
-  too, so Tab follows what is seen.
-- Only sorted headers carry `aria-sort`. With several, each sort button's name
-  adds its place, "sort order 2".
-- Each row's checkbox is named "Select" plus its row header's text, else its
-  first cell's. The header checkbox reads mixed while some rows are selected.
-- A selected row carries `aria-selected="true"`, and a polite live region says
-  the new count, "2 rows selected", after each change.
-- A tap on a touch screen has no Shift key, so with `multi_sort` a tap always
-  adds the column.
-- `selectable` or `row_detail` without `row_key` warns in a debug build.
-- Each detail toggle is a button named "Details for" plus the row's name, like
-  its checkbox, with `aria-expanded`, and `aria-controls` on the detail row
-  while it is open. The toggle column's header reads "Details" to a screen
-  reader only.
-- `.row_header()` cells render as `th scope="row"`, so a screen reader reads
-  that name as it moves down any other column. They look like the other cells.
-- Paginated, the page buttons sit in a `nav` named after the caption, the
-  page-size picker is labelled, and a page change announces the new range,
-  "4–6 of 7", politely. The first render announces nothing.
-- The quick-filter field is a labelled `type="search"` input, "Search", described by the table's caption, else its `aria_labelledby` or `aria_label`,
-  so two tables' fields differ. Once typing pauses for half a second, a polite live region says how many rows are
-  left, "2 rows".
-- With `column_menu`, each menu button is named after its column, "Age column
-  options", and the header keeps its text as its name. The Columns submenu lists
-  checkbox items, and the last shown column cannot be hidden: its checkbox and
-  Hide column are described by why, "One column stays shown". After a pin moves
-  the column, focus stays on its menu button; after Hide column it moves to the
-  next shown column's, else the previous one's.
-- The filter popover is a `role="dialog"` named "Filter" plus the column, with
-  labelled Operator and Value fields; focus moves to the value on open, or to
-  the operator when it takes none. A filtered header's button reads "Age is
-  filtered". Each header filter field is named "Filter" plus its column.
-- The filter panel is a `role="dialog"` named "Filters"; its button reads "Filters, 2 active", the count it shows hidden from readers. Each line's controls are named with their column, "Name: operator", "Name: value", "Remove Name filter". Opening focuses the first line, else Add filter; Add focuses the new line, a remove the line before it, else Add filter; Escape, or Tab past either end, closes it onto its button.
-- A column filter change announces the rows left, "2 rows", in the same polite
-  live region, once it settles.
-- A group header is a `th scope="colgroup"` over its columns, so a screen reader
-  reads it with each of their cells. A column outside any group, and the
-  select-all box, span every header row.
-- Pinned columns move to their edge in the DOM too, so Tab and a screen reader
-  meet the cells in the order they are seen. The detail toggle and checkbox
-  columns pin with the start ones.
-- A pinned column past one without a `width` warns in a debug build: its offset
-  is unknown, so it would overlap.
-- A group or a `col_span` stops at a pin edge: a group over pinned and scrolled
-  columns shows as two headers, and the one over the pinned columns pins with them.
-- With `onrowreorder`, each row has a drag handle named "Reorder" plus the
-  row's name, described by the keyboard steps, and Move up and Move down
-  buttons, so a single pointer reorders without a drag (WCAG 2.5.7). A touch
-  drags only from the handle; elsewhere it scrolls. Each lift, move and drop is
-  said in a polite live region. While sorted or filtered the controls are off,
-  `aria-disabled`, yet stay tab stops described by why: "Clear the sort and
-  filters to reorder rows".
-- `onrowreorder` without `row_key` warns in a debug build.
-- The column menu's Move left and Move right name the screen sides in either
-  text direction. A moved column moves in the DOM too, so Tab and a screen
-  reader follow it, and a column moved out of its group splits the group.
-- Each move, pin, unpin and Hide column in the column menu is said in a polite
-  live region, "Name moved to column 2 of 5", "Name pinned to start", "Name
-  hidden": the menu closes over the change.
-- The header drag grip is pointer only and hidden from screen readers, with no
-  tab stop: the column menu's moves are its keyboard and drag-free way (WCAG
-  2.5.7). Escape, or a drop outside the table, cancels the drag. Blitz has no
-  grip; the menu moves columns there.
+- A debug build warns about an unnamed table, about `selectable`, `row_detail`
+  or `onrowreorder` without `row_key`, and about a pinned column after one
+  with no `width`.
+- `.row_header()` cells are `th scope="row"`, so a screen reader reads the
+  row's name as it moves down any other column. A group header is a `th
+  scope="colgroup"`, read with each cell under it.
+- With `scroll` or `max_height`, an overflowing table with no button in it is
+  a named region and a tab stop, so the arrows can scroll it. With header
+  buttons there is no extra stop: the arrows scroll from a focused button.
+- Only sorted headers carry `aria-sort`. With `multi_sort`, each sort button's
+  name adds its place, "sort order 2", and a tap always adds the column, as
+  touch has no Shift.
+- Each row's checkbox is named "Select" plus the row's name. The header
+  checkbox reads mixed while some rows are selected. A selected row carries
+  `aria-selected="true"`.
+- Each detail toggle is a button named "Details for" plus the row's name, with
+  `aria-expanded` and, while open, `aria-controls`.
+- A polite live region says what changed: the selected count, "2 rows
+  selected"; the page range, "4–6 of 7"; the rows left after a filter, "2
+  rows"; the rows loaded by `onbottomreached`, "200 rows"; an export,
+  "Exported 12 rows". The first render says nothing.
+- Page buttons sit in a `nav` named after the caption, and the page-size
+  picker is labelled. The quick-filter is a labelled search field described by
+  the table's name, so two tables' fields differ.
+- Filter popovers and the filter panel are named dialogs with labelled fields.
+  Focus moves in on open, and Escape closes them onto their button. A filtered
+  header reads "Age is filtered".
+- Each column menu button is named after its column, "Age column options". It
+  shows on hover or focus, always on touch. A move, pin, hide or width change
+  is said in a polite live region, and the last shown column cannot be hidden:
+  its controls say why.
+- Pinned and moved columns move in the DOM too, so Tab and a screen reader
+  meet the cells in the order they are seen.
+- Rows and columns reorder without a drag (WCAG 2.5.7): a row has a named
+  handle plus Move up and Move down buttons, a column moves from its menu. The
+  header drag grip is pointer only and hidden from screen readers. While
+  sorted or filtered the row controls stay tab stops but are `aria-disabled`
+  and say why.
 - Each resize grip is a tab stop, a vertical `role="separator"` named "Resize"
-  plus the column, with `aria-valuenow` its width in px and `aria-valuemin` and
-  `aria-valuemax` its limits.
-- Each Widen, Narrow or Reset width in the column menu says the column's new
-  width in a polite live region, "Name: 170 px": the menu stays open over the
-  change.
-- `loading` without shown rows marks the table `aria-busy` and hides its
-  placeholder rows from screen readers. With rows shown it adds a progress bar
-  named "Loading rows" and leaves the table unbusy, as some screen readers hold
-  back a busy table's rows.
-- The `toolbar` is a plain row, not a `role="toolbar"`: Tab moves through its
-  controls as anywhere else. `TableExportButton` says the rows it handed over,
-  "Exported 12 rows", in the polite live region; `TableColumnsButton` describes
-  the last shown column's checkbox as the column menu does.
-- With `virtual_row_height`, the table carries `aria-rowcount`, every row it
-  holds, the other pages' too when paged, and each rendered row its
-  `aria-rowindex`, so a screen reader says
-  "row 5 001 of 10 001" though only a screenful is in the DOM. The
-  scrolled-away rows leave no empty rows behind.
-- With `virtual_row_height`, Tab and Shift+Tab walk the rows' controls past the
-  rendered ones: the focused row scrolls into view and the next one renders.
-  The row holding focus stays rendered when it scrolls away, Blitz included.
-- With `onbottomreached`, once the rows it asked for arrive a polite live region
-  says the new count, "200 rows". `aria-rowcount` counts the rows loaded so far.
+  plus the column, with its width and limits in `aria-valuenow`,
+  `aria-valuemin` and `aria-valuemax`.
+- `loading` marks an empty table `aria-busy`. With rows shown it adds a
+  progress bar named "Loading rows" instead, as some screen readers hold back
+  a busy table's rows.
+- With `virtual_row_height`, `aria-rowcount` and `aria-rowindex` give the full
+  count and each row's place, "row 5 001 of 10 001". Tab walks past the
+  rendered rows, and the row holding focus stays rendered.
+- The `toolbar` is a plain row, not a `role="toolbar"`: Tab moves through it
+  as anywhere else.
 
 ### You must
 
-- Name every table. `caption` shows a title and names it, `aria_labelledby`
-  points at a heading already on the page, and `aria_label` names it without
-  text.
+- Name every table: `caption` shows a title, `aria_labelledby` points at a
+  heading already on the page, `aria_label` names it without text.
 - Set `scroll: true` on a table wider than its container, or `max_height` on a
   long one.
 - Mark the column that names a row with `.row_header()`.
 - With `onrowclick`, also put a button or link for that action in a cell. A
   row is not a tab stop, so a keyboard cannot click it.
-- With `selectable` or `row_detail`, give the rows a `.row_header()` column, so
-  each checkbox and toggle is named by something unique.
-- Before a CSV of text users typed goes to a spreadsheet, neutralise cells that
-  start with `=`, `+`, `-` or `@` (CSV injection, OWASP). `table_text`'s docs
-  show a three-line guard.
+- With `selectable` or `row_detail`, give the rows a `.row_header()` column,
+  so each checkbox and toggle gets a unique name.
+- Before a CSV of text users typed goes to a spreadsheet, neutralise cells
+  that start with `=`, `+`, `-` or `@` (CSV injection, OWASP). `table_text`'s
+  docs show a three-line guard.
+
+### Example
+
+A stock list with `caption: "Stock"`, `row_detail` and `.row_header()` on the
+Name column. A screen reader announces the "Stock" table, reads "Cherry" with
+each cell of that row, and names the row's toggle "Details for Cherry".
 
 ### Limits
 

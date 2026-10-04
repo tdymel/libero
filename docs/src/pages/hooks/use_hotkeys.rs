@@ -6,6 +6,7 @@ use libero::{
 };
 
 /// The hook in one component, as `Shortcuts` renders it.
+// snippet: mirrors Shortcuts
 fn code(_: &DemoValues, _: &str) -> String {
     r#"let mut searches = use_signal(|| 0);
 let mut helps = use_signal(|| 0);

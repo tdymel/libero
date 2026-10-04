@@ -28,6 +28,7 @@ use libero::{
 };
 
 /// The enum is the option list, so the snippet has to show it.
+// snippet: mirrors Topping
 const TOPPING_ENUM: &str = r#"#[derive(Clone, Copy, PartialEq, Options)]
 enum Topping {
     Cheese,
@@ -42,6 +43,7 @@ enum Topping {
 
 /// Only printed while the custom rows are on - the plain snippet never calls it.
 // snippet: after TOPPING_ENUM
+// snippet: mirrors Topping
 const TOPPING_IMPL: &str = r#"impl Topping {
     fn emoji(self) -> &'static str {
         match self {
@@ -72,6 +74,7 @@ const TOPPING_IMPL: &str = r#"impl Topping {
 // snippet: item impl Topping { fn emoji(self) -> &'static str { "" } fn note(self) -> &'static str { "" } }
 // snippet: let mut value = use_signal(Vec::<Topping>::new);
 // snippet: in MultiSelect { value: value(), onchange: move |next| value.set(next), .. }
+// snippet: mirrors topping_row
 const CUSTOM_OPTION: &str = r#"option: move |o: SelectOptionArgs<Topping>| rsx! {
     Text { component: "span", size: "lg", "aria-hidden": "true", "{o.value.emoji()}" }
     Text { component: "span", sx: sx().flex("1 1 auto"), "{o.value.label()}" }
@@ -85,6 +88,7 @@ const CUSTOM_OPTION: &str = r#"option: move |o: SelectOptionArgs<Topping>| rsx! 
 // snippet: let mut value = use_signal(Vec::<Topping>::new);
 // snippet: let words = use_localization();
 // snippet: in MultiSelect { value: value(), onchange: move |next| value.set(next), .. }
+// snippet: mirrors topping_selection
 const CUSTOM_SELECTION: &str = r#"selection: move |s: SelectionArgs<Topping>| rsx! {
     // Unclipped, so the x's 24px hit area reaches past the pill.
     Chip { size: "xs", variant: "outlined", sx: sx().overflow("visible"),
@@ -119,6 +123,7 @@ const CUSTOM_SELECTION: &str = r#"selection: move |s: SelectionArgs<Topping>| rs
 // snippet: item impl Topping { fn emoji(self) -> &'static str { "" } fn note(self) -> &'static str { "" } }
 // snippet: let mut value = use_signal(Vec::<Topping>::new);
 // snippet: in MultiSelect { value: value(), onchange: move |next| value.set(next), .. }
+// snippet: mirrors topping_filter
 const CUSTOM_FILTER: &str = r#"filter: move |f: SelectFilterArgs<Topping>| {
     let query = f.query.to_lowercase();
     f.value.label().to_lowercase().contains(&query)
@@ -130,6 +135,7 @@ const CUSTOM_FILTER: &str = r#"filter: move |f: SelectFilterArgs<Topping>| {
 // snippet: after TOPPING_ENUM
 // snippet: let mut value = use_signal(Vec::<Topping>::new);
 // snippet: in MultiSelect { value: value(), onchange: move |next| value.set(next), .. }
+// snippet: mirrors topping_options
 const GROUPED: &str = r#"options: OptionList::grouped()
     .group("Dairy", [Topping::Cheese])
     .group("Vegetables", [Topping::Mushrooms, Topping::Olives, Topping::Onions, Topping::Peppers])
@@ -140,12 +146,13 @@ const GROUPED: &str = r#"options: OptionList::grouped()
 // snippet: after TOPPING_ENUM
 // snippet: let mut value = use_signal(Vec::<Topping>::new);
 // snippet: in MultiSelect { value: value(), onchange: move |next| value.set(next), .. }
+// snippet: mirrors topping_options
 const SOLD_OUT: &str = r#"options: OptionList::new([
-    Topping::Cheese.into(),
-    Topping::Mushrooms.into(),
-    Topping::Olives.into(),
-    Topping::Onions.into(),
-    Topping::Peppers.into(),
+    OptionItem::new(Topping::Cheese),
+    OptionItem::new(Topping::Mushrooms),
+    OptionItem::new(Topping::Olives),
+    OptionItem::new(Topping::Onions),
+    OptionItem::new(Topping::Peppers),
     OptionItem::new(Topping::Pineapple).disabled(true),
 ])"#;
 
@@ -153,6 +160,7 @@ const SOLD_OUT: &str = r#"options: OptionList::new([
 // snippet: after TOPPING_ENUM
 // snippet: let mut value = use_signal(Vec::<Topping>::new);
 // snippet: in MultiSelect { value: value(), onchange: move |next| value.set(next), .. }
+// snippet: mirrors topping_options
 const GROUPED_SOLD_OUT: &str = r#"options: OptionList::grouped()
     .group("Dairy", [Topping::Cheese])
     .group("Vegetables", [Topping::Mushrooms, Topping::Olives, Topping::Onions, Topping::Peppers])

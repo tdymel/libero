@@ -1,19 +1,29 @@
 use super::CLEAR_NAME;
 use super::dropdown_parts::{SELECT_DROPDOWN, list_dropdown_parts};
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props, readonly_prop, required_prop,
-    status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls, field_props, prop,
+    props, readonly_prop, required_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::SelectPart;
 use libero::use_theme;
 use libero::{
     components::{
-        Code, FieldStatus, Flex, OptionItem, OptionList, Options, Select, SelectFilterArgs,
-        SelectOptionArgs, Text,
+        Code, Flex, OptionItem, OptionList, Options, Select, SelectFilterArgs, SelectOptionArgs,
+        Text,
     },
     sx::sx,
 };
+
+struct FruitCopy;
+
+impl FieldCopy for FruitCopy {
+    const LABEL: &'static str = "Fruit";
+    const DESCRIPTION: &'static str = "Delivered with your next box.";
+    const HELPER: &'static str = "You can swap it until Friday.";
+    const WARNING: &'static str = "Out of season.";
+    const ERROR: &'static str = "Pick a fruit.";
+}
 
 /// The enum is the option list, so the snippet has to show it.
 const FRUIT_ENUM: &str = r#"#[derive(Clone, Copy, PartialEq, Options)]
@@ -346,37 +356,10 @@ pub fn SelectPage() -> Element {
                     "onchange: move |next| value.set(next)".to_string(),
                     "placeholder: \"Pick a fruit\"".to_string(),
                 ],
-                controls: vec![
+                controls: [vec![
                     Control::sizes("size").default("md"),
                     Control::sizes("radius").default("sm"),
-                    Control::toggle("status", ["valid", "warning", "error"])
-                        .labels(["Valid", "Warning", "Error"])
-                        .default("valid")
-                        .code(|_, values| match values.str("status").as_str() {
-                            "warning" => vec![
-                                "status: FieldStatus::Warning(\"Out of season.\".into())".to_string(),
-                            ],
-                            "error" => vec!["status: \"Pick a fruit.\"".to_string()],
-                            _ => vec![],
-                        }),
-                    Control::switch("label").default("true").code(|_, values| {
-                        match values.str("label").as_str() {
-                            "true" => vec!["label: \"Fruit\"".to_string()],
-                            _ => vec!["aria_label: \"Fruit\"".to_string()],
-                        }
-                    }),
-                    Control::switch("description").code(|_, values| {
-                        match values.str("description").as_str() {
-                            "true" => vec!["description: \"Delivered with your next box.\"".to_string()],
-                            _ => vec![],
-                        }
-                    }),
-                    Control::switch("helper").code(|_, values| {
-                        match values.str("helper").as_str() {
-                            "true" => vec!["helper: \"You can swap it until Friday.\"".to_string()],
-                            _ => vec![],
-                        }
-                    }),
+                ], field_controls::<FruitCopy>(), vec![
                     // Draws the rows and the trigger through `option` and
                     // `selection` - what `NativeSelect` cannot do at all.
                     Control::switch("custom").code(|_, values| match custom(values) {
@@ -417,23 +400,19 @@ pub fn SelectPage() -> Element {
                     Control::switch("required"),
                     Control::switch("disabled"),
                     Control::switch("readonly"),
-                ],
-                render: move |values: DemoValues| rsx! {
+                ]].concat(),
+                render: move |values: DemoValues| {
+                    let field = field_props::<FruitCopy>(&values);
+                    rsx! {
                     Select {
                         sx: sx().width("280px"),
                         size: values.str("size"),
                         radius: values.str("radius"),
-                        label: (values.str("label") == "true").then(|| "Fruit".to_string()),
-                        aria_label: (values.str("label") != "true").then_some("Fruit"),
-                        description: (values.str("description") == "true")
-                            .then(|| "Delivered with your next box.".to_string()),
-                        helper: (values.str("helper") == "true")
-                            .then(|| "You can swap it until Friday.".to_string()),
-                        status: match values.str("status").as_str() {
-                            "warning" => FieldStatus::Warning("Out of season.".to_string()),
-                            "error" => FieldStatus::Error("Pick a fruit.".to_string()),
-                            _ => FieldStatus::Valid,
-                        },
+                        label: field.label,
+                        aria_label: field.aria_label,
+                        description: field.description,
+                        helper: field.helper,
+                        status: field.status,
                         options: fruit_options(&values),
                         option: custom(&values).then(|| Callback::new(fruit_row)),
                         selection: custom(&values).then(|| Callback::new(fruit_selection)),
@@ -448,6 +427,7 @@ pub fn SelectPage() -> Element {
                         value: value(),
                         onchange: move |next| value.set(next),
                     }
+                }
                 },
             }
         }

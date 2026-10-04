@@ -15,6 +15,7 @@ const TEXTS: [&str; 3] = [
 
 // snippet: let mut open = use_signal(|| false);
 // snippet: let trigger = use_focus_return();
+// snippet: mirrors CollapseDemo
 const DONE: &str = r#"Button {
     onclick: move |_| {
         open.set(false);

@@ -7,6 +7,7 @@ use libero::{
 };
 
 /// The hook call and the knob it drives, as `Knob` renders them.
+// snippet: mirrors Knob
 fn code(_: &DemoValues, _: &str) -> String {
     r#"let track = use_element();
 let mut x = use_signal(|| 0.0);

@@ -8,6 +8,7 @@ use libero::use_theme;
 
 /// The items, printed verbatim. Only the outer list carries `size`: nested indent comes from
 /// the parent's `& ul` rule.
+// snippet: mirrors ListPage
 const CHILDREN: &str = r#"ListItem { "First item" }
 ListItem { "Second item" }
 ListItem {

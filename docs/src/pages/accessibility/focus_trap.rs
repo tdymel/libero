@@ -2,6 +2,7 @@ use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, 
 use dioxus::prelude::*;
 use libero::components::{Button, Code, Flex, FocusTrap, Text};
 
+// snippet: mirrors Preview
 const TRAPPED: &str = r#"Flex {
     direction: "row",
     gap: "sm",
@@ -12,6 +13,7 @@ const TRAPPED: &str = r#"Flex {
 
 /// The trap as `Preview` wires it: Release and Escape switch it off, and `restore_focus` hands
 /// focus back to the button that switched it on.
+// snippet: mirrors Preview except trapped use_signal "Trap focus"
 const RELEASABLE: &str = r#"let mut trapped = use_signal(|| true);
 
 rsx! {

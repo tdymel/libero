@@ -6,6 +6,7 @@ use libero::use_theme;
 /// The pairs, printed verbatim. The `for` loop shows several descriptions per term.
 // snippet: let phones = ["+49 30 1234567"];
 // snippet: in DataList { .. }
+// snippet: mirrors DataListPage
 const CHILDREN: &str = r#"DataListItem {
     label: rsx! { "Status" },
     Chip { variant: "filled", color: "success", size: "xs", "Active" }

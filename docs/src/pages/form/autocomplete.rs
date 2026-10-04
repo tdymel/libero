@@ -1,17 +1,25 @@
 use super::CLEAR_NAME;
 use super::dropdown_parts::{SUGGESTION_DROPDOWN, list_dropdown_parts};
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props, readonly_prop, required_prop,
-    status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls, field_props, prop,
+    props, readonly_prop, required_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::FieldPart;
 use libero::{
-    components::{
-        Autocomplete, AutocompleteFilterArgs, AutocompleteOptionArgs, Code, FieldStatus, Flex, Text,
-    },
+    components::{Autocomplete, AutocompleteFilterArgs, AutocompleteOptionArgs, Code, Flex, Text},
     sx::sx,
 };
+
+struct CityCopy;
+
+impl FieldCopy for CityCopy {
+    const LABEL: &'static str = "City";
+    const DESCRIPTION: &'static str = "Where the parcel goes.";
+    const HELPER: &'static str = "Anything you type is kept, list or not.";
+    const WARNING: &'static str = "We don't deliver there yet.";
+    const ERROR: &'static str = "Pick a city from the list.";
+}
 
 /// The suggestion list is runtime data, so every snippet has to show it.
 const CITIES_CONST: &str = r#"const CITIES: [(&str, &str); 6] = [
@@ -40,6 +48,7 @@ fn country(city: &str) -> &'static str {
 // snippet: after CITIES_CONST
 // snippet: let mut value = use_signal(String::new);
 // snippet: in Autocomplete { options: cities(), value: value(), oninput: move |next| value.set(next), .. }
+// snippet: mirrors city_row
 const CUSTOM_OPTION: &str = r#"option: move |o: AutocompleteOptionArgs<String>| rsx! {
     Flex {
         direction: "column",
@@ -55,6 +64,7 @@ const CUSTOM_OPTION: &str = r#"option: move |o: AutocompleteOptionArgs<String>| 
 // snippet: after CITIES_CONST
 // snippet: let mut value = use_signal(String::new);
 // snippet: in Autocomplete { options: cities(), value: value(), oninput: move |next| value.set(next), .. }
+// snippet: mirrors starts_with
 const CUSTOM_FILTER: &str = r#"filter: move |f: AutocompleteFilterArgs<String>| {
     f.value.to_lowercase().starts_with(&f.query.to_lowercase())
 }"#;
@@ -241,37 +251,10 @@ pub fn AutocompletePage() -> Element {
                     "oninput: move |next| value.set(next)".to_string(),
                     "placeholder: \"Start typing\"".to_string(),
                 ],
-                controls: vec![
+                controls: [vec![
                     Control::sizes("size").default("md"),
                     Control::sizes("radius").default("sm"),
-                    Control::toggle("status", ["valid", "warning", "error"])
-                        .labels(["Valid", "Warning", "Error"])
-                        .default("valid")
-                        .code(|_, values| match values.str("status").as_str() {
-                            "warning" => vec![
-                                "status: FieldStatus::Warning(\"We don't deliver there yet.\".into())".to_string(),
-                            ],
-                            "error" => vec!["status: \"Pick a city from the list.\"".to_string()],
-                            _ => vec![],
-                        }),
-                    Control::switch("label").default("true").code(|_, values| {
-                        match values.str("label").as_str() {
-                            "true" => vec!["label: \"City\"".to_string()],
-                            _ => vec!["aria_label: \"City\"".to_string()],
-                        }
-                    }),
-                    Control::switch("description").code(|_, values| {
-                        match values.str("description").as_str() {
-                            "true" => vec!["description: \"Where the parcel goes.\"".to_string()],
-                            _ => vec![],
-                        }
-                    }),
-                    Control::switch("helper").code(|_, values| {
-                        match values.str("helper").as_str() {
-                            "true" => vec!["helper: \"Anything you type is kept, list or not.\"".to_string()],
-                            _ => vec![],
-                        }
-                    }),
+                ], field_controls::<CityCopy>(), vec![
                     // A row drawn with `option`, and the `onpick` that reaches
                     // the record behind the text.
                     Control::switch("custom").code(|_, values| match custom(values) {
@@ -294,26 +277,21 @@ pub fn AutocompletePage() -> Element {
                     Control::switch("clearable"),
                     Control::switch("required"),
                     Control::switch("disabled"),
-                ],
-                render: move |values: DemoValues| rsx! {
+                ]].concat(),
+                render: move |values: DemoValues| {
+                    let field = field_props::<CityCopy>(&values);
+                    rsx! {
                     Autocomplete {
                         sx: sx().width("280px"),
                         size: values.str("size"),
                         radius: values.str("radius"),
-                        label: (values.str("label") == "true").then(|| "City".to_string()),
-                        aria_label: (values.str("label") != "true").then_some("City"),
-                        description: (values.str("description") == "true")
-                            .then(|| "Where the parcel goes.".to_string()),
-                        helper: match (values.str("helper").as_str(), picked()) {
-                            ("true", _) => Some("Anything you type is kept, list or not.".to_string()),
-                            (_, Some(country)) => Some(format!("Picked a city in {country}.")),
-                            _ => None,
-                        },
-                        status: match values.str("status").as_str() {
-                            "warning" => FieldStatus::Warning("We don't deliver there yet.".to_string()),
-                            "error" => FieldStatus::Error("Pick a city from the list.".to_string()),
-                            _ => FieldStatus::Valid,
-                        },
+                        label: field.label,
+                        aria_label: field.aria_label,
+                        description: field.description,
+                        helper: field
+                            .helper
+                            .or_else(|| picked().map(|country| format!("Picked a city in {country}."))),
+                        status: field.status,
                         option: custom(&values).then(|| Callback::new(city_row)),
                         onpick: custom(&values).then(|| {
                             Callback::new(move |city: String| picked.set(Some(country(&city))))
@@ -330,6 +308,7 @@ pub fn AutocompletePage() -> Element {
                         value: value(),
                         oninput: move |next| value.set(next),
                     }
+                }
                 },
             }
         }

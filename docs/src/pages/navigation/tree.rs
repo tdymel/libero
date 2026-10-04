@@ -109,6 +109,7 @@ fn file_icon(entry: &FileEntry, expanded: Option<bool>) -> SvgData {
 
 /// The data, the controlled expansion and the row renderer are the demo's
 /// fixture, not controls, but the code block has to print them.
+// snippet: mirrors TreePage
 const FIXED: [&str; 6] = [
     r#"aria_label: "Project files""#,
     "data: file_tree()",
@@ -137,6 +138,7 @@ fn wrap_selection(_: &DemoValues, code: &str) -> String {
 }
 
 // snippet: ignore - a fragment of the Demo's code block, compiled there
+// snippet: mirrors TreePage
 const EXPAND_BUTTONS: &str = r#"    Flex { direction: "row", gap: "xs",
         Button { size: "xs", onclick: move |_| expanded.set(folders()), "Expand all" }
         Button { size: "xs", onclick: move |_| expanded.set(HashSet::new()), "Collapse all" }

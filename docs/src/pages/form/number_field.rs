@@ -1,11 +1,21 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, Wrap, a11y, disabled_prop, prop, props, readonly_prop,
-    status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, disabled_prop, field_controls,
+    field_props, prop, props, readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::FieldPart;
-use libero::components::{Code, FieldStatus, NumberField, NumberValue, Text};
+use libero::components::{Code, NumberField, NumberValue, Text};
 use libero::use_theme;
+
+struct QuantityCopy;
+
+impl FieldCopy for QuantityCopy {
+    const LABEL: &'static str = "Quantity";
+    const DESCRIPTION: &'static str = "How many to add to the order.";
+    const HELPER: &'static str = "Up to 99 per order.";
+    const WARNING: &'static str = "That is a lot.";
+    const ERROR: &'static str = "Not in stock.";
+}
 
 /// Printed above the snippet when the demo is on the custom type - the field
 /// is only as short as it is because the impl exists.
@@ -217,7 +227,7 @@ pub fn NumberFieldPage() -> Element {
                         _ => source.to_string(),
                     }
                 }),
-                controls: vec![
+                controls: [vec![
                     // Three value types over one component: a plain integer, a
                     // float with its own step, and a caller's own type.
                     Control::toggle("type", ["i32", "f64", "cents"])
@@ -242,16 +252,7 @@ pub fn NumberFieldPage() -> Element {
                         .default("md"),
                     Control::sizes("radius")
                         .default("sm"),
-                    Control::toggle("status", ["valid", "warning", "error"])
-                        .labels(["Valid", "Warning", "Error"])
-                        .default("valid")
-                        .code(|_, values| match values.str("status").as_str() {
-                            "warning" => vec![
-                                "status: FieldStatus::Warning(\"That is a lot.\".into())".to_string(),
-                            ],
-                            "error" => vec!["status: \"Not in stock.\"".to_string()],
-                            _ => vec![],
-                        }),
+                ], field_controls::<QuantityCopy>(), vec![
                     // Bounds are typed as `T`, so what the switch prints
                     // follows the value type the same way the props do.
                     // On in the preview, but the prop defaults to false, so the
@@ -284,39 +285,13 @@ pub fn NumberFieldPage() -> Element {
                             _ => vec![],
                         }
                     }),
-                    Control::switch("label").default("true").code(|_, values| {
-                        match values.str("label").as_str() {
-                            "true" => vec!["label: \"Quantity\"".to_string()],
-                            _ => vec!["aria_label: \"Quantity\"".to_string()],
-                        }
-                    }),
-                    Control::switch("description").code(|_, values| {
-                        match values.str("description").as_str() {
-                            "true" => vec!["description: \"How many to add to the order.\"".to_string()],
-                            _ => vec![],
-                        }
-                    }),
-                    Control::switch("helper").code(|_, values| {
-                        match values.str("helper").as_str() {
-                            "true" => vec!["helper: \"Up to 99 per order.\"".to_string()],
-                            _ => vec![],
-                        }
-                    }),
                     Control::switch("required"),
                     Control::switch("disabled"),
-                ],
+                ]].concat(),
                 render: move |values: DemoValues| {
-                    let label = (values.str("label") == "true").then(|| "Quantity".to_string());
-                    let aria_label = label.is_none().then_some("Quantity");
-                    let description = (values.str("description") == "true")
-                        .then(|| "How many to add to the order.".to_string());
-                    let helper =
-                        (values.str("helper") == "true").then(|| "Up to 99 per order.".to_string());
-                    let status = match values.str("status").as_str() {
-                        "warning" => FieldStatus::Warning("That is a lot.".to_string()),
-                        "error" => FieldStatus::Error("Not in stock.".to_string()),
-                        _ => FieldStatus::Valid,
-                    };
+                    let field = field_props::<QuantityCopy>(&values);
+                    let (label, aria_label, description, helper, status) =
+                        (field.label, field.aria_label, field.description, field.helper, field.status);
                     let size = values.str("size");
                     let radius = values.str("radius");
                     let required = (values.str("required") == "true").then_some(true);

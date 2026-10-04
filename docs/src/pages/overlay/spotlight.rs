@@ -14,6 +14,7 @@ use std::time::Duration;
 
 /// Each example's actions, printed verbatim above the hook - keep every one in
 /// step with the fn below it.
+// snippet: mirrors commands
 const COMMANDS_CODE: &str = r#"fn commands(mut last: Signal<String>) -> Vec<SpotlightAction> {
     let run = move |name: &'static str| move |_| last.set(name.to_string());
     vec![
@@ -55,6 +56,7 @@ fn commands(mut last: Signal<String>) -> Vec<SpotlightAction> {
     ]
 }
 
+// snippet: mirrors files
 const FILES_CODE: &str = r#"fn files(mut last: Signal<String>) -> Vec<SpotlightAction> {
     ["src", "src/main.rs", "src/lib.rs", "tests", "Cargo.toml", "README.md"]
         .into_iter()
@@ -89,6 +91,7 @@ fn files(mut last: Signal<String>) -> Vec<SpotlightAction> {
     .collect()
 }
 
+// snippet: mirrors issues
 const ISSUES_CODE: &str = r#"fn issues(mut last: Signal<String>) -> Vec<SpotlightAction> {
     (1..=200)
         .map(|n| {
@@ -112,6 +115,7 @@ fn issues(mut last: Signal<String>) -> Vec<SpotlightAction> {
 
 /// A fake fetch per keystroke. `onquery` runs from the input event, so `loading` is set before
 /// the next frame and "nothing found" never flashes.
+// snippet: mirrors SpotlightDemo
 const SEARCH_CODE: &str = r#"let mut results = use_signal(Vec::<SpotlightAction>::new);
 let mut loading = use_signal(|| false);
 "#;

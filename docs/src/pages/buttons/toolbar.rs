@@ -8,6 +8,7 @@ use libero::hooks::use_element;
 use pictogram_icons_lucide as lucide;
 
 /// The controls inside - a subtree, so the code block prints it verbatim.
+// snippet: mirrors ToolbarPreview
 const CHILDREN: &str = r#"ToolbarGroup { "aria-label": "Style",
     ActionIcon { aria_label: "Bold", Pictogram { icon: lucide::bold::outlined } }
     ActionIcon { aria_label: "Italic", Pictogram { icon: lucide::italic::outlined } }
@@ -21,6 +22,7 @@ ToolbarGroup { "aria-label": "History",
 
 /// The element `focus_from` names: Alt+F10 in it reaches the bar, Escape there comes back.
 // snippet: let editor = use_element();
+// snippet: mirrors ToolbarPreview
 const EDITOR: &str = r#"div { onmounted: editor.mount(), ..editor.attributes(),
     Textarea { label: "Text" }
 }"#;

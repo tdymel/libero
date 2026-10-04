@@ -6,6 +6,7 @@ use libero::{
 };
 
 /// The field and its undo and redo buttons, as `UndoableNote` renders them.
+// snippet: mirrors UndoableNote
 fn code(_: &DemoValues, _: &str) -> String {
     r#"let note = use_history(|| UndoHistory::new(String::new()), 500);
 

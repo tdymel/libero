@@ -142,25 +142,38 @@ picker in it with the field's `dropdown_parts`.
 
 ### Libero handles
 
-- Days, months and years are one tab stop each, on the picked cell, else today,
-  else the first.
-- Today's day, month and year carry `aria-current="date"`.
-- The decade heading is disabled, since there is no level above it.
-- Picking a month or a year below the lowest level climbs back down with focus
-  on it.
-- The mini calendar's days are one tab stop. Its two buttons page the row by
-  `days`.
-- The analog clock face is one tab stop. Each digital column is a spinbutton
-  and one tab stop.
+- The days, the months and the years are one tab stop each. Tab lands on the
+  picked cell, else today, else the first.
+- Today's day, month and year carry `aria-current="date"`, which a screen
+  reader reads as the current date.
+- The decade heading is disabled: there is no level above it.
+- After climbing to the months or years, a pick goes back down to the picker's
+  level, with focus on the picked cell.
+- The mini calendar's row of days is one tab stop. Its two buttons page the
+  row by `days`.
+- The clock face is one tab stop. Each digital column is a spinbutton and a
+  tab stop of its own.
 - The clock keys change the value at once and skip what `min` and `max` rule
-  out.
-- The wheel and a drag turn a digital column too, and a press on the value
-  above or below picks it.
-- A date-time's day and time are tabs above the picker, and picking the day
-  moves focus into the clock.
+  out. The wheel, a drag, or a press on the value above or below turns a
+  digital column too.
+- A date-time shows the day and the time as tabs above the picker. Picking the
+  day moves focus into the clock.
 - A date-time range has three tabs: the days, the start time and the end time.
-  Each shows its value once picked, such as `12–14 Oct` or `09:00`, and moves on
-  to the next when complete. The start and the end may be on different days.
+  Each shows its value once picked, such as `12–14 Oct` or `09:00`, and moves
+  on to the next when complete. The start and the end may be on different
+  days.
+
+### You must
+
+- Off the web, pass `today`. Without it no day is marked as today.
+- Set `focusable: false` only for a picker inside a dropdown whose input keeps
+  focus.
+
+### Example
+
+A due-date picker, `ChronoPicker::<NaiveDate>`: Tab lands once in the month,
+on the picked day. The arrows move a day or a week, PageDown a month, Enter
+picks, and a screen reader reads today's cell as the current date.
 
 ## Theme defaults
 

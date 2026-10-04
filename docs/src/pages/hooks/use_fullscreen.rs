@@ -6,6 +6,7 @@ use libero::{
 };
 
 /// The hook in one component, as `Panel` renders it.
+// snippet: mirrors Panel
 fn code(_: &DemoValues, _: &str) -> String {
     r#"let panel = use_element();
 let fullscreen = use_fullscreen(panel);

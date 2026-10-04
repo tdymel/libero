@@ -5,6 +5,7 @@ use libero::components::{ActionIcon, Button, ButtonGroup, Code, Input, Text};
 use pictogram_icons_lucide as lucide;
 
 /// The buttons inside - a subtree, so the code block prints it verbatim.
+// snippet: mirrors ButtonGroupPage
 const CHILDREN: &str = r#"Button { "Undo" }
 Button { "Redo" }
 ActionIcon { aria_label: "Confirm", Pictogram { icon: lucide::check::outlined } }"#;

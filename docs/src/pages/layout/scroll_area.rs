@@ -15,6 +15,7 @@ use libero::{
 const VIRTUAL_ROWS: usize = 50_000;
 
 /// What the `virtualize` switch puts in the area instead of `CONTENT`.
+// snippet: mirrors ScrollAreaPage
 const VIRTUAL_CONTENT: &str = r#"List {
     Virtualize {
         count: 50_000,
@@ -26,6 +27,7 @@ const VIRTUAL_CONTENT: &str = r#"List {
 
 /// Wider and taller than the frame, so both axes have something to scroll -
 /// relative, so it stays wider however wide the frame gets.
+// snippet: mirrors ScrollAreaPage
 const CONTENT: &str = r#"Box {
     sx: sx().width("150%").padding("md"),
     for i in 0..20 {
@@ -35,6 +37,7 @@ const CONTENT: &str = r#"Box {
 
 /// Fixed wiring; `area`, `position` and `edge` are declared in `PREAMBLE`. The plain content
 /// makes the area a tab stop, so it needs a name.
+// snippet: mirrors ScrollAreaPage
 const FIXED: [&str; 5] = [
     r#"aria_label: "Items""#,
     "handle: area",
@@ -44,7 +47,7 @@ const FIXED: [&str; 5] = [
 ];
 
 /// Rounded percentages: a raw `{event:?}` reflows the row every tick.
-/// **Kept in step with `PREAMBLE` by hand.**
+/// `PREAMBLE` prints it; `printed_snippets_mirror_their_live_code` keeps the two in step.
 fn readout(event: ScrollPositionEvent) -> String {
     let (kind, x, y) = match event {
         ScrollPositionEvent::Start(x, y) => ("Start", x, y),
@@ -56,6 +59,7 @@ fn readout(event: ScrollPositionEvent) -> String {
 
 /// The helper, the handle and the two signals the preview's wiring uses,
 /// printed above the rsx so the snippet compiles as it stands.
+// snippet: mirrors readout,ScrollAreaPage
 const PREAMBLE: &str = r#"fn readout(event: ScrollPositionEvent) -> String {
     let (kind, x, y) = match event {
         ScrollPositionEvent::Start(x, y) => ("Start", x, y),

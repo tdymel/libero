@@ -13,6 +13,7 @@ AddressFieldset                // a composed part, fields grouped into one value
 OrderForm                      // the whole value, its parts submitted together
   └ Form { value: order }"#;
 
+// snippet: mirrors EmailField
 const SPECIALIZE_CODE: &str = r#"use libero::components::{FieldName, Rule, TextField, Validators, is_email};
 
 /// A text field that only accepts email addresses.

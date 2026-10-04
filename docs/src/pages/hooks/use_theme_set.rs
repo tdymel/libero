@@ -9,6 +9,7 @@ use libero::{
 };
 
 /// The hook call and the picker, as `ThemePicker` renders them.
+// snippet: mirrors ThemePicker
 fn code(_: &DemoValues, _: &str) -> String {
     r#"let themes = use_theme_set();
 

@@ -1,10 +1,20 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, a11y, disabled_prop, prop, props, readonly_prop,
-    status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, a11y, disabled_prop, field_controls,
+    field_props, prop, props, readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::FieldPart;
-use libero::components::{Code, FieldStatus, Text, TextField};
+use libero::components::{Code, Text, TextField};
+
+struct UsernameCopy;
+
+impl FieldCopy for UsernameCopy {
+    const LABEL: &'static str = "Username";
+    const DESCRIPTION: &'static str = "How other people see you.";
+    const HELPER: &'static str = "Letters, numbers and underscores.";
+    const WARNING: &'static str = "That name is close to another one.";
+    const ERROR: &'static str = "That name is taken.";
+}
 
 fn no_trailing(values: &DemoValues) -> bool {
     values.str("trailing") != "true"
@@ -104,41 +114,12 @@ pub fn TextFieldPage() -> Element {
                     "value: value()".to_string(),
                     "oninput: move |next| value.set(next)".to_string(),
                 ],
-                controls: vec![
+                controls: [vec![
                     Control::sizes("size")
                         .default("md"),
                     Control::sizes("radius")
                         .default("sm"),
-                    Control::toggle("status", ["valid", "warning", "error"])
-                        .labels(["Valid", "Warning", "Error"])
-                        .default("valid")
-                        .code(|_, values| match values.str("status").as_str() {
-                            "warning" => vec![
-                                "status: FieldStatus::Warning(\"That name is close to another one.\".into())".to_string(),
-                            ],
-                            "error" => vec!["status: \"That name is taken.\"".to_string()],
-                            _ => vec![],
-                        }),
-                    // Each caption is a whole element, not a style: unset,
-                    // the slot is not in the markup at all.
-                    Control::switch("label").default("true").code(|_, values| {
-                        match values.str("label").as_str() {
-                            "true" => vec!["label: \"Username\"".to_string()],
-                            _ => vec!["aria_label: \"Username\"".to_string()],
-                        }
-                    }),
-                    Control::switch("description").code(|_, values| {
-                        match values.str("description").as_str() {
-                            "true" => vec!["description: \"How other people see you.\"".to_string()],
-                            _ => vec![],
-                        }
-                    }),
-                    Control::switch("helper").code(|_, values| {
-                        match values.str("helper").as_str() {
-                            "true" => vec!["helper: \"Letters, numbers and underscores.\"".to_string()],
-                            _ => vec![],
-                        }
-                    }),
+                ], field_controls::<UsernameCopy>(), vec![
                     Control::switch("placeholder").default("true").code(|_, values| {
                         match values.str("placeholder").as_str() {
                             "true" => vec!["placeholder: \"ada\"".to_string()],
@@ -164,24 +145,18 @@ pub fn TextFieldPage() -> Element {
                     Control::switch("describe_trailing").hidden_when(no_trailing),
                     Control::switch("required"),
                     Control::switch("disabled"),
-                ],
-                render: move |values: DemoValues| rsx! {
+                ]].concat(),
+                render: move |values: DemoValues| {
+                    let field = field_props::<UsernameCopy>(&values);
+                    rsx! {
                     TextField {
                         size: values.str("size"),
                         radius: values.str("radius"),
-                        label: (values.str("label") == "true").then(|| "Username".to_string()),
-                        aria_label: (values.str("label") != "true").then_some("Username"),
-                        description: (values.str("description") == "true")
-                            .then(|| "How other people see you.".to_string()),
-                        helper: (values.str("helper") == "true")
-                            .then(|| "Letters, numbers and underscores.".to_string()),
-                        status: match values.str("status").as_str() {
-                            "warning" => {
-                                FieldStatus::Warning("That name is close to another one.".to_string())
-                            }
-                            "error" => FieldStatus::Error("That name is taken.".to_string()),
-                            _ => FieldStatus::Valid,
-                        },
+                        label: field.label,
+                        aria_label: field.aria_label,
+                        description: field.description,
+                        helper: field.helper,
+                        status: field.status,
                         placeholder: (values.str("placeholder") == "true")
                             .then(|| "ada".to_string()),
                         // Plain text: `Icon` colours and sizes an svg, not a prefix.
@@ -196,6 +171,7 @@ pub fn TextFieldPage() -> Element {
                         value: value(),
                         oninput: move |next| value.set(next),
                     }
+                }
                 },
             }
         }

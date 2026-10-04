@@ -13,6 +13,7 @@ use libero::components::{
 use libero::use_theme;
 
 /// The enum is the strip, so the snippet has to show it.
+// snippet: mirrors Alignment
 const ALIGNMENT_ENUM: &str = r#"#[derive(Clone, Copy, PartialEq, Options)]
 enum Alignment {
     Left,
@@ -28,6 +29,7 @@ enum Alignment {
 // snippet: after ALIGNMENT_ENUM
 // snippet: let mut alignment = use_signal(|| Alignment::Left);
 // snippet: in SegmentedControl { value: alignment(), onchange: move |next| alignment.set(next), .. }
+// snippet: mirrors renamed
 const RENAMED: &str = r#"option_label: |alignment: Alignment| -> OptionLabel {
     match alignment {
         Alignment::Left => "Links".into(),
@@ -40,6 +42,7 @@ const RENAMED: &str = r#"option_label: |alignment: Alignment| -> OptionLabel {
 // snippet: after ALIGNMENT_ENUM
 // snippet: let mut alignment = use_signal(|| Alignment::Left);
 // snippet: in SegmentedControl { value: alignment(), onchange: move |next| alignment.set(next), .. }
+// snippet: mirrors rich
 const RICH: &str = r#"option_label: |alignment: Alignment| OptionLabel::rich(
     alignment.label(),
     rsx! {

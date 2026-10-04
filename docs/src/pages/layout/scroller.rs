@@ -36,6 +36,7 @@ const TAGS: [&str; 20] = [
 
 /// The strip itself, printed verbatim so the code block builds the preview.
 // snippet: item const TAGS: [&str; 2] = ["rust", "dioxus"];
+// snippet: mirrors strip_content
 const CHILDREN: &str = r#"Flex { direction: "row", gap: "sm", wrap: "nowrap",
     for tag in TAGS {
         Chip { key: "{tag}", "{tag}" }

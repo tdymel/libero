@@ -6,6 +6,7 @@ use libero::{
 };
 
 /// The whole list as `Fruit` renders it, with the chosen orientation.
+// snippet: mirrors Fruit except horizontal "horizontal"
 fn code(values: &DemoValues, _: &str) -> String {
     let orientation = match values.str("orientation").as_str() {
         "horizontal" => "\n        orientation: \"horizontal\",",
@@ -84,20 +85,19 @@ pub fn SortablePage() -> Element {
                 .key(["Home", "End"], "Moves a lifted item to the first or last slot.")
                 .key(["Escape"], "Puts a lifted or dragged item back where it was.")
                 .handles([
-                    "Each item's handle is a button named by `SortableLabels::handle` with the item's name (\"Reorder Apple\"); without a `label`, the template's words and the item's content through `aria-labelledby`. It is at least 24px square (WCAG 2.5.8). It is described by `SortableLabels::instructions`, how to move by keyboard; on a touch screen (`pointer: coarse`) with the move buttons shown, by `SortableLabels::touch_instructions`, which points to them.",
-                    "A `role=\"status\"` region announces each lift, move, drop and cancel with the item's `label` and its position, from the `SortableLabels` templates of the active `Localization`. A key that would move a lifted item past either end says it stays (`SortableLabels::unmoved`).",
-                    "A horizontal list scrolls inside itself when its row is wider than its container, so it never widens the page (WCAG 1.4.10). A padding the size of the focus ring keeps the handles' rings clear of the scroller's edge.",
-                    "Each item has a move up and a move down button (back and forward in a row) for a single pointer (WCAG 2.5.7), named with the item's name too (\"Move Apple up\"). The first item's move up and the last one's move down are disabled; the focus stays on the pressed button, or goes to the other one at the list's end.",
-                    "A drag starts after the pointer moved 4px (8px for a touch), so a click on the handle stays a click.",
-                    "Only the handle takes a touch. Swiping the rest of an item scrolls the page.",
-                    "Moving focus off a lifted item's handle cancels the move.",
-                    "The handle keeps the focus after a drop.",
-                    "A dropped item slides from where it was let go into its slot, over the theme's transition duration. Under reduced motion it lands at once, and the other items jump to their new place instead of sliding.",
+                    "Each item's handle is a button of at least 24px (WCAG 2.5.8) named with the item, \"Reorder Apple\", and described by how to move it with the keys. On a touch screen with the move buttons shown, the description points to them instead.",
+                    "Each item has Move up and Move down buttons (back and forward in a row), named with the item, \"Move Apple up\", so one pointer reorders without a drag (WCAG 2.5.7). At the list's ends the button that cannot move is disabled, and focus goes to the other one.",
+                    "A status region says each lift, move, drop and cancel with the item and its place. A key that would move an item past either end says it stays. The words come from `SortableLabels` in the active `Localization`.",
+                    "A horizontal list wider than its container scrolls inside itself and never widens the page (WCAG 1.4.10).",
+                    "A drag starts after 4px of pointer movement (8px on touch), so a click on the handle stays a click. Only the handle takes a touch: a swipe on the rest of an item scrolls the page.",
+                    "Focus leaving a lifted item's handle cancels the move. After a drop the handle keeps focus.",
+                    "A dropped item slides into its slot. Under reduced motion it lands at once, and the others jump instead of sliding.",
                 ])
                 .must([
                     "Give each `SortableItem` a `label`, or its controls and the announcements name it by position (\"Item 2\").",
                     "With `move_buttons: false`, give the reader another way to reorder without dragging, such as a menu.",
-                ]),
+                ])
+                .example("A fruit list where each `SortableItem` has `label: name`. Tab reaches \"Reorder Apple\"; Space lifts it, Down moves it, and the status region says where Apple is now; Space drops it, and focus stays on the handle."),
             lead: rsx! {
                 Text {
                     "A list the user reorders by dragging each item's handle, by keyboard, or "

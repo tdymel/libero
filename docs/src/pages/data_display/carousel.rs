@@ -8,6 +8,7 @@ use libero::{
 
 /// Fixed slides, controlled so a control change keeps the reader's slide. Opens on slide 3:
 /// at slide 1 every `align` rests the same way.
+// snippet: mirrors demo_slides,CarouselPage
 const FIXED: [&str; 4] = [
     r#"aria_label: "Product photos""#,
     "index: index()",

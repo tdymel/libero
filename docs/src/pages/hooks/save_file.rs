@@ -6,6 +6,7 @@ use libero::{
 };
 
 /// The demo in one component, as `SaveDemo` renders it.
+// snippet: mirrors SaveDemo
 fn code(_: &DemoValues, _: &str) -> String {
     r#"let mut outcome = use_signal(|| None::<SaveOutcome>);
 

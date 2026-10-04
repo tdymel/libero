@@ -1,10 +1,21 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, a11y, prop, props, readonly_prop, status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, a11y, field_controls, field_props, prop, props,
+    readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::FieldPart;
-use libero::components::{Code, FieldStatus, Flex, PinField, Text};
+use libero::components::{Code, Flex, PinField, Text};
 use libero::use_theme;
+
+struct CodeCopy;
+
+impl FieldCopy for CodeCopy {
+    const LABEL: &'static str = "Verification code";
+    const DESCRIPTION: &'static str = "Sent to your phone.";
+    const HELPER: &'static str = "It expires in ten minutes.";
+    const WARNING: &'static str = "That code is about to expire.";
+    const ERROR: &'static str = "That code is wrong.";
+}
 
 #[component]
 pub fn PinFieldPage() -> Element {
@@ -87,7 +98,7 @@ pub fn PinFieldPage() -> Element {
             Demo {
                 component: "PinField",
                 children_text: "",
-                controls: vec![
+                controls: [vec![
                     // `length` is a `usize`, so it must not print quoted the
                     // way a bare slider's value would.
                     Control::slider("length", ["4", "5", "6", "8"])
@@ -105,34 +116,7 @@ pub fn PinFieldPage() -> Element {
                         }),
                     Control::sizes("size").default("md"),
                     Control::sizes("radius").default("sm"),
-                    Control::toggle("status", ["valid", "warning", "error"])
-                        .labels(["Valid", "Warning", "Error"])
-                        .default("valid")
-                        .code(|_, values| match values.str("status").as_str() {
-                            "warning" => vec![
-                                "status: FieldStatus::Warning(\"That code is about to expire.\".into())".to_string(),
-                            ],
-                            "error" => vec!["status: \"That code is wrong.\"".to_string()],
-                            _ => vec![],
-                        }),
-                    Control::switch("label").default("true").code(|_, values| {
-                        match values.str("label").as_str() {
-                            "true" => vec!["label: \"Verification code\"".to_string()],
-                            _ => vec!["aria_label: \"Verification code\"".to_string()],
-                        }
-                    }),
-                    Control::switch("description").code(|_, values| {
-                        match values.str("description").as_str() {
-                            "true" => vec!["description: \"Sent to your phone.\"".to_string()],
-                            _ => vec![],
-                        }
-                    }),
-                    Control::switch("helper").code(|_, values| {
-                        match values.str("helper").as_str() {
-                            "true" => vec!["helper: \"It expires in ten minutes.\"".to_string()],
-                            _ => vec![],
-                        }
-                    }),
+                ], field_controls::<CodeCopy>(), vec![
                     // The separator is an `Element`, so the control switches a
                     // whole `rsx!` in rather than a value.
                     Control::switch("separator").code(|_, values| {
@@ -144,7 +128,7 @@ pub fn PinFieldPage() -> Element {
                     Control::switch("mask"),
                     Control::switch("required"),
                     Control::switch("disabled"),
-                ],
+                ]].concat(),
                 render: move |values: DemoValues| rsx! {
                     PinFieldDemo { values }
                 },
@@ -161,6 +145,7 @@ fn PinFieldDemo(values: DemoValues) -> Element {
     let mut verified = use_signal(|| false);
 
     let length = values.str("length").parse::<usize>().unwrap_or(4);
+    let field = field_props::<CodeCopy>(&values);
 
     rsx! {
         Flex { direction: "column", gap: "sm", align: "center",
@@ -169,17 +154,11 @@ fn PinFieldDemo(values: DemoValues) -> Element {
                 radius: values.str("radius"),
                 length,
                 kind: values.str("kind"),
-                label: (values.str("label") == "true").then(|| "Verification code".to_string()),
-                aria_label: (values.str("label") != "true").then_some("Verification code"),
-                description: (values.str("description") == "true")
-                    .then(|| "Sent to your phone.".to_string()),
-                helper: (values.str("helper") == "true")
-                    .then(|| "It expires in ten minutes.".to_string()),
-                status: match values.str("status").as_str() {
-                    "warning" => FieldStatus::Warning("That code is about to expire.".to_string()),
-                    "error" => FieldStatus::Error("That code is wrong.".to_string()),
-                    _ => FieldStatus::Valid,
-                },
+                label: field.label,
+                aria_label: field.aria_label,
+                description: field.description,
+                helper: field.helper,
+                status: field.status,
                 separator: (values.str("separator") == "true").then(|| rsx! { "-" }),
                 mask: (values.str("mask") == "true").then_some(true),
                 required: (values.str("required") == "true").then_some(true),

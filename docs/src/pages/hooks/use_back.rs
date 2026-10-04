@@ -6,6 +6,7 @@ use libero::{
 };
 
 /// The hook in one component, as `Steps` renders it.
+// snippet: mirrors Steps
 fn code(_: &DemoValues, _: &str) -> String {
     r#"let mut step = use_signal(|| 1);
 // On Android, Back goes one step back while there is one; at the first, it leaves the app.
