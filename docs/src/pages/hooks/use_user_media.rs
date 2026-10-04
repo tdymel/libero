@@ -12,6 +12,7 @@ pub fn UseUserMediaPage() -> Element {
             title: "User media",
             source: "libero/src/hooks/user_media.rs",
             markdown: "/md/use_user_media.md",
+            plays_media: true,
             accessibility: a11y()
                 .handles([
                     "Mounting never prompts: the browser or OS asks only on start, which you call from a user's action.",

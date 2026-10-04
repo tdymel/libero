@@ -194,6 +194,57 @@ fn an_unknown_url_shows_the_not_found_page() {
     });
 }
 
+/// Clicks the docs tab named `label`.
+fn doc_tab_js(label: &str) -> String {
+    format!(
+        "[...document.querySelectorAll('#docs-main [role=tab]')].find(t => t.textContent.includes('{label}')).click()"
+    )
+}
+
+/// Todo 2182: a visited doc tab's panel stays mounted, hidden and inert; a media page's Usage
+/// panel unmounts, so its player stops.
+#[test]
+fn a_doc_tab_switch_hides_the_old_panel() {
+    block_on(async {
+        let fixture = Fixture::open_until(
+            "/form/switch",
+            Viewport::Desktop,
+            Scheme::Light,
+            "#docs-main [role=tabpanel] > div > *",
+        )
+        .await
+        .unwrap();
+        let page = &fixture.page;
+        page.evaluate(doc_tab_js("Properties")).await.unwrap();
+        let kept = "(() => { const kids = [...document.querySelector('#docs-main [role=tabpanel]').children]; \
+            const off = kids.filter(k => k.hidden); \
+            return off.some(k => k.childElementCount > 0) && off.every(k => k.inert); })()";
+        wait::for_js_true(page, kept, "the Usage panel kept, hidden and inert")
+            .await
+            .unwrap();
+        close(fixture).await;
+
+        let fixture = Fixture::open_until(
+            "/data-display/video",
+            Viewport::Desktop,
+            Scheme::Light,
+            "#docs-main video",
+        )
+        .await
+        .unwrap();
+        let page = &fixture.page;
+        page.evaluate(doc_tab_js("Properties")).await.unwrap();
+        wait::for_js_true(
+            page,
+            "!document.querySelector('#docs-main video')",
+            "the Video page's players unmounted",
+        )
+        .await
+        .unwrap();
+        close(fixture).await;
+    });
+}
+
 /// Each label and border of the landing page's gradient cards against the gradient's two
 /// stops and their midpoint (the lowest ratio), then axe over the page. The stops are
 /// translucent tints, so each is read over the first opaque background behind the card.

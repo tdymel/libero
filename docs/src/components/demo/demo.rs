@@ -359,6 +359,177 @@ impl DemoCode {
     }
 }
 
+/// A control as the panel draws it. Equal on what it shows: the `fn` fields are page constants.
+#[derive(Clone)]
+struct PanelControl(Control);
+
+impl PartialEq for PanelControl {
+    fn eq(&self, other: &Self) -> bool {
+        let (a, b) = (&self.0, &other.0);
+        a.name == b.name
+            && a.kind == b.kind
+            && a.options == b.options
+            && a.labels == b.labels
+            && a.unset_swatch == b.unset_swatch
+            && a.custom == b.custom
+    }
+}
+
+/// One control of the panel. A component, so a value change re-renders only its own control (todo 2149).
+#[component]
+fn DemoControl(
+    index: usize,
+    control: PanelControl,
+    value: String,
+    id: String,
+    values: Signal<DemoValues>,
+) -> Element {
+    let (control, mut values) = (control.0, values);
+    rsx! {
+        Flex {
+            direction: "column",
+            // Switches spread over the row, centred to read as a group;
+            // the min keeps a long label from wrapping under its switch.
+            sx: if control.kind == ControlKind::Switch {
+                sx().flex("1 1 0").min_width("104px").align_items("center")
+            } else {
+                sx().width("100%")
+            },
+            // The slider's bubble sits above its track, so it
+            // needs more room under the label than the rest.
+            gap: if control.kind == ControlKind::Slider { "sm" } else { "xs" },
+            // `NativeSelect` renders its own `<label>`, which is
+            // what names it - a second one would duplicate it.
+            if control.kind == ControlKind::Switch {
+                Text {
+                    component: "label",
+                    "for": "{id}",
+                    size: "sm",
+                    sx: sx().font_weight("600"),
+                    {label(control.name)}
+                }
+            } else if control.kind != ControlKind::Select {
+                Text {
+                    size: "sm",
+                    sx: sx().font_weight("600"),
+                    {label(control.name)}
+                }
+            }
+            match control.kind {
+                ControlKind::Color => rsx! {
+                    ColorControl {
+                        control: control.clone(),
+                        label: label(control.name),
+                        value: value.clone(),
+                        onchange: move |value: String| {
+                            values.write().0[index].1 = value;
+                        },
+                    }
+                },
+                ControlKind::Slider => rsx! {
+                    Slider {
+                        size: "lg",
+                        aria_label: label(control.name),
+                        min: 0.0,
+                        max: (control.options.len() - 1) as f64,
+                        step: 1.0,
+                        value: control.step_of(&value),
+                        // The bubble shows the option, not the step index.
+                        format: {
+                            let options = control.options.clone();
+                            move |at: f64| options[at as usize].clone()
+                        },
+                        marks: control.marks(),
+                        oninput: {
+                            let options = control.options.clone();
+                            move |event: SliderChangeEvent| {
+                                let at = event.value() as usize;
+                                values.write().0[index].1 = options[at].clone();
+                            }
+                        },
+                    }
+                },
+                ControlKind::Select => rsx! {
+                    NativeSelect {
+                        size: "sm",
+                        label: label(control.name),
+                        // Matches the other controls' `Text { size: "sm" }` label,
+                        // styled from the wrapper since the field owns its label.
+                        sx: sx().selector(
+                            "& > label",
+                            sx()
+                                .font_weight("600")
+                                .font_size(TEXT_FONT_SIZE.value(Size::Sm)),
+                        ),
+                        value: Some(value.clone()),
+                        options: control.options.clone(),
+                        option_label: {
+                            let control = control.clone();
+                            move |option: String| control.label_of(&option)
+                        },
+                        onchange: move |value: String| {
+                            values.write().0[index].1 = value;
+                        },
+                    }
+                },
+                ControlKind::Switch => rsx! {
+                    Switch {
+                        id: "{id}",
+                        aria_label: label(control.name),
+                        checked: control.is_on(&value),
+                        onchange: move |on: bool| {
+                            values.write().0[index].1 = on.to_string();
+                        },
+                    }
+                },
+                // Too wide for the card, a select: a container query shows one,
+                // and `display: none` keeps the other out of tab order and a11y tree.
+                ControlKind::Toggle if segments_need(&control).is_some() => {
+                    let needed = segments_need(&control).unwrap_or_default();
+                    rsx! {
+                        Box {
+                            sx: card_query(sx().display("none"), needed, sx().display("block")),
+                            ToggleSegments {
+                                control: control.clone(),
+                                value: value.clone(),
+                                onchange: move |next: String| {
+                                    values.write().0[index].1 = next;
+                                },
+                            }
+                        }
+                        Box {
+                            sx: card_query(sx().display("block"), needed, sx().display("none")),
+                            NativeSelect {
+                                size: "sm",
+                                // The row's `Text` names it: no second label.
+                                "aria-label": label(control.name),
+                                value: Some(value.clone()),
+                                options: control.options.clone(),
+                                option_label: {
+                                    let control = control.clone();
+                                    move |option: String| control.label_of(&option)
+                                },
+                                onchange: move |value: String| {
+                                    values.write().0[index].1 = value;
+                                },
+                            }
+                        }
+                    }
+                },
+                ControlKind::Toggle => rsx! {
+                    ToggleSegments {
+                        control: control.clone(),
+                        value: value.clone(),
+                        onchange: move |next: String| {
+                            values.write().0[index].1 = next;
+                        },
+                    }
+                },
+            }
+        }
+    }
+}
+
 /// A live example: `render` on the left, a control per prop on the right,
 /// and the rsx those values add up to below.
 #[component]
@@ -428,7 +599,7 @@ pub fn Demo(
     use_hook(|| crate::snippets::record(&code));
     let mut expanded = use_signal(|| false);
     let code_id = use_id();
-    let cuts = file.is_some_and(|file| file.cuts());
+    let cuts = use_memo(use_reactive!(|file| file.is_some_and(|file| file.cuts())))();
     let source = match expanded() || !cuts {
         true => code.source(&current),
         false => code.shown_source(&current),
@@ -501,147 +672,13 @@ pub fn Demo(
                         // `index` is from before the filter: it addresses `DemoValues`,
                         // which keeps hidden controls' values too.
                         for (index, control) in shown_controls(&controls, &current) {
-                            Flex {
+                            DemoControl {
                                 key: "{control.name}",
-                                direction: "column",
-                                // Switches spread over the row, centred to read as a group;
-                                // the min keeps a long label from wrapping under its switch.
-                                sx: if control.kind == ControlKind::Switch {
-                                    sx().flex("1 1 0").min_width("104px").align_items("center")
-                                } else {
-                                    sx().width("100%")
-                                },
-                                // The slider's bubble sits above its track, so it
-                                // needs more room under the label than the rest.
-                                gap: if control.kind == ControlKind::Slider { "sm" } else { "xs" },
-                                // `NativeSelect` renders its own `<label>`, which is
-                                // what names it - a second one would duplicate it.
-                                if control.kind == ControlKind::Switch {
-                                    Text {
-                                        component: "label",
-                                        "for": "{demo_id}-{control.name}",
-                                        size: "sm",
-                                        sx: sx().font_weight("600"),
-                                        {label(control.name)}
-                                    }
-                                } else if control.kind != ControlKind::Select {
-                                    Text {
-                                        size: "sm",
-                                        sx: sx().font_weight("600"),
-                                        {label(control.name)}
-                                    }
-                                }
-                                match control.kind {
-                                    ControlKind::Color => rsx! {
-                                        ColorControl {
-                                            control: control.clone(),
-                                            label: label(control.name),
-                                            value: current.str(control.name),
-                                            onchange: move |value: String| {
-                                                values.write().0[index].1 = value;
-                                            },
-                                        }
-                                    },
-                                    ControlKind::Slider => rsx! {
-                                        Slider {
-                                            size: "lg",
-                                            aria_label: label(control.name),
-                                            min: 0.0,
-                                            max: (control.options.len() - 1) as f64,
-                                            step: 1.0,
-                                            value: control.step_of(&current.str(control.name)),
-                                            // The bubble shows the option, not the step index.
-                                            format: {
-                                                let options = control.options.clone();
-                                                move |at: f64| options[at as usize].clone()
-                                            },
-                                            marks: control.marks(),
-                                            oninput: {
-                                                let options = control.options.clone();
-                                                move |event: SliderChangeEvent| {
-                                                    let at = event.value() as usize;
-                                                    values.write().0[index].1 = options[at].clone();
-                                                }
-                                            },
-                                        }
-                                    },
-                                    ControlKind::Select => rsx! {
-                                        NativeSelect {
-                                            size: "sm",
-                                            label: label(control.name),
-                                            // Matches the other controls' `Text { size: "sm" }` label,
-                                            // styled from the wrapper since the field owns its label.
-                                            sx: sx().selector(
-                                                "& > label",
-                                                sx()
-                                                    .font_weight("600")
-                                                    .font_size(TEXT_FONT_SIZE.value(Size::Sm)),
-                                            ),
-                                            value: Some(current.str(control.name)),
-                                            options: control.options.clone(),
-                                            option_label: {
-                                                let control = control.clone();
-                                                move |option: String| control.label_of(&option)
-                                            },
-                                            onchange: move |value: String| {
-                                                values.write().0[index].1 = value;
-                                            },
-                                        }
-                                    },
-                                    ControlKind::Switch => rsx! {
-                                        Switch {
-                                            id: "{demo_id}-{control.name}",
-                                            aria_label: label(control.name),
-                                            checked: control.is_on(&current.str(control.name)),
-                                            onchange: move |on: bool| {
-                                                values.write().0[index].1 = on.to_string();
-                                            },
-                                        }
-                                    },
-                                    // Too wide for the card, a select: a container query shows one,
-                                    // and `display: none` keeps the other out of tab order and a11y tree.
-                                    ControlKind::Toggle if segments_need(&control).is_some() => {
-                                        let needed = segments_need(&control).unwrap_or_default();
-                                        rsx! {
-                                            Box {
-                                                sx: card_query(sx().display("none"), needed, sx().display("block")),
-                                                ToggleSegments {
-                                                    control: control.clone(),
-                                                    value: current.str(control.name),
-                                                    onchange: move |next: String| {
-                                                        values.write().0[index].1 = next;
-                                                    },
-                                                }
-                                            }
-                                            Box {
-                                                sx: card_query(sx().display("block"), needed, sx().display("none")),
-                                                NativeSelect {
-                                                    size: "sm",
-                                                    // The row's `Text` names it: no second label.
-                                                    "aria-label": label(control.name),
-                                                    value: Some(current.str(control.name)),
-                                                    options: control.options.clone(),
-                                                    option_label: {
-                                                        let control = control.clone();
-                                                        move |option: String| control.label_of(&option)
-                                                    },
-                                                    onchange: move |value: String| {
-                                                        values.write().0[index].1 = value;
-                                                    },
-                                                }
-                                            }
-                                        }
-                                    },
-                                    ControlKind::Toggle => rsx! {
-                                        ToggleSegments {
-                                            control: control.clone(),
-                                            value: current.str(control.name),
-                                            onchange: move |next: String| {
-                                                values.write().0[index].1 = next;
-                                            },
-                                        }
-                                    },
-                                }
+                                index,
+                                value: current.str(control.name),
+                                id: format!("{demo_id}-{}", control.name),
+                                control: PanelControl(control),
+                                values,
                             }
                         }
                     }

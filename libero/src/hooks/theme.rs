@@ -56,16 +56,27 @@ pub(crate) fn use_gradient_style(
     text: bool,
 ) -> Option<String> {
     let context = use_context::<LiberoContext>();
-    if !active || (gradient.is_none() && color.is_none()) {
-        return None;
-    }
-    let gradient = gradient.cloned().unwrap_or_default();
-    Some(
-        gradient
-            .declarations(color, &scheme_themes(&context), text)
-            .iter()
-            .map(ToString::to_string)
-            .collect(),
+    let shown = active && (gradient.is_some() || color.is_some());
+    let themes = if shown {
+        scheme_themes(&context)
+    } else {
+        vec![]
+    };
+    use_cached(
+        gradient_key(gradient, color, [shown, text], &themes),
+        || {
+            if !shown {
+                return None;
+            }
+            let gradient = gradient.cloned().unwrap_or_default();
+            Some(
+                gradient
+                    .declarations(color, &themes, text)
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect(),
+            )
+        },
     )
 }
 
@@ -80,12 +91,58 @@ pub(crate) fn use_glass_gradient_style(
     let style = use_gradient_style(gradient, color, active, false);
     // A hook: called before the early return, or toggling `glass` panics (todo 2134).
     let context = use_context::<LiberoContext>();
+    // Read only when used, as before: a theme switch re-renders no plain component.
+    let themes = if glass {
+        scheme_themes(&context)
+    } else {
+        vec![]
+    };
+    // `best_label` measures contrast per stop: 3 ms a Header render without the cache (todo 2148).
+    let glass_style = use_cached(gradient_key(gradient, color, [glass], &themes), || {
+        if !glass {
+            return None;
+        }
+        let gradient = gradient.cloned().unwrap_or_default();
+        let glass = glass_gradient_declarations(&gradient, color, &themes);
+        Some(glass.iter().map(ToString::to_string).collect())
+    });
     if !glass {
         return style;
     }
-    let gradient = gradient.cloned().unwrap_or_default();
-    let glass = glass_gradient_declarations(&gradient, color, &scheme_themes(&context));
-    Some(style? + &glass.iter().map(ToString::to_string).collect::<String>())
+    Some(style? + &glass_style?)
+}
+
+type GradientKey<const N: usize> = (
+    Option<Gradient>,
+    Option<ThemeAwareValue>,
+    [bool; N],
+    Vec<*const Theme>,
+);
+
+fn gradient_key<const N: usize>(
+    gradient: Option<&Gradient>,
+    color: Option<&ThemeAwareValue>,
+    flags: [bool; N],
+    themes: &[&'static Theme],
+) -> GradientKey<N> {
+    let themes = themes.iter().map(|theme| *theme as *const Theme).collect();
+    (gradient.cloned(), color.cloned(), flags, themes)
+}
+
+/// `compute`'s result, rerun only when `key` changes from the last render's.
+fn use_cached<K: PartialEq + 'static>(
+    key: K,
+    compute: impl FnOnce() -> Option<String>,
+) -> Option<String> {
+    let mut cache = use_hook(|| CopyValue::new(None::<(K, Option<String>)>));
+    if let Some((last, value)) = &*cache.peek()
+        && *last == key
+    {
+        return value.clone();
+    }
+    let value = compute();
+    cache.set(Some((key, value.clone())));
+    value
 }
 
 /// The label and share of a glass tint of `fill` (see [`glass_tint`]), measured

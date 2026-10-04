@@ -36,6 +36,7 @@ pub fn VideoPage() -> Element {
             title: "Video",
             source: "libero/src/components/data_display/video.rs",
             markdown: "/md/video.md",
+            plays_media: true,
             properties: vec![
                 props("Video", vec![
                     prop("src", "String").default("required").doc("The file's URL."),

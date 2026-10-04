@@ -374,15 +374,39 @@ fn flatten<'a>(
     }
 }
 
+/// The last few highlights: a remount or a demo switching back skips the regex work (todo 2148).
+const HIGHLIGHT_CACHE: usize = 32;
+
+thread_local! {
+    static HIGHLIGHTED: std::cell::RefCell<std::collections::VecDeque<(Language, String, Vec<HighlightedLine>)>> =
+        const { std::cell::RefCell::new(std::collections::VecDeque::new()) };
+}
+
 pub(crate) fn highlight(source: &str, language: Language) -> Vec<HighlightedLine> {
     if source.is_empty() {
         return Vec::new();
+    }
+    let hit = HIGHLIGHTED.with_borrow(|cache| {
+        cache
+            .iter()
+            .find(|(lang, text, _)| *lang == language && text == source)
+            .map(|(_, _, lines)| lines.clone())
+    });
+    if let Some(lines) = hit {
+        return lines;
     }
 
     let tokens = tokenize(source, language.grammar());
     let mut spans = Vec::new();
     flatten(&tokens, &mut spans, None);
-    split_into_lines(spans, source.ends_with('\n'))
+    let lines = split_into_lines(spans, source.ends_with('\n'));
+    HIGHLIGHTED.with_borrow_mut(|cache| {
+        if cache.len() == HIGHLIGHT_CACHE {
+            cache.pop_front();
+        }
+        cache.push_back((language, source.to_string(), lines.clone()));
+    });
+    lines
 }
 
 /// The only place a span's text is copied; `flatten`'s spans borrow the source.

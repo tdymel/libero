@@ -57,6 +57,9 @@ pub fn DocPage(
     /// The TLDR chip; off for a page with nothing to summarize, such as the not-found page.
     #[props(default = true)]
     tldr: bool,
+    /// Its demos play or capture media: the Usage panel unmounts on a tab switch, so playback stops.
+    #[props(default)]
+    plays_media: bool,
     children: Element,
 ) -> Element {
     #[cfg(test)]
@@ -108,7 +111,10 @@ pub fn DocPage(
     let mut visited = use_hook(|| CopyValue::new(Vec::<DocTab>::new()));
     let current = tab();
     if !visited.peek().contains(&current) {
-        visited.write().push(current);
+        visited.write().push(current.clone());
+    }
+    if plays_media && current != DocTab::Usage {
+        visited.write().retain(|tab| *tab != DocTab::Usage);
     }
     let tabs: Vec<DocTab> = DocTab::options()
         .iter()
@@ -243,11 +249,12 @@ pub fn DocPage(
                     ),
                     // One template for every tab, so a switch flips `hidden` instead of remounting
                     // a panel it showed before (todo 2150). `Extra` still remounts: its landing waits on `onmounted`.
+                    // `inert` too: out of the Tab order and the accessibility tree even if a style shows it.
                     panel: move |selected: DocTab| {
                         let off = |tab: DocTab| (selected != tab).then_some(true);
                         let kept = |tab: DocTab| visited.peek().contains(&tab);
                         rsx! {
-                            div { hidden: off(DocTab::Usage),
+                            div { hidden: off(DocTab::Usage), inert: off(DocTab::Usage),
                                 if kept(DocTab::Usage) {
                                     // The sections carry no spacing of their own - outside
                                     // the tabs the page's own column `Flex` gaps them.
@@ -271,17 +278,17 @@ pub fn DocPage(
                                     {extra.content}
                                 }
                             }
-                            div { hidden: off(DocTab::Properties),
+                            div { hidden: off(DocTab::Properties), inert: off(DocTab::Properties),
                                 if kept(DocTab::Properties) {
                                     PropertyTable { properties: properties.clone() }
                                 }
                             }
-                            div { hidden: off(DocTab::StyleApi),
+                            div { hidden: off(DocTab::StyleApi), inert: off(DocTab::StyleApi),
                                 if kept(DocTab::StyleApi) {
                                     PartsPanel { properties: properties.clone() }
                                 }
                             }
-                            div { hidden: off(DocTab::Accessibility),
+                            div { hidden: off(DocTab::Accessibility), inert: off(DocTab::Accessibility),
                                 if kept(DocTab::Accessibility) {
                                     A11yPanel { doc: accessibility.clone().unwrap_or_default() }
                                 }

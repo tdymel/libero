@@ -18,6 +18,7 @@ pub fn AudioPage() -> Element {
             title: "Audio",
             source: "libero/src/components/data_display/audio.rs",
             markdown: "/md/audio.md",
+            plays_media: true,
             properties: vec![
                 props("Audio", vec![
                     prop("src", "String").default("required").doc("The file's URL."),

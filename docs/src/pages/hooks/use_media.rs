@@ -105,6 +105,7 @@ pub fn UseMediaPage() -> Element {
             title: "Media",
             source: "libero/src/hooks/media.rs",
             markdown: "/md/use_media.md",
+            plays_media: true,
             accessibility: a11y()
                 .handles([
                     "It renders nothing and announces nothing: your controls carry the names and states.",
