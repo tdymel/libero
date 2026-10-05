@@ -29,12 +29,14 @@ static SORTABLE_BASE_SX: StaticSx = StaticSx::new(|| {
         .padding("0")
         .when("vertical", sx().flex_direction("column"))
         // A row cannot wrap while it sorts, so it scrolls inside itself (1.4.10);
-        // the padding keeps the handles' focus rings clear of the scroller's clip.
+        // the padding keeps the handles' focus rings clear of the scroller's clip,
+        // also for a handle that focus scrolls in.
         .when(
             "horizontal",
             sx().flex_direction("row")
                 .overflow_x("auto")
-                .padding(FOCUS_RING_HALO_SPREAD.value()),
+                .padding(FOCUS_RING_HALO_SPREAD.value())
+                .with("scroll-padding-inline", FOCUS_RING_HALO_SPREAD.value()),
         )
         .when("sorting", sx().user_select("none"))
 });

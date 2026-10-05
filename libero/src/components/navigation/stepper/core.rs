@@ -8,12 +8,14 @@ use crate::{
         accessibility::VisuallyHidden,
         common::{
             ClassList, Glyph, HtmlTag, Input, LogicalTextAlign, Orientation, Part, Rail, RailInset,
-            States, Variables, focus_ring_sx, on_ring_sx, parts_enum, use_closing_focus, variables,
+            States, Variables, focus_ring_sx, on_ring_sx, parts_enum, reveal_inline,
+            use_closing_focus, variables,
         },
         layout::{Collapse, use_box},
     },
     context::IconSlot,
     hooks::{id_selector, use_element},
+    platform::when_laid_out,
     str_enum::str_enum,
     sx::{FORCED_COLORS, StaticSx, Sx, sx},
     theme::{
@@ -174,6 +176,7 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
     // `Rail::connector_start`, the vertical rail's centreline.
     // Steps the shrunk connectors can't fit scroll in the strip, not the page (1.4.10).
     // The padding keeps the headers' rings clear of its clip; the margin takes it back.
+    // The scroll padding gives a step scrolled in by focus the same room.
     let ring_room = FOCUS_RING_HALO_SPREAD.value();
     let horizontal = sx()
         .selector(
@@ -182,6 +185,7 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
                 .align_items("flex-start")
                 .overflow_x("auto")
                 .padding(ring_room.clone())
+                .with("scroll-padding-inline", ring_room.clone())
                 .margin_top(format!("calc(-1 * {ring_room})"))
                 .margin_bottom(format!("calc(-1 * {ring_room})")),
         )
@@ -446,6 +450,17 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
         repay.repay();
     }));
 
+    // The current step past the overflowing strip's edge scrolls into view, on
+    // mount and after any move. Focus stays put.
+    let strip = use_element();
+    let reveal_root = root.clone();
+    use_effect(use_reactive!(|(current, vertical)| {
+        if let Some(index) = current.filter(|_| !vertical) {
+            let header = id_selector(&format!("{reveal_root}-step-{index}"));
+            when_laid_out(move || reveal_inline(strip, &header));
+        }
+    }));
+
     let mut states = states
         .unwrap_or_default()
         .with(size.state_name(), true)
@@ -534,6 +549,7 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
                 ol {
                     role: "list",
                     "data-slot": StepperPart::List.slot(),
+                    onmounted: strip.mount(),
                     ..naming,
                     {items.into_iter()}
                 }

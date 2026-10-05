@@ -298,6 +298,88 @@ fn many_steps_shrink_then_scroll_in_their_strip() {
     });
 }
 
+/// Whether `STEP` (a stepper id and step index) sits inside its strip with the strip's
+/// `scroll-padding` free on both sides, and the strip has scrolled.
+const ROOMY: &str = "(() => {
+    const [id, index] = STEP;
+    const ol = document.querySelector(`#${id} ol`);
+    const h = document.getElementById(`${id}-step-${index}`).getBoundingClientRect();
+    const box = ol.getBoundingClientRect();
+    const style = getComputedStyle(ol);
+    const left = parseFloat(style.scrollPaddingLeft), right = parseFloat(style.scrollPaddingRight);
+    return left > 0 && right > 0 && Math.abs(ol.scrollLeft) > 0
+        && h.left >= box.left + left - 1 && h.right <= box.right - right + 1;
+})()";
+
+fn roomy(id: &str, index: usize) -> String {
+    ROOMY.replace("STEP", &format!("['{id}', {index}]"))
+}
+
+/// A step that focus scrolls into the strip keeps room for its ring on both sides (todo 2373).
+#[test]
+fn a_step_scrolled_in_by_focus_keeps_its_ring_room() {
+    block_on(async {
+        let fixture = Fixture::open("/stepper-many", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#below-9-step-8").await.unwrap();
+        page.execute(SetDeviceMetricsOverrideParams::new(320, 800, 1.0, true))
+            .await
+            .unwrap();
+        // From the start, a step comes in on the right; from the end, on the left.
+        for (scroll, index) in [("0", 6), ("ol.scrollWidth", 2)] {
+            page.evaluate(format!(
+                "(() => {{ const ol = document.querySelector('#below-9 ol'); \
+                 ol.scrollLeft = {scroll}; \
+                 document.getElementById('below-9-step-{index}').focus(); }})()"
+            ))
+            .await
+            .unwrap();
+            wait::for_js_true(
+                page,
+                &roomy("below-9", index),
+                "the focused step's ring room",
+            )
+            .await
+            .unwrap();
+        }
+        fixture.console.assert_clean("focus scroll").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The current step scrolls into the strip on mount and when `value` moves from outside,
+/// with no focus move (todo 2374).
+#[test]
+fn the_current_step_scrolls_into_its_strip() {
+    block_on(async {
+        let fixture = Fixture::open("/stepper-many", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#late").await.unwrap();
+        wait::for_js_true(page, &roomy("late", 5), "the mounted current step in view")
+            .await
+            .unwrap();
+        page.evaluate("document.getElementById('late-last').click()")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &roomy("late", 8), "the moved current step in view")
+            .await
+            .unwrap();
+        let focus: bool = page
+            .evaluate("!document.querySelector('#late')?.contains(document.activeElement)")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(focus, "the reveal moved focus into the stepper");
+        fixture.console.assert_clean("current step reveal").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Side labels stack under the width their step count needs, not a fixed 360px (todo 1573).
 #[test]
 fn the_side_fallback_follows_the_step_count() {

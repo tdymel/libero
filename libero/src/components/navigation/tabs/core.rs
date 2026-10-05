@@ -5,8 +5,8 @@ use crate::{
     components::{
         common::{
             ClassList, HtmlTag, Input, Part, States, Variables, focus_ring_sx,
-            has_shortcut_modifier, inset_focus_ring_sx, names_itself, neighbour, text_color,
-            use_name_warning, variables,
+            has_shortcut_modifier, inset_focus_ring_sx, names_itself, neighbour, reveal_inline,
+            text_color, use_name_warning, variables,
         },
         layout::use_box,
     },
@@ -99,46 +99,6 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
                 .selector("& [role=\"tab\"]", sx().flex("1 1 0")),
         )
 });
-
-/// Scrolls `strip` sideways just enough to show its descendant `selector`, as
-/// `scrollIntoView` `nearest` would, without scrolling the page.
-fn reveal_inline(strip: ElementHandle, selector: &str) {
-    let Ok(tab) = strip.query_selector(selector) else {
-        return;
-    };
-    let reads = (
-        strip.client_offset(),
-        strip.dimensions(),
-        strip.scroll_offset(),
-        tab.client_offset(),
-        tab.dimensions(),
-    );
-    spawn(async move {
-        let (strip_at, strip_size, scroll, tab_at, tab_size) = reads;
-        let (
-            Ok((strip_x, _)),
-            Ok(strip_size),
-            Ok((scroll_x, scroll_y)),
-            Ok((tab_x, _)),
-            Ok(tab_size),
-        ) = (
-            strip_at.await,
-            strip_size.await,
-            scroll.await,
-            tab_at.await,
-            tab_size.await,
-        )
-        else {
-            return;
-        };
-        let before = tab_x - strip_x;
-        let after = tab_x + tab_size.width - (strip_x + strip_size.width);
-        let shift = if before < 0.0 { before } else { after.max(0.0) };
-        if shift != 0.0 {
-            let _ = strip.scroll_to(scroll_x + shift, scroll_y);
-        }
-    });
-}
 
 /// One tab, with `T` already gone: `content` is the rendered label and `name`
 /// the accessible one, or empty for the content's own.

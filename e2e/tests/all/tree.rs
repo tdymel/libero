@@ -225,6 +225,57 @@ fn the_arrows_work_after_a_click_on_a_row_button() {
     });
 }
 
+/// Todo 2372: a click in a child group's indent focuses the parent row, which then takes
+/// the tab stop, so the arrows work from it.
+#[test]
+fn the_arrows_work_after_a_click_in_the_indent() {
+    block_on(async {
+        let fixture = Fixture::open("/tree/guides", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "[data-tree-id='src/main.rs']")
+            .await
+            .unwrap();
+        // Just before main.rs's row, inside src's: the indent, no row of its own.
+        let (x, y, gutter): (f64, f64, bool) = page
+            .evaluate(
+                "(() => { const r = document.querySelector(\"[data-tree-id='src/main.rs']\")\
+                 .getBoundingClientRect(); const x = r.left - 2, y = r.top + r.height / 2; \
+                 const hit = document.elementFromPoint(x, y); \
+                 return [x, y, hit.closest('[role=treeitem]')?.dataset.treeId === 'src']; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(gutter, "({x}, {y}) is not src's indent");
+        pointer::click_at(page, pointer::Point { x, y })
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement?.dataset.treeId === 'src'",
+            "the click in the indent to focus src",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement?.dataset.treeId === 'src/lib.rs'",
+            "Down to move from src to lib.rs",
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("a click in the indent")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The same for a link leaf, as the docs sidebar renders them.
 #[test]
 fn a_clicked_link_row_takes_focus() {

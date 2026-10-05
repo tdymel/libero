@@ -30,9 +30,11 @@ enum Phase {
 }
 
 /// Todo 1573: five and nine steps in both horizontal arms, for reflow at 390 and 320px.
+/// `#late` mounts on a step past the strip's edge, and `#late-last` moves it from outside (2374).
 #[component]
 fn ManyStepsPage() -> Element {
     let all = Phase::options();
+    let mut late = use_signal(|| Some(Phase::Review));
     rsx! {
         Flex { direction: "column", gap: "md",
             for (id, count, position) in [
@@ -50,6 +52,14 @@ fn ManyStepsPage() -> Element {
                     onstepclick: |_| {},
                 }
             }
+            Stepper {
+                id: "late",
+                value: late(),
+                options: all.to_vec(),
+                label_position: "below",
+                onstepclick: move |phase| late.set(Some(phase)),
+            }
+            Button { id: "late-last", onclick: move |_| late.set(Some(Phase::Survey)), "Last step" }
         }
     }
 }

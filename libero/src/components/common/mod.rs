@@ -17,6 +17,7 @@ mod orientation;
 mod parts;
 mod polymorphic;
 mod rail;
+mod reveal_inline;
 mod style_attributes;
 mod svg_fit;
 mod toolbar_context;
@@ -65,6 +66,7 @@ pub(crate) use parts::{parts_enum, parts_source, parts_under_sx, recast_parts};
 pub use polymorphic::HtmlTag;
 pub(crate) use polymorphic::{IntoChildren, render_polymorphic, styling_attributes};
 pub(crate) use rail::{Rail, RailInset};
+pub(crate) use reveal_inline::reveal_inline;
 pub(crate) use style_attributes::{
     ABSENT, StyleAttributes, sx_source, use_style_attributes, with_parts,
 };
