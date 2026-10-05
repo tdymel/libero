@@ -316,6 +316,13 @@ fn label_aliases(label: &str) -> &'static [&'static str] {
             "position",
             "permission",
         ],
+        "Local storage" => &[
+            "use_local_storage",
+            "use_session_storage",
+            "session storage",
+            "persist",
+            "remember",
+        ],
         "User media" => &[
             "use_user_media",
             "use_user_media_devices",
@@ -599,6 +606,7 @@ pub(super) fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::UseFullscreenPage {}, "Fullscreen"),
                 page(Route::UseBackPage {}, "Back button"),
                 page(Route::UseGeolocationPage {}, "Geolocation"),
+                page(Route::UseLocalStoragePage {}, "Local storage"),
                 page(Route::UseUserMediaPage {}, "User media"),
                 page(Route::UseSystemNotificationPage {}, "System notifications"),
                 page(Route::SaveFilePage {}, "Save file"),

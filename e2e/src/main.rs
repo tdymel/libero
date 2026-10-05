@@ -94,6 +94,8 @@ fn main() -> Result<()> {
     // SAFETY: single-threaded, before anything is spawned.
     unsafe {
         std::env::set_var("E2E_ARTIFACTS", &artifacts);
+        // The storage fixture's files off the web: fresh each run, never the user's data dir.
+        std::env::set_var("E2E_STORAGE_DIR", artifacts.join("storage"));
         std::env::set_var(
             e2e::journal::RUN_STARTED,
             started

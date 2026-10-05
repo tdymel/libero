@@ -170,6 +170,12 @@ fn run_on(
         let permission = format!("android.permission.{permission}");
         adb(serial, &["shell", "pm", "grant", PACKAGE, &permission])?;
     }
+    // `use_local_storage`: `install -r` keeps the app's files, so a past run's values would show.
+    // Best effort: the scenario also starts by removing its keys.
+    let _ = adb(
+        serial,
+        &["shell", "run-as", PACKAGE, "rm", "-rf", "files/storage"],
+    );
     // `use_user_media` answers wry's dialog itself (1346), so it must show even on a reused device.
     // `use_system_notification` too (1348).
     for permission in ["CAMERA", "RECORD_AUDIO", "POST_NOTIFICATIONS"] {

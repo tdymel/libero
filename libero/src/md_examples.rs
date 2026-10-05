@@ -168,6 +168,7 @@ md_pages! {
     UseHotkeys => "use_hotkeys",
     UseId => "use_id",
     UseIntersection => "use_intersection",
+    UseLocalStorage => "use_local_storage",
     UseLongPress => "use_long_press",
     UseMediaQuery => "use_media_query",
     UseStylesheet => "use_stylesheet",

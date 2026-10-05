@@ -41,6 +41,8 @@ Accessibility. The rest are shown on the component or guide page they belong to.
 | `use_fullscreen` | Puts one element in fullscreen, drawn where the platform refuses it. | [Fullscreen](use_fullscreen.md) |
 | `use_back` | Runs a handler on Android's Back button instead of leaving the app. | [Back button](use_back.md) |
 | `use_geolocation` | The device's position, once or followed, and the location permission. | [Geolocation](use_geolocation.md) |
+| `use_local_storage` | A value kept under a key across reloads and app runs. | [Local storage](use_local_storage.md) |
+| `use_session_storage` | A value kept under a key for the tab or the window's run. | [Local storage](use_local_storage.md) |
 | `use_user_media` | The camera and microphone: a preview, a photo and a recording. | [User media](use_user_media.md) |
 | `use_user_media_devices` | The page's cameras and microphones, live. | [User media](use_user_media.md) |
 | `use_system_notification` | Notifications the operating system draws, and their permission. | [System notifications](use_system_notification.md) |

@@ -139,6 +139,7 @@ mod use_back;
 mod use_geolocation;
 mod use_hotkeys;
 mod use_intersection;
+mod use_local_storage;
 mod use_long_press;
 mod use_media_query;
 mod use_swipe;

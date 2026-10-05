@@ -103,6 +103,8 @@ pub(crate) enum Route {
     UseFullscreenPage {},
     #[route("/hooks/use-geolocation")]
     UseGeolocationPage {},
+    #[route("/hooks/use-local-storage")]
+    UseLocalStoragePage {},
     #[route("/hooks/use-user-media")]
     UseUserMediaPage {},
     #[route("/hooks/use-system-notification")]

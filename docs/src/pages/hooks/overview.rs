@@ -147,21 +147,21 @@ fn hooks() -> Vec<HookRow> {
             "The device's position, once or followed, and the location permission.",
             Route::UseGeolocationPage {},
         ),
-        // No pages yet (2209, Tour phase 2): the rows link here until they land.
-        row(
-            "use_local_storage",
-            "A value kept under a key across reloads and app runs.",
-            Route::HooksPage {},
-        ),
-        row(
-            "use_session_storage",
-            "A value kept under a key for the tab or the window's run.",
-            Route::HooksPage {},
-        ),
+        // No page yet (Tour phase 2): the row links here until it lands.
         row(
             "use_tour",
             "A guided tour that spotlights one element per step.",
             Route::HooksPage {},
+        ),
+        row(
+            "use_local_storage",
+            "A value kept under a key across reloads and app runs.",
+            Route::UseLocalStoragePage {},
+        ),
+        row(
+            "use_session_storage",
+            "A value kept under a key for the tab or the window's run.",
+            Route::UseLocalStoragePage {},
         ),
         row(
             "use_user_media",
