@@ -379,6 +379,28 @@ fn an_action_icon_with_an_empty_label_warns() {
     ));
 }
 
+/// Todo 2337: a typo in `shortcut` drops the announcement and the hint, so it warns.
+#[test]
+fn an_action_icon_with_an_unparsable_shortcut_warns() {
+    let prefix = "ActionIcon: `shortcut`";
+    assert!(warns(
+        || rsx! { LiberoProvider { ActionIcon { aria_label: "Bold", shortcut: "Ctrl-B", "B" } } },
+        prefix
+    ));
+    assert!(warns(
+        || rsx! { LiberoProvider { ActionIcon { aria_label: "Bold", tooltip: true, shortcut: "Cmnd+B", "B" } } },
+        prefix
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { ActionIcon { aria_label: "Bold", shortcut: "Control+B", "B" } } },
+        prefix
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { ActionIcon { aria_label: "Bold", "B" } } },
+        prefix
+    ));
+}
+
 /// Todo 1549: only the clickable swatch is a button; a plain one is a picture.
 #[test]
 fn an_unnamed_clickable_swatch_warns() {

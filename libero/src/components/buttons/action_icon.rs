@@ -347,6 +347,16 @@ fn action_icon(mut props: ActionIconProps) -> Element {
         !props.aria_label.trim().is_empty() || names_itself(&props.attributes),
         "ActionIcon: an empty `aria_label`, so it is announced as just \"button\".",
     );
+    // A blank own label would override a spread `aria-label` (todo 2336).
+    let aria_label = (!props.aria_label.trim().is_empty()).then(|| props.aria_label.clone());
+    let unparsed_shortcut = props.shortcut.is_some() && keyshortcuts.is_none();
+    use_hook(move || {
+        if unparsed_shortcut {
+            warn(
+                "ActionIcon: `shortcut` is not a chord `use_hotkeys` takes, so it is not announced or shown.",
+            );
+        }
+    });
 
     let ripple = use_ripple();
     let showing = ripple.showing();
@@ -404,7 +414,7 @@ fn action_icon(mut props: ActionIconProps) -> Element {
             };
             return boxed
                 .attr_default("role", "link")
-                .attr("aria-label", props.aria_label)
+                .attr("aria-label", aria_label)
                 .attr("aria-disabled", "true")
                 .attr("aria-keyshortcuts", keyshortcuts)
                 .attr("tabindex", tabindex)
@@ -423,7 +433,7 @@ fn action_icon(mut props: ActionIconProps) -> Element {
                 framework_sx: &ACTION_ICON_BASE_SX,
                 states,
                 variables,
-                "aria-label": props.aria_label,
+                "aria-label": aria_label,
                 "aria-keyshortcuts": keyshortcuts,
                 attributes,
                 {glyph}
@@ -442,7 +452,7 @@ fn action_icon(mut props: ActionIconProps) -> Element {
 
     boxed
         .event("onclick", handle_click)
-        .attr("aria-label", props.aria_label)
+        .attr("aria-label", aria_label)
         .attr("aria-keyshortcuts", keyshortcuts)
         .attr("disabled", disabled && !soft_disabled)
         .attr("tabindex", item.map(ToolbarItem::tabindex))

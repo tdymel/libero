@@ -42,6 +42,25 @@ fn action_icon_labels_itself_for_assistive_technology() {
     assert_eq!(attributes["type"], "button");
 }
 
+/// Todo 2336: a blank `aria_label` renders no `aria-label` of its own, so a spread one names
+/// the button, the disabled link and the link.
+#[test]
+fn a_blank_label_leaves_a_spread_label_in_place() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                ActionIcon { aria_label: "", "aria-label": "Close", "×" }
+                ActionIcon { aria_label: " ", "aria-label": "Close", to: "https://example.com", disabled: true, "×" }
+                ActionIcon { aria_label: "", "aria-label": "Close", to: "https://example.com", "×" }
+            }
+        }
+    }
+
+    let html = render(app);
+    assert_eq!(html.matches("aria-label=").count(), 3, "{html}");
+    assert_eq!(html.matches(r#"aria-label="Close""#).count(), 3, "{html}");
+}
+
 /// Todo 222: `ActionIcon` takes `Button`'s `selected` - `aria-pressed` both
 /// ways, the `checked` token while pressed, and nothing on a plain action.
 #[test]

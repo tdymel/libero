@@ -70,6 +70,27 @@ fn a_literal_fill_gets_a_readable_label() {
     });
 }
 
+/// Todo 2339: a `<button>` takes the theme's typeface and letter spacing, as link mode does.
+#[test]
+fn a_button_and_a_link_share_the_theme_font() {
+    block_on(async {
+        let fixture = Fixture::open("/button", Viewport::Desktop).await.unwrap();
+        let fonts: Vec<String> = fixture
+            .page
+            .evaluate(format!(
+                "['body', '{PLAIN}', '{LINK}'].map(q => {{ const s = getComputedStyle(document.querySelector(q)); \
+                 return `${{s.fontFamily}} | ${{s.letterSpacing}}`; }})"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(fonts[1], fonts[0], "{fonts:?}");
+        assert_eq!(fonts[2], fonts[0], "{fonts:?}");
+        fixture.close().await.unwrap();
+    });
+}
+
 fn presses(which: &str) -> String {
     format!("document.querySelector('#presses').dataset.{which}")
 }

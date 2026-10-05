@@ -42,6 +42,9 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
         .border_style("solid")
         .border_width("1px")
         .font_weight("600")
+        // A `<button>` inherits neither; link mode does, and both tags must look alike.
+        .font_family("inherit")
+        .letter_spacing("inherit")
         .cursor("pointer")
         .user_select("none")
         .white_space("nowrap")
