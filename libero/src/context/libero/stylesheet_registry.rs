@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     cell::RefCell,
     collections::{BTreeMap, VecDeque},
     rc::Rc,
@@ -89,6 +90,46 @@ fn top_level_rules(css: &str) -> impl Iterator<Item = &str> {
     })
 }
 
+/// `css`'s rules for a layer block, `@media P{.a{x}}` nested as `.a{@media P{x}}`: inserting
+/// a grouping rule costs Chromium the whole-page restyle, a nested one 1-2 ms (todo 2231).
+/// `None` for any other at-rule shape, or without `nests`: the sheet keeps its `<style>`.
+fn block_rules(css: &str, nests: bool) -> Option<Vec<Cow<'_, str>>> {
+    const GROUPING: [&str; 3] = ["@media", "@container", "@supports"];
+    let mut rules = Vec::new();
+    for rule in top_level_rules(css) {
+        if !rule.starts_with('@') {
+            rules.push(Cow::Borrowed(rule));
+            continue;
+        }
+        let (prelude, inner) = rule.split_once('{')?;
+        let inner = inner.strip_suffix('}')?;
+        // A forced reduced motion rewrites a motion query's text in the outlet.
+        if !nests
+            || !GROUPING.iter().any(|name| prelude.starts_with(name))
+            || prelude.contains("prefers-reduced-motion")
+            || inner.contains('@')
+        {
+            return None;
+        }
+        for style in top_level_rules(inner) {
+            let (selector, body) = style.split_once('{')?;
+            let body = body.strip_suffix('}')?;
+            let pseudo_element = selector.contains("::")
+                || [":before", ":after", ":first-line", ":first-letter"]
+                    .iter()
+                    .any(|name| selector.contains(name));
+            if pseudo_element
+                || body.contains('{')
+                || selector.matches(['"', '\'']).count() % 2 == 1
+            {
+                return None;
+            }
+            rules.push(Cow::Owned(format!("{selector}{{{prelude}{{{body}}}}}")));
+        }
+    }
+    Some(rules)
+}
+
 #[derive(Default)]
 struct Sheets {
     by_key: BTreeMap<StylesheetKey, RegisteredStylesheet>,
@@ -98,6 +139,8 @@ struct Sheets {
     /// The outlet's mounted layer blocks: a new layer sheet costs Chromium a whole-page
     /// restyle, a rule inserted into a block about 1 ms (todo 2186). Web only.
     blocks: Option<Box<dyn StyleRulesApi>>,
+    /// The blocks' browser nests rules, so a sheet's at-rules can go in as nested rules.
+    nests: bool,
     /// Per layer, the inserted sheets in rule order with how many rules each holds.
     inserted: [Vec<(StylesheetKey, usize)>; 4],
     /// A `<style>` entry came or went since the outlet last heard.
@@ -105,23 +148,22 @@ struct Sheets {
 }
 
 impl Sheets {
-    /// Puts a plain class-scoped sheet's rules at the end of its layer's block. Global
-    /// sheets and at-rules stay `<style>`s: an at-rule costs the full restyle anyway.
+    /// Puts a class-scoped sheet's rules at the end of its layer's block, see [`block_rules`].
+    /// Global sheets stay `<style>`s.
     fn insert(&mut self, key: StylesheetKey, stylesheet: &Stylesheet) -> bool {
         let Some(blocks) = &self.blocks else {
             return false;
         };
-        let css = stylesheet.as_str();
-        if key.rank != SheetRank::Component
-            || stylesheet.class_name().is_none()
-            || css.contains('@')
-        {
+        if key.rank != SheetRank::Component || stylesheet.class_name().is_none() {
             return false;
         }
+        let Some(rules) = block_rules(stylesheet.as_str(), self.nests) else {
+            return false;
+        };
         let order = &mut self.inserted[key.layer.index()];
         let start: usize = order.iter().map(|(_, count)| count).sum();
         let mut end = start;
-        for rule in top_level_rules(css) {
+        for rule in &rules {
             // A rule the browser rejects is dropped, as a `<style>` would drop it.
             if blocks.insert(key.layer.index(), end, rule) {
                 end += 1;
@@ -279,7 +321,9 @@ impl StylesheetRegistry {
     /// Sends later plain class-scoped sheets into `blocks`, one per [`CssLayer`]; the
     /// sheets registered so far keep their `<style>`, as a hydrating client must.
     pub(crate) fn attach(&self, blocks: Box<dyn StyleRulesApi>) {
-        self.inner.borrow_mut().blocks = Some(blocks);
+        let mut sheets = self.inner.borrow_mut();
+        sheets.nests = blocks.nests();
+        sheets.blocks = Some(blocks);
     }
 
     #[cfg(test)]
@@ -508,6 +552,7 @@ mod tests {
     struct FakeRules {
         blocks: Rc<RefCell<[Vec<String>; 4]>>,
         reject: Option<&'static str>,
+        nests: bool,
     }
 
     impl StyleRulesApi for FakeRules {
@@ -522,11 +567,18 @@ mod tests {
         fn delete(&self, block: usize, index: usize) {
             self.blocks.borrow_mut()[block].remove(index);
         }
+
+        fn nests(&self) -> bool {
+            self.nests
+        }
     }
 
     fn attached() -> (StylesheetRegistry, FakeRules) {
         let registry = StylesheetRegistry::new();
-        let rules = FakeRules::default();
+        let rules = FakeRules {
+            nests: true,
+            ..FakeRules::default()
+        };
         registry.attach(Box::new(rules.clone()));
         (registry, rules)
     }
@@ -576,7 +628,7 @@ mod tests {
     }
 
     #[test]
-    fn global_ranked_and_at_rule_sheets_keep_their_style() {
+    fn global_ranked_and_motion_query_sheets_keep_their_style() {
         let (registry, rules) = attached();
         registry.acquire(":root{--x:1px;}", CssLayer::Framework, SheetRank::Component);
         registry.acquire(
@@ -585,7 +637,7 @@ mod tests {
             SheetRank::Default,
         );
         registry.acquire(
-            Stylesheet::from(&sx().media("(min-width: 1px)", sx().padding("lg"))),
+            Stylesheet::from(&sx().media("(prefers-reduced-motion: reduce)", sx().padding("lg"))),
             CssLayer::Framework,
             SheetRank::Component,
         );
@@ -593,6 +645,44 @@ mod tests {
         assert!(block(&rules, CssLayer::Framework).is_empty());
         assert_eq!(registry.len(), 3);
         assert!(registry.take_outlet_change());
+    }
+
+    #[test]
+    fn a_media_sheet_goes_in_nested_in_its_own_order() {
+        let (registry, rules) = attached();
+        let stylesheet = Stylesheet::from(
+            &sx()
+                .padding("lg")
+                .media("(forced-colors: active)", sx().color("red")),
+        );
+        let class = stylesheet.class_name().unwrap().to_string();
+
+        registry.acquire(stylesheet, CssLayer::UserStatic, SheetRank::Component);
+
+        assert!(registry.stylesheets(SheetRank::Component).is_empty());
+        let block = block(&rules, CssLayer::UserStatic);
+        assert_eq!(block.len(), 2);
+        assert!(block[0].contains("padding"));
+        assert_eq!(
+            block[1],
+            format!(".{class}{{@media (forced-colors: active){{color:red;}}}}")
+        );
+    }
+
+    /// Without nesting, and for any shape nesting cannot carry, the sheet keeps its `<style>`.
+    #[test]
+    fn block_rules_nest_only_the_simple_shape() {
+        let nested = block_rules(".a{x:1}@container c (min-width: 1px){.a > b{y:2}}", true);
+        assert_eq!(
+            nested.unwrap(),
+            [".a{x:1}", ".a > b{@container c (min-width: 1px){y:2}}"]
+        );
+        assert!(block_rules("@media x{.a{y:2}}", false).is_none());
+        assert!(block_rules("@keyframes k{to{opacity:0}}", true).is_none());
+        assert!(block_rules("@media x{.a::before{y:2}}", true).is_none());
+        assert!(block_rules("@media x{@supports y{.a{z:3}}}", true).is_none());
+        assert!(block_rules("@media (prefers-reduced-motion: reduce){.a{y:2}}", true).is_none());
+        assert_eq!(block_rules(".a{x:1}", false).unwrap(), [".a{x:1}"]);
     }
 
     /// Eviction finds the sheet's rules by the ones inserted before it, whatever came after.

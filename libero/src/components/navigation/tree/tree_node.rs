@@ -62,7 +62,7 @@ impl<T> TreeNode<T> {
 pub(super) struct TreeNodeErased {
     pub id: String,
     pub label: String,
-    pub children: Vec<TreeNodeErased>,
+    pub children: Rc<[TreeNodeErased]>,
     pub disabled: bool,
     pub data: Rc<dyn Any>,
 }
@@ -73,14 +73,14 @@ impl TreeNodeErased {
     }
 }
 
-// `data` compares by pointer identity: `Tree`'s cache re-erases only on a
-// real change, so a stable `Rc` is exactly the "subtree untouched" signal.
+// `data` and `children` compare by pointer identity: `Tree`'s cache re-erases only
+// on a real change, so a stable `Rc` is the "subtree untouched" signal, in O(1).
 impl PartialEq for TreeNodeErased {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
             && self.label == other.label
             && self.disabled == other.disabled
-            && self.children == other.children
+            && Rc::ptr_eq(&self.children, &other.children)
             && Rc::ptr_eq(&self.data, &other.data)
     }
 }
@@ -94,7 +94,7 @@ pub(super) fn erase_nodes<T: TreeLabel + Clone + 'static>(
             id: node.id.clone(),
             label: node.data.tree_label(),
             disabled: node.disabled,
-            children: erase_nodes(&node.children),
+            children: erase_nodes(&node.children).into(),
             data: Rc::new(node.data.clone()) as Rc<dyn Any>,
         })
         .collect()
@@ -181,7 +181,7 @@ mod tests {
     fn a_changed_child_breaks_equality() {
         let erased = erase_nodes(&nodes());
         let mut changed = erased.clone();
-        changed[0].children[0].label = "Alpha Two".to_string();
+        Rc::make_mut(&mut changed[0].children)[0].label = "Alpha Two".to_string();
         assert!(erased != changed);
     }
 }

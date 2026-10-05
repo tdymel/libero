@@ -67,6 +67,23 @@ impl StyleRulesApi for WebStyleRules {
             let _ = block.delete_rule(index as u32);
         }
     }
+
+    // The gate for nested at-rules (todo 2231): a browser without CSS nesting would drop
+    // them silently, so there a sheet with an at-rule keeps its `<style>`.
+    fn nests(&self) -> bool {
+        let supports = || {
+            let css = js_sys::Reflect::get(&js_sys::global(), &JsValue::from_str("CSS")).ok()?;
+            let supports = js_sys::Reflect::get(&css, &JsValue::from_str("supports"))
+                .ok()?
+                .dyn_into::<js_sys::Function>()
+                .ok()?;
+            supports
+                .call1(&css, &JsValue::from_str("selector(&)"))
+                .ok()?
+                .as_bool()
+        };
+        supports().unwrap_or(false)
+    }
 }
 
 pub(super) fn is_rtl(mounted: &Rc<MountedData>) -> bool {

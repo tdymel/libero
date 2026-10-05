@@ -70,3 +70,52 @@ fn the_root_lang_follows_the_outer_provider_only() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 2232: the inner provider writes into the outer one's sheets, so the page holds one
+/// layer order and one set of layer blocks, and a reduced motion forced inside still applies.
+#[test]
+fn the_inner_provider_shares_the_outer_sheets() {
+    block_on(async {
+        let fixture = Fixture::open("/nested-provider", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            "[...document.querySelectorAll('style')].some(s => s.textContent.startsWith('@layer lsx-base{}'))",
+            "the layer blocks mounted",
+        )
+        .await
+        .unwrap();
+        let counts: (usize, usize) = page
+            .evaluate(
+                "(() => { const texts = [...document.querySelectorAll('style')].map(s => s.textContent); \
+                 return [texts.filter(t => t.startsWith('@layer lsx-base,')).length, \
+                 texts.filter(t => t.startsWith('@layer lsx-base{}')).length]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(counts, (1, 1), "one layer order, one set of blocks");
+
+        let padding = "getComputedStyle(document.querySelector('#inner-motion')).paddingTop";
+        pointer::click(page, "#inner-calm").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{padding} === '7px'"),
+            "the inner force reduces motion",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, "#inner-follow").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{padding} === '1px'"),
+            "the system answer again",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

@@ -81,6 +81,7 @@ impl LiberoContext {
         accessibility_system: Signal<AccessibilityPreferences>,
         forced_reduced_motion: Signal<Option<bool>>,
         theme_css: Signal<Rc<str>>,
+        stylesheet_registry: StylesheetRegistry,
         stylesheet_registry_version: Signal<u64>,
     ) -> Self {
         Self {
@@ -98,7 +99,7 @@ impl LiberoContext {
             forced_reduced_motion,
             layer_order_css: CssLayer::order_css(),
             theme_css,
-            stylesheet_registry: StylesheetRegistry::new(),
+            stylesheet_registry,
             stylesheet_registry_version,
         }
     }

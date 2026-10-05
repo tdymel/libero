@@ -1,14 +1,15 @@
 //! A date field under the fixture's English provider, and one under a nested
 //! `LiberoProvider` with German words and formats. 2026-03-14 held, `today` pinned.
-//! A button switches the outer words to German.
+//! A button switches the outer words to German; two force and release reduced motion inside.
 
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     chrono::NaiveDate,
-    components::{ChronoField, Flex},
-    hooks::use_localization_handle,
+    components::{Box, ChronoField, Flex},
+    hooks::{use_accessibility, use_localization_handle},
     localization::{Formats, Localization},
+    sx::sx,
 };
 
 use crate::Routes;
@@ -32,7 +33,24 @@ fn NestedProviderPage() -> Element {
                 div { id: "inner",
                     ChronoField::<NaiveDate> { label: "Inner", today, value: day, onchange: |_| {} }
                 }
+                InnerMotion {}
             }
+        }
+    }
+}
+
+/// Forces reduced motion through the inner provider (todo 2232); `#inner-motion` pads 7px when reduced.
+#[component]
+fn InnerMotion() -> Element {
+    let calm = use_accessibility();
+    let follow = calm.clone();
+    rsx! {
+        button { id: "inner-calm", onclick: move |_| calm.set_reduced_motion(Some(true)), "Calm" }
+        button { id: "inner-follow", onclick: move |_| follow.set_reduced_motion(None), "Follow" }
+        Box {
+            id: "inner-motion",
+            sx: sx().padding("1px").media("(prefers-reduced-motion: reduce)", sx().padding("7px")),
+            "Motion"
         }
     }
 }

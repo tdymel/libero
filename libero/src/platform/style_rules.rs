@@ -11,6 +11,8 @@ pub(crate) trait StyleRulesApi {
     /// Inserts `rule` at `index` in block `block`; `false` when the browser rejects it.
     fn insert(&self, block: usize, index: usize, rule: &str) -> bool;
     fn delete(&self, block: usize, index: usize);
+    /// Whether the browser takes nested rules (`.a{@media x{..}}`).
+    fn nests(&self) -> bool;
 }
 
 /// The blocks of `style`; `None` off the web, where every sheet stays its own `<style>`.

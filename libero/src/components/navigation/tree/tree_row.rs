@@ -321,7 +321,7 @@ pub(super) fn open_key(node: &TreeNodeErased, open: &HashSet<String>) -> u64 {
     fn walk(node: &TreeNodeErased, open: &HashSet<String>, hasher: &mut DefaultHasher) {
         if node.has_children() && open.contains(&node.id) {
             node.id.hash(hasher);
-            for child in &node.children {
+            for child in node.children.iter() {
                 walk(child, open, hasher);
             }
             // Closes the subtree, so `a/b` open differs from `a` and its sibling `b` open.

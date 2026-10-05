@@ -5,6 +5,7 @@ use dioxus::prelude::*;
 use super::{
     LiberoContext,
     outlets::{StyleOutlet, ThemeStyle},
+    stylesheet_registry::StylesheetRegistry,
 };
 use crate::{
     context::{ModalHost, PortalHost, PortalOutlet, WindowHost, window::ZLayers},
@@ -59,8 +60,8 @@ pub fn LiberoProvider(
     children: Element,
 ) -> Element {
     let themes = use_hook(|| themes.clone());
-    let outer_css =
-        use_hook(|| try_consume_context::<LiberoContext>().map(|outer| outer.theme_css));
+    let outer = use_hook(try_consume_context::<LiberoContext>);
+    let outer_css = outer.as_ref().map(|outer| outer.theme_css);
     // Only the outermost provider owns the root's `lang`: two would race for it.
     let outermost = outer_css.is_none();
     let localization = use_signal(|| localization);
@@ -113,8 +114,30 @@ pub fn LiberoProvider(
             .filter(|_| !cfg!(target_arch = "wasm32"))
             .and_then(|platform| platform.stored_reduced_motion())
     });
-
     let stylesheet_registry_version = use_signal(|| 0u64);
+    let stylesheet_registry = use_hook(StylesheetRegistry::new);
+
+    // A nested provider shares the outer one's sheets and a11y answers: its own outlet would
+    // mount a second set of `<style>`s and layer blocks, each a whole-page restyle (2232).
+    let (
+        accessibility_system,
+        forced_reduced_motion,
+        stylesheet_registry_version,
+        stylesheet_registry,
+    ) = match &outer {
+        Some(outer) => (
+            outer.accessibility_system,
+            outer.forced_reduced_motion,
+            outer.stylesheet_registry_version,
+            outer.stylesheet_registry.clone(),
+        ),
+        None => (
+            accessibility_system,
+            forced_reduced_motion,
+            stylesheet_registry_version,
+            stylesheet_registry,
+        ),
+    };
     let context = use_context_provider(|| {
         LiberoContext::new(
             theme_set,
@@ -130,6 +153,7 @@ pub fn LiberoProvider(
             accessibility_system,
             forced_reduced_motion,
             theme_css,
+            stylesheet_registry,
             stylesheet_registry_version,
         )
     });
@@ -230,15 +254,19 @@ pub fn LiberoProvider(
     use_context_provider(|| WindowHost::new(window_stack, window_layers.into()));
 
     rsx! {
-        style {
-            dangerous_inner_html: "{context.layer_order_css}"
+        if outermost {
+            style {
+                dangerous_inner_html: "{context.layer_order_css}"
+            }
         }
         ThemeStyle { outer: outer_css }
         {platform::Listener(rsx! {
             {children}
             PortalOutlet {}
         })}
-        StyleOutlet {}
+        if outermost {
+            StyleOutlet {}
+        }
         platform::Outlet {}
     }
 }

@@ -27,7 +27,7 @@ use crate::{
 /// ```
 ///
 /// A forced reduced motion reaches libero's own CSS, not a `<style>` the app adds itself.
-/// Panics outside a `LiberoProvider`.
+/// It applies page-wide, set under a nested `LiberoProvider` too. Panics outside a `LiberoProvider`.
 ///
 /// Docs: <https://libero-ui.dev/accessibility/use-accessibility>
 pub fn use_accessibility() -> AccessibilityHandle {
