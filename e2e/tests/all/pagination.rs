@@ -34,6 +34,18 @@ fn the_current_page_shows_the_on_state_ring() {
     });
 }
 
+/// Todo 2376: a page button takes the page's typeface and letter spacing.
+#[test]
+fn a_page_button_takes_the_page_font() {
+    block_on(async {
+        let fixture = Fixture::open("/pagination", Viewport::Desktop)
+            .await
+            .unwrap();
+        crate::button::assert_takes_the_page_font(&fixture.page, &[CURRENT, PREVIOUS]).await;
+        fixture.close().await.unwrap();
+    });
+}
+
 async fn wait_for_page(page: &Page, number: u32, route: &str) {
     wait::for_js_true(
         page,

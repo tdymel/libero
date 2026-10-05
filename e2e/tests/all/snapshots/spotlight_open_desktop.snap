@@ -26,4 +26,5 @@ dialog "Command palette" [modal]
         StaticText "Ctrl"
         StaticText "+"
         StaticText "N"
+  status [atomic] [live=polite]
 --> aria-controls [id="lsx-N-listbox"] (rendered above)

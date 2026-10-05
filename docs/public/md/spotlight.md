@@ -67,11 +67,13 @@ let spotlight = use_spotlight(SpotlightOptions {
 ```
 
 For results from a server, return a signal's contents from `actions`, start the
-search from `onquery` and set `loading` until it answers.
+search from `onquery` and set `loading` until it answers. Cancel the previous
+search first, or a slow answer to an older query overwrites the newer rows.
 
 ```rust,ignore
 let mut results = use_signal(Vec::<SpotlightAction>::new);
 let mut loading = use_signal(|| false);
+let mut search_task = use_signal(|| None::<dioxus::core::Task>);
 let spotlight = use_spotlight(SpotlightOptions {
     actions: Some(Callback::new(move |query: String| match query.trim().is_empty() {
         true => vec![],
@@ -80,10 +82,13 @@ let spotlight = use_spotlight(SpotlightOptions {
     loading: loading(),
     onquery: Some(Callback::new(move |query: String| {
         loading.set(true);
-        spawn(async move {
+        if let Some(older) = search_task.write().take() {
+            older.cancel();
+        }
+        search_task.set(Some(spawn(async move {
             results.set(search_on_server(&query).await);
             loading.set(false);
-        });
+        })));
     })),
     ..Default::default()
 });
@@ -116,7 +121,7 @@ pub fn spotlight_filter(query: &str, actions: &[SpotlightAction]) -> Vec<Spotlig
 | `shortcut` | `Option<char>` | `Some('k')` | Ctrl (Cmd on a Mac) plus this key toggles the palette. `None` for no hotkey. Web only. A key the browser already uses, such as L, T or W, warns in a debug build. Elsewhere, open the palette from a button. Two palettes on one page should not share a key. |
 | `highlight_first_on_query` | `bool` | `true` | Highlights the first row after every keystroke, so Enter runs it. Off, Enter does nothing until the arrows pick a row. |
 | `loading` | `bool` | `false` | The results are still coming. A loader replaces the rows, and a screen reader hears "Searching". |
-| `onquery` | `Callback<String>` | - | Called with the query on every keystroke. Set `loading` and start the search here. |
+| `onquery` | `Callback<String>` | - | Called with the query on every keystroke. Set `loading` and start the search here, cancelling the previous one: a newer query supersedes it. |
 | `sx` | `Sx` | - | Styles the dialog box. |
 | `parts` | `Parts<SpotlightPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
@@ -171,7 +176,7 @@ explains how parts work.
 | Key | Action |
 |---|---|
 | `Down` or `Up` | Moves the highlight, wrapping at both ends. |
-| `Enter` | Runs the highlighted action, by default the first row. |
+| `Enter` | Runs the highlighted action. After typing, the first row is highlighted; right after opening, none is. |
 | `Escape` | Closes, as a click outside does. Focus goes back to what opened it. |
 
 ### Libero handles

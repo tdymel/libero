@@ -51,6 +51,8 @@ static TREE_ITEM_SX: StaticSx = StaticSx::new(|| {
             .background("none")
             .color("inherit")
             .font("inherit")
+            // Not in the `font` shorthand, and a `<button>`'s UA sheet resets it (todo 2376).
+            .letter_spacing("inherit")
             .text_align_start()
             .cursor("pointer")
             // Disabled by its row or a `Fieldset` (todo 514); only the Fieldset's case dims here.

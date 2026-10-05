@@ -12,7 +12,33 @@ pub const ROUTES: Routes = &[
     ("/spotlight-long", || rsx! { SpotlightLongPage {} }),
     ("/spotlight-tall", || rsx! { SpotlightTallPage {} }),
     ("/spotlight-fetch", || rsx! { SpotlightFetchPage {} }),
+    ("/spotlight-options", || rsx! { SpotlightOptionsPage {} }),
 ];
+
+/// Four actions, two drawn, none highlighted by typing (todo 2387).
+#[component]
+fn SpotlightOptionsPage() -> Element {
+    let mut ran = use_signal(String::new);
+    let all = use_hook(|| {
+        ["Alpha", "Beta", "Gamma", "Delta"]
+            .map(|label| SpotlightAction::new(label).onclick(move |_| ran.set(label.into())))
+            .to_vec()
+    });
+    let spotlight = use_spotlight(SpotlightOptions {
+        actions: Some(Callback::new(move |query: String| {
+            spotlight_filter(&query, &all)
+        })),
+        aria_label: Some("Command palette".into()),
+        limit: Some(2),
+        highlight_first_on_query: false,
+        ..Default::default()
+    });
+
+    rsx! {
+        Button { id: "open-spotlight", onclick: move |_| spotlight.open(), "Open the palette" }
+        Text { id: "ran", "data-ran": "{ran}", size: "sm", "Ran" }
+    }
+}
 
 /// A server-side search: the answer for one or two letters is still on its way (todo 1810).
 #[component]

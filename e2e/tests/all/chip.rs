@@ -280,6 +280,28 @@ fn buttons_in_a_disabled_fieldset_look_disabled() {
     });
 }
 
+/// Todo 2376: the button-rooted controls take the page's typeface and letter spacing.
+#[test]
+fn button_rooted_controls_take_the_page_font() {
+    block_on(async {
+        let fixture = Fixture::open("/chip/fieldset", Viewport::Desktop)
+            .await
+            .unwrap();
+        crate::button::assert_takes_the_page_font(
+            &fixture.page,
+            &[
+                "#fs-chip",
+                "#fs-button",
+                "#fs-swatch",
+                "#fs-tree-item",
+                "#fs-phone button",
+            ],
+        )
+        .await;
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 596: a disabled filter chip and a disabled link chip take the pointer
 /// and show `not-allowed`, and a click on the filter chip still emits nothing.
 #[test]

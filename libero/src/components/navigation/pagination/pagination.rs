@@ -67,6 +67,7 @@ static PAGINATION_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .color("inherit")
         .cursor("pointer")
         .font_family("inherit")
+        .letter_spacing("inherit")
         .line_height("1")
         // On-state ring, so the current page is not a fill alone (todo 631).
         .when(

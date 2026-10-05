@@ -451,3 +451,53 @@ fn a_start_bubble_follows_the_direction() {
         }
     });
 }
+
+/// Todo 2387: closed, the bubble's stand-in carries `label_id`, so the trigger's
+/// `aria-describedby` resolves to the label before anything opened it.
+#[test]
+fn a_closed_tooltip_still_describes_its_trigger() {
+    block_on(async {
+        let fixture = Fixture::open("/tooltip", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_selector(page, TRIGGER).await.unwrap();
+        assert!(!wait::exists(page, OPEN).await.unwrap(), "open at rest");
+        let described: String = js(
+            page,
+            "(() => { const target = document.getElementById( \
+             document.querySelector('#save').getAttribute('aria-describedby')); \
+             return target ? `${target.getAttribute('role')}: ${target.textContent}` : 'none'; })()",
+        )
+        .await;
+        assert_eq!(described, "tooltip: Saves the draft");
+        fixture.console.assert_clean("a closed tooltip").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2384 (WCAG 1.4.10): a label with no break opportunity wraps inside the
+/// bubble at 320px.
+#[test]
+fn a_long_word_wraps_in_the_bubble() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
+    block_on(async {
+        let fixture = Fixture::open("/tooltip-long", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute(SetDeviceMetricsOverrideParams::new(320, 640, 1.0, true))
+            .await
+            .unwrap();
+        wait::for_visible(page, BUBBLE).await.unwrap();
+        crate::floating_window::assert_fits_at_320(
+            page,
+            BUBBLE,
+            &format!("[document.documentElement, document.querySelector({BUBBLE:?})]"),
+        )
+        .await;
+        fixture
+            .console
+            .assert_clean("a long tooltip label")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

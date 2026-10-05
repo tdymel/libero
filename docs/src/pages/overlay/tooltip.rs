@@ -73,6 +73,7 @@ pub fn TooltipPage() -> Element {
                 ])
                 .must([
                     "Give the bubble an id with `label_id` and point your trigger's `aria-describedby` at it, so a screen reader reads the label. The demo's Save button does.",
+                    "Keep a disabled trigger focusable: `Button { disabled }` drops out of the Tab order, so its tooltip is mouse-only. Set `focusable_when_disabled: true`, which uses `aria-disabled` instead.",
                 ])
                 .example("A Save icon button with a \"Save (Ctrl+S)\" tooltip and `label_id: \"save-tip\"`: the button's `aria-describedby: \"save-tip\"` makes a screen reader read the tip, Tab to it shows the bubble, and Escape hides it."),
             lead: rsx! {

@@ -485,7 +485,8 @@ pub(crate) enum CaretKeys {
 
 impl ComboboxKeys {
     fn handle(self, event: KeyboardEvent) {
-        if self.disabled {
+        // A composing key commits or picks an IME candidate (todo 2377).
+        if self.disabled || event.is_composing() {
             return;
         }
         let opened = self.opened;

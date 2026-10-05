@@ -11,7 +11,23 @@ pub const ROUTES: Routes = &[
     ("/tooltip-edge", || rsx! { TooltipEdgePage {} }),
     ("/tooltip-start", || rsx! { TooltipStartPage {} }),
     ("/tooltip/quick", || rsx! { TooltipQuickPage {} }),
+    ("/tooltip-long", || rsx! { TooltipLongPage {} }),
 ];
+
+/// A label with no break opportunity, forced open, for reflow at 320px (todo 2384).
+#[component]
+fn TooltipLongPage() -> Element {
+    rsx! {
+        div { style: "padding-top: 80px;",
+            Tooltip {
+                label: rsx! { "Versandkostenberechnungsgrundlagenverordnungsentwurfsbearbeitungsstelle" },
+                label_id: "save-tip",
+                open: true,
+                Button { id: "save", "aria-describedby": "save-tip", "Save" }
+            }
+        }
+    }
+}
 
 /// 10 ms delays, a bottom bubble 200px off the left edge so it centres
 /// without clamping, and `#away` to hover off to.

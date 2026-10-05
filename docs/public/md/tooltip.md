@@ -22,10 +22,11 @@ fn Demo() -> Element {
     rsx! {
         Tooltip {
             label: rsx! { "Saves the current draft" },
+            label_id: "draft-tip",
             side: "top",
             size: "sm",
             gap: "xs",
-            Button { variant: "outlined", "Save" }
+            Button { variant: "outlined", aria_describedby: "draft-tip", "Save" }
         }
     }
 }
@@ -42,8 +43,9 @@ fn Demo() -> Element {
     rsx! {
         Tooltip {
             label: rsx! { "Saves the current draft" },
+            label_id: "draft-tip",
             sx: sx().background("primary.6").white_space("normal").max_width("12rem"),
-            Button { variant: "outlined", "Save" }
+            Button { variant: "outlined", aria_describedby: "draft-tip", "Save" }
         }
     }
 }
@@ -88,6 +90,9 @@ Like every component, `Tooltip` also takes the shared props `sx`, `class`,
 
 - Give the bubble an id with `label_id` and point your trigger's
   `aria-describedby` at it, so a screen reader reads the label.
+- Keep a disabled trigger focusable: `Button { disabled }` drops out of the
+  Tab order, so its tooltip is mouse-only. Set `focusable_when_disabled: true`,
+  which uses `aria-disabled` instead.
 
 ```rust
 use dioxus::prelude::*;

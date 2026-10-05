@@ -1,10 +1,8 @@
-use std::rc::Rc;
-
 use dioxus::prelude::*;
 
 use crate::{
     components::{
-        accessibility::VisuallyHidden,
+        accessibility::{VisuallyHidden, visually_hidden_sx},
         common::{
             ComboboxState, Input, Part, Parts, inset_focus_ring_sx, navigation_chord, parts_enum,
             recast_parts, use_combobox, use_name_warning,
@@ -140,7 +138,12 @@ static SPOTLIGHT_BODY_SX: StaticSx = StaticSx::new(|| {
             "& [role=\"status\"]",
             sx().padding("12px").text_align("center"),
         )
-        .selector("& [role=\"status\"]:empty", sx().display("none"))
+        // Not `display: none`: a region that appears with its text may go unheard
+        // (todo 2379). A spoken count alone takes no room.
+        .selector(
+            "& [role=\"status\"]:not([data-shown])",
+            visually_hidden_sx(),
+        )
 });
 
 /// How a [`use_spotlight`] palette behaves. Set `actions`, or it warns and stays empty.
@@ -167,7 +170,8 @@ pub struct SpotlightOptions {
     pub loading: bool,
     /// Highlight the first row after every keystroke, so `Enter` runs it.
     pub highlight_first_on_query: bool,
-    /// Called with the new query on every keystroke, from the input event.
+    /// Called with the new query on every keystroke, from the input event. A newer
+    /// call supersedes the older: cancel a search still running for it.
     pub onquery: Option<Callback<String>>,
     /// Styles the dialog box.
     pub sx: Input<Sx>,
@@ -278,6 +282,7 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
     let options_for_render = options.clone();
     // The last render's row count, and the key generation it drew with.
     let layout_generation = use_hook(|| CopyValue::new((0usize, 0u64)));
+    let pressed_input = use_hook(|| CopyValue::new(false));
     let modal = use_modal(move |scope: ModalScope<()>| {
         let options = &options_for_render;
         let id = state.id();
@@ -311,14 +316,6 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
             .filter(|_| count > 0)
             .map(|row| row.min(count - 1));
 
-        // This render's callbacks: an older list's compare equal whatever they
-        // capture ([[codebase/dioxus-memoization-traps]]).
-        let callbacks: Rc<Vec<Option<Callback<()>>>> = Rc::new(
-            groups
-                .iter()
-                .flat_map(|(_, members)| members.iter().map(|action| action.onclick))
-                .collect(),
-        );
         let run = move |callback: Option<Callback<()>>| {
             if let Some(callback) = callback {
                 callback.call(());
@@ -330,8 +327,26 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
             }
         };
 
+        let (source, limit) = (options.actions, options.limit);
+        // A key can land before the render of the input event before it (todo 2388):
+        // the rows come from the live query, as `ComboboxCore` reads `active_now()`.
         let onkeydown = move |event: KeyboardEvent| {
-            let callbacks = callbacks.clone();
+            if !matches!(event.key(), Key::ArrowDown | Key::ArrowUp | Key::Enter) {
+                return;
+            }
+            let actions = match (loading, source) {
+                (false, Some(source)) => source.call(query.peek().clone()),
+                _ => Vec::new(),
+            };
+            let callbacks: Vec<Option<Callback<()>>> = group_and_limit(actions, limit)
+                .into_iter()
+                .flat_map(|(_, members)| members.into_iter().map(|action| action.onclick))
+                .collect();
+            let count = callbacks.len();
+            let active = state
+                .active_now()
+                .filter(|_| count > 0)
+                .map(|row| row.min(count - 1));
             spotlight_key(event, state, active, count, move |row| run(callbacks[row]));
         };
 
@@ -372,8 +387,20 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
                     .padding(SPOTLIGHT_PADDING.value())
                     .and(options.sx.as_ref().cloned().unwrap_or_default()),
                 parts: recast_parts(options.parts.clone()),
+                // A press off the input would focus the list or the dialog (WCAG 2.4.3,
+                // todo 2378); the input's own press still places the caret.
+                onmousedown: move |event: MouseEvent| {
+                    let mut pressed_input = pressed_input;
+                    if !pressed_input.replace(false) {
+                        event.prevent_default();
+                    }
+                },
                 Box { framework_sx: &SPOTLIGHT_BODY_SX, "data-slot": SpotlightPart::Body.slot(),
                     input {
+                        onmousedown: move |_| {
+                            let mut pressed_input = pressed_input;
+                            pressed_input.set(true);
+                        },
                         "data-slot": SpotlightPart::Search.slot(),
                         r#type: "text",
                         autocomplete: "off",
@@ -415,7 +442,10 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
                     }
                     // Always mounted, and outside the busy listbox some screen
                     // readers hold back, so "nothing found" and "loading" are heard.
-                    div { "role": "status", "data-slot": SpotlightPart::Status.slot(),
+                    div {
+                        "role": "status",
+                        "data-slot": SpotlightPart::Status.slot(),
+                        "data-shown": (loading || empty).then_some("true"),
                         if loading {
                             Loader { size: Size::Sm }
                             VisuallyHidden { "{labels.loading}" }
@@ -573,8 +603,8 @@ fn spotlight_key(
     count: usize,
     run_row: impl Fn(usize),
 ) {
-    // A chord is the caret's or the browser's; the list is always open.
-    if count == 0 || navigation_chord(&event).is_some() {
+    // A chord is the caret's or the browser's, a composing key the IME's (todo 2377).
+    if count == 0 || event.is_composing() || navigation_chord(&event).is_some() {
         return;
     }
     match event.key() {

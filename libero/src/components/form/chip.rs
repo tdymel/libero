@@ -60,6 +60,7 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
         // A `<button>` root inherits neither, and a chip has to look the same
         // whichever tag it lands on.
         .font_family("inherit")
+        .letter_spacing("inherit")
         .text_decoration("none")
         // The `icon` slot never shrinks, on the root or in a checkbox chip's label.
         .selector(ChipPart::Icon.selector(), chip_icon_sx());

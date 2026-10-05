@@ -91,6 +91,33 @@ fn a_button_and_a_link_share_the_theme_font() {
     });
 }
 
+/// Each of `selectors` takes the body's typeface and letter spacing, set here to values
+/// no UA sheet or theme has, so a `<button>` that resets either shows (todo 2376).
+pub(crate) async fn assert_takes_the_page_font(page: &chromiumoxide::Page, selectors: &[&str]) {
+    let fonts: Vec<String> = page
+        .evaluate(format!(
+            "(() => {{ document.body.style.fontFamily = 'Georgia, serif'; \
+             document.body.style.letterSpacing = '0.1em'; \
+             const font = q => {{ const s = getComputedStyle(document.querySelector(q)); \
+               return `${{q}}: ${{s.fontFamily}} | ${{s.letterSpacing}}`; }}; \
+             return {selectors:?}.map(font); }})()"
+        ))
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap();
+    let body: Vec<String> = page
+        .evaluate(format!(
+            "{selectors:?}.map(q => {{ const s = getComputedStyle(document.body); \
+             return `${{q}}: ${{s.fontFamily}} | ${{s.letterSpacing}}`; }})"
+        ))
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap();
+    assert_eq!(fonts, body, "[selector: font-family | letter-spacing]");
+}
+
 fn presses(which: &str) -> String {
     format!("document.querySelector('#presses').dataset.{which}")
 }

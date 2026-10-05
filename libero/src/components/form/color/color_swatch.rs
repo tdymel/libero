@@ -33,6 +33,9 @@ static COLOR_SWATCH_SX: StaticSx = StaticSx::new(|| {
         .background(format!("linear-gradient({color}, {color}), {CHECKERBOARD}"))
         .border_style("none")
         .padding("0")
+        // A clickable swatch is a `<button>`, which inherits neither (todo 2376).
+        .font_family("inherit")
+        .letter_spacing("inherit")
         .when(
             "shadow",
             shadow_sx(

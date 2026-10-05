@@ -6,7 +6,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually};
 use e2e::suite::Step;
 use e2e::{
-    Fixture, Suite, Viewport, ax,
+    Fixture, Suite, Viewport, ax, js,
     passes::{keyboard, pointer},
     wait,
 };
@@ -572,6 +572,64 @@ fn space_while_typing_commits_nothing() {
             fixture.close().await.unwrap();
         })
         .await;
+    });
+}
+
+/// Todo 2377: the Enter that commits an IME composition is the IME's: the row the
+/// query armed is not picked. A plain Enter is the control.
+#[test]
+fn a_composing_enter_picks_nothing() {
+    block_on(async {
+        let fixture = Fixture::open("/select/field", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.activeElement === document.querySelector({SEARCH:?})"),
+            "the search box to take focus",
+        )
+        .await
+        .unwrap();
+        keyboard::type_text(page, "d").await.unwrap();
+        let armed = format!(
+            "document.getElementById(document.querySelector({SEARCH:?}).getAttribute('aria-activedescendant') ?? '')"
+        );
+        wait::for_js_true(page, &format!("!!{armed}"), "typing to arm a row")
+            .await
+            .unwrap();
+        let label: String = js(page, &format!("{armed}.textContent")).await;
+        let _: bool = js(
+            page,
+            &format!(
+                "document.querySelector({SEARCH:?}).dispatchEvent(new KeyboardEvent('keydown', \
+                 {{ key: 'Enter', code: 'Enter', isComposing: true, bubbles: true, cancelable: true }})) || true"
+            ),
+        )
+        .await;
+        e2e::clock::settle(page).await.unwrap();
+        let (open, value): (bool, String) = js(
+            page,
+            &format!("[!!document.querySelector({LISTBOX:?}), document.getElementById('lsx-1').textContent]"),
+        )
+        .await;
+        assert!(
+            open && value.contains("Banana"),
+            "a composing Enter picked or closed: open {open}, value {value:?}"
+        );
+
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.getElementById('lsx-1').textContent.includes({label:?})"),
+            "a plain Enter to pick the armed row",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a composing Enter").unwrap();
+        fixture.close().await.unwrap();
     });
 }
 

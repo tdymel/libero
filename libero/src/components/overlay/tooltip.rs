@@ -63,6 +63,8 @@ fn bubble_sx() -> Sx {
             "min({MAX_WIDTH}, calc(100vw - 2 * {}))",
             POPOVER_PADDING.value()
         ))
+        // A path or hash wider than the cap breaks inside the bubble (WCAG 1.4.10).
+        .with("overflow-wrap", "anywhere")
         .selector("&::before", sx().content("\"\"").position("absolute"))
         .animation(format!("{TOOLTIP_IN} {} ease", TOOLTIP_DURATION.value()))
         .media(REDUCED_MOTION, sx().animation("none"))
@@ -153,13 +155,16 @@ base_props! {
 /// The bubble carries `data-closing` while the pointer has left and `close_delay` counts down;
 /// the pointer coming back or the close firing removes it.
 ///
+/// A `disabled` trigger takes no focus, so its tooltip is mouse-only: give a `Button`
+/// `focusable_when_disabled`.
+///
 /// ```
 /// # use dioxus::prelude::*;
 /// # use libero::components::{Button, Tooltip};
 /// # fn app() -> Element {
 /// # rsx! {
-/// Tooltip { label: rsx! { "Save changes" },
-///     Button { "Save" }
+/// Tooltip { label: rsx! { "Save changes" }, label_id: "save-tip",
+///     Button { "aria-describedby": "save-tip", "Save" }
 /// }
 /// # } }
 /// ```

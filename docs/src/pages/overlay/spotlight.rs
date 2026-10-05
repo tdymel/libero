@@ -128,7 +128,7 @@ fn option_lines(values: &DemoValues) -> Vec<String> {
 }
 
 /// The code of the example opened last. The preview's buttons pick it.
-// snippet: mirrors SpotlightDemo except Callback already async await frame next search_on_server label none actions_code hint setup
+// snippet: mirrors SpotlightDemo except Callback already async await frame next search_on_server label none actions_code hint setup dioxus core Task search_task cancel take write
 fn wrap_example(values: &DemoValues, _: &str) -> String {
     let example = values.str("example");
     let (handle, actions, actions_code, label) = EXAMPLES
@@ -140,6 +140,7 @@ fn wrap_example(values: &DemoValues, _: &str) -> String {
     let mut options = vec![];
     if handle == "search" {
         setup.push_str(&(FILE.section("search") + "\n"));
+        setup.push_str("let mut search_task = use_signal(|| None::<dioxus::core::Task>);\n");
         let search_actions = FILE.section("search_actions");
         options.push(format!(
             "actions: Some(Callback::new({})),",
@@ -148,13 +149,17 @@ fn wrap_example(values: &DemoValues, _: &str) -> String {
         options.push("loading: loading(),".into());
         options.push(
             "// The input event, not a render: the next frame is already loading.\n\
+             // Cancelling the older search keeps a slow answer from landing late.\n\
              onquery: Some(Callback::new(move |query: String| {\n    \
              loading.set(true);\n    \
+             if let Some(older) = search_task.write().take() {\n        \
+             older.cancel();\n    \
+             }\n    \
              let all = all.clone();\n    \
-             spawn(async move {\n        \
+             search_task.set(Some(spawn(async move {\n        \
              results.set(search_on_server(&query, &all).await);\n        \
              loading.set(false);\n    \
-             });\n})),"
+             })));\n})),"
                 .into(),
         );
     } else {
@@ -336,7 +341,7 @@ pub fn SpotlightPage() -> Element {
                     prop("shortcut", "Option<char>").default("Some('k')").doc("Ctrl (Cmd on a Mac) plus this key toggles the palette. `None` for no hotkey. Web only. A key the browser already uses, such as L, T or W, warns in a debug build. Elsewhere, open the palette from a button. Two palettes on one page should not share a key."),
                     prop("highlight_first_on_query", "bool").default("true").doc("Highlights the first row after every keystroke, so Enter runs it. Off, Enter does nothing until the arrows pick a row."),
                     prop("loading", "bool").default("false").doc("The results are still coming. A loader replaces the rows, and a screen reader hears \"Searching\"."),
-                    prop("onquery", "Callback<String>").doc("Called with the query on every keystroke. Set `loading` and start the search here."),
+                    prop("onquery", "Callback<String>").doc("Called with the query on every keystroke. Set `loading` and start the search here, cancelling the previous one: a newer query supersedes it."),
                     prop("sx", "Sx").doc("Styles the dialog box."),
                     prop("parts", "Parts<SpotlightPart>").doc("Styles for the inner parts in the Style API tab, under `sx`."),
                 ])
@@ -373,7 +378,7 @@ pub fn SpotlightPage() -> Element {
             ],
             accessibility: a11y()
                 .key(["Down", "Up"], "Moves the highlight, wrapping at both ends.")
-                .key(["Enter"], "Runs the highlighted action, by default the first row.")
+                .key(["Enter"], "Runs the highlighted action. After typing, the first row is highlighted; right after opening, none is.")
                 .key(["Escape"], "Closes, as a click outside does. Focus goes back to what opened it.")
                 .handles([
                     "Focus stays in the search box.",

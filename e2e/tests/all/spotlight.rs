@@ -5,7 +5,7 @@ use anyhow::Result;
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, eventually_focused};
-use e2e::passes::{focus, keyboard::Key};
+use e2e::passes::{focus, keyboard::Key, pointer};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, js, passes::keyboard, wait};
 
@@ -495,6 +495,344 @@ fn a_long_label_wraps_in_its_row() {
         fixture
             .console
             .assert_clean("spotlight long label")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+fn rows_are(n: usize) -> String {
+    format!("document.querySelectorAll({OPTIONS:?}).length === {n}")
+}
+
+async fn search_value(page: &chromiumoxide::Page) -> String {
+    js(page, &format!("document.querySelector({SEARCH:?}).value")).await
+}
+
+/// Todo 2378 (WCAG 2.4.3): a press on a group label, the gap under the search box or
+/// the dialog's padding leaves focus in the search box, so typing still filters.
+#[test]
+fn a_click_off_a_row_keeps_focus_in_the_search_box() {
+    block_on(async {
+        let fixture = Fixture::open("/spotlight", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        open_by_keyboard(page).await;
+        keyboard::type_text(page, "n").await.unwrap();
+        wait::for_js_true(page, &rows_are(2), "\"n\" to narrow to two rows")
+            .await
+            .unwrap();
+
+        let spots = [
+            (
+                "the last group label",
+                "(() => { const r = [...document.querySelectorAll('[role=dialog] [data-slot=group-label]')] \
+                 .at(-1).getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()",
+            ),
+            (
+                "the gap under the search box",
+                "(() => { const r = document.querySelector('[role=dialog] [data-slot=search]').getBoundingClientRect(); \
+                 return [r.x + r.width / 2, r.bottom + 2]; })()",
+            ),
+            (
+                "the dialog's padding",
+                "(() => { const r = document.querySelector('[role=dialog]').getBoundingClientRect(); \
+                 return [r.x + 2, r.y + r.height / 2]; })()",
+            ),
+        ];
+        for (what, at) in spots {
+            let (x, y): (f64, f64) = js(page, at).await;
+            pointer::click_at(page, pointer::Point { x, y })
+                .await
+                .unwrap();
+            crate::settle::painted(page).await.unwrap();
+            focus::assert_focused(page, SEARCH, &format!("a click on {what}"))
+                .await
+                .unwrap();
+        }
+        keyboard::type_text(page, "e").await.unwrap();
+        wait::for_js_true(page, &rows_are(1), "typing after the clicks")
+            .await
+            .unwrap();
+        // The input's own press still lands in it.
+        pointer::click(page, SEARCH).await.unwrap();
+        keyboard::type_text(page, "w").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector({SEARCH:?}).value === 'new'"),
+            "typing after a click on the search box",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("clicks off a row").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2387: a click on a row runs it, closes, and hands focus back.
+#[test]
+fn a_click_on_a_row_runs_it_and_closes() {
+    block_on(async {
+        let fixture = Fixture::open("/spotlight", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        open_by_keyboard(page).await;
+        let id: String = js(
+            page,
+            &format!("[...document.querySelectorAll({OPTIONS:?})].find(o => o.textContent.includes('Changelog')).id"),
+        )
+        .await;
+        pointer::click(page, &format!("#{id}")).await.unwrap();
+        ran(page, "Changelog", "a click on the row").await;
+        wait::for_hidden(page, DIALOG).await.unwrap();
+        focus::wait_for_focus(page, TRIGGER, "a click on a row")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("a row click").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2377: a key that commits or picks an IME candidate is the IME's: neither
+/// the arrows nor Enter act while `isComposing`. A plain Enter is the control.
+#[test]
+fn composing_keys_leave_the_rows_alone() {
+    block_on(async {
+        let fixture = Fixture::open("/spotlight", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        open_by_keyboard(page).await;
+        keyboard::type_text(page, "n").await.unwrap();
+        wait::for_js_true(page, &rows_are(2), "\"n\" to narrow to two rows")
+            .await
+            .unwrap();
+        let (first, label): (String, String) = js(
+            page,
+            &format!(
+                "(() => {{ const o = document.querySelector({OPTIONS:?}); \
+                 return [o.id, o.querySelector('[data-slot=label]').textContent]; }})()"
+            ),
+        )
+        .await;
+        expect_active(page, &first, "typing").await;
+
+        let _: bool = js(
+            page,
+            &format!(
+                "(() => {{ const input = document.querySelector({SEARCH:?}); \
+                 for (const key of ['ArrowDown', 'Enter']) input.dispatchEvent(new KeyboardEvent('keydown', \
+                   {{ key, code: key, isComposing: true, bubbles: true, cancelable: true }})); \
+                 return true; }})()"
+            ),
+        )
+        .await;
+        crate::settle::painted(page).await.unwrap();
+        expect_active(page, &first, "a composing ArrowDown").await;
+        let ran_nothing: bool = js(
+            page,
+            &format!("document.querySelector({RAN:?}).dataset.ran === '' && !!document.querySelector({DIALOG:?})"),
+        )
+        .await;
+        assert!(
+            ran_nothing,
+            "a composing Enter ran a row or closed the palette"
+        );
+
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        ran(page, &label, "Enter after the composition").await;
+        fixture.console.assert_clean("composing keys").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2387: Escape with a query closes and hands focus back; the next opening
+/// starts empty (`clear_on_close`).
+#[test]
+fn escape_with_a_query_closes_and_clears_it() {
+    block_on(async {
+        let fixture = Fixture::open("/spotlight", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        open_by_keyboard(page).await;
+        keyboard::type_text(page, "ne").await.unwrap();
+        wait::for_js_true(page, &rows_are(1), "\"ne\" to narrow to one row")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        wait::for_hidden(page, DIALOG).await.unwrap();
+        focus::wait_for_focus(page, TRIGGER, "Escape")
+            .await
+            .unwrap();
+        let ran_nothing: bool = js(
+            page,
+            &format!("document.querySelector({RAN:?}).dataset.ran === ''"),
+        )
+        .await;
+        assert!(ran_nothing, "Escape ran the highlighted row");
+
+        open_by_keyboard(page).await;
+        assert_eq!(search_value(page).await, "", "the query survived closing");
+        wait::for_js_true(page, &rows_are(3), "the reopened palette to list every row")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("Escape with a query").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2387: each group is a `group` named by its header, holding its rows.
+#[test]
+fn groups_are_named_by_their_header() {
+    block_on(async {
+        let fixture = Fixture::open("/spotlight", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        open_by_keyboard(page).await;
+        let groups: Vec<String> = js(
+            page,
+            "[...document.querySelectorAll('[role=dialog] [role=group]')].map(g => \
+             `${document.getElementById(g.getAttribute('aria-labelledby')).textContent}: ${g.querySelectorAll('[role=option]').length}`)",
+        )
+        .await;
+        assert_eq!(groups, ["Pages: 2", "Commands: 1"]);
+        let tree = e2e::ax::snapshot(page, DIALOG).await.unwrap();
+        for name in ["Pages", "Commands"] {
+            assert!(
+                tree.contains(&format!("group \"{name}\"")),
+                "no group named {name:?}:\n{tree}"
+            );
+        }
+        fixture.console.assert_clean("spotlight groups").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2379 (WCAG 4.1.3): the status region is in the tree while it has nothing to
+/// say, and a spoken count alone takes no room under the list.
+#[test]
+fn the_status_region_is_always_there_and_a_count_takes_no_room() {
+    block_on(async {
+        let fixture = Fixture::open("/spotlight", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        open_by_keyboard(page).await;
+        let tree = e2e::ax::snapshot(page, DIALOG).await.unwrap();
+        assert!(
+            tree.contains("status"),
+            "no status region while empty:\n{tree}"
+        );
+
+        keyboard::type_text(page, "n").await.unwrap();
+        wait::for_js_true(
+            page,
+            &status_says("2 results"),
+            "the status to say 2 results",
+        )
+        .await
+        .unwrap();
+        let height: f64 = js(
+            page,
+            "document.querySelector('[role=dialog] [role=status]').getBoundingClientRect().height",
+        )
+        .await;
+        assert!(
+            height <= 1.0,
+            "a count alone takes {height}px under the list"
+        );
+        fixture.console.assert_clean("the status region").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2387: `limit` caps the drawn rows, and with `highlight_first_on_query: false`
+/// typing highlights nothing, so Enter waits for the arrows.
+#[test]
+fn limit_and_no_first_highlight() {
+    block_on(async {
+        let fixture = Fixture::open("/spotlight-options", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        open_by_keyboard(page).await;
+        wait::for_js_true(page, &rows_are(2), "the limit to draw two of four rows")
+            .await
+            .unwrap();
+        keyboard::type_text(page, "a").await.unwrap();
+        wait::for_js_true(
+            page,
+            &status_says("2 results"),
+            "\"a\" to settle on two rows",
+        )
+        .await
+        .unwrap();
+        assert_eq!(highlight(page).await, "", "typing highlighted a row");
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        crate::settle::painted(page).await.unwrap();
+        let ran_nothing: bool = js(
+            page,
+            &format!("document.querySelector({RAN:?}).dataset.ran === '' && !!document.querySelector({DIALOG:?})"),
+        )
+        .await;
+        assert!(ran_nothing, "Enter with no highlight ran a row");
+
+        let first: String = js(page, &format!("document.querySelector({OPTIONS:?}).id")).await;
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        expect_active(page, &first, "ArrowDown").await;
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        ran(page, "Alpha", "Enter on the arrowed row").await;
+        fixture
+            .console
+            .assert_clean("limit and no first highlight")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2388: an Enter in the same task as the input event that narrows the list runs
+/// the new list's row, not the one the last render drew.
+#[test]
+fn enter_before_the_render_runs_the_new_row() {
+    block_on(async {
+        let fixture = Fixture::open("/spotlight", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        open_by_keyboard(page).await;
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        let first: String = js(page, &format!("document.querySelector({OPTIONS:?}).id")).await;
+        expect_active(page, &first, "ArrowDown to Home").await;
+        let _: bool = js(
+            page,
+            &format!(
+                "(() => {{ const input = document.querySelector({SEARCH:?}); \
+                 input.value = 'new'; \
+                 input.dispatchEvent(new InputEvent('input', {{ bubbles: true, inputType: 'insertText', data: 'new' }})); \
+                 input.dispatchEvent(new KeyboardEvent('keydown', {{ key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }})); \
+                 return true; }})()"
+            ),
+        )
+        .await;
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector({RAN:?}).dataset.ran !== ''"),
+            "the Enter to run a row",
+        )
+        .await
+        .unwrap();
+        let ran: String = js(
+            page,
+            &format!("document.querySelector({RAN:?}).dataset.ran"),
+        )
+        .await;
+        assert_eq!(ran, "New file", "Enter ran the row the last render drew");
+        fixture
+            .console
+            .assert_clean("Enter before the render")
             .unwrap();
         fixture.close().await.unwrap();
     });
