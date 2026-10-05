@@ -302,6 +302,16 @@ impl TourHandle {
     }
 }
 
+/// A [`TourHandle`] call from the portal outlet, run in the owner's scope.
+#[derive(Clone, Copy, PartialEq)]
+enum Move {
+    Next,
+    Prev,
+    GoTo(usize),
+    Close,
+    Finish,
+}
+
 /// The step a [`TourOptions::card`] draws, and the moves its buttons make.
 #[derive(Clone, PartialEq)]
 pub struct TourView {
@@ -310,7 +320,7 @@ pub struct TourView {
     pub step: TourStep,
     /// The default card's "{n} of {m}", in the provider's language.
     pub progress: String,
-    handle: TourHandle,
+    act: Callback<Move>,
 }
 
 impl TourView {
@@ -323,23 +333,23 @@ impl TourView {
     }
 
     pub fn next(&self) {
-        self.handle.next();
+        self.act.call(Move::Next);
     }
 
     pub fn prev(&self) {
-        self.handle.prev();
+        self.act.call(Move::Prev);
     }
 
     pub fn go_to(&self, index: usize) {
-        self.handle.go_to(index);
+        self.act.call(Move::GoTo(index));
     }
 
     pub fn close(&self) {
-        self.handle.close();
+        self.act.call(Move::Close);
     }
 
     pub fn finish(&self) {
-        self.handle.finish();
+        self.act.call(Move::Finish);
     }
 }
 
@@ -394,34 +404,64 @@ pub fn use_tour(options: TourOptions) -> TourHandle {
          A dialog needs a name of its own to be told apart.",
     );
 
+    // The layer is outside this scope: its moves run here, through a callback made here.
+    let act = use_callback(move |step: Move| match step {
+        Move::Next => handle.next(),
+        Move::Prev => handle.prev(),
+        Move::GoTo(index) => handle.go_to(index),
+        Move::Close => handle.close(),
+        Move::Finish => handle.finish(),
+    });
+
+    // Root-owned copies of the targets, which the layer may read; each follows its target.
+    let mirrors = use_hook(|| CopyValue::new(Vec::<ElementHandle>::new()));
+    while mirrors.peek().len() < options.steps.len() {
+        let mut mirrors = mirrors;
+        mirrors
+            .write()
+            .push(ElementHandle::new_in_scope(ScopeId::ROOT));
+    }
+    let targets: Vec<Option<ElementHandle>> =
+        options.steps.iter().map(|step| step.target).collect();
+    use_effect(use_reactive!(|targets| {
+        for (mirror, target) in mirrors.peek().iter().zip(&targets) {
+            mirror.follow(target.as_ref());
+        }
+    }));
+
     // The owner unmounting takes the tour with it: hand focus back.
     use_drop(move || {
         if open.try_peek().is_ok_and(|open| *open) {
             focus_return.restore_detached();
         }
+        if let Ok(mirrors) = mirrors.try_peek() {
+            mirrors.iter().for_each(ElementHandle::release);
+        }
     });
 
     let slot = use_portal_slot();
     let shown = open() && !options.steps.is_empty();
-    slot.show(shown.then(|| rsx! { TourLayer { handle, options } }));
+    slot.show(shown.then(|| {
+        let index = handle.index();
+        let mut options = options;
+        for (step, mirror) in options.steps.iter_mut().zip(mirrors.peek().iter()) {
+            step.target = step.target.map(|target| mirror.retag(target.tag()));
+        }
+        rsx! { TourLayer { act, index, options } }
+    }));
     handle
 }
 
 /// The open tour in the portal outlet: mask, highlight and the step's card.
 #[component]
-fn TourLayer(handle: TourHandle, options: TourOptions) -> Element {
+fn TourLayer(act: Callback<Move>, index: usize, options: TourOptions) -> Element {
     let theme = use_theme();
     let defaults = theme.tour;
-    let total = options.steps.len();
-    let index = options
-        .current
-        .unwrap_or_else(|| (handle.index)())
-        .min(total.saturating_sub(1));
     let step = options.steps[index].clone();
 
     let layer = use_dismiss_layer();
     use_hook(move || Rc::new(layer.push()));
-    use_back(true, use_callback(move |()| handle.close()));
+    use_back(true, use_callback(move |()| act.call(Move::Close)));
     // Each step's card mounts its own; focus never leaves it but for `<body>`.
     let positioner = use_element();
 
@@ -445,7 +485,7 @@ fn TourLayer(handle: TourHandle, options: TourOptions) -> Element {
     use_effect(move || {
         let tick = stray_escape();
         if tick != seen.replace(tick) {
-            handle.close();
+            act.call(Move::Close);
         }
     });
 
@@ -477,7 +517,7 @@ fn TourLayer(handle: TourHandle, options: TourOptions) -> Element {
 
     let onkeydown = use_callback(move |event: Event<KeyboardData>| {
         if escape_closes(&event) && layer.is_top() {
-            handle.close();
+            act.call(Move::Close);
             return;
         }
         if !keyboard_on
@@ -489,18 +529,19 @@ fn TourLayer(handle: TourHandle, options: TourOptions) -> Element {
             return;
         }
         match logical_key(&event) {
-            Key::ArrowRight => handle.next(),
-            Key::ArrowLeft => handle.prev(),
+            Key::ArrowRight => act.call(Move::Next),
+            Key::ArrowLeft => act.call(Move::Prev),
             _ => {}
         }
     });
     // The trap is the root: only the card holds anything focusable.
     let layer_sx = parts_under_sx(&options.parts, (&TOUR_SX).into());
-    // Keyed per step, so each step's popover hooks onto its own target.
+    // Keyed per step, so each step's popover hooks onto its own target. A target that
+    // turns out missing mounts a fresh box: the popover's inline placement stays on the old.
     let card = rsx! {
         TourCard {
-            key: "{index}-{step.key}",
-            handle,
+            key: "{index}-{step.key}-{centred}",
+            act,
             options: options.clone(),
             step: step.clone(),
             index,
@@ -522,8 +563,8 @@ fn TourLayer(handle: TourHandle, options: TourOptions) -> Element {
                 onmousedown: move |event| event.prevent_default(),
                 onclick: move |_| match mask_click {
                     MaskClick::None => {}
-                    MaskClick::Close => handle.close(),
-                    MaskClick::Next => handle.next(),
+                    MaskClick::Close => act.call(Move::Close),
+                    MaskClick::Next => act.call(Move::Next),
                 },
             }
             div { "data-slot": TourPart::Highlight.slot(), style }
@@ -549,7 +590,7 @@ fn focus_card(positioner: &ElementHandle) {
 /// One step's card, drawn afresh per step: its popover anchors to that step's target.
 #[component]
 fn TourCard(
-    handle: TourHandle,
+    act: Callback<Move>,
     options: TourOptions,
     step: TourStep,
     index: usize,
@@ -620,7 +661,7 @@ fn TourCard(
                 total,
                 step: step.clone(),
                 progress,
-                handle,
+                act,
             };
             let name = name.clone().or_else(|| step.title.clone());
             rsx! {
@@ -647,7 +688,7 @@ fn TourCard(
                     title: step.title.clone(),
                     aria_label: name,
                     close_label: labels.close,
-                    onclose: move |_| handle.close(),
+                    onclose: move |_| act.call(Move::Close),
                     "aria-modal": "true",
                     "aria-describedby": body.is_some().then_some(body_id()),
                     tabindex: "-1",
@@ -663,7 +704,7 @@ fn TourCard(
                                 "data-slot": TourPart::Skip.slot(),
                                 variant: "standard",
                                 size: "sm",
-                                onclick: move |_| handle.close(),
+                                onclick: move |_| act.call(Move::Close),
                                 "{labels.skip}"
                             }
                         }
@@ -672,14 +713,14 @@ fn TourCard(
                                 "data-slot": TourPart::Previous.slot(),
                                 variant: "outlined",
                                 size: "sm",
-                                onclick: move |_| handle.prev(),
+                                onclick: move |_| act.call(Move::Prev),
                                 "{labels.previous}"
                             }
                         }
                         Button {
                             "data-slot": TourPart::Next.slot(),
                             size: "sm",
-                            onclick: move |_| handle.next(),
+                            onclick: move |_| act.call(Move::Next),
                             if last { "{labels.done}" } else { "{labels.next}" }
                         }
                     }

@@ -1,0 +1,14 @@
+---
+source: e2e/src/suite.rs
+description: tour at mobile (rest)
+expression: tree
+---
+button "Take the tour"
+  StaticText "Take the tour"
+button "First"
+  StaticText "First"
+button "Second"
+  StaticText "Second"
+button "Third"
+  StaticText "Third"
+paragraph

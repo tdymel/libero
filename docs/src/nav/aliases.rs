@@ -145,6 +145,13 @@ fn label_aliases(label: &str) -> &'static [&'static str] {
         "ShortcutHelp" => &["keyboard shortcuts", "hotkeys", "cheat sheet"],
         "Lightbox" => &["image viewer", "gallery", "zoom"],
         "FloatingWindow" => &["window", "draggable", "floating panel"],
+        "Tour" => &[
+            "onboarding",
+            "walkthrough",
+            "coachmark",
+            "product tour",
+            "guide",
+        ],
         "Alert" => &["banner", "callout", "message", "notice", "warning"],
         "Notifications" => &["toast", "snackbar", "notify", "notification"],
         "Loader" => &["spinner", "loading", "activity indicator"],

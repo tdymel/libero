@@ -111,6 +111,7 @@ fetch only the file you need.
 - [ShortcutHelp](shortcut_help.md): A dialog listing keyboard shortcuts, each chord in the platform's key names.
 - [Lightbox](lightbox.md): A modal image viewer, `use_modal` with a gallery around it, with zoom, pan, captions and a thumbnail strip.
 - [FloatingWindow](floating_window.md): A non-modal window over the page that drags, moves by keyboard and resizes from a corner, opened through a hook.
+- [Tour](tour.md): A guided tour. A hook that dims the page around one element per step and explains it in a card beside it.
 
 ## Feedback
 

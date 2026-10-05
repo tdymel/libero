@@ -130,6 +130,7 @@ mod timeline;
 mod tldr;
 mod toolbar;
 mod tooltip;
+mod tour;
 mod trailing_button;
 mod transition;
 mod tree;

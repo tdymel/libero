@@ -83,6 +83,30 @@ impl ElementHandle {
         }
     }
 
+    /// This handle under another WebView tag, for a copy that stands in for `tag`'s element.
+    pub(crate) fn retag(self, tag: Option<u64>) -> Self {
+        Self { tag, ..self }
+    }
+
+    /// Points this handle at `source`'s element. Reading `source` subscribes the
+    /// calling effect, so a copy a portal reads follows the caller's mounts.
+    pub(crate) fn follow(&self, source: Option<&ElementHandle>) {
+        let next = source.and_then(|source| source.mounted.read().clone());
+        let same = match (&*self.mounted.peek(), &next) {
+            (Some(now), Some(next)) => Rc::ptr_eq(now, next),
+            (now, next) => now.is_none() && next.is_none(),
+        };
+        if !same {
+            let mut mounted = self.mounted;
+            mounted.set(next);
+        }
+    }
+
+    /// Drops a [`new_in_scope`](Self::new_in_scope) handle's signal before its owner does.
+    pub(crate) fn release(&self) {
+        self.mounted.manually_drop();
+    }
+
     /// The mounted element, for a platform call that needs the node itself.
     pub(crate) fn mounted(&self) -> Option<Rc<MountedData>> {
         self.mounted.peek().clone()

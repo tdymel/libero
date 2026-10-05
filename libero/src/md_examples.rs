@@ -152,6 +152,7 @@ md_pages! {
     Tldr => "tldr",
     Toolbar => "toolbar",
     Tooltip => "tooltip",
+    Tour => "tour",
     Transition => "transition",
     Tree => "tree",
     UseAccessibility => "use_accessibility",

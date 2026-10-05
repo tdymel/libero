@@ -327,6 +327,8 @@ pub(crate) enum Route {
     SpotlightPage {},
     #[route("/overlay/tooltip")]
     TooltipPage {},
+    #[route("/overlay/tour")]
+    TourPage {},
 
     #[route("/typography/blockquote")]
     BlockquotePage {},

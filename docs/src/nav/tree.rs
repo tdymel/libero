@@ -190,6 +190,7 @@ pub(super) fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::ShortcutHelpPage {}, "ShortcutHelp"),
                 page(Route::LightboxPage {}, "Lightbox"),
                 page(Route::FloatingWindowPage {}, "FloatingWindow"),
+                page(Route::TourPage {}, "Tour"),
             ],
         ),
         group(

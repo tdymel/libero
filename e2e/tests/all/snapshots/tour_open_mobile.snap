@@ -1,0 +1,25 @@
+---
+source: e2e/src/suite.rs
+description: tour at mobile (open)
+expression: tree
+---
+button "Take the tour"
+  StaticText "Take the tour"
+button "First"
+  StaticText "First"
+button "Second"
+  StaticText "Second"
+button "Third"
+  StaticText "Third"
+paragraph
+dialog "First" [modal]
+  description "The first stop."
+  heading "First" [level=2]
+    StaticText "First"
+  button "Close tour"
+  StaticText "The first stop."
+  StaticText "1 of 3"
+  button "Skip"
+    StaticText "Skip"
+  button "Next"
+    StaticText "Next"

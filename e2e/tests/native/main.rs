@@ -71,6 +71,7 @@ mod table_groups;
 mod table_markup;
 mod theme_switcher;
 mod tooltip;
+mod tour;
 mod tour_mask;
 mod transitions;
 mod tree;

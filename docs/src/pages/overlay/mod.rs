@@ -10,6 +10,7 @@ mod popover;
 mod shortcut_help;
 mod spotlight;
 mod tooltip;
+mod tour;
 
 pub use dialog::DialogPage;
 pub use drawer::DrawerPage;
@@ -23,3 +24,4 @@ pub use popover::PopoverPage;
 pub use shortcut_help::ShortcutHelpPage;
 pub use spotlight::SpotlightPage;
 pub use tooltip::TooltipPage;
+pub use tour::TourPage;

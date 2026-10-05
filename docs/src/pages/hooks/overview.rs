@@ -147,11 +147,10 @@ fn hooks() -> Vec<HookRow> {
             "The device's position, once or followed, and the location permission.",
             Route::UseGeolocationPage {},
         ),
-        // No page yet (Tour phase 2): the row links here until it lands.
         row(
             "use_tour",
             "A guided tour that spotlights one element per step.",
-            Route::HooksPage {},
+            Route::TourPage {},
         ),
         row(
             "use_local_storage",

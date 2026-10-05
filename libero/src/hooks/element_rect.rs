@@ -8,8 +8,8 @@ use dioxus::prelude::*;
 use crate::{
     hooks::{ElementHandle, Rect, use_subscription_slot},
     platform::{
-        Dimensions, ElementApi, ScrollSubscription, document, on_viewport_resize, scroll,
-        when_laid_out,
+        Dimensions, ElementApi, ScrollSubscription, document, next_task, on_viewport_resize,
+        scroll, when_laid_out,
     },
     utils::bump,
 };
@@ -42,9 +42,14 @@ pub(crate) fn use_element_rect(
     let listening = use_subscription_slot::<dyn ScrollSubscription>();
     let resizing = use_subscription_slot::<dyn ScrollSubscription>();
     let waited: Rc<Cell<u8>> = use_hook(|| Rc::new(Cell::new(0)));
+    let measured: Rc<Cell<Option<ElementHandle>>> = use_hook(|| Rc::new(Cell::new(None)));
 
     use_effect(use_reactive!(|(target, active)| {
         let _ = tick();
+        // A new target gets its own tries, not the ones the last one spent.
+        if measured.replace(target) != target {
+            waited.set(0);
+        }
         // Read before any return: a (re)mount re-runs this.
         let mounted = target.is_some_and(|target| target.mount_token().is_some());
         let set = move |next: ElementRect| {
@@ -67,7 +72,11 @@ pub(crate) fn use_element_rect(
             let tries = waited.get();
             if tries < UNLAID_TRIES {
                 waited.set(tries + 1);
-                when_laid_out(move || bump(tick));
+                // The web lays out at once: a bump inside this run would not run it again.
+                spawn(async move {
+                    next_task().await;
+                    when_laid_out(move || bump(tick));
+                });
             } else {
                 set(ElementRect::Missing);
             }
