@@ -104,7 +104,7 @@ pub fn AudioPage() -> Element {
                 wide_preview: true,
                 children_text: "",
                 fixed: vec![
-                    format!("src: {:?}", crate::site::SAMPLE_AUDIO),
+                    format!("src: {:?}", crate::samples::SAMPLE_AUDIO),
                     r#"label: "Wikipedia guitar solo""#.to_string(),
                 ],
                 controls: vec![
@@ -118,7 +118,7 @@ pub fn AudioPage() -> Element {
                     rsx! {
                         Audio {
                             key: "{muted}",
-                            src: crate::site::SAMPLE_AUDIO,
+                            src: crate::samples::SAMPLE_AUDIO,
                             label: "Wikipedia guitar solo",
                             size: Input::from(Size::from(values.str("size").as_str())),
                             muted: muted == "true",

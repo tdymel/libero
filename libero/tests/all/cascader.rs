@@ -174,25 +174,18 @@ fn the_trigger_shows_the_joined_path() {
     );
 }
 
-/// The placeholder is what an empty value shows, and so is a value no option
-/// holds.
+/// The placeholder is what an empty value shows. A value no option holds still
+/// posts, so the trigger shows its own label, as `Select` does (todo 1989).
 #[test]
-fn a_value_that_is_not_in_the_tree_selects_nothing() {
+fn a_value_that_is_not_in_the_tree_shows_its_own_label() {
     assert!(shown(Setup::default()).contains("Pick a category"));
-    assert!(
-        shown(Setup {
-            value: Some("banana".into()),
-            ..Setup::default()
-        })
-        .contains("Pick a category")
-    );
-    assert!(
-        !shown(Setup {
-            value: Some("banana".into()),
-            ..Setup::default()
-        })
-        .contains("banana")
-    );
+    let html = shown(Setup {
+        value: Some("banana".into()),
+        ..posting()
+    });
+    assert!(!html.contains("Pick a category"), "{html}");
+    assert!(html.contains(">banana<"), "{html}");
+    assert!(html.contains("value=\"banana\""), "{html}");
     assert!(!shown(chosen()).contains("Pick a category"));
 }
 

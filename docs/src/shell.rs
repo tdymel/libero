@@ -2,8 +2,8 @@ use dioxus::prelude::*;
 use libero::{
     components::{
         ActionIcon, Anchor, Box, Burger, Button, ButtonGroup, Container, DirectionToggle, Flex,
-        Header, Icon, Kbd, Pictogram, Repository, ScrollArea, ScrollAreaHandle, SpotlightOptions,
-        ThemeSwitcher, Title, spotlight_filter, use_scroll_area, use_spotlight,
+        Header, Icon, Kbd, Pictogram, Repository, ScrollArea, ScrollAreaHandle, SpotlightHandle,
+        SpotlightOptions, ThemeSwitcher, Title, spotlight_filter, use_scroll_area, use_spotlight,
     },
     hooks::{ElementHandle, edge_swipe_sx, use_element, use_media_query},
     platform::ElementApi,
@@ -18,7 +18,7 @@ use pictogram_icons_lucide as lucide;
 use crate::{
     Route, heading_focus,
     nav::{self, DocsNav, use_nav_drag},
-    site::{LOGO_INLINE, REPO},
+    site::{LOGO, REPO},
 };
 
 /// A `ButtonGroup` item's start as when it is the first: round corners, no seam overlap.
@@ -115,171 +115,8 @@ pub(crate) fn AppShell() -> Element {
                 }
             },
             RouteEffects { open, area, content, section }
-            // WCAG 2.4.1 skip link, off-screen until focused. The click moves focus itself,
-            // so the router never sees the fragment.
-            Box {
-                sx: sx()
-                    .selector(
-                        "& > a",
-                        sx().position("fixed")
-                            .top("8px")
-                            .left("8px")
-                            .z_index(format!("calc({} + 1)", Z_INDEX_HEADER.value()))
-                            .padding("sm")
-                            .border_radius("sm")
-                            .background("surface")
-                            .color("primary.7")
-                            .transform("translateY(-200%)"),
-                    )
-                    .selector("& > a:focus", sx().transform("none")),
-                a {
-                    href: "#docs-main",
-                    onclick: move |event: MouseEvent| {
-                        event.prevent_default();
-                        let _ = main.focus();
-                    },
-                    "Skip to content"
-                }
-            }
-            Header {
-                // No `color`: page surface, reads as chrome. Glass, so content scrolling
-                // under the sticky bar shows through.
-                publish_height: true,
-                glass: true,
-                // Tighter on a phone: the seven controls just miss 320px at `md`.
-                sx: sx().gap("sm").breakpoint(Size::Sm, sx().gap("md")),
-                // Focus target when a page link closes the drawer. On the button itself, not a
-                // wrapper: a WebView focuses a handle but cannot query below it (2213).
-                Burger {
-                    open: open(),
-                    "aria-controls": "docs-nav",
-                    onclick: move |_| open.set(!open()),
-                    onmounted: burger.mount(),
-                    // Hidden from `Sm` up, so the drawer can't open on desktop.
-                    // The home page has no sidebar, so its burger stays.
-                    sx: if home {
-                        sx().hover(sx().background("muted.1"))
-                    } else {
-                        sx().hover(sx().background("muted.1"))
-                            .breakpoint(Size::Sm, sx().display("none"))
-                    },
-                }
-                // The way home: the nav has no entry for it.
-                Anchor {
-                    to: Route::Home {},
-                    underline: "never",
-                    // The logo is the one item that gives way when the row runs short.
-                    sx: sx()
-                        .display("flex")
-                        .align_items("center")
-                        // `md` from `Sm` up; at 320px the name ran 9px past its box (todo 1885),
-                        // so below `Sm` the gap and the logo shrink.
-                        .gap("xs")
-                        .breakpoint(Size::Sm, sx().gap("md"))
-                        .color("inherit")
-                        .min_width("0"),
-                    // Inline, not `src`: Android's WebView draws the mask of `src` as a solid box.
-                    Icon {
-                        variant: "standard",
-                        color: "primary",
-                        // Wide, and the glyph nearly filling it: at icon size the bars blur together.
-                        sx: sx()
-                            .width("40px")
-                            .breakpoint(Size::Sm, sx().width("72px"))
-                            .min_width("0")
-                            .height("44px")
-                            .with("--lsx-icon-glyph", "84%"),
-                        span {
-                            display: "flex",
-                            align_items: "center",
-                            justify_content: "center",
-                            width: "100%",
-                            height: "100%",
-                            dangerous_inner_html: LOGO_INLINE.as_str(),
-                        }
-                    }
-                    Title { size: "lg", component: "span", "Libero" }
-                }
-                // Looks like a field, but opens Spotlight, so it stays a button. On a phone the
-                // search is an icon button in the group below. Both carry the shortcut in
-                // `aria-keyshortcuts`, not the name.
-                Button {
-                    variant: "standard",
-                    aria_label: "Search",
-                    "aria-keyshortcuts": "Control+K Meta+K",
-                    sx: sx()
-                        .display("none")
-                        .color("muted.7")
-                        // A placeholder's weight, not a button label's.
-                        .font_weight("400")
-                        // `use_field_frame`'s border step: `standard`'s transparent border left
-                        // no edge on palettes whose paper is close to the page.
-                        .border_color("muted.5")
-                        // The icon buttons' `sm` box: one row of controls, one height.
-                        .height(BUTTON_HEIGHT.value(Size::Sm))
-                        .gap("sm")
-                        .hover(sx().background("muted.1"))
-                        .breakpoint(
-                            Size::Sm,
-                            sx()
-                                .display("inline-flex")
-                                .margin_inline_start("auto")
-                                .width("240px")
-                                .justify_content("flex-start")
-                                .background(PAPER_BACKGROUND.value()),
-                        ),
-                    onclick: move |_| search.open(),
-                    span {
-                        display: "inline-flex",
-                        width: "16px",
-                        height: "16px",
-                        Pictogram { icon: lucide::search::outlined }
-                    }
-                    "Search"
-                    Kbd {
-                        sx: sx().margin_left("auto"),
-                        "{modifier} K"
-                    }
-                }
-                // One joined control.
-                ButtonGroup {
-                    "aria-label": "Site tools",
-                    size: "sm",
-                    // Logical, so the controls stay at the end under RTL. From `Sm` up the
-                    // search field takes the free space instead.
-                    sx: sx()
-                        .margin_inline_start("auto")
-                        .breakpoint(
-                            Size::Sm,
-                            sx().margin_inline_start("0")
-                                // The hidden phone search still counts as the first child, so
-                                // the next item gets back its outer corners and loses the seam.
-                                .selector("& > :nth-child(2) :is(button, a)", first_item_sx())
-                                .selector("& > :nth-child(2):is(button, a)", first_item_sx()),
-                        ),
-                    // Below `Sm`, the field's own breakpoint: one of the two always shows, also
-                    // with a raised default font size (a `px` query and a `rem` one drift apart).
-                    ActionIcon {
-                        aria_label: "Search",
-                        "aria-keyshortcuts": "Control+K Meta+K",
-                        onclick: move |_| search.open(),
-                        variant: "outlined",
-                        color: "muted",
-                        sx: sx().breakpoint(Size::Sm, sx().display("none")),
-                        span {
-                            display: "inline-flex",
-                            width: "18px",
-                            height: "18px",
-                            Pictogram { icon: lucide::search::outlined }
-                        }
-                    }
-                    Repository { repo: REPO }
-                    // Lets a reviewer check any component right to left.
-                    DirectionToggle {}
-                    // In the header, so any page can be checked in every scheme and palette.
-                    ThemeSwitcher { themes: ThemeSet::CATALOGUE }
-                }
-            }
+            {skip_link(main)}
+            {shell_header(open, burger, home, search, modifier)}
             // The row never scrolls: the nav scrolls itself, and `ScrollArea` (not
             // `Container`) fills the rest and scrolls the page.
             Flex {
@@ -341,6 +178,186 @@ pub(crate) fn AppShell() -> Element {
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+/// WCAG 2.4.1 skip link, off-screen until focused. The click moves focus itself,
+/// so the router never sees the fragment.
+fn skip_link(main: ElementHandle) -> Element {
+    rsx! {
+        Box {
+            sx: sx()
+                .selector(
+                    "& > a",
+                    sx().position("fixed")
+                        .top("8px")
+                        .left("8px")
+                        .z_index(format!("calc({} + 1)", Z_INDEX_HEADER.value()))
+                        .padding("sm")
+                        .border_radius("sm")
+                        .background("surface")
+                        .color("primary.7")
+                        .transform("translateY(-200%)"),
+                )
+                .selector("& > a:focus", sx().transform("none")),
+            a {
+                href: "#docs-main",
+                onclick: move |event: MouseEvent| {
+                    event.prevent_default();
+                    let _ = main.focus();
+                },
+                "Skip to content"
+            }
+        }
+    }
+}
+
+/// The sticky bar: burger, the way home, search and the site tools.
+fn shell_header(
+    mut open: Signal<bool>,
+    burger: ElementHandle,
+    home: bool,
+    search: SpotlightHandle,
+    modifier: &'static str,
+) -> Element {
+    rsx! {
+        Header {
+            // No `color`: page surface, reads as chrome. Glass, so content scrolling
+            // under the sticky bar shows through.
+            publish_height: true,
+            glass: true,
+            // Tighter on a phone: the seven controls just miss 320px at `md`.
+            sx: sx().gap("sm").breakpoint(Size::Sm, sx().gap("md")),
+            // Focus target when a page link closes the drawer. On the button itself, not a
+            // wrapper: a WebView focuses a handle but cannot query below it (2213).
+            Burger {
+                open: open(),
+                "aria-controls": "docs-nav",
+                onclick: move |_| open.set(!open()),
+                onmounted: burger.mount(),
+                // Hidden from `Sm` up, so the drawer can't open on desktop.
+                // The home page has no sidebar, so its burger stays.
+                sx: if home {
+                    sx().hover(sx().background("muted.1"))
+                } else {
+                    sx().hover(sx().background("muted.1"))
+                        .breakpoint(Size::Sm, sx().display("none"))
+                },
+            }
+            // The way home: the nav has no entry for it.
+            Anchor {
+                to: Route::Home {},
+                underline: "never",
+                // The logo is the one item that gives way when the row runs short.
+                sx: sx()
+                    .display("flex")
+                    .align_items("center")
+                    // `md` from `Sm` up; at 320px the name ran 9px past its box (todo 1885),
+                    // so below `Sm` the gap and the logo shrink.
+                    .gap("xs")
+                    .breakpoint(Size::Sm, sx().gap("md"))
+                    .color("inherit")
+                    .min_width("0"),
+                Icon {
+                    src: LOGO,
+                    variant: "standard",
+                    color: "primary",
+                    // Wide, and the glyph nearly filling it: at icon size the bars blur together.
+                    sx: sx()
+                        .width("40px")
+                        .breakpoint(Size::Sm, sx().width("72px"))
+                        .min_width("0")
+                        .height("44px")
+                        .with("--lsx-icon-glyph", "84%"),
+                }
+                Title { size: "lg", component: "span", "Libero" }
+            }
+            {search_button(search, modifier)}
+            // One joined control.
+            ButtonGroup {
+                "aria-label": "Site tools",
+                size: "sm",
+                // Logical, so the controls stay at the end under RTL. From `Sm` up the
+                // search field takes the free space instead.
+                sx: sx()
+                    .margin_inline_start("auto")
+                    .breakpoint(
+                        Size::Sm,
+                        sx().margin_inline_start("0")
+                            // The hidden phone search still counts as the first child, so
+                            // the next item gets back its outer corners and loses the seam.
+                            .selector("& > :nth-child(2) :is(button, a)", first_item_sx())
+                            .selector("& > :nth-child(2):is(button, a)", first_item_sx()),
+                    ),
+                // Below `Sm`, the field's own breakpoint: one of the two always shows, also
+                // with a raised default font size (a `px` query and a `rem` one drift apart).
+                ActionIcon {
+                    aria_label: "Search",
+                    "aria-keyshortcuts": "Control+K Meta+K",
+                    onclick: move |_| search.open(),
+                    variant: "outlined",
+                    color: "muted",
+                    sx: sx().breakpoint(Size::Sm, sx().display("none")),
+                    span {
+                        display: "inline-flex",
+                        width: "18px",
+                        height: "18px",
+                        Pictogram { icon: lucide::search::outlined }
+                    }
+                }
+                Repository { repo: REPO }
+                // Lets a reviewer check any component right to left.
+                DirectionToggle {}
+                // In the header, so any page can be checked in every scheme and palette.
+                ThemeSwitcher { themes: ThemeSet::CATALOGUE }
+            }
+        }
+    }
+}
+
+/// Looks like a field, but opens Spotlight, so it stays a button. On a phone the
+/// search is an icon button in the site tools. Both carry the shortcut in
+/// `aria-keyshortcuts`, not the name.
+fn search_button(search: SpotlightHandle, modifier: &'static str) -> Element {
+    rsx! {
+        Button {
+            variant: "standard",
+            aria_label: "Search",
+            "aria-keyshortcuts": "Control+K Meta+K",
+            sx: sx()
+                .display("none")
+                .color("muted.7")
+                // A placeholder's weight, not a button label's.
+                .font_weight("400")
+                // `use_field_frame`'s border step: `standard`'s transparent border left
+                // no edge on palettes whose paper is close to the page.
+                .border_color("muted.5")
+                // The icon buttons' `sm` box: one row of controls, one height.
+                .height(BUTTON_HEIGHT.value(Size::Sm))
+                .gap("sm")
+                .hover(sx().background("muted.1"))
+                .breakpoint(
+                    Size::Sm,
+                    sx()
+                        .display("inline-flex")
+                        .margin_inline_start("auto")
+                        .width("240px")
+                        .justify_content("flex-start")
+                        .background(PAPER_BACKGROUND.value()),
+                ),
+            onclick: move |_| search.open(),
+            span {
+                display: "inline-flex",
+                width: "16px",
+                height: "16px",
+                Pictogram { icon: lucide::search::outlined }
+            }
+            "Search"
+            Kbd {
+                sx: sx().margin_left("auto"),
+                "{modifier} K"
             }
         }
     }

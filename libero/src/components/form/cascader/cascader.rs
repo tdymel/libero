@@ -149,11 +149,12 @@ pub fn Cascader<T: Options>(props: CascaderProps<T>) -> Element {
         .as_ref()
         .and_then(|value| indices_for_value(&props.data, value));
     if current.is_some() && committed.is_none() {
-        warn("Cascader: no option in `data` holds `value`, so nothing is selected.");
+        warn("Cascader: no option in `data` holds `value`, so it shows the value's own label.");
     }
 
+    // An unmatched value still posts, so the trigger names it, as `Select` does.
     let display = match &committed {
-        None => String::new(),
+        None => current.as_ref().map(Options::label).unwrap_or_default(),
         Some(indices) => {
             let labels: Vec<String> = options_at(&props.data, indices)
                 .iter()

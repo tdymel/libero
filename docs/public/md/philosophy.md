@@ -61,9 +61,10 @@ A clean look that stays out of the way.
 What we do:
 
 - Aim for a default that fits most apps as it is.
-- Make changing the look ordinary Rust, not a fight with the library.
+- Change the look in Rust, right where you use the component. For example,
+  `sx: sx().border_radius("xl")` on a `Button` rounds its corners.
 - Offer light and dark from the start.
-- Let your own styles win over ours.
+- Let your styles win when yours and ours set the same thing.
 
-Why it matters: Your app should look like your app. A quiet default gets you
-started, and when you want your own look, nothing stands in the way.
+Why it matters: Your app should look like your app. The plain default gets you
+started. When you want your own look, you change it in your own code.

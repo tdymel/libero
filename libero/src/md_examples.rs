@@ -13,7 +13,7 @@
 //!
 //! `PageSnippets` does the same for the code the docs pages print, from
 //! `const`s and from each `Demo`'s generated code block, which the docs
-//! crate's `snippets.rs` test writes into one md file. That file is gitignored,
+//! crate's `snippets` tests writes into one md file. That file is gitignored,
 //! so `cargo test -p docs page_snippets` runs first: in a fresh clone the
 //! doc-tests fail on the missing file, and the line rustc quotes names the
 //! command. Failing, not skipping: a skip would leave the printed code
@@ -28,7 +28,7 @@ macro_rules! md_pages {
     };
 }
 
-/// The code the docs pages print, as `docs/src/snippets.rs` writes it out.
+/// The code the docs pages print, as `docs/src/snippets/generate.rs` writes it out.
 #[doc = include_str!("../tests/page_snippets.md")] // Missing? Run `cargo test -p docs page_snippets` first.
 pub struct PageSnippets;
 

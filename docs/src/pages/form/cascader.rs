@@ -156,7 +156,7 @@ pub fn CascaderPage() -> Element {
                     prop("data", "Vec<CascaderOption<T>>").default("required")
                         .doc("The tree, built with `CascaderOption::new(value, label)`, `.children(..)` and `.disabled(..)`. `T` is any `Options` type. Values must be unique across the whole tree."),
                     prop("value", "Option<T>")
-                        .doc("The selected option's value. Pair it with `onchange`. The cascader finds the path to it in `data`, and a value no option holds selects nothing."),
+                        .doc("The selected option's value. Pair it with `onchange`. The cascader finds the path to it in `data`, and a value no option holds selects nothing there: the trigger shows its `Options::label()` and the form still posts it, as `Select` does."),
                     prop("onchange", "EventHandler<Option<T>>")
                         .doc("Called with the value to select next, or `None` when the selection was cleared."),
                     prop("any_level", "bool")

@@ -12,6 +12,7 @@ mod heading_focus;
 mod index_html;
 mod nav;
 mod pages;
+mod samples;
 mod shell;
 mod site;
 #[cfg(test)]

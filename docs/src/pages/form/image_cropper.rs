@@ -1,5 +1,5 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
-use crate::site::SAMPLE_IMAGE;
+use crate::samples::SAMPLE_IMAGE;
 use dioxus::prelude::*;
 use libero::components::{Code, CropRect, CropShape, Flex, ImageCropper, ImageCropperPart, Text};
 

@@ -122,9 +122,9 @@ pub fn ImagePage() -> Element {
                     Image {
                         src: match values.str("broken_src").as_str() {
                             "true" => MISSING_SRC.to_string(),
-                            _ => crate::site::SAMPLE_IMAGE.to_string(),
+                            _ => crate::samples::SAMPLE_IMAGE.to_string(),
                         },
-                        fallback_src: crate::site::FALLBACK_IMAGE.to_string(),
+                        fallback_src: crate::samples::FALLBACK_IMAGE.to_string(),
                         alt: (values.str("decorative") != "true").then(|| ALT.to_string()),
                         decorative: values.str("decorative") == "true",
                         fit: values.str("fit"),

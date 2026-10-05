@@ -84,6 +84,16 @@ pub(super) fn icon_label(name: String, icon: Element) -> OptionLabel {
     )
 }
 
+/// A section's `h2`, for screen readers only (todo 1206): the sections show no subtitle.
+#[component]
+pub(super) fn SectionTitle(id: &'static str, children: Element) -> Element {
+    rsx! {
+        Title { component: "h2", id, sx: sx().margin("0"),
+            VisuallyHidden { {children} }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeMap;
@@ -132,16 +142,6 @@ mod tests {
                 lines, &copy[name],
                 "region `{name}` differs from the e2e fixture"
             );
-        }
-    }
-}
-
-/// A section's `h2`, for screen readers only (todo 1206): the sections show no subtitle.
-#[component]
-pub(super) fn SectionTitle(id: &'static str, children: Element) -> Element {
-    rsx! {
-        Title { component: "h2", id, sx: sx().margin("0"),
-            VisuallyHidden { {children} }
         }
     }
 }

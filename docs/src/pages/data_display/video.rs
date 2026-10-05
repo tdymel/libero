@@ -163,17 +163,17 @@ pub fn VideoPage() -> Element {
                 wide_preview: true,
                 children_text: "",
                 fixed: vec![
-                    format!("src: {:?}", crate::site::SAMPLE_VIDEO),
+                    format!("src: {:?}", crate::samples::SAMPLE_VIDEO),
                     r#"label: "Big Buck Bunny""#.to_string(),
-                    format!("poster: {:?}", crate::site::SAMPLE_POSTER),
+                    format!("poster: {:?}", crate::samples::SAMPLE_POSTER),
                     r#"aspect_ratio: "16 / 9""#.to_string(),
                     format!(
                         r#"tracks: vec![
     MediaTrack {{ src: {:?}.into(), kind: TrackKind::Captions, srclang: "en".into(), label: "English".into(), default: true }},
     MediaTrack {{ src: {:?}.into(), kind: TrackKind::Subtitles, srclang: "de".into(), label: "Deutsch".into(), default: false }},
 ]"#,
-                        crate::site::SAMPLE_CAPTIONS,
-                        crate::site::SAMPLE_UNTERTITEL,
+                        crate::samples::SAMPLE_CAPTIONS,
+                        crate::samples::SAMPLE_UNTERTITEL,
                     ),
                     format!("chapters: {CHAPTERS}"),
                 ],
@@ -188,20 +188,20 @@ pub fn VideoPage() -> Element {
                     rsx! {
                         Video {
                             key: "{muted}",
-                            src: crate::site::SAMPLE_VIDEO,
+                            src: crate::samples::SAMPLE_VIDEO,
                             label: "Big Buck Bunny",
-                            poster: crate::site::SAMPLE_POSTER,
+                            poster: crate::samples::SAMPLE_POSTER,
                             aspect_ratio: "16 / 9",
                             tracks: vec![
                                 MediaTrack {
-                                    src: crate::site::SAMPLE_CAPTIONS.into(),
+                                    src: crate::samples::SAMPLE_CAPTIONS.into(),
                                     kind: TrackKind::Captions,
                                     srclang: "en".into(),
                                     label: "English".into(),
                                     default: true,
                                 },
                                 MediaTrack {
-                                    src: crate::site::SAMPLE_UNTERTITEL.into(),
+                                    src: crate::samples::SAMPLE_UNTERTITEL.into(),
                                     kind: TrackKind::Subtitles,
                                     srclang: "de".into(),
                                     label: "Deutsch".into(),

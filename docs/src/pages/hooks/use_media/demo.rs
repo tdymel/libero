@@ -14,7 +14,7 @@ pub fn OwnPlayer() -> Element {
         (None, false) => "",
     };
     rsx! {
-        audio { src: crate::site::SAMPLE_AUDIO, onmounted: media.mount(), ..media.attributes() }
+        audio { src: crate::samples::SAMPLE_AUDIO, onmounted: media.mount(), ..media.attributes() }
         Flex { gap: "sm", align: "center",
             Button {
                 onclick: move |_| media.toggle(),

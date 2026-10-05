@@ -11,14 +11,18 @@ use libero::{
 
 use crate::Route;
 
-mod data;
+mod aliases;
 mod drag;
+mod pager;
+mod search;
+mod tree;
 
-#[cfg(test)]
-pub use data::page_title;
-use data::{NavEntry, nav_tree};
-pub use data::{neighbours, page_actions, page_label};
 pub(crate) use drag::use_nav_drag;
+pub use pager::{neighbours, page_label};
+pub use search::page_actions;
+#[cfg(test)]
+pub use tree::page_title;
+use tree::{NavEntry, nav_tree};
 
 // Below `Sm` an off-canvas panel toggled by `open` (`visibility` drops closed links from tab
 // order); from `Sm` up the sticky sidebar, ignoring `open`. With `drawer` off-canvas everywhere.
