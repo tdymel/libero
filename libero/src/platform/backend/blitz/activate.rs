@@ -34,6 +34,10 @@ thread_local! {
         const { Cell::new([(WITHIN, Vec::new()), (VISIBLE, Vec::new())]) };
     /// The last press, where and when, and Blitz's click count for it.
     static PRESSES: Cell<Option<(Instant, f64, f64, u32)>> = const { Cell::new(None) };
+    /// Whether [`takes_over`] fired the last press's `dblclick`.
+    static DOUBLED: Cell<bool> = const { Cell::new(false) };
+    /// Whether the last press's `pointerdown` was cancelled. See [`press_cancelled`].
+    static CANCELLED: Cell<bool> = const { Cell::new(false) };
 }
 
 /// Clicks `node_id` at the end of this poll through Blitz's event driver:
@@ -241,12 +245,15 @@ pub(super) fn key_up(event: &Event<KeyboardData>) {
 }
 
 /// A press: from here the focus ring stays off, as the web's `:focus-visible`.
-/// Counted as Blitz counts clicks: within 500ms and 2px of the last.
+/// Counted as Blitz counts clicks, within 500ms and 2px of the last, and when
+/// cancelled too, as on the web: Blitz then skips its count.
 pub(super) fn pointer_down(event: &Event<PointerData>) {
     KEYBOARD.set(false);
     SPACE.set(None);
     let at = event.client_coordinates();
     let now = Instant::now();
+    DOUBLED.set(false);
+    CANCELLED.set(!event.default_action_enabled());
     let count = match PRESSES.get() {
         Some((last, x, y, count))
             if now - last < Duration::from_millis(500)
@@ -260,19 +267,60 @@ pub(super) fn pointer_down(event: &Event<PointerData>) {
     PRESSES.set(Some((now, at.x, at.y, count)));
 }
 
+/// Whether the last press was cancelled: Blitz's click default would then count
+/// its click from an older press, and the web moves no focus for it.
+pub(super) fn press_cancelled() -> bool {
+    CANCELLED.get()
+}
+
 /// Prevents a bubbled click whose Blitz default would only clear focus, so
-/// focus moves to the target as on the web. Not a double click's second.
-pub(super) fn takes_over(event: &Event<MouseData>, hit: Option<NodeId>) -> bool {
-    if !event.default_action_enabled() || PRESSES.get().is_some_and(|press| press.3 == 2) {
-        return false;
-    }
-    let acts = anchor()
-        .zip(hit)
-        .is_none_or(|(anchor, hit)| anchor.try_doc().is_none_or(|doc| blitz_acts(&doc, hit)));
-    if !acts {
+/// focus moves to the target as on the web. `raw` is the click's own data.
+pub(super) fn takes_over(
+    event: &Event<MouseData>,
+    raw: &Event<PlatformEventData>,
+    hit: Option<NodeId>,
+) -> bool {
+    let prevented = !event.default_action_enabled();
+    let takes = !prevented
+        && !anchor()
+            .zip(hit)
+            .is_none_or(|(anchor, hit)| anchor.try_doc().is_none_or(|doc| blitz_acts(&doc, hit)));
+    if takes {
         event.prevent_default();
+    } // Blitz fires `dblclick` from its click default, which no longer runs (todo 1413).
+    // Once per press: a nested provider's wrapper hears the click too.
+    if (prevented || takes)
+        && PRESSES.get().is_some_and(|press| press.3 == 2)
+        && !DOUBLED.replace(true)
+        && let Some(hit) = hit
+    {
+        double(raw.data.clone(), hit);
     }
-    !acts
+    takes
+}
+
+/// Fires the `dblclick` Blitz's click default would have, with the click's data, at the flush.
+fn double(data: Rc<PlatformEventData>, hit: NodeId) {
+    let Some(anchor) = anchor() else {
+        return;
+    };
+    later(move || {
+        let Some(runtime) = Runtime::try_current() else {
+            return;
+        };
+        let id = {
+            let doc = anchor.doc();
+            doc.get_node(hit)
+                .filter(|node| node.flags.is_in_document())
+                .and_then(|_| {
+                    std::iter::successors(Some(hit), |&id| doc.get_node(id)?.parent)
+                        .find_map(|id| doc.get_node(id).and_then(dioxus_id))
+                })
+        };
+        if let Some(id) = id {
+            runtime.handle_event("dblclick", Event::new(data as Rc<dyn Any>, true), id);
+        }
+    });
 }
 
 /// Focus moves to a pressed `target` at the flush, unless something moved it

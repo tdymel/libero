@@ -183,8 +183,8 @@ fn a_link_in_a_radio_card_keeps_its_click() {
     assert!(picked(&page), "the card's label picks it");
 }
 
-/// Two drags on one divider press at one point, which the divider counts as a double
-/// press within 500 ms; the driver spaces them so it does not collapse.
+/// Two drags on one divider press at one point, a double click within 500 ms;
+/// the driver spaces them so it does not collapse.
 #[test]
 fn two_drags_on_one_divider_do_not_collapse_it() {
     const DIVIDER: &str = "[role=separator]";
@@ -236,4 +236,79 @@ fn a_link_in_a_switch_card_keeps_its_click() {
     assert!(!on(&page), "{}", page.tree());
     page.click("label");
     assert!(on(&page), "the card's label toggles it");
+}
+
+fn doubles() -> Element {
+    let mut on_box = use_signal(|| 0);
+    let mut on_text = use_signal(|| 0);
+    let mut on_handle = use_signal(|| 0);
+    rsx! {
+        input { id: "field", ondoubleclick: move |_| on_text += 1 }
+        div {
+            id: "box",
+            height: "40px",
+            // Keeps the field's focus, as a menu item does.
+            onmousedown: |event| event.prevent_default(),
+            ondoubleclick: move |_| on_box += 1,
+            "Twice"
+        }
+        div {
+            id: "handle",
+            height: "40px",
+            // Cancelled, as a drag handle's press is: the web still fires `dblclick`.
+            onpointerdown: |event| event.prevent_default(),
+            ondoubleclick: move |_| on_handle += 1,
+            "Handle"
+        }
+        span { id: "doubles", "{on_box} {on_text} {on_handle}" }
+    }
+}
+
+/// A double click fires one `dblclick`, where Blitz's click default would only clear focus
+/// where it acts and after a cancelled press. The kept focus stays through the second click (todo 1413).
+#[test]
+fn a_double_click_fires_once_and_keeps_focus() {
+    let mut page = mount(doubles);
+    page.focus("#field");
+    page.click("#box");
+    page.click("#box");
+    page.settle();
+    assert!(
+        page.is_focused("#field"),
+        "focus moved to {}",
+        page.focus_owner()
+    );
+    page.click("#field");
+    page.click("#field");
+    page.click("#handle");
+    page.click("#handle");
+    page.settle();
+    assert_eq!(page.text("#doubles"), "1 1 1", "{}", page.tree());
+}
+
+/// Two quick drags on one divider: the second press lands where the first drag left it,
+/// past the double click's 2px, so the divider does not collapse (todo 1413).
+#[test]
+fn two_quick_drags_on_one_divider_move_it_twice() {
+    const DIVIDER: &str = "[role=separator]";
+    fn app() -> Element {
+        rsx! {
+            div { style: "width: 400px; height: 120px",
+                Splitter {
+                    initial_size: 50.0,
+                    aria_label: "Resize",
+                    panel_a: rsx! { "Pane A" },
+                    panel_b: rsx! { "Pane B" },
+                }
+            }
+        }
+    }
+    let mut page = mount(app);
+    page.drag(DIVIDER, 40.0, 0.0);
+    page.drag(DIVIDER, 40.0, 0.0);
+    let value: f64 = page
+        .attr(DIVIDER, "aria-valuenow")
+        .and_then(|v| v.parse().ok())
+        .unwrap_or_default();
+    assert!(value > 60.0, "the divider is at {value}: {}", page.tree());
 }

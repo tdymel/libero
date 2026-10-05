@@ -27,8 +27,8 @@ async fn a_drag_resizes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.drag(&grip, 60.0, 0.0).await?;
     eventually_text(d, WIDTHS, "Name=210", "a 60px drag").await?;
     width_near(d, 210.0, "the drag's end").await?;
-    // Clamped to the column's 100px floor.
-    d.drag(&grip, -400.0, 0.0).await?;
+    // Clamped to the column's 100px floor; inside the window, where Blitz sees the release.
+    d.drag(&grip, -150.0, 0.0).await?;
     eventually_text(d, WIDTHS, "Name=100", "a drag past the floor").await?;
     // The header's text and menu button may keep it wider than 100px: auto layout.
     eventually(d, "the narrowed column", async |d| {
@@ -40,8 +40,7 @@ async fn a_drag_resizes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_header_grip_drags_the_width_within_its_limits,
     "/table-resize",
-    a_drag_resizes,
-    native: skip("1156-4d: the first grip drag resizes, a second one moves nothing")
+    a_drag_resizes
 );
 
 /// Todo 2015: a finger 18px inside the header's end edge, past the old 8px grip, still resizes.
@@ -161,6 +160,7 @@ async fn the_menu_resizes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     // Widen and Narrow keep the menu open, to step again.
     pick(d, "Narrow column").await?;
     eventually_text(d, WIDTHS, "Name=150", "Narrow").await?;
+    // Two quick picks at one spot: on Blitz the second is a double click (todo 1413).
     pick(d, "Narrow column").await?;
     eventually_text(d, WIDTHS, "Name=100", "Narrow to the floor").await?;
     pick(d, "Reset width").await?;
@@ -178,8 +178,7 @@ async fn the_menu_resizes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     the_column_menu_widens_narrows_and_resets_a_width,
     "/table-resize",
-    the_menu_resizes,
-    native: skip("1156-4d: no Reset width entry found after Widen and two Narrows")
+    the_menu_resizes
 );
 
 /// Todo 2017: in an overflowing table, Widen shows on the column, not only in the state.
@@ -204,6 +203,5 @@ async fn an_overflowing_column_widens<D: Driver>(d: &mut D, _route: &str) -> Res
 e2e::scenario!(
     an_overflowing_tables_column_widens_from_its_menu,
     "/table-resize/wide",
-    an_overflowing_column_widens,
-    native: skip("1156-4d: no Reset width entry found after Widen and two Narrows")
+    an_overflowing_column_widens
 );

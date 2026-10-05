@@ -104,8 +104,12 @@ fn RowSelect(
     rsx! {
         td {
             "data-select": true,
-            // The box is not a row click.
-            onclick: |event| event.stop_propagation(),
+            // The box is not a row click. Stopped, it no longer reaches Blitz's focus
+            // guard, whose default would clear the focus the box gave its input (todo 1406).
+            onclick: |event| {
+                event.stop_propagation();
+                event.prevent_default();
+            },
             {look.render(element, state, aria_label, move |on| toggle((row.clone(), on)))}
         }
     }

@@ -145,6 +145,51 @@ fn a_wide_scroll_table_scrolls_to_its_last_column() {
     );
 }
 
+/// Todo 1402: Blitz sticks no `thead`, so the header filters row stuck by hand
+/// under the column headers while the body scrolls.
+#[test]
+fn the_header_filters_row_holds_under_the_header() {
+    fn app() -> Element {
+        let data: Vec<Person> = (0..40).map(|age| Person { name: "Ada", age }).collect();
+        rsx! {
+            Table {
+                aria_label: "People",
+                max_height: "240px",
+                header_filters: true,
+                data,
+                columns: vec![
+                    column("Name").value(|p: &Person| p.name.to_string()),
+                    column("Age").value(|p: &Person| p.age),
+                ],
+            }
+        }
+    }
+    const AREA: &str = "[data-table-scroll]";
+    const FILTER: &str = "thead td[data-filter-cell]";
+    let mut page = mount(app);
+    // It sticks once the header is measured, a frame or so after mount.
+    page.wait_for(|page| page.exists("[data-state~=sticky-filters]"));
+    page.settle();
+    let header = page.rect("thead th");
+    let filter = page.rect(FILTER).1;
+    let first_row = page.rect("tbody tr:first-child td").1;
+    page.hover(AREA);
+    page.wheel(AREA, 400.0);
+    let scrolled = |page: &Page| page.rect("tbody tr:first-child td").1 < first_row - 200.0;
+    page.wait_for(|page| scrolled(page) && (page.rect(FILTER).1 - filter).abs() <= 1.0);
+    assert!(scrolled(&page), "the body did not scroll: {}", page.tree());
+    let held = page.rect(FILTER).1;
+    assert!(
+        (held - filter).abs() <= 1.0 && (filter - (header.1 + header.3)).abs() <= 1.0,
+        "the filters row is at {held}, from {filter}, under a header ending at {}",
+        header.1 + header.3
+    );
+    assert!(
+        (page.rect("thead th").1 - header.1).abs() <= 1.0,
+        "the header row left the top"
+    );
+}
+
 fn pinned_app(rtl: bool) -> Element {
     let columns = (0..6)
         .map(|i| {
@@ -261,9 +306,8 @@ fn a_column_width_sizes_the_whole_column() {
 }
 
 /// 1156-4d: the grip on a header's end edge drags its width on Blitz too, from
-/// the measured width.
+/// the measured width. A text-only th missed the press by its padding (todo 1412).
 #[test]
-#[ignore = "1156-4d: the press on the grip (absolute in the th, laid out at its edge) moves no width on Blitz; the column menu resizes there"]
 fn a_header_grip_drags_the_column_wider() {
     fn app() -> Element {
         rsx! {
@@ -281,8 +325,10 @@ fn a_header_grip_drags_the_column_wider() {
         }
     }
     let mut page = mount(app);
+    let grip = "thead th [data-resize-handle]";
     let before = page.rect("thead th").2;
-    page.drag("thead th [data-resize-handle]", 60.0, 0.0);
+    assert!(page.hits(grip), "the grip takes no press: {}", page.tree());
+    page.drag(grip, 60.0, 0.0);
     let wider = |page: &Page| page.rect("thead th").2 > before + 50.0;
     page.wait_for(wider);
     assert!(
@@ -290,6 +336,25 @@ fn a_header_grip_drags_the_column_wider() {
         "the header stayed {}px wide, from {before}px: {}",
         page.rect("thead th").2,
         page.tree()
+    );
+    // A second drag moves it too (todo 1412).
+    page.drag(grip, -100.0, 0.0);
+    let narrower = |page: &Page| page.rect("thead th").2 < before - 30.0;
+    page.wait_for(narrower);
+    assert!(
+        narrower(&page),
+        "the second drag left the header {}px wide",
+        page.rect("thead th").2
+    );
+    // A double click puts back the column's own width (todo 1413).
+    page.click(grip);
+    page.click(grip);
+    let reset = |page: &Page| (page.rect("thead th").2 - before).abs() <= 1.0;
+    page.wait_for(reset);
+    assert!(
+        reset(&page),
+        "the double click left the header {}px wide, from {before}px",
+        page.rect("thead th").2
     );
 }
 

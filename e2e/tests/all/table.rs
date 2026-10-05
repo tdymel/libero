@@ -239,25 +239,7 @@ async fn the_window_follows_the_scroll<D: Driver>(d: &mut D, _route: &str) -> Re
         .await?;
     eventually_text(d, "#selection", "10000", "a click on the last row's box").await?;
     let last_box = format!("{LAST} input");
-    if d.platform() == Platform::Native {
-        // A click on the drawn box focuses nothing on Blitz and Tab fires no `focusin`:
-        // the table finds the focused row after Tab's silent move.
-        d.focus("tr[aria-rowindex=\"10000\"] input").await?;
-        d.press(keyboard::TAB).await?;
-        eventually_focused(d, &last_box, "Tab").await?;
-        d.press(keyboard::HOME).await?;
-        eventually(d, "the first rows to come back", async |d| {
-            Ok(d.exists(FIRST).await? && d.is_focused(&last_box).await?)
-        })
-        .await?;
-        // Tab wraps round to the select-all box: the last row goes with the rest.
-        d.press(keyboard::TAB).await?;
-        return eventually(d, "the last row to unmount once focus left it", async |d| {
-            Ok(d.exists(FIRST).await? && !d.exists(LAST).await?)
-        })
-        .await;
-    }
-    // The focused row stays rendered out of view, focus still in it.
+    // The focused row stays rendered out of view, focus still in it; on Blitz too (todo 1406).
     eventually_focused(d, &last_box, "a click on the last row's box").await?;
     d.press(keyboard::HOME).await?;
     eventually(d, "the first rows to come back", async |d| {

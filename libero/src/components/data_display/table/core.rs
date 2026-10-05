@@ -22,6 +22,7 @@ use crate::{
     context::IconSlot,
     hooks::{ElementHandle, listener},
     localization::fill,
+    platform,
 };
 
 /// One entry of a [`Table`](super::Table)'s sort: a column, named by its header text.
@@ -404,6 +405,8 @@ pub(super) struct BodySpec {
     pub reorder_header: Option<Element>,
     /// With `header_filters`: each header's filter field, by header index.
     pub filters: Option<Vec<Option<Element>>>,
+    /// The first column header, measured where the filters row sticks under it by hand (Blitz).
+    pub head_cell: Option<ElementHandle>,
     /// With `resizable_columns`: what the headers' resize grips share.
     pub resize: Option<ColumnResize>,
     /// With `column_menu`, off Blitz: what the unpinned headers' drag grips share.
@@ -472,6 +475,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         reorder,
         reorder_header,
         filters,
+        head_cell,
         resize,
         drag,
         head_height,
@@ -550,6 +554,16 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                             }
                         });
                         let resizable = grip.is_some();
+                        let menu = menu_of(index);
+                        // A text th misplaces the grip's hits on Blitz (todo 1412): a block child holds the text.
+                        let wrap = resizable && menu.is_none() && !platform::hits_absolute_in_text();
+                        let body = header_cell(spec, index, &context, menu);
+                        let body = match wrap {
+                            true => rsx! {
+                                div { {body} }
+                            },
+                            false => body,
+                        };
                         let draggable = drag.is_some() && spec.pin.is_none();
                         // An unsized innermost pin is measured: the scroll padding clears it (todo 1973).
                         let measure: Vec<Attribute> = spec
@@ -565,6 +579,11 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                                 })
                             })
                             .into_iter()
+                            .chain(
+                                head_cell
+                                    .filter(|_| shown.first() == Some(&index))
+                                    .map(|cell| listener("onmounted", cell.mount())),
+                            )
                             .collect();
                         // A pinned column moves by its pin.
                         let mover = drag.filter(|_| spec.pin.is_none()).map(|drag| {
@@ -595,7 +614,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                                     .map(|(_, direction)| direction.aria_value()),
                                 ..measure,
                                 {mover}
-                                {header_cell(spec, index, &context, menu_of(index))}
+                                {body}
                                 {grip}
                             }
                         }

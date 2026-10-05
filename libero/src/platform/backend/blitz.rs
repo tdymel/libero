@@ -10,7 +10,8 @@ use blitz_dom::{
     ns,
 };
 use blitz_traits::shell;
-use dioxus::core::Runtime;
+use dioxus::core::{AttributeValue, Runtime};
+use dioxus::html::PlatformEventData;
 use dioxus::prelude::*;
 use dioxus_native_dom::{NodeHandle, NodeId};
 use style::properties::PropertyId;
@@ -323,6 +324,30 @@ pub(super) fn Listener(children: Element) -> Element {
             }
         }
     });
+    // Raw, so a double click's second keeps its data for the `dblclick` it fires.
+    let onclick = AttributeValue::listener(|raw: Event<PlatformEventData>| {
+        let event = raw.map(|data| MouseData::from(data));
+        // A kept press on nothing focusable keeps focus too, as on the web.
+        let (kept, press) = (focus::press_kept_focus(), PRESS.get());
+        let moving = press.filter(|_| !kept);
+        let taken = press.is_some() || kept || activate::press_cancelled();
+        if taken && activate::takes_over(&event, &raw, HIT.get()) {
+            if let Some((before, target)) = moving {
+                activate::focus_pressed(before, target);
+            }
+        } else if let Some((before, target)) = moving {
+            activate::clicked(before, target);
+        }
+        forget_press();
+        focus::clicked();
+        if BLANK_PRESS.take() {
+            refocus_wrapper();
+        }
+        resize::pressed();
+        baked::check_soon();
+        placeholder::sync_soon();
+    });
+    let click = vec![Attribute::new("onclick", onclick, None, false)];
     rsx! {
         div {
             display: "contents",
@@ -341,26 +366,6 @@ pub(super) fn Listener(children: Element) -> Element {
                 pressed(&event);
             },
             onmousedown: |event| focus::mouse_pressed(&event),
-            onclick: |event| {
-                // A kept press on nothing focusable keeps focus too, as on the web.
-                let (kept, press) = (focus::press_kept_focus(), PRESS.get());
-                let moving = press.filter(|_| !kept);
-                if (press.is_some() || kept) && activate::takes_over(&event, HIT.get()) {
-                    if let Some((before, target)) = moving {
-                        activate::focus_pressed(before, target);
-                    }
-                } else if let Some((before, target)) = moving {
-                    activate::clicked(before, target);
-                }
-                forget_press();
-                focus::clicked();
-                if BLANK_PRESS.take() {
-                    refocus_wrapper();
-                }
-                resize::pressed();
-                baked::check_soon();
-                placeholder::sync_soon();
-            },
             onkeydown: |event| {
                 forget_press();
                 BLANK_PRESS.set(false);
@@ -407,6 +412,7 @@ pub(super) fn Listener(children: Element) -> Element {
                 wheel::wheeled(&event);
                 notify_scroll();
             },
+            ..click,
             {children}
         }
     }

@@ -27,7 +27,7 @@ use crate::{
     },
     sx::{StaticSx, Sx, sx},
     theme::{
-        CHECKBOX_BOX_SIZE, NamedColorCss, ScrollAxis, Size, TABLE_PAD_X, TABLE_PADDING_X,
+        CHECKBOX_BOX_SIZE, CssVar, NamedColorCss, ScrollAxis, Size, TABLE_PAD_X, TABLE_PADDING_X,
         TableDefaults,
     },
     utils::warn,
@@ -68,6 +68,9 @@ use super::{
 const GRIP_LANE: &str = "24px";
 
 const COARSE: &str = "(pointer: coarse)";
+
+/// Where the header filters row sticks on Blitz: the column headers' height.
+const FILTERS_TOP_VAR: CssVar = CssVar::new("--lsx-table-filters-top");
 
 static TABLE_SX: StaticSx = StaticSx::new(|| {
     let vars = TableDefaults::theme_vars();
@@ -489,6 +492,16 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
                 "& thead th, & thead td",
                 sx().background(NamedColorCss::SURFACE.value()),
             ),
+    )
+    .when(
+        "sticky-filters",
+        sx().selector(
+            "& thead tr[data-filters] > td",
+            sx().position("sticky")
+                .top(FILTERS_TOP_VAR.value())
+                .z_index("1")
+                .background(NamedColorCss::SURFACE.value()),
+        ),
     )
     // Opaque over the scrolled cells: a body cell takes its row's colour, which
     // is the surface unless hovered, striped or selected.
@@ -1068,6 +1081,17 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             head.set(size.height);
         }
     });
+    // Blitz sticks each column header, not the `thead`: the filters row sticks under them by hand (todo 1402).
+    let sticky_filters = bounded && props.header_filters && !sticks_table_heads();
+    let head_cell = use_element();
+    let mut head_cell_height = use_signal(|| 0.0);
+    use_resize_fallback(head_cell, move |event| {
+        if let (true, Ok(size)) = (sticky_filters, event.get_border_box_size())
+            && *head_cell_height.peek() != size.height
+        {
+            head_cell_height.set(size.height);
+        }
+    });
     // The first resize report can come a second late, and a Tab before it
     // scrolls a row under the header (todo 1523): measure at mount too.
     use_effect(move || {
@@ -1629,6 +1653,11 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             "sticky-head",
             bounded && head_rows > 1 && sticks_table_heads(),
         )
+        // Under group rows, which scroll away there, it would leave their gap. Unmeasured, it would stick at 0.
+        .with(
+            "sticky-filters",
+            sticky_filters && group_rows == 0 && head_cell_height() > 0.0,
+        )
         .with("pinned", pins)
         .with("pin-select", pins_select)
         .with("pin-detail", has_detail && pins_start)
@@ -1660,6 +1689,10 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .with(
             TABLE_MIN_WIDTH_VAR,
             row_height.map(|_| windowed_min_width(lead_width.as_deref(), &headers, &layout)),
+        )
+        .with(
+            FILTERS_TOP_VAR,
+            sticky_filters.then(|| format!("{}px", head_cell_height())),
         )
         .into();
     let table = use_box()
@@ -1695,6 +1728,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                     .map(|reorder| reorder.header_cell(group_rows + 1)),
                 reorder: reorder.clone(),
                 filters: filter_cells,
+                head_cell: sticky_filters.then_some(head_cell),
                 resize,
                 drag: drags.then_some(column_drag),
                 head_height: bounded.then(|| EventHandler::new(move |height| head.set(height))),

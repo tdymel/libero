@@ -65,8 +65,7 @@ pub(crate) use capture::{
 };
 pub use capture::{MediaDevice, UserMediaError};
 pub(crate) use click::{
-    DoublePress, follow_pointer, hits_inline_boxes, nested_interactive, padding_press,
-    reads_click_targets,
+    follow_pointer, hits_inline_boxes, nested_interactive, padding_press, reads_click_targets,
 };
 pub(crate) use clipboard::clipboard;
 #[cfg(test)]
@@ -155,8 +154,8 @@ pub(crate) use system_notification::{
     NotificationEvent, ShownNotification, raise_window, system_notification,
 };
 pub(crate) use table::{
-    drags_table_columns, lays_out_captions, moves_table_rows, sticks_table_heads,
-    widens_sized_tables,
+    drags_table_columns, hits_absolute_in_text, lays_out_captions, moves_table_rows,
+    sticks_table_heads, widens_sized_tables,
 };
 pub(crate) use task::{next_task, when_free, when_laid_out};
 pub use timer::{TimerApi, TimerSubscription, timer};

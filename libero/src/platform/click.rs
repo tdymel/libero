@@ -37,39 +37,6 @@ pub(crate) fn follow_pointer(
     super::backend::follow_pointer(event, capture, onmove, onup)
 }
 
-/// Double presses where no `dblclick` follows a cancelled `pointerdown`: Blitz
-/// counts clicks in that default action, so a drag handle never gets one.
-#[derive(Clone, Copy, Default)]
-pub(crate) struct DoublePress {
-    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
-    last: Option<(std::time::Instant, f64, f64)>,
-}
-
-impl DoublePress {
-    /// Whether this press at `(x, y)` makes a double press, as Blitz counts one:
-    /// within 500ms and 2px of the last. Always `false` where `dblclick` works.
-    pub(crate) fn press(&mut self, x: f64, y: f64) -> bool {
-        #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
-        {
-            use std::time::{Duration, Instant};
-            let now = Instant::now();
-            let double = self.last.is_some_and(|(at, last_x, last_y)| {
-                now - at < Duration::from_millis(500)
-                    && (x - last_x).abs() <= 2.0
-                    && (y - last_y).abs() <= 2.0
-            });
-            // A third press starts over, as a third click is no second double.
-            self.last = (!double).then_some((now, x, y));
-            double
-        }
-        #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
-        {
-            let _ = (x, y);
-            false
-        }
-    }
-}
-
 /// The control a press on a frame's padding belongs to: the first tab stop in
 /// `boundary`'s child that is no `[data-slot]` but `control`, nor `[data-ring]`.
 ///

@@ -13,7 +13,7 @@ use crate::{
     hooks::{
         DragMove, DragOptions, DragStart, use_css, use_drag_with, use_element, use_id, use_theme,
     },
-    platform::{DoublePress, ElementApi},
+    platform::ElementApi,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CssVar, Size},
     utils::warn,
@@ -304,14 +304,9 @@ pub fn Splitter(props: SplitterProps) -> Element {
             toggle();
         }
     });
-    let mut double_press = use_signal(DoublePress::default);
     let ondividerdown = use_callback(move |event: Event<PointerData>| {
         divider_pressing.set(true);
-        let at = event.client_coordinates();
         drag.onpointerdown.call(event);
-        if double_press.write().press(at.x, at.y) {
-            toggle();
-        }
     });
     let onrootdown = use_callback(move |_: Event<PointerData>| {
         pressed_divider.set(divider_pressing());
