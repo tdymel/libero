@@ -18,6 +18,7 @@ pub const ROUTES: Routes = &[
         || rsx! { SegmentedControlPage { readonly: true } },
     ),
     ("/segmented-control/field", || rsx! { FieldPage {} }),
+    ("/segmented-control/odd-id", || rsx! { OddIdPage {} }),
     ("/segmented-control/long", || rsx! { LongPage {} }),
     ("/segmented-control/form", || rsx! { FormPage {} }),
     ("/segmented-control/raw-form", || rsx! { RawFormPage {} }),
@@ -120,6 +121,23 @@ pub fn SegmentedControlPage(#[props(default)] readonly: bool) -> Element {
                     value: alignment(),
                     onchange: move |next| alignment.set(next),
                 }
+            }
+        }
+    }
+}
+
+/// Todo 2331: a caller's `id` that is no CSS identifier, so `#view.mode-segment-0` would miss.
+#[component]
+fn OddIdPage() -> Element {
+    let mut alignment = use_signal(|| Alignment::Center);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            SegmentedControl {
+                id: "view.mode",
+                label: "Alignment",
+                value: alignment(),
+                onchange: move |next| alignment.set(next),
             }
         }
     }

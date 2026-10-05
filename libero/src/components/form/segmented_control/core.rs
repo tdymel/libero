@@ -11,7 +11,7 @@ use crate::{
         form::{Activation, field_parts_enum},
         layout::use_box,
     },
-    hooks::ElementHandle,
+    hooks::{ElementHandle, id_selector},
     platform::{ElementApi, focus_selector, logical_key, next_task},
     sx::{StaticSx, sx},
     theme::{ButtonDefaults, Size, SizeCss},
@@ -247,7 +247,7 @@ fn has_further(disabled: &[bool], index: usize, step: isize) -> bool {
 /// Scoped to this strip's own root, so two controls can hold the same segment
 /// count without colliding.
 fn focus_segment(element: &ElementHandle, root: &str, index: usize) {
-    let selector = format!("#{root}-segment-{index}");
+    let selector = id_selector(&format!("{root}-segment-{index}"));
     // A WebView queries nothing: the page focuses it by its id.
     let _ = element
         .query_selector(&selector)

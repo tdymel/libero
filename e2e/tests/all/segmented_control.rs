@@ -42,6 +42,16 @@ async fn the_arrows_move_focus_and_wrap<D: Driver>(d: &mut D, _route: &str) -> R
     selected(d, "Left", "ArrowDown from Right").await
 }
 
+async fn the_arrows_move_focus_past_an_odd_id<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("input[aria-label=Center]").await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    selected(d, "Right", "ArrowRight").await?;
+    eventually_focused(d, "input[aria-label=Right]", "ArrowRight").await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    selected(d, "Left", "a second ArrowRight").await?;
+    eventually_focused(d, "input[aria-label=Left]", "a second ArrowRight").await
+}
+
 async fn enter_picks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.focus("input[aria-label=Left]").await?;
     d.press(keyboard::ENTER).await?;
@@ -75,6 +85,13 @@ e2e::scenario!(
     "/segmented-control",
     the_arrows_move_focus_and_wrap,
     web: skip("1826: it_honours_the_radio_group_contract runs these keys at both viewports"),
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView")
+);
+e2e::scenario!(
+    the_arrows_move_focus_when_the_id_is_no_css_identifier,
+    "/segmented-control/odd-id",
+    the_arrows_move_focus_past_an_odd_id,
     android: skip("958: element identity on the WebView"),
     desktop: skip("958: element identity on the WebView")
 );

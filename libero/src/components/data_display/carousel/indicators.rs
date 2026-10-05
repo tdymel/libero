@@ -6,7 +6,7 @@ use crate::{
         common::{Input, Part, States, focus_ring_sx, has_shortcut_modifier, states},
         layout::Box,
     },
-    hooks::ElementHandle,
+    hooks::{ElementHandle, id_selector},
     platform::{ElementApi, logical_key},
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, sx},
     theme::{
@@ -103,7 +103,7 @@ fn indicator_id(track_id: &str, index: usize) -> String {
 
 /// Moves focus onto the dot the arrows just made current.
 fn focus_indicator(root: ElementHandle, track_id: &str, index: usize) {
-    let selector = format!("#{}", indicator_id(track_id, index));
+    let selector = id_selector(&indicator_id(track_id, index));
     let _ = root.query_selector(&selector).and_then(|dot| dot.focus());
 }
 

@@ -136,7 +136,7 @@ form.getAll("price") // ["20", "80"]
 | `oninput` | `EventHandler<SliderChangeEvent<(V, V)>>` | - | Fires per value while dragging. `Start` and `End` bracket a drag, `Change` carries each new pair. A key press sends `Change`, then `End`. |
 | `min` | `V` | `first option, or 0.0` | Lower bound of the track, in the value's own type. |
 | `max` | `V` | `last option, or 100.0` | Upper bound of the track, in the value's own type. Off the `step` grid, the track ends at the last step below it, as on a native range input: 0 to 100 by 30 ends at 90. |
-| `step` | `V::Step` | - | How far one step goes from `min`. A count of options on a discrete scale, a value on a continuous one. Also sets how many decimals a value keeps. |
+| `step` | `V::Step` | `one option, or 1.0` | How far one step goes from `min`. A count of options on a discrete scale, a value on a continuous one, so 0 to 1 has two stops unless you pass a smaller one. Also sets how many decimals a value keeps; `0.0` is continuous and keeps a thousandth of the range. |
 | `min_range` | `V::Step` | `0` | The smallest gap the thumbs keep, in the unit of `step`. At 0 they may meet, and they never cross. |
 | `format` | `Callback<V, String>` | `bare value, or SliderValue::label` | Text of the bubbles and each thumb's `aria-valuetext`. On a discrete scale it also names the marks, so this is where a translation goes. |
 | `marks` | `Vec<SliderMark<V>>` | `one per option, discretely` | Ticks on the track. A labeled one gets a caption below it. Replaces the marks a discrete scale draws itself. Past about six options the derived captions touch on a phone, so pass your own `marks`, or a `step` that skips options. |

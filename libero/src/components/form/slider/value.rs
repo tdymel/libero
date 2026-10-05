@@ -27,6 +27,17 @@ pub(super) fn grid_bounds(min: f64, max: f64, step: f64) -> (f64, f64) {
     (min, snap_towards(max, min, step.max(0.0), true))
 }
 
+/// The decimals that resolve a thousandth of `min..=max`: what a continuous
+/// value keeps, so a drag does not emit 37.52839181093 (2333).
+fn continuous_decimals(min: f64, max: f64) -> usize {
+    let resolution = (max - min) / 1000.0;
+    let places = match resolution > 0.0 {
+        true => (-resolution.log10().floor()).max(0.0) as usize,
+        false => 0,
+    };
+    places.max(decimals(min)).min(15)
+}
+
 /// `raw` snapped to the `step` grid from `min`, clamped and rounded; `step: 0`
 /// is continuous. Bounds come from [`sane_bounds`]; `NaN` reads as `min`.
 pub(super) fn snap(raw: f64, min: f64, max: f64, step: f64) -> f64 {
@@ -34,7 +45,7 @@ pub(super) fn snap(raw: f64, min: f64, max: f64, step: f64) -> f64 {
         return min;
     }
     if step <= 0.0 {
-        return raw.clamp(min, max);
+        return round_to(raw.clamp(min, max), continuous_decimals(min, max)).clamp(min, max);
     }
 
     let value = min + step * ((raw - min) / step).round();
@@ -280,10 +291,18 @@ mod tests {
         assert_eq!(fraction(snap(f64::NAN, 5.0, 10.0, 1.0), 5.0, 10.0), 0.0);
     }
 
+    /// Continuous, but to a thousandth of the range: a drag left 15-17 digits
+    /// in the bubble and `aria-valuenow` (2333).
     #[test]
-    fn a_zero_step_is_continuous_and_unrounded() {
+    fn a_zero_step_is_continuous_to_a_thousandth_of_the_range() {
         assert_eq!(snap(3.7, 0.0, 10.0, 0.0), 3.7);
         assert_eq!(snap(-1.0, 0.0, 10.0, 0.0), 0.0);
+        assert_eq!(snap(37.52839181093, 0.0, 100.0, 0.0), 37.5);
+        assert_eq!(snap(0.123456789, 0.0, 1.0, 0.0), 0.123);
+        assert_eq!(snap(1234.5678, 0.0, 5000.0, 0.0), 1235.0);
+        assert_eq!(snap(0.37, 0.25, 1.0, 0.0), 0.37);
+        assert_eq!(snap(100.06, 0.0, 100.06, 0.0), 100.06);
+        assert_eq!(snap(7.0, 5.0, 5.0, 0.0), 5.0);
     }
 
     #[test]

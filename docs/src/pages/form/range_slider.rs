@@ -123,7 +123,8 @@ pub fn RangeSliderPage() -> Element {
                         .default("last option, or 100.0")
                         .doc("Upper bound of the track, in the value's own type. Off the `step` grid, the track ends at the last step below it, as on a native range input: 0 to 100 by 30 ends at 90."),
                     prop("step", "V::Step")
-                        .doc("How far one step goes from `min`. A count of options on a discrete scale, a value on a continuous one. Also sets how many decimals a value keeps."),
+                        .default("one option, or 1.0")
+                        .doc("How far one step goes from `min`. A count of options on a discrete scale, a value on a continuous one, so 0 to 1 has two stops unless you pass a smaller one. Also sets how many decimals a value keeps; `0.0` is continuous and keeps a thousandth of the range."),
                     prop("min_range", "V::Step")
                         .default("0")
                         .doc("The smallest gap the thumbs keep, in the unit of `step`. At 0 they may meet, and they never cross."),

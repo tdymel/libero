@@ -29,7 +29,8 @@ field_props! {
         #[props(default, into)]
         max: Option<V>,
         /// One step from `min`: options discretely, a value continuously. Sets
-        /// the decimals an emitted value keeps.
+        /// the decimals an emitted value keeps. Defaults to `1.0` on a continuous
+        /// scale, so `0.0..1.0` has two stops; `0.0` keeps a thousandth of the range.
         #[props(default, into)]
         step: Option<V::Step>,
         /// The smallest gap the two thumbs keep. They may meet by default.
