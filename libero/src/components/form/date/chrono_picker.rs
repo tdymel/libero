@@ -224,4 +224,54 @@ mod tests {
             );
         }
     }
+
+    /// Todos 2307, 2308: a gridcell wraps each month and year button; the decade title is text.
+    #[test]
+    fn month_and_year_cells_wrap_their_buttons() {
+        let html = dioxus_ssr::render_element(rsx! {
+            crate::LiberoProvider {
+                MonthPicker { value: NaiveDate::from_ymd_opt(2026, 3, 1) }
+                super::super::YearPicker { value: NaiveDate::from_ymd_opt(2026, 1, 1) }
+            }
+        });
+        let button_cells = html
+            .split("<button")
+            .skip(1)
+            .filter(|tag| {
+                tag.split('>')
+                    .next()
+                    .is_some_and(|tag| tag.contains("gridcell"))
+            })
+            .count();
+        assert_eq!(button_cells, 0, "{html}");
+        assert_eq!(
+            html.matches(r#"<div role="gridcell""#).count(),
+            24,
+            "{html}"
+        );
+        assert!(
+            html.contains(r#"<div aria-live="polite" data-slot="title">2020 – 2029</div>"#),
+            "{html}"
+        );
+    }
+
+    /// Todo 2310: the analog readout's colons are not read between the buttons.
+    #[test]
+    fn the_analog_colons_are_hidden() {
+        let html = dioxus_ssr::render_element(rsx! {
+            crate::LiberoProvider {
+                TimePicker {
+                    value: NaiveTime::from_hms_opt(9, 30, 0),
+                    variant: "analog",
+                    with_seconds: true,
+                }
+            }
+        });
+        assert!(!html.contains("<span>:</span>"), "{html}");
+        assert_eq!(
+            html.matches(r#"<span aria-hidden="true">:</span>"#).count(),
+            2,
+            "{html}"
+        );
+    }
 }

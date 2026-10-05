@@ -63,6 +63,18 @@ fn time_limits(
     (on(min), on(max))
 }
 
+/// `time` on a picked `day`, pulled into `min`..`max`, as the clock would for a pick.
+fn on_day(
+    day: NaiveDate,
+    time: NaiveTime,
+    min: Option<NaiveDateTime>,
+    max: Option<NaiveDateTime>,
+) -> NaiveDateTime {
+    let at = NaiveDateTime::new(day, time);
+    let at = min.map_or(at, |min| at.max(min));
+    max.map_or(at, |max| at.min(max))
+}
+
 /// A day as a tab shows it, `12 Oct`, with the year when `year`.
 fn short_day(day: NaiveDate, year: bool, names: &DateLocale) -> String {
     let month = names.months_short[day.month0() as usize];
@@ -282,7 +294,8 @@ pub(super) fn DateTimeFlow(props: DateTimeFlowProps) -> Element {
                 focusable: props.focusable,
                 onchange: move |day: Option<NaiveDate>| {
                     if let Some(day) = day {
-                        onpick.call(Some(NaiveDateTime::new(day, time.unwrap_or(MIDNIGHT))));
+                        let time = time.unwrap_or(MIDNIGHT);
+                        onpick.call(Some(on_day(day, time, props.min, props.max)));
                         pending.set(None);
                         part.set(Part::Time);
                         handoff.set(focusable && root.query_selector(":focus").is_ok());
@@ -403,16 +416,17 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
         step.set(to);
         handoff.set(focusable && root.query_selector(":focus").is_ok());
     };
+    let (min, max) = (props.min, props.max);
     // One identity across renders, so a re-render from above skips the calendar.
     let onpick_day = use_callback(move |day: NaiveDate| {
         let days =
             value.map(|range| DateRange::new(range.start.date(), range.end.map(|end| end.date())));
         let days = DateRange::pick(days, day);
         let from = start_time.unwrap_or(MIDNIGHT);
-        let start = NaiveDateTime::new(days.start, from);
+        let start = on_day(days.start, from, min, max);
         let end = days
             .end
-            .map(|day| NaiveDateTime::new(day, end_time.unwrap_or(from)));
+            .map(|day| on_day(day, end_time.unwrap_or(from), min, max));
         pending_start.set(None);
         pending_end.set(None);
         emit(start, end);
@@ -582,5 +596,16 @@ mod tests {
         assert_eq!(short_time(time, true, false, names), "5:30 PM");
         assert_eq!(short_time(time, false, true, names), "17:30:05");
         assert_eq!(short_time(MIDNIGHT, true, false, names), "12:00 AM");
+    }
+
+    #[test]
+    fn a_picked_day_pulls_its_time_into_the_limits() {
+        let at = |month, date, hour| day(month, date).and_hms_opt(hour, 0, 0).expect("a time");
+        let (min, max) = (Some(at(3, 5, 9)), Some(at(3, 9, 17)));
+        let time = |hour| NaiveTime::from_hms_opt(hour, 0, 0).expect("a time");
+        assert_eq!(on_day(day(3, 5), MIDNIGHT, min, max), at(3, 5, 9));
+        assert_eq!(on_day(day(3, 9), time(20), min, max), at(3, 9, 17));
+        assert_eq!(on_day(day(3, 7), MIDNIGHT, min, max), at(3, 7, 0));
+        assert_eq!(on_day(day(3, 5), time(8), None, None), at(3, 5, 8));
     }
 }

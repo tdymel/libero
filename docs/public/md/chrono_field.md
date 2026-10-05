@@ -64,7 +64,8 @@ Typing reads `1 h 30 min`, `1h30`, `1:30` or a bare number of minutes.
 The dropdown has a column each for the hours, the minutes at `step` and, with
 `with_seconds`, the seconds. The minutes and seconds wrap round without
 carrying into the next column. The value runs from `min`, 0 by default, to
-`max`, 99 h 59 min 59 s by default. The hours column ends at `max`.
+`max`, 99 h 59 min 59 s by default, and never past 999 h 59 min 59 s. The
+hours column ends at `max`.
 
 A duration has its own errors: `Must be at least 15 min` names the bound it
 missed, and `Not a valid duration` is text it cannot read. A screen reader

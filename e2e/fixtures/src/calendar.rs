@@ -4,7 +4,9 @@
 use dioxus::prelude::*;
 use libero::{
     chrono::NaiveDate,
-    components::{Button, ChronoPicker, DateRange, DateRangePicker, Flex, MonthPicker},
+    components::{
+        Button, ChronoPicker, DateRange, DateRangePicker, Flex, MonthPicker, YearPicker,
+    },
 };
 
 use crate::Routes;
@@ -15,7 +17,26 @@ pub const ROUTES: Routes = &[
     ("/calendar/month", || rsx! { MonthPage {} }),
     ("/calendar/mini", || rsx! { MiniPage {} }),
     ("/calendar/limited", || rsx! { LimitedPage {} }),
+    ("/calendar/year", || rsx! { YearPage {} }),
 ];
+
+/// 2026 picked and `today`: the decade 2020 – 2029, its title plain text.
+#[component]
+fn YearPage() -> Element {
+    let mut year = use_signal(|| NaiveDate::from_ymd_opt(2026, 1, 1));
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button { id: "before", "Before" }
+            YearPicker {
+                value: year(),
+                today: NaiveDate::from_ymd_opt(2026, 3, 18),
+                onchange: move |next: Option<NaiveDate>| year.set(next),
+            }
+            Button { id: "after", "After" }
+        }
+    }
+}
 
 /// March 2026 with `min` on the 10th, so the days before it are disabled.
 #[component]

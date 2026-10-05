@@ -61,7 +61,7 @@ date_props! {
     picker DateRangePickerProps(DateRange<NaiveDate>, NaiveDate): limits, exclude_date, columns, today
 }
 
-/// Two months side by side to pick a start and an end from.
+/// Two months side by side to pick a start and an end from; one below `sm` unless `columns` is set.
 ///
 /// ```
 /// # use dioxus::prelude::*;

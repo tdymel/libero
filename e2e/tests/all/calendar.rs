@@ -384,6 +384,15 @@ fn the_month_view_meets_the_baseline() {
         .run();
 }
 
+/// Todo 2308: the year level, gridcells around buttons and a plain-text title (2307).
+#[test]
+fn the_year_view_meets_the_baseline() {
+    Suite::new("calendar-year", "/calendar/year")
+        .focusable("[role=grid] [data-date='2026-01-01']")
+        .targets("[role=grid] [data-slot=cell]")
+        .run();
+}
+
 /// The other variants (todo 1773).
 #[test]
 fn the_range_and_limited_calendars_meet_the_baseline() {
@@ -456,7 +465,8 @@ fn the_month_and_year_views_are_grids() {
         wait::for_js_true(
             page,
             "document.querySelector('[role=grid]').getAttribute('aria-label') === '2020 – 2029' \
-             && document.querySelector(\"[role=gridcell][data-date='2026-01-01']\").getAttribute('aria-selected') === 'true'",
+             && document.querySelector(\"[data-date='2026-01-01']\").closest('[role=gridcell]').getAttribute('aria-selected') === 'true' \
+             && document.querySelector('[data-slot=title]').tagName === 'DIV'",
             "the year view to label its decade and select 2026",
         )
         .await

@@ -1,5 +1,6 @@
 ---
 source: e2e/src/suite.rs
+assertion_line: 618
 description: chrono_field-month at mobile (rest)
 expression: tree
 ---
@@ -18,30 +19,42 @@ dialog "Date"
   grid "2026"
     row "January 2026 February 2026 March 2026"
       gridcell "January 2026" [selected=false]
-        StaticText "Jan"
+        button "January 2026"
+          StaticText "Jan"
       gridcell "February 2026" [selected=false]
-        StaticText "Feb"
-      gridcell "March 2026" [current=date] [selected]
-        StaticText "Mar"
+        button "February 2026"
+          StaticText "Feb"
+      gridcell "March 2026" [selected]
+        button "March 2026" [current=date]
+          StaticText "Mar"
     row "April 2026 May 2026 June 2026"
       gridcell "April 2026" [selected=false]
-        StaticText "Apr"
+        button "April 2026"
+          StaticText "Apr"
       gridcell "May 2026" [selected=false]
-        StaticText "May"
+        button "May 2026"
+          StaticText "May"
       gridcell "June 2026" [selected=false]
-        StaticText "Jun"
+        button "June 2026"
+          StaticText "Jun"
     row "July 2026 August 2026 September 2026"
       gridcell "July 2026" [selected=false]
-        StaticText "Jul"
+        button "July 2026"
+          StaticText "Jul"
       gridcell "August 2026" [selected=false]
-        StaticText "Aug"
+        button "August 2026"
+          StaticText "Aug"
       gridcell "September 2026" [selected=false]
-        StaticText "Sep"
+        button "September 2026"
+          StaticText "Sep"
     row "October 2026 November 2026 December 2026"
       gridcell "October 2026" [selected=false]
-        StaticText "Oct"
+        button "October 2026"
+          StaticText "Oct"
       gridcell "November 2026" [selected=false]
-        StaticText "Nov"
+        button "November 2026"
+          StaticText "Nov"
       gridcell "December 2026" [selected=false]
-        StaticText "Dec"
+        button "December 2026"
+          StaticText "Dec"
 --> aria-controls [id="lsx-N-dialog"] (rendered above)

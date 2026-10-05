@@ -11,15 +11,15 @@ use crate::{
             navigation_chord,
         },
         form::{
-            ColorDropdownPart, FIELD_CONTROL_SX, FieldStatus, SLOT_BUTTON_SX, SliderChangeEvent,
-            field_props, slot_icon_size, use_bound, use_field, use_field_frame,
+            ColorDropdownPart, FIELD_CONTROL_SX, FieldStatus, FormScope, SLOT_BUTTON_SX,
+            SliderChangeEvent, field_props, slot_icon_size, use_bound, use_field, use_field_frame,
         },
         layout::{paper_sx, use_box},
     },
     context::IconSlot,
     hooks::{
         POPOVER_AVAILABLE_HEIGHT, PopoverOptions, use_element, use_field_list_layer,
-        use_focus_within, use_localization, use_popover_on, use_theme,
+        use_focus_within, use_form_owner, use_localization, use_popover_on, use_theme,
     },
     platform::{ElementApi, eye_dropper, next_task},
     sx::{StaticSx, ThemeAwareValue, sx},
@@ -295,6 +295,19 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     // Every one of these is a hook, so all of them run before anything
     // branches on `opened`.
     let anchor = use_element();
+    // A form reset drops the typed text and its refusal, as in `ChronoField`.
+    let scope = try_use_context::<FormScope>();
+    let owner = use_form_owner(anchor, scope.is_none());
+    let resets = scope.map_or(0, |form| form.resets()) + owner().unwrap_or(0);
+    use_effect(use_reactive!(|resets| {
+        let _ = resets;
+        if draft.peek().is_some() {
+            draft.set(None);
+        }
+        if *rejected.peek() {
+            rejected.set(false);
+        }
+    }));
     let showing = opened() && has_dropdown && !readonly;
     let popover = use_popover_on(
         anchor,

@@ -3,7 +3,10 @@
 
 use chrono::{NaiveDateTime, NaiveTime};
 
-use super::parse::{Piece, Unreadable, literal_words, parse_date, pieces};
+use super::{
+    format::{Token, tokens},
+    parse::{Piece, Unreadable, literal_words, parse_date, pieces},
+};
 use crate::localization::DateLocale;
 
 pub(super) const MIDNIGHT: NaiveTime = match NaiveTime::from_hms_opt(0, 0, 0) {
@@ -72,8 +75,8 @@ pub(super) fn parse_time(
     NaiveTime::from_hms_opt(hour, minute, second).ok_or(Unreadable)
 }
 
-/// Reads a day and time: the time starts at the number (or am/pm word) before the first `:`
-/// or `time_format` literal. Without one, the time is `fallback_time`, else midnight.
+/// Reads a day and time: the time starts where `time_start` says, or at the am/pm word before.
+/// Without a time, it is `fallback_time`, else midnight.
 pub(super) fn parse_date_time(
     text: &str,
     format: &str,
@@ -82,12 +85,8 @@ pub(super) fn parse_date_time(
     fallback_year: Option<i32>,
     fallback_time: Option<NaiveTime>,
 ) -> Result<NaiveDateTime, Unreadable> {
-    let (date_text, time_text) = match time_marker(text, format, time_format) {
-        Some(marker) => {
-            let mut start = text[..marker]
-                .trim_end()
-                .trim_end_matches(|character: char| character.is_ascii_digit())
-                .len();
+    let (date_text, time_text) = match time_start(text, format, time_format) {
+        Some(mut start) => {
             let before = text[..start].trim_end();
             if let Some(Piece::Word(word)) = pieces(before).pop()
                 && before.ends_with(word)
@@ -107,6 +106,45 @@ pub(super) fn parse_date_time(
         None => fallback_time.unwrap_or(MIDNIGHT),
     };
     Ok(NaiveDateTime::new(date, time))
+}
+
+/// Where the time's numbers start: the number before the first `:`, else the numbers the time
+/// format counts, taken from the end of what the date leaves over (`1.2.2026 13.05`).
+fn time_start(text: &str, format: &str, time_format: &str) -> Option<usize> {
+    let marker = time_marker(text, format, time_format);
+    let before_digits = |end: usize| {
+        text[..end]
+            .trim_end()
+            .trim_end_matches(|character: char| character.is_ascii_digit())
+            .len()
+    };
+    if let Some(colon) = marker.filter(|&marker| text[marker..].starts_with(':')) {
+        return Some(before_digits(colon));
+    }
+    let numbers: Vec<&str> = pieces(&text[..marker.unwrap_or(text.len())])
+        .into_iter()
+        .filter_map(|piece| match piece {
+            Piece::Number(digits) => Some(digits),
+            Piece::Word(_) => None,
+        })
+        .collect();
+    let extra = numbers.len().saturating_sub(numeric_tokens(format, false));
+    match extra.min(numeric_tokens(time_format, true)) {
+        0 => marker.map(before_digits),
+        take => Some(numbers[numbers.len() - take].as_ptr().addr() - text.as_ptr().addr()),
+    }
+}
+
+/// How many numbers `format` writes for the date, or for the time when `time`.
+fn numeric_tokens(format: &str, time: bool) -> usize {
+    tokens(format)
+        .into_iter()
+        .filter(|token| match token {
+            Token::Year | Token::Month { .. } | Token::Day { .. } => !time,
+            Token::Hour { .. } | Token::Minute { .. } | Token::Second { .. } => time,
+            _ => false,
+        })
+        .count()
 }
 
 /// Where the time starts: the first `:`, or the first literal word only `time_format` writes.
@@ -189,6 +227,23 @@ mod tests {
             None,
         );
         assert_eq!(read.map(|moment| moment.time()), at(13, 5, 0));
+    }
+
+    /// Todo 2303: a time format without a colon reads back by its count of numbers.
+    #[test]
+    fn a_dotted_time_reads_back() {
+        let names = &DateLocale::ENGLISH;
+        let read = |text: &str, time_format: &str| {
+            parse_date_time(text, "D.M.YYYY", time_format, names, None, None)
+                .map(|moment| (moment.date(), moment.time()))
+        };
+        let day = NaiveDate::from_ymd_opt(2026, 2, 1).expect("a real day");
+        let time = |hour, minute| Ok((day, at(hour, minute, 0).expect("a real time")));
+        assert_eq!(read("1.2.2026 13.05", "HH.mm"), time(13, 5));
+        assert_eq!(read("1.2.2026 13.05 Uhr", "H.mm [Uhr]"), time(13, 5));
+        assert_eq!(read("1.2.2026 13", "HH.mm"), time(13, 0));
+        assert_eq!(read("1.2.2026", "HH.mm"), time(0, 0));
+        assert_eq!(read("1.2.2026 PM 1.05", "A h.mm"), time(13, 5));
     }
 
     #[test]

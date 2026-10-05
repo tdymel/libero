@@ -146,31 +146,34 @@ impl View {
                 .flatten()
                 .any(|day| first_of_month(day) == month);
             let is_today = today.is_some_and(|today| first_of_month(today) == month);
+            // A `gridcell` around the button, as the day view: a button may not be a gridcell.
             rsx! {
-                button {
-                    r#type: "button",
+                div {
                     role: "gridcell",
                     "aria-selected": if picked { "true" } else { "false" },
-                    "data-slot": ChronoPickerPart::Cell.slot(),
-                    "data-date": "{month}",
-                    "data-selected": picked.then_some("true"),
-                    "data-today": is_today.then_some("true"),
-                    "aria-current": is_today.then_some("date"),
-                    "aria-label": format_date(month, (formats.date)(DateLevel::Month), names),
-                    disabled,
-                    tabindex: self.tabindex(month == cell_stop),
-                    onclick: move |_| {
-                        if lowest == DateLevel::Month {
-                            onpick.call(month);
-                        } else {
-                            paged.set(Some(month));
-                            level.set(DateLevel::Day);
-                            active.set(Some(month));
-                            // The 1st may be disabled; the tab stop is not.
-                            focus.to(Focus::Stop);
-                        }
-                    },
-                    {names.months_short[index as usize]}
+                    button {
+                        r#type: "button",
+                        "data-slot": ChronoPickerPart::Cell.slot(),
+                        "data-date": "{month}",
+                        "data-selected": picked.then_some("true"),
+                        "data-today": is_today.then_some("true"),
+                        "aria-current": is_today.then_some("date"),
+                        "aria-label": format_date(month, (formats.date)(DateLevel::Month), names),
+                        disabled,
+                        tabindex: self.tabindex(month == cell_stop),
+                        onclick: move |_| {
+                            if lowest == DateLevel::Month {
+                                onpick.call(month);
+                            } else {
+                                paged.set(Some(month));
+                                level.set(DateLevel::Day);
+                                active.set(Some(month));
+                                // The 1st may be disabled; the tab stop is not.
+                                focus.to(Focus::Stop);
+                            }
+                        },
+                        {names.months_short[index as usize]}
+                    }
                 }
             }
         };
@@ -184,7 +187,7 @@ impl View {
                     tabindex: self.tabindex(true),
                     onclick: move |_| {
                         level.set(DateLevel::Year);
-                        // The decade's title is disabled, so focus goes to the year.
+                        // The decade's title is plain text, so focus goes to the year.
                         focus.to(Focus::Stop);
                     },
                     "{year}"
@@ -239,40 +242,41 @@ impl View {
             let outside = !(0..10).contains(&offset);
             let is_today = today.is_some_and(|today| today.year() == shown_year);
             rsx! {
-                button {
-                    r#type: "button",
+                div {
                     role: "gridcell",
                     "aria-selected": if picked { "true" } else { "false" },
-                    "data-slot": ChronoPickerPart::Cell.slot(),
-                    "data-date": "{year_start}",
-                    "data-outside": outside.then_some("true"),
-                    "data-selected": picked.then_some("true"),
-                    "data-today": is_today.then_some("true"),
-                    "aria-current": is_today.then_some("date"),
-                    disabled,
-                    tabindex: self.tabindex(year_start == cell_stop),
-                    onclick: move |_| {
-                        if lowest == DateLevel::Year {
-                            onpick.call(year_start);
-                        } else {
-                            paged.set(Some(start));
-                            level.set(DateLevel::Month);
-                            active.set(Some(start));
-                            focus.to(Focus::Stop);
-                        }
-                    },
-                    "{shown_year}"
+                    button {
+                        r#type: "button",
+                        "data-slot": ChronoPickerPart::Cell.slot(),
+                        "data-date": "{year_start}",
+                        "data-outside": outside.then_some("true"),
+                        "data-selected": picked.then_some("true"),
+                        "data-today": is_today.then_some("true"),
+                        "aria-current": is_today.then_some("date"),
+                        disabled,
+                        tabindex: self.tabindex(year_start == cell_stop),
+                        onclick: move |_| {
+                            if lowest == DateLevel::Year {
+                                onpick.call(year_start);
+                            } else {
+                                paged.set(Some(start));
+                                level.set(DateLevel::Month);
+                                active.set(Some(start));
+                                focus.to(Focus::Stop);
+                            }
+                        },
+                        "{shown_year}"
+                    }
                 }
             }
         };
         rsx! {
             div { "data-slot": ChronoPickerPart::Header.slot(),
                 {self.nav(names.previous_decade, min.is_some_and(|min| decade <= min.year()), add_months(first, -120), false)}
-                button {
-                    r#type: "button",
+                // The top level: nothing to climb to, so plain text, not a dimmed button.
+                div {
                     "data-slot": ChronoPickerPart::Title.slot(),
                     "aria-live": "polite",
-                    disabled: true,
                     "{decade} – {decade + 9}"
                 }
                 {self.nav(names.next_decade, max.is_some_and(|max| decade + 9 >= max.year()), add_months(first, 120), true)}

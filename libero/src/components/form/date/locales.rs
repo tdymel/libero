@@ -102,6 +102,25 @@ fn a_moment_reads_back() {
     }
 }
 
+/// Todo 2303: time formats without a colon, as Danish and Finnish write them.
+#[test]
+fn a_moment_with_a_dotted_time_reads_back() {
+    let (locale, date) = (DateLocale::GERMAN, (Formats::GERMAN.date)(DateLevel::Day));
+    for time_format in ["HH.mm", "H.mm [Uhr]", "h.mm A", "HH.mm.ss"] {
+        for day in days().step_by(97) {
+            for time in minutes().step_by(97) {
+                let text = format!(
+                    "{} {}",
+                    format_date(day, date, &locale),
+                    format_time(time, time_format, &locale)
+                );
+                let read = parse_date_time(&text, date, time_format, &locale, None, None);
+                assert_eq!(read, Ok(NaiveDateTime::new(day, time)), "{text}");
+            }
+        }
+    }
+}
+
 /// The language names the month, the formats place it.
 #[test]
 fn the_language_and_the_formats_mix() {

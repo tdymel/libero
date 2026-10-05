@@ -282,7 +282,7 @@ pub fn ChronoFieldPage() -> Element {
                     Code { source: "min" }
                     ", 0 by default, to "
                     Code { source: "max" }
-                    ", 99 h 59 min 59 s by default. The hours column ends at "
+                    ", 99 h 59 min 59 s by default, and never past 999 h 59 min 59 s. The hours column ends at "
                     Code { source: "max" }
                     "."
                 }

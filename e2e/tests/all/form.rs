@@ -205,6 +205,107 @@ fn every_summary_line_focuses_something_in_its_field() {
     });
 }
 
+const DUE: &str = "input[data-e2e=due]";
+
+/// Tags the date field's text input as `DUE`.
+async fn tag_due(page: &Page) -> Result<()> {
+    page.evaluate(
+        "[...document.querySelectorAll('label')].find(l => l.textContent.trim() === 'Due') \
+         .control.setAttribute('data-e2e', 'due')",
+    )
+    .await?;
+    Ok(())
+}
+
+/// Todo 2305: Enter both commits the typed date and submits; the submit sees the date.
+#[test]
+fn enter_in_a_date_field_submits_the_committed_date() {
+    block_on(async {
+        let fixture = Fixture::open("/form/targets", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        tag_due(page).await.unwrap();
+        pointer::click(page, DUE).await.unwrap();
+        keyboard::type_text(page, "March 5, 2026").await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        focus::wait_for_focus(page, "[data-slot=summary]", "a blocked submit")
+            .await
+            .unwrap();
+        let texts: Vec<String> = page
+            .evaluate(
+                "[...document.querySelectorAll('[data-slot=summary] a')].map((a) => a.textContent)",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(texts.len(), 20, "{texts:?}");
+        assert!(
+            !texts.iter().any(|text| text.starts_with("Due")),
+            "{texts:?}"
+        );
+        fixture
+            .console
+            .assert_clean("Enter in a date field")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2304: a form reset drops a date field's refused text and its error.
+#[test]
+fn a_reset_drops_a_refused_date() {
+    block_on(async {
+        let fixture = Fixture::open("/form/targets", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        tag_due(page).await.unwrap();
+        pointer::click(page, DUE).await.unwrap();
+        keyboard::type_text(page, "nope").await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector({DUE:?}).getAttribute('aria-invalid') === 'true'"),
+            "the refused date",
+        )
+        .await
+        .unwrap();
+        page.evaluate("document.querySelector('button[type=reset]').click()")
+            .await
+            .unwrap();
+        let cleared = wait::for_js_true(
+            page,
+            &format!(
+                "(() => {{ const input = document.querySelector({DUE:?}); \
+                 const ids = (input.getAttribute('aria-describedby') || '').split(' '); \
+                 return input.value === '' \
+                   && !ids.some(id => document.getElementById(id)?.textContent.includes('Not a valid date')); }})()"
+            ),
+            // A native reset keeps the touched flag, so the field's own rule may show.
+            "the reset to clear the text and the refusal",
+        )
+        .await;
+        if let Err(error) = cleared {
+            let state: String = page
+                .evaluate(format!(
+                    "(() => {{ const input = document.querySelector({DUE:?}); \
+                     const ids = (input.getAttribute('aria-describedby') || '').split(' '); \
+                     return JSON.stringify([input.value, \
+                       ids.map(id => document.getElementById(id)?.textContent)]); }})()"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            panic!("{error}: [value, descriptions] {state}");
+        }
+        fixture.console.assert_clean("a reset date field").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 async fn submits(page: &Page, count: u32) -> Result<()> {
     wait::for_js_true(
         page,

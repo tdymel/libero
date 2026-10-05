@@ -1,0 +1,54 @@
+---
+source: e2e/src/suite.rs
+description: calendar-year at mobile (rest)
+expression: tree
+---
+button "Before"
+  StaticText "Before"
+button "Previous decade"
+generic [live=polite]
+  StaticText "2020 – 2029"
+button "Next decade"
+grid "2020 – 2029"
+  row "2019 2020 2021"
+    gridcell "2019" [selected=false]
+      button "2019"
+        StaticText "2019"
+    gridcell "2020" [selected=false]
+      button "2020"
+        StaticText "2020"
+    gridcell "2021" [selected=false]
+      button "2021"
+        StaticText "2021"
+  row "2022 2023 2024"
+    gridcell "2022" [selected=false]
+      button "2022"
+        StaticText "2022"
+    gridcell "2023" [selected=false]
+      button "2023"
+        StaticText "2023"
+    gridcell "2024" [selected=false]
+      button "2024"
+        StaticText "2024"
+  row "2025 2026 2027"
+    gridcell "2025" [selected=false]
+      button "2025"
+        StaticText "2025"
+    gridcell "2026" [selected]
+      button "2026" [current=date]
+        StaticText "2026"
+    gridcell "2027" [selected=false]
+      button "2027"
+        StaticText "2027"
+  row "2028 2029 2030"
+    gridcell "2028" [selected=false]
+      button "2028"
+        StaticText "2028"
+    gridcell "2029" [selected=false]
+      button "2029"
+        StaticText "2029"
+    gridcell "2030" [selected=false]
+      button "2030"
+        StaticText "2030"
+button "After"
+  StaticText "After"

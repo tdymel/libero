@@ -45,7 +45,7 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
                 .font_weight("600"),
         )
         .selector(
-            "& [data-slot='title']:disabled",
+            "& div[data-slot='title']",
             sx().cursor("default").hover(sx().background("transparent")),
         )
         .selector(

@@ -244,7 +244,7 @@ impl ClockView {
         let second_text = value.map_or("--", |value| TWO_DIGITS[value.second() as usize]);
         let seconds = with_seconds.then(|| {
             rsx! {
-                span { ":" }
+                span { "aria-hidden": "true", ":" }
                 button {
                     r#type: "button",
                     "aria-label": "{second_text} {names.seconds_label}",
@@ -335,7 +335,7 @@ impl ClockView {
                     onclick: move |_| hand.set(Hand::Hour),
                     "{hour_text}"
                 }
-                span { ":" }
+                span { "aria-hidden": "true", ":" }
                 button {
                     r#type: "button",
                     "aria-label": "{minute_text} {names.minutes_label}",

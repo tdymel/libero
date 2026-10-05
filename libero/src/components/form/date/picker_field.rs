@@ -22,13 +22,13 @@ use crate::{
         },
         form::{
             Caption, ChronoDropdownPart, FIELD_CONTROL_SX, FieldName, FieldPart, FieldStatus,
-            Validators, use_bound, use_field, use_field_frame,
+            FormScope, Validators, use_bound, use_field, use_field_frame,
         },
         layout::{paper_sx, use_box},
     },
     hooks::{
         POPOVER_AVAILABLE_HEIGHT, PopoverOptions, use_element, use_field_list_layer,
-        use_focus_within, use_localization, use_popover_on, use_theme,
+        use_focus_within, use_form_owner, use_localization, use_popover_on, use_theme,
     },
     localization::DateLocale,
     platform::{ElementApi, next_task, soft_keyboard_app},
@@ -313,6 +313,20 @@ pub(super) fn use_picker_field<V: FieldValue>(
     let mut returning = use_signal(|| false);
     // Arrow Down asked for focus in the picker, once the dropdown is drawn.
     let mut entering = use_signal(|| false);
+    let anchor = use_element();
+    // A form reset drops the typed text and its refusal; a raw `<form>` is heard off the DOM.
+    let scope = try_use_context::<FormScope>();
+    let owner = use_form_owner(anchor, scope.is_none());
+    let resets = scope.map_or(0, |form| form.resets()) + owner().unwrap_or(0);
+    use_effect(use_reactive!(|resets| {
+        let _ = resets;
+        if draft.peek().is_some() {
+            draft.set(None);
+        }
+        if rejected.peek().is_some() {
+            rejected.set(None);
+        }
+    }));
 
     let onchange = field.onchange;
     let setter = bound.setter();
@@ -387,7 +401,6 @@ pub(super) fn use_picker_field<V: FieldValue>(
         .prepare();
 
     // Hooks: all run before anything branches on `opened`.
-    let anchor = use_element();
     let showing = opened() && !disabled && !readonly;
     let popover = use_popover_on(
         anchor,

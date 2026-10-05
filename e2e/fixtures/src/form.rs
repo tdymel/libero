@@ -183,6 +183,8 @@ fn TargetsPage() -> Element {
                 TextField { label: "Street", value: "" }
             }
             Button { r#type: "submit", "Send" }
+            // A native reset: typed text a field keeps must go with it (2304).
+            Button { r#type: "reset", "Clear" }
         }
     }
 }

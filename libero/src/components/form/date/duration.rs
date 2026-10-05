@@ -27,7 +27,7 @@ use crate::{
 
 /// The top of the hours column without a `max`: 99 h 59 min 59 s.
 const DEFAULT_MAX: TimeDelta = TimeDelta::seconds(99 * 3600 + 59 * 60 + 59);
-/// The hours column stops here, whatever `max` says.
+/// The hours column stops here; `bounds` caps `max` to it.
 const MAX_HOURS: i64 = 999;
 
 /// `00` to `999`, so a pick allocates no label.
@@ -40,10 +40,11 @@ static NUMBERS: LazyLock<Vec<String>> = LazyLock::new(|| {
 /// The columns, by their `data-column`, in order.
 const COLUMNS: [&str; 3] = ["Hours", "Minutes", "Seconds"];
 
-/// `min` and `max` with their defaults: zero and 99 h 59 min 59 s.
+/// `min` and `max` with their defaults: zero and 99 h 59 min 59 s; neither past 999 h 59 min 59 s.
 pub(super) fn bounds(min: Option<TimeDelta>, max: Option<TimeDelta>) -> (TimeDelta, TimeDelta) {
-    let min = min.unwrap_or_default().max(TimeDelta::zero());
-    (min, max.unwrap_or(DEFAULT_MAX).max(min))
+    let top = of(MAX_HOURS, 59, 59);
+    let min = min.unwrap_or_default().clamp(TimeDelta::zero(), top);
+    (min, max.unwrap_or(DEFAULT_MAX).clamp(min, top))
 }
 
 /// Whole hours, minutes and seconds of a span that is not negative.
@@ -532,5 +533,22 @@ mod tests {
             bounds(Some(of(2, 0, 0)), Some(of(1, 0, 0))),
             (of(2, 0, 0), of(2, 0, 0))
         );
+        let top = of(999, 59, 59);
+        assert_eq!(bounds(None, Some(of(2000, 0, 0))).1, top);
+        assert_eq!(bounds(Some(of(1200, 0, 0)), None), (top, top));
+    }
+
+    /// Todo 2302: a value past 999 h renders at the cap instead of panicking.
+    #[test]
+    fn a_value_past_the_hours_column_renders() {
+        let html = dioxus_ssr::render_element(rsx! {
+            crate::LiberoProvider {
+                super::super::ChronoPicker::<TimeDelta> {
+                    value: of(1200, 0, 0),
+                    max: of(2000, 0, 0),
+                }
+            }
+        });
+        assert!(html.contains(r#"aria-valuetext="999 hours""#), "{html}");
     }
 }

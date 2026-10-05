@@ -15,6 +15,7 @@ parts_enum! {
         Listbox = "listbox" => "& [data-slot='listbox']",
         /// A `role="group"` of rows that share a label.
         Group = "group" => "& [data-slot='group']",
+        /// The label atop a `Group`, which names it.
         GroupLabel = "group-label" => "& [data-slot='group-label']",
         /// A [`ComboboxOption`](super::ComboboxOption) row.
         Option = "option" => "& [data-slot='option']",
