@@ -54,7 +54,7 @@ pub fn FocusTrapPage() -> Element {
                     "Release without reaching Before or After. Release or Escape switches "
                     "it off, and "
                     Code { source: "restore_focus" }
-                    " puts focus back on the switch."
+                    " puts focus back on the button or switch that turned it on."
                 }
             },
             Demo {
@@ -90,6 +90,8 @@ fn Preview(values: DemoValues) -> Element {
             gap: "sm",
             align: "flex-start",
             Button { variant: "text", "Before" }
+            // Stays mounted, so `restore_focus` has it to return to.
+            Button { variant: "outlined", onclick: move |_| trapped.set(true), "Trap focus" }
             if trapped() {
                 FocusTrap {
                     restore_focus: true,
@@ -107,8 +109,6 @@ fn Preview(values: DemoValues) -> Element {
                         Button { variant: "filled", onclick: move |_| trapped.set(false), "Release" }
                     }
                 }
-            } else {
-                Button { variant: "outlined", onclick: move |_| trapped.set(true), "Trap focus" }
             }
             Button { variant: "text", "After" }
         }

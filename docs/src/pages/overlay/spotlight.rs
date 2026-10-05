@@ -128,7 +128,7 @@ fn option_lines(values: &DemoValues) -> Vec<String> {
 }
 
 /// The code of the example opened last. The preview's buttons pick it.
-// snippet: mirrors SpotlightDemo except Callback already async await frame next search_on_server label none actions_code hint nlet setup
+// snippet: mirrors SpotlightDemo except Callback already async await frame next search_on_server label none actions_code hint setup
 fn wrap_example(values: &DemoValues, _: &str) -> String {
     let example = values.str("example");
     let (handle, actions, actions_code, label) = EXAMPLES
@@ -140,12 +140,11 @@ fn wrap_example(values: &DemoValues, _: &str) -> String {
     let mut options = vec![];
     if handle == "search" {
         setup.push_str(&(FILE.section("search") + "\n"));
-        options.push(
-            "actions: Some(Callback::new(move |query: String| match query.trim().is_empty() {\n    \
-             true => vec![],\n    \
-             false => results(),\n})),"
-                .into(),
-        );
+        let search_actions = FILE.section("search_actions");
+        options.push(format!(
+            "actions: Some(Callback::new({})),",
+            search_actions.trim_end_matches(',')
+        ));
         options.push("loading: loading(),".into());
         options.push(
             "// The input event, not a render: the next frame is already loading.\n\
@@ -166,8 +165,7 @@ fn wrap_example(values: &DemoValues, _: &str) -> String {
     }
     options.push(format!("aria_label: Some({label:?}.into()),"));
     if handle == "files" {
-        options.push(r#"placeholder: Some("Go to file...".into()),"#.into());
-        options.push(r#"nothing_found: Some(rsx! { "No file by that name." }),"#.into());
+        options.push(FILE.section("files_options"));
     }
     options.extend(option_lines(values));
     options.push("..Default::default()".into());
@@ -183,7 +181,7 @@ fn wrap_example(values: &DemoValues, _: &str) -> String {
     };
     let actions_code = FILE.section(actions_code);
     format!(
-        "{actions_code}\n\nlet last = use_signal(|| String::from(\"nothing yet\"));\n\
+        "{actions_code}\n\n{}\n\
          {setup}\
          let {handle} = use_spotlight(SpotlightOptions {{\n{}}});\n\n\
          rsx! {{\n    \
@@ -191,6 +189,7 @@ fn wrap_example(values: &DemoValues, _: &str) -> String {
          {hint}    \
              Text {{ size: \"sm\", role: \"status\", \"Last run: {{last()}}\" }}\n\
          }}",
+        FILE.section("last"),
         indent(&options.join("\n")),
     )
 }
@@ -217,7 +216,9 @@ fn SpotlightDemo(props: SpotlightDemoProps) -> Element {
         values,
     } = props;
     let example = values.str("example");
+    // demo-code: last start
     let last = use_signal(|| String::from("nothing yet"));
+    // demo-code: last end
     // Only the palette the code block shows is bound to the key.
     let options = |name: &str| SpotlightOptions {
         limit,
@@ -240,8 +241,10 @@ fn SpotlightDemo(props: SpotlightDemoProps) -> Element {
     let files_actions = use_callback(move |query: String| spotlight_filter(&query, &all_files));
     let files = use_spotlight(SpotlightOptions {
         actions: Some(files_actions),
+        // demo-code: files_options start
         placeholder: Some("Go to file...".into()),
         nothing_found: Some(rsx! { "No file by that name." }),
+        // demo-code: files_options end
         ..options("files")
     });
     let all_issues = use_hook(|| issues(last));
@@ -260,10 +263,14 @@ fn SpotlightDemo(props: SpotlightDemoProps) -> Element {
     // demo-code: search end
     let mut pending = use_signal(|| None::<Box<dyn TimerSubscription>>);
     use_drop(move || pending.set(None));
-    let search_actions = use_callback(move |query: String| match query.trim().is_empty() {
-        true => vec![],
-        false => results(),
-    });
+    let search_actions = use_callback(
+        // demo-code: search_actions start
+        move |query: String| match query.trim().is_empty() {
+            true => vec![],
+            false => results(),
+        },
+        // demo-code: search_actions end
+    );
     let onquery = use_callback(move |query: String| {
         loading.set(true);
         let all = search_all.clone();

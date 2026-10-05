@@ -38,30 +38,17 @@ struct Signup {
 
 #[component]
 fn SignupForm() -> Element {
-    let signup = use_store(Signup::default);
-    let mut sent = use_signal(|| false);__HANDLE__
+__STATE____HANDLE__
 
     rsx! {
         Form {__FORM__
             value: signup,
-            // Only the whole signup sees the email and the password together.
-            validate: (|s: &Signup| s.email.is_empty() || !s.password.value.contains(&s.email))
-                .warn("Your password contains your email address.")
-                .on([Signup::FIELDS.password().value()]),__SUMMARY__
+__RULE____SUMMARY__
             onsubmit: move |_| sent.set(true),
-            // A specialized field and a composed part, built in Getting started.
-            EmailField { label: "Email", name: Signup::FIELDS.email(), validate: not_empty.error("Enter your email.") }
-            NewPasswordFieldset { path: Signup::FIELDS.password() }__COMPANY__
-            Checkbox {
-                label: "I accept the terms",
-                name: Signup::FIELDS.terms(),
-                validate: not_empty.error("Accept the terms to continue."),
-            }
+__FIELDS____COMPANY__
+__TERMS__
 __BUTTONS__
-            // Mounted before the submit, so a screen reader hears the text it gains.
-            Text { role: "status",
-                if sent() { "Account created." }
-            }
+__STATUS__
         }
     }
 }"#;
@@ -91,6 +78,11 @@ fn form_code(values: &DemoValues, _: &str) -> String {
         false => String::new(),
     };
     let code = FORM_CODE
+        .replace("__STATE__", indent(&FILE.section("state")).trim_end())
+        .replace("__RULE__", &nest("rule"))
+        .replace("__FIELDS__", &nest("fields"))
+        .replace("__TERMS__", &nest("terms"))
+        .replace("__STATUS__", &nest("status"))
         .replace(
             "__SUMMARY__",
             match values.str("summary_title").as_str() {
@@ -243,8 +235,10 @@ pub fn FormPage() -> Element {
 
 #[component]
 fn SignupForm(summary_title: bool, handle: bool, company: bool) -> Element {
+    // demo-code: state start
     let signup = use_store(Signup::default);
     let mut sent = use_signal(|| false);
+    // demo-code: state end
     // Always made, so the hook order holds; the form only gets it while the
     // switch is on.
     let form = use_form();
@@ -254,13 +248,19 @@ fn SignupForm(summary_title: bool, handle: bool, company: bool) -> Element {
             sx: libero::sx::sx().width("100%").max_width("320px"),
             form: handle.then_some(form),
             value: signup,
+            // demo-code: rule start
+            // Only the whole signup sees the email and the password together.
             validate: (|s: &Signup| s.email.is_empty() || !s.password.value.contains(&s.email))
                 .warn("Your password contains your email address.")
                 .on([Signup::FIELDS.password().value()]),
+            // demo-code: rule end
             summary_title: summary_title.then(|| "Please fix these first:".to_string()),
             onsubmit: move |_| sent.set(true),
+            // demo-code: fields start
+            // A specialized field and a composed part, built in Getting started.
             EmailField { label: "Email", name: Signup::FIELDS.email(), validate: not_empty.error("Enter your email.") }
             NewPasswordFieldset { path: Signup::FIELDS.password() }
+            // demo-code: fields end
             if company {
                 // demo-code: company start
                 Checkbox { label: "Sign up as a company", name: Signup::FIELDS.company() }
@@ -274,11 +274,13 @@ fn SignupForm(summary_title: bool, handle: bool, company: bool) -> Element {
                 }
                 // demo-code: company end
             }
+            // demo-code: terms start
             Checkbox {
                 label: "I accept the terms",
                 name: Signup::FIELDS.terms(),
                 validate: not_empty.error("Accept the terms to continue."),
             }
+            // demo-code: terms end
             if handle {
                 // demo-code: handle_buttons start
                 Text { role: "status", if form.is_valid() { "Ready to send." } else { "Not ready yet." } }
@@ -293,9 +295,12 @@ fn SignupForm(summary_title: bool, handle: bool, company: bool) -> Element {
                 Button { r#type: "submit", "Create account" }
                 // demo-code: submit end
             }
+            // demo-code: status start
+            // Mounted before the submit, so a screen reader hears the text it gains.
             Text { role: "status",
                 if sent() { "Account created." }
             }
+            // demo-code: status end
         }
     }
 }

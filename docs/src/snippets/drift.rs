@@ -286,24 +286,17 @@ fn drifted(body: &str, live: &str) -> Vec<String> {
     missing
 }
 
-/// Every tagged item other than a `const NAME: &str`, one `Snippet` per string literal in it:
-/// an array of props (Carousel's `FIXED`) or a `fn code` that returns the printed text.
+/// Every tagged `fn` that builds the printed text (spotlight's `wrap_example`), one `Snippet`
+/// per string literal in it.
 fn printed_items(source: &str) -> Vec<Snippet> {
     let lines: Vec<&str> = source.lines().collect();
     let mut found = Vec::new();
     for (index, line) in lines.iter().enumerate() {
-        let line = line
-            .trim_start_matches("pub(super) ")
-            .trim_start_matches("pub ");
-        let Some(rest) = ["const ", "static ", "fn "]
-            .iter()
-            .find_map(|keyword| line.strip_prefix(keyword))
-        else {
+        let Some(rest) = line.strip_prefix("fn ") else {
             continue;
         };
         let markers = markers(&lines, index);
-        // `snippets` reads the `&str` consts, and only tagged items matter here.
-        if rest.contains(": &str =") || !markers.iter().any(|m| m.starts_with("mirrors ")) {
+        if !markers.iter().any(|m| m.starts_with("mirrors ")) {
             continue;
         }
         let end = rest
@@ -341,9 +334,9 @@ fn printed_items(source: &str) -> Vec<Snippet> {
     found
 }
 
-/// Todo 1858: a printed `const` tagged `// snippet: mirrors <live item>, ..` names nothing
-/// the live demo does not, so the two cannot drift apart. The live items are looked up in
-/// the page and in its `<page>/demo.rs`.
+/// Todo 1858: a printed template tagged `// snippet: mirrors <live item>, ..` names nothing
+/// the page's live items lack. Opt-in, only for prints built from the controls (form's
+/// `FORM_CODE`, spotlight's `wrap_example`); every other demo prints its live code.
 #[test]
 fn printed_snippets_mirror_their_live_code() {
     let pages = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/pages");
@@ -353,8 +346,6 @@ fn printed_snippets_mirror_their_live_code() {
     let (mut problems, mut tagged) = (Vec::new(), 0);
     for file in &files {
         let source = std::fs::read_to_string(file).unwrap();
-        let demo =
-            std::fs::read_to_string(file.with_extension("").join("demo.rs")).unwrap_or_default();
         let path = file.strip_prefix(&pages).unwrap().display();
         for snippet in snippets(&source).into_iter().chain(printed_items(&source)) {
             for marker in snippet
@@ -363,11 +354,11 @@ fn printed_snippets_mirror_their_live_code() {
                 .filter_map(|m| m.strip_prefix("mirrors "))
             {
                 tagged += 1;
-                // `except` lists what only the print has: an asset path the reader owns.
+                // `except` lists what only the print has, such as spotlight's `search_on_server`.
                 let (names, except) = marker.split_once(" except ").unwrap_or((marker, ""));
                 let mut live = String::new();
                 for name in names.split(',').map(str::trim) {
-                    let item = live_items(&source, name) + &live_items(&demo, name);
+                    let item = live_items(&source, name);
                     if item.is_empty() {
                         problems.push(format!("{path} {}: no live item `{name}`", snippet.name));
                     }
