@@ -117,7 +117,12 @@ fn warn_once(mut warned: CopyValue<u8>, error: StorageError) {
 }
 
 /// A value kept under a key, from [`use_local_storage`] or [`use_session_storage`].
-/// Every handle on the same key in a document shows the same value.
+/// Every handle with the same `T` on the same key in a document shows the same value.
+///
+/// A key's text is read once per document and kept until the document ends, so
+/// avoid keys without bound (one per row). A write to the store from outside the
+/// document (another window, page script, a second root) shows in the next
+/// document; on the web another tab's write arrives at once.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -139,6 +144,7 @@ pub struct Stored<T: 'static> {
     warned: CopyValue<u8>,
     parsed: Memo<Option<T>>,
     value: Memo<T>,
+    fallback: CopyValue<T>,
 }
 
 impl<T: 'static> Clone for Stored<T> {
@@ -162,8 +168,13 @@ impl<T: Serialize + DeserializeOwned + Clone + PartialEq + 'static> Stored<T> {
 
     /// Stores `value`. Where the store refuses, it still holds for the session
     /// and [`error`](Self::error) says why. Each call writes: debounce a fast source.
+    /// A value that does not read back (a NaN float) is not kept and reports `Invalid`.
     pub fn set(&mut self, value: T) {
-        let Ok(text) = serde_json::to_string(&value) else {
+        // serde_json writes NaN and infinite floats as `null`.
+        let text = serde_json::to_string(&value)
+            .ok()
+            .filter(|text| !text.contains("null") || serde_json::from_str::<T>(text).is_ok());
+        let Some(text) = text else {
             self.settle(Some(Err(StorageError::Invalid)));
             return;
         };
@@ -176,8 +187,12 @@ impl<T: Serialize + DeserializeOwned + Clone + PartialEq + 'static> Stored<T> {
     }
 
     /// Changes the current value in place, then stores it as [`set`](Self::set) does.
+    /// While the stored text is [`Invalid`](StorageError::Invalid) it starts from the
+    /// default and overwrites that text.
     pub fn update(&mut self, change: impl FnOnce(&mut T)) {
-        let mut value = self.value.peek().clone();
+        // From the raw text: a memo stays stale until read, so a second update would lose the first.
+        let parsed = parse(self.entry.raw.peek().as_deref());
+        let mut value = parsed.unwrap_or_else(|| self.fallback.cloned());
         change(&mut value);
         self.set(value);
     }
@@ -220,7 +235,8 @@ impl<T: Serialize + DeserializeOwned + Clone + PartialEq + 'static> Stored<T> {
 }
 
 /// A value kept across reloads and app runs: `localStorage` on the web, a file
-/// per key elsewhere (see [`set_storage_dir`](crate::platform::set_storage_dir)).
+/// per key where libero keeps a directory (its `native` or `desktop` feature,
+/// Android, or [`set_storage_dir`](crate::platform::set_storage_dir)), memory otherwise.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -238,6 +254,8 @@ impl<T: Serialize + DeserializeOwned + Clone + PartialEq + 'static> Stored<T> {
 /// `default` where the client then shows the stored value. `key` is read at
 /// mount: give the component a `key` to switch it. Another tab's write arrives
 /// on the web; other windows and processes off the web read it at their mount.
+/// Kept as plain text that anyone with the browser profile or the file can read:
+/// not for secrets.
 pub fn use_local_storage<T: Serialize + DeserializeOwned + Clone + PartialEq + 'static>(
     key: &str,
     default: impl FnOnce() -> T,
@@ -313,13 +331,19 @@ fn use_storage<T: Serialize + DeserializeOwned + Clone + PartialEq + 'static>(
         }
         parsed.and_then(Result::ok)
     });
-    let value = use_memo(move || parsed().unwrap_or_else(|| fallback.cloned()));
+    // Straight from `raw`, not `parsed`: a read right after a write then recomputes it.
+    let value = use_memo(move || parse(raw.read().as_deref()).unwrap_or_else(|| fallback.cloned()));
     Stored {
         entry,
         warned,
         parsed,
         value,
+        fallback,
     }
+}
+
+fn parse<T: DeserializeOwned>(raw: Option<&str>) -> Option<T> {
+    serde_json::from_str(raw?).ok()
 }
 
 #[cfg(all(test, not(target_arch = "wasm32")))]

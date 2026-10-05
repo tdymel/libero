@@ -9,8 +9,8 @@ Description: A value kept under a key across reloads and app runs, or for the ta
 `use_local_storage(key, default) -> Stored<T>` keeps a value across reloads
 and app runs, `use_session_storage(key, default)` for the tab or the window's
 run. Read `get()`, `is_stored()` and `error()`; all are reactive. `set(value)`,
-`update(change)` and `remove()` write through; every handle on a key shows the
-same value.
+`update(change)` and `remove()` write through; every handle of the same type on
+a key shows the same value.
 
 Web: `localStorage` and `sessionStorage`; another tab's write arrives live.
 Blitz (the `native` feature), a desktop app with the `desktop` feature and
@@ -96,8 +96,8 @@ pub fn libero::platform::set_storage_dir(dir: impl Into<PathBuf>)
 |---|---|
 | `get()` | The stored value, or the default where none or no valid one is stored. |
 | `value()` | The same as a `ReadSignal<T>`, to hand on, as to `use_debounced_value`. |
-| `set(value)` | Stores `value`. Where the store refuses, it still holds for the session and `error()` says why. |
-| `update(change)` | Changes the current value in place, then stores it. |
+| `set(value)` | Stores `value`. Where the store refuses, it still holds for the session and `error()` says why. A value that does not read back (a NaN float) is not kept and reports `Invalid`. |
+| `update(change)` | Changes the current value in place, then stores it. While the stored text is `Invalid` it starts from the default and overwrites that text. |
 | `remove()` | Drops the stored value: `get()` falls back to the default. The default itself is never written. |
 | `is_stored()` | Whether anything is stored under the key, valid or not. |
 | `error()` | Why the last read or write failed, or `Invalid` while the stored text does not parse; the next good write clears it. |
@@ -106,10 +106,13 @@ pub fn libero::platform::set_storage_dir(dir: impl Into<PathBuf>)
 |---|---|
 | `Unavailable` | No local store: site data blocked, no data directory, a build with only memory. Session storage off the web is memory by design and reports nothing. |
 | `Full` | The browser's quota or the disk is full. |
-| `Invalid` | The stored text does not parse as `T`; the text stays until the next `set`. |
+| `Invalid` | The stored text does not parse as `T`; the text stays until the next `set`. Or `set` got a value that does not read back. |
 
 `Stored<T>` is `Copy`. The key is read at mount: give the component a `key` to
-switch it. A failure logs one warning per kind and document.
+switch it. A failure logs one warning per kind and document. A key's text is
+read once per document and kept until it ends, so avoid keys without bound; a
+write from outside the document (another window, page script) shows in the next
+one. Values are plain text: not for secrets.
 
 | Platform | Local | Session |
 |---|---|---|

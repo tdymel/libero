@@ -17,7 +17,8 @@ pub enum StorageError {
     Unavailable,
     /// The store is full: the browser's quota, or a full disk.
     Full,
-    /// The stored text does not parse as the value's type, or the value does not serialise.
+    /// The stored text does not parse as the value's type, or the value does not
+    /// serialise to text that reads back (a NaN float).
     Invalid,
 }
 
@@ -131,21 +132,26 @@ mod web {
 #[cfg(not(target_arch = "wasm32"))]
 mod files {
     use std::fmt::Write as _;
-    use std::io;
+    use std::io::{self, Write as _};
     use std::path::{Path, PathBuf};
-    use std::sync::atomic::{AtomicU64, Ordering};
+    use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
     use std::sync::{Mutex, OnceLock, PoisonError};
+    use std::time::{Duration, SystemTime};
 
     use super::{StorageApi, StorageError};
 
     /// Set by [`set_storage_dir`](super::set_storage_dir); wins over the app's own directory.
     pub(super) static DIR: Mutex<Option<PathBuf>> = Mutex::new(None);
 
+    /// Whether a store directory was looked up, so a later `set_storage_dir` comes too late.
+    pub(super) static LOOKED_UP: AtomicBool = AtomicBool::new(false);
+
     pub(super) struct FileStorage;
 
     pub(super) static FILES: FileStorage = FileStorage;
 
     pub(super) fn local_dir() -> Option<PathBuf> {
+        LOOKED_UP.store(true, Ordering::Relaxed);
         let set = DIR.lock().unwrap_or_else(PoisonError::into_inner).clone();
         set.or_else(|| {
             static OWN: OnceLock<Option<PathBuf>> = OnceLock::new();
@@ -163,14 +169,29 @@ mod files {
         any(feature = "native", feature = "desktop")
     ))]
     fn app_storage_dir() -> Option<PathBuf> {
-        let exe = std::env::current_exe().ok()?;
-        let app = exe.file_stem()?;
+        let app = app_name(&std::env::current_exe().ok()?)?;
         Some(
             dirs::data_local_dir()?
                 .join(app)
                 .join("storage")
                 .join("local"),
         )
+    }
+
+    /// The executable's stem; Linux reports a binary replaced while running as `app (deleted)`.
+    #[cfg(any(
+        test,
+        all(
+            not(target_os = "android"),
+            any(feature = "native", feature = "desktop")
+        )
+    ))]
+    pub(super) fn app_name(exe: &Path) -> Option<std::ffi::OsString> {
+        let stem = exe.file_stem()?;
+        let live = stem
+            .to_str()
+            .and_then(|stem| stem.strip_suffix(" (deleted)"));
+        Some(live.map_or_else(|| stem.to_owned(), Into::into))
     }
 
     /// A server build shares this cfg: one file would be shared by every user's document.
@@ -207,22 +228,65 @@ mod files {
         }
     }
 
-    /// Through a temporary file and a rename, so a crash never leaves half a value.
+    /// Through a synced temporary file and a rename, so neither a crash nor a power
+    /// cut leaves half a value.
     pub(super) fn write(dir: &Path, key: &str, value: &str) -> Result<(), StorageError> {
         static NEXT: AtomicU64 = AtomicU64::new(0);
-        let name = file_name(key);
         let temp = dir.join(format!(
-            "{name}.{}-{}.tmp",
+            "~{}-{}.tmp",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
-        let written = std::fs::create_dir_all(dir)
-            .and_then(|()| std::fs::write(&temp, value))
-            .and_then(|()| std::fs::rename(&temp, dir.join(name)));
+        let written = create_dir(dir)
+            .and_then(|()| {
+                sweep(dir);
+                let mut file = create_file(&temp)?;
+                file.write_all(value.as_bytes())?;
+                file.sync_all()
+            })
+            .and_then(|()| std::fs::rename(&temp, dir.join(file_name(key))));
         written.map_err(|error| {
             let _ = std::fs::remove_file(&temp);
             refusal(&error)
         })
+    }
+
+    /// Private to the user on Unix: values may name the user or hold drafts.
+    fn create_dir(dir: &Path) -> io::Result<()> {
+        let mut builder = std::fs::DirBuilder::new();
+        builder.recursive(true);
+        #[cfg(unix)]
+        std::os::unix::fs::DirBuilderExt::mode(&mut builder, 0o700);
+        builder.create(dir)
+    }
+
+    fn create_file(path: &Path) -> io::Result<std::fs::File> {
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create(true).truncate(true);
+        #[cfg(unix)]
+        std::os::unix::fs::OpenOptionsExt::mode(&mut options, 0o600);
+        options.open(path)
+    }
+
+    /// Once per directory and run: drops temporary files a crash left over a day ago.
+    fn sweep(dir: &Path) {
+        static SWEPT: Mutex<Vec<PathBuf>> = Mutex::new(Vec::new());
+        let mut swept = SWEPT.lock().unwrap_or_else(PoisonError::into_inner);
+        if swept.iter().any(|done| done == dir) {
+            return;
+        }
+        swept.push(dir.to_path_buf());
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            return;
+        };
+        let day_ago = SystemTime::now() - Duration::from_secs(24 * 60 * 60);
+        for entry in entries.flatten() {
+            let stale = (entry.metadata().and_then(|meta| meta.modified()))
+                .is_ok_and(|modified| modified < day_ago);
+            if stale && entry.file_name().to_string_lossy().ends_with(".tmp") {
+                let _ = std::fs::remove_file(entry.path());
+            }
+        }
     }
 
     pub(super) fn delete(dir: &Path, key: &str) -> Result<(), StorageError> {
@@ -245,6 +309,9 @@ mod files {
         "com9", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
     ];
 
+    /// Longest name file systems take (255 bytes), minus `.json`.
+    const LONGEST: usize = 250;
+
     /// `key` as a file name on any file system: `[a-z0-9_-]` stay, every other byte
     /// becomes `%XX`, so `/`, `..` and case-folding cannot make two keys meet.
     pub(super) fn file_name(key: &str) -> String {
@@ -257,7 +324,19 @@ mod files {
                 let _ = write!(name, "%{byte:02X}");
             }
         }
+        // Names that fit stay as before; a longer one keeps a prefix and a hash (`~` is never plain).
+        if name.len() > LONGEST {
+            name.truncate(200);
+            let _ = write!(name, "~{:016x}", fnv1a(key.as_bytes()));
+        }
         name + ".json"
+    }
+
+    /// FNV-1a: stable across runs and Rust versions, unlike the std hasher.
+    fn fnv1a(bytes: &[u8]) -> u64 {
+        (bytes.iter()).fold(0xcbf2_9ce4_8422_2325, |hash, byte| {
+            (hash ^ u64::from(*byte)).wrapping_mul(0x0100_0000_01b3)
+        })
     }
 }
 
@@ -389,8 +468,9 @@ pub(crate) fn storage(area: StorageArea) -> Option<&'static dyn StorageApi> {
 ///
 /// Builds with libero's `native` or `desktop` feature, and Android, keep a
 /// directory of their own; any other build keeps local storage in memory unless
-/// this names one, because a server build shares that cfg. Call it at start,
-/// before the first value is read.
+/// this names one, because a server build shares that cfg. On a server every
+/// user's document then shares this directory. Call it at start, before the first
+/// value is read; a relative `dir` resolves against the working directory then.
 ///
 /// ```rust
 /// // In `main`, before launching the app.
@@ -399,12 +479,23 @@ pub(crate) fn storage(area: StorageArea) -> Option<&'static dyn StorageApi> {
 pub fn set_storage_dir(dir: impl Into<PathBuf>) {
     #[cfg(not(target_arch = "wasm32"))]
     {
+        if files::LOOKED_UP.load(std::sync::atomic::Ordering::Relaxed) {
+            crate::utils::warn(
+                "storage: set_storage_dir after the first read, values read before stay",
+            );
+        }
         *files::DIR
             .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(dir.into());
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(absolute(dir.into()));
     }
     #[cfg(target_arch = "wasm32")]
     let _ = dir;
+}
+
+/// `dir` against the working directory now: launchers and `set_current_dir` change it later.
+#[cfg(not(target_arch = "wasm32"))]
+fn absolute(dir: PathBuf) -> PathBuf {
+    std::path::absolute(&dir).unwrap_or(dir)
 }
 
 /// Libero's own setting under `key` in local storage, as raw text. Android also
@@ -422,13 +513,21 @@ pub(crate) fn keep(key: &str, value: Option<&str>) {
     let Some(store) = storage(StorageArea::Local) else {
         return;
     };
-    let _ = match value {
+    let done = match value {
         Some(value) => store.set(key, value),
         None => store.remove(key),
     };
-    // Else the earlier file would answer again once this one is dropped.
     #[cfg(target_os = "android")]
-    if let Some(dir) = app_dir() {
+    retire(app_dir(), key, done);
+    #[cfg(not(target_os = "android"))]
+    let _ = done;
+}
+
+/// Drops the file an earlier libero kept in `dir`, else it would answer again once
+/// the store's is dropped; a failed write keeps it.
+#[cfg(any(test, target_os = "android"))]
+fn retire(dir: Option<PathBuf>, key: &str, done: Result<(), StorageError>) {
+    if let (Ok(()), Some(dir)) = (done, dir) {
         let _ = std::fs::remove_file(dir.join(key));
     }
 }

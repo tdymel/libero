@@ -108,6 +108,53 @@ fn a_new_document_reads_what_was_set() {
     );
 }
 
+/// No render between the writes: each reads what the one before wrote.
+#[test]
+fn writes_in_one_handler_build_on_each_other() {
+    let (local, session) = stores();
+    let _fake = fake(local, session);
+    let dom = mounted();
+    dom.in_runtime(|| {
+        handle(0).update(|count| *count += 1);
+        handle(1).update(|count| *count += 1);
+        assert_eq!(handle(0).get(), 2);
+        handle(0).set(5);
+        assert_eq!((handle(0).get(), handle(1).get()), (5, 5));
+        handle(1).update(|count| *count += 1);
+    });
+    assert_eq!(stored_text(local), Some("6".into()));
+}
+
+thread_local! {
+    static LEVEL: std::cell::Cell<Option<Stored<f64>>> = const { std::cell::Cell::new(None) };
+}
+
+fn level_app() -> Element {
+    LEVEL.set(Some(use_local_storage("level", || 0.5_f64)));
+    rsx! {}
+}
+
+#[test]
+fn a_value_that_does_not_read_back_is_not_kept() {
+    let (local, session) = stores();
+    let _fake = fake(local, session);
+    let mut dom = VirtualDom::new(level_app);
+    dom.rebuild_in_place();
+    dom.in_runtime(|| {
+        let mut level = LEVEL.get().expect("rendered");
+        level.set(0.25);
+        level.set(f64::NAN);
+        assert_eq!(
+            (level.get(), level.error()),
+            (0.25, Some(StorageError::Invalid))
+        );
+    });
+    assert_eq!(
+        local.values.borrow().get("level").cloned(),
+        Some("0.25".into())
+    );
+}
+
 #[test]
 fn remove_falls_back_to_the_default() {
     let (local, session) = stores();
@@ -141,6 +188,9 @@ fn text_that_does_not_parse_shows_the_default_and_stays_until_a_set() {
         assert_eq!(handle(0).error(), Some(StorageError::Invalid));
     });
     assert_eq!(stored_text(local), Some("\"many\"".into()));
+    // `update` starts from the default and overwrites the text, as documented.
+    dom.in_runtime(|| handle(1).update(|count| *count += 1));
+    assert_eq!(stored_text(local), Some("1".into()));
     dom.in_runtime(|| handle(0).set(2));
     pump(&mut dom);
     dom.in_runtime(|| assert_eq!((handle(0).get(), handle(0).error()), (2, None)));

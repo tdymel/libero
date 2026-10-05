@@ -44,7 +44,7 @@ pub fn UseLocalStoragePage() -> Element {
                     Code { source: "update(change)" }
                     " and "
                     Code { source: "remove()" }
-                    " write through; every handle on a key shows the same value."
+                    " write through; every handle of the same type on a key shows the same value."
                 }
                 Text {
                     "Web: "
