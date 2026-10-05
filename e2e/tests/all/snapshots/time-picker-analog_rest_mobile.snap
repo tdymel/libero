@@ -5,10 +5,8 @@ expression: tree
 ---
 button "10 Hours" [pressed]
   StaticText "10"
-StaticText ":"
 button "00 Minutes" [pressed=false]
   StaticText "00"
-StaticText ":"
 button "00 Seconds" [pressed=false]
   StaticText "00"
 slider "Hours" = 10 [orientation=horizontal] [valuemax=23] [valuemin=0]
