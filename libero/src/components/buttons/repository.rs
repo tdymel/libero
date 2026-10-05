@@ -10,7 +10,7 @@ use crate::{
         data_display::Pictogram,
         layout::use_box,
     },
-    hooks::{use_cache, use_formats, use_localization, use_theme},
+    hooks::{SessionText, session_text, use_cache, use_formats, use_localization, use_theme},
     platform,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ACTION_ICON_SIZE, Color},
@@ -68,8 +68,8 @@ fn stars_key(api: &str) -> String {
     format!("libero-repo-stars:{api}")
 }
 
-fn cached_stars(api: &str) -> Option<u64> {
-    platform::session_get(&stars_key(api))?.parse().ok()
+fn parsed_count(stars: SessionText) -> Option<u64> {
+    stars.get()?.parse().ok()
 }
 
 fn parse_stars(body: &str, field: &str) -> Option<u64> {
@@ -164,14 +164,12 @@ pub fn Repository(props: RepositoryProps) -> Element {
     let host = props.host;
     let api = host.api_url(&props.repo);
 
-    // Bumped when a count lands, so the render reads the cache again.
-    let mut landed = use_signal(|| 0u32);
-    use_cache(api.clone(), |api| {
-        if cached_stars(api).is_some() {
-            return;
+    let stars = use_cache(api.clone(), |api| {
+        let stars = session_text(&stars_key(api));
+        if parsed_count(stars).is_some() {
+            return stars;
         }
         let fetched = platform::fetch_text(api);
-        let api = api.clone();
         spawn(async move {
             let Some(count) = fetched
                 .await
@@ -179,12 +177,11 @@ pub fn Repository(props: RepositoryProps) -> Element {
             else {
                 return;
             };
-            platform::session_set(&stars_key(&api), &count.to_string());
-            landed += 1;
+            stars.set(count.to_string());
         });
+        stars
     });
-    landed.read();
-    let count = cached_stars(&api).filter(|&count| count > 0);
+    let count = parsed_count(stars).filter(|&count| count > 0);
 
     let new_tab = localization.anchor.new_tab;
     // The repo in the name, else two buttons on a page read alike.

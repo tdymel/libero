@@ -39,7 +39,6 @@ mod resize;
 mod save_file;
 mod scroll;
 mod select;
-mod session;
 mod storage;
 mod style_rules;
 mod system_notification;
@@ -143,7 +142,6 @@ pub(crate) use scroll::{
 };
 pub use scroll::{ScrollApi, ScrollSubscription, scroll};
 pub(crate) use select::opens_select_picker;
-pub(crate) use session::{session_get, session_set};
 #[cfg(test)]
 pub(crate) use storage::{MemoryStorage, StorageApi, fake_storage};
 pub(crate) use storage::{StorageArea, StorageChange, StorageSubscription, storage};

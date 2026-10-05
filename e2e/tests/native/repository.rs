@@ -31,7 +31,7 @@ fn provide(body: Option<&'static str>) {
     use_context_provider(|| Arc::new(StubNet(body)) as Arc<dyn NetProvider>);
 }
 
-// One repository per app: the session cache is per thread and per repository.
+// One repository per app: the session cache is per document and per repository.
 fn failing() -> Element {
     provide(None);
     rsx! { Repository { id: "repo", repo: "native/failing" } }
@@ -86,10 +86,24 @@ fn a_count_joins_the_icon() {
     );
 }
 
+fn remounted() -> Element {
+    provide(Some(r#"{"stargazers_count": 1234}"#));
+    let mut shown = use_signal(|| true);
+    rsx! {
+        button { id: "toggle", onclick: move |_| shown.toggle(), "Toggle" }
+        if shown() {
+            Repository { id: "repo", repo: "native/remounted" }
+        }
+    }
+}
+
+/// Off the web the session lives in the document (2229): a remount there reads it.
 #[test]
 fn a_remount_reads_the_session_not_the_network() {
-    drop(landed(counted));
-    let page = landed(counted);
+    let mut page = landed(remounted);
+    page.click("#toggle");
+    assert!(!page.exists(LINK));
+    page.click("#toggle");
     assert_eq!(asked().len(), 1, "fetched again: {:?}", asked());
     assert_eq!(page.text(LINK).trim(), "1.2k");
 }

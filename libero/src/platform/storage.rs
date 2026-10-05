@@ -407,29 +407,30 @@ pub fn set_storage_dir(dir: impl Into<PathBuf>) {
     let _ = dir;
 }
 
-/// Writes `text` to `path`, making its directory first.
-#[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
-pub(crate) fn write_app_file(path: &std::path::Path, text: &str) -> std::io::Result<()> {
-    if let Some(dir) = path.parent() {
-        std::fs::create_dir_all(dir)?;
+/// Libero's own setting under `key` in local storage, as raw text. Android also
+/// reads the file an earlier libero kept straight in the app's files directory.
+pub(crate) fn kept(key: &str) -> Option<String> {
+    let stored = storage(StorageArea::Local)?.get(key).ok().flatten();
+    #[cfg(target_os = "android")]
+    let stored = stored.or_else(|| std::fs::read_to_string(app_dir()?.join(key)).ok());
+    stored
+}
+
+/// Keeps libero's own setting as raw text, `None` drops it. Where the store refuses,
+/// the caller's state lasts the session.
+pub(crate) fn keep(key: &str, value: Option<&str>) {
+    let Some(store) = storage(StorageArea::Local) else {
+        return;
+    };
+    let _ = match value {
+        Some(value) => store.set(key, value),
+        None => store.remove(key),
+    };
+    // Else the earlier file would answer again once this one is dropped.
+    #[cfg(target_os = "android")]
+    if let Some(dir) = app_dir() {
+        let _ = std::fs::remove_file(dir.join(key));
     }
-    std::fs::write(path, text)
-}
-
-/// Desktop names no app directory yet, so an override is not kept.
-#[cfg(all(
-    not(target_arch = "wasm32"),
-    not(feature = "native"),
-    not(target_os = "android")
-))]
-pub(crate) fn app_file(_name: &str) -> Option<PathBuf> {
-    None
-}
-
-/// `name` in the app's own files directory, `None` where it cannot be named.
-#[cfg(all(target_os = "android", not(feature = "native")))]
-pub(crate) fn app_file(name: &str) -> Option<PathBuf> {
-    Some(app_dir()?.join(name))
 }
 
 /// The app's files directory. User 0's path: under a secondary Android user

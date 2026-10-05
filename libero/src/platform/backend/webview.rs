@@ -14,9 +14,7 @@ use dioxus::html::FileData;
 use dioxus::prelude::{Event, Key, Modifiers, PointerData, spawn};
 use serde_json::{Value, json};
 
-use crate::platform::a11y_media::{
-    A11yMediaSubscription, REDUCED_MOTION_STORAGE_KEY, kept_reduced_motion, parse_reduced_motion,
-};
+use crate::platform::a11y_media::A11yMediaSubscription;
 #[cfg(all(
     not(target_os = "android"),
     not(feature = "native"),
@@ -49,7 +47,7 @@ use crate::platform::{
     media::{MEDIA_EVENTS, MediaApi, MediaState, MediaSubscription},
     permission::{PermissionApi, PermissionKind, PermissionState, PermissionSubscription},
     scroll::{ScrollData, ScrollReport},
-    storage::{app_file, write_app_file},
+    storage::{keep, kept},
     waveform::{PEAKS_SCRIPT, Peaks, WaveformApi},
 };
 use crate::tokens::{
@@ -1662,20 +1660,6 @@ impl A11yMediaApi for WebViewA11yMedia {
             .push((id, in_subscriber(callback)));
         Box::new(WebViewSubscription(Rc::downgrade(&page), id))
     }
-
-    fn stored_reduced_motion(&self) -> Option<bool> {
-        parse_reduced_motion(&std::fs::read_to_string(app_file(REDUCED_MOTION_STORAGE_KEY)?).ok()?)
-    }
-
-    fn store_reduced_motion(&self, reduced: Option<bool>) {
-        let Some(path) = app_file(REDUCED_MOTION_STORAGE_KEY) else {
-            return;
-        };
-        let _ = match reduced {
-            Some(reduced) => write_app_file(&path, kept_reduced_motion(reduced)),
-            None => std::fs::remove_file(path),
-        };
-    }
 }
 
 /// Runs `callback` in the subscribing scope: a watcher's task runs at the root,
@@ -1767,14 +1751,13 @@ impl ColorSchemeApi for WebViewColorScheme {
     }
 
     fn stored(&self) -> Option<ColorSchemeSetting> {
-        let stored = std::fs::read_to_string(app_file(COLOR_SCHEME_STORAGE_KEY)?).ok()?;
-        Some(ColorSchemeSetting::parse(stored.trim()))
+        Some(ColorSchemeSetting::parse(
+            kept(COLOR_SCHEME_STORAGE_KEY)?.trim(),
+        ))
     }
 
     fn store(&self, setting: ColorSchemeSetting) {
-        if let Some(path) = app_file(COLOR_SCHEME_STORAGE_KEY) {
-            let _ = write_app_file(&path, setting.as_str());
-        }
+        keep(COLOR_SCHEME_STORAGE_KEY, Some(setting.as_str()));
     }
 }
 

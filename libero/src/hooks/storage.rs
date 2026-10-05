@@ -268,6 +268,30 @@ pub fn use_session_storage<T: Serialize + DeserializeOwned + Clone + PartialEq +
     use_storage(StorageArea::Session, key, default)
 }
 
+/// Raw text kept for the session under a key, for libero's own caches. Reactive;
+/// off the web it lives in the document's memory.
+#[derive(Clone, Copy)]
+pub(crate) struct SessionText(Entry);
+
+/// The document's session text under `key`, read from the store on first use.
+pub(crate) fn session_text(key: &str) -> SessionText {
+    SessionText(storage_host().entry(StorageArea::Session, key))
+}
+
+impl SessionText {
+    pub(crate) fn get(&self) -> Option<String> {
+        self.0.raw.cloned()
+    }
+
+    /// Stores `text`; a full or refused store keeps it in memory only.
+    pub(crate) fn set(mut self, text: String) {
+        if let Some(store) = storage(StorageArea::Session) {
+            let _ = store.set(&self.0.key.peek(), &text);
+        }
+        self.0.raw.set(Some(text));
+    }
+}
+
 fn use_storage<T: Serialize + DeserializeOwned + Clone + PartialEq + 'static>(
     area: StorageArea,
     key: &str,

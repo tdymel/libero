@@ -15,9 +15,12 @@
 //! ```
 
 use std::{
+    cell::{Cell, RefCell},
+    path::Path,
+    rc::{Rc, Weak},
     sync::{
-        Arc,
-        atomic::{AtomicUsize, Ordering},
+        Arc, Once, PoisonError, RwLock, RwLockReadGuard, TryLockError,
+        atomic::{AtomicBool, AtomicUsize, Ordering},
     },
     thread,
     time::{Duration, Instant},
@@ -87,6 +90,7 @@ pub fn mount(app: fn() -> Element) -> Page {
 
 /// [`mount`], with the window theme set to `scheme`.
 pub fn mount_in(app: fn() -> Element, scheme: ColorScheme) -> Page {
+    let storage = storage_share();
     let warnings = SignalWarnings::watch();
     let vdom = VirtualDom::new_with_props(Root, RootProps { app: App(app) });
     let navigations = Arc::new(Navigations::default());
@@ -110,9 +114,85 @@ pub fn mount_in(app: fn() -> Element, scheme: ColorScheme) -> Page {
         redraws,
         navigations,
         last_press: None,
+        _storage: storage,
     };
     page.settle();
     page
+}
+
+/// Parallel tests share the process: a kept scheme or direction would leak between
+/// them, so every read and write fails and choices last the mount, as before 2228.
+const NO_STORAGE_DIR: &str = "/dev/null";
+
+static STORAGE: RwLock<()> = RwLock::new(());
+
+static STORAGE_WANTED: AtomicBool = AtomicBool::new(false);
+
+/// How long [`with_storage_dir`] waits for every other test's pages to drop.
+const STORAGE_WAIT: Duration = Duration::from_secs(60);
+
+type StorageShare = Rc<RwLockReadGuard<'static, ()>>;
+
+thread_local! {
+    static OWNS_STORAGE: Cell<bool> = const { Cell::new(false) };
+    /// One share per thread: a thread holding one must never wait for a waiting writer.
+    static SHARE: RefCell<Weak<RwLockReadGuard<'static, ()>>> = const { RefCell::new(Weak::new()) };
+}
+
+fn no_storage() {
+    static ONCE: Once = Once::new();
+    ONCE.call_once(|| libero::platform::set_storage_dir(NO_STORAGE_DIR));
+}
+
+/// The thread's share of [`STORAGE`]; `None` inside [`with_storage_dir`].
+fn storage_share() -> Option<StorageShare> {
+    no_storage();
+    if OWNS_STORAGE.get() {
+        return None;
+    }
+    SHARE.with_borrow_mut(|share| {
+        Some(share.upgrade().unwrap_or_else(|| {
+            // Let a waiting `with_storage_dir` in, else a stream of new pages starves it.
+            while STORAGE_WANTED.load(Ordering::Acquire) {
+                thread::sleep(Duration::from_millis(5));
+            }
+            let fresh = Rc::new(STORAGE.read().unwrap_or_else(PoisonError::into_inner));
+            *share = Rc::downgrade(&fresh);
+            fresh
+        }))
+    })
+}
+
+/// Runs `test` with local storage kept in `dir` while no other test's page lives,
+/// so no stray scheme lands there. Call it before mounting anything on the thread.
+pub fn with_storage_dir<T>(dir: &Path, test: impl FnOnce() -> T) -> T {
+    struct Restore;
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            OWNS_STORAGE.set(false);
+            libero::platform::set_storage_dir(NO_STORAGE_DIR);
+        }
+    }
+    no_storage();
+    // Bounded: a page leaked by another test must fail this one, not hang the run.
+    let started = Instant::now();
+    STORAGE_WANTED.store(true, Ordering::Release);
+    let _alone = loop {
+        match STORAGE.try_write() {
+            Ok(alone) => break alone,
+            Err(TryLockError::Poisoned(poisoned)) => break poisoned.into_inner(),
+            Err(TryLockError::WouldBlock) if started.elapsed() > STORAGE_WAIT => {
+                STORAGE_WANTED.store(false, Ordering::Release);
+                panic!("another test's page kept the storage lock for {STORAGE_WAIT:?}")
+            }
+            Err(TryLockError::WouldBlock) => thread::sleep(Duration::from_millis(5)),
+        }
+    };
+    STORAGE_WANTED.store(false, Ordering::Release);
+    libero::platform::set_storage_dir(dir);
+    OWNS_STORAGE.set(true);
+    let _restore = Restore;
+    test()
 }
 
 /// The shell: counts the redraws the document asks for, and holds the
@@ -293,6 +373,8 @@ pub struct Page {
     navigations: Arc<Navigations>,
     /// When and where the last drag pressed, see [`Page::press_apart`].
     last_press: Option<(Instant, f32, f32)>,
+    /// Shared while the page lives; `None` inside [`with_storage_dir`], which holds it alone.
+    _storage: Option<StorageShare>,
 }
 
 impl Page {

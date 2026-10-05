@@ -1,43 +1,30 @@
 //! The app's text direction and language on the document root, and where a direction is kept.
 
-use super::document;
+use super::{
+    document,
+    storage::{keep, kept},
+};
 use crate::tokens::Direction;
 
-/// Where a chosen direction is kept on the web, beside `lsx-color-scheme`.
-#[cfg(target_arch = "wasm32")]
+/// Where a chosen direction is kept, beside `lsx-color-scheme`.
 const DIRECTION_STORAGE_KEY: &str = "lsx-direction";
 
-/// The stored choice. `None` where nothing was stored, and off the web, where
-/// a choice lives for the session.
+/// The stored choice. `None` where nothing was stored, and where nothing can be,
+/// as a server build: there a choice lives for the session.
 pub(crate) fn stored_direction() -> Option<Direction> {
-    #[cfg(target_arch = "wasm32")]
-    return web_sys::window()?
-        .local_storage()
-        .ok()??
-        .get_item(DIRECTION_STORAGE_KEY)
-        .ok()?
+    kept(DIRECTION_STORAGE_KEY)
         .as_deref()
-        .and_then(Direction::parse);
-    #[cfg(not(target_arch = "wasm32"))]
-    None
+        .and_then(Direction::parse)
 }
 
 /// Keeps `direction` where the platform can.
 pub(crate) fn store_direction(direction: Direction) {
-    #[cfg(target_arch = "wasm32")]
-    if let Some(storage) = web_sys::window().and_then(|window| window.local_storage().ok()?) {
-        let _ = storage.set_item(DIRECTION_STORAGE_KEY, direction.as_str());
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    let _ = direction;
+    keep(DIRECTION_STORAGE_KEY, Some(direction.as_str()));
 }
 
 /// Drops the kept choice.
 pub(crate) fn forget_direction() {
-    #[cfg(target_arch = "wasm32")]
-    if let Some(storage) = web_sys::window().and_then(|window| window.local_storage().ok()?) {
-        let _ = storage.remove_item(DIRECTION_STORAGE_KEY);
-    }
+    keep(DIRECTION_STORAGE_KEY, None);
 }
 
 /// Removes the root's `dir`, so the page runs as it would without one.

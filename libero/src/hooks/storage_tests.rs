@@ -213,3 +213,52 @@ fn a_change_from_another_tab_arrives() {
     dom.in_runtime(|| assert!(!handle(0).is_stored()));
     assert!(dioxus_ssr::render(&dom).contains("local=0"));
 }
+
+thread_local! {
+    static TEXT: std::cell::Cell<Option<SessionText>> = const { std::cell::Cell::new(None) };
+}
+
+fn text_app() -> Element {
+    let text = session_text("stars");
+    TEXT.set(Some(text));
+    rsx! { span { "stars={text.get().unwrap_or_default()}" } }
+}
+
+fn set_text(dom: &mut VirtualDom, text: &str) {
+    dom.in_runtime(|| TEXT.get().expect("rendered").set(text.into()));
+    pump(dom);
+}
+
+/// Libero's own session caches: raw text, written through, shown where read.
+#[test]
+fn session_text_is_raw_and_rerenders_its_readers() {
+    let (local, session) = stores();
+    session
+        .values
+        .borrow_mut()
+        .insert("stars".into(), "7".into());
+    let _fake = fake(local, session);
+    let mut dom = VirtualDom::new(text_app);
+    dom.rebuild_in_place();
+    assert!(dioxus_ssr::render(&dom).contains("stars=7"));
+    set_text(&mut dom, "8");
+    assert!(dioxus_ssr::render(&dom).contains("stars=8"));
+    assert_eq!(
+        session.values.borrow().get("stars").cloned(),
+        Some("8".into())
+    );
+}
+
+/// Off the web session text lives in its document, not in a thread-wide map.
+#[test]
+fn session_text_without_a_store_stays_in_its_document() {
+    let _fake = fake_storage(None, None);
+    let mut dom = VirtualDom::new(text_app);
+    dom.rebuild_in_place();
+    set_text(&mut dom, "8");
+    assert!(dioxus_ssr::render(&dom).contains("stars=8"));
+    let mut other = VirtualDom::new(text_app);
+    other.rebuild_in_place();
+    let html = dioxus_ssr::render(&other);
+    assert!(!html.contains("stars=8"), "{html}");
+}

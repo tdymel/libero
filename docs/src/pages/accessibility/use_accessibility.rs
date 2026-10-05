@@ -18,8 +18,8 @@ pub fn UseAccessibilityPage() -> Element {
                     " reads the reader's accessibility settings: reduced motion, forced "
                     "colors, contrast and reduced transparency. A settings page can force "
                     "reduced motion on or off over the system's, and the choice is kept "
-                    "for the next visit (the web's localStorage, Android) until Follow the "
-                    "system clears it. This page clears what its demo forced when you "
+                    "for the next visit (libero's local storage) until Follow the system "
+                    "clears it. This page clears what its demo forced when you "
                     "leave it."
                 }
             },

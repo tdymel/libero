@@ -2,8 +2,8 @@
 
 use std::path::PathBuf;
 
-use super::StorageError;
 use super::files::{delete, file_name, read, write};
+use super::{MemoryStorage, StorageError, fake_storage, keep, kept};
 
 /// A fresh directory under the system temp dir, removed when dropped.
 struct TempDir(PathBuf);
@@ -63,6 +63,34 @@ fn keys_become_names_that_never_meet_or_leave_the_dir() {
     assert_eq!(file_name(""), ".json");
     assert_ne!(file_name("A"), file_name("a"));
     assert_ne!(file_name("%41"), file_name("A"));
+}
+
+/// Libero's own settings stay raw text under their key, so values kept before still load.
+#[test]
+fn a_kept_setting_is_raw_text_under_its_key() {
+    let local = MemoryStorage::leaked();
+    let _fake = fake_storage(Some(local), None);
+    keep("lsx-direction", Some("rtl"));
+    assert_eq!(
+        local.values.borrow().get("lsx-direction").cloned(),
+        Some("rtl".into())
+    );
+    assert_eq!(kept("lsx-direction"), Some("rtl".into()));
+    keep("lsx-direction", None);
+    assert_eq!(kept("lsx-direction"), None);
+}
+
+#[test]
+fn without_a_store_nothing_is_kept() {
+    let local = MemoryStorage::leaked();
+    local.refuse.set(Some(StorageError::Unavailable));
+    let fake = fake_storage(Some(local), None);
+    keep("lsx-color-scheme", Some("dark"));
+    assert_eq!(kept("lsx-color-scheme"), None);
+    drop(fake);
+    let _none = fake_storage(None, None);
+    keep("lsx-color-scheme", Some("dark"));
+    assert_eq!(kept("lsx-color-scheme"), None);
 }
 
 #[test]

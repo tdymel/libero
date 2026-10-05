@@ -4,7 +4,7 @@
 use std::borrow::Cow;
 use std::sync::{Mutex, PoisonError};
 
-use super::backend;
+use super::{backend, storage};
 use crate::tokens::{AccessibilityPreferences, Contrast};
 
 /// The platform's own accessibility settings.
@@ -20,26 +20,25 @@ pub(crate) trait A11yMediaApi {
 
     /// The app's kept forced reduced motion; `None` where nothing is kept or it cannot be.
     fn stored_reduced_motion(&self) -> Option<bool> {
-        None
+        parse_reduced_motion(&storage::kept(REDUCED_MOTION_STORAGE_KEY)?)
     }
 
     /// Keeps a forced reduced motion where the platform can; `None` drops it.
-    fn store_reduced_motion(&self, _reduced: Option<bool>) {}
+    fn store_reduced_motion(&self, reduced: Option<bool>) {
+        storage::keep(REDUCED_MOTION_STORAGE_KEY, reduced.map(kept_reduced_motion));
+    }
 }
 
 /// Where a forced reduced motion is kept, beside `lsx-color-scheme`.
-#[cfg_attr(all(feature = "native", not(target_arch = "wasm32")), allow(dead_code))]
 pub(crate) const REDUCED_MOTION_STORAGE_KEY: &str = "lsx-reduced-motion";
 
 /// The kept text for a forced reduced motion, as the media feature spells it.
-#[cfg_attr(all(feature = "native", not(target_arch = "wasm32")), allow(dead_code))]
 pub(crate) fn kept_reduced_motion(reduced: bool) -> &'static str {
     if reduced { "reduce" } else { "no-preference" }
 }
 
 /// Reads [`kept_reduced_motion`]'s text back; anything else is `None`.
-#[cfg_attr(all(feature = "native", not(target_arch = "wasm32")), allow(dead_code))]
-pub(crate) fn parse_reduced_motion(kept: &str) -> Option<bool> {
+fn parse_reduced_motion(kept: &str) -> Option<bool> {
     match kept.trim() {
         "reduce" => Some(true),
         "no-preference" => Some(false),

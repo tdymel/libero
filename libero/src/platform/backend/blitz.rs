@@ -43,9 +43,10 @@ use crate::{
         KeySubscription, KeyboardApi, PlatformError, Read, SCROLL_MARGIN_VAR, SCROLL_PADDING_VARS,
         ScrollApi, ScrollSubscription, TimerSubscription,
         keyboard::{takes_arrows, takes_typing},
+        storage::{keep, kept},
         warn_reserved_chord,
     },
-    tokens::{ColorScheme, ColorSchemeSetting},
+    tokens::{COLOR_SCHEME_STORAGE_KEY, ColorScheme, ColorSchemeSetting},
 };
 
 /// Stylo's resolved value of a longhand, `""` for an unknown property or an
@@ -1637,12 +1638,15 @@ impl ColorSchemeApi for BlitzColorScheme {
         Box::new(BlitzColorSchemeSubscription(id, Rc::downgrade(&doc)))
     }
 
-    /// Blitz has no storage, so an override lives for the session.
     fn stored(&self) -> Option<ColorSchemeSetting> {
-        None
+        Some(ColorSchemeSetting::parse(
+            kept(COLOR_SCHEME_STORAGE_KEY)?.trim(),
+        ))
     }
 
-    fn store(&self, _setting: ColorSchemeSetting) {}
+    fn store(&self, setting: ColorSchemeSetting) {
+        keep(COLOR_SCHEME_STORAGE_KEY, Some(setting.as_str()));
+    }
 }
 
 struct BlitzColorSchemeSubscription(u64, Weak<Doc>);

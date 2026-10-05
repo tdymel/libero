@@ -23,7 +23,7 @@ pub trait ColorSchemeSubscription {}
 
 /// The colour scheme, `None` on a server or headless build. Blitz hears a live
 /// change within half a second; a WebView answers light until its media query
-/// replies, and only Android keeps a stored override.
+/// replies. The override is kept in local storage, see [`set_storage_dir`](super::set_storage_dir).
 ///
 /// ```no_run
 /// if let Some(scheme) = libero::platform::color_scheme() {

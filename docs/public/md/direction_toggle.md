@@ -8,7 +8,7 @@ Description: An icon button that turns the app's text between left to right and 
 
 An icon button that turns the app's text between left to right and right to
 left. It sets the document's `dir`, so every component and every overlay turns
-with it, and the web keeps the choice in `localStorage` for the next visit.
+with it, and libero's local storage keeps the choice for the next visit.
 The arrow shows where the next press goes.
 
 ## Usage

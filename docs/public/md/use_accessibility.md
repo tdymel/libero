@@ -9,7 +9,7 @@ Description: Reads the reader's accessibility settings and lets an app force red
 `use_accessibility() -> AccessibilityHandle` reads the reader's accessibility
 settings: reduced motion, forced colors, contrast and reduced transparency. A
 settings page can force reduced motion on or off over the system's, and the
-choice is kept for the next visit (the web's localStorage, Android) until
+choice is kept for the next visit (libero's local storage) until
 `set_reduced_motion(None)` clears it.
 
 ## Usage
@@ -57,8 +57,10 @@ In a browser and Android's WebView the settings are the page's media queries.
 Natively they come from the desktop portal on Linux (`org.freedesktop.appearance`,
 GNOME's and older KDE's own keys as a fallback); other native platforms report no preference.
 
-A forced reduced motion is kept across restarts in a browser (`localStorage`) and on
-Android; on desktop and native it lasts for the session.
+A forced reduced motion is kept across restarts under `lsx-reduced-motion`: in a
+browser's `localStorage`, and in a file on Android, the desktop WebView and native
+where `libero::platform::set_storage_dir` (or libero's `desktop` or `native`
+feature) gives local storage a directory. Elsewhere it lasts for the session.
 
 ## Forced settings
 

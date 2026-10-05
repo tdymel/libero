@@ -8,6 +8,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
@@ -78,13 +79,21 @@ impl Desktop {
         })?;
         let listener = TcpListener::bind("127.0.0.1:0").context("bind the bridge")?;
         listener.set_nonblocking(true)?;
-        let log = std::env::var_os("E2E_ARTIFACTS")
+        let artifacts = std::env::var_os("E2E_ARTIFACTS")
             .map(PathBuf::from)
-            .unwrap_or_else(std::env::temp_dir)
-            .join("desktop-app.log");
+            .unwrap_or_else(std::env::temp_dir);
+        let log = artifacts.join("desktop-app.log");
         let log = File::options().create(true).append(true).open(&log)?;
+        // A store per launch: a kept scheme or direction never reaches the next unit.
+        static LAUNCHES: AtomicU64 = AtomicU64::new(0);
+        let storage = artifacts.join(format!(
+            "desktop-storage-{}-{}",
+            std::process::id(),
+            LAUNCHES.fetch_add(1, Ordering::Relaxed)
+        ));
         let mut app = Command::new(binary)
             .env("E2E_BRIDGE", listener.local_addr()?.to_string())
+            .env("E2E_STORAGE_DIR", storage)
             .stdout(Stdio::from(log.try_clone()?))
             .stderr(Stdio::from(log))
             .spawn()

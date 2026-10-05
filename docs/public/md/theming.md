@@ -127,7 +127,8 @@ LiberoProvider {
 
 [`ThemeSwitcher`](theme_switcher.md) is a ready-made switch.
 
-On the web the choice is kept in `localStorage`. To restore it before the first
+The choice is kept in local storage: `localStorage` on the web, a file off it
+where local storage has a directory (see `libero::platform::set_storage_dir`). To restore it before the first
 paint, paste `libero::theme::COLOR_SCHEME_RESTORE_SCRIPT` into the head of your
 `index.html`.
 

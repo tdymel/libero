@@ -11,15 +11,14 @@ use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen::prelude::Closure;
 
 use super::INTERACTIVE;
-use crate::platform::a11y_media::{
-    A11yMediaSubscription, REDUCED_MOTION_STORAGE_KEY, kept_reduced_motion, parse_reduced_motion,
-};
+use crate::platform::a11y_media::A11yMediaSubscription;
 use crate::platform::{
     A11yMediaApi, ColorSchemeApi, ColorSchemeSubscription, ContentSubscription, Dimensions,
     DocumentApi, ElementApi, KeyChord, KeySubscription, KeyboardApi, MediaQueryApi,
     MediaQuerySubscription, PlatformError, Read, ScrollApi, ScrollSubscription, StyleRulesApi,
     TimerApi, TimerSubscription,
     keyboard::{takes_arrows, takes_typing, warn_reserved_chord},
+    storage::{keep, kept},
 };
 use crate::tokens::{
     AccessibilityPreferences, COLOR_SCHEME_STORAGE_KEY, ColorScheme, ColorSchemeSetting, Contrast,
@@ -371,26 +370,6 @@ impl A11yMediaApi for WebA11yMedia {
             .collect();
         Box::new(WebA11yMediaSubscription { queries, closure })
     }
-
-    fn stored_reduced_motion(&self) -> Option<bool> {
-        parse_reduced_motion(
-            &local_storage()?
-                .get_item(REDUCED_MOTION_STORAGE_KEY)
-                .ok()??,
-        )
-    }
-
-    fn store_reduced_motion(&self, reduced: Option<bool>) {
-        let Some(storage) = local_storage() else {
-            return;
-        };
-        let _ = match reduced {
-            Some(reduced) => {
-                storage.set_item(REDUCED_MOTION_STORAGE_KEY, kept_reduced_motion(reduced))
-            }
-            None => storage.remove_item(REDUCED_MOTION_STORAGE_KEY),
-        };
-    }
 }
 
 struct WebA11yMediaSubscription {
@@ -453,20 +432,12 @@ impl ColorSchemeApi for WebColorScheme {
     }
 
     fn stored(&self) -> Option<ColorSchemeSetting> {
-        let stored = local_storage()?.get_item(COLOR_SCHEME_STORAGE_KEY).ok()??;
-        Some(ColorSchemeSetting::parse(&stored))
+        Some(ColorSchemeSetting::parse(&kept(COLOR_SCHEME_STORAGE_KEY)?))
     }
 
     fn store(&self, setting: ColorSchemeSetting) {
-        if let Some(storage) = local_storage() {
-            let _ = storage.set_item(COLOR_SCHEME_STORAGE_KEY, setting.as_str());
-        }
+        keep(COLOR_SCHEME_STORAGE_KEY, Some(setting.as_str()));
     }
-}
-
-/// `None` where the browser refuses the store: blocked site data throws.
-fn local_storage() -> Option<web_sys::Storage> {
-    web_sys::window()?.local_storage().ok()?
 }
 
 struct WebColorSchemeSubscription {
