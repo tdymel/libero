@@ -12,8 +12,9 @@ use dioxus::prelude::{
 };
 
 use super::{
-    A11yMediaApi, ColorSchemeApi, ContentSubscription, DocumentApi, ElementApi, KeyboardApi,
-    MediaQueryApi, PressApi, ScrollApi, ScrollSubscription, SilentFocusApi, TimerApi,
+    A11yMediaApi, ColorSchemeApi, ContentSubscription, Dimensions, DocumentApi, ElementApi,
+    KeyboardApi, MediaQueryApi, PressApi, Read, ScrollApi, ScrollSubscription, SilentFocusApi,
+    TimerApi,
 };
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
@@ -88,6 +89,31 @@ pub(crate) fn element(mounted: &Rc<MountedData>) -> Box<dyn ElementApi> {
     }
 
     Box::new(mounted::MountedElement(mounted.clone()))
+}
+
+/// `mounted`'s client offset and size, started at once: one round-trip under a
+/// WebView, where [`ElementApi::client_offset`] and `dimensions` cost one each (todo 2018).
+pub(crate) fn client_rect(mounted: &Rc<MountedData>) -> Read<((f64, f64), Dimensions)> {
+    #[cfg(target_arch = "wasm32")]
+    if let Some(element) = web::element(mounted) {
+        return offset_and_size(element.as_ref());
+    }
+
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    if let Some(element) = blitz::element(mounted) {
+        return offset_and_size(element.as_ref());
+    }
+
+    mounted::client_rect(mounted.clone())
+}
+
+#[cfg(any(target_arch = "wasm32", feature = "native"))]
+fn offset_and_size(element: &dyn ElementApi) -> Read<((f64, f64), Dimensions)> {
+    let (offset, size) = (element.client_offset(), element.dimensions());
+    Box::pin(async move {
+        let (offset, size) = super::join(offset, size).await;
+        Ok((offset?, size?))
+    })
 }
 
 /// The web has a `MutationObserver`; Blitz watches the subtree's scroll size.

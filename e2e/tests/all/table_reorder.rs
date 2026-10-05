@@ -608,9 +608,25 @@ e2e::scenario!(
     header_grip_drags_move_its_own_columns_twice,
     "/table-column-drag",
     two_grip_drags_move_columns,
-    native: skip("no column drag grip on Blitz: the column menu moves columns"),
-    android: skip("1463: a touch on an end-aligned header's grip at times snaps to its menu button")
+    native: skip("no column drag grip on Blitz: the column menu moves columns")
 );
+
+/// Todo 2018: the rows measure at the press, so a finger's drag moves the row soon.
+mod a_touch_drag_moves_the_row_soon_on_a_slow_phone {
+    #[cfg(feature = "android")]
+    #[test]
+    fn android() {
+        e2e::android::block_on(async {
+            e2e::driver::Android::drag_starts_without_a_read(
+                "/table-reorder",
+                "button[aria-label=\"Reorder Apple\"]",
+                (0.0, 100.0),
+            )
+            .await
+            .unwrap();
+        });
+    }
+}
 
 /// Name's grip held at the scroll region's end edge scrolls Origin's end into
 /// view, then drops after it (1463, the edge scroll as Kanban's 1364).

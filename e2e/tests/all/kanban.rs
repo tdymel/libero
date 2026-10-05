@@ -733,3 +733,20 @@ fn a_column_keeps_an_edge_in_forced_colours() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 2018: the board measures at the press, so a finger's drag moves the card soon.
+mod a_touch_drag_moves_the_card_soon_on_a_slow_phone {
+    #[cfg(feature = "android")]
+    #[test]
+    fn android() {
+        e2e::android::block_on(async {
+            e2e::driver::Android::drag_starts_without_a_read(
+                "/kanban",
+                "#Alpha [data-slot=handle]",
+                (0.0, 140.0),
+            )
+            .await
+            .unwrap();
+        });
+    }
+}

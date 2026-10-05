@@ -1,7 +1,8 @@
 use std::time::Duration;
 
-use anyhow::Result;
+use anyhow::{Result, bail};
 use chromiumoxide::Page;
+use chromiumoxide::cdp::browser_protocol::emulation::SetCpuThrottlingRateParams;
 
 use super::web::{element, evaluate, json};
 use super::{Driver, Platform, Rect};
@@ -102,6 +103,144 @@ impl Android {
     /// its last move, a touch comes to rest.
     pub async fn fling_from(&mut self, x: f64, y: f64, dx: f64, dy: f64) -> Result<()> {
         self.stroke(pointer::Point { x, y }, dx, dy, 2.0).await
+    }
+
+    /// A finger's drag of `selector` by `dx`, `dy` in `steps` moves `step_ms` apart,
+    /// held still `hold_ms` before it lifts: a drag with a person's pace.
+    pub async fn paced_drag(
+        &mut self,
+        selector: &str,
+        (dx, dy): (f64, f64),
+        steps: usize,
+        step_ms: u64,
+        hold_ms: u64,
+    ) -> Result<()> {
+        let from = self.centre(selector).await?;
+        let at = |t: f64| {
+            self.device(pointer::Point {
+                x: from.x + dx * t,
+                y: from.y + dy * t,
+            })
+        };
+        let pause = |ms: u64| {
+            [
+                ";".into(),
+                "sleep".into(),
+                format!("{:.3}", ms as f64 / 1000.0),
+            ]
+        };
+        let [x, y] = at(0.0);
+        let mut chain: Vec<String> = vec!["motionevent".into(), "DOWN".into(), x, y];
+        for step in 1..=steps {
+            chain.extend(pause(step_ms));
+            let [x, y] = at(step as f64 / steps as f64);
+            chain.extend([
+                ";".into(),
+                "input".into(),
+                "motionevent".into(),
+                "MOVE".into(),
+                x,
+                y,
+            ]);
+        }
+        chain.extend(pause(hold_ms));
+        let [x, y] = at(1.0);
+        chain.extend([
+            ";".into(),
+            "input".into(),
+            "motionevent".into(),
+            "UP".into(),
+            x,
+            y,
+        ]);
+        input(&chain).await
+    }
+
+    /// Fails when the median of three [`Self::drag_start`]s, each on a fresh
+    /// `route` under an 8x slower WebView CPU, reads a rect between the move past
+    /// the slop and the first moved frame: each read is a round trip, and
+    /// measuring there took 180-280 ms (todo 2018). The time varies with the
+    /// host's load, the reads do not.
+    pub async fn drag_starts_without_a_read(
+        route: &str,
+        selector: &str,
+        delta: (f64, f64),
+    ) -> Result<()> {
+        let mut runs = Vec::new();
+        for _ in 0..3 {
+            let mut driver = Self::open(route).await?;
+            driver
+                .page
+                .execute(SetCpuThrottlingRateParams::new(8.0))
+                .await?;
+            let start = driver.drag_start(selector, delta).await;
+            driver
+                .page
+                .execute(SetCpuThrottlingRateParams::new(1.0))
+                .await?;
+            runs.push(start?);
+            driver.finish("a slow drag start").await?;
+        }
+        runs.sort_by_key(|&(_, reads)| reads);
+        if runs[1].1 > 0 {
+            bail!("{selector}'s drag reads rects past its slop: (ms, reads) {runs:?}");
+        }
+        Ok(())
+    }
+
+    /// From the move that takes `selector`'s paced drag past 8px to the first
+    /// paint of a non-zero `translate` on a node holding it: the ms, and the
+    /// rect reads in between (todo 2018).
+    pub async fn drag_start(&mut self, selector: &str, (dx, dy): (f64, f64)) -> Result<(f64, u32)> {
+        let probe = format!(
+            "(() => {{
+                const handle = {handle};
+                const moved = s => /translate[^(]*\\((?!0px(, 0px)?\\))/.test(s || '');
+                const lag = window.__dragLag = {{ down: null, moves: [], moved: null }};
+                const I = window.interpreter;
+                if (I && !I.__readsCounted) {{
+                    I.__readsCounted = true;
+                    const read = I.getClientRect.bind(I);
+                    I.getClientRect = (...a) => {{ window.__rectReads = (window.__rectReads || 0) + 1; return read(...a); }};
+                }}
+                const reads = () => window.__rectReads || 0;
+                const opts = {{ capture: true, passive: true }};
+                const ac = new AbortController();
+                addEventListener('pointerdown', e => {{ lag.down = [e.clientX, e.clientY, performance.now()]; }}, {{ ...opts, signal: ac.signal }});
+                addEventListener('pointermove', e => {{ lag.moves.push([performance.now(), e.clientX, e.clientY, reads()]); }}, {{ ...opts, signal: ac.signal }});
+                const seen = new MutationObserver(ms => {{
+                    if (lag.moved || !lag.down) return;
+                    if (ms.some(m => m.target.contains(handle) && moved(m.target.getAttribute('style'))))
+                        requestAnimationFrame(t => {{ lag.moved = [t, reads()]; seen.disconnect(); ac.abort(); }});
+                }});
+                seen.observe(document.body, {{ subtree: true, attributes: true, attributeFilter: ['style'] }});
+                return !!handle;
+            }})()",
+            handle = element(selector)
+        );
+        if !json::<bool>(&self.page, &probe).await? {
+            bail!("no {selector} to drag");
+        }
+        self.paced_drag(selector, (dx, dy), 12, 16, 600).await?;
+        let lag: serde_json::Value = json(&self.page, "window.__dragLag").await?;
+        let (Some([x, y, down]), Some([moved, reads])) = (
+            serde_json::from_value::<[f64; 3]>(lag["down"].clone()).ok(),
+            serde_json::from_value::<[f64; 2]>(lag["moved"].clone()).ok(),
+        ) else {
+            bail!("no drag start seen: {lag}");
+        };
+        let moves: Vec<[f64; 4]> = serde_json::from_value(lag["moves"].clone())?;
+        let Some(past) = moves.iter().find(|m| (m[1] - x).hypot(m[2] - y) >= 8.0) else {
+            bail!("the drag never passed 8px: {lag}");
+        };
+        let (ms, reads) = (moved - past[0], (reads - past[3]) as u32);
+        if std::env::var_os("E2E_FRAMES").is_some() {
+            println!(
+                "drag start: down->slop {:.0} ms, slop->moved {ms:.0} ms, {reads} reads",
+                past[0] - down
+            );
+        }
+        Ok((ms, reads))
     }
 
     async fn swipe(&mut self, from: pointer::Point, dx: f64, dy: f64) -> Result<()> {

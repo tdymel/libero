@@ -57,7 +57,9 @@ pub(crate) use a11y_media::{
 pub use backend::held_clock;
 #[cfg(all(test, not(target_arch = "wasm32")))]
 pub(crate) use backend::manual_timer;
-pub(crate) use backend::{Listener, Outlet, PortalEntry, PortalRoot, SheetWatch, element};
+pub(crate) use backend::{
+    Listener, Outlet, PortalEntry, PortalRoot, SheetWatch, client_rect, element,
+};
 pub(crate) use capture::{
     CAPTURE_ATTR, CaptureEvent, CaptureSession, CaptureSubscription, DeviceList, capture,
     constraints, file_from_blob, file_from_bytes,

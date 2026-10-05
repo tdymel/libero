@@ -14,10 +14,10 @@ use crate::{
     components::accessibility::Announcer,
     hooks::{
         DragMove, DragOptions, DragStart, ElementHandle, current_localization, edge_scroll_step,
-        use_distance_drag, use_element, use_interval,
+        use_distance_drag, use_early_measure, use_element, use_interval,
     },
     localization::fill,
-    platform::{self, Dimensions, ElementApi, Read},
+    platform::{self, Dimensions, ElementApi, PlatformError, Read},
     theme::{SORTABLE_SETTLE, SORTABLE_SETTLE_FROM, TRANSITION_DURATION, TRANSITION_EASING},
 };
 
@@ -101,6 +101,8 @@ pub(super) struct BoardDrag {
     /// Px the board scrolled sideways since the lift: the cards moved the other way.
     scrolled: Signal<f64>,
     settle: Signal<Option<Settle>>,
+    /// Starts a card's measure at its press.
+    press: Callback<usize>,
     onpointerdown: Callback<Event<PointerData>>,
     cancel: Callback<()>,
 }
@@ -114,16 +116,14 @@ impl BoardDrag {
     }
 }
 
-type Reading = (Read<(f64, f64)>, Read<Dimensions>);
+type Reading = Read<((f64, f64), Dimensions)>;
 
 fn read(node: &Rc<MountedData>) -> Reading {
-    let node = platform::element(node);
-    (node.client_offset(), node.dimensions())
+    platform::client_rect(node)
 }
 
-async fn rect((offset, size): Reading) -> Option<Rect> {
-    let (offset, size) = platform::join(offset, size).await;
-    let ((x, y), size) = (offset.ok()?, size.ok()?);
+async fn rect(reading: Reading) -> Option<Rect> {
+    let ((x, y), size) = reading.await.ok()?;
     Some(Rect {
         x,
         y,
@@ -240,11 +240,11 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
         };
         settle.set(None);
         let rtl = element.is_rtl();
-        let board_reads = (
-            (element.client_offset(), element.dimensions()),
-            element.scroll_size(),
-            element.scroll_offset(),
-        );
+        let board_rect: Reading = match element.mounted() {
+            Some(board) => read(&board),
+            None => Box::pin(std::future::ready(Err(PlatformError::Unsupported))),
+        };
+        let board_reads = (board_rect, element.scroll_size(), element.scroll_offset());
         spawn(async move {
             let (board, content, scroll) = board_reads;
             // Every read at once: one round-trip on a WebView, not one per card (todo 2018).
@@ -361,6 +361,13 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
         }
     };
 
+    // A settling card's transform would skew a measure taken now.
+    let early = use_early_measure::<Lifted>();
+    let press = use_callback(move |id: usize| {
+        let idle = lifted.peek().is_none() && settle.peek().is_none() && !starting.peek().0;
+        early.press(id, idle, move |started| begin(id, started));
+    });
+
     let drag = use_distance_drag(DragOptions {
         capture: element,
         onstart: use_callback(move |start: DragStart| {
@@ -371,21 +378,21 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
             };
             starting.set((true, false));
             travel.set((0.0, 0.0));
-            begin(
-                id,
-                Callback::new(move |measured: Option<Lifted>| {
-                    let (_, released) = starting.replace((false, false));
-                    match measured {
-                        None => cancel.call(()),
-                        // A flick let go before the measure still lands where it was let go.
-                        Some(measured) if released => {
-                            lifted.set(Some(measured));
-                            finish(true);
-                        }
-                        Some(measured) => lift(measured),
+            let started = Callback::new(move |measured: Option<Lifted>| {
+                let (_, released) = starting.replace((false, false));
+                match measured {
+                    None => cancel.call(()),
+                    // A flick let go before the measure still lands where it was let go.
+                    Some(measured) if released => {
+                        lifted.set(Some(measured));
+                        finish(true);
                     }
-                }),
-            );
+                    Some(measured) => lift(measured),
+                }
+            });
+            if !early.claim(id, started) {
+                begin(id, started);
+            }
         }),
         onmove: use_callback(move |step: DragMove| {
             let delta = step.delta();
@@ -426,6 +433,7 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
         travel,
         scrolled,
         settle,
+        press,
         onpointerdown: drag.onpointerdown,
         cancel,
     }
@@ -571,6 +579,7 @@ pub(super) fn use_board_card(
     let mut pressed = drag.pressed;
     let onpointerdown = use_callback(move |event: Event<PointerData>| {
         pressed.set(Some(id));
+        drag.press.call(id);
         drag.onpointerdown.call(event);
     });
     let onkeydown = use_callback(move |event: Event<KeyboardData>| {

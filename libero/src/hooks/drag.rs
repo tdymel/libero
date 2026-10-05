@@ -409,6 +409,65 @@ fn use_drag_inner(
     }
 }
 
+/// Where a measure started at the press stands.
+enum Early<T: 'static> {
+    Idle,
+    Waiting(usize),
+    Ready(usize, Option<T>),
+    Claimed(usize, Callback<Option<T>>),
+}
+
+/// A drag's measure started at the press of item `key`, so the drag that
+/// follows a few px later need not wait a WebView round-trip for it (todo 2018).
+pub(crate) struct EarlyMeasure<T: 'static>(CopyValue<Early<T>>);
+
+impl<T: 'static> Clone for EarlyMeasure<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<T: 'static> Copy for EarlyMeasure<T> {}
+
+/// See [`EarlyMeasure`].
+pub(crate) fn use_early_measure<T: 'static>() -> EarlyMeasure<T> {
+    use_hook(|| EarlyMeasure(CopyValue::new(Early::Idle)))
+}
+
+impl<T: 'static> EarlyMeasure<T> {
+    /// Measures for `key` through `begin`, which reports to the callback it gets;
+    /// with `measure` off it only drops an older press's measure.
+    pub(crate) fn press(self, key: usize, measure: bool, begin: impl FnOnce(Callback<Option<T>>)) {
+        let mut state = self.0;
+        if !measure {
+            state.set(Early::Idle);
+            return;
+        }
+        state.set(Early::Waiting(key));
+        begin(Callback::new(move |measured: Option<T>| {
+            match state.replace(Early::Idle) {
+                Early::Claimed(at, started) if at == key => started.call(measured),
+                Early::Waiting(at) if at == key => state.set(Early::Ready(at, measured)),
+                other => state.set(other),
+            }
+        }));
+    }
+
+    /// Hands `key`'s measure to `started`, now or once it lands; `false` if none was started.
+    pub(crate) fn claim(self, key: usize, started: Callback<Option<T>>) -> bool {
+        let mut state = self.0;
+        match state.replace(Early::Idle) {
+            Early::Ready(at, measured) if at == key => started.call(measured),
+            Early::Waiting(at) if at == key => state.set(Early::Claimed(at, started)),
+            other => {
+                state.set(other);
+                return false;
+            }
+        }
+        true
+    }
+}
+
 /// `touch-action: none` for a drag handle: without it a touch scrolls and no
 /// `pointermove` arrives.
 ///

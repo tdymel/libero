@@ -7,7 +7,7 @@ use crate::{
     components::common::Orientation,
     hooks::{
         DragMove, DragOptions, DragStart, ElementHandle, current_localization, edge_scroll_step,
-        use_distance_drag, use_element, use_interval,
+        use_distance_drag, use_early_measure, use_element, use_interval,
     },
     localization::fill,
     platform::{self, Dimensions, ElementApi, Read},
@@ -222,6 +222,8 @@ struct SortableContext {
     horizontal: Memo<bool>,
     count: Signal<usize>,
     settle: Signal<Option<Settle>>,
+    /// Starts an item's measure at its press.
+    onpress: Callback<usize>,
     onpointerdown: Callback<Event<PointerData>>,
     onkeydown: Callback<(usize, Event<KeyboardData>)>,
     onblur: Callback<usize>,
@@ -229,7 +231,7 @@ struct SortableContext {
 }
 
 /// One node's position read, started at once: see `ElementApi::dimensions`.
-type NodeRead = (Read<(f64, f64)>, Read<Dimensions>);
+type NodeRead = Read<((f64, f64), Dimensions)>;
 
 /// Every item's read, and its extent's.
 type Reads = Vec<(NodeRead, Option<NodeRead>)>;
@@ -253,8 +255,7 @@ fn mounted(registry: &[Option<Registered>]) -> Option<Vec<MountedItem>> {
 }
 
 fn read_node(node: &Rc<MountedData>) -> NodeRead {
-    let node = platform::element(node);
-    (node.client_offset(), node.dimensions())
+    platform::client_rect(node)
 }
 
 fn start_reads(items: &[MountedItem]) -> Reads {
@@ -265,8 +266,8 @@ fn start_reads(items: &[MountedItem]) -> Reads {
 }
 
 /// A node's span along the flow, `None` when a read failed.
-async fn node_span((offset, size): NodeRead, vertical: bool, flipped: bool) -> Option<Span> {
-    let (Ok((x, y)), Ok(size)) = platform::join(offset, size).await else {
+async fn node_span(read: NodeRead, vertical: bool, flipped: bool) -> Option<Span> {
+    let Ok(((x, y), size)) = read.await else {
         return None;
     };
     Some(match (vertical, flipped) {
@@ -595,6 +596,13 @@ pub(crate) fn use_fixed_sortable(
         }
     };
 
+    // A settling item's transform would skew a measure taken now.
+    let early = use_early_measure::<Session>();
+    let onpress = use_callback(move |index: usize| {
+        let idle = session.peek().is_none() && settle.peek().is_none() && !starting.peek().0;
+        early.press(index, idle, move |started| begin(index, false, started));
+    });
+
     let drag = use_distance_drag(DragOptions {
         capture: element,
         onstart: use_callback(move |start: DragStart| {
@@ -638,22 +646,21 @@ pub(crate) fn use_fixed_sortable(
                     }
                 });
             }
-            begin(
-                from,
-                false,
-                Callback::new(move |measured: Option<Session>| {
-                    let (_, released) = starting.replace((false, false));
-                    match measured {
-                        None => cancel.call(()),
-                        // A flick let go before the measure still lands where it was let go.
-                        Some(measured) if released => {
-                            session.set(Some(measured));
-                            finish(true);
-                        }
-                        Some(measured) => lift(measured),
+            let started = Callback::new(move |measured: Option<Session>| {
+                let (_, released) = starting.replace((false, false));
+                match measured {
+                    None => cancel.call(()),
+                    // A flick let go before the measure still lands where it was let go.
+                    Some(measured) if released => {
+                        session.set(Some(measured));
+                        finish(true);
                     }
-                }),
-            );
+                    Some(measured) => lift(measured),
+                }
+            });
+            if !early.claim(from, started) {
+                begin(from, false, started);
+            }
         }),
         onmove: use_callback(move |step: DragMove| {
             let delta = step.delta();
@@ -820,6 +827,7 @@ pub(crate) fn use_fixed_sortable(
         horizontal,
         count,
         settle,
+        onpress,
         onpointerdown: drag.onpointerdown,
         onkeydown,
         onblur,
@@ -991,6 +999,7 @@ pub(crate) fn use_spanning_sortable_item(
     let mut pressed = context.pressed;
     let onpointerdown = use_callback(move |event: Event<PointerData>| {
         pressed.set(Some(index));
+        context.onpress.call(index);
         context.onpointerdown.call(event);
     });
     let onkeydown = use_callback(move |event| context.onkeydown.call((index, event)));

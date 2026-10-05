@@ -139,6 +139,20 @@ impl ElementApi for MountedElement {
     }
 }
 
+/// Offset and size from one `getBoundingClientRect`.
+pub(super) fn client_rect(element: Rc<MountedData>) -> Read<((f64, f64), Dimensions)> {
+    Box::pin(async move {
+        let rect = failed(element.get_client_rect().await)?;
+        Ok((
+            (rect.origin.x, rect.origin.y),
+            Dimensions {
+                width: rect.size.width,
+                height: rect.size.height,
+            },
+        ))
+    })
+}
+
 /// A command nobody reads back: under a WebView an IPC round-trip, so `Ok` means
 /// queued.
 fn queue(

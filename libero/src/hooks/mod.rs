@@ -73,7 +73,8 @@ pub(crate) use dismiss::{
 };
 pub use drag::{Drag, DragMove, DragOptions, DragPoint, DragStart, drag_handle_sx, use_drag};
 pub(crate) use drag::{
-    edge_scroll_step, sideways_drag_sx, use_distance_drag, use_drag_with, use_sideways_drag,
+    edge_scroll_step, sideways_drag_sx, use_distance_drag, use_drag_with, use_early_measure,
+    use_sideways_drag,
 };
 pub use element::{ElementHandle, use_element};
 pub(crate) use element::{use_content_changes, use_form_owner, use_resize_fallback};
