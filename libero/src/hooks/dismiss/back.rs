@@ -1,5 +1,5 @@
 //! Android's Back as a layer close (1275). wry finishes the activity on a Back
-//! the WebView cannot go back from, so a history entry stands in for the open layers.
+//! the WebView cannot go back from, so a history entry stands in for each open layer.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -9,31 +9,40 @@ use dioxus::prelude::*;
 
 use crate::platform;
 
-/// The layers Back closes, newest last, and whether the page holds the entry.
+/// The layers Back closes, newest last, and the entry count the page was asked for.
 #[derive(Default)]
 struct BackStack {
     layers: Vec<(u64, Callback<()>)>,
     next: u64,
     /// `None` until a layer first asks; `Some(false)` without a transport.
     listening: Option<bool>,
-    armed: bool,
+    sent: usize,
+    /// Backs since, whose layers may not have closed yet.
+    popped: usize,
 }
 
 impl BackStack {
-    /// One entry while any layer is open: the change to make, if any.
-    fn sync(&mut self) -> Option<bool> {
-        let want = !self.layers.is_empty();
-        (self.listening == Some(true) && self.armed != want).then(|| {
-            self.armed = want;
+    /// One entry per open layer: the count to send, if it changed. A closed
+    /// layer settles a Back; a new one starts afresh (its tap paid what was owed).
+    fn sync(&mut self) -> Option<usize> {
+        let want = self.layers.len();
+        (self.listening == Some(true) && self.sent != want).then(|| {
+            self.popped = match want < self.sent {
+                true => self.popped.saturating_sub(self.sent - want),
+                false => 0,
+            };
+            self.sent = want;
             want
         })
     }
 
-    /// Back popped the entry. The top layer stays until its guard drops: an
-    /// `onback` that keeps it open gets the entry back.
+    /// Back popped the newest entry left: its layer, or the top one when none is
+    /// left. Rust's view, so a layer whose entry is still on its way counts.
     fn pressed(&mut self) -> Option<Callback<()>> {
-        self.armed = false;
-        self.layers.last().map(|(_, onback)| *onback)
+        let top = self.layers.len().checked_sub(1)?;
+        let left = self.sent.saturating_sub(self.popped);
+        self.popped += 1;
+        Some(self.layers[left.saturating_sub(1).min(top)].1)
     }
 }
 
@@ -51,23 +60,23 @@ impl Back {
         })
     }
 
-    /// Pushed for the first layer, taken back unheard after the last.
+    /// Pushed while a layer opens within its tap, taken back unheard as layers close.
     fn sync(self) {
         let mut stack = self.0;
         let change = stack.try_write().ok().and_then(|mut stack| stack.sync());
-        if let Some(want) = change {
-            platform::back_entry(want);
+        if let Some(count) = change {
+            platform::back_entries(count);
         }
     }
 
-    /// Back popped the entry: the top layer closes, and the entry returns while layers are left.
+    /// No sync here: the layer is still open, and a push now has no activation.
+    /// One kept open gets its entry back at the next tap.
     fn pressed(self) {
         let mut stack = self.0;
-        let top = stack.try_write().ok().and_then(|mut stack| stack.pressed());
-        if let Some(onback) = top {
+        let layer = stack.try_write().ok().and_then(|mut stack| stack.pressed());
+        if let Some(onback) = layer {
             onback.call(());
         }
-        self.sync();
     }
 
     fn push(self, onback: Callback<()>) -> Option<Guard> {
@@ -127,28 +136,53 @@ pub(super) fn use_back(open: bool, onback: Callback<()>) {
 mod tests {
     use super::*;
 
+    fn stack(layers: Vec<(u64, Callback<()>)>) -> BackStack {
+        BackStack {
+            next: layers.len() as u64,
+            layers,
+            listening: Some(true),
+            ..BackStack::default()
+        }
+    }
+
     #[test]
-    fn a_layer_back_leaves_open_keeps_the_entry() {
+    fn each_layer_holds_an_entry_and_back_closes_the_newest() {
         let mut dom = VirtualDom::new(|| rsx! {});
         dom.rebuild_in_place();
         dom.in_scope(ScopeId::APP, || {
             let (lower, upper) = (Callback::new(|()| {}), Callback::new(|()| {}));
-            let mut stack = BackStack {
-                layers: vec![(1, lower), (2, upper)],
-                next: 2,
-                listening: Some(true),
-                armed: true,
-            };
+            let mut stack = stack(vec![(1, lower)]);
+            assert_eq!(stack.sync(), Some(1));
+            stack.layers.push((2, upper));
+            assert_eq!(stack.sync(), Some(2));
             assert_eq!(stack.pressed(), Some(upper));
+            assert_eq!(stack.sync(), None, "Back asks for no entry back");
             assert_eq!(
-                stack.sync(),
-                Some(true),
-                "the entry returns while upper is open"
+                stack.pressed(),
+                Some(lower),
+                "a second Back before upper closed"
             );
             stack.layers.retain(|(id, _)| *id != 2);
-            assert_eq!(stack.sync(), None, "lower still holds the entry");
+            assert_eq!(stack.sync(), Some(1));
             stack.layers.clear();
-            assert_eq!(stack.sync(), Some(false));
+            assert_eq!(stack.sync(), Some(0));
+            assert_eq!(stack.pressed(), None);
+        });
+    }
+
+    #[test]
+    fn a_layer_kept_open_takes_the_next_back_too() {
+        let mut dom = VirtualDom::new(|| rsx! {});
+        dom.rebuild_in_place();
+        dom.in_scope(ScopeId::APP, || {
+            let (wizard, menu) = (Callback::new(|()| {}), Callback::new(|()| {}));
+            let mut stack = stack(vec![(1, wizard)]);
+            stack.sync();
+            assert_eq!(stack.pressed(), Some(wizard));
+            assert_eq!(stack.pressed(), Some(wizard), "still open, still on top");
+            stack.layers.push((2, menu));
+            stack.sync();
+            assert_eq!(stack.pressed(), Some(menu), "a new layer starts afresh");
         });
     }
 }

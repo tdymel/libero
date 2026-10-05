@@ -122,7 +122,7 @@ pub(crate) use keyboard::typing_target;
 pub(crate) use keyboard::warn_reserved_chord;
 pub use keyboard::{KeyChord, KeySubscription, KeyboardApi, keyboard};
 #[cfg(target_os = "android")]
-pub(crate) use keyboard::{back_entry, watch_back};
+pub(crate) use keyboard::{back_entries, watch_back};
 pub(crate) use max_length::fit_max_length;
 pub(crate) use media::{MediaApi, MediaState, MediaSubscription, media};
 pub use media_query::{MediaQueryApi, MediaQuerySubscription, media_query};
@@ -141,13 +141,13 @@ pub(crate) use press::{PRESS_MARKER_ATTR, PressApi, PressSubscription, press};
 pub(crate) use push::{PushApi, push};
 pub use push::{PushEndpoint, PushError, PushOptions};
 pub(crate) use regex::{PreparedText, RegexMatch, regex_api};
-pub(crate) use resize::{is_measured_resize, on_resize};
+pub(crate) use resize::{is_measured_resize, observe_resize, on_resize};
 pub use save_file::{SaveOutcome, save_file};
 pub(crate) use scroll::{
     EDGE_SWIPE_MARK, EdgeBand, SCROLL_QUIET, clips_z_indexed, draws_own_scrollbars,
     fires_scroll_end, fires_scroll_on_scroll_to, hold_edge_pan, on_element_scroll,
-    on_viewport_resize, reserves_rows_in_tables, scroll_range, scroll_timelines, scrolls_on_keys,
-    snaps_scroll, wheel_travel_y,
+    on_viewport_resize, reserves_rows_in_tables, scroll_chain_into_view, scroll_range,
+    scroll_timelines, scrolls_on_keys, snaps_scroll, wheel_travel_y,
 };
 pub use scroll::{ScrollApi, ScrollSubscription, scroll};
 pub(crate) use select::opens_select_picker;

@@ -230,6 +230,72 @@ fn arrow_left_goes_forward_in_rtl() {
     });
 }
 
+/// JS: whether the hole is `target`'s box plus the padding.
+fn hole_js(target: &str) -> String {
+    format!(
+        "(() => {{ const t = document.querySelector({target:?}).getBoundingClientRect(); \
+         const h = document.querySelector({HIGHLIGHT:?}).getBoundingClientRect(); \
+         const near = (a, b) => Math.abs(a - b) <= 1; \
+         return near(h.x, t.x - {PADDING}) && near(h.y, t.y - {PADDING}) \
+           && near(h.width, t.width + {}) && near(h.height, t.height + {}); }})()",
+        2.0 * PADDING,
+        2.0 * PADDING
+    )
+}
+
+/// Starts the tour on `route` from the keyboard and waits for the card's focus.
+async fn start_on(route: &str) -> Fixture {
+    let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+    let page = &fixture.page;
+    keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
+    keyboard::press(page, keyboard::ENTER).await.unwrap();
+    wait::for_visible(page, CARD).await.unwrap();
+    e2e::passes::focus::wait_for_focus(page, CARD, "starting the tour")
+        .await
+        .unwrap();
+    fixture
+}
+
+/// A target below one scroller's fold and past another's side edge: both scroll (2222).
+#[test]
+fn a_nested_target_scrolls_into_view() {
+    block_on(async {
+        let fixture = start_on("/tour/nested").await;
+        let page = &fixture.page;
+        let inside = "(() => { const t = document.querySelector('#deep').getBoundingClientRect(); \
+             const within = (id) => { const r = document.querySelector(id).getBoundingClientRect(); \
+               return t.left >= r.left - 1 && t.right <= r.right + 1 \
+                 && t.top >= r.top - 1 && t.bottom <= r.bottom + 1; }; \
+             return within('#inner') && within('#outer'); })()";
+        wait::for_js_true(page, inside, "#deep to scroll into both scrollers")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &hole_js("#deep"), "the hole to follow the scroll")
+            .await
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The target growing with nothing scrolled or resized moves the hole (2223).
+#[test]
+fn a_growing_target_grows_the_hole() {
+    block_on(async {
+        let fixture = start_on("/tour").await;
+        let page = &fixture.page;
+        wait::for_js_true(page, &hole_js("#first"), "the hole on #first")
+            .await
+            .unwrap();
+        page.evaluate("document.querySelector('#first').style.width = '260px'")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &hole_js("#first"), "the hole to grow with #first")
+            .await
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A target that never mounts: after its tries the card shows in the middle, and the
 /// debug build warns, so the console is allowed at close.
 #[test]

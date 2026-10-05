@@ -823,6 +823,34 @@ impl Drop for WebIntersectionSubscription {
     }
 }
 
+pub(super) fn observe_resize(
+    target: &Rc<MountedData>,
+    callback: Box<dyn Fn()>,
+) -> Option<Box<dyn ContentSubscription>> {
+    let element = target.downcast::<web_sys::Element>()?;
+    let closure = Closure::<dyn FnMut()>::new(callback);
+    let observer = web_sys::ResizeObserver::new(closure.as_ref().unchecked_ref()).ok()?;
+    observer.observe(element);
+    Some(Box::new(WebBoxResizeSubscription {
+        observer,
+        _closure: closure,
+    }))
+}
+
+struct WebBoxResizeSubscription {
+    observer: web_sys::ResizeObserver,
+    /// Kept alive for as long as the observer can call it.
+    _closure: Closure<dyn FnMut()>,
+}
+
+impl ContentSubscription for WebBoxResizeSubscription {}
+
+impl Drop for WebBoxResizeSubscription {
+    fn drop(&mut self) {
+        self.observer.disconnect();
+    }
+}
+
 pub(super) fn on_form_reset(
     mounted: &Rc<MountedData>,
     on_reset: Box<dyn Fn()>,

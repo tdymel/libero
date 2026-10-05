@@ -604,6 +604,49 @@ pub(super) fn on_intersection(
     }))
 }
 
+/// A `ResizeObserver` on the element carrying `tag`'s `OBSERVE_ATTR`, started once it renders.
+pub(super) fn observe_resize(
+    tag: u64,
+    callback: Box<dyn Fn()>,
+) -> Option<Box<dyn ContentSubscription>> {
+    if !runs_scripts() {
+        return None;
+    }
+    let slot = Slot::new();
+    let script = eval_with(
+        json!([OBSERVE_ATTR, tag.to_string()]),
+        &format!(
+            "const [attr, tag] = data;
+            let observer = null;
+            const start = () => {{
+                const target = document.querySelector('[' + attr + '=\"' + tag + '\"]');
+                if (!target) return false;
+                observer = new ResizeObserver(() => dioxus.send(true));
+                observer.observe(target);
+                return true;
+            }};
+            const waiting = start() ? null : new MutationObserver(() => {{
+                if (start()) waiting.disconnect();
+            }});
+            waiting?.observe(document.documentElement, {{ childList: true, subtree: true, attributes: true, attributeFilter: [attr] }});
+            {}
+            observer?.disconnect();
+            waiting?.disconnect();",
+            slot.park("")
+        ),
+    );
+    let task = spawn(async move {
+        let mut script = script;
+        while script.recv::<bool>().await.is_ok() {
+            callback();
+        }
+    });
+    Some(Box::new(WebViewListener {
+        task,
+        _slot: Rc::new(slot),
+    }))
+}
+
 impl ContentSubscription for WebViewListener {}
 
 pub(super) fn press() -> Option<&'static dyn PressApi> {
@@ -1527,8 +1570,36 @@ fn watch_media(query: &'static str, answer: impl Fn(bool) + 'static) {
     });
 }
 
-/// Back pops [`back_entry`]'s history entry: `onback` runs, unless the page took
-/// the entry back itself. Starts here, as [`watch_media`] does.
+/// [`back_entries`] in the page. Chromium skips on Back an entry pushed with no gesture
+/// since the last navigation (2240): after a Back, a missing one waits for a tap or key.
+#[cfg(target_os = "android")]
+const BACK_ENTRIES: &str =
+    "const back = window.__lsxBack = { held: 0, want: 0, ignore: 0, owed: false };
+    back.settle = (push) => {
+        if (back.want < back.held) {
+            back.ignore++;
+            history.go(back.want - back.held);
+            back.held = back.want;
+        } else if (back.want > back.held && push && navigator.userActivation?.isActive !== false) {
+            for (; back.held < back.want; back.held++) history.pushState({ lsxBack: true }, '');
+        }
+        const owed = back.want > back.held;
+        if (owed !== back.owed) {
+            const listen = owed ? addEventListener : removeEventListener;
+            listen('pointerup', back.settle, true);
+            listen('keydown', back.settle, true);
+            back.owed = owed;
+        }
+    };
+    addEventListener('popstate', () => {
+        if (back.ignore > 0) return void back.ignore--;
+        back.held = Math.max(0, back.held - 1);
+        dioxus.send(true);
+        back.settle(false);
+    });";
+
+/// Back pops one of [`back_entries`]' history entries: `onback` runs, unless the
+/// page took it back itself. Starts here, as [`watch_media`] does.
 #[cfg(target_os = "android")]
 pub(super) fn watch_back(onback: impl Fn() + 'static) -> bool {
     if !runs_scripts() {
@@ -1536,12 +1607,7 @@ pub(super) fn watch_back(onback: impl Fn() + 'static) -> bool {
     }
     let script = eval_with(
         json!(null),
-        "window.__lsxBackIgnore = 0;
-        addEventListener('popstate', () => {
-            if (window.__lsxBackIgnore > 0) window.__lsxBackIgnore--;
-            else dioxus.send(true);
-        });
-        await new Promise(() => {});",
+        &format!("{BACK_ENTRIES}\nawait new Promise(() => {{}});"),
     );
     spawn_forever(async move {
         let mut script = script;
@@ -1552,14 +1618,13 @@ pub(super) fn watch_back(onback: impl Fn() + 'static) -> bool {
     true
 }
 
-/// Pushed inside the opening tap's activation, or Chromium skips the entry on
-/// Back and the app closes; taken back with its `popstate` ignored.
+/// Asks the page to hold `count` entries: pushed inside a tap's activation (now
+/// or at the next one), taken back with their `popstate` ignored.
 #[cfg(target_os = "android")]
-pub(super) fn back_entry(armed: bool) {
-    eval(match armed {
-        true => "history.pushState({ lsxBack: true }, '');",
-        false => "window.__lsxBackIgnore++; history.back();",
-    });
+pub(super) fn back_entries(count: usize) {
+    eval(&format!(
+        "if (window.__lsxBack) {{ window.__lsxBack.want = {count}; window.__lsxBack.settle(true); }}"
+    ));
 }
 
 /// `false` until the page first answers, then kept live by a listener.

@@ -216,6 +216,41 @@ pub(crate) fn on_resize(
     }
 }
 
+/// The web and Blitz observe the node, a WebView the element carrying `tag`.
+pub(crate) fn observe_resize(
+    mounted: &Rc<MountedData>,
+    tag: Option<u64>,
+    callback: Box<dyn Fn()>,
+) -> Option<Box<dyn ContentSubscription>> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _ = tag;
+        web::observe_resize(mounted, callback)
+    }
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    {
+        let _ = mounted;
+        webview::observe_resize(tag?, callback)
+    }
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    {
+        let _ = tag;
+        blitz::on_resize(mounted, Box::new(move |_| callback()))
+    }
+}
+
+/// The web and a WebView use the browser's `scrollIntoView`, which moves every
+/// scroller up the chain on both axes; Blitz its nearest scroller only.
+pub(crate) fn scroll_chain_into_view(
+    mounted: &Rc<MountedData>,
+    smooth: bool,
+) -> Result<(), super::PlatformError> {
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return element(mounted).scroll_into_view(smooth);
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    return mounted::MountedElement(mounted.clone()).scroll_into_view(smooth);
+}
+
 /// Only the web: Blitz fires no native `submit` or `reset` for a raw `<form>`,
 /// so an owner found there would promise what nothing delivers.
 pub(crate) fn on_form_reset(
@@ -756,13 +791,13 @@ pub(crate) fn watch_back(onback: impl Fn() + 'static) -> bool {
     };
 }
 
-/// Only the WebView - see [`back_entry`](crate::platform::back_entry).
+/// Only the WebView - see [`back_entries`](crate::platform::back_entries).
 #[cfg(target_os = "android")]
-pub(crate) fn back_entry(armed: bool) {
+pub(crate) fn back_entries(count: usize) {
     #[cfg(not(feature = "native"))]
-    webview::back_entry(armed);
+    webview::back_entries(count);
     #[cfg(feature = "native")]
-    let _ = armed;
+    let _ = count;
 }
 
 /// Only a WebView on a phone - see [`soft_keyboard_app`](crate::platform::soft_keyboard_app).

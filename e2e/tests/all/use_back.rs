@@ -31,6 +31,8 @@ async fn back_steps_down_below_a_menu<D: Driver>(d: &mut D, _route: &str) -> Res
 
     d.press_back().await?;
     eventually(d, "Back to step down", async |d| Ok(step(d).await? == "2")).await?;
+    // Still active: its entry returns only within a gesture, WebView 133 skips one pushed without (2240).
+    d.click(STEP).await?;
     d.press_back().await?;
     eventually(d, "Back to step down again", async |d| {
         Ok(step(d).await? == "1")

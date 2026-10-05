@@ -109,17 +109,18 @@ pub(crate) fn soft_keyboard_app() -> bool {
     backend::soft_keyboard_app()
 }
 
-/// Runs `onback` on each Android Back that pops a [`back_entry`]; `false` where
-/// Back never reaches the page (no WebView).
+/// Runs `onback` on each Android Back that pops one of the [`back_entries`];
+/// `false` where Back never reaches the page (no WebView).
 #[cfg(target_os = "android")]
 pub(crate) fn watch_back(onback: impl Fn() + 'static) -> bool {
     backend::watch_back(onback)
 }
 
-/// Adds the history entry Back pops, or with `false` takes it back unheard.
+/// Keeps `count` history entries for Back to pop: added only within a user
+/// activation (later if none), extras taken back unheard.
 #[cfg(target_os = "android")]
-pub(crate) fn back_entry(armed: bool) {
-    backend::back_entry(armed);
+pub(crate) fn back_entries(count: usize) {
+    backend::back_entries(count);
 }
 
 /// Whether this press landed in right-to-left content: the target's computed

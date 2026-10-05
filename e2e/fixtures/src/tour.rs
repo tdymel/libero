@@ -12,6 +12,7 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/tour", || rsx! { TourPage {} }),
     ("/tour/missing", || rsx! { MissingTourPage {} }),
+    ("/tour/nested", || rsx! { NestedTourPage {} }),
 ];
 
 /// `#ended` reads how the tour last ended: `finished`, or `closed at <index>`.
@@ -66,5 +67,27 @@ fn MissingTourPage() -> Element {
 
     rsx! {
         Button { id: "start-tour", variant: "outlined", onclick: move |_| tour.start(), "Take the tour" }
+    }
+}
+
+/// `#deep` sits below a vertical scroller's fold and past a horizontal one's edge.
+#[component]
+fn NestedTourPage() -> Element {
+    let deep = use_element();
+    let tour = use_tour(TourOptions {
+        steps: vec![TourStep::new("deep").target(deep).title("Deep")],
+        ..Default::default()
+    });
+
+    rsx! {
+        Button { id: "start-tour", variant: "outlined", onclick: move |_| tour.start(), "Take the tour" }
+        div { id: "outer", style: "height: 200px; width: 300px; overflow-y: auto;",
+            div { style: "height: 600px;" }
+            div { id: "inner", style: "overflow-x: auto; white-space: nowrap;",
+                div { style: "display: inline-block; width: 900px; height: 1px;" }
+                Button { id: "deep", onmounted: deep.mount(), attributes: deep.attributes(), "Deep" }
+            }
+            div { style: "height: 600px;" }
+        }
     }
 }

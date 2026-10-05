@@ -8,8 +8,8 @@ use dioxus::prelude::*;
 use crate::{
     hooks::{ElementHandle, Rect, use_subscription_slot},
     platform::{
-        Dimensions, ElementApi, ScrollSubscription, document, next_task, on_viewport_resize,
-        scroll, when_laid_out,
+        ContentSubscription, Dimensions, ElementApi, ScrollSubscription, document, next_task,
+        observe_resize, on_viewport_resize, scroll, when_laid_out,
     },
     utils::bump,
 };
@@ -30,7 +30,7 @@ pub(crate) enum ElementRect {
     },
 }
 
-/// Measures `target` while `active`, again on every scroll and viewport resize.
+/// Measures `target` while `active`, again on every scroll, viewport resize and resize of `target`.
 /// Scrolls are heard where the renderer reports them (Blitz: libero's own and the wheel).
 pub(crate) fn use_element_rect(
     target: Option<ElementHandle>,
@@ -41,6 +41,8 @@ pub(crate) fn use_element_rect(
     let tick = use_signal(|| 0u64);
     let listening = use_subscription_slot::<dyn ScrollSubscription>();
     let resizing = use_subscription_slot::<dyn ScrollSubscription>();
+    let growing = use_subscription_slot::<dyn ContentSubscription>();
+    let observed: Rc<Cell<Option<usize>>> = use_hook(|| Rc::new(Cell::new(None)));
     let waited: Rc<Cell<u8>> = use_hook(|| Rc::new(Cell::new(0)));
     let measured: Rc<Cell<Option<ElementHandle>>> = use_hook(|| Rc::new(Cell::new(None)));
 
@@ -61,6 +63,8 @@ pub(crate) fn use_element_rect(
         let Some(target) = target.filter(|_| active) else {
             listening.clear();
             resizing.clear();
+            growing.clear();
+            observed.set(None);
             waited.set(0);
             set(match active {
                 true => ElementRect::Missing,
@@ -90,6 +94,17 @@ pub(crate) fn use_element_rect(
         }
         if !resizing.is_some() {
             resizing.set(on_viewport_resize(Box::new(move || bump(tick))));
+        }
+        // Per mount: a remount is a new node to observe.
+        let token = target.mount_token();
+        if observed.replace(token) != token
+            && let Some(mounted) = target.mounted()
+        {
+            growing.set(observe_resize(
+                &mounted,
+                target.tag(),
+                Box::new(move || bump(tick)),
+            ));
         }
 
         // Started here, awaited in the task: Blitz locks the document while tasks drain.

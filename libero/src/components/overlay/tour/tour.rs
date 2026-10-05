@@ -25,7 +25,7 @@ use crate::{
     localization::fill,
     platform::{
         ElementApi, KeyChord, OBSERVE_ATTR, arrow_target, focus_first_of, key_taken, keyboard,
-        logical_key, prefers_reduced_motion, typing_target,
+        logical_key, prefers_reduced_motion, scroll_chain_into_view, typing_target,
     },
     sx::{REDUCED_MOTION, StaticSx, Sx, sx},
     theme::{OVERLAY_OPACITY, Z_INDEX_POPOVER},
@@ -617,11 +617,16 @@ fn TourCard(
     );
     let body_id = use_id();
 
-    // Brought into view once per step; the scroll it causes measures the hole again.
+    // Brought into view once per step, through nested and sideways scrollers; the
+    // scroll it causes measures the hole again.
     let scrolled = use_hook(|| Rc::new(Cell::new(false)));
     use_effect(move || {
-        if anchor.mount_token().is_some() && step.target.is_some() && !scrolled.replace(true) {
-            let _ = anchor.scroll_into_view(!prefers_reduced_motion());
+        if anchor.mount_token().is_some()
+            && step.target.is_some()
+            && !scrolled.replace(true)
+            && let Some(mounted) = anchor.mounted()
+        {
+            let _ = scroll_chain_into_view(&mounted, !prefers_reduced_motion());
         }
     });
     // Focus moves once the card shows: a hidden box takes no focus. Per mount:

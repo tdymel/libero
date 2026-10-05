@@ -174,6 +174,15 @@ pub(crate) fn on_element_scroll(
     backend::on_element_scroll(tag, callback)
 }
 
+/// Brings the element into view through every scroller around it, on both axes
+/// (`scrollIntoView` `nearest`). Blitz moves its nearest scroller only.
+pub(crate) fn scroll_chain_into_view(
+    mounted: &std::rc::Rc<dioxus::prelude::MountedData>,
+    smooth: bool,
+) -> Result<(), super::PlatformError> {
+    backend::scroll_chain_into_view(mounted, smooth)
+}
+
 /// `None` where no scroll is reported: a WebView, a headless build. Blitz reports
 /// a wheel inside `LiberoProvider` and libero's own scroll commands.
 ///

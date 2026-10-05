@@ -23,6 +23,7 @@ pub fn UseBackPage() -> Element {
                 .limits([
                     "Android only. Elsewhere the hook does nothing.",
                     "Activated without a tap (on mount, from a timer), the first Back may still leave the app: Android's WebView skips a history entry pushed without a user gesture.",
+                    "A Back that leaves the hook active (one wizard step back) needs a tap or key press before the next Back reaches it; two Backs in a row leave the app.",
                 ]),
             lead: rsx! {
                 Text {

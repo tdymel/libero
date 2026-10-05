@@ -14,6 +14,16 @@ pub(crate) fn on_resize(
     backend::on_resize(mounted, callback)
 }
 
+/// Calls `callback` at the first measure and on each border-box change of an
+/// element `onresize` cannot be put on; a WebView finds it by `tag` (`None`: unheard there).
+pub(crate) fn observe_resize(
+    mounted: &Rc<MountedData>,
+    tag: Option<u64>,
+    callback: Box<dyn Fn()>,
+) -> Option<Box<dyn ContentSubscription>> {
+    backend::observe_resize(mounted, tag, callback)
+}
+
 /// Whether `data` came from [`on_resize`]'s measure rather than the
 /// renderer's own `resize` event.
 pub(crate) fn is_measured_resize(data: &ResizeData) -> bool {
