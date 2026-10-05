@@ -139,8 +139,8 @@ Done button closes it and returns focus to the trigger.
 
 - On Android, a drawer opened without a tap (on mount or from a timer) may let
   Back close the app.
-- On the desktop WebView, Shift+Tab from the panel's first control leaves it;
-  on Android, Tab does.
+- In a desktop WebView or on Android, Tab and Shift+Tab move between the
+  controls but can leave the drawer at its ends.
 
 ## Theme defaults
 

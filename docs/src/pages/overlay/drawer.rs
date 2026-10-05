@@ -107,7 +107,7 @@ pub fn DrawerPage() -> Element {
                 .example("A filters drawer, `DrawerOptions { aria_label: Some(\"Filters\".into()), .. }`: focus moves into the panel, Tab stays inside it, and Escape or the panel's own Done button closes it and returns focus to the trigger.")
                 .limits([
                     "On Android, a drawer opened without a tap (on mount or from a timer) may let Back close the app.",
-                    "On the desktop WebView, Shift+Tab from the panel's first control leaves it; on Android, Tab does.",
+                    "In a desktop WebView or on Android, Tab and Shift+Tab move between the controls but can leave the drawer at its ends.",
                 ]),
             lead: rsx! {
                 Text {

@@ -44,6 +44,7 @@ pub fn FocusTrapPage() -> Element {
                 .example("A delete confirmation, `FocusTrap { restore_focus: true, .. }` around its message and two buttons: Tab from the last button wraps to the first, Escape and Cancel close it, and focus goes back to the button that opened it.")
                 .limits([
                     "Without `restore_focus`, focus is not restored on unmount: it falls to the page body.",
+                    "In a desktop WebView or on Android, Tab and Shift+Tab move between the children but do not wrap: at either end they leave the trap.",
                 ]),
             lead: rsx! {
                 Text {

@@ -180,7 +180,10 @@ pub fn LightboxPage() -> Element {
                     "At the edge of a pan the arrows move to the next picture, so the keyboard never gets stuck.",
                 ])
                 .must(["Give every picture its own `alt`."])
-                .example("A product gallery whose photos each have their own `alt`: the viewer opens from a thumbnail, Left and Right move between photos, and Escape closes it with focus back on that thumbnail."),
+                .example("A product gallery whose photos each have their own `alt`: the viewer opens from a thumbnail, Left and Right move between photos, and Escape closes it with focus back on that thumbnail.")
+                .limits([
+                    "In a desktop WebView or on Android, Tab and Shift+Tab move between the controls but can leave the viewer at its ends.",
+                ]),
             lead: rsx! {
                 Text {
                     "A modal image viewer. "

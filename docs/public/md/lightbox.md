@@ -164,6 +164,11 @@ A product gallery whose photos each have their own `alt`: the viewer opens
 from a thumbnail, Left and Right move between photos, and Escape closes it
 with focus back on that thumbnail.
 
+### Limits
+
+- In a desktop WebView or on Android, Tab and Shift+Tab move between the
+  controls but can leave the viewer at its ends.
+
 ## Theme defaults
 
 `LightboxDefaults` on the theme.

@@ -117,6 +117,8 @@ and Cancel close it, and focus goes back to the button that opened it.
 
 - Without `restore_focus`, focus is not restored on unmount: it falls to the
   page body.
+- In a desktop WebView or on Android, Tab and Shift+Tab move between the
+  children but do not wrap: at either end they leave the trap.
 
 ## Theme defaults
 

@@ -377,7 +377,10 @@ pub fn SpotlightPage() -> Element {
                     "Turn `highlight_first_on_query` off for a palette whose actions change things. Then nothing is highlighted until you press Down.",
                     "Call `open()` from the trigger's handler, so focus returns there.",
                 ])
-                .example("A command palette opened from a \"Search\" button that calls `open()`: typing \"the\" says \"2 results\", Enter runs the first one, and Escape puts focus back on Search."),
+                .example("A command palette opened from a \"Search\" button that calls `open()`: typing \"the\" says \"2 results\", Enter runs the first one, and Escape puts focus back on Search.")
+                .limits([
+                    "In a desktop WebView or on Android, Tab and Shift+Tab can leave the palette for the page behind it.",
+                ]),
             lead: rsx! {
                 Text {
                     "A command palette, a modal search box over a list of actions. "

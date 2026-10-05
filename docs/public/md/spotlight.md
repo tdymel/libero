@@ -195,6 +195,11 @@ A command palette opened from a "Search" button that calls `open()`: typing
 "the" says "2 results", Enter runs the first one, and Escape puts focus back
 on Search.
 
+### Limits
+
+- In a desktop WebView or on Android, Tab and Shift+Tab can leave the palette
+  for the page behind it.
+
 ## Theme defaults
 
 `SpotlightDefaults` on the theme holds `width` (`"600px"`), `top_offset`
