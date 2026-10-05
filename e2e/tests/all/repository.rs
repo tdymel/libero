@@ -222,17 +222,73 @@ fn a_count_joins_the_icon_and_is_cached_for_the_session() {
     });
 }
 
+/// `aria_label` replaces the subject only, so the visible count stays in the name (2.5.3);
+/// a raw `aria-label` attribute replaces the whole name.
 #[test]
-fn aria_label_replaces_the_name_while_the_count_shows() {
+fn aria_label_replaces_the_subject_and_the_count_stays() {
     block_on(async {
         let fixture = Fixture::open("/repository/named", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;
-        wait::for_visible(page, "#named").await.unwrap();
         let (name, text, _, _) = link(page, "#named", "1.2k").await;
-        assert_eq!(name, "Example source (new tab)");
+        assert_eq!(name, "Example source, 1.2k stars (opens in a new tab)");
         assert_eq!(text, "1.2k", "the seeded count did not show");
+        let (raw, _, _, _) = link(page, "#raw", "1.2k").await;
+        assert_eq!(raw, "Example source, opens a new tab");
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Inside a `ButtonGroup`: a group gradient's count takes the label colour (todo 1529's
+/// route), a group `disabled` drops the `href`, and a column stretches the pill.
+#[test]
+fn in_a_button_group_it_takes_the_group_s_variant_disabled_and_width() {
+    block_on(async {
+        let fixture = Fixture::open("/repository/grouped", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        link(page, "#gradient", "1.2k").await;
+        let (label, count): (String, String) = page
+            .evaluate(
+                "(() => { const a = document.querySelector('#gradient'); \
+                 const c = a.querySelector('[data-slot=\"count\"]'); \
+                 return [getComputedStyle(a).color, getComputedStyle(c).color]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            count, label,
+            "the group's gradient count left the label colour"
+        );
+
+        link(page, "#disabled", "1.2k").await;
+        let (href, disabled): (Option<String>, Option<String>) = page
+            .evaluate(
+                "(() => { const a = document.querySelector('#disabled'); \
+                 return [a.getAttribute('href'), a.getAttribute('aria-disabled')]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(href, None, "a disabled group's link kept its href");
+        assert_eq!(disabled.as_deref(), Some("true"));
+
+        let (_, _, width, _) = link(page, "#vertical", "1.2k").await;
+        let widest: f64 = page
+            .evaluate("document.querySelector('#wide').getBoundingClientRect().width")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            (width - widest).abs() < 0.5,
+            "the pill is {width}px, the column {widest}px"
+        );
         fixture.close().await.unwrap();
     });
 }

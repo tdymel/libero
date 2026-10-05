@@ -28,7 +28,7 @@ pub fn RepositoryPage() -> Element {
                     .default("sm")
                     .doc("Corner radius, independent of `size`."),
                 prop("aria_label", "String")
-                    .doc("Replaces the whole built name: host, repository, star count and new-tab cue. Unset, the built name."),
+                    .doc("Replaces the name's subject, the host and repository; the star count and new-tab cue still follow. A raw `\"aria-label\"` attribute replaces the whole name."),
                 prop("parts", "Parts<RepositoryPart>")
                     .doc("Styles for the inner parts in the Style API tab, under `sx`."),
             ])
@@ -41,10 +41,10 @@ pub fn RepositoryPage() -> Element {
                     "The link's name is the host and repository (\"GitHub tdymel/libero\"), the star count once it arrives, and the new-tab cue, so two buttons on one page read apart. The words come from `RepositoryLabels::stars`, `RepositoryLabels::compact` and `AnchorLabels::new_tab` in the localization.",
                     "The drawn count is not read twice: the name replaces the link's content.",
                     "A count drawn in the accent color, which could miss 4.5:1, takes the `ink` color instead.",
-                    "Set, `aria_label` replaces that whole name, count and new-tab cue included.",
+                    "Set, `aria_label` replaces the host and repository; the star count and new-tab cue still follow it.",
                 ])
                 .must([
-                    "With your own `aria_label`, name the repository and say that it opens in a new tab.",
+                    "With your own `aria_label`, name the repository. With a raw `\"aria-label\"` attribute, which replaces the whole name, also say the star count and that it opens in a new tab.",
                 ])
                 .example("A header link, `Repository { repo: \"tdymel/libero\" }`: a screen reader reads \"GitHub tdymel/libero\", then the star count once it arrives, then that it opens in a new tab."),
             lead: rsx! {

@@ -168,7 +168,7 @@ pub fn use_tour(options: TourOptions) -> TourHandle
 | `current` | `Option<usize>` | - | Makes the step shown controlled: the buttons, keys and handle calls only call `onchange`. |
 | `onchange` | `Option<Callback<usize>>` | - | Called with the step a button, key or handle call asks for. |
 | `onfinish` | `Option<Callback<()>>` | - | Called once when Next is pressed on the last step. |
-| `onclose` | `Option<Callback<usize>>` | - | Called with the step shown when the tour ends early: Escape, Back, Skip or the close button. |
+| `onclose` | `Option<Callback<usize>>` | - | Called with the step shown when the tour ends early: Escape, Back, Skip or the close button. Steps going empty while open end it too, with the last step shown. |
 | `mask_click` | `MaskClick` | `None` | What a press on the dimmed page does: `None`, `Close` or `Next`. |
 | `keyboard` | `bool` | `true` | ← and → go to the previous and next step, following the text direction. |
 | `aria_label` | `Option<String>` | - | Names every step's card, over the step titles. |

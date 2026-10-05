@@ -53,7 +53,7 @@ button names come from the [localization](localization.md).
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
 | `themes` | `&'static [&'static ThemeSet]` | - | Adds the theme picker, a second button that opens a menu of these sets. `class`, `sx` and extra attributes then land on the group around both. |
 | `with_system` | `bool` | `false` | Adds following the system to the cycle. Off, a press flips between light and dark, and flipping to the system's own scheme follows the system again. |
-| `label` | `Callback<ColorSchemeSetting, String>` | - | Replaces the three built-in button names. Gets the setting a press moves to and returns what the press does. |
+| `label` | `Callback<ColorSchemeSetting, String>` | - | Replaces the three built-in button names. Gets the scheme a press shows next, always `Light` or `Dark` without `with_system` (even when the press stores `System`), and returns what the press does. |
 | `disabled` | `bool` | `false` | Disables and dims the button. |
 | `parts` | `Parts<ThemeSwitcherPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 | `menu_parts` | `Parts<MenuPart>` | - | The theme-set menu's `parts`, the `Menu` page's Style API table. The menu opens in a portal, out of `sx` and `parts`. |

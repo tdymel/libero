@@ -118,10 +118,10 @@ async fn vertical<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     Ok(())
 }
 
-/// Items with a set width stretch too: icons, a wrapped icon, the theme pair.
+/// Items with a set width stretch too: icons, a wrapped icon, a tooltip icon, the theme pair.
 async fn vertical_stretches<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let widest = d.rect("#vm1").await?.width;
-    for item in ["#vm2", "#vm3", "#vm4"] {
+    for item in ["#vm2", "#vm3", "#vm5", "#vm4"] {
         let width = d.rect(item).await?.width;
         ensure!(
             (width - widest).abs() < 0.5,
@@ -136,6 +136,25 @@ async fn vertical_stretches<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         toggle.width > chevron.width,
         "the toggle did not grow: {toggle:?} {chevron:?}"
     );
+    Ok(())
+}
+
+/// A tooltip icon's wrapper adds no line box: one height, flush, the group no taller.
+async fn tooltip_icon_in_a_row<D: Driver>(d: &mut D, route: &str) -> Result<()> {
+    let (t1, t2, group) = (
+        d.rect("#t1").await?,
+        d.rect("#t2").await?,
+        d.rect("#tipped").await?,
+    );
+    ensure!(
+        joined(t1, t2, route.ends_with("/rtl")),
+        "not flush: {t1:?} {t2:?}"
+    );
+    ensure!(
+        (t1.height - t2.height).abs() < 0.5 && (group.height - t1.height).abs() < 0.5,
+        "heights: {t1:?} {t2:?} group {group:?}"
+    );
+    ensure!((t1.y - t2.y).abs() < 0.5, "not aligned: {t1:?} {t2:?}");
     Ok(())
 }
 
@@ -217,6 +236,11 @@ e2e::scenario!(
     a_vertical_group_stretches_set_width_items,
     "/button-group",
     vertical_stretches
+);
+e2e::scenario!(
+    a_tooltip_icon_sits_flush_in_a_row,
+    "/button-group",
+    tooltip_icon_in_a_row
 );
 e2e::scenario!(
     the_focused_button_is_lifted_over_its_neighbours,

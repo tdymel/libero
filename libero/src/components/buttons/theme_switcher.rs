@@ -80,7 +80,9 @@ base_props! {
         /// and flipping to the system's own scheme follows the system again.
         #[props(default)]
         with_system: Option<bool>,
-        /// Names the press, given the setting it moves to. Replaces the localized names.
+        /// Names the press, given the scheme it shows next: the next cycle step with
+        /// `with_system`, else always `Light` or `Dark`, even when the press stores `System`.
+        /// Replaces the localized names.
         #[props(default)]
         label: Option<Callback<ColorSchemeSetting, String>>,
         #[props(default)]

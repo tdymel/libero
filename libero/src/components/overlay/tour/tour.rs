@@ -158,6 +158,7 @@ pub struct TourOptions {
     /// Called once when Next is pressed on the last step.
     pub onfinish: Option<Callback<()>>,
     /// Called with the step shown when the tour is closed early: Escape, Back, Skip, close.
+    /// Steps going empty while open close it too, with the last step shown.
     pub onclose: Option<Callback<usize>>,
     pub mask_click: MaskClick,
     /// ArrowRight and ArrowLeft go to the next and previous step.
@@ -285,10 +286,14 @@ impl TourHandle {
 
     /// Ends the tour early: `onclose` with the step shown, focus back to the trigger.
     pub fn close(&self) {
+        self.close_at(self.index_untracked());
+    }
+
+    fn close_at(&self, index: usize) {
         if self.end() {
             let onclose = self.latest.peek().onclose;
             if let Some(onclose) = onclose {
-                onclose.call(self.index_untracked());
+                onclose.call(index);
             }
         }
     }
@@ -459,10 +464,12 @@ pub fn use_tour(options: TourOptions) -> TourHandle {
     });
 
     // Steps gone while open end the tour, or it would stay open with nothing shown.
+    // `onclose` gets the last step shown, not the clamped 0 (todo 2317).
+    let mut last_shown = use_hook(|| CopyValue::new(0usize));
     let total = options.steps.len();
     use_effect(use_reactive!(|total| {
         if total == 0 && *open.peek() {
-            handle.close();
+            handle.close_at(*last_shown.peek());
         }
     }));
 
@@ -470,6 +477,7 @@ pub fn use_tour(options: TourOptions) -> TourHandle {
     let shown = open() && !options.steps.is_empty();
     slot.show(shown.then(|| {
         let index = handle.index();
+        last_shown.set(index);
         let mut options = options;
         for (step, mirror) in options.steps.iter_mut().zip(mirrors.peek().iter()) {
             step.target = step.target.map(|target| mirror.retag(target.tag()));

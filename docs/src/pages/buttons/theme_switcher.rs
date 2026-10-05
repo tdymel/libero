@@ -49,7 +49,7 @@ pub fn ThemeSwitcherPage() -> Element {
                     .default("false")
                     .doc("Adds following the system to the cycle. Off, a press flips between light and dark, and flipping to the system's own scheme follows the system again."),
                 prop("label", "Callback<ColorSchemeSetting, String>")
-                    .doc("Replaces the three built-in button names. Gets the setting a press moves to and returns what the press does."),
+                    .doc("Replaces the three built-in button names. Gets the scheme a press shows next, always `Light` or `Dark` without `with_system` (even when the press stores `System`), and returns what the press does."),
                 prop("disabled", "bool")
                     .default("false")
                     .doc("Disables and dims the button."),

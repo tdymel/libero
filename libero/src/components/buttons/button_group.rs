@@ -81,6 +81,11 @@ static BUTTON_GROUP_SX: StaticSx = StaticSx::new(|| {
                     format!("& > :not([role=\"group\"]) > {CONTROL}"),
                     sx().width("100%"),
                 )
+                // A `max-content` wrapper (`Tooltip`'s) is not stretched either (todo 2321).
+                .selector(
+                    format!("& > :not({CONTROL}, [role=\"group\"])"),
+                    sx().width("100%"),
+                )
                 .selector(
                     format!("& > [role=\"group\"] > {CONTROL}"),
                     sx().flex_grow("1"),

@@ -197,7 +197,7 @@ pub fn TourPage() -> Element {
                     prop("onfinish", "Callback<()>")
                         .doc("Called once when Next is pressed on the last step."),
                     prop("onclose", "Callback<usize>")
-                        .doc("Called with the step shown when the tour ends early: Escape, Back, Skip or the close button."),
+                        .doc("Called with the step shown when the tour ends early: Escape, Back, Skip or the close button. Steps going empty while open end it too, with the last step shown."),
                     prop("mask_click", "MaskClick")
                         .default("None")
                         .doc("What a press on the dimmed page does: `None`, `Close` or `Next`. `None`, so a stray tap does not lose the tour."),

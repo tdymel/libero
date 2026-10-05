@@ -62,7 +62,13 @@ fn ButtonGroupPage() -> Element {
                 Button { id: "vm1", "A wider label" }
                 ActionIcon { id: "vm2", aria_label: "Two", "2" }
                 span { display: "contents", ActionIcon { id: "vm3", aria_label: "Three", "3" } }
+                // In the Tooltip's `max-content` wrapper (todo 2321).
+                ActionIcon { id: "vm5", aria_label: "Five", tooltip: true, "5" }
                 ThemeSwitcher { id: "vm4", themes: ThemeSet::CATALOGUE }
+            }
+            ButtonGroup { id: "tipped", "aria-label": "Tipped", variant: "outlined",
+                Button { id: "t1", "Label" }
+                ActionIcon { id: "t2", aria_label: "Tip", tooltip: true, "T" }
             }
         }
     }

@@ -24,17 +24,28 @@ fn before_a_count_it_is_the_host_icon_linking_to_the_repo() {
     );
 }
 
+/// Todo 2320: `aria_label` is the subject, the new-tab cue follows; a raw attribute is the whole name.
 #[test]
-fn aria_label_replaces_the_built_name() {
+fn aria_label_replaces_the_subject() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                Repository { repo: "tdymel/libero", aria_label: "Libero source (new tab)" }
+                Repository { repo: "tdymel/libero", aria_label: "Libero source" }
             }
         }
     }
     let link = attributes_of(&body(&render(app)), "a");
-    assert_eq!(link["aria-label"], "Libero source (new tab)");
+    assert_eq!(link["aria-label"], "Libero source (opens in a new tab)");
+
+    fn raw() -> Element {
+        rsx! {
+            LiberoProvider {
+                Repository { repo: "tdymel/libero", "aria-label": "Libero source, new tab" }
+            }
+        }
+    }
+    let link = attributes_of(&body(&render(raw)), "a");
+    assert_eq!(link["aria-label"], "Libero source, new tab");
 }
 
 #[test]

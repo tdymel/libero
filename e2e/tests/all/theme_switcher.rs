@@ -277,6 +277,37 @@ fn a_dark_platform_cycles_light_then_dark_then_system() {
     });
 }
 
+/// Todo 2319: without `with_system`, `label` gets `Light` from dark under a light
+/// platform, though the press stores following the system.
+#[test]
+fn label_gets_the_scheme_shown_next_not_the_stored_setting() {
+    block_on(async {
+        let fixture = Fixture::open("/theme-switcher/labelled", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate(SHIELD_STORAGE).await.unwrap();
+        page.execute(
+            SetEmulatedMediaParams::builder()
+                .features(vec![MediaFeature::new("prefers-color-scheme", "light")])
+                .build(),
+        )
+        .await
+        .unwrap();
+
+        wait_for_name(page, "Go Dark").await;
+        pointer::click(page, BUTTON).await.unwrap();
+        wait_for_pin(page, Some("dark")).await;
+        wait_for_name(page, "Go Light").await;
+        pointer::click(page, BUTTON).await.unwrap();
+        wait_for_pin(page, None).await;
+        wait_for_name(page, "Go Dark").await;
+
+        fixture.console.assert_clean("a custom label").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Under a light platform, without the system entry: dark, then back to
 /// following the platform (which reads light). Enter and a click each flip it.
 #[test]

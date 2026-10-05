@@ -1,3 +1,4 @@
+use dioxus::core::AttributeValue;
 use dioxus::prelude::*;
 
 use crate::{
@@ -134,7 +135,8 @@ base_props! {
         size: Input<ThemeAwareValue>,
         #[props(default, into)]
         radius: Input<ThemeAwareValue>,
-        /// Replaces the built name (host, repo, stars, new-tab cue) whole.
+        /// Replaces the name's subject (host and repo); the stars and the new-tab cue
+        /// still follow. A raw `"aria-label"` attribute replaces the name whole.
         #[props(default, into)]
         aria_label: Option<String>,
     }
@@ -185,14 +187,25 @@ pub fn Repository(props: RepositoryProps) -> Element {
 
     let new_tab = localization.anchor.new_tab;
     // The repo in the name, else two buttons on a page read alike.
-    let subject = format!("{} {}", host.name(), props.repo);
-    let aria_label = match (props.aria_label.clone(), count) {
-        (Some(label), _) => label,
-        (None, Some(count)) => format!(
+    let subject = props
+        .aria_label
+        .clone()
+        .unwrap_or_else(|| format!("{} {}", host.name(), props.repo));
+    let aria_label = match count {
+        Some(count) => format!(
             "{subject}, {} {new_tab}",
             (localization.repository.stars)(count, &compact(count, separator))
         ),
-        (None, None) => format!("{subject} {new_tab}"),
+        None => format!("{subject} {new_tab}"),
+    };
+    // A raw `aria-label` attribute is the whole-name override; `ActionIcon`'s own would win.
+    let mut attributes = props.attributes.clone();
+    let aria_label = match attributes.iter().position(|a| a.name == "aria-label") {
+        Some(at) => match attributes.remove(at).value {
+            AttributeValue::Text(raw) => raw,
+            _ => aria_label,
+        },
+        None => aria_label,
     };
     let group = use_button_group();
     let variant = props
@@ -259,7 +272,7 @@ pub fn Repository(props: RepositoryProps) -> Element {
                 class: props.class.clone(),
                 sx: parts_under_sx(&props.parts, props.sx.clone()),
                 states: props.states.clone(),
-                attributes: props.attributes.clone(),
+                attributes,
                 {glyph}
                 {count_text}
             }

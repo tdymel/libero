@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 use libero::LiberoContext;
 use libero::components::{Button, Flex, MenuPart, Parts, Text, ThemeSwitcher};
 use libero::sx::sx;
-use libero::theme::{HexColor, Theme, ThemeSet};
+use libero::theme::{ColorSchemeSetting, HexColor, Theme, ThemeSet};
 
 use crate::Routes;
 
@@ -13,7 +13,16 @@ pub const ROUTES: Routes = &[
     ("/theme-switcher/themes", || rsx! { ThemesPage {} }),
     ("/theme-switcher/system", || rsx! { SystemPage {} }),
     ("/theme-switcher/named", || rsx! { NamedPage {} }),
+    ("/theme-switcher/labelled", || rsx! { LabelledPage {} }),
 ];
+
+/// Todo 2319: `label` names the setting it gets, so a test reads what it was given.
+#[component]
+fn LabelledPage() -> Element {
+    rsx! {
+        ThemeSwitcher { id: "scheme", label: |to: ColorSchemeSetting| format!("Go {to:?}") }
+    }
+}
 
 /// Todo 1837: a theme beyond the pair, then a pinned scheme of the pair.
 #[component]

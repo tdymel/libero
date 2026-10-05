@@ -377,12 +377,13 @@ fn only_a_step_change_lets_the_hole_glide() {
     );
 }
 
+/// Todo 2317: `onclose` once, with the step last shown, not the clamped 0.
 #[test]
 fn steps_going_empty_close_the_tour() {
     reset();
-    LATER.with(|later| *later.borrow_mut() = vec![Move::Next, Move::Empty]);
-    let html = rendered(&[Move::Start]);
+    LATER.with(|later| *later.borrow_mut() = vec![Move::Empty]);
+    let html = rendered(&[Move::Start, Move::Next]);
     assert!(!html.contains("data-lsx-tour"), "{html}");
     assert!(!OPEN.get(), "the handle still says open");
-    assert_eq!(CLOSED.with(|c| c.borrow().clone()), [0]);
+    assert_eq!(CLOSED.with(|c| c.borrow().clone()), [1]);
 }
