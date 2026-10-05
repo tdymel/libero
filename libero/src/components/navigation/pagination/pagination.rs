@@ -11,7 +11,7 @@ use crate::{
         layout::{BoxStyle, use_box},
     },
     context::IconSlot,
-    hooks::{ElementHandle, use_element, use_localization},
+    hooks::{ElementHandle, use_element, use_localization, use_silent_focus_out_of},
     localization::fill,
     platform::ElementApi,
     sx::{StaticSx, ThemeAwareValue, sx},
@@ -205,6 +205,16 @@ pub fn Pagination(props: PaginationProps) -> Element {
     let page = props.page.clamp(1, total.max(1));
 
     let owed_focus = use_pagination_focus_repair(list, page);
+    // Leaving before the page moved (a rejected or slow `onchange`) forgives
+    // the debt; the blur of the control the move disabled comes after (todo 1589).
+    let forgive = move || {
+        let mut owed_focus = owed_focus;
+        if *owed_focus.peek() == Some(page) {
+            owed_focus.set(None);
+        }
+    };
+    // Blitz's Tab and libero's `focus()` fire no `focusout` (todo 1639).
+    use_silent_focus_out_of(list, forgive);
 
     let states: Input<States> = props
         .states
@@ -317,14 +327,7 @@ pub fn Pagination(props: PaginationProps) -> Element {
         .attr("data-slot", PaginationPart::List.slot())
         // Safari with VoiceOver drops list semantics from a `list-style: none` list.
         .attr("role", "list")
-        // Leaving before the page moved (a rejected or slow `onchange`) forgives
-        // the debt; the blur of the control the move disabled comes after (todo 1589).
-        .event("onfocusout", move |_: Event<FocusData>| {
-            let mut owed_focus = owed_focus;
-            if *owed_focus.peek() == Some(page) {
-                owed_focus.set(None);
-            }
-        })
+        .event("onfocusout", move |_: Event<FocusData>| forgive())
         .render(
             HtmlTag::Ul,
             vec![],

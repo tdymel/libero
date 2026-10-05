@@ -45,6 +45,7 @@ mod menubar;
 mod nav_link;
 mod notifications;
 mod overlays;
+mod pagination;
 mod paper;
 mod placeholder;
 mod pointer;

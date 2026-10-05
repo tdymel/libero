@@ -26,6 +26,10 @@ mod native {
 
     impl FileDialogApi for NativeFileDialog {
         fn open(&self, accept: &str, multiple: bool, _capture: Option<&str>) -> Picked {
+            #[cfg(feature = "fake-file-dialog")]
+            if let Some(files) = super::fake_file_dialog::take() {
+                return Box::pin(std::future::ready(files));
+            }
             let mut dialog = rfd::AsyncFileDialog::new();
             if let Some(extensions) = extensions(accept) {
                 dialog = dialog.add_filter(accept, &extensions);
@@ -44,6 +48,32 @@ mod native {
     }
 
     pub(super) static FILE_DIALOG: NativeFileDialog = NativeFileDialog;
+}
+
+/// The `fake-file-dialog` feature (todo 1514): the next native pick answers with
+/// the files an e2e harness queued instead of opening `rfd`'s dialog.
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    feature = "native",
+    feature = "fake-file-dialog"
+))]
+pub mod fake_file_dialog {
+    use std::cell::RefCell;
+
+    use dioxus::html::FileData;
+
+    thread_local! {
+        static NEXT: RefCell<Option<Vec<FileData>>> = const { RefCell::new(None) };
+    }
+
+    /// The next pick's files, on the thread that renders; an empty list is a cancel.
+    pub fn answer(files: Vec<FileData>) {
+        NEXT.with(|next| *next.borrow_mut() = Some(files));
+    }
+
+    pub(super) fn take() -> Option<Vec<FileData>> {
+        NEXT.with(|next| next.borrow_mut().take())
+    }
 }
 
 /// Opens a file picker: `input`'s own where a file input opens one, else the

@@ -3,7 +3,7 @@
 
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};
-use libero::components::{PinnedColumns, Table, column};
+use libero::components::{ColumnFilter, FilterOperator, PinnedColumns, Table, column};
 
 #[derive(Clone, PartialEq)]
 struct Person {
@@ -443,6 +443,36 @@ fn a_capped_table_keeps_its_header_over_the_scrolled_rows() {
         [255, 255, 255, 255],
         "the header is not painted over the rows"
     );
+}
+
+/// Todo 1522: the header's funnel opens the filter panel through `onopen`; Blitz
+/// reports the funnel's click focus late, which must not dismiss the panel.
+#[test]
+fn a_filtered_header_opens_the_filter_panel_and_it_stays() {
+    fn app() -> Element {
+        rsx! {
+            Table {
+                aria_label: "People",
+                column_menu: true,
+                filter_panel: true,
+                default_column_filters: vec![ColumnFilter::new("Name", FilterOperator::Contains, "a")],
+                data: vec![Person { name: "Ada", age: 36 }, Person { name: "Grace", age: 85 }],
+                columns: vec![
+                    column("Name").value(|p: &Person| p.name.to_string()),
+                    column("Age").value(|p: &Person| p.age),
+                ],
+            }
+        }
+    }
+    const PANEL: &str = "[data-filter-panel]";
+    let mut page = mount(app);
+    page.click("[data-filtered]");
+    let opened = page.wait_for(|page| page.exists(PANEL));
+    assert!(opened, "the funnel opened no panel: {}", page.tree());
+    let focused = page.wait_for(|page| page.is_focused("[data-filter-line=\"0\"] *"));
+    let owner = page.focus_owner();
+    assert!(page.exists(PANEL), "the panel closed; focus on {owner}");
+    assert!(focused, "focus is on {owner}, not the column's line");
 }
 
 fn windowed() -> Element {

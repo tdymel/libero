@@ -40,8 +40,8 @@ use super::{INTERACTIVE, origin::Origin};
 use crate::{
     platform::{
         ColorSchemeApi, ColorSchemeSubscription, Dimensions, DocumentApi, ElementApi, KeyChord,
-        KeySubscription, KeyboardApi, PlatformError, Read, SCROLL_MARGIN_VAR, SCROLL_PADDING_VARS,
-        ScrollApi, ScrollSubscription, TimerSubscription,
+        KeySubscription, KeyboardApi, PlatformError, Read, SCROLL_MARGIN_BOTTOM_VAR,
+        SCROLL_MARGIN_VAR, SCROLL_PADDING_VARS, ScrollApi, ScrollSubscription, TimerSubscription,
         keyboard::{takes_arrows, takes_typing},
         storage::{keep, kept},
         warn_reserved_chord,
@@ -2226,8 +2226,8 @@ fn into_view(doc: &BaseDocument, node_id: NodeId) -> Option<(Option<NodeId>, f64
     if width == 0.0 && height == 0.0 {
         return None;
     }
-    let margin = scroll_margin(doc, node_id);
-    let (y, height) = (y - margin, height + 2.0 * margin);
+    let [margin, bottom] = scroll_margin(doc, node_id);
+    let (y, height) = (y - margin, height + margin + bottom);
     let mut ancestor = doc.get_node(node_id)?.parent;
     let scroller = loop {
         let Some(id) = ancestor else {
@@ -2269,15 +2269,10 @@ pub(super) fn reveal(doc: &mut BaseDocument, node_id: NodeId) {
     if width == 0.0 && height == 0.0 {
         return;
     }
-    let margin = scroll_margin(doc, node_id);
-    let nearest = |start: f64, size: f64, view: f64, view_size: f64| {
-        super::nearest_scroll(
-            start - margin,
-            start + size + margin,
-            view,
-            view + view_size,
-        )
-        .unwrap_or(0.0)
+    let [margin, margin_bottom] = scroll_margin(doc, node_id);
+    let nearest = |start: f64, size: f64, view: f64, view_size: f64, after: f64| {
+        super::nearest_scroll(start - margin, start + size + after, view, view + view_size)
+            .unwrap_or(0.0)
     };
     let mut moved = false;
     let mut ancestor = doc.get_node(node_id).and_then(|node| node.parent);
@@ -2312,6 +2307,7 @@ pub(super) fn reveal(doc: &mut BaseDocument, node_id: NodeId) {
                 target.2,
                 view.0 + f64::from(border.left) + left,
                 view_width - left - right,
+                margin,
             ),
             false => 0.0,
         };
@@ -2321,6 +2317,7 @@ pub(super) fn reveal(doc: &mut BaseDocument, node_id: NodeId) {
                 target.3,
                 view.1 + f64::from(border.top) + top,
                 view_height - top - bottom,
+                margin_bottom,
             ),
             false => 0.0,
         };
@@ -2332,8 +2329,20 @@ pub(super) fn reveal(doc: &mut BaseDocument, node_id: NodeId) {
     if let Some((x, y, width, height)) = client_rect(doc, node_id) {
         let (window, scale) = (doc.viewport().window_size, doc.viewport().scale_f64());
         let [top, right, bottom, left] = viewport_padding(doc);
-        let dx = nearest(x, width, left, f64::from(window.0) / scale - left - right);
-        let dy = nearest(y, height, top, f64::from(window.1) / scale - top - bottom);
+        let dx = nearest(
+            x,
+            width,
+            left,
+            f64::from(window.0) / scale - left - right,
+            margin,
+        );
+        let dy = nearest(
+            y,
+            height,
+            top,
+            f64::from(window.1) / scale - top - bottom,
+            margin_bottom,
+        );
         if dx != 0.0 || dy != 0.0 {
             doc.scroll_viewport_by(-dx, -dy);
             moved = true;
@@ -2367,9 +2376,15 @@ fn viewport_padding(doc: &BaseDocument) -> [f64; 4] {
     scroll_padding(doc, doc.root_element().id)
 }
 
-/// [`SCROLL_MARGIN_VAR`] in px.
-fn scroll_margin(doc: &BaseDocument, node_id: NodeId) -> f64 {
-    px_var(doc, node_id, SCROLL_MARGIN_VAR)
+/// `[margin, bottom]` in px: [`SCROLL_MARGIN_VAR`] on every side, the bottom
+/// [`SCROLL_MARGIN_BOTTOM_VAR`] instead when set.
+fn scroll_margin(doc: &BaseDocument, node_id: NodeId) -> [f64; 2] {
+    let margin = px_var(doc, node_id, SCROLL_MARGIN_VAR);
+    let bottom = resolved_style_value(doc, node_id, SCROLL_MARGIN_BOTTOM_VAR);
+    match bottom.trim().is_empty() {
+        true => [margin, margin],
+        false => [margin, px_var(doc, node_id, SCROLL_MARGIN_BOTTOM_VAR)],
+    }
 }
 
 /// A custom property in px: a `px` length, or `rem` of the root's font size.

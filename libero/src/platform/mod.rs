@@ -78,13 +78,20 @@ pub(crate) use direction::{
 pub use document::{DocumentApi, document};
 pub(crate) use document::{VisibleBand, root_padding_right, visible_band};
 pub(crate) use element::{
-    ContentSubscription, FocusStep, SCROLL_MARGIN_VAR, SCROLL_PADDING_VARS, focus_among,
-    focus_first_of, focus_kept, focus_selector, focused_attribute, is_rtl, join, join_all,
-    keep_focused, on_content_change, on_form_reset, scroll_padding_properties, set_value_by_id,
+    ContentSubscription, FocusStep, SCROLL_MARGIN_BOTTOM_VAR, SCROLL_MARGIN_VAR,
+    SCROLL_PADDING_VARS, focus_among, focus_first_of, focus_kept, focus_selector,
+    focused_attribute, is_rtl, join, join_all, keep_focused, on_content_change, on_form_reset,
+    scroll_padding_properties, set_value_by_id,
 };
 pub use element::{Dimensions, ElementApi, Read};
 pub use error::PlatformError;
 pub(crate) use eye_dropper::eye_dropper;
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    feature = "native",
+    feature = "fake-file-dialog"
+))]
+pub use file_dialog::fake_file_dialog;
 pub(crate) use file_dialog::pick_files;
 pub(crate) use focus::{
     FocusMove, SilentFocusApi, SilentFocusSubscription, blur_counts, element_contains,

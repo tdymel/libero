@@ -112,7 +112,9 @@ pub(crate) use presence::use_presence;
 pub use push_subscription::{PushSubscription, use_push_subscription};
 pub(crate) use ripple::{clipped_ripple_sx, ripple_sx, use_ripple};
 pub(crate) use scroll_lock::use_scroll_lock;
-pub(crate) use silent_focus::{use_silent_focus_in, use_silent_focus_out, use_silent_focus_within};
+pub(crate) use silent_focus::{
+    use_silent_focus_in, use_silent_focus_out, use_silent_focus_out_of, use_silent_focus_within,
+};
 pub(crate) use storage::{SessionText, session_text};
 pub use storage::{Stored, use_local_storage, use_session_storage};
 pub use stylesheet::use_stylesheet;

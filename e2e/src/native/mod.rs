@@ -226,20 +226,44 @@ impl NavigationProvider for Navigations {
 }
 
 /// The network: only `data:` URLs, answered at once, so a test's pictures load
-/// (`data:image/svg+xml,<svg ...>`, percent-escapes allowed; no base64).
+/// (`data:image/svg+xml,<svg ...>`, percent-escapes allowed; base64 as libero's
+/// `bytes_data_url` writes it).
 struct DataUrls;
 
 impl NetProvider for DataUrls {
     fn fetch(&self, _doc_id: usize, request: Request, handler: Box<dyn NetHandler>) {
         let url = request.url.as_str();
-        let Some((_, payload)) = url
+        let Some((meta, payload)) = url
             .strip_prefix("data:")
             .and_then(|rest| rest.split_once(','))
         else {
             return;
         };
-        handler.bytes(url.to_string(), Bytes::from(percent_decode(payload)));
+        let bytes = match meta.ends_with(";base64") {
+            true => base64_decode(payload),
+            false => percent_decode(payload),
+        };
+        handler.bytes(url.to_string(), Bytes::from(bytes));
     }
+}
+
+fn base64_decode(text: &str) -> Vec<u8> {
+    const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let sextets: Vec<u32> = text
+        .bytes()
+        .filter_map(|byte| ALPHABET.iter().position(|&a| a == byte))
+        .map(|at| at as u32)
+        .collect();
+    let mut out = Vec::with_capacity(sextets.len() * 3 / 4);
+    for group in sextets.chunks(4) {
+        let bits = group
+            .iter()
+            .enumerate()
+            .fold(0, |bits, (i, sextet)| bits | sextet << (18 - 6 * i));
+        // Two sextets make one byte, three two, four three.
+        out.extend_from_slice(&bits.to_be_bytes()[1..group.len()]);
+    }
+    out
 }
 
 fn percent_decode(text: &str) -> Vec<u8> {

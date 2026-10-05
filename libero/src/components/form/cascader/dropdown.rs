@@ -12,7 +12,7 @@ use crate::{
         ElementHandle, PopoverHandle, PopoverOptions, PopoverWidth, use_element,
         use_field_list_layer, use_popover_on,
     },
-    platform::ElementApi,
+    platform::{ElementApi, SCROLL_MARGIN_BOTTOM_VAR},
     sx::{StaticSx, sx},
     theme::Size,
 };
@@ -178,7 +178,9 @@ pub(super) fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
     let search_box = use_box().framework_sx(&CASCADER_SEARCH_SX).prepare();
     let wrapper = use_box()
         // Always printed: a renderer never removes a declaration that stops being printed.
-        .style(Some(format!("scroll-margin-bottom:{sheet_clearance}px;")))
+        .style(Some(format!(
+            "scroll-margin-bottom:{sheet_clearance}px;{SCROLL_MARGIN_BOTTOM_VAR}:{sheet_clearance}px;"
+        )))
         .prepare();
     let dropdown_states: Input<States> = States::new()
         .with(size.state_name(), true)

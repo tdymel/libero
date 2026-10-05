@@ -98,6 +98,10 @@ pub(crate) fn is_rtl(mounted: &Rc<MountedData>) -> bool {
 /// does not parse `scroll-margin`. Set it beside `scroll-margin`.
 pub(crate) const SCROLL_MARGIN_VAR: &str = "--lsx-scroll-margin";
 
+/// [`SCROLL_MARGIN_VAR`] for the bottom only, beside `scroll-margin-bottom`;
+/// set, it overrides the bottom side (todo 1659).
+pub(crate) const SCROLL_MARGIN_BOTTOM_VAR: &str = "--lsx-scroll-margin-bottom";
+
 /// A scroller's `scroll-padding` per side (top, right, bottom, left) for Blitz,
 /// whose stylo lacks the property: set them beside it.
 pub(crate) const SCROLL_PADDING_VARS: [&str; 4] = [
