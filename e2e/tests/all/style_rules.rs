@@ -31,6 +31,78 @@ async fn computed(page: &Page, selector: &str, property: &str) -> String {
     .unwrap()
 }
 
+async fn before(page: &Page, selector: &str, property: &str) -> String {
+    page.evaluate(format!(
+        "getComputedStyle(document.querySelector({selector:?}), '::before').{property}"
+    ))
+    .await
+    .unwrap()
+    .into_value()
+    .unwrap()
+}
+
+/// A reduced-motion guard goes in nested while nothing forces motion; forcing it moves the
+/// sheet back to a `<style>` the outlet writes answered, and releasing it lets the browser
+/// answer again (todo 2249).
+#[test]
+fn a_forced_motion_round_trip_keeps_the_guard() {
+    block_on(async {
+        let fixture = Fixture::open("/style-rules", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            "[...document.querySelectorAll('style')].some(s => s.textContent.startsWith('@layer lsx-base{}'))",
+            "the layer blocks mounted",
+        )
+        .await
+        .unwrap();
+        let (_, styles) = rules_and_styles(page, "lsx-probe-spin").await;
+        pointer::click(page, "#toggle").await.unwrap();
+        wait::for_visible(page, "#motion").await.unwrap();
+        assert_eq!(
+            rules_and_styles(page, "lsx-probe-spin").await,
+            (1, styles),
+            "nested, no <style>"
+        );
+        assert_eq!(
+            before(page, "#motion", "animationName").await,
+            "lsx-probe-spin"
+        );
+
+        let animation = |name: &str| {
+            format!(
+                "getComputedStyle(document.querySelector('#motion'), '::before').animationName === '{name}'"
+            )
+        };
+        pointer::click(page, "#calm").await.unwrap();
+        wait::for_js_true(page, &animation("none"), "the forced guard applies")
+            .await
+            .unwrap();
+        assert_eq!(
+            rules_and_styles(page, "lsx-probe-spin").await,
+            (0, styles + 1),
+            "moved back to a <style>"
+        );
+
+        pointer::click(page, "#follow").await.unwrap();
+        wait::for_js_true(
+            page,
+            &animation("lsx-probe-spin"),
+            "the browser answers again",
+        )
+        .await
+        .unwrap();
+
+        fixture
+            .console
+            .assert_clean("the motion round trip")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn a_class_mounted_later_is_a_rule_in_its_layer_block() {
     block_on(async {
@@ -126,6 +198,22 @@ fn a_nested_query_matches_as_the_flat_one() {
             nested, 1,
             "the container sheet is a nested rule in the blocks"
         );
+
+        // A `::before` under a query goes in as `.a{@media x{&::before{..}}}` (todo 2249).
+        for (id, expected) in [
+            ("pseudo", "rgb(19, 20, 21)"),
+            ("pseudo-out", "rgb(10, 11, 12)"),
+        ] {
+            let nested = before(page, &format!("#{id}"), "color").await;
+            let flat = before(page, &format!("#flat-{id}"), "color").await;
+            assert_eq!(
+                (nested.as_str(), flat.as_str()),
+                (expected, expected),
+                "#{id}::before"
+            );
+        }
+        let (nested, _) = rules_and_styles(page, "rgb(19, 20, 21)").await;
+        assert_eq!(nested, 1, "the pseudo-element sheet is a nested rule");
 
         fixture.console.assert_clean("the nested queries").unwrap();
         fixture.close().await.unwrap();

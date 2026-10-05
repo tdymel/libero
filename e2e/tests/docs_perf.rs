@@ -9,9 +9,13 @@
 //!   `toggle`, `segment`, `select`, `type`, `key`, `drag`, `tab`, `popup`, `button`), unset takes all.
 //! - `DOCS_PERF_ROUNDS` (default 4), `DOCS_PERF_PER_KIND` controls per kind and page (2).
 //! - `DOCS_PERF_OUT`: the JSON report, default `<target>/docs-perf.json`.
+//! - `DOCS_PERF_B`: a second docs server (another build). Each round then runs A and B in turn
+//!   (A B, B A, ...) and the report adds B - A per row. On a loaded machine compare `low`, the
+//!   mean of the fastest third, over 8 rounds or more; the report names both builds and the load.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, bail};
@@ -123,6 +127,40 @@ struct Row {
 }
 
 type Rows = BTreeMap<String, Row>;
+
+/// The docs server the running variant is measured on.
+static BASE: Mutex<String> = Mutex::new(String::new());
+
+fn base() -> String {
+    BASE.lock().unwrap().clone()
+}
+
+/// One build under test: `A` is `E2E_BASE_URL`, `B` is `DOCS_PERF_B`.
+struct Variant {
+    label: &'static str,
+    base: String,
+    /// The served wasm file name: its hash tells two builds apart.
+    build: String,
+    rows: Rows,
+}
+
+/// Machine load and duration of one variant's round, kept with the numbers it explains.
+#[derive(Serialize)]
+struct RoundMeta {
+    round: usize,
+    variant: &'static str,
+    load_before: f64,
+    load_after: f64,
+    secs: f64,
+}
+
+/// The 1-minute load average; NaN where `/proc` is missing.
+fn load_average() -> f64 {
+    std::fs::read_to_string("/proc/loadavg")
+        .ok()
+        .and_then(|s| s.split_whitespace().next()?.parse().ok())
+        .unwrap_or(f64::NAN)
+}
 
 fn env_list(name: &str) -> Option<Vec<String>> {
     std::env::var(name)
@@ -243,17 +281,22 @@ async fn ensure(page: &Page, path: &str) -> Result<()> {
     if let Err(e) = navigate(page, path).await {
         let at: String = js(page, "location.pathname").await.unwrap_or_default();
         eprintln!("docs-perf: in-app navigation {at} -> {path} failed ({e:#}), reloading");
-        page.goto(format!("{}{path}", e2e::base_url())).await?;
-        until(
-            page,
-            "document.querySelector('#docs-main *') !== null",
-            "the reload",
-        )
-        .await?;
-        page.evaluate(RECORDER).await?;
-        expand_nav(page).await?;
+        load(page, path).await?;
     }
     Ok(())
+}
+
+/// A full load of `path` from the current variant's server, recorder and nav set up again.
+async fn load(page: &Page, path: &str) -> Result<()> {
+    page.goto(format!("{}{path}", base())).await?;
+    until(
+        page,
+        "document.querySelector('#docs-main *') !== null",
+        "the reload",
+    )
+    .await?;
+    page.evaluate(RECORDER).await?;
+    expand_nav(page).await
 }
 
 /// `#docs-main`'s markup set again as plain DOM beside it: the lean baseline of a mount.
@@ -285,15 +328,7 @@ async fn revive(page: &Page, path: &str, after: &str) -> Result<()> {
     .await?;
     if !error.is_empty() {
         eprintln!("docs-perf: the app threw after {after}: {error}; reloading {path}");
-        page.goto(format!("{}{path}", e2e::base_url())).await?;
-        until(
-            page,
-            "document.querySelector('#docs-main *') !== null",
-            "the reload",
-        )
-        .await?;
-        page.evaluate(RECORDER).await?;
-        expand_nav(page).await?;
+        load(page, path).await?;
     }
     Ok(())
 }
@@ -685,6 +720,8 @@ struct Summary {
     first_task: Option<f64>,
     task: f64,
     task_min: f64,
+    /// The mean of the fastest third: load only adds time, and one lucky rep is no figure.
+    task_low: f64,
     task_max: f64,
     script: f64,
     layout: f64,
@@ -704,6 +741,15 @@ fn median(mut v: Vec<f64>) -> f64 {
     v[v.len() / 2]
 }
 
+fn fastest_third(mut v: Vec<f64>) -> f64 {
+    if v.is_empty() {
+        return f64::NAN;
+    }
+    v.sort_by(f64::total_cmp);
+    let n = v.len().div_ceil(3);
+    v[..n].iter().sum::<f64>() / n as f64
+}
+
 fn summarise(name: &str, row: &Row) -> Summary {
     // A single round leaves only the first visit to report.
     let reps = if row.warm.is_empty() {
@@ -718,6 +764,7 @@ fn summarise(name: &str, row: &Row) -> Summary {
         first_task: row.first.first().map(|r| r.task),
         task: median(pick(|r| r.task)),
         task_min: pick(|r| r.task).into_iter().fold(f64::INFINITY, f64::min),
+        task_low: fastest_third(pick(|r| r.task)),
         task_max: pick(|r| r.task).into_iter().fold(0.0, f64::max),
         script: median(pick(|r| r.script)),
         layout: median(pick(|r| r.layout)),
@@ -740,19 +787,120 @@ fn out_path() -> PathBuf {
         })
 }
 
-/// Writes the JSON and markdown reports; `print` also prints every row.
-fn report(rows: &Rows, print: bool) -> Result<()> {
+fn summaries(rows: &Rows) -> Vec<Summary> {
     let mut all: Vec<Summary> = rows.iter().map(|(k, v)| summarise(k, v)).collect();
     all.sort_by(|a, b| b.task.total_cmp(&a.task));
+    all
+}
+
+/// Writes the JSON and markdown reports; `print` also prints every row. With two variants
+/// it adds B against A per row: the min is the steadier figure on a loaded machine.
+fn report(variants: &[Variant], rounds: &[RoundMeta], print: bool) -> Result<()> {
+    let path = out_path();
+    let mut json = serde_json::Map::new();
+    let mut md = String::new();
+    for v in variants {
+        md.push_str(&format!("- {}: {} build `{}`\n", v.label, v.base, v.build));
+    }
+    let loads: Vec<f64> = rounds
+        .iter()
+        .flat_map(|r| [r.load_before, r.load_after])
+        .collect();
+    md.push_str(&format!(
+        "- load {:.1}..{:.1} over {} variant rounds\n\n",
+        loads.iter().copied().fold(f64::INFINITY, f64::min),
+        loads.iter().copied().fold(0.0, f64::max),
+        rounds.len()
+    ));
+    for v in variants {
+        let all = summaries(&v.rows);
+        print_rows(v, &all, print && variants.len() == 1);
+        if variants.len() > 1 {
+            md.push_str(&format!("### {}\n\n", v.label));
+        }
+        md.push_str(&table(&all));
+        md.push('\n');
+        json.insert(
+            v.label.to_string(),
+            serde_json::json!({ "base": v.base, "build": v.build, "summary": all, "raw": v.rows }),
+        );
+    }
+    if let [a, b] = variants {
+        md.push_str(&compare(a, b, print));
+    }
+    json.insert("rounds".into(), serde_json::to_value(rounds)?);
+    std::fs::write(&path, serde_json::to_string_pretty(&json)?)
+        .with_context(|| format!("write {}", path.display()))?;
+    std::fs::write(path.with_extension("md"), md)?;
+    eprintln!("docs-perf: report written to {}", path.display());
+    Ok(())
+}
+
+/// B against A for every row both measured, largest change of the fastest third first: on
+/// one build served twice at load 6-12 that moved 0-2 ms a row, the median up to 9 (todo 2236).
+fn compare(a: &Variant, b: &Variant, print: bool) -> String {
+    let theirs: BTreeMap<String, Summary> = summaries(&b.rows)
+        .into_iter()
+        .map(|s| (s.row.clone(), s))
+        .collect();
+    let mut pairs: Vec<(Summary, &Summary)> = summaries(&a.rows)
+        .into_iter()
+        .filter_map(|s| theirs.get(&s.row).map(|t| (s, t)))
+        .collect();
+    let change = |(x, y): &(Summary, &Summary)| (y.task_low - x.task_low).abs();
+    pairs.sort_by(|p, q| change(q).total_cmp(&change(p)));
+    let mut md = String::from(
+        "### B - A\n\n| page | kind | control | n | A low | B low | delta low | A task | B task | delta | A min | B min | A layout | B layout |\n\
+         |---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|\n",
+    );
+    for (x, y) in &pairs {
+        if print {
+            println!(
+                "docs-perf B-A | {:<70} | low {:>7.1} -> {:>7.1} ({:>+6.1}) | task {:>7.1} -> {:>7.1} ({:>+6.1}) | min {:>7.1} -> {:>7.1} | layout {:>6.1} -> {:>6.1}",
+                x.row,
+                x.task_low,
+                y.task_low,
+                y.task_low - x.task_low,
+                x.task,
+                y.task,
+                y.task - x.task,
+                x.task_min,
+                y.task_min,
+                x.layout,
+                y.layout,
+            );
+        }
+        md.push_str(&format!(
+            "| {} | {}/{} | {:.1} | {:.1} | {:+.1} | {:.1} | {:.1} | {:+.1} | {:.1} | {:.1} | {:.1} | {:.1} |\n",
+            x.row.split(" | ").collect::<Vec<_>>().join(" | "),
+            x.n,
+            y.n,
+            x.task_low,
+            y.task_low,
+            y.task_low - x.task_low,
+            x.task,
+            y.task,
+            y.task - x.task,
+            x.task_min,
+            y.task_min,
+            x.layout,
+            y.layout,
+        ));
+    }
+    md
+}
+
+fn print_rows(v: &Variant, all: &[Summary], print: bool) {
     for s in all.iter().filter(|_| print) {
         println!(
-            "docs-perf | {:<70} | n {:>2} | first {:>7.1} | task {:>7.1} [{:>6.1}..{:>6.1}] | script {:>6.1} | layout {:>6.1} | frame {:>5.1} | long {:>2} | writes {:>5} | nodes {:>5} | invalid {} | failed {}",
+            "docs-perf | {:<70} | n {:>2} | first {:>7.1} | task {:>7.1} [{:>6.1}..{:>6.1}] low {:>6.1} | script {:>6.1} | layout {:>6.1} | frame {:>5.1} | long {:>2} | writes {:>5} | nodes {:>5} | invalid {} | failed {}",
             s.row,
             s.n,
             s.first_task.unwrap_or(f64::NAN),
             s.task,
             s.task_min,
             s.task_max,
+            s.task_low,
             s.script,
             s.layout,
             s.frame,
@@ -763,31 +911,29 @@ fn report(rows: &Rows, print: bool) -> Result<()> {
             s.failed,
         );
     }
-    for (name, row) in rows.iter().filter(|_| print) {
+    for (name, row) in v.rows.iter().filter(|_| print) {
         if let Some(e) = row.failed.first() {
             println!("docs-perf failed | {name} | {e}");
         }
     }
-    let path = out_path();
-    std::fs::write(
-        &path,
-        serde_json::to_string_pretty(&serde_json::json!({ "summary": all, "raw": rows }))?,
-    )
-    .with_context(|| format!("write {}", path.display()))?;
-    // The same rows as a markdown table beside it, for a brain note.
+}
+
+/// The rows as a markdown table, for a brain note.
+fn table(all: &[Summary]) -> String {
     let mut md = String::from(
-        "| page | kind | control | n | first | task | min | max | script | layout | frame | long | writes | nodes | invalid | failed |\n\
-         |---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|\n",
+        "| page | kind | control | n | first | task | min | low | max | script | layout | frame | long | writes | nodes | invalid | failed |\n\
+         |---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|\n",
     );
-    for s in &all {
+    for s in all {
         let cells: Vec<&str> = s.row.split(" | ").collect();
         md.push_str(&format!(
-            "| {} | {} | {:.1} | {:.1} | {:.1} | {:.1} | {:.1} | {:.1} | {:.1} | {} | {} | {} | {} | {} |\n",
+            "| {} | {} | {:.1} | {:.1} | {:.1} | {:.1} | {:.1} | {:.1} | {:.1} | {:.1} | {} | {} | {} | {} | {} |\n",
             cells.join(" | "),
             s.n,
             s.first_task.unwrap_or(f64::NAN),
             s.task,
             s.task_min,
+            s.task_low,
             s.task_max,
             s.script,
             s.layout,
@@ -799,13 +945,65 @@ fn report(rows: &Rows, print: bool) -> Result<()> {
             s.failed,
         ));
     }
-    std::fs::write(path.with_extension("md"), md)?;
-    eprintln!(
-        "docs-perf: {} rows written to {}",
-        all.len(),
-        path.display()
-    );
-    Ok(())
+    md
+}
+
+/// The served wasm's file name, the build's identity in the report.
+const WASM_NAME: &str = "performance.getEntriesByType('resource').map((e) => e.name) \
+    .filter((n) => n.endsWith('.wasm')).map((n) => n.split('/').pop()).join(' ')";
+
+/// One pass over every page: its mount, plain twin, theme, scroll and controls.
+async fn survey_round(
+    page: &Page,
+    pages: &[String],
+    kinds: &Option<Vec<String>>,
+    per_kind: usize,
+    round: usize,
+    rows: &mut Rows,
+) {
+    let started = Instant::now();
+    for (n, path) in pages.iter().enumerate() {
+        eprintln!(
+            "docs-perf: round {round} page {n}/{} {path} at {:.0} s",
+            pages.len(),
+            started.elapsed().as_secs_f64()
+        );
+        if wanted(kinds, "mount") || wanted(kinds, "plain") {
+            let outcome = rep(page, async || navigate(page, path).await).await;
+            record(rows, format!("{path} | mount | page"), round, outcome);
+            if let Err(e) = ensure(page, path).await {
+                eprintln!("docs-perf: {path} skipped: {e:#}");
+                continue;
+            }
+        } else if let Err(e) = ensure(page, path).await {
+            eprintln!("docs-perf: {path} skipped: {e:#}");
+            continue;
+        }
+        if wanted(kinds, "plain") {
+            let outcome = rep(page, async || plain(page).await).await;
+            record(rows, format!("{path} | plain | page"), round, outcome);
+            let _ = unplain(page).await;
+        }
+        if wanted(kinds, "theme") {
+            theme(page, path, round, rows).await;
+        }
+        if wanted(kinds, "scroll") {
+            scroll(page, path, round, rows).await;
+        }
+        // Tagged again before each: a tab switch remounts its panel and drops the tags.
+        let found = controls(page, per_kind).await.unwrap_or_default().len();
+        for i in 0..found {
+            let now = controls(page, per_kind).await.unwrap_or_default();
+            if let Some(c) = now.get(i).filter(|c| wanted(kinds, &c.kind)) {
+                exercise(page, path, c, round, rows).await;
+                let after = format!("{path} {} {}", c.kind, c.name);
+                if let Err(e) = revive(page, path, &after).await {
+                    eprintln!("docs-perf: {path} left: {e:#}");
+                    break;
+                }
+            }
+        }
+    }
 }
 
 /// Every nav page mounted in-app, its plain-DOM twin, the header theme switch, a page
@@ -836,62 +1034,63 @@ fn survey() {
         let page = &fixture.page;
         let front = frames::bring_to_front(page).await.unwrap();
         page.execute(EnableParams::default()).await.unwrap();
-        page.evaluate(RECORDER).await.unwrap();
-        expand_nav(page).await.unwrap();
-        let mut rows = Rows::new();
+        let mut variants = vec![Variant {
+            label: "A",
+            base: e2e::base_url(),
+            build: String::new(),
+            rows: Rows::new(),
+        }];
+        if let Ok(b) = std::env::var("DOCS_PERF_B") {
+            variants.push(Variant {
+                label: "B",
+                base: b.trim_end_matches('/').to_string(),
+                build: String::new(),
+                rows: Rows::new(),
+            });
+        }
+        let ab = variants.len() > 1;
         // The page before the first: a mount of `start` from itself would be no navigation.
         let lead = pages.get(1).cloned().unwrap_or_else(|| "/".to_string());
-        let _ = navigate(page, &lead).await;
+        let mut metas = Vec::new();
         for round in 0..rounds {
-            let started = Instant::now();
-            for (n, path) in pages.iter().enumerate() {
-                eprintln!(
-                    "docs-perf: round {round} page {n}/{} {path} at {:.0} s",
-                    pages.len(),
-                    started.elapsed().as_secs_f64()
-                );
-                if wanted(&kinds, "mount") || wanted(&kinds, "plain") {
-                    let outcome = rep(page, async || navigate(page, path).await).await;
-                    record(&mut rows, format!("{path} | mount | page"), round, outcome);
-                    if let Err(e) = ensure(page, path).await {
-                        eprintln!("docs-perf: {path} skipped: {e:#}");
-                        continue;
+            // A B, then B A: a load drift over the run hits both alike.
+            let order: Vec<usize> = (0..variants.len()).collect();
+            let order = if round % 2 == 1 {
+                order.into_iter().rev().collect()
+            } else {
+                order
+            };
+            for i in order {
+                let v = &mut variants[i];
+                *BASE.lock().unwrap() = v.base.clone();
+                let started = Instant::now();
+                let load_before = load_average();
+                // The A server is already open on the first round.
+                if ab || round == 0 {
+                    if ab {
+                        load(page, &start).await.unwrap();
+                    } else {
+                        page.evaluate(RECORDER).await.unwrap();
+                        expand_nav(page).await.unwrap();
                     }
-                } else if let Err(e) = ensure(page, path).await {
-                    eprintln!("docs-perf: {path} skipped: {e:#}");
-                    continue;
+                    let _ = navigate(page, &lead).await;
                 }
-                if wanted(&kinds, "plain") {
-                    let outcome = rep(page, async || plain(page).await).await;
-                    record(&mut rows, format!("{path} | plain | page"), round, outcome);
-                    let _ = unplain(page).await;
+                if v.build.is_empty() {
+                    v.build = js(page, WASM_NAME).await.unwrap_or_default();
                 }
-                if wanted(&kinds, "theme") {
-                    theme(page, path, round, &mut rows).await;
-                }
-                if wanted(&kinds, "scroll") {
-                    scroll(page, path, round, &mut rows).await;
-                }
-                // Tagged again before each: a tab switch remounts its panel and drops the tags.
-                let found = controls(page, per_kind).await.unwrap_or_default().len();
-                for i in 0..found {
-                    let now = controls(page, per_kind).await.unwrap_or_default();
-                    if let Some(c) = now.get(i).filter(|c| wanted(&kinds, &c.kind)) {
-                        exercise(page, path, c, round, &mut rows).await;
-                        let after = format!("{path} {} {}", c.kind, c.name);
-                        if let Err(e) = revive(page, path, &after).await {
-                            eprintln!("docs-perf: {path} left: {e:#}");
-                            break;
-                        }
-                    }
-                }
+                survey_round(page, &pages, &kinds, per_kind, round, &mut v.rows).await;
+                let secs = started.elapsed().as_secs_f64();
+                eprintln!("docs-perf: round {round} {} in {secs:.0} s", v.label);
+                metas.push(RoundMeta {
+                    round,
+                    variant: v.label,
+                    load_before,
+                    load_after: load_average(),
+                    secs,
+                });
             }
-            eprintln!(
-                "docs-perf: round {round} in {:.0} s",
-                started.elapsed().as_secs_f64()
-            );
             // After every round, so a cut-short run still leaves its numbers.
-            report(&rows, round + 1 == rounds).unwrap();
+            report(&variants, &metas, round + 1 == rounds).unwrap();
         }
         front.release().await.unwrap();
         let _ = fixture

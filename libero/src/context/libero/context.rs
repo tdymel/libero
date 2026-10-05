@@ -274,10 +274,12 @@ impl LiberoContext {
     /// Hands the answers to motion started from Rust and bumps the sheets'
     /// version, so `SheetWatch` sees the rewritten text.
     fn publish_accessibility(&self) {
-        set_current_a11y_answers(A11yAnswers::new(
+        let answers = A11yAnswers::new(
             *self.accessibility_system.peek(),
             *self.forced_reduced_motion.peek(),
-        ));
+        );
+        set_current_a11y_answers(answers);
+        self.stylesheet_registry.reanswer(answers);
         let mut version = self.stylesheet_registry_version;
         version += 1;
     }

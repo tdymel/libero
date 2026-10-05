@@ -6,7 +6,10 @@ use std::{
 };
 
 use super::CssLayer;
-use crate::{css::Stylesheet, platform::StyleRulesApi};
+use crate::{
+    css::Stylesheet,
+    platform::{A11yAnswers, StyleRulesApi, answer_a11y_media, current_a11y_answers},
+};
 
 /// Unused sheets kept mounted: Chromium restyles and relays out the whole page per `@layer` sheet added or removed.
 const RETAINED: usize = 256;
@@ -90,10 +93,11 @@ fn top_level_rules(css: &str) -> impl Iterator<Item = &str> {
     })
 }
 
-/// `css`'s rules for a layer block, `@media P{.a{x}}` nested as `.a{@media P{x}}`: inserting
-/// a grouping rule costs Chromium the whole-page restyle, a nested one 1-2 ms (todo 2231).
-/// `None` for any other at-rule shape, or without `nests`: the sheet keeps its `<style>`.
-fn block_rules(css: &str, nests: bool) -> Option<Vec<Cow<'_, str>>> {
+/// `css`'s rules for a layer block, `@media P{.a{x}}` nested as `.a{@media P{x}}` and
+/// `@media P{.a::before{x}}` as `.a{@media P{&::before{x}}}`: inserting a grouping rule costs
+/// Chromium the whole-page restyle, a nested one 1-2 ms (todos 2231, 2249). `None` for any
+/// other at-rule shape, a query `answers` rewrite, or without `nests`: the sheet keeps its `<style>`.
+fn block_rules<'a>(css: &'a str, nests: bool, answers: &A11yAnswers) -> Option<Vec<Cow<'a, str>>> {
     const GROUPING: [&str; 3] = ["@media", "@container", "@supports"];
     let mut rules = Vec::new();
     for rule in top_level_rules(css) {
@@ -103,10 +107,10 @@ fn block_rules(css: &str, nests: bool) -> Option<Vec<Cow<'_, str>>> {
         }
         let (prelude, inner) = rule.split_once('{')?;
         let inner = inner.strip_suffix('}')?;
-        // A forced reduced motion rewrites a motion query's text in the outlet.
+        // An answered query (a forced reduced motion) is rewritten in the outlet's text.
         if !nests
             || !GROUPING.iter().any(|name| prelude.starts_with(name))
-            || prelude.contains("prefers-reduced-motion")
+            || answer_a11y_media(rule, answers) != rule
             || inner.contains('@')
         {
             return None;
@@ -114,20 +118,41 @@ fn block_rules(css: &str, nests: bool) -> Option<Vec<Cow<'_, str>>> {
         for style in top_level_rules(inner) {
             let (selector, body) = style.split_once('{')?;
             let body = body.strip_suffix('}')?;
-            let pseudo_element = selector.contains("::")
-                || [":before", ":after", ":first-line", ":first-letter"]
-                    .iter()
-                    .any(|name| selector.contains(name));
-            if pseudo_element
-                || body.contains('{')
-                || selector.matches(['"', '\'']).count() % 2 == 1
-            {
+            if body.contains('{') || selector.matches(['"', '\'']).count() % 2 == 1 {
                 return None;
             }
-            rules.push(Cow::Owned(format!("{selector}{{{prelude}{{{body}}}}}")));
+            rules.push(Cow::Owned(match pseudo_element(selector)? {
+                None => format!("{selector}{{{prelude}{{{body}}}}}"),
+                Some((base, pseudo)) => format!("{base}{{{prelude}{{&{pseudo}{{{body}}}}}}}"),
+            }));
         }
     }
     Some(rules)
+}
+
+/// `Some(None)` for a selector with no pseudo-element, `Some(Some((base, "::x")))` for one
+/// compound selector ending in a single `::x`. `None` for what the nesting `&` cannot carry:
+/// a list or a combinator before the pseudo-element, a legacy `:before`.
+fn pseudo_element(selector: &str) -> Option<Option<(&str, &str)>> {
+    const LEGACY: [&str; 4] = [":before", ":after", ":first-line", ":first-letter"];
+    let selector = selector.trim();
+    let Some(at) = selector.find("::") else {
+        return (!LEGACY.iter().any(|name| selector.contains(name))).then_some(None);
+    };
+    let (base, pseudo) = selector.split_at(at);
+    let name = &pseudo[2..];
+    let mut depth = 0i32;
+    let compound = base.chars().all(|c| {
+        depth += match c {
+            '[' | '(' => 1,
+            ']' | ')' => -1,
+            _ => 0,
+        };
+        depth > 0 || !(c.is_whitespace() || matches!(c, '>' | '+' | '~' | ','))
+    });
+    let named = !name.is_empty() && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '-');
+    let legacy = LEGACY.iter().any(|name| base.contains(name));
+    (compound && named && !base.is_empty() && !legacy).then_some(Some((base, pseudo)))
 }
 
 #[derive(Default)]
@@ -141,6 +166,8 @@ struct Sheets {
     blocks: Option<Box<dyn StyleRulesApi>>,
     /// The blocks' browser nests rules, so a sheet's at-rules can go in as nested rules.
     nests: bool,
+    /// The outlet's accessibility answers: a query they rewrite keeps its `<style>`.
+    answers: A11yAnswers,
     /// Per layer, the inserted sheets in rule order with how many rules each holds.
     inserted: [Vec<(StylesheetKey, usize)>; 4],
     /// A `<style>` entry came or went since the outlet last heard.
@@ -157,7 +184,7 @@ impl Sheets {
         if key.rank != SheetRank::Component || stylesheet.class_name().is_none() {
             return false;
         }
-        let Some(rules) = block_rules(stylesheet.as_str(), self.nests) else {
+        let Some(rules) = block_rules(stylesheet.as_str(), self.nests, &self.answers) else {
             return false;
         };
         let order = &mut self.inserted[key.layer.index()];
@@ -184,6 +211,11 @@ impl Sheets {
             self.outlet_changed = true;
             return;
         }
+        self.delete_rules(key);
+    }
+
+    /// Takes `key`'s inserted rules out of its layer block.
+    fn delete_rules(&mut self, key: &StylesheetKey) {
         let order = &mut self.inserted[key.layer.index()];
         let Some(at) = order.iter().position(|(inserted, _)| inserted == key) else {
             return;
@@ -324,6 +356,30 @@ impl StylesheetRegistry {
         let mut sheets = self.inner.borrow_mut();
         sheets.nests = blocks.nests();
         sheets.blocks = Some(blocks);
+        sheets.answers = current_a11y_answers();
+    }
+
+    /// New accessibility answers: an inserted sheet whose queries they rewrite goes back to
+    /// its `<style>`, which the outlet writes answered. One whole-page restyle per change.
+    pub(crate) fn reanswer(&self, answers: A11yAnswers) {
+        let mut sheets = self.inner.borrow_mut();
+        let sheets = &mut *sheets;
+        sheets.answers = answers;
+        let stale: Vec<StylesheetKey> = sheets
+            .by_key
+            .iter()
+            .filter(|(_, entry)| {
+                entry.inserted && answer_a11y_media(&entry.css, &answers) != *entry.css
+            })
+            .map(|(key, _)| *key)
+            .collect();
+        for key in &stale {
+            sheets.delete_rules(key);
+            if let Some(entry) = sheets.by_key.get_mut(key) {
+                entry.inserted = false;
+            }
+        }
+        sheets.outlet_changed |= !stale.is_empty();
     }
 
     #[cfg(test)]
@@ -628,7 +684,7 @@ mod tests {
     }
 
     #[test]
-    fn global_ranked_and_motion_query_sheets_keep_their_style() {
+    fn global_and_ranked_sheets_keep_their_style() {
         let (registry, rules) = attached();
         registry.acquire(":root{--x:1px;}", CssLayer::Framework, SheetRank::Component);
         registry.acquire(
@@ -636,15 +692,70 @@ mod tests {
             CssLayer::Framework,
             SheetRank::Default,
         );
-        registry.acquire(
-            Stylesheet::from(&sx().media("(prefers-reduced-motion: reduce)", sx().padding("lg"))),
-            CssLayer::Framework,
-            SheetRank::Component,
-        );
 
         assert!(block(&rules, CssLayer::Framework).is_empty());
-        assert_eq!(registry.len(), 3);
+        assert_eq!(registry.len(), 2);
         assert!(registry.take_outlet_change());
+    }
+
+    fn forced_motion() -> A11yAnswers {
+        A11yAnswers {
+            reduced_motion: Some(true),
+            ..A11yAnswers::default()
+        }
+    }
+
+    fn motion_sheet() -> Stylesheet {
+        Stylesheet::from(
+            &sx()
+                .padding("lg")
+                .media("(prefers-reduced-motion: reduce)", sx().padding("sm")),
+        )
+    }
+
+    /// Unanswered, a motion query nests like any other (todo 2249).
+    #[test]
+    fn an_unanswered_motion_query_goes_in_nested() {
+        let (registry, rules) = attached();
+        registry.reanswer(A11yAnswers::default());
+        registry.acquire(motion_sheet(), CssLayer::Framework, SheetRank::Component);
+
+        assert!(registry.stylesheets(SheetRank::Component).is_empty());
+        assert!(
+            block(&rules, CssLayer::Framework)[1]
+                .contains("{@media (prefers-reduced-motion: reduce){")
+        );
+    }
+
+    /// A forced motion rewrites the query, so the sheet is written answered by the outlet.
+    #[test]
+    fn a_forced_motion_keeps_new_motion_sheets_out_and_moves_inserted_ones_back() {
+        let (registry, rules) = attached();
+        registry.reanswer(A11yAnswers::default());
+        let moved = registry.acquire(motion_sheet(), CssLayer::Framework, SheetRank::Component);
+        let plain = padding(&registry, 3);
+        assert!(!registry.take_outlet_change());
+
+        registry.reanswer(forced_motion());
+        assert!(registry.take_outlet_change());
+        assert_eq!(registry.stylesheets(SheetRank::Component).len(), 1);
+        assert!(
+            block(&rules, CssLayer::Framework).is_empty(),
+            "its rules left the block"
+        );
+        assert_eq!(
+            block(&rules, CssLayer::UserCustom).len(),
+            1,
+            "a plain sheet stays"
+        );
+
+        registry.release(moved);
+        registry.release(plain);
+        let other =
+            Stylesheet::from(&sx().media("(prefers-reduced-motion: reduce)", sx().padding("xs")));
+        registry.acquire(other, CssLayer::Framework, SheetRank::Component);
+        assert_eq!(registry.stylesheets(SheetRank::Component).len(), 2);
+        assert!(block(&rules, CssLayer::Framework).is_empty());
     }
 
     #[test]
@@ -672,17 +783,46 @@ mod tests {
     /// Without nesting, and for any shape nesting cannot carry, the sheet keeps its `<style>`.
     #[test]
     fn block_rules_nest_only_the_simple_shape() {
-        let nested = block_rules(".a{x:1}@container c (min-width: 1px){.a > b{y:2}}", true);
+        let none = &A11yAnswers::default();
+        let nested = block_rules(
+            ".a{x:1}@container c (min-width: 1px){.a > b{y:2}}",
+            true,
+            none,
+        );
         assert_eq!(
             nested.unwrap(),
             [".a{x:1}", ".a > b{@container c (min-width: 1px){y:2}}"]
         );
-        assert!(block_rules("@media x{.a{y:2}}", false).is_none());
-        assert!(block_rules("@keyframes k{to{opacity:0}}", true).is_none());
-        assert!(block_rules("@media x{.a::before{y:2}}", true).is_none());
-        assert!(block_rules("@media x{@supports y{.a{z:3}}}", true).is_none());
-        assert!(block_rules("@media (prefers-reduced-motion: reduce){.a{y:2}}", true).is_none());
-        assert_eq!(block_rules(".a{x:1}", false).unwrap(), [".a{x:1}"]);
+        assert!(block_rules("@media x{.a{y:2}}", false, none).is_none());
+        assert!(block_rules("@keyframes k{to{opacity:0}}", true, none).is_none());
+        assert!(block_rules("@media x{@supports y{.a{z:3}}}", true, none).is_none());
+        assert_eq!(block_rules(".a{x:1}", false, none).unwrap(), [".a{x:1}"]);
+        let motion = "@media (prefers-reduced-motion: reduce){.a{y:2}}";
+        assert!(block_rules(motion, true, none).is_some());
+        assert!(block_rules(motion, true, &forced_motion()).is_none());
+    }
+
+    /// A pseudo-element moves behind the `&`, as a pseudo-element rule cannot hold an at-rule.
+    #[test]
+    fn a_pseudo_element_under_a_query_nests_behind_the_ampersand() {
+        let none = &A11yAnswers::default();
+        let css = r#"@media (prefers-reduced-motion: reduce){.a[data-state~="on"]::before{animation:none}}"#;
+        assert_eq!(
+            block_rules(css, true, none).unwrap(),
+            [
+                r#".a[data-state~="on"]{@media (prefers-reduced-motion: reduce){&::before{animation:none}}}"#
+            ]
+        );
+        for refused in [
+            "@media x{.a::before, .b::before{y:2}}",
+            "@media x{.a .b::before{y:2}}",
+            "@media x{.a > .b::after{y:2}}",
+            "@media x{.a:before{y:2}}",
+            "@media x{.a::part(x){y:2}}",
+            "@media x{::before{y:2}}",
+        ] {
+            assert!(block_rules(refused, true, none).is_none(), "{refused}");
+        }
     }
 
     /// Eviction finds the sheet's rules by the ones inserted before it, whatever came after.
