@@ -12,7 +12,7 @@ use super::{
     ChronoPickerPart, DateRange,
     fields::day_allowed,
     format::{date_formatter, format_date},
-    today::use_today,
+    today::use_today_with_refresh,
 };
 use crate::{
     components::{
@@ -241,7 +241,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
     let (min, max, exclude_date) = (props.min, props.max, props.exclude_date.0);
     let focusable = props.focusable;
 
-    let today = use_today(props.today);
+    let (today, refresh_today) = use_today_with_refresh(props.today);
     // A new `lowest` remounts the calendar (`DateValue::picker` keys it).
     let mut level = use_signal(|| lowest);
     let mut paged = use_signal(|| None::<NaiveDate>);
@@ -421,12 +421,17 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
         }
     });
 
-    root_box.element(&root).render(
-        HtmlTag::Div,
-        props.attributes,
-        rsx! {
-            {body}
-            {hidden}
-        },
-    )
+    // An inline picker has no open to re-read today on; a field passes its own (2341).
+    let onfocusin = move |_: FocusEvent| refresh_today.ask();
+    root_box
+        .element(&root)
+        .event("onfocusin", onfocusin)
+        .render(
+            HtmlTag::Div,
+            props.attributes,
+            rsx! {
+                {body}
+                {hidden}
+            },
+        )
 }

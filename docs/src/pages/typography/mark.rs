@@ -26,7 +26,7 @@ pub fn MarkPage() -> Element {
                     .default("warning, tinted")
                     .doc("A theme color name gets a light shade, and an explicit shade such as `error.4` stays as it is. Any CSS color works too. Under a gradient, its first stop."),
                 prop("gradient", "Gradient")
-                    .doc("Fills the highlight with a gradient from `color` to a second stop, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`; `Gradient::default()` is the theme's. The text turns black or white, whichever reads on both stops and the span between; the contrast of a literal CSS stop is yours to check. Solid in its first stop where the image is dropped."),
+                    .doc("Fills the highlight with a gradient from `color` to a second stop, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`; `Gradient::default()` is the theme's. The text turns black or white, whichever reads on both stops and the span between; the contrast of a literal CSS stop is yours to check. Solid in its first stop where a renderer drops the image; in forced colors, the system highlight colors."),
                 prop("children", "Element").default("required").doc("The highlighted content."),
             ])],
             accessibility: a11y()
@@ -34,7 +34,7 @@ pub fn MarkPage() -> Element {
                     "Each highlight is a real `<mark>`.",
                     "For a theme color, a shade or a hex, the text takes the tint's contrast color, so it stays readable.",
                     "A link inside is underlined in the text's color, unless its `underline` is `never`, and its focus ring clears 3:1 against the tint.",
-                    "In forced colors the tint gives way to the system highlight colors, `Mark` and `MarkText`.",
+                    "In forced colors the tint or gradient gives way to the system highlight colors, `Mark` and `MarkText`.",
                     "Under a `gradient`, the text is black or white, picked to read at 4.5:1 on both stops and the span between in light and dark.",
                 ])
                 .must([

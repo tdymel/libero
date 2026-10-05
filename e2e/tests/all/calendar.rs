@@ -17,6 +17,42 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// Todo 2341. The page's clock jumps 40 days; focus coming into an inline picker marks
+/// the new today, not the one read at mount.
+#[test]
+fn an_inline_picker_asks_the_clock_again_on_focus_in() {
+    const TODAY_IS_NOW: &str = "(() => { const d = new Date(); \
+        const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; \
+        return document.querySelector('[role=grid] [aria-current=date]:not([data-outside])')?.getAttribute('data-date') === iso; })()";
+    block_on(async {
+        let fixture = Fixture::open("/calendar/clock", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(page, TODAY_IS_NOW, "the mount to mark today")
+            .await
+            .unwrap();
+        page.evaluate(
+            "(() => { const Real = Date, shift = 40 * 864e5; \
+             window.Date = class extends Real { \
+               constructor(...a) { a.length ? super(...a) : super(Real.now() + shift); } \
+               static now() { return Real.now() + shift; } }; })()",
+        )
+        .await
+        .unwrap();
+        keyboard::tab_to(page, "#before", 3).await.unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        wait::for_js_true(page, TODAY_IS_NOW, "focus-in to mark the new today")
+            .await
+            .unwrap();
+        fixture
+            .console
+            .assert_clean("focus-in over a day change")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 745: a day before `min` is `GrayText` in forced colours, and draws no box.
 #[test]
 fn a_disabled_day_grays_out_in_forced_colours() {

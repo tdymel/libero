@@ -43,7 +43,10 @@ static MARK_BASE_SX: StaticSx = StaticSx::new(|| {
         // The highlight as a gradient fill, its label read on every point (2132).
         .when(
             "gradient",
-            gradient_surface_sx().var(ANCHOR_COLOR, GRADIENT_CONTRAST.value()),
+            gradient_surface_sx()
+                .var(ANCHOR_COLOR, GRADIENT_CONTRAST.value())
+                // Repeated: the state rule outranks the base media rule (2346).
+                .media(FORCED_COLORS, sx().color("MarkText").background("Mark")),
         )
 });
 
@@ -197,6 +200,19 @@ mod tests {
                 SURFACE_LABEL.name()
             )
         );
+    }
+
+    /// Todo 2346: the gradient state rule outranks the base media rule, so it repeats the pair.
+    #[test]
+    fn a_gradient_keeps_the_system_highlight_in_forced_colours() {
+        let css = crate::css::Stylesheet::from(&MARK_BASE_SX);
+        let css = css.as_str();
+        let forced = css
+            .split("@media (forced-colors: active)")
+            .skip(1)
+            .find(|block| block.trim_start().starts_with('{') && block.contains("gradient"))
+            .unwrap_or_else(|| panic!("no forced-colours rule for the gradient: {css}"));
+        assert!(forced.contains("background:Mark"), "{css}");
     }
 
     #[test]

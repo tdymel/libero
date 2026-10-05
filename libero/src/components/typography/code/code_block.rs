@@ -28,8 +28,9 @@ use crate::{
     utils::warn,
 };
 
-// Shared with `max_lines`' height math, so neither drifts.
-const CODE_LINE_HEIGHT_PX: u32 = 20;
+// Shared with `max_lines`' height math, so neither drifts. Relative, so rows
+// grow with a larger default font size, as the rem text does (2345).
+const CODE_LINE_HEIGHT: &str = "1.25rem";
 // Set once on the lines container and inherited by every row.
 const CODE_GUTTER_WIDTH_VAR: CssVar = CssVar::new("--lsx-code-block-gutter-width");
 const CODE_LINES_VERTICAL_PADDING_PX: u32 = 24;
@@ -70,10 +71,10 @@ static CODE_COPY_BUTTON_SX: StaticSx = StaticSx::new(|| {
 // Measured on the scroll box; 0 under overlay scrollbars.
 const CODE_SCROLLBAR_WIDTH_VAR: CssVar = CssVar::new("--lsx-code-block-scrollbar-width");
 
-// Centred on the first code line: 12px padding + 10px half line, minus half the 24px button.
+// Centred on the first code line: 12px padding + half a line, minus half the 26px button.
 static CODE_COPY_BUTTON_FLOATING_SX: StaticSx = StaticSx::new(|| {
     sx().position("absolute")
-        .top("9px")
+        .top(format!("calc({CODE_LINE_HEIGHT} / 2 - 1px)"))
         .right(format!(
             "calc(8px + {})",
             CODE_SCROLLBAR_WIDTH_VAR.value_or("0px")
@@ -107,7 +108,7 @@ static CODE_LINES_SX: StaticSx = StaticSx::new(|| {
         .font_family(CODE_FONT_FAMILY.value())
         .font_size(Size::Sm)
         // Explicit: the copy button's centring and `max_lines` compute against it.
-        .line_height(format!("{CODE_LINE_HEIGHT_PX}px"))
+        .line_height(CODE_LINE_HEIGHT)
 });
 
 // `box-shadow`, not `border-left`, so the accent bar doesn't shift content.
@@ -115,7 +116,7 @@ static CODE_LINE_ROW_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .flex_direction("row")
         // A blank line has no gutter digit or text to give it height (todo 771).
-        .min_height(format!("{CODE_LINE_HEIGHT_PX}px"))
+        .min_height(CODE_LINE_HEIGHT)
         .when("highlighted", marked_row_sx(ColorCss::PRIMARY))
         .when("diff-add", marked_row_sx(ColorCss::SUCCESS))
         .when("diff-remove", marked_row_sx(ColorCss::ERROR))
@@ -186,7 +187,7 @@ static CODE_PLAIN_PRE_SX: StaticSx = StaticSx::new(|| {
         .font_family(CODE_FONT_FAMILY.value())
         .font_size(Size::Sm)
         // As `CODE_LINES_SX`, so `max_lines` holds while highlighting runs.
-        .line_height(format!("{CODE_LINE_HEIGHT_PX}px"))
+        .line_height(CODE_LINE_HEIGHT)
         .when("copy-space", sx().padding_right(COPY_SPACE))
 });
 
@@ -408,6 +409,10 @@ fn code_line_row(
     )
 }
 
+fn max_lines_height(max_lines: u32) -> String {
+    format!("calc({max_lines} * {CODE_LINE_HEIGHT} + {CODE_LINES_VERTICAL_PADDING_PX}px)")
+}
+
 fn gutter_variables(gutter_width: String) -> Variables {
     variables().with(CODE_GUTTER_WIDTH_VAR, gutter_width)
 }
@@ -545,10 +550,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
         }
     });
     let scroll_sx: Input<Sx> = match props.max_lines {
-        Some(max_lines) => sx().max_height(format!(
-            "{}px",
-            max_lines * CODE_LINE_HEIGHT_PX + CODE_LINES_VERTICAL_PADDING_PX
-        )),
+        Some(max_lines) => sx().max_height(max_lines_height(max_lines)),
         None => sx(),
     }
     .into();
@@ -803,6 +805,20 @@ mod tests {
         });
         assert_eq!(html.matches("aria-label=").count(), 1, "{html}");
         assert!(html.contains(r#"aria-label="Mine""#), "{html}");
+    }
+
+    /// Todo 2345: a 200% default font size grew the text but not a px row pitch.
+    #[test]
+    fn the_row_pitch_follows_the_root_font_size() {
+        assert!(CODE_LINE_HEIGHT.ends_with("rem"));
+        assert_eq!(max_lines_height(3), "calc(3 * 1.25rem + 24px)");
+        let css = crate::css::Stylesheet::from(&CODE_LINE_ROW_SX);
+        assert!(css.as_str().contains("min-height:1.25rem"), "{css:?}");
+        let css = crate::css::Stylesheet::from(&CODE_COPY_BUTTON_FLOATING_SX);
+        assert!(
+            css.as_str().contains("top:calc(1.25rem / 2 - 1px)"),
+            "{css:?}"
+        );
     }
 
     #[test]

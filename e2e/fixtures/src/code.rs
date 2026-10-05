@@ -47,6 +47,10 @@ fn CodePage() -> Element {
             Text { id: "long-code-text",
                 Code { id: "long-code", source: "an_identifier_far_too_long_for_a_three_hundred_twenty_pixel_column" }
             }
+            // Todo 2351: the first row's end scrolls clear of the floating copy button.
+            CodeBlock { id: "first-line-block", language: "rust", header: false, copyable: true,
+                source: "let s = \"a first line long enough to run under the copy button\";\nlet b = 2;"
+            }
         }
     }
 }

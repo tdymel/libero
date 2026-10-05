@@ -24,6 +24,10 @@ fn MarkPage() -> Element {
                     Anchor { id: "mark-never", to: "#", underline: "never", "a bare link" }
                 }
             }
+            // Todo 2346: a gradient keeps the system pair in forced colours, and its label 4.5:1.
+            Text {
+                Mark { id: "mark-gradient", gradient: ("secondary", 45), "a gradient highlight" }
+            }
             for (id, color) in MARK_COLORS {
                 Text {
                     Mark { color: *color,

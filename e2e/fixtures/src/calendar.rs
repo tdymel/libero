@@ -18,7 +18,21 @@ pub const ROUTES: Routes = &[
     ("/calendar/mini", || rsx! { MiniPage {} }),
     ("/calendar/limited", || rsx! { LimitedPage {} }),
     ("/calendar/year", || rsx! { YearPage {} }),
+    ("/calendar/clock", || rsx! { ClockPage {} }),
 ];
+
+/// Empty, without `today`: the inline picker asks the clock, again on focus-in (2341).
+#[component]
+fn ClockPage() -> Element {
+    let mut day = use_signal(|| None::<NaiveDate>);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button { id: "before", "Before" }
+            ChronoPicker { value: day(), onchange: move |next: Option<NaiveDate>| day.set(next) }
+        }
+    }
+}
 
 /// 2026 picked and `today`: the decade 2020 – 2029, its title plain text.
 #[component]

@@ -154,7 +154,7 @@ success and error.
 | `line_numbers` | `bool` | Default `line_numbers` when the prop is omitted (`true`). |
 
 The defaults are steps of the theme's `muted` ramp, so the block follows the
-palette's page. A token or text color that falls short of 4.5:1 there (3:1
+palette's page. A token or text color that falls short of 4.5:1 there (4.27:1
 for line numbers) is darkened, or lightened on a dark page, until it reads.
 
 ## CSS variables
@@ -177,4 +177,5 @@ State tokens on the rows and cells the block builds, not on its root.
 |---|---|---|
 | `diff-add` / `diff-remove` | a line row | `diff` is set and the line starts with `+` / `-`. |
 | `highlighted` | a line row | The line is named by `highlight_lines` (and `diff` is off). |
-| `no-gutter` | a line's content cell | `line_numbers` is off, so the content takes the gutter's padding. |
+| `no-gutter` | a line's content cell, or its diff marker cell | `line_numbers` is off, so the first cell takes the gutter's padding. |
+| `copy-space` | the first line's content cell, or the plain `pre` while highlighting runs | The copy button floats (`copyable` without `header`), so the first line ends clear of it. |

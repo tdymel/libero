@@ -11,6 +11,8 @@ const FLOATING_COPY: &str = "#wide-block button";
 const WIDE_SCROLL: &str = "#wide-block [role=region]";
 const TALL_COPY: &str = "#tall-block button";
 const TALL_SCROLL: &str = "#tall-block [role=region]";
+const FIRST_LINE_COPY: &str = "#first-line-block button";
+const FIRST_LINE_SCROLL: &str = "#first-line-block [role=region]";
 
 #[test]
 fn it_meets_the_baseline() {
@@ -21,9 +23,12 @@ fn it_meets_the_baseline() {
         .focusable(WIDE_SCROLL)
         .focusable(TALL_COPY)
         .focusable(TALL_SCROLL)
+        .focusable(FIRST_LINE_COPY)
+        .focusable(FIRST_LINE_SCROLL)
         .targets(COPY)
         .targets(FLOATING_COPY)
         .targets(TALL_COPY)
+        .targets(FIRST_LINE_COPY)
         .contrast_covers("#diff-block")
         .contrast_covers("#wide-block")
         .run();
@@ -392,6 +397,57 @@ fn a_short_code_span_keeps_its_token_whole() {
             .into_value()
             .unwrap();
         assert!(!overflow, "the long span ran out of its 320px column");
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2351. Scrolled to its end, the first row's last character sits left of the
+/// floating copy button, which the row's `copy-space` padding keeps clear.
+#[test]
+fn the_first_line_scrolls_clear_of_the_floating_copy_button() {
+    block_on(async {
+        let fixture = Fixture::open("/code", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, FIRST_LINE_SCROLL).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "(() => {{ const scroller = document.querySelector('{FIRST_LINE_SCROLL}'); \
+                 scroller.scrollLeft = scroller.scrollWidth; \
+                 const row = scroller.querySelector('pre > code > span > span'); \
+                 const walker = document.createTreeWalker(row, NodeFilter.SHOW_TEXT); \
+                 let last = null; while (walker.nextNode()) last = walker.currentNode; \
+                 if (!last || !last.length) return false; \
+                 const range = document.createRange(); range.setStart(last, last.length - 1); range.setEnd(last, last.length); \
+                 return range.getBoundingClientRect().right \
+                   <= document.querySelector('{FIRST_LINE_COPY}').getBoundingClientRect().left; }})()"
+            ),
+            "the first row's end left of the copy button",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2345. A 200% default font size grows the row pitch with the text, so rows
+/// don't overlap and `max_lines: 2` still shows two whole lines.
+#[test]
+fn the_row_pitch_follows_a_larger_default_font_size() {
+    block_on(async {
+        let fixture = Fixture::open("/code", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        page.evaluate("document.documentElement.style.fontSize = '32px'")
+            .await
+            .unwrap();
+        const PITCH: &str = r#"(() => {
+            const rows = [...document.querySelectorAll('#blank-line-block pre > code > span')]
+                .map(r => Math.round(r.getBoundingClientRect().height)).join();
+            const tall = document.querySelector('#tall-block [data-slot=scroll]').clientHeight;
+            return rows === '40,40,40' && Math.round(tall) === 2 * 40 + 24; })()"#;
+        wait::for_js_true(page, PITCH, "40px rows and a two-line max height")
+            .await
+            .unwrap();
         fixture.close().await.unwrap();
     });
 }

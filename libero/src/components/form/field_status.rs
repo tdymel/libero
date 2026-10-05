@@ -18,6 +18,7 @@ impl FieldStatus {
         }
     }
 
+    /// `Valid` only: false for a warning too, though only an error blocks a `Form`'s submit.
     pub fn is_valid(&self) -> bool {
         matches!(self, Self::Valid)
     }
@@ -97,6 +98,8 @@ mod tests {
         assert_eq!(warning.message(), Some("close"));
         assert_eq!(warning.state(), Some("warning"));
         assert!(warning.is_warning());
+        // Todo 2344: a warning is not `Valid`, as the doc says.
+        assert!(!warning.is_valid());
 
         let error = FieldStatus::Error("too short".to_string());
         assert_eq!(error.message(), Some("too short"));

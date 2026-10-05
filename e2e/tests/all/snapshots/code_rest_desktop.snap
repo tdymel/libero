@@ -121,3 +121,17 @@ paragraph
 paragraph
   code
     StaticText "an_identifier_far_too_long_for_a_three_hundred_twenty_pixel_column"
+group "Rust code"
+  button "Copy code"
+    description "Rust code"
+  status [atomic] [live=polite]
+  region "Rust code"
+    code
+      StaticText "let"
+      StaticText "s ="
+      StaticText ""a first line long enough to run under the copy button""
+      StaticText ";"
+      StaticText "let"
+      StaticText "b ="
+      StaticText "2"
+      StaticText ";"

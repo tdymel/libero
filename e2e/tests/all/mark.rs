@@ -52,6 +52,7 @@ fn a_link_inside_a_mark_has_a_ring_that_clears_three_to_one() {
 }
 
 /// Todo 1542. Forced colours drop the tint, so the mark paints the system `Mark` pair.
+/// Todo 2346: the gradient one too, whose state rule outranked the base media rule.
 #[test]
 fn a_mark_keeps_its_highlight_in_forced_colours() {
     use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};

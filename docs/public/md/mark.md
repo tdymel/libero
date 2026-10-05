@@ -33,7 +33,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `color` | `ThemeAwareValue` | `warning`, tinted | A theme color name gets a light shade, and an explicit shade such as `error.4` stays as it is. Any CSS color works too. Under a gradient, its first stop. |
-| `gradient` | `Gradient` | - | Fills the highlight with a gradient from `color` to a second stop, as `("info", 90)` or `Gradient::default().to("info").deg(90)`; `Gradient::default()` is the theme's. The text turns black or white, whichever reads on both stops and the span between; the contrast of a literal CSS stop is yours to check. Solid in its first stop where the image is dropped. |
+| `gradient` | `Gradient` | - | Fills the highlight with a gradient from `color` to a second stop, as `("info", 90)` or `Gradient::default().to("info").deg(90)`; `Gradient::default()` is the theme's. The text turns black or white, whichever reads on both stops and the span between; the contrast of a literal CSS stop is yours to check. Solid in its first stop where a renderer drops the image; in forced colors, the system highlight colors. |
 | `children` | `Element` | required | The highlighted content. |
 
 Like every component, `Mark` also takes the shared props `sx`, `class`, `style`,
@@ -48,8 +48,8 @@ Like every component, `Mark` also takes the shared props `sx`, `class`, `style`,
   color, so it stays readable.
 - A link inside is underlined in the text's color, unless its `underline` is
   `never`, and its focus ring clears 3:1 against the tint.
-- In forced colors the tint gives way to the system highlight colors, `Mark`
-  and `MarkText`.
+- In forced colors the tint or gradient gives way to the system highlight
+  colors, `Mark` and `MarkText`.
 - Under a `gradient`, the text is black or white, picked to read at 4.5:1 on
   both stops and the span between in light and dark.
 
@@ -87,5 +87,5 @@ every screen reader announces the highlight.
 
 ## Data attributes
 
-Only what you pass: the `states` prop renders as `data-state`. `Mark` adds no
-state tokens of its own.
+The `states` prop renders as `data-state`. `Mark` adds `gradient` while
+`gradient` is set.

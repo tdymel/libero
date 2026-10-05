@@ -9,7 +9,7 @@ use super::{
     parse_time::MIDNIGHT,
     picker_field::FieldValue,
     time_picker::Clock,
-    today::use_today,
+    today::{TodayRefresh, use_today_with_refresh},
 };
 use crate::{
     components::{
@@ -184,13 +184,14 @@ fn step_tabs(
 }
 
 /// The column both flows stand in, wearing the caller's class and style.
+/// Inline, nothing opens to re-read today on: focus-in refreshes it (2341).
 fn flow_root(
     class: &Input<ClassList>,
     sx: &Input<Sx>,
     parts: &Input<Parts<ChronoPickerPart>>,
     states: &Input<States>,
     attributes: Vec<Attribute>,
-    root: &ElementHandle,
+    (root, refresh_today): (&ElementHandle, TodayRefresh),
     children: Element,
 ) -> Element {
     use_box()
@@ -201,6 +202,7 @@ fn flow_root(
         .style(Some(FLOW_STYLE.to_string()))
         .prepare()
         .element(root)
+        .event("onfocusin", move |_: FocusEvent| refresh_today.ask())
         .render(HtmlTag::Div, attributes, children)
 }
 
@@ -272,7 +274,7 @@ pub(super) fn DateTimeFlow(props: DateTimeFlowProps) -> Element {
     let tabs_id = use_id();
     let focusable = props.focusable;
     let (value, onpick) = (props.value, props.onpick);
-    let today = use_today(props.today);
+    let (today, refresh_today) = use_today_with_refresh(props.today);
     // A time picked with no day and no clock waits here for the day pick.
     let mut pending = use_signal(|| None::<NaiveTime>);
     let size = props.size.copied_or(use_theme().chrono_picker.size);
@@ -353,7 +355,7 @@ pub(super) fn DateTimeFlow(props: DateTimeFlowProps) -> Element {
         &props.parts,
         &props.states,
         props.attributes,
-        &root,
+        (&root, refresh_today),
         rsx! {
             {strip}
             {hidden(props.name, value)}
@@ -401,7 +403,7 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
     let tabs_id = use_id();
     let focusable = props.focusable;
     let (value, onpick) = (props.value, props.onpick);
-    let today = use_today(props.today);
+    let (today, refresh_today) = use_today_with_refresh(props.today);
     // Times picked before their day, as in `DateTimeFlow`.
     let mut pending_start = use_signal(|| None::<NaiveTime>);
     let mut pending_end = use_signal(|| None::<NaiveTime>);
@@ -557,7 +559,7 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
         &props.parts,
         &props.states,
         props.attributes,
-        &root,
+        (&root, refresh_today),
         rsx! {
             {strip}
             {hidden(props.name, value)}
