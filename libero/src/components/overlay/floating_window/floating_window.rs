@@ -116,6 +116,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
         root,
         f64::from(defaults.move_step),
         f64::from(defaults.resize_step),
+        pinned.then(|| placement.copied_or(defaults.placement)),
         onmove,
         onresize,
     );

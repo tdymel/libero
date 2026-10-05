@@ -1974,7 +1974,7 @@ impl ElementApi for BlitzElement {
     /// The web's walk over Blitz's layout; `smooth` is ignored, as Blitz only
     /// jumps.
     fn scroll_into_view(&self, _smooth: bool) -> Result<(), PlatformError> {
-        show(self.anchor.clone(), self.node_id, LAYOUT_TRIES);
+        show(self.anchor.clone(), self.node_id, LAYOUT_TRIES, false);
         Ok(())
     }
 
@@ -2133,7 +2133,19 @@ impl ElementApi for BlitzElement {
 const LAYOUT_TRIES: u8 = 3;
 const LAYOUT_WAIT: Duration = Duration::from_millis(20);
 
-fn show(anchor: NodeHandle, node_id: NodeId, tries: u8) {
+/// Every scroller round the node, on both axes, then the viewport (todo 2280).
+/// `None` for a node that is not Blitz's.
+pub(super) fn scroll_chain_into_view(mounted: &Rc<MountedData>) -> Option<()> {
+    let anchor = mounted.downcast::<NodeHandle>()?.clone();
+    remember_document(&anchor);
+    let node_id = anchor.node_id();
+    show(anchor, node_id, LAYOUT_TRIES, true);
+    Some(())
+}
+
+/// `chain` moves every scroller round it on both axes, as [`reveal`]; otherwise
+/// only the nearest vertical one.
+fn show(anchor: NodeHandle, node_id: NodeId, tries: u8, chain: bool) {
     let element = BlitzElement {
         anchor: anchor.clone(),
         node_id,
@@ -2147,13 +2159,15 @@ fn show(anchor: NodeHandle, node_id: NodeId, tries: u8) {
             let retry = super::thread::timer().map(|timer| {
                 timer.after(
                     LAYOUT_WAIT,
-                    Box::new(move || show(anchor, node_id, tries - 1)),
+                    Box::new(move || show(anchor, node_id, tries - 1, chain)),
                 )
             });
             // The latest call wins, as a second scroll would override the first.
             if let Some(state) = self::doc() {
                 drop(state.show_retry.replace(retry));
             }
+        } else if chain {
+            reveal(doc, node_id);
         } else if let Some((scroller, delta)) = into_view(doc, node_id) {
             match scroller {
                 Some(scroller) => {

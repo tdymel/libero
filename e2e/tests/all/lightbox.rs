@@ -4,6 +4,9 @@
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
+use chromiumoxide::cdp::browser_protocol::input::{
+    DispatchMouseEventParams, DispatchMouseEventType, MouseButton,
+};
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually};
@@ -768,6 +771,113 @@ async fn click_pan(page: &Page) -> Result<()> {
             &format!("z to announce {said:?}"),
         )
         .await?;
+    }
+    Ok(())
+}
+
+/// Todo 2283: a double-click on a zoomed picture off its centre zooms about the spot
+/// clicked, its two clicks pan nothing. Todo 2284: a right press leaves no `dragging`.
+#[test]
+fn a_double_click_off_centre_keeps_the_spot_under_the_pointer() {
+    block_on(async {
+        let fixture = Fixture::open("/lightbox", Viewport::Desktop).await.unwrap();
+        double_click_off_centre(&fixture.page).await.unwrap();
+        fixture
+            .console
+            .assert_clean("the lightbox double-click off centre")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A press and release of `button` at `at`; `clicks` 2 on the second makes a `dblclick`.
+async fn press_at(page: &Page, at: pointer::Point, button: MouseButton, clicks: i64) -> Result<()> {
+    let held = if button == MouseButton::Right { 2 } else { 1 };
+    for (kind, buttons) in [
+        (DispatchMouseEventType::MousePressed, held),
+        (DispatchMouseEventType::MouseReleased, 0),
+    ] {
+        page.execute(
+            DispatchMouseEventParams::builder()
+                .r#type(kind)
+                .x(at.x)
+                .y(at.y)
+                .button(button.clone())
+                .buttons(buttons)
+                .click_count(clicks)
+                .build()
+                .map_err(anyhow::Error::msg)?,
+        )
+        .await?;
+    }
+    Ok(())
+}
+
+async fn double_click_off_centre(page: &Page) -> Result<()> {
+    const IMG: &str = "[role=dialog] [data-lightbox-frame=\"0\"] img";
+    motion::set_reduced_motion(page, true).await?;
+    // As in `click_pan`: the picture at 2x overhangs the stage vertically only.
+    page.execute(SetDeviceMetricsOverrideParams::new(900, 500, 1.0, false))
+        .await?;
+    pointer::click(page, TRIGGER).await?;
+    wait::for_visible(page, DIALOG).await?;
+    wait_showing(page, 0).await?;
+    wait::for_js_true(
+        page,
+        &format!("document.querySelector({IMG:?})?.naturalWidth > 0"),
+        "the first picture to decode",
+    )
+    .await?;
+    let frame = pointer::centre_of(page, "[role=dialog] [data-lightbox-frame=\"0\"]").await?;
+    pointer::double_click(page, IMG).await?;
+    let style = format!("document.querySelector({IMG:?}).style.cssText");
+    wait::for_js_true(
+        page,
+        &format!("{style}.includes('scale(2)')"),
+        "the picture at 2x",
+    )
+    .await?;
+
+    // 40px below the centre at 2x is 20px of picture; at 4x it stays under the pointer
+    // only with the picture's centre at dy -40 (the two clicks' pans would make it -200).
+    let below = pointer::Point {
+        x: frame.x,
+        y: frame.y + 40.0,
+    };
+    for clicks in 1..=2 {
+        press_at(page, below, MouseButton::Left, clicks).await?;
+    }
+    let at_4x = format!(
+        "(() => {{ const [, dy] = {PAN_JS}; return {style}.includes('scale(4)') && Math.abs(dy + 40) <= 1; }})()"
+    );
+    if wait::for_js_true(page, &at_4x, "a double-click to 4x about the pointer")
+        .await
+        .is_err()
+    {
+        let seen: [f64; 4] = page.evaluate(PAN_JS).await?.into_value()?;
+        let style: String = page.evaluate(style.as_str()).await?.into_value()?;
+        bail!(
+            "a double-click 40px below the centre at 2x left {seen:?}, style {style:?}, not dy -40 at 4x"
+        );
+    }
+
+    // The zoom-in click renders after the right press, so its state is read settled.
+    press_at(page, below, MouseButton::Right, 1).await?;
+    pointer::click(page, ZOOM_IN).await?;
+    wait::for_js_true(
+        page,
+        &format!("{style}.includes('scale(5)')"),
+        "one wheel step in",
+    )
+    .await?;
+    let state: String = page
+        .evaluate(format!(
+            "document.querySelector({IMG:?}).dataset.state ?? ''"
+        ))
+        .await?
+        .into_value()?;
+    if state.split(' ').any(|token| token == "dragging") {
+        bail!("a right press left the picture dragging: data-state {state:?}");
     }
     Ok(())
 }

@@ -205,7 +205,6 @@ State tokens on the pictures' and thumbnails' `data-state`, space separated.
 | Token | Condition |
 |---|---|
 | `zoomable` | On a picture that zooms and is fitted. |
-| `swipe` | On a fitted picture while a swipe down closes. |
 | `zoomed` | On the picture showing, while zoomed. |
 | `dragging` | On the picture showing, during a pan or swipe. |
 | `current` | On the current thumbnail. |

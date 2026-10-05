@@ -1,6 +1,6 @@
 //! The pictures and the thumbnail strip, and the drag on a picture.
 
-use dioxus::prelude::*;
+use dioxus::{html::input_data::MouseButton, prelude::*};
 
 use super::{
     lightbox::LightboxPart,
@@ -254,6 +254,10 @@ pub(super) fn lightbox_slide(
                     }
                     return;
                 }
+                // `use_drag` declines a right or middle press, so no end would clear the gesture.
+                if matches!(event.trigger_button(), Some(button) if button != MouseButton::Primary) {
+                    return;
+                }
                 if *dragged.peek() {
                     dragged.set(false);
                 }
@@ -338,11 +342,25 @@ pub(super) fn lightbox_slide(
                 },
                 // Panning without a drag: a click centres the spot clicked.
                 onclick: move |event: Event<MouseData>| {
-                    if !zoomable || i != *index.peek() || *dragged.peek() || !zooming.held().is_zoomed() {
+                    if !zoomable || i != *index.peek() {
                         return;
                     }
-                    let client = event.client_coordinates();
-                    centre_on(frame, image, zooming, i, DragPoint { x: client.x, y: client.y });
+                    let from = zooming.held();
+                    let centres = !*dragged.peek() && from.is_zoomed();
+                    let ticket = zooming.clicked(centres.then_some(from));
+                    if centres {
+                        let client = event.client_coordinates();
+                        centre_on(frame, image, zooming, i, DragPoint { x: client.x, y: client.y }, ticket);
+                    }
+                },
+                // Before the frame zooms: a double-click's two clicks must not pan (todo 2283).
+                ondoubleclick: move |_| {
+                    if !zoomable || i != *index.peek() {
+                        return;
+                    }
+                    if let Some(before) = zooming.undo_clicks() {
+                        zoom.set(before);
+                    }
                 },
                 onmounted: image.mount(),
                 onpointermove: move |event: Event<PointerData>| {

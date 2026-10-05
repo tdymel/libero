@@ -240,13 +240,16 @@ pub(crate) fn observe_resize(
 }
 
 /// The web and a WebView use the browser's `scrollIntoView`, which moves every
-/// scroller up the chain on both axes; Blitz its nearest scroller only.
+/// scroller up the chain on both axes; Blitz walks the same chain itself.
 pub(crate) fn scroll_chain_into_view(
     mounted: &Rc<MountedData>,
     smooth: bool,
 ) -> Result<(), super::PlatformError> {
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
-    return element(mounted).scroll_into_view(smooth);
+    return match blitz::scroll_chain_into_view(mounted) {
+        Some(()) => Ok(()),
+        None => element(mounted).scroll_into_view(smooth),
+    };
     #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
     return mounted::MountedElement(mounted.clone()).scroll_into_view(smooth);
 }

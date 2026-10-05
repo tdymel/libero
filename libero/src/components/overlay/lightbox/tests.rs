@@ -279,3 +279,40 @@ fn the_part_table_is_stable() {
 
     assert_eq!(table, expected);
 }
+
+fn zoomed_at(x: f64) -> Zoom {
+    Zoom {
+        scale: 2.0,
+        x,
+        ..Zoom::fitted(0)
+    }
+}
+
+#[test]
+fn a_double_click_restores_the_zoom_before_its_first_click() {
+    let mut clicks = Clicks::default();
+    clicks.clicked(Some(zoomed_at(-50.0)));
+    let ticket = clicks.clicked(Some(zoomed_at(10.0)));
+
+    assert_eq!(clicks.undo(0), Some(zoomed_at(-50.0)));
+    assert_ne!(clicks.cancelled, ticket, "the queued centrings are dropped");
+}
+
+#[test]
+fn a_double_click_on_a_fitted_picture_restores_nothing() {
+    let mut clicks = Clicks::default();
+    clicks.clicked(Some(zoomed_at(-50.0)));
+    clicks.clicked(None);
+    clicks.clicked(None);
+
+    assert_eq!(clicks.undo(0), None);
+}
+
+#[test]
+fn a_double_click_on_another_picture_restores_nothing() {
+    let mut clicks = Clicks::default();
+    clicks.clicked(Some(zoomed_at(-50.0)));
+    clicks.clicked(Some(zoomed_at(10.0)));
+
+    assert_eq!(clicks.undo(1), None);
+}

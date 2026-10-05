@@ -1,6 +1,9 @@
 use dioxus::prelude::*;
 
-use super::{FloatingWindow, FloatingWindowOptions, FloatingWindowPart, geometry::WindowBounds};
+use super::{
+    FloatingWindow, FloatingWindowOptions, FloatingWindowPart,
+    geometry::{WindowBounds, pinned_growth},
+};
 use crate::{
     LiberoProvider,
     components::{
@@ -8,6 +11,18 @@ use crate::{
         overlay::{Dialog, Modal},
     },
 };
+
+/// Todo 2282: a pinned window grows about its anchor, so the grip's travel maps per edge.
+#[test]
+fn a_pinned_window_grows_about_its_anchor() {
+    use crate::components::layout::Placement::*;
+
+    assert_eq!(pinned_growth(TopStart), (1.0, 1.0));
+    assert_eq!(pinned_growth(CenterCenter), (2.0, 2.0));
+    assert_eq!(pinned_growth(BottomEnd), (-1.0, -1.0));
+    assert_eq!(pinned_growth(TopEnd), (-1.0, 1.0));
+    assert_eq!(pinned_growth(BottomStart), (1.0, -1.0));
+}
 
 /// The slot names are public: a rename here is a breaking change.
 #[test]

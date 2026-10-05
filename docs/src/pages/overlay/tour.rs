@@ -276,7 +276,6 @@ pub fn TourPage() -> Element {
                 ])
                 .example("A first-run tour over Search and New project: \"Take the tour\" moves focus into the Welcome card, → or Next moves the hole to Search, and Escape ends the tour and returns focus to \"Take the tour\".")
                 .limits([
-                    "A target inside a nested or horizontal scroll area may not be scrolled into view; only its nearest vertical scroller and the page scroll.",
                     "The hole follows the target on scroll and window resize, not when the target alone changes size.",
                     "In a native window, the hole drifts under a page scroll the app causes itself; libero hears its own scrolls and the wheel.",
                 ]),

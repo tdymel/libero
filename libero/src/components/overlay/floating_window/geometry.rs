@@ -2,10 +2,27 @@ use dioxus::prelude::*;
 
 use super::options::WindowRect;
 use crate::{
-    components::common::has_shortcut_modifier,
+    components::{common::has_shortcut_modifier, layout::Placement},
     hooks::{Drag, DragMove, DragOptions, DragStart, ElementHandle, use_drag},
     platform::ElementApi,
 };
+
+/// How a pinned window's size follows the grip's logical travel: it grows about
+/// its anchor, so twice when centred and inverted from an end or bottom edge.
+pub(super) fn pinned_growth(placement: Placement) -> (f64, f64) {
+    use Placement::*;
+    let inline = match placement {
+        TopStart | CenterStart | BottomStart => 1.0,
+        TopCenter | CenterCenter | BottomCenter => 2.0,
+        TopEnd | CenterEnd | BottomEnd => -1.0,
+    };
+    let block = match placement {
+        TopStart | TopCenter | TopEnd => 1.0,
+        CenterStart | CenterCenter | CenterEnd => 2.0,
+        BottomStart | BottomCenter | BottomEnd => -1.0,
+    };
+    (inline, block)
+}
 
 fn arrow_delta(key: &Key, step: f64) -> Option<(f64, f64)> {
     match key {
@@ -114,6 +131,7 @@ pub(super) fn use_window_geometry(
     root: ElementHandle,
     move_step: f64,
     resize_step: f64,
+    pinned: Option<Placement>,
     onmove: Option<Callback<WindowRect>>,
     onresize: Option<Callback<WindowRect>>,
 ) -> WindowGeometry {
@@ -180,9 +198,14 @@ pub(super) fn use_window_geometry(
         onstart: use_callback(move |_: DragStart| {
             size_origin.set(None);
             resize_rtl.set(root.is_rtl());
+            // An anchored window grows away from its anchor, not under the grip (todo 2282).
+            let pin = pinned.is_none() && position.peek().is_none();
             let (dimensions, offset) = (root.dimensions(), root.client_offset());
             spawn(async move {
-                if let (Ok(dimensions), Ok((x, _))) = (dimensions.await, offset.await) {
+                if let (Ok(dimensions), Ok((x, y))) = (dimensions.await, offset.await) {
+                    if pin {
+                        position.set(Some((x, y)));
+                    }
                     left_origin.set(x);
                     size_origin.set(Some((dimensions.width, dimensions.height)));
                 }
@@ -197,7 +220,14 @@ pub(super) fn use_window_geometry(
                 } else {
                     delta.x
                 };
-                let next = ((width + dx).max(0.0), (height + delta.y).max(0.0));
+                let (inline, block) = match pinned {
+                    Some(placement) if position.peek().is_none() => pinned_growth(placement),
+                    _ => (1.0, 1.0),
+                };
+                let next = (
+                    (width + dx * inline).max(0.0),
+                    (height + delta.y * block).max(0.0),
+                );
                 size.set(Some(next));
                 if *resize_rtl.peek() {
                     keep_right_edge(position, bounds, *left_origin.peek() + width, next.0);

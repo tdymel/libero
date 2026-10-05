@@ -258,8 +258,6 @@ and returns focus to "Take the tour".
 
 ### Limits
 
-- A target inside a nested or horizontal scroll area may not be scrolled into
-  view; only its nearest vertical scroller and the page scroll.
 - The hole follows the target on scroll and window resize, not when the target
   alone changes size.
 - In a native window, the hole drifts under a page scroll the app causes

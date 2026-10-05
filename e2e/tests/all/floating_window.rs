@@ -951,6 +951,33 @@ async fn a_resize_beats_the_callers_size<D: Driver>(d: &mut D, _route: &str) -> 
     .await
 }
 
+/// Todo 2282: the grip of a window still at its centred placement follows the
+/// pointer; growing about the anchor moved it at half the pointer's speed.
+async fn a_grip_drag<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let window = opened(d).await?;
+    let grip = d.rect(SEPARATOR).await?;
+    let (vw, vh) = d.viewport().await?;
+    if window.x + window.width + 30.0 > vw || window.y + window.height + 20.0 > vh {
+        return Ok(());
+    }
+    d.drag(SEPARATOR, 30.0, 20.0).await?;
+    eventually(d, "the grip to stay under the pointer", async |d| {
+        let r = d.rect(SEPARATOR).await?;
+        Ok(near(r.x, grip.x + 30.0) && near(r.y, grip.y + 20.0))
+    })
+    .await?;
+    let moved = d.rect(DIALOG).await?;
+    if !near(moved.x, window.x) || !near(moved.y, window.y) {
+        bail!("the window's top-left moved: {window:?} -> {moved:?}");
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    a_grip_drag_keeps_the_grip_under_the_pointer,
+    "/floating-window",
+    a_grip_drag
+);
 e2e::scenario!(
     a_resize_wins_over_the_callers_sx_size,
     "/floating-window-sized",

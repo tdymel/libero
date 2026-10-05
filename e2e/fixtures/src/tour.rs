@@ -89,10 +89,12 @@ fn NestedTourPage() -> Element {
 
     rsx! {
         Button { id: "start-tour", variant: "outlined", onclick: move |_| tour.start(), "Take the tour" }
-        div { id: "outer", style: "height: 200px; width: 300px; overflow-y: auto;",
+        // A flex row puts the target past the side edge on every renderer; the margin
+        // keeps the hole off the window's edge, where it clamps.
+        div { id: "outer", style: "height: 200px; width: 300px; margin: 24px; overflow-y: auto;",
             div { style: "height: 600px;" }
-            div { id: "inner", style: "overflow-x: auto; white-space: nowrap;",
-                div { style: "display: inline-block; width: 900px; height: 1px;" }
+            div { id: "inner", style: "overflow-x: auto; display: flex;",
+                div { style: "flex: none; width: 900px; height: 1px;" }
                 Button { id: "deep", onmounted: deep.mount(), attributes: deep.attributes(), "Deep" }
             }
             div { style: "height: 600px;" }

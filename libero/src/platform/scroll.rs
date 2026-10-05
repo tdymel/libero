@@ -175,7 +175,7 @@ pub(crate) fn on_element_scroll(
 }
 
 /// Brings the element into view through every scroller around it, on both axes
-/// (`scrollIntoView` `nearest`). Blitz moves its nearest scroller only.
+/// (`scrollIntoView` `nearest`). Blitz jumps, whatever `smooth` says.
 pub(crate) fn scroll_chain_into_view(
     mounted: &std::rc::Rc<dioxus::prelude::MountedData>,
     smooth: bool,

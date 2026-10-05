@@ -259,26 +259,44 @@ async fn start_on(route: &str) -> Fixture {
     fixture
 }
 
-/// A target below one scroller's fold and past another's side edge: both scroll (2222).
-#[test]
-fn a_nested_target_scrolls_into_view() {
-    block_on(async {
-        let fixture = start_on("/tour/nested").await;
-        let page = &fixture.page;
-        let inside = "(() => { const t = document.querySelector('#deep').getBoundingClientRect(); \
-             const within = (id) => { const r = document.querySelector(id).getBoundingClientRect(); \
-               return t.left >= r.left - 1 && t.right <= r.right + 1 \
-                 && t.top >= r.top - 1 && t.bottom <= r.bottom + 1; }; \
-             return within('#inner') && within('#outer'); })()";
-        wait::for_js_true(page, inside, "#deep to scroll into both scrollers")
-            .await
-            .unwrap();
-        wait::for_js_true(page, &hole_js("#deep"), "the hole to follow the scroll")
-            .await
-            .unwrap();
-        fixture.close().await.unwrap();
-    });
+/// A target below one scroller's fold and past another's side edge: both scroll (2222),
+/// on Blitz too (2280).
+async fn nested_target<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let (deep, inner) = (d.rect("#deep").await?, d.rect("#inner").await?);
+    if deep.x < inner.x + inner.width {
+        bail!("#deep {deep:?} starts inside #inner {inner:?}: nothing to scroll sideways");
+    }
+    open(d).await?;
+    let scrolled = eventually(d, "#deep to scroll into both scrollers", async |d| {
+        let t = d.rect("#deep").await?;
+        let mut inside = true;
+        for scroller in ["#inner", "#outer"] {
+            let r = d.rect(scroller).await?;
+            inside &= t.x >= r.x - 1.0
+                && t.x + t.width <= r.x + r.width + 1.0
+                && t.y >= r.y - 1.0
+                && t.y + t.height <= r.y + r.height + 1.0;
+        }
+        Ok(inside)
+    })
+    .await;
+    if let Err(error) = scrolled {
+        let (deep, inner, outer) = (
+            d.rect("#deep").await?,
+            d.rect("#inner").await?,
+            d.rect("#outer").await?,
+        );
+        bail!("{error}: #deep {deep:?}, #inner {inner:?}, #outer {outer:?}");
+    }
+    hole_on(d, "#deep", "the nested scroll").await
 }
+
+e2e::scenario!(
+    a_nested_target_scrolls_into_view,
+    "/tour/nested",
+    nested_target,
+    android: skip("API 34 WebView: neither scroller moves (dev64 handback)")
+);
 
 /// The target growing with nothing scrolled or resized moves the hole (2223).
 #[test]

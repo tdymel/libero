@@ -10,7 +10,7 @@ use super::{
         LIGHTBOX_THUMBNAILS_SHOWN, LIGHTBOX_THUMBNAILS_SX, LIGHTBOX_TOOLBAR_SX,
     },
     use_lightbox::{LightboxOpening, LightboxOptions},
-    zoom::{Fit, Gesture, Slide, Zoom, Zooming, refit, reopened, wheel_step, zoom_about},
+    zoom::{Clicks, Fit, Gesture, Slide, Zoom, Zooming, refit, reopened, wheel_step, zoom_about},
 };
 use crate::{
     components::{
@@ -125,6 +125,7 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
         gesture: use_signal(|| None::<Gesture>),
         dragged: use_signal(|| false),
         touches: use_signal(Vec::new),
+        clicks: use_signal(Clicks::default),
         max_zoom: options.max_zoom.unwrap_or(theme.lightbox.max_zoom).max(1.0),
         announcer: use_announcer(),
         labels: localization.lightbox,

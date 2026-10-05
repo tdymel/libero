@@ -283,6 +283,7 @@ pub(super) fn centre_on(
     zooming: Zooming,
     index: usize,
     client: DragPoint,
+    ticket: u64,
 ) {
     let (mut zoom, mut fit) = (zooming.zoom, zooming.fit);
     let measured = measure_fit(frame, picture);
@@ -292,7 +293,7 @@ pub(super) fn centre_on(
         };
         fit.set(Some(bounds));
         let from = *zoom.peek();
-        if from.index == index && from.is_zoomed() {
+        if from.index == index && from.is_zoomed() && zooming.clicks.peek().cancelled == ticket {
             zoom.set(from.centred_on(from_frame_centre(client, bounds, left, top), bounds));
         }
     });
@@ -322,6 +323,28 @@ pub(super) fn refit(frame: ElementHandle, picture: ElementHandle, zooming: Zoomi
     });
 }
 
+/// The zooms before the last two clicks on the picture (`None`: it did not
+/// centre), and a count each double-click bumps to drop the centring queued.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub(super) struct Clicks {
+    pub(super) before: [Option<Zoom>; 2],
+    pub(super) cancelled: u64,
+}
+
+impl Clicks {
+    pub(super) fn clicked(&mut self, before: Option<Zoom>) -> u64 {
+        self.before = [self.before[1], before];
+        self.cancelled
+    }
+
+    /// The zoom before the double-click's first click, so its two centrings undo.
+    pub(super) fn undo(&mut self, index: usize) -> Option<Zoom> {
+        self.cancelled += 1;
+        let [first, second] = std::mem::take(&mut self.before);
+        first.or(second).filter(|zoom| zoom.index == index)
+    }
+}
+
 /// One picture's handles: the frame measures, the picture holds the drag.
 #[derive(Clone, Copy)]
 pub(super) struct Slide {
@@ -343,6 +366,7 @@ pub(super) struct Zooming {
     pub(super) dragged: Signal<bool>,
     /// The touches down on the picture, for a pinch: the drag follows one.
     pub(super) touches: Signal<Vec<(i32, DragPoint)>>,
+    pub(super) clicks: Signal<Clicks>,
     pub(super) max_zoom: f64,
     pub(super) announcer: Announcer,
     pub(super) labels: LightboxLabels,
@@ -364,6 +388,17 @@ impl Zooming {
             held if held.index == *self.index.peek() => held,
             _ => Zoom::fitted(*self.index.peek()),
         }
+    }
+
+    /// A click on the picture; the ticket its centring checks.
+    pub(super) fn clicked(self, before: Option<Zoom>) -> u64 {
+        let mut clicks = self.clicks;
+        clicks.write().clicked(before)
+    }
+
+    pub(super) fn undo_clicks(self) -> Option<Zoom> {
+        let mut clicks = self.clicks;
+        clicks.write().undo(*self.index.peek())
     }
 
     /// Double-click and `z` step through [`zoom_step`].
