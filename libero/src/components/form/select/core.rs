@@ -777,11 +777,14 @@ fn select_trigger(
         )
         .attr(TOOLBAR_ITEM, toolbar_item.map(ToolbarItem::key))
         // Keeps the open search box focused, so the click reads the list open and closes it (todo 2294).
-        .event("onmousedown", move |event: MouseEvent| {
-            if searchable && state.is_open() {
-                event.prevent_default();
-            }
-        })
+        .event(
+            "onmousedown",
+            searchable.then_some(move |event: MouseEvent| {
+                if state.is_open() {
+                    event.prevent_default();
+                }
+            }),
+        )
         // A multi-select's click bubbles to the slot around it, which owns it.
         .event("onclick", move |_: MouseEvent| {
             if let Some(item) = toolbar_item {

@@ -2092,15 +2092,14 @@ mod dispatched {
         );
     }
 
-    /// Todo 291: typed text that parses is settled the moment it lands, so it
-    /// emits `Change` then `End`, like a key press or a swatch in the dropdown - a
-    /// caller committing on `End` used to miss every typed color.
+    /// Todo 2296: typed text that parses sends `Change` per parse; the one `End`
+    /// comes on Enter or blur.
     #[test]
-    fn typing_a_color_emits_change_then_end() {
+    fn typing_a_color_emits_change_only() {
         let (heard, _) = send(readonly_color, false, "input", input_listener, || {
             input_event("#00ff00")
         });
-        assert_eq!(heard, ["\"Change\"", "\"End\""]);
+        assert_eq!(heard, ["\"Change\""]);
     }
 
     thread_local! {
