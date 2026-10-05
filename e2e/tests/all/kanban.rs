@@ -411,27 +411,53 @@ async fn ticks(page: &chromiumoxide::Page, done: &str, most: u32) -> bool {
 /// A card held still at the board's end edge scrolls the board, and drops in the column it brought in (1364).
 #[test]
 fn a_drag_held_at_the_edge_scrolls_the_board_to_a_hidden_column() {
+    drag_held_at_the_end_edge(false);
+}
+
+/// Right to left the end edge is the left one, and `scrollLeft` runs negative (1436).
+#[test]
+fn a_drag_held_at_the_left_edge_scrolls_a_right_to_left_board() {
+    drag_held_at_the_end_edge(true);
+}
+
+fn drag_held_at_the_end_edge(rtl: bool) {
     use chromiumoxide::cdp::browser_protocol::input::DispatchMouseEventType as Kind;
     use e2e::browser::{Fixture, Viewport, block_on};
     use e2e::frames::in_front;
     use e2e::passes::pointer::Point;
     use e2e::wait;
+    // The board's end side; Done wholly past it, and scrolled in past it.
+    let (end, hidden, past) = match rtl {
+        true => ("left", "d.right <= b.left", "d.left > b.left + 2"),
+        false => ("right", "d.left >= b.right", "d.right < b.right - 2"),
+    };
+    let done = |test: &str| {
+        format!(
+            "(() => {{ const b = document.querySelector('#board').getBoundingClientRect(); \
+             const d = document.querySelector('#column-2').getBoundingClientRect(); \
+             return {test}; }})()"
+        )
+    };
     block_on(async {
         let fixture = Fixture::open("/kanban", Viewport::Mobile).await.unwrap();
         let page = &fixture.page;
+        if rtl {
+            page.evaluate("document.documentElement.dir = 'rtl'")
+                .await
+                .unwrap();
+        }
         e2e::clock::hold(page, &[AUTO_SCROLL_MS]).await.unwrap();
         let hidden: bool = page
-            .evaluate(
-                "(() => { const b = document.querySelector('#board').getBoundingClientRect(); \
-                 return document.querySelector('#column-2').getBoundingClientRect().left >= b.right; })()",
-            )
+            .evaluate(done(hidden))
             .await
             .unwrap()
             .into_value()
             .unwrap();
         assert!(hidden, "Done starts in view: nothing to scroll to");
-        let right: f64 = page
-            .evaluate("document.querySelector('#board').getBoundingClientRect().right")
+        let side: f64 = page
+            .evaluate(format!(
+                "document.querySelector('#board').getBoundingClientRect().{end}"
+            ))
             .await
             .unwrap()
             .into_value()
@@ -441,7 +467,7 @@ fn a_drag_held_at_the_edge_scrolls_the_board_to_a_hidden_column() {
             centre(page, "#Alpha [data-slot=handle]").await,
         );
         let edge = Point {
-            x: right - 8.0,
+            x: if rtl { side + 8.0 } else { side - 8.0 },
             y: alpha.y,
         };
         // In front: a tab behind holds each move for its next frame, about 1 s.
@@ -461,19 +487,15 @@ fn a_drag_held_at_the_edge_scrolls_the_board_to_a_hidden_column() {
         .await
         .unwrap();
         // Held still: only the ticks scroll, up to Done's end edge and no further.
-        let at_end = "(() => { const b = document.querySelector('#board').getBoundingClientRect(); \
-             return Math.abs(document.querySelector('#column-2').getBoundingClientRect().right - b.right) < 2; })()";
+        let at_end = done(&format!("Math.abs(d.{end} - b.{end}) < 2"));
         assert!(
-            ticks(page, at_end, 200).await,
+            ticks(page, &at_end, 200).await,
             "a card held at the end edge did not scroll the board to its end"
         );
         // A few more ticks, held at the edge.
         ticks(page, "false", 8).await;
         let past: bool = page
-            .evaluate(
-                "(() => { const b = document.querySelector('#board').getBoundingClientRect(); \
-                 return document.querySelector('#column-2').getBoundingClientRect().right < b.right - 2; })()",
-            )
+            .evaluate(done(past))
             .await
             .unwrap()
             .into_value()

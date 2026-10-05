@@ -2,6 +2,7 @@ use std::rc::Rc;
 
 use dioxus::prelude::*;
 
+use super::super::sortable::SortableMove;
 use super::{
     core::{HeaderSpec, RowSpec, body_rows},
     row_reorder::RowReorder,
@@ -92,8 +93,30 @@ impl RowFocus {
         self.shown.set((head_rows, order));
     }
 
+    /// Follows the focused row through a move of `data`, before the scroll brings the
+    /// window to its slot: kept by its old index, it unmounted and lost the focus (todo 2233).
+    pub fn follow(mut self, step: SortableMove) {
+        let Some(at) = *self.focused.peek() else {
+            return;
+        };
+        let next = moved_index(at, step);
+        if next != at {
+            self.focused.set(Some(next));
+        }
+    }
+
     pub fn attributes(&self) -> Option<Attribute> {
         self.table.map(|table| listener("onmounted", table.mount()))
+    }
+}
+
+/// Where index `at` lands once `step` moved one item, shifting the ones between.
+fn moved_index(at: usize, SortableMove { from, to }: SortableMove) -> usize {
+    match at {
+        _ if at == from => to,
+        _ if from < at && at <= to => at - 1,
+        _ if to <= at && at < from => at + 1,
+        _ => at,
     }
 }
 
@@ -233,5 +256,19 @@ mod tests {
         assert_eq!(reveal_slot(2, 40.0, 42.0, 0.0, 200.0), None);
         assert_eq!(reveal_slot(5, 40.0, 42.0, 400.0, 200.0), Some(200.0));
         assert_eq!(reveal_slot(199, 40.0, 42.0, 0.0, 200.0), Some(7842.0));
+    }
+
+    #[test]
+    fn an_index_follows_a_move_of_its_list() {
+        let down = SortableMove { from: 1, to: 3 };
+        let up = SortableMove { from: 3, to: 1 };
+        assert_eq!(
+            [0, 1, 2, 3, 4].map(|at| moved_index(at, down)),
+            [0, 3, 1, 2, 4]
+        );
+        assert_eq!(
+            [0, 1, 2, 3, 4].map(|at| moved_index(at, up)),
+            [0, 2, 3, 1, 4]
+        );
     }
 }

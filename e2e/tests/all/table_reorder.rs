@@ -431,6 +431,32 @@ e2e::scenario!(
     native: skip("1520/2038: Blitz paints no `transform` on a `tr`, so the lifted row keeps its slot")
 );
 
+/// Todo 2233: a drop right after Home, before the scroll moved the window,
+/// keeps the dropped row's node and its handle's focus.
+async fn an_early_drop_keeps_its_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const HANDLE: &str = "[aria-label=\"Reorder Row 1\"]";
+    d.focus(HANDLE).await?;
+    eventually_focused(d, HANDLE, "the handle").await?;
+    d.press(keyboard::SPACE).await?;
+    d.press(keyboard::END).await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_text(d, "#ends", "Row 2 Row 1", "the drop at the end").await?;
+    eventually_focused(d, HANDLE, "the drop at the end").await?;
+    d.press(keyboard::SPACE).await?;
+    d.press(keyboard::HOME).await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_text(d, "#ends", "Row 1 Row 200", "the drop after Home").await?;
+    eventually_focused(d, HANDLE, "the drop after Home").await
+}
+
+e2e::scenario!(
+    an_early_keyboard_drop_keeps_its_focus,
+    "/table-reorder-windowed",
+    an_early_drop_keeps_its_focus,
+    android: skip("958: element identity on the WebView"),
+    native: skip("End on a lifted windowed row moves the focus to the scroll area on Blitz")
+);
+
 /// Todo 1872: Row 1's grip held at the bottom edge scrolls the windowed rows on,
 /// past the window's rows, and drops there.
 #[test]

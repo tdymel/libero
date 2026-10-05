@@ -253,7 +253,8 @@ pub async fn eventually_focused<D: Driver>(d: &mut D, selector: &str, during: &s
     Ok(())
 }
 
-/// `selector`'s text reads `expected`, or fails naming what it reads.
+/// `selector`'s text reads `expected`, or fails naming what it reads. No match yet
+/// is not yet: an Android tap renders after it returns.
 pub async fn eventually_text<D: Driver>(
     d: &mut D,
     selector: &str,
@@ -263,10 +264,16 @@ pub async fn eventually_text<D: Driver>(
     let settled = eventually(
         d,
         &format!("{selector} to read {expected:?} after {during}"),
-        async |d| Ok(d.text(selector).await? == expected),
+        async |d| Ok(d.exists(selector).await? && d.text(selector).await? == expected),
     )
     .await;
     if settled.is_err() {
+        if !d.exists(selector).await? {
+            bail!(
+                "{:?}: after {during}, no element matches {selector}",
+                d.platform()
+            );
+        }
         bail!(
             "{:?}: after {during}, {selector} reads {:?}, not {expected:?}",
             d.platform(),

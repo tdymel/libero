@@ -1023,12 +1023,15 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     // The shown rows' indices in `data`, which a reorder's slots map to.
     let mut shown_rows = use_hook(|| CopyValue::new(Vec::<usize>::new()));
     let onrowreorder = props.onrowreorder;
+    let row_focus = use_row_focus();
     let reorder_rows = use_callback(move |step: SortableMove| {
         let shown = shown_rows.peek();
         if let (Some(onrowreorder), Some(&from), Some(&to)) =
             (onrowreorder, shown.get(step.from), shown.get(step.to))
         {
-            onrowreorder.call(SortableMove { from, to });
+            let step = SortableMove { from, to };
+            onrowreorder.call(step);
+            row_focus.follow(step);
         }
     });
     let detail_id = use_id();
@@ -1119,7 +1122,6 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let mut filtered = use_hook(|| CopyValue::new(FilteredRows::<T>::default()));
     let mut row_context = use_hook(|| CopyValue::new((0u64, None::<Rc<RowContext<T>>>)));
     let mut known_rows = use_hook(|| CopyValue::new(None::<(Rc<Vec<T>>, bool, Rc<[String]>)>));
-    let row_focus = use_row_focus();
     let mut pin_edges = use_signal(|| [None::<f64>; 2]);
     let pin_edge = use_callback(move |(side, width): (PinSide, f64)| {
         let at = usize::from(side == PinSide::End);

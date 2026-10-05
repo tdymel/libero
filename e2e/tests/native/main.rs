@@ -36,6 +36,7 @@ mod image;
 mod image_cropper;
 mod image_list;
 mod inline_spaces;
+mod kanban;
 mod keyboard;
 mod lightbox;
 mod max_length;
