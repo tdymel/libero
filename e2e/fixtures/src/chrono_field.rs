@@ -16,7 +16,17 @@ pub const ROUTES: Routes = &[
     ("/chrono-field/moment", || rsx! { MomentFieldPage {} }),
     ("/chrono-field/digital", || rsx! { DigitalFieldPage {} }),
     ("/chrono-field/duration", || rsx! { DurationFieldPage {} }),
+    ("/chrono-field/clock", || rsx! { ClockFieldPage {} }),
 ];
+
+/// An empty date field without `today`: the dropdown asks the clock (2313).
+#[component]
+fn ClockFieldPage() -> Element {
+    let mut day = use_signal(|| None::<NaiveDate>);
+    rsx! {
+        ChronoField::<NaiveDate> { id: "date", label: "Day", value: day(), onchange: move |next| day.set(next) }
+    }
+}
 
 /// A duration of 1 h 30 min held, 15 min to 12 h, minutes at 15 and seconds
 /// shown. The readout shows it in seconds.

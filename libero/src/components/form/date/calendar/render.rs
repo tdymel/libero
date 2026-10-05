@@ -468,6 +468,8 @@ pub(super) fn Nav(props: NavProps) -> Element {
             size: ThemeAwareValue::Size(nav_size(props.size)),
             tabindex: if props.focusable { "0" } else { "-1" },
             disabled: props.disabled,
+            // Paging to `min` or `max` disables the focused button: focus stays on it.
+            focusable_when_disabled: true,
             onclick: move |_| paged.set(Some(targets.peek()[usize::from(forward)])),
             if props.forward {
                 Glyph { slot: IconSlot::ChevronRight, icon: lucide::chevron_right::outlined }

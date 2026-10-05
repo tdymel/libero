@@ -2,7 +2,7 @@
 //! the dropdown opens on the month grid. `today` is pinned to 2026-03-18.
 
 use e2e::browser::block_on;
-use e2e::passes::keyboard;
+use e2e::passes::{keyboard, pointer};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
 
@@ -86,6 +86,63 @@ fn the_dropdown_opens_on_the_month_grid() {
     });
 }
 
+/// The page's clock jumps 40 days while the dropdown is shut: reopened, it marks the new
+/// today, not the one read at mount (2313).
+#[test]
+fn a_reopened_dropdown_asks_the_clock_again() {
+    const TODAY: &str = "[data-slot=dropdown] [aria-current=date]:not([data-outside])";
+    let today_is = |js_day: &str| {
+        format!(
+            "(() => {{ const d = {js_day}; \
+             const iso = `${{d.getFullYear()}}-${{String(d.getMonth() + 1).padStart(2, '0')}}-${{String(d.getDate()).padStart(2, '0')}}`; \
+             return document.querySelector({TODAY:?})?.getAttribute('data-date') === iso; }})()"
+        )
+    };
+    block_on(async {
+        let fixture = Fixture::open("/chrono-field/clock", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        keyboard::tab_to(page, INPUT, 5).await.unwrap();
+        expect(
+            page,
+            &today_is("new Date()"),
+            "the first open to mark today",
+        )
+        .await;
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        expect(
+            page,
+            "!document.querySelector('[data-slot=dropdown]')",
+            "Escape to close the dropdown",
+        )
+        .await;
+
+        page.evaluate(
+            "(() => { const Real = Date, shift = 40 * 864e5; \
+             window.Date = class extends Real { \
+               constructor(...a) { a.length ? super(...a) : super(Real.now() + shift); } \
+               static now() { return Real.now() + shift; } }; })()",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, INPUT).await.unwrap();
+        expect(
+            page,
+            &today_is("new Date()"),
+            "the reopened dropdown to mark the new today",
+        )
+        .await;
+
+        fixture
+            .console
+            .assert_clean("reopening over a day change")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The dropdown is portaled after the page: Tab past either end goes back
 /// through the text input, not to the end of the document (todo 449).
 #[test]
@@ -114,8 +171,8 @@ fn tab_past_the_dropdown_moves_on_from_the_field() {
 
         keyboard::press_shift(page, keyboard::TAB).await.unwrap();
         keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
-        // The days, Next month, the title: Previous month is disabled at `min`.
-        for _ in 0..3 {
+        // The days, Next month, the title, Previous month: disabled at `min`, still a stop (2301).
+        for _ in 0..4 {
             keyboard::press_shift(page, keyboard::TAB).await.unwrap();
         }
         expect(

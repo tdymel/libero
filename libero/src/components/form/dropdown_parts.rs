@@ -135,18 +135,23 @@ mod tests {
         );
     }
 
-    /// Every picker part is listed, in the picker's order, after the box.
+    /// Every picker part is listed, in the picker's order, after the box, and each
+    /// alternative is the picker's own one step below the box.
     fn assert_mirrors<D: Part + std::fmt::Debug, P: Part>() {
         let slots: Vec<_> = D::ALL.iter().map(|part| part.slot()).collect();
         let mut expected = vec!["dropdown"];
         expected.extend(P::ALL.iter().map(|part| part.slot()));
         assert_eq!(slots, expected);
         for (dropdown, picker) in D::ALL[1..].iter().zip(P::ALL) {
-            assert_eq!(
-                dropdown.selector(),
-                under_picker(picker.selector()),
-                "{dropdown:?}"
-            );
+            let ours: Vec<_> = dropdown.selector().split(", ").collect();
+            let theirs: Vec<_> = picker.selector().split(", ").collect();
+            assert_eq!(ours.len(), theirs.len(), "{dropdown:?}");
+            for (ours, theirs) in ours.iter().zip(theirs) {
+                let rest = theirs
+                    .strip_prefix('&')
+                    .expect("a picker selector starts at `&`");
+                assert_eq!(ours.strip_prefix("& > *"), Some(rest), "{dropdown:?}");
+            }
         }
     }
 

@@ -15,6 +15,7 @@ pub const ROUTES: Routes = &[
     ("/modal/nested", || rsx! { NestedModalPage {} }),
     ("/modal/tall", || rsx! { TallModalPage {} }),
     ("/modal/self-removing", || rsx! { SelfRemovingModalPage {} }),
+    ("/modal/last-removing", || rsx! { LastRemovingModalPage {} }),
     ("/modal/scrollbar", || rsx! { ScrollbarModalPage {} }),
     ("/modal/owner", || rsx! { OwnerModalPage {} }),
 ];
@@ -44,6 +45,36 @@ fn SelfRemoving() -> Element {
                 Button { id: "remove-me", onclick: move |_| shown.set(false), "Done" }
             } else {
                 Text { "All done." }
+            }
+        }
+    }
+}
+
+/// A dialog whose last control removes itself: the next Tab is a `<body>` press (2297).
+#[component]
+fn LastRemovingModalPage() -> Element {
+    let notice = use_modal(|_: ModalScope<()>| rsx! { LastRemoving {} });
+
+    rsx! {
+        Button {
+            id: "open-modal",
+            onclick: move |_| {
+                notice.open();
+            },
+            "Open"
+        }
+        Button { id: "behind", "Behind" }
+    }
+}
+
+#[component]
+fn LastRemoving() -> Element {
+    let mut shown = use_signal(|| true);
+    rsx! {
+        Dialog { title: "Two steps", close_button: false,
+            Button { id: "stay", "Stay" }
+            if shown() {
+                Button { id: "remove-me", onclick: move |_| shown.set(false), "Done" }
             }
         }
     }

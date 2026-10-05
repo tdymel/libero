@@ -15,7 +15,43 @@ pub const ROUTES: Routes = &[
     ("/focus-trap/nested", || rsx! { NestedPage {} }),
     ("/focus-trap/dialog", || rsx! { DialogPage {} }),
     ("/focus-trap/exit", || rsx! { ExitPage {} }),
+    ("/focus-trap/autofocus", || rsx! { AutofocusPage {} }),
+    ("/focus-trap/leaving", || rsx! { LeavingPage {} }),
 ];
+
+/// Ways focus leaves without a Tab: the last stop removes itself, a click on text outside (2297).
+#[component]
+fn LeavingPage() -> Element {
+    let mut shown = use_signal(|| true);
+    rsx! {
+        button { id: "before", "Before" }
+        p { id: "outside", "Text outside the trap." }
+        FocusTrap {
+            button { id: "first", "First" }
+            button { id: "middle", "Middle" }
+            if shown() {
+                button { id: "remove", onclick: move |_| shown.set(false), "Remove" }
+            }
+        }
+        button { id: "after", "After" }
+    }
+}
+
+/// An autofocus target that cannot take focus (`display: none`), before the first stop (2299).
+#[component]
+fn AutofocusPage() -> Element {
+    let mut open = use_signal(|| false);
+    rsx! {
+        button { id: "open", onclick: move |_| open.set(true), "Open" }
+        if open() {
+            FocusTrap {
+                button { id: "hidden", style: "display: none", "data-autofocus": true, "Hidden" }
+                button { id: "first", "First" }
+                button { id: "last", "Last" }
+            }
+        }
+    }
+}
 
 /// The docs demo's shape: a switch mounts the trap, and Release or Escape inside
 /// switches it off; `restore_focus` hands focus back (todos 1528, 1534).

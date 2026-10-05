@@ -221,6 +221,7 @@ pub fn ModalPage() -> Element {
                     "The focus trap, Escape and backdrop dismissal come from the modal. A `Dialog` on its own has none of them.",
                     "A dismissal settles the `Opening` with `None`, so a handler written for an answer never runs on it.",
                     "Android's Back button dismisses the top modal, as Escape does, rather than closing the app.",
+                    "When the focused control is removed, focus goes back into the modal, and Tab and Escape keep working.",
                 ])
                 .must(["Name the `Dialog` with its `title`, or `aria_label`."])
                 .example("A delete confirmation opened from a button: focus moves into the dialog, Tab stays inside it, and Escape closes it and puts focus back on the button.")

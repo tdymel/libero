@@ -1,3 +1,8 @@
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
+
 use dioxus::core::AttributeValue;
 use dioxus::prelude::*;
 
@@ -8,7 +13,10 @@ use crate::{
         layout::use_box,
     },
     hooks::{ElementHandle, use_element, use_focus_return, use_local_state},
-    platform::{ElementApi, OBSERVE_ATTR, focus_first_of, key_taken},
+    platform::{
+        ElementApi, KeyChord, OBSERVE_ATTR, document, focus_first_of, key_taken, keyboard,
+        next_task, when_free,
+    },
     sx::{StaticSx, sx},
 };
 
@@ -27,14 +35,16 @@ fn focus_first(root: &ElementHandle, tag: Option<&str>) {
         ]);
         return;
     }
-    if let Ok(target) = root.query_selector("[data-autofocus]") {
-        let _ = target.focus();
-        return;
-    }
-    if let Ok(items) = root.query_selector_all(FOCUSABLE_SELECTOR)
-        && focus_next(&items, &tab_stops(root, &items), None, false)
-    {
-        return;
+    if let Ok(mut items) = root.query_selector_all(FOCUSABLE_SELECTOR) {
+        let mut stops = tab_stops(root, &items);
+        // An autofocus target leads; one that takes no focus falls through to the first stop.
+        if let Ok(target) = root.query_selector("[data-autofocus]") {
+            items.insert(0, target);
+            stops.insert(0, true);
+        }
+        if focus_next(&items, &stops, None, false) {
+            return;
+        }
     }
     // Nothing to focus: the modal dialog itself (APG), not the page behind.
     if let Ok(target) = root.query_selector("[aria-modal=\"true\"]") {
@@ -49,6 +59,44 @@ fn cycle_focus(root: &ElementHandle, backwards: bool) -> bool {
     };
     let index = items.iter().position(|item| item.is_focused());
     focus_next(&items, &tab_stops(root, &items), index, backwards)
+}
+
+/// Focus fell to the document: on `<body>` (`<html>` on Blitz) or on a removed element.
+/// A platform that cannot say, or a window blur, which keeps the element, is not a fall.
+fn focus_fell() -> bool {
+    document()
+        .and_then(|document| document.active_element())
+        .is_some_and(|active| {
+            !active.is_connected()
+                || active.query_selector("body").is_ok()
+                || active.query_selector(":scope:is(body) > *").is_ok()
+        })
+}
+
+thread_local! {
+    /// Mounted traps in mount order, each with whether focus was last inside it (2297).
+    static TRAPS: RefCell<Vec<(u64, Rc<Cell<bool>>)>> = const { RefCell::new(Vec::new()) };
+    static NEXT_TRAP: Cell<u64> = const { Cell::new(0) };
+}
+
+/// Whether `id` is the innermost trap focus was last inside: the one a fallen Tab returns to.
+fn holds_last(id: u64) -> bool {
+    TRAPS.with_borrow(|traps| {
+        traps
+            .iter()
+            .rev()
+            .find(|(_, held)| held.get())
+            .is_some_and(|(top, _)| *top == id)
+    })
+}
+
+/// A trap's place in [`TRAPS`], dropped on unmount.
+struct Registered(u64);
+
+impl Drop for Registered {
+    fn drop(&mut self) {
+        TRAPS.with_borrow_mut(|traps| traps.retain(|(id, _)| *id != self.0));
+    }
 }
 
 /// Which of `items` are Tab stops: a native radio group is one, its checked
@@ -138,6 +186,9 @@ base_props! {
 /// Keeps Tab and Shift+Tab cycling inside its children, and focuses the first one on mount.
 /// It has no Escape, and restores focus on unmount only with `restore_focus`.
 ///
+/// A native radio group is one stop, grouped by `name` only and its checked radio found by
+/// `value`: two forms sharing a radio name, or radios sharing or lacking a `value`, mislead it.
+///
 /// ```rust
 /// # use dioxus::prelude::*;
 /// # use libero::components::FocusTrap;
@@ -180,6 +231,66 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
         }
     });
 
+    // Focus gone without a Tab (a removed control, a click outside): refocused when it
+    // fell to the document, and a Tab from there comes back in (2297).
+    let held = use_hook(|| Rc::new(Cell::new(false)));
+    let last = use_hook(|| Rc::new(RefCell::new(None::<Box<dyn ElementApi>>)));
+    let id = use_hook(|| {
+        let id = NEXT_TRAP.replace(NEXT_TRAP.get() + 1);
+        TRAPS.with_borrow_mut(|traps| traps.push((id, held.clone())));
+        Rc::new(Registered(id))
+    })
+    .0;
+    use_hook(move || {
+        Rc::new(keyboard().map(|api| {
+            api.on_key_unfiltered(Box::new(move |chord: KeyChord| {
+                chord.key == Key::Tab
+                    && holds_last(id)
+                    && focus_fell()
+                    && root
+                        .query_selector_all(FOCUSABLE_SELECTOR)
+                        .is_ok_and(|items| {
+                            let stops = tab_stops(&root, &items);
+                            focus_next(&items, &stops, None, chord.modifiers.shift())
+                        })
+            }))
+        }))
+    });
+    let onfocusin = {
+        let (held, last) = (held.clone(), last.clone());
+        move |_: Event<FocusData>| {
+            held.set(true);
+            if let Ok(focused) = root.query_selector(":focus") {
+                *last.borrow_mut() = Some(focused);
+            }
+        }
+    };
+    let onfocusout = move |_: Event<FocusData>| {
+        let (held, last) = (held.clone(), last.clone());
+        // The web lands focus after `focusout`: asked a task later, once the document is free.
+        spawn(async move {
+            next_task().await;
+            when_free(move || {
+                if root.query_selector(":focus").is_ok() {
+                    return;
+                }
+                // Moved on to an element outside, or the window blurred: not ours to take back.
+                if !focus_fell() {
+                    held.set(false);
+                    return;
+                }
+                // Taken out: its `focus()` runs `onfocusin`, which stores it again.
+                let previous = last.borrow_mut().take();
+                let back = previous.is_some_and(|last| {
+                    last.is_connected() && last.focus().is_ok() && last.is_focused()
+                });
+                if !back {
+                    focus_first(&root, None);
+                }
+            });
+        });
+    };
+
     use_box()
         .framework_sx(&FOCUS_TRAP_SX)
         .class(&props.class)
@@ -203,6 +314,8 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
                 event.prevent_default();
             }
         })
+        .event("onfocusin", onfocusin)
+        .event("onfocusout", onfocusout)
         .render(HtmlTag::Div, attributes, props.children)
 }
 

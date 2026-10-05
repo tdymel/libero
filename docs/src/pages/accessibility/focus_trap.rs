@@ -35,6 +35,8 @@ pub fn FocusTrapPage() -> Element {
                 .handles([
                     "On mount the trap focuses the element marked `data-autofocus`, or else its first focusable child.",
                     "With `restore_focus`, unmounting the trap puts focus back where it was before the trap took it.",
+                    "Focus that falls to the page, because the focused control was removed or a click landed on plain text outside, goes back to the last focused child, and the next Tab comes back into the trap.",
+                    "A native radio group is one Tab stop: its checked radio, or else its first.",
                 ])
                 .must([
                     "To focus nothing visible, so a dialog does not open with its first button looking pressed, render `FocusTrapInitialFocus` as the first child.",
@@ -45,6 +47,9 @@ pub fn FocusTrapPage() -> Element {
                 .limits([
                     "Without `restore_focus`, focus is not restored on unmount: it falls to the page body.",
                     "In a desktop WebView or on Android, Tab and Shift+Tab move between the children but do not wrap: at either end they leave the trap.",
+                    "Focus moved on purpose to another control outside, by a click or a script, stays there: the trap takes back only focus that fell to the page.",
+                    "Radio groups are told apart by `name` alone: two forms in one trap that share a radio name are one Tab stop.",
+                    "A checked radio is found by its `value`: when radios in a group share a value or have none, Tab lands on the first of them, even when a later one is checked.",
                 ]),
             lead: rsx! {
                 Text {

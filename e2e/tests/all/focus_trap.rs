@@ -90,6 +90,21 @@ e2e::scenario!(
     desktop: skip("958: element identity on the WebView")
 );
 
+/// A hidden `[data-autofocus]` target took the search with it: focus stayed on Open (2299).
+async fn a_hidden_autofocus_falls_through<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#open").await?;
+    eventually_focused(d, "#first", "opening the trap").await?;
+    Ok(())
+}
+
+e2e::scenario!(
+    an_autofocus_target_that_takes_no_focus_falls_through,
+    "/focus-trap/autofocus",
+    a_hidden_autofocus_falls_through,
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView")
+);
+
 const SWITCH: &str = "[aria-label='activate focus trap']";
 
 /// The docs demo's exit: Escape and Release each switch the trap off and hand
@@ -146,6 +161,68 @@ e2e::scenario!(
     android: skip("958: element identity on the WebView"),
     desktop: skip("958: element identity on the WebView")
 );
+
+/// Focus that leaves without a Tab (2297): a click on text outside comes back, a blur that
+/// keeps the element (a window switch) moves nothing, and a Tab after the focused stop is
+/// removed stays in.
+#[test]
+fn focus_that_falls_out_of_the_trap_comes_back() {
+    block_on(async {
+        let fixture = Fixture::open("/focus-trap/leaving", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        focus::wait_for_focus(page, "#first", "mount")
+            .await
+            .unwrap();
+
+        pointer::click(page, "#middle").await.unwrap();
+        focus::wait_for_focus(page, "#middle", "a click on Middle")
+            .await
+            .unwrap();
+        pointer::click(page, "#outside").await.unwrap();
+        focus::wait_for_focus(page, "#middle", "a click on the text outside")
+            .await
+            .unwrap();
+        // From the text, Tab would reach First: from Middle it reaches Remove.
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        focus::wait_for_focus(page, "#remove", "Tab after the click outside")
+            .await
+            .unwrap();
+        keyboard::press_shift(page, keyboard::TAB).await.unwrap();
+        focus::wait_for_focus(page, "#middle", "Shift+Tab")
+            .await
+            .unwrap();
+
+        page.evaluate(
+            "document.activeElement.dispatchEvent(new FocusEvent('focusout', { bubbles: true }))",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        focus::wait_for_focus(page, "#remove", "Tab after a blur that kept Middle")
+            .await
+            .unwrap();
+
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(page, "!document.querySelector('#remove')", "Remove gone")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        wait::for_js_true(
+            page,
+            "['first', 'middle'].includes(document.activeElement.id)",
+            "Tab after the removal to stay in the trap",
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("focus leaving the trap")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
 
 /// Focus on the dialog itself (a click on its text) is outside the stops:
 /// Shift+Tab went to the first one, not the last.

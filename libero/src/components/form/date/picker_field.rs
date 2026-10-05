@@ -11,7 +11,7 @@ use super::{
     parse::{Unreadable, parse_at},
     parse_time::{parse_date_time, parse_time},
     range::{iso_date_time, split_range},
-    today::use_today,
+    today::use_today_on_open,
 };
 use crate::{
     components::{
@@ -295,9 +295,8 @@ pub(super) fn use_picker_field<V: FieldValue>(
     // Readonly: native on the text; the dropdown refuses to open, leaving focus and posting alone.
     let readonly = field.readonly.unwrap_or(false);
     let value = bound.value().unwrap_or(field.value);
-    let today = use_today(field.today);
-
     let opened = use_signal(|| false);
+    let today = use_today_on_open(field.today, opened());
     // Peek-compared: focus then click both open, and an unchanged `set` still redraws.
     let open_to = move |next: bool| {
         let mut opened = opened;

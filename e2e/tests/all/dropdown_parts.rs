@@ -60,6 +60,12 @@ fn dropdown_parts_style_the_portaled_dropdowns() {
                 "[data-slot=dropdown] [data-slot=day]",
                 &[
                     ("[data-slot=dropdown]", "paddingTop", "11px"),
+                    // The rebased `& > * [data-slot='header']` reaches the calendar (2312).
+                    (
+                        "[data-slot=dropdown] [data-slot=header]",
+                        "paddingTop",
+                        "7px",
+                    ),
                     (
                         "[data-slot=dropdown] [data-slot=day]",
                         "letterSpacing",

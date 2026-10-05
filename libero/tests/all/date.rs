@@ -709,16 +709,31 @@ fn a_mini_calendar_cannot_page_past_its_limits() {
             }
         }
     }
-    let disabled = |app: fn() -> Element| -> Vec<String> {
-        disabled_tags(&body(&render(app)))
-            .iter()
-            .map(|tag| tag.get("aria-label").cloned().unwrap_or_default())
-            .collect()
+    let label = |tag: &BTreeMap<String, String>| tag.get("aria-label").cloned().unwrap_or_default();
+    let disabled = |app: fn() -> Element| -> [Vec<String>; 2] {
+        let html = body(&render(app));
+        let soft = tags_with(&html, " aria-disabled")
+            .into_iter()
+            .filter(|tag| {
+                tag.get("aria-disabled")
+                    .is_some_and(|value| value == "true")
+            });
+        [
+            disabled_tags(&html).iter().map(label).collect(),
+            soft.map(|tag| label(&tag)).collect(),
+        ]
     };
 
-    assert_eq!(disabled(open), Vec::<String>::new());
-    // Both buttons, and no day: the seven days are exactly the limits.
-    assert_eq!(disabled(limited), ["Previous days", "Next days"]);
+    assert_eq!(disabled(open), [Vec::<String>::new(), Vec::new()]);
+    // Both buttons, and no day: the seven days are exactly the limits. The buttons stay
+    // focusable, so paging onto a limit keeps focus (2301).
+    assert_eq!(
+        disabled(limited),
+        [
+            Vec::<String>::new(),
+            vec!["Previous days".into(), "Next days".into()]
+        ]
+    );
 }
 
 /// Every tag carrying the `disabled` attribute, not `aria-disabled`.

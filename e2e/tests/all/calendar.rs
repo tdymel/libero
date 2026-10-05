@@ -178,6 +178,42 @@ fn the_page_buttons_follow_the_month_shown() {
     });
 }
 
+/// Enter on Next pages to `max`'s month and disables the button: focus stays on it,
+/// and a second Enter pages nowhere (2301).
+#[test]
+fn paging_to_max_keeps_focus_on_the_page_button() {
+    const NEXT: &str = "[aria-label='Next month']";
+    block_on(async {
+        let fixture = Fixture::open("/calendar/limited", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, NEXT, 6).await.unwrap();
+        for what in ["Enter on Next", "Enter on the disabled Next"] {
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            wait::for_js_true(
+                page,
+                "document.querySelector('[role=grid]').getAttribute('aria-label') === 'April 2026'",
+                &format!("{what} to show April 2026"),
+            )
+            .await
+            .unwrap();
+            wait::for_js_true(
+                page,
+                &format!(
+                    "document.activeElement?.matches({NEXT:?}) \
+                     && document.activeElement.getAttribute('aria-disabled') === 'true'"
+                ),
+                &format!("focus on the disabled Next after {what}"),
+            )
+            .await
+            .unwrap();
+        }
+        fixture.console.assert_clean("paging to max").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A range picked, previewed and paged: the days are drawn in place on a
 /// page (todo 29), so their marks must follow the dates, not the columns.
 #[test]

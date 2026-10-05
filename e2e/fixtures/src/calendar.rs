@@ -38,7 +38,7 @@ fn YearPage() -> Element {
     }
 }
 
-/// March 2026 with `min` on the 10th, so the days before it are disabled.
+/// March 2026 with `min` on the 10th, so the days before it are disabled, and `max` in April.
 #[component]
 fn LimitedPage() -> Element {
     rsx! {
@@ -46,6 +46,7 @@ fn LimitedPage() -> Element {
             value: NaiveDate::from_ymd_opt(2026, 3, 18),
             today: NaiveDate::from_ymd_opt(2026, 3, 18),
             min: NaiveDate::from_ymd_opt(2026, 3, 10),
+            max: NaiveDate::from_ymd_opt(2026, 4, 15),
         }
     }
 }

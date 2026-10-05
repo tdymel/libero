@@ -35,6 +35,7 @@ fn DropdownPartsPage() -> Element {
                 onchange: move |_| {},
                 dropdown_parts: Parts::new()
                     .part(ChronoDropdownPart::Panel, sx().padding("11px"))
+                    .part(ChronoDropdownPart::Header, sx().padding_top("7px"))
                     .part(ChronoDropdownPart::Day, sx().letter_spacing("3px")),
             }
             ColorField { id: "color", label: "Accent", value: ColorCode::hex(0x228be6),
