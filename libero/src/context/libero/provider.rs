@@ -21,6 +21,8 @@ use crate::{
 /// The root every libero app renders once: themes, localization, stylesheets,
 /// portals and the modal stack.
 ///
+/// A nested provider shares the outer one's stylesheets, so its a11y overrides apply page-wide.
+///
 /// ```rust
 /// # use dioxus::prelude::*;
 /// # use libero::{LiberoProvider, localization::{Formats, Localization}};
