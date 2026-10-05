@@ -492,3 +492,21 @@ fn a_move_with_a_slide_swap_is_instant() {
     assert!(instant_scroll(false, true, 2, 2, 5, 0));
     assert!(!instant_scroll(false, true, 0, 5, 5, 0));
 }
+
+/// Todo 2357: five slides looping three-up (three clones a side) wrap onto the
+/// adjacent clone, never back across the strip.
+#[test]
+fn a_looping_step_wraps_onto_the_adjacent_clone() {
+    assert_eq!(step_from(4, true, 5, 3, 1, 3), (0, 8));
+    assert_eq!(step_from(0, false, 5, 3, 1, 3), (4, 2));
+    assert_eq!(step_from(2, true, 5, 3, 1, 3), (3, 6));
+    assert_eq!(step_from(2, false, 5, 3, 1, 3), (1, 4));
+}
+
+/// A plain strip stops at its reachable window.
+#[test]
+fn a_plain_step_stops_at_the_window() {
+    assert_eq!(step_from(3, true, 6, 0, 0, 3), (3, 3));
+    assert_eq!(step_from(1, false, 6, 0, 1, 4), (1, 1));
+    assert_eq!(step_from(1, true, 6, 0, 0, 3), (2, 2));
+}

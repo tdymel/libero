@@ -10,7 +10,49 @@ pub const ROUTES: Routes = &[
     ("/carousel/loop", || rsx! { LoopPage {} }),
     ("/carousel/autoplay", || rsx! { AutoplayPage {} }),
     ("/carousel/text", || rsx! { TextPage {} }),
+    ("/carousel/buttons", || rsx! { ButtonsPage {} }),
+    ("/carousel/fits", || rsx! { FitsPage {} }),
 ];
+
+/// A draggable strip of buttons that count their clicks (todo 2358).
+#[component]
+fn ButtonsPage() -> Element {
+    let mut clicks = use_signal(|| 0u32);
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "420px",
+            Carousel {
+                aria_label: "Pressable slides",
+                draggable: true,
+                slides: (1..=3)
+                    .map(|n| rsx! {
+                        Button { variant: "outlined", onclick: move |_| clicks += 1, "Press {n}" }
+                    })
+                    .collect(),
+            }
+            Text { id: "clicks", "{clicks}" }
+        }
+    }
+}
+
+/// Autoplay with nothing to rotate: one slide, and three that fit (todo 2361).
+#[component]
+fn FitsPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "600px",
+            Carousel {
+                aria_label: "One slide",
+                autoplay: true,
+                slides: vec![rsx! { Text { "Only slide" } }],
+            }
+            Carousel {
+                aria_label: "Three that fit",
+                autoplay: true,
+                per_view: 3.0,
+                slides: (1..=3).map(|n| rsx! { Text { "Slide {n}" } }).collect(),
+            }
+        }
+    }
+}
 
 /// Plain text slides, so a drag lands on nothing that takes the pointer.
 #[component]

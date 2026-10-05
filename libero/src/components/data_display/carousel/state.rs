@@ -159,6 +159,28 @@ pub(super) fn is_clone(raw: usize, count: usize, clones: usize) -> bool {
     clones > 0 && (raw < clones || raw >= clones + count)
 }
 
+/// One step from `index`: the slide it lands on and the strip position to scroll to.
+/// Past a looping strip's end that is the adjacent clone; the seam jump lands it.
+pub(super) fn step_from(
+    index: usize,
+    forward: bool,
+    count: usize,
+    clones: usize,
+    first: usize,
+    last: usize,
+) -> (usize, usize) {
+    let end = count.saturating_sub(1);
+    let next = match (forward, clones > 0) {
+        (true, true) if index >= end => return (0, clones + count),
+        (false, true) if index == 0 => return (end, clones - 1),
+        (true, true) => index + 1,
+        (false, true) => index - 1,
+        (true, false) => (index + 1).min(last),
+        (false, false) => index.saturating_sub(1).max(first),
+    };
+    (next, next + clones)
+}
+
 /// Whether a controlled scroll is instant: the first after mount, or one with a
 /// slide swap. Only if it moves, or a raised `seam` never comes down.
 pub(super) fn instant_scroll(
@@ -250,13 +272,31 @@ impl Nav {
         }
     }
 
-    pub(super) fn go_to(mut self, index: usize) {
+    pub(super) fn go_to(self, index: usize) {
         let index = self.clamp_index(index);
+        self.move_to(index, self.raw_for(index));
+    }
+
+    /// One slide on or back; a looping strip wraps onto the adjacent clone, not
+    /// back across every slide (todo 2357).
+    pub(super) fn step(self, forward: bool) {
+        let (index, raw) = step_from(
+            *self.current.peek(),
+            forward,
+            self.count,
+            self.clones,
+            self.first,
+            self.last,
+        );
+        self.move_to(index, raw);
+    }
+
+    fn move_to(mut self, index: usize, raw: usize) {
         // Against `settled`, the last index the caller was told.
         let changed = index != *self.settled.peek();
         self.current.set(index);
         self.settled.set(index);
-        self.scroll_to_raw(self.raw_for(index));
+        self.scroll_to_raw(raw);
         if changed && let Some(handler) = &self.onindexchange {
             handler.call(index);
         }
@@ -345,6 +385,8 @@ pub(super) struct CarouselState {
     /// The controlled index the effect last applied. Until it runs, a new one
     /// stands in for `settled` when the slides go `inert` - see `carousel_slides`.
     pub(super) applied: Signal<Option<usize>>,
+    /// Autoplay is on and the strip has somewhere to go: the pause control shows.
+    pub(super) rotates: bool,
     /// Autoplay is on and nothing is holding it back.
     pub(super) running: bool,
 }
@@ -467,6 +509,8 @@ pub(super) fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
         let swapped = consume_swap(&mut swaps_seen.write(), swaps);
         match instant_scroll(first_scroll, swapped, nav.clones, index, from, nav.first) {
             true => seam.set(true),
+            // The caller echoing a move: re-scrolling would rewind a wrap off its clone.
+            false if index == from && index == *settled.peek() => {}
             false => nav.scroll_to_raw(nav.raw_for(index)),
         }
         // An unshowable index: report the clamped one, or caller and clamp disagree.
@@ -495,8 +539,10 @@ pub(super) fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
         }
     }));
 
+    // A plain strip whose slides all fit has nowhere to go (todo 2361).
+    let rotates = autoplay && count > 1 && (clones > 0 || last > first);
     // Hover only pauses: leaving resumes.
-    let running = autoplay && !paused() && !hovered() && count > 1;
+    let running = rotates && !paused() && !hovered();
     // The timer callback has no scope and a move spawns, so a tick only counts;
     // the effect below moves. `go_to` there panicked in `spawn` on the web.
     let ticks = use_signal(|| 0usize);
@@ -540,9 +586,7 @@ pub(super) fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
             true => nav.count.saturating_sub(1),
             false => last,
         };
-        let next = match (*nav.current.peek() >= end, nav.clones > 0) {
-            (false, _) => *nav.current.peek() + 1,
-            (true, true) => 0,
+        let restart = match (*nav.current.peek() >= end, nav.clones > 0) {
             // Without `loop` it rests on the last slide (APG); Play pressed there starts over.
             (true, false) if !*rested.peek() => {
                 rested.set(true);
@@ -550,12 +594,16 @@ pub(super) fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
                 paused.set(true);
                 return;
             }
-            (true, false) => 0,
+            (true, false) => true,
+            _ => false,
         };
         if *rested.peek() {
             rested.set(false);
         }
-        nav.go_to(next);
+        match restart {
+            true => nav.go_to(0),
+            false => nav.step(true),
+        }
     }));
 
     CarouselState {
@@ -567,6 +615,7 @@ pub(super) fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
         dragging,
         drag_origin,
         applied,
+        rotates,
         running,
     }
 }

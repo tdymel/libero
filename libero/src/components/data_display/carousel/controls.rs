@@ -157,10 +157,7 @@ fn CarouselControl(view: CarouselView, forward: bool, disabled: Memo<bool>) -> E
         ..
     } = view;
     let nav = state.nav;
-    let count = setup.count;
     let orientation = setup.orientation;
-    let current = nav.current;
-    let looping = nav.clones > 0;
     let control_states: Input<States> = states().with(orientation.state_name(), true).into();
 
     rsx! {
@@ -172,15 +169,7 @@ fn CarouselControl(view: CarouselView, forward: bool, disabled: Memo<bool>) -> E
             disabled: disabled(),
             focusable_when_disabled: true,
             aria_label: if forward { labels.next } else { labels.previous },
-            onclick: move |_| {
-                let index = *current.peek();
-                match (forward, looping) {
-                    (false, true) if index == 0 => nav.go_to(count.saturating_sub(1)),
-                    (true, true) if index >= count.saturating_sub(1) => nav.go_to(0),
-                    (false, _) => nav.go_to(index.saturating_sub(1)),
-                    (true, _) => nav.go_to(index + 1),
-                }
-            },
+            onclick: move |_| nav.step(forward),
             {
                 let (slot, icon) = match (orientation, forward) {
                     (Orientation::Horizontal, false) => {
@@ -279,7 +268,18 @@ pub(super) fn carousel_pause_button(view: CarouselView, controls: bool) -> Eleme
                     pressing.set(true);
                 }
             },
-            onclick: move |_| paused.toggle(),
+            // Focus that never came with the press (Safari, iOS): the next entry is a real one (todo 2359).
+            onpointercancel: move |_| {
+                if !*focused.peek() {
+                    pressing.set(false);
+                }
+            },
+            onclick: move |_| {
+                if !*focused.peek() {
+                    pressing.set(false);
+                }
+                paused.toggle();
+            },
             if paused() {
                 Glyph { slot: IconSlot::Play, icon: lucide::play::outlined }
             } else {

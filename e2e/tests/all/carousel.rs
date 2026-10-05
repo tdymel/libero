@@ -982,3 +982,214 @@ fn a_drag_and_a_step_head_for_the_end_in_either_direction() {
         }
     });
 }
+
+const PREVIOUS: &str = "[aria-roledescription=carousel] button[aria-label='Previous slide']";
+
+async fn scroll_left(page: &Page) -> f64 {
+    page.evaluate(format!("document.querySelector({TRACK:?}).scrollLeft"))
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap()
+}
+
+/// Runs `act`, which wraps the strip from rest `from` to rest `to`, and returns every
+/// `scrollLeft` sampled until it rests on `to`.
+async fn wrap_samples(page: &Page, act: impl AsyncFnOnce(), to: f64, what: &str) -> Vec<f64> {
+    page.evaluate(format!(
+        "(() => {{ const t = document.querySelector({TRACK:?}); window.__wrap = []; \
+         if (window.__wrapOn) return; window.__wrapOn = true; \
+         t.addEventListener('scroll', () => window.__wrap.push(t.scrollLeft)); \
+         (function sample() {{ window.__wrap.push(t.scrollLeft); requestAnimationFrame(sample); }})(); }})()"
+    ))
+    .await
+    .unwrap();
+    act().await;
+    wait::for_js_true(
+        page,
+        &format!("Math.abs(document.querySelector({TRACK:?}).scrollLeft - {to}) < 1"),
+        what,
+    )
+    .await
+    .unwrap();
+    page.evaluate("window.__wrap")
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap()
+}
+
+/// Todo 2357: a looping strip wraps one step onto the adjacent clone, then jumps the
+/// seam; it never sweeps back across the slides between its two ends.
+#[test]
+fn a_looping_wrap_steps_onto_the_clone() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/loop", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        instant_scroll(page).await;
+        let home = scroll_left(page).await;
+        focus_track(page).await;
+        keyboard::press(page, keyboard::END).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector({TRACK:?}).scrollLeft > {home} + 1"),
+            "End to reach slide 5",
+        )
+        .await
+        .unwrap();
+        let end = scroll_left(page).await;
+        let between = |samples: &[f64]| -> Vec<f64> {
+            samples
+                .iter()
+                .copied()
+                .filter(|&v| v > home + 1.0 && v < end - 1.0)
+                .collect()
+        };
+
+        let next = wrap_samples(
+            page,
+            async || pointer::click(page, NEXT).await.unwrap(),
+            home,
+            "Next on slide 5 to land on slide 1",
+        )
+        .await;
+        assert!(
+            next.iter().any(|&v| v > end + 1.0),
+            "Next on slide 5 never stepped onto the clone: {next:?}"
+        );
+        assert!(between(&next).is_empty(), "Next swept back: {next:?}");
+
+        let previous = wrap_samples(
+            page,
+            async || pointer::click(page, PREVIOUS).await.unwrap(),
+            end,
+            "Previous on slide 1 to land on slide 5",
+        )
+        .await;
+        assert!(
+            previous.iter().any(|&v| v < home - 1.0),
+            "Previous on slide 1 never stepped onto the clone: {previous:?}"
+        );
+        assert!(
+            between(&previous).is_empty(),
+            "Previous swept: {previous:?}"
+        );
+
+        focus_track(page).await;
+        let arrow = wrap_samples(
+            page,
+            async || keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap(),
+            home,
+            "ArrowRight on slide 5 to land on slide 1",
+        )
+        .await;
+        assert!(
+            arrow.iter().any(|&v| v > end + 1.0),
+            "ArrowRight on slide 5 never stepped onto the clone: {arrow:?}"
+        );
+        assert!(
+            between(&arrow).is_empty(),
+            "ArrowRight swept back: {arrow:?}"
+        );
+        fixture.console.assert_clean("a looping wrap").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+async fn focus_track(page: &Page) {
+    page.evaluate(format!("document.querySelector({TRACK:?}).focus()"))
+        .await
+        .unwrap();
+}
+
+/// Todo 2358: a mouse click on a button in a draggable slide reaches the button; the
+/// drag starts only once the pointer moves.
+#[test]
+fn a_click_in_a_draggable_slide_stays_a_click() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/buttons", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, "[aria-roledescription=slide] button")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "document.getElementById('clicks').textContent === '1'",
+            "the click to reach the slide's button",
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("a click in a draggable slide")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2359: a press on Pause that brings no focus (Safari, iOS) leaves no stale
+/// flag, so the next focus entry still stops the rotation.
+#[test]
+fn a_press_without_focus_leaves_the_next_entry_an_entry() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/autoplay", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        hold_rotation(page).await;
+        instant_scroll(page).await;
+        // Synthetic events move no focus, as a click in Safari does not.
+        let press = format!(
+            "(() => {{ const b = document.querySelector({PAUSE:?}); \
+             const o = {{ bubbles: true, pointerType: 'mouse', isPrimary: true }}; \
+             b.dispatchEvent(new PointerEvent('pointerdown', o)); \
+             b.dispatchEvent(new PointerEvent('pointerup', o)); b.click(); }})()"
+        );
+        page.evaluate(press.clone()).await.unwrap();
+        assert_pressed(page, "true", "a focusless press on Pause").await;
+        page.evaluate(press).await.unwrap();
+        assert_pressed(page, "false", "a focusless press on Play").await;
+        let start = index(page).await.unwrap();
+        rotates(page, start, "autoplay to advance once Play is pressed").await;
+
+        // The entry itself, on the toggle: the stale flag is read there.
+        reach(page, PAUSE).await.unwrap();
+        assert_pressed(page, "true", "focus entering after a focusless press").await;
+        fixture
+            .console
+            .assert_clean("a focusless press on Pause")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2361: one slide, or every slide in view, has nothing to rotate: no Pause.
+#[test]
+fn nothing_to_rotate_shows_no_pause() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/fits", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            "document.querySelectorAll('[aria-roledescription=carousel]').length === 2",
+            "both carousels to render",
+        )
+        .await
+        .unwrap();
+        let pauses: i64 = page
+            .evaluate(format!("document.querySelectorAll({PAUSE:?}).length"))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(pauses, 0, "Pause controls on carousels that cannot rotate");
+        fixture.console.assert_clean("nothing to rotate").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

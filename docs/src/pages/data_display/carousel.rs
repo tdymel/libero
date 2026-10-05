@@ -69,7 +69,7 @@ pub fn CarouselPage() -> Element {
                         .doc("Advances on a timer, with a pause button first in Tab order. Hover pauses it, and focus stops it until the button is pressed. Under `prefers-reduced-motion: reduce` it opens paused. Without `loop` it stops on the last slide and presses Pause; Play there starts over from the first."),
                     prop("r#loop", "bool")
                         .default("false")
-                        .doc("Wraps around at both ends."),
+                        .doc("Wraps around at both ends through cloned slides, which repeat a slide's DOM: give interactive slide content no `id` or form `name`."),
                     prop("autoplay_delay", "u32")
                         .default(theme.carousel.autoplay_delay.to_string())
                         .doc("Milliseconds between advances."),

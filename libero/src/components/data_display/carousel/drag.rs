@@ -6,7 +6,7 @@ use crate::{
         common::Orientation,
         layout::{inline_x, physical_x},
     },
-    hooks::{Drag, DragMove, DragOptions, DragStart, use_drag},
+    hooks::{Drag, DragMove, DragOptions, DragStart, use_distance_drag},
     platform::{ElementApi, snaps_scroll, when_free},
 };
 
@@ -25,7 +25,8 @@ pub(super) fn use_carousel_drag(
     // Under RTL a drag to the right heads for the end, as in `Scroller`.
     let mut rtl = use_hook(|| CopyValue::new(false));
 
-    use_drag(DragOptions {
+    // Only once it moves, so a click on a slide's link or button stays one (todo 2358).
+    use_distance_drag(DragOptions {
         capture: track.element,
         onstart: Callback::new(move |start: DragStart| {
             if !draggable {
@@ -33,6 +34,8 @@ pub(super) fn use_carousel_drag(
                 return;
             }
             dragging.set(true);
+            // Unknown until the read lands: the move that starts the drag comes first.
+            drag_origin.set(f64::NAN);
             let offset = track.element.scroll_offset();
             rtl.set(track.element.is_rtl());
             spawn(async move {
@@ -45,6 +48,9 @@ pub(super) fn use_carousel_drag(
             });
         }),
         onmove: Callback::new(move |moved: DragMove| {
+            if drag_origin().is_nan() {
+                return;
+            }
             let delta = moved.delta();
             let target = match orientation {
                 Orientation::Horizontal => drag_origin() - physical_x(delta.x, rtl()),

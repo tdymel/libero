@@ -155,7 +155,8 @@ base_props! {
         /// Milliseconds between advances.
         #[props(default)]
         autoplay_delay: Option<u32>,
-        /// Wraps at both ends through cloned slides.
+        /// Wraps at both ends through cloned slides. The clones repeat a slide's DOM:
+        /// give interactive slide content no `id` or form `name`.
         #[props(default)]
         r#loop: bool,
     }
@@ -297,7 +298,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
                 CarouselStatus { view }
             }
             // First in Tab order, as APG's rotation control (todo 548).
-            if props.autoplay && !empty {
+            if state.rotates {
                 {carousel_pause_button(view, controls)}
             }
             Box { framework_sx: &CAROUSEL_VIEWPORT_SX, "data-slot": CarouselPart::Viewport.slot(),

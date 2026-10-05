@@ -119,13 +119,15 @@ pub(super) fn carousel_track(
         {
             return;
         }
-        let Some(target) = track_key_target(logical_key(&event), orientation, nav, current())
-        else {
+        let Some(target) = track_key_target(logical_key(&event), orientation, nav) else {
             return;
         };
         // Or the native scroll runs too and lands between two snap points.
         event.prevent_default();
-        nav.go_to(target);
+        match target {
+            TrackKey::Step(forward) => nav.step(forward),
+            TrackKey::To(index) => nav.go_to(index),
+        }
     };
 
     let track_states: Input<States> = states()
@@ -175,33 +177,31 @@ pub(super) fn carousel_track(
     }
 }
 
-/// Where an arrow, `Home` or `End` on the track goes; `None` for a key the
-/// carousel does not act on. A looping strip wraps, a plain one clamps to the
-/// reachable window.
-fn track_key_target(key: Key, orientation: Orientation, nav: Nav, current: usize) -> Option<usize> {
+/// What a track key does: a step, which wraps a looping strip, or a jump.
+enum TrackKey {
+    Step(bool),
+    To(usize),
+}
+
+/// What an arrow, `Home` or `End` on the track does; `None` for a key the
+/// carousel does not act on. A plain strip ends at the reachable window.
+fn track_key_target(key: Key, orientation: Orientation, nav: Nav) -> Option<TrackKey> {
     let (previous, next) = match orientation {
         Orientation::Horizontal => (Key::ArrowLeft, Key::ArrowRight),
         Orientation::Vertical => (Key::ArrowUp, Key::ArrowDown),
     };
     let wraps = nav.clones > 0;
-    let count = nav.count;
     Some(match key {
-        key if key == previous => match (wraps, current) {
-            (true, 0) => count.saturating_sub(1),
-            (_, index) => index.saturating_sub(1).max(nav.first),
-        },
-        key if key == next => match wraps && current >= count.saturating_sub(1) {
-            true => 0,
-            false => (current + 1).min(nav.last),
-        },
-        Key::Home => match wraps {
+        key if key == previous => TrackKey::Step(false),
+        key if key == next => TrackKey::Step(true),
+        Key::Home => TrackKey::To(match wraps {
             true => 0,
             false => nav.first,
-        },
-        Key::End => match wraps {
-            true => count.saturating_sub(1),
+        }),
+        Key::End => TrackKey::To(match wraps {
+            true => nav.count.saturating_sub(1),
             false => nav.last,
-        },
+        }),
         _ => return None,
     })
 }
