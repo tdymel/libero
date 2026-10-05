@@ -154,6 +154,101 @@ e2e::scenario!(
     an_outside_click_keeps_its_focus
 );
 
+/// The trigger while the search box holds the combobox role.
+const BARE_TRIGGER: &str = "div[aria-haspopup=listbox]";
+
+async fn open_search<D: Driver>(d: &mut D) -> Result<()> {
+    d.focus(TRIGGER).await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually(d, "the search box to take focus", async |d| {
+        d.is_focused(SEARCH).await
+    })
+    .await
+}
+
+/// Todo 2289: the portaled search box hands Tab to the trigger first, so focus
+/// moves on to the field after it (or before it), not to the document's end.
+pub async fn tab_from_the_search_moves_on<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    for (backwards, target) in [(false, "#after"), (true, "#outside")] {
+        open_search(d).await?;
+        match backwards {
+            true => d.press_shift(keyboard::TAB).await?,
+            false => d.press(keyboard::TAB).await?,
+        }
+        let moved = eventually(d, &format!("Tab to land on {target}"), async |d| {
+            Ok(d.is_focused(target).await? && !d.exists(SEARCH).await?)
+        })
+        .await;
+        if let Err(error) = moved {
+            let owner = d.focus_owner().await?;
+            anyhow::bail!("{error}; focus on {owner}");
+        }
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    tab_from_a_select_search_moves_on,
+    "/select/outside",
+    tab_from_the_search_moves_on
+);
+
+/// Todo 2294: a click on the trigger of an open, searchable list closes it, and
+/// it stays closed.
+pub async fn a_trigger_click_closes_the_search<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(TRIGGER).await?;
+    eventually(d, "the search box to take focus", async |d| {
+        d.is_focused(SEARCH).await
+    })
+    .await?;
+    d.click(BARE_TRIGGER).await?;
+    eventually(
+        d,
+        "the click to close the list onto the trigger",
+        async |d| {
+            Ok(!d.exists(SEARCH).await?
+                && d.attr(TRIGGER, "aria-expanded").await?.as_deref() == Some("false")
+                && d.is_focused(TRIGGER).await?)
+        },
+    )
+    .await?;
+    // A round trip later: a reopen would have drawn the search box by now.
+    let owner = d.focus_owner().await?;
+    anyhow::ensure!(
+        !d.exists(SEARCH).await?,
+        "the list opened again, focus on {owner}"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_trigger_click_closes_a_searchable_select,
+    "/select/outside",
+    a_trigger_click_closes_the_search
+);
+
+/// Todo 2291: while nothing matches there is no listbox, so the search box
+/// points `aria-controls` at nothing.
+pub async fn nothing_found_drops_aria_controls<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    open_search(d).await?;
+    anyhow::ensure!(
+        d.attr(SEARCH, "aria-controls").await?.is_some(),
+        "the search box controls the list while it shows rows"
+    );
+    d.type_text("zzzz").await?;
+    eventually(d, "nothing found, and no aria-controls", async |d| {
+        Ok(d.exists("[data-slot=nothing-found]").await?
+            && d.attr(SEARCH, "aria-controls").await?.is_none())
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_select_search_matching_nothing_controls_nothing,
+    "/select/outside",
+    nothing_found_drops_aria_controls
+);
+
 /// `[active row is the selected one, the selected row's image, an unselected idle row's
 /// image]`.
 fn rows_js() -> String {

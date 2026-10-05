@@ -40,9 +40,9 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `value` | `ColorCode` | - | Strictly controlled. Pair it with `oninput`. |
-| `oninput` | `EventHandler<SliderChangeEvent<ColorCode>>` | - | Every new color. A drag in the dropdown sends `Start` and `End` around its moves. A key press, a swatch, typed text that parses and the eyedropper send `Change` then `End`. |
+| `oninput` | `EventHandler<SliderChangeEvent<ColorCode>>` | - | Every new color. A drag in the dropdown sends `Start` and `End` around its moves. A key press, a swatch and the eyedropper send `Change` then `End`. Typed text sends `Change` each time it parses and one `End` on Enter or blur. |
 | `validate` | `Validators<ColorCode>` | - | Rules over the color, shown once the field loses focus or its form is submitted. |
-| `format` | `ColorFormat` | hex, or hexa with alpha | How the text shows the color, and so what the field posts. Typing accepts every form either way. |
+| `format` | `ColorFormat` | hex, or hexa with alpha | How the text shows the color once the field loses focus. Typing accepts every form either way. |
 | `with_alpha` | `bool` | `false` | Shows the alpha slider in the dropdown. Without it a translucent color arrives opaque. |
 | `swatches` | `Swatches` | - | Preset colors in the dropdown. Takes `ColorCode`s or CSS strings. |
 | `swatches_per_row` | `usize` | - | Caps how many swatches share a row. Unset, they wrap to fill the width. |
@@ -52,7 +52,7 @@ fn Demo() -> Element {
 | `disallow_input` | `bool` | `false` | Makes the text read-only, so a color comes from the dropdown alone. |
 | `fix_on_blur` | `bool` | `true` | Text that does not parse goes back to the last valid color on blur. Off, it stays and shows `color.invalid` as an error. |
 | `close_on_swatch_click` | `bool` | `false` | Picking a swatch closes the dropdown. |
-| `name` | `FieldName<ColorCode>` | - | What the field posts as, the text in `format`. A path such as `Theme::FIELDS.accent()` also binds the color to the surrounding `Form`'s value when the field has no `oninput`. |
+| `name` | `FieldName<ColorCode>` | - | What the field posts as: the text it shows, so in `format` after a blur but as typed while it has focus (Enter submits that), or unparsable text kept by `fix_on_blur: false`. A path such as `Theme::FIELDS.accent()` also binds the color to the surrounding `Form`'s value when the field has no `oninput`. |
 | `placeholder` | `String` | - | Shown while the text is empty. |
 | `size` | `Size` | `md` | Control height, font size and the dropdown's picker. |
 | `radius` | `Size` | `sm` | Corner radius of the frame. |
@@ -113,7 +113,7 @@ The dropdown is portaled out of the field, so its parts take the
 | Key | Action |
 |---|---|
 | `Down` | Moves focus into the picker, onto the saturation area or the first swatch, where the [ColorPicker](color_picker.md#accessibility) keys apply. |
-| `Enter` | On text that does not parse: announces the refusal and keeps the text. Text that parses is sent as you type. |
+| `Enter` | On text that does not parse: announces the refusal and keeps the text. On text that parses: sends `End`, which typing alone does not. |
 | `Escape` | Closes the dropdown. From inside it, moves focus back to the text. |
 | `Tab` or `Shift+Tab` | Past the dropdown's last stop: moves on as Tab from the text would. Before its first stop: back to the text. |
 

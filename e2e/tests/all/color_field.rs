@@ -253,6 +253,50 @@ fn a_reverting_blur_says_the_error() {
     });
 }
 
+/// Todo 2296: typed text sends `Change` per parse and one `End`, on Enter or blur,
+/// not one for each valid prefix (`#fa5`, `#fa52`).
+#[test]
+fn typed_text_ends_once_on_enter_or_blur() {
+    block_on(async {
+        let fixture = Fixture::open("/color-field/keep-text", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, INPUT, 5).await.unwrap();
+        page.evaluate(format!("document.querySelector({INPUT:?}).select()"))
+            .await
+            .unwrap();
+        keyboard::type_text(page, "#fa5252").await.unwrap();
+        let ends = |text: &str| format!("document.getElementById('ends').textContent === {text:?}");
+        expect(
+            page,
+            &format!(
+                "document.getElementById('readout').textContent === '#fa5252' && {}",
+                ends("")
+            ),
+            "typing to change the colour without an End",
+        )
+        .await;
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        expect(page, &ends("#fa5252"), "Enter to send one End").await;
+
+        keyboard::type_text(page, "0").await.unwrap();
+        keyboard::press(page, keyboard::BACKSPACE).await.unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        expect(
+            page,
+            &format!(
+                "document.activeElement.id === 'after' && {}",
+                ends("#fa5252 #fa5252")
+            ),
+            "the blur to send the next End",
+        )
+        .await;
+        fixture.console.assert_clean("typed ends").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 async fn expect(page: &chromiumoxide::Page, check: &str, what: &str) {
     if let Err(error) = wait::for_js_true(page, check, what).await {
         let focus: String = page

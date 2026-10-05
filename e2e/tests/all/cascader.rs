@@ -40,12 +40,30 @@ e2e::scenario!(
     a_tap_focuses_the_search
 );
 
-use crate::select::an_outside_click_keeps_its_focus;
+use crate::select::{
+    a_trigger_click_closes_the_search, an_outside_click_keeps_its_focus,
+    nothing_found_drops_aria_controls, tab_from_the_search_moves_on,
+};
 
 e2e::scenario!(
     an_outside_click_leaves_a_searchable_cascader,
     "/cascader/outside",
     an_outside_click_keeps_its_focus
+);
+e2e::scenario!(
+    tab_from_a_cascader_search_moves_on,
+    "/cascader/outside",
+    tab_from_the_search_moves_on
+);
+e2e::scenario!(
+    a_trigger_click_closes_a_searchable_cascader,
+    "/cascader/outside",
+    a_trigger_click_closes_the_search
+);
+e2e::scenario!(
+    a_cascader_search_matching_nothing_controls_nothing,
+    "/cascader/outside",
+    nothing_found_drops_aria_controls
 );
 
 const ROOTS: &str = "[data-slot=column]";

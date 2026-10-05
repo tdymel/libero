@@ -23,6 +23,27 @@ e2e::scenario!(
     typing_reaches_e164
 );
 
+/// Todo 2289: Tab from the portaled country search moves on from the country
+/// button, to the number, not to the document's end.
+async fn tab_from_the_search_reaches_the_number<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(PICKER).await?;
+    eventually(d, "the search box to take focus", async |d| {
+        d.is_focused(SEARCH).await
+    })
+    .await?;
+    d.press(keyboard::TAB).await?;
+    eventually(d, "Tab to land on the number, the list closed", async |d| {
+        Ok(d.is_focused(TEL).await? && !d.exists(SEARCH).await?)
+    })
+    .await
+}
+
+e2e::scenario!(
+    tab_from_the_country_search_reaches_the_number,
+    "/phone-field/echo",
+    tab_from_the_search_reaches_the_number
+);
+
 /// Todo 2129: the soft keyboard the search box opens shrinks the viewport after the
 /// list was placed; the list moves or shrinks into what is left, and a covered picker
 /// scrolls back into view. The web shrinks it by hand to `room` px below the picker's top.

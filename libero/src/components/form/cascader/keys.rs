@@ -7,8 +7,8 @@ use crate::{
         common::{NavigationChord, has_shortcut_modifier, navigation_chord},
         form::ComboboxState,
     },
-    hooks::{Typeahead, typeahead_match},
-    platform::logical_key,
+    hooks::{ElementHandle, Typeahead, typeahead_match},
+    platform::{ElementApi, logical_key},
 };
 
 use super::{
@@ -32,6 +32,7 @@ pub(super) struct CascaderKeys {
     pub(super) searchable: bool,
     pub(super) any_level: bool,
     pub(super) layout: CascaderLayout,
+    pub(super) trigger: ElementHandle,
 }
 
 impl CascaderKeys {
@@ -70,7 +71,13 @@ impl CascaderKeys {
                 event.prevent_default();
                 self.state.close();
             }
-            Key::Tab => self.leave(),
+            // The search box is portaled after the page: Tab moves on from the trigger (todo 2289).
+            Key::Tab => {
+                if self.searchable {
+                    let _ = self.trigger.focus();
+                }
+                self.leave();
+            }
             // APG select-only: Space is Enter, except in the search box.
             Key::Character(ref character) if character == " " && !self.searchable => {
                 event.prevent_default();

@@ -135,6 +135,12 @@ pub(super) fn cascader_trigger(
         .attr("aria-disabled", disabled.then_some("true"))
         .attr("aria-readonly", readonly.then_some("true"))
         .attr("tabindex", (!disabled).then_some("0"))
+        // Keeps the open search box focused, so the click reads the list open and closes it (todo 2294).
+        .event("onmousedown", move |event: MouseEvent| {
+            if searchable && state.is_open() {
+                event.prevent_default();
+            }
+        })
         .event("onclick", move |_: MouseEvent| {
             if !disabled && !readonly {
                 toggle(!state.is_open());

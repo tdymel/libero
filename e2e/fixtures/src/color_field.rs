@@ -56,9 +56,11 @@ fn SwatchesFieldPage() -> Element {
 }
 
 /// `fix_on_blur: false` and no dropdown: unparsable text stays on blur.
+/// `#ends` lists every `End` (2296).
 #[component]
 fn KeepTextFieldPage() -> Element {
     let mut color = use_signal(|| "#40c057".parse::<ColorCode>().unwrap());
+    let mut ends = use_signal(Vec::<String>::new);
 
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
@@ -69,10 +71,16 @@ fn KeepTextFieldPage() -> Element {
                 with_eye_dropper: false,
                 fix_on_blur: false,
                 value: color(),
-                oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value()),
+                oninput: move |event: SliderChangeEvent<ColorCode>| {
+                    if let SliderChangeEvent::End(end) = event {
+                        ends.push(end.to_hex());
+                    }
+                    color.set(event.value());
+                },
             }
             Button { id: "after", "After" }
             Text { id: "readout", "{color().to_hex()}" }
+            Text { id: "ends", {ends().join(" ")} }
         }
     }
 }

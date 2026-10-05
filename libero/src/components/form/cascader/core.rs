@@ -254,6 +254,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         searchable,
         any_level,
         layout,
+        trigger: trigger_element,
     });
 
     let rows = CascaderRows {
@@ -333,7 +334,8 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
                     state,
                     blurred,
                 },
-                controlled_id.clone(),
+                // No listbox while nothing matches; a dangling id is invalid (todo 2291).
+                nothing_found.is_none().then(|| controlled_id.clone()),
                 descendant.clone(),
                 search_placeholder.clone(),
                 &field,

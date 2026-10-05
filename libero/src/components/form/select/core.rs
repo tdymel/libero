@@ -420,6 +420,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
                     element: search,
                     query,
                     blurred,
+                    trigger: trigger_element,
                 },
                 state,
                 aria.clone(),
@@ -775,6 +776,12 @@ fn select_trigger(
             },
         )
         .attr(TOOLBAR_ITEM, toolbar_item.map(ToolbarItem::key))
+        // Keeps the open search box focused, so the click reads the list open and closes it (todo 2294).
+        .event("onmousedown", move |event: MouseEvent| {
+            if searchable && state.is_open() {
+                event.prevent_default();
+            }
+        })
         // A multi-select's click bubbles to the slot around it, which owns it.
         .event("onclick", move |_: MouseEvent| {
             if let Some(item) = toolbar_item {
@@ -1027,6 +1034,7 @@ struct SelectSearch {
     query: Signal<String>,
     /// [`use_refocus_on_close`]'s blur mark.
     blurred: Signal<bool>,
+    trigger: ElementHandle,
 }
 
 /// The open search box owns the combobox role and the trigger's a11y wiring, field label included.
@@ -1045,6 +1053,7 @@ fn select_search_box(
         element: search,
         mut query,
         mut blurred,
+        trigger,
     } = search;
     attributes.extend(naming);
     search_box
@@ -1064,6 +1073,12 @@ fn select_search_box(
             query.set(event.value());
             // A new list: arm its top row.
             state.set_active(Some(0));
+        })
+        // Portaled after the page: Tab moves on from the trigger; the dropdown's keys still commit (todo 2289).
+        .event("onkeydown", move |event: KeyboardEvent| {
+            if event.key() == Key::Tab {
+                let _ = trigger.focus();
+            }
         })
         // Closes while searchable; the rows cancel `mousedown`, so a click inside never blurs.
         .event("onblur", move |event: FocusEvent| {

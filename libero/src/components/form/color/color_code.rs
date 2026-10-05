@@ -1,4 +1,5 @@
 use std::{
+    f64::consts::PI,
     fmt::{self, Display},
     str::FromStr,
 };
@@ -248,7 +249,8 @@ impl FromStr for ColorCode {
     type Err = ParseColorError;
 
     /// Hex with 3, 4, 6 or 8 digits (`#` optional), `rgb[a]()` and `hsl[a]()`,
-    /// comma or space separated, alpha as a number or percentage.
+    /// comma or space separated, rgb channels and alpha as a number or percentage,
+    /// hue in any CSS angle unit.
     fn from_str(text: &str) -> Result<Self, Self::Err> {
         let text = text.trim().to_ascii_lowercase();
 
@@ -264,7 +266,7 @@ impl FromStr for ColorCode {
         if let Some(inner) = function_args(&text, "hsla").or_else(|| function_args(&text, "hsl")) {
             let ([h, s, l], a) = arguments(inner)?;
             return Ok(Self::hsla(
-                number(h.trim_end_matches("deg"))?,
+                hue(h)?,
                 percent(s)?,
                 percent(l)?,
                 a.map_or(Ok(1.0), alpha)?,
@@ -319,11 +321,32 @@ fn number(text: &str) -> Result<f64, ParseColorError> {
         .ok_or(ParseColorError)
 }
 
+/// `255` or `100%`.
 fn byte(text: &str) -> Result<u8, ParseColorError> {
-    let value = number(text)?;
+    let value = match text.strip_suffix('%') {
+        Some(percent) => number(percent)? / 100.0 * 255.0,
+        None => number(text)?,
+    };
     match (0.0..=255.0).contains(&value) {
         true => Ok(value.round() as u8),
         false => Err(ParseColorError),
+    }
+}
+
+/// A CSS hue in degrees: bare, `deg`, `grad`, `rad` or `turn`.
+fn hue(text: &str) -> Result<f64, ParseColorError> {
+    let units = [
+        ("deg", 1.0),
+        ("grad", 0.9),
+        ("rad", 180.0 / PI),
+        ("turn", 360.0),
+    ];
+    match units
+        .iter()
+        .find_map(|(unit, scale)| Some((text.strip_suffix(unit)?, scale)))
+    {
+        Some((value, scale)) => Ok(number(value)? * scale),
+        None => number(text),
     }
 }
 
@@ -413,6 +436,26 @@ mod tests {
             "hsla(208, 80%, 52%, 0.5)"
         );
         assert_eq!(parse("hsl(120, 100, 50)").to_hex(), "#00ff00");
+    }
+
+    /// Todo 2295: percent rgb channels and every CSS hue unit.
+    #[test]
+    fn percent_channels_and_hue_units_parse() {
+        assert_eq!(parse("rgb(100% 0% 0%)").to_hex(), "#ff0000");
+        assert_eq!(parse("rgb(50%, 50%, 50%, 50%)").to_hexa(), "#80808080");
+        assert_eq!(parse("rgb(50% 50% 50% / 50%)").to_hexa(), "#80808080");
+        for text in [
+            "hsl(120deg 100% 50%)",
+            "hsl(0.3333turn 100% 50%)",
+            "hsl(133.33grad 100% 50%)",
+            "hsl(2.0944rad 100% 50%)",
+        ] {
+            assert_eq!(parse(text).to_hex(), "#00ff00", "{text}");
+        }
+        assert_eq!(
+            "rgb(101%, 0%, 0%)".parse::<ColorCode>(),
+            Err(ParseColorError)
+        );
     }
 
     #[test]

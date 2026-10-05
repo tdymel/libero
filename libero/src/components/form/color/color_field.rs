@@ -53,15 +53,14 @@ field_props! {
         /// Controlled: pair it with `oninput`, or bind a path `name` in a `Form`.
         #[props(default)]
         value: ColorCode,
-        /// A drag brackets its moves with `Start`/`End`; anything else emits
-        /// `Change` then `End` at once.
+        /// A drag brackets its moves with `Start`/`End`; typed text sends `Change`
+        /// per parse and `End` on Enter or blur; anything else `Change` then `End`.
         #[props(default)]
         oninput: Option<EventHandler<SliderChangeEvent<ColorCode>>>,
         /// Rules over the color, shown on blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<ColorCode>,
-        /// How the text shows the color and what `name` posts. Typing accepts
-        /// every form.
+        /// How the text shows the color after a blur. Typing accepts every form.
         #[props(default, into)]
         format: Input<ColorFormat>,
         /// Shows the alpha slider in the dropdown, and keeps typed alpha.
@@ -91,7 +90,8 @@ field_props! {
         /// Picking a swatch closes the dropdown.
         #[props(default)]
         close_on_swatch_click: Option<bool>,
-        /// What the field posts as. A path also binds it to the surrounding `Form`.
+        /// What the field posts its shown text as, typed text included. A path
+        /// also binds it to the surrounding `Form`.
         #[props(default, into)]
         name: crate::components::form::FieldName<ColorCode>,
         #[props(default, into)]
@@ -183,7 +183,33 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             (None, None) => {}
         }
     };
-    let dropper_emit = emit.clone();
+    let dropper_emit = emit;
+    // Typed text sends `Change` per parse and `End` once, on Enter or blur:
+    // `#fa5252` passes through `#fa5` and `#fa52` (todo 2296).
+    let mut unsettled = use_signal(|| Option::<ColorCode>::None);
+    let typed_setter = bound.setter();
+    let type_in = move |color: ColorCode| {
+        let color = match with_alpha {
+            true => color,
+            false => color.opaque(),
+        };
+        match (&oninput, &typed_setter) {
+            (Some(oninput), _) => {
+                oninput.call(SliderChangeEvent::Change(color));
+                unsettled.set(Some(color));
+            }
+            (None, Some(setter)) => setter.set(color),
+            (None, None) => {}
+        }
+    };
+    let settle_typed = move || {
+        if unsettled.peek().is_none() {
+            return;
+        }
+        if let (Some(color), Some(oninput)) = (unsettled.take(), oninput) {
+            oninput.call(SliderChangeEvent::End(color));
+        }
+    };
 
     let labels = use_localization().color;
     // Typed text that is no color, found on Enter or on a blur that keeps it;
@@ -243,6 +269,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
                         };
                         if let Ok(color) = hex.parse::<ColorCode>() {
                             draft.set(None);
+                            unsettled.set(None);
                             emit(color.with_alpha(preview.alpha()));
                         }
                     });
@@ -341,6 +368,8 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             .is_some_and(|text| text.parse::<ColorCode>().is_err())
     };
     let blurred = move || {
+        let mut settle_typed = settle_typed;
+        settle_typed();
         let unparsable = unparsable();
         // Said once, so a blur after Enter does not repeat it; a revert says it too (todo 1548).
         if unparsable && !*rejected.peek() {
@@ -398,7 +427,8 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         .event("oninput", move |event: FormEvent| {
             let text = event.value();
             if let Ok(color) = text.parse::<ColorCode>() {
-                emit(color);
+                let mut type_in = type_in.clone();
+                type_in(color);
             }
             draft.set(Some(text));
             if *rejected.peek() {
@@ -414,6 +444,10 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             Key::Enter if unparsable() => {
                 rejected.set(true);
                 announcer.say(labels.invalid.to_string());
+            }
+            Key::Enter => {
+                let mut settle_typed = settle_typed;
+                settle_typed();
             }
             // APG: Alt+ArrowDown enters like ArrowDown; Ctrl/Meta is the caret's.
             Key::ArrowDown
@@ -488,6 +522,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
                         size,
                         oninput: move |event: SliderChangeEvent<ColorCode>| {
                             draft.set(None);
+                            unsettled.set(None);
                             match (&oninput, &picker_setter) {
                                 (Some(oninput), _) => oninput.call(event),
                                 (None, Some(setter)) => {

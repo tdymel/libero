@@ -14,7 +14,8 @@ pub const ROUTES: Routes = &[
     ("/cascader/outside", || rsx! { CascaderOutsidePage {} }),
 ];
 
-/// Searchable, with a field above it to click while the list is open below (1497).
+/// Searchable, with a field above it to click while the list is open below (1497)
+/// and one after it for Tab (2289).
 #[component]
 fn CascaderOutsidePage() -> Element {
     let mut place = use_signal(|| None::<String>);
@@ -29,6 +30,7 @@ fn CascaderOutsidePage() -> Element {
                 value: place(),
                 onchange: move |next: Option<String>| place.set(next),
             }
+            input { id: "after", "aria-label": "After" }
         }
     }
 }

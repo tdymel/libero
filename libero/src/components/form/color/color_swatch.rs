@@ -125,9 +125,10 @@ pub fn ColorSwatch(props: ColorSwatchProps) -> Element {
 /// Whether `color` is light enough that the children need to be black.
 fn on_light(color: ColorCode) -> bool {
     let (r, g, b, a) = color.to_rgba_channels();
-    let rgb = ((r as u32) << 16) | ((g as u32) << 8) | b as u32;
-    // Mostly transparent shows the light checkerboard. Above 0.179 black out-contrasts white.
-    a < 0.5 || HexColor::new(rgb).relative_luminance() > 0.179
+    // Judge what shows: the colour over the light checkerboard. Above 0.179 black out-contrasts white.
+    let over_white = |c: u8| (c as f64 * a + 255.0 * (1.0 - a)).round() as u32;
+    let rgb = (over_white(r) << 16) | (over_white(g) << 8) | over_white(b);
+    HexColor::new(rgb).relative_luminance() > 0.179
 }
 
 #[cfg(test)]
@@ -155,5 +156,14 @@ mod tests {
             );
             assert!(fill.contrast_ratio(mark) >= 3.0, "{rgb:06x}");
         }
+    }
+
+    /// Todo 2292: rgba(0, 128, 0, 0.6) shows about #66b366 over white, where white was 2.56:1.
+    #[test]
+    fn a_translucent_swatch_is_judged_by_what_shows() {
+        assert!(on_light(ColorCode::rgba(0, 128, 0, 0.6)));
+        assert!(on_light(ColorCode::rgba(0, 0, 0, 0.3)));
+        assert!(!on_light(ColorCode::rgba(0, 0, 0, 0.9)));
+        assert!(!on_light(ColorCode::rgba(0, 128, 0, 1.0)));
     }
 }

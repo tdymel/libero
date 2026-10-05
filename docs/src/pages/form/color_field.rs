@@ -39,12 +39,12 @@ pub fn ColorFieldPage() -> Element {
                     prop("value", "ColorCode")
                         .doc("Strictly controlled. Pair it with `oninput`."),
                     prop("oninput", "EventHandler<SliderChangeEvent<ColorCode>>")
-                        .doc("Every new color. A drag in the dropdown sends `Start` and `End` around its moves. A key press, a swatch, typed text that parses and the eyedropper send `Change` then `End`."),
+                        .doc("Every new color. A drag in the dropdown sends `Start` and `End` around its moves. A key press, a swatch and the eyedropper send `Change` then `End`. Typed text sends `Change` each time it parses and one `End` on Enter or blur."),
                     prop("validate", "Validators<ColorCode>")
                         .doc("Rules over the color, shown once the field loses focus or its form is submitted."),
                     prop("format", "ColorFormat")
                         .default("hex, or hexa with alpha")
-                        .doc("How the text shows the color, and so what the field posts. Typing accepts every form either way."),
+                        .doc("How the text shows the color once the field loses focus. Typing accepts every form either way."),
                     prop("with_alpha", "bool")
                         .default("false")
                         .doc("Shows the alpha slider in the dropdown. Without it a translucent color arrives opaque."),
@@ -67,7 +67,7 @@ pub fn ColorFieldPage() -> Element {
                         .default(theme.color_field.close_on_swatch_click.to_string())
                         .doc("Picking a swatch closes the dropdown."),
                     prop("name", "FieldName<ColorCode>")
-                        .doc("What the field posts as, the text in `format`. A path such as `Theme::FIELDS.accent()` also binds the color to the surrounding `Form`'s value when the field has no `oninput`."),
+                        .doc("What the field posts as: the text it shows, so in `format` after a blur but as typed while it has focus (Enter submits that), or unparsable text kept by `fix_on_blur: false`. A path such as `Theme::FIELDS.accent()` also binds the color to the surrounding `Form`'s value when the field has no `oninput`."),
                     prop("placeholder", "String").doc("Shown while the text is empty."),
                     prop("size", "Size").default(theme.color_field.size.as_str()).doc("Control height, font size and the dropdown's picker."),
                     prop("radius", "Size").default(theme.color_field.radius.as_str()).doc("Corner radius of the frame."),
@@ -96,7 +96,7 @@ pub fn ColorFieldPage() -> Element {
             ],
             accessibility: a11y()
                 .key(["Down"], "Moves focus into the picker, onto the saturation area or the first swatch, where the `ColorPicker` keys apply.")
-                .key(["Enter"], "On text that does not parse: announces the refusal and keeps the text. Text that parses is sent as you type. A revert on blur is announced too.")
+                .key(["Enter"], "On text that does not parse: announces the refusal and keeps the text. On text that parses: sends `End`, which typing alone does not. A revert on blur is announced too.")
                 .key(["Escape"], "Closes the dropdown. From inside it, moves focus back to the text.")
                 .key(["Tab", "Shift+Tab"], "Past the dropdown's last stop: moves on as Tab from the text would. Before its first stop: back to the text.")
                 .handles([

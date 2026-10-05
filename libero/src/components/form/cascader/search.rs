@@ -50,7 +50,7 @@ pub(super) struct CascaderSearch {
 pub(super) fn search_header(
     style: BoxStyle,
     search: CascaderSearch,
-    controlled_id: String,
+    controlled_id: Option<String>,
     descendant: Option<String>,
     placeholder: String,
     // The open box is the combobox, so it carries the field's label and captions.

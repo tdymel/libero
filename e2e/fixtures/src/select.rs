@@ -54,7 +54,8 @@ fn SelectTallPage(top: &'static str) -> Element {
     }
 }
 
-/// Searchable, with a field above it to click while the list is open below (1497).
+/// Searchable, with a field above it to click while the list is open below (1497)
+/// and one after it for Tab (2289).
 #[component]
 fn SelectOutsidePage() -> Element {
     let mut value = use_signal(|| Some(Fruit::Banana));
@@ -68,6 +69,7 @@ fn SelectOutsidePage() -> Element {
                 value: value(),
                 onchange: move |next| value.set(next),
             }
+            input { id: "after", "aria-label": "After" }
         }
     }
 }

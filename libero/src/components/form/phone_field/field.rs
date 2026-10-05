@@ -356,6 +356,12 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
         })
         // The list cancels `mousedown`, so only an outside click blurs this.
         .event("onblur", move |_: FocusEvent| state.close())
+        // Portaled after the page: Tab moves on from the country button (todo 2289).
+        .event("onkeydown", move |event: KeyboardEvent| {
+            if event.key() == Key::Tab {
+                let _ = picker_element.focus();
+            }
+        })
         .render(HtmlTag::Input, state.a11y_attributes(), ());
     let search = with_drawn_placeholder(Some(localization.common.search), SEARCH_INSET, search);
 
