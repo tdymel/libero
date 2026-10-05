@@ -488,6 +488,88 @@ fn home_and_end_edit_the_country_search() {
     crate::select::search_home_end_edit_the_query("/phone-field", PICKER, "fr");
 }
 
+/// Todo 1565: under `dir=rtl` the dial code still draws `+49`, the plus on the left, in the
+/// picker and in a pinned prefix.
+#[test]
+fn the_dial_code_reads_left_to_right_under_rtl() {
+    block_on(async {
+        let fixture = Fixture::open("/phone-field/rtl", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            "document.querySelectorAll('[data-slot=dial]').length === 2",
+            "both dial codes",
+        )
+        .await
+        .unwrap();
+        let order: Vec<(String, bool)> = page
+            .evaluate(
+                "[...document.querySelectorAll('[data-slot=dial]')].map(el => {
+                   const text = el.firstChild, range = document.createRange();
+                   range.setStart(text, 0); range.setEnd(text, 1);
+                   const plus = range.getBoundingClientRect();
+                   range.setStart(text, text.length - 1); range.setEnd(text, text.length);
+                   return [el.textContent, plus.left < range.getBoundingClientRect().left];
+                 })",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            order,
+            [("+49".to_string(), true), ("+49".to_string(), true)],
+            "the plus drawn left of the digits, picker then pinned"
+        );
+        fixture.console.assert_clean("/phone-field/rtl").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2368: a rule added after mount still treats Tab from the country button to the
+/// number as a move inside the field; only leaving the field shows the error.
+#[test]
+fn a_rule_added_after_mount_waits_for_the_field_to_lose_focus() {
+    block_on(async {
+        let fixture = Fixture::open("/phone-field/later", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, "button:not([aria-haspopup])")
+            .await
+            .unwrap();
+        keyboard::tab_to(page, PICKER, 10).await.unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.activeElement === document.querySelector({TEL:?})"),
+            "Tab to move from the country button to the number",
+        )
+        .await
+        .unwrap();
+        let shown = "document.body.textContent.includes('Enter a number.')";
+        // Two frames: a touch from the focus move would have rendered by then.
+        let early: bool = page
+            .evaluate(format!(
+                "new Promise(done => requestAnimationFrame(() => requestAnimationFrame(() => done({shown}))))"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(!early, "the move inside the field touched it");
+
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        wait::for_js_true(page, shown, "leaving the field to show the error")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("/phone-field/later").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The caret stays where the user typed: nothing regroups while typing, and a
 /// fixed plan groups on blur. The E.164 follows every keystroke.
 #[test]

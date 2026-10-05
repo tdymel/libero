@@ -325,6 +325,87 @@ mod dispatched {
         }
     }
 
+    thread_local! {
+        /// Every value the recorded field below emitted.
+        static EMITTED: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+    }
+
+    /// A saved US number under a field whose prop says Germany; `oninput` only records.
+    fn foreign_app() -> Element {
+        rsx! {
+            LiberoProvider {
+                PhoneField {
+                    label: "Mobile",
+                    name: "phone",
+                    country: PHONE_COUNTRY.get(),
+                    value: "+12133734253",
+                    oninput: move |next: String| EMITTED.with_borrow_mut(|seen| seen.push(next)),
+                }
+            }
+        }
+    }
+
+    /// Todo 2364: the mount leaves a value from another country alone and emits nothing;
+    /// only a later change of the `country` prop moves the number, once.
+    #[test]
+    fn a_foreign_value_is_not_rewritten_on_mount() {
+        PHONE_COUNTRY.set("DE");
+        EMITTED.with_borrow_mut(Vec::clear);
+        let mut page = Page::mount(foreign_app);
+        page.render();
+        assert_eq!(
+            EMITTED.with_borrow(Vec::clone),
+            Vec::<String>::new(),
+            "the mount emitted"
+        );
+        let html = dioxus_ssr::render(&page.dom);
+        assert!(
+            html.contains("value=\"+12133734253\""),
+            "the posted number moved: {html}"
+        );
+        assert_eq!(phone_text(&html), "213 373 4253");
+
+        PHONE_COUNTRY.set("FR");
+        page.dom.mark_dirty(dioxus::core::ScopeId::APP);
+        page.render();
+        page.render();
+        assert_eq!(
+            EMITTED.with_borrow(Vec::clone),
+            ["+332133734253"],
+            "the prop change"
+        );
+    }
+
+    /// Todo 2369: a typed or pasted number with its own dial code moves the picker and keeps
+    /// only the national part in the input, from either prefix and in any digits.
+    #[test]
+    fn a_typed_dial_code_moves_the_country_through_the_input() {
+        for (typed, text, e164) in [
+            ("+49 171 1234567", "1711234567", "+491711234567"),
+            ("0049 30 123456", "30123456", "+4930123456"),
+            ("＋４９ ３０ １２３", "30123", "+4930123"),
+        ] {
+            PHONE_COUNTRY.set("US");
+            PHONE_TOGGLE.set(false);
+            let mut page = Page::mount(phone_app);
+            let input = input_listener(&page.rec);
+            page.dom
+                .runtime()
+                .handle_event("input", Event::new(input_event(typed), true), input);
+            page.render();
+            let html = dioxus_ssr::render(&page.dom);
+            assert_eq!(phone_text(&html), text, "{typed}: the text");
+            assert!(
+                html.contains(&format!("value=\"{e164}\"")),
+                "{typed}: the E.164 in {html}"
+            );
+            assert!(
+                html.contains("Country: Germany, DE +49"),
+                "{typed}: the picker in {html}"
+            );
+        }
+    }
+
     /// The text the `tel` input is showing, which is not what it posts.
     fn phone_text(html: &str) -> String {
         attributes_of(&body(html), "input")

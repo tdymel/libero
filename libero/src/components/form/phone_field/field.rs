@@ -294,11 +294,16 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             let _ = picker_element.focus();
         });
 
-    // A changed `country` prop moves the number like a pick would. Guarded on
-    // a real change, so the first render emits nothing.
+    // A changed `country` prop moves the number like a pick would. The mount's
+    // prop is seeded, so a value from another country is not rewritten (todo 2364).
     let requested = props.country.clone();
+    let mut seen = use_hook(|| CopyValue::new(requested.clone()));
     let following = pick.clone();
     use_effect(use_reactive!(|requested| {
+        if *seen.peek() == requested {
+            return;
+        }
+        seen.set(requested.clone());
         if let Some(next) = requested.as_deref().and_then(countries::find)
             && next.iso != country.iso
         {
@@ -975,6 +980,22 @@ mod tests {
         assert_eq!(countries::value_of(country("DE"), "+4"), "+4");
         assert_eq!(countries::value_of(country("DE"), "+"), "");
         assert_eq!(dialled("171 1234567", country("DE")), None);
+    }
+
+    /// Arabic-Indic, Persian and full-width digits are digits too, so a filled
+    /// field never posts nothing (todo 2365).
+    #[test]
+    fn digits_of_another_script_reach_the_value() {
+        assert_eq!(countries::digits_of("٠١٢٣٤٥٦٧٨٩"), "0123456789");
+        assert_eq!(countries::digits_of("۰۱۲ ۳۴۵"), "012345");
+        assert_eq!(countries::digits_of("０１２３"), "0123");
+        assert_eq!(countries::value_of(country("DE"), "＋４９１７１"), "+49171");
+        assert_eq!(countries::value_of(country("US"), "٠٠٤٩١٧١"), "+49171");
+        assert_eq!(countries::value_of(country("DE"), "١٧١ ١٢٣"), "+49171123");
+        let (to, national) = dialled("＋４４ ２０", country("DE")).expect("a dial code");
+        assert_eq!((to.iso, national.as_str()), ("GB", "20"));
+        // Letters and other numerals (Roman, fractions) are no digits.
+        assert_eq!(countries::digits_of("Ⅻ½a"), "");
     }
 
     /// An empty value never drags the field off the country it is on.

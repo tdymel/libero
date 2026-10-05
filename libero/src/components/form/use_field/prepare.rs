@@ -154,9 +154,10 @@ impl FieldBuilder<'_> {
         });
         // The label of a `labelled_by` control finds that control in here.
         let focuses = self.labelled_by && !self.group;
-        // A touching field also asks whether focus left it.
-        let own = use_hook(|| (focuses || touches).then(ElementHandle::new));
-        let root = silent.or(own);
+        // A touching field also asks whether focus left it. Made for every field: rules added
+        // after mount would otherwise find no handle (todo 2368).
+        let own = use_hook(ElementHandle::new);
+        let root = silent.or(Some(own));
         if let Some(element) = &root {
             wrapper = wrapper.element(element);
         }

@@ -2,7 +2,7 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{FieldStatus, Flex, PhoneField, Text},
+    components::{Button, FieldStatus, Flex, PhoneField, Rule, Text, not_empty},
     hooks::use_localization_handle,
     localization::Localization,
 };
@@ -19,7 +19,38 @@ pub const ROUTES: Routes = &[
     ("/phone-field/german", || rsx! { PhoneFieldGermanPage {} }),
     ("/phone-field/echo", || rsx! { PhoneFieldEchoPage {} }),
     ("/phone-field/low", || rsx! { PhoneFieldLowPage {} }),
+    ("/phone-field/rtl", || rsx! { PhoneFieldRtlPage {} }),
+    ("/phone-field/later", || rsx! { PhoneFieldLaterRulesPage {} }),
 ];
+
+/// Under `dir=rtl`, the picker's dial code and a pinned one (todo 1565).
+#[component]
+fn PhoneFieldRtlPage() -> Element {
+    rsx! {
+        div { dir: "rtl",
+            Flex { direction: "column", gap: "md", max_width: "320px",
+                PhoneField { label: "Mobile", country: "DE" }
+                PhoneField { label: "Office", country: "DE", country_select: false }
+            }
+        }
+    }
+}
+
+/// No rules at mount, a rule after the button (todo 2368).
+#[component]
+fn PhoneFieldLaterRulesPage() -> Element {
+    let mut strict = use_signal(|| false);
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button { onclick: move |_| strict.set(true), "Strict" }
+            PhoneField {
+                label: "Mobile",
+                country: "DE",
+                validate: if strict() { vec![not_empty.error("Enter a number.")] } else { Vec::new() },
+            }
+        }
+    }
+}
 
 /// The field 320px down, where a phone's soft keyboard covers the room below it (todo 2129).
 #[component]
