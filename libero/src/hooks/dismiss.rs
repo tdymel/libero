@@ -534,6 +534,7 @@ pub(crate) fn use_dismiss(
         left_seen.set(*left_tick.peek());
         *opening.write() += 1;
     }
+    // Follows the rendered `open`: a press between an `open` write and its render is ignored.
     live.set(open);
     let own_marker = use_press_marker();
     let popups = use_open_popups();

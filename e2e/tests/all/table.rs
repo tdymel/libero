@@ -2008,7 +2008,13 @@ async fn the_filter_panel_edits_every_filter<D: Driver>(d: &mut D, _route: &str)
         d.exists(PANEL).await
     })
     .await?;
-    eventually_focused(d, &format!("{LINE_1} {PICKER}"), "the menu's Filter").await
+    eventually_focused(d, &format!("{LINE_1} {PICKER}"), "the menu's Filter").await?;
+    // A real press outside still closes the reopened panel.
+    d.click("#filters").await?;
+    eventually(d, "the panel closed by a press outside", async |d| {
+        Ok(!d.exists(PANEL).await?)
+    })
+    .await
 }
 
 /// Waits for the open menu's entry reading `label`; todo 1502: the entries, not only its first.
