@@ -1,10 +1,14 @@
+use super::slider_demo::{
+    Quality, bound_code, continuous, continuous_marks, discrete, discrete_marks, is_on,
+    mark_values, marks_code, max_options, min_options, number, number_code, quality_code,
+    quality_of, within,
+};
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::components::SliderPart;
 use libero::{
     components::{
-        Code, FieldStatus, Flex, Slider, SliderChangeEvent, SliderMark, SliderSegment, SliderTrack,
-        SliderValue, Text,
+        Code, FieldStatus, Flex, Slider, SliderChangeEvent, SliderSegment, SliderTrack, Text,
     },
     sx::sx,
     use_theme,
@@ -32,55 +36,6 @@ fn bars_code(_control: &Control, values: &DemoValues) -> Vec<String> {
     }
 }
 
-/// The demo's own discrete type, so the code block can show the derive that
-/// makes it one - the preview slides over exactly this enum.
-#[derive(Clone, Copy, Debug, PartialEq, SliderValue)]
-enum Quality {
-    Low,
-    Medium,
-    High,
-    #[slider(label = "Max")]
-    Ultra,
-}
-
-impl Quality {
-    const ALL: [&'static str; 4] = ["low", "medium", "high", "ultra"];
-
-    fn parse(value: &str) -> Self {
-        match value {
-            "low" => Self::Low,
-            "medium" => Self::Medium,
-            "high" => Self::High,
-            _ => Self::Ultra,
-        }
-    }
-}
-
-/// Printed above the rsx in discrete mode: without the derive there is no
-/// discrete slider, so it is part of the example, not a separate section.
-const QUALITY: &str = r#"#[derive(Clone, Copy, Debug, PartialEq, SliderValue)]
-enum Quality {
-    Low,
-    Medium,
-    High,
-    #[slider(label = "Max")]
-    Ultra,
-}
-
-"#;
-
-fn discrete(values: &DemoValues) -> bool {
-    values.str("mode") == "discrete"
-}
-
-fn continuous(values: &DemoValues) -> bool {
-    !discrete(values)
-}
-
-fn is_on(values: &DemoValues, name: &str) -> bool {
-    values.str(name) == "true"
-}
-
 /// The value type decides `value`, `oninput` and the name the thumb reports,
 /// so the mode control prints all three.
 fn mode_code(_control: &Control, values: &DemoValues) -> Vec<String> {
@@ -100,21 +55,6 @@ fn mode_code(_control: &Control, values: &DemoValues) -> Vec<String> {
     }
 }
 
-/// A bound in the value's own type. Quiet at the option the slider would pick
-/// anyway - the first for `min`, the last for `max`.
-fn bound_code(control: &Control, values: &DemoValues) -> Vec<String> {
-    let value = values.str(control.name);
-    match continuous(values) || value == control.default {
-        true => vec![],
-        false => vec![format!(
-            "{}: Quality::{}{}",
-            control.name,
-            value[..1].to_uppercase(),
-            &value[1..]
-        )],
-    }
-}
-
 /// A stride over the options - `1` is every one of them, which is the default.
 fn stride_code(control: &Control, values: &DemoValues) -> Vec<String> {
     if continuous(values) {
@@ -126,42 +66,6 @@ fn stride_code(control: &Control, values: &DemoValues) -> Vec<String> {
     }
 }
 
-/// `min`/`max`/`step` print as unquoted floats, under their real prop names -
-/// the control is `min_value` only because the discrete `min` owns that name.
-fn number_code(control: &Control, values: &DemoValues) -> Vec<String> {
-    if discrete(values) {
-        return vec![];
-    }
-    match values.str(control.name).as_str() {
-        "auto" => vec![],
-        value => vec![format!(
-            "{}: {value}",
-            control.name.trim_end_matches("_value")
-        )],
-    }
-}
-
-fn number(values: &DemoValues, name: &str) -> Option<f64> {
-    values.str(name).parse::<f64>().ok()
-}
-
-/// `min` offers the qualities below `max`, and `max` those above `min`: the bounds never cross.
-fn min_options(values: &DemoValues) -> Vec<String> {
-    let max = Quality::parse(&values.str("max")) as usize;
-    Quality::ALL[..max]
-        .iter()
-        .map(|quality| quality.to_string())
-        .collect()
-}
-
-fn max_options(values: &DemoValues) -> Vec<String> {
-    let min = Quality::parse(&values.str("min")) as usize;
-    Quality::ALL[min + 1..]
-        .iter()
-        .map(|quality| quality.to_string())
-        .collect()
-}
-
 /// The continuous twins of `min_options` and `max_options`; `auto` is 0 and 100.
 fn min_value_options(values: &DemoValues) -> Vec<String> {
     let max = number(values, "max_value").unwrap_or(100.0);
@@ -171,43 +75,6 @@ fn min_value_options(values: &DemoValues) -> Vec<String> {
 fn max_value_options(values: &DemoValues) -> Vec<String> {
     let min = number(values, "min_value").unwrap_or(0.0);
     within(&MAX_VALUES, |max| max > min)
-}
-
-/// `auto`, and the numbers `keep` accepts.
-fn within(options: &[&str], keep: impl Fn(f64) -> bool) -> Vec<String> {
-    options
-        .iter()
-        .filter(|option| option.parse().map_or(true, &keep))
-        .map(|option| option.to_string())
-        .collect()
-}
-
-/// Ticks at both ends and the midpoint of the *current* range - a mark at 50
-/// means nothing on a 0.5-to-3 slider.
-fn mark_values(values: &DemoValues) -> [f64; 3] {
-    let min = values.str("min_value").parse().unwrap_or(0.0);
-    let max = values.str("max_value").parse().unwrap_or(100.0);
-    [min, (min + max) / 2.0, max]
-}
-
-/// Discretely, `marks` *replaces* the one-per-option set the type derives;
-/// continuously there is nothing to derive, so it adds them.
-fn marks_code(_control: &Control, values: &DemoValues) -> Vec<String> {
-    if !is_on(values, "marks") {
-        return vec![];
-    }
-    match discrete(values) {
-        true => vec![
-            r#"marks: vec![SliderMark::labeled(Quality::Low, "cheap"), SliderMark::labeled(Quality::Ultra, "pricey")]"#
-                .to_string(),
-        ],
-        false => {
-            let [min, mid, max] = mark_values(values);
-            vec![format!(
-                "marks: vec![SliderMark::labeled({min:?}, \"{min}\"), SliderMark::new({mid:?}), SliderMark::labeled({max:?}, \"{max}\")]"
-            )]
-        }
-    }
 }
 
 /// On by default, so the gaps show; a `Bars` track draws no segments, so they go quiet there.
@@ -279,40 +146,12 @@ fn format_code(_control: &Control, values: &DemoValues) -> Vec<String> {
     }
 }
 
-fn quality_of(values: &DemoValues, name: &str) -> Quality {
-    Quality::parse(&values.str(name))
-}
-
-fn discrete_marks(values: &DemoValues) -> Vec<SliderMark<Quality>> {
-    match is_on(values, "marks") {
-        true => vec![
-            SliderMark::labeled(Quality::Low, "cheap"),
-            SliderMark::labeled(Quality::Ultra, "pricey"),
-        ],
-        false => Vec::new(),
-    }
-}
-
-fn continuous_marks(values: &DemoValues) -> Vec<SliderMark> {
-    match is_on(values, "marks") {
-        true => {
-            let [min, mid, max] = mark_values(values);
-            vec![
-                SliderMark::labeled(min, min.to_string()),
-                SliderMark::new(mid),
-                SliderMark::labeled(max, max.to_string()),
-            ]
-        }
-        false => Vec::new(),
-    }
-}
-
 /// The readout, the other half of a controlled slider: `Start`/`End` bracket a drag,
 /// `Change` carries each value. Printed too.
 fn wrap_readout(values: &DemoValues, code: &str) -> String {
     let (declaration, signal, last) = match discrete(values) {
-        true => (QUALITY, "quality():?", "last_quality()"),
-        false => ("", "volume()", "last()"),
+        true => (quality_code(), "quality():?", "last_quality()"),
+        false => (String::new(), "volume()", "last()"),
     };
     format!(
         "{declaration}Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    sx: sx().width(\"100%\"),\n{}    Text {{ size: \"sm\", \"value: {{{signal}}} - last event: {{{last}:?}}\" }}\n}}",

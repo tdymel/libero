@@ -1,11 +1,15 @@
+use super::slider_demo::{
+    Quality, bound_code, continuous, continuous_marks, discrete, discrete_marks, is_on, marks_code,
+    max_options, min_options, number, number_code, quality_code, quality_of, within,
+};
 use crate::components::{
-    Control, Demo, DemoFile, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls,
-    field_props, indent, prop, props, readonly_prop, status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls, field_props, indent,
+    prop, props, readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::SliderPart;
 use libero::{
-    components::{Code, Flex, RangeSlider, SliderChangeEvent, SliderMark, SliderValue, Text},
+    components::{Code, Flex, RangeSlider, SliderChangeEvent, Text},
     sx::sx,
     use_theme,
 };
@@ -20,49 +24,8 @@ impl FieldCopy for PriceCopy {
     const ERROR: &'static str = "Pick a narrower range.";
 }
 
-/// The page's own source: the printed parts are cut from its live demo.
-const FILE: DemoFile = DemoFile(include_str!("range_slider.rs"));
-
 const MIN_VALUES: [&str; 4] = ["auto", "0.0", "10.0", "50.0"];
 const MAX_VALUES: [&str; 4] = ["auto", "50.0", "100.0", "200.0"];
-
-/// The demo's own discrete type - a range slides over the same values a
-/// single-thumb `Slider` does. Printed above the rsx in discrete mode.
-// demo-code: quality start
-#[derive(Clone, Copy, Debug, PartialEq, SliderValue)]
-enum Quality {
-    Low,
-    Medium,
-    High,
-    #[slider(label = "Max")]
-    Ultra,
-}
-// demo-code: quality end
-
-impl Quality {
-    const ALL: [&'static str; 4] = ["low", "medium", "high", "ultra"];
-
-    fn parse(value: &str) -> Self {
-        match value {
-            "low" => Self::Low,
-            "medium" => Self::Medium,
-            "high" => Self::High,
-            _ => Self::Ultra,
-        }
-    }
-}
-
-fn discrete(values: &DemoValues) -> bool {
-    values.str("mode") == "discrete"
-}
-
-fn continuous(values: &DemoValues) -> bool {
-    !discrete(values)
-}
-
-fn is_on(values: &DemoValues, name: &str) -> bool {
-    values.str(name) == "true"
-}
 
 /// The value type decides `value`, `oninput` and what the thumbs report, so
 /// the mode control prints both.
@@ -81,36 +44,6 @@ fn mode_code(_control: &Control, values: &DemoValues) -> Vec<String> {
     }
 }
 
-/// A bound in the value's own type. Quiet at the option the range would pick
-/// anyway - the first for `min`, the last for `max`.
-fn bound_code(control: &Control, values: &DemoValues) -> Vec<String> {
-    let value = values.str(control.name);
-    match continuous(values) || value == control.default {
-        true => vec![],
-        false => vec![format!(
-            "{}: Quality::{}{}",
-            control.name,
-            value[..1].to_uppercase(),
-            &value[1..]
-        )],
-    }
-}
-
-/// Prints unquoted floats under the real prop names; the controls' `_value` suffix avoids
-/// clashing with the discrete `min` and `max`.
-fn number_code(control: &Control, values: &DemoValues) -> Vec<String> {
-    if discrete(values) {
-        return vec![];
-    }
-    match values.str(control.name).as_str() {
-        "auto" | "0.0" => vec![],
-        value => vec![format!(
-            "{}: {value}",
-            control.name.trim_end_matches("_value")
-        )],
-    }
-}
-
 /// Discretely, `min_range` is a count of options rather than a distance.
 fn min_range_code(control: &Control, values: &DemoValues) -> Vec<String> {
     if continuous(values) {
@@ -122,27 +55,6 @@ fn min_range_code(control: &Control, values: &DemoValues) -> Vec<String> {
     }
 }
 
-fn number(values: &DemoValues, name: &str) -> Option<f64> {
-    values.str(name).parse::<f64>().ok()
-}
-
-/// `min` offers the qualities below `max`, and `max` those above `min`: the bounds never cross.
-fn min_options(values: &DemoValues) -> Vec<String> {
-    let max = Quality::parse(&values.str("max")) as usize;
-    Quality::ALL[..max]
-        .iter()
-        .map(|quality| quality.to_string())
-        .collect()
-}
-
-fn max_options(values: &DemoValues) -> Vec<String> {
-    let min = Quality::parse(&values.str("min")) as usize;
-    Quality::ALL[min + 1..]
-        .iter()
-        .map(|quality| quality.to_string())
-        .collect()
-}
-
 /// The continuous twins of `min_options` and `max_options`; `auto` is 0 and 100.
 fn min_value_options(values: &DemoValues) -> Vec<String> {
     let max = number(values, "max_value").unwrap_or(100.0);
@@ -152,41 +64,6 @@ fn min_value_options(values: &DemoValues) -> Vec<String> {
 fn max_value_options(values: &DemoValues) -> Vec<String> {
     let min = number(values, "min_value").unwrap_or(0.0);
     within(&MAX_VALUES, |max| max > min)
-}
-
-/// `auto`, and the numbers `keep` accepts.
-fn within(options: &[&str], keep: impl Fn(f64) -> bool) -> Vec<String> {
-    options
-        .iter()
-        .filter(|option| option.parse().map_or(true, &keep))
-        .map(|option| option.to_string())
-        .collect()
-}
-
-/// Ticks at both ends and the midpoint of the *current* range - a mark at 50
-/// means nothing on a 0-to-10 slider.
-fn mark_values(values: &DemoValues) -> [f64; 3] {
-    let min = values.str("min_value").parse().unwrap_or(0.0);
-    let max = values.str("max_value").parse().unwrap_or(100.0);
-    [min, (min + max) / 2.0, max]
-}
-
-fn marks_code(_control: &Control, values: &DemoValues) -> Vec<String> {
-    if !is_on(values, "marks") {
-        return vec![];
-    }
-    match discrete(values) {
-        true => vec![
-            r#"marks: vec![SliderMark::labeled(Quality::Low, "cheap"), SliderMark::labeled(Quality::Ultra, "pricey")]"#
-                .to_string(),
-        ],
-        false => {
-            let [min, mid, max] = mark_values(values);
-            vec![format!(
-                "marks: vec![SliderMark::labeled({min:?}, \"{min}\"), SliderMark::new({mid:?}), SliderMark::labeled({max:?}, \"{max}\")]"
-            )]
-        }
-    }
 }
 
 fn format_code(_control: &Control, values: &DemoValues) -> Vec<String> {
@@ -204,42 +81,10 @@ fn format_code(_control: &Control, values: &DemoValues) -> Vec<String> {
     }
 }
 
-fn quality_of(values: &DemoValues, name: &str) -> Quality {
-    Quality::parse(&values.str(name))
-}
-
-fn discrete_marks(values: &DemoValues) -> Vec<SliderMark<Quality>> {
-    match is_on(values, "marks") {
-        true => vec![
-            SliderMark::labeled(Quality::Low, "cheap"),
-            SliderMark::labeled(Quality::Ultra, "pricey"),
-        ],
-        false => Vec::new(),
-    }
-}
-
-fn continuous_marks(values: &DemoValues) -> Vec<SliderMark> {
-    match is_on(values, "marks") {
-        true => {
-            let [min, mid, max] = mark_values(values);
-            vec![
-                SliderMark::labeled(min, min.to_string()),
-                SliderMark::new(mid),
-                SliderMark::labeled(max, max.to_string()),
-            ]
-        }
-        false => Vec::new(),
-    }
-}
-
 /// The readout, the other half of a controlled range, shows the thumbs never cross. Printed too.
 fn wrap_readout(values: &DemoValues, code: &str) -> String {
     let (declaration, signal, last) = match discrete(values) {
-        true => (
-            FILE.section("quality") + "\n\n",
-            "quality():?",
-            "last_quality()",
-        ),
+        true => (quality_code(), "quality():?", "last_quality()"),
         false => (String::new(), "price():?", "last()"),
     };
     format!(

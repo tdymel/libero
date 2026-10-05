@@ -28,6 +28,7 @@ mod rich_text_editor;
 mod segmented_control;
 mod select;
 mod slider;
+mod slider_demo;
 mod switch;
 mod tags_field;
 mod text_field;
