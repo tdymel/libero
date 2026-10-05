@@ -407,14 +407,14 @@ pub(crate) fn root_padding_right() -> Option<f64> {
     return None;
 }
 
-/// See [`visible_top`](crate::platform::visible_top).
-pub(crate) fn visible_top() -> super::Read<f64> {
+/// See [`visible_band`](crate::platform::visible_band).
+pub(crate) fn visible_band() -> super::Read<super::VisibleBand> {
     #[cfg(target_arch = "wasm32")]
-    return Box::pin(std::future::ready(Ok(web::visible_top())));
+    return Box::pin(std::future::ready(Ok(web::visible_band())));
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
-    return Box::pin(std::future::ready(Ok(0.0)));
+    return Box::pin(std::future::ready(Ok(super::VisibleBand::WHOLE)));
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
-    return webview::visible_top();
+    return webview::visible_band();
 }
 
 /// See [`color_scheme`](crate::platform::color_scheme).

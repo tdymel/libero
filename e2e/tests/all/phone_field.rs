@@ -163,6 +163,53 @@ fn the_country_list_stays_below_a_panned_visual_viewport_top() {
     });
 }
 
+/// Todo 2219: zoomed 3x and panned sideways to the number's end, the visual viewport starts
+/// far right of the layout left. The list must shift into the visible band, not stay out of sight.
+#[test]
+fn the_country_list_shifts_into_a_sideways_panned_visual_viewport() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetPageScaleFactorParams;
+    block_on(async {
+        let fixture = Fixture::open("/phone-field/low", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, PICKER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "!!document.querySelector('[role=listbox]')",
+            "the list",
+        )
+        .await
+        .unwrap();
+        page.execute(SetPageScaleFactorParams::new(3.0))
+            .await
+            .unwrap();
+        page.evaluate(format!(
+            "document.querySelector('{TEL}').scrollIntoView({{ block: 'nearest', inline: 'end' }})"
+        ))
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "visualViewport.offsetLeft > 100",
+            "a sideways panned visual viewport",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const v = visualViewport, list = document.querySelector('[data-slot=dropdown]');
+             if (!list || list.closest('[hidden]')) return false;
+             const r = list.getBoundingClientRect();
+             return r.width > 0 && r.left >= v.offsetLeft - 0.5 && r.left < v.offsetLeft + v.width; })()",
+            "the list inside the panned visual viewport",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("phone_field", "/phone-field")

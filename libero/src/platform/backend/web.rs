@@ -646,12 +646,20 @@ fn visible_bottom(window: &web_sys::Window) -> Option<f64> {
     Some(visual_read(window, "offsetTop")? + visual_read(window, "height")?)
 }
 
-/// The visual viewport's top in layout coordinates: mobile Chrome pans it down to keep a
-/// focused field visible.
-pub(super) fn visible_top() -> f64 {
-    web_sys::window()
-        .and_then(|window| visual_read(&window, "offsetTop"))
-        .map_or(0.0, |top| top.max(0.0))
+/// The visual viewport's edges in layout coordinates: mobile Chrome pans it down to keep a
+/// focused field visible, a pinch zoom sideways too.
+pub(super) fn visible_band() -> crate::platform::VisibleBand {
+    let whole = crate::platform::VisibleBand::WHOLE;
+    let Some(window) = web_sys::window() else {
+        return whole;
+    };
+    let read = |name| visual_read(&window, name);
+    let left = read("offsetLeft").map_or(0.0, |left| left.max(0.0));
+    crate::platform::VisibleBand {
+        left,
+        top: read("offsetTop").map_or(0.0, |top| top.max(0.0)),
+        right: read("width").map_or(whole.right, |width| left + width),
+    }
 }
 
 pub(super) fn on_viewport_resize(callback: Box<dyn Fn()>) -> Option<Box<dyn ScrollSubscription>> {

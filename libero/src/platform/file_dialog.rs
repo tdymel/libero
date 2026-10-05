@@ -1,4 +1,8 @@
-use std::{cell::Cell, future::Future, pin::Pin};
+use std::{
+    future::Future,
+    pin::Pin,
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 use dioxus::html::FileData;
 
@@ -54,7 +58,7 @@ pub(crate) fn pick_files(
     match file_dialog() {
         // One dialog at a time: a WebView hears one press from the button and
         // again from the group around it (`nested_interactive` is `false` there).
-        Some(_) if PICKING.get() => {}
+        Some(_) if PICKING.load(Ordering::Relaxed) => {}
         Some(dialog) => {
             let picked = dialog.open(accept, multiple, capture);
             let picking = Picking::start();
@@ -68,23 +72,22 @@ pub(crate) fn pick_files(
     }
 }
 
-thread_local! {
-    static PICKING: Cell<bool> = const { Cell::new(false) };
-}
+/// Process-wide: Android starts a pick on its event thread and ends it on the render thread (2217).
+static PICKING: AtomicBool = AtomicBool::new(false);
 
 /// Holds [`PICKING`] until dropped, also when the field unmounts mid-pick.
 struct Picking;
 
 impl Picking {
     fn start() -> Self {
-        PICKING.set(true);
+        PICKING.store(true, Ordering::Relaxed);
         Picking
     }
 }
 
 impl Drop for Picking {
     fn drop(&mut self) {
-        PICKING.set(false);
+        PICKING.store(false, Ordering::Relaxed);
     }
 }
 

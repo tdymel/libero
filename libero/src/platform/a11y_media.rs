@@ -2,7 +2,7 @@
 //! whose stylo can't match them (drop once it can, 954), and for forced motion.
 
 use std::borrow::Cow;
-use std::cell::Cell;
+use std::sync::{Mutex, PoisonError};
 
 use super::backend;
 use crate::tokens::{AccessibilityPreferences, Contrast};
@@ -193,17 +193,21 @@ pub(crate) fn answer_a11y_media<'a>(css: &'a str, answers: &A11yAnswers) -> Cow<
     Cow::Owned(answered)
 }
 
-thread_local! {
-    static CURRENT: Cell<A11yAnswers> = Cell::new(A11yAnswers::default());
-}
+/// Process-wide: Android reads it from handlers on another thread than render (2215).
+static CURRENT: Mutex<A11yAnswers> = Mutex::new(A11yAnswers {
+    reduced_motion: None,
+    forced_colors: None,
+    contrast: None,
+    reduced_transparency: None,
+});
 
 /// What `LiberoProvider` answered last, for motion started from Rust.
 pub(crate) fn current_a11y_answers() -> A11yAnswers {
-    CURRENT.get()
+    *CURRENT.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 pub(crate) fn set_current_a11y_answers(answers: A11yAnswers) {
-    CURRENT.set(answers);
+    *CURRENT.lock().unwrap_or_else(PoisonError::into_inner) = answers;
 }
 
 #[cfg(test)]

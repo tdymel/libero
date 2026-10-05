@@ -21,8 +21,8 @@ use crate::{
         use_subscription_slot,
     },
     platform::{
-        Dimensions, ElementApi, ScrollSubscription, document, focus_is_in, on_viewport_resize,
-        reads_dom_synchronously, scroll, visible_top, when_laid_out,
+        Dimensions, ElementApi, ScrollSubscription, VisibleBand, document, focus_is_in,
+        on_viewport_resize, reads_dom_synchronously, scroll, visible_band, when_laid_out,
     },
     theme::CssVar,
     utils::bump,
@@ -315,7 +315,7 @@ pub(crate) fn use_popover_on(
         let anchor_offset = anchor.client_offset();
         let floating_size = floating.dimensions();
         let viewport = document.viewport();
-        let top = visible_top();
+        let band = visible_band();
         let rtl = anchor.is_rtl();
         let waited = waited.clone();
         let capped = capped.clone();
@@ -337,8 +337,11 @@ pub(crate) fn use_popover_on(
             ) else {
                 return;
             };
-            // A panned visual viewport (todo 2200): place in the visible part, shifted back below.
-            let top = top.await.unwrap_or(0.0).min(viewport.height);
+            // A panned visual viewport (todos 2200, 2219): place in the visible part, shifted back below.
+            let band = band.await.unwrap_or(VisibleBand::WHOLE);
+            let top = band.top.min(viewport.height);
+            let left = band.left.min(viewport.width);
+            let right = band.right.clamp(left, viewport.width);
             // Not laid out yet (native shell): a 0x0 box placed at the anchor's
             // edge overflows, so wait for layout, a few times at most (todo 896).
             let tries = waited.get();
@@ -373,16 +376,21 @@ pub(crate) fn use_popover_on(
             }
             // A scroll that moved nothing (a listbox's own) must not redraw the consumer.
             let visible = Dimensions {
+                width: right - left,
                 height: viewport.height - top,
-                ..viewport
             };
             let mut next = place(
-                Rect { y: y - top, ..rect },
+                Rect {
+                    x: x - left,
+                    y: y - top,
+                    ..rect
+                },
                 floating_size,
                 visible,
                 &options,
                 rtl,
             );
+            next.x += left;
             next.y += top;
             // Taller than the room: a box capping itself at it shrinks, and above
             // its anchor its top follows the new height. Once per open.

@@ -282,13 +282,19 @@ impl ScrollApi for WebViewScroll {
     }
 }
 
-/// The visual viewport's top in layout coordinates, 0 where none is panned.
-pub(super) fn visible_top() -> Read<f64> {
-    let read = eval("return Math.max(0, window.visualViewport?.offsetTop ?? 0);");
+/// The visual viewport's edges in layout coordinates, the whole viewport where none is panned.
+pub(super) fn visible_band() -> Read<crate::platform::VisibleBand> {
+    let read = eval(
+        "const visual = window.visualViewport;
+        const left = Math.max(0, visual?.offsetLeft ?? 0);
+        return [left, Math.max(0, visual?.offsetTop ?? 0), visual ? left + visual.width : window.innerWidth];",
+    );
     Box::pin(async move {
-        read.join::<f64>()
+        let (left, top, right) = read
+            .join::<(f64, f64, f64)>()
             .await
-            .map_err(|_| PlatformError::Unsupported)
+            .map_err(|_| PlatformError::Unsupported)?;
+        Ok(crate::platform::VisibleBand { left, top, right })
     })
 }
 

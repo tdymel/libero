@@ -29,10 +29,27 @@ pub fn document() -> Option<&'static dyn DocumentApi> {
     backend::document()
 }
 
-/// The visible viewport's top in layout coordinates: above 0 where the browser panned
-/// the visual viewport down (a focused field over a soft keyboard, a pinch zoom).
-pub(crate) fn visible_top() -> Read<f64> {
-    backend::visible_top()
+/// The visual viewport's edges in layout coordinates, where the browser panned it
+/// (a focused field over a soft keyboard, a pinch zoom).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct VisibleBand {
+    pub(crate) left: f64,
+    pub(crate) top: f64,
+    /// `f64::INFINITY` where no visual viewport narrows the layout one.
+    pub(crate) right: f64,
+}
+
+impl VisibleBand {
+    pub(crate) const WHOLE: Self = Self {
+        left: 0.0,
+        top: 0.0,
+        right: f64::INFINITY,
+    };
+}
+
+/// See [`VisibleBand`]: the whole viewport where nothing is panned.
+pub(crate) fn visible_band() -> Read<VisibleBand> {
+    backend::visible_band()
 }
 
 /// `:root`'s computed `padding-right` in px, where the renderer can tell (the web).

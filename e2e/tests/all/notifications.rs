@@ -3,6 +3,7 @@
 
 use e2e::browser::block_on;
 use e2e::clock::HELD_CLOCK;
+use e2e::driver::{Driver, eventually};
 use e2e::passes::{keyboard, pointer};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, js, wait};
@@ -627,6 +628,32 @@ const F8: keyboard::Key = keyboard::Key {
     vk: 119,
     text: None,
 };
+
+/// Todo 2216: Android hears the key on another thread than the effect that registers the
+/// host; F8 must still find it.
+async fn f8_reaches_the_newest<D: Driver>(d: &mut D, _route: &str) -> anyhow::Result<()> {
+    d.click(TRIGGER).await?;
+    eventually(d, "two notifications", async |d| {
+        Ok(d.evaluate("document.querySelectorAll('.clear-all').length")
+            .await?
+            == 2)
+    })
+    .await?;
+    d.press(F8).await?;
+    eventually(d, "F8 to focus the newest notification", async |d| {
+        let probe =
+            "document.activeElement?.closest('li')?.textContent.includes('Second') ?? false";
+        Ok(d.evaluate(probe).await? == true)
+    })
+    .await
+}
+
+e2e::scenario!(
+    f8_focuses_the_newest_notification_on_the_event_thread,
+    "/notifications-clear",
+    f8_reaches_the_newest,
+    android_only("2216: the split event thread is Android's; the web test above covers F8")
+);
 
 /// Todo 575: F8 focuses the newest notification, and closing it returns focus to where F8
 /// was pressed. The region names the key.

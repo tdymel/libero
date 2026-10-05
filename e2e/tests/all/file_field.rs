@@ -89,6 +89,23 @@ e2e::scenario!(
     desktop: skip("1126: the GTK file chooser is not driven")
 );
 
+/// Todo 2217: Android starts a pick on its event thread and ends it on the render thread;
+/// the one-dialog latch must clear across both, so a second Browse opens again.
+async fn picks_twice<D: Driver>(d: &mut D, route: &str) -> Result<()> {
+    picks_and_reads(d, route).await?;
+    d.choose_files("#receipt", &[("again.txt", "picked a second time")])
+        .await?;
+    eventually_text(d, "#read", "picked a second time", "a second pick").await
+}
+
+e2e::scenario!(
+    browse_picks_a_second_time,
+    "/file-field/pick",
+    picks_twice,
+    native: skip("rfd opens the desktop portal's dialog, which no driver answers"),
+    desktop: skip("1126: the GTK file chooser is not driven")
+);
+
 /// WCAG 1.4.11: the dashed border is all that shows the dropzone's extent
 /// (todo 490).
 #[test]

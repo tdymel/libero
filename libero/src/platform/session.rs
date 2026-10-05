@@ -1,10 +1,16 @@
 //! Values kept for the session: `sessionStorage` on the web, so a reload keeps
 //! them; memory elsewhere, for the app's lifetime.
 
+/// Process-wide: Android runs handlers and render on two threads (2217).
 #[cfg(not(target_arch = "wasm32"))]
-thread_local! {
-    static VALUES: std::cell::RefCell<std::collections::HashMap<String, String>> =
-        Default::default();
+static VALUES: std::sync::Mutex<std::collections::BTreeMap<String, String>> =
+    std::sync::Mutex::new(std::collections::BTreeMap::new());
+
+#[cfg(not(target_arch = "wasm32"))]
+fn values() -> std::sync::MutexGuard<'static, std::collections::BTreeMap<String, String>> {
+    VALUES
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 /// The value stored under `key`, if any.
@@ -12,7 +18,7 @@ pub(crate) fn session_get(key: &str) -> Option<String> {
     #[cfg(target_arch = "wasm32")]
     return storage()?.get_item(key).ok().flatten();
     #[cfg(not(target_arch = "wasm32"))]
-    VALUES.with(|values| values.borrow().get(key).cloned())
+    values().get(key).cloned()
 }
 
 /// Stores `value` under `key`. A full or refused storage keeps nothing.
@@ -22,11 +28,7 @@ pub(crate) fn session_set(key: &str, value: &str) {
         let _ = storage.set_item(key, value);
     }
     #[cfg(not(target_arch = "wasm32"))]
-    VALUES.with(|values| {
-        values
-            .borrow_mut()
-            .insert(key.to_string(), value.to_string())
-    });
+    values().insert(key.to_string(), value.to_string());
 }
 
 #[cfg(target_arch = "wasm32")]
