@@ -10,6 +10,7 @@ use libero::{
     LiberoProvider,
     components::{TourOptions, TourStep, TourView, use_tour},
     localization::Localization,
+    theme::Direction,
 };
 
 #[derive(Clone, Copy)]
@@ -19,6 +20,8 @@ enum Move {
     Prev,
     GoTo(usize),
     Close,
+    /// Takes every step away.
+    Empty,
 }
 
 thread_local! {
@@ -30,6 +33,11 @@ thread_local! {
     static CHANGES: RefCell<Vec<usize>> = const { RefCell::new(Vec::new()) };
     static FINISHED: Cell<u32> = const { Cell::new(0) };
     static CLOSED: RefCell<Vec<usize>> = const { RefCell::new(Vec::new()) };
+    /// Moves made after the first render, once the layer is up.
+    static LATER: RefCell<Vec<Move>> = const { RefCell::new(Vec::new()) };
+    static KEYBOARD_OFF: Cell<bool> = const { Cell::new(false) };
+    static RTL: Cell<bool> = const { Cell::new(false) };
+    static OPEN: Cell<bool> = const { Cell::new(false) };
 }
 
 fn steps() -> Vec<TourStep> {
@@ -58,8 +66,10 @@ fn custom_card(view: TourView) -> Element {
 
 #[component]
 fn Tour() -> Element {
+    let mut empty = use_signal(|| false);
     let tour = use_tour(TourOptions {
-        steps: steps(),
+        steps: if empty() { Vec::new() } else { steps() },
+        keyboard: !KEYBOARD_OFF.get(),
         current: CURRENT.get(),
         onchange: Some(Callback::new(|index| {
             CHANGES.with(|c| c.borrow_mut().push(index))
@@ -71,17 +81,27 @@ fn Tour() -> Element {
         card: CUSTOM.get().then(|| Callback::new(custom_card)),
         ..Default::default()
     });
+    let mut make = move |step: Move| match step {
+        Move::Start => tour.start(),
+        Move::Next => tour.next(),
+        Move::Prev => tour.prev(),
+        Move::GoTo(index) => tour.go_to(index),
+        Move::Close => tour.close(),
+        Move::Empty => empty.set(true),
+    };
     use_hook(|| {
-        for step in MOVES.with(|moves| moves.borrow().clone()) {
-            match step {
-                Move::Start => tour.start(),
-                Move::Next => tour.next(),
-                Move::Prev => tour.prev(),
-                Move::GoTo(index) => tour.go_to(index),
-                Move::Close => tour.close(),
-            }
-        }
+        MOVES
+            .with(|moves| moves.borrow().clone())
+            .into_iter()
+            .for_each(&mut make)
     });
+    use_effect(move || {
+        LATER
+            .with(|later| later.take())
+            .into_iter()
+            .for_each(&mut make)
+    });
+    OPEN.set(tour.is_open());
     rsx! {}
 }
 
@@ -90,8 +110,12 @@ fn app() -> Element {
         true => &Localization::GERMAN,
         false => &Localization::ENGLISH,
     };
+    let direction = match RTL.get() {
+        true => Direction::Rtl,
+        false => Direction::Ltr,
+    };
     rsx! {
-        LiberoProvider { localization, Tour {} }
+        LiberoProvider { localization, direction, Tour {} }
     }
 }
 
@@ -104,6 +128,10 @@ fn reset() {
     CHANGES.with(|c| c.borrow_mut().clear());
     FINISHED.set(0);
     CLOSED.with(|c| c.borrow_mut().clear());
+    LATER.with(|later| later.borrow_mut().clear());
+    KEYBOARD_OFF.set(false);
+    RTL.set(false);
+    OPEN.set(false);
 }
 
 fn rendered(moves: &[Move]) -> String {
@@ -111,7 +139,7 @@ fn rendered(moves: &[Move]) -> String {
     let mut dom = VirtualDom::new(app);
     dom.rebuild_in_place();
     // The start lands after the slot was published empty.
-    for _ in 0..3 {
+    for _ in 0..4 {
         dom.render_immediate(&mut dioxus::core::NoOpMutations);
     }
     body(&dioxus_ssr::render(&dom))
@@ -285,4 +313,76 @@ fn german_words_reach_the_card() {
     assert!(html.contains(">Weiter<") && html.contains(">Zurück<"));
     assert!(html.contains(">Überspringen<"));
     assert!(html.contains(r#"aria-label="Rundgang schließen""#));
+}
+
+#[test]
+fn the_card_names_its_arrow_keys_next_first() {
+    reset();
+    let html = rendered(&[Move::Start]);
+    let card = tags_with(&html, r#"role="dialog""#)[0].to_string();
+    assert!(
+        card.contains(r#"aria-keyshortcuts="ArrowRight ArrowLeft""#),
+        "{card}"
+    );
+
+    reset();
+    RTL.set(true);
+    let html = rendered(&[Move::Start]);
+    let card = tags_with(&html, r#"role="dialog""#)[0].to_string();
+    assert!(
+        card.contains(r#"aria-keyshortcuts="ArrowLeft ArrowRight""#),
+        "{card}"
+    );
+
+    reset();
+    KEYBOARD_OFF.set(true);
+    let html = rendered(&[Move::Start]);
+    assert!(!html.contains("aria-keyshortcuts"), "{html}");
+
+    reset();
+    CUSTOM.set(true);
+    let html = rendered(&[Move::Start]);
+    let card = tags_with(&html, r#"role="dialog""#)[0].to_string();
+    assert!(card.contains("aria-keyshortcuts"), "{card}");
+}
+
+#[test]
+fn a_hole_without_size_has_no_ring() {
+    reset();
+    let html = rendered(&[Move::Start]);
+    assert!(
+        !slot(&html, "highlight").unwrap().contains("data-ringed"),
+        "{html}"
+    );
+}
+
+#[test]
+fn only_a_step_change_lets_the_hole_glide() {
+    reset();
+    let html = rendered(&[Move::Start]);
+    assert!(
+        !slot(&html, "highlight").unwrap().contains("data-moving"),
+        "{html}"
+    );
+
+    reset();
+    LATER.with(|later| *later.borrow_mut() = vec![Move::Next]);
+    let html = rendered(&[Move::Start]);
+    assert_eq!(slot_text(&html, "progress"), "2 of 3");
+    assert!(
+        slot(&html, "highlight")
+            .unwrap()
+            .contains(r#"data-moving="true""#),
+        "{html}"
+    );
+}
+
+#[test]
+fn steps_going_empty_close_the_tour() {
+    reset();
+    LATER.with(|later| *later.borrow_mut() = vec![Move::Next, Move::Empty]);
+    let html = rendered(&[Move::Start]);
+    assert!(!html.contains("data-lsx-tour"), "{html}");
+    assert!(!OPEN.get(), "the handle still says open");
+    assert_eq!(CLOSED.with(|c| c.borrow().clone()), [0]);
 }

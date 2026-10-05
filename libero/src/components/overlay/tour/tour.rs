@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 
 use super::{
     TourStep,
-    geometry::{highlight_style, hole_rect, remeasure_key},
+    geometry::{has_size, highlight_style, hole_rect, remeasure_key},
 };
 use crate::{
     components::{
@@ -17,18 +17,20 @@ use crate::{
         layout::{self, use_box},
         overlay::Dialog,
     },
+    context::LiberoContext,
     hooks::{
-        ElementHandle, ElementRect, FocusReturn, PopoverOptions, escape_closes, use_back,
-        use_dismiss_layer, use_element, use_element_rect, use_focus_return, use_id,
-        use_localization, use_popover_on, use_portal_slot, use_theme,
+        ElementHandle, ElementRect, FocusReturn, POPOVER_AVAILABLE_HEIGHT, PopoverOptions, Rect,
+        escape_closes, use_back, use_dismiss_layer, use_element, use_element_rect,
+        use_focus_return, use_id, use_localization, use_popover_on, use_portal_slot, use_scheduled,
+        use_theme,
     },
     localization::fill,
     platform::{
         ElementApi, KeyChord, OBSERVE_ATTR, arrow_target, focus_first_of, key_taken, keyboard,
         logical_key, prefers_reduced_motion, scroll_chain_into_view, typing_target,
     },
-    sx::{REDUCED_MOTION, StaticSx, Sx, sx},
-    theme::{OVERLAY_OPACITY, Z_INDEX_POPOVER},
+    sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, Sx, sx},
+    theme::{Direction, OVERLAY_OPACITY, Z_INDEX_POPOVER},
     utils::{bump, warn},
 };
 
@@ -60,6 +62,7 @@ parts_enum! {
 
 // The popover layer, so a target inside a modal is covered too.
 static TOUR_SX: StaticSx = StaticSx::new(|| {
+    let dim = format!("0 0 0 100vmax rgba(0, 0, 0, {})", OVERLAY_OPACITY.value());
     // On a `FocusTrap`, so `display` beats its `contents`.
     sx().display("block")
         .position("fixed")
@@ -75,11 +78,18 @@ static TOUR_SX: StaticSx = StaticSx::new(|| {
             "& > [data-slot='highlight']",
             sx().position("fixed")
                 .pointer_events("none")
-                .box_shadow(format!(
-                    "0 0 0 100vmax rgba(0, 0, 0, {})",
-                    OVERLAY_OPACITY.value()
-                ))
-                .transition("left 0.2s ease, top 0.2s ease, width 0.2s ease, height 0.2s ease")
+                .box_shadow(dim.clone()),
+        )
+        // A sized hole's own edge: on a dark page the dim alone is about 1.3:1 (1.4.11).
+        .selector(
+            "& > [data-slot='highlight'][data-ringed]",
+            sx().box_shadow(format!("0 0 0 2px currentColor, {dim}"))
+                .media(FORCED_COLORS, sx().outline("2px solid CanvasText")),
+        )
+        // Glides to a new step's target only; a scroll or resize remeasure follows at once.
+        .selector(
+            "& > [data-slot='highlight'][data-moving]",
+            sx().transition("left 0.2s ease, top 0.2s ease, width 0.2s ease, height 0.2s ease")
                 .media(REDUCED_MOTION, sx().transition("none")),
         )
         .selector("& > [data-slot='positioner']", sx().pointer_events("none"))
@@ -89,21 +99,30 @@ static TOUR_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
+/// How long a step change may take to glide the hole before it stops waiting for `transitionend`.
+const HOLE_GLIDE_FALLBACK_MS: u64 = 500;
+
 // No pointer events: presses beside the card reach the mask.
 static CENTRED_SX: StaticSx = StaticSx::new(|| {
     sx().position("fixed")
         .inset("0")
         .display("flex")
-        .align_items("center")
+        // `safe`: a card taller than the viewport starts at the top, not clipped at both ends.
+        .align_items("safe center")
         .justify_content("center")
         .padding("md")
+        // The card's cap: this box's height inside the padding.
+        .var(POPOVER_AVAILABLE_HEIGHT, "100%")
 });
 
 static PLACED_SX: StaticSx = StaticSx::new(|| sx().display("block"));
 
+// Never past the room on its side: it scrolls instead (WCAG 1.4.10).
 static CARD_SX: StaticSx = StaticSx::new(|| {
     sx().margin("0")
         .max_width("100%")
+        .max_height(POPOVER_AVAILABLE_HEIGHT.value_or("none"))
+        .overflow_y("auto")
         .selector("& > [data-slot='body']", sx().margin_bottom("md"))
         .selector(
             "& > [data-slot='footer']",
@@ -439,6 +458,14 @@ pub fn use_tour(options: TourOptions) -> TourHandle {
         }
     });
 
+    // Steps gone while open end the tour, or it would stay open with nothing shown.
+    let total = options.steps.len();
+    use_effect(use_reactive!(|total| {
+        if total == 0 && *open.peek() {
+            handle.close();
+        }
+    }));
+
     let slot = use_portal_slot();
     let shown = open() && !options.steps.is_empty();
     slot.show(shown.then(|| {
@@ -491,25 +518,56 @@ fn TourLayer(act: Callback<Move>, index: usize, options: TourOptions) -> Element
 
     let rect = use_element_rect(step.target, true);
     let padding = step.padding.unwrap_or(defaults.padding);
-    let measured = match rect() {
-        ElementRect::At { rect, viewport } => Some((rect, viewport)),
+    // Still 0x0 after the hook's laid-out tries: mounted but not rendered (`display: none`).
+    let measured = match rect {
+        ElementRect::At { rect, viewport } if rect.width > 0.0 || rect.height > 0.0 => {
+            Some((rect, viewport))
+        }
         _ => None,
     };
     let hole = step
         .target
         .and(measured)
         .map(|(rect, viewport)| hole_rect(rect, padding, viewport));
-    // No target, or one that never mounted: the card waits in the middle.
-    let missing = step.target.is_some() && rect() == ElementRect::Missing;
+    // While a new target is measured the hole stays put, and glides on from there.
+    let last_hole = use_hook(|| Rc::new(Cell::new(None::<Rect>)));
+    let hole = match rect {
+        ElementRect::Pending if step.target.is_some() => last_hole.get(),
+        _ => hole,
+    };
+    last_hole.set(hole);
+    // No target, or one that never mounted or renders nothing: the card waits in the middle.
+    let missing = step.target.is_some()
+        && match rect {
+            ElementRect::Missing => true,
+            ElementRect::At { .. } => measured.is_none(),
+            ElementRect::Pending => false,
+        };
     let centred = step.target.is_none() || missing;
     let key = step.key.clone();
     use_effect(use_reactive!(|missing, key| {
         if missing {
             warn(&format!(
-                "use_tour: step \"{key}\"'s target is not mounted, so its card shows in the middle."
+                "use_tour: step \"{key}\"'s target is not mounted or not rendered, so its card shows in the middle."
             ));
         }
     }));
+
+    // Set on a step change until the hole's glide ends; the fallback serves a renderer without `transitionend`.
+    let mut latest_index = use_hook(|| CopyValue::new(index));
+    latest_index.set(index);
+    let mut arrived = use_signal(|| index);
+    let land = use_scheduled(move |_| {
+        let index = *latest_index.peek();
+        if *arrived.peek() != index {
+            arrived.set(index);
+        }
+    });
+    use_effect(use_reactive!(|index| {
+        let _ = index;
+        land.after(HOLE_GLIDE_FALLBACK_MS);
+    }));
+    let moving = arrived() != index;
 
     let keyboard_on = options.keyboard;
     let mask_click = options.mask_click;
@@ -528,9 +586,10 @@ fn TourLayer(act: Callback<Move>, index: usize, options: TourOptions) -> Element
         {
             return;
         }
+        // A held arrow steps once: a repeat would run on to the last step and finish.
         match logical_key(&event) {
-            Key::ArrowRight => act.call(Move::Next),
-            Key::ArrowLeft => act.call(Move::Prev),
+            Key::ArrowRight if !event.is_auto_repeating() => act.call(Move::Next),
+            Key::ArrowLeft if !event.is_auto_repeating() => act.call(Move::Prev),
             _ => {}
         }
     });
@@ -567,7 +626,17 @@ fn TourLayer(act: Callback<Move>, index: usize, options: TourOptions) -> Element
                     MaskClick::Next => act.call(Move::Next),
                 },
             }
-            div { "data-slot": TourPart::Highlight.slot(), style }
+            div {
+                "data-slot": TourPart::Highlight.slot(),
+                "data-ringed": hole.is_some_and(has_size).then_some("true"),
+                "data-moving": moving.then_some("true"),
+                ontransitionend: move |_| {
+                    if *arrived.peek() != index {
+                        arrived.set(index);
+                    }
+                },
+                style,
+            }
             {card}
         }
     }
@@ -649,6 +718,13 @@ fn TourCard(
         .aria_label
         .clone()
         .or_else(|| step.title.is_none().then(|| labels.label.to_string()));
+    // Next's key first: under RTL that is ArrowLeft, as `logical_key` reads it.
+    let rtl = try_use_context::<LiberoContext>()
+        .is_some_and(|context| *context.direction.read() == Direction::Rtl);
+    let shortcuts = options.keyboard.then_some(match rtl {
+        true => "ArrowLeft ArrowRight",
+        false => "ArrowRight ArrowLeft",
+    });
 
     let positioned = use_box()
         .framework_sx(if centred { &CENTRED_SX } else { &PLACED_SX })
@@ -675,6 +751,7 @@ fn TourCard(
                     role: "dialog",
                     "aria-modal": "true",
                     "aria-label": name,
+                    "aria-keyshortcuts": shortcuts,
                     tabindex: "-1",
                     "data-autofocus": "true",
                     sx: card_sx,
@@ -696,6 +773,7 @@ fn TourCard(
                     onclose: move |_| act.call(Move::Close),
                     "aria-modal": "true",
                     "aria-describedby": body.is_some().then_some(body_id()),
+                    "aria-keyshortcuts": shortcuts,
                     tabindex: "-1",
                     "data-autofocus": "true",
                     sx: card_sx,

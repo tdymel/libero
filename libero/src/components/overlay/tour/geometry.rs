@@ -17,6 +17,11 @@ pub(super) fn hole_rect(target: Rect, padding: f64, viewport: Dimensions) -> Rec
     }
 }
 
+/// Whether `hole` has an area to ring; an off-screen target's sliver of an edge has none.
+pub(super) fn has_size(hole: Rect) -> bool {
+    hole.width > 0.0 && hole.height > 0.0
+}
+
 /// The highlight's `style`: the hole, or a zero-size box in the middle whose shadow
 /// dims everything. Every declaration on every render: a renderer never removes one.
 pub(super) fn highlight_style(hole: Option<Rect>, radius: f64) -> String {
@@ -81,6 +86,12 @@ mod tests {
         let hole = hole_rect(rect(100.0, 900.0, 80.0, 40.0), 6.0, VIEWPORT);
         assert_eq!((hole.width, hole.height), (92.0, 0.0));
         assert_eq!(hole.y, 600.0);
+        assert!(!has_size(hole), "a sliver on the edge takes no ring");
+        assert!(has_size(hole_rect(
+            rect(100.0, 50.0, 80.0, 40.0),
+            6.0,
+            VIEWPORT
+        )));
     }
 
     #[test]

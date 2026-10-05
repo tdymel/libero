@@ -12,7 +12,7 @@ button "Second"
 button "Third"
   StaticText "Third"
 paragraph
-dialog "First" [modal]
+dialog "First" [keyshortcuts=ArrowRight ArrowLeft] [modal]
   description "The first stop."
   heading "First" [level=2]
     StaticText "First"

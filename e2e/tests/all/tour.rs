@@ -56,7 +56,10 @@ e2e::scenario!(starting_a_tour_focuses_its_card, "/tour", focuses_the_card);
 
 async fn pads_the_target<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     open(d).await?;
-    hole_on(d, "#first", "starting the tour").await
+    hole_on(d, "#first", "starting the tour").await?;
+    // A hole with size draws its own edge (1.4.11).
+    let ringed = format!("{HIGHLIGHT}[data-ringed]");
+    eventually(d, "the hole's ring", async |d| d.exists(&ringed).await).await
 }
 
 e2e::scenario!(
@@ -300,10 +303,18 @@ fn a_growing_target_grows_the_hole() {
 /// debug build warns, so the console is allowed at close.
 #[test]
 fn a_missing_target_centres_the_card() {
+    centres_the_card("/tour/missing");
+}
+
+/// A target mounted under `display: none` measures 0x0: it takes the same middle card.
+#[test]
+fn a_hidden_target_centres_the_card() {
+    centres_the_card("/tour/hidden");
+}
+
+fn centres_the_card(route: &str) {
     block_on(async {
-        let fixture = Fixture::open("/tour/missing", Viewport::Desktop)
-            .await
-            .unwrap();
+        let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
         keyboard::press(page, keyboard::ENTER).await.unwrap();
@@ -324,10 +335,108 @@ fn a_missing_target_centres_the_card() {
             &format!("document.querySelector({HIGHLIGHT:?}).style.width"),
         )
         .await;
-        assert_eq!(hole, "0px", "a missing target left a hole");
+        assert_eq!(hole, "0px", "{route}: the target left a hole");
         fixture
             .close_allowing("the debug build warns of the missing target")
             .await
             .unwrap();
+    });
+}
+
+/// A held ArrowRight steps once: its auto-repeats would run on to the last step and finish.
+#[test]
+fn a_held_arrow_steps_once() {
+    block_on(async {
+        let fixture = Fixture::open("/tour", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        e2e::passes::focus::wait_for_focus(page, CARD, "starting the tour")
+            .await
+            .unwrap();
+        keyboard::hold(page, keyboard::ARROW_RIGHT, 0, 6)
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector({PROGRESS:?})?.textContent !== '1 of 3'"),
+            "the held ArrowRight to leave the first step",
+        )
+        .await
+        .unwrap();
+        let progress: String = js(
+            page,
+            &format!("document.querySelector({PROGRESS:?})?.textContent ?? 'closed'"),
+        )
+        .await;
+        assert_eq!(
+            progress, "2 of 3",
+            "a held ArrowRight stepped more than once"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
+/// At 320x256 CSS px, a 1280x1024 window at 400 % zoom, a long card stays inside the
+/// viewport and scrolls to its Next button, centred or placed (1.4.10).
+#[test]
+fn a_long_card_scrolls_in_a_short_viewport() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
+    block_on(async {
+        let fixture = Fixture::open("/tour/long", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute(SetDeviceMetricsOverrideParams::new(320, 256, 1.0, false))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "innerWidth === 320 && innerHeight === 256",
+            "the short viewport",
+        )
+        .await
+        .unwrap();
+        keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        for (step, progress) in [("centred", "1 of 2"), ("placed", "2 of 2")] {
+            e2e::passes::focus::wait_for_focus(page, CARD, step)
+                .await
+                .unwrap();
+            wait::for_js_true(
+                page,
+                &format!("document.querySelector({PROGRESS:?})?.textContent === '{progress}'"),
+                step,
+            )
+            .await
+            .unwrap();
+            // Inside the viewport, taller inside than out, and Next in reach once scrolled down.
+            let fits = format!(
+                "(() => {{ const c = document.querySelector({CARD:?}); const r = c.getBoundingClientRect(); \
+                 if (r.top < -0.5 || r.bottom > innerHeight + 0.5 || c.scrollHeight <= c.clientHeight) return false; \
+                 c.scrollTop = c.scrollHeight; \
+                 const n = document.querySelector({NEXT:?}).getBoundingClientRect(); \
+                 return n.top >= r.top - 0.5 && n.bottom <= r.bottom + 0.5 && n.bottom <= innerHeight + 0.5; }})()"
+            );
+            if let Err(e) =
+                wait::for_js_true(page, &fits, &format!("the {step} card to fit and scroll")).await
+            {
+                let seen: String = js(
+                    page,
+                    &format!(
+                        "(() => {{ const c = document.querySelector({CARD:?}); const r = c.getBoundingClientRect(); \
+                         const n = document.querySelector({NEXT:?}).getBoundingClientRect(); \
+                         return JSON.stringify({{ top: r.top, bottom: r.bottom, scroll: c.scrollHeight, client: c.clientHeight, \
+                         next: [n.top, n.bottom], max: getComputedStyle(c).maxHeight }}); }})()"
+                    ),
+                )
+                .await;
+                panic!("{step}: {e}; the card {seen}");
+            }
+            if step == "centred" {
+                keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+            }
+        }
+        fixture.close().await.unwrap();
     });
 }

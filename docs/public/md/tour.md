@@ -218,7 +218,7 @@ explains how parts work.
 
 | Key | Action |
 |---|---|
-| `→` | Goes to the next step, or finishes on the last. Under `dir="rtl"`, `←` does. |
+| `→` | Goes to the next step, or finishes on the last. Under `dir="rtl"`, `←` does. A held key steps once. |
 | `←` | Goes to the previous step. |
 | `Escape` | Ends the tour early and returns focus to what started it. |
 | `Tab` or `Shift+Tab` | Moves the focus within the card. It does not leave while the tour shows. |
@@ -227,13 +227,21 @@ explains how parts work.
 
 - Each step's card is a `dialog` with `aria-modal`, named by the step title and
   described by its text. Focus moves to it on every step.
+- While `keyboard` is on, the card names its arrow keys in `aria-keyshortcuts`;
+  few screen readers announce it, so say the keys in the first step's text too.
+- The hole has a 2px ring of its own, and an outline in forced colours, so the
+  highlighted element stands out on a dark page too.
+- A card taller than the room it has scrolls, so its buttons stay reachable at
+  400% zoom or on a phone held sideways.
 - The highlighted element cannot be pressed, and a press on the dimmed page
   does nothing unless `mask_click` says so.
 - Each step scrolls its target into view; smoothly, unless the user reduces
-  motion. The hole moves without animation then too.
+  motion. The hole glides to a new step's target, without animation then too,
+  and follows a scroll at once.
 - Android's Back button ends the tour, as Escape does, rather than the app.
-- A target that never mounts shows its step's card in the middle, with a
-  warning in a debug build.
+- A target that never mounts, or renders nothing (`display: none`), shows its
+  step's card in the middle, with a warning in a debug build.
+- Steps that go empty while the tour shows end it, as closing does.
 
 ### You must
 

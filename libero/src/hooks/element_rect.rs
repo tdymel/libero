@@ -32,11 +32,10 @@ pub(crate) enum ElementRect {
 
 /// Measures `target` while `active`, again on every scroll, viewport resize and resize of `target`.
 /// Scrolls are heard where the renderer reports them (Blitz: libero's own and the wheel).
-pub(crate) fn use_element_rect(
-    target: Option<ElementHandle>,
-    active: bool,
-) -> ReadSignal<ElementRect> {
-    let state = use_signal(|| ElementRect::Pending);
+/// Read in render; `Pending` until the current `target` has been measured.
+pub(crate) fn use_element_rect(target: Option<ElementHandle>, active: bool) -> ElementRect {
+    // Tagged with the target it is of: the last target's stays put for a render.
+    let state = use_signal(|| (None::<ElementHandle>, ElementRect::Pending));
     // Bumped from platform callbacks, outside every scope; the effect measures.
     let tick = use_signal(|| 0u64);
     let listening = use_subscription_slot::<dyn ScrollSubscription>();
@@ -56,8 +55,8 @@ pub(crate) fn use_element_rect(
         let mounted = target.is_some_and(|target| target.mount_token().is_some());
         let set = move |next: ElementRect| {
             let mut state = state;
-            if *state.peek() != next {
-                state.set(next);
+            if *state.peek() != (target, next) {
+                state.set((target, next));
             }
         };
         let Some(target) = target.filter(|_| active) else {
@@ -134,5 +133,8 @@ pub(crate) fn use_element_rect(
         });
     }));
 
-    state.into()
+    match *state.read() {
+        (measured, rect) if measured == target => rect,
+        _ => ElementRect::Pending,
+    }
 }
