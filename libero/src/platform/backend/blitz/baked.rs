@@ -20,8 +20,8 @@ use super::{anchor, doc, run_or_defer, when_laid_out};
 pub(super) struct Watch {
     /// Where hover was at the last `pointermove`. See [`on_hover_change`].
     hovered: Cell<Option<NodeId>>,
-    /// Each svg's colour at its last build, `None` when a rebuild is pending.
-    svgs: RefCell<HashMap<NodeId, Option<AbsoluteColor>>>,
+    /// Each svg's colour at its last checked build.
+    svgs: RefCell<HashMap<NodeId, AbsoluteColor>>,
     armed: Cell<bool>,
     waits: Cell<u32>,
     /// Text re-laid since the last press, key or render, by content width: each
@@ -177,14 +177,12 @@ fn check() {
                 return;
             };
             if &*element.name.local == "svg" {
-                // `Some(None)`: rebuilt before the restyle, so with the colour computed now.
-                if svgs
-                    .get(&id)
-                    .is_none_or(|built| built.is_some_and(|c| c != now))
-                {
+                // Also after a rebuild ahead of a restyle: another restyle may have
+                // landed between its build and this check (todo 2247).
+                if svgs.get(&id).is_none_or(|&built| built != now) {
                     stale.push(id);
                 }
-                seen.insert(id, Some(now));
+                seen.insert(id, now);
                 return;
             }
             let layout = node.layout_children.borrow();
@@ -234,7 +232,7 @@ fn warn_once(message: &str) {
 }
 
 /// Re-sets an attribute on each of `elements` that bakes a colour. Ahead of a
-/// restyle (`ahead`), what the svgs bake is known at the next [`check`].
+/// restyle (`ahead`), the next [`check`] rebuilds each svg whose colour changed once more.
 fn rebuild(doc: &mut BaseDocument, elements: impl IntoIterator<Item = NodeId>, ahead: bool) {
     let attrs: Vec<_> = elements
         .into_iter()
@@ -252,14 +250,7 @@ fn rebuild(doc: &mut BaseDocument, elements: impl IntoIterator<Item = NodeId>, a
             Some((id, element.attrs().first()?.clone()))
         })
         .collect();
-    if ahead && let Some(state) = self::doc() {
-        let mut svgs = state.baked.svgs.borrow_mut();
-        for (id, _) in &attrs {
-            if let Some(built) = svgs.get_mut(id) {
-                *built = None;
-            }
-        }
-        drop(svgs);
+    if ahead {
         check_soon();
     }
     // Quiet: a box Blitz will not repaint must not re-arm its own check.

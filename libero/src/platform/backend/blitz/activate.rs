@@ -4,8 +4,8 @@
 use std::{
     any::Any,
     borrow::Cow,
-    cell::Cell,
-    rc::Rc,
+    cell::{Cell, RefCell},
+    rc::{Rc, Weak},
     time::{Duration, Instant},
 };
 
@@ -38,6 +38,8 @@ thread_local! {
     static DOUBLED: Cell<bool> = const { Cell::new(false) };
     /// Whether the last press's `pointerdown` was cancelled. See [`press_cancelled`].
     static CANCELLED: Cell<bool> = const { Cell::new(false) };
+    /// The last press's data, counted once however many wrappers it bubbles through.
+    static PRESS_DATA: RefCell<Option<Weak<PlatformEventData>>> = const { RefCell::new(None) };
 }
 
 /// Clicks `node_id` at the end of this poll through Blitz's event driver:
@@ -247,13 +249,20 @@ pub(super) fn key_up(event: &Event<KeyboardData>) {
 /// A press: from here the focus ring stays off, as the web's `:focus-visible`.
 /// Counted as Blitz counts clicks, within 500ms and 2px of the last, and when
 /// cancelled too, as on the web: Blitz then skips its count.
-pub(super) fn pointer_down(event: &Event<PointerData>) {
+/// `raw` is the press's own data: a nested provider's wrapper hears it again (todo 2246).
+pub(super) fn pointer_down(event: &Event<PointerData>, raw: &Rc<PlatformEventData>) {
     KEYBOARD.set(false);
     SPACE.set(None);
+    CANCELLED.set(!event.default_action_enabled());
+    let seen = PRESS_DATA
+        .replace(Some(Rc::downgrade(raw)))
+        .is_some_and(|last| last.ptr_eq(&Rc::downgrade(raw)));
+    if seen {
+        return;
+    }
     let at = event.client_coordinates();
     let now = Instant::now();
     DOUBLED.set(false);
-    CANCELLED.set(!event.default_action_enabled());
     let count = match PRESSES.get() {
         Some((last, x, y, count))
             if now - last < Duration::from_millis(500)

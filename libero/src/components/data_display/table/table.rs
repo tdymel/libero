@@ -22,8 +22,7 @@ use crate::{
         use_theme,
     },
     platform::{
-        ElementApi, SCROLL_PADDING_VARS, drags_table_columns, lays_out_captions,
-        sticks_table_heads, widens_sized_tables,
+        ElementApi, SCROLL_PADDING_VARS, lays_out_captions, sticks_table_heads, widens_sized_tables,
     },
     sx::{StaticSx, Sx, sx},
     theme::{
@@ -54,7 +53,7 @@ use super::{
     pinning::{PinSide, PinnedColumns, pin_columns, pinned_extent},
     resize::{ColumnResize, ColumnWidths, MenuWidth},
     row::{RowContext, RowState, TableRow},
-    row_reorder::RowReorder,
+    row_reorder::{ROW_ANIMATION, ROW_TRANSFORM, RowReorder},
     selection::Selection,
     toolbar::{TableToolbar, TableTools, ToolView},
     use_table::{TableConfig, use_table},
@@ -464,6 +463,25 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
             .z_index("2")
             .transition("none")
             .background(NamedColorCss::SURFACE.value()),
+    )
+    // Natively a `tr` has no box: its cells move and lift in its place (todo 1520).
+    .selector(
+        "& tbody > tr[data-cell-moved] > *",
+        sx().transform(format!("var({ROW_TRANSFORM})"))
+            .with("animation", format!("var({ROW_ANIMATION}, none)")),
+    )
+    .selector(
+        "& tbody[data-sorting] > tr[data-cell-moved] > *",
+        sx().transition("transform 150ms ease")
+            .media("(prefers-reduced-motion: reduce)", sx().transition("none")),
+    )
+    .selector(
+        "& tbody > tr[data-dragging][data-cell-moved] > *",
+        sx().z_index("2").transition("none").background("inherit"),
+    )
+    .selector(
+        "& tbody > tr[data-dragging][data-cell-moved] > :not([data-pin])",
+        sx().position("relative"),
     )
     .when(
         "row-click",
@@ -977,7 +995,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let measured = use_hook(|| CopyValue::new(BTreeMap::new()));
     let column_drag = use_column_drag(state.column_order);
     let menu_focus = use_menu_focus();
-    let drags = props.column_menu && drags_table_columns();
+    let drags = props.column_menu;
     let touch = use_hook(|| CopyValue::new(false));
     use_hook(|| {
         if props.selectable && !props.row_key.is_set() {

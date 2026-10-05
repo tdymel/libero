@@ -301,6 +301,52 @@ fn css_color(color: peniko::Color) -> String {
 
 /// Blitz's client rect leaves out `transform`; the web's does not. libero's
 /// `client_rect` in `platform/backend/blitz.rs` does the same walk.
+/// libero's Blitz `client_rect`: transforms followed, a table row its cells' union.
+fn client_rect(doc: &BaseDocument, id: NodeId) -> Option<(f64, f64, f64, f64)> {
+    if let Some(rect) = boxless_rect(doc, id).or_else(|| transformed_rect(doc, id)) {
+        return Some(rect);
+    }
+    let rect = doc.get_client_bounding_rect(id)?;
+    let own = doc.get_node(id)?.scroll_offset();
+    Some((rect.x + own.x, rect.y + own.y, rect.width, rect.height))
+}
+
+/// A table row or row group, which lays out no box in Blitz: its children's union.
+fn boxless_rect(doc: &BaseDocument, id: NodeId) -> Option<(f64, f64, f64, f64)> {
+    let node = doc.get_node(id)?;
+    let element = node.element_data()?;
+    let size = node.final_layout().size;
+    if !matches!(&*element.name.local, "tr" | "tbody" | "thead" | "tfoot")
+        || size.width != 0.0
+        || size.height != 0.0
+    {
+        return None;
+    }
+    let (left, top, right, bottom) = node
+        .children
+        .iter()
+        .filter(|&&child| doc.get_node(child).is_some_and(|node| node.is_element()))
+        .filter_map(|&child| client_rect(doc, child))
+        .filter(|&(_, _, width, height)| width > 0.0 || height > 0.0)
+        .fold(
+            (
+                f64::INFINITY,
+                f64::INFINITY,
+                f64::NEG_INFINITY,
+                f64::NEG_INFINITY,
+            ),
+            |(left, top, right, bottom), (x, y, width, height)| {
+                (
+                    left.min(x),
+                    top.min(y),
+                    right.max(x + width),
+                    bottom.max(y + height),
+                )
+            },
+        );
+    (right >= left).then_some((left, top, right - left, bottom - top))
+}
+
 fn transformed_rect(doc: &BaseDocument, node_id: NodeId) -> Option<(f64, f64, f64, f64)> {
     let node = doc.get_node(node_id)?;
     let size = node.unrounded_layout().size;
@@ -675,6 +721,11 @@ impl Page {
     /// Moves the pointer, no button held, to the first match's centre.
     pub fn hover(&mut self, selector: &str) {
         let (x, y) = self.centre(selector);
+        self.hover_at(x, y);
+    }
+
+    /// Moves the pointer, no button held, to a viewport point.
+    pub fn hover_at(&mut self, x: f32, y: f32) {
         self.dispatch(UiEvent::PointerMove(self.pointer(x, y, false)));
     }
 
@@ -1036,16 +1087,7 @@ impl Page {
     pub fn rect(&self, selector: &str) -> (f64, f64, f64, f64) {
         let id = self.node(selector);
         let doc = self.doc.inner.borrow();
-        if let Some(rect) = transformed_rect(&doc, id) {
-            return rect;
-        }
-        let rect = doc
-            .get_client_bounding_rect(id)
-            .unwrap_or_else(|| panic!("{selector:?} has no layout box"));
-        let own = doc.get_node(id).map_or((0.0, 0.0), |node| {
-            (node.scroll_offset().x, node.scroll_offset().y)
-        });
-        (rect.x + own.0, rect.y + own.1, rect.width, rect.height)
+        client_rect(&doc, id).unwrap_or_else(|| panic!("{selector:?} has no layout box"))
     }
 
     /// Whether a pointer at the first match's centre hits it or a descendant.

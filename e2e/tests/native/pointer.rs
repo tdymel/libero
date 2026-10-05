@@ -4,6 +4,7 @@
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};
 use libero::{
+    LiberoProvider,
     components::{Checkbox, Radio, Slider, SliderChangeEvent, Splitter, Switch},
     sx::sx,
     theme::ChoiceVariant,
@@ -284,6 +285,39 @@ fn a_double_click_fires_once_and_keeps_focus() {
     page.click("#handle");
     page.settle();
     assert_eq!(page.text("#doubles"), "1 1 1", "{}", page.tree());
+}
+
+/// A nested provider's wrapper hears each press too: one click is still no double (todo 2246).
+#[test]
+fn a_click_inside_a_nested_provider_is_no_double() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { {doubles()} }
+        }
+    }
+    let mut page = mount(app);
+    page.click("#field");
+    page.settle();
+    assert_eq!(page.text("#doubles"), "0 0 0", "{}", page.tree());
+    page.click("#field");
+    page.settle();
+    assert_eq!(page.text("#doubles"), "0 1 0", "{}", page.tree());
+}
+
+/// A drag released off the window stays held until a move comes with no button (todo 2244).
+#[test]
+fn a_move_with_no_button_held_ends_a_drag() {
+    let mut page = mount(slider);
+    let (tx, ty, tw, th) = page.rect(TRACK);
+    let y = (ty + th / 2.0) as f32;
+    let x0 = (tx + tw / 2.0) as f32;
+    page.press_at(x0, y);
+    page.move_to(x0 + 40.0, y);
+    let held = value(&page);
+    // The release went to the window's edge, outside the app: only the next move is seen.
+    page.hover_at(x0 + 120.0, y + 300.0);
+    page.move_to(x0 + 160.0, y);
+    assert_eq!(value(&page), held, "{}", page.tree());
 }
 
 /// Two quick drags on one divider: the second press lands where the first drag left it,

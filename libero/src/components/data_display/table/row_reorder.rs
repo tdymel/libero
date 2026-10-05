@@ -18,6 +18,10 @@ use crate::{
     platform::moves_table_rows,
 };
 
+/// A natively moved row's `transform` and settle `animation`, for its cells.
+pub(super) const ROW_TRANSFORM: &str = "--lsx-row-transform";
+pub(super) const ROW_ANIMATION: &str = "--lsx-row-animation";
+
 /// The column of row reorder handles, with `onrowreorder`.
 #[derive(Clone)]
 pub(super) struct RowReorder {
@@ -157,8 +161,7 @@ pub(super) fn ReorderRow(
     let named = |template: &str| fill(template, &[("label", &label)]);
     let handle_class = use_css(Some(&SORTABLE_HANDLE_SX), CssLayer::Framework);
     let move_class = use_css(Some(&SORTABLE_MOVE_SX), CssLayer::Framework);
-    // Blitz paints no moved `tr`: the keys and buttons still reorder there.
-    let drags = moves_table_rows() && !disabled;
+    let drags = !disabled;
     let (onpointerdown, onkeydown, onblur) = (item.onpointerdown, item.onkeydown, item.onblur);
     let (onearlier, onlater) = (item.onearlier, item.onlater);
     // At rest no transform: it would make each row a stacking context under the sticky cells.
@@ -169,7 +172,15 @@ pub(super) fn ReorderRow(
     };
     let style = item.style_by(laid_off);
     let moving = item.offset() + laid_off != 0.0 || style.contains("animation");
-    let style = (moves_table_rows() && moving).then_some(style);
+    // Blitz paints no moved `tr`: its cells take the row's declarations (todo 1520).
+    let cells = moving && !moves_table_rows();
+    let style = moving.then(|| match cells {
+        true => style
+            .replace("transform:", &format!("{ROW_TRANSFORM}:"))
+            .replace("animation:", &format!("{ROW_ANIMATION}:")),
+        false => style,
+    });
+    let cells = cells.then_some(true);
     // Off while sorted or filtered: still Tab stops, so the reason is heard (todo 1430).
     let off = disabled.then_some("true");
     let described = match disabled {
@@ -183,6 +194,7 @@ pub(super) fn ReorderRow(
                 id,
                 onmounted: extent.mount(),
                 style: style.clone(),
+                "data-cell-moved": cells,
                 "data-detail": true,
                 "data-dragging": (item.dragging)().then_some(true),
                 td { colspan: "{columns}", {body} }
@@ -193,6 +205,7 @@ pub(super) fn ReorderRow(
         tr {
             onmounted: item.element.mount(),
             style,
+            "data-cell-moved": cells,
             "data-state": states,
             "data-stripe": stripe.then_some(true),
             "data-dragging": (item.dragging)().then_some(true),

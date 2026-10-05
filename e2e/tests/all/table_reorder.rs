@@ -103,8 +103,7 @@ async fn a_drag_moves_a_row<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_handle_drag_moves_a_row,
     "/table-reorder",
-    a_drag_moves_a_row,
-    native: skip("Blitz paints no `transform` on a `tr`; no native pointer row drag by decision (1156 Phase 4b), keyboard lift and Move buttons cover it")
+    a_drag_moves_a_row
 );
 
 /// Cherry's open detail drags with it: one row's travel past Apple moves it,
@@ -131,8 +130,7 @@ async fn a_detail_drags_with_its_row<D: Driver>(d: &mut D, _route: &str) -> Resu
 e2e::scenario!(
     an_open_detail_drags_with_its_row,
     "/table-reorder-detail",
-    a_detail_drags_with_its_row,
-    native: skip("Blitz paints no `transform` on a `tr`; no native pointer row drag by decision (1156 Phase 4b), keyboard lift and Move buttons cover it")
+    a_detail_drags_with_its_row
 );
 
 async fn sorted_is_off<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -427,8 +425,7 @@ e2e::scenario!(
     a_windowed_table_reorders_past_its_window,
     "/table-reorder-windowed",
     a_windowed_table_reorders,
-    android: skip("958: element identity on the WebView"),
-    native: skip("1520/2038: Blitz paints no `transform` on a `tr`, so the lifted row keeps its slot")
+    android: skip("958: element identity on the WebView")
 );
 
 /// Todo 2233: a drop right after Home, before the scroll moved the window,
@@ -534,8 +531,7 @@ async fn grips_keep_their_lane<D: Driver>(d: &mut D, _route: &str) -> Result<()>
 e2e::scenario!(
     a_header_grip_has_its_own_lane,
     "/table-column-drag",
-    grips_keep_their_lane,
-    native: skip("no column drag grip on Blitz: the column menu moves columns")
+    grips_keep_their_lane
 );
 
 /// Name's header grip dropped near Origin's end edge: one order change (1395).
@@ -556,8 +552,7 @@ async fn a_grip_drag_moves_a_column<D: Driver>(d: &mut D, _route: &str) -> Resul
 e2e::scenario!(
     a_header_grip_drag_moves_a_column,
     "/table-reorder",
-    a_grip_drag_moves_a_column,
-    native: skip("no column drag grip on Blitz: the column menu moves columns")
+    a_grip_drag_moves_a_column
 );
 
 /// Drags `header`'s grip so its centre lands at client `x`.
@@ -599,15 +594,13 @@ async fn two_grip_drags_move_columns<D: Driver>(d: &mut D, _route: &str) -> Resu
 e2e::scenario!(
     header_grip_drags_move_columns_twice,
     "/table-reorder",
-    two_grip_drags_move_columns,
-    native: skip("no column drag grip on Blitz: the column menu moves columns")
+    two_grip_drags_move_columns
 );
 
 e2e::scenario!(
     header_grip_drags_move_its_own_columns_twice,
     "/table-column-drag",
-    two_grip_drags_move_columns,
-    native: skip("no column drag grip on Blitz: the column menu moves columns")
+    two_grip_drags_move_columns
 );
 
 /// Todo 2018: the rows measure at the press, so a finger's drag moves the row soon.

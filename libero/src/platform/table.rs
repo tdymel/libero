@@ -19,7 +19,7 @@ pub(crate) fn sticks_table_heads() -> bool {
 }
 
 /// Whether a `transform` on a `<tr>` paints. Blitz's `tr` has no box, so a
-/// `Table`'s rows reorder there by key and buttons only, not by drag.
+/// `Table` moves a dragged row's cells there instead.
 pub(crate) fn moves_table_rows() -> bool {
     backend::MOVES_TABLE_ROWS
 }
@@ -28,10 +28,4 @@ pub(crate) fn moves_table_rows() -> bool {
 /// drawn. Blitz shifts them by the padding, so `Table` wraps a header's text there.
 pub(crate) fn hits_absolute_in_text() -> bool {
     backend::HITS_ABSOLUTE_IN_TEXT
-}
-
-/// Whether a `Table` header has a column drag grip. Not on Blitz, where a
-/// header grip drag is unreliable: the column menu moves columns there.
-pub(crate) fn drags_table_columns() -> bool {
-    backend::DRAGS_TABLE_COLUMNS
 }

@@ -234,6 +234,35 @@ fn moved_cell() -> Element {
     }
 }
 
+fn row_var_on_cells() -> Element {
+    rsx! {
+        style { "tr[data-shift] > td {{ transform: var(--shift); }}" }
+        table { border_spacing: "0",
+            tbody {
+                tr { id: "r0",
+                    td { id: "zero", height: "30px", width: "100px", "Zero" }
+                }
+                tr { id: "r1", "data-shift": true, style: "--shift: translate(0px, 60px);",
+                    td { id: "one", height: "30px", width: "100px", background: "red" }
+                }
+                tr { td { height: "30px" } }
+                tr { td { height: "30px" } }
+            }
+        }
+    }
+}
+
+/// `Table` moves a row by its cells (1520): a `transform` var set on the `tr`
+/// reaches them, and the row's rect is its moved cells'.
+#[test]
+fn a_rows_cells_take_its_transform_var() {
+    let page = mount(row_var_on_cells);
+    let (x, y, _, height) = page.rect("#zero");
+    assert_eq!(pixel(&page, x + 10.0, y + height + 75.0), RED);
+    assert_eq!(page.rect("#r0"), (x, y, 100.0, 30.0));
+    assert_eq!(page.rect("#r1"), (x, y + height + 60.0, 100.0, 30.0));
+}
+
 /// A row reorder moves cells: a `transform` on a `td` paints it moved (one on
 /// a `tr` is not painted, the row has no box of its own).
 #[test]

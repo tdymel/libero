@@ -5,7 +5,7 @@ use std::{
 };
 
 use blitz_dom::{
-    BaseDocument, QualName, local_name,
+    BaseDocument, Node, QualName, local_name,
     node::{ImageData, SpecialElementData},
     ns,
 };
@@ -348,7 +348,18 @@ pub(super) fn Listener(children: Element) -> Element {
         baked::check_soon();
         placeholder::sync_soon();
     });
-    let click = vec![Attribute::new("onclick", onclick, None, false)];
+    // Raw too, so a nested provider's wrapper knows the press it already counted.
+    let onpointerdown = AttributeValue::listener(|raw: Event<PlatformEventData>| {
+        let event = raw.map(|data| PointerData::from(data));
+        HELD.set(true);
+        activate::pointer_down(&event, &raw.data);
+        refused::pressed(&event);
+        pressed(&event);
+    });
+    let raw = vec![
+        Attribute::new("onclick", onclick, None, false),
+        Attribute::new("onpointerdown", onpointerdown, None, false),
+    ];
     rsx! {
         div {
             display: "contents",
@@ -359,13 +370,7 @@ pub(super) fn Listener(children: Element) -> Element {
                     *doc.wrapper.borrow_mut() = Some(handle.clone());
                 }
             },
-            // Bubble phase: this dioxus has no capture listeners.
-            onpointerdown: move |event| {
-                HELD.set(true);
-                activate::pointer_down(&event);
-                refused::pressed(&event);
-                pressed(&event);
-            },
+            // Bubble phase, `onpointerdown` in `raw`: this dioxus has no capture listeners.
             onmousedown: |event| focus::mouse_pressed(&event),
             onkeydown: |event| {
                 forget_press();
@@ -413,7 +418,7 @@ pub(super) fn Listener(children: Element) -> Element {
                 wheel::wheeled(&event);
                 notify_scroll();
             },
-            ..click,
+            ..raw,
             {children}
         }
     }
@@ -1143,12 +1148,13 @@ fn catch_pointer(cursor: Option<String>) {
 }
 
 /// Hands the followed drag what bubbled here from outside its element. A stopped
-/// move, or a release off the app, is never seen.
+/// move is never seen; a release off the app ends it at the next move (todo 2244).
 fn followed(event: &Event<PointerData>, up: bool) {
     let Some(follow) = FOLLOW.get().filter(|f| f.pointer_id == event.pointer_id()) else {
         return;
     };
-    if up {
+    let released = !up && event.held_buttons().is_empty();
+    if up || released {
         FOLLOW.set(None);
         catch_pointer(None);
     }
@@ -1168,7 +1174,7 @@ fn followed(event: &Event<PointerData>, up: bool) {
         Some(!inside)
     });
     match outside {
-        Some(true) if up => follow.onup.call(event.clone()),
+        Some(outside) if released || (up && outside) => follow.onup.call(event.clone()),
         Some(true) => follow.onmove.call(event.clone()),
         Some(false) => {}
         None => {
@@ -2165,12 +2171,52 @@ fn show(anchor: NodeHandle, node_id: NodeId, tries: u8) {
 /// `x, y, width, height` of a node's border box in the viewport, its own scroll
 /// offset added back: `get_client_bounding_rect` subtracts it.
 fn client_rect(doc: &BaseDocument, node_id: NodeId) -> Option<(f64, f64, f64, f64)> {
+    if let Some(rect) = boxless_rect(doc, node_id) {
+        return Some(rect);
+    }
     if let Some(rect) = transformed_rect(doc, node_id) {
         return Some(rect);
     }
     let rect = doc.get_client_bounding_rect(node_id)?;
     let own = doc.get_node(node_id)?.scroll_offset();
     Some((rect.x + own.x, rect.y + own.y, rect.width, rect.height))
+}
+
+/// A table row or row group, which lays out no box in Blitz: the union of its
+/// children's rects, moved cells included (todo 1520). `None` for any other node.
+fn boxless_rect(doc: &BaseDocument, node_id: NodeId) -> Option<(f64, f64, f64, f64)> {
+    let node = doc.get_node(node_id)?;
+    let element = node.element_data()?;
+    let size = node.final_layout().size;
+    if !matches!(&*element.name.local, "tr" | "tbody" | "thead" | "tfoot")
+        || size.width != 0.0
+        || size.height != 0.0
+    {
+        return None;
+    }
+    let (left, top, right, bottom) = node
+        .children
+        .iter()
+        .filter(|&&child| doc.get_node(child).is_some_and(Node::is_element))
+        .filter_map(|&child| client_rect(doc, child))
+        .filter(|&(_, _, width, height)| width > 0.0 || height > 0.0)
+        .fold(
+            (
+                f64::INFINITY,
+                f64::INFINITY,
+                f64::NEG_INFINITY,
+                f64::NEG_INFINITY,
+            ),
+            |(left, top, right, bottom), (x, y, width, height)| {
+                (
+                    left.min(x),
+                    top.min(y),
+                    right.max(x + width),
+                    bottom.max(y + height),
+                )
+            },
+        );
+    (right >= left).then_some((left, top, right - left, bottom - top))
 }
 
 /// The rect with `transform`s, which Blitz's client rect leaves out: corners
