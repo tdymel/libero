@@ -21,7 +21,7 @@ use super::{
     tree_node::{
         ErasedRenderNode, TreeNode, TreeNodeErased, TreeNodeRenderArgs, TreeValue, erase_nodes,
     },
-    tree_row::{TreeRow, child_active},
+    tree_row::{TreeRow, child_active, open_key},
 };
 
 /// Borrows from `data`: rebuilt on every keystroke, owning meant two `String`s per node.
@@ -604,6 +604,11 @@ fn TreeCore(props: TreeCoreProps) -> Element {
     };
 
     let root_sx = props.sx.into_option().unwrap_or_default();
+    let open_keys: Vec<u64> = props
+        .data
+        .iter()
+        .map(|node| open_key(node, &expanded.read()))
+        .collect();
 
     rsx! {
         List {
@@ -624,6 +629,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                     size,
                     depth: 0,
                     expansion,
+                    open_key: open_keys[index],
                     active: child_active(active_path.as_deref(), index),
                     current: child_active(current_path.as_deref(), index),
                     active_id,

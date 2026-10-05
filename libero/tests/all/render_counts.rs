@@ -2,6 +2,7 @@
 //! `render` span dioxus opens per scope run. The deterministic check of the
 //! memoization comments in `render_cost.rs`, which only times the rows.
 
+use std::collections::HashSet;
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 
@@ -125,6 +126,36 @@ fn a_carousel_renders_with_its_parent() {
         }
     }
     assert_eq!(renders(app, "Carousel"), (1, 1));
+}
+
+/// Closing one branch redraws its row alone, not every open branch (todo 2093).
+#[test]
+fn a_tree_toggle_renders_only_the_row_it_changes() {
+    static OPEN: GlobalSignal<HashSet<String>> =
+        Signal::global(|| ["a", "a/1", "b"].map(String::from).into());
+    fn app() -> Element {
+        let node = |id: &str| TreeNode::new(id, id.to_string());
+        let data = vec![
+            node("a").children(vec![node("a/1").children(vec![node("a/1/x")])]),
+            node("b").children(vec![node("b/1")]),
+        ];
+        rsx! {
+            LiberoProvider { Tree { aria_label: "t", data, expanded: OPEN(), onexpandedchange: |_| {} } }
+        }
+    }
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    let again = Renders::default();
+    tracing::subscriber::with_default(again.clone(), || {
+        dom.in_scope(ScopeId::APP, || OPEN.write().remove("b"));
+        dom.render_immediate(&mut NoOpMutations);
+    });
+    let names = again.0.lock().expect("not poisoned");
+    let rows = names
+        .iter()
+        .filter(|scope| scope.ends_with("::TreeRow"))
+        .count();
+    assert_eq!(rows, 1, "{names:?}");
 }
 
 /// The notifications rows' host: what redraws it is a store write, not its parent.

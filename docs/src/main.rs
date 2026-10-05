@@ -23,6 +23,10 @@ use site::LOGO;
 use pages::*;
 
 fn main() {
+    // dioxus's release default, INFO, marks every span in the performance timeline: 2-4 ms per mount (todo 2208).
+    if !cfg!(debug_assertions) {
+        let _ = dioxus::logger::init(dioxus::logger::tracing::Level::WARN);
+    }
     #[cfg(feature = "native-cpu")]
     dioxus_native::launch(App);
     #[cfg(not(feature = "native-cpu"))]

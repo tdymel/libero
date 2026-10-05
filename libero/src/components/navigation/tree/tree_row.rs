@@ -1,3 +1,8 @@
+use std::{
+    collections::HashSet,
+    hash::{DefaultHasher, Hash, Hasher},
+};
+
 use dioxus::prelude::*;
 
 use crate::{
@@ -155,6 +160,9 @@ pub(super) struct TreeRowProps {
     pub size: Size,
     pub depth: usize,
     pub expansion: Expansion,
+    /// [`open_key`] of this row, from the parent, so a toggle re-renders only the
+    /// rows whose shown subtree changed (todo 2093).
+    pub open_key: u64,
     /// The tab stop's path from this row: `Some(&[])` is this row, `None` off the
     /// path, so a move re-renders only the rows it leaves and enters.
     pub active: Option<Vec<usize>>,
@@ -173,7 +181,18 @@ pub(super) struct TreeRowProps {
 pub(super) fn TreeRow(props: TreeRowProps) -> Element {
     let node = &props.node;
     let has_children = node.has_children();
-    let is_expanded = has_children.then(|| props.expansion.open.read().contains(&node.id));
+    // `peek`: `open_key` brings the change, a read would wake every branch.
+    let open = props.expansion.open.peek();
+    let is_expanded = has_children.then(|| open.contains(&node.id));
+    let child_keys: Vec<u64> = match is_expanded {
+        Some(true) => node
+            .children
+            .iter()
+            .map(|child| open_key(child, &open))
+            .collect(),
+        _ => Vec::new(),
+    };
+    drop(open);
     let disabled = node.disabled || props.ancestor_disabled;
     let is_roving_active = props.active.as_deref().is_some_and(<[usize]>::is_empty);
     // The `<li>` is the roving tab stop; `render_node`'s content is always "-1".
@@ -262,6 +281,7 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
                             size: props.size,
                             depth: props.depth + 1,
                             expansion: props.expansion,
+                            open_key: child_keys[index],
                             active: child_active(props.active.as_deref(), index),
                             current: child_active(props.current.as_deref(), index),
                             active_id: props.active_id,
@@ -293,6 +313,24 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
             }
         })
         .render(HtmlTag::Li, Vec::new(), children)
+}
+
+/// A hash of the open branches `node` shows, itself included: a closed branch
+/// hides its open descendants, so they do not count.
+pub(super) fn open_key(node: &TreeNodeErased, open: &HashSet<String>) -> u64 {
+    fn walk(node: &TreeNodeErased, open: &HashSet<String>, hasher: &mut DefaultHasher) {
+        if node.has_children() && open.contains(&node.id) {
+            node.id.hash(hasher);
+            for child in &node.children {
+                walk(child, open, hasher);
+            }
+            // Closes the subtree, so `a/b` open differs from `a` and its sibling `b` open.
+            hasher.write_u8(0xff);
+        }
+    }
+    let mut hasher = DefaultHasher::new();
+    walk(node, open, &mut hasher);
+    hasher.finish()
 }
 
 /// The part of a row's `active` path that its child `index` sees.

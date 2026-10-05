@@ -9,12 +9,17 @@ use crate::{
 };
 
 /// The theme's own `<style>`, its own component so a rebuilt sheet re-renders
-/// this leaf instead of everything under `{children}`.
+/// this leaf instead of everything under `{children}`. `outer` is an enclosing
+/// provider's sheet: the same text is already in the document (todo 2207).
 #[component]
-pub(super) fn ThemeStyle() -> Element {
+pub(super) fn ThemeStyle(outer: Option<Signal<Rc<str>>>) -> Element {
     let context = use_context::<LiberoContext>();
     let sheet = context.theme_css.read().clone();
-    let css = focus_selectors(&sheet);
+    let shared = outer.is_some_and(|outer| {
+        let outer = outer.read();
+        Rc::ptr_eq(&outer, &sheet) || **outer == *sheet
+    });
+    let css = (!shared).then(|| focus_selectors(&sheet));
     // Bumped per rebuilt sheet, for `SheetWatch` (todo 871).
     let version = use_hook(|| Rc::new(std::cell::Cell::new((0u64, sheet.clone()))));
     let (mut count, last) = version.take();
@@ -35,12 +40,17 @@ pub(super) fn ThemeStyle() -> Element {
         }
     });
 
-    let physical = use_hook(|| (!platform::aligns_logical_text()).then(physical_text_align));
-    let form_controls = use_hook(|| (!platform::colors_form_controls()).then(themed_form_controls));
+    // Fixed text, so only the outermost provider writes it.
+    let physical = use_hook(|| {
+        (outer.is_none() && !platform::aligns_logical_text()).then(physical_text_align)
+    });
+    let form_controls = use_hook(|| {
+        (outer.is_none() && !platform::colors_form_controls()).then(themed_form_controls)
+    });
 
     rsx! {
-        style {
-            dangerous_inner_html: "{css}"
+        if let Some(css) = css {
+            style { dangerous_inner_html: "{css}" }
         }
         if let Some(physical) = physical {
             style { dangerous_inner_html: "{physical}" }

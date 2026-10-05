@@ -59,8 +59,10 @@ pub fn LiberoProvider(
     children: Element,
 ) -> Element {
     let themes = use_hook(|| themes.clone());
+    let outer_css =
+        use_hook(|| try_consume_context::<LiberoContext>().map(|outer| outer.theme_css));
     // Only the outermost provider owns the root's `lang`: two would race for it.
-    let outermost = use_hook(|| try_consume_context::<LiberoContext>().is_none());
+    let outermost = outer_css.is_none();
     let localization = use_signal(|| localization);
     let formats = use_signal(|| formats);
     // Read at mount, so the first render paints the kept scheme, not a light flash.
@@ -231,7 +233,7 @@ pub fn LiberoProvider(
         style {
             dangerous_inner_html: "{context.layer_order_css}"
         }
-        ThemeStyle {}
+        ThemeStyle { outer: outer_css }
         {platform::Listener(rsx! {
             {children}
             PortalOutlet {}
