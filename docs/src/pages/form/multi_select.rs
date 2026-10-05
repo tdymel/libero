@@ -197,6 +197,9 @@ fn topping_selection(words: &'static Localization, s: SelectionArgs<Topping>) ->
     // demo-code: selection end
 }
 
+/// The printed twin of the page's `value` signal below.
+const VALUE_SIGNAL: &str = "let mut value = use_signal(|| vec![Topping::Cheese, Topping::Olives]);";
+
 #[component]
 pub fn MultiSelectPage() -> Element {
     let theme = use_theme();
@@ -310,17 +313,19 @@ pub fn MultiSelectPage() -> Element {
                     "click elsewhere or the trigger close it."
                 }
             },
-            // snippet: let mut value = use_signal(Vec::<Topping>::new);
-            // snippet: let words = use_localization();
             Demo {
                 component: "MultiSelect",
                 children_text: "",
                 // `filter` and the custom rows share one helper, printed for either switch.
-                wrap: Wrap(|values: &DemoValues, source: &str| match custom(values)
-                    || filtering(values)
-                {
-                    true => format!("{}\n\n{}\n\n{source}", FILE.section("topping"), FILE.section("impl")),
-                    false => format!("{}\n\n{source}", FILE.section("topping")),
+                wrap: Wrap(|values: &DemoValues, source: &str| {
+                    let state = match custom(values) {
+                        true => format!("{VALUE_SIGNAL}\nlet words = use_localization();"),
+                        false => VALUE_SIGNAL.to_string(),
+                    };
+                    match custom(values) || filtering(values) {
+                        true => format!("{}\n\n{}\n\n{state}\n\n{source}", FILE.section("topping"), FILE.section("impl")),
+                        false => format!("{}\n\n{state}\n\n{source}", FILE.section("topping")),
+                    }
                 }),
                 fixed: vec![
                     "sx: sx().width(\"280px\")".to_string(),

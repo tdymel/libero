@@ -453,8 +453,7 @@ e2e::scenario!(
     an_early_keyboard_drop_keeps_its_focus,
     "/table-reorder-windowed",
     an_early_drop_keeps_its_focus,
-    android: skip("958: element identity on the WebView"),
-    native: skip("End on a lifted windowed row moves the focus to the scroll area on Blitz")
+    android: skip("958: element identity on the WebView")
 );
 
 /// Todo 1872: Row 1's grip held at the bottom edge scrolls the windowed rows on,

@@ -225,6 +225,13 @@ pub(super) fn render_window(
                         focused.set(Some(index));
                     }
                 }));
+                // A key proves the focus where Blitz fired no `focusin` (todo 2252). Only when unset:
+                // a drop's key bubbles here after `RowFocus::follow` moved the index.
+                spec.attributes.push(listener("onkeydown", move |_: Event<KeyboardData>| {
+                    if focused.peek().is_none() {
+                        focused.set(Some(index));
+                    }
+                }));
                 // A task later: Tab to the next row is no moment without a focused row,
                 // whose shrunk overscan would drop the rows above it and jump the scroll.
                 spec.attributes.push(listener("onfocusout", move |_: Event<FocusData>| {

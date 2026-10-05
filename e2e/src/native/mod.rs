@@ -657,6 +657,21 @@ impl Page {
         self.dispatch(UiEvent::PointerUp(self.finger(x, y, false)));
     }
 
+    /// A finger lands on a viewport point, moves by `(dx, dy)` in eight steps, lifts there.
+    pub fn swipe_from(&mut self, x: f32, y: f32, dx: f32, dy: f32) {
+        const STEPS: u8 = 8;
+        self.dispatch(UiEvent::PointerDown(self.finger(x, y, true)));
+        for step in 1..=STEPS {
+            let t = f32::from(step) / f32::from(STEPS);
+            self.dispatch(UiEvent::PointerMove(self.finger(
+                x + dx * t,
+                y + dy * t,
+                true,
+            )));
+        }
+        self.touch_up(x + dx, y + dy);
+    }
+
     /// Moves the pointer, no button held, to the first match's centre.
     pub fn hover(&mut self, selector: &str) {
         let (x, y) = self.centre(selector);

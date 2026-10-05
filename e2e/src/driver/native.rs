@@ -98,6 +98,12 @@ impl Driver for Native {
         Ok(())
     }
 
+    async fn swipe_from(&mut self, x: f64, y: f64, dx: f64, dy: f64) -> Result<()> {
+        self.page
+            .swipe_from(x as f32, y as f32, dx as f32, dy as f32);
+        Ok(())
+    }
+
     async fn focus(&mut self, selector: &str) -> Result<()> {
         self.page.focus(selector);
         Ok(())

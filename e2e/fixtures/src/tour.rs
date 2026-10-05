@@ -4,6 +4,7 @@ use dioxus::prelude::*;
 use libero::{
     components::{Button, Flex, Text, TourOptions, TourStep, use_tour},
     hooks::use_element,
+    sx::sx,
 };
 
 use crate::Routes;
@@ -43,7 +44,8 @@ fn TourPage() -> Element {
     });
 
     rsx! {
-        Flex { direction: "column", gap: "xl", max_width: "320px",
+        // Off the window edge: natively the page has no margin, and a hole on x 0 is clipped.
+        Flex { direction: "column", gap: "xl", max_width: "320px", sx: sx().padding("16px"),
             Button { id: "start-tour", variant: "outlined", onclick: move |_| tour.start(), "Take the tour" }
             Button { id: "first", onmounted: first.mount(), attributes: first.attributes(), "First" }
             Button { id: "second", onmounted: second.mount(), attributes: second.attributes(), "Second" }
