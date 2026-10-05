@@ -10,7 +10,8 @@
 //! - `DOCS_PERF_ROUNDS` (default 4), `DOCS_PERF_PER_KIND` controls per kind and page (2).
 //! - `DOCS_PERF_OUT`: the JSON report, default `<target>/docs-perf.json`.
 //! - `DOCS_PERF_B`: a second docs server (another build). Each round then runs A and B in turn
-//!   (A B, B A, ...) and the report adds B - A per row. On a loaded machine compare `low`, the
+//!   (A B, B A, ...), each in its own tab, so a warm row stays warm as in a single-variant run;
+//!   the report adds B - A per row. On a loaded machine compare `low`, the
 //!   mean of the fastest third, over 8 rounds or more; the report names both builds and the load.
 
 use std::collections::BTreeMap;
@@ -1040,6 +1041,8 @@ fn survey() {
             build: String::new(),
             rows: Rows::new(),
         }];
+        // B's own tab: a reload per round would make its warm rows pay first insertion (todo 2288).
+        let mut other = None;
         if let Ok(b) = std::env::var("DOCS_PERF_B") {
             variants.push(Variant {
                 label: "B",
@@ -1047,8 +1050,15 @@ fn survey() {
                 build: String::new(),
                 rows: Rows::new(),
             });
+            let tab = Fixture::open_until(&start, Viewport::Desktop, Scheme::Light, READY)
+                .await
+                .unwrap();
+            tab.page.execute(EnableParams::default()).await.unwrap();
+            other = Some(tab);
         }
-        let ab = variants.len() > 1;
+        let tabs: Vec<&Page> = std::iter::once(page)
+            .chain(other.as_ref().map(|tab| &tab.page))
+            .collect();
         // The page before the first: a mount of `start` from itself would be no navigation.
         let lead = pages.get(1).cloned().unwrap_or_else(|| "/".to_string());
         let mut metas = Vec::new();
@@ -1061,17 +1071,19 @@ fn survey() {
                 order
             };
             for i in order {
+                let page = tabs[i];
                 let v = &mut variants[i];
                 *BASE.lock().unwrap() = v.base.clone();
+                page.bring_to_front().await.unwrap();
                 let started = Instant::now();
                 let load_before = load_average();
-                // The A server is already open on the first round.
-                if ab || round == 0 {
-                    if ab {
-                        load(page, &start).await.unwrap();
-                    } else {
+                // Both tabs opened on A's server: B loads its own on the first round.
+                if round == 0 {
+                    if i == 0 {
                         page.evaluate(RECORDER).await.unwrap();
                         expand_nav(page).await.unwrap();
+                    } else {
+                        load(page, &start).await.unwrap();
                     }
                     let _ = navigate(page, &lead).await;
                 }
@@ -1093,6 +1105,11 @@ fn survey() {
             report(&variants, &metas, round + 1 == rounds).unwrap();
         }
         front.release().await.unwrap();
+        if let Some(tab) = other {
+            let _ = tab
+                .close_allowing("a survey clicks whatever it finds")
+                .await;
+        }
         let _ = fixture
             .close_allowing("a survey clicks whatever it finds")
             .await;

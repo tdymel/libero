@@ -37,6 +37,15 @@ fn RouteEffects(
     section: Signal<Option<String>>,
 ) -> Element {
     let route = use_route::<Route>();
+    // In the render, before the old page leaves the DOM: leaving with focus in it costs
+    // Chromium a forced restyle and layout of both pages (todo 2286). The new heading takes it.
+    let mut rendered = use_hook(|| CopyValue::new(route.clone()));
+    if *rendered.peek() != route {
+        rendered.set(route.clone());
+        if let Ok(focused) = content.query_selector(":focus") {
+            let _ = focused.blur();
+        }
+    }
     heading_focus::use_scroll_reset(route.clone(), area, content, section);
     heading_focus::use_heading_focus(route.clone(), open(), content, section);
     // Any route change closes the drawer (search, pager, TLDR, body link, back); focus stays put.

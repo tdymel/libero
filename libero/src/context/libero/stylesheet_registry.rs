@@ -95,44 +95,86 @@ fn top_level_rules(css: &str) -> impl Iterator<Item = &str> {
 
 /// `css`'s rules for a layer block, `@media P{.a{x}}` nested as `.a{@media P{x}}` and
 /// `@media P{.a::before{x}}` as `.a{@media P{&::before{x}}}`: inserting a grouping rule costs
-/// Chromium the whole-page restyle, a nested one 1-2 ms (todos 2231, 2249). `None` for any
+/// Chromium the whole-page restyle, a nested one 1-2 ms (todos 2231, 2249, 2287). `None` for any
 /// other at-rule shape, a query `answers` rewrite, or without `nests`: the sheet keeps its `<style>`.
 fn block_rules<'a>(css: &'a str, nests: bool, answers: &A11yAnswers) -> Option<Vec<Cow<'a, str>>> {
-    const GROUPING: [&str; 3] = ["@media", "@container", "@supports"];
     let mut rules = Vec::new();
     for rule in top_level_rules(css) {
         if !rule.starts_with('@') {
             rules.push(Cow::Borrowed(rule));
             continue;
         }
-        let (prelude, inner) = rule.split_once('{')?;
-        let inner = inner.strip_suffix('}')?;
         // An answered query (a forced reduced motion) is rewritten in the outlet's text.
-        if !nests
-            || !GROUPING.iter().any(|name| prelude.starts_with(name))
-            || answer_a11y_media(rule, answers) != rule
-            || inner.contains('@')
-        {
+        if !nests || answer_a11y_media(rule, answers) != rule {
             return None;
         }
-        for style in top_level_rules(inner) {
-            let (selector, body) = style.split_once('{')?;
-            let body = body.strip_suffix('}')?;
-            if body.contains('{') || selector.matches(['"', '\'']).count() % 2 == 1 {
-                return None;
-            }
-            rules.push(Cow::Owned(match pseudo_element(selector)? {
-                None => format!("{selector}{{{prelude}{{{body}}}}}"),
-                Some((base, pseudo)) => format!("{base}{{{prelude}{{&{pseudo}{{{body}}}}}}}"),
-            }));
-        }
+        nest_grouping(rule, &mut Vec::new(), &mut rules)?;
     }
     Some(rules)
 }
 
+/// Pushes `rule`'s style rules nested under `preludes` plus its own; `@supports` in `@media` too.
+fn nest_grouping<'a>(
+    rule: &'a str,
+    preludes: &mut Vec<&'a str>,
+    rules: &mut Vec<Cow<'a, str>>,
+) -> Option<()> {
+    const GROUPING: [&str; 3] = ["@media", "@container", "@supports"];
+    let (prelude, inner) = rule.split_once('{')?;
+    if !GROUPING.iter().any(|name| prelude.starts_with(name)) {
+        return None;
+    }
+    preludes.push(prelude);
+    for style in top_level_rules(inner.strip_suffix('}')?) {
+        if style.starts_with('@') {
+            nest_grouping(style, preludes, rules)?;
+            continue;
+        }
+        let (selector, body) = style.split_once('{')?;
+        let body = body.strip_suffix('}')?;
+        if body.contains('{') || selector.matches(['"', '\'']).count() % 2 == 1 {
+            return None;
+        }
+        let open: String = preludes
+            .iter()
+            .map(|prelude| format!("{prelude}{{"))
+            .collect();
+        let close = "}".repeat(preludes.len());
+        // `&` cannot stand for a list holding a pseudo-element: one rule per selector.
+        let parts: Vec<&str> = if selector.contains("::") {
+            selector_list(selector).collect()
+        } else {
+            vec![selector]
+        };
+        for selector in parts {
+            rules.push(Cow::Owned(match pseudo_element(selector)? {
+                None => format!("{selector}{{{open}{body}{close}}}"),
+                Some((base, pseudo)) => format!("{base}{{{open}&{pseudo}{{{body}}}{close}}}"),
+            }));
+        }
+    }
+    preludes.pop();
+    Some(())
+}
+
+/// `selector`'s top-level comma-separated parts, trimmed.
+fn selector_list(selector: &str) -> impl Iterator<Item = &str> {
+    let mut depth = 0i32;
+    selector
+        .split(move |c| {
+            depth += match c {
+                '[' | '(' => 1,
+                ']' | ')' => -1,
+                _ => 0,
+            };
+            depth == 0 && c == ','
+        })
+        .map(str::trim)
+}
+
 /// `Some(None)` for a selector with no pseudo-element, `Some(Some((base, "::x")))` for one
-/// compound selector ending in a single `::x`. `None` for what the nesting `&` cannot carry:
-/// a list or a combinator before the pseudo-element, a legacy `:before`.
+/// complex selector ending in a single `::x`, nested as `base{&::x{..}}`. `None` for what the
+/// nesting `&` cannot carry: a list, a legacy `:before`, `::part()`, a bare `::x`.
 fn pseudo_element(selector: &str) -> Option<Option<(&str, &str)>> {
     const LEGACY: [&str; 4] = [":before", ":after", ":first-line", ":first-letter"];
     let selector = selector.trim();
@@ -141,18 +183,11 @@ fn pseudo_element(selector: &str) -> Option<Option<(&str, &str)>> {
     };
     let (base, pseudo) = selector.split_at(at);
     let name = &pseudo[2..];
-    let mut depth = 0i32;
-    let compound = base.chars().all(|c| {
-        depth += match c {
-            '[' | '(' => 1,
-            ']' | ')' => -1,
-            _ => 0,
-        };
-        depth > 0 || !(c.is_whitespace() || matches!(c, '>' | '+' | '~' | ','))
-    });
     let named = !name.is_empty() && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '-');
     let legacy = LEGACY.iter().any(|name| base.contains(name));
-    (compound && named && !base.is_empty() && !legacy).then_some(Some((base, pseudo)))
+    let ends_compound =
+        !base.ends_with(|c: char| c.is_whitespace() || matches!(c, '>' | '+' | '~'));
+    (named && !base.is_empty() && ends_compound && !legacy).then_some(Some((base, pseudo)))
 }
 
 #[derive(Default)]
@@ -795,7 +830,11 @@ mod tests {
         );
         assert!(block_rules("@media x{.a{y:2}}", false, none).is_none());
         assert!(block_rules("@keyframes k{to{opacity:0}}", true, none).is_none());
-        assert!(block_rules("@media x{@supports y{.a{z:3}}}", true, none).is_none());
+        assert_eq!(
+            block_rules("@media x{@supports y{.a{z:3}}.b{w:4}}", true, none).unwrap(),
+            [".a{@media x{@supports y{z:3}}}", ".b{@media x{w:4}}"]
+        );
+        assert!(block_rules("@media x{@keyframes k{to{opacity:0}}}", true, none).is_none());
         assert_eq!(block_rules(".a{x:1}", false, none).unwrap(), [".a{x:1}"]);
         let motion = "@media (prefers-reduced-motion: reduce){.a{y:2}}";
         assert!(block_rules(motion, true, none).is_some());
@@ -813,10 +852,29 @@ mod tests {
                 r#".a[data-state~="on"]{@media (prefers-reduced-motion: reduce){&::before{animation:none}}}"#
             ]
         );
+        assert_eq!(
+            block_rules("@media x{.a::before, .b[s='1,2']::after{y:2}}", true, none).unwrap(),
+            [
+                ".a{@media x{&::before{y:2}}}",
+                ".b[s='1,2']{@media x{&::after{y:2}}}"
+            ]
+        );
+        assert_eq!(
+            block_rules(
+                "@media x{.a > [s] ::-webkit-x, .a>.b::after{y:2}}",
+                true,
+                none
+            ),
+            None,
+            "a combinator right before the pseudo-element"
+        );
+        assert_eq!(
+            block_rules("@media x{.a > [s]::-webkit-x{y:2}}", true, none).unwrap(),
+            [".a > [s]{@media x{&::-webkit-x{y:2}}}"]
+        );
         for refused in [
-            "@media x{.a::before, .b::before{y:2}}",
-            "@media x{.a .b::before{y:2}}",
-            "@media x{.a > .b::after{y:2}}",
+            "@media x{.a::before, .b:after{y:2}}",
+            "@media x{.a ::before{y:2}}",
             "@media x{.a:before{y:2}}",
             "@media x{.a::part(x){y:2}}",
             "@media x{::before{y:2}}",

@@ -32,8 +32,12 @@ async fn computed(page: &Page, selector: &str, property: &str) -> String {
 }
 
 async fn before(page: &Page, selector: &str, property: &str) -> String {
+    pseudo(page, selector, "::before", property).await
+}
+
+async fn pseudo(page: &Page, selector: &str, element: &str, property: &str) -> String {
     page.evaluate(format!(
-        "getComputedStyle(document.querySelector({selector:?}), '::before').{property}"
+        "getComputedStyle(document.querySelector({selector:?}), {element:?}).{property}"
     ))
     .await
     .unwrap()
@@ -214,6 +218,19 @@ fn a_nested_query_matches_as_the_flat_one() {
         }
         let (nested, _) = rules_and_styles(page, "rgb(19, 20, 21)").await;
         assert_eq!(nested, 1, "the pseudo-element sheet is a nested rule");
+
+        // A list splits into one rule per selector, a combinator stays in the base (todo 2287).
+        for (id, element) in [("combo > span", "::before"), ("combo", "::after")] {
+            let nested = pseudo(page, &format!("#{id}"), element, "color").await;
+            let flat = pseudo(page, &format!("#flat-{id}"), element, "color").await;
+            assert_eq!(
+                (nested.as_str(), flat.as_str()),
+                ("rgb(25, 26, 27)", "rgb(25, 26, 27)"),
+                "#{id}{element}"
+            );
+        }
+        let (split, _) = rules_and_styles(page, "rgb(25, 26, 27)").await;
+        assert_eq!(split, 2, "one nested rule per selector");
 
         fixture.console.assert_clean("the nested queries").unwrap();
         fixture.close().await.unwrap();

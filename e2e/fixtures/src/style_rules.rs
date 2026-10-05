@@ -22,7 +22,9 @@ const FLAT: &str = "#flat-media{color:rgb(10, 11, 12)}\
     @container probe (min-width: 500px){#flat-container-out{color:rgb(13, 14, 15)}}\
     #flat-pseudo::before,#flat-pseudo-out::before{content:\"\";color:rgb(10, 11, 12)}\
     @media (min-width: 1px){#flat-pseudo::before{color:rgb(19, 20, 21)}}\
-    @media (max-width: 1px){#flat-pseudo-out::before{color:rgb(22, 23, 24)}}";
+    @media (max-width: 1px){#flat-pseudo-out::before{color:rgb(22, 23, 24)}}\
+    #flat-combo > [data-slot='x']::before,#flat-combo::after{content:\"\";color:rgb(10, 11, 12)}\
+    @media (min-width: 1px){#flat-combo > [data-slot='x']::before,#flat-combo::after{color:rgb(25, 26, 27)}}";
 
 /// A `::before` that turns `color` under `query`.
 fn pseudo(query: &str, color: &str) -> Sx {
@@ -35,7 +37,8 @@ fn pseudo(query: &str, color: &str) -> Sx {
 }
 
 /// "Show" mounts a plain class-scoped box and boxes in and out of a media and a container
-/// query (todo 2231), a `::before` under a query and a reduced-motion guard (todo 2249);
+/// query (todo 2231), a `::before` under a query and a reduced-motion guard (todo 2249), a
+/// pseudo-element list with a combinator under a query (todo 2287);
 /// "Hide" unmounts them. The `flat-` twins hold the same CSS unnested. "Calm" and "Follow"
 /// force and release reduced motion.
 #[component]
@@ -60,7 +63,20 @@ fn StyleRulesPage() -> Element {
         }
         div { id: "flat-pseudo", "Flat pseudo" }
         div { id: "flat-pseudo-out", "Flat pseudo out" }
+        div { id: "flat-combo",
+            span { "data-slot": "x", "Flat combo" }
+        }
         if shown() {
+            Box {
+                id: "combo",
+                sx: sx().selector(
+                    "& > [data-slot='x']::before, &::after",
+                    sx().content("\"\"")
+                        .color("rgb(10, 11, 12)")
+                        .media("(min-width: 1px)", sx().color("rgb(25, 26, 27)")),
+                ),
+                span { "data-slot": "x", "Combo" }
+            }
             Box { id: "pseudo", sx: pseudo("(min-width: 1px)", "rgb(19, 20, 21)"), "Pseudo" }
             Box { id: "pseudo-out", sx: pseudo("(max-width: 1px)", "rgb(22, 23, 24)"), "Pseudo out" }
             Box {
