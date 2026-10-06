@@ -1,3 +1,5 @@
+use std::{cell::RefCell, collections::HashSet, rc::Rc};
+
 use dioxus::prelude::*;
 
 use crate::{
@@ -62,6 +64,7 @@ pub struct Shortcut {
 
 impl Shortcut {
     /// `chord` is parsed as `use_hotkeys` parses it, so `"mod+b"` shows Ctrl or Cmd.
+    /// A chord that does not parse is left out, with a debug warning.
     pub fn new(chord: impl Into<String>, description: impl Into<String>) -> Self {
         Self {
             chord: chord.into(),
@@ -103,12 +106,16 @@ pub fn ShortcutHelp(props: ShortcutHelpProps) -> Element {
     let words = &current_localization().shortcut_help;
     let list_class = use_css(Some(&SHORTCUT_LIST_SX), CssLayer::Framework);
     let apple = mod_is_meta();
+    // Each bad chord warns once per instance, not on every render (todo 2450).
+    let warned = use_hook(|| Rc::new(RefCell::new(HashSet::<String>::new())));
     let rows = props.shortcuts.iter().filter_map(|shortcut| {
         let Some(keys) = chord_keys(&shortcut.chord, apple, words) else {
-            warn(&format!(
-                "ShortcutHelp: `{}` is not a chord `use_hotkeys` binds, so it is left out.",
-                shortcut.chord
-            ));
+            if warned.borrow_mut().insert(shortcut.chord.clone()) {
+                warn(&format!(
+                    "ShortcutHelp: `{}` is not a chord `use_hotkeys` binds, so it is left out.",
+                    shortcut.chord
+                ));
+            }
             return None;
         };
         Some(rsx! {
@@ -158,5 +165,42 @@ pub fn ShortcutHelp(props: ShortcutHelpProps) -> Element {
                 dl { class: list_class, {rows} }
             })}
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    use super::*;
+    use crate::utils::take_warnings;
+
+    static RENDERS: AtomicUsize = AtomicUsize::new(0);
+
+    /// Todo 2450: a re-render with the same bad chord does not warn again.
+    #[test]
+    fn a_bad_chord_warns_once() {
+        fn app() -> Element {
+            // A new title each render, so `ShortcutHelp` re-renders with the same bad row.
+            let title = format!("Keys {}", RENDERS.fetch_add(1, Ordering::Relaxed));
+            rsx! {
+                crate::LiberoProvider {
+                    ShortcutHelp { title, shortcuts: vec![Shortcut::new("hyper+b", "Bold")] }
+                }
+            }
+        }
+        take_warnings();
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        for _ in 0..2 {
+            dom.mark_dirty(ScopeId::APP);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        }
+        let bad: Vec<_> = take_warnings()
+            .into_iter()
+            .filter(|w| w.contains("`hyper+b`"))
+            .collect();
+        assert!(RENDERS.load(Ordering::Relaxed) >= 3);
+        assert_eq!(bad.len(), 1, "{bad:?}");
     }
 }

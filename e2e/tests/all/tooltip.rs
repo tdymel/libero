@@ -234,6 +234,47 @@ fn a_click_does_not_pin_the_bubble() {
     });
 }
 
+/// Todo 2446: disabling unmounted the wrapper before the pointer left, so re-enabling with
+/// the pointer elsewhere reopened the bubble.
+#[test]
+fn re_enabling_with_the_pointer_elsewhere_keeps_the_bubble_closed() {
+    block_on(async {
+        let fixture = Fixture::open("/tooltip-toggle", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::hover(page, TRIGGER).await.unwrap();
+        wait::for_visible(page, BUBBLE).await.unwrap();
+        pointer::click(page, TRIGGER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "!document.querySelector('#save-tip')",
+            "the disabled tooltip left the page",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, "#enable").await.unwrap();
+        // The label is back, closed, then the renders a reopen would take.
+        wait::for_js_true(
+            page,
+            "!!document.querySelector('#save-tip')",
+            "the tooltip enabled again",
+        )
+        .await
+        .unwrap();
+        settle(page).await;
+        assert!(
+            !wait::exists(page, OPEN).await.unwrap(),
+            "the bubble reopened with no pointer on its trigger"
+        );
+        fixture
+            .console
+            .assert_clean("re-enabling a tooltip")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 #[derive(serde::Deserialize)]
 struct Gap {
     x: f64,

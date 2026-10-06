@@ -12,6 +12,7 @@ pub const ROUTES: Routes = &[
     ("/tooltip-start", || rsx! { TooltipStartPage {} }),
     ("/tooltip/quick", || rsx! { TooltipQuickPage {} }),
     ("/tooltip-long", || rsx! { TooltipLongPage {} }),
+    ("/tooltip-toggle", || rsx! { TooltipTogglePage {} }),
 ];
 
 /// A label with no break opportunity, forced open, for reflow at 320px (todo 2384).
@@ -48,6 +49,26 @@ fn TooltipQuickPage() -> Element {
         }
         div { height: "200px" }
         p { id: "away", "Away" }
+    }
+}
+
+/// The trigger's press disables the tooltip, `#enable` turns it back on (todo 2446).
+#[component]
+fn TooltipTogglePage() -> Element {
+    let mut disabled = use_signal(|| false);
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Tooltip {
+                label: rsx! { "Saves the draft" },
+                label_id: "save-tip",
+                side: "bottom",
+                open_delay: 0,
+                close_delay: 0,
+                disabled: disabled(),
+                Button { id: "save", onclick: move |_| disabled.set(true), "Save" }
+            }
+            Button { id: "enable", onclick: move |_| disabled.set(false), "Enable" }
+        }
     }
 }
 

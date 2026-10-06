@@ -88,7 +88,8 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
     // Hover and focus are independent reasons to stay open.
     let hovered = use_hover_intent();
     let mut focused = use_signal(|| false);
-    let open = !props.disabled.unwrap_or(false) && props.open.unwrap_or(hovered.get() || focused());
+    let disabled = props.disabled.unwrap_or(false);
+    let open = !disabled && props.open.unwrap_or(hovered.get() || focused());
 
     let anchor = use_element();
     let popover = use_popover_on(
@@ -113,6 +114,13 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
             focused.set(false);
         }
     });
+    // Disabling unmounts the wrapper with its leave handlers: re-enabling must not reopen (2446).
+    use_effect(use_reactive!(|(disabled,)| {
+        if disabled {
+            hovered.set(false);
+            focused.set(false);
+        }
+    }));
     // `outside` is ours: focus leaving must clear only `focused`. A forced-open
     // card takes no Escape, so it never blocks an enclosing `Modal`'s.
     let dismissible = props.open.is_none();
@@ -220,7 +228,7 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         .style(Some(popover.style()))
         .prepare();
 
-    if props.disabled.unwrap_or(false) {
+    if disabled {
         // The slot outlives this branch: a card open when disabled would stay up.
         popover.show(None);
         return props.children;

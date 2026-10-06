@@ -456,6 +456,47 @@ fn disabling_an_open_card_removes_it() {
     });
 }
 
+/// Todo 2446: disabling unmounted the wrapper before the pointer left, so re-enabling with
+/// the pointer elsewhere reopened the card.
+#[test]
+fn re_enabling_with_the_pointer_elsewhere_keeps_the_card_closed() {
+    block_on(async {
+        let fixture = Fixture::open("/hover-card-toggle", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::hover(page, TRIGGER).await.unwrap();
+        wait::for_visible(page, CARD).await.unwrap();
+        pointer::click(page, TRIGGER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "!document.querySelector('[role=dialog]')",
+            "the disabled card left the page",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, "#enable").await.unwrap();
+        // The trigger is back in the wrapper span, then the renders a reopen would take.
+        wait::for_js_true(
+            page,
+            "document.querySelector('#trigger').parentElement.tagName === 'SPAN'",
+            "the card enabled again",
+        )
+        .await
+        .unwrap();
+        crate::settle::painted(page).await.unwrap();
+        assert!(
+            !wait::exists(page, CARD).await.unwrap(),
+            "the card reopened with no pointer on its trigger"
+        );
+        fixture
+            .console
+            .assert_clean("re-enabling a hover card")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 523: a plain-text trigger takes no focus, so no keyboard opens the
 /// card. A debug build says so; a focusable trigger stays quiet.
 #[test]

@@ -195,6 +195,14 @@ pub fn Tooltip(props: TooltipProps) -> Element {
         hover.set(false);
         focused.set(false);
     });
+    // Disabling unmounts the wrapper with its leave handlers: re-enabling must not reopen (2446).
+    let disabled = props.disabled.unwrap_or(false);
+    use_effect(use_reactive!(|(disabled,)| {
+        if disabled {
+            hover.set(false);
+            focused.set(false);
+        }
+    }));
     let focus = use_focus_within(move || vec![anchor.mounted()], {
         let pressed = pressed.clone();
         move |change| {
@@ -215,7 +223,7 @@ pub fn Tooltip(props: TooltipProps) -> Element {
     // Every hook above the branch - `prepare()` is the hook.
     let wrapper = use_box().framework_sx(&TRIGGER_WRAPPER_SX).prepare();
 
-    if props.disabled.unwrap_or(false) {
+    if disabled {
         return props.children;
     }
 

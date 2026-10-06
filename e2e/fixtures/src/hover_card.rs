@@ -13,6 +13,7 @@ pub const ROUTES: Routes = &[
         || rsx! { ColorFieldInCardPage {} },
     ),
     ("/hover-card-disable", || rsx! { DisableWhileOpenPage {} }),
+    ("/hover-card-toggle", || rsx! { ToggleDisabledPage {} }),
     ("/hover-card-text", || rsx! { TextTriggerPage {} }),
     ("/hover-card-sides", || rsx! { SidesPage {} }),
     ("/hover-card-select", || rsx! { SelectInCardPage {} }),
@@ -91,6 +92,25 @@ fn DisableWhileOpenPage() -> Element {
                 content: rsx! { Text { "Wrote the first algorithm meant for a machine." } },
                 Button { id: "trigger", "Ada Lovelace" }
             }
+        }
+    }
+}
+
+/// The trigger's press disables the card, `#enable` turns it back on (todo 2446).
+#[component]
+fn ToggleDisabledPage() -> Element {
+    let mut disabled = use_signal(|| false);
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            HoverCard {
+                aria_label: "Ada Lovelace",
+                open_delay: 0,
+                close_delay: 0,
+                disabled: disabled(),
+                content: rsx! { Text { "Wrote the first algorithm meant for a machine." } },
+                Button { id: "trigger", onclick: move |_| disabled.set(true), "Ada Lovelace" }
+            }
+            Button { id: "enable", onclick: move |_| disabled.set(false), "Enable" }
         }
     }
 }
