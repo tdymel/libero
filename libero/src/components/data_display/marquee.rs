@@ -32,10 +32,12 @@ parts_enum! {
     }
 }
 
-/// One copy plus one gap: the track plus the missing gap, over `repeat`.
-fn shift(axis: &str) -> String {
+/// One copy plus one gap: the track plus the missing gap, over `repeat`. Right to
+/// left the copies trail leftward, so the track moves right (todo 2401).
+fn shift(axis: &str, rtl: bool) -> String {
+    let (track, sign) = if rtl { ("100%", "+") } else { ("-100%", "-") };
     format!(
-        "translate{axis}(calc((-100% - {}) / {}))",
+        "translate{axis}(calc(({track} {sign} {}) / {}))",
         MARQUEE_GAP.value(),
         MARQUEE_REPEAT.value()
     )
@@ -95,7 +97,8 @@ static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
         .overflow_x("clip")
         .min_width("0")
         .media(REDUCED_MOTION, sx().overflow_x("auto"))
-        .var(MARQUEE_SHIFT, shift("X"))
+        .var(MARQUEE_SHIFT, shift("X", false))
+        .rtl(sx().var(MARQUEE_SHIFT, shift("X", true)))
         .selector(track, sx().width("max-content"))
         .selector(
             format!("{track}:focus-within"),
@@ -113,7 +116,7 @@ static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
         .overflow_y("clip")
         .min_height("0")
         .media(REDUCED_MOTION, sx().overflow_y("auto"))
-        .var(MARQUEE_SHIFT, shift("Y"))
+        .var(MARQUEE_SHIFT, shift("Y", false))
         .selector(track, sx().flex_direction("column"))
         .selector(
             format!("{track}:focus-within"),

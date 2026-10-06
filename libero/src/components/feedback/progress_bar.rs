@@ -14,9 +14,9 @@ use crate::{
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         Color, ColorShade, ColorValue, CssVar, INDETERMINATE_WIDTH, PROGRESS_BAR_ANIMATION,
-        PROGRESS_BAR_COLOR, PROGRESS_BAR_FILL, PROGRESS_BAR_INDETERMINATE_STATE,
-        PROGRESS_BAR_RADIUS, PROGRESS_BAR_SIZE, PROGRESS_BAR_TRACK, PROGRESS_BAR_TRANSITION,
-        ProgressBarDefaults, Size,
+        PROGRESS_BAR_ANIMATION_RTL, PROGRESS_BAR_COLOR, PROGRESS_BAR_FILL,
+        PROGRESS_BAR_INDETERMINATE_STATE, PROGRESS_BAR_RADIUS, PROGRESS_BAR_SIZE,
+        PROGRESS_BAR_TRACK, PROGRESS_BAR_TRANSITION, ProgressBarDefaults, Size,
     },
     utils::warn,
 };
@@ -145,21 +145,28 @@ static PROGRESS_BAR_FILL_SX: StaticSx = StaticSx::new(|| {
         )
         .when(
             PROGRESS_BAR_INDETERMINATE_STATE,
-            sx().width(INDETERMINATE_WIDTH)
-                .animation(format!(
-                    "{PROGRESS_BAR_ANIMATION} {SWEEP_DURATION} ease-in-out infinite"
-                ))
-                // A frozen sweep would read as 25% done; a dimmed full bar says
-                // "busy, amount unknown".
+            sweep_sx(PROGRESS_BAR_ANIMATION)
+                .width(INDETERMINATE_WIDTH)
+                .rtl(sweep_sx(PROGRESS_BAR_ANIMATION_RTL))
+                // A frozen sweep would read as 25% done; a striped full bar says "busy,
+                // amount unknown" in the full fill colour, so it keeps 3:1 (todo 2402).
                 .media(
                     REDUCED_MOTION,
-                    sx().animation("none")
-                        .transform("none")
+                    sx().transform("none")
                         .width("100%")
-                        .opacity("0.5"),
+                        .mask_image(INDETERMINATE_STRIPES),
                 ),
         )
 });
+
+/// Masks, not paints, so forced colours keep them on the `Highlight` fill.
+const INDETERMINATE_STRIPES: &str =
+    "repeating-linear-gradient(45deg, #000 0 4px, transparent 4px 8px)";
+
+fn sweep_sx(keyframes: &str) -> Sx {
+    sx().animation(format!("{keyframes} {SWEEP_DURATION} ease-in-out infinite"))
+        .media(REDUCED_MOTION, sx().animation("none"))
+}
 
 /// The drawn share, in `0.0..=1.0`. A broken range warns and draws empty.
 fn fraction(value: f64, min: f64, max: f64) -> f64 {
@@ -174,10 +181,10 @@ fn fraction(value: f64, min: f64, max: f64) -> f64 {
     (value.clamp(min, max) - min) / (max - min)
 }
 
-/// `aria-valuenow`, clamped like the fill. A broken range reports the raw
-/// value, as `clamp` panics on `min > max`.
+/// `aria-valuenow`, clamped like the fill. A non-finite input reports `min`, as the
+/// fill draws empty; `min > max` reports the raw value, as `clamp` panics on it.
 fn value_now(value: f64, min: f64, max: f64) -> f64 {
-    if value.is_nan() {
+    if !(value.is_finite() && min.is_finite() && max.is_finite()) {
         min
     } else if min < max {
         value.clamp(min, max)
@@ -190,12 +197,15 @@ fn percentage(fraction: f64) -> String {
     format!("{}%", (fraction * 100.0).round())
 }
 
-/// Whole numbers without a decimal tail: "3 of 10", not "3 of 10.0".
-fn aria_number(value: f64) -> String {
-    if value.fract() == 0.0 && value.abs() < 1e15 {
-        format!("{}", value as i64)
+/// Whole numbers without a decimal tail: "3 of 10", not "3 of 10.0". `None` for a
+/// non-finite one, which ARIA cannot read ("inf", "NaN").
+fn aria_number(value: f64) -> Option<String> {
+    if !value.is_finite() {
+        None
+    } else if value.fract() == 0.0 && value.abs() < 1e15 {
+        Some(format!("{}", value as i64))
     } else {
-        format!("{value}")
+        Some(format!("{value}"))
     }
 }
 
@@ -397,7 +407,7 @@ pub fn ProgressBar(props: ProgressBarProps) -> Element {
             "aria-valuenow",
             props
                 .value
-                .map(|value| aria_number(value_now(value, props.min, props.max))),
+                .and_then(|value| aria_number(value_now(value, props.min, props.max))),
         );
 
     // The percentage is only a default: a spread `aria-valuetext` beats it.
@@ -562,6 +572,19 @@ mod tests {
         assert_eq!(value_now(f64::NAN, 0.0, 100.0), 0.0);
     }
 
+    /// Todo 2400: `inf` drew empty and read "0%", but `aria-valuenow` said `max`.
+    #[test]
+    fn a_non_finite_value_or_bound_reports_what_the_fill_draws() {
+        for (value, max) in [
+            (f64::INFINITY, 100.0),
+            (f64::NEG_INFINITY, 100.0),
+            (50.0, f64::INFINITY),
+        ] {
+            assert_eq!(fraction(value, 0.0, max), 0.0);
+            assert_eq!(value_now(value, 0.0, max), 0.0, "{value} of {max}");
+        }
+    }
+
     #[test]
     fn the_percentage_is_rounded_to_whole_units() {
         assert_eq!(percentage(0.0), "0%");
@@ -571,10 +594,18 @@ mod tests {
 
     #[test]
     fn whole_aria_bounds_print_without_a_decimal_tail() {
-        assert_eq!(aria_number(10.0), "10");
-        assert_eq!(aria_number(0.0), "0");
-        assert_eq!(aria_number(-3.0), "-3");
-        assert_eq!(aria_number(2.5), "2.5");
+        let number = |value| aria_number(value).expect("finite");
+        assert_eq!(number(10.0), "10");
+        assert_eq!(number(0.0), "0");
+        assert_eq!(number(-3.0), "-3");
+        assert_eq!(number(2.5), "2.5");
+    }
+
+    #[test]
+    fn a_non_finite_aria_bound_is_omitted() {
+        assert_eq!(aria_number(f64::INFINITY), None);
+        assert_eq!(aria_number(f64::NEG_INFINITY), None);
+        assert_eq!(aria_number(f64::NAN), None);
     }
 
     /// Todo 1577: the bar has no text, so its fill needs 3:1 on the track and the page (1.4.11).
@@ -640,6 +671,27 @@ mod tests {
                 "Osmium light success: 1.93:1",
             ],
             "the shipped fills' contrast moved"
+        );
+    }
+
+    /// Todo 2402: the reduced-motion bar is the fill in stripes, not a blend, so the 1577
+    /// ratios above hold for it. Todo 2401: right to left runs the mirrored sweep.
+    #[test]
+    fn the_indeterminate_fill_keeps_its_paint_and_mirrors_under_rtl() {
+        use crate::{css::Stylesheet, theme::PROGRESS_BAR_KEYFRAMES};
+
+        let css = Stylesheet::from(&PROGRESS_BAR_FILL_SX).as_str().to_string();
+        assert!(!css.contains("opacity"), "{css}");
+        assert!(
+            css.contains(&format!("mask-image:{INDETERMINATE_STRIPES}")),
+            "{css}"
+        );
+        assert!(
+            css.contains(&format!("animation:{PROGRESS_BAR_ANIMATION_RTL} ")),
+            "{css}"
+        );
+        assert!(
+            PROGRESS_BAR_KEYFRAMES.contains(&format!("@keyframes {PROGRESS_BAR_ANIMATION_RTL}{{"))
         );
     }
 

@@ -11,3 +11,4 @@ button "Add 10%"
 paragraph
   StaticText "Sync"
 progressbar "Sync" [valuemax=100] [valuemin=0]
+progressbar "Sync, right to left" [valuemax=100] [valuemin=0]

@@ -49,6 +49,59 @@ fn reduced_motion_shows_one_still_copy_without_the_toggle() {
     });
 }
 
+/// Todo 2401: right to left the first copy starts at the right edge, the strip never
+/// opens a blank gap, and the cycle ends with the second copy where the first began.
+#[test]
+fn an_rtl_marquee_keeps_its_seam() {
+    block_on(async {
+        let fixture = Fixture::open("/marquee-rtl", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        motion::set_reduced_motion(page, false).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('[data-slot=track]')?.getAnimations().length > 0",
+            "the marquee to run",
+        )
+        .await
+        .unwrap();
+        let [start_gap, worst_blank, seam]: [f64; 3] = page
+            .evaluate(
+                r#"(() => {
+                    const track = document.querySelector('[data-slot=track]');
+                    const root = track.parentElement.getBoundingClientRect();
+                    const groups = track.querySelectorAll('[data-slot=group]');
+                    const anim = track.getAnimations()[0];
+                    const duration = anim.effect.getComputedTiming().duration;
+                    anim.pause();
+                    anim.currentTime = 0;
+                    const first = groups[0].getBoundingClientRect().right;
+                    let blank = 0;
+                    for (const t of [0.25, 0.5, 0.75, 0.999]) {
+                        anim.currentTime = duration * t;
+                        const r = track.getBoundingClientRect();
+                        blank = Math.max(blank, r.left - root.left, root.right - r.right);
+                    }
+                    anim.currentTime = duration - 1;
+                    return [root.right - first, blank, groups[1].getBoundingClientRect().right - first];
+                })()"#,
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            start_gap.abs() < 1.0,
+            "the first copy starts {start_gap:.1}px from the right edge"
+        );
+        assert!(worst_blank <= 0.5, "a {worst_blank:.1}px blank strip opens");
+        assert!(seam.abs() < 1.0, "the seam is off by {seam:.1}px");
+        fixture.console.assert_clean("the RTL marquee").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A link focused while its copy is scrolled out of the clip must come into
 /// view: pausing where it stood left it focused and unseen (WCAG 2.4.11).
 #[test]

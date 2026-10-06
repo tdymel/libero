@@ -28,7 +28,7 @@ fn ProgressBarSegmentsPage() -> Element {
 }
 
 /// A determinate bar "Add 10%" moves, whose fill eases, and an indeterminate
-/// one, whose fill sweeps.
+/// one, whose fill sweeps, also right to left.
 #[component]
 fn ProgressBarPage() -> Element {
     let mut done = use_signal(|| 40.0);
@@ -45,6 +45,9 @@ fn ProgressBarPage() -> Element {
             }
             Text { "Sync" }
             ProgressBar { id: "sync", aria_label: "Sync", value: None }
+            div { dir: "rtl",
+                ProgressBar { id: "sync-rtl", aria_label: "Sync, right to left", value: None }
+            }
         }
     }
 }

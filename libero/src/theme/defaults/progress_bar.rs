@@ -21,16 +21,21 @@ pub const PROGRESS_BAR_COLOR: CssVar = CssVar::new("--lsx-progress-bar-color");
 pub const PROGRESS_BAR_FILL: CssVar = CssVar::new("--lsx-progress-bar-fill");
 
 /// The indeterminate sweep: a [`INDETERMINATE_WIDTH`] fill translated (no reflow) from
-/// `-100%` to `400%` of its own box, so it enters and leaves completely.
+/// `-100%` to `400%` of its own box, so it enters and leaves completely. The `-rtl` twin
+/// mirrors it, as the fill starts at the right there (todo 2401).
 pub const PROGRESS_BAR_KEYFRAMES: &str = concat!(
     "@keyframes lsx-progress-bar-indeterminate{",
     "from{transform:translateX(-100%);}",
-    "to{transform:translateX(400%);}}"
+    "to{transform:translateX(400%);}}",
+    "@keyframes lsx-progress-bar-indeterminate-rtl{",
+    "from{transform:translateX(100%);}",
+    "to{transform:translateX(-400%);}}"
 );
 
 /// The `data-state` that runs it, and the animation's name.
 pub const PROGRESS_BAR_INDETERMINATE_STATE: &str = "indeterminate";
 pub const PROGRESS_BAR_ANIMATION: &str = "lsx-progress-bar-indeterminate";
+pub(crate) const PROGRESS_BAR_ANIMATION_RTL: &str = "lsx-progress-bar-indeterminate-rtl";
 
 /// Width of the sweeping fill, as a share of the track.
 pub const INDETERMINATE_WIDTH: &str = "25%";

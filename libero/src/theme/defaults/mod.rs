@@ -279,6 +279,7 @@ pub use password_field::PasswordFieldDefaults;
 pub use phone_field::PhoneFieldDefaults;
 pub use pin_field::{PIN_FIELD_GAP, PinFieldDefaults, PinKind};
 pub use popover::{Align, POPOVER_GAP, POPOVER_PADDING, PopoverDefaults, Side};
+pub(crate) use progress_bar::PROGRESS_BAR_ANIMATION_RTL;
 pub use progress_bar::{
     INDETERMINATE_WIDTH, PROGRESS_BAR_ANIMATION, PROGRESS_BAR_COLOR, PROGRESS_BAR_FILL,
     PROGRESS_BAR_INDETERMINATE_STATE, PROGRESS_BAR_KEYFRAMES, PROGRESS_BAR_RADIUS,

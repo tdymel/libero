@@ -143,6 +143,13 @@ fn the_shift_is_one_copy_plus_one_gap() {
         )),
         "{html}"
     );
+    // Todo 2401: right to left the copies trail leftward, so the track moves right.
+    assert!(
+        html.contains(&format!(
+            r#".{class}[data-state~="horizontal"]:dir(rtl){{--lsx-marquee-shift:translateX(calc((100% + var(--lsx-marquee-gap)) / var(--lsx-marquee-repeat)));}}"#
+        )),
+        "{html}"
+    );
     assert!(
         html.contains("@keyframes lsx-marquee{to{transform:var(--lsx-marquee-shift);}}"),
         "{html}"

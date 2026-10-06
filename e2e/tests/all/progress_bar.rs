@@ -1,5 +1,5 @@
 //! `ProgressBar`: under reduced motion the fill jumps instead of easing, and
-//! the indeterminate sweep becomes a dimmed full track.
+//! the indeterminate sweep becomes a striped full track.
 
 use anyhow::Result;
 use e2e::browser::block_on;
@@ -10,6 +10,7 @@ use e2e::{Fixture, Suite, Viewport, wait};
 
 const UPLOAD: &str = "#upload";
 const SYNC: &str = "#sync";
+const SYNC_RTL: &str = "#sync-rtl";
 const ADD: &str = "#add";
 
 #[test]
@@ -134,6 +135,60 @@ fn fill(selector: &str) -> String {
     )
 }
 
+/// Todo 2402, WCAG 1.4.11: the reduced-motion bar is stripes of the full fill
+/// colour, so each stripe keeps 3:1 on the track and on the page.
+async fn striped_fill_keeps_its_contrast(page: &chromiumoxide::Page) {
+    let probe = format!(
+        r#"(() => {{ {COLOUR_JS}
+        const track = document.querySelector('{SYNC}');
+        const fill = getComputedStyle(track.firstElementChild);
+        const base = OVER(RGBA(getComputedStyle(document.body).backgroundColor), [255, 255, 255, 1]);
+        const under = OVER(RGBA(getComputedStyle(track).backgroundColor), base);
+        const paint = OVER(RGBA(fill.backgroundColor), under);
+        return [fill.maskImage.startsWith('repeating-linear-gradient') ? 1 : 0,
+                CONTRAST(paint, under), CONTRAST(paint, base)]; }})()"#
+    );
+    let [striped, on_track, on_page]: [f64; 3] = page
+        .evaluate(probe.as_str())
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap();
+    assert_eq!(striped, 1.0, "the reduced-motion fill is not striped");
+    assert!(on_track >= 3.0, "a stripe is {on_track:.2}:1 on its track");
+    assert!(on_page >= 3.0, "a stripe is {on_page:.2}:1 on the page");
+}
+
+/// Todo 2401: the sweep enters from the start side, so under RTL its first frame
+/// sits past the right edge, not at half way.
+async fn sweep_starts_off_the_track(page: &chromiumoxide::Page) {
+    for (bar, rtl) in [(SYNC, false), (SYNC_RTL, true)] {
+        let probe = format!(
+            "(() => {{ const track = document.querySelector('{bar}');
+                const fill = track.firstElementChild;
+                const sweep = fill.getAnimations()[0];
+                sweep.pause(); sweep.currentTime = 0;
+                const t = track.getBoundingClientRect(), f = fill.getBoundingClientRect();
+                return [f.right - t.left, t.right - f.left]; }})()"
+        );
+        let [inside_from_left, inside_from_right]: [f64; 2] = page
+            .evaluate(probe.as_str())
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let inside = if rtl {
+            inside_from_right
+        } else {
+            inside_from_left
+        };
+        assert!(
+            inside <= 0.5,
+            "{bar}: the sweep's first frame overlaps the track by {inside:.1}px"
+        );
+    }
+}
+
 /// Forced colours paint every background `Canvas`, so the track and the fill
 /// vanished into the page (todo 506).
 #[test]
@@ -198,7 +253,7 @@ fn reduced_motion_stops_the_ease_and_the_sweep() {
                 motion::assert_reduced_motion_matches(page).await.unwrap();
             }
 
-            for bar in [UPLOAD, SYNC] {
+            for bar in [UPLOAD, SYNC, SYNC_RTL] {
                 let still = motion::assert_still(page, bar).await;
                 match reduced {
                     true => still.unwrap_or_else(|e| panic!("{bar}: {e}")),
@@ -208,19 +263,26 @@ fn reduced_motion_stops_the_ease_and_the_sweep() {
                 }
             }
 
+            if !reduced {
+                sweep_starts_off_the_track(page).await;
+            }
+
             if reduced {
                 // No 25% stub parked at the left, which would read as a value.
-                let (share, opacity): (f64, f64) = page
-                    .evaluate(fill(SYNC))
-                    .await
-                    .unwrap()
-                    .into_value()
-                    .unwrap();
-                assert!(
-                    (share - 1.0).abs() < 0.01,
-                    "the sweep froze at {share} of the track"
-                );
-                assert_eq!(opacity, 0.5);
+                for bar in [SYNC, SYNC_RTL] {
+                    let (share, opacity): (f64, f64) = page
+                        .evaluate(fill(bar))
+                        .await
+                        .unwrap()
+                        .into_value()
+                        .unwrap();
+                    assert!(
+                        (share - 1.0).abs() < 0.01,
+                        "{bar}: the sweep froze at {share} of the track"
+                    );
+                    assert_eq!(opacity, 1.0, "{bar}: a blended fill drops under 3:1");
+                }
+                striped_fill_keeps_its_contrast(page).await;
 
                 // The fill is at the new value on the first read after the
                 // value lands: no ease to wait out.
