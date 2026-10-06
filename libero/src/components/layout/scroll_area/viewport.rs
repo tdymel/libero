@@ -12,6 +12,8 @@ pub(super) struct ScrollGeometry {
     pub viewport: f64,
     /// The last scroll step, signed: the window reaches that far further ahead.
     pub step: f64,
+    /// A new width rewraps the rows, so a measured pitch is measured again.
+    pub width: f64,
 }
 
 impl ScrollGeometry {
@@ -21,6 +23,7 @@ impl ScrollGeometry {
             offset,
             viewport,
             step: offset - self.offset,
+            width: self.width,
         }
     }
 }
@@ -43,6 +46,7 @@ pub(super) const UNMEASURED: ScrollGeometry = ScrollGeometry {
     offset: 0.0,
     viewport: 1080.0,
     step: 0.0,
+    width: 0.0,
 };
 
 /// What a settled `Virtualize` windows by: with the geometry, its rows and offsets.
@@ -229,6 +233,7 @@ mod tests {
         offset: 0.0,
         viewport: 100.0,
         step: 0.0,
+        width: 300.0,
     };
 
     /// A 50px step down reaches 150px (8 rows) further below; up, above.

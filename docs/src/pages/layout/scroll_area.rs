@@ -93,7 +93,7 @@ pub fn ScrollAreaPage() -> Element {
                 prop("item", "Callback<usize, Element>").default("required")
                     .doc("Renders one row. Called only for the rows in view."),
                 prop("item_size", "f64")
-                    .doc("A row's height plus the gap below it, in px. Unset, it is measured from the first rows. Every row must have the same height."),
+                    .doc("A row's height plus the gap below it, in px. Unset, it is measured from the first rows, and again when the area's width changes. Every row must have the same height."),
                 prop("overscan", "usize")
                     .default(theme.scroll_area.overscan.to_string())
                     .doc("Rows rendered beyond each edge, so a fast scroll has something to show."),
@@ -114,6 +114,8 @@ pub fn ScrollAreaPage() -> Element {
                 .must([
                     "Name the area with `aria_label` or `aria_labelledby`.",
                     "Use `scrollbars: \"none\"` only where something else scrolls: it puts the clipped content out of reach.",
+                    "Give each `Virtualize` row `aria_setsize: count` and `aria_posinset: index + 1`, as the virtualize preview does: only the rows in view exist, so a screen reader cannot count the rest. For a table row, `aria-rowcount` and `aria-rowindex`.",
+                    "Pass `focusable: true` when the content holds only controls hidden by CSS (`visibility: hidden`, `display: none`): the area counts them as focusable and makes no tab stop.",
                 ])
                 .example("A terms text in `ScrollArea { aria_label: \"Terms of service\", .. }`: Tab stops on the area, a screen reader reads its name, and the arrow keys scroll it."),
             lead: rsx! {
@@ -148,9 +150,9 @@ pub fn ScrollAreaPage() -> Element {
                     Control::toggle("scrollbar_size", ["thin", "auto"])
                         .labels(["Thin", "Auto"])
                         .default(theme.scroll_area.size.as_str()),
-                    // Unset draws grey-5, which bare `grey` is not: the unset swatch is painted grey-5.
+                    // Unset draws grey-6, which bare `grey` is not: the unset swatch is painted grey-6.
                     Control::color("scrollbar_color").with_unset()
-                    .unset_swatch("muted.5"),
+                    .unset_swatch("muted.6"),
                     // Not a prop: swaps the content for a `Virtualize` list,
                     // which renders only the rows in view.
                     Control::switch("virtualize").code(|_, _| vec![]),
@@ -189,7 +191,12 @@ pub fn ScrollAreaPage() -> Element {
                                         Virtualize {
                                             count: 50_000,
                                             item: move |index: usize| rsx! {
-                                                ListItem { sx: sx().padding("sm"), "Row {index}" }
+                                                ListItem {
+                                                    sx: sx().padding("sm"),
+                                                    aria_setsize: 50_000,
+                                                    aria_posinset: index + 1,
+                                                    "Row {index}"
+                                                }
                                             },
                                         }
                                     }

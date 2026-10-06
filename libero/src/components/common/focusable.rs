@@ -1,8 +1,8 @@
 /// What Tab can reach. The `:not(..)` tail drops hidden, inert, `tabindex="-1"` (roving items)
-/// and `:disabled` elements; visually hidden but focusable ones still match.
+/// and `:disabled` elements; visually hidden but focusable ones, and CSS-hidden ones, still match.
 pub(crate) const FOCUSABLE_SELECTOR: &str = concat!(
     ":is(a[href], button:not([disabled]), textarea:not([disabled]), ",
-    "input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex=\"-1\"]), ",
+    "input:not([disabled], [type=\"hidden\"]), select:not([disabled]), [tabindex]:not([tabindex=\"-1\"]), ",
     "summary, iframe, audio[controls], video[controls], ",
     "[contenteditable]:not([contenteditable=\"false\"]))",
     ":not([hidden], [inert], [aria-hidden=\"true\"], [tabindex=\"-1\"], :disabled, ",
@@ -34,5 +34,14 @@ mod tests {
             .expect("an exclusion list after the :is(..)");
 
         assert!(excluded.contains(":disabled"), "{FOCUSABLE_SELECTOR}");
+    }
+
+    /// A form's posted value (`type="hidden"`) is never a tab stop (todo 2498).
+    #[test]
+    fn a_hidden_input_is_never_a_tab_stop() {
+        assert!(
+            FOCUSABLE_SELECTOR.contains(r#"input:not([disabled], [type="hidden"])"#),
+            "{FOCUSABLE_SELECTOR}"
+        );
     }
 }

@@ -13,7 +13,30 @@ pub const ROUTES: Routes = &[
     ("/scroll-area/keyboard", || rsx! { KeyboardPage {} }),
     ("/scroll-area/rtl", || rsx! { RtlPage {} }),
     ("/scroll-area/bars", || rsx! { BarsPage {} }),
+    ("/scroll-area/rewrap", || rsx! { RewrapPage {} }),
 ];
+
+/// A measured list whose rows rewrap when a test narrows `#wrap-pane`: two 140px boxes
+/// sit on one 20px line at 300px and on two at 200px (todo 2496).
+#[component]
+fn RewrapPage() -> Element {
+    let cell = "display: inline-block; width: 140px; height: 20px; line-height: 20px; vertical-align: top";
+    rsx! {
+        div { id: "wrap-pane", style: "width: 300px; height: 120px",
+            ScrollArea { "aria-label": "Wrapping rows",
+                Virtualize {
+                    count: 1000,
+                    item: move |i: usize| rsx! {
+                        div { "data-row": i, style: "line-height: 0",
+                            span { style: cell, "Row {i}" }
+                            span { style: cell, "Detail" }
+                        }
+                    },
+                }
+            }
+        }
+    }
+}
 
 /// The bars `Always` draws: a padded vertical area whose pane `#bars-pane` a test resizes,
 /// both axes, a padded and bordered horizontal one under RTL, `Hover`, which draws none,
@@ -106,7 +129,7 @@ fn RtlPage() -> Element {
 }
 
 /// Plain-text areas at defaults and `focusable` + named, then the automatic tab stop's other
-/// cases (585): content that fits, links inside, content that grows past the area.
+/// cases (585): content that fits, links inside, content that grows past the area, a hidden input.
 #[component]
 fn KeyboardPage() -> Element {
     let lines = || (0..40).map(|i| rsx! { p { key: "{i}", "Line {i}" } });
@@ -155,6 +178,13 @@ fn KeyboardPage() -> Element {
             button { id: "nested-step", onclick: move |_| nested += 1, "Step" }
             div { style: "height: 120px",
                 ScrollArea { id: "nested", "aria-label": "Nested", NestedLines {} }
+            }
+            // A posted value is no tab stop, so the text still needs the area's (2498).
+            div { style: "height: 120px",
+                ScrollArea { id: "posted", "aria-label": "Posted",
+                    input { r#type: "hidden", name: "choice", value: "1" }
+                    {lines()}
+                }
             }
         }
     }

@@ -137,6 +137,62 @@ e2e::scenario!(
     android: skip("2177: the WebView does not follow the jump")
 );
 
+/// `#wrap-pane`'s list: its scroll height, the px no row covers, and whether the row at
+/// the top of the view is the one the offset puts there at `pitch`.
+const WRAP: &str = "(pitch) => { const pane = document.querySelector('#wrap-pane'); \
+    const area = [...pane.querySelectorAll('*')].find(e => e.scrollHeight > e.clientHeight + 100); \
+    const view = area.getBoundingClientRect(); \
+    const rows = [...pane.querySelectorAll('[data-row]')]; \
+    const rects = rows.map(r => r.getBoundingClientRect()); \
+    const top = Math.min(...rects.map(r => r.top)), bottom = Math.max(...rects.map(r => r.bottom)); \
+    const at = rows.find((r, i) => rects[i].top <= view.top + 1 && rects[i].bottom > view.top + 1); \
+    return { height: area.scrollHeight, top: area.scrollTop, \
+        blank: Math.max(0, top - view.top) + Math.max(0, view.bottom - bottom), \
+        aligned: !!at && Number(at.dataset.row) === Math.floor((area.scrollTop + 1) / pitch) }; }";
+
+async fn wrap<D: Driver>(d: &mut D, pitch: f64) -> Result<serde_json::Value> {
+    d.evaluate(&format!("({WRAP})({pitch})")).await
+}
+
+/// Todo 2496: a narrower pane rewraps the measured rows from 20px to 40px; the pitch
+/// follows, so the list grows and the pane stays covered at the offset.
+async fn rewrapped_rows_keep_the_pane_covered<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually(d, "the rows measured at 20px", async |d| {
+        let list = wrap(d, 20.0).await?;
+        Ok(list["height"]
+            .as_f64()
+            .is_some_and(|h| (19_000.0..21_000.0).contains(&h)))
+    })
+    .await?;
+    d.evaluate("[...document.querySelectorAll('#wrap-pane *')].find(e => e.scrollHeight > e.clientHeight + 100).scrollTop = 2000")
+        .await?;
+    eventually(d, "the window at row 100", async |d| {
+        let list = wrap(d, 20.0).await?;
+        Ok(list["blank"].as_f64().is_some_and(|b| b < 1.0) && list["aligned"] == true)
+    })
+    .await?;
+    d.evaluate("document.querySelector('#wrap-pane').style.width = '200px'")
+        .await?;
+    eventually(
+        d,
+        "the pitch revised to 40px, the pane covered",
+        async |d| {
+            let list = wrap(d, 40.0).await?;
+            Ok(list["height"].as_f64().is_some_and(|h| h > 39_000.0)
+                && list["blank"].as_f64().is_some_and(|b| b < 1.0)
+                && list["aligned"] == true)
+        },
+    )
+    .await
+}
+
+e2e::scenario!(
+    a_rewrap_revises_the_measured_pitch,
+    "/scroll-area/rewrap",
+    rewrapped_rows_keep_the_pane_covered,
+    native: skip("no script reads on Blitz")
+);
+
 /// The real input path: a wheel, or a touch fling where there is no wheel. The list comes
 /// to rest with the window moved down and the pane covered.
 async fn the_window_follows_the_input<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -335,6 +391,13 @@ fn an_overflowing_area_of_plain_content_is_a_tab_stop() {
             page,
             &stop("plain"),
             "the overflowing plain area to take Tab",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            &stop("posted"),
+            "text beside a hidden input to take Tab",
         )
         .await
         .unwrap();

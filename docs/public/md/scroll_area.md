@@ -87,8 +87,12 @@ fn Rows() -> Element {
             List {
                 Virtualize {
                     count: rows.read().len(),
-                    item: move |index| rsx! {
-                        ListItem { "{rows.read()[index]}" }
+                    item: move |index: usize| rsx! {
+                        ListItem {
+                            aria_setsize: rows.read().len(),
+                            aria_posinset: index + 1,
+                            "{rows.read()[index]}"
+                        }
                     },
                 }
             }
@@ -110,7 +114,7 @@ second, it warns and renders every row.
 | `scrollbars` | `ScrollAxis` | `vertical` | Which axes scroll and show a scrollbar. `none` clips the overflow. |
 | `scrollbar_visibility` | `ScrollbarVisibility` | `always` | When the scrollbar shows, `always`, `hover` or `hidden`. `scroll` acts like `hover` for now. In a browser or WebView, `always` draws its own track and thumb, so the bar stays where the system overlays and fades its scrollbars; drag the thumb or press the track. The other values keep the native bar. |
 | `scrollbar_size` | `ScrollbarSize` | `thin` | `thin` or `auto`: the CSS `scrollbar-width`, or 8px and 12px for the bar `always` draws. |
-| `scrollbar_color` | `ThemeAwareValue` | - | Thumb color. The track stays transparent. Unset it is `muted.5`. |
+| `scrollbar_color` | `ThemeAwareValue` | - | Thumb color. The track stays transparent. Unset it is `muted.6`. |
 | `scroll_position_x` | `f64` | - | Scrolls to this percent (0-100) horizontally. A signal re-applies it on every change, a literal once at mount. |
 | `scroll_position_y` | `f64` | - | The same as `scroll_position_x`, vertically. |
 | `handle` | `ScrollAreaHandle` | - | From `use_scroll_area()`. Its `scroll_to_percent(x, y)` and `scroll_to(x, y)` in px scroll the area from any handler, on every call. A `None` percent keeps that axis; a call before the area mounts does nothing. |
@@ -130,7 +134,7 @@ second, it warns and renders every row.
 |---|---|---|---|
 | `count` | `usize` | required | Rows in the whole list, not only the rendered ones. |
 | `item` | `Callback<usize, Element>` | required | Renders one row. Called only for the rows in view. |
-| `item_size` | `f64` | measured | A row's height plus the gap below it, in px. Unset, it is measured from the first rows. Every row must have the same height. |
+| `item_size` | `f64` | measured | A row's height plus the gap below it, in px. Unset, it is measured from the first rows, and again when the area's width changes. Every row must have the same height. |
 | `overscan` | `usize` | `4` | Rows rendered beyond each edge, so a fast scroll has something to show. |
 | `keep_rendered` | `usize` | none | An index rendered even out of view, e.g. the row holding focus, so scrolling it away keeps the focus. |
 | `item_key` | `Callback<usize, String>` | the index | A row's identity, such as its data's id. A row's state (focus, typed text, open details) follows its key, so set it when rows can be sorted, inserted or removed. |
@@ -172,6 +176,13 @@ parts work.
 - Name the area with `aria_label` or `aria_labelledby`.
 - Use `scrollbars: "none"` only where something else scrolls: it puts the
   clipped content out of reach.
+- Give each `Virtualize` row `aria_setsize: count` and `aria_posinset: index + 1`,
+  as the virtualize example does: only the rows in view exist, so a screen
+  reader cannot count the rest. For a table row, `aria-rowcount` and
+  `aria-rowindex`.
+- Pass `focusable: true` when the content holds only controls hidden by CSS
+  (`visibility: hidden`, `display: none`): the area counts them as focusable
+  and makes no tab stop.
 
 ### Example
 
@@ -193,7 +204,7 @@ on the area, a screen reader reads its name, and the arrow keys scroll it.
 
 | Variable | Description |
 |---|---|
-| `--lsx-scroll-area-thumb-color` | Thumb color, from `scrollbar_color` or `muted.5`. |
+| `--lsx-scroll-area-thumb-color` | Thumb color, from `scrollbar_color` or `muted.6`. |
 | `--lsx-scroll-area-leading` | Space for the rows a `Virtualize` skipped above the view. |
 | `--lsx-scroll-area-trailing` | The same below the view. |
 

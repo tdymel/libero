@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use dioxus::{core::DynamicValues, prelude::*};
 
 use super::viewport::{ContentOffsets, ScrollViewport, Window, WindowSpec, probed_pitch};
@@ -51,6 +53,12 @@ enum Probe {
     Batch { single: f64 },
     /// Given, measured, or given up on - `None` renders every row.
     Settled(Option<f64>),
+    /// A measured `pitch` checked again in place after a resize (rows rewrap):
+    /// the window's height first, then with rows added (todo 2496).
+    Revise {
+        pitch: f64,
+        base: Option<(f64, (usize, usize))>,
+    },
 }
 
 impl Probe {
@@ -59,7 +67,83 @@ impl Probe {
         match self {
             Self::Single { .. } => Some(1.min(count)),
             Self::Batch { .. } => Some(PROBE_ROWS.min(count)),
-            Self::Settled(_) => None,
+            Self::Settled(_) | Self::Revise { .. } => None,
+        }
+    }
+
+    /// The pitch the window uses, while settled or revising.
+    fn pitch(self) -> Option<f64> {
+        match self {
+            Self::Settled(pitch) => pitch,
+            Self::Revise { pitch, .. } => Some(pitch),
+            _ => None,
+        }
+    }
+
+    /// Still measuring, so the measuring effect runs again.
+    fn measuring(self, count: usize) -> bool {
+        self.rows(count).is_some() || matches!(self, Self::Revise { .. })
+    }
+
+    /// The rows rendered for the second revise measurement, while the window
+    /// is still `window`; else the window. Growing never clamps the offset.
+    fn revise_rows(self, window: Range<usize>, count: usize) -> Range<usize> {
+        let Self::Revise {
+            base: Some((_, at)),
+            ..
+        } = self
+        else {
+            return window;
+        };
+        if at != (window.start, window.end) {
+            return window;
+        }
+        let more = PROBE_ROWS - 1;
+        match (count - window.end, window.start) {
+            (after, _) if after > 0 => window.start..window.end + more.min(after),
+            (_, before) if before > 0 => window.start - more.min(before)..window.end,
+            // The whole list is in the window: weigh it against fewer rows.
+            _ => window.start..window.end - more.min(window.len().saturating_sub(1)),
+        }
+    }
+
+    /// What a revise measurement of `height` makes of this stage, `window`
+    /// being the window it was rendered for.
+    fn revised(self, height: f64, window: (usize, usize), count: usize) -> Self {
+        let Self::Revise { pitch, base } = self else {
+            return self;
+        };
+        if height <= 0.0 {
+            return Self::Settled(Some(pitch));
+        }
+        let Some((before, at)) = base else {
+            return Self::Revise {
+                pitch,
+                base: Some((height, window)),
+            };
+        };
+        // Scrolled in between: the padding moved, so start over.
+        if at != window {
+            return Self::Revise { pitch, base: None };
+        }
+        let rows = self.revise_rows(at.0..at.1, count).len();
+        let base_rows = at.1 - at.0;
+        let revised = match rows.cmp(&base_rows) {
+            std::cmp::Ordering::Greater => probed_pitch(before, height, rows - base_rows + 1),
+            std::cmp::Ordering::Less => probed_pitch(height, before, base_rows - rows + 1),
+            std::cmp::Ordering::Equal => None,
+        };
+        Self::Settled(revised.or(Some(pitch)))
+    }
+
+    /// The stage after the area's width or `item_size` changed, if it restarts.
+    fn resized(self, item_size: Option<f64>) -> Option<Self> {
+        match (item_size, self) {
+            (Some(size), _) => Some(Self::Settled(Some(size))),
+            (None, Self::Settled(Some(pitch)) | Self::Revise { pitch, .. }) => {
+                Some(Self::Revise { pitch, base: None })
+            }
+            _ => None,
         }
     }
 
@@ -72,6 +156,7 @@ impl Probe {
                     attempt: attempt + 1,
                 },
                 Self::Settled(pitch) => Self::Settled(pitch),
+                Self::Revise { .. } => self,
                 _ => Self::Settled(None),
             };
         }
@@ -83,6 +168,7 @@ impl Probe {
                 Self::Settled(probed_pitch(single, height, PROBE_ROWS.min(count)))
             }
             Self::Settled(pitch) => Self::Settled(pitch),
+            Self::Revise { .. } => self,
         }
     }
 }
@@ -115,7 +201,8 @@ pub fn Virtualize(
     count: usize,
     /// Renders one row; called only for the rows in view.
     item: Callback<usize, Element>,
-    /// Row pitch in px, a row plus its gap. Measured when unset.
+    /// Row pitch in px, a row plus its gap. Measured when unset, and again
+    /// when the area's width changes.
     #[props(default)]
     item_size: Option<f64>,
     /// Rows kept beyond each edge; `theme.scroll_area.overscan` by default.
@@ -160,13 +247,33 @@ pub fn Virtualize(
         }
     }));
 
+    let geometry = viewport
+        .as_ref()
+        .and_then(|viewport| *viewport.geometry.read());
+    // A rewrap after a resize, rotation or zoom, or a new `item_size`, changes the pitch.
+    let width = geometry.map(|geometry| geometry.width);
+    let mut seen = use_hook(|| CopyValue::new((item_size, width)));
+    use_effect(use_reactive!(|(item_size, width)| {
+        let (seen_size, seen_width) = *seen.peek();
+        seen.set((item_size, width));
+        let rewrapped = seen_width.is_some_and(|seen| seen > 0.0) && seen_width != width;
+        let next = probe.peek().resized(item_size);
+        if (seen_size != item_size || rewrapped)
+            && let Some(next) = next
+        {
+            probe.set(next);
+        }
+    }));
+
+    // The window the rows render for, read by the measuring effect after the render.
+    let mut rendered = use_hook(|| CopyValue::new((0, 0)));
     let content = viewport.as_ref().map(|viewport| viewport.content);
     use_effect(use_reactive!(|(count, owned)| {
         let (Some(content), Some(virtualized), true) = (content, virtualized, owned) else {
             return;
         };
         let stage = probe();
-        if stage.rows(count).is_none() || !virtualized() || !content.is_mounted() {
+        if !stage.measuring(count) || !virtualized() || !content.is_mounted() {
             return;
         }
         // The content box, not the container: its scroll height floors at the
@@ -177,17 +284,17 @@ pub fn Virtualize(
                 probe.set(Probe::Settled(None));
                 return;
             };
-            probe.set(stage.advance(size.height, count));
+            probe.set(match stage {
+                Probe::Revise { .. } => stage.revised(size.height, *rendered.peek(), count),
+                _ => stage.advance(size.height, count),
+            });
         });
     }));
 
     let stage = probe();
-    let geometry = viewport
-        .as_ref()
-        .and_then(|viewport| *viewport.geometry.read());
     let mut kept = None;
-    let spec = match (owned, stage) {
-        (true, Probe::Settled(Some(pitch))) => Some(WindowSpec {
+    let spec = match (owned, stage.pitch()) {
+        (true, Some(pitch)) => Some(WindowSpec {
             count,
             pitch,
             overscan: overscan.unwrap_or(theme.scroll_area.overscan),
@@ -248,9 +355,10 @@ pub fn Virtualize(
         None => (None, None),
     };
     // Keyed: unkeyed, a row's node would pass to the next row as the window shifts.
+    rendered.set((visible.range.start, visible.range.end));
     let rows = before
         .into_iter()
-        .chain(visible.range)
+        .chain(stage.revise_rows(visible.range, count))
         .chain(after)
         .map(|index| {
             let key = match item_key {
@@ -329,10 +437,83 @@ mod tests {
     }
 
     #[test]
-    fn a_settled_pitch_is_never_revised() {
+    fn a_settled_pitch_ignores_a_probe_measurement() {
         let settled = Probe::Settled(Some(52.0));
 
         assert_eq!(pitch(settled.advance(999.0, 1000)), Some(52.0));
         assert_eq!(pitch(settled.advance(0.0, 1000)), Some(52.0));
+    }
+
+    /// Rows rewrapped from 52px to 80px: the window, then 7 rows more below it.
+    #[test]
+    fn a_resize_revises_the_pitch_in_place() {
+        let revise = Probe::Settled(Some(52.0)).resized(None).unwrap();
+        assert_eq!(revise.revise_rows(10..30, 1000), 10..30);
+
+        let based = revise.revised(20.0 * 80.0, (10, 30), 1000);
+        assert_eq!(based.revise_rows(10..30, 1000), 10..37);
+        assert_eq!(based.pitch(), Some(52.0));
+        assert_eq!(
+            pitch(based.revised(27.0 * 80.0, (10, 30), 1000)),
+            Some(80.0)
+        );
+    }
+
+    /// At the list's end the added rows go above; a list that fits drops rows.
+    #[test]
+    fn a_revise_weighs_rows_where_the_list_has_them() {
+        let at_end = Probe::Revise {
+            pitch: 52.0,
+            base: Some((20.0 * 80.0, (980, 1000))),
+        };
+        assert_eq!(at_end.revise_rows(980..1000, 1000), 973..1000);
+        assert_eq!(
+            pitch(at_end.revised(27.0 * 80.0, (980, 1000), 1000)),
+            Some(80.0)
+        );
+
+        let fits = Probe::Revise {
+            pitch: 52.0,
+            base: Some((10.0 * 80.0, (0, 10))),
+        };
+        assert_eq!(fits.revise_rows(0..10, 10), 0..3);
+        assert_eq!(pitch(fits.revised(3.0 * 80.0, (0, 10), 10)), Some(80.0));
+    }
+
+    #[test]
+    fn a_scroll_during_a_revise_starts_it_over() {
+        let based = Probe::Revise {
+            pitch: 52.0,
+            base: Some((1600.0, (10, 30))),
+        };
+
+        assert_eq!(based.revise_rows(12..32, 1000), 12..32);
+        assert_eq!(
+            based.revised(1600.0, (12, 32), 1000),
+            Probe::Revise {
+                pitch: 52.0,
+                base: None
+            }
+        );
+    }
+
+    /// A new `item_size` is used at once; without one, a probe in progress goes on.
+    #[test]
+    fn a_new_item_size_replaces_the_pitch() {
+        assert_eq!(
+            Probe::Settled(Some(52.0)).resized(Some(80.0)),
+            Some(Probe::Settled(Some(80.0)))
+        );
+        assert_eq!(Probe::Single { attempt: 0 }.resized(None), None);
+        assert_eq!(
+            pitch(
+                Probe::Revise {
+                    pitch: 52.0,
+                    base: None
+                }
+                .revised(0.0, (0, 20), 1000)
+            ),
+            Some(52.0)
+        );
     }
 }

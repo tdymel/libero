@@ -345,6 +345,7 @@ fn measure_area(root: ElementHandle, mut geometry: Signal<Option<ScrollGeometry>
                 (Ok(size), Ok((_, top))) => ScrollGeometry {
                     offset: top,
                     viewport: size.height,
+                    width: size.width,
                     ..ScrollGeometry::default()
                 },
                 _ => ScrollGeometry::default(),
