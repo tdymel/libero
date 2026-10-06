@@ -104,6 +104,9 @@ static ZOOM_BUTTON_SX: StaticSx = StaticSx::new(|| {
         .border_width("0")
         .background("transparent")
         .outline("none")
+        // A fallback's text keeps the page's font: a `<button>` inherits neither.
+        .font_family("inherit")
+        .letter_spacing("inherit")
         .cursor("zoom-in")
         // A disabled `Fieldset` disables the `<button>` (todo 514).
         .selector("&:disabled", sx().opacity("0.5").cursor("not-allowed"))

@@ -74,6 +74,19 @@ pub(crate) fn exact(listed: &[String], args: &[String]) -> Vec<String> {
 /// Units whose tests open other modules' fixtures too, from the route literals in their sources
 /// (`tests::extra_fixtures_list_the_routes_each_unit_opens` keeps it so).
 const EXTRA_FIXTURES: &[(&str, &[&str])] = &[
+    (
+        "button",
+        &[
+            "accordion",
+            "bottom_navigation",
+            "calendar",
+            "image",
+            "menubar",
+            "stepper",
+            "table",
+            "tabs",
+        ],
+    ),
     ("color_picker", &["color_field"]),
     (
         "combobox",

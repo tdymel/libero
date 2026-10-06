@@ -48,6 +48,7 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
                 .border_bottom(format!("{} solid transparent", TABS_LINE.value()))
                 .padding(format!("{} {}", TABS_PAD_Y.value(), TABS_PAD_X.value()))
                 .font("inherit")
+                .letter_spacing("inherit")
                 .color("inherit")
                 // The strip scrolls; a label wider than it wraps (1.4.10).
                 .flex_shrink("0")

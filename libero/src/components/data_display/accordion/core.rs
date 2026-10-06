@@ -49,6 +49,7 @@ static ACCORDION_SX: StaticSx = StaticSx::new(|| {
                 .border("0")
                 .padding(format!("{} {}", ACCORDION_PAD_Y.value(), ACCORDION_PAD_X.value()))
                 .font("inherit")
+                .letter_spacing("inherit")
                 .color("inherit")
                 .text_align_start()
                 .cursor("pointer"),

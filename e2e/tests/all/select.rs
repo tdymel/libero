@@ -870,6 +870,65 @@ fn a_filter_keeps_the_option_ids_and_enter_picks_the_named_row() {
     });
 }
 
+/// Todo 2409 (WCAG 2.4.3): a press on a group label or on the dropdown off a row leaves
+/// focus in the search box, so typing still filters.
+#[test]
+fn a_click_off_a_row_keeps_focus_in_the_search_box() {
+    const ROUTE: &str = "/select/field";
+    // The dropdown's own box: a corner or the gap under the search, hitting no row or input.
+    const PADDING: &str = "(() => { const p = document.querySelector('[data-slot=dropdown]'); \
+         const r = p.getBoundingClientRect(); \
+         const s = p.querySelector('[data-slot=search]').getBoundingClientRect(); \
+         const spots = [[r.x + 1, r.y + 1], [r.right - 1, r.bottom - 1], [s.x + s.width / 2, s.bottom + 2]]; \
+         return spots.find(([x, y]) => { const e = document.elementFromPoint(x, y); \
+           return e && p.contains(e) && !e.closest('[role=option], input'); }) ?? []; })()";
+    const LABEL: &str = "(() => { const r = [...document.querySelectorAll('[data-slot=dropdown] [data-slot=group-label]')] \
+         .at(-1).getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()";
+    block_on(async {
+        let fixture = Fixture::open(ROUTE, Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        let focused = format!("document.activeElement === document.querySelector({SEARCH:?})");
+        wait::for_js_true(page, &focused, "the search box to take focus")
+            .await
+            .unwrap();
+
+        for (what, at) in [
+            ("the last group label", LABEL),
+            ("the dropdown off a row", PADDING),
+        ] {
+            let spot: Vec<f64> = js(page, at).await;
+            let [x, y] = spot[..] else {
+                panic!("no spot on {what}: {spot:?}")
+            };
+            pointer::click_at(page, pointer::Point { x, y })
+                .await
+                .unwrap();
+            crate::settle::painted(page).await.unwrap();
+            let kept: bool = js(
+                page,
+                &format!("{focused} && !!document.querySelector({LISTBOX:?})"),
+            )
+            .await;
+            assert!(
+                kept,
+                "a click on {what} moved focus off the search box or closed the list"
+            );
+        }
+        keyboard::type_text(page, "e").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelectorAll('[role=option]').length === 3",
+            "typing after the clicks to filter",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean(ROUTE).unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 842: a controlled caller refusing a pick keeps the old row, in the form value and
 /// `aria-selected`; one it takes moves both.
 #[test]

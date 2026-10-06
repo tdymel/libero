@@ -67,6 +67,7 @@ fn drill_back_sx() -> Sx {
         .background("transparent")
         .color("inherit")
         .font_family("inherit")
+        .letter_spacing("inherit")
         .font_size("inherit")
         .font_weight("600")
         .line_height("1.5")

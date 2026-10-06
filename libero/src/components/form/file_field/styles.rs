@@ -98,6 +98,7 @@ pub(super) static FILE_DROPZONE_BROWSE_SX: StaticSx = StaticSx::new(|| {
         .padding("0")
         .color("inherit")
         .font_family("inherit")
+        .letter_spacing("inherit")
         .font_size("inherit")
         .text_align("center")
         .cursor("pointer")

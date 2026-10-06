@@ -44,7 +44,12 @@ fn SpotlightOptionsPage() -> Element {
 #[component]
 fn SpotlightFetchPage() -> Element {
     let mut query = use_signal(String::new);
-    let all = use_hook(|| vec![SpotlightAction::new("Home"), SpotlightAction::new("Changelog")]);
+    let mut ran = use_signal(String::new);
+    let all = use_hook(|| {
+        ["Home", "Changelog"]
+            .map(|label| SpotlightAction::new(label).onclick(move |_| ran.set(label.into())))
+            .to_vec()
+    });
     let actions = use_callback(move |query: String| spotlight_filter(&query, &all));
     let onquery = use_callback(move |next: String| query.set(next));
     let typed = query().trim().chars().count();
@@ -58,6 +63,7 @@ fn SpotlightFetchPage() -> Element {
 
     rsx! {
         Button { id: "open-spotlight", onclick: move |_| spotlight.open(), "Open the palette" }
+        Text { id: "ran", "data-ran": "{ran}", size: "sm", "Ran" }
     }
 }
 

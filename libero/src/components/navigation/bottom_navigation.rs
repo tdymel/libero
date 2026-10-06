@@ -128,6 +128,7 @@ static BOTTOM_NAVIGATION_ITEM_SX: StaticSx = StaticSx::new(|| {
         .background("transparent")
         .color("text-dimmed")
         .font("inherit")
+        .letter_spacing("inherit")
         .text_decoration("none")
         .cursor("pointer")
         .with("-webkit-tap-highlight-color", "transparent")

@@ -328,13 +328,16 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
         };
 
         let (source, limit) = (options.actions, options.limit);
+        let drawn_query = query.peek().clone();
         // A key can land before the render of the input event before it (todo 2388):
         // the rows come from the live query, as `ComboboxCore` reads `active_now()`.
         let onkeydown = move |event: KeyboardEvent| {
             if !matches!(event.key(), Key::ArrowDown | Key::ArrowUp | Key::Enter) {
                 return;
             }
-            let actions = match (loading, source) {
+            // An `onquery` caller has not answered a newer query's `loading` yet (todo 2408).
+            let unanswered = onquery.is_some() && *query.peek() != drawn_query;
+            let actions = match (loading || unanswered, source) {
                 (false, Some(source)) => source.call(query.peek().clone()),
                 _ => Vec::new(),
             };

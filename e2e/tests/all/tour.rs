@@ -94,6 +94,8 @@ async fn one_arrow_one_step<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     if progress != "2 of 3" {
         bail!("{:?}: one ArrowRight went to {progress:?}", d.platform());
     }
+    // The progress can redraw before step 2's card takes focus (todo 2411).
+    eventually_focused(d, CARD, "ArrowRight").await?;
     d.press(keyboard::ARROW_LEFT).await?;
     eventually_text(d, PROGRESS, "1 of 3", "ArrowLeft").await
 }

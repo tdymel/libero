@@ -112,6 +112,7 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
             .background("none")
             .border("0")
             .font("inherit")
+            .letter_spacing("inherit")
             .color("inherit")
             .cursor("pointer"),
     )

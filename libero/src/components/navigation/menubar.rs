@@ -64,6 +64,7 @@ static MENUBAR_SX: StaticSx = StaticSx::new(|| {
                 .border_radius(MENUBAR_TRIGGER_RADIUS.value())
                 .background("transparent")
                 .font("inherit")
+                .letter_spacing("inherit")
                 .font_size(MENUBAR_TRIGGER_FONT.value())
                 .color("inherit")
                 .flex_shrink("0")

@@ -91,6 +91,50 @@ fn a_button_and_a_link_share_the_theme_font() {
     });
 }
 
+/// Todo 2410: the other `<button>`-rooted parts take the page's typeface and letter spacing.
+#[test]
+fn button_rooted_parts_take_the_page_font() {
+    const MENUBAR_TRIGGER: &str = "[role=menubar] [role=menuitem]";
+    block_on(async {
+        e2e::browser::at_once(
+            [
+                "/accordion",
+                "/tabs",
+                "/stepper",
+                "/bottom-navigation",
+                "/image",
+                "/table",
+                "/calendar",
+                "/menubar",
+            ],
+            async |route| {
+                let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+                let page = &fixture.page;
+                let parts: &[&str] = match route {
+                    "/accordion" => &["[data-accordion-heading] > button"],
+                    "/tabs" => &["[role=tab]"],
+                    "/stepper" => &["[data-slot=step] > button"],
+                    "/bottom-navigation" => &["[aria-label=Main] button"],
+                    "/image" => &["button[aria-haspopup=dialog]"],
+                    "/table" => &["[data-sort-button]"],
+                    "/calendar" => &["[data-slot=day]", "[data-slot=title]"],
+                    _ => &[MENUBAR_TRIGGER],
+                };
+                assert_takes_the_page_font(page, parts).await;
+                if route == "/menubar" {
+                    pointer::click(page, MENUBAR_TRIGGER).await.unwrap();
+                    wait::for_visible(page, "[role=menu] [role=menuitem]")
+                        .await
+                        .unwrap();
+                    assert_takes_the_page_font(page, &["[role=menu] [role=menuitem]"]).await;
+                }
+                fixture.close().await.unwrap();
+            },
+        )
+        .await;
+    });
+}
+
 /// Each of `selectors` takes the body's typeface and letter spacing, set here to values
 /// no UA sheet or theme has, so a `<button>` that resets either shows (todo 2376).
 pub(crate) async fn assert_takes_the_page_font(page: &chromiumoxide::Page, selectors: &[&str]) {

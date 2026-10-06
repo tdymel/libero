@@ -59,6 +59,7 @@ pub(super) static MENU_SX: StaticSx = StaticSx::new(|| {
                 .border_radius(MENU_ITEM_RADIUS.value())
                 .background("transparent")
                 .font("inherit")
+                .letter_spacing("inherit")
                 .font_size(MENU_ITEM_FONT.value())
                 .color("inherit")
                 .text_align_start()

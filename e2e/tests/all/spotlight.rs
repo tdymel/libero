@@ -838,6 +838,62 @@ fn enter_before_the_render_runs_the_new_row() {
     });
 }
 
+/// Todo 2408: an Enter in the same task as a query the caller's `loading` has not
+/// answered yet runs nothing, not a row of the previous answer.
+#[test]
+fn enter_before_loading_lands_runs_nothing() {
+    block_on(async {
+        let fixture = Fixture::open("/spotlight-fetch", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        open_by_keyboard(page).await;
+        keyboard::type_text(page, "home").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "{} && document.querySelector({OPTIONS:?}).hasAttribute('data-active')",
+                rows_are(1)
+            ),
+            "home to land with Home highlighted",
+        )
+        .await
+        .unwrap();
+        let _: bool = js(
+            page,
+            &format!(
+                "(() => {{ const input = document.querySelector({SEARCH:?}); \
+                 input.value = 'h'; \
+                 input.dispatchEvent(new InputEvent('input', {{ bubbles: true, inputType: 'deleteContentBackward' }})); \
+                 input.dispatchEvent(new KeyboardEvent('keydown', {{ key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }})); \
+                 return true; }})()"
+            ),
+        )
+        .await;
+        // Keys run in order: once the later query lands, the Enter above is handled.
+        keyboard::type_text(page, "ome").await.unwrap();
+        wait::for_js_true(page, &rows_are(1), "home to land again")
+            .await
+            .unwrap();
+        let ran_nothing: bool = js(
+            page,
+            &format!(
+                "document.querySelector({RAN:?}).dataset.ran === '' && document.querySelector({DIALOG:?}) !== null"
+            ),
+        )
+        .await;
+        assert!(
+            ran_nothing,
+            "Enter before loading landed ran or closed something"
+        );
+        fixture
+            .console
+            .assert_clean("Enter before loading lands")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 1307: a long result list leaves the search box and the last row reachable.
 #[test]
 fn a_tall_spotlight_stays_reachable() {

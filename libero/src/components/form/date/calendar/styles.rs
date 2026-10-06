@@ -22,6 +22,7 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
         .background("transparent")
         .color("inherit")
         .font_family("inherit")
+        .letter_spacing("inherit")
         .font_size("inherit")
         .cursor("pointer")
         .hover(sx().background("muted.1"));

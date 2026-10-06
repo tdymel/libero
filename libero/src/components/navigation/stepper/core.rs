@@ -145,6 +145,7 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
         .padding("0")
         .margin("0")
         .font("inherit")
+        .letter_spacing("inherit")
         .color("inherit")
         .text_align_start()
         // Not `anywhere`: words stay whole down to the step's min-content, and the strip
