@@ -8,9 +8,25 @@ paragraph
 separator [orientation=horizontal]
 separator "Or continue with" [orientation=horizontal]
   StaticText "Or continue with"
+separator "Advanced" [orientation=horizontal]
+  StaticText "Advanced"
+separator "Billing" [orientation=horizontal]
+  StaticText "Or"
+paragraph
+  StaticText "Account"
+separator "Account" [orientation=horizontal]
+  StaticText "Or"
+separator "Start" [orientation=horizontal]
+  StaticText "Start"
+separator "End" [orientation=horizontal]
+  StaticText "End"
+separator "Or continue with your work email address instead" [orientation=horizontal]
+  StaticText "Or continue with your work email address instead"
 paragraph
   StaticText "Left"
 separator "Or" [orientation=vertical]
   StaticText "Or"
 paragraph
   StaticText "Right"
+paragraph
+  StaticText "End"

@@ -30,7 +30,8 @@ fn Demo() -> Element {
 }
 ```
 
-A vertical rule stretches to the row's height.
+A vertical rule stretches to the row's height, so its parent must be a flex
+row. In a block parent it is 0px high and does not show.
 
 ```rust
 use dioxus::prelude::*;
@@ -54,7 +55,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `orientation` | `Orientation` | `horizontal` | The direction of the rule. |
+| `orientation` | `Orientation` | `horizontal` | The direction of the rule. A vertical rule needs a flex row parent. |
 | `size` | `Size` | `xs` | Line thickness. |
 | `label_position` | `LabelPosition` | `center` | Where the label sits along the rule: `center`, `start` or `end`. |
 | `spacing` | `ThemeAwareValue` | `none` | Margin on both sides of the rule, a spacing step or a CSS length. |
@@ -80,7 +81,10 @@ parts work.
 ### Libero handles
 
 - The rule is a `separator`, named by its label. Your own `aria-label` or
-  `aria-labelledby` wins.
+  `aria-labelledby` wins. A `role` other than `separator` turns the label
+  naming and `aria-orientation` off.
+- A long label wraps inside the line instead of running out of a narrow
+  container.
 
 ### You must
 

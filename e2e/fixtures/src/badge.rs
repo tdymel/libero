@@ -1,8 +1,9 @@
 //! The small display labels: `Badge` in every variant and colour, `Indicator`
-//! counts, `Kbd` at every size, and a nested `List`.
+//! counts, a ringed and a processing one on an `Avatar`, `Kbd` at every size, and
+//! nested, ordered and icon `List`s.
 
 use dioxus::prelude::*;
-use libero::components::{Badge, Flex, Indicator, Kbd, List, ListItem};
+use libero::components::{Avatar, Badge, Flex, Float, Indicator, Kbd, List, ListItem};
 
 use crate::Routes;
 
@@ -51,6 +52,17 @@ fn BadgePage() -> Element {
                 }
                 Indicator { id: "dot" }
             }
+            // The real use: on a picture, in a `Float` on a positioned parent.
+            Flex { gap: "md", align: "center",
+                div { id: "ringed-host", position: "relative", width: "fit-content",
+                    Avatar { name: "Ada Lovelace", initials: "AL" }
+                    Float { Indicator { id: "ringed", with_border: true, color: "success" } }
+                }
+                div { id: "processing-host", position: "relative", width: "fit-content",
+                    Avatar { name: "Grace Hopper", initials: "GH" }
+                    Float { Indicator { id: "processing", processing: true } }
+                }
+            }
             Flex { gap: "xs", wrap: "wrap", align: "center",
                 for size in SIZES {
                     Kbd { size, "Ctrl" }
@@ -66,6 +78,14 @@ fn BadgePage() -> Element {
                 }
             }
             List { id: "ordered-list", ordered: true,
+                ListItem { "Install" }
+                ListItem { "Configure" }
+            }
+            List { id: "icon-list", icon: rsx! { span { "✓" } },
+                ListItem { "Keyboard" }
+                ListItem { "Screen reader" }
+            }
+            List { id: "ordered-icon-list", ordered: true, icon: rsx! { span { "✓" } },
                 ListItem { "Install" }
                 ListItem { "Configure" }
             }

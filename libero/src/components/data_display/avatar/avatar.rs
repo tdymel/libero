@@ -14,7 +14,7 @@ use crate::{
     context::IconSlot,
     hooks::use_theme,
     platform,
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         AVATAR_GROUP_INDEX, AVATAR_GROUP_RING, AVATAR_RADII, AVATAR_RADIUS, AvatarDefaults, CssVar,
         PAPER_BACKGROUND, Size,
@@ -65,7 +65,12 @@ pub(super) fn avatar_sx() -> Sx {
                     "0 0 0 {} {}",
                     AVATAR_GROUP_RING.value(),
                     PAPER_BACKGROUND.value()
-                )),
+                ))
+                // Forced colours drop shadows.
+                .media(
+                    FORCED_COLORS,
+                    sx().outline(format!("{} solid Canvas", AVATAR_GROUP_RING.value())),
+                ),
         );
 
     // Chrome only: an avatar is not interactive, so no hover response.

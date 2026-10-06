@@ -69,7 +69,8 @@ pub fn List(props: ListProps) -> Element {
     let context = use_context_provider(|| ListContext {
         icon: Signal::new(props.icon.clone()),
     });
-    // Guarded, so an unchanged render wakes no item.
+    // Only a hoisted or absent icon skips the write: `VNode` compares by `Rc`
+    // pointer, so an inline `rsx!` icon is unequal and wakes the items every render.
     if *context.icon.peek() != props.icon {
         let mut icon = context.icon;
         icon.set(props.icon.clone());

@@ -1,0 +1,53 @@
+---
+source: e2e/src/suite.rs
+description: sidebar at desktop (rest)
+expression: tree
+---
+complementary "Filters"
+  region "Filters"
+    paragraph
+      StaticText "Filter 1"
+    paragraph
+      StaticText "Filter 2"
+    paragraph
+      StaticText "Filter 3"
+    paragraph
+      StaticText "Filter 4"
+    paragraph
+      StaticText "Filter 5"
+    paragraph
+      StaticText "Filter 6"
+    paragraph
+      StaticText "Filter 7"
+    paragraph
+      StaticText "Filter 8"
+StaticText "Results"
+paragraph
+  StaticText "Inspector"
+StaticText "Page"
+complementary "Inspector"
+  region "Inspector"
+    paragraph
+      StaticText "Property 1"
+    paragraph
+      StaticText "Property 2"
+    paragraph
+      StaticText "Property 3"
+    paragraph
+      StaticText "Property 4"
+    paragraph
+      StaticText "Property 5"
+    paragraph
+      StaticText "Property 6"
+    paragraph
+      StaticText "Property 7"
+    paragraph
+      StaticText "Property 8"
+complementary "Toolbar"
+  StaticText "Toolbar"
+StaticText "Body"
+complementary "Status"
+  StaticText "Status"
+complementary "Wide"
+  StaticText "A line of filters far wider than its panel"
+StaticText "Rest"

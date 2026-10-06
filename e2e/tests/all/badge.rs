@@ -82,8 +82,8 @@ fn an_ordered_list_shows_its_numbers() {
     });
 }
 
-/// Forced colours paint every fill `Canvas`: a bare `Indicator` dot, which is
-/// nothing but its fill, must not vanish into the page.
+/// Forced colours paint every fill `Canvas` and drop `box-shadow`: a bare dot
+/// and the ping must not vanish into the page, the ring stays as an outline.
 #[test]
 fn a_bare_indicator_dot_shows_in_forced_colours() {
     use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
@@ -104,18 +104,26 @@ fn a_bare_indicator_dot_shows_in_forced_colours() {
         )
         .await
         .unwrap();
-        let [dot, canvas]: [String; 2] = page
+        let [dot, ping, ring, canvas]: [String; 4] = page
             .evaluate(
                 "(() => { const probe = document.createElement('div'); \
                  probe.style.background = 'Canvas'; document.body.append(probe); \
                  const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \
-                 return [getComputedStyle(document.querySelector('#dot')).backgroundColor, canvas]; })()",
+                 const ringed = getComputedStyle(document.querySelector('#ringed')); \
+                 return [getComputedStyle(document.querySelector('#dot')).backgroundColor, \
+                   getComputedStyle(document.querySelector('#processing'), '::before').backgroundColor, \
+                   `${ringed.outlineStyle} ${ringed.outlineWidth} ${ringed.outlineColor}`, canvas]; })()",
             )
             .await
             .unwrap()
             .into_value()
             .unwrap();
         assert_ne!(dot, canvas, "the dot is filled with the page's own colour");
+        assert_ne!(
+            ping, canvas,
+            "the ping is filled with the page's own colour"
+        );
+        assert_eq!(ring, format!("solid 2px {canvas}"), "the ring is gone");
         fixture.close().await.unwrap();
     });
 }

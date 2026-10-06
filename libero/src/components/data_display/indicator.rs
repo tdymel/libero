@@ -40,12 +40,17 @@ static INDICATOR_BASE_SX: StaticSx = StaticSx::new(|| {
         .media(FORCED_COLORS, sx().background("CanvasText").color("Canvas"));
 
     // A `box-shadow`, not a `border`: under `border-box` a 2px border eats 4px
-    // of a 6px dot and moves it inside its `Float`.
-    let with_border = sx().box_shadow(format!(
-        "0 0 0 {} {}",
-        INDICATOR_BORDER_WIDTH.value(),
-        PAPER_BACKGROUND.value()
-    ));
+    // of a 6px dot and moves it inside its `Float`. Forced colours drop shadows.
+    let with_border = sx()
+        .box_shadow(format!(
+            "0 0 0 {} {}",
+            INDICATOR_BORDER_WIDTH.value(),
+            PAPER_BACKGROUND.value()
+        ))
+        .media(
+            FORCED_COLORS,
+            sx().outline(format!("{} solid Canvas", INDICATOR_BORDER_WIDTH.value())),
+        );
 
     // A copy behind the dot grows and fades. The reduced-motion guard sits on
     // this same rule: anywhere else it loses on specificity.
@@ -61,7 +66,9 @@ static INDICATOR_BASE_SX: StaticSx = StaticSx::new(|| {
                 "lsx-indicator-processing {} linear infinite",
                 INDICATOR_PROCESSING_DURATION.value()
             ))
-            .media(REDUCED_MOTION, sx().animation("none")),
+            .media(REDUCED_MOTION, sx().animation("none"))
+            // Else forced to `Canvas`, invisible on the page.
+            .media(FORCED_COLORS, sx().background("CanvasText")),
     );
 
     base.when("with-border", with_border)

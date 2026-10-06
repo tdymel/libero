@@ -104,6 +104,7 @@ mod segmented_control;
 mod select;
 mod settle;
 mod shortcut_help;
+mod sidebar;
 mod skeleton;
 mod slider;
 mod sortable;

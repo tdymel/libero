@@ -28,6 +28,18 @@ fn a_label_names_its_separator() {
             ax::snapshot(page, "#plain").await.unwrap(),
             "separator [orientation=horizontal]\n"
         );
+        // The caller's own `role: "separator"` keeps the label name; their name wins.
+        for (id, name) in [
+            ("#same-role", "Advanced"),
+            ("#named", "Billing"),
+            ("#named-by", "Account"),
+        ] {
+            let tree = ax::snapshot(page, id).await.unwrap();
+            assert!(
+                tree.starts_with(&format!("separator \"{name}\"")),
+                "{id}: {tree}"
+            );
+        }
 
         fixture.console.assert_clean("the divider fixture").unwrap();
         fixture.close().await.unwrap();
@@ -92,13 +104,75 @@ fn a_caller_role_replaces_separator() {
         let page = &fixture.page;
         wait::for_visible(page, "#labelled").await.unwrap();
 
-        let role: String = page
-            .evaluate("document.querySelector('#decorative').getAttribute('role')")
+        // `aria-orientation` is not allowed on `none` (axe `aria-allowed-attr`).
+        let attributes: Vec<String> = page
+            .evaluate(
+                "['#decorative', '#decorative-vertical'].map(id => { \
+                   const rule = document.querySelector(id); \
+                   return `${id} ${rule.getAttribute('role')} ${rule.getAttribute('aria-orientation')}`; })",
+            )
             .await
             .unwrap()
             .into_value()
             .unwrap();
-        assert_eq!(role, "none");
+        assert_eq!(
+            attributes,
+            ["#decorative none null", "#decorative-vertical none null"]
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
+/// `label_position` gives the leading or trailing half its `10%` basis.
+#[test]
+fn the_label_position_moves_the_label() {
+    block_on(async {
+        let fixture = Fixture::open("/divider", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#end").await.unwrap();
+
+        let sides: Vec<String> = page
+            .evaluate(
+                "['#start', '#labelled', '#end'].map(id => { \
+                   const rule = document.querySelector(id); \
+                   const half = pseudo => parseFloat(getComputedStyle(rule, pseudo).width); \
+                   const before = half('::before'), after = half('::after'); \
+                   const side = Math.abs(before - after) < 1 ? 'centre' : before < after ? 'start' : 'end'; \
+                   return `${id} ${side}`; })",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(sides, ["#start start", "#labelled centre", "#end end"]);
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A label longer than the 320px column wraps inside the rule (1.4.10, todo 2471).
+#[test]
+fn a_long_label_wraps_inside_its_column() {
+    block_on(async {
+        let fixture = Fixture::open("/divider", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#long").await.unwrap();
+
+        let fit: String = page
+            .evaluate(
+                "(() => { const rule = document.querySelector('#long'); \
+                   const label = rule.querySelector('[data-slot=label]'); \
+                   const r = rule.getBoundingClientRect(), l = label.getBoundingClientRect(); \
+                   const s = getComputedStyle(label); \
+                   const line = parseFloat(s.lineHeight) || parseFloat(s.fontSize) * 1.2; \
+                   const inside = l.left >= r.left - 0.5 && l.right <= r.right + 0.5 \
+                     && rule.scrollWidth <= rule.clientWidth; \
+                   return `inside ${inside}, wrapped ${l.height > line * 1.5}`; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(fit, "inside true, wrapped true");
         fixture.close().await.unwrap();
     });
 }

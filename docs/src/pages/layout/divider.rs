@@ -38,7 +38,7 @@ pub fn DividerPage() -> Element {
             properties: vec![props("Divider", vec![
                 prop("orientation", "Orientation")
                     .default("horizontal")
-                    .doc("The direction of the rule."),
+                    .doc("The direction of the rule. A vertical rule needs a flex row parent."),
                 prop("size", "Size").default("xs").doc("Line thickness."),
                 prop("label_position", "LabelPosition")
                     .default("center")
@@ -58,7 +58,10 @@ pub fn DividerPage() -> Element {
                 (DividerPart::Label, "The label between the two line halves, with `children` only."),
             ])],
             accessibility: a11y()
-                .handles(["The rule is a `separator`, named by its label. Your own `aria-label` or `aria-labelledby` wins."])
+                .handles([
+                    "The rule is a `separator`, named by its label. Your own `aria-label` or `aria-labelledby` wins. A `role` other than `separator` turns the label naming and `aria-orientation` off.",
+                    "A long label wraps inside the line instead of running out of a narrow container.",
+                ])
                 .must(["Pass `role: \"none\"` for a purely visual rule."])
                 .example("A rule between two settings groups, `Divider { \"Advanced\" }`: a screen reader reads a separator named \"Advanced\". A rule that only spaces two cards takes `role: \"none\"` and is skipped."),
             lead: rsx! {

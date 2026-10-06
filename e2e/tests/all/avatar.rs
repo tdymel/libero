@@ -29,3 +29,47 @@ fn a_broken_picture_falls_back_to_the_initials_under_the_same_name() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Forced colours drop `box-shadow`: the ring that separates grouped avatars
+/// stays as a `Canvas` outline (todo 2469).
+#[test]
+fn the_group_ring_shows_in_forced_colours() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    block_on(async {
+        let fixture = Fixture::open("/avatar", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        page.execute(
+            SetEmulatedMediaParams::builder()
+                .features(vec![MediaFeature::new("forced-colors", "active")])
+                .build(),
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(forced-colors: active)').matches",
+            "forced colours to apply",
+        )
+        .await
+        .unwrap();
+        let rings: Vec<String> = page
+            .evaluate(
+                "(() => { const probe = document.createElement('div'); \
+                 probe.style.color = 'Canvas'; document.body.append(probe); \
+                 const canvas = getComputedStyle(probe).color; probe.remove(); \
+                 return [...document.querySelectorAll(\"#group [data-state~='grouped']\")].map(a => { \
+                   const s = getComputedStyle(a); \
+                   return s.outlineStyle === 'solid' && s.outlineWidth !== '0px' \
+                     && s.outlineColor === canvas ? 'ring' : `${s.outlineStyle} ${s.outlineColor}`; }); })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            !rings.is_empty() && rings.iter().all(|ring| ring == "ring"),
+            "{rings:?}"
+        );
+        fixture.close().await.unwrap();
+    });
+}

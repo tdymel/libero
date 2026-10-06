@@ -42,6 +42,10 @@ StaticText "XXL"
 StaticText "9"
 StaticText "LIGHT"
 StaticText "DARK"
+image "Ada Lovelace"
+  StaticText "AL"
+image "Grace Hopper"
+  StaticText "GH"
 StaticText "Ctrl"
 StaticText "Ctrl"
 StaticText "Ctrl"
@@ -62,4 +66,14 @@ list
     StaticText "Install"
   listitem [level=1]
     ListMarker "2."
+    StaticText "Configure"
+list
+  listitem [level=1]
+    StaticText "Keyboard"
+  listitem [level=1]
+    StaticText "Screen reader"
+list
+  listitem [level=1]
+    StaticText "Install"
+  listitem [level=1]
     StaticText "Configure"

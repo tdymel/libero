@@ -1,3 +1,4 @@
+use dioxus::dioxus_core::AttributeValue;
 use dioxus::prelude::*;
 
 use crate::{
@@ -145,8 +146,10 @@ fn divider_variables(
 }
 
 static DIVIDER_LABEL_HORIZONTAL_SX: StaticSx = StaticSx::new(|| {
+    // Wraps: a long label must not run out of a narrow container.
     sx().padding("0 12px")
-        .white_space("nowrap")
+        .min_width("0")
+        .text_align("center")
         .user_select("none")
 });
 
@@ -167,7 +170,8 @@ parts_enum! {
 base_props! {
     parts(DividerPart);
     pub struct DividerProps {
-        /// `"horizontal"` (the default) or `"vertical"`.
+        /// `"horizontal"` (the default) or `"vertical"`. A vertical rule
+        /// stretches to its parent's height, so the parent must be a flex row.
         #[props(default, into)]
         orientation: Input<Orientation>,
         /// Line thickness. Defaults to `xs`.
@@ -222,7 +226,6 @@ pub fn Divider(props: DividerProps) -> Element {
     let variables: Input<Variables> =
         divider_variables(props.color.as_ref(), props.spacing.as_ref()).into();
     let data_state = divider_states.data_state();
-    let aria_orientation = vertical.then_some("vertical");
 
     // A static class, not a component: `use_css` always, the span only with a label.
     let label_class = use_css(
@@ -234,14 +237,19 @@ pub fn Divider(props: DividerProps) -> Element {
         CssLayer::Framework,
     );
 
-    // A separator is named only by its author, never by its content. Not with a
-    // caller's role: a global aria attribute would undo a `role: "none"`.
+    // A separator is named only by its author, never by its content. Not with
+    // another caller role: a global aria attribute would undo a `role: "none"`.
     let label_id = use_id();
-    let caller_owns_it = props
+    let other_role = props.attributes.iter().any(|attribute| {
+        attribute.name == "role"
+            && !matches!(&attribute.value, AttributeValue::Text(role) if role == "separator")
+    });
+    let caller_names_it = props
         .attributes
         .iter()
-        .any(|attribute| matches!(attribute.name, "role" | "aria-label" | "aria-labelledby"));
-    let labelled_by = (has_label && !caller_owns_it).then_some(label_id.cloned());
+        .any(|attribute| matches!(attribute.name, "aria-label" | "aria-labelledby"));
+    let labelled_by = (has_label && !other_role && !caller_names_it).then_some(label_id.cloned());
+    let aria_orientation = (vertical && !other_role).then_some("vertical");
 
     let label = match props.children {
         Some(children) => rsx! {

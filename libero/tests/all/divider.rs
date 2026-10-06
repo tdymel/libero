@@ -39,6 +39,59 @@ fn a_dividers_size_reaches_its_data_state() {
     assert!(attributes_of(&html, "div")["data-state"].contains("size-lg"));
 }
 
+/// `aria-orientation` is not allowed on `none` (axe `aria-allowed-attr`).
+#[test]
+fn a_decorative_vertical_divider_has_no_orientation() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Divider { orientation: "vertical", role: "none" }
+            }
+        }
+    }
+
+    let html = render(app);
+    let attributes = attributes_of(&html, "div");
+
+    assert_eq!(attributes["role"], "none", "{html}");
+    assert!(!attributes.contains_key("aria-orientation"), "{html}");
+}
+
+/// The caller's `role: "separator"` is the default role, so the label still names it.
+#[test]
+fn a_callers_separator_role_keeps_the_label_name() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Divider { orientation: "vertical", role: "separator", "Advanced" }
+            }
+        }
+    }
+
+    let html = render(app);
+    let attributes = attributes_of(&html, "div");
+
+    assert!(attributes.contains_key("aria-labelledby"), "{html}");
+    assert_eq!(attributes["aria-orientation"], "vertical", "{html}");
+}
+
+#[test]
+fn a_callers_aria_label_replaces_the_label_name() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Divider { aria_label: "Billing", "Or" }
+            }
+        }
+    }
+
+    let html = render(app);
+    let attributes = attributes_of(&html, "div");
+
+    assert_eq!(attributes["aria-label"], "Billing", "{html}");
+    assert!(!attributes.contains_key("aria-labelledby"), "{html}");
+}
+
 static THICK_DIVIDERS: Theme = Theme {
     divider: DividerDefaults {
         size: Size::Lg,

@@ -111,12 +111,17 @@ parts work.
 ### Libero handles
 
 - The root is an `aside`, the `complementary` landmark.
+- Content that overflows with nothing focusable in it makes the inner scroll
+  area a tab stop, a `region` that takes the panel's `aria_label` or
+  `aria_labelledby`.
 
 ### You must
 
 - Pass `component: "nav"` for the site navigation.
 - Give it an `aria_label` when the page has more than one landmark of that
   kind.
+- Give it an `aria_label` or `aria_labelledby` when its content can overflow
+  with nothing focusable in it, or the tab stop is an unnamed region.
 
 ### Example
 
