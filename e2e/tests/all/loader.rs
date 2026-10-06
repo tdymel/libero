@@ -51,7 +51,11 @@ fn every_variant_shows_in_forced_colours() {
                 "(() => {
                     const page = getComputedStyle(document.body).backgroundColor;
                     const oval = getComputedStyle(document.querySelector('#oval'), '::after');
-                    const rows = [['#oval', oval.borderTopColor !== page]];
+                    // The gap is what shows the rotation; forced colours would fill it.
+                    const rows = [
+                        ['#oval', oval.borderTopColor !== page],
+                        ['#oval gap', oval.borderLeftColor === 'rgba(0, 0, 0, 0)'],
+                    ];
                     for (const el of document.querySelectorAll('#bars > span, #dots > span'))
                         rows.push([el.parentElement.id, getComputedStyle(el).backgroundColor !== page]);
                     return rows.filter(([, shows]) => !shows).map(([what]) => what);

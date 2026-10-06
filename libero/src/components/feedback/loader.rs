@@ -79,7 +79,13 @@ static LOADER_BASE_SX: StaticSx = StaticSx::new(|| {
             // The gap makes the rotation visible; a full ring looks static.
             .border_color(format!("{c} {c} {c} transparent"))
             .animation("lsx-loader-oval 1.2s linear infinite")
-            .media(REDUCED_MOTION, stop_motion(sx())),
+            .media(REDUCED_MOTION, stop_motion(sx()))
+            // Forced colours keep alpha only on backgrounds: the gap would close.
+            .media(
+                FORCED_COLORS,
+                sx().forced_color_adjust("none")
+                    .border_color("CanvasText CanvasText CanvasText transparent"),
+            ),
     );
 
     // Negative delays phase the bars into one wave.

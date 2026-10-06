@@ -90,6 +90,47 @@ fn reduced_motion_stops_every_bar_on_its_visible_end() {
     }
 }
 
+/// Forced colours keep alpha only on backgrounds, so the oval opts out to keep
+/// its transparent side: without the gap the rotation is invisible.
+#[test]
+fn forced_colours_keep_the_oval_gap() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { Loader {} }
+        }
+    }
+
+    let html = render(app);
+    let class = loader_class(&html);
+    let rule = format!(
+        r#".{class}[data-state~="oval"]::after{{forced-color-adjust:none;border-color:CanvasText CanvasText CanvasText transparent;}}"#
+    );
+    assert!(
+        html.split("@media (forced-colors: active)")
+            .skip(1)
+            .any(|block| block.contains(&rule)),
+        "missing {rule} under the forced-colours query: {html}"
+    );
+}
+
+/// The dots shrink and grow back within one cycle instead of snapping to full size.
+#[test]
+fn dots_loop_back_to_full_size() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { Loader { variant: "dots" } }
+        }
+    }
+
+    let html = render(app);
+    assert!(
+        html.contains(
+            "@keyframes lsx-loader-dots{0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(0.6);opacity:0.5;}}"
+        ),
+        "{html}"
+    );
+}
+
 /// The size resolves on the root and the children inherit it, and the ink is
 /// per instance - never on `:root`.
 #[test]

@@ -25,8 +25,7 @@ static SKELETON_BASE_SX: StaticSx = StaticSx::new(|| {
         .height(SKELETON_HEIGHT.value_or("auto"))
         .width(SKELETON_WIDTH.value_or("100%"))
         .border_radius(SKELETON_RADIUS.value())
-        // Own compositing layer: the pulse does not repaint the subtree.
-        .transform("translateZ(0)")
+        // No transform: it would trap the loaded content's fixed and z-indexed children.
         // A circle without `height` shrinks to its children.
         .when(
             CIRCLE_STATE,

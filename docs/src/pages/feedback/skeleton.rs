@@ -132,6 +132,7 @@ pub fn SkeletonPage() -> Element {
                 .must([
                     "Mark the region you are filling `aria-busy` while it waits, as on `Loader`. The demo's `Busy region` switch shows it.",
                     "Avoid a descendant that sets `visibility: visible` on itself under a visible skeleton: it shows through.",
+                    "Move focus out of the content before setting `visible` back to `true`, or use the skeleton for the first load only: covered content is `inert`, so focus inside it drops to the page.",
                 ])
                 .example("A profile card loading, `Skeleton { visible: loading(), .. }` around the name and bio, inside a region with `aria-busy`: a screen reader says nothing about the grey shapes, and Tab skips the hidden content until it loads."),
             lead: rsx! {

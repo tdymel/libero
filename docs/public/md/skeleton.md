@@ -141,6 +141,9 @@ Like every component, `Skeleton` also takes the shared props `sx`, `class`,
   [Loader](loader.md).
 - Avoid a descendant that sets `visibility: visible` on itself under a visible
   skeleton: it shows through.
+- Move focus out of the content before setting `visible` back to `true`, or
+  use the skeleton for the first load only: covered content is `inert`, so
+  focus inside it drops to the page.
 
 ```rust
 use dioxus::prelude::*;

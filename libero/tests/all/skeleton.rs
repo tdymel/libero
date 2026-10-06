@@ -231,6 +231,27 @@ fn a_visible_skeleton_hides_its_children_and_shows_only_the_grey() {
     );
 }
 
+/// No rule sets a transform on the root: it would make the loaded skeleton the
+/// containing block and stacking context of its content.
+#[test]
+fn the_root_sets_no_transform() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { Skeleton { visible: false, animate: false, "x" } }
+        }
+    }
+
+    let html = render(app);
+    let class = skeleton_class(&html);
+    let transforms: Vec<&str> = html
+        .split(&format!(".{class}"))
+        .skip(1)
+        .filter_map(|rest| rest.split('}').next())
+        .filter(|rule| rule.contains("transform:"))
+        .collect();
+    assert!(transforms.is_empty(), "{transforms:?}");
+}
+
 static STILL: Theme = Theme {
     skeleton: SkeletonDefaults {
         animate: false,

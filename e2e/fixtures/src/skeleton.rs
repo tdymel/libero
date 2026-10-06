@@ -18,7 +18,23 @@ pub const ROUTES: Routes = &[
         "/skeleton-grace/slow",
         || rsx! { GracePage { latency: 1000 } },
     ),
+    ("/skeleton-fixed", || rsx! { FixedPage {} }),
 ];
+
+/// A loaded skeleton, offset from the corner, around a `position: fixed` child.
+#[component]
+fn FixedPage() -> Element {
+    rsx! {
+        Box { padding: "64px",
+            Skeleton { visible: false, animate: false,
+                div {
+                    id: "pinned",
+                    style: "position: fixed; top: 0; left: 0; width: 10px; height: 10px; background: black;",
+                }
+            }
+        }
+    }
+}
 
 /// A standalone shape and a wrapper, both pulsing until "Reload" starts a
 /// wait: the pulse is motion an interaction starts.

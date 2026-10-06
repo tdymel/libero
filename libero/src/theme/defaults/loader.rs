@@ -18,8 +18,9 @@ pub const LOADER_KEYFRAMES: &str = concat!(
     "@keyframes lsx-loader-oval{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}",
     "@keyframes lsx-loader-bars{from{transform:scale(0.6);opacity:0;}",
     "to{transform:scale(1);opacity:1;}}",
-    "@keyframes lsx-loader-dots{from{transform:scale(1);opacity:1;}",
-    "to{transform:scale(0.6);opacity:0.5;}}"
+    // Dots loop back to full size instead of snapping there.
+    "@keyframes lsx-loader-dots{0%,100%{transform:scale(1);opacity:1;}",
+    "50%{transform:scale(0.6);opacity:0.5;}}"
 );
 
 str_enum! {

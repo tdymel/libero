@@ -162,6 +162,34 @@ fn a_loaded_skeleton_is_not_inert() {
     });
 }
 
+/// Loaded, a `position: fixed` child sits at the viewport corner: a transform on the root
+/// would make the skeleton its containing block (todo 2490).
+#[test]
+fn a_loaded_skeleton_does_not_trap_a_fixed_child() {
+    block_on(async {
+        let fixture = Fixture::open("/skeleton-fixed", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#pinned").await.unwrap();
+        let at: Vec<f64> = page
+            .evaluate(
+                "(() => { const r = document.querySelector('#pinned').getBoundingClientRect(); \
+                 return [r.left, r.top]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            at,
+            vec![0.0, 0.0],
+            "the fixed child is placed against the skeleton"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The opacity each skeleton's `::after` is drawn at, as `[id, opacity]`.
 const GREYS: &str = "[...document.querySelectorAll('#profile [data-state~=visible]')]\
      .map(el => [el.id, getComputedStyle(el, '::after').opacity])";
