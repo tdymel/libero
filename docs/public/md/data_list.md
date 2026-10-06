@@ -47,7 +47,7 @@ the first column and every description in the second.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `orientation` | `Orientation` | `vertical` | `horizontal` puts each description beside its term, `vertical` below it. |
-| `gap` | `Size` | `md` | Row gap. Other values go through `sx`. |
+| `gap` | `Size` | `md` | Gap between rows, and between a term and its description. Other values go through `sx`. |
 | `children` | `Element` | required | `DataListItem`s, or any `dt` and `dd` content. |
 
 ### DataListItem
@@ -84,13 +84,13 @@ An order summary with a `DataListItem` per row, such as "Status" and
 | Field | Type | Description |
 |---|---|---|
 | `size` | `Size` | Size step `gap` falls back to when the prop is omitted. |
-| `gaps` | `Sizes<u8>` | Row gap per size step, in px. |
+| `gaps` | `Sizes<u8>` | Row and term-to-description gap per size step, in px. |
 
 ## CSS variables
 
 | Variable | Description |
 |---|---|
-| `--lsx-data-list-gap-<size>` | Row gap for that size step. |
+| `--lsx-data-list-gap-<size>` | Row and term-to-description gap for that size step. |
 
 ## Data attributes
 

@@ -174,6 +174,8 @@ pub fn Sortable(props: SortableProps) -> Element {
         .sx(&props.sx)
         .states(&states)
         .prepare()
+        // Safari drops a `list-style: none` list's role; a caller's `role` wins.
+        .attr_default("role", "list")
         .element(&list.element)
         .event("onpointermove", list.onpointermove)
         .event("onpointerup", list.onpointerup)
@@ -212,7 +214,8 @@ parts_enum! {
 base_props! {
     parts(SortableItemPart);
     pub struct SortableItemProps {
-        /// The item's current position, from 0. Key it by its data, not this.
+        /// The item's current position: the items run exactly `0..n`, a gap or a repeat
+        /// stops every drag. Key it by its data, not this.
         index: usize,
         /// Names the item in its controls and the announcements. Unset, the handle reads the
         /// item's content, the rest "Item {n}" by where it was lifted.

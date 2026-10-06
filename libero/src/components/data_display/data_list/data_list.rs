@@ -42,7 +42,8 @@ base_props! {
         /// `"horizontal"`: descriptions beside their term; default `"vertical"`: below.
         #[props(default, into)]
         orientation: Input<Orientation>,
-        /// Row gap. Off-scale values go through `sx`.
+        /// Gap between rows, and between a term and its description.
+        /// Off-scale values go through `sx`.
         #[props(default, into)]
         gap: Input<Size>,
         /// [`DataListItem`](super::DataListItem)s, or any `dt`/`dd` content.

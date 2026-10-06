@@ -350,6 +350,27 @@ async fn a_long_handle_drag_moves_it_far<D: Driver>(d: &mut D, _route: &str) -> 
     Ok(())
 }
 
+/// The lifted item moves by `transform` only: each key step scrolls it into view (2510).
+async fn a_lifted_item_stays_in_view<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let (_, height) = d.viewport().await?;
+    let last = d.rect("#Item40").await?;
+    ensure!(last.y > height, "the list fits the viewport: {last:?}");
+    d.focus("#Item1 button").await?;
+    d.press(keyboard::SPACE).await?;
+    eventually(d, "Space to lift", async |d| {
+        d.exists("#Item1[data-state~=dragging]").await
+    })
+    .await?;
+    d.press(keyboard::END).await?;
+    eventually(d, "End to scroll the lifted item into view", async |d| {
+        let item = d.rect("#Item1").await?;
+        Ok(item.y > height / 2.0 && item.y + item.height <= height + 0.5)
+    })
+    .await?;
+    d.press(keyboard::ESCAPE).await?;
+    Ok(())
+}
+
 e2e::scenario!(
     a_handle_drag_down_moves_the_item_and_keeps_its_handle_focused,
     "/sortable",
@@ -444,6 +465,11 @@ e2e::scenario!(
 );
 
 e2e::scenario!(
+    a_keyboard_lifted_item_scrolls_into_view_at_each_step,
+    "/sortable/long",
+    a_lifted_item_stays_in_view
+);
+e2e::scenario!(
     a_key_past_the_lists_end_announces_the_item_stays,
     "/sortable",
     a_move_past_the_end_is_announced
@@ -531,6 +557,55 @@ fn a_second_drag_still_moves_the_neighbours_before_the_drop() {
                 second_drag(page, &rounds, "#Gamma", delta.y - gamma.y),
             )
             .await
+        }
+        .await;
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+    });
+}
+
+/// A held Space or Enter neither drops nor lifts again on its auto-repeats (2509).
+#[test]
+fn a_held_lift_key_does_not_toggle_on_its_repeats() {
+    use chromiumoxide::cdp::browser_protocol::input::{
+        DispatchKeyEventParams, DispatchKeyEventType,
+    };
+    block_on(async {
+        let fixture = Fixture::open("/sortable", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            wait::for_visible(page, "#Alpha").await?;
+            page.evaluate("document.querySelector('#Alpha button').focus()")
+                .await?;
+            keyboard::press(page, keyboard::SPACE).await?;
+            wait::for_visible(page, "#Alpha[data-state~=dragging]").await?;
+            for key in [keyboard::SPACE, keyboard::ENTER] {
+                for (kind, repeat) in [
+                    (DispatchKeyEventType::RawKeyDown, true),
+                    (DispatchKeyEventType::KeyUp, false),
+                ] {
+                    let event = DispatchKeyEventParams::builder()
+                        .r#type(kind)
+                        .key(key.key)
+                        .code(key.code)
+                        .windows_virtual_key_code(key.vk)
+                        .native_virtual_key_code(key.vk)
+                        .auto_repeat(repeat)
+                        .build()
+                        .map_err(anyhow::Error::msg)?;
+                    page.execute(event).await?;
+                }
+            }
+            // Handled in order: a dropped item would not move.
+            keyboard::press(page, keyboard::ARROW_DOWN).await?;
+            wait::for_js_true(
+                page,
+                "document.querySelector('[role=status]').textContent \
+                 === 'Alpha moved to position 2 of 4.'",
+                "ArrowDown after the repeats",
+            )
+            .await?;
+            keyboard::press(page, keyboard::ESCAPE).await
         }
         .await;
         fixture.close().await.unwrap();

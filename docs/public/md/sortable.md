@@ -130,7 +130,7 @@ buttons and a status region.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `index` | `usize` | required | The item's current position, from 0. Key the item by its data, not by this. |
+| `index` | `usize` | required | The item's current position. The items run exactly 0 to n - 1: a gap or a repeat stops every drag and lift, so number a filtered view or a page from 0. Key the item by its data, not by this. |
 | `label` | `Option<String>` | `"Item {n}"` | Names the item in its controls and the announcements. Unset, the handle reads the item's content ("Reorder Apple"), and the move buttons and announcements `SortableLabels::item` with its position when it was lifted. |
 | `parts` | `Parts<SortableItemPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 | `children` | `Element` | required | The item's content, between the handle and the move buttons. |
@@ -183,6 +183,8 @@ parts work.
   of an item scrolls the page.
 - Focus leaving a lifted item's handle cancels the move. After a drop the
   handle keeps focus.
+- A lifted item scrolls into view at each key, in a long list and in a row
+  that scrolls inside itself. Holding Space or Enter lifts or drops once.
 - A dropped item slides into its slot. Under reduced motion it lands at once,
   and the others jump instead of sliding.
 

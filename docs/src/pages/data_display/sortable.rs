@@ -30,7 +30,7 @@ pub fn SortablePage() -> Element {
                 props("SortableItem", vec![
                     prop("index", "usize")
                         .default("required")
-                        .doc("The item's current position, from 0. Key the item by its data, not by this."),
+                        .doc("The item's current position. The items run exactly 0 to n - 1: a gap or a repeat stops every drag and lift, so number a filtered view or a page from 0. Key the item by its data, not by this."),
                     prop("label", "Option<String>")
                         .default("\"Item {n}\"")
                         .doc("Names the item in its controls and the announcements. Unset, the handle reads the item's content (\"Reorder Apple\"), and the move buttons and announcements `SortableLabels::item` with its position when it was lifted."),
@@ -58,6 +58,7 @@ pub fn SortablePage() -> Element {
                     "A horizontal list wider than its container scrolls inside itself and never widens the page (WCAG 1.4.10).",
                     "A drag starts after 4px of pointer movement (8px on touch), so a click on the handle stays a click. Only the handle takes a touch: a swipe on the rest of an item scrolls the page.",
                     "Focus leaving a lifted item's handle cancels the move. After a drop the handle keeps focus.",
+                    "A lifted item scrolls into view at each key, in a long list and in a row that scrolls inside itself. Holding Space or Enter lifts or drops once.",
                     "A dropped item slides into its slot. Under reduced motion it lands at once, and the others jump instead of sliding.",
                 ])
                 .must([

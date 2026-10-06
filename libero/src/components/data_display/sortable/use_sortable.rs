@@ -212,6 +212,8 @@ struct SortableContext {
     fixed: CopyValue<Option<FixedSlots>>,
     registry: CopyValue<Vec<Option<Registered>>>,
     next_id: CopyValue<usize>,
+    /// How many items are mounted, to tell a repeated `index`.
+    live: CopyValue<usize>,
     refocus: CopyValue<Option<Moved>>,
     pressed: CopyValue<Option<usize>>,
     session: Signal<Option<Session>>,
@@ -252,6 +254,21 @@ fn mounted(registry: &[Option<Registered>]) -> Option<Vec<MountedItem>> {
             ))
         })
         .collect()
+}
+
+/// What is wrong with the items' `index`es when they are not exactly `0..live` (2512).
+fn index_fault(registry: &[Option<Registered>], live: usize) -> Option<String> {
+    if let Some(gap) = registry.iter().position(Option::is_none) {
+        return Some(format!(
+            "Sortable: no item has index {gap}, so no drag or lift starts; number the items 0..n."
+        ));
+    }
+    (registry.len() != live).then(|| {
+        format!(
+            "Sortable: {live} items share {} indices, so some never move; number the items 0..n.",
+            registry.len()
+        )
+    })
 }
 
 fn read_node(node: &Rc<MountedData>) -> NodeRead {
@@ -415,6 +432,7 @@ pub(crate) fn use_fixed_sortable(
 
     let registry = use_hook(|| CopyValue::new(Vec::<Option<Registered>>::new()));
     let next_id = use_hook(|| CopyValue::new(0_usize));
+    let live = use_hook(|| CopyValue::new(0_usize));
     let mut refocus = use_hook(|| CopyValue::new(None::<Moved>));
     let mut pressed = use_hook(|| CopyValue::new(None::<usize>));
     let mut session = use_signal(|| None::<Session>);
@@ -516,6 +534,9 @@ pub(crate) fn use_fixed_sortable(
                 return;
             }
             None => {
+                if let Some(fault) = index_fault(&registry.peek(), *live.peek()) {
+                    crate::utils::warn(&fault);
+                }
                 let items = mounted(&registry.peek());
                 let Some(items) = items.filter(|items| from < items.len()) else {
                     started.call(None);
@@ -690,6 +711,11 @@ pub(crate) fn use_fixed_sortable(
 
     let onkeydown = use_callback(move |(index, event): (usize, Event<KeyboardData>)| {
         let key = event.key();
+        // A held Space or Enter must not toggle lift and drop at the repeat rate (2509).
+        if lifts(&key) && event.is_auto_repeating() {
+            event.prevent_default();
+            return;
+        }
         let keyed = session
             .peek()
             .as_ref()
@@ -807,10 +833,20 @@ pub(crate) fn use_fixed_sortable(
             .read()
             .as_ref()
             .and_then(|lifted| Some((lifted.from, lifted.keyed?)));
-        if let Some(mut lift) = fixed_slots.peek().as_ref().map(|slots| slots.lift)
-            && *lift.peek() != keyed
-        {
-            lift.set(keyed);
+        match fixed_slots.peek().as_ref().map(|slots| slots.lift) {
+            Some(mut lift) => {
+                if *lift.peek() != keyed {
+                    lift.set(keyed);
+                }
+            }
+            // The lifted item moves by `transform` only: keep it in view per step (2510).
+            None => {
+                let node = keyed
+                    .and_then(|(from, _)| registry.peek().get(from).cloned().flatten()?.element);
+                if let Some(node) = node {
+                    let _ = platform::scroll_chain_into_view(&node, false);
+                }
+            }
         }
     });
 
@@ -818,6 +854,7 @@ pub(crate) fn use_fixed_sortable(
         fixed: fixed_slots,
         registry,
         next_id,
+        live,
         refocus,
         pressed,
         session,
@@ -856,7 +893,7 @@ fn trim(items: &mut Vec<Option<Registered>>) {
 }
 
 /// One item of the nearest [`use_sortable`] list, at `index` in its order.
-/// Panics outside one.
+/// Panics outside one. The indices run exactly `0..n`: a gap or a repeat stops every drag.
 ///
 /// Key the item by its data, not its index: a reorder then moves the item,
 /// focus included, instead of rebuilding it.
@@ -890,6 +927,8 @@ pub(crate) fn use_spanning_sortable_item(
         let mut next_id = context.next_id;
         let id = *next_id.peek();
         next_id.set(id + 1);
+        let mut live = context.live;
+        *live.write() += 1;
         id
     });
 
@@ -945,6 +984,10 @@ pub(crate) fn use_spanning_sortable_item(
         }
     }));
     use_drop(move || {
+        let mut live = context.live;
+        if let Ok(mut live) = live.try_write() {
+            *live = live.saturating_sub(1);
+        }
         let mut items = registry.write();
         if let Some(index) = *slot.peek()
             && items.get(index).is_some_and(|item| owns(item, id))
@@ -994,7 +1037,11 @@ pub(crate) fn use_spanning_sortable_item(
             .map(|settle| settle.offset)
     }));
     let first = use_memo(use_reactive!(|index| index == 0));
-    let last = use_memo(use_reactive!(|index| index + 1 >= count()));
+    // 0 is no item registered yet, the first render's: unknown, not last (2511).
+    let last = use_memo(use_reactive!(|index| {
+        let count = count();
+        count > 0 && index + 1 >= count
+    }));
 
     let mut pressed = context.pressed;
     let onpointerdown = use_callback(move |event: Event<PointerData>| {
@@ -1043,5 +1090,25 @@ mod tests {
             }
         );
         assert_eq!(slot_offset(&spans, 0, 2), 80.0);
+    }
+
+    fn slot(id: usize) -> Option<Registered> {
+        Some(Registered {
+            id,
+            element: None,
+            handle: None,
+            extent: None,
+            label: None,
+        })
+    }
+
+    #[test]
+    fn an_index_gap_or_repeat_is_a_fault_and_0_to_n_is_not() {
+        assert_eq!(index_fault(&[slot(0), slot(1)], 2), None);
+
+        let gap = index_fault(&[slot(0), None, slot(2)], 2).unwrap();
+        assert!(gap.contains("no item has index 1"), "{gap}");
+        let repeat = index_fault(&[slot(0), slot(1)], 3).unwrap();
+        assert!(repeat.contains("3 items share 2 indices"), "{repeat}");
     }
 }

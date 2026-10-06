@@ -66,6 +66,55 @@ fn a_rows_unlabelled_items_are_named_by_position() {
     );
 }
 
+/// Safari drops the role of a `list-style: none` list (2508); a caller's role wins.
+#[test]
+fn the_list_states_its_role_and_a_callers_role_wins() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Sortable { onreorder: move |_: SortableMove| {},
+                    SortableItem { index: 0, "A" }
+                }
+                Sortable { onreorder: move |_: SortableMove| {}, role: "listbox",
+                    SortableItem { index: 0, "B" }
+                }
+            }
+        }
+    }
+    let html = body(&render(app));
+
+    assert_eq!(count(&html, "role=\"list\""), 1, "{html}");
+    assert_eq!(count(&html, "role=\"listbox\""), 1, "{html}");
+}
+
+/// Before the items register, the count is unknown: no Move down is disabled (2511).
+#[test]
+fn no_move_down_is_disabled_on_the_first_render() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Sortable { onreorder: move |_: SortableMove| {},
+                    SortableItem { index: 0, label: "Apple", "Apple" }
+                    SortableItem { index: 1, label: "Pear", "Pear" }
+                }
+            }
+        }
+    }
+    // The first pass only, as prerendered HTML ships it: no effect has run.
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    let html = dioxus_ssr::render(&dom);
+
+    for item in ["Apple", "Pear"] {
+        let at = html
+            .find(&format!("aria-label=\"Move {item} down\""))
+            .unwrap();
+        let start = html[..at].rfind("<button").unwrap();
+        let tag = &html[start..at + html[at..].find('>').unwrap()];
+        assert!(!tag.contains("disabled"), "{item}: {tag}");
+    }
+}
+
 /// The text of the elements `ids` points at, joined as a name is.
 pub fn labelled_by(html: &str, ids: &str) -> String {
     ids.split_whitespace()
