@@ -574,7 +574,7 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let mut geometry = use_signal(|| None::<ScrollGeometry>);
     let spec = use_signal(|| None::<WindowSpec>);
     let virtualized = use_signal(|| false);
-    use_context_provider(|| ScrollViewport::new(content, geometry, spec, virtualized));
+    use_context_provider(|| ScrollViewport::new((root, content), geometry, spec, virtualized));
     // A `Virtualize` child needs the height before any scroll and on every resize.
     let measure = move || {
         if root.is_mounted() {

@@ -76,6 +76,10 @@ pub(super) struct Landing {
     /// The moved card's board id and the slot it left.
     pub(super) card: usize,
     pub(super) from: (usize, usize),
+    /// The board render in which the moved card left its slot.
+    pub(super) left: Option<u64>,
+    /// A card at the slot claimed it and waits for its control to mount.
+    pub(super) held: bool,
 }
 
 /// What [`use_board_drag`] takes from its board.
@@ -99,6 +103,9 @@ pub(super) struct BoardDrag {
     pub(super) onpointercancel: Callback<Event<PointerData>>,
     cards: CopyValue<BTreeMap<usize, Placed>>,
     lists: CopyValue<Vec<Mounted>>,
+    landing: CopyValue<Option<Landing>>,
+    /// The board's renders so far: an app's data change renders it.
+    renders: CopyValue<u64>,
     next_id: CopyValue<usize>,
     pressed: CopyValue<Option<usize>>,
     lifted: Signal<Option<Lifted>>,
@@ -121,14 +128,31 @@ impl BoardDrag {
     }
 
     /// Card `claimant` may take `landing`'s focus: it is the moved card, or that one left its
-    /// slot. A move the app refused leaves it in place (2451).
+    /// slot in this render. A move the app refused leaves it in place (2451); a later data
+    /// change moving it is no landing (2519).
     pub(super) fn landed(self, landing: Landing, claimant: usize) -> bool {
-        claimant == landing.card
-            || self
-                .cards
-                .peek()
-                .get(&landing.card)
-                .is_none_or(|placed| (placed.column, placed.index) != landing.from)
+        claimant == landing.card || landing.held || landing.left == Some(*self.renders.peek())
+    }
+
+    /// The number of cards mounted in `column`, and the `index` just past its last one:
+    /// where Move to lands, the data's end when every card is shown.
+    pub(super) fn end(self, column: usize) -> (usize, usize) {
+        let cards = self.cards.peek();
+        let shown = cards.values().filter(|placed| placed.column == column);
+        shown.fold((0, 0), |(count, end), placed| {
+            (count + 1, end.max(placed.index + 1))
+        })
+    }
+
+    /// Card `id` left its slot or the board: stamps the landing it armed with this render.
+    fn left(self, id: usize) {
+        let mut landing = self.landing;
+        let render = self.renders.try_peek().map(|renders| *renders);
+        if let (Ok(mut armed), Ok(render)) = (landing.try_write(), render)
+            && let Some(at) = armed.as_mut().filter(|at| at.card == id)
+        {
+            at.left = Some(render);
+        }
     }
 }
 
@@ -170,6 +194,8 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
     let cards = use_hook(|| CopyValue::new(BTreeMap::<usize, Placed>::new()));
     let lists = use_hook(|| CopyValue::new(Vec::<Mounted>::new()));
     let next_id = use_hook(|| CopyValue::new(0_usize));
+    let mut renders = use_hook(|| CopyValue::new(0_u64));
+    *renders.write() += 1;
     let mut pressed = use_hook(|| CopyValue::new(None::<usize>));
     let mut lifted = use_signal(|| None::<Lifted>);
     let mut travel = use_signal(|| (0.0_f64, 0.0_f64));
@@ -238,15 +264,20 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
                 column.push((placed.index, placed.element.clone()));
             }
         }
-        // Each column's cards in order, with no slot missing.
+        // Each column's mounted cards in order; a filtered column's indices may skip (2517).
+        for column in &mut columns {
+            column.sort_by_key(|(index, _)| *index);
+        }
+        let indices: Vec<Vec<usize>> = columns
+            .iter()
+            .map(|column| column.iter().map(|(index, _)| *index).collect())
+            .collect();
         let card_reads: Option<Vec<Vec<Reading>>> = columns
-            .into_iter()
-            .map(|mut column| {
-                column.sort_by_key(|(index, _)| *index);
+            .iter()
+            .map(|column| {
                 column
                     .iter()
-                    .enumerate()
-                    .map(|(at, (index, node))| node.as_ref().filter(|_| at == *index).map(read))
+                    .map(|(_, node)| node.as_ref().map(read))
                     .collect()
             })
             .collect();
@@ -285,20 +316,24 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
                 false => (0.0, most),
             };
             let mut lanes = Vec::with_capacity(lanes_read.len());
-            for (list, cards) in lanes_read {
+            for ((list, cards), indices) in lanes_read.into_iter().zip(indices) {
                 let (Some(list), Some(cards)) = (list, cards.into_iter().collect()) else {
                     started.call(None);
                     return;
                 };
-                lanes.push(Lane { list, cards });
+                lanes.push(Lane {
+                    list,
+                    cards,
+                    indices,
+                });
             }
-            let fits = lanes
+            let Some(from) = lanes
                 .get(card.column)
-                .is_some_and(|lane| card.index < lane.cards.len());
-            if !fits {
+                .and_then(|lane| lane.indices.iter().position(|&at| at == card.index))
+            else {
                 started.call(None);
                 return;
-            }
+            };
             // `use_drag` refocuses the handle only on the web.
             if let Some(handle) = &card.handle {
                 let _ = platform::element(handle).focus();
@@ -308,7 +343,7 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
                 lanes: Lanes {
                     lanes,
                     from_column: card.column,
-                    from: card.index,
+                    from,
                 },
                 label: card.label,
                 board,
@@ -354,19 +389,27 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
                 )
             }
         });
+        // Slots count the mounted cards; the move and the landing speak `index`.
+        let from_index = lanes.lifted_index();
+        let to_index = match to == from {
+            true => from_index,
+            false => lanes.index_at(to),
+        };
         if to != from {
             landing.set(Some(Landing {
                 column: to.0,
-                index: to.1,
+                index: to_index,
                 control: Control::Handle,
                 card: ended.id,
-                from,
+                from: (from.0, from_index),
+                left: None,
+                held: false,
             }));
             onmove.call(KanbanMove {
                 from_column: from.0,
-                from: from.1,
+                from: from_index,
                 to_column: to.0,
-                to: to.1,
+                to: to_index,
             });
         }
         let (x, y) = lanes.landing(to);
@@ -374,7 +417,7 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
         if offset.0.abs() > 0.5 || offset.1.abs() > 0.5 {
             settle.set(Some(Settle {
                 column: to.0,
-                index: to.1,
+                index: to_index,
                 offset,
             }));
         }
@@ -436,7 +479,6 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
         }),
     });
     let cancel = use_callback(move |()| finish(false));
-
     BoardDrag {
         element,
         sorting,
@@ -446,6 +488,8 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
         onpointercancel: drag.onpointercancel,
         cards,
         lists,
+        landing,
+        renders,
         next_id,
         pressed,
         lifted,
@@ -551,21 +595,30 @@ pub(super) fn use_board_card(
     let mut cards = drag.cards;
     use_effect(use_reactive!(|index, label| {
         let _ = (element.mount_token(), handle.mount_token());
+        let at = column();
         cards.write().insert(
             id,
             Placed {
-                column: column(),
+                column: at,
                 index,
                 element: element.mounted(),
                 handle: handle.mounted(),
                 label: label.clone(),
             },
         );
+        if drag
+            .landing
+            .peek()
+            .is_some_and(|armed| armed.card == id && armed.from != (at, index))
+        {
+            drag.left(id);
+        }
     }));
     use_drop(move || {
         if let Ok(mut cards) = cards.try_write() {
             cards.remove(&id);
         }
+        drag.left(id);
     });
 
     let BoardDrag {
@@ -578,19 +631,16 @@ pub(super) fn use_board_card(
     } = drag;
     let offset = use_memo(use_reactive!(|index| {
         let lifted = lifted.read();
-        let lanes = &lifted.as_ref()?.lanes;
-        let at = column();
-        if (lanes.from_column, lanes.from) == (at, index) {
+        let up = lifted.as_ref()?;
+        if up.id == id {
             let (dx, dy) = travel();
             return Some((dx + scrolled(), dy));
         }
-        Some((0.0, target().map_or(0.0, |to| lanes.step(at, index, to))))
+        let at = column();
+        let slot = up.lanes.slot(at, index)?;
+        Some((0.0, target().map_or(0.0, |to| up.lanes.step(at, slot, to))))
     }));
-    let dragging = use_memo(use_reactive!(|index| {
-        lifted.read().as_ref().is_some_and(|lifted| {
-            (lifted.lanes.from_column, lifted.lanes.from) == (column(), index)
-        })
-    }));
+    let dragging = use_memo(move || lifted.read().as_ref().is_some_and(|up| up.id == id));
     let settle = use_memo(use_reactive!(|index| {
         settle()
             .filter(|settle| (settle.column, settle.index) == (column(), index))

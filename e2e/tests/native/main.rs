@@ -4,6 +4,7 @@
 mod accessibility;
 mod alert;
 mod anchor;
+mod aspect_ratio;
 mod avatar;
 mod bottom_navigation;
 mod button;

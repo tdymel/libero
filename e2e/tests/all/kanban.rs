@@ -223,6 +223,69 @@ async fn the_own_column_is_disabled<D: Driver>(d: &mut D, _route: &str) -> Resul
     Ok(())
 }
 
+/// 2519: a refused move is void once the app moves its card by data.
+async fn a_refused_move_is_void_after_a_data_change<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    d.click("#refuse").await?;
+    d.focus("#Beta [data-slot=move-to]").await?;
+    d.press(keyboard::ARROW_UP).await?;
+    eventually_focused(d, "[role=menuitem]", "ArrowUp on the trigger").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_text(d, "#moves", "0.1>2.0 ", "the refused move to Done").await?;
+    d.focus("#remove").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_text(d, "#order", "Alpha Gamma | Delta | ", "Beta removed").await?;
+    d.focus("#add").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_text(d, "#order", "Alpha Gamma | Delta | Omega", "Omega added").await?;
+    d.settle().await?;
+    ensure!(
+        d.is_focused("#add").await?,
+        "a card added at the refused slot took the focus: {}",
+        d.focus_owner().await?
+    );
+    Ok(())
+}
+
+/// 2517: with Alpha hidden, To do shows indices 1 and 2; a drag and Move to still land.
+async fn a_filtered_column_drags_and_takes_a_card_at_its_end<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    d.click("#hide").await?;
+    eventually_text(d, "#order", START, "Alpha hidden, not removed").await?;
+    let (beta, gamma) = (d.rect("#Beta").await?, d.rect("#Gamma").await?);
+    d.drag("#Gamma [data-slot=handle]", 0.0, beta.y - gamma.y)
+        .await?;
+    eventually_text(
+        d,
+        "#order",
+        "Alpha Gamma Beta | Delta | ",
+        "a drag one slot up",
+    )
+    .await?;
+    ensure!(
+        d.text("#moves").await? == "0.2>0.1 ",
+        "the move speaks the data's indices"
+    );
+    d.focus("#Delta [data-slot=move-to]").await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually_focused(d, "[role=menuitem]", "ArrowDown on the trigger").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_text(d, "#order", "Alpha Gamma Beta Delta |  | ", "Move to To do").await?;
+    eventually_text(
+        d,
+        STATUS,
+        "Delta moved to To do, position 3 of 3.",
+        "the move into the filtered column",
+    )
+    .await?;
+    eventually_focused(d, "#Delta [data-slot=move-to]", "a move to the end").await?;
+    Ok(())
+}
+
 /// 2451: a move the app ignores arms no focus jump for the next card at its slot.
 async fn a_refused_move_moves_no_focus_later<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click("#refuse").await?;
@@ -254,6 +317,18 @@ e2e::scenario!(
     a_move_the_app_refuses_leaves_no_focus_jump_for_a_later_card,
     "/kanban",
     a_refused_move_moves_no_focus_later,
+    desktop: skip("958: element identity on the WebView")
+);
+e2e::scenario!(
+    a_refused_move_is_void_once_the_app_removes_its_card,
+    "/kanban/data",
+    a_refused_move_is_void_after_a_data_change,
+    desktop: skip("958: element identity on the WebView")
+);
+e2e::scenario!(
+    a_filtered_column_still_drags_and_move_to_lands_after_its_last_card,
+    "/kanban/data",
+    a_filtered_column_drags_and_takes_a_card_at_its_end,
     desktop: skip("958: element identity on the WebView")
 );
 e2e::scenario!(

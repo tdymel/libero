@@ -183,6 +183,14 @@ async fn rewrapped_rows_keep_the_pane_covered<D: Driver>(d: &mut D, _route: &str
                 && list["aligned"] == true)
         },
     )
+    .await?;
+    // Todo 2538: row 100 stays at the top, scrolled to 100 rows of the new pitch.
+    eventually(d, "the scroll to row 100 at 40px", async |d| {
+        let top = d
+            .evaluate("[...document.querySelectorAll('#wrap-pane *')].find(e => e.scrollHeight > e.clientHeight + 100).scrollTop")
+            .await?;
+        Ok(top.as_f64().is_some_and(|top| (top - 4000.0).abs() < 2.0))
+    })
     .await
 }
 

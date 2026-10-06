@@ -45,7 +45,7 @@ pub fn KanbanPage() -> Element {
                 props("KanbanCard", vec![
                     prop("index", "usize")
                         .default("required")
-                        .doc("The card's position in its column, from 0. Key the card by its data, not by this. Mount every card of the column, indexed 0 to n with no gap: a gap stops the pointer drag, and Move to counts only the mounted cards."),
+                        .doc("The card's position in its column's data, from 0. Key the card by its data, not by this. A filtered column may skip indices: a drag and Move to land by the cards it shows."),
                     prop("label", "Option<String>")
                         .default("\"Item {n}\"")
                         .doc("Names the card in its controls and the announcements. Unset, the handle reads the card's content, and the other controls and announcements `SortableLabels::item` with its position."),
@@ -84,7 +84,7 @@ pub fn KanbanPage() -> Element {
                     "The keyboard drag moves a card within its column only. Moving to another column is the Move to menu.",
                     "A drag scrolls the board sideways only, not the page: to reach a card or column above or below the window, use the Move to menu.",
                     "Columns keep their place: the board has no column reorder.",
-                    "Every card of a column is mounted, indexed 0 to n: a filtered or lazily rendered column does not drag by pointer.",
+                    "In a filtered column a dragged card lands just before the next card shown, or just after the last one; Move to lands after the last card shown, before any hidden ones that follow.",
                 ]),
             lead: rsx! {
                 Text {

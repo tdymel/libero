@@ -21,11 +21,12 @@ impl Rect {
     }
 }
 
-/// One column: its card list and its cards in order.
+/// One column: its card list and its mounted cards in order, with each one's `index`.
 #[derive(Clone, Debug, PartialEq)]
 pub(super) struct Lane {
     pub(super) list: Rect,
     pub(super) cards: Vec<Rect>,
+    pub(super) indices: Vec<usize>,
 }
 
 impl Lane {
@@ -40,7 +41,8 @@ impl Lane {
     }
 }
 
-/// The board with card `from` of column `from_column` lifted.
+/// The board with card `from` of column `from_column` lifted. Slots count the
+/// mounted cards; a filtered column's `index`es may skip some.
 #[derive(Clone, Debug, PartialEq)]
 pub(super) struct Lanes {
     pub(super) lanes: Vec<Lane>,
@@ -51,6 +53,38 @@ pub(super) struct Lanes {
 impl Lanes {
     fn own(&self) -> Rect {
         self.lanes[self.from_column].cards[self.from]
+    }
+
+    /// The slot of the card with `index` in `column`, `None` when it was not measured.
+    pub(super) fn slot(&self, column: usize, index: usize) -> Option<usize> {
+        let lane = self.lanes.get(column)?;
+        lane.indices.iter().position(|&at| at == index)
+    }
+
+    /// The lifted card's `index`.
+    pub(super) fn lifted_index(&self) -> usize {
+        self.lanes[self.from_column].indices[self.from]
+    }
+
+    /// The `index` a card dropped in slot `target` takes: just before the next shown card,
+    /// else just after the last one. In its own column, counted after its removal.
+    pub(super) fn index_at(&self, target: (usize, usize)) -> usize {
+        let (column, to) = target;
+        let own = column == self.from_column;
+        let from = self.lifted_index();
+        let others: Vec<usize> = self.lanes[column]
+            .indices
+            .iter()
+            .copied()
+            .filter(|&index| !own || index != from)
+            .collect();
+        let shifted = |index: usize| index - usize::from(own && index > from);
+        match (others.get(to), others.last()) {
+            (Some(&next), _) => shifted(next),
+            (None, Some(&last)) => shifted(last) + 1,
+            (None, None) if own => from,
+            (None, None) => 0,
+        }
     }
 
     /// The space between two cards, from the first column holding two.
@@ -180,6 +214,7 @@ mod tests {
                 height: 200.0,
             },
             cards: (0..count).map(|at| rect(x, at as f64 * 50.0)).collect(),
+            indices: (0..count).collect(),
         };
         Lanes {
             lanes: vec![lane(0.0, 3), lane(120.0, 1), lane(240.0, 0)],
@@ -242,6 +277,32 @@ mod tests {
         assert_eq!(lanes.step(2, 0, target), 0.0);
         assert_eq!(lanes.room(1, target), 50.0);
         assert_eq!(lanes.room(0, target), 0.0);
+    }
+
+    #[test]
+    fn with_every_card_mounted_a_slot_is_its_index() {
+        let lanes = board(0, 1);
+        assert_eq!(lanes.lifted_index(), 1);
+        assert_eq!(lanes.index_at((0, 0)), 0);
+        assert_eq!(lanes.index_at((0, 2)), 2);
+        assert_eq!(lanes.index_at((1, 1)), 1);
+        assert_eq!(lanes.index_at((2, 0)), 0);
+    }
+
+    /// Todo 2517: column 0 shows its cards 1, 3 and 4 of a longer list.
+    #[test]
+    fn a_filtered_column_lands_by_the_shown_cards_index() {
+        let mut lanes = board(0, 1);
+        lanes.lanes[0].indices = vec![1, 3, 4];
+        assert_eq!(lanes.slot(0, 3), Some(1));
+        assert_eq!(lanes.slot(0, 0), None);
+        assert_eq!(lanes.lifted_index(), 3);
+        // Before the first shown, after the last shown, counted with 3 taken out.
+        assert_eq!(lanes.index_at((0, 0)), 1);
+        assert_eq!(lanes.index_at((0, 2)), 4);
+        lanes.lanes[1].indices = vec![5];
+        assert_eq!(lanes.index_at((1, 0)), 5);
+        assert_eq!(lanes.index_at((1, 1)), 6);
     }
 
     #[test]

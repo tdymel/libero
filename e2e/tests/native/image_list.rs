@@ -91,6 +91,29 @@ fn quilted_cells_add_up_their_gaps_at_350px() {
     assert_quilt(&page, "350px");
 }
 
+/// Todos 2480, 2522: a link cell's ring rides a `::before` overlay over its picture.
+#[test]
+fn a_focused_link_cell_paints_its_ring_over_its_picture() {
+    let mut page = mount(|| {
+        let cell = || rsx! { div { style: "background: rgb(51, 102, 153)" } };
+        rsx! {
+            div { id: "frame", width: "600px",
+                ImageList { cols: 2u8, gap: "md",
+                    items: vec![ImageItem::new(cell()).to("/here"), ImageItem::new(cell())],
+                }
+            }
+        }
+    });
+    let link = "#frame [role=list] a";
+    let (edge, centre) = crate::aspect_ratio::edge_and_centre(&page, link);
+    assert_eq!(edge, centre, "the picture does not fill the link");
+
+    page.tab();
+    assert!(page.is_focused(link), "Tab reached {}", page.focus_owner());
+    let (edge, centre) = crate::aspect_ratio::edge_and_centre(&page, link);
+    assert_ne!(edge, centre, "no ring over the picture: {}", page.tree());
+}
+
 /// One, two and four to a row from `sm` (48rem) and `md` (62rem); the harness
 /// viewport is past `md`.
 #[test]

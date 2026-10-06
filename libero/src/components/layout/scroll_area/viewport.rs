@@ -76,6 +76,8 @@ impl WindowSpec {
 /// the window's spec back up.
 #[derive(Clone)]
 pub(super) struct ScrollViewport {
+    /// The element that scrolls.
+    pub area: ElementHandle,
     /// The box holding the rows; unlike the container's, its height isn't
     /// floored at the viewport.
     pub content: ElementHandle,
@@ -95,12 +97,13 @@ pub(super) struct ScrollViewport {
 
 impl ScrollViewport {
     pub fn new(
-        content: ElementHandle,
+        (area, content): (ElementHandle, ElementHandle),
         geometry: Signal<Option<ScrollGeometry>>,
         spec: Signal<Option<WindowSpec>>,
         virtualized: Signal<bool>,
     ) -> Self {
         Self {
+            area,
             content,
             geometry,
             spec,

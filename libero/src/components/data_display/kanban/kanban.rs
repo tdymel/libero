@@ -110,8 +110,6 @@ static KANBAN_CARD_SX: StaticSx = StaticSx::new(|| {
 struct Board {
     /// Each column's label by position, for the Move to menu.
     labels: Signal<Vec<Option<String>>>,
-    /// Each column's card count by position, for where a move lands.
-    counts: CopyValue<Vec<usize>>,
     onmove: Callback<KanbanMove>,
     announcer: Announcer,
     /// Where a card moved by the board lands: one of its controls takes the focus there.
@@ -180,7 +178,6 @@ pub fn Kanban(props: KanbanProps) -> Element {
     });
     use_context_provider(|| Board {
         labels,
-        counts: CopyValue::new(Vec::new()),
         onmove: Callback::new(move |step| {
             drag.unsettle();
             onmove.call(step);
@@ -382,8 +379,8 @@ parts_enum! {
 base_props! {
     parts(KanbanCardPart);
     pub struct KanbanCardProps {
-        /// The card's position in its column, from 0. Key it by its data, not this. Mount
-        /// every card of a column, indexed 0..n with no gap: a gap stops the pointer drag.
+        /// The card's position in its column's data, from 0. Key it by its data, not this.
+        /// A filtered column may skip indices: a drag and Move to land by the cards it shows.
         index: usize,
         /// Names the card in its controls and the announcements. Unset, the handle reads the
         /// card's content, the rest "Item {n}" by its position.
@@ -415,25 +412,6 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
     );
     let dragging = (item.dragging)() || (carried.dragging)();
 
-    // Counted under the column the card mounted in; a board keeps its columns in place.
-    let mut counts = board.counts;
-    let counted = use_hook(|| {
-        let at = *column.index.peek();
-        let mut counts = counts.write();
-        if counts.len() <= at {
-            counts.resize(at + 1, 0);
-        }
-        counts[at] += 1;
-        at
-    });
-    use_drop(move || {
-        if let Ok(mut counts) = counts.try_write()
-            && let Some(count) = counts.get_mut(counted)
-        {
-            *count = count.saturating_sub(1);
-        }
-    });
-
     let trigger = use_element();
     let mut landing = board.landing;
     let column_index = column.index;
@@ -458,6 +436,8 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
         if target.mounted().is_some() {
             landing.set(None);
             let _ = target.focus();
+        } else if !at.held {
+            landing.set(Some(Landing { held: true, ..at }));
         }
     }));
 
@@ -478,7 +458,8 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
             MenuItem::new(column.clone())
                 .disabled(to_column == here)
                 .onselect(move |()| {
-                    let to = counts.peek().get(to_column).copied().unwrap_or(0);
+                    // After the last card shown, numbered among the shown ones (2517).
+                    let (shown, to) = drag.end(to_column);
                     let from_column = *column_index.peek();
                     landing.set(Some(Landing {
                         column: to_column,
@@ -486,14 +467,16 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
                         control: Control::MoveTo,
                         card: id,
                         from: (from_column, index),
+                        left: None,
+                        held: false,
                     }));
                     board.announcer.say(fill(
                         words.kanban.moved,
                         &[
                             ("label", &card),
                             ("column", &column),
-                            ("n", &(to + 1)),
-                            ("m", &(to + 1)),
+                            ("n", &(shown + 1)),
+                            ("m", &(shown + 1)),
                         ],
                     ));
                     board.onmove.call(KanbanMove {

@@ -311,7 +311,10 @@ fn radio(n: usize) -> String {
 }
 
 async fn tab_enters_at_the_checked<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    // A cold Android boot once tabbed from before the page was up (2539).
+    eventually_text(d, "#picked", "Some(Pro)", "the page to render").await?;
     d.focus("#before").await?;
+    eventually_focused(d, "#before", "focusing the button before").await?;
     d.press(keyboard::TAB).await?;
     eventually_focused(d, &radio(2), "Tab").await
 }

@@ -45,6 +45,33 @@ fn a_narrow_box_keeps_side_labels_natively() {
     assert_eq!(page.computed(FIRST, "flex-direction"), "row");
 }
 
+/// Todos 2464, 2522: a vertical panel's top pad is `max(content padding, ring reach)`;
+/// Blitz dropping `max()` would leave a child's ring cut at the panel's clip.
+#[test]
+fn a_vertical_panel_pads_its_top_by_at_least_the_rings_reach() {
+    let page = mount(|| {
+        rsx! {
+            Stepper { id: "wide", value: Some(Stage::Shipping), orientation: "vertical",
+                panel: |_: Stage| rsx! { Button { id: "first", "Edit address" } } }
+        }
+    });
+    let panel = "#wide [data-slot=panel]";
+    let (pad_top, pad_end) = (
+        page.computed(panel, "padding-top"),
+        page.computed(panel, "padding-right"),
+    );
+    assert_eq!(pad_end, "6px", "the ring's reach on the end side");
+    let top: f64 = pad_top.trim_end_matches("px").parse().unwrap_or(0.0);
+    assert!(top >= 6.0, "panel padding-top {pad_top:?}: max() dropped?");
+    let (_, panel_y, _, _) = page.rect(panel);
+    let (_, first_y, _, _) = page.rect("#first");
+    assert!(
+        first_y - panel_y >= 6.0 - 0.5,
+        "the button sits {}px under the panel's top",
+        first_y - panel_y
+    );
+}
+
 /// Two steps: the width at which the text went stale in the harness.
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Pair {

@@ -2,7 +2,9 @@ use std::ops::Range;
 
 use dioxus::{core::DynamicValues, prelude::*};
 
-use super::viewport::{ContentOffsets, ScrollViewport, Window, WindowSpec, probed_pitch};
+use super::viewport::{
+    ContentOffsets, ScrollGeometry, ScrollViewport, Window, WindowSpec, probed_pitch,
+};
 use crate::{hooks::use_theme, platform::ElementApi, utils::warn};
 
 /// Rows in the second probe render: enough to weigh the gap, cheap on a short list.
@@ -292,8 +294,33 @@ pub fn Virtualize(
     }));
 
     let stage = probe();
+    // A new pitch moves every row: the window and the scroll follow the row at the top (2538).
+    let pitch = stage.pitch();
+    let mut used = use_hook(|| CopyValue::new(pitch));
+    let place = owned
+        .then(|| kept_place(*used.peek(), pitch, geometry))
+        .flatten();
+    if *used.peek() != pitch {
+        used.set(pitch);
+    }
+    let geometry = place.or(geometry);
+    let area = viewport
+        .as_ref()
+        .map(|viewport| (viewport.area, viewport.geometry));
+    use_effect(use_reactive!(|place| {
+        let (Some(place), Some((area, mut geometry))) = (place, area) else {
+            return;
+        };
+        geometry.set(Some(place));
+        let offset = area.scroll_offset();
+        spawn(async move {
+            if let Ok((x, _)) = offset.await {
+                let _ = area.scroll_to(x, place.offset);
+            }
+        });
+    }));
     let mut kept = None;
-    let spec = match (owned, stage.pitch()) {
+    let spec = match (owned, pitch) {
         (true, Some(pitch)) => Some(WindowSpec {
             count,
             pitch,
@@ -370,6 +397,21 @@ pub fn Virtualize(
     rsx! {
         {rows}
     }
+}
+
+/// The geometry keeping the row at the top in place when the pitch went from `old` to
+/// `new`, `None` when it did not change or nothing is scrolled.
+fn kept_place(
+    old: Option<f64>,
+    new: Option<f64>,
+    at: Option<ScrollGeometry>,
+) -> Option<ScrollGeometry> {
+    let (old, new, at) = (old?, new?, at?);
+    (old > 0.0 && old != new && at.offset > 0.0).then(|| ScrollGeometry {
+        offset: at.offset * new / old,
+        step: 0.0,
+        ..at
+    })
 }
 
 /// `row` under `key`; a `Fragment` wrapper would cost a component render per row.
@@ -495,6 +537,29 @@ mod tests {
                 base: None
             }
         );
+    }
+
+    /// Todo 2538: row 10 at the top under a 52px pitch stays there under 80px, a third in.
+    #[test]
+    fn a_new_pitch_keeps_the_row_at_the_top() {
+        let at = ScrollGeometry {
+            offset: 10.0 * 52.0 + 52.0 / 3.0,
+            viewport: 400.0,
+            step: 40.0,
+            width: 300.0,
+        };
+        let place = kept_place(Some(52.0), Some(80.0), Some(at)).unwrap();
+        assert!((place.offset - (10.0 * 80.0 + 80.0 / 3.0)).abs() < 1e-9);
+        assert_eq!(
+            (place.step, place.viewport, place.width),
+            (0.0, 400.0, 300.0)
+        );
+        // The first pitch, an unchanged one, or no scroll keeps the offset.
+        assert_eq!(kept_place(None, Some(80.0), Some(at)), None);
+        assert_eq!(kept_place(Some(52.0), Some(52.0), Some(at)), None);
+        let top = ScrollGeometry { offset: 0.0, ..at };
+        assert_eq!(kept_place(Some(52.0), Some(80.0), Some(top)), None);
+        assert_eq!(kept_place(Some(52.0), None, Some(at)), None);
     }
 
     /// A new `item_size` is used at once; without one, a probe in progress goes on.
