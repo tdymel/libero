@@ -42,7 +42,7 @@ pub fn PaginationPage() -> Element {
                 prop("size", "Size").default(theme.pagination.size.as_str()).doc("Control box and font size."),
                 prop("radius", "Size").default(theme.pagination.radius.as_str()).doc("Corner radius, independent of `size`."),
                 prop("color", "ThemeAwareValue").default(theme.pagination.color.as_str())
-                    .doc("Fill of the current page. Its text takes the matching `-contrast` color."),
+                    .doc("Fill of the current page. A theme color gives its text the matching `-contrast` shade, a literal color black or white."),
                 prop("disabled", "bool").default("false").doc("Disables every control."),
                 prop("with_controls", "bool").default("true").doc("Shows the previous and next controls."),
                 prop("with_edges", "bool").default("false").doc("Shows the first and last controls."),
@@ -59,13 +59,14 @@ pub fn PaginationPage() -> Element {
             ])],
             accessibility: a11y()
                 .handles([
-                    "Every control is a button and a tab stop.",
+                    "Every control is a button and a tab stop, except an arrow at its end and every control under `disabled`: those are disabled buttons.",
+                    "An arrow that disables itself on click, such as next on the last page, hands focus to the current page.",
                     "The page names come from the localization's `PaginationLabels`, and `label` overrides them.",
                 ])
                 .must([
                     "Keep `theme.pagination.gap` above zero: at `xs` the controls are 22px and meet the 24px target size only through the gap.",
                 ])
-                .example("A results pager: each page number and arrow is a button and a tab stop, and the next arrow reads \"Go to next page\" from `PaginationLabels` instead of a bare arrow."),
+                .example("A results pager: each page number and enabled arrow is a button and a tab stop, and the next arrow reads \"Go to next page\" from `PaginationLabels` instead of a bare arrow."),
             lead: rsx! {
                 Text {
                     "A row of page buttons in a named "
@@ -78,8 +79,11 @@ pub fn PaginationPage() -> Element {
                     " asks for a new one."
                 }
                 Text {
-                    "It renders buttons, not links. A listing that wants shareable URLs wraps "
-                    "its own links around it."
+                    "It renders buttons, not links, so open in a new tab and crawlable "
+                    "page URLs are not available. A listing that wants shareable URLs "
+                    "navigates in "
+                    Code { source: "onchange" }
+                    "."
                 }
             },
             // snippet: let mut page = use_signal(|| 1u32);

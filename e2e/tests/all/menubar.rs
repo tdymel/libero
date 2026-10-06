@@ -479,6 +479,54 @@ fn a_disabled_trigger_grays_out_in_forced_colours() {
     });
 }
 
+/// Todo 2420: the open trigger's tint is gone in forced colours, so it takes `Highlight`.
+#[test]
+fn an_open_trigger_is_highlight_in_forced_colours() {
+    block_on(async {
+        let fixture = Fixture::open("/menubar-docs", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        e2e::browser::force_colours(page).await.unwrap();
+        pointer::click(page, FIRST).await.unwrap();
+        wait::for_visible(page, MENU).await.unwrap();
+        crate::button::assert_unmarked_in_forced_colours(
+            page,
+            &format!("{FIRST}[aria-expanded=\"true\"]"),
+            &format!("{}:not([aria-expanded=\"true\"])", trigger(1)),
+        )
+        .await;
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2421: a trigger keeps the 24px target height under a tight inherited line height.
+#[test]
+fn a_trigger_is_24px_high_at_line_height_1() {
+    block_on(async {
+        let fixture = Fixture::open("/menubar-docs", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, FIRST).await.unwrap();
+        page.evaluate("document.querySelector('[role=menubar]').style.lineHeight = '1'")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "[...document.querySelectorAll({TRIGGERS:?})] \
+                 .every(t => t.getBoundingClientRect().height >= 23.99)"
+            ),
+            "every trigger to stay 24px high",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("trigger height").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 711: a menu starts at its trigger's start edge, the left under LTR and
 /// the right under RTL. `rtl_keys` covers the submenu opening towards the end.
 #[test]

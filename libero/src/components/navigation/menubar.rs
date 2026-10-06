@@ -8,7 +8,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, Part, Parts, States, base_props, disabled_look_sx,
+            HtmlTag, Input, Part, Parts, States, base_props, disabled_look_sx, forced_on_sx,
             has_shortcut_modifier, inset_focus_ring_sx, parts_enum,
         },
         layout::use_box,
@@ -59,6 +59,9 @@ static MENUBAR_SX: StaticSx = StaticSx::new(|| {
                     MENUBAR_TRIGGER_PAD_Y.value(),
                     MENUBAR_TRIGGER_PAD_X.value()
                 ))
+                // WCAG 2.5.8's 24px floor, whatever line height the bar inherits (todo 2421).
+                .box_sizing("border-box")
+                .min_height("24px")
                 .appearance("none")
                 .border("0")
                 .border_radius(MENUBAR_TRIGGER_RADIUS.value())
@@ -79,9 +82,10 @@ static MENUBAR_SX: StaticSx = StaticSx::new(|| {
             sx().background("muted.1"),
         )
         .selector(format!("{trigger}:focus"), sx().background("muted.1"))
+        // Forced colours drop the tint, so the open trigger takes `Highlight` (todo 2420).
         .selector(
             format!("{trigger}[aria-expanded=\"true\"]"),
-            sx().background("muted.1"),
+            sx().background("muted.1").and(forced_on_sx()),
         )
         // `appearance: none` and `border: 0` take the UA's ring with them.
         .selector(

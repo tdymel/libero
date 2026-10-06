@@ -10,8 +10,9 @@ A row of page buttons in a named `<nav>` landmark. The ellipsis keeps the row
 the same width as you click through it. You own `page`, and `onchange` asks for
 a new one.
 
-It renders buttons, not links. A listing that wants shareable URLs wraps its
-own links around it.
+It renders buttons, not links, so open in a new tab and crawlable page URLs
+are not available. A listing that wants shareable URLs navigates in
+`onchange`.
 
 ## Usage
 
@@ -47,7 +48,7 @@ fn Demo() -> Element {
 | `boundaries` | `u8` | `1` | Pages pinned at each end. `0` counts as 1. |
 | `size` | `Size` | `md` | Control box and font size. |
 | `radius` | `Size` | `sm` | Corner radius, independent of `size`. |
-| `color` | `ThemeAwareValue` | `primary` | Fill of the current page. Its text takes the matching `-contrast` color. |
+| `color` | `ThemeAwareValue` | `primary` | Fill of the current page. A theme color gives its text the matching `-contrast` shade, a literal color black or white. |
 | `disabled` | `bool` | `false` | Disables every control. |
 | `with_controls` | `bool` | `true` | Shows the previous and next controls. |
 | `with_edges` | `bool` | `false` | Shows the first and last controls. |
@@ -74,7 +75,10 @@ parts work.
 
 ### Libero handles
 
-- Every control is a button and a tab stop.
+- Every control is a button and a tab stop, except an arrow at its end and
+  every control under `disabled`: those are disabled buttons.
+- An arrow that disables itself on click, such as next on the last page, hands
+  focus to the current page.
 - The page names come from the [localization](localization.md)'s
   `PaginationLabels`, and `label` overrides them.
 
@@ -85,7 +89,7 @@ parts work.
 
 ### Example
 
-A results pager: each page number and arrow is a button and a tab stop, and
+A results pager: each page number and enabled arrow is a button and a tab stop, and
 the next arrow reads "Go to next page" from `PaginationLabels` instead of a
 bare arrow.
 
