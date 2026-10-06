@@ -39,9 +39,6 @@ fn wrap_hook(values: &DemoValues, _: &str) -> String {
     if mask_click != MaskClick::None {
         options.push_str(&format!("    mask_click: MaskClick::{mask_click:?},\n"));
     }
-    if values.str("keyboard") != "true" {
-        options.push_str("    keyboard: false,\n");
-    }
     if custom {
         options.push_str("    card: Some(card),\n");
     }
@@ -96,7 +93,7 @@ fn wrap_hook(values: &DemoValues, _: &str) -> String {
 
 /// The hook needs a scope of its own: `Demo` calls its `render` closure from its own.
 #[component]
-fn TourDemo(side: String, mask_click: String, keyboard: bool, custom: bool) -> Element {
+fn TourDemo(side: String, mask_click: String, custom: bool) -> Element {
     let side = side_of(&side);
     let search = use_element();
     let create = use_element();
@@ -147,7 +144,6 @@ fn TourDemo(side: String, mask_click: String, keyboard: bool, custom: bool) -> E
                 .side(side),
         ],
         mask_click: mask_click_of(&mask_click),
-        keyboard,
         card: custom.then_some(card),
         onfinish: Some(finished),
         onclose: Some(skipped),
@@ -201,9 +197,6 @@ pub fn TourPage() -> Element {
                     prop("mask_click", "MaskClick")
                         .default("None")
                         .doc("What a press on the dimmed page does: `None`, `Close` or `Next`. `None`, so a stray tap does not lose the tour."),
-                    prop("keyboard", "bool")
-                        .default("true")
-                        .doc("← and → go to the previous and next step. They follow the text direction."),
                     prop("aria_label", "Option<String>")
                         .doc("Names every step's card, over the step titles. Without either, the localization's `tour.label`, with a warning in a debug build."),
                     prop("card", "Callback<TourView, Element>")
@@ -261,7 +254,7 @@ pub fn TourPage() -> Element {
                 .key(["Tab", "Shift+Tab"], "Moves the focus within the card. It does not leave while the tour shows.")
                 .handles([
                     "Each step's card is a `dialog` with `aria-modal`, named by the step title and described by its text. Focus moves to it on every step.",
-                    "While `keyboard` is on, the card names its arrow keys in `aria-keyshortcuts`; few screen readers announce it, so say the keys in the first step's text too.",
+                    "The card names its arrow keys in `aria-keyshortcuts`; few screen readers announce it, so say the keys in the first step's text too.",
                     "The hole has a 2px ring of its own, and an outline in forced colours, so the highlighted element stands out on a dark page too.",
                     "A card taller than the room it has scrolls, so its buttons stay reachable at 400% zoom or on a phone held sideways.",
                     "The highlighted element cannot be pressed, and a press on the dimmed page does nothing unless `mask_click` says so.",
@@ -305,13 +298,11 @@ pub fn TourPage() -> Element {
                     Control::toggle("mask_click", ["none", "close", "next"])
                         .labels(["None", "Close", "Next"]),
                     Control::toggle("card", ["default", "custom"]).labels(["Default", "Custom"]),
-                    Control::switch("keyboard").default("true"),
                 ],
                 render: move |values: DemoValues| rsx! {
                     TourDemo {
                         side: values.str("side"),
                         mask_click: values.str("mask_click"),
-                        keyboard: values.str("keyboard") == "true",
                         custom: values.str("card") == "custom",
                     }
                 },

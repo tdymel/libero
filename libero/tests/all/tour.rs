@@ -35,7 +35,6 @@ thread_local! {
     static CLOSED: RefCell<Vec<usize>> = const { RefCell::new(Vec::new()) };
     /// Moves made after the first render, once the layer is up.
     static LATER: RefCell<Vec<Move>> = const { RefCell::new(Vec::new()) };
-    static KEYBOARD_OFF: Cell<bool> = const { Cell::new(false) };
     static RTL: Cell<bool> = const { Cell::new(false) };
     static OPEN: Cell<bool> = const { Cell::new(false) };
 }
@@ -69,7 +68,6 @@ fn Tour() -> Element {
     let mut empty = use_signal(|| false);
     let tour = use_tour(TourOptions {
         steps: if empty() { Vec::new() } else { steps() },
-        keyboard: !KEYBOARD_OFF.get(),
         current: CURRENT.get(),
         onchange: Some(Callback::new(|index| {
             CHANGES.with(|c| c.borrow_mut().push(index))
@@ -129,7 +127,6 @@ fn reset() {
     FINISHED.set(0);
     CLOSED.with(|c| c.borrow_mut().clear());
     LATER.with(|later| later.borrow_mut().clear());
-    KEYBOARD_OFF.set(false);
     RTL.set(false);
     OPEN.set(false);
 }
@@ -333,11 +330,6 @@ fn the_card_names_its_arrow_keys_next_first() {
         card.contains(r#"aria-keyshortcuts="ArrowLeft ArrowRight""#),
         "{card}"
     );
-
-    reset();
-    KEYBOARD_OFF.set(true);
-    let html = rendered(&[Move::Start]);
-    assert!(!html.contains("aria-keyshortcuts"), "{html}");
 
     reset();
     CUSTOM.set(true);

@@ -170,7 +170,6 @@ pub fn use_tour(options: TourOptions) -> TourHandle
 | `onfinish` | `Option<Callback<()>>` | - | Called once when Next is pressed on the last step. |
 | `onclose` | `Option<Callback<usize>>` | - | Called with the step shown when the tour ends early: Escape, Back, Skip or the close button. Steps going empty while open end it too, with the last step shown. |
 | `mask_click` | `MaskClick` | `None` | What a press on the dimmed page does: `None`, `Close` or `Next`. |
-| `keyboard` | `bool` | `true` | ← and → go to the previous and next step, following the text direction. |
 | `aria_label` | `Option<String>` | - | Names every step's card, over the step titles. |
 | `card` | `Option<Callback<TourView, Element>>` | - | Draws the card's inside in place of the default. |
 | `sx` | `Input<Sx>` | - | Styles the card. |
@@ -227,8 +226,8 @@ explains how parts work.
 
 - Each step's card is a `dialog` with `aria-modal`, named by the step title and
   described by its text. Focus moves to it on every step.
-- While `keyboard` is on, the card names its arrow keys in `aria-keyshortcuts`;
-  few screen readers announce it, so say the keys in the first step's text too.
+- The card names its arrow keys in `aria-keyshortcuts`; few screen readers
+  announce it, so say the keys in the first step's text too.
 - The hole has a 2px ring of its own, and an outline in forced colours, so the
   highlighted element stands out on a dark page too.
 - A card taller than the room it has scrolls, so its buttons stay reachable at

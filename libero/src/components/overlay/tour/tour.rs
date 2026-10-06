@@ -161,8 +161,6 @@ pub struct TourOptions {
     /// Steps going empty while open close it too, with the last step shown.
     pub onclose: Option<Callback<usize>>,
     pub mask_click: MaskClick,
-    /// ArrowRight and ArrowLeft go to the next and previous step.
-    pub keyboard: bool,
     /// Names every step's card, over the step titles.
     pub aria_label: Option<String>,
     /// Draws the card's inside in place of the default; the tour keeps placing,
@@ -183,7 +181,6 @@ impl Default for TourOptions {
             onfinish: None,
             onclose: None,
             mask_click: MaskClick::None,
-            keyboard: true,
             aria_label: None,
             card: None,
             sx: Input::None,
@@ -577,7 +574,6 @@ fn TourLayer(act: Callback<Move>, index: usize, options: TourOptions) -> Element
     }));
     let moving = arrived() != index;
 
-    let keyboard_on = options.keyboard;
     let mask_click = options.mask_click;
     let style = highlight_style(hole, step.radius.unwrap_or(defaults.radius));
 
@@ -586,8 +582,7 @@ fn TourLayer(act: Callback<Move>, index: usize, options: TourOptions) -> Element
             act.call(Move::Close);
             return;
         }
-        if !keyboard_on
-            || key_taken(&event)
+        if key_taken(&event)
             || typing_target(&event)
             || arrow_target(&event)
             || has_shortcut_modifier(&event)
@@ -734,10 +729,10 @@ fn TourCard(
     // Next's key first: under RTL that is ArrowLeft, as `logical_key` reads it.
     let rtl = try_use_context::<LiberoContext>()
         .is_some_and(|context| *context.direction.read() == Direction::Rtl);
-    let shortcuts = options.keyboard.then_some(match rtl {
+    let shortcuts = match rtl {
         true => "ArrowLeft ArrowRight",
         false => "ArrowRight ArrowLeft",
-    });
+    };
 
     let positioned = use_box()
         .framework_sx(if centred { &CENTRED_SX } else { &PLACED_SX })
