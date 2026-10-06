@@ -2,7 +2,7 @@
 //! schemes, and text that reflows in a 320px column.
 
 use e2e::browser::block_on;
-use e2e::{Fixture, Suite, Viewport, wait};
+use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 #[test]
 fn it_meets_the_baseline() {
@@ -11,6 +11,7 @@ fn it_meets_the_baseline() {
         .contrast_covers("#code-rust")
         .contrast_covers("#quote-default figcaption")
         .contrast_covers("#text-color")
+        .contrast_covers("#kbds")
         .run();
 }
 
@@ -24,11 +25,11 @@ fn every_quote_colour_meets_the_baseline() {
         .run();
 }
 
-/// How far `selector` pokes out past the right edge of its paragraph, in px.
+/// How far `selector` pokes out past the right edge of its paragraph (a heading: its column), in px.
 async fn overflow(page: &chromiumoxide::Page, selector: &str) -> f64 {
     page.evaluate(format!(
         "(() => {{ const el = document.querySelector({selector:?}); \
-         const column = el.closest('p').getBoundingClientRect(); \
+         const column = (el.closest('p') ?? el.parentElement).getBoundingClientRect(); \
          return Math.max(...[...el.getClientRects()].map(r => r.right)) - column.right; }})()"
     ))
     .await
@@ -57,6 +58,30 @@ fn a_long_inline_code_wraps_inside_its_paragraph() {
             .console
             .assert_clean("the long inline code")
             .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2543 and 2547: a long heading word and the largest key at 320px (WCAG 1.4.10),
+/// and every key's text read out in the sentence.
+#[test]
+fn a_long_title_and_the_keys_stay_inside_the_column() {
+    block_on(async {
+        let fixture = Fixture::open("/typography", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#title-long").await.unwrap();
+
+        for selector in ["#title-long", "#kbds kbd:last-of-type"] {
+            let past = overflow(page, selector).await;
+            assert!(past <= 1.0, "{selector} runs {past}px past its column");
+        }
+
+        let tree = ax::snapshot(page, "#kbds").await.unwrap();
+        assert_eq!(tree.matches("Ctrl").count(), 6, "the keys' text:\n{tree}");
+
+        fixture.console.assert_clean("the long title").unwrap();
         fixture.close().await.unwrap();
     });
 }
@@ -95,7 +120,13 @@ fn text_spacing_overrides_lose_nothing() {
             "clipped under text spacing: {clipped:?}"
         );
 
-        for selector in ["#code-long", "#code-rust", "#marks mark"] {
+        for selector in [
+            "#code-long",
+            "#code-rust",
+            "#marks mark",
+            "#title-long",
+            "#kbds kbd",
+        ] {
             let past = overflow(page, selector).await;
             assert!(past <= 1.0, "{selector} runs {past}px past its paragraph");
         }

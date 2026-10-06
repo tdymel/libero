@@ -3,7 +3,9 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Anchor, Blockquote, BlockquotePart, Code, Flex, Mark, Parts, Text, Title},
+    components::{
+        Anchor, Blockquote, BlockquotePart, Code, Flex, Kbd, Mark, Parts, Text, Title,
+    },
     sx::sx,
     theme::Gradient,
 };
@@ -23,6 +25,8 @@ const COLORS: &[&str] = &[
     "success",
     "warning",
 ];
+
+const KBD_SIZES: &[&str] = &["xs", "sm", "md", "lg", "xl", "xxl"];
 
 /// Mid and dark shades, where a brightness-picked twin or the page text failed.
 const SHADES: &[&str] = &["info.6", "error.8"];
@@ -69,6 +73,17 @@ fn TypographyPage() -> Element {
             // Todo 2489: a coloured and a gradient Text through the 320px and text-spacing passes.
             Text { id: "text-color", color: "error", "Coloured text in the narrow column." }
             Text { id: "text-gradient", gradient: Gradient::default(), "Gradient text in the narrow column." }
+            // Todo 2543: one word wider than the column at `xxl`.
+            Title { id: "title-long", size: "xxl", "Donaudampfschifffahrtsgesellschaft" }
+            // Todo 2547: a key of every size in running text.
+            Text { id: "kbds",
+                "Press "
+                for size in KBD_SIZES {
+                    Kbd { size: *size, "Ctrl" }
+                    " + "
+                }
+                "K."
+            }
             Title { size: "xl", "Heading two" }
             Title { size: "lg", "Heading three" }
             Title { size: "md", "Heading four" }

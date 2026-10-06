@@ -15,6 +15,8 @@ use super::text::gradient_text_sx;
 static TITLE_BASE_SX: StaticSx = StaticSx::new(|| {
     TitleDefaults::theme_vars()
         .margin("0")
+        // A long word at `xxl` is wider than a 320px column (WCAG 1.4.10).
+        .overflow_wrap("break-word")
         .when("gradient", gradient_text_sx())
 });
 

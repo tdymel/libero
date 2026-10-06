@@ -64,6 +64,23 @@ paragraph
   StaticText "Coloured text in the narrow column."
 paragraph
   StaticText "Gradient text in the narrow column."
+heading "Donaudampfschifffahrtsgesellschaft" [level=1]
+  StaticText "Donaudampfschifffahrtsgesellschaft"
+paragraph
+  StaticText "Press"
+  StaticText "Ctrl"
+  StaticText "+"
+  StaticText "Ctrl"
+  StaticText "+"
+  StaticText "Ctrl"
+  StaticText "+"
+  StaticText "Ctrl"
+  StaticText "+"
+  StaticText "Ctrl"
+  StaticText "+"
+  StaticText "Ctrl"
+  StaticText "+"
+  StaticText "K."
 heading "Heading two" [level=2]
   StaticText "Heading two"
 heading "Heading three" [level=3]
