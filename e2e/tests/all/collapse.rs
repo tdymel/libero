@@ -127,3 +127,36 @@ fn a_closed_kept_panel_is_neither_focusable_nor_announced() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 2531: an open panel inside a closed one is hidden with it, and reachable
+/// once the outer one opens.
+#[test]
+fn an_open_panel_inside_a_closed_one_is_neither_focusable_nor_announced() {
+    block_on(async {
+        let fixture = Fixture::open("/collapse-nested", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#toggle-outer").await.unwrap();
+        let focus_trigger = "document.querySelector('#toggle-outer').focus()";
+
+        page.evaluate(focus_trigger).await.unwrap();
+        keyboard::press(page, TAB).await.unwrap();
+        focus::wait_for_focus(page, "#after-nested", "Tab past the closed outer panel")
+            .await
+            .unwrap();
+        let closed = ax::snapshot(page, "#nested-frame").await.unwrap();
+        assert!(!closed.contains("Deep"), "nested panel announced: {closed}");
+
+        pointer::click(page, "#toggle-outer").await.unwrap();
+        wait::for_visible(page, "#deep").await.unwrap();
+        page.evaluate(focus_trigger).await.unwrap();
+        keyboard::press(page, TAB).await.unwrap();
+        focus::wait_for_focus(page, "#deep", "Tab into the open nested panel")
+            .await
+            .unwrap();
+
+        fixture.console.assert_clean("the nested collapse").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

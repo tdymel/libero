@@ -98,6 +98,8 @@ Like every component, `Collapse` also takes the shared props `sx`, `class`,
 - Make wide content fit: `Collapse` clips whatever is wider than the panel,
   with no scrollbar. Let text wrap (`overflow-wrap: anywhere`) and put a wide
   table or code block in a box with `overflow-x: auto`.
+- Put padding on the content, not on `Collapse`: the root keeps its own
+  padding, border and margin when closed.
 
 ### Example
 

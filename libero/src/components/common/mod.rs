@@ -43,7 +43,8 @@ pub(crate) use combobox_aria::{group_id, listbox_id, option_id};
 pub use combobox_state::{ComboboxState, use_combobox};
 pub(crate) use focus_ring::{
     borderless_on_state_sx, disabled_look_sx, focus_ring_sx, forced_on_sx, inset_focus_ring_sx,
-    on_ring_sx, on_start_bar_sx, on_state_sx, ring_overlay, ring_overlay_sx, shadow_sx,
+    inset_outline_ring_sx, on_ring_sx, on_start_bar_sx, on_state_sx, ring_overlay, ring_overlay_sx,
+    shadow_sx,
 };
 pub(crate) use focusable::FOCUSABLE_SELECTOR;
 pub(crate) use icons::{Glyph, draw_svg};

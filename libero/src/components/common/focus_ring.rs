@@ -44,6 +44,16 @@ pub(crate) fn inset_focus_ring_sx(offset: &str) -> crate::sx::Sx {
         ))
 }
 
+/// [`inset_focus_ring_sx`] with a painted outline, for a replaced element (`video`, `img`):
+/// its content covers inset shadows, the web paints the outline over it.
+pub(crate) fn inset_outline_ring_sx(offset: &str) -> crate::sx::Sx {
+    use crate::theme::{FOCUS_RING_COLOR, FOCUS_RING_WIDTH};
+    use crate::tokens::NamedColorCss;
+
+    let stripe = NamedColorCss::FOCUS_CONTRAST.value_or(FOCUS_RING_COLOR.value());
+    inset_focus_ring_sx(offset).outline(format!("{} solid {stripe}", FOCUS_RING_WIDTH.value()))
+}
+
 /// Four offset inset shadows: a band `depth` deep round the padding box.
 fn inset_band(depth: &str, color: &str) -> String {
     format!(

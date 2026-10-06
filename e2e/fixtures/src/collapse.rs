@@ -8,7 +8,33 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/collapse", || rsx! { CollapsePage {} }),
     ("/collapse-kept", || rsx! { KeptPage {} }),
+    ("/collapse-nested", || rsx! { NestedPage {} }),
 ];
+
+/// Todo 2531: an open kept panel inside a closed one must stay hidden with it.
+#[component]
+fn NestedPage() -> Element {
+    let mut open = use_signal(|| false);
+
+    rsx! {
+        Flex { id: "nested-frame", direction: "column", gap: "md", max_width: "320px",
+            Button {
+                id: "toggle-outer",
+                variant: "outlined",
+                aria_expanded: open(),
+                aria_controls: "outer",
+                onclick: move |_| open.toggle(),
+                "Groups"
+            }
+            Collapse { id: "outer", open: open(),
+                Collapse { id: "inner", open: true,
+                    Button { id: "deep", "Deep" }
+                }
+            }
+            Button { id: "after-nested", variant: "outlined", "After" }
+        }
+    }
+}
 
 /// `keep_mounted` (the default): the closed panel's button stays in the DOM,
 /// so only `visibility` keeps it out of the tab order and the tree.

@@ -25,8 +25,9 @@ static COLLAPSE_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().display("grid")
         .when(
             "open",
+            // `inherit`, not `visible`: an open nested panel stays hidden in a closed one (todo 2531).
             sx().grid_template_rows("1fr")
-                .visibility("visible")
+                .visibility("inherit")
                 .transition(format!("{rows}, visibility 0s linear 0s"))
                 .media(REDUCED_MOTION, sx().transition("none")),
         )
@@ -180,5 +181,15 @@ mod tests {
     #[test]
     fn no_duration_emits_no_variable() {
         assert_eq!(collapse_variables(None).to_string(), "");
+    }
+
+    /// Todo 2531: an explicit `visible` would punch through a closed ancestor.
+    #[test]
+    fn an_open_panel_inherits_its_ancestors_visibility() {
+        let sheet = crate::css::Stylesheet::from(&COLLAPSE_BASE_SX);
+        let css = sheet.as_str();
+
+        assert!(css.contains("visibility:inherit"), "{css}");
+        assert!(!css.contains("visibility:visible"), "{css}");
     }
 }

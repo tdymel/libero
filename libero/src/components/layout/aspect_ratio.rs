@@ -3,7 +3,8 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, Variables, base_props, inset_focus_ring_sx, ring_overlay_sx, variables,
+            HtmlTag, Input, Variables, base_props, inset_focus_ring_sx, inset_outline_ring_sx,
+            ring_overlay_sx, variables,
         },
         layout::use_box,
     },
@@ -13,14 +14,18 @@ use crate::{
 };
 
 static ASPECT_RATIO_BASE_SX: StaticSx = StaticSx::new(|| {
+    // Relative so a static child's overlay anchors here, never moving a positioned child (todo 2535).
     sx().aspect_ratio(ASPECT_RATIO.overridable())
+        .position("relative")
         .overflow("hidden")
         .selector("& > *", sx().width("100%").height("100%"))
         // The child fills the clipped box, so a ring drawn outside it is cut away.
         // Doubled to outrank a `Button`'s own ring, which ties it otherwise.
+        .selector("& > *:focus-visible:focus-visible", inset_ring())
+        // Replaced content covers inset shadows and takes no `::after` (todo 2532).
         .selector(
-            "& > *:focus-visible:focus-visible",
-            inset_ring().position("relative"),
+            format!("& > :is({REPLACED}):focus-visible:focus-visible"),
+            inset_outline_ring_sx(&ring_offset()),
         )
         // A picture inside the child paints over its inset shadows; the overlay paints over it (todo 2480).
         .selector(
@@ -29,8 +34,14 @@ static ASPECT_RATIO_BASE_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
+const REPLACED: &str = "img, video, iframe, canvas, svg, embed, object";
+
+fn ring_offset() -> String {
+    format!("calc(-1 * {})", FOCUS_RING_WIDTH.value())
+}
+
 fn inset_ring() -> Sx {
-    inset_focus_ring_sx(&format!("calc(-1 * {})", FOCUS_RING_WIDTH.value()))
+    inset_focus_ring_sx(&ring_offset())
 }
 
 fn aspect_ratio_variables(ratio: Option<&f32>) -> Variables {
@@ -139,5 +150,36 @@ mod tests {
             .and_then(|rule| rule.split('}').next())
             .unwrap_or_else(|| panic!("no overlay: {css}"));
         assert!(overlay.contains("box-shadow:inset"), "{overlay}");
+    }
+
+    fn rule<'a>(css: &'a str, selector: &str) -> &'a str {
+        css.split(selector)
+            .nth(1)
+            .and_then(|rule| rule.split('}').next())
+            .unwrap_or_else(|| panic!("no `{selector}` rule: {css}"))
+    }
+
+    /// Todo 2532: a `video` paints over inset shadows, so its stripe is a painted outline.
+    #[test]
+    fn a_focused_replaced_child_draws_a_painted_outline() {
+        let sheet = crate::css::Stylesheet::from(&ASPECT_RATIO_BASE_SX);
+        let replaced = rule(sheet.as_str(), "video, iframe");
+
+        assert!(!replaced.contains("solid transparent"), "{replaced}");
+        assert!(
+            replaced.contains("outline-offset:calc(-1 * var(--lsx-focus-ring-width))"),
+            "{replaced}"
+        );
+    }
+
+    /// Todo 2535: the overlay anchors on the root, so a positioned child keeps its place.
+    #[test]
+    fn focus_leaves_a_childs_position_alone() {
+        let sheet = crate::css::Stylesheet::from(&ASPECT_RATIO_BASE_SX);
+        let css = sheet.as_str();
+
+        let focused = rule(css, " > *:focus-visible:focus-visible{");
+        assert!(!focused.contains("position"), "{focused}");
+        assert!(css.contains("position:relative"), "{css}");
     }
 }
