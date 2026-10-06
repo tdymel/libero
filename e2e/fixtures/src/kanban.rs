@@ -10,10 +10,12 @@ pub const ROUTES: Routes = &[("/kanban", || rsx! { KanbanPage {} })];
 const COLUMNS: [&str; 3] = ["To do", "Doing", "Done"];
 
 /// Three columns, the last empty; `#order` lists them split by `|`, `#moves` each move.
+/// `#refuse` makes the app ignore every move; `#add` puts Omega first in Done.
 #[component]
 fn KanbanPage() -> Element {
     let mut cards = use_signal(|| vec![vec!["Alpha", "Beta", "Gamma"], vec!["Delta"], vec![]]);
     let mut moves = use_signal(String::new);
+    let mut refuse = use_signal(|| false);
     let order = cards()
         .iter()
         .map(|column| column.join(" "))
@@ -29,7 +31,9 @@ fn KanbanPage() -> Element {
                         "{}.{}>{}.{} ",
                         step.from_column, step.from, step.to_column, step.to
                     ));
-                    step.apply(&mut cards.write());
+                    if !refuse() {
+                        step.apply(&mut cards.write());
+                    }
                 },
                 for (column, label) in COLUMNS.into_iter().enumerate() {
                     KanbanColumn { key: "{label}", index: column, label, id: "column-{column}",
@@ -42,6 +46,8 @@ fn KanbanPage() -> Element {
             Text { id: "order", "{order}" }
             Text { id: "moves", "{moves}" }
             Button { id: "after", "After" }
+            Button { id: "refuse", onclick: move |_| refuse.set(true), "Refuse moves" }
+            Button { id: "add", onclick: move |_| cards.write()[2].insert(0, "Omega"), "Add Omega" }
         }
     }
 }

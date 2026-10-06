@@ -223,6 +223,39 @@ async fn the_own_column_is_disabled<D: Driver>(d: &mut D, _route: &str) -> Resul
     Ok(())
 }
 
+/// 2451: a move the app ignores arms no focus jump for the next card at its slot.
+async fn a_refused_move_moves_no_focus_later<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#refuse").await?;
+    d.focus("#Beta [data-slot=move-to]").await?;
+    d.press(keyboard::ARROW_UP).await?;
+    eventually_focused(d, "[role=menuitem]", "ArrowUp on the trigger").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_text(d, "#moves", "0.1>2.0 ", "the refused move to Done").await?;
+    ensure!(d.text("#order").await? == START, "a refused move moved");
+    d.focus("#add").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_text(
+        d,
+        "#order",
+        "Alpha Beta Gamma | Delta | Omega",
+        "Omega added",
+    )
+    .await?;
+    d.settle().await?;
+    ensure!(
+        d.is_focused("#add").await?,
+        "a card added at the refused slot took the focus: {}",
+        d.focus_owner().await?
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_move_the_app_refuses_leaves_no_focus_jump_for_a_later_card,
+    "/kanban",
+    a_refused_move_moves_no_focus_later,
+    desktop: skip("958: element identity on the WebView")
+);
 e2e::scenario!(
     a_handle_drag_reorders_a_column_and_keeps_the_handle_focused,
     "/kanban",
@@ -624,6 +657,109 @@ fn a_touch_on_the_handle_drags_across_and_elsewhere_scrolls_the_board() {
             .unwrap();
         assert_eq!(order, "Alpha Gamma | Delta Beta | ", "a swipe moved a card");
         fixture.console.assert_clean("touch drags").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// 2452: as `Sortable`'s, a touch screen's handle description points to the move buttons.
+#[test]
+fn a_touch_screen_describes_the_handle_by_the_move_buttons() {
+    use e2e::browser::{Fixture, Viewport, block_on};
+    use e2e::wait;
+    const DESCRIPTION: &str = "document.getElementById(document.querySelector('#Alpha [data-slot=handle]')\
+         .getAttribute('aria-describedby')).textContent";
+    block_on(async {
+        let fixture = Fixture::open("/kanban", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            e2e::browser::fake_pointer(page).await?;
+            wait::for_visible(page, "#Alpha").await?;
+            wait::for_js_true(
+                page,
+                &format!("{DESCRIPTION}.startsWith('Press Space')"),
+                "the keyboard description",
+            )
+            .await?;
+            e2e::browser::set_coarse_pointer(page, true).await?;
+            wait::for_js_true(
+                page,
+                &format!("{DESCRIPTION} === 'Use the move buttons to reorder the item.'"),
+                "the touch description",
+            )
+            .await
+        }
+        .await;
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+    });
+}
+
+/// 2454: a card dragged below the columns adds no vertical scrollbar, so the board keeps its width.
+#[test]
+fn a_card_dragged_below_the_columns_keeps_the_board_width() {
+    use chromiumoxide::cdp::browser_protocol::input::DispatchMouseEventType as Kind;
+    use e2e::browser::{Fixture, Viewport, block_on};
+    use e2e::frames::in_front;
+    use e2e::passes::pointer::Point;
+    use e2e::wait;
+    const WIDTH: &str = "document.querySelector('#board').clientWidth";
+    block_on(async {
+        let fixture = Fixture::open("/kanban", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let width: f64 = page.evaluate(WIDTH).await.unwrap().into_value().unwrap();
+        let bottom: f64 = page
+            .evaluate("document.querySelector('#board').getBoundingClientRect().bottom")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let handle = centre(page, "#Gamma [data-slot=handle]").await;
+        let below = Point {
+            x: handle.x,
+            y: bottom + 80.0,
+        };
+        in_front(page, async {
+            mouse_at(page, Kind::MouseMoved, handle, false).await;
+            mouse_at(page, Kind::MousePressed, handle, true).await;
+            for step in 1..=10 {
+                let t = f64::from(step) / 10.0;
+                let at = Point {
+                    x: handle.x,
+                    y: handle.y + (below.y - handle.y) * t,
+                };
+                mouse_at(page, Kind::MouseMoved, at, true).await;
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#Gamma')?.dataset.state?.includes('dragging')",
+            "Gamma lifted",
+        )
+        .await
+        .unwrap();
+        let held: (f64, String, f64) = page
+            .evaluate(format!(
+                "(() => {{ const b = document.querySelector('#board'); \
+                 return [{WIDTH}, getComputedStyle(b).overflowY, b.scrollTop]; }})()"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            held,
+            (width, "hidden".to_string(), 0.0),
+            "the drag changed the board"
+        );
+        in_front(page, async {
+            mouse_at(page, Kind::MouseReleased, below, false).await;
+            Ok(())
+        })
+        .await
+        .unwrap();
         fixture.close().await.unwrap();
     });
 }

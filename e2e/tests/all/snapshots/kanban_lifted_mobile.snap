@@ -50,3 +50,7 @@ paragraph
 paragraph
 button "After"
   StaticText "After"
+button "Refuse moves"
+  StaticText "Refuse moves"
+button "Add Omega"
+  StaticText "Add Omega"

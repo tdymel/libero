@@ -49,6 +49,10 @@ paragraph
 paragraph
 button "After"
   StaticText "After"
+button "Refuse moves"
+  StaticText "Refuse moves"
+button "Add Omega"
+  StaticText "Add Omega"
 menu "Move Alpha to column" [orientation=vertical]
   menuitem "To do" [disabled]
     StaticText "To do"

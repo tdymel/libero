@@ -39,6 +39,8 @@ struct Placed {
 /// A pointer drag measured and under way.
 #[derive(Clone, PartialEq)]
 struct Lifted {
+    /// The dragged card's board id.
+    id: usize,
     lanes: Lanes,
     label: String,
     /// The board's rect when it scrolls sideways, else `None`.
@@ -71,6 +73,9 @@ pub(super) struct Landing {
     pub(super) column: usize,
     pub(super) index: usize,
     pub(super) control: Control,
+    /// The moved card's board id and the slot it left.
+    pub(super) card: usize,
+    pub(super) from: (usize, usize),
 }
 
 /// What [`use_board_drag`] takes from its board.
@@ -113,6 +118,17 @@ impl BoardDrag {
         if self.settle.peek().is_some() {
             self.settle.set(None);
         }
+    }
+
+    /// Card `claimant` may take `landing`'s focus: it is the moved card, or that one left its
+    /// slot. A move the app refused leaves it in place (2451).
+    pub(super) fn landed(self, landing: Landing, claimant: usize) -> bool {
+        claimant == landing.card
+            || self
+                .cards
+                .peek()
+                .get(&landing.card)
+                .is_none_or(|placed| (placed.column, placed.index) != landing.from)
     }
 }
 
@@ -288,6 +304,7 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
                 let _ = platform::element(handle).focus();
             }
             started.call(Some(Lifted {
+                id,
                 lanes: Lanes {
                     lanes,
                     from_column: card.column,
@@ -342,6 +359,8 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
                 column: to.0,
                 index: to.1,
                 control: Control::Handle,
+                card: ended.id,
+                from,
             }));
             onmove.call(KanbanMove {
                 from_column: from.0,
@@ -482,6 +501,8 @@ pub(super) fn use_board_list(drag: BoardDrag, column: usize, list: ElementHandle
 /// A card's side of the board drag, from [`use_board_card`].
 #[derive(Clone, Copy)]
 pub(super) struct BoardCard {
+    /// The card's board id, for its [`Landing`].
+    pub(super) id: usize,
     /// The handle's.
     pub(super) onpointerdown: Callback<Event<PointerData>>,
     /// The handle's: Escape puts a dragged card back; otherwise the column's keys.
@@ -592,6 +613,7 @@ pub(super) fn use_board_card(
     });
 
     BoardCard {
+        id,
         onpointerdown,
         onkeydown,
         dragging,

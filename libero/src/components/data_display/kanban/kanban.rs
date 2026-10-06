@@ -22,7 +22,7 @@ use crate::{
         overlay::{Menu, MenuItem, use_menu},
     },
     context::IconSlot,
-    hooks::{current_localization, use_css, use_element, use_id},
+    hooks::{current_localization, use_css, use_element, use_id, use_media_query},
     localization::fill,
     platform::ElementApi,
     sx::{StaticSx, sx},
@@ -34,6 +34,8 @@ static KANBAN_SX: StaticSx = StaticSx::new(|| {
         .align_items("flex-start")
         .gap("md")
         .overflow_x("auto")
+        // Not `auto` too: a card dragged below the columns would add a scrollbar mid-drag (2454).
+        .overflow_y("hidden")
 });
 
 static KANBAN_COLUMN_SX: StaticSx = StaticSx::new(|| {
@@ -264,10 +266,14 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
         }
     });
 
-    let onmove = board.onmove;
+    let (onmove, mut landing) = (board.onmove, board.landing);
     let list = use_sortable(SortableOptions {
         orientation: Orientation::Vertical,
         onreorder: use_callback(move |step: SortableMove| {
+            // The sortable refocuses its own move; an earlier, refused landing is void.
+            if landing.peek().is_some() {
+                landing.set(None);
+            }
             let column = *index.peek();
             onmove.call(KanbanMove {
                 from_column: column,
@@ -294,6 +300,7 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
         instructions,
     });
     let words = current_localization().sortable;
+    let touch = use_media_query("(pointer: coarse)");
     let room = use_board_list(board.drag, column, list.element);
 
     let states: Input<States> = props
@@ -310,6 +317,11 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
     let (name_attr, name) = match props.header {
         Some(_) => ("aria-label", props.label.clone()),
         None => ("aria-labelledby", header_id()),
+    };
+    // As `Sortable`'s: a touch screen reader's tap on the handle lifts nothing (2452).
+    let described = match touch() && (board.move_buttons)() {
+        true => words.touch_instructions,
+        false => words.instructions,
     };
     // The slot a card from another column opens grows the list, not past its edge.
     let room = room();
@@ -345,7 +357,7 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
                 }
                 {items}
                 // Hidden, not visually hidden: read only as the handles' description.
-                div { id: "{instructions}", hidden: true, {words.instructions} }
+                div { id: "{instructions}", hidden: true, {described} }
             },
         )
 }
@@ -370,7 +382,8 @@ parts_enum! {
 base_props! {
     parts(KanbanCardPart);
     pub struct KanbanCardProps {
-        /// The card's position in its column, from 0. Key it by its data, not this.
+        /// The card's position in its column, from 0. Key it by its data, not this. Mount
+        /// every card of a column, indexed 0..n with no gap: a gap stops the pointer drag.
         index: usize,
         /// Names the card in its controls and the announcements. Unset, the handle reads the
         /// card's content, the rest "Item {n}" by its position.
@@ -425,15 +438,20 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
     let mut landing = board.landing;
     let column_index = column.index;
     let handle_node = item.handle;
+    let (drag, id) = (board.drag, carried.id);
     use_effect(use_reactive!(|index| {
         let _ = (trigger.mount_token(), handle_node.mount_token());
-        let Some(Landing { control, .. }) = landing
+        let Some(at) = landing
             .peek()
             .filter(|at| (at.column, at.index) == (column_index(), index))
         else {
             return;
         };
-        let target = match control {
+        if !drag.landed(at, id) {
+            landing.set(None);
+            return;
+        }
+        let target = match at.control {
             Control::Handle => handle_node,
             Control::MoveTo => trigger,
         };
@@ -466,6 +484,8 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
                         column: to_column,
                         index: to,
                         control: Control::MoveTo,
+                        card: id,
+                        from: (from_column, index),
                     }));
                     board.announcer.say(fill(
                         words.kanban.moved,
@@ -614,6 +634,14 @@ mod tests {
         assert!(css.contains("flex-wrap:wrap"), "{css}");
         assert!(basis.contains("flex-basis:max(calc(100% - 4 * "), "{basis}");
         assert!(css.contains("margin-inline-start:auto"), "{css}");
+    }
+
+    #[test]
+    fn the_board_scrolls_sideways_only() {
+        let css = Stylesheet::from(&KANBAN_SX).as_str().to_string();
+
+        assert!(css.contains("overflow-x:auto"), "{css}");
+        assert!(css.contains("overflow-y:hidden"), "{css}");
     }
 
     #[test]
