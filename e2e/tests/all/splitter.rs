@@ -3,12 +3,14 @@
 
 use anyhow::{Context, Result, ensure};
 use e2e::browser::block_on;
-use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text, linger};
+use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text};
 use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const DIVIDER: &str = "[role=separator]";
 const VALUE_NOW: &str = "document.querySelector('[role=separator]').getAttribute('aria-valuenow')";
+/// `Change` events so far on `/splitter`.
+const CHANGES: &str = "document.getElementById('box').dataset.changes";
 
 async fn value<D: Driver>(d: &mut D) -> Result<f64> {
     let now = d
@@ -40,6 +42,16 @@ async fn a_double_click_collapses<D: Driver>(d: &mut D, _route: &str) -> Result<
     moved(d, "a double-click to collapse pane A", |v| v == 10.0).await?;
     d.double_click(DIVIDER).await?;
     moved(d, "a second double-click to restore it", |v| v == 50.0).await?;
+    // Todo 2406: a floor reached by `Home` restores the size before it too.
+    d.press_shift(keyboard::ARROW_RIGHT).await?;
+    moved(d, "Shift+ArrowRight to move it to 60", |v| v == 60.0).await?;
+    d.press(keyboard::HOME).await?;
+    moved(d, "Home to reach the floor", |v| v == 10.0).await?;
+    d.double_click(DIVIDER).await?;
+    moved(d, "a double-click to restore the size before Home", |v| {
+        v == 60.0
+    })
+    .await?;
     Ok(())
 }
 
@@ -107,11 +119,6 @@ async fn a_swipe_scrolls<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
             "a swipe up over the divider did not scroll: its top at {}",
             at.y
         );
-        linger(d, 8).await;
-        ensure!(
-            d.text("#row-log").await?.is_empty(),
-            "a swipe over the divider grabbed it"
-        );
     } else {
         eventually_text(d, "#row-end", "50", "a vertical mouse drag").await?;
     }
@@ -127,6 +134,13 @@ async fn a_swipe_scrolls<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     .await?;
 
     let log = d.text("#row-log").await?;
+    // The sideways drag's pair is the only one: the swipe before it grabbed nothing.
+    if d.platform() == Platform::Android {
+        ensure!(
+            log == "start end ",
+            "a swipe over the divider grabbed it: {log:?}"
+        );
+    }
     d.click(ROW).await?;
     eventually_text(d, "#row-log", &format!("{log}start end "), "a tap").await?;
 
@@ -315,14 +329,15 @@ fn a_click_only_focuses_and_a_double_click_in_a_pane_does_nothing() {
         )
         .await
         .unwrap();
-        e2e::clock::settle(page).await.unwrap();
-        let now: String = page
-            .evaluate(VALUE_NOW)
-            .await
-            .unwrap()
-            .into_value()
-            .unwrap();
-        assert_eq!(now, "50", "a single click moved the divider");
+        // The next step's `Change` is the first: the click before it moved nothing.
+        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{} && {CHANGES} === '1'", value_is("51")),
+            "ArrowRight after a single click to be the first move",
+        )
+        .await
+        .unwrap();
 
         // Pointer capture sends every `dblclick` to the root: one in a pane is not the divider's.
         let pane_a: String = page
@@ -334,14 +349,17 @@ fn a_click_only_focuses_and_a_double_click_in_a_pane_does_nothing() {
         pointer::double_click(page, &format!("[id={pane_a:?}]"))
             .await
             .unwrap();
-        e2e::clock::settle(page).await.unwrap();
-        let now: String = page
-            .evaluate(VALUE_NOW)
+        page.evaluate(format!("document.querySelector({DIVIDER:?}).focus()"))
             .await
-            .unwrap()
-            .into_value()
             .unwrap();
-        assert_eq!(now, "50", "a double-click in pane A moved the divider");
+        keyboard::press(page, keyboard::ARROW_LEFT).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{} && {CHANGES} === '2'", value_is("50")),
+            "ArrowLeft after a double-click in pane A to be the second move",
+        )
+        .await
+        .unwrap();
 
         fixture
             .console
@@ -424,6 +442,55 @@ fn a_raised_min_size_clamps_the_moved_divider() {
         );
 
         fixture.console.assert_clean("a raised min_size").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2404: the line is a fill, which forced colours turn `Canvas` unless it is a system colour.
+#[test]
+fn the_divider_line_shows_in_forced_colours() {
+    block_on(async {
+        let fixture = Fixture::open("/splitter/content", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        e2e::browser::force_colours(page).await.unwrap();
+        let (line, canvas): (String, String) = page
+            .evaluate(format!(
+                "(() => {{ const probe = document.createElement('div'); \
+                 probe.style.background = 'Canvas'; document.body.append(probe); \
+                 const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \
+                 const bar = document.querySelector({DIVIDER:?}).parentElement; \
+                 return [getComputedStyle(bar).backgroundColor, canvas]; }})()"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_ne!(line, canvas, "the divider line takes the page's Canvas");
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 1581: an overflowing pane scrolls inside itself instead of painting over its neighbours.
+#[test]
+fn an_overflowing_pane_scrolls_inside_itself() {
+    block_on(async {
+        let fixture = Fixture::open("/splitter/content", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#pane-a").await.unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const pane = document.getElementById('pane-a').parentElement; \
+             pane.scrollTop = 100; \
+             return pane.scrollHeight > pane.clientHeight && pane.scrollTop > 0; })()",
+            "pane A to scroll its own overflow",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("an overflowing pane").unwrap();
         fixture.close().await.unwrap();
     });
 }

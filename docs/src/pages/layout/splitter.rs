@@ -115,7 +115,8 @@ pub fn SplitterPage() -> Element {
                 .key(["Home", "End"], "Jumps to either limit.")
                 .handles([
                     "The divider is a focusable separator.",
-                    "Double-clicking the divider resizes without dragging (WCAG 2.5.7): pane A collapses to `min_size`, and the next double-click restores it. A single click only focuses the divider.",
+                    "Double-clicking the divider resizes without dragging (WCAG 2.5.7): pane A collapses to `min_size`, and the next double-click restores the size it had before it reached `min_size`, by a double-click, a drag or `Home`. A single click only focuses the divider.",
+                    "In forced colours the divider line takes the system text colour, so it stays visible.",
                     "The divider's hit area is 24px thick (WCAG 2.5.8), so it takes presses about 12px into each pane.",
                     "Each pane scrolls its own overflow, so a pane at `min_size` never paints over the divider or hides its controls under the other pane.",
                     "A debug build warns without `aria_label`.",

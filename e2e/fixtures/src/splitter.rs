@@ -13,7 +13,41 @@ pub const ROUTES: Routes = &[
     ("/splitter/min-size", || rsx! { MinSizePage {} }),
     ("/splitter/rtl", || rsx! { RtlPage {} }),
     ("/splitter/scroll", || rsx! { ScrollPage {} }),
+    ("/splitter/content", || rsx! { ContentPage {} }),
 ];
+
+/// Pane A overflows, and a button sits flush to each edge of both panes (todo 2407):
+/// the panes' own scroll (1581), forced colours, and the gutter over pane edges.
+#[component]
+fn ContentPage() -> Element {
+    let edge = |id: &'static str, side: &'static str| {
+        rsx! {
+            div { style: "position: absolute; top: 0; {side}: 0", Button { id, "{id}" } }
+        }
+    };
+    rsx! {
+        div { style: "height: 160px; max-width: 320px",
+            Splitter {
+                initial_size: 50.0,
+                aria_label: "Resize panes",
+                panel_a: rsx! {
+                    div { id: "pane-a", style: "position: relative; min-height: 400px",
+                        {edge("a-start", "inset-inline-start")}
+                        {edge("a-end", "inset-inline-end")}
+                        Text { "Pane A" }
+                    }
+                },
+                panel_b: rsx! {
+                    div { id: "pane-b", style: "position: relative; height: 100%",
+                        {edge("b-start", "inset-inline-start")}
+                        {edge("b-end", "inset-inline-end")}
+                        Text { "Pane B" }
+                    }
+                },
+            }
+        }
+    }
+}
 
 /// Both orientations on a page taller than the screen (todo 1039). `#row-log`
 /// lists the row's `start`/`end`, `#row-end` and `#column-end` their last `End`.
@@ -83,18 +117,25 @@ fn RtlPage() -> Element {
 }
 
 /// A `Splitter` between two buttons, so focus has somewhere to be before a
-/// drag and a Shift+Tab never sits at the document edge.
+/// drag and a Shift+Tab never sits at the document edge. `#box[data-changes]`
+/// counts `Change` events, for the checks that something did not move it.
 #[component]
 fn SplitterPage() -> Element {
+    let mut changes = use_signal(|| 0);
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
             Button { id: "before", "Before" }
-            div { style: "height: 160px",
+            div { id: "box", style: "height: 160px", "data-changes": "{changes}",
                 Splitter {
                     initial_size: 50.0,
                     aria_label: "Resize panes",
                     panel_a: rsx! { Text { "Pane A" } },
                     panel_b: rsx! { Text { "Pane B" } },
+                    onresize: move |event: SplitterResizeEvent| {
+                        if let SplitterResizeEvent::Change(..) = event {
+                            changes += 1;
+                        }
+                    },
                 }
             }
             Button { id: "after", "After" }

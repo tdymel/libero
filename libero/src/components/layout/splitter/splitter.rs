@@ -44,6 +44,16 @@ fn inline_sign(rtl: bool) -> f64 {
     if rtl { -1.0 } else { 1.0 }
 }
 
+/// Where a double-click restores pane A to once a move took it from `from` to `to`:
+/// `from` if that move reached the floor from above it, else the old point.
+fn restore_point(from: f64, to: f64, min_size: f64, restore_to: f64) -> f64 {
+    if to <= min_size && from > min_size {
+        from
+    } else {
+        restore_to
+    }
+}
+
 static SPLITTER_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .height("100%")
@@ -164,7 +174,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
     // Under RTL a row puts pane A on the right, so moving right shrinks it.
     let mut toward_b = use_hook(|| CopyValue::new(1.0_f64));
 
-    // Where a double-click restores pane A to after it collapsed it.
+    // Where a double-click restores pane A to after any move took it to the floor.
     let mut restore_to = use_signal(|| initial_size.clamp(min_size, 100.0 - min_size));
     // Pointer capture retargets the `dblclick` to the root, so the root learns
     // from the bubbling press whether the divider took it.
@@ -180,6 +190,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
     // A key press or double-click settles at once; `End` is where callers persist.
     let settle = move |new_a: f64| {
         let new_a = new_a.clamp(min_size, 100.0 - min_size);
+        restore_to.set(restore_point(bounded(), new_a, min_size, restore_to()));
         a.set(new_a);
         notify(SplitterResizeEvent::Change(new_a, 100.0 - new_a));
         notify(SplitterResizeEvent::End(new_a, 100.0 - new_a));
@@ -247,6 +258,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
                     return;
                 }
                 let to = bounded();
+                restore_to.set(restore_point(start_a(), to, min_size, restore_to()));
                 notify(SplitterResizeEvent::End(to, 100.0 - to));
             }),
         },
@@ -286,11 +298,10 @@ pub fn Splitter(props: SplitterProps) -> Element {
 
     // WCAG 2.5.7's drag-free path: collapse pane A to the floor, or restore it.
     // A double-click, so the click that focuses the divider moves nothing.
-    let mut toggle = move || {
+    let toggle = move || {
         let mut settle = settle;
         let current = bounded();
         if current > min_size {
-            restore_to.set(current);
             settle(min_size);
         } else {
             // A restore point at the floor would restore nothing.
@@ -367,6 +378,15 @@ pub fn Splitter(props: SplitterProps) -> Element {
 mod tests {
     use super::*;
     use crate::tokens::{Color, ColorShade, ColorValue};
+
+    /// Todo 2406: `Home`, a drag or a double-click to the floor all keep the size before it.
+    #[test]
+    fn any_move_to_the_floor_keeps_the_size_before_it() {
+        assert_eq!(restore_point(70.0, 10.0, 10.0, 50.0), 70.0);
+        // Within the range, or already at the floor: the old point stays.
+        assert_eq!(restore_point(70.0, 60.0, 10.0, 50.0), 50.0);
+        assert_eq!(restore_point(10.0, 10.0, 10.0, 70.0), 70.0);
+    }
 
     /// It positions the divider, so there is no "unset" for it.
     #[test]

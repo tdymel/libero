@@ -6,7 +6,7 @@ use crate::{
         layout::use_box,
     },
     hooks::{ElementHandle, drag_handle_sx, sideways_drag_sx},
-    sx::{StaticSx, sx},
+    sx::{FORCED_COLORS, StaticSx, sx},
     theme::{ColorCss, ColorShade, CssVar, SPLITTER_DIVIDER_SIZE, SPLITTER_HIT_SIZE, Size},
 };
 
@@ -20,7 +20,9 @@ static SPLITTER_BAR_SX: StaticSx = StaticSx::new(|| {
         .flex_shrink("0")
         .align_self("stretch")
         // Shade 6, 3:1 on page and paper: shade 4 was about 1.5:1, under WCAG 1.4.11.
-        .background(SPLITTER_DIVIDER_COLOR_VAR.value_or(ColorCss::MUTED.value(ColorShade::S6)));
+        .background(SPLITTER_DIVIDER_COLOR_VAR.value_or(ColorCss::MUTED.value(ColorShade::S6)))
+        // Forced colours turn an author fill into `Canvas`; a system colour stays.
+        .media(FORCED_COLORS, sx().background("CanvasText"));
 
     Size::ALL.into_iter().fold(base, |acc, size| {
         acc.when(
@@ -120,4 +122,20 @@ pub(super) fn SplitterDivider(
         .render(HtmlTag::Div, Vec::new(), ());
 
     bar.render(HtmlTag::Div, Vec::new(), hit)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::css::Stylesheet;
+
+    /// Todo 2404: the line is a fill, which forced colours would paint `Canvas`.
+    #[test]
+    fn the_line_turns_canvas_text_in_forced_colours() {
+        let css = Stylesheet::from(&SPLITTER_BAR_SX).as_str().to_string();
+        assert!(
+            css.contains("@media (forced-colors: active)") && css.contains("background:CanvasText"),
+            "{css}"
+        );
+    }
 }
