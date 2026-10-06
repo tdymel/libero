@@ -105,6 +105,8 @@ explains how parts work.
   localization's `image.zoom_named`).
 - An image with neither `alt` nor `decorative` warns in a debug build and
   renders no `alt`, so a checker still flags it.
+- A zoomable image with no `alt`, an empty one or `decorative` warns in a debug
+  build: a checker passes its bare "Zoom in" button and "Gallery" dialog.
 
 ### You must
 

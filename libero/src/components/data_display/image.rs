@@ -107,6 +107,8 @@ static ZOOM_BUTTON_SX: StaticSx = StaticSx::new(|| {
         // A fallback's text keeps the page's font: a `<button>` inherits neither.
         .font_family("inherit")
         .letter_spacing("inherit")
+        // The picture's radius, so the focus ring and a caller's background follow it.
+        .border_radius(IMAGE_RADIUS.overridable())
         .cursor("zoom-in")
         // A disabled `Fieldset` disables the `<button>` (todo 514).
         .selector("&:disabled", sx().opacity("0.5").cursor("not-allowed"))
@@ -207,6 +209,13 @@ pub fn Image(props: ImageProps) -> Element {
             }
             _ => {}
         }
+        let named = !props.decorative && props.alt.as_deref().is_some_and(|alt| !alt.is_empty());
+        if props.zoomable && !in_link && !named {
+            warn(
+                "Image: a zoomable picture needs an `alt` - the zoom button and the dialog are \
+                 named from it.",
+            );
+        }
         if props.zoomable && in_link {
             warn(
                 "Image: zoomable is ignored inside a linked ImageItem - the link wins, and a \
@@ -216,21 +225,19 @@ pub fn Image(props: ImageProps) -> Element {
     });
     let zoomable = props.zoomable && !in_link;
 
+    // An empty fallback is no fallback, on every platform.
+    let fallback_src = props
+        .fallback_src
+        .as_deref()
+        .filter(|fallback| !fallback.is_empty());
     let show_fallback = errored_src.read().as_deref() == Some(props.src.as_str());
-    let src = if show_fallback {
-        props
-            .fallback_src
-            .clone()
-            .unwrap_or_else(|| props.src.clone())
-    } else {
-        props.src.clone()
+    let src = match fallback_src {
+        Some(fallback) if show_fallback => fallback.to_string(),
+        _ => props.src.clone(),
     };
 
     let fit = props.fit.copied_or(use_theme().image.fit);
-    let fallback_under = props
-        .fallback_src
-        .as_deref()
-        .filter(|fallback| !platform::fires_image_errors() && !fallback.is_empty());
+    let fallback_under = fallback_src.filter(|_| !platform::fires_image_errors());
     let mut variables = svg_fit_variables(
         image_variables(props.radius.as_ref().copied()),
         &src,
@@ -309,6 +316,7 @@ pub fn Image(props: ImageProps) -> Element {
         ZoomButton {
             item,
             alt: alt.unwrap_or_default(),
+            variables: image_variables(props.radius.as_ref().copied()),
             class: props.class,
             sx: parts_under_sx(&props.parts, props.sx),
             states: props.states,
@@ -322,6 +330,7 @@ pub fn Image(props: ImageProps) -> Element {
 struct ZoomButtonProps {
     item: LightboxItem,
     alt: String,
+    variables: Variables,
     class: Input<ClassList>,
     sx: Input<Sx>,
     states: Input<States>,
@@ -340,8 +349,10 @@ fn ZoomButton(props: ZoomButtonProps) -> Element {
         aria_label: (!props.alt.is_empty()).then(|| props.alt.clone()),
         ..LightboxOptions::default()
     });
+    let variables: Input<Variables> = props.variables.clone().into();
     let root = use_box()
         .framework_sx(&ZOOM_BUTTON_SX)
+        .variables(&variables)
         .class(&props.class)
         .sx(&props.sx)
         .states(&props.states)
@@ -437,5 +448,27 @@ mod tests {
             both.iter().any(|w| w.contains("`decorative` wins")),
             "{both:?}"
         );
+    }
+
+    /// Todo 2526: the zoom button and its dialog are named from the `alt`.
+    #[test]
+    fn a_zoomable_image_without_an_alt_warns() {
+        let zoomable = |app: fn() -> Element| {
+            warnings_of(app)
+                .iter()
+                .any(|w| w.starts_with("Image: a zoomable picture"))
+        };
+        assert!(zoomable(|| rsx! {
+            crate::LiberoProvider { Image { src: "/a.svg", alt: "", zoomable: true } }
+        }));
+        assert!(zoomable(|| rsx! {
+            crate::LiberoProvider { Image { src: "/a.svg", decorative: true, zoomable: true } }
+        }));
+        assert!(zoomable(
+            || rsx! { crate::LiberoProvider { Image { src: "/a.svg", zoomable: true } } }
+        ));
+        assert!(!zoomable(|| rsx! {
+            crate::LiberoProvider { Image { src: "/a.svg", alt: "A", zoomable: true } }
+        }));
     }
 }

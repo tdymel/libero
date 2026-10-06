@@ -1,5 +1,5 @@
-//! `Image`: a described picture, a decorative one, the fallback and the zoom
-//! button.
+//! `Image`: a described picture, a decorative one, the fallback, an empty
+//! fallback and the rounded zoom button.
 
 use dioxus::prelude::*;
 use libero::components::Image;
@@ -32,11 +32,20 @@ fn ImagePage() -> Element {
             }
             div { width: "64px", height: "64px",
                 Image {
+                    id: "empty-fallback",
+                    src: MISSING,
+                    fallback_src: String::new(),
+                    alt: "A missing square",
+                }
+            }
+            div { width: "64px", height: "64px",
+                Image {
                     id: "zoom",
                     src: PICTURE,
                     alt: "A blue square",
                     zoomable: true,
                     loading: "lazy",
+                    radius: "md",
                 }
             }
         }

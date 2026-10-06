@@ -30,6 +30,39 @@ pub fn ring_clipped(root: &str) -> String {
     )
 }
 
+/// Todo 2523: a quilted cell's `Below` bar, unclipped since 2481, stays inside its
+/// `<li>`, and no two cells overlap: the `1fr` rows grow to the bar.
+#[test]
+fn a_quilted_below_bar_stays_inside_its_cell() {
+    block_on(async {
+        let fixture = Fixture::open("/image-list-quilted-below", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "[role=list] figcaption")
+            .await
+            .unwrap();
+        let problems: Vec<String> = page
+            .evaluate(
+                "(() => { const cells = [...document.querySelectorAll('[role=list] > li')]; \
+                 const rects = cells.map(c => c.getBoundingClientRect()); const out = []; \
+                 cells.forEach((cell, i) => { const r = rects[i]; \
+                   for (const el of cell.querySelectorAll('*')) { const e = el.getBoundingClientRect(); \
+                     if (e.bottom > r.bottom + 0.5 || e.right > r.right + 0.5) \
+                       out.push(`cell ${i}: ${el.tagName} ends at ${e.bottom} past ${r.bottom}`); } \
+                   rects.forEach((o, j) => { if (j > i && r.left < o.right - 0.5 && o.left < r.right - 0.5 \
+                     && r.top < o.bottom - 0.5 && o.top < r.bottom - 0.5) out.push(`cells ${i} and ${j} overlap`); }); }); \
+                 return out; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(problems.is_empty(), "{problems:?}");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 618: a `to` cell's link fills its `overflow: hidden` `<li>`, so an
 /// outset ring was cut away on all four sides (WCAG 2.4.7).
 #[test]

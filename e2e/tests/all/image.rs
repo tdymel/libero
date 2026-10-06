@@ -45,6 +45,51 @@ fn a_broken_source_falls_back_and_keeps_its_alt() {
     });
 }
 
+/// Todo 2528: `fallback_src: ""` is no fallback, so the broken `src` stays, as natively.
+#[test]
+fn an_empty_fallback_keeps_the_broken_source() {
+    block_on(async {
+        let fixture = Fixture::open("/image", Viewport::Desktop).await.unwrap();
+        // Both share the missing source: once `#fallback` swapped, both errors were handled.
+        wait::for_js_true(
+            &fixture.page,
+            "(() => { const i = document.querySelector('#fallback'); \
+             return i.complete && i.naturalWidth > 0 \
+             && document.querySelector('#empty-fallback').complete; })()",
+            "both missing sources to fail",
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            attr(&fixture, "#empty-fallback", "src").await,
+            "/does-not-exist.png"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2527: the zoom button takes the picture's radius, so its focus ring is rounded too.
+#[test]
+fn the_zoom_button_has_the_picture_radius() {
+    block_on(async {
+        let fixture = Fixture::open("/image", Viewport::Desktop).await.unwrap();
+        wait::for_visible(&fixture.page, "#zoom").await.unwrap();
+        let [button, img]: [String; 2] = fixture
+            .page
+            .evaluate(
+                "['#zoom', '#zoom > img'].map(q => \
+                 getComputedStyle(document.querySelector(q)).borderRadius)",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_ne!(img, "0px");
+        assert_eq!(button, img);
+        fixture.close().await.unwrap();
+    });
+}
+
 /// `loading`, `srcset` and the rest describe the picture: on a zoomable
 /// image they belong on the `<img>`, not on the `<button>` wrapping it.
 #[test]

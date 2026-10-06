@@ -5,4 +5,5 @@ expression: tree
 ---
 image "A blue square"
 image "A brown square"
+image "A missing square"
 button "Zoom in: A blue square" [haspopup=dialog]

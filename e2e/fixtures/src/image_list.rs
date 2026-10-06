@@ -16,7 +16,34 @@ pub const ROUTES: Routes = &[
     ("/image-list-masonry", || rsx! { ImageListMasonryPage {} }),
     ("/image-list-captions", || rsx! { ImageListCaptionsPage {} }),
     ("/image-list-focus", || rsx! { ImageListFocusPage {} }),
+    (
+        "/image-list-quilted-below",
+        || rsx! { ImageListQuiltedBelowPage {} },
+    ),
 ];
+
+/// Todo 2523: unclipped `Below` bars on quilted cells of one and two rows.
+#[component]
+fn ImageListQuiltedBelowPage() -> Element {
+    let cell = || rsx! { div { style: "background: #777" } };
+    let below = || ImageBar::new(rsx! { span { "Caption" } }).position(BarPosition::Below);
+
+    rsx! {
+        div { style: "width: 600px",
+            ImageList {
+                cols: 2u8,
+                variant: "quilted",
+                gap: "md",
+                items: vec![
+                    ImageItem::new(cell()).rows(2).bar(below()),
+                    ImageItem::new(cell()).bar(below()),
+                    ImageItem::new(cell()),
+                    ImageItem::new(cell()).span(GridSpan::Full).bar(below()),
+                ],
+            }
+        }
+    }
+}
 
 const PICTURE: &str = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 3'%3E%3Crect width='4' height='3' fill='%23369'/%3E%3C/svg%3E";
 

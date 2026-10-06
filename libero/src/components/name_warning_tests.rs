@@ -9,9 +9,9 @@ use crate::{
     components::{
         ActionIcon, AlphaSlider, Anchor, Audio, Avatar, Button, ButtonGroup, Carousel, Checkbox,
         ColorCode, ColorPicker, ColorSwatch, Dialog, Drawer, FloatingWindowOptions, HoverCard,
-        HueSlider, ProgressBar, Radio, RadioGroup, RangeSlider, Rating, RichTextEditor, ScrollArea,
-        SegmentedControl, Slider, Splitter, SpotlightOptions, Switch, Table, Tabs, Toolbar,
-        ToolbarGroup, TourOptions, TourStep, Video, column,
+        HueSlider, ProgressBar, QrCode, Radio, RadioGroup, RangeSlider, Rating, RichTextEditor,
+        ScrollArea, SegmentedControl, Slider, Splitter, SpotlightOptions, Switch, Table, Tabs,
+        Toolbar, ToolbarGroup, TourOptions, TourStep, Video, column,
         rich_text::{NodeViewProps, NodeViews, use_rich_text_editor},
         use_spotlight, use_tour,
     },
@@ -578,6 +578,23 @@ fn an_unnamed_avatar_warns() {
     assert!(!warns(
         || rsx! { LiberoProvider { Avatar { name: "", alt: "" } } },
         "Avatar:"
+    ));
+}
+
+/// Todo 2524: a blank `aria_label` leaves the `role="img"` unnamed.
+#[test]
+fn an_unnamed_qr_code_warns() {
+    assert!(warns(
+        || rsx! { LiberoProvider { QrCode { data: "a", aria_label: "  " } } },
+        "QrCode:"
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { QrCode { data: "a", aria_label: "A link" } } },
+        "QrCode:"
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { QrCode { data: "a", aria_label: "", "aria-labelledby": "t" } } },
+        "QrCode:"
     ));
 }
 

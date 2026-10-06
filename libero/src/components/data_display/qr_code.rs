@@ -4,7 +4,7 @@ use fast_qr::{ECL, QRBuilder};
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, base_props, input_from_str},
+        common::{HtmlTag, Input, base_props, input_from_str, names_itself, use_name_warning},
         layout::use_box,
     },
     hooks::use_theme,
@@ -34,6 +34,8 @@ static QR_CODE_BASE_SX: StaticSx = StaticSx::new(|| {
         .width("100%")
         .color(QR_CODE_FOREGROUND.value())
         .background(QR_CODE_BACKGROUND.value())
+        // Forced colours would invert it (light on dark), which many scanners reject.
+        .forced_color_adjust("none")
         .selector("& svg", sx().display("block").width("100%").height("100%"))
 });
 
@@ -81,10 +83,16 @@ pub fn QrCode(props: QrCodeProps) -> Element {
     let theme = use_theme();
     let robustness = props.robustness.copied_or(theme.qr_code.robustness);
     let data = props.data.clone();
+    use_name_warning(
+        !props.aria_label.trim().is_empty() || names_itself(&props.attributes),
+        "QrCode: no `aria_label` - name the code, e.g. what it links to; it is the only way \
+         to the payload for a screen reader.",
+    );
 
-    let svg = use_resource(use_reactive!(|data, robustness| async move {
-        generate_svg(data, robustness)
-    }));
+    // Synchronous, so the server and the first client frame render the code.
+    let svg = use_memo(use_reactive!(|data, robustness| generate_svg(
+        data, robustness
+    )));
 
     let boxed = use_box()
         .framework_sx(&QR_CODE_BASE_SX)
@@ -93,7 +101,7 @@ pub fn QrCode(props: QrCodeProps) -> Element {
         .states(&props.states)
         .prepare();
 
-    let Some(svg) = svg.read().clone().flatten() else {
+    let Some(svg) = svg.read().clone() else {
         return rsx! {};
     };
 
@@ -106,4 +114,21 @@ pub fn QrCode(props: QrCodeProps) -> Element {
             // The root is the image; the bare `<svg>` would be a second, nameless one.
             rsx! { div { "aria-hidden": "true", dangerous_inner_html: "{svg}" } },
         )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Todo 2530: the code is in the first render, so the server's HTML has it.
+    #[test]
+    fn the_first_render_has_the_named_code() {
+        let mut dom = VirtualDom::new(|| {
+            rsx! { crate::LiberoProvider { QrCode { data: "a", aria_label: "A link" } } }
+        });
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert!(html.contains("role=\"img\""), "{html}");
+        assert!(html.contains("<svg"), "{html}");
+    }
 }
