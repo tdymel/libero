@@ -8,10 +8,10 @@ use crate::{
     LiberoProvider,
     components::{
         ActionIcon, AlphaSlider, Anchor, Audio, Avatar, Button, ButtonGroup, Carousel, Checkbox,
-        ColorCode, ColorPicker, ColorSwatch, Dialog, Drawer, FloatingWindowOptions, HoverCard,
-        HueSlider, ProgressBar, QrCode, Radio, RadioGroup, RangeSlider, Rating, RichTextEditor,
-        ScrollArea, SegmentedControl, Slider, Splitter, SpotlightOptions, Switch, Table, Tabs,
-        Toolbar, ToolbarGroup, TourOptions, TourStep, Video, column,
+        ColorCode, ColorPicker, ColorSwatch, Dialog, Drawer, Fieldset, FloatingWindowOptions,
+        HoverCard, HueSlider, ProgressBar, QrCode, Radio, RadioGroup, RangeSlider, Rating,
+        RichTextEditor, ScrollArea, SegmentedControl, Slider, Splitter, SpotlightOptions, Switch,
+        Table, Tabs, Toolbar, ToolbarGroup, TourOptions, TourStep, Video, column,
         rich_text::{NodeViewProps, NodeViews, use_rich_text_editor},
         use_spotlight, use_tour,
     },
@@ -112,6 +112,22 @@ fn an_unnamed_button_group_warns() {
     assert!(!warns(
         || rsx! { LiberoProvider { ButtonGroup { "aria-labelledby": "heading", Button { "Left" } } } },
         "ButtonGroup:"
+    ));
+}
+
+#[test]
+fn an_unnamed_fieldset_warns() {
+    assert!(warns(
+        || rsx! { LiberoProvider { Fieldset::<()> { "x" } } },
+        "Fieldset:"
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Fieldset::<()> { label: "Address", "x" } } },
+        "Fieldset:"
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Fieldset::<()> { "aria-labelledby": "heading", "x" } } },
+        "Fieldset:"
     ));
 }
 

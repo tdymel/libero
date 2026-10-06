@@ -4,7 +4,7 @@ use dioxus::{core::current_scope_id, prelude::*};
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, Part, base_props, parts_enum},
+        common::{HtmlTag, Input, Part, base_props, names_itself, parts_enum, use_name_warning},
         form::{
             Binding, Caption, Disabled, FieldEntry, FieldName, FieldStatus, FormScope, FormValue,
             Source, Validators, issues_of,
@@ -61,7 +61,9 @@ parts_enum! {
     pub enum FieldsetPart {
         /// The `<legend>`, from `label`.
         Legend = "legend" => "& > [data-slot='legend']",
+        /// The `description` caption, under the legend.
         Description = "description" => "& > [data-slot='description']",
+        /// The `helper` caption, under the fields.
         Helper = "helper" => "& > [data-slot='helper']",
         /// The group's status, under the fields.
         Status = "status" => "& > [data-slot='status']",
@@ -79,13 +81,16 @@ base_props! {
         #[props(default, into)]
         validate: Validators<V>,
         /// Where the group sits in the form's value; names inside are relative to it.
+        /// Inside a `Form`, give one with `validate`: a pathless group reveals its rules on any touch.
         #[props(default, into)]
         path: FieldName<V>,
         /// The group's caption, rendered as its `<legend>`.
         #[props(default, into)]
         label: Caption,
+        /// Under the label.
         #[props(default, into)]
         description: Caption,
+        /// Under the fields.
         #[props(default, into)]
         helper: Caption,
         /// The group's own status, under the fields. A bare `&str` is an error.
@@ -126,7 +131,10 @@ base_props! {
 #[component]
 pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
     // Inside a `Form` the group joins its scope; alone, it opens its own.
-    let mut scope = use_hook(|| try_consume_context::<FormScope>().unwrap_or_else(FormScope::new));
+    let (mut scope, shared) = use_hook(|| match try_consume_context::<FormScope>() {
+        Some(scope) => (scope, true),
+        None => (FormScope::new(), false),
+    });
     use_context_provider(|| scope);
     let key = use_hook(|| scope.key());
     use_drop(move || {
@@ -157,6 +165,11 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
     // With no value there is nothing to judge: a rule run over `V::default()`
     // would report on a value nobody entered.
     let inert = !props.validate.is_empty() && !binding.is_bound();
+    // Its prefix is the form's, so `touched_under` sees every field of the form.
+    let pathless = shared
+        && !props.validate.is_empty()
+        && props.value.is_some()
+        && binding.prefix().is_empty();
     use_hook(|| {
         if inert {
             warn(
@@ -164,7 +177,18 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
                  or put it in a `Form` with one and name its `path` with `FIELDS`.",
             );
         }
+        if pathless {
+            warn(
+                "Fieldset: `value` and `validate` without a `path` inside a `Form` or `Fieldset` \
+                 show the group's rules once any field of the form is touched. Give it a `path`.",
+            );
+        }
     });
+    use_name_warning(
+        !props.label.is_none() || names_itself(&props.attributes),
+        "Fieldset: no `label`, `aria-label` or `aria-labelledby`, so the group has no name \
+         and its question is never read.",
+    );
 
     let prefix = binding.prefix();
     let issues = match props.validate.is_empty() {
@@ -175,7 +199,8 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
     };
     scope.raise(key, issues);
 
-    let revealed = scope.submitted() || scope.touched_under(prefix);
+    // No rules, no unnamed issue: skip the `touched` subscription.
+    let revealed = !props.validate.is_empty() && (scope.submitted() || scope.touched_under(prefix));
     let unnamed = match revealed {
         true => scope.unnamed_issue(key),
         false => FieldStatus::Valid,
@@ -246,19 +271,20 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
 
 #[cfg(test)]
 mod tests {
-    use std::cell::Cell;
+    use std::{cell::Cell, fmt::Debug};
 
-    use dioxus::prelude::*;
+    use dioxus::{dioxus_core::NoOpMutations, logger::tracing, prelude::*};
 
     use crate::{
         LiberoProvider,
-        components::form::{Fieldset, Rule},
+        components::form::{Fieldset, FormScope, Rule},
         utils::warnings_of,
     };
 
     thread_local! {
         /// What each rule run was handed.
         static JUDGED: Cell<Option<u32>> = const { Cell::new(None) };
+        static RENDERS: Cell<usize> = const { Cell::new(0) };
     }
 
     fn judged_and_warnings(app: fn() -> Element) -> (Option<u32>, Vec<String>) {
@@ -280,7 +306,7 @@ mod tests {
     #[test]
     fn a_fieldset_without_a_value_runs_no_rule_and_says_so() {
         let (judged, warnings) = judged_and_warnings(|| {
-            rsx! { LiberoProvider { Fieldset::<u32> { validate: rule.error("Never"), "" } } }
+            rsx! { LiberoProvider { Fieldset::<u32> { label: "G", validate: rule.error("Never"), "" } } }
         });
         assert_eq!(judged, None);
         assert_eq!(warnings.len(), 1, "{warnings:?}");
@@ -290,9 +316,93 @@ mod tests {
     fn a_fieldset_with_a_value_runs_its_rules_on_it() {
         let (judged, warnings) = judged_and_warnings(|| {
             let value = use_store(|| 7_u32);
-            rsx! { LiberoProvider { Fieldset { value, validate: rule.error("Never"), "" } } }
+            rsx! { LiberoProvider { Fieldset { label: "G", value, validate: rule.error("Never"), "" } } }
         });
         assert_eq!(judged, Some(7));
         assert!(warnings.is_empty(), "{warnings:?}");
+    }
+
+    /// Todo 2567: inside a form, a pathless group's prefix spans every field of it.
+    #[test]
+    fn a_pathless_fieldset_with_rules_in_a_form_asks_for_a_path() {
+        let (_, pathless) = judged_and_warnings(|| {
+            use_context_provider(FormScope::new);
+            let value = use_store(|| 7_u32);
+            rsx! { LiberoProvider { Fieldset { label: "G", value, validate: rule.error("Never"), "" } } }
+        });
+        assert_eq!(pathless.len(), 1, "{pathless:?}");
+        assert!(pathless[0].contains("`path`"), "{pathless:?}");
+
+        let (_, with_path) = judged_and_warnings(|| {
+            use_context_provider(FormScope::new);
+            let value = use_store(|| 7_u32);
+            rsx! {
+                LiberoProvider {
+                    Fieldset { label: "G", path: "g", value, validate: rule.error("Never"), "" }
+                }
+            }
+        });
+        assert!(with_path.is_empty(), "{with_path:?}");
+    }
+
+    /// Counts the `render` spans dioxus opens for a `Fieldset` scope.
+    struct FieldsetRenders;
+
+    impl tracing::Subscriber for FieldsetRenders {
+        fn enabled(&self, metadata: &tracing::Metadata<'_>) -> bool {
+            metadata.name() == "render"
+        }
+        fn new_span(&self, span: &tracing::span::Attributes<'_>) -> tracing::span::Id {
+            struct Scope(bool);
+            impl tracing::field::Visit for Scope {
+                fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn Debug) {
+                    self.0 |=
+                        field.name() == "scope" && format!("{value:?}").contains("::Fieldset");
+                }
+            }
+            let mut scope = Scope(false);
+            span.record(&mut scope);
+            if scope.0 {
+                RENDERS.set(RENDERS.get() + 1);
+            }
+            tracing::span::Id::from_u64(1)
+        }
+        fn record(&self, _: &tracing::span::Id, _: &tracing::span::Record<'_>) {}
+        fn record_follows_from(&self, _: &tracing::span::Id, _: &tracing::span::Id) {}
+        fn event(&self, _: &tracing::Event<'_>) {}
+        fn enter(&self, _: &tracing::span::Id) {}
+        fn exit(&self, _: &tracing::span::Id) {}
+    }
+
+    /// How often the fieldset re-renders when a field elsewhere in the form is touched.
+    fn renders_after_a_touch(app: fn() -> Element) -> usize {
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        dom.render_immediate(&mut NoOpMutations);
+        RENDERS.set(0);
+        tracing::subscriber::with_default(FieldsetRenders, || {
+            dom.in_scope(ScopeId::APP, || {
+                consume_context::<FormScope>().touch("elsewhere")
+            });
+            dom.process_events();
+            dom.render_immediate(&mut NoOpMutations);
+        });
+        RENDERS.get()
+    }
+
+    /// Todo 2570: with no rules there is no unnamed issue to reveal.
+    #[test]
+    fn a_fieldset_without_rules_ignores_a_touch() {
+        let plain = renders_after_a_touch(|| {
+            use_context_provider(FormScope::new);
+            rsx! { LiberoProvider { Fieldset::<()> { label: "G", "" } } }
+        });
+        assert_eq!(plain, 0);
+        let ruled = renders_after_a_touch(|| {
+            use_context_provider(FormScope::new);
+            let value = use_store(|| 7_u32);
+            rsx! { LiberoProvider { Fieldset { label: "G", value, validate: rule.error("Never"), "" } } }
+        });
+        assert_eq!(ruled, 1, "the control case should re-render on the touch");
     }
 }

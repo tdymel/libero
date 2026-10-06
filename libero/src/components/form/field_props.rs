@@ -41,6 +41,7 @@ macro_rules! field_props {
                 /// Validation state, under the helper. A bare `&str` is an error.
                 #[props(default, into)]
                 status: Input<crate::components::form::FieldStatus>,
+                /// Scales the control and the font of its label and captions.
                 #[props(default, into)]
                 size: Input<crate::theme::Size>,
                 $(
