@@ -102,20 +102,12 @@ static PAGE: StaticGridTemplate<PageArea> = StaticGridTemplate::new(|template| {
         .row(|row| row.cell(PageArea::Sidebar).cells(PageArea::Content, 3))
 });
 
-// Written content-first, sidebar last. The template decides where each
-// zone lands, so this order only sets the reading and tab order.
+// Written in reading order. The template places each zone by name, so any
+// order looks the same, but screen readers and Tab follow this one.
 rsx! {
     Grid {
         template: PAGE.clone(),
         sx: sx().background("muted.1").padding("12px").border_radius("sm"),
-        GridZone {
-            area: PageArea::Content,
-            masonry: true,
-            GridItem { span: GridSpan::Half, "Card A" }
-            GridItem { span: GridSpan::Half, "Card B" }
-            GridItem { span: GridSpan::Half, "Card C" }
-            GridItem { span: GridSpan::Half, "Card D" }
-        }
         GridZone {
             area: PageArea::Header,
             component: HtmlTag::Header,
@@ -126,6 +118,14 @@ rsx! {
             area: PageArea::Sidebar,
             component: HtmlTag::Aside,
             GridItem { "Menu" }
+        }
+        GridZone {
+            area: PageArea::Content,
+            masonry: true,
+            GridItem { span: GridSpan::Half, "Card A" }
+            GridItem { span: GridSpan::Half, "Card B" }
+            GridItem { span: GridSpan::Half, "Card C" }
+            GridItem { span: GridSpan::Half, "Card D" }
         }
     }
 }"#;
@@ -187,7 +187,7 @@ pub fn GridPage() -> Element {
                     prop("children", "Element").doc("`GridZone`s."),
                 ]),
                 props("GridZone", vec![
-                    prop("area", "AreaName").doc("The `Grid` area this zone fills. Zones land by name, so their order only sets the reading and tab order. A zone with an area is the containing block of any absolutely positioned descendant. Omit it to use the zone on its own, without a `Grid`, and give it a width."),
+                    prop("area", "AreaName").doc("The `Grid` area this zone fills. Zones land by name, so their order only sets the reading and tab order. A zone with an area is a size container (`container-type: inline-size`), not a containing block: a `position: fixed` descendant, such as a `fixed` `Header`, stays on the viewport, and an absolutely positioned one needs `position: relative` on its `GridItem`. Omit it to use the zone on its own, without a `Grid`, and give it a width."),
                     prop("dense", "bool").default("false").doc("Fills the gaps a wider item left, moving items sideways only."),
                     prop("masonry", "bool").default("false").doc("Packs items of different heights with no vertical gaps. The zone's height follows its items, so scroll inside a `GridItem`, not around the zone, and set no `align-self` or `margin-bottom` on an item. Keep it out of a container whose width follows its content: a scrollbar coming and going makes it measure again and again."),
                     prop("gap", "Size").default("md").doc("Space between items."),
@@ -202,11 +202,11 @@ pub fn GridPage() -> Element {
                 ]),
             ],
             accessibility: a11y()
-                .handles(["`Grid`, `GridZone` and `GridItem` add no roles: `component` names the tag, such as `HtmlTag::Header` or `HtmlTag::Aside` for a landmark."])
+                .handles(["`Grid`, `GridZone` and `GridItem` add no roles: `component` names the tag, such as `HtmlTag::Header` or `HtmlTag::Aside` for a landmark. A `header` is a banner only outside `main`, `article`, `aside`, `nav` and `section`."])
                 .must([
                     "Write the zones in reading order: the template places them anywhere, but screen readers and Tab follow the code.",
                     "Use `dense` only where order means nothing, such as a photo wall: a later item fills an earlier gap and shows before items it follows in the code.",
-                    "Give two landmarks of the same kind an `aria-label` each, such as two `Aside` zones.",
+                    "Give two landmarks of the same kind an `aria-label` each, such as two `Aside` zones. An `Aside` zone inside `main` needs one to be a landmark at all.",
                 ])
                 .example("A page `Grid` with a header, a main zone and two `Aside` zones named \"Filters\" and \"Related\": a screen reader lists the two complementary landmarks apart, and Tab follows the code order."),
             lead: rsx! {
@@ -233,20 +233,10 @@ pub fn GridPage() -> Element {
                 // the controls the zone never gets that wide.
                 wide_preview: true,
                 render: move |values: DemoValues| match values.str("layout").as_str() {
-                    // Written content-first and the sidebar last, and still
-                    // rendered header on top: zones land by name.
                     "page" => rsx! {
                         Grid {
                             template: PAGE.clone(),
                             sx: sx().width("100%").background("muted.1").padding("12px").border_radius("sm"),
-                            GridZone {
-                                area: PageArea::Content,
-                                masonry: true,
-                                GridItem { span: GridSpan::Half, {panel("Card A", 60)} }
-                                GridItem { span: GridSpan::Half, {panel("Card B", 120)} }
-                                GridItem { span: GridSpan::Half, {panel("Card C", 90)} }
-                                GridItem { span: GridSpan::Half, {panel("Card D", 50)} }
-                            }
                             GridZone {
                                 area: PageArea::Header,
                                 component: HtmlTag::Header,
@@ -257,6 +247,14 @@ pub fn GridPage() -> Element {
                                 area: PageArea::Sidebar,
                                 component: HtmlTag::Aside,
                                 GridItem { {panel("Menu", 220)} }
+                            }
+                            GridZone {
+                                area: PageArea::Content,
+                                masonry: true,
+                                GridItem { span: GridSpan::Half, {panel("Card A", 60)} }
+                                GridItem { span: GridSpan::Half, {panel("Card B", 120)} }
+                                GridItem { span: GridSpan::Half, {panel("Card C", 90)} }
+                                GridItem { span: GridSpan::Half, {panel("Card D", 50)} }
                             }
                         }
                     },
@@ -335,3 +333,18 @@ rsx! {
         }
     }
 }"#;
+
+#[cfg(test)]
+mod tests {
+    use super::TEMPLATE_SOURCE;
+
+    #[test]
+    fn the_named_areas_source_writes_its_zones_in_reading_order() {
+        let at = |area: &str| {
+            TEMPLATE_SOURCE
+                .find(&format!("area: PageArea::{area},"))
+                .expect(area)
+        };
+        assert!(at("Header") < at("Sidebar") && at("Sidebar") < at("Content"));
+    }
+}

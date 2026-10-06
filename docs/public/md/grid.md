@@ -1,7 +1,7 @@
 # Grid
 
 Crate: `libero`
-Import: `use libero::components::{Grid, GridZone, GridItem, GridSpan, GridArea, StaticGridTemplate, sp};`
+Import: `use libero::components::{Grid, GridZone, GridItem, GridSpan, GridArea, StaticGridTemplate}; use libero::theme::{Responsive, responsive};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/grid>
 Index: [index.md](index.md) lists every other page
 Description: A layout matrix of named areas. `Grid` holds the shape, a `GridZone` is a twelve-column container with optional masonry, and a `GridItem` takes a fraction of it.
@@ -49,7 +49,7 @@ fn Demo() -> Element {
 }
 ```
 
-Named areas: a template of a header over a sidebar and the content. The zones are written content-first and land by name.
+Named areas: a template of a header over a sidebar and the content. The zones land by name and are written in reading order.
 
 ```rust
 use dioxus::prelude::*;
@@ -79,22 +79,14 @@ static PAGE: StaticGridTemplate<PageArea> = StaticGridTemplate::new(|template| {
         .row(|row| row.cell(PageArea::Sidebar).cells(PageArea::Content, 3))
 });
 
-// Written content-first, sidebar last. The template decides where each
-// zone lands, so this order only sets the reading and tab order.
+// Written in reading order. The template places each zone by name, so any
+// order looks the same, but screen readers and Tab follow this one.
 #[component]
 fn Demo() -> Element {
     rsx! {
         Grid {
             template: PAGE.clone(),
             sx: sx().background("muted.1").padding("12px").border_radius("sm"),
-            GridZone {
-                area: PageArea::Content,
-                masonry: true,
-                GridItem { span: GridSpan::Half, "Card A" }
-                GridItem { span: GridSpan::Half, "Card B" }
-                GridItem { span: GridSpan::Half, "Card C" }
-                GridItem { span: GridSpan::Half, "Card D" }
-            }
             GridZone {
                 area: PageArea::Header,
                 component: HtmlTag::Header,
@@ -105,6 +97,14 @@ fn Demo() -> Element {
                 area: PageArea::Sidebar,
                 component: HtmlTag::Aside,
                 GridItem { "Menu" }
+            }
+            GridZone {
+                area: PageArea::Content,
+                masonry: true,
+                GridItem { span: GridSpan::Half, "Card A" }
+                GridItem { span: GridSpan::Half, "Card B" }
+                GridItem { span: GridSpan::Half, "Card C" }
+                GridItem { span: GridSpan::Half, "Card D" }
             }
         }
     }
@@ -165,7 +165,7 @@ since each item starts no higher than the one before it.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `area` | `AreaName` | - | The `Grid` area this zone fills. Zones land by name, so their order only sets the reading and tab order. A zone with an area is the containing block of any absolutely positioned descendant. Omit it to use the zone on its own, without a `Grid`, and give it a width. |
+| `area` | `AreaName` | - | The `Grid` area this zone fills. Zones land by name, so their order only sets the reading and tab order. A zone with an area is a size container (`container-type: inline-size`), not a containing block: a `position: fixed` descendant, such as a `fixed` `Header`, stays on the viewport, and an absolutely positioned one needs `position: relative` on its `GridItem`. Omit it to use the zone on its own, without a `Grid`, and give it a width. |
 | `dense` | `bool` | `false` | Fills the gaps a wider item left, moving items sideways only. |
 | `masonry` | `bool` | `false` | Packs items of different heights with no vertical gaps. The zone's height follows its items, so scroll inside a `GridItem`, not around the zone, and set no `align-self` or `margin-bottom` on an item. Keep it out of a container whose width follows its content: a scrollbar coming and going makes it measure again and again. |
 | `gap` | `Size` | `md` | Space between items. |
@@ -189,7 +189,8 @@ Like every component, all three also take the shared props `sx`, `class`,
 ### Libero handles
 
 - `Grid`, `GridZone` and `GridItem` add no roles: `component` names the tag,
-  such as `HtmlTag::Header` or `HtmlTag::Aside` for a landmark.
+  such as `HtmlTag::Header` or `HtmlTag::Aside` for a landmark. A `header`
+  is a banner only outside `main`, `article`, `aside`, `nav` and `section`.
 
 ### You must
 
@@ -198,7 +199,8 @@ Like every component, all three also take the shared props `sx`, `class`,
 - Use `dense` only where order means nothing, such as a photo wall: a later
   item fills an earlier gap and shows before items it follows in the code.
 - Give two landmarks of the same kind an `aria-label` each, such as two
-  `Aside` zones.
+  `Aside` zones. An `Aside` zone inside `main` needs one to be a landmark at
+  all.
 
 ### Example
 

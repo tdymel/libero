@@ -90,7 +90,11 @@ impl fmt::Display for GridTemplateError {
             Self::NonRectangular { area } => {
                 write!(f, "area `{area}` does not form a rectangle")
             }
-            Self::InvalidName { name } => write!(f, "`{name}` is not a valid CSS ident"),
+            Self::InvalidName { name } => write!(
+                f,
+                "`{name}` is not a valid area name: a CSS ident other than `auto`, `span` or a \
+                 CSS-wide keyword"
+            ),
         }
     }
 }
@@ -250,7 +254,23 @@ fn is_ident(name: &str) -> bool {
         Some(first) if first.is_ascii_alphabetic() || first == '_' => {}
         _ => return false,
     }
-    chars.all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    chars.all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') && !is_reserved(name)
+}
+
+/// `grid-area` reads these as auto-placement or a keyword, never as an area.
+fn is_reserved(name: &str) -> bool {
+    [
+        "auto",
+        "span",
+        "initial",
+        "inherit",
+        "unset",
+        "revert",
+        "revert-layer",
+        "default",
+    ]
+    .iter()
+    .any(|keyword| name.eq_ignore_ascii_case(keyword))
 }
 
 /// CSS rejects a named area whose cells are not a solid rectangle, so this
@@ -428,6 +448,27 @@ mod tests {
                 .unwrap_err(),
             GridTemplateError::InvalidName { name: "2 cols" }
         );
+    }
+
+    #[test]
+    fn a_grid_keyword_as_a_name_is_rejected() {
+        #[derive(Clone, Copy, PartialEq)]
+        struct Keyword(&'static str);
+        impl GridArea for Keyword {
+            fn name(&self) -> &'static str {
+                self.0
+            }
+        }
+
+        for name in ["auto", "span", "Inherit", "revert-layer"] {
+            assert_eq!(
+                GridTemplate::new()
+                    .row(|row| row.cell(Keyword(name)))
+                    .build()
+                    .unwrap_err(),
+                GridTemplateError::InvalidName { name }
+            );
+        }
     }
 
     #[test]

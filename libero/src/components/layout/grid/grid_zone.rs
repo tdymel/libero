@@ -133,7 +133,13 @@ pub fn GridZone(props: GridZoneProps) -> Element {
     let enclosing = try_use_context::<GridZoneContext>();
 
     let area = props.area;
-    if let Some(grid) = grid.as_ref()
+    if grid.is_none() && area.is_set() {
+        warn(&format!(
+            "GridZone: area `{}` is set outside a Grid; its container containment can collapse \
+             the zone to zero width. Omit `area` for a standalone zone.",
+            area.name
+        ));
+    } else if let Some(grid) = grid.as_ref()
         && area.is_set()
         && !grid.template.read().contains(&area)
     {
@@ -214,4 +220,35 @@ pub fn GridZone(props: GridZoneProps) -> Element {
             props.attributes,
             props.children,
         )
+}
+
+#[cfg(test)]
+mod tests {
+    use dioxus::prelude::*;
+
+    use crate::{
+        LiberoProvider,
+        components::layout::{GridArea, GridZone},
+        utils::warnings_of,
+    };
+
+    #[derive(Clone, Copy, PartialEq)]
+    struct Body;
+    impl GridArea for Body {
+        fn name(&self) -> &'static str {
+            "body"
+        }
+    }
+
+    #[test]
+    fn an_area_outside_a_grid_warns() {
+        let orphan = warnings_of(|| rsx! { LiberoProvider { GridZone { area: Body, "x" } } });
+        let plain = warnings_of(|| rsx! { LiberoProvider { GridZone { "x" } } });
+
+        assert!(
+            orphan.iter().any(|w| w.contains("outside a Grid")),
+            "{orphan:?}"
+        );
+        assert!(plain.is_empty(), "{plain:?}");
+    }
 }
