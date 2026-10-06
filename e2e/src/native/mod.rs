@@ -607,6 +607,16 @@ impl Page {
         self.click_at(x, y);
     }
 
+    /// Two clicks at the first match's centre, apart from the last double: Blitz counts
+    /// on presses within 500 ms, and a third double in a row fired no `dblclick` (todo 2507).
+    pub fn double_click(&mut self, selector: &str) {
+        let (x, y) = self.centre(selector);
+        self.press_apart(x, y);
+        self.dispatch(UiEvent::PointerUp(self.pointer(x, y, false)));
+        self.click_at(x, y);
+        self.last_press = Some((Instant::now(), x, y));
+    }
+
     /// Pointer down and up at a viewport point, e.g. on a backdrop.
     pub fn click_at(&mut self, x: f32, y: f32) {
         self.dispatch(UiEvent::PointerDown(self.pointer(x, y, true)));

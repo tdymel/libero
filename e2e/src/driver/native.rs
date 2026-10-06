@@ -39,8 +39,7 @@ impl Driver for Native {
     }
 
     async fn double_click(&mut self, selector: &str) -> Result<()> {
-        self.page.click(selector);
-        self.page.click(selector);
+        self.page.double_click(selector);
         Ok(())
     }
 

@@ -3,14 +3,16 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, OptionSource, Options, Orientation, Part, States,
+            HtmlTag, Input, OptionSource, Options, Orientation, Part, States, css_string,
             has_shortcut_modifier, names_itself, neighbour, use_name_warning,
         },
         form::{Radio, field_parts_enum, field_props, use_bound, use_field},
         layout::use_box,
     },
     hooks::{ElementHandle, use_element, use_theme},
-    platform::{ElementApi, logical_key, next_task},
+    platform::{
+        ElementApi, PlatformError, focus_selector, focused_attribute, logical_key, next_task,
+    },
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ChoiceVariant, FIELD_GAP, Size},
     utils::warn,
@@ -34,16 +36,28 @@ static RADIO_GROUP_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
+/// The selector for option `index` page-wide, scoped by the group's shared `name`.
+fn option_selector(name: &str, index: usize) -> String {
+    format!(
+        "input[name={}][data-radio-index=\"{index}\"]",
+        css_string(name)
+    )
+}
+
 /// Scoped to this group's root, so two groups with the same options don't collide.
-fn focus_option(root: &ElementHandle, index: usize) {
+fn focus_option(root: &ElementHandle, name: &str, index: usize) {
     let selector = format!("input[data-radio-index=\"{index}\"]");
-    let _ = root.query_selector(&selector).and_then(|el| el.focus());
+    let focused = root.query_selector(&selector).and_then(|el| el.focus());
+    // A WebView queries nothing below the root (todo 2506).
+    if let Err(PlatformError::Unsupported) = focused {
+        let _ = focus_selector(&option_selector(name, index));
+    }
 }
 
 /// The index of the option under focus; the radios render in index order.
-fn focused_option(root: &ElementHandle) -> Option<usize> {
-    let radios = root.query_selector_all("input[data-radio-index]").ok()?;
-    radios.iter().position(|radio| radio.is_focused())
+fn focused_option(root: &ElementHandle) -> Result<Option<usize>, PlatformError> {
+    let radios = root.query_selector_all("input[data-radio-index]")?;
+    Ok(radios.iter().position(|radio| radio.is_focused()))
 }
 
 field_parts_enum! {
@@ -206,8 +220,14 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
         .or_else(|| option_disabled.iter().position(|off| !off))
         .unwrap_or(0);
 
+    let name = bound
+        .name()
+        .map(str::to_string)
+        .unwrap_or_else(|| format!("{}-radio", field.id()));
+
     let arrows = {
         let option_disabled = option_disabled.clone();
+        let name = name.clone();
         move |event: Event<KeyboardData>| {
             // A native radio leaves Alt/Ctrl/Meta+arrow to the browser.
             if disabled || has_shortcut_modifier(&event) {
@@ -228,14 +248,28 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
             if readonly {
                 return;
             }
+            let option_disabled = option_disabled.clone();
+            let name = name.clone();
+            let step_from = move |from: Option<usize>| {
+                let Some(next) = neighbour(&option_disabled, from.unwrap_or(tab_stop), step) else {
+                    return;
+                };
+                pick.call(next);
+                focus_option(&root, &name, next);
+            };
             // From the focused option: a parent that applies the pick late
             // leaves the tab stop behind (todo 2443).
-            let from = focused_option(&root).unwrap_or(tab_stop);
-            let Some(next) = neighbour(&option_disabled, from, step) else {
-                return;
-            };
-            pick.call(next);
-            focus_option(&root, next);
+            match focused_option(&root) {
+                Ok(from) => step_from(from),
+                // A WebView reads focus page-side, after the handler (todo 2506).
+                Err(_) => {
+                    let read = focused_attribute("data-radio-index");
+                    spawn(async move {
+                        let from = read.await.ok().flatten().and_then(|at| at.parse().ok());
+                        step_from(from);
+                    });
+                }
+            }
         }
     };
 
@@ -245,12 +279,12 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
     let option_label = props.option_label;
     let option_description = props.option_description;
     let variant = props.variant.copied_or(theme.radio.variant);
-    let name = bound
-        .name()
-        .map(str::to_string)
-        .unwrap_or_else(|| format!("{}-radio", field.id()));
     let color = props.color.clone();
 
+    let refocus = {
+        let name = name.clone();
+        move || focus_option(&root, &name, tab_stop)
+    };
     let options = values.iter().enumerate().map(|(index, option)| {
         let label = match &option_label {
             Some(format) => format.call(option.clone()),
@@ -292,18 +326,22 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
         .event("onkeydown", arrows)
         // Read-only keeps focus on the checked option (todo 746). A task later:
         // the move fires `focusin` again, inside this handler.
-        .event("onfocusin", move |_: FocusEvent| {
-            if readonly && !disabled {
-                spawn(async move {
-                    next_task().await;
-                    focus_option(&root, tab_stop);
-                });
+        .event("onfocusin", {
+            let refocus = refocus.clone();
+            move |_: FocusEvent| {
+                if readonly && !disabled {
+                    let refocus = refocus.clone();
+                    spawn(async move {
+                        next_task().await;
+                        refocus();
+                    });
+                }
             }
         })
         // Blitz fires no `focusin` for a click's move; its click comes first.
         .event("onclick", move |_: MouseEvent| {
             if readonly && !disabled {
-                focus_option(&root, tab_stop);
+                refocus();
             }
         })
         .render(HtmlTag::Div, props.attributes, options.collect::<Vec<_>>());
@@ -365,5 +403,19 @@ fn GroupRadio(props: GroupRadioProps) -> Element {
             "data-radio-index": "{index}",
             value,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Todo 2506: a WebView finds the option page-wide, so the group's name scopes it.
+    #[test]
+    fn the_page_wide_option_selector_is_scoped_by_the_quoted_name() {
+        assert_eq!(
+            option_selector("plan\"s", 2),
+            "input[name=\"plan\\\"s\"][data-radio-index=\"2\"]"
+        );
     }
 }
