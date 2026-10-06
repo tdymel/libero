@@ -135,19 +135,20 @@ pub fn FileFieldPage() -> Element {
                 .without_base_props(),
             ],
             accessibility: a11y()
-                .key(["Enter", "Space"], "On the Browse button: opens the picker. A click elsewhere on the field opens it too, except on a file.")
-                .key(["Left", "Right"], "`input` variant: moves along the files.")
-                .key(["Home", "End"], "`input` variant: jumps to the first or last file.")
-                .key(["Backspace", "Delete"], "`input` variant: removes the focused file.")
-                .key(["Left"], "On the Browse button: moves to the last file.")
+                .key(["Enter", "Space"], "On the Browse button: opens the picker. A click elsewhere on the field opens it too, except on a file of a `multiple` field.")
+                .key(["Left", "Right"], "`input` variant with `multiple`: moves along the files.")
+                .key(["Home", "End"], "`input` variant with `multiple`: jumps to the first or last file.")
+                .key(["Backspace", "Delete"], "`input` variant with `multiple`: removes the focused file.")
+                .key(["Left"], "On the Browse button, with `multiple`: moves to the last file.")
                 .key(["Backspace"], "On the Browse button: removes the last file.")
                 .handles([
                     "The field is a group named by its label, holding the picked files and a Browse button.",
-                    "In the `input` variant the files are one tab stop.",
+                    "In the `input` variant several files are one tab stop; a single file is none, Browse and clear act on it.",
+                    "A single-file dropzone holding its file hands its label, error and description to the card's remove button.",
                     "In the `dropzone` variant each card's remove button is its own tab stop.",
                 ])
                 .must(["Without a `label`, pass `aria_label`, which names the Browse button."])
-                .example("An attachment field, `FileField { label: \"Attachment\" }`: a group named \"Attachment\". The picked files are one tab stop and Browse is another; on Browse, Enter opens the picker and Backspace removes the last file."),
+                .example("An attachment field, `FileField { label: \"Attachment\" }`: a group named \"Attachment\". Browse is its tab stop: Enter opens the picker and Backspace removes the picked file."),
             lead: rsx! {
                 Text {
                     "Files picked from the system dialog or dropped on the control. It shows "

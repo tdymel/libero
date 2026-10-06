@@ -571,6 +571,42 @@ fn a_drop_on_the_frame_padding_is_taken() {
     });
 }
 
+/// Todo 2551: a native reset empties the input, but a field holding its own value
+/// still shows the file, so the input must post it again; in a raw `<form>` and
+/// in a `Form`.
+#[test]
+fn a_native_reset_leaves_the_input_holding_the_shown_file() {
+    block_on(async {
+        let fixture = Fixture::open("/file-field/reset", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#held").await.unwrap();
+        let disk = OnDisk::new();
+        for id in ["raw", "held"] {
+            let held = format!(
+                "[...document.getElementById('{id}').parentElement \
+                 .querySelector('input[type=file]').files].map(f => f.name).join() === 'alpha.txt'"
+            );
+            drop_files(page, &format!("#{id}"), disk.paths()[..1].to_vec()).await;
+            wait::for_js_true(page, &held, "the input to hold the dropped file")
+                .await
+                .unwrap();
+            pointer::click(page, &format!("#{id}-reset")).await.unwrap();
+            wait::for_js_true(
+                page,
+                &format!("{held} && !!document.getElementById('{id}-file-0')"),
+                "the input to hold the file again after the reset",
+            )
+            .await
+            .unwrap();
+        }
+
+        fixture.console.assert_clean("native resets").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 1819: a drop the field refuses is said, not dropped silently: a PDF on an
 /// `image/*` field, then a second file on a single-file one.
 #[test]

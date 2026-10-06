@@ -325,6 +325,60 @@ fn the_chips_are_a_list_with_one_tab_stop() {
     assert_eq!(body.matches("<li").count(), 2, "{body}");
 }
 
+/// Todo 2548: one file's name has nothing to act on, and its value slot clips
+/// a ring, so it is no tab stop; Browse and clear are the field's.
+#[test]
+fn a_single_files_name_is_no_tab_stop() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                FileField {
+                    id: "one",
+                    label: "Attachment",
+                    value: fake_files(&["a.txt"]),
+                    onchange: move |_| {},
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    let chip = tag_with(&body, r#"id="one-file-0""#);
+    assert!(!chip.contains_key("tabindex"), "{chip:?}");
+}
+
+/// Todo 2550: a single-file dropzone holding its file puts its surface away,
+/// so the card list carries the field's error and description, and its x is
+/// named by the label for the error summary and the label's click.
+#[test]
+fn a_full_single_file_dropzone_keeps_its_error_on_the_card() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                FileField {
+                    id: "one",
+                    label: "Attachment",
+                    variant: "dropzone",
+                    status: "File too large",
+                    value: fake_files(&["a.txt"]),
+                    onchange: move |_| {},
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    assert!(!body.contains(r#"data-slot="browse""#), "{body}");
+    let list = attributes_of(&body, "ul");
+    assert_eq!(list["aria-labelledby"], "one-label", "{list:?}");
+    assert_eq!(list["aria-describedby"], "one-status", "{list:?}");
+    assert_eq!(list["aria-invalid"], "true", "{list:?}");
+    let x = tag_with(&body, r#"id="one-remove-0""#);
+    assert_eq!(x["aria-labelledby"], "one-label one-remove-0", "{x:?}");
+    assert_eq!(x["aria-describedby"], "one-status", "{x:?}");
+    assert_eq!(x["tabindex"], "0", "{x:?}");
+}
+
 /// Read-only keeps the Browse button and the chips reachable and refuses;
 /// disabled takes both out of the order natively.
 #[test]

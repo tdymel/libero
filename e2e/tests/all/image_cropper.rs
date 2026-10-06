@@ -172,7 +172,8 @@ fn a_failed_crop_keeps_the_dialog_and_emits_nothing() {
 
 /// A dropped PNG opens the dialog at 80% of the largest centred square, the
 /// picture named as one to crop (1612); Apply hands `onchange` that 16 px
-/// square, cut by the canvas and held by `max_size` at 16 px, still a PNG.
+/// square, cut by the canvas and held by `max_size` at 16 px, still a PNG, and
+/// the focus lands on the card's x.
 #[test]
 fn a_dropped_image_is_cropped_before_the_field_takes_it() {
     let file = TempFile::new("e2e-crop", PNG);
@@ -181,6 +182,10 @@ fn a_dropped_image_is_cropped_before_the_field_takes_it() {
             .await
             .unwrap();
         let page = &fixture.page;
+        // On Browse, which the dialog hands the focus back to (todo 2549).
+        page.evaluate("document.getElementById('avatar').focus()")
+            .await
+            .unwrap();
         crate::file_field::drop_files(page, "[data-fixture-ready] [role=group]", file.drop_arg())
             .await;
         wait::for_js_true(
@@ -222,6 +227,10 @@ fn a_dropped_image_is_cropped_before_the_field_takes_it() {
         )
         .await
         .unwrap();
+        // The surface went with the pick, so the card's x takes the focus.
+        e2e::passes::focus::wait_for_focus(page, "#avatar-remove-0", "Apply")
+            .await
+            .unwrap();
         fixture.console.assert_clean("the crop").unwrap();
         fixture.close().await.unwrap();
     });

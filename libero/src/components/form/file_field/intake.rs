@@ -2,10 +2,10 @@ use dioxus::html::FileData;
 use dioxus::prelude::*;
 
 use crate::{
-    components::form::Setter,
-    hooks::{ElementHandle, current_localization},
+    components::form::{FormScope, Setter},
+    hooks::{ElementHandle, current_localization, use_form_owner},
     localization::{FileFieldLabels, fill},
-    platform::ElementApi,
+    platform::{ElementApi, next_task},
 };
 
 use super::accept::accepts;
@@ -131,21 +131,48 @@ fn rejection_note(rejected: &[FileRejection], words: &FileFieldLabels) -> String
 
 /// Writes the caller's value back into the input's `FileList`, what a form
 /// posts, whenever the two disagree.
-pub(super) fn use_input_mirror(
-    input_element: ElementHandle,
-    mut mirrored: Signal<(Option<usize>, Files)>,
-    synced: Files,
-) {
+pub(super) fn use_input_mirror(input_element: ElementHandle, synced: Files) {
+    let mut mirrored = use_signal(Mirrored::default);
     // The token, not `is_mounted`: a `variant` switch mounts a fresh, empty
     // input that must be rewritten too.
     let mount = input_element.mount_token();
-    use_effect(use_reactive!(|(synced, mount)| {
-        let (mirrored_mount, mirrored_files) = mirrored.peek().clone();
-        if mirrored_mount == mount && mirrored_files == synced {
+    // A native reset empties the input while a value of the caller's own stays.
+    let scope = try_use_context::<FormScope>();
+    let owner = use_form_owner(input_element, scope.is_none());
+    let resets = scope.map_or(0, |form| form.resets()) + owner().unwrap_or(0);
+    use_effect(use_reactive!(|(synced, mount, resets)| {
+        let next = Mirrored {
+            mount,
+            resets,
+            files: synced,
+        };
+        if *mirrored.peek() == next {
             return;
         }
-        if input_element.set_files(&synced).is_ok() {
-            mirrored.set((mount, synced));
+        let mut write = move |next: Mirrored| {
+            if input_element.set_files(&next.files).is_ok() {
+                mirrored.set(next);
+            }
+        };
+        // Read first: the scrutinee's borrow would outlive `write`'s `set`.
+        let after_reset = mirrored.peek().resets != resets;
+        match after_reset {
+            false => write(next),
+            // The `reset` event comes before the browser empties the input.
+            true => {
+                spawn(async move {
+                    next_task().await;
+                    write(next);
+                });
+            }
         }
     }));
+}
+
+/// What the input's `FileList` was last written from.
+#[derive(Clone, Default, PartialEq)]
+struct Mirrored {
+    mount: Option<usize>,
+    resets: u32,
+    files: Files,
 }

@@ -146,9 +146,6 @@ pub fn FileField(props: FileFieldProps) -> Element {
     let browse_element = use_element();
     // The chips or the cards, whichever the variant draws.
     let list_element = use_element();
-    // What the input holds, and which input held it; `use_input_mirror`
-    // writes Rust-side edits back.
-    let mirrored = use_signal(|| (None::<usize>, Files::default()));
     let opening = use_hook(|| Rc::new(Cell::new(false)));
 
     let size = props.size.copied_or(theme.file_field.size);
@@ -197,7 +194,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
         crop: crop.map(|_| pending),
     });
 
-    use_input_mirror(input_element, mirrored, value.clone());
+    use_input_mirror(input_element, value.clone());
 
     // The input's own picker, or the system dialog where the input opens none.
     let accept = props.accept.clone().unwrap_or_default();
@@ -299,6 +296,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
     let keys = ChipKeys {
         interactive,
         editable,
+        multiple,
         count,
         remove_at,
         drop_at,
@@ -321,6 +319,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
         // Only once the surface is gone: otherwise the loader is on the
         // surface, and one is enough.
         card_loader: (loading && !surface).then_some(chip_size),
+        card_named: (!surface).then(|| (labelledby.clone(), describedby.clone())),
         field_id: field.id().to_string(),
         chip_cursor,
         keys: keys.clone(),
@@ -351,7 +350,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
         browse: browse_element,
         id: field.id().to_string(),
         labelledby: labelledby.clone(),
-        describedby,
+        describedby: describedby.clone(),
         invalid,
         required,
         interactive,
@@ -368,7 +367,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
     };
 
     let gate = crop.map(|options| {
-        rsx! { CropGate { pending, options, emit, oncrop: props.oncrop } }
+        rsx! { CropGate { pending, options, emit, owed, oncrop: props.oncrop } }
     });
     let field = match variant {
         // A scope per variant: their hooks differ, so a `variant` switch must
@@ -396,6 +395,8 @@ pub fn FileField(props: FileFieldProps) -> Element {
                 style: card_list_style,
                 list_element,
                 labelledby,
+                describedby,
+                invalid,
                 surface,
                 loading,
                 has_files,

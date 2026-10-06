@@ -93,6 +93,9 @@ pub(super) struct FileRows {
     pub(super) size: Size,
     /// The loader a card carries, once no surface is left to carry it.
     pub(super) card_loader: Option<Size>,
+    /// The field's label and description ids for the card's x, once it is the
+    /// field's only tab stop.
+    pub(super) card_named: Option<(Option<String>, Option<String>)>,
     pub(super) field_id: String,
     /// The chip that holds the list's one tab stop.
     pub(super) chip_cursor: Option<usize>,
@@ -129,6 +132,7 @@ impl FileRows {
                     self.editable,
                     self.card_loader,
                     format!("{}-remove-{index}", self.field_id),
+                    self.card_named.clone(),
                 ),
                 false => default_chip(&file, remove, self.size, self.multiple, self.editable),
             },
@@ -146,13 +150,14 @@ impl FileRows {
                 let keys = self.keys.clone();
                 let mut cursor = keys.cursor;
                 let id = format!("{}-{index}", keys.id_prefix);
-                // One tab stop for the whole list; the arrows walk the rest.
-                let stop =
-                    keys.interactive
-                        .then_some(match self.chip_cursor.unwrap_or(0) == index {
-                            true => "0",
-                            false => "-1",
-                        });
+                // One tab stop for the whole list; the arrows walk the rest. A
+                // lone filename has nothing to act on, and its ring would clip.
+                let stop = (keys.interactive && self.multiple).then_some(
+                    match self.chip_cursor.unwrap_or(0) == index {
+                        true => "0",
+                        false => "-1",
+                    },
+                );
                 rsx! {
                     li {
                         key: "{index}",
@@ -207,6 +212,8 @@ pub(super) struct ChipKeys {
     /// The keys that remove. The arrows only read, so a read-only field still
     /// walks the chips.
     pub(super) editable: bool,
+    /// Only several chips are tab stops for the arrows to reach.
+    pub(super) multiple: bool,
     pub(super) count: usize,
     /// Removes a chip the focus is on, and owes the focus a new place.
     pub(super) remove_at: Callback<usize>,
@@ -230,7 +237,7 @@ impl ChipKeys {
         let target = match (logical_key(&event), at) {
             (Key::ArrowLeft, Some(index)) => Some(index.saturating_sub(1)),
             // From the Browse button, the last chip - the one Backspace takes.
-            (Key::ArrowLeft, None) => Some(last),
+            (Key::ArrowLeft, None) if self.multiple => Some(last),
             // Past the last chip is the Browse button, not a wrap.
             (Key::ArrowRight, Some(index)) => (index < last).then_some(index + 1),
             (Key::Home, Some(_)) => Some(0),
@@ -252,22 +259,34 @@ impl ChipKeys {
     }
 }
 
+/// What the card list carries once no surface is left: it is then what the
+/// field's label names, and what its error and description belong to.
+#[derive(Default)]
+pub(super) struct StandIn {
+    pub(super) labelledby: Option<String>,
+    pub(super) describedby: Option<String>,
+    pub(super) invalid: bool,
+    pub(super) loading: bool,
+}
+
 /// The dropzone's cards, a list under the surface.
 pub(super) fn card_list(
     style: BoxStyle,
     list_element: ElementHandle,
-    labelledby: Option<String>,
-    surface: bool,
-    loading: bool,
+    stand_in: Option<StandIn>,
     drawn: Vec<Element>,
 ) -> Element {
+    let StandIn {
+        labelledby,
+        describedby,
+        invalid,
+        loading,
+    } = stand_in.unwrap_or_default();
     style
-        // With no surface left, the list is what the field's label names.
-        .attr(
-            "aria-labelledby",
-            (!surface).then_some(labelledby).flatten(),
-        )
-        .attr("aria-busy", (loading && !surface).then_some("true"))
+        .attr("aria-labelledby", labelledby)
+        .attr("aria-describedby", describedby)
+        .attr("aria-invalid", invalid.then_some("true"))
+        .attr("aria-busy", loading.then_some("true"))
         .element(&list_element)
         // Safari with VoiceOver drops list semantics from a `list-style: none`
         // list.
@@ -306,8 +325,14 @@ fn default_card(
     editable: bool,
     loading: Option<Size>,
     id: String,
+    named: Option<(Option<String>, Option<String>)>,
 ) -> Element {
     let name = file.name();
+    let (labelledby, describedby) = named.unwrap_or_default();
+    // "Receipt, Remove a.pdf": the label names it, so the error summary and
+    // the label's click find it.
+    let labelledby = labelledby.map(|label| format!("{label} {id}"));
+    let tabindex = labelledby.as_ref().map(|_| "0");
     let words = current_localization();
     let size = format_size(
         file.size(),
@@ -328,6 +353,9 @@ fn default_card(
                     // one's place: a list cannot hold a hook per row.
                     id,
                     aria_label: remove_label,
+                    "aria-labelledby": labelledby,
+                    "aria-describedby": describedby,
+                    tabindex,
                     size: icon_size,
                     sx: sx()
                         .color("inherit")

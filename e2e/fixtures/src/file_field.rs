@@ -1,7 +1,9 @@
 //! `FileField`, as a dropzone taking several files.
 
 use dioxus::prelude::*;
-use libero::components::{Button, CropOptions, CropRect, FileField, FileRejection, Files, Flex};
+use libero::components::{
+    Button, CropOptions, CropRect, FileField, FileRejection, Files, Flex, Form, use_form,
+};
 
 use crate::Routes;
 
@@ -13,7 +15,31 @@ pub const ROUTES: Routes = &[
     ("/file-field/pick", || rsx! { FilePickPage {} }),
     ("/file-field/crop", || rsx! { FileCropPage {} }),
     ("/file-field/reject", || rsx! { FileRejectPage {} }),
+    ("/file-field/reset", || rsx! { FileResetPage {} }),
 ];
+
+/// Todo 2551: a field holding its own value, in a raw `<form>` and in a `Form`,
+/// each with a native reset button.
+#[component]
+fn FileResetPage() -> Element {
+    let mut raw = use_signal(Files::default);
+    let mut held = use_signal(Files::default);
+    let value = use_store(String::new);
+    let form = use_form();
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "360px",
+            form {
+                FileField { id: "raw", label: "Raw", value: raw(), onchange: move |next: Files| raw.set(next) }
+                button { id: "raw-reset", r#type: "reset", "Reset raw" }
+            }
+            Form { value, form,
+                FileField { id: "held", label: "Held", value: held(), onchange: move |next: Files| held.set(next) }
+                button { id: "held-reset", r#type: "reset", "Reset held" }
+            }
+        }
+    }
+}
 
 /// The next file chooser answers itself with a 40 x 20 PNG, as no driver answers
 /// GTK's (1126): a detached input (the WebViews') at `click()`, an attached one at its event.

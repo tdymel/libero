@@ -5,6 +5,7 @@ use dioxus::html::FileData;
 use dioxus::prelude::*;
 
 use super::files::Files;
+use super::rows::FocusDebt;
 use crate::{
     components::{
         buttons::Button,
@@ -52,6 +53,9 @@ pub(super) fn CropGate(
     pending: Signal<Option<FileData>>,
     options: CropOptions,
     emit: Callback<Files>,
+    /// Owed after Apply: a single-file dropzone puts away the Browse button
+    /// the dialog would hand the focus back to.
+    mut owed: Signal<Option<FocusDebt>>,
     oncrop: Option<EventHandler<CropRect>>,
 ) -> Element {
     let dialog = use_modal(|scope: ModalScope<CropArgs, (CropRect, FileData)>| {
@@ -83,6 +87,7 @@ pub(super) fn CropGate(
             if let Some(oncrop) = &oncrop {
                 oncrop.call(rect);
             }
+            owed.set(Some(FocusDebt::Took));
             emit.call(cropped.into());
         });
     });

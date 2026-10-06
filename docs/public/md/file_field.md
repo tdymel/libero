@@ -188,18 +188,21 @@ explains how parts work.
 
 | Key | Action |
 |---|---|
-| `Enter` or `Space` | On the Browse button: opens the picker. A click elsewhere on the field opens it too, except on a file. |
-| `Left` or `Right` | `input` variant: moves along the files. |
-| `Home` or `End` | `input` variant: jumps to the first or last file. |
-| `Backspace` or `Delete` | `input` variant: removes the focused file. |
-| `Left` | On the Browse button: moves to the last file. |
+| `Enter` or `Space` | On the Browse button: opens the picker. A click elsewhere on the field opens it too, except on a file of a `multiple` field. |
+| `Left` or `Right` | `input` variant with `multiple`: moves along the files. |
+| `Home` or `End` | `input` variant with `multiple`: jumps to the first or last file. |
+| `Backspace` or `Delete` | `input` variant with `multiple`: removes the focused file. |
+| `Left` | On the Browse button, with `multiple`: moves to the last file. |
 | `Backspace` | On the Browse button: removes the last file. |
 
 ### Libero handles
 
 - The field is a group named by its label, holding the picked files and a
   Browse button.
-- In the `input` variant the files are one tab stop.
+- In the `input` variant several files are one tab stop; a single file is
+  none, Browse and clear act on it.
+- A single-file dropzone holding its file hands its label, error and
+  description to the card's remove button.
 - In the `dropzone` variant each card's remove button is its own tab stop.
 
 ### You must
@@ -209,8 +212,8 @@ explains how parts work.
 ### Example
 
 An attachment field, `FileField { label: "Attachment" }`: a group named
-"Attachment". The picked files are one tab stop and Browse is another; on
-Browse, Enter opens the picker and Backspace removes the last file.
+"Attachment". Browse is its tab stop: Enter opens the picker and Backspace
+removes the picked file.
 
 ## Theme defaults
 

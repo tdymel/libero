@@ -18,7 +18,7 @@ use crate::{
 
 use super::file_field::FileFieldPart;
 use super::files::Files;
-use super::rows::{ChipKeys, card_list, chip_list};
+use super::rows::{ChipKeys, StandIn, card_list, chip_list};
 use super::styles::{FILE_BROWSE_SX, FILE_CONTROL_SX, FILE_DROPZONE_BROWSE_SX, FILE_DROPZONE_SX};
 
 /// What both variants draw: a labelled group with the chips and a Browse
@@ -301,6 +301,8 @@ pub(super) struct Cards {
     pub(super) style: BoxStyle,
     pub(super) list_element: ElementHandle,
     pub(super) labelledby: Option<String>,
+    pub(super) describedby: Option<String>,
+    pub(super) invalid: bool,
     pub(super) surface: bool,
     pub(super) loading: bool,
     pub(super) has_files: bool,
@@ -322,6 +324,8 @@ pub(super) fn file_dropzone_variant(
         style,
         list_element,
         labelledby,
+        describedby,
+        invalid,
         surface,
         loading,
         has_files,
@@ -330,8 +334,13 @@ pub(super) fn file_dropzone_variant(
     let drop_target = rsx! {
         FileDropzoneControl { control, states, shown: surface, {prompt} }
     };
-    let card_list =
-        has_files.then(|| card_list(style, list_element, labelledby, surface, loading, drawn));
+    let stand_in = (!surface).then_some(StandIn {
+        labelledby,
+        describedby,
+        invalid,
+        loading,
+    });
+    let card_list = has_files.then(|| card_list(style, list_element, stand_in, drawn));
 
     field.render(rsx! {
         {drop_target}
