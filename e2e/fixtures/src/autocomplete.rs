@@ -10,7 +10,26 @@ pub const ROUTES: Routes = &[
     ("/autocomplete/echo", || rsx! { AutocompleteEchoPage {} }),
     ("/autocomplete/fetch", || rsx! { AutocompleteFetchPage {} }),
     ("/autocomplete/odd", || rsx! { AutocompleteOddPage {} }),
+    ("/autocomplete/none", || rsx! { AutocompleteNonePage {} }),
 ];
+
+/// A caller's `empty` over no options at all (todo 2417).
+#[component]
+fn AutocompleteNonePage() -> Element {
+    let mut value = use_signal(String::new);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Autocomplete {
+                label: "City",
+                options: Vec::<String>::new(),
+                empty: rsx! { Text { id: "no-city", "No city by that name." } },
+                value: value(),
+                oninput: move |next| value.set(next),
+            }
+        }
+    }
+}
 
 /// Spaces, quotes, non-ASCII and two equal labels, for the option ids (todo 2046).
 #[component]

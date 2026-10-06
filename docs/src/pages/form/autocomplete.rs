@@ -114,7 +114,7 @@ pub fn AutocompletePage() -> Element {
                         .doc("A suggestion was accepted, with the whole value behind the text. Fires after `oninput`."),
                     prop("filter", "Callback<AutocompleteFilterArgs<T>, bool>")
                         .default("contains")
-                        .doc("Narrows `options`. Defaults to a case-insensitive `contains` over the label."),
+                        .doc("Narrows `options`. Defaults to a case-insensitive `contains` over the label, ignoring spaces around the text."),
                     prop("prefiltered", "bool")
                         .default("false")
                         .doc("`options` arrives already narrowed, such as a list fetched per keystroke. Skips filtering, so `filter` never runs."),
@@ -123,7 +123,7 @@ pub fn AutocompletePage() -> Element {
                         .default("false")
                         .doc("Shows an x at the end of the frame that empties the field."),
                     prop("empty", "Element")
-                        .doc("Shown in place of the list when nothing matches. Screen readers hear the localization's `combobox.nothing_found` either way, so change that string to match."),
+                        .doc("Shown in place of the list when typed text matches nothing. Screen readers hear the localization's `combobox.nothing_found` either way, so change that string to match."),
                     prop("loading_label", "String")
                         .default("common.loading")
                         .doc("What screen readers hear while `options` is pending."),

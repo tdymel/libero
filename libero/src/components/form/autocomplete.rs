@@ -53,7 +53,7 @@ field_props! {
         /// A suggestion was accepted, with the whole `T`. Fires after `oninput`.
         #[props(default)]
         onpick: Option<EventHandler<T>>,
-        /// Narrows `options`. Defaults to a case-insensitive `contains` on the label.
+        /// Narrows `options`. Defaults to a case-insensitive `contains` of the trimmed text on the label.
         #[props(default)]
         filter: Option<Callback<AutocompleteFilterArgs<T>, bool>>,
         /// `options` arrives already narrowed; `filter` is skipped.
@@ -67,7 +67,7 @@ field_props! {
         /// Shows an x that empties the field while it holds text.
         #[props(default)]
         clearable: Option<bool>,
-        /// Shown in place of the list when nothing matches. Announced as
+        /// Shown in place of the list when typed text matches nothing. Announced as
         /// `combobox.nothing_found` either way.
         #[props(default)]
         empty: Option<Element>,
@@ -138,7 +138,8 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
     let input_element = use_element();
     let row_cache = use_row_cache();
 
-    let query = text.to_lowercase();
+    // Trimmed: a phone keyboard's trailing space must not hide "Paris" (todo 2415).
+    let query = text.trim().to_lowercase();
     // A pending list draws the loader, never its stale rows or "nothing found".
     let loading = props.options.is_pending();
     let options = props.options.list().values();
@@ -221,9 +222,12 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         autocomplete_row::<T>,
     );
     let has_rows = !rows.is_empty();
-    // Typed text against a list that has options to match, or a fetched one.
-    let nothing_found = (!text.is_empty() && (prefiltered || !options.is_empty()))
-        .then(|| nothing_found.to_string());
+    // Typed text against a list that has options to match, a fetched one, or a caller's `empty`.
+    let nothing_found = (!text.is_empty()
+        && (prefiltered || !options.is_empty() || props.empty.is_some()))
+    .then(|| nothing_found.to_string());
+    // Drawn only while said, so never under an emptied field (todo 2417).
+    let empty = props.empty.filter(|_| nothing_found.is_some());
     let loading = loading.then(|| {
         props
             .loading_label
@@ -315,11 +319,11 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
             opened: state.is_open()
                 && !disabled
                 && !readonly
-                && (has_rows || loading.is_some() || props.empty.is_some() || nothing_found.is_some()),
+                && (has_rows || loading.is_some() || nothing_found.is_some()),
             onopened: move |opened| state.set_open(opened),
             state,
             caret_keys: CaretKeys::Unhighlighted,
-            empty: props.empty,
+            empty,
             nothing_found,
             loading,
             size,

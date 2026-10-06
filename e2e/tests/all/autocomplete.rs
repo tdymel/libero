@@ -163,6 +163,69 @@ fn a_pending_fetch_says_loading_not_nothing_found() {
     });
 }
 
+/// Todo 2415: a phone keyboard's trailing space still finds the city.
+#[test]
+fn a_trailing_space_still_matches() {
+    block_on(async {
+        let fixture = Fixture::open("/autocomplete", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::type_text(page, "Berlin ").await.unwrap();
+        wait::for_js_true(
+            page,
+            "(o => o.length === 1 && o[0].textContent.trim() === 'Berlin')\
+             ([...document.querySelectorAll('[role=option]')]) \
+             && [...document.querySelectorAll('[role=status]')].some(e => e.textContent.includes('1 result'))",
+            "Berlin, drawn and counted",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a trailing space").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2417: a caller's `empty` over no options is said with the text, and leaves with it.
+#[test]
+fn a_callers_empty_is_said_and_leaves_an_emptied_field() {
+    const SHOWN: &str = "(e => !!e && e.offsetParent !== null)(document.getElementById('no-city'))";
+    block_on(async {
+        let fixture = Fixture::open("/autocomplete/none", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::type_text(page, "Be").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "{SHOWN} && [...document.querySelectorAll('[role=status]')].some(e => e.textContent.includes('No results'))"
+            ),
+            "the caller's empty, drawn and said",
+        )
+        .await
+        .unwrap();
+
+        for _ in 0..2 {
+            keyboard::press(page, keyboard::BACKSPACE).await.unwrap();
+        }
+        wait::for_js_true(
+            page,
+            &format!(
+                "!{SHOWN} && document.querySelector({TRIGGER:?}).getAttribute('aria-expanded') === 'false' \
+                 && [...document.querySelectorAll('[role=status]')].every(e => e.textContent.trim() === '')"
+            ),
+            "an emptied field to draw and say nothing",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a caller's empty").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Waits until a status region says "No results" and the dropdown shows it.
 pub async fn wait_for_nothing_found(page: &chromiumoxide::Page, what: &str) {
     wait::for_js_true(

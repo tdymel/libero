@@ -36,7 +36,8 @@ fn Demo() -> Element {
 `String` implements `Options`, so a list of strings works as is. `T` is
 inferred from `options`.
 
-The component narrows `options` case-insensitively on `Options::label`.
+The component narrows `options` case-insensitively on `Options::label`,
+ignoring spaces around the typed text.
 `filter` replaces the test, and `prefiltered` turns filtering off for a list
 that is already narrowed:
 
@@ -101,11 +102,11 @@ Autocomplete {
 | `options` | `OptionSource<T>` | `[]` | The suggestions to offer. `T` is inferred from it. A `Vec<T>` converts, and so does a `Resource<Vec<T>>` or an `Option<OptionList<T>>` that is `None` while you fetch: a pending list shows the loader and says `loading_label`, never "No results" for an answer that has not arrived. Groups and disabled options of an `OptionList` are not drawn. |
 | `option` | `Callback<AutocompleteOptionArgs<T>, Element>` | `T::label()` | Draws one row's content. The highlight and click stay the component's. |
 | `onpick` | `EventHandler<T>` | - | A suggestion was accepted, with the whole value behind the text. Fires after `oninput`. |
-| `filter` | `Callback<AutocompleteFilterArgs<T>, bool>` | `contains` | Narrows `options`. Defaults to a case-insensitive `contains` over the label. |
+| `filter` | `Callback<AutocompleteFilterArgs<T>, bool>` | `contains` | Narrows `options`. Defaults to a case-insensitive `contains` over the label, ignoring spaces around the text. |
 | `prefiltered` | `bool` | `false` | `options` arrives already narrowed, such as a list fetched per keystroke. Skips filtering, so `filter` never runs. |
 | `placeholder` | `String` | - | Shown while the field is empty. |
 | `clearable` | `bool` | `false` | Shows an x at the end of the frame that empties the field. |
-| `empty` | `Element` | - | Shown in place of the list when nothing matches. Screen readers hear the localization's `combobox.nothing_found` either way, so change that string to match. |
+| `empty` | `Element` | - | Shown in place of the list when typed text matches nothing. Screen readers hear the localization's `combobox.nothing_found` either way, so change that string to match. |
 | `loading_label` | `String` | `common.loading` | What screen readers hear while `options` is pending. |
 | `leading` | `Element` | - | Inside the frame, before the control, such as a search icon. |
 | `trailing` | `Element` | - | Inside the frame, after the control, before the clear x. |
