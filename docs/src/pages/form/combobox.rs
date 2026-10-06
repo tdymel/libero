@@ -168,6 +168,7 @@ pub fn ComboboxPage() -> Element {
                 .key(["Down"], "Opens the list, and moves the highlight down.")
                 .key(["Up"], "Moves the highlight up.")
                 .key(["Home", "End"], "Jumps to the first or last row.")
+                .key(["PageUp", "PageDown"], "Moves the highlight 10 rows, stopping at the first or last.")
                 .key(["Enter"], "Picks the highlighted row.")
                 .key(["Escape", "Tab"], "Close the list.")
                 .handles([

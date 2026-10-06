@@ -20,6 +20,15 @@ const HELPERS: &str = "
 /// Opens `path` light and dark and asserts every `[name, ratio]` pair `body`
 /// returns is at least 3:1. `body` is a JS function body.
 pub(crate) fn assert_boundaries(path: &str, body: &str) {
+    assert_ratios(path, body, 3.0);
+}
+
+/// [`assert_boundaries`] at 4.5:1, for visible text axe skips, such as an `aria-hidden` badge (1.4.3).
+pub(crate) fn assert_text_contrast(path: &str, body: &str) {
+    assert_ratios(path, body, 4.5);
+}
+
+fn assert_ratios(path: &str, body: &str, floor: f64) {
     block_on(async {
         for scheme in [Scheme::Light, Scheme::Dark] {
             let fixture = Fixture::open(path, Viewport::Desktop).await.unwrap();
@@ -39,7 +48,7 @@ pub(crate) fn assert_boundaries(path: &str, body: &str) {
             for (name, ratio) in pairs {
                 eprintln!("{path} {}: {name} {ratio:.2}:1", scheme.name());
                 assert!(
-                    ratio >= 3.0,
+                    ratio >= floor,
                     "{path} {}: {name} reads {ratio:.2}:1",
                     scheme.name()
                 );

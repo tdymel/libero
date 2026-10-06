@@ -141,12 +141,24 @@ fn the_counter_speaks_only_near_the_limit() {
 }
 
 /// Axe, contrast and focus rings, light and dark, desktop and mobile. Axe
-/// skips the `aria-hidden` counter.
+/// skips the `aria-hidden` counter; `the_counter_meets_text_contrast` reads it.
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("textarea", "/textarea/counter")
         .focusable("textarea")
         .run();
+}
+
+/// Todo 2462: axe skips the counter, so its 1.4.3 contrast is read here, light and dark.
+#[test]
+fn the_counter_meets_text_contrast() {
+    crate::boundary::assert_text_contrast(
+        "/textarea/counter",
+        "const badges = [...document.querySelectorAll('[data-slot=counter]')];
+         if (!badges.length) return [['no counter drawn', 0]];
+         return badges.map((badge, i) =>
+             [`counter ${i} on its frame`, RATIO(CSS(badge, 'color'), PAGE(badge))]);",
+    );
 }
 
 /// Todo 685: a raw `<form>`'s own reset reaches the count too, with no libero

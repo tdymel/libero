@@ -281,6 +281,7 @@ match at any depth inside the list.
 | `Down` | Opens the list, and moves the highlight down. |
 | `Up` | Moves the highlight up. |
 | `Home` or `End` | Jumps to the first or last row. |
+| `PageUp` or `PageDown` | Moves the highlight 10 rows, stopping at the first or last. |
 | `Enter` | Picks the highlighted row. |
 | `Escape` or `Tab` | Close the list. |
 

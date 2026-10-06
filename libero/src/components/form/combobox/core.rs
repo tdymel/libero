@@ -413,9 +413,14 @@ fn use_combobox_context(state_id: String, size: Size, radius: Size) -> ComboboxC
 struct Arrows {
     down: Option<usize>,
     up: Option<usize>,
+    page_down: Option<usize>,
+    page_up: Option<usize>,
     first: Option<usize>,
     last: Option<usize>,
 }
+
+/// APG select-only: Page Up and Page Down jump this many rows, clamped to the ends.
+const PAGE_ROWS: isize = 10;
 
 /// Snaps a disabled or missing highlight (from open, filter or `set_active`) to the next
 /// enabled row, else back.
@@ -446,6 +451,8 @@ fn arrow_targets(enabled: &[usize], active_row: Option<usize>, opened: bool) -> 
             _ => active_row.or(first),
         },
         up: step(-1),
+        page_down: step(PAGE_ROWS).or(first),
+        page_up: step(-PAGE_ROWS).or(first),
         first,
         last: enabled.last().copied(),
     }
@@ -551,6 +558,14 @@ impl ComboboxKeys {
                 event.prevent_default();
                 go_to(arrows.up);
             }
+            Key::PageDown if opened => {
+                event.prevent_default();
+                go_to(arrows.page_down);
+            }
+            Key::PageUp if opened => {
+                event.prevent_default();
+                go_to(arrows.page_up);
+            }
             Key::Home if row_keys => {
                 event.prevent_default();
                 go_to(arrows.first);
@@ -583,5 +598,24 @@ impl ComboboxKeys {
             Key::Tab if opened => leave(),
             _ => {}
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn page_keys_jump_ten_enabled_rows_and_clamp_at_the_ends() {
+        // Row 3 is disabled, so ten enabled rows on from row 0 is row 11.
+        let enabled: Vec<usize> = (0..25).filter(|row| *row != 3).collect();
+        let from_first = arrow_targets(&enabled, Some(0), true);
+        assert_eq!(from_first.page_down, Some(11));
+        assert_eq!(from_first.page_up, Some(0));
+        let near_end = arrow_targets(&enabled, Some(20), true);
+        assert_eq!(near_end.page_down, Some(24));
+        assert_eq!(near_end.page_up, Some(10));
+        // No highlight arms the first enabled row.
+        assert_eq!(arrow_targets(&enabled, None, true).page_down, Some(0));
     }
 }

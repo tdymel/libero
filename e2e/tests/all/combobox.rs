@@ -78,6 +78,11 @@ pub(crate) fn the_trigger_names_the_lit_row(route: &str, expected: &str) {
             return [named && named.textContent, named && named.getAttribute('aria-disabled'),
                     lit && lit.textContent];
         })()"#;
+        // The snapped row reaches the trigger a render after the list draws; a miss reports below.
+        let settled = format!(
+            "(([named, refused, lit]) => named === {expected:?} && refused === null && lit === named)({js})"
+        );
+        let _ = wait::for_js_true(page, &settled, "the trigger naming the lit row").await;
         let read: (Option<String>, Option<String>, Option<String>) =
             page.evaluate(js).await.unwrap().into_value().unwrap();
         assert_eq!(
@@ -89,6 +94,37 @@ pub(crate) fn the_trigger_names_the_lit_row(route: &str, expected: &str) {
             read.0, read.2,
             "{route}: the named row is not the lit one: {read:?}"
         );
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2459: Page Down and Page Up jump ten rows; five rows clamp them to the last and first.
+#[test]
+fn the_page_keys_jump_to_the_ends_of_a_short_list() {
+    block_on(async {
+        let fixture = Fixture::open("/combobox", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_visible(page, LISTBOX).await.unwrap();
+        let lit_is = |at: &str| {
+            format!(
+                "(() => {{ const rows = [...document.querySelectorAll('[role=option]')]; \
+                 const lit = document.querySelector('[role=option][data-state~=active]'); \
+                 const t = document.querySelector('[role=combobox]'); \
+                 return !!lit && lit === rows.{at} && t.getAttribute('aria-activedescendant') === lit.id; }})()"
+            )
+        };
+        for (key, at) in [
+            (keyboard::PAGE_DOWN, "at(-1)"),
+            (keyboard::PAGE_UP, "at(0)"),
+        ] {
+            keyboard::press(page, key).await.unwrap();
+            wait::for_js_true(page, &lit_is(at), &format!("{} lights rows.{at}", key.key))
+                .await
+                .unwrap();
+        }
+        fixture.console.assert_clean("the page keys").unwrap();
         fixture.close().await.unwrap();
     });
 }
