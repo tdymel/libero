@@ -4,14 +4,15 @@ use dioxus::prelude::*;
 
 use super::use_modal::use_modal_z_index;
 use crate::{
+    CssLayer,
     components::{
         accessibility::FocusTrap,
         common::{FOCUSABLE_SELECTOR, HtmlTag, Input, Variables, base_props, variables},
-        layout::use_box,
+        layout::{Box, use_box},
         overlay::Overlay,
     },
     context::ModalContext,
-    hooks::{escape_closes, use_back, use_dismiss_layer, use_element, use_scroll_lock},
+    hooks::{escape_closes, use_back, use_css, use_dismiss_layer, use_element, use_scroll_lock},
     platform::{ElementApi, KeyChord, key_taken, keyboard},
     sx::{StaticSx, sx},
     theme::CssVar,
@@ -25,18 +26,36 @@ static MODAL_SX: StaticSx = StaticSx::new(|| {
         .z_index(MODAL_Z_INDEX_VAR.value())
 });
 
-// On the `FocusTrap` as an `sx`, to beat its `display: contents`. No pointer
-// events, so clicks in the empty area reach the `Overlay`. Scrolls when the dialog
-// outgrows the viewport; its auto margins centre it, and drop to 0 rather than clip the top.
+// On the `FocusTrap` as an `sx`, to beat its `display: contents`. Scrolls when the
+// dialog outgrows the viewport; it takes pointer events, so its scrollbar works (2560).
 static MODAL_CONTENT_SX: StaticSx = StaticSx::new(|| {
     sx().position("fixed")
         .inset("0")
         .z_index("1")
-        .display("flex")
-        .padding("md")
+        .display("block")
         .overflow_y("auto")
+});
+
+// Grows with the dialog; its auto margins centre it, and drop to 0 rather than clip the top.
+// No pointer events: only a `Dialog` opts back in, the rest falls through to the hit area.
+static MODAL_FRAME_SX: StaticSx = StaticSx::new(|| {
+    sx().position("relative")
+        .isolation("isolate")
+        .display("flex")
+        .box_sizing("border-box")
+        .min_height("100%")
+        .padding("md")
         .pointer_events("none")
         .selector("& > [role='dialog']", sx().margin("auto"))
+});
+
+// The backdrop click target, behind the content: inside the scroller, so the wheel over
+// it scrolls, and a press on the scrollbar never lands on it.
+static MODAL_HIT_AREA_SX: StaticSx = StaticSx::new(|| {
+    sx().position("absolute")
+        .inset("0")
+        .z_index("-1")
+        .pointer_events("auto")
 });
 
 base_props! {
@@ -82,8 +101,7 @@ pub(crate) fn Modal(props: ModalProps) -> Element {
         });
     };
 
-    // Stable identity, so `Overlay`'s props memoize.
-    let on_backdrop_click = use_callback(move |_: MouseEvent| close());
+    let hit_area_class = use_css(Some(&MODAL_HIT_AREA_SX), CssLayer::Framework);
     use_back(true, use_callback(move |()| close()));
 
     // Escape from outside the dialog: the focused control was removed and focus
@@ -145,8 +163,13 @@ pub(crate) fn Modal(props: ModalProps) -> Element {
             attributes,
             rsx! {
                 {scroll_lock}
-                Overlay { z_index: 0, onclick: on_backdrop_click }
-                FocusTrap { sx: &MODAL_CONTENT_SX, {props.children} }
+                Overlay { z_index: 0 }
+                FocusTrap { sx: &MODAL_CONTENT_SX,
+                    Box { framework_sx: &MODAL_FRAME_SX,
+                        div { class: hit_area_class, onclick: move |_| close() }
+                        {props.children}
+                    }
+                }
             },
         )
 }

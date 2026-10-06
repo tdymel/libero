@@ -23,12 +23,12 @@ const DIALOG_RADIUS_VAR: CssVar = CssVar::new("--lsx-dialog-radius");
 // `Paper`'s chrome, plus what makes it a dialog.
 static DIALOG_BASE_SX: StaticSx = StaticSx::new(|| {
     paper_sx()
-        // Back on: `Modal`'s wrapper lets backdrop clicks fall through.
+        // Back on: `Modal`'s frame lets backdrop clicks fall through.
         .pointer_events("auto")
         // A flex item shrinks to content, so `size` would only cap, not fill.
+        // No margin: with `width: 100%` it overflows a container (2561).
         .width("100%")
         .max_width(DIALOG_SIZE.overridable(Size::Md))
-        .margin("md")
         .padding("lg")
         .border_radius(DIALOG_RADIUS_VAR.value_or(PAPER_RADIUS.value()))
         .box_shadow(SizeCss::SHADOW.value(Size::Xl))
@@ -129,8 +129,14 @@ pub fn Dialog(props: DialogProps) -> Element {
         .close_button
         .unwrap_or(is_modal || props.onclose.is_some());
     let title_id = use_id();
+    // A blank one names nothing: no empty heading, and it does not mask a good title.
+    let aria_label = props
+        .aria_label
+        .clone()
+        .filter(|label| !label.trim().is_empty());
+    let title = props.title.clone().filter(|title| !title.trim().is_empty());
     use_name_warning(
-        props.aria_label.is_some() || props.title.is_some() || names_itself(&props.attributes),
+        aria_label.is_some() || title.is_some() || names_itself(&props.attributes),
         "Dialog: no `title`, `aria_label` or `aria-labelledby`, so it is announced as just \
          \"dialog\".",
     );
@@ -160,18 +166,18 @@ pub fn Dialog(props: DialogProps) -> Element {
         // modal's keys stay inside when nothing in it takes focus (APG).
         attributes.push(attr("tabindex", "-1"));
     }
-    if props.aria_label.is_none() && props.title.is_some() {
+    if aria_label.is_none() && title.is_some() {
         attributes.push(attr("aria-labelledby", title_id()));
     }
-    if let Some(aria_label) = props.aria_label.clone() {
+    if let Some(aria_label) = aria_label {
         attributes.push(attr("aria-label", aria_label));
     }
 
     let mut children = Vec::with_capacity(2);
-    if props.title.is_some() || close_button {
+    if title.is_some() || close_button {
         children.push(rsx! {
             DialogHeader {
-                title: props.title,
+                title,
                 title_id,
                 close_button,
                 close_label: props.close_label,
@@ -248,5 +254,27 @@ mod tests {
                 ("close", "& > [data-slot='header'] > [data-slot='close']"),
             ]
         );
+    }
+
+    /// Todo 2562: a blank `aria_label` does not mask a good title, and a blank title
+    /// renders no empty heading.
+    #[test]
+    fn a_blank_name_names_nothing() {
+        fn app() -> Element {
+            rsx! {
+                crate::LiberoProvider {
+                    Dialog { id: "labelled", title: "Filters", aria_label: " ", "one" }
+                    Dialog { id: "blank", title: "  ", aria_label: "Notes", "two" }
+                }
+            }
+        }
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+
+        assert!(html.contains("aria-labelledby="), "{html}");
+        assert!(!html.contains("aria-label=\" \""), "{html}");
+        assert_eq!(html.matches("<h2").count(), 1, "{html}");
+        assert!(html.contains("aria-label=\"Notes\""), "{html}");
     }
 }

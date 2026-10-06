@@ -467,6 +467,97 @@ fn a_dialog_taller_than_the_viewport_stays_reachable() {
     });
 }
 
+/// Todo 2560: with a classic scrollbar, a press on the track of a tall dialog's scroller
+/// leaves the modal open, the thumb drags, and the wheel beside the dialog scrolls.
+#[test]
+fn the_scrollbar_and_the_wheel_beside_a_tall_dialog_scroll_it() {
+    use chromiumoxide::cdp::browser_protocol::input::{
+        DispatchMouseEventParams, DispatchMouseEventType,
+    };
+    const SCROLLER: &str = "(() => { let e = document.querySelector('[role=dialog]'); \
+         while (e && getComputedStyle(e).overflowY !== 'auto') e = e.parentElement; return e; })()";
+    block_on(async {
+        let fixture = Fixture::open_with_scrollbars("/modal/tall", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 3).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_visible(page, DIALOG).await.unwrap();
+        let geometry: Vec<f64> = page
+            .evaluate(format!(
+                "(() => {{ const s = {SCROLLER}; const r = s.getBoundingClientRect(); \
+                 const d = document.querySelector('[role=dialog]').getBoundingClientRect(); \
+                 return [s.offsetWidth - s.clientWidth, s.scrollHeight - s.clientHeight, \
+                 r.right, r.bottom, d.left]; }})()"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let [gutter, overflow, right, bottom, dialog_left] = geometry[..] else {
+            panic!("geometry: {geometry:?}");
+        };
+        assert!(gutter > 0.0, "no classic scrollbar to test with");
+        assert!(
+            overflow > 0.0,
+            "the dialog fits the viewport, nothing to scroll"
+        );
+        let scroll_top = async || -> f64 {
+            page.evaluate(format!("{SCROLLER}.scrollTop"))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap()
+        };
+
+        // Headless Chrome neither pages nor drags on CDP presses: the hit test is the
+        // proof that the bar is live, and the press must not close.
+        let track = pointer::Point {
+            x: right - gutter / 2.0,
+            y: bottom - 40.0,
+        };
+        assert!(
+            eval_bool(
+                page,
+                &format!(
+                    "document.elementFromPoint({}, {}) === {SCROLLER}",
+                    track.x, track.y
+                )
+            )
+            .await,
+            "the scrollbar does not take the pointer"
+        );
+        pointer::click_at(page, track).await.unwrap();
+
+        // Also lets a close the press spawned land first: the scroller reads need the dialog.
+        let before = scroll_top().await;
+        let beside = DispatchMouseEventParams::builder()
+            .r#type(DispatchMouseEventType::MouseWheel)
+            .x(dialog_left / 2.0)
+            .y(bottom / 2.0)
+            .delta_x(0.0)
+            .delta_y(120.0)
+            .build()
+            .unwrap();
+        page.execute(beside).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "!!document.querySelector('[role=dialog]') && {SCROLLER}.scrollTop > {before}"
+            ),
+            "the wheel beside the dialog to scroll",
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("scrolling a tall dialog")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Scrolls the element `element` (a JS expression) into view the way a user
 /// can, and fails if it is off screen or only an `overflow: hidden` box or the
 /// locked page moved to show it (todo 1307).

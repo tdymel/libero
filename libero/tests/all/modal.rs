@@ -388,7 +388,7 @@ mod dispatched {
             let modal = use_modal(|s: ModalScope<(), bool>| {
                 rsx! {
                     Dialog { title: "Delete?",
-                        Button { onclick: move |_| s.resolve(true), "Yes" }
+                        Button { id: "yes", onclick: move |_| s.resolve(true), "Yes" }
                     }
                 }
             });
@@ -418,9 +418,7 @@ mod dispatched {
         // `use_hook` opens after `use_modal` has already read the empty slot, so
         // the dialog only exists from the second render on.
         dom.render_immediate(&mut find);
-        // The last click listener in the dialog, i.e. the confirm button - the
-        // close button in the header registered before it.
-        let confirm = find.click.expect("registered no click listener");
+        let confirm = find.element("click", "id", "yes");
 
         dom.runtime()
             .handle_event("click", Event::new(click_event(), true), confirm);
@@ -443,7 +441,7 @@ mod dispatched {
             let modal = use_modal(|s: ModalScope<(), bool>| {
                 rsx! {
                     Dialog { title: "Delete?",
-                        Button { onclick: move |_| s.resolve(true), "Yes" }
+                        Button { id: "yes", onclick: move |_| s.resolve(true), "Yes" }
                     }
                 }
             });
@@ -467,7 +465,7 @@ mod dispatched {
 
         let Page { mut dom, rec: find } = Page::mount(app);
         dom.process_events();
-        let confirm = find.click.expect("registered no click listener");
+        let confirm = find.element("click", "id", "yes");
 
         let html = dioxus_ssr::render(&dom);
         assert!(!html.contains("Some("), "settled before the click: {html}");

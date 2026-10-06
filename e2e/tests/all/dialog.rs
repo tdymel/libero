@@ -45,6 +45,34 @@ fn an_inline_dialog_is_named_by_its_title_and_not_modal() {
     });
 }
 
+/// Todo 2561: `width: 100%` plus a margin stuck out of the container by the margin.
+#[test]
+fn an_inline_dialog_fits_its_container() {
+    block_on(async {
+        let fixture = Fixture::open("/dialog", Viewport::Mobile).await.unwrap();
+        let page = &fixture.page;
+        wait::for_selector(page, "#inline").await.unwrap();
+
+        let (overhang, page_overflow): (f64, f64) = page
+            .evaluate(
+                "(() => { const d = document.querySelector('#inline'); \
+                 const p = d.parentElement.getBoundingClientRect(); \
+                 const e = document.documentElement; \
+                 return [d.getBoundingClientRect().right - p.right, e.scrollWidth - e.clientWidth]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(overhang <= 0.5, "the dialog sticks out by {overhang}px");
+        assert!(
+            page_overflow <= 0.0,
+            "the page scrolls sideways by {page_overflow}px"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 611: outside a modal the close button calls `onclose`.
 #[test]
 fn the_close_button_of_an_inline_dialog_calls_onclose() {

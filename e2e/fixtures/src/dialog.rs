@@ -24,7 +24,6 @@ fn DialogPage() -> Element {
                 id: "inline",
                 title: "Filters",
                 onclose: move |_| open.set(false),
-                sx: sx().margin("0"),
                 Text { "Narrow the list." }
             }
         }
