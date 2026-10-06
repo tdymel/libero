@@ -5,7 +5,6 @@ expression: tree
 ---
 button "Before"
   StaticText "Before"
-button "Scroll backward" [disabled]
 region "Tags"
   button "Tag 0"
     StaticText "Tag 0"

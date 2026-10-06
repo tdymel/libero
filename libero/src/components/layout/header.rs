@@ -160,7 +160,8 @@ static HEADER_BASE_SX: StaticSx = StaticSx::new(|| {
                 .padding_top("0")
                 .min_height(HEADER_HEIGHT_VAR.value()),
         )
-        .when("fixed", sx().position("fixed").top("0"))
+        // `left` too: `auto` keeps a padded parent's offset and runs past the viewport (todo 2392).
+        .when("fixed", sx().position("fixed").top("0").left("0"))
         // Links take the fill's text colour there (todo 1576), so the underline marks them.
         .when("colored", AnchorDefaults::underline_at_rest())
         .when(
@@ -237,6 +238,7 @@ base_props! {
         #[props(default, into)]
         size: Input<ThemeAwareValue>,
         /// Banner fill; a bare color takes shade 6. The first stop under a `gradient`.
+        /// A literal CSS colour is used as given, its text, link and focus colours the caller's.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         #[props(default, into)]
@@ -491,6 +493,31 @@ mod tests {
             "{css}"
         );
         assert!(css.contains("saturate(160%)"), "{css}");
+    }
+
+    /// The documented limit (todo 2389): a literal fills, its label stays the caller's.
+    #[test]
+    fn a_literal_color_fills_but_leaves_the_label_to_the_caller() {
+        let variables = header_variables(&header_props("#1a1a2e".into()), None).to_string();
+
+        assert!(
+            variables.contains(&format!("{}:#1a1a2e;", HEADER_BACKGROUND_VAR.name())),
+            "{variables}"
+        );
+        assert!(!variables.contains(HEADER_COLOR_VAR.name()), "{variables}");
+        assert!(!variables.contains(ANCHOR_COLOR.name()), "{variables}");
+    }
+
+    #[test]
+    fn a_fixed_banner_pins_its_left_edge() {
+        let css = Stylesheet::from(&HEADER_BASE_SX);
+        let css = css.as_str();
+        let (_, fixed) = css
+            .split_once(r#"[data-state~="fixed"]"#)
+            .unwrap_or_else(|| panic!("no fixed rule: {css}"));
+        let fixed = &fixed[..fixed.find('}').unwrap()];
+        assert!(fixed.contains("top:0;"), "{css}");
+        assert!(fixed.contains("left:0;"), "{css}");
     }
 
     /// The colour is the gradient's first stop, not a flat fill under it.

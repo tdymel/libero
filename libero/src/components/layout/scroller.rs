@@ -227,9 +227,12 @@ static SCROLLER_VIEWPORT_SX: StaticSx = StaticSx::new(|| {
 });
 
 /// As wide as the strip, so `onresize` fires on content width changes; never
-/// narrower than the viewport, so it reports that growing too.
-static SCROLLER_CONTENT_SX: StaticSx =
-    StaticSx::new(|| sx().width("max-content").min_width("100%"));
+/// narrower than the viewport, so it reports that growing too; 24 px high for the controls (2.5.8).
+static SCROLLER_CONTENT_SX: StaticSx = StaticSx::new(|| {
+    sx().width("max-content")
+        .min_width("100%")
+        .min_height("24px")
+});
 
 /// A control pinned to the `side` edge, fading towards `away`. The glyph points
 /// down; a quarter `turn` points it outwards along the strip.
@@ -259,7 +262,8 @@ static SCROLLER_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .border_width("0")
         .color("inherit")
         .cursor("pointer")
-        .transition("opacity 150ms")
+        // `visibility` flips at the end of the fade out, at the start of the fade in.
+        .transition("opacity 150ms, visibility 150ms")
         .media(REDUCED_MOTION, sx().transition("none"))
         // The gradient is the button's own background: fade and hit target in one.
         .selector("& svg", sx().width("60%").height("60%").flex("none"))
@@ -286,12 +290,15 @@ static SCROLLER_CONTROL_SX: StaticSx = StaticSx::new(|| {
             sx().cursor("default")
                 .selector("& svg", sx().opacity("0.4")),
         )
-        // Under `Auto` a control at its end hides, but never from under the focus.
+        // Under `Auto` a control at its end hides, but never from under the focus;
+        // `visibility` drops it from the accessibility tree too (todo 2390).
         .when(
             "controls-auto && disabled",
             sx().selector(
                 "&:not(:focus-visible)",
-                sx().opacity("0").pointer_events("none"),
+                sx().opacity("0")
+                    .visibility("hidden")
+                    .pointer_events("none"),
             ),
         )
         .focus_visible(inset_focus_ring_sx("-2px"))
@@ -765,6 +772,33 @@ mod tests {
     fn an_rtl_item_is_measured_from_the_right_edge() {
         assert_eq!(inline_span(150.0, 50.0, 100.0, 300.0, false), (50.0, 100.0));
         assert_eq!(inline_span(150.0, 50.0, 100.0, 300.0, true), (200.0, 250.0));
+    }
+
+    #[test]
+    fn an_auto_hidden_control_leaves_the_accessibility_tree() {
+        let css = Stylesheet::from(&SCROLLER_CONTROL_SX);
+        let css = css.as_str();
+        let (_, hidden) = css
+            .split_once(":not(:focus-visible)")
+            .unwrap_or_else(|| panic!("no auto hide rule: {css}"));
+        let hidden = &hidden[..hidden.find('}').unwrap()];
+
+        assert!(hidden.contains("opacity:0;"), "{css}");
+        assert!(hidden.contains("visibility:hidden;"), "{css}");
+        assert!(
+            css.contains("transition:opacity 150ms, visibility 150ms;"),
+            "{css}"
+        );
+    }
+
+    #[test]
+    fn a_short_strip_keeps_the_controls_24px_high() {
+        let css = Stylesheet::from(&SCROLLER_CONTENT_SX);
+        assert!(
+            css.as_str().contains("min-height:24px;"),
+            "{}",
+            css.as_str()
+        );
     }
 
     /// Chrome and Safari keep smooth scrolling under reduced motion; a drag switches it off.
