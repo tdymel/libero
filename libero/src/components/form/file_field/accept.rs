@@ -16,11 +16,11 @@ pub(super) fn accepts(accept: &str, name: &str, content_type: Option<&str>) -> b
 }
 
 fn matches(entry: &str, name: &str, content_type: Option<&str>) -> bool {
-    // Case-insensitive: `.PDF` off a camera roll is a `.pdf`.
-    if let Some(extension) = entry.strip_prefix('.') {
-        return name
-            .rsplit_once('.')
-            .is_some_and(|(_, actual)| actual.eq_ignore_ascii_case(extension));
+    // A suffix match, so `.tar.gz` works; case-insensitive, as `.PDF` is a `.pdf`.
+    if entry.starts_with('.') {
+        let (name, entry) = (name.as_bytes(), entry.as_bytes());
+        return name.len() >= entry.len()
+            && name[name.len() - entry.len()..].eq_ignore_ascii_case(entry);
     }
 
     // A file with no media type only matches `*/*`.
@@ -91,6 +91,16 @@ mod tests {
         assert!(!accepts(".pdf", "report.png", Some("image/png")));
         // No extension at all is not a match for one.
         assert!(!accepts(".pdf", "report", None));
+    }
+
+    /// Todo 2552: the picker offers `a.tar.gz` for `.tar.gz`, so the field takes it.
+    #[test]
+    fn a_compound_extension_matches_the_whole_suffix() {
+        assert!(accepts(".tar.gz", "backup.tar.gz", None));
+        assert!(accepts(".tar.gz", "BACKUP.TAR.GZ", None));
+        assert!(accepts(".d.ts", "index.d.ts", Some("video/mp2t")));
+        assert!(!accepts(".tar.gz", "backup.gz", None));
+        assert!(!accepts(".gz", "backup.tgz", None));
     }
 
     #[test]

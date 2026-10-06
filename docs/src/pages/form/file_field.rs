@@ -135,7 +135,7 @@ pub fn FileFieldPage() -> Element {
                 .without_base_props(),
             ],
             accessibility: a11y()
-                .key(["Enter", "Space"], "On the Browse button: opens the picker. A click anywhere on the field opens it too.")
+                .key(["Enter", "Space"], "On the Browse button: opens the picker. A click elsewhere on the field opens it too, except on a file.")
                 .key(["Left", "Right"], "`input` variant: moves along the files.")
                 .key(["Home", "End"], "`input` variant: jumps to the first or last file.")
                 .key(["Backspace", "Delete"], "`input` variant: removes the focused file.")

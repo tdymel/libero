@@ -67,7 +67,8 @@ impl FormHandle {
     }
 
     /// Checks the form as a submit does, without `onsubmit`. `true` when
-    /// nothing is an error; warnings never count.
+    /// nothing is an error; warnings never count. When invalid it shows the
+    /// summary and moves focus to it; [`is_valid`](Self::is_valid) does neither.
     pub fn validate(&self) -> bool {
         let mut scope = self.scope;
         scope.submit();
@@ -125,7 +126,8 @@ impl FormHandle {
     }
 }
 
-/// The error summary a failed submit leaves. Fixed lines drop out; none is
+/// The error summary a failed submit leaves. Fixed lines drop out, a line whose
+/// field is still in error follows its message; none is
 /// added until the next submit, so it is not re-announced.
 #[derive(Clone)]
 pub(crate) struct Summary {
@@ -162,8 +164,18 @@ impl Summary {
             return Vec::new();
         }
         scope.has_errors_tracked();
-        let current = scope.summary();
-        items.retain(|item| current.contains(item));
+        // A field still in error keeps its line with the new text (todo 2556).
+        let mut current = scope.summary();
+        *items = items
+            .iter()
+            .filter_map(|item| {
+                let at = current.iter().position(|line| line == item).or_else(|| {
+                    item.target.as_ref()?;
+                    current.iter().position(|line| line.target == item.target)
+                })?;
+                Some(current.remove(at))
+            })
+            .collect();
         items.clone()
     }
 }

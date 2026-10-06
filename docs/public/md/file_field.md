@@ -188,7 +188,7 @@ explains how parts work.
 
 | Key | Action |
 |---|---|
-| `Enter` or `Space` | On the Browse button: opens the picker. A click anywhere on the field opens it too. |
+| `Enter` or `Space` | On the Browse button: opens the picker. A click elsewhere on the field opens it too, except on a file. |
 | `Left` or `Right` | `input` variant: moves along the files. |
 | `Home` or `End` | `input` variant: jumps to the first or last file. |
 | `Backspace` or `Delete` | `input` variant: removes the focused file. |

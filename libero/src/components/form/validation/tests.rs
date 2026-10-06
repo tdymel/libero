@@ -8,8 +8,8 @@ use dioxus::{core::provide_root_context, prelude::*};
 use crate::{
     LiberoProvider,
     components::{
-        FieldStatus, Fieldset, Form, FormHandle, FormScope, Rule, TextField, not_empty, use_form,
-        use_form_context,
+        FieldStatus, Fieldset, Form, FormHandle, FormScope, Rule, TextField, min_length, not_empty,
+        use_form, use_form_context,
     },
 };
 
@@ -638,6 +638,45 @@ fn the_context_reaches_a_forms_handle_and_nothing_outside_one() {
         exposed::<Option<FormHandle>>(&dom).is_none(),
         "a fieldset without a form hands out a handle"
     );
+}
+
+/// Todo 2556: a field still in error keeps its line when its message changes.
+#[test]
+fn a_line_follows_its_fields_new_message() {
+    fn app() -> Element {
+        let login = use_store(Login::default);
+        expose(login);
+        rsx! {
+            LiberoProvider {
+                Form {
+                    value: login,
+                    HandleSpy {}
+                    TextField {
+                        label: "Name",
+                        name: crate::path!(Login => name),
+                        validate: [
+                            not_empty.error("Name needed"),
+                            min_length(3).error("Too short"),
+                        ],
+                    }
+                }
+            }
+        }
+    }
+
+    let (mut dom, _) = mount(app);
+    dom.in_runtime(|| handle(&dom).validate());
+    settle(&mut dom);
+
+    dom.in_runtime(|| login(&dom).write().name = "T".into());
+    let changed = settle(&mut dom);
+    let summary = summary_of(&changed).expect("the summary vanished with the field in error");
+    assert!(summary.contains("Name: Too short"), "{summary}");
+    assert!(!summary.contains("Name needed"), "{summary}");
+
+    dom.in_runtime(|| login(&dom).write().name = "Tom".into());
+    let fixed = settle(&mut dom);
+    assert!(summary_of(&fixed).is_none(), "a fixed line stays");
 }
 
 #[test]
