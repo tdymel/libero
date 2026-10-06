@@ -2,7 +2,11 @@
 //! Two pages: contrast coverage only counts text inside the viewport.
 
 use dioxus::prelude::*;
-use libero::components::{Blockquote, Code, Flex, Mark, Text, Title};
+use libero::{
+    components::{Anchor, Blockquote, BlockquotePart, Code, Flex, Mark, Parts, Text, Title},
+    sx::sx,
+    theme::Gradient,
+};
 
 use crate::Routes;
 
@@ -62,6 +66,9 @@ fn TypographyPage() -> Element {
                 work: "Letter to his son Eduard",
                 "Life is like riding a bicycle."
             }
+            // Todo 2489: a coloured and a gradient Text through the 320px and text-spacing passes.
+            Text { id: "text-color", color: "error", "Coloured text in the narrow column." }
+            Text { id: "text-gradient", gradient: Gradient::default(), "Gradient text in the narrow column." }
             Title { size: "xl", "Heading two" }
             Title { size: "lg", "Heading three" }
             Title { size: "md", "Heading four" }
@@ -85,6 +92,16 @@ fn QuotesPage() -> Element {
             Blockquote { size: "xs", color: "#ffe066", "A yellow quote." }
             for color in SHADES {
                 Blockquote { size: "xs", color: *color, "A {color} quote." }
+            }
+            // Todo 2484: `opacity` on the caption took this link to 2.4:1.
+            Blockquote { id: "quote-linked", size: "xs", color: "info",
+                attribution: rsx! { Anchor { id: "attribution-link", to: "#source", "Albert Einstein" } },
+                "A quote with a linked attribution."
+            }
+            // Todo 2485: a named literal leaves the text to the caller, as the page says.
+            Blockquote { id: "quote-named", size: "xs", color: "navy",
+                parts: Parts::new().part(BlockquotePart::Quote, sx().color("#FFFFFF")),
+                "A navy quote."
             }
         }
     }

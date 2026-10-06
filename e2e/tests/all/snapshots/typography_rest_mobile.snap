@@ -60,6 +60,10 @@ figure
     StaticText "Albert Einstein"
     StaticText ","
     StaticText "Letter to his son Eduard"
+paragraph
+  StaticText "Coloured text in the narrow column."
+paragraph
+  StaticText "Gradient text in the narrow column."
 heading "Heading two" [level=2]
   StaticText "Heading two"
 heading "Heading three" [level=3]

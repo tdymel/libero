@@ -10,14 +10,17 @@ fn it_meets_the_baseline() {
         .contrast_covers("#marks")
         .contrast_covers("#code-rust")
         .contrast_covers("#quote-default figcaption")
+        .contrast_covers("#text-color")
         .run();
 }
 
-/// Every tint, and the dimmed attribution under it.
+/// Every tint, the dimmed attribution under it, and a link in an attribution.
 #[test]
 fn every_quote_colour_meets_the_baseline() {
     Suite::new("typography_quotes", "/typography/quotes")
         .contrast_covers("#quotes")
+        .contrast_covers("#attribution-link")
+        .focusable("#attribution-link")
         .run();
 }
 

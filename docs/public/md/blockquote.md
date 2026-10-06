@@ -87,6 +87,16 @@ parts work.
   `<figcaption>` outside it, so a screen reader does not read the speaker's name
   as part of the quote.
 - `work` renders in a `<cite>`, the comma kept outside it.
+- The caption dims its text color, not the whole caption, so a link in
+  `attribution` keeps its own color and focus ring.
+- For a theme color, a shade or a hex, the quote text takes the tint's
+  contrast color, and a focus ring inside clears 3:1 against the tint.
+
+### You must
+
+- With any other CSS color, such as `navy`, `rgb()` or a `var()`, the quote
+  text keeps the page's color and a focus ring inside gets no contrast color:
+  set a readable `color` on the quote through `parts` and check its contrast.
 
 ### Example
 
@@ -108,7 +118,7 @@ never the name as part of the quote.
 | `size` | `Size` | `Size::Md` | The size used when the prop is unset. |
 | `radius` | `Size` | `Size::Sm` | The radius used when the prop is unset. |
 | `color` | `Color` | `Color::Primary` | Which theme color the tint and the bar are taken from. |
-| `cite_opacity` | `&'static str` | `"0.65"` | How far the `<figcaption>` is dimmed below the quote. |
+| `cite_opacity` | `&'static str` | `"0.65"` | The share of the text color the `<figcaption>`'s text keeps. A link in it keeps its own color. |
 | `sizes` | `Sizes<BlockquoteSizeLevel>` | below | Padding and bar width per size. |
 
 `BlockquoteSizeLevel`, per size:
@@ -132,7 +142,7 @@ The font size and line height come from `TextDefaults`' scale, so retuning
 | `--lsx-blockquote-padding-y-{xs..xxl}` | Vertical padding per size. Declared on `:root` from the theme. |
 | `--lsx-blockquote-padding-x-{xs..xxl}` | Horizontal padding per size. Declared on `:root` from the theme. |
 | `--lsx-blockquote-border-width-{xs..xxl}` | The accent bar's width per size. Declared on `:root` from the theme. |
-| `--lsx-blockquote-cite-opacity` | The `<figcaption>`'s opacity. Declared on `:root` from the theme. |
+| `--lsx-blockquote-cite-opacity` | The share of the text color the `<figcaption>`'s text keeps. Declared on `:root` from the theme. |
 | `--lsx-blockquote-background` | The resolved tint, set per instance on the `<blockquote>`. |
 | `--lsx-blockquote-border-color` | The resolved accent bar color, set per instance on the `<blockquote>`. |
 | `--lsx-blockquote-color` | The tint's contrast color for the body text, set per instance. Unset for a literal other than a hex. |

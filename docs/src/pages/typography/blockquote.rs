@@ -49,6 +49,11 @@ pub fn BlockquotePage() -> Element {
                 .handles([
                     "The quote is a `<blockquote>` in a `<figure>`, and the attribution sits in a `<figcaption>` outside it, so a screen reader does not read the speaker's name as part of the quote.",
                     "`work` renders in a `<cite>`, the comma kept outside it.",
+                    "The caption dims its text color, not the whole caption, so a link in `attribution` keeps its own color and focus ring.",
+                    "For a theme color, a shade or a hex, the quote text takes the tint's contrast color, and a focus ring inside clears 3:1 against the tint.",
+                ])
+                .must([
+                    "With any other CSS color, such as `navy`, `rgb()` or a `var()`, the quote text keeps the page's color and a focus ring inside gets no contrast color: set a readable `color` on the quote through `parts` and check its contrast.",
                 ])
                 .example("A quote with `attribution: rsx! { \"Ada Lovelace\" }` and `work: \"Notes\"`: a screen reader reads the quote, then \"Ada Lovelace, Notes\" as its caption, never the name as part of the quote.")
                 .limits(["`cite_url` is for machines only: browsers do not show it, so link the source yourself where readers need it."]),

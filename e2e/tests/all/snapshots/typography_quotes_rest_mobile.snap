@@ -45,3 +45,12 @@ figure
 figure
   blockquote
     StaticText "A error.8 quote."
+figure
+  blockquote
+    StaticText "A quote with a linked attribution."
+  Figcaption
+    link "Albert Einstein"
+      StaticText "Albert Einstein"
+figure
+  blockquote
+    StaticText "A navy quote."

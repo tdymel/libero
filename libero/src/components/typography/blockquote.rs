@@ -92,9 +92,13 @@ static BLOCKQUOTE_SX: StaticSx = StaticSx::new(|| {
 });
 
 /// Size per step: a sibling of the quote, an `em` here would resolve against the `<figure>`.
+/// Dims the ink, not the layer: `opacity` took a link in `attribution` to 2.4:1 (todo 2484).
 static FIGCAPTION_SX: StaticSx = StaticSx::new(|| {
     sx().margin_top("0.5rem")
-        .opacity(BLOCKQUOTE_CITE_OPACITY.value())
+        .color(format!(
+            "color-mix(in srgb, currentColor calc({} * 100%), transparent)",
+            BLOCKQUOTE_CITE_OPACITY.value()
+        ))
         .per_size(|size| sx().font_size(format!("calc({} * 0.85)", TEXT_FONT_SIZE.value(size))))
 });
 
@@ -116,7 +120,8 @@ base_props! {
         /// Body font size, line height, padding and the accent bar's width.
         #[props(default, into)]
         size: Input<Size>,
-        /// The accent bar, and the background tint derived from it.
+        /// The accent bar, and the background tint derived from it. A CSS colour other
+        /// than a hex leaves the quote text at the page's colour: check its contrast.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         /// Rounds the two corners away from the accent bar.

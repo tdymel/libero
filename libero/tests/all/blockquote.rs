@@ -226,6 +226,28 @@ fn the_attribution_scales_with_the_quote() {
     );
 }
 
+/// Todo 2484: `opacity` dimmed a link in the attribution with the caption, to
+/// about 2.4:1. The caption dims its own ink, so a child with a colour keeps it.
+#[test]
+fn the_attribution_dims_its_text_not_its_children() {
+    let html = render(full_app);
+    let caption = first_class(&html, "figcaption");
+    let rule = format!(".{caption}{{");
+    let start = html.find(&rule).expect("a caption rule") + rule.len();
+    let body = &html[start..start + html[start..].find('}').expect("a closed rule")];
+
+    assert!(
+        !body.contains(";opacity:") && !body.starts_with("opacity:"),
+        "{body}"
+    );
+    assert!(
+        body.contains(
+            "color:color-mix(in srgb, currentColor calc(var(--lsx-blockquote-cite-opacity) * 100%), transparent)"
+        ),
+        "{body}"
+    );
+}
+
 /// The UA stylesheet gives *both* `<figure>` and `<blockquote>` a 40px inline
 /// margin, and the plan only mentions the blockquote's. Scoped to the two
 /// component classes rather than counting `{margin:0;` across the sheet - the
