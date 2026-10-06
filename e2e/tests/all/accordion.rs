@@ -88,6 +88,101 @@ fn a_long_label_wraps_instead_of_widening_the_page() {
     });
 }
 
+/// Todo 2430: an unbreakable word wraps and a 600px child scrolls inside the body at
+/// 390px, instead of being clipped by `Collapse` or widening the page (1.4.10).
+#[test]
+fn wide_panel_content_wraps_or_scrolls_inside_the_panel() {
+    block_on(async {
+        let fixture = Fixture::open("/accordion-wide", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#wide-child").await.unwrap();
+        let widths: Vec<f64> = page
+            .evaluate(
+                "(() => {
+                    const body = document.querySelector('#wide [data-accordion-body]');
+                    const word = document.querySelector('#word');
+                    body.scrollLeft = 1e4;
+                    return [document.documentElement.scrollWidth, innerWidth,
+                            word.scrollWidth, word.clientWidth, body.scrollLeft];
+                })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let [page_width, viewport, word, word_box, scrolled] = widths[..] else {
+            panic!("{widths:?}");
+        };
+        assert!(
+            page_width <= viewport,
+            "the page scrolls sideways: {widths:?}"
+        );
+        assert!(word <= word_box, "the word overflows: {widths:?}");
+        assert!(
+            scrolled > 0.0,
+            "the wide child cannot be scrolled to: {widths:?}"
+        );
+        fixture.console.assert_clean("a wide panel").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2431: a panel's first focusable keeps its ring's top edge inside the clip.
+#[test]
+fn a_first_child_in_a_panel_keeps_its_ring() {
+    block_on(async {
+        let fixture = Fixture::open("/accordion-wide", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, "#first", 10).await.unwrap();
+        let clipped: f64 = js(page, &crate::image_list::ring_clipped("#wide")).await;
+        assert!(
+            clipped <= 0.0,
+            "the ring runs {clipped}px past the panel's clip"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2432: with one enabled trigger the arrows and Home/End have nowhere to move
+/// focus, so they stay the page's.
+#[test]
+fn a_lone_trigger_leaves_the_arrows_to_the_page() {
+    block_on(async {
+        let fixture = Fixture::open("/accordion-lone", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate(
+            "window.__prevented = []; \
+             window.addEventListener('keydown', e => { if (e.key !== 'Tab') window.__prevented.push(e.defaultPrevented) })",
+        )
+        .await
+        .unwrap();
+        keyboard::tab_to(page, "#lone-trigger-0", 10).await.unwrap();
+        for key in [
+            keyboard::ARROW_DOWN,
+            keyboard::END,
+            keyboard::ARROW_UP,
+            keyboard::HOME,
+        ] {
+            keyboard::press(page, key).await.unwrap();
+        }
+        wait::for_js_true(page, "window.__prevented.length === 4", "the four keys")
+            .await
+            .unwrap();
+        let prevented: Vec<bool> = js(page, "window.__prevented").await;
+        assert_eq!(prevented, [false; 4], "a key was cancelled");
+        let focused: String = js(page, "document.activeElement.id").await;
+        assert_eq!(focused, "lone-trigger-0");
+        fixture.console.assert_clean("a lone trigger").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// `true` once region `index`'s root is `visibility: hidden`, which takes the
 /// landmark out of the accessibility tree.
 fn hidden(index: usize) -> String {

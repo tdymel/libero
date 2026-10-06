@@ -100,6 +100,7 @@ pub fn AccordionPage() -> Element {
                 .key(["Home", "End"], "Jumps to the first or last trigger, without toggling.")
                 .handles([
                     "Every open panel is a region named by its trigger.",
+                    "Panel content wider than the panel wraps, or scrolls inside the panel, instead of being cut off.",
                 ])
                 .must([
                     "Pick the heading level the page outline needs, then the size. `h3` assumes a section title above the accordion.",

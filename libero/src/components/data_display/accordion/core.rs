@@ -18,7 +18,8 @@ use crate::{
     sx::{REDUCED_MOTION, StaticSx, sx},
     theme::{
         ACCORDION_BORDER_COLOR, ACCORDION_CHEVRON_DURATION, ACCORDION_CHEVRON_SIZE,
-        ACCORDION_HOVER, ACCORDION_PAD_X, ACCORDION_PAD_Y, AccordionDefaults, Size,
+        ACCORDION_HOVER, ACCORDION_PAD_X, ACCORDION_PAD_Y, AccordionDefaults,
+        FOCUS_RING_HALO_SPREAD, Size,
     },
 };
 
@@ -91,10 +92,18 @@ static ACCORDION_SX: StaticSx = StaticSx::new(|| {
             "& > [data-accordion-item] > [data-accordion-heading] > button[aria-expanded=\"true\"] [data-accordion-chevron]",
             sx().transform("rotate(180deg)"),
         )
-        // Inside `Collapse`'s clipped box, so the padding animates with the height.
+        // Inside `Collapse`'s clipped box, so the padding animates with the height. The
+        // top pad keeps a first child's ring clear of the clip; wide content wraps or scrolls (1.4.10).
         .selector(
             "& > [data-accordion-item] [data-accordion-body]",
-            sx().padding(format!("0 {} {}", ACCORDION_PAD_X.value(), ACCORDION_PAD_Y.value())),
+            sx().padding(format!(
+                "{} {} {}",
+                FOCUS_RING_HALO_SPREAD.value(),
+                ACCORDION_PAD_X.value(),
+                ACCORDION_PAD_Y.value()
+            ))
+            .with("overflow-wrap", "anywhere")
+            .overflow_x("auto"),
         )
 });
 
@@ -255,7 +264,9 @@ fn AccordionSection<T: Options>(
     };
     // A plain closure, not `use_callback`: a focus handler is re-entrant.
     let onkeydown = move |event: Event<KeyboardData>| {
-        let Some([next, previous, first, last]) = targets else {
+        // A lone enabled trigger has nowhere to go: the keys scroll the page.
+        let Some([next, previous, first, last]) = targets.filter(|[next, ..]| *next != index)
+        else {
             return;
         };
         // Ctrl/Alt/Meta chords are the browser's.

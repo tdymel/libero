@@ -10,7 +10,48 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/accordion", || rsx! { AccordionPage {} }),
     ("/accordion-long", || rsx! { LongLabelPage {} }),
+    ("/accordion-wide", || rsx! { WidePanelPage {} }),
+    ("/accordion-lone", || rsx! { LoneTriggerPage {} }),
 ];
+
+/// An open panel led by a button, then a word with no break opportunity and a child
+/// wider than a phone: the ring and the content stay reachable (todos 2430, 2431).
+#[component]
+fn WidePanelPage() -> Element {
+    let mut open = use_signal(|| AccordionOpen::One(Some(Step::Shipping)));
+    rsx! {
+        Accordion {
+            id: "wide",
+            open: open(),
+            onchange: move |next| open.set(next),
+            panel: |_: Step| rsx! {
+                Flex { direction: "column", align: "flex-start", gap: "sm",
+                    Button { id: "first", "Edit address" }
+                    Text { id: "word", "Versandkostenberechnungsgrundlagenverordnungsentwurfsfassung" }
+                    div { id: "wide-child", style: "width: 600px; height: 20px" }
+                }
+            },
+        }
+    }
+}
+
+/// One enabled trigger on a page taller than the viewport: the arrows have nowhere to
+/// move focus, so they scroll the page (todo 2432).
+#[component]
+fn LoneTriggerPage() -> Element {
+    let mut open = use_signal(|| AccordionOpen::One(None::<Step>));
+    rsx! {
+        div { style: "min-height: 300vh",
+            Accordion {
+                id: "lone",
+                open: open(),
+                onchange: move |next| open.set(next),
+                options: OptionList::from_options().disabling(|s| *s != Step::Shipping),
+                panel: |_: Step| rsx! { Text { "Body." } },
+            }
+        }
+    }
+}
 
 /// One label with no break opportunity, for reflow at a narrow width.
 #[component]

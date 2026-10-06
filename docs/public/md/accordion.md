@@ -79,6 +79,8 @@ Like every component, `Accordion` also takes the shared props `sx`, `class`,
 ### Libero handles
 
 - Every open panel is a region named by its trigger.
+- Panel content wider than the panel wraps, or scrolls inside the panel,
+  instead of being cut off.
 
 ### You must
 

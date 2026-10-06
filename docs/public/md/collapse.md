@@ -95,6 +95,9 @@ Like every component, `Collapse` also takes the shared props `sx`, `class`,
 - Return focus yourself when the panel closes from inside: use
   [`use_focus_return`](use_focus_return.md), with `remember_active()` on every
   open and `restore()` where the panel closes.
+- Make wide content fit: `Collapse` clips whatever is wider than the panel,
+  with no scrollbar. Let text wrap (`overflow-wrap: anywhere`) and put a wide
+  table or code block in a box with `overflow-x: auto`.
 
 ### Example
 

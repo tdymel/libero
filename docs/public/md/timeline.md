@@ -43,21 +43,27 @@ finished.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{Text, Timeline, TimelineEvent};
+use libero::components::{Button, Flex, Text, Timeline, TimelineEvent};
 
 #[component]
 fn Demo() -> Element {
     let mut step = use_signal(|| 1usize);
 
     rsx! {
-        Timeline {
-            active: step(),
-            items: vec![
-                TimelineEvent::new("Ordered").content(rsx! { Text { "Payment captured" } }),
-                TimelineEvent::new("Packed").content(rsx! { Text { "Two parcels" } }),
-                TimelineEvent::new("Shipped").content(rsx! { Text { "DHL, tracked" } }),
-                TimelineEvent::new("Delivered").content(rsx! { Text { "Signed for" } }),
-            ],
+        Flex {
+            direction: "column",
+            align: "flex-start",
+            gap: "md",
+            Timeline {
+                active: step(),
+                items: vec![
+                    TimelineEvent::new("Ordered").content(rsx! { Text { "Payment captured" } }),
+                    TimelineEvent::new("Packed").content(rsx! { Text { "Two parcels" } }),
+                    TimelineEvent::new("Shipped").content(rsx! { Text { "DHL, tracked" } }),
+                    TimelineEvent::new("Delivered").content(rsx! { Text { "Signed for" } }),
+                ],
+            }
+            Button { onclick: move |_| step += 1, "Next" }
         }
     }
 }
