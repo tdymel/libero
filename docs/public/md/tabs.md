@@ -146,7 +146,7 @@ text name for screen readers.
 | `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Overrides a tab's label. Runs during render, so it can read a locale. |
 | `size` | `Size` | `md` | Tab strip size. |
 | `color` | `ThemeAwareValue` | `primary` | Indicator and selected-label color. |
-| `full_width` | `bool` | `false` | Tabs share the row evenly instead of sizing to their label. |
+| `full_width` | `bool` | `false` | Tabs grow to fill the row, never below their label. A crowded strip still scrolls. |
 | `activation` | `TabsActivation` | `Automatic` | `Automatic` selects as the arrows move. `Manual` moves only the focus, and Enter or Space selects. Use it for slow panels. |
 | `parts` | `Parts<TabsPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 

@@ -410,6 +410,72 @@ fn a_crowded_strip_scrolls_inside_itself() {
     });
 }
 
+/// Opens the `full_width` fixture at 320px.
+async fn open_full_width() -> Fixture {
+    let fixture = Fixture::open("/tabs-full-width", Viewport::Mobile)
+        .await
+        .unwrap();
+    let page = &fixture.page;
+    page.execute(SetDeviceMetricsOverrideParams::new(320, 800, 1.0, true))
+        .await
+        .unwrap();
+    page.reload().await.unwrap();
+    wait::for_visible(page, "#inner [role=tab]").await.unwrap();
+    fixture
+}
+
+/// Todo 2422: at 320px a crowded `full_width` strip scrolls inside itself
+/// instead of breaking its labels, and a roomy one still fills its row.
+#[test]
+fn a_crowded_full_width_strip_keeps_its_labels_whole() {
+    block_on(async {
+        let fixture = open_full_width().await;
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            "(() => { const list = document.querySelector('#crowded > [role=tablist]'); \
+             const heights = [...list.children].map(t => t.getBoundingClientRect().height); \
+             return list.scrollWidth > list.clientWidth && heights.every(h => h === heights[0]) \
+               && document.documentElement.scrollWidth <= 320; })()",
+            "the crowded strip to scroll with one-line labels",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const list = document.querySelector('#outer > [role=tablist]').getBoundingClientRect(); \
+             const last = document.querySelector('#outer > [role=tablist] > [role=tab]:last-child').getBoundingClientRect(); \
+             return Math.abs(last.right - list.right) <= 1; })()",
+            "the roomy strip to fill its row",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("full_width tabs").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2423: a default Tabs in a `full_width` one's panel keeps its own sizing.
+#[test]
+fn a_nested_strip_ignores_the_outer_full_width() {
+    block_on(async {
+        let fixture = open_full_width().await;
+        let grow: Vec<String> = fixture
+            .page
+            .evaluate(
+                "['#outer > [role=tablist] > [role=tab]', '#inner [role=tab]'] \
+                 .map(s => getComputedStyle(document.querySelector(s)).flexGrow)",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(grow, ["1", "0"], "outer and inner flex-grow");
+        fixture.console.assert_clean("nested tabs").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Whether `root`'s selected tab lies inside its strip.
 fn selected_shown(root: &str) -> String {
     format!(

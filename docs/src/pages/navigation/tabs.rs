@@ -98,7 +98,7 @@ pub fn TabsPage() -> Element {
                         .doc("Overrides a tab's label. Runs during render, so it can read a locale."),
                     prop("size", "Size").default("md").doc("Tab strip size."),
                     prop("color", "ThemeAwareValue").default("primary").doc("Indicator and selected-label color."),
-                    prop("full_width", "bool").default("false").doc("Tabs share the row evenly instead of sizing to their label."),
+                    prop("full_width", "bool").default("false").doc("Tabs grow to fill the row, never below their label. A crowded strip still scrolls."),
                     prop("activation", "TabsActivation").default("Automatic").doc("`Automatic` selects as the arrows move. `Manual` moves only the focus, and Enter or Space selects. Use it for slow panels."),
                     prop("parts", "Parts<TabsPart>")
                         .doc("Styles for the inner parts in the Style API tab, under `sx`."),

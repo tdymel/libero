@@ -60,7 +60,7 @@ pub struct TabsProps<T: Options> {
     /// Indicator and selected-label colour.
     #[props(default, into)]
     color: Input<ThemeAwareValue>,
-    /// Tabs share the row evenly instead of sizing to their label.
+    /// Tabs grow to fill the row, never below their label; a crowded strip still scrolls.
     #[props(default)]
     full_width: Option<bool>,
     /// `manual`: arrows move the focus, Enter or Space selects.

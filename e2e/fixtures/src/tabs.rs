@@ -13,6 +13,7 @@ pub const ROUTES: Routes = &[
     ),
     ("/tabs-disabled", || rsx! { TabsDisabledPage {} }),
     ("/tabs-crowded", || rsx! { TabsCrowdedPage {} }),
+    ("/tabs-full-width", || rsx! { TabsFullWidthPage {} }),
     ("/tabs-named", || rsx! { TabsNamedPage {} }),
     ("/tabs-manual", || rsx! { TabsManualPage {} }),
     ("/tabs-late", || rsx! { TabsLatePage {} }),
@@ -165,6 +166,44 @@ fn TabsLatePage() -> Element {
                 value: late(),
                 onchange: move |next| late.set(next),
                 panel: |t: Crowded| rsx! { Text { "panel for {t.label()}" } },
+            }
+        }
+    }
+}
+
+/// Todos 2422 and 2423: a crowded `full_width` strip, and a default Tabs nested
+/// in a `full_width` one's panel.
+#[component]
+fn TabsFullWidthPage() -> Element {
+    let mut tab = use_signal(|| Crowded::Overview);
+    let mut section = use_signal(|| Section::Account);
+    let mut inner = use_signal(|| Section::Account);
+
+    rsx! {
+        Flex { direction: "column", gap: "md",
+            Tabs {
+                id: "crowded",
+                aria_label: "Crowded",
+                full_width: true,
+                value: tab(),
+                onchange: move |next| tab.set(next),
+                panel: |t: Crowded| rsx! { Text { "panel for {t.label()}" } },
+            }
+            Tabs {
+                id: "outer",
+                aria_label: "Outer",
+                full_width: true,
+                value: section(),
+                onchange: move |next| section.set(next),
+                panel: move |_: Section| rsx! {
+                    Tabs {
+                        id: "inner",
+                        aria_label: "Inner",
+                        value: inner(),
+                        onchange: move |next| inner.set(next),
+                        panel: |s: Section| rsx! { Text { "panel for {s.label()}" } },
+                    }
+                },
             }
         }
     }

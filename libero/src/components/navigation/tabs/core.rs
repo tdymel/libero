@@ -94,9 +94,12 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
         )
         .when(
             "full-width",
-            // Else a flex parent shrinks the root to the tabs.
-            sx().width("100%")
-                .selector("& [role=\"tab\"]", sx().flex("1 1 0")),
+            // Else a flex parent shrinks the root to the tabs. Never below the label,
+            // so a crowded strip scrolls; direct path, so nested tabs keep their own.
+            sx().width("100%").selector(
+                "& > [role=\"tablist\"] > [role=\"tab\"]",
+                sx().flex("1 0 auto"),
+            ),
         )
 });
 
