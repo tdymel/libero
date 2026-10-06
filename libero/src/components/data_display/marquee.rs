@@ -14,8 +14,9 @@ use crate::{
     hooks::{use_localization, use_theme},
     sx::{REDUCED_MOTION, StaticSx, sx},
     theme::{
-        MARQUEE_ANIMATION, MARQUEE_DURATION, MARQUEE_FADE_SIZE, MARQUEE_GAP, MARQUEE_MIN_REPEAT,
-        MARQUEE_REPEAT, MARQUEE_SHIFT, PAPER_BACKGROUND, Size, SizeCss,
+        FOCUS_RING_HALO_SPREAD, MARQUEE_ANIMATION, MARQUEE_DURATION, MARQUEE_FADE_SIZE,
+        MARQUEE_GAP, MARQUEE_MIN_REPEAT, MARQUEE_REPEAT, MARQUEE_SHIFT, PAPER_BACKGROUND, Size,
+        SizeCss,
     },
 };
 
@@ -91,6 +92,11 @@ static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
                 .media(REDUCED_MOTION, sx().display("none")),
         );
 
+    // A focused track clips both axes: room for a link's ring, the cross axis taken back
+    // by the margin. The scroll axis is clipped by the root, so it pads in (todo 2424).
+    let ring_room = FOCUS_RING_HALO_SPREAD.value();
+    let back = format!("calc(-1 * {ring_room})");
+
     // `clip` on one axis keeps focus rings visible on the other (`hidden` forces
     // it to `auto`). The zero minimum lets the non-scroller shrink as a flex item.
     let horizontal = sx()
@@ -102,7 +108,12 @@ static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
         .selector(track, sx().width("max-content"))
         .selector(
             format!("{track}:focus-within"),
-            sx().width("auto").overflow_x("hidden"),
+            sx().width("auto")
+                .overflow_x("hidden")
+                .padding(ring_room.clone())
+                .margin_top(back.clone())
+                .margin_bottom(back.clone())
+                .with("scroll-padding-inline", ring_room.clone()),
         )
         .selector(
             pause,
@@ -120,7 +131,13 @@ static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
         .selector(track, sx().flex_direction("column"))
         .selector(
             format!("{track}:focus-within"),
-            sx().max_height("100%").overflow_y("hidden"),
+            sx().max_height("100%")
+                .box_sizing("border-box")
+                .overflow_y("hidden")
+                .padding(ring_room.clone())
+                .margin_left(back.clone())
+                .margin_right(back)
+                .with("scroll-padding-block", ring_room),
         )
         .selector(copies, sx().flex_direction("column"))
         .selector(pause, sx().bottom(offset));

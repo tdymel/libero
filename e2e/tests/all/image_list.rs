@@ -14,7 +14,7 @@ fn it_meets_the_baseline() {
 }
 
 /// How far the focused element's ring reaches past any ancestor up to `root`
-/// that clips its overflow, in px. Zero or less: the whole stripe shows.
+/// that clips its overflow, in px, per clipped axis. Zero or less: the whole stripe shows.
 pub fn ring_clipped(root: &str) -> String {
     format!(
         "(() => {{ const el = document.activeElement; const s = getComputedStyle(el); \
@@ -22,11 +22,9 @@ pub fn ring_clipped(root: &str) -> String {
          const r = el.getBoundingClientRect(); const stop = document.querySelector('{root}'); \
          let worst = -Infinity; \
          for (let clip = el.parentElement; clip && clip !== stop.parentElement; clip = clip.parentElement) {{ \
-           const cs = getComputedStyle(clip); \
-           if (cs.overflowX === 'visible' && cs.overflowY === 'visible') continue; \
-           const c = clip.getBoundingClientRect(); \
-           worst = Math.max(worst, c.left - (r.left - reach), (r.right + reach) - c.right, \
-             c.top - (r.top - reach), (r.bottom + reach) - c.bottom); }} \
+           const cs = getComputedStyle(clip); const c = clip.getBoundingClientRect(); \
+           if (cs.overflowX !== 'visible') worst = Math.max(worst, c.left - (r.left - reach), (r.right + reach) - c.right); \
+           if (cs.overflowY !== 'visible') worst = Math.max(worst, c.top - (r.top - reach), (r.bottom + reach) - c.bottom); }} \
          return worst; }})()"
     )
 }
@@ -51,6 +49,51 @@ fn a_focused_link_cell_keeps_its_ring() {
             clipped <= 0.0,
             "the ring runs {clipped}px past the cell's clip"
         );
+        fixture.close().await.unwrap();
+    });
+}
+
+const ZOOM: &str = "[role=list] button[aria-haspopup=dialog]";
+
+/// Todos 2425, 2426: the zoom button fills the clipped media box and the `<li>`,
+/// the `Below` bar's button sits at the cell's end.
+#[test]
+fn a_zoom_button_and_a_below_bar_button_keep_their_rings() {
+    block_on(async {
+        let fixture = Fixture::open("/image-list-focus", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        for target in [ZOOM, "#below-action"] {
+            keyboard::tab_to(page, target, 10).await.unwrap();
+            let clipped: f64 = page
+                .evaluate(ring_clipped("[role=list]"))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(
+                clipped <= 0.0,
+                "{target}: the ring runs {clipped}px past the cell's clip"
+            );
+            if target == ZOOM {
+                // The picture covers the button's own inset shadows: the stripe is the overlay's.
+                let overlay: String = page
+                    .evaluate("getComputedStyle(document.activeElement, '::after').boxShadow")
+                    .await
+                    .unwrap()
+                    .into_value()
+                    .unwrap();
+                assert!(
+                    overlay.contains("inset"),
+                    "no ring over the picture: {overlay}"
+                );
+            }
+        }
+        fixture
+            .console
+            .assert_clean("a focused image list")
+            .unwrap();
         fixture.close().await.unwrap();
     });
 }

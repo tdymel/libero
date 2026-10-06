@@ -4,7 +4,7 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, Part, States, Variables, base_props, input_from_str,
-            inset_focus_ring_sx, parts_enum, parts_under_sx, variables,
+            inset_focus_ring_sx, parts_enum, parts_under_sx, ring_overlay_sx, variables,
         },
         data_display::LinkedImageScope,
         layout::{InternalAnchor, use_box},
@@ -12,7 +12,7 @@ use crate::{
     hooks::use_theme,
     sx::{StaticSx, Sx, sx},
     theme::{
-        ASPECT_RATIO, BarPosition, CssVar, FOCUS_RING_WIDTH, GRID_ZONE_GAP,
+        ASPECT_RATIO, BarPosition, CssVar, FOCUS_RING_HALO_SPREAD, FOCUS_RING_WIDTH, GRID_ZONE_GAP,
         IMAGE_LIST_BAR_BACKGROUND, IMAGE_LIST_BAR_BACKGROUND_TOP, IMAGE_LIST_BAR_COLOR,
         IMAGE_LIST_BAR_PADDING, IMAGE_LIST_RADIUS, ImageListDefaults, ImageListVariant, Responsive,
         Size, SizeCss,
@@ -81,6 +81,18 @@ fn snap_cols(cols: u8) -> u8 {
          whole tracks of a twelve-track GridZone."
     ));
     snapped
+}
+
+/// `None` for a ratio no cell can take: zero, negative or not finite (todo 2428).
+fn usable_ratio(ratio: Option<f32>) -> Option<f32> {
+    let ratio = ratio?;
+    if ratio.is_finite() && ratio > 0.0 {
+        return Some(ratio);
+    }
+    warn(&format!(
+        "ImageList: ratio {ratio} is not a positive number, the theme's ratio is used instead."
+    ));
+    None
 }
 
 /// A quilted cell's height, `rowHeight * rows + gap * (rows - 1)`, from its width
@@ -171,6 +183,17 @@ fn media_base() -> Sx {
         .min_height("0")
         .overflow("hidden")
         .selector("& > *", sx().width("100%").display("block"))
+        // A zoomable `Image` fills the clipped box, so an outset ring is cut away (todo 2425).
+        // Doubled to outrank the zoom button's own ring, as `AspectRatio`.
+        .selector(
+            "& > *:focus-visible:focus-visible",
+            inset_ring().position("relative"),
+        )
+        // The picture paints over its button's inset shadows; the overlay paints over it.
+        .selector(
+            "& > *:focus-visible::after",
+            ring_overlay_sx().content("\"\"").and(inset_ring()),
+        )
         .when(
             RATIO_BOX_STATE,
             // `AspectRatio`'s themed var. The 100% pair fills a stretched cell in a
@@ -202,10 +225,11 @@ fn link_base() -> Sx {
             sx().content("\"\"").position("absolute").inset("0"),
         )
         // The link fills the clipped cell, so an outset ring is cut away (todo 618).
-        .focus_visible(inset_focus_ring_sx(&format!(
-            "calc(-1 * {})",
-            FOCUS_RING_WIDTH.value()
-        )))
+        .focus_visible(inset_ring())
+}
+
+fn inset_ring() -> Sx {
+    inset_focus_ring_sx(&format!("calc(-1 * {})", FOCUS_RING_WIDTH.value()))
 }
 
 static IMAGE_LIST_MEDIA_SX: StaticSx = StaticSx::new(media_base);
@@ -239,14 +263,15 @@ static IMAGE_LIST_BAR_SX: StaticSx = StaticSx::new(|| {
             overlay.clone().align_self("end"),
         )
         .when(BarPosition::Top.state_name(), overlay.align_self("start"))
-        // The implicit second row, on the page's background: top padding only.
+        // The implicit second row, on the page's background, the text flush with the
+        // picture. The end and bottom keep a control's ring inside the cell's clip (todo 2426).
         .when(
             BarPosition::Below.state_name(),
             sx().grid_row("2")
                 .grid_column("1")
-                .padding_left("0")
-                .padding_right("0")
-                .padding_bottom("0"),
+                .with("padding-inline-start", "0")
+                .with("padding-inline-end", FOCUS_RING_HALO_SPREAD.value())
+                .padding_bottom(FOCUS_RING_HALO_SPREAD.value()),
         )
         // The light text rides the scrim: with it off, the caller owns the colour.
         .when(
@@ -346,6 +371,7 @@ pub fn ImageList(props: ImageListProps) -> Element {
             "ImageList: ratio is ignored by the masonry variant - a packed cell takes its height from its own picture.",
         );
     }
+    let ratio = usable_ratio(props.ratio.as_ref().copied().filter(|_| !masonry));
 
     let spans = cols.map(span_for_cols);
     let default_span = spans.base();
@@ -364,18 +390,10 @@ pub fn ImageList(props: ImageListProps) -> Element {
     let media_variables: Input<Variables> = variables()
         .with(
             ASPECT_RATIO.override_var(),
-            props
-                .ratio
-                .as_ref()
-                .filter(|_| !masonry && !quilted)
-                .map(f32::to_string),
+            ratio.filter(|_| !quilted).map(|ratio| ratio.to_string()),
         )
         .into();
-    let base_ratio = props
-        .ratio
-        .as_ref()
-        .copied()
-        .unwrap_or(theme.aspect_ratio.ratio);
+    let base_ratio = ratio.unwrap_or(theme.aspect_ratio.ratio);
     let cell_states: Input<States> = States::default()
         .with(radius.radius_state_name(), true)
         .into();
@@ -602,6 +620,41 @@ mod tests {
             quilt_height(1.0, 4, 4, 2),
             format!("calc(2 * (100% - 0 * {gap}) / 1 + 1 * {gap})")
         );
+    }
+
+    /// Todo 2428: such a ratio made every quilted cell's strut zero.
+    #[test]
+    fn a_ratio_no_cell_can_take_falls_back_to_the_theme() {
+        assert_eq!(usable_ratio(Some(1.5)), Some(1.5));
+        assert_eq!(usable_ratio(None), None);
+        for ratio in [0.0, -1.0, f32::NAN, f32::INFINITY] {
+            assert_eq!(usable_ratio(Some(ratio)), None, "{ratio}");
+        }
+    }
+
+    /// Todo 2425: a zoom button's ring is inset, and outranks the button's own.
+    #[test]
+    fn a_focusable_picture_gets_the_inset_ring() {
+        let sheet = crate::css::Stylesheet::from(&IMAGE_LIST_MEDIA_SX);
+        assert!(
+            sheet.as_str().contains(" > *:focus-visible:focus-visible{"),
+            "{}",
+            sheet.as_str()
+        );
+    }
+
+    /// Todo 2426: a `Below` bar's end and bottom hold the ring's reach.
+    #[test]
+    fn a_below_bar_leaves_room_for_a_ring_at_its_end_and_bottom() {
+        let sheet = crate::css::Stylesheet::from(&IMAGE_LIST_BAR_SX);
+        let css = sheet.as_str();
+        for declaration in [
+            "padding-inline-start:0;",
+            "padding-inline-end:var(--lsx-focus-ring-halo-spread);",
+            "padding-bottom:var(--lsx-focus-ring-halo-spread);",
+        ] {
+            assert!(css.contains(declaration), "{declaration}: {css}");
+        }
     }
 
     /// A row of `cols` cells fills the zone exactly.

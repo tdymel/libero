@@ -2,7 +2,7 @@
 
 use dioxus::prelude::*;
 use libero::components::{GridSpan, Image, ImageBar, ImageItem, ImageList};
-use libero::theme::responsive;
+use libero::theme::{BarPosition, responsive};
 
 use crate::Routes;
 
@@ -15,6 +15,7 @@ pub const ROUTES: Routes = &[
     ("/image-list-links", || rsx! { ImageListLinksPage {} }),
     ("/image-list-masonry", || rsx! { ImageListMasonryPage {} }),
     ("/image-list-captions", || rsx! { ImageListCaptionsPage {} }),
+    ("/image-list-focus", || rsx! { ImageListFocusPage {} }),
 ];
 
 const PICTURE: &str = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 3'%3E%3Crect width='4' height='3' fill='%23369'/%3E%3C/svg%3E";
@@ -56,6 +57,28 @@ fn ImageListLinksPage() -> Element {
                             span { id: "bar-caption", "Caption" }
                             button { id: "bar-action", "Act" }
                         })),
+                ],
+            }
+        }
+    }
+}
+
+/// Todos 2425, 2426: an unlinked zoomable picture, and a button flush with a
+/// `Below` bar's end, both in the clipped `<li>`.
+#[component]
+fn ImageListFocusPage() -> Element {
+    rsx! {
+        div { style: "width: 600px",
+            ImageList {
+                cols: 2u8,
+                gap: "md",
+                items: vec![
+                    ImageItem::new(rsx! { Image { src: PICTURE, alt: "A blue field", zoomable: true } }),
+                    ImageItem::new(rsx! { Image { src: PICTURE, alt: "Another blue field" } })
+                        .bar(ImageBar::new(rsx! {
+                            span { style: "flex: 1", "Caption" }
+                            button { id: "below-action", "Act" }
+                        }).position(BarPosition::Below)),
                 ],
             }
         }

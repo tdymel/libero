@@ -146,6 +146,37 @@ fn a_link_focused_out_of_view_scrolls_into_it() {
     });
 }
 
+/// Todo 2424: a focused track clips both axes, which cut a link's ring on the
+/// cross axis and at the leading edge.
+#[test]
+fn a_focused_link_keeps_its_ring() {
+    block_on(async {
+        for route in ["/marquee", "/marquee-vertical"] {
+            let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+            let page = &fixture.page;
+            wait::for_visible(page, PAUSE).await.unwrap();
+            for link in [
+                "[data-slot=group]:first-child a:first-child",
+                "[data-slot=group]:first-child a:last-child",
+            ] {
+                keyboard::tab_to(page, link, 20).await.unwrap();
+                let clipped: f64 = page
+                    .evaluate(crate::image_list::ring_clipped(":has(> [data-slot=track])"))
+                    .await
+                    .unwrap()
+                    .into_value()
+                    .unwrap();
+                assert!(
+                    clipped <= 0.0,
+                    "{route} {link}: the ring runs {clipped}px past the clip"
+                );
+            }
+            fixture.console.assert_clean("the marquee").unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
 /// Every live link, stopped where its centre meets the toggle's, focused, and
 /// sampled on a grid: some part of it has to be the topmost element.
 #[test]
