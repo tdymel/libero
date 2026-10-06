@@ -200,6 +200,7 @@ pub fn TagsFieldPage() -> Element {
                 .key(["Left", "Right"], "On the tags: walk them. `Right` past the last returns to the input.")
                 .key(["Delete", "Backspace", "Enter"], "On a tag: removes it.")
                 .key(["Down", "Up"], "With `suggestions`: open the list and move the highlight.")
+                .key(["PageUp", "PageDown"], "With `suggestions`, open: moves the highlight 10 rows, stopping at the first or last.")
                 .key(["Enter"], "With `suggestions`: picks the highlighted row.")
                 .key(["Escape"], "With `suggestions`: closes the list.")
                 .handles([

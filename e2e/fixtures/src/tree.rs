@@ -16,6 +16,11 @@ pub const ROUTES: Routes = &[
     ("/tree/links/arrived", || rsx! { "arrived" }),
     ("/tree/delete", || rsx! { DeleteTreePage {} }),
     ("/tree/default", || rsx! { DefaultTreePage {} }),
+    // Todo 2465: one visible row, so its keys are the page's.
+    (
+        "/tree/lone",
+        || rsx! { Tree { aria_label: "Files", data: vec![TreeNode::new("README.md", "README.md")] } },
+    ),
     ("/tree/controlled", || rsx! { ControlledTreePage {} }),
     ("/tree/chevron", || rsx! { ChevronTreePage {} }),
     ("/tree/activate", || rsx! { ActivateTreePage {} }),

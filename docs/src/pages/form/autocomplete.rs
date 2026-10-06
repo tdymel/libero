@@ -172,6 +172,7 @@ pub fn AutocompletePage() -> Element {
                 .key(["Alt+Down"], "Opens the list without moving the highlight.")
                 .key(["Up", "Down"], "Move the highlight.")
                 .key(["Home", "End"], "Once a row is highlighted: move the highlight to the first or last row. Before that, they move the text caret.")
+                .key(["PageUp", "PageDown"], "Open: moves the highlight 10 rows, stopping at the first or last.")
                 .key(["Enter"], "Picks the highlighted row.")
                 .key(["Escape", "Tab", "Alt+Up"], "Close the list.")
                 .handles([

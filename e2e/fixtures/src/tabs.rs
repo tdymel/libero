@@ -17,7 +17,23 @@ pub const ROUTES: Routes = &[
     ("/tabs-named", || rsx! { TabsNamedPage {} }),
     ("/tabs-manual", || rsx! { TabsManualPage {} }),
     ("/tabs-late", || rsx! { TabsLatePage {} }),
+    ("/tabs-lone", || rsx! { TabsLonePage {} }),
 ];
+
+/// Todo 2465: one enabled tab, so the arrows and Home/End are the page's.
+#[component]
+fn TabsLonePage() -> Element {
+    rsx! {
+        Tabs {
+            id: "lone",
+            aria_label: "Settings",
+            value: Section::Account,
+            onchange: |_| {},
+            options: OptionList::from_options().disabling(|s| *s != Section::Account),
+            panel: |s: Section| rsx! { Text { "panel for {s.label()}" } },
+        }
+    }
+}
 
 /// Todo 502: manual activation, Billing disabled so the arrows skip it.
 #[component]

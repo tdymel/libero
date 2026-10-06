@@ -354,3 +354,28 @@ e2e::scenario!(
     "/radio-group/echo",
     a_label_click_selects
 );
+
+/// Todo 2465: one enabled option has nowhere to move, so the arrows and Home/End stay the page's.
+#[test]
+fn a_lone_radio_leaves_the_arrows_to_the_page() {
+    block_on(async {
+        let fixture = Fixture::open("/radio-group/lone", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, "[role=radiogroup] input:not(:disabled)", 10)
+            .await
+            .unwrap();
+        crate::accordion::assert_keys_left_to_page(
+            page,
+            &[
+                keyboard::ARROW_DOWN,
+                keyboard::ARROW_UP,
+                keyboard::ARROW_RIGHT,
+                keyboard::ARROW_LEFT,
+            ],
+        )
+        .await;
+        fixture.close().await.unwrap();
+    });
+}

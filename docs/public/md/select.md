@@ -179,6 +179,7 @@ The dropdown is portaled out of the field, so its parts take the
 | `Down`, `Up`, `Enter` or `Space` | Closed: opens the list. |
 | `Home` or `End` | Closed: opens the list at the first or last row. Open: jumps to the first or last row. |
 | `Up` or `Down` | Open: move the highlight. |
+| `PageUp` or `PageDown` | Open: moves the highlight 10 rows, stopping at the first or last. |
 | `Enter` or `Space` | Open: picks the highlighted row. |
 | `Tab` or `Alt+Up` | Open: pick the highlighted row and close. |
 | `Escape` | Open: closes without a pick. |

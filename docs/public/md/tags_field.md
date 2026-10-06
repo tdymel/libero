@@ -135,6 +135,7 @@ The dropdown is portaled out of the field, so its parts take the
 | `Left` or `Right` | On the tags: walk them. `Right` past the last returns to the input. |
 | `Delete`, `Backspace` or `Enter` | On a tag: removes it. |
 | `Down` or `Up` | With `suggestions`: open the list and move the highlight. |
+| `PageUp` or `PageDown` | With `suggestions`, open: moves the highlight 10 rows, stopping at the first or last. |
 | `Enter` | With `suggestions`: picks the highlighted row. |
 | `Escape` | With `suggestions`: closes the list. |
 

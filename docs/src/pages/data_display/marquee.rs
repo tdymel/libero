@@ -3,12 +3,22 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Chip, Code, Flex, Marquee, MarqueePart, Text},
+    components::{Anchor, Button, Chip, Code, Flex, Marquee, MarqueePart, Text},
     sx::sx,
     use_theme,
 };
 
 const CHIPS: [&str; 6] = ["Rust", "Dioxus", "WebAssembly", "Blitz", "Tokio", "Serde"];
+
+/// The `links` switch's content: something to Tab to, so the focus behaviour shows (todo 2482).
+const LINKS: [(&str, &str); 6] = [
+    ("Rust", "https://www.rust-lang.org"),
+    ("Dioxus", "https://dioxuslabs.com"),
+    ("WebAssembly", "https://webassembly.org"),
+    ("Blitz", "https://github.com/DioxusLabs/blitz"),
+    ("Tokio", "https://tokio.rs"),
+    ("Serde", "https://serde.rs"),
+];
 
 /// A vertical marquee is as tall as all its copies unless it is given a
 /// height, so the demo gives it one and prints it.
@@ -31,6 +41,23 @@ fn integer(control: &Control, values: &DemoValues) -> Vec<String> {
     }
 }
 
+fn links(values: &DemoValues) -> bool {
+    values.str("links") == "true"
+}
+
+/// The chips' lines swapped for links, at whatever indent they print.
+fn with_links(source: &str) -> String {
+    LINKS
+        .iter()
+        .zip(CHIPS)
+        .fold(source.to_string(), |code, ((name, url), chip)| {
+            code.replace(
+                &format!("Chip {{ {chip:?} }}"),
+                &format!("Anchor {{ to: {url:?}, {name:?} }}"),
+            )
+        })
+}
+
 fn vertical(values: &DemoValues) -> bool {
     values.str("orientation") == "vertical"
 }
@@ -42,6 +69,8 @@ const OWN_PAUSE: &str =
 
 /// Without the built-in toggle, prints the `paused` signal and the page's own button too.
 fn wrap(values: &DemoValues, source: &str) -> String {
+    let swapped = links(values).then(|| with_links(source));
+    let source = swapped.as_deref().unwrap_or(source);
     if values.str("pause_control") == "true" {
         return source.to_string();
     }
@@ -77,8 +106,14 @@ fn MarqueePreview(values: DemoValues) -> Element {
                 pause_control: !own_control,
                 paused: own_control.then(&*paused),
                 fade_edges: values.str("fade_edges") == "true",
-                for chip in CHIPS {
-                    Chip { "{chip}" }
+                if links(&values) {
+                    for (name, url) in LINKS {
+                        Anchor { to: url, "{name}" }
+                    }
+                } else {
+                    for chip in CHIPS {
+                        Chip { "{chip}" }
+                    }
                 }
             }
         }
@@ -196,6 +231,7 @@ pub fn MarqueePage() -> Element {
                         }
                     }),
                     Control::switch("fade_edges"),
+                    Control::switch("links").code(|_, _| vec![]),
                 ],
                 wrap: Wrap(wrap),
                 render: move |values: DemoValues| rsx! {

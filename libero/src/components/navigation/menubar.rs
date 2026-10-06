@@ -326,7 +326,14 @@ pub fn Menubar(props: MenubarProps) -> Element {
                 if has_shortcut_modifier(&event) {
                     return;
                 }
-                let target = match logical_key(&event) {
+                let key = logical_key(&event);
+                // A lone trigger has nowhere to go: the keys scroll the page (todo 2465).
+                if len == 1
+                    && matches!(key, Key::ArrowRight | Key::ArrowLeft | Key::Home | Key::End)
+                {
+                    return;
+                }
+                let target = match key {
                     Key::ArrowRight => row.step(index, true),
                     Key::ArrowLeft => row.step(index, false),
                     Key::Home => (len > 0).then_some(0),

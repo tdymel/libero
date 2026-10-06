@@ -191,6 +191,10 @@ fn track_key_target(key: Key, orientation: Orientation, nav: Nav) -> Option<Trac
         Orientation::Vertical => (Key::ArrowUp, Key::ArrowDown),
     };
     let wraps = nav.clones > 0;
+    // One reachable position has nowhere to go: the keys scroll the page (todo 2465).
+    if nav.count <= 1 || (!wraps && nav.first >= nav.last) {
+        return None;
+    }
     Some(match key {
         key if key == previous => TrackKey::Step(false),
         key if key == next => TrackKey::Step(true),

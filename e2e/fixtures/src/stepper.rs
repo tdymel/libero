@@ -14,7 +14,28 @@ pub const ROUTES: Routes = &[
     ("/stepper-long", || rsx! { LongLabelPage {} }),
     ("/stepper-named", || rsx! { NamedPage {} }),
     ("/stepper-many", || rsx! { ManyStepsPage {} }),
+    ("/stepper-wide", || rsx! { WidePanelPage {} }),
 ];
+
+/// Todo 2464: a vertical step's panel led by a button, then a word with no break
+/// opportunity and a child wider than a phone.
+#[component]
+fn WidePanelPage() -> Element {
+    rsx! {
+        Stepper {
+            id: "wide",
+            value: Some(Stage::Shipping),
+            orientation: "vertical",
+            panel: |_: Stage| rsx! {
+                Flex { direction: "column", align: "flex-start", gap: "sm",
+                    Button { id: "first", "Edit address" }
+                    span { id: "word", "Versandkostenberechnungsgrundlagenverordnungsentwurfsfassung" }
+                    div { id: "wide-child", style: "width: 600px; height: 20px" }
+                }
+            },
+        }
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Phase {

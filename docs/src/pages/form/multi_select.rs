@@ -293,6 +293,7 @@ pub fn MultiSelectPage() -> Element {
                 .key(["Down", "Up", "Enter", "Space"], "Closed: opens the list.")
                 .key(["Home", "End"], "Closed: opens the list at the first or last row.")
                 .key(["Up", "Down"], "Open: move the highlight.")
+                .key(["PageUp", "PageDown"], "Open: moves the highlight 10 rows, stopping at the first or last.")
                 .key(["Enter", "Space"], "Open: toggles the row and keeps the list open.")
                 .key(["Escape", "Tab", "Alt+Up"], "Open: close the list.")
                 .key(["Left", "Right"], "Move over the chips.")

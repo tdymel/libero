@@ -538,3 +538,26 @@ fn the_tablist_takes_the_callers_name() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 2465: one enabled tab has nowhere to move, so the arrows and Home/End stay the page's.
+#[test]
+fn a_lone_tab_leaves_the_keys_to_the_page() {
+    block_on(async {
+        let fixture = Fixture::open("/tabs-lone", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, "#lone-tab-0", 10).await.unwrap();
+        crate::accordion::assert_keys_left_to_page(
+            page,
+            &[
+                keyboard::ARROW_RIGHT,
+                keyboard::ARROW_LEFT,
+                keyboard::HOME,
+                keyboard::END,
+            ],
+        )
+        .await;
+        fixture.close().await.unwrap();
+    });
+}

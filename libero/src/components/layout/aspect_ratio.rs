@@ -2,10 +2,12 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, Variables, base_props, inset_focus_ring_sx, variables},
+        common::{
+            HtmlTag, Input, Variables, base_props, inset_focus_ring_sx, ring_overlay_sx, variables,
+        },
         layout::use_box,
     },
-    sx::{StaticSx, sx},
+    sx::{StaticSx, Sx, sx},
     theme::{ASPECT_RATIO, FOCUS_RING_WIDTH},
     utils::warn,
 };
@@ -18,9 +20,18 @@ static ASPECT_RATIO_BASE_SX: StaticSx = StaticSx::new(|| {
         // Doubled to outrank a `Button`'s own ring, which ties it otherwise.
         .selector(
             "& > *:focus-visible:focus-visible",
-            inset_focus_ring_sx(&format!("calc(-1 * {})", FOCUS_RING_WIDTH.value())),
+            inset_ring().position("relative"),
+        )
+        // A picture inside the child paints over its inset shadows; the overlay paints over it (todo 2480).
+        .selector(
+            "& > *:focus-visible::after",
+            ring_overlay_sx().content("\"\"").and(inset_ring()),
         )
 });
+
+fn inset_ring() -> Sx {
+    inset_focus_ring_sx(&format!("calc(-1 * {})", FOCUS_RING_WIDTH.value()))
+}
 
 fn aspect_ratio_variables(ratio: Option<&f32>) -> Variables {
     // CSS drops a ratio that is not positive and finite; the box falls back to `auto`.
@@ -115,5 +126,18 @@ mod tests {
             "{}",
             sheet.as_str()
         );
+    }
+
+    /// Todo 2480: a linked picture's stripe rides an overlay over the picture.
+    #[test]
+    fn a_focused_child_paints_its_ring_over_its_picture() {
+        let sheet = crate::css::Stylesheet::from(&ASPECT_RATIO_BASE_SX);
+        let css = sheet.as_str();
+        let overlay = css
+            .split(" > *:focus-visible::after{")
+            .nth(1)
+            .and_then(|rule| rule.split('}').next())
+            .unwrap_or_else(|| panic!("no overlay: {css}"));
+        assert!(overlay.contains("box-shadow:inset"), "{overlay}");
     }
 }

@@ -187,6 +187,10 @@ fn indicator_key_target(
     high: usize,
     looping: bool,
 ) -> Option<usize> {
+    // A lone dot has nowhere to go: the keys scroll the page (todo 2465).
+    if low >= high {
+        return None;
+    }
     Some(match key {
         Key::ArrowRight | Key::ArrowDown => match index >= high {
             true if looping => low,
@@ -202,4 +206,25 @@ fn indicator_key_target(
         Key::End => high,
         _ => return None,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Todo 2465: a lone dot leaves the keys to the page; two still wrap or clamp.
+    #[test]
+    fn a_lone_dot_takes_no_key() {
+        for key in [Key::ArrowRight, Key::ArrowLeft, Key::Home, Key::End] {
+            assert_eq!(indicator_key_target(key, 0, 0, 0, false), None);
+        }
+        assert_eq!(
+            indicator_key_target(Key::ArrowRight, 1, 0, 1, true),
+            Some(0)
+        );
+        assert_eq!(
+            indicator_key_target(Key::ArrowRight, 1, 0, 1, false),
+            Some(1)
+        );
+    }
 }

@@ -310,6 +310,7 @@ pub fn SelectPage() -> Element {
                 .key(["Down", "Up", "Enter", "Space"], "Closed: opens the list.")
                 .key(["Home", "End"], "Closed: opens the list at the first or last row. Open: jumps to the first or last row.")
                 .key(["Up", "Down"], "Open: move the highlight.")
+                .key(["PageUp", "PageDown"], "Open: moves the highlight 10 rows, stopping at the first or last.")
                 .key(["Enter", "Space"], "Open: picks the highlighted row.")
                 .key(["Tab", "Alt+Up"], "Open: pick the highlighted row and close.")
                 .key(["Escape"], "Open: closes without a pick.")

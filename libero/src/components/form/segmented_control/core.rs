@@ -373,6 +373,10 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
                     item.pass_on();
                     return;
                 }
+                // A lone enabled segment has nowhere to go: the keys scroll the page (todo 2465).
+                if neighbour(&disabled_segments, index, step) == Some(index) {
+                    return;
+                }
                 // Cancelled even when read-only: the browser's own arrow would
                 // move focus and check the next radio.
                 event.prevent_default();

@@ -15,7 +15,21 @@ pub const ROUTES: Routes = &[
         "/radio-group/readonly",
         || rsx! { RadioGroupReadonlyPage {} },
     ),
+    ("/radio-group/lone", || rsx! { RadioGroupLonePage {} }),
 ];
+
+/// Todo 2465: one enabled option, so the arrows are the page's.
+#[component]
+fn RadioGroupLonePage() -> Element {
+    rsx! {
+        RadioGroup {
+            label: "Plan",
+            value: Some(Plan::Pro),
+            onchange: |_: Plan| {},
+            options: OptionList::from_options().disabling(|plan| *plan != Plan::Pro),
+        }
+    }
+}
 
 #[component]
 fn RadioGroupReadonlyPage() -> Element {

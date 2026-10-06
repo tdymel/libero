@@ -249,7 +249,8 @@ fn TabStrip(
     let keydown_root = root.clone();
     // From the focused tab, which may be a clicked disabled one.
     let onkeydown = use_callback(move |(at, event): (usize, Event<KeyboardData>)| {
-        if has_shortcut_modifier(&event) {
+        // A lone enabled tab has nowhere to go: the keys scroll the page (todo 2465).
+        if has_shortcut_modifier(&event) || neighbour(&disabled, at, 1) == Some(at) {
             return;
         }
         let next = match logical_key(&event) {

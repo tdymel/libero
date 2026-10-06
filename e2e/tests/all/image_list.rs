@@ -14,7 +14,8 @@ fn it_meets_the_baseline() {
 }
 
 /// How far the focused element's ring reaches past any ancestor up to `root`
-/// that clips its overflow, in px, per clipped axis. Zero or less: the whole stripe shows.
+/// that clips its overflow, in px, per clipped axis. Zero or less: the whole stripe shows;
+/// zero when nothing clips.
 pub fn ring_clipped(root: &str) -> String {
     format!(
         "(() => {{ const el = document.activeElement; const s = getComputedStyle(el); \
@@ -25,7 +26,7 @@ pub fn ring_clipped(root: &str) -> String {
            const cs = getComputedStyle(clip); const c = clip.getBoundingClientRect(); \
            if (cs.overflowX !== 'visible') worst = Math.max(worst, c.left - (r.left - reach), (r.right + reach) - c.right); \
            if (cs.overflowY !== 'visible') worst = Math.max(worst, c.top - (r.top - reach), (r.bottom + reach) - c.bottom); }} \
-         return worst; }})()"
+         return isFinite(worst) ? worst : 0; }})()"
     )
 }
 
@@ -49,14 +50,30 @@ fn a_focused_link_cell_keeps_its_ring() {
             clipped <= 0.0,
             "the ring runs {clipped}px past the cell's clip"
         );
+        // Todo 2480: the picture covers the link's own inset shadows: the stripe is the overlay's.
+        let overlay: String = e2e::js(
+            page,
+            "getComputedStyle(document.activeElement, '::before').boxShadow",
+        )
+        .await;
+        assert!(
+            overlay.contains("inset"),
+            "no ring over the picture: {overlay}"
+        );
+        let z: String = e2e::js(
+            page,
+            "getComputedStyle(document.activeElement, '::before').zIndex",
+        )
+        .await;
+        assert_eq!(z, "2", "the overlay must paint over the bar");
         fixture.close().await.unwrap();
     });
 }
 
 const ZOOM: &str = "[role=list] button[aria-haspopup=dialog]";
 
-/// Todos 2425, 2426: the zoom button fills the clipped media box and the `<li>`,
-/// the `Below` bar's button sits at the cell's end.
+/// Todos 2425, 2426, 2481: the zoom button fills the clipped media box and the `<li>`,
+/// the `Below` bar's buttons sit at the cell's start and end.
 #[test]
 fn a_zoom_button_and_a_below_bar_button_keep_their_rings() {
     block_on(async {
@@ -64,7 +81,7 @@ fn a_zoom_button_and_a_below_bar_button_keep_their_rings() {
             .await
             .unwrap();
         let page = &fixture.page;
-        for target in [ZOOM, "#below-action"] {
+        for target in [ZOOM, "#below-start", "#below-action"] {
             keyboard::tab_to(page, target, 10).await.unwrap();
             let clipped: f64 = page
                 .evaluate(ring_clipped("[role=list]"))

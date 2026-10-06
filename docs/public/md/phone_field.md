@@ -126,6 +126,7 @@ The dropdown is portaled out of the field, so its parts take the
 | `Enter`, `Space` or `Down` | On the country picker: opens the list. |
 | `Letter` | Filters the open list. |
 | `Up` or `Down` | Move the highlight. |
+| `PageUp` or `PageDown` | Moves the highlight 10 rows, stopping at the first or last. |
 | `Enter` | Picks the highlighted country and returns focus to the picker. |
 | `Escape` | Closes the list and returns focus to the picker. |
 

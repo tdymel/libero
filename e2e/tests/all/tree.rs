@@ -563,3 +563,28 @@ fn a_disabled_row_shows_not_allowed_and_takes_no_focus() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 2465: one visible leaf row has nowhere to move, so the arrows and Home/End stay the page's.
+#[test]
+fn a_lone_row_leaves_the_keys_to_the_page() {
+    block_on(async {
+        let fixture = Fixture::open("/tree/lone", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, "[role=treeitem]", 10).await.unwrap();
+        crate::accordion::assert_keys_left_to_page(
+            page,
+            &[
+                keyboard::ARROW_DOWN,
+                keyboard::ARROW_UP,
+                keyboard::HOME,
+                keyboard::END,
+                keyboard::ARROW_LEFT,
+                keyboard::ARROW_RIGHT,
+            ],
+        )
+        .await;
+        fixture.close().await.unwrap();
+    });
+}

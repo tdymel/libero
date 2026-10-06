@@ -22,7 +22,22 @@ pub const ROUTES: Routes = &[
     ("/segmented-control/long", || rsx! { LongPage {} }),
     ("/segmented-control/form", || rsx! { FormPage {} }),
     ("/segmented-control/raw-form", || rsx! { RawFormPage {} }),
+    ("/segmented-control/lone", || rsx! { LonePage {} }),
 ];
+
+/// Todo 2465: one enabled segment, so the arrows are the page's.
+#[component]
+fn LonePage() -> Element {
+    rsx! {
+        SegmentedControl {
+            id: "lone",
+            label: "Alignment",
+            options: OptionList::from_options().disabling(|align| *align != Alignment::Center),
+            value: Alignment::Center,
+            onchange: |_| {},
+        }
+    }
+}
 
 /// Todo 660: a strip in a raw `<form>`, no libero `Form`, counting submits.
 #[component]

@@ -4,6 +4,7 @@
 mod accordion;
 mod action_icon;
 mod alert;
+mod aspect_ratio;
 mod audio;
 mod autocomplete;
 mod avatar;

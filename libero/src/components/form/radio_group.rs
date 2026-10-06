@@ -218,6 +218,10 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
                 Key::ArrowUp | Key::ArrowLeft => -1,
                 _ => return,
             };
+            // A lone enabled option has nowhere to go: the keys scroll the page (todo 2465).
+            if neighbour(&option_disabled, tab_stop, step) == Some(tab_stop) {
+                return;
+            }
             // Cancel the native move: one code path, the same on Blitz, and
             // read-only focus stays on the tab stop (todo 320).
             event.prevent_default();

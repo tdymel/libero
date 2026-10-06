@@ -476,3 +476,26 @@ fn a_long_strip_wraps_inside_a_phone() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 2465: one enabled segment has nowhere to move, so the arrows and Home/End stay the page's.
+#[test]
+fn a_lone_segment_leaves_the_arrows_to_the_page() {
+    block_on(async {
+        let fixture = Fixture::open("/segmented-control/lone", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, "#lone-segment-1", 10).await.unwrap();
+        crate::accordion::assert_keys_left_to_page(
+            page,
+            &[
+                keyboard::ARROW_DOWN,
+                keyboard::ARROW_UP,
+                keyboard::ARROW_RIGHT,
+                keyboard::ARROW_LEFT,
+            ],
+        )
+        .await;
+        fixture.close().await.unwrap();
+    });
+}

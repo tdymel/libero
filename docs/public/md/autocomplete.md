@@ -168,6 +168,7 @@ The dropdown is portaled out of the field, so its parts take the
 | `Alt+Down` | Opens the list without moving the highlight. |
 | `Up` or `Down` | Move the highlight. |
 | `Home` or `End` | Once a row is highlighted: move the highlight to the first or last row. Before that, they move the text caret. |
+| `PageUp` or `PageDown` | Open: moves the highlight 10 rows, stopping at the first or last. |
 | `Enter` | Picks the highlighted row. |
 | `Escape`, `Tab` or `Alt+Up` | Close the list. |
 

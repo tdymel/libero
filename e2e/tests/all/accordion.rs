@@ -156,31 +156,50 @@ fn a_lone_trigger_leaves_the_arrows_to_the_page() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(
-            "window.__prevented = []; \
-             window.addEventListener('keydown', e => { if (e.key !== 'Tab') window.__prevented.push(e.defaultPrevented) })",
-        )
-        .await
-        .unwrap();
         keyboard::tab_to(page, "#lone-trigger-0", 10).await.unwrap();
-        for key in [
-            keyboard::ARROW_DOWN,
-            keyboard::END,
-            keyboard::ARROW_UP,
-            keyboard::HOME,
-        ] {
-            keyboard::press(page, key).await.unwrap();
-        }
-        wait::for_js_true(page, "window.__prevented.length === 4", "the four keys")
-            .await
-            .unwrap();
-        let prevented: Vec<bool> = js(page, "window.__prevented").await;
-        assert_eq!(prevented, [false; 4], "a key was cancelled");
-        let focused: String = js(page, "document.activeElement.id").await;
-        assert_eq!(focused, "lone-trigger-0");
+        assert_keys_left_to_page(
+            page,
+            &[
+                keyboard::ARROW_DOWN,
+                keyboard::END,
+                keyboard::ARROW_UP,
+                keyboard::HOME,
+            ],
+        )
+        .await;
         fixture.console.assert_clean("a lone trigger").unwrap();
         fixture.close().await.unwrap();
     });
+}
+
+/// Presses `keys` on the focused element and asserts none was cancelled and focus
+/// stayed: a lone roving item leaves them to the page (todos 2432, 2465).
+pub(crate) async fn assert_keys_left_to_page(page: &Page, keys: &[keyboard::Key]) {
+    page.evaluate(
+        "window.__prevented = []; window.__focused = document.activeElement; \
+         window.addEventListener('keydown', e => window.__prevented.push(e.defaultPrevented))",
+    )
+    .await
+    .unwrap();
+    for key in keys {
+        keyboard::press(page, *key).await.unwrap();
+    }
+    let count = keys.len();
+    wait::for_js_true(
+        page,
+        &format!("window.__prevented.length === {count}"),
+        "the keys",
+    )
+    .await
+    .unwrap();
+    let prevented: Vec<bool> = js(page, "window.__prevented").await;
+    assert_eq!(
+        prevented,
+        vec![false; count],
+        "a key was cancelled: {keys:?}"
+    );
+    let stayed: bool = js(page, "document.activeElement === window.__focused").await;
+    assert!(stayed, "focus moved");
 }
 
 /// `true` once region `index`'s root is `visibility: hidden`, which takes the

@@ -137,8 +137,9 @@ fn under_rtl_the_vertical_rail_stays_under_the_markers() {
             off.iter().all(|px| *px < 2.0),
             "rail centre off the marker centre by {off:?}px"
         );
+        // The end side keeps only the ring's reach (todo 2464).
         assert!(
-            content.starts_with("0px /"),
+            content.starts_with("6px /"),
             "content padding (left / right): {content}"
         );
         fixture
@@ -556,6 +557,55 @@ fn the_step_list_takes_the_callers_name() {
             assert!(tree.starts_with(&format!("list \"{name}\"")), "{tree}");
         }
         fixture.console.assert_clean("named steppers").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2464: in a vertical step's clipped panel an unbreakable word wraps, a 600px child
+/// scrolls at 390px, and the first child's ring stays inside the clip.
+#[test]
+fn a_vertical_panel_keeps_wide_content_and_rings_usable() {
+    block_on(async {
+        let fixture = Fixture::open("/stepper-wide", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#wide-child").await.unwrap();
+        let widths: Vec<f64> = e2e::js(
+            page,
+            "(() => {
+                const panel = document.querySelector(\"#wide [data-slot='panel']\");
+                const word = document.querySelector('#word');
+                panel.scrollLeft = 1e4;
+                const scrolled = panel.scrollLeft;
+                panel.scrollLeft = 0;
+                return [document.documentElement.scrollWidth, innerWidth,
+                        word.scrollWidth, word.clientWidth, scrolled];
+            })()",
+        )
+        .await;
+        let [page_width, viewport, word, word_box, scrolled] = widths[..] else {
+            panic!("{widths:?}");
+        };
+        assert!(
+            page_width <= viewport,
+            "the page scrolls sideways: {widths:?}"
+        );
+        assert!(word <= word_box, "the word overflows: {widths:?}");
+        assert!(
+            scrolled > 0.0,
+            "the wide child cannot be scrolled to: {widths:?}"
+        );
+        keyboard::tab_to(page, "#first", 10).await.unwrap();
+        let clipped: f64 = e2e::js(page, &crate::image_list::ring_clipped("#wide")).await;
+        assert!(
+            clipped <= 0.0,
+            "the ring runs {clipped}px past the panel's clip"
+        );
+        fixture
+            .console
+            .assert_clean("a wide vertical panel")
+            .unwrap();
         fixture.close().await.unwrap();
     });
 }

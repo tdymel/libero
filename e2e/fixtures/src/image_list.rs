@@ -63,8 +63,8 @@ fn ImageListLinksPage() -> Element {
     }
 }
 
-/// Todos 2425, 2426: an unlinked zoomable picture, and a button flush with a
-/// `Below` bar's end, both in the clipped `<li>`.
+/// Todos 2425, 2426, 2481: an unlinked zoomable picture, and buttons flush with a
+/// `Below` bar's start and end.
 #[component]
 fn ImageListFocusPage() -> Element {
     rsx! {
@@ -76,6 +76,7 @@ fn ImageListFocusPage() -> Element {
                     ImageItem::new(rsx! { Image { src: PICTURE, alt: "A blue field", zoomable: true } }),
                     ImageItem::new(rsx! { Image { src: PICTURE, alt: "Another blue field" } })
                         .bar(ImageBar::new(rsx! {
+                            button { id: "below-start", "Pick" }
                             span { style: "flex: 1", "Caption" }
                             button { id: "below-action", "Act" }
                         }).position(BarPosition::Below)),

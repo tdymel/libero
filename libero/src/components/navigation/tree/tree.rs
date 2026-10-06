@@ -514,6 +514,16 @@ fn TreeCore(props: TreeCoreProps) -> Element {
         if navigation && has_shortcut_modifier(&event) {
             return;
         }
+        // A lone row has nowhere to go: the keys scroll the page (todo 2465).
+        let lone = order.len() == 1;
+        if lone
+            && matches!(
+                event.key(),
+                Key::ArrowDown | Key::ArrowUp | Key::Home | Key::End
+            )
+        {
+            return;
+        }
         match logical_key(&event) {
             Key::ArrowDown => {
                 event.prevent_default();
@@ -533,7 +543,9 @@ fn TreeCore(props: TreeCoreProps) -> Element {
             }
             key @ (Key::ArrowRight | Key::ArrowLeft) => {
                 let forward = key == Key::ArrowRight;
-                let Some(step) = horizontal(&order, node, is_expanded, forward) else {
+                let Some(step) = horizontal(&order, node, is_expanded, forward)
+                    .filter(|step| !lone || *step == Horizontal::Toggle)
+                else {
                     return;
                 };
                 event.prevent_default();

@@ -112,6 +112,7 @@ pub fn PhoneFieldPage() -> Element {
                 .key(["Enter", "Space", "Down"], "On the country picker: opens the list.")
                 .key(["Letter"], "Filters the open list.")
                 .key(["Up", "Down"], "Move the highlight.")
+                .key(["PageUp", "PageDown"], "Moves the highlight 10 rows, stopping at the first or last.")
                 .key(["Enter"], "Picks the highlighted country and returns focus to the picker.")
                 .key(["Escape"], "Closes the list and returns focus to the picker.")
                 .handles([

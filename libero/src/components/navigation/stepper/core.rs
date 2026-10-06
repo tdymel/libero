@@ -230,6 +230,11 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
     };
     let side = stacked(3);
 
+    let ring_pad = format!(
+        "max({}, {})",
+        STEPPER_CONTENT_PADDING.value(),
+        FOCUS_RING_HALO_SPREAD.value()
+    );
     // Marker, rail and content inset all measure from the item's inline-start edge.
     let vertical = sx()
         .selector(
@@ -249,14 +254,18 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
                     .selector("&:not(:last-of-type)::before", sx().left("auto")),
             ),
         )
-        // Through `Collapse`'s two boxes, so a nested stepper's panel keeps its own.
+        // Through `Collapse`'s two boxes, so a nested stepper's panel keeps its own. Inside its
+        // clip: the pads hold a child's ring, wide content wraps or scrolls (1.4.10, todo 2464).
         .selector(
             format!("& > ol > li > * > * > {}", slot(StepperPart::Panel)),
             sx().padding_left(rail.content_inset(&STEPPER_GAP.value()))
-                .padding_top(STEPPER_CONTENT_PADDING.value())
-                .padding_bottom(STEPPER_CONTENT_PADDING.value())
+                .padding_right(FOCUS_RING_HALO_SPREAD.value())
+                .padding_top(ring_pad.clone())
+                .padding_bottom(ring_pad)
+                .with("overflow-wrap", "anywhere")
+                .overflow_x("auto")
                 .rtl(
-                    sx().padding_left("0")
+                    sx().padding_left(FOCUS_RING_HALO_SPREAD.value())
                         .padding_right(rail.content_inset(&STEPPER_GAP.value())),
                 ),
         );

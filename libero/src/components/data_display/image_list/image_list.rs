@@ -173,7 +173,22 @@ static IMAGE_LIST_CELL_SX: StaticSx = StaticSx::new(|| {
         .grid_template_columns("minmax(0, 1fr)")
         .overflow("hidden")
         .border_radius(IMAGE_LIST_RADIUS.value())
+        // A `Below` bar's start-edge control lost its ring to this clip: the picture rounds
+        // itself instead, so the caption text stays flush (todo 2481).
+        .when(
+            BELOW_CELL_STATE,
+            sx().overflow("visible").selector(
+                "& > figure > [data-slot='media']",
+                sx().with(
+                    "border-radius",
+                    format!("{radius} {radius} 0 0", radius = IMAGE_LIST_RADIUS.value()),
+                ),
+            ),
+        )
 });
+
+/// A cell whose bar sits below the picture.
+const BELOW_CELL_STATE: &str = "bar-below";
 
 /// Always the cell's first row. An overlay bar shares it; a `Below` bar takes
 /// the implicit second one.
@@ -226,6 +241,16 @@ fn link_base() -> Sx {
         )
         // The link fills the clipped cell, so an outset ring is cut away (todo 618).
         .focus_visible(inset_ring())
+        // The picture paints over the link's inset shadows, so the stripe rides an overlay
+        // over the cell, the hit area's size, above the bar (todo 2480).
+        .selector(
+            "&:focus-visible::before",
+            ring_overlay_sx()
+                .content("\"\"")
+                .z_index("2")
+                .border_radius(IMAGE_LIST_RADIUS.value())
+                .and(inset_ring()),
+        )
 }
 
 fn inset_ring() -> Sx {
@@ -264,7 +289,7 @@ static IMAGE_LIST_BAR_SX: StaticSx = StaticSx::new(|| {
         )
         .when(BarPosition::Top.state_name(), overlay.align_self("start"))
         // The implicit second row, on the page's background, the text flush with the
-        // picture. The end and bottom keep a control's ring inside the cell's clip (todo 2426).
+        // picture. The end and bottom keep a control's ring inside the cell's box (todo 2426).
         .when(
             BarPosition::Below.state_name(),
             sx().grid_row("2")
@@ -394,9 +419,7 @@ pub fn ImageList(props: ImageListProps) -> Element {
         )
         .into();
     let base_ratio = ratio.unwrap_or(theme.aspect_ratio.ratio);
-    let cell_states: Input<States> = States::default()
-        .with(radius.radius_state_name(), true)
-        .into();
+    let cell_states = States::default().with(radius.radius_state_name(), true);
 
     // Prepared once, above the loop (`use_box` is a hook), and cloned per cell.
     let media_style = use_box()
@@ -433,6 +456,10 @@ pub fn ImageList(props: ImageListProps) -> Element {
                 .render(HtmlTag::Div, Vec::new(), item.content.clone()),
         };
 
+        let below = item
+            .bar
+            .as_ref()
+            .is_some_and(|bar| bar.position.unwrap_or(defaults.bar_position) == BarPosition::Below);
         let bar = item.bar.as_ref().map(|bar| {
             let position = bar.position.unwrap_or(defaults.bar_position);
             let scrim = scrim_state(position);
@@ -509,7 +536,7 @@ pub fn ImageList(props: ImageListProps) -> Element {
                 span,
                 rows,
                 sx: cell_sx,
-                states: cell_states.clone(),
+                states: cell_states.clone().with(BELOW_CELL_STATE, below),
                 "data-slot": ImageListPart::Item.slot(),
                 {content}
             }
@@ -655,6 +682,35 @@ mod tests {
         ] {
             assert!(css.contains(declaration), "{declaration}: {css}");
         }
+    }
+
+    /// Todo 2480: a focused link's stripe rides an overlay over its picture.
+    #[test]
+    fn a_focused_link_paints_its_ring_over_the_picture() {
+        let sheet = crate::css::Stylesheet::from(&IMAGE_LIST_MEDIA_LINK_SX);
+        let css = sheet.as_str();
+        let overlay = css
+            .split(":focus-visible::before{")
+            .nth(1)
+            .and_then(|rule| rule.split('}').next())
+            .unwrap_or_else(|| panic!("no overlay: {css}"));
+        for declaration in ["z-index:2;", "position:absolute;", "box-shadow:inset"] {
+            assert!(overlay.contains(declaration), "{declaration}: {overlay}");
+        }
+    }
+
+    /// Todo 2481: a `Below` cell clips its picture, not the bar, so a start-edge ring shows.
+    #[test]
+    fn a_below_cell_rounds_its_picture_instead_of_clipping_the_bar() {
+        let sheet = crate::css::Stylesheet::from(&IMAGE_LIST_CELL_SX);
+        let css = sheet.as_str();
+        assert!(css.contains("overflow:visible;"), "{css}");
+        assert!(
+            css.contains(
+                "border-radius:var(--lsx-image-list-radius) var(--lsx-image-list-radius) 0 0;"
+            ),
+            "{css}"
+        );
     }
 
     /// A row of `cols` cells fills the zone exactly.

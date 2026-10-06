@@ -589,3 +589,28 @@ fn menu_parts_style_the_portaled_menus() {
         console.unwrap();
     });
 }
+
+/// Todo 2465: one trigger has nowhere to move, so the arrows and Home/End stay the page's.
+#[test]
+fn a_lone_trigger_leaves_the_keys_to_the_page() {
+    block_on(async {
+        let fixture = Fixture::open("/menubar-parts", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, "[data-menubar-index=\"0\"]", 10)
+            .await
+            .unwrap();
+        crate::accordion::assert_keys_left_to_page(
+            page,
+            &[
+                keyboard::ARROW_RIGHT,
+                keyboard::ARROW_LEFT,
+                keyboard::HOME,
+                keyboard::END,
+            ],
+        )
+        .await;
+        fixture.close().await.unwrap();
+    });
+}
