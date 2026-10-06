@@ -258,3 +258,45 @@ async fn revealed(page: &Page, kind: &str, pressed: &str) -> Result<()> {
     )
     .await
 }
+
+/// Todo 2438: a field's input and the dropdown search boxes take the page's
+/// typeface and letter spacing, which a UA sheet resets on `<input>`.
+#[test]
+fn text_inputs_take_the_page_font() {
+    const SEARCH: &str = "input[role=combobox]";
+    block_on(async {
+        e2e::browser::at_once(
+            [
+                "/text-field",
+                "/pin-field",
+                "/select/field",
+                "/cascader/search",
+                "/phone-field",
+                "/spotlight",
+            ],
+            async |route| {
+                let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+                let page = &fixture.page;
+                let (opener, input) = match route {
+                    "/text-field" => (None, "input"),
+                    "/pin-field" => (None, "[data-pin-index='0']"),
+                    "/select/field" | "/cascader/search" => (Some("[role=combobox]"), SEARCH),
+                    "/phone-field" => (Some("button[aria-haspopup=listbox]"), SEARCH),
+                    _ => (
+                        Some("#open-spotlight"),
+                        "[role=dialog] input[role=combobox]",
+                    ),
+                };
+                if let Some(opener) = opener {
+                    e2e::passes::pointer::click(page, opener).await.unwrap();
+                    focus::wait_for_focus(page, input, "the opened search box")
+                        .await
+                        .unwrap();
+                }
+                crate::button::assert_takes_the_page_font(page, &[input]).await;
+                fixture.close().await.unwrap();
+            },
+        )
+        .await;
+    });
+}

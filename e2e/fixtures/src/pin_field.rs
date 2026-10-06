@@ -52,10 +52,12 @@ fn PinFieldWidePage() -> Element {
     }
 }
 
-/// The typed code echoed in `#echo`, for the shared web/native scenarios.
+/// The typed code echoed in `#echo` and its `oninput` calls counted in
+/// `#inputs`, for the shared web/native scenarios.
 #[component]
 fn PinFieldEchoPage() -> Element {
     let mut pin = use_signal(String::new);
+    let mut inputs = use_signal(|| 0);
 
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
@@ -63,9 +65,13 @@ fn PinFieldEchoPage() -> Element {
                 label: "Code",
                 length: 4usize,
                 value: pin(),
-                oninput: move |next: String| pin.set(next),
+                oninput: move |next: String| {
+                    pin.set(next);
+                    inputs += 1;
+                },
             }
             Text { id: "echo", "{pin}" }
+            Text { id: "inputs", "{inputs}" }
         }
     }
 }

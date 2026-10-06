@@ -381,26 +381,53 @@ impl PinEdit {
     /// What arrived in one cell's `oninput`: a paste, or a character a soft
     /// keyboard typed without naming its key.
     fn typed(&self, index: usize, raw: String) {
-        let mut accepted: Vec<char> = raw.chars().filter(|c| self.kind.accepts(*c)).collect();
+        let mut raw: Vec<char> = raw.chars().collect();
+        let emptied = raw.is_empty();
         // The cell's old character sits on whichever side the caret was not.
-        if accepted.len() > 1
+        // Out before the filter, so a rejected insertion does not keep it as new.
+        if raw.len() > 1
             && let Some(old) = self.cells[index]
         {
-            if accepted[0] == old {
-                accepted.remove(0);
-            } else if accepted.last() == Some(&old) {
-                accepted.pop();
+            if raw[0] == old {
+                raw.remove(0);
+            } else if raw.last() == Some(&old) {
+                raw.pop();
             }
         }
-        let at = self.landing(index);
+        let accepted: Vec<char> = raw.into_iter().filter(|c| self.kind.accepts(*c)).collect();
         let next = match accepted.len() {
             // The cell was emptied - Backspace handles its own focus.
-            0 if raw.is_empty() => self.edit(index, None),
-            // Every character was rejected. The key handler drops those
-            // before they land, so this is a paste of junk.
+            0 if emptied && self.cells[index].is_some() => self.edit(index, None),
+            // Every character was rejected, or an empty cell stayed empty.
             0 => self.cells.clone(),
-            1 => {
-                let next = self.edit(at, Some(accepted[0]));
+            _ => self.place(index, accepted),
+        };
+        // Dioxus writes the cell only if the edit changes it, so an unchanged
+        // cell would keep the raw text. Its final text, as a WebView's write lands late.
+        self.show(index, next[index]);
+    }
+
+    /// A paste, read from the clipboard rather than the cell: over a selected
+    /// character the cell's text cannot tell what was old (todo 2440).
+    fn pasted(&self, index: usize, event: ClipboardEvent) {
+        // No text on this platform: the browser inserts it and `typed` runs.
+        let Some(text) = event.data().data_transfer().get_as_text() else {
+            return;
+        };
+        event.prevent_default();
+        let accepted: Vec<char> = text.chars().filter(|c| self.kind.accepts(*c)).collect();
+        if !self.readonly && !accepted.is_empty() {
+            self.place(index, accepted);
+        }
+    }
+
+    /// Accepted characters for cell `index`, written from where they land,
+    /// with focus after the last.
+    fn place(&self, index: usize, accepted: Vec<char>) -> Vec<Option<char>> {
+        let at = self.landing(index);
+        match accepted.as_slice() {
+            [character] => {
+                let next = self.edit(at, Some(*character));
                 self.focus(at + 1);
                 next
             }
@@ -409,10 +436,7 @@ impl PinEdit {
                 self.focus(cursor);
                 next
             }
-        };
-        // Dioxus writes the cell only if the edit changes it, so an unchanged
-        // cell would keep the raw text. Its final text, as a WebView's write lands late.
-        self.show(index, next[index]);
+        }
     }
 
     /// One cell's keyboard: the moves, the two deletions, and the characters
@@ -444,7 +468,8 @@ impl PinEdit {
             // Native `readonly` does not stop a handler clearing a cell.
             Key::Delete => {
                 event.prevent_default();
-                if !readonly {
+                // An empty cell reports nothing: `oninput` would see an unchanged pin.
+                if self.cells[index].is_some() && !readonly {
                     self.edit(index, None);
                 }
             }
@@ -635,6 +660,7 @@ fn PinCell(
         *slot = Some(handle);
     }
     let typed = editor.clone();
+    let pasted = editor.clone();
     let keys = editor;
     let input = control
         .element(&handle)
@@ -662,6 +688,9 @@ fn PinCell(
         .attr("autofocus", autofocus)
         .event("oninput", move |event: FormEvent| {
             typed.current().typed(index, event.value())
+        })
+        .event("onpaste", move |event: ClipboardEvent| {
+            pasted.current().pasted(index, event)
         })
         .event("onkeydown", move |event: Event<KeyboardData>| {
             keys.current().keys(index, event)

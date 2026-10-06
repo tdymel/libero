@@ -21,6 +21,7 @@ pub(super) static CASCADER_SEARCH_SX: StaticSx = StaticSx::new(|| {
         .color("inherit")
         .font_family("inherit")
         .font_size("inherit")
+        .letter_spacing("inherit")
         .line_height("1.5")
         .padding("4px 8px")
         .border_bottom("1px solid")

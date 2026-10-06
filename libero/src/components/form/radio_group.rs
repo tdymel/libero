@@ -40,6 +40,12 @@ fn focus_option(root: &ElementHandle, index: usize) {
     let _ = root.query_selector(&selector).and_then(|el| el.focus());
 }
 
+/// The index of the option under focus; the radios render in index order.
+fn focused_option(root: &ElementHandle) -> Option<usize> {
+    let radios = root.query_selector_all("input[data-radio-index]").ok()?;
+    radios.iter().position(|radio| radio.is_focused())
+}
+
 field_parts_enum! {
     /// [`RadioGroup`]'s inner parts, for its `parts` prop: a field's, the
     /// group, and every option's circle and dot.
@@ -218,7 +224,10 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
             if readonly {
                 return;
             }
-            let Some(next) = neighbour(&option_disabled, tab_stop, step) else {
+            // From the focused option: a parent that applies the pick late
+            // leaves the tab stop behind (todo 2443).
+            let from = focused_option(&root).unwrap_or(tab_stop);
+            let Some(next) = neighbour(&option_disabled, from, step) else {
                 return;
             };
             pick.call(next);

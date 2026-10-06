@@ -10,6 +10,7 @@ pub const ROUTES: Routes = &[
     ("/radio-group/field", || rsx! { RadioGroupFieldPage {} }),
     ("/radio-group/echo", || rsx! { RadioGroupEchoPage {} }),
     ("/radio-group/empty", || rsx! { RadioGroupEmptyPage {} }),
+    ("/radio-group/ignored", || rsx! { RadioGroupIgnoredPage {} }),
     (
         "/radio-group/readonly",
         || rsx! { RadioGroupReadonlyPage {} },
@@ -109,6 +110,22 @@ fn RadioGroupFieldPage() -> Element {
                     options: OptionList::from_options().disabling(|plan| *plan == Plan::Team),
                     value: plan(),
                     onchange: move |next| plan.set(Some(next)),
+                }
+            }
+        }
+    }
+}
+
+/// A parent that never applies the pick, as one awaiting a confirmation does (todo 2443).
+#[component]
+fn RadioGroupIgnoredPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Between {
+                RadioGroup {
+                    label: "Plan",
+                    value: Some(Plan::Free),
+                    onchange: move |_: Plan| {},
                 }
             }
         }

@@ -121,6 +121,16 @@ const EXTRA_FIXTURES: &[(&str, &[&str])] = &[
         ],
     ),
     ("slider", &["range_slider"]),
+    (
+        "text_field",
+        &[
+            "cascader",
+            "phone_field",
+            "pin_field",
+            "select",
+            "spotlight",
+        ],
+    ),
     ("transition", &["collapse", "modal", "notifications"]),
     ("tree", &["chip"]),
     ("video", &["audio"]),

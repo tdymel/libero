@@ -29,6 +29,26 @@ fn a_click_at_the_hidden_input_lands_on_the_circle() {
     ));
 }
 
+/// Todo 2443: with a parent that ignores the pick, each arrow steps from the
+/// focused option, not from the checked one.
+async fn arrows_step_from_the_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let option = |index: usize| format!("{RADIOS}[data-radio-index=\"{index}\"]");
+    d.focus(&option(0)).await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually_focused(d, &option(1), "one Down").await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually_focused(d, &option(2), "two Downs").await?;
+    d.press(keyboard::ARROW_UP).await?;
+    eventually_focused(d, &option(1), "Up after two Downs").await
+}
+
+e2e::scenario!(
+    arrows_step_from_the_focused_option,
+    "/radio-group/ignored",
+    arrows_step_from_the_focus,
+    android: skip("the first Down leaves focus on option 0, on main too (dev88 todo)")
+);
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("radio_group", "/radio-group")

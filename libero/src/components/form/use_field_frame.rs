@@ -154,9 +154,10 @@ pub(crate) fn field_control_sx() -> Sx {
         .background("transparent")
         .padding("0")
         .color("inherit")
-        // An `<input>` inherits neither.
+        // An `<input>` inherits none of these.
         .font_family("inherit")
         .font_size("inherit")
+        .letter_spacing("inherit")
         // The frame's padding sets the height; the control adds line boxes only.
         .line_height("1.5")
         .selector("::placeholder", sx().color("text-dimmed"))

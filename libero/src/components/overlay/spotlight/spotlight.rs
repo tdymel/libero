@@ -66,6 +66,7 @@ static SPOTLIGHT_BODY_SX: StaticSx = StaticSx::new(|| {
             sx().width("100%")
                 .padding("12px")
                 .font("inherit")
+                .letter_spacing("inherit")
                 .font_size(SPOTLIGHT_SEARCH_FONT_SIZE.value())
                 .color("inherit")
                 .background("transparent")

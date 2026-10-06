@@ -160,6 +160,33 @@ e2e::scenario!(
     desktop: skip("1126: no text without a key (no IME path) under xdotool")
 );
 
+const DELETE: keyboard::Key = keyboard::Key {
+    key: "Delete",
+    code: "Delete",
+    vk: 46,
+    text: None,
+};
+
+/// Todo 2441: Delete in an empty cell changes nothing, so `oninput` stays quiet.
+async fn delete_in_an_empty_cell<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("[data-pin-index='0']").await?;
+    d.type_text("1").await?;
+    eventually_text(d, "#inputs", "1", "typing 1").await?;
+    d.focus("[data-pin-index='2']").await?;
+    d.press(DELETE).await?;
+    d.type_text("2").await?;
+    eventually_text(d, "#echo", "12", "2 typed after a Delete").await?;
+    let inputs = d.text("#inputs").await?;
+    anyhow::ensure!(inputs == "2", "oninput ran {inputs} times, not 2");
+    Ok(())
+}
+
+e2e::scenario!(
+    delete_in_an_empty_cell_reports_nothing,
+    "/pin-field/echo",
+    delete_in_an_empty_cell
+);
+
 /// Todo 507: every cell is named, so axe `label` holds.
 #[test]
 fn it_meets_the_baseline() {
@@ -329,6 +356,48 @@ fn a_paste_into_a_filled_cell_replaces_from_there() {
         focus_at(page, 1, 0).await;
         page.execute(InsertTextParams::new("56")).await.unwrap();
         expect_cells(page, "1|5|6|4 @3", "56 pasted before the 9").await;
+
+        fixture.console.assert_clean("pin field paste").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A clipboard paste of `text` over cell `index`'s selected character, as after a Tab.
+async fn paste_over_selection(page: &Page, index: usize, text: &str) {
+    page.evaluate(format!(
+        "(() => {{ const i = document.querySelectorAll('[role=group] input')[{index}]; \
+         i.focus(); i.select(); const data = new DataTransfer(); \
+         data.setData('text/plain', {text:?}); \
+         i.dispatchEvent(new ClipboardEvent('paste', \
+           {{ clipboardData: data, bubbles: true, cancelable: true }})); }})()"
+    ))
+    .await
+    .unwrap();
+}
+
+/// Todo 2440: a paste over a selected character writes the whole code, its
+/// first character included, and a paste of junk changes nothing.
+#[test]
+fn a_paste_over_a_selected_cell_writes_the_code() {
+    block_on(async {
+        let fixture = Fixture::open("/pin-field", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        focus_at(page, 0, 0).await;
+        keyboard::type_text(page, "1234").await.unwrap();
+        expect_cells(page, "1|2|3|4 @3", "1234 typed").await;
+
+        paste_over_selection(page, 0, "1256").await;
+        expect_cells(page, "1|2|5|6 @3", "1256 pasted over the 1").await;
+
+        paste_over_selection(page, 1, "x").await;
+        expect_cells(page, "1|2|5|6 @1", "x pasted over the 2").await;
+
+        // The same junk as text beside the digit, as a soft keyboard sends it.
+        focus_at(page, 0, 1).await;
+        page.execute(InsertTextParams::new("x")).await.unwrap();
+        expect_cells(page, "1|2|5|6 @0", "x inserted after the 1").await;
 
         fixture.console.assert_clean("pin field paste").unwrap();
         fixture.close().await.unwrap();
