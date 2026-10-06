@@ -294,8 +294,7 @@ async fn nested_target<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_nested_target_scrolls_into_view,
     "/tour/nested",
-    nested_target,
-    android: skip("API 34 WebView: neither scroller moves (dev64 handback)")
+    nested_target
 );
 
 /// The target growing with nothing scrolled or resized moves the hole (2223).

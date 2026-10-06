@@ -15,7 +15,7 @@ use crate::{
     hooks::{ElementHandle, use_element, use_focus_return, use_local_state},
     platform::{
         ElementApi, KeyChord, OBSERVE_ATTR, document, focus_first_of, key_taken, keyboard,
-        next_task, when_free,
+        next_task, when_free, when_laid_out,
     },
     sx::{StaticSx, sx},
 };
@@ -303,7 +303,9 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
             if *restore.peek() {
                 back.remember_focused();
             }
-            focus_first(&root, tag.as_deref());
+            // Blitz has no styles before layout, so a `display: none` target read as focusable (2370).
+            let tag = tag.clone();
+            when_laid_out(move || focus_first(&root, tag.as_deref()));
         })
         .event("onkeydown", move |event: Event<KeyboardData>| {
             // A nested trap below already moved focus for this press.

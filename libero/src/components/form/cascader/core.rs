@@ -255,6 +255,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         any_level,
         layout,
         trigger: trigger_element,
+        blurred,
     });
 
     let rows = CascaderRows {

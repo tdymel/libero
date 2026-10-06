@@ -33,6 +33,8 @@ pub(super) struct CascaderKeys {
     pub(super) any_level: bool,
     pub(super) layout: CascaderLayout,
     pub(super) trigger: ElementHandle,
+    /// `use_refocus_on_close`'s blur mark.
+    pub(super) blurred: Signal<bool>,
 }
 
 impl CascaderKeys {
@@ -73,8 +75,11 @@ impl CascaderKeys {
             }
             // The search box is portaled after the page: Tab moves on from the trigger (todo 2289).
             Key::Tab => {
+                // Marked blurred: Blitz moves focus without a blur, and the close would refocus the trigger (todo 2354).
                 if self.searchable {
                     let _ = self.trigger.focus();
+                    let mut blurred = self.blurred;
+                    blurred.set(true);
                 }
                 self.leave();
             }

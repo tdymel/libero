@@ -1081,6 +1081,8 @@ fn select_search_box(
         .event("onkeydown", move |event: KeyboardEvent| {
             if event.key() == Key::Tab {
                 let _ = trigger.focus();
+                // Blitz moves focus without a blur, and the close would refocus the trigger (todo 2354).
+                blurred.set(true);
             }
         })
         // Closes while searchable; the rows cancel `mousedown`, so a click inside never blurs.

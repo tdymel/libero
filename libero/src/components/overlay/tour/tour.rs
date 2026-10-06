@@ -710,11 +710,16 @@ fn TourCard(
     // the handle is the layer's, and may still hold the last step's positioner.
     let ready = centred || popover.placed();
     let focused = use_hook(|| Rc::new(Cell::new(None::<usize>)));
+    let targeted = step.target.is_some();
     use_effect(use_reactive!(|ready| {
         let token = positioner.mount_token();
         if ready && token.is_some() && focused.get() != token {
             focused.set(token);
             focus_card(&positioner);
+            // Chromium 113's focus stops a running smooth scroll midway (todo 2356): once more after it.
+            if targeted && let Some(mounted) = anchor.mounted() {
+                let _ = scroll_chain_into_view(&mounted, !prefers_reduced_motion());
+            }
         }
     }));
 
