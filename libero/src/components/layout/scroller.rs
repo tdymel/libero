@@ -262,8 +262,9 @@ static SCROLLER_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .border_width("0")
         .color("inherit")
         .cursor("pointer")
-        // `visibility` flips at the end of the fade out, at the start of the fade in.
-        .transition("opacity 150ms, visibility 150ms")
+        // `visibility` flips at once on the fade in, so a shown control takes the
+        // click on any clock (Blitz's stands still between frames, todo 2593).
+        .transition("opacity 150ms")
         .media(REDUCED_MOTION, sx().transition("none"))
         // The gradient is the button's own background: fade and hit target in one.
         .selector("& svg", sx().width("60%").height("60%").flex("none"))
@@ -298,7 +299,10 @@ static SCROLLER_CONTROL_SX: StaticSx = StaticSx::new(|| {
                 "&:not(:focus-visible)",
                 sx().opacity("0")
                     .visibility("hidden")
-                    .pointer_events("none"),
+                    .pointer_events("none")
+                    // and at the end of the fade out.
+                    .transition("opacity 150ms, visibility 0s 150ms")
+                    .media(REDUCED_MOTION, sx().transition("none")),
             ),
         )
         .focus_visible(inset_focus_ring_sx("-2px"))
@@ -786,9 +790,19 @@ mod tests {
         assert!(hidden.contains("opacity:0;"), "{css}");
         assert!(hidden.contains("visibility:hidden;"), "{css}");
         assert!(
-            css.contains("transition:opacity 150ms, visibility 150ms;"),
+            hidden.contains("transition:opacity 150ms, visibility 0s 150ms;"),
             "{css}"
         );
+    }
+
+    /// A shown control takes the click at once, even on Blitz's still clock (todo 2593).
+    #[test]
+    fn a_shown_control_turns_visible_without_a_transition() {
+        let css = Stylesheet::from(&SCROLLER_CONTROL_SX);
+        let css = css.as_str();
+        let (shown, _) = css.split_once(":not(:focus-visible)").unwrap();
+        assert!(shown.contains("transition:opacity 150ms;"), "{css}");
+        assert!(!shown.contains("visibility 150ms"), "{css}");
     }
 
     #[test]

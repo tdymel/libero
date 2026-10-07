@@ -167,9 +167,13 @@ fn the_header_filters_row_holds_under_the_header() {
     const AREA: &str = "[data-table-scroll]";
     const FILTER: &str = "thead td[data-filter-cell]";
     let mut page = mount(app);
-    // It sticks once the header is measured, a frame or so after mount.
-    page.wait_for(|page| page.exists("[data-state~=sticky-filters]"));
-    page.settle();
+    // It sticks once the header is measured, a frame or so after mount; until the
+    // sticky sync lands, Blitz's relative `top` holds it a header lower (todo 2593).
+    let under = |page: &Page| {
+        let (_, top, _, height) = page.rect("thead th");
+        (page.rect(FILTER).1 - (top + height)).abs() <= 1.0
+    };
+    page.wait_for(|page| page.exists("[data-state~=sticky-filters]") && under(page));
     let header = page.rect("thead th");
     let filter = page.rect(FILTER).1;
     let first_row = page.rect("tbody tr:first-child td").1;
