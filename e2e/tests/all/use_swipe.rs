@@ -250,5 +250,6 @@ e2e::scenario!(
     an_edge_swipe_wins_over_a_scrolled_inner_scroller,
     "/use-swipe/drawer",
     the_band_wins_over_a_scrolled_scroller,
+    native: skip("sets and reads scrollLeft by script; Blitz runs none"),
     desktop: skip("1126: no touch input under Xvfb")
 );
