@@ -8,7 +8,7 @@ use crate::{
     components::{
         accessibility::FocusTrap,
         common::{FOCUSABLE_SELECTOR, HtmlTag, Input, Variables, base_props, variables},
-        layout::{Box, use_box},
+        layout::use_box,
         overlay::Overlay,
     },
     context::ModalContext,
@@ -101,6 +101,8 @@ pub(crate) fn Modal(props: ModalProps) -> Element {
         });
     };
 
+    // Plain divs, not `Box`: a `Box` re-renders and counts against the perf budgets (2594).
+    let frame_class = use_css(Some(&MODAL_FRAME_SX), CssLayer::Framework);
     let hit_area_class = use_css(Some(&MODAL_HIT_AREA_SX), CssLayer::Framework);
     use_back(true, use_callback(move |()| close()));
 
@@ -165,7 +167,7 @@ pub(crate) fn Modal(props: ModalProps) -> Element {
                 {scroll_lock}
                 Overlay { z_index: 0 }
                 FocusTrap { sx: &MODAL_CONTENT_SX,
-                    Box { framework_sx: &MODAL_FRAME_SX,
+                    div { class: frame_class,
                         div { class: hit_area_class, onclick: move |_| close() }
                         {props.children}
                     }
