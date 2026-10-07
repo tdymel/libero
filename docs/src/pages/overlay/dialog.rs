@@ -63,7 +63,8 @@ pub fn DialogPage() -> Element {
                         .doc("Called by the close button outside a modal."),
                     prop("ondismiss", "Callback<Dismiss, bool>")
                         .default("all close, an alertdialog's backdrop does not")
-                        .doc("Inside a modal: asked before Escape, the backdrop or Back closes it. Return `false` to keep it open, such as a form with unsaved input. The close button and your own `close()` are not asked."),                    prop("close_label", "String").default("\"Close\"").doc("The close button's accessible name, such as \"Close cart\". Unset, the localization's `common.close`."),
+                        .doc("Inside a modal: asked before Escape, the backdrop or Back closes it. Return `false` to keep it open, such as a form with unsaved input. The close button and your own `close()` are not asked."),
+                    prop("close_label", "String").default("\"Close\"").doc("The close button's accessible name, such as \"Close cart\". Unset, the localization's `common.close`."),
                     prop("radius", "Size").default("md").doc("Corner radius from the radius scale. Other values go through `sx`."),
                     prop("size", "ThemeAwareValue")
                         .default("md")

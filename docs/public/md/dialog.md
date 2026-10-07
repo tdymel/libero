@@ -46,6 +46,7 @@ fn Demo() -> Element {
 | `title` | `String` | - | Heading, and the accessible name unless `aria_label` is set. |
 | `close_button` | `bool` | in a modal, or with `onclose` | Header close button. Inside a modal it closes the modal, outside one it calls `onclose`. |
 | `onclose` | `EventHandler<()>` | - | Called by the close button outside a modal. |
+| `ondismiss` | `Callback<Dismiss, bool>` | all close, an alertdialog's backdrop does not | Inside a modal: asked before Escape, the backdrop or Back closes it. Return `false` to keep it open, such as a form with unsaved input. The close button and your own `close()` are not asked. |
 | `close_label` | `String` | `"Close"` | The close button's accessible name, such as "Close cart". Unset, the localization's `common.close`. |
 | `radius` | `Size` | `md` | Corner radius from the radius scale. Other values go through `sx`. |
 | `size` | `ThemeAwareValue` | `md` | Caps the width from the dialog scale. `md` is 510px. |
@@ -73,18 +74,25 @@ explains how parts work.
 ### Libero handles
 
 - Outside a modal, a close button without `onclose` warns in debug builds.
+- `role: "alertdialog"`, as a spread attribute, makes it an alert dialog for a
+  message that needs an answer, such as a delete confirmation. It ignores a
+  click on the backdrop: a stray click is no answer (APG). Any other `role`
+  stays `dialog`.
 
 ### You must
 
 - Name it with `title` or `aria_label`.
+- Give an `alertdialog` an `aria_describedby` pointing at its message, so a
+  screen reader reads it on open.
 - Open it in a modal: the focus trap, Escape and backdrop dismissal come from
   the modal. A `Dialog` on its own has none of them.
 - Outside a modal, give a close button `onclose`, or it closes nothing.
 
 ### Example
 
-A confirm dialog, `Dialog { title: "Delete file?" }` inside a modal: the title
-names it, and the modal traps focus and closes it on Escape.
+A confirm dialog, `Dialog { title: "Delete file?", role: "alertdialog",
+aria_describedby: "delete-message" }` inside a modal: the title names it, the
+message describes it, and the modal traps focus and closes it on Escape.
 
 ## Theme defaults
 
