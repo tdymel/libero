@@ -100,11 +100,12 @@ jobs:
           cache-key: doc-tests
       - if: matrix.part == 'docs'
         run: cargo test -p docs
-      # `page_snippets` writes the gitignored `libero/tests/page_snippets.md` the doc-tests compile.
+      # `page_snippets` writes the gitignored `libero/tests/page_snippets.md` that every libero
+      # doc-test run compiles (`md_examples.rs`), so both libero legs need it first.
+      - if: matrix.part != 'docs'
+        run: cargo test -p docs page_snippets
       - if: matrix.part == 'libero-doc'
-        run: |
-          cargo test -p docs page_snippets
-          cargo test -p libero --doc
+        run: cargo test -p libero --doc
       - if: matrix.part == 'no-default'
         run: cargo test -p libero --no-default-features
 
