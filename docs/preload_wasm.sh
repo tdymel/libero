@@ -8,7 +8,7 @@
 # reads the real name out of the JS the built index.html points at.
 set -euo pipefail
 
-public="${1:?usage: preload_wasm.sh <public dir>}"
+public="${1:?usage: [BASE_PATH=<p>] preload_wasm.sh <public dir>}"
 index="$public/index.html"
 
 marker='<!-- LIBERO_WASM_PRELOAD -->'
@@ -22,7 +22,10 @@ grep -qF "$marker" "$index" || {
 
 # The <script type="module"> dx injected, and the wasm URL inside it.
 js_href=$(grep -oE '<script type="module"[^>]*src="[^"]+"' "$index" | grep -oE 'src="[^"]+"' | cut -d'"' -f2)
-js_file="$public/${js_href#/}"
+js_rel="${js_href#/}"
+# A `dx --base-path <p>` build prefixes the URLs with `/<p>/` but keeps the files at the root.
+[ -n "${BASE_PATH:-}" ] && js_rel="${js_rel#"${BASE_PATH#/}/"}"
+js_file="$public/$js_rel"
 js_file="${js_file//\/.\//\/}"
 
 wasm_href=$(grep -oE '"[^"]*docs_bg[^"]*\.wasm"' "$js_file" | tr -d '"' | grep '/' | head -1)

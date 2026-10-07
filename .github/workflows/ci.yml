@@ -1,5 +1,6 @@
 # The `ted_gate.py` tiers as parallel jobs. Zero warnings via clippy `-D warnings` per
 # configuration, not `RUSTFLAGS`, which also fails on warnings in the git-pinned dioxus and Blitz.
+# The slow tiers run sharded (2592); `ci` is the one required check.
 name: CI
 
 on:
@@ -23,31 +24,30 @@ env:
 
 jobs:
   fmt:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
       - run: cargo fmt --all --check
 
   clippy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
         with:
           components: clippy
           cache-key: clippy
       - run: cargo clippy --workspace --all-targets --exclude e2e -- -D warnings
-      # e2e with `native` (driver::Native, the scenarios' native arms) is the `native` job's.
       - run: cargo clippy -p e2e --all-targets -- -D warnings
 
-  # The libero configurations the gate does not build.
+  # The libero configurations the gate does not build, and e2e with `native`.
   features:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # `native` pulls Blitz's font stack (fontconfig, by pkg-config) and libero's `dbus` crate.
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libdbus-1-dev
       - uses: ./.github/actions/setup
@@ -58,11 +58,12 @@ jobs:
       - run: cargo clippy -p libero --all-targets --features full-polymorphism -- -D warnings
       - run: cargo clippy -p libero --all-targets --features native -- -D warnings
       - run: cargo clippy -p libero --all-targets --features "$CODE_LANGS" -- -D warnings
+      - run: cargo clippy -p e2e --features native --all-targets -- -D warnings
 
   wasm:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
         with:
           targets: wasm32-unknown-unknown
@@ -72,9 +73,9 @@ jobs:
       - run: cargo clippy -p docs --target wasm32-unknown-unknown -- -D warnings
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
         with:
           cache-key: test
@@ -82,66 +83,111 @@ jobs:
       - run: cargo test -p libero --lib --features "$CODE_LANGS" highlight
       # The harness's own unit tests (exact filters, console classifier, focus-ring maths): no browser.
       - run: cargo test -p e2e --lib --bins
+      # The two file checks of the browser suite, which the unit shards below never select.
+      - run: cargo test -p e2e --test all -- --exact every_test_file_is_registered every_ax_baseline_is_referenced
 
   doc-tests:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [docs, libero-doc, no-default]
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
         with:
+          # One cache for the three parts: the 10 GiB budget is shared with every other job.
           cache-key: doc-tests
-      # Writes the gitignored `libero/tests/page_snippets.md` the doc-tests compile.
-      - run: cargo test -p docs
-      - run: cargo test -p libero --doc
-      - run: cargo test -p libero --no-default-features
+      - if: matrix.part == 'docs'
+        run: cargo test -p docs
+      # `page_snippets` writes the gitignored `libero/tests/page_snippets.md` the doc-tests compile.
+      - if: matrix.part == 'libero-doc'
+        run: |
+          cargo test -p docs page_snippets
+          cargo test -p libero --doc
+      - if: matrix.part == 'no-default'
+        run: cargo test -p libero --no-default-features
 
   native:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    runs-on: ubuntu-24.04
+    env:
+      SHARDS: 3
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Blitz's font stack links fontconfig; libero's `dbus` crate needs libdbus.
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libdbus-1-dev fonts-dejavu-core xvfb
       - uses: ./.github/actions/setup
         with:
-          components: clippy
           cache-key: native
-      - run: cargo clippy -p e2e --features native --all-targets -- -D warnings
       # Both test binaries in one cargo run, so they build side by side (the gate's `native-build`).
       - run: cargo test -p e2e --features native --test native --test all --no-run
       # The Blitz-only tests: paint, stylo, Blitz's event order.
-      - run: cargo test -p e2e --features native --test native
-      # The shared e2e scenarios on the Blitz backend (822).
-      - run: xvfb-run -a -s "-screen 0 1280x800x24" cargo test -p e2e --features native --test all -- ::native
+      - if: matrix.shard == 1
+        run: cargo test -p e2e --features native --test native
+      # This shard's units of the shared e2e scenarios on the Blitz backend (822).
+      - run: |
+          args=$(cargo test -q -p e2e --features native --test all -- ::native --list \
+            | python3 .github/scripts/shard.py names ${{ matrix.shard }} "$SHARDS")
+          if [ -z "$args" ]; then echo "no native scenarios in shard ${{ matrix.shard }}"; exit 0; fi
+          # shellcheck disable=SC2086
+          xvfb-run -a -s "-screen 0 1280x800x24" cargo test -p e2e --features native --test all -- $args
 
   e2e:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ["1", "2", "3", "4", sweep]
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
+    env:
+      SHARDS: 4
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
         with:
           targets: wasm32-unknown-unknown
           cache-key: e2e
       - uses: ./.github/actions/dx
       # Pinned: the AX snapshots follow Chrome's tree. Bump it in the same commit as the
-      # re-blessed snapshots, see .agents/brain/codebase/testing/e2e-harness.md.
+      # re-blessed snapshots (brain: codebase/testing/e2e-harness).
       - id: chrome
-        uses: browser-actions/setup-chrome@v1
+        uses: browser-actions/setup-chrome@v2
         with:
           chrome-version: 152.0.7977.82
       - run: '"${{ steps.chrome.outputs.chrome-path }}" --version'
       # Ubuntu 24.04 blocks the unprivileged user namespaces Chrome's sandbox needs.
       - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-      - run: cargo run -p e2e
+      # `unit::` filters: the runner builds only those units' fixture modules.
+      - if: matrix.shard != 'sweep'
+        run: |
+          units=$(python3 .github/scripts/shard.py units ${{ matrix.shard }} "$SHARDS")
+          echo "units: $units"
+          # shellcheck disable=SC2086
+          cargo run -p e2e -- $units
         env:
           CHROME: ${{ steps.chrome.outputs.chrome-path }}
       # The docs behaviour tests in e2e/tests/sweep.rs no other run reaches (1708).
-      - run: cargo run -p e2e -- sweep a_route_change the_landing a_combobox
+      - if: matrix.shard == 'sweep'
+        run: cargo run -p e2e -- sweep a_route_change the_landing a_combobox
         env:
           CHROME: ${{ steps.chrome.outputs.chrome-path }}
       - if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: e2e-artifacts
+          name: e2e-artifacts-${{ matrix.shard }}
           path: /tmp/e2e-artifacts
           if-no-files-found: ignore
+
+  # The one required check: green only when every job above is.
+  ci:
+    if: always()
+    needs: [fmt, clippy, features, wasm, test, doc-tests, native, e2e]
+    runs-on: ubuntu-24.04
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
+      - run: echo "all CI jobs green"

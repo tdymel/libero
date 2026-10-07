@@ -1,0 +1,61 @@
+# Publishes the docs site to GitHub Pages. Independent of CI: whenever the docs build, they
+# go out, red tests or not. Needs Settings > Pages > Source: "GitHub Actions".
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deployment at a time; a newer push waits instead of cancelling one mid-deploy.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      # Served at https://<owner>.github.io/<repo>/.
+      BASE_PATH: ${{ github.event.repository.name }}
+      PUBLIC: target/dx/docs/release/web/public
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          targets: wasm32-unknown-unknown
+          cache-key: pages
+      - uses: ./.github/actions/dx
+      - working-directory: docs
+        run: dx build --platform web --release --debug-symbols=false --base-path "$BASE_PATH"
+      - run: |
+          docs/preload_wasm.sh "$PUBLIC"
+          # Pages has no SPA rewrite: a deep link lands on 404.html, which boots the app on its route.
+          cp "$PUBLIC/index.html" "$PUBLIC/404.html"
+          # Pages compresses on its own and never serves the `.br` siblings `pre_compress` writes.
+          find "$PUBLIC" -name '*.br' -delete
+          touch "$PUBLIC/.nojekyll"
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: target/dx/docs/release/web/public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

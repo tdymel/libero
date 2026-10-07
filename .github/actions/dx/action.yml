@@ -20,7 +20,7 @@ runs:
           *) echo "no dioxus source in Cargo.lock: '$src'" >&2; exit 1 ;;
         esac
     - id: dx-cache
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         # `dx.exe` on Windows.
         path: |
