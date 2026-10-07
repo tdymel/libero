@@ -1,4 +1,4 @@
-use dioxus::prelude::*;
+use dioxus::{dioxus_core::AttributeValue, prelude::*};
 use pictogram_icons_lucide as lucide;
 
 use crate::{
@@ -11,7 +11,7 @@ use crate::{
         layout::{Box, paper_sx, use_box},
         typography::Title,
     },
-    context::{IconSlot, ModalContext},
+    context::{Dismiss, IconSlot, ModalContext},
     hooks::{current_localization, use_id},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CssVar, DIALOG_SIZE, PAPER_RADIUS, Size, SizeCss},
@@ -90,6 +90,10 @@ base_props! {
         /// The close button outside a modal; inside one it closes the modal.
         #[props(default)]
         onclose: Option<EventHandler<()>>,
+        /// Inside a modal: whether Escape, the backdrop or Back may close it; `false`
+        /// keeps it open. Unset, all three close, but an `alertdialog` ignores the backdrop.
+        #[props(default)]
+        ondismiss: Option<Callback<Dismiss, bool>>,
         /// The close button's accessible name, e.g. "Close cart".
         #[props(default, into)]
         close_label: Option<String>,
@@ -117,6 +121,30 @@ base_props! {
 ///         Dialog { title: "Tip", onclose: move |_| open.set(false), "Drag to reorder." }
 ///     }
 /// }
+/// # }
+/// ```
+///
+/// A confirmation is an `alertdialog`, described by its message; the backdrop
+/// does not close it. `ondismiss` keeps a form with unsaved input open:
+///
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Button, Dialog, Text};
+/// # use libero::hooks::{ModalScope, use_modal};
+/// # fn app() -> Element {
+/// let confirm = use_modal(|s: ModalScope<(), bool>| rsx! {
+///     Dialog { title: "Delete file?", role: "alertdialog", aria_describedby: "delete-message",
+///         Text { id: "delete-message", "notes.md goes for good." }
+///         Button { onclick: move |_| s.resolve(true), "Delete" }
+///     }
+/// });
+/// let mut draft = use_signal(String::new);
+/// let note = use_modal(move |_: ModalScope<()>| rsx! {
+///     Dialog { title: "New note", ondismiss: move |_| draft.read().is_empty(),
+///         textarea { aria_label: "Note", oninput: move |e| draft.set(e.value()) }
+///     }
+/// });
+/// # rsx! {}
 /// # }
 /// ```
 ///
@@ -153,13 +181,40 @@ pub fn Dialog(props: DialogProps) -> Element {
         (None, Some(onclose)) => onclose.call(()),
         (None, None) => {}
     });
+    // A spread `role: "alertdialog"` survives; any other role gives way to `dialog`.
+    let alert = props.attributes.iter().any(|attribute| {
+        attribute.name == "role"
+            && matches!(&attribute.value, AttributeValue::Text(role) if role.trim() == "alertdialog")
+    });
+    let ondismiss = props.ondismiss;
+    let guard = use_callback(move |reason: Dismiss| match ondismiss {
+        Some(ondismiss) => ondismiss.call(reason),
+        // APG: an alert dialog expects an answer, so a stray click does not count as one.
+        None => !(alert && reason == Dismiss::Backdrop),
+    });
+    let slot = modal.and_then(|modal| modal.dismiss_guard);
+    use_hook(move || {
+        if let Some(mut slot) = slot {
+            slot.set(Some(guard));
+        }
+    });
+    use_drop(move || {
+        if let Some(mut slot) = slot
+            && let Ok(mut slot) = slot.try_write()
+            && *slot == Some(guard)
+        {
+            *slot = None;
+        }
+    });
     let variables: Input<Variables> = dialog_variables(&props)
         .merge(props.variables.unwrap_or_default())
         .into();
 
     // Pushed after the caller's, to win a duplicate name.
     let mut attributes = props.attributes;
-    attributes.push(attr("role", "dialog"));
+    if !alert {
+        attributes.push(attr("role", "dialog"));
+    }
     if is_modal {
         attributes.push(attr("aria-modal", "true"));
         // Focusable by script and by a click on its text, so focus and the
@@ -276,5 +331,25 @@ mod tests {
         assert!(!html.contains("aria-label=\" \""), "{html}");
         assert_eq!(html.matches("<h2").count(), 1, "{html}");
         assert!(html.contains("aria-label=\"Notes\""), "{html}");
+    }
+
+    /// Todo 2564: a spread `alertdialog` survives, any other role gives way.
+    #[test]
+    fn only_alertdialog_overrides_the_role() {
+        fn app() -> Element {
+            rsx! {
+                crate::LiberoProvider {
+                    Dialog { title: "Delete?", role: "alertdialog", "one" }
+                    Dialog { title: "Notes", role: "region", "two" }
+                }
+            }
+        }
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+
+        assert_eq!(html.matches("role=\"alertdialog\"").count(), 1, "{html}");
+        // The last of a duplicate name wins in the DOM.
+        assert!(html.contains("role=\"region\" role=\"dialog\""), "{html}");
     }
 }

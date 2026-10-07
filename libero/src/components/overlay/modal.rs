@@ -11,7 +11,7 @@ use crate::{
         layout::use_box,
         overlay::Overlay,
     },
-    context::ModalContext,
+    context::{Dismiss, ModalContext},
     hooks::{escape_closes, use_back, use_css, use_dismiss_layer, use_element, use_scroll_lock},
     platform::{ElementApi, KeyChord, key_taken, keyboard},
     sx::{StaticSx, sx},
@@ -46,7 +46,10 @@ static MODAL_FRAME_SX: StaticSx = StaticSx::new(|| {
         .min_height("100%")
         .padding("md")
         .pointer_events("none")
-        .selector("& > [role='dialog']", sx().margin("auto"))
+        .selector(
+            "& > :is([role='dialog'], [role='alertdialog'])",
+            sx().margin("auto"),
+        )
 });
 
 // The backdrop click target, behind the content: inside the scroller, so the wheel over
@@ -67,7 +70,8 @@ base_props! {
 }
 
 /// A focus-trapped, dimmed, scroll-locking layer. Crate-only: `use_modal` adds
-/// focus return. Escape and backdrop only request a close via `onclose`.
+/// focus return. Escape, backdrop and Back request a close via `onclose`,
+/// unless the inner `Dialog`'s `ondismiss` refuses it.
 #[component]
 pub(crate) fn Modal(props: ModalProps) -> Element {
     // Through `use_callback`: the context is provided once, and the raw prop
@@ -78,8 +82,10 @@ pub(crate) fn Modal(props: ModalProps) -> Element {
             onclose.call(());
         }
     });
+    let dismiss_guard = use_hook(|| CopyValue::new(None::<Callback<Dismiss, bool>>));
     use_context_provider(|| ModalContext {
         onclose: Some(onclose),
+        dismiss_guard: Some(dismiss_guard),
     });
 
     let z_index = use_modal_z_index();
@@ -95,7 +101,12 @@ pub(crate) fn Modal(props: ModalProps) -> Element {
 
     // Deferred: closing synchronously mid-bubble re-enters the same
     // `EventHandler` and panics with `AlreadyBorrowedMut`.
-    let close = move || {
+    // The inner `Dialog`'s `ondismiss` may keep it open.
+    let close = move |reason: Dismiss| {
+        let guard = *dismiss_guard.peek();
+        if guard.is_some_and(|guard| !guard.call(reason)) {
+            return;
+        }
         spawn(async move {
             onclose.call(());
         });
@@ -104,7 +115,7 @@ pub(crate) fn Modal(props: ModalProps) -> Element {
     // Plain divs, not `Box`: a `Box` re-renders and counts against the perf budgets (2594).
     let frame_class = use_css(Some(&MODAL_FRAME_SX), CssLayer::Framework);
     let hit_area_class = use_css(Some(&MODAL_HIT_AREA_SX), CssLayer::Framework);
-    use_back(true, use_callback(move |()| close()));
+    use_back(true, use_callback(move |()| close(Dismiss::Back)));
 
     // Escape from outside the dialog: the focused control was removed and focus
     // fell to `<body>` (todo 1304). Recorded only; the effect closes.
@@ -127,7 +138,7 @@ pub(crate) fn Modal(props: ModalProps) -> Element {
     use_effect(move || {
         let tick = stray_escape();
         if tick != seen.replace(tick) {
-            close();
+            close(Dismiss::Escape);
         }
     });
 
@@ -149,7 +160,7 @@ pub(crate) fn Modal(props: ModalProps) -> Element {
             // Only the top layer answers. `escape_closes` also skips a press a popover
             // or field dropdown already took (default prevented), and held repeats.
             if escape_closes(&event) && layer.is_top() {
-                close();
+                close(Dismiss::Escape);
             }
             // A Tab the trap left alone found nothing to focus: stay put rather than
             // walk out to the page behind. A WebView queries nothing, so Tab stays native.
@@ -168,7 +179,7 @@ pub(crate) fn Modal(props: ModalProps) -> Element {
                 Overlay { z_index: 0 }
                 FocusTrap { sx: &MODAL_CONTENT_SX,
                     div { class: frame_class,
-                        div { class: hit_area_class, onclick: move |_| close() }
+                        div { class: hit_area_class, onclick: move |_| close(Dismiss::Backdrop) }
                         {props.children}
                     }
                 }

@@ -79,7 +79,12 @@ static PAGINATION_CONTROL_SX: StaticSx = StaticSx::new(|| {
                 .focus_visible(focus_ring_sx()),
         )
         .when("disabled", sx().opacity("0.5").cursor("default"))
-        // Page buttons have no `disabled` state; a disabled `Fieldset` disables them (todo 514).
+        // Page buttons have no `disabled` state: `disabled` soft-disables them (todo 2418).
+        .selector(
+            "&[aria-disabled='true']",
+            sx().opacity("0.5").cursor("default"),
+        )
+        // A disabled `Fieldset` disables them natively (todo 514).
         .selector("&:disabled", sx().opacity("0.5").cursor("default"))
         // The row runs right to left, so the arrows point the other way.
         .rtl(sx().selector("& svg", sx().transform("scaleX(-1)")))
@@ -131,7 +136,7 @@ base_props! {
         /// Fill of the current page.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        /// Disables every control at once.
+        /// Disables every control at once, as `aria-disabled`: focus stays where it is.
         #[props(default)]
         disabled: Option<bool>,
         /// Previous and next. On by default.
@@ -303,6 +308,8 @@ pub fn Pagination(props: PaginationProps) -> Element {
                     size,
                     radius,
                     disabled: disabled || at_end,
+                    // An end arrow stays natively disabled; the focus repair covers it.
+                    focusable: disabled,
                     onarrow,
                 }
             }
@@ -394,6 +401,7 @@ fn PaginationArrow(
     size: Size,
     radius: Size,
     disabled: bool,
+    focusable: bool,
     onarrow: Callback<PaginationLabel>,
 ) -> Element {
     let (slot, icon) = match label {
@@ -415,6 +423,7 @@ fn PaginationArrow(
             size: PAGINATION_CONTROL_SIZE.value(size),
             radius: SizeCss::RADIUS.value(radius),
             disabled,
+            focusable_when_disabled: focusable,
             onclick: move |_| {
                 if !disabled {
                     onarrow.call(label)
@@ -465,7 +474,8 @@ fn page_button(
         .attr("type", "button")
         .attr("aria-label", label)
         .attr("aria-current", current.then_some("page"))
-        .attr("disabled", disabled)
+        // Soft: a native `disabled` would drop the focused button's focus to the page.
+        .attr("aria-disabled", disabled.then_some("true"))
         .event("onclick", move |_: Event<MouseData>| {
             // The current page is no change: no `onchange`, like Select's same-value pick.
             if !disabled && !current {

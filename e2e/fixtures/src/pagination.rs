@@ -46,12 +46,20 @@ fn PaginationRejectingPage() -> Element {
     }
 }
 
-/// Disabled by its prop and by a `Fieldset`, one page, and the smallest size.
+/// Disabled by its prop and by a `Fieldset`, one page, the smallest size, and a
+/// `disabled` that `#flip` toggles (todo 2418).
 #[component]
 fn PaginationStatesPage() -> Element {
     let mut page = use_signal(|| 20u32);
+    let mut flip_page = use_signal(|| 2u32);
+    let mut off = use_signal(|| false);
     rsx! {
         Flex { direction: "column", gap: "md",
+            Pagination { id: "pg-flip", total: 10, page: flip_page(), aria_label: "Flipped",
+                disabled: off(), onchange: move |next| flip_page.set(next),
+            }
+            button { id: "flip", onclick: move |_| off.toggle(), "Toggle disabled" }
+            span { id: "flip-page", "data-page": "{flip_page}" }
             Pagination { id: "pg-disabled", total: 10, page: 5, aria_label: "Disabled",
                 with_edges: true, disabled: true, onchange: move |_| {},
             }

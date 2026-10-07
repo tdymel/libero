@@ -3,6 +3,7 @@
 use dioxus::prelude::*;
 use libero::{
     components::{Button, Dialog, Flex, Menu, MenuItem, Text, use_menu},
+    context::Dismiss,
     hooks::{ModalScope, use_modal},
 };
 
@@ -18,7 +19,56 @@ pub const ROUTES: Routes = &[
     ("/modal/last-removing", || rsx! { LastRemovingModalPage {} }),
     ("/modal/scrollbar", || rsx! { ScrollbarModalPage {} }),
     ("/modal/owner", || rsx! { OwnerModalPage {} }),
+    ("/modal/guarded", || rsx! { GuardedModalPage {} }),
 ];
+
+/// An `alertdialog` ignores the backdrop (2564); a draft refuses every dismissal (2563).
+#[component]
+fn GuardedModalPage() -> Element {
+    let mut pings = use_signal(|| 0_u32);
+    let mut dirty = use_signal(|| false);
+    let mut reasons = use_signal(Vec::<String>::new);
+    let confirm = use_modal(move |s: ModalScope<()>| {
+        rsx! {
+            Dialog { title: "Delete file?", role: "alertdialog", aria_describedby: "confirm-text",
+                Text { id: "confirm-text", "notes.md goes for good." }
+                Button { id: "ping", variant: "text", onclick: move |_| pings += 1, "Ping" }
+                Button { id: "delete", onclick: move |_| s.close(), "Delete" }
+            }
+        }
+    });
+    let draft = use_modal(move |_: ModalScope<()>| {
+        rsx! {
+            Dialog {
+                title: "New note",
+                ondismiss: move |reason: Dismiss| {
+                    reasons.push(format!("{reason:?}"));
+                    !dirty()
+                },
+                Button { id: "dirty", onclick: move |_| dirty.toggle(), "Toggle draft" }
+            }
+        }
+    });
+
+    rsx! {
+        Button {
+            id: "open-alert",
+            onclick: move |_| {
+                confirm.open();
+            },
+            "Delete"
+        }
+        Button {
+            id: "open-draft",
+            onclick: move |_| {
+                draft.open();
+            },
+            "New note"
+        }
+        div { id: "pings", "{pings}" }
+        div { id: "reasons", {reasons.read().join(",")} }
+    }
+}
 
 /// A dialog whose only control removes itself: focus falls to `<body>` (todo 1304).
 #[component]

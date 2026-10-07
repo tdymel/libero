@@ -174,13 +174,13 @@ fn a_rejected_press_owes_no_focus_once_focus_leaves() {
     });
 }
 
-/// `[id, :disabled, opacity, cursor]` of every button in the nav `id`.
+/// `[:disabled, aria-disabled, opacity, cursor, name]` of every button in the nav `id`.
 async fn looks(page: &Page, id: &str) -> Vec<String> {
     page.evaluate(format!(
         "[...document.querySelectorAll('#{id} button')].map((b) => {{ \
          const s = getComputedStyle(b); \
-         return `${{b.textContent || b.getAttribute('aria-label')}} ${{b.matches(':disabled')}} \
-         ${{s.opacity}} ${{s.cursor}}`; }})"
+         return `${{b.matches(':disabled')}} ${{b.getAttribute('aria-disabled') === 'true'}} \
+         ${{s.opacity}} ${{s.cursor}} ${{b.textContent || b.getAttribute('aria-label')}}`; }})"
     ))
     .await
     .unwrap()
@@ -190,21 +190,80 @@ async fn looks(page: &Page, id: &str) -> Vec<String> {
 
 /// The page buttons carry no `disabled` state, so `disabled: true` dimmed only
 /// the arrows; a disabled `Fieldset` dimmed nothing but the arrows (todo 514).
+/// The prop soft-disables, so every control stays focusable (todo 2418).
 #[test]
 fn every_control_of_a_disabled_pagination_looks_disabled() {
     block_on(async {
         let fixture = Fixture::open("/pagination/states", Viewport::Desktop)
             .await
             .unwrap();
-        for id in ["pg-disabled", "pg-fieldset"] {
+        // The prop: focusable and `aria-disabled`. The `Fieldset`: native, either way.
+        for (id, focusable) in [("pg-disabled", true), ("pg-fieldset", false)] {
             let looks = looks(&fixture.page, id).await;
             assert_eq!(looks.len(), 9, "{id}: {looks:?}");
             let enabled: Vec<_> = looks
                 .iter()
-                .filter(|look| !look.ends_with(" true 0.5 default"))
+                .filter(|look| match focusable {
+                    true => !look.starts_with("false true 0.5 default "),
+                    false => !look.starts_with("true ") || !look.contains(" 0.5 default "),
+                })
                 .collect();
             assert!(enabled.is_empty(), "{id} looks enabled: {enabled:?}");
         }
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2418: `disabled` set while a page button holds focus kept it there, and
+/// the button works again once `disabled` is off.
+#[test]
+fn disabling_keeps_focus_on_the_page_button() {
+    const PAGE_3: &str = "#pg-flip [aria-label=\"Go to page 3\"]";
+    block_on(async {
+        let fixture = Fixture::open("/pagination/states", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let flip = "document.querySelector('#flip').click()";
+        page.evaluate(format!("document.querySelector('{PAGE_3}').focus()"))
+            .await
+            .unwrap();
+        page.evaluate(flip).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.activeElement === document.querySelector('{PAGE_3}') \
+                 && document.activeElement.getAttribute('aria-disabled') === 'true'"
+            ),
+            "focus kept on the soft-disabled page 3",
+        )
+        .await
+        .unwrap();
+        // Ignored while disabled: the re-enabled press below is the first change.
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        page.evaluate(flip).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("!document.querySelector('{PAGE_3}').hasAttribute('aria-disabled')"),
+            "page 3 enabled again",
+        )
+        .await
+        .unwrap();
+        let unchanged: String = page
+            .evaluate("document.querySelector('#flip-page').dataset.page")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(unchanged, "2", "a disabled page button changed the page");
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#flip-page').dataset.page === '3'",
+            "page 3 after re-enabling",
+        )
+        .await
+        .unwrap();
         fixture.close().await.unwrap();
     });
 }

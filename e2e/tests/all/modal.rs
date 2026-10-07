@@ -141,6 +141,73 @@ e2e::scenario!(
     modal_takes_focus
 );
 
+const ALERT: &str = "[role=alertdialog]";
+
+/// Todo 2564: an `alertdialog` keeps its role and description and ignores the
+/// backdrop; Escape still closes it. The ping lands after the backdrop click's close would.
+async fn alert_ignores_the_backdrop<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#open-alert").await?;
+    eventually(d, "the alert dialog to open", async |d| {
+        d.exists(ALERT).await
+    })
+    .await?;
+    ensure!(
+        d.attr(ALERT, "aria-describedby").await?.as_deref() == Some("confirm-text"),
+        "the alert dialog is not described by its message"
+    );
+    eventually_focused(d, "[role=alertdialog], [role=alertdialog] *", "opening").await?;
+    d.click_at(4.0, 4.0).await?;
+    d.click("#ping").await?;
+    eventually(d, "the ping after the backdrop click", async |d| {
+        Ok(d.text("#pings").await? == "1")
+    })
+    .await?;
+    ensure!(
+        d.exists(ALERT).await?,
+        "a backdrop click closed the alert dialog"
+    );
+    d.press(keyboard::ESCAPE).await?;
+    eventually(d, "Escape to close the alert dialog", async |d| {
+        Ok(!d.exists(ALERT).await?)
+    })
+    .await?;
+    eventually_focused(d, "#open-alert", "closing the alert dialog").await
+}
+
+e2e::scenario!(
+    an_alertdialog_ignores_the_backdrop,
+    "/modal/guarded",
+    alert_ignores_the_backdrop,
+    android: skip("958: element identity on the WebView")
+);
+
+/// Todo 2563: `ondismiss` hears each dismissal and keeps a draft open; with the
+/// draft gone, Escape closes.
+async fn a_draft_vetoes_dismissal<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    open(d, "#open-draft").await?;
+    d.click("#dirty").await?;
+    d.press(keyboard::ESCAPE).await?;
+    d.click_at(4.0, 4.0).await?;
+    eventually(d, "Escape and the backdrop to be refused", async |d| {
+        Ok(d.text("#reasons").await? == "Escape,Backdrop")
+    })
+    .await?;
+    ensure!(
+        d.exists(DIALOG).await?,
+        "a refused dismissal closed the draft"
+    );
+    d.click("#dirty").await?;
+    d.press(keyboard::ESCAPE).await?;
+    closed_with_focus_on(d, "#open-draft", "Escape without a draft").await
+}
+
+e2e::scenario!(
+    ondismiss_keeps_a_draft_open,
+    "/modal/guarded",
+    a_draft_vetoes_dismissal,
+    android: skip("958: element identity on the WebView")
+);
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("modal", "/modal")

@@ -14,6 +14,7 @@ pub const KBD_COLOR: CssVar = CssVar::new("--lsx-kbd-color");
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct KbdDefaults {
     pub size: Size,
+    /// Pixels at a 16px root, written as `rem`, so a key grows with a raised text size.
     pub font_sizes: Sizes<u16>,
     pub font_family: &'static str,
     pub background: &'static str,
@@ -57,11 +58,44 @@ impl KbdDefaults {
 
 impl ToCssDeclarations for KbdDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
-        let mut declarations = self.font_sizes.to_css_declarations(KBD_FONT_SIZE, "px");
+        let mut declarations: Vec<_> = Size::ALL
+            .into_iter()
+            .map(|size| {
+                let rem = f32::from(self.font_sizes.get(size)) / 16.0;
+                KBD_FONT_SIZE.declare(size, format!("{rem}rem"))
+            })
+            .collect();
         declarations.push(KBD_FONT_FAMILY.declare(self.font_family));
         declarations.push(KBD_BACKGROUND.declare(self.background));
         declarations.push(KBD_BORDER.declare(self.border));
         declarations.push(KBD_COLOR.declare(self.color));
         declarations
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Todo 2542: rem, the same size as the old px at a 16px root.
+    #[test]
+    fn the_font_sizes_are_rem() {
+        let css: Vec<String> = KbdDefaults::DEFAULT
+            .to_css_declarations()
+            .iter()
+            .map(ToString::to_string)
+            .collect();
+
+        assert!(
+            css.iter()
+                .any(|d| d.contains("--lsx-kbd-font-size-xs") && d.contains(":0.625rem")),
+            "{css:?}"
+        );
+        assert!(
+            css.iter()
+                .any(|d| d.contains("--lsx-kbd-font-size-xxl") && d.contains(":1.5rem")),
+            "{css:?}"
+        );
+        assert!(!css.iter().any(|d| d.contains("px")), "{css:?}");
     }
 }

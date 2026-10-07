@@ -53,11 +53,28 @@ impl ModalHost {
 #[derive(Clone, Copy)]
 pub struct ModalContext {
     pub(crate) onclose: Option<EventHandler<()>>,
+    /// The `Dialog` inside asks here whether a [`Dismiss`] may close the modal.
+    pub(crate) dismiss_guard: Option<CopyValue<Option<Callback<Dismiss, bool>>>>,
+}
+
+/// How the user asked a modal to close, for `Dialog`'s `ondismiss`.
+#[non_exhaustive]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Dismiss {
+    /// Escape, inside the modal or with focus fallen to the page.
+    Escape,
+    /// A click on the dimmed area around the dialog.
+    Backdrop,
+    /// Android's Back button or gesture; web and desktop have none.
+    Back,
 }
 
 impl ModalContext {
     /// The boundary a non-modal surface provides.
-    pub(crate) const NONE: Self = Self { onclose: None };
+    pub(crate) const NONE: Self = Self {
+        onclose: None,
+        dismiss_guard: None,
+    };
 
     /// Whether this content sits in a modal.
     pub fn is_modal(&self) -> bool {

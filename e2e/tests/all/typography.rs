@@ -4,6 +4,38 @@
 use e2e::browser::block_on;
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
+/// Todos 2542, 2590: a key's size is `rem`, so at a 32px root it doubles with the
+/// sentence; in `px` it stayed put.
+#[test]
+fn the_keys_grow_with_the_root_font_size() {
+    block_on(async {
+        let fixture = Fixture::open("/typography", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#kbds kbd").await.unwrap();
+        const SIZES: &str = "[...document.querySelectorAll('#kbds kbd')] \
+                             .map((k) => getComputedStyle(k).fontSize).join(' ')";
+        let before: String = page.evaluate(SIZES).await.unwrap().into_value().unwrap();
+        assert_eq!(
+            before, "10px 12px 14px 16px 20px 24px",
+            "the default look moved"
+        );
+
+        page.evaluate("document.documentElement.style.fontSize = '32px'")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{SIZES} === '20px 24px 28px 32px 40px 48px'"),
+            "the keys to double at a 32px root",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("typography", "/typography")

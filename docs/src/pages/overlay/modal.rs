@@ -214,7 +214,7 @@ pub fn ModalPage() -> Element {
                 ]).without_base_props(),
             ],
             accessibility: a11y()
-                .key(["Escape"], "Dismisses the modal, as a backdrop click does.")
+                .key(["Escape"], "Dismisses the modal, as a backdrop click does, unless the `Dialog`'s `ondismiss` refuses.")
                 .key(["Tab", "Shift+Tab"], "Moves the focus within the modal. It does not leave while the modal shows.")
                 .handles([
                     "Focus moves into the modal, and back to the trigger once it closes.",
@@ -222,11 +222,13 @@ pub fn ModalPage() -> Element {
                     "A dismissal settles the `Opening` with `None`, so a handler written for an answer never runs on it.",
                     "Android's Back button dismisses the top modal, as Escape does, rather than closing the app.",
                     "When the focused control is removed, focus goes back into the modal, and Tab and Escape keep working.",
+                    "A `Dialog` with `role: \"alertdialog\"` ignores a backdrop click, so a stray click is no answer.",
                 ])
                 .must(["Name the `Dialog` with its `title`, or `aria_label`."])
                 .example("A delete confirmation opened from a button: focus moves into the dialog, Tab stays inside it, and Escape closes it and puts focus back on the button.")
                 .limits([
                     "On Android, a modal opened without a tap (on mount or from a timer) may let Back close the app.",
+                    "On Android, once `ondismiss` refused a Back, the next Back closes the app unless a tap or key came between.",
                     "In a desktop WebView or on Android, Tab and Shift+Tab move between the controls but can leave the modal at its ends.",
                 ]),
             lead: rsx! {
@@ -273,6 +275,27 @@ pub fn ModalPage() -> Element {
                     "context. A "
                     Code { source: "Dialog" }
                     " inside closes the modal from its own close button."
+                }
+            }
+
+            DocSection {
+                title: "Keeping it open",
+                Text {
+                    "Escape, a backdrop click and Android's Back first ask the "
+                    Code { source: "Dialog" }
+                    "'s "
+                    Code { source: "ondismiss" }
+                    ", with a "
+                    Code { source: "Dismiss" }
+                    " reason. Return "
+                    Code { source: "false" }
+                    " to keep a form with unsaved input open: "
+                    Code { source: "ondismiss: move |_| draft.read().is_empty()" }
+                    ". A confirmation that needs an answer is "
+                    Code { source: "role: \"alertdialog\"" }
+                    ", which the backdrop does not close; describe it with "
+                    Code { source: "aria_describedby" }
+                    " pointing at its message."
                 }
             }
         }
