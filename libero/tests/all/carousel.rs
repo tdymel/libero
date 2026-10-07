@@ -3,7 +3,7 @@
 use crate::common::{attributes_of, body, render, tag_with, tags_with};
 
 use dioxus::prelude::*;
-use libero::{LiberoProvider, components::Carousel};
+use libero::{LiberoProvider, components::Carousel, localization::Localization};
 
 /// The autoplay button is a toggle: one fixed name, with `aria-pressed` as the
 /// state. A name that flipped to "Play" as well would read "Play, pressed".
@@ -133,6 +133,26 @@ fn a_carousel_is_a_named_region_of_named_slides() {
         let slide = tag_with(&html, &format!(r#"aria-label="{n} of 6""#));
         assert!(slide.contains_key("inert"), "{slide:?}");
     }
+}
+
+/// Todo 2360: the role descriptions follow the localization.
+#[test]
+fn the_role_descriptions_are_localized() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { localization: &Localization::GERMAN,
+                Carousel { aria_label: "Fotos", slides: six() }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    assert_eq!(
+        attributes_of(&html, "section")["aria-roledescription"],
+        "Karussell"
+    );
+    assert!(html.contains(r#"aria-roledescription="Folie""#), "{html}");
+    assert!(!html.contains(r#"aria-roledescription="slide""#), "{html}");
 }
 
 #[test]

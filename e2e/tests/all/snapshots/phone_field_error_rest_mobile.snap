@@ -11,4 +11,5 @@ button "Country: United States, US +1" [expanded=false] [haspopup=listbox]
 status [atomic] [live=polite]
 textbox "Mobile" [invalid] [required]
   description "Enter a phone number."
+status [atomic] [live=polite]
 StaticText "Enter a phone number."

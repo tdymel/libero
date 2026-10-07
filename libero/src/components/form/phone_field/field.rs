@@ -5,6 +5,7 @@ use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
+        accessibility::VisuallyHidden,
         common::{
             ComboboxState, Glyph, HtmlTag, Input, Part, Parts, inset_focus_ring_sx, use_combobox,
         },
@@ -216,6 +217,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
         .or_else(|| countries::find(theme.phone_field.country))
         .unwrap_or(&COUNTRIES[0]);
     let picked = use_signal(|| initial);
+    let dial_moved = use_signal(|| None::<&'static Country>);
     let country = country_for(current.as_deref(), picked());
 
     // The edit buffer, shown while it still assembles into the caller's E.164;
@@ -276,9 +278,12 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
     // ([[codebase/reentrant-handlers]]). The `bool` is "the user did this".
     let pick: Rc<dyn Fn(&'static Country, bool)> =
         Rc::new(move |next: &'static Country, by_user: bool| {
-            let mut picked = picked;
-            let mut text = text;
+            let (mut picked, mut text, mut dial_moved) = (picked, text, dial_moved);
             picked.set(next);
+            // The picker shows its own pick; an old dial-code status would be stale.
+            if dial_moved.peek().is_some() {
+                dial_moved.set(None);
+            }
             // Only the dial code changed; without a fixed shape the typed text
             // keeps its spacing (todo 87b).
             text.set(countries::group(next, &typed).unwrap_or_else(|| shown.clone()));
@@ -445,6 +450,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             text,
             country,
             picked,
+            dial_moved,
             oncountrychange,
             placeholder: props.placeholder,
             disabled,
@@ -456,10 +462,12 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
     );
 
     let hidden = phone_hidden(bound.name().map(str::to_string), &e164, disabled);
+    let country_set = dial_moved().map(|to| fill(names.country_set, &[("name", &name_of(to))]));
 
     field.render(rsx! {
         {frame.render(input)}
         {hidden}
+        VisuallyHidden { role: "status", {country_set} }
     })
 }
 
@@ -774,6 +782,8 @@ struct Entry {
     country: &'static Country,
     /// Moved by a typed dial code, as by a pick.
     picked: Signal<&'static Country>,
+    /// The country a typed dial code moved to, for the status.
+    dial_moved: Signal<Option<&'static Country>>,
     oncountrychange: Option<EventHandler<String>>,
     placeholder: Option<String>,
     disabled: bool,
@@ -794,6 +804,7 @@ fn phone_input<F: Fn(String) + Clone + 'static>(
         mut text,
         country,
         mut picked,
+        mut dial_moved,
         oncountrychange,
         placeholder,
         disabled,
@@ -831,6 +842,7 @@ fn phone_input<F: Fn(String) + Clone + 'static>(
             };
             if next.iso != country.iso {
                 picked.set(next);
+                dial_moved.set(Some(next));
                 if let Some(oncountrychange) = &oncountrychange {
                     oncountrychange.call(next.iso.to_string());
                 }

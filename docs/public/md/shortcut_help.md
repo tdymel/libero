@@ -66,7 +66,9 @@ Like every component, `ShortcutHelp` also takes the shared props `sx`, `class`,
 - A `Dialog` named by its title, the shortcuts a description list: each chord
   a `dt`, what it does the `dd`.
 - Each key is a `kbd`. `mod` shows as Cmd on Apple platforms and Ctrl
-  elsewhere; the key names come from the localization.
+  elsewhere. The modifiers, Space and named keys such as Escape take their
+  names from the localization's `ShortcutHelpLabels`; a key missing from its
+  `key_names` shows its `Key` name, `ArrowUp`.
 
 ### You must
 

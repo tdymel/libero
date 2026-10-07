@@ -195,7 +195,11 @@ pub fn Textarea(props: TextareaProps) -> Element {
         };
         let used = value.as_deref().map_or(typed_now, length);
         let left = max.saturating_sub(used);
-        let spoken = near_limit(left, max).then(|| (words.characters_left)(left));
+        // Only a controlled value runs past `maxlength`; "0 left" would hide it.
+        let spoken = match used > max {
+            true => Some((words.characters_over)(used - max)),
+            false => near_limit(left, max).then(|| (words.characters_left)(left)),
+        };
         let badge = rsx! {
             div {
                 class: counter_class,
@@ -291,5 +295,17 @@ mod tests {
             }
         });
         assert!(!without.contains("data-slot=\"counter\""), "{without}");
+    }
+
+    #[test]
+    fn a_value_over_the_limit_says_by_how_many() {
+        let html = dioxus_ssr::render_element(rsx! {
+            LiberoProvider {
+                Textarea { counter: true, maxlength: 3, value: "hello" }
+            }
+        });
+        assert!(html.contains(">5/3<"), "{html}");
+        assert!(html.contains("2 characters too many"), "{html}");
+        assert!(!html.contains("characters left"), "{html}");
     }
 }

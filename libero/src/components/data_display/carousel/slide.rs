@@ -89,6 +89,7 @@ pub(super) fn carousel_slides(
                     index,
                     is_clone,
                     label,
+                    roledescription: labels.slide_roledescription,
                     slide,
                 }
             }
@@ -107,6 +108,7 @@ fn CarouselSlide(
     index: usize,
     is_clone: bool,
     label: String,
+    roledescription: &'static str,
 ) -> Element {
     let flags =
         use_memo(use_reactive!(|nav,
@@ -146,7 +148,7 @@ fn CarouselSlide(
             states: slide_states,
             "data-slot": CarouselPart::Slide.slot(),
             role: live.then_some("group"),
-            aria_roledescription: live.then_some("slide"),
+            aria_roledescription: live.then_some(roledescription),
             aria_label: live.then_some(label),
             aria_hidden: (!live).then(|| "true".to_string()),
             inert: hidden.then_some(true),

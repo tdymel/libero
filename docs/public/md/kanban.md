@@ -116,7 +116,8 @@ parts work.
 - Each card's handle is a button of at least 24px (WCAG 2.5.8) named with the
   card, "Reorder Write", and described by how to move it with the keys. On a
   touch screen with `move_buttons` on, the description points to the move
-  buttons instead.
+  buttons and the Move to column menu instead, from
+  `KanbanLabels::touch_instructions`.
 - Each card has Move up and Move down buttons and a Move to column menu, named
   with the card, "Move Write up", "Move Write to column", so nothing needs a
   drag (WCAG 2.5.7). The menu lists every column, the card's own disabled.

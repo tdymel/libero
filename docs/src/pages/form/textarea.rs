@@ -75,6 +75,7 @@ pub fn TextareaPage() -> Element {
             accessibility: a11y()
                 .handles([
                     "The visible counter is hidden from screen readers. Instead, a polite status says how many characters are left once a tenth of the limit remains. Its words come from the localization's `textarea.characters_left`.",
+                    "A controlled `value` longer than `maxlength` makes the status say by how many, \"2 characters too many\", from `textarea.characters_over`.",
                 ])
                 .must(["Leave `label` unset only when something else names the field."])
                 .example("A bio, `Textarea { label: \"Bio\", maxlength: 200, counter: true }`: the counter is silent while you type, and from 20 characters left a polite status says how many remain."),

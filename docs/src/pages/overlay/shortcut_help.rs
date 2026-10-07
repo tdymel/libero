@@ -29,7 +29,7 @@ pub fn ShortcutHelpPage() -> Element {
             accessibility: a11y()
                 .handles([
                     "A `Dialog` named by its title, the shortcuts a description list: each chord a `dt`, what it does the `dd`.",
-                    "Each key is a `kbd`. `mod` shows as Cmd on Apple platforms and Ctrl elsewhere; the key names come from the localization.",
+                    "Each key is a `kbd`. `mod` shows as Cmd on Apple platforms and Ctrl elsewhere. The modifiers, Space and named keys such as Escape take their names from the localization's `ShortcutHelpLabels`; a key missing from its `key_names` shows its `Key` name, `ArrowUp`.",
                 ])
                 .must([
                     "Open it with `use_modal`, which traps focus, closes on Escape and hands focus back.",

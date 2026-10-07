@@ -296,7 +296,7 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
         index,
         instructions,
     });
-    let words = current_localization().sortable;
+    let words = current_localization();
     let touch = use_media_query("(pointer: coarse)");
     let room = use_board_list(board.drag, column, list.element);
 
@@ -317,8 +317,8 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
     };
     // As `Sortable`'s: a touch screen reader's tap on the handle lifts nothing (2452).
     let described = match touch() && (board.move_buttons)() {
-        true => words.touch_instructions,
-        false => words.instructions,
+        true => words.kanban.touch_instructions,
+        false => words.sortable.instructions,
     };
     // The slot a card from another column opens grows the list, not past its edge.
     let room = room();

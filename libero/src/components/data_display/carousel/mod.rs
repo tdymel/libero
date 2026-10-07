@@ -275,7 +275,10 @@ pub fn Carousel(props: CarouselProps) -> Element {
         .prepare()
         .element(&root_handle)
         .attr("role", (!empty).then_some("region"))
-        .attr("aria-roledescription", (!empty).then_some("carousel"))
+        .attr(
+            "aria-roledescription",
+            (!empty).then_some(labels.roledescription),
+        )
         .attr("aria-label", (!empty).then(|| aria_label.clone()))
         .event("onmouseenter", move |_: Event<MouseData>| {
             let mut hovered = state.hovered;

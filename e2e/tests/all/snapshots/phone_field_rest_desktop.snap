@@ -10,4 +10,5 @@ button "Country: Germany, DE +49" [expanded=false] [haspopup=listbox]
   StaticText "+49"
 status [atomic] [live=polite]
 textbox "Mobile"
+status [atomic] [live=polite]
 paragraph

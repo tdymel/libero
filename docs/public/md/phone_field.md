@@ -135,6 +135,8 @@ The dropdown is portaled out of the field, so its parts take the
 - The country picker is a second tab stop.
 - Android's Back button closes the country list as Escape does, rather than
   the app.
+- A typed dial code of another country moves the picker, and a polite status
+  says so, "Country set to Germany", from `PhoneFieldLabels::country_set`.
 
 ### Example
 

@@ -403,7 +403,29 @@ mod dispatched {
                 html.contains("Country: Germany, DE +49"),
                 "{typed}: the picker in {html}"
             );
+            // Todo 2367: the emptied text is not the only sign of the move.
+            assert!(
+                html.contains("Country set to Germany"),
+                "{typed}: the status in {html}"
+            );
         }
+    }
+
+    /// Todo 2367: a number typed under its own country moves nothing and says nothing.
+    #[test]
+    fn a_dial_code_of_the_same_country_says_nothing() {
+        PHONE_COUNTRY.set("DE");
+        PHONE_TOGGLE.set(false);
+        let mut page = Page::mount(phone_app);
+        let input = input_listener(&page.rec);
+        page.dom.runtime().handle_event(
+            "input",
+            Event::new(input_event("+49 171 1234567"), true),
+            input,
+        );
+        page.render();
+        let html = dioxus_ssr::render(&page.dom);
+        assert!(!html.contains("Country set to"), "{html}");
     }
 
     /// The text the `tel` input is showing, which is not what it posts.

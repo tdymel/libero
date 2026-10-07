@@ -13,11 +13,11 @@ use crate::{
         data_display::{Pictogram, SvgData},
         feedback::Loader,
         layout::{InternalAnchor, use_box},
-        overlay::{Tooltip, chord_kbd},
+        overlay::{Tooltip, chord_kbd, chord_words},
     },
     hooks::{
-        aria_keyshortcuts, chord_keys, clipped_ripple_sx, current_localization, use_gradient_style,
-        use_ripple, use_theme,
+        aria_keyshortcuts, clipped_ripple_sx, current_localization, use_gradient_style, use_ripple,
+        use_theme,
     },
     platform::mod_is_meta,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -280,7 +280,7 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
     let keys = props
         .shortcut
         .as_deref()
-        .and_then(|chord| chord_keys(chord, apple, &current_localization().shortcut_help));
+        .and_then(|chord| chord_words(chord, apple, &current_localization().shortcut_help));
     let label = props.aria_label.clone();
     let open_delay = try_consume_context::<TooltipOpenDelay>().map(|delay| delay.0);
     rsx! {

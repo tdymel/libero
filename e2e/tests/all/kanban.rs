@@ -736,7 +736,8 @@ fn a_touch_on_the_handle_drags_across_and_elsewhere_scrolls_the_board() {
     });
 }
 
-/// 2452: as `Sortable`'s, a touch screen's handle description points to the move buttons.
+/// 2452, 2516: a touch screen's handle description points to the move buttons and the
+/// Move to menu.
 #[test]
 fn a_touch_screen_describes_the_handle_by_the_move_buttons() {
     use e2e::browser::{Fixture, Viewport, block_on};
@@ -758,7 +759,10 @@ fn a_touch_screen_describes_the_handle_by_the_move_buttons() {
             e2e::browser::set_coarse_pointer(page, true).await?;
             wait::for_js_true(
                 page,
-                &format!("{DESCRIPTION} === 'Use the move buttons to reorder the item.'"),
+                &format!(
+                    "{DESCRIPTION} === 'Use the move buttons to reorder the card, or the Move to \
+                     column button to put it in another column.'"
+                ),
                 "the touch description",
             )
             .await

@@ -217,6 +217,8 @@ The words are `CarouselLabels` in the [localization](localization.md).
 | `status` | `Slide {n} of {m}` | What the live region reads one-up. `{m}` counts resting positions, not slides. |
 | `status_range` | `Slides {from}–{to} of {n}` | What it reads above one slide per view, the slides showing of all `{n}`. |
 | `pause` | `Pause slideshow` | The autoplay button's name. It stays the same when paused, and `aria-pressed` carries the state. |
+| `roledescription` | `carousel` | The region's `aria-roledescription`. |
+| `slide_roledescription` | `slide` | Each slide group's `aria-roledescription`. |
 
 ## CSS variables
 

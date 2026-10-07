@@ -18,6 +18,10 @@ pub struct CarouselLabels {
     pub status_range: &'static str,
     /// The autoplay button's name in both states: `aria-pressed` carries the state.
     pub pause: &'static str,
+    /// The root's `aria-roledescription`.
+    pub roledescription: &'static str,
+    /// Each slide's `aria-roledescription`.
+    pub slide_roledescription: &'static str,
 }
 
 impl CarouselLabels {
@@ -31,6 +35,8 @@ impl CarouselLabels {
         status: "Slide {n} of {m}",
         status_range: "Slides {from}–{to} of {n}",
         pause: "Pause slideshow",
+        roledescription: "carousel",
+        slide_roledescription: "slide",
     };
 
     pub const GERMAN: Self = Self {
@@ -43,5 +49,7 @@ impl CarouselLabels {
         status: "Folie {n} von {m}",
         status_range: "Folien {from}–{to} von {n}",
         pause: "Diashow anhalten",
+        roledescription: "Karussell",
+        slide_roledescription: "Folie",
     };
 }

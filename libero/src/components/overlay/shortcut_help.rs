@@ -11,6 +11,7 @@ use crate::{
         typography::Kbd,
     },
     hooks::{chord_keys, current_localization, use_css, use_element, use_resize_fallback},
+    localization::ShortcutHelpLabels,
     platform::{ElementApi, mod_is_meta},
     sx::{StaticSx, sx},
     utils::warn,
@@ -43,7 +44,17 @@ static SHORTCUT_SCROLL_SX: StaticSx = StaticSx::new(|| {
         .focus_visible(inset_focus_ring_sx("-2px"))
 });
 
-/// A chord's keys from [`chord_keys`], one [`Kbd`] each, joined by " + ".
+/// [`chord_keys`] with `Space`, `Meta` and the named keys in the localization's words.
+pub(crate) fn chord_words(
+    chord: &str,
+    apple: bool,
+    words: &ShortcutHelpLabels,
+) -> Option<Vec<String>> {
+    let keys = chord_keys(chord, apple, words)?;
+    Some(keys.iter().map(|key| words.key_word(key)).collect())
+}
+
+/// A chord's keys from [`chord_words`], one [`Kbd`] each, joined by " + ".
 pub(crate) fn chord_kbd(keys: Vec<String>) -> Element {
     let last = keys.len().saturating_sub(1);
     rsx! {
@@ -109,7 +120,7 @@ pub fn ShortcutHelp(props: ShortcutHelpProps) -> Element {
     // Each bad chord warns once per instance, not on every render (todo 2450).
     let warned = use_hook(|| Rc::new(RefCell::new(HashSet::<String>::new())));
     let rows = props.shortcuts.iter().filter_map(|shortcut| {
-        let Some(keys) = chord_keys(&shortcut.chord, apple, words) else {
+        let Some(keys) = chord_words(&shortcut.chord, apple, words) else {
             if warned.borrow_mut().insert(shortcut.chord.clone()) {
                 warn(&format!(
                     "ShortcutHelp: `{}` is not a chord `use_hotkeys` binds, so it is left out.",
@@ -202,5 +213,19 @@ mod tests {
             .collect();
         assert!(RENDERS.load(Ordering::Relaxed) >= 3);
         assert_eq!(bad.len(), 1, "{bad:?}");
+    }
+
+    /// Todo 2449: Space, Meta and the named keys follow the localization.
+    #[test]
+    fn a_chord_shows_the_localized_key_names() {
+        let words = ShortcutHelpLabels::GERMAN;
+        let keys = |chord| chord_words(chord, false, &words).unwrap();
+        assert_eq!(keys("space"), ["Leertaste"]);
+        assert_eq!(keys("meta+escape"), ["Meta", "Esc"]);
+        assert_eq!(keys("ctrl+ArrowUp"), ["Strg", "Pfeil nach oben"]);
+        // A key the table lacks keeps its `Key` name.
+        assert_eq!(keys("f10"), ["F10"]);
+        let english = chord_words("ctrl+ArrowUp", false, &ShortcutHelpLabels::ENGLISH);
+        assert_eq!(english.unwrap(), ["Ctrl", "ArrowUp"]);
     }
 }

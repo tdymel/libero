@@ -18,6 +18,8 @@ pub struct PhoneFieldLabels {
     /// };
     /// ```
     pub country_names: &'static [(&'static str, &'static str)],
+    /// The polite status when a typed dial code changes the country: `{name}`.
+    pub country_set: &'static str,
 }
 
 impl PhoneFieldLabels {
@@ -25,12 +27,14 @@ impl PhoneFieldLabels {
         search: "Search countries",
         country: "Country: {name}, {iso} +{dial}",
         country_names: &[],
+        country_set: "Country set to {name}",
     };
 
     pub const GERMAN: Self = Self {
         search: "Länder durchsuchen",
         country: "Land: {name}, {iso} +{dial}",
         country_names: crate::localization::country_names::GERMAN,
+        country_set: "Land auf {name} gestellt",
     };
 
     /// The name `country_names` gives `iso`, if any.
