@@ -33,24 +33,22 @@ figure
     StaticText "A warning quote."
   Figcaption
     StaticText "Speaker"
+blockquote
+  StaticText "A navy quote."
+blockquote
+  StaticText "A yellow quote."
+blockquote
+  StaticText "A info.6 quote."
+blockquote
+  StaticText "A error.8 quote."
 figure
   blockquote
-    StaticText "A navy quote."
-figure
-  blockquote
-    StaticText "A yellow quote."
-figure
-  blockquote
-    StaticText "A info.6 quote."
-figure
-  blockquote
-    StaticText "A error.8 quote."
-figure
-  blockquote
-    StaticText "A quote with a linked attribution."
+    StaticText "A quote with a"
+    link "link"
+      StaticText "link"
+    StaticText "and a linked attribution."
   Figcaption
     link "Albert Einstein"
       StaticText "Albert Einstein"
-figure
-  blockquote
-    StaticText "A navy quote."
+blockquote
+  StaticText "A navy quote."

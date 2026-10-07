@@ -45,14 +45,15 @@ fn the_attribution_sits_outside_the_quote() {
     assert!(!html[..quote_end].contains("Albert Einstein"), "{html}");
 }
 
-/// A quote with no attribution still renders the same root, so a caller's
-/// `sx`, `class` and attributes always land on the same element.
+/// Todo 2487: a `<figure>` with no caption is announced as a nameless "figure",
+/// so a bare quote's root is a `<div>`; `sx`, `class` and attributes still land on it.
 #[test]
-fn the_figure_is_the_root_whether_or_not_there_is_an_attribution() {
+fn a_quote_without_a_caption_is_not_a_figure() {
     let bare = body(&render(bare_app));
 
-    assert!(bare.contains("<figure"), "{bare}");
+    assert!(!bare.contains("<figure"), "{bare}");
     assert!(!bare.contains("<figcaption"), "{bare}");
+    assert!(body(&render(full_app)).contains("<figure"));
 }
 
 /// `<cite>` is the title of a work. The spec says it "must therefore not be
@@ -255,7 +256,7 @@ fn the_attribution_dims_its_text_not_its_children() {
 /// the first time.
 #[test]
 fn both_ua_margins_are_reset() {
-    let html = render(bare_app);
+    let html = render(full_app);
     let figure = first_class(&html, "figure");
     let quote = first_class(&html, "blockquote");
 

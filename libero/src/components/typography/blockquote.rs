@@ -3,16 +3,17 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, Part, States, Variables, attr, base_props, parts_enum, variables,
+            HtmlTag, Input, Part, States, Variables, attr, base_props, literal_contrast,
+            parts_enum, variables,
         },
         layout::use_box,
     },
     hooks::use_theme,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
-        BLOCKQUOTE_BACKGROUND, BLOCKQUOTE_BORDER_COLOR, BLOCKQUOTE_CITE_OPACITY, BLOCKQUOTE_COLOR,
-        BlockquoteDefaults, Color, ColorShade, ColorValue, FOCUS_RING_HALO, NamedColorCss, Size,
-        TEXT_FONT_SIZE,
+        ANCHOR_COLOR, AnchorDefaults, BLOCKQUOTE_BACKGROUND, BLOCKQUOTE_BORDER_COLOR,
+        BLOCKQUOTE_CITE_OPACITY, BLOCKQUOTE_COLOR, BlockquoteDefaults, Color, ColorShade,
+        ColorValue, FOCUS_RING_HALO, NamedColorCss, SURFACE_LABEL, Size, TEXT_FONT_SIZE,
     },
 };
 
@@ -25,12 +26,12 @@ const ACCENT_SHADE: ColorShade = ColorShade::S6;
 struct Palette {
     background: ThemeAwareValue,
     border: ThemeAwareValue,
-    /// `None` for arbitrary CSS, which has no contrast twin.
+    /// `None` for a value `literal_contrast` cannot read.
     contrast: Option<ThemeAwareValue>,
 }
 
 /// A bare colour takes the tint shade, painted as `fill-N`, which `contrast-N` is
-/// computed on (todo 605). Of the literals only a hex keeps a contrast twin.
+/// computed on (todo 605). A literal is both bar and fill, so it shows neither (todo 2486).
 fn palette(value: Option<&ThemeAwareValue>, default_color: Color) -> Palette {
     let from_shade = |color: Color, shade: ColorShade| Palette {
         background: ThemeAwareValue::ColorValue(ColorValue::Fill(color, shade)),
@@ -46,16 +47,11 @@ fn palette(value: Option<&ThemeAwareValue>, default_color: Color) -> Palette {
         Some(ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade))) => {
             from_shade(*color, *shade)
         }
-        // Literal black or white off a hex: under the page's text a dark one was 2.02:1.
+        // Black or white off a hex, `contrast-color()` off a name: under the page's text navy was 2.02:1.
         Some(other) => Palette {
             background: other.clone(),
             border: other.clone(),
-            contrast: match other {
-                ThemeAwareValue::RawColor(_, hex) => {
-                    Some(ThemeAwareValue::String(hex.contrast().to_string()))
-                }
-                _ => None,
-            },
+            contrast: literal_contrast(other).map(ThemeAwareValue::String),
         },
     }
 }
@@ -77,7 +73,10 @@ fn blockquote_variables(color: Option<&ThemeAwareValue>, default_color: Color) -
         .with(BLOCKQUOTE_BORDER_COLOR, palette.border.resolve(None))
         .with(BLOCKQUOTE_COLOR, contrast.clone())
         .with(FOCUS_RING_HALO, contrast.as_ref().and(background))
-        .with(focus_contrast, contrast)
+        .with(focus_contrast, contrast.clone())
+        // The link colour was 3.53:1 on the `info` tint (todo 2521), as on `Mark` (762).
+        .with(ANCHOR_COLOR, contrast.clone())
+        .with(SURFACE_LABEL, contrast)
 }
 
 /// The UA gives both `<figure>` and `<blockquote>` a 40px inline margin.
@@ -89,6 +88,10 @@ static BLOCKQUOTE_SX: StaticSx = StaticSx::new(|| {
         .background(BLOCKQUOTE_BACKGROUND.value())
         // The tint's own contrast twin, never an accent shade.
         .color(BLOCKQUOTE_COLOR.value())
+        // A long word overflowed a 320px column (WCAG 1.4.10), as on `Title`.
+        .overflow_wrap("break-word")
+        // A link in the text's colour needs its underline (1.4.1).
+        .and(AnchorDefaults::underline_at_rest())
 });
 
 /// Size per step: a sibling of the quote, an `em` here would resolve against the `<figure>`.
@@ -103,7 +106,8 @@ static FIGCAPTION_SX: StaticSx = StaticSx::new(|| {
 });
 
 parts_enum! {
-    /// [`Blockquote`]'s inner parts, for its `parts` prop. The root is the `<figure>`.
+    /// [`Blockquote`]'s inner parts, for its `parts` prop. The root is the `<figure>`, a
+    /// `<div>` without a caption.
     pub enum BlockquotePart {
         /// The tinted `<blockquote>`.
         Quote = "quote" => "& > [data-slot='quote']",
@@ -120,8 +124,8 @@ base_props! {
         /// Body font size, line height, padding and the accent bar's width.
         #[props(default, into)]
         size: Input<Size>,
-        /// The accent bar, and the background tint derived from it. A CSS colour other
-        /// than a hex leaves the quote text at the page's colour: check its contrast.
+        /// The accent bar, and the background tint derived from it. A literal colour, or a
+        /// shade from 6 up, is a solid fill with no separate bar or tint.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         /// Rounds the two corners away from the accent bar.
@@ -140,7 +144,8 @@ base_props! {
     }
 }
 
-/// A quotation with its attribution, as `<figure><blockquote/><figcaption/></figure>`.
+/// A quotation with its attribution, as `<figure><blockquote/><figcaption/></figure>`;
+/// without `attribution` or `work` the root is a `<div>`.
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
@@ -221,6 +226,11 @@ pub fn Blockquote(props: BlockquoteProps) -> Element {
         }
     };
 
+    // A `<figure>` with no caption is announced as a nameless "figure" (todo 2487).
+    let root = match caption {
+        Some(_) => HtmlTag::Figure,
+        None => HtmlTag::Div,
+    };
     let mut children = vec![quote];
     children.extend(caption);
 
@@ -231,7 +241,7 @@ pub fn Blockquote(props: BlockquoteProps) -> Element {
         .parts(&props.parts)
         .states(&props.states)
         .prepare()
-        .render(HtmlTag::Figure, props.attributes, children)
+        .render(root, props.attributes, children)
 }
 
 #[cfg(test)]
@@ -250,5 +260,31 @@ mod tests {
                 ("work", "& > [data-slot='caption'] > [data-slot='work']"),
             ]
         );
+    }
+
+    /// Todo 2520: navy under the page text was about 1:1; the browser picks black or white.
+    #[test]
+    fn a_named_literal_takes_the_browsers_contrast_colour() {
+        let navy = ThemeAwareValue::String("navy".to_string());
+        let css = blockquote_variables(Some(&navy), Color::Primary).to_string();
+
+        for pair in [
+            format!("{}:contrast-color(navy);", BLOCKQUOTE_COLOR.name()),
+            format!("{}:contrast-color(navy);", ANCHOR_COLOR.name()),
+            format!("{}:navy;", FOCUS_RING_HALO.name()),
+        ] {
+            assert!(css.contains(&pair), "{pair} in {css}");
+        }
+    }
+
+    /// Todo 2521: a link on the `info` tint was 3.53:1 in the theme's link colour.
+    #[test]
+    fn a_link_inside_takes_the_tints_twin() {
+        let css = blockquote_variables(None, Color::Info).to_string();
+        let twin = ColorValue::Contrast(Color::Info, TINT_SHADE).value();
+
+        for var in [ANCHOR_COLOR, SURFACE_LABEL] {
+            assert!(css.contains(&format!("{}:{twin};", var.name())), "{css}");
+        }
     }
 }

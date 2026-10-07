@@ -30,13 +30,17 @@ pub fn TextPage() -> Element {
                 prop("children", "Element").default("required").doc("The text."),
             ])],
             accessibility: a11y()
-                .handles(["A large size is only styling, so it never makes a heading."])
+                .handles([
+                    "A large size is only styling, so it never makes a heading.",
+                    "A long word breaks inside the text rather than overflowing a narrow column.",
+                ])
                 .must([
                     "Use `component: \"span\"` for text inside a sentence.",
                     "For a heading, use `Title`.",
                     "Keep `gradient` to large display text and check the contrast of a literal CSS stop. A debug build warns when a hex stop reads under 4.5:1 on the page background.",
                 ])
-                .example("A price in a sentence, `Text { component: \"span\", size: \"lg\", \"$12\" }`: it stays part of the sentence, and its large size does not make it a heading."),
+                .example("A price in a sentence, `Text { component: \"span\", size: \"lg\", \"$12\" }`: it stays part of the sentence, and its large size does not make it a heading.")
+                .limits(["`component` keeps the body-text look, so `a`, `strong`, `del` and the like lose their underline, weight or line. For a link, use `Anchor`."]),
             lead: rsx! {
                 Text {
                     "Body copy in a "

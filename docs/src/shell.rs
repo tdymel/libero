@@ -3,14 +3,14 @@ use libero::{
     components::{
         ActionIcon, Anchor, Box, Burger, Button, ButtonGroup, Container, DirectionToggle, Flex,
         Header, Icon, Kbd, Pictogram, Repository, ScrollArea, ScrollAreaHandle, SpotlightHandle,
-        SpotlightOptions, ThemeSwitcher, Title, spotlight_filter, use_scroll_area, use_spotlight,
+        SpotlightOptions, ThemeSwitcher, spotlight_filter, use_scroll_area, use_spotlight,
     },
     hooks::{ElementHandle, edge_swipe_sx, use_element, use_media_query},
     platform::ElementApi,
     sx::{Sx, sx},
     theme::{
-        ACTION_ICON_RADIUS, BUTTON_HEIGHT, HEADER_HEIGHT_VAR, PAPER_BACKGROUND, Size, ThemeSet,
-        Z_INDEX_HEADER,
+        ACTION_ICON_RADIUS, BUTTON_HEIGHT, HEADER_HEIGHT_VAR, PAPER_BACKGROUND, Size,
+        TITLE_FONT_FAMILY, ThemeSet, TitleDefaults, Z_INDEX_HEADER,
     },
 };
 use pictogram_icons_lucide as lucide;
@@ -281,7 +281,12 @@ fn shell_header(
                         .height("44px")
                         .with("--lsx-icon-glyph", "84%"),
                 }
-                Title { size: "lg", component: "span", "Libero" }
+                // Title's `lg` look on a span: a non-heading `Title` warns (todo 2545).
+                Box {
+                    component: "span",
+                    sx: sx().font_family(TITLE_FONT_FAMILY.value()).and(TitleDefaults::size_sx(Size::Lg)),
+                    "Libero"
+                }
             }
             {search_button(search, modifier)}
             // One joined control.

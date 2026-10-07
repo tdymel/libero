@@ -8,6 +8,7 @@ use crate::{
     hooks::{use_gradient_style, use_theme},
     sx::StaticSx,
     theme::{Gradient, Size, TitleDefaults},
+    utils::warn,
 };
 
 use super::text::gradient_text_sx;
@@ -32,11 +33,24 @@ fn default_component(size: Size) -> HtmlTag {
     }
 }
 
+/// Todo 2545: another tag keeps the heading look but leaves the outline silently.
+fn warn_unless_heading(component: HtmlTag) {
+    use HtmlTag::{H1, H2, H3, H4, H5, H6};
+    if !matches!(component, H1 | H2 | H3 | H4 | H5 | H6) {
+        warn(&format!(
+            "Title: component `{}` is not a heading, so it is missing from the outline; \
+             use h1 to h6, or `Text` for the look alone",
+            component.as_str()
+        ));
+    }
+}
+
 base_props! {
     pub struct TitleProps {
         #[props(default, into)]
         size: Input<Size>,
-        /// Unset, `size`'s heading tag. Set it to keep the outline order under another size.
+        /// Unset, `size`'s heading tag. Set it to keep the outline order under another size;
+        /// a tag other than h1 to h6 warns in debug builds.
         #[props(default, into)]
         component: Input<HtmlTag>,
         /// Paints the glyphs in a gradient from the theme's first stop: `("secondary", 45)` or
@@ -84,6 +98,7 @@ pub fn Title(props: TitleProps) -> Element {
         .copied()
         // The caller's size, never the theme's: a theme must not move the outline.
         .unwrap_or_else(|| default_component(props.size.copied_or(Size::Xxl)));
+    use_hook(|| warn_unless_heading(component));
 
     use_box()
         .framework_sx(&TITLE_BASE_SX)
@@ -93,4 +108,27 @@ pub fn Title(props: TitleProps) -> Element {
         .style(style)
         .prepare()
         .render(component, props.attributes, props.children)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{LiberoProvider, utils::warnings_of};
+
+    fn warns(app: fn() -> Element) -> bool {
+        warnings_of(app)
+            .iter()
+            .any(|warning| warning.starts_with("Title:"))
+    }
+
+    #[test]
+    fn only_a_tag_outside_h1_to_h6_warns() {
+        assert!(warns(
+            || rsx! { LiberoProvider { Title { component: "div", "Look only" } } }
+        ));
+        assert!(!warns(
+            || rsx! { LiberoProvider { Title { component: "h2", "Second level" } } }
+        ));
+        assert!(!warns(|| rsx! { LiberoProvider { Title { "Default" } } }));
+    }
 }

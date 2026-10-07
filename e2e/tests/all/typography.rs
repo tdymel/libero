@@ -15,13 +15,15 @@ fn it_meets_the_baseline() {
         .run();
 }
 
-/// Every tint, the dimmed attribution under it, and a link in an attribution.
+/// Every tint, the dimmed attribution under it, and a link in the quote and in an attribution.
 #[test]
 fn every_quote_colour_meets_the_baseline() {
     Suite::new("typography_quotes", "/typography/quotes")
         .contrast_covers("#quotes")
         .contrast_covers("#attribution-link")
+        .contrast_covers("#quote-link")
         .focusable("#attribution-link")
+        .focusable("#quote-link")
         .run();
 }
 
@@ -62,8 +64,8 @@ fn a_long_inline_code_wraps_inside_its_paragraph() {
     });
 }
 
-/// Todo 2543 and 2547: a long heading word and the largest key at 320px (WCAG 1.4.10),
-/// and every key's text read out in the sentence.
+/// Todo 2543, 2547 and 2589: a long word in a heading, body text and a quote, and the
+/// largest key at 320px (WCAG 1.4.10), and every key's text read out in the sentence.
 #[test]
 fn a_long_title_and_the_keys_stay_inside_the_column() {
     block_on(async {
@@ -73,7 +75,12 @@ fn a_long_title_and_the_keys_stay_inside_the_column() {
         let page = &fixture.page;
         wait::for_visible(page, "#title-long").await.unwrap();
 
-        for selector in ["#title-long", "#kbds kbd:last-of-type"] {
+        for selector in [
+            "#title-long",
+            "#text-long",
+            "#quote-long",
+            "#kbds kbd:last-of-type",
+        ] {
             let past = overflow(page, selector).await;
             assert!(past <= 1.0, "{selector} runs {past}px past its column");
         }

@@ -26,7 +26,7 @@ pub fn BlockquotePage() -> Element {
                     .doc("Text size, line height, padding and the accent bar's width."),
                 prop("color", "ThemeAwareValue")
                     .default("primary, tinted")
-                    .doc("The accent bar and the tint behind the quote. A theme color name gets its lightest shade. Any CSS color works too."),
+                    .doc("The accent bar and the tint behind the quote. A theme color name gets its lightest shade. Any CSS color works too, and a CSS color or a shade from 6 up fills the quote solid, with no separate bar or tint."),
                 prop("radius", "Size")
                     .default("sm")
                     .doc("Rounds the two corners away from the accent bar."),
@@ -47,13 +47,11 @@ pub fn BlockquotePage() -> Element {
             ])],
             accessibility: a11y()
                 .handles([
-                    "The quote is a `<blockquote>` in a `<figure>`, and the attribution sits in a `<figcaption>` outside it, so a screen reader does not read the speaker's name as part of the quote.",
+                    "The quote is a `<blockquote>` in a `<figure>`, and the attribution sits in a `<figcaption>` outside it, so a screen reader does not read the speaker's name as part of the quote. Without `attribution` or `work` the root is a `<div>`, so no nameless figure is announced.",
                     "`work` renders in a `<cite>`, the comma kept outside it.",
                     "The caption dims its text color, not the whole caption, so a link in `attribution` keeps its own color and focus ring.",
-                    "For a theme color, a shade or a hex, the quote text takes the tint's contrast color, and a focus ring inside clears 3:1 against the tint.",
-                ])
-                .must([
-                    "With any other CSS color, such as `navy`, `rgb()` or a `var()`, the quote text keeps the page's color and a focus ring inside gets no contrast color: set a readable `color` on the quote through `parts` and check its contrast.",
+                    "The quote text, a link and a focus ring inside take the tint's contrast color, so they read on the tint. A link keeps its underline, as color alone does not mark it. Any other CSS color, such as `navy`, gets black or white from the browser's `contrast-color()`.",
+                    "A long word breaks inside the quote rather than overflowing a narrow column.",
                 ])
                 .example("A quote with `attribution: rsx! { \"Ada Lovelace\" }` and `work: \"Notes\"`: a screen reader reads the quote, then \"Ada Lovelace, Notes\" as its caption, never the name as part of the quote.")
                 .limits(["`cite_url` is for machines only: browsers do not show it, so link the source yourself where readers need it."]),

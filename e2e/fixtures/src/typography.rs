@@ -4,9 +4,8 @@
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Anchor, Blockquote, BlockquotePart, Code, Flex, Kbd, Mark, Parts, Text, Title,
+        Anchor, Blockquote, Code, Flex, Kbd, Mark, Text, Title,
     },
-    sx::sx,
     theme::Gradient,
 };
 
@@ -30,6 +29,9 @@ const KBD_SIZES: &[&str] = &["xs", "sm", "md", "lg", "xl", "xxl"];
 
 /// Mid and dark shades, where a brightness-picked twin or the page text failed.
 const SHADES: &[&str] = &["info.6", "error.8"];
+
+/// Wider than a 320px column at body size.
+const LONG_WORD: &str = "Donaudampfschifffahrtselektrizitaetenhauptbetriebswerkbauunterbeamtengesellschaft";
 
 /// A 320px column, the width WCAG 1.4.10 reflows to.
 #[component]
@@ -75,6 +77,9 @@ fn TypographyPage() -> Element {
             Text { id: "text-gradient", gradient: Gradient::default(), "Gradient text in the narrow column." }
             // Todo 2543: one word wider than the column at `xxl`.
             Title { id: "title-long", size: "xxl", "Donaudampfschifffahrtsgesellschaft" }
+            // Todo 2589: the same in body text and in a quote.
+            Text { span { id: "text-long", "{LONG_WORD}" } }
+            Blockquote { span { id: "quote-long", "{LONG_WORD}" } }
             // Todo 2547: a key of every size in running text.
             Text { id: "kbds",
                 "Press "
@@ -109,15 +114,15 @@ fn QuotesPage() -> Element {
                 Blockquote { size: "xs", color: *color, "A {color} quote." }
             }
             // Todo 2484: `opacity` on the caption took this link to 2.4:1.
+            // Todo 2521: the link inside was 3.53:1 in the theme's link colour on the tint.
             Blockquote { id: "quote-linked", size: "xs", color: "info",
                 attribution: rsx! { Anchor { id: "attribution-link", to: "#source", "Albert Einstein" } },
-                "A quote with a linked attribution."
+                "A quote with a "
+                Anchor { id: "quote-link", to: "#source", "link" }
+                " and a linked attribution."
             }
-            // Todo 2485: a named literal leaves the text to the caller, as the page says.
-            Blockquote { id: "quote-named", size: "xs", color: "navy",
-                parts: Parts::new().part(BlockquotePart::Quote, sx().color("#FFFFFF")),
-                "A navy quote."
-            }
+            // Todo 2520: a named literal takes the browser's `contrast-color()`.
+            Blockquote { id: "quote-named", size: "xs", color: "navy", "A navy quote." }
         }
     }
 }

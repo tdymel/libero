@@ -22,7 +22,7 @@ pub fn TitlePage() -> Element {
                     .doc("Visual size, `xs` to `xxl`. Also picks the tag unless `component` is set."),
                 prop("component", "HtmlTag")
                     .default("follows size")
-                    .doc("The heading tag. The size's look stays."),
+                    .doc("The heading tag. The size's look stays. A debug build warns for a tag other than `h1` to `h6`."),
                 prop("gradient", "Gradient")
                     .doc("Paints the glyphs with a gradient from the theme's first stop to a second, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`; `Gradient::default()` is the theme's. The contrast of a literal CSS stop is yours to check, and a debug build warns when a hex stop reads under 4.5:1 on the page background. Solid in its first stop in forced colors and in native windows."),
                 prop("children", "Element").default("required").doc("The heading text."),

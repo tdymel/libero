@@ -41,6 +41,7 @@ Like every component, `Text` also takes the shared props `sx`, `class`,
 ### Libero handles
 
 - A large size is only styling, so it never makes a heading.
+- A long word breaks inside the text rather than overflowing a narrow column.
 
 ### You must
 
@@ -54,6 +55,11 @@ Like every component, `Text` also takes the shared props `sx`, `class`,
 
 A price in a sentence, `Text { component: "span", size: "lg", "$12" }`: it
 stays part of the sentence, and its large size does not make it a heading.
+
+### Limits
+
+- `component` keeps the body-text look, so `a`, `strong`, `del` and the like
+  lose their underline, weight or line. For a link, use [`Anchor`](anchor.md).
 
 ## Theme defaults
 

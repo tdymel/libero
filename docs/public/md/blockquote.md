@@ -56,7 +56,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `size` | `Size` | `md` | Text size, line height, padding and the accent bar's width. |
-| `color` | `ThemeAwareValue` | `primary`, tinted | The accent bar and the tint behind the quote. A theme color name gets its lightest shade. Any CSS color works too. |
+| `color` | `ThemeAwareValue` | `primary`, tinted | The accent bar and the tint behind the quote. A theme color name gets its lightest shade. Any CSS color works too, and a CSS color or a shade from 6 up fills the quote solid, with no separate bar or tint. |
 | `radius` | `Size` | `sm` | Rounds the two corners away from the accent bar. |
 | `attribution` | `Element` | - | Who said it, shown under the quote. For any join other than a comma, pass the whole line here. |
 | `work` | `String` | - | The title of the quoted work, such as a book or a talk. Follows `attribution` after a comma. |
@@ -65,7 +65,8 @@ fn Demo() -> Element {
 | `children` | `Element` | required | The quote. |
 
 Like every component, `Blockquote` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes. They land on the `<figure>`.
+`style`, `states`, and any extra HTML attributes. They land on the `<figure>`,
+a `<div>` without `attribution` or `work`.
 
 ## Style API
 
@@ -85,18 +86,16 @@ parts work.
 
 - The quote is a `<blockquote>` in a `<figure>`, and the attribution sits in a
   `<figcaption>` outside it, so a screen reader does not read the speaker's name
-  as part of the quote.
+  as part of the quote. Without `attribution` or `work` the root is a `<div>`,
+  so no nameless figure is announced.
 - `work` renders in a `<cite>`, the comma kept outside it.
 - The caption dims its text color, not the whole caption, so a link in
   `attribution` keeps its own color and focus ring.
-- For a theme color, a shade or a hex, the quote text takes the tint's
-  contrast color, and a focus ring inside clears 3:1 against the tint.
-
-### You must
-
-- With any other CSS color, such as `navy`, `rgb()` or a `var()`, the quote
-  text keeps the page's color and a focus ring inside gets no contrast color:
-  set a readable `color` on the quote through `parts` and check its contrast.
+- The quote text, a link and a focus ring inside take the tint's contrast
+  color, so they read on the tint. A link keeps its underline, as color alone
+  does not mark it. Any other CSS color, such as `navy`, gets black or white
+  from the browser's `contrast-color()`.
+- A long word breaks inside the quote rather than overflowing a narrow column.
 
 ### Example
 
@@ -145,14 +144,15 @@ The font size and line height come from `TextDefaults`' scale, so retuning
 | `--lsx-blockquote-cite-opacity` | The share of the text color the `<figcaption>`'s text keeps. Declared on `:root` from the theme. |
 | `--lsx-blockquote-background` | The resolved tint, set per instance on the `<blockquote>`. |
 | `--lsx-blockquote-border-color` | The resolved accent bar color, set per instance on the `<blockquote>`. |
-| `--lsx-blockquote-color` | The tint's contrast color for the body text, set per instance. Unset for a literal other than a hex. |
-| `--lsx-focus-contrast` | The same contrast color, published for focus rings inside the quote. Unset for a literal other than a hex. |
-| `--lsx-focus-ring-halo` | The tint, published beside it as the ring's halo. Unset with it. |
+| `--lsx-blockquote-color` | The tint's contrast color for the body text, set per instance. |
+| `--lsx-focus-contrast` | The same contrast color, published for focus rings inside the quote. |
+| `--lsx-focus-ring-halo` | The tint, published beside it as the ring's halo. |
+| `--lsx-anchor-color` | The same contrast color, for a link inside the quote. |
 
 ## Data attributes
 
 State tokens on the `<blockquote>`'s `data-state`; the `<figcaption>` carries the
-`size` token too. The `states` prop renders on the `<figure>` instead.
+`size` token too. The `states` prop renders on the root instead.
 
 | Token | Condition |
 |---|---|

@@ -16,6 +16,8 @@ static TEXT_BASE_SX: StaticSx = StaticSx::new(|| {
         .margin("0")
         .padding("0")
         .text_decoration("none")
+        // A long word overflowed a 320px column (WCAG 1.4.10), as on `Title`.
+        .overflow_wrap("break-word")
         .when("colored", sx().color(TEXT_COLOR.value()))
         .when("gradient", gradient_text_sx())
 });
