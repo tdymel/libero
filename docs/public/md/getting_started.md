@@ -10,8 +10,13 @@ accessibility, and configurability.
 
 ## Installation
 
+Not on crates.io yet: until the first release, install libero from its
+repository. It tracks Dioxus `main`, so take dioxus from git as well: a second
+copy of dioxus would not share libero's contexts.
+
 ```shell
-cargo add libero
+cargo add dioxus --git https://github.com/DioxusLabs/dioxus
+cargo add libero --git https://github.com/tdymel/libero
 ```
 
 Wrap your app in `LiberoProvider` once, at the root. It registers the theme and
@@ -70,8 +75,8 @@ libero, and name your platform (`linux`, `macos` or `windows`).
 
 ```toml
 [dependencies]
-dioxus = { version = "0.8.0-alpha.1", features = ["native"] }
-libero = { version = "0.1", features = ["native"] }
+dioxus = { git = "https://github.com/DioxusLabs/dioxus", features = ["native"] }
+libero = { git = "https://github.com/tdymel/libero", features = ["native"] }
 
 # Blitz is unusably slow unoptimised; this keeps your own crate debuggable.
 [profile.dev.package."*"]
@@ -184,7 +189,7 @@ Every feature is additive.
 | `icons-tabler` | The Tabler Icons set for [IconProvider](icon_provider.md), as `IconSet::tabler()`. Without it libero's glyphs are Lucide. |
 
 ```toml
-libero = { version = "0.1", default-features = false, features = [
+libero = { git = "https://github.com/tdymel/libero", default-features = false, features = [
     "code-lang-rust",
     "full-polymorphism",
 ] }

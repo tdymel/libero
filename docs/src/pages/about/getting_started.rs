@@ -46,10 +46,14 @@ const FEATURES: [(&str, &str); 8] = [
 ];
 
 // snippet: ignore - a Cargo.toml fragment, not Rust
-const FEATURES_EXAMPLE: &str = r#"libero = { version = "0.1", default-features = false, features = [
+const FEATURES_EXAMPLE: &str = r#"libero = { git = "https://github.com/tdymel/libero", default-features = false, features = [
     "code-lang-rust",
     "full-polymorphism",
 ] }"#;
+
+// snippet: ignore - shell commands, not Rust
+const INSTALL_COMMANDS: &str = "cargo add dioxus --git https://github.com/DioxusLabs/dioxus
+cargo add libero --git https://github.com/tdymel/libero";
 
 const QUICK_START_EXAMPLE: &str = r#"fn App() -> Element {
     rsx! {
@@ -76,8 +80,8 @@ pre_compress = true"#;
 
 // snippet: ignore - a Cargo.toml fragment, not Rust
 const NATIVE_CARGO: &str = r#"[dependencies]
-dioxus ={ version = "0.8.0-alpha.1", features = ["native"] }
-libero = { version = "0.1", features = ["native"] }
+dioxus = { git = "https://github.com/DioxusLabs/dioxus", features = ["native"] }
+libero = { git = "https://github.com/tdymel/libero", features = ["native"] }
 
 # Blitz is unusably slow unoptimised; this keeps your own crate debuggable.
 [profile.dev.package."*"]
@@ -140,7 +144,14 @@ pub fn GettingStarted() -> Element {
             },
             DocSection {
                 title: "Installation",
-                CodeBlock { source: "cargo add libero", language: "shell" }
+                Alert { title: "Not on crates.io yet",
+                    Text {
+                        "Until the first release, install libero from its repository. It tracks Dioxus "
+                        Code { source: "main" }
+                        ", so take dioxus from git as well: a second copy of dioxus would not share libero's contexts."
+                    }
+                }
+                CodeBlock { source: INSTALL_COMMANDS, language: "shell" }
                 Text {
                     "Wrap your app in "
                     Code { source: "LiberoProvider" }

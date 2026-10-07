@@ -53,7 +53,7 @@ fn HomeCode() -> Element {
             CodeBlock {
                 id: "install",
                 // copy: install
-                source: "cargo add libero",
+                source: "cargo add libero --git https://github.com/tdymel/libero",
                 language: "shell",
                 label: "Add libero to your project",
                 header: false,
