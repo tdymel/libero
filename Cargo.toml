@@ -1,6 +1,5 @@
 [workspace]
 members = ["libero", "libero-macros", "docs", "e2e", "e2e/fixtures"]
-exclude = [".dioxus-fork", ".dioxus-main", ".dioxus-active", ".blitz-fork"]
 resolver = "3"
 
 # Full debug info is most of what a dev build writes, and on this encrypted
