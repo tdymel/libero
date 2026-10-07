@@ -24,18 +24,22 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     env:
-      # Served at https://<owner>.github.io/<repo>/.
-      BASE_PATH: ${{ github.event.repository.name }}
       PUBLIC: target/dx/docs/release/web/public
     steps:
       - uses: actions/checkout@v7
+      # `base_path` is `/<repo>` on <owner>.github.io and empty under a custom domain.
+      - id: pages
+        uses: actions/configure-pages@v6
+      - run: |
+          base="${{ steps.pages.outputs.base_path }}"
+          echo "BASE_PATH=${base#/}" >> "$GITHUB_ENV"
       - uses: ./.github/actions/setup
         with:
           targets: wasm32-unknown-unknown
           cache-key: pages
       - uses: ./.github/actions/dx
       - working-directory: docs
-        run: dx build --platform web --release --debug-symbols=false --base-path "$BASE_PATH"
+        run: dx build --platform web --release --debug-symbols=false ${BASE_PATH:+--base-path "$BASE_PATH"}
       - run: |
           docs/preload_wasm.sh "$PUBLIC"
           # Pages has no SPA rewrite: a deep link lands on 404.html, which boots the app on its route.
