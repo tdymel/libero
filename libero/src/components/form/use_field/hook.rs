@@ -15,6 +15,8 @@ pub(crate) struct FieldHook {
     pub(super) generation: Cell<u32>,
     /// Whether a `name` that does not fit the form's value was warned about.
     pub(super) warned: Cell<bool>,
+    /// Whether a blank status message was warned about (todo 2342).
+    pub(super) warned_blank: Cell<bool>,
     pub(super) owner: ScopeId,
     pub(super) form: Option<(FormScope, usize)>,
     pub(super) binding: Binding,
@@ -28,6 +30,7 @@ impl FieldHook {
             touched: Cell::new(false),
             generation: Cell::new(form.map_or(0, |(scope, _)| scope.generation())),
             warned: Cell::new(false),
+            warned_blank: Cell::new(false),
             owner: current_scope_id(),
             form,
             binding: try_consume_context::<Binding>().unwrap_or_default(),

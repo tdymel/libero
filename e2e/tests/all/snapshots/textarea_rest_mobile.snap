@@ -6,10 +6,12 @@ expression: tree
 LabelText
   StaticText "Note"
 textbox "Note"
+  description "20 characters left"
 status [atomic] [live=polite]
 LabelText
   StaticText "Remark"
 textbox "Remark"
+  description "20 characters left"
 status [atomic] [live=polite]
 LabelText
   StaticText "Code"

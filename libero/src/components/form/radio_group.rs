@@ -322,6 +322,8 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
         .attr("aria-describedby", describedby)
         .attr("aria-invalid", invalid.then_some("true"))
         .attr("aria-required", required.then_some("true"))
+        // An empty group while the options load is not a group with none.
+        .attr("aria-busy", props.options.is_pending().then_some("true"))
         .element(&root)
         .event("onkeydown", arrows)
         // Read-only keeps focus on the checked option (todo 746). A task later:
@@ -417,5 +419,31 @@ mod tests {
             option_selector("plan\"s", 2),
             "input[name=\"plan\\\"s\"][data-radio-index=\"2\"]"
         );
+    }
+
+    /// Todo 2444.
+    #[test]
+    fn a_pending_option_source_marks_the_group_busy() {
+        fn html(app: fn() -> Element) -> String {
+            let mut dom = VirtualDom::new(app);
+            dom.rebuild_in_place();
+            dioxus_ssr::render(&dom)
+        }
+        let pending = html(|| {
+            rsx! {
+                crate::LiberoProvider {
+                    RadioGroup::<String> { label: "Plan", options: None::<crate::components::common::OptionList<String>>, onchange: |_| {} }
+                }
+            }
+        });
+        assert!(pending.contains("aria-busy=\"true\""), "{pending}");
+        let ready = html(|| {
+            rsx! {
+                crate::LiberoProvider {
+                    RadioGroup::<String> { label: "Plan", options: vec!["Free".to_string()], onchange: |_| {} }
+                }
+            }
+        });
+        assert!(!ready.contains("aria-busy"), "{ready}");
     }
 }

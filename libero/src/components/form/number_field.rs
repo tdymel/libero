@@ -1,4 +1,4 @@
-use std::{any::TypeId, rc::Rc};
+use std::{any::TypeId, borrow::Cow, rc::Rc};
 
 use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
@@ -11,7 +11,7 @@ use crate::{
             use_no_toolbar, use_toolbar_item,
         },
         form::{
-            FIELD_CONTROL_SX, LiveControl, field_props, slot_button_sx, slot_icon_size, use_bound,
+            LiveControl, field_control_sx, field_props, slot_button_sx, slot_icon_size, use_bound,
             use_field, use_field_frame,
         },
         layout::use_box,
@@ -27,6 +27,13 @@ use crate::{
 /// empties text it cannot parse, the in-progress text the edit buffer keeps.
 static STEPPERS_SX: StaticSx =
     StaticSx::new(|| sx().display("flex").align_items("center").gap("2px"));
+
+/// The input is `dir="ltr"`; its text still sits at the page's start.
+static NUMBER_CONTROL_SX: StaticSx = StaticSx::new(|| {
+    field_control_sx()
+        .text_align("start")
+        .rtl(sx().text_align("right"))
+});
 
 /// Each 24px hit area stops mid-gap so the two meet; spare width goes outwards.
 static DECREMENT_SX: StaticSx = StaticSx::new(|| {
@@ -229,7 +236,7 @@ fn NumberFieldShell<T: NumberValue>(
         .prepare();
 
     let control = use_box()
-        .framework_sx(&FIELD_CONTROL_SX)
+        .framework_sx(&NUMBER_CONTROL_SX)
         .focus_ring(false)
         .prepare();
 
@@ -237,6 +244,8 @@ fn NumberFieldShell<T: NumberValue>(
         .aria(control)
         .attr_default("type", "text")
         .attr_default("inputmode", keypad(kind, min))
+        // A leading minus takes the page direction, so `-5` drew as `5-` under `rtl`.
+        .attr_default("dir", "ltr")
         // The role carries the range: `min`/`max` mean nothing on `type="text"`.
         .attr("role", "spinbutton")
         .attr("aria-valuemin", min.map(|min| min.to_string()))
@@ -368,9 +377,29 @@ fn keypad<T: NumberValue>(kind: Keypad<T>, min: Option<T>) -> &'static str {
 /// `T::parse`, taking the separator as well as `.`: a German user on a US
 /// layout or a numpad types `1.5`.
 fn parse<T: NumberValue>(text: &str, separator: Option<&str>) -> Option<T> {
+    let text = ascii_digits(text);
     match separator {
         Some(separator) => T::parse(&text.replacen(separator, ".", 1)),
-        None => T::parse(text),
+        None => T::parse(&text),
+    }
+}
+
+/// Arabic-Indic, Extended Arabic-Indic and full-width digits as ASCII: the
+/// default of a Persian or Arabic keyboard and a CJK IME in full-width mode.
+fn ascii_digits(text: &str) -> Cow<'_, str> {
+    let fold = |c: char| {
+        let zero = match c {
+            '\u{0660}'..='\u{0669}' => 0x0660,
+            '\u{06F0}'..='\u{06F9}' => 0x06F0,
+            '\u{FF10}'..='\u{FF19}' => 0xFF10,
+            '\u{FF0D}' | '\u{2212}' => return Some('-'),
+            _ => return None,
+        };
+        char::from_digit(c as u32 - zero, 10)
+    };
+    match text.chars().any(|c| fold(c).is_some()) {
+        true => Cow::Owned(text.chars().map(|c| fold(c).unwrap_or(c)).collect()),
+        false => Cow::Borrowed(text),
     }
 }
 
@@ -419,4 +448,19 @@ fn Steppers(
             }
         },
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse;
+
+    /// Todo 2414: these typed digits never parsed and reverted on blur.
+    #[test]
+    fn non_ascii_digits_parse() {
+        assert_eq!(parse::<i32>("\u{0661}\u{0662}", None), Some(12));
+        assert_eq!(parse::<i32>("\u{06F4}\u{06F2}", None), Some(42));
+        assert_eq!(parse::<i32>("\u{FF0D}\u{FF17}", None), Some(-7));
+        assert_eq!(parse::<f64>("\u{FF11},\u{FF15}", Some(",")), Some(1.5));
+        assert_eq!(parse::<i32>("12", None), Some(12));
+    }
 }

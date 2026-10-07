@@ -45,6 +45,14 @@ static FIELDSET_SX: StaticSx = StaticSx::new(|| {
             sx().color("muted.7")
                 .font_size(FIELD_CAPTION_FONT_SIZE.value(Size::Md)),
         )
+        // The fields inside dim themselves; the group's own text dims with them.
+        .when(
+            "disabled",
+            sx().selector("& > legend", sx().color("muted.6")).selector(
+                "& > [data-slot]:where(:not([data-slot='legend']))",
+                sx().color("muted.6"),
+            ),
+        )
         .when(
             "warning",
             sx().selector("& > [data-slot='status']", sx().color("warning.7")),
@@ -74,7 +82,8 @@ base_props! {
     extends(fieldset);
     parts(FieldsetPart);
     pub struct FieldsetProps<V: FormValue> {
-        /// The group's own value, for a fieldset outside a `Form`.
+        /// The group's own value, for a fieldset outside a `Form`. A different store,
+        /// or a different `path`, remounts the fields.
         #[props(default)]
         value: Option<Store<V>>,
         /// Composite rules over `value`; `.on(..)` shows one on the named fields.
@@ -142,14 +151,31 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
         scope.unregister(key);
     });
 
-    let binding = use_hook(|| {
-        let parent = try_consume_context::<Binding>().unwrap_or_default();
-        match props.value {
-            Some(value) => parent.rebased(props.path.as_str(), Rc::new(value) as Rc<dyn Source>),
-            None => parent.narrow(props.path.as_str(), props.path.steps()),
-        }
-    });
+    // A field binds on mount, so another `value` or `path` remounts the fields, as in `Form`.
+    let parent = use_hook(|| try_consume_context::<Binding>().unwrap_or_default());
+    let bind = || match props.value {
+        Some(value) => parent.rebased(props.path.as_str(), Rc::new(value) as Rc<dyn Source>),
+        None => parent.narrow(props.path.as_str(), props.path.steps()),
+    };
+    let mut bound_to = use_hook(|| CopyValue::new((props.value, props.path.as_str().to_string())));
+    let mut record = use_hook(|| CopyValue::new(0u32));
+    let swapped = {
+        let (value, path) = &*bound_to.peek();
+        *value != props.value || path != props.path.as_str()
+    };
+    let mut binding = use_hook(|| CopyValue::new(bind()));
+    if swapped {
+        bound_to.set((props.value, props.path.as_str().to_string()));
+        let next = *record.peek() + 1;
+        record.set(next);
+        binding.set(bind());
+    }
+    let binding = binding.peek().clone();
     use_context_provider(|| binding.clone());
+    if swapped {
+        // The fields about to mount read it from the context.
+        provide_context(binding.clone());
+    }
 
     // `<fieldset disabled>` only reaches native controls, so the group also
     // tells its fields - which draw their own disabled look - and nested groups.
@@ -242,7 +268,12 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
         &id,
         &props.description,
     ));
-    children.push(props.children);
+    let record = *record.peek();
+    children.push(rsx! {
+        for record in [record] {
+            Fragment { key: "{record}", {props.children.clone()} }
+        }
+    });
     children.extend(slot_node(FieldsetPart::Helper.slot(), &id, &props.helper));
     children.extend(status_node(
         &id,
@@ -250,7 +281,12 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
         crate::hooks::use_localization().common.warning,
     ));
 
-    let mut states = props.states.as_ref().cloned().unwrap_or_default();
+    let mut states = props
+        .states
+        .as_ref()
+        .cloned()
+        .unwrap_or_default()
+        .with("disabled", disabled);
     if let Some(state) = status.state() {
         states = states.active(state);
     }
@@ -277,7 +313,7 @@ mod tests {
 
     use crate::{
         LiberoProvider,
-        components::form::{Fieldset, FormScope, Rule},
+        components::form::{Fieldset, FormScope, Rule, TextField},
         utils::warnings_of,
     };
 
@@ -388,6 +424,77 @@ mod tests {
             dom.render_immediate(&mut NoOpMutations);
         });
         RENDERS.get()
+    }
+
+    #[derive(Clone, PartialEq, Default)]
+    struct Pair {
+        a: String,
+    }
+
+    #[derive(Clone, PartialEq, Default)]
+    struct Two {
+        x: Pair,
+        y: Pair,
+    }
+
+    /// Renders `app`, flips its `Signal<bool>` context and renders again.
+    fn before_and_after_a_flip(app: fn() -> Element) -> (String, String) {
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        dom.render_immediate(&mut NoOpMutations);
+        let before = dioxus_ssr::render(&dom);
+        dom.in_scope(ScopeId::APP, || consume_context::<Signal<bool>>().set(true));
+        dom.render_immediate(&mut NoOpMutations);
+        (before, dioxus_ssr::render(&dom))
+    }
+
+    /// Todo 2565: the fields bound once at mount and kept editing the first record.
+    #[test]
+    fn a_different_value_or_path_rebinds_the_fields() {
+        let (before, after) = before_and_after_a_flip(|| {
+            let first = use_store(|| Pair { a: "first".into() });
+            let second = use_store(|| Pair { a: "second".into() });
+            let flip = use_context_provider(|| Signal::new(false));
+            let value = if flip() { second } else { first };
+            rsx! {
+                LiberoProvider {
+                    Fieldset { label: "G", value,
+                        TextField { label: "A", name: crate::path!(Pair => a) }
+                    }
+                }
+            }
+        });
+        assert!(before.contains("first"), "{before}");
+        assert!(
+            after.contains("second") && !after.contains("first"),
+            "{after}"
+        );
+
+        let (before, after) = before_and_after_a_flip(|| {
+            let two = use_store(|| Two {
+                x: Pair { a: "first".into() },
+                y: Pair { a: "second".into() },
+            });
+            let flip = use_context_provider(|| Signal::new(false));
+            let path = match flip() {
+                true => crate::path!(Two => y),
+                false => crate::path!(Two => x),
+            };
+            rsx! {
+                LiberoProvider {
+                    Fieldset { label: "Both", value: two,
+                        Fieldset { label: "One", path,
+                            TextField { label: "A", name: crate::path!(Pair => a) }
+                        }
+                    }
+                }
+            }
+        });
+        assert!(before.contains("first"), "{before}");
+        assert!(
+            after.contains("second") && !after.contains("first"),
+            "{after}"
+        );
     }
 
     /// Todo 2570: with no rules there is no unnamed issue to reveal.

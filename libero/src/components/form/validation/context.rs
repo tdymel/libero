@@ -292,14 +292,33 @@ impl FormScope {
             })
             .collect();
 
-        for issue in self.issues.peek().values().flatten() {
-            let FieldStatus::Error(message) = &issue.status else {
-                continue;
-            };
-            items.push(SummaryItem {
-                message: message.clone(),
-                target: issue.paths.first().and_then(|path| id_of(path)),
-            });
+        for (key, issues) in self.issues.peek().iter() {
+            for issue in issues {
+                let FieldStatus::Error(message) = &issue.status else {
+                    continue;
+                };
+                let item = match issue.paths.first() {
+                    Some(path) => SummaryItem {
+                        message: message.clone(),
+                        target: id_of(path),
+                    },
+                    // A `Fieldset`'s own rule: its entry shares the key, so the line goes to the group.
+                    None => match fields.get(key) {
+                        Some(group) => SummaryItem {
+                            message: match &group.label {
+                                Some(label) => format!("{label}: {message}"),
+                                None => message.clone(),
+                            },
+                            target: Some(group.id.clone()),
+                        },
+                        None => SummaryItem {
+                            message: message.clone(),
+                            target: None,
+                        },
+                    },
+                };
+                items.push(item);
+            }
         }
         items
     }

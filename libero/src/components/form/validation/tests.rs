@@ -857,3 +857,67 @@ fn a_fieldset_in_error_blocks_the_submit_and_joins_the_summary() {
     assert_eq!(messages, ["Address: Address not found"]);
     assert!(summary[0].target.is_some());
 }
+
+/// Todo 2566: a `Fieldset`'s own rule was an unlinked, unnamed line.
+#[test]
+fn a_fieldset_rule_naming_no_field_links_to_the_group() {
+    #[derive(Clone, PartialEq, Default)]
+    struct Account {
+        passwords: Signup,
+    }
+
+    fn app() -> Element {
+        let account = use_store(|| Account {
+            passwords: Signup {
+                password: "a".into(),
+                confirm: "b".into(),
+            },
+        });
+        rsx! {
+            LiberoProvider {
+                Form {
+                    value: account,
+                    Spy {}
+                    Fieldset::<Signup> {
+                        label: "Passwords",
+                        id: "passwords",
+                        path: crate::path!(Account => passwords),
+                        validate: [(|s: &Signup| s.password == s.confirm).error("They differ")],
+                        TextField { name: "password", value: "" }
+                    }
+                }
+            }
+        }
+    }
+
+    let (dom, _) = mount(app);
+    let scope = scope(&dom);
+    let summary = dom.in_runtime(|| scope.summary());
+    assert_eq!(summary.len(), 1, "{summary:?}");
+    assert_eq!(summary[0].message, "Passwords: They differ");
+    assert_eq!(summary[0].target.as_deref(), Some("passwords"));
+}
+
+/// Todo 2342: a blank message marks the field invalid with nothing to read.
+#[test]
+fn a_blank_status_or_rule_message_warns() {
+    use crate::utils::warnings_of;
+    let blank = |app: fn() -> Element| {
+        warnings_of(app)
+            .iter()
+            .any(|warning| warning.starts_with("Field: a status or rule message is blank"))
+    };
+    assert!(blank(|| rsx! {
+        LiberoProvider { TextField { label: "A", status: FieldStatus::Error(" ".into()) } }
+    }));
+    assert!(blank(|| rsx! {
+        LiberoProvider {
+            Form::<()> {
+                TextField { label: "A", name: "a", value: "", validate: [not_empty.error("")] }
+            }
+        }
+    }));
+    assert!(!blank(|| rsx! {
+        LiberoProvider { TextField { label: "A", status: FieldStatus::Error("Wrong".into()) } }
+    }));
+}

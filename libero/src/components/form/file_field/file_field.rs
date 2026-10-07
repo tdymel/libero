@@ -183,6 +183,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
         emit,
         mut owed,
         take,
+        pick,
     } = use_file_intake(Taking {
         onchange: props.onchange,
         setter: bound.setter(),
@@ -207,7 +208,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
             || {
                 let _ = input_element.click();
             },
-            move |picked| take.call(picked),
+            move |picked| pick.call(picked),
         );
     });
 
@@ -334,7 +335,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
         &props,
         bound.name().map(str::to_string),
         interactive,
-        take,
+        pick,
     );
 
     let states: Input<States> = field
@@ -428,7 +429,7 @@ fn file_input(
     props: &FileFieldProps,
     name: Option<String>,
     interactive: bool,
-    take: Callback<Vec<FileData>>,
+    pick: Callback<Vec<FileData>>,
 ) -> Element {
     style
         .attr_default("type", "file")
@@ -443,7 +444,7 @@ fn file_input(
         .attr("tabindex", "-1")
         .attr("aria-hidden", "true")
         .element(&element)
-        .event("onchange", move |event: FormEvent| take.call(event.files()))
+        .event("onchange", move |event: FormEvent| pick.call(event.files()))
         .render(HtmlTag::Input, Vec::new(), ())
 }
 

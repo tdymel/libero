@@ -8,7 +8,7 @@ use crate::{
     platform::{ElementApi, next_task},
 };
 
-use super::accept::accepts;
+use super::accept::{accepts, picker_accepts};
 use super::crop::croppable;
 use super::files::{FileRejection, Files, RejectReason};
 use super::rows::FocusDebt;
@@ -34,7 +34,10 @@ pub(super) struct Intake {
     /// What the next render owes the keyboard, after a removal or a pick
     /// destroyed the element focus was on.
     pub(super) owed: Signal<Option<FocusDebt>>,
+    /// A drop.
     pub(super) take: Callback<Vec<FileData>>,
+    /// A pick, which the picker filtered by `accept` already.
+    pub(super) pick: Callback<Vec<FileData>>,
 }
 
 pub(super) fn use_file_intake(taking: Taking) -> Intake {
@@ -57,11 +60,11 @@ pub(super) fn use_file_intake(taking: Taking) -> Intake {
 
     let mut owed = use_signal(|| None::<FocusDebt>);
 
-    let take = use_callback(move |files: Vec<FileData>| {
+    let intake = use_callback(move |(files, picked): (Vec<FileData>, bool)| {
         if !editable {
             return;
         }
-        let (kept, rejected) = keep_accepted(files, &accept, multiple);
+        let (kept, rejected) = keep_accepted(files, &accept, multiple, picked);
         if !rejected.is_empty() {
             let note = rejection_note(&rejected, &current_localization().file_field);
             let count = refused.peek().as_ref().map_or(0, |(count, _)| *count);
@@ -79,8 +82,15 @@ pub(super) fn use_file_intake(taking: Taking) -> Intake {
             emit.call(kept);
         }
     });
+    let take = use_callback(move |files| intake.call((files, false)));
+    let pick = use_callback(move |files| intake.call((files, true)));
 
-    Intake { emit, owed, take }
+    Intake {
+        emit,
+        owed,
+        take,
+        pick,
+    }
 }
 
 /// The files a pick or a drop leaves after `accept` and `multiple`, and the
@@ -89,10 +99,15 @@ fn keep_accepted(
     files: Vec<FileData>,
     accept: &str,
     multiple: bool,
+    picked: bool,
 ) -> (Files, Vec<FileRejection>) {
+    let check = match picked {
+        true => picker_accepts,
+        false => accepts,
+    };
     let (mut kept, mut rejected) = (Vec::new(), Vec::new());
     for file in files {
-        let reason = if !accepts(accept, &file.name(), file.content_type().as_deref()) {
+        let reason = if !check(accept, &file.name(), file.content_type().as_deref()) {
             Some(RejectReason::Type)
         } else if !multiple && !kept.is_empty() {
             Some(RejectReason::TooMany)

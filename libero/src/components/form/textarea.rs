@@ -12,7 +12,9 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::{use_css, use_element, use_form_owner, use_localization, use_theme},
+    hooks::{
+        use_css, use_debounced_value, use_element, use_form_owner, use_localization, use_theme,
+    },
     platform::fit_max_length,
     sx::{StaticSx, sx},
 };
@@ -106,6 +108,9 @@ fn length(text: &str) -> usize {
     text.encode_utf16().count()
 }
 
+/// How long typing pauses before the counter's status speaks.
+const SETTLE_MS: u64 = 1000;
+
 /// Whether `left` of `max` is near enough the limit to announce: the last
 /// tenth, rounded up.
 fn near_limit(left: usize, max: usize) -> bool {
@@ -144,7 +149,7 @@ pub fn Textarea(props: TextareaProps) -> Element {
     let readonly = props.readonly.unwrap_or(false);
     let value = bound.value().or_else(|| props.value.clone());
 
-    let field = use_field()
+    let mut field = use_field()
         .label(&props.label)
         .description(&props.description)
         .helper(&props.helper)
@@ -187,19 +192,36 @@ pub fn Textarea(props: TextareaProps) -> Element {
     let mut typed = use_signal(|| (0u32, None::<usize>));
     let counter_class = use_css(Some(&COUNTER_SX), CssLayer::Framework);
     let words = use_localization().textarea;
-    let counter = limit.map(|max| {
+    let count = limit.map(|max| {
         let (at, count) = typed();
         let typed_now = match (at == resets, count) {
             (true, Some(count)) => count,
             _ => initial_length(&props.attributes),
         };
         let used = value.as_deref().map_or(typed_now, length);
-        let left = max.saturating_sub(used);
-        // Only a controlled value runs past `maxlength`; "0 left" would hide it.
-        let spoken = match used > max {
-            true => Some((words.characters_over)(used - max)),
-            false => near_limit(left, max).then(|| (words.characters_left)(left)),
-        };
+        (used, max, max.saturating_sub(used))
+    });
+    // Only a controlled value runs past `maxlength`; "0 left" would hide it.
+    let over = count
+        .filter(|&(used, max, _)| used > max)
+        .map(|(used, max, _)| (words.characters_over)(used - max));
+    // Said once typing stops, not per keystroke (GOV.UK's character count).
+    let spoken = over.clone().or_else(|| {
+        count
+            .filter(|&(_, max, left)| near_limit(left, max))
+            .map(|(_, _, left)| (words.characters_left)(left))
+    });
+    let mut typing = use_signal(|| spoken.clone());
+    if *typing.peek() != spoken {
+        typing.set(spoken);
+    }
+    let settled = use_debounced_value(typing.into(), SETTLE_MS);
+    let count_id = format!("{}-count", field.id());
+    if count.is_some() {
+        // Read with the field at focus, so the limit is known before typing.
+        field.describe_also(count_id.clone());
+    }
+    let counter = count.map(|(used, max, left)| {
         let badge = rsx! {
             div {
                 class: counter_class,
@@ -210,7 +232,9 @@ pub fn Textarea(props: TextareaProps) -> Element {
             }
         };
         let status = rsx! {
-            VisuallyHidden { role: "status", {spoken} }
+            // `hidden`: a description only, not a second line in browse mode.
+            span { id: count_id, hidden: true, {over.unwrap_or_else(|| (words.characters_left)(left))} }
+            VisuallyHidden { role: "status", {settled()} }
         };
         (badge, status)
     });
@@ -307,5 +331,22 @@ mod tests {
         assert!(html.contains(">5/3<"), "{html}");
         assert!(html.contains("2 characters too many"), "{html}");
         assert!(!html.contains("characters left"), "{html}");
+    }
+
+    /// Todo 2460: the count is part of the field's description, read at focus.
+    #[test]
+    fn the_count_describes_the_field() {
+        let html = dioxus_ssr::render_element(rsx! {
+            LiberoProvider {
+                Textarea { id: "bio", counter: true, maxlength: 20, value: "hello" }
+            }
+        });
+        assert!(html.contains("id=\"bio-count\""), "{html}");
+        assert!(html.contains(">15 characters left<"), "{html}");
+        let described = html
+            .split("aria-describedby=\"")
+            .nth(1)
+            .and_then(|rest| rest.split('"').next());
+        assert_eq!(described, Some("bio-count"), "{html}");
     }
 }

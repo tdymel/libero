@@ -1,6 +1,9 @@
 use crate::components::common::Input;
 
 /// The validation state of a field, and the message that goes with it.
+///
+/// A variant keeps its text as given: `Error("")` still marks the field invalid and
+/// blocks a submit, with nothing to read. Debug builds warn about a blank message.
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub enum FieldStatus {
     #[default]

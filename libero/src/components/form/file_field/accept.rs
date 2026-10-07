@@ -4,18 +4,28 @@
 /// Whether a file satisfies `accept` (`.ext`, `type/subtype`, `type/*`). An
 /// empty list accepts everything.
 pub(super) fn accepts(accept: &str, name: &str, content_type: Option<&str>) -> bool {
+    accepts_from(accept, name, content_type, false)
+}
+
+/// [`accepts`] for a file the picker offered. The picker applied `accept` already,
+/// so a file the platform gave no type (an HEIC on Windows) passes `image/*` too.
+pub(super) fn picker_accepts(accept: &str, name: &str, content_type: Option<&str>) -> bool {
+    accepts_from(accept, name, content_type, true)
+}
+
+fn accepts_from(accept: &str, name: &str, content_type: Option<&str>, picked: bool) -> bool {
     let mut entries = accept.split(',').map(str::trim).filter(|e| !e.is_empty());
     let mut empty = true;
     for entry in entries.by_ref() {
         empty = false;
-        if matches(entry, name, content_type) {
+        if matches(entry, name, content_type, picked) {
             return true;
         }
     }
     empty
 }
 
-fn matches(entry: &str, name: &str, content_type: Option<&str>) -> bool {
+fn matches(entry: &str, name: &str, content_type: Option<&str>, picked: bool) -> bool {
     // A suffix match, so `.tar.gz` works; case-insensitive, as `.PDF` is a `.pdf`.
     if entry.starts_with('.') {
         let (name, entry) = (name.as_bytes(), entry.as_bytes());
@@ -23,9 +33,9 @@ fn matches(entry: &str, name: &str, content_type: Option<&str>) -> bool {
             && name[name.len() - entry.len()..].eq_ignore_ascii_case(entry);
     }
 
-    // A file with no media type only matches `*/*`.
-    let Some(content_type) = content_type else {
-        return entry == "*/*";
+    // A dropped file with no media type only matches `*/*`.
+    let Some(content_type) = content_type.filter(|content_type| !content_type.is_empty()) else {
+        return picked || entry == "*/*";
     };
     // Parameters (`;charset=utf-8`) are not compared.
     let content_type = content_type
@@ -172,7 +182,17 @@ mod tests {
     #[test]
     fn a_typeless_file_needs_an_extension_or_a_star() {
         assert!(!accepts("image/*", "photo", None));
+        assert!(!accepts("image/*", "photo", Some("")));
         assert!(accepts("*/*", "photo", None));
         assert!(accepts(".png", "photo.png", None));
+    }
+
+    /// Todo 2552: the picker offered the typeless file for `image/*`, so the field takes it.
+    #[test]
+    fn a_typeless_pick_passes_a_media_type_entry() {
+        assert!(picker_accepts("image/*", "IMG_1.HEIC", None));
+        assert!(picker_accepts("image/*", "IMG_1.HEIC", Some("")));
+        assert!(!picker_accepts("image/*", "a.pdf", Some("application/pdf")));
+        assert!(!picker_accepts(".png", "IMG_1.HEIC", None));
     }
 }

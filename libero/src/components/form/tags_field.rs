@@ -714,7 +714,8 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
         .attr("disabled", disabled)
         .attr("readonly", readonly)
         .attr("required", (required && held.is_empty()).then_some(true))
-        .attr("autocomplete", "off")
+        // A caller's token wins; the browser's saved entries then cover the suggestions.
+        .attr_default("autocomplete", "off")
         .event("oninput", move |event: FormEvent| {
             let raw = event.value();
             let pieces: Vec<String> = split(&raw, &split_chars);

@@ -4,7 +4,10 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, Part, States, input_from_str, navigation_chord},
+        common::{
+            HtmlTag, Input, Part, States, input_from_str, names_itself, navigation_chord,
+            use_name_warning,
+        },
         form::{
             FIELD_CONTROL_SX, FieldPart, PreparedFrame, field_props, use_bound, use_field,
             use_field_frame,
@@ -149,6 +152,11 @@ pub fn PinField(props: PinFieldProps) -> Element {
         .states(&props.states)
         .attributes(&props.attributes)
         .prepare();
+    use_name_warning(
+        field.label_id().is_some() || names_itself(&props.attributes),
+        "PinField: no `label`, `aria-label` or `aria-labelledby`, so its cells are read as \
+         \"Character 1 of 6\" with no question.",
+    );
 
     let states: Input<States> = field
         .states()
@@ -698,4 +706,29 @@ fn PinCell(
         .render(HtmlTag::Input, Vec::new(), ());
 
     frame.frame.render(input)
+}
+
+#[cfg(test)]
+mod tests {
+    use dioxus::prelude::*;
+
+    use crate::{LiberoProvider, components::form::PinField, utils::warnings_of};
+
+    fn warns(app: fn() -> Element) -> bool {
+        warnings_of(app)
+            .iter()
+            .any(|warning| warning.starts_with("PinField:"))
+    }
+
+    /// Todo 2442.
+    #[test]
+    fn an_unnamed_pin_field_warns() {
+        assert!(warns(|| rsx! { LiberoProvider { PinField {} } }));
+        assert!(!warns(
+            || rsx! { LiberoProvider { PinField { label: "Code" } } }
+        ));
+        assert!(!warns(
+            || rsx! { LiberoProvider { PinField { aria_label: "Code" } } }
+        ));
+    }
 }

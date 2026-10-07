@@ -294,7 +294,8 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         .attr("disabled", disabled)
         .attr("readonly", readonly)
         .attr("required", required)
-        .attr("autocomplete", "off")
+        // The browser's saved entries would cover the list; a caller's token (WCAG 1.3.5) takes that trade.
+        .attr_default("autocomplete", "off")
         .event("oninput", move |event: FormEvent| {
             if let Some(oninput) = &oninput {
                 oninput(event.value());

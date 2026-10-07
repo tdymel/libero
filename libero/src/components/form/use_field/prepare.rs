@@ -15,6 +15,7 @@ use crate::{
     },
     hooks::{ElementHandle, use_localization, use_root_id, use_silent_focus_out},
     platform,
+    utils::warn,
 };
 
 impl FieldBuilder<'_> {
@@ -45,6 +46,15 @@ impl FieldBuilder<'_> {
             .unwrap_or_default();
         let validated = self.rules.is_some();
         let rules = self.rules.unwrap_or_default();
+        let blank = [&explicit, &rules]
+            .into_iter()
+            .any(|status| status.message().is_some_and(|text| text.trim().is_empty()));
+        if blank && !hook.warned_blank.replace(true) {
+            warn(
+                "Field: a status or rule message is blank, so the field is invalid with nothing \
+                 to read. Give it a text, or use `FieldStatus::Valid`.",
+            );
+        }
 
         if let Some((mut scope, key)) = hook.form {
             let generation = scope.generation();
