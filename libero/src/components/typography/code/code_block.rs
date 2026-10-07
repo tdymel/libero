@@ -232,7 +232,7 @@ base_props! {
         /// prefix, so not a unified diff. Wins over `highlight_lines`.
         #[props(default)]
         diff: bool,
-        /// Names the block and its copy button, e.g. "The booking card, Rust code".
+        /// Names the block, its copy button and its scroll region, e.g. "The booking card, Rust code".
         /// Unset, the language, as "Rust code".
         #[props(default, into)]
         label: Option<String>,
@@ -493,7 +493,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
         Some(language) => fill(labels.code_named, &[("language", &language.name(&labels))]),
         None => labels.code.to_string(),
     };
-    let group_label = props.label.clone().unwrap_or_else(|| scroll_label.clone());
+    let group_label = props.label.clone().unwrap_or(scroll_label);
     // A classic vertical scrollbar's width, which the floating copy button moves clear of.
     let mut scrollbar = use_signal(|| 0u32);
     let width = scrollbar();
@@ -604,7 +604,8 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
         .attr("dir", Some("ltr"))
         .attr("tabindex", scrolls.then_some("0"))
         .attr("role", scrolls.then_some("region"))
-        .attr("aria-label", scrolls.then_some(scroll_label));
+        // `label` tells two blocks' regions apart in the landmark list (todo 2349).
+        .attr("aria-label", scrolls.then(|| group_label.clone()));
     let code = match &lines {
         Some(lines) => code_lines(
             lines,

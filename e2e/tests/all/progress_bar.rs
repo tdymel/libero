@@ -82,6 +82,14 @@ fn the_segments_keep_their_contrast() {
         )
         .await
         .unwrap();
+        // Todo 2403: the value at 50 is in the "Send" stretch, said after the percentage.
+        let text: String = page
+            .evaluate("document.querySelector('#segments').getAttribute('aria-valuetext')")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(text, "50%, Send");
         let ratios = format!(
             r#"(() => {{ {COLOUR_JS}
             const style = (s) => getComputedStyle(document.querySelector('#segments ' + s));

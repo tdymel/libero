@@ -223,6 +223,12 @@ explains how parts work.
 - Without a visible label, spread `"aria-label"`, since the segments name the
   options, not the question.
 
+### Limits
+
+- A row too long for its container wraps (WCAG 1.4.10). Without `gap`, the
+  second line keeps the joined look: its first segment overlaps by 1px and its
+  ends stay square. Set `gap` or a vertical `orientation` where it may wrap.
+
 ### Example
 
 An alignment strip with no visible label, `"aria-label": "Alignment"`: Tab

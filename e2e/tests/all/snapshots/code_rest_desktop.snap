@@ -68,7 +68,7 @@ group "The greeting, Rust code"
   button "Copy code"
     description "The greeting, Rust code"
   status [atomic] [live=polite]
-  region "Rust code"
+  region "The greeting, Rust code"
     code
       StaticText "fn"
       StaticText

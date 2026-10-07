@@ -153,10 +153,11 @@ pub struct SpotlightOptions {
     /// The live query to what to show; see [`spotlight_filter`](super::spotlight_filter).
     /// The closure is stored: capture a `Signal`, not a `Vec`, if the list changes.
     pub actions: Option<Callback<String, Vec<SpotlightAction>>>,
+    /// Also names the search box; unset, both come from the localization.
     pub placeholder: Option<String>,
     /// Drawn and announced when a non-empty query matches nothing.
     pub nothing_found: Option<Element>,
-    /// A cap on the rows drawn, counted through the groups.
+    /// A cap on the rows drawn, counted through the groups. The spoken count stays the matched one.
     pub limit: Option<usize>,
     /// Close after running an action.
     pub close_on_action: bool,
@@ -298,6 +299,8 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
             true => Vec::new(),
             false => actions,
         };
+        // Spoken: what the query matched, not what `limit` let through (todo 2383).
+        let matched = actions.len();
         let groups = group_and_limit(actions, options.limit);
         let count = groups
             .iter()
@@ -359,7 +362,7 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
         let filtered = !loading && !query().trim().is_empty();
         let empty = filtered && count == 0;
         // What a query left, said but not shown (WCAG 4.1.3, todo 1574).
-        let results = (filtered && count > 0).then(|| (labels.results)(count));
+        let results = (filtered && count > 0).then(|| (labels.results)(matched));
         let nothing_found = empty.then(|| {
             options
                 .nothing_found
@@ -370,6 +373,11 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
             .aria_label
             .clone()
             .unwrap_or_else(|| labels.label.to_string());
+        // A given placeholder says what this palette searches, so it names the box too (todo 2380).
+        let search_label = options
+            .placeholder
+            .clone()
+            .unwrap_or_else(|| labels.search.to_string());
         let placeholder = options
             .placeholder
             .clone()
@@ -417,7 +425,7 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
                         },
                         "aria-autocomplete": "list",
                         // Its own name: the dialog and the listbox carry `aria_label`.
-                        "aria-label": "{labels.search}",
+                        "aria-label": "{search_label}",
                         placeholder: "{placeholder}",
                         value: "{query}",
                         oninput: move |event: FormEvent| {

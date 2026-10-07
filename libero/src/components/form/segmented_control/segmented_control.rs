@@ -63,6 +63,10 @@ field_props! {
 
 /// A connected strip of segments over an enum, exactly one of them selected.
 ///
+/// A row too long for its container wraps (WCAG 1.4.10). Without `gap` the wrapped line
+/// keeps the joined look: its first segment overlaps by 1px and its ends stay square.
+/// Set `gap` or a vertical `orientation` where the strip may wrap.
+///
 /// ```rust
 /// # use dioxus::prelude::*;
 /// # use libero::components::{Options, SegmentedControl};

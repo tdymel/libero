@@ -763,13 +763,24 @@ fn limit_and_no_first_highlight() {
             .await
             .unwrap();
         keyboard::type_text(page, "a").await.unwrap();
+        // Todo 2383: two rows drawn, but all four matches are said.
         wait::for_js_true(
             page,
-            &status_says("2 results"),
-            "\"a\" to settle on two rows",
+            &status_says("4 results"),
+            "\"a\" to say its four matches",
         )
         .await
         .unwrap();
+        wait::for_js_true(page, &rows_are(2), "the limit to keep two rows")
+            .await
+            .unwrap();
+        // Todo 2380: a given placeholder names the search box.
+        let search_name: String = js(
+            page,
+            "document.querySelector('[role=dialog] [data-slot=search]').getAttribute('aria-label')",
+        )
+        .await;
+        assert_eq!(search_name, "Search the Greek letters");
         assert_eq!(highlight(page).await, "", "typing highlighted a row");
         keyboard::press(page, keyboard::ENTER).await.unwrap();
         crate::settle::painted(page).await.unwrap();

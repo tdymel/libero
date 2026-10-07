@@ -84,8 +84,21 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
         .selector("&:disabled", disabled_look_sx("not-allowed"))
         .when("full-width", sx().width("100%"))
         .when("loading", loading_sx())
+        .and(zoom_height_sx())
         .focus_visible(focus_ring_sx())
 });
+
+/// The step's height, or the label's line once text zoom outgrows it: the ripple's
+/// `overflow: hidden` would clip descenders at 200% (WCAG 1.4.4, todo 2338).
+/// Still a definite height, so a stretching flex row does not grow the button.
+fn zoom_height_sx() -> Sx {
+    sx().per_size(|size| {
+        sx().height(format!(
+            "max({}, calc(1.5em + 2px))",
+            BUTTON_HEIGHT.value(size)
+        ))
+    })
+}
 
 /// Before the children, never shrinking, as on `Chip`.
 fn button_icon_sx() -> Sx {

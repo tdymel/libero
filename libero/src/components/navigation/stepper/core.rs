@@ -8,14 +8,14 @@ use crate::{
         accessibility::VisuallyHidden,
         common::{
             ClassList, Glyph, HtmlTag, Input, LogicalTextAlign, Orientation, Part, Rail, RailInset,
-            States, Variables, focus_ring_sx, on_ring_sx, parts_enum, reveal_inline,
-            use_closing_focus, variables,
+            States, Variables, focus_ring_sx, inset_focus_ring_sx, on_ring_sx, parts_enum,
+            reveal_inline, use_closing_focus, variables,
         },
         layout::{Collapse, use_box},
     },
     context::IconSlot,
     hooks::{id_selector, use_element},
-    platform::when_laid_out,
+    platform::{ElementApi, when_laid_out},
     str_enum::str_enum,
     sx::{FORCED_COLORS, StaticSx, Sx, sx},
     theme::{
@@ -197,6 +197,8 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
                 .align_items("flex-start")
                 .max_width("100%"),
         )
+        // A strip that holds the tab stop itself; inset, in the ring room the scroller clips.
+        .selector("& > ol:focus-visible", inset_focus_ring_sx("-2px"))
         .selector("& > ol > li + li", sx().flex("1 1 auto"))
         .selector(
             "& > ol > li + li::before",
@@ -490,6 +492,38 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
     }
     let root_variables: Input<Variables> = root_variables.into();
 
+    // With no step to Tab to, an overflowing strip takes the tab stop itself: Safari
+    // does not make scrollers focusable (WCAG 2.1.1, todo 2375).
+    let mut overflows = use_signal(|| false);
+    let measure = move || {
+        if vertical || !strip.is_mounted() {
+            return;
+        }
+        let (content, size) = (strip.scroll_size(), strip.dimensions());
+        spawn(async move {
+            if let (Ok(content), Ok(size)) = (content.await, size.await) {
+                // `scrollWidth` is rounded, the rect is not.
+                let next = content.width > size.width + 1.0;
+                if next != *overflows.peek() {
+                    overflows.set(next);
+                }
+            }
+        });
+    };
+    let step_count = steps.len();
+    use_effect(use_reactive!(|(step_count, vertical)| {
+        let _ = step_count;
+        if vertical {
+            overflows.set(false);
+        }
+        when_laid_out(measure);
+    }));
+    let any_clickable = onstepclick.is_some()
+        && (allow_next_steps
+            || (0..steps.len())
+                .any(|index| derived_state(index, reached, current) != StepState::Pending));
+    let strip_tab_stop = !vertical && !any_clickable && overflows();
+
     let last = steps.len().saturating_sub(1);
     let items = steps.into_iter().enumerate().map(|(index, step)| {
         let derived = derived_state(index, reached, current);
@@ -560,6 +594,8 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
                     role: "list",
                     "data-slot": StepperPart::List.slot(),
                     onmounted: strip.mount(),
+                    onresize: move |_| measure(),
+                    tabindex: strip_tab_stop.then_some("0"),
                     ..naming,
                     {items.into_iter()}
                 }

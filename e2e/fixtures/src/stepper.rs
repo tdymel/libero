@@ -81,6 +81,13 @@ fn ManyStepsPage() -> Element {
                 onstepclick: move |phase| late.set(Some(phase)),
             }
             Button { id: "late-last", onclick: move |_| late.set(Some(Phase::Survey)), "Last step" }
+            // Todo 2375: no clickable step, so the overflowing strip is the tab stop.
+            Stepper {
+                id: "plain-9",
+                value: Some(Phase::Account),
+                options: all.to_vec(),
+                label_position: "below",
+            }
         }
     }
 }

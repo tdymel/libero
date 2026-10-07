@@ -119,8 +119,9 @@ parts work.
   described by the same words, so a screen reader hears "Copy code, Rust code".
 - In `diff` mode a screen reader hears "added" or "removed" before a changed
   line.
-- A block that scrolls is a focusable region named after its language, such as
-  "Rust code". The words come from the [localization](localization.md).
+- A block that scrolls is a focusable region named like the group: by `label`,
+  or else after its language, such as "Rust code". The words come from the
+  [localization](localization.md).
 
 ### You must
 

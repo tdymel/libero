@@ -29,6 +29,7 @@ fn SpotlightOptionsPage() -> Element {
             spotlight_filter(&query, &all)
         })),
         aria_label: Some("Command palette".into()),
+        placeholder: Some("Search the Greek letters".into()),
         limit: Some(2),
         highlight_first_on_query: false,
         ..Default::default()

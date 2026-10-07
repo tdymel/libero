@@ -402,6 +402,46 @@ fn the_side_fallback_follows_the_step_count() {
     });
 }
 
+/// An overflowing strip with no clickable step is a tab stop; one with buttons, or
+/// that fits, is not (WCAG 2.1.1, todo 2375).
+#[test]
+fn a_scrolling_strip_without_buttons_takes_a_tab_stop() {
+    block_on(async {
+        let fixture = Fixture::open("/stepper-many", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#plain-9-step-0").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#plain-9 > ol').getAttribute('tabindex') === '0'",
+            "the overflowing plain strip to take a tab stop",
+        )
+        .await
+        .unwrap();
+        let clickable: bool = page
+            .evaluate("document.querySelector('#side-9 > ol').hasAttribute('tabindex')")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(!clickable, "a strip of buttons took a tab stop");
+
+        page.execute(SetDeviceMetricsOverrideParams::new(1600, 800, 1.0, false))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "!document.querySelector('#plain-9 > ol').hasAttribute('tabindex')",
+            "the fitting plain strip to drop its tab stop",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("the plain strip").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Words of the `#plain` stepper's labels and descriptions split across lines, and how many
 /// words it examined: a label without a direct text node is skipped (todo 1829).
 const SPLIT_WORDS: &str = "(() => {

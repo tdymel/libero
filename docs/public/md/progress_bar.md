@@ -72,7 +72,7 @@ fn Demo() -> Element {
 | `size` | `Size` | `md` | Track height, 3px at `xs` to 20px at `xxl`. |
 | `radius` | `Size` | `xl` | Corner of the track and the fill. On a thin track most steps draw the same pill. |
 | `aria_valuetext` | `String` | - | Read instead of the rounded percentage, such as "4.2 MB of 12 MB". |
-| `segments` | `Vec<ProgressBarSegment>` | `[]` | Splits the track into stretches with 2px gaps, each from its `start` to the next one's, as a `Slider`'s `segments`, and fills them up to the value. A label does not change what the bar reports: name the stage in `aria_valuetext`. Sorted for you; a start outside the range or a repeat is dropped, and an unlabeled stretch fills from `min` to the first start. An indeterminate bar sweeps as without them. |
+| `segments` | `Vec<ProgressBarSegment>` | `[]` | Splits the track into stretches with 2px gaps, each from its `start` to the next one's, as a `Slider`'s `segments`, and fills them up to the value. The label of the stretch the value is in follows the percentage, as "60%, Upload"; `aria_valuetext` replaces both. Sorted for you; a start outside the range or a repeat is dropped, and an unlabeled stretch fills from `min` to the first start. An indeterminate bar sweeps as without them. |
 | `parts` | `Parts<ProgressBarPart>` | - | Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(ProgressBarPart::Fill, sx().background("success.6"))`. |
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
@@ -83,7 +83,7 @@ Like every component, it also takes the shared props `sx`, `class`, `style`,
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `start` | `f64` | - | Where the stretch starts; it ends at the next one's start, or `max`. |
-| `label` | `Option<String>` | - | Names the stretch. `ProgressBarSegment::labeled(start, label)`. |
+| `label` | `Option<String>` | - | Names the stretch, read after the percentage while the value is in it. `ProgressBarSegment::labeled(start, label)`. |
 
 ## Style API
 
@@ -102,8 +102,8 @@ explains how parts work.
 
 ### Libero handles
 
-- A screen reader reads the rounded percentage, or `aria_valuetext` when you
-  set it.
+- A screen reader reads the rounded percentage, then the label of the segment
+  the value is in, or `aria_valuetext` when you set it.
 - The bar takes no focus.
 - A theme color fills in its text shade, at 3:1 or more against the track and the page. Yellow stays short of that on a light page, so `warning` draws a 1px ink edge inside its fill.
 - With reduced motion an indeterminate bar stops sweeping and shows as a full

@@ -108,6 +108,8 @@ explains how parts work.
 - A horizontal strip never widens the page (WCAG 1.4.10): the connectors
   shrink first, then steps that still don't fit scroll inside the strip.
   Labels keep their words whole; only a word wider than the strip breaks.
+  While it scrolls and no step is clickable, the strip itself is a tab stop,
+  so the arrow keys can scroll it in any browser.
 
 ### You must
 

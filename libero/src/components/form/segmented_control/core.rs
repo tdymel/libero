@@ -14,7 +14,7 @@ use crate::{
     hooks::{ElementHandle, id_selector},
     platform::{ElementApi, focus_selector, logical_key, next_task},
     sx::{StaticSx, sx},
-    theme::{ButtonDefaults, Size, SizeCss},
+    theme::{BUTTON_HEIGHT, ButtonDefaults, Size, SizeCss},
 };
 
 /// The segment itself. A `<label>`, because the radio it wraps is what
@@ -46,7 +46,8 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .align_items("center")
         // Pins its own size, so a `Flex` column's `stretch` cannot widen it.
         .width("max-content")
-        // A long row wraps rather than run off a phone's page (WCAG 1.4.10).
+        // A long row wraps rather than run off a phone's page (WCAG 1.4.10); a collapsed
+        // one keeps its joins on line two, a documented limit (todo 2335).
         .max_width("100%")
         .flex_wrap("wrap")
         // The radio serves screen readers and keys; only the label shows.
@@ -78,7 +79,14 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
                 // label ends in an ellipsis, and `title` shows the whole.
                 .max_width("100%")
                 .min_width("0")
-                .overflow("hidden"),
+                .overflow("hidden")
+                // As `Button`: the line outgrows the step at 200% text zoom (todo 2338).
+                .per_size(|size| {
+                    sx().height(format!(
+                        "max({}, calc(1.5em + 2px))",
+                        BUTTON_HEIGHT.value(size)
+                    ))
+                }),
         )
         .selector(
             "& > label > span",

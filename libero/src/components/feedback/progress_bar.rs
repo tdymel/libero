@@ -10,7 +10,8 @@ use crate::{
         form::{SliderSegment, segment_filled, track_segments},
         layout::use_box,
     },
-    hooks::{use_css, use_theme},
+    hooks::{use_css, use_localization, use_theme},
+    localization::fill,
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         Color, ColorShade, ColorValue, CssVar, INDETERMINATE_WIDTH, PROGRESS_BAR_ANIMATION,
@@ -300,8 +301,8 @@ base_props! {
         #[props(default, into)]
         aria_valuetext: Option<String>,
         /// Splits the track into stretches with gaps, each from its `start` to the next,
-        /// as a Slider's. A label does not change what the bar reports: name the stage
-        /// in `aria_valuetext`. Indeterminate, the plain sweep runs.
+        /// as a Slider's. The label of the stretch the value is in follows the default
+        /// percentage in `aria-valuetext`. Indeterminate, the plain sweep runs.
         #[props(default)]
         segments: Vec<ProgressBarSegment>,
     }
@@ -344,11 +345,20 @@ pub fn ProgressBar(props: ProgressBarProps) -> Element {
         .value
         .map(|value| fraction(value, props.min, props.max));
     let percentage = fraction.map(percentage);
-    let segments = match fraction {
+    let (segments, stage) = match fraction {
         Some(filled) if !props.segments.is_empty() => {
             segment_pieces(&props.segments, props.min, props.max, filled)
         }
-        _ => Vec::new(),
+        _ => (Vec::new(), None),
+    };
+    // A labelled stretch names itself after the percentage, as on `Slider` (todo 2403).
+    let segment_text = use_localization().slider.segment;
+    let default_text = match (percentage.clone(), stage) {
+        (Some(value), Some(stage)) => Some(fill(
+            segment_text,
+            &[("value", &value), ("segment", &stage)],
+        )),
+        (percentage, _) => percentage,
     };
     let segmented = !segments.is_empty();
 
@@ -413,7 +423,7 @@ pub fn ProgressBar(props: ProgressBarProps) -> Element {
     // The percentage is only a default: a spread `aria-valuetext` beats it.
     let track = match props.aria_valuetext {
         Some(text) => track.attr("aria-valuetext", text),
-        None => track.attr_default("aria-valuetext", percentage),
+        None => track.attr_default("aria-valuetext", default_text),
     };
 
     track.render(HtmlTag::Div, props.attributes, inner)
@@ -427,13 +437,13 @@ struct SegmentPiece {
 }
 
 /// Normalised as Slider's (sorted, out-of-range and repeated starts dropped); `filled` is
-/// the drawn share of the whole track.
+/// the drawn share of the whole track. Also the label of the stretch the value is in.
 fn segment_pieces(
     segments: &[ProgressBarSegment],
     min: f64,
     max: f64,
     filled: f64,
-) -> Vec<SegmentPiece> {
+) -> (Vec<SegmentPiece>, Option<String>) {
     let given: Vec<SliderSegment> = segments
         .iter()
         .map(|segment| SliderSegment {
@@ -447,7 +457,13 @@ fn segment_pieces(
             "ProgressBar: a segment starting outside `min..max`, or at another's start, is dropped.",
         );
     }
-    stretches
+    let value = min + filled * (max - min);
+    let stage = stretches
+        .iter()
+        .rev()
+        .find(|stretch| stretch.start <= value)
+        .and_then(|stretch| stretch.label.clone());
+    let pieces = stretches
         .iter()
         .map(|stretch| {
             let (start, end) = (
@@ -467,7 +483,8 @@ fn segment_pieces(
                     .render(),
             }
         })
-        .collect()
+        .collect();
+    (pieces, stage)
 }
 
 #[cfg(test)]
@@ -502,7 +519,7 @@ mod tests {
     /// Todo 2167: led from `min`, out-of-range starts dropped, filled up to the value.
     #[test]
     fn the_segments_split_the_range_and_fill_up_to_the_value() {
-        let pieces = segment_pieces(
+        let (pieces, stage) = segment_pieces(
             &[
                 ProgressBarSegment::labeled(50.0, "Upload"),
                 ProgressBarSegment::new(150.0),
@@ -511,6 +528,8 @@ mod tests {
             100.0,
             0.75,
         );
+        // Todo 2403: the value at 75 sits in the labelled stretch.
+        assert_eq!(stage.as_deref(), Some("Upload"));
         let var = |name: CssVar, value: &str| format!("{}:{value};", name.name());
         assert_eq!(pieces.len(), 2, "{pieces:?}");
         assert!(
@@ -529,6 +548,20 @@ mod tests {
                 .filled
                 .contains(&var(PROGRESS_BAR_SEGMENT_FILLED, "0.5"))
         );
+    }
+
+    #[test]
+    fn an_unlabelled_stretch_names_no_stage() {
+        let (_, stage) = segment_pieces(
+            &[
+                ProgressBarSegment::new(0.0),
+                ProgressBarSegment::labeled(50.0, "Upload"),
+            ],
+            0.0,
+            100.0,
+            0.25,
+        );
+        assert_eq!(stage, None);
     }
 
     #[test]

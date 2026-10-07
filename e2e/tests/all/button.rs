@@ -12,6 +12,40 @@ const PLAIN: &str = "#plain";
 const BUSY: &str = "#busy";
 const LINK: &str = "#to-landing";
 
+/// Todo 2338 (1.4.4): at 200% text every size's line fits the button and the
+/// segment, which clip their overflow; at 100% the steps keep their heights.
+#[test]
+fn every_size_fits_its_label_at_200_percent_text() {
+    block_on(async {
+        let fixture = Fixture::open("/button/sizes", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#sizes > button").await.unwrap();
+        let xs: f64 = page
+            .evaluate("document.querySelector('#sizes > button').getBoundingClientRect().height")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(xs, 24.0, "the xs step changed height at 100%");
+        let clipped: Vec<String> = page
+            .evaluate(
+                "(() => { document.documentElement.style.fontSize = '200%'; \
+                 return [...document.querySelectorAll('#sizes > button, #sizes label')] \
+                 .filter(b => parseFloat(getComputedStyle(b).fontSize) * 1.2 > b.clientHeight) \
+                 .map(b => b.textContent); })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(clipped.is_empty(), "clipped at 200%: {clipped:?}");
+        fixture.console.assert_clean("the button sizes").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 586, in link mode: the one disabled `Button` the fixture has.
 #[test]
 fn a_disabled_link_shows_not_allowed_and_no_hover() {

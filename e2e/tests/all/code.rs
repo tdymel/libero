@@ -126,7 +126,7 @@ fn a_keyboard_copy_is_announced() {
 }
 
 /// Todo 1025: a block is a group named by its label, and its copy button, still "Copy code",
-/// is described by it. A scrolling block's region keeps the language name inside.
+/// is described by it. A scrolling block's region takes the label too (todo 2349).
 #[test]
 fn a_block_is_a_group_that_describes_its_copy_button() {
     block_on(async {
@@ -150,7 +150,10 @@ fn a_block_is_a_group_that_describes_its_copy_button() {
             labelled.starts_with("group \"The greeting, Rust code\"\n"),
             "{labelled}"
         );
-        assert!(labelled.contains("region \"Rust code\""), "{labelled}");
+        assert!(
+            labelled.contains("region \"The greeting, Rust code\""),
+            "{labelled}"
+        );
         assert_eq!(
             ax::description(page, FLOATING_COPY).await.unwrap(),
             "The greeting, Rust code"
@@ -326,7 +329,8 @@ fn a_diff_without_a_language_is_still_marked() {
         .unwrap();
         wait::for_js_true(
             page,
-            "document.querySelector(\"#wide-block [role=region]\")?.getAttribute('aria-label') === 'Rust code'",
+            // Unlabelled, so the localization's words name it (todo 2349).
+            "document.querySelector(\"#first-line-block [role=region]\")?.getAttribute('aria-label') === 'Rust code'",
             "the region named from the localization",
         )
         .await

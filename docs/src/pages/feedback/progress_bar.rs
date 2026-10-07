@@ -45,7 +45,7 @@ pub fn ProgressBarPage() -> Element {
                     .doc("Read instead of the rounded percentage, such as \"4.2 MB of 12 MB\"."),
                 prop("segments", "Vec<ProgressBarSegment>")
                     .default("[]")
-                    .doc("Splits the track into stretches with 2px gaps, each from its `start` to the next one's, as a `Slider`'s `segments`, and fills them up to the value. A label does not change what the bar reports: name the stage in `aria_valuetext`. Sorted for you; a start outside the range or a repeat is dropped, and an unlabeled stretch fills from `min` to the first start. An indeterminate bar sweeps as without them."),
+                    .doc("Splits the track into stretches with 2px gaps, each from its `start` to the next one's, as a `Slider`'s `segments`, and fills them up to the value. The label of the stretch the value is in follows the percentage, as \"60%, Upload\"; `aria_valuetext` replaces both. Sorted for you; a start outside the range or a repeat is dropped, and an unlabeled stretch fills from `min` to the first start. An indeterminate bar sweeps as without them."),
                 prop("parts", "Parts<ProgressBarPart>")
                     .doc("Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(ProgressBarPart::Fill, sx().background(\"success.6\"))`."),
             ])
@@ -57,7 +57,7 @@ pub fn ProgressBarPage() -> Element {
             ]),
             props("ProgressBarSegment", vec![
                 prop("start", "f64").doc("Where the stretch starts; it ends at the next one's start, or `max`."),
-                prop("label", "Option<String>").doc("Names the stretch. `ProgressBarSegment::labeled(start, label)`."),
+                prop("label", "Option<String>").doc("Names the stretch, read after the percentage while the value is in it. `ProgressBarSegment::labeled(start, label)`."),
             ])
             .without_base_props()],
             accessibility: a11y()

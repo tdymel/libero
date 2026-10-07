@@ -112,9 +112,9 @@ pub fn spotlight_filter(query: &str, actions: &[SpotlightAction]) -> Vec<Spotlig
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `actions` | `Callback<String, Vec<SpotlightAction>>` | - | Called with the query, returns the rows. Capture a `Signal`, not a `Vec`, if the list changes. Unset warns and shows nothing. |
-| `placeholder` | `String` | `"Search..."` | The search box's placeholder. |
+| `placeholder` | `String` | `"Search..."` | The search box's placeholder, and its name once you set it. Unset, the box is named "Search commands". |
 | `nothing_found` | `Element` | - | Shown and announced when a query matches nothing. Unset, the localization's text. |
-| `limit` | `usize` | - | The most rows drawn, counted across groups. |
+| `limit` | `usize` | - | The most rows drawn, counted across groups. A screen reader still hears how many actions matched. |
 | `close_on_action` | `bool` | `true` | Closes after running an action. |
 | `clear_on_close` | `bool` | `true` | Starts every opening with an empty query. |
 | `aria_label` | `String` | `"Command palette"` | Names the dialog and its list. |
@@ -182,9 +182,11 @@ explains how parts work.
 ### Libero handles
 
 - Focus stays in the search box.
-- A polite status region says how many actions a query left
-  (`SpotlightLabels::results`, "2 results"), "nothing found" when none, and
-  "searching" while `loading`.
+- A polite status region says how many actions a query matched
+  (`SpotlightLabels::results`, "2 results"), also those past `limit`,
+  "nothing found" when none, and "searching" while `loading`.
+- The search box is named by your `placeholder`, so a files palette and a
+  commands palette sound different.
 - The hotkey is ignored while you type in another text field, and while a
   dialog or popover is open.
 

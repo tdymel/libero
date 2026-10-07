@@ -2,7 +2,7 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Badge, Box, Button, Flex, Text},
+    components::{Badge, Box, Button, Flex, Options, SegmentedControl, Text},
     sx::sx,
 };
 
@@ -11,7 +11,35 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/button", || rsx! { ButtonPage {} }),
     ("/button/landing", || rsx! { ButtonLanding {} }),
+    ("/button/sizes", || rsx! { ButtonSizes {} }),
 ];
+
+/// Todo 2338: a button and a segment per size, labels with descenders, for 200% text.
+#[component]
+fn ButtonSizes() -> Element {
+    rsx! {
+        Flex { id: "sizes", direction: "column", align: "flex-start", gap: "sm",
+            for size in ["xs", "sm", "md", "lg", "xl", "xxl"] {
+                Button { key: "{size}", size, "Typography {size}" }
+            }
+            for size in ["xs", "sm"] {
+                SegmentedControl::<Pitch> {
+                    key: "{size}",
+                    "aria-label": "Pitch {size}",
+                    size,
+                    value: Pitch::Gypsy,
+                    onchange: |_| {},
+                }
+            }
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Options)]
+enum Pitch {
+    Gypsy,
+    Jiggy,
+}
 
 /// Plain and busy buttons counting activations, a link-mode button, a busy submit, a long
 /// label, element children and a toggle pair per variant.
