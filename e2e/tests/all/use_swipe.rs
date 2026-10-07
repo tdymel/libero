@@ -98,6 +98,72 @@ async fn reopens_after_each_close<D: Driver>(d: &mut D, _route: &str) -> Result<
     Ok(())
 }
 
+const WIDE_SCROLL_LEFT: &str = "document.querySelector('#wide').scrollLeft";
+
+async fn wide_scroll_left<D: Driver>(d: &mut D) -> Result<f64> {
+    Ok(d.evaluate(WIDE_SCROLL_LEFT)
+        .await?
+        .as_f64()
+        .unwrap_or(f64::NAN))
+}
+
+/// Todo 2586: on a scroller with room to pan back, the band still opens and the
+/// scroller stays put; a swipe from past the band scrolls it instead.
+async fn the_band_wins_over_a_scrolled_scroller<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let wide = d.rect("#wide").await?;
+    let y = wide.y + wide.height / 2.0;
+    d.evaluate(&format!("{WIDE_SCROLL_LEFT} = 600")).await?;
+    d.swipe_from(IN_BAND, y, 120.0, 0.0).await?;
+    text_is(d, "#opens", "1").await?;
+    let left = wide_scroll_left(d).await?;
+    assert!(
+        (left - 600.0).abs() < 1.0,
+        "the band swipe scrolled the scroller to {left}"
+    );
+    d.click("#close").await?;
+    eventually(d, "the drawer to close", async |d| {
+        Ok(!d.exists("#drawer").await?)
+    })
+    .await?;
+    d.swipe_from(IN_BAND + 120.0, y, 120.0, 0.0).await?;
+    eventually(d, "the scroller to scroll back", async |d| {
+        Ok(wide_scroll_left(d).await? < 590.0)
+    })
+    .await?;
+    text_is(d, "#opens", "1").await
+}
+
+/// Todo 2586: in a scroller's fling Chromium sends the band touch uncancelable, and its
+/// pan scrolled the scroller back; the scroller now holds still while the drawer opens.
+mod an_edge_swipe_wins_over_a_flinging_scroller {
+    #[cfg(feature = "android")]
+    #[test]
+    fn android() {
+        use e2e::driver::{Android, Driver};
+
+        e2e::android::block_on(async {
+            let mut d = Android::open("/use-swipe/drawer").await.unwrap();
+            let wide = d.rect("#wide").await.unwrap();
+            let y = wide.y + wide.height / 2.0;
+            d.evaluate(&format!("{} = 300", super::WIDE_SCROLL_LEFT))
+                .await
+                .unwrap();
+            // Flung toward its end: the band swipe lands while it still moves.
+            d.fling_from(300.0, y, -150.0, 0.0).await.unwrap();
+            let flung = super::wide_scroll_left(&mut d).await.unwrap();
+            d.swipe_from(super::IN_BAND, y, 120.0, 0.0).await.unwrap();
+            super::text_is(&mut d, "#opens", "1").await.unwrap();
+            let left = super::wide_scroll_left(&mut d).await.unwrap();
+            // Before the fix it panned back past the fling's start (441 to 156 px).
+            assert!(
+                left > flung - 10.0,
+                "the band swipe scrolled the flinging scroller back from {flung} to {left}"
+            );
+            d.finish("use_swipe").await.unwrap();
+        });
+    }
+}
+
 /// Todo 2190: in a fling Chromium sends a touch's first move uncancelable, an inner
 /// scroller pans and the pointer is cancelled; the touch still opens the drawer.
 mod an_edge_swipe_opens_while_the_page_flings {
@@ -178,5 +244,11 @@ e2e::scenario!(
     an_edge_swipe_reopens_a_drawer_five_times,
     "/use-swipe/drawer",
     reopens_after_each_close,
+    desktop: skip("1126: no touch input under Xvfb")
+);
+e2e::scenario!(
+    an_edge_swipe_wins_over_a_scrolled_inner_scroller,
+    "/use-swipe/drawer",
+    the_band_wins_over_a_scrolled_scroller,
     desktop: skip("1126: no touch input under Xvfb")
 );

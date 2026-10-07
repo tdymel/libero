@@ -226,11 +226,21 @@ pub(crate) const EDGE_PAN_JS: &str = "(inset, width, left, distance, swiped) => 
     let origin = null;
     let holding = false;
     let lost = false;
+    let under = [];
+    let pinned = [];
     const reset = () => {
         start = null;
         origin = null;
         holding = false;
         lost = false;
+        under = [];
+    };
+    const release = () => {
+        for (const [box, at, overflow] of pinned) {
+            box.scrollLeft = at;
+            box.style.overflowX = overflow;
+        }
+        pinned = [];
     };
     const down = (event) => {
         reset();
@@ -241,6 +251,11 @@ pub(crate) const EDGE_PAN_JS: &str = "(inset, width, left, distance, swiped) => 
         if (getComputedStyle(event.target).getPropertyValue('--lsx-edge-swipe').trim() !== '1') return;
         start = { x: touch.clientX, y: touch.clientY };
         origin = start;
+        for (let box = event.target; box; box = box.parentElement) {
+            if (box.scrollWidth > box.clientWidth && /auto|scroll/.test(getComputedStyle(box).overflowX)) {
+                under.push([box, box.scrollLeft, box.style.overflowX]);
+            }
+        }
     };
     const move = (event) => {
         if (event.touches.length !== 1) reset();
@@ -251,6 +266,15 @@ pub(crate) const EDGE_PAN_JS: &str = "(inset, width, left, distance, swiped) => 
             if (Math.max(Math.abs(dx), dy) < 4) return;
             start = null;
             holding = dx > dy;
+            // In a fling the touch cannot be held: freeze the scrollers under it instead (2586).
+            if (holding && !event.cancelable) {
+                release();
+                pinned = under;
+                for (const [box, at] of pinned) {
+                    box.style.overflowX = 'hidden';
+                    box.scrollLeft = at;
+                }
+            }
         }
         if (!holding) return;
         if (event.cancelable) event.preventDefault();
@@ -264,19 +288,25 @@ pub(crate) const EDGE_PAN_JS: &str = "(inset, width, left, distance, swiped) => 
     const cancel = (event) => {
         if (event.pointerType === 'touch' && (start || holding)) lost = true;
     };
+    // Two frames on, past the fling the lift would start.
+    const end = () => {
+        reset();
+        if (pinned.length) requestAnimationFrame(() => requestAnimationFrame(release));
+    };
     const capture = { capture: true };
     const passive = { capture: true, passive: true };
     addEventListener('touchstart', down, passive);
     addEventListener('touchmove', move, { capture: true, passive: false });
     addEventListener('pointercancel', cancel, passive);
-    addEventListener('touchend', reset, passive);
-    addEventListener('touchcancel', reset, passive);
+    addEventListener('touchend', end, passive);
+    addEventListener('touchcancel', end, passive);
     return () => {
         removeEventListener('touchstart', down, capture);
         removeEventListener('touchmove', move, capture);
         removeEventListener('pointercancel', cancel, capture);
-        removeEventListener('touchend', reset, capture);
-        removeEventListener('touchcancel', reset, capture);
+        removeEventListener('touchend', end, capture);
+        removeEventListener('touchcancel', end, capture);
+        release();
     };
 }";
 

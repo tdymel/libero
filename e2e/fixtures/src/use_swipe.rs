@@ -97,6 +97,13 @@ fn DrawerPage() -> Element {
                     style: "overflow-x: auto; height: 200px; background: #eef;",
                     "fn main() {{}}"
                 }
+                // A wide table's box: it overflows, so a sideways pan scrolls it (2586).
+                div {
+                    id: "wide",
+                    // Left to right after the RTL page too: `scrollLeft` counts up from 0.
+                    style: "overflow-x: auto; height: 120px; background: #efe; direction: ltr;",
+                    div { style: "width: 2000px; height: 100px;" }
+                }
             }
         }
         if open() {
