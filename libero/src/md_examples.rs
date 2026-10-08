@@ -167,6 +167,7 @@ md_pages! {
     UseSystemNotification => "use_system_notification",
     UseHistory => "use_history",
     UseHotkeys => "use_hotkeys",
+    UseIndexedDb => "use_indexed_db",
     UseId => "use_id",
     UseIntersection => "use_intersection",
     UseLocalStorage => "use_local_storage",

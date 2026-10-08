@@ -181,6 +181,7 @@ fetch only the file you need.
 - [Back button](use_back.md): Runs a handler on Android's Back button instead of leaving the app, below any overlay opened later; does nothing elsewhere.
 - [Geolocation](use_geolocation.md): The device's position, once or followed, with the location permission; never prompts on mount.
 - [Local storage](use_local_storage.md): A value kept under a key across reloads and app runs, or for the tab's session; a file per key off the web.
+- [IndexedDB](use_indexed_db.md): A larger value kept under a key in IndexedDB, loaded and saved without blocking the page; shows the default until it loads.
 - [User media](use_user_media.md): The camera and microphone with a preview, a PNG snapshot and a chunked recording; never prompts on mount.
 - [System notifications](use_system_notification.md): Notifications the operating system draws and a web push subscription; never prompt on mount.
 - [Save file](save_file.md): Saves bytes the app made as a file: a download on the web, a save dialog on the desktop and Blitz, the share sheet on Android.

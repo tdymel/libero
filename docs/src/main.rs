@@ -106,6 +106,8 @@ pub(crate) enum Route {
     UseGeolocationPage {},
     #[route("/hooks/use-local-storage")]
     UseLocalStoragePage {},
+    #[route("/hooks/use-indexed-db")]
+    UseIndexedDbPage {},
     #[route("/hooks/use-user-media")]
     UseUserMediaPage {},
     #[route("/hooks/use-system-notification")]

@@ -223,6 +223,14 @@ fn label_aliases(label: &str) -> &'static [&'static str] {
             "persist",
             "remember",
         ],
+        "IndexedDB" => &[
+            "use_indexed_db",
+            "indexeddb",
+            "idb",
+            "persist",
+            "offline",
+            "database",
+        ],
         "User media" => &[
             "use_user_media",
             "use_user_media_devices",

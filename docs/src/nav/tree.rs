@@ -278,6 +278,7 @@ pub(super) fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::UseBackPage {}, "Back button"),
                 page(Route::UseGeolocationPage {}, "Geolocation"),
                 page(Route::UseLocalStoragePage {}, "Local storage"),
+                page(Route::UseIndexedDbPage {}, "IndexedDB"),
                 page(Route::UseUserMediaPage {}, "User media"),
                 page(Route::UseSystemNotificationPage {}, "System notifications"),
                 page(Route::SaveFilePage {}, "Save file"),

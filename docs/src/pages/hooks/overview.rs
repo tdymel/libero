@@ -163,6 +163,11 @@ fn hooks() -> Vec<HookRow> {
             Route::UseLocalStoragePage {},
         ),
         row(
+            "use_indexed_db",
+            "A larger value kept under a key, loaded and saved without blocking the page.",
+            Route::UseIndexedDbPage {},
+        ),
+        row(
             "use_user_media",
             "The camera and microphone: a preview, a photo and a recording.",
             Route::UseUserMediaPage {},

@@ -43,6 +43,7 @@ Accessibility. The rest are shown on the component or guide page they belong to.
 | `use_geolocation` | The device's position, once or followed, and the location permission. | [Geolocation](use_geolocation.md) |
 | `use_local_storage` | A value kept under a key across reloads and app runs. | [Local storage](use_local_storage.md) |
 | `use_session_storage` | A value kept under a key for the tab or the window's run. | [Local storage](use_local_storage.md) |
+| `use_indexed_db` | A larger value kept under a key, loaded and saved without blocking the page. | [IndexedDB](use_indexed_db.md) |
 | `use_user_media` | The camera and microphone: a preview, a photo and a recording. | [User media](use_user_media.md) |
 | `use_user_media_devices` | The page's cameras and microphones, live. | [User media](use_user_media.md) |
 | `use_system_notification` | Notifications the operating system draws, and their permission. | [System notifications](use_system_notification.md) |
