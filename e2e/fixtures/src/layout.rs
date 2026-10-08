@@ -4,13 +4,30 @@
 use dioxus::prelude::*;
 use libero::components::{AspectRatio, Box as LBox, Center, Container, Flex, Float, Sidebar};
 use libero::sx::sx;
+use libero::theme::{Size, responsive};
 
 use crate::Routes;
 
 pub const ROUTES: Routes = &[
     ("/layout", || rsx! { LayoutPage {} }),
     ("/center-overflow", || rsx! { CenterOverflowPage {} }),
+    ("/flex-gap", || rsx! { FlexGapPage {} }),
 ];
+
+/// Todo 2619: a gap per breakpoint, and plain CSS beside the size scale (2663).
+#[component]
+fn FlexGapPage() -> Element {
+    rsx! {
+        Flex { id: "responsive-gap", direction: "row", gap: responsive(Size::Xs).md(Size::Xl),
+            LBox { component: "span", "One" }
+            LBox { component: "span", "Two" }
+        }
+        Flex { id: "zero-gap", direction: "row", gap: "0",
+            LBox { component: "span", "One" }
+            LBox { component: "span", "Two" }
+        }
+    }
+}
 
 /// A child wider and taller than its `Center`: centring must not push it past the start edges.
 #[component]

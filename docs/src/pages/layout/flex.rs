@@ -2,7 +2,8 @@ use crate::components::{Control, Demo, DemoValues, DocPage, a11y, or_unset, prop
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Flex, Text},
-    sx::sx,
+    sx::{ThemeAwareValue, sx},
+    theme::{Responsive, Size, responsive},
 };
 
 /// The three children the demo lays out - a subtree, so the code block prints
@@ -16,10 +17,29 @@ Box { sx: sx().padding("8px 16px").background("primary.1"), "Three" }"#;
 const BOX_SX: &str =
     r#"sx: sx().width("400px").height("200px").padding("8px").background("muted.1")"#;
 
+/// The `responsive` switch's gap: tight on a phone, wide from a laptop up.
+const RESPONSIVE_GAP: Responsive<Size> = responsive(Size::Xs).md(Size::Xl);
+const RESPONSIVE_GAP_CODE: &str = "gap: responsive(Size::Xs).md(Size::Xl)";
+
+fn gap(values: &DemoValues) -> Responsive<ThemeAwareValue> {
+    match values.str("responsive") == "true" {
+        true => RESPONSIVE_GAP.map(ThemeAwareValue::from),
+        false => responsive(values.str("gap").into()),
+    }
+}
+
 fn controls() -> Vec<Control> {
     vec![
         Control::toggle("direction", ["column", "row"]).labels(["Column", "Row"]),
-        Control::sizes("gap").default("md"),
+        // `0` is plain CSS, next to the size scale.
+        Control::slider("gap", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
+            .default("md")
+            .hidden_when(|values| values.str("responsive") == "true"),
+        // Replaces the `gap` slider, which is hidden and so prints nothing while this is on.
+        Control::switch("responsive").code(|_, values| match values.str("responsive") == "true" {
+            true => vec![RESPONSIVE_GAP_CODE.to_string()],
+            false => vec![],
+        }),
         Control::select(
             "align",
             ["auto", "flex-start", "center", "flex-end", "stretch"],
@@ -65,9 +85,9 @@ pub fn FlexPage() -> Element {
                 prop("justify", "ThemeAwareValue")
                     .default("flex-start")
                     .doc("Main-axis alignment."),
-                prop("gap", "Size")
+                prop("gap", "Responsive<ThemeAwareValue>")
                     .default("md")
-                    .doc("Space between children."),
+                    .doc("Space between children: a size, any CSS such as `\"0\"`, or one per breakpoint, `gap: responsive(Size::Xs).md(Size::Xl)`. Breakpoints follow the window, not the parent."),
                 prop("wrap", "FlexWrap")
                     .default("nowrap in a column, wrap in a row")
                     .doc("Whether children wrap onto new lines. Also takes a `bool`."),
@@ -104,7 +124,7 @@ pub fn FlexPage() -> Element {
                             .padding("8px")
                             .background("muted.1"),
                         direction: values.str("direction"),
-                        gap: values.str("gap"),
+                        gap: gap(&values),
                         align: or_unset(values.str("align")),
                         justify: or_unset(values.str("justify")),
                         wrap: or_unset(values.str("wrap")),

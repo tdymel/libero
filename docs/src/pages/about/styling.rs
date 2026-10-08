@@ -351,6 +351,10 @@ pub fn StylingPage() -> Element {
                 }
                 CodeBlock { source: RESPONSIVE, language: "rust" }
                 CodeBlock { source: RESPONSIVE_VALUE, language: "rust" }
+                Text {
+                    "Breakpoints follow the window, not the parent element: resize the "
+                    "window to see them, as a narrow preview does not switch."
+                }
                 Table {
                     aria_label: "Breakpoints",
                     data: vec![Size::Xs, Size::Sm, Size::Md, Size::Lg, Size::Xl, Size::Xxl],

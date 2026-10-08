@@ -129,7 +129,7 @@ pub fn ImageListPage() -> Element {
                         .doc("One cell each, in render order."),
                     prop("cols", "Responsive<u8>")
                         .default(defaults.cols.to_string())
-                        .doc("Columns, as `cols: 3` or one count per breakpoint, `cols: responsive(1).sm(2).md(4)`. Each count snaps to 1, 2, 3, 4, 6 or 12, since a cell spans twelfths of a `GridZone`. Any other count snaps to the nearest, a tie to the wider cell, and warns. An `ImageItem::span` stays the same at every width."),
+                        .doc("Columns, as `cols: 3` or one count per breakpoint, `cols: responsive(1).sm(2).md(4)`. Each count snaps to 1, 2, 3, 4, 6 or 12, since a cell spans twelfths of a `GridZone`. Any other count snaps to the nearest, a tie to the wider cell, and warns. An `ImageItem::span` stays the same at every width. Breakpoints follow the window, not the list's parent."),
                     prop("variant", "ImageListVariant")
                         .default(defaults.variant.as_str())
                         .doc("`standard` gives every cell the same height, `masonry` keeps each picture's own and packs them, `quilted` lets a cell take more than one row, and `woven` shortens every second cell to 70%. `masonry` measures in the browser, and without a DOM draws an ordinary grid."),

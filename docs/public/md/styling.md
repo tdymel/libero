@@ -132,6 +132,9 @@ sx()
 sx().width(bp().sm("480px").lg("720px"))
 ```
 
+Breakpoints follow the window, not the parent element: resize the window to see
+them, as a narrow preview does not switch.
+
 The breakpoints are fixed, because a `@media` query cannot read a CSS custom
 property:
 

@@ -8,8 +8,10 @@ use crate::{
         layout::use_box,
     },
     str_enum::str_enum,
-    sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{FLEX_ALIGN_VAR, FLEX_JUSTIFY_VAR, FLEX_WRAP_VAR, FlexDefaults, Size, SizeCss},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    theme::{
+        FLEX_ALIGN_VAR, FLEX_JUSTIFY_VAR, FLEX_WRAP_VAR, FlexDefaults, Responsive, Size, SizeCss,
+    },
 };
 
 // Missing: an option, or at least a variable, to give every child the same width.
@@ -101,8 +103,10 @@ base_props! {
         /// `justify-content`.
         #[props(default, into)]
         justify: Input<ThemeAwareValue>,
+        /// A size word or any CSS, as `gap: "sm"`, `gap: "0"` or one per breakpoint,
+        /// `gap: responsive(Size::Xs).md(Size::Lg)`. Breakpoints follow the window.
         #[props(default, into)]
-        gap: Input<Size>,
+        gap: Input<Responsive<ThemeAwareValue>>,
         /// `column` by default.
         #[props(default, into)]
         direction: Input<FlexDirection>,
@@ -111,6 +115,22 @@ base_props! {
         wrap: Input<FlexWrap>,
         children: Element,
     }
+}
+
+/// A gap off the size scale and every breakpoint, in the user layer so it beats the
+/// state classes; before `sx`, so a caller's own `gap` still wins.
+fn gap_sx(gap: &Responsive<ThemeAwareValue>, own: &Input<Sx>) -> Input<Sx> {
+    let base = match gap.base_ref() {
+        ThemeAwareValue::Size(_) if gap.breakpoints().next().is_none() => return own.clone(),
+        ThemeAwareValue::Size(_) => sx(),
+        custom => sx().gap(custom.clone()),
+    };
+    gap.breakpoints()
+        .fold(base, |base, (size, value)| {
+            base.breakpoint(size, sx().gap(value))
+        })
+        .and(own.as_ref().cloned().unwrap_or_default())
+        .into()
 }
 
 /// Lays its children out in a column or a row, with a themed gap.
@@ -138,15 +158,19 @@ pub fn Flex(props: FlexProps) -> Element {
         .states
         .unwrap_or_default()
         .with("row", direction == FlexDirection::Row);
-    if let Some(gap) = props.gap.as_ref().copied() {
+    if let Some(ThemeAwareValue::Size(gap)) = props.gap.as_ref().map(Responsive::base_ref) {
         states = states.with(gap.state_name(), true);
     }
     let states: Input<States> = states.into();
+    let sx = match props.gap.as_ref() {
+        Some(gap) => gap_sx(gap, &props.sx),
+        None => props.sx.clone(),
+    };
 
     use_box()
         .framework_sx(&FLEX_BASE_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(&sx)
         .states(&states)
         .variables(&variables)
         .prepare()

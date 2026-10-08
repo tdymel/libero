@@ -62,6 +62,19 @@ fn Demo() -> Element {
 }
 ```
 
+One gap per breakpoint, or any CSS next to the size scale. Breakpoints follow
+the window, not the parent element.
+
+```rust,ignore
+Flex {
+    // `xs` on a phone, `xl` from `md` (62rem).
+    gap: responsive(Size::Xs).md(Size::Xl),
+    // Or one size, gap: "sm", or plain CSS, gap: "0".
+    Box { "One" }
+    Box { "Two" }
+}
+```
+
 ## Props
 
 | Prop | Type | Default | Description |
@@ -69,7 +82,7 @@ fn Demo() -> Element {
 | `direction` | `FlexDirection` | `column` | Lays the children out in a row or a column. |
 | `align` | `ThemeAwareValue` | `stretch` in a column, `center` in a row | Cross-axis alignment. |
 | `justify` | `ThemeAwareValue` | `flex-start` | Main-axis alignment. |
-| `gap` | `Size` | `md` | Space between children. |
+| `gap` | `Responsive<ThemeAwareValue>` | `md` | Space between children: a size, any CSS such as `"0"`, or one per breakpoint, `gap: responsive(Size::Xs).md(Size::Xl)`. Breakpoints follow the window, not the parent. |
 | `wrap` | `FlexWrap` | `nowrap` in a column, `wrap` in a row | Whether children wrap onto new lines. Also takes a `bool`. |
 | `children` | `Element` | required | The flex's children. |
 
@@ -135,4 +148,4 @@ State tokens on the root's `data-state`, space separated.
 | Token | Condition |
 |---|---|
 | `row` | `direction` is `row`. Without it, a column. |
-| `size-<size>` | The `gap` in effect, when `gap` is set. |
+| `size-<size>` | The `gap` below every breakpoint, when it is a size. |

@@ -1,6 +1,7 @@
 //! Layout components: native semantics through `component`, reflow at 320px and focus
 //! rings that no wrapper clips.
 
+use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::browser::block_on;
 use e2e::passes::keyboard;
 use e2e::{Fixture, Suite, Viewport, wait};
@@ -167,6 +168,52 @@ fn a_focused_child_of_aspect_ratio_keeps_its_ring() {
             .console
             .assert_clean("the AspectRatio ring")
             .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The px between a row Flex's first two children.
+fn gap_of(id: &str) -> String {
+    format!(
+        "(() => {{ const [a, b] = document.querySelectorAll('#{id} > *'); \
+           return b.getBoundingClientRect().left - a.getBoundingClientRect().right; }})()"
+    )
+}
+
+/// Todo 2619: `responsive(Size::Xs).md(Size::Xl)` is 4px on a phone and 20px from
+/// 62rem; `gap: "0"` is plain CSS (2663). No script measures.
+#[test]
+fn a_responsive_gap_follows_the_viewport() {
+    block_on(async {
+        let fixture = Fixture::open("/flex-gap", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#zero-gap").await.unwrap();
+
+        for (width, gap) in [(390, 4.0), (1280, 20.0)] {
+            page.execute(SetDeviceMetricsOverrideParams::new(width, 900, 1.0, false))
+                .await
+                .unwrap();
+            let seen: f64 = page
+                .evaluate(gap_of("responsive-gap"))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(
+                (seen - gap).abs() < 0.5,
+                "{width}px: gap {seen}, want {gap}"
+            );
+
+            let zero: f64 = page
+                .evaluate(gap_of("zero-gap"))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(zero.abs() < 0.5, "{width}px: gap {zero}, want 0");
+        }
+
+        fixture.console.assert_clean("a responsive gap").unwrap();
         fixture.close().await.unwrap();
     });
 }

@@ -1,6 +1,6 @@
 use crate::{
     sx::{ClassList, States, StaticSx, Sx, ThemeAwareValue, Variables},
-    tokens::{Size, SizeCss},
+    tokens::{Responsive, Size, SizeCss},
 };
 
 /// A styling prop's value: unset, owned, or a `static` (compared by address first).
@@ -173,6 +173,40 @@ where
             Some(value) => Self::Value(value.into()),
             None => Self::None,
         }
+    }
+}
+
+/// A size word or any CSS, at every breakpoint: `gap: "0"`, `gap: responsive(Size::Xs).md(Size::Lg)`.
+impl<T> From<T> for Input<Responsive<ThemeAwareValue>>
+where
+    T: Into<ThemeAwareValue>,
+{
+    fn from(value: T) -> Self {
+        Self::Value(Responsive::new(value.into()))
+    }
+}
+
+impl<T> From<Option<T>> for Input<Responsive<ThemeAwareValue>>
+where
+    T: Into<ThemeAwareValue>,
+{
+    fn from(value: Option<T>) -> Self {
+        match value {
+            Some(value) => Self::Value(Responsive::new(value.into())),
+            None => Self::None,
+        }
+    }
+}
+
+impl From<Responsive<ThemeAwareValue>> for Input<Responsive<ThemeAwareValue>> {
+    fn from(value: Responsive<ThemeAwareValue>) -> Self {
+        Self::Value(value)
+    }
+}
+
+impl From<Responsive<Size>> for Input<Responsive<ThemeAwareValue>> {
+    fn from(value: Responsive<Size>) -> Self {
+        Self::Value(value.map(ThemeAwareValue::from))
     }
 }
 
