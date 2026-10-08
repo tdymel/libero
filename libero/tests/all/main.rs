@@ -68,6 +68,7 @@ mod icon_provider;
 mod ids;
 mod image;
 mod image_list;
+mod indexed_db;
 mod indicator;
 mod input;
 mod kanban;

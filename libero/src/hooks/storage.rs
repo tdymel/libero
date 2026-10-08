@@ -103,7 +103,7 @@ fn missing(area: StorageArea) -> Option<StorageError> {
 }
 
 /// Once per kind and document: a failing store fails on every write.
-fn warn_once(mut warned: CopyValue<u8>, error: StorageError) {
+pub(super) fn warn_once(mut warned: CopyValue<u8>, error: StorageError) {
     let bit = 1 << error as u8;
     if *warned.peek() & bit != 0 {
         return;
@@ -170,11 +170,7 @@ impl<T: Serialize + DeserializeOwned + Clone + PartialEq + 'static> Stored<T> {
     /// and [`error`](Self::error) says why. Each call writes: debounce a fast source.
     /// A value that does not read back (a NaN float) is not kept and reports `Invalid`.
     pub fn set(&mut self, value: T) {
-        // serde_json writes NaN and infinite floats as `null`.
-        let text = serde_json::to_string(&value)
-            .ok()
-            .filter(|text| !text.contains("null") || serde_json::from_str::<T>(text).is_ok());
-        let Some(text) = text else {
+        let Some(text) = encode(&value) else {
             self.settle(Some(Err(StorageError::Invalid)));
             return;
         };
@@ -342,8 +338,15 @@ fn use_storage<T: Serialize + DeserializeOwned + Clone + PartialEq + 'static>(
     }
 }
 
-fn parse<T: DeserializeOwned>(raw: Option<&str>) -> Option<T> {
+pub(super) fn parse<T: DeserializeOwned>(raw: Option<&str>) -> Option<T> {
     serde_json::from_str(raw?).ok()
+}
+
+/// `value` as JSON text that reads back as a `T`. serde_json writes a NaN float as `null`.
+pub(super) fn encode<T: Serialize + DeserializeOwned>(value: &T) -> Option<String> {
+    serde_json::to_string(value)
+        .ok()
+        .filter(|text| !text.contains("null") || serde_json::from_str::<T>(text).is_ok())
 }
 
 #[cfg(all(test, not(target_arch = "wasm32")))]

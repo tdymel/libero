@@ -17,6 +17,7 @@ mod history;
 mod hotkeys;
 mod icons;
 mod id;
+mod indexed_db;
 mod intersection;
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod intersection_tests;
@@ -92,6 +93,7 @@ pub(crate) use hotkeys::{aria_keyshortcuts, chord_keys};
 pub use icons::use_icon;
 pub use id::use_id;
 pub(crate) use id::{id_selector, use_root_id};
+pub use indexed_db::{StoredAsync, use_indexed_db};
 pub use intersection::{
     InViewport, Intersection, IntersectionEntry, IntersectionOptions, use_in_viewport,
     use_intersection,
