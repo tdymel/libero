@@ -109,7 +109,7 @@ Like every component, `Splitter` also takes the shared props `sx`, `class`,
 - In forced colours the divider line takes the system text colour, so it stays
   visible.
 - The divider's hit area is 24px thick (WCAG 2.5.8), so it takes presses up to
-  24px into pane B. Pane A's own scrollbar stays free to grab.
+  24px minus the divider's thickness into pane B. Pane A's own scrollbar stays free to grab.
 - Each pane scrolls its own overflow, so a pane at `min_size` never paints
   over the divider or hides its controls under the other pane.
 - A debug build warns without `aria_label`.

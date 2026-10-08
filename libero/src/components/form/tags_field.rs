@@ -180,6 +180,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         .bound(&bound)
         .required(required)
         .empty(held.is_empty())
+        .readonly(readonly)
         .disabled(disabled)
         .size(size)
         .radius(radius)

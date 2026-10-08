@@ -145,6 +145,7 @@ pub fn PinField(props: PinFieldProps) -> Element {
         .bound(&bound)
         .required(required)
         .empty(value.is_empty())
+        .readonly(readonly)
         .disabled(disabled)
         .size(size)
         .radius(radius)

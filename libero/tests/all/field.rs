@@ -2169,4 +2169,79 @@ mod dispatched {
             "a pin pasted after the parent reset it must complete again"
         );
     }
+
+    /// Todo 2656: the implicit required error waits for the submit; an explicit rule
+    /// shows on the first blur. Afterwards the required error follows the value.
+    #[test]
+    fn the_required_error_waits_for_the_submit_while_a_rule_shows_on_blur() {
+        const REQUIRED: &str = "Fill in this field.";
+
+        fn app() -> Element {
+            let handle = use_form();
+            let mut name = use_signal(String::new);
+            rsx! {
+                LiberoProvider {
+                    Button { id: "submit", onclick: move |_| { handle.validate(); }, "Submit" }
+                    Form::<()> { form: handle,
+                        TextField {
+                            label: "Name",
+                            name: "name",
+                            required: true,
+                            value: name(),
+                            oninput: move |next: String| name.set(next),
+                        }
+                        TextField {
+                            label: "Email",
+                            name: "email",
+                            value: "",
+                            validate: not_empty.error("Enter your email."),
+                        }
+                    }
+                }
+            }
+        }
+
+        let blur = |page: &mut Page, id: ElementId| {
+            page.dom
+                .runtime()
+                .handle_event("focusout", Event::new(focus_event(), true), id);
+            page.render();
+            dioxus_ssr::render(&page.dom)
+        };
+
+        let mut page = Page::mount(app);
+        let [name, email] = page.rec.registered_for("focusout")[..] else {
+            panic!("expected one focusout listener per field");
+        };
+        let submit = page.rec.element("click", "id", "submit");
+
+        let tabbed = blur(&mut page, name);
+        assert!(!tabbed.contains(REQUIRED), "painted before the submit");
+        let tabbed = blur(&mut page, email);
+        assert!(!tabbed.contains(REQUIRED), "painted before the submit");
+        assert!(tabbed.contains("Enter your email."), "the rule waited");
+
+        page.click(submit);
+        let submitted = dioxus_ssr::render(&page.dom);
+        assert!(submitted.contains(REQUIRED), "the submit did not reveal it");
+
+        let input = page.rec.registered_for("input")[0];
+        page.dom
+            .runtime()
+            .handle_event("input", Event::new(input_event("Tom"), true), input);
+        page.render();
+        let typed = dioxus_ssr::render(&page.dom);
+        assert!(!typed.contains(REQUIRED), "typing did not clear it");
+
+        let mut page = Page::mount(app);
+        let submit = page.rec.element("click", "id", "submit");
+        let name = page.rec.registered_for("focusout")[0];
+        page.click(submit);
+        let submitted = dioxus_ssr::render(&page.dom);
+        assert!(
+            submitted.contains(REQUIRED),
+            "a submit first did not show it"
+        );
+        assert!(blur(&mut page, name).contains(REQUIRED), "the blur lost it");
+    }
 }

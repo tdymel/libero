@@ -393,6 +393,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
         .bound(&bound)
         .required(required)
         .empty(!value.is_some_and(|value| value.is_complete()))
+        .readonly(readonly)
         .disabled(disabled)
         .size(size)
         .radius(radius)

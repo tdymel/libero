@@ -218,6 +218,7 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         .required(required)
         .empty(!checked)
         .asks(Asks::Check)
+        .readonly(readonly)
         .disabled(disabled)
         .size(size)
         .radius(radius)

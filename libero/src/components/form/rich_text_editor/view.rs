@@ -811,6 +811,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             || value.clone(),
             |doc| doc.blocks.iter().all(|block| block.is_empty()),
         ))
+        .readonly(readonly)
         .disabled(disabled)
         .size(size)
         .radius(radius)

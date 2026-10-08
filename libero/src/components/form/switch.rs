@@ -237,6 +237,7 @@ pub fn Switch(props: SwitchProps) -> Element {
         .required(required)
         .empty(!checked)
         .asks(Asks::Check)
+        .readonly(readonly)
         .disabled(disabled)
         .size(size)
         .radius(radius)

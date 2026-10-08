@@ -224,6 +224,7 @@ fn NumberFieldShell<T: NumberValue>(
             || Some(bound_value.unwrap_or_else(|| live.cloned())),
             Option::is_none,
         ))
+        .readonly(readonly)
         .disabled(disabled)
         .size(size)
         .radius(radius)

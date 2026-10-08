@@ -224,6 +224,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
         .bound(&bound)
         .required(required)
         .empty(value.is_empty())
+        .readonly(props.readonly.unwrap_or(false))
         .disabled(disabled)
         .size(size)
         .radius(radius)

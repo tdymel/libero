@@ -47,14 +47,13 @@ impl FieldBuilder<'_> {
             .cloned()
             .unwrap_or_default();
         // `required` is a rule at submit inside a form; the field's own rules speak first.
-        let missing = self.required && self.empty && !self.disabled && scope.is_some();
+        let missing =
+            self.required && self.empty && !self.disabled && !self.readonly && scope.is_some();
         let validated = self.rules.is_some();
+        let own_rules = self.rules.unwrap_or_default();
         let rules = match missing {
-            true => worst(
-                self.rules.unwrap_or_default(),
-                FieldStatus::Error(required_text.into()),
-            ),
-            false => self.rules.unwrap_or_default(),
+            true => worst(own_rules.clone(), FieldStatus::Error(required_text.into())),
+            false => own_rules.clone(),
         };
         let blank = [&explicit, &rules]
             .into_iter()
@@ -88,17 +87,19 @@ impl FieldBuilder<'_> {
             );
         }
 
-        // Rules wait for the first blur or submit; an explicit status - a
-        // server's answer - never waits.
-        let revealed = hook.touched.get() || scope.is_some_and(|scope| scope.submitted());
+        // Own rules wait for the first blur or submit, the implicit required error for the
+        // submit; an explicit status - a server's answer - never waits.
+        let submitted = scope.is_some_and(|scope| scope.submitted());
+        let revealed = match (submitted, hook.touched.get()) {
+            (true, _) => rules,
+            (false, true) => own_rules,
+            (false, false) => FieldStatus::Valid,
+        };
         let composite = match (scope, &name) {
             (Some(scope), Some(name)) => scope.visible_issue(name),
             _ => FieldStatus::Valid,
         };
-        let shown = worst(
-            worst(explicit, if revealed { rules } else { FieldStatus::Valid }),
-            composite,
-        );
+        let shown = worst(worst(explicit, revealed), composite);
 
         let status = Some(&shown);
         let status_state = status.and_then(FieldStatus::state);

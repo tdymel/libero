@@ -210,6 +210,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         .required(required)
         .empty(committed.is_none())
         .asks(Asks::Select)
+        .readonly(readonly)
         .disabled(disabled)
         .size(size)
         .radius(radius)

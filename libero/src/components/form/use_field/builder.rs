@@ -34,6 +34,7 @@ pub(crate) struct FieldBuilder<'a> {
     pub(super) hook: Option<Rc<FieldHook>>,
     pub(super) required: bool,
     pub(super) empty: bool,
+    pub(super) readonly: bool,
     pub(super) required_word: Option<&'static str>,
     pub(super) asks: Asks,
     pub(super) disabled: bool,
@@ -67,6 +68,7 @@ impl Default for FieldBuilder<'_> {
             hook: None,
             required: false,
             empty: false,
+            readonly: false,
             required_word: None,
             asks: Asks::Fill,
             disabled: false,
@@ -184,6 +186,14 @@ impl<'a> FieldBuilder<'a> {
     #[inline]
     pub fn asks(mut self, asks: Asks) -> Self {
         self.asks = asks;
+        self
+    }
+
+    /// Whether the control is read-only: it cannot be edited, so an empty `required` one does
+    /// not block the submit.
+    #[inline]
+    pub fn readonly(mut self, readonly: bool) -> Self {
+        self.readonly = readonly;
         self
     }
 

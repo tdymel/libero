@@ -381,6 +381,10 @@ async fn required_blocks_an_empty_submit<D: Driver>(d: &mut D, _route: &str) -> 
         d.attr("#send", "disabled").await?.is_none(),
         "the submit button is disabled"
     );
+    ensure!(
+        !d.text("body").await?.contains("Fill in this field."),
+        "the required error showed before the submit"
+    );
     d.click("#send").await?;
     eventually(d, "the error summary", async |d| d.exists(SUMMARY).await).await?;
     let summary = d.text(SUMMARY).await?;
@@ -399,6 +403,10 @@ async fn required_blocks_an_empty_submit<D: Driver>(d: &mut D, _route: &str) -> 
     ensure!(
         d.text("#submits").await? == "0",
         "onsubmit ran on an empty submit"
+    );
+    ensure!(
+        !summary.contains("Note"),
+        "the read-only field is in the summary: {summary}"
     );
     for field in ["#name", "#plan"] {
         ensure!(

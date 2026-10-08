@@ -158,6 +158,7 @@ pub fn Textarea(props: TextareaProps) -> Element {
         .bound(&bound)
         .required(required)
         .empty(bound.is_empty(required, || value.clone(), String::is_empty))
+        .readonly(readonly)
         .disabled(disabled)
         .size(size)
         .radius(radius)

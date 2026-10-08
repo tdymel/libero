@@ -126,8 +126,10 @@ A submit shows every status. With an error, it is cancelled, and a summary of
 every problem appears above the fields and takes focus. Warnings never block.
 A `required` field left empty is an error too, "Fill in this field.", or
 "Check this box." and "Select an item in the list." for a box or a select
-(`Localization::form`), unless a rule of its own says more; a disabled one
-never blocks.
+(`Localization::form`), unless a rule of its own says more; a disabled or
+read-only one never blocks. The error shows only once the form was submitted,
+so tabbing through an empty form paints nothing; after that it follows the
+value like any rule.
 The summary keeps the problems of that submit. A line leaves once it is fixed,
 and new ones wait for the next submit.
 
@@ -162,7 +164,7 @@ any extra HTML attributes.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `required` | `bool` | `false` | Marks the label. Inside a `Form`, an empty field fails the submit with `form.required` unless its own rules fail first: `form.required_check` for an unchecked `Checkbox` or `Switch`, `form.required_select` for a select. A slider always holds a value, and a lone `Radio` leaves it to its `RadioGroup`. A field with a handler but no `value` or binding counts as filled: pass its `value` or a `name` path. |
+| `required` | `bool` | `false` | Marks the label. Inside a `Form`, an empty field fails the submit with `form.required` unless its own rules fail first: `form.required_check` for an unchecked `Checkbox` or `Switch`, `form.required_select` for a select. A read-only field never fails it. A slider and a `ColorField` always hold a value, and a lone `Radio` leaves it to its `RadioGroup`. A field with a handler but no `value` or binding counts as filled: pass its `value` or a `name` path. |
 | `validate` | `Validators<T>` | - | Rules over the field's own value, one or an array. Shown once the field loses focus or its form is submitted. |
 | `name` | `FieldName<T>` | - | What the field posts as, and how rules address it. A path from `#[derive(Fields)]` also binds the field to the form's value, unless the field has a handler of its own. `T` is the field's value type. |
 

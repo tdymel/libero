@@ -933,6 +933,27 @@ fn a_box_or_a_select_left_empty_asks_in_its_own_words() {
     );
 }
 
+/// Todo 2655: a read-only control cannot be filled in, so empty and required it never blocks.
+#[test]
+fn an_empty_required_readonly_field_submits_clean() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Form::<()> {
+                    Spy {}
+                    TextField { label: "Name", name: "name", required: true, readonly: true, value: "" }
+                    crate::components::Textarea { label: "Bio", name: "bio", required: true, readonly: true, value: "" }
+                    crate::components::Checkbox { label: "Terms", name: "terms", required: true, readonly: true, checked: false, onchange: |_| {} }
+                }
+            }
+        }
+    }
+
+    let (dom, _) = mount(app);
+    let scope = scope(&dom);
+    dom.in_runtime(|| assert!(!scope.has_errors(), "a read-only field blocks the submit"));
+}
+
 /// Todo 2566: a `Fieldset`'s own rule was an unlinked, unnamed line.
 #[test]
 fn a_fieldset_rule_naming_no_field_links_to_the_group() {

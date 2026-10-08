@@ -127,6 +127,7 @@ fn TextFieldShell(
         .bound(&bound)
         .required(required)
         .empty(empty)
+        .readonly(readonly)
         .disabled(disabled)
         .size(size)
         .radius(radius)

@@ -321,6 +321,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         .required(required)
         .empty(empty)
         .asks(Asks::Select)
+        .readonly(readonly)
         .disabled(disabled)
         .size(size)
         .radius(radius)

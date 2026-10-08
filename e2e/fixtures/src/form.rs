@@ -22,6 +22,7 @@ pub const ROUTES: Routes = &[
 ];
 
 /// Todo 2572: `required` alone, no rules, blocks an empty submit; `#fill` fills all three.
+/// Todo 2655: the empty, read-only `#note` never blocks.
 #[component]
 fn RequiredPage() -> Element {
     let mut name = use_signal(String::new);
@@ -36,6 +37,7 @@ fn RequiredPage() -> Element {
                 TextField { id: "name", label: "Name", required: true, value: name(), oninput: move |text| name.set(text) }
                 NativeSelect { id: "plan", label: "Plan", placeholder: "Pick one", required: true, value: plan(), onchange: move |next| plan.set(Some(next)) }
                 Select { id: "tier", label: "Tier", placeholder: "Pick one", required: true, value: tier(), onchange: move |next| tier.set(next) }
+                TextField { id: "note", label: "Note", required: true, readonly: true, value: "" }
                 Button { id: "send", r#type: "submit", "Send" }
             }
             Button {
