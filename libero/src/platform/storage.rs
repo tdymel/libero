@@ -130,7 +130,7 @@ mod web {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-mod files {
+pub(super) mod files {
     use std::fmt::Write as _;
     use std::io::{self, Write as _};
     use std::path::{Path, PathBuf};
@@ -152,11 +152,25 @@ mod files {
 
     pub(super) fn local_dir() -> Option<PathBuf> {
         LOOKED_UP.store(true, Ordering::Relaxed);
-        let set = DIR.lock().unwrap_or_else(PoisonError::into_inner).clone();
-        set.or_else(|| {
-            static OWN: OnceLock<Option<PathBuf>> = OnceLock::new();
-            OWN.get_or_init(app_storage_dir).clone()
-        })
+        set_dir().or_else(own_dir)
+    }
+
+    /// Beside `local` in the app's own directory, inside the one `set_storage_dir` names.
+    pub(in crate::platform) fn indexed_dir() -> Option<PathBuf> {
+        LOOKED_UP.store(true, Ordering::Relaxed);
+        match set_dir() {
+            Some(dir) => Some(dir.join("indexed")),
+            None => Some(own_dir()?.with_file_name("indexed")),
+        }
+    }
+
+    fn set_dir() -> Option<PathBuf> {
+        DIR.lock().unwrap_or_else(PoisonError::into_inner).clone()
+    }
+
+    fn own_dir() -> Option<PathBuf> {
+        static OWN: OnceLock<Option<PathBuf>> = OnceLock::new();
+        OWN.get_or_init(app_storage_dir).clone()
     }
 
     #[cfg(target_os = "android")]
@@ -218,7 +232,7 @@ mod files {
         }
     }
 
-    pub(super) fn read(dir: &Path, key: &str) -> Result<Option<String>, StorageError> {
+    pub(in crate::platform) fn read(dir: &Path, key: &str) -> Result<Option<String>, StorageError> {
         match std::fs::read(dir.join(file_name(key))) {
             Ok(bytes) => String::from_utf8(bytes)
                 .map(Some)
@@ -230,7 +244,11 @@ mod files {
 
     /// Through a synced temporary file and a rename, so neither a crash nor a power
     /// cut leaves half a value.
-    pub(super) fn write(dir: &Path, key: &str, value: &str) -> Result<(), StorageError> {
+    pub(in crate::platform) fn write(
+        dir: &Path,
+        key: &str,
+        value: &str,
+    ) -> Result<(), StorageError> {
         static NEXT: AtomicU64 = AtomicU64::new(0);
         let temp = dir.join(format!(
             "~{}-{}.tmp",
@@ -289,7 +307,7 @@ mod files {
         }
     }
 
-    pub(super) fn delete(dir: &Path, key: &str) -> Result<(), StorageError> {
+    pub(in crate::platform) fn delete(dir: &Path, key: &str) -> Result<(), StorageError> {
         match std::fs::remove_file(dir.join(file_name(key))) {
             Err(error) if error.kind() != io::ErrorKind::NotFound => Err(refusal(&error)),
             _ => Ok(()),

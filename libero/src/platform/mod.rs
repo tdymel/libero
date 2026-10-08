@@ -23,6 +23,7 @@ mod fullscreen;
 mod geolocation;
 mod http;
 mod image_crop;
+mod indexed_db;
 mod intersection;
 mod keyboard;
 mod max_length;
@@ -107,6 +108,9 @@ pub(crate) use geolocation::{Fix, GeolocationSubscription, geolocation};
 pub use geolocation::{GeolocationError, GeolocationOptions, Position};
 pub(crate) use http::fetch_text;
 pub(crate) use image_crop::{data_url, image_crop};
+#[cfg(test)]
+pub(crate) use indexed_db::{IndexedDbApi, MemoryIndexedDb, fake_indexed_db};
+pub(crate) use indexed_db::indexed_db;
 pub(crate) use intersection::{
     INTERSECT_ATTR, OBSERVE_ATTR, OWNER_ATTR, computed_px_by_tag, has_match_by_tag,
     next_observe_tag, observes_by_tag, on_intersection,
