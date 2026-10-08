@@ -182,9 +182,6 @@ fn page_snippets_are_current() {
         demo_count > 0,
         "no route rendered a `Demo`: the shell likely failed"
     );
-    // Gitignored, so nothing to commit. Rewritten only when it changed.
-    let generated = root.join("../libero/tests/page_snippets.md");
-    if std::fs::read_to_string(&generated).ok().as_deref() != Some(&out) {
-        std::fs::write(&generated, &out).unwrap();
-    }
+    // Gitignored, so nothing to commit. Always written: its age tells libero a page is newer.
+    std::fs::write(root.join("../libero/tests/page_snippets.md"), &out).unwrap();
 }

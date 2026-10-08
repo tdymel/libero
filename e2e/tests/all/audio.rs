@@ -50,6 +50,7 @@ fn volume_parts_style_the_portaled_menu() {
         )
         .await
         .unwrap();
+        broken_player_settled(page).await;
         pointer::click(page, chevron).await.unwrap();
         wait::for_js_true(
             page,
@@ -219,6 +220,18 @@ fn shift_question_lists_the_keys() {
     });
 }
 
+/// The broken player's alert grows the page above the players under it; a click aimed before
+/// it appears lands on its text (todo 1673).
+async fn broken_player_settled(page: &chromiumoxide::Page) {
+    wait::for_js_true(
+        page,
+        "document.querySelector('#broken [role=alert]') !== null",
+        "the broken player's alert, which moves the players under it",
+    )
+    .await
+    .unwrap();
+}
+
 /// Todo 1385: the speaker mutes and unmutes; the chevron opens the volume
 /// slider in a dialog, focused, and Escape returns to the chevron.
 #[test]
@@ -244,19 +257,9 @@ fn the_speaker_mutes_and_the_volume_sits_in_a_menu() {
         )
         .await
         .unwrap();
-        // A timeline for a failure: a press that never clicked, or a click something undid.
-        page.evaluate(
-            "window.__presses = []; const t0 = performance.now(); \
-             const note = (what) => window.__presses.push(`${what}@${Math.round(performance.now() - t0)}`); \
-             ['pointerdown', 'pointerup', 'click'].forEach((type) => document.addEventListener(type, (e) => \
-               note(`${type}:${e.target.closest('button')?.getAttribute('aria-label') ?? e.target.tagName}`), true)); \
-             document.querySelector('#muted audio').addEventListener('volumechange', (e) => \
-               note(`volumechange:muted=${e.target.muted}`))",
-        )
-        .await
-        .unwrap();
+        broken_player_settled(page).await;
         pointer::click(page, SPEAKER).await.unwrap();
-        let unmuted = wait::for_js_true(
+        wait::for_js_true(
             page,
             &format!(
                 "{} && {}",
@@ -265,22 +268,8 @@ fn the_speaker_mutes_and_the_volume_sits_in_a_menu() {
             ),
             "the speaker to unmute",
         )
-        .await;
-        if let Err(error) = unmuted {
-            // Todo 1673 flaked here: whether the press was lost or undone.
-            let state: String = page
-                .evaluate(audio(
-                    "muted",
-                    &format!(
-                        "`muted ${{a.muted}} volume ${{a.volume}} label ${{document.querySelector('{SPEAKER}').getAttribute('aria-label')}} focus ${{document.activeElement?.getAttribute('aria-label')}} events ${{window.__presses.join(' ')}}`"
-                    ),
-                ))
-                .await
-                .unwrap()
-                .into_value()
-                .unwrap();
-            panic!("{error}; the player reads {state}");
-        }
+        .await
+        .unwrap();
         pointer::click(page, SPEAKER).await.unwrap();
         wait::for_js_true(page, &audio("muted", "a.muted"), "the speaker to mute")
             .await

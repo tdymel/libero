@@ -53,6 +53,21 @@ pub const HELD_CLOCK: &str = r#"(delays) => {
     };
 }"#;
 
+/// Install with `(PINNED_TODAY)('2030-06-15')`: `new Date()` and `Date.now()` answer noon of that
+/// day plus the real time elapsed since, so durations still measure. Dates built from arguments and timers stay real.
+pub const PINNED_TODAY: &str = r#"(iso) => {
+    const [year, month, day] = iso.split('-').map(Number);
+    const Real = Date;
+    const shift = new Real(year, month - 1, day, 12).getTime() - Real.now();
+    const now = () => Real.now() + shift;
+    window.Date = new Proxy(Real, {
+        construct: (target, args, newTarget) =>
+            Reflect.construct(target, args.length ? args : [now()], newTarget),
+        apply: () => new Real(now()).toString(),
+        get: (target, key) => (key === 'now' ? now : Reflect.get(target, key, target)),
+    });
+}"#;
+
 /// A WebView app's timers are libero's thread timers (2144): the expression a driver awaits
 /// for `op` (`hold`, `armed` or `fire`) on them, through the fixtures app's `__heldClock`.
 pub fn app_clock(op: &str, ms: &[u32]) -> String {
@@ -82,6 +97,22 @@ pub async fn hold_from_load(page: &Page, delays: &[u32]) -> Result<()> {
     page.evaluate_on_new_document(format!(
         "({HELD_CLOCK})({})",
         serde_json::to_string(delays)?
+    ))
+    .await?;
+    page.reload().await?;
+    Ok(())
+}
+
+/// Makes the page's today `iso_date` (`YYYY-MM-DD`) from its load on, for a route without a
+/// `today` prop; reloads. The clock then runs on from noon of that day.
+pub async fn pin_today(page: &Page, iso_date: &str) -> Result<()> {
+    let parts: Vec<_> = iso_date.split('-').collect();
+    if parts.len() != 3 || parts.iter().any(|part| part.parse::<u32>().is_err()) {
+        bail!("pin_today wants YYYY-MM-DD, got {iso_date:?}");
+    }
+    page.evaluate_on_new_document(format!(
+        "({PINNED_TODAY})({})",
+        serde_json::to_string(iso_date)?
     ))
     .await?;
     page.reload().await?;

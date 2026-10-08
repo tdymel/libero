@@ -17,7 +17,8 @@
 //! so `cargo test -p docs page_snippets` runs first: in a fresh clone the
 //! doc-tests fail on the missing file, and the line rustc quotes names the
 //! command. Failing, not skipping: a skip would leave the printed code
-//! unchecked behind a green run.
+//! unchecked behind a green run. A copy older than a docs page fails
+//! `PageSnippetsAreCurrent` with the same command.
 
 macro_rules! md_pages {
     ($($page:ident => $file:literal,)*) => {
@@ -31,6 +32,37 @@ macro_rules! md_pages {
 /// The code the docs pages print, as `docs/src/snippets/generate.rs` writes it out.
 #[doc = include_str!("../tests/page_snippets.md")] // Missing? Run `cargo test -p docs page_snippets` first.
 pub struct PageSnippets;
+
+/// Fails, naming the command, when [`PageSnippets`] is older than a docs page: stale, it
+/// compiles code the pages no longer print (todo 2069).
+///
+/// ```
+/// use std::path::{Path, PathBuf};
+///
+/// fn newest(dir: &Path) -> (std::time::SystemTime, PathBuf) {
+///     let mut best = (std::time::UNIX_EPOCH, dir.to_path_buf());
+///     for entry in std::fs::read_dir(dir).unwrap() {
+///         let path = entry.unwrap().path();
+///         let found = if path.is_dir() {
+///             newest(&path)
+///         } else {
+///             (std::fs::metadata(&path).unwrap().modified().unwrap(), path)
+///         };
+///         best = best.max(found);
+///     }
+///     best
+/// }
+///
+/// let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+/// let generated = std::fs::metadata(root.join("tests/page_snippets.md")).and_then(|meta| meta.modified());
+/// let (page_time, page) = newest(&root.join("../docs/src/pages"));
+/// assert!(
+///     generated.is_ok_and(|time| time >= page_time),
+///     "tests/page_snippets.md is missing or older than {}: regenerate with `cargo test -p docs page_snippets`",
+///     page.display()
+/// );
+/// ```
+pub struct PageSnippetsAreCurrent;
 
 md_pages! {
     Accessibility => "accessibility",

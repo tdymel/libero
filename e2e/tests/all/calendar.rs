@@ -53,6 +53,37 @@ fn an_inline_picker_asks_the_clock_again_on_focus_in() {
     });
 }
 
+/// Todo 2059: `clock::pin_today` makes a route without a `today` prop mark the pinned day, and
+/// keeps `Date` a `Date` whose clock runs on.
+#[test]
+fn a_pinned_today_is_marked_without_a_today_prop() {
+    block_on(async {
+        let fixture = Fixture::open("/calendar/clock", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        e2e::clock::pin_today(page, "2031-06-15").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('[role=grid] [aria-current=date]:not([data-outside])')?.getAttribute('data-date') === '2031-06-15'",
+            "the pinned day marked as today",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const a = Date.now(); const noon = new Date(2031, 5, 15, 12).getTime();
+             return new Date() instanceof Date && typeof Date() === 'string' && a >= noon
+                 && a - noon < 3600e3 && Date.parse('2031-06-15') > 0 && Date.UTC(2031, 5, 15) > 0; })()",
+            "the pinned clock running on from noon",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a pinned today").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 745: a day before `min` is `GrayText` in forced colours, and draws no box.
 #[test]
 fn a_disabled_day_grays_out_in_forced_colours() {
