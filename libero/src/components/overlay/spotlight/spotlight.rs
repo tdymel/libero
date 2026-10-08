@@ -4,8 +4,8 @@ use crate::{
     components::{
         accessibility::{VisuallyHidden, visually_hidden_sx},
         common::{
-            ComboboxState, Input, Part, Parts, inset_focus_ring_sx, navigation_chord, parts_enum,
-            recast_parts, use_combobox, use_name_warning,
+            ComboboxState, Input, Part, Parts, ROW_HOVER_TINT, inset_focus_ring_sx,
+            navigation_chord, parts_enum, recast_parts, use_combobox, use_name_warning,
         },
         feedback::Loader,
         layout::{Box, ScrollArea},
@@ -56,7 +56,7 @@ parts_enum! {
 }
 
 // Rows are styled from here, the `Menu` shape. Hover tints like the keyboard's row
-// (muted.1 on white is invisible, todo 2628); only the keyboard's row takes a ring.
+// (todo 2628); only the keyboard's row takes a ring.
 static SPOTLIGHT_BODY_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .flex_direction("column")
@@ -102,10 +102,10 @@ static SPOTLIGHT_BODY_SX: StaticSx = StaticSx::new(|| {
                 .cursor("pointer")
                 .user_select("none"),
         )
-        .selector("& [role=\"option\"]:hover", sx().background("muted.2"))
+        .selector("& [role=\"option\"]:hover", sx().background(ROW_HOVER_TINT))
         .selector(
             "& [role=\"option\"][data-active]",
-            sx().background("muted.2"),
+            sx().background(ROW_HOVER_TINT),
         )
         .selector(
             "& [role=\"option\"][data-active]",

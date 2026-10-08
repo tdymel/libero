@@ -65,6 +65,51 @@ e2e::scenario!(
     android_only("1275: no Back key off Android")
 );
 
+const ACTIVE_OPTION: &str = "[role=option][data-state~=active]";
+const IDLE_OPTION: &str = "[role=option]:not([data-state~=active]):not([aria-selected=true])";
+const HOVERED_OPTION: &str = "[role=option]:hover";
+const FILL: &str = "background-color";
+
+/// Todo 2633: one row tint for hover and the keyboard's row; `muted.1` was near
+/// invisible on white. A hover leaves the keyboard's row where it is.
+async fn a_hovered_option_tints<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(TRIGGER).await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually(d, "the listbox", async |d| d.exists(LISTBOX).await).await?;
+    // Off the selected Apple, whose tint is its own.
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually(d, "ArrowDown to light Banana", async |d| {
+        Ok(d.text(ACTIVE_OPTION).await? == "Banana")
+    })
+    .await?;
+    let bare = d.style(IDLE_OPTION, FILL).await?;
+    d.hover("[role=option]:nth-child(3)").await?;
+    eventually(
+        d,
+        "the hovered option to tint like the lit one",
+        async |d| {
+            Ok(d.exists(HOVERED_OPTION).await?
+                && d.style(HOVERED_OPTION, FILL).await? == d.style(ACTIVE_OPTION, FILL).await?)
+        },
+    )
+    .await?;
+    anyhow::ensure!(
+        d.style(HOVERED_OPTION, FILL).await? != bare,
+        "the hover tint is the bare row's fill"
+    );
+    anyhow::ensure!(
+        d.text(ACTIVE_OPTION).await? == "Banana",
+        "a hover moved the keyboard's row"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_hovered_select_option_tints_like_the_keyboard_s_row,
+    "/select/echo",
+    a_hovered_option_tints
+);
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("select", "/select")

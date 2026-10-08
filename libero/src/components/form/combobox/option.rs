@@ -5,8 +5,8 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, Part, States, base_props, disabled_look_sx, forced_on_sx,
-            inset_focus_ring_sx, option_id,
+            HtmlTag, Input, Part, ROW_HOVER_TINT, States, base_props, disabled_look_sx,
+            forced_on_sx, inset_focus_ring_sx, option_id,
         },
         layout::use_box,
     },
@@ -66,8 +66,9 @@ static COMBOBOX_ROW_SX: StaticSx = StaticSx::new(|| {
                 .overflow("hidden")
                 .text_overflow("ellipsis"),
         )
-        .hover(sx().background("muted.1"))
-        .when("active", sx().background("muted.2"))
+        // Hover and the keyboard's row share the tint; only the active row takes the ring.
+        .hover(sx().background(ROW_HOVER_TINT))
+        .when("active", sx().background(ROW_HOVER_TINT))
         // The contrast twin, not `primary.7` (hard to read). A ring means active.
         .when(
             "selected",

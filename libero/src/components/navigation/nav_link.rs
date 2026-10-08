@@ -4,9 +4,10 @@ use pictogram_icons_lucide as lucide;
 use crate::{
     components::{
         common::{
-            Glyph, HtmlTag, Input, Part, States, StyleAttributes, Variables, attr, base_props,
-            disabled_look_sx, forced_on_sx, inset_focus_ring_sx, on_start_bar_sx, on_tint_color,
-            parts_enum, parts_source, sx_source, use_style_attributes, variables, with_parts,
+            Glyph, HtmlTag, Input, Part, ROW_HOVER_TINT, States, StyleAttributes, Variables, attr,
+            base_props, disabled_look_sx, forced_on_sx, inset_focus_ring_sx, on_start_bar_sx,
+            on_tint_color, parts_enum, parts_source, sx_source, use_style_attributes, variables,
+            with_parts,
         },
         layout::{Collapse, box_style, use_box},
         navigation::{NewTabHint, tree::row_draws_current, wants_new_tab_hint},
@@ -79,7 +80,7 @@ static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {
         // link (todo 596); `:where` keeps `:hover`'s specificity.
         .selector(
             "&:hover:not(:where([data-state~=\"disabled\"]))",
-            sx().background("muted.2"),
+            sx().background(ROW_HOVER_TINT),
         )
         // The tint is too faint to mark the state alone, so a coloured start bar
         // does; a full ring would read as the focus ring. After each `background`, which resets it.
@@ -137,7 +138,7 @@ static NAV_GROUP_SX: StaticSx = StaticSx::new(|| {
                 .color("inherit")
                 .cursor("pointer")
                 .focus_visible(inset_focus_ring_sx("-2px"))
-                .hover(sx().background("muted.2"))
+                .hover(sx().background(ROW_HOVER_TINT))
                 .selector("&:disabled", disabled_look_sx("not-allowed"))
                 .selector(
                     "& > svg",

@@ -8,8 +8,8 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, Part, Parts, States, base_props, disabled_look_sx, forced_on_sx,
-            has_shortcut_modifier, inset_focus_ring_sx, parts_enum,
+            HtmlTag, Input, Part, Parts, ROW_HOVER_TINT, States, base_props, disabled_look_sx,
+            forced_on_sx, has_shortcut_modifier, inset_focus_ring_sx, parts_enum,
         },
         layout::use_box,
     },
@@ -79,13 +79,13 @@ static MENUBAR_SX: StaticSx = StaticSx::new(|| {
         // Hover, focus and an open menu share one tint, as `Menu`'s items.
         .selector(
             format!("{trigger}:hover:not([aria-disabled=\"true\"])"),
-            sx().background("muted.1"),
+            sx().background(ROW_HOVER_TINT),
         )
-        .selector(format!("{trigger}:focus"), sx().background("muted.1"))
+        .selector(format!("{trigger}:focus"), sx().background(ROW_HOVER_TINT))
         // Forced colours drop the tint, so the open trigger takes `Highlight` (todo 2420).
         .selector(
             format!("{trigger}[aria-expanded=\"true\"]"),
-            sx().background("muted.1").and(forced_on_sx()),
+            sx().background(ROW_HOVER_TINT).and(forced_on_sx()),
         )
         // `appearance: none` and `border: 0` take the UA's ring with them.
         .selector(

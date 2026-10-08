@@ -5,7 +5,7 @@ use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
-        common::{Glyph, HtmlTag, States},
+        common::{Glyph, HtmlTag, ROW_HOVER_TINT, States},
         form::{ComboboxOption, ComboboxState},
         layout::{Box, BoxStyle, ScrollArea},
     },
@@ -73,7 +73,7 @@ fn drill_back_sx() -> Sx {
         .line_height("1.5")
         .text_align("start")
         .cursor("pointer")
-        .hover(sx().background("muted.1"))
+        .hover(sx().background(ROW_HOVER_TINT))
         .selector(
             "& > [data-slot='back']",
             sx().flex("0 0 auto")

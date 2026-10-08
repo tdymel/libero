@@ -807,6 +807,40 @@ async fn a_tall_menu_fits_the_room<D: Driver>(d: &mut D, _route: &str) -> Result
     .await
 }
 
+/// Todo 2633: a hovered item takes the shared row tint, `muted.2`, in both schemes;
+/// `muted.1` was near invisible on white.
+#[test]
+fn a_hovered_item_takes_the_row_tint_in_both_schemes() {
+    use e2e::Scheme;
+    const ITEM: &str = "[role=menu] [data-menu-index=\"1\"]";
+    let tint = format!(
+        "(() => {{ const p = document.createElement('div'); \
+         p.style.background = 'var(--lsx-muted-2)'; \
+         document.querySelector({MENU:?}).append(p); \
+         const fill = getComputedStyle(p).backgroundColor; p.remove(); return fill; }})()"
+    );
+    block_on(async {
+        for scheme in [Scheme::Light, Scheme::Dark] {
+            let fixture = Fixture::open_in("/menu", Viewport::Desktop, scheme)
+                .await
+                .unwrap();
+            let mut d = e2e::driver::Web { fixture };
+            d.click(TRIGGER).await.unwrap();
+            eventually(&mut d, "the menu", async |d| d.exists(ITEM).await)
+                .await
+                .unwrap();
+            d.hover(ITEM).await.unwrap();
+            eventually(&mut d, "the hovered item to take the row tint", async |d| {
+                let want = d.evaluate(&tint).await?;
+                Ok(d.style(ITEM, "background-color").await? == want.as_str().unwrap_or_default())
+            })
+            .await
+            .unwrap_or_else(|e| panic!("{scheme:?}: {e}"));
+            d.fixture.close().await.unwrap();
+        }
+    });
+}
+
 /// 1739: the room caps a menu, it never stretches a short one.
 async fn a_short_menu_keeps_its_height<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click(TRIGGER).await?;

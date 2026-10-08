@@ -8,7 +8,10 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::states,
-        common::{HtmlTag, Part, focus_ring_sx, forced_on_sx, on_start_bar_sx, on_tint_color},
+        common::{
+            HtmlTag, Part, ROW_HOVER_TINT, focus_ring_sx, forced_on_sx, on_start_bar_sx,
+            on_tint_color,
+        },
         data_display::List,
         layout::use_box,
     },
@@ -114,7 +117,7 @@ static TREE_ROW_CONTENT_SX: StaticSx = StaticSx::new(|| {
         .cursor("pointer")
         // A long unbreakable label wraps instead of widening the page (1.4.10).
         .with("overflow-wrap", "anywhere")
-        .hover(sx().background("muted.2"))
+        .hover(sx().background(ROW_HOVER_TINT))
         // Pulled back over the parent's guide from its outer edge, the content left
         // in place. Not centred: half pixels round apart natively.
         .when(

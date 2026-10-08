@@ -1,6 +1,10 @@
 /// A `box-shadow` that draws nothing, so a shadow list always parses.
 const NO_SHADOW: &str = "0 0 #0000";
 
+/// The one hover tint of every list-like row (menu items, options, tree and nav rows).
+/// `muted.1` was near invisible on white, about 1.1:1 (todo 2633).
+pub(crate) const ROW_HOVER_TINT: &str = "muted.2";
+
 /// The `:focus-visible` ring: a dark stripe between two light halo bands, so it reads on any surface.
 /// The stripe is also a shadow: Blitz paints the outline under the shadows (todo 478).
 pub(crate) fn focus_ring_sx() -> crate::sx::Sx {

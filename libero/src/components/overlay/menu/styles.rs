@@ -1,7 +1,7 @@
 use super::menu::MenuPart;
 use crate::{
     components::{
-        common::{LogicalTextAlign, Part, disabled_look_sx, inset_focus_ring_sx},
+        common::{LogicalTextAlign, Part, ROW_HOVER_TINT, disabled_look_sx, inset_focus_ring_sx},
         layout::paper_sx,
     },
     hooks::POPOVER_AVAILABLE_HEIGHT,
@@ -70,9 +70,9 @@ pub(super) static MENU_SX: StaticSx = StaticSx::new(|| {
         // Hover and focus share a tint: focus follows the pointer.
         .selector(
             format!("{item}:hover:not([aria-disabled=\"true\"])"),
-            sx().background("muted.1"),
+            sx().background(ROW_HOVER_TINT),
         )
-        .selector(format!("{item}:focus"), sx().background("muted.1"))
+        .selector(format!("{item}:focus"), sx().background(ROW_HOVER_TINT))
         // Inset: the box clips at its padding edge while it scrolls.
         .selector(
             format!("{item}:focus-visible"),
