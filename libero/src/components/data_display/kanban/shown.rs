@@ -30,10 +30,33 @@ fn nth(cards: &BTreeMap<usize, usize>, position: usize) -> usize {
     indices.get(position).copied().unwrap_or(position)
 }
 
+/// The `index` a card dropped in slot `to` among the shown `indices` takes: just before the
+/// next shown card, else just after the last one. With `lifted`, its own `index`, the others
+/// count after its removal.
+pub(super) fn drop_index(indices: &[usize], lifted: Option<usize>, to: usize) -> usize {
+    let others: Vec<usize> = indices
+        .iter()
+        .copied()
+        .filter(|&index| Some(index) != lifted)
+        .collect();
+    let shifted = |index: usize| index - usize::from(lifted.is_some_and(|from| index > from));
+    match (others.get(to), others.last(), lifted) {
+        (Some(&next), ..) => shifted(next),
+        (None, Some(&last), _) => shifted(last) + 1,
+        (None, None, Some(from)) => from,
+        (None, None, None) => 0,
+    }
+}
+
 impl Shown {
-    /// The `index` of the card shown at `position`; `position` itself past the last.
-    pub(super) fn index_at(self, position: usize) -> usize {
-        nth(&self.cards.peek(), position)
+    /// The `index`es of a move from `position` to slot `to` among the shown cards, landing
+    /// where the pointer drag drops it.
+    pub(super) fn reorder(self, position: usize, to: usize) -> (usize, usize) {
+        let cards = self.cards.peek();
+        let mut indices: Vec<usize> = cards.values().copied().collect();
+        indices.sort_unstable();
+        let from = nth(&cards, position);
+        (from, drop_index(&indices, Some(from), to))
     }
 }
 
@@ -89,6 +112,21 @@ mod tests {
         assert!(is_dense(&shown(&[2, 0, 1])));
         assert!(!is_dense(&shown(&[1, 2])));
         assert!(!is_dense(&shown(&[0, 2])));
+    }
+
+    /// Todo 2635: a later move lands before the next shown card, as the pointer drop does.
+    #[test]
+    fn a_drop_lands_before_the_next_shown_card_or_after_the_last() {
+        let shown = [1, 4, 6];
+        // Card 1 over slot 1 passes 4 and stops before 6: past the hidden 5.
+        assert_eq!(drop_index(&shown, Some(1), 1), 5);
+        assert_eq!(drop_index(&shown, Some(1), 2), 6);
+        assert_eq!(drop_index(&shown, Some(6), 0), 1);
+        assert_eq!(drop_index(&shown, Some(4), 0), 1);
+        assert_eq!(drop_index(&shown, None, 3), 7);
+        assert_eq!(drop_index(&[3], Some(3), 0), 3);
+        assert_eq!(drop_index(&[], None, 0), 0);
+        assert_eq!(drop_index(&[0, 1, 2], Some(0), 1), 1);
     }
 
     #[test]

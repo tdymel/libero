@@ -416,6 +416,7 @@ fn parse<T: NumberValue>(text: &str, separator: Option<&str>) -> Option<T> {
 fn ascii_digits(text: &str) -> Cow<'_, str> {
     let fold = |c: char| match c {
         '\u{FF0D}' | '\u{2212}' => Some('-'),
+        '\u{066B}' | '\u{FF0E}' => Some('.'),
         _ => ascii_digit(c).filter(|digit| *digit != c),
     };
     match text.chars().any(|c| fold(c).is_some()) {
@@ -484,6 +485,14 @@ mod tests {
         assert_eq!(aria_number(Some(2.5)), Some("2.5".into()));
         assert_eq!(aria_number(Some(-3_i32)), Some("-3".into()));
         assert_eq!(aria_number::<f64>(None), None);
+    }
+
+    /// Todo 2646: the Arabic and full-width decimal separators fold to `.`.
+    #[test]
+    fn non_ascii_decimal_separators_parse() {
+        assert_eq!(parse::<f64>("1\u{066B}5", None), Some(1.5));
+        assert_eq!(parse::<f64>("\u{FF11}\u{FF0E}\u{FF15}", None), Some(1.5));
+        assert_eq!(parse::<f64>("1\u{066B}5", Some(",")), Some(1.5));
     }
 
     /// Todo 2414: these typed digits never parsed and reverted on blur.

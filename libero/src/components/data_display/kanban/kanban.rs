@@ -276,11 +276,12 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
             }
             let column = *index.peek();
             // The sortable counts the shown cards; the move speaks the data's indices (2579).
+            let (from, to) = shown.reorder(step.from, step.to);
             onmove.call(KanbanMove {
                 from_column: column,
-                from: shown.index_at(step.from),
+                from,
                 to_column: column,
-                to: shown.index_at(step.to),
+                to,
             });
         }),
     });

@@ -1,6 +1,7 @@
 //! A board's geometry while a card drags by pointer: every column's list and
 //! cards, in client px, measured when the drag started.
 
+use super::shown::drop_index;
 use crate::components::data_display::sortable::{Span, shift, slot_offset, target_index};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -71,20 +72,8 @@ impl Lanes {
     pub(super) fn index_at(&self, target: (usize, usize)) -> usize {
         let (column, to) = target;
         let own = column == self.from_column;
-        let from = self.lifted_index();
-        let others: Vec<usize> = self.lanes[column]
-            .indices
-            .iter()
-            .copied()
-            .filter(|&index| !own || index != from)
-            .collect();
-        let shifted = |index: usize| index - usize::from(own && index > from);
-        match (others.get(to), others.last()) {
-            (Some(&next), _) => shifted(next),
-            (None, Some(&last)) => shifted(last) + 1,
-            (None, None) if own => from,
-            (None, None) => 0,
-        }
+        let lifted = own.then(|| self.lifted_index());
+        drop_index(&self.lanes[column].indices, lifted, to)
     }
 
     /// The space between two cards, from the first column holding two.

@@ -11,7 +11,24 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/sidebar", || rsx! { SidebarPage {} }),
     ("/sidebar/narrow", || rsx! { NarrowPage {} }),
+    ("/sidebar/short", || rsx! { ShortPage {} }),
 ];
+
+/// The default `md` top and bottom panel, each in a 256px column; not in the baseline
+/// (todo 2645).
+#[component]
+fn ShortPage() -> Element {
+    rsx! {
+        Flex { id: "short-a", direction: "column", height: "256px",
+            Sidebar { id: "short-top", side: "top", aria_label: "Toolbar", "Toolbar" }
+            LBox { id: "short-rest", sx: sx().flex("1").min_height("0"), "Body" }
+        }
+        Flex { id: "short-b", direction: "column", height: "256px",
+            LBox { sx: sx().flex("1").min_height("0"), "Body" }
+            Sidebar { id: "short-bottom", side: "bottom", aria_label: "Status", "Status" }
+        }
+    }
+}
 
 /// The default `md` panel beside content in a 320px column; not in the baseline
 /// (todo 2477).

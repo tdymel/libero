@@ -13,8 +13,8 @@ in the DOM. For a panel that slides in over the page, see
 
 The content sits in a [`ScrollArea`](scroll_area.md), so it scrolls apart from
 the page, down and, for a line wider than the panel, sideways. A start or end
-panel takes half its parent's width at most, so a narrow screen leaves the
-content room.
+panel takes half its parent's width at most, and a top or bottom one half its
+height, so a small screen leaves the content room.
 
 ## Usage
 
@@ -88,7 +88,7 @@ With `side: "top"` or `"bottom"`, `size` is a height, so the parent needs
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `side` | `SidebarSide` | `start` | The edge that gets the border, and whether `size` is a width or a height. It does not move the panel, so put it at the matching end of the DOM. |
-| `size` | `Size` | `md` | The panel's width, or its height on a `top` or `bottom` side. A start or end panel takes half its parent's width at most. |
+| `size` | `Size` | `md` | The panel's width, or its height on a `top` or `bottom` side. A start or end panel takes half its parent's width at most, a top or bottom one half its height. |
 | `component` | `HtmlTag` | `aside` | The element to render, such as `nav` for a navigation panel. |
 | `children` | `Element` | required | The panel's content, scrolled by an inner `ScrollArea`. |
 | `parts` | `Parts<SidebarPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
@@ -117,7 +117,9 @@ parts work.
   area a tab stop, a `region` that takes the panel's `aria_label` or
   `aria_labelledby`.
 - Content wider than the panel scrolls sideways, and a start or end panel takes
-  half its parent's width at most, so the content keeps room at 320 px.
+  half its parent's width at most, so the content keeps room at 320 px. A top or
+  bottom panel takes half its parent's height at most, so the content keeps room
+  at 256 px high.
 
 ### You must
 

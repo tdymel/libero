@@ -64,6 +64,34 @@ fn a_top_or_bottom_sidebar_sizes_its_height() {
     });
 }
 
+/// A top or bottom panel takes half its column at most (todo 2645): two default
+/// `md` panel in a 256px column leaves the content half of it, not 16px.
+#[test]
+fn top_and_bottom_sidebars_leave_content_room_at_256px() {
+    block_on(async {
+        let fixture = Fixture::open("/sidebar/short", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#short-rest").await.unwrap();
+
+        let heights: Vec<f64> = page
+            .evaluate(
+                "['#short-a', '#short-top', '#short-rest', '#short-bottom'].map(id => \
+                   document.querySelector(id).getBoundingClientRect().height)",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(heights[..2], [256.0, 128.0]);
+        // The content gets the other half less the column's gap, not 16px.
+        assert!(heights[2] >= 100.0, "{heights:?}");
+        assert_eq!(heights[3], 128.0, "{heights:?}");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Content wider than the panel scrolls sideways inside it (todo 2476): the panel
 /// and the 320px column keep their size, and the far end of the line is reachable.
 #[test]

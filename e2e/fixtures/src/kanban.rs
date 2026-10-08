@@ -18,7 +18,7 @@ type Cards = Signal<Vec<Vec<&'static str>>>;
 #[derive(Clone, Copy)]
 struct Data {
     cards: Cards,
-    hide: Signal<bool>,
+    hidden: Signal<Vec<&'static str>>,
 }
 
 /// Three columns, the last empty; `#order` lists them split by `|`, `#moves` each move.
@@ -31,8 +31,8 @@ fn KanbanPage(data: bool, wrapped: bool) -> Element {
     let mut cards: Cards = use_signal(|| vec![vec!["Alpha", "Beta", "Gamma"], vec!["Delta"], vec![]]);
     let mut moves = use_signal(String::new);
     let mut refuse = use_signal(|| false);
-    let mut hide = use_signal(|| false);
-    use_context_provider(|| Data { cards, hide });
+    let mut hidden = use_signal(Vec::new);
+    use_context_provider(|| Data { cards, hidden });
     if !wrapped {
         let _ = cards();
     }
@@ -61,7 +61,9 @@ fn KanbanPage(data: bool, wrapped: bool) -> Element {
             Button { id: "add", onclick: move |_| cards.write()[2].insert(0, "Omega"), "Add Omega" }
             if data {
                 Button { id: "remove", onclick: move |_| cards.write()[0].retain(|name| *name != "Beta"), "Remove Beta" }
-                Button { id: "hide", onclick: move |_| hide.set(true), "Hide Alpha" }
+                Button { id: "hide", onclick: move |_| hidden.write().push("Alpha"), "Hide Alpha" }
+                Button { id: "hide-gamma", onclick: move |_| hidden.write().push("Gamma"), "Hide Gamma" }
+                Button { id: "grow", onclick: move |_| cards.write()[0].push("Zeta"), "Add Zeta" }
             }
         }
     }
@@ -81,11 +83,11 @@ fn Order() -> Element {
 
 #[component]
 fn Lane(column: usize, label: &'static str) -> Element {
-    let Data { cards, hide } = use_context::<Data>();
+    let Data { cards, hidden } = use_context::<Data>();
     let shown = cards()[column].clone();
     rsx! {
         KanbanColumn { index: column, label, id: "column-{column}",
-            for (index, name) in shown.into_iter().enumerate().filter(|(_, name)| !hide() || *name != "Alpha") {
+            for (index, name) in shown.into_iter().enumerate().filter(|(_, name)| !hidden().contains(name)) {
                 KanbanCard { key: "{name}", index, id: "{name}", label: name, Text { "{name}" } }
             }
         }

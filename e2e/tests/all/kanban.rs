@@ -322,6 +322,60 @@ async fn a_filtered_column_moves_by_keys_and_buttons<D: Driver>(
     Ok(())
 }
 
+/// 2635: To do shows Alpha, Beta and Zeta with Gamma hidden between the last two.
+async fn gamma_hidden_before_zeta<D: Driver>(d: &mut D) -> Result<()> {
+    d.click("#grow").await?;
+    d.click("#hide-gamma").await?;
+    eventually(d, "Gamma hidden, Zeta shown", async |d| {
+        Ok(d.exists("#Zeta").await? && !d.exists("#Gamma").await?)
+    })
+    .await
+}
+
+/// Alpha passes Beta and lands before Zeta, behind the hidden Gamma, as a drag would.
+async fn alpha_landed_before_zeta<D: Driver>(d: &mut D, how: &str) -> Result<()> {
+    eventually_text(d, "#order", "Beta Gamma Alpha Zeta | Delta | ", how).await?;
+    ensure!(
+        d.text("#moves").await? == "0.0>0.2 ",
+        "{how} speaks the data's indices"
+    );
+    Ok(())
+}
+
+async fn a_filtered_key_move_lands_before_the_next_shown_card<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    gamma_hidden_before_zeta(d).await?;
+    d.focus("#Alpha [data-slot=handle]").await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_text(d, STATUS, "Lifted Alpha, position 1 of 3.", "Space to lift").await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually_text(d, STATUS, "Alpha moved to position 2 of 3.", "ArrowDown").await?;
+    d.press(keyboard::SPACE).await?;
+    alpha_landed_before_zeta(d, "the key move").await
+}
+
+async fn a_filtered_button_move_lands_before_the_next_shown_card<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    gamma_hidden_before_zeta(d).await?;
+    d.click("#Alpha [data-slot=move-later]").await?;
+    alpha_landed_before_zeta(d, "the button move").await
+}
+
+async fn a_filtered_drag_lands_before_the_next_shown_card<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    gamma_hidden_before_zeta(d).await?;
+    let (alpha, beta) = (d.rect("#Alpha").await?, d.rect("#Beta").await?);
+    d.drag("#Alpha [data-slot=handle]", 0.0, beta.y - alpha.y)
+        .await?;
+    alpha_landed_before_zeta(d, "the drag").await
+}
+
 /// 2451: a move the app ignores arms no focus jump for the next card at its slot.
 async fn a_refused_move_moves_no_focus_later<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click("#refuse").await?;
@@ -371,6 +425,24 @@ e2e::scenario!(
     a_filtered_column_moves_by_keys_and_buttons_over_the_shown_cards,
     "/kanban/data",
     a_filtered_column_moves_by_keys_and_buttons,
+    desktop: skip("958: element identity on the WebView")
+);
+e2e::scenario!(
+    a_filtered_key_move_lands_before_the_next_shown_card_behind_a_hidden_one,
+    "/kanban/data",
+    a_filtered_key_move_lands_before_the_next_shown_card,
+    desktop: skip("958: element identity on the WebView")
+);
+e2e::scenario!(
+    a_filtered_button_move_lands_before_the_next_shown_card_behind_a_hidden_one,
+    "/kanban/data",
+    a_filtered_button_move_lands_before_the_next_shown_card,
+    desktop: skip("958: element identity on the WebView")
+);
+e2e::scenario!(
+    a_filtered_drag_lands_before_the_next_shown_card_behind_a_hidden_one,
+    "/kanban/data",
+    a_filtered_drag_lands_before_the_next_shown_card,
     desktop: skip("958: element identity on the WebView")
 );
 e2e::scenario!(

@@ -20,7 +20,7 @@ static SIDEBAR_SCROLL_SX: StaticSx = StaticSx::new(|| sx().padding("lg"));
 static SIDEBAR_BASE_SX: StaticSx = StaticSx::new(|| {
     let border = format!("1px solid {}", ColorCss::MUTED.value(ColorShade::S4));
 
-    // Half the row at most, so a narrow screen leaves the content room (todo 2477).
+    // Half the row or column at most, so a small screen leaves the content room (todos 2477, 2645).
     let base = sx()
         .flex_shrink("0")
         .min_height("0")
@@ -32,8 +32,11 @@ static SIDEBAR_BASE_SX: StaticSx = StaticSx::new(|| {
             "side-end",
             sx().border_inline_start(border.clone()).max_width("50%"),
         )
-        .when("side-top", sx().border_bottom(border.clone()))
-        .when("side-bottom", sx().border_top(border));
+        .when(
+            "side-top",
+            sx().border_bottom(border.clone()).max_height("50%"),
+        )
+        .when("side-bottom", sx().border_top(border).max_height("50%"));
 
     Size::ALL.into_iter().fold(base, |acc, size| {
         let state = size.state_name();

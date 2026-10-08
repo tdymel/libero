@@ -193,26 +193,47 @@ fn the_web_shows_closes_and_reports_a_denial() {
             .await
             .unwrap();
         reads(page, "#permission", "Granted").await.unwrap();
-        // As in Chrome on Android, where the constructor throws.
+        // As in Chrome on Android, where the constructor throws. The worker calls are
+        // recorded: whether the browser lists a shown notification again is its own
+        // timing (todo 2626), so the token comes from the call, not from `getNotifications`.
         page.evaluate(
             "window.focused = 0; window.focus = () => window.focused++;
             window.Notification = class extends Notification {
                 constructor() { throw new TypeError('Illegal constructor'); }
+            };
+            window.worked = []; window.listed = 0;
+            const proto = ServiceWorkerRegistration.prototype;
+            const { showNotification, getNotifications } = proto;
+            proto.showNotification = function (title, options) {
+                const call = {
+                    token: options?.data?.libero ?? '',
+                    actions: options?.actions?.map((a) => a.action).join() ?? '',
+                    done: false,
+                };
+                window.worked.push(call);
+                return showNotification.call(this, title, options).then((result) => {
+                    call.done = true;
+                    return result;
+                });
+            };
+            proto.getNotifications = function (...args) {
+                window.listed++;
+                return getNotifications.apply(this, args);
             };",
         )
         .await
         .unwrap();
         click(page, "#show").await;
-        let latest = "navigator.serviceWorker.getRegistration()
-            .then((r) => r.getNotifications())
-            .then((shown) => shown.find((one) => one.data?.libero)?.data.libero ?? '')";
-        let expression = format!("{latest}.then((token) => token !== '')");
-        // The earlier denial clears once `showNotification` resolved. Polling
-        // `getNotifications` before that starves the show under load (todo 1354).
+        let latest = "Promise.resolve(window.worked.at(-1)?.token ?? '')";
+        // The earlier denial clears once `showNotification` resolved.
         reads(page, "#error", "None").await.unwrap();
-        wait::for_js_true(page, &expression, "the worker's notification")
-            .await
-            .unwrap();
+        wait::for_js_true(
+            page,
+            "window.worked.length === 1 && window.worked[0].token !== '' && window.worked[0].done",
+            "the worker's notification",
+        )
+        .await
+        .unwrap();
 
         // What the sample `sw.js` posts on a click.
         let post = |libero: &str| {
@@ -234,12 +255,13 @@ fn the_web_shows_closes_and_reports_a_denial() {
 
         // Todo 2107: actions show through the worker, whose posted press runs `on_action`.
         click(page, "#show-actions").await;
-        let with_actions = "navigator.serviceWorker.getRegistration()
-            .then((r) => r.getNotifications())
-            .then((shown) => shown.some((one) => one.actions?.map((a) => a.action).join() === 'open,retry'))";
-        wait::for_js_true(page, with_actions, "the worker's notification with actions")
-            .await
-            .unwrap();
+        wait::for_js_true(
+            page,
+            "window.worked.at(-1)?.actions === 'open,retry' && window.worked.at(-1).done",
+            "the worker's notification with actions",
+        )
+        .await
+        .unwrap();
         page.evaluate(format!(
             "{latest}.then((token) => navigator.serviceWorker.dispatchEvent(
                 new MessageEvent('message', {{ data: {{ libero: token, event: 'action', action: 'retry' }} }})))"
@@ -249,7 +271,15 @@ fn the_web_shows_closes_and_reports_a_denial() {
         reads(page, "#action", "retry").await.unwrap();
         reads(page, "#clicks", "2").await.unwrap();
 
+        page.evaluate("window.listed = 0").await.unwrap();
         click(page, "#close").await;
+        wait::for_js_true(
+            page,
+            "window.listed > 0",
+            "the close to look up the worker's notification",
+        )
+        .await
+        .unwrap();
         let gone = "navigator.serviceWorker.getRegistration()
             .then((r) => r.getNotifications()).then((shown) => shown.length === 0)";
         wait::for_js_true(page, gone, "the close to reach the worker's notification")
