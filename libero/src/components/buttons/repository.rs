@@ -69,8 +69,26 @@ fn stars_key(api: &str) -> String {
     format!("libero-repo-stars:{api}")
 }
 
+/// How long a fetched count counts as fresh; older, it shows while a new fetch runs.
+const STARS_TTL_MS: u64 = 10 * 60 * 1000;
+
+/// The stored `count@fetched_ms`, or a bare count (no fetch time: stale).
+fn stored_stars(stored: &str) -> Option<(u64, Option<u64>)> {
+    match stored.split_once('@') {
+        Some((count, at)) => Some((count.parse().ok()?, at.parse().ok())),
+        None => Some((stored.parse().ok()?, None)),
+    }
+}
+
 fn parsed_count(stars: SessionText) -> Option<u64> {
-    stars.get()?.parse().ok()
+    stored_stars(&stars.get()?).map(|(count, _)| count)
+}
+
+/// Whether the stored count was fetched within the TTL of `now`.
+fn is_fresh(stored: &str, now: u64) -> bool {
+    stored_stars(stored)
+        .and_then(|(_, at)| at)
+        .is_some_and(|at| now.saturating_sub(at) < STARS_TTL_MS)
 }
 
 fn parse_stars(body: &str, field: &str) -> Option<u64> {
@@ -168,7 +186,10 @@ pub fn Repository(props: RepositoryProps) -> Element {
 
     let stars = use_cache(api.clone(), |api| {
         let stars = session_text(&stars_key(api));
-        if parsed_count(stars).is_some() {
+        if stars
+            .get()
+            .is_some_and(|stored| is_fresh(&stored, platform::unix_millis()))
+        {
             return stars;
         }
         let fetched = platform::fetch_text(api);
@@ -179,7 +200,7 @@ pub fn Repository(props: RepositoryProps) -> Element {
             else {
                 return;
             };
-            stars.set(count.to_string());
+            stars.set(format!("{count}@{}", platform::unix_millis()));
         });
         stars
     });
@@ -323,5 +344,17 @@ mod tests {
             None
         );
         assert_eq!(parse_stars("<html>", "star_count"), None);
+    }
+
+    /// A count fetched within the TTL is reused; an older or untimed one is fetched again.
+    #[test]
+    fn a_stored_count_expires_after_the_ttl() {
+        assert_eq!(stored_stars("12@1000"), Some((12, Some(1000))));
+        assert_eq!(stored_stars("12"), Some((12, None)));
+        assert_eq!(stored_stars("x@1000"), None);
+        assert!(is_fresh("1@1000", 1000 + STARS_TTL_MS - 1));
+        assert!(!is_fresh("1@1000", 1000 + STARS_TTL_MS));
+        assert!(!is_fresh("0@1000", 1000 + STARS_TTL_MS + 1));
+        assert!(!is_fresh("1234", 1000));
     }
 }

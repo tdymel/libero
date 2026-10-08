@@ -100,8 +100,9 @@ pub fn RepositoryPage() -> Element {
             DocSection {
                 title: "Star count",
                 Text {
-                    "Give it the repository's name; it asks the host's public API once per "
-                    "mount and keeps the count for the session. Until the count arrives, "
+                    "Give it the repository's name; it asks the host's public API at mount "
+                    "and keeps the count for the session. A count older than 10 minutes shows "
+                    "while it is fetched again. Until the count arrives, "
                     "when it is 0, or when the host does not answer, the icon stands alone. "
                     "This site's header uses "
                     Code { source: "Repository {{ repo: \"tdymel/libero\" }}" }

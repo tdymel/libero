@@ -71,6 +71,7 @@ pub(crate) use click::{
 pub(crate) use clipboard::clipboard;
 #[cfg(test)]
 pub(crate) use clipboard::{ClipboardApi, Write, fake_clipboard};
+pub(crate) use clock::unix_millis;
 pub use clock::{ClockApi, clock};
 pub use color_scheme::{ColorSchemeApi, ColorSchemeSubscription, color_scheme};
 pub(crate) use direction::{

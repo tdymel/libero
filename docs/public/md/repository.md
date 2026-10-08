@@ -26,9 +26,10 @@ fn Demo() -> Element {
 
 ## Star count
 
-Give it the repository's name; it asks the host's public API once per mount and
-keeps the count for the session (the web's `sessionStorage`, memory elsewhere).
-Until the count arrives, when it is 0, or when the host does not answer, the
+Give it the repository's name; it asks the host's public API at mount and keeps
+the count for the session (the web's `sessionStorage`, memory elsewhere). A
+count older than 10 minutes shows while it is fetched again. Until the count
+arrives, when it is 0, or when the host does not answer, the
 icon stands alone. This site's header uses `Repository { repo: "tdymel/libero" }`.
 The button's name comes from the [localization](localization.md).
 

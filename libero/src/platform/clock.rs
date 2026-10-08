@@ -61,6 +61,16 @@ pub fn clock() -> Option<&'static dyn ClockApi> {
     return Some(&native::CLOCK);
 }
 
+/// Milliseconds since the Unix epoch, for cache ages; 0 if the clock is before it.
+pub(crate) fn unix_millis() -> u64 {
+    #[cfg(target_arch = "wasm32")]
+    return js_sys::Date::now() as u64;
+    #[cfg(not(target_arch = "wasm32"))]
+    return std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |since| since.as_millis() as u64);
+}
+
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use chrono::{TimeDelta, Utc};
