@@ -163,6 +163,16 @@ fn hooks() -> Vec<HookRow> {
             Route::UseLocalStoragePage {},
         ),
         row(
+            "use_local_storage_with",
+            "use_local_storage with options, such as reading the value after mount.",
+            Route::UseLocalStoragePage {},
+        ),
+        row(
+            "use_session_storage_with",
+            "use_session_storage with options, such as reading the value after mount.",
+            Route::UseLocalStoragePage {},
+        ),
+        row(
             "use_indexed_db",
             "A larger value kept under a key, loaded and saved without blocking the page.",
             Route::UseIndexedDbPage {},
