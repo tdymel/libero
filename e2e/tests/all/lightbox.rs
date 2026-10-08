@@ -1003,6 +1003,13 @@ async fn gallery_swap(page: &Page, viewport: Viewport) -> Result<()> {
     // A smooth swap is caught only on a track that animates at rest.
     wait_stage_smooth(page).await?;
     motion::spy_scrolls(page, STAGE, false).await?;
+    // An observer, not `performance.getEntries`: its buffer holds 250 entries and drops the rest.
+    page.evaluate(
+        "window.__swapFetched = new Set(); new PerformanceObserver((list) => \
+         list.getEntries().forEach((entry) => window.__swapFetched.add(entry.name))) \
+         .observe({ type: 'resource' })",
+    )
+    .await?;
     // The trigger is under the modal, so a script presses it.
     page.evaluate("document.querySelector('#swap-gallery').click()")
         .await?;
@@ -1020,7 +1027,9 @@ async fn gallery_swap(page: &Page, viewport: Viewport) -> Result<()> {
     // between two polls, and every eager picture of the new gallery has loaded. At desktop
     // also its resource entry: `complete` came before it under load (fetched [], 1513).
     let timed = viewport == Viewport::Desktop;
-    wait::for_js_true(
+    let eager = "[...document.querySelectorAll('[role=dialog] img')] \
+        .filter(img => img.src.endsWith('?second') && img.loading !== 'lazy')";
+    let settled = wait::for_js_true(
         page,
         &format!(
             "(() => {{ const track = [...document.querySelectorAll('[role=dialog] *')] \
@@ -1028,14 +1037,23 @@ async fn gallery_swap(page: &Page, viewport: Viewport) -> Result<()> {
                 .pop(); \
               const still = !!track && window.__swapLeft === track.scrollLeft; \
               window.__swapLeft = track?.scrollLeft; \
-              const eager = [...document.querySelectorAll('[role=dialog] img')] \
-                .filter(img => img.src.endsWith('?second') && img.loading !== 'lazy'); \
+              const eager = {eager}; \
               return still && eager.length > 0 && eager.every(img => img.complete \
-                  && (!{timed} || performance.getEntriesByName(img.src).length > 0)); }})()"
+                  && (!{timed} || window.__swapFetched.has(img.src))); }})()"
         ),
         "the swapped track to settle and its eager pictures to load",
     )
-    .await?;
+    .await;
+    if let Err(error) = settled {
+        // Per eager picture: loading, complete, and whether its fetch was seen.
+        let state: Vec<String> = page
+            .evaluate(format!(
+                "{eager}.map(img => `${{img.loading}}:${{img.complete}}:${{window.__swapFetched.has(img.src)}}`)"
+            ))
+            .await?
+            .into_value()?;
+        bail!("{error}; the eager pictures read {state:?}");
+    }
 
     // None at all when the picture's focus scroll got the track there first.
     let scrolls = motion::scrolls(page).await?;
@@ -1045,8 +1063,7 @@ async fn gallery_swap(page: &Page, viewport: Viewport) -> Result<()> {
 
     let fetched: Vec<usize> = page
         .evaluate(
-            r#"(() => performance.getEntriesByType('resource')
-                .map(e => e.name)
+            r#"(() => [...window.__swapFetched]
                 .filter(n => n.endsWith('?second'))
                 .map(n => Number(n.match(/\/(\d)[^/]*\.svg\?second$/)?.[1]) - 1)
                 .sort())()"#,

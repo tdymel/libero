@@ -169,7 +169,7 @@ async fn reads(page: &Page, selector: &str, text: &str) -> Result<()> {
         .evaluate("[...document.querySelectorAll('p[id]')].map((p) => p.id + '=' + p.textContent).join(' ')")
         .await?
         .into_value()?;
-    // Todo 2085: whether the browser holds the new state (the hook missed it) or not.
+    // Todo 2085, a stale second permission query in libero: whether the browser holds the new state.
     let browser: String = page
         .evaluate(
             "Promise.all(['camera', 'microphone'].map((name) => navigator.permissions.query({ name }) \

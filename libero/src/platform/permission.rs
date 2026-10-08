@@ -155,13 +155,18 @@ mod web {
                 });
                 let read = listened.clone();
                 let on_change = report.clone();
-                let change = Closure::<dyn Fn()>::new(move || on_change(state_of(&read)));
+                let changed = Rc::new(Cell::new(false));
+                let seen = changed.clone();
+                let change = Closure::<dyn Fn()>::new(move || {
+                    seen.set(true);
+                    on_change(state_of(&read))
+                });
                 let _ = Reflect::set(&listened, &"onchange".into(), change.as_ref());
                 held.status.replace(Some((listened, change)));
-                // A change between the query and the listener fires no event; a second
-                // query, sent after the listener, sees it.
+                // A change between the query and the listener fires no event; a second query,
+                // sent after the listener, sees it. Its reply may cross a later event, which wins.
                 let again = status(kind).await;
-                if let Some(again) = again.filter(|_| !held.stopped.get()) {
+                if let Some(again) = again.filter(|_| !held.stopped.get() && !changed.get()) {
                     report(state_of(&again));
                 }
             });

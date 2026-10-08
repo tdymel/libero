@@ -244,9 +244,14 @@ fn the_speaker_mutes_and_the_volume_sits_in_a_menu() {
         )
         .await
         .unwrap();
+        // A timeline for a failure: a press that never clicked, or a click something undid.
         page.evaluate(
-            "window.__presses = []; document.addEventListener('click', (e) => \
-             window.__presses.push(e.target.closest('button')?.getAttribute('aria-label')), true)",
+            "window.__presses = []; const t0 = performance.now(); \
+             const note = (what) => window.__presses.push(`${what}@${Math.round(performance.now() - t0)}`); \
+             ['pointerdown', 'pointerup', 'click'].forEach((type) => document.addEventListener(type, (e) => \
+               note(`${type}:${e.target.closest('button')?.getAttribute('aria-label') ?? e.target.tagName}`), true)); \
+             document.querySelector('#muted audio').addEventListener('volumechange', (e) => \
+               note(`volumechange:muted=${e.target.muted}`))",
         )
         .await
         .unwrap();
@@ -267,7 +272,7 @@ fn the_speaker_mutes_and_the_volume_sits_in_a_menu() {
                 .evaluate(audio(
                     "muted",
                     &format!(
-                        "`muted ${{a.muted}} volume ${{a.volume}} label ${{document.querySelector('{SPEAKER}').getAttribute('aria-label')}} focus ${{document.activeElement?.getAttribute('aria-label')}} clicks ${{window.__presses}}`"
+                        "`muted ${{a.muted}} volume ${{a.volume}} label ${{document.querySelector('{SPEAKER}').getAttribute('aria-label')}} focus ${{document.activeElement?.getAttribute('aria-label')}} events ${{window.__presses.join(' ')}}`"
                     ),
                 ))
                 .await
