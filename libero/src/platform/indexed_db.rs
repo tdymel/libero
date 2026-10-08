@@ -237,6 +237,20 @@ mod files {
     }
 }
 
+/// The origin's store; `None` where values live in memory for the document: local
+/// files without an app directory, and a server build.
+pub(crate) fn indexed_db() -> Option<&'static dyn IndexedDbApi> {
+    #[cfg(test)]
+    if let Some(fake) = FAKE.with(std::cell::Cell::get) {
+        return fake;
+    }
+    #[cfg(target_arch = "wasm32")]
+    return Some(&web::INDEXED_DB);
+    #[cfg(not(target_arch = "wasm32"))]
+    return crate::platform::storage::files::indexed_dir()
+        .map(|_| &files::FILES as &dyn IndexedDbApi);
+}
+
 #[cfg(test)]
 type FakeStore = Option<&'static dyn IndexedDbApi>;
 
@@ -378,18 +392,4 @@ mod memory {
             Some(Box::new(MemorySubscription))
         }
     }
-}
-
-/// The origin's store; `None` where values live in memory for the document: local
-/// files without an app directory, and a server build.
-pub(crate) fn indexed_db() -> Option<&'static dyn IndexedDbApi> {
-    #[cfg(test)]
-    if let Some(fake) = FAKE.with(std::cell::Cell::get) {
-        return fake;
-    }
-    #[cfg(target_arch = "wasm32")]
-    return Some(&web::INDEXED_DB);
-    #[cfg(not(target_arch = "wasm32"))]
-    return crate::platform::storage::files::indexed_dir()
-        .map(|_| &files::FILES as &dyn IndexedDbApi);
 }
