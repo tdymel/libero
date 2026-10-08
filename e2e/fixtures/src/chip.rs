@@ -14,6 +14,8 @@ pub const ROUTES: Routes = &[
     ("/chip/readonly", || rsx! { ChipReadonlyPage {} }),
     ("/chip/removable", || rsx! { ChipRemovablePage {} }),
     ("/chip/icons", || rsx! { ChipIconsPage {} }),
+    ("/chip/sizes", || rsx! { ChipSizesPage {} }),
+    ("/chip/icon-only", || rsx! { ChipIconOnlyPage {} }),
     ("/chip/new-tab", || rsx! { ChipNewTabPage {} }),
     (
         "/chip/trailing-badge",
@@ -123,6 +125,31 @@ fn ChipIconsPage() -> Element {
             Chip { id: "in-prop-xs", size: "xs", variant: "outlined",
                 icon: rsx! { Icon { variant: "standard", size: "xs", color: "inherit", Glyph {} } },
                 "Source"
+            }
+        }
+    }
+}
+
+/// Todo 2599: every size, as a tag and as a filter chip, to grow with the text.
+#[component]
+fn ChipSizesPage() -> Element {
+    rsx! {
+        Flex { id: "sizes", direction: "row", gap: "md", wrap: "wrap",
+            for size in ["xs", "sm", "md", "lg", "xl", "xxl"] {
+                Chip { size, "Tag {size}" }
+                Chip { size, checked: true, onchange: move |_| {}, "Filter {size}" }
+            }
+        }
+    }
+}
+
+/// Todo 2558: an icon-only filter chip is named by its icon's `aria_label`.
+#[component]
+fn ChipIconOnlyPage() -> Element {
+    rsx! {
+        Flex { direction: "row", gap: "md",
+            Chip { id: "icon-only", checked: false, onchange: move |_| {},
+                Icon { variant: "standard", size: "sm", color: "inherit", aria_label: "Favourites", Glyph {} }
             }
         }
     }

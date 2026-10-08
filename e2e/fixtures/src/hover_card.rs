@@ -18,7 +18,28 @@ pub const ROUTES: Routes = &[
     ("/hover-card-sides", || rsx! { SidesPage {} }),
     ("/hover-card-select", || rsx! { SelectInCardPage {} }),
     ("/hover-card-pair", || rsx! { PairTriggerPage {} }),
+    ("/hover-card-scroll", || rsx! { ScrollingTextPage {} }),
 ];
+
+/// A card of text taller than the room beside the trigger (todo 2445).
+#[component]
+fn ScrollingTextPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button { id: "before", "Before" }
+            HoverCard {
+                aria_label: "Ada Lovelace",
+                content: rsx! {
+                    for line in 0..80 {
+                        Text { "Line {line} of a long biography that scrolls inside the card." }
+                    }
+                },
+                Button { id: "trigger", variant: "outlined", "Ada Lovelace" }
+            }
+            Button { id: "after", "After" }
+        }
+    }
+}
 
 /// A trigger holding two buttons: the card sits after the second (todo 1614).
 #[component]

@@ -58,7 +58,7 @@ pub fn TooltipPage() -> Element {
                     .doc("Forces the bubble open or closed. Unset, hover and focus decide. A bubble forced open ignores Escape."),
                 prop("disabled", "bool")
                     .default("false")
-                    .doc("Renders `children` alone, with no wrapper and no bubble."),
+                    .doc("No bubble. The trigger keeps its wrapper, so enabling or disabling does not remount it or drop its focus."),
                 prop("label_id", "String")
                     .doc("The bubble's `id`, for the trigger's `aria-describedby`. It exists while the bubble is closed, too."),
                 prop("children", "Element")

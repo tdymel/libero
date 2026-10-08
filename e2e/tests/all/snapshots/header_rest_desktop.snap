@@ -11,6 +11,9 @@ sectionheader
   link "On the fill"
     StaticText "On the fill"
 sectionheader
+  link "On a literal"
+    StaticText "On a literal"
+sectionheader
   link "On the gradient"
     StaticText "On the gradient"
 button "Item 0"

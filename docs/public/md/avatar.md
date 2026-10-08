@@ -158,7 +158,7 @@ visible name: the name is read once, from the text, not twice.
 | `avatar.size` | `Size` | `md` | Default `size` when the prop is omitted. |
 | `avatar.radius` | `Size` | `xxl` | The step of `avatar.radii` when the prop is omitted, a circle. |
 | `avatar.sizes` | `Sizes<u16>` | `20, 28, 38, 56, 84, 120` | The square's side, in px, per size step. |
-| `avatar.font_sizes` | `Sizes<u16>` | `8, 11, 15, 22, 34, 48` | Placeholder font size, `side / 2.5`. |
+| `avatar.font_sizes` | `Sizes<u16>` | `10, 12, 15, 22, 34, 48` | Placeholder font size in px at a 16px root, written as `rem`; about `side / 2.5`, never under 10. |
 | `avatar.radii` | `Sizes<&'static str>` | `2px, 4px, 8px, 16px, 32px, 9999px` | The avatar's own radius scale. `xxl` is a circle at every size. |
 | `avatar_group.spacing` | `Size` | `sm` | How far each circle is pulled over the one before it. |
 | `avatar_group.ring` | `&'static str` | `2px` | Width of the ring in the page colour that separates two overlapping members. |

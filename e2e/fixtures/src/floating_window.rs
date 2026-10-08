@@ -14,7 +14,30 @@ pub const ROUTES: Routes = &[
     ("/floating-window-pair", || rsx! { WindowPairPage {} }),
     ("/floating-window-sized", || rsx! { SizedWindowPage {} }),
     ("/floating-window-tall", || rsx! { TallWindowPage {} }),
+    (
+        "/floating-window-anchored",
+        || rsx! { AnchoredWindowPage {} },
+    ),
 ];
+
+/// Todo 2353: a window placed at the bottom end, not yet moved, resized by key.
+#[component]
+fn AnchoredWindowPage() -> Element {
+    let window = use_floating_window(
+        FloatingWindowOptions {
+            title: Some("Anchored".into()),
+            resizable: true,
+            placement: "bottom-end".into(),
+            sx: sx().width("400px").height("200px").into(),
+            ..Default::default()
+        },
+        |_| rsx! { Text { "A window at the bottom end." } },
+    );
+
+    rsx! {
+        Button { id: "open-window", variant: "outlined", onclick: move |_| window.open(), "Anchored" }
+    }
+}
 
 /// Content taller than the viewport: the window caps and its body scrolls (todo 1307).
 #[component]

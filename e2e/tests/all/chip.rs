@@ -416,6 +416,47 @@ fn a_control_in_a_clickable_chips_trailing_warns() {
     });
 }
 
+/// Todo 2599: every size keeps its label inside the pill when the text grows to 200%.
+#[test]
+fn every_size_fits_its_label_at_200_percent_text() {
+    block_on(async {
+        let fixture = Fixture::open("/chip/sizes", Viewport::Desktop)
+            .await
+            .unwrap();
+        let clipped: Vec<String> = fixture
+            .page
+            .evaluate(
+                "(() => { document.documentElement.style.fontSize = '200%'; \
+                 return [...document.querySelectorAll('#sizes > span')] \
+                 .filter(c => parseFloat(getComputedStyle(c).fontSize) * 1.2 > c.clientHeight \
+                     || c.scrollHeight > c.clientHeight + 1 || c.scrollWidth > c.clientWidth + 1) \
+                 .map(c => c.textContent); })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(clipped.is_empty(), "clipped at 200%: {clipped:?}");
+        fixture.console.assert_clean("the chip sizes").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2558: an icon-only filter chip takes its checkbox name from the icon's `aria_label`.
+#[test]
+fn an_icon_only_chip_is_named_by_its_icons_label() {
+    block_on(async {
+        let fixture = Fixture::open("/chip/icon-only", Viewport::Desktop)
+            .await
+            .unwrap();
+        let tree = e2e::ax::snapshot(&fixture.page, "#icon-only")
+            .await
+            .unwrap();
+        assert!(tree.contains("checkbox \"Favourites\""), "{tree}");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 629: a readonly chip keeps its tab stop and says it is read only, but
 /// Space and clicks leave it as it is, and in a form it still posts.
 #[test]

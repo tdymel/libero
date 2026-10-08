@@ -123,6 +123,8 @@ pub(super) struct WindowGeometry {
     pub(super) onresize: Option<Callback<WindowRect>>,
     pub(super) move_step: f64,
     pub(super) resize_step: f64,
+    /// Grows about its anchor instead of from the top-left (the `pinned` option).
+    pinned: Option<Placement>,
 }
 
 /// The window's own geometry state, the two drags over it, and the effect that
@@ -250,6 +252,7 @@ pub(super) fn use_window_geometry(
         onresize,
         move_step,
         resize_step,
+        pinned,
     }
 }
 
@@ -351,10 +354,16 @@ impl WindowGeometry {
     /// the window's min/max constraints clamp either. Reports it.
     pub(super) fn resize_to(self, request: Result<(f64, f64), (f64, f64)>) {
         let (mut size, mut owed, onresize) = (self.size, self.owed, self.onresize);
-        let (position, bounds, rtl) = (self.position, self.bounds, self.root.is_rtl());
+        let (mut position, bounds, rtl) = (self.position, self.bounds, self.root.is_rtl());
+        // An unmoved window grows from its top-left, as the pointer resize pins it (todo 2353).
+        let pin = self.pinned.is_none() && position.peek().is_none();
         let (dimensions, offset) = (self.root.dimensions(), self.root.client_offset());
         spawn(async move {
             let dimensions = dimensions.await.ok();
+            let offset = offset.await.ok();
+            if let (true, Some(drawn)) = (pin, offset) {
+                position.set(Some(drawn));
+            }
             let next = match (request, dimensions) {
                 (Err(absolute), _) => absolute,
                 (Ok((dx, dy)), Some(dimensions)) => (
@@ -364,7 +373,7 @@ impl WindowGeometry {
                 (Ok(_), None) => return,
             };
             size.set(Some(next));
-            if rtl && let (Some(dimensions), Ok((x, _))) = (dimensions, offset.await) {
+            if rtl && let (Some(dimensions), Some((x, _))) = (dimensions, offset) {
                 keep_right_edge(position, bounds, x + dimensions.width, next.0);
             }
             owed.write().extend(onresize);

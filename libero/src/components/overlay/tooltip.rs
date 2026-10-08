@@ -139,7 +139,7 @@ base_props! {
         /// Forces the bubble open or closed; `None` leaves it to hover and focus.
         #[props(default)]
         open: Option<bool>,
-        /// Renders `children` bare: no wrapper, no bubble.
+        /// No bubble; the wrapper stays, so enabling or disabling does not remount the trigger.
         #[props(default)]
         disabled: Option<bool>,
         /// The bubble's `id`, for the trigger's `aria-describedby`.
@@ -195,7 +195,7 @@ pub fn Tooltip(props: TooltipProps) -> Element {
         hover.set(false);
         focused.set(false);
     });
-    // Disabling unmounts the wrapper with its leave handlers: re-enabling must not reopen (2446).
+    // Disabled while hovered or focused: re-enabling must not reopen (2446).
     let disabled = props.disabled.unwrap_or(false);
     use_effect(use_reactive!(|(disabled,)| {
         if disabled {
@@ -211,6 +211,9 @@ pub fn Tooltip(props: TooltipProps) -> Element {
                 focused.set(false);
                 return;
             }
+            if disabled {
+                return;
+            }
             // The web answers itself, except for a focus from code after a
             // press outside this wrapper, which its caller marks (todo 476).
             let pointer = pressed.replace(false);
@@ -223,13 +226,10 @@ pub fn Tooltip(props: TooltipProps) -> Element {
     // Every hook above the branch - `prepare()` is the hook.
     let wrapper = use_box().framework_sx(&TRIGGER_WRAPPER_SX).prepare();
 
-    if disabled {
-        return props.children;
-    }
-
     let open_delay = props.open_delay.unwrap_or(theme.tooltip.open_delay);
     let close_delay = props.close_delay.unwrap_or(theme.tooltip.close_delay);
-    let open = props.open.unwrap_or(hover.get() || focused());
+    // Disabled keeps the wrapper and its listeners, so the trigger is not remounted.
+    let open = !disabled && props.open.unwrap_or(hover.get() || focused());
     let dismissible = props.open.is_none();
 
     let bubble = match open {
@@ -244,10 +244,10 @@ pub fn Tooltip(props: TooltipProps) -> Element {
         },
         // A hidden element still describes the trigger that points at it.
         false => match props.label_id.clone() {
-            Some(id) => rsx! {
+            Some(id) if !disabled => rsx! {
                 span { id, role: "tooltip", hidden: true, {props.label.clone()} }
             },
-            None => VNode::empty(),
+            _ => VNode::empty(),
         },
     };
 
@@ -257,7 +257,7 @@ pub fn Tooltip(props: TooltipProps) -> Element {
         .element(&anchor)
         // A touch's compatibility mouse events are no hover: a tap never opens it.
         .event("onmouseenter", move |_: MouseEvent| {
-            if !enter.get() {
+            if !enter.get() && !disabled {
                 hover.hover(true, open_delay)
             }
         })
@@ -271,7 +271,7 @@ pub fn Tooltip(props: TooltipProps) -> Element {
             pressed.set(true);
             let is_touch = event.data().pointer_type() == "touch";
             press_touch.set(is_touch);
-            if is_touch && !owned {
+            if is_touch && !owned && !disabled {
                 hover.hover(true, LONG_PRESS);
             }
         })

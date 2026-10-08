@@ -114,7 +114,7 @@ fn Demo() -> Element {
 
 | Method | Type | Default | Description |
 |---|---|---|---|
-| `new(title)` | `impl Into<OptionLabel>` | required | The event's name, optionally with its own rendering. |
+| `new(title)` | `impl Into<OptionLabel>` | required | The event's name, optionally with its own rendering, which a screen reader skips for the name. |
 | `.content(..)` | `Element` | none | The body below the title. |
 | `.bullet(..)` | `Element` | the dot | An icon or avatar inside the bullet. Inverts when active. |
 | `.color(..)` | `impl Into<ThemeAwareValue>` | inherits | This event's own accent. |

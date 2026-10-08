@@ -3,6 +3,7 @@ use dioxus::prelude::*;
 use super::event::TimelineEvent;
 use crate::{
     components::{
+        accessibility::VisuallyHidden,
         common::{
             ABSENT, HtmlTag, Input, LogicalTextAlign, Part, Rail, RailInset, States, Variables,
             base_props, input_from_str, parts_enum, variables,
@@ -313,10 +314,18 @@ pub fn Timeline(props: TimelineProps) -> Element {
                 .attr("data-slot", TimelinePart::Bullet.slot())
                 .render(HtmlTag::Span, Vec::new(), item.bullet.clone());
 
+            // A rich title is drawn for the eye; the reader gets its plain-text name.
+            let title_content = match &item.title.content {
+                Some(content) => rsx! {
+                    span { "aria-hidden": "true", {content.clone()} }
+                    VisuallyHidden { "{item.title.name()}" }
+                },
+                None => item.title.render(),
+            };
             let title = title_style
                 .clone()
                 .attr("data-slot", TimelinePart::Title.slot())
-                .render(HtmlTag::Div, Vec::new(), item.title.render())?;
+                .render(HtmlTag::Div, Vec::new(), title_content)?;
 
             let body = rsx! {
                 div { "data-slot": TimelinePart::Body.slot(),

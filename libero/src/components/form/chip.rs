@@ -234,6 +234,7 @@ base_props! {
         #[props(default)]
         trailing: Option<Element>,
         /// The label. Text and `Icon` only: a `<label>` hijacks nested clicks.
+        /// An icon-only chip is named by its `Icon`'s `aria_label`.
         children: Element,
     }
 }

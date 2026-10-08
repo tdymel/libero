@@ -178,6 +178,8 @@ explains how parts work.
 
 - Keep `children` to text and `Icon`: a selectable chip is a `<label>`, which
   takes the clicks of any control inside it.
+- Name an icon-only chip: its checkbox takes the name of its label, so give the
+  `Icon` an `aria_label`.
 
 ### Example
 

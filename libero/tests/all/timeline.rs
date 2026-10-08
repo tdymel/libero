@@ -6,7 +6,7 @@ use crate::common::{attributes_of, body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Timeline, TimelineEvent, TimelineLine},
+    components::{OptionLabel, Timeline, TimelineEvent, TimelineLine},
 };
 
 fn events() -> Vec<TimelineEvent> {
@@ -52,6 +52,36 @@ fn it_renders_an_ordered_list_with_an_explicit_role() {
     assert!(html.contains("<ol"), "{html}");
     assert_eq!(attributes_of(&html, "ol")["role"], "list");
     assert_eq!(html.matches("<li").count(), 4, "{html}");
+}
+
+/// Todo 2429: a rich title is drawn hidden from readers and named in plain text.
+#[test]
+fn a_rich_title_is_drawn_hidden_and_named_in_text() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Timeline {
+                    items: vec![
+                        TimelineEvent::new(OptionLabel::rich("Shipped", rsx! { b { "icon" } })),
+                        TimelineEvent::new("Plain"),
+                    ],
+                }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+
+    assert!(
+        html.contains("<span aria-hidden=\"true\"><b>icon</b></span>"),
+        "{html}"
+    );
+    assert!(html.contains("Shipped"), "{html}");
+    assert_eq!(
+        html.matches("aria-hidden=\"true\"><b>").count(),
+        1,
+        "{html}"
+    );
 }
 
 /// A caller's own `role` has to win - `attr_default`, not `attr`.

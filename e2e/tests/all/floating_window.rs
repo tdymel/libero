@@ -154,6 +154,36 @@ fn the_separator_resizes_the_window_and_clamps_to_the_callers_bounds() {
     });
 }
 
+/// Todo 2353: the grip's arrows move its corner, so a bottom-end window shrinks
+/// from the right and the bottom, not from its anchored edges.
+#[test]
+fn a_keyboard_resize_moves_the_grips_corner_of_an_anchored_window() {
+    block_on(async {
+        let fixture = Fixture::open("/floating-window-anchored", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        open(page).await.unwrap();
+        keyboard::tab_to(page, SEPARATOR, TAB_BUDGET).await.unwrap();
+
+        let before = rect(page, DIALOG).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_LEFT).await.unwrap();
+        let narrower = wait_for_size(page, (before.2 - STEP, before.3), "a step left")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ARROW_UP).await.unwrap();
+        let shorter = wait_for_size(page, (narrower.2, before.3 - STEP), "a step up")
+            .await
+            .unwrap();
+        assert!(
+            (shorter.0 - before.0).abs() <= 1.0 && (shorter.1 - before.1).abs() <= 1.0,
+            "the top-left corner moved: {before:?} -> {shorter:?}"
+        );
+        fixture.console.assert_clean("an anchored resize").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 pub async fn keyboard_resize(page: &Page) -> Result<()> {
     open(page).await?;
     let ring = focus::assert_focus_ring(page, SEPARATOR, TAB_BUDGET).await?;

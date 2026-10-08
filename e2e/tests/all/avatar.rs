@@ -30,6 +30,29 @@ fn a_broken_picture_falls_back_to_the_initials_under_the_same_name() {
     });
 }
 
+/// Todos 2363, 2601: the smallest initials draw at 10 px or more, and every size follows the root.
+#[test]
+fn the_initials_are_legible_and_follow_the_text_size() {
+    block_on(async {
+        let fixture = Fixture::open("/avatar", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let sizes = "[...document.querySelectorAll('#sizes > *')]\
+                     .map(a => parseFloat(getComputedStyle(a).fontSize))";
+        let at_default: Vec<f64> = page.evaluate(sizes).await.unwrap().into_value().unwrap();
+        assert_eq!(at_default, [10.0, 12.0, 15.0, 22.0, 34.0, 48.0]);
+        let doubled: Vec<f64> = page
+            .evaluate(format!(
+                "(() => {{ document.documentElement.style.fontSize = '200%'; return {sizes}; }})()"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(doubled, [20.0, 24.0, 30.0, 44.0, 68.0, 96.0]);
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Forced colours drop `box-shadow`: the ring that separates grouped avatars
 /// stays as a `Canvas` outline (todo 2469).
 #[test]

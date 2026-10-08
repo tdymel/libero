@@ -70,7 +70,7 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `position` | `HeaderPosition` | `sticky` | `sticky` pins to the top of the scrolling ancestor, `static` scrolls away. `fixed` pins to the viewport, so offset your content by `var(--lsx-header-height)`. In a native app `fixed` scrolls with the page for now; use `sticky`. |
 | `size` | `ThemeAwareValue` | `md` | Minimum height. The header grows when its content wraps. |
-| `color` | `ThemeAwareValue` | none, a neutral background | Fills the header with shade 6 and a readable text color. With `glass`, a translucent tint of it, as on `Paper`. Under a gradient, its first stop. |
+| `color` | `ThemeAwareValue` | none, a neutral background | Fills the header with shade 6 and a readable text color. A literal CSS color is used as given, with black or white text, links and focus rings, whichever reads better on it. With `glass`, a translucent tint of it, as on `Paper`. Under a gradient, its first stop. |
 | `glass` | `bool` | `false` | Frosted glass, as on `Paper`: content scrolling under the bar shows through, blurred. A `color` tints it, as on `Paper`. Opaque when the user reduces transparency, in forced colours, and in native windows. |
 | `gradient` | `Gradient` | - | Fills the header with a gradient from `color`, as on `Paper`: `("info", 90)` or `Gradient::default().to("info").deg(90)`; `Gradient::default()` is the theme's. The text colour and focus rings are picked to read on both stops. With `glass`, the stops turn translucent. |
 | `z_index` | `ThemeAwareValue` | `100` | Stacking order. |

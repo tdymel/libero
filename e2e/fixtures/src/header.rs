@@ -48,6 +48,10 @@ fn HeaderPage() -> Element {
                 Header { id: "colored", position: "static", color: "primary",
                     Anchor { to: "#colored", "On the fill" }
                 }
+                // Todo 2412: a literal fill takes a black or white label.
+                Header { id: "literal", position: "static", color: "#1a1a2e",
+                    Anchor { to: "#literal", "On a literal" }
+                }
                 Header { id: "gradient", position: "static", color: "primary", gradient: ("secondary", 90),
                     Anchor { to: "#gradient", "On the gradient" }
                 }

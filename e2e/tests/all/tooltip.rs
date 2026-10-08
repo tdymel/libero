@@ -275,6 +275,62 @@ fn re_enabling_with_the_pointer_elsewhere_keeps_the_bubble_closed() {
     });
 }
 
+/// Todo 2601: the bubble's text follows the root's text size.
+#[test]
+fn the_bubble_text_follows_the_root_text_size() {
+    block_on(async {
+        let fixture = Fixture::open("/tooltip-long", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, BUBBLE).await.unwrap();
+        let size = "parseFloat(getComputedStyle(document.querySelector('#save-tip')).fontSize)";
+        let at_default: f64 = page.evaluate(size).await.unwrap().into_value().unwrap();
+        assert_eq!(at_default, 12.0);
+        let doubled: f64 = page
+            .evaluate(format!(
+                "(() => {{ document.documentElement.style.fontSize = '200%'; return {size}; }})()"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(doubled, 24.0);
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2447: disabling keeps the trigger's node, so a focused trigger keeps its focus.
+#[test]
+fn disabling_a_tooltip_keeps_a_focused_trigger() {
+    block_on(async {
+        let fixture = Fixture::open("/tooltip-toggle", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
+        page.evaluate("window.__trigger = document.getElementById('save')")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "!document.querySelector('#save-tip')",
+            "the disabled tooltip to leave",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement === window.__trigger && document.getElementById('save') === window.__trigger",
+            "the trigger to keep its node and focus",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 #[derive(serde::Deserialize)]
 struct Gap {
     x: f64,

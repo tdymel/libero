@@ -28,6 +28,11 @@ fn AvatarPage() -> Element {
                     }
                 }
             }
+            div { id: "sizes", display: "flex", flex_wrap: "wrap", gap: "8px", align_items: "center",
+                for size in ["xs", "sm", "md", "lg", "xl", "xxl"] {
+                    Avatar { name: "Ada Lovelace", initials: "AL", size }
+                }
+            }
             div { display: "flex", gap: "8px", align_items: "center",
                 Avatar {
                     id: "broken",

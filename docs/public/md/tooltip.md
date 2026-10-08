@@ -63,7 +63,7 @@ fn Demo() -> Element {
 | `open_delay` | `u32` | `0` | Milliseconds the pointer must rest before the bubble appears. |
 | `close_delay` | `u32` | `0` | Milliseconds the bubble stays after the pointer leaves. While it counts down, the bubble carries `data-closing`. |
 | `open` | `bool` | unset | Forces the bubble open or closed. Unset, hover and focus decide. A bubble forced open ignores Escape. |
-| `disabled` | `bool` | `false` | Renders `children` alone, with no wrapper and no bubble. |
+| `disabled` | `bool` | `false` | No bubble. The trigger keeps its wrapper, so enabling or disabling does not remount it or drop its focus. |
 | `label_id` | `String` | - | The bubble's `id`, for the trigger's `aria-describedby`. It exists while the bubble is closed, too. |
 | `children` | `Element` | required | The trigger. |
 
@@ -128,7 +128,7 @@ tip, Tab to it shows the bubble, and Escape hides it.
 | `open_delay` | `u32` | Default milliseconds before the bubble appears. |
 | `close_delay` | `u32` | Default milliseconds before it disappears. |
 | `duration` | `u32` | Fade-in duration, in milliseconds. |
-| `font_sizes` | `Sizes<u16>` | Bubble font size per size step, in px. |
+| `font_sizes` | `Sizes<u16>` | Bubble font size per size step, in px at a 16px root, written as `rem`. |
 | `background` | `&'static str` | Bubble background. |
 | `color` | `&'static str` | Bubble text color. |
 

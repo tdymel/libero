@@ -11,7 +11,7 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, States, Variables, base_props, fill_color, input_from_str,
-            safe_area_padding, variables,
+            literal_contrast, safe_area_padding, variables,
         },
         layout::use_box,
     },
@@ -199,7 +199,8 @@ fn header_variables(props: &HeaderProps, tint: Option<GlassTint>) -> Variables {
         None => (
             base.as_ref()
                 .and_then(header_contrast_color)
-                .and_then(|v| v.resolve(None)),
+                .and_then(|v| v.resolve(None))
+                .or_else(|| base.as_ref().and_then(literal_contrast)),
             None,
             None,
         ),
@@ -238,7 +239,7 @@ base_props! {
         #[props(default, into)]
         size: Input<ThemeAwareValue>,
         /// Banner fill; a bare color takes shade 6. The first stop under a `gradient`.
-        /// A literal CSS colour is used as given, its text, link and focus colours the caller's.
+        /// A literal CSS colour is used as given, its text, link and focus colours black or white.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         #[props(default, into)]
@@ -495,17 +496,21 @@ mod tests {
         assert!(css.contains("saturate(160%)"), "{css}");
     }
 
-    /// The documented limit (todo 2389): a literal fills, its label stays the caller's.
+    /// Todo 2412: a literal fills and gets the black or white label that reads on it.
     #[test]
-    fn a_literal_color_fills_but_leaves_the_label_to_the_caller() {
+    fn a_literal_color_fills_and_takes_a_readable_label() {
         let variables = header_variables(&header_props("#1a1a2e".into()), None).to_string();
 
         assert!(
             variables.contains(&format!("{}:#1a1a2e;", HEADER_BACKGROUND_VAR.name())),
             "{variables}"
         );
-        assert!(!variables.contains(HEADER_COLOR_VAR.name()), "{variables}");
-        assert!(!variables.contains(ANCHOR_COLOR.name()), "{variables}");
+        for var in [HEADER_COLOR_VAR.name(), ANCHOR_COLOR.name()] {
+            assert!(
+                variables.contains(&format!("{var}:#FFFFFF;")),
+                "{var}: {variables}"
+            );
+        }
     }
 
     #[test]

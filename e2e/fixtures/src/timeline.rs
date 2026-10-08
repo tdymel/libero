@@ -1,11 +1,23 @@
 //! `Timeline` in every alignment, with and without custom bullets.
 
 use dioxus::prelude::*;
-use libero::components::{Flex, Text, Timeline, TimelineEvent};
+use libero::components::{Flex, OptionLabel, Text, Timeline, TimelineEvent};
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/timeline", || rsx! { TimelinePage {} })];
+pub const ROUTES: Routes = &[
+    ("/timeline", || rsx! { TimelinePage {} }),
+    ("/timeline/rich", || rsx! { RichTitlePage {} }),
+];
+
+/// Todo 2429: a rich title is drawn, and a screen reader reads its name.
+#[component]
+fn RichTitlePage() -> Element {
+    let rich = OptionLabel::rich("Shipped by air", rsx! { b { "Shipped" } " ✈" });
+    rsx! {
+        Timeline { id: "rich", items: vec![TimelineEvent::new(rich), TimelineEvent::new("Delivered")] }
+    }
+}
 
 fn events() -> Vec<TimelineEvent> {
     ["Ordered", "Packed", "Shipped", "Delivered"]

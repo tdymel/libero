@@ -5,14 +5,15 @@ use dioxus::prelude::*;
 use super::hover_intent::{TRIGGER_WRAPPER_SX, use_hover_intent};
 use crate::{
     components::{
-        common::{FOCUSABLE_SELECTOR, HtmlTag, Input, States, base_props},
+        common::{FOCUSABLE_SELECTOR, HtmlTag, Input, States, base_props, inset_focus_ring_sx},
         layout::{paper_sx, use_box},
     },
     hooks::{
         Align, DismissOptions, ElementHandle, POPOVER_AVAILABLE_HEIGHT, PopoverOptions, Side,
-        owner_link, use_dismiss, use_element, use_focus_within, use_popover_on, use_theme,
+        owner_link, use_dismiss, use_element, use_focus_within, use_popover_on,
+        use_resize_fallback, use_theme,
     },
-    platform::{ElementApi, next_task},
+    platform::{ElementApi, PlatformError, next_task},
     sx::StaticSx,
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
 };
@@ -25,6 +26,8 @@ static HOVER_CARD_SX: StaticSx = StaticSx::new(|| {
         // Never past the room on its side: it scrolls instead (WCAG 1.4.10).
         .max_height(POPOVER_AVAILABLE_HEIGHT.value_or("none"))
         .overflow_y("auto")
+        // The text-only card's tab stop, so the keyboard can scroll it.
+        .selector("& > [tabindex]:focus-visible", inset_focus_ring_sx("-2px"))
 });
 
 /// Holds the Tab bridges: dioxus calls one listener per event name per element,
@@ -53,7 +56,7 @@ base_props! {
         radius: Input<Size>,
         #[props(default, into)]
         shadow: Input<Size>,
-        /// Renders `children` bare: no wrapper, no card.
+        /// No card; the wrapper stays, so enabling or disabling does not remount the trigger.
         #[props(default)]
         disabled: Option<bool>,
         /// The trigger, holding a focusable element. `class`/`sx`/`attributes` style the card.
@@ -114,7 +117,7 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
             focused.set(false);
         }
     });
-    // Disabling unmounts the wrapper with its leave handlers: re-enabling must not reopen (2446).
+    // Disabled while hovered or focused: re-enabling must not reopen (2446).
     use_effect(use_reactive!(|(disabled,)| {
         if disabled {
             hovered.set(false);
@@ -163,7 +166,7 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
                     // The web answers itself (todo 477: no stale press).
                     let pointer = pressed.replace(false);
                     let keyboard = change.focus_visible().unwrap_or(!pointer);
-                    if !returning.replace(false) && keyboard {
+                    if !returning.replace(false) && keyboard && !disabled {
                         // What Escape hands focus back to.
                         dismiss.focus_return().remember_active();
                         focused.set(true);
@@ -186,6 +189,31 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
             }
         }
     });
+
+    // A card of text that scrolls is a tab stop, so the keyboard can read it (todo 2445).
+    let text_stop_handle = use_element();
+    let mut overflows = use_signal(|| false);
+    let measure = move || {
+        if !floating.is_mounted() || !text_stop_handle.is_mounted() {
+            return;
+        }
+        // Below the stop itself, which `FOCUSABLE_SELECTOR` matches once it has a tabindex.
+        let text_only = matches!(
+            text_stop_handle.query_selector(FOCUSABLE_SELECTOR),
+            Err(PlatformError::NotFound)
+        );
+        let (content, size) = (floating.scroll_size(), floating.dimensions());
+        spawn(async move {
+            if let (Ok(content), Ok(size)) = (content.await, size.await) {
+                let next = text_only && content.height > size.height + 1.0;
+                if next != *overflows.peek() {
+                    overflows.set(next);
+                }
+            }
+        });
+    };
+    use_resize_fallback(floating, move |_| measure());
+    let text_stop = open && overflows();
 
     crate::components::common::use_name_warning(
         crate::components::common::names_itself(&props.attributes),
@@ -228,12 +256,6 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         .style(Some(popover.style()))
         .prepare();
 
-    if disabled {
-        // The slot outlives this branch: a card open when disabled would stay up.
-        popover.show(None);
-        return props.children;
-    }
-
     popover.show(open.then(|| {
         let mut attributes = props.attributes.clone();
         attributes.extend(dismiss.floating_events());
@@ -245,12 +267,15 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
             .event("onmouseleave", move |_: MouseEvent| {
                 hovered.hover(false, close_delay)
             })
+            .event("onresize", move |_: Event<ResizeData>| measure())
             .render(
                 HtmlTag::Div,
                 attributes,
                 rsx! {
                     div {
-                        style: CONTENTS,
+                        style: if text_stop { "display: block" } else { CONTENTS },
+                        tabindex: text_stop.then_some("0"),
+                        onmounted: text_stop_handle.mount(),
                         onfocusin: focus.focusin(1),
                         onfocusout: focus.focusout(1),
                         onkeydown: move |event| card_tab(&event, anchor, floating),
@@ -263,7 +288,9 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
     wrapper
         .element(&anchor)
         .event("onmouseenter", move |_: MouseEvent| {
-            hovered.hover(true, open_delay)
+            if !disabled {
+                hovered.hover(true, open_delay)
+            }
         })
         .event("onmouseleave", {
             // A press on a trigger that held focus already fired no `focusin`

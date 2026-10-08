@@ -35,7 +35,7 @@ pub fn HeaderPage() -> Element {
                     .doc("Minimum height. The header grows when its content wraps."),
                 prop("color", "ThemeAwareValue")
                     .default("none, a neutral background")
-                    .doc("A theme color fills the header with shade 6 and a readable text color. A literal CSS color is used as given: the text, link and focus colors stay the page's, so set them yourself. With `glass`, a translucent tint of it, as on `Paper`. Under a gradient, its first stop."),
+                    .doc("A theme color fills the header with shade 6 and a readable text color. A literal CSS color is used as given, with black or white text, links and focus rings, whichever reads better on it. With `glass`, a translucent tint of it, as on `Paper`. Under a gradient, its first stop."),
                 prop("glass", "bool")
                     .default("false")
                     .doc("Frosted glass, as on `Paper`: content scrolling under the bar shows through, blurred. A `color` tints it, as on `Paper`. Opaque when the user reduces transparency, in forced colours, and in native windows."),

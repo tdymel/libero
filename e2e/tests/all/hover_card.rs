@@ -257,6 +257,95 @@ fn the_pointer_opens_and_closes_it_on_its_delays() {
     });
 }
 
+/// Todo 2445: a text card that scrolls is a tab stop the arrows scroll; one that fits is none.
+#[test]
+fn a_scrolling_text_card_takes_a_tab_stop_that_scrolls_it() {
+    const STOP: &str = "[role=dialog] > [tabindex='0']";
+    block_on(async {
+        let fixture = Fixture::open("/hover-card-scroll", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        keyboard::tab_to(page, "#trigger", 5).await.unwrap();
+        wait::for_visible(page, "[role=dialog]").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("!!document.querySelector(\"{STOP}\")"),
+            "the overflowing text card to become a tab stop",
+        )
+        .await
+        .unwrap();
+
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        focus::wait_for_focus(page, STOP, "Tab from the trigger into the card")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('[role=dialog]').scrollTop > 0",
+            "ArrowDown to scroll the card",
+        )
+        .await
+        .unwrap();
+
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        focus::wait_for_focus(page, "#after", "Tab out of the card")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("a scrolling card").unwrap();
+        fixture.close().await.unwrap();
+
+        let fixture = Fixture::open("/hover-card-text", Viewport::Desktop)
+            .await
+            .unwrap();
+        pointer::hover(&fixture.page, "#trigger").await.unwrap();
+        wait::for_visible(&fixture.page, "[role=dialog]")
+            .await
+            .unwrap();
+        crate::settle::painted(&fixture.page).await.unwrap();
+        assert!(
+            !wait::exists(&fixture.page, STOP).await.unwrap(),
+            "a card that fits took a tab stop"
+        );
+        // A plain-text trigger warns, by design.
+        fixture.console.drain();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2447: disabling keeps the trigger's node, so a focused trigger keeps its focus.
+#[test]
+fn disabling_a_hover_card_keeps_a_focused_trigger() {
+    block_on(async {
+        let fixture = Fixture::open("/hover-card-toggle", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, "#trigger", 5).await.unwrap();
+        page.evaluate("window.__trigger = document.getElementById('trigger')")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "!document.querySelector('[role=dialog]')",
+            "the disabled card to leave",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement === window.__trigger && document.getElementById('trigger') === window.__trigger",
+            "the trigger to keep its node and focus",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Tab from the trigger enters the card and leaves it for what follows the trigger;
 /// Shift+Tab from its first control goes back to the trigger.
 #[test]

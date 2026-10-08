@@ -57,7 +57,7 @@ such as `side: Side::Top, align: Align::Center`.
 | `open` | `bool` | unset | Forces the card open or closed. Unset, hover and focus decide. A card forced open cannot be dismissed. |
 | `radius` | `Size` | `sm` | The card's corner radius. |
 | `shadow` | `Size` | `md` | The card's elevation. |
-| `disabled` | `bool` | `false` | Renders `children` alone, with no card. |
+| `disabled` | `bool` | `false` | No card. The trigger keeps its wrapper, so enabling or disabling does not remount it or drop its focus. |
 
 Like every component, `HoverCard` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes. They land on the card.
@@ -75,6 +75,9 @@ Like every component, `HoverCard` also takes the shared props `sx`, `class`,
 ### Libero handles
 
 - Focusing the trigger opens the card. A click does not keep it open.
+- A card of text taller than the room beside the trigger is a tab stop, so Tab
+  enters it and the arrow keys scroll it. A card with a link or button is not:
+  the controls take the focus.
 - A trigger with nothing focusable and an unnamed card both warn in the
   console.
 - On touch, a tap opens it and a tap elsewhere closes it. The card has no

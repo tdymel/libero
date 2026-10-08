@@ -98,9 +98,13 @@ fn forced_closed_renders_no_card() {
 }
 
 #[test]
-fn disabled_renders_the_trigger_bare() {
+fn disabled_keeps_the_wrapper_and_renders_no_card() {
     let html = body(&rendered(Some(true), true));
-    assert!(html.starts_with("<button"), "{html}");
+    assert!(html.starts_with("<span"), "{html}");
+    assert!(
+        html.contains("<span style=\"display: contents\"><button"),
+        "{html}"
+    );
     assert!(!html.contains("role=\"dialog\""), "{html}");
     assert!(html.contains(">Ada</button>"), "{html}");
 }

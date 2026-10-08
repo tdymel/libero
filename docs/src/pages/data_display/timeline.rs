@@ -67,7 +67,7 @@ pub fn TimelinePage() -> Element {
                 props("TimelineEvent", vec![
                     prop("new(title)", "impl Into<OptionLabel>")
                         .default("required")
-                        .doc("The event's name, optionally with its own rendering."),
+                        .doc("The event's name, optionally with its own rendering, which a screen reader skips for the name."),
                     prop(".content(Element)", "Element")
                         .doc("The body below the title."),
                     prop(".bullet(Element)", "Element")

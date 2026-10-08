@@ -68,7 +68,7 @@ pub fn HoverCardPage() -> Element {
                     .doc("The card's elevation."),
                 prop("disabled", "bool")
                     .default("false")
-                    .doc("Renders `children` alone, with no card."),
+                    .doc("No card. The trigger keeps its wrapper, so enabling or disabling does not remount it or drop its focus."),
             ])],
             accessibility: a11y()
                 .key(["Tab"], "On the trigger's last link or button: moves into the card, and past its last link to whatever follows the trigger.")
@@ -76,6 +76,7 @@ pub fn HoverCardPage() -> Element {
                 .key(["Escape"], "Closes the card and returns focus to the trigger if focus was inside. On the web it works wherever focus is.")
                 .handles([
                     "Focusing the trigger opens the card. A click does not keep it open.",
+                    "A card of text taller than the room beside the trigger is a tab stop, so Tab enters it and the arrow keys scroll it. A card with a link or button is not: the controls take the focus.",
                     "A trigger with nothing focusable and an unnamed card both warn in the console.",
                     "On touch, a tap opens it and a tap elsewhere closes it. The card has no arrow.",
                 ])

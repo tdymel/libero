@@ -23,7 +23,7 @@ pub struct AvatarDefaults {
     pub radius: Size,
     /// The square's side, in px.
     pub sizes: Sizes<u16>,
-    /// Derived from the square (`side / 2.5`).
+    /// Pixels at a 16px root, written as `rem`; about `side / 2.5`, floored at 10 px.
     pub font_sizes: Sizes<u16>,
     /// Its own radius scale; `xxl` is a circle, which no fixed global step gives.
     pub radii: Sizes<&'static str>,
@@ -35,7 +35,7 @@ impl AvatarDefaults {
         size: Size::Md,
         radius: Size::Xxl,
         sizes: Sizes::new(20, 28, 38, 56, 84, 120),
-        font_sizes: Sizes::new(8, 11, 15, 22, 34, 48),
+        font_sizes: Sizes::new(10, 12, 15, 22, 34, 48),
         radii: Sizes::new("2px", "4px", "8px", "16px", "32px", "9999px"),
     };
 
@@ -56,7 +56,10 @@ impl AvatarDefaults {
 impl ToCssDeclarations for AvatarDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
         let mut declarations = self.sizes.to_css_declarations(AVATAR_SIZE, "px");
-        declarations.extend(self.font_sizes.to_css_declarations(AVATAR_FONT_SIZE, "px"));
+        declarations.extend(Size::ALL.into_iter().map(|size| {
+            let rem = f32::from(self.font_sizes.get(size)) / 16.0;
+            AVATAR_FONT_SIZE.declare(size, format!("{rem}rem"))
+        }));
         for size in Size::ALL {
             declarations.push(AVATAR_RADII.declare(size, self.radii.get(size)));
         }
@@ -87,5 +90,36 @@ impl ToCssDeclarations for AvatarGroupDefaults {
             AVATAR_GROUP_SPACING.declare(SizeCss::SPACING.value(self.spacing)),
             AVATAR_GROUP_RING.declare(self.ring),
         ]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Todos 2363, 2601: rem, with the smallest initials at 10 px.
+    #[test]
+    fn the_font_sizes_are_rem_with_a_floor() {
+        let css: Vec<String> = AvatarDefaults::DEFAULT
+            .to_css_declarations()
+            .iter()
+            .map(ToString::to_string)
+            .collect();
+
+        assert!(
+            css.iter()
+                .any(|d| d.contains("--lsx-avatar-font-size-xs") && d.contains(":0.625rem")),
+            "{css:?}"
+        );
+        assert!(
+            css.iter()
+                .any(|d| d.contains("--lsx-avatar-font-size-xxl") && d.contains(":3rem")),
+            "{css:?}"
+        );
+        assert!(
+            !css.iter()
+                .any(|d| d.contains("font-size") && d.contains("px")),
+            "{css:?}"
+        );
     }
 }

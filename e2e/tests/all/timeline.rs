@@ -9,6 +9,20 @@ fn it_meets_the_baseline() {
     Suite::new("timeline", "/timeline").run();
 }
 
+/// Todo 2429: the AX name of a rich title is its plain-text name, not the drawn content.
+#[test]
+fn a_rich_title_is_named_by_its_plain_text() {
+    block_on(async {
+        let fixture = Fixture::open("/timeline/rich", Viewport::Desktop)
+            .await
+            .unwrap();
+        let tree = e2e::ax::snapshot(&fixture.page, "#rich").await.unwrap();
+        assert!(tree.contains("Shipped by air"), "{tree}");
+        assert!(!tree.contains("✈"), "{tree}");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Each dot bullet's fill and ring: `[background, border]` per event.
 const BULLETS: &str = "(() => [...document.querySelectorAll('#left > li > span')] \
     .map(b => { const s = getComputedStyle(b); return [s.backgroundColor, s.borderTopColor]; }))()";

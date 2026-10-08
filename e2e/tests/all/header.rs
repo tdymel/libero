@@ -189,6 +189,25 @@ fn scroll_padding_keeps_focus_clear_of_a_sticky_header() {
     });
 }
 
+/// Todo 2412: a dark literal fill gets a white label and link, not the page's dark text.
+#[test]
+fn a_literal_fill_gets_a_readable_label() {
+    block_on(async {
+        let fixture = Fixture::open("/header", Viewport::Desktop).await.unwrap();
+        wait::for_js_true(
+            &fixture.page,
+            "(() => { const header = document.querySelector('#literal'); \
+             const link = header.querySelector('a'); \
+             return getComputedStyle(header).color === 'rgb(255, 255, 255)' \
+                 && getComputedStyle(link).color === 'rgb(255, 255, 255)'; })()",
+            "white text and link on the dark literal header",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 1647. On a coloured or gradient fill a link is the text colour, so it
 /// keeps its underline at rest.
 #[test]

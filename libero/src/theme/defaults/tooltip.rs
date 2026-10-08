@@ -24,6 +24,7 @@ pub struct TooltipDefaults {
     pub close_delay: u32,
     /// Fade duration, in milliseconds.
     pub duration: u32,
+    /// Pixels at a 16px root, written as `rem`, so the bubble grows with a raised text size.
     pub font_sizes: Sizes<u16>,
     pub background: &'static str,
     pub color: &'static str,
@@ -62,10 +63,47 @@ impl TooltipDefaults {
 
 impl ToCssDeclarations for TooltipDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
-        let mut declarations = self.font_sizes.to_css_declarations(TOOLTIP_FONT_SIZE, "px");
+        let mut declarations: Vec<_> = Size::ALL
+            .into_iter()
+            .map(|size| {
+                let rem = f32::from(self.font_sizes.get(size)) / 16.0;
+                TOOLTIP_FONT_SIZE.declare(size, format!("{rem}rem"))
+            })
+            .collect();
         declarations.push(TOOLTIP_BACKGROUND.declare(self.background));
         declarations.push(TOOLTIP_COLOR.declare(self.color));
         declarations.push(TOOLTIP_DURATION.declare(format!("{}ms", self.duration)));
         declarations
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Todo 2601: rem, the same size as the old px at a 16px root.
+    #[test]
+    fn the_font_sizes_are_rem() {
+        let css: Vec<String> = TooltipDefaults::DEFAULT
+            .to_css_declarations()
+            .iter()
+            .map(ToString::to_string)
+            .collect();
+
+        assert!(
+            css.iter()
+                .any(|d| d.contains("--lsx-tooltip-font-size-xs") && d.contains(":0.625rem")),
+            "{css:?}"
+        );
+        assert!(
+            css.iter()
+                .any(|d| d.contains("--lsx-tooltip-font-size-xxl") && d.contains(":1.125rem")),
+            "{css:?}"
+        );
+        assert!(
+            !css.iter()
+                .any(|d| d.contains("font-size") && d.contains("px")),
+            "{css:?}"
+        );
     }
 }
