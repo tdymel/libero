@@ -102,6 +102,7 @@ pub(crate) fn media(mounted: &Rc<MountedData>, tag: Option<u64>) -> Option<Box<d
 
 #[cfg(target_arch = "wasm32")]
 mod web {
+    use std::cell::Cell;
     use std::rc::Rc;
 
     use dioxus::prelude::MountedData;
@@ -128,7 +129,13 @@ mod web {
     /// `HAVE_FUTURE_DATA`: below it a playing element waits for data.
     const HAVE_FUTURE_DATA: u16 = 3;
 
-    fn state(element: &HtmlMediaElement) -> MediaState {
+    const NETWORK_NO_SOURCE: u16 = 3;
+
+    /// Events that start source selection again, forgetting an earlier failure of every `<source>`.
+    const RESELECTS: &[&str] = &["emptied", "loadstart"];
+
+    /// `exhausted`: every `<source>` failed, which sets no `MediaError` (4 stands in for it).
+    fn state(element: &HtmlMediaElement, exhausted: bool) -> MediaState {
         let duration = element.duration();
         let paused = element.paused();
         MediaState {
@@ -140,7 +147,10 @@ mod web {
             muted: element.muted(),
             rate: element.playback_rate(),
             buffering: !paused && element.ready_state() < HAVE_FUTURE_DATA,
-            error: element.error().map(|error| error.code()),
+            error: element
+                .error()
+                .map(|error| error.code())
+                .or(exhausted.then_some(4)),
         }
     }
 
@@ -209,36 +219,90 @@ mod web {
         }
 
         fn watch(&self, callback: Box<dyn Fn(MediaState)>) -> Box<dyn MediaSubscription> {
-            callback(state(&self.element));
-            let element = self.element.clone();
-            let closure = Closure::<dyn FnMut()>::new(move || callback(state(&element)));
-            for event in MEDIA_EVENTS {
+            let callback = Rc::new(callback);
+            // Mounted after every `<source>` failed (hydration): no `error` event is left to see.
+            let spent = self.element.network_state() == NETWORK_NO_SOURCE
+                && matches!(self.element.query_selector("source"), Ok(Some(_)));
+            let exhausted = Rc::new(Cell::new(spent));
+            callback(state(&self.element, spent));
+            let closure = {
+                let (element, callback, exhausted) =
+                    (self.element.clone(), callback.clone(), exhausted.clone());
+                Closure::<dyn FnMut(web_sys::Event)>::new(move |event: web_sys::Event| {
+                    if RESELECTS.contains(&event.type_().as_str()) {
+                        exhausted.set(false);
+                    }
+                    callback(state(&element, exhausted.get()));
+                })
+            };
+            for event in MEDIA_EVENTS.iter().chain(RESELECTS) {
                 let _ = self
                     .element
                     .add_event_listener_with_callback(event, closure.as_ref().unchecked_ref());
             }
+            // A `<source>`'s `error` does not bubble: the capture phase sees the last one fail.
+            let sources = {
+                let element = self.element.clone();
+                Closure::<dyn FnMut(web_sys::Event)>::new(move |event: web_sys::Event| {
+                    if last_source(&event) {
+                        exhausted.set(true);
+                        callback(state(&element, true));
+                    }
+                })
+            };
+            let _ = self.element.add_event_listener_with_callback_and_bool(
+                "error",
+                sources.as_ref().unchecked_ref(),
+                true,
+            );
             Box::new(WebMediaSubscription {
                 element: self.element.clone(),
                 closure,
+                sources,
             })
         }
     }
 
+    /// Whether `event` is the `error` of a `<source>` with no `<source>` after it.
+    fn last_source(event: &web_sys::Event) -> bool {
+        let Some(source) = event
+            .target()
+            .and_then(|target| target.dyn_into::<web_sys::Element>().ok())
+            .filter(|target| target.tag_name().eq_ignore_ascii_case("source"))
+        else {
+            return false;
+        };
+        let mut next = source.next_element_sibling();
+        while let Some(sibling) = next {
+            if sibling.tag_name().eq_ignore_ascii_case("source") {
+                return false;
+            }
+            next = sibling.next_element_sibling();
+        }
+        true
+    }
+
     struct WebMediaSubscription {
         element: HtmlMediaElement,
-        closure: Closure<dyn FnMut()>,
+        closure: Closure<dyn FnMut(web_sys::Event)>,
+        sources: Closure<dyn FnMut(web_sys::Event)>,
     }
 
     impl MediaSubscription for WebMediaSubscription {}
 
     impl Drop for WebMediaSubscription {
         fn drop(&mut self) {
-            for event in MEDIA_EVENTS {
+            for event in MEDIA_EVENTS.iter().chain(RESELECTS) {
                 let _ = self.element.remove_event_listener_with_callback(
                     event,
                     self.closure.as_ref().unchecked_ref(),
                 );
             }
+            let _ = self.element.remove_event_listener_with_callback_and_bool(
+                "error",
+                self.sources.as_ref().unchecked_ref(),
+                true,
+            );
         }
     }
 }

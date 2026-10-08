@@ -201,9 +201,10 @@ fn the_web_shows_closes_and_reports_a_denial() {
             window.Notification = class extends Notification {
                 constructor() { throw new TypeError('Illegal constructor'); }
             };
-            window.worked = []; window.listed = 0;
+            window.worked = []; window.listed = 0; window.matched = 0; window.workerCloses = 0;
             const proto = ServiceWorkerRegistration.prototype;
             const { showNotification, getNotifications } = proto;
+            window.listRaw = (registration) => getNotifications.call(registration);
             proto.showNotification = function (title, options) {
                 const call = {
                     token: options?.data?.libero ?? '',
@@ -218,7 +219,15 @@ fn the_web_shows_closes_and_reports_a_denial() {
             };
             proto.getNotifications = function (...args) {
                 window.listed++;
-                return getNotifications.apply(this, args);
+                return getNotifications.apply(this, args).then((list) => {
+                    for (const shown of list) {
+                        if (shown.data?.libero !== window.worked.at(-1)?.token) continue;
+                        window.matched++;
+                        const close = shown.close;
+                        shown.close = function () { window.workerCloses++; return close.call(this); };
+                    }
+                    return list;
+                });
             };",
         )
         .await
@@ -281,10 +290,22 @@ fn the_web_shows_closes_and_reports_a_denial() {
         .await
         .unwrap();
         let gone = "navigator.serviceWorker.getRegistration()
-            .then((r) => r.getNotifications()).then((shown) => shown.length === 0)";
+            .then((r) => window.listRaw(r)).then((shown) => shown.length === 0)";
         wait::for_js_true(page, gone, "the close to reach the worker's notification")
             .await
             .unwrap();
+        // The display is proven by `showNotification` resolving above; the browser's listing
+        // is its own timing (todo 2626), so a close is checked on whatever the lookup listed.
+        let closed = page
+            .evaluate("window.matched === window.workerCloses")
+            .await
+            .unwrap()
+            .into_value::<bool>()
+            .unwrap();
+        assert!(
+            closed,
+            "every listed notification of the worker's was closed"
+        );
 
         set_permission(page, PermissionSetting::Prompt)
             .await

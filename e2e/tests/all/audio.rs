@@ -232,6 +232,25 @@ async fn broken_player_settled(page: &chromiumoxide::Page) {
     .unwrap();
 }
 
+/// Todo 2654: every `<source>` failing sets no MediaError, yet the player says it failed.
+#[test]
+fn every_source_failing_shows_the_error() {
+    block_on(async {
+        let fixture = Fixture::open("/audio/sources-failing", Viewport::Desktop)
+            .await
+            .unwrap();
+        wait::for_js_true(
+            &fixture.page,
+            "document.querySelector('#failing [role=alert]') !== null
+             && document.querySelector('#failing audio').error === null",
+            "the alert for sources that all failed, with no MediaError on the element",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 1385: the speaker mutes and unmutes; the chevron opens the volume
 /// slider in a dialog, focused, and Escape returns to the chevron.
 #[test]

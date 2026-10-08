@@ -10,7 +10,22 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/audio", || rsx! { AudioPage {} }),
     ("/audio/swap", || rsx! { SwapPage {} }),
+    // Todo 2654: every `<source>` fails, which sets no MediaError.
+    ("/audio/sources-failing", || rsx! { SourcesFailingPage {} }),
 ];
+
+#[component]
+fn SourcesFailingPage() -> Element {
+    rsx! {
+        div { id: "failing",
+            Audio {
+                src: "/missing.mp3",
+                sources: vec![MediaSource::new("/none.xyz", "audio/x-none")],
+                label: "Failing",
+            }
+        }
+    }
+}
 
 /// A silent 8 kHz, 8-bit mono WAV of `seconds`, as a `data:` URL: no file to serve,
 /// and every Chromium decodes PCM.

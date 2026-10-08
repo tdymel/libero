@@ -2,7 +2,9 @@
 //! subtitle track, plus one without tracks.
 
 use dioxus::prelude::*;
-use libero::components::{Chapter, Flex, MediaPreload, MediaTrack, Text, TrackKind, Video};
+use libero::components::{
+    Chapter, Flex, MediaPreload, MediaSource, MediaTrack, Text, TrackKind, Video,
+};
 use libero::theme::Size;
 
 use crate::Routes;
@@ -30,7 +32,22 @@ pub const ROUTES: Routes = &[
     ("/video/languages", || rsx! { LanguagesPage {} }),
     // Todo 2136: chapters from the prop, from a chapters track, both, right to left and narrow.
     ("/video/chapters", || rsx! { ChaptersPage {} }),
+    // Todo 2654: every `<source>` fails, which sets no MediaError.
+    ("/video/sources-failing", || rsx! { SourcesFailingPage {} }),
 ];
+
+#[component]
+fn SourcesFailingPage() -> Element {
+    rsx! {
+        div { id: "failing",
+            Video {
+                src: "/missing.mp4",
+                sources: vec![MediaSource::new("/none.xyz", "video/x-none")],
+                label: "Failing",
+            }
+        }
+    }
+}
 
 const CHAPTERS_VTT: &str = "data:text/vtt,WEBVTT%0A%0A00:00.000 --> 00:02.000%0AOpening%0A%0A00:02.000 --> 00:04.000%0AEnding";
 

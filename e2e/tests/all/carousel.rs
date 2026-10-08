@@ -5,7 +5,7 @@ use anyhow::{Result, bail, ensure};
 use chromiumoxide::Page;
 use e2e::archetypes::reset_tab_position;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually};
+use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::keyboard;
 use e2e::passes::motion;
 use e2e::passes::pointer;
@@ -1234,6 +1234,56 @@ fn tab_from_pause_to_the_track_is_no_new_entry() {
         fixture.close().await.unwrap();
     });
 }
+
+const CURRENT_SLIDE: &str = "[aria-roledescription=slide][data-current]";
+
+/// Todo 2652: the desktop WebView's arm of the Tab above, which reports a focusout/focusin pair
+/// where the web reports one move (red, so skipped); Chromium and Blitz have their own tests.
+async fn tab_from_pause_keeps_it_playing<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    ensure!(
+        d.hold_timers(&[AUTOPLAY_MS]).await?,
+        "the rotation timer cannot be held"
+    );
+    eventually(d, "the toggle to render", async |d| d.exists(PAUSE).await).await?;
+    d.focus(PAUSE).await?;
+    eventually(d, "focus entering to pause", async |d| {
+        Ok(d.attr(PAUSE, "aria-pressed").await?.as_deref() == Some("true"))
+    })
+    .await?;
+    d.press(keyboard::ENTER).await?;
+    eventually(d, "Enter to play", async |d| {
+        Ok(d.attr(PAUSE, "aria-pressed").await?.as_deref() == Some("false"))
+    })
+    .await?;
+
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, TRACK, "Tab from the toggle").await?;
+    d.settle().await?;
+    ensure!(
+        d.attr(PAUSE, "aria-pressed").await?.as_deref() == Some("false"),
+        "a Tab within the carousel paused it"
+    );
+    let before = d.text(CURRENT_SLIDE).await?;
+    eventually(d, "the rotation to stay armed", async |d| {
+        Ok(d.armed(AUTOPLAY_MS).await? >= 1)
+    })
+    .await?;
+    eventually(d, "a fired rotation to advance", async |d| {
+        d.fire_timers(AUTOPLAY_MS).await?;
+        Ok(d.text(CURRENT_SLIDE).await? != before)
+    })
+    .await
+}
+
+e2e::scenario!(
+    tab_from_pause_within_the_carousel,
+    "/carousel/autoplay",
+    tab_from_pause_keeps_it_playing,
+    web: skip("tab_from_pause_to_the_track_is_no_new_entry is the web's arm"),
+    native: skip("native::carousel has the Blitz arm"),
+    android: skip("2652 is the desktop WebView's arm"),
+    desktop: skip("2634: the WebView's focusout/focusin pair is a new entry, so the Tab pauses it")
+);
 
 /// Todo 2361: one slide, or every slide in view, has nothing to rotate: no Pause.
 #[test]

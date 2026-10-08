@@ -379,6 +379,25 @@ fn a_shrink_wrapping_parent_keeps_the_box() {
     });
 }
 
+/// Todo 2654: every `<source>` failing sets no MediaError, yet the player says it failed.
+#[test]
+fn every_source_failing_shows_the_error() {
+    block_on(async {
+        let fixture = Fixture::open("/video/sources-failing", Viewport::Desktop)
+            .await
+            .unwrap();
+        wait::for_js_true(
+            &fixture.page,
+            "document.querySelector('#failing [role=alert]') !== null
+             && document.querySelector('#failing video').error === null",
+            "the alert for sources that all failed, with no MediaError on the element",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 1399: the speaker mutes and unmutes; the chevron opens the volume slider
 /// in a dialog, inside the player in fullscreen, focused, and a moved volume unmutes.
 #[test]
@@ -395,9 +414,18 @@ fn the_speaker_mutes_and_the_volume_sits_in_a_menu() {
         let speaker = |name: &str| {
             format!("document.querySelector('{SPEAKER}')?.getAttribute('aria-label') === '{name}'")
         };
-        wait::for_js_true(page, &speaker("Mute"), "the speaker")
-            .await
-            .unwrap();
+        // The metadata widens the time and moves the speaker; a click aimed before lands beside it (todo 1673).
+        wait::for_js_true(
+            page,
+            &format!(
+                "{} && document.querySelector('#player [data-slot=time]').textContent === '0:00 / 0:04'
+                 && document.querySelector('#player [role=alert]') === null",
+                speaker("Mute")
+            ),
+            "the speaker, once the metadata has settled the bar",
+        )
+        .await
+        .unwrap();
         pointer::click(page, SPEAKER).await.unwrap();
         wait::for_js_true(
             page,
