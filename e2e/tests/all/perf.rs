@@ -543,6 +543,50 @@ fn scrolling_a_virtual_list_stays_in_budget() {
     });
 }
 
+/// 60px a frame for 30 frames, as a fling; the most px of the pane no row covered in any frame.
+const FLING: &str = r#"(async () => {
+    const pane = document.querySelector('#pane');
+    const area = [...pane.querySelectorAll('*')].find(e => e.scrollHeight > e.clientHeight + 100);
+    const frame = () => new Promise(requestAnimationFrame);
+    let worst = 0;
+    for (let i = 0; i < 30; i++) {
+        area.scrollTop += 60;
+        await frame();
+        const view = area.getBoundingClientRect();
+        const rows = [...pane.querySelectorAll('[data-row]')].map(r => r.getBoundingClientRect());
+        const top = Math.min(...rows.map(r => r.top)), bottom = Math.max(...rows.map(r => r.bottom));
+        worst = Math.max(worst, Math.max(0, top - view.top) + Math.max(0, view.bottom - bottom));
+    }
+    return worst;
+})()"#;
+
+/// Todo 2131: a fling paints the skeleton rows once, not on every step. Sized by the
+/// padding, they repainted each step (61 `PaintImage` in 30), so every tile under them
+/// was rastered again and a fling ahead of that raster showed a bare pane.
+#[test]
+fn a_fling_paints_the_skeleton_rows_once() {
+    block_on(async {
+        let fixture = open("/perf/scroll").await;
+        let page = &fixture.page;
+        let mut blank = 0.0;
+        let painted = timing::trace_counts(page, &["PaintImage"], async || {
+            blank = timing::js::<f64>(page, FLING).await?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+        // The rows cover the pane from the first step on.
+        assert!(blank < 1.0, "{blank}px of the pane showed no row");
+        assert!(
+            painted[0] <= 6,
+            "{} skeleton paints in 30 steps",
+            painted[0]
+        );
+        fixture.console.assert_clean("fling").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Typing into an Autocomplete of a hundred options: the first key opens the list, the
 /// next one and a Backspace keep every row, which must not redraw.
 #[test]
@@ -2145,6 +2189,41 @@ pub(crate) mod timing {
             })
             .await;
         });
+    }
+
+    /// The `names` events a Chromium trace records while `act` runs, one count per name.
+    pub(crate) async fn trace_counts(
+        page: &Page,
+        names: &[&str],
+        act: impl AsyncFnOnce() -> Result<()>,
+    ) -> Result<Vec<usize>> {
+        let mut batches = page.event_listener::<EventDataCollected>().await?;
+        let mut complete = page.event_listener::<EventTracingComplete>().await?;
+        let config = TraceConfig::builder()
+            .included_categories(vec![
+                "devtools.timeline".to_string(),
+                "disabled-by-default-devtools.timeline".to_string(),
+            ])
+            .build();
+        page.execute(
+            StartParams::builder()
+                .trace_config(config)
+                .transfer_mode(StartTransferMode::ReportEvents)
+                .build(),
+        )
+        .await?;
+        act().await?;
+        page.execute(EndParams::default()).await?;
+        complete.next().await;
+        let mut counts = vec![0; names.len()];
+        while let Some(Some(batch)) = batches.next().now_or_never() {
+            for event in &batch.value {
+                if let Some(at) = names.iter().position(|name| event["name"] == *name) {
+                    counts[at] += 1;
+                }
+            }
+        }
+        Ok(counts)
     }
 
     /// Every survey case, each step about eight times; `PERF_CASE` picks cases by name.

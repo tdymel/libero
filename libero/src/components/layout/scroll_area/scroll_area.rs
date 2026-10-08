@@ -175,9 +175,8 @@ fn table_body_reserve_sx() -> Sx {
     sx().when("table", reserve)
 }
 
-/// Skeleton bars, one per pitch, in the padding only: a fast fling outruns the
-/// rows' render, and shows these instead of a blank pane (todo 2131). Forced
-/// colours compute the image to `none`, so no bars stray there.
+/// Skeleton bars in the padding for a fling that outruns the rows; forced colours drop the image.
+/// Static layers slid to the window's edges: a padding-sized background re-rastered every step (2131).
 fn placeholder_rows_sx() -> Sx {
     let pitch = SCROLL_AREA_PITCH_VAR.value();
     let bar = format!("min(6px, {pitch} / 4)");
@@ -186,14 +185,36 @@ fn placeholder_rows_sx() -> Sx {
         "repeating-linear-gradient(to bottom, transparent 0 calc({pitch} / 2 - {bar}), \
          {color} 0 calc({pitch} / 2 + {bar}), transparent 0 {pitch})"
     );
-    sx().background_image(format!("{rows}, {rows}"))
-        .background_size(format!(
-            "calc(100% - 2rem) {}, calc(100% - 2rem) {}",
-            SCROLL_AREA_LEADING_VAR.value_or("0px"),
-            SCROLL_AREA_TRAILING_VAR.value_or("0px")
-        ))
-        .background_position("1rem top, 1rem bottom")
-        .background_repeat("no-repeat")
+    let layer = |shift: String| {
+        sx().content("\"\"")
+            .position("absolute")
+            .top("0")
+            .with("inset-inline", "1rem")
+            .height("100%")
+            .z_index("-1")
+            .pointer_events("none")
+            .background_image(rows.clone())
+            .with("will-change", "transform")
+            .with("transform", format!("translateY({shift})"))
+    };
+    // Under the rows, and clipped so the slid layers stretch no scroll range.
+    sx().position("relative")
+        .with("isolation", "isolate")
+        .overflow_y("clip")
+        .selector(
+            "::before",
+            layer(format!(
+                "calc({} - 100%)",
+                SCROLL_AREA_LEADING_VAR.value_or("0px")
+            )),
+        )
+        .selector(
+            "::after",
+            layer(format!(
+                "calc(100% - {})",
+                SCROLL_AREA_TRAILING_VAR.value_or("0px")
+            )),
+        )
 }
 
 fn scroll_area_variables(color: Option<&ThemeAwareValue>) -> Variables {
