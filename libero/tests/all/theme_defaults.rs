@@ -252,3 +252,98 @@ mod variant {
         assert_eq!(outlined, 5, "{html}");
     }
 }
+
+/// The rendered side: a `*Defaults` colour reaches every component that leaves
+/// its own unset, exactly as if the call site had named it.
+mod color {
+    use crate::common::{body, render_with};
+
+    use dioxus::prelude::*;
+    use libero::{
+        LiberoProvider,
+        components::{
+            Avatar, AvatarGroup, AvatarSpec, Badge, Input, ProgressBar, RangeSlider, Slider,
+        },
+        sx::ThemeAwareValue,
+        theme::{AvatarDefaults, BadgeDefaults, Color, ProgressBarDefaults, SliderDefaults, Theme},
+    };
+
+    static ERROR: Theme = Theme {
+        badge: BadgeDefaults {
+            color: Color::Error,
+            ..Theme::DEFAULT.badge
+        },
+        avatar: AvatarDefaults {
+            color: Color::Error,
+            ..Theme::DEFAULT.avatar
+        },
+        progress_bar: ProgressBarDefaults {
+            color: Color::Error,
+            ..Theme::DEFAULT.progress_bar
+        },
+        slider: SliderDefaults {
+            color: Color::Error,
+            ..Theme::DEFAULT.slider
+        },
+        ..Theme::DEFAULT
+    };
+
+    #[component]
+    fn Part(part: &'static str, themed: bool, explicit: bool) -> Element {
+        let color: Input<ThemeAwareValue> = match explicit {
+            true => ThemeAwareValue::from(Color::Error).into(),
+            false => Input::None,
+        };
+        let theme: &'static Theme = match themed {
+            true => &ERROR,
+            false => &Theme::DEFAULT,
+        };
+        let people = vec![
+            AvatarSpec::from("Ada Lovelace"),
+            AvatarSpec::from("Grace Hopper"),
+            AvatarSpec::from("Radia Perlman"),
+        ];
+        rsx! {
+            LiberoProvider { themes: theme,
+                match part {
+                    "badge" => rsx! { Badge { color, "New" } },
+                    "avatar" => rsx! { Avatar { name: "Ada Lovelace", color } },
+                    "avatar_group" => rsx! { AvatarGroup { max: 2, people, color } },
+                    "progress_bar" => rsx! { ProgressBar { aria_label: "Upload", value: 30.0, color } },
+                    "slider" => rsx! { Slider { aria_label: "Volume", value: 25.0, color, oninput: move |_| {} } },
+                    _ => rsx! { RangeSlider { aria_label: "Price", value: (20.0, 80.0), color, oninput: move |_| {} } },
+                }
+            }
+        }
+    }
+
+    fn html(part: &'static str, themed: bool, explicit: bool) -> String {
+        body(&render_with(
+            Part,
+            PartProps {
+                part,
+                themed,
+                explicit,
+            },
+        ))
+    }
+
+    /// A project sets the colour once in the theme; with no `color` of its own a
+    /// component draws what an explicit `color` would, and not the old primary.
+    #[test]
+    fn an_unset_color_follows_the_theme() {
+        for part in [
+            "badge",
+            "avatar",
+            "avatar_group",
+            "progress_bar",
+            "slider",
+            "range_slider",
+        ] {
+            let followed = html(part, true, false);
+
+            assert_eq!(followed, html(part, true, true), "{part}");
+            assert_ne!(followed, html(part, false, false), "{part}");
+        }
+    }
+}

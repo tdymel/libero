@@ -336,7 +336,12 @@ pub fn ProgressBar(props: ProgressBarProps) -> Element {
         "ProgressBar: no `aria_label` or `aria-labelledby`, so it is announced as just \
          \"progress bar\" and a percentage.",
     );
-    let color = base_color(props.color.as_ref());
+    let color = props
+        .color
+        .as_ref()
+        .cloned()
+        .unwrap_or_else(|| ThemeAwareValue::from(theme.progress_bar.color));
+    let color = base_color(Some(&color));
 
     let size = props.size.copied_or(theme.progress_bar.size);
     let radius = props.radius.copied_or(theme.progress_bar.radius);

@@ -1,6 +1,9 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Code, Input, ProgressBar, ProgressBarPart, ProgressBarSegment, Text};
+use libero::{
+    components::{Code, Input, ProgressBar, ProgressBarPart, ProgressBarSegment, Text},
+    use_theme,
+};
 
 fn indeterminate(values: &DemoValues) -> bool {
     values.str("indeterminate") == "true"
@@ -23,6 +26,7 @@ fn segments(values: &DemoValues) -> Vec<ProgressBarSegment> {
 
 #[component]
 pub fn ProgressBarPage() -> Element {
+    let theme = use_theme();
     rsx! {
         DocPage {
             title: "ProgressBar",
@@ -35,7 +39,7 @@ pub fn ProgressBarPage() -> Element {
                 prop("min", "f64").default("0.0").doc("Range start."),
                 prop("max", "f64").default("100.0").doc("Range end. At or below `min` the bar draws empty."),
                 prop("color", "ThemeAwareValue")
-                    .default("primary")
+                    .default(theme.progress_bar.color.as_str())
                     .doc("The fill. A theme color name paints its text shade, darker on a light page so the bar stands out from its track. Any other CSS color paints as given."),
                 prop("size", "Size").default("md").doc("Track height, 3px at `xs` to 20px at `xxl`."),
                 prop("radius", "Size")

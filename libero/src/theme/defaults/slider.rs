@@ -1,6 +1,6 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
-use crate::theme::{CssVar, Size, SizeCss, Sizes};
+use crate::theme::{Color, CssVar, Size, SizeCss, Sizes};
 
 pub const SLIDER_TRACK_SIZE: SizeCss = SizeCss::new("--lsx-slider-track-size-");
 pub const SLIDER_THUMB_SIZE: SizeCss = SizeCss::new("--lsx-slider-thumb-size-");
@@ -22,6 +22,8 @@ pub struct SliderSizeLevel {
 /// Theme defaults for `Slider`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SliderDefaults {
+    /// The accent of `Slider` and `RangeSlider` when a call site names none.
+    pub color: Color,
     pub size: Size,
     pub sizes: Sizes<SliderSizeLevel>,
     /// Steps moved per arrow key press.
@@ -32,6 +34,7 @@ pub struct SliderDefaults {
 
 impl SliderDefaults {
     pub const DEFAULT: Self = Self {
+        color: Color::Primary,
         size: Size::Md,
         sizes: Sizes::new(
             SliderSizeLevel {

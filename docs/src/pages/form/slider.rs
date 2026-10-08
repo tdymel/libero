@@ -176,7 +176,7 @@ pub fn SliderPage() -> Element {
                 props("Slider", vec![
                     prop("size", "Size").default(theme.slider.size.as_str()).doc("Track, thumb and font size."),
                     prop("color", "ThemeAwareValue")
-                        .default("primary")
+                        .default(theme.slider.color.as_str())
                         .doc("Accent color. A theme color name or any CSS color."),
                     prop("value", "Option<V>").doc("The value. Pair it with `oninput`, or bind it with a path `name` inside a `Form`."),
                     prop("oninput", "EventHandler<SliderChangeEvent<V>>")

@@ -1,6 +1,6 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
-use crate::theme::{ColorCss, ColorShade, CssVar, Size, SizeCss, Sizes};
+use crate::theme::{Color, ColorCss, ColorShade, CssVar, Size, SizeCss, Sizes};
 
 /// Track thickness, one declaration per step.
 pub const PROGRESS_BAR_THICKNESS: SizeCss = SizeCss::new("--lsx-progress-bar-thickness-");
@@ -43,6 +43,8 @@ pub const INDETERMINATE_WIDTH: &str = "25%";
 /// Theme defaults for `ProgressBar`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ProgressBarDefaults {
+    /// The fill when a call site names no color.
+    pub color: Color,
     pub size: Size,
     /// Corner of track and fill. Past half the height it is a pill, so on the 8px
     /// `md` track only `xs` differs.
@@ -57,6 +59,7 @@ pub struct ProgressBarDefaults {
 
 impl ProgressBarDefaults {
     pub const DEFAULT: Self = Self {
+        color: Color::Primary,
         size: Size::Md,
         radius: Size::Xl,
         track_shade: ColorShade::S2,

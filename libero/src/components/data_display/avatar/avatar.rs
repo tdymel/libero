@@ -185,6 +185,11 @@ pub fn Avatar(props: AvatarProps) -> Element {
 
     let size = props.size.copied_or(theme.avatar.size);
     let variant = props.variant.copied_or(theme.avatar.variant);
+    let color = props
+        .color
+        .as_ref()
+        .cloned()
+        .unwrap_or_else(|| ThemeAwareValue::from(theme.avatar.color));
 
     let src = props.src.clone().filter(|src| !src.is_empty());
     let failed = src.is_some() && errored_src.read().as_deref() == src.as_deref();
@@ -192,12 +197,8 @@ pub fn Avatar(props: AvatarProps) -> Element {
     // where it fails to load (todo 884).
     let layered = !platform::fires_image_errors() && src.is_some();
 
-    let variables: Input<Variables> = avatar_variables(
-        props.color.as_ref(),
-        variant,
-        props.radius.as_ref().copied(),
-    )
-    .into();
+    let variables: Input<Variables> =
+        avatar_variables(Some(&color), variant, props.radius.as_ref().copied()).into();
     let states: Input<States> = props
         .states
         .unwrap_or_default()

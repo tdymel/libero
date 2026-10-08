@@ -2,7 +2,10 @@ use crate::components::{
     Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, indent, prop, props,
 };
 use dioxus::prelude::*;
-use libero::components::{Avatar, AvatarGroup, AvatarPart, AvatarSpec, Code, Flex, Input, Text};
+use libero::{
+    components::{Avatar, AvatarGroup, AvatarPart, AvatarSpec, Code, Flex, Input, Text},
+    use_theme,
+};
 
 static AVATAR_IMAGE: Asset = asset!("/assets/avatar.svg");
 
@@ -85,6 +88,7 @@ fn content_code(_control: &Control, values: &DemoValues) -> Vec<String> {
 
 #[component]
 pub fn AvatarPage() -> Element {
+    let theme = use_theme();
     rsx! {
         DocPage {
             title: "Avatar",
@@ -114,7 +118,7 @@ pub fn AvatarPage() -> Element {
                         .default("tonal")
                         .doc("The placeholder's look. Hidden once a picture loads."),
                     prop("color", "ThemeAwareValue")
-                        .default("primary")
+                        .default(theme.avatar.color.as_str())
                         .doc("The placeholder's tint."),
                     prop("children", "Option<Element>")
                         .default("None")
@@ -145,7 +149,7 @@ pub fn AvatarPage() -> Element {
                         .default("tonal")
                         .doc("For every member and the chip."),
                     prop("color", "ThemeAwareValue")
-                        .default("primary")
+                        .default(theme.avatar.color.as_str())
                         .doc("The tint of every member without a `color` of its own."),
                 ]),
                 props("AvatarSpec", vec![

@@ -1,6 +1,6 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
-use crate::theme::{CssVar, Size, SizeCss, Sizes, Variant};
+use crate::theme::{Color, CssVar, Size, SizeCss, Sizes, Variant};
 
 pub const BADGE_FONT_SIZE: SizeCss = SizeCss::new("--lsx-badge-font-size-");
 pub const BADGE_HEIGHT: SizeCss = SizeCss::new("--lsx-badge-height-");
@@ -30,6 +30,8 @@ pub struct BadgeSizeLevel {
 pub struct BadgeDefaults {
     /// The chrome a badge takes when a call site names none.
     pub variant: Variant,
+    /// The tint a badge takes when a call site names none.
+    pub color: Color,
     pub size: Size,
     /// The step of [`Self::radii`] a badge takes when a call site names none.
     pub radius: Size,
@@ -47,6 +49,7 @@ pub struct BadgeDefaults {
 impl BadgeDefaults {
     pub const DEFAULT: Self = Self {
         variant: Variant::Filled,
+        color: Color::Primary,
         size: Size::Md,
         // A pill at every height, which no fixed length below it gives.
         radius: Size::Xxl,

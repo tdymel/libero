@@ -1,6 +1,6 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
-use crate::theme::{CssVar, Size, SizeCss, Sizes, Variant};
+use crate::theme::{Color, CssVar, Size, SizeCss, Sizes, Variant};
 
 pub const AVATAR_SIZE: SizeCss = SizeCss::new("--lsx-avatar-size-");
 pub const AVATAR_FONT_SIZE: SizeCss = SizeCss::new("--lsx-avatar-font-size-");
@@ -18,6 +18,8 @@ pub struct AvatarDefaults {
     /// Placeholder chrome, also for `AvatarGroup` members. `Tonal`: initials on a
     /// light tint read at any size.
     pub variant: Variant,
+    /// The tint of the placeholder, also for `AvatarGroup` members and its chip.
+    pub color: Color,
     pub size: Size,
     /// The step of [`Self::radii`] an avatar takes when a call site names none.
     pub radius: Size,
@@ -32,6 +34,7 @@ pub struct AvatarDefaults {
 impl AvatarDefaults {
     pub const DEFAULT: Self = Self {
         variant: Variant::Tonal,
+        color: Color::Primary,
         size: Size::Md,
         radius: Size::Xxl,
         sizes: Sizes::new(20, 28, 38, 56, 84, 120),

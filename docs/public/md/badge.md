@@ -88,6 +88,7 @@ A "Paid" badge in an invoice row, `Badge { color: "success", variant: "tonal",
 | Field | Type | Description |
 |---|---|---|
 | `variant` | `Variant` | Variant when the prop is omitted, `filled`. |
+| `color` | `Color` | Color when the prop is omitted, `primary` (shade 6). |
 | `size` | `Size` | Size step when the prop is omitted, `md`. |
 | `radius` | `Size` | Step of `radii` when the prop is omitted, `xxl`, a pill at every height. |
 | `text_transform` | `&'static str` | `uppercase`. Set it to `none` for a badge that carries a name. |
@@ -96,7 +97,7 @@ A "Paid" badge in an invoice row, `Badge { color: "success", variant: "tonal",
 | `sizes` | `Sizes<BadgeSizeLevel>` | `font_size`/`height`/`padding_x` per step: `0.5625rem/1rem/0.375rem`, `0.625rem/1.125rem/0.5rem`, `0.6875rem/1.25rem/0.625rem`, `0.8125rem/1.625rem/0.75rem`, `1rem/2rem/1rem`, `1.125rem/2.375rem/1.25rem`. All rem, so the box grows with the reader's text size. |
 | `radii` | `Sizes<&'static str>` | The badge's own radius scale: `2px`, `4px`, `6px`, `8px`, `12px`, `9999px`. |
 
-`color` is not a theme field. It falls back to `primary` shade 6.
+An unset `color` takes `theme.badge.color`, `primary` shade 6 by default.
 
 ## CSS variables
 

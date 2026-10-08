@@ -64,8 +64,8 @@ static BADGE_BASE_SX: StaticSx = StaticSx::new(|| {
     )
 });
 
-fn badge_variables(props: &BadgeProps, variant: Variant) -> Variables {
-    let base = base_color(props.color.as_ref());
+fn badge_variables(props: &BadgeProps, color: &ThemeAwareValue, variant: Variant) -> Variables {
+    let base = base_color(Some(color));
     let contrast = contrast_color(&base);
     let colors = variant_colors(variant, &base);
 
@@ -130,7 +130,12 @@ pub fn Badge(props: BadgeProps) -> Element {
     let theme = use_theme();
     let variant = props.variant.copied_or(theme.badge.variant);
     let size = props.size.copied_or(theme.badge.size);
-    let variables: Input<Variables> = badge_variables(&props, variant).into();
+    let color = props
+        .color
+        .as_ref()
+        .cloned()
+        .unwrap_or_else(|| ThemeAwareValue::from(theme.badge.color));
+    let variables: Input<Variables> = badge_variables(&props, &color, variant).into();
     let gradient = use_gradient_style(
         props.gradient.as_ref(),
         props.color.as_ref(),

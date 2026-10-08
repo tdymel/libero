@@ -155,6 +155,7 @@ visible name: the name is read once, from the text, not twice.
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `avatar.variant` | `Variant` | `tonal` | Default `variant` when the prop is omitted, for an `Avatar` and for an `AvatarGroup`. |
+| `avatar.color` | `Color` | `primary` | Default `color` when the prop is omitted, for an `Avatar`, an `AvatarGroup` member and its `+N` chip. |
 | `avatar.size` | `Size` | `md` | Default `size` when the prop is omitted. |
 | `avatar.radius` | `Size` | `xxl` | The step of `avatar.radii` when the prop is omitted, a circle. |
 | `avatar.sizes` | `Sizes<u16>` | `20, 28, 38, 56, 84, 120` | The square's side, in px, per size step. |

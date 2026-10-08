@@ -270,6 +270,7 @@ screen reader reads the formatted value.
 
 | Field | Type | Description |
 |---|---|---|
+| `color` | `Color` | Default `color` when the prop is omitted, `primary`; also for `RangeSlider`. |
 | `size` | `Size` | Default `size` when the prop is omitted, `md`. |
 | `sizes` | `Sizes<SliderSizeLevel>` | `track_size`, `thumb_size`, `font_size` per size. |
 | `step` | `f64` | Steps moved per arrow key press. |

@@ -128,6 +128,7 @@ status line beside it says "Half done" once, at the milestone.
 
 | Field | Type | Description |
 |---|---|---|
+| `color` | `Color` | Default `color` when the prop is omitted (`primary`). |
 | `size` | `Size` | Default `size` when the prop is omitted (`md`). |
 | `radius` | `Size` | Default `radius` when the prop is omitted (`xl`). |
 | `track_shade` | `ColorShade` | Grey step of the unfilled track (`S2`). |

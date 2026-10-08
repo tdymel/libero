@@ -3,7 +3,10 @@ use crate::components::{
     not_gradient_variant, prop, props,
 };
 use dioxus::prelude::*;
-use libero::components::{Badge, Code, Input, Text};
+use libero::{
+    components::{Badge, Code, Input, Text},
+    use_theme,
+};
 
 /// The label is a child, not a prop, so the control that varies it prints
 /// nothing of its own. `Demo` renders it as the child.
@@ -13,6 +16,7 @@ fn label(values: &DemoValues) -> String {
 
 #[component]
 pub fn BadgePage() -> Element {
+    let theme = use_theme();
     let [gradient_to, gradient_deg] = gradient_controls(not_gradient_variant);
     rsx! {
         DocPage {
@@ -26,7 +30,7 @@ pub fn BadgePage() -> Element {
                 prop("gradient", "Gradient")
                     .doc("With `variant: \"gradient\"`: the second stop and the angle, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`. The first stop is `color`. Ignored by the other variants."),
                 prop("color", "ThemeAwareValue")
-                    .default("primary")
+                    .default(theme.badge.color.as_str())
                     .doc("A theme color name or a CSS color. A theme color also sets a label color that reads on it. Under a gradient, its first stop."),
                 prop("size", "Size")
                     .default("md")

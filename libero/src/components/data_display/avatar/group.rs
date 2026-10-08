@@ -93,6 +93,11 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
     let spacing = props.spacing.copied_or(theme.avatar_group.spacing);
     let size = props.size.copied_or(theme.avatar.size);
     let variant = props.variant.copied_or(theme.avatar.variant);
+    let color = props
+        .color
+        .as_ref()
+        .cloned()
+        .unwrap_or_else(|| ThemeAwareValue::from(theme.avatar.color));
 
     let total = props.people.len();
     // `max` counts the chip, so it always stands for two or more: no `+1`.
@@ -111,13 +116,9 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
     // ([[codebase/css-vars]]). The hook runs unconditionally.
     let chip_variables: Input<Variables> = match hidden > 0 {
         // The bottom of the stack, under every member.
-        true => avatar_variables(
-            props.color.as_ref(),
-            variant,
-            props.radius.as_ref().copied(),
-        )
-        .with(AVATAR_GROUP_INDEX, "1".to_string())
-        .into(),
+        true => avatar_variables(Some(&color), variant, props.radius.as_ref().copied())
+            .with(AVATAR_GROUP_INDEX, "1".to_string())
+            .into(),
         false => Input::None,
     };
     let chip_style = use_box()

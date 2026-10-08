@@ -698,7 +698,12 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     let step = props.step.max(0.0);
     let min_range = props.min_range.max(0.0);
     let size = props.size.copied_or(theme.slider.size);
-    let color = base_color(props.color.as_ref());
+    let color = props
+        .color
+        .as_ref()
+        .cloned()
+        .unwrap_or_else(|| ThemeAwareValue::from(theme.slider.color));
+    let color = base_color(Some(&color));
     let disabled = props.disabled.unwrap_or(false);
 
     let interactive = props.oninput.is_some() && !disabled;
