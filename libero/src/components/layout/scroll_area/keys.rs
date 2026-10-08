@@ -41,7 +41,7 @@ fn key_move(key: &Key, shift: bool, on_area: bool, view_height: f64) -> Option<M
 
 /// Scrolls `root` on a key nothing nearer took. Taken here, so an outer area
 /// does not scroll too.
-pub(super) fn scroll_on_key(root: ElementHandle, event: Event<KeyboardData>) {
+pub(crate) fn scroll_on_key(root: ElementHandle, event: Event<KeyboardData>) {
     let modifiers = event.modifiers();
     if modifiers.intersects(Modifiers::CONTROL | Modifiers::ALT | Modifiers::META)
         || key_taken(&event)

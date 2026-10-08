@@ -2,7 +2,7 @@
 //! drag or a wheel rests on the nearest slide, as the web's scroll snap does.
 
 use dioxus::prelude::*;
-use e2e::native::{Page, mount};
+use e2e::native::{Key, Page, mount};
 use libero::components::{Carousel, Text};
 
 const TRACK: &str = "[aria-roledescription=carousel] [role=group][aria-describedby]";
@@ -189,5 +189,32 @@ fn a_play_click_from_outside_the_carousel_keeps_it_playing() {
         Some("false"),
         "Play was paused again, focus on {}",
         page.focus_owner()
+    );
+}
+
+/// Todo 2634: a Tab from the Play toggle to the track is a move within the carousel, no
+/// new focus entry that pauses the rotation again.
+#[test]
+fn a_tab_within_the_carousel_keeps_it_playing() {
+    let mut page = mount(autoplaying);
+    page.click("#before");
+    page.click(TOGGLE);
+    page.click(TOGGLE);
+    assert_eq!(
+        pressed(&page).as_deref(),
+        Some("false"),
+        "Play did not play"
+    );
+
+    page.press(Key::Tab);
+    assert!(
+        page.is_focused(TRACK),
+        "Tab did not reach the track, focus on {}",
+        page.focus_owner()
+    );
+    assert_eq!(
+        pressed(&page).as_deref(),
+        Some("false"),
+        "a Tab within the carousel paused it"
     );
 }

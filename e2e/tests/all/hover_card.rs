@@ -1,11 +1,11 @@
 //! `HoverCard`: a non-modal dialog on hover delays or at once on focus. The card is
 //! portaled, so Tab is carried into it and back out past the trigger (406).
 
-use anyhow::{Result, ensure};
+use anyhow::{Result, bail, ensure};
 use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::clock;
-use e2e::driver::{Driver, Platform, eventually, eventually_focused};
+use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::{focus, keyboard, pointer};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
@@ -276,15 +276,19 @@ async fn tab_into_the_text_stop<D: Driver>(d: &mut D) -> Result<()> {
 
 async fn a_scrolling_card_is_a_tab_stop<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     tab_into_the_text_stop(d).await?;
-    // Blitz does not scroll a focused element by key.
-    if d.platform() == Platform::Web {
-        let top = d.rect(TEXT_STOP).await?.y;
-        d.press(keyboard::ARROW_DOWN).await?;
-        eventually(d, "ArrowDown to scroll the card", async |d| {
-            Ok(d.rect(TEXT_STOP).await?.y < top)
-        })
-        .await?;
+    // Todo 2643: the stop is the scroller, so its ring is closed at top and bottom.
+    let (stop, card) = (d.rect(TEXT_STOP).await?, d.rect(CARD).await?);
+    if stop.height > card.height {
+        bail!("the stop is taller than the card: {stop:?} in {card:?}");
     }
+    // Todo 2644: Blitz scrolls no focused element by key, so the card does it.
+    const FIRST_LINE: &str = "[role=dialog] > [tabindex='0'] > :first-child";
+    let top = d.rect(FIRST_LINE).await?.y;
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually(d, "ArrowDown to scroll the text", async |d| {
+        Ok(d.rect(FIRST_LINE).await?.y < top)
+    })
+    .await?;
     d.press(keyboard::TAB).await?;
     eventually_focused(d, AFTER, "Tab out of the card").await
 }
@@ -342,7 +346,6 @@ fn a_pointer_press_on_the_text_stop_does_not_hold_the_card_open() {
             .unwrap();
         let page = &fixture.page;
         open_scrolling_card(page).await;
-        // The stop is as tall as the text, so its centre is below the card's visible part.
         pointer::click(page, CARD).await.unwrap();
         focus::wait_for_focus(page, TEXT_STOP, "the press to focus the text stop")
             .await

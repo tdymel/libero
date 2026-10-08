@@ -6,14 +6,14 @@ use super::hover_intent::{TRIGGER_WRAPPER_SX, use_hover_intent};
 use crate::{
     components::{
         common::{FOCUSABLE_SELECTOR, HtmlTag, Input, States, base_props, inset_focus_ring_sx},
-        layout::{paper_sx, use_box},
+        layout::{paper_sx, scroll_on_key, use_box},
     },
     hooks::{
         Align, DismissOptions, ElementHandle, POPOVER_AVAILABLE_HEIGHT, PopoverOptions, Side,
         owner_link, use_dismiss, use_element, use_focus_within, use_popover_on,
         use_resize_fallback, use_theme,
     },
-    platform::{ElementApi, PlatformError, next_task},
+    platform::{ElementApi, PlatformError, next_task, scrolls_on_keys},
     sx::{StaticSx, sx},
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
 };
@@ -26,9 +26,18 @@ static HOVER_CARD_SX: StaticSx = StaticSx::new(|| {
         // Never past the room on its side: it scrolls instead (WCAG 1.4.10).
         .max_height(POPOVER_AVAILABLE_HEIGHT.value_or("none"))
         .overflow_y("auto")
-        // The text-only card's tab stop, so the keyboard can scroll it; the padding keeps
-        // text clear of the ring's band.
-        .selector("& > [tabindex]", sx().padding("2px"))
+        // The text-only card's tab stop scrolls instead of the card, so its ring stays
+        // closed; the padding keeps text clear of the ring's band.
+        .when(
+            "text-stop",
+            sx().overflow_y("hidden")
+                .display("flex")
+                .flex_direction("column"),
+        )
+        .selector(
+            "& > [tabindex]",
+            sx().padding("2px").min_height("0").overflow_y("auto"),
+        )
         .selector("& > [tabindex]:focus-visible", inset_focus_ring_sx("-2px"))
 });
 
@@ -210,7 +219,13 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
             text_stop_handle.query_selector(FOCUSABLE_SELECTOR),
             Err(PlatformError::NotFound)
         );
-        let (content, size) = (floating.scroll_size(), floating.dimensions());
+        // Once the stop is the scroller it is the one that overflows.
+        let scroller = if *overflows.peek() {
+            text_stop_handle
+        } else {
+            floating
+        };
+        let (content, size) = (scroller.scroll_size(), scroller.dimensions());
         spawn(async move {
             if let (Ok(content), Ok(size)) = (content.await, size.await) {
                 let next = text_only && content.height > size.height + 1.0;
@@ -251,6 +266,7 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
             props.shadow.copied_or(defaults.shadow).shadow_state_name(),
             true,
         )
+        .with("text-stop", text_stop)
         .into();
 
     // Every hook above the branch - `prepare()` is the hook.
@@ -291,7 +307,12 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
                         onmounted: text_stop_handle.mount(),
                         onfocusin: focus.focusin(1),
                         onfocusout: focus.focusout(1),
-                        onkeydown: move |event| card_tab(&event, anchor, floating),
+                        onkeydown: move |event| {
+                            card_tab(&event, anchor, floating);
+                            if text_stop && !scrolls_on_keys() {
+                                scroll_on_key(text_stop_handle, event);
+                            }
+                        },
                         {props.content}
                     }
                 },
