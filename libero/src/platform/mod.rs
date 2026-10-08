@@ -169,7 +169,7 @@ pub(crate) use table::{
     hits_absolute_in_text, lays_out_captions, moves_table_rows, sticks_table_heads,
     widens_sized_tables,
 };
-pub(crate) use task::{next_task, when_free, when_laid_out};
+pub(crate) use task::{next_task, page_task, when_free, when_laid_out};
 pub use timer::{TimerApi, TimerSubscription, timer};
 pub(crate) use transition::transition_property;
 pub(crate) use waveform::waveform;

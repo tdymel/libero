@@ -188,7 +188,7 @@ pub fn use_tour(options: TourOptions) -> TourHandle
 |---|---|---|---|
 | `new(key)` | `impl Into<String>` | required | Tells the steps apart. The card is drawn afresh when it changes. |
 | `target` | `ElementHandle` | - | The element the hole goes around. |
-| `target_selector` | `impl Into<String>` | - | A CSS selector for the target, as `"#search"`, looked up when the step shows. `target` wins. Not on a WebView. |
+| `target_selector` | `impl Into<String>` | - | A CSS selector for the target, as `"#search"`, looked up when the step shows. `target` wins. |
 | `interactive` | `bool` | `false` | Lets presses through the hole to the target, and puts the target in the Tab order beside the card. |
 | `title` | `impl Into<String>` | - | The card's heading and, unless the tour has an `aria_label`, its name. |
 | `description` | `impl Into<String>` | - | The card's text. |

@@ -26,7 +26,7 @@ pub struct TourStep {
     /// The element the hole goes around.
     pub target: Option<ElementHandle>,
     /// A CSS selector for the target, looked up in the document when the step shows;
-    /// [`target`](Self::target) wins. Not on a WebView, which centres the card.
+    /// [`target`](Self::target) wins.
     pub target_selector: Option<String>,
     /// The card's heading and, unless the tour has an `aria_label`, its name.
     pub title: Option<String>,

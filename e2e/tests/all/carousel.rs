@@ -1237,8 +1237,8 @@ fn tab_from_pause_to_the_track_is_no_new_entry() {
 
 const CURRENT_SLIDE: &str = "[aria-roledescription=slide][data-current]";
 
-/// Todo 2652: the desktop WebView's arm of the Tab above, which reports a focusout/focusin pair
-/// where the web reports one move (red, so skipped); Chromium and Blitz have their own tests.
+/// Todo 2652: the desktop WebView's arm of the Tab above, whose focusout/focusin pair is one
+/// move once `next_task` waits out the page's task (2664); Chromium and Blitz have their own tests.
 async fn tab_from_pause_keeps_it_playing<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     ensure!(
         d.hold_timers(&[AUTOPLAY_MS]).await?,
@@ -1281,8 +1281,7 @@ e2e::scenario!(
     tab_from_pause_keeps_it_playing,
     web: skip("tab_from_pause_to_the_track_is_no_new_entry is the web's arm"),
     native: skip("native::carousel has the Blitz arm"),
-    android: skip("2652 is the desktop WebView's arm"),
-    desktop: skip("2634: the WebView's focusout/focusin pair is a new entry, so the Tab pauses it")
+    android: skip("2652 is the desktop WebView's arm")
 );
 
 /// Todo 2361: one slide, or every slide in view, has nothing to rotate: no Pause.

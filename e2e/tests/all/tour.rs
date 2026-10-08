@@ -181,8 +181,7 @@ e2e::scenario!(
     a_selector_targets_a_step,
     "/tour/more",
     selector_target,
-    android: skip("2220: a WebView holds no node to look a selector up by"),
-    desktop: skip("2220: a WebView holds no node to look a selector up by")
+    android: skip("2666: the WebView lookup is checked on desktop only")
 );
 
 /// Steps on to the interactive step of `/tour/more`.

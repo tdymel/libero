@@ -49,6 +49,8 @@ pub(crate) use webview::image_crop as webview_image_crop;
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
 pub(crate) use webview::media as webview_media;
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+pub(crate) use webview::next_task as webview_next_task;
+#[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
 pub(crate) use webview::permission as webview_permission;
 #[cfg(all(
     not(target_arch = "wasm32"),
@@ -762,10 +764,7 @@ pub(crate) fn mounted_by_selector(selector: &str) -> Option<Rc<MountedData>> {
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     return blitz::mounted_by_selector(selector);
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
-    return {
-        let _ = selector;
-        None
-    };
+    return webview::mounted_by_selector(selector);
 }
 
 /// Only a WebView - see [`focus_first_of`](crate::platform::focus_first_of).

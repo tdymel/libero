@@ -405,6 +405,32 @@ fn every_source_failing_shows_the_error() {
     });
 }
 
+/// Todo 2665: the WebView's arm of the test above, shared by `Audio` and `Video`.
+async fn the_failed_sources_are_explained<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let explained = crate::audio::play_explained("#failing");
+    eventually(d, "the alert for sources that all failed", async |d| {
+        Ok(d.evaluate(&explained).await? == serde_json::Value::Bool(true))
+    })
+    .await
+}
+
+e2e::scenario!(
+    every_audio_source_failing_shows_the_error,
+    "/audio/sources-failing",
+    the_failed_sources_are_explained,
+    web: skip("audio::every_source_failing_shows_the_error is the web's arm"),
+    native: skip("Blitz plays no media and shows the fallback"),
+    android: skip("2665: checked on the desktop WebView only")
+);
+e2e::scenario!(
+    every_video_source_failing_shows_the_error,
+    "/video/sources-failing",
+    the_failed_sources_are_explained,
+    web: skip("video::every_source_failing_shows_the_error is the web's arm"),
+    native: skip("Blitz plays no media and shows the fallback"),
+    android: skip("2665: checked on the desktop WebView only")
+);
+
 /// Todo 1399: the speaker mutes and unmutes; the chevron opens the volume slider
 /// in a dialog, inside the player in fullscreen, focused, and a moved volume unmutes.
 #[test]

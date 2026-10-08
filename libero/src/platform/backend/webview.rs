@@ -10,7 +10,11 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use dioxus::core::{Runtime, ScopeId, Task, spawn_forever};
 use dioxus::document::{Document, Eval, NoOpDocument};
-use dioxus::html::FileData;
+use dioxus::html::geometry::{PixelsRect, PixelsSize, PixelsVector2D};
+use dioxus::html::{
+    FileData, MountedData, MountedError, MountedResult, RenderedElementBacking, ScrollBehavior,
+    ScrollLogicalPosition, ScrollToOptions,
+};
 use dioxus::prelude::{Event, Key, Modifiers, PointerData, spawn};
 use serde_json::{Value, json};
 
@@ -720,21 +724,42 @@ impl WebViewMedia {
 
 /// Sends the state on each media event, `timeupdate` at most every 250 ms: each
 /// message crosses the IPC. Waits for the element if it is not there yet.
+/// `exhausted`: every `<source>` failed, which sets no `MediaError` (4 stands in, as on the web).
 const ON_MEDIA: &str = "let media = null;
     let last = 0;
+    let exhausted = false;
+    let alive = true;
     const send = (event) => {
+        if (event?.type === 'emptied' || event?.type === 'loadstart') exhausted = false;
         const now = Date.now();
         if (event?.type === 'timeupdate' && now - last < 250) return;
         last = now;
         const duration = isFinite(media.duration) ? media.duration : null;
+        const error = media.error?.code ?? (exhausted ? 4 : null);
         dioxus.send([media.paused, media.ended, media.currentTime, duration, media.volume,
-            media.muted, media.playbackRate, !media.paused && media.readyState < 3 && !media.error, media.error?.code ?? null]);
+            media.muted, media.playbackRate, !media.paused && media.readyState < 3 && error === null, error]);
+    };
+    const exhaust = () => { exhausted = true; send(); };
+    // A `<source>`'s `error` does not bubble: the capture phase sees the last one fail.
+    const onSource = (event) => {
+        if (event.target?.tagName !== 'SOURCE') return;
+        for (let next = event.target.nextElementSibling; next; next = next.nextElementSibling) {
+            if (next.tagName === 'SOURCE') return;
+        }
+        exhaust();
     };
     const start = () => {
         media = document.querySelector('[' + data[0] + '=\"' + data[1] + '\"]');
         if (!media) return false;
         for (const name of data[2]) media.addEventListener(name, send);
+        media.addEventListener('loadstart', send);
+        media.addEventListener('error', onSource, true);
         send();
+        // Found after every `<source>` failed: no `error` is left to see. A task later, as a
+        // selection just begun also sits in NETWORK_NO_SOURCE until then.
+        setTimeout(() => {
+            if (alive && !exhausted && media.networkState === 3 && media.querySelector('source')) exhaust();
+        }, 0);
         return true;
     };
     const waiting = start() ? null : new MutationObserver(() => {
@@ -800,8 +825,13 @@ impl MediaApi for WebViewMedia {
             &format!(
                 "{ON_MEDIA}
                 {}
+                alive = false;
                 waiting?.disconnect();
-                if (media) for (const name of data[2]) media.removeEventListener(name, send);",
+                if (media) {{
+                    for (const name of data[2]) media.removeEventListener(name, send);
+                    media.removeEventListener('loadstart', send);
+                    media.removeEventListener('error', onSource, true);
+                }}",
                 slot.park("")
             ),
         );
@@ -827,6 +857,133 @@ impl MediaApi for WebViewMedia {
             task,
             _slot: Rc::new(slot),
         })
+    }
+}
+
+/// Answers once the page finished its current task: an eval only runs after it, and an
+/// event that task fired (a `focusin` after a `focusout`) reached Rust first (todo 2664).
+pub(crate) async fn next_task() {
+    if runs_scripts() {
+        let _ = eval("return 0;").join::<u8>().await;
+    }
+}
+
+/// The document's first match of `selector`, found again on every call (todo 2666).
+pub(crate) fn mounted_by_selector(selector: &str) -> Option<Rc<MountedData>> {
+    runs_scripts().then(|| {
+        Rc::new(MountedData::new(SelectedElement {
+            selector: selector.to_string(),
+        }))
+    })
+}
+
+/// A `MountedData` backing with no node in Rust: the page looks `selector` up per call.
+struct SelectedElement {
+    selector: String,
+}
+
+/// `data` is `[selector, ...]`; the script sees the match as `found`, maybe `null`
+/// (an invalid selector too).
+const FIND_SELECTED: &str =
+    "let found = null;\ntry { found = document.querySelector(data[0]); } catch {}";
+
+type Mounted<T> = std::pin::Pin<Box<dyn std::future::Future<Output = MountedResult<T>>>>;
+
+impl SelectedElement {
+    /// Started now, in the calling scope; answered by the returned future.
+    fn read<T: serde::de::DeserializeOwned + 'static>(&self, script: &str) -> Mounted<T> {
+        let read = eval_with(
+            json!([self.selector]),
+            &format!("{FIND_SELECTED}\n{script}"),
+        );
+        Box::pin(async move {
+            read.join::<T>()
+                .await
+                .map_err(|_| MountedError::NotSupported)
+        })
+    }
+
+    fn command(&self, argument: Value, script: &str) -> Mounted<()> {
+        eval_with(
+            json!([self.selector, argument]),
+            &format!("{FIND_SELECTED}\nconst value = data[1];\nif (found) {{ {script} }}"),
+        );
+        Box::pin(std::future::ready(Ok(())))
+    }
+}
+
+impl RenderedElementBacking for SelectedElement {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    /// No match measures 0x0, which a measure takes for an element not rendered.
+    fn get_client_rect(&self) -> Mounted<PixelsRect> {
+        let read = self.read::<(f64, f64, f64, f64)>(
+            "if (!found) return [0, 0, 0, 0];
+            const rect = found.getBoundingClientRect();
+            return [rect.x, rect.y, rect.width, rect.height];",
+        );
+        Box::pin(async move {
+            let (x, y, width, height) = read.await?;
+            Ok(PixelsRect::new(
+                (x, y).into(),
+                PixelsSize::new(width, height),
+            ))
+        })
+    }
+
+    fn get_scroll_offset(&self) -> Mounted<PixelsVector2D> {
+        let read =
+            self.read::<(f64, f64)>("return [found?.scrollLeft ?? 0, found?.scrollTop ?? 0];");
+        Box::pin(async move {
+            let (x, y) = read.await?;
+            Ok(PixelsVector2D::new(x, y))
+        })
+    }
+
+    fn get_scroll_size(&self) -> Mounted<PixelsSize> {
+        let read =
+            self.read::<(f64, f64)>("return [found?.scrollWidth ?? 0, found?.scrollHeight ?? 0];");
+        Box::pin(async move {
+            let (width, height) = read.await?;
+            Ok(PixelsSize::new(width, height))
+        })
+    }
+
+    fn scroll_to(&self, options: ScrollToOptions) -> Mounted<()> {
+        let position = |at: ScrollLogicalPosition| match at {
+            ScrollLogicalPosition::Start => "start",
+            ScrollLogicalPosition::Center => "center",
+            ScrollLogicalPosition::End => "end",
+            ScrollLogicalPosition::Nearest => "nearest",
+        };
+        self.command(
+            json!({
+                "behavior": behavior(options.behavior),
+                "block": position(options.vertical),
+                "inline": position(options.horizontal),
+            }),
+            "found.scrollIntoView(value);",
+        )
+    }
+
+    fn scroll(&self, coordinates: PixelsVector2D, scroll: ScrollBehavior) -> Mounted<()> {
+        self.command(
+            json!({ "left": coordinates.x, "top": coordinates.y, "behavior": behavior(scroll) }),
+            "found.scrollTo(value);",
+        )
+    }
+
+    fn set_focus(&self, focus: bool) -> Mounted<()> {
+        self.command(json!(focus), "if (value) found.focus(); else found.blur();")
+    }
+}
+
+fn behavior(behavior: ScrollBehavior) -> &'static str {
+    match behavior {
+        ScrollBehavior::Instant => "instant",
+        ScrollBehavior::Smooth => "smooth",
     }
 }
 

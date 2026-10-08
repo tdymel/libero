@@ -5,6 +5,15 @@ pub(crate) async fn next_task() {
     web::next_task().await;
 }
 
+/// [`next_task`], and on a WebView one eval round trip: past a `focusout`'s `focusin`
+/// there too (todo 2664). Not `next_task` itself: that slowed other WebView callers.
+pub(crate) async fn page_task() {
+    #[cfg(target_arch = "wasm32")]
+    web::next_task().await;
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    super::backend::webview_next_task().await;
+}
+
 /// Runs `run` once element reads can answer: at once, or natively, where a
 /// render or a task holds Blitz's document, at the end of this poll.
 pub(crate) fn when_free(run: impl FnOnce() + 'static) {

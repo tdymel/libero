@@ -230,7 +230,7 @@ pub fn TourPage() -> Element {
                     prop("target", "ElementHandle")
                         .doc("The element the hole goes around, from `use_element()`, mounted with `onmounted: handle.mount()`."),
                     prop("target_selector", "String")
-                        .doc("A CSS selector for the target, as `\"#search\"`, looked up in the document when the step shows: for a target in another component. `target` wins. A WebView cannot look one up and shows the card in the middle."),
+                        .doc("A CSS selector for the target, as `\"#search\"`, looked up in the document when the step shows: for a target in another component. `target` wins."),
                     prop("interactive", "bool")
                         .default("false")
                         .doc("Lets presses through the hole to the target, and puts the target in the Tab order beside the card."),

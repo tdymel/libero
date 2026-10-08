@@ -658,8 +658,8 @@ fn TourLayer(act: Callback<Move>, index: usize, options: TourOptions) -> Element
         }
         match looked_up {
             Some(selector) => warn(&format!(
-                "use_tour: step \"{key}\"'s target_selector \"{selector}\" matches nothing rendered \
-                 (or the renderer is a WebView, which cannot look it up), so its card shows in the middle."
+                "use_tour: step \"{key}\"'s target_selector \"{selector}\" matches nothing rendered, \
+                 so its card shows in the middle."
             )),
             None => warn(&format!(
                 "use_tour: step \"{key}\"'s target is not mounted or not rendered, so its card shows in the middle."

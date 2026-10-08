@@ -29,7 +29,7 @@ use crate::{
     },
     hooks::{use_element, use_focus_within, use_id, use_localization, use_theme},
     localization::fill,
-    platform::next_task,
+    platform::page_task,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CAROUSEL_GAP, CAROUSEL_PER_VIEW, CssVar, Size, SizeCss},
 };
@@ -259,7 +259,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
         carousel_variables(per_view, props.gap.as_ref().copied(), props.height.as_ref()).into();
 
     // A focusout is decided a task later: a focusin in between is a move within the
-    // root, no new entry (2393), on every platform that reports the pair.
+    // root, no new entry (2393, WebView 2664), on every platform that reports the pair.
     let moves = use_signal(|| 0u64);
     let focus = use_focus_within(
         move || vec![root_handle.mounted()],
@@ -272,7 +272,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
             }
             let seen = *moves.peek();
             spawn(async move {
-                next_task().await;
+                page_task().await;
                 if *moves.peek() == seen {
                     focused.set(false);
                 }
