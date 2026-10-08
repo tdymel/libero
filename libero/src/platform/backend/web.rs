@@ -119,6 +119,36 @@ pub(super) fn load_failed(mounted: &Rc<MountedData>) -> bool {
         })
 }
 
+pub(super) fn on_image_error(
+    src: &str,
+    on_error: Box<dyn Fn()>,
+) -> Option<Box<dyn ContentSubscription>> {
+    let image = web_sys::HtmlImageElement::new().ok()?;
+    let closure = Closure::<dyn FnMut()>::new(on_error);
+    image
+        .add_event_listener_with_callback("error", closure.as_ref().unchecked_ref())
+        .ok()?;
+    image.set_src(src);
+    Some(Box::new(WebImageProbe { image, closure }))
+}
+
+struct WebImageProbe {
+    image: web_sys::HtmlImageElement,
+    /// Kept alive for as long as the listener is registered.
+    closure: Closure<dyn FnMut()>,
+}
+
+impl ContentSubscription for WebImageProbe {}
+
+impl Drop for WebImageProbe {
+    fn drop(&mut self) {
+        let _ = self
+            .image
+            .remove_event_listener_with_callback("error", self.closure.as_ref().unchecked_ref());
+        self.image.remove_attribute("src").ok();
+    }
+}
+
 /// Whether `document.activeElement` is `mounted` or inside it.
 pub(super) fn focus_is_in(mounted: &Rc<MountedData>) -> bool {
     let active = web_sys::window()

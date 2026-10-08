@@ -85,7 +85,7 @@ pub(crate) use element::{
     ContentSubscription, FocusStep, SCROLL_MARGIN_BOTTOM_VAR, SCROLL_MARGIN_VAR,
     SCROLL_PADDING_VARS, focus_among, focus_first_of, focus_kept, focus_selector,
     focused_attribute, is_rtl, join, join_all, keep_focused, load_failed, mounted_by_selector,
-    on_content_change, on_form_reset, scroll_padding_properties, set_value_by_id,
+    on_content_change, on_form_reset, on_image_error, scroll_padding_properties, set_value_by_id,
 };
 pub use element::{Dimensions, ElementApi, Read};
 pub use error::PlatformError;

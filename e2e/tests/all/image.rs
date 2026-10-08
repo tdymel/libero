@@ -98,69 +98,73 @@ async fn open_missed_error(fixture: &Fixture) {
     pointer::click(page, "#mount").await.unwrap();
 }
 
-/// Todo 2529: an `Image` whose source failed before its `onerror` existed shows the fallback.
+/// A raster and an SVG picture that fail to decode (todo 2671: an SVG reads empty, not failed).
+const MISSED_ERROR_ROUTES: [&str; 2] = ["/image/missed-error", "/image/missed-error-svg"];
+
+/// Todos 2529, 2671: an `Image` whose source failed before its `onerror` existed shows the fallback.
 #[test]
 fn an_image_that_failed_before_its_listener_shows_the_fallback() {
     block_on(async {
-        let fixture = Fixture::open("/image/missed-error", Viewport::Desktop)
+        for route in MISSED_ERROR_ROUTES {
+            let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+            open_missed_error(&fixture).await;
+            wait::for_js_true(
+                &fixture.page,
+                "document.querySelector('#missed-image')?.src.includes('963')",
+                "the fallback source",
+            )
             .await
             .unwrap();
-        open_missed_error(&fixture).await;
-        wait::for_js_true(
-            &fixture.page,
-            "document.querySelector('#missed-image')?.src.includes('963')",
-            "the fallback source",
-        )
-        .await
-        .unwrap();
-        // The cropper on the page warns about its source.
-        fixture.console.drain();
-        fixture.close().await.unwrap();
+            // The cropper on the page warns about its source.
+            fixture.console.drain();
+            fixture.close().await.unwrap();
+        }
     });
 }
 
-/// Todo 2529: an `Avatar` whose source failed before its `onerror` existed shows its initials.
+/// Todos 2529, 2671: an `Avatar` whose source failed before its `onerror` existed shows its
+/// initials.
 #[test]
 fn an_avatar_that_failed_before_its_listener_shows_its_initials() {
     block_on(async {
-        let fixture = Fixture::open("/image/missed-error", Viewport::Desktop)
+        for route in MISSED_ERROR_ROUTES {
+            let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+            open_missed_error(&fixture).await;
+            wait::for_js_true(
+                &fixture.page,
+                "(() => { const a = document.querySelector('#missed-avatar'); \
+                 return !!a && !a.querySelector('img') && a.textContent === 'AL'; })()",
+                "the initials instead of the picture",
+            )
             .await
             .unwrap();
-        open_missed_error(&fixture).await;
-        wait::for_js_true(
-            &fixture.page,
-            "(() => { const a = document.querySelector('#missed-avatar'); \
-             return !!a && !a.querySelector('img') && a.textContent === 'AL'; })()",
-            "the initials instead of the picture",
-        )
-        .await
-        .unwrap();
-        // The cropper on the page warns about its source.
-        fixture.console.drain();
-        fixture.close().await.unwrap();
+            // The cropper on the page warns about its source.
+            fixture.console.drain();
+            fixture.close().await.unwrap();
+        }
     });
 }
 
-/// Todo 2529: an `ImageCropper` whose source failed before its `onerror` existed reports it
-/// once and draws no box.
+/// Todos 2529, 2671: an `ImageCropper` whose source failed before its `onerror` existed reports
+/// it once and draws no box.
 #[test]
 fn a_cropper_that_failed_before_its_listener_reports_and_draws_no_box() {
     block_on(async {
-        let fixture = Fixture::open("/image/missed-error", Viewport::Desktop)
+        for route in MISSED_ERROR_ROUTES {
+            let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+            open_missed_error(&fixture).await;
+            wait::for_js_true(
+                &fixture.page,
+                "document.getElementById('error')?.textContent === '1' \
+                 && !document.querySelector('[data-slot=box], [data-slot=frame]')",
+                &format!("onerror, and no box on {route}"),
+            )
             .await
             .unwrap();
-        open_missed_error(&fixture).await;
-        wait::for_js_true(
-            &fixture.page,
-            "document.getElementById('error')?.textContent === '1' \
-             && !document.querySelector('[data-slot=box], [data-slot=frame]')",
-            "onerror, and no box",
-        )
-        .await
-        .unwrap();
-        // The cropper on the page warns about its source.
-        fixture.console.drain();
-        fixture.close().await.unwrap();
+            // The cropper on the page warns about its source.
+            fixture.console.drain();
+            fixture.close().await.unwrap();
+        }
     });
 }
 

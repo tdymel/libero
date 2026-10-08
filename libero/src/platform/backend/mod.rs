@@ -279,6 +279,21 @@ pub(crate) fn load_failed(mounted: &Rc<MountedData>) -> bool {
     };
 }
 
+/// Only the web: an SVG that failed before hydration reads as an empty one, so a fresh
+/// image decides.
+pub(crate) fn on_image_error(
+    src: &str,
+    on_error: Box<dyn Fn()>,
+) -> Option<Box<dyn ContentSubscription>> {
+    #[cfg(target_arch = "wasm32")]
+    return web::on_image_error(src, on_error);
+    #[cfg(not(target_arch = "wasm32"))]
+    return {
+        let _ = (src, on_error);
+        None
+    };
+}
+
 /// The web and Blitz compute `direction`; the WebView floor answers LTR.
 pub(crate) fn is_rtl(mounted: &Rc<MountedData>) -> bool {
     #[cfg(not(any(target_arch = "wasm32", feature = "native")))]

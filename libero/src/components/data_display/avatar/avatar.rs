@@ -7,7 +7,7 @@ use crate::{
             Glyph, HtmlTag, Input, Part, SVG_FIT, States, Variables, Variant, VariantVars,
             base_color, base_props, contrast_color, fill_color, names_itself,
             on_failed_after_mount, parts_enum, svg_fit, svg_fit_sx, svg_fit_variables, text_color,
-            use_name_warning, variables, variant_chrome_sx, variant_colors,
+            use_name_warning, use_svg_probe, variables, variant_chrome_sx, variant_colors,
         },
         layout::{Box, use_box},
     },
@@ -177,6 +177,7 @@ base_props! {
 pub fn Avatar(props: AvatarProps) -> Element {
     let theme = use_theme();
     let mut errored_src = use_signal(|| None::<String>);
+    let probe = use_svg_probe(props.src.as_deref().unwrap_or_default());
     use_name_warning(
         !props.name.trim().is_empty() || props.alt.is_some() || names_itself(&props.attributes),
         "Avatar: an empty `name` and no `alt`, so it is announced as an unnamed image. Set `alt: \"\"` if it is decorative.",
@@ -236,7 +237,7 @@ pub fn Avatar(props: AvatarProps) -> Element {
                     onerror: move |_| errored_src.set(Some(errored.clone())),
                     onmounted: move |event: Event<MountedData>| {
                         let failed = missed.clone();
-                        on_failed_after_mount(&missed, event.data(), move || {
+                        on_failed_after_mount(&missed, event.data(), &probe, move || {
                             errored_src.set(Some(failed))
                         });
                     },

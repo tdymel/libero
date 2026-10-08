@@ -8,7 +8,8 @@ use crate::{
         buttons::ActionIcon,
         common::{
             Glyph, HtmlTag, Input, Part, States, Variables, base_props, disabled_look_sx,
-            focus_ring_sx, has_shortcut_modifier, on_failed_after_mount, parts_enum, variables,
+            focus_ring_sx, has_shortcut_modifier, on_failed_after_mount, parts_enum, use_svg_probe,
+            variables,
         },
         form::{Slider, SliderChangeEvent},
         layout::use_box,
@@ -518,6 +519,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     });
     let mut mount_image = image.mount();
     let mounted_src = props.src.clone();
+    let probe = use_svg_probe(&props.src);
 
     // Blitz fires no `load`: measure once laid out as well.
     use_effect(move || {
@@ -923,7 +925,9 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                     alt: props.alt,
                     draggable: "false",
                     onmounted: move |event: Event<MountedData>| {
-                        on_failed_after_mount(&mounted_src, event.data(), move || fail.call(()));
+                        on_failed_after_mount(&mounted_src, event.data(), &probe, move || {
+                            fail.call(())
+                        });
                         mount_image(event);
                     },
                     onload: move |_| measure.call(()),

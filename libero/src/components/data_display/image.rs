@@ -5,7 +5,7 @@ use crate::{
         common::{
             ClassList, HtmlTag, Input, Part, SVG_FIT, States, Variables, base_props, css_string,
             focus_ring_sx, input_from_str, on_failed_after_mount, parts_enum, parts_under_sx,
-            states, svg_fit, svg_fit_sx, svg_fit_variables, variables,
+            states, svg_fit, svg_fit_sx, svg_fit_variables, use_svg_probe, variables,
         },
         layout::use_box,
     },
@@ -196,6 +196,7 @@ pub(crate) fn LinkedImageScope(children: Element) -> Element {
 #[component]
 pub fn Image(props: ImageProps) -> Element {
     let mut errored_src = use_signal(|| None::<String>);
+    let probe = use_svg_probe(&props.src);
     let in_link = use_hook(|| try_consume_context::<InLink>().is_some());
     // Once per mount, not per render.
     use_hook(|| {
@@ -288,7 +289,7 @@ pub fn Image(props: ImageProps) -> Element {
         })
         .event("onmounted", move |event: Event<MountedData>| {
             let failed = on_mounted_src.clone();
-            on_failed_after_mount(&on_mounted_src, event.data(), move || {
+            on_failed_after_mount(&on_mounted_src, event.data(), &probe, move || {
                 errored_src.set(Some(failed))
             });
         })

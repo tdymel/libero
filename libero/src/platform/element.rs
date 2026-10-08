@@ -100,6 +100,15 @@ pub(crate) fn load_failed(mounted: &Rc<MountedData>) -> bool {
     backend::load_failed(mounted)
 }
 
+/// Loads `src` into a fresh image and calls `on_error` if that fails, for an SVG whose own
+/// `<img>` cannot be told empty from failed. Web only, else `None`; dropping it stops it.
+pub(crate) fn on_image_error(
+    src: &str,
+    on_error: Box<dyn Fn()>,
+) -> Option<Box<dyn ContentSubscription>> {
+    backend::on_image_error(src, on_error)
+}
+
 /// Whether `mounted` lays out right to left: its computed `direction`, which
 /// `dir="rtl"` on it or an ancestor sets. `false` where the renderer cannot say.
 pub(crate) fn is_rtl(mounted: &Rc<MountedData>) -> bool {
