@@ -141,6 +141,7 @@ mod use_accessibility;
 mod use_back;
 mod use_geolocation;
 mod use_hotkeys;
+mod use_indexed_db;
 mod use_intersection;
 mod use_local_storage;
 mod use_long_press;
