@@ -390,9 +390,11 @@ async fn required_blocks_an_empty_submit<D: Driver>(d: &mut D, _route: &str) -> 
             "no {label} line in the summary: {summary}"
         );
     }
+    // Todo 2647: a select asks in its own words.
     ensure!(
-        summary.matches("Fill in this field.").count() == 3,
-        "not three required lines: {summary}"
+        summary.matches("Fill in this field.").count() == 1
+            && summary.matches("Select an item in the list.").count() == 2,
+        "not one fill and two select lines: {summary}"
     );
     ensure!(
         d.text("#submits").await? == "0",

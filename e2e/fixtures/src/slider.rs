@@ -19,7 +19,33 @@ pub const ROUTES: Routes = &[
     ("/slider/edges", || rsx! { SliderEdgesPage {} }),
     ("/slider/bars", || rsx! { SliderBarsPage {} }),
     ("/slider/segments", || rsx! { SliderSegmentsPage {} }),
+    ("/slider/preview", || rsx! { SliderPreviewPage {} }),
 ];
+
+/// Todo 2212: 400px tracks at 0 and 0..10 that preview the value under a hovering mouse.
+#[component]
+fn SliderPreviewPage() -> Element {
+    let mut value = use_signal(|| 0.0f64);
+    let mut range = use_signal(|| (0.0f64, 10.0f64));
+    rsx! {
+        Flex { direction: "column", gap: "xl", width: "400px",
+            Slider {
+                id: "single",
+                label: "Volume",
+                value: value(),
+                preview_on_hover: true,
+                oninput: move |e: SliderChangeEvent<f64>| value.set(e.value()),
+            }
+            RangeSlider {
+                id: "range",
+                label: "Price",
+                value: range(),
+                preview_on_hover: true,
+                oninput: move |e: SliderChangeEvent<(f64, f64)>| range.set(e.value()),
+            }
+        }
+    }
+}
 
 /// Todo 2136: a 400px track in segments from 0, 40 and 80, at 50; marks at 40 and 100 (todo 2168).
 #[component]

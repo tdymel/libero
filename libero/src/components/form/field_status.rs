@@ -79,6 +79,25 @@ impl From<String> for Input<FieldStatus> {
     }
 }
 
+/// `None` is `Valid`, so a server's `Option` answer goes straight in (2343).
+impl From<Option<FieldStatus>> for Input<FieldStatus> {
+    fn from(status: Option<FieldStatus>) -> Self {
+        status.map_or(Input::None, Input::Value)
+    }
+}
+
+impl From<Option<String>> for Input<FieldStatus> {
+    fn from(message: Option<String>) -> Self {
+        message.map_or(Input::None, Self::from)
+    }
+}
+
+impl From<Option<&str>> for Input<FieldStatus> {
+    fn from(message: Option<&str>) -> Self {
+        message.map_or(Input::None, Self::from)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -128,6 +147,27 @@ mod tests {
         assert_eq!(FieldStatus::from(" \n".to_string()), FieldStatus::Valid);
         let status: Input<FieldStatus> = "".into();
         assert_eq!(status.as_ref(), Some(&FieldStatus::Valid));
+    }
+
+    #[test]
+    fn none_and_a_blank_option_are_valid() {
+        let unset: [Input<FieldStatus>; 3] = [
+            None::<FieldStatus>.into(),
+            None::<String>.into(),
+            None::<&str>.into(),
+        ];
+        for status in unset {
+            assert!(status.unwrap_or_default().is_valid());
+        }
+        let blank: Input<FieldStatus> = Some(" ").into();
+        assert_eq!(blank.as_ref(), Some(&FieldStatus::Valid));
+        let server: Input<FieldStatus> = Some("taken".to_string()).into();
+        assert_eq!(
+            server.as_ref(),
+            Some(&FieldStatus::Error("taken".to_string()))
+        );
+        let warning: Input<FieldStatus> = Some(FieldStatus::Warning("weak".to_string())).into();
+        assert!(warning.as_ref().is_some_and(FieldStatus::is_warning));
     }
 
     #[test]

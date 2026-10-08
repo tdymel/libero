@@ -10,7 +10,7 @@ use crate::{
             ring_overlay, use_toolbar_item,
         },
         form::{
-            CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, PreparedField, RowCache,
+            Asks, CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, PreparedField, RowCache,
             clear_button, field_control_sx, field_parts_enum, field_props, use_chip_announcer,
             use_field, use_field_frame, use_refocus_on_close, use_row_cache,
             with_drawn_placeholder,
@@ -320,6 +320,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         .name(props.name.as_deref())
         .required(required)
         .empty(empty)
+        .asks(Asks::Select)
         .disabled(disabled)
         .size(size)
         .radius(radius)

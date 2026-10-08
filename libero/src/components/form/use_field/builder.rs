@@ -12,6 +12,7 @@ use crate::{
         form::{Caption, FieldStatus},
     },
     hooks::{ElementHandle, SxSource},
+    localization::FormLabels,
     sx::Sx,
     theme::Size,
 };
@@ -34,6 +35,7 @@ pub(crate) struct FieldBuilder<'a> {
     pub(super) required: bool,
     pub(super) empty: bool,
     pub(super) required_word: Option<&'static str>,
+    pub(super) asks: Asks,
     pub(super) disabled: bool,
     pub(super) inline: bool,
     pub(super) card: bool,
@@ -66,6 +68,7 @@ impl Default for FieldBuilder<'_> {
             required: false,
             empty: false,
             required_word: None,
+            asks: Asks::Fill,
             disabled: false,
             inline: false,
             card: false,
@@ -81,6 +84,27 @@ impl Default for FieldBuilder<'_> {
             parts: None,
             states: None,
             attributes: &[],
+        }
+    }
+}
+
+/// What a `required` field left empty asks for at submit, as a browser words it per control (2647).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Asks {
+    /// `form.required`: a text entry.
+    Fill,
+    /// `form.required_check`: a checkbox or switch.
+    Check,
+    /// `form.required_select`: a pick from a list.
+    Select,
+}
+
+impl Asks {
+    pub(super) fn text(self, labels: &FormLabels) -> &'static str {
+        match self {
+            Self::Fill => labels.required,
+            Self::Check => labels.required_check,
+            Self::Select => labels.required_select,
         }
     }
 }
@@ -153,6 +177,13 @@ impl<'a> FieldBuilder<'a> {
     #[inline]
     pub fn empty(mut self, empty: bool) -> Self {
         self.empty = empty;
+        self
+    }
+
+    /// Which `form.required*` text an empty `required` field fails with. Defaults to `Fill`.
+    #[inline]
+    pub fn asks(mut self, asks: Asks) -> Self {
+        self.asks = asks;
         self
     }
 

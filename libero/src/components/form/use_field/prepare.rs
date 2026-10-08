@@ -25,7 +25,7 @@ impl FieldBuilder<'_> {
         let id_value = id();
         let words = use_localization();
         let warning_word = words.common.warning;
-        let required_text = words.form.required;
+        let required_text = self.asks.text(&words.form);
 
         // One hook for the touched flag, the form registration, the binding and
         // their cleanup: every field pays for it, validated or not.

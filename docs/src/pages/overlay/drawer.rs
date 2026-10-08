@@ -89,10 +89,11 @@ pub fn DrawerPage() -> Element {
                     prop("z_index", "Input<ThemeAwareValue>").doc("Stacking order of the panel."),
                     prop("aria_label", "Option<String>").doc("Names the panel, which is a dialog. Unset warns in a debug build."),
                     prop("sx", "Input<Sx>").doc("Styles the panel. It has no inner parts: the content is yours to style."),
+                    prop("ondismiss", "Option<Callback<Dismiss, bool>>").doc("Whether Escape, the backdrop or Back may close it; `false` keeps it open, e.g. over an unsaved draft. Unset, all three close."),
                 ]).without_base_props(),
             ],
             accessibility: a11y()
-                .key(["Escape"], "Closes the drawer, as a backdrop click does.")
+                .key(["Escape"], "Closes the drawer, as a backdrop click does, unless `ondismiss` returns `false`.")
                 .key(["Tab", "Shift+Tab"], "Moves the focus within the panel. It does not leave while the drawer shows.")
                 .handles([
                     "Focus moves into the panel, and back to the trigger once it closes, as with `use_modal`.",

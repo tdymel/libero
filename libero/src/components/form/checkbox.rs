@@ -11,7 +11,7 @@ use crate::{
             contrast_color, disabled_look_sx, draw_svg, fill_color, focus_ring_sx, names_itself,
             ring_overlay, ring_overlay_sx, use_name_warning, use_toolbar_item, variables,
         },
-        form::{Activation, field_parts_enum, field_props, use_bound, use_field},
+        form::{Activation, Asks, field_parts_enum, field_props, use_bound, use_field},
         layout::{BoxStyle, use_box},
     },
     context::IconSlot,
@@ -217,6 +217,7 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         .bound(&bound)
         .required(required)
         .empty(!checked)
+        .asks(Asks::Check)
         .disabled(disabled)
         .size(size)
         .radius(radius)

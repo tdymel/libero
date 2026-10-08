@@ -7,7 +7,7 @@ use crate::{
         accessibility::VisuallyHidden,
         common::{HtmlTag, Input, Part, Parts, input_from_str},
         form::{
-            ComboboxState, DropdownPart, clear_button, combobox::nothing_found_row,
+            Asks, ComboboxState, DropdownPart, clear_button, combobox::nothing_found_row,
             field_parts_enum, field_props, use_combobox, use_field, use_field_frame,
             use_refocus_on_close, with_drawn_placeholder,
         },
@@ -209,6 +209,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         .name(props.name.as_deref())
         .required(required)
         .empty(committed.is_none())
+        .asks(Asks::Select)
         .disabled(disabled)
         .size(size)
         .radius(radius)

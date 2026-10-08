@@ -6,6 +6,7 @@ use crate::{
         common::Input,
         overlay::{Drawer, DrawerAnchor},
     },
+    context::Dismiss,
     sx::{Sx, ThemeAwareValue},
     theme::Size,
 };
@@ -22,6 +23,9 @@ pub struct DrawerOptions {
     pub aria_label: Option<String>,
     /// Styles the panel. It has no inner parts: its content is yours.
     pub sx: Input<Sx>,
+    /// Whether Escape, the backdrop or Back may close it; `false` keeps it open.
+    /// Unset, all three close. As [`Dialog`](crate::components::Dialog)'s.
+    pub ondismiss: Option<Callback<Dismiss, bool>>,
 }
 
 /// A drawer is [`use_modal`] with a docked panel around the content: same
@@ -64,6 +68,7 @@ where
                 z_index: options.z_index.clone(),
                 aria_label: options.aria_label.clone(),
                 sx: options.sx.clone(),
+                ondismiss: options.ondismiss,
                 {content}
             }
         }

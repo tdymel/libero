@@ -51,6 +51,7 @@ fn mode_code(_: &Control, values: &DemoValues) -> Vec<String> {
     let mut code = vec![state.to_string(), options.to_string()];
     if !suggesting(values) {
         code.push("labelled_by: label.clone()".to_string());
+        code.push("select_only: true".to_string());
     }
     code
 }
@@ -136,6 +137,9 @@ pub fn ComboboxPage() -> Element {
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Draws no list and ignores the keys, and the trigger reads as closed. Disable the trigger too."),
+                    prop("select_only", "bool")
+                        .default("false")
+                        .doc("For a trigger with no text to type in, such as a button: Space picks the highlighted row like Enter, and Tab or Alt+Up pick it before closing, as a `Select` does."),
                 ])
                 .parts("DropdownPart", list_dropdown_parts(COMBOBOX_DROPDOWN)),
                 props("ComboboxOption", vec![
@@ -171,7 +175,8 @@ pub fn ComboboxPage() -> Element {
                 .key(["PageUp", "PageDown"], "Moves the highlight 10 rows, stopping at the first or last.")
                 .key(["Enter"], "Open: picks the highlighted row. Every open starts on the first row, so in a suggestion list Enter replaces the typed text; press `Escape` first to keep it.")
                 .key(["Escape"], "Open: closes the list and keeps the typed text. Enter then goes to the field, so a form submits.")
-                .key(["Tab"], "Closes the list.")
+                .key(["Space"], "With `select_only`, open: picks the highlighted row, as Enter does.")
+                .key(["Tab"], "Closes the list. With `select_only`, picks the highlighted row first.")
                 .handles([
                     "Focus stays on your trigger, so typing keeps working.",
                     "An open list with no options says `empty_label`, so an empty search is heard, not only seen.",

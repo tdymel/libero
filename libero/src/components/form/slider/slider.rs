@@ -60,6 +60,10 @@ field_props! {
         validate: crate::components::form::Validators<V>,
         #[props(default)]
         track: SliderTrack,
+        /// A bubble over the value a hovering mouse or pen points at, before a press
+        /// picks it. Escape hides it until the pointer leaves.
+        #[props(default)]
+        preview_on_hover: bool,
     }
 }
 
@@ -225,6 +229,7 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
                 SliderTrack::Line => None,
                 SliderTrack::Bars(heights) => Some(heights),
             },
+            preview_on_hover: props.preview_on_hover,
         }
     };
 

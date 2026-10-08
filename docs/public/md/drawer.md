@@ -104,6 +104,7 @@ behave the same. See [Modal](modal.md).
 | `z_index` | `Input<ThemeAwareValue>` | - | Stacking order of the panel. |
 | `aria_label` | `Option<String>` | - | Names the panel, which is a dialog. Unset warns in a debug build. |
 | `sx` | `Input<Sx>` | - | Styles the panel. It has no inner parts: the content is yours to style. |
+| `ondismiss` | `Option<Callback<Dismiss, bool>>` | - | Whether Escape, the backdrop or Back may close it; `false` keeps it open, e.g. over an unsaved draft. Unset, all three close. |
 
 ## Accessibility
 
@@ -111,7 +112,7 @@ behave the same. See [Modal](modal.md).
 
 | Key | Action |
 |---|---|
-| `Escape` | Closes the drawer, as a backdrop click does. |
+| `Escape` | Closes the drawer, as a backdrop click does, unless `ondismiss` returns `false`. |
 | `Tab` or `Shift+Tab` | Moves the focus within the panel. It does not leave while the drawer shows. |
 
 ### Libero handles

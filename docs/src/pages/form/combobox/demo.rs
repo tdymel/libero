@@ -92,6 +92,7 @@ pub(super) fn SelectDemo(values: DemoValues) -> Element {
                 state: fruit,
                 options: Fruit::options().to_vec(),
                 labelled_by: label.clone(),
+                select_only: true,
                 option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
                     ComboboxOption {
                         // demo-code: select_wiring start

@@ -73,7 +73,7 @@ under Germany becomes `"+4901711234567"`, which is not E.164. Say so in
 | `label` | `Caption` | - | The field's caption, above the control. It names the input. |
 | `description` | `Caption` | - | Between the label and the control. What to enter. |
 | `helper` | `Caption` | - | Under the control. The format, or an example. |
-| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error; an empty one or `None` is `Valid`. |
 | `required` | `bool` | `false` | Marks the field required and adds an asterisk to the label. Inside a `Form`, an empty one fails the submit. |
 | `disabled` | `bool` | `false` | Disables and dims the field. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead. The country button stays focusable and opens nothing. |

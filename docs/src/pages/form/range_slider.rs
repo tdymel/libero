@@ -160,6 +160,9 @@ pub fn RangeSliderPage() -> Element {
                         .default("false")
                         .doc("Takes the thumbs out of the tab order and dims the slider."),
                     readonly_prop("slider"),
+                    prop("preview_on_hover", "bool")
+                        .default("false")
+                        .doc("Shows a bubble over the value a hovering mouse or pen points at, before a press moves the nearer thumb there. Escape hides it until the pointer leaves the slider. Touch has no hover, so it never shows there."),
                 ])
                 .parts("SliderPart", vec![
                     (SliderPart::Label, "The label above the control."),
@@ -184,6 +187,7 @@ pub fn RangeSliderPage() -> Element {
                 .key(["Left", "Right", "Up", "Down"], "Move the focused thumb `theme.slider.step` steps, one by default. Right to left, ArrowLeft raises the value instead.")
                 .key(["Shift+Arrow", "PageUp", "PageDown"], "Move the focused thumb `theme.slider.big_step` steps, ten by default.")
                 .key(["Home", "End"], "Move the focused thumb to the end, stopping at the other thumb.")
+                .key(["Escape"], "With `preview_on_hover`, hides the hover bubble until the pointer leaves the slider.")
                 .handles([
                     "The two thumbs sit in a `role=\"group\"` named by the label, and each is its own `role=\"slider\"`, as in the ARIA multi-thumb slider pattern. A single `Slider` is one slider and needs no group.",
                     "Each thumb is named by the label plus its own word, such as \"Price Minimum\" and \"Price Maximum\", from the localization's `slider.minimum` and `slider.maximum`. Without a `label`, `aria_label` names the group and the thumbs the same way.",
@@ -250,6 +254,12 @@ pub fn RangeSliderPage() -> Element {
                 ], field_controls::<PriceCopy>(), vec![
                     Control::switch("marks").code(marks_code),
                     Control::switch("format").code(format_code),
+                    Control::switch("preview_on_hover").default("true").code(|_, values| {
+                        match is_on(values, "preview_on_hover") {
+                            true => vec!["preview_on_hover: true".to_string()],
+                            false => vec![],
+                        }
+                    }),
                     Control::switch("required"),
                     Control::switch("disabled"),
                 ]].concat(),
@@ -282,6 +292,7 @@ pub fn RangeSliderPage() -> Element {
                                     status: field.status.clone(),
                                     required: is_on(&values, "required").then_some(true),
                                     disabled: is_on(&values, "disabled").then_some(true),
+                                    preview_on_hover: is_on(&values, "preview_on_hover"),
                                     oninput: move |event: SliderChangeEvent<(Quality, Quality)>| {
                                         quality.set(event.value());
                                         last_quality.set(event)
@@ -310,6 +321,7 @@ pub fn RangeSliderPage() -> Element {
                                     status: field.status,
                                     required: is_on(&values, "required").then_some(true),
                                     disabled: is_on(&values, "disabled").then_some(true),
+                                    preview_on_hover: is_on(&values, "preview_on_hover"),
                                     oninput: move |event: SliderChangeEvent<(f64, f64)>| {
                                         price.set(event.value());
                                         last.set(event)

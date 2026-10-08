@@ -49,7 +49,7 @@ impl PropDoc {
 pub fn status_prop() -> PropDoc {
     prop("status", "FieldStatus")
         .default("Valid")
-        .doc("Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`.")
+        .doc("Validation state, under the helper. A bare `&str` is an error; an empty one or `None` is `Valid`.")
 }
 
 pub fn required_prop() -> PropDoc {

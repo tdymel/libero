@@ -145,10 +145,11 @@ form.getAll("price") // ["20", "80"]
 | `aria_label_to` | `String` | `slider.maximum` | Names the upper thumb. Unset, the localization's `slider.maximum`, "Maximum" in English. |
 | `name` | `FieldName<(V, V)>` | - | Posts the pair as two hidden inputs of that name, in track order. A discrete slider, whose type lists `options()`, posts the options' indices, not the options. A path such as `Settings::FIELDS.price()` also binds the pair to the surrounding `Form`'s value when there is no `oninput`. |
 | `validate` | `Validators<(V, V)>` | - | Rules over the pair, shown once the slider loses focus or its form is submitted. |
+| `preview_on_hover` | `bool` | `false` | Shows a bubble over the value a hovering mouse or pen points at, before a press moves the nearer thumb there. Escape hides it until the pointer leaves the slider. Touch has no hover, so it never shows there. |
 | `label` | `Caption` | - | The caption above the track. Both thumbs' names start with it. |
 | `description` | `Caption` | - | Between the label and the track. What the range means. |
 | `helper` | `Caption` | - | Under the track, below the mark captions. |
-| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error; an empty one or `None` is `Valid`. |
 | `required` | `bool` | `false` | Adds an asterisk to the label. No `aria-required`: ARIA does not allow it on a slider, which always holds a value. |
 | `disabled` | `bool` | `false` | Takes the thumbs out of the tab order and dims the slider. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the slider from the tab order and the post instead. |
@@ -193,6 +194,7 @@ explains how parts work.
 | `Left`, `Right`, `Up` or `Down` | Move the focused thumb `theme.slider.step` steps, one by default. Right to left, ArrowLeft raises the value instead. |
 | `Shift+Arrow`, `PageUp` or `PageDown` | Move the focused thumb `theme.slider.big_step` steps, ten by default. |
 | `Home` or `End` | Move the focused thumb to the end, stopping at the other thumb. |
+| `Escape` | With `preview_on_hover`, hides the hover bubble until the pointer leaves the slider. |
 
 ### Libero handles
 

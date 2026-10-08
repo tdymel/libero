@@ -66,6 +66,10 @@ field_props! {
         /// Rules over the pair, shown on blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<(V, V)>,
+        /// A bubble over the value a hovering mouse or pen points at, before a press
+        /// moves the nearer thumb there. Escape hides it until the pointer leaves.
+        #[props(default)]
+        preview_on_hover: bool,
     }
 }
 
@@ -225,6 +229,7 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
             // The same `use_callback` every render, so the core's props can
             // compare equal.
             oninput: (props.oninput.is_some() || bound.is_bound()).then_some(emit),
+            preview_on_hover: props.preview_on_hover,
         }
     };
 

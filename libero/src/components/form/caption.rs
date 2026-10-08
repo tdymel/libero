@@ -65,6 +65,18 @@ impl From<Option<String>> for Caption {
     }
 }
 
+impl From<Option<&str>> for Caption {
+    fn from(text: Option<&str>) -> Self {
+        text.map_or(Self::None, Self::from)
+    }
+}
+
+impl From<Option<Element>> for Caption {
+    fn from(element: Option<Element>) -> Self {
+        element.map_or(Self::None, Self::Node)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -75,5 +87,17 @@ mod tests {
         assert!(Caption::from("  ".to_string()).is_none());
         assert!(Caption::from(Some(String::new())).is_none());
         assert_eq!(Caption::from("Email").text(), Some("Email"));
+    }
+
+    #[test]
+    fn an_option_of_str_or_element_takes_none_as_none() {
+        assert!(Caption::from(None::<&str>).is_none());
+        assert!(Caption::from(Some(" ")).is_none());
+        assert_eq!(Caption::from(Some("Email")).text(), Some("Email"));
+        assert!(Caption::from(None::<Element>).is_none());
+        assert!(matches!(
+            Caption::from(Some(VNode::empty())),
+            Caption::Node(_)
+        ));
     }
 }

@@ -35,6 +35,8 @@ fn Demo() -> Element {
         Combobox {
             state: fruit,
             options: Fruit::options().to_vec(),
+            // A button has no text to type in: Space and Tab pick, as in a `Select`.
+            select_only: true,
             option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
                 ComboboxOption {
                     selected: picked() == Some(o.value),
@@ -214,6 +216,7 @@ fn Demo() -> Element {
 | `size` | `Size` | `md` | A row's height and font size. |
 | `radius` | `Size` | `sm` | The dropdown's corner radius. |
 | `disabled` | `bool` | `false` | Draws no list and ignores the keys, and the trigger reads as closed. Disable the trigger too. |
+| `select_only` | `bool` | `false` | For a trigger with no text to type in, such as a button: Space picks the highlighted row like Enter, and Tab or Alt+Up pick it before closing, as a `Select` does. |
 
 `T` is any `Clone + PartialEq`. `Options` is not required, since you hand the
 list in.
@@ -284,7 +287,8 @@ match at any depth inside the list.
 | `PageUp` or `PageDown` | Moves the highlight 10 rows, stopping at the first or last. |
 | `Enter` | Open: picks the highlighted row. Every open starts on the first row, so in a suggestion list Enter replaces the typed text; press `Escape` first to keep it. |
 | `Escape` | Open: closes the list and keeps the typed text. Enter then goes to the field, so a form submits. |
-| `Tab` | Closes the list. |
+| `Space` | With `select_only`, open: picks the highlighted row, as Enter does. |
+| `Tab` | Closes the list. With `select_only`, picks the highlighted row first. |
 
 ### Libero handles
 

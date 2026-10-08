@@ -46,6 +46,10 @@ pub struct ComboboxProps<T: Clone + PartialEq + 'static> {
     /// Draws no list and ignores the keys; the trigger reads as closed. Disable the trigger too.
     #[props(default)]
     disabled: Option<bool>,
+    /// A trigger with no text to type in, as a `Select` (APG select-only): Space picks the
+    /// highlight like Enter, and Tab or Alt+ArrowUp pick it before closing.
+    #[props(default)]
+    select_only: bool,
     #[props(extends = GlobalAttributes)]
     attributes: Vec<Attribute>,
     #[props(default, into)]
@@ -73,6 +77,7 @@ pub struct ComboboxProps<T: Clone + PartialEq + 'static> {
 /// rsx! {
 ///     Combobox {
 ///         state,
+///         select_only: true,
 ///         options: vec!["Apple", "Pear"],
 ///         option: move |row: ComboboxOptionArgs<&'static str>| rsx! {
 ///             ComboboxOption {
@@ -168,6 +173,8 @@ pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Elem
             size: props.size,
             radius: props.radius,
             disabled: props.disabled.unwrap_or(false),
+            commit_on_leave: props.select_only,
+            space_picks: props.select_only,
             attributes: props.attributes,
             class: props.class,
             sx: props.sx,

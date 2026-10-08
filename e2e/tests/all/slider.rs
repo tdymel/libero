@@ -1215,3 +1215,81 @@ fn a_bars_track_fills_from_the_minimum_in_either_direction() {
         console.unwrap();
     });
 }
+
+/// A visible bubble that says `text`, as JS.
+fn preview_js(text: &str) -> String {
+    format!(
+        "[...document.querySelectorAll('[role=tooltip]')].some((e) =>
+            e.textContent === '{text}' && getComputedStyle(e).visibility === 'visible')"
+    )
+}
+
+/// Where a mouse over `#id`'s track points at `fraction` of the range, as the drag maps it.
+async fn track_point(
+    page: &chromiumoxide::Page,
+    id: &str,
+    fraction: f64,
+) -> Result<pointer::Point> {
+    Ok(page
+        .evaluate(format!(
+            "(() => {{ const t = document.querySelector('#{id} [data-slot=track]').getBoundingClientRect();
+             const w = document.querySelector('#{id} [role=slider]').getBoundingClientRect().width;
+             return {{ x: t.x + w / 2 + {fraction} * (t.width - w), y: t.y + t.height / 2 }}; }})()"
+        ))
+        .await?
+        .into_value()?)
+}
+
+/// Todo 2212: `preview_on_hover` shows the value under a hovering mouse on a Slider and a
+/// RangeSlider; Escape hides it until the pointer leaves (WCAG 1.4.13).
+#[test]
+fn preview_on_hover_shows_the_value_and_escape_hides_it() {
+    block_on(async {
+        let fixture = Fixture::open("/slider/preview", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            for id in ["single", "range"] {
+                pointer::move_to(page, track_point(page, id, 0.75).await?).await?;
+                wait::for_js_true(
+                    page,
+                    &preview_js("75"),
+                    &format!("#{id}: the preview of 75"),
+                )
+                .await?;
+                keyboard::press(page, keyboard::ESCAPE).await?;
+                wait::for_js_true(
+                    page,
+                    &format!("!({})", preview_js("75")),
+                    &format!("#{id}: Escape to hide it"),
+                )
+                .await?;
+                // Still over the track: a move shows nothing till the pointer leaves.
+                pointer::move_to(page, track_point(page, id, 0.8).await?).await?;
+                e2e::clock::settle(page).await?;
+                e2e::clock::next_frame(page).await?;
+                let back: bool = page.evaluate(preview_js("80")).await?.into_value()?;
+                ensure!(
+                    !back,
+                    "#{id}: the preview came back before the pointer left"
+                );
+                pointer::move_to(page, pointer::Point { x: 2.0, y: 2.0 }).await?;
+                pointer::move_to(page, track_point(page, id, 0.8).await?).await?;
+                wait::for_js_true(
+                    page,
+                    &preview_js("80"),
+                    &format!("#{id}: the preview after leaving"),
+                )
+                .await?;
+                pointer::move_to(page, pointer::Point { x: 2.0, y: 2.0 }).await?;
+            }
+            Ok::<_, anyhow::Error>(())
+        }
+        .await;
+        let console = fixture.console.assert_clean("the hover preview");
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+        console.unwrap();
+    });
+}

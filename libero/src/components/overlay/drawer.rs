@@ -6,6 +6,7 @@ use crate::{
         layout::{Float, Placement},
         overlay::Dialog,
     },
+    context::Dismiss,
     hooks::{use_css, use_theme},
     str_enum::str_enum,
     sx::{StaticSx, ThemeAwareValue, sx},
@@ -80,6 +81,8 @@ base_props! {
         z_index: Input<ThemeAwareValue>,
         #[props(default, into)]
         aria_label: Option<String>,
+        #[props(default)]
+        ondismiss: Option<Callback<Dismiss, bool>>,
         children: Element,
     }
 }
@@ -114,6 +117,7 @@ pub(crate) fn Drawer(props: DrawerProps) -> Element {
                 // A drawer's own content owns its dismissal.
                 close_button: false,
                 aria_label: props.aria_label.clone(),
+                ondismiss: props.ondismiss,
                 class,
                 sx: props.sx.clone(),
                 states,

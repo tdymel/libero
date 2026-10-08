@@ -87,7 +87,7 @@ Use a `Radio` on its own only to lay a group out by hand. Then the shared
 | `label` | `Caption` | - | The question, and the group's name. |
 | `description` | `Caption` | - | Between the question and the options. How to choose. |
 | `helper` | `Caption` | - | Under the options. What the choice changes. |
-| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error; an empty one or `None` is `Valid`. |
 | `required` | `bool` | `false` | Sets `aria-required` on the group and marks the label. Inside a `Form`, an empty one fails the submit. |
 | `disabled` | `bool` | `false` | Disables every option and dims the group. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the group from the tab order and the post instead. Chromium does not announce read-only on a group, so say it in the label or description where it matters. |
@@ -105,7 +105,7 @@ Use a `Radio` on its own only to lay a group out by hand. Then the shared
 | `label` | `Caption` | - | The text beside the circle, and the radio's name. |
 | `description` | `Caption` | - | A second line under the label. |
 | `helper` | `Caption` | - | A caption under the radio. |
-| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error; an empty one or `None` is `Valid`. |
 | `required` | `bool` | `false` | Sets `aria-required` and marks the label. In a group, set it on `RadioGroup`: a lone `Radio` cannot see its siblings, so a `Form` does not block a submit on it. |
 | `disabled` | `bool` | `false` | Cannot be picked, dimmed and out of the tab order. |
 | `aria_label` | `String` | - | Names the radio when it has no `label`. |

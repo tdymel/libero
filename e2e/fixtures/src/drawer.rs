@@ -3,6 +3,7 @@
 use dioxus::prelude::*;
 use libero::{
     components::{Anchor, Button, Flex, Title},
+    context::Dismiss,
     hooks::{DrawerOptions, ModalScope, use_drawer},
 };
 
@@ -12,7 +13,41 @@ pub const ROUTES: Routes = &[
     ("/drawer", || rsx! { DrawerPage {} }),
     ("/drawer/tall", || rsx! { TallDrawerPage {} }),
     ("/drawer/wide", || rsx! { WideDrawerPage {} }),
+    ("/drawer/guarded", || rsx! { GuardedDrawerPage {} }),
 ];
+
+/// `ondismiss` keeps a dirty draft open and logs each reason (2600).
+#[component]
+fn GuardedDrawerPage() -> Element {
+    let mut dirty = use_signal(|| false);
+    let mut reasons = use_signal(Vec::<String>::new);
+    let nav = use_drawer(
+        DrawerOptions {
+            aria_label: Some("Draft".into()),
+            ondismiss: Some(Callback::new(move |reason: Dismiss| {
+                reasons.push(format!("{reason:?}"));
+                !dirty()
+            })),
+            ..Default::default()
+        },
+        move |_: ModalScope<()>| {
+            rsx! {
+                Button { id: "dirty", onclick: move |_| dirty.toggle(), "Toggle draft" }
+            }
+        },
+    );
+
+    rsx! {
+        Button {
+            id: "open-drawer",
+            onclick: move |_| {
+                nav.open();
+            },
+            "Open draft"
+        }
+        div { id: "reasons", {reasons.read().join(",")} }
+    }
+}
 
 /// The widest size, wider than a phone.
 #[component]

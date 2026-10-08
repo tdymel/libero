@@ -960,6 +960,51 @@ mod dispatched {
             assert_no_listbox_claimed(&dom, "readonly after ArrowDown");
         }
 
+        fn fruit_by(select_only: bool) -> Element {
+            let fruit = use_combobox();
+            use_hook(|| fruit.open());
+            rsx! {
+                LiberoProvider {
+                    Combobox {
+                        state: fruit,
+                        select_only,
+                        options: vec!["apple"],
+                        option: move |o: ComboboxOptionArgs<&'static str>| rsx! {
+                            ComboboxOption {
+                                onpick: move |_| PICKED.with(|p| p.set(true)),
+                                "{o.value}"
+                            }
+                        },
+                        Button { attributes: fruit.a11y_attributes(), "pick" }
+                    }
+                }
+            }
+        }
+
+        fn picked_by(select_only: bool, key: Key) -> bool {
+            let app: fn() -> Element = match select_only {
+                true => || fruit_by(true),
+                false => || fruit_by(false),
+            };
+            let (mut dom, find) = mount(app);
+            settle(&mut dom, &mut dioxus::core::NoOpMutations);
+            press(&mut dom, last_keydown(&find), key);
+            PICKED.with(|p| p.get())
+        }
+
+        /// Todo 2457: `select_only` makes Space and Tab pick the highlight, as a `Select`'s
+        /// bare trigger; an editable combobox types its space and Tab only closes.
+        #[test]
+        fn select_only_picks_on_space_and_tab() {
+            for key in [Key::Character(" ".into()), Key::Tab] {
+                assert!(
+                    picked_by(true, key.clone()),
+                    "select_only: {key:?} picked nothing"
+                );
+                assert!(!picked_by(false, key.clone()), "editable: {key:?} picked");
+            }
+        }
+
         /// Todo 401: disabling an open `Select` hid the list, while nothing closed
         /// the state the trigger's ARIA read.
         #[test]

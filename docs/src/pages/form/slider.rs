@@ -213,7 +213,7 @@ pub fn SliderPage() -> Element {
                         .doc("Under the track, below the mark captions."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`."),
+                        .doc("Validation state, under the helper. A bare `&str` is an error; an empty one or `None` is `Valid`."),
                     prop("required", "bool")
                         .default("false")
                         .doc("Adds an asterisk to the label. No `aria-required`: ARIA does not allow it on a slider, which always holds a value."),
@@ -226,6 +226,9 @@ pub fn SliderPage() -> Element {
                     prop("track", "SliderTrack")
                         .default("Line")
                         .doc("How the track is drawn. `SliderTrack::Bars(heights)` draws a row of rounded bars, each as tall as its fraction (0 to 1) of a taller track, like `Audio`'s waveform; the bars up to the value fill in `color`."),
+                    prop("preview_on_hover", "bool")
+                        .default("false")
+                        .doc("Shows a bubble over the value a hovering mouse or pen points at, before a press picks it. Escape hides it until the pointer leaves the slider. Touch has no hover, so it never shows there."),
                 ])
                 .parts("SliderPart", vec![
                     (SliderPart::Label, "The label above the control."),
@@ -258,6 +261,7 @@ pub fn SliderPage() -> Element {
                 .key(["Left", "Right", "Up", "Down"], "Move `theme.slider.step` steps, one by default. With `step: 0.0` a step is 1% of the range. Right to left, ArrowLeft raises the value instead.")
                 .key(["Shift+Arrow", "PageUp", "PageDown"], "Move `theme.slider.big_step` steps, ten by default.")
                 .key(["Home", "End"], "Jump to the ends.")
+                .key(["Escape"], "With `preview_on_hover`, hides the hover bubble until the pointer leaves the slider.")
                 .handles([
                     "`format` replaces `SliderValue::label` in the bubble, the captions and `aria-valuetext`, and runs during render, so it can read the locale from context.",
                     "On a discrete slider the mark captions are hidden from screen readers, since the thumb already names each value. On a continuous one they stay, since they can say more than the number.",
@@ -332,6 +336,12 @@ pub fn SliderPage() -> Element {
                     Control::switch("marks").code(marks_code),
                     Control::switch("segments").default("true").code(segments_code),
                     Control::switch("format").code(format_code),
+                    Control::switch("preview_on_hover").default("true").code(|_, values| {
+                        match is_on(values, "preview_on_hover") {
+                            true => vec!["preview_on_hover: true".to_string()],
+                            false => vec![],
+                        }
+                    }),
                     Control::switch("label").default("true").code(|_, values| {
                         match (values.str("label").as_str(), discrete(values)) {
                             ("true", true) => vec![r#"label: "Quality""#.to_string()],
@@ -395,6 +405,7 @@ pub fn SliderPage() -> Element {
                                     },
                                     required: is_on(&values, "required").then_some(true),
                                     disabled: is_on(&values, "disabled").then_some(true),
+                                    preview_on_hover: is_on(&values, "preview_on_hover"),
                                     oninput: move |event: SliderChangeEvent<Quality>| {
                                         quality.set(event.value());
                                         last_quality.set(event)
@@ -435,6 +446,7 @@ pub fn SliderPage() -> Element {
                                     },
                                     required: is_on(&values, "required").then_some(true),
                                     disabled: is_on(&values, "disabled").then_some(true),
+                                    preview_on_hover: is_on(&values, "preview_on_hover"),
                                     oninput: move |event: SliderChangeEvent| {
                                         volume.set(event.value());
                                         last.set(event)

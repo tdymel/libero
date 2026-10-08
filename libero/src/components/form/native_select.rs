@@ -6,7 +6,7 @@ use crate::{
     components::{
         common::{HtmlTag, Input, OptionSource, Options, recast_parts},
         form::{
-            LiveControl, Select, SelectOptionArgs, field_control_sx, field_props, row_label,
+            Asks, LiveControl, Select, SelectOptionArgs, field_control_sx, field_props, row_label,
             use_bound, use_field, use_field_frame,
         },
         layout::use_box,
@@ -189,6 +189,7 @@ fn NativeSelectShell<T: Options>(live: Signal<Option<T>>, field: NativeSelectPro
         .bound(&bound)
         .required(required)
         .empty(unpicked)
+        .asks(Asks::Select)
         .disabled(disabled)
         .size(size)
         .radius(radius)

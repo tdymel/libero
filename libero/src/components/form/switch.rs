@@ -9,7 +9,7 @@ use crate::{
             disabled_look_sx, fill_color, focus_ring_sx, names_itself, ring_overlay,
             ring_overlay_sx, use_name_warning, use_toolbar_item, variables,
         },
-        form::{field_parts_enum, field_props, use_bound, use_field, use_form_context},
+        form::{Asks, field_parts_enum, field_props, use_bound, use_field, use_form_context},
         layout::use_box,
     },
     hooks::{use_cache, use_css, use_element, use_form_owner, use_theme},
@@ -236,6 +236,7 @@ pub fn Switch(props: SwitchProps) -> Element {
         .bound(&bound)
         .required(required)
         .empty(!checked)
+        .asks(Asks::Check)
         .disabled(disabled)
         .size(size)
         .radius(radius)

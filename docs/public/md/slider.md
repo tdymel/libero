@@ -183,11 +183,12 @@ fn Demo() -> Element {
 | `label` | `Caption` | - | The caption above the track, and the thumb's name. |
 | `description` | `Caption` | - | Between the label and the track. What the value means. |
 | `helper` | `Caption` | - | Under the track, below the mark captions. |
-| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error; an empty one or `None` is `Valid`. |
 | `required` | `bool` | `false` | Adds an asterisk to the label. No `aria-required`: ARIA does not allow it on a slider, which always holds a value. |
 | `disabled` | `bool` | `false` | Takes the thumb out of the tab order and dims the slider. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the slider from the tab order and the post instead. |
 | `track` | `SliderTrack` | `Line` | How the track is drawn. `SliderTrack::Bars(heights)` draws a row of rounded bars, each as tall as its fraction (0 to 1) of a taller track, like `Audio`'s waveform; the bars up to the value fill in `color`. |
+| `preview_on_hover` | `bool` | `false` | Shows a bubble over the value a hovering mouse or pen points at, before a press picks it. Escape hides it until the pointer leaves the slider. Touch has no hover, so it never shows there. |
 
 ### `SliderMark`
 
@@ -236,6 +237,7 @@ explains how parts work.
 | `Left`, `Right`, `Up` or `Down` | Move `theme.slider.step` steps, one by default. With `step: 0.0` a step is 1% of the range. Right to left, ArrowLeft raises the value instead. |
 | `Shift+Arrow`, `PageUp` or `PageDown` | Move `theme.slider.big_step` steps, ten by default. |
 | `Home` or `End` | Jump to the ends. |
+| `Escape` | With `preview_on_hover`, hides the hover bubble until the pointer leaves the slider. |
 
 ### Libero handles
 

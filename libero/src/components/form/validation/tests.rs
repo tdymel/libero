@@ -895,7 +895,40 @@ fn an_empty_required_field_blocks_the_submit_unless_filled_or_disabled() {
         [
             "Name: Fill in this field.",
             "Email: Enter your email.",
-            "Terms: Fill in this field."
+            "Terms: Check this box."
+        ]
+    );
+}
+
+/// Todo 2647: a box or a select asks in its own words, as the browser does per control.
+#[test]
+fn a_box_or_a_select_left_empty_asks_in_its_own_words() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Form::<()> {
+                    Spy {}
+                    crate::components::Switch { label: "Alerts", name: "alerts", required: true, checked: false, onchange: |_| {} }
+                    crate::components::Select::<String> {
+                        label: "City",
+                        name: "city",
+                        required: true,
+                        options: vec!["Berlin".to_string(), "Bonn".to_string()],
+                    }
+                }
+            }
+        }
+    }
+
+    let (dom, _) = mount(app);
+    let scope = scope(&dom);
+    let summary = dom.in_runtime(|| scope.summary());
+    let messages: Vec<_> = summary.iter().map(|item| item.message.as_str()).collect();
+    assert_eq!(
+        messages,
+        [
+            "Alerts: Check this box.",
+            "City: Select an item in the list."
         ]
     );
 }

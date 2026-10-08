@@ -15,8 +15,8 @@ use crate::{
     },
     hooks::{
         DragMove, DragOptions, DragStart, ElementHandle, Rect, sideways_drag_sx, use_css,
-        use_element, use_formats, use_id, use_local_state, use_localization, use_sideways_drag,
-        use_theme,
+        use_element, use_escape_dismiss, use_formats, use_id, use_local_state, use_localization,
+        use_sideways_drag, use_theme,
     },
     localization::fill,
     platform::{Dimensions, ElementApi, logical_key, next_task},
@@ -340,7 +340,8 @@ fn value_text(
 /// The bubble over the value a hovering mouse or pen points at, while no drag runs.
 #[component]
 fn SliderHoverPreview(
-    hovered: Signal<Option<(f64, ThumbTrack)>>,
+    mut hovered: Signal<Option<(f64, ThumbTrack)>>,
+    mut muted: CopyValue<bool>,
     dragging: Signal<bool>,
     min: f64,
     max: f64,
@@ -350,7 +351,13 @@ fn SliderHoverPreview(
     segment_text: &'static str,
 ) -> Element {
     let decimal_separator = use_formats().decimal_separator;
-    let Some((value, track)) = hovered().filter(|_| !dragging()) else {
+    let shown = hovered().filter(|_| !dragging());
+    let hide = use_callback(move |()| {
+        muted.set(true);
+        hovered.set(None);
+    });
+    let _ = use_escape_dismiss(shown.is_some(), true, hide);
+    let Some((value, track)) = shown else {
         return rsx! {};
     };
     let (_, text) = value_text(label, &segments, segment_text, value, decimal_separator);
@@ -581,6 +588,9 @@ pub(in crate::components::form) struct SliderCoreProps {
     /// Splits the line track into segments with gaps; a labelled one joins the value's text.
     #[props(default)]
     segments: Vec<SliderSegment>,
+    /// A bubble over the value a hovering mouse or pen points at.
+    #[props(default)]
+    preview_on_hover: bool,
 }
 
 /// What a value move changes. Only the thumbs' scope reads it, so the rest of
@@ -713,8 +723,11 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     let mut active = use_signal(|| 0_usize);
     let mut thumb_track = use_signal(|| None::<ThumbTrack>);
     // The hover preview's value and geometry, measured at the first move over the slider.
-    let previews = try_use_context::<HoverPreview>().is_some() && !props.segments.is_empty();
+    let previews = props.preview_on_hover
+        || try_use_context::<HoverPreview>().is_some() && !props.segments.is_empty();
     let mut hovered = use_signal(|| None::<(f64, ThumbTrack)>);
+    // Escape hid the bubble: it stays hidden till the pointer leaves (WCAG 1.4.13).
+    let mut hover_muted = use_hook(|| CopyValue::new(false));
     let mut hover_track = use_hook(|| CopyValue::new(None::<ThumbTrack>));
     let mut hover_x = use_hook(|| CopyValue::new(None::<f64>));
     let mut hover_busy = use_hook(|| CopyValue::new(false));
@@ -976,7 +989,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
                     }
                 }
                 next_task().await;
-                let geometry = *hover_track.peek();
+                let geometry = hover_track.peek().filter(|_| !*hover_muted.peek());
                 let shown = geometry.zip(*hover_x.peek()).and_then(|(track, x)| {
                     // Over a thumb its own bubble shows the value.
                     let on_thumb = live.peek().value.thumbs().any(|thumb| {
@@ -1000,6 +1013,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         let pointer = event.data().pointer_type();
         if !previews
             || !interactive
+            || *hover_muted.peek()
             || *drag.dragging.peek()
             || !matches!(pointer.as_str(), "mouse" | "pen")
         {
@@ -1011,6 +1025,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     let onpointerleave = move |_: Event<PointerData>| {
         hover_x.set(None);
         hover_track.set(None);
+        hover_muted.set(false);
         if hovered.peek().is_some() {
             hovered.set(None);
         }
@@ -1112,6 +1127,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         rsx! {
             SliderHoverPreview {
                 hovered,
+                muted: hover_muted,
                 dragging: drag.dragging,
                 min,
                 max,

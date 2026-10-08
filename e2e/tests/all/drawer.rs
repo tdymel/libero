@@ -1,7 +1,7 @@
 //! `Drawer`: the overlay archetype, docked to an edge. It escaped todo 327 by geometry
 //! alone; `contrast_covers` makes that an assertion.
 
-use anyhow::Result;
+use anyhow::{Result, ensure};
 use e2e::archetypes::{self, Overlay};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
@@ -78,6 +78,35 @@ e2e::scenario!(
     escape_closes_a_drawer_and_returns_focus,
     "/drawer",
     escape_closes
+);
+
+/// Todo 2600: `DrawerOptions::ondismiss` hears each dismissal and keeps a draft open;
+/// with the draft gone, Escape closes.
+async fn a_draft_vetoes_dismissal<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    modal::open(d, TRIGGER).await?;
+    d.click("#dirty").await?;
+    d.press(keyboard::ESCAPE).await?;
+    // The end of the viewport, away from the start-docked panel.
+    let (vw, vh) = d.viewport().await?;
+    d.click_at(vw - 4.0, vh - 4.0).await?;
+    eventually(d, "Escape and the backdrop to be refused", async |d| {
+        Ok(d.text("#reasons").await? == "Escape,Backdrop")
+    })
+    .await?;
+    ensure!(
+        d.exists(DIALOG).await?,
+        "a refused dismissal closed the drawer"
+    );
+    d.click("#dirty").await?;
+    d.press(keyboard::ESCAPE).await?;
+    modal::closed_with_focus_on(d, TRIGGER, "Escape without a draft").await
+}
+
+e2e::scenario!(
+    ondismiss_keeps_a_drawer_open,
+    "/drawer/guarded",
+    a_draft_vetoes_dismissal,
+    android: skip("958: element identity on the WebView")
 );
 
 /// Android's Back closes the drawer, and the app stays (1289).
