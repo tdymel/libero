@@ -1,7 +1,7 @@
 //! `Collapse`, for the motion checks.
 
 use dioxus::prelude::*;
-use libero::components::{Button, Collapse, Flex, Text};
+use libero::components::{Button, Collapse, Flex, Text, Transition};
 
 use crate::Routes;
 
@@ -9,7 +9,33 @@ pub const ROUTES: Routes = &[
     ("/collapse", || rsx! { CollapsePage {} }),
     ("/collapse-kept", || rsx! { KeptPage {} }),
     ("/collapse-nested", || rsx! { NestedPage {} }),
+    ("/collapse-transition", || rsx! { TransitionInsidePage {} }),
 ];
+
+/// Todo 2578: an open `Transition` inside a closed kept panel must stay hidden with it.
+#[component]
+fn TransitionInsidePage() -> Element {
+    let mut open = use_signal(|| false);
+
+    rsx! {
+        Flex { id: "transition-frame", direction: "column", gap: "md", max_width: "320px",
+            Button {
+                id: "toggle-wrapper",
+                variant: "outlined",
+                aria_expanded: open(),
+                aria_controls: "wrapper",
+                onclick: move |_| open.toggle(),
+                "Details"
+            }
+            Collapse { id: "wrapper", open: open(),
+                Transition { id: "fade",
+                    Button { id: "faded", "Faded" }
+                }
+            }
+            Button { id: "after-transition", variant: "outlined", "After" }
+        }
+    }
+}
 
 /// Todo 2531: an open kept panel inside a closed one must stay hidden with it.
 #[component]

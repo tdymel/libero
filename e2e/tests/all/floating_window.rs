@@ -184,6 +184,53 @@ fn a_keyboard_resize_moves_the_grips_corner_of_an_anchored_window() {
     });
 }
 
+/// Todo 2631: under RTL the grip is the bottom-left corner, so an anchored window's
+/// arrows keep its top-right corner and the right edge stays through a widen.
+#[test]
+fn under_rtl_a_keyboard_resize_moves_the_grips_corner_of_an_anchored_window() {
+    block_on(async {
+        let fixture = Fixture::open("/floating-window-anchored", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate("document.documentElement.dir = 'rtl'")
+            .await
+            .unwrap();
+        open(page).await.unwrap();
+        keyboard::tab_to(page, SEPARATOR, TAB_BUDGET).await.unwrap();
+
+        let before = rect(page, DIALOG).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+        let narrower = wait_for_size(page, (before.2 - STEP, before.3), "a step right")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ARROW_UP).await.unwrap();
+        let shorter = wait_for_size(page, (narrower.2, before.3 - STEP), "a step up")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ARROW_LEFT).await.unwrap();
+        let wider = wait_for_size(page, (before.2, shorter.3), "a step left")
+            .await
+            .unwrap();
+        for (what, drawn) in [
+            ("narrower", narrower),
+            ("shorter", shorter),
+            ("wider", wider),
+        ] {
+            assert!(
+                (drawn.0 + drawn.2 - (before.0 + before.2)).abs() <= 1.0
+                    && (drawn.1 - before.1).abs() <= 1.0,
+                "the top-right corner moved ({what}): {before:?} -> {drawn:?}"
+            );
+        }
+        fixture
+            .console
+            .assert_clean("an RTL anchored resize")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 pub async fn keyboard_resize(page: &Page) -> Result<()> {
     open(page).await?;
     let ring = focus::assert_focus_ring(page, SEPARATOR, TAB_BUDGET).await?;

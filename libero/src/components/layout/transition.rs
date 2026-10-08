@@ -59,9 +59,10 @@ static TRANSITION_BASE_SX: StaticSx = StaticSx::new(|| {
     let easing = TRANSITION_EASING.value();
 
     sx().transform_origin(TRANSITION_ORIGIN.value())
+        // `inherit`, not `visible`: an open transition stays hidden in a closed `Collapse` (todo 2578).
         .when(
             "open",
-            sx().opacity("1").transform("none").visibility("visible"),
+            sx().opacity("1").transform("none").visibility("inherit"),
         )
         .when(
             "closed",
@@ -381,6 +382,16 @@ mod tests {
                 "{kind:?}: {variables}"
             );
         }
+    }
+
+    /// Todo 2578: an explicit `visible` would punch through a closed ancestor.
+    #[test]
+    fn an_open_transition_inherits_its_ancestors_visibility() {
+        let sheet = crate::css::Stylesheet::from(&TRANSITION_BASE_SX);
+        let css = sheet.as_str();
+
+        assert!(css.contains("visibility:inherit"), "{css}");
+        assert!(!css.contains("visibility:visible"), "{css}");
     }
 
     #[test]

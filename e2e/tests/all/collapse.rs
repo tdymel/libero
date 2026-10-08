@@ -160,3 +160,39 @@ fn an_open_panel_inside_a_closed_one_is_neither_focusable_nor_announced() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 2578: an open `Transition` inside a closed panel is hidden with it, and
+/// reachable once the panel opens.
+#[test]
+fn an_open_transition_inside_a_closed_panel_is_neither_focusable_nor_announced() {
+    block_on(async {
+        let fixture = Fixture::open("/collapse-transition", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#toggle-wrapper").await.unwrap();
+        let focus_trigger = "document.querySelector('#toggle-wrapper').focus()";
+
+        page.evaluate(focus_trigger).await.unwrap();
+        keyboard::press(page, TAB).await.unwrap();
+        focus::wait_for_focus(page, "#after-transition", "Tab past the closed panel")
+            .await
+            .unwrap();
+        let closed = ax::snapshot(page, "#transition-frame").await.unwrap();
+        assert!(!closed.contains("Faded"), "transition announced: {closed}");
+
+        pointer::click(page, "#toggle-wrapper").await.unwrap();
+        wait::for_visible(page, "#faded").await.unwrap();
+        page.evaluate(focus_trigger).await.unwrap();
+        keyboard::press(page, TAB).await.unwrap();
+        focus::wait_for_focus(page, "#faded", "Tab into the open panel's transition")
+            .await
+            .unwrap();
+
+        fixture
+            .console
+            .assert_clean("the transition in a collapse")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

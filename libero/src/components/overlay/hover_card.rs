@@ -14,7 +14,7 @@ use crate::{
         use_resize_fallback, use_theme,
     },
     platform::{ElementApi, PlatformError, next_task},
-    sx::StaticSx,
+    sx::{StaticSx, sx},
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
 };
 
@@ -26,7 +26,9 @@ static HOVER_CARD_SX: StaticSx = StaticSx::new(|| {
         // Never past the room on its side: it scrolls instead (WCAG 1.4.10).
         .max_height(POPOVER_AVAILABLE_HEIGHT.value_or("none"))
         .overflow_y("auto")
-        // The text-only card's tab stop, so the keyboard can scroll it.
+        // The text-only card's tab stop, so the keyboard can scroll it; the padding keeps
+        // text clear of the ring's band.
+        .selector("& > [tabindex]", sx().padding("2px"))
         .selector("& > [tabindex]:focus-visible", inset_focus_ring_sx("-2px"))
 });
 

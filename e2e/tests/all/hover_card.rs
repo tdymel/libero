@@ -4,7 +4,7 @@
 use anyhow::{Result, ensure};
 use e2e::browser::block_on;
 use e2e::clock;
-use e2e::driver::{Driver, eventually, eventually_focused};
+use e2e::driver::{Driver, Platform, eventually, eventually_focused};
 use e2e::passes::{focus, keyboard, pointer};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
@@ -257,46 +257,129 @@ fn the_pointer_opens_and_closes_it_on_its_delays() {
     });
 }
 
-/// Todo 2445: a text card that scrolls is a tab stop the arrows scroll; one that fits is none.
+const TEXT_STOP: &str = "[role=dialog] > [tabindex='0']";
+
+/// Opens the scrolling card by keyboard and Tabs into its text stop.
+async fn tab_into_the_text_stop<D: Driver>(d: &mut D) -> Result<()> {
+    d.focus(BEFORE).await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, TRIGGER, "Tab from Before").await?;
+    shown(d, CARD, true, "Tab onto the trigger").await?;
+    eventually(d, "the overflowing card to become a tab stop", async |d| {
+        d.exists(TEXT_STOP).await
+    })
+    .await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, TEXT_STOP, "Tab from the trigger into the card").await
+}
+
+async fn a_scrolling_card_is_a_tab_stop<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    tab_into_the_text_stop(d).await?;
+    // Blitz does not scroll a focused element by key.
+    if d.platform() == Platform::Web {
+        let top = d.rect(TEXT_STOP).await?.y;
+        d.press(keyboard::ARROW_DOWN).await?;
+        eventually(d, "ArrowDown to scroll the card", async |d| {
+            Ok(d.rect(TEXT_STOP).await?.y < top)
+        })
+        .await?;
+    }
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, AFTER, "Tab out of the card").await
+}
+
+// Todo 2445: a text card that scrolls is a tab stop the arrows scroll.
+e2e::scenario!(
+    a_scrolling_text_card_takes_a_tab_stop_that_scrolls_it,
+    "/hover-card-scroll",
+    a_scrolling_card_is_a_tab_stop,
+    android: skip("958: the Tab bridge reads the card's focusables inside a handler"),
+    desktop: skip("958: the Tab bridge reads the card's focusables inside a handler")
+);
+
+#[derive(serde::Deserialize)]
+struct StopRing {
+    padding: f64,
+    inside_card: bool,
+    clipped_x: bool,
+    outline_alpha: f64,
+    stripe: String,
+    card_fill: String,
+}
+
+/// Todo 2631: the text stop's ring stays inside the card, clear of the text, at 200% text,
+/// in the dark scheme and in forced colours.
 #[test]
-fn a_scrolling_text_card_takes_a_tab_stop_that_scrolls_it() {
-    const STOP: &str = "[role=dialog] > [tabindex='0']";
+fn the_text_stop_ring_shows_at_200_percent_text_dark_and_in_forced_colours() {
+    const PROBE: &str = "(() => { const stop = document.querySelector(\"[role=dialog] > [tabindex='0']\"); \
+        const card = stop.parentElement, style = getComputedStyle(stop); \
+        const a = stop.getBoundingClientRect(), b = card.getBoundingClientRect(); \
+        const colour = (style.boxShadow.match(/rgba?\\([^)]*\\)/g) || [])[4] || ''; \
+        const outline = (style.outlineColor.match(/[\\d.]+/g) || []).map(Number); \
+        return { padding: parseFloat(style.paddingLeft), \
+          inside_card: a.left >= b.left && a.right <= b.right && b.bottom <= innerHeight, \
+          clipped_x: stop.scrollWidth > stop.clientWidth + 1, \
+          outline_alpha: outline.length > 3 ? outline[3] : 1, stripe: colour, \
+          card_fill: getComputedStyle(card).backgroundColor }; })()";
     block_on(async {
-        let fixture = Fixture::open("/hover-card-scroll", Viewport::Desktop)
+        for (dark, forced) in [(false, false), (true, false), (false, true)] {
+            let what = format!("dark {dark}, forced {forced}");
+            let fixture = Fixture::open("/hover-card-scroll", Viewport::Desktop)
+                .await
+                .unwrap();
+            let page = &fixture.page;
+            page.evaluate("document.documentElement.style.fontSize = '200%'")
+                .await
+                .unwrap();
+            if dark {
+                e2e::browser::emulate_media(page, e2e::browser::Scheme::Dark, None)
+                    .await
+                    .unwrap();
+            }
+            if forced {
+                e2e::browser::force_colours(page).await.unwrap();
+            }
+            keyboard::tab_to(page, "#trigger", 5).await.unwrap();
+            wait::for_visible(page, CARD).await.unwrap();
+            wait::for_js_true(
+                page,
+                &format!("!!document.querySelector(\"{TEXT_STOP}\")"),
+                "the overflowing text card to become a tab stop",
+            )
             .await
             .unwrap();
-        let page = &fixture.page;
+            keyboard::press(page, keyboard::TAB).await.unwrap();
+            focus::wait_for_focus(page, TEXT_STOP, "Tab into the text stop")
+                .await
+                .unwrap();
 
-        keyboard::tab_to(page, "#trigger", 5).await.unwrap();
-        wait::for_visible(page, "[role=dialog]").await.unwrap();
-        wait::for_js_true(
-            page,
-            &format!("!!document.querySelector(\"{STOP}\")"),
-            "the overflowing text card to become a tab stop",
-        )
-        .await
-        .unwrap();
+            let ring: StopRing = page.evaluate(PROBE).await.unwrap().into_value().unwrap();
+            assert!(ring.padding >= 2.0, "{what}: text under the ring band");
+            assert!(
+                ring.inside_card,
+                "{what}: the stop left the card or viewport"
+            );
+            assert!(!ring.clipped_x, "{what}: the text overflows sideways");
+            if forced {
+                assert!(ring.outline_alpha > 0.0, "{what}: the outline vanished");
+            } else {
+                assert!(
+                    !ring.stripe.is_empty() && ring.stripe != ring.card_fill,
+                    "{what}: the stripe {} is the card's fill {}",
+                    ring.stripe,
+                    ring.card_fill
+                );
+            }
+            fixture.console.assert_clean(&what).unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
 
-        keyboard::press(page, keyboard::TAB).await.unwrap();
-        focus::wait_for_focus(page, STOP, "Tab from the trigger into the card")
-            .await
-            .unwrap();
-        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
-        wait::for_js_true(
-            page,
-            "document.querySelector('[role=dialog]').scrollTop > 0",
-            "ArrowDown to scroll the card",
-        )
-        .await
-        .unwrap();
-
-        keyboard::press(page, keyboard::TAB).await.unwrap();
-        focus::wait_for_focus(page, "#after", "Tab out of the card")
-            .await
-            .unwrap();
-        fixture.console.assert_clean("a scrolling card").unwrap();
-        fixture.close().await.unwrap();
-
+/// Todo 2445: a text card that fits takes no tab stop.
+#[test]
+fn a_text_card_that_fits_takes_no_tab_stop() {
+    block_on(async {
         let fixture = Fixture::open("/hover-card-text", Viewport::Desktop)
             .await
             .unwrap();
@@ -306,7 +389,7 @@ fn a_scrolling_text_card_takes_a_tab_stop_that_scrolls_it() {
             .unwrap();
         crate::settle::painted(&fixture.page).await.unwrap();
         assert!(
-            !wait::exists(&fixture.page, STOP).await.unwrap(),
+            !wait::exists(&fixture.page, TEXT_STOP).await.unwrap(),
             "a card that fits took a tab stop"
         );
         // A plain-text trigger warns, by design.
