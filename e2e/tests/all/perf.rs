@@ -275,6 +275,7 @@ fn a_multi_select_pick_stays_in_budget() {
 
 /// The rows a key or an arrow leaves alone skip (todo 2022). A kept row keeps its key, id and
 /// pick slot through a filter, so only the highlight's old and new rows redraw (todo 2046).
+/// The first key drops below the 200-row window threshold, so all 138 rows mount once (todo 2709).
 #[test]
 fn a_searchable_select_filter_and_arrow_stay_in_budget() {
     block_on(async {
@@ -302,16 +303,16 @@ fn a_searchable_select_filter_and_arrow_stay_in_budget() {
                 ("ComboboxCore", 1),
                 ("ComboboxPopup", 1),
                 ("ComboboxDropdown", 1),
-                ("ComboboxRow", 2),
-                ("ComboboxOption", 2),
+                ("ComboboxRow", 138),
+                ("ComboboxOption", 138),
                 ("ScrollArea", 1),
-                ("ScrollAreaContent", 1),
+                ("ScrollAreaContent", 2),
                 ("ScrollAreaBars", 2),
                 ("Fragment", 1),
                 ("PortalOutlet", 1),
                 ("StyleOutlet", 1),
             ],
-            "a key filtering 300 rows to 138",
+            "a key filtering 300 windowed rows to 138",
         );
         reset(page).await;
         keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
@@ -336,6 +337,30 @@ fn a_searchable_select_filter_and_arrow_stay_in_budget() {
                 ("StyleOutlet", 1),
             ],
             "an arrow over 138 rows",
+        );
+        reset(page).await;
+        keyboard::type_text(page, "0").await.unwrap();
+        wait::for_js_true(page, &option_count_is(13), "the second filter")
+            .await
+            .unwrap();
+        let refiltered = settled(page, "filtering again").await;
+        assert_within(
+            &refiltered,
+            &[
+                ("SelectCore", 1),
+                ("ComboboxCore", 1),
+                ("ComboboxPopup", 1),
+                ("ComboboxDropdown", 1),
+                ("ComboboxRow", 2),
+                ("ComboboxOption", 2),
+                ("ScrollArea", 1),
+                ("ScrollAreaContent", 1),
+                ("ScrollAreaBars", 2),
+                ("Fragment", 1),
+                ("PortalOutlet", 1),
+                ("StyleOutlet", 1),
+            ],
+            "a key filtering 138 drawn rows to 13",
         );
         fixture
             .console

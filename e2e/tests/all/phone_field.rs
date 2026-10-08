@@ -237,12 +237,31 @@ fn it_meets_the_baseline() {
         .focusable(PICKER)
         .focusable(TEL)
         .targets(PICKER)
+        // Filtered below the 200-row window (todo 2234): a window's drawn rows vary with timing.
         .state(
             "open",
-            &[Step::TabTo(PICKER), Step::Press(keyboard::ENTER)],
-            "[role=listbox]",
+            const {
+                &[
+                    Step::TabTo(PICKER),
+                    Step::Press(keyboard::ENTER),
+                    Step::Press(letter("g", "KeyG", 71)),
+                    Step::Press(letter("e", "KeyE", 69)),
+                    Step::Press(letter("r", "KeyR", 82)),
+                ]
+            },
+            // Only a windowed row carries `aria-posinset`.
+            "[role=listbox] [role=option][aria-selected=true]:not([aria-posinset])",
         )
         .run();
+}
+
+const fn letter(text: &'static str, code: &'static str, vk: i64) -> keyboard::Key {
+    keyboard::Key {
+        key: text,
+        code,
+        vk,
+        text: Some(text),
+    }
 }
 
 #[test]
@@ -451,8 +470,35 @@ fn the_list_sorts_by_the_localized_name() {
         keyboard::tab_to(page, PICKER, 10).await.unwrap();
         keyboard::press(page, keyboard::ENTER).await.unwrap();
         wait_open(page, "Enter").await;
+        // Windowed above 200 rows (todo 2234): scroll through, keying each drawn name by its offset.
         let names: Vec<String> = page
-            .evaluate("[...document.querySelectorAll('[role=option] [data-slot=name]')].map(n => n.textContent)")
+            .evaluate(
+                r#"(async () => {
+                const list = document.querySelector('[role=listbox]');
+                const area = [list, ...list.querySelectorAll('*')].find(e => e.scrollHeight > e.clientHeight + 100);
+                const frame = () => new Promise(requestAnimationFrame);
+                const names = new Map();
+                for (let top = 0; ; top = Math.min(top + area.clientHeight, area.scrollHeight - area.clientHeight)) {
+                    const view = area.getBoundingClientRect();
+                    let rows = [];
+                    for (let i = 0; ; i++) {
+                        if (i === 120) throw new Error(`no rows drawn over the view at ${top}px`);
+                        // Again if the open's own scroll to the highlight landed after ours.
+                        if (Math.abs(area.scrollTop - top) > 1) area.scrollTop = top;
+                        await frame();
+                        rows = [...list.querySelectorAll('[role=option]')].map(o => [o, o.getBoundingClientRect()]);
+                        if (Math.abs(area.scrollTop - top) <= 1 && rows.some(([, r]) => r.top <= view.top + 1)
+                            && rows.some(([, r]) => r.bottom >= view.bottom - 1)) break;
+                    }
+                    // In view only: the highlight's kept row draws beside the window, not at its place.
+                    for (const [o, r] of rows.filter(([, r]) => r.bottom > view.top + 1 && r.top < view.bottom - 1)) {
+                        names.set(Math.round(r.top - view.top + area.scrollTop), o.querySelector('[data-slot=name]').textContent);
+                    }
+                    if (top >= area.scrollHeight - area.clientHeight - 1) break;
+                }
+                return [...names].sort((a, b) => a[0] - b[0]).map(([, name]) => name);
+            })()"#,
+            )
             .await
             .unwrap()
             .into_value()

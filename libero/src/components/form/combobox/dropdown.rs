@@ -109,10 +109,15 @@ pub(super) fn ComboboxDropdown(
         let y = windowed.active_slot.map(|slot| slot as f64 / last * 100.0);
         (y, windowed.slots.len() as f64 * row_height)
     });
+    // A newer list (a filter below the threshold, say) retires a pending follow (todo 2709).
+    let mut follows = use_hook(|| CopyValue::new(0u32));
     use_effect(use_reactive!(|follow| {
+        let run = *follows.peek() + 1;
+        follows.set(run);
+        let live = move || follows.try_peek().is_ok_and(|now| *now == run);
         if let Some((y, height)) = follow {
             // Natively a scroll in the render's own poll was lost (the PageDown e2e).
-            when_laid_out(move || follow_highlight(area, y, height, FOLLOW_TRIES));
+            when_laid_out(move || follow_highlight(area, y, height, FOLLOW_TRIES, live));
         }
     }));
 
@@ -303,9 +308,15 @@ impl Windowed {
 
 /// Scrolls a windowed list to `y` percent once its padding stands for every slot. A height that
 /// never matches means rows off the theme's row height, which the window can't place.
-fn follow_highlight(area: ScrollAreaHandle, y: Option<f64>, height: f64, tries: u8) {
+fn follow_highlight(
+    area: ScrollAreaHandle,
+    y: Option<f64>,
+    height: f64,
+    tries: u8,
+    live: impl Fn() -> bool + Copy + 'static,
+) {
     let element = area.element;
-    if !element.is_mounted() {
+    if !element.is_mounted() || !live() {
         return;
     }
     let size = element.scroll_size();
@@ -313,10 +324,13 @@ fn follow_highlight(area: ScrollAreaHandle, y: Option<f64>, height: f64, tries: 
         let Ok(size) = size.await else {
             return;
         };
+        if !live() {
+            return;
+        }
         let off = (size.height - height).abs() > 1.0;
         if off && tries > 0 {
             next_task().await;
-            return when_laid_out(move || follow_highlight(area, y, height, tries - 1));
+            return when_laid_out(move || follow_highlight(area, y, height, tries - 1, live));
         }
         if off && cfg!(debug_assertions) {
             warn(&format!(
