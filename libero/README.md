@@ -1,57 +1,73 @@
-# Libero
+<p align="center">
+  <img src="https://raw.githubusercontent.com/tdymel/libero/main/docs/assets/logo.svg" alt="Libero" width="240">
+</p>
 
-A [Dioxus](https://dioxuslabs.com) component library focused on developer experience, UX, accessibility, and configurability.
+<p align="center"><strong>Focus on your game, while Libero has your back!</strong></p>
 
-Libero provides a themeable set of components (`Button`, `Flex`, `Select`, `Image`, `Backdrop`, `FocusTrap`, ...) styled through a small `sx` builder, so you get ergonomic, theme-aware styling without leaving Rust or reaching for a CSS framework.
+Libero is a component library for Rust and [Dioxus](https://dioxuslabs.com).
+Like the libero on a volleyball court, it covers the defence: accessibility,
+keyboard support and theming are handled, so you can focus on your app.
 
-## Example
+- 100+ components and hooks, accessible and keyboard-ready
+- A typed `sx` builder for theme-aware styling, all in Rust
+- 20+ ready-made themes, or your own
+- One codebase for the web, the desktop and Android (iOS builds, untested)
+
+## A taste
 
 ```rust
-use dioxus::prelude::*;
-use libero::{
-    components::{Button, Flex, Title},
-    sx::sx,
-    LiberoProvider,
-};
+#[derive(Clone, PartialEq, Default, Fields)]
+struct Booking {
+    name: String,
+    day: Option<NaiveDate>,
+    terrace: bool,
+}
 
-fn app() -> Element {
+#[component]
+fn BookingForm() -> Element {
+    let booking = use_store(Booking::default);
+    let notify = use_notifications();
+
     rsx! {
-        LiberoProvider {
-            Flex {
-                direction: "column",
-                gap: "md",
-                sx: sx().padding_top("md"),
-                Title { variant: "h1", "Welcome to Libero" }
-                Button {
-                    variant: "filled",
-                    color: "primary",
-                    onclick: move |_| println!("clicked"),
-                    "Get started"
-                }
+        Form {
+            value: booking,
+            onsubmit: move |_| notify.show("Table booked."),
+            TextField {
+                label: "Name",
+                name: Booking::FIELDS.name(),
+                validate: not_empty.error("Enter a name."),
             }
+            DateField { label: "Day", name: Booking::FIELDS.day() }
+            Switch { label: "On the terrace", name: Booking::FIELDS.terrace() }
+            Button { r#type: "submit", "Book" }
         }
     }
 }
 ```
 
-## Features
+See it running, with every component and its live demos, at
+**[libero-ui.dev](https://libero-ui.dev)**.
 
-All additive. The default set is five `code-lang-*` highlighter grammars
-(Rust, Bash, Markdown, HTML and CSS).
+## Installation
 
-- `code-lang-*` - one hand-ported grammar each for `Code` and `CodeBlock`, 30
-  in all. With `default-features = false` you compile only the ones you name.
-- `full-polymorphism` - `Box`'s `component` prop accepts all 111 HTML5 element
-  names, and 83 of them (every sectioning, text-level, list, table and form
-  element) render on default features. This adds the remaining 28: document
-  metadata, embedded and media content, `template`/`slot`, and the bidi and
-  ruby set. Without it those render as a `div`, silently in a release build.
-- `native` - reach elements through Blitz when running under `dioxus-native`,
-  instead of Dioxus's portable mounted handle.
+Libero is not on crates.io yet. Until the first release, install it from this
+repository, with dioxus from git too (libero tracks Dioxus `main`):
 
-## Status
+```shell
+cargo add dioxus --git https://github.com/DioxusLabs/dioxus
+cargo add libero --git https://github.com/tdymel/libero
+```
 
-Libero is a work in progress. APIs may change between `0.x` releases.
+[Getting started](https://libero-ui.dev/about/getting-started) covers the
+setup, each platform and the feature flags.
+
+## AI disclaimer
+
+Libero's implementation is heavily driven by AI coding agents. The
+architectural decisions and the code reviews are made by humans, and an
+extensive test suite backs every change, but expect the rough edges of a
+pre-release. Libero is a work in progress, and APIs may change
+between `0.x` releases.
 
 ## License
 
