@@ -29,17 +29,26 @@ fn BookingForm() -> Element {
     let notify = use_notifications();
 
     rsx! {
-        Form {
-            value: booking,
-            onsubmit: move |_| notify.show("Table booked."),
-            TextField {
-                label: "Name",
-                name: Booking::FIELDS.name(),
-                validate: not_empty.error("Enter a name."),
+        Paper {
+            shadow: "lg",
+            // Typed, theme-aware styling: spacing tokens, palette colours, breakpoints.
+            sx: sx()
+                .padding("md")
+                .border_top("4px solid")
+                .border_color("primary.6")
+                .breakpoint(Size::Md, sx().padding("xl").max_width("440px")),
+            Form {
+                value: booking,
+                onsubmit: move |_| notify.show("Table booked."),
+                TextField {
+                    label: "Name",
+                    name: Booking::FIELDS.name(),
+                    validate: not_empty.error("Enter a name."),
+                }
+                DateField { label: "Day", name: Booking::FIELDS.day() }
+                Switch { label: "On the terrace", name: Booking::FIELDS.terrace() }
+                Button { r#type: "submit", "Book" }
             }
-            DateField { label: "Day", name: Booking::FIELDS.day() }
-            Switch { label: "On the terrace", name: Booking::FIELDS.terrace() }
-            Button { r#type: "submit", "Book" }
         }
     }
 }
