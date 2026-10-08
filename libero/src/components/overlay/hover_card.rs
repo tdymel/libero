@@ -6,7 +6,10 @@ use super::hover_intent::{TRIGGER_WRAPPER_SX, use_hover_intent};
 use crate::{
     components::{
         accessibility::{focus_edge, focus_first_stop, tab_stops},
-        common::{FOCUSABLE_SELECTOR, HtmlTag, Input, States, base_props, inset_focus_ring_sx},
+        common::{
+            FOCUSABLE_SELECTOR, HtmlTag, Input, States, base_props, input_from_str,
+            inset_focus_ring_sx,
+        },
         layout::{paper_sx, scroll_on_key, use_box},
     },
     hooks::{
@@ -18,6 +21,8 @@ use crate::{
     sx::{StaticSx, sx},
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
 };
+
+input_from_str!(Align);
 
 // `paper_sx()` through `use_box`, not `Paper`: it needs the popover's element and events.
 static HOVER_CARD_SX: StaticSx = StaticSx::new(|| {
@@ -51,10 +56,10 @@ base_props! {
         /// What the card shows; it may hold links and buttons.
         content: Element,
         /// The preferred side. The card flips when that side has no room.
-        #[props(default)]
-        side: Side,
-        #[props(default)]
-        align: Align,
+        #[props(default, into)]
+        side: Input<Side>,
+        #[props(default, into)]
+        align: Input<Align>,
         /// Milliseconds the pointer must rest before the card opens.
         #[props(default)]
         open_delay: Option<u32>,
@@ -111,9 +116,11 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         anchor,
         use_element(),
         open,
-        PopoverOptions::new(theme.popover.gap, theme.popover.padding)
-            .side(props.side)
-            .align(props.align),
+        PopoverOptions {
+            side: props.side.copied_or(defaults.side),
+            align: props.align.copied_or(defaults.align),
+            ..PopoverOptions::new(theme.popover.gap, theme.popover.padding)
+        },
     );
     let floating = *popover.floating();
     let placed = popover.placed();

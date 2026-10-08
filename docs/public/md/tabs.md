@@ -146,8 +146,8 @@ text name for screen readers.
 | `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Overrides a tab's label. Runs during render, so it can read a locale. |
 | `size` | `Size` | `md` | Tab strip size. |
 | `color` | `ThemeAwareValue` | `primary` | Indicator and selected-label color. |
-| `full_width` | `bool` | `false` | Tabs grow to fill the row, never below their label. A crowded strip still scrolls. |
-| `activation` | `TabsActivation` | `Automatic` | `Automatic` selects as the arrows move. `Manual` moves only the focus, and Enter or Space selects. Use it for slow panels. |
+| `full_width` | `bool` | `false` | Tabs grow to fill the row, never below their label. A crowded strip still scrolls. Not themed. |
+| `activation` | `TabsActivation` | `automatic` | `Automatic` selects as the arrows move. `Manual` moves only the focus, and Enter or Space selects. Use it for slow panels. |
 | `parts` | `Parts<TabsPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 `Tabs` also takes the shared props `sx`, `class`, `states`, and any extra HTML
@@ -213,6 +213,8 @@ tab.
 | Field | Type | Description |
 |---|---|---|
 | `size` | `Size` | Default `size` when the prop is omitted. |
+| `color` | `Color` | Default `color` when the prop is omitted. |
+| `activation` | `TabsActivation` | Default `activation` when the prop is omitted. |
 | `sizes` | `Sizes<TabsSizeLevel>` | `font_size`, `padding_x`, `padding_y`, `indicator`, `icon_gap` per size. |
 | `border_color` | `ColorValue` | The line the whole strip sits on. |
 | `hover_color` | `ColorValue` | Background of an unselected tab while hovered. |

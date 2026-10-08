@@ -7,22 +7,10 @@ use crate::{
         input_from_str, parts_enum, parts_under_sx,
     },
     hooks::{use_root_id, use_theme},
-    str_enum::str_enum,
     sx::{Sx, ThemeAwareValue},
-    theme::Size,
+    theme::{Size, TabsActivation},
     utils::warn,
 };
-
-str_enum! {
-    /// When an arrow key selects the tab it moves to.
-    pub enum TabsActivation {
-        /// Arrows select as they move: the panel follows the focus.
-        #[default]
-        Automatic = "automatic",
-        /// Arrows only move the focus; Enter or Space selects. For slow panels.
-        Manual = "manual",
-    }
-}
 
 input_from_str!(TabsActivation);
 
@@ -153,15 +141,21 @@ pub fn Tabs<T: Options>(props: TabsProps<T>) -> Element {
         }
     });
 
+    let color = props
+        .color
+        .as_ref()
+        .cloned()
+        .unwrap_or_else(|| ThemeAwareValue::from(theme.tabs.color));
+
     render_tabs(
         TabsView {
             tabs,
             selected,
             panel,
             onselect: pick,
-            color: base_color(props.color.as_ref()),
+            color: base_color(Some(&color)),
             full_width: props.full_width.unwrap_or(false),
-            manual: props.activation.copied_or(TabsActivation::Automatic) == TabsActivation::Manual,
+            manual: props.activation.copied_or(theme.tabs.activation) == TabsActivation::Manual,
             focusable: true,
             panel_stop: true,
             size: props.size.copied_or(theme.tabs.size),

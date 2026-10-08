@@ -91,6 +91,7 @@ mod theme_switcher;
 mod timeline;
 mod title;
 mod tldr;
+mod toolbar;
 mod tooltip;
 mod tour;
 mod transition;
@@ -339,7 +340,8 @@ pub use table::{
 };
 pub use tabs::{
     TABS_BORDER_COLOR, TABS_FONT_SIZE, TABS_GAP, TABS_HOVER, TABS_ICON_GAP, TABS_INDICATOR,
-    TABS_LINE, TABS_PAD_X, TABS_PAD_Y, TABS_PADDING_X, TABS_PADDING_Y, TabsDefaults, TabsSizeLevel,
+    TABS_LINE, TABS_PAD_X, TABS_PAD_Y, TABS_PADDING_X, TABS_PADDING_Y, TabsActivation,
+    TabsDefaults, TabsSizeLevel,
 };
 pub use tags_field::TagsFieldDefaults;
 pub use text::{
@@ -360,6 +362,7 @@ pub use title::{
     TitleDefaults, TitleSizeLevel,
 };
 pub use tldr::TldrDefaults;
+pub use toolbar::ToolbarDefaults;
 pub use tooltip::{
     TOOLTIP_BACKGROUND, TOOLTIP_COLOR, TOOLTIP_DURATION, TOOLTIP_FONT_SIZE, TooltipDefaults,
 };

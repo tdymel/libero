@@ -46,10 +46,10 @@ pub fn HoverCardPage() -> Element {
                     .default("required")
                     .doc("The trigger. It must hold a link or a button, since focus is the keyboard's only way to open the card."),
                 prop("side", "Side")
-                    .default("Bottom")
+                    .default(theme.hover_card.side.as_str())
                     .doc("Which side of the trigger the card opens on. It flips when that side has no room."),
                 prop("align", "Align")
-                    .default("Start")
+                    .default(theme.hover_card.align.as_str())
                     .doc("Where the card lines up along that side."),
                 prop("open_delay", "u32")
                     .default(theme.hover_card.open_delay.to_string())

@@ -12,6 +12,7 @@ where
 /// `direction: FlexDirection::Row` compiles like `direction: "row"`.
 #[test]
 fn every_str_enum_input_takes_its_own_value() {
+    converts::<Align>();
     converts::<AnchorUnderline>();
     converts::<CalendarVariant>();
     converts::<CarouselAlign>();

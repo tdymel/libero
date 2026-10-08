@@ -55,6 +55,11 @@ str_enum! {
 /// Pixels, not a `Size`: `use_popover` does arithmetic with measured rects.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PopoverDefaults {
+    /// The `side` and `align` a caller of `use_popover` starts from, as
+    /// `PopoverOptions { side: theme.popover.side, ..PopoverOptions::new(gap, padding) }`.
+    /// `PopoverOptions::new` and the built-in dropdowns keep `Bottom` and `Start`.
+    pub side: Side,
+    pub align: Align,
     /// Distance from the anchor.
     pub gap: f64,
     /// How close to a viewport edge the box may come before it flips or shifts.
@@ -63,6 +68,8 @@ pub struct PopoverDefaults {
 
 impl PopoverDefaults {
     pub const DEFAULT: Self = Self {
+        side: Side::Bottom,
+        align: Align::Start,
         gap: 4.0,
         padding: 8.0,
     };

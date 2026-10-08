@@ -11,7 +11,7 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::{ElementHandle, Hotkey, use_element, use_focus_return, use_hotkeys},
+    hooks::{ElementHandle, Hotkey, use_element, use_focus_return, use_hotkeys, use_theme},
     platform::{
         ElementApi, FocusStep, arrow_target, caret_edges, focus_among, focus_entered_from,
         focus_lands_in, focus_selector, focused_attribute, key_taken, logical_key, silent_focus,
@@ -84,7 +84,7 @@ base_props! {
         /// Unset, `"horizontal"`: Left and Right move. `"vertical"`: Up and Down.
         #[props(default, into)]
         orientation: Input<Orientation>,
-        /// Whether the arrow keys wrap at the ends. Unset, `true`.
+        /// Whether the arrow keys wrap at the ends. Unset, the theme's.
         #[props(default)]
         loop_focus: Option<bool>,
         /// The element the bar serves, such as an editor: Alt+F10 inside it moves focus
@@ -123,7 +123,7 @@ base_props! {
 #[component]
 pub fn Toolbar(props: ToolbarProps) -> Element {
     let orientation = props.orientation.copied_or(Orientation::Horizontal);
-    let loop_focus = props.loop_focus.unwrap_or(true);
+    let loop_focus = props.loop_focus.unwrap_or(use_theme().toolbar.loop_focus);
     let scope = use_provide_toolbar(orientation);
     let bar = use_element();
 

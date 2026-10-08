@@ -453,3 +453,66 @@ mod size {
         assert!(html.contains(&radius), "{html}");
     }
 }
+
+/// A theme's `color` reaches the Tabs that leave their own unset. The key and
+/// placement defaults (Tabs `activation`, Toolbar `loop_focus`, HoverCard `side`) need a browser: `e2e` `theme_defaults::`.
+mod tabs_color {
+    use crate::common::{body, render_with};
+
+    use dioxus::prelude::*;
+    use libero::{
+        LiberoProvider,
+        components::{Input, Options, Tabs},
+        sx::ThemeAwareValue,
+        theme::{Color, TabsDefaults, Theme},
+    };
+
+    static SECONDARY: Theme = Theme {
+        tabs: TabsDefaults {
+            color: Color::Secondary,
+            ..Theme::DEFAULT.tabs
+        },
+        ..Theme::DEFAULT
+    };
+
+    #[derive(Clone, PartialEq, Options)]
+    enum Section {
+        Account,
+        Billing,
+    }
+
+    #[component]
+    fn Part(themed: bool, explicit: bool) -> Element {
+        let color: Input<ThemeAwareValue> = match explicit {
+            true => ThemeAwareValue::from(Color::Secondary).into(),
+            false => Input::None,
+        };
+        let theme: &'static Theme = match themed {
+            true => &SECONDARY,
+            false => &Theme::DEFAULT,
+        };
+        rsx! {
+            LiberoProvider { themes: theme,
+                Tabs {
+                    aria_label: "Sections",
+                    value: Section::Account,
+                    onchange: move |_| {},
+                    color,
+                    panel: |_: Section| rsx! {},
+                }
+            }
+        }
+    }
+
+    fn html(themed: bool, explicit: bool) -> String {
+        body(&render_with(Part, PartProps { themed, explicit }))
+    }
+
+    #[test]
+    fn an_unset_tabs_color_follows_the_theme() {
+        let followed = html(true, false);
+
+        assert_eq!(followed, html(true, true));
+        assert_ne!(followed, html(false, false));
+    }
+}

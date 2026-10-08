@@ -113,7 +113,7 @@ Bold, Italic, Undo and Redo, and Tab leaves the bar.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `orientation` | `Orientation` | `horizontal` | `"vertical"` stacks the controls; Up and Down move instead of Left and Right. |
+| `orientation` | `Orientation` | `horizontal` | `"vertical"` stacks the controls; Up and Down move instead of Left and Right. Not themed. |
 | `loop_focus` | `bool` | `true` | Whether the arrow keys wrap at the ends. |
 | `focus_from` | `Option<ElementHandle>` | - | The element the bar serves, such as an editor: Alt+F10 inside it moves focus to the bar, Escape in the bar hands it back. Spread its `attributes()`. |
 | `parts` | `Parts<ToolbarPart>` | - | Styles for the groups and separators, under `sx`. |
@@ -129,6 +129,10 @@ Like every component, `Toolbar` also takes the shared props `sx`, `class`,
 | `children` | `Element` | `required` | The section's controls. They stay in the bar's arrow order. |
 
 `ToolbarGroup` and `ToolbarSeparator` take the shared props too.
+
+## Theme defaults
+
+`ToolbarDefaults` on the theme holds `loop_focus`, the default of that prop.
 
 ## CSS variables
 

@@ -1,4 +1,5 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
+use crate::str_enum::str_enum;
 use crate::sx::{Sx, sx};
 use crate::theme::{Color, ColorShade, ColorValue, CssVar, Size, SizeCss, Sizes};
 
@@ -28,10 +29,24 @@ pub struct TabsSizeLevel {
     pub icon_gap: &'static str,
 }
 
+str_enum! {
+    /// When an arrow key selects the tab it moves to.
+    pub enum TabsActivation {
+        /// Arrows select as they move: the panel follows the focus.
+        #[default]
+        Automatic = "automatic",
+        /// Arrows only move the focus; Enter or Space selects. For slow panels.
+        Manual = "manual",
+    }
+}
+
 /// Theme defaults for `Tabs`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TabsDefaults {
     pub size: Size,
+    /// Indicator and selected-label colour.
+    pub color: Color,
+    pub activation: TabsActivation,
     pub sizes: Sizes<TabsSizeLevel>,
     /// The line the whole strip sits on.
     pub border_color: ColorValue,
@@ -41,6 +56,8 @@ pub struct TabsDefaults {
 impl TabsDefaults {
     pub const DEFAULT: Self = Self {
         size: Size::Md,
+        color: Color::Primary,
+        activation: TabsActivation::Automatic,
         sizes: Sizes::new(
             TabsSizeLevel {
                 font_size: "12px",

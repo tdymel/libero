@@ -2,7 +2,10 @@ use crate::components::{
     Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, indent, prop, props,
 };
 use dioxus::prelude::*;
-use libero::components::{Code, Text, ToolbarPart};
+use libero::{
+    components::{Code, Text, ToolbarPart},
+    use_theme,
+};
 
 mod demo;
 use demo::ToolbarPreview;
@@ -28,6 +31,8 @@ fn wrap(values: &DemoValues, source: &str) -> String {
 
 #[component]
 pub fn ToolbarPage() -> Element {
+    let theme = use_theme();
+
     rsx! {
         DocPage {
             title: "Toolbar",
@@ -37,9 +42,9 @@ pub fn ToolbarPage() -> Element {
                 props("Toolbar", vec![
                     prop("orientation", "Orientation")
                         .default("horizontal")
-                        .doc("`\"vertical\"` stacks the controls; Up and Down move instead of Left and Right."),
+                        .doc("`\"vertical\"` stacks the controls; Up and Down move instead of Left and Right. Not themed."),
                     prop("loop_focus", "bool")
-                        .default("true")
+                        .default(theme.toolbar.loop_focus.to_string())
                         .doc("Whether the arrow keys wrap at the ends."),
                     prop("focus_from", "Option<ElementHandle>")
                         .doc("The element the bar serves, such as an editor: Alt+F10 inside it moves focus to the bar, Escape in the bar hands it back. Spread its `attributes()`."),
