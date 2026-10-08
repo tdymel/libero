@@ -60,7 +60,7 @@ pub fn TooltipPage() -> Element {
                     .default("false")
                     .doc("No bubble. The trigger keeps its wrapper, so enabling or disabling does not remount it or drop its focus."),
                 prop("label_id", "String")
-                    .doc("The bubble's `id`, for the trigger's `aria-describedby`. It exists while the bubble is closed, too."),
+                    .doc("The bubble's `id`, for the trigger's `aria-describedby`. It exists while the bubble is closed, too, except while `disabled`: then nothing describes the trigger."),
                 prop("children", "Element")
                     .default("required")
                     .doc("The trigger."),

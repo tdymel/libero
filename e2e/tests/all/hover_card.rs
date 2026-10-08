@@ -2,6 +2,7 @@
 //! portaled, so Tab is carried into it and back out past the trigger (406).
 
 use anyhow::{Result, ensure};
+use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::clock;
 use e2e::driver::{Driver, Platform, eventually, eventually_focused};
@@ -296,6 +297,63 @@ e2e::scenario!(
     android: skip("958: the Tab bridge reads the card's focusables inside a handler"),
     desktop: skip("958: the Tab bridge reads the card's focusables inside a handler")
 );
+
+/// Hovers the trigger of the scrolling card and waits for its text stop.
+async fn open_scrolling_card(page: &Page) {
+    pointer::hover(page, TRIGGER).await.unwrap();
+    wait::for_js_true(
+        page,
+        &format!("!!document.querySelector(\"{TEXT_STOP}\")"),
+        "the overflowing card to become a tab stop",
+    )
+    .await
+    .unwrap();
+}
+
+/// Todo 2640: the text tab stop is a region named as the card.
+#[test]
+fn the_text_stop_is_a_region_named_as_the_card() {
+    block_on(async {
+        let fixture = Fixture::open("/hover-card-scroll", Viewport::Desktop)
+            .await
+            .unwrap();
+        open_scrolling_card(&fixture.page).await;
+        let stop = format!("document.querySelector(\"{TEXT_STOP}\")");
+        wait::for_js_true(
+            &fixture.page,
+            &format!(
+                "{stop}.getAttribute('role') === 'region' \
+                 && {stop}.getAttribute('aria-label') === 'Ada Lovelace'"
+            ),
+            "the text stop to be a region named Ada Lovelace",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2639: a press on the text stop is the pointer's, so the card closes once it leaves.
+#[test]
+fn a_pointer_press_on_the_text_stop_does_not_hold_the_card_open() {
+    block_on(async {
+        let fixture = Fixture::open("/hover-card-scroll", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        open_scrolling_card(page).await;
+        // The stop is as tall as the text, so its centre is below the card's visible part.
+        pointer::click(page, CARD).await.unwrap();
+        focus::wait_for_focus(page, TEXT_STOP, "the press to focus the text stop")
+            .await
+            .unwrap();
+        pointer::move_to(page, AWAY).await.unwrap();
+        wait::for_hidden(page, CARD)
+            .await
+            .unwrap_or_else(|e| panic!("a pressed text stop held the card open: {e}"));
+        fixture.close().await.unwrap();
+    });
+}
 
 #[derive(serde::Deserialize)]
 struct StopRing {

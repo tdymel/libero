@@ -18,6 +18,7 @@ pub const ROUTES: Routes = &[
         "/floating-window-anchored",
         || rsx! { AnchoredWindowPage {} },
     ),
+    ("/floating-window-pinned", || rsx! { PinnedWindowPage {} }),
 ];
 
 /// Todo 2353: a window placed at the bottom end, not yet moved, resized by key.
@@ -36,6 +37,26 @@ fn AnchoredWindowPage() -> Element {
 
     rsx! {
         Button { id: "open-window", variant: "outlined", onclick: move |_| window.open(), "Anchored" }
+    }
+}
+
+/// Todo 2641: a pinned window at the bottom end, resized by key like a pointer drag.
+#[component]
+fn PinnedWindowPage() -> Element {
+    let window = use_floating_window(
+        FloatingWindowOptions {
+            title: Some("Pinned".into()),
+            resizable: true,
+            pinned: true,
+            placement: "bottom-end".into(),
+            sx: sx().width("400px").height("200px").into(),
+            ..Default::default()
+        },
+        |_| rsx! { Text { "A pinned window at the bottom end." } },
+    );
+
+    rsx! {
+        Button { id: "open-window", variant: "outlined", onclick: move |_| window.open(), "Pinned" }
     }
 }
 

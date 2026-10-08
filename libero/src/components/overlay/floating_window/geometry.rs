@@ -341,7 +341,12 @@ impl WindowGeometry {
                 };
                 // The grip's arrows move its corner, the bottom-left under RTL.
                 let flip = if self.root.is_rtl() { -1.0 } else { 1.0 };
-                arrow_delta(&key, step).map(|(dx, dy)| Ok((dx * flip, dy)))
+                // As the pointer drag: a pinned window grows about its anchor.
+                let (inline, block) = match self.pinned {
+                    Some(placement) if self.position.peek().is_none() => pinned_growth(placement),
+                    _ => (1.0, 1.0),
+                };
+                arrow_delta(&key, step).map(|(dx, dy)| Ok((dx * flip * inline, dy * block)))
             }
         };
         let Some(request) = request else { return };

@@ -64,7 +64,7 @@ fn Demo() -> Element {
 | `close_delay` | `u32` | `0` | Milliseconds the bubble stays after the pointer leaves. While it counts down, the bubble carries `data-closing`. |
 | `open` | `bool` | unset | Forces the bubble open or closed. Unset, hover and focus decide. A bubble forced open ignores Escape. |
 | `disabled` | `bool` | `false` | No bubble. The trigger keeps its wrapper, so enabling or disabling does not remount it or drop its focus. |
-| `label_id` | `String` | - | The bubble's `id`, for the trigger's `aria-describedby`. It exists while the bubble is closed, too. |
+| `label_id` | `String` | - | The bubble's `id`, for the trigger's `aria-describedby`. It exists while the bubble is closed, too, except while `disabled`: then nothing describes the trigger. |
 | `children` | `Element` | required | The trigger. |
 
 The defaults come from `TooltipDefaults` on the theme.

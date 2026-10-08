@@ -231,6 +231,69 @@ fn under_rtl_a_keyboard_resize_moves_the_grips_corner_of_an_anchored_window() {
     });
 }
 
+/// Todo 2641: a pinned bottom-end window grows about its anchored corner, so the grip's
+/// arrows act as a pointer drag does: toward the anchor shrinks, away widens.
+async fn pinned_resize_by_key(rtl: bool) {
+    let fixture = Fixture::open("/floating-window-pinned", Viewport::Desktop)
+        .await
+        .unwrap();
+    let page = &fixture.page;
+    if rtl {
+        page.evaluate("document.documentElement.dir = 'rtl'")
+            .await
+            .unwrap();
+    }
+    open(page).await.unwrap();
+    keyboard::tab_to(page, SEPARATOR, TAB_BUDGET).await.unwrap();
+
+    // The anchored corner is the bottom-right, or the bottom-left under RTL.
+    let (shrink, widen) = match rtl {
+        true => (keyboard::ARROW_LEFT, keyboard::ARROW_RIGHT),
+        false => (keyboard::ARROW_RIGHT, keyboard::ARROW_LEFT),
+    };
+    let before = rect(page, DIALOG).await.unwrap();
+    keyboard::press(page, shrink).await.unwrap();
+    let narrower = wait_for_size(
+        page,
+        (before.2 - STEP, before.3),
+        "a step toward the anchor",
+    )
+    .await
+    .unwrap();
+    keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+    let shorter = wait_for_size(page, (narrower.2, before.3 - STEP), "a step down")
+        .await
+        .unwrap();
+    keyboard::press(page, widen).await.unwrap();
+    let wider = wait_for_size(page, (before.2, shorter.3), "a step away from the anchor")
+        .await
+        .unwrap();
+    for (what, drawn) in [
+        ("narrower", narrower),
+        ("shorter", shorter),
+        ("wider", wider),
+    ] {
+        let corner = |r: (f64, f64, f64, f64)| (if rtl { r.0 } else { r.0 + r.2 }, r.1 + r.3);
+        let (anchored, was) = (corner(drawn), corner(before));
+        assert!(
+            (anchored.0 - was.0).abs() <= 1.0 && (anchored.1 - was.1).abs() <= 1.0,
+            "the anchored corner moved ({what}): {before:?} -> {drawn:?}"
+        );
+    }
+    fixture.console.assert_clean("a pinned resize").unwrap();
+    fixture.close().await.unwrap();
+}
+
+#[test]
+fn a_keyboard_resize_of_a_pinned_window_moves_the_grips_corner() {
+    block_on(pinned_resize_by_key(false));
+}
+
+#[test]
+fn under_rtl_a_keyboard_resize_of_a_pinned_window_moves_the_grips_corner() {
+    block_on(pinned_resize_by_key(true));
+}
+
 pub async fn keyboard_resize(page: &Page) -> Result<()> {
     open(page).await?;
     let ring = focus::assert_focus_ring(page, SEPARATOR, TAB_BUDGET).await?;

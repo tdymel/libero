@@ -1,6 +1,6 @@
 use std::{cell::Cell, rc::Rc};
 
-use dioxus::prelude::*;
+use dioxus::{dioxus_core::AttributeValue, prelude::*};
 
 use super::hover_intent::{TRIGGER_WRAPPER_SX, use_hover_intent};
 use crate::{
@@ -157,6 +157,11 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
             }
         });
     };
+    // A card of text that scrolls is a tab stop, so the keyboard can read it (todo 2445).
+    let text_stop_handle = use_element();
+    let mut overflows = use_signal(|| false);
+    let text_stop = open && overflows();
+
     // Element 0 is the trigger, 1 the card.
     let focus = use_focus_within(move || vec![anchor.mounted(), floating.mounted()], {
         let (pressed, returning) = (pressed.clone(), returning.clone());
@@ -174,9 +179,13 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
                         focused.set(true);
                     }
                 }
-                (_, true) => {
+                (element, true) => {
                     moves += 1;
-                    focused.set(true);
+                    // A press on the text stop is the pointer's: hover alone holds the card.
+                    let pressed_stop = text_stop && change.focus_visible() == Some(false);
+                    if element != 1 || !pressed_stop {
+                        focused.set(true);
+                    }
                 }
                 (element, false) => {
                     if element == 0 || change.in_group == Some(false) {
@@ -192,9 +201,6 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         }
     });
 
-    // A card of text that scrolls is a tab stop, so the keyboard can read it (todo 2445).
-    let text_stop_handle = use_element();
-    let mut overflows = use_signal(|| false);
     let measure = move || {
         if !floating.is_mounted() || !text_stop_handle.is_mounted() {
             return;
@@ -215,7 +221,6 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         });
     };
     use_resize_fallback(floating, move |_| measure());
-    let text_stop = open && overflows();
 
     crate::components::common::use_name_warning(
         crate::components::common::names_itself(&props.attributes),
@@ -259,6 +264,9 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         .prepare();
 
     popover.show(open.then(|| {
+        // The tab stop takes the card's name.
+        let name = |name| attribute_text(&props.attributes, name).filter(|_| text_stop);
+        let (stop_label, stop_labelledby) = (name("aria-label"), name("aria-labelledby"));
         let mut attributes = props.attributes.clone();
         attributes.extend(dismiss.floating_events());
         attributes.extend(owner_link(&anchor));
@@ -277,6 +285,9 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
                     div {
                         style: if text_stop { "display: block" } else { CONTENTS },
                         tabindex: text_stop.then_some("0"),
+                        role: text_stop.then_some("region"),
+                        aria_label: stop_label,
+                        aria_labelledby: stop_labelledby,
                         onmounted: text_stop_handle.mount(),
                         onfocusin: focus.focusin(1),
                         onfocusout: focus.focusout(1),
@@ -320,6 +331,18 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
                 }
             },
         )
+}
+
+/// The text of the attribute `name`, if it is set to non-empty text.
+fn attribute_text(attributes: &[Attribute], name: &str) -> Option<String> {
+    attributes
+        .iter()
+        .find_map(|attribute| match &attribute.value {
+            AttributeValue::Text(text) if attribute.name == name && !text.trim().is_empty() => {
+                Some(text.clone())
+            }
+            _ => None,
+        })
 }
 
 /// Tab on the trigger's last focusable enters the card, which is portaled out of
