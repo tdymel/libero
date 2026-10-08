@@ -291,7 +291,48 @@ pub(super) fn nav_tree() -> Vec<TreeNode<NavEntry>> {
 
 #[cfg(test)]
 mod tests {
+    use std::fmt::Write as _;
+
+    use dioxus::prelude::Routable;
+
     use super::*;
+
+    /// `public/sitemap.xml` lists the home page and every sidebar page; rewritten when stale.
+    #[test]
+    fn the_sitemap_is_current() {
+        let mut expected = String::from(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
+             <urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n",
+        );
+        let paths = std::iter::once("/".to_string()).chain(pages().into_iter().map(|p| p.0));
+        for path in paths {
+            let _ = writeln!(
+                expected,
+                "  <url><loc>{}{path}</loc></url>",
+                crate::site::SITE
+            );
+        }
+        expected.push_str("</urlset>\n");
+
+        let file = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("public/sitemap.xml");
+        if std::fs::read_to_string(&file).ok().as_deref() != Some(&expected) {
+            std::fs::write(&file, &expected).unwrap();
+            panic!("docs/public/sitemap.xml was stale: rewritten, commit it");
+        }
+    }
+
+    /// A page that is a route but not in the sidebar would be missing from the sitemap.
+    #[test]
+    fn every_static_route_is_a_sidebar_page_or_home() {
+        let listed: Vec<String> = pages().into_iter().map(|p| p.0).collect();
+        for route in Route::static_routes() {
+            let path = route.to_string();
+            assert!(
+                path == "/" || listed.contains(&path),
+                "{path} is not in the sitemap"
+            );
+        }
+    }
 
     /// The a11y hooks moved from Hooks to Accessibility: their old links still land.
     #[test]

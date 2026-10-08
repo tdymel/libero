@@ -55,8 +55,8 @@ parts_enum! {
     }
 }
 
-// Rows are styled from here, the `Menu` shape. The keyboard's row tints darker
-// than hover and takes a ring, so it stands out under the pointer too.
+// Rows are styled from here, the `Menu` shape. Hover tints like the keyboard's row
+// (muted.1 on white is invisible, todo 2628); only the keyboard's row takes a ring.
 static SPOTLIGHT_BODY_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .flex_direction("column")
@@ -102,7 +102,7 @@ static SPOTLIGHT_BODY_SX: StaticSx = StaticSx::new(|| {
                 .cursor("pointer")
                 .user_select("none"),
         )
-        .selector("& [role=\"option\"]:hover", sx().background("muted.1"))
+        .selector("& [role=\"option\"]:hover", sx().background("muted.2"))
         .selector(
             "& [role=\"option\"][data-active]",
             sx().background("muted.2"),

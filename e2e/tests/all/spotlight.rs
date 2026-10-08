@@ -1,7 +1,7 @@
 //! `Spotlight`: a modal palette trapping focus in its search box. `contrast_covers` guards
 //! todo 327 (the scroll lock hid the rows from axe); keys and Ctrl/Cmd+K are real (406).
 
-use anyhow::Result;
+use anyhow::{Result, ensure};
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, eventually_focused};
@@ -52,6 +52,56 @@ e2e::scenario!(
     a_tap_on_the_trigger_focuses_the_search_box,
     "/spotlight",
     a_tap_focuses_the_search
+);
+
+const FIRST_ROW: &str = "[role=dialog] [role=option]";
+const UNHOVERED_ROW: &str = "[role=dialog] [role=option]:not(:hover)";
+const IDLE_ROW: &str = "[role=dialog] [role=option]:not([data-active])";
+const ACTIVE_ROW: &str = "[role=dialog] [role=option][data-active]";
+const HOVERED_ROW: &str = "[role=dialog] [role=option]:hover";
+const FILL: &str = "background-color";
+
+/// Todo 2628: the row under the pointer is tinted like the keyboard row, the others
+/// stay bare, and a hover does not move the keyboard highlight (as in `Combobox`).
+async fn a_hovered_row_is_tinted<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(TRIGGER).await?;
+    eventually(d, "the palette's rows", async |d| d.exists(FIRST_ROW).await).await?;
+    let bare = d.style(FIRST_ROW, FILL).await?;
+    d.hover(FIRST_ROW).await?;
+    eventually(d, "the hovered row to be tinted", async |d| {
+        Ok(d.style(FIRST_ROW, FILL).await? != bare)
+    })
+    .await?;
+    ensure!(
+        d.style(UNHOVERED_ROW, FILL).await? == bare,
+        "a row under no pointer is tinted"
+    );
+    ensure!(
+        d.attr(SEARCH, "aria-activedescendant").await?.is_none(),
+        "a hover moved the keyboard highlight"
+    );
+
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually(d, "ArrowDown to highlight a row", async |d| {
+        d.exists(ACTIVE_ROW).await
+    })
+    .await?;
+    d.hover(IDLE_ROW).await?;
+    eventually(
+        d,
+        "the pointer's row to tint like the keyboard's",
+        async |d| {
+            Ok(d.exists(HOVERED_ROW).await?
+                && d.style(HOVERED_ROW, FILL).await? == d.style(ACTIVE_ROW, FILL).await?)
+        },
+    )
+    .await
+}
+
+e2e::scenario!(
+    a_hovered_row_is_tinted_and_does_not_move_the_highlight,
+    "/spotlight",
+    a_hovered_row_is_tinted
 );
 
 #[test]

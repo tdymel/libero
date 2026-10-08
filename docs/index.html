@@ -6,6 +6,22 @@
         <!-- dx appends `[web.app] title` from `Dioxus.toml` here. -->
         <title></title>
         <meta name="description" content="Libero, a Dioxus component library for Rust: typed style props, a theme of design tokens, and accessible components for the web, Blitz, desktop and Android.">
+        <link rel="icon" type="image/png" sizes="192x192" href="/{base_path}/favicon.png">
+        <!-- Site-wide: this shell also answers every deep link, so no canonical or
+             og:url here. The absolute URLs are pinned by `src/index_html.rs`. -->
+        <meta property="og:type" content="website">
+        <meta property="og:site_name" content="Libero">
+        <meta property="og:title" content="Libero">
+        <meta property="og:description" content="Libero, a Dioxus component library for Rust: typed style props, a theme of design tokens, and accessible components for the web, Blitz, desktop and Android.">
+        <meta property="og:image" content="https://libero-ui.dev/og-image.png">
+        <meta property="og:image:width" content="1200">
+        <meta property="og:image:height" content="630">
+        <meta property="og:image:alt" content="The Libero logo, a dog drawn in vertical bars">
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:title" content="Libero">
+        <meta name="twitter:description" content="Libero, a Dioxus component library for Rust: typed style props, a theme of design tokens, and accessible components for the web, Blitz, desktop and Android.">
+        <meta name="twitter:image" content="https://libero-ui.dev/og-image.png">
+        <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"Libero","url":"https://libero-ui.dev","inLanguage":"en"},{"@type":"SoftwareSourceCode","name":"Libero","description":"A Dioxus component library: typed style props, a theme of design tokens, and accessible components.","programmingLanguage":"Rust","codeRepository":"https://github.com/tdymel/libero","url":"https://libero-ui.dev"}]}</script>
         <!-- dx preloads the entry JS but not the wasm it fetches, so the wasm
              request only starts once that module has downloaded and parsed.
              `preload_wasm.sh` (run by `just build`/`just build_release`) rewrites
