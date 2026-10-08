@@ -10,7 +10,7 @@ use super::{A11yDoc, A11yPanel, PartsPanel, PropGroup, PropertyTable, doc_sectio
 use crate::{
     Route, heading_focus,
     nav::neighbours,
-    site::{SITE, TLDR_PROMPT, github_tree},
+    site::{SITE, TLDR_PROMPT, github_tree, public_url},
 };
 use pictogram_icons_simple as simple;
 
@@ -192,7 +192,7 @@ pub fn DocPage(
                                     if cfg!(any(feature = "native", feature = "native-cpu")) {
                                         github_tree(&format!("docs/public{markdown}"))
                                     } else {
-                                        markdown.clone()
+                                        public_url(&markdown)
                                     },
                                 ),
                                 target: "_blank",

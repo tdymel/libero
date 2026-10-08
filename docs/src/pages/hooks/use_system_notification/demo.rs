@@ -8,7 +8,7 @@ use libero::{
     sx::sx,
 };
 
-use crate::site::LOGO;
+use crate::site::{LOGO, public_url};
 
 /// A throwaway public key: its private half was never kept, so nothing can push to the demo.
 const DEMO_VAPID_KEY: &str =
@@ -38,7 +38,7 @@ fn permission_text(state: PermissionState) -> &'static str {
 pub fn Notify() -> Element {
     let mut notifier = use_system_notification();
     let mut push = use_push_subscription(PushOptions {
-        service_worker: "/sw.js".into(),
+        service_worker: public_url("/sw.js"),
         vapid_public_key: DEMO_VAPID_KEY.into(),
     });
     let mut last = use_signal(String::new);

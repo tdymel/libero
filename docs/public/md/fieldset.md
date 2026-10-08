@@ -12,6 +12,10 @@ rules over its value. Inside a `Form`, give it a `path`. On its own, give it a
 `value` store. The Form [getting started](form_getting_started.md) page shows
 how to build reusable parts around it.
 
+The fields bind once, when they mount. A different `value` store or `path`
+remounts them, so they restart from the new value and lose their focus and
+touched state.
+
 ## Usage
 
 ```rust

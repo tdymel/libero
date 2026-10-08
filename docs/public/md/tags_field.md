@@ -12,6 +12,10 @@ and so does leaving the field. A tag is trimmed first. To pick from a fixed set
 instead, use [MultiSelect](multi_select.md), whose value is a `Vec<T>` of your
 own type.
 
+The field turns the browser's saved entries off, so they do not cover the
+suggestions. You can pass your own `autocomplete` token, such as `email` for a
+list of addresses, and the saved entries then cover the suggestions.
+
 ## Usage
 
 ```rust

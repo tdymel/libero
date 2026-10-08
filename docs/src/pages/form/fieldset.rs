@@ -140,6 +140,14 @@ pub fn FieldsetPage() -> Element {
                     " store. The Form getting started page shows how to build reusable parts "
                     "around it."
                 }
+                Text {
+                    "The fields bind once, when they mount. A different "
+                    Code { source: "value" }
+                    " store or "
+                    Code { source: "path" }
+                    " remounts them, so they restart from the new value and lose their "
+                    "focus and touched state."
+                }
             },
             Demo {
                 component: "Fieldset",

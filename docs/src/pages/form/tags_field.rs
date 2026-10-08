@@ -224,6 +224,14 @@ pub fn TagsFieldPage() -> Element {
                     Code { source: "Vec<T>" }
                     " of your own type."
                 }
+                Text {
+                    "The field turns the browser's saved entries off, so they do not cover the "
+                    "suggestions. You can pass your own "
+                    Code { source: "autocomplete" }
+                    " token, such as "
+                    Code { source: "email" }
+                    " for a list of addresses, and the saved entries then cover the suggestions."
+                }
             },
             // snippet: let mut topics = use_signal(Vec::<String>::new);
             // snippet: let mut refused = use_signal(|| None::<String>);

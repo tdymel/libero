@@ -75,8 +75,9 @@ parts work.
 
 ### Libero handles
 
-- Every control is a button and a tab stop, except an arrow at its end and
-  every control under `disabled`: those are disabled buttons.
+- Every control is a button and a tab stop, except an arrow at its end, which is
+  a natively disabled button. Under `disabled` every control is `aria-disabled`
+  and stays a tab stop, so focus is not lost.
 - An arrow that disables itself on click, such as next on the last page, hands
   focus to the current page.
 - The page names come from the [localization](localization.md)'s

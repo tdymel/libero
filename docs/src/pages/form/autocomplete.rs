@@ -194,6 +194,14 @@ pub fn AutocompletePage() -> Element {
                     Code { source: "Select" }
                     "."
                 }
+                Text {
+                    "The field turns the browser's saved entries off, so they do not cover the "
+                    "list. You can pass your own "
+                    Code { source: "autocomplete" }
+                    " token, such as "
+                    Code { source: "address-level2" }
+                    " for a city, and the saved entries then cover the list."
+                }
             },
             // snippet: let mut value = use_signal(String::new);
             // snippet: let mut picked = use_signal(|| None::<&'static str>);

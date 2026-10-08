@@ -55,3 +55,12 @@ fn Card() -> Element {
 Forced colors is a Windows mode, not a WCAG success criterion, and covering it
 properly means work on most of the library plus tests to keep it. If you need
 more of it, open an issue. A real user asking is what would change this.
+
+## Focus after a route change
+
+Libero has no router helper, so an app moves focus itself, usually to the new
+page's heading. Blur the element that still holds focus in the outgoing page
+first: in the render that sees the new route, before the old page leaves the
+DOM. Removing a page that holds focus (back, forward or a link in the body)
+costs Chromium a forced restyle and layout of both pages. The docs do this in
+the `RouteEffects` of `docs/src/shell.rs`.

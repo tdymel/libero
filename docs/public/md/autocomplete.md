@@ -10,6 +10,10 @@ A [TextField](text_field.md) that offers completions. The value stays a
 `String`, and picking a suggestion inserts its label. To choose from a fixed
 set, use [Select](select.md).
 
+The field turns the browser's saved entries off, so they do not cover the list.
+You can pass your own `autocomplete` token, such as `address-level2` for a
+city, and the saved entries then cover the list.
+
 ## Usage
 
 ```rust

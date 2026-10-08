@@ -92,6 +92,22 @@ pub fn AccessibilityPage() -> Element {
                     "what would change this."
                 }
             }
+
+            DocSection {
+                title: "Focus after a route change",
+                Text {
+                    "Libero has no router helper, so an app moves focus itself, usually to the "
+                    "new page's heading. Blur the element that still holds focus in the "
+                    "outgoing page first: in the render that sees the new route, before the old "
+                    "page leaves the DOM. Removing a page that holds focus (back, forward or a "
+                    "link in the body) costs Chromium a forced restyle and layout of both "
+                    "pages. The docs do this in the "
+                    Code { source: "RouteEffects" }
+                    " of "
+                    Code { source: "docs/src/shell.rs" }
+                    "."
+                }
+            }
         }
     }
 }
