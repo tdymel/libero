@@ -41,6 +41,7 @@ Accessibility. The rest are shown on the component or guide page they belong to.
 | `use_fullscreen` | Puts one element in fullscreen, drawn where the platform refuses it. | [Fullscreen](use_fullscreen.md) |
 | `use_back` | Runs a handler on Android's Back button instead of leaving the app. | [Back button](use_back.md) |
 | `use_geolocation` | The device's position, once or followed, and the location permission. | [Geolocation](use_geolocation.md) |
+| `use_tour` | A guided tour that spotlights one element per step. | [Tour](tour.md) |
 | `use_local_storage` | A value kept under a key across reloads and app runs. | [Local storage](use_local_storage.md) |
 | `use_session_storage` | A value kept under a key for the tab or the window's run. | [Local storage](use_local_storage.md) |
 | `use_local_storage_with` | use_local_storage with options, such as reading the value after mount. | [Local storage](use_local_storage.md) |

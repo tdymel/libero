@@ -160,7 +160,7 @@ pub fn FormPage() -> Element {
                 props("Every field", vec![
                     prop("required", "bool")
                         .default("false")
-                        .doc("Marks the label. Inside a `Form`, an empty field fails the submit with `form.required` unless its own rules fail first: `form.required_check` for an unchecked `Checkbox` or `Switch`, `form.required_select` for a select. A read-only field never fails it. A slider and a `ColorField` always hold a value, and a lone `Radio` leaves it to its `RadioGroup`. A field with a handler but no `value` or binding counts as filled: pass its `value` or a `name` path."),
+                        .doc("Marks the label. Inside a `Form`, an empty field fails the submit with `form.required` unless its own rules fail first: `form.required_check` for an unchecked `Checkbox` or `Switch`, `form.required_select` for a select, `form.required_option` for a `RadioGroup` or `SegmentedControl`. A read-only field never fails it. A slider and a `ColorField` always hold a value, and a lone `Radio` leaves it to its `RadioGroup`. A field with a handler but no `value` or binding counts as filled: pass its `value` or a `name` path."),
                     prop("validate", "Validators<T>")
                         .doc("Rules over the field's own value, one or an array. Shown once the field loses focus or its form is submitted."),
                     prop("name", "FieldName<T>")
@@ -217,8 +217,8 @@ pub fn FormPage() -> Element {
                     "every problem appears above the fields and takes focus. Warnings never block. "
                     "A "
                     Code { source: "required" }
-                    " field left empty is an error too, \"Fill in this field.\", or \"Check this box.\" "
-                    "and \"Select an item in the list.\" for a box or a select ("
+                    " field left empty is an error too, \"Fill in this field.\", or \"Check this box.\", "
+                    "\"Select an item in the list.\" and \"Select one of these options.\" for a box, a select or a group of options ("
                     Code { source: "Localization::form" }
                     "), unless a rule of its own says more; a disabled or read-only one never blocks. "
                     "The error shows only once the form was submitted, so tabbing through an empty "

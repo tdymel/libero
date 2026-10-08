@@ -690,18 +690,13 @@ mod tests {
                 }
             }
         }
-        // Recorded: the text role caps at the S9 mix; warning clears by its edge (todo 2033).
+        // Recorded: Nord's official pastel accents stay (todo 2034); warning clears by its edge (todo 2033).
         assert_eq!(
             short,
             [
-                "kettek16 light primary: 2.70:1",
-                "kettek16 light info: 2.27:1",
                 "Nord light primary: 2.39:1",
                 "Nord light info: 2.48:1",
                 "Nord light success: 2.44:1",
-                "Osmium light primary: 2.76:1",
-                "Osmium light info: 2.46:1",
-                "Osmium light success: 1.93:1",
             ],
             "the shipped fills' contrast moved"
         );

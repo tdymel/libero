@@ -6,7 +6,7 @@ use crate::{
             HtmlTag, Input, OptionSource, Options, Orientation, Part, States, css_string,
             has_shortcut_modifier, names_itself, neighbour, use_name_warning,
         },
-        form::{Radio, field_parts_enum, field_props, use_bound, use_field},
+        form::{Asks, Radio, field_parts_enum, field_props, use_bound, use_field},
         layout::use_box,
     },
     hooks::{ElementHandle, use_element, use_theme},
@@ -170,6 +170,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
         .required(required)
         .empty(selected.is_none())
         .readonly(readonly)
+        .asks(Asks::Option)
         .disabled(disabled)
         .size(size)
         .class(&props.class)

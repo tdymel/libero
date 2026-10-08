@@ -10,7 +10,7 @@ use crate::{
             Input, OptionLabel, OptionSource, Options, Orientation, Variant, base_color,
             names_itself, use_name_warning, use_toolbar_item,
         },
-        form::{field_props, use_bound, use_field, use_form_context},
+        form::{Asks, field_props, use_bound, use_field, use_form_context},
     },
     hooks::{use_cache, use_element, use_form_owner, use_theme},
     sx::ThemeAwareValue,
@@ -147,6 +147,7 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
         .required(required)
         .empty(selected.is_none())
         .readonly(props.readonly.unwrap_or(false))
+        .asks(Asks::Option)
         .disabled(disabled)
         .size(size)
         .radius(radius)

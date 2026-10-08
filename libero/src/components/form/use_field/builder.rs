@@ -99,6 +99,8 @@ pub(crate) enum Asks {
     Check,
     /// `form.required_select`: a pick from a list.
     Select,
+    /// `form.required_option`: one of a few options.
+    Option,
 }
 
 impl Asks {
@@ -107,6 +109,7 @@ impl Asks {
             Self::Fill => labels.required,
             Self::Check => labels.required_check,
             Self::Select => labels.required_select,
+            Self::Option => labels.required_option,
         }
     }
 }

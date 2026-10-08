@@ -442,4 +442,24 @@ mod tests {
             "libero's pub use hooks against the Hooks page's rows"
         );
     }
+
+    #[test]
+    fn the_markdown_mirror_has_the_rows_of_the_page() {
+        let mirror =
+            fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("public/md/hooks.md"))
+                .unwrap();
+        let mirrored: Vec<(&str, &str)> = mirror
+            .lines()
+            .filter_map(|line| {
+                let (hook, rest) = line.strip_prefix("| `")?.split_once("` | ")?;
+                Some((hook, rest.rsplit_once(" | ")?.0))
+            })
+            .collect();
+        let rows = super::hooks();
+        let listed: Vec<(&str, &str)> = rows.iter().map(|row| (row.hook, row.purpose)).collect();
+        assert_eq!(
+            mirrored, listed,
+            "docs/public/md/hooks.md against the Hooks page's rows"
+        );
+    }
 }

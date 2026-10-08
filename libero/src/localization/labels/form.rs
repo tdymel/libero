@@ -7,6 +7,8 @@ pub struct FormLabels {
     pub required_check: &'static str,
     /// As `required`, for a select with nothing picked.
     pub required_select: &'static str,
+    /// As `required`, for a `RadioGroup` or `SegmentedControl` with nothing picked.
+    pub required_option: &'static str,
 }
 
 impl FormLabels {
@@ -14,11 +16,13 @@ impl FormLabels {
         required: "Fill in this field.",
         required_check: "Check this box.",
         required_select: "Select an item in the list.",
+        required_option: "Select one of these options.",
     };
 
     pub const GERMAN: Self = Self {
         required: "Füllen Sie dieses Feld aus.",
         required_check: "Aktivieren Sie dieses Kästchen.",
         required_select: "Wählen Sie ein Element aus der Liste aus.",
+        required_option: "Wählen Sie eine dieser Optionen aus.",
     };
 }

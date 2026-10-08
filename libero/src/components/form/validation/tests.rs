@@ -954,6 +954,44 @@ fn an_empty_required_readonly_field_submits_clean() {
     dom.in_runtime(|| assert!(!scope.has_errors(), "a read-only field blocks the submit"));
 }
 
+/// Todo 2661: a radio group or a segmented control asks to pick one, as a browser's radio does.
+#[test]
+fn a_group_of_options_left_empty_asks_to_pick_one() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Form::<()> {
+                    Spy {}
+                    crate::components::RadioGroup::<String> {
+                        label: "Plan",
+                        name: "plan",
+                        required: true,
+                        options: vec!["Free".to_string(), "Pro".to_string()],
+                    }
+                    crate::components::SegmentedControl::<String> {
+                        label: "Billing",
+                        name: "billing",
+                        required: true,
+                        options: vec!["Monthly".to_string(), "Yearly".to_string()],
+                    }
+                }
+            }
+        }
+    }
+
+    let (dom, _) = mount(app);
+    let scope = scope(&dom);
+    let summary = dom.in_runtime(|| scope.summary());
+    let messages: Vec<_> = summary.iter().map(|item| item.message.as_str()).collect();
+    assert_eq!(
+        messages,
+        [
+            "Plan: Select one of these options.",
+            "Billing: Select one of these options."
+        ]
+    );
+}
+
 /// Todo 2566: a `Fieldset`'s own rule was an unlinked, unnamed line.
 #[test]
 fn a_fieldset_rule_naming_no_field_links_to_the_group() {

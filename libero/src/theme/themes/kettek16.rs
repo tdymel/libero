@@ -4,7 +4,8 @@
 //! so the light half is ours, by the rule in [`vague`](super::VAGUE_LIGHT):
 //!
 //! - `ink` is the dark `bg`, `#090909`; page and card are `#fef638` mixed 80%/60% to white;
-//! - `muted` is `#dddddd` moved toward the ink to the same 14.66:1 from the page.
+//! - `muted` is `#dddddd` moved toward the ink to the same 14.66:1 from the page;
+//! - `primary` and `info` are darkened until their text role reads at 4.5:1 (todo 2034).
 //!
 //! The gradient runs primary to info: no label reads at 4.5:1 on primary to secondary
 //! (todo 2051).
@@ -24,9 +25,9 @@ pub static KETTEK16_LIGHT: Theme = Theme {
     ink: HexColor::new(0x090909),
     neutral: HexColor::new(0x090909),
     muted: HexColor::new(0x252525),
-    primary: HexColor::new(0x33BBEE),
+    primary: HexColor::new(0x2BA0CC),
     secondary: HexColor::new(0xEE3377),
-    info: HexColor::new(0x66CCEE),
+    info: HexColor::new(0x4B96B0),
     success: HexColor::new(0x009988),
     error: HexColor::new(0xEE6677),
     paper: PaperDefaults {

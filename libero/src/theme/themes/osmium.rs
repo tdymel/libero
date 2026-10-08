@@ -4,7 +4,8 @@
 //! is ours, by the rule in [`vague`](super::VAGUE_LIGHT):
 //!
 //! - `ink` is the dark `bg`, `#14131e`; page and card are `#c8d5f1` mixed 80%/60% to white;
-//! - `muted` is `#949bb9` moved toward the ink to the same 6.70:1 from the page.
+//! - `muted` is `#949bb9` moved toward the ink to the same 6.70:1 from the page;
+//! - `primary`, `info` and `success` are darkened until their text role reads at 4.5:1 (todo 2034).
 
 use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet};
 
@@ -14,10 +15,10 @@ pub static OSMIUM_LIGHT: Theme = Theme {
     ink: HexColor::new(0x14131E),
     neutral: HexColor::new(0x14131E),
     muted: HexColor::new(0x54566B),
-    primary: HexColor::new(0xB0A8EB),
+    primary: HexColor::new(0x9089C0),
     secondary: HexColor::new(0xD9A1E8),
-    info: HexColor::new(0x9ABFE8),
-    success: HexColor::new(0xC9DE96),
+    info: HexColor::new(0x7591B0),
+    success: HexColor::new(0x889666),
     error: HexColor::new(0xE55376),
     paper: PaperDefaults {
         background: "#e9eef9",
