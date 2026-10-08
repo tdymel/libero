@@ -757,34 +757,49 @@ pub(super) fn render_cells(
     cells: impl Iterator<Item = CellSpec>,
     headers: &[HeaderSpec],
 ) -> Element {
-    rsx! {
-        for CellSpec { column , text , body , span , pin } in cells {
+    // Each cell its own keyed node: under a `for`, an `if` root dropped the key, so a
+    // column move redrew every cell in place and remounted its body (todo 2584).
+    let cells = cells.map(
+        |CellSpec {
+             column,
+             text,
+             body,
+             span,
+             pin,
+         }| {
             if headers[column].row_header {
-                th {
-                    key: "{column}",
-                    scope: "row",
-                    colspan: (span > 1).then(|| span.to_string()),
-                    "data-align": align_attr(headers[column].align),
-                    "data-pin": pin.as_ref().map(|pin| pin.side.as_str()),
-                    "data-pin-edge": pin.as_ref().filter(|pin| pin.edge).map(|_| true),
-                    style: pin.as_ref().map(CellPin::style),
-                    "{text}"
-                    {body}
+                rsx! {
+                    th {
+                        key: "{column}",
+                        scope: "row",
+                        colspan: (span > 1).then(|| span.to_string()),
+                        "data-align": align_attr(headers[column].align),
+                        "data-pin": pin.as_ref().map(|pin| pin.side.as_str()),
+                        "data-pin-edge": pin.as_ref().filter(|pin| pin.edge).map(|_| true),
+                        style: pin.as_ref().map(CellPin::style),
+                        "{text}"
+                        {body}
+                    }
                 }
             } else {
-                td {
-                    key: "{column}",
-                    colspan: (span > 1).then(|| span.to_string()),
-                    "data-align": align_attr(headers[column].align),
-                    "data-pin": pin.as_ref().map(|pin| pin.side.as_str()),
-                    "data-pin-edge": pin.as_ref().filter(|pin| pin.edge).map(|_| true),
-                    style: pin.as_ref().map(CellPin::style),
-                    // Text inline: a nested node per cell costs ~1 us a sort.
-                    "{text}"
-                    {body}
+                rsx! {
+                    td {
+                        key: "{column}",
+                        colspan: (span > 1).then(|| span.to_string()),
+                        "data-align": align_attr(headers[column].align),
+                        "data-pin": pin.as_ref().map(|pin| pin.side.as_str()),
+                        "data-pin-edge": pin.as_ref().filter(|pin| pin.edge).map(|_| true),
+                        style: pin.as_ref().map(CellPin::style),
+                        // Text inline: a nested node per cell costs ~1 us a sort.
+                        "{text}"
+                        {body}
+                    }
                 }
             }
-        }
+        },
+    );
+    rsx! {
+        {cells}
     }
 }
 

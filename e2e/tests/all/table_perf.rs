@@ -146,6 +146,41 @@ async fn select_reps(page: &Page, table: &str) -> Result<()> {
     Ok(())
 }
 
+/// Role's grip dragged over City's far edge, and back over its near one.
+async fn column_drag_reps(page: &Page) -> Result<Rows> {
+    let order =
+        "[...document.querySelectorAll('thead th')].map((th) => th.textContent.trim()).join('|')";
+    let grip = tag(
+        page,
+        &format!("{}.querySelector('[data-drag-handle]')", header("Role")),
+        "grip",
+    )
+    .await?;
+    let target = format!(
+        "(() => {{ const city = {}.getBoundingClientRect(); const grip = document.querySelector('{grip}').getBoundingClientRect(); \
+         return grip.x < city.x ? city.right - 4 - (grip.x + grip.width / 2) : city.x + 4 - (grip.x + grip.width / 2); }})()",
+        header("City")
+    );
+    measure(page, REPS, async |_| {
+        let by: f64 = js(page, &target).await?;
+        let from = pointer::centre_of(page, &grip).await?;
+        let before: String = js(page, order).await?;
+        let to = Point {
+            x: from.x + by,
+            y: from.y,
+        };
+        pointer::drag(page, from, to, 10).await?;
+        wait::for_js_true(
+            page,
+            &format!("{order} !== {}", serde_json::to_string(&before)?),
+            "the column drag to move it",
+        )
+        .await?;
+        Ok("column drag")
+    })
+    .await
+}
+
 #[test]
 #[ignore = "table timing report, run on request"]
 fn mounting() {
@@ -207,38 +242,7 @@ fn interacting_with_a_full_table() {
         let width = format!("{city}.style.width");
         let rows = drag_reps(page, &handle, (60.0, 0.0), 10, &width, REPS).await?;
         report(&format!("{TABLE} resize"), &rows, BUDGETS);
-        let order = "[...document.querySelectorAll('thead th')].map((th) => th.textContent.trim()).join('|')";
-        let grip = tag(
-            page,
-            &format!("{}.querySelector('[data-drag-handle]')", header("Role")),
-            "grip",
-        )
-        .await?;
-        // Role over City's far edge and back over its near one.
-        let target = format!(
-            "(() => {{ const city = {}.getBoundingClientRect(); const grip = document.querySelector('{grip}').getBoundingClientRect(); \
-             return grip.x < city.x ? city.right - 4 - (grip.x + grip.width / 2) : city.x + 4 - (grip.x + grip.width / 2); }})()",
-            header("City")
-        );
-        let rows = measure(page, REPS, async |_| {
-            let by: f64 = js(page, &target).await?;
-            let from = pointer::centre_of(page, &grip).await?;
-            let before: String = js(page, order).await?;
-            let to = Point {
-                x: from.x + by,
-                y: from.y,
-            };
-            pointer::drag(page, from, to, 10).await?;
-            wait::for_js_true(
-                page,
-                &format!("{order} !== {}", serde_json::to_string(&before)?),
-                "the column drag to move it",
-            )
-            .await?;
-            Ok("column drag")
-        })
-        .await?;
-        report(TABLE, &rows, BUDGETS);
+        report(TABLE, &column_drag_reps(page).await?, BUDGETS);
         report(TABLE, &filter_keys(page, "ali").await?, BUDGETS);
         Ok(())
     }));
@@ -302,6 +306,21 @@ fn a_windowed_table() {
         page.evaluate(format!("{SCROLLER}.scrollTop = 0")).await?;
         report(TABLE, &sort_reps(page, "Age").await?, BUDGETS);
         report(TABLE, &select_all_reps(page).await?, BUDGETS);
+        report(TABLE, &column_drag_reps(page).await?, BUDGETS);
+        // Deep in the list, where a reorder was laggy (todo 2584).
+        page.evaluate(format!("{SCROLLER}.scrollTop = 200000"))
+            .await?;
+        wait::for_js_true(
+            page,
+            "[...document.querySelectorAll('tbody tr')].some((tr) => tr.getAttribute('aria-rowindex') > 5000)",
+            "row 5000 in view",
+        )
+        .await?;
+        report(
+            &format!("{TABLE} at 5000"),
+            &column_drag_reps(page).await?,
+            BUDGETS,
+        );
         report(TABLE, &filter_keys(page, "ali").await?, BUDGETS);
         Ok(())
     }));

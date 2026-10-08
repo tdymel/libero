@@ -211,3 +211,55 @@ fn without_a_column_menu_no_header_drags() {
 
     assert!(!render(app).contains("data-drag-handle=true"));
 }
+
+/// Todo 2584: a column move carries each cell's body along. Unkeyed, the cells were
+/// redrawn in place, so every row remounted the bodies that changed places.
+#[test]
+fn a_column_move_keeps_the_cell_bodies_mounted() {
+    thread_local! {
+        static MOUNTS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+    }
+
+    #[component]
+    fn Badge(text: String) -> Element {
+        use_hook(|| MOUNTS.set(MOUNTS.get() + 1));
+        rsx! { "{text}" }
+    }
+
+    fn app() -> Element {
+        let order =
+            use_context_provider(|| Signal::new(vec!["Name".to_string(), "Age".to_string()]));
+        let columns = vec![
+            column("Name")
+                .value(|row: &Person| row.name.to_string())
+                .row_header(),
+            column("Age").value(|row: &Person| row.age),
+            column("Badge")
+                .value(|row: &Person| row.name[..1].to_string())
+                .render(|row: &Person| rsx! { Badge { text: row.name[..1].to_string() } }),
+        ];
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "People",
+                    data: people(),
+                    columns,
+                    column_order: order(),
+                }
+            }
+        }
+    }
+
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    let rows = people().len();
+    assert_eq!(MOUNTS.get(), rows);
+
+    let mut order = dom.in_scope(ScopeId::APP, consume_context::<Signal<Vec<String>>>);
+    dom.in_runtime(|| order.set(vec!["Badge".to_string(), "Name".to_string()]));
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    let html = dioxus_ssr::render(&dom);
+    let at = |text: &str| html.find(text).unwrap_or_else(|| panic!("{text}: {html}"));
+    assert!(at(">Badge<") < at(">Name<"), "{html}");
+    assert_eq!(MOUNTS.get(), rows);
+}

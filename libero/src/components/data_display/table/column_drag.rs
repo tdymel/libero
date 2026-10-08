@@ -79,6 +79,8 @@ struct Dragging {
     gap: Option<usize>,
     /// Let go before the measure came back (the WebView reads over IPC): it drops on arrival.
     released: bool,
+    /// The geometry arrived: the grip redraws with its ghost.
+    measured: bool,
 }
 
 /// The layout a drag measured at its start.
@@ -243,7 +245,9 @@ pub(super) fn ColumnDragGrip(index: usize, header: String, drag: ColumnDrag) -> 
         dragging.set(None);
         geometry.set(None);
     });
-    let ours = dragging.read().is_some_and(|active| active.index == index);
+    // Through a memo: a move redraws the dragged grip only, not every header's (todo 2584).
+    let mine = use_memo(move || dragging().filter(|active| active.index == index));
+    let ours = mine.read().is_some();
     let _ = use_escape_dismiss(ours, true, cancel);
     let end_header = header.clone();
     let drop_at = use_callback(move |gap: usize| {
@@ -282,6 +286,7 @@ pub(super) fn ColumnDragGrip(index: usize, header: String, drag: ColumnDrag) -> 
                 scrolled: 0.0,
                 gap: None,
                 released: false,
+                measured: false,
             }));
             let fail = move || {
                 start.cancel.call(());
@@ -327,6 +332,7 @@ pub(super) fn ColumnDragGrip(index: usize, header: String, drag: ColumnDrag) -> 
                     scroll,
                 };
                 active.gap = measured.gap_at(active.x, active.y, 0.0);
+                active.measured = true;
                 if !active.released {
                     dragging.set(Some(active));
                     return geometry.set(Some(measured));
@@ -376,7 +382,7 @@ pub(super) fn ColumnDragGrip(index: usize, header: String, drag: ColumnDrag) -> 
             }
         }),
     });
-    let active = (*dragging.read()).filter(|active| active.index == index);
+    let active = mine();
     let shown = geometry.read().clone().zip(active);
     let overlay = shown.map(|(geometry, active)| {
         let (cell, area) = (geometry.cell, geometry.area);

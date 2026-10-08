@@ -5,7 +5,7 @@
 use std::rc::Rc;
 
 use dioxus::prelude::*;
-use libero::components::{Column, Table, column};
+use libero::components::{Chip, Column, Table, column};
 
 use crate::Routes;
 
@@ -57,6 +57,16 @@ fn columns() -> Vec<Column<Person>> {
         column("Age").value(|p: &Person| p.age).sortable(),
         column("Salary").value(|p: &Person| p.salary).sortable(),
     ]
+}
+
+/// [`columns`] with Role in a `Chip`, as the docs demo draws it: a body a column move must carry.
+fn chip_columns() -> Vec<Column<Person>> {
+    let mut columns = columns();
+    columns[1] = column("Role")
+        .value(|p: &Person| p.role.to_string())
+        .sortable()
+        .render(|p: &Person| rsx! { Chip { size: "xs", "{p.role}" } });
+    columns
 }
 
 fn key(p: &Person) -> String {
@@ -139,7 +149,8 @@ fn PagedPage() -> Element {
     }
 }
 
-/// 10k selectable rows, 40px each under a 400px cap, with a quick filter. In `#pane`,
+/// 10k selectable rows, 40px each under a 400px cap, with a quick filter, column menus,
+/// whose grips reorder the columns, and Role in a `Chip`. In `#pane`,
 /// where the shared wheel reps find the scroller.
 #[component]
 fn WindowedPage() -> Element {
@@ -149,10 +160,11 @@ fn WindowedPage() -> Element {
             Table {
                 caption: "People",
                 data: data.as_ref().clone(),
-                columns: columns(),
+                columns: chip_columns(),
                 row_key: key,
                 selectable: true,
                 show_quick_filter: true,
+                column_menu: true,
                 max_height: "400px",
                 virtual_row_height: 40.0,
             }

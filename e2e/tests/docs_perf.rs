@@ -256,16 +256,40 @@ async fn expand_nav(page: &Page) -> Result<()> {
     Ok(())
 }
 
-/// An in-app navigation to `path`: its nav link clicked, else a router `popstate`.
+/// Where [`aim`] tags the nav link to click.
+const NAV_LINK: &str = "[data-docs-perf-nav]";
+
+/// Tags `path`'s nav link and scrolls it into view, before a timed [`navigate`], which
+/// then writes nothing; `false` when the nav has no link to it.
+async fn aim(page: &Page, path: &str) -> Result<bool> {
+    let p = serde_json::to_string(path)?;
+    js(
+        page,
+        &format!(
+            "(() => {{ const a = [...document.querySelectorAll('#docs-nav a[href]')] \
+               .find((a) => new URL(a.href).pathname === {p}); \
+               if (!a) return false; \
+               if (a.hasAttribute('data-docs-perf-nav')) return true; \
+               document.querySelectorAll('{NAV_LINK}').forEach((a) => a.removeAttribute('data-docs-perf-nav')); \
+               a.setAttribute('data-docs-perf-nav', ''); a.scrollIntoView({{ block: 'nearest' }}); return true; }})()"
+        ),
+    )
+    .await
+}
+
+/// An in-app navigation to `path`: its nav link clicked by pointer, which moves the focus
+/// as a user's click does (todo 2324), else a router `popstate`.
 async fn navigate(page: &Page, path: &str) -> Result<()> {
     let p = serde_json::to_string(path)?;
-    page.evaluate(format!(
-        "(() => {{ const a = [...document.querySelectorAll('#docs-nav a[href]')] \
-           .find((a) => new URL(a.href).pathname === {p}); \
-           if (a) {{ a.click(); return; }} \
-           history.pushState(null, '', {p}); dispatchEvent(new PopStateEvent('popstate')); }})()"
-    ))
-    .await?;
+    match aim(page, path).await? {
+        true => pointer::click(page, NAV_LINK).await?,
+        false => {
+            page.evaluate(format!(
+                "history.pushState(null, '', {p}); dispatchEvent(new PopStateEvent('popstate'))"
+            ))
+            .await?;
+        }
+    }
     until(
         page,
         &format!(
@@ -970,6 +994,8 @@ async fn survey_round(
             started.elapsed().as_secs_f64()
         );
         if wanted(kinds, "mount") || wanted(kinds, "plain") {
+            // The nav scrolled to the link untimed: the row prices the click.
+            let _ = aim(page, path).await;
             let outcome = rep(page, async || navigate(page, path).await).await;
             record(rows, format!("{path} | mount | page"), round, outcome);
             if let Err(e) = ensure(page, path).await {
