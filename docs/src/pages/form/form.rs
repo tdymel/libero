@@ -15,6 +15,7 @@ pub struct NewPassword {
 
 #[derive(Clone, PartialEq, Default, Fields)]
 pub struct Signup {
+    pub name: String,
     pub email: String,
     #[fields(nested)]
     pub password: NewPassword,
@@ -26,10 +27,11 @@ pub struct Signup {
 // snippet: ignore - builds on Getting Started's `EmailField` and `NewPasswordFieldset`
 // snippet: mirrors SignupForm, Signup
 const FORM_CODE: &str = r#"use dioxus::prelude::*;
-use libero::components::{Button, Checkbox, Fields, Form, Rule, Text, not_empty};__IMPORTS____COMPANY_IMPORT__
+use libero::components::{Button, Checkbox, Fields, Form, Rule, Text, TextField, not_empty};__IMPORTS__
 
 #[derive(Clone, PartialEq, Default, Fields)]
 struct Signup {
+    name: String,
     email: String,
     #[fields(nested)]
     password: NewPassword,__COMPANY_FIELDS__
@@ -95,10 +97,6 @@ fn form_code(values: &DemoValues, _: &str) -> String {
             pick("\nuse libero::components::{Flex, use_form, use_form_context};"),
         )
         .replace(
-            "__COMPANY_IMPORT__",
-            company("\nuse libero::components::TextField;"),
-        )
-        .replace(
             "__COMPANY_FIELDS__",
             company("\n    company: bool,\n    company_name: String,"),
         )
@@ -160,6 +158,9 @@ pub fn FormPage() -> Element {
                         .doc("Hides the summary and resets nothing."),
                 ]).without_base_props(),
                 props("Every field", vec![
+                    prop("required", "bool")
+                        .default("false")
+                        .doc("Marks the label. Inside a `Form`, an empty field fails the submit with `form.required` unless its own rules fail first. A slider always holds a value, and a lone `Radio` leaves it to its `RadioGroup`. A field with a handler but no `value` or binding counts as filled: pass its `value` or a `name` path."),
                     prop("validate", "Validators<T>")
                         .doc("Rules over the field's own value, one or an array. Shown once the field loses focus or its form is submitted."),
                     prop("name", "FieldName<T>")
@@ -214,6 +215,11 @@ pub fn FormPage() -> Element {
                 Text {
                     "A submit shows every status. With an error, it is cancelled, and a summary of "
                     "every problem appears above the fields and takes focus. Warnings never block. "
+                    "A "
+                    Code { source: "required" }
+                    " field left empty is an error too, \"Fill in this field.\" ("
+                    Code { source: "Localization::form" }
+                    "), unless a rule of its own says more; a disabled one never blocks. "
                     "The summary keeps the problems of that submit. A line leaves once it is fixed, "
                     "and new ones wait for the next submit."
                 }
@@ -257,6 +263,8 @@ fn SignupForm(summary_title: bool, handle: bool, company: bool) -> Element {
             summary_title: summary_title.then(|| "Please fix these first:".to_string()),
             onsubmit: move |_| sent.set(true),
             // demo-code: fields start
+            // `required` alone blocks an empty submit with "Fill in this field.".
+            TextField { label: "Name", name: Signup::FIELDS.name(), required: true }
             // A specialized field and a composed part, built in Getting started.
             EmailField { label: "Email", name: Signup::FIELDS.email(), validate: not_empty.error("Enter your email.") }
             NewPasswordFieldset { path: Signup::FIELDS.password() }

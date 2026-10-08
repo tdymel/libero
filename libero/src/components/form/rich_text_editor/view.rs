@@ -806,6 +806,11 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         .rules(bound.check(&props.validate, value.clone()))
         .bound(&bound)
         .required(required)
+        .empty(bound.is_empty(
+            required,
+            || value.clone(),
+            |doc| doc.blocks.iter().all(|block| block.is_empty()),
+        ))
         .disabled(disabled)
         .size(size)
         .radius(radius)

@@ -858,6 +858,48 @@ fn a_fieldset_in_error_blocks_the_submit_and_joins_the_summary() {
     assert!(summary[0].target.is_some());
 }
 
+/// Todo 2572: `required` is a rule at submit. An empty field blocks with `form.required`, its own
+/// rule speaks first, and a filled or disabled one never blocks.
+#[test]
+fn an_empty_required_field_blocks_the_submit_unless_filled_or_disabled() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Form::<()> {
+                    Spy {}
+                    TextField { label: "Name", name: "name", required: true, value: "" }
+                    TextField {
+                        label: "Email",
+                        name: "email",
+                        required: true,
+                        value: "",
+                        validate: not_empty.error("Enter your email."),
+                    }
+                    TextField { label: "City", name: "city", required: true, value: "Oslo" }
+                    TextField { label: "Zip", name: "zip", required: true, disabled: true, value: "" }
+                    crate::components::Checkbox { label: "Terms", name: "terms", required: true, checked: false, onchange: |_| {} }
+                }
+            }
+        }
+    }
+
+    let (dom, _) = mount(app);
+    let scope = scope(&dom);
+    let summary = dom.in_runtime(|| {
+        assert!(scope.has_errors(), "an empty required field does not block");
+        scope.summary()
+    });
+    let messages: Vec<_> = summary.iter().map(|item| item.message.as_str()).collect();
+    assert_eq!(
+        messages,
+        [
+            "Name: Fill in this field.",
+            "Email: Enter your email.",
+            "Terms: Fill in this field."
+        ]
+    );
+}
+
 /// Todo 2566: a `Fieldset`'s own rule was an unlinked, unnamed line.
 #[test]
 fn a_fieldset_rule_naming_no_field_links_to_the_group() {

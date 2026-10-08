@@ -105,7 +105,7 @@ pub fn ChronoFieldPage() -> Element {
                     prop("status", "FieldStatus")
                         .default("Valid")
                         .doc("Validation state, under the helper. Text the field cannot accept shows its own error instead, such as `DateLocale::invalid_date`, `invalid_duration` or the bound it missed."),
-                    prop("required", "bool").default("false").doc("Sets `required` on the input and marks the label."),
+                    prop("required", "bool").default("false").doc("Sets `required` on the input and marks the label. Inside a `Form`, an empty one fails the submit."),
                     prop("disabled", "bool").default("false").doc("Disables typing and the dropdown, and dims the field."),
                     readonly_prop("field"),
                     prop("dropdown_parts", "Parts<ChronoDropdownPart>").doc("Styles the portaled dropdown and the picker in it."),

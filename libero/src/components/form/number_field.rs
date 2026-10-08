@@ -219,6 +219,11 @@ fn NumberFieldShell<T: NumberValue>(
         .rules(rules)
         .bound(&bound)
         .required(required)
+        .empty(bound.is_empty(
+            required,
+            || Some(bound_value.unwrap_or_else(|| live.cloned())),
+            Option::is_none,
+        ))
         .disabled(disabled)
         .size(size)
         .radius(radius)

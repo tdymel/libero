@@ -67,7 +67,7 @@ pub fn ColorFieldPage() -> Element {
                         .default(theme.color_field.close_on_swatch_click.to_string())
                         .doc("Picking a swatch closes the dropdown."),
                     prop("name", "FieldName<ColorCode>")
-                        .doc("What the field posts as: the text it shows, so in `format` after a blur but as typed while it has focus (Enter submits that), or unparsable text kept by `fix_on_blur: false`. A path such as `Theme::FIELDS.accent()` also binds the color to the surrounding `Form`'s value when the field has no `oninput`."),
+                        .doc("What the field posts as: its color in `format`, from a hidden input as `ColorPicker` posts it, never the text being typed. A path such as `Theme::FIELDS.accent()` also binds the color to the surrounding `Form`'s value when the field has no `oninput`."),
                     prop("placeholder", "String").doc("Shown while the text is empty."),
                     prop("size", "Size").default(theme.color_field.size.as_str()).doc("Control height, font size and the dropdown's picker."),
                     prop("radius", "Size").default(theme.color_field.radius.as_str()).doc("Corner radius of the frame."),

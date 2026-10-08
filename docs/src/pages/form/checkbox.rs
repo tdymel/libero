@@ -54,7 +54,7 @@ pub fn CheckboxPage() -> Element {
                     prop("helper", "Caption")
                         .doc("Under the description, in the label's column."),
                     status_prop(),
-                    required_prop(),
+                    required_prop().also("Inside a `Form`, an empty one fails the submit."),
                     disabled_prop("checkbox"),
                     readonly_prop("checkbox").also("Chromium does not announce read-only on a checkbox, so say it in the label or description where it matters."),
                     prop("aria_label", "String")

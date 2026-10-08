@@ -201,7 +201,7 @@ pub fn RichTextEditorPage() -> Element {
                     status_prop(),
                     prop("required", "bool")
                         .default("false")
-                        .doc("Marks the field required and adds an asterisk to the label."),
+                        .doc("Marks the field required and adds an asterisk to the label. Inside a `Form`, an empty one fails the submit."),
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Disables and dims the field and hides the toolbar."),

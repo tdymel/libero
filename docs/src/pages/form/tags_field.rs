@@ -175,7 +175,7 @@ pub fn TagsFieldPage() -> Element {
                     prop("description", "Caption").doc("Between the label and the control. What to enter."),
                     prop("helper", "Caption").doc("Under the control. Formatting rules, or what the entry affects."),
                     status_prop(),
-                    prop("required", "bool").default("false").doc("Marks the field required and adds an asterisk to the label."),
+                    prop("required", "bool").default("false").doc("Marks the field required and adds an asterisk to the label. Inside a `Form`, an empty one fails the submit."),
                     prop("disabled", "bool").default("false").doc("Takes the input out of the tab order and dims the field."),
                     readonly_prop("field"),
                     prop("dropdown_parts", "Parts<DropdownPart>").doc("Styles the portaled `suggestions` dropdown and its inner parts."),

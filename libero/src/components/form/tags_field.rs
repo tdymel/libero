@@ -179,6 +179,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         .rules(props.validate.check(&held))
         .bound(&bound)
         .required(required)
+        .empty(held.is_empty())
         .disabled(disabled)
         .size(size)
         .radius(radius)

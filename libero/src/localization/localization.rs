@@ -28,6 +28,7 @@ pub struct Localization {
     /// to the root's `lang`, so a screen reader speaks the words in it.
     pub lang: &'static str,
     pub common: CommonLabels,
+    pub form: FormLabels,
     /// Names and labels for every date and time component.
     pub date: DateLocale,
     pub pagination: PaginationLabels,
@@ -79,6 +80,7 @@ impl Localization {
     pub const ENGLISH: Localization = Localization {
         lang: "en",
         common: CommonLabels::ENGLISH,
+        form: FormLabels::ENGLISH,
         date: DateLocale::ENGLISH,
         pagination: PaginationLabels::ENGLISH,
         avatar: AvatarLabels::ENGLISH,
@@ -128,6 +130,7 @@ impl Localization {
     pub const GERMAN: Localization = Localization {
         lang: "de",
         common: CommonLabels::GERMAN,
+        form: FormLabels::GERMAN,
         date: DateLocale::GERMAN,
         pagination: PaginationLabels::GERMAN,
         avatar: AvatarLabels::GERMAN,

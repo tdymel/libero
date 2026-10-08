@@ -1,10 +1,11 @@
 //! `Form`: a bound field's rule shows on blur and follows the form's value. The field skips
 //! its parent's render (29), yet must redraw on a keystroke and a store write.
 
-use anyhow::Result;
+use anyhow::{Result, ensure};
 use chromiumoxide::Page;
 use e2e::browser::Scheme;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, eventually_text};
 use e2e::passes::{contrast, focus, keyboard, pointer};
 use e2e::{Fixture, Viewport, wait};
 
@@ -336,3 +337,66 @@ async fn settle(page: &Page, invalid: bool) -> Result<()> {
     )
     .await
 }
+
+const SUMMARY: &str = "[data-slot=summary]";
+
+/// Todo 2572: `required` alone cancels an empty submit before `onsubmit`, with the summary as a
+/// rule's error has it; the button stays enabled, and a filled form submits.
+async fn required_blocks_an_empty_submit<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    ensure!(
+        d.attr("#send", "disabled").await?.is_none(),
+        "the submit button is disabled"
+    );
+    d.click("#send").await?;
+    eventually(d, "the error summary", async |d| d.exists(SUMMARY).await).await?;
+    let summary = d.text(SUMMARY).await?;
+    for label in ["Name", "Plan", "Tier"] {
+        ensure!(
+            summary.contains(label),
+            "no {label} line in the summary: {summary}"
+        );
+    }
+    ensure!(
+        summary.matches("Fill in this field.").count() == 3,
+        "not three required lines: {summary}"
+    );
+    ensure!(
+        d.text("#submits").await? == "0",
+        "onsubmit ran on an empty submit"
+    );
+    for field in ["#name", "#plan"] {
+        ensure!(
+            d.attr(field, "aria-invalid").await?.as_deref() == Some("true"),
+            "{field} is not invalid"
+        );
+    }
+    d.click("#fill").await?;
+    d.click("#send").await?;
+    eventually_text(d, "#submits", "1", "a filled submit").await
+}
+
+e2e::scenario!(
+    required_fields_block_an_empty_submit,
+    "/form/required",
+    required_blocks_an_empty_submit
+);
+
+/// Todo 2608: a disabled `Fieldset` dims its legend, description and helper to `muted.6`.
+async fn a_disabled_fieldset_dims_its_text<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let muted = d.style("#probe", "color").await?;
+    for part in [
+        "#group > legend",
+        "#group > [data-slot=description]",
+        "#group > [data-slot=helper]",
+    ] {
+        let color = d.style(part, "color").await?;
+        ensure!(color == muted, "{part} is {color}, not muted.6's {muted}");
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    a_disabled_fieldset_dims_its_legend_and_captions,
+    "/form/fieldset-disabled",
+    a_disabled_fieldset_dims_its_text
+);

@@ -139,7 +139,7 @@ pub fn AutocompletePage() -> Element {
                     prop("description", "Caption").doc("Between the label and the control. What to enter."),
                     prop("helper", "Caption").doc("Under the control. Formatting rules, or what the entry changes."),
                     status_prop(),
-                    required_prop(),
+                    required_prop().also("Inside a `Form`, an empty one fails the submit."),
                     prop("disabled", "bool").default("false").doc("Takes the input out of the tab order and dims the field."),
                     readonly_prop("field"),
                     prop("dropdown_parts", "Parts<DropdownPart>").doc("Styles the portaled dropdown and its inner parts."),

@@ -89,7 +89,7 @@ IconProvider {
 | `description` | `Caption` | - | Under the label. |
 | `helper` | `Caption` | - | Under the stars. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`. |
-| `required` | `bool` | `false` | Marks the label with an asterisk. No `aria-required`: ARIA does not allow it on a slider. |
+| `required` | `bool` | `false` | Marks the label with an asterisk. No `aria-required`: ARIA does not allow it on a slider. Inside a `Form`, an unrated one fails the submit. |
 | `disabled` | `bool` | `false` | Dims the stars and drops them from the tab order. |
 | `readonly` | `bool` | `false` | Focusable, announced and posted, but neither pointer nor keys change it. |
 | `aria_label` | `String` | - | Names the rating when it has no `label`. |

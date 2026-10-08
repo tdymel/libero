@@ -172,7 +172,7 @@ fn Demo() -> Element {
 | `description` | `Caption` | - | Between the label and the segments. How to choose. |
 | `helper` | `Caption` | - | Under the segments. What the choice changes. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`. |
-| `required` | `bool` | `false` | Sets `aria-required` on the group and marks the label. |
+| `required` | `bool` | `false` | Sets `aria-required` on the group and marks the label. Inside a `Form`, an empty one fails the submit. |
 | `disabled` | `bool` | `false` | Disables every segment and dims the captions. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the control from the tab order and the post instead. |
 

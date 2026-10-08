@@ -134,6 +134,23 @@ impl<T: Clone + 'static> Bound<T> {
         self.owns.then(|| self.entered.cloned()).flatten()
     }
 
+    /// Whether a `required` field inside a form holds nothing: `shown` is what it draws, else what
+    /// was entered. Reads nothing otherwise; a value it cannot see (a handler, no `value`) is filled.
+    pub fn is_empty(
+        &self,
+        required: bool,
+        shown: impl FnOnce() -> Option<T>,
+        empty: impl Fn(&T) -> bool,
+    ) -> bool {
+        if !required || self.hook.form.is_none() {
+            return false;
+        }
+        match shown().or_else(|| self.entered()) {
+            Some(value) => empty(&value),
+            None => self.owns,
+        }
+    }
+
     /// The status the field's rules give `value`, else what was entered. Reads
     /// nothing without rules, so no re-render per keystroke.
     pub fn check(&self, rules: &Validators<T>, value: Option<T>) -> Option<FieldStatus>

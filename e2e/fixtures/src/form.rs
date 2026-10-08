@@ -7,7 +7,7 @@ use libero::components::{
     Autocomplete, Button, Cascader, CascaderOption, Checkbox, ColorCode, ColorField, DateField,
     Fields, Fieldset, FileField, Files, Flex, Form, MultiSelect, NativeSelect, NumberField,
     Options, PasswordField, PhoneField, PinField, RadioGroup, Rating, Rule, SegmentedControl,
-    Select, Slider, SliderChangeEvent, Switch, TagsField, TextField, Textarea, min_length,
+    Select, Slider, SliderChangeEvent, Switch, TagsField, Text, TextField, Textarea, min_length,
     not_empty, use_form,
 };
 
@@ -17,7 +17,57 @@ pub const ROUTES: Routes = &[
     ("/form", || rsx! { FormPage {} }),
     ("/form/summary", || rsx! { SummaryPage {} }),
     ("/form/targets", || rsx! { TargetsPage {} }),
+    ("/form/required", || rsx! { RequiredPage {} }),
+    ("/form/fieldset-disabled", || rsx! { DisabledFieldsetPage {} }),
 ];
+
+/// Todo 2572: `required` alone, no rules, blocks an empty submit; `#fill` fills all three.
+#[component]
+fn RequiredPage() -> Element {
+    let mut name = use_signal(String::new);
+    let mut plan = use_signal(|| None::<Plan>);
+    let mut tier = use_signal(|| None::<Plan>);
+    let mut submits = use_signal(|| 0u32);
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            span { id: "submits", "{submits}" }
+            Form::<()> {
+                onsubmit: move |_| submits += 1,
+                TextField { id: "name", label: "Name", required: true, value: name(), oninput: move |text| name.set(text) }
+                NativeSelect { id: "plan", label: "Plan", placeholder: "Pick one", required: true, value: plan(), onchange: move |next| plan.set(Some(next)) }
+                Select { id: "tier", label: "Tier", placeholder: "Pick one", required: true, value: tier(), onchange: move |next| tier.set(next) }
+                Button { id: "send", r#type: "submit", "Send" }
+            }
+            Button {
+                id: "fill",
+                onclick: move |_| {
+                    name.set("Ada".to_string());
+                    plan.set(Some(Plan::Pro));
+                    tier.set(Some(Plan::Free));
+                },
+                "Fill"
+            }
+        }
+    }
+}
+
+/// Todo 2608: a disabled group's legend and captions dim to `muted.6`, as `#probe` is.
+#[component]
+fn DisabledFieldsetPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Fieldset::<()> {
+                id: "group",
+                label: "Address",
+                description: "Where we ship.",
+                helper: "Kept private.",
+                disabled: true,
+                TextField { label: "Street" }
+            }
+            Text { id: "probe", sx: libero::sx::sx().color("muted.6"), "Probe" }
+        }
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Plan {

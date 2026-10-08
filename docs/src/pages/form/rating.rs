@@ -66,7 +66,7 @@ pub fn RatingPage() -> Element {
                 status_prop(),
                 prop("required", "bool")
                     .default("false")
-                    .doc("Marks the label with an asterisk. No `aria-required`: ARIA does not allow it on a slider, so the name says the localization's `rating.required` word instead."),
+                    .doc("Marks the label with an asterisk. No `aria-required`: ARIA does not allow it on a slider, so the name says the localization's `rating.required` word instead. Inside a `Form`, an unrated one fails the submit."),
                 prop("disabled", "bool")
                     .default("false")
                     .doc("Dims the stars and drops them from the tab order."),

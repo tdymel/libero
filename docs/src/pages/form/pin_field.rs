@@ -51,7 +51,7 @@ pub fn PinFieldPage() -> Element {
                     prop("description", "Caption").doc("Between the label and the cells. Where the code came from."),
                     prop("helper", "Caption").doc("Under the cells. How long the code lasts, how to get another."),
                     status_prop(),
-                    prop("required", "bool").default("false").doc("Marks the field required and adds an asterisk to the label."),
+                    prop("required", "bool").default("false").doc("Marks the field required and adds an asterisk to the label. Inside a `Form`, an empty one fails the submit."),
                     prop("disabled", "bool").default("false").doc("Disables and dims every cell."),
                     readonly_prop("field"),
                 ])

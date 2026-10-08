@@ -23,7 +23,9 @@ impl FieldBuilder<'_> {
     pub fn prepare(self) -> PreparedField {
         let id = use_root_id(self.attributes);
         let id_value = id();
-        let warning_word = use_localization().common.warning;
+        let words = use_localization();
+        let warning_word = words.common.warning;
+        let required_text = words.form.required;
 
         // One hook for the touched flag, the form registration, the binding and
         // their cleanup: every field pays for it, validated or not.
@@ -44,8 +46,16 @@ impl FieldBuilder<'_> {
             .and_then(Input::as_ref)
             .cloned()
             .unwrap_or_default();
+        // `required` is a rule at submit inside a form; the field's own rules speak first.
+        let missing = self.required && self.empty && !self.disabled && scope.is_some();
         let validated = self.rules.is_some();
-        let rules = self.rules.unwrap_or_default();
+        let rules = match missing {
+            true => worst(
+                self.rules.unwrap_or_default(),
+                FieldStatus::Error(required_text.into()),
+            ),
+            false => self.rules.unwrap_or_default(),
+        };
         let blank = [&explicit, &rules]
             .into_iter()
             .any(|status| status.message().is_some_and(|text| text.trim().is_empty()));

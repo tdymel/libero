@@ -120,7 +120,7 @@ pub fn RadioGroupPage() -> Element {
                     status_prop(),
                     prop("required", "bool")
                         .default("false")
-                        .doc("Sets `aria-required` on the group and marks the label."),
+                        .doc("Sets `aria-required` on the group and marks the label. Inside a `Form`, an empty one fails the submit."),
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Disables every option and dims the group."),

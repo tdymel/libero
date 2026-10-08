@@ -9,7 +9,19 @@ pub const ROUTES: Routes = &[
     ("/number-field", || rsx! { NumberFieldPage {} }),
     ("/number-field/echo", || rsx! { NumberFieldEchoPage {} }),
     ("/number-field/reset", || rsx! { NumberFieldResetPage {} }),
+    ("/number-field/rtl", || rsx! { NumberFieldRtlPage {} }),
 ];
+
+/// Todo 2608: a negative number under `dir=rtl` still reads `-5`.
+#[component]
+fn NumberFieldRtlPage() -> Element {
+    let mut delta = use_signal(|| Some(-5i32));
+    rsx! {
+        div { dir: "rtl",
+            NumberField { id: "delta", label: "Delta", value: delta(), onchange: move |next| delta.set(next) }
+        }
+    }
+}
 
 /// Todo 2327: an empty field in a `Form`, reset by a button; the caller then sets and clears it.
 #[component]

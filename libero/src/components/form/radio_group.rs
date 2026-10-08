@@ -168,6 +168,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
         .rules(props.validate.check(&current))
         .bound(&bound)
         .required(required)
+        .empty(selected.is_none())
         .disabled(disabled)
         .size(size)
         .class(&props.class)

@@ -50,7 +50,7 @@ pub fn SwitchPage() -> Element {
                 prop("helper", "Caption")
                     .doc("Under the description, in the label's column."),
                 status_prop(),
-                required_prop(),
+                required_prop().also("Inside a `Form`, an empty one fails the submit."),
                 disabled_prop("switch"),
                 readonly_prop("switch").also("Chromium does not announce read-only on a switch, so say it in the label or description where it matters."),
                 prop("aria_label", "String")

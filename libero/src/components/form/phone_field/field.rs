@@ -268,6 +268,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
         .rules(props.validate.check(&e164))
         .bound(&bound)
         .required(required)
+        .empty(typed.is_empty())
         .disabled(disabled)
         .size(size)
         .radius(radius)

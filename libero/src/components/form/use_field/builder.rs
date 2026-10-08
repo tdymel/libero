@@ -32,6 +32,7 @@ pub(crate) struct FieldBuilder<'a> {
     pub(super) aria_label: Option<&'a str>,
     pub(super) hook: Option<Rc<FieldHook>>,
     pub(super) required: bool,
+    pub(super) empty: bool,
     pub(super) required_word: Option<&'static str>,
     pub(super) disabled: bool,
     pub(super) inline: bool,
@@ -63,6 +64,7 @@ impl Default for FieldBuilder<'_> {
             aria_label: None,
             hook: None,
             required: false,
+            empty: false,
             required_word: None,
             disabled: false,
             inline: false,
@@ -143,6 +145,14 @@ impl<'a> FieldBuilder<'a> {
     #[inline]
     pub fn required(mut self, required: bool) -> Self {
         self.required = required;
+        self
+    }
+
+    /// Whether the control holds nothing: a `required` field inside a `Form` then fails at
+    /// submit with `form.required`, unless disabled.
+    #[inline]
+    pub fn empty(mut self, empty: bool) -> Self {
+        self.empty = empty;
         self
     }
 

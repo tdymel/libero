@@ -52,7 +52,7 @@ fn Demo() -> Element {
 | `disallow_input` | `bool` | `false` | Makes the text read-only, so a color comes from the dropdown alone. |
 | `fix_on_blur` | `bool` | `true` | Text that does not parse goes back to the last valid color on blur. Off, it stays and shows `color.invalid` as an error. |
 | `close_on_swatch_click` | `bool` | `false` | Picking a swatch closes the dropdown. |
-| `name` | `FieldName<ColorCode>` | - | What the field posts as: the text it shows, so in `format` after a blur but as typed while it has focus (Enter submits that), or unparsable text kept by `fix_on_blur: false`. A path such as `Theme::FIELDS.accent()` also binds the color to the surrounding `Form`'s value when the field has no `oninput`. |
+| `name` | `FieldName<ColorCode>` | - | What the field posts as: its color in `format`, from a hidden input as `ColorPicker` posts it, never the text being typed. A path such as `Theme::FIELDS.accent()` also binds the color to the surrounding `Form`'s value when the field has no `oninput`. |
 | `placeholder` | `String` | - | Shown while the text is empty. |
 | `size` | `Size` | `md` | Control height, font size and the dropdown's picker. |
 | `radius` | `Size` | `sm` | Corner radius of the frame. |

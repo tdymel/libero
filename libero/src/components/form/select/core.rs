@@ -295,6 +295,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
 
     // Subscribed only where a pick changes what is drawn.
     let has_selection = props.clearable && picked.read().selected.iter().any(|selected| *selected);
+    let empty = required && !picked.read().selected.iter().any(|selected| *selected);
     let open = SelectOpen {
         state,
         cursor,
@@ -318,6 +319,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         .rules(props.rules.clone())
         .name(props.name.as_deref())
         .required(required)
+        .empty(empty)
         .disabled(disabled)
         .size(size)
         .radius(radius)

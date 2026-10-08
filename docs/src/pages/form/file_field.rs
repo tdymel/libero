@@ -98,7 +98,7 @@ pub fn FileFieldPage() -> Element {
                     prop("description", "Caption").doc("Between the label and the control. Which files are wanted."),
                     prop("helper", "Caption").doc("Under the control. Size limits, formats."),
                     status_prop(),
-                    prop("required", "bool").default("false").doc("Marks the field required and adds an asterisk to the label."),
+                    prop("required", "bool").default("false").doc("Marks the field required and adds an asterisk to the label. Inside a `Form`, an empty one fails the submit."),
                     prop("disabled", "bool").default("false").doc("Disables picking and dropping, and dims the field."),
                     readonly_prop("field"),
                 ])

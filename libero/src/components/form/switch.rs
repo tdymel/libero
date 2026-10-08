@@ -235,6 +235,7 @@ pub fn Switch(props: SwitchProps) -> Element {
         .rules(props.validate.check(&checked))
         .bound(&bound)
         .required(required)
+        .empty(!checked)
         .disabled(disabled)
         .size(size)
         .radius(radius)

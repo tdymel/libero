@@ -168,6 +168,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         .rules(props.validate.check(&text))
         .bound(&bound)
         .required(required)
+        .empty(text.is_empty())
         .disabled(disabled)
         .size(size)
         .radius(radius)

@@ -90,7 +90,7 @@ field_props! {
         /// Picking a swatch closes the dropdown.
         #[props(default)]
         close_on_swatch_click: Option<bool>,
-        /// What the field posts its shown text as, typed text included. A path
+        /// What the field posts its color as, in `format`, from a hidden input. A path
         /// also binds it to the surrounding `Form`.
         #[props(default, into)]
         name: crate::components::form::FieldName<ColorCode>,
@@ -423,7 +423,6 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     let input = field
         .aria(control)
         .attr_default("type", "text")
-        .attr("name", bound.name().map(str::to_string))
         .attr("value", text)
         .attr("data-controlled", true)
         .attr("placeholder", props.placeholder)
@@ -560,10 +559,22 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             )
     }));
 
+    // Posts the value in `format`, as `ColorPicker` does, never the text being typed (todo 2315).
+    let hidden = bound.name().map(|name| {
+        rsx! {
+            input {
+                r#type: "hidden",
+                name,
+                value: value.to_format(format),
+                disabled,
+            }
+        }
+    });
     let control = rsx! {
         // On the wrapper, not the input: focus can also leave from the eyedropper.
         div { onmounted: anchor.mount(), onfocusout: move |_| settle(),
             {frame.render(input)}
+            {hidden}
             {announcer.render()}
         }
     };

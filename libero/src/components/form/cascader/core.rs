@@ -208,6 +208,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         .rules(props.rules.clone())
         .name(props.name.as_deref())
         .required(required)
+        .empty(committed.is_none())
         .disabled(disabled)
         .size(size)
         .radius(radius)

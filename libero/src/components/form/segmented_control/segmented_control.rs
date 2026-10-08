@@ -145,6 +145,7 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
         )
         .bound(&bound)
         .required(required)
+        .empty(selected.is_none())
         .disabled(disabled)
         .size(size)
         .radius(radius)

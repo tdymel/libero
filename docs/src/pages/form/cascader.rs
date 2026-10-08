@@ -197,7 +197,7 @@ pub fn CascaderPage() -> Element {
                     prop("description", "Caption").doc("Between the label and the control. What to pick."),
                     prop("helper", "Caption").doc("Under the control. What the choice changes."),
                     status_prop(),
-                    required_prop(),
+                    required_prop().also("Inside a `Form`, an empty one fails the submit."),
                     prop("disabled", "bool").default("false").doc("Takes the trigger out of the tab order and dims the field."),
                     readonly_prop("field"),
                     prop("dropdown_parts", "Parts<DropdownPart>").doc("Styles the portaled dropdown and its inner parts."),

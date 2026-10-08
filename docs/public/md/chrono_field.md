@@ -145,7 +145,7 @@ and `DateTimeRangeField`, with only the props that type uses and no turbofish.
 | `description` | `Caption` | - | Between the label and the control. What to enter. |
 | `helper` | `Caption` | - | Under the control. Formatting rules, or what the entry changes. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. Text the field cannot accept shows its own error instead, such as `DateLocale::invalid_date`, `invalid_duration` or the bound it missed. |
-| `required` | `bool` | `false` | Sets `required` on the input and marks the label. |
+| `required` | `bool` | `false` | Sets `required` on the input and marks the label. Inside a `Form`, an empty one fails the submit. |
 | `disabled` | `bool` | `false` | Disables typing and the dropdown, and dims the field. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead. |
 | `dropdown_parts` | `Parts<ChronoDropdownPart>` | - | Styles the portaled dropdown and the picker in it. |

@@ -112,6 +112,11 @@ fn TextFieldShell(
             )
         })
         .flatten();
+    let empty = bound.is_empty(
+        required,
+        || bound_value.clone().or_else(|| live.cloned()),
+        String::is_empty,
+    );
 
     let field = use_field()
         .label(&props.label)
@@ -121,6 +126,7 @@ fn TextFieldShell(
         .rules(rules)
         .bound(&bound)
         .required(required)
+        .empty(empty)
         .disabled(disabled)
         .size(size)
         .radius(radius)

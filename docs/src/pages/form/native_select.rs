@@ -81,7 +81,7 @@ pub fn NativeSelectPage() -> Element {
                     prop("helper", "Caption")
                         .doc("Under the control. Constraints, or what the choice changes."),
                     status_prop(),
-                    required_prop().also("An untouched select is not announced invalid. `validate` or the surrounding `Form` enforces it."),
+                    required_prop().also("An untouched select is not announced invalid. Inside a `Form`, an unpicked one fails the submit."),
                     disabled_prop("field").also("A native `<select>` has no read-only state, so there is no `readonly`. Use `Select` for that."),
                 ])
                 .parts("FieldPart", vec![

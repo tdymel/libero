@@ -188,6 +188,7 @@ fn NativeSelectShell<T: Options>(live: Signal<Option<T>>, field: NativeSelectPro
         .rules(rules)
         .bound(&bound)
         .required(required)
+        .empty(unpicked)
         .disabled(disabled)
         .size(size)
         .radius(radius)

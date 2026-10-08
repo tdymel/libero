@@ -85,7 +85,7 @@ The field tells screen readers why it refused a tag, but shows nothing. The
 | `description` | `Caption` | - | Between the label and the control. What to enter. |
 | `helper` | `Caption` | - | Under the control. Formatting rules, or what the entry affects. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`. |
-| `required` | `bool` | `false` | Marks the field required and adds an asterisk to the label. |
+| `required` | `bool` | `false` | Marks the field required and adds an asterisk to the label. Inside a `Form`, an empty one fails the submit. |
 | `disabled` | `bool` | `false` | Takes the input out of the tab order and dims the field. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead. |
 | `dropdown_parts` | `Parts<DropdownPart>` | - | Styles the portaled `suggestions` dropdown and its inner parts. |

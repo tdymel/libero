@@ -373,3 +373,18 @@ async fn settle(page: &Page, value: &str) -> Result<()> {
     )
     .await
 }
+
+/// Todo 2608: under `dir=rtl` a negative number still reads `-5`, not `5-` (UAX #9).
+async fn a_negative_number_reads_left_to_right<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let direction = d.style("#delta", "direction").await?;
+    anyhow::ensure!(direction == "ltr", "the input runs {direction}");
+    let value = d.value("#delta").await?;
+    anyhow::ensure!(value == "-5", "the input holds {value:?}");
+    Ok(())
+}
+
+e2e::scenario!(
+    a_negative_number_reads_left_to_right_under_rtl,
+    "/number-field/rtl",
+    a_negative_number_reads_left_to_right
+);

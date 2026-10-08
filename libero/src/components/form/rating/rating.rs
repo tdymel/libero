@@ -274,6 +274,7 @@ pub fn Rating(props: RatingProps) -> Element {
         .rules(props.validate.check(&value))
         .bound(&bound)
         .required(props.required.unwrap_or(false))
+        .empty(value <= 0.0)
         .required_in_name(words.rating.required)
         .disabled(disabled)
         .size(size)
