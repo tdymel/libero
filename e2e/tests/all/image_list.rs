@@ -168,6 +168,18 @@ fn a_focused_video_cell_shows_a_painted_ring() {
         assert!(outline[2].starts_with('-'), "{outline:?}");
         let clipped: f64 = e2e::js(page, ring_clipped("[role=list]")).await;
         assert!(clipped <= 0.0, "the ring runs {clipped}px past the clip");
+        // Todo 2670: the overlay beside it paints the halo band over the picture too.
+        let halo: String = e2e::js(
+            page,
+            "(() => { const s = getComputedStyle(document.activeElement.nextElementSibling); \
+               return s.position === 'absolute' ? s.boxShadow.split(/,(?![^(]*\\))/)[0] : ''; })()",
+        )
+        .await;
+        assert!(halo.contains("inset"), "no halo overlay: {halo}");
+        assert!(
+            !halo.contains(" 0px 0px 0px 0px"),
+            "the halo band is flat: {halo}"
+        );
         fixture
             .console
             .assert_clean("a focused video cell")

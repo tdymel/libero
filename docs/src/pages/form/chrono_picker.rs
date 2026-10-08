@@ -71,15 +71,15 @@ pub fn ChronoPickerPage() -> Element {
                 .key(["Enter"], "On the month heading: climbs to the months, focus on the year heading. On the year heading: climbs to the years, focus into them.")
                 .key(["Up", "Right"], "Analog clock: the hand forward by an hour or `step` minutes. Digital column (`Up`): a step forward.")
                 .key(["Down", "Left"], "Analog clock: the hand back. Digital column (`Down`): a step back.")
-                .key(["PageUp", "PageDown"], "Digital column: a bigger step.")
-                .key(["Home", "End"], "Digital column: the first or last value.")
+                .key(["PageUp", "PageDown"], "Analog clock: the hand a quarter face, 3 hours or 15 minutes. Digital column: a bigger step.")
+                .key(["Home", "End"], "Analog clock: the hand's first or last open value. Digital column: the first or last value.")
                 .key(["Digit"], "Digital column: picks. A filled column moves on to the next.")
                 .key(["Enter"], "Analog clock: from the hour to the minute. Digital column: to the next column.")
                 .key(["Tab"], "Analog clock: to the next control. Digital column: to the next column.")
                 .handles([
                     "The days, the months and the years are one tab stop each. Tab lands on the picked cell, else today, else the first.",
                     "Today's day, month and year carry `aria-current=\"date\"`, which a screen reader reads as the current date.",
-                    "The decade heading is disabled: there is no level above it.",
+                    "The decade heading is plain text, not a button: there is no level above it.",
                     "After climbing to the months or years, a pick goes back down to the picker's level, with focus on the picked cell.",
                     "The mini calendar's row of days is one tab stop. Its two buttons page the row by `days`.",
                     "The clock face is one tab stop. Each digital column is a spinbutton and a tab stop of its own.",

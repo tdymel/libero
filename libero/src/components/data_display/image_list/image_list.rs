@@ -4,7 +4,7 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, Part, REPLACED_ELEMENTS, States, Variables, base_props, input_from_str,
-            inset_focus_ring_sx, inset_outline_ring_sx, parts_enum, parts_under_sx,
+            inset_focus_ring_sx, inset_outline_ring_sx, parts_enum, parts_under_sx, ring_overlay,
             ring_overlay_sx, variables,
         },
         data_display::LinkedImageScope,
@@ -205,10 +205,16 @@ fn media_base() -> Sx {
             "& > *:focus-visible:focus-visible",
             inset_ring().position("relative"),
         )
-        // A replaced child (`video controls`) covers inset shadows and takes no `::after` (todo 2577).
+        // A replaced child (`video controls`) covers inset shadows and takes no `::after`
+        // (todo 2577): its stripe is a painted outline, its halo the sibling overlay's (todo 2670).
         .selector(
             format!("& > :is({REPLACED_ELEMENTS}):focus-visible:focus-visible"),
-            inset_outline_ring_sx(&ring_offset()),
+            inset_outline_ring_sx(&banded_ring_offset()),
+        )
+        .selector("& > [data-ring]", ring_overlay_sx())
+        .selector(
+            format!("& > :is({REPLACED_ELEMENTS}):focus-visible ~ [data-ring]"),
+            inset_focus_ring_sx(&banded_ring_offset()),
         )
         // The picture paints over its button's inset shadows; the overlay paints over it.
         .selector(
@@ -263,11 +269,17 @@ fn ring_offset() -> String {
     format!("calc(-1 * {})", FOCUS_RING_WIDTH.value())
 }
 
+/// Two widths deep: the halo band outside, the stripe inside it.
+fn banded_ring_offset() -> String {
+    format!("calc(-2 * {})", FOCUS_RING_WIDTH.value())
+}
+
 fn inset_ring() -> Sx {
     inset_focus_ring_sx(&ring_offset())
 }
 
-static IMAGE_LIST_MEDIA_SX: StaticSx = StaticSx::new(media_base);
+/// Positioned for the ring overlay; the link media stays unpositioned for its stretched `::after`.
+static IMAGE_LIST_MEDIA_SX: StaticSx = StaticSx::new(|| media_base().position("relative"));
 /// A captioned cell's `figure`, boxless, so picture and bar stay the `<li>`'s grid items.
 static IMAGE_LIST_FIGURE_SX: StaticSx = StaticSx::new(|| sx().display("contents").margin("0"));
 static IMAGE_LIST_MEDIA_LINK_SX: StaticSx = StaticSx::new(|| media_base().and(link_base()));
@@ -463,7 +475,14 @@ pub fn ImageList(props: ImageListProps) -> Element {
             None => media_style
                 .clone()
                 .attr("data-slot", ImageListPart::Media.slot())
-                .render(HtmlTag::Div, Vec::new(), item.content.clone()),
+                .render(
+                    HtmlTag::Div,
+                    Vec::new(),
+                    rsx! {
+                        {item.content.clone()}
+                        {ring_overlay()}
+                    },
+                ),
         };
 
         let below = item

@@ -5,6 +5,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::SwitchPart;
 use libero::components::{Code, Switch, Text};
+use libero::use_theme;
 
 struct NotificationsCopy;
 
@@ -22,6 +23,7 @@ fn describes(values: &DemoValues) -> bool {
 
 #[component]
 pub fn SwitchPage() -> Element {
+    let theme = use_theme();
     rsx! {
         DocPage {
             title: "Switch",
@@ -31,9 +33,11 @@ pub fn SwitchPage() -> Element {
                 prop("color", "ThemeAwareValue")
                     .default("primary")
                     .doc("Track color when on. A theme color name or any CSS color."),
-                prop("size", "Size").default("md").doc("Size of the track, the thumb and the label."),
+                prop("size", "Size")
+                    .default(theme.switch.size.as_str())
+                    .doc("Size of the track, the thumb and the label."),
                 prop("radius", "Size")
-                    .default("xl")
+                    .default(theme.switch.radius.as_str())
                     .doc("Track corner radius. The thumb stays a circle."),
                 prop("checked", "bool")
                     .doc("Whether it is on. Pair it with `onchange`. Left out, the switch keeps its own state, or the form's when `name` binds it."),
@@ -56,7 +60,7 @@ pub fn SwitchPage() -> Element {
                 prop("aria_label", "String")
                     .doc("Names the switch when it has no `label`."),
                 prop("variant", "ChoiceVariant")
-                    .default("plain")
+                    .default(theme.switch.variant.as_str())
                     .doc("`card` draws the switch as a bordered surface you can click anywhere. Pair it with a `description`. On the web a link inside the card keeps its own click. Natively the whole card toggles."),
             ])
             .parts("SwitchPart", vec![

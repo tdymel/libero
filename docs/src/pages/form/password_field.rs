@@ -5,6 +5,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::FieldPart;
 use libero::components::{Code, PasswordField, Text};
+use libero::use_theme;
 
 struct PasswordCopy;
 
@@ -19,6 +20,7 @@ impl FieldCopy for PasswordCopy {
 #[component]
 pub fn PasswordFieldPage() -> Element {
     let mut value = use_signal(String::new);
+    let theme = use_theme();
 
     rsx! {
         DocPage {
@@ -27,9 +29,11 @@ pub fn PasswordFieldPage() -> Element {
             markdown: "/md/password_field.md",
             properties: vec![
                 props("PasswordField", vec![
-                    prop("size", "Size").default("md").doc("Height, padding and font size."),
+                    prop("size", "Size")
+                        .default(theme.text_field.size.as_str())
+                        .doc("Height, padding and font size."),
                     prop("radius", "Size")
-                        .default("sm")
+                        .default(theme.text_field.radius.as_str())
                         .doc("Corner radius, independent of `size`."),
                     prop("value", "Option<String>")
                         .doc("The secret. Leave it out and the input keeps its own text."),

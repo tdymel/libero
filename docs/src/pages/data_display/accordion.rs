@@ -11,6 +11,7 @@ use libero::{
         Text,
     },
     sx::sx,
+    use_theme,
 };
 
 /// The page's own source: the printed parts are cut from its live demo.
@@ -66,6 +67,7 @@ pub fn AccordionPage() -> Element {
     // convert one open set into the other.
     let one = use_signal(|| AccordionOpen::One(Some(Step::Shipping)));
     let several = use_signal(|| AccordionOpen::Many(vec![Step::Shipping]));
+    let theme = use_theme();
 
     rsx! {
         DocPage {
@@ -90,7 +92,9 @@ pub fn AccordionPage() -> Element {
                         .default("T::label()")
                         .doc("Renames a section. `OptionLabel::rich` draws the trigger as rsx and still names it."),
                     prop("heading", "HtmlTag").default("h3").doc("The heading around each trigger, `h1` to `h6`."),
-                    prop("size", "Size").default("md").doc("Type and padding of the triggers and panels."),
+                    prop("size", "Size")
+                        .default(theme.accordion.size.as_str())
+                        .doc("Type and padding of the triggers and panels."),
                 ]),
             ],
             accessibility: a11y()
