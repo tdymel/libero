@@ -371,6 +371,7 @@ fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
                         header: props.header,
                         multiselectable: props.multiselectable,
                         labelled_by: props.labelled_by,
+                        row_height: theme.combobox.sizes.get((context.size)()).row_height,
                         context,
                     }
                 },

@@ -160,6 +160,82 @@ e2e::scenario!(
     the_search_box_shows_focus
 );
 
+/// The highlight's selector once `aria-activedescendant` names a drawn row reading `text`.
+async fn highlighted<D: Driver>(d: &mut D, after: &str, text: &str) -> Result<String> {
+    let mut row = String::new();
+    eventually(
+        d,
+        &format!("{after}: the highlight on a drawn {text}"),
+        async |d| {
+            let Some(id) = d.attr(SEARCH, "aria-activedescendant").await? else {
+                return Ok(false);
+            };
+            row = format!("#{id}");
+            Ok(d.exists(&row).await? && d.text(&row).await? == text)
+        },
+    )
+    .await?;
+    Ok(row)
+}
+
+async fn in_view<D: Driver>(d: &mut D, row: &str, after: &str) -> Result<()> {
+    let mut seen = None;
+    let settled = eventually(
+        d,
+        &format!("{after}: {row} inside the listbox"),
+        async |d| {
+            let (row, list) = (d.rect(row).await?, d.rect(LISTBOX).await?);
+            seen = Some((row.y, row.height, list.y, list.height));
+            Ok(row.y >= list.y - 1.0 && row.y + row.height <= list.y + list.height + 1.0)
+        },
+    )
+    .await;
+    settled.map_err(|error| error.context(format!("row y, height, list y, height: {seen:?}")))
+}
+
+/// Todo 2234: a thousand rows draw only a window. The highlight stays drawn, in view and
+/// counted in its group, across a filter below the windowing threshold and back.
+async fn a_long_list_windows<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(TRIGGER).await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually(d, "the search box", async |d| d.is_focused(SEARCH).await).await?;
+    let row = highlighted(d, "opening on Item 700", "Item 700").await?;
+    in_view(d, &row, "opening").await?;
+    assert_eq!(d.attr(&row, "aria-posinset").await?.as_deref(), Some("1"));
+    assert_eq!(d.attr(&row, "aria-setsize").await?.as_deref(), Some("100"));
+    let group = d.attr(&row, "aria-describedby").await?;
+    let group = format!("#{}", group.unwrap_or_default());
+    assert_eq!(d.text(&group).await?, "Group 7", "the row's description");
+    let first = row.replace("-option-700", "-option-0");
+    assert!(
+        !d.exists(&first).await?,
+        "{first} drawn beside Item 700: no window"
+    );
+
+    d.press(keyboard::PAGE_DOWN).await?;
+    let row = highlighted(d, "PageDown", "Item 710").await?;
+    in_view(d, &row, "PageDown").await?;
+
+    // Ten rows: every one drawn, the browser counts them.
+    d.type_text("Item 05").await?;
+    let row = highlighted(d, "a filter to ten rows", "Item 050").await?;
+    assert_eq!(d.attr(&row, "aria-posinset").await?, None);
+    for _ in 0.."Item 05".len() {
+        d.press(keyboard::BACKSPACE).await?;
+    }
+    let row = highlighted(d, "clearing the filter", "Item 000").await?;
+    in_view(d, &row, "clearing the filter").await?;
+    assert_eq!(d.attr(&row, "aria-setsize").await?.as_deref(), Some("100"));
+    d.press(keyboard::ENTER).await?;
+    picked(d, "Some(\"Item 000\")", "Enter on a windowed row").await
+}
+
+e2e::scenario!(
+    a_long_select_windows_its_rows,
+    "/select/long",
+    a_long_list_windows
+);
+
 /// Todo 1497: a click outside closes the search box's list and the focus stays
 /// where the click put it; only Escape, a pick or Clear refocus the trigger.
 pub async fn an_outside_click_keeps_its_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {

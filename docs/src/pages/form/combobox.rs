@@ -181,12 +181,14 @@ pub fn ComboboxPage() -> Element {
                     "Focus stays on your trigger, so typing keeps working.",
                     "An open list with no options says `empty_label`, so an empty search is heard, not only seen.",
                     "Android's Back button calls `onopened(false)` while the list is open, rather than closing the app.",
+                    "From 200 options the list draws only the rows in view. The highlighted row stays drawn for `aria-activedescendant`, a `ComboboxOption` row carries `aria-posinset` and `aria-setsize`, and a grouped row is described by its heading.",
                 ])
                 .must([
                     "Spread `state.a11y_attributes()` on your trigger, or screen readers cannot tie the list to it.",
                     "Close the list on your trigger's blur, or an enclosing `Modal` stops hearing Escape while the list stays open.",
                     "Name the trigger: it becomes a `combobox`, which takes no name from its content. Point a button trigger's `aria-labelledby` at a visible label, and give a text field a `label`.",
                     "Pass the same label's id as `labelled_by`, so the list has a name too.",
+                    "From 200 options, keep every row the theme's `row_height` tall, as a plain `ComboboxOption` is: the list places the rows it draws by that height. A debug build warns when they differ.",
                 ])
                 .example("A search field as your own trigger, with `state.a11y_attributes()` spread on it and a visible label whose id is `labelled_by`: a screen reader reads a combobox named by the label, Down moves into the list, and focus never leaves the field."),
             lead: rsx! {

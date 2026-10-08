@@ -6,7 +6,7 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, Part, ROW_HOVER_TINT, States, base_props, disabled_look_sx,
-            forced_on_sx, inset_focus_ring_sx, option_id,
+            forced_on_sx, group_id, inset_focus_ring_sx, option_id,
         },
         layout::use_box,
     },
@@ -34,6 +34,10 @@ pub(super) struct ComboboxRowContext {
     pub key: usize,
     pub active: bool,
     pub disabled: bool,
+    /// A windowed list's `(aria-posinset, aria-setsize)`: the browser can't count unmounted rows.
+    pub set: Option<(usize, usize)>,
+    /// A windowed list's group label key: no `role="group"` wraps a window, so it describes the row.
+    pub group: Option<usize>,
 }
 
 /// One option, handed to `Combobox`'s `option` callback.
@@ -151,6 +155,10 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
     let id = combobox
         .zip(row)
         .map(|(combobox, row)| option_id(&(combobox.id)(), row().key));
+    let set = row.and_then(|row| row().set);
+    let described_by = combobox
+        .zip(row.and_then(|row| row().group))
+        .map(|(combobox, group)| group_id(&(combobox.id)(), group));
 
     let onpick = props.onpick;
     // The one gate for click and Enter.
@@ -200,6 +208,9 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
         .attr("aria-selected", props.selected.map(|on| on.to_string()))
         // `disabled` is no `div` attribute, and the row must stay readable.
         .attr("aria-disabled", disabled.then_some("true"))
+        .attr("aria-posinset", set.map(|(at, _)| at.to_string()))
+        .attr("aria-setsize", set.map(|(_, size)| size.to_string()))
+        .attr_default("aria-describedby", described_by)
         // Or the click blurs whatever the caller focused first.
         .event("onmousedown", move |event: MouseEvent| {
             event.prevent_default();

@@ -26,7 +26,33 @@ pub const ROUTES: Routes = &[
         "/select/tall/above",
         || rsx! { SelectTallPage { top: "calc(100vh - 100px)" } },
     ),
+    ("/select/long", || rsx! { SelectLongPage {} }),
 ];
+
+/// A thousand rows in ten groups, opening on row 700: past the row count that windows (2234).
+#[component]
+fn SelectLongPage() -> Element {
+    let mut value = use_signal(|| Some("Item 700".to_string()));
+    let options = use_hook(|| {
+        (0..10).fold(OptionList::grouped(), |list, group| {
+            let items = (0..100).map(move |row| format!("Item {:03}", group * 100 + row));
+            list.group(format!("Group {group}"), items)
+        })
+    });
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Select::<String> {
+                label: "Item",
+                searchable: true,
+                options: options.clone(),
+                value: value(),
+                onchange: move |next| value.set(next),
+            }
+            Text { id: "picked", "{value:?}" }
+        }
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, Debug, Options)]
 enum Row {

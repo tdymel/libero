@@ -297,6 +297,10 @@ match at any depth inside the list.
   not only seen.
 - Android's Back button calls `onopened(false)` while the list is open, rather
   than closing the app.
+- From 200 options the list draws only the rows in view. The highlighted row
+  stays drawn for `aria-activedescendant`, a `ComboboxOption` row carries
+  `aria-posinset` and `aria-setsize`, and a grouped row is described by its
+  heading.
 
 ### You must
 
@@ -308,6 +312,9 @@ match at any depth inside the list.
   content. Point a button trigger's `aria-labelledby` at a visible label, and
   give a text field a `label`.
 - Pass the same label's id as `labelled_by`, so the list has a name too.
+- From 200 options, keep every row the theme's `row_height` tall, as a plain
+  `ComboboxOption` is: the list places the rows it draws by that height. A
+  debug build warns when they differ.
 
 ### Example
 
