@@ -344,6 +344,18 @@ mod tests {
         }
     }
 
+    /// Pages may 301 a page that is also a directory to `/x/`; `route_pages.py` writes
+    /// `x/index.html` for it, and the router must land on the same page.
+    #[test]
+    fn a_page_that_is_also_a_directory_takes_a_trailing_slash() {
+        for (path, route) in [
+            ("/accessibility/", Route::AccessibilityPage {}),
+            ("/hooks/", Route::HooksPage {}),
+        ] {
+            assert_eq!(path.parse::<Route>().ok(), Some(route), "{path}");
+        }
+    }
+
     /// The a11y hooks moved from Hooks to Accessibility: their old links still land.
     #[test]
     fn a_moved_hook_page_keeps_its_old_url() {
