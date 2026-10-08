@@ -75,8 +75,8 @@ fn small_action_icons_take_presses_in_a_24px_box() {
     });
 }
 
-/// The ripple grows as a `clip-path` inside the box: `overflow: hidden` on the
-/// button would clip the hit area as well.
+/// The ripple grows by a transform inside a clipping child span: `overflow: hidden`
+/// on the button would clip the hit area as well.
 #[test]
 fn the_ripple_stays_inside_an_unclipped_button() {
     block_on(async {
@@ -100,11 +100,16 @@ fn the_ripple_stays_inside_an_unclipped_button() {
         wait::for_js_true(
             page,
             "(() => { const el = document.querySelector('#icon-sm'); \
-             const after = getComputedStyle(el, '::after'); \
+             const span = el.querySelector(':scope > [data-ripple]'); \
+             if (!span) return false; \
+             const after = getComputedStyle(span, '::after'); \
+             const box = span.getBoundingClientRect(), host = el.getBoundingClientRect(); \
              return getComputedStyle(el).overflow === 'visible' \
-             && after.animationName.startsWith('lsx-ripple-clip-') \
-             && after.clipPath.startsWith('circle(') && !after.clipPath.startsWith('circle(0%'); })()",
-            "the ripple's clip circle to grow on an unclipped button",
+             && getComputedStyle(span).overflow === 'hidden' \
+             && box.width === host.width && box.height === host.height \
+             && after.animationName.startsWith('lsx-ripple-') \
+             && after.transform !== 'none' && new DOMMatrix(after.transform).a > 0; })()",
+            "the ripple circle to grow inside its span on an unclipped button",
         )
         .await
         .unwrap();

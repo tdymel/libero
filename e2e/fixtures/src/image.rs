@@ -22,7 +22,15 @@ fn MissedErrorPage() -> Element {
     let mut errors = use_signal(|| 0);
 
     rsx! {
-        button { id: "mount", onclick: move |_| shown.toggle(), "Mount" }
+        // The count restarts per mount: the first one may report its failure before it unmounts.
+        button {
+            id: "mount",
+            onclick: move |_| {
+                shown.toggle();
+                errors.set(0);
+            },
+            "Mount"
+        }
         if shown() {
             div { width: "64px", height: "64px",
                 Image {
