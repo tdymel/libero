@@ -3,7 +3,7 @@
 
 use anyhow::{Result, ensure};
 use e2e::Suite;
-use e2e::driver::{Driver, eventually_focused, eventually_text};
+use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::passes::keyboard;
 use e2e::suite::Step;
 
@@ -223,7 +223,8 @@ async fn the_own_column_is_disabled<D: Driver>(d: &mut D, _route: &str) -> Resul
     Ok(())
 }
 
-/// 2519: a refused move is void once the app moves its card by data.
+/// 2519, 2580: a refused move is void once the app moves its card by data, whether
+/// that renders the board or only a column.
 async fn a_refused_move_is_void_after_a_data_change<D: Driver>(
     d: &mut D,
     _route: &str,
@@ -286,6 +287,41 @@ async fn a_filtered_column_drags_and_takes_a_card_at_its_end<D: Driver>(
     Ok(())
 }
 
+/// 2579: with Alpha hidden, To do shows indices 1 and 2; keys and buttons go by the shown cards.
+async fn a_filtered_column_moves_by_keys_and_buttons<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    d.click("#hide").await?;
+    eventually(d, "Beta first of the shown cards", async |d| {
+        let earlier = d.attr("#Beta [data-slot=move-earlier]", "disabled").await?;
+        Ok(earlier.is_some())
+    })
+    .await?;
+    d.focus("#Gamma [data-slot=handle]").await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_text(d, STATUS, "Lifted Gamma, position 2 of 2.", "Space to lift").await?;
+    d.press(keyboard::ARROW_UP).await?;
+    eventually_text(d, STATUS, "Gamma moved to position 1 of 2.", "ArrowUp").await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_text(d, "#order", "Alpha Gamma Beta | Delta | ", "Space to drop").await?;
+    eventually_focused(d, "#Gamma [data-slot=handle]", "a keyboard drop").await?;
+    ensure!(
+        d.text("#moves").await? == "0.2>0.1 ",
+        "the key move speaks the data's indices"
+    );
+
+    d.click("#Gamma [data-slot=move-later]").await?;
+    eventually_text(d, "#order", "Alpha Beta Gamma | Delta | ", "Move down").await?;
+    eventually_focused(d, "#Gamma [data-slot=move-earlier]", "a move down").await?;
+    eventually_text(d, STATUS, "Gamma moved to position 2 of 2.", "Move down").await?;
+    ensure!(
+        d.text("#moves").await? == "0.2>0.1 0.1>0.2 ",
+        "the button move speaks the data's indices"
+    );
+    Ok(())
+}
+
 /// 2451: a move the app ignores arms no focus jump for the next card at its slot.
 async fn a_refused_move_moves_no_focus_later<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click("#refuse").await?;
@@ -323,6 +359,18 @@ e2e::scenario!(
     a_refused_move_is_void_once_the_app_removes_its_card,
     "/kanban/data",
     a_refused_move_is_void_after_a_data_change,
+    desktop: skip("958: element identity on the WebView")
+);
+e2e::scenario!(
+    a_refused_move_is_void_when_the_data_change_renders_only_a_column,
+    "/kanban/columns",
+    a_refused_move_is_void_after_a_data_change,
+    desktop: skip("958: element identity on the WebView")
+);
+e2e::scenario!(
+    a_filtered_column_moves_by_keys_and_buttons_over_the_shown_cards,
+    "/kanban/data",
+    a_filtered_column_moves_by_keys_and_buttons,
     desktop: skip("958: element identity on the WebView")
 );
 e2e::scenario!(
@@ -776,71 +824,87 @@ fn a_touch_screen_describes_the_handle_by_the_move_buttons() {
 /// 2454: a card dragged below the columns adds no vertical scrollbar, so the board keeps its width.
 #[test]
 fn a_card_dragged_below_the_columns_keeps_the_board_width() {
-    use chromiumoxide::cdp::browser_protocol::input::DispatchMouseEventType as Kind;
     use e2e::browser::{Fixture, Viewport, block_on};
+    block_on(async {
+        let fixture = Fixture::open("/kanban", Viewport::Desktop).await.unwrap();
+        drag_below_the_columns(fixture).await;
+    });
+}
+
+/// 2518: as above where the page draws a classic scrollbar, which headless Chromium hides.
+#[test]
+fn a_card_dragged_below_the_columns_keeps_the_board_width_with_a_classic_scrollbar() {
+    use e2e::browser::{Fixture, Viewport, block_on};
+    block_on(async {
+        let fixture = Fixture::open_with_scrollbars("/kanban", Viewport::Desktop)
+            .await
+            .unwrap();
+        drag_below_the_columns(fixture).await;
+    });
+}
+
+async fn drag_below_the_columns(fixture: e2e::browser::Fixture) {
+    use chromiumoxide::cdp::browser_protocol::input::DispatchMouseEventType as Kind;
     use e2e::frames::in_front;
     use e2e::passes::pointer::Point;
     use e2e::wait;
     const WIDTH: &str = "document.querySelector('#board').clientWidth";
-    block_on(async {
-        let fixture = Fixture::open("/kanban", Viewport::Desktop).await.unwrap();
-        let page = &fixture.page;
-        let width: f64 = page.evaluate(WIDTH).await.unwrap().into_value().unwrap();
-        let bottom: f64 = page
-            .evaluate("document.querySelector('#board').getBoundingClientRect().bottom")
-            .await
-            .unwrap()
-            .into_value()
-            .unwrap();
-        let handle = centre(page, "#Gamma [data-slot=handle]").await;
-        let below = Point {
-            x: handle.x,
-            y: bottom + 80.0,
-        };
-        in_front(page, async {
-            mouse_at(page, Kind::MouseMoved, handle, false).await;
-            mouse_at(page, Kind::MousePressed, handle, true).await;
-            for step in 1..=10 {
-                let t = f64::from(step) / 10.0;
-                let at = Point {
-                    x: handle.x,
-                    y: handle.y + (below.y - handle.y) * t,
-                };
-                mouse_at(page, Kind::MouseMoved, at, true).await;
-            }
-            Ok(())
-        })
+    let page = &fixture.page;
+    let width: f64 = page.evaluate(WIDTH).await.unwrap().into_value().unwrap();
+    let bottom: f64 = page
+        .evaluate("document.querySelector('#board').getBoundingClientRect().bottom")
         .await
+        .unwrap()
+        .into_value()
         .unwrap();
-        wait::for_js_true(
-            page,
-            "document.querySelector('#Gamma')?.dataset.state?.includes('dragging')",
-            "Gamma lifted",
-        )
+    let handle = centre(page, "#Gamma [data-slot=handle]").await;
+    let below = Point {
+        x: handle.x,
+        y: bottom + 80.0,
+    };
+    in_front(page, async {
+        mouse_at(page, Kind::MouseMoved, handle, false).await;
+        mouse_at(page, Kind::MousePressed, handle, true).await;
+        for step in 1..=10 {
+            let t = f64::from(step) / 10.0;
+            let at = Point {
+                x: handle.x,
+                y: handle.y + (below.y - handle.y) * t,
+            };
+            mouse_at(page, Kind::MouseMoved, at, true).await;
+        }
+        Ok(())
+    })
+    .await
+    .unwrap();
+    wait::for_js_true(
+        page,
+        "document.querySelector('#Gamma')?.dataset.state?.includes('dragging')",
+        "Gamma lifted",
+    )
+    .await
+    .unwrap();
+    let held: (f64, String, f64) = page
+        .evaluate(format!(
+            "(() => {{ const b = document.querySelector('#board'); \
+             return [{WIDTH}, getComputedStyle(b).overflowY, b.scrollTop]; }})()"
+        ))
         .await
+        .unwrap()
+        .into_value()
         .unwrap();
-        let held: (f64, String, f64) = page
-            .evaluate(format!(
-                "(() => {{ const b = document.querySelector('#board'); \
-                 return [{WIDTH}, getComputedStyle(b).overflowY, b.scrollTop]; }})()"
-            ))
-            .await
-            .unwrap()
-            .into_value()
-            .unwrap();
-        assert_eq!(
-            held,
-            (width, "hidden".to_string(), 0.0),
-            "the drag changed the board"
-        );
-        in_front(page, async {
-            mouse_at(page, Kind::MouseReleased, below, false).await;
-            Ok(())
-        })
-        .await
-        .unwrap();
-        fixture.close().await.unwrap();
-    });
+    assert_eq!(
+        held,
+        (width, "hidden".to_string(), 0.0),
+        "the drag changed the board"
+    );
+    in_front(page, async {
+        mouse_at(page, Kind::MouseReleased, below, false).await;
+        Ok(())
+    })
+    .await
+    .unwrap();
+    fixture.close().await.unwrap();
 }
 
 /// A card is a bordered paper surface apart from its column's fill, light and dark (1437).

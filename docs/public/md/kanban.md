@@ -75,7 +75,7 @@ in each column's `header`.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `index` | `usize` | required | The card's position in its column's data, from 0. Key the card by its data, not by this. A filtered column may skip indices: a drag and Move to land by the cards it shows. |
+| `index` | `usize` | required | The card's position in its column's data, from 0. Key the card by its data, not by this. A filtered column may skip indices: the drag, keys, move buttons and Move to go by the cards it shows. |
 | `label` | `Option<String>` | `"Item {n}"` | Names the card in its controls and the announcements. Unset, the handle reads the card's content, and the other controls and announcements `SortableLabels::item` with its position. |
 | `parts` | `Parts<KanbanCardPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 | `children` | `Element` | required | The card's content, between the handle and the move buttons. |

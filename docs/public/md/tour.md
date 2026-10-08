@@ -217,7 +217,7 @@ explains how parts work.
 
 | Key | Action |
 |---|---|
-| `→` | Goes to the next step, or finishes on the last. Under `dir="rtl"`, `←` does. A held key steps once. |
+| `→` | Goes to the next step. On the last step it does nothing: only Done finishes. Under `dir="rtl"`, `←` does. A held key steps once. |
 | `←` | Goes to the previous step. |
 | `Escape` | Ends the tour early and returns focus to what started it. |
 | `Tab` or `Shift+Tab` | Moves the focus within the card. It does not leave while the tour shows. |
@@ -225,7 +225,8 @@ explains how parts work.
 ### Libero handles
 
 - Each step's card is a `dialog` with `aria-modal`, named by the step title and
-  described by its text. Focus moves to it on every step.
+  described by its text and its progress ("2 of 3"), also with a custom `card`,
+  which the tour describes by a hidden text of its own. Focus moves to it on every step.
 - The card names its arrow keys in `aria-keyshortcuts`; few screen readers
   announce it, so say the keys in the first step's text too.
 - The hole has a 2px ring of its own, and an outline in forced colours, so the

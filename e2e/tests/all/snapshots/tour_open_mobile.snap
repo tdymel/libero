@@ -13,7 +13,7 @@ button "Third"
   StaticText "Third"
 paragraph
 dialog "First" [keyshortcuts=ArrowRight ArrowLeft] [modal]
-  description "The first stop."
+  description "The first stop. 1 of 3"
   heading "First" [level=2]
     StaticText "First"
   button "Close tour"

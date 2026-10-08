@@ -248,12 +248,12 @@ pub fn TourPage() -> Element {
                 ]).without_base_props(),
             ],
             accessibility: a11y()
-                .key(["Right"], "Goes to the next step, or finishes on the last. Under `dir=\"rtl\"`, ← does. A held key steps once.")
+                .key(["Right"], "Goes to the next step. On the last step it does nothing: only Done finishes. Under `dir=\"rtl\"`, ← does. A held key steps once.")
                 .key(["Left"], "Goes to the previous step.")
                 .key(["Escape"], "Ends the tour early and returns focus to what started it.")
                 .key(["Tab", "Shift+Tab"], "Moves the focus within the card. It does not leave while the tour shows.")
                 .handles([
-                    "Each step's card is a `dialog` with `aria-modal`, named by the step title and described by its text. Focus moves to it on every step.",
+                    "Each step's card is a `dialog` with `aria-modal`, named by the step title and described by its text and its progress (\"2 of 3\"), also with a custom `card`, which the tour describes by a hidden text of its own. Focus moves to it on every step.",
                     "The card names its arrow keys in `aria-keyshortcuts`; few screen readers announce it, so say the keys in the first step's text too.",
                     "The hole has a 2px ring of its own, and an outline in forced colours, so the highlighted element stands out on a dark page too.",
                     "A card taller than the room it has scrolls, so its buttons stay reachable at 400% zoom or on a phone held sideways.",

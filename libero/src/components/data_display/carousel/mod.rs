@@ -257,9 +257,15 @@ pub fn Carousel(props: CarouselProps) -> Element {
     let variables: Input<Variables> =
         carousel_variables(per_view, props.gap.as_ref().copied(), props.height.as_ref()).into();
 
+    let root_key = use_id();
     let focus = use_focus_within(
         move || vec![root_handle.mounted()],
         move |change| {
+            // A focusout whose focus lands inside the root is a move within, no new entry (2393).
+            let boundary = format!("[data-lsx-carousel='{}']", root_key());
+            if change.lands_within(&boundary) {
+                return;
+            }
             let mut focused = state.focused;
             focused.set(change.within)
         },
@@ -274,6 +280,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
         .variables(&variables)
         .prepare()
         .element(&root_handle)
+        .attr("data-lsx-carousel", root_key())
         .attr("role", (!empty).then_some("region"))
         .attr(
             "aria-roledescription",

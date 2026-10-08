@@ -50,6 +50,14 @@ impl FocusChange<'_> {
     }
 }
 
+impl FocusChange<'_> {
+    /// A `focusout` whose focus lands inside `boundary`: a move within it, not a leave.
+    /// Only the web names the target; elsewhere `false`.
+    pub(crate) fn lands_within(&self, boundary: &str) -> bool {
+        cfg!(target_arch = "wasm32") && !self.within && self.entered_from(boundary).is_none()
+    }
+}
+
 /// The focus listeners of a [`use_focus_within`] group, for its elements.
 #[derive(Clone, Copy, PartialEq)]
 pub(crate) struct FocusWithin {

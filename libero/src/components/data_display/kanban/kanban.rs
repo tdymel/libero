@@ -7,6 +7,7 @@ use super::{
         use_board_list,
     },
     moves::KanbanMove,
+    shown::{Shown, use_shown, use_shown_card},
 };
 use crate::{
     CssLayer,
@@ -123,6 +124,7 @@ struct Board {
 struct ColumnView {
     index: Signal<usize>,
     instructions: Signal<String>,
+    shown: Shown,
 }
 
 base_props! {
@@ -264,6 +266,7 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
     });
 
     let (onmove, mut landing) = (board.onmove, board.landing);
+    let shown = use_shown();
     let list = use_sortable(SortableOptions {
         orientation: Orientation::Vertical,
         onreorder: use_callback(move |step: SortableMove| {
@@ -272,11 +275,12 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
                 landing.set(None);
             }
             let column = *index.peek();
+            // The sortable counts the shown cards; the move speaks the data's indices (2579).
             onmove.call(KanbanMove {
                 from_column: column,
-                from: step.from,
+                from: shown.index_at(step.from),
                 to_column: column,
-                to: step.to,
+                to: shown.index_at(step.to),
             });
         }),
     });
@@ -295,6 +299,7 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
     use_context_provider(|| ColumnView {
         index,
         instructions,
+        shown,
     });
     let words = current_localization();
     let touch = use_media_query("(pointer: coarse)");
@@ -380,7 +385,7 @@ base_props! {
     parts(KanbanCardPart);
     pub struct KanbanCardProps {
         /// The card's position in its column's data, from 0. Key it by its data, not this.
-        /// A filtered column may skip indices: a drag and Move to land by the cards it shows.
+        /// A filtered column may skip indices: the drag, keys, buttons and Move to go by the cards it shows.
         index: usize,
         /// Names the card in its controls and the announcements. Unset, the handle reads the
         /// card's content, the rest "Item {n}" by its position.
@@ -398,10 +403,11 @@ base_props! {
 pub fn KanbanCard(props: KanbanCardProps) -> Element {
     let board = use_context::<Board>();
     let column = use_context::<ColumnView>();
-    let item = use_labelled_sortable_item(props.index, props.label.clone());
-    let words = current_localization();
     let index = props.index;
-    let name = item_name(words.sortable.item, props.label.as_deref(), index);
+    let position = use_shown_card(column.shown, index);
+    let item = use_labelled_sortable_item(position, props.label.clone());
+    let words = current_localization();
+    let name = item_name(words.sortable.item, props.label.as_deref(), position);
     let carried = use_board_card(
         board.drag,
         column.index,

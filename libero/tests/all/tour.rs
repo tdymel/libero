@@ -197,8 +197,12 @@ fn a_started_tour_shows_a_named_modal_card_on_the_first_step() {
         .find(r#"aria-describedby=""#)
         .expect("a described card")
         + 18;
-    let body_id = &card[at..at + card[at..].find('"').unwrap()];
+    let described = &card[at..at + card[at..].find('"').unwrap()];
+    let [body_id, progress_id] = described.split(' ').collect::<Vec<_>>()[..] else {
+        panic!("not the body and the progress: {described}");
+    };
     assert!(tags_with(&html, &format!(r#"id="{body_id}""#))[0].contains(r#"data-slot="body""#));
+    assert!(tags_with(&html, &format!(r#"id="{progress_id}""#))[0].contains("progress"));
     assert!(html.contains("A quick look around."));
 
     assert_eq!(slot_text(&html, "progress"), "1 of 3");

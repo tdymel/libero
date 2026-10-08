@@ -104,8 +104,12 @@ pub(super) struct BoardDrag {
     cards: CopyValue<BTreeMap<usize, Placed>>,
     lists: CopyValue<Vec<Mounted>>,
     landing: CopyValue<Option<Landing>>,
-    /// The board's renders so far: an app's data change renders it.
+    /// The render cycles so far, see [`tick`](Self::tick).
     renders: CopyValue<u64>,
+    /// A render or drop has opened this cycle and the effects have not run yet.
+    fresh: CopyValue<bool>,
+    /// Written when a cycle opens: its effect reopens `fresh`.
+    flush: Signal<u64>,
     next_id: CopyValue<usize>,
     pressed: CopyValue<Option<usize>>,
     lifted: Signal<Option<Lifted>>,
@@ -127,8 +131,25 @@ impl BoardDrag {
         }
     }
 
+    /// Called by every board, column and card render and card drop: the first one after the
+    /// effects ran opens the next render cycle. An app's data change may reach only a column
+    /// or a card, not the board (2580).
+    pub(super) fn tick(self) {
+        let (mut fresh, mut renders, mut flush) = (self.fresh, self.renders, self.flush);
+        let (Ok(mut fresh), Ok(mut renders)) = (fresh.try_write(), renders.try_write()) else {
+            return;
+        };
+        if !*fresh {
+            *fresh = true;
+            *renders += 1;
+            if let Ok(mut flush) = flush.try_write() {
+                *flush += 1;
+            }
+        }
+    }
+
     /// Card `claimant` may take `landing`'s focus: it is the moved card, or that one left its
-    /// slot in this render. A move the app refused leaves it in place (2451); a later data
+    /// slot in this render cycle. A move the app refused leaves it in place (2451); a later data
     /// change moving it is no landing (2519).
     pub(super) fn landed(self, landing: Landing, claimant: usize) -> bool {
         claimant == landing.card || landing.held || landing.left == Some(*self.renders.peek())
@@ -194,8 +215,13 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
     let cards = use_hook(|| CopyValue::new(BTreeMap::<usize, Placed>::new()));
     let lists = use_hook(|| CopyValue::new(Vec::<Mounted>::new()));
     let next_id = use_hook(|| CopyValue::new(0_usize));
-    let mut renders = use_hook(|| CopyValue::new(0_u64));
-    *renders.write() += 1;
+    let renders = use_hook(|| CopyValue::new(0_u64));
+    let mut fresh = use_hook(|| CopyValue::new(false));
+    let flush = use_signal(|| 0_u64);
+    use_effect(move || {
+        flush();
+        fresh.set(false);
+    });
     let mut pressed = use_hook(|| CopyValue::new(None::<usize>));
     let mut lifted = use_signal(|| None::<Lifted>);
     let mut travel = use_signal(|| (0.0_f64, 0.0_f64));
@@ -479,7 +505,7 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
         }),
     });
     let cancel = use_callback(move |()| finish(false));
-    BoardDrag {
+    let board = BoardDrag {
         element,
         sorting,
         target,
@@ -490,6 +516,8 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
         lists,
         landing,
         renders,
+        fresh,
+        flush,
         next_id,
         pressed,
         lifted,
@@ -499,12 +527,15 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
         press,
         onpointerdown: drag.onpointerdown,
         cancel,
-    }
+    };
+    board.tick();
+    board
 }
 
 /// A column's side of the board drag: registers its card list, and returns the
 /// room it grows by below its cards while a card from another hovers there.
 pub(super) fn use_board_list(drag: BoardDrag, column: usize, list: ElementHandle) -> Memo<f64> {
+    drag.tick();
     let mut lists = drag.lists;
     let mut at = use_hook(|| CopyValue::new(None::<usize>));
     use_effect(use_reactive!(|column| {
@@ -586,6 +617,7 @@ pub(super) fn use_board_card(
     keys: Callback<Event<KeyboardData>>,
 ) -> BoardCard {
     let (element, handle) = nodes;
+    drag.tick();
     let id = use_hook(|| {
         let mut next_id = drag.next_id;
         let id = *next_id.peek();
@@ -618,6 +650,7 @@ pub(super) fn use_board_card(
         if let Ok(mut cards) = cards.try_write() {
             cards.remove(&id);
         }
+        drag.tick();
         drag.left(id);
     });
 

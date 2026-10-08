@@ -327,6 +327,8 @@ impl TourHandle {
 #[derive(Clone, Copy, PartialEq)]
 enum Move {
     Next,
+    /// A key's step: stops on the last step, where only Done finishes.
+    Forward,
     Prev,
     GoTo(usize),
     Close,
@@ -378,7 +380,8 @@ impl TourView {
 /// a card beside it, with Back, Next and Skip.
 ///
 /// Escape, Android's Back and the close button end it early; ArrowLeft and
-/// ArrowRight step. The page is not scrolled away from: each step scrolls its
+/// ArrowRight step, ArrowRight stopping on the last step: only Done finishes.
+/// The page is not scrolled away from: each step scrolls its
 /// target into view. Call it in a component that outlives every target.
 ///
 /// ```no_run
@@ -428,6 +431,7 @@ pub fn use_tour(options: TourOptions) -> TourHandle {
     // The layer is outside this scope: its moves run here, through a callback made here.
     let act = use_callback(move |step: Move| match step {
         Move::Next => handle.next(),
+        Move::Forward => handle.go_to(handle.index_untracked() + 1),
         Move::Prev => handle.prev(),
         Move::GoTo(index) => handle.go_to(index),
         Move::Close => handle.close(),
@@ -589,9 +593,9 @@ fn TourLayer(act: Callback<Move>, index: usize, options: TourOptions) -> Element
         {
             return;
         }
-        // A held arrow steps once: a repeat would run on to the last step and finish.
+        // A held arrow steps once, and none finishes: the last step stops it (2262).
         match logical_key(&event) {
-            Key::ArrowRight if !event.is_auto_repeating() => act.call(Move::Next),
+            Key::ArrowRight if !event.is_auto_repeating() => act.call(Move::Forward),
             Key::ArrowLeft if !event.is_auto_repeating() => act.call(Move::Prev),
             _ => {}
         }
@@ -688,6 +692,8 @@ fn TourCard(
             .remeasure(remeasure),
     );
     let body_id = use_id();
+    let progress_id = use_id();
+    let summary_id = use_id();
 
     // Brought into view once per step, through nested and sideways scrollers; the
     // scroll it causes measures the hole again.
@@ -745,6 +751,11 @@ fn TourCard(
 
     let content = match options.card {
         Some(render) => {
+            // The card is the author's: the tour describes it by its own hidden text (2264).
+            let summary = match &step.description {
+                Some(text) => format!("{progress}. {text}"),
+                None => progress.clone(),
+            };
             let view = TourView {
                 index,
                 total,
@@ -759,11 +770,13 @@ fn TourCard(
                     role: "dialog",
                     "aria-modal": "true",
                     "aria-label": name,
+                    "aria-describedby": summary_id(),
                     "aria-keyshortcuts": shortcuts,
                     tabindex: "-1",
                     "data-autofocus": "true",
                     sx: card_sx,
                     {render.call(view)}
+                    div { id: "{summary_id}", hidden: true, "{summary}" }
                 }
             }
         }
@@ -772,6 +785,11 @@ fn TourCard(
                 .content
                 .clone()
                 .or_else(|| step.description.clone().map(|text| rsx! { "{text}" }));
+            // The step's text, then where the tour stands.
+            let described = match body.is_some() {
+                true => format!("{} {}", body_id(), progress_id()),
+                false => progress_id(),
+            };
             rsx! {
                 Dialog {
                     "data-slot": TourPart::Card.slot(),
@@ -780,7 +798,7 @@ fn TourCard(
                     close_label: labels.close,
                     onclose: move |_| act.call(Move::Close),
                     "aria-modal": "true",
-                    "aria-describedby": body.is_some().then_some(body_id()),
+                    "aria-describedby": described,
                     "aria-keyshortcuts": shortcuts,
                     tabindex: "-1",
                     "data-autofocus": "true",
@@ -789,7 +807,7 @@ fn TourCard(
                         div { id: body_id(), "data-slot": TourPart::Body.slot(), {body} }
                     }
                     div { "data-slot": TourPart::Footer.slot(),
-                        span { "data-slot": TourPart::Progress.slot(), "{progress}" }
+                        span { id: "{progress_id}", "data-slot": TourPart::Progress.slot(), "{progress}" }
                         if !last {
                             Button {
                                 "data-slot": TourPart::Skip.slot(),

@@ -3,7 +3,7 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Flex, Text, TourOptions, TourStep, use_tour},
+    components::{Button, Flex, Text, TourOptions, TourStep, TourView, use_tour},
     hooks::use_element,
     sx::sx,
 };
@@ -11,7 +11,8 @@ use libero::{
 use crate::Routes;
 
 pub const ROUTES: Routes = &[
-    ("/tour", || rsx! { TourPage {} }),
+    ("/tour", || rsx! { TourPage { custom: false } }),
+    ("/tour/custom", || rsx! { TourPage { custom: true } }),
     ("/tour/missing", || rsx! { MissingTourPage {} }),
     ("/tour/nested", || rsx! { NestedTourPage {} }),
     ("/tour/hidden", || rsx! { HiddenTourPage {} }),
@@ -23,15 +24,23 @@ const LONG: &str = "This stop has a lot to say. It explains the feature in sever
     sideways. The card must scroll instead of losing its buttons off the screen.";
 
 
-/// `#ended` reads how the tour last ended: `finished`, or `closed at <index>`.
+/// `#ended` reads how the tour last ended: `finished`, or `closed at <index>`. `custom` draws
+/// the card itself.
 #[component]
-fn TourPage() -> Element {
+fn TourPage(custom: bool) -> Element {
     let first = use_element();
     let second = use_element();
     let third = use_element();
     let mut ended = use_signal(String::new);
     let finished = use_callback(move |()| ended.set("finished".into()));
     let closed = use_callback(move |index: usize| ended.set(format!("closed at {index}")));
+    let card = use_callback(|view: TourView| {
+        let next = view.clone();
+        rsx! {
+            Text { "{view.progress}" }
+            Button { id: "custom-next", onclick: move |_| next.next(), "Next" }
+        }
+    });
     let tour = use_tour(TourOptions {
         steps: vec![
             TourStep::new("first")
@@ -47,6 +56,7 @@ fn TourPage() -> Element {
                 .title("Third")
                 .description("The last stop."),
         ],
+        card: custom.then_some(card),
         onfinish: Some(finished),
         onclose: Some(closed),
         ..Default::default()

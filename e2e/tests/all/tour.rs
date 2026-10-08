@@ -1,7 +1,7 @@
 //! `use_tour`: a hole around each step's target and a modal card beside it. Focus moves into
 //! the card, the arrows step once each, Escape and Back end it and focus returns.
 
-use anyhow::{Result, bail};
+use anyhow::{Result, bail, ensure};
 use e2e::archetypes::{self, Overlay};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
@@ -359,6 +359,60 @@ fn centres_the_card(route: &str) {
             .close_allowing("the debug build warns of the missing target")
             .await
             .unwrap();
+    });
+}
+
+/// 2262: ArrowRight stops on the last step; only Done finishes.
+async fn arrow_right_stops_on_the_last_step<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    open(d).await?;
+    for progress in ["2 of 3", "3 of 3"] {
+        d.press(keyboard::ARROW_RIGHT).await?;
+        eventually_text(d, PROGRESS, progress, "ArrowRight").await?;
+        eventually_focused(d, CARD, "ArrowRight").await?;
+    }
+    d.press(keyboard::ARROW_RIGHT).await?;
+    d.settle().await?;
+    ensure!(
+        d.text(PROGRESS).await? == "3 of 3",
+        "ArrowRight on the last step left it"
+    );
+    ensure!(
+        d.text(ENDED).await?.is_empty(),
+        "ArrowRight on the last step ended the tour: {}",
+        d.text(ENDED).await?
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    arrow_right_on_the_last_step_does_not_finish_the_tour,
+    "/tour",
+    arrow_right_stops_on_the_last_step
+);
+
+/// 2264: the card is described by its text and its progress; a custom card by a hidden text
+/// of the tour's, since its inside is the author's.
+#[test]
+fn the_card_is_described_with_its_progress() {
+    block_on(async {
+        for (route, expected) in [
+            ("/tour", "The first stop. 1 of 3"),
+            ("/tour/custom", "1 of 3. The first stop."),
+        ] {
+            let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+            let page = &fixture.page;
+            keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            e2e::passes::focus::wait_for_focus(page, CARD, "starting the tour")
+                .await
+                .unwrap();
+            wait::until(&format!("{route}: the card's description"), || async {
+                Ok(e2e::ax::description(page, CARD).await? == expected)
+            })
+            .await
+            .unwrap();
+            fixture.close().await.unwrap();
+        }
     });
 }
 

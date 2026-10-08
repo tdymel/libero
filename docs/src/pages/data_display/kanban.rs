@@ -45,7 +45,7 @@ pub fn KanbanPage() -> Element {
                 props("KanbanCard", vec![
                     prop("index", "usize")
                         .default("required")
-                        .doc("The card's position in its column's data, from 0. Key the card by its data, not by this. A filtered column may skip indices: a drag and Move to land by the cards it shows."),
+                        .doc("The card's position in its column's data, from 0. Key the card by its data, not by this. A filtered column may skip indices: the drag, keys, move buttons and Move to go by the cards it shows."),
                     prop("label", "Option<String>")
                         .default("\"Item {n}\"")
                         .doc("Names the card in its controls and the announcements. Unset, the handle reads the card's content, and the other controls and announcements `SortableLabels::item` with its position."),

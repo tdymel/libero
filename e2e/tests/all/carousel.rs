@@ -1167,6 +1167,39 @@ fn a_press_without_focus_leaves_the_next_entry_an_entry() {
     });
 }
 
+/// Todo 2393: Tab from Pause to the track moves within the carousel: no new focus entry
+/// that stops the rotation Play just started.
+#[test]
+fn tab_from_pause_to_the_track_is_no_new_entry() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/autoplay", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        hold_rotation(page).await;
+        instant_scroll(page).await;
+        reach(page, PAUSE).await.unwrap();
+        assert_pressed(page, "true", "focus entering").await;
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        assert_pressed(page, "false", "Play").await;
+
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.activeElement.matches({TRACK:?})"),
+            "Tab to move from the toggle to the track",
+        )
+        .await
+        .unwrap();
+        clock::settle(page).await.unwrap();
+        assert_pressed(page, "false", "a Tab within the carousel").await;
+        let start = index(page).await.unwrap();
+        rotates(page, start, "autoplay to advance after a Tab within").await;
+        fixture.console.assert_clean("a Tab within").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 2361: one slide, or every slide in view, has nothing to rotate: no Pause.
 #[test]
 fn nothing_to_rotate_shows_no_pause() {
