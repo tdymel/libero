@@ -267,6 +267,8 @@ pub(super) struct StandIn {
     pub(super) describedby: Option<String>,
     pub(super) invalid: bool,
     pub(super) loading: bool,
+    /// Read-only draws no x, so the list is the field's only tab stop.
+    pub(super) focusable: bool,
 }
 
 /// The dropzone's cards, a list under the surface.
@@ -281,8 +283,10 @@ pub(super) fn card_list(
         describedby,
         invalid,
         loading,
+        focusable,
     } = stand_in.unwrap_or_default();
     style
+        .attr("tabindex", focusable.then_some("0"))
         .attr("aria-labelledby", labelledby)
         .attr("aria-describedby", describedby)
         .attr("aria-invalid", invalid.then_some("true"))

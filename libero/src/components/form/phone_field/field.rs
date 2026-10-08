@@ -10,7 +10,7 @@ use crate::{
             ComboboxState, Glyph, HtmlTag, Input, Part, Parts, inset_focus_ring_sx, use_combobox,
         },
         form::{
-            CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, FIELD_CONTROL_SX,
+            CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, FIELD_CONTROL_SX, FormScope,
             field_parts_enum, field_props, use_bound, use_field, use_field_frame,
             with_drawn_placeholder,
         },
@@ -18,7 +18,8 @@ use crate::{
     },
     context::IconSlot,
     hooks::{
-        ElementHandle, PopoverWidth, current_localization, use_element, use_localization, use_theme,
+        ElementHandle, PopoverWidth, current_localization, use_element, use_form_owner,
+        use_localization, use_theme,
     },
     localization::fill,
     platform::ElementApi,
@@ -222,7 +223,18 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
 
     // The edit buffer, shown while it still assembles into the caller's E.164;
     // otherwise the caller's value wins.
-    let text = use_signal(String::new);
+    let mut text = use_signal(String::new);
+    // A form reset drops the typed text, which a `None` value would show again.
+    let anchor = use_element();
+    let scope = try_use_context::<FormScope>();
+    let owner = use_form_owner(anchor, scope.is_none());
+    let resets = scope.map_or(0, |form| form.resets()) + owner().unwrap_or(0);
+    use_effect(use_reactive!(|resets| {
+        let _ = resets;
+        if !text.peek().is_empty() {
+            text.set(String::new());
+        }
+    }));
     let display = match &current {
         None => text(),
         Some(value) if countries::value_of(country, &text()) == *value => text(),
@@ -230,10 +242,16 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             .map(|national| countries::group(country, &national).unwrap_or(national))
             .unwrap_or_default(),
     };
-    // A pick or a blur re-assembles from the digits on screen, not the buffer.
-    let typed = countries::digits_of(&display);
+    // A pick or a blur re-assembles from the digits on screen, not the buffer;
+    // a bare dial code on screen is the old country's, not a number.
+    let bare = countries::bare_code(country, &display);
+    let typed = if bare {
+        String::new()
+    } else {
+        countries::digits_of(&display)
+    };
     // The pick closure below outlives `display`, which the input takes.
-    let shown = display.clone();
+    let shown = if bare { String::new() } else { display.clone() };
     let e164 = countries::value_of(country, &display);
 
     let state = use_combobox();
@@ -437,6 +455,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
         (false, Some(captions)) => Some(format!("{dial_id} {captions}")),
     };
     let control = control
+        .element(&anchor)
         .attr("data-slot", PhoneFieldPart::Control.slot())
         .attr("id", field.id().to_string())
         .attr("aria-describedby", describedby)
@@ -850,7 +869,12 @@ fn phone_input<F: Fn(String) + Clone + 'static>(
             if let Some(emit) = &input_emit {
                 emit(countries::to_e164(next, &national));
             }
-            text.set(countries::group(next, &national).unwrap_or(national));
+            // A bare dial code stays on screen until the next character.
+            let shown = match national.is_empty() {
+                true => raw,
+                false => countries::group(next, &national).unwrap_or(national),
+            };
+            text.set(shown);
         })
         // Grouped on blur: regrouping per keystroke moves the caret, and
         // `ElementApi` cannot put it back.
@@ -1010,6 +1034,18 @@ mod tests {
         assert_eq!((to.iso, national.as_str()), ("GB", "20"));
         // Letters and other numerals (Roman, fractions) are no digits.
         assert_eq!(countries::digits_of("Ⅻ½a"), "");
+    }
+
+    /// A dial code alone is no number yet (todo 2604): it posts nothing and keeps no digits.
+    #[test]
+    fn a_bare_dial_code_is_nothing_typed() {
+        assert!(countries::bare_code(country("DE"), "+49"));
+        assert!(countries::bare_code(country("DE"), "0049"));
+        assert!(!countries::bare_code(country("DE"), "+4"));
+        assert!(!countries::bare_code(country("DE"), "+49 1"));
+        assert!(!countries::bare_code(country("US"), "+49"));
+        assert_eq!(countries::value_of(country("DE"), "+49"), "");
+        assert_eq!(countries::value_of(country("US"), "+49"), "+49");
     }
 
     /// An empty value never drags the field off the country it is on.

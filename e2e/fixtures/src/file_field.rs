@@ -16,7 +16,31 @@ pub const ROUTES: Routes = &[
     ("/file-field/crop", || rsx! { FileCropPage {} }),
     ("/file-field/reject", || rsx! { FileRejectPage {} }),
     ("/file-field/reset", || rsx! { FileResetPage {} }),
+    ("/file-field/single", || rsx! { FileSinglePage {} }),
 ];
+
+/// Todos 2581, 2582: a single-file dropzone with an error that the button turns read-only
+/// once the unit has dropped its file in.
+#[component]
+fn FileSinglePage() -> Element {
+    let mut files = use_signal(Files::default);
+    let mut readonly = use_signal(|| false);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "360px",
+            Button { id: "to-readonly", onclick: move |_| readonly.set(true), "Read-only" }
+            FileField {
+                id: "single",
+                label: "Contract",
+                variant: "dropzone",
+                status: "We cannot read that file.",
+                readonly: readonly(),
+                value: files(),
+                onchange: move |next: Files| files.set(next),
+            }
+        }
+    }
+}
 
 /// Todo 2551: a field holding its own value, in a raw `<form>` and in a `Form`,
 /// each with a native reset button.

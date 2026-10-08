@@ -199,7 +199,6 @@ explains how parts work.
 | `FieldPart::Description` | `description` | The caption between the label and the control. |
 | `FieldPart::Frame` | `frame` | The bordered box around the control. |
 | `FieldPart::Control` | `control` | The element the label names. |
-| `FieldPart::Trailing` | `trailing` | The slot after the control: a chevron, a toggle. |
 | `FieldPart::Helper` | `helper` | The caption under the control. |
 | `FieldPart::Status` | `status` | The validation message. |
 
@@ -251,8 +250,8 @@ Almost everything is `FieldDefaults`, shared by every field.
 ## Data attributes
 
 State tokens on the wrapper's and the frame's `data-state`, space separated. The
-`<select>` itself carries only `data-placeholder` while `value` is `None`, which
-dims it.
+`<select>` itself also carries `data-controlled`, and `data-placeholder` while no
+option matches `value` (`None`, or an option not in the list yet), which dims it.
 
 | Token | Condition |
 |---|---|

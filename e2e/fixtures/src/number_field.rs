@@ -1,14 +1,39 @@
 //! `NumberField` with its steppers, and one field per state its docs page shows.
 
 use dioxus::prelude::*;
-use libero::components::{Flex, NumberField, Text};
+use libero::components::{Button, Flex, Form, NumberField, Text, use_form};
 
 use crate::Routes;
 
 pub const ROUTES: Routes = &[
     ("/number-field", || rsx! { NumberFieldPage {} }),
     ("/number-field/echo", || rsx! { NumberFieldEchoPage {} }),
+    ("/number-field/reset", || rsx! { NumberFieldResetPage {} }),
 ];
+
+/// Todo 2327: an empty field in a `Form`, reset by a button; the caller then sets and clears it.
+#[component]
+fn NumberFieldResetPage() -> Element {
+    let value = use_store(String::new);
+    let form = use_form();
+    let mut quantity = use_signal(|| None::<i32>);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Form { value, form,
+                NumberField {
+                    id: "quantity",
+                    label: "Quantity",
+                    value: quantity(),
+                    onchange: move |next| quantity.set(next),
+                }
+            }
+            Button { id: "reset", onclick: move |_| form.reset(), "Reset" }
+            Button { id: "set", onclick: move |_| quantity.set(Some(5)), "Set 5" }
+            Button { id: "clear", onclick: move |_| quantity.set(None), "Clear" }
+        }
+    }
+}
 
 /// Starts on 3, the value echoed in `#echo`, for the shared web/native scenarios.
 #[component]

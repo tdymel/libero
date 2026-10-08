@@ -570,6 +570,72 @@ fn a_rule_added_after_mount_waits_for_the_field_to_lose_focus() {
     });
 }
 
+/// Todo 2326: a form reset drops the typed number, on screen and in what the field posts.
+#[test]
+fn a_form_reset_drops_the_typed_number() {
+    block_on(async {
+        let fixture = Fixture::open("/phone-field/reset", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let posted = "document.querySelector('input[type=hidden][name=phone]').value";
+
+        pointer::click(page, TEL).await.unwrap();
+        keyboard::type_text(page, "171").await.unwrap();
+        wait::for_js_true(page, &format!("{posted} === '+49171'"), "the typed number")
+            .await
+            .unwrap();
+        pointer::click(page, "#reset").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{posted} === '' && document.querySelector({TEL:?}).value === ''"),
+            "the reset to drop the number",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("a reset phone field").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2604: a typed dial code moves the country and stays on screen until the next
+/// character, which replaces it with the national number.
+#[test]
+fn a_typed_dial_code_stays_until_the_next_character() {
+    block_on(async {
+        let fixture = Fixture::open("/phone-field/echo", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let tel = format!("document.querySelector({TEL:?}).value");
+        let picker = format!("document.querySelector({PICKER:?}).textContent");
+        let echo = "document.querySelector('#echo').textContent";
+
+        pointer::click(page, TEL).await.unwrap();
+        keyboard::type_text(page, "+1").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{tel} === '+1' && {picker}.includes('+1') && {echo} === ''"),
+            "the dial code on screen, the country moved, nothing posted",
+        )
+        .await
+        .unwrap();
+
+        keyboard::type_text(page, "212").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{tel} === '212' && {echo} === '+1212'"),
+            "the national number after the code",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("a typed dial code").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The caret stays where the user typed: nothing regroups while typing, and a
 /// fixed plan groups on blur. The E.164 follows every keystroke.
 #[test]

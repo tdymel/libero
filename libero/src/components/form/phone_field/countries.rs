@@ -344,11 +344,16 @@ pub(crate) fn international(text: &str) -> Option<String> {
     }
 }
 
+/// Whether the text is `country`'s own dial code and nothing after it: no number yet.
+pub(crate) fn bare_code(country: &Country, text: &str) -> bool {
+    international(text).is_some_and(|digits| digits == country.dial)
+}
+
 /// The E.164 a typed text stands for: its own dial code when it has one, else
-/// `country`'s.
+/// `country`'s. A bare dial code is nothing typed.
 pub(crate) fn value_of(country: &Country, text: &str) -> String {
     match international(text) {
-        Some(digits) if digits.is_empty() => String::new(),
+        Some(digits) if digits.is_empty() || digits == country.dial => String::new(),
         Some(digits) => format!("+{digits}"),
         None => to_e164(country, text),
     }

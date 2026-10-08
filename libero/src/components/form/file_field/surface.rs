@@ -331,6 +331,7 @@ pub(super) fn file_dropzone_variant(
         has_files,
     } = cards;
 
+    let focusable = control.interactive && !control.editable;
     let drop_target = rsx! {
         FileDropzoneControl { control, states, shown: surface, {prompt} }
     };
@@ -339,6 +340,7 @@ pub(super) fn file_dropzone_variant(
         describedby,
         invalid,
         loading,
+        focusable,
     });
     let card_list = has_files.then(|| card_list(style, list_element, stand_in, drawn));
 

@@ -22,6 +22,7 @@ use crate::{
 static NATIVE_SELECT_CONTROL_SX: StaticSx = StaticSx::new(|| {
     field_control_sx()
         .cursor("pointer")
+        .selector("&:disabled", sx().cursor("not-allowed"))
         // The placeholder dims like a text field's (todo 582). The options
         // inherit the colour, so they take ink back.
         .selector("&[data-placeholder]", sx().color("text-dimmed"))
@@ -141,12 +142,6 @@ fn NativeSelectShell<T: Options>(live: Signal<Option<T>>, field: NativeSelectPro
     let bound = use_bound(&props.name, props.onchange.is_some());
     let disabled = bound.disabled(props.disabled);
     let bound_value = bound.value();
-    // A memo, so the shell redraws when the select empties or fills, not per pick.
-    let unpicked = use_memo(move || live.read().is_none());
-    let unpicked = match &bound_value {
-        Some(value) => value.is_none(),
-        None => unpicked(),
-    };
 
     if props.onchange.is_none() && !bound.is_bound() {
         warn("NativeSelect: without `onchange` the selection can never change.");
@@ -154,6 +149,17 @@ fn NativeSelectShell<T: Options>(live: Signal<Option<T>>, field: NativeSelectPro
 
     let list = props.options.or_static();
     let values = list.values();
+    // A memo, so the shell redraws when no option starts or stops matching, not per pick.
+    let live_unpicked = use_memo(use_reactive!(|values| {
+        !live
+            .read()
+            .as_ref()
+            .is_some_and(|value| values.contains(value))
+    }));
+    let unpicked = match &bound_value {
+        Some(value) => !value.as_ref().is_some_and(|value| values.contains(value)),
+        None => live_unpicked(),
+    };
     let refused = list.disabled();
     let groups = list.group_labels();
     if values.is_empty() && !props.options.is_pending() {

@@ -232,6 +232,7 @@ const KNOWN_GAPS: &[(&str, &str)] = &[
     ("Combobox", "search"),
     ("MultiSelect", "leading"),
     ("NativeSelect", "leading"),
+    ("NativeSelect", "trailing"),
     ("NumberField", "leading"),
     ("PasswordField", "leading"),
     ("PinField", "leading"),

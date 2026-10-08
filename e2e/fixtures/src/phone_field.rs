@@ -2,7 +2,9 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, FieldStatus, Flex, PhoneField, Rule, Text, not_empty},
+    components::{
+        Button, FieldStatus, Flex, Form, PhoneField, Rule, Text, not_empty, use_form,
+    },
     hooks::use_localization_handle,
     localization::Localization,
 };
@@ -21,7 +23,24 @@ pub const ROUTES: Routes = &[
     ("/phone-field/low", || rsx! { PhoneFieldLowPage {} }),
     ("/phone-field/rtl", || rsx! { PhoneFieldRtlPage {} }),
     ("/phone-field/later", || rsx! { PhoneFieldLaterRulesPage {} }),
+    ("/phone-field/reset", || rsx! { PhoneFieldResetPage {} }),
 ];
+
+/// Todo 2326: a typed number in a `Form`, reset by a button; the `name` posts the E.164.
+#[component]
+fn PhoneFieldResetPage() -> Element {
+    let value = use_store(String::new);
+    let form = use_form();
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Form { value, form,
+                PhoneField { label: "Phone", country: "DE", name: "phone" }
+            }
+            Button { id: "reset", onclick: move |_| form.reset(), "Reset" }
+        }
+    }
+}
 
 /// Under `dir=rtl`, the picker's dial code and a pinned one (todo 1565).
 #[component]

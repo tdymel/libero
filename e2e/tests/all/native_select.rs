@@ -68,6 +68,67 @@ fn an_empty_required_select_is_quiet_and_dimmed() {
     });
 }
 
+/// Todo 2574: a disabled select shows the not-allowed cursor, an enabled one the pointer.
+#[test]
+fn a_disabled_select_shows_the_not_allowed_cursor() {
+    block_on(async {
+        let fixture = Fixture::open("/native-select", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let cursor = |case: &str| {
+            format!("getComputedStyle(document.querySelector('[data-case={case}] select')).cursor")
+        };
+        let check = format!(
+            "{} === 'not-allowed' && {} === 'pointer'",
+            cursor("disabled"),
+            cursor("refused")
+        );
+        wait::for_js_true(page, &check, "not-allowed on the disabled select only")
+            .await
+            .unwrap();
+
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2575: a value the pending options do not hold yet draws the dimmed placeholder,
+/// and the select takes ink once the option arrives.
+#[test]
+fn a_value_outside_the_options_shows_the_placeholder_until_it_arrives() {
+    block_on(async {
+        let fixture = Fixture::open("/native-select/pending", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let select = |case: &str| format!("document.querySelector('[data-case={case}] select')");
+        let pending = select("pending");
+        let color = |element: &str| format!("getComputedStyle({element}).color");
+        let dimmed = format!(
+            "{pending}.hasAttribute('data-placeholder') && {} !== {}",
+            color(&pending),
+            color(&select("plain"))
+        );
+        wait::for_js_true(page, &dimmed, "the dimmed placeholder")
+            .await
+            .unwrap();
+
+        pointer::click(page, "#load").await.unwrap();
+        let arrived = format!(
+            "!{pending}.hasAttribute('data-placeholder') && {pending}.value === 'Banana' \
+             && {} === {}",
+            color(&pending),
+            color(&select("plain"))
+        );
+        wait::for_js_true(page, &arrived, "ink once Banana is offered")
+            .await
+            .unwrap();
+
+        fixture.console.assert_clean("a pending select").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 583: named groups are `<optgroup>`s, a disabled option is announced
 /// disabled and the arrows step over it.
 #[test]

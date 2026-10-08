@@ -251,6 +251,54 @@ fn emptying_the_field_clears_the_value_and_junk_reverts() {
     });
 }
 
+/// Todo 2327: a form reset drops text the field still shows for `None`, such as a lone
+/// minus, which would come back when the caller clears the field again.
+#[test]
+fn a_form_reset_drops_an_unparsed_minus() {
+    block_on(async {
+        let fixture = Fixture::open("/number-field/reset", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let value = format!("document.querySelector({INPUT:?}).value");
+
+        keyboard::tab_to(page, INPUT, 3).await.unwrap();
+        keyboard::type_text(page, "-").await.unwrap();
+        wait::for_js_true(page, &format!("{value} === '-'"), "the typed minus")
+            .await
+            .unwrap();
+        // By script: a real click would blur the field, and its change commit drops the text.
+        page.evaluate("document.querySelector('#reset').click()")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{value} === ''"),
+            "the reset to drop the minus",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, "#set").await.unwrap();
+        wait::for_js_true(page, &format!("{value} === '5'"), "the caller's 5")
+            .await
+            .unwrap();
+        pointer::click(page, "#clear").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{value} === ''"),
+            "the cleared field, no minus",
+        )
+        .await
+        .unwrap();
+
+        fixture
+            .console
+            .assert_clean("a reset number field")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 509: Ctrl/Alt/Meta with an arrow or Page key is the caret's or the
 /// browser's (Ctrl+PageDown switches tabs), not a step.
 #[test]

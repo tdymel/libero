@@ -333,6 +333,48 @@ fn the_chips_take_the_focus_and_the_required_field_stays_clean() {
     });
 }
 
+/// Todos 2581, 2582: a read-only single-file dropzone holding a file draws no x, so its card
+/// list is the tab stop; with the error on it, axe clean before and after.
+#[test]
+fn a_read_only_single_file_dropzone_stays_reachable() {
+    block_on(async {
+        let fixture = Fixture::open("/file-field/single", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        const LIST: &str = "[data-fixture-ready] ul[role=list]";
+        wait::for_visible(page, SURFACE).await.unwrap();
+        let disk = OnDisk::with(&["alpha.txt"]);
+        drop_files(page, SURFACE, disk.paths()).await;
+        wait::for_selector(page, LIST).await.unwrap();
+        contrast::assert_clean(page, "[data-fixture-ready]")
+            .await
+            .unwrap();
+
+        pointer::click(page, "#to-readonly").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector({LIST:?}).getAttribute('tabindex') === '0' \
+                 && !document.querySelector('[aria-label=\"Remove alpha.txt\"]')"
+            ),
+            "the card list to become the tab stop",
+        )
+        .await
+        .unwrap();
+        keyboard::tab_to(page, LIST, 3).await.unwrap();
+        contrast::assert_clean(page, "[data-fixture-ready]")
+            .await
+            .unwrap();
+
+        fixture
+            .console
+            .assert_clean("a read-only dropzone")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Enter and Space on Browse open the picker; read-only keeps the tab order and refuses
 /// every edit; disabled leaves the tab order (529).
 #[test]

@@ -90,7 +90,6 @@ pub fn NativeSelectPage() -> Element {
                     (FieldPart::Description, "The caption between the label and the control."),
                     (FieldPart::Frame, "The bordered box around the control."),
                     (FieldPart::Control, "The element the label names."),
-                    (FieldPart::Trailing, "The slot after the control: a chevron, a toggle."),
                     (FieldPart::Helper, "The caption under the control."),
                     (FieldPart::Status, "The validation message."),
                 ]),

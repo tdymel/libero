@@ -8,7 +8,37 @@ use libero::components::{
 
 use crate::{Routes, common::Fruit};
 
-pub const ROUTES: Routes = &[("/native-select", || rsx! { NativeSelectPage {} })];
+pub const ROUTES: Routes = &[
+    ("/native-select", || rsx! { NativeSelectPage {} }),
+    ("/native-select/pending", || rsx! { NativeSelectPendingPage {} }),
+];
+
+/// Todo 2575: `Banana` is held while the options are pending, until `Load`.
+#[component]
+fn NativeSelectPendingPage() -> Element {
+    let mut loaded = use_signal(|| false);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            div { "data-case": "pending",
+                NativeSelect {
+                    label: "Pending fruit",
+                    placeholder: "Pick one",
+                    value: Fruit::Banana,
+                    onchange: |_| {},
+                    options: match loaded() {
+                        true => Some(OptionList::from(vec![Fruit::Apple, Fruit::Banana])),
+                        false => None::<OptionList<Fruit>>,
+                    },
+                }
+            }
+            div { "data-case": "plain",
+                NativeSelect { label: "Plain fruit", value: Fruit::Apple, onchange: |_| {} }
+            }
+            button { id: "load", onclick: move |_| loaded.set(true), "Load" }
+        }
+    }
+}
 
 #[component]
 fn NativeSelectPage() -> Element {

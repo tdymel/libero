@@ -11,13 +11,13 @@ use crate::{
             use_no_toolbar, use_toolbar_item,
         },
         form::{
-            LiveControl, field_control_sx, field_props, slot_button_sx, slot_icon_size, use_bound,
-            use_field, use_field_frame,
+            FormScope, LiveControl, field_control_sx, field_props, slot_button_sx, slot_icon_size,
+            use_bound, use_field, use_field_frame,
         },
         layout::use_box,
     },
     context::IconSlot,
-    hooks::{current_localization, use_formats, use_theme},
+    hooks::{current_localization, use_element, use_form_owner, use_formats, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::Size,
     utils::warn,
@@ -146,6 +146,17 @@ fn NumberFieldShell<T: NumberValue>(
 
     // The raw text, so that in-progress input survives a render. See `Edit`.
     let mut buffer = use_signal(|| None::<Edit<T>>);
+    // A form reset drops the typed text, which `-` or `.` would outlive on a `None` value.
+    let anchor = use_element();
+    let scope = try_use_context::<FormScope>();
+    let owner = use_form_owner(anchor, scope.is_none());
+    let resets = scope.map_or(0, |form| form.resets()) + owner().unwrap_or(0);
+    use_effect(use_reactive!(|resets| {
+        let _ = resets;
+        if buffer.peek().is_some() {
+            buffer.set(None);
+        }
+    }));
 
     let min = props.min;
     let max = props.max;
@@ -242,6 +253,7 @@ fn NumberFieldShell<T: NumberValue>(
 
     let input = field
         .aria(control)
+        .element(&anchor)
         .attr_default("type", "text")
         .attr_default("inputmode", keypad(kind, min))
         // A leading minus takes the page direction, so `-5` drew as `5-` under `rtl`.
