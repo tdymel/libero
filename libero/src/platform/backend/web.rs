@@ -92,6 +92,16 @@ pub(super) fn is_rtl(mounted: &Rc<MountedData>) -> bool {
         .is_some_and(element_is_rtl)
 }
 
+/// An `<img>` that finished with no picture.
+pub(super) fn load_failed(mounted: &Rc<MountedData>) -> bool {
+    mounted
+        .downcast::<web_sys::Element>()
+        .and_then(|element| element.dyn_ref::<web_sys::HtmlImageElement>())
+        .is_some_and(|image| {
+            image.complete() && image.natural_width() == 0 && image.natural_height() == 0
+        })
+}
+
 /// Whether `document.activeElement` is `mounted` or inside it.
 pub(super) fn focus_is_in(mounted: &Rc<MountedData>) -> bool {
     let active = web_sys::window()

@@ -3,6 +3,7 @@
 
 use e2e::browser::block_on;
 use e2e::passes::keyboard::{self, ESCAPE};
+use e2e::passes::pointer;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 #[test]
@@ -64,6 +65,101 @@ fn an_empty_fallback_keeps_the_broken_source() {
             attr(&fixture, "#empty-fallback", "src").await,
             "/does-not-exist.png"
         );
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Swallows every image `error`, as a server-rendered page misses it before hydration, lets the
+/// pictures fail once, then mounts them again: the browser has the failure by then.
+async fn open_missed_error(fixture: &Fixture) {
+    let page = &fixture.page;
+    page.evaluate(
+        "window.addEventListener('error', e => { \
+         if (e.target instanceof HTMLImageElement) e.stopImmediatePropagation(); }, true)",
+    )
+    .await
+    .unwrap();
+    pointer::click(page, "#mount").await.unwrap();
+    wait::for_js_true(
+        page,
+        "[...document.querySelectorAll('img')].every(i => i.complete)",
+        "the pictures to fail",
+    )
+    .await
+    .unwrap();
+    pointer::click(page, "#mount").await.unwrap();
+    wait::for_js_true(
+        page,
+        "!document.querySelector('img')",
+        "the pictures to unmount",
+    )
+    .await
+    .unwrap();
+    pointer::click(page, "#mount").await.unwrap();
+}
+
+/// Todo 2529: an `Image` whose source failed before its `onerror` existed shows the fallback.
+#[test]
+fn an_image_that_failed_before_its_listener_shows_the_fallback() {
+    block_on(async {
+        let fixture = Fixture::open("/image/missed-error", Viewport::Desktop)
+            .await
+            .unwrap();
+        open_missed_error(&fixture).await;
+        wait::for_js_true(
+            &fixture.page,
+            "document.querySelector('#missed-image')?.src.includes('963')",
+            "the fallback source",
+        )
+        .await
+        .unwrap();
+        // The cropper on the page warns about its source.
+        fixture.console.drain();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2529: an `Avatar` whose source failed before its `onerror` existed shows its initials.
+#[test]
+fn an_avatar_that_failed_before_its_listener_shows_its_initials() {
+    block_on(async {
+        let fixture = Fixture::open("/image/missed-error", Viewport::Desktop)
+            .await
+            .unwrap();
+        open_missed_error(&fixture).await;
+        wait::for_js_true(
+            &fixture.page,
+            "(() => { const a = document.querySelector('#missed-avatar'); \
+             return !!a && !a.querySelector('img') && a.textContent === 'AL'; })()",
+            "the initials instead of the picture",
+        )
+        .await
+        .unwrap();
+        // The cropper on the page warns about its source.
+        fixture.console.drain();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2529: an `ImageCropper` whose source failed before its `onerror` existed reports it
+/// once and draws no box.
+#[test]
+fn a_cropper_that_failed_before_its_listener_reports_and_draws_no_box() {
+    block_on(async {
+        let fixture = Fixture::open("/image/missed-error", Viewport::Desktop)
+            .await
+            .unwrap();
+        open_missed_error(&fixture).await;
+        wait::for_js_true(
+            &fixture.page,
+            "document.getElementById('error')?.textContent === '1' \
+             && !document.querySelector('[data-slot=box], [data-slot=frame]')",
+            "onerror, and no box",
+        )
+        .await
+        .unwrap();
+        // The cropper on the page warns about its source.
+        fixture.console.drain();
         fixture.close().await.unwrap();
     });
 }

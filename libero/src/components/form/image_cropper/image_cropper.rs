@@ -8,7 +8,7 @@ use crate::{
         buttons::ActionIcon,
         common::{
             Glyph, HtmlTag, Input, Part, States, Variables, base_props, disabled_look_sx,
-            focus_ring_sx, has_shortcut_modifier, parts_enum, variables,
+            focus_ring_sx, has_shortcut_modifier, on_failed_after_mount, parts_enum, variables,
         },
         form::{Slider, SliderChangeEvent},
         layout::use_box,
@@ -505,13 +505,19 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
         }
     }));
     let onerror = props.onerror;
-    let onerror = move |_| {
+    // Once per `src`: the error event and the check after mount can both report it.
+    let fail = use_callback(move |()| {
+        if *failed.peek() {
+            return;
+        }
         warn("ImageCropper: `src` failed to load.");
         failed.set(true);
         if let Some(onerror) = &onerror {
             onerror.call(());
         }
-    };
+    });
+    let mut mount_image = image.mount();
+    let mounted_src = props.src.clone();
 
     // Blitz fires no `load`: measure once laid out as well.
     use_effect(move || {
@@ -916,9 +922,12 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                     src: props.src,
                     alt: props.alt,
                     draggable: "false",
-                    onmounted: image.mount(),
+                    onmounted: move |event: Event<MountedData>| {
+                        on_failed_after_mount(&mounted_src, event.data(), move || fail.call(()));
+                        mount_image(event);
+                    },
                     onload: move |_| measure.call(()),
-                    onerror,
+                    onerror: move |_| fail.call(()),
                 }
                 if !failed() {
                     div { "data-slot": "mask", "aria-hidden": "true",

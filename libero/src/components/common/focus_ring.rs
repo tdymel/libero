@@ -44,6 +44,9 @@ pub(crate) fn inset_focus_ring_sx(offset: &str) -> crate::sx::Sx {
         ))
 }
 
+/// The elements whose content paints over an inset shadow and which take no `::after`.
+pub(crate) const REPLACED_ELEMENTS: &str = "img, video, iframe, canvas, svg, embed, object";
+
 /// [`inset_focus_ring_sx`] with a painted outline, for a replaced element (`video`, `img`):
 /// its content covers inset shadows, the web paints the outline over it.
 pub(crate) fn inset_outline_ring_sx(offset: &str) -> crate::sx::Sx {

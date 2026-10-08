@@ -3,8 +3,8 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, Variables, base_props, inset_focus_ring_sx, inset_outline_ring_sx,
-            ring_overlay_sx, variables,
+            HtmlTag, Input, REPLACED_ELEMENTS, Variables, base_props, inset_focus_ring_sx,
+            inset_outline_ring_sx, ring_overlay_sx, variables,
         },
         layout::use_box,
     },
@@ -30,7 +30,7 @@ static ASPECT_RATIO_BASE_SX: StaticSx = StaticSx::new(|| {
         .selector("& > *:focus-visible:focus-visible", inset_ring())
         // Replaced content covers inset shadows and takes no `::after` (todo 2532).
         .selector(
-            format!("& > :is({REPLACED}):focus-visible:focus-visible"),
+            format!("& > :is({REPLACED_ELEMENTS}):focus-visible:focus-visible"),
             inset_outline_ring_sx(&ring_offset()),
         )
         // A picture inside the child paints over its inset shadows; the overlay paints over it (todo 2480).
@@ -39,8 +39,6 @@ static ASPECT_RATIO_BASE_SX: StaticSx = StaticSx::new(|| {
             ring_overlay_sx().content("\"\"").and(inset_ring()),
         )
 });
-
-const REPLACED: &str = "img, video, iframe, canvas, svg, embed, object";
 
 fn ring_offset() -> String {
     format!("calc(-1 * {})", FOCUS_RING_WIDTH.value())

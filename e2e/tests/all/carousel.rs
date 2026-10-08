@@ -17,6 +17,41 @@ use e2e::{Fixture, Suite, Viewport, clock, wait};
 /// round the clip a layout unit (1/64px) inside it.
 const SUBPIXEL: f64 = 0.5;
 
+/// Todo 2577: a replaced child (`video controls`) in a slide paints its outset ring in the padding.
+#[test]
+fn a_focused_video_slide_keeps_its_ring() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/replaced", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, "#clip-1", 10).await.unwrap();
+        let outline: Vec<String> = e2e::js(
+            page,
+            "(() => { const s = getComputedStyle(document.activeElement); \
+               return [s.outlineStyle, s.outlineColor]; })()",
+        )
+        .await;
+        // A bare `video` keeps the browser's own ring; it must be drawn, and not transparent.
+        assert_ne!(outline[0], "none", "{outline:?}");
+        assert_ne!(outline[1], "rgba(0, 0, 0, 0)", "{outline:?}");
+        let clipped: f64 = e2e::js(
+            page,
+            crate::image_list::ring_clipped("[aria-roledescription=carousel]"),
+        )
+        .await;
+        assert!(
+            clipped < SUBPIXEL,
+            "the ring runs {clipped}px past the clip"
+        );
+        fixture
+            .console
+            .assert_clean("a focused video slide")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todos 618, 619: the slide and the track clipped the outset ring of a slide's content.
 /// Checks every visible slide's button, the first flush with the track's left edge.
 #[test]

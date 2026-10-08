@@ -12,7 +12,25 @@ pub const ROUTES: Routes = &[
     ("/carousel/text", || rsx! { TextPage {} }),
     ("/carousel/buttons", || rsx! { ButtonsPage {} }),
     ("/carousel/fits", || rsx! { FitsPage {} }),
+    ("/carousel/replaced", || rsx! { ReplacedPage {} }),
 ];
+
+/// A focusable `video` as a slide's child, whose outset ring needs the slide's padding (todo 2577).
+#[component]
+fn ReplacedPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "420px",
+            Carousel {
+                aria_label: "Clips",
+                slides: (1..=2)
+                    .map(|n| rsx! {
+                        video { id: "clip-{n}", controls: true, tabindex: "0", style: "width: 100%; background: #369" }
+                    })
+                    .collect(),
+            }
+        }
+    }
+}
 
 /// A draggable strip of buttons that count their clicks (todo 2358).
 #[component]

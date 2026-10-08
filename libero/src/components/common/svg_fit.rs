@@ -1,6 +1,10 @@
 //! Blitz draws every SVG `<img>` `contain`, whatever its `object-fit` (todo 920):
 //! there the picture is drawn as the `<img>`'s background, which Blitz sizes right.
 
+use std::rc::Rc;
+
+use dioxus::prelude::{MountedData, spawn};
+
 use crate::{
     components::common::{Variables, css_string},
     platform,
@@ -17,6 +21,25 @@ const SVG_FIT_SIZE: CssVar = CssVar::new("--lsx-svg-fit-size");
 /// Whether `src` is an SVG this renderer would misfit, told by a `.svg` path or SVG data URL.
 pub(crate) fn svg_fit(src: &str) -> bool {
     !platform::fits_svg_images() && is_svg(src)
+}
+
+/// Calls `on_failed` if the `<img>` showing `src` has failed by the task after it mounted: a
+/// server-rendered one failed before hydration attached its `onerror` (todo 2529). An SVG with
+/// no size reads as empty, so it is left to `onerror`.
+pub(crate) fn on_failed_after_mount(
+    src: &str,
+    mounted: Rc<MountedData>,
+    on_failed: impl FnOnce() + 'static,
+) {
+    if is_svg(src) {
+        return;
+    }
+    spawn(async move {
+        platform::next_task().await;
+        if platform::load_failed(&mounted) {
+            on_failed();
+        }
+    });
 }
 
 fn is_svg(src: &str) -> bool {

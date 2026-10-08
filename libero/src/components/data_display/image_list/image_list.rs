@@ -3,8 +3,9 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, Part, States, Variables, base_props, input_from_str,
-            inset_focus_ring_sx, parts_enum, parts_under_sx, ring_overlay_sx, variables,
+            HtmlTag, Input, Part, REPLACED_ELEMENTS, States, Variables, base_props, input_from_str,
+            inset_focus_ring_sx, inset_outline_ring_sx, parts_enum, parts_under_sx,
+            ring_overlay_sx, variables,
         },
         data_display::LinkedImageScope,
         layout::{InternalAnchor, use_box},
@@ -204,6 +205,11 @@ fn media_base() -> Sx {
             "& > *:focus-visible:focus-visible",
             inset_ring().position("relative"),
         )
+        // A replaced child (`video controls`) covers inset shadows and takes no `::after` (todo 2577).
+        .selector(
+            format!("& > :is({REPLACED_ELEMENTS}):focus-visible:focus-visible"),
+            inset_outline_ring_sx(&ring_offset()),
+        )
         // The picture paints over its button's inset shadows; the overlay paints over it.
         .selector(
             "& > *:focus-visible::after",
@@ -253,8 +259,12 @@ fn link_base() -> Sx {
         )
 }
 
+fn ring_offset() -> String {
+    format!("calc(-1 * {})", FOCUS_RING_WIDTH.value())
+}
+
 fn inset_ring() -> Sx {
-    inset_focus_ring_sx(&format!("calc(-1 * {})", FOCUS_RING_WIDTH.value()))
+    inset_focus_ring_sx(&ring_offset())
 }
 
 static IMAGE_LIST_MEDIA_SX: StaticSx = StaticSx::new(media_base);

@@ -5,9 +5,9 @@ use crate::{
     components::{
         common::{
             Glyph, HtmlTag, Input, Part, SVG_FIT, States, Variables, Variant, VariantVars,
-            base_color, base_props, contrast_color, fill_color, names_itself, parts_enum, svg_fit,
-            svg_fit_sx, svg_fit_variables, text_color, use_name_warning, variables,
-            variant_chrome_sx, variant_colors,
+            base_color, base_props, contrast_color, fill_color, names_itself,
+            on_failed_after_mount, parts_enum, svg_fit, svg_fit_sx, svg_fit_variables, text_color,
+            use_name_warning, variables, variant_chrome_sx, variant_colors,
         },
         layout::{Box, use_box},
     },
@@ -213,6 +213,7 @@ pub fn Avatar(props: AvatarProps) -> Element {
     let content = match (src, failed) {
         (Some(src), false) => {
             let errored = src.clone();
+            let missed = src.clone();
             let image_states: Input<States> = States::default()
                 .with(SVG_FIT, svg_fit(&src))
                 .with(LAYERED, layered)
@@ -233,6 +234,12 @@ pub fn Avatar(props: AvatarProps) -> Element {
                     // The root is the `role="img"`, not a second image.
                     alt: "",
                     onerror: move |_| errored_src.set(Some(errored.clone())),
+                    onmounted: move |event: Event<MountedData>| {
+                        let failed = missed.clone();
+                        on_failed_after_mount(&missed, event.data(), move || {
+                            errored_src.set(Some(failed))
+                        });
+                    },
                 }
             }
         }

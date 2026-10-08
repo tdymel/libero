@@ -268,6 +268,17 @@ pub(crate) fn on_form_reset(
     return None;
 }
 
+/// Only the web: a server-rendered picture can fail before hydration attaches `onerror`.
+pub(crate) fn load_failed(mounted: &Rc<MountedData>) -> bool {
+    #[cfg(target_arch = "wasm32")]
+    return web::load_failed(mounted);
+    #[cfg(not(target_arch = "wasm32"))]
+    return {
+        let _ = mounted;
+        false
+    };
+}
+
 /// The web and Blitz compute `direction`; the WebView floor answers LTR.
 pub(crate) fn is_rtl(mounted: &Rc<MountedData>) -> bool {
     #[cfg(not(any(target_arch = "wasm32", feature = "native")))]

@@ -97,6 +97,40 @@ fn a_strip_whose_thumbnails_all_fit_is_quiet() {
     });
 }
 
+/// Todo 2577: the focused picture is a replaced `img`, so the frame's sibling overlay draws the
+/// inset ring over it, covering the frame.
+#[test]
+fn a_focused_picture_is_ringed_by_the_frame_overlay() {
+    block_on(async {
+        let fixture = Fixture::open("/lightbox", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_visible(page, DIALOG).await.unwrap();
+        keyboard::tab_to(page, PICTURE, 10).await.unwrap();
+        let [shadow, gap]: [String; 2] = e2e::js(
+            page,
+            "(() => { const el = document.activeElement; const frame = el.parentElement; \
+               const ring = frame.querySelector('[data-ring]'); const f = frame.getBoundingClientRect(); \
+               const r = ring.getBoundingClientRect(); \
+               return [getComputedStyle(ring).boxShadow, \
+                 [r.left - f.left, r.top - f.top, f.right - r.right, f.bottom - r.bottom].map(Math.abs).join()]; })()",
+        )
+        .await;
+        assert!(
+            shadow.contains("inset"),
+            "no ring over the picture: {shadow}"
+        );
+        assert!(
+            gap.split(',')
+                .all(|side| side.parse::<f64>().unwrap() < 0.5),
+            "the overlay does not cover the frame: {gap}"
+        );
+        fixture.console.assert_clean("a focused picture").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Forced colours paint every fill `Canvas`: the current thumbnail's frame
 /// must still set it apart from the others (1.4.1).
 #[test]

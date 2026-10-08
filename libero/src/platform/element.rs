@@ -88,6 +88,12 @@ pub(crate) fn focus_kept(token: u64) {
     backend::focus_kept(token);
 }
 
+/// Whether `mounted`, an `<img>`, already finished with no picture: a server-rendered one
+/// fails before hydration attaches `onerror`. Web only, else `false`.
+pub(crate) fn load_failed(mounted: &Rc<MountedData>) -> bool {
+    backend::load_failed(mounted)
+}
+
 /// Whether `mounted` lays out right to left: its computed `direction`, which
 /// `dir="rtl"` on it or an ancestor sets. `false` where the renderer cannot say.
 pub(crate) fn is_rtl(mounted: &Rc<MountedData>) -> bool {

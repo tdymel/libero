@@ -148,6 +148,34 @@ fn a_zoom_button_and_a_below_bar_button_keep_their_rings() {
     });
 }
 
+/// Todo 2577: a focused `video` cell covers inset shadows, so its stripe is a painted outline.
+#[test]
+fn a_focused_video_cell_shows_a_painted_ring() {
+    block_on(async {
+        let fixture = Fixture::open("/image-list-focus", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, "#cell-video", 10).await.unwrap();
+        let outline: Vec<String> = e2e::js(
+            page,
+            "(() => { const s = getComputedStyle(document.activeElement); \
+               return [s.outlineStyle, s.outlineColor, s.outlineOffset]; })()",
+        )
+        .await;
+        assert_eq!(outline[0], "solid", "{outline:?}");
+        assert_ne!(outline[1], "rgba(0, 0, 0, 0)", "{outline:?}");
+        assert!(outline[2].starts_with('-'), "{outline:?}");
+        let clipped: f64 = e2e::js(page, ring_clipped("[role=list]")).await;
+        assert!(clipped <= 0.0, "the ring runs {clipped}px past the clip");
+        fixture
+            .console
+            .assert_clean("a focused video cell")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// What a pointer at the centre of `selector` hits: the link's `href`, or the
 /// hit element's id when it is not in a link.
 fn hit_at(selector: &str) -> String {

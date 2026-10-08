@@ -90,8 +90,8 @@ fn ImageListLinksPage() -> Element {
     }
 }
 
-/// Todos 2425, 2426, 2481: an unlinked zoomable picture, and buttons flush with a
-/// `Below` bar's start and end.
+/// Todos 2425, 2426, 2481, 2577: an unlinked zoomable picture, buttons flush with a
+/// `Below` bar's start and end, and a focusable `video`.
 #[component]
 fn ImageListFocusPage() -> Element {
     rsx! {
@@ -107,6 +107,9 @@ fn ImageListFocusPage() -> Element {
                             span { style: "flex: 1", "Caption" }
                             button { id: "below-action", "Act" }
                         }).position(BarPosition::Below)),
+                    ImageItem::new(rsx! {
+                        video { id: "cell-video", controls: true, tabindex: "0", style: "background: #369" }
+                    }),
                 ],
             }
         }
