@@ -143,7 +143,7 @@ form.getAll("price") // ["20", "80"]
 | `aria_label` | `String` | - | Names the pair when the field has no `label`: the group, and each thumb before its own word. Put in `attributes`, it would land on the wrapper instead. |
 | `aria_label_from` | `String` | `slider.minimum` | Names the lower thumb. Unset, the localization's `slider.minimum`, "Minimum" in English. |
 | `aria_label_to` | `String` | `slider.maximum` | Names the upper thumb. Unset, the localization's `slider.maximum`, "Maximum" in English. |
-| `name` | `FieldName<(V, V)>` | - | Posts the pair as two hidden inputs of that name, in track order. A path such as `Settings::FIELDS.price()` also binds the pair to the surrounding `Form`'s value when there is no `oninput`. |
+| `name` | `FieldName<(V, V)>` | - | Posts the pair as two hidden inputs of that name, in track order. A discrete slider, whose type lists `options()`, posts the options' indices, not the options. A path such as `Settings::FIELDS.price()` also binds the pair to the surrounding `Form`'s value when there is no `oninput`. |
 | `validate` | `Validators<(V, V)>` | - | Rules over the pair, shown once the slider loses focus or its form is submitted. |
 | `label` | `Caption` | - | The caption above the track. Both thumbs' names start with it. |
 | `description` | `Caption` | - | Between the label and the track. What the range means. |

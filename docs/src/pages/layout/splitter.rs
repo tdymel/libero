@@ -117,13 +117,13 @@ pub fn SplitterPage() -> Element {
                     "The divider is a focusable separator.",
                     "Double-clicking the divider resizes without dragging (WCAG 2.5.7): pane A collapses to `min_size`, and the next double-click restores the size it had before it reached `min_size`, by a double-click, a drag or `Home`. A single click only focuses the divider.",
                     "In forced colours the divider line takes the system text colour, so it stays visible.",
-                    "The divider's hit area is 24px thick (WCAG 2.5.8), so it takes presses about 12px into each pane.",
+                    "The divider's hit area is 24px thick (WCAG 2.5.8), so it takes presses up to 24px into pane B. Pane A's own scrollbar stays free to grab.",
                     "Each pane scrolls its own overflow, so a pane at `min_size` never paints over the divider or hides its controls under the other pane.",
                     "A debug build warns without `aria_label`.",
                 ])
                 .must([
                     "Set `aria_label` to name the divider after the pane it resizes, such as `\"Resize sidebar\"`. It has no name of its own.",
-                    "Keep a pane's scrollbar or edge buttons out of the 12px gutter next to the divider, which gets no press there. For example, use `padding: 12px` on that side.",
+                    "Keep buttons at pane B's start edge out of the 24px next to the divider, which gets no press there. For example, use `padding-inline-start: 24px` on pane B.",
                 ])
                 .example("A file sidebar beside an editor, `Splitter { aria_label: \"Resize sidebar\", .. }`: Tab reaches the divider, Left and Right move it by 1%, and a double-click collapses the sidebar without a drag."),
             lead: rsx! {

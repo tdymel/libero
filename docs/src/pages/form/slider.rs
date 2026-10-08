@@ -202,7 +202,7 @@ pub fn SliderPage() -> Element {
                     prop("aria_label", "String")
                         .doc("Names the thumb when the field has no `label`. Put in `attributes`, it would land on the wrapper instead."),
                     prop("name", "FieldName<V>")
-                        .doc("Posts the value in a hidden input of that name. A path such as `Settings::FIELDS.volume()` also binds the value to the surrounding `Form`'s value when there is no `oninput`."),
+                        .doc("Posts the value in a hidden input of that name. A discrete slider, whose type lists `options()`, posts the option's index, not the option. A path such as `Settings::FIELDS.volume()` also binds the value to the surrounding `Form`'s value when there is no `oninput`."),
                     prop("validate", "Validators<V>")
                         .doc("Rules over the value, shown once the slider loses focus or its form is submitted."),
                     prop("label", "Caption")

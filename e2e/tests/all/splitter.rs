@@ -494,3 +494,34 @@ fn an_overflowing_pane_scrolls_inside_itself() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 2405: pane A's own scrollbar sits clear of the divider's hit overlay, in either direction.
+#[test]
+fn pane_a_scrollbar_is_not_under_the_hit_area() {
+    block_on(async {
+        let fixture = Fixture::open_with_scrollbars("/splitter/content", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#pane-a").await.unwrap();
+        for dir in ["ltr", "rtl"] {
+            let verdict: String = page
+                .evaluate(format!(
+                    "(() => {{ document.body.dir = '{dir}'; \
+                     const pane = document.getElementById('pane-a').parentElement; \
+                     const bar = pane.offsetWidth - pane.clientWidth; \
+                     if (bar <= 0) return 'pane A has no scrollbar'; \
+                     const r = pane.getBoundingClientRect(); \
+                     const x = '{dir}' === 'rtl' ? r.left + bar / 2 : r.right - bar / 2; \
+                     const hit = document.elementFromPoint(x, r.top + r.height / 2); \
+                     return hit === pane ? 'ok' : 'the scrollbar strip hits ' + hit.outerHTML.slice(0, 60); }})()"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert_eq!(verdict, "ok", "under {dir}");
+        }
+        fixture.close().await.unwrap();
+    });
+}

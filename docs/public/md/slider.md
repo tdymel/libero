@@ -178,7 +178,7 @@ fn Demo() -> Element {
 | `marks` | `Vec<SliderMark<V>>` | `one per option, discretely` | Ticks on the track. A labeled one gets a caption below it. Replaces the marks a discrete scale draws itself. Past about six options the derived captions touch on a phone, so pass your own `marks`, or a `step` that skips options. |
 | `segments` | `Vec<SliderSegment<V>>` | `[]` | Splits a line track into stretches with 2px gaps, each from its `start` to the next one's, as `Video`'s chapters. A labeled one is named after the value in the bubble and `aria-valuetext` (`slider.segment`, "{value}, {segment}"). Sorted for you; a start outside the track or a repeat is dropped, and an unlabeled stretch fills from `min` to the first start. A mark where two stretches meet keeps its caption but draws no dot: the gap is the tick. |
 | `aria_label` | `String` | - | Names the thumb when the field has no `label`. Put in `attributes`, it would land on the wrapper instead. |
-| `name` | `FieldName<V>` | - | Posts the value in a hidden input of that name. A path such as `Settings::FIELDS.volume()` also binds the value to the surrounding `Form`'s value when there is no `oninput`. |
+| `name` | `FieldName<V>` | - | Posts the value in a hidden input of that name. A discrete slider, whose type lists `options()`, posts the option's index, not the option. A path such as `Settings::FIELDS.volume()` also binds the value to the surrounding `Form`'s value when there is no `oninput`. |
 | `validate` | `Validators<V>` | - | Rules over the value, shown once the slider loses focus or its form is submitted. |
 | `label` | `Caption` | - | The caption above the track, and the thumb's name. |
 | `description` | `Caption` | - | Between the label and the track. What the value means. |

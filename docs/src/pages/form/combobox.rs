@@ -169,8 +169,9 @@ pub fn ComboboxPage() -> Element {
                 .key(["Up"], "Moves the highlight up.")
                 .key(["Home", "End"], "Jumps to the first or last row.")
                 .key(["PageUp", "PageDown"], "Moves the highlight 10 rows, stopping at the first or last.")
-                .key(["Enter"], "Picks the highlighted row.")
-                .key(["Escape", "Tab"], "Close the list.")
+                .key(["Enter"], "Open: picks the highlighted row. Every open starts on the first row, so in a suggestion list Enter replaces the typed text; press `Escape` first to keep it.")
+                .key(["Escape"], "Open: closes the list and keeps the typed text. Enter then goes to the field, so a form submits.")
+                .key(["Tab"], "Closes the list.")
                 .handles([
                     "Focus stays on your trigger, so typing keeps working.",
                     "An open list with no options says `empty_label`, so an empty search is heard, not only seen.",

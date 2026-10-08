@@ -3,7 +3,8 @@
 
 use dioxus::prelude::*;
 use libero::components::{
-    Button, Combobox, ComboboxOption, ComboboxOptionArgs, OptionList, Options, use_combobox,
+    Button, Combobox, ComboboxOption, ComboboxOptionArgs, OptionList, Options, TextField,
+    use_combobox,
 };
 
 use crate::{Routes, common::Fruit};
@@ -12,7 +13,47 @@ pub const ROUTES: Routes = &[
     ("/combobox", || rsx! { ComboboxPage {} }),
     ("/combobox/refused", || rsx! { RefusedPage {} }),
     ("/combobox/none", || rsx! { NonePage {} }),
+    ("/combobox/suggest", || rsx! { SuggestPage {} }),
 ];
+
+/// A suggestion list on a text field, as the docs' demo: `#typed` echoes the field's text (2458).
+#[component]
+fn SuggestPage() -> Element {
+    let fruit = use_combobox();
+    let mut text = use_signal(String::new);
+    let matches: Vec<Fruit> = Fruit::options()
+        .iter()
+        .copied()
+        .filter(|f| f.label().to_lowercase().contains(&text().to_lowercase()))
+        .collect();
+
+    rsx! {
+        Combobox {
+            state: fruit,
+            options: matches,
+            option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
+                ComboboxOption {
+                    onpick: move |_| {
+                        text.set(o.value.label());
+                        fruit.close();
+                    },
+                    "{o.value.label()}"
+                }
+            },
+            TextField {
+                label: "Fruit",
+                value: text(),
+                attributes: fruit.a11y_attributes(),
+                onblur: move |_| fruit.close(),
+                oninput: move |next: String| {
+                    text.set(next);
+                    fruit.open();
+                },
+            }
+        }
+        span { id: "typed", "{text}" }
+    }
+}
 
 /// No options and no `empty`: an open list draws and says "No results" (1269).
 #[component]

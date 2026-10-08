@@ -10,7 +10,7 @@ pub struct SplitterDefaults {
     /// Which size level `divider_size` uses when unset.
     pub size: Size,
     pub divider_sizes: Sizes<u8>,
-    /// Invisible hit-target thickness; 24 meets WCAG 2.5.8 on its own.
+    /// Invisible hit-target thickness, reaching into pane B; 24 meets WCAG 2.5.8 on its own.
     pub hit_sizes: Sizes<u8>,
     /// Percent floor applied to both panes.
     pub min_size: f64,

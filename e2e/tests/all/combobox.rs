@@ -129,6 +129,45 @@ fn the_page_keys_jump_to_the_ends_of_a_short_list() {
     });
 }
 
+/// Todo 2458: a suggestion list opens on its first row, so Enter picks it; Escape closes and keeps the text.
+#[test]
+fn in_a_suggestion_list_enter_picks_the_first_row_and_escape_keeps_the_text() {
+    block_on(async {
+        for (typed, key, after) in [
+            ("an", keyboard::ENTER, "Banana"),
+            ("ch", keyboard::ESCAPE, "ch"),
+        ] {
+            let fixture = Fixture::open("/combobox/suggest", Viewport::Desktop)
+                .await
+                .unwrap();
+            let page = &fixture.page;
+            keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+            keyboard::type_text(page, typed).await.unwrap();
+            wait::for_js_true(
+                page,
+                "!!document.querySelector('[role=option][data-state~=active]')",
+                "the list to open on a highlighted row",
+            )
+            .await
+            .unwrap();
+            keyboard::press(page, key).await.unwrap();
+            wait::for_js_true(
+                page,
+                &format!(
+                    "document.getElementById('typed').textContent === {after:?} \
+                     && document.querySelector('{TRIGGER}').value === {after:?} \
+                     && document.querySelector('{TRIGGER}').getAttribute('aria-expanded') === 'false'"
+                ),
+                &format!("{} to leave {after:?} in the field with the list closed", key.key),
+            )
+            .await
+            .unwrap();
+            fixture.console.assert_clean("a suggestion list").unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
 /// Under RTL the box is placed with the width it will have, so it stays on screen.
 #[test]
 fn an_rtl_dropdown_stays_inside_the_viewport() {

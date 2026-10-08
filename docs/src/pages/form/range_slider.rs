@@ -143,7 +143,7 @@ pub fn RangeSliderPage() -> Element {
                         .default("slider.maximum")
                         .doc("Names the upper thumb. Unset, the localization's `slider.maximum`, \"Maximum\" in English."),
                     prop("name", "FieldName<(V, V)>")
-                        .doc("Posts the pair as two hidden inputs of that name, in track order. A path such as `Settings::FIELDS.price()` also binds the pair to the surrounding `Form`'s value when there is no `oninput`."),
+                        .doc("Posts the pair as two hidden inputs of that name, in track order. A discrete slider, whose type lists `options()`, posts the options' indices, not the options. A path such as `Settings::FIELDS.price()` also binds the pair to the surrounding `Form`'s value when there is no `oninput`."),
                     prop("validate", "Validators<(V, V)>")
                         .doc("Rules over the pair, shown once the slider loses focus or its form is submitted."),
                     prop("label", "Caption")

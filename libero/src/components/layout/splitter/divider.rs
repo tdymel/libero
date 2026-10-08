@@ -36,8 +36,8 @@ static SPLITTER_BAR_SX: StaticSx = StaticSx::new(|| {
     })
 });
 
-// Invisible, and negatively inset past the bar into both panes, so the drag
-// target is larger than the visible line without the panes leaving a gap.
+// Invisible, and negatively inset past the bar into pane B only, so the drag
+// target is larger than the visible line and pane A's own scrollbar stays clear.
 static SPLITTER_HIT_SX: StaticSx = StaticSx::new(|| {
     // A vertical swipe over a vertical divider scrolls the page (1039).
     let base = sx()
@@ -47,7 +47,7 @@ static SPLITTER_HIT_SX: StaticSx = StaticSx::new(|| {
 
     Size::ALL.into_iter().fold(base, |acc, size| {
         let inset = format!(
-            "calc(({} - {}) / 2)",
+            "calc({} - {})",
             SPLITTER_DIVIDER_SIZE.value(size),
             SPLITTER_HIT_SIZE.value(size)
         );
@@ -55,15 +55,15 @@ static SPLITTER_HIT_SX: StaticSx = StaticSx::new(|| {
             format!("vertical && {}", size.state_name()),
             sx().top("0")
                 .bottom("0")
-                .left(inset.clone())
-                .right(inset.clone())
+                .inset_inline_start("0")
+                .inset_inline_end(inset.clone())
                 .cursor("col-resize"),
         )
         .when(
             format!("horizontal && {}", size.state_name()),
             sx().left("0")
                 .right("0")
-                .top(inset.clone())
+                .top("0")
                 .bottom(inset)
                 .cursor("row-resize"),
         )

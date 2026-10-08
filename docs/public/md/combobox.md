@@ -282,8 +282,9 @@ match at any depth inside the list.
 | `Up` | Moves the highlight up. |
 | `Home` or `End` | Jumps to the first or last row. |
 | `PageUp` or `PageDown` | Moves the highlight 10 rows, stopping at the first or last. |
-| `Enter` | Picks the highlighted row. |
-| `Escape` or `Tab` | Close the list. |
+| `Enter` | Open: picks the highlighted row. Every open starts on the first row, so in a suggestion list Enter replaces the typed text; press `Escape` first to keep it. |
+| `Escape` | Open: closes the list and keeps the typed text. Enter then goes to the field, so a form submits. |
+| `Tab` | Closes the list. |
 
 ### Libero handles
 
