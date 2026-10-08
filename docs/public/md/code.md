@@ -46,7 +46,8 @@ Like every component, `Code` also takes the shared props `sx`, `class`,
 - Each snippet is a real `<code>`. Highlighting only adds colored spans, so a
   screen reader reads the source as it is.
 - A long identifier wraps at any character, so it fits a 320px column. A span
-  of up to 20 characters stays on one line.
+  of up to 20 characters stays on one line at any font size, so in a large
+  heading or a narrow cell it can run wider than its column.
 
 ### Example
 

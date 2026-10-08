@@ -421,7 +421,8 @@ fn visible_paths(
     let Some(query) = query else {
         return all_paths;
     };
-    let needle = query.to_lowercase();
+    // Trimmed, as the other search boxes: a trailing space must not hide a match.
+    let needle = query.trim().to_lowercase();
     all_paths
         .into_iter()
         .filter(|path| {

@@ -20,7 +20,7 @@ use crate::{
     hooks::{current_localization, use_element, use_form_owner, use_formats, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::Size,
-    utils::warn,
+    utils::{ascii_digit, warn},
 };
 
 /// The steppers in the trailing slot. Not the native spinner: `type="number"`
@@ -260,8 +260,8 @@ fn NumberFieldShell<T: NumberValue>(
         .attr_default("dir", "ltr")
         // The role carries the range: `min`/`max` mean nothing on `type="text"`.
         .attr("role", "spinbutton")
-        .attr("aria-valuemin", min.map(|min| min.to_string()))
-        .attr("aria-valuemax", max.map(|max| max.to_string()))
+        .attr("aria-valuemin", aria_number(min))
+        .attr("aria-valuemax", aria_number(max))
         .attr("name", bound.name().map(str::to_string))
         .attr("data-controlled", true)
         .attr("placeholder", props.placeholder)
@@ -328,7 +328,7 @@ fn NumberFieldShell<T: NumberValue>(
         };
         input
             .clone()
-            .attr("aria-valuenow", current.map(|value| value.to_string()))
+            .attr("aria-valuenow", aria_number(current))
             .attr("value", display)
             .render(HtmlTag::Input, attributes.clone(), ())
     });
@@ -386,6 +386,16 @@ fn keypad<T: NumberValue>(kind: Keypad<T>, min: Option<T>) -> &'static str {
     }
 }
 
+/// The number as `aria-value*` text; `None` for `NaN` and `inf`, which ARIA cannot read.
+fn aria_number<T: NumberValue>(number: Option<T>) -> Option<String> {
+    let text = number?.to_string();
+    // A custom type's text that is no float stays.
+    let finite = text
+        .parse::<f64>()
+        .map_or(true, |number| number.is_finite());
+    finite.then_some(text)
+}
+
 /// `T::parse`, taking the separator as well as `.`: a German user on a US
 /// layout or a numpad types `1.5`.
 fn parse<T: NumberValue>(text: &str, separator: Option<&str>) -> Option<T> {
@@ -396,18 +406,12 @@ fn parse<T: NumberValue>(text: &str, separator: Option<&str>) -> Option<T> {
     }
 }
 
-/// Arabic-Indic, Extended Arabic-Indic and full-width digits as ASCII: the
+/// Digits of another script and the full-width or true minus as ASCII: the
 /// default of a Persian or Arabic keyboard and a CJK IME in full-width mode.
 fn ascii_digits(text: &str) -> Cow<'_, str> {
-    let fold = |c: char| {
-        let zero = match c {
-            '\u{0660}'..='\u{0669}' => 0x0660,
-            '\u{06F0}'..='\u{06F9}' => 0x06F0,
-            '\u{FF10}'..='\u{FF19}' => 0xFF10,
-            '\u{FF0D}' | '\u{2212}' => return Some('-'),
-            _ => return None,
-        };
-        char::from_digit(c as u32 - zero, 10)
+    let fold = |c: char| match c {
+        '\u{FF0D}' | '\u{2212}' => Some('-'),
+        _ => ascii_digit(c).filter(|digit| *digit != c),
     };
     match text.chars().any(|c| fold(c).is_some()) {
         true => Cow::Owned(text.chars().map(|c| fold(c).unwrap_or(c)).collect()),
@@ -464,7 +468,18 @@ fn Steppers(
 
 #[cfg(test)]
 mod tests {
-    use super::parse;
+    use super::{aria_number, parse};
+
+    /// Todo 2436: `aria-valuenow="NaN"` and `aria-valuemax="inf"` are no numbers.
+    #[test]
+    fn a_non_finite_number_is_left_out_of_aria() {
+        for number in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            assert_eq!(aria_number(Some(number)), None, "{number}");
+        }
+        assert_eq!(aria_number(Some(2.5)), Some("2.5".into()));
+        assert_eq!(aria_number(Some(-3_i32)), Some("-3".into()));
+        assert_eq!(aria_number::<f64>(None), None);
+    }
 
     /// Todo 2414: these typed digits never parsed and reverted on blur.
     #[test]

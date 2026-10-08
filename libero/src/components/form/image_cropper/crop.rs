@@ -134,6 +134,13 @@ impl CropRect {
         }
     }
 
+    /// Whether every edge is a number the box can be drawn and announced from.
+    pub(super) fn is_finite(self) -> bool {
+        [self.x, self.y, self.width, self.height]
+            .iter()
+            .all(|edge| edge.is_finite())
+    }
+
     fn right(self) -> f64 {
         self.x + self.width
     }

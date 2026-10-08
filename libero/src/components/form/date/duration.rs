@@ -23,6 +23,7 @@ use crate::{
     platform::ElementApi,
     sx::Sx,
     theme::Size,
+    utils::fold_digits,
 };
 
 /// The top of the hours column without a `max`: 99 h 59 min 59 s.
@@ -129,7 +130,7 @@ fn unit_of(word: &str, names: &DateLocale) -> Option<usize> {
 /// Reads `1 h 30 min`, `1h30`, `90 min`, `1:30`, `1:30:15` or bare minutes.
 /// A number after a unit counts in the next smaller one. Nothing negative.
 fn read_duration(text: &str, names: &DateLocale) -> Result<TimeDelta, Unreadable> {
-    let text = bare(text.trim());
+    let text = bare(&fold_digits(text.trim()));
     if text.contains(':') {
         let numbers = text
             .split(':')
@@ -479,6 +480,14 @@ mod tests {
         assert_eq!(read("2 Stunden"), Some(of(2, 0, 0)));
         assert_eq!(read("1 Stunde 5 Sekunden"), Some(of(1, 0, 5)));
         assert_eq!(read("1 h 5 s"), Some(of(1, 0, 5)));
+    }
+
+    /// Todo 2396: another script's digits stopped the number, so the text never read.
+    #[test]
+    fn digits_of_another_script_read() {
+        let read = |text| read_duration(text, EN).ok();
+        assert_eq!(read("\u{0661} h \u{0663}\u{0660} min"), Some(of(1, 30, 0)));
+        assert_eq!(read("\u{0661}:\u{0663}\u{0660}"), Some(of(1, 30, 0)));
     }
 
     #[test]

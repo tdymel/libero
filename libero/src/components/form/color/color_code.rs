@@ -43,10 +43,14 @@ impl Default for ColorCode {
 
 impl ColorCode {
     /// Hue in degrees; saturation, value and alpha as `0.0..=1.0`. Out of
-    /// range inputs are wrapped (hue) or clamped (the rest).
+    /// range inputs are wrapped (hue) or clamped (the rest); a non-finite hue is 0.
     pub fn hsva(hue: f64, saturation: f64, value: f64, alpha: f64) -> Self {
         Self {
-            hue: hue.rem_euclid(360.0),
+            hue: if hue.is_finite() {
+                hue.rem_euclid(360.0)
+            } else {
+                0.0
+            },
             saturation: unit(saturation),
             value: unit(value),
             alpha: unit(alpha),
@@ -545,5 +549,13 @@ mod tests {
             (color.saturation(), color.value(), color.alpha()),
             (1.0, 0.0, 0.0)
         );
+    }
+
+    /// Todo 2436: a `NaN` hue reached the hue slider's `aria-valuenow`.
+    #[test]
+    fn a_non_finite_hue_is_zero() {
+        for hue in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            assert_eq!(ColorCode::hsva(hue, 1.0, 1.0, 1.0).hue(), 0.0, "{hue}");
+        }
     }
 }

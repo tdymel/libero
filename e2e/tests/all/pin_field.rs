@@ -404,6 +404,29 @@ fn a_paste_over_a_selected_cell_writes_the_code() {
     });
 }
 
+/// Todo 2396: the digits of another script, pasted or typed by an Arabic-Indic or
+/// full-width keyboard, reach the cells as ASCII.
+#[test]
+fn digits_of_another_script_fill_the_cells() {
+    block_on(async {
+        let fixture = Fixture::open("/pin-field", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        paste_over_selection(page, 0, "\u{0661}\u{0662}\u{0663}\u{0664}").await;
+        expect_cells(page, "1|2|3|4 @3", "Arabic-Indic digits pasted").await;
+
+        focus_at(page, 0, 0).await;
+        page.execute(InsertTextParams::new("\u{FF19}"))
+            .await
+            .unwrap();
+        expect_cells(page, "9|2|3|4 @1", "a full-width 9 typed before the 1").await;
+
+        fixture.console.assert_clean("pin field digits").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Holes are not representable: a character typed past the pin lands in the
 /// first empty cell, which is what the cells show, and focus moves after it.
 #[test]

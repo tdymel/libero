@@ -45,6 +45,16 @@ fn a_pinch_scales_the_box_around_its_centre_inside_the_image() {
     assert_close(start.scaled(0.01, 0.05), rect(0.35, 0.375, 0.1, 0.05));
 }
 
+/// Todo 2436: a non-finite edge read `aria-valuenow="NaN"`, so the box is not used.
+#[test]
+fn a_box_with_a_non_finite_edge_is_not_finite() {
+    assert!(CropRect::FULL.is_finite());
+    for bad in [f64::NAN, f64::INFINITY] {
+        assert!(!rect(0.1, 0.1, bad, 0.5).is_finite());
+        assert!(!rect(bad, 0.1, 0.5, 0.5).is_finite());
+    }
+}
+
 #[test]
 fn an_unset_box_starts_at_four_fifths_of_the_largest() {
     assert_close(CropRect::starting(None), rect(0.1, 0.1, 0.8, 0.8));

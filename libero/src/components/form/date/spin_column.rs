@@ -9,6 +9,7 @@ use crate::{
     },
     hooks::{DragMove, DragOptions, DragStart, use_drag, use_element},
     platform,
+    utils::fold_digits,
 };
 
 /// The wheel travel, in pixels, that turns a column one step.
@@ -84,7 +85,7 @@ pub(super) fn stepped(
 /// The option typed text picks: an exact match without leading zeros first (`1` is `01`,
 /// not `12`), then a prefix.
 pub(super) fn typed(options: &[SpinOption], text: &str) -> Option<usize> {
-    let text = text.to_lowercase();
+    let text = fold_digits(text).to_lowercase();
     let open = || {
         options
             .iter()
@@ -103,7 +104,7 @@ pub(super) fn typed(options: &[SpinOption], text: &str) -> Option<usize> {
 
 /// Whether more typing could still pick another option than `picked`.
 fn typing_goes_on(options: &[SpinOption], text: &str, picked: usize) -> bool {
-    let text = text.to_lowercase();
+    let text = fold_digits(text).to_lowercase();
     options.iter().enumerate().any(|(index, option)| {
         let own = option.text.to_lowercase();
         index != picked && !option.disabled && own.len() > text.len() && own.starts_with(&text)
@@ -428,5 +429,14 @@ mod tests {
         let halves = options(&["AM", "PM"]);
         assert_eq!(typed(&halves, "p"), Some(1));
         assert!(!typing_goes_on(&halves, "p", 1));
+    }
+
+    /// Todo 2396: an Arabic-Indic or full-width keyboard types the same hour.
+    #[test]
+    fn typing_digits_of_another_script_picks_the_same_option() {
+        let minutes = options(&MINUTES);
+        assert_eq!(typed(&minutes, "\u{0663}\u{0665}"), typed(&minutes, "35"));
+        assert_eq!(typed(&minutes, "\u{FF13}"), typed(&minutes, "3"));
+        assert!(typing_goes_on(&minutes, "\u{FF13}", 6));
     }
 }

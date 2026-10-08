@@ -140,9 +140,9 @@ pub(super) fn SelectDemo(values: DemoValues) -> Element {
 /// How long the fake search takes: long enough to see, short enough to type through.
 const LATENCY: Duration = Duration::from_millis(700);
 
-/// The fruit whose label contains `query`, case-insensitively.
+/// The fruit whose label contains `query`, case-insensitively and ignoring surrounding space.
 fn matching(query: &str) -> Vec<Fruit> {
-    let query = query.to_lowercase();
+    let query = query.trim().to_lowercase();
     Fruit::options()
         .iter()
         .copied()
@@ -150,6 +150,18 @@ fn matching(query: &str) -> Vec<Fruit> {
         .collect()
 }
 // demo-code: search end
+
+#[cfg(test)]
+mod tests {
+    use super::matching;
+
+    /// Todo 2434: a phone keyboard's trailing space must not hide the fruit.
+    #[test]
+    fn a_trailing_space_does_not_hide_a_match() {
+        assert!(!matching("an").is_empty());
+        assert_eq!(matching(" an ").len(), matching("an").len());
+    }
+}
 
 /// Every keystroke starts a fake search that answers after [`LATENCY`], and a
 /// newer keystroke cancels the older one by dropping its timer.

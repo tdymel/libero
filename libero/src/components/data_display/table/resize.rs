@@ -287,8 +287,10 @@ pub(super) fn ResizeHandle(
             tabindex: "0",
             aria_orientation: "vertical",
             aria_label: (resize.labels.resize_column)(&header),
-            aria_valuenow: now.map(|width| width.round().to_string()),
-            aria_valuemin: limits.min.to_string(),
+            aria_valuenow: now
+                .filter(|width| width.is_finite())
+                .map(|width| width.round().to_string()),
+            aria_valuemin: limits.min.is_finite().then(|| limits.min.to_string()),
             aria_valuemax: limits.max.is_finite().then(|| limits.max.to_string()),
             onmounted: grip.mount(),
             onkeydown,

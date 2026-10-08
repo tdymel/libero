@@ -1,7 +1,9 @@
 //! `ButtonGroup`: bordered and borderless rows, a column, wrapped items, RTL.
 
 use dioxus::prelude::*;
-use libero::components::{ActionIcon, Button, ButtonGroup, DirectionToggle, Flex, ThemeSwitcher};
+use libero::components::{
+    ActionIcon, Button, ButtonGroup, Copy, DirectionToggle, Flex, ThemeSwitcher,
+};
 use libero::theme::ThemeSet;
 
 use crate::Routes;
@@ -65,6 +67,11 @@ fn ButtonGroupPage() -> Element {
                 // In the Tooltip's `max-content` wrapper (todo 2321).
                 ActionIcon { id: "vm5", aria_label: "Five", tooltip: true, "5" }
                 ThemeSwitcher { id: "vm4", themes: ThemeSet::CATALOGUE }
+            }
+            // `Copy` closes the group: its status span must not square its end corners (todo 2318).
+            ButtonGroup { id: "copying", "aria-label": "Copying", variant: "outlined",
+                Button { id: "c1", "Install" }
+                Copy { id: "c2", value: "cargo add libero", aria_label: "Copy the command" }
             }
             ButtonGroup { id: "tipped", "aria-label": "Tipped", variant: "outlined",
                 Button { id: "t1", "Label" }

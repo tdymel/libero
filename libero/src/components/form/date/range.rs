@@ -7,7 +7,8 @@ use std::{
 
 use chrono::{NaiveDate, NaiveDateTime};
 
-/// Two days or two `NaiveDateTime`s, the start picked first. `end: None` is a range still being picked.
+/// Two days or two `NaiveDateTime`s, the start picked first. `end: None` is a range still being picked: `onchange` emits it,
+/// but a field posts nothing for it and its validators see no value.
 ///
 /// ```
 /// # use libero::chrono::NaiveDate;
@@ -150,6 +151,27 @@ mod tests {
         let moments = "2026-09-14T09:00:00/2026-09-20T17:30:00";
         let parsed: DateRange<NaiveDateTime> = moments.parse().expect("an interval");
         assert_eq!(parsed.to_string(), moments);
+    }
+
+    /// Todo 2306: a range still missing its end is no value for the form.
+    #[test]
+    fn a_half_picked_range_posts_nothing() {
+        use dioxus::prelude::*;
+
+        let posted = |range: DateRange<NaiveDate>| {
+            dioxus_ssr::render_element(rsx! {
+                crate::LiberoProvider {
+                    crate::components::DateRangeField { name: "span", value: Some(range) }
+                }
+            })
+        };
+        let hidden = r#"type="hidden" name="span" value="#;
+        assert!(posted(DateRange::new(day(1), None)).contains(&format!(r#"{hidden}"""#)));
+        let full = posted(DateRange::new(day(1), Some(day(5))));
+        assert!(
+            full.contains(&format!(r#"{hidden}"2026-09-01/2026-09-05""#)),
+            "{full}"
+        );
     }
 
     #[test]

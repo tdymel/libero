@@ -44,7 +44,7 @@ pub(super) fn snap(raw: f64, min: f64, max: f64, step: f64) -> f64 {
     if raw.is_nan() {
         return min;
     }
-    if step <= 0.0 {
+    if !(step.is_finite() && step > 0.0) {
         return round_to(raw.clamp(min, max), continuous_decimals(min, max)).clamp(min, max);
     }
 
@@ -303,6 +303,14 @@ mod tests {
         assert_eq!(snap(0.37, 0.25, 1.0, 0.0), 0.37);
         assert_eq!(snap(100.06, 0.0, 100.06, 0.0), 100.06);
         assert_eq!(snap(7.0, 5.0, 5.0, 0.0), 5.0);
+    }
+
+    /// Todo 2436: a `NaN` or infinite step left `NaN` for `aria-valuenow`.
+    #[test]
+    fn a_non_finite_step_is_continuous() {
+        for step in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            assert_eq!(snap(3.7, 0.0, 10.0, step), 3.7, "{step}");
+        }
     }
 
     #[test]

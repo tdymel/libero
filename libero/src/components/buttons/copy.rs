@@ -61,50 +61,53 @@ pub fn Copy(props: CopyProps) -> Element {
     let label_id = use_id();
     let described = props.label.as_ref().map(|_| label_id());
 
+    // One item for a `ButtonGroup`: its trailing status span would be the group's last child.
     rsx! {
-        ActionIcon {
-            aria_label: props.aria_label.clone().unwrap_or_else(|| labels.copy.to_string()),
-            variant: props.variant.clone(),
-            color: props.color.clone(),
-            size: props.size.clone(),
-            radius: props.radius.clone(),
-            disabled: props.disabled,
-            aria_describedby: described,
-            class: props.class.clone(),
-            sx: props.sx.clone(),
-            states: props.states.clone(),
-            attributes: props.attributes.clone(),
-            // Reset first, so a second copy re-announces rather than repeating unchanged text.
-            onclick: move |_| {
-                clipboard.reset();
-                clipboard.copy(value.clone());
-            },
-            onmouseleave: move |_| clipboard.reset(),
-            // A keyboard or touch user never leaves with a mouse.
-            onblur: move |_| clipboard.reset(),
-            onmounted: move |event| {
-                if let Some(silent) = silent {
-                    silent.mount()(event);
+        span { style: "display: contents",
+            ActionIcon {
+                aria_label: props.aria_label.clone().unwrap_or_else(|| labels.copy.to_string()),
+                variant: props.variant.clone(),
+                color: props.color.clone(),
+                size: props.size.clone(),
+                radius: props.radius.clone(),
+                disabled: props.disabled,
+                aria_describedby: described,
+                class: props.class.clone(),
+                sx: props.sx.clone(),
+                states: props.states.clone(),
+                attributes: props.attributes.clone(),
+                // Reset first, so a second copy re-announces rather than repeating unchanged text.
+                onclick: move |_| {
+                    clipboard.reset();
+                    clipboard.copy(value.clone());
+                },
+                onmouseleave: move |_| clipboard.reset(),
+                // A keyboard or touch user never leaves with a mouse.
+                onblur: move |_| clipboard.reset(),
+                onmounted: move |event| {
+                    if let Some(silent) = silent {
+                        silent.mount()(event);
+                    }
+                },
+                if clipboard.copied() {
+                    Glyph { slot: IconSlot::Check, icon: lucide::check::outlined }
+                } else if clipboard.failed() {
+                    Glyph { slot: IconSlot::CopyFailed, icon: lucide::circle_alert::outlined }
+                } else {
+                    Glyph { slot: IconSlot::Copy, icon: lucide::copy::outlined }
                 }
-            },
-            if clipboard.copied() {
-                Glyph { slot: IconSlot::Check, icon: lucide::check::outlined }
-            } else if clipboard.failed() {
-                Glyph { slot: IconSlot::CopyFailed, icon: lucide::circle_alert::outlined }
-            } else {
-                Glyph { slot: IconSlot::Copy, icon: lucide::copy::outlined }
             }
-        }
-        // `hidden`: a description only, not read again in browse mode.
-        if let Some(label) = props.label.as_deref() {
-            span { id: label_id, hidden: true, "{label}" }
-        }
-        // Always mounted, so a screen reader is watching it when the text arrives.
-        VisuallyHidden { role: "status",
-            if clipboard.copied() {
-                {labels.copied}
-            } else if clipboard.failed() {
-                {labels.copy_failed}
+            // `hidden`: a description only, not read again in browse mode.
+            if let Some(label) = props.label.as_deref() {
+                span { id: label_id, hidden: true, "{label}" }
+            }
+            // Always mounted, so a screen reader is watching it when the text arrives.
+            VisuallyHidden { role: "status",
+                if clipboard.copied() {
+                    {labels.copied}
+                } else if clipboard.failed() {
+                    {labels.copy_failed}
+                }
             }
         }
     }

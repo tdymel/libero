@@ -25,6 +25,7 @@ use crate::{
     platform::ElementApi,
     sx::{StaticSx, Sx, sx},
     theme::{FOCUS_RING_WIDTH, Size},
+    utils::digits_of,
 };
 
 use super::countries::{self, COUNTRIES, Country};
@@ -248,7 +249,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
     let typed = if bare {
         String::new()
     } else {
-        countries::digits_of(&display)
+        digits_of(&display)
     };
     // The pick closure below outlives `display`, which the input takes.
     let shown = if bare { String::new() } else { display.clone() };
@@ -505,7 +506,7 @@ fn offered(codes: &Option<Vec<String>>) -> Vec<&'static Country> {
 /// The field's country: the pick while the value fits it, so `242` typed in a
 /// US field stays US; else the value's own dial code.
 pub(crate) fn country_for(value: Option<&str>, picked: &'static Country) -> &'static Country {
-    let digits = countries::digits_of(value.unwrap_or_default());
+    let digits = digits_of(value.unwrap_or_default());
     if digits.is_empty() || digits.starts_with(picked.dial) {
         return picked;
     }
@@ -1024,16 +1025,16 @@ mod tests {
     /// field never posts nothing (todo 2365).
     #[test]
     fn digits_of_another_script_reach_the_value() {
-        assert_eq!(countries::digits_of("٠١٢٣٤٥٦٧٨٩"), "0123456789");
-        assert_eq!(countries::digits_of("۰۱۲ ۳۴۵"), "012345");
-        assert_eq!(countries::digits_of("０１２３"), "0123");
+        assert_eq!(digits_of("٠١٢٣٤٥٦٧٨٩"), "0123456789");
+        assert_eq!(digits_of("۰۱۲ ۳۴۵"), "012345");
+        assert_eq!(digits_of("０１２３"), "0123");
         assert_eq!(countries::value_of(country("DE"), "＋４９１７１"), "+49171");
         assert_eq!(countries::value_of(country("US"), "٠٠٤٩١٧١"), "+49171");
         assert_eq!(countries::value_of(country("DE"), "١٧١ ١٢٣"), "+49171123");
         let (to, national) = dialled("＋４４ ２０", country("DE")).expect("a dial code");
         assert_eq!((to.iso, national.as_str()), ("GB", "20"));
         // Letters and other numerals (Roman, fractions) are no digits.
-        assert_eq!(countries::digits_of("Ⅻ½a"), "");
+        assert_eq!(digits_of("Ⅻ½a"), "");
     }
 
     /// A dial code alone is no number yet (todo 2604): it posts nothing and keeps no digits.

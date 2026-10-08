@@ -7,7 +7,7 @@ use super::{
     calendar::DateLevel,
     format::{Token, tokens},
 };
-use crate::localization::DateLocale;
+use crate::{localization::DateLocale, utils::fold_digits};
 
 /// Typed text a field cannot read.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -54,6 +54,7 @@ pub(super) fn parse_at(
     fallback_year: Option<i32>,
     level: DateLevel,
 ) -> Result<NaiveDate, Unreadable> {
+    let text = &fold_digits(text);
     let literals = literal_words(format);
     let mut numbers = Vec::new();
     let mut named_month = None;
@@ -235,6 +236,22 @@ mod tests {
         ] {
             assert_eq!(parse(text, DMY), date(2026, 2, 1), "{text}");
         }
+    }
+
+    /// Todo 2396: another script's digits were separators, so the text never read.
+    #[test]
+    fn digits_of_another_script_read() {
+        assert_eq!(
+            parse("\u{0661}/\u{0662}/\u{0662}\u{0660}\u{0662}\u{0666}", DMY),
+            date(2026, 2, 1)
+        );
+        assert_eq!(
+            parse(
+                "\u{FF10}\u{FF11}\u{FF0E}\u{FF10}\u{FF12}\u{FF0E}\u{FF12}\u{FF10}\u{FF12}\u{FF16}",
+                DMY
+            ),
+            date(2026, 2, 1)
+        );
     }
 
     #[test]

@@ -442,8 +442,10 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
         .aspect
         .filter(|aspect| aspect.is_finite() && *aspect > 0.0)
         .map(|aspect| aspect / image_ratio().unwrap_or(1.0));
+    // A non-finite box would reach the CSS and `aria-valuenow` as `NaN`.
     let shown = props
         .value
+        .filter(|rect| rect.is_finite())
         .or(held())
         .unwrap_or_else(|| CropRect::starting(ratio));
 

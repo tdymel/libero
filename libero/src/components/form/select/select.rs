@@ -244,7 +244,8 @@ pub(super) fn use_search_mask<T: Options>(
     filter: Option<Callback<SelectFilterArgs<T>, bool>>,
 ) -> Option<Callback<String, Vec<bool>>> {
     let mask = use_callback(move |query: String| {
-        let needle = query.to_lowercase();
+        // Trimmed: a phone keyboard's trailing space must not hide "Paris" (todo 2434).
+        let needle = query.trim().to_lowercase();
         values
             .iter()
             .map(|value| match &filter {

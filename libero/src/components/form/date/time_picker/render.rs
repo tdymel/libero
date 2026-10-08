@@ -296,10 +296,12 @@ impl ClockView {
             }
         });
         // Minutes and seconds say their unit; an hour reads as itself, plus AM/PM if twelve-hour.
+        // Without a value the slider keeps its `aria-valuenow` (required), at `base`, and says so.
+        let base = self.base;
         let (face_label, face_text, face_now, face_max) = match hand() {
             Hand::Hour => (
                 names.hours_label,
-                value.map(|_| match twelve {
+                value.map_or(names.no_time.to_string(), |_| match twelve {
                     true => format!(
                         "{} {}",
                         hour_text.trim_start_matches('0'),
@@ -307,19 +309,23 @@ impl ClockView {
                     ),
                     false => hour_text.to_string(),
                 }),
-                value.map(|value| value.hour()),
+                value.unwrap_or(base).hour(),
                 23,
             ),
             Hand::Minute => (
                 names.minutes_label,
-                value.map(|value| (names.minutes_value)(value.minute())),
-                value.map(|value| value.minute()),
+                value.map_or(names.no_time.to_string(), |value| {
+                    (names.minutes_value)(value.minute())
+                }),
+                value.unwrap_or(base).minute(),
                 59,
             ),
             Hand::Second => (
                 names.seconds_label,
-                value.map(|value| (names.seconds_value)(value.second())),
-                value.map(|value| value.second()),
+                value.map_or(names.no_time.to_string(), |value| {
+                    (names.seconds_value)(value.second())
+                }),
+                value.unwrap_or(base).second(),
                 59,
             ),
         };

@@ -1,5 +1,6 @@
 ---
 source: e2e/src/suite.rs
+assertion_line: 618
 description: "button_group at desktop (rest, dark)"
 expression: tree
 ---
@@ -58,6 +59,11 @@ group "Vertical mixed"
   group "Theme"
     button "Switch to the light theme"
     button "Choose a theme" [expanded=false] [haspopup=menu]
+group "Copying"
+  button "Install"
+    StaticText "Install"
+  button "Copy the command"
+  status [atomic] [live=polite]
 group "Tipped"
   button "Label"
     StaticText "Label"

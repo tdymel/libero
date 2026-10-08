@@ -59,6 +59,12 @@ fn home_and_end_edit_the_search_query() {
     crate::select::search_home_end_edit_the_query("/multi-select/search", TRIGGER, "an");
 }
 
+/// Todo 2434: a trailing space does not hide the matching rows.
+#[test]
+fn a_trailing_space_does_not_hide_the_matches() {
+    crate::select::search_ignores_a_trailing_space("/multi-select/search", TRIGGER, "an");
+}
+
 /// Todo 482: a search matching nothing shows "No results" and says it.
 #[test]
 fn a_search_matching_nothing_is_shown_and_said() {

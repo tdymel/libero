@@ -1,6 +1,8 @@
 //! `PhoneField`'s hand-kept country table: ISO code, English name, dial code.
 //! No crate backs it and nothing here validates a number (f3-phone-field plan).
 
+use crate::utils::{ascii_digit, digits_of};
+
 /// One row of the table.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct Country {
@@ -290,31 +292,6 @@ pub(crate) const SHARING: &[&str] = &[
     "AQ", "AX", "BL", "BQ", "CA", "CC", "CX", "DO", "EH", "GG", "IM", "JE", "JM", "KZ", "MF", "PN",
     "PR", "SJ", "VA", "YT",
 ];
-
-/// Only the digits, as ASCII, which is every path's first step: a pasted
-/// `(213) 373-4253` and a typed `2133734253` have to reach the same value.
-pub(crate) fn digits_of(text: &str) -> String {
-    text.chars().filter_map(ascii_digit).collect()
-}
-
-/// The zeros of the decimal digit runs a phone keyboard or IME types: Arabic-Indic,
-/// Persian, the Indic scripts, Thai, Lao, Tibetan, Myanmar, Khmer, Mongolian, full width.
-const ZEROS: &[u32] = &[
-    0x0660, 0x06F0, 0x07C0, 0x0966, 0x09E6, 0x0A66, 0x0AE6, 0x0B66, 0x0BE6, 0x0C66, 0x0CE6, 0x0D66,
-    0x0DE6, 0x0E50, 0x0ED0, 0x0F20, 0x1040, 0x1090, 0x17E0, 0x1810, 0xFF10,
-];
-
-/// A decimal digit of any of those scripts as its ASCII digit.
-fn ascii_digit(c: char) -> Option<char> {
-    if c.is_ascii_digit() {
-        return Some(c);
-    }
-    let code = u32::from(c);
-    ZEROS
-        .iter()
-        .find(|zero| (**zero..**zero + 10).contains(&code))
-        .and_then(|zero| char::from_digit(code - zero, 10))
-}
 
 /// `+{dial}{national}`, or an empty string when nothing was typed - an empty
 /// field posts nothing rather than a bare dial code.

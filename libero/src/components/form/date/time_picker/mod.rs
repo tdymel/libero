@@ -191,3 +191,25 @@ pub(super) fn Clock(props: ClockProps) -> Element {
         },
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Todo 2309: `role="slider"` needs an `aria-valuenow`, also with no time picked.
+    #[test]
+    fn an_empty_analog_face_keeps_its_value_and_says_no_time() {
+        let html = dioxus_ssr::render_element(rsx! {
+            crate::LiberoProvider {
+                TimePicker { variant: "analog", twelve_hour: false }
+            }
+        });
+        let face = html.split(r#"data-slot="face""#).nth(1).expect("a face");
+        let face = face.split('>').next().unwrap_or_default();
+        assert!(face.contains("aria-valuenow=0 "), "{face}");
+        assert!(
+            face.contains(r#"aria-valuetext="No time selected""#),
+            "{face}"
+        );
+    }
+}

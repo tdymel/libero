@@ -7,7 +7,7 @@ use super::{
     format::{Token, tokens},
     parse::{Piece, Unreadable, literal_words, parse_date, pieces},
 };
-use crate::localization::DateLocale;
+use crate::{localization::DateLocale, utils::fold_digits};
 
 pub(super) const MIDNIGHT: NaiveTime = match NaiveTime::from_hms_opt(0, 0, 0) {
     Some(midnight) => midnight,
@@ -21,6 +21,7 @@ pub(super) fn parse_time(
     format: &str,
     names: &DateLocale,
 ) -> Result<NaiveTime, Unreadable> {
+    let text = &fold_digits(text);
     let literals = literal_words(format);
     let mut numbers = Vec::new();
     let mut afternoon = None;
@@ -85,6 +86,8 @@ pub(super) fn parse_date_time(
     fallback_year: Option<i32>,
     fallback_time: Option<NaiveTime>,
 ) -> Result<NaiveDateTime, Unreadable> {
+    let text = fold_digits(text);
+    let text = text.as_str();
     let (date_text, time_text) = match time_start(text, format, time_format) {
         Some(mut start) => {
             let before = text[..start].trim_end();
@@ -191,6 +194,21 @@ mod tests {
         assert_eq!(time("930"), at(9, 30, 0));
         assert_eq!(time("0930"), at(9, 30, 0));
         assert_eq!(time("093015"), at(9, 30, 15));
+    }
+
+    /// Todo 2396: another script's digits were separators, so the text never read.
+    #[test]
+    fn digits_of_another_script_read() {
+        assert_eq!(time("\u{0661}\u{0663}:\u{0660}\u{0665}"), at(13, 5, 0));
+        let read = parse_date_time(
+            "\u{0661}.\u{0662}.\u{0662}\u{0660}\u{0662}\u{0666} \u{0661}\u{0663}:\u{0660}\u{0665}",
+            "D.M.YYYY",
+            "HH:mm",
+            &DateLocale::ENGLISH,
+            None,
+            None,
+        );
+        assert_eq!(read.map(|moment| moment.time()), at(13, 5, 0));
     }
 
     #[test]

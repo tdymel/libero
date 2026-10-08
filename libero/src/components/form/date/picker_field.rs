@@ -77,6 +77,11 @@ pub trait FieldValue: Copy + PartialEq + 'static {
     ) -> Result<Self, Unreadable>;
     /// What the hidden input posts: ISO 8601.
     fn iso(self) -> String;
+    /// Whether the value counts as one: a range still missing its end posts nothing and
+    /// fails a `required` rule.
+    fn is_complete(self) -> bool {
+        true
+    }
     /// Names the dropdown's dialog.
     fn dialog_label(names: &DateLocale) -> &'static str {
         names.date_label
@@ -205,6 +210,10 @@ impl<T: FieldValue + Ord> FieldValue for DateRange<T> {
             self.start.iso(),
             self.end.map(T::iso).unwrap_or_default()
         )
+    }
+
+    fn is_complete(self) -> bool {
+        self.end.is_some()
     }
 
     fn dialog_label(names: &DateLocale) -> &'static str {
@@ -376,7 +385,11 @@ pub(super) fn use_picker_field<V: FieldValue>(
         .description(field.description)
         .helper(field.helper)
         .status(&status)
-        .rules(field.validate.check(&value))
+        .rules(
+            field
+                .validate
+                .check(&value.filter(|value| value.is_complete())),
+        )
         .bound(&bound)
         .required(required)
         .disabled(disabled)
@@ -543,7 +556,10 @@ pub(super) fn use_picker_field<V: FieldValue>(
             input {
                 r#type: "hidden",
                 name: name.to_string(),
-                value: value.map(FieldValue::iso).unwrap_or_default(),
+                value: value
+                    .filter(|value| value.is_complete())
+                    .map(FieldValue::iso)
+                    .unwrap_or_default(),
             }
         }
     });

@@ -432,6 +432,12 @@ fn a_search_matching_nothing_is_shown_and_said() {
     crate::select::search_matching_nothing("/cascader/search", TRIGGER);
 }
 
+/// Todo 2434: a trailing space does not hide the paths a query ending a path matches.
+#[test]
+fn a_trailing_space_does_not_hide_the_matches() {
+    crate::select::search_ignores_a_trailing_space("/cascader/search", TRIGGER, "lyon");
+}
+
 /// Todo 2035: a search leaving some paths says how many, as `ComboboxCore` does.
 #[test]
 fn a_narrowing_search_says_its_result_count() {

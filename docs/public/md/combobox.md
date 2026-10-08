@@ -141,9 +141,9 @@ enum Fruit {
 /// How long the fake search takes.
 const LATENCY: Duration = Duration::from_millis(700);
 
-/// The fruit whose label contains `query`, case-insensitively.
+/// The fruit whose label contains `query`, case-insensitively and ignoring surrounding space.
 fn matching(query: &str) -> Vec<Fruit> {
-    let query = query.to_lowercase();
+    let query = query.trim().to_lowercase();
     Fruit::options()
         .iter()
         .copied()

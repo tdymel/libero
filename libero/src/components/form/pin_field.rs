@@ -19,6 +19,7 @@ use crate::{
     platform::{ElementApi, PlatformError, set_value_by_id},
     sx::{StaticSx, sx},
     theme::{FIELD_HEIGHT, PinFieldDefaults},
+    utils::fold_digit,
 };
 
 pub use crate::theme::PinKind;
@@ -389,7 +390,7 @@ impl PinEdit {
     /// What arrived in one cell's `oninput`: a paste, or a character a soft
     /// keyboard typed without naming its key.
     fn typed(&self, index: usize, raw: String) {
-        let mut raw: Vec<char> = raw.chars().collect();
+        let mut raw: Vec<char> = raw.chars().map(fold_digit).collect();
         let emptied = raw.is_empty();
         // The cell's old character sits on whichever side the caret was not.
         // Out before the filter, so a rejected insertion does not keep it as new.
@@ -423,7 +424,11 @@ impl PinEdit {
             return;
         };
         event.prevent_default();
-        let accepted: Vec<char> = text.chars().filter(|c| self.kind.accepts(*c)).collect();
+        let accepted: Vec<char> = text
+            .chars()
+            .map(fold_digit)
+            .filter(|c| self.kind.accepts(*c))
+            .collect();
         if !self.readonly && !accepted.is_empty() {
             self.place(index, accepted);
         }
@@ -496,7 +501,7 @@ impl PinEdit {
                 }
             }
             Key::Character(character) if !modified => {
-                let character = character.chars().next();
+                let character = character.chars().next().map(fold_digit);
                 match character {
                     // Space moves on rather than typing a character no
                     // pin accepts.
