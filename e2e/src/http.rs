@@ -102,6 +102,45 @@ fn wait_for_app_within(
     }
 }
 
+/// Waits until `dx`'s log holds `line`. A release build serves its bundle while it still
+/// optimises and pre-compresses (minutes), and a page loaded then times out (todo 2163).
+pub(crate) fn wait_for_log_line(
+    line: &str,
+    server: &mut Child,
+    dx_log: &std::path::Path,
+) -> Result<()> {
+    wait_for_log_line_within(BUILD_TIMEOUT, line, server, dx_log)
+}
+
+fn wait_for_log_line_within(
+    budget: Duration,
+    line: &str,
+    server: &mut Child,
+    dx_log: &std::path::Path,
+) -> Result<()> {
+    let deadline = Instant::now() + budget;
+    let mut polls = 0u32;
+    loop {
+        if std::fs::read_to_string(dx_log).is_ok_and(|log| log.contains(line)) {
+            return Ok(());
+        }
+        if let Ok(Some(status)) = server.try_wait() {
+            bail!(
+                "dx exited ({status}) before logging {line:?}; see {}",
+                dx_log.display()
+            );
+        }
+        if Instant::now() >= deadline {
+            bail!(
+                "dx never logged {line:?} within {budget:?}; see {}",
+                dx_log.display()
+            );
+        }
+        polls += 1;
+        std::thread::sleep(poll_delay(polls));
+    }
+}
+
 /// Short at first, so an app that is up within a second is not found 2 s late; a cold build
 /// polls at the cap.
 fn poll_delay(polls: u32) -> Duration {
@@ -370,6 +409,41 @@ mod tests {
         let _ = server.kill();
         let _ = server.wait();
         outcome.unwrap();
+    }
+
+    #[test]
+    fn the_wait_for_a_log_line_ends_when_it_appears_and_fails_with_a_dead_server() {
+        let log = std::env::temp_dir().join(format!("e2e-http-line-{}.log", std::process::id()));
+        std::fs::write(&log, "optimising\n").unwrap();
+        let mut server = idle_child();
+        let writer = {
+            let log = log.clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(Duration::from_millis(200));
+                std::fs::write(&log, "optimising\nBuild completed successfully in 9s\n").unwrap();
+            })
+        };
+        let started = Instant::now();
+        wait_for_log_line_within(
+            Duration::from_secs(30),
+            "Build completed successfully",
+            &mut server,
+            &log,
+        )
+        .unwrap();
+        assert!(started.elapsed() < Duration::from_secs(10));
+        writer.join().unwrap();
+        let _ = server.kill();
+        let _ = server.wait();
+
+        std::fs::write(&log, "optimising\n").unwrap();
+        let mut dead = Command::new("true").spawn().unwrap();
+        let _ = dead.wait();
+        let error = wait_for_log_line_within(Duration::from_secs(30), "done", &mut dead, &log)
+            .unwrap_err()
+            .to_string();
+        let _ = std::fs::remove_file(&log);
+        assert!(error.contains("dx exited"), "{error}");
     }
 
     #[test]

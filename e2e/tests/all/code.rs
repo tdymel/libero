@@ -35,26 +35,24 @@ fn it_meets_the_baseline() {
 }
 
 /// Todo 1652: a classic vertical scrollbar takes width off the scroll box; the floating
-/// copy button sits left of it, not over it. Headless Chrome scrollbars, so a 16px right padding stands in for the gutter: it narrows the
-/// `pre` as a scrollbar does, which is what the block measures.
+/// copy button sits left of it, not over it. Opened with classic scrollbars (todo 1835).
 #[test]
 fn the_floating_copy_button_clears_the_vertical_scrollbar() {
     block_on(async {
-        let fixture = Fixture::open("/code", Viewport::Desktop).await.unwrap();
+        let fixture = Fixture::open_with_scrollbars("/code", Viewport::Desktop)
+            .await
+            .unwrap();
         let page = &fixture.page;
         wait::for_visible(page, TALL_COPY).await.unwrap();
-        page.evaluate(format!(
-            "document.querySelector('{TALL_SCROLL}').style.paddingRight = '16px'"
-        ))
-        .await
-        .unwrap();
         wait::for_js_true(
             page,
             &format!(
-                "(() => {{ const box = document.querySelector('{TALL_SCROLL}').getBoundingClientRect(); \
-                 return document.querySelector('{TALL_COPY}').getBoundingClientRect().right <= box.right - 16 - 8 + 0.5; }})()"
+                "(() => {{ const el = document.querySelector('{TALL_SCROLL}'); \
+                 const gutter = el.offsetWidth - el.clientWidth; \
+                 return gutter > 0 && document.querySelector('{TALL_COPY}').getBoundingClientRect().right \
+                     <= el.getBoundingClientRect().right - gutter - 8 + 0.5; }})()"
             ),
-            "the copy button 8px left of the gutter",
+            "a classic scrollbar with the copy button 8px left of it",
         )
         .await
         .unwrap();

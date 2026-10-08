@@ -19,7 +19,7 @@ mod process;
 mod units;
 
 use dx::{dx, workspace_root};
-use http::{free_port, wait_for_app};
+use http::{free_port, wait_for_app, wait_for_log_line};
 use process::{
     GUARD_ENV, Guard, count_by_cmdline, describe_pid, guard, kill_by_cmdline, libc_kill,
     pids_by_cmdline, stop, wait_until,
@@ -30,6 +30,9 @@ const FIXTURE_TITLE: &str = "libero e2e fixtures";
 
 /// The docs site's `<title>`, from `docs/Dioxus.toml`, for `sweep`.
 const DOCS_TITLE: &str = "Libero";
+
+/// What `dx run` logs once its bundle is built, optimised and pre-compressed.
+const BUILD_DONE: &str = "Build completed successfully";
 
 /// What a run serves, and the test binary that runs against it.
 struct Target {
@@ -182,7 +185,10 @@ fn run(target: &Target, passthrough: Vec<String>) -> Result<()> {
         eprintln!("e2e: the filter selects {names} test(s), run --exact");
     }
 
-    let ready = wait_for_app(&session.base_url, target.title, &mut server, &dx_log);
+    let mut ready = wait_for_app(&session.base_url, target.title, &mut server, &dx_log);
+    if ready.is_ok() && std::env::var_os("E2E_RELEASE").is_some() {
+        ready = wait_for_log_line(BUILD_DONE, &mut server, &dx_log);
+    }
     if ready.is_ok() {
         let _ = prebuild.wait();
     } else {
