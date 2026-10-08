@@ -182,6 +182,7 @@ pub use date::{
     ChronoFieldDefaults, ChronoPickerDefaults, ChronoSizeLevel, DateLevel, TimePickerDefaults,
     TimePickerVariant,
 };
+pub(crate) use dialog::DIALOG_DEFAULT_SIZE;
 pub use dialog::{DIALOG_SIZE, DialogDefaults};
 pub use direction_toggle::DirectionToggleDefaults;
 pub use divider::{DIVIDER_LINE, DIVIDER_SPACING, DIVIDER_THICKNESS, DividerDefaults};
@@ -221,8 +222,10 @@ pub use grid::{
     GRID_AREAS_VAR, GRID_COLUMNS_VAR, GRID_GAP, GRID_ITEM_ROW_SPAN_VAR, GRID_ITEM_ROWS_VAR,
     GRID_ROW_UNIT, GRID_ZONE_AREA_VAR, GRID_ZONE_CONTAINER_VAR, GRID_ZONE_GAP, GridDefaults,
 };
+pub(crate) use header::HEADER_DEFAULT_HEIGHT;
 pub use header::{HEADER_HEIGHT, HEADER_HEIGHT_VAR, HeaderDefaults};
 pub use hover_card::HoverCardDefaults;
+pub(crate) use icon::{ICON_DEFAULT_RADIUS, ICON_DEFAULT_SIZE};
 pub use icon::{ICON_SIZE, IconDefaults};
 pub use image::{IMAGE_RADIUS, ImageDefaults, ImageFit};
 pub use image_list::{

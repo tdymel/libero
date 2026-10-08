@@ -12,7 +12,7 @@ use crate::{
     },
     hooks::{use_cache, use_gradient_style, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{CssVar, Gradient, ICON_SIZE, Size, SizeCss},
+    theme::{CssVar, Gradient, ICON_DEFAULT_RADIUS, ICON_DEFAULT_SIZE, ICON_SIZE, SizeCss},
 };
 
 pub(crate) const ICON_COLOR_VAR: CssVar = CssVar::new("--lsx-icon-color");
@@ -39,9 +39,9 @@ static ICON_BASE_SX: StaticSx = StaticSx::new(|| {
         .align_items("center")
         .justify_content("center")
         .flex_shrink("0")
-        .width(ICON_SIZE.overridable(Size::Md))
-        .height(ICON_SIZE.overridable(Size::Md))
-        .border_radius(ICON_RADIUS_VAR.value_or(SizeCss::RADIUS.value(Size::Sm)))
+        .width(ICON_DEFAULT_SIZE.overridable())
+        .height(ICON_DEFAULT_SIZE.overridable())
+        .border_radius(ICON_RADIUS_VAR.value_or(ICON_DEFAULT_RADIUS.value()))
         .selector(
             "& svg",
             sx().width(ICON_GLYPH_VAR.value())
@@ -122,8 +122,10 @@ base_props! {
         gradient: Option<Gradient>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
+        /// Unset, `theme.icon.size`.
         #[props(default, into)]
         size: Input<ThemeAwareValue>,
+        /// Unset, `theme.icon.radius`.
         #[props(default, into)]
         radius: Input<ThemeAwareValue>,
         /// An image URL drawn as the glyph, in the icon's color, instead of `children`.

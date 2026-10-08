@@ -12,9 +12,9 @@ use crate::{
         typography::Title,
     },
     context::{Dismiss, IconSlot, ModalContext},
-    hooks::{current_localization, use_id},
+    hooks::{current_localization, use_id, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{CssVar, DIALOG_SIZE, PAPER_RADIUS, Size, SizeCss},
+    theme::{CssVar, DIALOG_DEFAULT_SIZE, DIALOG_SIZE, PAPER_RADIUS, Size, SizeCss},
     utils::warn,
 };
 
@@ -28,7 +28,7 @@ static DIALOG_BASE_SX: StaticSx = StaticSx::new(|| {
         // A flex item shrinks to content, so `size` would only cap, not fill.
         // No margin: with `width: 100%` it overflows a container (2561).
         .width("100%")
-        .max_width(DIALOG_SIZE.overridable(Size::Md))
+        .max_width(DIALOG_DEFAULT_SIZE.overridable())
         .padding("lg")
         .border_radius(DIALOG_RADIUS_VAR.value_or(PAPER_RADIUS.value()))
         .box_shadow(SizeCss::SHADOW.value(Size::Xl))
@@ -50,14 +50,16 @@ static DIALOG_HEADER_SX: StaticSx = StaticSx::new(|| {
 
 static DIALOG_HEADER_TITLE_SX: StaticSx = StaticSx::new(|| sx().margin("0").flex("1"));
 
-fn dialog_variables(props: &DialogProps) -> Variables {
+fn dialog_variables(props: &DialogProps, default_radius: Option<Size>) -> Variables {
     variables()
         .with(
             DIALOG_RADIUS_VAR,
             props
                 .radius
                 .as_ref()
-                .map(|&radius| SizeCss::RADIUS.value(radius)),
+                .copied()
+                .or(default_radius)
+                .map(|radius| SizeCss::RADIUS.value(radius)),
         )
         .with(
             DIALOG_SIZE.override_var(),
@@ -97,8 +99,10 @@ base_props! {
         /// The close button's accessible name, e.g. "Close cart".
         #[props(default, into)]
         close_label: Option<String>,
+        /// Unset, `theme.dialog.radius`, else `Paper`'s.
         #[props(default, into)]
         radius: Input<Size>,
+        /// Unset, `theme.dialog.size`.
         #[props(default, into)]
         size: Input<ThemeAwareValue>,
         /// Layered onto Dialog's own - e.g. `Drawer`'s anchor/size vars.
@@ -206,7 +210,7 @@ pub fn Dialog(props: DialogProps) -> Element {
             *slot = None;
         }
     });
-    let variables: Input<Variables> = dialog_variables(&props)
+    let variables: Input<Variables> = dialog_variables(&props, use_theme().dialog.radius)
         .merge(props.variables.unwrap_or_default())
         .into();
 

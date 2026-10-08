@@ -5,6 +5,7 @@ use dioxus::prelude::*;
 use libero::{
     components::{Box, Code, Header, Input, ScrollArea, Text},
     sx::sx,
+    use_theme,
 };
 
 /// The frame scrolls, with more content than height, so `sticky` and `static` differ.
@@ -18,6 +19,7 @@ fn wrap_frame(_: &DemoValues, code: &str) -> String {
 
 #[component]
 pub fn HeaderPage() -> Element {
+    let theme = use_theme();
     rsx! {
         DocPage {
             title: "Header",
@@ -31,7 +33,7 @@ pub fn HeaderPage() -> Element {
                     .default("false")
                     .doc("Publishes the height as `--lsx-header-height` and `scroll-padding-top` on `:root`, so focus scrolls clear of a sticky or fixed banner. Set it on the page's own banner only."),
                 prop("size", "ThemeAwareValue")
-                    .default("md")
+                    .default(theme.header.size.as_str())
                     .doc("Minimum height. The header grows when its content wraps."),
                 prop("color", "ThemeAwareValue")
                     .default("none, a neutral background")

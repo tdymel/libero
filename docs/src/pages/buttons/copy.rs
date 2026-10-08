@@ -1,12 +1,14 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Copy, Input, Text};
+use libero::use_theme;
 
 /// The `label` switch's description, read after the name.
 const LABEL: &str = "Add libero to your project";
 
 #[component]
 pub fn CopyPage() -> Element {
+    let theme = use_theme();
     rsx! {
         DocPage {
             title: "Copy",
@@ -20,10 +22,10 @@ pub fn CopyPage() -> Element {
                 prop("color", "ThemeAwareValue")
                     .doc("Accent color. A theme color name or any CSS color."),
                 prop("size", "ThemeAwareValue")
-                    .default("md")
+                    .default(theme.action_icon.size.as_str())
                     .doc("Button size."),
                 prop("radius", "ThemeAwareValue")
-                    .default("sm")
+                    .default(theme.action_icon.radius.as_str())
                     .doc("Corner radius, independent of `size`."),
                 prop("aria_label", "String")
                     .default("\"Copy\"")

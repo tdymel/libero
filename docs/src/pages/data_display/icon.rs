@@ -33,10 +33,10 @@ pub fn IconPage() -> Element {
                         .default("primary")
                         .doc("The CSS color, which an svg drawn in `currentColor` inherits. Under `filled` a theme color also tints the background. Under a gradient, its first stop."),
                     prop("size", "ThemeAwareValue")
-                        .default("md")
+                        .default(theme.icon.size.as_str())
                         .doc("Width and height."),
                     prop("radius", "ThemeAwareValue")
-                        .default("sm")
+                        .default(theme.icon.radius.as_str())
                         .doc("Corner radius."),
                     prop("src", "String")
                         .doc("An image URL drawn as the glyph, in the icon's color, instead of `children`. Only its shape is used: its own colors are ignored."),

@@ -1,6 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Button, Code, Dialog, DialogPart, Text};
+use libero::use_theme;
 
 const CONTENT: &str = r#"Text { "notes.md has changes you have not saved." }"#;
 
@@ -47,6 +48,8 @@ fn DialogDemo(titled: bool, close_button: bool, size: String, radius: String) ->
 
 #[component]
 pub fn DialogPage() -> Element {
+    let theme = use_theme();
+    let radius = theme.dialog.radius.unwrap_or(theme.paper.radius);
     rsx! {
         DocPage {
             title: "Dialog",
@@ -65,9 +68,9 @@ pub fn DialogPage() -> Element {
                         .default("all close, an alertdialog's backdrop does not")
                         .doc("Inside a modal: asked before Escape, the backdrop or Back closes it. Return `false` to keep it open, such as a form with unsaved input. The close button and your own `close()` are not asked."),
                     prop("close_label", "String").default("\"Close\"").doc("The close button's accessible name, such as \"Close cart\". Unset, the localization's `common.close`."),
-                    prop("radius", "Size").default("md").doc("Corner radius from the radius scale. Other values go through `sx`."),
+                    prop("radius", "Size").default(radius.as_str()).doc("Corner radius from the radius scale. Other values go through `sx`."),
                     prop("size", "ThemeAwareValue")
-                        .default("md")
+                        .default(theme.dialog.size.as_str())
                         .doc("Caps the width from the dialog scale. `md` is 510px."),
                     prop("variables", "Variables")
                         .doc("CSS variables layered onto the dialog's own, as `Drawer` does."),

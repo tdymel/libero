@@ -4,10 +4,13 @@ use dioxus::prelude::*;
 use libero::{
     components::{Code, Flex, Input, Text, Tldr},
     hooks::use_localization,
+    use_theme,
 };
 
 #[component]
 pub fn TldrPage() -> Element {
+    let theme = use_theme();
+    let radius = theme.tldr.radius.map(|radius| radius.as_str());
     rsx! {
         DocPage {
             title: "Tldr",
@@ -32,10 +35,11 @@ pub fn TldrPage() -> Element {
                     .default("outlined")
                     .doc("The trigger's visual style."),
                 prop("size", "Size")
-                    .default("md")
+                    .default(theme.tldr.size.as_str())
                     .doc("The trigger's size step, the icon-only one too."),
                 prop("radius", "Size")
-                    .doc("Corner radius, independent of `size`. Unset, the trigger's own: `xl` on the labelled chip, `sm` icon-only."),
+                    .default(radius.unwrap_or("the trigger's own"))
+                    .doc("Corner radius, independent of `size`. The trigger's own is `xl` on the labelled chip, `sm` icon-only."),
                 prop("color", "ThemeAwareValue")
                     .default("neutral")
                     .doc("The trigger's accent color. A theme color name or any CSS color."),

@@ -16,15 +16,15 @@ use crate::{
         layout::use_box,
     },
     css::Stylesheet,
-    hooks::{use_css, use_glass_gradient_style, use_glass_tint, use_id},
+    hooks::{use_css, use_glass_gradient_style, use_glass_tint, use_id, use_theme},
     platform::{SCROLL_PADDING_VARS, document, draws_backdrop_filter, when_laid_out},
     str_enum::str_enum,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
         ANCHOR_COLOR, AnchorDefaults, ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, GLASS_SHEEN,
-        GRADIENT_CONTRAST, GlassTint, Gradient, HEADER_HEIGHT, HEADER_HEIGHT_VAR, NamedColorCss,
-        PAPER_BACKGROUND, PaperDefaults, SURFACE_LABEL, Size, SizeCss, Z_INDEX_HEADER,
-        gradient_surface_sx,
+        GRADIENT_CONTRAST, GlassTint, Gradient, HEADER_DEFAULT_HEIGHT, HEADER_HEIGHT,
+        HEADER_HEIGHT_VAR, NamedColorCss, PAPER_BACKGROUND, PaperDefaults, SURFACE_LABEL, Size,
+        SizeCss, Z_INDEX_HEADER, gradient_surface_sx,
     },
 };
 
@@ -136,7 +136,9 @@ static HEADER_BASE_SX: StaticSx = StaticSx::new(|| {
         .width("100%")
         .with(
             HEADER_HEIGHT_VAR.name(),
-            HEADER_HEIGHT.overridable(Size::Md),
+            HEADER_HEIGHT
+                .override_var()
+                .value_or(HEADER_DEFAULT_HEIGHT.value()),
         )
         // Content that wraps (200% text, 320 px) grows the banner instead of spilling.
         .min_height(safe_area_padding(&HEADER_HEIGHT_VAR.value(), "top"))
@@ -235,7 +237,7 @@ base_props! {
         /// `Sticky` (default); `Fixed` content is offset by `var(--lsx-header-height)`.
         #[props(default, into)]
         position: Input<HeaderPosition>,
-        /// Height, a size or any CSS length.
+        /// Height, a size or any CSS length. Unset, `theme.header.size`.
         #[props(default, into)]
         size: Input<ThemeAwareValue>,
         /// Banner fill; a bare color takes shade 6. The first stop under a `gradient`.
@@ -273,6 +275,7 @@ base_props! {
 /// Docs: <https://libero-ui.dev/layout/header>
 #[component]
 pub fn Header(props: HeaderProps) -> Element {
+    let theme = use_theme();
     let position = props.position.copied_or_default();
     let glass = props.glass && draws_backdrop_filter();
     let tint = use_glass_tint(
@@ -312,7 +315,7 @@ pub fn Header(props: HeaderProps) -> Element {
     let height = props
         .size
         .resolve(Some(HEADER_HEIGHT))
-        .unwrap_or_else(|| HEADER_HEIGHT.value(Size::Md));
+        .unwrap_or_else(|| HEADER_HEIGHT.value(theme.header.size));
     use_css(
         publishes.then(|| Stylesheet::from(publish_css(&published.id, &height).as_str())),
         CssLayer::Framework,

@@ -347,3 +347,109 @@ mod color {
         }
     }
 }
+
+/// A `*Defaults` size and radius reach the component that leaves its own unset.
+mod size {
+    use crate::common::render;
+
+    use dioxus::prelude::*;
+    use libero::{
+        LiberoProvider,
+        components::{Dialog, Header, Icon, Tldr},
+        theme::{
+            BUTTON_HEIGHT, DIALOG_SIZE, DialogDefaults, HEADER_HEIGHT, HeaderDefaults, ICON_SIZE,
+            IconDefaults, Size, SizeCss, Theme, TldrDefaults,
+        },
+    };
+
+    static LARGE: Theme = Theme {
+        tldr: TldrDefaults {
+            size: Size::Lg,
+            radius: Some(Size::Xs),
+            ..Theme::DEFAULT.tldr
+        },
+        icon: IconDefaults {
+            size: Size::Lg,
+            radius: Size::Xs,
+            ..Theme::DEFAULT.icon
+        },
+        header: HeaderDefaults {
+            size: Size::Lg,
+            ..Theme::DEFAULT.header
+        },
+        dialog: DialogDefaults {
+            size: Size::Lg,
+            radius: Some(Size::Xs),
+            ..Theme::DEFAULT.dialog
+        },
+        ..Theme::DEFAULT
+    };
+
+    #[component]
+    fn Large(children: Element) -> Element {
+        rsx! { LiberoProvider { themes: &LARGE, {children} } }
+    }
+
+    /// Spaces dropped, so a declaration matches either way.
+    fn html(app: fn() -> Element) -> String {
+        render(app).replace(' ', "")
+    }
+
+    #[test]
+    fn an_unset_tldr_size_and_radius_follow_the_theme() {
+        fn app() -> Element {
+            rsx! { Large { Tldr { url: "https://example.com", icon_only: true } } }
+        }
+        let html = html(app);
+        assert!(html.contains(&BUTTON_HEIGHT.value(Size::Lg)), "{html}");
+        assert!(html.contains(&SizeCss::RADIUS.value(Size::Xs)), "{html}");
+    }
+
+    #[test]
+    fn an_unset_icon_size_and_radius_follow_the_theme() {
+        fn app() -> Element {
+            rsx! { Large { Icon { "i" } } }
+        }
+        let html = html(app);
+        let size = format!("--lsx-icon-size:{}", ICON_SIZE.value(Size::Lg));
+        let radius = format!(
+            "--lsx-icon-radius-default:{}",
+            SizeCss::RADIUS.value(Size::Xs)
+        );
+        assert!(html.contains(&size), "{html}");
+        assert!(html.contains(&radius), "{html}");
+        assert!(
+            html.contains("var(--lsx-icon-size-override,var(--lsx-icon-size))"),
+            "{html}"
+        );
+    }
+
+    #[test]
+    fn an_unset_header_size_follows_the_theme() {
+        fn app() -> Element {
+            rsx! { Large { Header { "Libero" } } }
+        }
+        let html = html(app);
+        let size = format!(
+            "--lsx-header-height-default:{}",
+            HEADER_HEIGHT.value(Size::Lg)
+        );
+        assert!(html.contains(&size), "{html}");
+        assert!(
+            html.contains("var(--lsx-header-height-override,var(--lsx-header-height-default))"),
+            "{html}"
+        );
+    }
+
+    #[test]
+    fn an_unset_dialog_size_and_radius_follow_the_theme() {
+        fn app() -> Element {
+            rsx! { Large { Dialog { aria_label: "Tip", "Drag to reorder." } } }
+        }
+        let html = html(app);
+        let size = format!("--lsx-dialog-size:{}", DIALOG_SIZE.value(Size::Lg));
+        let radius = format!("--lsx-dialog-radius:{}", SizeCss::RADIUS.value(Size::Xs));
+        assert!(html.contains(&size), "{html}");
+        assert!(html.contains(&radius), "{html}");
+    }
+}
