@@ -18,6 +18,8 @@ struct Entry {
     key: CopyValue<String>,
     raw: Signal<Option<String>>,
     error: Signal<Option<StorageError>>,
+    /// Whether the store was read; a handle reading after mount creates it unread.
+    loaded: CopyValue<bool>,
 }
 
 type EntryMap = RefCell<HashMap<(StorageArea, String), Entry>>;
@@ -73,27 +75,58 @@ fn follow(entries: &Weak<EntryMap>, area: StorageArea, change: StorageChange) {
 }
 
 impl StorageHost {
-    /// The key's entry, read from the store on first use.
-    fn entry(&self, area: StorageArea, key: &str) -> Entry {
-        if let Some(entry) = self.entries.borrow().get(&(area, key.to_string())) {
-            return *entry;
+    /// The key's entry; `read` reads the store now unless an earlier handle did.
+    fn entry(&self, area: StorageArea, key: &str, read: bool) -> Entry {
+        if let Some(entry) = self.entries.borrow().get(&(area, key.to_string())).copied() {
+            if read {
+                load(entry, self.warned);
+            }
+            return entry;
         }
-        let (raw, error) = match storage(area).map(|store| store.get(key)) {
-            Some(Ok(raw)) => (raw, None),
-            Some(Err(error)) => (None, Some(error)),
-            None => (None, missing(area)),
+        let (raw, error) = match read {
+            true => read_store(area, key, self.warned),
+            false => (None, None),
         };
-        if let Some(error) = error {
-            warn_once(self.warned, error);
-        }
         let entry = Entry {
             area,
             key: CopyValue::new_in_scope(key.to_string(), ScopeId::ROOT),
             raw: Signal::new_in_scope(raw, ScopeId::ROOT),
             error: Signal::new_in_scope(error, ScopeId::ROOT),
+            loaded: CopyValue::new_in_scope(read, ScopeId::ROOT),
         };
         (self.entries.borrow_mut()).insert((area, key.to_string()), entry);
         entry
+    }
+}
+
+fn read_store(
+    area: StorageArea,
+    key: &str,
+    warned: CopyValue<u8>,
+) -> (Option<String>, Option<StorageError>) {
+    let (raw, error) = match storage(area).map(|store| store.get(key)) {
+        Some(Ok(raw)) => (raw, None),
+        Some(Err(error)) => (None, Some(error)),
+        None => (None, missing(area)),
+    };
+    if let Some(error) = error {
+        warn_once(warned, error);
+    }
+    (raw, error)
+}
+
+/// Reads an entry created unread; a no-op once read or written.
+fn load(mut entry: Entry, warned: CopyValue<u8>) {
+    if *entry.loaded.peek() {
+        return;
+    }
+    entry.loaded.set(true);
+    let (raw, error) = read_store(entry.area, &entry.key.peek(), warned);
+    if *entry.raw.peek() != raw {
+        entry.raw.set(raw);
+    }
+    if *entry.error.peek() != error {
+        entry.error.set(error);
     }
 }
 
@@ -142,9 +175,46 @@ pub(super) fn warn_once(mut warned: CopyValue<u8>, error: StorageError) {
 pub struct Stored<T: 'static> {
     entry: Entry,
     warned: CopyValue<u8>,
+    format: StorageFormat,
+    /// False until the read after mount, with [`StorageOptions::read_after_mount`].
+    mounted: Signal<bool>,
     parsed: Memo<Option<T>>,
     value: Memo<T>,
     fallback: CopyValue<T>,
+}
+
+/// How [`use_local_storage_with`] and [`use_session_storage_with`] read and store.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::hooks::{StorageOptions, use_local_storage_with};
+/// # fn app() -> Element {
+/// let theme = use_local_storage_with("theme", || "light".to_string(), StorageOptions {
+///     read_after_mount: true,
+///     ..Default::default()
+/// });
+/// # rsx! {}
+/// # }
+/// ```
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct StorageOptions {
+    /// Show `default` at the first render and read the store after mount, so a
+    /// hydrating server render and the client's first render agree.
+    pub read_after_mount: bool,
+    /// How the value is written as text.
+    pub format: StorageFormat,
+}
+
+/// The text a value is stored as.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum StorageFormat {
+    /// JSON: a `String` keeps its quotes.
+    #[default]
+    Json,
+    /// The bare text of a value that serialises to a string (a `String`, or an
+    /// enum of unit variants), as libero's own `lsx-` keys and page scripts keep it.
+    /// Any other value is not kept and reports [`Invalid`](StorageError::Invalid).
+    Text,
 }
 
 impl<T: 'static> Clone for Stored<T> {
@@ -170,7 +240,8 @@ impl<T: Serialize + DeserializeOwned + Clone + PartialEq + 'static> Stored<T> {
     /// and [`error`](Self::error) says why. Each call writes: debounce a fast source.
     /// A value that does not read back (a NaN float) is not kept and reports `Invalid`.
     pub fn set(&mut self, value: T) {
-        let Some(text) = encode(&value) else {
+        self.mount();
+        let Some(text) = encode_as(self.format, &value) else {
             self.settle(Some(Err(StorageError::Invalid)));
             return;
         };
@@ -186,8 +257,9 @@ impl<T: Serialize + DeserializeOwned + Clone + PartialEq + 'static> Stored<T> {
     /// While the stored text is [`Invalid`](StorageError::Invalid) it starts from the
     /// default and overwrites that text.
     pub fn update(&mut self, change: impl FnOnce(&mut T)) {
+        self.mount();
         // From the raw text: a memo stays stale until read, so a second update would lose the first.
-        let parsed = parse(self.entry.raw.peek().as_deref());
+        let parsed = parse_as(self.format, self.entry.raw.peek().as_deref());
         let mut value = parsed.unwrap_or_else(|| self.fallback.cloned());
         change(&mut value);
         self.set(value);
@@ -195,6 +267,7 @@ impl<T: Serialize + DeserializeOwned + Clone + PartialEq + 'static> Stored<T> {
 
     /// Drops the stored value: [`get`](Self::get) falls back to the default.
     pub fn remove(&mut self) {
+        self.mount();
         let removed = storage(self.entry.area).map(|store| store.remove(&self.entry.key.peek()));
         self.settle(removed);
         if self.entry.raw.peek().is_some() {
@@ -204,16 +277,34 @@ impl<T: Serialize + DeserializeOwned + Clone + PartialEq + 'static> Stored<T> {
 
     /// Whether anything is stored under the key, valid or not. Reactive.
     pub fn is_stored(&self) -> bool {
-        self.entry.raw.read().is_some()
+        (self.mounted)() && self.entry.raw.read().is_some()
+    }
+
+    /// Whether the store was read: from the first render, or after mount with
+    /// [`StorageOptions::read_after_mount`]. Reactive.
+    pub fn is_loaded(&self) -> bool {
+        (self.mounted)()
     }
 
     /// Why the last read or write failed, or [`Invalid`](StorageError::Invalid)
-    /// while the stored text does not parse; the next good write clears it. Reactive.
+    /// while the stored text does not parse; the next good write clears it.
+    /// `None` until loaded. Reactive.
     pub fn error(&self) -> Option<StorageError> {
+        if !(self.mounted)() {
+            return None;
+        }
         if let Some(error) = (self.entry.error)() {
             return Some(error);
         }
         (self.is_stored() && self.parsed.read().is_none()).then_some(StorageError::Invalid)
+    }
+
+    /// Reads the store if this handle has not yet: a write starts from what is stored.
+    fn mount(&mut self) {
+        if !*self.mounted.peek() {
+            load(self.entry, self.warned);
+            self.mounted.set(true);
+        }
     }
 
     fn settle(&mut self, done: Option<Result<(), StorageError>>) {
@@ -246,17 +337,45 @@ impl<T: Serialize + DeserializeOwned + Clone + PartialEq + 'static> Stored<T> {
 /// # }
 /// ```
 ///
-/// Stored as JSON. Read at the first render, so a hydrating server render shows
-/// `default` where the client then shows the stored value. `key` is read at
-/// mount: give the component a `key` to switch it. Another tab's write arrives
-/// on the web; other windows and processes off the web read it at their mount.
-/// Kept as plain text that anyone with the browser profile or the file can read:
-/// not for secrets.
+/// Stored as JSON. Read at the first render: a hydrating fullstack app takes
+/// [`use_local_storage_with`] and [`StorageOptions::read_after_mount`]. `key` is
+/// read at mount: give the component a `key` to switch it. Another tab's write
+/// arrives on the web; other windows and processes off the web read it at their
+/// mount. Kept as plain text that anyone with the browser profile or the file can
+/// read: not for secrets.
 pub fn use_local_storage<T: Serialize + DeserializeOwned + Clone + PartialEq + 'static>(
     key: &str,
     default: impl FnOnce() -> T,
 ) -> Stored<T> {
-    use_storage(StorageArea::Local, key, default)
+    use_storage(StorageArea::Local, key, default, StorageOptions::default())
+}
+
+/// [`use_local_storage`] with [`StorageOptions`]: read after mount for a hydrating
+/// server render, or keep bare text as libero's own `lsx-` keys do.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::hooks::{StorageFormat, StorageOptions, use_local_storage_with};
+/// # fn app() -> Element {
+/// // The colour scheme libero keeps: "light" or "dark", read at its next start.
+/// let scheme = use_local_storage_with("lsx-color-scheme", String::new, StorageOptions {
+///     read_after_mount: true,
+///     format: StorageFormat::Text,
+/// });
+///
+/// rsx! {
+///     if scheme.is_loaded() {
+///         p { "Kept scheme: {scheme.get()}" }
+///     }
+/// }
+/// # }
+/// ```
+pub fn use_local_storage_with<T: Serialize + DeserializeOwned + Clone + PartialEq + 'static>(
+    key: &str,
+    default: impl FnOnce() -> T,
+    options: StorageOptions,
+) -> Stored<T> {
+    use_storage(StorageArea::Local, key, default, options)
 }
 
 /// A value kept for the session: `sessionStorage` on the web, so a reload keeps
@@ -279,7 +398,33 @@ pub fn use_session_storage<T: Serialize + DeserializeOwned + Clone + PartialEq +
     key: &str,
     default: impl FnOnce() -> T,
 ) -> Stored<T> {
-    use_storage(StorageArea::Session, key, default)
+    use_storage(
+        StorageArea::Session,
+        key,
+        default,
+        StorageOptions::default(),
+    )
+}
+
+/// [`use_session_storage`] with [`StorageOptions`], as [`use_local_storage_with`].
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::hooks::{StorageOptions, use_session_storage_with};
+/// # fn app() -> Element {
+/// let tab = use_session_storage_with("open-tab", || 0_usize, StorageOptions {
+///     read_after_mount: true,
+///     ..Default::default()
+/// });
+/// # rsx! {}
+/// # }
+/// ```
+pub fn use_session_storage_with<T: Serialize + DeserializeOwned + Clone + PartialEq + 'static>(
+    key: &str,
+    default: impl FnOnce() -> T,
+    options: StorageOptions,
+) -> Stored<T> {
+    use_storage(StorageArea::Session, key, default, options)
 }
 
 /// Raw text kept for the session under a key, for libero's own caches. Reactive;
@@ -289,7 +434,7 @@ pub(crate) struct SessionText(Entry);
 
 /// The document's session text under `key`, read from the store on first use.
 pub(crate) fn session_text(key: &str) -> SessionText {
-    SessionText(storage_host().entry(StorageArea::Session, key))
+    SessionText(storage_host().entry(StorageArea::Session, key, true))
 }
 
 impl SessionText {
@@ -310,28 +455,47 @@ fn use_storage<T: Serialize + DeserializeOwned + Clone + PartialEq + 'static>(
     area: StorageArea,
     key: &str,
     default: impl FnOnce() -> T,
+    options: StorageOptions,
 ) -> Stored<T> {
+    let StorageOptions {
+        read_after_mount,
+        format,
+    } = use_hook(|| options);
     let (entry, warned, fallback) = use_hook(|| {
         let host = storage_host();
         (
-            host.entry(area, key),
+            host.entry(area, key, !read_after_mount),
             host.warned,
             CopyValue::new(default()),
         )
     });
+    let mut mounted = use_signal(|| !read_after_mount);
+    // Effects never run in a server render, so it and the hydrating client show the default.
+    use_effect(move || {
+        if !*mounted.peek() {
+            load(entry, warned);
+            mounted.set(true);
+        }
+    });
     let raw = entry.raw;
     let parsed = use_memo(move || {
-        let parsed = (raw.read().as_deref()).map(serde_json::from_str::<T>);
-        if let Some(Err(_)) = parsed {
+        let raw = raw.read();
+        let parsed = raw.as_deref().map(|raw| parse_as::<T>(format, Some(raw)));
+        if let Some(None) = parsed {
             warn_once(warned, StorageError::Invalid);
         }
-        parsed.and_then(Result::ok)
+        parsed.flatten()
     });
     // Straight from `raw`, not `parsed`: a read right after a write then recomputes it.
-    let value = use_memo(move || parse(raw.read().as_deref()).unwrap_or_else(|| fallback.cloned()));
+    let value = use_memo(move || {
+        let shown = mounted().then(|| parse_as(format, raw.read().as_deref()));
+        shown.flatten().unwrap_or_else(|| fallback.cloned())
+    });
     Stored {
         entry,
         warned,
+        format,
+        mounted,
         parsed,
         value,
         fallback,
@@ -340,6 +504,23 @@ fn use_storage<T: Serialize + DeserializeOwned + Clone + PartialEq + 'static>(
 
 pub(super) fn parse<T: DeserializeOwned>(raw: Option<&str>) -> Option<T> {
     serde_json::from_str(raw?).ok()
+}
+
+fn parse_as<T: DeserializeOwned>(format: StorageFormat, raw: Option<&str>) -> Option<T> {
+    match format {
+        StorageFormat::Json => parse(raw),
+        StorageFormat::Text => serde_json::from_value(serde_json::Value::String(raw?.into())).ok(),
+    }
+}
+
+fn encode_as<T: Serialize + DeserializeOwned>(format: StorageFormat, value: &T) -> Option<String> {
+    match format {
+        StorageFormat::Json => encode(value),
+        StorageFormat::Text => match serde_json::to_value(value).ok()? {
+            serde_json::Value::String(text) => parse_as::<T>(format, Some(&text)).map(|_| text),
+            _ => None,
+        },
+    }
 }
 
 /// `value` as JSON text that reads back as a `T`. serde_json writes a NaN float as `null`.

@@ -64,9 +64,27 @@ pub fn UseLocalStoragePage() -> Element {
                     Code { source: "String" }
                     " is kept with its quotes. Keys are used verbatim; "
                     Code { source: "lsx-" }
-                    " keys are libero's own. The value is read at the first render: a hydrating server render shows the default and mismatches a stored value. Each write hits the store (a file off the web), so pass a fast source such as a slider through "
+                    " keys are libero's own. Each write hits the store (a file off the web), so pass a fast source such as a slider through "
                     Code { source: "use_debounced_value" }
                     " first."
+                }
+                Text {
+                    Code { source: "use_local_storage_with(key, default, options)" }
+                    " and "
+                    Code { source: "use_session_storage_with" }
+                    " take "
+                    Code { source: "StorageOptions" }
+                    ". The value is read at the first render; in a hydrating fullstack app set "
+                    Code { source: "read_after_mount: true" }
+                    ", so the server render and the client's first render both show the default until "
+                    Code { source: "is_loaded()" }
+                    ". "
+                    Code { source: "format: StorageFormat::Text" }
+                    " keeps bare text, as libero's own "
+                    Code { source: "lsx-" }
+                    " keys and page scripts do. Libero reads those keys at start: change the colour scheme live through "
+                    Code { source: "use_color_scheme" }
+                    "."
                 }
             },
 

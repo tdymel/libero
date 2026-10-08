@@ -147,6 +147,34 @@ fn another_tab_follows_local_but_not_session() {
     });
 }
 
+/// Read after mount, kept as bare text: a page script's value shows, a set stores no quotes.
+#[test]
+fn a_read_after_mount_shows_bare_text() {
+    block_on(async {
+        let fixture = Fixture::open("/use-local-storage/late", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate("localStorage.setItem('e2e-storage-late', 'hello')")
+            .await
+            .unwrap();
+        page.reload().await.unwrap();
+        reads(page, "#late", "hello").await.unwrap();
+        reads(page, "#late-loaded", "true").await.unwrap();
+        reads(page, "#late-error", "None").await.unwrap();
+
+        click(page, "#set-late").await;
+        reads(page, "#late", "bye").await.unwrap();
+        let late = raw(page, "localStorage", "e2e-storage-late").await;
+        assert_eq!(late.as_deref(), Some("bye"));
+
+        click(page, "#remove-late").await;
+        reads(page, "#late", "none").await.unwrap();
+        fixture.console.assert_clean("a read after mount").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 const KEY: &str = "e2e-storage-errors-local";
 
 /// Every `setItem` throws as a full store does, until `__unfill()`.

@@ -119,7 +119,10 @@ pub(crate) use silent_focus::{
     use_silent_focus_in, use_silent_focus_out, use_silent_focus_out_of, use_silent_focus_within,
 };
 pub(crate) use storage::{SessionText, session_text};
-pub use storage::{Stored, use_local_storage, use_session_storage};
+pub use storage::{
+    StorageFormat, StorageOptions, Stored, use_local_storage, use_local_storage_with,
+    use_session_storage, use_session_storage_with,
+};
 pub use stylesheet::use_stylesheet;
 pub(crate) use stylesheet::{SxSource, use_box_css, use_css};
 pub(crate) use subscription_slot::{SubscriptionSlot, use_subscription_slot};

@@ -312,3 +312,131 @@ fn session_text_without_a_store_stays_in_its_document() {
     let html = dioxus_ssr::render(&other);
     assert!(!html.contains("stars=8"), "{html}");
 }
+
+#[test]
+fn a_store_read_at_the_first_render_is_loaded_at_once() {
+    let (local, session) = stores();
+    let _fake = fake(local, session);
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    dom.in_runtime(|| assert!(handle(0).is_loaded() && handle(2).is_loaded()));
+}
+
+thread_local! {
+    static LATE: std::cell::Cell<Option<Stored<u32>>> = const { std::cell::Cell::new(None) };
+}
+
+fn late_app() -> Element {
+    let late = use_local_storage_with(
+        "count",
+        || 0_u32,
+        StorageOptions {
+            read_after_mount: true,
+            ..Default::default()
+        },
+    );
+    LATE.set(Some(late));
+    let (count, loaded, error) = (late.get(), late.is_loaded(), late.error());
+    rsx! { span { "late={count} loaded={loaded} error={error:?}" } }
+}
+
+/// The first render is what a server render shows: the default, no error.
+#[test]
+fn a_read_after_mount_shows_the_default_first() {
+    let (local, session) = stores();
+    local.values.borrow_mut().insert("count".into(), "5".into());
+    let _fake = fake(local, session);
+    let mut dom = VirtualDom::new(late_app);
+    dom.rebuild_in_place();
+    let html = dioxus_ssr::render(&dom);
+    assert!(html.contains("late=0 loaded=false error=None"), "{html}");
+    pump(&mut dom);
+    let html = dioxus_ssr::render(&dom);
+    assert!(html.contains("late=5 loaded=true error=None"), "{html}");
+}
+
+/// The server's missing store reports nothing until the client has mounted.
+#[test]
+fn a_read_after_mount_defers_the_error() {
+    let _fake = fake_storage(None, None);
+    let mut dom = VirtualDom::new(late_app);
+    dom.rebuild_in_place();
+    assert!(dioxus_ssr::render(&dom).contains("error=None"));
+    pump(&mut dom);
+    let html = dioxus_ssr::render(&dom);
+    assert!(html.contains("error=Some(Unavailable)"), "{html}");
+}
+
+/// A write before the read lands starts from the stored value, not the default.
+#[test]
+fn an_update_before_the_read_after_mount_reads_first() {
+    let (local, session) = stores();
+    local.values.borrow_mut().insert("count".into(), "5".into());
+    let _fake = fake(local, session);
+    let mut dom = VirtualDom::new(late_app);
+    dom.rebuild_in_place();
+    dom.in_runtime(|| {
+        let mut late = LATE.get().expect("rendered");
+        late.update(|count| *count += 1);
+        assert_eq!((late.get(), late.is_loaded()), (6, true));
+    });
+    pump(&mut dom);
+    assert_eq!(stored_text(local), Some("6".into()));
+}
+
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum Scheme {
+    Light,
+    Dark,
+}
+
+thread_local! {
+    static SCHEME: std::cell::Cell<Option<Stored<Scheme>>> = const { std::cell::Cell::new(None) };
+    static BARE: std::cell::Cell<Option<Stored<u32>>> = const { std::cell::Cell::new(None) };
+}
+
+fn text_options() -> StorageOptions {
+    StorageOptions {
+        format: StorageFormat::Text,
+        ..Default::default()
+    }
+}
+
+fn scheme_app() -> Element {
+    SCHEME.set(Some(use_local_storage_with(
+        "lsx-color-scheme",
+        || Scheme::Light,
+        text_options(),
+    )));
+    BARE.set(Some(use_local_storage_with(
+        "bare",
+        || 0_u32,
+        text_options(),
+    )));
+    rsx! {}
+}
+
+/// Bare text, as libero keeps `lsx-color-scheme`; a number has no bare text form.
+#[test]
+fn text_format_reads_and_writes_bare_text() {
+    let (local, session) = stores();
+    (local.values.borrow_mut()).insert("lsx-color-scheme".into(), "dark".into());
+    let _fake = fake(local, session);
+    let mut dom = VirtualDom::new(scheme_app);
+    dom.rebuild_in_place();
+    dom.in_runtime(|| {
+        let mut scheme = SCHEME.get().expect("rendered");
+        assert_eq!((scheme.get(), scheme.error()), (Scheme::Dark, None));
+        scheme.set(Scheme::Light);
+        let mut bare = BARE.get().expect("rendered");
+        bare.set(3);
+        assert_eq!((bare.get(), bare.error()), (0, Some(StorageError::Invalid)));
+    });
+    let values = local.values.borrow();
+    assert_eq!(
+        values.get("lsx-color-scheme").map(String::as_str),
+        Some("light")
+    );
+    assert_eq!(values.get("bare"), None);
+}

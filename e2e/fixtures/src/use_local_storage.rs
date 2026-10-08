@@ -3,7 +3,9 @@
 //! one browser profile.
 
 use dioxus::prelude::*;
-use libero::hooks::{use_local_storage, use_session_storage};
+use libero::hooks::{
+    StorageFormat, StorageOptions, use_local_storage, use_local_storage_with, use_session_storage,
+};
 
 use crate::Routes;
 
@@ -12,6 +14,7 @@ pub const ROUTES: Routes = &[
     ("/use-local-storage/reload", || rsx! { Kept { prefix: "e2e-storage-reload" } }),
     ("/use-local-storage/tabs", || rsx! { Kept { prefix: "e2e-storage-tabs" } }),
     ("/use-local-storage/errors", || rsx! { Kept { prefix: "e2e-storage-errors" } }),
+    ("/use-local-storage/late", || rsx! { Late {} }),
 ];
 
 /// Off the web, the run's directory (`E2E_STORAGE_DIR`), never the user's data dir.
@@ -42,6 +45,25 @@ fn Kept(prefix: &'static str) -> Element {
         p { id: "error", "{local.error():?}" }
         p { id: "session", "{session.get()}" }
         Twin { storage_key: local_key }
+    }
+}
+
+/// Bare text read after mount, as a hydrating app reads libero's `lsx-` keys.
+#[component]
+fn Late() -> Element {
+    use_hook(point_storage_dir);
+    let options = StorageOptions {
+        read_after_mount: true,
+        format: StorageFormat::Text,
+    };
+    let mut late = use_local_storage_with("e2e-storage-late", || "none".to_string(), options);
+
+    rsx! {
+        button { id: "set-late", onclick: move |_| late.set("bye".into()), "Set late" }
+        button { id: "remove-late", onclick: move |_| late.remove(), "Remove late" }
+        p { id: "late", "{late.get()}" }
+        p { id: "late-loaded", "{late.is_loaded()}" }
+        p { id: "late-error", "{late.error():?}" }
     }
 }
 

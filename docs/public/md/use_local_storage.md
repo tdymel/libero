@@ -1,7 +1,7 @@
 # Local storage
 
 Crate: `libero`
-Import: `use libero::hooks::{StorageError, Stored, use_local_storage, use_session_storage};`
+Import: `use libero::hooks::{StorageError, StorageFormat, StorageOptions, Stored, use_local_storage, use_local_storage_with, use_session_storage, use_session_storage_with};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/storage.rs>
 Index: [index.md](index.md) lists every other page
 Description: A value kept under a key across reloads and app runs, or for the tab's session; a file per key off the web.
@@ -21,10 +21,12 @@ without the feature, keeps values in memory until you call
 processes read a value at their mount.
 
 Values are stored as JSON, so a `String` is kept with its quotes. Keys are used
-verbatim; `lsx-` keys are libero's own. The value is read at the first render:
-a hydrating server render shows the default and mismatches a stored value. Each
-write hits the store (a file off the web), so pass a fast source such as a
-slider through `use_debounced_value` first.
+verbatim; `lsx-` keys are libero's own. The value is read at the first render;
+in a hydrating fullstack app pass `StorageOptions { read_after_mount: true, .. }`
+to `use_local_storage_with` or `use_session_storage_with`, so the server render
+and the client's first render both show the default. Each write hits the store
+(a file off the web), so pass a fast source such as a slider through
+`use_debounced_value` first.
 
 ## Usage
 
@@ -80,13 +82,41 @@ fn main() {
 }
 ```
 
+A hydrating fullstack app reads after mount; `StorageFormat::Text` keeps bare
+text, as libero's own `lsx-` keys and page scripts do. Libero reads its `lsx-`
+keys at start, so a write there shows at the next start: change the colour
+scheme live through `use_color_scheme`.
+
+```rust
+use dioxus::prelude::*;
+use libero::hooks::{StorageFormat, StorageOptions, use_local_storage_with};
+
+#[component]
+fn KeptScheme() -> Element {
+    let scheme = use_local_storage_with("lsx-color-scheme", String::new, StorageOptions {
+        read_after_mount: true,
+        format: StorageFormat::Text,
+    });
+
+    rsx! {
+        if scheme.is_loaded() {
+            p { "Kept scheme: {scheme.get()}" }
+        }
+    }
+}
+```
+
 ## API
 
 ```rust,ignore
 pub fn use_local_storage<T>(key: &str, default: impl FnOnce() -> T) -> Stored<T>
 pub fn use_session_storage<T>(key: &str, default: impl FnOnce() -> T) -> Stored<T>
+pub fn use_local_storage_with<T>(key: &str, default: impl FnOnce() -> T, options: StorageOptions) -> Stored<T>
+pub fn use_session_storage_with<T>(key: &str, default: impl FnOnce() -> T, options: StorageOptions) -> Stored<T>
 // T: Serialize + DeserializeOwned + Clone + PartialEq + 'static
 
+pub struct StorageOptions { pub read_after_mount: bool, pub format: StorageFormat }
+pub enum StorageFormat { Json, Text } // Json by default
 pub enum StorageError { Unavailable, Full, Invalid }
 
 pub fn libero::platform::set_storage_dir(dir: impl Into<PathBuf>)
@@ -100,7 +130,13 @@ pub fn libero::platform::set_storage_dir(dir: impl Into<PathBuf>)
 | `update(change)` | Changes the current value in place, then stores it. While the stored text is `Invalid` it starts from the default and overwrites that text. |
 | `remove()` | Drops the stored value: `get()` falls back to the default. The default itself is never written. |
 | `is_stored()` | Whether anything is stored under the key, valid or not. |
-| `error()` | Why the last read or write failed, or `Invalid` while the stored text does not parse; the next good write clears it. |
+| `is_loaded()` | Whether the store was read: from the first render, or after mount with `read_after_mount`. |
+| `error()` | Why the last read or write failed, or `Invalid` while the stored text does not parse; the next good write clears it. `None` until loaded. |
+
+| `StorageOptions` field | Default | Description |
+|---|---|---|
+| `read_after_mount` | `false` | Show `default` at the first render and read the store after mount; `error()` waits too. A write before then reads the store first. |
+| `format` | `Json` | `Text` stores the bare text of a value that serialises to a string (a `String`, an enum of unit variants); any other value reports `Invalid` and is not kept. |
 
 | `StorageError` | When |
 |---|---|
