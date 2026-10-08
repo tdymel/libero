@@ -64,6 +64,7 @@ mod journal;
 mod kanban;
 mod layout;
 mod lightbox;
+mod list;
 mod loader;
 mod long_labels;
 mod mark;

@@ -183,6 +183,8 @@ parts work.
 - Pass `focusable: true` when the content holds only controls hidden by CSS
   (`visibility: hidden`, `display: none`): the area counts them as focusable
   and makes no tab stop.
+- Pad the content by 6 px or more where a focusable child sits flush with the
+  area's edge: the area clips the outset focus ring there.
 
 ### Example
 

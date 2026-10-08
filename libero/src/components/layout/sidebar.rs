@@ -20,11 +20,18 @@ static SIDEBAR_SCROLL_SX: StaticSx = StaticSx::new(|| sx().padding("lg"));
 static SIDEBAR_BASE_SX: StaticSx = StaticSx::new(|| {
     let border = format!("1px solid {}", ColorCss::MUTED.value(ColorShade::S4));
 
+    // Half the row at most, so a narrow screen leaves the content room (todo 2477).
     let base = sx()
         .flex_shrink("0")
         .min_height("0")
-        .when("side-start", sx().border_inline_end(border.clone()))
-        .when("side-end", sx().border_inline_start(border.clone()))
+        .when(
+            "side-start",
+            sx().border_inline_end(border.clone()).max_width("50%"),
+        )
+        .when(
+            "side-end",
+            sx().border_inline_start(border.clone()).max_width("50%"),
+        )
         .when("side-top", sx().border_bottom(border.clone()))
         .when("side-bottom", sx().border_top(border));
 
@@ -122,7 +129,12 @@ pub fn Sidebar(props: SidebarProps) -> Element {
             component,
             props.attributes,
             rsx! {
-                ScrollArea { sx: &SIDEBAR_SCROLL_SX, attributes: scroll_attributes, {props.children} }
+                ScrollArea {
+                    scrollbars: "both",
+                    sx: &SIDEBAR_SCROLL_SX,
+                    attributes: scroll_attributes,
+                    {props.children}
+                }
             },
         )
 }

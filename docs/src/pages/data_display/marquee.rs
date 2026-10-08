@@ -87,7 +87,11 @@ fn MarqueePreview(values: DemoValues) -> Element {
     let mut paused = use_signal(|| false);
     let own_control = values.str("pause_control") != "true";
     rsx! {
-        Flex { direction: "column", gap: "md",
+        // The preview box is a flex row: without a width the strip's 1900px sets this column's.
+        Flex {
+            direction: "column",
+            gap: "md",
+            sx: sx().width("100%").min_width("0"),
             if own_control {
                 Button {
                     selected: paused(),

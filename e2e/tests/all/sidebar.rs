@@ -1,5 +1,5 @@
 //! `Sidebar`: the overflow tab stop and its forwarded name, `top` / `bottom`, the
-//! default size beside content at 320px, and content wider than the panel.
+//! default size beside content at 320px, and content wider than the panel scrolling.
 
 use e2e::browser::block_on;
 use e2e::passes::keyboard;
@@ -64,10 +64,10 @@ fn a_top_or_bottom_sidebar_sizes_its_height() {
     });
 }
 
-/// Content wider than the panel stays inside it: the panel keeps its width and
-/// the 320px column does not scroll sideways (todo 2476 decides on scrolling it).
+/// Content wider than the panel scrolls sideways inside it (todo 2476): the panel
+/// and the 320px column keep their size, and the far end of the line is reachable.
 #[test]
-fn wide_content_keeps_the_sidebar_and_its_column_in_size() {
+fn wide_content_scrolls_inside_the_sidebar() {
     block_on(async {
         let fixture = Fixture::open("/sidebar", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
@@ -76,22 +76,30 @@ fn wide_content_keeps_the_sidebar_and_its_column_in_size() {
         let fit: String = page
             .evaluate(
                 "(() => { const column = document.querySelector('#column'); \
-                   const wide = document.querySelector('#wide').getBoundingClientRect().width; \
-                   return `${wide} ${column.scrollWidth <= column.clientWidth}`; })()",
+                   const wide = document.querySelector('#wide'); \
+                   const scroll = wide.querySelector('[data-slot=scroll]'); \
+                   scroll.scrollLeft = scroll.scrollWidth; \
+                   const content = document.querySelector('#wide-content').getBoundingClientRect(); \
+                   const area = scroll.getBoundingClientRect(); \
+                   return `${wide.getBoundingClientRect().width} ${column.scrollWidth <= column.clientWidth} \
+                     ${getComputedStyle(scroll).overflowX} ${content.right <= area.right}`; })()",
             )
             .await
             .unwrap()
             .into_value()
             .unwrap();
-        assert_eq!(fit, "200 true", "panel width, and the 320px column fits");
+        assert_eq!(
+            fit, "160 true auto true",
+            "panel width, the column fits, the area scrolls, the line's end is reachable"
+        );
         fixture.close().await.unwrap();
     });
 }
 
-/// The default `md` panel does not shrink in a 320px row: its sibling gets
-/// what is left (todo 2477 decides whether it should).
+/// A start or end panel takes half its row at most (todo 2477), so the default `md`
+/// panel leaves its sibling room beside content at 320px.
 #[test]
-fn the_default_sidebar_keeps_its_width_beside_content_at_320px() {
+fn the_default_sidebar_leaves_content_room_at_320px() {
     block_on(async {
         let fixture = Fixture::open("/sidebar/narrow", Viewport::Desktop)
             .await
@@ -108,8 +116,9 @@ fn the_default_sidebar_keeps_its_width_beside_content_at_320px() {
             .unwrap()
             .into_value()
             .unwrap();
-        // 320 less the panel and the row's gap.
-        assert_eq!(widths, [320.0, 280.0, 28.0]);
+        // Half the row for the panel; the sibling gets the rest less the row's gap.
+        assert_eq!(widths[..2], [320.0, 160.0]);
+        assert!(widths[2] >= 140.0, "{widths:?}");
         fixture.close().await.unwrap();
     });
 }

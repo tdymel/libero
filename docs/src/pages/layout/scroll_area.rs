@@ -116,6 +116,7 @@ pub fn ScrollAreaPage() -> Element {
                     "Use `scrollbars: \"none\"` only where something else scrolls: it puts the clipped content out of reach.",
                     "Give each `Virtualize` row `aria_setsize: count` and `aria_posinset: index + 1`, as the virtualize preview does: only the rows in view exist, so a screen reader cannot count the rest. For a table row, `aria-rowcount` and `aria-rowindex`.",
                     "Pass `focusable: true` when the content holds only controls hidden by CSS (`visibility: hidden`, `display: none`): the area counts them as focusable and makes no tab stop.",
+                    "Pad the content by 6 px or more where a focusable child sits flush with the area's edge: the area clips the outset focus ring there.",
                 ])
                 .example("A terms text in `ScrollArea { aria_label: \"Terms of service\", .. }`: Tab stops on the area, a screen reader reads its name, and the arrow keys scroll it."),
             lead: rsx! {

@@ -98,3 +98,18 @@ pub fn List(props: ListProps) -> Element {
         .attr_default("role", "list")
         .render(tag, props.attributes, props.children)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Todo 2468: the indent reaches a `List` directly under an item, not any `ul` below.
+    #[test]
+    fn the_indent_is_scoped_to_the_lists_own_nested_lists() {
+        let sheet = crate::css::Stylesheet::from(&LIST_BASE_SX);
+        let css = sheet.as_str();
+
+        assert!(css.contains("] > li > ul[role='list']"), "{css}");
+        assert!(!css.contains("] ul"), "{css}");
+    }
+}

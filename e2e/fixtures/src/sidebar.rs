@@ -13,8 +13,8 @@ pub const ROUTES: Routes = &[
     ("/sidebar/narrow", || rsx! { NarrowPage {} }),
 ];
 
-/// The default `md` panel beside content in a 320px column; not in the baseline,
-/// as it leaves the sibling too little room (todo 2477).
+/// The default `md` panel beside content in a 320px column; not in the baseline
+/// (todo 2477).
 #[component]
 fn NarrowPage() -> Element {
     rsx! {

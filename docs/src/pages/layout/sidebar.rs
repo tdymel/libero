@@ -47,7 +47,7 @@ pub fn SidebarPage() -> Element {
                 prop("side", "SidebarSide")
                     .default("start")
                     .doc("The edge that gets the border, and whether `size` is a width or a height. `start` is the right edge under `dir=\"rtl\"`. It does not move the panel, so put it at the matching end of the DOM."),
-                prop("size", "Size").default("md").doc("The panel's width, or its height on a `top` or `bottom` side."),
+                prop("size", "Size").default("md").doc("The panel's width, or its height on a `top` or `bottom` side. A start or end panel takes half its parent's width at most."),
                 prop("component", "HtmlTag").default("aside").doc("The element to render, such as `nav` for a navigation panel."),
                 prop("children", "Element").doc("The panel's content, scrolled by an inner `ScrollArea`."),
                 prop("parts", "Parts<SidebarPart>")
@@ -60,6 +60,7 @@ pub fn SidebarPage() -> Element {
                 .handles([
                     "The root is an `aside`, the `complementary` landmark.",
                     "Content that overflows with nothing focusable in it makes the inner scroll area a tab stop, a `region` that takes the panel's `aria_label` or `aria_labelledby`.",
+                    "Content wider than the panel scrolls sideways, and a start or end panel takes half its parent's width at most, so the content keeps room at 320 px.",
                 ])
                 .must([
                     "Pass `component: \"nav\"` for the site navigation.",

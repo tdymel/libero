@@ -46,8 +46,22 @@ pub fn AspectRatioPage() -> Element {
                     " as a division, like "
                     Code { source: "16.0 / 9.0" }
                     ". The box has no size of its own, so give it a width. The child "
-                    "stretches to fill it and the overflow is clipped, which suits an image "
-                    "or a video."
+                    "fills it and the overflow is clipped: an image or a video is cropped "
+                    "with "
+                    Code { source: "object-fit: cover" }
+                    ", not stretched, and an "
+                    Code { source: "a" }
+                    ", "
+                    Code { source: "picture" }
+                    " or "
+                    Code { source: "span" }
+                    " child becomes a block. Give any other inline child "
+                    Code { source: "display: block" }
+                    ", and a "
+                    Code { source: "picture" }
+                    "'s inner "
+                    Code { source: "img" }
+                    " the full size."
                 }
             },
             Demo {

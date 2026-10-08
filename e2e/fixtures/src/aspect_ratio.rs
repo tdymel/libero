@@ -10,7 +10,8 @@ pub const ROUTES: Routes = &[
     ("/aspect-ratio-children", || rsx! { ChildrenPage {} }),
 ];
 
-/// Todos 2532, 2535: a replaced child takes no `::after`, a positioned one must stay put on focus.
+/// Todos 2532, 2535, 2533, 2534: a replaced child takes no `::after`, a positioned one must stay put
+/// on focus, a picture is cropped and an inline child fills the box.
 #[component]
 fn ChildrenPage() -> Element {
     rsx! {
@@ -26,6 +27,12 @@ fn ChildrenPage() -> Element {
             }
             AspectRatio { id: "video-ratio", ratio: 16.0 / 9.0,
                 video { id: "video", controls: true, tabindex: "0", style: "background: #369" }
+            }
+            AspectRatio { id: "span-ratio", ratio: 16.0 / 9.0,
+                span { id: "span", "Inline child" }
+            }
+            AspectRatio { id: "cover-ratio", ratio: 1.0,
+                img { id: "cover", src: PICTURE, alt: "A blue field" }
             }
         }
     }

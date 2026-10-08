@@ -201,6 +201,9 @@ Like every component, all three also take the shared props `sx`, `class`,
 - Give two landmarks of the same kind an `aria-label` each, such as two
   `Aside` zones. An `Aside` zone inside `main` needs one to be a landmark at
   all.
+- Use `responsive(..)` for a span that must stack on a narrow screen: a fixed
+  `GridSpan` and the named-area template keep their fractions at 320 px, where
+  a `Quarter` is under 74 px wide.
 
 ### Example
 

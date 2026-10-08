@@ -8,8 +8,10 @@ Description: Enforces a width-to-height ratio on its child, cropping it to fill 
 
 Enforces a width-to-height ratio on its child, cropping it to fill the box.
 Write `ratio` as a division, like `16.0 / 9.0`. The box has no size of its own,
-so give it a width. The child stretches to fill it and the overflow is clipped,
-which suits an image or a video.
+so give it a width. The child fills it and the overflow is clipped: an image or
+a video is cropped with `object-fit: cover`, not stretched, and an `a`,
+`picture` or `span` child becomes a block. Give any other inline child
+`display: block`, and a `picture`'s inner `img` the full size.
 
 ## Usage
 

@@ -18,7 +18,13 @@ static ASPECT_RATIO_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().aspect_ratio(ASPECT_RATIO.overridable())
         .position("relative")
         .overflow("hidden")
-        .selector("& > *", sx().width("100%").height("100%"))
+        // `object-fit` crops a replaced child instead of stretching it (todo 2533).
+        .selector(
+            "& > *",
+            sx().width("100%").height("100%").object_fit("cover"),
+        )
+        // An inline child ignores the 100% size (todo 2534).
+        .selector("& > :where(a, picture, span)", sx().display("block"))
         // The child fills the clipped box, so a ring drawn outside it is cut away.
         // Doubled to outrank a `Button`'s own ring, which ties it otherwise.
         .selector("& > *:focus-visible:focus-visible", inset_ring())
@@ -169,6 +175,19 @@ mod tests {
         assert!(
             replaced.contains("outline-offset:calc(-1 * var(--lsx-focus-ring-width))"),
             "{replaced}"
+        );
+    }
+
+    /// Todos 2533, 2534: a replaced child is cropped, an inline one takes the full size.
+    #[test]
+    fn the_child_is_cropped_and_an_inline_one_made_a_block() {
+        let sheet = crate::css::Stylesheet::from(&ASPECT_RATIO_BASE_SX);
+        let css = sheet.as_str();
+
+        assert!(rule(css, " > *{").contains("object-fit:cover"), "{css}");
+        assert!(
+            rule(css, " > :where(a, picture, span){").contains("display:block"),
+            "{css}"
         );
     }
 

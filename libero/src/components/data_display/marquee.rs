@@ -247,7 +247,7 @@ base_props! {
 /// # use libero::components::Marquee;
 /// # fn app() -> Element {
 /// rsx! {
-///     Marquee { fade_edges: true,
+///     Marquee { repeat: 8, fade_edges: true,
 ///         span { "Rust" }
 ///         span { "Dioxus" }
 ///         span { "Libero" }

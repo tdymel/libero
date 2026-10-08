@@ -245,6 +245,38 @@ fn a_doc_tab_switch_hides_the_old_panel() {
     });
 }
 
+/// Todo 2437: the Marquee preview is as wide as its box, so the box does not scroll
+/// sideways and the pause toggle stays in view, left to right and right to left.
+#[test]
+fn the_marquee_preview_fits_its_box() {
+    block_on(async {
+        let fixture = Fixture::open_until(
+            "/data-display/marquee",
+            Viewport::Desktop,
+            Scheme::Light,
+            "#docs-main [data-slot='pause']",
+        )
+        .await
+        .unwrap();
+        let page = &fixture.page;
+        let fits = "(() => { const pause = document.querySelector('#docs-main [data-slot=pause]'); \
+            let box = pause.parentElement; \
+            while (box && getComputedStyle(box).overflowX !== 'auto') box = box.parentElement; \
+            const p = pause.getBoundingClientRect(), b = box.getBoundingClientRect(); \
+            return box.scrollWidth <= box.clientWidth && p.left >= b.left && p.right <= b.right; })()";
+        wait::for_js_true(page, fits, "the preview to fit its box")
+            .await
+            .unwrap();
+        page.evaluate("document.documentElement.dir = 'rtl'")
+            .await
+            .unwrap();
+        wait::for_js_true(page, fits, "the preview to fit its box right to left")
+            .await
+            .unwrap();
+        close(fixture).await;
+    });
+}
+
 /// Each label and border of the landing page's gradient cards against the gradient's two
 /// stops and their midpoint (the lowest ratio), then axe over the page. The stops are
 /// translucent tints, so each is read over the first opaque background behind the card.

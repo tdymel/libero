@@ -56,6 +56,31 @@ fn a_focused_video_shows_a_painted_ring() {
     });
 }
 
+/// Todos 2533, 2534: a picture fills the box cropped, not stretched, and an inline child fills it too.
+#[test]
+fn the_child_fills_the_box_cropped_whatever_its_display() {
+    block_on(async {
+        let fixture = Fixture::open("/aspect-ratio-children", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let sizes: Vec<String> = js(
+            page,
+            "(() => { const size = (id) => { const r = document.querySelector(id).getBoundingClientRect(); \
+               return `${r.width}x${r.height}`; }; \
+             return [getComputedStyle(document.querySelector('#cover')).objectFit, size('#cover'), size('#cover-ratio'), \
+               getComputedStyle(document.querySelector('#span')).display, size('#span'), size('#span-ratio')]; })()",
+        )
+        .await;
+        assert_eq!(sizes[0], "cover", "{sizes:?}");
+        assert_eq!(sizes[1], sizes[2], "{sizes:?}");
+        assert_eq!(sizes[3], "block", "{sizes:?}");
+        assert_eq!(sizes[4], sizes[5], "{sizes:?}");
+        fixture.console.assert_clean("a cropped child").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 2535: the overlay anchors on the root, so focus does not move a positioned child.
 #[test]
 fn focus_leaves_a_positioned_child_in_place() {
