@@ -276,10 +276,15 @@ pub(super) fn pointer_down(event: &Event<PointerData>, raw: &Rc<PlatformEventDat
     PRESSES.set(Some((now, at.x, at.y, count)));
 }
 
-/// Whether the last press was cancelled: Blitz's click default would then count
-/// its click from an older press, and the web moves no focus for it.
+/// Whether the last press was cancelled, by its `pointerdown` or `mousedown`: Blitz's
+/// click default would then count its click from an older press, and the web moves no focus for it.
 pub(super) fn press_cancelled() -> bool {
     CANCELLED.get()
+}
+
+/// The press's `mousedown` was cancelled, which it reaches after its `pointerdown`.
+pub(super) fn cancel_press() {
+    CANCELLED.set(true);
 }
 
 /// Prevents a bubbled click whose Blitz default would only clear focus, so

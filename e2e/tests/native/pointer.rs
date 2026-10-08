@@ -304,6 +304,34 @@ fn a_click_inside_a_nested_provider_is_no_double() {
     assert_eq!(page.text("#doubles"), "0 1 0", "{}", page.tree());
 }
 
+/// A press whose `mousedown` is cancelled, on content nothing holds focus for, still
+/// double-clicks (todo 2267).
+#[test]
+fn a_double_click_on_a_box_that_cancels_its_mousedown_fires() {
+    let mut page = mount(doubles);
+    page.click("#box");
+    page.click("#box");
+    page.settle();
+    assert_eq!(page.text("#doubles"), "1 0 0", "{}", page.tree());
+}
+
+/// Each target of a double click fires its own `dblclick` in a nested provider (todo 2267).
+#[test]
+fn a_double_click_in_a_nested_provider_fires_on_every_target() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { {doubles()} }
+        }
+    }
+    let mut page = mount(app);
+    for id in ["#box", "#field", "#handle"] {
+        page.click(id);
+        page.click(id);
+        page.settle();
+    }
+    assert_eq!(page.text("#doubles"), "1 1 1", "{}", page.tree());
+}
+
 /// A drag released off the window stays held until a move comes with no button (todo 2244).
 #[test]
 fn a_move_with_no_button_held_ends_a_drag() {

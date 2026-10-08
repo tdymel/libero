@@ -56,6 +56,7 @@ pub(super) fn mouse_pressed(event: &Event<MouseData>) {
     if event.default_action_enabled() {
         return;
     }
+    super::activate::cancel_press();
     let Some(doc) = doc() else {
         return;
     };
