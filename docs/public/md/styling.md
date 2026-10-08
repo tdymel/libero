@@ -69,6 +69,24 @@ CSS text reaches the stylesheet unescaped, and so do selectors and media
 queries. Never build them from user text: a `}` or `</style>` in it ends the
 rule or the style element.
 
+## Axes
+
+There are no `px` or `my` shorthands. The logical properties set an axis in one
+call and take the same theme words, `"md"`, `"-sm"`. `padding_inline` and
+`margin_inline` are the two sides along the text, `padding_block` and
+`margin_block` the two across it; `inset_inline` / `inset_block` do the same for
+`inset`. Add `_start` or `_end` for one side. They follow `dir`, so
+`margin_inline_start` is the right margin in a right-to-left page.
+`inline_size` and `block_size` are `width` and `height` the same way.
+
+```rust,ignore
+sx()
+    .padding_inline("lg")         // left and right
+    .padding_block("xs")          // top and bottom
+    .margin_inline_start("-sm")   // one side, flips under rtl
+    .inline_size("20rem")         // width
+```
+
 ## States
 
 Fold every variant into one `sx` with `when`, and pick one with the `states`
@@ -173,6 +191,17 @@ sx().when(
     sx().transition("transform 200ms ease")
         .media("(prefers-reduced-motion: reduce)", sx().transition("none")),
 )
+```
+
+`supports` nests styles under `@supports`, for a value an older engine would
+reject. Declare the plain value first, then override it inside, since CSS has no
+two values for one property. The condition is passed through verbatim. Native
+Blitz judges it too: a property its engine knows applies the block, an unknown
+one drops it.
+
+```rust,ignore
+sx().height("70vh")
+    .supports("(height: 1dvh)", sx().height("70dvh"))
 ```
 
 `container_query` asks about a named ancestor instead of the window, for a
@@ -290,6 +319,11 @@ prop keyed by it. The component's page lists its parts in a "Style API" tab.
   styling like `sx` does. Where the instance `sx` sets the same property on the
   same part, `sx` wins.
 - `StaticParts` builds the parts once per process, as `StaticSx` does for `sx`.
+- `parts` takes an array of `(Part, Sx)` pairs as well as the `Parts::new()`
+  chain: the array reads better for two or three parts.
+- A part takes `Sx`, not a class name. To style one with a class of your own
+  (Tailwind, a stylesheet), select its `data-slot` in unlayered CSS, which beats
+  every Libero layer: `.my-alert [data-slot='title'] { font-weight: 700 }`.
 - Parts a component renders in a portal (a `Dialog`, a `Menu`, a `Tooltip`)
   sit outside its root, so `parts` cannot reach them. A field's portaled
   dropdown, such as a `Select`'s list, takes its own `dropdown_parts` prop
@@ -315,9 +349,18 @@ fn Demo() -> Element {
             "Your changes are live."
         }
         Alert { title: "Synced", parts: &QUIET, "Nothing to do." }
+        Alert {
+            title: "Heads up",
+            parts: [(AlertPart::Title, sx().font_weight("700"))],
+            "The array form."
+        }
     }
 }
 ```
+
+The `--lsx-*` custom properties in a component's "CSS variables" table are
+stable API, set with `sx().with("--lsx-alert-padding", "1rem")`. A variable
+that table does not list is internal and may change.
 
 ## Props
 

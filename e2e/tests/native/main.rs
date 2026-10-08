@@ -69,6 +69,7 @@ mod stepper;
 mod sticky;
 mod svg_fit;
 mod switch;
+mod sx_supports;
 mod table;
 mod table_detail;
 mod table_groups;

@@ -190,7 +190,10 @@ pub fn ThemingPage() -> Element {
                     Code { source: "parts" }
                     ", see "
                     SectionLink { to: Route::StylingPage {}, section: "style-api", "Style API in Styling" }
-                    "."
+                    ". The "
+                    Code { source: "--lsx-*" }
+                    " variables in a component's CSS variables table are stable API too; any "
+                    "other is internal."
                 }
             }
 

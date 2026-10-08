@@ -139,7 +139,12 @@ impl Sx {
 
     /// Styles where the browser knows `condition`, e.g. `"(height: 1dvh)"`: declare the plain
     /// value first, then override it here, since CSS has no two values for one property.
-    pub(crate) fn supports(self, condition: impl Into<String>, nested: Sx) -> Self {
+    ///
+    /// ```
+    /// # use libero::sx::sx;
+    /// let tall = sx().height("70vh").supports("(height: 1dvh)", sx().height("70dvh"));
+    /// ```
+    pub fn supports(self, condition: impl Into<String>, nested: Sx) -> Self {
         self.modifier(SxModifierKey::Supports(condition.into()), nested)
     }
 

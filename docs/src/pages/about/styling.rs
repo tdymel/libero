@@ -77,6 +77,15 @@ const SELECTORS: &str = r#"sx()
     .selector(".dark &", sx().background("muted.8"))       // this element, in a context
     .selector("&::before, &::after", sx().display("block"))"#;
 
+const AXES: &str = r#"sx()
+    .padding_inline("lg")         // left and right
+    .padding_block("xs")          // top and bottom
+    .margin_inline_start("-sm")   // one side, flips under rtl
+    .inline_size("20rem")         // width"#;
+
+const SUPPORTS: &str = r#"sx().height("70vh")
+    .supports("(height: 1dvh)", sx().height("70dvh"))"#;
+
 const RESPONSIVE: &str = r#"sx()
     .flex_direction("column")
     .gap("sm")
@@ -147,6 +156,11 @@ rsx! {
         "Your changes are live."
     }
     Alert { title: "Synced", parts: &QUIET, "Nothing to do." }
+    Alert {
+        title: "Heads up",
+        parts: [(AlertPart::Title, sx().font_weight("700"))],
+        "The array form."
+    }
 }"#;
 
 // snippet: let mut open = use_signal(|| false);
@@ -284,6 +298,49 @@ pub fn StylingPage() -> Element {
             }
 
             DocSection {
+                title: "Axes",
+                Text {
+                    "There are no "
+                    Code { source: "px" }
+                    " or "
+                    Code { source: "my" }
+                    " shorthands. The logical properties set an axis in one call and take the "
+                    "same theme words, "
+                    Code { source: "\"md\"" }
+                    ", "
+                    Code { source: "\"-sm\"" }
+                    ". "
+                    Code { source: "padding_inline" }
+                    " and "
+                    Code { source: "margin_inline" }
+                    " are the two sides along the text, "
+                    Code { source: "padding_block" }
+                    " and "
+                    Code { source: "margin_block" }
+                    " the two across it; "
+                    Code { source: "inset_inline" }
+                    " and "
+                    Code { source: "inset_block" }
+                    " do the same for "
+                    Code { source: "inset" }
+                    ". Add "
+                    Code { source: "_start" }
+                    " or "
+                    Code { source: "_end" }
+                    " for one side. They follow "
+                    Code { source: "dir" }
+                    ", so "
+                    Code { source: "margin_inline_start" }
+                    " is the right margin in a right-to-left page. "
+                    Code { source: "inline_size" }
+                    " and "
+                    Code { source: "block_size" }
+                    " are width and height the same way."
+                }
+                CodeBlock { source: AXES, language: "rust" }
+            }
+
+            DocSection {
                 title: "States",
                 Text {
                     "Fold every variant into one "
@@ -380,6 +437,16 @@ pub fn StylingPage() -> Element {
                 CodeBlock { source: MEDIA, language: "rust" }
                 CodeBlock { source: MEDIA_NESTING, language: "rust" }
                 Text {
+                    Code { source: "supports" }
+                    " nests styles under "
+                    Code { source: "@supports" }
+                    ", for a value an older engine would reject. Declare the plain value first, "
+                    "then override it inside, since CSS has no two values for one property. The "
+                    "condition is passed through verbatim. Native Blitz judges it too: a "
+                    "property its engine knows applies the block, an unknown one drops it."
+                }
+                CodeBlock { source: SUPPORTS, language: "rust" }
+                Text {
                     Code { source: "container_query" }
                     " asks about a named ancestor instead of the window, for a component in "
                     "a sidebar, a grid cell or a card. A container no longer takes its width "
@@ -474,6 +541,19 @@ pub fn StylingPage() -> Element {
                     Code { source: "StaticSx" }
                     " does."
                 }
+                Text {
+                    Code { source: "parts" }
+                    " also takes an array of "
+                    Code { source: "(Part, Sx)" }
+                    " pairs, which reads better for two or three parts. A part takes "
+                    Code { source: "Sx" }
+                    ", not a class name. To style one with a class of your own (Tailwind, a "
+                    "stylesheet), select its "
+                    Code { source: "data-slot" }
+                    " in unlayered CSS, which beats every Libero layer: "
+                    Code { source: ".my-alert [data-slot='title'] {{ font-weight: 700 }}" }
+                    "."
+                }
                 CodeBlock { source: PARTS, language: "rust" }
                 Text {
                     "Parts a component renders in a portal (a "
@@ -489,6 +569,14 @@ pub fn StylingPage() -> Element {
                     "'s list, takes its own "
                     Code { source: "dropdown_parts" }
                     " prop instead."
+                }
+                Text {
+                    "The "
+                    Code { source: "--lsx-*" }
+                    " custom properties in a component's CSS variables table are stable API, set "
+                    "with "
+                    Code { source: "sx().with(\"--lsx-alert-padding\", \"1rem\")" }
+                    ". A variable that table does not list is internal and may change."
                 }
             }
         }

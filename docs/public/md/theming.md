@@ -74,7 +74,9 @@ Two structs serve every component: `focus_ring` is the one focus indicator,
 and `z_index` orders the headers, windows, modals, popovers and toasts.
 
 The theme sets props, not a component's inner parts. To restyle a part, pass
-`parts`, see [Style API in Styling](styling.md#style-api).
+`parts`, see [Style API in Styling](styling.md#style-api). The `--lsx-*`
+variables in a component's "CSS variables" table are stable API too; any other
+is internal.
 
 ## Type scale and glass
 
