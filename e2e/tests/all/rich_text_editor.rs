@@ -1839,9 +1839,10 @@ fn a_press_while_syncing_moves_the_model_caret() {
         wait::for_js_true(page, "window.__synced.length > 0", "the synced reply held")
             .await
             .unwrap();
-        // The editor's listener came first, so its report is out once ours runs.
+        // The editor's listener came first, so its report is out once ours sees the press.
+        // A selectionchange from its own caret may still be queued: that one does not count.
         page.evaluate(
-            "document.addEventListener('selectionchange', () => { window.__moved = true; }, { once: true })",
+            "document.addEventListener('selectionchange', () => { if (document.getSelection().anchorNode?.textContent === 'above') window.__moved = true; })",
         )
         .await
         .unwrap();
