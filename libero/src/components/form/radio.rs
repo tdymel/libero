@@ -129,7 +129,8 @@ field_props! {
 }
 
 /// One radio with its label. Prefer [`RadioGroup`](crate::components::RadioGroup),
-/// which owns the shared `name` and the single tab stop.
+/// which owns the shared `name` and the single tab stop. A `Form` does not
+/// enforce `required` on a lone `Radio`; set it on the group.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;

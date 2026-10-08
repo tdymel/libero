@@ -153,7 +153,7 @@ any extra HTML attributes.
 |---|---|---|
 | `validate()` | `bool` | Checks like a submit without calling `onsubmit`. Every status shows, and with an error the summary appears and takes focus. `true` when nothing is an error. |
 | `submit()` | `Result<(), PlatformError>` | Submits as the submit button would. `Unsupported` once the form is gone. |
-| `reset()` | `()` | Puts the value back to `V::default()` and clears touched fields, the submit and the summary. A field with its own `value` and handler keeps what it shows. On the desktop WebView it cannot clear a control that is not bound to the value. Under Blitz it clears unbound text fields, not checkboxes or selects. |
+| `reset()` | `()` | Puts the value back to `V::default()` and clears touched fields, the submit and the summary; a `type="reset"` button clears those too. A field with its own `value` and handler keeps what it shows. On the desktop WebView it cannot clear a control that is not bound to the value. Under Blitz it clears unbound text fields, not checkboxes or selects. |
 | `is_valid()` | `bool` | Whether nothing is an error, shown or not. It follows changes, so it can drive other UI. |
 | `clear_summary()` | `()` | Hides the summary and resets nothing. |
 

@@ -101,6 +101,8 @@ fn a_shift_tab_under_a_published_banner_scrolls_clear_of_it() {
     page.shift_tab();
     page.settle();
     assert!(page.is_focused(&under), "{}", page.focus_owner());
+    // The scroll lands first, the sticky move after it: wait for the banner to stick again.
+    page.wait_for(|page| top(page, "#banner") == 0.0);
     assert!(
         top(&page, &under) >= bottom(&page, "#banner") - 0.5,
         "{under} at {} under the banner's bottom {}",
@@ -182,7 +184,6 @@ fn scrollers(publish_height: bool) -> Element {
 }
 
 const PADDING: &str = "--lsx-scroll-padding-top";
-
 /// A ScrollArea's focus scroll, from a line at its top edge: Shift+Tab onto it.
 fn area_scroll_after_shift_tab(app: fn() -> Element) -> f64 {
     let mut page = mount(app);

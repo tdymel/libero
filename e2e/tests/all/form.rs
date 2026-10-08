@@ -284,7 +284,6 @@ fn a_reset_drops_a_refused_date() {
                  return input.value === '' \
                    && !ids.some(id => document.getElementById(id)?.textContent.includes('Not a valid date')); }})()"
             ),
-            // A native reset keeps the touched flag, so the field's own rule may show.
             "the reset to clear the text and the refusal",
         )
         .await;
@@ -303,6 +302,41 @@ fn a_reset_drops_a_refused_date() {
             panic!("{error}: [value, descriptions] {state}");
         }
         fixture.console.assert_clean("a reset date field").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2328: a native reset takes the form back to pristine, as `FormHandle::reset`.
+#[test]
+fn a_native_reset_clears_the_summary_and_the_shown_errors() {
+    block_on(async {
+        let fixture = Fixture::open("/form/targets", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate("document.querySelector('button[type=submit]').click()")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "!!document.querySelector('[data-slot=summary]') \
+             && !!document.querySelector('[aria-invalid=true]')",
+            "a blocked submit to show its summary and errors",
+        )
+        .await
+        .unwrap();
+        page.evaluate("document.querySelector('button[type=reset]').click()")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "!document.querySelector('[data-slot=summary]') \
+             && !document.querySelector('[aria-invalid=true]')",
+            "the reset to clear the summary and the errors",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a native form reset").unwrap();
         fixture.close().await.unwrap();
     });
 }

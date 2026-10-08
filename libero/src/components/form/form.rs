@@ -283,9 +283,15 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         .element(&form_element)
         .attr("novalidate", true)
         .event("onsubmit", move |event: FormEvent| submit.call(event))
-        // A native reset button resets no state of ours, but ends a reveal
-        // and restarts a textarea's count.
-        .event("onreset", move |_: FormEvent| scope.count_reset())
+        // A native reset button also takes the form back to pristine: nothing
+        // touched, no summary, as `FormHandle::reset`.
+        .event("onreset", {
+            let summary = summary.clone();
+            move |_: FormEvent| {
+                summary.set(Vec::new());
+                scope.reset();
+            }
+        })
         .event("onclick", submit_click)
         .event("onkeydown", implicit_submit)
         .render(HtmlTag::Form, props.attributes, children)

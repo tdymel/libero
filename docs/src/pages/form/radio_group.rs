@@ -153,7 +153,7 @@ pub fn RadioGroupPage() -> Element {
                     prop("description", "Caption").doc("A second line under the label."),
                     prop("helper", "Caption").doc("A caption under the radio."),
                     status_prop(),
-                    required_prop().also("In a group, set it on `RadioGroup`."),
+                    required_prop().also("In a group, set it on `RadioGroup`: a lone `Radio` cannot see its siblings, so a `Form` does not block a submit on it."),
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Cannot be picked, dimmed and out of the tab order."),
