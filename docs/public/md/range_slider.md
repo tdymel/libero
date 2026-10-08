@@ -145,7 +145,7 @@ form.getAll("price") // ["20", "80"]
 | `aria_label_to` | `String` | `slider.maximum` | Names the upper thumb. Unset, the localization's `slider.maximum`, "Maximum" in English. |
 | `name` | `FieldName<(V, V)>` | - | Posts the pair as two hidden inputs of that name, in track order. A discrete slider, whose type lists `options()`, posts the options' indices, not the options. A path such as `Settings::FIELDS.price()` also binds the pair to the surrounding `Form`'s value when there is no `oninput`. |
 | `validate` | `Validators<(V, V)>` | - | Rules over the pair, shown once the slider loses focus or its form is submitted. |
-| `preview_on_hover` | `bool` | `false` | Shows a bubble over the value a hovering mouse or pen points at, before a press moves the nearer thumb there. Escape hides it until the pointer leaves the slider. Touch has no hover, so it never shows there. |
+| `preview_on_hover` | `bool` | `false` | Shows a bubble over the value a hovering mouse or pen points at, before a press moves the nearer thumb there. Escape hides it until the pointer leaves the slider. Touch has no hover, so it never shows there. The bubble follows the pointer and goes when it leaves the slider, so it is not hoverable (WCAG 1.4.13). |
 | `label` | `Caption` | - | The caption above the track. Both thumbs' names start with it. |
 | `description` | `Caption` | - | Between the label and the track. What the range means. |
 | `helper` | `Caption` | - | Under the track, below the mark captions. |

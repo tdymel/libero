@@ -2,8 +2,8 @@
 const NO_SHADOW: &str = "0 0 #0000";
 
 /// The one hover tint of every list-like row (menu items, options, tree and nav rows).
-/// `muted.1` was near invisible on white, about 1.1:1 (todo 2633).
-pub(crate) const ROW_HOVER_TINT: &str = "muted.2";
+/// A muted fill step the theme picks to show 1.15:1 on the card: `muted.2` was 1.09:1 on a dark one (todo 2683).
+pub(crate) const ROW_HOVER_TINT: &str = "var(--lsx-row-hover)";
 
 /// The `:focus-visible` ring: a dark stripe between two light halo bands, so it reads on any surface.
 /// The stripe is also a shadow: Blitz paints the outline under the shadows (todo 478).
@@ -186,8 +186,13 @@ pub(crate) fn ring_overlay_sx() -> crate::sx::Sx {
 
 #[cfg(test)]
 mod tests {
-    use super::{focus_ring_sx, inset_focus_ring_sx, shadow_sx};
-    use crate::css::Stylesheet;
+    use super::{ROW_HOVER_TINT, focus_ring_sx, inset_focus_ring_sx, shadow_sx};
+    use crate::{css::Stylesheet, tokens::NamedColorCss};
+
+    #[test]
+    fn the_row_hover_tint_names_the_var_the_stylesheet_declares() {
+        assert_eq!(ROW_HOVER_TINT, NamedColorCss::ROW_HOVER.value());
+    }
 
     #[test]
     fn the_ring_draws_both_tones_and_takes_every_number_from_the_theme() {

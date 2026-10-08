@@ -2,7 +2,7 @@
 //! Thumb and leaving drags are in `pointer.rs`; track drag and End are shared scenarios.
 
 use dioxus::prelude::*;
-use e2e::native::{Page, mount};
+use e2e::native::{Key, Page, mount};
 use libero::{
     components::{RangeSlider, Slider, SliderChangeEvent},
     sx::sx,
@@ -173,6 +173,43 @@ fn a_drag_over_text_selects_none_of_it() {
         }
         page.release_at(ex, ey);
         assert_eq!(rows(&page), 0, "a drag towards {text} selected it");
+    }
+}
+
+fn preview() -> Element {
+    let mut value = use_signal(|| 0.0);
+    rsx! {
+        Slider {
+            aria_label: "Volume",
+            value: Some(value()),
+            preview_on_hover: true,
+            oninput: move |event: SliderChangeEvent<f64>| value.set(event.value()),
+            sx: sx().width("400px"),
+        }
+    }
+}
+
+/// Todo 2662: Escape hides the hover preview with nothing focused and with the thumb focused.
+#[test]
+fn escape_hides_the_hover_preview() {
+    for focus_thumb in [false, true] {
+        let mut page = mount(preview);
+        if focus_thumb {
+            page.focus(THUMB);
+        }
+        let (tx, ty, tw, th) = page.rect(TRACK);
+        page.hover_at((tx + tw * 0.75) as f32, (ty + th / 2.0) as f32);
+        assert!(
+            page.wait_for(|page| page.exists(BUBBLE)),
+            "hovering opened no preview (thumb focused: {focus_thumb})\n{}",
+            page.tree()
+        );
+        page.press(Key::Escape);
+        assert!(
+            !page.exists(BUBBLE),
+            "Escape left the preview (thumb focused: {focus_thumb})\n{}",
+            page.tree()
+        );
     }
 }
 

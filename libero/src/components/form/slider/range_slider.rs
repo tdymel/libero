@@ -67,7 +67,8 @@ field_props! {
         #[props(default, into)]
         validate: crate::components::form::Validators<(V, V)>,
         /// A bubble over the value a hovering mouse or pen points at, before a press
-        /// moves the nearer thumb there. Escape hides it until the pointer leaves.
+        /// moves the nearer thumb there. Escape hides it until the pointer leaves. It follows
+        /// the pointer and goes with it, so it is not hoverable (WCAG 1.4.13).
         #[props(default)]
         preview_on_hover: bool,
     }

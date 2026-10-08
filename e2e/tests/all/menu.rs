@@ -807,15 +807,15 @@ async fn a_tall_menu_fits_the_room<D: Driver>(d: &mut D, _route: &str) -> Result
     .await
 }
 
-/// Todo 2633: a hovered item takes the shared row tint, `muted.2`, in both schemes;
-/// `muted.1` was near invisible on white.
+/// Todo 2633: a hovered item takes the shared row tint in both schemes; `muted.1` was near
+/// invisible on white. Todo 2683: the theme picks the step, `muted.3` on the dark card.
 #[test]
 fn a_hovered_item_takes_the_row_tint_in_both_schemes() {
     use e2e::Scheme;
     const ITEM: &str = "[role=menu] [data-menu-index=\"1\"]";
     let tint = format!(
         "(() => {{ const p = document.createElement('div'); \
-         p.style.background = 'var(--lsx-muted-2)'; \
+         p.style.background = 'var(--lsx-row-hover)'; \
          document.querySelector({MENU:?}).append(p); \
          const fill = getComputedStyle(p).backgroundColor; p.remove(); return fill; }})()"
     );

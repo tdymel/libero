@@ -4,6 +4,8 @@ use crate::{
     tokens::{Ends, HOVER_TINT_SHADE, SELECTED_TINT_SHADE, ShadeRamp, TEXT_CONTRAST},
 };
 
+const ROW_HOVER_CONTRAST: f32 = 1.15;
+
 const SHADES: [ColorShade; 9] = [
     ColorShade::S1,
     ColorShade::S2,
@@ -31,7 +33,35 @@ pub(super) fn push_palette_declarations(
     ));
     for (color, base) in bases {
         push_color_declarations(declarations, color, base, ends, cards);
+        if color == Color::Muted {
+            push_row_hover_declaration(declarations, base, ends, cards);
+        }
     }
+}
+
+/// The muted fill step a hovered row takes: the first that shows 1.15:1 on every card (todo 2683).
+fn push_row_hover_declaration(
+    declarations: &mut Vec<CssDeclaration>,
+    base: HexColor,
+    ends: Ends,
+    cards: &[HexColor],
+) {
+    let ramp = Color::Muted.shade_ramp();
+    let fill_base = base.fill_base(ramp, ends);
+    let shade = SHADES
+        .into_iter()
+        .find(|shade| {
+            let step = fill_base.shade(*shade, ramp, ends);
+            cards
+                .iter()
+                .chain([&ends.surface])
+                .all(|card| step.contrast_ratio(*card) >= ROW_HOVER_CONTRAST)
+        })
+        .unwrap_or(ColorShade::S9);
+    declarations.push(CssDeclaration::new(
+        NamedColorCss::ROW_HOVER.name(),
+        ColorValue::Fill(Color::Muted, shade).value(),
+    ));
 }
 
 fn push_named_color_declarations(declarations: &mut Vec<CssDeclaration>, ends: Ends) {

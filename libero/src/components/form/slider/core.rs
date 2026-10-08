@@ -1,3 +1,5 @@
+use std::{future::Future, pin::Pin};
+
 use dioxus::prelude::*;
 
 use super::slider_value::{SliderChangeEvent, SliderMark, SliderSegment};
@@ -732,6 +734,8 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     let mut hover_x = use_hook(|| CopyValue::new(None::<f64>));
     let mut hover_busy = use_hook(|| CopyValue::new(false));
     let mut hover_dirty = use_hook(|| CopyValue::new(false));
+    let mut hover_measuring =
+        use_hook(|| CopyValue::new(None::<Pin<Box<dyn Future<Output = Option<ThumbTrack>>>>>));
 
     let oninput = props.oninput;
     let emit = use_callback(move |event: SliderChangeEvent<SliderCoreValue>| {
@@ -959,34 +963,44 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     // Requests coalesce into one update per task: a WebView sends each move over IPC.
     let refresh_preview = use_callback(move |()| {
         hover_dirty.set(true);
+        // The reads start here: Blitz fails one made inside a task (the document is borrowed).
+        if hover_track.peek().is_none() && hover_measuring.peek().is_none() {
+            let (track_size, track_offset) =
+                (track_element.dimensions(), track_element.client_offset());
+            let (thumb_size, thumb_offset) = (
+                thumb_elements[0].dimensions(),
+                thumb_elements[0].client_offset(),
+            );
+            let rtl = root_element.is_rtl();
+            hover_measuring.set(Some(Box::pin(async move {
+                let (Ok(track), Ok((left, _)), Ok(thumb), Ok((_, top))) = (
+                    track_size.await,
+                    track_offset.await,
+                    thumb_size.await,
+                    thumb_offset.await,
+                ) else {
+                    return None;
+                };
+                Some(ThumbTrack {
+                    left,
+                    travel: track.width - thumb.width,
+                    top,
+                    thumb,
+                    rtl,
+                    stale: false,
+                })
+            })));
+        }
         if std::mem::replace(&mut *hover_busy.write(), true) {
             return;
         }
         spawn(async move {
             while std::mem::replace(&mut *hover_dirty.write(), false) {
-                if hover_track.peek().is_none() {
-                    let (track_size, track_offset) =
-                        (track_element.dimensions(), track_element.client_offset());
-                    let (thumb_size, thumb_offset) = (
-                        thumb_elements[0].dimensions(),
-                        thumb_elements[0].client_offset(),
-                    );
-                    let rtl = root_element.is_rtl();
-                    if let (Ok(track), Ok((left, _)), Ok(thumb), Ok((_, top))) = (
-                        track_size.await,
-                        track_offset.await,
-                        thumb_size.await,
-                        thumb_offset.await,
-                    ) {
-                        hover_track.set(Some(ThumbTrack {
-                            left,
-                            travel: track.width - thumb.width,
-                            top,
-                            thumb,
-                            rtl,
-                            stale: false,
-                        }));
-                    }
+                let measuring = hover_measuring.write().take();
+                if let Some(measuring) = measuring
+                    && hover_track.peek().is_none()
+                {
+                    hover_track.set(measuring.await);
                 }
                 next_task().await;
                 let geometry = hover_track.peek().filter(|_| !*hover_muted.peek());
@@ -1033,6 +1047,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     // A resize or fullscreen moves the track: measured again for the pointer still on it.
     let onresize = move |_: Event<ResizeData>| {
         hover_track.set(None);
+        hover_measuring.set(None);
         if hover_x.peek().is_some() {
             refresh_preview.call(());
         }

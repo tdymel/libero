@@ -257,6 +257,56 @@ fn text_roles_falling_short(theme: &Theme) -> Vec<&'static str> {
         .collect()
 }
 
+/// Todo 2683: every shipped theme's row hover tint shows at 1.15:1 on its own card.
+#[test]
+fn every_shipped_theme_shows_its_row_hover_tint_on_the_card() {
+    for set in ThemeSet::CATALOGUE {
+        for theme in [Some(set.light_theme()), set.dark_theme()]
+            .into_iter()
+            .flatten()
+        {
+            let css = Stylesheet::from(theme).as_str().to_string();
+            let tint = root_var(&css, NamedColorCss::ROW_HOVER.name());
+            let fill = tint
+                .strip_prefix("var(")
+                .and_then(|name| name.strip_suffix(')'))
+                .map(|name| root_var(&css, name))
+                .and_then(|hex| HexColor::parse(&hex))
+                .expect("a muted fill step");
+            let card = HexColor::parse(theme.paper.background).expect("a hex");
+            assert!(
+                fill.contrast_ratio(card) >= 1.15,
+                "{} {}: {tint} is {:.3}:1 on the card",
+                set.name(),
+                theme.surface.color_scheme(),
+                fill.contrast_ratio(card)
+            );
+        }
+    }
+}
+
+/// Todo 2683: `muted.2` was 1.09:1 on the dark card; the row hover tint is the first muted
+/// fill step that shows 1.15:1 there (`muted.3`) and stays `muted.2` on white.
+#[test]
+fn the_row_hover_tint_shows_on_the_card_of_each_scheme() {
+    for (theme, card, step) in [
+        (Theme::DEFAULT, HexColor::new(0xFF_FF_FF), 2),
+        (Theme::DARK, HexColor::new(0x25_26_2B), 3),
+    ] {
+        let css = Stylesheet::from(&theme).as_str().to_string();
+        let tint = root_var(&css, NamedColorCss::ROW_HOVER.name());
+        assert_eq!(tint, format!("var(--lsx-muted-fill-{step})"));
+
+        let fill =
+            HexColor::parse(&root_var(&css, &format!("--lsx-muted-fill-{step}"))).expect("a hex");
+        assert!(
+            fill.contrast_ratio(card) >= 1.15,
+            "{fill} on {card}: {:.3}:1",
+            fill.contrast_ratio(card)
+        );
+    }
+}
+
 /// Todo 240: dimmed text is the muted text role, `#70777E` at 4.54:1: quiet but passing.
 #[test]
 fn dimmed_text_is_the_grey_ramps_text_role() {

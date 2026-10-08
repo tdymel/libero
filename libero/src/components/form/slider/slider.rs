@@ -61,7 +61,8 @@ field_props! {
         #[props(default)]
         track: SliderTrack,
         /// A bubble over the value a hovering mouse or pen points at, before a press
-        /// picks it. Escape hides it until the pointer leaves.
+        /// picks it. Escape hides it until the pointer leaves. It follows the pointer and
+        /// goes with it, so it is not hoverable (WCAG 1.4.13).
         #[props(default)]
         preview_on_hover: bool,
     }

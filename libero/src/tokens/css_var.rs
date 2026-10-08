@@ -212,6 +212,8 @@ impl NamedColorCss {
     pub const FOCUS_CONTRAST: NamedColorCss = NamedColorCss::new("--lsx-focus-contrast");
     /// Quieter text: a placeholder, hint or unit. `"text-dimmed"` in an `Sx`; icons use `muted.6`.
     pub const TEXT_DIMMED: NamedColorCss = NamedColorCss::new("--lsx-text-dimmed");
+    /// The one hover tint of list-like rows: the muted fill step that shows on the card.
+    pub(crate) const ROW_HOVER: NamedColorCss = NamedColorCss::new("--lsx-row-hover");
 
     pub const fn new(name: &'static str) -> Self {
         Self {
