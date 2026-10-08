@@ -9,6 +9,7 @@ use libero::components::FieldPart;
 use libero::{
     components::{Autocomplete, AutocompleteFilterArgs, AutocompleteOptionArgs, Code, Flex, Text},
     sx::sx,
+    use_theme,
 };
 
 struct CityCopy;
@@ -83,6 +84,7 @@ fn starts_with(f: AutocompleteFilterArgs<String>) -> bool {
 pub fn AutocompletePage() -> Element {
     let mut value = use_signal(String::new);
     let mut picked = use_signal(|| None::<&'static str>);
+    let theme = use_theme();
 
     rsx! {
         DocPage {
@@ -91,9 +93,11 @@ pub fn AutocompletePage() -> Element {
             markdown: "/md/autocomplete.md",
             properties: vec![
                 props("Autocomplete", vec![
-                    prop("size", "Size").default("md").doc("Height, padding and font size of the field and its rows."),
+                    prop("size", "Size")
+                        .default(theme.autocomplete.size.as_str())
+                        .doc("Height, padding and font size of the field and its rows."),
                     prop("radius", "Size")
-                        .default("sm")
+                        .default(theme.autocomplete.radius.as_str())
                         .doc("Corner radius of the frame and the list."),
                     prop("value", "String")
                         .default("\"\"")
@@ -221,8 +225,8 @@ pub fn AutocompletePage() -> Element {
                     "placeholder: \"Start typing\"".to_string(),
                 ],
                 controls: [vec![
-                    Control::sizes("size").default("md"),
-                    Control::sizes("radius").default("sm"),
+                    Control::sizes("size").default(theme.autocomplete.size.as_str()),
+                    Control::sizes("radius").default(theme.autocomplete.radius.as_str()),
                 ], field_controls::<CityCopy>(), vec![
                     // A row drawn with `option`, and the `onpick` that reaches
                     // the record behind the text.

@@ -5,6 +5,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::{Code, OptionList, Options, RadioGroup, Text};
 use libero::components::{RadioGroupPart, RadioPart};
+use libero::use_theme;
 
 struct PlanCopy;
 
@@ -77,6 +78,7 @@ fn is_on(values: &DemoValues, name: &str) -> bool {
 #[component]
 pub fn RadioGroupPage() -> Element {
     let mut plan = use_signal(|| Some(Plan::Pro));
+    let theme = use_theme();
 
     rsx! {
         DocPage {
@@ -102,7 +104,7 @@ pub fn RadioGroupPage() -> Element {
                     prop("option_description", "Callback<T, String>")
                         .doc("A line under each option's label. An empty string renders none."),
                     prop("variant", "ChoiceVariant")
-                        .default("plain")
+                        .default(theme.radio.variant.as_str())
                         .doc("`card` draws every option as a bordered surface you can click anywhere. A row of cards stretches them to one height."),
                     prop("orientation", "Orientation")
                         .default("vertical")
@@ -110,7 +112,9 @@ pub fn RadioGroupPage() -> Element {
                     prop("color", "ThemeAwareValue")
                         .default("primary")
                         .doc("Ring and dot color of the selected option."),
-                    prop("size", "Size").default("md").doc("Size of the circles and their labels."),
+                    prop("size", "Size")
+                        .default(theme.radio.size.as_str())
+                        .doc("Size of the circles and their labels."),
                     prop("label", "Caption")
                         .doc("The question, and the group's name."),
                     prop("description", "Caption")
@@ -148,7 +152,9 @@ pub fn RadioGroupPage() -> Element {
                     prop("color", "ThemeAwareValue")
                         .default("primary")
                         .doc("Ring and dot color when selected."),
-                    prop("size", "Size").default("md").doc("Size of the circle and its label."),
+                    prop("size", "Size")
+                        .default(theme.radio.size.as_str())
+                        .doc("Size of the circle and its label."),
                     prop("label", "Caption").doc("The text beside the circle, and the radio's name."),
                     prop("description", "Caption").doc("A second line under the label."),
                     prop("helper", "Caption").doc("A caption under the radio."),
@@ -163,7 +169,7 @@ pub fn RadioGroupPage() -> Element {
                         .default("false")
                         .doc("Refuses the pick. ARIA has no read-only radio, so only `RadioGroup` can announce it."),
                     prop("variant", "ChoiceVariant")
-                        .default("plain")
+                        .default(theme.radio.variant.as_str())
                         .doc("`card` draws the radio as a bordered surface you can click anywhere."),
                 ])
                 .parts("RadioPart", vec![
@@ -210,7 +216,7 @@ pub fn RadioGroupPage() -> Element {
                     // card brings the per-option descriptions with it.
                     Control::toggle("variant", ["plain", "card"])
                         .labels(["Plain", "Card"])
-                        .default("plain")
+                        .default(theme.radio.variant.as_str())
                         .code(|_, values| match values.str("variant").as_str() {
                             "card" => vec![
                                 r#"variant: "card""#.to_string(),
@@ -220,7 +226,7 @@ pub fn RadioGroupPage() -> Element {
                         }),
                     Control::color("color"),
                     Control::sizes("size")
-                        .default("md"),
+                        .default(theme.radio.size.as_str()),
                     Control::toggle("orientation", ["horizontal", "vertical"])
                         .labels(["Horizontal", "Vertical"])
                         .default("vertical")

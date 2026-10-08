@@ -13,6 +13,7 @@ use libero::{
     hooks::use_localization,
     localization::{Localization, fill},
     sx::sx,
+    use_theme,
 };
 
 /// A custom tag draws the whole chip, so it owns its x and that x's tab order.
@@ -129,6 +130,7 @@ pub fn TagsFieldPage() -> Element {
     let mut value = use_signal(Vec::<String>::new);
     let mut refused = use_signal(|| None::<String>);
     let words = use_localization();
+    let theme = use_theme();
 
     rsx! {
         DocPage {
@@ -137,9 +139,11 @@ pub fn TagsFieldPage() -> Element {
             markdown: "/md/tags_field.md",
             properties: vec![
                 props("TagsField", vec![
-                    prop("size", "Size").default("md").doc("Height, padding, font size and the chips' size. A chip is one step smaller than the field."),
+                    prop("size", "Size")
+                        .default(theme.tags_field.size.as_str())
+                        .doc("Height, padding, font size and the chips' size. A chip is one step smaller than the field."),
                     prop("radius", "Size")
-                        .default("sm")
+                        .default(theme.tags_field.radius.as_str())
                         .doc("Corner radius of the frame and the list, independent of `size`."),
                     prop("value", "Vec<String>")
                         .default("[]")
@@ -258,8 +262,8 @@ pub fn TagsFieldPage() -> Element {
                             false => vec!["onchange: move |next| topics.set(next)".to_string()],
                         }
                     }),
-                    Control::sizes("size").default("md"),
-                    Control::sizes("radius").default("sm"),
+                    Control::sizes("size").default(theme.tags_field.size.as_str()),
+                    Control::sizes("radius").default(theme.tags_field.radius.as_str()),
                     Control::toggle("status", ["valid", "warning", "error"])
                         .labels(["Valid", "Warning", "Error"])
                         .default("valid")

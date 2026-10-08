@@ -142,6 +142,29 @@ pub(crate) fn tab_stops(root: &ElementHandle, items: &[Box<dyn ElementApi>]) -> 
         .collect()
 }
 
+/// `root`'s first Tab stop that takes focus (the last, `last`); whether one did.
+pub(crate) fn focus_edge(root: &ElementHandle, last: bool) -> bool {
+    let Ok(items) = root.query_selector_all(FOCUSABLE_SELECTOR) else {
+        return false;
+    };
+    let stops = tab_stops(root, &items);
+    match last {
+        true => focus_first_stop(&items, &stops, (0..items.len()).rev()),
+        false => focus_first_stop(&items, &stops, 0..items.len()),
+    }
+}
+
+/// Focuses the first stop of `order` that takes it: a `display: none` one ignores `focus()`.
+pub(crate) fn focus_first_stop(
+    items: &[Box<dyn ElementApi>],
+    stops: &[bool],
+    order: impl Iterator<Item = usize>,
+) -> bool {
+    order
+        .filter(|at| stops.get(*at).copied().unwrap_or(true))
+        .any(|at| items[at].focus().is_ok() && items[at].is_focused())
+}
+
 /// Focuses the stop after `index` (from `None`: the first, or last backwards).
 /// Skips non-stops and a `display: none` match, which ignores `focus()`.
 fn focus_next(

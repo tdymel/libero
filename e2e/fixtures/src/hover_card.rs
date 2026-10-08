@@ -19,7 +19,34 @@ pub const ROUTES: Routes = &[
     ("/hover-card-select", || rsx! { SelectInCardPage {} }),
     ("/hover-card-pair", || rsx! { PairTriggerPage {} }),
     ("/hover-card-scroll", || rsx! { ScrollingTextPage {} }),
+    ("/hover-card-hidden", || rsx! { HiddenLastControlPage {} }),
 ];
+
+/// A `display: none` button last in the trigger and last in the card, both ignoring `focus()`
+/// (todo 2688).
+#[component]
+fn HiddenLastControlPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button { id: "before", "Before" }
+            HoverCard {
+                aria_label: "Ada Lovelace",
+                content: rsx! {
+                    Flex { direction: "column", gap: "xs",
+                        Button { id: "card-first", variant: "outlined", "Profile" }
+                        Button { id: "card-last", variant: "outlined", "Follow" }
+                        button { id: "card-hidden", style: "display: none", "Hidden" }
+                    }
+                },
+                Flex { gap: "xs",
+                    Button { id: "trigger", variant: "outlined", "Ada Lovelace" }
+                    button { id: "trigger-hidden", style: "display: none", "Hidden" }
+                }
+            }
+            Button { id: "after", "After" }
+        }
+    }
+}
 
 /// A card of text taller than the room beside the trigger (todo 2445).
 #[component]

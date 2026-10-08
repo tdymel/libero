@@ -5,6 +5,7 @@ use dioxus::{dioxus_core::AttributeValue, prelude::*};
 use super::hover_intent::{TRIGGER_WRAPPER_SX, use_hover_intent};
 use crate::{
     components::{
+        accessibility::{focus_edge, focus_first_stop, tab_stops},
         common::{FOCUSABLE_SELECTOR, HtmlTag, Input, States, base_props, inset_focus_ring_sx},
         layout::{paper_sx, scroll_on_key, use_box},
     },
@@ -372,27 +373,20 @@ fn trigger_tab(event: &KeyboardEvent, open: bool, anchor: ElementHandle, floatin
     if !open || event.key() != Key::Tab || event.modifiers().shift() {
         return;
     }
-    if !last_focusable(anchor).is_some_and(|last| last.is_focused()) {
+    let Ok(items) = anchor.query_selector_all(FOCUSABLE_SELECTOR) else {
         return;
-    }
-    let first = floating
-        .query_selector_all(FOCUSABLE_SELECTOR)
-        .ok()
-        .and_then(|items| items.into_iter().next());
-    if let Some(first) = first {
+    };
+    let Some(at) = items.iter().position(|item| item.is_focused()) else {
+        return;
+    };
+    // A later control that is `display: none` ignores `focus()`: the card follows the last that takes it.
+    let moved = focus_first_stop(&items, &tab_stops(&anchor, &items), at + 1..items.len())
+        || focus_edge(&floating, false);
+    if moved {
         event.prevent_default();
         // An enclosing `Modal`'s `FocusTrap` would take focus back out.
         event.stop_propagation();
-        let _ = first.focus();
     }
-}
-
-/// The trigger's last focusable: where the card sits in the Tab order.
-fn last_focusable(anchor: ElementHandle) -> Option<Box<dyn ElementApi>> {
-    anchor
-        .query_selector_all(FOCUSABLE_SELECTOR)
-        .ok()
-        .and_then(|items| items.into_iter().last())
 }
 
 /// Tab past either end goes back via the trigger's last focusable, so the browser's
@@ -405,18 +399,18 @@ fn card_tab(event: &KeyboardEvent, anchor: ElementHandle, floating: ElementHandl
         return;
     };
     let backwards = event.modifiers().shift();
-    let edge = match backwards {
-        true => items.first(),
-        false => items.last(),
-    };
-    if !edge.is_some_and(|item| item.is_focused()) {
-        return;
-    }
-    let Some(trigger) = last_focusable(anchor) else {
+    let Some(at) = items.iter().position(|item| item.is_focused()) else {
         return;
     };
-    if backwards {
+    let beyond: Vec<usize> = match backwards {
+        true => (0..at).rev().collect(),
+        false => (at + 1..items.len()).collect(),
+    };
+    // A control that is `display: none` ignores `focus()`, so the edge is the last that takes it.
+    let inside = focus_first_stop(&items, &tab_stops(&floating, &items), beyond.into_iter());
+    let via_trigger = !inside && focus_edge(&anchor, true);
+    // Forward off the trigger, the browser's own Tab moves on.
+    if inside || (via_trigger && backwards) {
         event.prevent_default();
     }
-    let _ = trigger.focus();
 }

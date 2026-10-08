@@ -51,6 +51,18 @@ fn a_focused_video_shows_a_painted_ring() {
         assert!(outline[2].starts_with('-'), "{outline:?}");
         let clipped: f64 = js(page, crate::image_list::ring_clipped("#video-ratio")).await;
         assert!(clipped <= 0.0, "the ring runs {clipped}px past the clip");
+        // Todo 2687: the overlay beside it paints the halo band over the picture too.
+        let halo: String = js(
+            page,
+            "(() => { const s = getComputedStyle(document.activeElement.nextElementSibling); \
+               return s.position === 'absolute' ? s.boxShadow.split(/,(?![^(]*\\))/)[0] : ''; })()",
+        )
+        .await;
+        assert!(halo.contains("inset"), "no halo overlay: {halo}");
+        assert!(
+            !halo.contains(" 0px 0px 0px 0px"),
+            "the halo band is flat: {halo}"
+        );
         fixture.console.assert_clean("a focused video").unwrap();
         fixture.close().await.unwrap();
     });

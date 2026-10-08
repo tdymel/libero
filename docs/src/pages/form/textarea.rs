@@ -5,6 +5,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::TextareaPart;
 use libero::components::{Code, Text, Textarea};
+use libero::use_theme;
 
 struct NotesCopy;
 
@@ -19,6 +20,7 @@ impl FieldCopy for NotesCopy {
 #[component]
 pub fn TextareaPage() -> Element {
     let mut value = use_signal(String::new);
+    let theme = use_theme();
 
     rsx! {
         DocPage {
@@ -27,9 +29,11 @@ pub fn TextareaPage() -> Element {
             markdown: "/md/textarea.md",
             properties: vec![
                 props("Textarea", vec![
-                    prop("size", "Size").default("md").doc("Padding and font size."),
+                    prop("size", "Size")
+                        .default(theme.textarea.size.as_str())
+                        .doc("Padding and font size."),
                     prop("radius", "Size")
-                        .default("sm")
+                        .default(theme.textarea.radius.as_str())
                         .doc("Corner radius, independent of `size`."),
                     prop("rows", "u32")
                         .default("3")
@@ -99,9 +103,9 @@ pub fn TextareaPage() -> Element {
                 ],
                 controls: [vec![
                     Control::sizes("size")
-                        .default("md"),
+                        .default(theme.textarea.size.as_str()),
                     Control::sizes("radius")
-                        .default("sm"),
+                        .default(theme.textarea.radius.as_str()),
                     // A `u32`, so it prints unquoted.
                     Control::slider("rows", ["2", "3", "5", "8"]).default("3").code(
                         |control, values| match values.str("rows") {

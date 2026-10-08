@@ -205,6 +205,50 @@ fn required_props_read_required() {
     assert!(problems.is_empty(), "{}", problems.join("\n"));
 }
 
+/// Todos 2684, 2685, 2686: these pages read size, radius, variant and country defaults from
+/// the theme, in the table and in the demo controls, not as a literal that drifts from it.
+#[test]
+fn form_pages_read_theme_defaults() {
+    const PAGES: [&str; 9] = [
+        "text_field",
+        "textarea",
+        "checkbox",
+        "radio_group",
+        "tags_field",
+        "autocomplete",
+        "native_select",
+        "phone_field",
+        "switch",
+    ];
+    const LITERALS: [&str; 6] = [
+        r#"prop("size","Size").default(""#,
+        r#"prop("radius","Size").default(""#,
+        r#"prop("variant","ChoiceVariant").default(""#,
+        r#"Control::sizes("size").default(""#,
+        r#"Control::sizes("radius").default(""#,
+        r#"Control::toggle("variant",["plain","card"]).labels(["Plain","Card"]).default(""#,
+    ];
+    let mut problems = Vec::new();
+    for page in PAGES {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(format!("src/pages/form/{page}.rs"));
+        let source: String = std::fs::read_to_string(&path)
+            .unwrap()
+            .split_whitespace()
+            .collect();
+        for literal in LITERALS {
+            let mut rest = source.as_str();
+            while let Some(at) = rest.find(literal) {
+                rest = &rest[at + literal.len()..];
+                problems.push(format!("{page}: {literal}{}", &rest[..rest.len().min(12)]));
+            }
+        }
+        if source.contains(r#".default("theme."#) {
+            problems.push(format!("{page}: a default prints theme path text"));
+        }
+    }
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
+
 /// What `field_props!` adds to a struct: `without(readonly)` and `without(radius)` drop one.
 const FIELD_PROPS: [&str; 9] = [
     "label",

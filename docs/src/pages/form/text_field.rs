@@ -5,6 +5,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::FieldPart;
 use libero::components::{Code, Text, TextField};
+use libero::use_theme;
 
 struct UsernameCopy;
 
@@ -23,6 +24,7 @@ fn no_trailing(values: &DemoValues) -> bool {
 #[component]
 pub fn TextFieldPage() -> Element {
     let mut value = use_signal(String::new);
+    let theme = use_theme();
 
     rsx! {
         DocPage {
@@ -31,9 +33,11 @@ pub fn TextFieldPage() -> Element {
             markdown: "/md/text_field.md",
             properties: vec![
                 props("TextField", vec![
-                    prop("size", "Size").default("md").doc("Height, padding and font size."),
+                    prop("size", "Size")
+                        .default(theme.text_field.size.as_str())
+                        .doc("Height, padding and font size."),
                     prop("radius", "Size")
-                        .default("sm")
+                        .default(theme.text_field.radius.as_str())
                         .doc("Corner radius, independent of `size`."),
                     prop("value", "Option<String>")
                         .doc("The text in the field. Leave it out and the input keeps its own text."),
@@ -117,9 +121,9 @@ pub fn TextFieldPage() -> Element {
                 ],
                 controls: [vec![
                     Control::sizes("size")
-                        .default("md"),
+                        .default(theme.text_field.size.as_str()),
                     Control::sizes("radius")
-                        .default("sm"),
+                        .default(theme.text_field.radius.as_str()),
                 ], field_controls::<UsernameCopy>(), vec![
                     Control::switch("placeholder").default("true").code(|_, values| {
                         match values.str("placeholder").as_str() {

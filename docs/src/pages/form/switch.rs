@@ -100,7 +100,7 @@ pub fn SwitchPage() -> Element {
                 controls: [vec![
                     Control::toggle("variant", ["plain", "card"])
                         .labels(["Plain", "Card"])
-                        .default("plain")
+                        .default(theme.switch.variant.as_str())
                         .code(|_, values| match values.str("variant").as_str() {
                             // A card only reads as one with a description under
                             // the label, so the card shows one either way.
@@ -113,9 +113,9 @@ pub fn SwitchPage() -> Element {
                         }),
                     Control::color("color"),
                     Control::sizes("size")
-                        .default("md"),
+                        .default(theme.switch.size.as_str()),
                     Control::sizes("radius")
-                        .default("xl"),
+                        .default(theme.switch.radius.as_str()),
                 ], field_controls::<NotificationsCopy>(), vec![
                     // `checked` + `onchange` as a pair (the library warns on one alone); the
                     // preview writes `onchange` back into this control.

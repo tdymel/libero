@@ -5,6 +5,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::CheckboxPart;
 use libero::components::{Checkbox, Code, Text};
+use libero::use_theme;
 
 struct TermsCopy;
 
@@ -22,6 +23,7 @@ fn describes(values: &DemoValues) -> bool {
 
 #[component]
 pub fn CheckboxPage() -> Element {
+    let theme = use_theme();
     rsx! {
         DocPage {
             title: "Checkbox",
@@ -32,9 +34,11 @@ pub fn CheckboxPage() -> Element {
                     prop("color", "ThemeAwareValue")
                         .default("primary")
                         .doc("The box's color when checked. A theme color name or any CSS color."),
-                    prop("size", "Size").default("md").doc("Size of the box, the label and the captions."),
+                    prop("size", "Size")
+                        .default(theme.checkbox.size.as_str())
+                        .doc("Size of the box, the label and the captions."),
                     prop("radius", "Size")
-                        .default("sm")
+                        .default(theme.checkbox.radius.as_str())
                         .doc("Corner radius of the box."),
                     prop("checked", "bool")
                         .doc("Whether it is checked. Pair it with `onchange`. Left out, the box keeps its own state, or the form's when `name` binds it."),
@@ -60,7 +64,7 @@ pub fn CheckboxPage() -> Element {
                     prop("aria_label", "String")
                         .doc("Names the checkbox when it has no `label`."),
                     prop("variant", "ChoiceVariant")
-                        .default("plain")
+                        .default(theme.checkbox.variant.as_str())
                         .doc("`card` draws the checkbox as a bordered surface you can click anywhere. Pair it with a `description`. On the web a link inside the card keeps its own click. Natively the whole card toggles."),
                 ])
                 .parts("CheckboxPart", vec![
@@ -96,7 +100,7 @@ pub fn CheckboxPage() -> Element {
                 controls: [vec![
                     Control::toggle("variant", ["plain", "card"])
                         .labels(["Plain", "Card"])
-                        .default("plain")
+                        .default(theme.checkbox.variant.as_str())
                         .code(|_, values| match values.str("variant").as_str() {
                             // A card only reads as one with a description under
                             // the label, so the card shows one either way.
@@ -109,9 +113,9 @@ pub fn CheckboxPage() -> Element {
                         }),
                     Control::color("color"),
                     Control::sizes("size")
-                        .default("md"),
+                        .default(theme.checkbox.size.as_str()),
                     Control::sizes("radius")
-                        .default("sm"),
+                        .default(theme.checkbox.radius.as_str()),
                 ], field_controls::<TermsCopy>(), vec![
                     // `checked` + `onchange` as a pair (the library warns on one alone); the
                     // preview writes `onchange` back into this control.

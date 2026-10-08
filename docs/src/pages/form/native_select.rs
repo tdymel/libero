@@ -5,6 +5,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::FieldPart;
 use libero::components::{Code, NativeSelect, OptionList, Options, Text};
+use libero::use_theme;
 
 struct SizeCopy;
 
@@ -46,6 +47,7 @@ pub fn NativeSelectPage() -> Element {
     let value = use_signal(|| Some(FontSize::Small));
     // The placeholder shows only while nothing is picked, so its case starts at `None`.
     let unpicked = use_signal(|| None::<FontSize>);
+    let theme = use_theme();
 
     rsx! {
         DocPage {
@@ -54,9 +56,11 @@ pub fn NativeSelectPage() -> Element {
             markdown: "/md/native_select.md",
             properties: vec![
                 props("NativeSelect", vec![
-                    prop("size", "Size").default("md").doc("Height, padding and font size."),
+                    prop("size", "Size")
+                        .default(theme.native_select.size.as_str())
+                        .doc("Height, padding and font size."),
                     prop("radius", "Size")
-                        .default("sm")
+                        .default(theme.native_select.radius.as_str())
                         .doc("Corner radius."),
                     prop("value", "Option<T>")
                         .doc("The selected option. Pair it with `onchange`. `None` shows `placeholder` and selects nothing."),
@@ -125,9 +129,9 @@ pub fn NativeSelectPage() -> Element {
                 ],
                 controls: [vec![
                     Control::sizes("size")
-                        .default("md"),
+                        .default(theme.native_select.size.as_str()),
                     Control::sizes("radius")
-                        .default("sm"),
+                        .default(theme.native_select.radius.as_str()),
                 ], field_controls::<SizeCopy>(), vec![
                     Control::switch("placeholder").code(|_, values| {
                         match values.str("placeholder").as_str() {

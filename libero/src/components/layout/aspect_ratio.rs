@@ -4,7 +4,7 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, REPLACED_ELEMENTS, Variables, base_props, inset_focus_ring_sx,
-            inset_outline_ring_sx, ring_overlay_sx, variables,
+            inset_outline_ring_sx, ring_overlay, ring_overlay_sx, variables,
         },
         layout::use_box,
     },
@@ -28,10 +28,16 @@ static ASPECT_RATIO_BASE_SX: StaticSx = StaticSx::new(|| {
         // The child fills the clipped box, so a ring drawn outside it is cut away.
         // Doubled to outrank a `Button`'s own ring, which ties it otherwise.
         .selector("& > *:focus-visible:focus-visible", inset_ring())
-        // Replaced content covers inset shadows and takes no `::after` (todo 2532).
+        // Replaced content covers inset shadows and takes no `::after` (todo 2532): its stripe
+        // is a painted outline, its halo the sibling overlay's (todo 2687).
         .selector(
             format!("& > :is({REPLACED_ELEMENTS}):focus-visible:focus-visible"),
-            inset_outline_ring_sx(&ring_offset()),
+            inset_outline_ring_sx(&banded_ring_offset()),
+        )
+        .selector("& > [data-ring]", ring_overlay_sx())
+        .selector(
+            format!("& > :is({REPLACED_ELEMENTS}):focus-visible ~ [data-ring]"),
+            inset_focus_ring_sx(&banded_ring_offset()),
         )
         // A picture inside the child paints over its inset shadows; the overlay paints over it (todo 2480).
         .selector(
@@ -42,6 +48,11 @@ static ASPECT_RATIO_BASE_SX: StaticSx = StaticSx::new(|| {
 
 fn ring_offset() -> String {
     format!("calc(-1 * {})", FOCUS_RING_WIDTH.value())
+}
+
+/// Two widths deep: the halo band outside, the stripe inside it.
+fn banded_ring_offset() -> String {
+    format!("calc(-2 * {})", FOCUS_RING_WIDTH.value())
 }
 
 fn inset_ring() -> Sx {
@@ -93,7 +104,14 @@ pub fn AspectRatio(props: AspectRatioProps) -> Element {
         .states(&props.states)
         .variables(&variables)
         .prepare()
-        .render(HtmlTag::Div, props.attributes, props.children)
+        .render(
+            HtmlTag::Div,
+            props.attributes,
+            rsx! {
+                {props.children}
+                {ring_overlay()}
+            },
+        )
 }
 
 #[cfg(test)]
@@ -171,9 +189,23 @@ mod tests {
 
         assert!(!replaced.contains("solid transparent"), "{replaced}");
         assert!(
-            replaced.contains("outline-offset:calc(-1 * var(--lsx-focus-ring-width))"),
+            replaced.contains("outline-offset:calc(-2 * var(--lsx-focus-ring-width))"),
             "{replaced}"
         );
+    }
+
+    /// Todo 2687: the halo band of a replaced child rides a sibling overlay the picture cannot cover.
+    #[test]
+    fn a_focused_replaced_child_gets_a_halo_overlay() {
+        let sheet = crate::css::Stylesheet::from(&ASPECT_RATIO_BASE_SX);
+        let css = sheet.as_str();
+
+        assert!(
+            rule(css, " > [data-ring]{").contains("position:absolute"),
+            "{css}"
+        );
+        let halo = rule(css, ":focus-visible ~ [data-ring]{");
+        assert!(halo.contains("box-shadow:inset"), "{halo}");
     }
 
     /// Todos 2533, 2534: a replaced child is cropped, an inline one takes the full size.

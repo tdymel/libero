@@ -8,6 +8,7 @@ use libero::components::PhoneFieldPart;
 use libero::{
     components::{Code, Flex, PhoneField, Text},
     sx::sx,
+    use_theme,
 };
 
 struct MobileCopy;
@@ -41,6 +42,7 @@ fn Flag(iso: String) -> Element {
 #[component]
 pub fn PhoneFieldPage() -> Element {
     let mut value = use_signal(String::new);
+    let theme = use_theme();
 
     rsx! {
         DocPage {
@@ -49,21 +51,23 @@ pub fn PhoneFieldPage() -> Element {
             markdown: "/md/phone_field.md",
             properties: vec![
                 props("PhoneField", vec![
-                    prop("size", "Size").default("md").doc("Height, padding and font size."),
+                    prop("size", "Size")
+                        .default(theme.phone_field.size.as_str())
+                        .doc("Height, padding and font size."),
                     prop("radius", "Size")
-                        .default("sm")
+                        .default(theme.phone_field.radius.as_str())
                         .doc("Corner radius, independent of `size`."),
                     prop("value", "Option<String>")
                         .doc("The number in E.164, such as `\"+12133734253\"`. Leave it out and the field keeps its own text."),
                     prop("oninput", "EventHandler<String>")
                         .doc("Fires on every keystroke with the E.164 the field should hold next, or an empty string once nothing is typed."),
                     prop("country", "String")
-                        .default("theme.phone_field.country")
-                        .doc("The country the field starts on, ISO 3166-1 alpha-2, `US` by default. A pick wins over it until the prop changes. A `value` with another country's dial code wins over both."),
+                        .default(theme.phone_field.country)
+                        .doc("The country the field starts on, ISO 3166-1 alpha-2. A pick wins over it until the prop changes. A `value` with another country's dial code wins over both."),
                     prop("oncountrychange", "EventHandler<String>")
                         .doc("The user picked another country. `oninput` fires at the same time with the number under the new dial code."),
                     prop("country_select", "bool")
-                        .default("theme.phone_field.country_select")
+                        .default(theme.phone_field.country_select.to_string())
                         .doc("Shows the country picker. Off pins the country and shows its dial code as plain text."),
                     prop("country_label", "Callback<String, String>")
                         .doc("Overrides the name of a country. Unset, the name comes from the localization's `phone_field.country_names`, which ships in German, else English. It runs during render, so it can read a locale from context."),
@@ -144,9 +148,9 @@ pub fn PhoneFieldPage() -> Element {
                 ],
                 controls: [vec![
                     Control::sizes("size")
-                        .default("md"),
+                        .default(theme.phone_field.size.as_str()),
                     Control::sizes("radius")
-                        .default("sm"),
+                        .default(theme.phone_field.radius.as_str()),
                     Control::toggle("country", ["us", "de", "fr"])
                         .default("de")
                         .labels(["US", "DE", "FR"])
@@ -168,7 +172,8 @@ pub fn PhoneFieldPage() -> Element {
                             _ => vec![],
                         }
                     }),
-                    Control::switch("country_select").default("true"),
+                    Control::switch("country_select")
+                        .default(theme.phone_field.country_select.to_string()),
                     Control::switch("required"),
                     Control::switch("disabled"),
                 ]].concat(),

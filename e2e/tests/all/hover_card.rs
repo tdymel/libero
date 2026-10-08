@@ -123,6 +123,31 @@ async fn tab_crosses_a_pair<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     eventually_focused(d, TRIGGER_SECOND, "Shift+Tab from the card's first control").await
 }
 
+/// A hidden last control on both sides ignores `focus()`: Tab still enters and leaves the card (2688).
+async fn tab_crosses_past_hidden_last_controls<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(BEFORE).await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, TRIGGER, "Tab from Before").await?;
+    shown(d, CARD, true, "Tab onto the trigger").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(
+        d,
+        CARD_FIRST,
+        "Tab past the trigger's hidden control into the card",
+    )
+    .await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, CARD_LAST, "Tab within the card").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, AFTER, "Tab out past the card's hidden control").await?;
+    d.press_shift(keyboard::TAB).await?;
+    eventually_focused(d, TRIGGER, "Shift+Tab back to the trigger").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, CARD_FIRST, "Tab into the card again").await?;
+    d.press_shift(keyboard::TAB).await?;
+    eventually_focused(d, TRIGGER, "Shift+Tab from the card's first control").await
+}
+
 /// The pointer rests to open, may cross into the card, and leaving closes it.
 async fn pointer_crosses<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.hover(TRIGGER).await?;
@@ -170,6 +195,13 @@ e2e::scenario!(
     tab_enters_the_card_only_from_the_triggers_last_focusable,
     "/hover-card-pair",
     tab_crosses_a_pair,
+    android: skip("958: the Tab bridge reads the card's focusables inside a handler"),
+    desktop: skip("958: the Tab bridge reads the card's focusables inside a handler")
+);
+e2e::scenario!(
+    tab_crosses_past_a_hidden_last_control_on_the_trigger_and_the_card,
+    "/hover-card-hidden",
+    tab_crosses_past_hidden_last_controls,
     android: skip("958: the Tab bridge reads the card's focusables inside a handler"),
     desktop: skip("958: the Tab bridge reads the card's focusables inside a handler")
 );

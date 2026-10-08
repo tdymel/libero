@@ -8,7 +8,7 @@ use super::{
 };
 use crate::{
     components::{
-        accessibility::{FocusTrap, tab_stops},
+        accessibility::{FocusTrap, focus_edge, focus_first_stop, tab_stops},
         buttons::Button,
         common::{
             FOCUSABLE_SELECTOR, HtmlTag, Input, Part, Parts, attr, has_shortcut_modifier,
@@ -808,29 +808,6 @@ fn edge_focusable(root: &ElementHandle, last: bool) -> Option<std::boxed::Box<dy
 /// Focuses the target's first control (last, `backwards`), or the target itself; whether it took.
 fn enter_target(target: &ElementHandle, backwards: bool) -> bool {
     focus_edge(target, backwards) || (target.focus().is_ok() && target.is_focused())
-}
-
-/// `root`'s first Tab stop that takes focus (the last, `last`); whether one did.
-fn focus_edge(root: &ElementHandle, last: bool) -> bool {
-    let Ok(items) = root.query_selector_all(FOCUSABLE_SELECTOR) else {
-        return false;
-    };
-    let stops = tab_stops(root, &items);
-    match last {
-        true => focus_first_stop(&items, &stops, (0..items.len()).rev()),
-        false => focus_first_stop(&items, &stops, 0..items.len()),
-    }
-}
-
-/// Focuses the first stop of `order` that takes it: a `display: none` one ignores `focus()`.
-fn focus_first_stop(
-    items: &[std::boxed::Box<dyn ElementApi>],
-    stops: &[bool],
-    order: impl Iterator<Item = usize>,
-) -> bool {
-    order
-        .filter(|at| stops.get(*at).copied().unwrap_or(true))
-        .any(|at| items[at].focus().is_ok() && items[at].is_focused())
 }
 
 /// Tab inside an interactive target: its next stop that takes focus, or off its edge
