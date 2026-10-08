@@ -88,6 +88,18 @@ pub const ROUTES: Routes = &[
         || rsx! { LongMultiSelectPage {} },
     ),
     ("/timing/search-select", || rsx! { SearchSelectPage {} }),
+    ("/timing/select-1000", || rsx! { Select1000Page {} }),
+    (
+        "/timing/search-select-1000",
+        || rsx! { SearchSelect1000Page {} },
+    ),
+    ("/timing/combobox-1000", || rsx! { Combobox1000Page {} }),
+    ("/perf/select-1000", || rsx! { Select1000Page {} }),
+    (
+        "/perf/search-select-1000",
+        || rsx! { SearchSelect1000Page {} },
+    ),
+    ("/perf/combobox-1000", || rsx! { Combobox1000Page {} }),
     ("/timing/popover", || rsx! { PopoverPage {} }),
     ("/timing/tooltip", || rsx! { TooltipPage {} }),
     ("/timing/drawer", || rsx! { DrawerPage {} }),
@@ -611,11 +623,70 @@ fn LongMultiSelectPage() -> Element {
     }
 }
 
+/// A thousand options, the trigger a combobox (todo 2234).
+#[component]
+fn Select1000Page() -> Element {
+    let mut value = use_signal(|| None::<String>);
+    let options = use_hook(|| cities(1000));
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Select::<String> { label: "City", options: options.clone(), value: value(), onchange: move |next| value.set(next) }
+        }
+    }
+}
+
+/// A searchable select of a thousand, typed into once open (todo 2234).
+#[component]
+fn SearchSelect1000Page() -> Element {
+    rsx! { SearchSelectPage { count: 1000 } }
+}
+
+/// A thousand options under a text input, filtered by what is typed (todo 2234).
+#[component]
+fn Combobox1000Page() -> Element {
+    let state = use_combobox();
+    let mut query = use_signal(String::new);
+    let all = use_hook(|| cities(1000));
+    let options: Vec<String> = all
+        .iter()
+        .filter(|city| city.contains(query().as_str()))
+        .cloned()
+        .collect();
+    rsx! {
+        Combobox {
+            state,
+            options,
+            option: move |row: ComboboxOptionArgs<String>| {
+                let value = row.value.clone();
+                rsx! {
+                    ComboboxOption {
+                        onpick: move |_| {
+                            query.set(value.clone());
+                            state.close();
+                        },
+                        "{row.value}"
+                    }
+                }
+            },
+            input {
+                aria_label: "City",
+                value: query(),
+                oninput: move |e| {
+                    query.set(e.value());
+                    state.set_open(true);
+                },
+                onblur: move |_| state.close(),
+                ..state.a11y_attributes(),
+            }
+        }
+    }
+}
+
 /// A searchable select of three hundred, typed into once open.
 #[component]
-fn SearchSelectPage() -> Element {
+fn SearchSelectPage(#[props(default = 300)] count: usize) -> Element {
     let mut value = use_signal(|| None::<String>);
-    let options = use_hook(|| cities(300));
+    let options = use_hook(|| cities(count));
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
             Select::<String> {

@@ -114,7 +114,7 @@ pub fn spotlight_filter(query: &str, actions: &[SpotlightAction]) -> Vec<Spotlig
 | `actions` | `Callback<String, Vec<SpotlightAction>>` | - | Called with the query, returns the rows. Capture a `Signal`, not a `Vec`, if the list changes. Unset warns and shows nothing. |
 | `placeholder` | `String` | `"Search..."` | The search box's placeholder, and its name once you set it. Unset, the box is named "Search commands". |
 | `nothing_found` | `Element` | - | Shown and announced when a query matches nothing. Unset, the localization's text. |
-| `limit` | `usize` | - | The most rows drawn, counted across groups. A screen reader still hears how many actions matched. |
+| `limit` | `usize` | - | The most rows drawn, counted across groups. A screen reader still hears how many actions matched. The list is not virtualized: every drawn row mounts on open. Sixty rows open in about 13 ms on a desktop, so set a limit for lists in the hundreds. |
 | `close_on_action` | `bool` | `true` | Closes after running an action. |
 | `clear_on_close` | `bool` | `true` | Starts every opening with an empty query. |
 | `aria_label` | `String` | `"Command palette"` | Names the dialog and its list. |

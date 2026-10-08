@@ -16,7 +16,7 @@ use crate::{
         overlay::{Tooltip, chord_kbd, chord_words},
     },
     hooks::{
-        aria_keyshortcuts, clipped_ripple_sx, current_localization, use_gradient_style, use_ripple,
+        aria_keyshortcuts, child_ripple_sx, current_localization, use_gradient_style, use_ripple,
         use_theme,
     },
     platform::mod_is_meta,
@@ -51,7 +51,7 @@ const ACTION_ICON_VARS: VariantVars<'static> = VariantVars {
 // Variant chrome only behind a state set by `variant`/`color`: an ungated declaration
 // would beat a caller `sx`'s `:hover` (`Code`'s copy button).
 static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
-    let base = clipped_ripple_sx(sx())
+    let base = child_ripple_sx(sx())
         .display("inline-flex")
         .align_items("center")
         .justify_content("center")
@@ -448,6 +448,13 @@ fn action_icon(mut props: ActionIconProps) -> Element {
         }
     } else {
         glyph
+    };
+    // Mounted by the first press, so an untouched icon's markup stays as it was.
+    let children = rsx! {
+        {children}
+        if showing.is_some() {
+            span { "data-ripple": "", aria_hidden: "true" }
+        }
     };
 
     boxed

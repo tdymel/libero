@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     hooks::{LocalState, use_local_state},
     sx::{REDUCED_MOTION, Sx, sx},
-    theme::{CssVar, RIPPLE_ANIMATION, RIPPLE_CLIP_ANIMATION, RIPPLE_STATE},
+    theme::{CssVar, RIPPLE_ANIMATION, RIPPLE_STATE},
 };
 
 const RIPPLE_X_VAR: CssVar = CssVar::new("--lsx-ripple-x");
@@ -70,48 +70,52 @@ impl RippleState {
 pub(crate) fn ripple_sx(base: Sx) -> Sx {
     base.position("relative")
         .overflow("hidden")
-        .selector(
-            "::after",
-            sx().content("\"\"")
-                .position("absolute")
-                .left(RIPPLE_X_VAR.value_or("50%"))
-                .top(RIPPLE_Y_VAR.value_or("50%"))
-                .width("300%")
-                .height("300%")
-                .border_radius("50%")
-                .background("currentColor")
-                .opacity("0")
-                .transform("translate(-50%, -50%) scale(0)")
-                .pointer_events("none"),
-        )
-        .and(ripple_states_sx(RIPPLE_ANIMATION))
+        .selector("::after", ripple_circle_sx())
+        .and(ripple_states_at("::after", RIPPLE_ANIMATION))
 }
 
-/// [`ripple_sx`] without `overflow: hidden`: the circle grows as a `clip-path`
-/// inside the box, so a `::before` may reach past it as a hit area.
-pub(crate) fn clipped_ripple_sx(base: Sx) -> Sx {
+/// [`ripple_sx`] on an `aria-hidden` `span[data-ripple]` child, so the host keeps no
+/// `overflow: hidden` and a `::before` may reach past it as a hit area. A transform
+/// composites; the old `clip-path` circle repainted every frame (todo 2021).
+pub(crate) fn child_ripple_sx(base: Sx) -> Sx {
     base.position("relative")
         .selector(
-            "::after",
-            sx().content("\"\"")
-                .position("absolute")
+            "& > [data-ripple]",
+            sx().position("absolute")
                 .inset("0")
+                .overflow("hidden")
                 .border_radius("inherit")
-                .background("currentColor")
-                .opacity("0")
                 .pointer_events("none"),
         )
-        .and(ripple_states_sx(RIPPLE_CLIP_ANIMATION))
+        .selector("& > [data-ripple]::after", ripple_circle_sx())
+        .and(ripple_states_at(
+            "& > [data-ripple]::after",
+            RIPPLE_ANIMATION,
+        ))
 }
 
-fn ripple_states_sx(names: [&str; 2]) -> Sx {
+fn ripple_circle_sx() -> Sx {
+    sx().content("\"\"")
+        .position("absolute")
+        .left(RIPPLE_X_VAR.value_or("50%"))
+        .top(RIPPLE_Y_VAR.value_or("50%"))
+        .width("300%")
+        .height("300%")
+        .border_radius("50%")
+        .background("currentColor")
+        .opacity("0")
+        .transform("translate(-50%, -50%) scale(0)")
+        .pointer_events("none")
+}
+
+fn ripple_states_at(at: &str, names: [&str; 2]) -> Sx {
     sx().when(
         RIPPLE_STATE[0],
-        sx().selector("::after", ripple_animation_sx(names[0])),
+        sx().selector(at, ripple_animation_sx(names[0])),
     )
     .when(
         RIPPLE_STATE[1],
-        sx().selector("::after", ripple_animation_sx(names[1])),
+        sx().selector(at, ripple_animation_sx(names[1])),
     )
 }
 
@@ -126,36 +130,41 @@ fn ripple_animation_sx(name: &str) -> Sx {
 mod tests {
     use super::*;
     use crate::css::Stylesheet;
-    use crate::theme::RIPPLE_KEYFRAMES;
 
     /// Both animation names have to stop, or the second click replays one.
     #[test]
     fn reduced_motion_switches_both_ripples_off() {
-        for (base, names) in [
-            (ripple_sx(sx()), RIPPLE_ANIMATION),
-            (clipped_ripple_sx(sx()), RIPPLE_CLIP_ANIMATION),
+        for (base, after) in [
+            (ripple_sx(sx()), "::after"),
+            (child_ripple_sx(sx()), " > [data-ripple]::after"),
         ] {
-            assert_both_stop(&Stylesheet::from(&base), names);
+            assert_both_stop(&Stylesheet::from(&base), after);
         }
     }
 
-    /// Nothing clips the host, so a `::before` hit area reaches past it.
+    /// Only the ripple's span clips, so a `::before` hit area reaches past the host.
     #[test]
-    fn the_clipped_ripple_leaves_the_host_unclipped() {
-        let css = Stylesheet::from(&clipped_ripple_sx(sx()));
-        assert!(!css.as_str().contains("overflow"), "{}", css.as_str());
-        assert!(RIPPLE_KEYFRAMES.contains("@keyframes lsx-ripple-clip-a{"));
+    fn the_child_ripple_leaves_the_host_unclipped() {
+        let css = Stylesheet::from(&child_ripple_sx(sx()));
+        let css = css.as_str();
+        let span = css.find(" > [data-ripple]{").expect("the span's rule");
+        let overflow = css.find("overflow:hidden").expect("a clip");
+        assert!(
+            span < overflow && css.matches("overflow").count() == 1,
+            "{css}"
+        );
+        assert!(!css.contains("clip-path"), "{css}");
     }
 
-    fn assert_both_stop(css: &Stylesheet, names: [&str; 2]) {
+    fn assert_both_stop(css: &Stylesheet, after: &str) {
         let css = css.as_str();
         let reduced = css.find(REDUCED_MOTION).expect("a reduced-motion block");
 
-        for (state, name) in RIPPLE_STATE.iter().zip(names) {
+        for (state, name) in RIPPLE_STATE.iter().zip(RIPPLE_ANIMATION) {
             let running = css.find(name).expect("the ripple animation");
             let stopped = css
                 .find(&format!(
-                    "[data-state~=\"{state}\"]::after{{animation:none;}}"
+                    "[data-state~=\"{state}\"]{after}{{animation:none;}}"
                 ))
                 .unwrap_or_else(|| panic!("{state} never stops: {css}"));
             assert!(reduced < stopped && running < stopped, "{css}");

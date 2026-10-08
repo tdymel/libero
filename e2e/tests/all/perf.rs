@@ -1103,6 +1103,17 @@ fn cases() -> Vec<Case> {
                 "document.activeElement.tagName === 'INPUT'".into(),
             )],
         ),
+        open_close("Select (1000)", "select-1000", Act::Click("[role=combobox]"), "[role=option]"),
+        typing(
+            "Select search (1000)",
+            "search-select-1000",
+            vec![(
+                "open",
+                Act::Click("[role=combobox]"),
+                "document.activeElement.tagName === 'INPUT'".into(),
+            )],
+        ),
+        typing("Combobox (1000)", "combobox-1000", focus("input")),
         typing("NumberField", "number-field", focus("input")),
         toggles("Form (30) Switch", "big-form", "#s3", 0),
         toggles("Form (30) Checkbox", "big-form", "#c3", 0),
@@ -1463,6 +1474,7 @@ pub(crate) mod timing {
 
     use anyhow::Result;
     use chromiumoxide::Page;
+    use chromiumoxide::cdp::browser_protocol::emulation::SetCpuThrottlingRateParams;
     use chromiumoxide::cdp::browser_protocol::input::{
         DispatchMouseEventParams, DispatchMouseEventType,
     };
@@ -1693,6 +1705,11 @@ pub(crate) mod timing {
         let front = frames::bring_to_front(page).await.unwrap();
         let outcome = async {
             page.execute(EnableParams::default()).await?;
+            // `PERF_THROTTLE=4`: a slower CPU, as DevTools' 4x slowdown (todo 2234).
+            if let Ok(rate) = std::env::var("PERF_THROTTLE") {
+                page.execute(SetCpuThrottlingRateParams::new(rate.parse::<f64>()?))
+                    .await?;
+            }
             page.evaluate(RECORDER).await?;
             run(page).await
         }
