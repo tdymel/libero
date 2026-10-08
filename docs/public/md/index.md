@@ -13,19 +13,19 @@ fetch only the file you need.
 
 - [Getting started](getting_started.md): Installing libero, wrapping an app in LiberoProvider, building for the web, natively, in a desktop WebView and for Android, and the feature flags.
 - [Philosophy](philosophy.md): The four principles behind libero in order of priority (developer experience, accessibility, batteries included, simple yet modern) and what we do about each.
-- [Styling](styling.md): The `sx` styling builder every component takes: theme values, states, selectors, responsive, media and container queries, cascade layers, `StaticSx` and the `parts` Style API.
+- [Styling](styling.md): The `sx` styling builder every component takes: theme values, states, selectors, responsive, media and container queries, cascade layers and the `parts` Style API.
 - [Theming](theming.md): How to customize a Libero theme and use it: colors, scales, per-component defaults, light and dark pairs, and reading the active theme.
 - [Localization](localization.md): The words components say on their own, how dates and numbers are written, and the reading direction: `Localization`, `Formats` and the hooks that switch them.
-- [Providers](providers.md): LiberoProvider (themes, localization, formats, direction) and IconProvider (glyphs): what each provides, and how different parts of one page can sit below different providers.
-- [Platform](platform.md): Every platform API (elements, timers, keys, scroll, the document, the colour scheme and the clock), what each makes possible, and how to use them where a renderer lacks one.
-- [Credits](credits.md): The projects whose icons and logos libero and these docs use (Lucide, pictogram, Lobe Icons, Simple Icons), their licences and notices.
+- [Providers](providers.md): LiberoProvider (themes, localization, formats, direction) and IconProvider (glyphs): what each provides, and how parts of a page sit below different providers.
+- [Platform](platform.md): Every platform API (elements, timers, keys, scroll, the document, the colour scheme, the clock), what each enables, and what to do where a renderer lacks one.
+- [Credits](credits.md): The projects whose icons and logos libero and these docs use (Lucide, pictogram, Lobe Icons, Simple Icons, eleven more icon sets), their licences and notices.
 
 ## Layout
 
 - [Box](box.md): The primitive every other component is built on, rendered as any tag via `component` and styled through `sx`.
 - [Paper](paper.md): The library's surface, with a background, a corner radius, an elevation and an optional hairline border, and no semantics of its own.
 - [Flex](flex.md): A flexbox container with theme-aware direction, gap, alignment and wrapping.
-- [Grid](grid.md): A layout matrix of named areas. `Grid` holds the shape, a `GridZone` is a twelve-column container with optional masonry, and a `GridItem` takes a fraction of it.
+- [Grid](grid.md): A layout matrix of named areas: `Grid` holds the shape, a `GridZone` is a twelve-column container with optional masonry, a `GridItem` takes a fraction of it.
 - [Center](center.md): Centers its child horizontally and vertically.
 - [Container](container.md): Centers content and caps its width at a breakpoint.
 - [AspectRatio](aspect_ratio.md): Enforces a width-to-height ratio on its child, cropping it to fill the box.
@@ -79,7 +79,7 @@ fetch only the file you need.
 - [RangeSlider](range_slider.md): Two thumbs on one track, for a span instead of a point, over the same values as `Slider`.
 - [Rating](rating.md): A row of stars picking a value, whole or in halves, by click, sideways drag or arrow keys; read-only or display-only.
 - [ColorField](color_field.md): A text field holding a `ColorCode`, with a preview swatch, an eyedropper and a `ColorPicker` in a dropdown.
-- [ColorPicker](color_picker.md): A saturation panel and a hue slider, with an optional alpha slider and preset swatches, over one `ColorCode`. Also documents `HueSlider`, `AlphaSlider` and `ColorSwatch`.
+- [ColorPicker](color_picker.md): A saturation panel and a hue slider, with optional alpha and preset swatches, over one `ColorCode`. Also documents `HueSlider`, `AlphaSlider` and `ColorSwatch`.
 - [ChronoField](chrono_field.md): A text field for every date and time value, typed leniently, with the matching `ChronoPicker` in a dropdown.
 - [ChronoPicker](chrono_picker.md): One picker for every date and time value, from days, months and years to times, date-times and ranges of them.
 - [FileField](file_field.md): Files picked from the system dialog or dropped on the control, as a one-line input or a drop surface.
@@ -116,8 +116,8 @@ fetch only the file you need.
 ## Feedback
 
 - [Alert](alert.md): A tinted surface for something the reader has to know, with a title, an optional icon and close button, and a role that follows its color.
-- [Notifications](notifications.md): A hook plus a host. Render `Notifications {}` once, and `use_notifications()` shows messages from anywhere, as an `Alert` or as your own template over your own data.
-- [Loader](loader.md): An indeterminate busy indicator, as a ring, bars or dots. It stays silent, so a status region says the wait. `Button`, `Combobox` and `FileField` show it while loading.
+- [Notifications](notifications.md): A hook plus a host: render `Notifications {}` once, and `use_notifications()` shows messages from anywhere, as an `Alert` or your own template over your data.
+- [Loader](loader.md): An indeterminate busy indicator: a ring, bars or dots. It stays silent, so a status region says the wait. `Button`, `Combobox` and `FileField` show it.
 - [ProgressBar](progress_bar.md): A determinate or indeterminate progress bar over any `min..=max` range.
 - [Skeleton](skeleton.md): A placeholder for loading content, as a standalone grey shape or a wrapper that hides the real content until it is ready.
 
@@ -136,8 +136,8 @@ fetch only the file you need.
 - [Carousel](carousel.md): A strip of slides that snaps as it scrolls and knows which one it is on, with controls, indicators and optional autoplay.
 - [List](list.md): A `<ul>` of `<li>` items without the browser's list styling, with themed gaps and nested indent.
 - [DataList](data_list.md): A `<dl>` of term/description pairs, where one term can carry several descriptions.
-- [Sortable](sortable.md): A list the user reorders by dragging each item's handle. `use_sortable` and `use_sortable_item` do the same for your own markup.
-- [Kanban](kanban.md): A board of columns whose cards reorder in a column by drag, keyboard or move buttons, and move to another column by a Move to menu.
+- [Sortable](sortable.md): A list the user reorders by dragging a handle, by keyboard, or with move buttons. `use_sortable` and `use_sortable_item` do the same for your own markup.
+- [Kanban](kanban.md): A board of columns whose cards move by drag in a column or to another, by keyboard or move buttons in a column, and to another column by a Move to menu.
 - [Table](table.md): A sortable data table built from a row type and a list of column definitions.
 - [Timeline](timeline.md): An ordered list of events drawn against a rail, with an `active` index colouring the bullets and connectors up to the current one.
 - [Accordion](accordion.md): Sections over an enum, each a heading whose button opens its panel, with one or many open.
@@ -174,15 +174,15 @@ fetch only the file you need.
 - [Timers](use_timers.md): Runs a callback once or on a period, started and stopped from code, cancelled when the component unmounts.
 - [Debounce and throttle](use_debounce.md): Signals and callbacks that follow their source once it settles or at most once per period.
 - [History](use_history.md): Undo and redo over snapshots of a value, with rapid changes grouped into one step by time or size.
-- [Hotkeys](use_hotkeys.md): Runs a handler on a keyboard shortcut from anywhere in the page, skipping text entry unless asked.
-- [Media query](use_media_query.md): Whether a CSS media query or the 768px mobile breakpoint matches, live.
+- [Hotkeys](use_hotkeys.md): Runs a handler on a keyboard shortcut from anywhere in the page, skipping text entry unless asked, and stops when the component unmounts.
+- [Media query](use_media_query.md): Whether a CSS media query or the 768px mobile breakpoint matches, live, with a documented default where nothing can measure.
 - [Media](use_media.md): Plays and reads an `<audio>` or `<video>` you render yourself, one signal per read; the engine behind `Audio` and `Video`.
 - [Fullscreen](use_fullscreen.md): Puts one of your elements in fullscreen, natively or drawn as a fixed box where the platform refuses it; the engine behind `Video`'s fullscreen.
 - [Back button](use_back.md): Runs a handler on Android's Back button instead of leaving the app, below any overlay opened later; does nothing elsewhere.
 - [Geolocation](use_geolocation.md): The device's position, once or followed, with the location permission; never prompts on mount.
 - [Local storage](use_local_storage.md): A value kept under a key across reloads and app runs, or for the tab's session; a file per key off the web.
-- [IndexedDB](use_indexed_db.md): A larger value kept under a key in IndexedDB, loaded and saved without blocking the page; shows the default until it loads.
-- [User media](use_user_media.md): The camera and microphone with a preview, a PNG snapshot and a chunked recording; never prompts on mount.
+- [IndexedDB](use_indexed_db.md): A larger value kept under a key in IndexedDB, loaded and saved without blocking the page; a file per key off the web.
+- [User media](use_user_media.md): The camera and microphone with a preview, a PNG snapshot, a chunked video or audio recording and a camera switch; never prompts on mount.
 - [System notifications](use_system_notification.md): Notifications the operating system draws and a web push subscription; never prompt on mount.
 - [Save file](save_file.md): Saves bytes the app made as a file: a download on the web, a save dialog on the desktop and Blitz, the share sheet on Android.
 - [Theme set](use_theme_set.md): Reads and swaps the active theme set, which a theme picker is built on.

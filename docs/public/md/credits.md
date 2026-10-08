@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Index: [index.md](index.md) lists every other page
-Description: The projects whose icons and logos libero and these docs use (Lucide, pictogram, Lobe Icons, Simple Icons, and the Bootstrap, Material, Phosphor, Tabler, Feather, Font Awesome, Heroicons, Iconoir, Ionicons, Octicons and Codicons sets), their licences and notices.
+Description: The projects whose icons and logos libero and these docs use (Lucide, pictogram, Lobe Icons, Simple Icons, eleven more icon sets), their licences and notices.
 
 The icons and logos on these pages and inside libero's components, and the
 Video demo's film, come from other projects. Their licences ask that the

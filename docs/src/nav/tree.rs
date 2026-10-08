@@ -43,6 +43,16 @@ pub fn page_title(route: &Route) -> Option<String> {
     })
 }
 
+/// `route`'s sidebar section and the path of that section's first page.
+#[cfg(test)]
+pub fn page_group(route: &Route) -> Option<(&'static str, String)> {
+    let path = route.to_string();
+    let pages = pages();
+    let group = pages.iter().find(|(id, ..)| *id == path)?.2?;
+    let first = pages.iter().find(|(.., g)| *g == Some(group))?.0.clone();
+    Some((group, first))
+}
+
 // Every page as (path, label, group label), in sidebar order.
 pub(super) fn pages() -> Vec<(String, &'static str, Option<&'static str>)> {
     fn walk(

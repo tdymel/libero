@@ -14,10 +14,13 @@ use libero::{
     theme::{ColorCss, ColorShade},
 };
 
+/// The landing page's title, also in the static head `route_pages.py` writes.
+pub const TITLE: &str = "Libero - accessible, themeable components for Dioxus";
+
 #[component]
 pub fn Home() -> Element {
     rsx! {
-        document::Title { "Libero - accessible, themeable components for Dioxus" }
+        document::Title { "{TITLE}" }
         Flex { direction: "column", gap: "xxl", sx: sx().padding_bottom("lg"),
             hero::Hero {}
             stats::Stats {}

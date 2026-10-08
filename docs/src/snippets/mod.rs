@@ -16,6 +16,7 @@ mod generate;
 mod md_mirror;
 mod parse;
 mod props;
+mod route_pages;
 
 use compile::*;
 use drift::*;

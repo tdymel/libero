@@ -1,0 +1,147 @@
+/	Libero - accessible, themeable components for Dioxus		/md/index.md		
+/about/getting-started	Getting started - Libero	Installing libero, wrapping an app in LiberoProvider, building for the web, natively, in a desktop WebView and for Android, and the feature flags.	/md/getting_started.md	About	/about/getting-started
+/about/philosophy	Philosophy - Libero	The four principles behind libero in order of priority (developer experience, accessibility, batteries included, simple yet modern) and what we do about each.	/md/philosophy.md	About	/about/getting-started
+/about/styling	Styling - Libero	The sx styling builder every component takes: theme values, states, selectors, responsive, media and container queries, cascade layers and the parts Style API.	/md/styling.md	About	/about/getting-started
+/about/theming	Theming - Libero	How to customize a Libero theme and use it: colors, scales, per-component defaults, light and dark pairs, and reading the active theme.	/md/theming.md	About	/about/getting-started
+/about/localization	Localization - Libero	The words components say on their own, how dates and numbers are written, and the reading direction: Localization, Formats and the hooks that switch them.	/md/localization.md	About	/about/getting-started
+/about/providers	Providers - Libero	LiberoProvider (themes, localization, formats, direction) and IconProvider (glyphs): what each provides, and how parts of a page sit below different providers.	/md/providers.md	About	/about/getting-started
+/about/platform	Platform - Libero	Every platform API (elements, timers, keys, scroll, the document, the colour scheme, the clock), what each enables, and what to do where a renderer lacks one.	/md/platform.md	About	/about/getting-started
+/about/credits	Credits - Libero	The projects whose icons and logos libero and these docs use (Lucide, pictogram, Lobe Icons, Simple Icons, eleven more icon sets), their licences and notices.	/md/credits.md	About	/about/getting-started
+/accessibility	Accessibility - Libero	What libero's accessibility support covers across the library and what it does not, from on and disabled states to forced colors, which is covered only in part.	/md/accessibility.md	Accessibility	/accessibility
+/accessibility/focus-trap	FocusTrap - Libero	Confines Tab and Shift+Tab cycling to its children, for keeping keyboard focus inside an open overlay.	/md/focus_trap.md	Accessibility	/accessibility
+/accessibility/visually-hidden	VisuallyHidden - Libero	A span read by screen readers but hidden from sighted layout, for extra context on something vague on its own.	/md/visually_hidden.md	Accessibility	/accessibility
+/accessibility/use-id	Unique ID - Libero	An id unique within the app, stable for the component's lifetime, for the aria wiring between one instance's elements.	/md/use_id.md	Accessibility	/accessibility
+/accessibility/use-focus-return	Focus return - Libero	Puts focus back on the element that opened a panel or popup once it closes, with fallbacks for a trigger that is gone.	/md/use_focus_return.md	Accessibility	/accessibility
+/accessibility/use-accessibility	Accessibility settings - Libero	Reads the reader's accessibility settings and lets an app force reduced motion.	/md/use_accessibility.md	Accessibility	/accessibility
+/hooks	Hooks - Libero	Every public libero hook in one table, with what it is for and the page that shows it.	/md/hooks.md	Hooks	/hooks
+/hooks/use-element	Element handle - Libero	A handle to one of your component's own elements, to focus, scroll and measure it on every renderer.	/md/use_element.md	Hooks	/hooks
+/hooks/use-drag	Drag - Libero	Pointer plumbing for a drag. Capture, a start point, deltas against it, and one end path for release and cancel.	/md/use_drag.md	Hooks	/hooks
+/hooks/use-intersection	Intersection - Libero	Reports how much of an element is visible, with a root, margin and thresholds; never intersecting where nothing can observe.	/md/use_intersection.md	Hooks	/hooks
+/hooks/use-long-press	Long press - Libero	Pointer handlers that call back once a press is held, without breaking a tap or a scroll.	/md/use_long_press.md	Hooks	/hooks
+/hooks/use-swipe	Swipe - Libero	Touch swipe handlers, and an edge swipe that opens a drawer without fighting Android's back gesture.	/md/use_swipe.md	Hooks	/hooks
+/hooks/use-timers	Timers - Libero	Runs a callback once or on a period, started and stopped from code, cancelled when the component unmounts.	/md/use_timers.md	Hooks	/hooks
+/hooks/use-debounce	Debounce and throttle - Libero	Signals and callbacks that follow their source once it settles or at most once per period.	/md/use_debounce.md	Hooks	/hooks
+/hooks/use-history	History - Libero	Undo and redo over snapshots of a value, with rapid changes grouped into one step by time or size.	/md/use_history.md	Hooks	/hooks
+/hooks/use-hotkeys	Hotkeys - Libero	Runs a handler on a keyboard shortcut from anywhere in the page, skipping text entry unless asked, and stops when the component unmounts.	/md/use_hotkeys.md	Hooks	/hooks
+/hooks/use-media-query	Media query - Libero	Whether a CSS media query or the 768px mobile breakpoint matches, live, with a documented default where nothing can measure.	/md/use_media_query.md	Hooks	/hooks
+/hooks/use-media	Media - Libero	Plays and reads an <audio> or <video> you render yourself, one signal per read; the engine behind Audio and Video.	/md/use_media.md	Hooks	/hooks
+/hooks/use-back	Back button - Libero	Runs a handler on Android's Back button instead of leaving the app, below any overlay opened later; does nothing elsewhere.	/md/use_back.md	Hooks	/hooks
+/hooks/use-fullscreen	Fullscreen - Libero	Puts one of your elements in fullscreen, natively or drawn as a fixed box where the platform refuses it; the engine behind Video's fullscreen.	/md/use_fullscreen.md	Hooks	/hooks
+/hooks/use-geolocation	Geolocation - Libero	The device's position, once or followed, with the location permission; never prompts on mount.	/md/use_geolocation.md	Hooks	/hooks
+/hooks/use-local-storage	Local storage - Libero	A value kept under a key across reloads and app runs, or for the tab's session; a file per key off the web.	/md/use_local_storage.md	Hooks	/hooks
+/hooks/use-indexed-db	IndexedDB - Libero	A larger value kept under a key in IndexedDB, loaded and saved without blocking the page; a file per key off the web.	/md/use_indexed_db.md	Hooks	/hooks
+/hooks/use-user-media	User media - Libero	The camera and microphone with a preview, a PNG snapshot, a chunked video or audio recording and a camera switch; never prompts on mount.	/md/use_user_media.md	Hooks	/hooks
+/hooks/use-system-notification	System notifications - Libero	Notifications the operating system draws and a web push subscription; never prompt on mount.	/md/use_system_notification.md	Hooks	/hooks
+/hooks/save-file	Save file - Libero	Saves bytes the app made as a file: a download on the web, a save dialog on the desktop and Blitz, the share sheet on Android.	/md/save_file.md	Hooks	/hooks
+/hooks/use-theme-set	Theme set - Libero	Reads and swaps the active theme set, which a theme picker is built on.	/md/use_theme_set.md	Hooks	/hooks
+/hooks/use-stylesheet	Stylesheet - Libero	Registers a stylesheet of your own above every libero layer and returns its class.	/md/use_stylesheet.md	Hooks	/hooks
+/buttons/action-icon	ActionIcon - Libero	An icon-only button, rendered as a button or a link, with a required aria_label.	/md/action_icon.md	Buttons	/buttons/button
+/buttons/button	Button - Libero	A clickable action, a toggle, or a router-aware link.	/md/button.md	Buttons	/buttons/button
+/buttons/button-group	ButtonGroup - Libero	Buttons and action icons side by side as one control, sharing seams and defaults.	/md/button_group.md	Buttons	/buttons/button
+/buttons/copy	Copy - Libero	An icon button that copies a value to the clipboard and confirms it with a check and a spoken "Copied".	/md/copy.md	Buttons	/buttons/button
+/buttons/direction-toggle	DirectionToggle - Libero	An icon button that turns the app's text between left to right and right to left.	/md/direction_toggle.md	Buttons	/buttons/button
+/buttons/repository	Repository - Libero	A link to a GitHub or GitLab repository with its star count beside the host's icon.	/md/repository.md	Buttons	/buttons/button
+/buttons/theme-switcher	ThemeSwitcher - Libero	An icon button that flips the colour scheme, optionally through the system's too, with an optional theme picker beside it.	/md/theme_switcher.md	Buttons	/buttons/button
+/buttons/tldr	Tldr - Libero	A menu of links that ask an AI assistant (ChatGPT, Google AI, Claude, Perplexity or your own) to summarize a page.	/md/tldr.md	Buttons	/buttons/button
+/buttons/toolbar	Toolbar - Libero	A row of buttons, action icons and selects that is one tab stop, moved through with the arrow keys.	/md/toolbar.md	Buttons	/buttons/button
+/data-display/accordion	Accordion - Libero	Sections over an enum, each a heading whose button opens its panel, with one or many open.	/md/accordion.md	Data display	/data-display/icon
+/data-display/carousel	Carousel - Libero	A strip of slides that snaps as it scrolls and knows which one it is on, with controls, indicators and optional autoplay.	/md/carousel.md	Data display	/data-display/icon
+/data-display/image-list	ImageList - Libero	A gallery of pictures with optional caption bars, laid out on a GridZone, so cols counts the library's twelve tracks.	/md/image_list.md	Data display	/data-display/icon
+/data-display/avatar	Avatar - Libero	A person as a fixed square, with a fallback chain from a picture down to a person glyph, and a group that collapses its overflow into a +N chip.	/md/avatar.md	Data display	/data-display/icon
+/data-display/badge	Badge - Libero	A short status label, one uppercase pill with no role and no interaction.	/md/badge.md	Data display	/data-display/icon
+/data-display/data-list	DataList - Libero	A <dl> of term/description pairs, where one term can carry several descriptions.	/md/data_list.md	Data display	/data-display/icon
+/data-display/icon	Icon - Libero	A sized, colored box around an svg, which takes the box's color through currentColor.	/md/icon.md	Data display	/data-display/icon
+/data-display/pictogram	Pictogram - Libero	An inline svg drawn from SvgData, such as a lucide icon, in currentColor and with no size of its own.	/md/pictogram.md	Data display	/data-display/icon
+/data-display/icon-provider	IconProvider - Libero	Swaps the glyphs libero draws itself (chevrons, close, checks, ...), slot by slot, for everything below it; lucide by default.	/md/icon_provider.md	Data display	/data-display/icon
+/data-display/image	Image - Libero	An <img> with a fallback source on load error, rounded corners and an optional click-to-zoom overlay.	/md/image.md	Data display	/data-display/icon
+/data-display/audio	Audio - Libero	An <audio> with libero's own controls, and the use_media hook behind them.	/md/audio.md	Data display	/data-display/icon
+/data-display/video	Video - Libero	A <video> with libero's own controls, captions and fullscreen, on the use_media hook.	/md/video.md	Data display	/data-display/icon
+/data-display/indicator	Indicator - Libero	A dot or a small capped count pinned to something else with a Float, never read out itself.	/md/indicator.md	Data display	/data-display/icon
+/data-display/table	Table - Libero	A sortable data table built from a row type and a list of column definitions.	/md/table.md	Data display	/data-display/icon
+/data-display/timeline	Timeline - Libero	An ordered list of events drawn against a rail, with an active index colouring the bullets and connectors up to the current one.	/md/timeline.md	Data display	/data-display/icon
+/data-display/list	List - Libero	A <ul> of <li> items without the browser's list styling, with themed gaps and nested indent.	/md/list.md	Data display	/data-display/icon
+/data-display/marquee	Marquee - Libero	Content that scrolls on its own in an endless loop, with a pause toggle and a still fallback under reduced motion.	/md/marquee.md	Data display	/data-display/icon
+/data-display/qr-code	QrCode - Libero	Encodes a string as a scalable QR code, rendered as an inline SVG.	/md/qr_code.md	Data display	/data-display/icon
+/data-display/sortable	Sortable - Libero	A list the user reorders by dragging a handle, by keyboard, or with move buttons. use_sortable and use_sortable_item do the same for your own markup.	/md/sortable.md	Data display	/data-display/icon
+/data-display/kanban	Kanban - Libero	A board of columns whose cards move by drag in a column or to another, by keyboard or move buttons in a column, and to another column by a Move to menu.	/md/kanban.md	Data display	/data-display/icon
+/feedback/alert	Alert - Libero	A tinted surface for something the reader has to know, with a title, an optional icon and close button, and a role that follows its color.	/md/alert.md	Feedback	/feedback/alert
+/feedback/loader	Loader - Libero	An indeterminate busy indicator: a ring, bars or dots. It stays silent, so a status region says the wait. Button, Combobox and FileField show it.	/md/loader.md	Feedback	/feedback/alert
+/feedback/notifications	Notifications - Libero	A hook plus a host: render Notifications {} once, and use_notifications() shows messages from anywhere, as an Alert or your own template over your data.	/md/notifications.md	Feedback	/feedback/alert
+/feedback/progress-bar	ProgressBar - Libero	A determinate or indeterminate progress bar over any min..=max range.	/md/progress_bar.md	Feedback	/feedback/alert
+/feedback/skeleton	Skeleton - Libero	A placeholder for loading content, as a standalone grey shape or a wrapper that hides the real content until it is ready.	/md/skeleton.md	Feedback	/feedback/alert
+/form/getting-started	Form getting started - Libero	How to build libero forms, with specialized fields, composed parts, validators at each layer, typed paths from #[derive(Fields)] and binding.	/md/form_getting_started.md	Form	/form/getting-started
+/form/autocomplete	Autocomplete - Libero	A text field that offers completions from any Options type, while the value stays a String.	/md/autocomplete.md	Form	/form/getting-started
+/form/checkbox	Checkbox - Libero	A checkbox with its label beside the box, the field slots under both, and an indeterminate state.	/md/checkbox.md	Form	/form/getting-started
+/form/chip	Chip - Libero	A compact token: a tag, a filter, a small action or a link.	/md/chip.md	Form	/form/getting-started
+/form/color-field	ColorField - Libero	A text field holding a ColorCode, with a preview swatch, an eyedropper and a ColorPicker in a dropdown.	/md/color_field.md	Form	/form/getting-started
+/form/color-picker	ColorPicker - Libero	A saturation panel and a hue slider, with optional alpha and preset swatches, over one ColorCode. Also documents HueSlider, AlphaSlider and ColorSwatch.	/md/color_picker.md	Form	/form/getting-started
+/form/combobox	Combobox - Libero	A listbox that hangs off a trigger you supply, holding no state of its own.	/md/combobox.md	Form	/form/getting-started
+/form/chrono-field	ChronoField - Libero	A text field for every date and time value, typed leniently, with the matching ChronoPicker in a dropdown.	/md/chrono_field.md	Form	/form/getting-started
+/form/chrono-picker	ChronoPicker - Libero	One picker for every date and time value, from days, months and years to times, date-times and ranges of them.	/md/chrono_picker.md	Form	/form/getting-started
+/form/fieldset	Fieldset - Libero	Several fields that form one value under a <legend>, with rules over that value that land on the fields they name.	/md/fieldset.md	Form	/form/getting-started
+/form/file-field	FileField - Libero	Files picked from the system dialog or dropped on the control, as a one-line input or a drop surface.	/md/file_field.md	Form	/form/getting-started
+/form/form	Form - Libero	A <form> that validates on submit, with plain Fn(&V) -> bool rules, typed field paths from #[derive(Fields)] and a focused error summary.	/md/form.md	Form	/form/getting-started
+/form/image-cropper	ImageCropper - Libero	A box with handles over an image, picking the part to keep by drag or arrow keys, free or at a fixed aspect, with a rect or circle mask.	/md/image_cropper.md	Form	/form/getting-started
+/form/multi-select	MultiSelect - Libero	A listbox over an enum that holds any number of its options, drawn as chips in the trigger.	/md/multi_select.md	Form	/form/getting-started
+/form/cascader	Cascader - Libero	A field that picks one option from a tree, one level at a time, and shows the path in the trigger.	/md/cascader.md	Form	/form/getting-started
+/form/native-select	NativeSelect - Libero	A styled native <select> over an enum, with the field slots.	/md/native_select.md	Form	/form/getting-started
+/form/number-field	NumberField - Libero	A numeric field over your own number type, with optional steppers in its trailing slot.	/md/number_field.md	Form	/form/getting-started
+/form/password-field	PasswordField - Libero	A TextField for secrets, with a button in its trailing slot that shows the text.	/md/password_field.md	Form	/form/getting-started
+/form/phone-field	PhoneField - Libero	A country picker in front of a tel input, whose value is an E.164 string.	/md/phone_field.md	Form	/form/getting-started
+/form/pin-field	PinField - Libero	A pin, one character per cell, with auto-advance, paste spreading and an oncomplete that fires the moment the last cell fills.	/md/pin_field.md	Form	/form/getting-started
+/form/radio-group	RadioGroup - Libero	A group of radios over an enum, exactly one selected, with one tab stop, arrow-key selection and the question as the group's name.	/md/radio_group.md	Form	/form/getting-started
+/form/range-slider	RangeSlider - Libero	Two thumbs on one track, for a span instead of a point, over the same values as Slider.	/md/range_slider.md	Form	/form/getting-started
+/form/rating	Rating - Libero	A row of stars picking a value, whole or in halves, by click, sideways drag or arrow keys; read-only or display-only.	/md/rating.md	Form	/form/getting-started
+/form/rich-text-editor	RichTextEditor - Libero	A rich text field over a Doc: headings, lists, quotes, code blocks and marks, with undo, shortcuts and Markdown typing.	/md/rich_text_editor.md	Form	/form/getting-started
+/form/segmented-control	SegmentedControl - Libero	A connected strip of segments over an enum, exactly one of them selected, with the field slots.	/md/segmented_control.md	Form	/form/getting-started
+/form/select	Select - Libero	A listbox over an enum with rows you can draw yourself, in the same field frame as every other input.	/md/select.md	Form	/form/getting-started
+/form/slider	Slider - Libero	A value dragged along a track, continuous over f64 or discrete over an ordered enum that derives SliderValue.	/md/slider.md	Form	/form/getting-started
+/form/switch	Switch - Libero	An on/off toggle drawn as a track and thumb, announced as a switch, with the field slots.	/md/switch.md	Form	/form/getting-started
+/form/tags-field	TagsField - Libero	A field whose value is a Vec<String> of typed tags, drawn as chips around the input.	/md/tags_field.md	Form	/form/getting-started
+/form/text-field	TextField - Libero	A single-line text field with a label, a description, helper text and a validation message.	/md/text_field.md	Form	/form/getting-started
+/form/textarea	Textarea - Libero	A multi-line text field, sized by rows and resizable by the user.	/md/textarea.md	Form	/form/getting-started
+/layout/aspect-ratio	AspectRatio - Libero	Enforces a width-to-height ratio on its child, cropping it to fill the box.	/md/aspect_ratio.md	Layout	/layout/box
+/layout/box	Box - Libero	The primitive every other component is built on, rendered as any tag via component and styled through sx.	/md/box.md	Layout	/layout/box
+/layout/center	Center - Libero	Centers its child horizontally and vertically.	/md/center.md	Layout	/layout/box
+/layout/collapse	Collapse - Libero	Animates its children's height open and closed, and follows the content when its height changes.	/md/collapse.md	Layout	/layout/box
+/layout/container	Container - Libero	Centers content and caps its width at a breakpoint.	/md/container.md	Layout	/layout/box
+/layout/divider	Divider - Libero	A horizontal or vertical rule, with an optional label sitting in the line.	/md/divider.md	Layout	/layout/box
+/layout/flex	Flex - Libero	A flexbox container with theme-aware direction, gap, alignment and wrapping.	/md/flex.md	Layout	/layout/box
+/layout/float	Float - Libero	Anchors its child to a corner or edge of the nearest positioned ancestor, like a badge on an avatar.	/md/float.md	Layout	/layout/box
+/layout/grid	Grid - Libero	A layout matrix of named areas: Grid holds the shape, a GridZone is a twelve-column container with optional masonry, a GridItem takes a fraction of it.	/md/grid.md	Layout	/layout/box
+/layout/header	Header - Libero	The page's banner landmark, a sticky, static or fixed header bar for nav and actions.	/md/header.md	Layout	/layout/box
+/layout/paper	Paper - Libero	The library's surface, with a background, a corner radius, an elevation and an optional hairline border, and no semantics of its own.	/md/paper.md	Layout	/layout/box
+/layout/scroll-area	ScrollArea - Libero	A scrollable region that fills its parent, with themed scrollbars, scroll positions in percent, edge events and row virtualization through Virtualize.	/md/scroll_area.md	Layout	/layout/box
+/layout/scroller	Scroller - Libero	A horizontal strip with a hidden scrollbar and a step control over each end, shown while there is more content that way.	/md/scroller.md	Layout	/layout/box
+/layout/sidebar	Sidebar - Libero	An in-flow panel on one edge of its parent that scrolls its own content, like a nav rail or an inspector.	/md/sidebar.md	Layout	/layout/box
+/layout/splitter	Splitter - Libero	Two panes split by a divider you can drag or move with the keyboard. Nest another Splitter in a pane for more than two.	/md/splitter.md	Layout	/layout/box
+/layout/transition	Transition - Libero	Fades, slides or scales its children in on mount, and out when open turns false.	/md/transition.md	Layout	/layout/box
+/navigation/bottom-navigation	BottomNavigation - Libero	A phone's bar of three to five top-level destinations, each an icon over a label, the current one marked with aria-current.	/md/bottom_navigation.md	Navigation	/navigation/anchor
+/navigation/burger	Burger - Libero	Three bars that morph into an X, an ActionIcon with the ARIA a nav toggle needs.	/md/burger.md	Navigation	/navigation/anchor
+/navigation/anchor	Anchor - Libero	A real link styled and sized like Text, router-aware through to.	/md/anchor.md	Navigation	/navigation/anchor
+/navigation/nav-link	NavLink - Libero	A navigation list item for a sidebar or nav bar, a link that marks the current page with aria-current.	/md/nav_link.md	Navigation	/navigation/anchor
+/navigation/pagination	Pagination - Libero	A row of page buttons in a named nav landmark, with an ellipsis that keeps the row the same width.	/md/pagination.md	Navigation	/navigation/anchor
+/navigation/stepper	Stepper - Libero	The stages of a process over an enum, horizontal or vertical, with the current step's content.	/md/stepper.md	Navigation	/navigation/anchor
+/navigation/tabs	Tabs - Libero	One strip of tabs over an enum, with only the selected tab's panel built.	/md/tabs.md	Navigation	/navigation/anchor
+/navigation/menubar	Menubar - Libero	A row of menus. Each menu is a Menu, and the bar is a single tab stop with one menu open at most.	/md/menubar.md	Navigation	/navigation/anchor
+/navigation/tree	Tree - Libero	A data-driven, keyboard-navigable tree view over your own node type.	/md/tree.md	Navigation	/navigation/anchor
+/overlay/dialog	Dialog - Libero	The dialog surface with a header and role="dialog", which inside a modal also names and closes itself.	/md/dialog.md	Overlay	/overlay/overlay
+/overlay/drawer	Drawer - Libero	A dimmed, focus-trapped panel docked to one edge, use_modal with the docking around it.	/md/drawer.md	Overlay	/overlay/overlay
+/overlay/floating-window	FloatingWindow - Libero	A non-modal window over the page that drags, moves by keyboard and resizes from a corner, opened through a hook.	/md/floating_window.md	Overlay	/overlay/overlay
+/overlay/hover-card	HoverCard - Libero	An interactive card that opens while its trigger is hovered or focused, a named, dismissible dialog on a paper surface.	/md/hover_card.md	Overlay	/overlay/overlay
+/overlay/lightbox	Lightbox - Libero	A modal image viewer, use_modal with a gallery around it, with zoom, pan, captions and a thumbnail strip.	/md/lightbox.md	Overlay	/overlay/overlay
+/overlay/menu	Menu - Libero	A list of commands that drops from a trigger, with groups, separators and submenus.	/md/menu.md	Overlay	/overlay/overlay
+/overlay/modal	Modal - Libero	A hook that opens a render closure as a modal, with arguments and a result per opening.	/md/modal.md	Overlay	/overlay/overlay
+/overlay/overlay	Overlay - Libero	A layer that dims and blurs the page behind it, with centred content. The backdrop behind a modal, or a loading screen.	/md/overlay.md	Overlay	/overlay/overlay
+/overlay/popover	Popover - Libero	A hook that anchors a portaled box to a trigger, flipping and shifting it to stay on screen.	/md/popover.md	Overlay	/overlay/overlay
+/overlay/shortcut-help	ShortcutHelp - Libero	A dialog listing keyboard shortcuts, each chord in the platform's key names.	/md/shortcut_help.md	Overlay	/overlay/overlay
+/overlay/spotlight	Spotlight - Libero	A command palette. A modal search box over your actions, with groups, arrow-key highlight and a Ctrl/Cmd+K hotkey.	/md/spotlight.md	Overlay	/overlay/overlay
+/overlay/tooltip	Tooltip - Libero	A label that appears while its child is hovered or focused by keyboard, portaled so nothing clips it.	/md/tooltip.md	Overlay	/overlay/overlay
+/overlay/tour	Tour - Libero	A guided tour. A hook that dims the page around one element per step and explains it in a card beside it.	/md/tour.md	Overlay	/overlay/overlay
+/typography/blockquote	Blockquote - Libero	A quotation in a tinted frame with an accent bar, with the attribution outside the quote.	/md/blockquote.md	Typography	/typography/title
+/typography/code	Code - Libero	An inline <code> snippet, optionally syntax highlighted.	/md/code.md	Typography	/typography/title
+/typography/code-block	CodeBlock - Libero	A multi-line code block with line numbers, a copy button, a language header, diffs and highlighted lines.	/md/code_block.md	Typography	/typography/title
+/typography/kbd	Kbd - Libero	A single keyboard key, rendered as a real <kbd> and styled from the theme.	/md/kbd.md	Typography	/typography/title
+/typography/mark	Mark - Libero	A mark element that highlights text with a light tint of a theme color.	/md/mark.md	Typography	/typography/title
+/typography/text	Text - Libero	Body copy, sized from the theme's text scale.	/md/text.md	Typography	/typography/title
+/typography/title	Title - Libero	A heading, h1 through h6, whose visual size and semantic tag can be set apart.	/md/title.md	Typography	/typography/title

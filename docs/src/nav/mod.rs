@@ -22,9 +22,9 @@ mod tree;
 pub(crate) use drag::use_nav_drag;
 pub use pager::{neighbours, page_label};
 pub use search::page_actions;
-#[cfg(test)]
-pub use tree::page_title;
 use tree::{NavEntry, nav_tree};
+#[cfg(test)]
+pub use tree::{page_group, page_title};
 
 // Below `Sm` an off-canvas panel toggled by `open` (`visibility` drops closed links from tab
 // order); from `Sm` up the sticky sidebar, ignoring `open`. With `drawer` off-canvas everywhere.

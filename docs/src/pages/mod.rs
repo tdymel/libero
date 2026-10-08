@@ -20,6 +20,8 @@ pub use data_display::*;
 pub use feedback::*;
 pub use form::*;
 pub use home::Home;
+#[cfg(test)]
+pub use home::TITLE as HOME_TITLE;
 pub use hooks::*;
 pub use layout::*;
 pub use navigation::*;

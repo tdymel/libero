@@ -4,7 +4,7 @@ Crate: `libero`
 Import: `use libero::{IconProvider, IconSet, IconSlot, LiberoProvider};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/context/libero/mod.rs>
 Index: [index.md](index.md) lists every other page
-Description: LiberoProvider (themes, localization, formats, direction) and IconProvider (glyphs): what each provides, and how different parts of one page can sit below different providers.
+Description: LiberoProvider (themes, localization, formats, direction) and IconProvider (glyphs): what each provides, and how parts of a page sit below different providers.
 
 `LiberoProvider` is the root every app renders once: themes, localization,
 formats, stylesheets and portals. `IconProvider` swaps libero's glyphs. Both are

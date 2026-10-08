@@ -4,7 +4,7 @@ Crate: `libero`
 Import: `use libero::components::{Grid, GridZone, GridItem, GridSpan, GridArea, StaticGridTemplate}; use libero::theme::{Responsive, responsive};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/grid>
 Index: [index.md](index.md) lists every other page
-Description: A layout matrix of named areas. `Grid` holds the shape, a `GridZone` is a twelve-column container with optional masonry, and a `GridItem` takes a fraction of it.
+Description: A layout matrix of named areas: `Grid` holds the shape, a `GridZone` is a twelve-column container with optional masonry, a `GridItem` takes a fraction of it.
 
 A layout matrix of named areas. `Grid` holds the shape, each `GridZone` is a
 twelve-column container of its own, and a `GridItem` takes a fraction of its

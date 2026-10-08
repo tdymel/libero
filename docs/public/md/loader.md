@@ -4,7 +4,7 @@ Crate: `libero`
 Import: `use libero::components::Loader;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/feedback/loader.rs>
 Index: [index.md](index.md) lists every other page
-Description: An indeterminate busy indicator, as a ring, bars or dots. It stays silent, so a status region says the wait. `Button`, `Combobox` and `FileField` show it while loading.
+Description: An indeterminate busy indicator: a ring, bars or dots. It stays silent, so a status region says the wait. `Button`, `Combobox` and `FileField` show it.
 
 An indeterminate busy indicator. It says something is happening, not how much
 is left. The root is a `<span>`, so it fits inside a paragraph or a button.

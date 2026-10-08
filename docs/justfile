@@ -58,6 +58,9 @@ build: _dx
 build_release: _dx
     {{dx}} build --platform web --debug-symbols=false --release
     ./preload_wasm.sh {{public}}/release/web/public
+    # As pages.yml: the 404 shell and one `<route>.html` per route.
+    cp {{public}}/release/web/public/index.html {{public}}/release/web/public/404.html
+    ./route_pages.py {{public}}/release/web/public
 
 # Serve a built bundle with brotli/gzip content negotiation, the way a real
 # static host would. `dx serve` skips the preload step and `python3 -m

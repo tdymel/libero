@@ -42,8 +42,10 @@ jobs:
         run: dx build --platform web --release --debug-symbols=false ${BASE_PATH:+--base-path "$BASE_PATH"}
       - run: |
           docs/preload_wasm.sh "$PUBLIC"
-          # Pages has no SPA rewrite: a deep link lands on 404.html, which boots the app on its route.
+          # Pages has no SPA rewrite: an unknown path lands on 404.html, which boots the app on it.
           cp "$PUBLIC/index.html" "$PUBLIC/404.html"
+          # Every route gets its own `<route>.html` (200, own head); after the copy, it rewrites index.html.
+          python3 docs/route_pages.py "$PUBLIC"
           # Pages compresses on its own and never serves the `.br` siblings `pre_compress` writes.
           find "$PUBLIC" -name '*.br' -delete
           touch "$PUBLIC/.nojekyll"

@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::sx::{Sx, StaticSx, bp, sx};`
 Index: [index.md](index.md) lists every other page
-Description: The `sx` styling builder every component takes: theme values, states, selectors, responsive, media and container queries, cascade layers, `StaticSx` and the `parts` Style API.
+Description: The `sx` styling builder every component takes: theme values, states, selectors, responsive, media and container queries, cascade layers and the `parts` Style API.
 
 Every component takes the same styling props. `sx()` is not an inline style.
 Identical declarations share one `lsx-*` class, emitted once, so a thousand rows
