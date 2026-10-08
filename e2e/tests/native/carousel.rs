@@ -146,3 +146,48 @@ fn a_wheeled_strip_rests_on_a_slide_and_reports_it() {
         page.tree()
     );
 }
+
+fn autoplaying() -> Element {
+    rsx! {
+        button { id: "before", "Before" }
+        Carousel {
+            aria_label: "Photos",
+            autoplay: true,
+            autoplay_delay: 60_000,
+            slides: slides(),
+        }
+    }
+}
+
+const TOGGLE: &str = "[aria-pressed]";
+
+fn pressed(page: &Page) -> Option<String> {
+    page.attr(TOGGLE, "aria-pressed")
+}
+
+/// Todo 2394: a Play click whose focus entry Blitz reports late is not paused again by it.
+#[test]
+fn a_play_click_from_outside_the_carousel_keeps_it_playing() {
+    let mut page = mount(autoplaying);
+    page.click("#before");
+    page.click(TOGGLE);
+    assert_eq!(
+        pressed(&page).as_deref(),
+        Some("true"),
+        "Pause did not pause"
+    );
+    page.click("#before");
+    assert!(
+        page.is_focused("#before"),
+        "focus is on {}",
+        page.focus_owner()
+    );
+
+    page.click(TOGGLE);
+    assert_eq!(
+        pressed(&page).as_deref(),
+        Some("false"),
+        "Play was paused again, focus on {}",
+        page.focus_owner()
+    );
+}

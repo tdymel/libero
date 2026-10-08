@@ -197,9 +197,20 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         }
     });
 
-    // Where the renderer fires no `submit`, its triggers run the same path.
+    // Where the renderer fires no `submit`, its triggers run the same path, after the
+    // event's writes rendered: the web submits in a later task (a date Enter commits, 2329).
+    let mut requested = use_signal(|| false);
+    use_effect(move || {
+        if requested() {
+            requested.set(false);
+            platform::when_free(move || {
+                submit.call(platform::submit_event(form_element.mounted()));
+            });
+        }
+    });
+    let request = use_callback(move |()| requested.set(true));
     let (submit_click, implicit_submit) =
-        platform::submit_listeners(move || form_element.mounted(), submit).unzip();
+        platform::submit_listeners(move || form_element.mounted(), request).unzip();
 
     let items = summary.visible(&scope);
     let summary_node = (!items.is_empty()).then(|| {

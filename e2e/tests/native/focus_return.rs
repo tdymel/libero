@@ -41,11 +41,22 @@ fn a_trigger_that_stops_its_pointerdown_gets_the_old_answer() {
     page.click("#elsewhere");
 
     page.click(TRIGGER);
-    assert!(page.exists(DIALOG));
-    page.press(Key::Escape);
-    assert!(!page.exists(DIALOG));
+    assert!(page.wait_for(|page| page.exists(DIALOG)), "{}", page.tree());
+    // Escape goes to whatever holds focus: under load it is still on the trigger.
     assert!(
-        page.is_focused("#elsewhere"),
+        page.wait_for(|page| page.exists("[role=dialog] :focus")),
+        "focus is on {}",
+        page.focus_owner()
+    );
+    page.press(Key::Escape);
+    assert!(
+        page.wait_for(|page| !page.exists(DIALOG)),
+        "{}",
+        page.tree()
+    );
+    // The restore is a spawned task: under load it lands after the close.
+    assert!(
+        page.wait_for(|page| page.is_focused("#elsewhere")),
         "focus is on {}",
         page.focus_owner()
     );

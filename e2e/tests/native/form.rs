@@ -3,8 +3,12 @@
 
 use dioxus::prelude::*;
 use e2e::native::{Key, Page, mount};
-use libero::components::{
-    Button, Fields, Form, Options, Rule, SegmentedControl, Switch, TextField, not_empty, use_form,
+use libero::{
+    chrono::NaiveDate,
+    components::{
+        Button, DateField, Fields, Form, Options, Rule, SegmentedControl, Switch, TextField,
+        not_empty, use_form,
+    },
 };
 
 #[derive(Clone, PartialEq, Default, Fields)]
@@ -96,6 +100,27 @@ fn Checkables(button: bool) -> Element {
     }
 }
 
+const DUE: &str = "input[data-controlled]";
+
+/// A required date field: Enter commits the typed text and submits in one keydown (todo 2329).
+fn dated() -> Element {
+    let mut due = use_signal(|| None::<NaiveDate>);
+    let mut submits = use_signal(|| 0u32);
+    rsx! {
+        Form::<()> { onsubmit: move |_| submits += 1,
+            DateField {
+                id: "due",
+                label: "Due",
+                today: NaiveDate::from_ymd_opt(2026, 9, 18),
+                value: due(),
+                onchange: move |next| due.set(next),
+                validate: not_empty.error("Pick a date."),
+            }
+        }
+        span { id: "submits", "{submits}" }
+    }
+}
+
 fn submits(page: &Page) -> String {
     page.text("#submits")
 }
@@ -134,6 +159,26 @@ fn enter_in_a_text_field_submits() {
     let mut page = filled();
     page.press(Key::Enter);
     assert_eq!(submits(&page), "1");
+}
+
+#[test]
+fn enter_in_a_date_field_submits_the_committed_date() {
+    let mut page = mount(dated);
+    page.click(DUE);
+    for character in "March 5, 2026".chars() {
+        page.press(Key::Character(character.to_string()));
+    }
+    page.press(Key::Enter);
+    assert_eq!(submits(&page), "1", "{}", page.tree());
+}
+
+#[test]
+fn enter_in_an_empty_date_field_is_blocked_by_its_rule() {
+    let mut page = mount(dated);
+    page.click(DUE);
+    page.press(Key::Enter);
+    assert_eq!(submits(&page), "0");
+    assert!(page.exists("[data-slot=summary]"), "{}", page.tree());
 }
 
 #[test]

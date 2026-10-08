@@ -8,6 +8,7 @@ mod aspect_ratio;
 mod avatar;
 mod bottom_navigation;
 mod button;
+mod button_group;
 mod carousel;
 mod center;
 mod choice;

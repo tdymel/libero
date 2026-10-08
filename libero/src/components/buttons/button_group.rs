@@ -75,16 +75,16 @@ static BUTTON_GROUP_SX: StaticSx = StaticSx::new(|| {
             Orientation::Vertical.state_name(),
             sx().flex_direction("column")
                 .align_items("stretch")
-                // A set width (`ActionIcon`) is never stretched; the pair's toggle grows beside its chevron.
-                .selector(format!("& > {CONTROL}"), sx().width("100%"))
+                // `auto`, not `100%`, lets a set width (`ActionIcon`) stretch: Blitz resolves no percentage in the shrink-to-fit column (todo 2330).
+                .selector(format!("& > {CONTROL}"), sx().width("auto"))
                 .selector(
                     format!("& > :not([role=\"group\"]) > {CONTROL}"),
                     sx().width("100%"),
                 )
-                // A `max-content` wrapper (`Tooltip`'s) is not stretched either (todo 2321).
+                // A `max-content` wrapper (`Tooltip`'s) is stretched too (todo 2321).
                 .selector(
                     format!("& > :not({CONTROL}, [role=\"group\"])"),
-                    sx().width("100%"),
+                    sx().width("auto"),
                 )
                 .selector(
                     format!("& > [role=\"group\"] > {CONTROL}"),

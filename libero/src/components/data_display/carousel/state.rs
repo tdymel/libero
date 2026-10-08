@@ -380,6 +380,8 @@ pub(super) struct CarouselState {
     pub(super) focused: Signal<bool>,
     /// A pointer is down on the pause control, so the focus it brings is no entry.
     pub(super) pressing: Signal<bool>,
+    /// The click that ended that press; its focus may still be on its way.
+    pub(super) released: Signal<bool>,
     pub(super) dragging: Signal<bool>,
     pub(super) drag_origin: Signal<f64>,
     /// The controlled index the effect last applied. Until it runs, a new one
@@ -525,17 +527,23 @@ pub(super) fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
     // press on the pause control, is no entry.
     let mut was_focused = use_signal(|| false);
     let mut pressing = use_signal(|| false);
+    let mut released = use_signal(|| false);
     use_effect(use_reactive!(|autoplay| {
         let within = focused();
+        let released_now = released();
         let entered = within && !*was_focused.peek();
         was_focused.set(within);
-        if !entered {
-            return;
+        if entered {
+            let pressed = std::mem::replace(&mut *pressing.write(), false);
+            if autoplay && !pressed && !*paused.peek() {
+                let mut paused = paused;
+                paused.set(true);
+            }
         }
-        let pressed = std::mem::replace(&mut *pressing.write(), false);
-        if autoplay && !pressed && !*paused.peek() {
-            let mut paused = paused;
-            paused.set(true);
+        // Dropped after the entry above read it: Blitz brings a press's focus after its click (todo 2394).
+        if released_now {
+            released.set(false);
+            pressing.set(false);
         }
     }));
 
@@ -612,6 +620,7 @@ pub(super) fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
         hovered,
         focused,
         pressing,
+        released,
         dragging,
         drag_origin,
         applied,

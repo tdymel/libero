@@ -249,6 +249,7 @@ pub(super) fn carousel_pause_button(view: CarouselView, controls: bool) -> Eleme
     let mut paused = view.state.paused;
     let labels = view.labels;
     let (focused, mut pressing) = (view.state.focused, view.state.pressing);
+    let mut released = view.state.released;
     let beside_next = controls && view.setup.orientation == Orientation::Horizontal;
     let pause_states: Input<States> = states().with("beside-next", beside_next).into();
 
@@ -276,7 +277,7 @@ pub(super) fn carousel_pause_button(view: CarouselView, controls: bool) -> Eleme
             },
             onclick: move |_| {
                 if !*focused.peek() {
-                    pressing.set(false);
+                    released.set(true);
                 }
                 paused.toggle();
             },
