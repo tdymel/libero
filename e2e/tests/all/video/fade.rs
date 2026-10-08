@@ -254,6 +254,57 @@ fn a_click_on_the_picture_plays_or_pauses() {
     });
 }
 
+/// Todo 2681: an error mid-playback leaves the element unpaused and short of data; its alert
+/// brings the faded controls back, and the status reads no buffering beside it.
+#[test]
+fn a_mid_playback_error_shows_the_controls_and_no_buffering() {
+    block_on(async {
+        let fixture = Fixture::open("/video/long", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        clock::hold(page, &[IDLE_MS]).await.unwrap();
+        wait::for_js_true(page, LONG_DURATION, "the duration")
+            .await
+            .unwrap();
+        pointer::click(page, PLAY).await.unwrap();
+        wait::for_js_true(page, PLAYING, "playing").await.unwrap();
+        fade(page).await;
+        // A stream dying on cue cannot be served: the element's state is faked as one leaves it.
+        page.evaluate(
+            "(() => { const video = document.querySelector('#player video');
+             Object.defineProperty(video, 'error', { get: () => ({ code: 2 }) });
+             Object.defineProperty(video, 'readyState', { get: () => 1 });
+             Object.defineProperty(video, 'paused', { get: () => false });
+             video.dispatchEvent(new Event('error')); })()",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector('#player [role=alert]') !== null
+                 && document.querySelector('{GROUP}').dataset.controls === undefined && {} === '1'",
+                bar_opacity_js()
+            ),
+            "the alert to bring the controls back",
+        )
+        .await
+        .unwrap();
+        let status: String = page
+            .evaluate("document.querySelector('#player [role=status]').textContent")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            status.is_empty(),
+            "the status reads {status:?} beside the error"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 1249: focus moved into faded controls by code, with no key, shows them.
 #[test]
 fn focus_from_code_shows_the_faded_controls() {

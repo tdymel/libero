@@ -3,12 +3,12 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Flex, Text, TourOptions, TourStep, TourView, use_tour},
+    components::{Button, Flex, Select, Text, TourOptions, TourStep, TourView, use_tour},
     hooks::use_element,
     sx::sx,
 };
 
-use crate::Routes;
+use crate::{Routes, common::Fruit};
 
 pub const ROUTES: Routes = &[
     ("/tour", || rsx! { TourPage { custom: false } }),
@@ -18,6 +18,7 @@ pub const ROUTES: Routes = &[
     ("/tour/hidden", || rsx! { HiddenTourPage {} }),
     ("/tour/long", || rsx! { LongTourPage {} }),
     ("/tour/more", || rsx! { MoreTourPage {} }),
+    ("/tour/form", || rsx! { FormTourPage {} }),
 ];
 
 const LONG: &str = "This stop has a lot to say. It explains the feature in several sentences, so \
@@ -190,6 +191,55 @@ fn LongTourPage() -> Element {
         Flex { direction: "column", gap: "md", sx: sx().padding("16px"),
             Button { id: "start-tour", variant: "outlined", onclick: move |_| tour.start(), "Take the tour" }
             Button { id: "target", onmounted: target.mount(), attributes: target.attributes(), "Target" }
+        }
+    }
+}
+
+/// An interactive step over a form whose first and last focusables are `display: none`
+/// (2673), with a Select (2674) and `#drop`, which empties the steps (2677).
+#[component]
+fn FormTourPage() -> Element {
+    let form = use_element();
+    let mut dropped = use_signal(|| false);
+    let mut fruit = use_signal(|| None::<Fruit>);
+    let steps = match dropped() {
+        true => Vec::new(),
+        false => vec![
+            TourStep::new("form")
+                .target(form)
+                .interactive(true)
+                .title("Form"),
+        ],
+    };
+    let tour = use_tour(TourOptions {
+        steps,
+        storage_key: Some("e2e-tour-form-seen".into()),
+        ..Default::default()
+    });
+
+    rsx! {
+        Flex { direction: "column", gap: "xl", max_width: "320px", sx: sx().padding("16px"),
+            Button {
+                id: "start-tour",
+                variant: "outlined",
+                onclick: move |_| {
+                    dropped.set(false);
+                    tour.start();
+                },
+                "Take the tour"
+            }
+            div { id: "form", onmounted: form.mount(), ..form.attributes(),
+                button { id: "hidden-first", style: "display: none", "Hidden first" }
+                Select {
+                    label: "Fruit",
+                    value: fruit(),
+                    onchange: move |next| fruit.set(next),
+                }
+                Button { id: "drop", onclick: move |_| dropped.set(true), "Drop the steps" }
+                button { id: "hidden-last", style: "display: none", "Hidden last" }
+            }
+            Text { id: "seen", size: "sm", if tour.seen() { "seen" } else { "unseen" } }
+            Button { id: "forget", variant: "text", onclick: move |_| tour.forget(), "Forget" }
         }
     }
 }

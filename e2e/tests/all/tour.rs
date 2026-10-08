@@ -280,6 +280,101 @@ e2e::scenario!(
     remembers_seen
 );
 
+const FORM_SELECT: &str = "#form [role=combobox]";
+
+/// Tabs from the card until `target` takes focus.
+async fn tab_into<D: Driver>(d: &mut D, target: &str) -> Result<()> {
+    for _ in 0..6 {
+        d.press(keyboard::TAB).await?;
+        if d.is_focused(target).await? {
+            return Ok(());
+        }
+    }
+    bail!("Tab never left the card for {target}")
+}
+
+/// 2673: the target's first and last focusables are `display: none`; Tab still enters it
+/// and leaves it for the card, both ways.
+async fn hidden_edges<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const CLOSE: &str = "[data-lsx-tour] [data-slot=close]";
+    open(d).await?;
+    hole_on(d, "#form", "starting the tour").await?;
+    tab_into(d, FORM_SELECT).await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, "#drop", "Tab inside the target").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, CLOSE, "Tab from the target's last shown control").await?;
+    d.press_shift(keyboard::TAB).await?;
+    eventually_focused(d, "#drop", "Shift+Tab from the card's first control").await?;
+    d.press_shift(keyboard::TAB).await?;
+    eventually_focused(d, FORM_SELECT, "Shift+Tab inside the target").await?;
+    d.press_shift(keyboard::TAB).await?;
+    eventually_focused(d, NEXT, "Shift+Tab from the target's first shown control").await
+}
+
+e2e::scenario!(
+    tab_skips_a_hidden_edge_of_an_interactive_target,
+    "/tour/form",
+    hidden_edges,
+    android: skip("959: a WebView handle queries no focusables to bridge by"),
+    desktop: skip("959: a WebView handle queries no focusables to bridge by")
+);
+
+/// 2674: Escape on the target's open Select closes the list only; the next ends the tour.
+async fn escape_closes_the_list_first<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    open(d).await?;
+    hole_on(d, "#form", "starting the tour").await?;
+    tab_into(d, FORM_SELECT).await?;
+    d.press(keyboard::ENTER).await?;
+    eventually(d, "Enter to open the Select", async |d| {
+        Ok(d.attr(FORM_SELECT, "aria-expanded").await?.as_deref() == Some("true"))
+    })
+    .await?;
+    d.press(keyboard::ESCAPE).await?;
+    eventually(d, "Escape to close the Select", async |d| {
+        Ok(d.attr(FORM_SELECT, "aria-expanded").await?.as_deref() == Some("false"))
+    })
+    .await?;
+    d.settle().await?;
+    ensure!(
+        d.exists(CARD).await?,
+        "Escape on the open Select ended the tour too"
+    );
+    d.press(keyboard::ESCAPE).await?;
+    modal::closed_with_focus_on(d, TRIGGER, "the second Escape").await
+}
+
+e2e::scenario!(
+    escape_in_a_target_closes_its_open_select_first,
+    "/tour/form",
+    escape_closes_the_list_first,
+    android: skip("959: a WebView handle queries no focusables to bridge by"),
+    desktop: skip("959: a WebView handle queries no focusables to bridge by")
+);
+
+/// 2677: steps emptied while open end the tour without storing it as seen.
+async fn emptied_is_unseen<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#forget").await?;
+    eventually_text(d, "#seen", "unseen", "forget").await?;
+    open(d).await?;
+    hole_on(d, "#form", "starting the tour").await?;
+    d.click("#drop").await?;
+    eventually(d, "the emptied tour to close", async |d| {
+        Ok(!d.exists(CARD).await?)
+    })
+    .await?;
+    d.settle().await?;
+    let seen = d.text("#seen").await?;
+    ensure!(seen == "unseen", "an emptied tour was stored as {seen}");
+    Ok(())
+}
+
+e2e::scenario!(
+    a_tour_emptied_while_open_is_not_seen,
+    "/tour/form",
+    emptied_is_unseen
+);
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("tour", "/tour")

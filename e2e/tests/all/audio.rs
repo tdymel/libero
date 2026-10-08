@@ -4,7 +4,7 @@
 use e2e::browser::block_on;
 use e2e::passes::keyboard::{self, Key};
 use e2e::passes::{pointer, target_size};
-use e2e::{Fixture, Suite, Viewport, wait};
+use e2e::{Fixture, Suite, Viewport, js, wait};
 
 const PLAY: &str = "#player [data-slot=controls] button";
 /// The other Tab stops `PLAY`'s first match leaves out (todo 1823).
@@ -232,6 +232,50 @@ async fn broken_player_settled(page: &chromiumoxide::Page) {
     .unwrap();
 }
 
+/// JS: `player`'s Play is disabled, a Tab stop still, and described by its error alert.
+pub(crate) fn play_explained(player: &str) -> String {
+    format!(
+        "(() => {{ const alert = document.querySelector('{player} [role=alert]');
+         const play = document.querySelector('{player} [data-slot=controls] button');
+         return alert !== null && alert.id !== '' && play.getAttribute('aria-describedby') === alert.id
+             && play.getAttribute('aria-disabled') === 'true' && play.tabIndex === 0; }})()"
+    )
+}
+
+/// Todo 2679: a player mounted with its first `<source>` still to try shows no error alert,
+/// not even for a moment, on its way to the source that plays.
+#[test]
+fn a_healthy_player_mounting_never_shows_the_error() {
+    block_on(async {
+        let fixture = Fixture::open("/audio/late", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate(
+            "window.alerted = false;
+             new MutationObserver(() => {
+                 if (document.querySelector('#late [role=alert]')) window.alerted = true;
+             }).observe(document.body, { subtree: true, childList: true })",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, "#mount").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{} === '0:04'", time_text("late")),
+            "the late player's 4 s file",
+        )
+        .await
+        .unwrap();
+        let alerted: bool = js(page, "window.alerted").await;
+        assert!(
+            !alerted,
+            "the healthy player showed the error alert while mounting"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 2654: every `<source>` failing sets no MediaError, yet the player says it failed.
 #[test]
 fn every_source_failing_shows_the_error() {
@@ -244,6 +288,13 @@ fn every_source_failing_shows_the_error() {
             "document.querySelector('#failing [role=alert]') !== null
              && document.querySelector('#failing audio').error === null",
             "the alert for sources that all failed, with no MediaError on the element",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            &fixture.page,
+            &play_explained("#failing"),
+            "Play disabled and described by the alert (todo 2680)",
         )
         .await
         .unwrap();

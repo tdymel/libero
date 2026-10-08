@@ -728,7 +728,7 @@ const ON_MEDIA: &str = "let media = null;
         last = now;
         const duration = isFinite(media.duration) ? media.duration : null;
         dioxus.send([media.paused, media.ended, media.currentTime, duration, media.volume,
-            media.muted, media.playbackRate, !media.paused && media.readyState < 3, media.error?.code ?? null]);
+            media.muted, media.playbackRate, !media.paused && media.readyState < 3 && !media.error, media.error?.code ?? null]);
     };
     const start = () => {
         media = document.querySelector('[' + data[0] + '=\"' + data[1] + '\"]');

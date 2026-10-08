@@ -15,7 +15,7 @@ use crate::{
         layout::use_box,
     },
     context::IconSlot,
-    hooks::{MediaError, MediaHandle, use_formats, use_localization, use_media},
+    hooks::{MediaError, MediaHandle, use_formats, use_id, use_localization, use_media},
     localization::fill,
     platform::waveform,
     sx::{FORCED_COLORS, StaticSx, Sx, sx},
@@ -354,14 +354,20 @@ fn AudioControls(
 ) -> Element {
     use_late_tooltips();
     let labels = use_localization().media;
+    let alert = use_id();
+    let failed = media.error().is_some();
     rsx! {
         div { role: "group", "aria-label": labels.controls, "data-slot": CONTROLS,
             ActionIcon {
                 aria_label: if media.paused() { labels.play } else { labels.pause },
+                // Failed: still a Tab stop, so the alert's reason is heard (todo 2680).
+                "aria-describedby": failed.then(|| alert.cloned()),
+                disabled: failed,
+                focusable_when_disabled: true,
                 variant: "filled",
                 radius: "50%",
                 tooltip: true,
-                shortcut: "k",
+                shortcut: (!failed).then(|| "k".to_string()),
                 size: icon_size(&size),
                 onclick: move |_| media.toggle(),
                 if media.paused() {
@@ -377,7 +383,7 @@ fn AudioControls(
             MediaVolume { media, sound, size: size.clone(), parts: volume_parts }
             AudioSpeed { media, size }
         }
-        MediaStatus { media }
+        MediaStatus { media, alert: alert.cloned() }
     }
 }
 

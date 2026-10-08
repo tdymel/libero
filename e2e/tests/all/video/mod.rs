@@ -394,6 +394,13 @@ fn every_source_failing_shows_the_error() {
         )
         .await
         .unwrap();
+        wait::for_js_true(
+            &fixture.page,
+            &crate::audio::play_explained("#failing"),
+            "Play disabled and described by the alert (todo 2680)",
+        )
+        .await
+        .unwrap();
         fixture.close().await.unwrap();
     });
 }

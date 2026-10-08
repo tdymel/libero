@@ -8,7 +8,7 @@ use super::{
 };
 use crate::{
     components::{
-        accessibility::FocusTrap,
+        accessibility::{FocusTrap, tab_stops},
         buttons::Button,
         common::{
             FOCUSABLE_SELECTOR, HtmlTag, Input, Part, Parts, attr, has_shortcut_modifier,
@@ -321,11 +321,12 @@ impl TourHandle {
 
     /// Ends the tour early: `onclose` with the step shown, focus back to the trigger.
     pub fn close(&self) {
-        self.close_at(self.index_untracked());
+        self.close_at(self.index_untracked(), true);
     }
 
-    fn close_at(&self, index: usize) {
-        if self.end() {
+    /// `seen`: whether a [`TourOptions::storage_key`] remembers it.
+    fn close_at(&self, index: usize, seen: bool) {
+        if self.end(seen) {
             let onclose = self.latest.peek().onclose;
             if let Some(onclose) = onclose {
                 onclose.call(index);
@@ -335,7 +336,7 @@ impl TourHandle {
 
     /// Ends the tour as done: `onfinish`, focus back to the trigger.
     pub fn finish(&self) {
-        if self.end() {
+        if self.end(true) {
             let onfinish = self.latest.peek().onfinish;
             if let Some(onfinish) = onfinish {
                 onfinish.call(());
@@ -344,14 +345,14 @@ impl TourHandle {
     }
 
     /// Closes; `false` when already closed.
-    fn end(&self) -> bool {
+    fn end(&self, remember: bool) -> bool {
         if !*self.open.peek() {
             return false;
         }
         let mut open = self.open;
         open.set(false);
         self.focus_return.restore();
-        if let Some(seen) = self.seen {
+        if let Some(seen) = self.seen.filter(|_| remember) {
             seen.set("true".to_string());
         }
         true
@@ -425,7 +426,7 @@ impl TourView {
 /// The page is not scrolled away from: each step scrolls its
 /// target into view. Call it in a component that outlives every target.
 /// An [`interactive`](TourStep::interactive) step's target takes presses, and Tab
-/// moves between it and the card.
+/// moves between it and the card. Escape there first closes the target's open list.
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
@@ -519,12 +520,13 @@ pub fn use_tour(options: TourOptions) -> TourHandle {
     });
 
     // Steps gone while open end the tour, or it would stay open with nothing shown.
-    // `onclose` gets the last step shown, not the clamped 0 (todo 2317).
+    // `onclose` gets the last step shown, not the clamped 0 (todo 2317). Not seen: the
+    // user neither finished nor closed it (todo 2677).
     let mut last_shown = use_hook(|| CopyValue::new(0usize));
     let total = options.steps.len();
     use_effect(use_reactive!(|total| {
         if total == 0 && *open.peek() {
-            handle.close_at(*last_shown.peek());
+            handle.close_at(*last_shown.peek(), false);
         }
     }));
 
@@ -587,7 +589,9 @@ fn TourLayer(act: Callback<Move>, index: usize, options: TourOptions) -> Element
     });
 
     // An interactive step's target sits in the Tab order beside the card: Tab off its
-    // edge goes back in. `true` only once focus moved, so the press moves no further.
+    // edge goes back in. Tab inside it is walked as the card's trap walks, past a
+    // `display: none` stop (todo 2673). `true` for Tab breaks `on_key`'s rule, but only
+    // once focus moved, so the press moves no further (todo 2676).
     let interactive = step.interactive && step.target.is_some();
     let mut bridged = use_hook(|| CopyValue::new(None::<ElementHandle>));
     bridged.set(step.target.filter(|_| interactive));
@@ -603,12 +607,7 @@ fn TourLayer(act: Callback<Move>, index: usize, options: TourOptions) -> Element
                 if chord.key != Key::Tab || !chord.within(&mounted, target.tag()) {
                     return false;
                 }
-                let backwards = chord.modifiers.shift();
-                let leaving = (backwards && target.is_focused())
-                    || edge_focusable(&target, !backwards).is_none_or(|item| item.is_focused());
-                leaving
-                    && edge_focusable(&positioner, backwards)
-                        .is_some_and(|item| item.focus().is_ok() && item.is_focused())
+                tab_in_target(&target, &positioner, chord.modifiers.shift())
             }))
         }))
     });
@@ -808,10 +807,51 @@ fn edge_focusable(root: &ElementHandle, last: bool) -> Option<std::boxed::Box<dy
 
 /// Focuses the target's first control (last, `backwards`), or the target itself; whether it took.
 fn enter_target(target: &ElementHandle, backwards: bool) -> bool {
-    match edge_focusable(target, backwards) {
-        Some(item) => item.focus().is_ok() && item.is_focused(),
-        None => target.focus().is_ok() && target.is_focused(),
+    focus_edge(target, backwards) || (target.focus().is_ok() && target.is_focused())
+}
+
+/// `root`'s first Tab stop that takes focus (the last, `last`); whether one did.
+fn focus_edge(root: &ElementHandle, last: bool) -> bool {
+    let Ok(items) = root.query_selector_all(FOCUSABLE_SELECTOR) else {
+        return false;
+    };
+    let stops = tab_stops(root, &items);
+    match last {
+        true => focus_first_stop(&items, &stops, (0..items.len()).rev()),
+        false => focus_first_stop(&items, &stops, 0..items.len()),
     }
+}
+
+/// Focuses the first stop of `order` that takes it: a `display: none` one ignores `focus()`.
+fn focus_first_stop(
+    items: &[std::boxed::Box<dyn ElementApi>],
+    stops: &[bool],
+    order: impl Iterator<Item = usize>,
+) -> bool {
+    order
+        .filter(|at| stops.get(*at).copied().unwrap_or(true))
+        .any(|at| items[at].focus().is_ok() && items[at].is_focused())
+}
+
+/// Tab inside an interactive target: its next stop that takes focus, or off its edge
+/// to the card's. Whether focus moved; `false` leaves the press to the browser.
+fn tab_in_target(target: &ElementHandle, card: &ElementHandle, backwards: bool) -> bool {
+    let Ok(items) = target.query_selector_all(FOCUSABLE_SELECTOR) else {
+        return false;
+    };
+    let after: Vec<usize> = match (
+        target.is_focused(),
+        items.iter().position(|item| item.is_focused()),
+    ) {
+        (true, _) if backwards => Vec::new(),
+        (true, _) => (0..items.len()).collect(),
+        (false, Some(at)) if backwards => (0..at).rev().collect(),
+        (false, Some(at)) => (at + 1..items.len()).collect(),
+        // On an element out of the Tab order: the browser's own Tab.
+        (false, None) => return false,
+    };
+    focus_first_stop(&items, &tab_stops(target, &items), after.into_iter())
+        || focus_edge(card, backwards)
 }
 
 /// One step's card, drawn afresh per step: its popover anchors to that step's target.

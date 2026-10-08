@@ -12,7 +12,27 @@ pub const ROUTES: Routes = &[
     ("/audio/swap", || rsx! { SwapPage {} }),
     // Todo 2654: every `<source>` fails, which sets no MediaError.
     ("/audio/sources-failing", || rsx! { SourcesFailingPage {} }),
+    // Todo 2679: a healthy player mounted after load, its first `<source>` still to try.
+    ("/audio/late", || rsx! { LatePage {} }),
 ];
+
+#[component]
+fn LatePage() -> Element {
+    let src = use_hook(|| silent_wav(4));
+    let mut shown = use_signal(|| false);
+    rsx! {
+        Button { id: "mount", onclick: move |_| shown.set(true), "Mount" }
+        if shown() {
+            div { id: "late",
+                Audio {
+                    src: src.clone(),
+                    sources: vec![MediaSource::new("/none.xyz", "audio/x-none")],
+                    label: "Late",
+                }
+            }
+        }
+    }
+}
 
 #[component]
 fn SourcesFailingPage() -> Element {

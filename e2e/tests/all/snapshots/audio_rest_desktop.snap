@@ -15,7 +15,8 @@ group "Silence"
   status [atomic] [live=polite]
 group "Broken"
   group "Player controls"
-    button "Play" [keyshortcuts=K]
+    button "Play" [disabled]
+      description "This media could not be played."
     slider "Seek" = 0 [disabled] [orientation=horizontal] [valuemax=1] [valuemin=0]
       description "0:00 of --:--"
     button "Mute" [keyshortcuts=M]

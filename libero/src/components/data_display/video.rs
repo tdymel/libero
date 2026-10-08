@@ -685,7 +685,8 @@ pub fn Video(props: VideoProps) -> Element {
             listener("onkeyup", move |_: Event<KeyboardData>| by_key()),
         ]);
     }
-    let hidden = playing && idle() && !keyboard();
+    // An error leaves the element unpaused: its alert keeps the controls up (todo 2681).
+    let hidden = playing && idle() && !keyboard() && media.error().is_none();
     // A click on the picture plays or pauses, as YouTube's; a tap on hidden controls only shows them.
     let mut tap_shows = use_hook(|| CopyValue::new(false));
     if hidden {
@@ -713,7 +714,7 @@ pub fn Video(props: VideoProps) -> Element {
             onmounted: media.mount(),
             onpointerdown: move |event: PointerEvent| tap_shows.set(event.pointer_type() == "touch" && hidden),
             onclick: move |_| {
-                if !*tap_shows.peek() {
+                if !*tap_shows.peek() && media.error().is_none() {
                     media.toggle();
                 }
                 tap_shows.set(false);

@@ -101,7 +101,7 @@ impl Drop for Registered {
 
 /// Which of `items` are Tab stops: a native radio group is one, its checked
 /// radio (matched by `:checked` and `value`) or else its first.
-fn tab_stops(root: &ElementHandle, items: &[Box<dyn ElementApi>]) -> Vec<bool> {
+pub(crate) fn tab_stops(root: &ElementHandle, items: &[Box<dyn ElementApi>]) -> Vec<bool> {
     let attr = |item: &dyn ElementApi, name| item.attribute(name).ok().flatten();
     let group = |item: &dyn ElementApi| {
         let radio = attr(item, "type").is_some_and(|ty| ty.eq_ignore_ascii_case("radio"));

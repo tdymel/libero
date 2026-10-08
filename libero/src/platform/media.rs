@@ -134,10 +134,17 @@ mod web {
     /// Events that start source selection again, forgetting an earlier failure of every `<source>`.
     const RESELECTS: &[&str] = &["emptied", "loadstart"];
 
+    /// Listened to beside [`MEDIA_EVENTS`], which already holds `emptied`.
+    const LISTENED: &[&str] = &["loadstart"];
+
     /// `exhausted`: every `<source>` failed, which sets no `MediaError` (4 stands in for it).
     fn state(element: &HtmlMediaElement, exhausted: bool) -> MediaState {
         let duration = element.duration();
         let paused = element.paused();
+        let error = element
+            .error()
+            .map(|error| error.code())
+            .or(exhausted.then_some(4));
         MediaState {
             paused,
             ended: element.ended(),
@@ -146,11 +153,9 @@ mod web {
             volume: element.volume(),
             muted: element.muted(),
             rate: element.playback_rate(),
-            buffering: !paused && element.ready_state() < HAVE_FUTURE_DATA,
-            error: element
-                .error()
-                .map(|error| error.code())
-                .or(exhausted.then_some(4)),
+            // A failed element stays unpaused and waiting, but loads no more.
+            buffering: !paused && element.ready_state() < HAVE_FUTURE_DATA && error.is_none(),
+            error,
         }
     }
 
@@ -220,11 +225,26 @@ mod web {
 
         fn watch(&self, callback: Box<dyn Fn(MediaState)>) -> Box<dyn MediaSubscription> {
             let callback = Rc::new(callback);
+            let exhausted = Rc::new(Cell::new(false));
+            let alive = Rc::new(Cell::new(true));
+            callback(state(&self.element, false));
             // Mounted after every `<source>` failed (hydration): no `error` event is left to see.
-            let spent = self.element.network_state() == NETWORK_NO_SOURCE
-                && matches!(self.element.query_selector("source"), Ok(Some(_)));
-            let exhausted = Rc::new(Cell::new(spent));
-            callback(state(&self.element, spent));
+            // Read a task later: a selection just begun also sits in NO_SOURCE until then (todo 2679).
+            {
+                let (element, callback, exhausted, alive) = (
+                    self.element.clone(),
+                    callback.clone(),
+                    exhausted.clone(),
+                    alive.clone(),
+                );
+                wasm_bindgen_futures::spawn_local(async move {
+                    crate::platform::next_task().await;
+                    if alive.get() && !exhausted.get() && spent(&element) {
+                        exhausted.set(true);
+                        callback(state(&element, true));
+                    }
+                });
+            }
             let closure = {
                 let (element, callback, exhausted) =
                     (self.element.clone(), callback.clone(), exhausted.clone());
@@ -235,7 +255,7 @@ mod web {
                     callback(state(&element, exhausted.get()));
                 })
             };
-            for event in MEDIA_EVENTS.iter().chain(RESELECTS) {
+            for event in MEDIA_EVENTS.iter().chain(LISTENED) {
                 let _ = self
                     .element
                     .add_event_listener_with_callback(event, closure.as_ref().unchecked_ref());
@@ -259,8 +279,15 @@ mod web {
                 element: self.element.clone(),
                 closure,
                 sources,
+                alive,
             })
         }
+    }
+
+    /// Whether every `<source>` was tried and failed: no source left, with one there.
+    fn spent(element: &HtmlMediaElement) -> bool {
+        element.network_state() == NETWORK_NO_SOURCE
+            && matches!(element.query_selector("source"), Ok(Some(_)))
     }
 
     /// Whether `event` is the `error` of a `<source>` with no `<source>` after it.
@@ -286,13 +313,16 @@ mod web {
         element: HtmlMediaElement,
         closure: Closure<dyn FnMut(web_sys::Event)>,
         sources: Closure<dyn FnMut(web_sys::Event)>,
+        /// Cleared on drop, so the deferred mount-time read reports nothing after it.
+        alive: Rc<Cell<bool>>,
     }
 
     impl MediaSubscription for WebMediaSubscription {}
 
     impl Drop for WebMediaSubscription {
         fn drop(&mut self) {
-            for event in MEDIA_EVENTS.iter().chain(RESELECTS) {
+            self.alive.set(false);
+            for event in MEDIA_EVENTS.iter().chain(LISTENED) {
                 let _ = self.element.remove_event_listener_with_callback(
                     event,
                     self.closure.as_ref().unchecked_ref(),

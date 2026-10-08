@@ -309,6 +309,8 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     };
 
     let blurred = use_refocus_on_close(opened, searchable, trigger_element, query);
+    // On the Escape stack while open, as `ComboboxCore`: a Tour around leaves the press to it (todo 2674).
+    crate::hooks::use_field_list_layer(opened, use_callback(move |()| open.open(false)));
 
     let field = use_field()
         .labelled_by()

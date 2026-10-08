@@ -167,7 +167,7 @@ pub(super) fn use_media_keys(
     let jump = move |by: f64| media.seek(media.current_time() + by);
     use_hotkeys(
         [
-            Hotkey::new("k", move || media.toggle()),
+            Hotkey::new("k", move || media.toggle()).when(move || media.error().is_none()),
             Hotkey::new("j", move || jump(-10.0)),
             Hotkey::new("l", move || jump(10.0)),
             Hotkey::new("m", move || sound.toggle()),
@@ -275,11 +275,17 @@ pub(super) fn MediaControls(
     let icon_size = icon_size(&size);
     let space_toggles = space_toggles(media);
     let no_captions = use_id();
+    let alert = use_id();
+    let failed = media.error().is_some();
     let play = rsx! {
         ActionIcon {
             aria_label: if media.paused() { labels.play } else { labels.pause },
+            // Failed: still a Tab stop, so the alert's reason is heard (todo 2680).
+            "aria-describedby": failed.then(|| alert.cloned()),
+            disabled: failed,
+            focusable_when_disabled: true,
             tooltip: true,
-            shortcut: "k",
+            shortcut: (!failed).then(|| "k".to_string()),
             size: icon_size.clone(),
             onclick: move |_| media.toggle(),
             if media.paused() {
@@ -385,7 +391,7 @@ pub(super) fn MediaControls(
                 {fullscreen_button}
             }
         }
-        MediaStatus { media }
+        MediaStatus { media, alert: alert.cloned() }
     }
 }
 
@@ -445,13 +451,13 @@ pub(super) fn space_toggles(media: MediaHandle) -> impl FnMut(KeyboardEvent) + C
     }
 }
 
-/// The error alert and the buffering status under a player's controls.
+/// The error alert, its id `alert`, and the buffering status under a player's controls.
 #[component]
-pub(super) fn MediaStatus(media: MediaHandle) -> Element {
+pub(super) fn MediaStatus(media: MediaHandle, alert: String) -> Element {
     let labels = use_localization().media;
     rsx! {
         if media.error().is_some() {
-            p { "data-slot": MESSAGE, role: "alert", {labels.error} }
+            p { id: alert, "data-slot": MESSAGE, role: "alert", {labels.error} }
         }
         // Mounted throughout, so a screen reader hears the change.
         VisuallyHidden { role: "status",
