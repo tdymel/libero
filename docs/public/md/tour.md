@@ -8,8 +8,10 @@ Description: A guided tour. A hook that dims the page around one element per ste
 
 A guided tour. `use_tour` dims the page around one element per step and
 explains it in a card beside it, with Back, Next and Skip. The steps are data;
-a step's `target` is an element handle from [`use_element`](use_element.md). The
-tour is fixed to the viewport, over everything but notifications. The default
+a step's `target` is an element handle from [`use_element`](use_element.md), or
+a selector for one in another component. The tour is fixed to the viewport, over
+everything but notifications. With a `storage_key` it remembers being finished
+or skipped across reloads: offer it while `tour.seen()` is false. The default
 card is a [Dialog](dialog.md), placed like a [Popover](popover.md).
 
 ## Usage
@@ -18,16 +20,13 @@ card is a [Dialog](dialog.md), placed like a [Popover](popover.md).
 use dioxus::prelude::*;
 use libero::{
     components::{Button, Flex, Text, TourOptions, TourStep, use_tour},
-    hooks::{Side, use_element},
+    hooks::use_element,
 };
 
 #[component]
 fn Demo() -> Element {
     let search = use_element();
-    let create = use_element();
-    let mut seen = use_signal(|| false);
-    let finished = use_callback(move |()| seen.set(true));
-    let skipped = use_callback(move |_: usize| seen.set(true));
+    let mut searches = use_signal(|| 0);
     let tour = use_tour(TourOptions {
         steps: vec![
             TourStep::new("welcome")
@@ -35,16 +34,15 @@ fn Demo() -> Element {
                 .description("Two stops, under a minute."),
             TourStep::new("search")
                 .target(search)
+                .interactive(true)
                 .title("Search")
-                .description("Finds any page by its name."),
+                .description("Finds any page by its name. Try it: press it, or Tab to it."),
             TourStep::new("create")
-                .target(create)
+                .target_selector("#tour-demo-create")
                 .title("New project")
-                .description("Starts an empty project.")
-                .side(Side::Top),
+                .description("Starts an empty project."),
         ],
-        onfinish: Some(finished),
-        onclose: Some(skipped),
+        storage_key: Some("docs-tour-seen".into()),
         ..Default::default()
     });
 
@@ -56,28 +54,34 @@ fn Demo() -> Element {
                 variant: "outlined",
                 onmounted: search.mount(),
                 attributes: search.attributes(),
+                onclick: move |_| searches += 1,
                 "Search"
             }
-            Button {
-                variant: "outlined",
-                onmounted: create.mount(),
-                attributes: create.attributes(),
-                "New project"
-            }
+            // Found by its id: no handle to pass down.
+            Button { id: "tour-demo-create", variant: "outlined", "New project" }
             Button { onclick: move |_| tour.start(), "Take the tour" }
-            Text { size: "sm", role: "status", if seen() { "Seen" } else { "Not seen yet" } }
+            Button { variant: "text", onclick: move |_| tour.forget(), "Forget seen" }
+            Text {
+                size: "sm",
+                role: "status",
+                if tour.seen() { "Seen" } else { "Not seen yet" }
+                ", searches: {searches}"
+            }
         }
     }
 }
 ```
 
 Spread `handle.attributes()` on each target: a WebView finds the element by it.
+A `target_selector` is looked up in the document when its step shows; a WebView
+cannot look one up and shows that card in the middle.
 Call `use_tour` in a component that outlives every target, and `tour.start()`
 from a handler, so focus returns to the trigger. A tour never opens on mount.
 
 `TourHandle` is `Copy`: `start()`, `next()`, `prev()`, `go_to(index)`,
 `close()` (ends early, `onclose`), `finish()` (ends as done, `onfinish`),
-`is_open()`, `index()` and `total()`.
+`is_open()`, `index()` and `total()`, and with a `storage_key`, `seen()` and
+`forget()`.
 
 ### Your own card
 
@@ -146,9 +150,11 @@ let tour = use_tour(TourOptions {
 
 ### Show it once
 
-The tour stores nothing. `onfinish` and `onclose` say it was seen; keep that
-where your app keeps its settings, and offer the tour only while it is unseen.
-The example above holds it in a signal, so it is forgotten on reload.
+`storage_key` keeps in local storage that the tour was finished or closed
+early. `tour.seen()` reads it, reactively, and `tour.forget()` drops it, for a
+"show the tour again" setting. `start()` still starts: offer the tour while
+`!tour.seen()`. Without a key, `onfinish` and `onclose` say it was seen; keep
+that where your app keeps its settings.
 
 ## API
 
@@ -174,6 +180,7 @@ pub fn use_tour(options: TourOptions) -> TourHandle
 | `card` | `Option<Callback<TourView, Element>>` | - | Draws the card's inside in place of the default. |
 | `sx` | `Input<Sx>` | - | Styles the card. |
 | `parts` | `Input<Parts<TourPart>>` | - | Styles the mask, the highlight and the card's parts. |
+| `storage_key` | `Option<String>` | - | Remembers in local storage that the tour was finished or closed early, for `tour.seen()`; `tour.forget()` drops it. Read at mount. |
 
 ### `TourStep`
 
@@ -181,6 +188,8 @@ pub fn use_tour(options: TourOptions) -> TourHandle
 |---|---|---|---|
 | `new(key)` | `impl Into<String>` | required | Tells the steps apart. The card is drawn afresh when it changes. |
 | `target` | `ElementHandle` | - | The element the hole goes around. |
+| `target_selector` | `impl Into<String>` | - | A CSS selector for the target, as `"#search"`, looked up when the step shows. `target` wins. Not on a WebView. |
+| `interactive` | `bool` | `false` | Lets presses through the hole to the target, and puts the target in the Tab order beside the card. |
 | `title` | `impl Into<String>` | - | The card's heading and, unless the tour has an `aria_label`, its name. |
 | `description` | `impl Into<String>` | - | The card's text. |
 | `content` | `Element` | - | Shown in place of `description`, for rich content. |
@@ -197,7 +206,7 @@ explains how parts work.
 
 | Part | `data-slot` | Description |
 |---|---|---|
-| `TourPart::Mask` | `mask` | The transparent layer over the page that takes every press. |
+| `TourPart::Mask` | `mask` | The transparent layer over the page that takes every press. Four strips around the hole on an `interactive` step. |
 | `TourPart::Highlight` | `highlight` | The hole around the target. Its outer shadow is the dimming. |
 | `TourPart::Positioner` | `positioner` | Places the card beside the target, or in the middle. |
 | `TourPart::Card` | `card` | The `dialog`: the default card, or the box around `card`'s. |
@@ -220,7 +229,7 @@ explains how parts work.
 | `→` | Goes to the next step. On the last step it does nothing: only Done finishes. Under `dir="rtl"`, `←` does. A held key steps once. |
 | `←` | Goes to the previous step. |
 | `Escape` | Ends the tour early and returns focus to what started it. |
-| `Tab` or `Shift+Tab` | Moves the focus within the card. It does not leave while the tour shows. |
+| `Tab` or `Shift+Tab` | Moves the focus within the card. It does not leave while the tour shows, but for an `interactive` step's target: Tab past the card's last control reaches it, and Tab from it returns to the card. On the target the arrows are its own; Escape still ends the tour. |
 
 ### Libero handles
 
@@ -233,12 +242,16 @@ explains how parts work.
   highlighted element stands out on a dark page too.
 - A card taller than the room it has scrolls, so its buttons stay reachable at
   400% zoom or on a phone held sideways.
-- The highlighted element cannot be pressed, and a press on the dimmed page
-  does nothing unless `mask_click` says so.
+- The highlighted element cannot be pressed unless its step is `interactive`,
+  and a press on the dimmed page does nothing unless `mask_click` says so.
+- An `interactive` step's card has `aria-modal="false"`: the target outside it
+  is reachable.
 - Each step scrolls its target into view; smoothly, unless the user reduces
   motion. The hole glides to a new step's target, without animation then too,
   and follows a scroll at once.
 - Android's Back button ends the tour, as Escape does, rather than the app.
+- A `target_selector` that matches nothing when its step shows centres the
+  card, with a warning in a debug build.
 - A target that never mounts, or renders nothing (`display: none`), shows its
   step's card in the middle, with a warning in a debug build.
 - Steps that go empty while the tour shows end it, as closing does.

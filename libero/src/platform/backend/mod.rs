@@ -740,6 +740,19 @@ pub(crate) fn focus_selector(selector: &str) -> Result<(), super::PlatformError>
     };
 }
 
+/// See [`mounted_by_selector`](crate::platform::mounted_by_selector).
+pub(crate) fn mounted_by_selector(selector: &str) -> Option<Rc<MountedData>> {
+    #[cfg(target_arch = "wasm32")]
+    return web::mounted_by_selector(selector);
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return blitz::mounted_by_selector(selector);
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return {
+        let _ = selector;
+        None
+    };
+}
+
 /// Only a WebView - see [`focus_first_of`](crate::platform::focus_first_of).
 pub(crate) fn focus_first_of(selectors: &[String]) -> Result<(), super::PlatformError> {
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]

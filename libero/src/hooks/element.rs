@@ -102,6 +102,12 @@ impl ElementHandle {
         }
     }
 
+    /// Points this handle at an element no `onmounted` reported, a document query's match.
+    pub(crate) fn point_at(&self, mounted: Option<Rc<MountedData>>) {
+        let mut own = self.mounted;
+        own.set(mounted);
+    }
+
     /// Drops a [`new_in_scope`](Self::new_in_scope) handle's signal before its owner does.
     pub(crate) fn release(&self) {
         self.mounted.manually_drop();

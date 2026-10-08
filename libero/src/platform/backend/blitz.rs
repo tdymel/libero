@@ -67,23 +67,46 @@ fn resolved_style_value(doc: &BaseDocument, node_id: NodeId, property: &str) -> 
 /// Blitz backs a mounted element with a `NodeHandle`, which carries the whole
 /// document, so it answers for its subtree and (via [`document`]) the document.
 pub(super) fn element(mounted: &Rc<MountedData>) -> Option<Box<dyn ElementApi>> {
-    let handle = mounted.downcast::<NodeHandle>()?.clone();
-    remember_document(&handle);
-    let node_id = handle.node_id();
-    Some(Box::new(BlitzElement {
-        anchor: handle,
-        node_id,
-    }))
+    let (anchor, node_id) = node_of(mounted)?;
+    remember_document(&anchor);
+    Some(Box::new(BlitzElement { anchor, node_id }))
+}
+
+/// A document query's match: any handle carries the whole document, so one stands in.
+struct Found {
+    anchor: NodeHandle,
+    node_id: NodeId,
+}
+
+impl dioxus::html::RenderedElementBacking for Found {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
+pub(super) fn mounted_by_selector(selector: &str) -> Option<Rc<MountedData>> {
+    let anchor = doc()?.anchor()?;
+    let node_id = anchor.try_doc()?.query_selector(selector).ok()??;
+    Some(Rc::new(MountedData::new(Found { anchor, node_id })))
+}
+
+/// The node behind `mounted`, and a handle to reach its document by.
+fn node_of(mounted: &Rc<MountedData>) -> Option<(NodeHandle, NodeId)> {
+    if let Some(handle) = mounted.downcast::<NodeHandle>() {
+        return Some((handle.clone(), handle.node_id()));
+    }
+    let found = mounted.downcast::<Found>()?;
+    Some((found.anchor.clone(), found.node_id))
 }
 
 /// Taffy lays a row out right to left under `direction: rtl`, as the web does.
 pub(super) fn is_rtl(mounted: &Rc<MountedData>) -> bool {
-    let Some(handle) = mounted.downcast::<NodeHandle>() else {
+    let Some((handle, node_id)) = node_of(mounted) else {
         return false;
     };
     handle
         .try_doc()
-        .is_some_and(|doc| node_is_rtl(&doc, handle.node_id()))
+        .is_some_and(|doc| node_is_rtl(&doc, node_id))
 }
 
 /// Stylo's computed `direction`, named by its `Debug`: libero has no `stylo`
@@ -547,10 +570,9 @@ pub(super) fn rtl_target() -> bool {
 
 /// Whether the focused node is `mounted` or inside it.
 pub(super) fn focus_is_in(mounted: &Rc<MountedData>) -> bool {
-    let Some(handle) = mounted.downcast::<NodeHandle>() else {
+    let Some((handle, target)) = node_of(mounted) else {
         return false;
     };
-    let target = handle.node_id();
     handle.try_doc().is_some_and(|doc| {
         doc.get_focussed_node_id()
             .is_some_and(|focus| ancestors(&doc, focus).any(|id| id == target))
@@ -2136,9 +2158,8 @@ const LAYOUT_WAIT: Duration = Duration::from_millis(20);
 /// Every scroller round the node, on both axes, then the viewport (todo 2280).
 /// `None` for a node that is not Blitz's.
 pub(super) fn scroll_chain_into_view(mounted: &Rc<MountedData>) -> Option<()> {
-    let anchor = mounted.downcast::<NodeHandle>()?.clone();
+    let (anchor, node_id) = node_of(mounted)?;
     remember_document(&anchor);
-    let node_id = anchor.node_id();
     show(anchor, node_id, LAYOUT_TRIES, true);
     Some(())
 }

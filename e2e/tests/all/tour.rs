@@ -171,6 +171,115 @@ e2e::scenario!(
     android_only("1275: no Back key off Android")
 );
 
+/// 2220: a step's target found by selector, in a component the owner holds no handle to.
+async fn selector_target<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    open(d).await?;
+    hole_on(d, "#picked", "starting the tour").await
+}
+
+e2e::scenario!(
+    a_selector_targets_a_step,
+    "/tour/more",
+    selector_target,
+    android: skip("2220: a WebView holds no node to look a selector up by"),
+    desktop: skip("2220: a WebView holds no node to look a selector up by")
+);
+
+/// Steps on to the interactive step of `/tour/more`.
+async fn to_pressable<D: Driver>(d: &mut D) -> Result<()> {
+    open(d).await?;
+    d.click(NEXT).await?;
+    eventually_text(d, PROGRESS, "2 of 2", "Next").await?;
+    eventually_focused(d, CARD, "Next").await?;
+    hole_on(d, "#pressable", "Next").await
+}
+
+/// 2221: an interactive step's target takes a press through the hole, and the card stops
+/// claiming to be modal.
+async fn target_takes_presses<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    to_pressable(d).await?;
+    let modal = d.attr(CARD, "aria-modal").await?;
+    ensure!(
+        modal.as_deref() == Some("false"),
+        "aria-modal on an interactive step: {modal:?}"
+    );
+    let target = d.rect("#pressable").await?;
+    d.click_at(
+        target.x + target.width / 2.0,
+        target.y + target.height / 2.0,
+    )
+    .await?;
+    eventually_text(d, "#presses", "1", "a press on the target").await?;
+    ensure!(
+        d.exists(CARD).await?,
+        "a press on the target ended the tour"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    an_interactive_target_takes_presses,
+    "/tour/more",
+    target_takes_presses
+);
+
+/// 2221: Tab off the card's last control reaches the target and back to the card's first;
+/// Shift+Tab goes the other way. On the target, arrows stay its own and Escape ends the tour.
+async fn tab_bridge<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const CLOSE: &str = "[data-lsx-tour] [data-slot=close]";
+    to_pressable(d).await?;
+    let mut reached = false;
+    for _ in 0..6 {
+        d.press(keyboard::TAB).await?;
+        if d.is_focused("#pressable").await? {
+            reached = true;
+            break;
+        }
+    }
+    ensure!(reached, "Tab never left the card for the target");
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, CLOSE, "Tab from the target").await?;
+    d.press_shift(keyboard::TAB).await?;
+    eventually_focused(d, "#pressable", "Shift+Tab from the card's first control").await?;
+    d.press_shift(keyboard::TAB).await?;
+    eventually_focused(d, NEXT, "Shift+Tab from the target").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, "#pressable", "Tab from the card's last control").await?;
+    d.press(keyboard::ARROW_LEFT).await?;
+    d.settle().await?;
+    ensure!(
+        d.text(PROGRESS).await? == "2 of 2",
+        "ArrowLeft on the target stepped the tour"
+    );
+    d.press(keyboard::ESCAPE).await?;
+    modal::closed_with_focus_on(d, TRIGGER, "Escape on the target").await
+}
+
+e2e::scenario!(
+    tab_moves_between_the_card_and_an_interactive_target,
+    "/tour/more",
+    tab_bridge,
+    android: skip("959: a WebView handle queries no focusables to bridge by"),
+    desktop: skip("959: a WebView handle queries no focusables to bridge by")
+);
+
+/// 2225: closing the tour stores it as seen under its key; `forget` drops that.
+async fn remembers_seen<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#forget").await?;
+    eventually_text(d, "#seen", "unseen", "forget").await?;
+    open(d).await?;
+    d.press(keyboard::ESCAPE).await?;
+    eventually_text(d, "#seen", "seen", "Escape").await?;
+    d.click("#forget").await?;
+    eventually_text(d, "#seen", "unseen", "forget after the tour").await
+}
+
+e2e::scenario!(
+    a_closed_tour_is_remembered_as_seen,
+    "/tour/more",
+    remembers_seen
+);
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("tour", "/tour")

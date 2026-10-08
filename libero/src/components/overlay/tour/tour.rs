@@ -4,30 +4,31 @@ use dioxus::prelude::*;
 
 use super::{
     TourStep,
-    geometry::{has_size, highlight_style, hole_rect, remeasure_key},
+    geometry::{has_size, highlight_style, hole_rect, mask_strips, remeasure_key},
 };
 use crate::{
     components::{
         accessibility::FocusTrap,
         buttons::Button,
         common::{
-            HtmlTag, Input, Part, Parts, attr, has_shortcut_modifier, parts_enum, parts_under_sx,
-            use_name_warning,
+            FOCUSABLE_SELECTOR, HtmlTag, Input, Part, Parts, attr, has_shortcut_modifier,
+            parts_enum, parts_under_sx, use_name_warning,
         },
         layout::{self, use_box},
         overlay::Dialog,
     },
     context::LiberoContext,
     hooks::{
-        ElementHandle, ElementRect, FocusReturn, POPOVER_AVAILABLE_HEIGHT, PopoverOptions, Rect,
-        escape_closes, use_back, use_dismiss_layer, use_element, use_element_rect,
-        use_focus_return, use_id, use_localization, use_popover_on, use_portal_slot, use_scheduled,
-        use_theme,
+        ElementHandle, ElementRect, FocusReturn, LocalText, POPOVER_AVAILABLE_HEIGHT,
+        PopoverOptions, Rect, escape_closes, local_text, use_back, use_dismiss_layer, use_element,
+        use_element_rect, use_focus_return, use_id, use_localization, use_popover_on,
+        use_portal_slot, use_scheduled, use_theme,
     },
     localization::fill,
     platform::{
         ElementApi, KeyChord, OBSERVE_ATTR, arrow_target, focus_first_of, key_taken, keyboard,
-        logical_key, prefers_reduced_motion, scroll_chain_into_view, typing_target,
+        logical_key, mounted_by_selector, prefers_reduced_motion, scroll_chain_into_view,
+        typing_target,
     },
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, Sx, sx},
     theme::{Direction, OVERLAY_OPACITY, Z_INDEX_POPOVER},
@@ -37,7 +38,8 @@ use crate::{
 parts_enum! {
     /// A tour's parts, for [`TourOptions::parts`]. The card's own sit inside it.
     pub enum TourPart {
-        /// The transparent layer over the page that takes every press.
+        /// The transparent layer over the page that takes every press; on an
+        /// interactive step, four strips around the hole.
         Mask = "mask" => "& > [data-slot='mask']",
         /// The hole around the target; its outer shadow is the dimming.
         Highlight = "highlight" => "& > [data-slot='highlight']",
@@ -170,6 +172,9 @@ pub struct TourOptions {
     pub sx: Input<Sx>,
     /// Styles the mask, the highlight and the card's parts.
     pub parts: Input<Parts<TourPart>>,
+    /// Remembers in local storage that the tour was finished or closed, for
+    /// [`TourHandle::seen`]. Read at mount.
+    pub storage_key: Option<String>,
 }
 
 impl Default for TourOptions {
@@ -185,6 +190,7 @@ impl Default for TourOptions {
             card: None,
             sx: Input::None,
             parts: Input::None,
+            storage_key: None,
         }
     }
 }
@@ -207,6 +213,7 @@ pub struct TourHandle {
     index: Signal<usize>,
     latest: CopyValue<Latest>,
     focus_return: FocusReturn,
+    seen: Option<LocalText>,
 }
 
 impl PartialEq for TourHandle {
@@ -245,6 +252,37 @@ impl TourHandle {
 
     pub fn total(&self) -> usize {
         self.latest.peek().total
+    }
+
+    /// Whether the tour was finished or closed under its [`TourOptions::storage_key`],
+    /// in this run or an earlier one. Reactive; `false` without a key.
+    ///
+    /// ```no_run
+    /// # use dioxus::prelude::*;
+    /// # use libero::components::{Button, TourOptions, TourStep, use_tour};
+    /// # fn app() -> Element {
+    /// let tour = use_tour(TourOptions {
+    ///     steps: vec![TourStep::new("welcome").title("Welcome")],
+    ///     storage_key: Some("first-run-tour".into()),
+    ///     ..Default::default()
+    /// });
+    /// rsx! {
+    ///     if !tour.seen() {
+    ///         Button { onclick: move |_| tour.start(), "Take the tour" }
+    ///     }
+    ///     Button { onclick: move |_| tour.forget(), "Show the tour again" }
+    /// }
+    /// # }
+    /// ```
+    pub fn seen(&self) -> bool {
+        self.seen.is_some_and(|seen| seen.is_stored())
+    }
+
+    /// Drops what [`seen`](Self::seen) remembers.
+    pub fn forget(&self) {
+        if let Some(seen) = self.seen {
+            seen.remove();
+        }
     }
 
     /// Goes to step `index`, clamped. Controlled, it only calls `onchange`.
@@ -313,6 +351,9 @@ impl TourHandle {
         let mut open = self.open;
         open.set(false);
         self.focus_return.restore();
+        if let Some(seen) = self.seen {
+            seen.set("true".to_string());
+        }
         true
     }
 
@@ -383,6 +424,8 @@ impl TourView {
 /// ArrowRight step, ArrowRight stopping on the last step: only Done finishes.
 /// The page is not scrolled away from: each step scrolls its
 /// target into view. Call it in a component that outlives every target.
+/// An [`interactive`](TourStep::interactive) step's target takes presses, and Tab
+/// moves between it and the card.
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
@@ -407,6 +450,7 @@ pub fn use_tour(options: TourOptions) -> TourHandle {
     let open = use_signal(|| false);
     let index = use_signal(|| 0usize);
     let focus_return = use_focus_return();
+    let seen = use_hook(|| options.storage_key.as_deref().map(local_text));
     let mut latest = use_hook(|| CopyValue::new(Latest::default()));
     latest.set(Latest {
         total: options.steps.len(),
@@ -420,6 +464,7 @@ pub fn use_tour(options: TourOptions) -> TourHandle {
         index,
         latest,
         focus_return,
+        seen,
     };
 
     use_name_warning(
@@ -446,11 +491,20 @@ pub fn use_tour(options: TourOptions) -> TourHandle {
             .write()
             .push(ElementHandle::new_in_scope(ScopeId::ROOT));
     }
-    let targets: Vec<Option<ElementHandle>> =
-        options.steps.iter().map(|step| step.target).collect();
+    // `None` for a selector's step: the layer points that mirror at the match.
+    let targets: Vec<Option<Option<ElementHandle>>> = options
+        .steps
+        .iter()
+        .map(|step| match (step.target, &step.target_selector) {
+            (None, Some(_)) => None,
+            (target, _) => Some(target),
+        })
+        .collect();
     use_effect(use_reactive!(|targets| {
         for (mirror, target) in mirrors.peek().iter().zip(&targets) {
-            mirror.follow(target.as_ref());
+            if let Some(target) = target {
+                mirror.follow(target.as_ref());
+            }
         }
     }));
 
@@ -481,7 +535,14 @@ pub fn use_tour(options: TourOptions) -> TourHandle {
         last_shown.set(index);
         let mut options = options;
         for (step, mirror) in options.steps.iter_mut().zip(mirrors.peek().iter()) {
-            step.target = step.target.map(|target| mirror.retag(target.tag()));
+            match step.target {
+                Some(target) => {
+                    step.target = Some(mirror.retag(target.tag()));
+                    step.target_selector = None;
+                }
+                None if step.target_selector.is_some() => step.target = Some(*mirror),
+                None => {}
+            }
         }
         rsx! { TourLayer { act, index, options } }
     }));
@@ -525,6 +586,43 @@ fn TourLayer(act: Callback<Move>, index: usize, options: TourOptions) -> Element
         }
     });
 
+    // An interactive step's target sits in the Tab order beside the card: Tab off its
+    // edge goes back in. `true` only once focus moved, so the press moves no further.
+    let interactive = step.interactive && step.target.is_some();
+    let mut bridged = use_hook(|| CopyValue::new(None::<ElementHandle>));
+    bridged.set(step.target.filter(|_| interactive));
+    use_hook(move || {
+        Rc::new(keyboard().map(|api| {
+            api.on_key_unfiltered(std::boxed::Box::new(move |chord: KeyChord| {
+                let target = bridged.try_peek().ok().and_then(|target| *target);
+                let Some((target, mounted)) =
+                    target.and_then(|target| Some((target, target.try_mounted()?)))
+                else {
+                    return false;
+                };
+                if chord.key != Key::Tab || !chord.within(&mounted, target.tag()) {
+                    return false;
+                }
+                let backwards = chord.modifiers.shift();
+                let leaving = (backwards && target.is_focused())
+                    || edge_focusable(&target, !backwards).is_none_or(|item| item.is_focused());
+                leaving
+                    && edge_focusable(&positioner, backwards)
+                        .is_some_and(|item| item.focus().is_ok() && item.is_focused())
+            }))
+        }))
+    });
+
+    // A selector's target is looked up as its step shows, before the rect effect measures.
+    let selector = step.target_selector.clone();
+    let mirror = step.target;
+    use_effect(use_reactive!(|index, selector| {
+        let _ = index;
+        if let (Some(selector), Some(mirror)) = (&selector, mirror) {
+            mirror.point_at(mounted_by_selector(selector));
+        }
+    }));
+
     let rect = use_element_rect(step.target, true);
     let padding = step.padding.unwrap_or(defaults.padding);
     // Still 0x0 after the hook's laid-out tries: mounted but not rendered (`display: none`).
@@ -554,11 +652,19 @@ fn TourLayer(act: Callback<Move>, index: usize, options: TourOptions) -> Element
         };
     let centred = step.target.is_none() || missing;
     let key = step.key.clone();
-    use_effect(use_reactive!(|missing, key| {
-        if missing {
-            warn(&format!(
+    let looked_up = step.target_selector.clone();
+    use_effect(use_reactive!(|missing, key, looked_up| {
+        if !missing {
+            return;
+        }
+        match looked_up {
+            Some(selector) => warn(&format!(
+                "use_tour: step \"{key}\"'s target_selector \"{selector}\" matches nothing rendered \
+                 (or the renderer is a WebView, which cannot look it up), so its card shows in the middle."
+            )),
+            None => warn(&format!(
                 "use_tour: step \"{key}\"'s target is not mounted or not rendered, so its card shows in the middle."
-            ));
+            )),
         }
     }));
 
@@ -584,6 +690,18 @@ fn TourLayer(act: Callback<Move>, index: usize, options: TourOptions) -> Element
     let onkeydown = use_callback(move |event: Event<KeyboardData>| {
         if escape_closes(&event) && layer.is_top() {
             act.call(Move::Close);
+            return;
+        }
+        if event.key() == Key::Tab {
+            // Off the card's edge to the target, before the trap cycles.
+            let backwards = event.modifiers().shift();
+            if let Some(target) = *bridged.peek()
+                && !key_taken(&event)
+                && edge_focusable(&positioner, !backwards).is_some_and(|item| item.is_focused())
+                && enter_target(&target, backwards)
+            {
+                event.prevent_default();
+            }
             return;
         }
         if key_taken(&event)
@@ -621,17 +739,33 @@ fn TourLayer(act: Callback<Move>, index: usize, options: TourOptions) -> Element
         }
     };
 
+    // An interactive step's mask goes around the hole, once both are measured.
+    let strips = measured
+        .zip(hole)
+        .filter(|(_, hole)| interactive && has_size(*hole))
+        .map(|((_, viewport), hole)| mask_strips(hole, viewport));
+    // Keyed by the shape too: a full mask is a fresh node, never a strip with its style removed.
+    let split = strips.is_some();
+    let masks: Vec<Option<String>> = match strips {
+        Some(strips) => strips.map(Some).into(),
+        None => vec![None],
+    };
+
     rsx! {
         FocusTrap { sx: layer_sx, "data-lsx-tour": "true",
-            div {
-                "data-slot": TourPart::Mask.slot(),
-                // Keeps focus in the card.
-                onmousedown: move |event| event.prevent_default(),
-                onclick: move |_| match mask_click {
-                    MaskClick::None => {}
-                    MaskClick::Close => act.call(Move::Close),
-                    MaskClick::Next => act.call(Move::Next),
-                },
+            for (index, style) in masks.into_iter().enumerate() {
+                div {
+                    key: "{split}-{index}",
+                    "data-slot": TourPart::Mask.slot(),
+                    style,
+                    // Keeps focus in the card.
+                    onmousedown: move |event| event.prevent_default(),
+                    onclick: move |_| match mask_click {
+                        MaskClick::None => {}
+                        MaskClick::Close => act.call(Move::Close),
+                        MaskClick::Next => act.call(Move::Next),
+                    },
+                }
             }
             div {
                 "data-slot": TourPart::Highlight.slot(),
@@ -660,6 +794,23 @@ fn focus_card(positioner: &ElementHandle) {
                 let _ = focus_first_of(&[format!("[{OBSERVE_ATTR}='{tag}'] [data-autofocus]")]);
             }
         }
+    }
+}
+
+/// `root`'s first or last focusable; `None` without one or where the renderer cannot query.
+fn edge_focusable(root: &ElementHandle, last: bool) -> Option<std::boxed::Box<dyn ElementApi>> {
+    let items = root.query_selector_all(FOCUSABLE_SELECTOR).ok()?;
+    match last {
+        true => items.into_iter().last(),
+        false => items.into_iter().next(),
+    }
+}
+
+/// Focuses the target's first control (last, `backwards`), or the target itself; whether it took.
+fn enter_target(target: &ElementHandle, backwards: bool) -> bool {
+    match edge_focusable(target, backwards) {
+        Some(item) => item.focus().is_ok() && item.is_focused(),
+        None => target.focus().is_ok() && target.is_focused(),
     }
 }
 
@@ -694,6 +845,11 @@ fn TourCard(
     let body_id = use_id();
     let progress_id = use_id();
     let summary_id = use_id();
+    // The target outside the card is reachable on an interactive step.
+    let modal = match step.interactive && !centred {
+        true => "false",
+        false => "true",
+    };
 
     // Brought into view once per step, through nested and sideways scrollers; the
     // scroll it causes measures the hole again.
@@ -768,7 +924,7 @@ fn TourCard(
                 layout::Box {
                     "data-slot": TourPart::Card.slot(),
                     role: "dialog",
-                    "aria-modal": "true",
+                    "aria-modal": modal,
                     "aria-label": name,
                     "aria-describedby": summary_id(),
                     "aria-keyshortcuts": shortcuts,
@@ -797,7 +953,7 @@ fn TourCard(
                     aria_label: name,
                     close_label: labels.close,
                     onclose: move |_| act.call(Move::Close),
-                    "aria-modal": "true",
+                    "aria-modal": modal,
                     "aria-describedby": described,
                     "aria-keyshortcuts": shortcuts,
                     tabindex: "-1",

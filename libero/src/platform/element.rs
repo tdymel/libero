@@ -42,6 +42,12 @@ pub(crate) fn focus_selector(selector: &str) -> Result<(), PlatformError> {
     backend::focus_selector(selector)
 }
 
+/// The document's first match of `selector`, backed as a mounted element is. `None`
+/// on a WebView, where Rust holds no node, and on a server.
+pub(crate) fn mounted_by_selector(selector: &str) -> Option<Rc<MountedData>> {
+    backend::mounted_by_selector(selector)
+}
+
 /// Focuses the first match of the first of `selectors` whose match takes focus, for a
 /// WebView, where no handle can query (959). `Unsupported` elsewhere.
 pub(crate) fn focus_first_of(selectors: &[String]) -> Result<(), PlatformError> {

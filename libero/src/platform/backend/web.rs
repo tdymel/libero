@@ -31,6 +31,23 @@ pub(super) fn element(mounted: &Rc<MountedData>) -> Option<Box<dyn ElementApi>> 
     Some(Box::new(WebElement { element }))
 }
 
+/// A document query's match, downcasting to its `web_sys::Element` as a mounted one does.
+struct Found(web_sys::Element);
+
+impl dioxus::html::RenderedElementBacking for Found {
+    fn as_any(&self) -> &dyn std::any::Any {
+        &self.0
+    }
+}
+
+pub(super) fn mounted_by_selector(selector: &str) -> Option<Rc<MountedData>> {
+    let element = web_sys::window()?
+        .document()?
+        .query_selector(selector)
+        .ok()??;
+    Some(Rc::new(MountedData::new(Found(element))))
+}
+
 /// The top-level grouping rules of a mounted `<style>`, in source order.
 pub(super) fn style_rules(style: &Rc<MountedData>) -> Option<Box<dyn StyleRulesApi>> {
     let sheet = style

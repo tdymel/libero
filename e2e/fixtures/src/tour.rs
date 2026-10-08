@@ -17,6 +17,7 @@ pub const ROUTES: Routes = &[
     ("/tour/nested", || rsx! { NestedTourPage {} }),
     ("/tour/hidden", || rsx! { HiddenTourPage {} }),
     ("/tour/long", || rsx! { LongTourPage {} }),
+    ("/tour/more", || rsx! { MoreTourPage {} }),
 ];
 
 const LONG: &str = "This stop has a lot to say. It explains the feature in several sentences, so \
@@ -127,6 +128,50 @@ fn HiddenTourPage() -> Element {
             Button { id: "hidden", onmounted: hidden.mount(), attributes: hidden.attributes(), "Hidden" }
         }
     }
+}
+
+/// A step targeted by selector in another component, then an interactive one: `#presses`
+/// counts presses on `#pressable`. `#seen` reads the stored `seen()`.
+#[component]
+fn MoreTourPage() -> Element {
+    let pressable = use_element();
+    let mut presses = use_signal(|| 0u32);
+    let tour = use_tour(TourOptions {
+        steps: vec![
+            TourStep::new("picked")
+                .target_selector("#picked")
+                .title("Picked"),
+            TourStep::new("pressable")
+                .target(pressable)
+                .interactive(true)
+                .title("Pressable"),
+        ],
+        storage_key: Some("e2e-tour-seen".into()),
+        ..Default::default()
+    });
+
+    rsx! {
+        Flex { direction: "column", gap: "xl", max_width: "320px", sx: sx().padding("16px"),
+            Button { id: "start-tour", variant: "outlined", onclick: move |_| tour.start(), "Take the tour" }
+            Picked {}
+            Button {
+                id: "pressable",
+                onmounted: pressable.mount(),
+                attributes: pressable.attributes(),
+                onclick: move |_| presses += 1,
+                "Pressable"
+            }
+            Text { id: "presses", size: "sm", "{presses}" }
+            Text { id: "seen", size: "sm", if tour.seen() { "seen" } else { "unseen" } }
+            Button { id: "forget", variant: "text", onclick: move |_| tour.forget(), "Forget" }
+        }
+    }
+}
+
+/// A target the tour's owner holds no handle to.
+#[component]
+fn Picked() -> Element {
+    rsx! { Button { id: "picked", "Picked" } }
 }
 
 /// A centred step and a placed one, each taller than a 320x256 viewport.

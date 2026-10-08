@@ -44,10 +44,7 @@ fn wrap_hook(values: &DemoValues, _: &str) -> String {
     }
     format!(
         "let search = use_element();\n\
-         let create = use_element();\n\
-         let mut seen = use_signal(|| false);\n\
-         let finished = use_callback(move |()| seen.set(true));\n\
-         let skipped = use_callback(move |_: usize| seen.set(true));\n\
+         let mut searches = use_signal(|| 0);\n\
          {card}\
          let tour = use_tour(TourOptions {{\n    \
              steps: vec![\n        \
@@ -56,16 +53,16 @@ fn wrap_hook(values: &DemoValues, _: &str) -> String {
                      .description(\"Two stops, under a minute.\"),\n        \
                  TourStep::new(\"search\")\n            \
                      .target(search)\n            \
+                     .interactive(true)\n            \
                      .title(\"Search\")\n            \
-                     .description(\"Finds any page by its name.\"){side},\n        \
+                     .description(\"Finds any page by its name. Try it: press it, or Tab to it.\"){side},\n        \
                  TourStep::new(\"create\")\n            \
-                     .target(create)\n            \
+                     .target_selector(\"#tour-demo-create\")\n            \
                      .title(\"New project\")\n            \
                      .description(\"Starts an empty project.\"){side},\n    \
              ],\n\
          {options}    \
-             onfinish: Some(finished),\n    \
-             onclose: Some(skipped),\n    \
+             storage_key: Some(\"docs-tour-seen\".into()),\n    \
              ..Default::default()\n\
          }});\n\n\
          rsx! {{\n    \
@@ -76,16 +73,19 @@ fn wrap_hook(values: &DemoValues, _: &str) -> String {
                      variant: \"outlined\",\n            \
                      onmounted: search.mount(),\n            \
                      attributes: search.attributes(),\n            \
+                     onclick: move |_| searches += 1,\n            \
                      \"Search\"\n        \
                  }}\n        \
-                 Button {{\n            \
-                     variant: \"outlined\",\n            \
-                     onmounted: create.mount(),\n            \
-                     attributes: create.attributes(),\n            \
-                     \"New project\"\n        \
-                 }}\n        \
+                 // Found by its id: no handle to pass down.\n        \
+                 Button {{ id: \"tour-demo-create\", variant: \"outlined\", \"New project\" }}\n        \
                  Button {{ onclick: move |_| tour.start(), \"Take the tour\" }}\n        \
-                 Text {{ size: \"sm\", role: \"status\", if seen() {{ \"Seen\" }} else {{ \"Not seen yet\" }} }}\n    \
+                 Button {{ variant: \"text\", onclick: move |_| tour.forget(), \"Forget seen\" }}\n        \
+                 Text {{\n            \
+                     size: \"sm\",\n            \
+                     role: \"status\",\n            \
+                     if tour.seen() {{ \"Seen\" }} else {{ \"Not seen yet\" }}\n            \
+                     \", searches: {{searches}}\"\n        \
+                 }}\n    \
              }}\n\
          }}"
     )
@@ -96,10 +96,7 @@ fn wrap_hook(values: &DemoValues, _: &str) -> String {
 fn TourDemo(side: String, mask_click: String, custom: bool) -> Element {
     let side = side_of(&side);
     let search = use_element();
-    let create = use_element();
-    let mut seen = use_signal(|| false);
-    let finished = use_callback(move |()| seen.set(true));
-    let skipped = use_callback(move |_: usize| seen.set(true));
+    let mut searches = use_signal(|| 0);
     // demo-code: card start
     let card = use_callback(|view: TourView| {
         let title = view.step.title.clone().unwrap_or_default();
@@ -134,19 +131,19 @@ fn TourDemo(side: String, mask_click: String, custom: bool) -> Element {
                 .description("Two stops, under a minute."),
             TourStep::new("search")
                 .target(search)
+                .interactive(true)
                 .title("Search")
-                .description("Finds any page by its name.")
+                .description("Finds any page by its name. Try it: press it, or Tab to it.")
                 .side(side),
             TourStep::new("create")
-                .target(create)
+                .target_selector("#tour-demo-create")
                 .title("New project")
                 .description("Starts an empty project.")
                 .side(side),
         ],
         mask_click: mask_click_of(&mask_click),
         card: custom.then_some(card),
-        onfinish: Some(finished),
-        onclose: Some(skipped),
+        storage_key: Some("docs-tour-seen".into()),
         ..Default::default()
     });
 
@@ -158,16 +155,19 @@ fn TourDemo(side: String, mask_click: String, custom: bool) -> Element {
                 variant: "outlined",
                 onmounted: search.mount(),
                 attributes: search.attributes(),
+                onclick: move |_| searches += 1,
                 "Search"
             }
-            Button {
-                variant: "outlined",
-                onmounted: create.mount(),
-                attributes: create.attributes(),
-                "New project"
-            }
+            // Found by its id: no handle to pass down.
+            Button { id: "tour-demo-create", variant: "outlined", "New project" }
             Button { onclick: move |_| tour.start(), "Take the tour" }
-            Text { size: "sm", role: "status", if seen() { "Seen" } else { "Not seen yet" } }
+            Button { variant: "text", onclick: move |_| tour.forget(), "Forget seen" }
+            Text {
+                size: "sm",
+                role: "status",
+                if tour.seen() { "Seen" } else { "Not seen yet" }
+                ", searches: {searches}"
+            }
         }
     }
 }
@@ -205,10 +205,12 @@ pub fn TourPage() -> Element {
                         .doc("Styles the card."),
                     prop("parts", "Parts<TourPart>")
                         .doc("Styles for the mask, the highlight and the card's parts."),
+                    prop("storage_key", "Option<String>")
+                        .doc("Remembers in local storage that the tour was finished or closed early, for `tour.seen()`; `tour.forget()` drops it. `start()` still starts: offer the tour while `!tour.seen()`. Read at mount."),
                 ])
                 .without_base_props()
                 .parts("TourPart", vec![
-                    (TourPart::Mask, "The transparent layer over the page that takes every press."),
+                    (TourPart::Mask, "The transparent layer over the page that takes every press. Four strips around the hole on an `interactive` step."),
                     (TourPart::Highlight, "The hole around the target. Its outer shadow is the dimming."),
                     (TourPart::Positioner, "Places the card beside the target, or in the middle."),
                     (TourPart::Card, "The `dialog`: the default card, or the box around `card`'s."),
@@ -227,6 +229,11 @@ pub fn TourPage() -> Element {
                         .doc("Tells the steps apart. The card is drawn afresh when it changes."),
                     prop("target", "ElementHandle")
                         .doc("The element the hole goes around, from `use_element()`, mounted with `onmounted: handle.mount()`."),
+                    prop("target_selector", "String")
+                        .doc("A CSS selector for the target, as `\"#search\"`, looked up in the document when the step shows: for a target in another component. `target` wins. A WebView cannot look one up and shows the card in the middle."),
+                    prop("interactive", "bool")
+                        .default("false")
+                        .doc("Lets presses through the hole to the target, and puts the target in the Tab order beside the card."),
                     prop("title", "String")
                         .doc("The card's heading and, unless the tour has an `aria_label`, its name."),
                     prop("description", "String")
@@ -251,15 +258,17 @@ pub fn TourPage() -> Element {
                 .key(["Right"], "Goes to the next step. On the last step it does nothing: only Done finishes. Under `dir=\"rtl\"`, ← does. A held key steps once.")
                 .key(["Left"], "Goes to the previous step.")
                 .key(["Escape"], "Ends the tour early and returns focus to what started it.")
-                .key(["Tab", "Shift+Tab"], "Moves the focus within the card. It does not leave while the tour shows.")
+                .key(["Tab", "Shift+Tab"], "Moves the focus within the card. It does not leave while the tour shows, but for an `interactive` step's target: Tab past the card's last control reaches it, and Tab from it returns to the card. On the target the arrows are its own; Escape still ends the tour.")
                 .handles([
                     "Each step's card is a `dialog` with `aria-modal`, named by the step title and described by its text and its progress (\"2 of 3\"), also with a custom `card`, which the tour describes by a hidden text of its own. Focus moves to it on every step.",
                     "The card names its arrow keys in `aria-keyshortcuts`; few screen readers announce it, so say the keys in the first step's text too.",
                     "The hole has a 2px ring of its own, and an outline in forced colours, so the highlighted element stands out on a dark page too.",
                     "A card taller than the room it has scrolls, so its buttons stay reachable at 400% zoom or on a phone held sideways.",
-                    "The highlighted element cannot be pressed, and a press on the dimmed page does nothing unless `mask_click` says so.",
+                    "The highlighted element cannot be pressed unless its step is `interactive`, and a press on the dimmed page does nothing unless `mask_click` says so.",
+                    "An `interactive` step's card has `aria-modal=\"false\"`: the target outside it is reachable.",
                     "Each step scrolls its target into view; smoothly, unless the user reduces motion. The hole glides to a new step's target, without animation then too, and follows a scroll at once.",
                     "Android's Back button ends the tour, as Escape does, rather than the app.",
+                    "A `target_selector` that matches nothing when its step shows centres the card, with a warning in a debug build.",
                     "A target that never mounts, or renders nothing (`display: none`), shows its step's card in the middle, with a warning in a debug build.",
                     "Steps that go empty while the tour shows end it, as closing does.",
                 ])
@@ -281,13 +290,12 @@ pub fn TourPage() -> Element {
                     Code { source: "target" }
                     " is an element handle from "
                     Code { source: "use_element" }
-                    ". The tour is fixed to the viewport, over everything but notifications. "
-                    "It stores nothing: "
-                    Code { source: "onfinish" }
-                    " and "
-                    Code { source: "onclose" }
-                    " say it was seen, so keep that where your app keeps its settings and offer "
-                    "the tour only while it is unseen. The demo keeps it in a signal, forgotten on reload."
+                    ", or a selector for one in another component. The tour is fixed to the viewport, "
+                    "over everything but notifications. With a "
+                    Code { source: "storage_key" }
+                    " it remembers being finished or skipped across reloads: offer it while "
+                    Code { source: "tour.seen()" }
+                    " is false. The demo's Search step is interactive: press it while the tour shows."
                 }
             },
             Demo {

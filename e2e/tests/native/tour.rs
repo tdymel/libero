@@ -1,5 +1,5 @@
-//! `use_tour` in Blitz: the hole lands on the target, the keys step and close, and the mask
-//! takes a press on the highlighted element.
+//! `use_tour` in Blitz: the hole lands on the target, found by selector too, the keys step and
+//! close, and the mask takes a press on the highlighted element unless the step is interactive.
 
 use dioxus::prelude::*;
 use std::time::{Duration, Instant};
@@ -115,6 +115,100 @@ fn arrow_right_moves_the_hole_and_escape_returns_focus() {
         "focus is on {}",
         page.focus_owner()
     );
+}
+
+/// A selector's step (2220), then an interactive one (2221).
+fn more_app() -> Element {
+    let pressable = use_element();
+    let mut presses = use_signal(|| 0);
+    let tour = use_tour(TourOptions {
+        steps: vec![
+            TourStep::new("picked")
+                .target_selector("#picked")
+                .title("Picked"),
+            TourStep::new("pressable")
+                .target(pressable)
+                .interactive(true)
+                .title("Pressable"),
+        ],
+        ..Default::default()
+    });
+    rsx! {
+        div { padding: "40px", display: "flex", gap: "40px",
+            Button { id: "start", onclick: move |_| tour.start(), "Start" }
+            Button { id: "picked", "Picked" }
+            Button {
+                id: "pressable",
+                onmounted: pressable.mount(),
+                onclick: move |_| presses += 1,
+                "Pressable"
+            }
+            span { id: "presses", "{presses}" }
+        }
+    }
+}
+
+#[test]
+fn a_selector_target_takes_the_hole() {
+    let mut page = mount(more_app);
+    page.click("#start");
+    assert!(
+        until(&mut page, |page| hole_on(page, "#picked")),
+        "the hole {:?} is not around #picked {:?}",
+        page.rect(HIGHLIGHT),
+        page.rect("#picked")
+    );
+}
+
+#[test]
+fn an_interactive_target_takes_presses_and_tab() {
+    let mut page = mount(more_app);
+    page.click("#start");
+    until(&mut page, |page| page.is_focused(CARD));
+    page.press(Key::ArrowRight);
+    assert!(
+        until(&mut page, |page| hole_on(page, "#pressable")),
+        "ArrowRight did not move the hole:\n{}",
+        page.tree()
+    );
+    until(&mut page, |page| page.is_focused(CARD));
+
+    // Tab off the card's last control reaches the target; Tab from it, the card's first.
+    let mut reached = false;
+    for _ in 0..6 {
+        page.press(Key::Tab);
+        until(&mut page, |page| !page.is_focused(CARD));
+        if page.is_focused("#pressable") {
+            reached = true;
+            break;
+        }
+    }
+    assert!(
+        reached,
+        "Tab never reached the target: on {}",
+        page.focus_owner()
+    );
+    page.press(Key::Tab);
+    assert!(
+        until(&mut page, |page| page
+            .is_focused("[data-lsx-tour] [data-slot=close]")),
+        "Tab from the target went to {}",
+        page.focus_owner()
+    );
+    page.press_with(Key::Tab, Modifiers::SHIFT);
+    assert!(
+        until(&mut page, |page| page.is_focused("#pressable")),
+        "Shift+Tab from the card's first control went to {}",
+        page.focus_owner()
+    );
+
+    let (left, top, width, height) = page.rect("#pressable");
+    page.click_at((left + width / 2.0) as f32, (top + height / 2.0) as f32);
+    assert!(
+        until(&mut page, |page| page.text("#presses") == "1"),
+        "the press did not reach the target"
+    );
+    assert!(page.exists(CARD), "a press on the target closed the tour");
 }
 
 #[test]

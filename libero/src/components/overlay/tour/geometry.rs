@@ -34,6 +34,26 @@ pub(super) fn highlight_style(hole: Option<Rect>, radius: f64) -> String {
     }
 }
 
+/// The `style`s of four mask strips around `hole` (above, below, left, right), so
+/// a press inside it reaches the page.
+pub(super) fn mask_strips(hole: Rect, viewport: Dimensions) -> [String; 4] {
+    let bottom = hole.y + hole.height;
+    let right = hole.x + hole.width;
+    let strip = |left: f64, top: f64, width: f64, height: f64| {
+        format!(
+            "left:{left}px;top:{top}px;width:{}px;height:{}px;right:auto;bottom:auto;",
+            width.max(0.0),
+            height.max(0.0)
+        )
+    };
+    [
+        strip(0.0, 0.0, viewport.width, hole.y),
+        strip(0.0, bottom, viewport.width, viewport.height - bottom),
+        strip(0.0, hole.y, hole.x, hole.height),
+        strip(right, hole.y, viewport.width - right, hole.height),
+    ]
+}
+
 /// Changes whenever `rect` does, so the card's popover places itself again.
 pub(super) fn remeasure_key(rect: Option<Rect>) -> u64 {
     rect.map_or(0, |rect| {
@@ -112,6 +132,20 @@ mod tests {
             "left:1px;top:2px;width:3px;height:4px;border-radius:4px;"
         );
         assert_eq!(names(with), names(highlight_style(None, 4.0)));
+    }
+
+    #[test]
+    fn the_mask_strips_leave_only_the_hole_open() {
+        let strips = mask_strips(rect(100.0, 50.0, 80.0, 40.0), VIEWPORT);
+        assert_eq!(
+            strips,
+            [
+                "left:0px;top:0px;width:800px;height:50px;right:auto;bottom:auto;",
+                "left:0px;top:90px;width:800px;height:510px;right:auto;bottom:auto;",
+                "left:0px;top:50px;width:100px;height:40px;right:auto;bottom:auto;",
+                "left:180px;top:50px;width:620px;height:40px;right:auto;bottom:auto;",
+            ]
+        );
     }
 
     #[test]

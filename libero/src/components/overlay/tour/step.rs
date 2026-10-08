@@ -25,6 +25,9 @@ pub struct TourStep {
     pub key: String,
     /// The element the hole goes around.
     pub target: Option<ElementHandle>,
+    /// A CSS selector for the target, looked up in the document when the step shows;
+    /// [`target`](Self::target) wins. Not on a WebView, which centres the card.
+    pub target_selector: Option<String>,
     /// The card's heading and, unless the tour has an `aria_label`, its name.
     pub title: Option<String>,
     pub description: Option<String>,
@@ -37,6 +40,8 @@ pub struct TourStep {
     pub padding: Option<f64>,
     /// Overrides [`TourDefaults::radius`](crate::theme::TourDefaults::radius).
     pub radius: Option<f64>,
+    /// Lets presses through the hole to the target, and Tab between the card and it.
+    pub interactive: bool,
 }
 
 impl TourStep {
@@ -44,6 +49,7 @@ impl TourStep {
         Self {
             key: key.into(),
             target: None,
+            target_selector: None,
             title: None,
             description: None,
             content: None,
@@ -51,12 +57,20 @@ impl TourStep {
             align: Align::Center,
             padding: None,
             radius: None,
+            interactive: false,
         }
     }
 
     /// Sets [`target`](Self::target): the handle mounted on the element, `onmounted: handle.mount()`.
     pub fn target(mut self, target: ElementHandle) -> Self {
         self.target = Some(target);
+        self
+    }
+
+    /// Sets [`target_selector`](Self::target_selector), as `"#search"`: for a target
+    /// in another component, without passing a handle down.
+    pub fn target_selector(mut self, selector: impl Into<String>) -> Self {
+        self.target_selector = Some(selector.into());
         self
     }
 
@@ -95,6 +109,13 @@ impl TourStep {
     /// Sets [`radius`](Self::radius), in pixels.
     pub fn radius(mut self, radius: f64) -> Self {
         self.radius = Some(radius);
+        self
+    }
+
+    /// Sets [`interactive`](Self::interactive): the target can be pressed, and
+    /// Tab past the card's last control reaches it.
+    pub fn interactive(mut self, interactive: bool) -> Self {
+        self.interactive = interactive;
         self
     }
 }

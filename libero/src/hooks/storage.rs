@@ -451,6 +451,40 @@ impl SessionText {
     }
 }
 
+/// Raw text kept across runs under a key, for libero's own flags. Reactive.
+#[derive(Clone, Copy)]
+pub(crate) struct LocalText(Entry);
+
+/// The document's local text under `key`, read from the store on first use.
+pub(crate) fn local_text(key: &str) -> LocalText {
+    LocalText(storage_host().entry(StorageArea::Local, key, true))
+}
+
+impl LocalText {
+    pub(crate) fn is_stored(&self) -> bool {
+        self.0.raw.read().is_some()
+    }
+
+    /// Stores `text`; a full or missing store keeps it in memory only.
+    pub(crate) fn set(mut self, text: String) {
+        if let Some(store) = storage(StorageArea::Local) {
+            let _ = store.set(&self.0.key.peek(), &text);
+        }
+        if self.0.raw.peek().as_deref() != Some(text.as_str()) {
+            self.0.raw.set(Some(text));
+        }
+    }
+
+    pub(crate) fn remove(mut self) {
+        if let Some(store) = storage(StorageArea::Local) {
+            let _ = store.remove(&self.0.key.peek());
+        }
+        if self.0.raw.peek().is_some() {
+            self.0.raw.set(None);
+        }
+    }
+}
+
 fn use_storage<T: Serialize + DeserializeOwned + Clone + PartialEq + 'static>(
     area: StorageArea,
     key: &str,
