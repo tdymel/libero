@@ -256,17 +256,28 @@ mod variant {
 /// The rendered side: a `*Defaults` colour reaches every component that leaves
 /// its own unset, exactly as if the call site had named it.
 mod color {
-    use crate::common::{body, render_with};
+    use crate::common::{body, render, render_with};
 
     use dioxus::prelude::*;
     use libero::{
         LiberoProvider,
         components::{
-            Avatar, AvatarGroup, AvatarSpec, Badge, Input, ProgressBar, RangeSlider, Slider,
+            Avatar, AvatarGroup, AvatarSpec, Badge, Checkbox, Chip, Input, Options, ProgressBar,
+            Radio, RadioGroup, RangeSlider, SegmentedControl, Slider, Switch,
         },
         sx::ThemeAwareValue,
-        theme::{AvatarDefaults, BadgeDefaults, Color, ProgressBarDefaults, SliderDefaults, Theme},
+        theme::{
+            AvatarDefaults, BadgeDefaults, CheckboxDefaults, ChipDefaults, Color,
+            ProgressBarDefaults, RadioDefaults, SegmentedControlDefaults, SliderDefaults,
+            SwitchDefaults, Theme,
+        },
     };
+
+    #[derive(Clone, PartialEq, Options)]
+    enum Emphasis {
+        Bold,
+        Italic,
+    }
 
     static ERROR: Theme = Theme {
         badge: BadgeDefaults {
@@ -284,6 +295,26 @@ mod color {
         slider: SliderDefaults {
             color: Color::Error,
             ..Theme::DEFAULT.slider
+        },
+        chip: ChipDefaults {
+            color: Color::Error,
+            ..Theme::DEFAULT.chip
+        },
+        switch: SwitchDefaults {
+            color: Color::Error,
+            ..Theme::DEFAULT.switch
+        },
+        checkbox: CheckboxDefaults {
+            color: Color::Error,
+            ..Theme::DEFAULT.checkbox
+        },
+        radio: RadioDefaults {
+            color: Color::Error,
+            ..Theme::DEFAULT.radio
+        },
+        segmented_control: SegmentedControlDefaults {
+            color: Color::Error,
+            ..Theme::DEFAULT.segmented_control
         },
         ..Theme::DEFAULT
     };
@@ -346,6 +377,68 @@ mod color {
             assert_ne!(followed, html(part, false, false), "{part}");
         }
     }
+
+    macro_rules! unset_color_follows_the_theme {
+        ($test:ident, $component:ident { $($props:tt)* }) => {
+            #[test]
+            fn $test() {
+                fn themed() -> Element {
+                    rsx! { LiberoProvider { themes: &ERROR, $component { $($props)* } } }
+                }
+                fn explicit() -> Element {
+                    rsx! { LiberoProvider { $component { color: Color::Error, $($props)* } } }
+                }
+                fn stock() -> Element {
+                    rsx! { LiberoProvider { $component { $($props)* } } }
+                }
+
+                let themed = body(&render(themed));
+                assert_eq!(themed, body(&render(explicit)), "{themed}");
+                assert_ne!(themed, body(&render(stock)), "{themed}");
+            }
+        };
+    }
+
+    unset_color_follows_the_theme!(a_chip, Chip { "Tag" });
+    unset_color_follows_the_theme!(
+        a_switch,
+        Switch {
+            label: "Wi-Fi",
+            checked: true,
+            onchange: move |_| {}
+        }
+    );
+    unset_color_follows_the_theme!(
+        a_checkbox,
+        Checkbox {
+            label: "Agree",
+            checked: true,
+            onchange: move |_| {}
+        }
+    );
+    unset_color_follows_the_theme!(
+        a_radio,
+        Radio {
+            label: "Free",
+            checked: true,
+            onselect: move |_| {}
+        }
+    );
+    unset_color_follows_the_theme!(
+        a_radio_group,
+        RadioGroup {
+            label: "Plan",
+            value: Some(Emphasis::Bold),
+            onchange: move |_: Emphasis| {},
+        }
+    );
+    unset_color_follows_the_theme!(
+        a_segmented_control,
+        SegmentedControl {
+            value: Emphasis::Bold,
+            onchange: move |_| {},
+        }
+    );
 }
 
 /// A `*Defaults` size and radius reach the component that leaves its own unset.

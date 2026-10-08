@@ -169,6 +169,7 @@ fn a_segment_can_shrink_below_its_label() {
 static TONAL: libero::theme::Theme = libero::theme::Theme {
     segmented_control: libero::theme::SegmentedControlDefaults {
         variant: libero::theme::Variant::Tonal,
+        ..libero::theme::Theme::DEFAULT.segmented_control
     },
     ..libero::theme::Theme::DEFAULT
 };

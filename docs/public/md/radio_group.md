@@ -82,7 +82,7 @@ Use a `Radio` on its own only to lay a group out by hand. Then the shared
 | `option_description` | `Callback<T, String>` | - | A line under each option's label. An empty string renders none. |
 | `variant` | `ChoiceVariant` | `plain` | `card` draws every option as a bordered surface you can click anywhere. A row of cards stretches them to one height. |
 | `orientation` | `Orientation` | `vertical` | `horizontal` lays the options out in a row, for two or three short ones. |
-| `color` | `ThemeAwareValue` | `primary` | Ring and dot color of the selected option. |
+| `color` | `ThemeAwareValue` | `primary` | Ring and dot color of the selected option; `theme.radio.color` when unset. |
 | `size` | `Size` | `md` | Size of the circles and their labels. |
 | `label` | `Caption` | - | The question, and the group's name. |
 | `description` | `Caption` | - | Between the question and the options. How to choose. |
@@ -100,7 +100,7 @@ Use a `Radio` on its own only to lay a group out by hand. Then the shared
 | `onselect` | `EventHandler<()>` | - | Fires when this radio is picked. Never when another one is. |
 | `name` | `String` | - | Shared by every radio in one group, which makes them exclusive. `RadioGroup` sets it. |
 | `tabindex` | `String` | - | Which radio is the group's tab stop. `RadioGroup` sets it. |
-| `color` | `ThemeAwareValue` | `primary` | Ring and dot color when selected. |
+| `color` | `ThemeAwareValue` | `primary` | Ring and dot color when selected; `theme.radio.color` when unset. |
 | `size` | `Size` | `md` | Size of the circle and its label. |
 | `label` | `Caption` | - | The text beside the circle, and the radio's name. |
 | `description` | `Caption` | - | A second line under the label. |

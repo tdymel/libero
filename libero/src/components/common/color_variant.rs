@@ -22,6 +22,11 @@ pub(crate) fn base_color(value: Option<&ThemeAwareValue>) -> ThemeAwareValue {
     }
 }
 
+/// [`base_color`] where an unset value takes the theme's `default` colour.
+pub(crate) fn base_color_or(value: Option<&ThemeAwareValue>, default: Color) -> ThemeAwareValue {
+    base_color(Some(value.unwrap_or(&ThemeAwareValue::Color(default))))
+}
+
 /// `base` as a text colour, as `sx`'s `color()` resolves it; for colours that travel
 /// through a custom property. A literal comes back as itself.
 pub(crate) fn text_color(base: &ThemeAwareValue) -> Option<String> {

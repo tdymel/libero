@@ -162,7 +162,7 @@ fn Demo() -> Element {
 | `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Renames a segment, or draws it with `OptionLabel::rich`. Runs during render, so it can read a locale from context. |
 | `orientation` | `Orientation` | `horizontal` | A row or a column. |
 | `variant` | `Variant` | `filled` | The unselected look, shared by every segment: `filled`, `tonal`, `elevated`, `outlined`, `standard`, or `gradient`, which takes the theme's gradient. |
-| `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color. |
+| `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color; `theme.segmented_control.color` when unset. |
 | `size` | `Size` | `md` | Size of the segments and the captions. |
 | `radius` | `Size` | `md` | Radius of the control's outer corners. Inner corners are square. |
 | `gap` | `Size` | - | Space between the segments. Set, each segment gets its own border and radius. |

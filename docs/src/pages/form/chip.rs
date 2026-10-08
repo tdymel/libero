@@ -14,8 +14,8 @@ pub fn ChipPage() -> Element {
             markdown: "/md/chip.md",
             properties: vec![props("Chip", vec![
                 prop("color", "ThemeAwareValue")
-                    .default("primary")
-                    .doc("Accent color. A theme color name or any CSS color."),
+                    .default(theme.chip.color.as_str())
+                    .doc("Accent color. A theme color name or any CSS color; `theme.chip.color` when unset."),
                 prop("variant", "Variant")
                     .default(theme.chip.variant.as_str())
                     .doc("The unselected look. A checked chip is always a tonal container."),

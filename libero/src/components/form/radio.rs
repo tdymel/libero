@@ -5,8 +5,9 @@ use crate::{
     components::{
         accessibility::{VISUALLY_HIDDEN_SX, hidden_input_centred_sx},
         common::{
-            HtmlTag, Input, Part, States, base_color, disabled_look_sx, fill_color, focus_ring_sx,
-            names_itself, ring_overlay, ring_overlay_sx, use_name_warning, variables,
+            HtmlTag, Input, Part, States, base_color_or, disabled_look_sx, fill_color,
+            focus_ring_sx, names_itself, ring_overlay, ring_overlay_sx, use_name_warning,
+            variables,
         },
         form::{field_parts_enum, field_props, use_field},
         layout::use_box,
@@ -152,7 +153,7 @@ field_props! {
 #[component]
 pub fn Radio(props: RadioProps) -> Element {
     let theme = use_theme();
-    let color = base_color(props.color.as_ref());
+    let color = base_color_or(props.color.as_ref(), theme.radio.color);
 
     let size = props.size.copied_or(theme.radio.size);
     let disabled = props.disabled.unwrap_or(false);

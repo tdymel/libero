@@ -32,8 +32,8 @@ pub fn CheckboxPage() -> Element {
             properties: vec![
                 props("Checkbox", vec![
                     prop("color", "ThemeAwareValue")
-                        .default("primary")
-                        .doc("The box's color when checked. A theme color name or any CSS color."),
+                        .default(theme.checkbox.color.as_str())
+                        .doc("The box's color when checked. A theme color name or any CSS color; `theme.checkbox.color` when unset."),
                     prop("size", "Size")
                         .default(theme.checkbox.size.as_str())
                         .doc("Size of the box, the label and the captions."),

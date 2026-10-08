@@ -110,8 +110,8 @@ pub fn RadioGroupPage() -> Element {
                         .default("vertical")
                         .doc("`horizontal` lays the options out in a row, for two or three short ones."),
                     prop("color", "ThemeAwareValue")
-                        .default("primary")
-                        .doc("Ring and dot color of the selected option."),
+                        .default(theme.radio.color.as_str())
+                        .doc("Ring and dot color of the selected option; `theme.radio.color` when unset."),
                     prop("size", "Size")
                         .default(theme.radio.size.as_str())
                         .doc("Size of the circles and their labels."),
@@ -150,8 +150,8 @@ pub fn RadioGroupPage() -> Element {
                     prop("tabindex", "String")
                         .doc("Which radio is the group's tab stop. `RadioGroup` sets it."),
                     prop("color", "ThemeAwareValue")
-                        .default("primary")
-                        .doc("Ring and dot color when selected."),
+                        .default(theme.radio.color.as_str())
+                        .doc("Ring and dot color when selected; `theme.radio.color` when unset."),
                     prop("size", "Size")
                         .default(theme.radio.size.as_str())
                         .doc("Size of the circle and its label."),

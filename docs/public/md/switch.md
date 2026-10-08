@@ -51,7 +51,7 @@ Switch {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `color` | `ThemeAwareValue` | `primary` | Track color when on. A theme color name or any CSS color. |
+| `color` | `ThemeAwareValue` | `primary` | Track color when on. A theme color name or any CSS color; `theme.switch.color` when unset. |
 | `size` | `Size` | `md` | Size of the track, the thumb and the label. |
 | `radius` | `Size` | `xl` | Track corner radius. The thumb stays a circle. |
 | `checked` | `bool` | - | Whether it is on. Pair it with `onchange`. Left out, the switch keeps its own state, or the form's when `name` binds it. |

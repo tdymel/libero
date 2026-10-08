@@ -7,7 +7,7 @@ use crate::{
     components::{
         accessibility::{VISUALLY_HIDDEN_SX, hidden_input_centred_sx},
         common::{
-            Glyph, HtmlTag, Input, Part, States, TOOLBAR_ITEM, ToolbarItem, base_color,
+            Glyph, HtmlTag, Input, Part, States, TOOLBAR_ITEM, ToolbarItem, base_color_or,
             contrast_color, disabled_look_sx, draw_svg, fill_color, focus_ring_sx, names_itself,
             ring_overlay, ring_overlay_sx, use_name_warning, use_toolbar_item, variables,
         },
@@ -162,7 +162,7 @@ field_props! {
 #[component]
 pub fn Checkbox(props: CheckboxProps) -> Element {
     let theme = use_theme();
-    let color = base_color(props.color.as_ref());
+    let color = base_color_or(props.color.as_ref(), theme.checkbox.color);
 
     let size = props.size.copied_or(theme.checkbox.size);
     let radius = props.radius.copied_or(theme.checkbox.radius);
@@ -441,7 +441,7 @@ pub(crate) struct CheckboxLook {
 /// stylesheet, unless `enabled`.
 pub(crate) fn use_checkbox_look(size: Size, enabled: bool) -> Option<CheckboxLook> {
     let theme = use_theme();
-    let color = base_color(None);
+    let color = base_color_or(None, theme.checkbox.color);
     let base = States::new()
         .with(size.state_name(), true)
         .with(theme.checkbox.radius.radius_state_name(), true);

@@ -105,8 +105,8 @@ pub fn SegmentedControlPage() -> Element {
                         .default(theme.segmented_control.variant.as_str())
                         .doc("The unselected look, shared by every segment: `filled`, `tonal`, `elevated`, `outlined`, `standard`, or `gradient`, which takes the theme's gradient."),
                     prop("color", "ThemeAwareValue")
-                        .default("primary")
-                        .doc("Accent color. A theme color name or any CSS color."),
+                        .default(theme.segmented_control.color.as_str())
+                        .doc("Accent color. A theme color name or any CSS color; `theme.segmented_control.color` when unset."),
                     prop("size", "Size").default(theme.button.size.as_str()).doc("Size of the segments and the captions."),
                     prop("radius", "Size")
                         .default(theme.button.radius.as_str())

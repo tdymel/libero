@@ -129,7 +129,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color. |
+| `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color; `theme.chip.color` when unset. |
 | `variant` | `Variant` | `filled` | The unselected look. A checked chip is always a tonal container. |
 | `size` | `Size` | `md` | Height, padding and font size. |
 | `radius` | `Size` | `xl` | Corner radius. |

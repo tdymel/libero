@@ -31,8 +31,8 @@ pub fn SwitchPage() -> Element {
             markdown: "/md/switch.md",
             properties: vec![props("Switch", vec![
                 prop("color", "ThemeAwareValue")
-                    .default("primary")
-                    .doc("Track color when on. A theme color name or any CSS color."),
+                    .default(theme.switch.color.as_str())
+                    .doc("Track color when on. A theme color name or any CSS color; `theme.switch.color` when unset."),
                 prop("size", "Size")
                     .default(theme.switch.size.as_str())
                     .doc("Size of the track, the thumb and the label."),

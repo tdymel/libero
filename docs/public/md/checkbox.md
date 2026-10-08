@@ -62,7 +62,7 @@ Checkbox {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `color` | `ThemeAwareValue` | `primary` | The box's color when checked. A theme color name or any CSS color. |
+| `color` | `ThemeAwareValue` | `primary` | The box's color when checked. A theme color name or any CSS color; `theme.checkbox.color` when unset. |
 | `size` | `Size` | `md` | Size of the box, the label and the captions. |
 | `radius` | `Size` | `sm` | Corner radius of the box. |
 | `checked` | `bool` | - | Whether it is checked. Pair it with `onchange`. Left out, the box keeps its own state, or the form's when `name` binds it. |

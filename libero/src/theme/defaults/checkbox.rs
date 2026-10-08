@@ -1,6 +1,7 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
 use crate::theme::{ChoiceVariant, CssVar, Size, SizeCss, Sizes};
+use crate::tokens::Color;
 
 pub const CHECKBOX_BOX_SIZE: SizeCss = SizeCss::new("--lsx-checkbox-box-size-");
 
@@ -17,6 +18,8 @@ pub struct CheckboxDefaults {
     pub variant: ChoiceVariant,
     pub size: Size,
     pub radius: Size,
+    /// The colour a checked box takes when a call site names none.
+    pub color: Color,
     pub sizes: Sizes<&'static str>,
 }
 
@@ -25,6 +28,7 @@ impl CheckboxDefaults {
         variant: ChoiceVariant::Plain,
         size: Size::Md,
         radius: Size::Sm,
+        color: Color::Primary,
         sizes: Sizes::new("14px", "16px", "18px", "20px", "22px", "24px"),
     };
 

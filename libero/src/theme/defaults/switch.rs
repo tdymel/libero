@@ -1,6 +1,7 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
 use crate::theme::{ChoiceVariant, CssVar, Size, SizeCss, Sizes};
+use crate::tokens::Color;
 
 pub const SWITCH_TRACK_WIDTH: SizeCss = SizeCss::new("--lsx-switch-track-width-");
 pub const SWITCH_TRACK_HEIGHT: SizeCss = SizeCss::new("--lsx-switch-track-height-");
@@ -27,6 +28,8 @@ pub struct SwitchDefaults {
     pub size: Size,
     /// Track corner radius; the thumb is always a circle.
     pub radius: Size,
+    /// The colour a checked switch takes when a call site names none.
+    pub color: Color,
     pub sizes: Sizes<SwitchSizeLevel>,
 }
 
@@ -35,6 +38,7 @@ impl SwitchDefaults {
         variant: ChoiceVariant::Plain,
         size: Size::Md,
         radius: Size::Xl,
+        color: Color::Primary,
         sizes: Sizes::new(
             SwitchSizeLevel {
                 track_width: "30px",

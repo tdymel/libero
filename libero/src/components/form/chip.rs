@@ -8,7 +8,7 @@ use crate::{
     components::{
         accessibility::VISUALLY_HIDDEN_SX,
         common::{
-            HtmlTag, Input, Part, States, Variant, VariantColors, VariantVars, base_color,
+            HtmlTag, Input, Part, States, Variant, VariantColors, VariantVars, base_color_or,
             base_props, contrast_color, contrast_shade_color, disabled_look_sx, fill_color,
             focus_ring_sx, interactive_variant_sx, on_ring_sx, on_state_sx, parts_enum,
             parts_under_sx, ring_overlay, ring_overlay_sx, shade_color, text_color, variables,
@@ -257,7 +257,7 @@ base_props! {
 pub fn Chip(props: ChipProps) -> Element {
     let theme = use_theme();
     let variant = props.variant.copied_or(theme.chip.variant);
-    let color = base_color(props.color.as_ref());
+    let color = base_color_or(props.color.as_ref(), theme.chip.color);
     let bound = use_bound(&props.name, props.onchange.is_some());
     let checked = bound
         .value()

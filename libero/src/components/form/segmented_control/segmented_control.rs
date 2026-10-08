@@ -7,7 +7,7 @@ use crate::{
     components::{
         buttons::button_variables,
         common::{
-            Input, OptionLabel, OptionSource, Options, Orientation, Variant, base_color,
+            Input, OptionLabel, OptionSource, Options, Orientation, Variant, base_color_or,
             names_itself, use_name_warning, use_toolbar_item,
         },
         form::{Asks, field_props, use_bound, use_field, use_form_context},
@@ -197,7 +197,7 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
     });
 
     let variant = props.variant.copied_or(theme.segmented_control.variant);
-    let color = base_color(props.color.as_ref());
+    let color = base_color_or(props.color.as_ref(), theme.segmented_control.color);
     // Colour resolution plus rendering is ~790 ns, and `(variant, color)` is
     // the same on almost every render.
     let style = use_cache((variant, color), |(variant, color)| {

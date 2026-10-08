@@ -1,6 +1,7 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
 use crate::theme::{Size, SizeCss, Sizes, Variant};
+use crate::tokens::Color;
 
 pub const CHIP_FONT_SIZE: SizeCss = SizeCss::new("--lsx-chip-font-size-");
 pub const CHIP_HEIGHT: SizeCss = SizeCss::new("--lsx-chip-height-");
@@ -20,6 +21,8 @@ pub struct ChipDefaults {
     pub variant: Variant,
     pub size: Size,
     pub radius: Size,
+    /// The colour a chip takes when a call site names none.
+    pub color: Color,
     pub sizes: Sizes<ChipSizeLevel>,
 }
 
@@ -28,6 +31,7 @@ impl ChipDefaults {
         variant: Variant::Filled,
         size: Size::Md,
         radius: Size::Xl,
+        color: Color::Primary,
         sizes: Sizes::new(
             // 24px like `sm`: the WCAG 2.5.8 minimum target (1494).
             ChipSizeLevel {
