@@ -11,7 +11,7 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::{use_css, use_theme},
+    hooks::{use_accessibility, use_css, use_theme},
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         CIRCULAR_PROGRESS_COLOR, CIRCULAR_PROGRESS_SIZE, CIRCULAR_PROGRESS_THICKNESS,
@@ -156,16 +156,21 @@ static CIRCULAR_PROGRESS_EDGE_SX: StaticSx = StaticSx::new(|| {
         .media(FORCED_COLORS, sx().display("none"))
 });
 
-/// One ring in a `0 0 100 100` box. SVG attributes, not CSS: native bakes an
-/// inline svg from its attributes and `currentColor` only.
+/// One ring in a `0 0 100 100` box. SVG attributes, not CSS: native bakes an inline
+/// svg from its attributes and `currentColor` only, so a still ring says its dashes here.
 fn arc_svg(
     class: String,
     slot: Option<&'static str>,
     ring: Ring,
     width: f64,
     offset: f64,
+    still: bool,
 ) -> Element {
     let length = svg_number(ring.length);
+    let (dashes, offset) = match still {
+        true => (SPIN_DASHES.to_string(), 0.0),
+        false => (format!("{length} {length}"), offset),
+    };
     rsx! {
         svg {
             class,
@@ -179,7 +184,7 @@ fn arc_svg(
                 fill: "none",
                 stroke: "currentColor",
                 "stroke-width": svg_number(width),
-                "stroke-dasharray": "{length} {length}",
+                "stroke-dasharray": dashes,
                 "stroke-dashoffset": svg_number(offset),
                 // Starts at 12 o'clock.
                 transform: "rotate(-90 50 50)",
@@ -280,6 +285,7 @@ pub fn CircularProgress(props: CircularProgressProps) -> Element {
         .value
         .map(|value| fraction("CircularProgress", value, props.min, props.max));
     let offset = ring.offset(fraction.unwrap_or(SPIN_SHARE));
+    let still = fraction.is_none() && use_accessibility().reduced_motion();
 
     let states: Input<States> = props
         .states
@@ -315,12 +321,13 @@ pub fn CircularProgress(props: CircularProgressProps) -> Element {
             ring,
             ring.width + 2.0 * EDGE_WIDTH,
             offset,
+            still,
         )
     });
 
     let inner = rsx! {
         {edge}
-        {arc_svg(classes(arc_class), Some(CircularProgressPart::Arc.slot()), ring, ring.width, offset)}
+        {arc_svg(classes(arc_class), Some(CircularProgressPart::Arc.slot()), ring, ring.width, offset, still)}
         // Hidden: the value is already read, and "40%" twice is noise.
         span { class: label_class, "data-slot": CircularProgressPart::Label.slot(), "aria-hidden": "true", {props.children} }
     };

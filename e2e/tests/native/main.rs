@@ -53,6 +53,7 @@ mod paper;
 mod placeholder;
 mod pointer;
 mod popover;
+mod progress_bar;
 mod qr_code;
 mod repository;
 mod rich_text_view;
