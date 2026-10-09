@@ -1,5 +1,5 @@
 # Builds the docs app once per platform (1219), dev profile, and runs the e2e suites on macOS
-# (2776) and Windows (2781). Informational: not part of the required `ci` check.
+# (2776) and Windows (2781, 2783). Informational: not part of the required `ci` check.
 name: Platforms
 
 # On by default since the repo is public (standard runners are free there, macOS and Windows too).
@@ -282,6 +282,39 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: windows-e2e-artifacts-${{ matrix.shard }}
+          path: ${{ runner.temp }}/e2e-artifacts
+          if-no-files-found: ignore
+
+  # The desktop arm on Windows (2783): the fixture app in WebView2, driven over its DevTools
+  # port (`--remote-debugging-port`), so no input injection and no screen size are involved.
+  windows-desktop:
+    runs-on: windows-2025
+    timeout-minutes: 120
+    steps:
+      - run: |
+          git config --global core.autocrlf false
+          git config --global core.longpaths true
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: platforms-windows-desktop
+      # The image lists no WebView2 runtime; wry's own CI installs it the same way. The
+      # bootstrapper is a no-op when the Evergreen runtime is already there.
+      - shell: pwsh
+        run: |
+          Invoke-WebRequest https://go.microsoft.com/fwlink/p/?LinkId=2124703 -OutFile "$env:RUNNER_TEMP\installwebview.exe"
+          Start-Process -FilePath "$env:RUNNER_TEMP\installwebview.exe" -ArgumentList '/silent', '/install' -Wait
+          $key = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
+          "WebView2 runtime: $((Get-ItemProperty $key -ErrorAction SilentlyContinue).pv)"
+      - run: cargo run -p e2e -- desktop
+        env:
+          # The runner's artifacts and the WebView2 profiles go to `temp_dir()`, `%TMP%` here.
+          TMP: ${{ runner.temp }}
+          TEMP: ${{ runner.temp }}
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-desktop-artifacts
           path: ${{ runner.temp }}/e2e-artifacts
           if-no-files-found: ignore
 

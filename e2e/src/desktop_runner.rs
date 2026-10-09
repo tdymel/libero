@@ -1,5 +1,6 @@
 //! `cargo run -p e2e -- desktop [filter]` (1126): the scenarios' `desktop` arm
-//! against the fixture app in wry's WebView, all under one Xvfb display (macOS: the session's).
+//! against the fixture app in wry's WebView, all under one Xvfb display (macOS and Windows:
+//! the session's).
 
 use std::process::{Command, Stdio};
 
@@ -13,8 +14,9 @@ pub fn run(mut filters: Vec<String>) -> Result<()> {
     let before = filters.len();
     filters.retain(|filter| filter != "--ignored");
     let ignored = filters.len() != before;
-    // macOS needs neither: the runner's own GUI session, and the app's NSEvents (2782).
-    let tools: &[&str] = if cfg!(target_os = "macos") {
+    // macOS and Windows need neither: the runner's own GUI session, and the app's NSEvents
+    // (2782) or WebView2's DevTools (2783).
+    let tools: &[&str] = if cfg!(any(target_os = "macos", windows)) {
         &[]
     } else {
         &["xvfb-run", "xdotool"]
@@ -61,7 +63,7 @@ pub fn run(mut filters: Vec<String>) -> Result<()> {
     eprintln!("e2e desktop: running {} scenario(s)", names.len());
 
     // One display for the run; never the Maintainer's (`DISPLAY=:0`).
-    let mut command = if cfg!(target_os = "macos") {
+    let mut command = if cfg!(any(target_os = "macos", windows)) {
         Command::new(env!("CARGO"))
     } else {
         let mut xvfb = Command::new("xvfb-run");
@@ -86,7 +88,13 @@ pub fn run(mut filters: Vec<String>) -> Result<()> {
         .args(ignored.then_some("--ignored"))
         .args(&names)
         // `e2e::driver::desktop::APP_ENV`: the runner is built without the feature.
-        .env("E2E_DESKTOP_APP", target_dir.join("debug/e2e-fixtures"))
+        .env(
+            "E2E_DESKTOP_APP",
+            target_dir.join(format!(
+                "debug/e2e-fixtures{}",
+                std::env::consts::EXE_SUFFIX
+            )),
+        )
         .env("E2E_ARTIFACTS", &artifacts)
         .stdin(Stdio::null())
         .own_group()

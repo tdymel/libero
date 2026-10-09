@@ -2,7 +2,8 @@
 //! [`Desktop`] launches the fixture app once per unit, reads the page through the
 //! app's `E2E_BRIDGE` (an `eval` loop over loopback TCP) and drives it with real
 //! X input from `xdotool`. Run by `cargo run -p e2e -- desktop`, under Xvfb.
-//! On macOS (2782) the app builds NSEvents for its own WKWebView from ops on the bridge.
+//! On macOS (2782) the app builds NSEvents for its own WKWebView from ops on the bridge;
+//! on Windows (2783) input goes over WebView2's DevTools port ([`webview2`]).
 
 use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
@@ -20,6 +21,9 @@ use crate::clock::{app_clock, app_count};
 use crate::driver::{Driver, Platform, Rect};
 use crate::passes::keyboard::Key;
 
+#[cfg(windows)]
+mod webview2;
+
 /// The fixture binary, built with `--features desktop`; set by the runner.
 pub const APP_ENV: &str = "E2E_DESKTOP_APP";
 
@@ -28,7 +32,7 @@ const LAUNCH: Duration = Duration::from_secs(60);
 
 /// What one WebKitGTK wheel notch scrolls, in CSS px: measured 68 per notch in a 120 px tall
 /// scroller of the harness's 573 px tall window (todo 2197).
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", windows)))]
 const WHEEL_NOTCH: f64 = 68.0;
 
 /// The app the last scenario finished cleanly in; the next scenario of its unit reuses it.
@@ -40,12 +44,14 @@ pub struct Desktop {
     app: Child,
     reader: BufReader<TcpStream>,
     writer: TcpStream,
-    #[cfg_attr(target_os = "macos", allow(dead_code))]
+    #[cfg_attr(any(target_os = "macos", windows), allow(dead_code))]
     window: String,
     /// The viewport's origin in window px: the menu bar sits above the WebView.
-    #[cfg_attr(target_os = "macos", allow(dead_code))]
+    #[cfg_attr(any(target_os = "macos", windows), allow(dead_code))]
     origin: (f64, f64),
     scale: f64,
+    #[cfg(windows)]
+    cdp: Option<webview2::Cdp>,
     /// The test module path minus the scenario: one app per unit (~5 s a launch).
     unit: String,
 }
@@ -60,6 +66,8 @@ impl Desktop {
             Some(mut desktop) if desktop.unit == unit => {
                 // Past GTK's double-click time: the last scenario's clicks would count
                 // towards the first one here (a splitter drag read as a double-click).
+                // CDP sends each press's click count, so WebView2 needs no wait.
+                #[cfg(not(windows))]
                 std::thread::sleep(Duration::from_millis(500));
                 desktop.run("__e2eErrors = []")?;
                 desktop
@@ -90,18 +98,23 @@ impl Desktop {
         let log = File::options().create(true).append(true).open(&log)?;
         // A store per launch: a kept scheme or direction never reaches the next unit.
         static LAUNCHES: AtomicU64 = AtomicU64::new(0);
-        let storage = artifacts.join(format!(
-            "desktop-storage-{}-{}",
+        let launch = format!(
+            "{}-{}",
             std::process::id(),
             LAUNCHES.fetch_add(1, Ordering::Relaxed)
-        ));
-        let mut app = Command::new(binary)
+        );
+        let mut command = Command::new(binary);
+        command
             .env("E2E_BRIDGE", listener.local_addr()?.to_string())
-            .env("E2E_STORAGE_DIR", storage)
+            .env(
+                "E2E_STORAGE_DIR",
+                artifacts.join(format!("desktop-storage-{launch}")),
+            )
             .stdout(Stdio::from(log.try_clone()?))
-            .stderr(Stdio::from(log))
-            .spawn()
-            .context("launch the fixture app")?;
+            .stderr(Stdio::from(log));
+        #[cfg(windows)]
+        let devtools = webview2::prepare(&mut command, &launch)?;
+        let mut app = command.spawn().context("launch the fixture app")?;
 
         // The bridge connects from `Shell`'s first effect: it is the ready signal.
         let started = Instant::now();
@@ -129,11 +142,17 @@ impl Desktop {
             window: String::new(),
             origin: (0.0, 0.0),
             scale: 1.0,
+            #[cfg(windows)]
+            cdp: None,
             unit: unit.to_string(),
         };
         desktop.wait_for("[data-fixture-ready]")?;
         // `Shell` installs the route hook in an effect, after the marker mounts.
         desktop.wait_until("typeof window.__route === 'function'")?;
+        #[cfg(windows)]
+        {
+            desktop.cdp = Some(webview2::Cdp::connect(devtools)?);
+        }
         desktop.window = desktop.find_window()?;
         desktop.scale = desktop.json("devicePixelRatio")?;
         desktop.calibrate()?;
@@ -220,12 +239,12 @@ impl Desktop {
             }
             std::thread::sleep(Duration::from_millis(25));
         };
-        // macOS ops are in viewport px already: the move must land where it was sent.
-        #[cfg(target_os = "macos")]
+        // macOS ops and CDP are in viewport px already: the move must land where it was sent.
+        #[cfg(any(target_os = "macos", windows))]
         if (seen.0 - at.0).abs() > 1.0 || (seen.1 - at.1).abs() > 1.0 {
             bail!("an NSEvent move to {at:?} reached the page at {seen:?}");
         }
-        #[cfg(not(target_os = "macos"))]
+        #[cfg(not(any(target_os = "macos", windows)))]
         {
             self.origin = (at.0 - seen.0 * self.scale, at.1 - seen.1 * self.scale);
         }
@@ -242,7 +261,7 @@ impl Desktop {
     }
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", windows)))]
 impl Desktop {
     fn find_window(&self) -> Result<String> {
         let pid = self.app.id().to_string();
@@ -345,9 +364,9 @@ impl Desktop {
     }
 
     /// `key` with `mods` among `shift`, `ctrl` and `alt`, as one X chord.
-    fn chord(&mut self, mods: &[&str], key: &str) -> Result<()> {
+    fn chord(&mut self, mods: &[&str], key: Key) -> Result<()> {
         let mut chord: Vec<&str> = mods.to_vec();
-        chord.push(keysym(key));
+        chord.push(keysym(key.key));
         self.key(&chord.join("+"))
     }
 
@@ -464,9 +483,9 @@ impl Desktop {
         self.seen(&format!("__e2eSeen.wheel > {before}"))
     }
 
-    fn chord(&mut self, mods: &[&str], key: &str) -> Result<()> {
+    fn chord(&mut self, mods: &[&str], key: Key) -> Result<()> {
         let before = self.count("key")?;
-        self.input(serde_json::json!({ "op": "key", "key": key, "mods": mods }))?;
+        self.input(serde_json::json!({ "op": "key", "key": key.key, "mods": mods }))?;
         self.seen(&format!("__e2eSeen.key > {before}"))
     }
 
@@ -500,7 +519,7 @@ fn element(selector: &str) -> String {
 }
 
 /// `xdotool` with `args`; its stdout.
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", windows)))]
 fn xdotool(args: &[&str]) -> Result<String> {
     let out = Command::new("xdotool")
         .args(args)
@@ -516,7 +535,7 @@ fn xdotool(args: &[&str]) -> Result<String> {
 }
 
 /// The X keysym for a DOM `key`.
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", windows)))]
 fn keysym(key: &str) -> &str {
     match key {
         " " => "space",
@@ -563,19 +582,19 @@ impl Driver for Desktop {
     }
 
     async fn press(&mut self, key: Key) -> Result<()> {
-        self.chord(&[], key.key)
+        self.chord(&[], key)
     }
 
     async fn press_shift(&mut self, key: Key) -> Result<()> {
-        self.chord(&["shift"], key.key)
+        self.chord(&["shift"], key)
     }
 
     async fn press_ctrl(&mut self, key: Key) -> Result<()> {
-        self.chord(&["ctrl"], key.key)
+        self.chord(&["ctrl"], key)
     }
 
     async fn press_alt(&mut self, key: Key) -> Result<()> {
-        self.chord(&["alt"], key.key)
+        self.chord(&["alt"], key)
     }
 
     async fn type_text(&mut self, text: &str) -> Result<()> {
