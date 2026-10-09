@@ -34,13 +34,20 @@ pub fn page_title(route: &Route) -> Option<String> {
     let path = route.to_string();
     let pages = pages();
     let at = pages.iter().position(|(id, ..)| *id == path)?;
+    Some(title_at(&pages, at))
+}
+
+pub(super) fn title_at(
+    pages: &[(String, &'static str, Option<&'static str>)],
+    at: usize,
+) -> String {
     let (label, group) = (pages[at].1, pages[at].2);
     let repeated = pages[..at].iter().any(|(_, earlier, _)| *earlier == label);
-    Some(match group {
+    match group {
         Some(group) if label == "Overview" => group.to_string(),
         Some(group) if repeated => format!("{group} {}", label.to_lowercase()),
         _ => label.to_string(),
-    })
+    }
 }
 
 /// `route`'s sidebar section and the path of that section's first page.

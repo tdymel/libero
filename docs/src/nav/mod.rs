@@ -36,7 +36,7 @@ fn nav_responsive_sx(open: bool, drawer: bool) -> Sx {
         "transform 200ms ease, visibility 0s 200ms"
     };
 
-    // "ColorSchemeButton", the longest label, needs 4px past `Sm` to stay on one row.
+    // "Accessibility settings", the longest label, needs the 8px past `Sm` to stay on one row.
     let width = format!("calc({} + 8px)", SIDEBAR_SIZE.value(Size::Sm));
     // Absolute in the row below the header, not fixed at the header's height:
     // Blitz lays a fixed box out like an absolute one, which put it a header lower.
@@ -183,7 +183,7 @@ pub fn DocsNav(
                         data,
                         expanded: expanded(),
                         onexpandedchange: move |open: HashSet<String>| expanded.set(open),
-                        // The tab stop starts on the current page, not "Guides".
+                        // The tab stop starts on the current page, not "About".
                         current: current_path,
                         render_node: move |args: TreeNodeRenderArgs<NavEntry>| {
                             if args.expanded.is_some() {
