@@ -295,8 +295,9 @@ pub fn PopoverPage() -> Element {
                 component: "PopoverDemo",
                 children_text: "",
                 controls: vec![
-                    Control::side(["top", "end", "bottom", "start"]),
-                    Control::align(),
+                    Control::side(["top", "end", "bottom", "start"])
+                        .default(theme.popover.side.as_str()),
+                    Control::align().default(theme.popover.align.as_str()),
                     Control::toggle("width", ["auto", "match", "min"])
                         .labels(["Auto", "Match", "Min"])
                         .default("auto"),

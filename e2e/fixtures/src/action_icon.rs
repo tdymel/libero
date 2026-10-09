@@ -1,5 +1,5 @@
-//! `ActionIcon` in each of its states: plain, toggle, loading, disabled, and
-//! the smallest sizes, and a glyph from `icon` (1094).
+//! `ActionIcon` in each of its states: plain, toggle, loading, disabled, as a
+//! link, and the smallest sizes, and a glyph from `icon` (1094).
 
 use dioxus::prelude::*;
 use libero::components::{ActionIcon, Flex, SvgData, Text};
@@ -55,6 +55,14 @@ fn ActionIconPage() -> Element {
                 variant: "filled",
                 disabled: true,
                 onclick: move |_| clicks += 1,
+                {glyph()}
+            }
+            ActionIcon { id: "link", aria_label: "Open", to: "/button/landing", {glyph()} }
+            ActionIcon {
+                id: "disabled-link",
+                aria_label: "Disabled link",
+                to: "/button/landing",
+                disabled: true,
                 {glyph()}
             }
             ActionIcon { id: "sm", aria_label: "Small", size: "sm", {glyph()} }

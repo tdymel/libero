@@ -409,7 +409,7 @@ pub fn FocusTrapInitialFocus() -> Element {
         .framework_sx(&VISUALLY_HIDDEN_FIXED_SX)
         .prepare()
         .attr("tabindex", if used.get() { "-1" } else { "0" })
-        .attr("data-autofocus", true)
+        .attr("data-autofocus", !used.get())
         .event("onblur", move |_: Event<FocusData>| mark_used.set(true))
         .render(HtmlTag::Span, Vec::new(), ())
 }

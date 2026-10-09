@@ -224,6 +224,55 @@ fn focus_that_falls_out_of_the_trap_comes_back() {
     });
 }
 
+/// A used `FocusTrapInitialFocus` is no autofocus target: a removed focused stop sends focus to
+/// the first real stop, not back to the hidden placeholder (2812).
+#[test]
+fn a_used_initial_focus_placeholder_does_not_take_focus_back() {
+    block_on(async {
+        let fixture = Fixture::open("/focus-trap/placeholder", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        focus::wait_for_focus(page, "[data-autofocus]", "mount on the placeholder")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        focus::wait_for_focus(page, "#first", "Tab off the placeholder")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "!document.querySelector('[data-autofocus]')",
+            "the used placeholder to drop data-autofocus",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        focus::wait_for_focus(page, "#remove", "Tab to Remove")
+            .await
+            .unwrap();
+
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(page, "!document.querySelector('#remove')", "Remove gone")
+            .await
+            .unwrap();
+        // Chromium sends no `focusout` for a removed element; this is the one the trap would see.
+        page.evaluate(
+            "document.getElementById('first').dispatchEvent(new FocusEvent('focusout', { bubbles: true }))",
+        )
+        .await
+        .unwrap();
+        focus::wait_for_focus(page, "#first", "the first real stop after the removal")
+            .await
+            .unwrap();
+        fixture
+            .console
+            .assert_clean("the placeholder trap")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Focus on the dialog itself (a click on its text) is outside the stops:
 /// Shift+Tab went to the first one, not the last.
 #[test]

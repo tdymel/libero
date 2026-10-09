@@ -3,7 +3,7 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Dialog, FocusTrap, Switch, Text},
+    components::{Button, Dialog, FocusTrap, FocusTrapInitialFocus, Switch, Text},
     hooks::{ModalScope, use_modal},
 };
 
@@ -17,7 +17,24 @@ pub const ROUTES: Routes = &[
     ("/focus-trap/exit", || rsx! { ExitPage {} }),
     ("/focus-trap/autofocus", || rsx! { AutofocusPage {} }),
     ("/focus-trap/leaving", || rsx! { LeavingPage {} }),
+    ("/focus-trap/placeholder", || rsx! { PlaceholderPage {} }),
 ];
+
+/// A `FocusTrapInitialFocus` placeholder, then a stop that removes itself (2812).
+#[component]
+fn PlaceholderPage() -> Element {
+    let mut shown = use_signal(|| true);
+    rsx! {
+        FocusTrap {
+            FocusTrapInitialFocus {}
+            button { id: "first", "First" }
+            if shown() {
+                button { id: "remove", onclick: move |_| shown.set(false), "Remove" }
+            }
+            button { id: "last", "Last" }
+        }
+    }
+}
 
 /// Ways focus leaves without a Tab: the last stop removes itself, a click on text outside (2297).
 #[component]

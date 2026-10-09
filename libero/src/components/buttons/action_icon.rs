@@ -312,7 +312,7 @@ fn action_icon(mut props: ActionIconProps) -> Element {
     let soft_disabled = disabled && props.focusable_when_disabled.unwrap_or(item.is_some());
 
     if is_link && props.loading == Some(true) {
-        warn("ActionIcon:`loading` is ignored on a link - an `<a>` has nothing to wait for.");
+        warn("ActionIcon: `loading` is ignored on a link - an `<a>` has nothing to wait for.");
     }
     let glyph = match (props.icon, props.children.take()) {
         (Some(icon), children) => {

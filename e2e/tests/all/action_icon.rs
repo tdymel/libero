@@ -136,6 +136,45 @@ fn a_toggle_reports_its_pressed_state() {
     });
 }
 
+/// The link arms: an enabled one is an `<a href>` named by `aria_label`; a disabled one has no
+/// `href`, so it keeps its role and name explicitly, as `a_disabled_link_is_still_a_link` does
+/// for `Button`.
+#[test]
+fn a_link_icon_is_a_link_enabled_or_disabled() {
+    block_on(async {
+        let fixture = Fixture::open("/action-icon", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#link").await.unwrap();
+
+        let tree = e2e::ax::snapshot(page, "#link").await.unwrap();
+        assert!(
+            tree.starts_with("link \"Open\""),
+            "the link is exposed as:\n{tree}"
+        );
+        let tree = e2e::ax::snapshot(page, "#disabled-link").await.unwrap();
+        assert!(
+            tree.starts_with("link \"Disabled link\" [disabled]"),
+            "the disabled link is exposed as:\n{tree}"
+        );
+        let (href, disabled_href): (Option<String>, Option<String>) = page
+            .evaluate(
+                "[document.getElementById('link').getAttribute('href'), \
+                 document.getElementById('disabled-link').getAttribute('href')]",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(href.as_deref(), Some("/button/landing"));
+        assert_eq!(disabled_href, None, "the disabled link kept its href");
+
+        fixture.console.assert_clean("link icons").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// `[the icon's colour, its parent's]`.
 const PLAIN_COLORS: &str = "(() => {
     const el = document.getElementById('plain');
