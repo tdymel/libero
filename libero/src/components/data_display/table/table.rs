@@ -47,6 +47,7 @@ use super::{
     filter::{FilteredRows, QuickFilter, query_words},
     filter_panel::{FilterPanel, FilterPanelButton, PanelColumn, use_panel_control},
     filter_popover::FilterTarget,
+    footer::FooterRows,
     header_filters::HeaderFilter,
     overlay::{EmptyBody, LoadingBar, SKELETON_ROWS},
     paging::{TablePager, clamp_page, page_rows, use_page_reset, use_page_size_reseed},
@@ -87,6 +88,19 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         sx().text_align_start().vertical_align("middle"),
     )
     .selector("& thead th", sx().font_weight("600"))
+    .selector(
+        "& tfoot td",
+        sx().font_weight("600")
+            .background(NamedColorCss::SURFACE.value()),
+    )
+    // The aggregate's name reads as a label to its value.
+    .selector(
+        "& [data-footer-name]",
+        sx().font_size("0.85em")
+            .font_weight("400")
+            .opacity("0.75")
+            .with("margin-inline-end", "6px"),
+    )
     // A row header is semantics, not a look: it reads like its row.
     .selector("& tbody th", sx().font_weight("inherit"))
     .selector("& caption", caption_sx())
@@ -523,6 +537,22 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
                 .background(NamedColorCss::SURFACE.value()),
         ),
     )
+    // On each `td`, like the header's `th`: the rows scroll under it.
+    .when(
+        "sticky-footer",
+        sx().selector(
+            "& tfoot td",
+            sx().position("sticky")
+                .bottom("0")
+                .z_index("1")
+                .border_top(TableDefaults::border()),
+        )
+        // Above the other footer cells scrolling under it, as a pinned header cell is.
+        .selector(
+            "& tfoot td[data-pin], & tfoot td[data-footer-lead]",
+            sx().z_index("2"),
+        ),
+    )
     // Opaque over the scrolled cells: a body cell takes its row's colour, which
     // is the surface unless hovered, striped or selected.
     .when(
@@ -543,12 +573,26 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
             sx().z_index("3").background(NamedColorCss::SURFACE.value()),
         )
         .selector(
+            "& tfoot td[data-pin]",
+            sx().background(NamedColorCss::SURFACE.value()),
+        )
+        .selector(
             "& [data-pin=\"start\"][data-pin-edge]",
             sx().with("border-inline-end", TableDefaults::border()),
         )
         .selector(
             "& [data-pin=\"end\"][data-pin-edge]",
             sx().with("border-inline-start", TableDefaults::border()),
+        ),
+    )
+    // The footer's one cell over the lead columns holds with them.
+    .when(
+        "pin-footer-lead",
+        sx().selector(
+            "& tfoot td[data-footer-lead]",
+            sx().position("sticky")
+                .with("inset-inline-start", "0")
+                .z_index("1"),
         ),
     )
     .when(
@@ -802,7 +846,8 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// `data` comes sorted: a header click only asks via `onsortchange`.
     #[props(default)]
     manual_sort: bool,
-    /// `data` is the current page: the table only draws the page controls.
+    /// `data` is the current page: the table only draws the page controls. A
+    /// column's `aggregate` then covers the loaded rows only.
     #[props(default)]
     manual_pagination: bool,
     /// Rows over all pages with `manual_pagination`. Unset, `data`'s length.
@@ -1141,6 +1186,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let look = use_checkbox_look(size, props.selectable);
     let mut sorted = use_hook(|| CopyValue::new(SortedRows::<T>::default()));
     let mut filtered = use_hook(|| CopyValue::new(FilteredRows::<T>::default()));
+    let mut footer_rows = use_hook(|| CopyValue::new(FooterRows::<T>::default()));
     let mut row_context = use_hook(|| CopyValue::new((0u64, None::<Rc<RowContext<T>>>)));
     let mut known_rows = use_hook(|| CopyValue::new(KnownRows::<T>::None));
     let mut pin_edges = use_signal(|| [None::<f64>; 2]);
@@ -1394,6 +1440,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let mut order = visible_rows(sorted_order, kept.as_deref().map(Vec::as_slice));
     let results = order.len();
     filtered_count.set(results);
+    let footer = footer_rows.write().cells(&data, &columns, &order, &labels);
     if props.toolbar.is_some() {
         let (data, columns, shown, order) =
             (data.clone(), columns.clone(), layout.clone(), order.clone());
@@ -1657,6 +1704,11 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             sticky_filters && group_rows == 0 && head_cell_height() > 0.0,
         )
         .with("pinned", pins)
+        .with("sticky-footer", bounded)
+        .with(
+            "pin-footer-lead",
+            pins_start && (props.selectable || has_detail || has_reorder),
+        )
         .with("pin-select", pins_select)
         .with("pin-detail", has_detail && pins_start)
         .with("pin-reorder", has_reorder && pins_start)
@@ -1710,6 +1762,8 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 order: layout,
                 rows,
                 empty,
+                // Not while loading: a count of no rows yet would read as a total.
+                footer: footer.filter(|_| skeleton.is_none()),
                 active,
                 sort: state.sort,
                 touch: props.multi_sort.then_some(touch),

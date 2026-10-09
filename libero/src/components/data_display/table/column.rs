@@ -6,6 +6,7 @@ use super::{
     cell_value::{CellAlign, CellValue, FilterKind, SortKey},
     resize::ResizeLimits,
 };
+use crate::localization::Aggregate;
 
 /// A column waiting for its [`value`](ColumnHeader::value).
 pub struct ColumnHeader {
@@ -43,6 +44,9 @@ pub struct Column<T> {
     pub(super) groups: Vec<String>,
     /// How many shown columns a row's cell covers, from this one on.
     pub(super) col_span: Option<ColSpan<T>>,
+    /// Sums up the filtered rows in a footer cell.
+    pub(super) aggregate: Option<Aggregate>,
+    pub(super) aggregate_format: Option<AggregateFormat>,
     pub(super) sort_key: Rc<dyn Fn(&T) -> SortKey>,
     /// The cell as plain text, drawn inline in its `td`.
     pub(super) text: Rc<dyn Fn(&T) -> String>,
@@ -52,6 +56,7 @@ pub struct Column<T> {
 
 type CellRender<T> = Rc<dyn Fn(&T) -> Element>;
 type ColSpan<T> = Rc<dyn Fn(&T) -> usize>;
+type AggregateFormat = Rc<dyn Fn(f64) -> String>;
 pub(super) type HeaderRender = Rc<dyn Fn() -> Element>;
 
 impl ColumnHeader {
@@ -77,6 +82,8 @@ impl ColumnHeader {
             header_render: None,
             groups: Vec::new(),
             col_span: None,
+            aggregate: None,
+            aggregate_format: None,
             sort_key: Rc::new(move |row| sort_value(row).sort_key()),
             text: Rc::new(move |row| value(row).cell_text()),
             render: None,
@@ -374,6 +381,39 @@ impl<T> Column<T> {
         self.col_span = Some(Rc::new(span));
         self
     }
+
+    /// Adds a footer cell under the column that sums up its numeric cells, or counts
+    /// the filled ones, over the rows passing the filters on every page. With
+    /// `manual_pagination` those are the loaded rows only: the footer shows no
+    /// total of rows the table doesn't hold.
+    ///
+    /// ```rust
+    /// # use libero::components::{Aggregate, column};
+    /// # struct Item { cents: u64 }
+    /// column("Price").value(|i: &Item| i.cents).aggregate(Aggregate::Sum);
+    /// ```
+    pub fn aggregate(mut self, aggregate: Aggregate) -> Self {
+        self.aggregate = Some(aggregate);
+        self
+    }
+
+    /// The footer cell's text from the aggregate; plain `{}` of the number by default.
+    ///
+    /// Compared as equal to any other: capture signals, not values, or the
+    /// footer stays stale.
+    ///
+    /// ```rust
+    /// # use libero::components::{Aggregate, column};
+    /// # struct Item { cents: u64 }
+    /// column("Price")
+    ///     .value(|i: &Item| i.cents)
+    ///     .aggregate(Aggregate::Sum)
+    ///     .aggregate_format(|cents| format!("${:.2}", cents / 100.0));
+    /// ```
+    pub fn aggregate_format(mut self, format: impl Fn(f64) -> String + 'static) -> Self {
+        self.aggregate_format = Some(Rc::new(format));
+        self
+    }
 }
 
 // Hand-written: a derive would demand `T: Clone`, which the `Rc` fields don't.
@@ -395,6 +435,8 @@ impl<T> Clone for Column<T> {
             header_render: self.header_render.clone(),
             groups: self.groups.clone(),
             col_span: self.col_span.clone(),
+            aggregate: self.aggregate,
+            aggregate_format: self.aggregate_format.clone(),
             sort_key: self.sort_key.clone(),
             text: self.text.clone(),
             render: self.render.clone(),
@@ -418,6 +460,7 @@ impl<T> PartialEq for Column<T> {
             && self.resizable == other.resizable
             && self.resize_limits == other.resize_limits
             && self.groups == other.groups
+            && self.aggregate == other.aggregate
     }
 }
 
@@ -496,6 +539,8 @@ mod tests {
         assert!(a == b.clone().header_render(|| rsx! { "x" }));
         assert!(a == b.clone().col_span(|_| 2));
         assert!(a != b.clone().group("G"));
+        assert!(a != b.clone().aggregate(Aggregate::Sum));
+        assert!(a == b.clone().aggregate_format(|n| n.to_string()));
         assert!(a != column("Other").value(|row: &u32| *row));
     }
 

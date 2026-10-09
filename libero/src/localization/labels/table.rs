@@ -10,6 +10,18 @@ pub enum FilterLogic {
     Or,
 }
 
+/// How a column's footer cell sums up the rows that pass the filters. `Sum`,
+/// `Avg`, `Min` and `Max` read the numeric cells; `Count` counts the filled ones.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum Aggregate {
+    Sum,
+    Avg,
+    Min,
+    Max,
+    Count,
+}
+
 /// How a `ColumnFilter` compares a cell. Text operators ignore case, `Equals`
 /// too; number operators compare the value, not the formatted text.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -261,6 +273,15 @@ pub struct TableLabels {
     /// The filter panel's pick of how its filters join.
     pub logic: &'static str,
     pub logic_name: fn(FilterLogic) -> &'static str,
+    /// The name a footer cell shows before its value.
+    ///
+    /// ```
+    /// use libero::localization::{Aggregate, TableLabels};
+    ///
+    /// assert_eq!((TableLabels::ENGLISH.aggregate_name)(Aggregate::Avg), "Average");
+    /// assert_eq!((TableLabels::GERMAN.aggregate_name)(Aggregate::Sum), "Summe");
+    /// ```
+    pub aggregate_name: fn(Aggregate) -> &'static str,
     /// A panel line's controls, from its column's header.
     ///
     /// ```
@@ -553,6 +574,26 @@ fn german_remove_filter(column: &str) -> String {
     format!("{column}-Filter entfernen")
 }
 
+fn english_aggregate_name(aggregate: Aggregate) -> &'static str {
+    match aggregate {
+        Aggregate::Sum => "Sum",
+        Aggregate::Avg => "Average",
+        Aggregate::Min => "Minimum",
+        Aggregate::Max => "Maximum",
+        Aggregate::Count => "Count",
+    }
+}
+
+fn german_aggregate_name(aggregate: Aggregate) -> &'static str {
+    match aggregate {
+        Aggregate::Sum => "Summe",
+        Aggregate::Avg => "Durchschnitt",
+        Aggregate::Min => "Minimum",
+        Aggregate::Max => "Maximum",
+        Aggregate::Count => "Anzahl",
+    }
+}
+
 fn english_row_details(row: &str) -> String {
     format!("Details for {row}")
 }
@@ -625,6 +666,7 @@ impl TableLabels {
         add_filter: "Add filter",
         logic: "Match",
         logic_name: english_logic_name,
+        aggregate_name: english_aggregate_name,
         filter_line_column: english_line_column,
         filter_line_operator: line_operator,
         filter_line_value: english_line_value,
@@ -694,6 +736,7 @@ impl TableLabels {
         add_filter: "Filter hinzufügen",
         logic: "Übereinstimmung",
         logic_name: german_logic_name,
+        aggregate_name: german_aggregate_name,
         filter_line_column: german_line_column,
         filter_line_operator: german_line_operator,
         filter_line_value: german_line_value,

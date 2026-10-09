@@ -84,7 +84,7 @@ pub use slider::SliderLabels;
 pub use sortable::SortableLabels;
 pub use spotlight::SpotlightLabels;
 pub use stepper::StepperLabels;
-pub use table::{FilterLogic, FilterOperator, TableLabels};
+pub use table::{Aggregate, FilterLogic, FilterOperator, TableLabels};
 pub use tags_field::TagsFieldLabels;
 pub use textarea::TextareaLabels;
 pub use theme_switcher::ThemeSwitcherLabels;

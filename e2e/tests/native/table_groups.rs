@@ -4,7 +4,7 @@
 
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};
-use libero::components::{Table, column};
+use libero::components::{Aggregate, Table, column};
 
 #[derive(Clone, PartialEq)]
 struct Sale {
@@ -71,6 +71,50 @@ fn group_and_span_cells_cover_their_columns() {
         (total - (city.2 + q1.2)).abs() <= 1.0,
         "the total cell is {total}px wide over {}px",
         city.2 + q1.2
+    );
+}
+
+#[test]
+fn a_footer_lines_up_under_its_columns_after_the_rows() {
+    fn app() -> Element {
+        rsx! {
+            div { width: "600px",
+                Table {
+                    aria_label: "Sales",
+                    selectable: true,
+                    data: sales(3),
+                    columns: vec![
+                        column("City").value(|s: &Sale| s.city),
+                        column("Q1").value(|s: &Sale| s.q1).aggregate(Aggregate::Sum),
+                        column("Q2").value(|s: &Sale| s.q2),
+                    ],
+                }
+            }
+        }
+    }
+    let page = mount(app);
+    let head = page.rect("thead th:nth-child(3)");
+    let foot = page.rect("tfoot td:nth-child(3)");
+    assert!(
+        (foot.0 - head.0).abs() <= 1.0 && (foot.2 - head.2).abs() <= 1.0,
+        "the footer cell is at {} and {}px wide under a header at {} and {}px",
+        foot.0,
+        foot.2,
+        head.0,
+        head.2
+    );
+    let select = page.rect("thead th:nth-child(1)").2;
+    let lead = page.rect("tfoot td[data-footer-lead]").2;
+    assert!(
+        (lead - select).abs() <= 1.0,
+        "the lead footer cell is {lead}px wide over a {select}px checkbox column"
+    );
+    let last = page.rect("tbody tr:last-child td");
+    assert!(
+        foot.1 > last.1,
+        "the footer at {} is not under the last row at {}",
+        foot.1,
+        last.1
     );
 }
 

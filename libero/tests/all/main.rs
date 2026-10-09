@@ -118,6 +118,7 @@ mod stepper;
 mod stylesheet;
 mod system_notification;
 mod table;
+mod table_aggregate;
 mod table_controlled;
 mod table_detail;
 mod table_filter;

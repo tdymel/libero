@@ -10,6 +10,7 @@ mod detail;
 mod filter;
 mod filter_panel;
 mod filter_popover;
+mod footer;
 mod groups;
 mod header_filters;
 mod overlay;
@@ -27,6 +28,8 @@ mod window;
 
 pub use cell_value::{CellAlign, CellValue, FilterKind, SortDirection, SortKey};
 pub use column::{Column, ColumnDefaults, ColumnHeader, ColumnType, TypedColumnHeader, column};
+// Defined with the labels, which name each aggregate: localization sits below components.
+pub use crate::localization::Aggregate;
 pub use column_filter::{ColumnFilter, FilterLogic, FilterOperator};
 pub use core::{RowFn, TableSort};
 pub use csv::{table_csv, table_text};

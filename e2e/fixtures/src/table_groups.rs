@@ -2,13 +2,14 @@
 //! row whose label spans two columns.
 
 use dioxus::prelude::*;
-use libero::components::{PinnedColumns, Table, column};
+use libero::components::{Aggregate, PinnedColumns, Table, column};
 
 use crate::Routes;
 
 pub const ROUTES: Routes = &[
     ("/table-groups", || rsx! { GroupsTablePage {} }),
     ("/table-groups/pinned", || rsx! { PinnedGroupsTablePage {} }),
+    ("/table-groups/footer", || rsx! { FooterTablePage {} }),
 ];
 
 #[derive(Clone, PartialEq)]
@@ -53,6 +54,33 @@ fn GroupsTablePage() -> Element {
                 column("Region").value(|sale: &Sale| sale.region).group("Place"),
                 column("Q1").value(|sale: &Sale| sale.q1).group("Revenue").group("Half 1"),
                 column("Q2").value(|sale: &Sale| sale.q2).group("Revenue").group("Half 1"),
+            ],
+        }
+    }
+}
+
+/// Thirty sales under a 240px `max_height`, with a footer of aggregates.
+#[component]
+fn FooterTablePage() -> Element {
+    let data: Vec<Sale> = (1..=30)
+        .map(|n| Sale {
+            city: ["Lyon", "Turin", "Graz"][n as usize % 3],
+            region: ["South", "North"][n as usize % 2],
+            q1: n,
+            q2: n * 2,
+        })
+        .collect();
+    rsx! {
+        Table {
+            caption: "Footer sales",
+            max_height: "240px",
+            selectable: true,
+            data,
+            row_key: |sale: &Sale| sale.q1.to_string(),
+            columns: vec![
+                column("City").value(|sale: &Sale| sale.city).row_header().aggregate(Aggregate::Count),
+                column("Q1").value(|sale: &Sale| sale.q1).aggregate(Aggregate::Sum),
+                column("Q2").value(|sale: &Sale| sale.q2).aggregate(Aggregate::Max),
             ],
         }
     }

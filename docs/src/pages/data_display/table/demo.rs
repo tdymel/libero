@@ -10,7 +10,7 @@ use std::time::Duration;
 
 use libero::chrono::{NaiveDate, TimeDelta};
 use libero::components::{
-    Button, Chip, Column, ColumnWidths, PinnedColumns, RowFn, Table, TableColumnsButton,
+    Aggregate, Button, Chip, Column, ColumnWidths, PinnedColumns, RowFn, Table, TableColumnsButton,
     TableDensityButton, TableExportButton, TableFilterButton, column,
 };
 use libero::hooks::SortableMove;
@@ -127,7 +127,8 @@ fn team_columns(grouped: bool) -> Vec<Column<Person>> {
         column("Name")
             .value(|p: &Person| p.name.clone())
             .sortable()
-            .row_header(),
+            .row_header()
+            .aggregate(Aggregate::Count),
         group(
             column("Role")
                 .value(|p: &Person| p.role.clone())
@@ -140,6 +141,8 @@ fn team_columns(grouped: bool) -> Vec<Column<Person>> {
             column("Bonus")
                 .value(|p: &Person| p.bonus)
                 .format(|p: &Person| p.bonus.map(|b| format!("{b:.1} %")).unwrap_or_default())
+                .aggregate(Aggregate::Avg)
+                .aggregate_format(|b| format!("{b:.1} %"))
                 .sortable(),
         ),
     ]

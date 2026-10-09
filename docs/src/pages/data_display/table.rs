@@ -19,7 +19,11 @@ fn from_server(values: &DemoValues) -> bool {
 // snippet: let people: Vec<Person> = Vec::new();
 // snippet: in Table { caption: "Team members", data: people, .. }
 const COLUMNS: &str = r#"columns: vec![
-    column("Name").value(|p: &Person| p.name.clone()).sortable().row_header(),
+    column("Name")
+        .value(|p: &Person| p.name.clone())
+        .sortable()
+        .row_header()
+        .aggregate(Aggregate::Count),
     column("Role")
         .value(|p: &Person| p.role.clone())
         .sortable()
@@ -29,6 +33,8 @@ const COLUMNS: &str = r#"columns: vec![
     column("Bonus")
         .value(|p: &Person| p.bonus)
         .format(|p: &Person| p.bonus.map(|b| format!("{b:.1} %")).unwrap_or_default())
+        .aggregate(Aggregate::Avg)
+        .aggregate_format(|b| format!("{b:.1} %"))
         .sortable(),
 ]"#;
 
@@ -37,7 +43,11 @@ const COLUMNS: &str = r#"columns: vec![
 // snippet: let people: Vec<Person> = Vec::new();
 // snippet: in Table { caption: "Team members", data: people, .. }
 const GROUPED_COLUMNS: &str = r#"columns: vec![
-    column("Name").value(|p: &Person| p.name.clone()).sortable().row_header(),
+    column("Name")
+        .value(|p: &Person| p.name.clone())
+        .sortable()
+        .row_header()
+        .aggregate(Aggregate::Count),
     column("Role")
         .value(|p: &Person| p.role.clone())
         .sortable()
@@ -48,6 +58,8 @@ const GROUPED_COLUMNS: &str = r#"columns: vec![
     column("Bonus")
         .value(|p: &Person| p.bonus)
         .format(|p: &Person| p.bonus.map(|b| format!("{b:.1} %")).unwrap_or_default())
+        .aggregate(Aggregate::Avg)
+        .aggregate_format(|b| format!("{b:.1} %"))
         .sortable()
         .group("Membership"),
 ]"#;
@@ -231,7 +243,7 @@ pub fn TablePage() -> Element {
                     prop("onpagesizechange", "EventHandler<usize>").default("None").doc("Called with the size picked in the page-size picker."),
                     prop("page_sizes", "Vec<usize>").default("[]").doc("The page-size picker's choices; empty hides the picker. Turns on pagination, the first one seeding the size. No cap."),
                     prop("manual_sort", "bool").default("false").doc("`data` comes sorted, say from a server: a header click only reports through `onsortchange`."),
-                    prop("manual_pagination", "bool").default("false").doc("`data` is the current page only: the table draws the page controls and leaves the slicing to you."),
+                    prop("manual_pagination", "bool").default("false").doc("`data` is the current page only: the table draws the page controls and leaves the slicing to you. A column's `aggregate` then covers this page only."),
                     prop("row_count", "Option<usize>").default("data's length").doc("Rows over all pages with `manual_pagination`, for the page count and the range text."),
                     prop("hidden_columns", "Option<Vec<String>>").default("None").doc("The hidden columns' headers. Set, visibility is controlled: pair it with `onhiddencolumnschange`. A hidden sorted column keeps sorting."),
                     prop("default_hidden_columns", "Vec<String>").default("[]").doc("Seeds the hidden columns once. Ignored when `hidden_columns` is set."),
@@ -280,6 +292,8 @@ pub fn TablePage() -> Element {
                     prop("hideable", "bool").default("true").doc("Whether the column menu offers to hide the column. `hidden_columns` still hides it."),
                     prop("group", "String").default("None").doc("Puts the column under a group header, shared with the adjacent columns of the same groups. Call it once per level, outermost first. The same name under another parent is another group, and a hidden column leaves its group."),
                     prop("col_span", "fn(&T) -> usize").default("None").doc("How many shown columns a row's cell covers, from this one on, say a total row's label. The covered cells are left out; the span stops at the row's end. Capture signals, not values: the closure is not compared."),
+                    prop("aggregate", "Aggregate").default("None").doc("Adds a footer cell under the column that sums up its rows: `Sum`, `Avg`, `Min` or `Max` of the numeric cells, or `Count` of the filled ones. It covers the rows that pass the quick filter and the column filters, on every page. With `manual_pagination` it covers the loaded rows only: the table shows no total of rows it does not hold. A column without an aggregate gets an empty footer cell; with none at all there is no footer. The footer sticks to the bottom of a `max_height` table, as the header sticks to the top. Each cell names its aggregate before the value, from the localized `table.aggregate_name`."),
+                    prop("aggregate_format", "fn(f64) -> String").default("the number").doc("The footer cell's text from the aggregate, say a price with its currency; by default the number as Rust prints it, so format a `Sum` or `Avg` of fractions. Not compared: capture signals, not values."),
                 ]).without_base_props(),
                 props("table_csv()", vec![
                     prop("table_csv", "fn(&[Column<T>], &[T]) -> String").default("none").doc("The header row and one line per row as CSV (RFC 4180, CRLF), each cell as its column's text, `format` applied and `render` ignored. Pass the rows and columns in the order you want; `save_file` saves it as a file."),
@@ -318,6 +332,7 @@ pub fn TablePage() -> Element {
                     "Each resize grip is a tab stop, a vertical `role=\"separator\"` named \"Resize\" plus the column, with its width and limits in `aria-valuenow`, `aria-valuemin` and `aria-valuemax`.",
                     "`loading` marks an empty table `aria-busy`. With rows shown it adds a progress bar named \"Loading rows\" instead, as some screen readers hold back a busy table's rows.",
                     "With `virtual_row_height`, `aria-rowcount` and `aria-rowindex` give the full count and each row's place, \"row 5 001 of 10 001\". Tab walks past the rendered rows, and the row holding focus stays rendered.",
+                    "A footer cell reads its aggregate's name before the value, \"Average 7.8 %\", and sits in the column its header names. The footer is not counted in `aria-rowcount` of a `virtual_row_height` table.",
                     "The `toolbar` is a plain row, not a `role=\"toolbar\"`: Tab moves through it as anywhere else.",
                 ])
                 .must([

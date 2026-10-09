@@ -683,6 +683,43 @@ fn Demo() -> Element {
 }
 ```
 
+A footer row of aggregates: `Sum`, `Avg`, `Min` and `Max` read the numeric cells,
+`Count` the filled ones. They cover the rows that pass the filters, on every
+page; with `manual_pagination`, the loaded rows only.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Aggregate, Table, column};
+
+#[derive(Clone, PartialEq)]
+struct Item {
+    name: String,
+    cents: u32,
+}
+
+#[component]
+fn Demo() -> Element {
+    let items: Vec<Item> = Vec::new();
+
+    rsx! {
+        Table {
+            caption: "Basket",
+            data: items,
+            columns: vec![
+                column("Name")
+                    .value(|i: &Item| i.name.clone())
+                    .row_header()
+                    .aggregate(Aggregate::Count),
+                column("Price")
+                    .value(|i: &Item| i.cents)
+                    .aggregate(Aggregate::Sum)
+                    .aggregate_format(|cents| format!("{:.2} EUR", cents / 100.0)),
+            ],
+        }
+    }
+}
+```
+
 ## Props
 
 ### Table
@@ -733,7 +770,7 @@ fn Demo() -> Element {
 | `onpagesizechange` | `EventHandler<usize>` | `None` | Called with the size picked in the page-size picker. |
 | `page_sizes` | `Vec<usize>` | `[]` | The page-size picker's choices; empty hides the picker. Turns on pagination, the first one seeding the size. No cap. |
 | `manual_sort` | `bool` | `false` | `data` comes sorted, say from a server: a header click only reports through `onsortchange`. |
-| `manual_pagination` | `bool` | `false` | `data` is the current page only: the table draws the page controls and leaves the slicing to you. |
+| `manual_pagination` | `bool` | `false` | `data` is the current page only: the table draws the page controls and leaves the slicing to you. A column's `aggregate` then covers this page only. |
 | `row_count` | `Option<usize>` | data's length | Rows over all pages with `manual_pagination`, for the page count and the range text. |
 | `hidden_columns` | `Option<Vec<String>>` | `None` | The hidden columns' headers. Set, visibility is controlled: pair it with `onhiddencolumnschange`. A hidden sorted column keeps sorting. |
 | `default_hidden_columns` | `Vec<String>` | `[]` | Seeds the hidden columns once. Ignored when `hidden_columns` is set. |
@@ -788,6 +825,8 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `hideable` | `bool` | `true` | Whether the column menu offers to hide the column. `hidden_columns` still hides it. |
 | `group` | `String` | `None` | Puts the column under a group header, shared with the adjacent columns of the same groups. Call it once per level, outermost first. The same name under another parent is another group, and a hidden column leaves its group. |
 | `col_span` | `fn(&T) -> usize` | `None` | How many shown columns a row's cell covers, from this one on, say a total row's label. The covered cells are left out; the span stops at the row's end. Capture signals, not values: the closure is not compared. |
+| `aggregate` | `Aggregate` | `None` | Adds a footer cell under the column that sums up its rows: `Sum`, `Avg`, `Min` or `Max` of the numeric cells, or `Count` of the filled ones. It covers the rows that pass the quick filter and the column filters, on every page. With `manual_pagination` it covers the loaded rows only: the table shows no total of rows it does not hold. A column without an aggregate gets an empty footer cell; with none at all there is no footer. The footer sticks to the bottom of a `max_height` table, as the header sticks to the top. Each cell names its aggregate before the value, from the localized `table.aggregate_name`. |
+| `aggregate_format` | `fn(f64) -> String` | the number | The footer cell's text from the aggregate, say a price with its currency; by default the number as Rust prints it, so format a `Sum` or `Avg` of fractions. Not compared: capture signals, not values. |
 
 `column()` is a builder, not a component, so it takes no shared props.
 
@@ -872,6 +911,9 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 - With `virtual_row_height`, `aria-rowcount` and `aria-rowindex` give the full
   count and each row's place, "row 5 001 of 10 001". Tab walks past the
   rendered rows, and the row holding focus stays rendered.
+- A footer cell reads its aggregate's name before the value, "Average 7.8 %",
+  and sits in the column its header names. The footer is not counted in
+  `aria-rowcount` of a `virtual_row_height` table.
 - The `toolbar` is a plain row, not a `role="toolbar"`: Tab moves through it
   as anywhere else.
 
@@ -967,7 +1009,9 @@ default `start`.
 | `data-reorder` | On the reorder column's `th` and `td`s, with `onrowreorder`. |
 | `data-dragging` | On the body row being dragged or moved by keyboard. |
 | `data-group` | On a column group's header cell. |
+| `data-footer-lead` | On the footer's one cell over the lead columns, with an aggregating column. |
+| `data-footer-name` | On the span naming an aggregate before the value in a footer cell. |
 | `data-pin` | On a pinned column's `th` and `td`s, `start` or `end`. |
 | `data-pin-edge` | On the pinned cells next to the scrolled columns, which draw a rule there. |
-| `data-state` | On the table: `size-{size}`, plus `striped` and `row-click` when set, `pinned` with a pinned column and `pin-select` when the checkbox column pins too, `pin-detail` when the detail toggle column does, `pin-reorder` when the reorder column does. On a body row: its active `row_states`. |
+| `data-state` | On the table: `size-{size}`, plus `striped` and `row-click` when set, `pinned` with a pinned column and `pin-select` when the checkbox column pins too, `pin-detail` when the detail toggle column does, `pin-reorder` when the reorder column does, `sticky-footer` with `max_height`. On a body row: its active `row_states`. |
 | `data-slot="range"` | On the paginated table's range text, "1–10 of 95". |

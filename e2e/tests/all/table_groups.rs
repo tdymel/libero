@@ -111,3 +111,66 @@ e2e::scenario!(
     the_pinned_group_holds,
     android: skip("958: element identity on the WebView")
 );
+
+const FOOT_LEAD: &str = "tfoot td[data-footer-lead]";
+const FOOT_Q1: &str = "tfoot td:nth-child(3)";
+const HEAD_Q1: &str = "thead th:nth-child(3)";
+
+/// Todo 2736: the footer lines up under its columns, sums every row and sticks to
+/// the bottom of the capped table while the rows scroll under it.
+async fn the_footer_aggregates_and_sticks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let sum = d.text(FOOT_Q1).await?;
+    if !sum.contains("465") {
+        bail!("the Q1 footer reads {sum:?}, not the sum 465 of all thirty rows");
+    }
+    let (foot, head) = (d.rect(FOOT_Q1).await?, d.rect(HEAD_Q1).await?);
+    if (foot.x - head.x).abs() > 1.0 || (foot.width - head.width).abs() > 1.0 {
+        bail!(
+            "the footer cell is at {} and {}px wide under a header at {} and {}px",
+            foot.x,
+            foot.width,
+            head.x,
+            head.width
+        );
+    }
+    let select = d.rect("thead th:nth-child(1)").await?.width;
+    let lead = d.rect(FOOT_LEAD).await?.width;
+    if (lead - select).abs() > 1.0 {
+        bail!("the lead footer cell is {lead}px wide over a {select}px checkbox column");
+    }
+    let area = d.rect(AREA).await?;
+    let bottom = d.rect(FOOT_Q1).await?;
+    if ((area.y + area.height) - (bottom.y + bottom.height)).abs() > 2.0 {
+        bail!(
+            "the footer ends at {}, the area at {}",
+            bottom.y + bottom.height,
+            area.y + area.height
+        );
+    }
+    let row = d.rect("tbody td").await?.y;
+    d.focus(SELECT_ALL).await?;
+    d.press(keyboard::PAGE_DOWN).await?;
+    eventually(d, "the rows to scroll while the footer stays", async |d| {
+        let foot = d.rect(FOOT_Q1).await?;
+        let area = d.rect(AREA).await?;
+        let edge = area.y + area.height;
+        Ok(
+            d.rect("tbody td").await?.y < row - 20.0
+                && (edge - (foot.y + foot.height)).abs() <= 2.0,
+        )
+    })
+    .await?;
+    let background = d.style(FOOT_Q1, "background-color").await?;
+    if background == "rgba(0, 0, 0, 0)" || background == "transparent" {
+        bail!("the sticky footer is see-through: {background}");
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    a_footer_lines_up_under_its_columns_and_sticks,
+    "/table-groups/footer",
+    the_footer_aggregates_and_sticks,
+    android: skip("958: element identity on the WebView"),
+    native: skip("a sticky footer on Blitz is T2: tests/native/table_groups.rs")
+);

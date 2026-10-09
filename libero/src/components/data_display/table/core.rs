@@ -8,6 +8,7 @@ use super::{
     column::{Column, ColumnDefaults},
     column_drag::{ColumnDrag, ColumnDragGrip},
     detail::SlidingDetail,
+    footer::{FooterCells, footer_row},
     groups::{HeaderCell, header_rows},
     header_filters::filter_row,
     overlay::EmptyBody,
@@ -370,7 +371,7 @@ pub(super) fn active_sort(headers: &[HeaderSpec], sort: &[TableSort], multi: boo
     active
 }
 
-fn align_attr(align: CellAlign) -> Option<&'static str> {
+pub(super) fn align_attr(align: CellAlign) -> Option<&'static str> {
     (align != CellAlign::Start).then(|| align.as_str())
 }
 
@@ -389,6 +390,8 @@ pub(super) struct BodySpec {
     pub rows: BodyRows,
     /// Drawn when no row shows.
     pub empty: EmptyBody,
+    /// With an aggregating column: the footer's cells.
+    pub footer: Option<FooterCells>,
     pub active: ActiveSort,
     pub sort: StateSlice<Vec<TableSort>>,
     /// Set with `multi_sort`: whether the press before a header click was a touch.
@@ -465,6 +468,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         order: shown,
         rows,
         empty,
+        footer,
         active,
         sort,
         touch,
@@ -669,6 +673,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                 },
             }
         }
+        {footer.map(|cells| footer_row(&headers, &shown, cells, columns - shown.len().max(1)))}
     }
 }
 
