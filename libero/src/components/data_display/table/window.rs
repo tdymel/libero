@@ -188,6 +188,12 @@ pub(super) fn windowed_sx() -> Sx {
                 .overflow("hidden")
                 .text_overflow("ellipsis"),
         )
+        .selector(
+            "& tfoot > tr > *",
+            sx().white_space("nowrap")
+                .overflow("hidden")
+                .text_overflow("ellipsis"),
+        )
 }
 
 /// The scroll top that shows slot `to` whole between a `head` px sticky header and a

@@ -539,6 +539,48 @@ fn a_windowed_row_held_at_the_bottom_edge_scrolls_on() {
     });
 }
 
+/// Todo 2771: the edge zone ends at the sticky footer, so a grip held 30px above it scrolls
+/// (it sat 30px plus the footer from the area's bottom before, outside the zone).
+#[test]
+fn a_windowed_row_held_above_the_footer_scrolls_on() {
+    use e2e::browser::{Fixture, Viewport, block_on};
+    use e2e::passes::pointer::{self, Point};
+    use e2e::wait;
+    block_on(async {
+        let fixture = Fixture::open("/table-reorder-windowed-footer", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let foot_top: f64 = page
+            .evaluate("document.querySelector('tfoot td').getBoundingClientRect().top")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let from = pointer::centre_of(page, "[aria-label=\"Reorder Row 1\"]")
+            .await
+            .unwrap();
+        let held = Point {
+            x: from.x,
+            y: foot_top - 30.0,
+        };
+        pointer::drag_held(page, from, held, 10).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('[data-table-scroll]').scrollTop > 60",
+            "a grip held above the footer to scroll the rows on",
+        )
+        .await
+        .unwrap();
+        pointer::release(page, held).await.unwrap();
+        fixture
+            .console
+            .assert_clean("a row drag above the footer")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 e2e::scenario!(
     hiding_a_column_from_its_own_columns_submenu_keeps_focus,
     "/table-reorder",

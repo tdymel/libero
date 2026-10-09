@@ -187,12 +187,14 @@ pub(crate) struct FixedSlots {
     pub scroller: ElementHandle,
     /// The sticky header's height over the scroller's top.
     pub head: f64,
+    /// The sticky footer's height over the scroller's bottom.
+    pub foot: f64,
 }
 
 /// A fixed list's scroller at a drag's start, read in client px.
 #[derive(Clone, Copy)]
 struct EdgeScroll {
-    /// The edge zones' span: below the header to the bottom.
+    /// The edge zones' span: below the header to above the footer.
     start: f64,
     size: f64,
     /// `scrollLeft`, `scrollTop` at the start, and the most `scrollTop`.
@@ -681,7 +683,7 @@ pub(crate) fn use_fixed_sortable(
                     };
                     let scroll = EdgeScroll {
                         start: y + slots.head,
-                        size: size.height - slots.head,
+                        size: size.height - slots.head - slots.foot,
                         from,
                         most: (content.height - size.height).max(0.0),
                     };

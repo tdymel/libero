@@ -336,6 +336,10 @@ base_props! {
         #[doc(hidden)]
         #[props(default)]
         bar_inset_top: Option<f64>,
+        /// Crate-internal: px the drawn vertical track stops above the bottom, above a sticky footer.
+        #[doc(hidden)]
+        #[props(default)]
+        bar_inset_bottom: Option<f64>,
         /// The position as it scrolls; a WebView (desktop, mobile) coalesces it to about once a frame.
         #[props(default)]
         onscroll: Option<EventHandler<ScrollPositionEvent>>,
@@ -841,7 +845,13 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let virtualized = virtualized();
     let body = rsx! {
         if own_bars {
-            ScrollAreaBars { state: drawn_bars, scrollbars, size, inset_top: props.bar_inset_top.unwrap_or(0.0) }
+            ScrollAreaBars {
+                state: drawn_bars,
+                scrollbars,
+                size,
+                inset_top: props.bar_inset_top.unwrap_or(0.0),
+                inset_bottom: props.bar_inset_bottom.unwrap_or(0.0),
+            }
         }
         ScrollAreaContent { content, {props.children} }
     };

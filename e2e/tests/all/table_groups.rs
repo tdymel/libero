@@ -118,6 +118,7 @@ const LAST_ROW: &str = "tbody tr[aria-rowindex=\"201\"]";
 const UNDER_ROW: &str = "tbody tr[aria-rowindex=\"6\"]";
 const UNDER_BOX: &str = "tbody tr[aria-rowindex=\"6\"] input[type=checkbox]";
 const HEAD_Q1: &str = "thead th:nth-child(3)";
+const V_BAR: &str = "[data-table-scroll] [data-orientation=vertical]";
 
 /// Todo 2736: the footer lines up under its columns, sums every row and sticks to
 /// the bottom of the capped table while the rows scroll under it.
@@ -191,6 +192,17 @@ async fn the_windowed_footer_holds_and_ends_the_rows<D: Driver>(
     if index.as_deref() != Some("202") {
         bail!("the footer row is {index:?}, not row 202");
     }
+    // Todo 2772: a long aggregate name is cut, not wrapped into a taller footer.
+    // Blitz reports no computed `white-space`.
+    if !matches!(d.platform(), Platform::Native) {
+        let (wrap, cut) = (
+            d.style(FOOT_Q1, "white-space").await?,
+            d.style(FOOT_Q1, "text-overflow").await?,
+        );
+        if wrap != "nowrap" || cut != "ellipsis" {
+            bail!("the footer cell wraps: white-space {wrap}, text-overflow {cut}");
+        }
+    }
     let area = d.rect(AREA).await?;
     let edge = area.y + area.height;
     let foot = d.rect(FOOT_Q1).await?;
@@ -219,6 +231,26 @@ async fn the_windowed_footer_holds_and_ends_the_rows<D: Driver>(
     Ok(())
 }
 
+/// Todo 2770: the vertical scrollbar stops above the sticky footer, as it starts below the header.
+async fn the_scrollbar_stops_above_the_footer<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually(d, "the scrollbar to end at the footer", async |d| {
+        if !d.exists(V_BAR).await? {
+            return Ok(false);
+        }
+        let (bar, foot) = (d.rect(V_BAR).await?, d.rect(FOOT_Q1).await?);
+        Ok((bar.y + bar.height - foot.y).abs() <= 1.0)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_windowed_scrollbar_stops_above_the_footer,
+    "/table-groups/footer-window",
+    the_scrollbar_stops_above_the_footer,
+    native: skip("1010: Blitz paints its own bar, ours is not drawn"),
+    android: skip("958: element identity on the WebView")
+);
+
 /// Todo 2754 (WCAG 2.4.11): a focus scroll brings a row under the footer up to just above it.
 async fn a_focused_row_clears_the_footer<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let (row, foot) = (d.rect(UNDER_ROW).await?, d.rect(FOOT_Q1).await?);
@@ -235,9 +267,9 @@ async fn a_focused_row_clears_the_footer<D: Driver>(d: &mut D, _route: &str) -> 
         Ok(!["", "auto", "0px"].contains(&pad.trim()))
     })
     .await?;
-    // Chromium centres a focused control, clearing its row; Blitz stops at the padding, so
-    // there the control itself is what clears. Its own focus scroll ignores the padding
-    // (1517): a Tab move reveals with it.
+    // Chromium centres a focused control, clearing its row; the desktop WebView stops at the
+    // padding, so the control itself is what clears (2.4.11), as on Blitz. Blitz's own focus
+    // scroll ignores the padding (1517): a Tab move reveals with it.
     let cleared = match d.platform() {
         Platform::Native => {
             d.focus(SELECT_ALL).await?;
@@ -247,6 +279,10 @@ async fn a_focused_row_clears_the_footer<D: Driver>(d: &mut D, _route: &str) -> 
                 }
                 d.press(keyboard::TAB).await?;
             }
+            UNDER_BOX
+        }
+        Platform::Desktop => {
+            d.focus(UNDER_BOX).await?;
             UNDER_BOX
         }
         _ => {

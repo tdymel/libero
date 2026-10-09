@@ -3,7 +3,7 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Chip, Table, column},
+    components::{Aggregate, Chip, Table, column},
     hooks::{SortableMove, use_localization_handle},
     localization::Localization,
     sx::sx,
@@ -16,6 +16,7 @@ pub const ROUTES: Routes = &[
     ("/table-reorder-de", || rsx! { ReorderGermanPage {} }),
     ("/table-reorder-detail", || rsx! { ReorderDetailPage {} }),
     ("/table-reorder-windowed", || rsx! { ReorderWindowedPage {} }),
+    ("/table-reorder-windowed-footer", || rsx! { ReorderWindowedFooterPage {} }),
     ("/table-column-drag", || rsx! { ColumnDragPage {} }),
     ("/table-column-scroll", || rsx! { ColumnScrollPage {} }),
 ];
@@ -82,19 +83,31 @@ fn ReorderTablePage() -> Element {
 /// `#ends` the first and last rows.
 #[component]
 fn ReorderWindowedPage() -> Element {
+    rsx! { WindowedRows {} }
+}
+
+/// The windowed rows under a sticky footer that counts them (todo 2771).
+#[component]
+fn ReorderWindowedFooterPage() -> Element {
+    rsx! { WindowedRows { footer: true } }
+}
+
+#[component]
+fn WindowedRows(#[props(default)] footer: bool) -> Element {
     let mut rows = use_signal(|| (1..=200).map(|n| format!("Row {n}")).collect::<Vec<_>>());
     let mut moves = use_signal(String::new);
     let ends = {
         let rows = rows.read();
         format!("{} {}", rows[0], rows[rows.len() - 1])
     };
+    let name = column("Name").value(|row: &String| row.clone()).row_header();
     rsx! {
         Table {
             aria_label: "Rows",
             max_height: "240px",
             virtual_row_height: 40.0,
             data: rows(),
-            columns: vec![column("Name").value(|row: &String| row.clone()).row_header()],
+            columns: vec![if footer { name.aggregate(Aggregate::Count) } else { name }],
             row_key: |row: &String| row.clone(),
             onrowreorder: move |step: SortableMove| {
                 moves.write().push_str(&format!("{}>{} ", step.from, step.to));

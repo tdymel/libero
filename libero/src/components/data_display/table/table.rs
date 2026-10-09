@@ -1496,6 +1496,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         lift,
         scroller: column_drag.region,
         head: *head.peek(),
+        foot: foot_gap,
     });
     let reorder = has_reorder.then(|| RowReorder {
         onreorder: reorder_rows,
@@ -1873,6 +1874,8 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                     onbottomreached: onbottomreached.map(|_| bottom_reached),
                     // The scrollbar runs beside the rows only, not the sticky header (todo 1454).
                     bar_inset_top: bounded.then(|| *head.read()),
+                    // Nor the sticky footer at the bottom.
+                    bar_inset_bottom: bounded.then_some(foot_gap),
                     // Its root, mounted by the area itself, is where a column drop counts.
                     handle: ScrollAreaHandle { element: column_drag.region },
                     attributes,
