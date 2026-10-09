@@ -247,6 +247,14 @@ A code block shows its source with fences while the caret is in it; the
 language button on its opening fence, the toolbar's language menu or
 `Ctrl+Shift+L` change its language.
 
+## Links
+
+A web address (`http`, `https` or `mailto`) followed by a space or Enter
+becomes a link; a full stop or comma that ends the sentence stays outside it,
+and undo brings the plain text back. Typing `[text](address)` links the text.
+Pasting only an address links the selected text, or inserts the address as a
+link. Other schemes stay text, as does a `www.` address without a scheme.
+
 ## Mentions
 
 The mentions switch adds an @ list at the caret, built from `intercept`,
@@ -351,7 +359,8 @@ the Bold button reads as pressed.
   through their `NodeSpec::markdown` (pass `registry`). Cut is one undo step.
 - Paste reads Markdown back into formatted blocks; custom nodes stay text.
   Text from elsewhere is read the same way, one paragraph per line. In a code
-  block it is pasted as is.
+  block it is pasted as is. A pasted web address alone links the selection, or
+  becomes a link at the caret.
 - Drag and drop of text and replacements (spellcheck, autocorrect, macOS text
   substitutions) are ignored, so `spellcheck` is off.
 

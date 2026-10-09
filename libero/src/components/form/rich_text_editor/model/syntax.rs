@@ -1,7 +1,7 @@
 //! The Markdown subset's recognizers, shared by the typing shortcuts ([`super::rules`])
 //! and the reader ([`super::parse`]), so both accept exactly the same syntax.
 
-use super::mark::Mark;
+use super::mark::{Href, Mark};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) enum BlockSyntax {
@@ -94,4 +94,113 @@ pub(super) fn closing_span(
         }
     }
     None
+}
+
+/// The URL a typed or pasted word starts with: its length in chars, without the
+/// punctuation that ends a sentence, and its href. Only the [`Href::SCHEMES`].
+pub(super) fn autolink(word: &[char]) -> Option<(usize, Href)> {
+    if word.iter().any(|c| c.is_whitespace()) {
+        return None;
+    }
+    let lower = word.iter().collect::<String>().to_ascii_lowercase();
+    let head = Href::SCHEMES.iter().find_map(|scheme| {
+        let head = match *scheme {
+            "mailto" => "mailto:".to_string(),
+            scheme => format!("{scheme}://"),
+        };
+        lower.starts_with(&head).then(|| head.chars().count())
+    })?;
+    let mut end = word.len();
+    while end > head {
+        let count = |c: char| word[..end].iter().filter(|x| **x == c).count();
+        let trailing = word[end - 1];
+        if matches!(trailing, '.' | ',' | ';' | ':' | '!' | '?' | '\'' | '"')
+            || trailing == ')' && count(')') > count('(')
+        {
+            end -= 1;
+        } else {
+            break;
+        }
+    }
+    let rest = &word[head..end];
+    let valid = match lower.starts_with("mailto:") {
+        true => rest
+            .iter()
+            .position(|c| *c == '@')
+            .is_some_and(|at| at > 0 && at + 1 < rest.len()),
+        false => rest.first().is_some_and(|c| c.is_alphanumeric()),
+    };
+    let href = Href::parse(&word[..end].iter().collect::<String>()).ok()?;
+    valid.then_some((end, href))
+}
+
+/// A `[text](url "title")` link at `at` with a safe URL: its `]`, the index after `)`, the mark.
+pub(super) fn link(chars: &[char], at: usize) -> Option<(usize, usize, Mark)> {
+    let mut depth = 0;
+    let mut close = at + 1;
+    loop {
+        match *chars.get(close)? {
+            '\\' => close += 1,
+            '[' => depth += 1,
+            ']' if depth == 0 => break,
+            ']' => depth -= 1,
+            _ => {}
+        }
+        close += 1;
+    }
+    if chars.get(close + 1) != Some(&'(') {
+        return None;
+    }
+    let (href, title, end) = destination(chars, close + 2)?;
+    let href = Href::parse(&href).ok()?;
+    Some((close, end, Mark::Link { href, title }))
+}
+
+/// `url "title")` after `(`: the URL, the title and the index after `)`.
+fn destination(chars: &[char], mut i: usize) -> Option<(String, Option<String>, usize)> {
+    let skip = |i: &mut usize| {
+        while chars.get(*i) == Some(&' ') {
+            *i += 1;
+        }
+    };
+    // Reads up to `stop`, unescaping; nested parens only where `stop` is `)`.
+    let read = |i: &mut usize, stop: fn(char) -> bool| -> Option<String> {
+        let mut out = String::new();
+        let mut depth = 0;
+        loop {
+            let mut c = *chars.get(*i)?;
+            match c {
+                '\\' if chars.get(*i + 1).is_some_and(char::is_ascii_punctuation) => {
+                    *i += 1;
+                    c = chars[*i];
+                }
+                '\n' => return None,
+                ')' if depth > 0 => depth -= 1,
+                c if stop(c) => return Some(out),
+                '(' => depth += 1,
+                _ => {}
+            }
+            out.push(c);
+            *i += 1;
+        }
+    };
+    skip(&mut i);
+    let href = match chars.get(i) == Some(&'<') {
+        true => {
+            i += 1;
+            let href = read(&mut i, |c| c == '>')?;
+            i += 1;
+            href
+        }
+        false => read(&mut i, |c| c == ')' || c == ' ')?,
+    };
+    skip(&mut i);
+    let mut title = None;
+    if chars.get(i) == Some(&'"') {
+        i += 1;
+        title = Some(read(&mut i, |c| c == '"')?);
+        i += 1;
+        skip(&mut i);
+    }
+    (chars.get(i) == Some(&')')).then_some((href, title, i + 1))
 }

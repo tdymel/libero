@@ -2,8 +2,9 @@
 //! The recognizers live in [`super::syntax`], shared with the Markdown reader.
 
 use super::doc::{BlockKind, ContentKind, Inline, slice_inlines};
+use super::mark::{Mark, MarkKind};
 use super::state::{EditorState, Position};
-use super::syntax::{BlockSyntax, DELIMITERS, block_syntax, closing_span};
+use super::syntax::{BlockSyntax, DELIMITERS, autolink, block_syntax, closing_span, link};
 
 impl EditorState {
     /// Applies the shortcut the text just typed completes. Never in code blocks.
@@ -15,7 +16,7 @@ impl EditorState {
         if block.kind.content() != ContentKind::Inline || block.kind.is_code() {
             return false;
         }
-        self.block_rule() || self.inline_rule()
+        self.block_rule() || self.inline_rule() || self.link_rule() || self.autolink_rule()
     }
 
     /// A prefix typed at the start of a paragraph, ended by a space.
@@ -69,15 +70,91 @@ impl EditorState {
         self.set_kind(at.block, BlockKind::code(language))
     }
 
+    fn chars_before_caret(&self) -> Vec<char> {
+        self.text_before_caret().chars().collect()
+    }
+
+    /// The link a typed `)` completes: `[text](url)` becomes `text` linked to `url`.
+    fn link_rule(&mut self) -> bool {
+        let at = self.caret();
+        let text = self.chars_before_caret();
+        if text.last() != Some(&')') {
+            return false;
+        }
+        let found = (0..text.len())
+            .rev()
+            .filter(|open| text[*open] == '[' && (*open == 0 || text[*open - 1] != '!'))
+            .find_map(|open| {
+                link(&text, open)
+                    .filter(|(close, end, _)| *end == text.len() && *close > open + 1)
+                    .map(|(close, _, mark)| (open, close, mark))
+            });
+        let Some((open, close, mark)) = found else {
+            return false;
+        };
+        let block = at.block;
+        self.delete_range(Position::new(block, close), at);
+        self.delete_range(Position::new(block, open), Position::new(block, open + 1));
+        let end = close - 1;
+        let inlines = self.doc.get_mut(block).expect("a leaf").inlines_mut();
+        super::doc::map_marks(inlines, open, end, |marks| marks.add(mark.clone()));
+        self.set_caret(Position::new(block, end));
+        let mut marks = self.current_marks();
+        marks.remove(MarkKind::Link);
+        self.stored_marks = Some(marks);
+        true
+    }
+
+    /// A URL followed by the space just typed becomes a link.
+    fn autolink_rule(&mut self) -> bool {
+        match self.chars_before_caret().split_last() {
+            Some((' ', word)) => self.autolink(word.len()),
+            _ => false,
+        }
+    }
+
+    /// Enter after a URL links it before the block splits.
+    pub(super) fn autolink_at_caret(&mut self) -> bool {
+        let at = self.caret();
+        let block = self.block(at.block);
+        self.selection.is_collapsed()
+            && block.kind.content() == ContentKind::Inline
+            && !block.kind.is_code()
+            && self.autolink(at.offset)
+    }
+
+    /// Links the URL that is the last word before `end` in the caret's block, unless
+    /// it is code or already a link.
+    fn autolink(&mut self, end: usize) -> bool {
+        let block = self.caret().block;
+        let text: Vec<char> = self.block(block).text().chars().take(end).collect();
+        let from = text
+            .iter()
+            .rposition(|c| c.is_whitespace() || *c == '\u{fffc}')
+            .map_or(0, |at| at + 1);
+        let Some((len, href)) = autolink(&text[from..]) else {
+            return false;
+        };
+        let to = from + len;
+        let plain = slice_inlines(self.block(block).inlines(), from, to)
+            .iter()
+            .all(|inline| {
+                matches!(inline, Inline::Text { marks, .. }
+                    if !marks.has(MarkKind::Link) && !marks.has(MarkKind::Code))
+            });
+        if !plain {
+            return false;
+        }
+        let mark = Mark::Link { href, title: None };
+        let inlines = self.doc.get_mut(block).expect("a leaf").inlines_mut();
+        super::doc::map_marks(inlines, from, to, |marks| marks.add(mark.clone()));
+        true
+    }
+
     /// A closing delimiter typed after its opener: `` `x` ``, `**x**`, `*x*`, `~~x~~`.
     fn inline_rule(&mut self) -> bool {
         let at = self.caret();
-        let text: Vec<char> = self
-            .block(at.block)
-            .text()
-            .chars()
-            .take(at.offset)
-            .collect();
+        let text = self.chars_before_caret();
         let Some((open, len, mark)) = closing_span(&text, |_| true, &DELIMITERS) else {
             return false;
         };

@@ -592,6 +592,88 @@ async fn clipboard(page: &Page, kind: &str) -> (String, String, bool) {
     .await
 }
 
+/// Pastes `text` as plain text into the editor.
+async fn paste_text(page: &Page, text: &str) {
+    page.evaluate(format!(
+        "(() => {{ const d = new DataTransfer(); d.setData('text/plain', {text:?}); \
+           {EDITOR}.dispatchEvent(new ClipboardEvent('paste', {{ clipboardData: d, bubbles: true, cancelable: true }})); }})()"
+    ))
+    .await
+    .unwrap();
+}
+
+/// Todo 2716: a typed URL, a typed `[text](url)` and a pasted URL become links.
+#[test]
+fn typed_and_pasted_urls_and_typed_markdown_links_become_links() {
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+
+        keyboard::type_text(page, "see https://a.example ok")
+            .await
+            .unwrap();
+        out_eq(page, "see [https://a.example](https://a.example) ok\n").await;
+        let href: String = js(
+            page,
+            &format!("{EDITOR}.querySelector('a')?.getAttribute('href') ?? ''"),
+        )
+        .await;
+        assert_eq!(href, "https://a.example");
+
+        keyboard::press(page, ENTER).await.unwrap();
+        keyboard::type_text(page, "[docs](https://b.example)")
+            .await
+            .unwrap();
+        out_where(page, "the typed Markdown link", |now| {
+            now.ends_with("\n\n[docs](https://b.example)\n")
+        })
+        .await;
+        let text: String = js(
+            page,
+            &format!("[...{EDITOR}.querySelectorAll('a')].map(a => a.textContent).join('|')"),
+        )
+        .await;
+        assert_eq!(text, "https://a.example|docs");
+
+        keyboard::press(page, ENTER).await.unwrap();
+        paste_text(page, "https://c.example").await;
+        out_where(page, "the pasted URL", |now| {
+            now.ends_with("\n\n[https://c.example](https://c.example)\n")
+        })
+        .await;
+
+        keyboard::press(page, ENTER).await.unwrap();
+        keyboard::type_text(page, "word").await.unwrap();
+        select(
+            page,
+            &format!(
+                "const l = [...{EDITOR}.querySelectorAll('[data-key]')]; const t = l[l.length - 1].firstChild; \
+                 getSelection().setBaseAndExtent(t, 0, t, t.length)"
+            ),
+        )
+        .await;
+        paste_text(page, "https://d.example").await;
+        out_where(page, "the URL over a selection", |now| {
+            now.ends_with("\n\n[word](https://d.example)\n")
+        })
+        .await;
+
+        keyboard::press(page, ENTER).await.unwrap();
+        keyboard::type_text(page, "https://e.example")
+            .await
+            .unwrap();
+        keyboard::press(page, ENTER).await.unwrap();
+        out_where(page, "Enter after a URL", |now| {
+            now.contains("[https://e.example](https://e.example)")
+        })
+        .await;
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Both flavours carry the Markdown, so a code block keeps its fence (todo 1258).
 #[test]
 fn copy_writes_markdown_and_cut_edits_the_model() {

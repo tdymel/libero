@@ -247,8 +247,10 @@ fn builtin_action(builtin: Builtin) -> Action {
         B::HardBreak => edit(EditorState::insert_hard_break),
         // Not in `split_block` itself: a pasted fence line or blank line stays text.
         B::SplitBlock => edit(|state| {
+            let linked = state.autolink_at_caret();
             state.selection.is_collapsed() && (state.fence_rule() || state.exit_code_on_blank_end())
                 || state.split_block()
+                || linked
         }),
         B::DeleteBackward => edit(EditorState::delete_backward),
         B::DeleteForward => edit(EditorState::delete_forward),

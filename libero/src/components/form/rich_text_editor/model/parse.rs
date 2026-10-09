@@ -7,8 +7,8 @@
 //!   `<u>`, `<strong>`, `<em>`, `<s>`, `<code>` tags, backslash escapes and `\`-newline breaks.
 
 use super::doc::{Block, BlockKind, Doc, Inline};
-use super::mark::{Href, Mark, Marks};
-use super::syntax::{BlockSyntax, DELIMITERS, block_syntax, closing_span, valid_inner};
+use super::mark::{Mark, Marks};
+use super::syntax::{BlockSyntax, DELIMITERS, block_syntax, closing_span, link, valid_inner};
 
 impl Doc {
     pub fn from_markdown(markdown: &str) -> Self {
@@ -292,75 +292,4 @@ fn tag(chars: &[char], at: usize) -> Option<(usize, bool, usize)> {
         .iter()
         .position(|(tag, _)| name.eq_ignore_ascii_case(tag))?;
     Some((index, opening, end + 1))
-}
-
-/// A `[text](url "title")` link at `at` with a safe URL: its `]`, the index after `)`, the mark.
-fn link(chars: &[char], at: usize) -> Option<(usize, usize, Mark)> {
-    let mut depth = 0;
-    let mut close = at + 1;
-    loop {
-        match *chars.get(close)? {
-            '\\' => close += 1,
-            '[' => depth += 1,
-            ']' if depth == 0 => break,
-            ']' => depth -= 1,
-            _ => {}
-        }
-        close += 1;
-    }
-    if chars.get(close + 1) != Some(&'(') {
-        return None;
-    }
-    let (href, title, end) = destination(chars, close + 2)?;
-    let href = Href::parse(&href).ok()?;
-    Some((close, end, Mark::Link { href, title }))
-}
-
-/// `url "title")` after `(`: the URL, the title and the index after `)`.
-fn destination(chars: &[char], mut i: usize) -> Option<(String, Option<String>, usize)> {
-    let skip = |i: &mut usize| {
-        while chars.get(*i) == Some(&' ') {
-            *i += 1;
-        }
-    };
-    // Reads up to `stop`, unescaping; nested parens only where `stop` is `)`.
-    let read = |i: &mut usize, stop: fn(char) -> bool| -> Option<String> {
-        let mut out = String::new();
-        let mut depth = 0;
-        loop {
-            let mut c = *chars.get(*i)?;
-            match c {
-                '\\' if chars.get(*i + 1).is_some_and(char::is_ascii_punctuation) => {
-                    *i += 1;
-                    c = chars[*i];
-                }
-                '\n' => return None,
-                ')' if depth > 0 => depth -= 1,
-                c if stop(c) => return Some(out),
-                '(' => depth += 1,
-                _ => {}
-            }
-            out.push(c);
-            *i += 1;
-        }
-    };
-    skip(&mut i);
-    let href = match chars.get(i) == Some(&'<') {
-        true => {
-            i += 1;
-            let href = read(&mut i, |c| c == '>')?;
-            i += 1;
-            href
-        }
-        false => read(&mut i, |c| c == ')' || c == ' ')?,
-    };
-    skip(&mut i);
-    let mut title = None;
-    if chars.get(i) == Some(&'"') {
-        i += 1;
-        title = Some(read(&mut i, |c| c == '"')?);
-        i += 1;
-        skip(&mut i);
-    }
-    (chars.get(i) == Some(&')')).then_some((href, title, i + 1))
 }

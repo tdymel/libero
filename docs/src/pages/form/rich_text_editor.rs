@@ -32,6 +32,7 @@ Start a line with # and a space for a heading, or wrap a word in **two stars**. 
 - Undo with Ctrl+Z
 - Bold with Ctrl+B
   - Nest an item with Tab
+- Type a web address and a space, or paste one over a word, for a link
 
 1. Type three backticks and a language
 2. Press Enter for a code block
@@ -267,7 +268,7 @@ pub fn RichTextEditorPage() -> Element {
                 .limits([
                     "On Blitz (native) the document is shown read-only.",
                     "Copy and cut write the selection as Markdown, as plain text and as `text/markdown`: a quote as `>`, a code block fenced with its language, lists, headings, rules, marks and links as written. Custom nodes write through their `NodeSpec::markdown` (pass `registry`). Cut is one undo step.",
-                    "Paste reads Markdown back into formatted blocks; custom nodes stay text. Text from elsewhere is read the same way, one paragraph per line. In a code block it is pasted as is.",
+                    "Paste reads Markdown back into formatted blocks; custom nodes stay text. Text from elsewhere is read the same way, one paragraph per line. In a code block it is pasted as is. A pasted web address alone links the selection, or becomes a link at the caret.",
                     "Drag and drop of text and spellcheck replacements are ignored, so `spellcheck` is off.",
                 ]),
             lead: rich_lead(),
@@ -346,6 +347,23 @@ pub fn RichTextEditorPage() -> Element {
                 title: "Code blocks",
                 Text {
                     "A code block shows its source with fences while the caret is in it; the language button on its opening fence, the toolbar's language menu or Ctrl+Shift+L change its language."
+                }
+            }
+
+            DocSection {
+                title: "Links",
+                Text {
+                    "A web address ("
+                    Code { source: "http" }
+                    ", "
+                    Code { source: "https" }
+                    " or "
+                    Code { source: "mailto" }
+                    ") followed by a space or Enter becomes a link; a full stop or comma that ends the sentence stays outside it, and undo brings the plain text back. Typing "
+                    Code { source: "[text](address)" }
+                    " links the text. Pasting only an address links the selected text, or inserts the address as a link. Other schemes stay text, as does a "
+                    Code { source: "www." }
+                    " address without a scheme."
                 }
             }
 
