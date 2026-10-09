@@ -5,7 +5,7 @@ use libero::components::rich_text::{
     Attrs, Builtin, Chord, Commands, Doc, EditorInput, EditorState, Keymap, NodeRegistry, NodeSpec,
     NodeViewProps, NodeViews, Position, RichTextTool, Selection, use_rich_text_editor,
 };
-use libero::components::{ComboboxOption, Paper, RichTextEditor};
+use libero::components::{ComboboxOption, Flex, Paper, RichTextEditor, Text};
 use libero::sx::sx;
 
 /// The demo's extension switches: a command, mentions and a keymap.
@@ -172,6 +172,38 @@ pub fn NotesEditor(values: DemoValues, mut doc: Signal<Doc>) -> Element {
             overlay_results: count,
             value: doc(),
             onchange: move |next| doc.set(next),
+        }
+    }
+}
+
+const MESSAGE_LIMIT: usize = 140;
+
+/// A chat box: Enter sends, `max_length` caps it and the handle clears it.
+#[component]
+pub fn MessageBox() -> Element {
+    let editor = use_rich_text_editor();
+    let mut messages = use_signal(Vec::<String>::new);
+    let left = MESSAGE_LIMIT.saturating_sub(editor.plain_text().chars().count());
+    rsx! {
+        Flex { direction: "column", gap: "sm",
+            Text { size: "sm",
+                "A chat box: onsubmit sends on Enter, max_length caps the text and the handle's clear empties the box."
+            }
+            RichTextEditor {
+                label: "Message",
+                helper: format!("Enter sends, Shift+Enter breaks the line. {left} characters left."),
+                placeholder: "Write a message",
+                toolbar: false,
+                handle: editor,
+                max_length: MESSAGE_LIMIT,
+                onsubmit: move |doc: Doc| {
+                    messages.write().push(doc.to_markdown());
+                    editor.clear();
+                },
+            }
+            for (index, message) in messages.read().iter().enumerate() {
+                Text { key: "{index}", size: "sm", white_space: "pre-wrap", "{message}" }
+            }
         }
     }
 }

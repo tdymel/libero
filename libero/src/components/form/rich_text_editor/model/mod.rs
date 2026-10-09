@@ -4,6 +4,7 @@ mod command;
 mod doc;
 mod edit;
 mod editor;
+mod limit;
 mod mark;
 mod markdown;
 mod parse;

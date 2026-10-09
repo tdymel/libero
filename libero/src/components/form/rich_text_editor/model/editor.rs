@@ -66,6 +66,7 @@ impl UndoStack for UndoHistory<EditorState> {
 pub struct Editor<H = UndoHistory<EditorState>> {
     state: EditorState,
     history: H,
+    max_chars: Option<usize>,
 }
 
 impl Editor {
@@ -73,7 +74,11 @@ impl Editor {
     pub fn new(doc: Doc) -> Self {
         let state = EditorState::new(doc);
         let history = UndoHistory::new(state.clone());
-        Self { state, history }
+        Self {
+            state,
+            history,
+            max_chars: None,
+        }
     }
 }
 
@@ -81,7 +86,21 @@ impl<H: UndoStack> Editor<H> {
     /// An editor over `history`, starting at its present state.
     pub fn with_history(history: H) -> Self {
         let state = (*history.present()).clone();
-        Self { state, history }
+        Self {
+            state,
+            history,
+            max_chars: None,
+        }
+    }
+
+    /// Caps the plain text at `max` chars: an edit that grows the doc past it is refused,
+    /// typed text is cut to fit. A doc already over the cap can still shrink.
+    pub fn set_max_chars(&mut self, max: Option<usize>) {
+        self.max_chars = max;
+    }
+
+    pub fn max_chars(&self) -> Option<usize> {
+        self.max_chars
     }
 
     pub fn state(&self) -> &EditorState {
@@ -116,6 +135,12 @@ impl<H: UndoStack> Editor<H> {
             return false;
         }
         let doc_changed = next.doc != self.state.doc;
+        if let Some(max) = self.max_chars
+            && doc_changed
+            && next.doc.plain_len() > max.max(self.state.doc.plain_len())
+        {
+            return false;
+        }
         self.state = next;
         match (record, doc_changed) {
             (Record::Step, true) => self.history.push(self.state.clone()),
@@ -128,6 +153,11 @@ impl<H: UndoStack> Editor<H> {
     /// Typed text: one undo group while typing goes on. A completed Markdown
     /// shortcut is a step of its own, so undo brings the typed syntax back.
     pub fn type_text(&mut self, text: &str) -> bool {
+        let fitted: String = match self.max_chars {
+            Some(max) => text.chars().take(self.state.room(max)).collect(),
+            None => text.to_string(),
+        };
+        let text = fitted.as_str();
         if !self.apply(Record::Merge, |state| state.insert_text(text)) {
             return false;
         }

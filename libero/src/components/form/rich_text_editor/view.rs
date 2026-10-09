@@ -11,7 +11,7 @@ use pictogram_icons_lucide as lucide;
 
 use super::dialogs::{LinkArgs, LinkChoice, LinkDialog, announcement, shortcut_rows};
 use super::handle::{RichTextHandle, Runner, Status};
-use super::input::{EditorInput, Intent, intent, text_diff};
+use super::input::{EditorInput, Intent, SubmitOn, intent, split_enter, text_diff};
 use super::model::{
     Action, BlockKind, Builtin, CommandName, Commands, Doc, Editor, EditorState, Inline, KeyPress,
     Keymap, Mark, MarkKind, NodeKey, NodeRegistry, Position, Record, Selection, UndoStack,
@@ -140,6 +140,21 @@ field_props! {
         /// Shown while the document is one empty paragraph.
         #[props(default, into)]
         placeholder: Option<String>,
+        /// Sends the document when `submit_on` is pressed, as in a chat or comment box;
+        /// the editor keeps its text, so clear it with the handle's `clear` or a new
+        /// `value`. Nothing is sent from an empty document, a code block or while an
+        /// `overlay` takes the key; there Enter does its usual job. On phones the Enter key
+        /// shows as "send" for `SubmitOn::Enter`.
+        #[props(default)]
+        onsubmit: Option<EventHandler<Doc>>,
+        /// The key that fires `onsubmit`: Enter (Shift+Enter breaks the line) or Mod+Enter.
+        #[props(default)]
+        submit_on: SubmitOn,
+        /// The most chars of plain text the document holds (`Doc::plain_text`, a line
+        /// break between blocks counts one). Typing and paste stop at it. Text a phone
+        /// keyboard composes cannot be refused: it is cut when the word is committed.
+        #[props(default, into)]
+        max_length: Option<usize>,
         /// Shows the formatting toolbar above the text.
         #[props(default = true)]
         toolbar: bool,
@@ -267,6 +282,9 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     let initial = value.clone().unwrap_or_default();
     let history = use_history(|| UndoHistory::new(EditorState::new(initial)), GROUP_MS);
     let mut editor = use_hook(|| CopyValue::new(Editor::with_history(history)));
+    if editor.peek().max_chars() != props.max_length {
+        editor.write().set_max_chars(props.max_length);
+    }
     // Bumped on every change, selection included: the toolbar's state.
     let mut revision = use_signal(|| 0u32);
     // Bumped when the model moved the caret, so the DOM selection follows it.
@@ -452,6 +470,29 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             let run = Rc::new(move |name: CommandName| {
                 as_editor(&mut || run_command(name.clone(), true, false))
             });
+            let clear = Rc::new(move || {
+                as_editor(&mut || {
+                    let before = editor.peek().doc().clone();
+                    if !*can_edit.peek() || before == Doc::new() {
+                        return false;
+                    }
+                    let (mut editor, mut generation, mut changed) = (editor, generation, changed);
+                    editor.write().reset(Doc::new());
+                    generation += 1;
+                    changed(Some(before), true);
+                    true
+                })
+            });
+            let focus = Rc::new(move || {
+                as_editor(&mut || {
+                    let mut changed = changed;
+                    let editable = *can_edit.peek();
+                    if editable {
+                        changed(None, true);
+                    }
+                    editable
+                })
+            });
             let edit = Rc::new(move |f: &mut dyn FnMut(&mut EditorState) -> bool| {
                 as_editor(&mut || {
                     if !*can_edit.peek() {
@@ -465,7 +506,13 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                     )
                 })
             });
-            handle.attach(&owner, Runner { run, edit });
+            let runner = Runner {
+                run,
+                edit,
+                clear,
+                focus,
+            };
+            handle.attach(&owner, runner);
         }
         handle
     });
@@ -499,6 +546,29 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         let intercept = *intercept.peek();
         intercept.is_some_and(|intercept| intercept.call(input))
     };
+    let apple = mod_is_meta();
+    let mut submit = use_hook(|| CopyValue::new(None::<(EventHandler<Doc>, SubmitOn)>));
+    submit.set(props.onsubmit.map(|send| (send, props.submit_on)));
+    // Sends the doc when `press` is the submit key; not from a code block, a typed fence
+    // (Enter opens the block) or an empty doc.
+    let try_submit = move |press: &KeyPress| -> bool {
+        let Some((send, on)) = *submit.peek() else {
+            return false;
+        };
+        if !on.pressed(press, apple) || !*can_edit.peek() {
+            return false;
+        }
+        let live = editor.peek();
+        let state = live.state();
+        let opens_fence = on == SubmitOn::Enter && state.enter_opens_fence();
+        if state.block_kind().is_code() || opens_fence || live.doc().is_empty() {
+            return false;
+        }
+        let doc = live.doc().clone();
+        drop(live);
+        send.call(doc);
+        true
+    };
     // A `beforeinput` by its type, data and the last key pressed; `true` cancels it.
     let before_input = move |input_type: &str, data: Option<String>, key: &str| -> bool {
         let (mut composing, mut edit) = (composing, edit);
@@ -524,6 +594,11 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             {
                 true
             }
+            Intent::Run(Builtin::SplitBlock)
+                if key != "Enter" && try_submit(&KeyPress::new("Enter")) =>
+            {
+                true
+            }
             Intent::Run(builtin) => {
                 edit(&|live| live.run(&commands.peek(), builtin), false);
                 true
@@ -541,7 +616,6 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     // Android soft keyboards press "Unidentified": their Enter shows up as an insertParagraph.
     let mut last_key = use_hook(|| CopyValue::new(String::new()));
     let mut escaped = use_hook(|| CopyValue::new(false));
-    let apple = mod_is_meta();
     // A key press through `intercept` and the keymap; `true` cancels it.
     let mut key_down = move |press: KeyPress| -> bool {
         last_key.set(press.key.clone());
@@ -552,6 +626,9 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         let armed = std::mem::replace(&mut *escaped.write(), press.key == "Escape");
         if armed && press.key == "Tab" {
             return false;
+        }
+        if try_submit(&press) {
+            return true;
         }
         let name = keymap.peek().command_for(&press, apple).cloned();
         name.is_some_and(|name| run_command(name, false, true))
@@ -613,7 +690,13 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                 syncing.set(false);
             }
             if let Some((key, text)) = report.text {
-                reconcile(editor, NodeKey(key), &text, &mut changed);
+                let sends =
+                    submit.peek().is_some_and(|(_, on)| on == SubmitOn::Enter) && *can_edit.peek();
+                let entered = reconcile(editor, NodeKey(key), &text, sends, &mut changed);
+                // Enter in a composed word arrives as its "\n": send after the word is in.
+                if entered && !try_submit(&KeyPress::new("Enter")) {
+                    reconcile(editor, NodeKey(key), &text, false, &mut changed);
+                }
                 generation += 1;
             }
             if let Some((key, at_end)) = report.code
@@ -853,7 +936,12 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             },
         };
         edit(
-            &|live| live.apply(Record::Step, |state| state.paste(&text, markdown)),
+            &|live| {
+                let max = live.max_chars();
+                live.apply(Record::Step, |state| {
+                    state.paste_within(&text, markdown, max)
+                })
+            },
             false,
         );
     };
@@ -923,6 +1011,11 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         .attr("data-empty", empty)
         .attr("contenteditable", if editable { "true" } else { "false" })
         .attr("spellcheck", "false")
+        .attr(
+            "enterkeyhint",
+            (editable && props.onsubmit.is_some() && props.submit_on == SubmitOn::Enter)
+                .then_some("send"),
+        )
         .event("onkeydown", editable.then_some(onkeydown))
         .event("onbeforeinput", editable.then_some(onbeforeinput))
         .event("onpaste", editable.then_some(onpaste))
@@ -1433,20 +1526,25 @@ fn enter_code(mut editor: CopyValue<LiveEditor>, key: NodeKey, at_end: bool) {
         .select(Selection::caret(Position::new(key, at)));
 }
 
-/// Takes the text the browser composed into leaf `key` into the model.
+/// Takes the text the browser composed into leaf `key` into the model, cut to `max_length`.
+/// With `enter_sends`, a trailing "\n" is Enter pressed in the word: it is left out and
+/// `true` says so.
 fn reconcile(
     mut editor: CopyValue<LiveEditor>,
     key: NodeKey,
     dom: &str,
+    enter_sends: bool,
     changed: &mut impl FnMut(Option<Doc>, bool),
-) {
+) -> bool {
     let Some(old) = editor.peek().doc().get(key).map(|block| block.text()) else {
-        return;
+        return false;
     };
+    let (dom, entered) = split_enter(&old, dom, enter_sends);
     let Some((from, to, inserted)) = text_diff(&old, dom) else {
-        return;
+        return entered;
     };
     let before = editor.peek().doc().clone();
+    let max = editor.peek().max_chars();
     editor.write().apply(Record::Merge, |state| {
         state.select(Selection::range(
             Position::new(key, from),
@@ -1454,9 +1552,13 @@ fn reconcile(
         ));
         state.delete_selection();
         state.insert_text(&inserted);
+        if let Some(max) = max {
+            state.cut_over(max, inserted.chars().count());
+        }
         true
     });
     changed(Some(before), false);
+    entered
 }
 
 #[cfg(test)]

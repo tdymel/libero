@@ -752,6 +752,178 @@ fn node_views_draw_built_in_blocks_and_keep_them_editable() {
     });
 }
 
+const SENT: &str = "document.getElementById('sent').textContent";
+
+/// Waits for `#sent`, the fixture's list of sent messages, to read `want`.
+async fn sent_eq(page: &Page, want: &str) {
+    let last = std::cell::RefCell::new(String::new());
+    let held = wait::until(&format!("#sent to read {want:?}"), || async {
+        let now: String = page.evaluate(SENT).await?.into_value()?;
+        let passes = now == want;
+        *last.borrow_mut() = now;
+        Ok(passes)
+    })
+    .await;
+    assert!(
+        held.is_ok(),
+        "#sent reads {:?}, want {want:?}",
+        last.borrow()
+    );
+}
+
+/// Pastes `text` as plain text into the editor.
+async fn paste(page: &Page, text: &str) {
+    page.evaluate(format!(
+        "(() => {{ const d = new DataTransfer(); d.setData('text/plain', {text:?}); \
+           {EDITOR}.dispatchEvent(new ClipboardEvent('paste', {{ clipboardData: d, bubbles: true, cancelable: true }})); }})()"
+    ))
+    .await
+    .unwrap();
+}
+
+async fn editor_focused(page: &Page) -> bool {
+    js(page, &format!("document.activeElement === {EDITOR}")).await
+}
+
+/// Todo 2715: with `onsubmit` Enter sends, Shift+Enter breaks the line, a code block keeps
+/// Enter, `max_length` stops typing and cuts a paste, and the handle clears and refocuses.
+#[test]
+fn enter_sends_a_message_and_the_limit_and_handle_serve_a_chat_box() {
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor/chat", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        let hint: String = js(page, &format!("{EDITOR}.getAttribute('enterkeyhint')")).await;
+        assert_eq!(hint, "send");
+
+        keyboard::type_text(page, "hello").await.unwrap();
+        out_eq(page, "hello\n").await;
+        keyboard::press(page, ENTER).await.unwrap();
+        sent_eq(page, "hello").await;
+        out_eq(page, "").await;
+        wait::for_js_true(
+            page,
+            "document.getElementById('empty').textContent === 'true'",
+            "the handle to read the cleared editor as empty",
+        )
+        .await
+        .unwrap();
+        assert!(editor_focused(page).await, "the clear took focus away");
+
+        keyboard::type_text(page, "again").await.unwrap();
+        out_eq(page, "again\n").await;
+        keyboard::press_with(page, ENTER, keyboard::SHIFT)
+            .await
+            .unwrap();
+        keyboard::type_text(page, "b").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.getElementById('plain').textContent === 'again\\nb'",
+            "the handle's plain text across a line break",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, ENTER).await.unwrap();
+        sent_eq(page, "hello|again\nb").await;
+
+        // max_length is 12: typing stops there and a paste is cut to it.
+        keyboard::type_text(page, "123456789012345").await.unwrap();
+        out_eq(page, "123456789012\n").await;
+        paste(page, "ZZZ").await;
+        select(
+            page,
+            &format!("getSelection().selectAllChildren({EDITOR}.querySelector('[data-key]'))"),
+        )
+        .await;
+        paste(page, "abcdefghijklmnopqrstuvwxyz").await;
+        out_eq(page, "abcdefghijkl\n").await;
+        keyboard::press(page, ENTER).await.unwrap();
+        sent_eq(page, "hello|again\nb|abcdefghijkl").await;
+
+        // A code block keeps Enter; Mod+Enter leaves it, and then Enter sends.
+        keyboard::type_text(page, "```").await.unwrap();
+        keyboard::press(page, ENTER).await.unwrap();
+        keyboard::type_text(page, "x").await.unwrap();
+        keyboard::press(page, ENTER).await.unwrap();
+        keyboard::type_text(page, "y").await.unwrap();
+        out_where(page, "two lines of code", |now| {
+            now.ends_with("```\nx\ny\n```\n")
+        })
+        .await;
+        sent_eq(page, "hello|again\nb|abcdefghijkl").await;
+        keyboard::press_with(page, ENTER, CTRL).await.unwrap();
+        left_code(page).await;
+        keyboard::type_text(page, "z").await.unwrap();
+        keyboard::press(page, ENTER).await.unwrap();
+        sent_eq(page, "hello|again\nb|abcdefghijkl|x\ny\nz").await;
+
+        // An empty doc sends nothing: Enter opens a line as usual.
+        keyboard::press(page, ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{EDITOR}.querySelectorAll('[data-key]').length === 2"),
+            "Enter on an empty box to open a line",
+        )
+        .await
+        .unwrap();
+        sent_eq(page, "hello|again\nb|abcdefghijkl|x\ny\nz").await;
+        fixture.close().await.unwrap();
+    });
+}
+
+/// `SubmitOn::ModEnter`: Enter stays a new paragraph, Mod+Enter sends; the handle's `clear`
+/// and `focus` work from buttons outside the text.
+#[test]
+fn mod_enter_sends_a_comment_and_the_handle_clears_and_focuses() {
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor/comment", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        let hint: bool = js(page, &format!("{EDITOR}.hasAttribute('enterkeyhint')")).await;
+        assert!(!hint, "Enter is a new paragraph here, not send");
+
+        keyboard::type_text(page, "note").await.unwrap();
+        keyboard::press(page, ENTER).await.unwrap();
+        keyboard::type_text(page, "more").await.unwrap();
+        out_eq(page, "note\n\nmore\n").await;
+        sent_eq(page, "").await;
+        keyboard::press_with(page, ENTER, CTRL).await.unwrap();
+        sent_eq(page, "note\nmore").await;
+        out_eq(page, "").await;
+
+        keyboard::type_text(page, "x").await.unwrap();
+        out_eq(page, "x\n").await;
+        pointer::click(page, "#clear").await.unwrap();
+        out_eq(page, "").await;
+        wait::for_js_true(
+            page,
+            &format!("document.activeElement === {EDITOR}"),
+            "focus back in the text",
+        )
+        .await
+        .unwrap();
+
+        page.evaluate("document.activeElement.blur()")
+            .await
+            .unwrap();
+        pointer::click(page, "#focus").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.activeElement === {EDITOR}"),
+            "the handle's focus",
+        )
+        .await
+        .unwrap();
+        keyboard::type_text(page, "y").await.unwrap();
+        out_eq(page, "y\n").await;
+        fixture.close().await.unwrap();
+    });
+}
+
 /// In the WebView, `adb input text` keys open Gboard composing regions over each word;
 /// the model must still hold every letter once, in order, with shortcuts applied.
 #[cfg(feature = "android")]
@@ -805,6 +977,33 @@ fn android() {
         d.press(ENTER).await.unwrap();
         d.type_text("a **b** c").await.unwrap();
         out_is(&mut d, &page, "hello world\n\n# Title\n\na **b** c\n").await;
+
+        // Todo 2715: Enter sends, the cleared box takes the next words, `max_length` holds.
+        let mut d = e2e::driver::Android::open("/rich-text-editor/chat")
+            .await
+            .unwrap();
+        d.click("[role=textbox]").await.unwrap();
+        eventually(&mut d, "the chat box to take focus", async |d| {
+            d.is_focused("[role=textbox]").await
+        })
+        .await
+        .unwrap();
+        async fn text_is(d: &mut e2e::driver::Android, selector: &str, want: &str) {
+            let mut last = String::new();
+            let held = eventually(d, want, async |d| {
+                last = d.text(selector).await?;
+                Ok(last == want)
+            })
+            .await;
+            assert!(held.is_ok(), "{selector} reads {last:?}, want {want:?}");
+        }
+        d.type_text("hello world").await.unwrap();
+        text_is(&mut d, "#out", "hello world\n").await;
+        d.press(ENTER).await.unwrap();
+        text_is(&mut d, "#sent", "hello world").await;
+        text_is(&mut d, "#out", "").await;
+        d.type_text("abcdefghijklmno").await.unwrap();
+        text_is(&mut d, "#out", "abcdefghijkl\n").await;
         d.finish("rich text editor").await.unwrap();
     });
 }

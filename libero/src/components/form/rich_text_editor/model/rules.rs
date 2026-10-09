@@ -54,6 +54,11 @@ impl EditorState {
 
     /// Enter at the end of a paragraph that is a whole fence, "```rust": a code block in
     /// that language, as a typed space after the fence makes one.
+    /// Whether Enter here turns a typed fence into a code block rather than splitting.
+    pub(crate) fn enter_opens_fence(&self) -> bool {
+        self.clone().fence_rule()
+    }
+
     pub(super) fn fence_rule(&mut self) -> bool {
         let at = self.caret();
         let block = self.block(at.block);

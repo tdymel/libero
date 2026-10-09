@@ -3,6 +3,7 @@
 
 mod commands;
 mod edit;
+mod limit;
 mod links;
 mod markdown;
 mod serde;

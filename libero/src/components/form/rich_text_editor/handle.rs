@@ -73,6 +73,8 @@ pub(crate) type EditFnMut<'a> = &'a mut dyn FnMut(&mut EditorState) -> bool;
 pub(crate) struct Runner {
     pub run: Rc<dyn Fn(CommandName) -> bool>,
     pub edit: Rc<dyn Fn(EditFnMut<'_>) -> bool>,
+    pub clear: Rc<dyn Fn() -> bool>,
+    pub focus: Rc<dyn Fn() -> bool>,
 }
 
 /// Drives one [`RichTextEditor`](super::RichTextEditor) from outside: pass it as the
@@ -144,6 +146,53 @@ impl RichTextHandle {
         };
         let mut f = Some(f);
         (runner.edit)(&mut |state| f.take().is_some_and(|f| f(state)))
+    }
+
+    /// Empties the editor to one blank paragraph, e.g. after a send, and keeps focus in
+    /// the text. Undo starts over and `onchange` fires. `false` when no editor is mounted
+    /// (or it is read-only) or it was empty already.
+    ///
+    /// ```rust
+    /// # use dioxus::prelude::*;
+    /// # use libero::components::{RichTextEditor, rich_text::use_rich_text_editor};
+    /// # fn app() -> Element {
+    /// let editor = use_rich_text_editor();
+    /// rsx! {
+    ///     RichTextEditor {
+    ///         label: "Message",
+    ///         handle: editor,
+    ///         onsubmit: move |doc| {
+    ///             // Send `doc`, then:
+    ///             editor.clear();
+    ///         },
+    ///     }
+    /// }
+    /// # }
+    /// ```
+    pub fn clear(&self) -> bool {
+        self.runner().is_some_and(|runner| (runner.clear)())
+    }
+
+    /// Puts focus in the text, at the caret. `false` when no editor is mounted or it
+    /// is read-only or disabled.
+    pub fn focus(&self) -> bool {
+        self.runner().is_some_and(|runner| (runner.focus)())
+    }
+
+    /// Whether the document holds only blank text, no rules or inline nodes. Reactive;
+    /// `true` while no editor is mounted.
+    pub fn is_empty(&self) -> bool {
+        self.state
+            .read()
+            .as_deref()
+            .is_none_or(|state| state.doc.is_empty())
+    }
+
+    /// The document's plain text, one line per block, as `onsubmit` and `max_length`
+    /// see it. Reactive; empty while no editor is mounted.
+    pub fn plain_text(&self) -> String {
+        self.with_state(|state| state.doc.plain_text())
+            .unwrap_or_default()
     }
 
     /// Reads the editor's live state, reactively: re-runs on every edit and caret move.

@@ -19,7 +19,7 @@ pub use viewer::{RichTextView, RichTextViewProps};
 /// the [`RichTextView`] that shows one.
 pub mod rich_text {
     pub use super::handle::{ListKind, RichTextHandle, use_rich_text_editor};
-    pub use super::input::EditorInput;
+    pub use super::input::{EditorInput, SubmitOn};
     pub use super::model::{
         Action, Attrs, Block, BlockKind, Builtin, Chord, ChordError, CommandName, Commands,
         Content, ContentKind, CustomContent, Doc, EditFn, EditorState, Href, Inline, KeyPress,

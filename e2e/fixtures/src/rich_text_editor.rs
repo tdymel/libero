@@ -6,7 +6,7 @@ use libero::components::RichTextEditor;
 use libero::components::rich_text::{
     Attrs, Builtin, Commands, CustomContent, Doc, EditorInput, EditorState, Inline, MarkKind,
     Marks, NodeRegistry, NodeSpec, NodeViewProps, NodeViews, Position, RichTextTool, RichTextView,
-    Selection, use_rich_text_editor,
+    Selection, SubmitOn, use_rich_text_editor,
 };
 
 use libero::components::Dialog;
@@ -25,6 +25,8 @@ pub const ROUTES: Routes = &[
     ("/rich-text-editor/mentions", || rsx! { MentionsPage {} }),
     ("/rich-text-editor/mentions-modal", || rsx! { MentionsModalPage {} }),
     ("/rich-text-editor/narrow", || rsx! { NarrowPage {} }),
+    ("/rich-text-editor/chat", || rsx! { SendBox { submit_on: SubmitOn::Enter, max_length: 12 } }),
+    ("/rich-text-editor/comment", || rsx! { SendBox { submit_on: SubmitOn::ModEnter } }),
     ("/rich-text-editor/states", || rsx! { StatesPage {} }),
     ("/rich-text-editor/view", || rsx! { ViewPage {} }),
 ];
@@ -167,6 +169,35 @@ fn HandlePage() -> Element {
             onchange: move |next| doc.set(next),
         }
         pre { id: "out", {doc.read().to_markdown()} }
+    }
+}
+
+/// A send box: `onsubmit` lists what was sent in `#sent` and clears through the handle.
+#[component]
+fn SendBox(submit_on: SubmitOn, max_length: Option<usize>) -> Element {
+    let mut doc = use_signal(Doc::new);
+    let mut sent = use_signal(Vec::<String>::new);
+    let editor = use_rich_text_editor();
+
+    rsx! {
+        RichTextEditor {
+            label: "Message",
+            toolbar: false,
+            handle: editor,
+            submit_on,
+            max_length,
+            onchange: move |next| doc.set(next),
+            onsubmit: move |sending: Doc| {
+                sent.write().push(sending.plain_text());
+                editor.clear();
+            },
+        }
+        pre { id: "out", {doc.read().to_markdown()} }
+        pre { id: "sent", {sent.read().join("|")} }
+        output { id: "empty", "{editor.is_empty()}" }
+        output { id: "plain", "{editor.plain_text()}" }
+        button { id: "focus", onclick: move |_| { editor.focus(); }, "Focus" }
+        button { id: "clear", onclick: move |_| { editor.clear(); }, "Clear" }
     }
 }
 

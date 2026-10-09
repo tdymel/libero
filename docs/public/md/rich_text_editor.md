@@ -241,6 +241,41 @@ On Android a soft keyboard reports most keys as `Unidentified` and composes
 its text, so `intercept` sees Enter but rarely the typed text; `with_state`
 still sees every word once it is composed, which is what the example reads.
 
+## Chat and comment boxes
+
+`onsubmit` sends the document when `submit_on` is pressed: Enter, with
+Shift+Enter breaking the line, or Mod+Enter. `max_length` caps the plain text
+and the handle's `clear` empties the box after the send. Enter keeps its usual
+job in a code block, in an empty box and while an `overlay` takes it. On a
+phone the Enter key reads "send"; text the keyboard is still composing is in
+the document when it is sent, and `max_length` cuts it only once the word is
+committed.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::RichTextEditor;
+use libero::components::rich_text::{Doc, use_rich_text_editor};
+
+#[component]
+fn MessageBox() -> Element {
+    let editor = use_rich_text_editor();
+    let mut messages = use_signal(Vec::<String>::new);
+
+    rsx! {
+        RichTextEditor {
+            label: "Message",
+            toolbar: false,
+            handle: editor,
+            max_length: 280,
+            onsubmit: move |doc: Doc| {
+                messages.write().push(doc.to_markdown());
+                editor.clear();
+            },
+        }
+    }
+}
+```
+
 ## Code blocks
 
 A code block shows its source with fences while the caret is in it; the
@@ -300,9 +335,9 @@ shows Ctrl.
 | `Ctrl+Shift+7` | Numbered list. |
 | `Ctrl+Shift+B` | Quote. |
 | `Ctrl+Shift+Enter` | Horizontal rule. |
-| `Ctrl+Enter` | In a code block: leaves it for a new paragraph after it. Elsewhere the key passes on, so your own `Ctrl+Enter` (send) still runs. |
+| `Ctrl+Enter` | In a code block: leaves it for a new paragraph after it. Elsewhere the key passes on, so your own `Ctrl+Enter` still runs, or sends with `onsubmit` and `SubmitOn::ModEnter`. |
 | `ArrowDown` | On the last line of a code block that ends the document: leaves it for a new paragraph. Clicking below the last block does the same. |
-| `Enter` | Twice at the end of a code block: the second drops the empty line and leaves the block, also on a touch keyboard. |
+| `Enter` | Twice at the end of a code block: the second drops the empty line and leaves the block, also on a touch keyboard. With `onsubmit` (the default `SubmitOn::Enter`) it sends the document instead, except in a code block and in an empty document. |
 | `Tab` or `Shift+Tab` | In a list item: nests it under the item before, or moves it out. Elsewhere Tab moves focus on as usual. |
 | `Escape`, then `Tab` | Escape, then Tab or Shift+Tab: leaves the editor, also from a list item. |
 | `Shift+Enter` | Line break inside the block. |
@@ -334,6 +369,9 @@ shows Ctrl.
   on the fence is not a tab stop; `Ctrl+Shift+L` reaches it.
 - The link dialog focuses its labelled URL field and shows a refused scheme as
   that field's error. Closing it puts the caret back in the text.
+- With `onsubmit` and `SubmitOn::Enter` the text carries
+  `enterkeyhint="send"`, so a phone keyboard labels its Enter key. A send
+  leaves focus in the text, and the handle's `clear` keeps it there.
 - Every edit goes through the document model, so undo, the `onchange` value
   and the screen stay in step. Input methods (IME) compose natively.
 - While `overlay` is set, the text carries `aria-controls`,
@@ -361,6 +399,8 @@ shows Ctrl.
   `overlay_results`, and steer it with the keyboard through `intercept`.
   Escape should close it.
 - Name each `RichTextTool` with its `label`: the button shows only its icon.
+- Say in the `helper` that Enter sends and how many characters `max_length`
+  leaves: a refused key gives no other sign.
 
 ### Example
 
@@ -393,10 +433,13 @@ the Bold button reads as pressed.
 | `validate` | `Validators<Doc>` | - | Rules over the document, shown once the field loses focus or its form is submitted. |
 | `name` | `FieldName<Doc>` | - | A path such as `Post::FIELDS.body()` binds the document to the surrounding `Form`'s value when the editor has no `onchange`. |
 | `placeholder` | `String` | - | Shown while the document is one empty paragraph. |
+| `onsubmit` | `EventHandler<Doc>` | - | Sends the document when `submit_on` is pressed, as in a chat or comment box. The editor keeps its text: clear it with the handle's `clear` or a new `value`. Nothing is sent from an empty document, a code block or while an `overlay` takes the key; there Enter does its usual job. With `SubmitOn::Enter` the Enter key shows as "send" on phones, and Enter pressed in a word the keyboard is still composing sends the document with that word in it. |
+| `submit_on` | `SubmitOn` | `SubmitOn::Enter` | The key that fires `onsubmit`: `Enter` (Shift+Enter breaks the line) or `ModEnter` (Ctrl+Enter, Cmd+Enter on Apple platforms; Enter stays a new paragraph). Mod+Enter in a code block still leaves it. |
+| `max_length` | `usize` | - | The most characters of plain text the document holds, counted as `Doc::plain_text` does (a line break between blocks counts one). Typing and paste stop at it. A phone keyboard's composed text cannot be refused, so there the limit is soft: the surplus is cut when the word is committed. |
 | `toolbar` | `bool` | `true` | Shows the formatting toolbar above the text: marks, link, text type menu, lists, quote, code block, undo and redo. A narrow toolbar moves what does not fit into a More menu. |
 | `keymap` | `Keymap` | `Keymap::default()` | Which chords run which commands. `Mod` is Cmd on Apple platforms and Ctrl elsewhere. |
 | `commands` | `Commands` | `Commands::default()` | What the keymap and the toolbar run. Register your own command under a name and bind a chord to it. |
-| `handle` | `RichTextHandle` | - | From `use_rich_text_editor()`: runs commands from your own toolbar (`run`) and reads the state reactively (`is_active`, `block_kind`, `list_kind`, `in_quote`, `can_undo`, `can_redo`). One handle drives one editor. |
+| `handle` | `RichTextHandle` | - | From `use_rich_text_editor()`: runs commands from your own toolbar (`run`) and reads the state reactively (`is_active`, `block_kind`, `list_kind`, `in_quote`, `can_undo`, `can_redo`, `is_empty`, `plain_text`). `clear()` empties the editor and keeps focus in it (undo starts over), `focus()` puts the caret back. One handle drives one editor. |
 | `nodes` | `NodeViews` | `NodeViews::new()` | Your component per custom node name, e.g. a mention. It gets `NodeViewProps { name, attrs, children }` and renders `children` exactly once. Built-ins (`paragraph`, `heading`, `quote`, `list`, `list_item`, `rule`) take a view under their name too; `code_block` stays fixed. |
 | `registry` | `NodeRegistry` | - | Your node types. Copy and cut write your nodes through their `to_markdown`, and a debug build warns about a `nodes` name that is not registered, such as a typo. |
 | `intercept` | `Callback<EditorInput, bool>` | - | Sees each key press (`EditorInput::Key`, before the keymap) and typed text (`EditorInput::Text`) first; return `true` to take it over, and the editor does nothing with it. Android soft keyboards report most keys as `Unidentified` and compose their text, which never arrives as `Text`; Enter still arrives as a key. Read typed text through the handle's `with_state` instead. |

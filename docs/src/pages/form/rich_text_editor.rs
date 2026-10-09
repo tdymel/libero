@@ -8,7 +8,7 @@ use libero::components::{Code, FieldPart, Flex, Text};
 use libero::use_theme;
 
 mod demo;
-use demo::{Extensions, NotesEditor};
+use demo::{Extensions, MessageBox, NotesEditor};
 
 struct NotesCopy;
 
@@ -162,6 +162,13 @@ pub fn RichTextEditorPage() -> Element {
                         .doc("A path such as `Post::FIELDS.body()` binds the document to the surrounding `Form`'s value when the editor has no `onchange`."),
                     prop("placeholder", "String")
                         .doc("Shown while the document is one empty paragraph."),
+                    prop("onsubmit", "EventHandler<Doc>")
+                        .doc("Sends the document when `submit_on` is pressed, as in a chat or comment box. The editor keeps its text: clear it with the handle's `clear` or a new `value`. Nothing is sent from an empty document, a code block or while an `overlay` takes the key; there Enter does its usual job. With `SubmitOn::Enter` the Enter key shows as \"send\" on phones, and Enter pressed in a word the keyboard is still composing sends the document with that word in it."),
+                    prop("submit_on", "SubmitOn")
+                        .default("SubmitOn::Enter")
+                        .doc("The key that fires `onsubmit`: `Enter` (Shift+Enter breaks the line) or `ModEnter` (Ctrl+Enter, Cmd+Enter on Apple platforms; Enter stays a new paragraph). Mod+Enter in a code block still leaves it."),
+                    prop("max_length", "usize")
+                        .doc("The most characters of plain text the document holds, counted as `Doc::plain_text` does (a line break between blocks counts one). Typing and paste stop at it. A phone keyboard's composed text cannot be refused, so there the limit is soft: the surplus is cut when the word is committed."),
                     prop("toolbar", "bool")
                         .default("true")
                         .doc("Shows the formatting toolbar above the text: marks, link, text type menu, lists, quote, code block, undo and redo. A narrow toolbar moves what does not fit into a More menu."),
@@ -172,7 +179,7 @@ pub fn RichTextEditorPage() -> Element {
                         .default("Commands::default()")
                         .doc("What the keymap and the toolbar run. Register your own command under a name and bind a chord to it."),
                     prop("handle", "RichTextHandle")
-                        .doc("From `use_rich_text_editor()`: runs commands from your own toolbar (`run`) and reads the state reactively (`is_active`, `block_kind`, `list_kind`, `in_quote`, `can_undo`, `can_redo`). One handle drives one editor."),
+                        .doc("From `use_rich_text_editor()`: runs commands from your own toolbar (`run`) and reads the state reactively (`is_active`, `block_kind`, `list_kind`, `in_quote`, `can_undo`, `can_redo`, `is_empty`, `plain_text`). `clear()` empties the editor and keeps focus in it (undo starts over), `focus()` puts the caret back. One handle drives one editor."),
                     prop("nodes", "NodeViews")
                         .default("NodeViews::new()")
                         .doc("Your component per custom node name, e.g. a mention. It gets `NodeViewProps { name, attrs, children }` and renders `children` exactly once. Built-ins (`paragraph`, `heading`, `quote`, `list`, `list_item`, `rule`) take a view under their name too; `code_block` stays fixed."),
@@ -242,9 +249,9 @@ pub fn RichTextEditorPage() -> Element {
                 .key(["Ctrl+Shift+7"], "Numbered list.")
                 .key(["Ctrl+Shift+B"], "Quote.")
                 .key(["Ctrl+Shift+Enter"], "Horizontal rule.")
-                .key(["Ctrl+Enter"], "In a code block: leaves it for a new paragraph after it. Elsewhere the key passes on, so your own `Ctrl+Enter` (send) still runs.")
+                .key(["Ctrl+Enter"], "In a code block: leaves it for a new paragraph after it. Elsewhere the key passes on, so your own `Ctrl+Enter` still runs, or sends with `onsubmit` and `SubmitOn::ModEnter`.")
                 .key(["ArrowDown"], "On the last line of a code block that ends the document: leaves it for a new paragraph. Clicking below the last block does the same.")
-                        .key(["Enter"], "Twice at the end of a code block: the second drops the empty line and leaves the block, also on a touch keyboard.")
+                .key(["Enter"], "Twice at the end of a code block: the second drops the empty line and leaves the block, also on a touch keyboard. With `onsubmit` (the default `SubmitOn::Enter`) it sends the document instead, except in a code block and in an empty document.")
                 .key(["Tab", "Shift+Tab"], "In a list item: nests it under the item before, or moves it out. Elsewhere Tab moves focus on as usual.")
                 .key(["Escape", "Tab"], "Escape, then Tab or Shift+Tab: leaves the editor, also from a list item.")
                 .key(["Shift+Enter"], "Line break inside the block.")
@@ -261,6 +268,7 @@ pub fn RichTextEditorPage() -> Element {
                     "A shortcut that toggles a mark, list, quote or block type is said in a polite live region, \"Bold on\", \"Heading 2\".",
                     "The text type menu and a code block's language menu are menu buttons whose name includes the current choice, \"Code language: Rust\". The language button on the fence is not a tab stop; `Ctrl+Shift+L` reaches it.",
                     "The link dialog focuses its labelled URL field and shows a refused scheme as that field's error. Closing it puts the caret back in the text.",
+                    "With `onsubmit` and `SubmitOn::Enter` the text carries `enterkeyhint=\"send\"`, so a phone keyboard labels its Enter key. A send leaves focus in the text, and the handle's `clear` keeps it there.",
                     "Every edit goes through the document model, so undo, the `onchange` value and the screen stay in step. Input methods (IME) compose natively.",
                     "While `overlay` is set, the text carries `aria-controls`, `aria-autocomplete=\"list\"` and `aria-activedescendant` from `active_descendant`, so a screen reader reads the highlighted option. `overlay_results` says the option count, \"2 results\", in the live region when it changes.",
                 ])
@@ -271,6 +279,7 @@ pub fn RichTextEditorPage() -> Element {
                     "Make a `NodeViews` atom show its node's name as text (a mention shows `@name`). A screen reader reads the non-editable island as it is.",
                     "Give an `overlay` list `role=\"listbox\"` with an id per `role=\"option\"`, pass the highlighted one as `active_descendant` and the count as `overlay_results`, and steer it with the keyboard through `intercept`. Escape should close it.",
                     "Name each `RichTextTool` with its `label`: the button shows only its icon.",
+                    "Say in the `helper` that Enter sends and how many characters `max_length` leaves: a refused key gives no other sign.",
                 ])
                 .example("Release notes with `label: \"Notes\"`: a screen reader reads a multiline \"Notes\" text box. `Ctrl+B` says \"Bold on\", and `Alt+F10` moves to the toolbar, where the Bold button reads as pressed.")
                 .limits([
@@ -344,6 +353,7 @@ pub fn RichTextEditorPage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     Flex { direction: "column", gap: "sm",
                         NotesEditor { values: values.clone(), doc }
+                        MessageBox {}
                         for caption in captions(&values) {
                             Text { size: "sm", "{caption}" }
                         }

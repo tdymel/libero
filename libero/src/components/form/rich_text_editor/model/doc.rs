@@ -582,6 +582,29 @@ impl Doc {
         });
         lines.join("\n")
     }
+
+    /// The chars of [`plain_text`](Self::plain_text), counted without building it.
+    pub fn plain_len(&self) -> usize {
+        let (mut chars, mut lines) = (0usize, 0usize);
+        visit(&self.blocks, &mut |block| {
+            if block.kind.content() == ContentKind::Inline {
+                chars += block.len();
+                lines += 1;
+            }
+        });
+        chars + lines.saturating_sub(1)
+    }
+
+    /// Whether it holds nothing but blank text: no words, rules or inline nodes.
+    pub fn is_empty(&self) -> bool {
+        let mut empty = true;
+        visit(&self.blocks, &mut |block| match block.kind.content() {
+            ContentKind::Atom => empty = false,
+            ContentKind::Inline => empty &= block.text().trim().is_empty(),
+            ContentKind::Blocks => {}
+        });
+        empty
+    }
 }
 
 /// Visits every block depth first, parents before children.

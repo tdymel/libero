@@ -1,7 +1,31 @@
 //! What a `beforeinput` asks for, by its `inputType`. Everything the model does not
 //! handle is cancelled; only composition reaches the DOM (it cannot be cancelled).
 
-use super::model::{Builtin, EditorState, KeyPress};
+use super::model::{Builtin, Chord, EditorState, KeyPress};
+
+/// The key that sends a [`RichTextEditor`](super::RichTextEditor)'s `onsubmit`.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum SubmitOn {
+    /// Enter sends and Shift+Enter breaks the line, as in a chat box.
+    #[default]
+    Enter,
+    /// Mod+Enter (Cmd on Apple, Ctrl elsewhere) sends and Enter stays a new paragraph,
+    /// as in a comment box.
+    ModEnter,
+}
+
+impl SubmitOn {
+    pub(crate) fn pressed(self, press: &KeyPress, apple: bool) -> bool {
+        let chord = match self {
+            Self::Enter => "Enter",
+            Self::ModEnter => "Mod+Enter",
+        };
+        chord
+            .parse::<Chord>()
+            .is_ok_and(|chord| chord.matches(press, apple))
+    }
+}
 
 /// What a [`RichTextEditor`](super::RichTextEditor)'s `intercept` sees before the editor acts.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -84,6 +108,15 @@ pub(crate) fn intent(input_type: &str, data: Option<String>) -> Intent {
     }
 }
 
+/// Enter pressed inside a composed word reaches the leaf as a trailing "\n": with
+/// `enter_sends` it is split off from the text `dom` and `true` says Enter was pressed.
+pub(crate) fn split_enter<'a>(old: &str, dom: &'a str, enter_sends: bool) -> (&'a str, bool) {
+    match dom.strip_suffix('\n') {
+        Some(rest) if enter_sends && !old.ends_with('\n') => (rest, true),
+        _ => (dom, false),
+    }
+}
+
 /// The char range of `old` that `new` replaced, and its replacement. `None` when equal.
 pub(crate) fn text_diff(old: &str, new: &str) -> Option<(usize, usize, String)> {
     let (old, new): (Vec<char>, Vec<char>) = (old.chars().collect(), new.chars().collect());
@@ -151,6 +184,40 @@ mod tests {
             Intent::Delete(Delete::LineBackward)
         );
         assert_eq!(intent("historyRedo", None), Intent::Run(Builtin::Redo));
+    }
+
+    #[test]
+    fn a_composed_words_trailing_newline_is_enter_only_when_enter_sends() {
+        assert_eq!(split_enter("hel", "hello\n", true), ("hello", true));
+        assert_eq!(split_enter("hel", "hello\n", false), ("hello\n", false));
+        assert_eq!(split_enter("hel", "hello", true), ("hello", false));
+        assert_eq!(split_enter("hello\n", "hello\n", true), ("hello\n", false));
+        assert_eq!(split_enter("", "\n", true), ("", true));
+    }
+
+    #[test]
+    fn enter_and_mod_enter_send_by_their_mode() {
+        let enter = KeyPress::new("Enter");
+        let shifted = KeyPress {
+            shift: true,
+            ..enter.clone()
+        };
+        let ctrl = KeyPress {
+            ctrl: true,
+            ..enter.clone()
+        };
+        let cmd = KeyPress {
+            meta: true,
+            ..enter.clone()
+        };
+        assert!(SubmitOn::Enter.pressed(&enter, false));
+        assert!(!SubmitOn::Enter.pressed(&shifted, false));
+        assert!(!SubmitOn::Enter.pressed(&ctrl, false));
+        assert!(!SubmitOn::ModEnter.pressed(&enter, false));
+        assert!(SubmitOn::ModEnter.pressed(&ctrl, false));
+        assert!(!SubmitOn::ModEnter.pressed(&cmd, false));
+        assert!(SubmitOn::ModEnter.pressed(&cmd, true));
+        assert!(!SubmitOn::ModEnter.pressed(&KeyPress::new("a"), false));
     }
 
     #[test]
