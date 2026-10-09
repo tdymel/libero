@@ -34,7 +34,8 @@ impl TooltipDefaults {
     pub const DEFAULT: Self = Self {
         side: Side::Top,
         gap: Size::Xs,
-        size: Size::Sm,
+        // 14px, the label floor (todo 2707).
+        size: Size::Lg,
         open_delay: 0,
         close_delay: 0,
         duration: 150,

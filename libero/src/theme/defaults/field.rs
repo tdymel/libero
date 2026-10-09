@@ -79,34 +79,35 @@ impl FieldDefaults {
                 padding_y: "5px",
                 padding_x: "10px",
             },
+            // The type floor (todo 2707): 16px for what the user types, 14px for its label.
             FieldSizeLevel {
-                label_font_size: "0.8125rem",
+                label_font_size: "0.875rem",
                 caption_font_size: "0.75rem",
-                font_size: "0.875rem",
+                font_size: "1rem",
                 height: "36px",
                 padding_y: "6px",
                 padding_x: "12px",
             },
             FieldSizeLevel {
-                label_font_size: "0.875rem",
+                label_font_size: "0.9375rem",
                 caption_font_size: "0.8125rem",
-                font_size: "0.9375rem",
+                font_size: "1.0625rem",
                 height: "40px",
                 padding_y: "7px",
                 padding_x: "14px",
             },
             FieldSizeLevel {
-                label_font_size: "0.9375rem",
+                label_font_size: "1rem",
                 caption_font_size: "0.875rem",
-                font_size: "1rem",
+                font_size: "1.125rem",
                 height: "44px",
                 padding_y: "8px",
                 padding_x: "16px",
             },
             FieldSizeLevel {
-                label_font_size: "1rem",
+                label_font_size: "1.0625rem",
                 caption_font_size: "0.9375rem",
-                font_size: "1.0625rem",
+                font_size: "1.25rem",
                 height: "48px",
                 padding_y: "9px",
                 padding_x: "18px",
@@ -169,5 +170,30 @@ impl ToCssDeclarations for FieldDefaults {
             declarations.push(FIELD_CARD_PADDING.declare(size, self.card_paddings.get(size)));
         }
         declarations
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn rem(length: &str) -> f32 {
+        length.trim_end_matches("rem").parse().unwrap()
+    }
+
+    /// Todo 2707 raised md to the type floor; the steps above it moved along.
+    #[test]
+    fn the_text_and_label_rise_strictly_from_a_16px_and_14px_md() {
+        let level = |size| FieldDefaults::DEFAULT.sizes.get(size);
+        assert_eq!(rem(level(Size::Md).font_size), 1.0);
+        assert_eq!(rem(level(Size::Md).label_font_size), 0.875);
+        for pair in Size::ALL.windows(2) {
+            let (low, high) = (level(pair[0]), level(pair[1]));
+            assert!(rem(low.font_size) < rem(high.font_size), "{pair:?}");
+            assert!(
+                rem(low.label_font_size) < rem(high.label_font_size),
+                "{pair:?}"
+            );
+        }
     }
 }

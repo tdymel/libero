@@ -23,6 +23,8 @@ pub struct ChipDefaults {
     pub radius: Size,
     /// The colour a chip takes when a call site names none.
     pub color: Color,
+    /// A check before a selected chip's label, so selection is not a colour change alone.
+    pub selected_check: bool,
     pub sizes: Sizes<ChipSizeLevel>,
 }
 
@@ -32,6 +34,7 @@ impl ChipDefaults {
         size: Size::Md,
         radius: Size::Xl,
         color: Color::Primary,
+        selected_check: true,
         sizes: Sizes::new(
             // 24px like `sm`: the WCAG 2.5.8 minimum target (1494).
             ChipSizeLevel {
@@ -44,23 +47,24 @@ impl ChipDefaults {
                 height: "1.5rem",
                 padding_x: "0.625rem",
             },
+            // The 14px label floor (todo 2707).
             ChipSizeLevel {
-                font_size: "0.8125rem",
+                font_size: "0.875rem",
                 height: "1.75rem",
                 padding_x: "0.75rem",
             },
             ChipSizeLevel {
-                font_size: "0.875rem",
+                font_size: "0.9375rem",
                 height: "2rem",
                 padding_x: "0.875rem",
             },
             ChipSizeLevel {
-                font_size: "0.9375rem",
+                font_size: "1rem",
                 height: "2.25rem",
                 padding_x: "1rem",
             },
             ChipSizeLevel {
-                font_size: "1rem",
+                font_size: "1.0625rem",
                 height: "2.5rem",
                 padding_x: "1.125rem",
             },
@@ -105,6 +109,19 @@ mod tests {
             for length in [level.font_size, level.height, level.padding_x] {
                 assert!(length.ends_with("rem"), "{size:?}: {length}");
             }
+        }
+    }
+
+    /// Todo 2707 raised md to the 14px floor; the steps above it moved along.
+    #[test]
+    fn the_font_sizes_rise_strictly_from_a_14px_md() {
+        let rem = |size| {
+            let font = ChipDefaults::DEFAULT.sizes.get(size).font_size;
+            font.trim_end_matches("rem").parse::<f32>().unwrap()
+        };
+        assert_eq!(rem(Size::Md), 0.875);
+        for pair in Size::ALL.windows(2) {
+            assert!(rem(pair[0]) < rem(pair[1]), "{pair:?}");
         }
     }
 }

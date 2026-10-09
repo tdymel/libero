@@ -220,6 +220,7 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
                 .gap
                 .as_ref()
                 .map(|gap| ScaleOrCss::new(Some(gap), Size::Md)),
+            check: theme.segmented_control.selected_check,
             focusable: props.focusable.unwrap_or(true),
             readonly: props.readonly.unwrap_or(false) || soft_disabled,
             enter: !in_form,

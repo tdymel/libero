@@ -6,8 +6,8 @@ use crate::{
         buttons::ActionIcon,
         common::{
             Glyph, HtmlTag, Input, Part, ScaleOrCss, States, Variables, base_color, base_props,
-            contrast_color, fill_color, focus_ring_sx, literal_contrast, on_state_sx, parts_enum,
-            variables,
+            coarse_hit_area_sx, contrast_color, fill_color, focus_ring_sx, literal_contrast,
+            on_state_sx, parts_enum, variables,
         },
         layout::{BoxStyle, use_box},
     },
@@ -70,6 +70,8 @@ static PAGINATION_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .font_family("inherit")
         .letter_spacing("inherit")
         .line_height("1")
+        .position("relative")
+        .and(coarse_hit_area_sx("::before"))
         // On-state ring, so the current page is not a fill alone (todo 631).
         .when(
             "current",

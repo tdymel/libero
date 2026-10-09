@@ -49,7 +49,8 @@ pub enum IconSlot {
     ChevronLast,
     /// A sortable table column; flipped for ascending.
     ArrowDown,
-    /// A done step, a checked menu item, a picked swatch, a copied code block.
+    /// A done step, a checked menu item, a picked swatch, a copied code block, a selected
+    /// chip or segment.
     Check,
     /// A checked checkbox, drawn at stroke width 3.
     CheckboxCheck,

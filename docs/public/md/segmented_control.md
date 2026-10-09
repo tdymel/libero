@@ -242,6 +242,7 @@ leaves it.
 | Field | Type | Description |
 |---|---|---|
 | `variant` | `Variant` | Default `variant` when the prop is omitted (`filled`). Separate from `ButtonDefaults::variant`. |
+| `selected_check` | `bool` | Draws a check before the selected segment's label, so the selection is not a colour change alone (`true`). |
 
 For `size` and `radius` the control reads [Button](button.md)'s
 `ButtonDefaults`. `gap` resolves against the theme's spacing scale.

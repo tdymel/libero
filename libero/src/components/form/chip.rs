@@ -2,22 +2,24 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     CssLayer,
     components::{
         accessibility::VISUALLY_HIDDEN_SX,
         common::{
-            HtmlTag, Input, Part, ScaleOrCss, States, Variant, VariantColors, VariantVars,
-            base_color_or, base_props, contrast_color, contrast_shade_color, disabled_look_sx,
-            fill_color, focus_ring_sx, interactive_variant_sx, on_ring_sx, on_state_sx, parts_enum,
-            parts_under_sx, ring_overlay, ring_overlay_sx, shade_color, text_color, variables,
-            variant_colors,
+            COARSE_POINTER, Glyph, HtmlTag, Input, Part, ScaleOrCss, States, Variant,
+            VariantColors, VariantVars, base_color_or, base_props, coarse_hit_area_sx,
+            contrast_color, contrast_shade_color, disabled_look_sx, fill_color, focus_ring_sx,
+            interactive_variant_sx, on_ring_sx, on_state_sx, parts_enum, parts_under_sx,
+            ring_overlay, ring_overlay_sx, shade_color, text_color, variables, variant_colors,
         },
         form::{Activation, use_bound},
         layout::{InternalAnchor, use_box},
         navigation::{NewTabHint, wants_new_tab_hint},
     },
+    context::IconSlot,
     hooks::{ElementHandle, use_cache, use_css, use_element, use_id, use_theme},
     platform::reads_click_targets,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -63,7 +65,12 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
         .letter_spacing("inherit")
         .text_decoration("none")
         // The `icon` slot never shrinks, on the root or in a checkbox chip's label.
-        .selector(ChipPart::Icon.selector(), chip_icon_sx());
+        .selector(ChipPart::Icon.selector(), chip_icon_sx())
+        .selector(CHECK, chip_icon_sx())
+        .selector(
+            format!("{CHECK} > svg"),
+            sx().width("1.125em").height("1.125em"),
+        );
 
     Variant::ALL
         .iter()
@@ -91,7 +98,16 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
             ),
         )
         .when("selectable", sx().overflow("visible"))
-        .when("clickable", sx().cursor("pointer"))
+        // A finger-sized hit area; `clip` cuts a long label across only, so it reaches out.
+        .when(
+            "clickable",
+            sx().cursor("pointer")
+                .and(coarse_hit_area_sx("::before"))
+                .media(
+                    COARSE_POINTER,
+                    sx().overflow_x("clip").overflow_y("visible"),
+                ),
+        )
         .when("disabled", disabled_sx())
         // A button chip ignores a disabled `Fieldset`, but the browser still
         // disables its `<button>` (todo 499).
@@ -130,7 +146,11 @@ static CHIP_LABEL_SX: StaticSx = StaticSx::new(|| {
             "&::after",
             sx().content("\"\"").position("absolute").inset("0"),
         )
+        .and(coarse_hit_area_sx("&::after"))
 });
+
+/// The check a selected chip draws before its label (`ChipDefaults::selected_check`).
+const CHECK: &str = "& > label > [data-slot='chip-check']";
 
 /// After the label, never shrinking, so a long label cannot clip a remove x.
 /// Lifted over a selectable chip's label `::after`, which would take its clicks.
@@ -331,8 +351,15 @@ pub fn Chip(props: ChipProps) -> Element {
     let label = use_box().framework_sx(&CHIP_LABEL_SX).prepare();
     let trailing_class = use_css(Some(&CHIP_TRAILING_SX), CssLayer::Framework);
 
+    // Hidden: the checkbox's own checked state is what is read out.
+    let check = selectable && checked && theme.chip.selected_check;
     // Children unwrapped, so an icon among them keeps the gap and centring.
     let labelled = rsx! {
+        if check {
+            span { "data-slot": "chip-check", "aria-hidden": "true",
+                Glyph { slot: IconSlot::Check, icon: lucide::check::outlined }
+            }
+        }
         if let Some(icon) = props.icon {
             span { "data-slot": ChipPart::Icon.slot(), {icon} }
         }
@@ -501,6 +528,18 @@ mod tests {
         let css = Stylesheet::from(&CHIP_LABEL_SX);
         assert!(!css.as_str().contains("text-overflow"), "{}", css.as_str());
         assert!(css.as_str().contains("overflow:hidden"), "{}", css.as_str());
+    }
+
+    /// The coarse-pointer inset follows the resting one, so it wins on a finger (todo 2707).
+    #[test]
+    fn a_finger_grows_the_labels_hit_area() {
+        let css = Stylesheet::from(&CHIP_LABEL_SX);
+        let css = css.as_str();
+        let resting = css.find("inset:0").unwrap_or_else(|| panic!("{css}"));
+        let coarse = css
+            .find("(pointer: coarse)")
+            .unwrap_or_else(|| panic!("{css}"));
+        assert!(resting < coarse, "{css}");
     }
 
     /// A plain chip's root clips (todo 358); a selectable one lets the ring out.

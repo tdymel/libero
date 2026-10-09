@@ -75,6 +75,67 @@ fn small_action_icons_take_presses_in_a_24px_box() {
     });
 }
 
+/// Todo 2707: on a coarse pointer a small control takes presses 21px out from its centre,
+/// its drawn size unchanged. A pagination control's sides are its neighbours' to share.
+#[test]
+fn a_finger_presses_small_controls_in_a_44px_box() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    block_on(async {
+        let fixture = Fixture::open("/hit-area", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        page.execute(SetTouchEmulationEnabledParams::new(true))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(pointer: coarse)').matches",
+            "a coarse pointer",
+        )
+        .await
+        .unwrap();
+
+        let cases = [
+            ("#chip-filter", true),
+            ("#chip-action", true),
+            ("[data-case=checkbox] [data-slot=box]", true),
+            ("[data-case=radio] [data-slot=circle]", true),
+            ("[data-case=switch] [data-slot=track]", true),
+            ("[data-case=pagination] [aria-current=page]", false),
+        ];
+        for (selector, sides) in cases {
+            let hit: Hit = page
+                .evaluate(format!(
+                    "(() => {{
+                        const el = document.querySelector({selector:?});
+                        el.scrollIntoView({{ block: 'center' }});
+                        const r = el.getBoundingClientRect();
+                        const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
+                        const misses = [];
+                        for (const dx of {sides} ? [-21, 0, 21] : [0]) for (const dy of [-21, 0, 21]) {{
+                            const at = document.elementFromPoint(cx + dx, cy + dy);
+                            if (!at || !el.contains(at)) misses.push([dx, dy, at ? at.outerHTML.slice(0, 60) : null]);
+                        }}
+                        return {{ width: r.width, height: r.height, misses }};
+                    }})()"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            println!("{selector}: {hit:?}");
+            assert!(hit.height < 40.0, "{selector} grew its drawn size: {hit:?}");
+            assert!(
+                hit.misses.is_empty(),
+                "{selector}: points of its 44px box land elsewhere: {:?}",
+                hit.misses
+            );
+        }
+
+        fixture.console.assert_clean("coarse hit areas").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The ripple grows by a transform inside a clipping child span: `overflow: hidden`
 /// on the button would clip the hit area as well.
 #[test]

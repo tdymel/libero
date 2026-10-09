@@ -24,7 +24,7 @@ fn Demo() -> Element {
             label: rsx! { "Saves the current draft" },
             label_id: "draft-tip",
             side: "top",
-            size: "sm",
+            size: "lg",
             gap: "xs",
             Button { variant: "outlined", aria_describedby: "draft-tip", "Save" }
         }
@@ -58,7 +58,7 @@ fn Demo() -> Element {
 | `label` | `Element` | required | The bubble's content. |
 | `side` | `Side` | `top` | The preferred side of the trigger. The bubble flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir="ltr"`, the right under `rtl`. |
 | `gap` | `Size` | `xs` | Distance to the trigger. The pointer can cross it without closing the bubble. |
-| `size` | `Size` | `sm` | Font size of the bubble. |
+| `size` | `Size` | `lg` | Font size of the bubble. |
 | `z_index` | `ThemeAwareValue` | the popover layer | Overrides the stacking level, for a bubble hidden by another overlay. |
 | `open_delay` | `u32` | `0` | Milliseconds the pointer must rest before the bubble appears. |
 | `close_delay` | `u32` | `0` | Milliseconds the bubble stays after the pointer leaves. While it counts down, the bubble carries `data-closing`. |

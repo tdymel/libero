@@ -24,7 +24,8 @@ pub struct KbdDefaults {
 
 impl KbdDefaults {
     pub const DEFAULT: Self = Self {
-        size: Size::Sm,
+        // 14px, the label floor (todo 2707).
+        size: Size::Md,
         font_sizes: Sizes::new(10, 12, 14, 16, 20, 24),
         font_family: MONO_FONT_FAMILY,
         // The code block's `muted` steps, so a key follows the palette (todo 396).

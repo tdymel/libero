@@ -1,11 +1,13 @@
 //! Controls under 24px and their invisible 24x24 hit areas (todos 505, 566),
 //! and the framed fields whose slot buttons must not grow the frame (todo 495).
+//! On a coarse pointer, small controls take presses in a 44x44 box (todo 2707).
 
 use dioxus::prelude::*;
 use libero::{
     components::{
-        ActionIcon, Burger, ColorCode, ColorField, Dialog, Flex, NumberField, PasswordField,
-        Select, SliderChangeEvent, TagsField, TextField,
+        ActionIcon, Burger, Checkbox, Chip, ColorCode, ColorField, Dialog, Flex, NumberField,
+        Pagination, PasswordField, Radio, Select, SliderChangeEvent, Switch, TagsField,
+        TextField,
     },
     theme::Size,
 };
@@ -45,6 +47,42 @@ fn HitAreaPage() -> Element {
                     value: topics(),
                     onchange: move |next| topics.set(next),
                 }
+            }
+            Coarse {}
+        }
+    }
+}
+
+/// Controls whose hit area grows to 44x44 on a coarse pointer (todo 2707), 48px apart
+/// so no neighbour takes a share of it.
+#[component]
+fn Coarse() -> Element {
+    let mut vegan = use_signal(|| false);
+    let mut agree = use_signal(|| false);
+    let mut terrace = use_signal(|| false);
+    rsx! {
+        Flex { direction: "column", align: "flex-start", sx: libero::sx::sx().gap("48px"),
+            Chip { id: "chip-filter", checked: vegan(), onchange: move |next| vegan.set(next), "Vegan" }
+            Chip { id: "chip-action", onclick: move |_| {}, "Share" }
+            div { "data-case": "checkbox",
+                Checkbox {
+                    aria_label: "Agree",
+                    checked: agree(),
+                    onchange: move |next| agree.set(next),
+                }
+            }
+            div { "data-case": "radio",
+                Radio { aria_label: "Express", checked: false, onselect: move |_| {} }
+            }
+            div { "data-case": "switch",
+                Switch {
+                    aria_label: "Terrace",
+                    checked: terrace(),
+                    onchange: move |next| terrace.set(next),
+                }
+            }
+            div { "data-case": "pagination",
+                Pagination { total: 5, page: 2, aria_label: "Pages", onchange: move |_: u32| {} }
             }
         }
     }

@@ -33,7 +33,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Size` | `sm` | Font size. The rest of the look comes from the theme. |
+| `size` | `Size` | `md` | Font size. The rest of the look comes from the theme. |
 | `children` | `Element` | required | The key label. |
 
 Like every component, `Kbd` also takes the shared props `sx`, `class`, `style`,
@@ -62,7 +62,7 @@ plus S", key by key.
 
 | Field | Type | Description |
 |---|---|---|
-| `size` | `Size` | Default `size` when the prop is omitted; `sm`. |
+| `size` | `Size` | Default `size` when the prop is omitted; `md`. |
 | `font_sizes` | `Sizes<u16>` | Font size in px per size step: 10, 12, 14, 16, 20, 24. |
 | `font_family` | `&'static str` | The keycap's font; the theme's mono stack. |
 | `background` | `&'static str` | Keycap fill; `var(--lsx-muted-1)`. |

@@ -286,7 +286,8 @@ fn the_bubble_text_follows_the_root_text_size() {
         wait::for_visible(page, BUBBLE).await.unwrap();
         let size = "parseFloat(getComputedStyle(document.querySelector('#save-tip')).fontSize)";
         let at_default: f64 = page.evaluate(size).await.unwrap().into_value().unwrap();
-        assert_eq!(at_default, 12.0);
+        // The default `lg`, the 14px label floor (todo 2707).
+        assert_eq!(at_default, 14.0);
         let doubled: f64 = page
             .evaluate(format!(
                 "(() => {{ document.documentElement.style.fontSize = '200%'; return {size}; }})()"
@@ -295,7 +296,7 @@ fn the_bubble_text_follows_the_root_text_size() {
             .unwrap()
             .into_value()
             .unwrap();
-        assert_eq!(doubled, 24.0);
+        assert_eq!(doubled, 28.0);
         fixture.close().await.unwrap();
     });
 }

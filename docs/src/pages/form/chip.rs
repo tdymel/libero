@@ -18,7 +18,7 @@ pub fn ChipPage() -> Element {
                     .doc("Accent color. A theme color name or any CSS color; `theme.chip.color` when unset."),
                 prop("variant", "Variant")
                     .default(theme.chip.variant.as_str())
-                    .doc("The unselected look. A checked chip is always a tonal container."),
+                    .doc("The unselected look. A checked chip is always a tonal container, with a check before its label."),
                 prop("size", "Size").default(theme.chip.size.as_str()).doc("Height, padding and font size."),
                 prop("radius", "ThemeAwareValue")
                     .default(theme.chip.radius.as_str())
@@ -77,7 +77,7 @@ pub fn ChipPage() -> Element {
                     Code { source: "to" }
                     " a link, and with none of them a plain tag. "
                     Code { source: "variant" }
-                    " sets the unselected look. A checked chip is always a tinted container."
+                    " sets the unselected look. A checked chip is always a tinted container, with a check before its label."
                 }
             },
             // snippet: let mut selected = use_signal(|| false);

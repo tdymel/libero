@@ -333,3 +333,47 @@ mod dispatched {
         assert_eq!(input.get("name").map(String::as_str), Some("open"));
     }
 }
+
+static NO_CHECK: libero::theme::Theme = libero::theme::Theme {
+    chip: libero::theme::ChipDefaults {
+        selected_check: false,
+        ..libero::theme::Theme::DEFAULT.chip
+    },
+    ..libero::theme::Theme::DEFAULT
+};
+
+/// Todo 2707: a selected filter chip draws a hidden check, so selection is not colour
+/// alone; the checkbox keeps the state, and the theme can drop the check.
+#[test]
+fn a_selected_chip_draws_a_hidden_check() {
+    fn row() -> Element {
+        rsx! {
+            Chip { checked: true, onchange: move |_| {}, "on" }
+            Chip { checked: false, onchange: move |_| {}, "off" }
+            Chip { onclick: move |_| {}, "action" }
+        }
+    }
+    fn app() -> Element {
+        rsx! { LiberoProvider { {row()} } }
+    }
+    fn plain() -> Element {
+        rsx! { LiberoProvider { themes: &NO_CHECK, {row()} } }
+    }
+
+    let html = body(&render(app));
+    assert_eq!(
+        html.matches("data-slot=\"chip-check\"").count(),
+        1,
+        "{html}"
+    );
+    let before = &html[..html.find("data-slot=\"chip-check\"").unwrap()];
+    let check = &html[before.rfind("<span").unwrap()..];
+    assert_eq!(attributes_of(check, "span")["aria-hidden"], "true");
+    // Inside the checked chip's label.
+    assert!(
+        before
+            .rfind("<label")
+            .is_some_and(|at| !before[at..].contains("</label>"))
+    );
+    assert!(!body(&render(plain)).contains("chip-check"));
+}

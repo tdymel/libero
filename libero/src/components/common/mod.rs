@@ -6,6 +6,7 @@ mod combobox_aria;
 mod combobox_state;
 mod focus_ring;
 mod focusable;
+mod hit_area;
 mod icons;
 mod keys;
 mod logical_text;
@@ -48,6 +49,7 @@ pub(crate) use focus_ring::{
     on_state_sx, ring_overlay, ring_overlay_sx, shadow_sx,
 };
 pub(crate) use focusable::FOCUSABLE_SELECTOR;
+pub(crate) use hit_area::{COARSE_POINTER, coarse_hit_area_sx};
 pub(crate) use icons::{Glyph, draw_svg};
 pub(crate) use keys::{NavigationChord, has_shortcut_modifier, navigation_chord};
 pub(crate) use logical_text::LogicalTextAlign;

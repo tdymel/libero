@@ -5,9 +5,9 @@ use crate::{
     components::{
         accessibility::{VISUALLY_HIDDEN_SX, hidden_input_centred_sx},
         common::{
-            HtmlTag, Input, Part, States, base_color_or, disabled_look_sx, fill_color,
-            focus_ring_sx, names_itself, ring_overlay, ring_overlay_sx, use_name_warning,
-            variables,
+            HtmlTag, Input, Part, States, base_color_or, coarse_hit_area_sx, disabled_look_sx,
+            fill_color, focus_ring_sx, names_itself, ring_overlay, ring_overlay_sx,
+            use_name_warning, variables,
         },
         form::{field_parts_enum, field_props, use_field},
         layout::use_box,
@@ -51,6 +51,9 @@ static RADIO_CIRCLE_SX: StaticSx = StaticSx::new(|| {
         .align_items("center")
         .justify_content("center")
         .flex("0 0 auto")
+        // Carries the click, so it carries the finger-sized hit area too.
+        .position("relative")
+        .and(coarse_hit_area_sx("::before"))
         .width(RADIO_CIRCLE.value())
         .height(RADIO_CIRCLE.value())
         // A radio is round at every size - that is what tells it apart from a

@@ -8,7 +8,8 @@ Description: A compact token: a tag, a filter, a small action or a link.
 
 A compact token. With `onchange` or a `name` it is a checkbox, with `onclick` a
 button, with `to` a link, and with none of them a plain tag. `variant` sets the
-unselected look. A checked chip is always a tinted container.
+unselected look. A checked chip is always a tinted container, with a check before
+its label.
 
 ## Usage
 
@@ -130,7 +131,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color; `theme.chip.color` when unset. |
-| `variant` | `Variant` | `filled` | The unselected look. A checked chip is always a tonal container. |
+| `variant` | `Variant` | `filled` | The unselected look. A checked chip is always a tonal container, with a check before its label. |
 | `size` | `Size` | `md` | Height, padding and font size. |
 | `radius` | `ThemeAwareValue` | `xl` | Corner radius, or any CSS, e.g. `radius: "0"`. |
 | `checked` | `bool` | - | Whether it is selected. Pair it with `onchange`. Left out, a chip with a `name` keeps its own state, or the form's when that name binds it. |
@@ -195,6 +196,7 @@ toggles it, and a `readonly` chip keeps its tab stop but stays as it is.
 | `variant` | `Variant` | Default `variant` when the prop is omitted (`filled`). |
 | `size` | `Size` | Default `size` when the prop is omitted. |
 | `radius` | `Size` | Default `radius` when the prop is omitted. |
+| `selected_check` | `bool` | Draws a check before a selected chip's label, so the selection is not a colour change alone (`true`). |
 | `sizes` | `Sizes<ChipSizeLevel>` | `font_size`, `height`, `padding_x` per size. |
 
 ## CSS variables

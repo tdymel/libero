@@ -9,11 +9,14 @@ pub struct SegmentedControlDefaults {
     pub variant: Variant,
     /// The colour a segmented control takes when a call site names none.
     pub color: Color,
+    /// A check before the selected segment's label, so selection is not a colour change alone.
+    pub selected_check: bool,
 }
 
 impl SegmentedControlDefaults {
     pub const DEFAULT: Self = Self {
         variant: Variant::Filled,
         color: Color::Primary,
+        selected_check: true,
     };
 }

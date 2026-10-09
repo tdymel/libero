@@ -219,6 +219,44 @@ fn an_unset_variant_follows_its_own_theme_field() {
     );
 }
 
+static NO_CHECK: libero::theme::Theme = libero::theme::Theme {
+    segmented_control: libero::theme::SegmentedControlDefaults {
+        selected_check: false,
+        ..libero::theme::Theme::DEFAULT.segmented_control
+    },
+    ..libero::theme::Theme::DEFAULT
+};
+
+/// Todo 2707: the selected segment draws a hidden check, so selection is not colour
+/// alone; the radio keeps the state, and the theme can drop the check.
+#[test]
+fn only_the_selected_segment_draws_a_hidden_check() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                SegmentedControl { value: Emphasis::Italic, onchange: move |_| {} }
+            }
+        }
+    }
+    fn plain() -> Element {
+        rsx! {
+            LiberoProvider { themes: &NO_CHECK,
+                SegmentedControl { value: Emphasis::Italic, onchange: move |_| {} }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    assert_eq!(html.matches("data-slot=\"check\"").count(), 1, "{html}");
+    let before = &html[..html.find("data-slot=\"check\"").unwrap()];
+    let check = &html[before.rfind("<span").unwrap()..];
+    assert_eq!(attributes_of(check, "span")["aria-hidden"], "true");
+    // In the second segment's label, the selected one.
+    let label = &before[before.rfind("<label").unwrap()..];
+    assert!(label.contains("-segment-1"), "{label}");
+    assert!(!body(&render(plain)).contains("data-slot=\"check\""));
+}
+
 /// Todo 371: the per-segment flag rides on the option, and `options` left
 /// unset is not an empty list - it still means every `Options::options()`.
 #[test]

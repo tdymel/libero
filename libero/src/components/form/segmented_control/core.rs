@@ -1,17 +1,19 @@
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
         common::Part,
         common::{
-            BUTTON_HOVER_VAR, BUTTON_ON_STATE_VAR, BUTTON_SELECTED_VAR, BUTTON_VARS, HtmlTag,
-            Input, Orientation, ScaleOrCss, States, ToolbarItem, Variables, Variant,
+            BUTTON_HOVER_VAR, BUTTON_ON_STATE_VAR, BUTTON_SELECTED_VAR, BUTTON_VARS, Glyph,
+            HtmlTag, Input, Orientation, ScaleOrCss, States, ToolbarItem, Variables, Variant,
             disabled_look_sx, focus_ring_sx, has_shortcut_modifier, interactive_variant_sx,
             neighbour, variables, variant_selected_sx,
         },
         form::{Activation, field_parts_enum},
         layout::use_box,
     },
+    context::IconSlot,
     hooks::{ElementHandle, id_selector},
     platform::{ElementApi, focus_selector, logical_key, next_task},
     sx::{StaticSx, sx},
@@ -21,6 +23,9 @@ use crate::{
 /// The segment itself. A `<label>`, because the radio it wraps is what
 /// carries the semantics.
 const SEGMENT: &str = "& > label";
+
+/// The check the selected segment draws before its label.
+const CHECK: &str = "& > label > [data-slot='check']";
 
 field_parts_enum! {
     /// [`SegmentedControl`](super::SegmentedControl)'s inner parts, for its
@@ -96,6 +101,17 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
             sx().min_width("0")
                 .overflow("hidden")
                 .text_overflow("ellipsis"),
+        )
+        // Outranks the span rule above: the check never shrinks.
+        .selector(
+            CHECK,
+            sx().display("inline-flex")
+                .align_items("center")
+                .flex("0 0 auto"),
+        )
+        .selector(
+            format!("{CHECK} > svg"),
+            sx().width("1.125em").height("1.125em"),
         )
         // The overlapped border would otherwise cut into the next segment's
         // focus ring and selected background.
@@ -222,6 +238,8 @@ pub(crate) struct SegmentedControlView {
     pub size: Size,
     pub radius: Size,
     pub gap: Option<ScaleOrCss>,
+    /// Draws a check in the selected segment, `SegmentedControlDefaults::selected_check`.
+    pub check: bool,
     /// `false` keeps the radios out of the tab order and stops a label click
     /// from focusing its radio.
     pub focusable: bool,
@@ -295,6 +313,7 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
         size,
         radius,
         gap,
+        check,
         focusable,
         readonly,
         enter,
@@ -452,6 +471,12 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
                 // The whole name, where an ellipsis cuts the visible one.
                 title: segment.name.clone(),
                 onclick: activation.label_click(),
+                // Hidden: the radio's own checked state is what is read out.
+                if check && selected == Some(index) {
+                    span { "data-slot": "check", "aria-hidden": "true",
+                        Glyph { slot: IconSlot::Check, icon: lucide::check::outlined }
+                    }
+                }
                 {segment.content.clone()}
             }
         }

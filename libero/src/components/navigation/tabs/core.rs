@@ -4,7 +4,7 @@ use super::tabs::TabsPart;
 use crate::{
     components::{
         common::{
-            ClassList, HtmlTag, Input, Part, States, Variables, focus_ring_sx,
+            ClassList, HtmlTag, Input, Part, States, Variables, coarse_hit_area_sx, focus_ring_sx,
             has_shortcut_modifier, inset_focus_ring_sx, names_itself, neighbour, reveal_inline,
             text_color, use_name_warning, variables,
         },
@@ -54,7 +54,10 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
                 .flex_shrink("0")
                 .max_width("100%")
                 .with("overflow-wrap", "anywhere")
-                .cursor("pointer"),
+                .cursor("pointer")
+                // The scrolling strip clips it vertically, so it widens a narrow icon tab only.
+                .position("relative")
+                .and(coarse_hit_area_sx("::before")),
         )
         // Replaces the UA ring `appearance: none` drops; inset, or the strip clips it.
         .selector(

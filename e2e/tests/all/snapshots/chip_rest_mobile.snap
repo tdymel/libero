@@ -5,6 +5,8 @@ expression: tree
 ---
 StaticText "Tag"
 checkbox "rust" [checked]
+LabelText
+  StaticText "rust"
 checkbox "css" [checked=false]
 checkbox "html" [checked=false]
 generic [disabled]

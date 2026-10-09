@@ -5,9 +5,10 @@ use crate::{
     components::{
         accessibility::{VISUALLY_HIDDEN_SX, hidden_input_centred_sx},
         common::{
-            HtmlTag, Input, Part, States, TOOLBAR_ITEM, ToolbarItem, base_color_or, contrast_color,
-            disabled_look_sx, fill_color, focus_ring_sx, names_itself, ring_overlay,
-            ring_overlay_sx, use_name_warning, use_toolbar_item, variables,
+            HtmlTag, Input, Part, States, TOOLBAR_ITEM, ToolbarItem, base_color_or,
+            coarse_hit_area_sx, contrast_color, disabled_look_sx, fill_color, focus_ring_sx,
+            names_itself, ring_overlay, ring_overlay_sx, use_name_warning, use_toolbar_item,
+            variables,
         },
         form::{Asks, field_parts_enum, field_props, use_bound, use_field, use_form_context},
         layout::use_box,
@@ -53,6 +54,8 @@ static SWITCH_CONTROL_SX: StaticSx = StaticSx::new(|| {
 
 static SWITCH_TRACK_SX: StaticSx = StaticSx::new(|| {
     sx().position("relative")
+        // Carries the click, so it carries the finger-sized hit area too.
+        .and(coarse_hit_area_sx("::before"))
         .flex("0 0 auto")
         .width(SWITCH_TRACK_W.value())
         .height(SWITCH_TRACK_H.value())
