@@ -119,8 +119,7 @@ e2e::scenario!(
     escape_and_arrow_left_close_only_the_submenu,
     "/menubar-docs",
     a_key_closes_only_the_submenu,
-    android: skip("958: element identity on the WebView"),
-    desktop: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView")
 );
 e2e::scenario!(
     the_arrows_rove_along_the_bar_and_wrap,

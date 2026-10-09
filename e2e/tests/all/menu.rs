@@ -141,8 +141,7 @@ e2e::scenario!(
     enter_opens_it_and_escape_closes_it_with_focus_back_on_the_trigger,
     "/menu-submenu-reopen",
     enter_opens_and_escape_closes,
-    android: skip("958: element identity on the WebView"),
-    desktop: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView")
 );
 /// `use_dismiss` (todo 46): focus moving from the trigger into the list keeps
 /// it open.
@@ -199,8 +198,7 @@ e2e::scenario!(
     escape_and_arrow_left_close_only_the_submenu,
     "/menu-submenu-reopen",
     a_key_closes_only_the_submenu,
-    android: skip("958: element identity on the WebView"),
-    desktop: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView")
 );
 
 /// `level` is open and placed: an unplaced box sits hidden at 0,0.

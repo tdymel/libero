@@ -486,7 +486,8 @@ impl DismissHandle {
         let restore = self.return_focus
             && match reason {
                 Dismissal::FromInside => true,
-                Dismissal::FromDocument => self.holds_focus(),
+                // A WebView cannot tell (958): rarely pulling focus back beats dropping it to `<body>`.
+                Dismissal::FromDocument => self.focus_inside() != Some(false),
                 Dismissal::FocusMoved => false,
             };
 

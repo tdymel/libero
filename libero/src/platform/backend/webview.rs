@@ -78,8 +78,23 @@ pub(super) fn runs_scripts() -> bool {
         .send(())
         .is_ok();
     page.runs_scripts.set(Some(runs));
+    if runs {
+        eval(GUARD_LISTENERS);
+    }
     runs
 }
+
+/// dioxus c607e4e `interpreter/src/ts/core.ts:161` drops `local[id]` on a first removal; a second
+/// threw and the page stopped applying edits (2702). Drop when upstream fixes it.
+const GUARD_LISTENERS: &str = "const interpreter = window.interpreter;
+    if (!interpreter || interpreter.lsxListeners) return;
+    interpreter.lsxListeners = true;
+    const remove = interpreter.removeNonBubblingListener.bind(interpreter);
+    interpreter.removeNonBubblingListener = (element, name) => {
+        const id = element.getAttribute('data-dioxus-id');
+        if (interpreter.local[id]) return remove(element, name);
+        element.removeEventListener(name, interpreter.handler);
+    };";
 
 pub(super) fn document() -> Option<&'static dyn DocumentApi> {
     runs_scripts().then_some(&DOCUMENT as &'static dyn DocumentApi)
@@ -2340,6 +2355,30 @@ pub(super) fn focus_selector(selector: &str) -> Result<(), PlatformError> {
         return Err(PlatformError::Unsupported);
     }
     eval_with(json!(selector), "document.querySelector(data)?.focus();");
+    Ok(())
+}
+
+/// The tab stop next to `selector`'s match: positive `tabindex` ascending, then 0 in
+/// DOM order (2720). With none that way, the match keeps focus.
+const FOCUS_TAB_FROM: &str = "const [selector, backwards] = data;
+    const from = document.querySelector(selector);
+    if (!from) return;
+    const candidates = document.querySelectorAll('a[href], area[href], button, input, select, \
+        textarea, summary, iframe, [tabindex], [contenteditable]:not([contenteditable=\"false\"])');
+    const stops = [...candidates].filter((el) => el === from || (el.tabIndex >= 0
+        && !el.disabled && !el.closest('[inert]') && el.type !== 'hidden'
+        && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden'));
+    const rank = (el) => (el.tabIndex > 0 ? el.tabIndex : Infinity);
+    const order = stops.map((el, i) => [el, i])
+        .sort(([a, i], [b, j]) => rank(a) - rank(b) || i - j)
+        .map(([el]) => el);
+    (order[order.indexOf(from) + (backwards ? -1 : 1)] ?? from).focus();";
+
+pub(super) fn focus_tab_from(selector: &str, backwards: bool) -> Result<(), PlatformError> {
+    if !runs_scripts() {
+        return Err(PlatformError::Unsupported);
+    }
+    eval_with(json!([selector, backwards]), FOCUS_TAB_FROM);
     Ok(())
 }
 

@@ -295,6 +295,8 @@ impl Desktop {
             "mousemove",
             "--window",
             &self.window,
+            // A drag past the window's top or left edge: `-102` would read as an option.
+            "--",
             x.as_str(),
             y.as_str(),
         ];
@@ -518,6 +520,8 @@ fn xdotool(args: &[&str]) -> Result<String> {
 fn keysym(key: &str) -> &str {
     match key {
         " " => "space",
+        "+" => "plus",
+        "-" => "minus",
         "Enter" => "Return",
         "Backspace" => "BackSpace",
         "PageUp" => "Prior",

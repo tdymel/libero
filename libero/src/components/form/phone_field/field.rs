@@ -23,7 +23,7 @@ use crate::{
         use_localization, use_theme,
     },
     localization::fill,
-    platform::ElementApi,
+    platform::{ElementApi, focus_tab_from, is_tab},
     sx::{StaticSx, Sx, sx},
     theme::{FOCUS_RING_WIDTH, Size},
     utils::digits_of,
@@ -259,6 +259,8 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
     let state = use_combobox();
     let picker_element = use_element();
     let search_element = use_element();
+    // Set when a WebView's page tabbed on from the search box: the close leaves focus there.
+    let tabbed = use_hook(|| CopyValue::new(false));
     let mut query = use_signal(String::new);
 
     let field = use_field()
@@ -396,8 +398,19 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
         .event("onblur", move |_: FocusEvent| state.close())
         // Portaled after the page: Tab moves on from the country button (todo 2289).
         .event("onkeydown", move |event: KeyboardEvent| {
-            if event.key() == Key::Tab {
-                let _ = picker_element.focus();
+            if is_tab(&event) {
+                // A WebView's `focus()` lands after Tab's own move: the page tabs on for it.
+                let backwards = event.modifiers().contains(Modifiers::SHIFT);
+                match focus_tab_from(&format!("[id=\"{}\"]", picker_id(state)), backwards) {
+                    Ok(()) => {
+                        event.prevent_default();
+                        let mut tabbed = tabbed;
+                        tabbed.set(true);
+                    }
+                    Err(_) => {
+                        let _ = picker_element.focus();
+                    }
+                }
             }
         })
         .render(HtmlTag::Input, state.a11y_attributes(), ());
@@ -440,6 +453,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             dial: country.dial,
             dial_id: dial_id.clone(),
             dropdown_parts: props.dropdown_parts,
+            tabbed,
         },
         rows,
     );
@@ -743,6 +757,7 @@ struct Picker {
     dial: &'static str,
     dial_id: String,
     dropdown_parts: Input<Parts<DropdownPart>>,
+    tabbed: CopyValue<bool>,
 }
 
 /// The frame's leading slot: the country picker with its list, or - with
@@ -764,6 +779,7 @@ fn phone_leading(with_select: bool, parts: Picker, rows: Vec<Element>) -> Option
         dial,
         dial_id,
         dropdown_parts,
+        mut tabbed,
     } = parts;
 
     match with_select {
@@ -774,6 +790,7 @@ fn phone_leading(with_select: bool, parts: Picker, rows: Vec<Element>) -> Option
                 onactive: move |row| state.set_active(Some(row)),
                 opened,
                 onopened: move |opened: bool| {
+                    let tabbed_on = std::mem::take(&mut *tabbed.write());
                     // Over the row the opening arrow armed, as `Select` does.
                     if opened && !state.is_open() {
                         state.set_active(home_row());
@@ -783,7 +800,9 @@ fn phone_leading(with_select: bool, parts: Picker, rows: Vec<Element>) -> Option
                         query.set(String::new());
                         // Escape, Enter and Tab all close through here, and the
                         // box that held the focus has just unmounted.
-                        let _ = picker_element.focus();
+                        if !tabbed_on {
+                            let _ = picker_element.focus();
+                        }
                     }
                 },
                 state,

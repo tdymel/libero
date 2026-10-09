@@ -258,6 +258,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         any_level,
         layout,
         trigger: trigger_element,
+        trigger_id: field.id().to_string(),
         blurred,
     });
 

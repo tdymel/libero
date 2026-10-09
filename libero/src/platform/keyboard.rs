@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use dioxus::prelude::{Event, Key, KeyboardData, Modifiers, MountedData};
+use dioxus::prelude::{Code, Event, Key, KeyboardData, Modifiers, MountedData};
 
 use super::backend;
 
@@ -140,6 +140,16 @@ pub(crate) fn logical_key(event: &Event<KeyboardData>) -> Key {
         logical_arrow(key, rtl_target(event))
     } else {
         key
+    }
+}
+
+/// Whether the press is Tab. WebKitGTK names Shift+Tab (`ISO_Left_Tab`) `Unidentified`;
+/// its `code` stays `Tab` (2702).
+pub(crate) fn is_tab(event: &Event<KeyboardData>) -> bool {
+    match event.key() {
+        Key::Tab => true,
+        Key::Unidentified => event.code() == Code::Tab,
+        _ => false,
     }
 }
 

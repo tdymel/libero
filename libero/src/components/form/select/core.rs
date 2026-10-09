@@ -22,7 +22,7 @@ use crate::{
         ElementHandle, PopoverWidth, TYPEAHEAD_RESET, Typeahead, typeahead_match, use_element,
         use_localization, use_theme, use_typeahead,
     },
-    platform::{ElementApi, blur_counts, logical_key},
+    platform::{ElementApi, blur_counts, focus_tab_from, is_tab, logical_key},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{FOCUS_RING_WIDTH, Size},
 };
@@ -1110,6 +1110,7 @@ fn select_search_box(
         mut blurred,
         trigger,
     } = search;
+    let trigger_id = field.id().to_string();
     attributes.extend(naming);
     search_box
         .element(&search)
@@ -1131,8 +1132,15 @@ fn select_search_box(
         })
         // Portaled after the page: Tab moves on from the trigger; the dropdown's keys still commit (todo 2289).
         .event("onkeydown", move |event: KeyboardEvent| {
-            if event.key() == Key::Tab {
-                let _ = trigger.focus();
+            if is_tab(&event) {
+                // A WebView's `focus()` lands after Tab's own move: the page tabs on for it.
+                let backwards = event.modifiers().contains(Modifiers::SHIFT);
+                match focus_tab_from(&format!("[id=\"{trigger_id}\"]"), backwards) {
+                    Ok(()) => event.prevent_default(),
+                    Err(_) => {
+                        let _ = trigger.focus();
+                    }
+                }
                 // Blitz moves focus without a blur, and the close would refocus the trigger (todo 2354).
                 blurred.set(true);
             }

@@ -42,6 +42,13 @@ pub(crate) fn focus_selector(selector: &str) -> Result<(), PlatformError> {
     backend::focus_selector(selector)
 }
 
+/// Focuses the tab stop after (or before) the page's first match of `selector`, as Tab
+/// from it would, for a WebView, where a handler's `focus()` lands after Tab's own move.
+/// `Unsupported` elsewhere.
+pub(crate) fn focus_tab_from(selector: &str, backwards: bool) -> Result<(), PlatformError> {
+    backend::focus_tab_from(selector, backwards)
+}
+
 /// The document's first match of `selector`, backed as a mounted element is. A WebView's
 /// looks the match up again on every call; `None` on a server.
 pub(crate) fn mounted_by_selector(selector: &str) -> Option<Rc<MountedData>> {

@@ -72,10 +72,12 @@ fn the_menu_and_the_step_buttons_meet_the_baseline() {
             &[Step::TabTo(MENU), Step::Press(keyboard::ENTER)],
             "[role=menu]",
         )
+        // Todo 2637: the steps show before their first button takes focus; a snapshot
+        // between the two caught the ring elsewhere.
         .state(
             "steps",
             &[Step::Press(keyboard::ENTER)],
-            "[data-slot=steps]",
+            "[data-slot=steps] :focus",
         )
         .run();
 }

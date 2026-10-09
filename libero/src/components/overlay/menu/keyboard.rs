@@ -220,7 +220,7 @@ pub(super) fn use_level_focus(
     use_effect(use_reactive!(|(open,)| {
         let (mut active, mut open_child) = (level.active, level.open_child);
         match open {
-            true => dismiss.focus_return().remember_active(),
+            true => dismiss.focus_return().remember_focused(),
             // A set notifies even unchanged, which redrew a closing level twice (todo 2095).
             false => {
                 if active.peek().is_some() {

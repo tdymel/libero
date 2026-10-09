@@ -757,6 +757,17 @@ pub(crate) fn focus_selector(selector: &str) -> Result<(), super::PlatformError>
     };
 }
 
+/// Only a WebView - see [`focus_tab_from`](crate::platform::focus_tab_from).
+pub(crate) fn focus_tab_from(selector: &str, backwards: bool) -> Result<(), super::PlatformError> {
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return webview::focus_tab_from(selector, backwards);
+    #[cfg(any(target_arch = "wasm32", feature = "native"))]
+    return {
+        let _ = (selector, backwards);
+        Err(super::PlatformError::Unsupported)
+    };
+}
+
 /// See [`mounted_by_selector`](crate::platform::mounted_by_selector).
 pub(crate) fn mounted_by_selector(selector: &str) -> Option<Rc<MountedData>> {
     #[cfg(target_arch = "wasm32")]

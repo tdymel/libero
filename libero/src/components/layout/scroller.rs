@@ -17,7 +17,10 @@ use crate::{
         DragMove, DragOptions, DragStart, ElementHandle, use_drag, use_element, use_id,
         use_localization, use_resize_fallback, use_silent_focus_in, use_theme,
     },
-    platform::{ElementApi, is_measured_resize, next_task, scroll, when_laid_out},
+    platform::{
+        ElementApi, PlatformError, element, is_measured_resize, mounted_by_selector, next_task,
+        scroll, when_laid_out,
+    },
     sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{FOCUS_RING_HALO_SPREAD, SCROLLER_CONTROL, SCROLLER_FADE, ScrollerDefaults, Size},
 };
@@ -25,6 +28,16 @@ use crate::{
 pub use crate::theme::ScrollerControls;
 
 input_from_str!(ScrollerControls);
+
+/// `scope`'s first match of `css`. A WebView's handles cannot query (958): it looks
+/// `page_css` up page-side at each read instead.
+fn find(scope: ElementHandle, css: &str, page_css: &str) -> Option<Box<dyn ElementApi>> {
+    match scope.query_selector(css) {
+        Ok(found) => Some(found),
+        Err(PlatformError::Unsupported) => mounted_by_selector(page_css).map(|data| element(&data)),
+        Err(_) => None,
+    }
+}
 
 /// A fractional device-pixel offset would flicker a control at rest.
 const EDGE_TOLERANCE: f64 = 1.0;
@@ -432,10 +445,13 @@ pub fn Scroller(props: ScrollerProps) -> Element {
     let clear = move |item: Box<dyn ElementApi>| {
         let rtl = viewport.is_rtl();
         spawn(async move {
-            let control = root
-                .query_selector(":scope > button")
-                .ok()
-                .map(|control| control.dimensions());
+            let id = viewport_id.peek().clone();
+            let control = find(
+                root,
+                ":scope > button",
+                &format!("button[aria-controls=\"{id}\"]"),
+            )
+            .map(|control| control.dimensions());
             let (at, size, left, view, offset, content) = (
                 item.client_offset(),
                 item.dimensions(),
@@ -477,7 +493,12 @@ pub fn Scroller(props: ScrollerProps) -> Element {
         spawn(async move {
             next_task().await;
             // A pointer focus leaves the strip where the pointer put it.
-            if let Ok(item) = viewport.query_selector(":focus-visible") {
+            let id = viewport_id.peek().clone();
+            if let Some(item) = find(
+                viewport,
+                ":focus-visible",
+                &format!("[id=\"{id}\"] :focus-visible"),
+            ) {
                 clear(item);
             }
         });

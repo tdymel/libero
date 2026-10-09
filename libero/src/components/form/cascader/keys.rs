@@ -8,7 +8,7 @@ use crate::{
         form::ComboboxState,
     },
     hooks::{ElementHandle, Typeahead, typeahead_match},
-    platform::{ElementApi, logical_key},
+    platform::{ElementApi, focus_tab_from, is_tab, logical_key},
 };
 
 use super::{
@@ -33,6 +33,8 @@ pub(super) struct CascaderKeys {
     pub(super) any_level: bool,
     pub(super) layout: CascaderLayout,
     pub(super) trigger: ElementHandle,
+    /// The trigger's `id` while the search box is open.
+    pub(super) trigger_id: String,
     /// `use_refocus_on_close`'s blur mark.
     pub(super) blurred: Signal<bool>,
 }
@@ -66,7 +68,10 @@ impl CascaderKeys {
             self.closed(event);
             return;
         }
-        let key = event.key();
+        let key = match is_tab(&event) {
+            true => Key::Tab,
+            false => event.key(),
+        };
         let paths_layout = self.layout == CascaderLayout::Paths;
         match key {
             Key::Escape => {
@@ -77,7 +82,14 @@ impl CascaderKeys {
             Key::Tab => {
                 // Marked blurred: Blitz moves focus without a blur, and the close would refocus the trigger (todo 2354).
                 if self.searchable {
-                    let _ = self.trigger.focus();
+                    // A WebView's `focus()` lands after Tab's own move: the page tabs on for it.
+                    let from = format!("[id=\"{}\"]", self.trigger_id);
+                    match focus_tab_from(&from, event.modifiers().contains(Modifiers::SHIFT)) {
+                        Ok(()) => event.prevent_default(),
+                        Err(_) => {
+                            let _ = self.trigger.focus();
+                        }
+                    }
                     let mut blurred = self.blurred;
                     blurred.set(true);
                 }
