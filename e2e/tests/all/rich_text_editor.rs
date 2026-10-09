@@ -2011,8 +2011,58 @@ const DELETE: Key = Key {
     text: None,
 };
 
+/// Dispatches an `insertReplacementText` of `data` over the first `word` in the editor's
+/// text nodes, as a spelling menu does; `true` if the editor cancelled it.
+async fn replace_word(page: &Page, word: &str, data: &str) -> bool {
+    js(
+        page,
+        &format!(
+            "(() => {{ const w = document.createTreeWalker({EDITOR}, NodeFilter.SHOW_TEXT), nodes = []; let all = ''; \
+             while (w.nextNode()) {{ nodes.push([w.currentNode, all.length]); all += w.currentNode.data; }} \
+             const i = all.indexOf({word:?}), j = i + {word:?}.length; \
+             const at = (k, end) => nodes.map(([n, s]) => [n, k - s]).find(([n, o]) => o >= 0 && (end ? o <= n.length : o < n.length)); \
+             const [sc, so] = at(i, false), [ec, eo] = at(j, true); \
+             const range = new StaticRange({{ startContainer: sc, startOffset: so, endContainer: ec, endOffset: eo }}); \
+             const e = new InputEvent('beforeinput', {{ inputType: 'insertReplacementText', data: {data:?}, targetRanges: [range], bubbles: true, cancelable: true }}); \
+             return !{EDITOR}.dispatchEvent(e); }})()"
+        ),
+    )
+    .await
+}
+
 #[test]
-fn ctrl_backspace_and_ctrl_delete_take_a_word_and_replacements_are_ignored() {
+fn a_replacement_across_a_bold_run_is_one_undo_step() {
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        keyboard::type_text(page, "brwon").await.unwrap();
+        out_eq(page, "brwon\n").await;
+        select(
+            page,
+            &format!(
+                "const w = document.createTreeWalker({EDITOR}, NodeFilter.SHOW_TEXT); \
+                 while (w.nextNode() && !w.currentNode.data.includes('brwon')); \
+                 getSelection().setBaseAndExtent(w.currentNode, 2, w.currentNode, 4)"
+            ),
+        )
+        .await;
+        keyboard::press_with(page, KEY_B, CTRL).await.unwrap();
+        out_eq(page, "br**wo**n\n").await;
+
+        // Three text nodes: the replacement takes the start's marks.
+        assert!(replace_word(page, "brwon", "brown").await);
+        out_eq(page, "brown\n").await;
+        keyboard::press_with(page, KEY_Z, CTRL).await.unwrap();
+        out_eq(page, "br**wo**n\n").await;
+        fixture.close().await.unwrap();
+    });
+}
+
+#[test]
+fn ctrl_backspace_and_ctrl_delete_take_a_word_and_replacements_apply_at_their_range() {
     block_on(async {
         const CODE: &str = "\n\n```rust\nlet x = 1;\n```\n";
         let fixture = Fixture::open(TRAILING, Viewport::Desktop).await.unwrap();
@@ -2045,7 +2095,7 @@ fn ctrl_backspace_and_ctrl_delete_take_a_word_and_replacements_are_ignored() {
         .await
         .unwrap();
 
-        // A substitution's target range is unknown: nothing is typed at the caret.
+        // Without a target range and with a collapsed caret the word is unknown: nothing is typed.
         let cancelled: bool = js(
             page,
             &format!(
@@ -2058,6 +2108,10 @@ fn ctrl_backspace_and_ctrl_delete_take_a_word_and_replacements_are_ignored() {
         let typed = until(page, &out_is(&format!("^ one z{CODE}"))).await;
         let now: String = js(page, "document.getElementById('out').textContent").await;
         assert!(typed, "{now:?}");
+
+        // With a target range it replaces there, away from the caret.
+        assert!(replace_word(page, "one", "won").await);
+        out_eq(page, &format!("^ won z{CODE}")).await;
         fixture.close().await.unwrap();
     });
 }

@@ -126,6 +126,19 @@ document.addEventListener('keydown', (e) => {
 }, true);
 document.addEventListener('beforeinput', (e) => {
     const r = root();
+    // A spelling or autocorrect replacement: the target range, else a non-collapsed selection.
+    if (r && r.contains(e.target) && e.inputType === 'insertReplacementText') {
+        const data = e.data ?? (e.dataTransfer && e.dataTransfer.getData('text/plain'));
+        const t = e.getTargetRanges()[0], s = document.getSelection();
+        const [sn, so, en, eo] = t ? [t.startContainer, t.startOffset, t.endContainer, t.endOffset]
+            : [s.anchorNode, s.anchorOffset, s.focusNode, s.focusOffset];
+        // No range: the word is unknown, so ignore it rather than type at the caret.
+        const a = (t || !s.isCollapsed) && leafOf(sn), h = a && leafOf(en);
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (a && h && data != null) dioxus.send({ replace: [+a.dataset.key, units(a, sn, so), +h.dataset.key, units(h, en, eo), data] });
+        return;
+    }
     if (!r || !r.contains(e.target) || !(pressed || held) || e.isComposing
         || e.inputType === 'insertCompositionText') return;
     const now = current();
@@ -241,6 +254,8 @@ pub(crate) struct Report {
     pub synced: bool,
     /// A held-back `beforeinput` to run after `selection`: its type, data and last key.
     pub input: Option<(String, Option<String>, String)>,
+    /// An `insertReplacementText`: from key, from DOM offset, to key, to DOM offset, text.
+    pub replace: Option<(u64, usize, u64, usize, String)>,
     /// A keydown held behind input: key, code, ctrl, meta, alt, shift.
     pub key: Option<(String, String, bool, bool, bool, bool)>,
     /// `selection` is a press's, newer than any caret the model is still placing.

@@ -419,8 +419,10 @@ the Bold button reads as pressed.
   Text from elsewhere is read the same way, one paragraph per line. In a code
   block it is pasted as is. A pasted web address alone links the selection, or
   becomes a link at the caret.
-- Drag and drop of text and replacements (spellcheck, autocorrect, macOS text
-  substitutions) are ignored, so `spellcheck` is off.
+- Drag and drop of text is ignored. A replacement with no word to replace (no
+  target range, collapsed caret) is ignored too.
+- `spellcheck` is off by default: Chromium shows no squiggles for text the
+  editor writes. Firefox and Safari are not verified.
 
 ## Props
 
@@ -436,6 +438,7 @@ the Bold button reads as pressed.
 | `onsubmit` | `EventHandler<Doc>` | - | Sends the document when `submit_on` is pressed, as in a chat or comment box. The editor keeps its text: clear it with the handle's `clear` or a new `value`. Nothing is sent from an empty document, a code block or while an `overlay` takes the key; there Enter does its usual job. With `SubmitOn::Enter` the Enter key shows as "send" on phones, and Enter pressed in a word the keyboard is still composing sends the document with that word in it. |
 | `submit_on` | `SubmitOn` | `SubmitOn::Enter` | The key that fires `onsubmit`: `Enter` (Shift+Enter breaks the line) or `ModEnter` (Ctrl+Enter, Cmd+Enter on Apple platforms; Enter stays a new paragraph). Mod+Enter in a code block still leaves it. |
 | `max_length` | `usize` | - | The most characters of plain text the document holds, counted as `Doc::plain_text` does (a line break between blocks counts one). Typing and paste stop at it. A phone keyboard's composed text cannot be refused, so there the limit is soft: the surplus is cut when the word is committed. |
+| `spellcheck` | `bool` | `false` | Lets the browser spell check the text. A replacement the browser offers (a spelling suggestion, autocorrect) applies to its word as one undo step. Chromium marks no text the editor writes, so there it shows no squiggles. |
 | `toolbar` | `bool` | `true` | Shows the formatting toolbar above the text: marks, link, text type menu, lists, quote, code block, undo and redo. A narrow toolbar moves what does not fit into a More menu. |
 | `keymap` | `Keymap` | `Keymap::default()` | Which chords run which commands. `Mod` is Cmd on Apple platforms and Ctrl elsewhere. |
 | `commands` | `Commands` | `Commands::default()` | What the keymap and the toolbar run. Register your own command under a name and bind a chord to it. |

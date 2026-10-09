@@ -169,6 +169,9 @@ pub fn RichTextEditorPage() -> Element {
                         .doc("The key that fires `onsubmit`: `Enter` (Shift+Enter breaks the line) or `ModEnter` (Ctrl+Enter, Cmd+Enter on Apple platforms; Enter stays a new paragraph). Mod+Enter in a code block still leaves it."),
                     prop("max_length", "usize")
                         .doc("The most characters of plain text the document holds, counted as `Doc::plain_text` does (a line break between blocks counts one). Typing and paste stop at it. A phone keyboard's composed text cannot be refused, so there the limit is soft: the surplus is cut when the word is committed."),
+                    prop("spellcheck", "bool")
+                        .default("false")
+                        .doc("Lets the browser spell check the text. A replacement the browser offers (a spelling suggestion, autocorrect) applies to its word as one undo step. Chromium marks no text the editor writes, so there it shows no squiggles."),
                     prop("toolbar", "bool")
                         .default("true")
                         .doc("Shows the formatting toolbar above the text: marks, link, text type menu, lists, quote, code block, undo and redo. A narrow toolbar moves what does not fit into a More menu."),
@@ -286,7 +289,8 @@ pub fn RichTextEditorPage() -> Element {
                     "On Blitz (native) the document is shown read-only, through `RichTextView`.",
                     "Copy and cut write the selection as Markdown, as plain text and as `text/markdown`: a quote as `>`, a code block fenced with its language, lists, headings, rules, marks and links as written. Custom nodes write through their `NodeSpec::markdown` (pass `registry`). Cut is one undo step.",
                     "Paste reads Markdown back into formatted blocks; custom nodes stay text. Text from elsewhere is read the same way, one paragraph per line. In a code block it is pasted as is. A pasted web address alone links the selection, or becomes a link at the caret.",
-                    "Drag and drop of text and spellcheck replacements are ignored, so `spellcheck` is off.",
+                    "Drag and drop of text is ignored. A replacement with no word to replace (no target range, collapsed caret) is ignored too.",
+                    "`spellcheck` is off by default: Chromium shows no squiggles for text the editor writes. Firefox and Safari are not verified.",
                 ]),
             lead: rich_lead(),
             // snippet: let mut doc = use_signal(|| rich_text::Doc::from_markdown("## Release notes"));

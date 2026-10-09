@@ -86,7 +86,7 @@ pub(crate) fn intent(input_type: &str, data: Option<String>) -> Intent {
             Some(text) if !text.is_empty() => Intent::Type(text),
             _ => Intent::Cancel,
         },
-        // A substitution's target is a range the event's `data` does not carry.
+        // The surface script applies a substitution at its target range; here it has none.
         "insertReplacementText" => Intent::Cancel,
         "insertCompositionText" => Intent::Pass,
         "insertParagraph" => Intent::Run(B::SplitBlock),

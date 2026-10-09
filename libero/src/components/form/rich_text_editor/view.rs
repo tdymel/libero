@@ -155,6 +155,10 @@ field_props! {
         /// keyboard composes cannot be refused: it is cut when the word is committed.
         #[props(default, into)]
         max_length: Option<usize>,
+        /// Lets the browser spell check the text. Chromium marks no text the editor
+        /// writes, so it shows no squiggles; a browser's replacement still applies.
+        #[props(default)]
+        spellcheck: bool,
         /// Shows the formatting toolbar above the text.
         #[props(default = true)]
         toolbar: bool,
@@ -668,6 +672,28 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                     clip = clip_of(&editor.peek(), &registry.peek());
                 }
             }
+            if let Some((from_key, from, to_key, to, text)) = report.replace
+                && *can_edit.peek()
+            {
+                let range = {
+                    let live = editor.peek();
+                    model_position(&live, from_key, from).zip(model_position(&live, to_key, to))
+                };
+                if let Some((from, to)) = range {
+                    let mut edit = edit;
+                    edit(
+                        &|live| {
+                            live.apply(Record::Step, |state| {
+                                state.select(Selection::range(from, to));
+                                state.delete_selection();
+                                state.insert_text(&text);
+                                true
+                            })
+                        },
+                        false,
+                    );
+                }
+            }
             if let Some((input_type, data, key)) = report.input
                 && *can_edit.peek()
             {
@@ -1010,7 +1036,14 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         .attr("data-placeholder", props.placeholder.clone())
         .attr("data-empty", empty)
         .attr("contenteditable", if editable { "true" } else { "false" })
-        .attr("spellcheck", "false")
+        .attr(
+            "spellcheck",
+            if editable && props.spellcheck {
+                "true"
+            } else {
+                "false"
+            },
+        )
         .attr(
             "enterkeyhint",
             (editable && props.onsubmit.is_some() && props.submit_on == SubmitOn::Enter)
