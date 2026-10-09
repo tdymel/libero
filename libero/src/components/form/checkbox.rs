@@ -7,10 +7,10 @@ use crate::{
     components::{
         accessibility::{VISUALLY_HIDDEN_SX, hidden_input_centred_sx},
         common::{
-            Glyph, HtmlTag, Input, Part, States, TOOLBAR_ITEM, ToolbarItem, base_color_or,
-            coarse_hit_area_sx, contrast_color, disabled_look_sx, draw_svg, fill_color,
-            focus_ring_sx, names_itself, ring_overlay, ring_overlay_sx, use_name_warning,
-            use_toolbar_item, variables,
+            Glyph, HtmlTag, Input, Part, ScaleOrCss, States, TOOLBAR_ITEM, ToolbarItem,
+            base_color_or, coarse_hit_area_sx, contrast_color, disabled_look_sx, draw_svg,
+            fill_color, focus_ring_sx, names_itself, ring_overlay, ring_overlay_sx,
+            use_name_warning, use_toolbar_item, variables,
         },
         form::{Activation, Asks, field_parts_enum, field_props, use_bound, use_field},
         layout::{BoxStyle, use_box},
@@ -19,7 +19,9 @@ use crate::{
     hooks::{ElementHandle, use_cache, use_css, use_element, use_icon, use_theme},
     platform::ElementApi,
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{CHECKBOX_BOX, CHECKBOX_RADIUS, CheckboxDefaults, ChoiceVariant, CssVar, Size},
+    theme::{
+        CHECKBOX_BOX, CHECKBOX_RADIUS, CheckboxDefaults, ChoiceVariant, CssVar, Size, SizeCss,
+    },
     utils::warn,
 };
 
@@ -32,6 +34,8 @@ const CHECKBOX_MARK: CssVar = CssVar::new("--lsx-checkbox-mark");
 
 static CHECKBOX_CONTROL_SX: StaticSx = StaticSx::new(|| {
     CheckboxDefaults::theme_vars()
+        // Past `per_radius`'s reset: the field's custom radius, set on its wrapper.
+        .var(SizeCss::RADIUS.override_var(), "inherit")
         .display("inline-flex")
         .align_items("center")
         // The visually hidden input is absolutely positioned; without this it
@@ -169,7 +173,7 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
     let color = base_color_or(props.color.as_ref(), theme.checkbox.color);
 
     let size = props.size.copied_or(theme.checkbox.size);
-    let radius = props.radius.copied_or(theme.checkbox.radius);
+    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.checkbox.radius);
     let required = props.required.unwrap_or(false);
     let bound = use_bound(&props.name, props.onchange.is_some());
     let disabled = bound.disabled(props.disabled);
@@ -225,7 +229,7 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         .readonly(readonly)
         .disabled(disabled)
         .size(size)
-        .radius(radius)
+        .radius(radius.clone())
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)

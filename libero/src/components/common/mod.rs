@@ -70,7 +70,7 @@ pub(crate) use parts::{parts_enum, parts_source, parts_under_sx, recast_parts};
 pub use polymorphic::HtmlTag;
 pub(crate) use polymorphic::{IntoChildren, render_polymorphic, styling_attributes};
 pub(crate) use rail::{Rail, RailInset};
-pub(crate) use responsive_sx::{ScaleOrCss, responsive_sx, with_own};
+pub(crate) use responsive_sx::{ScaleOrCss, as_length, css_px, responsive_sx, with_own};
 pub(crate) use reveal_inline::reveal_inline;
 pub(crate) use style_attributes::{
     ABSENT, StyleAttributes, sx_source, use_style_attributes, with_parts,

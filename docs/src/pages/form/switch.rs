@@ -36,9 +36,9 @@ pub fn SwitchPage() -> Element {
                 prop("size", "Size")
                     .default(theme.switch.size.as_str())
                     .doc("Size of the track, the thumb and the label."),
-                prop("radius", "Size")
+                prop("radius", "ThemeAwareValue")
                     .default(theme.switch.radius.as_str())
-                    .doc("Track corner radius. The thumb stays a circle."),
+                    .doc("Track corner radius. The thumb stays a circle. Or any CSS, e.g. `radius: \"0\"`."),
                 prop("checked", "bool")
                     .doc("Whether it is on. Pair it with `onchange`. Left out, the switch keeps its own state, or the form's when `name` binds it."),
                 prop("onchange", "EventHandler<bool>")
@@ -114,7 +114,8 @@ pub fn SwitchPage() -> Element {
                     Control::color("color").default(theme.switch.color.as_str()),
                     Control::sizes("size")
                         .default(theme.switch.size.as_str()),
-                    Control::sizes("radius")
+                    // `0` is plain CSS, next to the size scale.
+                    Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.switch.radius.as_str()),
                 ], field_controls::<NotificationsCopy>(), vec![
                     // `checked` + `onchange` as a pair (the library warns on one alone); the

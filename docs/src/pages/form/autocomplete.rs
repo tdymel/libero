@@ -96,9 +96,9 @@ pub fn AutocompletePage() -> Element {
                     prop("size", "Size")
                         .default(theme.autocomplete.size.as_str())
                         .doc("Height, padding and font size of the field and its rows."),
-                    prop("radius", "Size")
+                    prop("radius", "ThemeAwareValue")
                         .default(theme.autocomplete.radius.as_str())
-                        .doc("Corner radius of the frame and the list."),
+                        .doc("Corner radius of the frame and the list. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("value", "String")
                         .default("\"\"")
                         .doc("The text. Pair it with `oninput`. Picking a suggestion inserts its label."),
@@ -226,7 +226,8 @@ pub fn AutocompletePage() -> Element {
                 ],
                 controls: [vec![
                     Control::sizes("size").default(theme.autocomplete.size.as_str()),
-                    Control::sizes("radius").default(theme.autocomplete.radius.as_str()),
+                    // `0` is plain CSS, next to the size scale.
+                    Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default(theme.autocomplete.radius.as_str()),
                 ], field_controls::<CityCopy>(), vec![
                     // A row drawn with `option`, and the `onpick` that reaches
                     // the record behind the text.

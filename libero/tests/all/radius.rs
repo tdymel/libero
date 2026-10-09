@@ -7,8 +7,8 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Alert, Badge, Button, ButtonGroup, Chip, ColorCode, ColorSwatch, Paper, ProgressBar,
-        Skeleton,
+        Alert, Badge, Button, ButtonGroup, Checkbox, Chip, ColorCode, ColorSwatch, Paper,
+        ProgressBar, Skeleton, Switch, TextField, Textarea,
     },
 };
 
@@ -123,4 +123,36 @@ fn a_custom_radius_fills_the_component_s_own_scale_var() {
         html.contains(&format!("{OVERRIDE}0")),
         "progress track: {html}"
     );
+}
+
+/// Todo 2721: a field's radius takes any CSS. The wrapper sets the override; the frame and
+/// the controls reset it per `radius-*` rule, so they inherit it back.
+#[test]
+fn a_custom_field_radius_reaches_the_frame_and_the_controls() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                TextField { label: "Name", radius: "0" }
+                Textarea { label: "Note", radius: "3px" }
+                Checkbox { label: "Check", radius: "0" }
+                Switch { label: "Switch", radius: "0" }
+            }
+        }
+    }
+    let html = render(app);
+
+    assert_eq!(html.matches(&format!("{OVERRIDE}0")).count(), 3, "{html}");
+    assert!(html.contains(&format!("{OVERRIDE}3px")), "{html}");
+    assert!(html.contains(&format!("{OVERRIDE}inherit")), "{html}");
+}
+
+#[test]
+fn a_field_radius_size_sets_no_override() {
+    fn app() -> Element {
+        rsx! { LiberoProvider { TextField { label: "Name", radius: "lg" } } }
+    }
+    let html = render(app);
+
+    assert!(html.contains("radius-lg"), "{html}");
+    assert!(!html.contains(&format!("{OVERRIDE}lg")), "{html}");
 }

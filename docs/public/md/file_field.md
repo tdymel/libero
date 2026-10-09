@@ -126,7 +126,7 @@ fn Demo() -> Element {
 | `validate` | `Validators<Files>` | - | Rules over the files, shown once the field loses focus or its form is submitted. |
 | `children` | `Element` | - | The dropzone's prompt. The `input` variant shows `placeholder` instead. |
 | `size` | `Size` | `md` | Control height, font size and the chips' size. |
-| `radius` | `Size` | `sm` | Corner radius of the frame. |
+| `radius` | `ThemeAwareValue` | `sm` | Corner radius of the frame. Or any CSS, e.g. `radius: "0"`. |
 | `label` | `Caption` | - | The field's caption. It names the field and its Browse button. |
 | `description` | `Caption` | - | Between the label and the control. Which files are wanted. |
 | `helper` | `Caption` | - | Under the control. Size limits, formats. |

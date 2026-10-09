@@ -13,6 +13,7 @@ pub const ROUTES: Routes = &[
     ("/tooltip/quick", || rsx! { TooltipQuickPage {} }),
     ("/tooltip-long", || rsx! { TooltipLongPage {} }),
     ("/tooltip-toggle", || rsx! { TooltipTogglePage {} }),
+    ("/tooltip-gap", || rsx! { TooltipGapPage {} }),
 ];
 
 /// A label with no break opportunity, forced open, for reflow at 320px (todo 2384).
@@ -49,6 +50,23 @@ fn TooltipQuickPage() -> Element {
         }
         div { height: "200px" }
         p { id: "away", "Away" }
+    }
+}
+
+/// A forced-open bottom bubble at a custom `gap: "20px"` (todo 2722).
+#[component]
+fn TooltipGapPage() -> Element {
+    rsx! {
+        div { margin_left: "200px", padding_top: "40px",
+            Tooltip {
+                label: rsx! { "Saves the draft" },
+                label_id: "save-tip",
+                side: "bottom",
+                gap: "20px",
+                open: true,
+                Button { id: "save", "aria-describedby": "save-tip", "Save" }
+            }
+        }
     }
 }
 

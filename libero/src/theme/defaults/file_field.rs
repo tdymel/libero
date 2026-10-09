@@ -56,7 +56,7 @@ impl FileFieldDefaults {
     }
 
     pub fn radius_sx(radius: Size) -> Sx {
-        sx().var(FILE_FIELD_RADIUS, SizeCss::RADIUS.value(radius))
+        sx().var(FILE_FIELD_RADIUS, SizeCss::RADIUS.overridable(radius))
     }
 
     pub fn theme_vars() -> Sx {

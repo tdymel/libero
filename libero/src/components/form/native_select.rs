@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, OptionSource, Options, recast_parts},
+        common::{HtmlTag, Input, OptionSource, Options, ScaleOrCss, recast_parts},
         form::{
             Asks, LiveControl, Select, SelectOptionArgs, field_control_sx, field_props, row_label,
             use_bound, use_field, use_field_frame,
@@ -136,7 +136,7 @@ fn NativeSelectShell<T: Options>(live: Signal<Option<T>>, field: NativeSelectPro
     let theme = use_theme();
 
     let size = props.size.copied_or(theme.native_select.size);
-    let radius = props.radius.copied_or(theme.native_select.radius);
+    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.native_select.radius);
     let required = props.required.unwrap_or(false);
 
     let bound = use_bound(&props.name, props.onchange.is_some());
@@ -192,7 +192,7 @@ fn NativeSelectShell<T: Options>(live: Signal<Option<T>>, field: NativeSelectPro
         .asks(Asks::Select)
         .disabled(disabled)
         .size(size)
-        .radius(radius)
+        .radius(radius.clone())
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)
@@ -337,7 +337,7 @@ fn listbox<T: Options>(props: NativeSelectProps<T>) -> Element {
             helper: props.helper,
             status: props.status,
             size: props.size.copied_or(theme.native_select.size),
-            radius: props.radius.copied_or(theme.native_select.radius),
+            radius: props.radius.clone(),
             disabled: props.disabled,
             required: props.required,
             class: props.class,

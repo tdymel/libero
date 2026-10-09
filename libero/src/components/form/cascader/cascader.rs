@@ -251,7 +251,7 @@ pub fn Cascader<T: Options>(props: CascaderProps<T>) -> Element {
             helper: props.helper,
             status: props.status,
             size: props.size.copied_or(theme.cascader.size),
-            radius: props.radius.copied_or(theme.cascader.radius),
+            radius: props.radius.clone(),
             disabled: Some(bound.disabled(props.disabled)),
             readonly: props.readonly,
             required: props.required,

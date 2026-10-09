@@ -55,7 +55,7 @@ fn Demo() -> Element {
 | `name` | `FieldName<ColorCode>` | - | What the field posts as: its color in `format`, from a hidden input as `ColorPicker` posts it, never the text being typed. A path such as `Theme::FIELDS.accent()` also binds the color to the surrounding `Form`'s value when the field has no `oninput`. |
 | `placeholder` | `String` | - | Shown while the text is empty. |
 | `size` | `Size` | `md` | Control height, font size and the dropdown's picker. |
-| `radius` | `Size` | `sm` | Corner radius of the frame. |
+| `radius` | `ThemeAwareValue` | `sm` | Corner radius of the frame. Or any CSS, e.g. `radius: "0"`. |
 | `label` | `Caption` | - | The field's caption. |
 | `description` | `Caption` | - | Between the label and the control. |
 | `helper` | `Caption` | - | Under the control. |

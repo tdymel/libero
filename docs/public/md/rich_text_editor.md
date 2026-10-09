@@ -453,7 +453,7 @@ the Bold button reads as pressed.
 | `overlay_results` | `usize` | - | How many options the overlay lists. While `overlay` is `Some`, a change is announced through the editor's polite live region ("2 results", or "No results" at 0; `RichTextEditorLabels::results` and `nothing_found`). |
 | `tools` | `Vec<RichTextTool>` | `vec![]` | Your toolbar buttons, after the block buttons: `RichTextTool::new(command, label, icon)` runs the command by name; `.active(fn)` makes it a toggle with `aria-pressed`. They never move into the More menu. |
 | `size` | `Size` | `md` | Padding and font size. |
-| `radius` | `Size` | `sm` | Corner radius, independent of `size`. |
+| `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. Or any CSS, e.g. `radius: "0"`. |
 | `label` | `Caption` | - | The field's caption, above the toolbar. It names the text. |
 | `description` | `Caption` | - | Between the label and the control. What to enter. |
 | `helper` | `Caption` | - | Under the control. Formatting rules or limits. |

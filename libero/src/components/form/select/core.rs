@@ -5,9 +5,9 @@ use crate::{
     components::{
         accessibility::VisuallyHidden,
         common::{
-            ComboboxState, Glyph, HtmlTag, Input, Part, Parts, States, TOOLBAR_ITEM, ToolbarItem,
-            attr, focus_ring_sx, has_shortcut_modifier, inset_focus_ring_sx, navigation_chord,
-            ring_overlay, use_toolbar_item,
+            ComboboxState, Glyph, HtmlTag, Input, Part, Parts, ScaleOrCss, States, TOOLBAR_ITEM,
+            ToolbarItem, attr, focus_ring_sx, has_shortcut_modifier, inset_focus_ring_sx,
+            navigation_chord, ring_overlay, use_toolbar_item,
         },
         form::{
             Asks, CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, PreparedField, RowCache,
@@ -23,7 +23,7 @@ use crate::{
         use_localization, use_theme, use_typeahead,
     },
     platform::{ElementApi, blur_counts, logical_key},
-    sx::{StaticSx, sx},
+    sx::{StaticSx, ThemeAwareValue, sx},
     theme::{FOCUS_RING_WIDTH, Size},
 };
 
@@ -259,7 +259,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     let theme = use_theme();
     let nothing_found = use_localization().combobox.nothing_found;
     let size = props.size.copied_or(theme.select.size);
-    let radius = props.radius.copied_or(theme.select.radius);
+    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.select.radius);
     let disabled = props.disabled.unwrap_or(false);
     // Read-only stays focusable and posting, but never opens; chip keys and clear go too.
     let readonly = props.readonly.unwrap_or(false);
@@ -326,7 +326,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         .readonly(readonly)
         .disabled(disabled)
         .size(size)
-        .radius(radius)
+        .radius(radius.clone())
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)
@@ -511,7 +511,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         open,
         opened,
         size,
-        radius,
+        radius: radius.value(),
         loading: props.loading,
         nothing_found: (searchable && !query.read().is_empty()).then(|| nothing_found.to_string()),
         multiple,
@@ -550,7 +550,7 @@ struct Listbox {
     open: SelectOpen,
     opened: bool,
     size: Size,
-    radius: Size,
+    radius: ThemeAwareValue,
     loading: Option<String>,
     nothing_found: Option<String>,
     multiple: bool,

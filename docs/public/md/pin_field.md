@@ -49,7 +49,7 @@ submit the code. Extra HTML attributes land on the group, not on a cell.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `size` | `Size` | `md` | The cell's square, its font size and the gap. A cell is as tall as a `TextField` of the same size. |
-| `radius` | `Size` | `sm` | Corner radius of each cell, independent of `size`. |
+| `radius` | `ThemeAwareValue` | `sm` | Corner radius of each cell, independent of `size`. Or any CSS, e.g. `radius: "0"`. |
 | `length` | `usize` | `4` | How many cells. |
 | `kind` | `PinKind` | `numeric` | `numeric` or `alphanumeric`. Any other character is ignored as it is typed. |
 | `value` | `Option<String>` | - | The pin so far, one character per filled cell. Leave it out and the field keeps its own pin. |

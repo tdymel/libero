@@ -53,7 +53,7 @@ Switch {
 |---|---|---|---|
 | `color` | `ThemeAwareValue` | `primary` | Track color when on. A theme color name or any CSS color; `theme.switch.color` when unset. |
 | `size` | `Size` | `md` | Size of the track, the thumb and the label. |
-| `radius` | `Size` | `xl` | Track corner radius. The thumb stays a circle. |
+| `radius` | `ThemeAwareValue` | `xl` | Track corner radius. The thumb stays a circle. Or any CSS, e.g. `radius: "0"`. |
 | `checked` | `bool` | - | Whether it is on. Pair it with `onchange`. Left out, the switch keeps its own state, or the form's when `name` binds it. |
 | `onchange` | `EventHandler<bool>` | - | Called with the value `checked` should take next. |
 | `name` | `FieldName<bool>` | - | What the switch posts as. A path such as `Signup::FIELDS.terms()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |

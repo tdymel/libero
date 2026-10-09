@@ -75,7 +75,7 @@ pub fn ChronoFieldPage() -> Element {
             properties: vec![
                 props("ChronoField<V: DateValue>", vec![
                     prop("size", "Size").default(theme.chrono_field.size.as_str()).doc("Control height, font size and the dropdown's picker."),
-                    prop("radius", "Size").default(theme.chrono_field.radius.as_str()).doc("Corner radius of the frame."),
+                    prop("radius", "ThemeAwareValue").default(theme.chrono_field.radius.as_str()).doc("Corner radius of the frame. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("value", "Option<V>").doc("The value. `None` is the empty field. Its type picks the dropdown. Pair it with `onchange`."),
                     prop("onchange", "EventHandler<Option<V>>")
                         .doc("Called on every pick, and when typed text is committed on blur or Enter. Emptied text commits `None`."),
@@ -196,7 +196,8 @@ pub fn ChronoFieldPage() -> Element {
                             code
                         }),
                         Control::sizes("size").default(theme.chrono_field.size.as_str()),
-                        Control::sizes("radius").default(theme.chrono_field.radius.as_str()),
+                        // `0` is plain CSS, next to the size scale.
+                        Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default(theme.chrono_field.radius.as_str()),
                         // Both swap the site's own, so they add no prop.
                         Control::toggle("language", options(&LANGUAGES)).default(LANGUAGES[0].0).code(|_, _| vec![]),
                         Control::toggle("formats", options(&FORMATS)).default(FORMATS[1].0).code(|_, _| vec![]),

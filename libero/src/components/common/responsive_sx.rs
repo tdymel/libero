@@ -27,6 +27,28 @@ pub(crate) fn with_own(extra: Option<Sx>, own: &Input<Sx>) -> Input<Sx> {
     }
 }
 
+/// A plain CSS length in px: `12px`, `0.5rem` (at a 16px root) or `0`. `None` for
+/// anything only layout can resolve: `calc()`, `var()`, a percentage.
+pub(crate) fn css_px(css: &str) -> Option<f32> {
+    let css = css.trim();
+    let number = |value: &str| value.trim().parse::<f32>().ok().filter(|n| n.is_finite());
+    if let Some(px) = css.strip_suffix("px") {
+        number(px)
+    } else if let Some(rem) = css.strip_suffix("rem") {
+        number(rem).map(|rem| rem * 16.0)
+    } else {
+        number(css).filter(|n| *n == 0.0)
+    }
+}
+
+/// `0px` for a bare `0`, which `calc()` and `min()` read as a number, not a length.
+pub(crate) fn as_length(css: String) -> String {
+    match css.trim() {
+        "0" => "0px".to_string(),
+        _ => css,
+    }
+}
+
 /// A size-or-CSS prop (`radius: "md"`, `radius: "0"`) after its fallback. Custom CSS keeps
 /// the fallback's state class and replaces its value through the scale's override var.
 #[derive(Clone, Debug, PartialEq)]
@@ -57,6 +79,13 @@ impl ScaleOrCss {
             .unwrap_or_else(|| scale.value(self.size))
     }
 
+    /// The size, or the custom CSS, for a child that takes the prop as is.
+    pub fn value(&self) -> ThemeAwareValue {
+        self.custom
+            .clone()
+            .unwrap_or(ThemeAwareValue::Size(self.size))
+    }
+
     /// The value for `scale.override_var()` on the instance; `None` for a size.
     pub fn custom_css(&self, scale: SizeCss) -> Option<String> {
         self.custom
@@ -85,6 +114,22 @@ mod tests {
             size.resolve(SizeCss::RADIUS),
             SizeCss::RADIUS.value(Size::Lg)
         );
+    }
+
+    #[test]
+    fn plain_lengths_read_as_px() {
+        assert_eq!(css_px("12px"), Some(12.0));
+        assert_eq!(css_px(" 0.5rem "), Some(8.0));
+        assert_eq!(css_px("0"), Some(0.0));
+        assert_eq!(css_px("calc(1rem + 2px)"), None);
+        assert_eq!(css_px("5%"), None);
+        assert_eq!(css_px("3"), None);
+    }
+
+    #[test]
+    fn a_bare_zero_becomes_a_length() {
+        assert_eq!(as_length("0".into()), "0px");
+        assert_eq!(as_length("2px".into()), "2px");
     }
 
     #[test]

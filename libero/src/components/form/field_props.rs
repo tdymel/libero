@@ -45,9 +45,9 @@ macro_rules! field_props {
                 #[props(default, into)]
                 size: Input<crate::theme::Size>,
                 $(
-                    /// Corner radius, independent of `size`.
+                    /// Corner radius, independent of `size`: a size word or any CSS, as `radius: "0"`.
                     #[props(default, into)]
-                    $radius: Input<crate::theme::Size>,
+                    $radius: Input<crate::sx::ThemeAwareValue>,
                 )?
                 /// `None` is "not stated", so a `Fieldset` can cascade into it.
                 #[props(default)]

@@ -59,9 +59,9 @@ pub fn NativeSelectPage() -> Element {
                     prop("size", "Size")
                         .default(theme.native_select.size.as_str())
                         .doc("Height, padding and font size."),
-                    prop("radius", "Size")
+                    prop("radius", "ThemeAwareValue")
                         .default(theme.native_select.radius.as_str())
-                        .doc("Corner radius."),
+                        .doc("Corner radius. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("value", "Option<T>")
                         .doc("The selected option. Pair it with `onchange`. `None` shows `placeholder` and selects nothing."),
                     prop("onchange", "EventHandler<T>")
@@ -130,7 +130,8 @@ pub fn NativeSelectPage() -> Element {
                 controls: [vec![
                     Control::sizes("size")
                         .default(theme.native_select.size.as_str()),
-                    Control::sizes("radius")
+                    // `0` is plain CSS, next to the size scale.
+                    Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.native_select.radius.as_str()),
                 ], field_controls::<SizeCopy>(), vec![
                     Control::switch("placeholder").code(|_, values| {

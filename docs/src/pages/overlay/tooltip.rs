@@ -40,9 +40,9 @@ pub fn TooltipPage() -> Element {
                 prop("side", "Side")
                     .default(theme.tooltip.side.as_str())
                     .doc("The preferred side of the trigger. The bubble flips when that side has no room."),
-                prop("gap", "Size")
+                prop("gap", "ThemeAwareValue")
                     .default(theme.tooltip.gap.as_str())
-                    .doc("Distance to the trigger. The pointer can cross it without closing the bubble."),
+                    .doc("Distance to the trigger, or a `px` or `rem` length, e.g. `gap: \"6px\"`. The pointer can cross it without closing the bubble. Other CSS places the bubble by the theme's gap."),
                 prop("size", "Size").default(theme.tooltip.size.as_str()).doc("Font size of the bubble."),
                 prop("z_index", "ThemeAwareValue")
                     .default("the popover layer")
@@ -100,7 +100,8 @@ pub fn TooltipPage() -> Element {
                         .capitalised()
                         .default(theme.tooltip.side.as_str()),
                     Control::sizes("size").default(theme.tooltip.size.as_str()),
-                    Control::sizes("gap").default(theme.tooltip.gap.as_str()),
+                    // `0` is plain CSS, next to the size scale.
+                    Control::slider("gap", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default(theme.tooltip.gap.as_str()),
                     Control::delay("open_delay", ["auto", "200", "500", "1000"]),
                     Control::delay("close_delay", ["auto", "200", "500", "1000"]),
                     // `Some(false)` pins it shut, which hover cannot override.

@@ -98,7 +98,7 @@ Autocomplete {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `size` | `Size` | `md` | Height, padding and font size of the field and its rows. |
-| `radius` | `Size` | `sm` | Corner radius of the frame and the list. |
+| `radius` | `ThemeAwareValue` | `sm` | Corner radius of the frame and the list. Or any CSS, e.g. `radius: "0"`. |
 | `value` | `String` | `""` | The text. Pair it with `oninput`. Picking a suggestion inserts its label. |
 | `oninput` | `EventHandler<String>` | - | Fires per keystroke, and again with the label when a suggestion is picked or the field is cleared. |
 | `name` | `FieldName<String>` | - | What the field posts as. A path such as `Signup::FIELDS.city()` also binds it to the surrounding `Form`'s value when it has no `oninput`. |

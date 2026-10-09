@@ -5,7 +5,7 @@ use crate::{
     CssLayer,
     components::{
         accessibility::VisuallyHidden,
-        common::{HtmlTag, Input, Part},
+        common::{HtmlTag, Input, Part, ScaleOrCss},
         form::{
             FormScope, field_control_sx, field_parts_enum, field_props, use_bound, use_field,
             use_field_frame,
@@ -141,7 +141,7 @@ pub fn Textarea(props: TextareaProps) -> Element {
     let theme = use_theme();
 
     let size = props.size.copied_or(theme.textarea.size);
-    let radius = props.radius.copied_or(theme.textarea.radius);
+    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.textarea.radius);
     let required = props.required.unwrap_or(false);
 
     let bound = use_bound(&props.name, props.oninput.is_some());
@@ -161,7 +161,7 @@ pub fn Textarea(props: TextareaProps) -> Element {
         .readonly(readonly)
         .disabled(disabled)
         .size(size)
-        .radius(radius)
+        .radius(radius.clone())
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)

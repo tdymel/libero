@@ -4,7 +4,10 @@ use crate::{
         form::{drag_over_sx, field_control_sx},
     },
     sx::{StaticSx, sx},
-    theme::{FILE_FIELD_DROPZONE_HEIGHT, FILE_FIELD_PADDING, FILE_FIELD_RADIUS, FileFieldDefaults},
+    theme::{
+        FILE_FIELD_DROPZONE_HEIGHT, FILE_FIELD_PADDING, FILE_FIELD_RADIUS, FileFieldDefaults,
+        SizeCss,
+    },
 };
 
 /// The `Input` variant's group, the `Select` trigger's shape: the chips, then
@@ -111,6 +114,8 @@ pub(super) static FILE_DROPZONE_SX: StaticSx = StaticSx::new(|| {
     // The surface carries the size and radius states, so the per-size vars
     // resolve here and its children inherit them.
     FileFieldDefaults::theme_vars()
+        // Past `per_radius`'s reset: the field's custom radius, set on its wrapper.
+        .var(SizeCss::RADIUS.override_var(), "inherit")
         .display("flex")
         .flex_direction("column")
         .align_items("center")
@@ -158,6 +163,7 @@ pub(super) static FILE_CARD_LIST_SX: StaticSx = StaticSx::new(|| {
     // The list is a sibling of the surface, not a descendant, so it resolves
     // the same vars for its own cards.
     FileFieldDefaults::theme_vars()
+        .var(SizeCss::RADIUS.override_var(), "inherit")
         .display("flex")
         .flex_direction("column")
         .gap("4px")

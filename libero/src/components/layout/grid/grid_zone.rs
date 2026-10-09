@@ -1,15 +1,17 @@
+use std::{cell::Cell, rc::Rc};
+
 use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, States, base_props, variables},
+        common::{HtmlTag, Input, ScaleOrCss, States, as_length, base_props, css_px, variables},
         layout::use_box,
     },
     hooks::{use_cache, use_theme},
-    sx::{StaticSx, sx},
+    sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
         GRID_ITEM_ROWS_VAR, GRID_ROW_UNIT, GRID_ZONE_AREA_VAR, GRID_ZONE_CONTAINER_VAR,
-        GRID_ZONE_GAP, Size, SizeCss,
+        GRID_ZONE_GAP, SizeCss,
     },
     utils::warn,
 };
@@ -46,7 +48,10 @@ static GRID_ZONE_SX: StaticSx = StaticSx::new(|| {
     let item = format!("& > [data-state~=\"{GRID_ITEM_STATE}\"]");
     let measured = format!("{item}[data-state~=\"measured\"]");
 
+    let gap = GRID_ZONE_GAP.overridable();
     sx().display("grid")
+        // Set per breakpoint by an `ImageList`; a nested zone must not inherit it.
+        .var(GRID_ZONE_GAP.override_var(), "initial")
         .grid_area(GRID_ZONE_AREA_VAR.value_or("auto"))
         .container_name(GRID_ZONE_CONTAINER_VAR.value_or("none"))
         .grid_template_columns("repeat(12, minmax(0, 1fr))")
@@ -55,8 +60,8 @@ static GRID_ZONE_SX: StaticSx = StaticSx::new(|| {
         .min_width("0")
         // Eleven length gaps can't shrink and overflow a narrow zone; the `4%`
         // cap engages only under ~300px.
-        .column_gap(format!("min({}, 4%)", GRID_ZONE_GAP.value()))
-        .row_gap(GRID_ZONE_GAP.value())
+        .column_gap(format!("min({gap}, 4%)"))
+        .row_gap(gap.clone())
         // Only a named zone: containment collapses a shrink-to-fit standalone
         // zone to nothing.
         .when("container", sx().container_type("inline-size"))
@@ -67,7 +72,7 @@ static GRID_ZONE_SX: StaticSx = StaticSx::new(|| {
                 // A row gap would make the quantum ragged; the item carries it,
                 // and the zone cancels the last one.
                 .row_gap("0")
-                .margin_bottom(format!("calc(-1 * {})", GRID_ZONE_GAP.value()))
+                .margin_bottom(format!("calc(-1 * {gap})"))
                 // `minmax`: an unmeasured item (SSR, native) grows its track
                 // instead of overflowing onto the items below.
                 .grid_auto_rows(format!("minmax({}, auto)", GRID_ROW_UNIT.value()))
@@ -75,8 +80,7 @@ static GRID_ZONE_SX: StaticSx = StaticSx::new(|| {
                     &item,
                     // At `stretch` each measurement reports its row span and
                     // the span climbs. Masonry only, or cards lose equal heights.
-                    sx().align_self("start")
-                        .margin_bottom(GRID_ZONE_GAP.value()),
+                    sx().align_self("start").margin_bottom(gap),
                 )
                 // (0,3,0) beats the item's (0,2,0) `grid-column` rule: framework
                 // sheets come in hash order, so `& > *` would lose.
@@ -100,9 +104,10 @@ base_props! {
         /// Pack measured item heights with no vertical dead space.
         #[props(default)]
         masonry: bool,
-        /// Between items.
+        /// Between items: a size word or any CSS, as `gap: "12px"`. Masonry packs by a
+        /// `px` or `rem` length; another CSS value packs by the theme's gap.
         #[props(default, into)]
-        gap: Input<Size>,
+        gap: Input<ThemeAwareValue>,
         #[props(default, into)]
         component: Input<HtmlTag>,
     }
@@ -131,6 +136,7 @@ pub fn GridZone(props: GridZoneProps) -> Element {
     let grid = try_use_context::<GridContext>();
     // Read before this zone provides its own: the zone enclosing a nested grid.
     let enclosing = try_use_context::<GridZoneContext>();
+    let warned = use_hook(|| Rc::new(Cell::new(false)));
 
     let area = props.area;
     if grid.is_none() && area.is_set() {
@@ -157,8 +163,19 @@ pub fn GridZone(props: GridZoneProps) -> Element {
         }
     }
 
-    let gap = props.gap.copied_or(theme.grid.zone_gap);
-    let gap_px = theme.spacing.get(gap).into();
+    let gap = ScaleOrCss::new(props.gap.as_ref(), theme.grid.zone_gap);
+    let custom = gap.custom_css(SizeCss::SPACING);
+    let measured = custom.as_deref().and_then(css_px);
+    if props.masonry
+        && let Some(css) = custom.as_deref().filter(|_| measured.is_none())
+        && !warned.replace(true)
+    {
+        warn(&format!(
+            "GridZone: masonry packs by a px or rem gap, so `{css}` packs by the theme's gap \
+             and the rows are off by the difference."
+        ));
+    }
+    let gap_px = measured.map_or(theme.spacing.get(gap.size).into(), |px| px.round() as u32);
     let container = if area.is_set() { area.name } else { "" };
     // A nested zone reusing the area name would capture the outer zone's
     // responsive spans.
@@ -188,11 +205,13 @@ pub fn GridZone(props: GridZoneProps) -> Element {
 
     // Always published: a nested zone must not inherit its parent's gap.
     // Cached per change: building the three vars was ~0.45x `Leaf`.
-    let style = use_cache((container, gap), |&(container, gap)| {
+    // The zone's and an image list's `calc()`s need a length.
+    let gap_css = as_length(gap.resolve(SizeCss::SPACING));
+    let style = use_cache((container, gap_css), |(container, gap_css)| {
         let named = !container.is_empty();
         variables()
             .with(GRID_ZONE_AREA_VAR, named.then(|| container.to_string()))
-            .with(GRID_ZONE_GAP, SizeCss::SPACING.value(gap))
+            .with(GRID_ZONE_GAP, gap_css.clone())
             .with(
                 GRID_ZONE_CONTAINER_VAR,
                 named.then(|| container_name(container)),
@@ -250,5 +269,24 @@ mod tests {
             "{orphan:?}"
         );
         assert!(plain.is_empty(), "{plain:?}");
+    }
+
+    #[test]
+    fn masonry_warns_once_a_gap_it_cannot_measure() {
+        let calc = warnings_of(|| {
+            rsx! { LiberoProvider { GridZone { masonry: true, gap: "calc(1rem + 1px)", "x" } } }
+        });
+        let px = warnings_of(
+            || rsx! { LiberoProvider { GridZone { masonry: true, gap: "12px", "x" } } },
+        );
+
+        assert_eq!(
+            calc.iter()
+                .filter(|w| w.contains("packs by the theme's gap"))
+                .count(),
+            1,
+            "{calc:?}"
+        );
+        assert!(px.is_empty(), "{px:?}");
     }
 }

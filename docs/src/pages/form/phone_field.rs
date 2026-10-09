@@ -54,9 +54,9 @@ pub fn PhoneFieldPage() -> Element {
                     prop("size", "Size")
                         .default(theme.phone_field.size.as_str())
                         .doc("Height, padding and font size."),
-                    prop("radius", "Size")
+                    prop("radius", "ThemeAwareValue")
                         .default(theme.phone_field.radius.as_str())
-                        .doc("Corner radius, independent of `size`."),
+                        .doc("Corner radius, independent of `size`. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("value", "Option<String>")
                         .doc("The number in E.164, such as `\"+12133734253\"`. Leave it out and the field keeps its own text."),
                     prop("oninput", "EventHandler<String>")
@@ -149,7 +149,8 @@ pub fn PhoneFieldPage() -> Element {
                 controls: [vec![
                     Control::sizes("size")
                         .default(theme.phone_field.size.as_str()),
-                    Control::sizes("radius")
+                    // `0` is plain CSS, next to the size scale.
+                    Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.phone_field.radius.as_str()),
                     Control::toggle("country", ["us", "de", "fr"])
                         .default("de")

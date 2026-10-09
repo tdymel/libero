@@ -6,7 +6,10 @@ use crate::common::{body, nth_attributes, render, rules_for, tags_with};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Carousel, DataList, DataListItem, Grid, GridArea, GridTemplate, Marquee},
+    components::{
+        Carousel, DataList, DataListItem, Grid, GridArea, GridTemplate, GridZone, ImageItem,
+        ImageList, Marquee, Sidebar,
+    },
     sx::ThemeAwareValue,
     theme::{Size, responsive},
 };
@@ -74,4 +77,44 @@ fn a_custom_gap_fills_the_spacing_var() {
             "{tag:?}"
         );
     }
+}
+
+/// Todos 2722, 2723: a zone's gap is any CSS; an image list's is per breakpoint too, a
+/// breakpoint replacing the zone's base through its override var.
+#[test]
+fn a_zone_and_an_image_list_gap_take_css_and_breakpoints() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                GridZone { gap: "12px", "z" }
+                ImageList {
+                    gap: responsive(ThemeAwareValue::from("2px")).md(Size::Lg.into()),
+                    items: vec![ImageItem::new(rsx! { "a" })],
+                }
+            }
+        }
+    }
+    let html = render(app).replace(' ', "");
+
+    assert!(html.contains("--lsx-grid-zone-gap:12px"), "{html}");
+    assert!(html.contains("--lsx-grid-zone-gap:2px"), "{html}");
+    assert!(
+        html.contains("--lsx-grid-zone-gap-override:var(--lsx-spacing-lg)"),
+        "{html}"
+    );
+}
+
+/// The Drawer and Sidebar width-like `size` takes any CSS through its override var.
+#[test]
+fn a_sidebar_size_takes_css() {
+    fn app() -> Element {
+        rsx! { LiberoProvider { Sidebar { size: "18rem", "s" } } }
+    }
+    let html = render(app).replace(' ', "");
+
+    assert!(html.contains("--lsx-sidebar-size-override:18rem"), "{html}");
+    assert!(
+        html.contains("var(--lsx-sidebar-size-override,var(--lsx-sidebar-size-md))"),
+        "{html}"
+    );
 }

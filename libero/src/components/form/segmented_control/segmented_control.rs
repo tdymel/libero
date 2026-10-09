@@ -92,7 +92,7 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
     let element = use_element();
 
     let size = props.size.copied_or(theme.button.size);
-    let radius = props.radius.copied_or(theme.button.radius);
+    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.button.radius);
     let required = props.required.unwrap_or(false);
 
     let bound = use_bound(&props.name, props.onchange.is_some());
@@ -151,7 +151,7 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
         .asks(Asks::Option)
         .disabled(disabled)
         .size(size)
-        .radius(radius)
+        .radius(radius.clone())
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)
@@ -214,7 +214,7 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
             variant,
             full_width,
             size,
-            radius,
+            radius: radius.size,
             // Only the state a custom gap rides: its override replaces the value.
             gap: props
                 .gap

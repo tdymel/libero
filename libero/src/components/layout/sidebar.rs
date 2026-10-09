@@ -3,11 +3,14 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, Part, States, base_props, input_from_str, parts_enum},
+        common::{
+            HtmlTag, Input, Part, ScaleOrCss, States, Variables, base_props, input_from_str,
+            parts_enum, variables,
+        },
         layout::{ScrollArea, use_box},
     },
     hooks::use_theme,
-    sx::{StaticSx, sx},
+    sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ColorCss, ColorShade, SIDEBAR_SIZE, Size},
 };
 
@@ -36,11 +39,13 @@ static SIDEBAR_BASE_SX: StaticSx = StaticSx::new(|| {
             "side-top",
             sx().border_bottom(border.clone()).max_height("50%"),
         )
-        .when("side-bottom", sx().border_top(border).max_height("50%"));
+        .when("side-bottom", sx().border_top(border).max_height("50%"))
+        // A nested sidebar must not inherit this one's custom size.
+        .var(SIDEBAR_SIZE.override_var(), "initial");
 
     Size::ALL.into_iter().fold(base, |acc, size| {
         let state = size.state_name();
-        let value = SIDEBAR_SIZE.value(size);
+        let value = SIDEBAR_SIZE.overridable(size);
 
         acc.when(
             format!("side-start && {state} || side-end && {state}"),
@@ -67,8 +72,9 @@ base_props! {
         /// The edge it borders and the axis `size` sizes; it does not place the panel.
         #[props(default, into)]
         side: Input<SidebarSide>,
+        /// The width (or height, on `top` or `bottom`): a size word or any CSS, as `size: "18rem"`.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<ThemeAwareValue>,
         /// Element to render as; `aside` (the `complementary` landmark) by default.
         #[props(default, into)]
         component: Input<HtmlTag>,
@@ -97,14 +103,17 @@ base_props! {
 pub fn Sidebar(props: SidebarProps) -> Element {
     let side = props.side.copied_or_default();
     let theme = use_theme();
-    let size = props.size.copied_or(theme.sidebar.size);
+    let size = ScaleOrCss::new(props.size.as_ref(), theme.sidebar.size);
+    let variables: Input<Variables> = variables()
+        .with(SIDEBAR_SIZE.override_var(), size.custom_css(SIDEBAR_SIZE))
+        .into();
     let component = props.component.copied_or(HtmlTag::Aside);
 
     let states: Input<States> = props
         .states
         .unwrap_or_default()
         .active(side.state_name())
-        .active(size.state_name())
+        .active(size.size.state_name())
         .into();
 
     // An overflowing sidebar's scroll area is a tab stop: it carries the panel's name.
@@ -127,6 +136,7 @@ pub fn Sidebar(props: SidebarProps) -> Element {
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&states)
+        .variables(&variables)
         .prepare()
         .render(
             component,

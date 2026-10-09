@@ -108,7 +108,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `size` | `Size` | `md` | Height, padding and font size. |
-| `radius` | `Size` | `sm` | Corner radius, independent of `size`. |
+| `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. Or any CSS, e.g. `radius: "0"`. |
 | `value` | `Option<T>` | - | The number in the field, strictly controlled. `None` is the empty field. A signal that starts at `None` needs its type, such as `None::<i32>`. |
 | `onchange` | `EventHandler<Option<T>>` | - | Called with the number the caller should hold next, `None` once the field is emptied. Half-typed text such as `-` or `1.` never reaches it. Leaving the field clamps a number out of range and reverts text that never parsed. |
 | `validate` | `Validators<Option<T>>` | - | Rules over the number, shown once the field loses focus or its form is submitted. |

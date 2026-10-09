@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         accessibility::VisuallyHidden,
-        common::{HtmlTag, Input, Part, Parts, input_from_str},
+        common::{HtmlTag, Input, Part, Parts, ScaleOrCss, input_from_str},
         form::{
             Asks, ComboboxState, DropdownPart, clear_button, combobox::nothing_found_row,
             field_parts_enum, field_props, use_combobox, use_field, use_field_frame,
@@ -148,7 +148,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     let nothing_found = words.combobox.nothing_found;
     let drill_labels = words.cascader;
     let size = props.size.copied_or(theme.cascader.size);
-    let radius = props.radius.copied_or(theme.cascader.radius);
+    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.cascader.radius);
     let disabled = props.disabled.unwrap_or(false);
     // As `SelectCore`: read-only stays focusable and posting, but never opens.
     let readonly = props.readonly.unwrap_or(false);
@@ -213,7 +213,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         .readonly(readonly)
         .disabled(disabled)
         .size(size)
-        .radius(radius)
+        .radius(radius.clone())
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)
@@ -272,7 +272,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         commit,
         any_level,
         size,
-        radius,
+        radius: radius.size,
         labels: drill_labels,
         state,
     };
@@ -304,7 +304,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         searchable,
         search,
         size,
-        radius,
+        radius: radius.size,
         layout,
         // A new column or a shorter match list reshapes the open box.
         remeasure: (cursor_now.len() * 4096 + visible.len()) as u64,

@@ -5,8 +5,8 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, Part, States, input_from_str, names_itself, navigation_chord,
-            use_name_warning,
+            HtmlTag, Input, Part, ScaleOrCss, States, input_from_str, names_itself,
+            navigation_chord, use_name_warning,
         },
         form::{
             FIELD_CONTROL_SX, FieldPart, PreparedFrame, field_props, use_bound, use_field,
@@ -115,7 +115,7 @@ pub fn PinField(props: PinFieldProps) -> Element {
     let buffer = use_signal(String::new);
 
     let size = props.size.copied_or(theme.pin_field.size);
-    let radius = props.radius.copied_or(theme.pin_field.radius);
+    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.pin_field.radius);
     let kind = props.kind.copied_or(theme.pin_field.kind);
     // A field with no cells has no reachable state, and every index below
     // would be out of bounds.
@@ -148,7 +148,7 @@ pub fn PinField(props: PinFieldProps) -> Element {
         .readonly(readonly)
         .disabled(disabled)
         .size(size)
-        .radius(radius)
+        .radius(radius.clone())
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)

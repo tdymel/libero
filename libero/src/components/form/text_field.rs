@@ -4,7 +4,9 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, TOOLBAR_ITEM, ToolbarItem, use_no_toolbar, use_toolbar_item},
+        common::{
+            HtmlTag, Input, ScaleOrCss, TOOLBAR_ITEM, ToolbarItem, use_no_toolbar, use_toolbar_item,
+        },
         form::{
             FIELD_CONTROL_SX, LiveControl, LiveSlot, field_props, use_bound, use_field,
             use_field_frame, use_live_slot,
@@ -93,7 +95,7 @@ fn TextFieldShell(
     let theme = use_theme();
 
     let size = props.size.copied_or(theme.text_field.size);
-    let radius = props.radius.copied_or(theme.text_field.radius);
+    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.text_field.radius);
     let required = props.required.unwrap_or(false);
 
     let bound = use_bound(&props.name, props.oninput.is_some());
@@ -130,7 +132,7 @@ fn TextFieldShell(
         .readonly(readonly)
         .disabled(disabled)
         .size(size)
-        .radius(radius)
+        .radius(radius.clone())
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)

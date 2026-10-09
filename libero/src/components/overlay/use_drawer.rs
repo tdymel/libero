@@ -8,7 +8,6 @@ use crate::{
     },
     context::Dismiss,
     sx::{Sx, ThemeAwareValue},
-    theme::Size,
 };
 
 /// How the panel docks, shared by every opening.
@@ -16,8 +15,9 @@ use crate::{
 pub struct DrawerOptions {
     /// The edge it docks to.
     pub anchor: Input<DrawerAnchor>,
-    /// Width when docked start or end, height when docked top or bottom.
-    pub size: Input<Size>,
+    /// Width when docked start or end, height when docked top or bottom: a size word or any
+    /// CSS, as `size: "24rem".into()`.
+    pub size: Input<ThemeAwareValue>,
     pub z_index: Input<ThemeAwareValue>,
     /// Names the panel, which is a dialog. Unset is a `warn()`.
     pub aria_label: Option<String>,

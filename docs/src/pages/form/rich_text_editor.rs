@@ -203,9 +203,9 @@ pub fn RichTextEditorPage() -> Element {
                         .default("vec![]")
                         .doc("Your toolbar buttons, after the block buttons: `RichTextTool::new(command, label, icon)` runs the command by name; `.active(fn)` makes it a toggle with `aria-pressed`. They never move into the More menu."),
                     prop("size", "Size").default(theme.textarea.size.as_str()).doc("Padding and font size."),
-                    prop("radius", "Size")
+                    prop("radius", "ThemeAwareValue")
                         .default(theme.textarea.radius.as_str())
-                        .doc("Corner radius, independent of `size`."),
+                        .doc("Corner radius, independent of `size`. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("label", "Caption")
                         .doc("The field's caption, above the toolbar. It names the text."),
                     prop("description", "Caption")
@@ -310,7 +310,8 @@ pub fn RichTextEditorPage() -> Element {
                 controls: [vec![
                     Control::sizes("size")
                         .default(theme.textarea.size.as_str()),
-                    Control::sizes("radius")
+                    // `0` is plain CSS, next to the size scale.
+                    Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.textarea.radius.as_str()),
                 ], field_controls::<NotesCopy>(), vec![
                     Control::switch("placeholder").default("true").code(|_, values| {

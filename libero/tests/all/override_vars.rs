@@ -25,8 +25,9 @@ use libero::{
     components::{
         ActionIcon, Alert, AspectRatio, Avatar, Badge, Burger, Button, Carousel, Center, Collapse,
         Container, Dialog, Float, Header, Icon, Image, ImageItem, ImageList, Indicator, Marquee,
-        Options, Overlay, Scroller, SegmentedControl, Timeline, Tooltip, Transition,
+        Options, Overlay, Scroller, SegmentedControl, Sidebar, Timeline, Tooltip, Transition,
     },
+    hooks::{DrawerOptions, ModalScope, use_drawer},
 };
 
 #[derive(Clone, PartialEq, Options)]
@@ -43,6 +44,19 @@ fn items() -> Vec<ImageItem> {
 
 fn quilted_items() -> Vec<ImageItem> {
     vec![ImageItem::new(rsx! { Image { src: "/a.svg", alt: "A" } }).rows(2)]
+}
+
+/// The drawer renders only once opened.
+#[component]
+fn OpenDrawer() -> Element {
+    let options = DrawerOptions {
+        size: "24rem".into(),
+        aria_label: Some("Menu".into()),
+        ..Default::default()
+    };
+    let drawer = use_drawer(options, |_: ModalScope<()>| rsx! { "drawer" });
+    use_hook(move || drawer.open());
+    rsx! {}
 }
 
 /// One of each writer, every override prop set.
@@ -66,6 +80,7 @@ fn app() -> Element {
             Collapse { open: true, duration: 350, "panel" }
             Container { size: "sm", gutters: "lg", "container" }
             Dialog { aria_label: "Inline", size: "lg", "dialog" }
+            OpenDrawer {}
             Float { z_index: "5", "float" }
             Header { size: "lg", z_index: "5", "header" }
             Icon { size: "lg", "i" }
@@ -76,6 +91,7 @@ fn app() -> Element {
             Marquee { duration: 9000, "marquee" }
             Overlay { opacity: "0.5", z_index: "5", blur: "2px" }
             Scroller { aria_label: "Tags", fade_color: "red", span { "one" } }
+            Sidebar { size: "18rem", "sidebar" }
             SegmentedControl { gap: "3px", value: Pick::One, onchange: move |_| {} }
             Timeline { gap: "3px", items: vec![] }
             // Open: the bubble is rendered only then.

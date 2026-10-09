@@ -133,9 +133,9 @@ pub fn ImageListPage() -> Element {
                     prop("variant", "ImageListVariant")
                         .default(defaults.variant.as_str())
                         .doc("`standard` gives every cell the same height, `masonry` keeps each picture's own and packs them, `quilted` lets a cell take more than one row, and `woven` shortens every second cell to 70%. `masonry` measures in the browser, and without a DOM draws an ordinary grid."),
-                    prop("gap", "Size")
+                    prop("gap", "Responsive<ThemeAwareValue>")
                         .default(defaults.gap.as_str())
-                        .doc("Between cells."),
+                        .doc("Between cells, or any CSS, e.g. `gap: \"2px\"`, per breakpoint too. Masonry packs its rows by the base gap."),
                     prop("radius", "ThemeAwareValue")
                         .default(defaults.radius.as_str())
                         .doc("Each cell's corner radius, or any CSS, e.g. `radius: \"0\"`."),
@@ -218,7 +218,8 @@ pub fn ImageListPage() -> Element {
                     Control::toggle("variant", ["standard", "masonry", "quilted", "woven"])
                         .labels(["Standard", "Masonry", "Quilted", "Woven"])
                         .default(defaults.variant.as_str()),
-                    Control::sizes("gap")
+                    // `0` is plain CSS, next to the size scale.
+                    Control::slider("gap", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(defaults.gap.as_str()),
                     Control::sizes("radius")
                         .default(defaults.radius.as_str()),

@@ -214,9 +214,9 @@ pub fn MultiSelectPage() -> Element {
             properties: vec![
                 props("MultiSelect", vec![
                     prop("size", "Size").default(theme.multi_select.size.as_str()).doc("Height, padding and font size of the field and its rows."),
-                    prop("radius", "Size")
+                    prop("radius", "ThemeAwareValue")
                         .default(theme.multi_select.radius.as_str())
-                        .doc("Corner radius of the frame and the list."),
+                        .doc("Corner radius of the frame and the list. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("value", "Vec<T>")
                         .doc("The selection, in the order it was picked. Pair it with `onchange`. Empty shows `placeholder`."),
                     prop("onchange", "EventHandler<Vec<T>>")
@@ -337,7 +337,8 @@ pub fn MultiSelectPage() -> Element {
                 ],
                 controls: [vec![
                     Control::sizes("size").default(theme.multi_select.size.as_str()),
-                    Control::sizes("radius").default(theme.multi_select.radius.as_str()),
+                    // `0` is plain CSS, next to the size scale.
+                    Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default(theme.multi_select.radius.as_str()),
                 ], field_controls::<ToppingsCopy>(), vec![
                     // Draws the rows and the chips through `option` and
                     // `selection`.

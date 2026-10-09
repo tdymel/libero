@@ -8,7 +8,7 @@ use super::{
 };
 use crate::{
     components::{
-        common::{ClassList, Input, Part, Parts, States, parts_source},
+        common::{ClassList, Input, Part, Parts, ScaleOrCss, States, parts_source},
         form::{Caption, FieldStatus},
     },
     hooks::{ElementHandle, SxSource},
@@ -46,7 +46,7 @@ pub(crate) struct FieldBuilder<'a> {
     pub(super) text_slots: [bool; 2],
     pub(super) activation: Option<Activation>,
     pub(super) size: Size,
-    pub(super) radius: Size,
+    pub(super) radius: ScaleOrCss,
     pub(super) class: Option<&'a Input<ClassList>>,
     pub(super) sx: Option<&'a Input<Sx>>,
     pub(super) parts: Option<SxSource<'a>>,
@@ -80,7 +80,7 @@ impl Default for FieldBuilder<'_> {
             text_slots: [false; 2],
             activation: None,
             size: Size::Md,
-            radius: Size::Sm,
+            radius: ScaleOrCss::new(None, Size::Sm),
             class: None,
             sx: None,
             parts: None,
@@ -286,8 +286,9 @@ impl<'a> FieldBuilder<'a> {
         self
     }
 
+    /// The radius step's state, and custom CSS on the wrapper's override var.
     #[inline]
-    pub fn radius(mut self, radius: Size) -> Self {
+    pub fn radius(mut self, radius: ScaleOrCss) -> Self {
         self.radius = radius;
         self
     }

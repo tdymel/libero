@@ -142,9 +142,9 @@ pub fn TagsFieldPage() -> Element {
                     prop("size", "Size")
                         .default(theme.tags_field.size.as_str())
                         .doc("Height, padding, font size and the chips' size. A chip is one step smaller than the field."),
-                    prop("radius", "Size")
+                    prop("radius", "ThemeAwareValue")
                         .default(theme.tags_field.radius.as_str())
-                        .doc("Corner radius of the frame and the list, independent of `size`."),
+                        .doc("Corner radius of the frame and the list, independent of `size`. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("value", "Vec<String>")
                         .default("[]")
                         .doc("The tags, in order, strictly controlled. Pair it with `onchange`."),
@@ -263,7 +263,8 @@ pub fn TagsFieldPage() -> Element {
                         }
                     }),
                     Control::sizes("size").default(theme.tags_field.size.as_str()),
-                    Control::sizes("radius").default(theme.tags_field.radius.as_str()),
+                    // `0` is plain CSS, next to the size scale.
+                    Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default(theme.tags_field.radius.as_str()),
                     Control::toggle("status", ["valid", "warning", "error"])
                         .labels(["Valid", "Warning", "Error"])
                         .default("valid")

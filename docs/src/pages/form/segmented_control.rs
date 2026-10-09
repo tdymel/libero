@@ -108,9 +108,9 @@ pub fn SegmentedControlPage() -> Element {
                         .default(theme.segmented_control.color.as_str())
                         .doc("Accent color. A theme color name or any CSS color; `theme.segmented_control.color` when unset."),
                     prop("size", "Size").default(theme.button.size.as_str()).doc("Size of the segments and the captions."),
-                    prop("radius", "Size")
+                    prop("radius", "ThemeAwareValue")
                         .default(theme.button.radius.as_str())
-                        .doc("Radius of the control's outer corners. Inner corners are square."),
+                        .doc("Radius of the control's outer corners. Inner corners are square. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("gap", "ThemeAwareValue")
                         .doc("Space between the segments, or any CSS, e.g. `gap: \"0\"`. Set, each segment gets its own border and radius."),
                     prop("full_width", "bool")
@@ -212,7 +212,8 @@ pub fn SegmentedControlPage() -> Element {
                     Control::color("color").default(theme.segmented_control.color.as_str()),
                     Control::sizes("size")
                         .default("md"),
-                    Control::sizes("radius")
+                    // `0` is plain CSS, next to the size scale.
+                    Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
                     Control::toggle("orientation", ["horizontal", "vertical"])
                         .labels(["Horizontal", "Vertical"]),

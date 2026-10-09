@@ -239,9 +239,9 @@ pub fn SelectPage() -> Element {
             properties: vec![
                 props("Select", vec![
                     prop("size", "Size").default(theme.select.size.as_str()).doc("Height, padding and font size of the field and its rows."),
-                    prop("radius", "Size")
+                    prop("radius", "ThemeAwareValue")
                         .default(theme.select.radius.as_str())
-                        .doc("Corner radius of the frame and the list."),
+                        .doc("Corner radius of the frame and the list. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("value", "Option<T>")
                         .doc("The selected option. Pair it with `onchange`. `None` shows `placeholder`."),
                     prop("onchange", "EventHandler<Option<T>>")
@@ -361,7 +361,8 @@ pub fn SelectPage() -> Element {
                 ],
                 controls: [vec![
                     Control::sizes("size").default(theme.select.size.as_str()),
-                    Control::sizes("radius").default(theme.select.radius.as_str()),
+                    // `0` is plain CSS, next to the size scale.
+                    Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default(theme.select.radius.as_str()),
                 ], field_controls::<FruitCopy>(), vec![
                     // Draws the rows and the trigger through `option` and
                     // `selection` - what `NativeSelect` cannot do at all.

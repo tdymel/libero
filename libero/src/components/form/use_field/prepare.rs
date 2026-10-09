@@ -9,12 +9,13 @@ use super::{
 };
 use crate::{
     components::{
-        common::{Input, Part, States},
+        common::{Input, Part, States, Variables, variables},
         form::{Caption, FieldEntry, FieldPart, FieldStatus, worst},
         layout::use_box,
     },
     hooks::{ElementHandle, use_localization, use_root_id, use_silent_focus_out},
     platform,
+    theme::SizeCss,
     utils::warn,
 };
 
@@ -111,7 +112,7 @@ impl FieldBuilder<'_> {
             .cloned()
             .unwrap_or_default()
             .with(self.size.state_name(), true)
-            .with(self.radius.radius_state_name(), true)
+            .with(self.radius.size.radius_state_name(), true)
             .with("disabled", self.disabled)
             .with("required", self.required)
             .with("inline", self.inline)
@@ -136,7 +137,17 @@ impl FieldBuilder<'_> {
         ];
         let describedby = join_ids(&id_value, described);
 
-        let mut wrapper = use_box().framework_sx(&FIELD_SX).states(&states);
+        // The frame and controls inherit it past their own `per_radius` reset.
+        let radius: Input<Variables> = variables()
+            .with(
+                SizeCss::RADIUS.override_var(),
+                self.radius.custom_css(SizeCss::RADIUS),
+            )
+            .into();
+        let mut wrapper = use_box()
+            .framework_sx(&FIELD_SX)
+            .states(&states)
+            .variables(&radius);
         if let Some(class) = self.class {
             wrapper = wrapper.class(class);
         }

@@ -599,3 +599,40 @@ fn a_long_word_wraps_in_the_bubble() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 2722: a custom `px` gap places the bubble that far off, and the bridge spans it.
+#[test]
+fn a_custom_px_gap_places_the_bubble_that_far_off() {
+    block_on(async {
+        let fixture = Fixture::open("/tooltip-gap", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        wait::for_visible(page, BUBBLE).await.unwrap();
+        let gap: Gap = js(
+            page,
+            "(() => { const t = document.querySelector('#save').getBoundingClientRect(); \
+             const b = document.querySelector('#save-tip').getBoundingClientRect(); \
+             const x = t.x + t.width / 2, y = (t.bottom + b.top) / 2; \
+             return { x, y, height: b.top - t.bottom, off: b.x + b.width / 2 - x, \
+               hit_bubble: document.elementFromPoint(x, y) === document.querySelector('#save-tip') }; })()",
+        )
+        .await;
+        assert!(
+            (gap.height - 20.0).abs() <= 1.0,
+            "the bubble sits {}px off the trigger, not 20px",
+            gap.height
+        );
+        assert!(
+            gap.hit_bubble,
+            "the 20px gap should hit the bubble's bridge"
+        );
+
+        fixture
+            .console
+            .assert_clean("a custom tooltip gap")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

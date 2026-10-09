@@ -49,7 +49,7 @@ pub fn SidebarPage() -> Element {
                 prop("side", "SidebarSide")
                     .default("start")
                     .doc("The edge that gets the border, and whether `size` is a width or a height. `start` is the right edge under `dir=\"rtl\"`. It does not move the panel, so put it at the matching end of the DOM."),
-                prop("size", "Size").default(theme.sidebar.size.as_str()).doc("The panel's width, or its height on a `top` or `bottom` side. A start or end panel takes half its parent's width at most, a top or bottom one half its height."),
+                prop("size", "ThemeAwareValue").default(theme.sidebar.size.as_str()).doc("The panel's width, or its height on a `top` or `bottom` side. A start or end panel takes half its parent's width at most, a top or bottom one half its height. A size word or any CSS, e.g. `size: \"18rem\"`."),
                 prop("component", "HtmlTag").default("aside").doc("The element to render, such as `nav` for a navigation panel."),
                 prop("children", "Element").doc("The panel's content, scrolled by an inner `ScrollArea`."),
                 prop("parts", "Parts<SidebarPart>")
@@ -90,7 +90,8 @@ pub fn SidebarPage() -> Element {
                 controls: vec![
                     Control::toggle("side", ["start", "end", "top", "bottom"])
                         .labels(["Start", "End", "Top", "Bottom"]),
-                    Control::sizes("size")
+                    // `24rem` is plain CSS, next to the size scale.
+                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl", "24rem"])
                         .default(theme.sidebar.size.as_str()),
                 ],
                 render: move |values: DemoValues| {

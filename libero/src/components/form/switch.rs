@@ -5,7 +5,7 @@ use crate::{
     components::{
         accessibility::{VISUALLY_HIDDEN_SX, hidden_input_centred_sx},
         common::{
-            HtmlTag, Input, Part, States, TOOLBAR_ITEM, ToolbarItem, base_color_or,
+            HtmlTag, Input, Part, ScaleOrCss, States, TOOLBAR_ITEM, ToolbarItem, base_color_or,
             coarse_hit_area_sx, contrast_color, disabled_look_sx, fill_color, focus_ring_sx,
             names_itself, ring_overlay, ring_overlay_sx, use_name_warning, use_toolbar_item,
             variables,
@@ -18,7 +18,7 @@ use crate::{
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
         ChoiceVariant, CssVar, NamedColorCss, SWITCH_RADIUS, SWITCH_THUMB, SWITCH_TRACK_H,
-        SWITCH_TRACK_W, SwitchDefaults,
+        SWITCH_TRACK_W, SizeCss, SwitchDefaults,
     },
     utils::warn,
 };
@@ -34,6 +34,8 @@ const INSET: &str = "2px";
 
 static SWITCH_CONTROL_SX: StaticSx = StaticSx::new(|| {
     SwitchDefaults::theme_vars()
+        // Past `per_radius`'s reset: the field's custom radius, set on its wrapper.
+        .var(SizeCss::RADIUS.override_var(), "inherit")
         .display("inline-flex")
         .align_items("center")
         // The visually hidden input is absolutely positioned; without this it
@@ -187,7 +189,7 @@ pub fn Switch(props: SwitchProps) -> Element {
     let color = base_color_or(props.color.as_ref(), theme.switch.color);
 
     let size = props.size.copied_or(theme.switch.size);
-    let radius = props.radius.copied_or(theme.switch.radius);
+    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.switch.radius);
     let required = props.required.unwrap_or(false);
     let bound = use_bound(&props.name, props.onchange.is_some());
     let disabled = bound.disabled(props.disabled);
@@ -243,7 +245,7 @@ pub fn Switch(props: SwitchProps) -> Element {
         .readonly(readonly)
         .disabled(disabled)
         .size(size)
-        .radius(radius)
+        .radius(radius.clone())
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)

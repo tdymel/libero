@@ -108,7 +108,7 @@ option is read out, and the arrows, typeahead and clicks skip it.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `size` | `Size` | `md` | Height, padding and font size of the field and its rows. |
-| `radius` | `Size` | `sm` | Corner radius of the frame and the list. |
+| `radius` | `ThemeAwareValue` | `sm` | Corner radius of the frame and the list. Or any CSS, e.g. `radius: "0"`. |
 | `value` | `Option<T>` | - | The selected option. Pair it with `onchange`. `None` shows `placeholder`. |
 | `onchange` | `EventHandler<Option<T>>` | - | Called with the option to select next, or `None` from the clear button. |
 | `name` | `FieldName<Option<T>>` | - | Posts the selected option's `Options::value()` under this name. A path such as `Order::FIELDS.plan()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |

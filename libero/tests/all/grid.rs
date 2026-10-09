@@ -323,8 +323,13 @@ fn a_zone_can_shrink_below_the_width_its_twelve_tracks_would_demand() {
 
     assert!(zone.contains("min-width:0"), "{zone}");
     assert!(
-        zone.contains("column-gap:min(var(--lsx-grid-zone-gap), 4%)"),
+        zone.contains(
+            "column-gap:min(var(--lsx-grid-zone-gap-override, var(--lsx-grid-zone-gap)), 4%)"
+        ),
         "{zone}"
     );
-    assert!(zone.contains("row-gap:var(--lsx-grid-zone-gap)"), "{zone}");
+    assert!(
+        zone.contains("row-gap:var(--lsx-grid-zone-gap-override, var(--lsx-grid-zone-gap))"),
+        "{zone}"
+    );
 }

@@ -128,7 +128,7 @@ MultiSelect {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `size` | `Size` | `md` | Height, padding and font size of the field and its rows. |
-| `radius` | `Size` | `sm` | Corner radius of the frame and the list. |
+| `radius` | `ThemeAwareValue` | `sm` | Corner radius of the frame and the list. Or any CSS, e.g. `radius: "0"`. |
 | `value` | `Vec<T>` | - | The selection, in the order it was picked. Pair it with `onchange`. Empty shows `placeholder`. |
 | `onchange` | `EventHandler<Vec<T>>` | - | Called with the whole next selection. |
 | `name` | `FieldName<Vec<T>>` | - | Posts each selected option's `Options::value()` under this name. A path such as `Order::FIELDS.toppings()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |

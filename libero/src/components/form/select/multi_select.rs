@@ -233,7 +233,13 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
             helper: props.helper,
             status: props.status,
             size,
-            radius: props.radius.copied_or(theme.multi_select.radius),
+            radius: Input::Value(
+                props
+                    .radius
+                    .as_ref()
+                    .cloned()
+                    .unwrap_or_else(|| theme.multi_select.radius.into()),
+            ),
             disabled: Some(disabled),
             readonly: props.readonly,
             required: props.required,

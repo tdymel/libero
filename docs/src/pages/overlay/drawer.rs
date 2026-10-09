@@ -87,7 +87,7 @@ pub fn DrawerPage() -> Element {
             properties: vec![
                 props("DrawerOptions", vec![
                     prop("anchor", "Input<DrawerAnchor>").default("start").doc("The edge the panel docks to. `start` is the right edge under `dir=\"rtl\"`."),
-                    prop("size", "Input<Size>").default(theme.drawer.size.as_str()).doc("Width when docked start or end, height when docked top or bottom."),
+                    prop("size", "Input<ThemeAwareValue>").default(theme.drawer.size.as_str()).doc("Width when docked start or end, height when docked top or bottom: a size word or any CSS, e.g. `size: \"24rem\".into()`."),
                     prop("z_index", "Input<ThemeAwareValue>").doc("Stacking order of the panel."),
                     prop("aria_label", "Option<String>").doc("Names the panel, which is a dialog. Unset warns in a debug build."),
                     prop("sx", "Input<Sx>").doc("Styles the panel. It has no inner parts: the content is yours to style."),
@@ -131,7 +131,8 @@ pub fn DrawerPage() -> Element {
                 controls: vec![
                     Control::toggle("anchor", ["start", "end", "top", "bottom"])
                         .labels(["Start", "End", "Top", "Bottom"]),
-                    Control::sizes("size").default(theme.drawer.size.as_str()),
+                    // `24rem` is plain CSS, next to the size scale.
+                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl", "24rem"]).default(theme.drawer.size.as_str()),
                 ],
                 render: move |values: DemoValues| rsx! {
                     DrawerDemo { anchor: values.str("anchor"), size: values.str("size") }

@@ -67,7 +67,7 @@ The field tells screen readers why it refused a tag, but shows nothing. The
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `size` | `Size` | `md` | Height, padding, font size and the chips' size. A chip is one step smaller than the field. |
-| `radius` | `Size` | `sm` | Corner radius of the frame and the list, independent of `size`. |
+| `radius` | `ThemeAwareValue` | `sm` | Corner radius of the frame and the list, independent of `size`. Or any CSS, e.g. `radius: "0"`. |
 | `value` | `Vec<String>` | `[]` | The tags, in order, strictly controlled. Pair it with `onchange`. |
 | `onchange` | `EventHandler<Vec<String>>` | - | Called with the whole list the caller should hold next. |
 | `suggestions` | `Vec<String>` | - | Adds a dropdown of tags to pick. Tags already held are not offered. |

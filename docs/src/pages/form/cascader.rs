@@ -152,7 +152,7 @@ pub fn CascaderPage() -> Element {
             properties: vec![
                 props("Cascader", vec![
                     prop("size", "Size").default(theme.cascader.size.as_str()).doc("Height, padding and font size of the frame and its rows."),
-                    prop("radius", "Size").default(theme.cascader.radius.as_str()).doc("Corner radius of the frame and the list."),
+                    prop("radius", "ThemeAwareValue").default(theme.cascader.radius.as_str()).doc("Corner radius of the frame and the list. Any CSS, e.g. `radius: \"0\"`, rounds the frame; the list keeps the theme's step."),
                     prop("data", "Vec<CascaderOption<T>>").default("required")
                         .doc("The tree, built with `CascaderOption::new(value, label)`, `.children(..)` and `.disabled(..)`. `T` is any `Options` type. Values must be unique across the whole tree."),
                     prop("value", "Option<T>")
@@ -272,7 +272,8 @@ pub fn CascaderPage() -> Element {
                 ],
                 controls: [vec![
                     Control::sizes("size").default(theme.cascader.size.as_str()),
-                    Control::sizes("radius").default(theme.cascader.radius.as_str()),
+                    // `0` is plain CSS, next to the size scale.
+                    Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default(theme.cascader.radius.as_str()),
                     Control::toggle("layout", ["columns", "paths"])
                         .labels(["Columns", "Paths"])
                         .default("columns"),

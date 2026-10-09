@@ -7,8 +7,8 @@ use crate::{
         accessibility::use_announcer,
         buttons::ActionIcon,
         common::{
-            FOCUSABLE_SELECTOR, Glyph, HtmlTag, Input, NavigationChord, Part, Parts, States,
-            navigation_chord,
+            FOCUSABLE_SELECTOR, Glyph, HtmlTag, Input, NavigationChord, Part, Parts, ScaleOrCss,
+            States, navigation_chord,
         },
         form::{
             ColorDropdownPart, FIELD_CONTROL_SX, FieldStatus, FormScope, SLOT_BUTTON_SX,
@@ -126,7 +126,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     let theme = use_theme();
     let defaults = &theme.color_field;
     let size = props.size.copied_or(defaults.size);
-    let radius = props.radius.copied_or(defaults.radius);
+    let radius = ScaleOrCss::new(props.radius.as_ref(), defaults.radius);
     let required = props.required.unwrap_or(false);
     let with_alpha = props.with_alpha.unwrap_or(false);
     let with_preview = props.with_preview.unwrap_or(defaults.with_preview);
@@ -231,7 +231,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         .required(required)
         .disabled(disabled)
         .size(size)
-        .radius(radius)
+        .radius(radius.clone())
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)

@@ -164,7 +164,7 @@ fn Demo() -> Element {
 | `variant` | `Variant` | `filled` | The unselected look, shared by every segment: `filled`, `tonal`, `elevated`, `outlined`, `standard`, or `gradient`, which takes the theme's gradient. |
 | `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color; `theme.segmented_control.color` when unset. |
 | `size` | `Size` | `md` | Size of the segments and the captions. |
-| `radius` | `Size` | `md` | Radius of the control's outer corners. Inner corners are square. |
+| `radius` | `ThemeAwareValue` | `md` | Radius of the control's outer corners. Inner corners are square. Or any CSS, e.g. `radius: "0"`. |
 | `gap` | `ThemeAwareValue` | - | Space between the segments, or any CSS, e.g. `gap: "0"`. Set, each segment gets its own border and radius. |
 | `full_width` | `bool` | `false` | Segments share the width evenly instead of sizing to their label. A label too long for its segment ends in an ellipsis either way. |
 | `focusable` | `bool` | `true` | `false` keeps the segments out of the tab order, and a click leaves focus where it is. For a control inside a field's dropdown. |

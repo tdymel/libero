@@ -102,9 +102,9 @@ pub fn NumberFieldPage() -> Element {
             properties: vec![
                 props("NumberField", vec![
                     prop("size", "Size").default(theme.number_field.size.as_str()).doc("Height, padding and font size."),
-                    prop("radius", "Size")
+                    prop("radius", "ThemeAwareValue")
                         .default(theme.number_field.radius.as_str())
-                        .doc("Corner radius, independent of `size`."),
+                        .doc("Corner radius, independent of `size`. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("value", "Option<T>")
                         .doc("The number in the field, strictly controlled. `None` is the empty field. A signal that starts at `None` needs its type, such as `None::<i32>`."),
                     prop("onchange", "EventHandler<Option<T>>")
@@ -251,7 +251,8 @@ pub fn NumberFieldPage() -> Element {
                         }),
                     Control::sizes("size")
                         .default(theme.number_field.size.as_str()),
-                    Control::sizes("radius")
+                    // `0` is plain CSS, next to the size scale.
+                    Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.number_field.radius.as_str()),
                 ], field_controls::<QuantityCopy>(), vec![
                     // Bounds are typed as `T`, so what the switch prints

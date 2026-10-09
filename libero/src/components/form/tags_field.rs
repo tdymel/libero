@@ -5,7 +5,9 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         accessibility::use_announcer,
-        common::{ComboboxState, HtmlTag, Input, Part, Parts, ring_overlay, use_combobox},
+        common::{
+            ComboboxState, HtmlTag, Input, Part, Parts, ScaleOrCss, ring_overlay, use_combobox,
+        },
         form::{
             CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, SelectionArgs, clear_button,
             field_control_sx, field_parts_enum, field_props, removable_chip, row_label, use_bound,
@@ -131,7 +133,7 @@ field_props! {
 pub fn TagsField(props: TagsFieldProps) -> Element {
     let theme = use_theme();
     let size = props.size.copied_or(theme.tags_field.size);
-    let radius = props.radius.copied_or(theme.tags_field.radius);
+    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.tags_field.radius);
     let required = props.required.unwrap_or(false);
 
     let bound = use_bound(&props.name, props.onchange.is_some());
@@ -183,7 +185,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         .readonly(readonly)
         .disabled(disabled)
         .size(size)
-        .radius(radius)
+        .radius(radius.clone())
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)
@@ -330,7 +332,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
                 caret_keys: CaretKeys::Unhighlighted,
                 labelled_by: field.label_id(),
                 size,
-                radius,
+                radius: radius.value(),
                 disabled: disabled || readonly,
                 // Stays up after a pick, as on `MultiSelect`.
                 close_on_pick: false,

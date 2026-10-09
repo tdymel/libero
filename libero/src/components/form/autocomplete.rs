@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, OptionSource, Options, Parts, use_combobox},
+        common::{HtmlTag, Input, OptionSource, Options, Parts, ScaleOrCss, use_combobox},
         form::{
             CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, FIELD_CONTROL_SX, clear_button,
             field_props, row_label, use_bound, use_field, use_field_frame, use_row_cache,
@@ -117,7 +117,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
     let localization = use_localization();
     let nothing_found = localization.combobox.nothing_found;
     let size = props.size.copied_or(theme.autocomplete.size);
-    let radius = props.radius.copied_or(theme.autocomplete.radius);
+    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.autocomplete.radius);
     let required = props.required.unwrap_or(false);
     let prefiltered = props.prefiltered.unwrap_or(false);
 
@@ -172,7 +172,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         .readonly(readonly)
         .disabled(disabled)
         .size(size)
-        .radius(radius)
+        .radius(radius.clone())
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)
@@ -330,7 +330,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
             nothing_found,
             loading,
             size,
-            radius,
+            radius: radius.value(),
             disabled: disabled || readonly,
             width: PopoverWidth::Match,
             labelled_by: field.label_id(),

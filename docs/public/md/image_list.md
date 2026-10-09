@@ -107,7 +107,7 @@ ImageList {
 | `items` | `Vec<ImageItem>` | `vec![]` | One cell each, in render order. |
 | `cols` | `Responsive<u8>` | `2` | Columns, as `cols: 3` or one count per breakpoint, `cols: responsive(1).sm(2).md(4)`. Each count snaps to 1, 2, 3, 4, 6 or 12, since a cell spans twelfths of a `GridZone`. Any other count snaps to the nearest, a tie to the wider cell, and warns. An `ImageItem::span` stays the same at every width. Breakpoints follow the window, not the list's parent. |
 | `variant` | `ImageListVariant` | `standard` | `standard` gives every cell the same height, `masonry` keeps each picture's own and packs them, `quilted` lets a cell take more than one row, and `woven` shortens every second cell to 70%. `masonry` measures in the browser, and without a DOM draws an ordinary grid. |
-| `gap` | `Size` | `xs` | Between cells. |
+| `gap` | `Responsive<ThemeAwareValue>` | `xs` | Between cells, or any CSS, e.g. `gap: "2px"`, per breakpoint too. Masonry packs its rows by the base gap. |
 | `radius` | `ThemeAwareValue` | `sm` | Each cell's corner radius, or any CSS, e.g. `radius: "0"`. |
 | `ratio` | `f32` | `1.0`, from `theme.aspect_ratio` | Cell aspect ratio, such as `16.0 / 9.0`. Ignored by `masonry`. Under `quilted` it is the ratio of one cell, and a bigger cell scales from it. |
 | `parts` | `Parts<ImageListPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |

@@ -3,9 +3,9 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, Part, REPLACED_ELEMENTS, ScaleOrCss, States, Variables, base_props,
-            input_from_str, inset_focus_ring_sx, inset_outline_ring_sx, parts_enum, parts_under_sx,
-            ring_overlay, ring_overlay_sx, variables,
+            HtmlTag, Input, Part, REPLACED_ELEMENTS, ScaleOrCss, States, Variables, as_length,
+            base_props, input_from_str, inset_focus_ring_sx, inset_outline_ring_sx, parts_enum,
+            parts_under_sx, ring_overlay, ring_overlay_sx, variables,
         },
         data_display::LinkedImageScope,
         layout::{InternalAnchor, use_box},
@@ -101,7 +101,7 @@ fn usable_ratio(ratio: Option<f32>) -> Option<f32> {
 fn quilt_height(ratio: f32, columns: u8, default_columns: u8, rows: u8) -> String {
     let widths = f32::from(columns) / f32::from(default_columns.max(1));
     let rows = rows.max(1);
-    let gap = GRID_ZONE_GAP.value();
+    let gap = GRID_ZONE_GAP.overridable();
     format!(
         "calc({rows} * (100% - {} * {gap}) / {} + {} * {gap})",
         widths - 1.0,
@@ -370,8 +370,10 @@ base_props! {
         cols: Input<Responsive<u8>>,
         #[props(default, into)]
         variant: Input<ImageListVariant>,
+        /// Between cells: a size word, any CSS (`gap: "2px"`) or one per breakpoint,
+        /// `gap: responsive(Size::Xs).md(Size::Lg)`. Masonry packs by the base gap.
         #[props(default, into)]
-        gap: Input<Size>,
+        gap: Input<Responsive<ThemeAwareValue>>,
         /// Each cell's corner radius: a size word or any CSS, as `radius: "0"`.
         #[props(default, into)]
         radius: Input<ThemeAwareValue>,
@@ -410,7 +412,27 @@ pub fn ImageList(props: ImageListProps) -> Element {
     let masonry = variant == ImageListVariant::Masonry;
     let quilted = variant == ImageListVariant::Quilted;
     let cols = props.cols.copied_or(defaults.cols).map(snap_cols);
-    let gap = props.gap.copied_or(defaults.gap);
+    let gap = props
+        .gap
+        .as_ref()
+        .cloned()
+        .unwrap_or_else(|| Responsive::new(defaults.gap.into()));
+    if masonry && gap.breakpoints().next().is_some() {
+        warn(
+            "ImageList: masonry packs by the base gap, so its rows are off by the difference at a breakpoint gap.",
+        );
+    }
+    // The zone takes the base; a breakpoint replaces it through the zone's override var.
+    let gap_sx = gap
+        .breakpoints()
+        .fold(None, |declared: Option<Sx>, (size, value)| {
+            let css = as_length(value.resolve(Some(SizeCss::SPACING))?);
+            Some(
+                declared
+                    .unwrap_or_default()
+                    .breakpoint(size, sx().var(GRID_ZONE_GAP.override_var(), css)),
+            )
+        });
     let radius = ScaleOrCss::new(props.radius.as_ref(), defaults.radius);
 
     if masonry && props.ratio.as_ref().is_some() {
@@ -591,9 +613,13 @@ pub fn ImageList(props: ImageListProps) -> Element {
     }
 
     let caller_sx = parts_under_sx(&props.parts, props.sx.clone());
-    let root_sx: Input<Sx> = match caller_sx.as_ref() {
-        None => Input::Static(&IMAGE_LIST_SX),
-        Some(caller) => Input::Value(Sx::clone(&IMAGE_LIST_SX).and(caller.clone())),
+    let root_sx: Input<Sx> = match (gap_sx, caller_sx.as_ref()) {
+        (None, None) => Input::Static(&IMAGE_LIST_SX),
+        (gap_sx, caller) => Input::Value(
+            Sx::clone(&IMAGE_LIST_SX)
+                .and(gap_sx.unwrap_or_default())
+                .and(caller.cloned().unwrap_or_default()),
+        ),
     };
     // Safari/VoiceOver drops list semantics under `list-style: none`. The caller's role wins.
     let names_role = props
@@ -615,7 +641,7 @@ pub fn ImageList(props: ImageListProps) -> Element {
     rsx! {
         GridZone {
             masonry,
-            gap,
+            gap: gap.base_ref().clone(),
             component: HtmlTag::Ul,
             class: props.class.clone(),
             sx: root_sx,
@@ -669,7 +695,7 @@ mod tests {
     /// An ordinary cell is its width over the ratio, with no gap term.
     #[test]
     fn an_ordinary_quilt_cell_is_its_width_over_the_ratio() {
-        let gap = GRID_ZONE_GAP.value();
+        let gap = GRID_ZONE_GAP.overridable();
         // Three columns, so an ordinary cell spans four tracks.
         assert_eq!(
             quilt_height(1.5, 4, 4, 1),
@@ -680,7 +706,7 @@ mod tests {
     /// A spanning cell nets out its column gaps and adds its row gaps.
     #[test]
     fn a_spanning_quilt_cell_adds_up_its_gaps() {
-        let gap = GRID_ZONE_GAP.value();
+        let gap = GRID_ZONE_GAP.overridable();
         assert_eq!(
             quilt_height(1.0, 8, 4, 2),
             format!("calc(2 * (100% - 1 * {gap}) / 2 + 1 * {gap})")

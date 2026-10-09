@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{Input, base_props, input_from_str},
+        common::{Input, ScaleOrCss, base_props, input_from_str, with_own},
         layout::{Float, Placement},
         overlay::Dialog,
     },
@@ -27,11 +27,13 @@ static DRAWER_SX: StaticSx = StaticSx::new(|| {
         .when("anchor-start", sx().height("100%"))
         .when("anchor-end", sx().height("100%"))
         .when("anchor-top", sx().width("100%"))
-        .when("anchor-bottom", sx().width("100%"));
+        .when("anchor-bottom", sx().width("100%"))
+        // A drawer opened from inside one must not inherit its custom size.
+        .var(DRAWER_SIZE.override_var(), "initial");
 
     Size::ALL.into_iter().fold(base, |acc, size| {
         let state = size.state_name();
-        let value = DRAWER_SIZE.value(size);
+        let value = DRAWER_SIZE.overridable(size);
 
         acc.when(
             format!("anchor-start && {state} || anchor-end && {state}"),
@@ -75,8 +77,9 @@ base_props! {
         /// The edge the drawer docks to.
         #[props(default, into)]
         anchor: Input<DrawerAnchor>,
+        /// The width (or height, docked top or bottom): a size word or any CSS, as `size: "24rem"`.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<ThemeAwareValue>,
         #[props(default, into)]
         z_index: Input<ThemeAwareValue>,
         #[props(default, into)]
@@ -93,12 +96,17 @@ base_props! {
 pub(crate) fn Drawer(props: DrawerProps) -> Element {
     let anchor = props.anchor.copied_or_default();
     let theme = use_theme();
-    let size = props.size.copied_or(theme.drawer.size);
+    let size = ScaleOrCss::new(props.size.as_ref(), theme.drawer.size);
+    let sx = with_own(
+        size.custom_css(DRAWER_SIZE)
+            .map(|css| sx().var(DRAWER_SIZE.override_var(), css)),
+        &props.sx,
+    );
 
     let states = props
         .states
         .unwrap_or_default()
-        .active(size.state_name())
+        .active(size.size.state_name())
         .with("anchor-start", anchor == DrawerAnchor::Start)
         .with("anchor-end", anchor == DrawerAnchor::End)
         .with("anchor-top", anchor == DrawerAnchor::Top)
@@ -119,7 +127,7 @@ pub(crate) fn Drawer(props: DrawerProps) -> Element {
                 aria_label: props.aria_label.clone(),
                 ondismiss: props.ondismiss,
                 class,
-                sx: props.sx.clone(),
+                sx,
                 states,
                 attributes: props.attributes.clone(),
                 {props.children}

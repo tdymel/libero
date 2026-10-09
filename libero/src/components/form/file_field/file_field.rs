@@ -7,7 +7,7 @@ use pictogram_icons_lucide as lucide;
 use crate::{
     CssLayer,
     components::{
-        common::{Glyph, HtmlTag, Input, States, input_from_str},
+        common::{Glyph, HtmlTag, Input, ScaleOrCss, States, input_from_str},
         feedback::Loader,
         form::{
             CropOptions, CropRect, SelectionArgs, field_parts_enum, field_props, slot_icon_size,
@@ -149,7 +149,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
     let opening = use_hook(|| Rc::new(Cell::new(false)));
 
     let size = props.size.copied_or(theme.file_field.size);
-    let radius = props.radius.copied_or(theme.file_field.radius);
+    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.file_field.radius);
     let variant = props.variant.copied_or(theme.file_field.variant);
     let clearable = props.clearable.unwrap_or(theme.file_field.clearable);
     let required = props.required.unwrap_or(false);
@@ -227,7 +227,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
         .readonly(props.readonly.unwrap_or(false))
         .disabled(disabled)
         .size(size)
-        .radius(radius)
+        .radius(radius.clone())
         .class(&props.class)
         .sx(&field_sx)
         .parts(&props.parts)

@@ -36,9 +36,9 @@ pub fn TextFieldPage() -> Element {
                     prop("size", "Size")
                         .default(theme.text_field.size.as_str())
                         .doc("Height, padding and font size."),
-                    prop("radius", "Size")
+                    prop("radius", "ThemeAwareValue")
                         .default(theme.text_field.radius.as_str())
-                        .doc("Corner radius, independent of `size`."),
+                        .doc("Corner radius, independent of `size`. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("value", "Option<String>")
                         .doc("The text in the field. Leave it out and the input keeps its own text."),
                     prop("oninput", "EventHandler<String>")
@@ -122,7 +122,8 @@ pub fn TextFieldPage() -> Element {
                 controls: [vec![
                     Control::sizes("size")
                         .default(theme.text_field.size.as_str()),
-                    Control::sizes("radius")
+                    // `0` is plain CSS, next to the size scale.
+                    Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.text_field.radius.as_str()),
                 ], field_controls::<UsernameCopy>(), vec![
                     Control::switch("placeholder").default("true").code(|_, values| {

@@ -32,9 +32,9 @@ pub fn TextareaPage() -> Element {
                     prop("size", "Size")
                         .default(theme.textarea.size.as_str())
                         .doc("Padding and font size."),
-                    prop("radius", "Size")
+                    prop("radius", "ThemeAwareValue")
                         .default(theme.textarea.radius.as_str())
-                        .doc("Corner radius, independent of `size`."),
+                        .doc("Corner radius, independent of `size`. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("rows", "u32")
                         .default("3")
                         .doc("Visible lines, which set the starting height. The user can still drag it taller."),
@@ -104,7 +104,8 @@ pub fn TextareaPage() -> Element {
                 controls: [vec![
                     Control::sizes("size")
                         .default(theme.textarea.size.as_str()),
-                    Control::sizes("radius")
+                    // `0` is plain CSS, next to the size scale.
+                    Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.textarea.radius.as_str()),
                     // A `u32`, so it prints unquoted.
                     Control::slider("rows", ["2", "3", "5", "8"]).default("3").code(

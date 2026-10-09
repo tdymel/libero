@@ -58,7 +58,7 @@ under Germany becomes `"+4901711234567"`, which is not E.164. Say so in
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `size` | `Size` | `md` | Height, padding and font size. |
-| `radius` | `Size` | `sm` | Corner radius, independent of `size`. |
+| `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. Or any CSS, e.g. `radius: "0"`. |
 | `value` | `Option<String>` | - | The number in E.164, such as `"+12133734253"`. Leave it out and the field keeps its own text. |
 | `oninput` | `EventHandler<String>` | - | Fires on every keystroke with the E.164 the field should hold next, or an empty string once nothing is typed. |
 | `country` | `String` | `US` | The country the field starts on, ISO 3166-1 alpha-2. A pick wins over it until the prop changes. A `value` with another country's dial code wins over both. |

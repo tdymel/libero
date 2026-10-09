@@ -7,7 +7,8 @@ use crate::{
     components::{
         accessibility::VisuallyHidden,
         common::{
-            ComboboxState, Glyph, HtmlTag, Input, Part, Parts, inset_focus_ring_sx, use_combobox,
+            ComboboxState, Glyph, HtmlTag, Input, Part, Parts, ScaleOrCss, inset_focus_ring_sx,
+            use_combobox,
         },
         form::{
             CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, FIELD_CONTROL_SX, FormScope,
@@ -201,7 +202,7 @@ field_props! {
 pub fn PhoneField(props: PhoneFieldProps) -> Element {
     let theme = use_theme();
     let size = props.size.copied_or(theme.phone_field.size);
-    let radius = props.radius.copied_or(theme.phone_field.radius);
+    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.phone_field.radius);
     let required = props.required.unwrap_or(false);
 
     let bound = use_bound(&props.name, props.oninput.is_some());
@@ -272,7 +273,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
         .readonly(readonly)
         .disabled(disabled)
         .size(size)
-        .radius(radius)
+        .radius(radius.clone())
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)
@@ -434,7 +435,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             opened,
             home_row,
             size,
-            radius,
+            radius: radius.size,
             disabled: disabled || readonly,
             dial: country.dial,
             dial_id: dial_id.clone(),

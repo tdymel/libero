@@ -143,7 +143,7 @@ impl FieldDefaults {
     }
 
     fn frame_radius_sx(radius: Size) -> Sx {
-        sx().border_radius(SizeCss::RADIUS.value(radius))
+        sx().border_radius(SizeCss::RADIUS.overridable(radius))
     }
 
     pub fn frame_theme_vars() -> Sx {

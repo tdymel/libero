@@ -28,7 +28,7 @@ use crate::{
     components::{
         accessibility::use_announcer,
         buttons::{ActionIcon, Button, Toolbar, ToolbarGroup, ToolbarSeparator},
-        common::{Glyph, HtmlTag, Input, attr, names_itself, use_name_warning},
+        common::{Glyph, HtmlTag, Input, ScaleOrCss, attr, names_itself, use_name_warning},
         form::{field_props, use_bound, use_field, use_field_frame},
         layout::use_box,
         overlay::{Menu, MenuEntry, MenuItem, Shortcut, ShortcutHelp, use_menu},
@@ -274,7 +274,7 @@ fn is_empty(doc: &Doc) -> bool {
 pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     let theme = use_theme();
     let size = props.size.copied_or(theme.textarea.size);
-    let radius = props.radius.copied_or(theme.textarea.radius);
+    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.textarea.radius);
     let required = props.required.unwrap_or(false);
 
     let bound = use_bound(&props.name, props.onchange.is_some());
@@ -897,7 +897,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         .readonly(readonly)
         .disabled(disabled)
         .size(size)
-        .radius(radius)
+        .radius(radius.clone())
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)

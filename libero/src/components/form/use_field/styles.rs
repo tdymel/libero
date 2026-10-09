@@ -3,7 +3,7 @@ use crate::{
     sx::{StaticSx, sx},
     theme::{
         ChoiceVariant, FIELD_CAPTIONS, FIELD_CARD_PADDING, FIELD_FRAME_GAP, FieldDefaults,
-        PAPER_BACKGROUND, PAPER_BORDER_COLOR, PAPER_RADIUS,
+        PAPER_BACKGROUND, PAPER_BORDER_COLOR, PAPER_RADIUS, SizeCss,
     },
 };
 
@@ -13,6 +13,8 @@ input_from_str!(ChoiceVariant);
 /// stylesheet registrations per field.
 pub(in crate::components::form) static FIELD_SX: StaticSx = StaticSx::new(|| {
     FieldDefaults::theme_vars()
+        // A field inside a `Paper { radius: "0" }` must not inherit the paper's radius.
+        .var(SizeCss::RADIUS.override_var(), "initial")
         .display("flex")
         .flex_direction("column")
         // Shrinks below its input's intrinsic width in a flex row (WCAG 1.4.10).

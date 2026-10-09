@@ -100,7 +100,7 @@ behave the same. See [Modal](modal.md).
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `anchor` | `Input<DrawerAnchor>` | `start` | The edge the panel docks to. |
-| `size` | `Input<Size>` | `md` | Width when docked start or end, height when docked top or bottom. |
+| `size` | `Input<ThemeAwareValue>` | `md` | Width when docked start or end, height when docked top or bottom: a size word or any CSS, e.g. `size: "24rem".into()`. |
 | `z_index` | `Input<ThemeAwareValue>` | - | Stacking order of the panel. |
 | `aria_label` | `Option<String>` | - | Names the panel, which is a dialog. Unset warns in a debug build. |
 | `sx` | `Input<Sx>` | - | Styles the panel. It has no inner parts: the content is yours to style. |

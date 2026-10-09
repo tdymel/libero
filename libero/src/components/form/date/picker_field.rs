@@ -17,8 +17,8 @@ use crate::{
     components::{
         accessibility::use_announcer,
         common::{
-            ClassList, FOCUSABLE_SELECTOR, HtmlTag, Input, NavigationChord, Part, Parts, States,
-            navigation_chord,
+            ClassList, FOCUSABLE_SELECTOR, HtmlTag, Input, NavigationChord, Part, Parts,
+            ScaleOrCss, States, navigation_chord,
         },
         form::{
             Caption, ChronoDropdownPart, FIELD_CONTROL_SX, FieldName, FieldPart, FieldStatus,
@@ -32,7 +32,7 @@ use crate::{
     },
     localization::DateLocale,
     platform::{ElementApi, next_task, soft_keyboard_app},
-    sx::{StaticSx, Sx},
+    sx::{StaticSx, Sx, ThemeAwareValue},
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
 };
 
@@ -234,7 +234,7 @@ pub(super) struct PickerField<'a, V: 'static> {
     pub helper: &'a Caption,
     pub status: &'a Input<FieldStatus>,
     pub size: Input<Size>,
-    pub radius: Input<Size>,
+    pub radius: Input<ThemeAwareValue>,
     pub required: Option<bool>,
     pub disabled: Option<bool>,
     pub readonly: Option<bool>,
@@ -297,7 +297,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
     let names = &use_localization().date;
     let defaults = &theme.chrono_field;
     let size = field.size.copied_or(defaults.size);
-    let radius = field.radius.copied_or(defaults.radius);
+    let radius = ScaleOrCss::new(field.radius.as_ref(), defaults.radius);
     let required = field.required.unwrap_or(false);
     let bound = use_bound(field.name, field.onchange.is_some());
     let disabled = bound.disabled(field.disabled);
@@ -396,7 +396,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
         .readonly(readonly)
         .disabled(disabled)
         .size(size)
-        .radius(radius)
+        .radius(radius.clone())
         .class(field.class)
         .sx(field.sx)
         .parts(field.parts)

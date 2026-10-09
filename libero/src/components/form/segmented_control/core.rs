@@ -71,6 +71,8 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .selector(
             SEGMENT,
             ButtonDefaults::theme_vars()
+                // Past `per_radius`'s reset: the field's custom radius, set on its wrapper.
+                .var(SizeCss::RADIUS.override_var(), "inherit")
                 .position("relative")
                 .display("inline-flex")
                 .align_items("center")

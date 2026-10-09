@@ -64,7 +64,7 @@ Checkbox {
 |---|---|---|---|
 | `color` | `ThemeAwareValue` | `primary` | The box's color when checked. A theme color name or any CSS color; `theme.checkbox.color` when unset. |
 | `size` | `Size` | `md` | Size of the box, the label and the captions. |
-| `radius` | `Size` | `sm` | Corner radius of the box. |
+| `radius` | `ThemeAwareValue` | `sm` | Corner radius of the box. Or any CSS, e.g. `radius: "0"`. |
 | `checked` | `bool` | - | Whether it is checked. Pair it with `onchange`. Left out, the box keeps its own state, or the form's when `name` binds it. |
 | `indeterminate` | `bool` | `false` | Draws a dash and reads as mixed. It wins over `checked`, and toggling from it gives `true`. |
 | `onchange` | `EventHandler<bool>` | - | Called with the value `checked` should take next. |

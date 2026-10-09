@@ -7,8 +7,8 @@ use crate::{
     components::{
         buttons::ActionIcon,
         common::{
-            Glyph, HtmlTag, Input, NumberValue, TOOLBAR_ITEM, ToolbarItem, navigation_chord,
-            use_no_toolbar, use_toolbar_item,
+            Glyph, HtmlTag, Input, NumberValue, ScaleOrCss, TOOLBAR_ITEM, ToolbarItem,
+            navigation_chord, use_no_toolbar, use_toolbar_item,
         },
         form::{
             FormScope, LiveControl, field_control_sx, field_props, slot_button_sx, slot_icon_size,
@@ -124,7 +124,7 @@ fn NumberFieldShell<T: NumberValue>(
     let theme = use_theme();
 
     let size = props.size.copied_or(theme.number_field.size);
-    let radius = props.radius.copied_or(theme.number_field.radius);
+    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.number_field.radius);
     let required = props.required.unwrap_or(false);
 
     let bound = use_bound(&props.name, props.onchange.is_some());
@@ -227,7 +227,7 @@ fn NumberFieldShell<T: NumberValue>(
         .readonly(readonly)
         .disabled(disabled)
         .size(size)
-        .radius(radius)
+        .radius(radius.clone())
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)

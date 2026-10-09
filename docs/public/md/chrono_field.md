@@ -120,7 +120,7 @@ and `DateTimeRangeField`, with only the props that type uses and no turbofish.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `size` | `Size` | `md` | Control height, font size and the dropdown's picker. |
-| `radius` | `Size` | `sm` | Corner radius of the frame. |
+| `radius` | `ThemeAwareValue` | `sm` | Corner radius of the frame. Or any CSS, e.g. `radius: "0"`. |
 | `value` | `Option<V>` | - | The value. `None` is the empty field. Its type picks the dropdown. Pair it with `onchange`. |
 | `onchange` | `EventHandler<Option<V>>` | - | Called on every pick, and when typed text is committed on blur or Enter. Emptied text commits `None`. |
 | `level` | `DateLevel` | `Day` | Types and picks a `NaiveDate` as a day, a month (its first day) or a year (its January 1), typed as `September 2026` or `2026`. Ignored for other values. |

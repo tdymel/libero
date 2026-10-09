@@ -37,9 +37,9 @@ pub fn CheckboxPage() -> Element {
                     prop("size", "Size")
                         .default(theme.checkbox.size.as_str())
                         .doc("Size of the box, the label and the captions."),
-                    prop("radius", "Size")
+                    prop("radius", "ThemeAwareValue")
                         .default(theme.checkbox.radius.as_str())
-                        .doc("Corner radius of the box."),
+                        .doc("Corner radius of the box. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("checked", "bool")
                         .doc("Whether it is checked. Pair it with `onchange`. Left out, the box keeps its own state, or the form's when `name` binds it."),
                     prop("indeterminate", "bool")
@@ -114,7 +114,8 @@ pub fn CheckboxPage() -> Element {
                     Control::color("color").default(theme.checkbox.color.as_str()),
                     Control::sizes("size")
                         .default(theme.checkbox.size.as_str()),
-                    Control::sizes("radius")
+                    // `0` is plain CSS, next to the size scale.
+                    Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.checkbox.radius.as_str()),
                 ], field_controls::<TermsCopy>(), vec![
                     // `checked` + `onchange` as a pair (the library warns on one alone); the

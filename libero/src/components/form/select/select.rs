@@ -223,7 +223,7 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
             helper: props.helper,
             status: props.status,
             size: props.size.copied_or(theme.select.size),
-            radius: props.radius.copied_or(theme.select.radius),
+            radius: props.radius.clone(),
             disabled: Some(bound.disabled(props.disabled)),
             readonly: props.readonly,
             required: props.required,

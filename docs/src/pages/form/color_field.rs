@@ -70,7 +70,7 @@ pub fn ColorFieldPage() -> Element {
                         .doc("What the field posts as: its color in `format`, from a hidden input as `ColorPicker` posts it, never the text being typed. A path such as `Theme::FIELDS.accent()` also binds the color to the surrounding `Form`'s value when the field has no `oninput`."),
                     prop("placeholder", "String").doc("Shown while the text is empty."),
                     prop("size", "Size").default(theme.color_field.size.as_str()).doc("Control height, font size and the dropdown's picker."),
-                    prop("radius", "Size").default(theme.color_field.radius.as_str()).doc("Corner radius of the frame."),
+                    prop("radius", "ThemeAwareValue").default(theme.color_field.radius.as_str()).doc("Corner radius of the frame. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("label", "Caption").doc("The field's caption."),
                     prop("description", "Caption").doc("Between the label and the control."),
                     prop("helper", "Caption").doc("Under the control."),
@@ -141,7 +141,8 @@ pub fn ColorFieldPage() -> Element {
                 ],
                 controls: [vec![
                     Control::sizes("size").default(theme.color_field.size.as_str()),
-                    Control::sizes("radius").default(theme.color_field.radius.as_str()),
+                    // `0` is plain CSS, next to the size scale.
+                    Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default(theme.color_field.radius.as_str()),
                     Control::select("format", ["hex", "hexa", "rgb", "rgba", "hsl", "hsla"])
                         .labels(["Hex", "Hexa", "RGB", "RGBA", "HSL", "HSLA"])
                         .default("hex")

@@ -51,7 +51,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `size` | `Size` | `md` | Height, padding and font size. |
-| `radius` | `Size` | `sm` | Corner radius, independent of `size`. |
+| `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. Or any CSS, e.g. `radius: "0"`. |
 | `value` | `Option<String>` | - | The text in the field. Leave it out and the input keeps its own text. |
 | `oninput` | `EventHandler<String>` | - | Fires on every keystroke with the text the field should hold next. |
 | `validate` | `Validators<String>` | - | Rules over the text, shown once the field loses focus or its form is submitted. |

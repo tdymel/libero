@@ -454,10 +454,13 @@ mod size {
     use dioxus::prelude::*;
     use libero::{
         LiberoProvider,
-        components::{Dialog, Header, Icon, Tldr},
+        components::{
+            Dialog, GridZone, Header, Icon, ImageItem, ImageList, Sidebar, TextField, Tldr,
+        },
         theme::{
-            BUTTON_HEIGHT, DIALOG_SIZE, DialogDefaults, HEADER_HEIGHT, HeaderDefaults, ICON_SIZE,
-            IconDefaults, Size, SizeCss, Theme, TldrDefaults,
+            BUTTON_HEIGHT, DIALOG_SIZE, DialogDefaults, GRID_ZONE_GAP, GridDefaults, HEADER_HEIGHT,
+            HeaderDefaults, ICON_SIZE, IconDefaults, ImageListDefaults, SidebarDefaults, Size,
+            SizeCss, TextFieldDefaults, Theme, TldrDefaults,
         },
     };
 
@@ -481,8 +484,33 @@ mod size {
             radius: Some(Size::Xs),
             ..Theme::DEFAULT.dialog
         },
+        text_field: TextFieldDefaults {
+            radius: Size::Xl,
+            ..Theme::DEFAULT.text_field
+        },
+        sidebar: SidebarDefaults {
+            size: Size::Xl,
+            ..Theme::DEFAULT.sidebar
+        },
+        grid: GridDefaults {
+            zone_gap: Size::Xl,
+            ..Theme::DEFAULT.grid
+        },
+        image_list: ImageListDefaults {
+            gap: Size::Xxl,
+            ..Theme::DEFAULT.image_list
+        },
         ..Theme::DEFAULT
     };
+
+    /// Whether some element's `data-state` holds `token`.
+    fn has_state(html: &str, token: &str) -> bool {
+        html.split("data-state=\"").skip(1).any(|rest| {
+            rest.split('"')
+                .next()
+                .is_some_and(|states| states.split(' ').any(|state| state == token))
+        })
+    }
 
     #[component]
     fn Large(children: Element) -> Element {
@@ -550,6 +578,41 @@ mod size {
         let radius = format!("--lsx-dialog-radius:{}", SizeCss::RADIUS.value(Size::Xs));
         assert!(html.contains(&size), "{html}");
         assert!(html.contains(&radius), "{html}");
+    }
+
+    /// Todo 2721: the radius takes any CSS now; unset is still the theme's step.
+    #[test]
+    fn an_unset_field_radius_follows_the_theme() {
+        fn app() -> Element {
+            rsx! { Large { TextField { label: "Name" } } }
+        }
+        let html = render(app);
+        assert!(has_state(&html, "radius-xl"), "{html}");
+    }
+
+    #[test]
+    fn an_unset_sidebar_size_follows_the_theme() {
+        fn app() -> Element {
+            rsx! { Large { Sidebar { "s" } } }
+        }
+        let html = render(app);
+        assert!(has_state(&html, "size-xl"), "{html}");
+    }
+
+    /// Todos 2722, 2723: a zone's and an image list's gap.
+    #[test]
+    fn an_unset_zone_and_image_list_gap_follow_the_theme() {
+        fn zone() -> Element {
+            rsx! { Large { GridZone { "z" } } }
+        }
+        fn list() -> Element {
+            rsx! { Large { ImageList { items: vec![ImageItem::new(rsx! { "a" })] } } }
+        }
+        let gap = |size| format!("{}:{}", GRID_ZONE_GAP.name(), SizeCss::SPACING.value(size));
+        let zone = html(zone);
+        let list = html(list);
+        assert!(zone.contains(&gap(Size::Xl)), "{zone}");
+        assert!(list.contains(&gap(Size::Xxl)), "{list}");
     }
 }
 

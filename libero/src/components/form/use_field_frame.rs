@@ -48,9 +48,11 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
         .per_radius(|radius| {
             sx().selector(
                 "& [data-ring]",
-                sx().border_radius(SizeCss::RADIUS.value(radius)),
+                sx().border_radius(SizeCss::RADIUS.overridable(radius)),
             )
         })
+        // After every `per_radius` reset: the field's custom radius, set on its wrapper.
+        .var(SizeCss::RADIUS.override_var(), "inherit")
         .selector("& :focus-visible ~ [data-ring]", focus_ring_sx())
         .when("error", sx().border_color("error.7"))
         // Shade 9: `warning.7` is 2.17:1 on white (WCAG 1.4.11).
@@ -490,5 +492,15 @@ mod tests {
             ),
             "{css}"
         );
+    }
+
+    /// Todo 2721: the frame inherits the wrapper's custom radius, not `per_radius`'s reset.
+    #[test]
+    fn the_frame_inherits_the_field_radius_override() {
+        let css = crate::css::Stylesheet::from(&FIELD_FRAME_SX);
+        let css = css.as_str();
+
+        assert!(css.contains("--lsx-radius-override:inherit"), "{css}");
+        assert!(!css.contains("--lsx-radius-override:initial"), "{css}");
     }
 }

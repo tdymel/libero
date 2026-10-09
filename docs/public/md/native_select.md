@@ -168,7 +168,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `size` | `Size` | `md` | Height, padding and font size. |
-| `radius` | `Size` | `sm` | Corner radius. |
+| `radius` | `ThemeAwareValue` | `sm` | Corner radius. Or any CSS, e.g. `radius: "0"`. |
 | `value` | `Option<T>` | - | The selected option. Pair it with `onchange`. `None` shows `placeholder` and selects nothing. |
 | `onchange` | `EventHandler<T>` | - | Called with the option to select next. Never for the placeholder, which cannot be picked. |
 | `name` | `FieldName<Option<T>>` | - | What the select posts as. A path such as `Order::FIELDS.size()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |

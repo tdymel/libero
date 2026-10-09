@@ -28,7 +28,7 @@ pub fn PinFieldPage() -> Element {
             properties: vec![
                 props("PinField", vec![
                     prop("size", "Size").default(theme.pin_field.size.as_str()).doc("The cell's square, its font size and the gap. A cell is as tall as a `TextField` of the same size."),
-                    prop("radius", "Size").default(theme.pin_field.radius.as_str()).doc("Corner radius of each cell, independent of `size`."),
+                    prop("radius", "ThemeAwareValue").default(theme.pin_field.radius.as_str()).doc("Corner radius of each cell, independent of `size`. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("length", "usize").default(theme.pin_field.length.to_string()).doc("How many cells, clamped to 1 through 32."),
                     prop("kind", "PinKind").default(theme.pin_field.kind.as_str()).doc("`numeric` takes the digits 0-9, `alphanumeric` the ASCII letters and digits. Any other character, an accented letter too, is ignored as it is typed."),
                     prop("value", "Option<String>")
@@ -113,7 +113,8 @@ pub fn PinFieldPage() -> Element {
                             _ => vec![],
                         }),
                     Control::sizes("size").default(theme.pin_field.size.as_str()),
-                    Control::sizes("radius").default(theme.pin_field.radius.as_str()),
+                    // `0` is plain CSS, next to the size scale.
+                    Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default(theme.pin_field.radius.as_str()),
                 ], field_controls::<CodeCopy>(), vec![
                     // The separator is an `Element`, so the control switches a
                     // whole `rsx!` in rather than a value.

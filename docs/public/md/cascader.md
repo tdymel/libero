@@ -104,7 +104,7 @@ Cascader {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `size` | `Size` | `md` | Height, padding and font size of the frame and its rows. |
-| `radius` | `Size` | `sm` | Corner radius of the frame and the list. |
+| `radius` | `ThemeAwareValue` | `sm` | Corner radius of the frame and the list. Any CSS, e.g. `radius: "0"`, rounds the frame; the list keeps the theme's step. |
 | `data` | `Vec<CascaderOption<T>>` | required | The tree, built with `CascaderOption::new(value, label)`, `.children(..)` and `.disabled(..)`. `T` is any `Options` type. Values must be unique across the whole tree. |
 | `value` | `Option<T>` | - | The selected option's value. Pair it with `onchange`. The cascader finds the path to it in `data`, and a value no option holds selects nothing there: the trigger shows its `Options::label()` and the form still posts it, as `Select` does. |
 | `onchange` | `EventHandler<Option<T>>` | - | Called with the value to select next, or `None` when the selection was cleared. |

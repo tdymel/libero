@@ -6,7 +6,9 @@ use super::hover_intent::{HoverIntent, TRIGGER_WRAPPER_SX, use_hover_intent};
 use crate::{
     CssLayer,
     components::{
-        common::{HtmlTag, Input, States, base_props, input_from_str, variables},
+        common::{
+            HtmlTag, Input, ScaleOrCss, States, base_props, css_px, input_from_str, variables,
+        },
         layout::use_box,
     },
     hooks::{
@@ -19,6 +21,7 @@ use crate::{
         CssVar, POPOVER_PADDING, Size, SizeCss, TOOLTIP_DURATION, TOOLTIP_IN, TooltipDefaults,
         Z_INDEX_POPOVER,
     },
+    utils::warn,
 };
 
 use crate::theme::Side;
@@ -125,9 +128,10 @@ base_props! {
         /// The preferred side. The bubble flips when that side has no room.
         #[props(default, into)]
         side: Input<Side>,
-        /// Distance to the trigger, bridged so the pointer can cross it.
+        /// Distance to the trigger, bridged so the pointer can cross it: a size word or a
+        /// `px` or `rem` length, as `gap: "6px"`. Other CSS places by the theme's gap.
         #[props(default, into)]
-        gap: Input<Size>,
+        gap: Input<ThemeAwareValue>,
         #[props(default, into)]
         size: Input<Size>,
         #[props(default, into)]
@@ -411,7 +415,15 @@ fn TooltipBubble(
     let theme = use_theme();
     let side = tooltip.side.copied_or(theme.tooltip.side);
     let size = tooltip.size.copied_or(theme.tooltip.size);
-    let gap = tooltip.gap.copied_or(theme.tooltip.gap);
+    let gap = ScaleOrCss::new(tooltip.gap.as_ref(), theme.tooltip.gap);
+    let custom = gap.custom_css(SizeCss::SPACING);
+    let measured = custom.as_deref().and_then(css_px);
+    if let Some(css) = custom.as_deref().filter(|_| measured.is_none()) {
+        warn(&format!(
+            "Tooltip: gap `{css}` is not a px or rem length, so the bubble is placed by the theme's gap."
+        ));
+    }
+    let offset = measured.map_or(theme.spacing.get(gap.size).into(), f64::from);
     let close_delay = tooltip.close_delay.unwrap_or(theme.tooltip.close_delay);
     let padding = theme.popover.padding;
 
@@ -419,7 +431,7 @@ fn TooltipBubble(
         anchor,
         use_element(),
         true,
-        PopoverOptions::new(theme.spacing.get(gap).into(), padding)
+        PopoverOptions::new(offset, padding)
             .side(side)
             .align(Align::Center)
             .remeasure(generation),
@@ -435,7 +447,10 @@ fn TooltipBubble(
         .with(size.state_name(), true)
         .into();
     let variables: Input<crate::components::common::Variables> = variables()
-        .with(TOOLTIP_GAP_VAR, SizeCss::SPACING.value(gap))
+        .with(
+            TOOLTIP_GAP_VAR,
+            measured.map_or(SizeCss::SPACING.value(gap.size), |px| format!("{px}px")),
+        )
         .with(
             Z_INDEX_POPOVER.override_var(),
             tooltip.z_index.resolve(None),
