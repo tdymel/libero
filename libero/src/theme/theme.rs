@@ -39,6 +39,7 @@ pub struct Theme {
     pub z_index: ZIndexDefaults,
     pub popover: PopoverDefaults,
     pub progress_bar: ProgressBarDefaults,
+    pub circular_progress: CircularProgressDefaults,
     /// The library's one focus indicator, shared by every focusable.
     pub focus_ring: FocusRingDefaults,
     pub paper: PaperDefaults,
@@ -195,6 +196,7 @@ impl Theme {
         alert: AlertDefaults::DEFAULT,
         badge: BadgeDefaults::DEFAULT,
         progress_bar: ProgressBarDefaults::DEFAULT,
+        circular_progress: CircularProgressDefaults::DEFAULT,
         switch: SwitchDefaults::DEFAULT,
         segmented_control: SegmentedControlDefaults::DEFAULT,
         checkbox: CheckboxDefaults::DEFAULT,

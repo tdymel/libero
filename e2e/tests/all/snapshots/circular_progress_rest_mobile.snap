@@ -1,0 +1,9 @@
+---
+source: e2e/src/suite.rs
+description: circular_progress at mobile (rest)
+expression: tree
+---
+progressbar "Upload" = 40 [valuemax=100] [valuemin=0]
+button "Add 10%"
+  StaticText "Add 10%"
+progressbar "Sync" [valuemax=100] [valuemin=0]

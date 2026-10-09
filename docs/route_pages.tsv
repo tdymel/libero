@@ -65,6 +65,7 @@
 /data-display/sortable	Sortable - Libero	A list the user reorders by dragging a handle, by keyboard, or with move buttons. use_sortable and use_sortable_item do the same for your own markup.	/md/sortable.md	Data display	/data-display/icon
 /data-display/kanban	Kanban - Libero	A board of columns whose cards move by drag in a column or to another, by keyboard or move buttons in a column, and to another column by a Move to menu.	/md/kanban.md	Data display	/data-display/icon
 /feedback/alert	Alert - Libero	A tinted surface for something the reader has to know, with a title, an optional icon and close button, and a role that follows its color.	/md/alert.md	Feedback	/feedback/alert
+/feedback/circular-progress	CircularProgress - Libero	A ring that fills clockwise from the top over any min..=max range, or spins, with an optional label in its middle.	/md/circular_progress.md	Feedback	/feedback/alert
 /feedback/loader	Loader - Libero	An indeterminate busy indicator: a ring, bars or dots. It stays silent, so a status region says the wait. Button, Combobox and FileField show it.	/md/loader.md	Feedback	/feedback/alert
 /feedback/notifications	Notifications - Libero	A hook plus a host: render Notifications {} once, and use_notifications() shows messages from anywhere, as an Alert or your own template over your data.	/md/notifications.md	Feedback	/feedback/alert
 /feedback/progress-bar	ProgressBar - Libero	A determinate or indeterminate progress bar over any min..=max range.	/md/progress_bar.md	Feedback	/feedback/alert

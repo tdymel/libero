@@ -262,14 +262,14 @@ mod color {
     use libero::{
         LiberoProvider,
         components::{
-            Avatar, AvatarGroup, AvatarSpec, Badge, Checkbox, Chip, Input, Options, ProgressBar,
-            Radio, RadioGroup, RangeSlider, SegmentedControl, Slider, Switch,
+            Avatar, AvatarGroup, AvatarSpec, Badge, Checkbox, Chip, CircularProgress, Input,
+            Options, ProgressBar, Radio, RadioGroup, RangeSlider, SegmentedControl, Slider, Switch,
         },
         sx::ThemeAwareValue,
         theme::{
-            AvatarDefaults, BadgeDefaults, CheckboxDefaults, ChipDefaults, Color,
-            ProgressBarDefaults, RadioDefaults, SegmentedControlDefaults, SliderDefaults,
-            SwitchDefaults, Theme,
+            AvatarDefaults, BadgeDefaults, CheckboxDefaults, ChipDefaults,
+            CircularProgressDefaults, Color, ProgressBarDefaults, RadioDefaults,
+            SegmentedControlDefaults, SliderDefaults, SwitchDefaults, Theme,
         },
     };
 
@@ -291,6 +291,10 @@ mod color {
         progress_bar: ProgressBarDefaults {
             color: Color::Error,
             ..Theme::DEFAULT.progress_bar
+        },
+        circular_progress: CircularProgressDefaults {
+            color: Color::Error,
+            ..Theme::DEFAULT.circular_progress
         },
         slider: SliderDefaults {
             color: Color::Error,
@@ -341,6 +345,7 @@ mod color {
                     "avatar" => rsx! { Avatar { name: "Ada Lovelace", color } },
                     "avatar_group" => rsx! { AvatarGroup { max: 2, people, color } },
                     "progress_bar" => rsx! { ProgressBar { aria_label: "Upload", value: 30.0, color } },
+                    "circular_progress" => rsx! { CircularProgress { aria_label: "Upload", value: 30.0, color } },
                     "slider" => rsx! { Slider { aria_label: "Volume", value: 25.0, color, oninput: move |_| {} } },
                     _ => rsx! { RangeSlider { aria_label: "Price", value: (20.0, 80.0), color, oninput: move |_| {} } },
                 }
@@ -368,6 +373,7 @@ mod color {
             "avatar",
             "avatar_group",
             "progress_bar",
+            "circular_progress",
             "slider",
             "range_slider",
         ] {

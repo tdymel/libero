@@ -12,6 +12,7 @@ mod button_group;
 mod carousel;
 mod center;
 mod choice;
+mod circular_progress;
 mod code;
 mod code_block;
 mod color_scheme;

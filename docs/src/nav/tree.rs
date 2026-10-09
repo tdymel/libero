@@ -211,6 +211,7 @@ pub(super) fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::NotificationsPage {}, "Notifications"),
                 page(Route::LoaderPage {}, "Loader"),
                 page(Route::ProgressBarPage {}, "ProgressBar"),
+                page(Route::CircularProgressPage {}, "CircularProgress"),
                 page(Route::SkeletonPage {}, "Skeleton"),
             ],
         ),

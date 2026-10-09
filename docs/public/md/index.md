@@ -119,6 +119,7 @@ fetch only the file you need.
 - [Notifications](notifications.md): A hook plus a host: render `Notifications {}` once, and `use_notifications()` shows messages from anywhere, as an `Alert` or your own template over your data.
 - [Loader](loader.md): An indeterminate busy indicator: a ring, bars or dots. It stays silent, so a status region says the wait. `Button`, `Combobox` and `FileField` show it.
 - [ProgressBar](progress_bar.md): A determinate or indeterminate progress bar over any `min..=max` range.
+- [CircularProgress](circular_progress.md): A ring that fills clockwise from the top over any `min..=max` range, or spins, with an optional label in its middle.
 - [Skeleton](skeleton.md): A placeholder for loading content, as a standalone grey shape or a wrapper that hides the real content until it is ready.
 
 ## Data display

@@ -19,6 +19,7 @@ mod cascader;
 mod checkbox;
 mod chip;
 mod chrono_field;
+mod circular_progress;
 mod code;
 mod collapse;
 mod color_field;

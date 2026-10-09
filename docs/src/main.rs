@@ -181,6 +181,8 @@ pub(crate) enum Route {
 
     #[route("/feedback/alert")]
     AlertPage {},
+    #[route("/feedback/circular-progress")]
+    CircularProgressPage {},
     #[route("/feedback/loader")]
     LoaderPage {},
     #[route("/feedback/notifications")]

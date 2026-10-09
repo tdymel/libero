@@ -150,6 +150,7 @@ md_pages! {
     Platform => "platform",
     Popover => "popover",
     ProgressBar => "progress_bar",
+    CircularProgress => "circular_progress",
     QrCode => "qr_code",
     RadioGroup => "radio_group",
     RangeSlider => "range_slider",

@@ -33,6 +33,7 @@ mod cascader;
 mod checkbox;
 mod checkbox_card;
 mod chip;
+mod circular_progress;
 mod code;
 mod code_block;
 mod collapse;

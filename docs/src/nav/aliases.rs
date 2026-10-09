@@ -156,6 +156,7 @@ fn label_aliases(label: &str) -> &'static [&'static str] {
         "Notifications" => &["toast", "snackbar", "notify", "notification"],
         "Loader" => &["spinner", "loading", "activity indicator"],
         "ProgressBar" => &["progress", "meter"],
+        "CircularProgress" => &["progress", "ring", "radial progress", "progress circle"],
         "Skeleton" => &["placeholder", "shimmer", "loading"],
         // "icons" on all three, so "Icon" and "Icons" list the providers too (1445).
         "Icon" => &["icons", "glyph", "icon box"],

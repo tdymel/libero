@@ -8,10 +8,11 @@ use crate::{
     LiberoProvider,
     components::{
         ActionIcon, AlphaSlider, Anchor, Audio, Avatar, Button, ButtonGroup, Carousel, Checkbox,
-        ColorCode, ColorPicker, ColorSwatch, Dialog, Drawer, Fieldset, FloatingWindowOptions,
-        HoverCard, HueSlider, ProgressBar, QrCode, Radio, RadioGroup, RangeSlider, Rating,
-        RichTextEditor, ScrollArea, SegmentedControl, Slider, Splitter, SpotlightOptions, Switch,
-        Table, Tabs, Toolbar, ToolbarGroup, TourOptions, TourStep, Video, column,
+        CircularProgress, ColorCode, ColorPicker, ColorSwatch, Dialog, Drawer, Fieldset,
+        FloatingWindowOptions, HoverCard, HueSlider, ProgressBar, QrCode, Radio, RadioGroup,
+        RangeSlider, Rating, RichTextEditor, ScrollArea, SegmentedControl, Slider, Splitter,
+        SpotlightOptions, Switch, Table, Tabs, Toolbar, ToolbarGroup, TourOptions, TourStep, Video,
+        column,
         rich_text::{NodeViewProps, NodeViews, use_rich_text_editor},
         use_spotlight, use_tour,
     },
@@ -38,6 +39,19 @@ fn an_unnamed_progress_bar_warns() {
     assert!(!warns(
         || rsx! { LiberoProvider { ProgressBar { value: None, aria_labelledby: "heading" } } },
         "ProgressBar:"
+    ));
+}
+
+/// The centred label is drawn, not the name: it does not stop the warning.
+#[test]
+fn an_unnamed_circular_progress_warns_even_with_a_label() {
+    assert!(warns(
+        || rsx! { LiberoProvider { CircularProgress { value: 40.0, "40%" } } },
+        "CircularProgress:"
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { CircularProgress { value: None, aria_label: "Sync" } } },
+        "CircularProgress:"
     ));
 }
 

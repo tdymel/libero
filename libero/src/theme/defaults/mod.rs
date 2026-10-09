@@ -15,6 +15,7 @@ mod cascader;
 mod center;
 mod checkbox;
 mod chip;
+mod circular_progress;
 mod code;
 mod code_block;
 mod collapse;
@@ -150,6 +151,11 @@ pub use cascader::CascaderDefaults;
 pub use center::{CENTER_DISPLAY, CenterDefaults};
 pub use checkbox::{CHECKBOX_BOX, CHECKBOX_BOX_SIZE, CHECKBOX_RADIUS, CheckboxDefaults};
 pub use chip::{CHIP_FONT_SIZE, CHIP_HEIGHT, CHIP_PADDING_X, ChipDefaults, ChipSizeLevel};
+pub use circular_progress::{
+    CIRCULAR_PROGRESS_COLOR, CIRCULAR_PROGRESS_SIZE, CIRCULAR_PROGRESS_SIZE_SCALE,
+    CIRCULAR_PROGRESS_THICKNESS, CIRCULAR_PROGRESS_TRACK, CIRCULAR_PROGRESS_TRANSITION,
+    CircularProgressDefaults,
+};
 pub use code::{
     CODE_FONT_FAMILY, CODE_TOK_ATTRIBUTE, CODE_TOK_COMMENT, CODE_TOK_CONSTANT, CODE_TOK_FUNCTION,
     CODE_TOK_HEADING, CODE_TOK_KEYWORD, CODE_TOK_NUMBER, CODE_TOK_STRING, CODE_TOK_TAG,
