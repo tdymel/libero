@@ -142,7 +142,14 @@ fn reduced_motion_stops_the_spin_and_dashes_the_ring() {
                     .unwrap()
                     .into_value()
                     .unwrap();
-                assert!(dashes.starts_with("7"), "the still ring is {dashes:?}");
+                // Chromium keeps the `calc()` in the computed value.
+                let dash: f64 = dashes
+                    .trim_start_matches("calc(")
+                    .split(|c: char| !(c.is_ascii_digit() || c == '.'))
+                    .next()
+                    .and_then(|number| number.parse().ok())
+                    .unwrap_or(0.0);
+                assert!((dash - 7.0).abs() < 0.1, "the still ring is {dashes:?}");
             }
             fixture
                 .console

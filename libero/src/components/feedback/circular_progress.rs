@@ -91,13 +91,27 @@ static CIRCULAR_PROGRESS_SPIN_SX: StaticSx = StaticSx::new(|| {
             REDUCED_MOTION,
             sx().animation("none").selector(
                 "& > circle",
-                sx().stroke_dasharray(SPIN_DASHES).stroke_dashoffset("0"),
+                sx().stroke_dasharray(spin_dashes_css())
+                    .stroke_dashoffset("0"),
             ),
         )
 });
 
-/// Dash and gap in viewBox units, 24 of each around the `md` ring.
-const SPIN_DASHES: &str = "7 4.78";
+/// How many dashes a still indeterminate ring shows, and the share of each pitch that is ink.
+const SPIN_DASH_COUNT: f64 = 24.0;
+const SPIN_DASH_SHARE: f64 = 0.594;
+
+/// `Ring::dashes` in CSS, from the thickness variable the root sets (`ring.width / 100`).
+fn spin_dashes_css() -> String {
+    let pitch = format!(
+        "100 * {PI} * (1 - {}) / {SPIN_DASH_COUNT}",
+        CIRCULAR_PROGRESS_THICKNESS.value_or("0.1")
+    );
+    format!(
+        "calc({pitch} * {SPIN_DASH_SHARE}) calc({pitch} * {})",
+        1.0 - SPIN_DASH_SHARE
+    )
+}
 
 static CIRCULAR_PROGRESS_LABEL_SX: StaticSx = StaticSx::new(|| {
     sx().position("relative")
@@ -135,6 +149,14 @@ impl Ring {
     fn offset(self, share: f64) -> f64 {
         self.length * (1.0 - share)
     }
+
+    /// The dash and gap of a still indeterminate ring: `SPIN_DASH_COUNT` of each.
+    fn dashes(self) -> String {
+        let pitch = self.length / SPIN_DASH_COUNT;
+        let dash = svg_number(pitch * SPIN_DASH_SHARE);
+        let gap = svg_number(pitch * (1.0 - SPIN_DASH_SHARE));
+        format!("{dash} {gap}")
+    }
 }
 
 /// Yellow stays under 3:1 on a light track even in the text role, so a warning arc
@@ -168,7 +190,7 @@ fn arc_svg(
 ) -> Element {
     let length = svg_number(ring.length);
     let (dashes, offset) = match still {
-        true => (SPIN_DASHES.to_string(), 0.0),
+        true => (ring.dashes(), 0.0),
         false => (format!("{length} {length}"), offset),
     };
     rsx! {
@@ -285,7 +307,8 @@ pub fn CircularProgress(props: CircularProgressProps) -> Element {
         .value
         .map(|value| fraction("CircularProgress", value, props.min, props.max));
     let offset = ring.offset(fraction.unwrap_or(SPIN_SHARE));
-    let still = fraction.is_none() && use_accessibility().reduced_motion();
+    let reduced_motion = use_accessibility().reduced_motion();
+    let still = fraction.is_none() && reduced_motion;
 
     let states: Input<States> = props
         .states
@@ -397,6 +420,17 @@ mod tests {
             svg_number(ring.offset(0.25)),
             svg_number(ring.length * 0.75)
         );
+    }
+
+    /// The `md` ring keeps its 7 4.78 dashes; a thicker ring has a shorter pitch, in CSS too (todo 2790).
+    #[test]
+    fn the_still_dashes_scale_with_the_ring() {
+        assert_eq!(Ring::new(10).dashes(), "7 4.78");
+        assert_eq!(Ring::new(20).dashes(), "6.22 4.25");
+        let css = crate::css::Stylesheet::from(&*CIRCULAR_PROGRESS_SPIN_SX);
+        let css = css.as_str();
+        assert!(css.contains("stroke-dasharray:calc(100 * 3.14159"), "{css}");
+        assert!(css.contains("var(--"), "{css}");
     }
 
     /// A quarter of the 36px `md` edge is 9px, under the 12px type floor (todo 2731).
