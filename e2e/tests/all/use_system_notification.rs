@@ -26,6 +26,7 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
         eventually_text(d, selector, expected, "mount").await?;
     }
     match d.platform() {
+        Platform::Ios => anyhow::bail!("2784: no iOS flow for the notification permission yet"),
         // Todo 1348: the system's notifications over JNI; the runner revokes the permission.
         Platform::Android => {
             eventually_text(d, "#supported", "true", "mount").await?;
@@ -94,7 +95,8 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
 e2e::scenario!(
     mounting_asks_nothing_until_a_request,
     "/use-system-notification",
-    mounting_asks_nothing
+    mounting_asks_nothing,
+    ios: skip("2784: no iOS flow for the notification permission yet")
 );
 
 async fn set_permission(page: &Page, setting: PermissionSetting) -> Result<()> {

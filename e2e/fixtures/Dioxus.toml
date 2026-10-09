@@ -11,6 +11,10 @@ title = "libero e2e fixtures"
 # The package the e2e runner installs, launches and forwards CDP to (964).
 identifier = "dev.libero.fixtures"
 
+[ios]
+# The bundle the e2e iOS runner installs in the simulator and launches (2784).
+identifier = "dev.libero.fixtures"
+
 # `use_geolocation`'s and `use_user_media`'s fixtures; the runner grants them before launch.
 [permissions]
 location = { precision = "fine", description = "The geolocation fixture" }

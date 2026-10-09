@@ -1,5 +1,5 @@
 # Builds the docs app once per platform (1219), dev profile, and runs the e2e suites on macOS
-# (2776) and Windows (2781, 2783). Informational: not part of the required `ci` check.
+# (2776), Windows (2781, 2783) and an iOS simulator (2784). Informational: not part of the required `ci` check.
 name: Platforms
 
 # On by default since the repo is public (standard runners are free there, macOS and Windows too).
@@ -368,3 +368,38 @@ jobs:
       - uses: ./.github/actions/dx
       - working-directory: docs
         run: dx build --platform ios --target aarch64-apple-ios-sim --debug-symbols=false --features mobile
+
+  # The scenarios' `ios` arm in a simulator (2784), informational: the fixture app answers the
+  # e2e bridge over loopback and AXe injects HID touches and keys. No phone, no signing.
+  ios-e2e:
+    runs-on: macos-26
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          targets: aarch64-apple-ios-sim
+          cache-key: platforms-ios-e2e
+      - uses: ./.github/actions/dx
+      # Unpinned: the tap has one formula; the version lands in the log.
+      - run: |
+          brew install cameroncooke/axe/axe
+          axe --version
+      # What the image offers; the runner boots the newest runtime's first iPhone.
+      - run: |
+          xcrun simctl list runtimes
+          xcrun simctl list devices available
+      # HID keys as a hardware keyboard, so a focused field raises no soft keyboard.
+      - run: defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool true
+      # The runner prints `e2e ios: screen ..., viewport origin ...` per app launch.
+      - run: cargo run -p e2e -- ios
+        env:
+          # The runner's artifacts go to `temp_dir()`, which is `$TMPDIR` on macOS.
+          TMPDIR: ${{ runner.temp }}
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ios-e2e-artifacts
+          path: ${{ runner.temp }}/e2e-artifacts
+          if-no-files-found: ignore
+          retention-days: 3

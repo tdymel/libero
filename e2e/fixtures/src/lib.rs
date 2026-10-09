@@ -62,7 +62,7 @@ struct Generation(Signal<u64>);
 #[component]
 fn Shell() -> Element {
     let generation = use_context_provider(|| Generation(Signal::new(0)));
-    #[cfg(any(target_os = "android", feature = "desktop"))]
+    #[cfg(any(target_os = "android", feature = "desktop", feature = "ios"))]
     route_hook(generation.0);
     #[cfg(any(feature = "mobile", feature = "desktop"))]
     held_clock_hook();
@@ -77,13 +77,15 @@ fn Shell() -> Element {
         });
         desktop_bridge();
     }
+    #[cfg(feature = "ios")]
+    desktop_bridge();
     let _ = generation;
     rsx! { Outlet::<Route> {} }
 }
 
-/// wry keeps routes in memory, so the e2e Android (964) and desktop (1126) drivers
-/// navigate by `window.__route(path)`, which returns the generation to wait for.
-#[cfg(any(target_os = "android", feature = "desktop"))]
+/// wry keeps routes in memory, so the e2e Android (964), desktop (1126) and iOS (2784)
+/// drivers navigate by `window.__route(path)`, which returns the generation to wait for.
+#[cfg(any(target_os = "android", feature = "desktop", feature = "ios"))]
 fn route_hook(mut generation: Signal<u64>) {
     let navigator = navigator();
     use_future(move || async move {
@@ -144,7 +146,8 @@ fn held_clock_hook() {
 /// The e2e desktop driver (1126) reads the page through `E2E_BRIDGE`, a loopback
 /// TCP address: one JSON string of a JS body per line in, `{"ok": ..}` or `{"err": ..}` out.
 /// On macOS a JSON object line is an input op instead, in order with the bodies (2782).
-#[cfg(feature = "desktop")]
+/// The iOS driver (2784) reads the simulator's WKWebView through it too.
+#[cfg(any(feature = "desktop", feature = "ios"))]
 fn desktop_bridge() {
     use futures_util::StreamExt;
     use std::io::{BufRead, BufReader, Write};
@@ -193,7 +196,7 @@ fn desktop_bridge() {
                     },
                     Err(error) => serde_json::json!({ "err": error.to_string() }),
                 },
-                #[cfg(target_os = "macos")]
+                #[cfg(all(feature = "desktop", target_os = "macos"))]
                 Ok(op @ serde_json::Value::Object(_)) => {
                     use dioxus::desktop::wry::WebViewExtMacOS;
                     let view = dioxus::desktop::window().webview.webview();

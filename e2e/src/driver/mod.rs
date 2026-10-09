@@ -1,7 +1,8 @@
 //! One scenario, several platforms (todo 822): a scenario is an `async fn`
 //! over any [`Driver`], and [`scenario!`](crate::scenario) runs it on the web
 //! backend (Chromium over CDP), with the `native` feature on Blitz, and with
-//! `android` in the emulator's WebView (964), with `desktop` in wry's (1126).
+//! `android` in the emulator's WebView (964), with `desktop` in wry's (1126), with
+//! `ios` in the simulator's WKWebView (2784).
 //!
 //! ```ignore
 //! async fn pages<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -23,6 +24,7 @@ pub enum Platform {
     Native,
     Android,
     Desktop,
+    Ios,
 }
 
 /// A `getBoundingClientRect()` in CSS px.
@@ -351,34 +353,39 @@ pub async fn eventually_text<D: Driver>(
 
 /// Runs `$body(&mut driver, $route)` as `$name::web`, with the `native`
 /// feature as `$name::native`, with `android` as `$name::android`, with
-/// `desktop` as `$name::desktop`. All but native also fail on a console error.
+/// `desktop` as `$name::desktop`, with `ios` as `$name::ios`. All but native also fail on a
+/// console error.
 ///
 /// A backend gap is a named skip, listed by `--ignored`, never silent:
 /// `scenario!(name, "/route", body, native: skip("Blitz has no <summary> stop"));`
-/// `android: skip("958 ...")`, `desktop: skip("1126 ...")` and `web: skip(..)` do the same
-/// for Android, the desktop WebView and Chromium; the skips may follow each other in any
-/// order. `android_only("1275 ...")` skips every arm but Android's.
+/// `android: skip("958 ...")`, `desktop: skip("1126 ...")`, `ios: skip("2784 ...")` and
+/// `web: skip(..)` do the same for Android, the desktop WebView, the iOS simulator and
+/// Chromium; the skips may follow each other in any order. `android_only("1275 ...")` skips
+/// every arm but Android's.
 #[macro_export]
 macro_rules! scenario {
-    (@skip $name:ident, $route:expr, $body:ident, $w:tt $n:tt $a:tt $d:tt; web: skip($reason:literal) $(, $($rest:tt)*)?) => {
-        $crate::scenario!(@skip $name, $route, $body, [#[test] #[ignore = $reason]] $n $a $d; $($($rest)*)?);
+    (@skip $name:ident, $route:expr, $body:ident, $w:tt $n:tt $a:tt $d:tt $i:tt; web: skip($reason:literal) $(, $($rest:tt)*)?) => {
+        $crate::scenario!(@skip $name, $route, $body, [#[test] #[ignore = $reason]] $n $a $d $i; $($($rest)*)?);
     };
-    (@skip $name:ident, $route:expr, $body:ident, $w:tt $n:tt $a:tt $d:tt; native: skip($reason:literal) $(, $($rest:tt)*)?) => {
-        $crate::scenario!(@skip $name, $route, $body, $w [#[test] #[ignore = $reason]] $a $d; $($($rest)*)?);
+    (@skip $name:ident, $route:expr, $body:ident, $w:tt $n:tt $a:tt $d:tt $i:tt; native: skip($reason:literal) $(, $($rest:tt)*)?) => {
+        $crate::scenario!(@skip $name, $route, $body, $w [#[test] #[ignore = $reason]] $a $d $i; $($($rest)*)?);
     };
-    (@skip $name:ident, $route:expr, $body:ident, $w:tt $n:tt $a:tt $d:tt; android: skip($reason:literal) $(, $($rest:tt)*)?) => {
-        $crate::scenario!(@skip $name, $route, $body, $w $n [#[test] #[ignore = $reason]] $d; $($($rest)*)?);
+    (@skip $name:ident, $route:expr, $body:ident, $w:tt $n:tt $a:tt $d:tt $i:tt; android: skip($reason:literal) $(, $($rest:tt)*)?) => {
+        $crate::scenario!(@skip $name, $route, $body, $w $n [#[test] #[ignore = $reason]] $d $i; $($($rest)*)?);
     };
-    (@skip $name:ident, $route:expr, $body:ident, $w:tt $n:tt $a:tt $d:tt; desktop: skip($reason:literal) $(, $($rest:tt)*)?) => {
-        $crate::scenario!(@skip $name, $route, $body, $w $n $a [#[test] #[ignore = $reason]]; $($($rest)*)?);
+    (@skip $name:ident, $route:expr, $body:ident, $w:tt $n:tt $a:tt $d:tt $i:tt; desktop: skip($reason:literal) $(, $($rest:tt)*)?) => {
+        $crate::scenario!(@skip $name, $route, $body, $w $n $a [#[test] #[ignore = $reason]] $i; $($($rest)*)?);
     };
-    (@skip $name:ident, $route:expr, $body:ident, $w:tt $n:tt $a:tt $d:tt; android_only($reason:literal) $(, $($rest:tt)*)?) => {
-        $crate::scenario!(@skip $name, $route, $body, [#[test] #[ignore = $reason]] [#[test] #[ignore = $reason]] $a [#[test] #[ignore = $reason]]; $($($rest)*)?);
+    (@skip $name:ident, $route:expr, $body:ident, $w:tt $n:tt $a:tt $d:tt $i:tt; ios: skip($reason:literal) $(, $($rest:tt)*)?) => {
+        $crate::scenario!(@skip $name, $route, $body, $w $n $a $d [#[test] #[ignore = $reason]]; $($($rest)*)?);
     };
-    (@skip $name:ident, $route:expr, $body:ident, $w:tt $n:tt $a:tt $d:tt;) => {
-        $crate::scenario!(@all $name, $route, $body, $w, $n, $a, $d);
+    (@skip $name:ident, $route:expr, $body:ident, $w:tt $n:tt $a:tt $d:tt $i:tt; android_only($reason:literal) $(, $($rest:tt)*)?) => {
+        $crate::scenario!(@skip $name, $route, $body, [#[test] #[ignore = $reason]] [#[test] #[ignore = $reason]] $a [#[test] #[ignore = $reason]] [#[test] #[ignore = $reason]]; $($($rest)*)?);
     };
-    (@all $name:ident, $route:expr, $body:ident, [$(#[$web:meta])*], [$(#[$native:meta])*], [$(#[$android:meta])*], [$(#[$desktop:meta])*]) => {
+    (@skip $name:ident, $route:expr, $body:ident, $w:tt $n:tt $a:tt $d:tt $i:tt;) => {
+        $crate::scenario!(@all $name, $route, $body, $w, $n, $a, $d, $i);
+    };
+    (@all $name:ident, $route:expr, $body:ident, [$(#[$web:meta])*], [$(#[$native:meta])*], [$(#[$android:meta])*], [$(#[$desktop:meta])*], [$(#[$ios:meta])*]) => {
         mod $name {
             $(#[$web])*
             fn web() {
@@ -413,10 +420,18 @@ macro_rules! scenario {
                 $crate::futures::executor::block_on(super::$body(&mut driver, $route)).unwrap();
                 driver.finish(stringify!($name)).unwrap();
             }
+
+            #[cfg(feature = "ios")]
+            $(#[$ios])*
+            fn ios() {
+                let mut driver = $crate::driver::Ios::open(module_path!(), $route).unwrap();
+                $crate::futures::executor::block_on(super::$body(&mut driver, $route)).unwrap();
+                driver.finish(stringify!($name)).unwrap();
+            }
         }
     };
     ($name:ident, $route:expr, $body:ident $(, $($skips:tt)*)?) => {
-        $crate::scenario!(@skip $name, $route, $body, [#[test]] [#[test]] [#[test]] [#[test]]; $($($skips)*)?);
+        $crate::scenario!(@skip $name, $route, $body, [#[test]] [#[test]] [#[test]] [#[test]] [#[test]]; $($($skips)*)?);
     };
 }
 
@@ -441,3 +456,9 @@ pub use desktop::Desktop;
 
 #[cfg(feature = "desktop")]
 pub mod desktop;
+
+#[cfg(feature = "ios")]
+pub use ios::Ios;
+
+#[cfg(feature = "ios")]
+pub mod ios;

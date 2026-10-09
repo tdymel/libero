@@ -27,6 +27,7 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
         eventually_text(d, selector, expected, "mount").await?;
     }
     match d.platform() {
+        Platform::Ios => anyhow::bail!("2784: no iOS flow for the location grant and fix yet"),
         Platform::Native => {
             eventually_text(d, "#permission", "Unsupported", "mount").await?;
             d.click("#locate").await?;
@@ -59,7 +60,8 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
 e2e::scenario!(
     mounting_asks_nothing_until_a_request,
     "/use-geolocation",
-    mounting_asks_nothing
+    mounting_asks_nothing,
+    ios: skip("2784: no iOS flow for the location grant and fix yet")
 );
 
 /// Feeds the emulator's GPS provider, the one a high-accuracy request reads.

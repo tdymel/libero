@@ -26,6 +26,7 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
         eventually_text(d, selector, expected, "mount").await?;
     }
     match d.platform() {
+        Platform::Ios => anyhow::bail!("2784: no iOS flow for the camera permission yet"),
         Platform::Native => {
             eventually_text(d, "#camera", "Unsupported", "mount").await?;
             d.click("#start").await?;
@@ -145,7 +146,8 @@ async fn fullscreen_beside_the_capture<D: Driver>(d: &mut D) -> Result<()> {
 e2e::scenario!(
     mounting_asks_nothing_until_a_start,
     "/use-user-media",
-    mounting_asks_nothing
+    mounting_asks_nothing,
+    ios: skip("2784: no iOS flow for the camera permission yet")
 );
 
 async fn set_permission(page: &Page, setting: PermissionSetting) -> Result<()> {

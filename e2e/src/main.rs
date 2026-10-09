@@ -14,6 +14,7 @@ mod bindgen;
 mod desktop_runner;
 mod dx;
 mod http;
+mod ios_runner;
 mod process;
 mod units;
 
@@ -92,6 +93,7 @@ fn main() -> Result<()> {
     match passthrough.first().map(String::as_str) {
         Some("android") => return android_runner::run(passthrough.split_off(1)),
         Some("desktop") => return desktop_runner::run(passthrough.split_off(1)),
+        Some("ios") => return ios_runner::run(passthrough.split_off(1)),
         _ => {}
     }
     let target = Target::new(docs_test(&mut passthrough));

@@ -1,8 +1,8 @@
 //! The fixture app on the web, served by the e2e runner's `dx run`.
 
-/// The desktop driver's console record (1126), in the head so errors before the
-/// app mounts count too.
-#[cfg(feature = "desktop")]
+/// The desktop (1126) and iOS (2784) drivers' console record, in the head so errors
+/// before the app mounts count too.
+#[cfg(any(feature = "desktop", feature = "ios"))]
 const CONSOLE_HOOK: &str = "<script>{ window.__e2eErrors = [];
     const error = console.error.bind(console);
     console.error = (...args) => { __e2eErrors.push(args.map(String).join(' ')); error(...args); };
@@ -21,6 +21,14 @@ fn main() {
     #[cfg(feature = "desktop")]
     if std::env::var_os("E2E_BRIDGE").is_some() {
         let config = dioxus::desktop::Config::new().with_custom_head(CONSOLE_HOOK.into());
+        return dioxus::LaunchBuilder::new()
+            .with_cfg(config)
+            .launch(e2e_fixtures::App);
+    }
+    // `SIMCTL_CHILD_E2E_BRIDGE` on `simctl launch` reaches the app as `E2E_BRIDGE`.
+    #[cfg(feature = "ios")]
+    if std::env::var_os("E2E_BRIDGE").is_some() {
+        let config = dioxus::mobile::Config::new().with_custom_head(CONSOLE_HOOK.into());
         return dioxus::LaunchBuilder::new()
             .with_cfg(config)
             .launch(e2e_fixtures::App);

@@ -81,6 +81,9 @@ android = []
 # The `desktop` scenario arm (1126): the fixture app in the desktop WebView under
 # Xvfb, driven by `xdotool`: `cargo run -p e2e -- desktop [filter]`.
 desktop = []
+# The `ios` scenario arm (2784): the fixture app in a simulator's WKWebView, read through
+# `E2E_BRIDGE`, driven by AXe (idb with `E2E_IOS_INPUT=idb`): `cargo run -p e2e -- ios [filter]`.
+ios = []
 
 # Blitz-only tests (paint, stylo, Blitz's event order), one binary as `all` is.
 [[test]]

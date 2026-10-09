@@ -28,6 +28,8 @@ objc2-foundation = { version = "0.3", optional = true, default-features = false,
 # The Android fixtures APK (964): `dx build --platform android --features mobile`.
 # Both WebView builds hold libero's thread timers for the driver's clock (2144).
 mobile = ["dioxus/mobile", "libero/held-clock"]
+# The iOS simulator app (2784): `mobile` plus the desktop's `E2E_BRIDGE`, as no DevTools socket is reachable.
+ios = ["mobile", "dep:futures-channel", "dep:futures-util", "dep:serde_json"]
 # The desktop WebView (wry) build, opened at `E2E_ROUTE` (1026), read through `E2E_BRIDGE` (1126).
 desktop = ["dioxus/desktop", "libero/desktop", "libero/held-clock", "dep:futures-channel", "dep:futures-util", "dep:serde_json", "dep:objc2", "dep:objc2-app-kit", "dep:objc2-core-foundation", "dep:objc2-core-graphics", "dep:objc2-foundation"]
 
