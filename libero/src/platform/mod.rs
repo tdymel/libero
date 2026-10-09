@@ -133,8 +133,8 @@ pub(crate) use media::{MediaApi, MediaState, MediaSubscription, media};
 pub use media_query::{MediaQueryApi, MediaQuerySubscription, media_query};
 pub(crate) use motion::prefers_reduced_motion;
 pub(crate) use paint::{
-    aligns_logical_text, clips_background_to_text, colors_form_controls, draws_backdrop_filter,
-    fires_image_errors, fits_svg_images, paints_outer_inline_backgrounds,
+    aligns_logical_text, clamps_lines, clips_background_to_text, colors_form_controls,
+    draws_backdrop_filter, fires_image_errors, fits_svg_images, paints_outer_inline_backgrounds,
 };
 pub use permission::PermissionState;
 pub(crate) use permission::{PermissionKind, PermissionSubscription, permission};

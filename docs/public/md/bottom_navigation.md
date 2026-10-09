@@ -160,7 +160,8 @@ parts work.
 - With `position: "fixed"`, pad the page by `var(--lsx-bottom-navigation-height)`.
 - A sticky bar closing a scrolling pane of its own: give the pane
   `scroll-padding-bottom: var(--lsx-bottom-navigation-height)`, so a focused
-  element in it scrolls clear of the bar.
+  element in it scrolls clear of the bar. In a native app set
+  `--lsx-scroll-padding-bottom` to the same value beside it.
 
 ### Example
 
@@ -170,10 +171,8 @@ lists the "Main" navigation, and the current item reads as the current page.
 
 ### Limits
 
-- A native app has no line clamp: a long label wraps onto more lines and grows
-  the bar.
-- A native app's focus scroll ignores that padding, so a link reached with Tab
-  can sit under a sticky bar.
+- A native app has no line clamp: a long label is cut at two lines without an
+  ellipsis.
 
 ## Theme defaults
 

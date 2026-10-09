@@ -482,6 +482,9 @@ pub(crate) const LIFTS_LEGENDS: bool = !cfg!(all(not(target_arch = "wasm32"), fe
 pub(crate) const COLORS_FORM_CONTROLS: bool =
     !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
 
+/// Blitz has no `-webkit-line-clamp`; see [`clamps_lines`](crate::platform::clamps_lines).
+pub(crate) const CLAMPS_LINES: bool = !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
+
 pub(crate) fn document() -> Option<&'static dyn DocumentApi> {
     #[cfg(target_arch = "wasm32")]
     return web::document();

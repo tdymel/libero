@@ -396,8 +396,7 @@ async fn a_sticky_bar_in_a_pane_leaves_the_focused_link_clear<D: Driver>(
 e2e::scenario!(
     a_sticky_bar_in_a_pane_clears_the_focused_link,
     "/bottom-navigation/scroller",
-    a_sticky_bar_in_a_pane_leaves_the_focused_link_clear,
-    native: skip("Blitz's focus scroll ignores scroll-padding; see the native unit")
+    a_sticky_bar_in_a_pane_leaves_the_focused_link_clear
 );
 
 /// 2.4.11 for the fixed bar (todo 1827): each link Tab reaches, the one in view but behind the
@@ -425,8 +424,7 @@ async fn a_fixed_bar_leaves_the_focused_link_clear<D: Driver>(
 e2e::scenario!(
     a_fixed_bar_clears_the_focused_link,
     "/bottom-navigation/fixed",
-    a_fixed_bar_leaves_the_focused_link_clear,
-    native: skip("a link Tab reaches behind the fixed bar is not scrolled clear natively; a filed todo")
+    a_fixed_bar_leaves_the_focused_link_clear
 );
 
 /// A fixed bar docks to the viewport's bottom edge, spans its width, publishes the

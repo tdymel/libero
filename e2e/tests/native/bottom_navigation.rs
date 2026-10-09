@@ -70,7 +70,12 @@ fn crowded() -> Element {
 
 fn pane() -> Element {
     rsx! {
-        div { id: "pane", width: "320px", height: "300px", overflow_y: "auto",
+        div {
+            id: "pane",
+            width: "320px",
+            height: "300px",
+            overflow_y: "auto",
+            style: "--lsx-scroll-padding-bottom: var(--lsx-bottom-navigation-height);",
             for index in 0..20 {
                 a { key: "{index}", id: "row-{index}", href: "#row-{index}", display: "block", padding: "12px", "Row {index}" }
             }
@@ -84,7 +89,6 @@ fn pane() -> Element {
 
 /// A link tabbed to in the pane a sticky bar closes ends up clear of the bar.
 #[test]
-#[ignore = "Blitz's focus scroll ignores scroll-padding; a filed todo"]
 fn a_tabbed_link_in_a_pane_is_clear_of_a_sticky_bar() {
     let mut page = mount(pane);
     page.focus("#row-0");
@@ -102,9 +106,8 @@ fn a_tabbed_link_in_a_pane_is_clear_of_a_sticky_bar() {
     );
 }
 
-/// Blitz has no `-webkit-line-clamp`: a long label grows to four lines and the bar with it.
+/// Blitz has no `-webkit-line-clamp`: a height cap stops a long label at two lines, without the ellipsis.
 #[test]
-#[ignore = "Blitz has no -webkit-line-clamp; a filed todo"]
 fn a_long_label_stops_at_two_lines() {
     let page = mount(crowded);
     let (_, _, _, height) = page.rect("#long [data-slot=label]");

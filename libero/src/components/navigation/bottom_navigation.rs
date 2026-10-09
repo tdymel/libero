@@ -17,6 +17,7 @@ use crate::{
     },
     css::Stylesheet,
     hooks::{use_css, use_theme},
+    platform::{SCROLL_PADDING_VARS, clamps_lines},
     str_enum::str_enum,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
@@ -151,18 +152,23 @@ static BOTTOM_NAVIGATION_ITEM_SX: StaticSx = StaticSx::new(|| {
             sx().background("muted.2"),
         )
         // Two lines at most, then an ellipsis: a long label must not grow the bar.
-        .selector(
-            "& > [data-slot='label']",
-            sx().max_width("100%")
+        // Blitz has no line clamp: a two-line height cap cuts it without the ellipsis.
+        .selector("& > [data-slot='label']", {
+            let label = sx()
+                .max_width("100%")
                 .font_size(TEXT_FONT_SIZE.value(Size::Xs))
                 .line_height("1.25")
                 .text_align("center")
                 .with("overflow-wrap", "anywhere")
-                .display("-webkit-box")
-                .with("-webkit-box-orient", "vertical")
-                .with("-webkit-line-clamp", "2")
-                .overflow("hidden"),
-        )
+                .overflow("hidden");
+            match clamps_lines() {
+                true => label
+                    .display("-webkit-box")
+                    .with("-webkit-box-orient", "vertical")
+                    .with("-webkit-line-clamp", "2"),
+                false => label.display("block").max_height("2.5em"),
+            }
+        })
         .when(
             "selected",
             sx().color("inherit")
@@ -192,16 +198,18 @@ fn pill_variables(color: Option<&ThemeAwareValue>, default_color: Color) -> Vari
 
 /// The bar's height and the scroll padding that keeps focus clear of it (2.4.11).
 /// Until measured, a bar of one-line labels: the item's content, plus the top border.
-/// A pane of its own that a sticky bar closes sets that padding itself.
+/// A pane of its own that a sticky bar closes sets that padding itself, and
+/// `--lsx-scroll-padding-bottom` beside it for Blitz.
 fn publish_css(measured: Option<f64>) -> String {
     let height = match measured {
         Some(height) => format!("{height}px"),
         None => safe_area_padding("64px", "bottom"),
     };
     format!(
-        ":root{{{}:{height};scroll-padding-bottom:{};}}",
+        ":root{{{}:{height};scroll-padding-bottom:{padding};{}:{padding};}}",
         BOTTOM_NAVIGATION_HEIGHT_VAR.name(),
-        BOTTOM_NAVIGATION_HEIGHT_VAR.value()
+        SCROLL_PADDING_VARS[2],
+        padding = BOTTOM_NAVIGATION_HEIGHT_VAR.value()
     )
 }
 
@@ -479,12 +487,14 @@ mod tests {
         assert_eq!(
             publish_css(None),
             ":root{--lsx-bottom-navigation-height:calc(64px + env(safe-area-inset-bottom, 0px));\
-             scroll-padding-bottom:var(--lsx-bottom-navigation-height);}"
+             scroll-padding-bottom:var(--lsx-bottom-navigation-height);\
+             --lsx-scroll-padding-bottom:var(--lsx-bottom-navigation-height);}"
         );
         assert_eq!(
             publish_css(Some(79.5)),
             ":root{--lsx-bottom-navigation-height:79.5px;\
-             scroll-padding-bottom:var(--lsx-bottom-navigation-height);}"
+             scroll-padding-bottom:var(--lsx-bottom-navigation-height);\
+             --lsx-scroll-padding-bottom:var(--lsx-bottom-navigation-height);}"
         );
     }
 

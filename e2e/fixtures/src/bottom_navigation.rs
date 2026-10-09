@@ -85,7 +85,7 @@ fn BottomNavigationPage() -> Element {
 #[component]
 fn ScrollerPage() -> Element {
     rsx! {
-        div { id: "pane", style: "max-width: 320px; height: 300px; overflow-y: auto; scroll-padding-bottom: var(--lsx-bottom-navigation-height);",
+        div { id: "pane", style: "max-width: 320px; height: 300px; overflow-y: auto; scroll-padding-bottom: var(--lsx-bottom-navigation-height); --lsx-scroll-padding-bottom: var(--lsx-bottom-navigation-height);",
             for index in 0..20 {
                 a { key: "{index}", id: "row-{index}", href: "#row-{index}", style: "display: block; padding: 12px;", "Row {index}" }
             }

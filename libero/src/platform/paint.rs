@@ -41,3 +41,9 @@ pub(crate) fn aligns_logical_text() -> bool {
 pub(crate) fn colors_form_controls() -> bool {
     backend::COLORS_FORM_CONTROLS
 }
+
+/// Whether `-webkit-line-clamp` cuts a block at N lines with an ellipsis. Blitz
+/// ignores it: cap the height instead, without the ellipsis.
+pub(crate) fn clamps_lines() -> bool {
+    backend::CLAMPS_LINES
+}
