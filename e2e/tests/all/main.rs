@@ -90,6 +90,7 @@ mod picker_parts;
 mod pictogram;
 mod pin_field;
 mod planted;
+mod polymorphic;
 mod popover;
 mod progress_bar;
 mod qr_code;

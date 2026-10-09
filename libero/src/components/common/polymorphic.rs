@@ -147,6 +147,13 @@ pub(crate) fn styling_attributes(
 ) -> Vec<Attribute> {
     let mut class = class;
     let mut style = style;
+    // Dioxus sorts a slot by (name, ns), so `style` lands between the style-ns attributes and the
+    // renderer's `style` write wipes those sorted before it: with a `style` string, fold them in.
+    let fold = style.is_some()
+        || attributes
+            .iter()
+            .any(|attribute| attribute.name == "style" && attribute.namespace.is_none());
+    let mut folded = String::new();
     // Everything after the first `aria-describedby`, to append to it.
     let mut described: Option<String> = None;
     let mut describes = false;
@@ -177,8 +184,30 @@ pub(crate) fn styling_attributes(
             describes = true;
             true
         }
+        (name, value) if fold && attribute.namespace == Some("style") => {
+            let value = match value {
+                AttributeValue::Text(value) => value.clone(),
+                AttributeValue::Int(value) => value.to_string(),
+                AttributeValue::Float(value) => value.to_string(),
+                _ => return true,
+            };
+            // A `;` would open a second declaration from a caller's data: drop the value.
+            if value.contains(';') {
+                crate::utils::warn(&format!("style `{name}` has a `;` in its value, dropped."));
+            } else {
+                folded.push_str(&format!("{name}:{value};"));
+            }
+            false
+        }
         _ => true,
     });
+
+    if !folded.is_empty() {
+        match &mut style {
+            Some(style) => join(style, &folded, ';'),
+            None => style = Some(folded),
+        }
+    }
 
     if let Some(rest) = described
         && let Some(first) = attributes
@@ -405,6 +434,85 @@ mod tests {
                 ("style", "color:red;color:blue;".into())
             ]
         );
+    }
+
+    fn styled(name: &'static str, value: &str) -> Attribute {
+        Attribute::new(name, value.to_string(), Some("style"), false)
+    }
+
+    #[test]
+    fn style_attributes_fold_into_a_style_string_after_it() {
+        let out = styling_attributes(
+            None,
+            None,
+            Some("--x:1;".into()),
+            vec![
+                styled("position", "absolute"),
+                styled("height", "8px"),
+                text("id", "x"),
+            ],
+        );
+
+        assert_eq!(
+            named(&out),
+            [
+                ("style", "--x:1;position:absolute;height:8px;".into()),
+                ("id", "x".into())
+            ]
+        );
+    }
+
+    #[test]
+    fn style_attributes_stay_apart_without_a_style_string() {
+        let out = styling_attributes(None, None, None, vec![styled("position", "absolute")]);
+
+        assert_eq!(named(&out), [("position", "absolute".into())]);
+        assert_eq!(out[0].namespace, Some("style"));
+    }
+
+    #[test]
+    fn a_style_value_with_a_semicolon_is_dropped() {
+        let out = styling_attributes(
+            None,
+            None,
+            Some("--x:1;".into()),
+            vec![
+                styled("color", "red;position:fixed"),
+                styled("height", "8px"),
+            ],
+        );
+
+        assert_eq!(named(&out), [("style", "--x:1;height:8px;".into())]);
+    }
+
+    #[test]
+    fn a_callers_important_style_attribute_beats_ours() {
+        let out = styling_attributes(
+            None,
+            None,
+            Some("color:blue !important;".into()),
+            vec![styled("color", "red !important")],
+        );
+
+        assert_eq!(
+            named(&out),
+            [(
+                "style",
+                "color:blue !important;color:red !important;".into()
+            )]
+        );
+    }
+
+    #[test]
+    fn a_callers_style_attribute_beats_a_callers_style_string() {
+        let out = styling_attributes(
+            None,
+            None,
+            None,
+            vec![styled("color", "red"), text("style", "color:blue")],
+        );
+
+        assert_eq!(named(&out), [("style", "color:blue;color:red;".into())]);
     }
 
     #[test]
