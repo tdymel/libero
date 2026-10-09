@@ -1,5 +1,5 @@
 //! `cargo run -p e2e -- desktop [filter]` (1126): the scenarios' `desktop` arm
-//! against the fixture app in wry's WebView, all under one Xvfb display.
+//! against the fixture app in wry's WebView, all under one Xvfb display (macOS: the session's).
 
 use std::process::{Command, Stdio};
 
@@ -13,7 +13,13 @@ pub fn run(mut filters: Vec<String>) -> Result<()> {
     let before = filters.len();
     filters.retain(|filter| filter != "--ignored");
     let ignored = filters.len() != before;
-    for tool in ["xvfb-run", "xdotool"] {
+    // macOS needs neither: the runner's own GUI session, and the app's NSEvents (2782).
+    let tools: &[&str] = if cfg!(target_os = "macos") {
+        &[]
+    } else {
+        &["xvfb-run", "xdotool"]
+    };
+    for tool in tools {
         let found = Command::new("which").arg(tool).output()?;
         if !found.status.success() {
             bail!("the desktop arm needs {tool} on PATH");
@@ -55,8 +61,14 @@ pub fn run(mut filters: Vec<String>) -> Result<()> {
     eprintln!("e2e desktop: running {} scenario(s)", names.len());
 
     // One display for the run; never the Maintainer's (`DISPLAY=:0`).
-    let mut tests = Command::new("xvfb-run")
-        .args(["-a", "-s", "-screen 0 1280x800x24", env!("CARGO")])
+    let mut command = if cfg!(target_os = "macos") {
+        Command::new(env!("CARGO"))
+    } else {
+        let mut xvfb = Command::new("xvfb-run");
+        xvfb.args(["-a", "-s", "-screen 0 1280x800x24", env!("CARGO")]);
+        xvfb
+    };
+    let mut tests = command
         .current_dir(&root)
         .args([
             "test",
@@ -79,7 +91,7 @@ pub fn run(mut filters: Vec<String>) -> Result<()> {
         .stdin(Stdio::null())
         .own_group()
         .spawn()
-        .context("run the tests under xvfb-run")?;
+        .context("run the desktop tests")?;
     guard.tell(&format!("group {}", tests.id()));
     let status = tests.wait()?;
     guard.done();

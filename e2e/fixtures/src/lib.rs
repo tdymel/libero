@@ -12,6 +12,8 @@
 mod common;
 pub mod docs_shell;
 pub mod home;
+#[cfg(all(feature = "desktop", target_os = "macos"))]
+mod mac_input;
 pub mod perf;
 
 // Every other `src/*.rs`, or only the `E2E_FIXTURES` ones (todo 1618).
@@ -141,6 +143,7 @@ fn held_clock_hook() {
 
 /// The e2e desktop driver (1126) reads the page through `E2E_BRIDGE`, a loopback
 /// TCP address: one JSON string of a JS body per line in, `{"ok": ..}` or `{"err": ..}` out.
+/// On macOS a JSON object line is an input op instead, in order with the bodies (2782).
 #[cfg(feature = "desktop")]
 fn desktop_bridge() {
     use futures_util::StreamExt;
@@ -182,14 +185,24 @@ fn desktop_bridge() {
              }",
         );
         while let Some((line, reply)) = incoming.next().await {
-            let answer = match serde_json::from_str::<String>(&line) {
-                Ok(body) => match channel.send(body) {
+            let answer = match serde_json::from_str::<serde_json::Value>(&line) {
+                Ok(serde_json::Value::String(body)) => match channel.send(body) {
                     Ok(()) => match channel.recv::<serde_json::Value>().await {
                         Ok(answer) => answer,
                         Err(error) => serde_json::json!({ "err": error.to_string() }),
                     },
                     Err(error) => serde_json::json!({ "err": error.to_string() }),
                 },
+                #[cfg(target_os = "macos")]
+                Ok(op @ serde_json::Value::Object(_)) => {
+                    use dioxus::desktop::wry::WebViewExtMacOS;
+                    let view = dioxus::desktop::window().webview.webview();
+                    match mac_input::run(&view, &op) {
+                        Ok(value) => serde_json::json!({ "ok": value }),
+                        Err(error) => serde_json::json!({ "err": error }),
+                    }
+                }
+                Ok(other) => serde_json::json!({ "err": format!("not a JS body: {other}") }),
                 Err(error) => serde_json::json!({ "err": error.to_string() }),
             };
             let _ = reply.send(answer.to_string());

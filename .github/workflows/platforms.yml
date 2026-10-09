@@ -159,8 +159,43 @@ jobs:
           path: ${{ runner.temp }}/e2e-artifacts
           if-no-files-found: ignore
 
+  # The desktop arm on WKWebView (2782): the fixture app sends its own WebView NSEvents, so
+  # no Xvfb, no xdotool, no TCC grant.
+  macos-desktop:
+    runs-on: macos-26
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: platforms-macos-desktop
+      # What the session gives a window; unknown until a run (plans/ios-mac-ci/macos-desktop.md).
+      - name: Probe the GUI session
+        continue-on-error: true
+        run: |
+          mkdir -p "$RUNNER_TEMP/e2e-artifacts"
+          sw_vers
+          echo "launchd session: $(launchctl managername)"
+          system_profiler SPDisplaysDataType
+          screencapture -x "$RUNNER_TEMP/e2e-artifacts/session.png" && sips -g pixelWidth -g pixelHeight "$RUNNER_TEMP/e2e-artifacts/session.png"
+          sqlite3 "$HOME/Library/Application Support/com.apple.TCC/TCC.db" 'select service, client, auth_value from access' || true
+      # The runner prints `e2e desktop: macOS window {..}` per launch: key, active, occlusion, scale.
+      - run: cargo run -p e2e -- desktop
+        env:
+          # The runner's artifacts go to `temp_dir()`, which is `$TMPDIR` on macOS.
+          TMPDIR: ${{ runner.temp }}
+      - if: failure()
+        run: screencapture -x "$RUNNER_TEMP/e2e-artifacts/failure.png"
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: macos-desktop-artifacts
+          path: ${{ runner.temp }}/e2e-artifacts
+          if-no-files-found: ignore
+          retention-days: 3
+
   # On demand only: a WKWebView window answering the e2e bridge, and windowed Blitz on wgpu.
-  # Input for the desktop arm on macOS is todo 2782.
+  # `macos-desktop` runs the desktop arm itself (2782).
   macos-probe:
     if: github.event_name == 'workflow_dispatch'
     runs-on: macos-26

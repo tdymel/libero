@@ -16,12 +16,20 @@ futures-channel = { version = "0.3", optional = true }
 futures-util = { version = "0.3", optional = true }
 serde_json = { version = "1", optional = true }
 
+# The desktop driver's NSEvent input on macOS (2782); the versions wry already pulls in.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = { version = "0.6", optional = true }
+objc2-app-kit = { version = "0.3", optional = true, default-features = false, features = ["std", "NSApplication", "NSEvent", "NSGraphicsContext", "NSResponder", "NSScreen", "NSView", "NSWindow", "objc2-core-foundation", "objc2-core-graphics"] }
+objc2-core-foundation = { version = "0.3", optional = true, default-features = false, features = ["std", "CFCGTypes"] }
+objc2-core-graphics = { version = "0.3", optional = true, default-features = false, features = ["std", "CGEvent", "CGEventTypes", "CGRemoteOperation"] }
+objc2-foundation = { version = "0.3", optional = true, default-features = false, features = ["std", "NSArray", "NSGeometry", "NSProcessInfo", "NSString"] }
+
 [features]
 # The Android fixtures APK (964): `dx build --platform android --features mobile`.
 # Both WebView builds hold libero's thread timers for the driver's clock (2144).
 mobile = ["dioxus/mobile", "libero/held-clock"]
 # The desktop WebView (wry) build, opened at `E2E_ROUTE` (1026), read through `E2E_BRIDGE` (1126).
-desktop = ["dioxus/desktop", "libero/desktop", "libero/held-clock", "dep:futures-channel", "dep:futures-util", "dep:serde_json"]
+desktop = ["dioxus/desktop", "libero/desktop", "libero/held-clock", "dep:futures-channel", "dep:futures-util", "dep:serde_json", "dep:objc2", "dep:objc2-app-kit", "dep:objc2-core-foundation", "dep:objc2-core-graphics", "dep:objc2-foundation"]
 
 # `perf::install`: counts dioxus-core's `render` spans per scope on `/perf/*`
 # pages. The versions dioxus-logger already pulls in.

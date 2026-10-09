@@ -3,8 +3,17 @@
 
 use std::fmt::Write;
 
-/// Declared by hand in `lib.rs`: the native tests and `main.rs` use them, so they always build.
-const ALWAYS: &[&str] = &["lib", "main", "common", "docs_shell", "home", "perf"];
+/// Declared by hand in `lib.rs`: the native tests and `main.rs` use them, so they always build;
+/// `mac_input` is no fixture but the macOS desktop driver's input (2782).
+const ALWAYS: &[&str] = &[
+    "lib",
+    "main",
+    "common",
+    "docs_shell",
+    "home",
+    "perf",
+    "mac_input",
+];
 
 fn main() {
     println!("cargo:rerun-if-env-changed=E2E_FIXTURES");

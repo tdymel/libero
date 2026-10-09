@@ -2,6 +2,7 @@
 //! [`Desktop`] launches the fixture app once per unit, reads the page through the
 //! app's `E2E_BRIDGE` (an `eval` loop over loopback TCP) and drives it with real
 //! X input from `xdotool`. Run by `cargo run -p e2e -- desktop`, under Xvfb.
+//! On macOS (2782) the app builds NSEvents for its own WKWebView from ops on the bridge.
 
 use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
@@ -27,6 +28,7 @@ const LAUNCH: Duration = Duration::from_secs(60);
 
 /// What one WebKitGTK wheel notch scrolls, in CSS px: measured 68 per notch in a 120 px tall
 /// scroller of the harness's 573 px tall window (todo 2197).
+#[cfg(not(target_os = "macos"))]
 const WHEEL_NOTCH: f64 = 68.0;
 
 /// The app the last scenario finished cleanly in; the next scenario of its unit reuses it.
@@ -38,8 +40,10 @@ pub struct Desktop {
     app: Child,
     reader: BufReader<TcpStream>,
     writer: TcpStream,
+    #[cfg_attr(target_os = "macos", allow(dead_code))]
     window: String,
     /// The viewport's origin in window px: the menu bar sits above the WebView.
+    #[cfg_attr(target_os = "macos", allow(dead_code))]
     origin: (f64, f64),
     scale: f64,
     /// The test module path minus the scenario: one app per unit (~5 s a launch).
@@ -133,7 +137,7 @@ impl Desktop {
         desktop.window = desktop.find_window()?;
         desktop.scale = desktop.json("devicePixelRatio")?;
         desktop.calibrate()?;
-        xdotool(&["windowfocus", "--sync", &desktop.window])?;
+        desktop.focus_window()?;
         Ok(desktop)
     }
 
@@ -153,13 +157,7 @@ impl Desktop {
     pub fn eval(&mut self, body: &str) -> Result<serde_json::Value> {
         // The bridge's own error names no cause: catch and carry the message.
         let body = format!("try {{ {body} }} catch (e) {{ return {{ __e2eError: String(e) }}; }}");
-        writeln!(self.writer, "{}", serde_json::to_string(&body)?)?;
-        let mut line = String::new();
-        self.reader
-            .read_line(&mut line)
-            .context("read the bridge's answer")?;
-        let mut answer: serde_json::Value =
-            serde_json::from_str(&line).context("the bridge closed")?;
+        let mut answer = self.request(&serde_json::to_string(&body)?)?;
         if let Some(error) = answer.get("err") {
             let running: String = body.chars().skip(6).take(120).collect();
             bail!("desktop eval failed: {error}, running {running}");
@@ -169,6 +167,16 @@ impl Desktop {
             bail!("desktop eval threw: {error}");
         }
         Ok(value)
+    }
+
+    /// One request line out, its `{"ok": ..}` or `{"err": ..}` answer back.
+    fn request(&mut self, line: &str) -> Result<serde_json::Value> {
+        writeln!(self.writer, "{line}")?;
+        let mut answer = String::new();
+        self.reader
+            .read_line(&mut answer)
+            .context("read the bridge's answer")?;
+        serde_json::from_str(&answer).context("the bridge closed")
     }
 
     fn run(&mut self, body: &str) -> Result<()> {
@@ -197,6 +205,45 @@ impl Desktop {
         Ok(())
     }
 
+    /// Where viewport 0,0 sits in the window: a pointer move at a known window
+    /// point, read back as `clientX/Y`. Bottom-left, away from the fixture.
+    fn calibrate(&mut self) -> Result<()> {
+        self.run("window.__e2eMove = null; addEventListener('mousemove', e => { __e2eMove = [e.clientX, e.clientY]; })")?;
+        let at = self.park_pointer()?;
+        let started = Instant::now();
+        let seen = loop {
+            if let Some((x, y)) = self.json::<Option<(f64, f64)>>("__e2eMove")? {
+                break (x, y);
+            }
+            if started.elapsed() > Duration::from_secs(5) {
+                bail!("the WebView saw no pointer move");
+            }
+            std::thread::sleep(Duration::from_millis(25));
+        };
+        // macOS ops are in viewport px already: the move must land where it was sent.
+        #[cfg(target_os = "macos")]
+        if (seen.0 - at.0).abs() > 1.0 || (seen.1 - at.1).abs() > 1.0 {
+            bail!("an NSEvent move to {at:?} reached the page at {seen:?}");
+        }
+        #[cfg(not(target_os = "macos"))]
+        {
+            self.origin = (at.0 - seen.0 * self.scale, at.1 - seen.1 * self.scale);
+        }
+        Ok(())
+    }
+
+    fn centre(&mut self, selector: &str) -> Result<(f64, f64)> {
+        self.run(&format!(
+            "{}.scrollIntoView({{ block: 'nearest', inline: 'nearest' }})",
+            element(selector)
+        ))?;
+        let rect: Rect = self.json(&format!("{}.getBoundingClientRect()", element(selector)))?;
+        Ok((rect.x + rect.width / 2.0, rect.y + rect.height / 2.0))
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+impl Desktop {
     fn find_window(&self) -> Result<String> {
         let pid = self.app.id().to_string();
         let started = Instant::now();
@@ -213,25 +260,6 @@ impl Desktop {
             }
             std::thread::sleep(Duration::from_millis(50));
         }
-    }
-
-    /// Where viewport 0,0 sits in the window: a pointer move at a known window
-    /// point, read back as `clientX/Y`. Bottom-left, away from the fixture.
-    fn calibrate(&mut self) -> Result<()> {
-        self.run("window.__e2eMove = null; addEventListener('mousemove', e => { __e2eMove = [e.clientX, e.clientY]; })")?;
-        let at = self.park_pointer()?;
-        let started = Instant::now();
-        let seen = loop {
-            if let Some((x, y)) = self.json::<Option<(f64, f64)>>("__e2eMove")? {
-                break (x, y);
-            }
-            if started.elapsed() > Duration::from_secs(5) {
-                bail!("the WebView saw no pointer move");
-            }
-            std::thread::sleep(Duration::from_millis(25));
-        };
-        self.origin = (at.0 - seen.0 * self.scale, at.1 - seen.1 * self.scale);
-        Ok(())
     }
 
     /// Moves the pointer to the window's bottom-left corner; that point in window px.
@@ -261,15 +289,6 @@ impl Desktop {
         ]
     }
 
-    fn centre(&mut self, selector: &str) -> Result<(f64, f64)> {
-        self.run(&format!(
-            "{}.scrollIntoView({{ block: 'nearest', inline: 'nearest' }})",
-            element(selector)
-        ))?;
-        let rect: Rect = self.json(&format!("{}.getBoundingClientRect()", element(selector)))?;
-        Ok((rect.x + rect.width / 2.0, rect.y + rect.height / 2.0))
-    }
-
     fn pointer(&self, x: f64, y: f64, then: &[&str]) -> Result<()> {
         let [x, y] = self.window_point(x, y);
         let mut args = vec![
@@ -286,6 +305,185 @@ impl Desktop {
     fn key(&self, chord: &str) -> Result<()> {
         xdotool(&["key", "--window", &self.window, chord]).map(drop)
     }
+
+    fn focus_window(&self) -> Result<()> {
+        xdotool(&["windowfocus", "--sync", &self.window]).map(drop)
+    }
+
+    fn move_to(&mut self, x: f64, y: f64) -> Result<()> {
+        self.pointer(x, y, &[])
+    }
+
+    fn click_point(&mut self, x: f64, y: f64, count: u32) -> Result<()> {
+        if count == 2 {
+            return self.pointer(x, y, &["click", "--repeat", "2", "--delay", "80", "1"]);
+        }
+        self.pointer(x, y, &["click", "1"])
+    }
+
+    fn drag_by(&mut self, x: f64, y: f64, dx: f64, dy: f64) -> Result<()> {
+        self.pointer(x, y, &["mousedown", "1"])?;
+        for step in 1..=8 {
+            let t = step as f64 / 8.0;
+            self.pointer(x + dx * t, y + dy * t, &[])?;
+            std::thread::sleep(Duration::from_millis(16));
+        }
+        xdotool(&["mouseup", "1"]).map(drop)
+    }
+
+    /// X buttons 4 and 5, one notch per [`WHEEL_NOTCH`] px of `dy`, at least one.
+    fn wheel_at(&mut self, x: f64, y: f64, dy: f64) -> Result<()> {
+        let notches = (dy.abs() / WHEEL_NOTCH).round().max(1.0).to_string();
+        let button = if dy < 0.0 { "4" } else { "5" };
+        self.pointer(
+            x,
+            y,
+            &["click", "--repeat", &notches, "--delay", "16", button],
+        )
+    }
+
+    /// `key` with `mods` among `shift`, `ctrl` and `alt`, as one X chord.
+    fn chord(&mut self, mods: &[&str], key: &str) -> Result<()> {
+        let mut chord: Vec<&str> = mods.to_vec();
+        chord.push(keysym(key));
+        self.key(&chord.join("+"))
+    }
+
+    /// Real X key events at `ms` a key, through WebKitGTK's own input path.
+    fn type_keys(&mut self, text: &str, ms: u64) -> Result<()> {
+        xdotool(&[
+            "type",
+            "--window",
+            &self.window,
+            "--delay",
+            &ms.to_string(),
+            text,
+        ])
+        .map(drop)
+    }
+}
+
+/// Counts what input the page saw, so an op's effects are in before the next eval (2782).
+#[cfg(target_os = "macos")]
+const SEEN: &str = "window.__e2eSeen = { up: 0, key: 0, wheel: 0, move: null };
+    addEventListener('mouseup', () => { __e2eSeen.up += 1; }, true);
+    addEventListener('keyup', () => { __e2eSeen.key += 1; }, true);
+    addEventListener('wheel', () => { __e2eSeen.wheel += 1; }, true);
+    addEventListener('mousemove', (e) => { __e2eSeen.move = [e.clientX, e.clientY]; }, true)";
+
+/// macOS input (2782): ops on the bridge that the app turns into NSEvents for its WKWebView
+/// (`e2e/fixtures/src/mac_input.rs`). No TCC grant, no shared cursor, no window lookup.
+#[cfg(target_os = "macos")]
+impl Desktop {
+    fn input(&mut self, op: serde_json::Value) -> Result<()> {
+        let answer = self.request(&op.to_string())?;
+        if let Some(error) = answer.get("err") {
+            bail!("desktop input {op} failed: {error}");
+        }
+        Ok(())
+    }
+
+    /// The app makes its window key and the WebView first responder; logs what the session gave it.
+    fn find_window(&mut self) -> Result<String> {
+        let state = self.request(&serde_json::json!({ "op": "prepare" }).to_string())?;
+        eprintln!("e2e desktop: macOS window {state}");
+        self.run(SEEN)?;
+        Ok(String::new())
+    }
+
+    fn focus_window(&self) -> Result<()> {
+        Ok(())
+    }
+
+    /// WebKit queues input behind the bridge's evals: waits until the page saw it, at most a
+    /// second, as a disabled control gets no mouse events at all.
+    fn seen(&mut self, condition: &str) -> Result<()> {
+        let started = Instant::now();
+        while !self.json::<bool>(&format!("window.__e2eSeen === undefined || {condition}"))? {
+            if started.elapsed() > Duration::from_secs(1) {
+                eprintln!("e2e desktop: the page did not see `{condition}` within 1 s");
+                return Ok(());
+            }
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        Ok(())
+    }
+
+    fn count(&mut self, what: &str) -> Result<u64> {
+        self.json(&format!("window.__e2eSeen?.{what} ?? 0"))
+    }
+
+    /// Moves the pointer to the viewport's bottom-left corner; that point.
+    fn park_pointer(&mut self) -> Result<(f64, f64)> {
+        let height: f64 = self.json("innerHeight")?;
+        let at = (2.0, height - 2.0);
+        self.move_to(at.0, at.1)?;
+        Ok(at)
+    }
+
+    fn move_to(&mut self, x: f64, y: f64) -> Result<()> {
+        self.input(serde_json::json!({ "op": "move", "x": x, "y": y }))?;
+        self.seen(&format!(
+            "Math.abs(__e2eSeen.move?.[0] - {x}) <= 1 && Math.abs(__e2eSeen.move?.[1] - {y}) <= 1"
+        ))
+    }
+
+    fn click_point(&mut self, x: f64, y: f64, count: u32) -> Result<()> {
+        self.move_to(x, y)?;
+        let before = self.count("up")?;
+        for n in 1..=count {
+            for op in ["down", "up"] {
+                self.input(serde_json::json!({ "op": op, "x": x, "y": y, "count": n }))?;
+            }
+        }
+        self.seen(&format!("__e2eSeen.up >= {}", before + u64::from(count)))
+    }
+
+    fn drag_by(&mut self, x: f64, y: f64, dx: f64, dy: f64) -> Result<()> {
+        self.move_to(x, y)?;
+        self.input(serde_json::json!({ "op": "down", "x": x, "y": y, "count": 1 }))?;
+        for step in 1..=8 {
+            let t = step as f64 / 8.0;
+            let (x, y) = (x + dx * t, y + dy * t);
+            self.input(serde_json::json!({ "op": "move", "x": x, "y": y, "held": true }))?;
+            std::thread::sleep(Duration::from_millis(16));
+        }
+        let before = self.count("up")?;
+        let (x, y) = (x + dx, y + dy);
+        self.input(serde_json::json!({ "op": "up", "x": x, "y": y, "count": 1 }))?;
+        self.seen(&format!("__e2eSeen.up > {before}"))
+    }
+
+    /// One pixel-precise wheel event of `dy` CSS px.
+    fn wheel_at(&mut self, x: f64, y: f64, dy: f64) -> Result<()> {
+        self.move_to(x, y)?;
+        let before = self.count("wheel")?;
+        self.input(serde_json::json!({ "op": "wheel", "x": x, "y": y, "dy": dy }))?;
+        self.seen(&format!("__e2eSeen.wheel > {before}"))
+    }
+
+    fn chord(&mut self, mods: &[&str], key: &str) -> Result<()> {
+        let before = self.count("key")?;
+        self.input(serde_json::json!({ "op": "key", "key": key, "mods": mods }))?;
+        self.seen(&format!("__e2eSeen.key > {before}"))
+    }
+
+    /// One key op per character at `ms` a key; waits for the last only, so a burst stays one.
+    fn type_keys(&mut self, text: &str, ms: u64) -> Result<()> {
+        let before = self.count("key")?;
+        let mut typed = 0;
+        for ch in text.chars() {
+            let key = match ch {
+                '\n' => "Enter".to_string(),
+                '\t' => "Tab".to_string(),
+                ch => ch.to_string(),
+            };
+            self.input(serde_json::json!({ "op": "key", "key": key }))?;
+            typed += 1;
+            std::thread::sleep(Duration::from_millis(ms));
+        }
+        self.seen(&format!("__e2eSeen.key >= {}", before + typed))
+    }
 }
 
 impl Drop for Desktop {
@@ -300,6 +498,7 @@ fn element(selector: &str) -> String {
 }
 
 /// `xdotool` with `args`; its stdout.
+#[cfg(not(target_os = "macos"))]
 fn xdotool(args: &[&str]) -> Result<String> {
     let out = Command::new("xdotool")
         .args(args)
@@ -315,6 +514,7 @@ fn xdotool(args: &[&str]) -> Result<String> {
 }
 
 /// The X keysym for a DOM `key`.
+#[cfg(not(target_os = "macos"))]
 fn keysym(key: &str) -> &str {
     match key {
         " " => "space",
@@ -337,21 +537,21 @@ impl Driver for Desktop {
 
     async fn click(&mut self, selector: &str) -> Result<()> {
         let (x, y) = self.centre(selector)?;
-        self.pointer(x, y, &["click", "1"])
+        self.click_point(x, y, 1)
     }
 
     async fn hover(&mut self, selector: &str) -> Result<()> {
         let (x, y) = self.centre(selector)?;
-        self.pointer(x, y, &[])
+        self.move_to(x, y)
     }
 
     async fn double_click(&mut self, selector: &str) -> Result<()> {
         let (x, y) = self.centre(selector)?;
-        self.pointer(x, y, &["click", "--repeat", "2", "--delay", "80", "1"])
+        self.click_point(x, y, 2)
     }
 
     async fn click_at(&mut self, x: f64, y: f64) -> Result<()> {
-        self.pointer(x, y, &["click", "1"])
+        self.click_point(x, y, 1)
     }
 
     async fn viewport(&mut self) -> Result<(f64, f64)> {
@@ -359,59 +559,37 @@ impl Driver for Desktop {
     }
 
     async fn press(&mut self, key: Key) -> Result<()> {
-        self.key(keysym(key.key))
+        self.chord(&[], key.key)
     }
 
     async fn press_shift(&mut self, key: Key) -> Result<()> {
-        self.key(&format!("shift+{}", keysym(key.key)))
+        self.chord(&["shift"], key.key)
     }
 
     async fn press_ctrl(&mut self, key: Key) -> Result<()> {
-        self.key(&format!("ctrl+{}", keysym(key.key)))
+        self.chord(&["ctrl"], key.key)
     }
 
     async fn press_alt(&mut self, key: Key) -> Result<()> {
-        self.key(&format!("alt+{}", keysym(key.key)))
+        self.chord(&["alt"], key.key)
     }
 
     async fn type_text(&mut self, text: &str) -> Result<()> {
         self.type_burst(text, 30).await
     }
 
-    /// Real X key events at `ms` a key, through WebKitGTK's own input path.
     async fn type_burst(&mut self, text: &str, ms: u64) -> Result<()> {
-        xdotool(&[
-            "type",
-            "--window",
-            &self.window,
-            "--delay",
-            &ms.to_string(),
-            text,
-        ])
-        .map(drop)
+        self.type_keys(text, ms)
     }
 
     async fn drag(&mut self, selector: &str, dx: f64, dy: f64) -> Result<()> {
         let (x, y) = self.centre(selector)?;
-        self.pointer(x, y, &["mousedown", "1"])?;
-        for step in 1..=8 {
-            let t = step as f64 / 8.0;
-            self.pointer(x + dx * t, y + dy * t, &[])?;
-            std::thread::sleep(Duration::from_millis(16));
-        }
-        xdotool(&["mouseup", "1"]).map(drop)
+        self.drag_by(x, y, dx, dy)
     }
 
-    /// X buttons 4 and 5, one notch per [`WHEEL_NOTCH`] px of `dy`, at least one.
     async fn wheel(&mut self, selector: &str, dy: f64) -> Result<()> {
         let (x, y) = self.centre(selector)?;
-        let notches = (dy.abs() / WHEEL_NOTCH).round().max(1.0).to_string();
-        let button = if dy < 0.0 { "4" } else { "5" };
-        self.pointer(
-            x,
-            y,
-            &["click", "--repeat", &notches, "--delay", "16", button],
-        )
+        self.wheel_at(x, y, dy)
     }
 
     async fn evaluate(&mut self, expression: &str) -> Result<serde_json::Value> {
