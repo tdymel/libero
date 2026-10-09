@@ -674,6 +674,43 @@ fn typed_and_pasted_urls_and_typed_markdown_links_become_links() {
     });
 }
 
+/// Todo 2725: Backspace right after a link rule turns the link back to text.
+#[test]
+fn backspace_right_after_a_made_link_turns_it_back_to_text() {
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let links = format!("{EDITOR}.querySelectorAll('a').length");
+        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+
+        keyboard::type_text(page, "https://a.example ")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &format!("{links} === 1"), "the autolink")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::BACKSPACE).await.unwrap();
+        wait::for_js_true(page, &format!("{links} === 0"), "the autolink undone")
+            .await
+            .unwrap();
+
+        keyboard::press(page, ENTER).await.unwrap();
+        keyboard::type_text(page, "[docs](https://b.example)")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &format!("{links} === 1"), "the typed link")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::BACKSPACE).await.unwrap();
+        wait::for_js_true(page, &format!("{links} === 0"), "the typed link undone")
+            .await
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Both flavours carry the Markdown, so a code block keeps its fence (todo 1258).
 #[test]
 fn copy_writes_markdown_and_cut_edits_the_model() {

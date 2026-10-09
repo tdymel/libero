@@ -45,6 +45,31 @@ fn only_a_pressable_paper_tints_under_the_pointer() {
 }
 
 #[test]
+fn a_tinted_glass_paper_keeps_its_cues_under_the_pointer() {
+    block_on(async {
+        let fixture = Fixture::open("/paper", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#glass-link").await.unwrap();
+
+        for (selector, layers) in [("#glass-link", 3), ("#glass-gradient-link", 4)] {
+            let rest = look(page, selector)
+                .await
+                .matches("linear-gradient(")
+                .count();
+            pointer::hover(page, selector).await.unwrap();
+            let hovered = look(page, selector).await;
+            assert_eq!(rest, layers - 1, "{selector} at rest");
+            assert_eq!(
+                hovered.matches("linear-gradient(").count(),
+                layers,
+                "{selector} hovered: {hovered}"
+            );
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
+#[test]
 fn a_link_paper_shows_the_focus_ring() {
     block_on(async {
         let fixture = Fixture::open("/paper", Viewport::Desktop).await.unwrap();

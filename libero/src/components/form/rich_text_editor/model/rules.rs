@@ -1,12 +1,33 @@
 //! Markdown shortcuts: typed syntax turns into structure (`# ` a heading, `**x**` bold).
 //! The recognizers live in [`super::syntax`], shared with the Markdown reader.
 
-use super::doc::{BlockKind, ContentKind, Inline, slice_inlines};
+use super::doc::{
+    BlockKind, ContentKind, Inline, NodeKey, map_marks, mark_range, normalize_inlines,
+    slice_inlines, split_inlines,
+};
 use super::mark::{Mark, MarkKind};
+use super::markdown::closer;
 use super::state::{EditorState, Position};
 use super::syntax::{
     BlockSyntax, DELIMITERS, autolink, block_syntax, closing_span, link, task_box,
 };
+
+/// Where the whitespace-free word ending `text` starts.
+fn word_start(text: &[char]) -> usize {
+    text.iter()
+        .rposition(|c| c.is_whitespace() || *c == '\u{fffc}')
+        .map_or(0, |at| at + 1)
+}
+
+fn splice_text(inlines: &mut Vec<Inline>, at: usize, text: &str) {
+    let (before, after) = split_inlines(inlines, at);
+    *inlines = before
+        .into_iter()
+        .chain([Inline::text(text)])
+        .chain(after)
+        .collect();
+    normalize_inlines(inlines);
+}
 
 impl EditorState {
     /// Applies the shortcut the text just typed completes. Never in code blocks.
@@ -129,12 +150,84 @@ impl EditorState {
         true
     }
 
-    /// A URL followed by the space just typed becomes a link.
+    /// A URL followed by the space just typed becomes a link. Stored marks flag the
+    /// moment for [`revert_link_rule`](Self::revert_link_rule); typing or moving drops them.
     fn autolink_rule(&mut self) -> bool {
-        match self.chars_before_caret().split_last() {
+        let linked = match self.chars_before_caret().split_last() {
             Some((' ', word)) => self.autolink(word.len()),
             _ => false,
+        };
+        if linked {
+            self.stored_marks = Some(self.current_marks());
         }
+        linked
+    }
+
+    /// Backspace right after a link rule fired: a typed `[text](url)` goes back to that
+    /// text, an autolinked URL back to plain text (todo 2725).
+    pub(super) fn revert_link_rule(&mut self) -> bool {
+        let at = self.caret();
+        let block = self.block(at.block);
+        if self.stored_marks.is_none()
+            || at.offset == 0
+            || block.kind.content() != ContentKind::Inline
+            || block.kind.is_code()
+        {
+            return false;
+        }
+        let last = slice_inlines(block.inlines(), at.offset - 1, at.offset);
+        let link = last.iter().find_map(|inline| match inline {
+            Inline::Text { marks, .. } => marks.iter().find(|m| m.kind() == MarkKind::Link),
+            _ => None,
+        });
+        match link.cloned() {
+            Some(mark) => self.revert_typed_link(at, &mark),
+            None => self.revert_autolink(at.block, at.offset - 1),
+        }
+    }
+
+    /// `text` linked ending at the caret goes back to `[text](url)`, the caret after it.
+    fn revert_typed_link(&mut self, at: Position, mark: &Mark) -> bool {
+        let inlines = self.block(at.block).inlines();
+        let Some((start, end)) =
+            mark_range(inlines, at.offset, mark).filter(|(_, end)| *end == at.offset)
+        else {
+            return false;
+        };
+        let closer = closer(mark, false);
+        let inlines = self.doc.get_mut(at.block).expect("a leaf").inlines_mut();
+        map_marks(inlines, start, end, |marks| marks.remove(MarkKind::Link));
+        splice_text(inlines, end, &closer);
+        splice_text(inlines, start, "[");
+        self.set_caret(Position::new(at.block, end + 1 + closer.chars().count()));
+        true
+    }
+
+    /// The linked URL before the space at `space` goes back to plain text, the space kept.
+    fn revert_autolink(&mut self, block: NodeKey, space: usize) -> bool {
+        let text: Vec<char> = self.block(block).text().chars().take(space + 1).collect();
+        if text.last() != Some(&' ') {
+            return false;
+        }
+        let word = &text[..space];
+        let from = word_start(word);
+        let Some((len, href)) = autolink(&word[from..]) else {
+            return false;
+        };
+        let to = from + len;
+        let linked = slice_inlines(self.block(block).inlines(), from, to)
+            .iter()
+            .all(|inline| {
+                matches!(inline, Inline::Text { marks, .. }
+                    if marks.iter().any(|m| matches!(m, Mark::Link { href: h, .. } if *h == href)))
+            });
+        if !linked {
+            return false;
+        }
+        let inlines = self.doc.get_mut(block).expect("a leaf").inlines_mut();
+        map_marks(inlines, from, to, |marks| marks.remove(MarkKind::Link));
+        self.stored_marks = None;
+        true
     }
 
     /// Enter after a URL links it before the block splits.
@@ -152,10 +245,7 @@ impl EditorState {
     fn autolink(&mut self, end: usize) -> bool {
         let block = self.caret().block;
         let text: Vec<char> = self.block(block).text().chars().take(end).collect();
-        let from = text
-            .iter()
-            .rposition(|c| c.is_whitespace() || *c == '\u{fffc}')
-            .map_or(0, |at| at + 1);
+        let from = word_start(&text);
         let Some((len, href)) = autolink(&text[from..]) else {
             return false;
         };

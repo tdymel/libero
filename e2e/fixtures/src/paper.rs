@@ -29,6 +29,24 @@ fn PaperPage() -> Element {
                 sx: sx().padding("lg"),
                 Text { "Gradient link" }
             }
+            Paper {
+                id: "glass-link",
+                component: "a",
+                href: "#order-4021",
+                glass: true,
+                color: "primary",
+                sx: sx().padding("lg"),
+                Text { "Glass link" }
+            }
+            Paper {
+                id: "glass-gradient-link",
+                component: "a",
+                href: "#order-4021",
+                glass: true,
+                gradient: ("info", 90),
+                sx: sx().padding("lg"),
+                Text { "Glass gradient link" }
+            }
         }
     }
 }

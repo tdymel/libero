@@ -351,7 +351,7 @@ fn opener(mark: &Mark, tags: bool) -> &'static str {
     }
 }
 
-fn closer(mark: &Mark, tags: bool) -> String {
+pub(super) fn closer(mark: &Mark, tags: bool) -> String {
     match mark {
         Mark::Underline | Mark::Bold | Mark::Italic | Mark::Strike
             if tags || *mark == Mark::Underline =>

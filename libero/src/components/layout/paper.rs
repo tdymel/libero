@@ -12,9 +12,9 @@ use crate::{
     platform::draws_backdrop_filter,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
-        CssVar, FOCUS_RING_HALO, GLASS_SHEEN, GlassTint, Gradient, HOVER_LAYER, NamedColorCss,
-        PAPER_BORDER_COLOR, PRESSED_LAYER, PaperDefaults, SURFACE_LABEL, Size, SizeCss,
-        gradient_hover_sx, gradient_pressed_sx, gradient_surface_sx,
+        CssVar, FOCUS_RING_HALO, GLASS_SHEEN, GRADIENT_LAYER, GlassTint, Gradient, HOVER_LAYER,
+        NamedColorCss, PAPER_BORDER_COLOR, PRESSED_LAYER, PaperDefaults, SURFACE_LABEL, Size,
+        SizeCss, gradient_hover_sx, gradient_pressed_sx, gradient_surface_sx,
     },
 };
 
@@ -48,15 +48,38 @@ pub fn paper_sx() -> Sx {
                     "colored",
                     PaperDefaults::glass_fill_sx(&PAPER_FILL.value(), Some(&PAPER_TINT_SHARE)),
                 )
-                .when("gradient", PaperDefaults::glass_gradient_sx()),
+                .when("gradient", PaperDefaults::glass_gradient_sx())
+                .when("interactive", glass_state_sx()),
         )
+}
+
+fn tint_image(color: &str, percent: u8) -> String {
+    let tint = format!("color-mix(in srgb, {color} {percent}%, transparent)");
+    format!("linear-gradient({tint}, {tint})")
+}
+
+/// Hover and press over a tinted glass, the state layer above its cues instead of replacing them.
+fn glass_state_sx() -> Sx {
+    let layer = |percent: u8| {
+        let fill = tint_image("currentColor", percent);
+        let gradient = tint_image(&GRADIENT_LAYER.value(), percent);
+        sx().when(
+            "colored",
+            PaperDefaults::glass_fill_state_sx(&PAPER_FILL.value(), Some(&PAPER_TINT_SHARE), &fill),
+        )
+        .when(
+            "gradient",
+            PaperDefaults::glass_gradient_state_sx(&gradient),
+        )
+    };
+    sx().hover(layer(HOVER_LAYER))
+        .selector(":active", layer(PRESSED_LAYER))
 }
 
 /// A state layer over whatever fill the surface has, then the focus ring.
 fn interactive_sx() -> Sx {
     let layer = |percent: u8, gradient: Sx| {
-        let tint = format!("color-mix(in srgb, currentColor {percent}%, transparent)");
-        sx().background_image(format!("linear-gradient({tint}, {tint})"))
+        sx().background_image(tint_image("currentColor", percent))
             .when("gradient", gradient)
     };
     // The UA's link colours would otherwise turn the label red while pressed.

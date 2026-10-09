@@ -231,7 +231,7 @@ impl EditorState {
 
     /// Backspace.
     pub fn delete_backward(&mut self) -> bool {
-        if self.delete_selection() {
+        if self.delete_selection() || self.revert_link_rule() {
             return true;
         }
         let at = self.caret();

@@ -39,6 +39,13 @@ fn glass_cue_layers() -> String {
     )
 }
 
+fn under_tint(tint: Option<&str>, layers: String) -> String {
+    match tint {
+        Some(tint) => format!("{tint}, {layers}"),
+        None => layers,
+    }
+}
+
 /// The theme's blur, saturated so the backdrop's colour bleeds through.
 fn glass_cue_filter() -> String {
     format!("{} saturate(160%)", GLASS_BLUR.value())
@@ -124,14 +131,29 @@ impl PaperDefaults {
     /// Glass over a flat `fill`, mixed down to `share` (`glass_background` if `None`),
     /// with the glass cues; opaque where [`glass_sx`](Self::glass_sx) turns opaque.
     pub(crate) fn glass_fill_sx(fill: &str, share: Option<&CssVar>) -> Sx {
-        let opaque = sx().background(fill).backdrop_filter("none");
+        Self::glass_fill_layers(fill, share, None)
+    }
+
+    /// [`glass_fill_sx`](Self::glass_fill_sx) with a state `tint` layer on top, so a
+    /// hovered or pressed glass keeps its cues.
+    pub(crate) fn glass_fill_state_sx(fill: &str, share: Option<&CssVar>, tint: &str) -> Sx {
+        Self::glass_fill_layers(fill, share, Some(tint))
+    }
+
+    fn glass_fill_layers(fill: &str, share: Option<&CssVar>, tint: Option<&str>) -> Sx {
+        let opaque = sx()
+            .background(under_tint(tint, fill.to_string()))
+            .backdrop_filter("none");
         let share = match share {
             Some(share) => share.value_or(GLASS_SHARE.value()),
             None => GLASS_SHARE.value(),
         };
-        sx().background(format!(
-            "{}, color-mix(in srgb, {fill} {share}, transparent)",
-            glass_cue_layers()
+        sx().background(under_tint(
+            tint,
+            format!(
+                "{}, color-mix(in srgb, {fill} {share}, transparent)",
+                glass_cue_layers()
+            ),
         ))
         .backdrop_filter(glass_cue_filter())
         .media(REDUCED_TRANSPARENCY, opaque.clone())
@@ -141,19 +163,30 @@ impl PaperDefaults {
     /// Glass over a gradient: each stop mixed down to the glass share, with the glass
     /// cues, and the opaque gradient again wherever [`glass_sx`](Self::glass_sx) turns opaque.
     pub(crate) fn glass_gradient_sx() -> Sx {
+        Self::glass_gradient_layers(None)
+    }
+
+    /// [`glass_gradient_sx`](Self::glass_gradient_sx) with a state `tint` layer on top.
+    pub(crate) fn glass_gradient_state_sx(tint: &str) -> Sx {
+        Self::glass_gradient_layers(Some(tint))
+    }
+
+    fn glass_gradient_layers(tint: Option<&str>) -> Sx {
         let share = GLASS_SHARE.value();
         let opaque = sx()
-            .background(format!(
-                "{}, {}",
-                gradient_image(None),
-                GRADIENT_FROM.value()
+            .background(under_tint(
+                tint,
+                format!("{}, {}", gradient_image(None), GRADIENT_FROM.value()),
             ))
             .backdrop_filter("none");
-        sx().background(format!(
-            "{}, {}, color-mix(in srgb, {} {share}, transparent)",
-            glass_cue_layers(),
-            gradient_image(Some(&share)),
-            GRADIENT_FROM.value()
+        sx().background(under_tint(
+            tint,
+            format!(
+                "{}, {}, color-mix(in srgb, {} {share}, transparent)",
+                glass_cue_layers(),
+                gradient_image(Some(&share)),
+                GRADIENT_FROM.value()
+            ),
         ))
         .backdrop_filter(glass_cue_filter())
         .media(REDUCED_TRANSPARENCY, opaque.clone())

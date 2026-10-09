@@ -144,6 +144,58 @@ fn undo_brings_the_plain_url_back() {
     assert_eq!(show(editor.state()), "https://a.example |");
 }
 
+fn backspace(editor: &mut Editor) -> bool {
+    editor.run(&Commands::builtin(), Builtin::DeleteBackward)
+}
+
+#[test]
+fn backspace_right_after_an_autolink_turns_it_back_to_text() {
+    let mut editor = editor("see https://a.example.|");
+    editor.type_text(" ");
+    assert!(backspace(&mut editor));
+    assert_eq!(editor.doc().blocks[0].text(), "see https://a.example. ");
+    assert!(editor.doc().blocks[0].inlines().iter().all(|inline| {
+        matches!(inline, crate::components::form::rich_text_editor::model::Inline::Text { marks, .. } if marks.is_empty())
+    }));
+    assert!(backspace(&mut editor));
+    assert_eq!(editor.doc().blocks[0].text(), "see https://a.example.");
+    assert!(editor.undo());
+    assert_eq!(editor.doc().blocks[0].text(), "see https://a.example. ");
+}
+
+#[test]
+fn backspace_after_a_typed_markdown_link_restores_its_syntax() {
+    let mut editor = editor("a [text](https://a.example \"The title\"|");
+    editor.type_text(")");
+    assert!(backspace(&mut editor));
+    assert_eq!(
+        show(editor.state()),
+        "a \\[text\\](https://a.example \"The title\")|"
+    );
+    assert!(editor.undo());
+    assert_eq!(
+        show(editor.state()),
+        "a [text|](https://a.example \"The title\")"
+    );
+}
+
+#[test]
+fn backspace_deletes_normally_once_the_link_rule_is_behind() {
+    let mut editor = editor("https://a.example|");
+    editor.type_text(" ");
+    editor.type_text("x");
+    assert!(backspace(&mut editor));
+    assert_eq!(
+        show(editor.state()),
+        "[https://a.example](https://a.example) |"
+    );
+    let mut editor = self::editor("[text](https://a.example|");
+    editor.type_text(")");
+    editor.select(editor.state().selection);
+    assert!(backspace(&mut editor));
+    assert_eq!(editor.doc().blocks[0].text(), "tex");
+}
+
 #[test]
 fn a_typed_markdown_link_becomes_a_link() {
     typing(
