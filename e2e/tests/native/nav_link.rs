@@ -34,10 +34,9 @@ fn closed_panel() -> Element {
     }
 }
 
-/// Blitz's Tab walk enters a link under `visibility: hidden`, so a closed disclosure's
-/// nested links stay in the tab order (every `Collapse`).
+/// Blitz's Tab walk would enter a link under `visibility: hidden`: a closed disclosure's
+/// nested links stay out of the tab order (every `Collapse`).
 #[test]
-#[ignore = "Blitz's Tab traversal does not skip visibility: hidden; a filed todo"]
 fn a_closed_panels_links_are_out_of_the_tab_order() {
     let mut page = mount(closed_panel);
     page.focus("#docs + button");
@@ -45,6 +44,25 @@ fn a_closed_panels_links_are_out_of_the_tab_order() {
     assert!(
         !page.is_focused("#install"),
         "Tab entered the closed panel: {}",
+        page.focus_owner()
+    );
+}
+
+/// The same Tab walk (`refused::tab`) skips a `display: none` stop, a closed `Collapse` too.
+#[test]
+fn tab_steps_over_a_display_none_stop() {
+    let mut page = mount(|| {
+        rsx! {
+            button { id: "a", "A" }
+            div { display: "none", button { id: "b", "B" } }
+            button { id: "c", "C" }
+        }
+    });
+    page.focus("#a");
+    page.tab();
+    assert!(
+        page.is_focused("#c"),
+        "Tab landed on {}",
         page.focus_owner()
     );
 }

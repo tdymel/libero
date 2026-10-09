@@ -9,6 +9,7 @@ use dioxus_native_dom::NodeId;
 
 use super::{
     BLANK_PRESS, activate, ancestors, anchor, defer, doc, focus, focusable_ancestor, forget_press,
+    is_rendered,
 };
 
 thread_local! {
@@ -106,8 +107,8 @@ pub(super) fn release(event: &Event<PointerData>) {
     }
 }
 
-/// Tab or Shift+Tab whose next stop Blitz would find under `inert`: prevented,
-/// and focus goes to the next one outside it.
+/// Tab or Shift+Tab whose next stop Blitz would find under `inert` or not rendered
+/// (`visibility: hidden`, `display: none`): prevented, and focus goes to the next one outside it.
 pub(super) fn tab(event: &Event<KeyboardData>) {
     if event.key() != Key::Tab || !event.default_action_enabled() {
         return;
@@ -131,11 +132,12 @@ pub(super) fn tab(event: &Event<KeyboardData>) {
                 doc.next_node(start, filter)
             }
         };
+        let refused = |id| is_inert(&doc, id) || !is_rendered(&doc, id);
         let blitz = step(&|_| true);
-        if !blitz.is_some_and(|id| is_inert(&doc, id)) {
+        if !blitz.is_some_and(refused) {
             return;
         }
-        step(&|id| !is_inert(&doc, id))
+        step(&|id| !refused(id))
     };
     event.prevent_default();
     let Some(next) = next else {
