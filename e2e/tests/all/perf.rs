@@ -612,6 +612,27 @@ fn a_fling_paints_the_skeleton_rows_once() {
     });
 }
 
+/// Todo 2804: the trace is browser-wide, so another page's first skeleton paint counted
+/// against the fling and a parallel test reddened it.
+#[test]
+fn a_trace_counts_only_its_own_pages_paints() {
+    block_on(async {
+        let fixture = open("/perf/scroll").await;
+        let mut other = None;
+        let painted = timing::trace_counts(&fixture.page, &["PaintImage"], async || {
+            let opened = open("/perf/scroll").await;
+            timing::js::<f64>(&opened.page, FLING).await?;
+            other = Some(opened);
+            Ok(())
+        })
+        .await
+        .unwrap();
+        assert_eq!(painted[0], 0, "another page's paints were counted");
+        other.unwrap().close().await.unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Typing into an Autocomplete of a hundred options: the first key opens the list, the
 /// next one and a Backspace keep every row, which must not redraw.
 #[test]
@@ -1541,7 +1562,7 @@ pub(crate) mod timing {
     use std::collections::BTreeMap;
     use std::path::PathBuf;
 
-    use anyhow::Result;
+    use anyhow::{Context, Result};
     use chromiumoxide::Page;
     use chromiumoxide::cdp::browser_protocol::emulation::SetCpuThrottlingRateParams;
     use chromiumoxide::cdp::browser_protocol::input::{
@@ -2132,6 +2153,9 @@ pub(crate) mod timing {
         });
     }
 
+    /// One trace at a time: Chromium refuses a second while one runs in any tab.
+    static TRACING: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
     /// Elements restyled and layout objects dirtied per rep, summed from a Chromium trace:
     /// counts that hold on a loaded host, where the milliseconds move 2x (todo 2089).
     async fn traced(
@@ -2143,6 +2167,7 @@ pub(crate) mod timing {
             act(i).await?;
             quiet(page).await?;
         }
+        let _tracing = TRACING.lock().await;
         let mut batches = page.event_listener::<EventDataCollected>().await?;
         let mut complete = page.event_listener::<EventTracingComplete>().await?;
         let config = TraceConfig::builder()
@@ -2216,12 +2241,14 @@ pub(crate) mod timing {
         });
     }
 
-    /// The `names` events a Chromium trace records while `act` runs, one count per name.
+    /// The `names` events of `page`'s frame a Chromium trace records while `act` runs, one count
+    /// per name. The trace is browser-wide: a parallel test's paints counted too (todo 2804).
     pub(crate) async fn trace_counts(
         page: &Page,
         names: &[&str],
         act: impl AsyncFnOnce() -> Result<()>,
     ) -> Result<Vec<usize>> {
+        let _tracing = TRACING.lock().await;
         let mut batches = page.event_listener::<EventDataCollected>().await?;
         let mut complete = page.event_listener::<EventTracingComplete>().await?;
         let config = TraceConfig::builder()
@@ -2240,9 +2267,13 @@ pub(crate) mod timing {
         act().await?;
         page.execute(EndParams::default()).await?;
         complete.next().await;
+        let frame = page.mainframe().await?.context("no main frame")?;
         let mut counts = vec![0; names.len()];
         while let Some(Some(batch)) = batches.next().now_or_never() {
             for event in &batch.value {
+                if event["args"]["data"]["frame"] != frame.inner().as_str() {
+                    continue;
+                }
                 if let Some(at) = names.iter().position(|name| event["name"] == *name) {
                     counts[at] += 1;
                 }
