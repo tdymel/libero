@@ -299,6 +299,8 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     let mut composing = use_hook(|| CopyValue::new(false));
     // While the DOM has not caught up with a model caret, its reports are stale.
     let mut syncing = use_hook(|| CopyValue::new(false));
+    // Set by the handle, which may focus an editor out of view; the toolbar's press never does.
+    let mut reveal = use_hook(|| CopyValue::new(false));
     let token = use_hook(next_token);
     let mut can_edit = use_hook(|| CopyValue::new(editable));
     if *can_edit.peek() != editable {
@@ -469,7 +471,17 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             // The caller's scope sits above the values these read, so they run as the editor's.
             let scope = current_scope_id();
             let as_editor = move |f: &mut dyn FnMut() -> bool| {
-                Runtime::try_current().is_some_and(|runtime| runtime.in_scope(scope, f))
+                Runtime::try_current().is_some_and(|runtime| {
+                    runtime.in_scope(scope, || {
+                        let seen = placed.peek().0;
+                        let ran = f();
+                        if placed.peek().0 != seen {
+                            let mut reveal = reveal;
+                            reveal.set(true);
+                        }
+                        ran
+                    })
+                })
             };
             let run = Rc::new(move |name: CommandName| {
                 as_editor(&mut || run_command(name.clone(), true, false))
@@ -755,7 +767,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             dom_position(&live, selection.anchor),
             dom_position(&live, selection.head),
         );
-        surface.select(anchor, head, focus);
+        surface.select(anchor, head, focus, reveal.replace(false));
         if let Some(markdown) = clip_of(&live, &registry.peek()) {
             surface.clip(anchor, head, markdown);
         }

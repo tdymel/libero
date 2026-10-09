@@ -215,7 +215,8 @@ fn code(block: &Block, language: &str, ctx: RenderCtx<'_>) -> Element {
     if ctx.source_code == Some(key) {
         let filler = text.is_empty() || text.ends_with('\n');
         return rsx! {
-            div { "data-code": "source",
+            // Code is LTR: bidi would reorder its operators on an RTL page (todo 735).
+            div { "data-code": "source", dir: "ltr",
                 div { contenteditable: "false", "data-fence": "",
                     {match ctx.fence {
                         Some(button) => rsx! { "```" {button.clone()} },

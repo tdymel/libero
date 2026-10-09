@@ -29,7 +29,35 @@ pub const ROUTES: Routes = &[
     ("/rich-text-editor/comment", || rsx! { SendBox { submit_on: SubmitOn::ModEnter } }),
     ("/rich-text-editor/states", || rsx! { StatesPage {} }),
     ("/rich-text-editor/view", || rsx! { ViewPage {} }),
+    ("/rich-text-editor/far", || rsx! { FarPage {} }),
+    ("/rich-text-editor/rtl-code", || rsx! { RtlCodePage {} }),
 ];
+
+/// The handle's buttons sit above an editor 3000px down the page.
+#[component]
+fn FarPage() -> Element {
+    let editor = use_rich_text_editor();
+
+    rsx! {
+        button { id: "far-focus", onclick: move |_| { editor.focus(); }, "Focus" }
+        button { id: "far-insert", onclick: move |_| { editor.edit(|state| state.insert_text("x")); }, "Insert" }
+        button { id: "far-clear", onclick: move |_| { editor.clear(); }, "Clear" }
+        div { height: "3000px" }
+        RichTextEditor { label: "Comment", toolbar: false, handle: editor }
+    }
+}
+
+/// A code block on a right-to-left page.
+#[component]
+fn RtlCodePage() -> Element {
+    let mut doc = use_signal(|| Doc::from_markdown("intro\n\n```rust\nlet x = 1;\n```\n"));
+
+    rsx! {
+        div { dir: "rtl",
+            RichTextEditor { label: "Snippet", value: doc(), onchange: move |next| doc.set(next) }
+        }
+    }
+}
 
 /// A stored doc in a `RichTextView`, and one that follows the editor beside it.
 #[component]

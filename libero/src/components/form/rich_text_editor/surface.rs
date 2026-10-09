@@ -224,6 +224,7 @@ while (true) {
             if (m.focus) r.focus({ preventScroll: true });
             const [an, aoff] = locate(a, ao), [hn, hoff] = locate(h, ho);
             document.getSelection().setBaseAndExtent(an, aoff, hn, hoff);
+            if (m.focus && m.scroll) h.scrollIntoView({ block: 'nearest', inline: 'nearest' });
         }
         // After the selectionchange this move queues, so that one is not stale.
         setTimeout(() => dioxus.send({ synced: true }), 0);
@@ -319,11 +320,13 @@ impl Surface {
         }
     }
 
-    /// Places the DOM selection; `focus` also focuses the editor first.
-    pub fn select(&self, anchor: (u64, usize), head: (u64, usize), focus: bool) {
+    /// Places the DOM selection; `focus` also focuses the editor first, and `scroll` brings the
+    /// caret into view.
+    pub fn select(&self, anchor: (u64, usize), head: (u64, usize), focus: bool, scroll: bool) {
         self.send(serde_json::json!({
             "select": [anchor.0, anchor.1, head.0, head.1],
             "focus": focus,
+            "scroll": scroll,
         }));
     }
 

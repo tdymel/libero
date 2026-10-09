@@ -1104,6 +1104,68 @@ fn toolbar_buttons_keep_the_caret_and_composition_lands_in_the_model() {
     });
 }
 
+const FAR: &str = "/rich-text-editor/far";
+
+/// Waits for the editor to hold focus and sit inside the viewport.
+async fn editor_in_view(page: &Page, what: &str) {
+    wait::for_js_true(
+        page,
+        &format!(
+            "(() => {{ const e = {EDITOR}, r = e.getBoundingClientRect(); \
+               return document.activeElement === e && r.top >= 0 && r.top < innerHeight; }})()"
+        ),
+        what,
+    )
+    .await
+    .unwrap();
+}
+
+#[test]
+fn the_handle_scrolls_a_far_editor_into_view_when_it_focuses_it() {
+    block_on(async {
+        let fixture = Fixture::open(FAR, Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_selector(page, "[role=textbox]").await.unwrap();
+
+        for (button, what) in [
+            ("far-focus", "focus() to bring the editor into view"),
+            ("far-insert", "edit() to bring the editor into view"),
+            ("far-clear", "clear() to bring the editor into view"),
+        ] {
+            page.evaluate("document.activeElement.blur(); scrollTo(0, 0)")
+                .await
+                .unwrap();
+            let top: f64 = js(page, "scrollY").await;
+            assert_eq!(top, 0.0);
+            js::<bool>(
+                page,
+                format!("document.getElementById('{button}').click(), true"),
+            )
+            .await;
+            editor_in_view(page, what).await;
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
+#[test]
+fn a_source_mode_code_block_stays_left_to_right_on_a_right_to_left_page() {
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor/rtl-code", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        enter_code(page).await;
+        let direction: String = js(
+            page,
+            "getComputedStyle(document.querySelector('[role=textbox] [data-code=source] pre')).direction",
+        )
+        .await;
+        assert_eq!(direction, "ltr");
+        fixture.close().await.unwrap();
+    });
+}
+
 const TRAILING: &str = "/rich-text-editor/trailing";
 
 /// Clicks the rendered code block, which puts the caret at its end as source.

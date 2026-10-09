@@ -123,16 +123,17 @@ impl RichTextHandle {
             .map(|(_, runner)| runner.clone())
     }
 
-    /// Runs the command `name` on the editor's selection and gives focus back to the text.
-    /// `false` when no editor is mounted, the command is unknown, or it changed nothing.
+    /// Runs the command `name` on the editor's selection. When it changed the document, focus
+    /// goes to the text and into view; a dialog command (Link, Shortcuts) returns focus to the
+    /// text when its dialog closes. `false` when no editor is mounted, the command is unknown, or it changed nothing.
     pub fn run(&self, name: impl Into<CommandName>) -> bool {
         self.runner()
             .is_some_and(|runner| (runner.run)(name.into()))
     }
 
-    /// Runs `f` on the editor's state as one undo step and gives focus back to the text,
-    /// e.g. to insert the mention a user picked. `false` when no editor is mounted or
-    /// `f` returned `false`.
+    /// Runs `f` on the editor's state as one undo step, e.g. to insert the mention a user
+    /// picked. When `f` returns `true`, focus goes to the text and into view. `false` when
+    /// no editor is mounted or `f` returned `false`.
     ///
     /// ```rust
     /// # use libero::components::rich_text::RichTextHandle;
@@ -173,7 +174,7 @@ impl RichTextHandle {
         self.runner().is_some_and(|runner| (runner.clear)())
     }
 
-    /// Puts focus in the text, at the caret. `false` when no editor is mounted or it
+    /// Puts focus in the text, at the caret, and scrolls it into view. `false` when no editor is mounted or it
     /// is read-only or disabled.
     pub fn focus(&self) -> bool {
         self.runner().is_some_and(|runner| (runner.focus)())
