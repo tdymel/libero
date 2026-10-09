@@ -59,6 +59,17 @@ impl Surface {
         })
     }
 
+    /// The frame's drag cue, for a drag over its padding as well. `None` when disabled.
+    fn frame_drag(&self) -> Option<impl Fn(bool) + 'static> {
+        let (dragging, editable) = (self.dragging.clone(), self.editable);
+        self.interactive.then_some(move |over: bool| {
+            let over = over && editable;
+            if dragging.get() != over {
+                dragging.set(over);
+            }
+        })
+    }
+
     /// `chips` come before the button, `after` after its ring.
     fn render(
         self,
@@ -213,6 +224,7 @@ fn FileInputControl(
         .trailing(&trailing)
         .states(&frame_states)
         .ondrop(control.frame_drop())
+        .ondrag(control.frame_drag())
         .prepare();
     // The frame draws the ring, so neither box may draw a second.
     let group = use_box()
@@ -278,7 +290,13 @@ pub(super) fn file_input_variant(
     } = chips;
     let browse = browse_content(&placeholder, drawn.is_empty());
     let chips = chip_list(drawn, list_element);
-    let frame_states = field.states().clone();
+    let frame_states: Input<States> = field
+        .states()
+        .as_ref()
+        .cloned()
+        .unwrap_or_default()
+        .with("dragging", control.dragging.get())
+        .into();
 
     field.render(rsx! {
         FileInputControl {

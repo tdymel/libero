@@ -1187,3 +1187,68 @@ fn the_drawn_thumb_has_contrast_and_shows_in_forced_colours() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 2494: `offset_scrollbars` keeps the drawn track off a flush trailing control, under
+/// RTL too, and pads a fitting area as well so nothing shifts once it overflows.
+#[test]
+fn offset_scrollbars_keep_the_track_off_a_flush_trailing_control() {
+    block_on(async {
+        let fixture = Fixture::open("/scroll-area/offset", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            "!!document.querySelector('#offset-rtl [data-slot=scrollbar]')",
+            "the drawn tracks",
+        )
+        .await
+        .unwrap();
+
+        // Gap in px from the control to the track, positive when clear of it.
+        let gap = |id: &str, rtl: bool| {
+            let clear = if rtl {
+                "b.left - t.right"
+            } else {
+                "t.left - b.right"
+            };
+            format!(
+                "(() => {{ const area = document.querySelector('#{id}'); \
+                 const b = area.querySelector('.trail').getBoundingClientRect(); \
+                 const t = area.querySelector('[data-slot=scrollbar]').getBoundingClientRect(); \
+                 return {clear}; }})()"
+            )
+        };
+        let mut gaps = Vec::new();
+        for (id, rtl) in [
+            ("offset-on", false),
+            ("offset-off", false),
+            ("offset-rtl", true),
+        ] {
+            let value: f64 = page
+                .evaluate(gap(id, rtl))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            gaps.push(value);
+        }
+        assert!(gaps[0] >= -0.5, "the track covers the control: {gaps:?}");
+        assert!(gaps[1] < -1.0, "the plain area is not overlaid: {gaps:?}");
+        assert!(
+            gaps[2] >= -0.5,
+            "the RTL track covers the control: {gaps:?}"
+        );
+
+        let fits: String = page
+            .evaluate("getComputedStyle(document.querySelector('#offset-fits')).paddingInlineEnd")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(fits, "8px", "a fitting area is not padded");
+
+        fixture.console.assert_clean("the offset areas").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

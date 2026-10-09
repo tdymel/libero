@@ -14,7 +14,40 @@ pub const ROUTES: Routes = &[
     ("/scroll-area/rtl", || rsx! { RtlPage {} }),
     ("/scroll-area/bars", || rsx! { BarsPage {} }),
     ("/scroll-area/rewrap", || rsx! { RewrapPage {} }),
+    ("/scroll-area/offset", || rsx! { OffsetPage {} }),
 ];
+
+/// Rows with a control flush at the end edge, in an area with `offset_scrollbars`, one
+/// without, one under RTL, and one whose few rows fit (todo 2494).
+#[component]
+fn OffsetPage() -> Element {
+    let rows = |count: usize| {
+        (0..count).map(|i| {
+            rsx! {
+                div { key: "{i}", style: "display: flex; justify-content: space-between; height: 20px",
+                    span { "Row {i}" }
+                    button { class: "trail", style: "width: 24px; height: 20px; padding: 0", "x" }
+                }
+            }
+        })
+    };
+    rsx! {
+        Flex { direction: "column", gap: "md",
+            div { style: "width: 240px; height: 120px",
+                ScrollArea { id: "offset-on", offset_scrollbars: true, "aria-label": "Offset", {rows(40)} }
+            }
+            div { style: "width: 240px; height: 120px",
+                ScrollArea { id: "offset-off", "aria-label": "Plain", {rows(40)} }
+            }
+            div { dir: "rtl", style: "width: 240px; height: 120px",
+                ScrollArea { id: "offset-rtl", offset_scrollbars: true, "aria-label": "Offset RTL", {rows(40)} }
+            }
+            div { style: "width: 240px; height: 120px",
+                ScrollArea { id: "offset-fits", offset_scrollbars: true, "aria-label": "Fits", {rows(2)} }
+            }
+        }
+    }
+}
 
 /// A measured list whose rows rewrap when a test narrows `#wrap-pane`: two 140px boxes
 /// sit on one 20px line at 300px and on two at 200px (todo 2496).

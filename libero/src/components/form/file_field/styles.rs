@@ -1,7 +1,7 @@
 use crate::{
     components::{
         common::{LogicalTextAlign, focus_ring_sx, ring_overlay_sx},
-        form::field_control_sx,
+        form::{drag_over_sx, field_control_sx},
     },
     sx::{StaticSx, sx},
     theme::{FILE_FIELD_DROPZONE_HEIGHT, FILE_FIELD_PADDING, FILE_FIELD_RADIUS, FileFieldDefaults},
@@ -145,11 +145,7 @@ pub(super) static FILE_DROPZONE_SX: StaticSx = StaticSx::new(|| {
             "& [data-slot='browse'] > svg",
             sx().width("2em").height("2em").color("muted.6"),
         )
-        .when(
-            "dragging",
-            sx().border_color("primary")
-                .background("color-mix(in srgb, var(--lsx-primary) 8%, transparent)"),
-        )
+        .when("dragging", drag_over_sx())
         .when(
             "disabled",
             sx().cursor("not-allowed").border_color("muted.3"),

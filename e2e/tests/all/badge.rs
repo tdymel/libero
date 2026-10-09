@@ -82,6 +82,41 @@ fn an_ordered_list_shows_its_numbers() {
     });
 }
 
+/// Todo 2466: an icon replaces the number and its gutter; a plain item beside it keeps both.
+#[test]
+fn an_icon_replaces_the_number_and_its_gutter() {
+    block_on(async {
+        let fixture = Fixture::open("/badge", Viewport::Desktop).await.unwrap();
+        let [icon_list, mixed_icon, mixed_plain]: [String; 3] = fixture
+            .page
+            .evaluate(
+                "(() => { const gutter = li => `${getComputedStyle(li).listStyleType === 'decimal' \
+                 && getComputedStyle(li).display === 'list-item'}:${Math.round(li.getBoundingClientRect().left \
+                 - li.parentElement.getBoundingClientRect().left)}`; \
+                 const first = id => document.querySelector(`#${id} > li`); \
+                 return [gutter(first('ordered-icon-list')), gutter(first('ordered-mixed-list')), \
+                 gutter(document.querySelector('#ordered-mixed-list > li:nth-child(2)'))]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            icon_list, "false:0",
+            "the icon list keeps a gutter or a number"
+        );
+        assert_eq!(
+            mixed_icon, "false:0",
+            "the item icon keeps a gutter or a number"
+        );
+        assert!(
+            mixed_plain.starts_with("true:") && mixed_plain != "true:0",
+            "the plain item lost its number or gutter: {mixed_plain}"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Forced colours paint every fill `Canvas` and drop `box-shadow`: a bare dot
 /// and the ping must not vanish into the page, the ring stays as an outline.
 #[test]

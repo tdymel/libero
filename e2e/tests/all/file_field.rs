@@ -161,11 +161,19 @@ pub(crate) async fn drop_files(page: &Page, selector: &str, files: Vec<String>) 
 }
 
 async fn drop_files_at(page: &Page, x: f64, y: f64, files: Vec<String>) {
-    for kind in [
+    drag_files_at(page, x, y, files, true).await;
+}
+
+/// The drag of [`drop_files_at`], released over the target only if `release`.
+async fn drag_files_at(page: &Page, x: f64, y: f64, files: Vec<String>, release: bool) {
+    let mut kinds = vec![
         DispatchDragEventType::DragEnter,
         DispatchDragEventType::DragOver,
-        DispatchDragEventType::Drop,
-    ] {
+    ];
+    if release {
+        kinds.push(DispatchDragEventType::Drop);
+    }
+    for kind in kinds {
         // CDP requires `items`, and chromiumoxide drops an empty list.
         let data = DragData::builder()
             .item(DragDataItem::new("text/plain", "files"))
@@ -608,6 +616,73 @@ fn a_drop_on_the_frame_padding_is_taken() {
         fixture
             .console
             .assert_clean("dropping on the frame padding")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2553: a file dragged over the `Input` variant's frame, padding included, tints it
+/// and draws a primary border, as the dropzone does; the drop clears it.
+#[test]
+fn a_drag_over_the_input_frame_draws_the_dragging_look() {
+    block_on(async {
+        let fixture = Fixture::open("/file-field/states", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_selector(page, "#bare").await.unwrap();
+
+        let frame = "document.querySelector('#bare').closest('[data-frame]')";
+        let look = format!(
+            "(() => {{ const f = {frame}; const s = getComputedStyle(f); \
+             return [f.dataset.state.split(' ').includes('dragging'), s.borderTopColor, s.backgroundImage]; }})()"
+        );
+        let at_rest: (bool, String, String) = page
+            .evaluate(look.clone())
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(!at_rest.0, "dragging before any drag");
+
+        let (x, y): (f64, f64) = page
+            .evaluate(format!(
+                "(() => {{ const r = {frame}.getBoundingClientRect(); return [r.left + 3, r.top + r.height / 2]; }})()"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let disk = OnDisk::new();
+        drag_files_at(page, x, y, disk.paths()[..1].to_vec(), false).await;
+        wait::for_js_true(
+            page,
+            &format!("{frame}.dataset.state.split(' ').includes('dragging')"),
+            "the frame to show the drag",
+        )
+        .await
+        .unwrap();
+        let dragged: (bool, String, String) = page
+            .evaluate(look.clone())
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_ne!(dragged.1, at_rest.1, "the border keeps its resting colour");
+        assert_ne!(dragged.2, "none", "the frame draws no tint");
+
+        drop_files_at(page, x, y, disk.paths()[..1].to_vec()).await;
+        wait::for_js_true(
+            page,
+            &format!("!{frame}.dataset.state.split(' ').includes('dragging')"),
+            "the drop to end the dragging look",
+        )
+        .await
+        .unwrap();
+
+        fixture
+            .console
+            .assert_clean("dragging over the frame")
             .unwrap();
         fixture.close().await.unwrap();
     });

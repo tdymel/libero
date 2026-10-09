@@ -5,7 +5,7 @@ use dioxus::{dioxus_core::AttributeValue, prelude::*};
 use super::{
     handle::{ScrollAreaHandle, inline_x, scroll_to_percent},
     keys::scroll_on_key,
-    scrollbars::{DrawnBars, ScrollAreaBars, ScrollMetrics},
+    scrollbars::{DrawnBars, ScrollAreaBars, ScrollMetrics, thickness},
     viewport::{ContentOffsets, ScrollGeometry, ScrollViewport, WindowSpec},
 };
 use crate::{
@@ -123,6 +123,7 @@ static SCROLL_AREA_BASE_SX: StaticSx = StaticSx::new(|| {
     ScrollbarSize::ALL.iter().fold(base, |acc, &size| {
         let token = size.state_name();
         let width = size.as_str();
+        let bar = format!("{}px", thickness(size));
         // Drawn by `ScrollAreaBars` instead: an overlay bar fades out. The
         // area holds their layer and stacks it above its rows.
         let always = match draws_own_scrollbars() {
@@ -132,12 +133,22 @@ static SCROLL_AREA_BASE_SX: StaticSx = StaticSx::new(|| {
                 .z_index("0"),
             false => sx().scrollbar_width(width),
         };
-        acc.when(format!("visible-always && {token}"), always).when(
-            format!("visible-hover && {token}"),
-            sx().scrollbar_width("none")
-                .hover(sx().scrollbar_width(width))
-                .selector(":focus-within", sx().scrollbar_width(width)),
-        )
+        acc.when(format!("visible-always && {token}"), always)
+            .when(
+                format!("visible-hover && {token}"),
+                sx().scrollbar_width("none")
+                    .hover(sx().scrollbar_width(width))
+                    .selector(":focus-within", sx().scrollbar_width(width)),
+            )
+            .when(
+                format!("offset-inline && {token}"),
+                sx().box_sizing("border-box")
+                    .padding_inline_end(bar.clone()),
+            )
+            .when(
+                format!("offset-block && {token}"),
+                sx().box_sizing("border-box").padding_block_end(bar),
+            )
     })
 });
 
@@ -298,6 +309,10 @@ base_props! {
         /// Scrollbar thumb color - track stays transparent.
         #[props(default, into)]
         scrollbar_color: Input<ThemeAwareValue>,
+        /// Keeps the drawn scrollbar off the content: pads the end edge by the track's
+        /// width, so a flush trailing control is not under it. Off by default.
+        #[props(default)]
+        offset_scrollbars: bool,
         /// Percent (0-100) to scroll to; re-applied on every change of a bound signal.
         scroll_position_x: Option<f64>,
         /// Percent (0-100) along the vertical axis - see `scroll_position_x`.
@@ -521,6 +536,7 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let own_bars = visibility == ScrollbarVisibility::Always
         && scrollbars != ScrollAxis::None
         && draws_own_scrollbars();
+    let offset = props.offset_scrollbars && own_bars;
     let drawn_bars = DrawnBars {
         root,
         layer: use_element(),
@@ -792,6 +808,14 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         .with(scrollbars.state_name(), true)
         .with(visibility_token(visibility), true)
         .with(size.state_name(), true)
+        .with(
+            "offset-inline",
+            offset && matches!(scrollbars, ScrollAxis::Vertical | ScrollAxis::Both),
+        )
+        .with(
+            "offset-block",
+            offset && matches!(scrollbars, ScrollAxis::Horizontal | ScrollAxis::Both),
+        )
         .into();
 
     let variables: Input<Variables> = scroll_area_variables(props.scrollbar_color.as_ref()).into();
@@ -906,6 +930,17 @@ mod tests {
                 ),
             ]
         );
+    }
+
+    /// Todo 2494: the offset pads by the bar's thickness at each size.
+    #[test]
+    fn the_offset_pads_the_end_edge_by_the_bar_thickness() {
+        let sheet = crate::css::Stylesheet::from(&SCROLL_AREA_BASE_SX);
+        let css = sheet.as_str();
+
+        assert!(css.contains("padding-inline-end:8px"), "{css}");
+        assert!(css.contains("padding-inline-end:12px"), "{css}");
+        assert!(css.contains("padding-block-end:8px"), "{css}");
     }
 
     #[test]

@@ -115,6 +115,7 @@ second, it warns and renders every row.
 | `scrollbar_visibility` | `ScrollbarVisibility` | `always` | When the scrollbar shows, `always`, `hover` or `hidden`. `scroll` acts like `hover` for now. In a browser or WebView, `always` draws its own track and thumb, so the bar stays where the system overlays and fades its scrollbars; drag the thumb or press the track. The other values keep the native bar. |
 | `scrollbar_size` | `ScrollbarSize` | `thin` | `thin` or `auto`: the CSS `scrollbar-width`, or 8px and 12px for the bar `always` draws. |
 | `scrollbar_color` | `ThemeAwareValue` | - | Thumb color. The track stays transparent. Unset it is `muted.6`. |
+| `offset_scrollbars` | `bool` | `false` | Pads the end edge by the drawn bar's width, 8px or 12px, so a flush trailing control is not under it. Only for the bar `always` draws; it pads even while the content fits, so the layout does not shift when it starts to overflow. |
 | `scroll_position_x` | `f64` | - | Scrolls to this percent (0-100) horizontally. A signal re-applies it on every change, a literal once at mount. |
 | `scroll_position_y` | `f64` | - | The same as `scroll_position_x`, vertically. |
 | `handle` | `ScrollAreaHandle` | - | From `use_scroll_area()`. Its `scroll_to_percent(x, y)` and `scroll_to(x, y)` in px scroll the area from any handler, on every call. A `None` percent keeps that axis; a call before the area mounts does nothing. |
@@ -185,6 +186,10 @@ parts work.
   and makes no tab stop.
 - Pad the content by 6 px or more where a focusable child sits flush with the
   area's edge: the area clips the outset focus ring there.
+- Set `offset_scrollbars: true` where a control sits flush with the end edge,
+  such as a trailing icon button in a flush row or a table's last-column
+  action: the drawn bar covers the last 8 px (12 px at `auto`) and takes the
+  click, which leaves a 24 px control under the 24 px target minimum.
 
 ### Example
 
@@ -219,6 +224,7 @@ State tokens on the root's `data-state`, space separated.
 | `axis-vertical` / `axis-horizontal` / `axis-both` / `axis-none` | The `scrollbars` axes in effect. |
 | `visible-always` / `visible-hover` / `visible-hidden` | The `scrollbar_visibility` in effect. `scroll` writes `visible-hover`. |
 | `size-thin` / `size-auto` | The `scrollbar_size` in effect. |
+| `offset-inline` / `offset-block` | `offset_scrollbars` pads the inline or block end. |
 
 The content box inside the root carries `virtualized` once it holds a
 `Virtualize`.

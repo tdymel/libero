@@ -114,7 +114,8 @@ pub fn ListPage() -> Element {
                     Code { source: "ListItem" }
                     "'s own "
                     Code { source: "icon" }
-                    " replaces it for that item. A nested list does not take its parent's icon."
+                    " replaces it for that item. A nested list does not take its parent's icon. "
+                    "In an ordered list an icon replaces its item's number and the gutter beside it."
                 }
             }
         }

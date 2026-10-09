@@ -59,7 +59,8 @@ fn Checklist() -> Element {
 ## Icons
 
 An `icon` on the list marks every item. A `ListItem`'s own `icon` replaces it
-for that item. A nested list does not take its parent's icon.
+for that item. A nested list does not take its parent's icon. In an ordered
+list an icon replaces its item's number and the gutter beside it.
 
 ## Ordered lists
 

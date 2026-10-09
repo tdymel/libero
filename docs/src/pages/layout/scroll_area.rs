@@ -63,6 +63,9 @@ pub fn ScrollAreaPage() -> Element {
                     .doc("`thin` or `auto`: the CSS `scrollbar-width`, or 8px and 12px for the bar `always` draws."),
                 prop("scrollbar_color", "ThemeAwareValue")
                     .doc("Thumb color. The track stays transparent."),
+                prop("offset_scrollbars", "bool")
+                    .default("false")
+                    .doc("Pads the end edge by the drawn bar's width, 8px or 12px, so a flush trailing control is not under it. Only for the bar `always` draws; it pads even while the content fits, so the layout does not shift when it starts to overflow."),
                 prop("scroll_position_x", "f64")
                     .doc("Scrolls to this percent (0-100) horizontally. A signal re-applies it on every change, a literal once at mount."),
                 prop("scroll_position_y", "f64")
@@ -117,6 +120,7 @@ pub fn ScrollAreaPage() -> Element {
                     "Give each `Virtualize` row `aria_setsize: count` and `aria_posinset: index + 1`, as the virtualize preview does: only the rows in view exist, so a screen reader cannot count the rest. For a table row, `aria-rowcount` and `aria-rowindex`.",
                     "Pass `focusable: true` when the content holds only controls hidden by CSS (`visibility: hidden`, `display: none`): the area counts them as focusable and makes no tab stop.",
                     "Pad the content by 6 px or more where a focusable child sits flush with the area's edge: the area clips the outset focus ring there.",
+                    "Set `offset_scrollbars: true` where a control sits flush with the end edge, such as a trailing icon button in a flush row or a table's last-column action: the drawn bar covers the last 8 px (12 px at `auto`) and takes the click, which leaves a 24 px control under the 24 px target minimum.",
                 ])
                 .example("A terms text in `ScrollArea { aria_label: \"Terms of service\", .. }`: Tab stops on the area, a screen reader reads its name, and the arrow keys scroll it."),
             lead: rsx! {
@@ -154,6 +158,7 @@ pub fn ScrollAreaPage() -> Element {
                     // Unset draws grey-6, which bare `grey` is not: the unset swatch is painted grey-6.
                     Control::color("scrollbar_color").with_unset()
                     .unset_swatch("muted.6"),
+                    Control::switch("offset_scrollbars"),
                     // Not a prop: swaps the content for a `Virtualize` list,
                     // which renders only the rows in view.
                     Control::switch("virtualize").code(|_, _| vec![]),
@@ -178,6 +183,7 @@ pub fn ScrollAreaPage() -> Element {
                                     UNSET => Input::None,
                                     color => Input::from(color),
                                 },
+                                offset_scrollbars: values.str("offset_scrollbars") == "true",
                                 // The plain content makes the area a tab stop, so it needs a name.
                                 // demo-code: wiring start
                                 aria_label: "Items",

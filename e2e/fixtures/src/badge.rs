@@ -89,6 +89,10 @@ fn BadgePage() -> Element {
                 ListItem { "Install" }
                 ListItem { "Configure" }
             }
+            List { id: "ordered-mixed-list", ordered: true,
+                ListItem { icon: rsx! { span { "✓" } }, "Own icon" }
+                ListItem { "Numbered" }
+            }
         }
     }
 }

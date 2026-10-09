@@ -16,7 +16,10 @@ use crate::{
         padding_press, placeholder_drawn,
     },
     sx::{StaticSx, Sx, sx},
-    theme::{ACTION_ICON_GLYPH, ACTION_ICON_SIZE, FieldDefaults, PaperDefaults, Size, SizeCss},
+    theme::{
+        ACTION_ICON_GLYPH, ACTION_ICON_SIZE, ColorCss, ColorShade, FieldDefaults, PaperDefaults,
+        Size, SizeCss,
+    },
 };
 
 /// The bordered box every framed field's control sits in.
@@ -52,6 +55,7 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
         .when("error", sx().border_color("error.7"))
         // Shade 9: `warning.7` is 2.17:1 on white (WCAG 1.4.11).
         .when("warning", sx().border_color("warning.9"))
+        .when("dragging", drag_over_sx())
         .when(
             "disabled",
             disabled_look_sx("not-allowed").background("muted.1"),
@@ -82,6 +86,15 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
             sx().display("none"),
         )
 });
+
+/// A file dragged over a `FileField`: the primary border and a tint layer, so the
+/// surface's own background stays under it.
+pub(crate) fn drag_over_sx() -> Sx {
+    let primary = ColorCss::PRIMARY.value(ColorShade::S6);
+    sx().border_color("primary").background_image(format!(
+        "linear-gradient(color-mix(in srgb, {primary} 8%, transparent) 0 0)"
+    ))
+}
 
 /// Where the renderer draws no placeholder, the control and a drawn one share
 /// one grid cell.
@@ -175,6 +188,7 @@ pub(crate) struct FieldFrameBuilder<'a> {
     trailing: Option<&'a Element>,
     states: Option<&'a Input<States>>,
     ondrop: Option<Rc<dyn Fn(DragEvent)>>,
+    ondrag: Option<Rc<dyn Fn(bool)>>,
     ids: [Option<String>; 2],
     placeholder: Option<Option<&'a str>>,
     multiline: bool,
@@ -201,6 +215,14 @@ impl<'a> FieldFrameBuilder<'a> {
     #[inline]
     pub fn ondrop(mut self, ondrop: Option<impl Fn(DragEvent) + 'static>) -> Self {
         self.ondrop = ondrop.map(|ondrop| Rc::new(ondrop) as Rc<dyn Fn(DragEvent)>);
+        self
+    }
+
+    /// Told `true` while a drag is over the frame and `false` once it leaves,
+    /// for the `dragging` look. With [`ondrop`](Self::ondrop) only.
+    #[inline]
+    pub fn ondrag(mut self, ondrag: Option<impl Fn(bool) + 'static>) -> Self {
+        self.ondrag = ondrag.map(|ondrag| Rc::new(ondrag) as Rc<dyn Fn(bool)>);
         self
     }
 
@@ -276,11 +298,20 @@ impl<'a> FieldFrameBuilder<'a> {
                 }
             });
         if let Some(ondrop) = self.ondrop {
+            let (over, leave) = (self.ondrag.clone(), self.ondrag);
             // A drag the control already took is its own, as with the press.
             frame = frame
-                .event("ondragover", |event: DragEvent| {
+                .event("ondragover", move |event: DragEvent| {
                     if event.default_action_enabled() {
                         event.prevent_default();
+                        if let Some(over) = &over {
+                            over(true);
+                        }
+                    }
+                })
+                .event("ondragleave", move |_: DragEvent| {
+                    if let Some(leave) = &leave {
+                        leave(false);
                     }
                 })
                 .event("ondrop", move |event: DragEvent| {
@@ -436,5 +467,28 @@ fn slot(slot: &'static str, id: Option<String>, content: &Element) -> Element {
     let content = content.clone();
     rsx! {
         span { "data-slot": slot, id, {content} }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Todo 2553: a dragged-over frame takes the primary border and a tint layer.
+    #[test]
+    fn a_dragging_frame_takes_the_primary_border_and_a_tint() {
+        let sheet = crate::css::Stylesheet::from(&FIELD_FRAME_SX);
+        let css = sheet.as_str();
+
+        assert!(
+            css.contains("[data-state~=\"dragging\"]{border-color:var(--lsx-primary-6);"),
+            "{css}"
+        );
+        assert!(
+            css.contains(
+                "background-image:linear-gradient(color-mix(in srgb, var(--lsx-primary-6) 8%"
+            ),
+            "{css}"
+        );
     }
 }

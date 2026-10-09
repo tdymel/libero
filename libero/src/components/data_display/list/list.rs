@@ -18,9 +18,15 @@ static LIST_BASE_SX: StaticSx = StaticSx::new(|| {
         .margin("0")
         .padding("0")
         // Outside markers, in em so two-digit numbers still fit the gutter.
+        // An icon replaces the number, so its item pulls the gutter back.
         .when(
             "ordered",
-            sx().list_style_type("decimal").padding_inline_start("2em"),
+            sx().list_style_type("decimal")
+                .padding_inline_start("2em")
+                .selector(
+                    "& > [data-state~='with-icon']",
+                    sx().margin_inline_start("-2em"),
+                ),
         )
 });
 
@@ -111,5 +117,17 @@ mod tests {
 
         assert!(css.contains("] > li > ul[role='list']"), "{css}");
         assert!(!css.contains("] ul"), "{css}");
+    }
+
+    /// Todo 2466: an ordered list's icon item pulls back the gutter its number would have used.
+    #[test]
+    fn an_icon_item_of_an_ordered_list_pulls_back_the_number_gutter() {
+        let sheet = crate::css::Stylesheet::from(&LIST_BASE_SX);
+        let css = sheet.as_str();
+
+        assert!(
+            css.contains("> [data-state~='with-icon']") && css.contains("margin-inline-start:-2em"),
+            "{css}"
+        );
     }
 }

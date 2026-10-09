@@ -84,7 +84,7 @@ static DRAWN_BARS_SX: StaticSx = StaticSx::new(|| {
 const MIN_THUMB: f64 = 20.0;
 
 /// How big a drawn scrollbar is across, in px.
-fn thickness(size: ScrollbarSize) -> f64 {
+pub(super) fn thickness(size: ScrollbarSize) -> f64 {
     match size {
         ScrollbarSize::Thin => 8.0,
         ScrollbarSize::Auto => 12.0,

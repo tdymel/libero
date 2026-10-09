@@ -77,3 +77,9 @@ list
     StaticText "Install"
   listitem [level=1]
     StaticText "Configure"
+list
+  listitem [level=1]
+    StaticText "Own icon"
+  listitem [level=1]
+    ListMarker "1."
+    StaticText "Numbered"
