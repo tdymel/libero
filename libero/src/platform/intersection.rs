@@ -45,8 +45,8 @@ pub(crate) fn has_match_by_tag(tag: u64, selector: &str) -> super::Read<bool> {
 /// Calls `callback` with `(is_intersecting, ratio)` at the first observation
 /// and whenever `target` crosses a threshold of its `root` (the viewport for
 /// `None`) grown by `root_margin`. The web and a WebView use an
-/// `IntersectionObserver`, a WebView on the element tagged `tags`; elsewhere
-/// `None`: nothing ever intersects.
+/// `IntersectionObserver`, a WebView on the element tagged `tags`; Blitz compares
+/// rects polled. `None` in a server render: nothing ever intersects.
 pub(crate) fn on_intersection(
     target: &Rc<MountedData>,
     root: Option<&Rc<MountedData>>,

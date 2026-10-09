@@ -178,7 +178,7 @@ pub(crate) fn on_element_scroll(
     }
 }
 
-/// The web and a WebView have an `IntersectionObserver`; Blitz has none.
+/// The web and a WebView have an `IntersectionObserver`; Blitz polls rects.
 pub(crate) fn on_intersection(
     target: &Rc<MountedData>,
     root: Option<&Rc<MountedData>>,
@@ -199,8 +199,8 @@ pub(crate) fn on_intersection(
     }
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     {
-        let _ = (target, root, tags, root_margin, thresholds, callback);
-        None
+        let _ = tags;
+        blitz::on_intersection(target, root, root_margin, thresholds, callback)
     }
 }
 
@@ -552,10 +552,7 @@ pub(crate) fn on_viewport_resize(callback: Box<dyn Fn()>) -> Option<Box<dyn Scro
     #[cfg(target_arch = "wasm32")]
     return web::on_viewport_resize(callback);
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
-    return {
-        let _ = callback;
-        None
-    };
+    return blitz::on_viewport_resize(callback);
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     return webview::on_viewport_resize(callback);
 }

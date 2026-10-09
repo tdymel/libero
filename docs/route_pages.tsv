@@ -16,7 +16,7 @@
 /hooks	Hooks - Libero	Every public libero hook in one table, with what it is for and the page that shows it.	/md/hooks.md	Hooks	/hooks
 /hooks/use-element	Element handle - Libero	A handle to one of your component's own elements, to focus, scroll and measure it on every renderer.	/md/use_element.md	Hooks	/hooks
 /hooks/use-drag	Drag - Libero	Pointer plumbing for a drag. Capture, a start point, deltas against it, and one end path for release and cancel.	/md/use_drag.md	Hooks	/hooks
-/hooks/use-intersection	Intersection - Libero	Reports how much of an element is visible, with a root, margin and thresholds; never intersecting where nothing can observe.	/md/use_intersection.md	Hooks	/hooks
+/hooks/use-intersection	Intersection - Libero	Reports how much of an element is visible, with a root, margin and thresholds; polled on Blitz, never intersecting in a server render.	/md/use_intersection.md	Hooks	/hooks
 /hooks/use-long-press	Long press - Libero	Pointer handlers that call back once a press is held, without breaking a tap or a scroll.	/md/use_long_press.md	Hooks	/hooks
 /hooks/use-swipe	Swipe - Libero	Touch swipe handlers, and an edge swipe that opens a drawer without fighting Android's back gesture.	/md/use_swipe.md	Hooks	/hooks
 /hooks/use-timers	Timers - Libero	Runs a callback once or on a period, started and stopped from code, cancelled when the component unmounts.	/md/use_timers.md	Hooks	/hooks

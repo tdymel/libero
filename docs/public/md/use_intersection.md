@@ -4,10 +4,10 @@ Crate: `libero`
 Import: `use libero::hooks::{InViewport, Intersection, IntersectionEntry, IntersectionOptions, use_in_viewport, use_intersection};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/intersection.rs>
 Index: [index.md](index.md) lists every other page
-Description: Reports how much of an element is visible, with a root, margin and thresholds; never intersecting where nothing can observe.
+Description: Reports how much of an element is visible, with a root, margin and thresholds; polled on Blitz, never intersecting in a server render.
 
 `use_intersection(options) -> Intersection` watches one element with the
-browser's `IntersectionObserver`.
+browser's `IntersectionObserver`, polled on Blitz.
 
 ## Usage
 
@@ -56,8 +56,8 @@ the first sighting.
 ## In the viewport
 
 `use_in_viewport() -> InViewport` is the same with the defaults, with
-`visible` as a bool. Where nothing can observe (Blitz, a server render) `entry`
-stays `None` and the bool is `false`.
+`visible` as a bool. Where nothing can observe (a server render) `entry` stays
+`None` and the bool is `false`.
 
 ## API
 
@@ -125,6 +125,8 @@ and every loaded row stays in the document.
   WebView finds the element by `attributes`, so spread them on it; without them
   nothing is observed there. A `root` needs `root.attributes()` spread on it
   the same way; without them a WebView observes against the viewport (a
-  warning in debug builds). On Blitz and in a server render `entry`
-  stays `None`: treat `None` as "unknown" and show lazy content, rather than
-  waiting for a sighting that never comes.
+  warning in debug builds). Blitz has no observer and is polled instead: at
+  each render, after a scroll or input, and every 500 ms, so a change no scroll
+  or input caused (a window resize, an animation) shows up to 500 ms late. In a
+  server render `entry` stays `None`: treat `None` as "unknown" and show lazy
+  content, rather than waiting for a sighting that never comes.

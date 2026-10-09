@@ -34,7 +34,7 @@ pub(super) use activate::focus_selectors;
 pub(super) use focus::{focus_lands_in, press_kept_focus, silent_focus};
 pub(super) use max_length::fit_pasted;
 pub(super) use placeholder::sync_soon as placeholder_drawn;
-pub(super) use resize::{on_content_change, on_resize};
+pub(super) use resize::{on_content_change, on_intersection, on_resize, on_viewport_resize};
 
 use super::{INTERACTIVE, origin::Origin};
 use crate::{
@@ -1717,6 +1717,7 @@ fn notify_scroll() {
         return;
     };
     sticky::sync_soon();
+    resize::scrolled();
     doc.scroll_callbacks.each(|callback| callback());
 }
 

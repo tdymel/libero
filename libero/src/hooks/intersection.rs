@@ -50,15 +50,16 @@ pub struct Intersection {
     /// element by it and observes nothing without; empty on the web and Blitz.
     pub attributes: Vec<Attribute>,
     /// `None` until the first observation, and always `None` where nothing can
-    /// observe: Blitz, a server render.
+    /// observe: a server render.
     pub entry: ReadSignal<Option<IntersectionEntry>>,
 }
 
 /// Reports how much of an element is visible inside its root.
 ///
 /// It is built on the browser's `IntersectionObserver`, in a WebView (desktop,
-/// Android) too, where the element must carry `attributes`. Where there is
-/// neither, `entry` stays `None` and the element counts as never intersecting.
+/// Android) too, where the element must carry `attributes`. Blitz has none and is
+/// polled: at each render, after a scroll or input, and every 500 ms. In a
+/// server render `entry` stays `None` and the element counts as never intersecting.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;

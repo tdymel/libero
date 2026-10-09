@@ -169,7 +169,7 @@ fetch only the file you need.
 - [Overview](hooks.md): Every public libero hook in one table, with what it is for and the page that shows it.
 - [Element handle](use_element.md): A handle to one of your component's own elements, to focus, scroll and measure it on every renderer.
 - [Drag](use_drag.md): Pointer plumbing for a drag. Capture, a start point, deltas against it, and one end path for release and cancel.
-- [Intersection](use_intersection.md): Reports how much of an element is visible, with a root, margin and thresholds; never intersecting where nothing can observe.
+- [Intersection](use_intersection.md): Reports how much of an element is visible, with a root, margin and thresholds; polled on Blitz, never intersecting in a server render.
 - [Long press](use_long_press.md): Pointer handlers that call back once a press is held, without breaking a tap or a scroll.
 - [Swipe](use_swipe.md): Touch swipe handlers, and an edge swipe that opens a drawer without fighting Android's back gesture.
 - [Timers](use_timers.md): Runs a callback once or on a period, started and stopped from code, cancelled when the component unmounts.

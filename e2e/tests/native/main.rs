@@ -84,5 +84,6 @@ mod transitions;
 mod tree;
 mod use_id;
 mod use_indexed_db;
+mod use_intersection;
 mod use_local_storage;
 mod use_long_press;

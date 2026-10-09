@@ -53,6 +53,14 @@ impl Driver for Native {
         Ok((f64::from(width), f64::from(height)))
     }
 
+    /// A wheel at the window's centre: whatever scrolls there takes it, the page in a plain fixture.
+    async fn scroll_by(&mut self, dy: f64) -> Result<()> {
+        let (width, height) = self.page.window_size();
+        self.page
+            .wheel_at(width as f32 / 2.0, height as f32 / 2.0, dy);
+        Ok(())
+    }
+
     async fn press(&mut self, key: keyboard::Key) -> Result<()> {
         let key = native_key(key)?;
         self.page.press(key);

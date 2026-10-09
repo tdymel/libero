@@ -5,17 +5,18 @@ use anyhow::{Result, bail};
 use e2e::driver::{Driver, Platform, eventually, eventually_text, linger};
 
 /// Scrolls by a quarter screen per poll (the target must stay up for a few polls) until `#state` reads `expected`.
-/// On the web it stops scrolling once the target is in (`dy` > 0) or out of the viewport.
+/// On the web and Blitz it stops scrolling once the target is in (`dy` > 0) or out of the viewport.
 async fn scroll_until<D: Driver>(d: &mut D, expected: &str, dy: f64) -> Result<()> {
     let (_, height) = d.viewport().await?;
-    let web = d.platform() == Platform::Web;
+    let web = matches!(d.platform(), Platform::Web | Platform::Native);
     eventually(d, &format!("#state to read {expected}"), async |d| {
         if d.text("#state").await? == expected {
             return Ok(true);
         }
         if web {
             let target = d.rect("#target").await?;
-            let shown = target.y < height && target.y + target.height > 0.0;
+            // Touching edges intersect, as in `IntersectionObserver`.
+            let shown = target.y <= height && target.y + target.height >= 0.0;
             if shown != (dy > 0.0) {
                 d.scroll_by(dy * height / 4.0).await?;
             }
@@ -46,8 +47,7 @@ async fn in_view_only_while_scrolled_to<D: Driver>(d: &mut D, _route: &str) -> R
 e2e::scenario!(
     a_target_is_in_the_viewport_only_while_scrolled_to,
     "/use-intersection/viewport",
-    in_view_only_while_scrolled_to,
-    native: skip("Blitz has no IntersectionObserver")
+    in_view_only_while_scrolled_to
 );
 
 async fn a_clipped_target_stays_out<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -59,15 +59,13 @@ async fn a_clipped_target_stays_out<D: Driver>(d: &mut D, _route: &str) -> Resul
 e2e::scenario!(
     a_target_clipped_by_a_scroller_is_not_in_the_viewport,
     "/use-intersection/clipped",
-    a_clipped_target_stays_out,
-    native: skip("Blitz has no IntersectionObserver")
+    a_clipped_target_stays_out
 );
 
 e2e::scenario!(
     a_root_clips_a_target_that_the_viewport_shows,
     "/use-intersection/root-clip",
-    a_clipped_target_stays_out,
-    native: skip("Blitz has no IntersectionObserver")
+    a_clipped_target_stays_out
 );
 
 async fn keeps_the_first_sighting<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -83,8 +81,7 @@ async fn keeps_the_first_sighting<D: Driver>(d: &mut D, _route: &str) -> Result<
 e2e::scenario!(
     once_keeps_the_first_sighting,
     "/use-intersection/once",
-    keeps_the_first_sighting,
-    native: skip("Blitz has no IntersectionObserver")
+    keeps_the_first_sighting
 );
 
 async fn the_ratio_follows_the_threshold<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -100,5 +97,5 @@ e2e::scenario!(
     a_scroller_is_the_root_and_the_ratio_follows_the_threshold,
     "/use-intersection/root",
     the_ratio_follows_the_threshold,
-    native: skip("Blitz has no IntersectionObserver")
+    native: skip("native Page::focus does not scroll into view")
 );
