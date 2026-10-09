@@ -253,6 +253,5 @@ e2e::scenario!(
     an_edge_swipe_wins_over_a_scrolled_inner_scroller,
     "/use-swipe/drawer",
     the_band_wins_over_a_scrolled_scroller,
-    native: skip("Blitz pans a scroller under any touch, whatever its touch-action: 600 -> ~200 on the band swipe"),
     desktop: skip("1126: no touch input under Xvfb")
 );

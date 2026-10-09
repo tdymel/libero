@@ -225,9 +225,14 @@ async fn a_focused_row_clears_the_footer<D: Driver>(d: &mut D, _route: &str) -> 
     if row.y + row.height <= foot.y {
         bail!("the row at {} is not under the footer at {}", row.y, foot.y);
     }
+    // Blitz's stylo lacks `scroll-padding`: it reads the var the Table sets beside it.
+    let padding = match d.platform() {
+        Platform::Native => "--lsx-scroll-padding-bottom",
+        _ => "scroll-padding-bottom",
+    };
     eventually(d, "the scroll area to keep the footer clear", async |d| {
-        let pad = d.style(AREA, "scroll-padding-bottom").await?;
-        Ok(pad != "auto" && pad != "0px")
+        let pad = d.style(AREA, padding).await?;
+        Ok(!["", "auto", "0px"].contains(&pad.trim()))
     })
     .await?;
     // Chromium centres a focused control, clearing its row; Blitz stops at the padding, so

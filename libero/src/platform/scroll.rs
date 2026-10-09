@@ -320,3 +320,9 @@ pub(crate) fn hold_edge_pan(
 ) -> Option<Box<dyn ScrollSubscription>> {
     backend::hold_edge_pan(band, swiped)
 }
+
+/// Whether an edge swipe holds the pan by cancelling its own `pointermove`s: Blitz runs
+/// no script for [`hold_edge_pan`], but skips the touch pan of a cancelled move (2792).
+pub(crate) fn holds_edge_pan_by_pointer() -> bool {
+    NATIVE
+}

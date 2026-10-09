@@ -150,9 +150,9 @@ pub(crate) use resize::{is_measured_resize, observe_resize, on_resize};
 pub use save_file::{SaveOutcome, save_file};
 pub(crate) use scroll::{
     EDGE_SWIPE_MARK, EdgeBand, SCROLL_QUIET, clips_z_indexed, draws_own_scrollbars,
-    fires_scroll_end, fires_scroll_on_scroll_to, hold_edge_pan, on_element_scroll,
-    on_viewport_resize, reserves_rows_in_tables, scroll_chain_into_view, scroll_range,
-    scroll_timelines, scrolls_on_keys, snaps_scroll, wheel_travel_y,
+    fires_scroll_end, fires_scroll_on_scroll_to, hold_edge_pan, holds_edge_pan_by_pointer,
+    on_element_scroll, on_viewport_resize, reserves_rows_in_tables, scroll_chain_into_view,
+    scroll_range, scroll_timelines, scrolls_on_keys, snaps_scroll, wheel_travel_y,
 };
 pub use scroll::{ScrollApi, ScrollSubscription, scroll};
 pub(crate) use select::opens_select_picker;

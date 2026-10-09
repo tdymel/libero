@@ -2,7 +2,10 @@ use dioxus::prelude::*;
 
 use crate::{
     hooks::{DragPoint, use_direction, use_subscription_slot},
-    platform::{self, EDGE_SWIPE_MARK, EdgeBand, ScrollSubscription, hold_edge_pan},
+    platform::{
+        self, EDGE_SWIPE_MARK, EdgeBand, ScrollSubscription, hold_edge_pan,
+        holds_edge_pan_by_pointer,
+    },
     sx::{Sx, sx},
 };
 
@@ -233,14 +236,42 @@ pub(crate) fn edge_swipe_opens(
     options: &EdgeSwipeOptions,
     rtl: bool,
 ) -> Option<bool> {
-    let left = (options.edge == SwipeEdge::Start) != rtl;
-    let (from_edge, inward) = if left {
-        (x, SwipeDirection::Right)
-    } else {
-        (viewport? - x, SwipeDirection::Left)
+    let inside = in_band(x, viewport, options, rtl)?;
+    let inward = match (options.edge == SwipeEdge::Start) != rtl {
+        true => SwipeDirection::Right,
+        false => SwipeDirection::Left,
     };
-    let band = options.inset..=options.inset + options.width;
-    Some(direction == inward && band.contains(&from_edge))
+    Some(direction == inward && inside)
+}
+
+/// Whether client `x` lies in the band, `None` for the right edge while `viewport` is unknown.
+fn in_band(x: f64, viewport: Option<f64>, options: &EdgeSwipeOptions, rtl: bool) -> Option<bool> {
+    let from_edge = match (options.edge == SwipeEdge::Start) != rtl {
+        true => x,
+        false => viewport? - x,
+    };
+    Some((options.inset..=options.inset + options.width).contains(&from_edge))
+}
+
+/// Blitz starts a touch pan once the finger is more than 2px from the press.
+const PAN_SLOP: f64 = 2.0;
+
+/// Whether a touch from the band holds the pan: `None` within [`PAN_SLOP`], then
+/// whether its first move went inward more than across, as the web's hold decides.
+fn holds_pan(delta: DragPoint, left: bool) -> Option<bool> {
+    if delta.x.abs().max(delta.y.abs()) <= PAN_SLOP {
+        return None;
+    }
+    let inward = if left { delta.x } else { -delta.x };
+    Some(inward > delta.y.abs())
+}
+
+/// A band touch [`use_edge_swipe`] holds the pan for, where [`holds_edge_pan_by_pointer`].
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Held {
+    pointer_id: i32,
+    start: DragPoint,
+    holding: Option<bool>,
 }
 
 /// `touch-action: pan-y pinch-zoom` for the element an edge swipe is spread on:
@@ -340,9 +371,57 @@ pub fn use_edge_swipe(on_swipe: Callback, options: EdgeSwipeOptions) -> Swipe {
         },
     );
 
+    let mut held = use_signal(|| None::<Held>);
+    let onpointermove = use_callback(move |event: PointerEvent| {
+        let current = *held.peek();
+        if let Some(mut current) = current
+            && current.pointer_id == event.pointer_id()
+        {
+            if current.holding.is_none() {
+                let at = event.client_coordinates();
+                let delta = DragPoint {
+                    x: at.x - current.start.x,
+                    y: at.y - current.start.y,
+                };
+                current.holding = holds_pan(delta, (options.edge == SwipeEdge::Start) != rtl);
+                if current.holding.is_some() {
+                    held.set(Some(current));
+                }
+            }
+            if current.holding == Some(true) {
+                event.prevent_default();
+            }
+        }
+        swipe.onpointermove.call(event);
+    });
+    let end = move |handler: Callback<PointerEvent>| {
+        use_callback(move |event: PointerEvent| {
+            if held.peek().is_some() {
+                held.set(None);
+            }
+            handler.call(event);
+        })
+    };
+    let onpointerup = end(swipe.onpointerup);
+    let onpointercancel = end(swipe.onpointercancel);
+
     let onpointerdown = use_callback(move |event: PointerEvent| {
         if waiting.peek().is_some() {
             waiting.set(None);
+        }
+        if holds_edge_pan_by_pointer() {
+            let at = event.client_coordinates();
+            let next = (event.is_primary()
+                && event.pointer_type() != "mouse"
+                && in_band(at.x, *viewport.peek(), &options, rtl) == Some(true))
+            .then_some(Held {
+                pointer_id: event.pointer_id(),
+                start: DragPoint { x: at.x, y: at.y },
+                holding: None,
+            });
+            if next != *held.peek() {
+                held.set(next);
+            }
         }
         swipe.onpointerdown.call(event);
         let Some(document) = platform::document() else {
@@ -367,7 +446,9 @@ pub fn use_edge_swipe(on_swipe: Callback, options: EdgeSwipeOptions) -> Swipe {
 
     Swipe {
         onpointerdown,
-        ..swipe
+        onpointermove,
+        onpointerup,
+        onpointercancel,
     }
 }
 
@@ -428,6 +509,16 @@ mod tests {
             Some(fresh)
         );
         assert_eq!(track_after_down(None, true, true, 1, at(0.0, 0.0)), None);
+    }
+
+    #[test]
+    fn a_band_touch_holds_the_pan_only_on_an_inward_first_move() {
+        assert_eq!(holds_pan(at(2.0, -1.0), true), None);
+        assert_eq!(holds_pan(at(15.0, 1.0), true), Some(true));
+        // Up the page, outward, or mirrored at the right edge.
+        assert_eq!(holds_pan(at(0.0, -15.0), true), Some(false));
+        assert_eq!(holds_pan(at(-15.0, 0.0), true), Some(false));
+        assert_eq!(holds_pan(at(-15.0, 0.0), false), Some(true));
     }
 
     fn opens(x: f64, direction: SwipeDirection, edge: SwipeEdge, rtl: bool) -> Option<bool> {
