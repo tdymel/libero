@@ -1,5 +1,5 @@
-# Builds the docs app once per platform (1219). Build-only, dev profile, informational: no
-# launch, not part of the required `ci` check.
+# Builds the docs app once per platform (1219), dev profile, informational: not part of the
+# required `ci` check. Only `macos-e2e` launches anything (2776).
 name: Platforms
 
 # On by default since the repo is public (standard runners are free there, macOS and Windows too).
@@ -96,6 +96,41 @@ jobs:
       - uses: ./.github/actions/dx
       - working-directory: docs
         run: dx build --platform desktop --renderer webview --debug-symbols=false --features desktop
+
+  # The e2e arms on macOS (2776). The desktop arm only builds: its driver is X11 (`xdotool`).
+  macos-e2e:
+    runs-on: macos-14
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: platforms-macos-e2e
+          save-cache: false
+      # The desktop arm against WKWebView: the fixture app and the test binary, no scenario run.
+      - run: cargo build -p e2e-fixtures --features desktop
+      - run: cargo test -p e2e --features desktop --test all --no-run
+      # Both native test binaries in one cargo run, as ci.yml's `native` job.
+      - run: cargo test -p e2e --features native --test native --test all --no-run
+      # Probes: a WebView window in the runner's GUI session, and a wgpu adapter for Blitz.
+      - continue-on-error: true
+        run: python3 .github/scripts/window_probe.py desktop target/debug/e2e-fixtures probe
+      - continue-on-error: true
+        run: |
+          system_profiler SPDisplaysDataType
+          cargo build -p docs --features native-vello
+          python3 .github/scripts/window_probe.py native target/debug/docs probe
+      # The Blitz-only tests, then the shared scenarios on the Blitz backend; no display needed.
+      - run: cargo test -p e2e --features native --test native
+      - if: success() || failure()
+        run: cargo test -p e2e --features native --test all -- ::native
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: macos-probe
+          path: probe
+          if-no-files-found: ignore
+          retention-days: 3
 
   android:
     runs-on: ubuntu-24.04
