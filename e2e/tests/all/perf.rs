@@ -612,7 +612,7 @@ fn a_fling_paints_the_skeleton_rows_once() {
     });
 }
 
-/// Todo 2804: the trace is browser-wide, so another page's first skeleton paint counted
+/// Todo 2816: the trace is browser-wide, so another page's first skeleton paint counted
 /// against the fling and a parallel test reddened it.
 #[test]
 fn a_trace_counts_only_its_own_pages_paints() {
@@ -2242,7 +2242,7 @@ pub(crate) mod timing {
     }
 
     /// The `names` events of `page`'s frame a Chromium trace records while `act` runs, one count
-    /// per name. The trace is browser-wide: a parallel test's paints counted too (todo 2804).
+    /// per name. The trace is browser-wide: a parallel test's paints counted too (todo 2816).
     pub(crate) async fn trace_counts(
         page: &Page,
         names: &[&str],
