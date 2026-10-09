@@ -1,9 +1,11 @@
 //! `ScrollArea`'s handle: binding one changes nothing in the markup, and a
 //! call with nothing mounted is a no-op rather than a panic.
 
+use std::cell::Cell;
+
 use crate::common::{body, render};
 
-use dioxus::prelude::*;
+use dioxus::{core::NoOpMutations, prelude::*};
 use libero::{
     LiberoProvider,
     components::{ScrollArea, Text, Virtualize, use_scroll_area},
@@ -175,4 +177,91 @@ fn without_a_scroll_area_every_row_renders() {
     }
 
     assert_eq!(rows(&body(&render(app))), 100);
+}
+
+thread_local! {
+    /// Rows `counted_row` rendered since the last reset.
+    static RENDERED: Cell<usize> = const { Cell::new(0) };
+}
+
+fn counted_row(i: usize) -> Element {
+    RENDERED.with(|rendered| rendered.set(rendered.get() + 1));
+    rsx! { div { "data-row": "{i}", "Row {i}" } }
+}
+
+/// Runs what is queued, effects too, and renders it.
+fn settle(dom: &mut VirtualDom) {
+    for _ in 0..3 {
+        dom.process_events();
+        dom.render_immediate(&mut NoOpMutations);
+    }
+}
+
+/// A `Virtualize` replacing the owner, as a table's rows when reorder turns on, renders
+/// its window: every row of 10k cost 40k blocking mounts on a phone (todo 2584).
+#[test]
+fn a_replacing_virtualize_renders_its_window_not_every_row() {
+    fn app() -> Element {
+        let wrapped = use_context_provider(|| Signal::new(false));
+        rsx! {
+            LiberoProvider {
+                ScrollArea {
+                    if wrapped() {
+                        div { Virtualize { count: 10_000, item_size: Some(20.0), item: counted_row } }
+                    } else {
+                        Virtualize { count: 10_000, item_size: Some(20.0), item: counted_row }
+                    }
+                }
+            }
+        }
+    }
+
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    settle(&mut dom);
+    RENDERED.with(|rendered| rendered.set(0));
+    dom.in_scope(ScopeId::APP, || consume_context::<Signal<bool>>().set(true));
+    settle(&mut dom);
+
+    let rendered = RENDERED.with(Cell::get);
+    assert!(
+        rendered < 200,
+        "{rendered} rows rendered for a 59-row window"
+    );
+    assert_eq!(rows(&body(&dioxus_ssr::render(&dom))), 59);
+}
+
+/// The control: a second list in one area never gets the offsets, so it renders every row.
+#[test]
+fn a_second_virtualize_in_one_area_renders_every_row() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                ScrollArea {
+                    Virtualize {
+                        count: 10_000,
+                        item_size: Some(20.0),
+                        item: move |i: usize| rsx! { div { "data-row": "{i}" } },
+                    }
+                    Virtualize {
+                        count: 30,
+                        item_size: Some(20.0),
+                        item: move |i: usize| rsx! { div { "data-second": "{i}" } },
+                    }
+                }
+            }
+        }
+    }
+
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    settle(&mut dom);
+    let html = body(&dioxus_ssr::render(&dom));
+
+    assert_eq!(rows(&html), 59, "the owner windows");
+    assert_eq!(
+        html.matches("data-second=").count(),
+        30,
+        "the second renders all"
+    );
 }

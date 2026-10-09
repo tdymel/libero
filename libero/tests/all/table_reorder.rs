@@ -3,7 +3,10 @@ use std::collections::BTreeMap;
 use crate::common::{body, render, style_of, tag_with, tags_with};
 use crate::table_fixture::{Person, people};
 
-use dioxus::prelude::*;
+use dioxus::{
+    core::{Mutation, Mutations},
+    prelude::*,
+};
 use libero::{
     LiberoProvider,
     components::{
@@ -85,6 +88,49 @@ fn row_reorder_adds_a_handle_column_with_move_buttons() {
     // The first row has nothing above. "Down" waits for the rows to mount and count.
     assert!(tag_with(&body, r#"aria-label="Move Ada up""#).contains_key("disabled"));
     assert!(!tag_with(&body, r#"aria-label="Move Grace up""#).contains_key("disabled"));
+}
+
+/// The `onmounted` listeners a first render of `app` creates.
+fn mounted_listeners(app: fn() -> Element) -> usize {
+    let mut edits = Mutations::default();
+    VirtualDom::new(app).rebuild(&mut edits);
+    edits
+        .edits
+        .iter()
+        .filter(|edit| matches!(edit, Mutation::NewEventListener { name, .. } if name == "mounted"))
+        .count()
+}
+
+/// A WebView reports each `onmounted` back in a blocking round trip: a phone froze
+/// on 4 per row while rows scrolled in (todo 2584). The rows now add none.
+#[test]
+fn reorder_rows_add_no_mounted_listeners() {
+    fn plain() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table { aria_label: "People", data: people(), columns: columns(),
+                    row_key: |row: &Person| row.name.to_string(),
+                }
+            }
+        }
+    }
+    fn reordered() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table { aria_label: "People", data: people(), columns: columns(),
+                    row_key: |row: &Person| row.name.to_string(),
+                    onrowreorder: |_| {},
+                }
+            }
+        }
+    }
+
+    let (plain, reordered) = (mounted_listeners(plain), mounted_listeners(reordered));
+    // The list's own `tbody` only, not one per row of the 3.
+    assert!(
+        reordered <= plain + 1,
+        "{plain} without reorder, {reordered} with"
+    );
 }
 
 /// Every reorder control: each row's handle and its up and down moves.

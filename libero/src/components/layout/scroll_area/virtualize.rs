@@ -227,6 +227,15 @@ pub fn Virtualize(
         owner.set(true);
     }
     let owned = *owner.peek();
+    // A replaced owner lets go only after this first render: no rows until the retry,
+    // as every row cost 10k mounts on a phone. Still unclaimed then, a second list renders all (2584).
+    let mut waited = use_signal(|| false);
+    use_effect(move || {
+        if !*waited.peek() && !*owner.peek() {
+            waited.set(true);
+        }
+    });
+    let waiting = viewport.is_some() && !owned && !waited();
     let releasing = viewport.clone();
     use_drop(move || {
         if let (Some(viewport), Ok(true)) = (&releasing, owner.try_peek().map(|owned| *owned)) {
@@ -344,6 +353,10 @@ pub fn Virtualize(
                 offsets: ContentOffsets::default(),
             },
             None => Window::all(count),
+        },
+        _ if waiting => Window {
+            range: 0..0,
+            offsets: ContentOffsets::default(),
         },
         _ => Window::all(count),
     };

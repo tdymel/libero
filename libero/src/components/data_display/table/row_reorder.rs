@@ -13,9 +13,9 @@ use crate::{
         layout::use_kept_slot,
     },
     context::IconSlot,
-    hooks::{current_localization, use_css, use_element, use_media_query},
+    hooks::{current_localization, use_css, use_element, use_id, use_media_query},
     localization::{TableLabels, fill},
-    platform::moves_table_rows,
+    platform::{mounted_by_selector, moves_table_rows},
 };
 
 /// A natively moved row's `transform` and settle `animation`, for its cells.
@@ -157,6 +157,20 @@ pub(super) fn ReorderRow(
         Some(label.clone()),
         detail.is_some().then_some(extent),
     );
+    // No `onmounted`: on a WebView each is a blocking round trip, four per row (todo 2584).
+    let row = use_id();
+    use_effect(move || {
+        let row = row.peek().clone();
+        let find =
+            |part: &str| mounted_by_selector(&format!("tr[data-reorder-row=\"{row}\"]{part}"));
+        item.element.point_at(find(""));
+        item.handle
+            .point_at(find(" > td > div > [data-reorder-handle]"));
+        item.earlier
+            .point_at(find(" > td > div > [data-reorder-move=\"up\"]"));
+        item.later
+            .point_at(find(" > td > div > [data-reorder-move=\"down\"]"));
+    });
     let words = current_localization().sortable;
     let named = |template: &str| fill(template, &[("label", &label)]);
     let handle_class = use_css(Some(&SORTABLE_HANDLE_SX), CssLayer::Framework);
@@ -203,7 +217,7 @@ pub(super) fn ReorderRow(
     });
     rsx! {
         tr {
-            onmounted: item.element.mount(),
+            "data-reorder-row": row,
             style,
             "data-cell-moved": cells,
             "data-state": states,
@@ -223,7 +237,6 @@ pub(super) fn ReorderRow(
                         aria_label: named(words.handle),
                         aria_describedby: described,
                         "aria-disabled": off,
-                        onmounted: item.handle.mount(),
                         onpointerdown: move |event| {
                             if drags {
                                 onpointerdown.call(event);
@@ -245,7 +258,6 @@ pub(super) fn ReorderRow(
                         aria_describedby: reason.clone(),
                         "aria-disabled": off,
                         disabled: !disabled && (item.first)(),
-                        onmounted: item.earlier.mount(),
                         onclick: move |event| {
                             if !disabled {
                                 onearlier.call(event);
@@ -261,7 +273,6 @@ pub(super) fn ReorderRow(
                         aria_describedby: reason,
                         "aria-disabled": off,
                         disabled: !disabled && (item.last)(),
-                        onmounted: item.later.mount(),
                         onclick: move |event| {
                             if !disabled {
                                 onlater.call(event);

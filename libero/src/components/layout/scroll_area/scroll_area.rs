@@ -165,7 +165,11 @@ static SCROLL_AREA_CONTENT_SX: StaticSx = StaticSx::new(|| {
     };
     sx().display("contents")
         .when("virtualized", reserved)
-        .when("windowed", placeholder_rows_sx())
+        // The padding follows the rows a render later: an anchor jumped the scroll 20 rows (2584).
+        .when(
+            "windowed",
+            placeholder_rows_sx().with("overflow-anchor", "none"),
+        )
 });
 
 /// A table's skipped rows reserved in its body, not around it: a sticky `th` holds

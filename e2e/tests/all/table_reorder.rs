@@ -453,6 +453,55 @@ e2e::scenario!(
     android: skip("958: element identity on the WebView")
 );
 
+/// Todo 2584: a deep windowed row's Move up keeps the scroll and the focus; with
+/// scroll anchoring on, Chrome jumped the view 800px and dropped the focus.
+async fn deep_move_up_keeps_scroll_and_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const SCROLLER: &str = "[data-table-scroll]";
+    const ROW: &str = "[aria-label=\"Reorder Row 150\"]";
+    const UP: &str = "button[aria-label=\"Move Row 150 up\"]";
+    d.evaluate(&format!(
+        "document.querySelector('{SCROLLER}').scrollTop = 5860"
+    ))
+    .await?;
+    eventually(d, "Row 150 in view", async |d| {
+        if !d.exists(UP).await? {
+            return Ok(false);
+        }
+        let (area, up) = (d.rect(SCROLLER).await?, d.rect(UP).await?);
+        Ok(up.y >= area.y && up.y + up.height <= area.y + area.height)
+    })
+    .await?;
+    let scroll_top = format!("document.querySelector('{SCROLLER}').scrollTop");
+    let before = d
+        .evaluate(&scroll_top)
+        .await?
+        .as_f64()
+        .expect("the scroller's scrollTop");
+    let row_y = d.rect(ROW).await?.y;
+    d.click(UP).await?;
+    eventually_text(d, "#moves", "149>148 ", "Row 150 moved up").await?;
+    eventually_focused(d, UP, "Move up").await?;
+    let after = d
+        .evaluate(&scroll_top)
+        .await?
+        .as_f64()
+        .expect("the scroller's scrollTop");
+    if (after - before).abs() > 1.0 {
+        bail!("the scroll moved from {before} to {after}");
+    }
+    eventually(d, "Row 150 one slot up", async |d| {
+        Ok((d.rect(ROW).await?.y - (row_y - 40.0)).abs() <= 1.0)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_deep_move_up_keeps_scroll_and_focus,
+    "/table-reorder-windowed",
+    deep_move_up_keeps_scroll_and_focus,
+    android: skip("958: element identity on the WebView")
+);
+
 /// Todo 1872: Row 1's grip held at the bottom edge scrolls the windowed rows on,
 /// past the window's rows, and drops there.
 #[test]
