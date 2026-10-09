@@ -756,6 +756,51 @@ fn drag_held_at_the_end_edge(rtl: bool) {
     });
 }
 
+/// The column a held card would land in paints its primary tint (2740: an undefined var left it transparent).
+#[test]
+fn a_dragged_card_tints_the_column_it_would_land_in() {
+    use chromiumoxide::cdp::browser_protocol::input::DispatchMouseEventType as Kind;
+    use e2e::browser::{Fixture, Viewport, block_on};
+    use e2e::frames::in_front;
+    use e2e::wait;
+    const FILL: &str = "getComputedStyle(document.querySelector('#column-1')).backgroundColor";
+    block_on(async {
+        let fixture = Fixture::open("/kanban", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let idle: String = page.evaluate(FILL).await.unwrap().into_value().unwrap();
+        let (handle, doing) = (
+            centre(page, "#Alpha [data-slot=handle]").await,
+            centre(page, "#column-1").await,
+        );
+        in_front(page, async {
+            mouse_at(page, Kind::MouseMoved, handle, false).await;
+            mouse_at(page, Kind::MousePressed, handle, true).await;
+            mouse_at(page, Kind::MouseMoved, doing, true).await;
+            Ok(())
+        })
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#column-1').matches('[data-state~=target]')",
+            "the column under the held card marked as the target",
+        )
+        .await
+        .unwrap();
+        let target: String = page.evaluate(FILL).await.unwrap().into_value().unwrap();
+        assert_ne!(target, "rgba(0, 0, 0, 0)", "the target tint is transparent");
+        assert_ne!(target, idle, "the target column kept its idle fill");
+        in_front(page, async {
+            mouse_at(page, Kind::MouseReleased, doing, false).await;
+            Ok(())
+        })
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a target tint").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The Move to menu, keyboard only, scrolls the board to a hidden column it moves the card to.
 #[test]
 fn a_menu_move_to_a_hidden_column_scrolls_it_into_view() {

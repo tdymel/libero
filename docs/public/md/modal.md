@@ -123,6 +123,14 @@ Make the answer the dialog's own enum, not a `bool`. The handle is `Copy`, so a
 trigger elsewhere in the tree can take it as a prop or from context. A
 [`Dialog`](dialog.md) inside closes the modal from its own close button.
 
+## Keeping it open
+
+Escape, a backdrop click and Android's Back first ask the `Dialog`'s
+`ondismiss`, with a `Dismiss` reason. Return `false` to keep a form with unsaved
+input open: `ondismiss: move |_| draft.read().is_empty()`. A confirmation that
+needs an answer is `role: "alertdialog"`, which the backdrop does not close;
+describe it with `aria_describedby` pointing at its message.
+
 ## API
 
 ### `use_modal`
@@ -161,14 +169,14 @@ pub fn use_modal<S: Clone + 'static, R: Clone + 'static>(
 |---|---|---|
 | `onresult(f: impl FnMut(Option<R>))` | `Self` | Runs when this opening settles, with `None` if it was dismissed. A replaced opening never runs it. Awaiting the `Opening` gives the same answer instead, and `None` once replaced. |
 | `close()` | `()` | Closes this opening, if it is still the one showing. |
-| `.await` | `Option<R>` | The same outcome, as a future. `None` once replaced. |
+| `.await` | `Option<R>` | The same outcome, as a future. `None` once replaced. Use it when async work waits on the answer, or for dialogs in sequence. |
 
 ### `ModalContext`
 
 | Method | Returns | Description |
 |---|---|---|
-| `is_modal()` | `bool` | Whether the content is in a modal. |
-| `close()` | `()` | Dismisses the modal around the content. Does nothing outside one. |
+| `is_modal()` | `bool` | Whether the content is in a modal. Every modal provides this context to its content. |
+| `close()` | `()` | Dismisses the modal around the content. `use_modal_close()` is the shorthand, for a component outside the render closure. |
 
 A floating window provides an empty `ModalContext`, so its content is not
 modal.
@@ -179,7 +187,7 @@ modal.
 
 | Key | Action |
 |---|---|
-| `Escape` | Dismisses the modal, as a backdrop click does. |
+| `Escape` | Dismisses the modal, as a backdrop click does, unless the `Dialog`'s `ondismiss` refuses. |
 | `Tab` or `Shift+Tab` | Moves the focus within the modal. It does not leave while the modal shows. |
 
 ### Libero handles
@@ -191,6 +199,10 @@ modal.
   answer never runs on it.
 - Android's Back button dismisses the top modal, as Escape does, rather than
   closing the app.
+- When the focused control is removed, focus goes back into the modal, and Tab
+  and Escape keep working.
+- A `Dialog` with `role: "alertdialog"` ignores a backdrop click, so a stray
+  click is no answer.
 - With nothing focusable inside and no `Dialog`, focus lands on the modal's
   content box, so Escape still closes it.
 
@@ -209,6 +221,8 @@ stays inside it, and Escape closes it and puts focus back on the button.
 
 - On Android, a modal opened without a tap (on mount or from a timer) may let
   Back close the app.
+- On Android, once `ondismiss` refused a Back, the next Back closes the app
+  unless a tap or key came between.
 - In a desktop WebView or on Android, Tab and Shift+Tab move between the
   controls but can leave the modal at its ends.
 

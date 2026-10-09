@@ -69,7 +69,7 @@ static KANBAN_COLUMN_SX: StaticSx = StaticSx::new(|| {
         .when(
             "target",
             sx().border_color("primary")
-                .background("color-mix(in srgb, var(--lsx-primary) 8%, var(--lsx-muted-1))")
+                .background("color-mix(in srgb, var(--lsx-primary-6) 8%, var(--lsx-muted-1))")
                 .media("(forced-colors: active)", sx().border_color("Highlight")),
         )
 });
@@ -642,7 +642,7 @@ mod tests {
             .nth(1)
             .unwrap_or_default();
 
-        assert!(target.contains("var(--lsx-primary)"), "{css}");
+        assert!(target.contains("var(--lsx-primary-6) 8%"), "{css}");
         assert!(css.contains("Highlight"), "{css}");
     }
 
