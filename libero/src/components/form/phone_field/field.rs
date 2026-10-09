@@ -345,10 +345,14 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
     let row_box = use_box().framework_sx(&ROW_SX).prepare();
 
     let opened = state.is_open() && !disabled && !readonly;
-    // The list opens on the current country, like a native `<select>`.
-    let home_row = offered(&props.countries)
-        .iter()
-        .position(|row| row.iso == country.iso);
+    // The list opens on the current country, like a native `<select>`: its row
+    // in the sorted list, worked out on open only (todo 2718).
+    let codes = props.countries.clone();
+    let home_row: Rc<dyn Fn() -> Option<usize>> = Rc::new(move || {
+        ordered(&codes, "", name_of)
+            .iter()
+            .position(|(row, _)| row.iso == country.iso)
+    });
     let rows = phone_rows(
         RowList {
             opened,
@@ -407,7 +411,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             picker_name: name_of(country),
             flag,
             opened,
-            home_row,
+            home_row: home_row.clone(),
             disabled,
             readonly,
         },
@@ -549,43 +553,13 @@ fn phone_rows(
         row_box,
         flag,
     } = list;
-    let codes = &codes;
     // Nothing built while closed: 240 rows and name lookups per render (todo 29).
     if !opened {
         return Vec::new();
     }
-    let dial = needle.trim_start_matches('+');
-    // Rank 0 starts with the query, 1 only contains it, so "fr" tops with France
-    // and Enter picks it, not the Central African Republic.
-    let rank = |country: &Country, name: &str| -> Option<u8> {
-        let lower = name.to_lowercase();
-        if needle.is_empty()
-            || lower.starts_with(&needle)
-            || country.iso.to_lowercase() == needle
-            || country.dial.starts_with(dial)
-        {
-            Some(0)
-        } else if lower.contains(&needle) || country.iso.to_lowercase().starts_with(&needle) {
-            Some(1)
-        } else {
-            None
-        }
-    };
-    let mut matched: Vec<(u8, &'static Country, String)> = offered(codes)
+    ordered(&codes, &needle, name_of)
         .into_iter()
-        .filter_map(|country| {
-            let name = name_of(country);
-            rank(country, &name).map(|rank| (rank, country, name))
-        })
-        .collect();
-    // The caller's order stands; the full list follows the shown names.
-    match codes {
-        Some(_) => matched.sort_by_key(|(rank, _, _)| *rank),
-        None => matched.sort_by_cached_key(|(rank, _, name)| (*rank, sort_key(name))),
-    }
-    matched
-        .into_iter()
-        .map(|(_, row, name)| {
+        .map(|(row, name)| {
             let drawn = flag.map(|flag| flag.call(row.iso.to_string()));
             let pick = pick.clone();
             let content = row_box.clone().render(
@@ -605,6 +579,47 @@ fn phone_rows(
                 }
             }
         })
+        .collect()
+}
+
+/// The countries matching `needle`, with their shown names, in the list's order.
+fn ordered(
+    codes: &Option<Vec<String>>,
+    needle: &str,
+    name_of: impl Fn(&'static Country) -> String,
+) -> Vec<(&'static Country, String)> {
+    let dial = needle.trim_start_matches('+');
+    // Rank 0 starts with the query, 1 only contains it, so "fr" tops with France
+    // and Enter picks it, not the Central African Republic.
+    let rank = |country: &Country, name: &str| -> Option<u8> {
+        let lower = name.to_lowercase();
+        if needle.is_empty()
+            || lower.starts_with(needle)
+            || country.iso.to_lowercase() == needle
+            || country.dial.starts_with(dial)
+        {
+            Some(0)
+        } else if lower.contains(needle) || country.iso.to_lowercase().starts_with(needle) {
+            Some(1)
+        } else {
+            None
+        }
+    };
+    let mut matched: Vec<(u8, &'static Country, String)> = offered(codes)
+        .into_iter()
+        .filter_map(|country| {
+            let name = name_of(country);
+            rank(country, &name).map(|rank| (rank, country, name))
+        })
+        .collect();
+    // The caller's order stands; the full list follows the shown names.
+    match codes {
+        Some(_) => matched.sort_by_key(|(rank, _, _)| *rank),
+        None => matched.sort_by_cached_key(|(rank, _, name)| (*rank, sort_key(name))),
+    }
+    matched
+        .into_iter()
+        .map(|(_, row, name)| (row, name))
         .collect()
 }
 
@@ -637,7 +652,7 @@ struct PickerButton {
     /// Whether the list is drawn, which a disabled or read-only field never is.
     opened: bool,
     /// The current country's row, which a click opens on.
-    home_row: Option<usize>,
+    home_row: Rc<dyn Fn() -> Option<usize>>,
     disabled: bool,
     readonly: bool,
 }
@@ -692,7 +707,7 @@ fn phone_picker(picker_box: BoxStyle, button: PickerButton) -> Element {
         .event("onclick", move |_: MouseEvent| {
             if !disabled && !readonly {
                 if !state.is_open() {
-                    state.set_active(home_row);
+                    state.set_active(home_row());
                 }
                 state.toggle();
             }
@@ -720,7 +735,7 @@ struct Picker {
     state: ComboboxState,
     query: Signal<String>,
     opened: bool,
-    home_row: Option<usize>,
+    home_row: Rc<dyn Fn() -> Option<usize>>,
     size: Size,
     radius: Size,
     disabled: bool,
@@ -760,7 +775,7 @@ fn phone_leading(with_select: bool, parts: Picker, rows: Vec<Element>) -> Option
                 onopened: move |opened: bool| {
                     // Over the row the opening arrow armed, as `Select` does.
                     if opened && !state.is_open() {
-                        state.set_active(home_row);
+                        state.set_active(home_row());
                     }
                     state.set_open(opened);
                     if !opened {
@@ -1093,6 +1108,32 @@ mod tests {
             assert!(!seen.contains(&entry.iso), "{} twice", entry.iso);
             seen.push(entry.iso);
         }
+    }
+
+    /// The list opens on the country's row in the localized order, not the table's (todo 2718).
+    #[test]
+    fn the_home_row_follows_the_localized_order() {
+        let names = crate::localization::PhoneFieldLabels::GERMAN;
+        let name_of = |country: &'static Country| {
+            names
+                .country_name(country.iso)
+                .unwrap_or(country.name)
+                .to_string()
+        };
+        let rows = ordered(&None, "", name_of);
+        let home = rows
+            .iter()
+            .position(|(row, _)| row.iso == "DE")
+            .expect("DE");
+        assert_eq!(rows[home].1, "Deutschland");
+        assert_ne!(
+            Some(home),
+            offered(&None).iter().position(|row| row.iso == "DE")
+        );
+        // A caller's list keeps its order.
+        let codes = Some(vec!["US".to_string(), "DE".to_string()]);
+        let rows = ordered(&codes, "", name_of);
+        assert_eq!(rows.iter().position(|(row, _)| row.iso == "DE"), Some(1));
     }
 
     /// The German names cover exactly the table's codes, each once.

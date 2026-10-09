@@ -470,6 +470,17 @@ fn the_list_sorts_by_the_localized_name() {
         keyboard::tab_to(page, PICKER, 10).await.unwrap();
         keyboard::press(page, keyboard::ENTER).await.unwrap();
         wait_open(page, "Enter").await;
+        // Todo 2718: the highlight is the current country's row in the sorted list.
+        wait::for_js_true(
+            page,
+            &format!(
+                "(s => {{ const id = s && s.getAttribute('aria-activedescendant'), row = id && document.getElementById(id); \
+                 return !!row && row.textContent === 'Deutschland+49'; }})(document.querySelector({SEARCH:?}))"
+            ),
+            "the list to open on Deutschland",
+        )
+        .await
+        .unwrap();
         // Windowed above 200 rows (todo 2234): scroll through, keying each drawn name by its offset.
         let names: Vec<String> = page
             .evaluate(

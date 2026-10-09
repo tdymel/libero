@@ -72,8 +72,8 @@ pub(super) fn ComboboxDropdown(
     header: Option<Element>,
     multiselectable: bool,
     labelled_by: Option<String>,
-    /// A windowed list's longest row text, drawn hidden to give the popover its width.
-    widest: Option<String>,
+    /// A windowed list's likely widest rows' content, drawn hidden to give the popover its width.
+    widest: Vec<Element>,
     /// The theme's row height in px: a windowed list's pitch, so it never waits for a probe.
     row_height: f64,
     /// Re-provided: portaled under `PortalOutlet`, rows would otherwise lose it silently.
@@ -113,13 +113,15 @@ pub(super) fn ComboboxDropdown(
     });
     // A newer list (a filter below the threshold, say) retires a pending follow (todo 2709).
     let mut follows = use_hook(|| CopyValue::new(0u32));
+    // Unseen until the first follow lands, or the top rows flash before the highlight's (todo 2719).
+    let landed = use_signal(|| false);
     use_effect(use_reactive!(|follow| {
         let run = *follows.peek() + 1;
         follows.set(run);
         let live = move || follows.try_peek().is_ok_and(|now| *now == run);
         if let Some((y, height)) = follow {
             // Natively a scroll in the render's own poll was lost (the PageDown e2e).
-            when_laid_out(move || follow_highlight(area, y, height, FOLLOW_TRIES, live));
+            when_laid_out(move || follow_highlight(area, y, height, FOLLOW_TRIES, live, landed));
         }
     }));
 
@@ -132,21 +134,27 @@ pub(super) fn ComboboxDropdown(
         (false, Some(windowed)) => {
             let (count, keep) = (windowed.slots.len(), windowed.active_slot);
             let keyed = windowed.clone();
+            let list_sx = match landed() {
+                true => sx().max_height(max_height),
+                false => sx().max_height(max_height).opacity("0"),
+            };
             rsx! {
                 ScrollArea {
-                    sx: sx().max_height(max_height),
+                    sx: list_sx,
                     handle: area,
                     id: listbox_id(&id),
                     "data-slot": DropdownPart::Listbox.slot(),
                     "role": "listbox",
                     "aria-multiselectable": multiselectable.then_some("true"),
                     "aria-labelledby": labelled_by,
-                    if let Some(widest) = widest {
-                        // Zero tall, so only its width counts; not a row, so no id or pick.
+                    if !widest.is_empty() {
+                        // Zero tall, so only the widest's width counts; not rows, so no id or pick.
                         div {
                             "aria-hidden": "true",
                             style: "height: 0; overflow: hidden; visibility: hidden; pointer-events: none",
-                            ComboboxOption { "role": "presentation", "{widest}" }
+                            for row in widest {
+                                ComboboxOption { "role": "presentation", {row} }
+                            }
                         }
                     }
                     Virtualize {
@@ -324,6 +332,7 @@ fn follow_highlight(
     height: f64,
     tries: u8,
     live: impl Fn() -> bool + Copy + 'static,
+    mut landed: Signal<bool>,
 ) {
     let element = area.element;
     if !element.is_mounted() || !live() {
@@ -340,7 +349,9 @@ fn follow_highlight(
         let off = (size.height - height).abs() > 1.0;
         if off && tries > 0 {
             next_task().await;
-            return when_laid_out(move || follow_highlight(area, y, height, tries - 1, live));
+            return when_laid_out(move || {
+                follow_highlight(area, y, height, tries - 1, live, landed)
+            });
         }
         if off && cfg!(debug_assertions) {
             warn(&format!(
@@ -350,6 +361,13 @@ fn follow_highlight(
         }
         if y.is_some() {
             area.scroll_to_percent(None, y);
+        }
+        if !*landed.peek() {
+            // A task on, the window has redrawn for the new offset.
+            next_task().await;
+            if live() {
+                landed.set(true);
+            }
         }
     });
 }

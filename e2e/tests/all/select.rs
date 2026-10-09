@@ -253,6 +253,95 @@ e2e::scenario!(
     a_long_list_fits_its_longest_label
 );
 
+/// Todo 2742: the windowed list is as wide as its widest drawn row, the caller's `option`
+/// included, and wide glyphs outweigh a longer run of narrow ones.
+async fn a_long_list_fits_its_widest_drawn_row<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(TRIGGER).await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually(d, "the listbox", async |d| d.exists(LISTBOX).await).await?;
+    d.type_text("W").await?;
+    let row = highlighted_row(d, "WWWWWWWWWWWWWWWWWWin stock, ships today").await?;
+    in_view(d, &row, "typing W").await?;
+    let (detail, list) = (
+        d.rect(&format!("{row} [data-slot=detail]")).await?,
+        d.rect(LISTBOX).await?,
+    );
+    assert!(
+        detail.x + detail.width <= list.x + list.width + 1.0,
+        "the row's detail ends at {} past the list's {}",
+        detail.x + detail.width,
+        list.x + list.width
+    );
+    Ok(())
+}
+
+/// The selector of the highlighted row once the trigger names a drawn row reading `text`.
+async fn highlighted_row<D: Driver>(d: &mut D, text: &str) -> Result<String> {
+    let mut row = String::new();
+    eventually(d, &format!("the highlight on a drawn {text}"), async |d| {
+        let Some(id) = d.attr(TRIGGER, "aria-activedescendant").await? else {
+            return Ok(false);
+        };
+        row = format!("#{id}");
+        Ok(d.exists(&row).await? && d.text(&row).await? == text)
+    })
+    .await?;
+    Ok(row)
+}
+
+e2e::scenario!(
+    a_long_select_is_as_wide_as_its_widest_drawn_row,
+    "/select/long-custom",
+    a_long_list_fits_its_widest_drawn_row
+);
+
+/// Todo 2719: a windowed list opens on its highlight; no painted frame shows the top rows first.
+#[test]
+fn a_long_select_never_paints_its_top_rows_on_open() {
+    block_on(async {
+        let fixture = Fixture::open("/select/long", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let painted: Vec<String> = page
+            .evaluate(
+                r#"(async () => {
+                const frame = () => new Promise(requestAnimationFrame);
+                document.querySelector('[role=combobox]').click();
+                const seen = [];
+                for (let i = 0; i < 600 && seen.length < 5; i++) {
+                    await frame();
+                    const list = document.querySelector('[role=listbox]');
+                    if (!list) continue;
+                    let shown = true;
+                    for (let e = list; e; e = e.parentElement) {
+                        const style = getComputedStyle(e);
+                        if (+style.opacity === 0 || style.visibility === 'hidden') shown = false;
+                    }
+                    if (!shown) continue;
+                    const view = list.getBoundingClientRect();
+                    const first = [...list.querySelectorAll('[role=option]')]
+                        .find(o => { const r = o.getBoundingClientRect(); return r.bottom > view.top + 1 && r.top < view.bottom - 1; });
+                    seen.push(first ? first.textContent : '');
+                }
+                return seen;
+            })()"#,
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(painted.len(), 5, "the list never showed: {painted:?}");
+        assert!(
+            painted
+                .iter()
+                .all(|first| !first.is_empty() && first != "Item 000"),
+            "a painted frame before the highlight's rows: {painted:?}"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 1497: a click outside closes the search box's list and the focus stays
 /// where the click put it; only Escape, a pick or Clear refocus the trigger.
 pub async fn an_outside_click_keeps_its_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {

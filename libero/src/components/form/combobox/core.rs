@@ -120,9 +120,9 @@ base_props! {
         /// Remeasures on change, for a trigger that resizes while open.
         #[props(default)]
         remeasure: u64,
-        /// The longest row's text: a windowed list draws it hidden, so `Min` fits rows not drawn.
+        /// The likely widest rows' content: a windowed list draws them hidden, so `Min` fits rows not drawn.
         #[props(default)]
-        widest: Option<String>,
+        widest: Vec<Element>,
         children: Element,
     }
 }
@@ -308,7 +308,7 @@ struct ComboboxPopupProps {
     header: Option<Element>,
     multiselectable: bool,
     labelled_by: Option<String>,
-    widest: Option<String>,
+    widest: Vec<Element>,
     context: ComboboxContext,
 }
 

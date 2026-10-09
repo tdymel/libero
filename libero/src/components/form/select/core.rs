@@ -400,8 +400,11 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
 
     let rows = select_rows(&props, &visible, state, &row_cache);
     let widest = match rows.rows.len() >= VIRTUAL_ROWS {
-        true => widest_label(&props.row_labels, &visible),
-        false => None,
+        true => widest_rows(&props.row_labels, &visible)
+            .into_iter()
+            .filter_map(|index| props.rows.get(index).cloned())
+            .collect(),
+        false => Vec::new(),
     };
     // Written before the trigger reads it; from `ComboboxCore` it re-ran this scope per open (todo 842).
     if opened {
@@ -556,7 +559,7 @@ struct Listbox {
     autofocus: Option<ElementHandle>,
     labelled_by: Option<String>,
     parts: Input<Parts<DropdownPart>>,
-    widest: Option<String>,
+    widest: Vec<Element>,
 }
 
 fn select_listbox(list: Listbox) -> Element {
@@ -991,13 +994,38 @@ fn select_row(index: usize, inputs: &SelectRowInputs) -> Element {
     }
 }
 
-/// The longest text among the visible rows, which a windowed list can't measure unless drawn.
-fn widest_label(labels: &[String], visible: &[usize]) -> Option<String> {
-    visible
+/// Rows a windowed list draws hidden to size itself: few, as each is a mounted row.
+const WIDEST_CANDIDATES: usize = 8;
+
+/// The visible rows a windowed list draws hidden for its width: the likely widest by label,
+/// so the layout picks the truly widest drawn row among them (todo 2742).
+fn widest_rows(labels: &[String], visible: &[usize]) -> Vec<usize> {
+    let mut ranked: Vec<(f32, usize)> = visible
         .iter()
-        .filter_map(|index| labels.get(*index))
-        .max_by_key(|label| label.chars().count())
-        .cloned()
+        .filter_map(|index| Some((label_width(labels.get(*index)?), *index)))
+        .collect();
+    ranked.sort_by(|a, b| b.0.total_cmp(&a.0));
+    ranked
+        .into_iter()
+        .take(WIDEST_CANDIDATES)
+        .map(|(_, index)| index)
+        .collect()
+}
+
+/// A label's rough width in ems, for ranking only: an `i` is a third of a `W`.
+fn label_width(label: &str) -> f32 {
+    label
+        .chars()
+        .map(|c| match c {
+            'f' | 'i' | 'j' | 'l' | 'r' | 't' | 'I' | ' ' | '.' | ',' | ':' | ';' | '\'' | '!'
+            | '|' => 0.3,
+            'm' | 'w' | 'M' | 'W' => 0.9,
+            c if c.is_uppercase() => 0.7,
+            // CJK, Hangul and emoji draw about one em.
+            c if c as u32 >= 0x1100 => 1.0,
+            _ => 0.55,
+        })
+        .sum()
 }
 
 /// The kept rows, keyed by their full-list index, and their parallel group labels and disabled flags.
@@ -1180,4 +1208,23 @@ fn select_hidden_inputs(
             }
         }
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Ranked by glyph width, not count: eighteen W's outrank thirty i's (todo 2742).
+    #[test]
+    fn the_widest_candidates_weigh_their_glyphs() {
+        let mut labels: Vec<String> = (0..300).map(|row| format!("Item {row:03}")).collect();
+        labels[250] = "W".repeat(18);
+        labels[260] = "i".repeat(30);
+        let visible: Vec<usize> = (0..300).collect();
+        let ranked = widest_rows(&labels, &visible);
+        assert_eq!(ranked.len(), WIDEST_CANDIDATES);
+        assert_eq!(&ranked[..2], [250, 260]);
+        // A filtered-out row is no candidate.
+        assert!(!widest_rows(&labels, &[1, 2, 260]).contains(&250));
+    }
 }

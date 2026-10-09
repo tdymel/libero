@@ -3,7 +3,7 @@
 
 use dioxus::prelude::*;
 use libero::components::{
-    DropdownPart, FieldStatus, Flex, OptionItem, OptionList, Options, Parts, Select, Text,
+    DropdownPart, FieldStatus, Flex, OptionItem, OptionList, Options, Parts, Select, SelectOptionArgs, Text,
 };
 use libero::sx::sx;
 
@@ -28,7 +28,42 @@ pub const ROUTES: Routes = &[
     ),
     ("/select/long", || rsx! { SelectLongPage {} }),
     ("/select/long-label", || rsx! { SelectLongLabelPage {} }),
+    ("/select/long-custom", || rsx! { SelectLongCustomPage {} }),
 ];
+
+/// Three hundred rows whose `option` draws more than the label, with a short label of
+/// wide glyphs and a longer one of narrow glyphs (2742).
+#[component]
+fn SelectLongCustomPage() -> Element {
+    let options = use_hook(|| {
+        OptionList::new((0..300).map(|row| match row {
+            250 => "WWWWWWWWWWWWWWWWWW".to_string(),
+            260 => "iiiiiiiiiiiiiiiiiiiiiiiiiiiiii".to_string(),
+            _ => format!("Item {row:03}"),
+        }))
+    });
+
+    let mut value = use_signal(|| None::<String>);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "200px",
+            Select::<String> {
+                label: "Item",
+                options: options.clone(),
+                value: value(),
+                onchange: move |next| value.set(next),
+                option: detailed_row,
+            }
+        }
+    }
+}
+
+fn detailed_row(row: SelectOptionArgs<String>) -> Element {
+    rsx! {
+        span { "data-slot": "label", "{row.value}" }
+        span { "data-slot": "detail", white_space: "nowrap", "in stock, ships today" }
+    }
+}
 
 /// Three hundred rows opening at the top, with the one long label far below the window (2695).
 #[component]
