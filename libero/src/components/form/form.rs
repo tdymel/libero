@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{cell::Cell, rc::Rc};
 
 use dioxus::prelude::*;
 
@@ -146,8 +146,9 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
     }
     // Read only with rules to run, so a form without any does not re-render on
     // every keystroke.
+    let warned_blank = use_hook(|| Rc::new(Cell::new(false)));
     let issues = match (props.validate.is_empty(), props.value) {
-        (false, Some(value)) => issues_of(&props.validate, &value.read(), ""),
+        (false, Some(value)) => issues_of(&props.validate, &value.read(), "", &warned_blank),
         _ => Vec::new(),
     };
     scope.raise(key, issues);

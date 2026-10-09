@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{cell::Cell, rc::Rc};
 
 use dioxus::{core::current_scope_id, prelude::*};
 
@@ -217,10 +217,13 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
     );
 
     let prefix = binding.prefix();
+    let warned_blank = use_hook(|| Rc::new(Cell::new(false)));
     let issues = match props.validate.is_empty() {
         true => Vec::new(),
         false => binding
-            .with::<V, _>(&[], |value| issues_of(&props.validate, value, prefix))
+            .with::<V, _>(&[], |value| {
+                issues_of(&props.validate, value, prefix, &warned_blank)
+            })
             .unwrap_or_default(),
     };
     scope.raise(key, issues);

@@ -51,7 +51,7 @@ pub fn ChronoPickerPage() -> Element {
                     prop("calendar", "CalendarVariant").default(theme.chrono_picker.calendar.as_str()).doc("A month of days, or `mini`, one row of days with buttons that page it. For a day or a date-time."),
                     prop("days", "usize").default(theme.chrono_picker.days.to_string()).doc("Days in the mini calendar's row."),
                     prop("variant", "TimePickerVariant").default(theme.time_picker.variant.as_str()).doc("A digital clock, `HH:MM` with a column to turn per part, or a clock face, for values with a time."),
-                    prop("with_seconds", "bool").default("false").doc("A seconds column. Digital only."),
+                    prop("with_seconds", "bool").default("false").doc("Seconds: a column on the digital clock, a button and hand on the clock face."),
                     prop("step", "u8").default(theme.time_picker.step.to_string()).doc("Minutes between the offered minutes."),
                     prop("twelve_hour", "bool").default("formats").doc("A 12-hour clock with AM and PM. Defaults to whether `Formats::time` is one."),
                     prop("today", "NaiveDate").doc("The day marked as today. Unset, the platform clock answers after mount on the web. Elsewhere no day is marked."),

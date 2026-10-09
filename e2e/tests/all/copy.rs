@@ -46,6 +46,26 @@ fn a_press_is_announced_and_leaving_resets_it() {
             .unwrap();
         assert_eq!(name, "Copy the install command");
 
+        // A second copy resets and announces again: the status empties, then fills.
+        page.evaluate(
+            "window.__mutations = 0; new MutationObserver(r => window.__mutations += r.length) \
+             .observe(document.querySelector('#named [role=status]'), \
+             { childList: true, characterData: true, subtree: true })",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "{} && window.__mutations >= 2",
+                status_is("named", "Copied")
+            ),
+            "the second copy to be announced again",
+        )
+        .await
+        .unwrap();
+
         keyboard::press(page, keyboard::TAB).await.unwrap();
         wait::for_js_true(page, &status_is("named", ""), "leaving to reset the status")
             .await
@@ -70,7 +90,40 @@ fn a_press_is_announced_and_leaving_resets_it() {
             .unwrap();
         assert_eq!(bare_name, "Copy");
 
+        // The pointer leaving resets it while focus stays.
+        pointer::hover(page, NAMED).await.unwrap();
+        wait::for_js_true(
+            page,
+            &status_is("bare", ""),
+            "the pointer leaving to reset the status",
+        )
+        .await
+        .unwrap();
+
         fixture.console.assert_clean("copying").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A disabled `Copy` is a disabled button that focus cannot reach.
+#[test]
+fn a_disabled_copy_cannot_be_focused() {
+    block_on(async {
+        let fixture = Fixture::open("/copy", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+
+        let unfocusable: bool = page
+            .evaluate(
+                "(() => { const b = document.querySelector('#off button'); \
+                 b.focus(); return b.disabled && document.activeElement !== b; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(unfocusable, "the disabled Copy took focus");
+
+        fixture.console.assert_clean("disabled copy").unwrap();
         fixture.close().await.unwrap();
     });
 }

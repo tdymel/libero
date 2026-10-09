@@ -40,7 +40,7 @@ static SPLIT_SX: StaticSx = StaticSx::new(|| {
             "& > div > button",
             sx().border_start_start_radius("0")
                 .border_end_start_radius("0")
-                // Narrower than the toggle, never under WCAG 2.5.8's 24px.
+                // Never under 24px (WCAG 2.5.8), so at the smallest size it matches the toggle.
                 .width(format!(
                     "max(24px, calc({} * 0.75))",
                     ACTION_ICON_SIZE.overridable()

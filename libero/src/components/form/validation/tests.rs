@@ -1055,3 +1055,29 @@ fn a_blank_status_or_rule_message_warns() {
         LiberoProvider { TextField { label: "A", status: FieldStatus::Error("Wrong".into()) } }
     }));
 }
+
+/// Todo 2822: a composite rule's blank message warns too, once per `Form`.
+#[test]
+fn a_blank_composite_rule_message_warns_once() {
+    use crate::utils::warnings_of;
+    fn app() -> Element {
+        let signup = use_store(|| Signup {
+            password: "a".into(),
+            confirm: "b".into(),
+        });
+        rsx! {
+            LiberoProvider {
+                Form {
+                    value: signup,
+                    validate: [(|s: &Signup| s.password == s.confirm).error(" ")],
+                }
+            }
+        }
+    }
+    let warnings = warnings_of(app);
+    let blank = warnings
+        .iter()
+        .filter(|warning| warning.starts_with("A composite rule message is blank"))
+        .count();
+    assert_eq!(blank, 1, "{warnings:?}");
+}

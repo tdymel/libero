@@ -59,9 +59,12 @@ async fn back_closes<D: Driver>(d: &mut D, route: &str) -> Result<()> {
     let before = d.value(field).await?;
     d.click(field).await?;
     eventually(d, "the dropdown", async |d| d.exists(DIALOG).await).await?;
-    linger(d, 40).await;
     // The colour's text input raises the keyboard; Android's first Back only hides it.
-    if d.soft_keyboard_shown().await? {
+    if d.attr(field, "inputmode").await?.as_deref() != Some("none") {
+        eventually(d, "the soft keyboard", async |d| {
+            d.soft_keyboard_shown().await
+        })
+        .await?;
         d.press_back().await?;
         eventually(d, "Back to hide the keyboard", async |d| {
             Ok(!d.soft_keyboard_shown().await?)

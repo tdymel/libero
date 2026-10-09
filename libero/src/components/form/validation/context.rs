@@ -1,11 +1,17 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    cell::Cell,
+    collections::{BTreeMap, BTreeSet},
+};
 
 use dioxus::{
     core::{Runtime, ScopeId, current_scope_id},
     prelude::*,
 };
 
-use crate::components::form::{FieldStatus, Validators, worst};
+use crate::{
+    components::form::{FieldStatus, Validators, worst},
+    utils::warn,
+};
 
 /// What a `Form` shares with the fields and fieldsets inside it. A lone
 /// `Fieldset` opens its own.
@@ -373,12 +379,24 @@ fn in_owner(owner: ScopeId, cleanup: impl FnOnce()) {
 }
 
 /// The issues a set of composite rules raises over `value`, every path put
-/// under `prefix`.
-pub(crate) fn issues_of<V>(rules: &Validators<V>, value: &V, prefix: &str) -> Vec<Issue> {
+/// under `prefix`. A blank message warns in debug once per `warned`.
+pub(crate) fn issues_of<V>(
+    rules: &Validators<V>,
+    value: &V,
+    prefix: &str,
+    warned: &Cell<bool>,
+) -> Vec<Issue> {
     rules
         .iter()
         .filter_map(|rule| {
             let status = rule.validate(value);
+            let blank = status.message().is_some_and(|text| text.trim().is_empty());
+            if blank && !warned.replace(true) {
+                warn(
+                    "A composite rule message is blank, so the group is invalid with nothing \
+                     to read. Give it a text, or use `FieldStatus::Valid`.",
+                );
+            }
             (!status.is_valid()).then(|| Issue {
                 paths: rule
                     .targets()

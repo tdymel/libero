@@ -72,7 +72,7 @@ uses and no turbofish.
 | `calendar` | `CalendarVariant` | `full` | A month of days, or `mini`, one row of days with buttons that page it. For a day or a date-time. |
 | `days` | `usize` | `7` | Days in the mini calendar's row. |
 | `variant` | `TimePickerVariant` | `analog` | A digital clock, `HH:MM` with a column to turn per part, or a clock face, for values with a time. |
-| `with_seconds` | `bool` | `false` | A seconds column. Digital only. |
+| `with_seconds` | `bool` | `false` | Seconds: a column on the digital clock, a button and hand on the clock face. |
 | `step` | `u8` | `5` | Minutes between the offered minutes. |
 | `twelve_hour` | `bool` | `formats` | A 12-hour clock with AM and PM. Defaults to whether `Formats::time` is one. |
 | `today` | `NaiveDate` | - | The day marked as today. Unset, the platform clock answers after mount on the web. Elsewhere no day is marked. |
