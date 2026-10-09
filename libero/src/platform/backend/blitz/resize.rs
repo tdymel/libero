@@ -392,7 +392,12 @@ fn intersection(doc: &BaseDocument, target: NodeId, intersect: &Intersect) -> (b
     let mut current = doc.get_node(target);
     while let Some(node) = current {
         let Some(style) = node.primary_styles() else {
-            break;
+            // Stylo leaves a `display: none` subtree unstyled; the document has no style.
+            if node.element_data().is_some() {
+                return (false, 0.0);
+            }
+            current = node.parent.and_then(|parent| doc.get_node(parent));
+            continue;
         };
         if style.get_box().display.is_none() {
             return (false, 0.0);

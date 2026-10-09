@@ -127,6 +127,51 @@ fn a_wheel_brings_a_target_into_view() {
     );
 }
 
+/// A target in the window under a `display: none` box, shown by a click.
+fn hidden() -> Element {
+    let seen = use_intersection(IntersectionOptions {
+        thresholds: vec![0.0, 1.0],
+        ..Default::default()
+    });
+    let mut shown = use_signal(|| false);
+    let state = match *seen.entry.read() {
+        None => "none".to_string(),
+        Some(entry) if !entry.is_intersecting => "out".to_string(),
+        Some(entry) => format!("{:.0}", entry.ratio * 100.0),
+    };
+    rsx! {
+        p { id: "state", "{state}" }
+        button { id: "show", onclick: move |_| shown.set(true), "Show" }
+        div { display: if shown() { "block" } else { "none" },
+            div {
+                id: "target",
+                width: "100px",
+                height: "40px",
+                onmounted: move |event| seen.on_mounted.call(event),
+                ..seen.attributes,
+            }
+        }
+    }
+}
+
+/// Unstyled under `display: none`, the target reports no intersection (todo 2803).
+#[test]
+fn a_target_under_display_none_is_not_intersecting() {
+    let mut page = mount(hidden);
+    let state = |page: &Page| page.text("#state");
+    assert!(
+        page.wait_for(|page| state(page) == "out"),
+        "hidden: {}",
+        state(&page)
+    );
+    page.click("#show");
+    assert!(
+        page.wait_for(|page| state(page) == "100"),
+        "shown: {}",
+        state(&page)
+    );
+}
+
 /// An anchor whose popover fits below it in the test window only.
 fn low_anchor() -> Element {
     let anchor = use_element();
