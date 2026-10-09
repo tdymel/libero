@@ -5,7 +5,49 @@ use dioxus::prelude::*;
 
 use super::model::{Attrs, Block, BlockKind, Content, Inline, Mark, Marks, NodeKey};
 use super::node_view::NodeViews;
-use crate::components::typography::CodeBlock;
+use crate::{
+    components::typography::CodeBlock,
+    sx::{Sx, sx},
+    theme::{ANCHOR_COLOR, CODE_FONT_FAMILY, ColorCss, ColorShade},
+};
+
+/// What the text of a document looks like, in the editor and in the read-only view.
+pub(crate) fn content_sx(base: Sx) -> Sx {
+    base.white_space("pre-wrap")
+        .overflow_wrap("anywhere")
+        .selector(
+            "& > :first-child, & > * > :first-child",
+            sx().margin_top("0"),
+        )
+        .selector(
+            "& > :last-child, & > * > :last-child",
+            sx().margin_bottom("0"),
+        )
+        .selector("& pre", sx().font_family("monospace").margin("0"))
+        // A shown code block scrolls inside itself: its longest line must not widen the editor (1466).
+        .selector("& [data-code='view']", sx().with("contain", "inline-size"))
+        // List items hold paragraphs: no paragraph gaps between bullets.
+        .selector("& li > p", sx().margin("0"))
+        // Inline code, links and quotes as `Code`, `Anchor` and `Blockquote` draw them.
+        .selector(
+            "& :not(pre) > code",
+            sx().background("muted.2")
+                .border_radius("4px")
+                .padding("0 0.25em")
+                .font_family(CODE_FONT_FAMILY.value())
+                .font_size("0.875em"),
+        )
+        .selector("& a", sx().color(ANCHOR_COLOR.value()))
+        .selector(
+            "& blockquote",
+            sx().margin("1em 0")
+                .padding("0 0.75rem")
+                .border_left(format!(
+                    "2px solid {}",
+                    ColorCss::MUTED.value(ColorShade::S4)
+                )),
+        )
+}
 
 #[derive(Clone, Copy)]
 pub(crate) struct RenderCtx<'a> {

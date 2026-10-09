@@ -18,11 +18,12 @@ use super::model::{
 };
 use super::node_view::NodeViews;
 use super::offsets::{to_dom, to_model};
-use super::render::{RenderCtx, blocks};
+use super::render::{RenderCtx, blocks, content_sx};
 use super::surface::{Caret, ROOT_ATTR, Report, Surface};
 use super::toolbar::{
     Group, Metrics, OVERFLOW, RichTextTool, Tool, hidden as overflow_count, tools,
 };
+use super::viewer::RichTextView;
 use crate::{
     components::{
         accessibility::use_announcer,
@@ -42,7 +43,7 @@ use crate::{
     localization::RichTextEditorLabels,
     platform::{Dimensions, ElementApi, mod_is_meta},
     sx::{StaticSx, sx},
-    theme::{ANCHOR_COLOR, CODE_FONT_FAMILY, ColorCss, ColorShade, Z_INDEX_POPOVER},
+    theme::Z_INDEX_POPOVER,
 };
 
 impl UndoStack for HistoryHandle<EditorState> {
@@ -89,68 +90,36 @@ type LiveEditor = Editor<HistoryHandle<EditorState>>;
 const GROUP_MS: u64 = 500;
 
 static SURFACE_SX: StaticSx = StaticSx::new(|| {
-    sx().display("block")
-        .width("100%")
-        .min_height("4.5em")
-        .padding("0.5rem 0.75rem")
-        .outline("none")
-        .white_space("pre-wrap")
-        .overflow_wrap("anywhere")
-        .selector(
-            "& > :first-child, & > * > :first-child",
-            sx().margin_top("0"),
-        )
-        .selector(
-            "& > :last-child, & > * > :last-child",
-            sx().margin_bottom("0"),
-        )
-        .selector("& pre", sx().font_family("monospace").margin("0"))
-        // A shown code block scrolls inside itself: its longest line must not widen the editor (1466).
-        .selector("& [data-code='view']", sx().with("contain", "inline-size"))
-        // So does the source while editing; the browser scrolls it to the caret (1475).
-        .selector(
-            "& [data-code='source'] > pre",
-            sx().with("contain", "inline-size").overflow_x("auto"),
-        )
-        // List items hold paragraphs: no paragraph gaps between bullets.
-        .selector("& li > p", sx().margin("0"))
-        // Inline code, links and quotes as `Code`, `Anchor` and `Blockquote` draw them.
-        .selector(
-            "& :not(pre) > code",
-            sx().background("muted.2")
-                .border_radius("4px")
-                .padding("0 0.25em")
-                .font_family(CODE_FONT_FAMILY.value())
-                .font_size("0.875em"),
-        )
-        .selector("& a", sx().color(ANCHOR_COLOR.value()))
-        .selector(
-            "& blockquote",
-            sx().margin("1em 0")
-                .padding("0 0.75rem")
-                .border_left(format!(
-                    "2px solid {}",
-                    ColorCss::MUTED.value(ColorShade::S4)
-                )),
-        )
-        .selector(
-            "& [data-fence]",
-            sx().font_family("monospace")
-                .color("text-dimmed")
-                .user_select("none"),
-        )
-        // The language menu's wrapper, beside the backticks.
-        .selector(
-            "& [data-fence] > div",
-            sx().display("inline-block").margin_inline_start("0.25rem"),
-        )
-        .selector(
-            "&[data-empty]::before",
-            sx().content("attr(data-placeholder)")
-                .color("text-dimmed")
-                .pointer_events("none")
-                .position("absolute"),
-        )
+    content_sx(
+        sx().display("block")
+            .width("100%")
+            .min_height("4.5em")
+            .padding("0.5rem 0.75rem")
+            .outline("none"),
+    )
+    // The source while editing scrolls inside itself; the browser scrolls it to the caret (1475).
+    .selector(
+        "& [data-code='source'] > pre",
+        sx().with("contain", "inline-size").overflow_x("auto"),
+    )
+    .selector(
+        "& [data-fence]",
+        sx().font_family("monospace")
+            .color("text-dimmed")
+            .user_select("none"),
+    )
+    // The language menu's wrapper, beside the backticks.
+    .selector(
+        "& [data-fence] > div",
+        sx().display("inline-block").margin_inline_start("0.25rem"),
+    )
+    .selector(
+        "&[data-empty]::before",
+        sx().content("attr(data-placeholder)")
+            .color("text-dimmed")
+            .pointer_events("none")
+            .position("absolute"),
+    )
 });
 
 field_props! {
@@ -785,15 +754,20 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     });
     let content = {
         let live = editor.peek();
-        blocks(
-            &live.doc().blocks,
-            RenderCtx {
-                source_code,
-                on_code,
-                views: &props.nodes,
-                fence: fence.as_ref(),
-            },
-        )
+        // Blitz has no editable surface: the document is shown through the read-only view.
+        if crate::platform::edits_rich_text() {
+            blocks(
+                &live.doc().blocks,
+                RenderCtx {
+                    source_code,
+                    on_code,
+                    views: &props.nodes,
+                    fence: fence.as_ref(),
+                },
+            )
+        } else {
+            rsx! { RichTextView { value: live.doc().clone(), nodes: props.nodes.clone() } }
+        }
     };
 
     // `for` names only a labelable element, and the surface is a `div`.

@@ -3,7 +3,7 @@ use crate::components::{
     field_controls, indent, prop, props, status_prop,
 };
 use dioxus::prelude::*;
-use libero::components::rich_text::Doc;
+use libero::components::rich_text::{Doc, RichTextView};
 use libero::components::{Code, FieldPart, Flex, Text};
 use libero::use_theme;
 
@@ -219,6 +219,14 @@ pub fn RichTextEditorPage() -> Element {
                     (FieldPart::Helper, "The caption under the control."),
                     (FieldPart::Status, "The validation message."),
                 ]).extends("div"),
+                props("RichTextView", vec![
+                    prop("value", "Doc")
+                        .default("required")
+                        .doc("The document to show."),
+                    prop("nodes", "NodeViews")
+                        .default("NodeViews::new()")
+                        .doc("Your component per custom node name, as the editor's `nodes`. Built-ins take a view under their name too; `code_block` stays fixed."),
+                ]).extends("div"),
             ],
             accessibility: a11y()
                 .key(["Ctrl+B"], "Bold. `Mod` in a `Keymap` is Cmd on Apple platforms, Ctrl elsewhere; the table shows Ctrl.")
@@ -266,7 +274,7 @@ pub fn RichTextEditorPage() -> Element {
                 ])
                 .example("Release notes with `label: \"Notes\"`: a screen reader reads a multiline \"Notes\" text box. `Ctrl+B` says \"Bold on\", and `Alt+F10` moves to the toolbar, where the Bold button reads as pressed.")
                 .limits([
-                    "On Blitz (native) the document is shown read-only.",
+                    "On Blitz (native) the document is shown read-only, through `RichTextView`.",
                     "Copy and cut write the selection as Markdown, as plain text and as `text/markdown`: a quote as `>`, a code block fenced with its language, lists, headings, rules, marks and links as written. Custom nodes write through their `NodeSpec::markdown` (pass `registry`). Cut is one undo step.",
                     "Paste reads Markdown back into formatted blocks; custom nodes stay text. Text from elsewhere is read the same way, one paragraph per line. In a code block it is pasted as is. A pasted web address alone links the selection, or becomes a link at the caret.",
                     "Drag and drop of text and spellcheck replacements are ignored, so `spellcheck` is off.",
@@ -365,6 +373,19 @@ pub fn RichTextEditorPage() -> Element {
                     Code { source: "www." }
                     " address without a scheme."
                 }
+            }
+
+            DocSection {
+                title: "Showing a document",
+                Text {
+                    Code { source: "RichTextView" }
+                    " shows a stored "
+                    Code { source: "Doc" }
+                    " read-only, without an editor's state, script or history: a message or comment list mounts one per entry. It draws the same blocks, marks and code blocks, takes the same "
+                    Code { source: "nodes" }
+                    ", and is what the editor shows on a renderer without an editable surface (Blitz). Here it follows the document edited above."
+                }
+                RichTextView { value: doc() }
             }
 
             DocSection {

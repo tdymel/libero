@@ -101,6 +101,7 @@ mod rating;
 mod recorder;
 mod render_counts;
 mod repository;
+mod rich_text_view;
 mod rsx_wrapping;
 mod scroll_area;
 mod scroller;

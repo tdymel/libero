@@ -1563,6 +1563,51 @@ fn a_readonly_editor_is_a_tab_stop_and_a_disabled_one_says_so() {
 }
 
 #[test]
+fn a_view_shows_a_doc_read_only_and_follows_an_editor() {
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor/view", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let static_view = "#static [data-code=view] pre, #static a[href='https://example.com']";
+        wait::for_js_true(
+            page,
+            &format!("document.querySelectorAll(\"{static_view}\").length === 2"),
+            "the code block and the link of the stored doc",
+        )
+        .await
+        .unwrap();
+        let texts: Vec<String> = js(
+            page,
+            "['h1', 'strong', 'em', 'li', 'blockquote'].map(tag => document.querySelector('#static ' + tag).textContent)",
+        )
+        .await;
+        assert_eq!(
+            texts,
+            ["Release notes", "bold", "italic", "First item", "A quote"]
+        );
+
+        let editing: u32 = js(
+            page,
+            "document.querySelectorAll('#static [contenteditable=true], #static [role=textbox], #live [contenteditable=true], #live [role=textbox]').length",
+        )
+        .await;
+        assert_eq!(editing, 0, "a view is not an editing surface");
+
+        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        keyboard::type_text(page, "ab").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#live p')?.textContent === 'ab'",
+            "the view to follow the editor",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+#[test]
 fn toolbar_and_menu_actions_are_announced() {
     const BULLETS: &str = "[role=toolbar] button[aria-label=\"Bulleted list\"]";
     const HEADING: &str = "[...document.querySelectorAll('[role=menuitemradio]')].find(i => i.textContent.includes('Heading 3'))";

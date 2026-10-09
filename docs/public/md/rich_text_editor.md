@@ -255,6 +255,24 @@ and undo brings the plain text back. Typing `[text](address)` links the text.
 Pasting only an address links the selected text, or inserts the address as a
 link. Other schemes stay text, as does a `www.` address without a scheme.
 
+## Showing a document
+
+`RichTextView` shows a stored `Doc` read-only, without an editor's state,
+script or history: a message or comment list mounts one per entry. It draws the
+same blocks, marks and code blocks, takes the same `nodes`, and is what the
+editor shows on a renderer without an editable surface (Blitz). On the docs
+page it follows the document edited above.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::rich_text::{Doc, RichTextView};
+
+#[component]
+fn Comment(body: Doc) -> Element {
+    rsx! { RichTextView { value: body } }
+}
+```
+
 ## Mentions
 
 The mentions switch adds an @ list at the caret, built from `intercept`,
@@ -352,7 +370,7 @@ the Bold button reads as pressed.
 
 ### Limits
 
-- On Blitz (native) the document is shown read-only.
+- On Blitz (native) the document is shown read-only, through `RichTextView`.
 - Copy and cut write the selection as Markdown, as plain text and as
   `text/markdown`: a quote as `>`, a code block fenced with its language,
   lists, headings, rules, marks and links as written. Custom nodes write
@@ -397,6 +415,17 @@ the Bold button reads as pressed.
 | `readonly` | `bool` | `false` | Shows the document, focusable but not editable, without the toolbar. |
 
 `RichTextEditor` also takes the `<div>` HTML attributes and, like every
+component, the shared props `sx`, `class`, `style`, `states`, and any extra
+HTML attributes.
+
+### `RichTextView`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `value` | `Doc` | required | The document to show. |
+| `nodes` | `NodeViews` | `NodeViews::new()` | Your component per custom node name, as the editor's `nodes`. Built-ins take a view under their name too; `code_block` stays fixed. |
+
+`RichTextView` also takes the `<div>` HTML attributes and, like every
 component, the shared props `sx`, `class`, `style`, `states`, and any extra
 HTML attributes.
 

@@ -54,6 +54,7 @@ mod pointer;
 mod popover;
 mod qr_code;
 mod repository;
+mod rich_text_view;
 mod rtl_text;
 mod scroll;
 mod scroll_area;

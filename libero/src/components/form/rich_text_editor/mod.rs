@@ -10,10 +10,13 @@ mod render;
 mod surface;
 mod toolbar;
 mod view;
+mod viewer;
 
 pub use view::{RichTextEditor, RichTextEditorProps};
+pub use viewer::{RichTextView, RichTextViewProps};
 
-/// The document a [`RichTextEditor`] edits and the commands, keys and nodes it runs.
+/// The document a [`RichTextEditor`] edits and the commands, keys and nodes it runs, and
+/// the [`RichTextView`] that shows one.
 pub mod rich_text {
     pub use super::handle::{ListKind, RichTextHandle, use_rich_text_editor};
     pub use super::input::EditorInput;
@@ -26,4 +29,5 @@ pub mod rich_text {
     pub use super::node_view::{NodeViewProps, NodeViews};
     pub use super::toolbar::RichTextTool;
     pub use super::view::{RichTextEditor, RichTextEditorProps};
+    pub use super::viewer::{RichTextView, RichTextViewProps};
 }

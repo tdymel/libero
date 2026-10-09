@@ -5,8 +5,8 @@ use dioxus::prelude::*;
 use libero::components::RichTextEditor;
 use libero::components::rich_text::{
     Attrs, Builtin, Commands, CustomContent, Doc, EditorInput, EditorState, Inline, MarkKind,
-    Marks, NodeRegistry, NodeSpec, NodeViewProps, NodeViews, Position, RichTextTool, Selection,
-    use_rich_text_editor,
+    Marks, NodeRegistry, NodeSpec, NodeViewProps, NodeViews, Position, RichTextTool, RichTextView,
+    Selection, use_rich_text_editor,
 };
 
 use libero::components::Dialog;
@@ -26,7 +26,19 @@ pub const ROUTES: Routes = &[
     ("/rich-text-editor/mentions-modal", || rsx! { MentionsModalPage {} }),
     ("/rich-text-editor/narrow", || rsx! { NarrowPage {} }),
     ("/rich-text-editor/states", || rsx! { StatesPage {} }),
+    ("/rich-text-editor/view", || rsx! { ViewPage {} }),
 ];
+
+/// A stored doc in a `RichTextView`, and one that follows the editor beside it.
+#[component]
+fn ViewPage() -> Element {
+    let mut doc = use_signal(Doc::new);
+    rsx! {
+        div { id: "static", RichTextView { value: Doc::from_markdown(SAMPLE) } }
+        RichTextEditor { label: "Comment", toolbar: false, value: doc(), onchange: move |next| doc.set(next) }
+        div { id: "live", RichTextView { value: doc() } }
+    }
+}
 
 /// A read-only and a disabled editor, for their tab stop and state.
 #[component]
