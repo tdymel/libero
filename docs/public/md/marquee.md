@@ -85,7 +85,7 @@ strip the reader scrolls, without the fade or the toggle.
 | `reverse` | `bool` | `false` | Scrolls towards the end instead of the start. |
 | `duration` | `u32` | `40000` | Milliseconds per full cycle. The same number moves a longer strip faster. |
 | `gap` | `ThemeAwareValue` | `md` | Between copies, and between the last and the first, or any CSS, e.g. `gap: "0"`. |
-| `repeat` | `u8` | `4` | Copies in a row. Raise it when a gap crosses the view. Anything below 2 renders 2. |
+| `repeat` | `u8` | `4` | Copies in a row. Raise it when a gap crosses the view; a debug build warns when the copies do not fill the box. Anything below 2 renders 2. |
 | `pause_on_hover` | `bool` | `false` | Pauses under the pointer. Not enough on its own, since a keyboard or a touch screen cannot hover. |
 | `paused` | `Option<bool>` | `None` | Controlled when set, so pair it with `onpausechange`. `None` leaves the state to the built-in toggle. |
 | `onpausechange` | `EventHandler<bool>` | `None` | The built-in toggle was pressed, with the state it asks for. |

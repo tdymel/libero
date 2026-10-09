@@ -10,7 +10,20 @@ pub const ROUTES: Routes = &[
     ("/marquee", || rsx! { MarqueePage {} }),
     ("/marquee-vertical", || rsx! { VerticalPage {} }),
     ("/marquee-rtl", || rsx! { RtlPage {} }),
+    ("/marquee-short", || rsx! { ShortPage {} }),
 ];
+
+/// Two short copies in a box wider than both: a blank strip opens (todo 2427).
+#[component]
+fn ShortPage() -> Element {
+    rsx! {
+        Marquee { repeat: 2,
+            span { "Rust" }
+            span { "Dioxus" }
+            span { "Libero" }
+        }
+    }
+}
 
 /// The ticker right to left (todo 2401).
 #[component]

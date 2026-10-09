@@ -1866,3 +1866,39 @@ fn a_press_while_syncing_moves_the_model_caret() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 2624: a toolbar press right after a press in the text reports that press at once,
+/// not with its late `selectionchange`; one after a key does not.
+#[test]
+fn a_toolbar_press_reports_the_fresh_press_at_once() {
+    const BULLETS: &str = "[role=toolbar] button[aria-label=\"Bulleted list\"]";
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor/code", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_selector(page, BULLETS).await.unwrap();
+        let reads: Vec<u32> = page
+            .evaluate(format!(
+                "(() => {{ const root = document.querySelector('[data-lsx-rich-text]'); \
+                   const toolbar = document.querySelector({BULLETS:?}); \
+                   const real = document.getSelection; let reads = 0; \
+                   document.getSelection = function () {{ reads += 1; return real.call(document); }}; \
+                   const press = (el) => el.dispatchEvent(new MouseEvent('mousedown', {{ bubbles: true, button: 0 }})); \
+                   press(root); const editor = reads; press(toolbar); const fresh = reads - editor; \
+                   press(root); root.dispatchEvent(new KeyboardEvent('keydown', {{ key: 'Shift', bubbles: true }})); \
+                   const before = reads; press(toolbar); const stale = reads - before; \
+                   delete document.getSelection; return [fresh, stale]; }})()"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            reads[0] > 0,
+            "the toolbar press read no selection: {reads:?}"
+        );
+        assert_eq!(reads[1], 0, "a press after a key reported: {reads:?}");
+        fixture.close().await.unwrap();
+    });
+}

@@ -113,7 +113,9 @@ fn Fruit(index: usize, name: &'static str) -> Element {
 For your own markup, `use_sortable` gives the list's handlers and
 `use_sortable_item(index)` each item's handle, element, move buttons and
 `style()`. The component is those two hooks plus a grip button, two move
-buttons and a status region.
+buttons and a status region. `style()` is empty while an item sits in its slot,
+so an idle item gets no stacking context or fixed-position containing block
+from it.
 
 ## Props
 
@@ -200,6 +202,11 @@ parts work.
 A fruit list where each `SortableItem` has `label: name`. Tab reaches "Reorder
 Apple"; Space lifts it, Down moves it, and the status region says where Apple
 is now; Space drops it, and focus stays on the handle.
+
+### Limits
+
+- A pointer drag does not scroll the page or a container at its edge. Keep a
+  list within the view, and use the keys or the move buttons for a long one.
 
 ## Data attributes
 

@@ -251,9 +251,24 @@ async fn neighbours_slide_the_lifted_item_does_not<D: Driver>(
         d.style("#Beta", "transition-duration").await? == "0s",
         "an idle item animates"
     );
+    // An idle transform would make each item a stacking context (2513).
+    ensure!(
+        d.style("#Beta", "transform").await? == "none",
+        "an idle item carries a transform"
+    );
     d.focus("#Alpha button").await?;
     d.press(keyboard::SPACE).await?;
     eventually_text(d, STATUS, "Lifted Alpha, position 1 of 4.", "Space to lift").await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually(d, "the neighbour to step aside", async |d| {
+        Ok(d.style("#Beta", "transform").await? != "none")
+    })
+    .await?;
+    d.press(keyboard::ARROW_UP).await?;
+    eventually(d, "the neighbour back in its slot", async |d| {
+        Ok(d.style("#Beta", "transform").await? == "none")
+    })
+    .await?;
     ensure!(
         d.style("#Beta", "transition-duration").await? == "0.15s",
         "a neighbour has no slide: {}",
@@ -555,6 +570,56 @@ fn a_second_drag_still_moves_the_neighbours_before_the_drop() {
             e2e::frames::in_front(
                 page,
                 second_drag(page, &rounds, "#Gamma", delta.y - gamma.y),
+            )
+            .await
+        }
+        .await;
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+    });
+}
+
+/// A wheel scroll mid-drag moves the items under the pointer: the dragged item stays under it
+/// and the drop lands where it points (2540). No edge auto-scroll: see the page's Limits.
+#[test]
+fn a_scroll_mid_drag_keeps_the_item_under_the_pointer() {
+    use e2e::passes::pointer::{self, Point};
+    const TOP: &str = "document.querySelector('#Item2').getBoundingClientRect().top";
+    block_on(async {
+        let fixture = Fixture::open("/sortable/long", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            wait::for_visible(page, "#Item2 button").await?;
+            let pitch: f64 = page
+                .evaluate(
+                    "document.querySelector('#Item3').getBoundingClientRect().top \
+                     - document.querySelector('#Item2').getBoundingClientRect().top",
+                )
+                .await?
+                .into_value()?;
+            let top: f64 = page.evaluate(TOP).await?.into_value()?;
+            let from = pointer::centre_of(page, "#Item2 button").await?;
+            let to = Point {
+                x: from.x,
+                y: from.y + 10.0,
+            };
+            pointer::drag_held(page, from, to, 4).await?;
+            wait::for_visible(page, "#Item2[data-state~=dragging]").await?;
+            page.evaluate(format!("window.scrollBy(0, {})", pitch * 5.0))
+                .await?;
+            wait::until("the dragged item to follow the pointer", || async {
+                let now: f64 = page.evaluate(TOP).await?.into_value()?;
+                Ok((now - (top + 10.0)).abs() < 2.0)
+            })
+            .await?;
+            pointer::release(page, to).await?;
+            wait::for_js_true(
+                page,
+                "document.querySelector('#order').textContent\
+                 .startsWith('Item1 Item3 Item4 Item5 Item6 Item7 Item2 ')",
+                "a drop five slots down",
             )
             .await
         }

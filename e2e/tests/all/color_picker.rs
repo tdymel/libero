@@ -110,6 +110,46 @@ fn the_picked_swatch_is_pressed_and_checked() {
     });
 }
 
+/// Todo 2293: a swatch near the page colour (`#f8f9fa`, `#40c057`) draws a ring of 3:1
+/// against the page; `#fa5252`, well away from it, keeps the faint ring.
+#[test]
+fn a_swatch_near_the_page_colour_has_a_3_to_1_edge() {
+    const RINGS: &str = r#"(() => {
+        const channels = (css) => css.match(/rgba?\([^)]*\)/)[0].match(/[\d.]+/g).map(Number);
+        const luminance = ([r, g, b]) => [r, g, b]
+            .map((c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; })
+            .reduce((sum, c, i) => sum + c * [0.2126, 0.7152, 0.0722][i], 0);
+        const page = channels(getComputedStyle(document.body).backgroundColor);
+        const back = page.length > 3 && page[3] === 0 ? [255, 255, 255] : page;
+        return [...document.querySelectorAll('[data-slot=swatches] > button')].map((button) => {
+            const ring = channels(getComputedStyle(button).boxShadow);
+            const [a, b] = [luminance(ring), luminance(back)].sort((x, y) => y - x);
+            return ((a + 0.05) / (b + 0.05)).toFixed(2) + (ring.length > 3 && ring[3] < 1 ? 'a' : '');
+        }).join(',');
+    })()"#;
+    block_on(async {
+        let fixture = Fixture::open("/color-picker-swatches", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "[data-slot=swatches] > button")
+            .await
+            .unwrap();
+        let rings: String = page.evaluate(RINGS).await.unwrap().into_value().unwrap();
+        let rings: Vec<&str> = rings.split(',').collect();
+        for (light, ring) in [(1, rings[1]), (2, rings[2])] {
+            let ratio: f64 = ring.parse().unwrap();
+            assert!(ratio >= 3.0, "light swatch {light}: a {ratio}:1 ring");
+        }
+        assert!(
+            rings[0].ends_with('a'),
+            "the red swatch lost its faint ring: {rings:?}"
+        );
+        fixture.console.assert_clean("the swatches").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// `saturation,brightness` in whole percent, from the thumb's own ARIA.
 async fn pad_reading<D: Driver>(d: &mut D) -> Result<String> {
     let now = d.attr(THUMB, "aria-valuenow").await?.unwrap_or_default();

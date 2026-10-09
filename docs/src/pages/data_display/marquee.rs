@@ -152,7 +152,7 @@ pub fn MarqueePage() -> Element {
                     .doc("Between copies, and between the last and the first, or any CSS, e.g. `gap: \"0\"`."),
                 prop("repeat", "u8")
                     .default("4")
-                    .doc("Copies in a row. Raise it when a gap crosses the view. Anything below 2 renders 2."),
+                    .doc("Copies in a row. Raise it when a gap crosses the view; a debug build warns when the copies do not fill the box. Anything below 2 renders 2."),
                 prop("pause_on_hover", "bool")
                     .default("false")
                     .doc("Pauses under the pointer. Not enough on its own, since a keyboard or a touch screen cannot hover."),

@@ -254,3 +254,38 @@ fn a_focused_link_is_never_hidden_under_the_pause_toggle() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 2427: copies that do not fill the box leave a blank strip, and a debug build says
+/// so once. A marquee that fills it stays quiet.
+#[test]
+fn copies_that_do_not_fill_the_box_warn_once() {
+    block_on(async {
+        let fixture = Fixture::open("/marquee", Viewport::Desktop).await.unwrap();
+        wait::for_visible(&fixture.page, PAUSE).await.unwrap();
+        fixture.console.settle().await.unwrap();
+        fixture
+            .console
+            .assert_clean("a marquee that fills its box")
+            .unwrap();
+        fixture.close().await.unwrap();
+
+        let fixture = Fixture::open("/marquee-short", Viewport::Desktop)
+            .await
+            .unwrap();
+        let warned = || {
+            fixture
+                .console
+                .peek()
+                .iter()
+                .filter(|message| message.contains("Marquee: 2 copies of"))
+                .count()
+        };
+        wait::until("the marquee to warn", || async { Ok(warned() == 1) })
+            .await
+            .unwrap();
+        fixture.console.settle().await.unwrap();
+        assert_eq!(warned(), 1, "the marquee warned again");
+        fixture.console.drain();
+        fixture.close().await.unwrap();
+    });
+}

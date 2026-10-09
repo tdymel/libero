@@ -18,6 +18,7 @@ use crate::{
         MARQUEE_GAP, MARQUEE_MIN_REPEAT, MARQUEE_REPEAT, MARQUEE_SHIFT, PAPER_BACKGROUND, Size,
         SizeCss,
     },
+    utils::warn,
 };
 
 parts_enum! {
@@ -216,7 +217,8 @@ base_props! {
         /// Between copies: a size word or any CSS, as `gap: "0"`.
         #[props(default, into)]
         gap: Input<ThemeAwareValue>,
-        /// Copies in a row, at least 2. Raise it when a gap crosses the view.
+        /// Copies in a row, at least 2. Raise it when a gap crosses the view; a
+        /// debug build warns when the copies do not fill the box.
         #[props(default, into)]
         repeat: Input<u8>,
         /// Pointer hover pauses; not a pause mechanism on its own.
@@ -268,6 +270,37 @@ pub fn Marquee(props: MarqueeProps) -> Element {
         .copied_or(defaults.repeat)
         .max(MARQUEE_MIN_REPEAT);
     let gap = ScaleOrCss::new(props.gap.as_ref(), defaults.gap);
+    let horizontal = orientation == Orientation::Horizontal;
+
+    // Debug builds only: a blank strip is a fault of the caller's `repeat` or content.
+    let mut lengths = use_signal(|| (0.0_f64, 0.0_f64));
+    let warned = use_hook(|| CopyValue::new(false));
+    use_effect(use_reactive!(|repeat| {
+        let (view, copy) = lengths();
+        let mut warned = warned;
+        if view > 0.0 && (f64::from(repeat) - 1.0) * copy < view && !warned() {
+            warned.set(true);
+            warn(&format!(
+                "Marquee: {repeat} copies of {copy:.0}px leave a blank strip in {view:.0}px; raise `repeat` or add content."
+            ));
+        }
+    }));
+    let measure = use_callback(move |(view, event): (bool, Event<ResizeData>)| {
+        let Ok(size) = event.get_border_box_size() else {
+            return;
+        };
+        let length = if horizontal { size.width } else { size.height };
+        let (seen_view, seen_copy) = *lengths.peek();
+        let next = if view {
+            (length, seen_copy)
+        } else {
+            (seen_view, length)
+        };
+        if next != (seen_view, seen_copy) {
+            lengths.set(next);
+        }
+    });
+    let watch = cfg!(debug_assertions);
 
     let mut own_paused = use_signal(|| false);
     let controlled = props.paused.is_some();
@@ -317,6 +350,10 @@ pub fn Marquee(props: MarqueeProps) -> Element {
         .states(&states)
         .variables(&variables)
         .prepare()
+        .event(
+            "onresize",
+            watch.then_some(move |event: Event<ResizeData>| measure.call((true, event))),
+        )
         .render(
             HtmlTag::Div,
             props.attributes,
@@ -328,6 +365,11 @@ pub fn Marquee(props: MarqueeProps) -> Element {
                             "data-slot": MarqueePart::Group.slot(),
                             "aria-hidden": (copy > 0).then_some("true"),
                             inert: (copy > 0).then_some(true),
+                            onresize: move |event| {
+                                if watch && copy == 0 {
+                                    measure.call((false, event));
+                                }
+                            },
                             {props.children.clone()}
                         }
                     }

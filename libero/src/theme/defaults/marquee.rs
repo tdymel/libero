@@ -26,7 +26,7 @@ pub const MARQUEE_MIN_REPEAT: u8 = 2;
 pub struct MarqueeDefaults {
     /// Milliseconds per cycle. A duration, not a speed: a longer strip moves faster.
     pub duration: u32,
-    /// Copies laid in a row. Too few leave a gap crossing the view, undetected.
+    /// Copies laid in a row. Too few leave a gap crossing the view; a debug build warns.
     pub repeat: u8,
     /// Between copies, and between the last and the first.
     pub gap: Size,

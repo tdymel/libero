@@ -11,7 +11,10 @@ use crate::{
     },
     hooks::use_theme,
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{COLOR_SWATCH_RADIUS, COLOR_SWATCH_SIZE, ColorSwatchDefaults, CssVar, Size, SizeCss},
+    theme::{
+        COLOR_SWATCH_RADIUS, COLOR_SWATCH_SIZE, Color, ColorShade, ColorSwatchDefaults, ColorValue,
+        CssVar, Size, SizeCss,
+    },
     tokens::HexColor,
 };
 
@@ -36,10 +39,18 @@ static COLOR_SWATCH_SX: StaticSx = StaticSx::new(|| {
         // A clickable swatch is a `<button>`, which inherits neither (todo 2376).
         .font_family("inherit")
         .letter_spacing("inherit")
+        // Near the paper colour the faint ring is under 3:1 (WCAG 1.4.11, todo 2293): a muted one.
         .when(
             "shadow",
             shadow_sx(
                 "inset 0 0 0 1px rgba(0, 0, 0, 0.1), inset 0 0 4px rgba(0, 0, 0, 0.1)".to_string(),
+            )
+            .when(
+                "near-paper",
+                shadow_sx(format!(
+                    "inset 0 0 0 1px {}",
+                    ColorValue::Shade(Color::Muted, ColorShade::S6).value()
+                )),
             ),
         )
         // Fixed, not the scheme's `surface`/`ink`: the swatch's color does not
@@ -103,6 +114,7 @@ pub fn ColorSwatch(props: ColorSwatchProps) -> Element {
         .with("shadow", props.with_shadow.unwrap_or(true))
         .with("clickable", clickable)
         .with("on-light", on_light(props.color))
+        .with("near-paper", near_paper(props.color))
         .into();
 
     let variables: Input<Variables> = variables()
@@ -130,13 +142,25 @@ pub fn ColorSwatch(props: ColorSwatchProps) -> Element {
     }
 }
 
-/// Whether `color` is light enough that the children need to be black.
-fn on_light(color: ColorCode) -> bool {
+/// The luminance of what shows: the colour over the light checkerboard.
+fn shown_luminance(color: ColorCode) -> f32 {
     let (r, g, b, a) = color.to_rgba_channels();
-    // Judge what shows: the colour over the light checkerboard. Above 0.179 black out-contrasts white.
     let over_white = |c: u8| (c as f64 * a + 255.0 * (1.0 - a)).round() as u32;
     let rgb = (over_white(r) << 16) | (over_white(g) << 8) | over_white(b);
-    HexColor::new(rgb).relative_luminance() > 0.179
+    HexColor::new(rgb).relative_luminance()
+}
+
+/// Whether `color` is light enough that the children need to be black.
+fn on_light(color: ColorCode) -> bool {
+    // Above 0.179 black out-contrasts white.
+    shown_luminance(color) > 0.179
+}
+
+/// Whether `color` is under 3:1 against a white page (luminance above 0.3) or a dark
+/// `Paper` (below 0.13), where only a muted ring gives it an edge.
+fn near_paper(color: ColorCode) -> bool {
+    let luminance = shown_luminance(color);
+    !(0.13..=0.3).contains(&luminance)
 }
 
 #[cfg(test)]
@@ -164,6 +188,16 @@ mod tests {
             );
             assert!(fill.contrast_ratio(mark) >= 3.0, "{rgb:06x}");
         }
+    }
+
+    /// Todo 2293: white on a white page and black on a dark `Paper` had a 1.25:1 edge.
+    #[test]
+    fn a_colour_near_the_paper_takes_the_muted_ring() {
+        assert!(near_paper(ColorCode::rgba(255, 255, 255, 1.0)));
+        assert!(near_paper(ColorCode::rgba(0, 0, 0, 1.0)));
+        assert!(near_paper(ColorCode::rgba(0, 0, 0, 0.0)));
+        assert!(!near_paper(ColorCode::rgba(34, 139, 230, 1.0)));
+        assert!(!near_paper(ColorCode::rgba(134, 142, 150, 1.0)));
     }
 
     /// Todo 2292: rgba(0, 128, 0, 0.6) shows about #66b366 over white, where white was 2.56:1.

@@ -102,9 +102,13 @@ document.addEventListener('selectionchange', report);
 // next key: input right after a press goes with its selection, until the model acks it (todo 2062).
 // `fresh`: the DOM selection is a press's until a key or a model caret (todo 2072).
 let pressed = false, fresh = false, held = 0, lastKey = '';
+// A press outside, as the toolbar's, reports the fresh press at once: its `selectionchange`
+// may come after the command runs (todo 2624).
 document.addEventListener('mousedown', (e) => {
     const r = root();
-    fresh = !!r && r.contains(e.target);
+    const inside = !!r && r.contains(e.target);
+    if (fresh && r && !inside) report();
+    fresh = inside;
     if (fresh) pressed = true;
 }, true);
 // Typed text and clipboard keys go natively; another key waits for held input too (todo 2071).

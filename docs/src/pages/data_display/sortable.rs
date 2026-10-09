@@ -65,7 +65,10 @@ pub fn SortablePage() -> Element {
                     "Give each `SortableItem` a `label`, or its controls and the announcements name it by position (\"Item 2\").",
                     "With `move_buttons: false`, give the reader another way to reorder without dragging, such as a menu.",
                 ])
-                .example("A fruit list where each `SortableItem` has `label: name`. Tab reaches \"Reorder Apple\"; Space lifts it, Down moves it, and the status region says where Apple is now; Space drops it, and focus stays on the handle."),
+                .example("A fruit list where each `SortableItem` has `label: name`. Tab reaches \"Reorder Apple\"; Space lifts it, Down moves it, and the status region says where Apple is now; Space drops it, and focus stays on the handle.")
+                .limits([
+                    "A pointer drag does not scroll the page or a container at its edge. Keep a list within the view, and use the keys or the move buttons for a long one.",
+                ]),
             lead: rsx! {
                 Text {
                     "A list the user reorders by dragging each item's handle, by keyboard, or "

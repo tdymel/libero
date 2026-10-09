@@ -7,11 +7,12 @@ use crate::{
     components::common::Orientation,
     hooks::{
         DragMove, DragOptions, DragStart, ElementHandle, current_localization, edge_scroll_step,
-        use_distance_drag, use_early_measure, use_element, use_interval,
+        use_distance_drag, use_early_measure, use_element, use_interval, use_subscription_slot,
     },
     localization::fill,
-    platform::{self, Dimensions, ElementApi, Read},
+    platform::{self, Dimensions, ElementApi, Read, ScrollSubscription, scroll},
     theme::{SORTABLE_SETTLE, SORTABLE_SETTLE_FROM, TRANSITION_DURATION, TRANSITION_EASING},
+    utils::bump,
 };
 
 /// What [`use_sortable`] takes.
@@ -75,8 +76,9 @@ impl SortableItemHandle {
         (self.offset)()
     }
 
-    /// The item's inline `style`: a `transform` moving it by [`offset`](Self::offset),
-    /// and just after a drop the slide from where it was let go into its slot.
+    /// The item's inline `style`: a `transform` moving it by [`offset`](Self::offset)
+    /// while it is off its slot (empty at rest), and just after a drop the slide
+    /// from where it was let go into its slot.
     pub fn style(&self) -> String {
         self.style_by(0.0)
     }
@@ -90,7 +92,11 @@ impl SortableItemHandle {
             false => format!("translate(0px, {px}px)"),
         };
         // Every declaration closed: the dropped settle var's reset is appended after them (1438).
-        let mut style = format!("transform: {};", translate(offset));
+        // None at rest: an idle transform makes a stacking context and a fixed-position containing block.
+        let mut style = match offset == 0.0 {
+            true => String::new(),
+            false => format!("transform: {};", translate(offset)),
+        };
         if let Some(from) = (self.settle)() {
             style.push_str(&format!(
                 " {SORTABLE_SETTLE_FROM}: {}; animation: {SORTABLE_SETTLE} {} {};",
@@ -201,6 +207,14 @@ impl EdgeScroll {
         let step = edge_scroll_step(at, self.start, self.size);
         if step * moved > 0.0 { step } else { 0.0 }
     }
+}
+
+/// The list's client position and scroll offset when a pointer drag measured, so a
+/// scroll after it can be read as how far the items moved under the pointer (2540).
+#[derive(Clone, Copy)]
+struct ListAnchor {
+    at: (f64, f64),
+    scroll: (f64, f64),
 }
 
 /// The edge scroll's tick, as a table column drag's.
@@ -449,6 +463,10 @@ pub(crate) fn use_fixed_sortable(
     let mut edge = use_hook(|| CopyValue::new(None::<EdgeScroll>));
     let mut pointer = use_hook(|| CopyValue::new((0.0_f64, 0.0_f64)));
     let mut scrolled = use_hook(|| CopyValue::new(0.0_f64));
+    // Plain lists: the list's place at the measure, and a tick per scroll during a pointer drag.
+    let mut anchor = use_hook(|| CopyValue::new(None::<ListAnchor>));
+    let scroll_tick = use_signal(|| 0_u64);
+    let listening = use_subscription_slot::<dyn ScrollSubscription>();
     let auto_scroll = use_interval(
         move || {
             let (Some(scroll), Some(slots)) = (*edge.peek(), *fixed_slots.peek()) else {
@@ -547,6 +565,8 @@ pub(crate) fn use_fixed_sortable(
         };
         let label = label_of(from).1;
         settle.set(None);
+        let list_reads = (!keyed && fixed_slots.peek().is_none())
+            .then(|| (element.client_offset(), element.scroll_offset()));
         spawn(async move {
             let spans = match reads {
                 Measure::Read(reads) => spans(reads, vertical, flipped).await,
@@ -556,6 +576,11 @@ pub(crate) fn use_fixed_sortable(
                 started.call(None);
                 return;
             };
+            if let Some((at, scroll)) = list_reads
+                && let (Ok(at), Ok(scroll)) = (at.await, scroll.await)
+            {
+                anchor.set(Some(ListAnchor { at, scroll }));
+            }
             // `use_drag` refocuses the handle only on the web.
             if !keyed && let Some(handle) = &handle {
                 let _ = platform::element(handle).focus();
@@ -586,6 +611,7 @@ pub(crate) fn use_fixed_sortable(
         pressed.set(None);
         auto_scroll.stop();
         edge.set(None);
+        anchor.set(None);
         scrolled.set(0.0);
         let count = ended.spans.len();
         let words_for = if commit {
@@ -639,10 +665,10 @@ pub(crate) fn use_fixed_sortable(
             drag_sign.set(if flipped { -1.0 } else { 1.0 });
             scrolled.set(0.0);
             edge.set(None);
+            pointer.set((start.client.y, 0.0));
             if let Some(slots) = *fixed_slots.peek()
                 && !*horizontal.peek()
             {
-                pointer.set((start.client.y, 0.0));
                 // Started in the handler, as Blitz needs.
                 let scroller = slots.scroller;
                 let (offset, size) = (scroller.client_offset(), scroller.dimensions());
@@ -848,6 +874,48 @@ pub(crate) fn use_fixed_sortable(
                 }
             }
         }
+    });
+
+    // A wheel scroll mid-drag moves the items under the pointer: the travel follows it (2540).
+    use_effect(move || {
+        let pointer_drag = session.read().as_ref().is_some_and(|s| s.keyed.is_none());
+        if !pointer_drag || fixed_slots.peek().is_some() {
+            listening.clear();
+            return;
+        }
+        if !listening.is_some()
+            && let Some(api) = scroll()
+        {
+            listening.set(Some(api.on_scroll(Box::new(move || bump(scroll_tick)))));
+        }
+    });
+    use_effect(move || {
+        if scroll_tick() == 0 {
+            return;
+        }
+        let Some(start) = *anchor.peek() else {
+            return;
+        };
+        if !session.peek().as_ref().is_some_and(|s| s.keyed.is_none()) {
+            return;
+        }
+        let (at, now) = (element.client_offset(), element.scroll_offset());
+        let (vertical, sign) = (!*horizontal.peek(), *drag_sign.peek());
+        spawn(async move {
+            let (Ok(at), Ok(now)) = (at.await, now.await) else {
+                return;
+            };
+            if session.peek().is_none() {
+                return;
+            }
+            let (moved, inner) = match vertical {
+                true => (at.1 - start.at.1, now.1 - start.scroll.1),
+                false => (at.0 - start.at.0, now.0 - start.scroll.0),
+            };
+            let extra = (inner - moved) * sign;
+            scrolled.set(extra);
+            travel.set(pointer.peek().1 + extra);
+        });
     });
 
     use_context_provider(|| SortableContext {
