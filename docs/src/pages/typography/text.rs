@@ -3,6 +3,7 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::components::{Code, Input, Text};
+use libero::use_theme;
 
 fn no_gradient(values: &DemoValues) -> bool {
     values.str("gradient") != "true"
@@ -10,6 +11,7 @@ fn no_gradient(values: &DemoValues) -> bool {
 
 #[component]
 pub fn TextPage() -> Element {
+    let theme = use_theme();
     let [gradient_to, gradient_deg] = gradient_controls(no_gradient);
     rsx! {
         DocPage {
@@ -18,7 +20,7 @@ pub fn TextPage() -> Element {
             markdown: "/md/text.md",
             properties: vec![props("Text", vec![
                 prop("size", "Size")
-                    .default("md")
+                    .default(theme.text.size.as_str())
                     .doc("Visual size, `xs` to `xxl`."),
                 prop("component", "HtmlTag")
                     .default("p")
@@ -57,7 +59,7 @@ pub fn TextPage() -> Element {
                 children_text: "The quick brown fox jumps over the lazy dog.",
                 controls: vec![
                     Control::sizes("size")
-                        .default("md"),
+                        .default(theme.text.size.as_str()),
                     Control::toggle("component", ["p", "span", "div"])
                         .labels(["P", "Span", "Div"]),
                     // Unset inherits the page's ink, so the unset swatch is painted ink.

@@ -152,7 +152,7 @@ pub fn AccordionPage() -> Element {
                             vec![format!("panel: {}", FILE.section(mode).trim_end_matches(','))]
                         }),
                     Control::sizes("size")
-                        .default("md"),
+                        .default(theme.accordion.size.as_str()),
                     Control::toggle("heading", ["h2", "h3", "h4"])
                         .labels(["H2", "H3", "H4"])
                         .default("h3"),

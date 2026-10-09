@@ -195,8 +195,8 @@ pub fn ChronoFieldPage() -> Element {
                             code.extend(level.map(|level| format!("level: DateLevel::{level}")));
                             code
                         }),
-                        Control::sizes("size").default("md"),
-                        Control::sizes("radius").default("sm"),
+                        Control::sizes("size").default(theme.chrono_field.size.as_str()),
+                        Control::sizes("radius").default(theme.chrono_field.radius.as_str()),
                         // Both swap the site's own, so they add no prop.
                         Control::toggle("language", options(&LANGUAGES)).default(LANGUAGES[0].0).code(|_, _| vec![]),
                         Control::toggle("formats", options(&FORMATS)).default(FORMATS[1].0).code(|_, _| vec![]),

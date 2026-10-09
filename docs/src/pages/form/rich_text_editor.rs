@@ -282,9 +282,9 @@ pub fn RichTextEditorPage() -> Element {
                 ],
                 controls: [vec![
                     Control::sizes("size")
-                        .default("md"),
+                        .default(theme.textarea.size.as_str()),
                     Control::sizes("radius")
-                        .default("sm"),
+                        .default(theme.textarea.radius.as_str()),
                 ], field_controls::<NotesCopy>(), vec![
                     Control::switch("placeholder").default("true").code(|_, values| {
                         match values.str("placeholder").as_str() {

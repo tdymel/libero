@@ -4,6 +4,7 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::components::{Button, ButtonPart, Code, Input, Text};
+use libero::use_theme;
 
 fn is_link(values: &DemoValues) -> bool {
     values.str("link") == "true"
@@ -11,6 +12,7 @@ fn is_link(values: &DemoValues) -> bool {
 
 #[component]
 pub fn ButtonPage() -> Element {
+    let theme = use_theme();
     let [gradient_to, gradient_deg] = gradient_controls(not_gradient_variant);
     rsx! {
         DocPage {
@@ -22,15 +24,15 @@ pub fn ButtonPage() -> Element {
                     .default("primary")
                     .doc("Accent color. A theme color name or any CSS color. Under a gradient, its first stop. Unset, a `standard` or `outlined` button on a gradient `Paper`, a coloured or gradient `Header`, a filled, tonal or gradient `Alert` or a `Mark` takes that surface's text color."),
                 prop("variant", "Variant")
-                    .default("filled")
+                    .default(theme.button.variant.as_str())
                     .doc("Visual style, from most to least emphasis: `filled`, `tonal`, `elevated`, `outlined`, `standard`. `gradient` fills it from `color` into the theme's second stop."),
                 prop("gradient", "Gradient")
                     .doc("With `variant: \"gradient\"`: the second stop and the angle, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`. The first stop is `color`. A literal CSS stop's label contrast is yours to check. Ignored by the other variants."),
                 prop("radius", "Size")
-                    .default("md")
+                    .default(theme.button.radius.as_str())
                     .doc("Corner radius, independent of `size`."),
                 prop("size", "Size")
-                    .default("md")
+                    .default(theme.button.size.as_str())
                     .doc("Height, padding and font size."),
                 prop("full_width", "bool")
                     .default("false")
@@ -92,14 +94,14 @@ pub fn ButtonPage() -> Element {
                     Control::toggle(
                         "variant",
                         ["filled", "tonal", "elevated", "outlined", "standard", "gradient"],
-                    )
+                    ).default(theme.button.variant.as_str())
                     .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard", "Gradient"]),
                     gradient_to,
                     gradient_deg,
                     Control::sizes("size")
-                        .default("md"),
+                        .default(theme.button.size.as_str()),
                     Control::sizes("radius")
-                        .default("md"),
+                        .default(theme.button.radius.as_str()),
                     Control::switch("full_width"),
                     // Off is still a toggle (`aria-pressed="false"`); unset
                     // is a plain action.

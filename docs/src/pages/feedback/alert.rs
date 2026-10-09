@@ -35,10 +35,10 @@ pub fn AlertPage() -> Element {
                     .default("info")
                     .doc("The tint. A theme color name or any CSS color. `error` and `warning` make the role `alert`, the rest `status`."),
                 prop("variant", "Variant")
-                    .default("tonal")
+                    .default(theme.alert.variant.as_str())
                     .doc("Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`."),
                 prop("radius", "Size")
-                    .default("md")
+                    .default(theme.alert.radius.as_str())
                     .doc("Corner radius, a size step from `xs` to `xxl`."),
                 prop("onclose", "EventHandler<()>")
                     .doc("Shows the close button and fires when it is pressed. Unmount the alert to close it."),

@@ -4,6 +4,7 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::components::{ActionIcon, Code, Input, Text};
+use libero::use_theme;
 
 /// The `shortcut` switch's chord, shown in the tooltip and as `aria-keyshortcuts`.
 const SHORTCUT: &str = "mod+enter";
@@ -14,6 +15,7 @@ fn is_link(values: &DemoValues) -> bool {
 
 #[component]
 pub fn ActionIconPage() -> Element {
+    let theme = use_theme();
     let [gradient_to, gradient_deg] = gradient_controls(not_gradient_variant);
     rsx! {
         DocPage {
@@ -28,10 +30,10 @@ pub fn ActionIconPage() -> Element {
                 prop("color", "ThemeAwareValue")
                     .doc("Accent color. A theme color name or any CSS color. Set alone, it gives the theme's default variant, `filled`. Under a gradient, its first stop."),
                 prop("size", "ThemeAwareValue")
-                    .default("md")
+                    .default(theme.action_icon.size.as_str())
                     .doc("A size word takes `Button`'s height at that step, so the two line up in a row, and sizes the icon inside as `Icon`'s. A length such as `\"20px\"` sizes the box, and the icon fills it."),
                 prop("radius", "ThemeAwareValue")
-                    .default("sm")
+                    .default(theme.action_icon.radius.as_str())
                     .doc("Corner radius, independent of `size`."),
                 prop("aria_label", "String")
                     .default("required")
@@ -110,9 +112,9 @@ pub fn ActionIconPage() -> Element {
                     Control::color("color"),
                     gradient_to,
                     gradient_deg,
-                    Control::sizes("size").default("md"),
+                    Control::sizes("size").default(theme.action_icon.size.as_str()),
                     Control::sizes("radius")
-                        .default("sm"),
+                        .default(theme.action_icon.radius.as_str()),
                     // As on Button: off is still a toggle, unset a plain action.
                     Control::toggle("selected", ["unset", "false", "true"])
                         .labels(["Unset", "Off", "On"])

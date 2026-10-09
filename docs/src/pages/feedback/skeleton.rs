@@ -160,7 +160,7 @@ pub fn SkeletonPage() -> Element {
                     // the first code block is the safe setup.
                     Control::switch("busy_region").default("true").code(|_, _| vec![]),
                     Control::sizes("radius")
-                        .default("sm")
+                        .default(theme.skeleton.radius.as_str())
                         .hidden_when(|values| values.str("circle") == "true"),
                     // Two controls for one prop: a shape with no content needs a height.
                     Control::toggle("height", ["auto", "12px", "40px"])

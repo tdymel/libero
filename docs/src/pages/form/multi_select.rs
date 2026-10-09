@@ -336,8 +336,8 @@ pub fn MultiSelectPage() -> Element {
                     "placeholder: \"Pick toppings\"".to_string(),
                 ],
                 controls: [vec![
-                    Control::sizes("size").default("md"),
-                    Control::sizes("radius").default("sm"),
+                    Control::sizes("size").default(theme.multi_select.size.as_str()),
+                    Control::sizes("radius").default(theme.multi_select.radius.as_str()),
                 ], field_controls::<ToppingsCopy>(), vec![
                     // Draws the rows and the chips through `option` and
                     // `selection`.

@@ -41,9 +41,9 @@ pub fn ProgressBarPage() -> Element {
                 prop("color", "ThemeAwareValue")
                     .default(theme.progress_bar.color.as_str())
                     .doc("The fill. A theme color name paints its text shade, darker on a light page so the bar stands out from its track. Any other CSS color paints as given."),
-                prop("size", "Size").default("md").doc("Track height, 3px at `xs` to 20px at `xxl`."),
+                prop("size", "Size").default(theme.progress_bar.size.as_str()).doc("Track height, 3px at `xs` to 20px at `xxl`."),
                 prop("radius", "Size")
-                    .default("xl")
+                    .default(theme.progress_bar.radius.as_str())
                     .doc("Corner of the track and the fill. On a thin track most steps draw the same pill."),
                 prop("aria_valuetext", "String")
                     .doc("Read instead of the rounded percentage, such as \"4.2 MB of 12 MB\"."),
@@ -109,9 +109,9 @@ pub fn ProgressBarPage() -> Element {
                     .hidden_when(indeterminate),
                     // An unset `color` is `base_color`'s primary shade 6, which
                     // is exactly what a bare `primary` resolves to.
-                    Control::color("color"),
-                    Control::sizes("size").default("md"),
-                    Control::sizes("radius").default("xl"),
+                    Control::color("color").default(theme.progress_bar.color.as_str()),
+                    Control::sizes("size").default(theme.progress_bar.size.as_str()),
+                    Control::sizes("radius").default(theme.progress_bar.radius.as_str()),
                     Control::switch("segments").default("true").code(|_, values| {
                         match segmented(values) {
                             true => vec![

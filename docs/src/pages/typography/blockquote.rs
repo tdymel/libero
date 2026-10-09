@@ -22,13 +22,13 @@ pub fn BlockquotePage() -> Element {
             markdown: "/md/blockquote.md",
             properties: vec![props("Blockquote", vec![
                 prop("size", "Size")
-                    .default("md")
+                    .default(theme.blockquote.size.as_str())
                     .doc("Text size, line height, padding and the accent bar's width."),
                 prop("color", "ThemeAwareValue")
-                    .default("primary, tinted")
+                    .default(theme.blockquote.color.as_str())
                     .doc("The accent bar and the tint behind the quote. A theme color name gets its lightest shade. Any CSS color works too, and a CSS color or a shade from 6 up fills the quote solid, with no separate bar or tint."),
                 prop("radius", "Size")
-                    .default("sm")
+                    .default(theme.blockquote.radius.as_str())
                     .doc("Rounds the two corners away from the accent bar."),
                 prop("attribution", "Element")
                     .doc("Who said it, shown under the quote. For any join other than a comma, pass the whole line here."),

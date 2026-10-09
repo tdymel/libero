@@ -1,9 +1,11 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Kbd, Text};
+use libero::use_theme;
 
 #[component]
 pub fn KbdPage() -> Element {
+    let theme = use_theme();
     rsx! {
         DocPage {
             title: "Kbd",
@@ -11,7 +13,7 @@ pub fn KbdPage() -> Element {
             markdown: "/md/kbd.md",
             properties: vec![props("Kbd", vec![
                 prop("size", "Size")
-                    .default("sm")
+                    .default(theme.kbd.size.as_str())
                     .doc("Font size. The rest of the look comes from the theme."),
                 prop("children", "Element").default("required").doc("The key label."),
             ])],
@@ -38,7 +40,7 @@ pub fn KbdPage() -> Element {
                 children_text: "Ctrl",
                 controls: vec![
                     Control::sizes("size")
-                        .default("sm"),
+                        .default(theme.kbd.size.as_str()),
                 ],
                 render: move |values: DemoValues| rsx! {
                     Kbd { size: values.str("size"), "Ctrl" }

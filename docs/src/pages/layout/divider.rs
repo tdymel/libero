@@ -5,6 +5,7 @@ use dioxus::prelude::*;
 use libero::{
     components::{Box, Divider, DividerPart, Input, Text},
     sx::sx,
+    use_theme,
 };
 
 /// The label is a child, not a prop, so a control has to decide it here.
@@ -30,6 +31,7 @@ fn wrap_rule(values: &DemoValues, code: &str) -> String {
 
 #[component]
 pub fn DividerPage() -> Element {
+    let theme = use_theme();
     rsx! {
         DocPage {
             title: "Divider",
@@ -39,7 +41,7 @@ pub fn DividerPage() -> Element {
                 prop("orientation", "Orientation")
                     .default("horizontal")
                     .doc("The direction of the rule. A vertical rule needs a flex row parent."),
-                prop("size", "Size").default("xs").doc("Line thickness."),
+                prop("size", "Size").default(theme.divider.size.as_str()).doc("Line thickness."),
                 prop("label_position", "LabelPosition")
                     .default("center")
                     .doc("Where the label sits along the rule."),
@@ -74,7 +76,7 @@ pub fn DividerPage() -> Element {
                     Control::toggle("orientation", ["horizontal", "vertical"])
                         .labels(["Horizontal", "Vertical"]),
                     Control::sizes("size")
-                        .default("xs"),
+                        .default(theme.divider.size.as_str()),
                     Control::switch("with_label").default("true").code(|_, _| vec![]),
                     // Meaningless without a label.
                     Control::toggle("label_position", ["start", "center", "end"])

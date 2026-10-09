@@ -1,6 +1,7 @@
 use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Text, Timeline, TimelinePart};
+use libero::use_theme;
 
 mod demo;
 use demo::demo_items;
@@ -27,6 +28,7 @@ fn wrap_page(values: &DemoValues, source: &str) -> String {
 
 #[component]
 pub fn TimelinePage() -> Element {
+    let theme = use_theme();
     rsx! {
         DocPage {
             title: "Timeline",
@@ -50,7 +52,7 @@ pub fn TimelinePage() -> Element {
                         .default("md")
                         .doc("Bullet diameter."),
                     prop("radius", "Size")
-                        .default("xl")
+                        .default(theme.timeline.radius.as_str())
                         .doc("Bullet corner radius. `xl` is a dot."),
                     prop("gap", "Size")
                         .default("xl")
@@ -121,7 +123,7 @@ pub fn TimelinePage() -> Element {
                     Control::sizes("bullet_size")
                         .default("md"),
                     Control::sizes("radius")
-                        .default("xl"),
+                        .default(theme.timeline.radius.as_str()),
                     Control::sizes("gap").default("xl"),
                     // Neither is a prop - both change what the `items` vec
                     // holds, which `Wrap` prints in full.

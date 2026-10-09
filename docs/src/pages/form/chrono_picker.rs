@@ -139,7 +139,7 @@ pub fn ChronoPickerPage() -> Element {
                         code.extend(level.map(|level| format!("level: DateLevel::{level}")));
                         code
                     }),
-                    Control::sizes("size").default("md"),
+                    Control::sizes("size").default(theme.chrono_picker.size.as_str()),
                     Control::toggle("variant", ["analog", "digital"]).labels(["Analog", "Digital"]).default("analog").hidden_when(|values| !has_time(values)).code(|_, values| {
                         match values.str("variant").as_str() {
                             "digital" => vec![r#"variant: "digital""#.to_string()],

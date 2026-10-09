@@ -74,7 +74,7 @@ pub fn ListPage() -> Element {
                 children_code: FILE.section("children"),
                 controls: vec![
                     Control::sizes("size")
-                        .default("md"),
+                        .default(theme.list.size.as_str()),
                     Control::switch("ordered"),
                     Control::switch("icon").code(|_, values| {
                         match values.str("icon").as_str() {

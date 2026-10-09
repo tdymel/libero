@@ -112,8 +112,8 @@ pub fn PinFieldPage() -> Element {
                             "alphanumeric" => vec!["kind: \"alphanumeric\"".to_string()],
                             _ => vec![],
                         }),
-                    Control::sizes("size").default("md"),
-                    Control::sizes("radius").default("sm"),
+                    Control::sizes("size").default(theme.pin_field.size.as_str()),
+                    Control::sizes("radius").default(theme.pin_field.radius.as_str()),
                 ], field_controls::<CodeCopy>(), vec![
                     // The separator is an `Element`, so the control switches a
                     // whole `rsx!` in rather than a value.

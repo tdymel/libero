@@ -25,7 +25,7 @@ pub fn BadgePage() -> Element {
             markdown: "/md/badge.md",
             properties: vec![props("Badge", vec![
                 prop("variant", "Variant")
-                    .default("filled")
+                    .default(theme.badge.variant.as_str())
                     .doc("The look, shared with `Button` and `Chip`. A badge is not interactive, so it has no hover state."),
                 prop("gradient", "Gradient")
                     .doc("With `variant: \"gradient\"`: the second stop and the angle, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`. The first stop is `color`. Ignored by the other variants."),
@@ -33,10 +33,10 @@ pub fn BadgePage() -> Element {
                     .default(theme.badge.color.as_str())
                     .doc("A theme color name or a CSS color. A theme color also sets a label color that reads on it. Under a gradient, its first stop."),
                 prop("size", "Size")
-                    .default("md")
+                    .default(theme.badge.size.as_str())
                     .doc("Height, horizontal padding and font size, on a scale smaller than a chip's."),
                 prop("radius", "Size")
-                    .default("xxl")
+                    .default(theme.badge.radius.as_str())
                     .doc("A step on the badge's own radius scale, `2px` to `12px`. The default `xxl` is a pill at every height."),
                 prop("circle", "bool")
                     .default("false")
@@ -77,17 +77,17 @@ pub fn BadgePage() -> Element {
                     Control::toggle(
                         "variant",
                         ["filled", "tonal", "elevated", "outlined", "standard", "gradient"],
-                    )
+                    ).default(theme.badge.variant.as_str())
                     .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard", "Gradient"]),
                     // A bare `primary` is what an unset `color` resolves to,
                     // so that swatch prints nothing.
-                    Control::color("color"),
+                    Control::color("color").default(theme.badge.color.as_str()),
                     gradient_to,
                     gradient_deg,
-                    Control::sizes("size").default("md"),
+                    Control::sizes("size").default(theme.badge.size.as_str()),
                     // `standard` draws no box, so there is no corner to round.
                     Control::sizes("radius")
-                        .default("xxl")
+                        .default(theme.badge.radius.as_str())
                         .hidden_when(|values| values.str("variant") == "standard"),
                     Control::switch("circle"),
                     // The child, not a prop: `circle` needs a one- or two-character label.

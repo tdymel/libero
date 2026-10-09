@@ -140,8 +140,8 @@ pub fn ColorFieldPage() -> Element {
                         .to_string(),
                 ],
                 controls: [vec![
-                    Control::sizes("size").default("md"),
-                    Control::sizes("radius").default("sm"),
+                    Control::sizes("size").default(theme.color_field.size.as_str()),
+                    Control::sizes("radius").default(theme.color_field.radius.as_str()),
                     Control::select("format", ["hex", "hexa", "rgb", "rgba", "hsl", "hsla"])
                         .labels(["Hex", "Hexa", "RGB", "RGBA", "HSL", "HSLA"])
                         .default("hex")

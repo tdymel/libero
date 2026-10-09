@@ -17,6 +17,7 @@ mod md_mirror;
 mod parse;
 mod props;
 mod route_pages;
+mod theme_defaults;
 
 use compile::*;
 use drift::*;

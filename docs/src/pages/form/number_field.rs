@@ -250,9 +250,9 @@ pub fn NumberFieldPage() -> Element {
                             ],
                         }),
                     Control::sizes("size")
-                        .default("md"),
+                        .default(theme.number_field.size.as_str()),
                     Control::sizes("radius")
-                        .default("sm"),
+                        .default(theme.number_field.radius.as_str()),
                 ], field_controls::<QuantityCopy>(), vec![
                     // Bounds are typed as `T`, so what the switch prints
                     // follows the value type the same way the props do.

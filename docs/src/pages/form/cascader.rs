@@ -271,8 +271,8 @@ pub fn CascaderPage() -> Element {
                     "onchange: move |next: Option<String>| chosen.set(next)".to_string(),
                 ],
                 controls: [vec![
-                    Control::sizes("size").default("md"),
-                    Control::sizes("radius").default("sm"),
+                    Control::sizes("size").default(theme.cascader.size.as_str()),
+                    Control::sizes("radius").default(theme.cascader.radius.as_str()),
                     Control::toggle("layout", ["columns", "paths"])
                         .labels(["Columns", "Paths"])
                         .default("columns"),

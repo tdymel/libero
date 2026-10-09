@@ -297,7 +297,7 @@ pub fn SliderPage() -> Element {
                         .labels(["Discrete", "Continuous"])
                         .code(mode_code),
                     Control::sizes("size").default(theme.slider.size.as_str()),
-                    Control::color("color"),
+                    Control::color("color").default(theme.slider.color.as_str()),
                     Control::slider("min", Quality::ALL)
                         .options_from(min_options)
                         .code(bound_code)

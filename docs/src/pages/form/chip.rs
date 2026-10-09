@@ -85,16 +85,16 @@ pub fn ChipPage() -> Element {
                 component: "Chip",
                 children_text: "rust",
                 controls: vec![
-                    Control::color("color"),
+                    Control::color("color").default(theme.chip.color.as_str()),
                     Control::toggle(
                         "variant",
                         ["filled", "tonal", "elevated", "outlined", "text"],
-                    )
+                    ).default(theme.chip.variant.as_str())
                     .labels(["Filled", "Tonal", "Elevated", "Outlined", "Text"]),
                     Control::sizes("size")
-                        .default("md"),
+                        .default(theme.chip.size.as_str()),
                     Control::sizes("radius")
-                        .default("xl"),
+                        .default(theme.chip.radius.as_str()),
                     // What the chip is: a plain tag, a checkbox, a button or
                     // a link. The last three never combine.
                     Control::toggle("kind", ["tag", "filter", "action", "link"])

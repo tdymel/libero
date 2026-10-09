@@ -224,7 +224,7 @@ pub fn RadioGroupPage() -> Element {
                             ],
                             _ => vec![],
                         }),
-                    Control::color("color"),
+                    Control::color("color").default(theme.radio.color.as_str()),
                     Control::sizes("size")
                         .default(theme.radio.size.as_str()),
                     Control::toggle("orientation", ["horizontal", "vertical"])

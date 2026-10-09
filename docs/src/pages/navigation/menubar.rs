@@ -3,6 +3,7 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::components::{Code, MenubarPart, Text};
+use libero::use_theme;
 
 mod demo;
 use demo::MenubarDemo;
@@ -20,6 +21,7 @@ fn wrap(_: &DemoValues, source: &str) -> String {
 
 #[component]
 pub fn MenubarPage() -> Element {
+    let theme = use_theme();
     rsx! {
         DocPage {
             title: "Menubar",
@@ -43,10 +45,10 @@ pub fn MenubarPage() -> Element {
                         .default("Start")
                         .doc("Where each menu lines up along that side."),
                     prop("size", "Size")
-                        .default("md")
+                        .default(theme.menubar.size.as_str())
                         .doc("The triggers' font and padding, and each menu's item size."),
                     prop("radius", "Size")
-                        .default("sm")
+                        .default(theme.menubar.radius.as_str())
                         .doc("The triggers' and the menus' corner radius."),
                     prop("menu_parts", "Parts<MenuPart>")
                         .doc("Every menu's `parts`, the `Menu` page's Style API table. The menus open in a portal, out of the bar's `sx` and `parts`."),
@@ -97,8 +99,8 @@ pub fn MenubarPage() -> Element {
                 controls: vec![
                     Control::side(["bottom", "top"]),
                     Control::align(),
-                    Control::sizes("size").default("md"),
-                    Control::sizes("radius").default("sm"),
+                    Control::sizes("size").default(theme.menubar.size.as_str()),
+                    Control::sizes("radius").default(theme.menubar.radius.as_str()),
                     Control::switch("loop_focus").default("true"),
                 ],
                 render: move |values: DemoValues| rsx! {

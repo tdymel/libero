@@ -4,6 +4,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::{Burger, BurgerPart, Code, Flex, Input, Paper, Text};
 use libero::sx::sx;
+use libero::use_theme;
 
 /// The panel `aria-controls` names: with `open` set and no real target, `Burger` warns.
 const PANEL_ID: &str = "burger-demo-panel";
@@ -58,6 +59,7 @@ fn BurgerPreview(size: String, color: String, disabled: bool) -> Element {
 
 #[component]
 pub fn BurgerPage() -> Element {
+    let theme = use_theme();
     rsx! {
         DocPage {
             title: "Burger",
@@ -71,7 +73,7 @@ pub fn BurgerPage() -> Element {
                 prop("label", "Callback<bool, String>")
                     .doc("Replaces the localization's labels. Called with the open state during render, so it can read a live locale."),
                 prop("size", "ThemeAwareValue")
-                    .default("md")
+                    .default(theme.burger.size.as_str())
                     .doc("The glyph's width and height. The button is one `spacing.xs` step larger. Below 24px it still takes presses in a 24x24 box."),
                 prop("color", "ThemeAwareValue")
                     .default("currentColor")
@@ -118,7 +120,7 @@ pub fn BurgerPage() -> Element {
                     "onclick: move |_| open.toggle()".to_string(),
                 ],
                 controls: vec![
-                    Control::sizes("size").default("md"),
+                    Control::sizes("size").default(theme.burger.size.as_str()),
                     // Unset is `currentColor`, so the swatch is painted (`codebase/docs/demo-controls`).
                     Control::color("color").with_unset()
                     .unset_swatch("currentColor"),

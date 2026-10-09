@@ -117,8 +117,8 @@ pub fn DialogPage() -> Element {
                 children_text: "",
                 children_code: CONTENT.to_string(),
                 controls: vec![
-                    Control::sizes("size").default("md"),
-                    Control::sizes("radius").default("md"),
+                    Control::sizes("size").default(theme.dialog.size.as_str()),
+                    Control::sizes("radius").default(radius.as_str()),
                     // Unnamed, a dialog is announced as just "dialog", so off
                     // names it through `aria_label` instead.
                     Control::switch("title")

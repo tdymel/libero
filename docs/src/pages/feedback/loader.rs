@@ -1,6 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Box, Code, Flex, Input, Loader, Text, VisuallyHidden};
+use libero::use_theme;
 
 /// The loader stays silent either way: beside text the text speaks; alone in a busy region,
 /// a status region outside it does.
@@ -36,6 +37,7 @@ fn in_region(values: &DemoValues) -> bool {
 
 #[component]
 pub fn LoaderPage() -> Element {
+    let theme = use_theme();
     rsx! {
         DocPage {
             title: "Loader",
@@ -43,13 +45,13 @@ pub fn LoaderPage() -> Element {
             markdown: "/md/loader.md",
             properties: vec![props("Loader", vec![
                 prop("variant", "LoaderVariant")
-                    .default("oval")
+                    .default(theme.loader.variant.as_str())
                     .doc("The shape: `oval`, `bars` or `dots`."),
                 prop("size", "Size")
-                    .default("md")
+                    .default(theme.loader.size.as_str())
                     .doc("The edge of the square, 18px at `xs` to 72px at `xxl`."),
                 prop("color", "ThemeAwareValue")
-                    .default("primary")
+                    .default(theme.loader.color.as_str())
                     .doc("A theme color name or any CSS color."),
             ])],
             accessibility: a11y()
@@ -76,12 +78,12 @@ pub fn LoaderPage() -> Element {
                 component: "Loader",
                 children_text: "",
                 controls: vec![
-                    Control::toggle("variant", ["oval", "bars", "dots"])
+                    Control::toggle("variant", ["oval", "bars", "dots"]).default(theme.loader.variant.as_str())
                         .labels(["Oval", "Bars", "Dots"]),
-                    Control::sizes("size").default("md"),
+                    Control::sizes("size").default(theme.loader.size.as_str()),
                     // A bare `primary` is what an unset `color` resolves to,
                     // so that swatch prints nothing.
-                    Control::color("color"),
+                    Control::color("color").default(theme.loader.color.as_str()),
                     // Neither is a prop: they place the loader beside its
                     // own text, or alone in a busy region.
                     // On by default, so the first code block is the safe setup.

@@ -80,17 +80,17 @@ pub fn IconPage() -> Element {
                     Control::toggle(
                         "variant",
                         ["filled", "tonal", "elevated", "outlined", "standard", "gradient"],
-                    )
+                    ).default(theme.icon.variant.as_str())
                     .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard", "Gradient"]),
                     // A bare `primary` is what an unset `color` resolves
                     // to, so that swatch prints nothing.
                     Control::color("color"),
                     gradient_to,
                     gradient_deg,
-                    Control::sizes("size").default("md"),
+                    Control::sizes("size").default(theme.icon.size.as_str()),
                     // `standard` draws no box, so there is no corner to round.
                     Control::sizes("radius")
-                        .default("sm")
+                        .default(theme.icon.radius.as_str())
                         .hidden_when(|values| values.str("variant") == "standard"),
                     // Off, the icon stays hidden, as one beside a text label should.
                     Control::switch("aria_label").code(|_, values| match values.str("aria_label").as_str() {

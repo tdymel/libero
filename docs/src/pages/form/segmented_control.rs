@@ -205,11 +205,11 @@ pub fn SegmentedControlPage() -> Element {
                     Control::toggle(
                         "variant",
                         ["filled", "tonal", "elevated", "outlined", "standard", "gradient"],
-                    )
+                    ).default(theme.segmented_control.variant.as_str())
                     .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard", "Gradient"]),
                     // A bare `primary` is what an unset `color` resolves
                     // to, so that swatch prints nothing.
-                    Control::color("color"),
+                    Control::color("color").default(theme.segmented_control.color.as_str()),
                     Control::sizes("size")
                         .default("md"),
                     Control::sizes("radius")

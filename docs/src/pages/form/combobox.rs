@@ -211,9 +211,9 @@ pub fn ComboboxPage() -> Element {
                         .labels(["Select", "Suggestions", "Fetching"])
                         .code(mode_code),
                     Control::sizes("size")
-                        .default("md"),
+                        .default(theme.combobox.size.as_str()),
                     Control::sizes("radius")
-                        .default("sm"),
+                        .default(theme.combobox.radius.as_str()),
                     Control::switch("option").code(option_code),
                     Control::switch("disabled"),
                 ],

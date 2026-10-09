@@ -1,9 +1,11 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Input, RepoHost, Repository, RepositoryPart, Text};
+use libero::use_theme;
 
 #[component]
 pub fn RepositoryPage() -> Element {
+    let theme = use_theme();
     rsx! {
         DocPage {
             title: "Repository",
@@ -16,7 +18,7 @@ pub fn RepositoryPage() -> Element {
                     .default("GitHub")
                     .doc("Where the repository lives: `RepoHost::GitHub` or `RepoHost::GitLab`."),
                 prop("variant", "Variant")
-                    .default("outlined")
+                    .default(theme.repository.variant.as_str())
                     .doc("Visual style, as on `ActionIcon`."),
                 prop("color", "ThemeAwareValue")
                     .default("muted")
@@ -68,7 +70,7 @@ pub fn RepositoryPage() -> Element {
                         }),
                     Control::toggle("variant", ["outlined", "filled", "gradient", "tonal", "standard"])
                         .labels(["Outlined", "Filled", "Gradient", "Tonal", "Standard"])
-                        .default("outlined"),
+                        .default(theme.repository.variant.as_str()),
                     // `muted` is what an unset `color` resolves to, so that
                     // swatch prints nothing.
                     Control::color("color").default("muted"),

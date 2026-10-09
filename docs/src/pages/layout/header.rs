@@ -81,7 +81,7 @@ pub fn HeaderPage() -> Element {
                 controls: vec![
                     Control::toggle("position", ["sticky", "static"]).labels(["Sticky", "Static"]),
                     Control::sizes("size")
-                        .default("md"),
+                        .default(theme.header.size.as_str()),
                     // Unset is the paper surface, the real default, so that prints nothing.
                     Control::color("color").with_unset()
                     .code(|_, values| match values.str("color").as_str() {

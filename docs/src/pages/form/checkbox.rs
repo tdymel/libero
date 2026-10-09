@@ -111,7 +111,7 @@ pub fn CheckboxPage() -> Element {
                             "card" => vec![r#"variant: "card""#.to_string()],
                             _ => vec![],
                         }),
-                    Control::color("color"),
+                    Control::color("color").default(theme.checkbox.color.as_str()),
                     Control::sizes("size")
                         .default(theme.checkbox.size.as_str()),
                     Control::sizes("radius")

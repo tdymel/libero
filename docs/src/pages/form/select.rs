@@ -360,8 +360,8 @@ pub fn SelectPage() -> Element {
                     "placeholder: \"Pick a fruit\"".to_string(),
                 ],
                 controls: [vec![
-                    Control::sizes("size").default("md"),
-                    Control::sizes("radius").default("sm"),
+                    Control::sizes("size").default(theme.select.size.as_str()),
+                    Control::sizes("radius").default(theme.select.radius.as_str()),
                 ], field_controls::<FruitCopy>(), vec![
                     // Draws the rows and the trigger through `option` and
                     // `selection` - what `NativeSelect` cannot do at all.

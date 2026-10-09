@@ -1,6 +1,7 @@
 use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Text};
+use libero::use_theme;
 
 mod demo;
 use demo::TeamTable;
@@ -178,6 +179,7 @@ fn resizes(values: &DemoValues) -> bool {
 
 #[component]
 pub fn TablePage() -> Element {
+    let theme = use_theme();
     rsx! {
         DocPage {
             title: "Table",
@@ -216,7 +218,7 @@ pub fn TablePage() -> Element {
                     prop("default_expanded", "Vec<String>").default("[]").doc("Seeds the open details once. Ignored when `expanded` is set."),
                     prop("onexpandedchange", "EventHandler<Vec<String>>").default("None").doc("Called with the open details a toggle asks for."),
                     prop("onrowreorder", "EventHandler<SortableMove>").default("None").doc("Adds a leading column with a drag handle and Move up and Move down buttons per row. Called with a move by positions in `data`; apply it with `step.apply(&mut rows)`, the table shows the old order until you do. Off while the rows are sorted or the quick filter has text. Paged, a row moves within its page. Set `row_key` with it."),
-                    prop("size", "Size").default("theme (md)").doc("Cell padding and font size."),
+                    prop("size", "Size").default(theme.table.size.as_str()).doc("Cell padding and font size."),
                     prop("density", "Option<Size>").default("None").doc("The size a `TableDensityButton` picked, over `size`; set, it is controlled."),
                     prop("default_density", "Option<Size>").default("None").doc("Seeds the density once. Ignored when `density` is set."),
                     prop("ondensitychange", "Option<EventHandler<Size>>").default("None").doc("The density a `TableDensityButton` pick asks for."),
@@ -361,7 +363,7 @@ pub fn TablePage() -> Element {
                 ],
                 controls: vec![
                     Control::sizes("size")
-                        .default("md"),
+                        .default(theme.table.size.as_str()),
                     Control::switch("striped"),
                     Control::switch("scroll").code(|_, values| match values.str("scroll") == "true" {
                         true => vec![

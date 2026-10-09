@@ -111,7 +111,7 @@ pub fn SwitchPage() -> Element {
                             "card" => vec![r#"variant: "card""#.to_string()],
                             _ => vec![],
                         }),
-                    Control::color("color"),
+                    Control::color("color").default(theme.switch.color.as_str()),
                     Control::sizes("size")
                         .default(theme.switch.size.as_str()),
                     Control::sizes("radius")

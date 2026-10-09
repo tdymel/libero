@@ -106,9 +106,9 @@ pub fn PasswordFieldPage() -> Element {
                 ],
                 controls: [vec![
                     Control::sizes("size")
-                        .default("md"),
+                        .default(theme.text_field.size.as_str()),
                     Control::sizes("radius")
-                        .default("sm"),
+                        .default(theme.text_field.radius.as_str()),
                 ], field_controls::<PasswordCopy>(), vec![
                     Control::switch("placeholder").code(|_, values| {
                         match values.str("placeholder").as_str() {

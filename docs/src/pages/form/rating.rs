@@ -128,8 +128,8 @@ pub fn RatingPage() -> Element {
                 component: "Rating",
                 children_text: "",
                 controls: vec![
-                    Control::sizes("size").default("md"),
-                    Control::color("color").default("warning"),
+                    Control::sizes("size").default(theme.rating.size.as_str()),
+                    Control::color("color").default(theme.rating.color.as_str()),
                     Control::toggle("fractions", ["1", "2"])
                         .labels(["Whole", "Halves"])
                         .default("2")

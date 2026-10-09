@@ -98,7 +98,7 @@ pub fn TabsPage() -> Element {
                     prop("option_label", "Callback<T, OptionLabel>")
                         .default("T::label()")
                         .doc("Overrides a tab's label. Runs during render, so it can read a locale."),
-                    prop("size", "Size").default("md").doc("Tab strip size."),
+                    prop("size", "Size").default(theme.tabs.size.as_str()).doc("Tab strip size."),
                     prop("color", "ThemeAwareValue").default(theme.tabs.color.as_str()).doc("Indicator and selected-label color."),
                     prop("full_width", "bool").default("false").doc("Tabs grow to fill the row, never below their label. A crowded strip still scrolls. Not themed."),
                     prop("activation", "TabsActivation").default(theme.tabs.activation.as_str()).doc("`Automatic` selects as the arrows move. `Manual` moves only the focus, and Enter or Space selects. Use it for slow panels."),
@@ -162,9 +162,9 @@ pub fn TabsPage() -> Element {
                             "rich" => vec![RICH.to_string()],
                             _ => vec![],
                         }),
-                    Control::color("color"),
+                    Control::color("color").default(theme.tabs.color.as_str()),
                     Control::sizes("size")
-                        .default("md"),
+                        .default(theme.tabs.size.as_str()),
                     Control::toggle("activation", ["automatic", "manual"])
                         .labels(["Automatic", "Manual"])
                         .default("automatic"),

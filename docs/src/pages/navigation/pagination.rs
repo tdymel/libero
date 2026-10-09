@@ -108,7 +108,7 @@ pub fn PaginationPage() -> Element {
                     Control::slider("boundaries", ["1", "2", "3"]).default("1").code(unquoted),
                     Control::sizes("size").default(theme.pagination.size.as_str()),
                     Control::sizes("radius").default(theme.pagination.radius.as_str()),
-                    Control::color("color"),
+                    Control::color("color").default(theme.pagination.color.as_str()),
                     Control::switch("with_controls").default("true"),
                     Control::switch("with_edges"),
                     Control::switch("disabled"),

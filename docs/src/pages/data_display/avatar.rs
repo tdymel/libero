@@ -109,13 +109,13 @@ pub fn AvatarPage() -> Element {
                         .default("None")
                         .doc("Replaces the announced name. `alt: \"\"` marks the avatar decorative."),
                     prop("size", "Size")
-                        .default("md")
+                        .default(theme.avatar.size.as_str())
                         .doc("The side of the square, which also sets the placeholder's font size."),
                     prop("radius", "Size")
-                        .default("xxl")
+                        .default(theme.avatar.radius.as_str())
                         .doc("A step on the avatar's own radius scale, `2px` to `32px`. The default `xxl` is a circle."),
                     prop("variant", "Variant")
-                        .default("tonal")
+                        .default(theme.avatar.variant.as_str())
                         .doc("The placeholder's look. Hidden once a picture loads."),
                     prop("color", "ThemeAwareValue")
                         .default(theme.avatar.color.as_str())
@@ -140,13 +140,13 @@ pub fn AvatarPage() -> Element {
                         .default("sm")
                         .doc("How far each circle overlaps the one before it."),
                     prop("size", "Size")
-                        .default("md")
+                        .default(theme.avatar.size.as_str())
                         .doc("For every member and the chip."),
                     prop("radius", "Size")
-                        .default("xxl")
+                        .default(theme.avatar.radius.as_str())
                         .doc("For every member and the chip."),
                     prop("variant", "Variant")
-                        .default("tonal")
+                        .default(theme.avatar.variant.as_str())
                         .doc("For every member and the chip."),
                     prop("color", "ThemeAwareValue")
                         .default(theme.avatar.color.as_str())
@@ -219,17 +219,17 @@ pub fn AvatarPage() -> Element {
                     Control::sizes("spacing")
                         .default("sm")
                         .hidden_when(|values| !grouped(values)),
-                    Control::sizes("size").default("md"),
+                    Control::sizes("size").default(theme.avatar.size.as_str()),
                     Control::sizes("radius")
-                        .default("xxl"),
+                        .default(theme.avatar.radius.as_str()),
                     Control::toggle(
                         "variant",
                         ["filled", "tonal", "elevated", "outlined", "standard"],
                     )
                     .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard"])
-                    .default("tonal"),
+                    .default(theme.avatar.variant.as_str()),
                     // Unset `color` resolves to primary, so the default swatch is primary.
-                    Control::color("color"),
+                    Control::color("color").default(theme.avatar.color.as_str()),
                     // Not a prop: the name beside the avatar, which `alt: ""` then hides.
                     Control::switch("beside_name")
                         .hidden_when(grouped)

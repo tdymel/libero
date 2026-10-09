@@ -720,7 +720,7 @@ fn Demo() -> Element {
 | `default_expanded` | `Vec<String>` | `[]` | Seeds the open details once. Ignored when `expanded` is set. |
 | `onexpandedchange` | `EventHandler<Vec<String>>` | `None` | Called with the open details a toggle asks for. |
 | `onrowreorder` | `EventHandler<SortableMove>` | `None` | Adds a leading column with a drag handle and Move up and Move down buttons per row. Called with a move by positions in `data`; apply it with `step.apply(&mut rows)`, the table shows the old order until you do. Off while the rows are sorted or the quick filter has text. Paged, a row moves within its page. Set `row_key` with it. |
-| `size` | `Size` | theme (md) | Cell padding and font size. |
+| `size` | `Size` | `md` | Cell padding and font size. |
 | `density` | `Option<Size>` | `None` | The size a `TableDensityButton` picked, over `size`; set, it is controlled. |
 | `default_density` | `Option<Size>` | `None` | Seeds the density once. Ignored when `density` is set. |
 | `ondensitychange` | `Option<EventHandler<Size>>` | `None` | The density a `TableDensityButton` pick asks for. |

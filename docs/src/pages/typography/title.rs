@@ -3,6 +3,7 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::components::{Code, HtmlTag, Input, Text, Title};
+use libero::use_theme;
 
 fn no_gradient(values: &DemoValues) -> bool {
     values.str("gradient") != "true"
@@ -10,6 +11,7 @@ fn no_gradient(values: &DemoValues) -> bool {
 
 #[component]
 pub fn TitlePage() -> Element {
+    let theme = use_theme();
     let [gradient_to, gradient_deg] = gradient_controls(no_gradient);
     rsx! {
         DocPage {
@@ -18,7 +20,7 @@ pub fn TitlePage() -> Element {
             markdown: "/md/title.md",
             properties: vec![props("Title", vec![
                 prop("size", "Size")
-                    .default("xxl")
+                    .default(theme.title.size.as_str())
                     .doc("Visual size, `xs` to `xxl`. Also picks the tag unless `component` is set."),
                 prop("component", "HtmlTag")
                     .default("follows size")
@@ -65,7 +67,7 @@ pub fn TitlePage() -> Element {
                     children_text: "The quick brown fox",
                     controls: vec![
                         Control::sizes("size")
-                            .default("xxl"),
+                            .default(theme.title.size.as_str()),
                         Control::slider(
                             "component",
                             ["auto", "h1", "h2", "h3", "h4", "h5", "h6"],

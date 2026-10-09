@@ -56,7 +56,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `size` | `Size` | `md` | Text size, line height, padding and the accent bar's width. |
-| `color` | `ThemeAwareValue` | `primary`, tinted | The accent bar and the tint behind the quote. A theme color name gets its lightest shade. Any CSS color works too, and a CSS color or a shade from 6 up fills the quote solid, with no separate bar or tint. |
+| `color` | `ThemeAwareValue` | `primary` | The accent bar and the tint behind the quote. A theme color name gets its lightest shade. Any CSS color works too, and a CSS color or a shade from 6 up fills the quote solid, with no separate bar or tint. |
 | `radius` | `Size` | `sm` | Rounds the two corners away from the accent bar. |
 | `attribution` | `Element` | - | Who said it, shown under the quote. For any join other than a comma, pass the whole line here. |
 | `work` | `String` | - | The title of the quoted work, such as a book or a talk. Follows `attribution` after a comma. |

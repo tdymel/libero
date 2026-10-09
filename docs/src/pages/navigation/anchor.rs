@@ -1,6 +1,7 @@
 use crate::components::{Child, Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Anchor, AnchorPart, Code, Text};
+use libero::use_theme;
 
 const HREF: &str = "https://dioxuslabs.com";
 const EXTERNAL_LABEL: &str = "Read the Dioxus docs";
@@ -16,13 +17,14 @@ fn link_label(values: &DemoValues) -> String {
 
 #[component]
 pub fn AnchorPage() -> Element {
+    let theme = use_theme();
     rsx! {
         DocPage {
             title: "Anchor",
             source: "libero/src/components/navigation/anchor.rs",
             markdown: "/md/anchor.md",
             properties: vec![props("Anchor", vec![
-                prop("size", "Size").default("md").doc("Text size."),
+                prop("size", "Size").default(theme.anchor.size.as_str()).doc("Text size."),
                 prop("to", "NavigationTarget")
                     .default("required")
                     .doc("A path, a URL or a typed route (`Route::Foo {}`). With a router mounted and `target` unset or `\"_blank\"`, an internal target navigates without a page reload. A `javascript:` URL runs script on click, so check the scheme of any URL from user data."),
@@ -87,7 +89,7 @@ pub fn AnchorPage() -> Element {
                     Control::toggle("underline", ["hover", "always", "never"])
                         .labels(["Hover", "Always", "Never"]),
                     Control::sizes("size")
-                        .default("md"),
+                        .default(theme.anchor.size.as_str()),
                 ],
                 render: move |values: DemoValues| {
                     let underline = values.str("underline");

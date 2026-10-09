@@ -178,10 +178,10 @@ pub fn FileFieldPage() -> Element {
                 controls: [vec![
                     Control::toggle("variant", ["input", "dropzone"])
                         .labels(["Input", "Dropzone"])
-                        .default("input")
+                        .default(theme.file_field.variant.as_str())
                         .code(variant_code),
-                    Control::sizes("size").default("md"),
-                    Control::sizes("radius").default("sm"),
+                    Control::sizes("size").default(theme.file_field.size.as_str()),
+                    Control::sizes("radius").default(theme.file_field.radius.as_str()),
                     Control::toggle("accept", ["any", "image/*", ".pdf"])
                         .labels(["Any", "Images", "PDF"])
                         .default("any")

@@ -89,7 +89,7 @@ pub fn ThemeSwitcherPage() -> Element {
                         ["filled", "tonal", "elevated", "outlined", "standard"],
                     )
                     .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard"])
-                    .default("outlined"),
+                    .default(theme.theme_switcher.variant.as_str()),
                     // `muted` is what an unset `color` resolves to, so that
                     // swatch prints nothing.
                     Control::color("color").default("muted"),

@@ -3,6 +3,7 @@ use dioxus::prelude::*;
 use libero::components::{
     Button, Code, Flex, Input, Options, StepState, Stepper, StepperPart, Text,
 };
+use libero::use_theme;
 
 /// The steps are the enum, so the snippet is a lie without it.
 const STAGE_ENUM: &str = r#"#[derive(Clone, PartialEq, Options)]
@@ -80,6 +81,7 @@ fn on(values: &DemoValues, name: &str) -> bool {
 
 #[component]
 pub fn StepperPage() -> Element {
+    let theme = use_theme();
     let mut stage = use_signal(|| Some(Stage::Account));
 
     rsx! {
@@ -103,7 +105,7 @@ pub fn StepperPage() -> Element {
                     prop("allow_next_steps", "bool").default("false").doc("With `onstepclick`, lets steps not reached yet be picked too."),
                     prop("orientation", "Orientation").default("horizontal").doc("`vertical` puts each step's content under the step itself."),
                     prop("label_position", "StepLabelPosition").default("side").doc("`side` or `below` the marker. Ignored when vertical. Under 120px a step (360px for three), `side` draws as `below`."),
-                    prop("size", "Size").default("md").doc("Marker, type and spacing."),
+                    prop("size", "Size").default(theme.stepper.size.as_str()).doc("Marker, type and spacing."),
                     prop("color", "ThemeAwareValue").default("primary").doc("The current and completed markers, and the connectors behind them."),
                     prop("parts", "Parts<StepperPart>")
                         .doc("Styles for the inner parts in the Style API tab, under `sx`."),
@@ -161,7 +163,7 @@ pub fn StepperPage() -> Element {
                         .default("side")
                         .hidden_when(|values| values.str("orientation") == "vertical"),
                     Control::sizes("size")
-                        .default("md"),
+                        .default(theme.stepper.size.as_str()),
                     Control::color("color"),
                     Control::switch("clickable").code(|_, values| {
                         if on(values, "clickable") {

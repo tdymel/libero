@@ -3,6 +3,7 @@ use dioxus::prelude::*;
 use libero::{
     components::{Code, Container, Text},
     sx::sx,
+    use_theme,
 };
 
 /// Printed as a `fixed` line, so the preview and the code block share it: a
@@ -12,6 +13,7 @@ const SX: &str = r#"sx: sx().background("muted.1").padding_top("16px").padding_b
 
 #[component]
 pub fn ContainerPage() -> Element {
+    let theme = use_theme();
     rsx! {
         DocPage {
             title: "Container",
@@ -22,7 +24,7 @@ pub fn ContainerPage() -> Element {
                     .default("div")
                     .doc("The element to render."),
                 prop("size", "ThemeAwareValue")
-                    .default("lg")
+                    .default(theme.container.size.as_str())
                     .doc("Max width, a breakpoint (`xs` is 36rem, `xxl` 101rem) or a CSS length."),
                 prop("gutters", "ThemeAwareValue")
                     .default("md")
@@ -58,7 +60,7 @@ pub fn ContainerPage() -> Element {
                 children_text: "Centered, width-capped content.",
                 fixed: vec![SX.to_string()],
                 controls: vec![
-                    Control::sizes("size").default("lg"),
+                    Control::sizes("size").default(theme.container.size.as_str()),
                     Control::sizes("gutters")
                         .default("md"),
                     // No `main`: the docs page is one already, and a page has one main.

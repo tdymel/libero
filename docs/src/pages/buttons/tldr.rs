@@ -32,7 +32,7 @@ pub fn TldrPage() -> Element {
                 prop("aria_label", "String")
                     .doc("Names the icon-only trigger. Unset, `TldrLabels::icon_only` (\"Summarize with AI\")."),
                 prop("variant", "Variant")
-                    .default("outlined")
+                    .default(theme.tldr.variant.as_str())
                     .doc("The trigger's visual style."),
                 prop("size", "Size")
                     .default(theme.tldr.size.as_str())
@@ -95,9 +95,9 @@ pub fn TldrPage() -> Element {
                     Control::switch("icon_only"),
                     Control::toggle("variant", ["outlined", "filled", "tonal", "standard"])
                         .labels(["Outlined", "Filled", "Tonal", "Standard"])
-                        .default("outlined"),
+                        .default(theme.tldr.variant.as_str()),
                     Control::color("color").default("neutral"),
-                    Control::sizes("size").default("md"),
+                    Control::sizes("size").default(theme.tldr.size.as_str()),
                     // Unset is the trigger's own: `xl` on the chip, `sm` icon-only.
                     Control::slider("radius", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("auto")

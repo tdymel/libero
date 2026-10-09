@@ -2,6 +2,7 @@ use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, a11y, pr
 use dioxus::prelude::*;
 use libero::components::{Code, DirectionToggle, Input, Text};
 use libero::theme::Direction;
+use libero::use_theme;
 
 /// The `label` switch's names, printed as `LABEL` shows them.
 fn direction_label(to: Direction) -> String {
@@ -19,6 +20,7 @@ const LABEL: &str = r#"label: |to: Direction| match to {
 
 #[component]
 pub fn DirectionTogglePage() -> Element {
+    let theme = use_theme();
     rsx! {
         DocPage {
             title: "DirectionToggle",
@@ -26,7 +28,7 @@ pub fn DirectionTogglePage() -> Element {
             markdown: "/md/direction_toggle.md",
             properties: vec![props("DirectionToggle", vec![
                 prop("variant", "Variant")
-                    .default("outlined")
+                    .default(theme.direction_toggle.variant.as_str())
                     .doc("Visual style, as on `ActionIcon`."),
                 prop("color", "ThemeAwareValue")
                     .default("muted")
@@ -66,7 +68,7 @@ pub fn DirectionTogglePage() -> Element {
                 controls: vec![
                     Control::toggle("variant", ["outlined", "filled", "tonal", "standard"])
                         .labels(["Outlined", "Filled", "Tonal", "Standard"])
-                        .default("outlined"),
+                        .default(theme.direction_toggle.variant.as_str()),
                     // `muted` is what an unset `color` resolves to, so that
                     // swatch prints nothing.
                     Control::color("color").default("muted"),
