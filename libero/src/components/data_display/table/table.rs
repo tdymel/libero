@@ -51,6 +51,7 @@ use super::{
     overlay::{EmptyBody, LoadingBar, SKELETON_ROWS},
     paging::{TablePager, clamp_page, page_rows, use_page_reset, use_page_size_reseed},
     pinning::{PinSide, PinnedColumns, pin_columns, pinned_extent},
+    pipeline::{KnownRows, VisibleRow, cut_page, keyed_rows, selection_scope, visible_rows},
     resize::{ColumnResize, ColumnWidths, MenuWidth},
     row::{RowContext, RowState, TableRow},
     row_reorder::{ROW_ANIMATION, ROW_TRANSFORM, RowReorder},
@@ -1039,14 +1040,15 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         }
     });
     let instructions_id = use_id();
-    // The shown rows' indices in `data`, which a reorder's slots map to.
-    let mut shown_rows = use_hook(|| CopyValue::new(Vec::<usize>::new()));
+    // The shown rows, which a reorder's slots map to.
+    let mut shown_rows = use_hook(|| CopyValue::new(Vec::<VisibleRow>::new()));
     let onrowreorder = props.onrowreorder;
     let row_focus = use_row_focus();
     let reorder_rows = use_callback(move |step: SortableMove| {
         let shown = shown_rows.peek();
-        if let (Some(onrowreorder), Some(&from), Some(&to)) =
-            (onrowreorder, shown.get(step.from), shown.get(step.to))
+        let data_at = |slot: usize| shown.get(slot).and_then(|row| row.data());
+        if let (Some(onrowreorder), Some(from), Some(to)) =
+            (onrowreorder, data_at(step.from), data_at(step.to))
         {
             let step = SortableMove { from, to };
             onrowreorder.call(step);
@@ -1140,7 +1142,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let mut sorted = use_hook(|| CopyValue::new(SortedRows::<T>::default()));
     let mut filtered = use_hook(|| CopyValue::new(FilteredRows::<T>::default()));
     let mut row_context = use_hook(|| CopyValue::new((0u64, None::<Rc<RowContext<T>>>)));
-    let mut known_rows = use_hook(|| CopyValue::new(None::<(Rc<Vec<T>>, bool, Rc<[String]>)>));
+    let mut known_rows = use_hook(|| CopyValue::new(KnownRows::<T>::None));
     let mut pin_edges = use_signal(|| [None::<f64>; 2]);
     let pin_edge = use_callback(move |(side, width): (PinSide, f64)| {
         let at = usize::from(side == PinSide::End);
@@ -1303,29 +1305,12 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             .collect::<Vec<_>>()
     });
 
-    // The last rows and their keys while `data` stays equal: the sort and filter caches
-    // then match it by pointer, and no key is built again (todo 1983).
-    let (data, keys) = {
-        let known = known_rows.peek();
-        match &*known {
-            Some((data, keyed, keys))
-                if *keyed == props.row_key.is_set() && **data == props.data =>
-            {
-                (data.clone(), keys.clone())
-            }
-            _ => {
-                let data = Rc::new(props.data);
-                let keys: Rc<[String]> = data
-                    .iter()
-                    .enumerate()
-                    .map(|(index, row)| {
-                        props.row_key.call(row).unwrap_or_else(|| index.to_string())
-                    })
-                    .collect();
-                (data, keys)
-            }
-        }
-    };
+    let (data, keys) = keyed_rows(
+        &known_rows.peek(),
+        props.data,
+        props.row_key.is_set(),
+        |row| props.row_key.call(row),
+    );
     known_rows.set(Some((data.clone(), props.row_key.is_set(), keys.clone())));
     // The quick filter searches the shown, filterable columns.
     let words = query_words(&state.quick_filter.read());
@@ -1357,23 +1342,12 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             state.filter_logic.read(),
         ),
     };
-    let selection = look.map(|look| {
-        let scope = match &kept {
-            Some(kept) => keys
-                .iter()
-                .zip(kept.iter())
-                .filter(|(_, kept)| **kept)
-                .map(|(key, _)| key.clone())
-                .collect(),
-            None => keys.clone(),
-        };
-        Selection {
-            slice: state.selection,
-            scope,
-            announcer,
-            labels,
-            look: Rc::new(look),
-        }
+    let selection = look.map(|look| Selection {
+        slice: state.selection,
+        scope: selection_scope(&keys, kept.as_deref().map(Vec::as_slice)),
+        announcer,
+        labels,
+        look: Rc::new(look),
     });
     // Stable, so a row's box memoizes when its row did not change.
     let current = selection.clone();
@@ -1413,13 +1387,11 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let columns = Rc::new(props.columns);
     // Filter, sort, then page; a `manual_*` stage is the caller's. Filtering
     // the sorted order keeps each stage's cache apart: a keystroke never re-sorts.
-    let mut order: Vec<usize> = match props.manual_sort {
+    let sorted_order = match props.manual_sort {
         true => (0..data.len()).collect(),
         false => sorted.write().order(&data, &columns, &active),
     };
-    if let Some(kept) = &kept {
-        order.retain(|&index| kept[index]);
-    }
+    let mut order = visible_rows(sorted_order, kept.as_deref().map(Vec::as_slice));
     let results = order.len();
     filtered_count.set(results);
     if props.toolbar.is_some() {
@@ -1461,8 +1433,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         let page = clamp_page(total, state.page.read(), page_size);
         let shown = page_rows(total, page, page_size);
         if !props.manual_pagination {
-            order.truncate(shown.end);
-            order.drain(..shown.start);
+            cut_page(&mut order, shown.clone());
         }
         counted = (shown.start, total.max(shown.start + order.len()));
         rsx! {
@@ -1579,17 +1550,21 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             let (first, total) = counted;
             attributes.extend(window_attributes(head_rows, total, skeleton.is_some()));
             attributes.extend(row_focus.attributes());
-            let order: Rc<[usize]> = order.into();
+            let order: Rc<[VisibleRow]> = order.into();
             row_focus.show(head_rows + first, order.clone());
             BodyRows::Window(RowWindow {
                 order,
                 first,
                 row_height,
-                row: Rc::new(move |position, index| {
-                    let row = &data[index];
-                    context.spec(row, state_of(position, index), context.cells(row))
+                row: Rc::new(move |position, row| match row {
+                    VisibleRow::Data(index) => {
+                        let row = &data[index];
+                        context.spec(row, state_of(position, index), context.cells(row))
+                    }
                 }),
-                key: key_at,
+                key: Rc::new(move |row| match row {
+                    VisibleRow::Data(index) => key_at(index),
+                }),
                 focused: row_focus.focused,
                 moves: row_focus.moves,
             })
@@ -1598,15 +1573,17 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             order
                 .into_iter()
                 .enumerate()
-                .map(|(position, index)| {
-                    let state = state_of(position, index);
-                    rsx! {
-                        TableRow::<T> {
-                            key: "{state.key}",
-                            row: data[index].clone(),
-                            state,
-                            context: context.clone(),
-                            generation,
+                .map(|(position, row)| match row {
+                    VisibleRow::Data(index) => {
+                        let state = state_of(position, index);
+                        rsx! {
+                            TableRow::<T> {
+                                key: "{state.key}",
+                                row: data[index].clone(),
+                                state,
+                                context: context.clone(),
+                                generation,
+                            }
                         }
                     }
                 })

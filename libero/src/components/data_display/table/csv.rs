@@ -1,4 +1,4 @@
-use super::column::Column;
+use super::{column::Column, pipeline::VisibleRow};
 
 /// The header row, then one row of cell text per row of `data`: each cell as
 /// its column shows it as text, `format` applied and `render` ignored.
@@ -58,14 +58,14 @@ pub(super) fn shown_csv<T>(
     columns: &[Column<T>],
     shown: &[usize],
     data: &[T],
-    order: &[usize],
+    order: &[VisibleRow],
 ) -> String {
     let header = shown.iter().map(|&at| columns[at].header.clone()).collect();
-    let rows = order.iter().map(|&row| {
-        shown
+    let rows = order.iter().map(|row| match *row {
+        VisibleRow::Data(row) => shown
             .iter()
             .map(|&at| (columns[at].text)(&data[row]))
-            .collect()
+            .collect(),
     });
     csv_of(std::iter::once(header).chain(rows))
 }
@@ -162,7 +162,7 @@ mod tests {
         ];
 
         assert_eq!(
-            shown_csv(&columns(), &[1, 0], &rows, &[1, 0]),
+            shown_csv(&columns(), &[1, 0], &rows, &[1, 0].map(VisibleRow::Data)),
             "Price,Name\r\n$4.00,Jam\r\n$2.50,Tea\r\n"
         );
     }

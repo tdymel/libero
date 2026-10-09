@@ -15,6 +15,7 @@ mod header_filters;
 mod overlay;
 mod paging;
 mod pinning;
+mod pipeline;
 mod resize;
 mod row;
 mod row_reorder;
