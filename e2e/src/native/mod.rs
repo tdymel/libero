@@ -311,6 +311,86 @@ fn client_rect(doc: &BaseDocument, id: NodeId) -> Option<(f64, f64, f64, f64)> {
     Some((rect.x + own.x, rect.y + own.y, rect.width, rect.height))
 }
 
+fn computed_value(doc: &BaseDocument, id: NodeId, property: &str) -> String {
+    let Ok(property) = PropertyId::parse_enabled_for_all_content(property) else {
+        return String::new();
+    };
+    let (Err(id), Some(style)) = (
+        property.as_shorthand(),
+        doc.get_node(id).and_then(|node| node.primary_styles()),
+    ) else {
+        return String::new();
+    };
+    style.computed_value_to_string(id)
+}
+
+/// How far a scroll offset moves to show `[start, end]` in `[view_start, view_end]`: the edge
+/// that is out of view, the start when it does not fit. libero's `nearest_scroll`.
+fn nearest_scroll(start: f64, end: f64, view_start: f64, view_end: f64) -> f64 {
+    if start < view_start || end - start > view_end - view_start {
+        start - view_start
+    } else if end > view_end {
+        end - view_end
+    } else {
+        0.0
+    }
+}
+
+/// The web's focus scroll, which Blitz lacks: every scroller round `id`, innermost first,
+/// then the viewport, moves just far enough. libero's `reveal`, without scroll padding.
+fn reveal(doc: &mut BaseDocument, id: NodeId) {
+    let mut ancestor = doc.get_node(id).and_then(|node| node.parent);
+    while let Some(scroller) = ancestor {
+        let Some(node) = doc.get_node(scroller) else {
+            break;
+        };
+        ancestor = node.parent;
+        let layout = *node.final_layout();
+        let scrolls = |axis: &str, range: f32| {
+            range > 0.0
+                && matches!(
+                    computed_value(doc, scroller, axis).as_str(),
+                    "auto" | "scroll" | "hidden"
+                )
+        };
+        let x = node.is_element() && scrolls("overflow-x", layout.scroll_width());
+        let y = node.is_element() && scrolls("overflow-y", layout.scroll_height());
+        let (Some(target), Some(view)) = (client_rect(doc, id), client_rect(doc, scroller)) else {
+            break;
+        };
+        if !x && !y {
+            continue;
+        }
+        let (border, bar) = (layout.border, layout.scrollbar_size);
+        let width = f64::from(layout.size.width - border.left - border.right - bar.width);
+        let height = f64::from(layout.size.height - border.top - border.bottom - bar.height);
+        let left = view.0 + f64::from(border.left);
+        let top = view.1 + f64::from(border.top);
+        let dx = if x {
+            nearest_scroll(target.0, target.0 + target.2, left, left + width)
+        } else {
+            0.0
+        };
+        let dy = if y {
+            nearest_scroll(target.1, target.1 + target.3, top, top + height)
+        } else {
+            0.0
+        };
+        if dx != 0.0 || dy != 0.0 {
+            doc.scroll_node_by(scroller, -dx, -dy, |_| {});
+        }
+    }
+    if let Some((x, y, width, height)) = client_rect(doc, id) {
+        let scale = doc.viewport().scale_f64();
+        let (window_width, window_height) = doc.viewport().window_size;
+        let dx = nearest_scroll(x, x + width, 0.0, f64::from(window_width) / scale);
+        let dy = nearest_scroll(y, y + height, 0.0, f64::from(window_height) / scale);
+        if dx != 0.0 || dy != 0.0 {
+            doc.scroll_viewport_by(-dx, -dy);
+        }
+    }
+}
+
 /// A table row or row group, which lays out no box in Blitz: its children's union.
 fn boxless_rect(doc: &BaseDocument, id: NodeId) -> Option<(f64, f64, f64, f64)> {
     let node = doc.get_node(id)?;
@@ -846,11 +926,15 @@ impl Page {
         self.settle();
     }
 
-    /// Focuses the first match directly, the way `element.focus()` does.
+    /// Focuses the first match directly, the way `element.focus()` does, scrolling it into view.
     /// Blitz fires no focus or blur event for it.
     pub fn focus(&mut self, selector: &str) {
         let id = self.node(selector);
-        self.doc.inner.borrow_mut().set_focus_to(id);
+        {
+            let mut doc = self.doc.inner.borrow_mut();
+            doc.set_focus_to(id);
+            reveal(&mut doc, id);
+        }
         self.settle();
     }
 
@@ -973,17 +1057,7 @@ impl Page {
     }
 
     pub fn computed_of(&self, id: NodeId, property: &str) -> String {
-        let doc = self.doc.inner.borrow();
-        let Ok(property) = PropertyId::parse_enabled_for_all_content(property) else {
-            return String::new();
-        };
-        let (Err(id), Some(style)) = (
-            property.as_shorthand(),
-            doc.get_node(id).and_then(|node| node.primary_styles()),
-        ) else {
-            return String::new();
-        };
-        style.computed_value_to_string(id)
+        computed_value(&self.doc.inner.borrow(), id, property)
     }
 
     /// The stroke Blitz will paint the first match's (an `svg`) first stroked

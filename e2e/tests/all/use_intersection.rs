@@ -96,6 +96,5 @@ async fn the_ratio_follows_the_threshold<D: Driver>(d: &mut D, _route: &str) -> 
 e2e::scenario!(
     a_scroller_is_the_root_and_the_ratio_follows_the_threshold,
     "/use-intersection/root",
-    the_ratio_follows_the_threshold,
-    native: skip("native Page::focus does not scroll into view")
+    the_ratio_follows_the_threshold
 );
