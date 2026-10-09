@@ -319,6 +319,36 @@ e2e::scenario!(
     desktop: skip("959: a WebView handle queries no focusables to bridge by")
 );
 
+/// 2720: Tab enters an interactive target, walks it and leaves it in `tabindex` order, both ways.
+async fn tabindex_order<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const CLOSE: &str = "[data-lsx-tour] [data-slot=close]";
+    open(d).await?;
+    hole_on(d, "#group", "starting the tour").await?;
+    tab_into(d, "#group-first").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, "#group-middle", "Tab to tabindex 2").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, "#group-last", "Tab to the control without a tabindex").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, CLOSE, "Tab from the target's last in Tab order").await?;
+    d.press_shift(keyboard::TAB).await?;
+    eventually_focused(d, "#group-last", "Shift+Tab from the card's first control").await?;
+    d.press_shift(keyboard::TAB).await?;
+    eventually_focused(d, "#group-middle", "Shift+Tab back to tabindex 2").await?;
+    d.press_shift(keyboard::TAB).await?;
+    eventually_focused(d, "#group-first", "Shift+Tab back to tabindex 1").await?;
+    d.press_shift(keyboard::TAB).await?;
+    eventually_focused(d, NEXT, "Shift+Tab from the target's first in Tab order").await
+}
+
+e2e::scenario!(
+    tab_follows_positive_tabindex_in_an_interactive_target,
+    "/tour/tabindex",
+    tabindex_order,
+    android: skip("959: a WebView handle queries no focusables to bridge by"),
+    desktop: skip("959: a WebView handle queries no focusables to bridge by")
+);
+
 /// 2674: Escape on the target's open Select closes the list only; the next ends the tour.
 async fn escape_closes_the_list_first<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     open(d).await?;

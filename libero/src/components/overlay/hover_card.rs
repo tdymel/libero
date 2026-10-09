@@ -8,7 +8,7 @@ use super::{
 };
 use crate::{
     components::{
-        accessibility::{focus_first_stop, tab_stops},
+        accessibility::{focus_edge, focus_first_stop, tab_order, tab_stops},
         common::{
             FOCUSABLE_SELECTOR, HtmlTag, Input, ScaleOrCss, States, Variables, base_props,
             input_from_str, inset_focus_ring_sx, variables,
@@ -456,54 +456,5 @@ fn card_tab(event: &KeyboardEvent, anchor: ElementHandle, floating: ElementHandl
     // Forward off the trigger, the browser's own Tab moves on.
     if inside || (via_trigger && backwards) {
         event.prevent_default();
-    }
-}
-
-/// Item indices in the browser's Tab order: positive `tabindex` ascending, then the rest in DOM order.
-fn tab_order(items: &[Box<dyn ElementApi>]) -> Vec<usize> {
-    let tabindex = |item: &dyn ElementApi| {
-        let value = item.attribute("tabindex").ok().flatten();
-        value.and_then(|text| text.trim().parse::<i32>().ok())
-    };
-    let indices: Vec<Option<i32>> = items.iter().map(|item| tabindex(item.as_ref())).collect();
-    order_by_tabindex(&indices)
-}
-
-fn order_by_tabindex(tabindexes: &[Option<i32>]) -> Vec<usize> {
-    let mut order: Vec<usize> = (0..tabindexes.len()).collect();
-    // Stable: equal `tabindex` and the unordered keep their DOM order.
-    order.sort_by_key(|at| match tabindexes[*at] {
-        Some(index) if index > 0 => (0, index),
-        _ => (1, 0),
-    });
-    order
-}
-
-/// The first (or last) control in Tab order that takes focus.
-fn focus_edge(root: &ElementHandle, last: bool) -> bool {
-    let Ok(items) = root.query_selector_all(FOCUSABLE_SELECTOR) else {
-        return false;
-    };
-    let stops = tab_stops(root, &items);
-    let order = tab_order(&items);
-    match last {
-        true => focus_first_stop(&items, &stops, order.into_iter().rev()),
-        false => focus_first_stop(&items, &stops, order.into_iter()),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn positive_tabindex_comes_first_in_ascending_order() {
-        let tabindexes = [None, Some(0), Some(3), Some(1), Some(3), None];
-        assert_eq!(order_by_tabindex(&tabindexes), [3, 2, 4, 0, 1, 5]);
-    }
-
-    #[test]
-    fn without_a_positive_tabindex_the_dom_order_stays() {
-        assert_eq!(order_by_tabindex(&[None, Some(0), None]), [0, 1, 2]);
     }
 }

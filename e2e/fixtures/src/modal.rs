@@ -22,7 +22,32 @@ pub const ROUTES: Routes = &[
     ("/modal/guarded", || rsx! { GuardedModalPage {} }),
     ("/modal/paper", || rsx! { PaperModalPage {} }),
     ("/modal/paper-static", || rsx! { StaticPaperModalPage {} }),
+    ("/modal/tabindex", || rsx! { TabindexModalPage {} }),
 ];
+
+/// Content whose DOM order is not its Tab order: `tabindex` 2, 1 and none (2720).
+#[component]
+fn TabindexModalPage() -> Element {
+    let sheet = use_modal(|_: ModalScope<()>| {
+        rsx! {
+            Paper { id: "sheet",
+                Button { id: "sheet-middle", "tabindex": "2", "Profile" }
+                Button { id: "sheet-first", "tabindex": "1", "Follow" }
+                Button { id: "sheet-last", "Message" }
+            }
+        }
+    });
+
+    rsx! {
+        Button {
+            id: "open-modal",
+            onclick: move |_| {
+                sheet.open();
+            },
+            "Open sheet"
+        }
+    }
+}
 
 /// Content that is no `Dialog` takes the pointer; only the backdrop closes (2559).
 #[component]

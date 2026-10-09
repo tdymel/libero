@@ -169,6 +169,29 @@ e2e::scenario!(
     non_dialog_content_takes_clicks
 );
 
+/// Todo 2720: the trap opens on and cycles in `tabindex` order, not DOM order, both ways.
+async fn tab_follows_positive_tabindex<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(TRIGGER).await?;
+    eventually_focused(d, "#sheet-first", "opening on tabindex 1").await?;
+    for to in ["#sheet-middle", "#sheet-last", "#sheet-first"] {
+        d.press(keyboard::TAB).await?;
+        eventually_focused(d, to, "Tab").await?;
+    }
+    for to in ["#sheet-last", "#sheet-middle", "#sheet-first"] {
+        d.press_shift(keyboard::TAB).await?;
+        eventually_focused(d, to, "Shift+Tab").await?;
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    the_trap_follows_positive_tabindex,
+    "/modal/tabindex",
+    tab_follows_positive_tabindex,
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView")
+);
+
 /// Todo 2559: with no `Dialog` and nothing focusable, focus lands on the content box, so
 /// Escape reaches the modal and focus goes back to the trigger.
 async fn non_dialog_content_takes_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {

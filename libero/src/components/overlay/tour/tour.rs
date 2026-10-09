@@ -8,7 +8,7 @@ use super::{
 };
 use crate::{
     components::{
-        accessibility::{FocusTrap, focus_edge, focus_first_stop, tab_stops},
+        accessibility::{FocusTrap, focus_edge, focus_first_stop, tab_order, tab_stops},
         buttons::Button,
         common::{
             FOCUSABLE_SELECTOR, HtmlTag, Input, Part, Parts, attr, has_shortcut_modifier,
@@ -796,13 +796,15 @@ fn focus_card(positioner: &ElementHandle) {
     }
 }
 
-/// `root`'s first or last focusable; `None` without one or where the renderer cannot query.
+/// `root`'s first or last focusable in Tab order; `None` without one or where the renderer cannot query.
 fn edge_focusable(root: &ElementHandle, last: bool) -> Option<std::boxed::Box<dyn ElementApi>> {
-    let items = root.query_selector_all(FOCUSABLE_SELECTOR).ok()?;
-    match last {
-        true => items.into_iter().last(),
-        false => items.into_iter().next(),
-    }
+    let mut items = root.query_selector_all(FOCUSABLE_SELECTOR).ok()?;
+    let order = tab_order(&items);
+    let at = match last {
+        true => order.last(),
+        false => order.first(),
+    };
+    Some(items.swap_remove(*at?))
 }
 
 /// Focuses the target's first control (last, `backwards`), or the target itself; whether it took.
@@ -816,14 +818,15 @@ fn tab_in_target(target: &ElementHandle, card: &ElementHandle, backwards: bool) 
     let Ok(items) = target.query_selector_all(FOCUSABLE_SELECTOR) else {
         return false;
     };
+    let order = tab_order(&items);
     let after: Vec<usize> = match (
         target.is_focused(),
-        items.iter().position(|item| item.is_focused()),
+        order.iter().position(|item| items[*item].is_focused()),
     ) {
         (true, _) if backwards => Vec::new(),
-        (true, _) => (0..items.len()).collect(),
-        (false, Some(at)) if backwards => (0..at).rev().collect(),
-        (false, Some(at)) => (at + 1..items.len()).collect(),
+        (true, _) => order,
+        (false, Some(at)) if backwards => order[..at].iter().rev().copied().collect(),
+        (false, Some(at)) => order[at + 1..].to_vec(),
         // On an element out of the Tab order: the browser's own Tab.
         (false, None) => return false,
     };

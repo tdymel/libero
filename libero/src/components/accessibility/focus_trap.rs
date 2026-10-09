@@ -38,12 +38,16 @@ fn focus_first(root: &ElementHandle, tag: Option<&str>) {
     }
     if let Ok(mut items) = root.query_selector_all(FOCUSABLE_SELECTOR) {
         let mut stops = tab_stops(root, &items);
+        let mut order = tab_order(&items);
         // An autofocus target leads; one that takes no focus falls through to the first stop.
         if let Ok(target) = root.query_selector("[data-autofocus]") {
             items.insert(0, target);
             stops.insert(0, true);
+            order = std::iter::once(0)
+                .chain(order.into_iter().map(|at| at + 1))
+                .collect();
         }
-        if focus_next(&items, &stops, None, false) {
+        if focus_next(&items, &stops, &order, None, false) {
             return;
         }
     }
@@ -66,7 +70,8 @@ fn cycle_focus(root: &ElementHandle, backwards: bool) -> bool {
         return false;
     };
     let index = items.iter().position(|item| item.is_focused());
-    focus_next(&items, &tab_stops(root, &items), index, backwards)
+    let order = tab_order(&items);
+    focus_next(&items, &tab_stops(root, &items), &order, index, backwards)
 }
 
 /// Focus fell to the document: on `<body>` (`<html>` on Blitz) or on a removed element.
@@ -150,15 +155,36 @@ pub(crate) fn tab_stops(root: &ElementHandle, items: &[Box<dyn ElementApi>]) -> 
         .collect()
 }
 
-/// `root`'s first Tab stop that takes focus (the last, `last`); whether one did.
+/// Item indices in the browser's Tab order: positive `tabindex` ascending, then the rest in DOM order.
+pub(crate) fn tab_order(items: &[Box<dyn ElementApi>]) -> Vec<usize> {
+    let tabindex = |item: &dyn ElementApi| {
+        let value = item.attribute("tabindex").ok().flatten();
+        value.and_then(|text| text.trim().parse::<i32>().ok())
+    };
+    let indices: Vec<Option<i32>> = items.iter().map(|item| tabindex(item.as_ref())).collect();
+    order_by_tabindex(&indices)
+}
+
+fn order_by_tabindex(tabindexes: &[Option<i32>]) -> Vec<usize> {
+    let mut order: Vec<usize> = (0..tabindexes.len()).collect();
+    // Stable: equal `tabindex` and the unordered keep their DOM order.
+    order.sort_by_key(|at| match tabindexes[*at] {
+        Some(index) if index > 0 => (0, index),
+        _ => (1, 0),
+    });
+    order
+}
+
+/// `root`'s first Tab stop in Tab order that takes focus (the last, `last`); whether one did.
 pub(crate) fn focus_edge(root: &ElementHandle, last: bool) -> bool {
     let Ok(items) = root.query_selector_all(FOCUSABLE_SELECTOR) else {
         return false;
     };
     let stops = tab_stops(root, &items);
+    let order = tab_order(&items);
     match last {
-        true => focus_first_stop(&items, &stops, (0..items.len()).rev()),
-        false => focus_first_stop(&items, &stops, 0..items.len()),
+        true => focus_first_stop(&items, &stops, order.into_iter().rev()),
+        false => focus_first_stop(&items, &stops, order.into_iter()),
     }
 }
 
@@ -173,23 +199,25 @@ pub(crate) fn focus_first_stop(
         .any(|at| items[at].focus().is_ok() && items[at].is_focused())
 }
 
-/// Focuses the stop after `index` (from `None`: the first, or last backwards).
+/// Focuses the stop after item `index` in `order` (from `None`: the first, or last backwards).
 /// Skips non-stops and a `display: none` match, which ignores `focus()`.
 fn focus_next(
     items: &[Box<dyn ElementApi>],
     stops: &[bool],
+    order: &[usize],
     index: Option<usize>,
     backwards: bool,
 ) -> bool {
-    let len = items.len();
+    let len = order.len();
+    let index = index.and_then(|index| order.iter().position(|at| *at == index));
     let mut first_ok = None;
     for step in 1..=len {
-        let next = match (index, backwards) {
+        let next = order[match (index, backwards) {
             (None, false) => step - 1,
             (None, true) => len - step,
             (Some(i), false) => (i + step) % len,
             (Some(i), true) => (i + len - step) % len,
-        };
+        }];
         if !stops.get(next).copied().unwrap_or(true) {
             continue;
         }
@@ -214,7 +242,8 @@ base_props! {
     }
 }
 
-/// Keeps Tab and Shift+Tab cycling inside its children, and focuses the first one on mount.
+/// Keeps Tab and Shift+Tab cycling inside its children, and focuses the first one on mount,
+/// both in the browser's Tab order: a positive `tabindex` first.
 /// It has no Escape, and restores focus on unmount only with `restore_focus`.
 ///
 /// With nothing focusable inside it focuses an `aria-modal="true"` child, or else
@@ -284,8 +313,8 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
                     && root
                         .query_selector_all(FOCUSABLE_SELECTOR)
                         .is_ok_and(|items| {
-                            let stops = tab_stops(&root, &items);
-                            focus_next(&items, &stops, None, chord.modifiers.shift())
+                            let (stops, order) = (tab_stops(&root, &items), tab_order(&items));
+                            focus_next(&items, &stops, &order, None, chord.modifiers.shift())
                         })
             }))
         }))
@@ -383,4 +412,20 @@ pub fn FocusTrapInitialFocus() -> Element {
         .attr("data-autofocus", true)
         .event("onblur", move |_: Event<FocusData>| mark_used.set(true))
         .render(HtmlTag::Span, Vec::new(), ())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn positive_tabindex_comes_first_in_ascending_order() {
+        let tabindexes = [None, Some(0), Some(3), Some(1), Some(3), None];
+        assert_eq!(order_by_tabindex(&tabindexes), [3, 2, 4, 0, 1, 5]);
+    }
+
+    #[test]
+    fn without_a_positive_tabindex_the_dom_order_stays() {
+        assert_eq!(order_by_tabindex(&[None, Some(0), None]), [0, 1, 2]);
+    }
 }

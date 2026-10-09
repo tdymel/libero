@@ -19,6 +19,7 @@ pub const ROUTES: Routes = &[
     ("/tour/long", || rsx! { LongTourPage {} }),
     ("/tour/more", || rsx! { MoreTourPage {} }),
     ("/tour/form", || rsx! { FormTourPage {} }),
+    ("/tour/tabindex", || rsx! { TabindexTourPage {} }),
 ];
 
 const LONG: &str = "This stop has a lot to say. It explains the feature in several sentences, so \
@@ -240,6 +241,32 @@ fn FormTourPage() -> Element {
             }
             Text { id: "seen", size: "sm", if tour.seen() { "seen" } else { "unseen" } }
             Button { id: "forget", variant: "text", onclick: move |_| tour.forget(), "Forget" }
+        }
+    }
+}
+
+/// An interactive target whose DOM order is not its Tab order: `tabindex` 2, 1 and none (2720).
+#[component]
+fn TabindexTourPage() -> Element {
+    let group = use_element();
+    let tour = use_tour(TourOptions {
+        steps: vec![
+            TourStep::new("group")
+                .target(group)
+                .interactive(true)
+                .title("Group"),
+        ],
+        ..Default::default()
+    });
+
+    rsx! {
+        Flex { direction: "column", gap: "xl", max_width: "320px", sx: sx().padding("16px"),
+            Button { id: "start-tour", variant: "outlined", onclick: move |_| tour.start(), "Take the tour" }
+            div { id: "group", onmounted: group.mount(), ..group.attributes(),
+                Button { id: "group-middle", "tabindex": "2", "Profile" }
+                Button { id: "group-first", "tabindex": "1", "Follow" }
+                Button { id: "group-last", "Message" }
+            }
         }
     }
 }
