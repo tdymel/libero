@@ -909,6 +909,9 @@ impl Drop for BlitzKeySubscription {
 /// viewport. `absolute`: no stacking context; [`PortalEntry`] takes the hits.
 const PORTAL_ROOT_STYLE: &str = "position:absolute;width:100vw;height:100vh;pointer-events:none;";
 
+/// Marks the portal outlet, whose `fixed` entries `sticky.rs` leaves in place.
+const PORTAL_ROOT_ATTR: &str = "data-lsx-portal-root";
+
 /// A hitless viewport-wide box: Blitz hit-tests z-indexed boxes only in their
 /// untransformed union. During a [`follow_pointer`] drag it takes the hits.
 const HIT_AREA_STYLE: &str = "position:absolute;inset:0;z-index:1;pointer-events:none;";
@@ -970,6 +973,7 @@ pub(super) fn PortalRoot(children: Element) -> Element {
     rsx! {
         div {
             style: "{PORTAL_ROOT_STYLE}left:{left}px;top:{top}px;",
+            "data-lsx-portal-root": true,
             onmounted: move |event| {
                 if let Some(handle) = event.data().downcast::<NodeHandle>() {
                     *root.borrow_mut() = Some(handle.clone());
@@ -1459,6 +1463,10 @@ pub(super) fn when_laid_out(run: Box<dyn FnOnce()>) {
         )
     });
     drop(doc.laid_out_wait.replace(wait));
+}
+
+pub(super) fn awaits_layout() -> bool {
+    doc().is_some_and(|doc| !doc.laid_out.borrow().is_empty())
 }
 
 fn heal_now() {

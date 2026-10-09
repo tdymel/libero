@@ -1,5 +1,5 @@
-//! A docked `BottomNavigation` natively (todo 1356): sticky holds through the
-//! platform's sticky shim, `env()` falls back to 0px, `fixed` is not docked yet.
+//! A docked `BottomNavigation` natively (todo 1356): sticky and fixed hold
+//! through the platform's sticky shim, `env()` falls back to 0px.
 
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};
@@ -112,12 +112,17 @@ fn a_long_label_stops_at_two_lines() {
     assert!(height <= 2.0 * line + 1.0, "the label is {height}px tall");
 }
 
-/// Blitz lays `fixed` out as `absolute`: the bar sits at the document's end.
+/// Blitz lays `fixed` out as `absolute`, at the document's end: the shim docks
+/// it to the window, through a scroll too (todo 1409).
 #[test]
-#[ignore = "Blitz lays position: fixed out as absolute; a platform shim is a filed todo"]
 fn a_fixed_bar_docks_to_the_window() {
     let mut page = mount(fixed);
     let window = page.window_size().1 as f64;
     page.wait_for(|page| bottom(page, "#bar") == window);
+    assert_eq!(bottom(&page, "#bar"), window, "{}", page.tree());
+
+    page.hover("#content");
+    page.wheel("#content", 500.0);
+    page.wait_for(|page| page.rect("#content").1 < -100.0 && bottom(page, "#bar") == window);
     assert_eq!(bottom(&page, "#bar"), window, "{}", page.tree());
 }

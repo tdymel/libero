@@ -26,6 +26,13 @@ pub(crate) fn when_laid_out(run: impl FnOnce() + 'static) {
     super::backend::when_laid_out(Box::new(run));
 }
 
+/// Whether a [`when_laid_out`] run still waits for its wake: a native harness
+/// keeps polling until it ran, as a shell's next frame would.
+#[doc(hidden)]
+pub fn awaits_layout() -> bool {
+    super::backend::awaits_layout()
+}
+
 #[cfg(target_arch = "wasm32")]
 mod web {
     use wasm_bindgen::JsValue;

@@ -475,16 +475,30 @@ impl Page {
 
     /// Polls the vdom until it has no work left, then restyles and lays out.
     pub fn settle(&mut self) {
-        for _ in 0..MAX_POLLS {
+        let until = Instant::now() + WAIT_LIMIT;
+        let mut polls = 0;
+        loop {
             let busy = self.doc.poll(None);
             self.doc.inner.borrow_mut().resolve(self.time);
-            if !busy {
-                self.assert_no_false_flags();
-                self.assert_no_signal_warnings();
-                return;
+            if busy {
+                polls += 1;
+                assert!(
+                    polls < MAX_POLLS,
+                    "the vdom was still busy after {MAX_POLLS} polls"
+                );
+                continue;
             }
+            // A shell's next frame runs libero's `when_laid_out` work, whose wake a
+            // loaded machine delays (2596): poll until it ran.
+            let awaits = self.doc.vdom.in_runtime(libero::platform::awaits_layout);
+            if awaits && Instant::now() < until {
+                thread::sleep(Duration::from_millis(1));
+                continue;
+            }
+            self.assert_no_false_flags();
+            self.assert_no_signal_warnings();
+            return;
         }
-        panic!("the vdom was still busy after {MAX_POLLS} polls");
     }
 
     /// dioxus-native writes a `false` bool attribute as `disabled="false"`,

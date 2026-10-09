@@ -426,7 +426,7 @@ e2e::scenario!(
     a_fixed_bar_clears_the_focused_link,
     "/bottom-navigation/fixed",
     a_fixed_bar_leaves_the_focused_link_clear,
-    native: skip("Blitz lays position: fixed out as absolute; see the native unit")
+    native: skip("a link Tab reaches behind the fixed bar is not scrolled clear natively; a filed todo")
 );
 
 /// A fixed bar docks to the viewport's bottom edge, spans its width, publishes the
@@ -460,5 +460,5 @@ e2e::scenario!(
     a_fixed_bar_docks_everywhere,
     "/bottom-navigation/fixed",
     a_fixed_bar_docks,
-    native: skip("Blitz lays position: fixed out as absolute; see the native unit")
+    native: skip("the native driver has no scroll_by; the native unit docks and scrolls it")
 );

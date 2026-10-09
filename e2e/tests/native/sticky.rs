@@ -1,5 +1,6 @@
-//! Any `position: sticky` box natively, found by its computed style: Blitz lays
-//! one out as `relative`, so the platform moves it (todo 927).
+//! Any `position: sticky` or `fixed` box natively, found by its computed style:
+//! Blitz lays one out as `relative` or `absolute`, so the platform moves it
+//! (todos 927, 1409).
 
 use dioxus::prelude::*;
 use e2e::native::{Page, VIEWPORT, mount};
@@ -204,4 +205,50 @@ fn left_and_right_boxes_hold_sideways() {
     page.wait_for(|page| left(page, "#start") - origin == 0.0);
     assert_eq!(left(&page, "#start") - origin, 0.0, "{}", page.tree());
     assert_eq!(left(&page, "#end") - origin, 160.0, "{}", page.tree());
+}
+
+fn fixed() -> Element {
+    rsx! {
+        div { height: "100px" }
+        div { padding: "30px", position: "relative",
+            div { id: "corner", position: "fixed", top: "10px", left: "20px", width: "40px", height: "20px", "Corner" }
+            div { id: "end", position: "fixed", bottom: "10%", right: "0", width: "40px", height: "20px", "End" }
+            div { id: "static", position: "fixed", width: "40px", height: "20px", "Static" }
+        }
+        div { transform: "translateX(5px)",
+            div { id: "held", position: "fixed", top: "0", height: "20px", "Held" }
+        }
+        div { id: "content", height: "3000px", "Content" }
+    }
+}
+
+/// Blitz places `fixed` against the parent box: the shim moves it to its insets
+/// in the window (`%` of the window), and no scroll moves it (todo 1409).
+#[test]
+fn a_fixed_box_holds_at_its_insets_in_the_window() {
+    let mut page = mount(fixed);
+    let (width, height) = (f64::from(VIEWPORT.0), f64::from(VIEWPORT.1));
+    let placed = |page: &Page| {
+        let (corner, end) = (page.rect("#corner"), page.rect("#end"));
+        (corner.0, corner.1, end.0, end.1)
+    };
+    let expected = (20.0, 10.0, width - 40.0, (0.9 * height - 20.0).round());
+    page.wait_for(|page| placed(page) == expected);
+    assert_eq!(placed(&page), expected, "{}", page.tree());
+    let stays = top(&page, "#static");
+
+    scroll_page(&mut page, 300.0);
+    page.wait_for(|page| top(page, "#content") < -100.0 && placed(page) == expected);
+    assert_eq!(placed(&page), expected, "{}", page.tree());
+    assert_eq!(top(&page, "#static"), stays, "{}", page.tree());
+}
+
+/// A transformed ancestor holds a `fixed` box, as on the web: it scrolls along.
+#[test]
+fn a_fixed_box_in_a_transformed_box_stays_in_it() {
+    let mut page = mount(fixed);
+    let place = top(&page, "#held");
+    scroll_page(&mut page, 300.0);
+    page.wait_for(|page| top(page, "#held") == place - 300.0);
+    assert_eq!(top(&page, "#held"), place - 300.0, "{}", page.tree());
 }

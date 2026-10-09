@@ -1013,6 +1013,14 @@ pub(crate) fn when_laid_out(run: Box<dyn FnOnce()>) {
     run();
 }
 
+/// Only Blitz waits - see [`awaits_layout`](crate::platform::awaits_layout).
+pub(crate) fn awaits_layout() -> bool {
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return blitz::awaits_layout();
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    false
+}
+
 /// Only Blitz's stylo lacks the accessibility media features - see
 /// [`answers_a11y_media`](crate::platform::answers_a11y_media).
 pub(crate) const ANSWERS_A11Y_MEDIA: bool =

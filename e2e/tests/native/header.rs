@@ -4,7 +4,7 @@
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};
 use libero::{
-    components::{Header, ScrollArea, Select, Table, column},
+    components::{Header, HeaderPosition, ScrollArea, Select, Table, column},
     sx::sx,
 };
 
@@ -35,6 +35,37 @@ fn a_page_scroll_holds_the_banner_at_the_top() {
     page.wheel("#content", -300.0);
     page.wait_for(|page| top(page, "#banner") == 40.0);
     assert_eq!(top(&page, "#banner"), 40.0, "it stayed stuck");
+}
+
+fn fixed_banner() -> Element {
+    let mut presses = use_signal(|| 0);
+    rsx! {
+        div { padding: "40px",
+            Header { id: "banner", position: HeaderPosition::Fixed, sx: sx().background("rgb(255, 0, 0)"),
+                button { id: "press", onclick: move |_| presses += 1, "Pressed {presses}" }
+            }
+            div { id: "content", height: "3000px", "Content" }
+        }
+    }
+}
+
+/// A fixed banner in a padded parent holds at the window's corner through a
+/// scroll and takes its presses there (todo 1409).
+#[test]
+fn a_fixed_banner_holds_at_the_window_corner() {
+    let mut page = mount(fixed_banner);
+    let corner = |page: &Page| (page.rect("#banner").0, top(page, "#banner"));
+    page.wait_for(|page| corner(page) == (0.0, 0.0));
+    assert_eq!(corner(&page), (0.0, 0.0), "{}", page.tree());
+    page.hover("#content");
+    page.wheel("#content", 300.0);
+    page.wait_for(|page| top(page, "#content") < 0.0 && corner(page) == (0.0, 0.0));
+    assert_eq!(corner(&page), (0.0, 0.0), "{}", page.tree());
+    let (_, _, width, height) = page.rect("#banner");
+    let (x, y) = ((width - 4.0) as u32, (height / 2.0) as u32);
+    assert_eq!(page.painted_pixel(x, y), "rgb(255, 0, 0)");
+    page.click("#press");
+    assert_eq!(page.text("#press"), "Pressed 1", "{}", page.tree());
 }
 
 fn framed() -> Element {
