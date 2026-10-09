@@ -25,6 +25,7 @@ const WHITE: HexColor = HexColor::new(0xFF_FF_FF);
 
 // M3's state layer opacities.
 pub(crate) const HOVER_LAYER: u8 = 8;
+pub(crate) const PRESSED_LAYER: u8 = 10;
 pub(crate) const SELECTED_LAYER: u8 = 12;
 
 /// The theme's gradient, the one every `gradient` surface falls back to.
@@ -206,6 +207,10 @@ fn state_layer(percent: u8) -> String {
 /// The hover state layer: the far end over the fill, which raises the label's contrast.
 pub(crate) fn gradient_hover_sx() -> Sx {
     sx().background_image(state_layer(HOVER_LAYER))
+}
+
+pub(crate) fn gradient_pressed_sx() -> Sx {
+    sx().background_image(state_layer(PRESSED_LAYER))
 }
 
 pub(crate) fn gradient_selected_sx() -> Sx {

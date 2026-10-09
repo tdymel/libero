@@ -84,12 +84,22 @@ fn luminance(hex: &str) -> f32 {
     0.2126 * channel(0) + 0.7152 * channel(2) + 0.0722 * channel(4)
 }
 
+/// `fill` with `PRESSED_LAYER` percent of `label` mixed in, as `color-mix(in srgb, ..)` does.
+fn layered(fill: &str, label: &str) -> String {
+    let channel = |hex: &str, i: usize| u8::from_str_radix(&hex[i..i + 2], 16).unwrap() as f32;
+    let mixed: String = [1, 3, 5]
+        .map(|i| channel(fill, i) * 0.9 + channel(label, i) * 0.1)
+        .map(|value| format!("{:02x}", value.round() as u8))
+        .concat();
+    format!("#{mixed}")
+}
+
 fn ratio(a: &str, b: &str) -> f32 {
     let (a, b) = (luminance(a), luminance(b));
     (a.max(b) + 0.05) / (a.min(b) + 0.05)
 }
 
-/// Every hover and selected pair below 4.5:1, as `"<tag> <color> <variant>
+/// Every hover, selected and pressed pair below 4.5:1, as `"<tag> <color> <variant>
 /// <state> <ratio>"`.
 fn short_pairs(app: fn() -> Element) -> Vec<String> {
     let html = render(app);
@@ -113,14 +123,25 @@ fn short_pairs(app: fn() -> Element) -> Vec<String> {
                 let own = declarations(&attributes_of(&rest[start..], "button")["style"]);
                 rest = &rest[at + marker.len()..];
 
-                for state in ["hover", "selected"] {
+                for state in ["hover", "selected", "pressed"] {
+                    // Any other pressed fill is the selected one, measured above.
+                    if state == "pressed" && variant != "tonal" {
+                        continue;
+                    }
                     // The var the CSS labels this state with.
                     let label = match (variant, state) {
-                        ("tonal", "hover") => "on-container",
+                        ("tonal", "hover" | "pressed") => "on-container",
                         _ => "on-state",
                     };
                     let label = resolve(&own[&format!("{prefix}-{label}")], &[&own, &root]);
-                    let fill = resolve(&own[&format!("{prefix}-{state}")], &[&own, &root]);
+                    // A tonal pressed fill is the hover's with a layer of the label.
+                    let fill = match state {
+                        "pressed" => {
+                            let hover = resolve(&own[&format!("{prefix}-hover")], &[&own, &root]);
+                            layered(&hover, &label)
+                        }
+                        _ => resolve(&own[&format!("{prefix}-{state}")], &[&own, &root]),
+                    };
                     let measured = ratio(&label, &fill);
                     if measured < 4.5 {
                         short.push(format!("{tag} {color} {variant} {state} {measured:.2}"));
@@ -133,7 +154,7 @@ fn short_pairs(app: fn() -> Element) -> Vec<String> {
 }
 
 #[test]
-fn every_hover_and_selected_label_reads_on_its_fill_in_the_light_theme() {
+fn every_hover_selected_and_pressed_label_reads_on_its_fill_in_the_light_theme() {
     assert_eq!(short_pairs(light), Vec::<String>::new());
 }
 

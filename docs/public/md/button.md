@@ -128,7 +128,7 @@ title shows it on hover.
 | `--lsx-button-color` | Accent color of the current variant. |
 | `--lsx-button-contrast` | Text color on top of that accent. |
 | `--lsx-button-hover` | Accent color while hovered. |
-| `--lsx-button-selected` | Background of a selected toggle button. |
+| `--lsx-button-selected` | Background of a selected toggle button, and of any button while pressed. |
 | `--lsx-button-container` | Container fill of `tonal`. |
 | `--lsx-button-on-container` | Label color on that container, black or white, whichever reads on it. |
 

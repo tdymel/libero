@@ -50,7 +50,7 @@ Paper { sx: sx().padding("lg").box_shadow("none"), "Flat" }
 | `glass` | `bool` | `false` | Frosted glass: translucent, blurring what is behind it, tuned by the theme's `paper.glass_background` and `paper.glass_blur`. A `color` or `gradient` tints it, and a tinted glass gets glass cues: a saturated backdrop, a top highlight and a light sheen. Use it over app chrome such as a sticky bar (this site's header is drawn with it), not over images, where text can lose contrast. Opaque when the user reduces transparency, in forced colours, and in native windows, where a coloured one is its solid fill. |
 | `color` | `ThemeAwareValue` | - | Fills the surface. A theme color name paints its shade 6 under a text colour picked to read on it; any other CSS color is used as given, and its text colour is yours to set. With `glass`, a translucent tint of it, its share raised until the text reads 4.5:1: the more a colour must carry text, the less see-through the glass. Under a gradient, its first stop. |
 | `gradient` | `Gradient` | - | Fills the surface with a gradient from `color` to a second stop, as `("info", 90)` or `Gradient::default().to("info").deg(90)`; `Gradient::default()` is the theme's. The text colour is picked to read on both stops. With `glass`, the stops turn translucent, their share raised until the text reads 4.5:1; a literal stop's text is yours to check. Its stops carry down to any gradient inside it. |
-| `component` | `HtmlTag` | `div` | The element to render, such as `section`, `article`, `aside`, or `a` for a clickable card. An `aside` is a landmark and needs your `aria-label`; a `section` becomes one once you give it an `aria-label`. |
+| `component` | `HtmlTag` | `div` | The element to render, such as `section`, `article`, `aside`, or `a` for a clickable card. An `aside` is a landmark and needs your `aria-label`; a `section` becomes one once you give it an `aria-label`. A surface that takes a press, an `a` with an `href`, a `button` or any element with an `onclick`, also tints on hover, tints deeper while pressed and shows the focus ring (the `interactive` state). |
 | `variables` | `Variables` | - | Custom properties set on the element's `style`, for a component built on `Paper`. |
 | `framework_sx` | `&'static StaticSx` | - | Base styles for a component built on `Paper`. They replace `Paper`'s own, so start from `paper_sx()`. |
 | `children` | `Element` | required | The surface's contents. |
@@ -69,6 +69,9 @@ reaches the element untouched.
   ones a reader should find.
 - Put nothing interactive inside a `Paper` rendered as an `a`: the whole
   surface is one link, named by its contents.
+- Render a pressable `Paper` as an `a` or a `button`. An `onclick` on a `div`
+  gives the look but not a role, a tab stop or Enter and Space: add those
+  yourself.
 
 ### Example
 
@@ -104,3 +107,4 @@ articles", .. }`: a screen reader lists it as the "Related articles" landmark.
 | `radius-<size>` | The caller named a `radius`. Absent otherwise. |
 | `shadow-<size>` | The caller named a `shadow`. Absent otherwise. |
 | `bordered` | `bordered` is on. |
+| `interactive` | The surface is a `button`, or carries an `href` or an `onclick`. |

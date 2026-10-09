@@ -254,7 +254,7 @@ For `size` and `radius` the control reads [Button](button.md)'s
 | `--lsx-button-color` | The accent, resolved from `color`. Set on the root, and the segments inherit it. |
 | `--lsx-button-contrast` | Label color on a `filled` segment. |
 | `--lsx-button-hover` | Hover background. |
-| `--lsx-button-selected` | Background of the selected segment. |
+| `--lsx-button-selected` | Background of the selected segment, and of a segment while pressed. |
 | `--lsx-spacing-<size>` | Read for `gap` when it is set. |
 | `--lsx-spacing-xs` | The gap inside a segment, between a rich label's icon and its text. |
 

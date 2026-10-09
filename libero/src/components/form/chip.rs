@@ -9,7 +9,7 @@ use crate::{
     components::{
         accessibility::VISUALLY_HIDDEN_SX,
         common::{
-            COARSE_POINTER, Glyph, HtmlTag, Input, Part, ScaleOrCss, States, Variant,
+            ACTIVE, COARSE_POINTER, Glyph, HtmlTag, Input, Part, ScaleOrCss, States, Variant,
             VariantColors, VariantVars, base_color_or, base_props, coarse_hit_area_sx,
             contrast_color, contrast_shade_color, disabled_look_sx, fill_color, focus_ring_sx,
             interactive_variant_sx, on_ring_sx, on_state_sx, parts_enum, parts_under_sx,
@@ -31,6 +31,7 @@ const CHIP_COLOR_VAR: CssVar = CssVar::new("--lsx-chip-color");
 const CHIP_FILL_VAR: CssVar = CssVar::new("--lsx-chip-fill");
 const CHIP_CONTRAST_VAR: CssVar = CssVar::new("--lsx-chip-contrast");
 const CHIP_HOVER_VAR: CssVar = CssVar::new("--lsx-chip-hover");
+const CHIP_SELECTED_VAR: CssVar = CssVar::new("--lsx-chip-selected");
 const CHIP_CONTAINER_VAR: CssVar = CssVar::new("--lsx-chip-container");
 const CHIP_ON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-chip-on-container");
 const CHIP_ON_STATE_VAR: CssVar = CssVar::new("--lsx-chip-on-state");
@@ -77,7 +78,13 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
         .fold(base, |base, &variant| {
             base.when(
                 variant.state_name(),
-                interactive_variant_sx(variant, &CHIP_VARS, &CHIP_HOVER_VAR, &CHIP_ON_STATE_VAR),
+                interactive_variant_sx(
+                    variant,
+                    &CHIP_VARS,
+                    &CHIP_HOVER_VAR,
+                    &CHIP_SELECTED_VAR,
+                    &CHIP_ON_STATE_VAR,
+                ),
             )
         })
         // After the variants so it wins on source order. Selected is M3's
@@ -88,14 +95,16 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
                 Variant::Tonal,
                 &CHIP_VARS,
                 &CHIP_HOVER_VAR,
+                &CHIP_SELECTED_VAR,
                 &CHIP_ON_STATE_VAR,
             )
             .and(on_state_sx(None))
-            // An `Elevated` chip's hover lift would drop the ring otherwise.
+            // An `Elevated` chip's hover lift and press would drop the ring otherwise.
             .selector(
                 "&:hover:not(:where(:disabled, [data-state~=\"disabled\"]))",
                 on_ring_sx(None),
-            ),
+            )
+            .selector(ACTIVE, on_ring_sx(None)),
         )
         .when("selectable", sx().overflow("visible"))
         // A finger-sized hit area; `clip` cuts a long label across only, so it reaches out.
@@ -186,6 +195,7 @@ fn chip_variables(variant: Variant, checked: bool, base: &ThemeAwareValue) -> St
             contrast_color(base).and_then(|color| color.resolve(None)),
         )
         .with(CHIP_HOVER_VAR, colors.hover)
+        .with(CHIP_SELECTED_VAR, colors.selected)
         .with(CHIP_ON_STATE_VAR, colors.on_state)
         .with(CHIP_CONTAINER_VAR, colors.container)
         .with(CHIP_ON_CONTAINER_VAR, colors.on_container)

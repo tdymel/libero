@@ -181,6 +181,7 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
                     variant,
                     &BUTTON_VARS,
                     &BUTTON_HOVER_VAR,
+                    &BUTTON_SELECTED_VAR,
                     &BUTTON_ON_STATE_VAR,
                 ),
             )

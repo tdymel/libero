@@ -23,6 +23,9 @@ const PADDING: &str = r#"sx: sx().padding("lg")"#;
 // snippet: in Paper { .. }
 const NO_SHADOW: &str = r#"sx: sx().padding("lg").box_shadow("none")"#;
 
+/// An id nothing has, so the demo link scrolls and navigates nowhere.
+const HREF: &str = "#order-4021";
+
 /// Large squares, well past the blur radius, in a colour and the page's ink, so the
 /// blur softens hard edges the glass overlaps.
 const BACKDROP: &str = "repeating-conic-gradient(var(--lsx-secondary-fill-6) 0 25%, var(--lsx-ink) 0 50%) 0 0 / 96px 96px";
@@ -84,7 +87,7 @@ pub fn PaperPage() -> Element {
                         .doc("Fills the surface with a gradient from `color` to a second stop, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`; `Gradient::default()` is the theme's. The text colour is picked to read on both stops. With `glass`, the stops turn translucent, their share raised until the text reads 4.5:1; a literal stop's text is yours to check. Its stops carry down to any gradient inside it."),
                     prop("component", "HtmlTag")
                         .default("div")
-                        .doc("The element to render, such as `section`, `article`, `aside`, or `a` for a clickable card. An `aside` is a landmark and needs your `aria-label`; a `section` becomes one once you give it an `aria-label`."),
+                        .doc("The element to render, such as `section`, `article`, `aside`, or `a` for a clickable card. An `aside` is a landmark and needs your `aria-label`; a `section` becomes one once you give it an `aria-label`. A surface that takes a press, an `a` with an `href`, a `button` or any element with an `onclick`, also tints on hover, tints deeper while pressed and shows the focus ring (the `interactive` state)."),
                     prop("variables", "Variables")
                         .doc("Custom properties set on the element's `style`, for a component built on `Paper`."),
                     prop("framework_sx", "&'static StaticSx")
@@ -95,6 +98,7 @@ pub fn PaperPage() -> Element {
             accessibility: a11y().must([
                 "Give a `Paper` rendered as an `aside` an `aria-label`: it is a landmark. A `section` becomes a landmark once you give it an `aria-label`, so name the ones a reader should find.",
                 "Put nothing interactive inside a `Paper` rendered as an `a`: the whole surface is one link, named by its contents.",
+                "Render a pressable `Paper` as an `a` or a `button`. An `onclick` on a `div` gives the look but not a role, a tab stop or Enter and Space: add those yourself.",
             ])
                 .example("A related-links panel, `Paper { component: \"aside\", \"aria-label\": \"Related articles\", .. }`: a screen reader lists it as the \"Related articles\" landmark."),
             lead: rsx! {
@@ -131,6 +135,13 @@ pub fn PaperPage() -> Element {
                         }),
                     Control::switch("bordered"),
                     Control::switch("glass"),
+                    // Not a prop: a link is what makes the surface take a press.
+                    Control::switch("link").default("true").code(|_, values| {
+                        match values.str("link").as_str() {
+                            "true" => vec!["component: \"a\"".to_string(), format!("href: {HREF:?}")],
+                            _ => vec![],
+                        }
+                    }),
                     Control::color("color").with_unset(),
                     // The theme's own second stop and angle print as `Gradient::default()`.
                     Control::switch("gradient").code(|_, values| {
@@ -144,10 +155,12 @@ pub fn PaperPage() -> Element {
                     gradient_to,
                     gradient_deg,
                     Control::toggle("component", ["div", "section", "article"])
-                        .labels(["Div", "Section", "Article"]),
+                        .labels(["Div", "Section", "Article"])
+                        .hidden_when(|values| values.str("link") == "true"),
                 ],
                 render: move |values: DemoValues| {
                     let flat = values.str("shadow") == "none";
+                    let link = values.str("link") == "true";
                     let sx = match flat {
                         true => sx().padding("lg").box_shadow("none"),
                         false => sx().padding("lg"),
@@ -170,7 +183,11 @@ pub fn PaperPage() -> Element {
                             },
                             gradient: (values.str("gradient") == "true")
                                 .then(|| gradient_value(&values)),
-                            component: values.str("component"),
+                            component: match link {
+                                true => "a".into(),
+                                false => Input::from(values.str("component")),
+                            },
+                            href: link.then_some(HREF),
                             sx,
                             // Level is a document decision, size a design one ([[codebase/heading-order]]).
                             Title { size: "md", component: "h2", "Invoice #4021" }

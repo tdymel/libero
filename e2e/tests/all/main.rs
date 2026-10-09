@@ -82,6 +82,7 @@ mod nested_provider;
 mod notifications;
 mod number_field;
 mod pagination;
+mod paper;
 mod perf;
 mod phone_field;
 mod picker_dialog;

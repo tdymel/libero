@@ -94,6 +94,7 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
                 variant,
                 &ACTION_ICON_VARS,
                 &ACTION_ICON_HOVER_VAR,
+                &ACTION_ICON_SELECTED_VAR,
                 &ACTION_ICON_ON_STATE_VAR,
             )
             .border_style("solid")
@@ -142,7 +143,6 @@ fn action_icon_variables(
     variant: Variant,
     has_variant_styling: bool,
 ) -> Variables {
-    let selectable = props.selected.is_some();
     // A size word is `Button`'s height round `Icon`'s glyph; a length is both.
     let glyph = match props.size.as_ref() {
         Some(ThemeAwareValue::Size(size)) => Some(ICON_SIZE.value(*size)),
@@ -181,10 +181,7 @@ fn action_icon_variables(
         .with(ACTION_ICON_ON_STATE_VAR, colors.on_state)
         .with(ACTION_ICON_CONTAINER_VAR, colors.container)
         .with(ACTION_ICON_ON_CONTAINER_VAR, colors.on_container)
-        .with(
-            ACTION_ICON_SELECTED_VAR,
-            selectable.then_some(colors.selected).flatten(),
-        )
+        .with(ACTION_ICON_SELECTED_VAR, colors.selected)
 }
 
 /// The enclosing `ButtonGroup`'s defaults, where the caller left a prop unset.

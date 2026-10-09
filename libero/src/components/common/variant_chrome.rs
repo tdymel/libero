@@ -5,8 +5,8 @@ use crate::{
     },
     sx::{Sx, ThemeAwareValue, sx},
     theme::{
-        ColorShade, CssVar, PAPER_BACKGROUND, PaperDefaults, Size, SizeCss, gradient_fill_sx,
-        gradient_hover_sx, gradient_selected_sx,
+        ColorShade, CssVar, PAPER_BACKGROUND, PRESSED_LAYER, PaperDefaults, Size, SizeCss,
+        gradient_fill_sx, gradient_hover_sx, gradient_pressed_sx, gradient_selected_sx,
     },
 };
 
@@ -91,12 +91,13 @@ pub(crate) fn variant_chrome_sx(variant: Variant, vars: &VariantVars) -> Sx {
     }
 }
 
-/// [`variant_chrome_sx`] plus a hover response. `on_state` is the label over hover and
-/// selected fills, where the resting one may not read (todo 452).
+/// [`variant_chrome_sx`] plus a hover and a pressed response. `on_state` is the label over
+/// hover and selected fills, where the resting one may not read (todo 452).
 pub(crate) fn interactive_variant_sx(
     variant: Variant,
     vars: &VariantVars,
     hover: &CssVar,
+    selected: &CssVar,
     on_state: &CssVar,
 ) -> Sx {
     let color = vars.color;
@@ -107,29 +108,50 @@ pub(crate) fn interactive_variant_sx(
         Variant::Outlined | Variant::Standard => "transparent".to_string(),
         // The state layer over the image, not a flat colour.
         Variant::Gradient => {
-            return variant_chrome_sx(variant, vars).selector(HOVER, gradient_hover_sx());
+            return variant_chrome_sx(variant, vars)
+                .selector(HOVER, gradient_hover_sx())
+                .selector(ACTIVE, gradient_pressed_sx());
         }
     };
 
-    let mut hovered = sx().background(hover.value_or(fallback));
-    match variant {
-        Variant::Filled => {
-            hovered = hovered.color(on_state.value_or(vars.contrast.value_or("inherit")));
-        }
-        Variant::Tonal | Variant::Gradient => {}
+    let hover_fill = hover.value_or(fallback);
+    let label = match variant {
+        Variant::Filled => Some(on_state.value_or(vars.contrast.value_or("inherit"))),
+        Variant::Tonal | Variant::Gradient => None,
         Variant::Elevated | Variant::Outlined | Variant::Standard => {
-            hovered = hovered.color(on_state.value_or(color.value()));
+            Some(on_state.value_or(color.value()))
         }
+    };
+    let mut hovered = sx().background(hover_fill.clone());
+    // Keyboard presses are `:active` without `:hover`, so the label repeats there.
+    let mut pressed = sx().background(match variant {
+        // A tonal fill reads under a layer of its label; the others step to the selected tint,
+        // which the palette measures, and a literal colour takes the layer.
+        Variant::Tonal => layered(&hover_fill),
+        _ => selected.value_or(layered(&hover_fill)),
+    });
+    if let Some(label) = label {
+        hovered = hovered.color(label.clone());
+        pressed = pressed.color(label);
     }
     if variant == Variant::Elevated {
         hovered = hovered.and(shadow_sx(SizeCss::SHADOW.value(ELEVATED_HOVER)));
+        // The press settles back to the resting lift.
+        pressed = pressed.and(shadow_sx(SizeCss::SHADOW.value(ELEVATED_REST)));
     }
 
-    variant_chrome_sx(variant, vars).selector(HOVER, hovered)
+    variant_chrome_sx(variant, vars)
+        .selector(HOVER, hovered)
+        .selector(ACTIVE, pressed)
+}
+
+fn layered(fill: &str) -> String {
+    format!("color-mix(in srgb, {fill}, currentColor {PRESSED_LAYER}%)")
 }
 
 // Skips a disabled control, so it can show `not-allowed` (todo 586). `:where` keeps specificity.
 const HOVER: &str = "&:hover:not(:where(:disabled, [data-state~=\"disabled\"]))";
+pub(crate) const ACTIVE: &str = "&:active:not(:where(:disabled, [data-state~=\"disabled\"]))";
 
 /// Resolved colour vars for a variant; `None` where a literal has no ramp.
 pub(crate) struct VariantColors {
@@ -226,4 +248,60 @@ pub(crate) fn variant_selected_sx(
     };
     // Outranks the plain focus rule; the focus ring composes the marker back in.
     selected.and(marker).focus_visible(focus_ring_sx())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::css::Stylesheet;
+
+    fn css(variant: Variant) -> String {
+        let sx = interactive_variant_sx(
+            variant,
+            &BUTTON_VARS,
+            &BUTTON_HOVER_VAR,
+            &BUTTON_SELECTED_VAR,
+            &BUTTON_ON_STATE_VAR,
+        );
+        Stylesheet::from(&sx).as_str().to_string()
+    }
+
+    #[test]
+    fn every_variant_answers_a_press() {
+        for variant in Variant::ALL.iter().copied() {
+            let css = css(variant);
+            assert!(
+                css.contains(":active:not(:where(:disabled"),
+                "{variant:?}: {css}"
+            );
+        }
+    }
+
+    /// The selected tint is the palette's measured step; a literal colour has none.
+    #[test]
+    fn a_press_steps_to_the_selected_tint_except_on_a_tonal_fill() {
+        let layer = format!("currentColor {PRESSED_LAYER}%)");
+        let filled = css(Variant::Filled);
+        let pressed = &filled[filled.find(":active").expect("a pressed rule")..];
+
+        assert!(
+            pressed.contains("background:var(--lsx-button-selected, color-mix("),
+            "{filled}"
+        );
+        assert!(pressed.contains(&layer), "{filled}");
+
+        let tonal = css(Variant::Tonal);
+        let pressed = &tonal[tonal.find(":active").expect("a pressed rule")..];
+        assert!(!pressed.contains("--lsx-button-selected"), "{tonal}");
+        assert!(pressed.contains(&layer), "{tonal}");
+    }
+
+    #[test]
+    fn a_pressed_elevated_surface_settles_back_to_its_resting_shadow() {
+        let css = css(Variant::Elevated);
+        let rest = SizeCss::SHADOW.value(ELEVATED_REST);
+        let active = &css[css.find(":active").expect("a pressed rule")..];
+
+        assert!(active.contains(&format!("box-shadow:{rest};")), "{css}");
+    }
 }

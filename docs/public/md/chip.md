@@ -209,6 +209,7 @@ toggles it, and a `readonly` chip keeps its tab stop but stays as it is.
 | `--lsx-chip-color` | Accent color of the current variant. |
 | `--lsx-chip-contrast` | Text color on top of that accent. |
 | `--lsx-chip-hover` | Accent color while hovered. |
+| `--lsx-chip-selected` | Background of a chip while pressed. |
 | `--lsx-chip-container` | Container fill of `tonal`. |
 | `--lsx-chip-on-container` | Label color on that container, black or white, whichever reads on it. |
 

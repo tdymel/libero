@@ -1,10 +1,10 @@
-use dioxus::prelude::*;
+use dioxus::{dioxus_core::AttributeValue, prelude::*};
 
 use crate::{
     components::{
         common::{
             HtmlTag, Input, ScaleOrCss, States, Variables, base_color, base_props, contrast_color,
-            fill_color, variables,
+            fill_color, focus_ring_sx, variables,
         },
         layout::use_box,
     },
@@ -12,8 +12,9 @@ use crate::{
     platform::draws_backdrop_filter,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
-        CssVar, FOCUS_RING_HALO, GLASS_SHEEN, GlassTint, Gradient, NamedColorCss,
-        PAPER_BORDER_COLOR, PaperDefaults, SURFACE_LABEL, Size, SizeCss, gradient_surface_sx,
+        CssVar, FOCUS_RING_HALO, GLASS_SHEEN, GlassTint, Gradient, HOVER_LAYER, NamedColorCss,
+        PAPER_BORDER_COLOR, PRESSED_LAYER, PaperDefaults, SURFACE_LABEL, Size, SizeCss,
+        gradient_hover_sx, gradient_pressed_sx, gradient_surface_sx,
     },
 };
 
@@ -35,6 +36,8 @@ pub fn paper_sx() -> Sx {
             "bordered",
             sx().border(format!("1px solid {}", PAPER_BORDER_COLOR.value())),
         )
+        // Before the fills, whose label colour it must not beat.
+        .when("interactive", interactive_sx())
         .when("colored", colored_sx())
         .when("gradient", gradient_surface_sx())
         // After `gradient`, which its shorthand would otherwise reset.
@@ -47,6 +50,30 @@ pub fn paper_sx() -> Sx {
                 )
                 .when("gradient", PaperDefaults::glass_gradient_sx()),
         )
+}
+
+/// A state layer over whatever fill the surface has, then the focus ring.
+fn interactive_sx() -> Sx {
+    let layer = |percent: u8, gradient: Sx| {
+        let tint = format!("color-mix(in srgb, currentColor {percent}%, transparent)");
+        sx().background_image(format!("linear-gradient({tint}, {tint})"))
+            .when("gradient", gradient)
+    };
+    // The UA's link colours would otherwise turn the label red while pressed.
+    sx().color("inherit")
+        .cursor("pointer")
+        .hover(layer(HOVER_LAYER, gradient_hover_sx()))
+        .selector(":active", layer(PRESSED_LAYER, gradient_pressed_sx()))
+        .focus_visible(focus_ring_sx())
+}
+
+/// Whether the surface takes a press: a link, a button, or a spread `onclick`.
+fn paper_interactive(component: HtmlTag, attributes: &[Attribute]) -> bool {
+    component == HtmlTag::Button
+        || attributes.iter().any(|attribute| {
+            matches!(attribute.name, "href" | "onclick")
+                && !matches!(attribute.value, AttributeValue::None)
+        })
 }
 
 // Own vars, not `PAPER_BACKGROUND`: an uncoloured `Paper` nested inside keeps the surface.
@@ -217,7 +244,16 @@ fn paper_states(props: &PaperProps) -> Input<States> {
     let gradient = props.gradient.is_some();
     let colored = props.color.as_ref().is_some() && !gradient;
 
-    if radius.is_none() && shadow.is_none() && !props.bordered && !glass && !gradient && !colored {
+    let interactive = paper_interactive(props.component.copied_or_default(), &props.attributes);
+
+    if radius.is_none()
+        && shadow.is_none()
+        && !props.bordered
+        && !glass
+        && !gradient
+        && !colored
+        && !interactive
+    {
         return props.states.clone();
     }
 
@@ -233,6 +269,7 @@ fn paper_states(props: &PaperProps) -> Input<States> {
         .with("colored", colored)
         .with("glass", glass)
         .with("gradient", gradient)
+        .with("interactive", interactive)
         .into()
 }
 
@@ -475,7 +512,11 @@ mod tests {
         let gradient = css
             .as_str()
             .split('}')
-            .find(|block| block.contains("gradient") && block.contains("background-image"))
+            .find(|block| {
+                block.contains("background-image")
+                    && block.contains("[data-state~=\"gradient\"]{")
+                    && !block.contains("interactive")
+            })
             .unwrap_or_else(|| panic!("no gradient block: {}", css.as_str()));
 
         assert!(

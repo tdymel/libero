@@ -202,7 +202,7 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
     // Colour resolution plus rendering is ~790 ns, and `(variant, color)` is
     // the same on almost every render.
     let style = use_cache((variant, color), |(variant, color)| {
-        button_variables(*variant, color, true, false)
+        button_variables(*variant, color, false)
     });
 
     let control = render_segmented_control(

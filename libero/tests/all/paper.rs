@@ -49,3 +49,59 @@ fn a_paper_that_names_no_step_carries_no_data_state() {
 
     assert!(!paper.contains_key("data-state"), "{paper:?}");
 }
+
+#[test]
+fn a_paper_takes_the_interactive_look_only_once_it_can_be_pressed() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Paper { id: "plain", "sheet" }
+                Paper { id: "link", component: "a", href: "/orders/4021", "sheet" }
+                Paper { id: "press", onclick: |_| {}, "sheet" }
+                Paper { id: "button", component: "button", "sheet" }
+                Paper { id: "bare-link", component: "a", "sheet" }
+            }
+        }
+    }
+
+    let html = render(app);
+    let state = |tag: &str, id: &str| {
+        let at = html.find(&format!("id=\"{id}\"")).expect(id);
+        let start = html[..at].rfind(&format!("<{tag}")).expect(tag);
+        attributes_of(&html[start..], tag)
+            .get("data-state")
+            .cloned()
+    };
+
+    assert_eq!(state("div", "plain"), None);
+    assert_eq!(state("a", "link").as_deref(), Some("interactive"));
+    assert_eq!(state("div", "press").as_deref(), Some("interactive"));
+    assert_eq!(state("button", "button").as_deref(), Some("interactive"));
+    assert_eq!(state("a", "bare-link"), None);
+}
+
+#[test]
+fn the_interactive_look_tints_on_hover_and_press_and_rings_on_focus() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Paper { component: "a", href: "/orders/4021", "sheet" }
+            }
+        }
+    }
+
+    let html = render(app);
+
+    assert!(
+        html.contains("[data-state~=\"interactive\"]:hover"),
+        "{html}"
+    );
+    assert!(
+        html.contains("[data-state~=\"interactive\"]:active"),
+        "{html}"
+    );
+    assert!(
+        html.contains("[data-state~=\"interactive\"]:focus-visible"),
+        "{html}"
+    );
+}

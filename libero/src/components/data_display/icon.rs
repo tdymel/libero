@@ -289,6 +289,7 @@ mod tests {
                 Variant::Filled,
                 &ICON_VARS,
                 &ICON_COLOR_VAR,
+                &ICON_COLOR_VAR,
                 &ICON_COLOR_VAR
             )
             .class_name()
