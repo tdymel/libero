@@ -332,7 +332,7 @@ pub fn TablePage() -> Element {
                     "Each resize grip is a tab stop, a vertical `role=\"separator\"` named \"Resize\" plus the column, with its width and limits in `aria-valuenow`, `aria-valuemin` and `aria-valuemax`.",
                     "`loading` marks an empty table `aria-busy`. With rows shown it adds a progress bar named \"Loading rows\" instead, as some screen readers hold back a busy table's rows.",
                     "With `virtual_row_height`, `aria-rowcount` and `aria-rowindex` give the full count and each row's place, \"row 5 001 of 10 001\". Tab walks past the rendered rows, and the row holding focus stays rendered.",
-                    "A footer cell reads its aggregate's name before the value, \"Average 7.8 %\", and sits in the column its header names. The footer is not counted in `aria-rowcount` of a `virtual_row_height` table.",
+                    "A footer cell reads its aggregate's name before the value, \"Average 7.8 %\", and sits in the column its header names. In a `virtual_row_height` table the footer is the last counted row, and a focus scroll stops above it.",
                     "The `toolbar` is a plain row, not a `role=\"toolbar\"`: Tab moves through it as anywhere else.",
                 ])
                 .must([

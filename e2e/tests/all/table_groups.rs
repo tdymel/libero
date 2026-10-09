@@ -114,6 +114,9 @@ e2e::scenario!(
 
 const FOOT_LEAD: &str = "tfoot td[data-footer-lead]";
 const FOOT_Q1: &str = "tfoot td:nth-child(3)";
+const LAST_ROW: &str = "tbody tr[aria-rowindex=\"201\"]";
+const UNDER_ROW: &str = "tbody tr[aria-rowindex=\"6\"]";
+const UNDER_BOX: &str = "tbody tr[aria-rowindex=\"6\"] input[type=checkbox]";
 const HEAD_Q1: &str = "thead th:nth-child(3)";
 
 /// Todo 2736: the footer lines up under its columns, sums every row and sticks to
@@ -171,6 +174,82 @@ e2e::scenario!(
     a_footer_lines_up_under_its_columns_and_sticks,
     "/table-groups/footer",
     the_footer_aggregates_and_sticks,
+    android: skip("958: element identity on the WebView")
+);
+
+/// Todo 2754: a windowed table's footer holds at the bottom, the last row scrolls
+/// to just above it, and the footer is the last counted row.
+async fn the_windowed_footer_holds_and_ends_the_rows<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    let count = d.attr("table", "aria-rowcount").await?;
+    if count.as_deref() != Some("202") {
+        bail!("aria-rowcount is {count:?}, not the header, 200 rows and the footer");
+    }
+    let index = d.attr("tfoot tr", "aria-rowindex").await?;
+    if index.as_deref() != Some("202") {
+        bail!("the footer row is {index:?}, not row 202");
+    }
+    let area = d.rect(AREA).await?;
+    let edge = area.y + area.height;
+    let foot = d.rect(FOOT_Q1).await?;
+    if (edge - (foot.y + foot.height)).abs() > 2.0 {
+        bail!(
+            "the footer ends at {}, the area at {edge}",
+            foot.y + foot.height
+        );
+    }
+    eventually(d, "the last row above the footer", async |d| {
+        d.wheel("tbody tr", 20000.0).await?;
+        if !d.exists(LAST_ROW).await? {
+            return Ok(false);
+        }
+        let (row, foot) = (d.rect(LAST_ROW).await?, d.rect(FOOT_Q1).await?);
+        Ok(row.y + row.height <= foot.y + 1.0)
+    })
+    .await?;
+    let foot = d.rect(FOOT_Q1).await?;
+    if (edge - (foot.y + foot.height)).abs() > 2.0 {
+        bail!(
+            "the footer ends at {}, the area at {edge}, after the scroll",
+            foot.y + foot.height
+        );
+    }
+    Ok(())
+}
+
+/// Todo 2754 (WCAG 2.4.11): a focus scroll brings a row under the footer up to just above it.
+async fn a_focused_row_clears_the_footer<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let (row, foot) = (d.rect(UNDER_ROW).await?, d.rect(FOOT_Q1).await?);
+    if row.y + row.height <= foot.y {
+        bail!("the row at {} is not under the footer at {}", row.y, foot.y);
+    }
+    eventually(d, "the scroll area to keep the footer clear", async |d| {
+        let pad = d.style(AREA, "scroll-padding-bottom").await?;
+        Ok(pad != "auto" && pad != "0px")
+    })
+    .await?;
+    d.focus(UNDER_BOX).await?;
+    eventually(d, "the focused row to scroll above the footer", async |d| {
+        let (row, foot) = (d.rect(UNDER_ROW).await?, d.rect(FOOT_Q1).await?);
+        Ok(row.y + row.height <= foot.y + 1.0)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_focused_windowed_row_clears_the_footer,
+    "/table-groups/footer-window",
+    a_focused_row_clears_the_footer,
     android: skip("958: element identity on the WebView"),
-    native: skip("a sticky footer on Blitz is T2: tests/native/table_groups.rs")
+    native: skip("1517: Blitz ignores scroll-padding")
+);
+
+e2e::scenario!(
+    a_windowed_footer_holds_and_ends_the_rows,
+    "/table-groups/footer-window",
+    the_windowed_footer_holds_and_ends_the_rows,
+    android: skip("958: element identity on the WebView"),
+    native: skip("no wheel in the scenario driver: tests/native/table_groups.rs")
 );

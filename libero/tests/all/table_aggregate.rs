@@ -1,7 +1,7 @@
 //! The footer row: each aggregate over the filtered rows of every page, its
 //! cells aligned and pinned like the body's, and its lead cell.
 
-use crate::common::{body, render, tags_with};
+use crate::common::{attributes_of, body, render, tags_with};
 use crate::table_fixture::{Stock, cell_of, table_rule, table_state};
 
 use dioxus::prelude::*;
@@ -244,6 +244,48 @@ fn a_capped_table_sticks_its_footer_at_the_bottom() {
     let rule = table_rule(&html, r#"[data-state~="sticky-footer"] tfoot td"#);
     assert_eq!(rule["position"], "sticky", "{rule:?}");
     assert_eq!(rule["bottom"], "0", "{rule:?}");
+}
+
+#[test]
+fn a_windowed_footer_is_the_last_counted_row() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "Numbers",
+                    max_height: "300px",
+                    virtual_row_height: 40.0,
+                    data: (0..1000u32).collect::<Vec<_>>(),
+                    columns: vec![column("N").value(|n: &u32| *n).aggregate(Aggregate::Sum)],
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    assert_eq!(attributes_of(&html, "table")["aria-rowcount"], "1002");
+    let row = tags_with(&foot(&html), "<tr");
+    assert_eq!(row[0]["aria-rowindex"], "1002", "{row:?}");
+}
+
+#[test]
+fn a_plain_footer_counts_no_row() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "Stock",
+                    data: stock(),
+                    columns: vec![column("Cents").value(|row: &Stock| row.cents).aggregate(Aggregate::Sum)],
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let row = tags_with(&foot(&html), "<tr");
+    assert!(!row[0].contains_key("aria-rowindex"), "{row:?}");
+    assert!(!attributes_of(&html, "table").contains_key("aria-rowcount"));
 }
 
 #[test]

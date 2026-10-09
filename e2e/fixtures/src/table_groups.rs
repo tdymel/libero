@@ -10,6 +10,7 @@ pub const ROUTES: Routes = &[
     ("/table-groups", || rsx! { GroupsTablePage {} }),
     ("/table-groups/pinned", || rsx! { PinnedGroupsTablePage {} }),
     ("/table-groups/footer", || rsx! { FooterTablePage {} }),
+    ("/table-groups/footer-window", || rsx! { FooterWindowPage {} }),
 ];
 
 #[derive(Clone, PartialEq)]
@@ -81,6 +82,33 @@ fn FooterTablePage() -> Element {
                 column("City").value(|sale: &Sale| sale.city).row_header().aggregate(Aggregate::Count),
                 column("Q1").value(|sale: &Sale| sale.q1).aggregate(Aggregate::Sum),
                 column("Q2").value(|sale: &Sale| sale.q2).aggregate(Aggregate::Max),
+            ],
+        }
+    }
+}
+
+/// Two hundred rows windowed at 40px under a 240px `max_height`, with a footer.
+#[component]
+fn FooterWindowPage() -> Element {
+    let data: Vec<Sale> = (1..=200)
+        .map(|n| Sale {
+            city: "Lyon",
+            region: "South",
+            q1: n,
+            q2: n * 2,
+        })
+        .collect();
+    rsx! {
+        Table {
+            caption: "Windowed footer",
+            max_height: "240px",
+            virtual_row_height: 40.0,
+            selectable: true,
+            data,
+            row_key: |sale: &Sale| sale.q1.to_string(),
+            columns: vec![
+                column("City").value(|sale: &Sale| sale.city).row_header(),
+                column("Q1").value(|sale: &Sale| sale.q1).aggregate(Aggregate::Sum),
             ],
         }
     }

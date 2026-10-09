@@ -47,6 +47,8 @@ pub(super) struct RowWindow {
     pub order: Rc<[VisibleRow]>,
     /// The rows on the pages before this one, counted in `aria-rowindex`.
     pub first: usize,
+    /// Every row on every page.
+    pub total: usize,
     pub row_height: f64,
     /// A row's spec by its position among the shown rows.
     pub row: Rc<dyn Fn(usize, VisibleRow) -> RowSpec>,
@@ -136,10 +138,16 @@ fn focused_row(
 }
 
 /// The rows the DOM leaves out still count: the header rows plus every body row,
-/// or the one empty row; the hidden skeleton rows count none (todo 1421).
-pub(super) fn window_attributes(head_rows: usize, rows: usize, skeleton: bool) -> Vec<Attribute> {
+/// or the one empty row, then the footer; the hidden skeleton rows count none (todo 1421).
+pub(super) fn window_attributes(
+    head_rows: usize,
+    rows: usize,
+    skeleton: bool,
+    footer: bool,
+) -> Vec<Attribute> {
     let body = if skeleton { 0 } else { rows.max(1) };
-    vec![attr("aria-rowcount", (head_rows + body).to_string())]
+    let count = head_rows + body + usize::from(footer);
+    vec![attr("aria-rowcount", count.to_string())]
 }
 
 /// A windowed table's least width: its sized columns, and a floor for each other one.
@@ -182,14 +190,20 @@ pub(super) fn windowed_sx() -> Sx {
         )
 }
 
-/// The scroll top that shows slot `to` whole below a `head` px sticky header,
-/// in a view `view` px tall scrolled to `top`; `None` when it shows already.
-pub(super) fn reveal_slot(to: usize, pitch: f64, head: f64, top: f64, view: f64) -> Option<f64> {
+/// The scroll top that shows slot `to` whole between a `head` px sticky header and a
+/// `foot` px footer, in a view `view` px tall scrolled to `top`; `None` when it shows already.
+pub(super) fn reveal_slot(
+    to: usize,
+    pitch: f64,
+    (head, foot): (f64, f64),
+    top: f64,
+    view: f64,
+) -> Option<f64> {
     let (start, end) = (to as f64 * pitch, (to + 1) as f64 * pitch);
     if start < top {
         Some(start)
-    } else if head + end > top + view {
-        Some(head + end - view)
+    } else if head + end + foot > top + view {
+        Some(head + end + foot - view)
     } else {
         None
     }
@@ -204,6 +218,7 @@ pub(super) fn render_window(
     let RowWindow {
         order,
         first,
+        total: _,
         row_height,
         row,
         key,
@@ -263,10 +278,21 @@ mod tests {
     /// 40px slots under a 42px header in a 200px view.
     #[test]
     fn a_slot_is_revealed_below_the_header_or_left_alone() {
-        assert_eq!(reveal_slot(3, 40.0, 42.0, 0.0, 200.0), Some(2.0));
-        assert_eq!(reveal_slot(2, 40.0, 42.0, 0.0, 200.0), None);
-        assert_eq!(reveal_slot(5, 40.0, 42.0, 400.0, 200.0), Some(200.0));
-        assert_eq!(reveal_slot(199, 40.0, 42.0, 0.0, 200.0), Some(7842.0));
+        assert_eq!(reveal_slot(3, 40.0, (42.0, 0.0), 0.0, 200.0), Some(2.0));
+        assert_eq!(reveal_slot(2, 40.0, (42.0, 0.0), 0.0, 200.0), None);
+        assert_eq!(reveal_slot(5, 40.0, (42.0, 0.0), 400.0, 200.0), Some(200.0));
+        assert_eq!(
+            reveal_slot(199, 40.0, (42.0, 0.0), 0.0, 200.0),
+            Some(7842.0)
+        );
+    }
+
+    /// A 30px footer takes the view's bottom: slot 2 ends at 122, under it.
+    #[test]
+    fn a_slot_is_revealed_above_the_footer() {
+        assert_eq!(reveal_slot(2, 40.0, (42.0, 30.0), 0.0, 200.0), None);
+        assert_eq!(reveal_slot(3, 40.0, (42.0, 30.0), 0.0, 200.0), Some(32.0));
+        assert_eq!(reveal_slot(3, 40.0, (42.0, 30.0), 0.0, 300.0), None);
     }
 
     #[test]

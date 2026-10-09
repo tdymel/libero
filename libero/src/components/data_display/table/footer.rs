@@ -9,7 +9,11 @@ use super::{
     pinning::CellPin,
     pipeline::VisibleRow,
 };
-use crate::localization::{Aggregate, TableLabels};
+use crate::{
+    hooks::{ElementHandle, use_element, use_resize_fallback},
+    localization::{Aggregate, TableLabels},
+    platform::ElementApi,
+};
 
 /// The footer's cells by header index: an aggregate's name and its text.
 pub(super) type FooterCells = Vec<Option<(&'static str, String)>>;
@@ -126,13 +130,48 @@ impl<T: PartialEq> FooterRows<T> {
     }
 }
 
+/// The height of a capped table's `thead` or `tfoot`, as its resize reports it. The
+/// first report can come a second late, and a Tab before it scrolls a row under the
+/// sticky edge (todo 1523): it is measured at mount too.
+pub(super) fn use_edge_height(bounded: bool) -> (ElementHandle, Signal<f64>) {
+    let mut height = use_signal(|| 0.0);
+    let element = use_element();
+    use_resize_fallback(element, move |event| {
+        if let (true, Ok(size)) = (bounded, event.get_border_box_size()) {
+            height.set(size.height);
+        }
+    });
+    use_effect(move || {
+        if !bounded || !element.is_mounted() {
+            return;
+        }
+        let measured = element.dimensions();
+        spawn(async move {
+            if let Ok(size) = measured.await
+                && *height.peek() == 0.0
+            {
+                height.set(size.height);
+            }
+        });
+    });
+    (element, height)
+}
+
+/// The `tfoot` of a capped table, which Blitz measures for a focus scroll to clear it.
+pub(super) struct Foot {
+    pub element: ElementHandle,
+    pub told: Option<EventHandler<f64>>,
+}
+
 /// The footer: one cell under each shown column, `leads` of them spanned by one
-/// cell before them.
+/// cell before them. `rowindex` is set where the DOM leaves rows out.
 pub(super) fn footer_row(
     headers: &[HeaderSpec],
     shown: &[usize],
     mut cells: FooterCells,
     leads: usize,
+    rowindex: Option<usize>,
+    foot: Foot,
 ) -> Element {
     let cells: Vec<Element> = shown
         .iter()
@@ -156,7 +195,13 @@ pub(super) fn footer_row(
         .collect();
     rsx! {
         tfoot {
-            tr {
+            onmounted: foot.element.mount(),
+            onresize: move |event: Event<ResizeData>| {
+                if let (Some(told), Ok(size)) = (foot.told, event.get_border_box_size()) {
+                    told.call(size.height);
+                }
+            },
+            tr { aria_rowindex: rowindex.map(|index| index.to_string()),
                 if leads > 0 {
                     td {
                         "data-footer-lead": true,

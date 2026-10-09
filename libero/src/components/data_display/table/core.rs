@@ -8,7 +8,7 @@ use super::{
     column::{Column, ColumnDefaults},
     column_drag::{ColumnDrag, ColumnDragGrip},
     detail::SlidingDetail,
-    footer::{FooterCells, footer_row},
+    footer::{Foot, FooterCells, footer_row},
     groups::{HeaderCell, header_rows},
     header_filters::filter_row,
     overlay::EmptyBody,
@@ -392,6 +392,7 @@ pub(super) struct BodySpec {
     pub empty: EmptyBody,
     /// With an aggregating column: the footer's cells.
     pub footer: Option<FooterCells>,
+    pub foot: Foot,
     pub active: ActiveSort,
     pub sort: StateSlice<Vec<TableSort>>,
     /// Set with `multi_sort`: whether the press before a header click was a touch.
@@ -469,6 +470,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         rows,
         empty,
         footer,
+        foot,
         active,
         sort,
         touch,
@@ -642,6 +644,11 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         filter_row(&headers, &shown, cells, reorder, detail, select, rowindex)
     });
     let head_levels = head_rows.len() + usize::from(filter_row.is_some());
+    // After the body's rows, or its one empty row.
+    let foot_rowindex = match &rows {
+        BodyRows::Window(window) => Some(head_levels + window.total.max(1) + 1),
+        BodyRows::All(_) => None,
+    };
     rsx! {
         if let Some(spec) = caption {
             caption { id: spec.id, "{spec.text}" }
@@ -673,7 +680,12 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                 },
             }
         }
-        {footer.map(|cells| footer_row(&headers, &shown, cells, columns - shown.len().max(1)))}
+        {
+            footer.map(|cells| {
+                let leads = columns - shown.len().max(1);
+                footer_row(&headers, &shown, cells, leads, foot_rowindex, foot)
+            })
+        }
     }
 }
 

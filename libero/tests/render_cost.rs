@@ -692,8 +692,63 @@ fn table_multi_sort_app<const ROWS: usize>() -> Element {
     }
 }
 
+/// [`table_large_app`] with a Sum footer on N (`SUM`), windowed under a 600px cap with
+/// `WINDOW`. A [`flip`] round changes one row (`CHANGE`): the footer sums every row
+/// again; else it reuses the sum.
+fn table_footer_app<const ROWS: usize, const CHANGE: bool, const WINDOW: bool, const SUM: bool>()
+-> Element {
+    let data = use_hook(|| (0..ROWS as u32).collect::<Vec<u32>>());
+    let mut rows = data.clone();
+    if CHANGE && flip() {
+        rows[0] = ROWS as u32;
+    }
+    let sum = column("N").value(|n: &u32| *n);
+    let sum = if SUM {
+        sum.aggregate(Aggregate::Sum)
+    } else {
+        sum
+    };
+    rsx! {
+        LiberoProvider {
+            Table {
+                data: rows,
+                columns: vec![
+                    column("Name").value(|n: &u32| format!("Row {n}")).row_header(),
+                    sum,
+                ],
+                max_height: WINDOW.then(|| "600px".to_string()),
+                virtual_row_height: WINDOW.then_some(40.0),
+            }
+        }
+    }
+}
+
 /// Large-N baselines, one table each, so the time is per table, not per row.
 const TABLE_LARGE_SHAPES: &[Shape] = &[
+    Shape {
+        name: "Table 1k footer",
+        app: table_footer_app::<1_000, true, false, true>,
+        count: 1,
+        round: rerender_app,
+    },
+    Shape {
+        name: "Table 1k footer-less",
+        app: table_footer_app::<1_000, true, false, false>,
+        count: 1,
+        round: rerender_app,
+    },
+    Shape {
+        name: "Table 1k footer steady",
+        app: table_footer_app::<1_000, false, false, true>,
+        count: 1,
+        round: rerender_app,
+    },
+    Shape {
+        name: "Table 10k windowed footer",
+        app: table_footer_app::<10_000, true, true, true>,
+        count: 1,
+        round: rerender_app,
+    },
     Shape {
         name: "Table 1k select",
         app: table_select_app::<1_000>,

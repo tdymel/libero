@@ -111,6 +111,62 @@ fn a_sticky_header_cell_leaves_with_its_table() {
     assert_eq!(bottom(&page), end, "{}", page.tree());
 }
 
+fn footer_cells() -> Element {
+    rsx! {
+        div { id: "scroller", width: "200px", height: "200px", overflow: "auto",
+            table { border_spacing: "0",
+                tbody {
+                    for i in 0..30 {
+                        tr { key: "{i}",
+                            for j in 0..3 {
+                                td { id: "c{i}-{j}", "C{j}" }
+                            }
+                        }
+                    }
+                }
+                tfoot {
+                    tr {
+                        for j in 0..3 {
+                            td {
+                                id: "f{j}",
+                                position: "sticky",
+                                bottom: "0",
+                                background: "red",
+                                span { "Sum" }
+                                "{j}"
+                            }
+                        }
+                    }
+                }
+            }
+            div { id: "after", height: "1000px" }
+        }
+    }
+}
+
+/// Sticky `td`s of a `tfoot`, text and span inside, hold at the scroller's bottom
+/// (the footer's per-cell fallback, 2754), painted over the rows, and leave with the table.
+#[test]
+fn a_sticky_footer_cell_holds_at_the_bottom() {
+    let mut page = mount(footer_cells);
+    let (_, oy, _, scroller) = page.rect("#scroller");
+    let held = |page: &Page| {
+        let (_, y, _, h) = page.rect("#f1");
+        y + h - oy == scroller
+    };
+    page.wait_for(held);
+    assert!(held(&page), "the footer: {}", page.tree());
+    assert!(
+        painted_red(&page, "#f1"),
+        "the footer is painted over the rows"
+    );
+    page.hover("#c5-1");
+    page.wheel("#c5-1", 300.0);
+    let after = page.rect("#f2");
+    assert_eq!(after.1 + after.3 - oy, scroller, "after a scroll");
+    assert!(page.hits("#f1"), "a press on the footer misses it");
+}
+
 fn widths() -> Element {
     rsx! {
         table { id: "fixed", border_spacing: "0", table_layout: "fixed", width: "600px",

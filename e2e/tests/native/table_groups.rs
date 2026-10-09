@@ -119,6 +119,45 @@ fn a_footer_lines_up_under_its_columns_after_the_rows() {
 }
 
 #[test]
+fn a_windowed_footer_holds_at_the_bottom_while_the_rows_scroll() {
+    fn app() -> Element {
+        rsx! {
+            Table {
+                aria_label: "Sales",
+                max_height: "240px",
+                virtual_row_height: 40.0,
+                data: sales(200),
+                columns: vec![
+                    column("City").value(|s: &Sale| s.city),
+                    column("Q1").value(|s: &Sale| s.q1).aggregate(Aggregate::Sum),
+                ],
+            }
+        }
+    }
+    let mut page = mount(app);
+    let area = page.rect("[data-table-scroll]");
+    let edge = area.1 + area.3;
+    let held = |page: &Page| {
+        let foot = page.rect("tfoot td:nth-child(2)");
+        (edge - (foot.1 + foot.3)).abs() <= 1.0
+    };
+    page.wait_for(held);
+    assert!(held(&page), "the footer at rest: {}", page.tree());
+    let row = page.rect("tbody tr:nth-child(2) td").1;
+    page.hover("tbody tr:nth-child(2) td");
+    page.wheel("tbody tr:nth-child(2) td", 400.0);
+    let scrolled = |page: &Page| page.rect("tbody td").1 < row - 100.0;
+    page.wait_for(scrolled);
+    assert!(scrolled(&page), "the rows did not scroll: {}", page.tree());
+    assert!(held(&page), "the footer after a scroll: {}", page.tree());
+    assert_eq!(
+        page.attr("table", "aria-rowcount").as_deref(),
+        Some("203"),
+        "the header, 200 rows, the total row and the footer"
+    );
+}
+
+#[test]
 fn a_capped_grouped_table_keeps_its_last_header_row() {
     fn app() -> Element {
         rsx! {

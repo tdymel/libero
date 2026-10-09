@@ -47,7 +47,7 @@ use super::{
     filter::{FilteredRows, QuickFilter, query_words},
     filter_panel::{FilterPanel, FilterPanelButton, PanelColumn, use_panel_control},
     filter_popover::FilterTarget,
-    footer::FooterRows,
+    footer::{Foot, FooterRows, use_edge_height},
     header_filters::HeaderFilter,
     overlay::{EmptyBody, LoadingBar, SKELETON_ROWS},
     paging::{TablePager, clamp_page, page_rows, use_page_reset, use_page_size_reseed},
@@ -1142,14 +1142,9 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         })
     };
     let bounded = props.max_height.is_some();
-    let mut head = use_signal(|| 0.0);
+    let (head_element, mut head) = use_edge_height(bounded);
+    let (foot_element, mut foot) = use_edge_height(bounded);
     let lift = use_signal(|| None::<(usize, usize)>);
-    let head_element = use_element();
-    use_resize_fallback(head_element, move |event| {
-        if let (true, Ok(size)) = (bounded, event.get_border_box_size()) {
-            head.set(size.height);
-        }
-    });
     // Blitz sticks each column header, not the `thead`: the filters row sticks under them by hand (todo 1402).
     let sticky_filters = bounded && props.header_filters && !sticks_table_heads();
     let head_cell = use_element();
@@ -1160,21 +1155,6 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         {
             head_cell_height.set(size.height);
         }
-    });
-    // The first resize report can come a second late, and a Tab before it
-    // scrolls a row under the header (todo 1523): measure at mount too.
-    use_effect(move || {
-        if !bounded || !head_element.is_mounted() {
-            return;
-        }
-        let measured = head_element.dimensions();
-        spawn(async move {
-            if let Ok(size) = measured.await
-                && *head.peek() == 0.0
-            {
-                head.set(size.height);
-            }
-        });
     });
     let scrolls = props.scroll || bounded;
     let size_states: Input<States> = States::new().with(size.state_name(), true).into();
@@ -1502,6 +1482,9 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         true => state.page_size.read().max(1),
         false => SKELETON_ROWS,
     });
+    // Not while loading: a count of no rows yet would read as a total.
+    let footer = footer.filter(|_| skeleton.is_none());
+    let foot_gap = if footer.is_some() { *foot.read() } else { 0.0 };
     let key_at: Rc<dyn Fn(usize) -> String> = Rc::new(move |index| keys[index].clone());
     let has_data = !data.is_empty();
     let headers = Rc::new(headers);
@@ -1572,7 +1555,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     };
     // A keyboard lift carries the view by slot: its target row may not be rendered (todo 1408).
     let region = column_drag.region;
-    use_effect(use_reactive!(|row_height| {
+    use_effect(use_reactive!(|(row_height, foot_gap)| {
         let (Some((_, to)), Some(pitch)) = (lift(), row_height) else {
             return;
         };
@@ -1582,7 +1565,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             let (Ok((x, top)), Ok(view)) = (offset.await, view.await) else {
                 return;
             };
-            if let Some(top) = reveal_slot(to, pitch, head, top, view.height) {
+            if let Some(top) = reveal_slot(to, pitch, (head, foot_gap), top, view.height) {
                 let _ = region.scroll_to(x, top);
             }
         });
@@ -1595,13 +1578,19 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let rows = match row_height {
         Some(row_height) => {
             let (first, total) = counted;
-            attributes.extend(window_attributes(head_rows, total, skeleton.is_some()));
+            attributes.extend(window_attributes(
+                head_rows,
+                total,
+                skeleton.is_some(),
+                footer.is_some(),
+            ));
             attributes.extend(row_focus.attributes());
             let order: Rc<[VisibleRow]> = order.into();
             row_focus.show(head_rows + first, order.clone());
             BodyRows::Window(RowWindow {
                 order,
                 first,
+                total,
                 row_height,
                 row: Rc::new(move |position, row| match row {
                     VisibleRow::Data(index) => {
@@ -1762,8 +1751,11 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 order: layout,
                 rows,
                 empty,
-                // Not while loading: a count of no rows yet would read as a total.
-                footer: footer.filter(|_| skeleton.is_none()),
+                footer,
+                foot: Foot {
+                    element: foot_element,
+                    told: bounded.then(|| EventHandler::new(move |height| foot.set(height))),
+                },
                 active,
                 sort: state.sort,
                 touch: props.multi_sort.then_some(touch),
@@ -1857,9 +1849,19 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                             Some(height) => {
                                 // The sticky header covers the top; a focus scroll stops below it.
                                 let pad = format!("{}px", head());
-                                pads.max_height(height)
+                                let pads = pads
+                                    .max_height(height)
                                     .with("scroll-padding-top", pad.clone())
-                                    .with(SCROLL_PADDING_VARS[0], pad)
+                                    .with(SCROLL_PADDING_VARS[0], pad);
+                                // The sticky footer covers the bottom, as the header the top.
+                                match foot_gap > 0.0 {
+                                    true => {
+                                        let pad = format!("{foot_gap}px");
+                                        pads.with("scroll-padding-bottom", pad.clone())
+                                            .with(SCROLL_PADDING_VARS[2], pad)
+                                    }
+                                    false => pads,
+                                }
                             }
                             None => pads,
                         }

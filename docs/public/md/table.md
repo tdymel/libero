@@ -912,8 +912,8 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
   count and each row's place, "row 5 001 of 10 001". Tab walks past the
   rendered rows, and the row holding focus stays rendered.
 - A footer cell reads its aggregate's name before the value, "Average 7.8 %",
-  and sits in the column its header names. The footer is not counted in
-  `aria-rowcount` of a `virtual_row_height` table.
+  and sits in the column its header names. In a `virtual_row_height` table the
+  footer is the last counted row, and a focus scroll stops above it.
 - The `toolbar` is a plain row, not a `role="toolbar"`: Tab moves through it
   as anywhere else.
 
