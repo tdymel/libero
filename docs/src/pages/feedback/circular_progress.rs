@@ -44,7 +44,7 @@ pub fn CircularProgressPage() -> Element {
                 prop("aria_valuetext", "String")
                     .doc("Read instead of the rounded percentage, such as \"3 of 8 files\"."),
                 prop("children", "Element")
-                    .doc("Drawn in the middle of the ring, such as the percentage or an icon, at a quarter of the edge. Hidden from screen readers: say the same in `aria_valuetext` when it differs from the percentage."),
+                    .doc("Drawn in the middle of the ring, such as the percentage or an icon, at a quarter of the edge, never under 12px. Hidden from screen readers: say the same in `aria_valuetext` when it differs from the percentage."),
                 prop("parts", "Parts<CircularProgressPart>")
                     .doc("Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(CircularProgressPart::Label, sx().font_weight(\"bold\"))`."),
             ])
@@ -62,7 +62,7 @@ pub fn CircularProgressPage() -> Element {
                 .must([
                     "Name it with `aria_label`, or `aria_labelledby` pointing at a visible caption.",
                     "The ring is not a live region. To announce progress, update a separate status line at milestones, not on every tick.",
-                    "Pick a `size` whose middle fits the children: the default `md` ring leaves 9px text.",
+                    "Pick a `size` whose middle fits the children: the text is never under 12px, so it spills over an `xs` or `sm` ring, and `md` holds about three characters (\"42%\", not \"100%\").",
                 ])
                 .example("An upload ring, `CircularProgress { value: Some(42.0), aria_label: \"Upload\", \"42%\" }`: a screen reader reads the name \"Upload\" and 42% when it reaches the ring."),
             lead: rsx! {

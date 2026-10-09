@@ -39,6 +39,8 @@ static ALERT_BASE_SX: StaticSx = StaticSx::new(|| {
         // Chained on the same `Sx` as `paper_sx()`'s `display: block`, so the
         // class carries one `display`, not two racing in the cascade.
         .display("flex")
+        // A wide `actions` row drops under the body, not beside a one-character message.
+        .flex_wrap("wrap")
         // Icon and close button sit beside the first line of a wrapped message.
         .align_items("flex-start")
         // `Elevated` puts its own shadow back, from inside its fold.
@@ -69,8 +71,9 @@ static ALERT_BASE_SX: StaticSx = StaticSx::new(|| {
             sx().display("flex")
                 .flex_direction("column")
                 .gap(ALERT_BODY_GAP.value())
-                // `min-width: 0` lets a long title wrap instead of overflowing.
-                .flex("1")
+                // 60% of the row at least, else `actions` wraps (106px wide message
+                // at 320px otherwise); `min-width: 0` lets a long title wrap.
+                .flex("1 1 60%")
                 .min_width("0")
                 // Wraps, never an ellipsis: cut text is unreadable (WCAG 1.4.10).
                 .with("overflow-wrap", "anywhere"),
@@ -82,6 +85,11 @@ static ALERT_BASE_SX: StaticSx = StaticSx::new(|| {
                 .align_items("center")
                 .align_self("center")
                 .gap(ALERT_GAP.value()),
+        )
+        // On a wrapped row the close button keeps the end edge.
+        .selector(
+            AlertPart::Close.selector(),
+            sx().margin_inline_start("auto"),
         )
         .selector(AlertPart::Title.selector(), sx().font_weight("600"));
 
@@ -327,6 +335,16 @@ mod tests {
                 ("close", "& > [data-slot='close']"),
             ]
         );
+    }
+
+    /// Measured at 320px and 200% text: nowrap left the message 35px wide beside "Update card".
+    #[test]
+    fn the_actions_row_wraps_under_a_body_that_keeps_most_of_the_row() {
+        let css = crate::css::Stylesheet::from(&*ALERT_BASE_SX);
+        let css = css.as_str();
+
+        assert!(css.contains("flex-wrap:wrap;"), "{css}");
+        assert!(css.contains("flex:1 1 60%;"), "{css}");
     }
 
     /// The page's link colour is about 1.5:1 on an `error` fill, 3.5:1 on its tint (todo 1576).

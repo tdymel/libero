@@ -73,7 +73,7 @@ fn Demo() -> Element {
 | `size` | `Size` | `md` | The outer edge, 18px at `xs` to 72px at `xxl`. |
 | `thickness` | `Size` | `md` | The ring's width as a share of the edge, 6% at `xs` to 16% at `xxl`, so it grows with `size`. |
 | `aria_valuetext` | `String` | - | Read instead of the rounded percentage, such as "3 of 8 files". |
-| `children` | `Element` | - | Drawn in the middle of the ring, such as the percentage or an icon, at a quarter of the edge. Hidden from screen readers: say the same in `aria_valuetext` when it differs from the percentage. |
+| `children` | `Element` | - | Drawn in the middle of the ring, such as the percentage or an icon, at a quarter of the edge, never under 12px. Hidden from screen readers: say the same in `aria_valuetext` when it differs from the percentage. |
 | `parts` | `Parts<CircularProgressPart>` | - | Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(CircularProgressPart::Label, sx().font_weight("bold"))`. |
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
@@ -110,8 +110,9 @@ explains how parts work.
   caption.
 - The ring is not a live region. To announce progress, update a separate status
   line at milestones, not on every tick.
-- Pick a `size` whose middle fits the children: the default `md` ring leaves
-  9px text.
+- Pick a `size` whose middle fits the children: the text is never under
+  12px, so it spills over an `xs` or `sm` ring, and `md` holds about three
+  characters ("42%", not "100%").
 
 ### Example
 

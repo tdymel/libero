@@ -278,7 +278,7 @@ pub fn NotificationsPage() -> Element {
                     "Showing one takes no focus. `live` picks a polite or an assertive announcement.",
                     "Without the hotkey, a close button comes after the rest of the page in `Tab` order.",
                     "A focused notification never closes on its own.",
-                    "Closing the focused one moves focus to the next close button in its stack, and back to where `F8` was pressed once the stack is empty.",
+                    "Closing the focused one moves focus to the next notification's close button in its stack (the previous one's if it was last; the first focusable element when that one has no close button), and back to where `F8` was pressed once the stack is empty.",
                 ])
                 .must([
                     "Give one with an action, such as Undo, `AutoClose::Never`: it is safer.",

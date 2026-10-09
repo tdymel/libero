@@ -8,6 +8,21 @@ use libero::components::CircularProgress;
 
 const RING: &str = "#ring";
 
+/// A quarter of the `md` edge is 9px: the label stays at the 12px floor.
+#[test]
+fn the_label_keeps_to_the_12px_floor_natively() {
+    fn app() -> Element {
+        rsx! {
+            CircularProgress { id: "ring", aria_label: "Upload", value: 42.0, "42%" }
+        }
+    }
+    let page = mount(app);
+    assert_eq!(
+        page.computed("#ring > [data-slot=label]", "font-size"),
+        "12px"
+    );
+}
+
 /// A quarter drawn clockwise from the top: its middle paints the arc colour, the
 /// opposite side only the track.
 #[test]

@@ -104,7 +104,11 @@ static CIRCULAR_PROGRESS_LABEL_SX: StaticSx = StaticSx::new(|| {
         .display("inline-flex")
         .align_items("center")
         .justify_content("center")
-        .font_size(format!("calc({} / 4)", CIRCULAR_PROGRESS_SIZE.value()))
+        // A quarter of the edge, but never under 12px: the type floor.
+        .font_size(format!(
+            "max(0.75rem, calc({} / 4))",
+            CIRCULAR_PROGRESS_SIZE.value()
+        ))
         .line_height("1")
 });
 
@@ -241,7 +245,12 @@ base_props! {
 /// # fn app() -> Element {
 /// # let sent = use_signal(|| 3.0);
 /// # rsx! {
-/// CircularProgress { aria_label: "Upload", value: sent(), max: 8.0, size: "lg",
+/// CircularProgress {
+///     aria_label: "Upload",
+///     value: sent(),
+///     max: 8.0,
+///     size: "lg",
+///     aria_valuetext: format!("{sent} of 8"),
 ///     "{sent} of 8"
 /// }
 /// # } }
@@ -381,6 +390,14 @@ mod tests {
             svg_number(ring.offset(0.25)),
             svg_number(ring.length * 0.75)
         );
+    }
+
+    /// A quarter of the 36px `md` edge is 9px, under the 12px type floor (todo 2731).
+    #[test]
+    fn the_label_never_drops_under_12px() {
+        let css = crate::css::Stylesheet::from(&*CIRCULAR_PROGRESS_LABEL_SX);
+        let css = css.as_str();
+        assert!(css.contains("font-size:max(0.75rem,"), "{css}");
     }
 
     /// A theme step past half the edge would draw a negative radius.
