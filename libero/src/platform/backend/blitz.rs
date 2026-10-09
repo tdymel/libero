@@ -2443,15 +2443,19 @@ pub(super) fn reveal(doc: &mut BaseDocument, node_id: NodeId) {
     }
 }
 
-/// [`SCROLL_PADDING_VARS`] as `@property` rules that do not inherit, so a nested scroller
-/// gets none of its ancestor's padding.
+/// [`SCROLL_PADDING_VARS`] and [`SCROLL_MARGIN_VAR`] as `@property` rules that do not inherit,
+/// so a nested scroller or a descendant gets none of its ancestor's padding or margin.
+/// The bottom margin stays unregistered-like (`*`, no initial value): unset is told from `0`.
 pub(super) fn scroll_padding_properties() -> &'static str {
     static CSS: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        SCROLL_PADDING_VARS
+        let lengths = SCROLL_PADDING_VARS
+            .into_iter()
+            .chain([SCROLL_MARGIN_VAR])
             .map(|var| {
                 format!("@property {var}{{syntax:'<length>';inherits:false;initial-value:0px;}}")
             })
-            .concat()
+            .collect::<String>();
+        format!("{lengths}@property {SCROLL_MARGIN_BOTTOM_VAR}{{syntax:'*';inherits:false;}}")
     });
     &CSS
 }

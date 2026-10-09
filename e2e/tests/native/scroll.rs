@@ -152,6 +152,53 @@ fn a_scrollers_padding_var_is_its_own_not_its_nested_scrollers() {
     );
 }
 
+/// A link far below the first, with `--lsx-scroll-margin` on the link itself or on its wrapper.
+fn margined(own: bool) -> Element {
+    let margin = "--lsx-scroll-margin: 40px;";
+    let link = if own { margin } else { "" };
+    rsx! {
+        div { id: "box", style: "height: 100px; overflow-y: auto;",
+            a { id: "first", href: "#", style: "display: block; height: 20px;", "First" }
+            div { style: "height: 300px;" }
+            div { style: if own { "" } else { margin },
+                a {
+                    id: "far",
+                    href: "#",
+                    style: "display: block; height: 20px; {link}",
+                    "Far"
+                }
+            }
+            div { style: "height: 300px;" }
+        }
+    }
+}
+
+fn own_margin() -> Element {
+    margined(true)
+}
+
+fn wrapper_margin() -> Element {
+    margined(false)
+}
+
+/// Todo 1831: a scroll margin is the target's own, as `scroll-margin` is, not its descendants'.
+#[test]
+fn a_scroll_margin_var_holds_for_its_own_element_only() {
+    for (app, margin) in [(own_margin as fn() -> Element, 40.0), (wrapper_margin, 0.0)] {
+        let mut page = mount(app);
+        page.focus("#first");
+        page.tab();
+        page.settle();
+        assert!(page.is_focused("#far"), "{}", page.focus_owner());
+        // The link's bottom, plus its margin, meets the box's bottom.
+        assert_eq!(
+            page.scroll_top("#box"),
+            340.0 + margin - 100.0,
+            "margin {margin}"
+        );
+    }
+}
+
 #[test]
 fn a_wheel_tells_scroll_subscribers() {
     let mut page = mount(listening);

@@ -281,6 +281,68 @@ fn pinned_columns_hold_at_both_edges_right_to_left() {
     pins_hold(mount(|| pinned_app(true)), true);
 }
 
+/// Todo 1974: a focus scroll stops short of a pinned column on either edge, which Blitz
+/// reads from the `--lsx-scroll-padding-*` vars.
+#[test]
+fn a_focus_scroll_clears_the_pinned_columns() {
+    fn app() -> Element {
+        let columns = (0..6)
+            .map(|i| {
+                column(format!("C{i}"))
+                    .value(|p: &Person| p.name.to_string())
+                    .width("120px")
+                    .sortable()
+            })
+            .collect();
+        rsx! {
+            div { width: "400px",
+                Table {
+                    aria_label: "Wide",
+                    scroll: true,
+                    default_pinned_columns: PinnedColumns::default().start(["C0"]).end(["C5"]),
+                    data: vec![Person { name: "Ada", age: 36 }],
+                    columns,
+                }
+            }
+        }
+    }
+    const AREA: &str = "[data-table-scroll]";
+    let mut page = mount(app);
+    let button = |index: usize| format!("thead th:nth-child({}) button", index + 1);
+    page.hover(AREA);
+    let start = page.rect("thead th:nth-child(4)").0;
+    page.wheel_x(AREA, 2000.0);
+    page.wait_for(|page| (page.rect("thead th:nth-child(4)").0 - start).abs() > 100.0);
+    // C4 is the one between the pins; Shift+Tab reaches C3, hidden under C0.
+    page.focus(&button(4));
+    page.shift_tab();
+    page.settle();
+    assert!(page.is_focused(&button(3)), "{}", page.focus_owner());
+    let (left, _, width, _) = page.rect("thead th:nth-child(1)");
+    let at = page.rect(&button(3)).0;
+    assert!(at >= left + width - 1.0, "C3 sits at {at}, under C0");
+
+    // Back at the start, Tab from C1 reaches C2, which C5 covers.
+    page.wheel_x(AREA, -2000.0);
+    page.wait_for(|page| (page.rect("thead th:nth-child(4)").0 - start).abs() <= 1.0);
+    page.focus(&button(1));
+    page.tab();
+    page.settle();
+    assert!(page.is_focused(&button(2)), "{}", page.focus_owner());
+    // The end pin's shift follows the scroll at the next layout.
+    let clear = |page: &Page| {
+        let (at, _, width, _) = page.rect(&button(2));
+        at + width <= page.rect("thead th:nth-child(6)").0 + 1.0
+    };
+    page.wait_for(clear);
+    assert!(
+        clear(&page),
+        "C2 {:?} is under C5 {:?}",
+        page.rect(&button(2)),
+        page.rect("thead th:nth-child(6)")
+    );
+}
+
 /// 1156-2a: a column's `width` sits on its header cell (Blitz ignores `<col>`)
 /// and sizes its body cells too, padding included.
 #[test]

@@ -1837,12 +1837,16 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                         // Pinned columns cover the inline edges; a focus scroll stops inside them (todo 1791).
                         // The lead widths read the cell padding, resolved on the table below: again here.
                         let mut pads = sx().var(TABLE_PAD_X, TABLE_PADDING_X.value(size));
-                        for (property, pad) in ["scroll-padding-inline-start", "scroll-padding-inline-end"]
-                            .into_iter()
-                            .zip(pinned_pads)
+                        // Blitz reads the left and right vars: its `<length>` registration resolves the calc.
+                        for ((property, var), pad) in [
+                            ("scroll-padding-inline-start", SCROLL_PADDING_VARS[3]),
+                            ("scroll-padding-inline-end", SCROLL_PADDING_VARS[1]),
+                        ]
+                        .into_iter()
+                        .zip(pinned_pads)
                         {
                             if let Some(pad) = pad {
-                                pads = pads.with(property, pad);
+                                pads = pads.with(property, pad.clone()).with(var, pad);
                             }
                         }
                         match max_height {
