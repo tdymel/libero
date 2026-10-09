@@ -13,7 +13,7 @@
 
 use std::time::{Duration, Instant};
 
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 
 use crate::passes::keyboard::Key;
 
@@ -32,6 +32,14 @@ pub struct Rect {
     pub y: f64,
     pub width: f64,
     pub height: f64,
+}
+
+/// The JS expression for `selector`'s first match.
+fn query(selector: &str) -> String {
+    format!(
+        "document.querySelector({})",
+        serde_json::to_string(selector).expect("a string serialises")
+    )
 }
 
 /// What a scenario may do and read. Every read is of the settled page on
@@ -87,6 +95,64 @@ pub trait Driver {
     async fn evaluate(&mut self, expression: &str) -> Result<serde_json::Value> {
         let _ = expression;
         bail!("{:?}: no script reads", self.platform())
+    }
+    /// The first match's `(scrollLeft, scrollTop)`.
+    async fn scroll_pos(&mut self, selector: &str) -> Result<(f64, f64)> {
+        let value = self
+            .evaluate(&format!(
+                "(e => [e.scrollLeft, e.scrollTop])({})",
+                query(selector)
+            ))
+            .await?;
+        let read = |at: usize| value[at].as_f64().context("no scroll offset read");
+        Ok((read(0)?, read(1)?))
+    }
+    /// The first match's `scrollHeight`.
+    async fn scroll_height(&mut self, selector: &str) -> Result<f64> {
+        let value = self
+            .evaluate(&format!("{}.scrollHeight", query(selector)))
+            .await?;
+        value.as_f64().context("no scroll height read")
+    }
+    /// Scrolls the first match to `(left, top)`, as `scrollTo` does; on Blitz by wheel, so a
+    /// target past the end is clamped and the offset lands within a px.
+    async fn scroll_to(&mut self, selector: &str, left: f64, top: f64) -> Result<()> {
+        self.evaluate(&format!("{}.scrollTo({left}, {top})", query(selector)))
+            .await?;
+        Ok(())
+    }
+    /// Sets one inline style property of the first match.
+    async fn set_style(&mut self, selector: &str, property: &str, value: &str) -> Result<()> {
+        self.evaluate(&format!(
+            "{}.style.setProperty({}, {})",
+            query(selector),
+            serde_json::to_string(property)?,
+            serde_json::to_string(value)?
+        ))
+        .await?;
+        Ok(())
+    }
+    /// Every match's bounding rect, in document order.
+    async fn rects(&mut self, selector: &str) -> Result<Vec<Rect>> {
+        let value = self
+            .evaluate(&format!(
+                "[...document.querySelectorAll({})].map(e => {{ const r = e.getBoundingClientRect(); \
+                 return {{x: r.x, y: r.y, width: r.width, height: r.height}}; }})",
+                serde_json::to_string(selector)?
+            ))
+            .await?;
+        Ok(serde_json::from_value(value)?)
+    }
+    /// Every match's `name` attribute (empty where unset), in document order.
+    async fn attrs(&mut self, selector: &str, name: &str) -> Result<Vec<String>> {
+        let value = self
+            .evaluate(&format!(
+                "[...document.querySelectorAll({})].map(e => e.getAttribute({}) ?? '')",
+                serde_json::to_string(selector)?,
+                serde_json::to_string(name)?
+            ))
+            .await?;
+        Ok(serde_json::from_value(value)?)
     }
     /// A touch held still at the first match's centre for `ms`, then lifted.
     async fn long_press(&mut self, selector: &str, ms: u64) -> Result<()> {

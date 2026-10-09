@@ -796,6 +796,56 @@ impl Page {
             .map_or(0.0, |node| node.scroll_offset().y)
     }
 
+    /// A node's `(left, top)` scroll offset.
+    pub fn scroll_pos(&self, selector: &str) -> (f64, f64) {
+        let id = self.node(selector);
+        let doc = self.doc.inner.borrow();
+        doc.get_node(id).map_or((0.0, 0.0), |node| {
+            let offset = node.scroll_offset();
+            (offset.x, offset.y)
+        })
+    }
+
+    /// A node's `scrollHeight`.
+    pub fn scroll_height(&self, selector: &str) -> f64 {
+        let id = self.node(selector);
+        let doc = self.doc.inner.borrow();
+        doc.get_node(id)
+            .map_or(0.0, |node| f64::from(node.scroll_height()))
+    }
+
+    /// Scrolls the first match to `(left, top)` by wheel, over its centre, as `scrollTo` lands.
+    pub fn scroll_to(&mut self, selector: &str, left: f64, top: f64) {
+        let (x, y) = self.centre(selector);
+        let (now_left, now_top) = self.scroll_pos(selector);
+        self.hover_at(x, y);
+        if left != now_left {
+            self.wheel_x(selector, left - now_left);
+        }
+        if top != now_top {
+            self.wheel_at(x, y, top - now_top);
+        }
+    }
+
+    /// Every match's `getBoundingClientRect()`, as [`rect`](Self::rect) reads one.
+    pub fn rects(&self, selector: &str) -> Vec<(f64, f64, f64, f64)> {
+        let doc = self.doc.inner.borrow();
+        self.query_all(selector)
+            .into_iter()
+            .filter_map(|id| client_rect(&doc, id))
+            .collect()
+    }
+
+    /// Sets one inline style property of the first match, as `style.setProperty` does.
+    pub fn set_style(&mut self, selector: &str, name: &str, value: &str) {
+        let id = self.node(selector);
+        self.doc
+            .inner
+            .borrow_mut()
+            .set_style_property(id, name, value);
+        self.settle();
+    }
+
     /// Focuses the first match directly, the way `element.focus()` does.
     /// Blitz fires no focus or blur event for it.
     pub fn focus(&mut self, selector: &str) {

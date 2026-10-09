@@ -61,6 +61,53 @@ impl Driver for Native {
         Ok(())
     }
 
+    async fn wheel(&mut self, selector: &str, dy: f64) -> Result<()> {
+        self.page.hover(selector);
+        self.page.wheel(selector, dy);
+        Ok(())
+    }
+
+    async fn scroll_pos(&mut self, selector: &str) -> Result<(f64, f64)> {
+        Ok(self.page.scroll_pos(selector))
+    }
+
+    async fn scroll_height(&mut self, selector: &str) -> Result<f64> {
+        Ok(self.page.scroll_height(selector))
+    }
+
+    async fn scroll_to(&mut self, selector: &str, left: f64, top: f64) -> Result<()> {
+        self.page.scroll_to(selector, left, top);
+        Ok(())
+    }
+
+    async fn set_style(&mut self, selector: &str, property: &str, value: &str) -> Result<()> {
+        self.page.set_style(selector, property, value);
+        Ok(())
+    }
+
+    async fn rects(&mut self, selector: &str) -> Result<Vec<Rect>> {
+        Ok(self
+            .page
+            .rects(selector)
+            .into_iter()
+            .map(|(x, y, width, height)| Rect {
+                x,
+                y,
+                width,
+                height,
+            })
+            .collect())
+    }
+
+    async fn attrs(&mut self, selector: &str, name: &str) -> Result<Vec<String>> {
+        let page = &self.page;
+        Ok(page
+            .query_all(selector)
+            .into_iter()
+            .map(|id| page.attr_of(id, name).unwrap_or_default())
+            .collect())
+    }
+
     async fn press(&mut self, key: keyboard::Key) -> Result<()> {
         let key = native_key(key)?;
         self.page.press(key);
@@ -102,6 +149,18 @@ impl Driver for Native {
         let (x, y) = self.page.touch_down(selector);
         self.page.wait(Duration::from_millis(ms));
         self.page.touch_up(x, y);
+        Ok(())
+    }
+
+    async fn touch_down(&mut self, selector: &str) -> Result<()> {
+        self.page.touch_down(selector);
+        Ok(())
+    }
+
+    async fn touch_up(&mut self, selector: &str) -> Result<()> {
+        let (x, y, width, height) = self.page.rect(selector);
+        self.page
+            .touch_up((x + width / 2.0) as f32, (y + height / 2.0) as f32);
         Ok(())
     }
 

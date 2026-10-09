@@ -146,7 +146,6 @@ e2e::scenario!(
     a_long_press_opens_it_on_touch,
     "/tooltip/quick",
     long_press_opens,
-    native: skip("996: Blitz has no touch input"),
     desktop: skip("1126: no touch input under Xvfb")
 );
 e2e::scenario!(

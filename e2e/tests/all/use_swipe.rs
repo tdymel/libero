@@ -98,13 +98,11 @@ async fn reopens_after_each_close<D: Driver>(d: &mut D, _route: &str) -> Result<
     Ok(())
 }
 
+#[cfg_attr(not(feature = "android"), allow(dead_code))]
 const WIDE_SCROLL_LEFT: &str = "document.querySelector('#wide').scrollLeft";
 
 async fn wide_scroll_left<D: Driver>(d: &mut D) -> Result<f64> {
-    Ok(d.evaluate(WIDE_SCROLL_LEFT)
-        .await?
-        .as_f64()
-        .unwrap_or(f64::NAN))
+    Ok(d.scroll_pos("#wide").await?.0)
 }
 
 /// Todo 2586: on a scroller with room to pan back, the band still opens and the
@@ -112,7 +110,12 @@ async fn wide_scroll_left<D: Driver>(d: &mut D) -> Result<f64> {
 async fn the_band_wins_over_a_scrolled_scroller<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let wide = d.rect("#wide").await?;
     let y = wide.y + wide.height / 2.0;
-    d.evaluate(&format!("{WIDE_SCROLL_LEFT} = 600")).await?;
+    d.scroll_to("#wide", 600.0, 0.0).await?;
+    let set = wide_scroll_left(d).await?;
+    assert!(
+        (set - 600.0).abs() < 1.0,
+        "the scroller is at {set}, not 600"
+    );
     d.swipe_from(IN_BAND, y, 120.0, 0.0).await?;
     text_is(d, "#opens", "1").await?;
     let left = wide_scroll_left(d).await?;
@@ -250,6 +253,6 @@ e2e::scenario!(
     an_edge_swipe_wins_over_a_scrolled_inner_scroller,
     "/use-swipe/drawer",
     the_band_wins_over_a_scrolled_scroller,
-    native: skip("sets and reads scrollLeft by script; Blitz runs none"),
+    native: skip("Blitz pans a scroller under any touch, whatever its touch-action: 600 -> ~200 on the band swipe"),
     desktop: skip("1126: no touch input under Xvfb")
 );

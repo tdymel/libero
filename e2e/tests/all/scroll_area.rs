@@ -12,8 +12,11 @@ use e2e::passes::contrast::COLOUR_JS;
 use e2e::passes::{focus, keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, wait};
 
-/// The highest row index a `Virtualize` has in the document.
-const LAST_ROW: &str = "Math.max(...[...document.querySelectorAll('#list-pane [data-row]')].map(r => Number(r.dataset.row)))";
+/// The list's scrolling box (the area's root) and its rows; the rewrap page's likewise.
+const LIST: &str = "#list-pane > div";
+const LIST_ROWS: &str = "#list-pane [data-row]";
+const WRAP_LIST: &str = "#wrap-pane > div";
+const WRAP_ROWS: &str = "#wrap-pane [data-row]";
 
 /// 20px rows: a 120px pane shows a dozen, 600px needs 29. The area listens for `onresize`
 /// itself; a caller's listener must still run.
@@ -37,6 +40,29 @@ async fn number<D: Driver>(d: &mut D, probe: &str) -> Result<f64> {
         .ok_or_else(|| anyhow!("{probe} read {value}, no number"))
 }
 
+/// The lowest and highest `data-row` among `rows`' matches; `(inf, -inf)` with none.
+async fn row_range<D: Driver>(d: &mut D, rows: &str) -> Result<(f64, f64)> {
+    let indices = d.attrs(rows, "data-row").await?;
+    let indices = indices.iter().filter_map(|row| row.parse::<f64>().ok());
+    Ok(
+        indices.fold((f64::INFINITY, f64::NEG_INFINITY), |(low, high), row| {
+            (low.min(row), high.max(row))
+        }),
+    )
+}
+
+/// The px of `area` no row of `rows` covers.
+async fn uncovered<D: Driver>(d: &mut D, area: &str, rows: &str) -> Result<f64> {
+    let view = d.rect(area).await?;
+    let rects = d.rects(rows).await?;
+    let top = rects.iter().map(|r| r.y).fold(f64::INFINITY, f64::min);
+    let bottom = rects
+        .iter()
+        .map(|r| r.y + r.height)
+        .fold(f64::NEG_INFINITY, f64::max);
+    Ok((top - view.y).max(0.0) + (view.y + view.height - bottom).max(0.0))
+}
+
 async fn resizes<D: Driver>(d: &mut D) -> Result<u64> {
     Ok(d.text("#list-resizes").await?.trim().parse()?)
 }
@@ -44,7 +70,7 @@ async fn resizes<D: Driver>(d: &mut D) -> Result<u64> {
 /// The measured window first, not the first render's 1080px guess.
 async fn measured<D: Driver>(d: &mut D) -> Result<()> {
     eventually(d, "the window to fit the short pane", async |d| {
-        Ok(number(d, LAST_ROW).await? < 29.0 && resizes(d).await? > 0)
+        Ok(row_range(d, LIST_ROWS).await?.1 < 29.0 && resizes(d).await? > 0)
     })
     .await
 }
@@ -52,10 +78,9 @@ async fn measured<D: Driver>(d: &mut D) -> Result<()> {
 async fn a_taller_pane_renders_more_rows<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     measured(d).await?;
     let before = resizes(d).await?;
-    d.evaluate("document.querySelector('#list-pane').style.height = '600px'")
-        .await?;
+    d.set_style("#list-pane", "height", "600px").await?;
     eventually(d, "rows down to the taller pane's bottom", async |d| {
-        Ok(number(d, LAST_ROW).await? >= 29.0)
+        Ok(row_range(d, LIST_ROWS).await?.1 >= 29.0)
     })
     .await?;
     eventually(d, "the caller's own onresize to run", async |d| {
@@ -67,8 +92,7 @@ async fn a_taller_pane_renders_more_rows<D: Driver>(d: &mut D, _route: &str) -> 
 e2e::scenario!(
     a_taller_pane_renders_rows_to_its_new_bottom,
     "/scroll-area",
-    a_taller_pane_renders_more_rows,
-    native: skip("no script reads on Blitz")
+    a_taller_pane_renders_more_rows
 );
 
 /// Scrolls the list 60px a frame for 40 frames, as a fling does, and returns the
@@ -90,11 +114,34 @@ const FLING_BLANK: &str = r#"(async () => {
     return worst;
 })()"#;
 
+/// [`FLING_BLANK`] where a script runs it within the page's frames; Blitz has none, so the
+/// same steps go through the driver, a frame each.
+async fn fling_blank<D: Driver>(d: &mut D) -> Result<f64> {
+    if d.platform() != Platform::Native {
+        return number(d, FLING_BLANK).await;
+    }
+    let height = d.rect(LIST).await?.height;
+    let mut worst: f64 = 0.0;
+    for step in 0..40 {
+        let (left, top) = d.scroll_pos(LIST).await?;
+        d.scroll_to(LIST, left, top + 60.0).await?;
+        d.frame().await?;
+        if step >= 3 {
+            worst = worst.max(uncovered(d, LIST, LIST_ROWS).await?.min(height));
+        }
+    }
+    ensure!(
+        d.scroll_pos(LIST).await?.1 > 1000.0,
+        "the fling did not scroll the list"
+    );
+    Ok(worst)
+}
+
 /// Todo 2013: the padding standing in for the rows above the window follows every
 /// scroll step. It came up through an effect, which a fling starved: the rows drifted off.
 async fn rows_stay_in_view<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     measured(d).await?;
-    let blank = number(d, FLING_BLANK).await?;
+    let blank = fling_blank(d).await?;
     // A row's pitch of slack for a frame the window trails by.
     ensure!(blank <= 20.0, "{blank}px of the 120px pane showed no row");
     Ok(())
@@ -104,27 +151,22 @@ e2e::scenario!(
     rows_stay_in_view_through_a_fling,
     "/scroll-area",
     rows_stay_in_view,
-    native: skip("no script reads on Blitz"),
     desktop: skip("2131: the window trails a WebView fling, 80px of 120 blank"),
     android: skip("2131: the window trails a WebView fling")
 );
 
 /// The list's scrolling box, and the lowest row index it has in the document.
+#[cfg_attr(not(feature = "android"), allow(dead_code))]
 const AREA: &str = "[...document.querySelectorAll('#list-pane *')].find(e => e.scrollHeight > e.clientHeight + 100)";
+#[cfg_attr(not(feature = "android"), allow(dead_code))]
 const FIRST_ROW: &str = "Math.min(...[...document.querySelectorAll('#list-pane [data-row]')].map(r => Number(r.dataset.row)))";
-/// The px of the list's pane no row covers now.
-const BLANK: &str = "(() => { const pane = document.querySelector('#list-pane'); \
-    const view = [...pane.querySelectorAll('*')].find(e => e.scrollHeight > e.clientHeight + 100).getBoundingClientRect(); \
-    const rows = [...pane.querySelectorAll('[data-row]')].map(r => r.getBoundingClientRect()); \
-    const top = Math.min(...rows.map(r => r.top)), bottom = Math.max(...rows.map(r => r.bottom)); \
-    return Math.max(0, top - view.top) + Math.max(0, view.bottom - bottom); })()";
 
 /// Todo 2177's setup on every platform: a jump far down the list renders the window there.
 async fn a_jump_renders_the_window_there<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     measured(d).await?;
-    d.evaluate(&format!("{AREA}.scrollTop = 10000")).await?;
+    d.scroll_to(LIST, 0.0, 10000.0).await?;
     eventually(d, "the window mid-list, the pane covered", async |d| {
-        Ok(number(d, FIRST_ROW).await? > 400.0 && number(d, BLANK).await? < 1.0)
+        Ok(row_range(d, LIST_ROWS).await?.0 > 400.0 && uncovered(d, LIST, LIST_ROWS).await? < 1.0)
     })
     .await
 }
@@ -133,63 +175,67 @@ e2e::scenario!(
     a_jump_mid_list_renders_the_window_there,
     "/scroll-area",
     a_jump_renders_the_window_there,
-    native: skip("no script reads on Blitz"),
     android: skip("2177: the WebView does not follow the jump")
 );
 
-/// `#wrap-pane`'s list: its scroll height, the px no row covers, and whether the row at
-/// the top of the view is the one the offset puts there at `pitch`.
-const WRAP: &str = "(pitch) => { const pane = document.querySelector('#wrap-pane'); \
-    const area = [...pane.querySelectorAll('*')].find(e => e.scrollHeight > e.clientHeight + 100); \
-    const view = area.getBoundingClientRect(); \
-    const rows = [...pane.querySelectorAll('[data-row]')]; \
-    const rects = rows.map(r => r.getBoundingClientRect()); \
-    const top = Math.min(...rects.map(r => r.top)), bottom = Math.max(...rects.map(r => r.bottom)); \
-    const at = rows.find((r, i) => rects[i].top <= view.top + 1 && rects[i].bottom > view.top + 1); \
-    return { height: area.scrollHeight, top: area.scrollTop, \
-        blank: Math.max(0, top - view.top) + Math.max(0, view.bottom - bottom), \
-        aligned: !!at && Number(at.dataset.row) === Math.floor((area.scrollTop + 1) / pitch) }; }";
+/// `#wrap-pane`'s list: its scroll height and offset, the px no row covers, and whether the
+/// row at the top of the view is the one the offset puts there at `pitch`.
+struct Wrap {
+    height: f64,
+    top: f64,
+    blank: f64,
+    aligned: bool,
+}
 
-async fn wrap<D: Driver>(d: &mut D, pitch: f64) -> Result<serde_json::Value> {
-    d.evaluate(&format!("({WRAP})({pitch})")).await
+async fn wrap<D: Driver>(d: &mut D, pitch: f64) -> Result<Wrap> {
+    let view = d.rect(WRAP_LIST).await?;
+    let (_, top) = d.scroll_pos(WRAP_LIST).await?;
+    let (rects, rows) = (
+        d.rects(WRAP_ROWS).await?,
+        d.attrs(WRAP_ROWS, "data-row").await?,
+    );
+    let edge = view.y + 1.0;
+    let at = rects
+        .iter()
+        .zip(&rows)
+        .find(|(rect, _)| rect.y <= edge && rect.y + rect.height > edge);
+    Ok(Wrap {
+        height: d.scroll_height(WRAP_LIST).await?,
+        top,
+        blank: uncovered(d, WRAP_LIST, WRAP_ROWS).await?,
+        aligned: at.is_some_and(|(_, row)| {
+            row.parse::<f64>()
+                .is_ok_and(|row| row == ((top + 1.0) / pitch).floor())
+        }),
+    })
 }
 
 /// Todo 2496: a narrower pane rewraps the measured rows from 20px to 40px; the pitch
 /// follows, so the list grows and the pane stays covered at the offset.
 async fn rewrapped_rows_keep_the_pane_covered<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     eventually(d, "the rows measured at 20px", async |d| {
-        let list = wrap(d, 20.0).await?;
-        Ok(list["height"]
-            .as_f64()
-            .is_some_and(|h| (19_000.0..21_000.0).contains(&h)))
+        Ok((19_000.0..21_000.0).contains(&wrap(d, 20.0).await?.height))
     })
     .await?;
-    d.evaluate("[...document.querySelectorAll('#wrap-pane *')].find(e => e.scrollHeight > e.clientHeight + 100).scrollTop = 2000")
-        .await?;
+    d.scroll_to(WRAP_LIST, 0.0, 2000.0).await?;
     eventually(d, "the window at row 100", async |d| {
         let list = wrap(d, 20.0).await?;
-        Ok(list["blank"].as_f64().is_some_and(|b| b < 1.0) && list["aligned"] == true)
+        Ok(list.blank < 1.0 && list.aligned)
     })
     .await?;
-    d.evaluate("document.querySelector('#wrap-pane').style.width = '200px'")
-        .await?;
+    d.set_style("#wrap-pane", "width", "200px").await?;
     eventually(
         d,
         "the pitch revised to 40px, the pane covered",
         async |d| {
             let list = wrap(d, 40.0).await?;
-            Ok(list["height"].as_f64().is_some_and(|h| h > 39_000.0)
-                && list["blank"].as_f64().is_some_and(|b| b < 1.0)
-                && list["aligned"] == true)
+            Ok(list.height > 39_000.0 && list.blank < 1.0 && list.aligned)
         },
     )
     .await?;
     // Todo 2538: row 100 stays at the top, scrolled to 100 rows of the new pitch.
     eventually(d, "the scroll to row 100 at 40px", async |d| {
-        let top = d
-            .evaluate("[...document.querySelectorAll('#wrap-pane *')].find(e => e.scrollHeight > e.clientHeight + 100).scrollTop")
-            .await?;
-        Ok(top.as_f64().is_some_and(|top| (top - 4000.0).abs() < 2.0))
+        Ok((wrap(d, 40.0).await?.top - 4000.0).abs() < 2.0)
     })
     .await
 }
@@ -197,8 +243,7 @@ async fn rewrapped_rows_keep_the_pane_covered<D: Driver>(d: &mut D, _route: &str
 e2e::scenario!(
     a_rewrap_revises_the_measured_pitch,
     "/scroll-area/rewrap",
-    rewrapped_rows_keep_the_pane_covered,
-    native: skip("no script reads on Blitz")
+    rewrapped_rows_keep_the_pane_covered
 );
 
 /// The real input path: a wheel, or a touch fling where there is no wheel. The list comes
@@ -212,14 +257,14 @@ async fn the_window_follows_the_input<D: Driver>(d: &mut D, _route: &str) -> Res
     let mut last = -1.0;
     eventually(d, "the list to come to rest past its top", async |d| {
         d.frame().await?;
-        let top = number(d, &format!("{AREA}.scrollTop")).await?;
+        let top = d.scroll_pos(LIST).await?.1;
         let rest = top > 0.0 && top == last;
         last = top;
         Ok(rest)
     })
     .await?;
     eventually(d, "the window moved down, the pane covered", async |d| {
-        Ok(number(d, FIRST_ROW).await? > 0.0 && number(d, BLANK).await? < 1.0)
+        Ok(row_range(d, LIST_ROWS).await?.0 > 0.0 && uncovered(d, LIST, LIST_ROWS).await? < 1.0)
     })
     .await
 }
@@ -227,8 +272,7 @@ async fn the_window_follows_the_input<D: Driver>(d: &mut D, _route: &str) -> Res
 e2e::scenario!(
     the_window_follows_a_wheel_or_a_fling,
     "/scroll-area",
-    the_window_follows_the_input,
-    native: skip("no script reads on Blitz")
+    the_window_follows_the_input
 );
 
 /// Samples each frame's leading padding of the list's content box while the list scrolls.

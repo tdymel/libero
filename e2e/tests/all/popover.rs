@@ -4,7 +4,7 @@
 use anyhow::{Result, bail};
 use e2e::archetypes;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, Rect, eventually, eventually_focused};
+use e2e::driver::{Driver, Platform, Rect, eventually, eventually_focused};
 use e2e::passes::{focus, keyboard, pointer};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
@@ -89,7 +89,11 @@ async fn matches_width<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 async fn follows_a_scroll<D: Driver>(d: &mut D, route: &str) -> Result<()> {
     lands_below(d, route).await?;
     let before = d.rect(ANCHOR).await?;
-    d.click("#scroll-by").await?;
+    // The button scrolls by script, which Blitz has none of: a wheel stands in.
+    match d.platform() {
+        Platform::Native => d.scroll_by(120.0).await?,
+        _ => d.click("#scroll-by").await?,
+    }
     eventually(d, "the page to scroll the anchor up", async |d| {
         Ok(close_to(d.rect(ANCHOR).await?.y, before.y - 120.0))
     })
@@ -104,8 +108,7 @@ async fn follows_a_scroll<D: Driver>(d: &mut D, route: &str) -> Result<()> {
 e2e::scenario!(
     it_follows_its_anchor_when_the_page_scrolls,
     "/popover/place/scroll",
-    follows_a_scroll,
-    native: skip("1002: Blitz runs no document eval to scroll the page")
+    follows_a_scroll
 );
 e2e::scenario!(
     it_lands_below_the_anchor_at_its_start,

@@ -151,7 +151,6 @@ e2e::scenario!(
     a_touch_held_on_the_thumb_leaves_no_bubble_after_the_release,
     "/slider/drag",
     held_thumb,
-    native: skip("996: Blitz has no touch input"),
     desktop: skip("1126: no touch input under Xvfb")
 );
 e2e::scenario!(

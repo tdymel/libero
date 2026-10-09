@@ -226,7 +226,6 @@ e2e::scenario!(
     a_long_press_opens_it_on_touch_and_a_tap_does_not,
     "/hover-card",
     long_press_opens,
-    native: skip("996: Blitz has no touch input"),
     desktop: skip("1126: no touch input under Xvfb")
 );
 e2e::scenario!(

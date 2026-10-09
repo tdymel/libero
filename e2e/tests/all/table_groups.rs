@@ -3,7 +3,7 @@
 //! keeps all its header rows stacked over the scrolled rows.
 
 use anyhow::{Result, bail};
-use e2e::driver::{Driver, eventually, eventually_focused};
+use e2e::driver::{Driver, Platform, eventually, eventually_focused};
 use e2e::passes::keyboard;
 
 const AREA: &str = "[data-table-scroll]";
@@ -230,9 +230,27 @@ async fn a_focused_row_clears_the_footer<D: Driver>(d: &mut D, _route: &str) -> 
         Ok(pad != "auto" && pad != "0px")
     })
     .await?;
-    d.focus(UNDER_BOX).await?;
+    // Chromium centres a focused control, clearing its row; Blitz stops at the padding, so
+    // there the control itself is what clears. Its own focus scroll ignores the padding
+    // (1517): a Tab move reveals with it.
+    let cleared = match d.platform() {
+        Platform::Native => {
+            d.focus(SELECT_ALL).await?;
+            for _ in 0..40 {
+                if d.is_focused(UNDER_BOX).await? {
+                    break;
+                }
+                d.press(keyboard::TAB).await?;
+            }
+            UNDER_BOX
+        }
+        _ => {
+            d.focus(UNDER_BOX).await?;
+            UNDER_ROW
+        }
+    };
     eventually(d, "the focused row to scroll above the footer", async |d| {
-        let (row, foot) = (d.rect(UNDER_ROW).await?, d.rect(FOOT_Q1).await?);
+        let (row, foot) = (d.rect(cleared).await?, d.rect(FOOT_Q1).await?);
         Ok(row.y + row.height <= foot.y + 1.0)
     })
     .await
@@ -242,14 +260,12 @@ e2e::scenario!(
     a_focused_windowed_row_clears_the_footer,
     "/table-groups/footer-window",
     a_focused_row_clears_the_footer,
-    android: skip("958: element identity on the WebView"),
-    native: skip("1517: Blitz ignores scroll-padding")
+    android: skip("958: element identity on the WebView")
 );
 
 e2e::scenario!(
     a_windowed_footer_holds_and_ends_the_rows,
     "/table-groups/footer-window",
     the_windowed_footer_holds_and_ends_the_rows,
-    android: skip("958: element identity on the WebView"),
-    native: skip("no wheel in the scenario driver: tests/native/table_groups.rs")
+    android: skip("958: element identity on the WebView")
 );
