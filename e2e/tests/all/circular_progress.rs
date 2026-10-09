@@ -110,6 +110,45 @@ fn the_arc_keeps_its_contrast_and_shows_in_forced_colours() {
     });
 }
 
+/// At 200% text the `md` ring grows with its label (WCAG 1.4.4): "42%" stays inside it.
+#[test]
+fn the_md_label_fits_the_ring_at_200_percent_text() {
+    block_on(async {
+        let fixture = Fixture::open("/circular-progress", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(page, "!!document.querySelector('#percent svg')", "the ring")
+            .await
+            .unwrap();
+        page.evaluate("document.documentElement.style.fontSize = '200%'")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#percent').getBoundingClientRect().width > 71",
+            "the ring at 200% text",
+        )
+        .await
+        .unwrap();
+        let [edge, label, font]: [f64; 3] = page
+            .evaluate(
+                "(() => { const ring = document.querySelector('#percent');
+                    const label = ring.querySelector('[data-slot=label]');
+                    return [ring.getBoundingClientRect().width, label.getBoundingClientRect().width,
+                        parseFloat(getComputedStyle(label).fontSize)]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!((edge - 72.0).abs() < 0.5, "the ring is {edge}px");
+        assert!((font - 24.0).abs() < 0.5, "the label is {font}px");
+        assert!(label < 0.8 * edge, "the label is {label}px in {edge}px");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Both settings explicitly, since headless Chromium defaults to reduced: the
 /// animated reading is what proves the reduced one measured real motion.
 #[test]
@@ -150,6 +189,21 @@ fn reduced_motion_stops_the_spin_and_dashes_the_ring() {
                     .and_then(|number| number.parse().ok())
                     .unwrap_or(0.0);
                 assert!((dash - 7.0).abs() < 0.1, "the still ring is {dashes:?}");
+                // The stylesheet draws the dashes on the web; the attributes keep the spin's arc.
+                let attributes: String = page
+                    .evaluate(format!(
+                        "(c => c.getAttribute('stroke-dasharray') + '|' + c.getAttribute('stroke-dashoffset'))(document.querySelector('{spin} > circle'))"
+                    ))
+                    .await
+                    .unwrap()
+                    .into_value()
+                    .unwrap();
+                let (array, offset) = attributes.split_once('|').unwrap();
+                let (dash, gap) = array.split_once(' ').unwrap();
+                assert!(
+                    dash == gap && offset != "0",
+                    "the attributes are {attributes:?}"
+                );
             }
             fixture
                 .console

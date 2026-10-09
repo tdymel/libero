@@ -37,7 +37,7 @@ pub fn CircularProgressPage() -> Element {
                     .doc("The arc. A theme color name paints its text shade, as `ProgressBar`'s fill. Any other CSS color paints as given."),
                 prop("size", "Size")
                     .default(defaults.size.as_str())
-                    .doc("The outer edge, 18px at `xs` to 72px at `xxl`."),
+                    .doc("The outer edge, 18px at `xs` to 72px at `xxl` at the default text size; it grows with text zoom."),
                 prop("thickness", "Size")
                     .default(defaults.thickness.as_str())
                     .doc("The ring's width as a share of the edge, 6% at `xs` to 16% at `xxl`, so it grows with `size`."),

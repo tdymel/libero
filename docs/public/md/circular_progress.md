@@ -70,7 +70,7 @@ fn Demo() -> Element {
 | `min` | `f64` | `0.0` | Range start. |
 | `max` | `f64` | `100.0` | Range end. At or below `min` the ring draws empty. |
 | `color` | `ThemeAwareValue` | `primary` | The arc. A theme color name paints its text shade, as `ProgressBar`'s fill. Any other CSS color paints as given. |
-| `size` | `Size` | `md` | The outer edge, 18px at `xs` to 72px at `xxl`. |
+| `size` | `Size` | `md` | The outer edge, 18px at `xs` to 72px at `xxl` at the default text size; it grows with text zoom. |
 | `thickness` | `Size` | `md` | The ring's width as a share of the edge, 6% at `xs` to 16% at `xxl`, so it grows with `size`. |
 | `aria_valuetext` | `String` | - | Read instead of the rounded percentage, such as "3 of 8 files". |
 | `children` | `Element` | - | Drawn in the middle of the ring, such as the percentage or an icon, at a quarter of the edge, never under 12px. Hidden from screen readers: say the same in `aria_valuetext` when it differs from the percentage. |
@@ -130,7 +130,7 @@ a screen reader reads the name "Upload" and 42% when it reaches the ring.
 | `thickness` | `Size` | Default `thickness` when the prop is omitted (`md`). |
 | `track_shade` | `ColorShade` | Grey step of the unfilled ring (`S2`). |
 | `transition` | `&'static str` | How long the arc eases to a new value (`100ms`). |
-| `sizes` | `Sizes<&'static str>` | Edge per size step: `18px 22px 36px 44px 58px 72px`. |
+| `sizes` | `Sizes<&'static str>` | Edge per size step, in rem: `1.125rem 1.375rem 2.25rem 2.75rem 3.625rem 4.5rem` (18px to 72px at 16px). |
 | `thicknesses` | `Sizes<u8>` | Ring width per thickness step, in percent of the edge: `6 8 10 12 14 16`. |
 
 ## CSS variables

@@ -25,6 +25,26 @@ fn the_label_keeps_to_the_12px_floor_natively() {
     );
 }
 
+/// At 200% text (a 32px root) the `md` ring grows with its label (WCAG 1.4.4): "42%" stays inside.
+#[test]
+fn the_md_label_fits_the_ring_at_200_percent_text() {
+    fn app() -> Element {
+        rsx! {
+            style { "html {{ font-size: 32px }}" }
+            CircularProgress { id: "ring", aria_label: "Upload", value: 42.0, "42%" }
+        }
+    }
+    let page = mount(app);
+    let (_, _, edge, _) = page.rect(RING);
+    let (_, _, label, _) = page.rect("#ring > [data-slot=label]");
+    assert!((edge - 72.0).abs() < 0.5, "the ring is {edge}px");
+    assert_eq!(
+        page.computed("#ring > [data-slot=label]", "font-size"),
+        "24px"
+    );
+    assert!(label < 0.8 * edge, "the label is {label}px in {edge}px");
+}
+
 /// A frozen quarter would read as 25% done: still, the unknown amount is a dashed ring
 /// all the way round. Blitz bakes the dashes from the svg attributes, not the CSS.
 #[test]

@@ -118,7 +118,7 @@ static CIRCULAR_PROGRESS_LABEL_SX: StaticSx = StaticSx::new(|| {
         .display("inline-flex")
         .align_items("center")
         .justify_content("center")
-        // A quarter of the edge, but never under 12px: the type floor.
+        // A quarter of the edge (rem, so it follows text zoom), never under 12px: the type floor.
         .font_size(format!(
             "max(0.75rem, calc({} / 4))",
             CIRCULAR_PROGRESS_SIZE.value()
@@ -215,6 +215,13 @@ fn arc_svg(
     }
 }
 
+const NATIVE: bool = cfg!(all(not(target_arch = "wasm32"), feature = "native"));
+
+/// Only Blitz needs the dashes in the svg attributes: the web's `@media` arm already draws them.
+fn paints_still(indeterminate: bool, reduced_motion: bool, native: bool) -> bool {
+    indeterminate && reduced_motion && native
+}
+
 /// Short SVG numbers: `282.74`, not `282.7433388230814`.
 fn svg_number(value: f64) -> String {
     let rounded = (value * 100.0).round() / 100.0;
@@ -308,7 +315,7 @@ pub fn CircularProgress(props: CircularProgressProps) -> Element {
         .map(|value| fraction("CircularProgress", value, props.min, props.max));
     let offset = ring.offset(fraction.unwrap_or(SPIN_SHARE));
     let reduced_motion = use_accessibility().reduced_motion();
-    let still = fraction.is_none() && reduced_motion;
+    let still = paints_still(fraction.is_none(), reduced_motion, NATIVE);
 
     let states: Input<States> = props
         .states
@@ -431,6 +438,15 @@ mod tests {
         let css = css.as_str();
         assert!(css.contains("stroke-dasharray:calc(100 * 3.14159"), "{css}");
         assert!(css.contains("var(--"), "{css}");
+    }
+
+    /// The web keeps its CSS-only reduced-motion look (todo 2801); only Blitz bakes the dashes.
+    #[test]
+    fn only_blitz_paints_the_still_ring_in_attributes() {
+        assert!(paints_still(true, true, true));
+        assert!(!paints_still(true, true, false));
+        assert!(!paints_still(true, false, true));
+        assert!(!paints_still(false, true, true));
     }
 
     /// A quarter of the 36px `md` edge is 9px, under the 12px type floor (todo 2731).

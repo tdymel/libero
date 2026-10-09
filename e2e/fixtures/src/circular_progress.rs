@@ -21,6 +21,7 @@ fn CircularProgressPage() -> Element {
                 "Add 10%"
             }
             CircularProgress { id: "sync", aria_label: "Sync", value: None }
+            CircularProgress { id: "percent", aria_label: "Done", value: 42.0, "42%" }
         }
     }
 }
