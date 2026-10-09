@@ -84,7 +84,7 @@ strip the reader scrolls, without the fade or the toggle.
 | `orientation` | `Orientation` | `horizontal` | The axis it scrolls along. A vertical marquee needs a height from `sx`, or it is as tall as all its copies. |
 | `reverse` | `bool` | `false` | Scrolls towards the end instead of the start. |
 | `duration` | `u32` | `40000` | Milliseconds per full cycle. The same number moves a longer strip faster. |
-| `gap` | `Size` | `md` | Between copies, and between the last and the first. |
+| `gap` | `ThemeAwareValue` | `md` | Between copies, and between the last and the first, or any CSS, e.g. `gap: "0"`. |
 | `repeat` | `u8` | `4` | Copies in a row. Raise it when a gap crosses the view. Anything below 2 renders 2. |
 | `pause_on_hover` | `bool` | `false` | Pauses under the pointer. Not enough on its own, since a keyboard or a touch screen cannot hover. |
 | `paused` | `Option<bool>` | `None` | Controlled when set, so pair it with `onpausechange`. `None` leaves the state to the built-in toggle. |

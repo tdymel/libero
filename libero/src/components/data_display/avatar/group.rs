@@ -5,7 +5,8 @@ use super::spec::AvatarSpec;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, States, Variables, Variant, base_props, focus_ring_sx, variables,
+            HtmlTag, Input, ScaleOrCss, States, Variables, Variant, base_props, focus_ring_sx,
+            variables,
         },
         data_display::Avatar,
         layout::use_box,
@@ -55,13 +56,14 @@ base_props! {
         #[props(default)]
         max: Option<usize>,
         /// How far each circle is pulled over the one before it.
+        /// A size word or any CSS, as `spacing: "0"`.
         #[props(default, into)]
-        spacing: Input<Size>,
+        spacing: Input<ThemeAwareValue>,
         #[props(default, into)]
         size: Input<Size>,
-        /// A step on `Avatar`'s radius scale, for every member and the chip.
+        /// A step on `Avatar`'s radius scale, or any CSS, for every member and the chip.
         #[props(default, into)]
-        radius: Input<Size>,
+        radius: Input<ThemeAwareValue>,
         #[props(default, into)]
         variant: Input<Variant>,
         /// The tint every member without one of its own takes.
@@ -90,7 +92,7 @@ base_props! {
 pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
     let theme = use_theme();
     let labels = &use_localization().avatar;
-    let spacing = props.spacing.copied_or(theme.avatar_group.spacing);
+    let spacing = ScaleOrCss::new(props.spacing.as_ref(), theme.avatar_group.spacing);
     let size = props.size.copied_or(theme.avatar.size);
     let variant = props.variant.copied_or(theme.avatar.variant);
     let color = props
@@ -109,14 +111,14 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
     let circles = shown + usize::from(hidden > 0);
 
     let root_variables: Input<Variables> = variables()
-        .with(AVATAR_GROUP_SPACING, SizeCss::SPACING.value(spacing))
+        .with(AVATAR_GROUP_SPACING, spacing.resolve(SizeCss::SPACING))
         .into();
 
     // Through `variables`, so a var the chip stops setting is reverted
     // ([[codebase/css-vars]]). The hook runs unconditionally.
     let chip_variables: Input<Variables> = match hidden > 0 {
         // The bottom of the stack, under every member.
-        true => avatar_variables(Some(&color), variant, props.radius.as_ref().copied())
+        true => avatar_variables(Some(&color), variant, props.radius.as_ref())
             .with(AVATAR_GROUP_INDEX, "1".to_string())
             .into(),
         false => Input::None,

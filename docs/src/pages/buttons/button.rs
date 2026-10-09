@@ -28,9 +28,9 @@ pub fn ButtonPage() -> Element {
                     .doc("Visual style, from most to least emphasis: `filled`, `tonal`, `elevated`, `outlined`, `standard`. `gradient` fills it from `color` into the theme's second stop."),
                 prop("gradient", "Gradient")
                     .doc("With `variant: \"gradient\"`: the second stop and the angle, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`. The first stop is `color`. A literal CSS stop's label contrast is yours to check. Ignored by the other variants."),
-                prop("radius", "Size")
+                prop("radius", "ThemeAwareValue")
                     .default(theme.button.radius.as_str())
-                    .doc("Corner radius, independent of `size`."),
+                    .doc("Corner radius, independent of `size`, or any CSS, e.g. `radius: \"0\"`."),
                 prop("size", "Size")
                     .default(theme.button.size.as_str())
                     .doc("Height, padding and font size."),
@@ -100,7 +100,8 @@ pub fn ButtonPage() -> Element {
                     gradient_deg,
                     Control::sizes("size")
                         .default(theme.button.size.as_str()),
-                    Control::sizes("radius")
+                    // `0` is plain CSS, next to the size scale.
+                    Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.button.radius.as_str()),
                     Control::switch("full_width"),
                     // Off is still a toggle (`aria-pressed="false"`); unset

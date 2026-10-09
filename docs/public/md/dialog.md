@@ -48,7 +48,7 @@ fn Demo() -> Element {
 | `onclose` | `EventHandler<()>` | - | Called by the close button outside a modal. |
 | `ondismiss` | `Callback<Dismiss, bool>` | all close, an alertdialog's backdrop does not | Inside a modal: asked before Escape, the backdrop or Back closes it. Return `false` to keep it open, such as a form with unsaved input. The close button and your own `close()` are not asked. |
 | `close_label` | `String` | `"Close"` | The close button's accessible name, such as "Close cart". Unset, the localization's `common.close`. |
-| `radius` | `Size` | `md` | Corner radius from the radius scale. Other values go through `sx`. |
+| `radius` | `ThemeAwareValue` | `md` | Corner radius from the radius scale, or any CSS, e.g. `radius: "0"`. |
 | `size` | `ThemeAwareValue` | `md` | Caps the width from the dialog scale. `md` is 510px. |
 | `variables` | `Variables` | - | CSS variables layered onto the dialog's own, as `Drawer` does. |
 | `parts` | `Parts<DialogPart>` | - | Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(DialogPart::Title, sx().font_size("lg"))`. |

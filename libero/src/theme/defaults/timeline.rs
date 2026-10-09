@@ -93,7 +93,7 @@ impl TimelineDefaults {
     }
 
     fn radius_sx(radius: Size) -> Sx {
-        sx().var(TIMELINE_RADIUS, SizeCss::RADIUS.value(radius))
+        sx().var(TIMELINE_RADIUS, SizeCss::RADIUS.overridable(radius))
     }
 
     /// A hand-rolled `per_size` for the only third size axis; promote it if a second
@@ -102,7 +102,7 @@ impl TimelineDefaults {
         Size::ALL.into_iter().fold(base, |acc, gap| {
             acc.when(
                 gap_state_name(gap),
-                sx().var(TIMELINE_SPACE, TIMELINE_GAP.value(gap)),
+                sx().var(TIMELINE_SPACE, TIMELINE_GAP.overridable(gap)),
             )
         })
     }

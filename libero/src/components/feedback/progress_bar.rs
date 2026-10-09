@@ -4,8 +4,8 @@ use crate::{
     CssLayer,
     components::{
         common::{
-            HtmlTag, Input, Part, States, Variables, base_color, base_props, names_itself,
-            parts_enum, text_color, use_name_warning, variables,
+            HtmlTag, Input, Part, ScaleOrCss, States, Variables, base_color, base_props,
+            names_itself, parts_enum, text_color, use_name_warning, variables,
         },
         form::{SliderSegment, segment_filled, track_segments},
         layout::use_box,
@@ -17,7 +17,7 @@ use crate::{
         Color, ColorShade, ColorValue, CssVar, INDETERMINATE_WIDTH, PROGRESS_BAR_ANIMATION,
         PROGRESS_BAR_ANIMATION_RTL, PROGRESS_BAR_COLOR, PROGRESS_BAR_FILL,
         PROGRESS_BAR_INDETERMINATE_STATE, PROGRESS_BAR_RADIUS, PROGRESS_BAR_SIZE,
-        PROGRESS_BAR_TRACK, PROGRESS_BAR_TRANSITION, ProgressBarDefaults, Size,
+        PROGRESS_BAR_TRACK, PROGRESS_BAR_TRANSITION, ProgressBarDefaults, Size, SizeCss,
     },
     utils::warn,
 };
@@ -294,9 +294,9 @@ base_props! {
         /// Track thickness.
         #[props(default, into)]
         size: Input<Size>,
-        /// Corner of the track and the fill.
+        /// Corner of the track and the fill: a size word or any CSS, as `radius: "0"`.
         #[props(default, into)]
-        radius: Input<Size>,
+        radius: Input<ThemeAwareValue>,
         /// Announced instead of the percentage, e.g. `"4.2 MB of 12 MB"`.
         #[props(default, into)]
         aria_valuetext: Option<String>,
@@ -344,7 +344,7 @@ pub fn ProgressBar(props: ProgressBarProps) -> Element {
     let color = base_color(Some(&color));
 
     let size = props.size.copied_or(theme.progress_bar.size);
-    let radius = props.radius.copied_or(theme.progress_bar.radius);
+    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.progress_bar.radius);
 
     let fraction = props
         .value
@@ -371,13 +371,19 @@ pub fn ProgressBar(props: ProgressBarProps) -> Element {
         .states
         .unwrap_or_default()
         .with(size.state_name(), true)
-        .with(radius.radius_state_name(), true)
+        .with(radius.size.radius_state_name(), true)
         .with(DETERMINATE_STATE, fraction.is_some())
         .with(PROGRESS_BAR_INDETERMINATE_STATE, fraction.is_none())
         .with(SEGMENTED_STATE, segmented)
         .into();
 
-    let vars: Input<Variables> = progress_bar_variables(&color, percentage.clone()).into();
+    // On the track, where the radius var and its `per_radius` reset live.
+    let vars: Input<Variables> = progress_bar_variables(&color, percentage.clone())
+        .with(
+            SizeCss::RADIUS.override_var(),
+            radius.custom_css(SizeCss::RADIUS),
+        )
+        .into();
 
     // Its own `data-state`: a child inherits vars but not state.
     let fill = use_box()

@@ -165,7 +165,7 @@ fn Demo() -> Element {
 | `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color; `theme.segmented_control.color` when unset. |
 | `size` | `Size` | `md` | Size of the segments and the captions. |
 | `radius` | `Size` | `md` | Radius of the control's outer corners. Inner corners are square. |
-| `gap` | `Size` | - | Space between the segments. Set, each segment gets its own border and radius. |
+| `gap` | `ThemeAwareValue` | - | Space between the segments, or any CSS, e.g. `gap: "0"`. Set, each segment gets its own border and radius. |
 | `full_width` | `bool` | `false` | Segments share the width evenly instead of sizing to their label. A label too long for its segment ends in an ellipsis either way. |
 | `focusable` | `bool` | `true` | `false` keeps the segments out of the tab order, and a click leaves focus where it is. For a control inside a field's dropdown. |
 | `label` | `Caption` | - | The question, and the group's name. |

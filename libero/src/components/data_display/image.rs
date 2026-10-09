@@ -13,8 +13,8 @@ use crate::{
     localization::{ImageLabels, fill},
     platform,
     str_enum::str_enum,
-    sx::{StaticSx, Sx, sx},
-    theme::{CssVar, IMAGE_RADIUS, ImageDefaults, Size, SizeCss},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    theme::{CssVar, IMAGE_RADIUS, ImageDefaults, SizeCss},
     utils::warn,
 };
 
@@ -33,10 +33,10 @@ str_enum! {
 
 input_from_str!(ImageLoading);
 
-fn image_variables(radius: Option<Size>) -> Variables {
+fn image_variables(radius: Option<&ThemeAwareValue>) -> Variables {
     variables().with(
         IMAGE_RADIUS.override_var(),
-        radius.map(|radius| SizeCss::RADIUS.value(radius)),
+        radius.and_then(|radius| radius.resolve(Some(SizeCss::RADIUS))),
     )
 }
 
@@ -134,8 +134,9 @@ base_props! {
         zoomed_src: Option<String>,
         #[props(default, into)]
         fit: Input<ImageFit>,
+        /// A size word on the radius scale, or any CSS, as `radius: "0"`.
         #[props(default, into)]
-        radius: Input<Size>,
+        radius: Input<ThemeAwareValue>,
         /// What the picture shows. `None` warns in debug builds unless `decorative`.
         #[props(default, into)]
         alt: Option<String>,
@@ -240,7 +241,7 @@ pub fn Image(props: ImageProps) -> Element {
     let fit = props.fit.copied_or(use_theme().image.fit);
     let fallback_under = fallback_src.filter(|_| !platform::fires_image_errors());
     let mut variables = svg_fit_variables(
-        image_variables(props.radius.as_ref().copied()),
+        image_variables(props.radius.as_ref()),
         &src,
         background_size(fit),
     );
@@ -324,7 +325,7 @@ pub fn Image(props: ImageProps) -> Element {
         ZoomButton {
             item,
             alt: alt.unwrap_or_default(),
-            variables: image_variables(props.radius.as_ref().copied()),
+            variables: image_variables(props.radius.as_ref()),
             class: props.class,
             sx: parts_under_sx(&props.parts, props.sx),
             states: props.states,
@@ -381,10 +382,11 @@ fn ZoomButton(props: ZoomButtonProps) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::theme::Size;
 
     #[test]
     fn a_size_radius_resolves_through_the_radius_scale() {
-        let variables = image_variables(Some(Size::Md));
+        let variables = image_variables(Some(&Size::Md.into()));
 
         assert_eq!(
             variables.to_string(),

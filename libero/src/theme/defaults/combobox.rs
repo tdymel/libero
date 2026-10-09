@@ -78,7 +78,7 @@ impl ComboboxDefaults {
     pub fn row_radius_sx(radius: Size) -> Sx {
         sx().border_radius(format!(
             "max(0px, calc({} - {COMBOBOX_PADDING}))",
-            SizeCss::RADIUS.value(radius)
+            SizeCss::RADIUS.overridable(radius)
         ))
     }
 

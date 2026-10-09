@@ -106,8 +106,8 @@ fn Demo() -> Element {
 | `align` | `TimelineAlign` | `start` | `start`, `end`, or `alternate` for content on both sides of a centred rail. Mirrored in a right-to-left layout. `alternate` fills its parent, so a narrower parent makes it narrower. |
 | `color` | `ThemeAwareValue` | `primary` | The active accent. An event's own `.color(..)` overrides it. |
 | `bullet_size` | `Size` | `md` | Bullet diameter. |
-| `radius` | `Size` | `xl` | Bullet corner radius. `xl` is a dot. |
-| `gap` | `Size` | `xl` | Space between events, which is also each connector's length. |
+| `radius` | `ThemeAwareValue` | `xl` | Bullet corner radius, or any CSS, e.g. `radius: "0"`. `xl` is a dot. |
+| `gap` | `ThemeAwareValue` | `xl` | Space between events, which is also each connector's length, or any CSS, e.g. `gap: "0"`. |
 | `parts` | `Parts<TimelinePart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 `TimelineEvent`

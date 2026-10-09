@@ -2,14 +2,14 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, States, Variables, base_props, variables},
+        common::{HtmlTag, Input, ScaleOrCss, States, Variables, base_props, variables},
         layout::use_box,
     },
     hooks::use_theme,
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{
         SKELETON_ANIMATION, SKELETON_COLOR, SKELETON_DURATION, SKELETON_HEIGHT, SKELETON_RADIUS,
-        SKELETON_WIDTH, Size, SkeletonDefaults,
+        SKELETON_WIDTH, SizeCss, SkeletonDefaults,
     },
 };
 
@@ -89,9 +89,9 @@ base_props! {
         /// Round, with width equal to `height`.
         #[props(default)]
         circle: bool,
-        /// Corner. Ignored when `circle`.
+        /// Corner: a size word or any CSS, as `radius: "0"`. Ignored when `circle`.
         #[props(default, into)]
-        radius: Input<Size>,
+        radius: Input<ThemeAwareValue>,
         /// Run the pulse.
         #[props(default)]
         animate: Option<bool>,
@@ -117,7 +117,9 @@ base_props! {
 #[component]
 pub fn Skeleton(props: SkeletonProps) -> Element {
     let theme = use_theme();
-    let radius = props.radius.copied_or(theme.skeleton.radius);
+    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.skeleton.radius);
+    // A circle is round by its own `1000px`, not by the radius.
+    let radius_css = radius.custom_css(SizeCss::RADIUS).filter(|_| !props.circle);
 
     let states: Input<States> = props
         .states
@@ -128,7 +130,7 @@ pub fn Skeleton(props: SkeletonProps) -> Element {
             props.animate.unwrap_or(theme.skeleton.animate),
         )
         .with(CIRCLE_STATE, props.circle)
-        .with(radius.radius_state_name(), !props.circle)
+        .with(radius.size.radius_state_name(), !props.circle)
         .into();
 
     let vars: Input<Variables> = skeleton_variables(
@@ -136,6 +138,7 @@ pub fn Skeleton(props: SkeletonProps) -> Element {
         props.width.resolve(None),
         props.circle,
     )
+    .with(SizeCss::RADIUS.override_var(), radius_css)
     .into();
 
     use_box()

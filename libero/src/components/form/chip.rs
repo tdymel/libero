@@ -8,9 +8,9 @@ use crate::{
     components::{
         accessibility::VISUALLY_HIDDEN_SX,
         common::{
-            HtmlTag, Input, Part, States, Variant, VariantColors, VariantVars, base_color_or,
-            base_props, contrast_color, contrast_shade_color, disabled_look_sx, fill_color,
-            focus_ring_sx, interactive_variant_sx, on_ring_sx, on_state_sx, parts_enum,
+            HtmlTag, Input, Part, ScaleOrCss, States, Variant, VariantColors, VariantVars,
+            base_color_or, base_props, contrast_color, contrast_shade_color, disabled_look_sx,
+            fill_color, focus_ring_sx, interactive_variant_sx, on_ring_sx, on_state_sx, parts_enum,
             parts_under_sx, ring_overlay, ring_overlay_sx, shade_color, text_color, variables,
             variant_colors,
         },
@@ -195,9 +195,9 @@ base_props! {
         variant: Input<Variant>,
         #[props(default, into)]
         size: Input<Size>,
-        /// Corner radius, independent of `size`.
+        /// Corner radius, independent of `size`: a size word or any CSS, as `radius: "0"`.
         #[props(default, into)]
-        radius: Input<Size>,
+        radius: Input<ThemeAwareValue>,
         /// Pair it with `onchange`; left out, a named chip keeps its own state.
         #[props(default)]
         checked: Option<bool>,
@@ -266,7 +266,7 @@ pub fn Chip(props: ChipProps) -> Element {
         .unwrap_or(false);
 
     let size = props.size.copied_or(theme.chip.size);
-    let radius = props.radius.copied_or(theme.chip.radius);
+    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.chip.radius);
 
     // A `name` alone makes it a checkbox too: it has something to post.
     let selectable = props.onchange.is_some() || !props.name.is_empty();
@@ -297,6 +297,10 @@ pub fn Chip(props: ChipProps) -> Element {
     let style = use_cache((variant, checked, color), |(variant, checked, color)| {
         chip_variables(*variant, *checked, color)
     });
+    let style = match radius.custom_css(SizeCss::RADIUS) {
+        Some(css) => format!("{style}{}:{css};", SizeCss::RADIUS.override_var().name()),
+        None => style,
+    };
     let style = Some(style).filter(|style| !style.is_empty());
 
     let states: Input<States> = props
@@ -304,7 +308,7 @@ pub fn Chip(props: ChipProps) -> Element {
         .unwrap_or_default()
         .with(variant.state_name(), true)
         .with(size.state_name(), true)
-        .with(radius.radius_state_name(), true)
+        .with(radius.size.radius_state_name(), true)
         .with("checked", checked)
         .with("selectable", selectable)
         .with("disabled", disabled)

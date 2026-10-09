@@ -214,7 +214,7 @@ fn Demo() -> Element {
 | `loading_label` | `String` | `common.loading` | What screen readers hear while `options` is pending. A pending list shows a `Loader` instead of the rows or `empty`. |
 | `labelled_by` | `String` | - | The id of the element that names the list, usually the trigger's label. Screen readers read it with the list. |
 | `size` | `Size` | `md` | A row's height and font size. |
-| `radius` | `Size` | `sm` | The dropdown's corner radius. |
+| `radius` | `ThemeAwareValue` | `sm` | The dropdown's corner radius, or any CSS, e.g. `radius: "0"`. |
 | `disabled` | `bool` | `false` | Draws no list and ignores the keys, and the trigger reads as closed. Disable the trigger too. |
 | `select_only` | `bool` | `false` | For a trigger with no text to type in, such as a button: Space picks the highlighted row like Enter, and Tab or Alt+Up pick it before closing, as a `Select` does. |
 
@@ -254,7 +254,7 @@ From `use_combobox()`. It is `Copy`, so it goes into event handlers by value.
 | `disabled` | `bool` | from the `Combobox` | Overrides whether the row is refused. A refused row is greyed and ignores the click and Enter. |
 | `onpick` | `EventHandler<()>` | - | A click, or Enter while the row is active. The only way to pick. |
 | `size` | `Size` | the `Combobox`'s | Row height and font size. |
-| `radius` | `Size` | the `Combobox`'s | Corner radius, reduced so the row nests inside the dropdown. |
+| `radius` | `ThemeAwareValue` | the `Combobox`'s | Corner radius, or any CSS, e.g. `radius: "0"`, reduced so the row nests inside the dropdown. |
 | `children` | `Element` | required | The row's content. |
 
 ## Style API

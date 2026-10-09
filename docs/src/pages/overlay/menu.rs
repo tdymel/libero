@@ -72,9 +72,9 @@ pub fn MenuPage() -> Element {
                     prop("size", "Size")
                         .default(theme.menu.size.as_str())
                         .doc("Item height and font size."),
-                    prop("radius", "Size")
+                    prop("radius", "ThemeAwareValue")
                         .default(theme.menu.radius.as_str())
-                        .doc("The menu's corner radius. The items' corners follow it."),
+                        .doc("The menu's corner radius, or any CSS, e.g. `radius: \"0\"`. The items' corners follow it."),
                     prop("disabled", "bool")
                         .default("false")
                         .doc("The trigger opens nothing, and an open menu closes. Disable the trigger too, so it looks disabled."),

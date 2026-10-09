@@ -16,7 +16,7 @@ use crate::{
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
         ALERT_BODY_GAP, ALERT_ICON_SIZE, ALERT_RADIUS, ANCHOR_COLOR, AlertDefaults, AnchorDefaults,
-        Color, CssVar, FOCUS_RING_HALO, NamedColorCss, SURFACE_LABEL, Size, SizeCss,
+        Color, CssVar, FOCUS_RING_HALO, NamedColorCss, SURFACE_LABEL, SizeCss,
     },
 };
 
@@ -128,10 +128,7 @@ fn alert_variables(props: &AlertProps, base: &ThemeAwareValue, variant: Variant)
         .with(ALERT_ON_CONTAINER_VAR, on_container)
         .with(
             ALERT_RADIUS.override_var(),
-            props
-                .radius
-                .as_ref()
-                .map(|&radius| SizeCss::RADIUS.value(radius)),
+            props.radius.resolve(Some(SizeCss::RADIUS)),
         )
 }
 
@@ -178,9 +175,9 @@ base_props! {
         /// Surface style, without a hover response.
         #[props(default, into)]
         variant: Input<Variant>,
-        /// A size step from `xs` to `xxl`.
+        /// A size step from `xs` to `xxl`, or any CSS, as `radius: "0"`.
         #[props(default, into)]
-        radius: Input<Size>,
+        radius: Input<ThemeAwareValue>,
         /// Set, shows the close button. The caller unmounts the alert and moves focus.
         #[props(default)]
         onclose: Option<EventHandler<()>>,

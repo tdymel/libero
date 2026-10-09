@@ -117,9 +117,9 @@ base_props! {
         /// Default `size` of the buttons inside.
         #[props(default, into)]
         size: Input<Size>,
-        /// The group's outer corners; the inner ones are always square.
+        /// The group's outer corners, a size word or any CSS; the inner ones are always square.
         #[props(default, into)]
-        radius: Input<Size>,
+        radius: Input<ThemeAwareValue>,
         /// Default `variant` of the buttons inside. Borderless ones get a divider between them.
         #[props(default, into)]
         variant: Input<Variant>,
@@ -164,7 +164,7 @@ pub fn ButtonGroup(props: ButtonGroupProps) -> Element {
     );
     use_provide_button_group(ButtonGroupContext {
         size: props.size.as_ref().copied(),
-        radius: props.radius.as_ref().copied(),
+        radius: props.radius.as_ref().cloned(),
         variant: props.variant.as_ref().copied(),
         color: props.color.as_ref().cloned(),
         disabled: props.disabled,

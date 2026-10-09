@@ -47,7 +47,7 @@ fn Demo() -> Element {
 | `siblings` | `u8` | `1` | Pages on each side of the current one. The row is always `2·siblings + 2·boundaries + 3` items wide, and an ellipsis never stands for a single page. |
 | `boundaries` | `u8` | `1` | Pages pinned at each end. `0` counts as 1. |
 | `size` | `Size` | `md` | Control box and font size. |
-| `radius` | `Size` | `sm` | Corner radius, independent of `size`. |
+| `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`, or any CSS, e.g. `radius: "0"`. |
 | `color` | `ThemeAwareValue` | `primary` | Fill of the current page. A theme color gives its text the matching `-contrast` shade, a literal color black or white. |
 | `disabled` | `bool` | `false` | Disables every control. |
 | `with_controls` | `bool` | `true` | Shows the previous and next controls. |

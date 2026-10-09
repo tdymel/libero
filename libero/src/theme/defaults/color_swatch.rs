@@ -28,7 +28,7 @@ impl ColorSwatchDefaults {
     }
 
     pub fn radius_sx(radius: Size) -> Sx {
-        sx().var(COLOR_SWATCH_RADIUS, SizeCss::RADIUS.value(radius))
+        sx().var(COLOR_SWATCH_RADIUS, SizeCss::RADIUS.overridable(radius))
     }
 
     pub fn theme_vars() -> Sx {

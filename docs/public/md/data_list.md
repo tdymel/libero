@@ -47,7 +47,7 @@ the first column and every description in the second.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `orientation` | `Orientation` | `vertical` | `horizontal` puts each description beside its term, `vertical` below it. |
-| `gap` | `Size` | `md` | Gap between rows, and between a term and its description. Other values go through `sx`. |
+| `gap` | `Responsive<ThemeAwareValue>` | `md` | Gap between rows, and between a term and its description, or any CSS, e.g. `gap: "0"`, per breakpoint too. |
 | `children` | `Element` | required | `DataListItem`s, or any `dt` and `dd` content. |
 
 ### DataListItem

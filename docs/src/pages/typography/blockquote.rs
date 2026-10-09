@@ -27,9 +27,9 @@ pub fn BlockquotePage() -> Element {
                 prop("color", "ThemeAwareValue")
                     .default(theme.blockquote.color.as_str())
                     .doc("The accent bar and the tint behind the quote. A theme color name gets its lightest shade. Any CSS color works too, and a CSS color or a shade from 6 up fills the quote solid, with no separate bar or tint."),
-                prop("radius", "Size")
+                prop("radius", "ThemeAwareValue")
                     .default(theme.blockquote.radius.as_str())
-                    .doc("Rounds the two corners away from the accent bar."),
+                    .doc("Rounds the two corners away from the accent bar, or any CSS, e.g. `radius: \"0\"`."),
                 prop("attribution", "Element")
                     .doc("Who said it, shown under the quote. For any join other than a comma, pass the whole line here."),
                 prop("work", "String")

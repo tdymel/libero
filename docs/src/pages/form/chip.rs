@@ -20,9 +20,9 @@ pub fn ChipPage() -> Element {
                     .default(theme.chip.variant.as_str())
                     .doc("The unselected look. A checked chip is always a tonal container."),
                 prop("size", "Size").default(theme.chip.size.as_str()).doc("Height, padding and font size."),
-                prop("radius", "Size")
+                prop("radius", "ThemeAwareValue")
                     .default(theme.chip.radius.as_str())
-                    .doc("Corner radius."),
+                    .doc("Corner radius, or any CSS, e.g. `radius: \"0\"`."),
                 prop("checked", "bool")
                     .doc("Whether it is selected. Pair it with `onchange`. Left out, a chip with a `name` keeps its own state, or the form's when that name binds it."),
                 disabled_prop("chip"),

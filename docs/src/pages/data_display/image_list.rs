@@ -136,9 +136,9 @@ pub fn ImageListPage() -> Element {
                     prop("gap", "Size")
                         .default(defaults.gap.as_str())
                         .doc("Between cells."),
-                    prop("radius", "Size")
+                    prop("radius", "ThemeAwareValue")
                         .default(defaults.radius.as_str())
-                        .doc("Each cell's corner radius."),
+                        .doc("Each cell's corner radius, or any CSS, e.g. `radius: \"0\"`."),
                     prop("ratio", "f32")
                         .default("1.0, from theme.aspect_ratio")
                         .doc("Cell aspect ratio, such as `16.0 / 9.0`. Ignored by `masonry`. Under `quilted` it is the ratio of one cell, and a bigger cell scales from it."),

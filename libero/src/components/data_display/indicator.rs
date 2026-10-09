@@ -103,9 +103,9 @@ base_props! {
         /// The fill. The label takes its auto-contrast twin.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        /// A step on the indicator's own radius scale; the default is round.
+        /// A step on the indicator's own radius scale, or any CSS, as `radius: "0"`; the default is round.
         #[props(default, into)]
-        radius: Input<Size>,
+        radius: Input<ThemeAwareValue>,
         /// A ring in the surface colour, so the dot reads on a picture.
         #[props(default)]
         with_border: Option<bool>,
@@ -154,10 +154,7 @@ pub fn Indicator(props: IndicatorProps) -> Element {
         )
         .with(
             INDICATOR_RADIUS.override_var(),
-            props
-                .radius
-                .as_ref()
-                .map(|radius| INDICATOR_RADII.value(*radius)),
+            props.radius.resolve(Some(INDICATOR_RADII)),
         )
         .into();
 

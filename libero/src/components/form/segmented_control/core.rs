@@ -5,8 +5,9 @@ use crate::{
         common::Part,
         common::{
             BUTTON_HOVER_VAR, BUTTON_ON_STATE_VAR, BUTTON_SELECTED_VAR, BUTTON_VARS, HtmlTag,
-            Orientation, States, ToolbarItem, Variant, disabled_look_sx, focus_ring_sx,
-            has_shortcut_modifier, interactive_variant_sx, neighbour, variant_selected_sx,
+            Input, Orientation, ScaleOrCss, States, ToolbarItem, Variables, Variant,
+            disabled_look_sx, focus_ring_sx, has_shortcut_modifier, interactive_variant_sx,
+            neighbour, variables, variant_selected_sx,
         },
         form::{Activation, field_parts_enum},
         layout::use_box,
@@ -42,6 +43,8 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
         // Contains the radios; against the viewport, focusing one scrolls the
         // document to it.
         .position("relative")
+        // A nested strip must not inherit this one's custom gap.
+        .var(SizeCss::SPACING.override_var(), "initial")
         .display("inline-flex")
         .align_items("center")
         // Pins its own size, so a `Flex` column's `stretch` cannot widen it.
@@ -190,7 +193,10 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
     });
 
     Size::ALL.into_iter().fold(base, |base, size| {
-        base.when(size.state_name(), sx().gap(SizeCss::SPACING.value(size)))
+        base.when(
+            size.state_name(),
+            sx().gap(SizeCss::SPACING.overridable(size)),
+        )
     })
 });
 
@@ -215,7 +221,7 @@ pub(crate) struct SegmentedControlView {
     pub full_width: bool,
     pub size: Size,
     pub radius: Size,
-    pub gap: Option<Size>,
+    pub gap: Option<ScaleOrCss>,
     /// `false` keeps the radios out of the tab order and stops a label click
     /// from focusing its radio.
     pub focusable: bool,
@@ -318,10 +324,17 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
         .with(variant.state_name(), true)
         .with("full-width", full_width)
         .with("collapsed", gap.is_none());
-    if let Some(gap) = gap {
-        own = own.with(gap.state_name(), true);
+    if let Some(gap) = &gap {
+        own = own.with(gap.size.state_name(), true);
     }
     let states = own.into();
+    let gap_variables: Input<Variables> = variables()
+        .with(
+            SizeCss::SPACING.override_var(),
+            gap.as_ref()
+                .and_then(|gap| gap.custom_css(SizeCss::SPACING)),
+        )
+        .into();
 
     // Shared by every segment, so built once.
     let segment_states = format!("{} {}", size.state_name(), radius.radius_state_name());
@@ -461,6 +474,7 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
     use_box()
         .framework_sx(&SEGMENTED_CONTROL_SX)
         .states(&states)
+        .variables(&gap_variables)
         .style(Some(style).filter(|style| !style.is_empty()))
         .prepare()
         .element(&element)

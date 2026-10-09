@@ -35,9 +35,9 @@ pub fn BadgePage() -> Element {
                 prop("size", "Size")
                     .default(theme.badge.size.as_str())
                     .doc("Height, horizontal padding and font size, on a scale smaller than a chip's."),
-                prop("radius", "Size")
+                prop("radius", "ThemeAwareValue")
                     .default(theme.badge.radius.as_str())
-                    .doc("A step on the badge's own radius scale, `2px` to `12px`. The default `xxl` is a pill at every height."),
+                    .doc("A step on the badge's own radius scale, `2px` to `12px`, or any CSS, e.g. `radius: \"0\"`. The default `xxl` is a pill at every height."),
                 prop("circle", "bool")
                     .default("false")
                     .doc("Drops the horizontal padding and makes the width at least the height, for a count of one or two characters."),

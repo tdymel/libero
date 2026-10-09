@@ -7,8 +7,8 @@ use crate::{
     components::{
         buttons::button_variables,
         common::{
-            Input, OptionLabel, OptionSource, Options, Orientation, Variant, base_color_or,
-            names_itself, use_name_warning, use_toolbar_item,
+            Input, OptionLabel, OptionSource, Options, Orientation, ScaleOrCss, Variant,
+            base_color_or, names_itself, use_name_warning, use_toolbar_item,
         },
         form::{Asks, field_props, use_bound, use_field, use_form_context},
     },
@@ -49,8 +49,9 @@ field_props! {
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         /// Space between the segments; set, each keeps its own border and radius.
+        /// A size word or any CSS, as `gap: "0"`.
         #[props(default, into)]
-        gap: Input<Size>,
+        gap: Input<ThemeAwareValue>,
         /// Segments share the width evenly instead of sizing to their label.
         #[props(default)]
         full_width: Option<bool>,
@@ -214,7 +215,11 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
             full_width,
             size,
             radius,
-            gap: props.gap.as_ref().copied(),
+            // Only the state a custom gap rides: its override replaces the value.
+            gap: props
+                .gap
+                .as_ref()
+                .map(|gap| ScaleOrCss::new(Some(gap), Size::Md)),
             focusable: props.focusable.unwrap_or(true),
             readonly: props.readonly.unwrap_or(false) || soft_disabled,
             enter: !in_form,

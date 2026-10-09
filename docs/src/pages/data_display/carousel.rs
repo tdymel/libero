@@ -42,7 +42,7 @@ pub fn CarouselPage() -> Element {
                     prop("per_view", "f64")
                         .default(theme.carousel.per_view.to_string())
                         .doc("Slides visible at once. A fraction lets the next one peek in."),
-                    prop("gap", "Size").default(theme.carousel.gap.as_str()).doc("Between slides."),
+                    prop("gap", "ThemeAwareValue").default(theme.carousel.gap.as_str()).doc("Between slides, or any CSS, e.g. `gap: \"0\"`."),
                     prop("align", "CarouselAlign")
                         .default(theme.carousel.align.as_str())
                         .doc("Where a snapped slide comes to rest. Shows best with a fractional `per_view`. Above `per_view` 1 it also moves which slides the strip can reach."),
@@ -127,7 +127,7 @@ pub fn CarouselPage() -> Element {
                                 vec![format!("per_view: {per_view:?}")]
                             }
                         }),
-                    Control::slider("gap", ["xs", "sm", "md", "lg", "xl"])
+                    Control::slider("gap", ["0", "xs", "sm", "md", "lg", "xl"])
                         .default(theme.carousel.gap.as_str()),
                     Control::toggle("align", ["start", "center", "end"])
                         .labels(["Start", "Center", "End"])

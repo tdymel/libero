@@ -111,8 +111,8 @@ pub fn SegmentedControlPage() -> Element {
                     prop("radius", "Size")
                         .default(theme.button.radius.as_str())
                         .doc("Radius of the control's outer corners. Inner corners are square."),
-                    prop("gap", "Size")
-                        .doc("Space between the segments. Set, each segment gets its own border and radius."),
+                    prop("gap", "ThemeAwareValue")
+                        .doc("Space between the segments, or any CSS, e.g. `gap: \"0\"`. Set, each segment gets its own border and radius."),
                     prop("full_width", "bool")
                         .default("false")
                         .doc("Segments share the width evenly instead of sizing to their label. A label too long for its segment ends in an ellipsis either way."),
@@ -218,7 +218,7 @@ pub fn SegmentedControlPage() -> Element {
                         .labels(["Horizontal", "Vertical"]),
                     // "auto" is no gap at all: the segments stay connected
                     // and share their borders.
-                    Control::slider("gap", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
+                    Control::slider("gap", ["auto", "0", "xs", "sm", "md", "lg", "xl", "xxl"]),
                 ], field_controls::<AlignmentCopy>(), vec![
                     Control::switch("full_width"),
                     Control::switch("required"),

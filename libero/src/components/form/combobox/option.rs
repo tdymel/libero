@@ -5,14 +5,14 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, Part, ROW_HOVER_TINT, States, base_props, disabled_look_sx,
-            forced_on_sx, group_id, inset_focus_ring_sx, option_id,
+            HtmlTag, Input, Part, ROW_HOVER_TINT, ScaleOrCss, States, Variables, base_props,
+            disabled_look_sx, forced_on_sx, group_id, inset_focus_ring_sx, option_id, variables,
         },
         layout::use_box,
     },
     hooks::use_theme,
-    sx::{StaticSx, sx},
-    theme::{ComboboxDefaults, Size},
+    sx::{StaticSx, ThemeAwareValue, sx},
+    theme::{ComboboxDefaults, Size, SizeCss},
 };
 
 use crate::components::form::DropdownPart;
@@ -22,7 +22,7 @@ use crate::components::form::DropdownPart;
 pub(super) struct ComboboxContext {
     pub id: Signal<String>,
     pub size: Signal<Size>,
-    pub radius: Signal<Size>,
+    pub radius: Signal<ScaleOrCss>,
     /// Each drawn row's `onpick` by row key, so Enter fires the highlighted one. Not reactive.
     pub picks: CopyValue<HashMap<usize, Callback<()>>>,
 }
@@ -108,8 +108,9 @@ base_props! {
         #[props(default, into)]
         size: Input<Size>,
         /// Defaults to the `Combobox`'s, tightened by the dropdown's padding.
+        /// A size word or any CSS, as `radius: "0"`.
         #[props(default, into)]
-        radius: Input<Size>,
+        radius: Input<ThemeAwareValue>,
         children: Element,
     }
 }
@@ -139,10 +140,16 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
         Some(context) => (context.size)(),
         None => theme.combobox.size,
     });
-    let radius = props.radius.copied_or(match combobox {
-        Some(context) => (context.radius)(),
-        None => theme.combobox.radius,
-    });
+    let radius = match (props.radius.as_ref(), combobox) {
+        (None, Some(context)) => (context.radius)(),
+        (value, _) => ScaleOrCss::new(value, theme.combobox.radius),
+    };
+    let radius_variables: Input<Variables> = variables()
+        .with(
+            SizeCss::RADIUS.override_var(),
+            radius.custom_css(SizeCss::RADIUS),
+        )
+        .into();
 
     let disabled = props
         .disabled
@@ -190,7 +197,7 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
         .states
         .unwrap_or_default()
         .with(size.state_name(), true)
-        .with(radius.radius_state_name(), true)
+        .with(radius.size.radius_state_name(), true)
         .with("active", active)
         .with("selected", props.selected.unwrap_or(false))
         .with("disabled", disabled)
@@ -201,6 +208,7 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
         .class(&props.class)
         .sx(&props.sx)
         .states(&states)
+        .variables(&radius_variables)
         .prepare()
         .attr_default("id", id)
         .attr_default("data-slot", DropdownPart::Option.slot())

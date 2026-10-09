@@ -5,10 +5,11 @@ use crate::{
         common::{
             BUTTON_COLOR_VAR, BUTTON_CONTAINER_VAR, BUTTON_CONTRAST_VAR, BUTTON_FILL_VAR,
             BUTTON_HOVER_VAR, BUTTON_ON_CONTAINER_VAR, BUTTON_ON_STATE_VAR, BUTTON_SELECTED_VAR,
-            BUTTON_VARS, HtmlTag, Input, Part, States, TOOLBAR_ITEM, ToolbarItem, Variant,
-            base_color, base_props, contrast_color, disabled_look_sx, fill_color, focus_ring_sx,
-            input_from_str, interactive_variant_sx, literal_contrast, parts_enum, text_color,
-            use_button_group, use_toolbar_item, variables, variant_colors, variant_selected_sx,
+            BUTTON_VARS, HtmlTag, Input, Part, ScaleOrCss, States, TOOLBAR_ITEM, ToolbarItem,
+            Variant, base_color, base_props, contrast_color, disabled_look_sx, fill_color,
+            focus_ring_sx, input_from_str, interactive_variant_sx, literal_contrast, parts_enum,
+            text_color, use_button_group, use_toolbar_item, variables, variant_colors,
+            variant_selected_sx,
         },
         feedback::Loader,
         layout::{render_anchor, use_box},
@@ -201,9 +202,9 @@ base_props! {
         /// `("secondary", 45)` or a [`Gradient`]. Unset keys take the theme's.
         #[props(default, into)]
         gradient: Option<Gradient>,
-        /// Corner radius, independent of `size`.
+        /// Corner radius, independent of `size`: a size word or any CSS, as `radius: "0"`.
         #[props(default, into)]
-        radius: Input<Size>,
+        radius: Input<ThemeAwareValue>,
         #[props(default, into)]
         size: Input<Size>,
         #[props(default)]
@@ -282,9 +283,10 @@ pub fn Button(props: ButtonProps) -> Element {
     let size = props
         .size
         .copied_or(group.size.unwrap_or(theme.button.size));
-    let radius = props
-        .radius
-        .copied_or(group.radius.unwrap_or(theme.button.radius));
+    let radius = ScaleOrCss::new(
+        props.radius.as_ref().or(group.radius.as_ref()),
+        theme.button.radius,
+    );
 
     let showing = ripple.showing();
     // ~790 ns uncached, and the key rarely changes between renders.
@@ -305,6 +307,10 @@ pub fn Button(props: ButtonProps) -> Element {
         Some(gradient) => format!("{style}{gradient}"),
         None => style,
     };
+    let style = match radius.custom_css(SizeCss::RADIUS) {
+        Some(radius) => format!("{style}{}:{radius};", SizeCss::RADIUS.override_var().name()),
+        None => style,
+    };
     let style = match showing.as_ref() {
         Some(ripple) => ripple.with_point(style),
         None => style,
@@ -320,7 +326,7 @@ pub fn Button(props: ButtonProps) -> Element {
         ("checked", selected),
         (variant.state_name(), true),
         (size.state_name(), true),
-        (radius.radius_state_name(), true),
+        (radius.size.radius_state_name(), true),
     ]);
     if let Some(ripple) = showing.as_ref() {
         own.push((ripple.state(), true));

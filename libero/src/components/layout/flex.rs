@@ -3,7 +3,8 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, States, Variables, base_props, focus_ring_sx, input_from_str, variables,
+            HtmlTag, Input, States, Variables, base_props, focus_ring_sx, input_from_str,
+            responsive_sx, variables, with_own,
         },
         layout::use_box,
     },
@@ -25,6 +26,37 @@ str_enum! {
 }
 
 input_from_str!(FlexDirection);
+
+/// One direction, or one per breakpoint: `direction: responsive(FlexDirection::Column).md(FlexDirection::Row)`.
+impl From<&str> for Input<Responsive<FlexDirection>> {
+    fn from(value: &str) -> Self {
+        Self::Value(Responsive::new(value.into()))
+    }
+}
+
+impl From<String> for Input<Responsive<FlexDirection>> {
+    fn from(value: String) -> Self {
+        value.as_str().into()
+    }
+}
+
+impl From<FlexDirection> for Input<Responsive<FlexDirection>> {
+    fn from(value: FlexDirection) -> Self {
+        Self::Value(Responsive::new(value))
+    }
+}
+
+impl From<Option<FlexDirection>> for Input<Responsive<FlexDirection>> {
+    fn from(value: Option<FlexDirection>) -> Self {
+        value.map_or(Self::None, Into::into)
+    }
+}
+
+impl From<Responsive<FlexDirection>> for Input<Responsive<FlexDirection>> {
+    fn from(value: Responsive<FlexDirection>) -> Self {
+        Self::Value(value)
+    }
+}
 
 str_enum! {
     pub enum FlexWrap {
@@ -107,9 +139,10 @@ base_props! {
         /// `gap: responsive(Size::Xs).md(Size::Lg)`. Breakpoints follow the window.
         #[props(default, into)]
         gap: Input<Responsive<ThemeAwareValue>>,
-        /// `column` by default.
+        /// `column` by default, or one per breakpoint,
+        /// `direction: responsive(FlexDirection::Column).md(FlexDirection::Row)`.
         #[props(default, into)]
-        direction: Input<FlexDirection>,
+        direction: Input<Responsive<FlexDirection>>,
         /// `true` or `FlexWrap::Wrap` wraps.
         #[props(default, into)]
         wrap: Input<FlexWrap>,
@@ -117,20 +150,43 @@ base_props! {
     }
 }
 
-/// A gap off the size scale and every breakpoint, in the user layer so it beats the
-/// state classes; before `sx`, so a caller's own `gap` still wins.
-fn gap_sx(gap: &Responsive<ThemeAwareValue>, own: &Input<Sx>) -> Input<Sx> {
-    let base = match gap.base_ref() {
-        ThemeAwareValue::Size(_) if gap.breakpoints().next().is_none() => return own.clone(),
-        ThemeAwareValue::Size(_) => sx(),
-        custom => sx().gap(custom.clone()),
+/// A gap off the size scale and every breakpoint, plus each direction breakpoint's axis
+/// defaults, in the user layer so they beat the state classes; before `sx`, so it still wins.
+fn layout_sx(
+    direction: Option<&Responsive<FlexDirection>>,
+    gap: Option<&Responsive<ThemeAwareValue>>,
+    own: &Input<Sx>,
+) -> Input<Sx> {
+    let turns: Vec<_> = direction.map_or(Vec::new(), |direction| direction.breakpoints().collect());
+    let Some(gap) = gap else {
+        if turns.is_empty() {
+            return own.clone();
+        }
+        let axes = turns.into_iter().fold(sx(), |base, (size, turn)| {
+            base.breakpoint(size, FlexDefaults::default_sx(turn == FlexDirection::Row))
+        });
+        return with_own(Some(axes), own);
     };
-    gap.breakpoints()
-        .fold(base, |base, (size, value)| {
-            base.breakpoint(size, sx().gap(value))
-        })
-        .and(own.as_ref().cloned().unwrap_or_default())
-        .into()
+    if turns.is_empty() {
+        return with_own(responsive_sx(gap, Sx::gap), own);
+    }
+
+    // One ascending pass, so a wider breakpoint's rule still comes last.
+    let base = responsive_sx(&Responsive::new(gap.base_ref().clone()), Sx::gap).unwrap_or_default();
+    let axes = Size::ALL.into_iter().fold(base, |base, size| {
+        let rule = match turns.iter().find(|(at, _)| *at == size) {
+            // The axis defaults carry the theme's spacing: the explicit gap goes back on top.
+            Some((_, turn)) => {
+                FlexDefaults::default_sx(*turn == FlexDirection::Row).gap(gap.at(size))
+            }
+            None => match gap.breakpoints().find(|(at, _)| *at == size) {
+                Some((_, value)) => sx().gap(value),
+                None => return base,
+            },
+        };
+        base.breakpoint(size, rule)
+    });
+    with_own(Some(axes), own)
 }
 
 /// Lays its children out in a column or a row, with a themed gap.
@@ -151,7 +207,10 @@ fn gap_sx(gap: &Responsive<ThemeAwareValue>, own: &Input<Sx>) -> Input<Sx> {
 /// Docs: <https://libero-ui.dev/layout/flex>
 #[component]
 pub fn Flex(props: FlexProps) -> Element {
-    let direction = props.direction.copied_or_default();
+    let direction = props
+        .direction
+        .as_ref()
+        .map_or(FlexDirection::default(), Responsive::base);
     let variables: Input<Variables> = flex_variables(&props).into();
 
     let mut states = props
@@ -162,10 +221,7 @@ pub fn Flex(props: FlexProps) -> Element {
         states = states.with(gap.state_name(), true);
     }
     let states: Input<States> = states.into();
-    let sx = match props.gap.as_ref() {
-        Some(gap) => gap_sx(gap, &props.sx),
-        None => props.sx.clone(),
-    };
+    let sx = layout_sx(props.direction.as_ref(), props.gap.as_ref(), &props.sx);
 
     use_box()
         .framework_sx(&FLEX_BASE_SX)

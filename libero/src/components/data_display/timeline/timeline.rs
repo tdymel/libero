@@ -5,17 +5,18 @@ use crate::{
     components::{
         accessibility::VisuallyHidden,
         common::{
-            ABSENT, HtmlTag, Input, LogicalTextAlign, Part, Rail, RailInset, States, Variables,
-            base_props, input_from_str, parts_enum, variables,
+            ABSENT, HtmlTag, Input, LogicalTextAlign, Part, Rail, RailInset, ScaleOrCss, States,
+            Variables, base_props, input_from_str, parts_enum, variables,
         },
         layout::use_box,
     },
     hooks::use_theme,
     sx::{FORCED_COLORS, StaticSx, ThemeAwareValue, sx},
     theme::{
-        Size, TIMELINE_BULLET, TIMELINE_BULLET_BACKGROUND, TIMELINE_COLOR, TIMELINE_CONNECTOR,
-        TIMELINE_LINE_COLOR, TIMELINE_LINE_STYLE, TIMELINE_LINE_WIDTH, TIMELINE_MARKER,
-        TIMELINE_RADIUS, TIMELINE_SPACE, TimelineAlign, gap_state_name,
+        Size, SizeCss, TIMELINE_BULLET, TIMELINE_BULLET_BACKGROUND, TIMELINE_COLOR,
+        TIMELINE_CONNECTOR, TIMELINE_GAP, TIMELINE_LINE_COLOR, TIMELINE_LINE_STYLE,
+        TIMELINE_LINE_WIDTH, TIMELINE_MARKER, TIMELINE_RADIUS, TIMELINE_SPACE, TimelineAlign,
+        gap_state_name,
     },
 };
 
@@ -36,6 +37,8 @@ fn rail() -> Rail {
 
 static TIMELINE_BASE_SX: StaticSx = StaticSx::new(|| {
     crate::theme::TimelineDefaults::theme_vars()
+        // Nested timelines must not inherit this one's custom gap.
+        .var(TIMELINE_GAP.override_var(), "initial")
         .list_style("none")
         .margin("0")
         .padding("0")
@@ -203,12 +206,12 @@ base_props! {
         color: Input<ThemeAwareValue>,
         #[props(default, into)]
         bullet_size: Input<Size>,
-        /// Bullet corner radius; `Xl` is the dot.
+        /// Bullet corner radius: a size word or any CSS, as `radius: "0"`. `Xl` is the dot.
         #[props(default, into)]
-        radius: Input<Size>,
-        /// Space between events, and so each connector's length.
+        radius: Input<ThemeAwareValue>,
+        /// Space between events and each connector: a size word or any CSS, as `gap: "0"`.
         #[props(default, into)]
-        gap: Input<Size>,
+        gap: Input<ThemeAwareValue>,
     }
 }
 
@@ -237,17 +240,17 @@ pub fn Timeline(props: TimelineProps) -> Element {
     let theme = use_theme();
     let align = props.align.copied_or(theme.timeline.align);
     let bullet_size = props.bullet_size.copied_or(theme.timeline.bullet_size);
-    let radius = props.radius.copied_or(theme.timeline.radius);
-    let gap = props.gap.copied_or(theme.timeline.gap);
+    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.timeline.radius);
+    let gap = ScaleOrCss::new(props.gap.as_ref(), theme.timeline.gap);
 
     let states: Input<States> = props
         .states
         .unwrap_or_default()
         .with(align.state_name(), true)
         .with(bullet_size.state_name(), true)
-        .with(radius.radius_state_name(), true)
+        .with(radius.size.radius_state_name(), true)
         // The third size axis has no `per_*` helper; see `TimelineDefaults`.
-        .with(gap_state_name(gap), true)
+        .with(gap_state_name(gap.size), true)
         .into();
 
     let root_variables: Input<Variables> = variables()
@@ -255,6 +258,11 @@ pub fn Timeline(props: TimelineProps) -> Element {
             TIMELINE_COLOR,
             props.color.as_ref().and_then(|color| color.resolve(None)),
         )
+        .with(
+            SizeCss::RADIUS.override_var(),
+            radius.custom_css(SizeCss::RADIUS),
+        )
+        .with(TIMELINE_GAP.override_var(), gap.custom_css(TIMELINE_GAP))
         .into();
 
     // Prepared once, outside the loop (`use_box` is a hook), and cloned per item.

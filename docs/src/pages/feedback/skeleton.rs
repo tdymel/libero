@@ -114,9 +114,9 @@ pub fn SkeletonPage() -> Element {
                 prop("circle", "bool")
                     .default("false")
                     .doc("A circle as wide as `height`. Without `height`, as wide as the children."),
-                prop("radius", "Size")
+                prop("radius", "ThemeAwareValue")
                     .default(theme.skeleton.radius.as_str())
-                    .doc("Corner radius. Ignored with `circle`."),
+                    .doc("Corner radius, or any CSS, e.g. `radius: \"0\"`. Ignored with `circle`."),
                 prop("animate", "bool")
                     .default(theme.skeleton.animate.to_string())
                     .doc("Runs the pulse. With reduced motion it stops half-way."),

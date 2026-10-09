@@ -75,11 +75,25 @@ Flex {
 }
 ```
 
+`direction` also takes one value per breakpoint. Each breakpoint brings that
+axis's theme defaults for align, justify, gap and wrap, but an explicit `gap`
+stays.
+
+```rust,ignore
+Flex {
+    // A column on a phone, a row from `md` (62rem).
+    direction: responsive(FlexDirection::Column).md(FlexDirection::Row),
+    gap: "sm",
+    Box { "One" }
+    Box { "Two" }
+}
+```
+
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `direction` | `FlexDirection` | `column` | Lays the children out in a row or a column. |
+| `direction` | `Responsive<FlexDirection>` | `column` | Lays the children out in a row or a column, or one per breakpoint, `direction: responsive(FlexDirection::Column).md(FlexDirection::Row)`. Each breakpoint takes that axis's theme defaults; an explicit `gap` stays. |
 | `align` | `ThemeAwareValue` | `stretch` in a column, `center` in a row | Cross-axis alignment. |
 | `justify` | `ThemeAwareValue` | `flex-start` | Main-axis alignment. |
 | `gap` | `Responsive<ThemeAwareValue>` | `md` | Space between children: a size, any CSS such as `"0"`, or one per breakpoint, `gap: responsive(Size::Xs).md(Size::Xl)`. Breakpoints follow the window, not the parent. |
@@ -147,5 +161,5 @@ State tokens on the root's `data-state`, space separated.
 
 | Token | Condition |
 |---|---|
-| `row` | `direction` is `row`. Without it, a column. |
+| `row` | `direction` is `row` below every breakpoint. Without it, a column. |
 | `size-<size>` | The `gap` below every breakpoint, when it is a size. |

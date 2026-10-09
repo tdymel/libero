@@ -38,7 +38,7 @@ impl SkeletonDefaults {
     };
 
     pub fn radius_sx(radius: Size) -> Sx {
-        sx().var(SKELETON_RADIUS, SizeCss::RADIUS.value(radius))
+        sx().var(SKELETON_RADIUS, SizeCss::RADIUS.overridable(radius))
     }
 
     /// No `per_size`: the dimensions are the content's, or `height`/`width`.

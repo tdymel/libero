@@ -105,7 +105,7 @@ impl MenuDefaults {
             MENU_ITEM_RADIUS,
             format!(
                 "max(0px, calc({} - {MENU_PADDING}))",
-                SizeCss::RADIUS.value(radius)
+                SizeCss::RADIUS.overridable(radius)
             ),
         )
     }

@@ -76,7 +76,7 @@ impl ImageListDefaults {
     };
 
     fn radius_sx(radius: Size) -> Sx {
-        sx().var(IMAGE_LIST_RADIUS, SizeCss::RADIUS.value(radius))
+        sx().var(IMAGE_LIST_RADIUS, SizeCss::RADIUS.overridable(radius))
     }
 
     /// Composed into the **cell's** base `Sx`, not the list's: the cell draws the corner.

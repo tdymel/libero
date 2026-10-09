@@ -58,7 +58,7 @@ of actions, use a single `Menu`.
 | `side` | `Side` | `Bottom` | Which side of its trigger every menu opens on. It flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir="ltr"`, the right under `rtl`. |
 | `align` | `Align` | `Start` | Where each menu lines up along that side. |
 | `size` | `Size` | `md` | The triggers' font and padding, and each menu's item size. |
-| `radius` | `Size` | `sm` | The triggers' and the menus' corner radius. |
+| `radius` | `ThemeAwareValue` | `sm` | The triggers' and the menus' corner radius, or any CSS, e.g. `radius: "0"`. |
 | `menu_parts` | `Parts<MenuPart>` | - | Every menu's `parts`, the `Menu` page's Style API table. The menus open in a portal, out of the bar's `sx` and `parts`. |
 | `parts` | `Parts<MenubarPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. The menus take `menu_parts`. |
 

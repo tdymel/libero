@@ -46,7 +46,7 @@ repository link, direction toggle and theme switcher, and on a phone the search.
 | `variant` | `Variant` | - | Default `variant` of the buttons inside. Between two buttons without a visible border of their own (every variant but `outlined`), the group draws a thin divider. |
 | `color` | `ThemeAwareValue` | - | Default `color` of the buttons inside. |
 | `size` | `Size` | - | Default `size` of the buttons inside. |
-| `radius` | `Size` | - | The group's outer corners. The corners between two buttons are always square. |
+| `radius` | `ThemeAwareValue` | - | The group's outer corners, or any CSS, e.g. `radius: "0"`. The corners between two buttons are always square. |
 | `disabled` | `bool` | - | Disables every button inside that does not set `disabled` itself. |
 | `children` | `Element` | `required` | `Button`s, `ActionIcon`s, and components built on them, such as `ThemeSwitcher`. |
 

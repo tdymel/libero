@@ -2,12 +2,12 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, Orientation, States, base_props},
+        common::{HtmlTag, Input, Orientation, States, base_props, responsive_sx, with_own},
         layout::use_box,
     },
     hooks::use_theme,
-    sx::{StaticSx, Sx, sx},
-    theme::{DataListDefaults, Size},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    theme::{DATA_LIST_GAP, DataListDefaults, Responsive},
 };
 
 // Pins the UA's `dl`/`dd` margins and `dt` bold.
@@ -42,10 +42,10 @@ base_props! {
         /// `"horizontal"`: descriptions beside their term; default `"vertical"`: below.
         #[props(default, into)]
         orientation: Input<Orientation>,
-        /// Gap between rows, and between a term and its description.
-        /// Off-scale values go through `sx`.
+        /// Gap between rows, and between a term and its description: a size word, any CSS
+        /// (`gap: "0"`) or one per breakpoint, `gap: responsive(Size::Xs).md(Size::Lg)`.
         #[props(default, into)]
-        gap: Input<Size>,
+        gap: Input<Responsive<ThemeAwareValue>>,
         /// [`DataListItem`](super::DataListItem)s, or any `dt`/`dd` content.
         children: Element,
     }
@@ -73,7 +73,10 @@ pub fn DataList(props: DataListProps) -> Element {
 
     let is_horizontal = props.orientation.copied_or_default() == Orientation::Horizontal;
 
-    let gap = props.gap.copied_or(theme.data_list.size);
+    let gap = match props.gap.as_ref().map(Responsive::base_ref) {
+        Some(ThemeAwareValue::Size(gap)) => *gap,
+        _ => theme.data_list.size,
+    };
 
     let states: Input<States> = props
         .states
@@ -81,11 +84,21 @@ pub fn DataList(props: DataListProps) -> Element {
         .with(gap.state_name(), true)
         .with("horizontal", is_horizontal)
         .into();
+    // A size off the list's own gap scale, not the spacing one.
+    let sx = with_own(
+        props.gap.as_ref().and_then(|gap| {
+            responsive_sx(gap, |sx, value| match value {
+                ThemeAwareValue::Size(size) => sx.gap(DATA_LIST_GAP.value(size)),
+                css => sx.gap(css),
+            })
+        }),
+        &props.sx,
+    );
 
     use_box()
         .framework_sx(&DATA_LIST_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(&sx)
         .states(&states)
         .prepare()
         .render(HtmlTag::Dl, props.attributes, props.children)

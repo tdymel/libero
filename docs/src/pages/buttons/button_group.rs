@@ -26,8 +26,8 @@ pub fn ButtonGroupPage() -> Element {
                     .doc("Default `color` of the buttons inside."),
                 prop("size", "Size")
                     .doc("Default `size` of the buttons inside."),
-                prop("radius", "Size")
-                    .doc("The group's outer corners. The corners between two buttons are always square."),
+                prop("radius", "ThemeAwareValue")
+                    .doc("The group's outer corners, or any CSS, e.g. `radius: \"0\"`. The corners between two buttons are always square."),
                 prop("disabled", "bool")
                     .doc("Disables every button inside that does not set `disabled` itself."),
                 prop("children", "Element")

@@ -13,14 +13,14 @@ use super::{
 };
 use crate::{
     components::{
-        common::{HtmlTag, Input, Part, Parts, States},
+        common::{HtmlTag, Input, Part, Parts, ScaleOrCss, States, Variables, variables},
         layout::{Divider, use_box},
     },
     hooks::{
         Align, DismissHandle, DismissOptions, ElementHandle, PopoverOptions, PressMarker, Side,
         TYPEAHEAD_RESET, use_dismiss, use_popover_on, use_theme, use_typeahead,
     },
-    theme::Size,
+    theme::{Size, SizeCss},
 };
 
 /// Every ancestor menu's dismissal: a third level is no descendant of the first.
@@ -63,7 +63,7 @@ pub(super) struct MenuLevelProps {
     side: Side,
     align: Align,
     size: Size,
-    radius: Size,
+    radius: ScaleOrCss,
     loop_focus: bool,
     close_on_select: bool,
     depth: usize,
@@ -263,8 +263,14 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
         .states
         .unwrap_or_default()
         .with(props.size.state_name(), true)
-        .with(props.radius.radius_state_name(), true)
+        .with(props.radius.size.radius_state_name(), true)
         .with("bordered", true)
+        .into();
+    let radius_variables: Input<Variables> = variables()
+        .with(
+            SizeCss::RADIUS.override_var(),
+            props.radius.custom_css(SizeCss::RADIUS),
+        )
         .into();
     let menu = use_box()
         .framework_sx(&MENU_SX)
@@ -272,6 +278,7 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&states)
+        .variables(&radius_variables)
         .style(open.then(|| popover.style()))
         .prepare();
 
@@ -335,7 +342,7 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
                 side: submenu_side,
                 align: Align::Start,
                 size: props.size,
-                radius: props.radius,
+                radius: props.radius.clone(),
                 loop_focus: props.loop_focus,
                 close_on_select: props.close_on_select,
                 depth: depth + 1,

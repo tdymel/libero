@@ -1,6 +1,6 @@
 use super::{Property, SxEntry, SxModifierKey, SxPropertyKey, ThemeAwareValue};
 use crate::css::canonical_condition;
-use crate::tokens::{CssVar, Size};
+use crate::tokens::{CssVar, Size, SizeCss};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
@@ -99,9 +99,11 @@ impl Sx {
         })
     }
 
-    /// Same, keyed by `radius-{size}`, so radius is independent of `size`.
+    /// Same, keyed by `radius-{size}`, so radius is independent of `size`. Resets the radius
+    /// override, so only the instance that sets it (`radius: "0"`) reads it, not its children.
     pub fn per_radius(self, radius_sx: impl Fn(Size) -> Sx) -> Self {
-        Size::ALL.into_iter().fold(self, |base, radius| {
+        let base = self.var(SizeCss::RADIUS.override_var(), "initial");
+        Size::ALL.into_iter().fold(base, |base, radius| {
             base.when(radius.radius_state_name(), radius_sx(radius))
         })
     }
@@ -340,6 +342,7 @@ mod tests {
         let base = Size::ALL.into_iter().fold(super::sx(), |base, size| {
             base.when(size.state_name(), super::sx().padding(size.state_name()))
         });
+        let base = base.var(crate::tokens::SizeCss::RADIUS.override_var(), "initial");
         let folded = Size::ALL.into_iter().fold(base, |base, radius| {
             base.when(
                 radius.radius_state_name(),

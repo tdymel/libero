@@ -2,7 +2,9 @@
 //! `Center`, `Float`, `AspectRatio` and `Sidebar`, in a 320px column (WCAG 1.4.10).
 
 use dioxus::prelude::*;
-use libero::components::{AspectRatio, Box as LBox, Center, Container, Flex, Float, Sidebar};
+use libero::components::{
+    AspectRatio, Box as LBox, Center, Container, Flex, FlexDirection, Float, Sidebar,
+};
 use libero::sx::sx;
 use libero::theme::{Size, responsive};
 
@@ -23,6 +25,14 @@ fn FlexGapPage() -> Element {
             LBox { component: "span", "Two" }
         }
         Flex { id: "zero-gap", direction: "row", gap: "0",
+            LBox { component: "span", "One" }
+            LBox { component: "span", "Two" }
+        }
+        // Todo 2689: a column on a phone, a row from `md`, keeping its gap.
+        Flex {
+            id: "responsive-direction",
+            direction: responsive(FlexDirection::Column).md(FlexDirection::Row),
+            gap: "xs",
             LBox { component: "span", "One" }
             LBox { component: "span", "Two" }
         }

@@ -66,9 +66,9 @@ pub fn PaperPage() -> Element {
             markdown: "/md/paper.md",
             properties: vec![
                 props("Paper", vec![
-                    prop("radius", "Size")
+                    prop("radius", "ThemeAwareValue")
                         .default(theme.paper.radius.as_str())
-                        .doc("Corner radius, a step on the shared radius scale."),
+                        .doc("Corner radius, a step on the shared radius scale, or any CSS, e.g. `radius: \"0\"`."),
                     prop("shadow", "Size")
                         .default(theme.paper.shadow.as_str())
                         .doc("Elevation, a step on the shared shadow scale. For a flat surface use `sx().box_shadow(\"none\")`."),
@@ -115,7 +115,8 @@ pub fn PaperPage() -> Element {
                 children_text: "",
                 children_code: CONTENT.to_string(),
                 controls: vec![
-                    Control::sizes("radius")
+                    // `0` is plain CSS, next to the size scale.
+                    Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.paper.radius.as_str()),
                     // `none` is not a `Size`: it prints the `sx` override that does it.
                     Control::slider("shadow", ["none", "xs", "sm", "md", "lg", "xl", "xxl"])

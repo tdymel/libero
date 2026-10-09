@@ -157,7 +157,7 @@ since each item starts no higher than the one before it.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `template` | `GridTemplate` | required | The named-area matrix. Each row shares its width equally between its cells, and `cells(area, n)` gives one area several. An area must be a rectangle, and the rows need at most twelve columns. Build it once, as a `StaticGridTemplate` static. |
-| `gap` | `Size` | `md` | Space between zones. |
+| `gap` | `Responsive<ThemeAwareValue>` | `md` | Space between zones, or any CSS, e.g. `gap: "0"`, per breakpoint too. |
 | `component` | `HtmlTag` | `div` | The element to render. |
 | `children` | `Element` | required | `GridZone`s. |
 

@@ -23,11 +23,16 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        ActionIcon, Alert, AspectRatio, Avatar, Badge, Burger, Carousel, Center, Collapse,
+        ActionIcon, Alert, AspectRatio, Avatar, Badge, Burger, Button, Carousel, Center, Collapse,
         Container, Dialog, Float, Header, Icon, Image, ImageItem, ImageList, Indicator, Marquee,
-        Overlay, Scroller, Tooltip, Transition,
+        Options, Overlay, Scroller, SegmentedControl, Timeline, Tooltip, Transition,
     },
 };
+
+#[derive(Clone, PartialEq, Options)]
+enum Pick {
+    One,
+}
 
 fn items() -> Vec<ImageItem> {
     vec![
@@ -49,6 +54,7 @@ fn app() -> Element {
             AspectRatio { ratio: 1.5, "ratio" }
             Avatar { name: "Ada Lovelace", initials: "AL", radius: "sm" }
             Badge { radius: "sm", "badge" }
+            Button { radius: "0", "button" }
             Burger { size: "lg", "aria-label": "Menu" }
             Carousel {
                 aria_label: "Offers",
@@ -70,6 +76,8 @@ fn app() -> Element {
             Marquee { duration: 9000, "marquee" }
             Overlay { opacity: "0.5", z_index: "5", blur: "2px" }
             Scroller { aria_label: "Tags", fade_color: "red", span { "one" } }
+            SegmentedControl { gap: "3px", value: Pick::One, onchange: move |_| {} }
+            Timeline { gap: "3px", items: vec![] }
             // Open: the bubble is rendered only then.
             Tooltip { label: rsx! { "t" }, z_index: "5", open: true, "x" }
             Transition { duration: 350, "transition" }

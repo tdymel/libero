@@ -211,6 +211,24 @@ fn a_responsive_gap_follows_the_viewport() {
                 .into_value()
                 .unwrap();
             assert!(zero.abs() < 0.5, "{width}px: gap {zero}, want 0");
+
+            // Todo 2689: the axis turns at `md`, and the explicit 4px gap rides along.
+            let (axis, turned) = if width < 992 {
+                ("column", "b.top - a.bottom")
+            } else {
+                ("row", "b.left - a.right")
+            };
+            let seen: String = page
+                .evaluate(format!(
+                    "(() => {{ const el = document.querySelector('#responsive-direction'); \
+                       const [a, b] = [...el.children].map(c => c.getBoundingClientRect()); \
+                       return getComputedStyle(el).flexDirection + ' ' + Math.round({turned}); }})()"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert_eq!(seen, format!("{axis} 4"), "{width}px");
         }
 
         fixture.console.assert_clean("a responsive gap").unwrap();

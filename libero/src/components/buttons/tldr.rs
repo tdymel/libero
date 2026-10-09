@@ -141,10 +141,10 @@ base_props! {
         /// The trigger's size step. Unset, `theme.tldr.size`.
         #[props(default, into)]
         size: Input<Size>,
-        /// Corner radius, independent of `size`. Unset, `theme.tldr.radius`, else the trigger's own:
-        /// `xl` on the chip, `sm` icon-only.
+        /// Corner radius, independent of `size`: a size word or any CSS. Unset, `theme.tldr.radius`,
+        /// else the trigger's own: `xl` on the chip, `sm` icon-only.
         #[props(default, into)]
-        radius: Input<Size>,
+        radius: Input<ThemeAwareValue>,
         /// Unset, `theme.tldr.color`.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
@@ -197,7 +197,11 @@ pub fn Tldr(props: TldrProps) -> Element {
 
     let variant = props.variant.copied_or(theme.tldr.variant);
     let size = props.size.copied_or(theme.tldr.size);
-    let radius = props.radius.as_ref().copied().or(theme.tldr.radius);
+    let radius = props
+        .radius
+        .clone()
+        .into_option()
+        .or(theme.tldr.radius.map(ThemeAwareValue::from));
     let color = props
         .color
         .clone()
@@ -211,7 +215,7 @@ pub fn Tldr(props: TldrProps) -> Element {
             if props.icon_only {
                 ActionIcon {
                     size,
-                    radius,
+                    radius: radius.clone(),
                     variant,
                     color,
                     aria_label: props.aria_label.clone().unwrap_or_else(|| words.icon_only.into()),

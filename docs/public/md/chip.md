@@ -132,7 +132,7 @@ fn Demo() -> Element {
 | `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color; `theme.chip.color` when unset. |
 | `variant` | `Variant` | `filled` | The unselected look. A checked chip is always a tonal container. |
 | `size` | `Size` | `md` | Height, padding and font size. |
-| `radius` | `Size` | `xl` | Corner radius. |
+| `radius` | `ThemeAwareValue` | `xl` | Corner radius, or any CSS, e.g. `radius: "0"`. |
 | `checked` | `bool` | - | Whether it is selected. Pair it with `onchange`. Left out, a chip with a `name` keeps its own state, or the form's when that name binds it. |
 | `disabled` | `bool` | `false` | Disables and dims the chip. |
 | `readonly` | `bool` | `false` | A selectable chip stays focusable and posted with the form, but clicks and Space no longer toggle it. |

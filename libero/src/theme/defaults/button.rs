@@ -73,7 +73,7 @@ impl ButtonDefaults {
     // The shared global radius scale, keyed by `radius-{size}` rather than
     // `size-{size}`, so it can be set independently of `size`.
     pub fn radius_sx(radius: Size) -> Sx {
-        sx().border_radius(SizeCss::RADIUS.value(radius))
+        sx().border_radius(SizeCss::RADIUS.overridable(radius))
     }
 
     pub fn theme_vars() -> Sx {

@@ -103,7 +103,7 @@ static AVATAR_IMAGE_SX: StaticSx = StaticSx::new(|| {
 pub(super) fn avatar_variables(
     color: Option<&ThemeAwareValue>,
     variant: Variant,
-    radius: Option<Size>,
+    radius: Option<&ThemeAwareValue>,
 ) -> Variables {
     let base = base_color(color);
     let contrast = contrast_color(&base);
@@ -117,7 +117,7 @@ pub(super) fn avatar_variables(
         .with(AVATAR_ON_CONTAINER_VAR, colors.on_container)
         .with(
             AVATAR_RADIUS.override_var(),
-            radius.map(|radius| AVATAR_RADII.value(radius)),
+            radius.and_then(|radius| radius.resolve(Some(AVATAR_RADII))),
         )
 }
 
@@ -148,9 +148,9 @@ base_props! {
         alt: Option<String>,
         #[props(default, into)]
         size: Input<Size>,
-        /// A step on the avatar's own radius scale; the default is a circle.
+        /// A step on the avatar's own radius scale, or any CSS, as `radius: "0"`; the default is a circle.
         #[props(default, into)]
-        radius: Input<Size>,
+        radius: Input<ThemeAwareValue>,
         #[props(default, into)]
         variant: Input<Variant>,
         #[props(default, into)]
@@ -198,7 +198,7 @@ pub fn Avatar(props: AvatarProps) -> Element {
     let layered = !platform::fires_image_errors() && src.is_some();
 
     let variables: Input<Variables> =
-        avatar_variables(Some(&color), variant, props.radius.as_ref().copied()).into();
+        avatar_variables(Some(&color), variant, props.radius.as_ref()).into();
     let states: Input<States> = props
         .states
         .unwrap_or_default()
@@ -305,7 +305,7 @@ mod tests {
     /// A step resolves through the avatar's own radius scale, not the global one.
     #[test]
     fn a_radius_step_resolves_through_the_avatar_scale() {
-        let variables = avatar_variables(None, Variant::Tonal, Some(Size::Md)).to_string();
+        let variables = avatar_variables(None, Variant::Tonal, Some(&Size::Md.into())).to_string();
 
         assert!(variables.contains(&format!(
             "{}:{};",

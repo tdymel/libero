@@ -113,7 +113,7 @@ Carousel { aria_label: "Offers", autoplay: true, autoplay_delay: 6000, slides: s
 | `index` | `Option<usize>` | `None`, uncontrolled | The current slide. Set it and the carousel follows. |
 | `onindexchange` | `EventHandler<usize>` | `None` | Fires once a scroll settles, and on every control, key, indicator and autoplay step. Safe to write straight back into `index`. An `index` out of reach is clamped and reported here. |
 | `per_view` | `f64` | `1` | Slides visible at once. A fraction lets the next one peek in. |
-| `gap` | `Size` | `md` | Between slides. |
+| `gap` | `ThemeAwareValue` | `md` | Between slides, or any CSS, e.g. `gap: "0"`. |
 | `align` | `CarouselAlign` | `center` | Where a snapped slide comes to rest, `start`, `center` or `end`. Shows best with a fractional `per_view`. Above `per_view` 1 it also moves which slides the strip can reach. |
 | `orientation` | `Orientation` | `horizontal` | Scroll axis. |
 | `height` | `ThemeAwareValue` | `auto` | Required for a vertical carousel, which has nothing else to take its height from. A slide is as long as the carousel makes it, so give its content `height: 100%`. |

@@ -65,7 +65,7 @@ which a `style` accepts.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `size` | `Size` | `md` | Width, panel height, thumbs, preview and swatches. Swatches keep their size when `full_width` stretches the picker. |
-| `radius` | `Size` | `xxl` | Corner radius of the swatches and the preview. `xs` makes them square. |
+| `radius` | `ThemeAwareValue` | `xxl` | Corner radius of the swatches and the preview, or any CSS, e.g. `radius: "0"`. `xs` makes them square. |
 | `value` | `ColorCode` | required | The color. Pair it with `oninput`. |
 | `oninput` | `EventHandler<SliderChangeEvent<ColorCode>>` | - | `Start` and `End` bracket a drag on the panel or a slider. A key press or a swatch click sends `Change`, then `End`, so saving on `End` is enough. |
 | `with_alpha` | `bool` | `false` | Shows the alpha slider and a preview swatch beside it. Without it, the color is always opaque. |
@@ -110,7 +110,7 @@ which a `style` accepts.
 |---|---|---|---|
 | `color` | `ColorCode` | required | The color. A translucent one shows a checkerboard through. |
 | `size` | `Size` | `md` | Diameter. |
-| `radius` | `Size` | `xxl` | Corner radius. Round by default. |
+| `radius` | `ThemeAwareValue` | `xxl` | Corner radius, or any CSS, e.g. `radius: "0"`. Round by default. |
 | `with_shadow` | `bool` | `true` | A faint inner ring, so a color close to the background keeps an edge. |
 | `onclick` | `EventHandler<MouseEvent>` | - | Makes the swatch a `<button>`. |
 | `children` | `Element` | - | Drawn on the color, such as a check mark, in black or white, whichever reads. |

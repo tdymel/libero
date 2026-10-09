@@ -7,10 +7,11 @@ use super::{
 };
 use crate::{
     components::{
-        common::{HtmlTag, Input, base_props, has_shortcut_modifier, parts_enum},
+        common::{HtmlTag, Input, ScaleOrCss, base_props, has_shortcut_modifier, parts_enum},
         layout::use_box,
     },
     hooks::{Align, Side, use_element, use_press_marker, use_theme},
+    sx::ThemeAwareValue,
     theme::Size,
 };
 
@@ -55,9 +56,9 @@ base_props! {
         /// Item height and font size.
         #[props(default, into)]
         size: Input<Size>,
-        /// The menu's corner radius.
+        /// The menu's corner radius: a size word or any CSS, as `radius: "0"`.
         #[props(default, into)]
-        radius: Input<Size>,
+        radius: Input<ThemeAwareValue>,
         /// The trigger opens nothing, and an open menu closes.
         #[props(default)]
         disabled: Option<bool>,
@@ -181,7 +182,7 @@ pub fn Menu(props: MenuProps) -> Element {
             side: props.side,
             align: props.align,
             size: props.size.copied_or(theme.menu.size),
-            radius: props.radius.copied_or(theme.menu.radius),
+            radius: ScaleOrCss::new(props.radius.as_ref(), theme.menu.radius),
             loop_focus: props.loop_focus.unwrap_or(theme.menu.loop_focus),
             close_on_select: props
                 .close_on_select

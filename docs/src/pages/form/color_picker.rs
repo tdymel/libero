@@ -91,7 +91,7 @@ pub fn ColorPickerPage() -> Element {
             properties: vec![
                 props("ColorPicker", vec![
                     prop("size", "Size").default(theme.color_picker.size.as_str()).doc("Width, panel height, thumbs, preview and swatches. Swatches keep their size when `full_width` stretches the picker."),
-                    prop("radius", "Size").default(theme.color_picker.radius.as_str()).doc("Corner radius of the swatches and the preview. `xs` makes them square."),
+                    prop("radius", "ThemeAwareValue").default(theme.color_picker.radius.as_str()).doc("Corner radius of the swatches and the preview, or any CSS, e.g. `radius: \"0\"`. `xs` makes them square."),
                     prop("value", "ColorCode").default("required")
                         .doc("The color. Pair it with `oninput`."),
                     prop("oninput", "EventHandler<SliderChangeEvent<ColorCode>>")
@@ -151,7 +151,7 @@ pub fn ColorPickerPage() -> Element {
                 props("ColorSwatch", vec![
                     prop("color", "ColorCode").default("required").doc("The color. A translucent one shows a checkerboard through."),
                     prop("size", "Size").default(theme.color_swatch.size.as_str()).doc("Diameter."),
-                    prop("radius", "Size").default(theme.color_swatch.radius.as_str()).doc("Corner radius. Round by default."),
+                    prop("radius", "ThemeAwareValue").default(theme.color_swatch.radius.as_str()).doc("Corner radius, or any CSS, e.g. `radius: \"0\"`. Round by default."),
                     prop("with_shadow", "bool").default("true").doc("A faint inner ring, so a color close to the background keeps an edge."),
                     prop("onclick", "EventHandler<MouseEvent>").doc("Makes the swatch a `<button>`."),
                     prop("children", "Element").doc("Drawn on the color, such as a check mark, in black or white, whichever reads."),

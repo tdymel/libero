@@ -37,9 +37,9 @@ pub fn TldrPage() -> Element {
                 prop("size", "Size")
                     .default(theme.tldr.size.as_str())
                     .doc("The trigger's size step, the icon-only one too."),
-                prop("radius", "Size")
+                prop("radius", "ThemeAwareValue")
                     .default(radius.unwrap_or("the trigger's own"))
-                    .doc("Corner radius, independent of `size`. The trigger's own is `xl` on the labelled chip, `sm` icon-only."),
+                    .doc("Corner radius, independent of `size`, or any CSS, e.g. `radius: \"0\"`. The trigger's own is `xl` on the labelled chip, `sm` icon-only."),
                 prop("color", "ThemeAwareValue")
                     .default("neutral")
                     .doc("The trigger's accent color. A theme color name or any CSS color."),

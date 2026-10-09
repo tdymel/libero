@@ -31,7 +31,7 @@ use crate::{
     localization::fill,
     platform::page_task,
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{CAROUSEL_GAP, CAROUSEL_PER_VIEW, CssVar, Size, SizeCss},
+    theme::{CAROUSEL_GAP, CAROUSEL_PER_VIEW, CssVar, SizeCss},
 };
 
 pub use crate::theme::CarouselAlign;
@@ -76,14 +76,14 @@ const CAROUSEL_HEIGHT: CssVar = CssVar::new("--lsx-carousel-height");
 
 fn carousel_variables(
     per_view: f64,
-    gap: Option<Size>,
+    gap: Option<&ThemeAwareValue>,
     height: Option<&ThemeAwareValue>,
 ) -> Variables {
     variables()
         .with(CAROUSEL_PER_VIEW.override_var(), Some(per_view.to_string()))
         .with(
             CAROUSEL_GAP.override_var(),
-            gap.map(|gap| SizeCss::SPACING.value(gap)),
+            gap.and_then(|gap| gap.resolve(Some(SizeCss::SPACING))),
         )
         .with(
             CAROUSEL_HEIGHT,
@@ -130,8 +130,9 @@ base_props! {
         /// Slides visible at once. Fractional peeks the next one.
         #[props(default, into)]
         per_view: Input<f64>,
+        /// Space between slides: a size word or any CSS, as `gap: "0"`.
         #[props(default, into)]
-        gap: Input<Size>,
+        gap: Input<ThemeAwareValue>,
         #[props(default, into)]
         align: Input<CarouselAlign>,
         /// `"horizontal"` by default, unlike `Orientation`'s own default.
@@ -256,7 +257,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
         .with(orientation.state_name(), true)
         .into();
     let variables: Input<Variables> =
-        carousel_variables(per_view, props.gap.as_ref().copied(), props.height.as_ref()).into();
+        carousel_variables(per_view, props.gap.as_ref(), props.height.as_ref()).into();
 
     // A focusout is decided a task later: a focusin in between is a move within the
     // root, no new entry (2393, WebView 2664), on every platform that reports the pair.

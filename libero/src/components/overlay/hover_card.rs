@@ -7,8 +7,8 @@ use crate::{
     components::{
         accessibility::{focus_first_stop, tab_stops},
         common::{
-            FOCUSABLE_SELECTOR, HtmlTag, Input, States, base_props, input_from_str,
-            inset_focus_ring_sx,
+            FOCUSABLE_SELECTOR, HtmlTag, Input, ScaleOrCss, States, Variables, base_props,
+            input_from_str, inset_focus_ring_sx, variables,
         },
         layout::{paper_sx, scroll_on_key, use_box},
     },
@@ -18,7 +18,7 @@ use crate::{
         use_resize_fallback, use_theme,
     },
     platform::{ElementApi, PlatformError, next_task, scrolls_on_keys},
-    sx::{StaticSx, sx},
+    sx::{StaticSx, ThemeAwareValue, sx},
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
 };
 
@@ -69,8 +69,9 @@ base_props! {
         /// Forces the card open or closed; `None` leaves it to hover and focus.
         #[props(default)]
         open: Option<bool>,
+        /// The card's corner radius: a size word or any CSS, as `radius: "0"`.
         #[props(default, into)]
-        radius: Input<Size>,
+        radius: Input<ThemeAwareValue>,
         #[props(default, into)]
         shadow: Input<Size>,
         /// No card; the wrapper stays, so enabling or disabling does not remount the trigger.
@@ -263,13 +264,18 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         }
     });
 
+    let radius = ScaleOrCss::new(props.radius.as_ref(), defaults.radius);
+    let radius_variables: Input<Variables> = variables()
+        .with(
+            SizeCss::RADIUS.override_var(),
+            radius.custom_css(SizeCss::RADIUS),
+        )
+        .into();
+
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(
-            props.radius.copied_or(defaults.radius).radius_state_name(),
-            true,
-        )
+        .with(radius.size.radius_state_name(), true)
         .with(
             props.shadow.copied_or(defaults.shadow).shadow_state_name(),
             true,
@@ -284,6 +290,7 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         .class(&props.class)
         .sx(&props.sx)
         .states(&states)
+        .variables(&radius_variables)
         .style(Some(popover.style()))
         .prepare();
 

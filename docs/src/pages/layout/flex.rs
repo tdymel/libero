@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, or_unset, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Flex, Text},
+    components::{Box, Flex, FlexDirection, Text},
     sx::{ThemeAwareValue, sx},
     theme::{Responsive, Size, responsive},
 };
@@ -21,6 +21,19 @@ const BOX_SX: &str =
 const RESPONSIVE_GAP: Responsive<Size> = responsive(Size::Xs).md(Size::Xl);
 const RESPONSIVE_GAP_CODE: &str = "gap: responsive(Size::Xs).md(Size::Xl)";
 
+/// The `direction` toggle's third option: a column on a phone, a row from a laptop up.
+const RESPONSIVE_DIRECTION: Responsive<FlexDirection> =
+    responsive(FlexDirection::Column).md(FlexDirection::Row);
+const RESPONSIVE_DIRECTION_CODE: &str =
+    "direction: responsive(FlexDirection::Column).md(FlexDirection::Row)";
+
+fn direction(values: &DemoValues) -> Responsive<FlexDirection> {
+    match values.str("direction").as_str() {
+        "responsive" => RESPONSIVE_DIRECTION,
+        direction => responsive(direction.into()),
+    }
+}
+
 fn gap(values: &DemoValues) -> Responsive<ThemeAwareValue> {
     match values.str("responsive") == "true" {
         true => RESPONSIVE_GAP.map(ThemeAwareValue::from),
@@ -30,7 +43,13 @@ fn gap(values: &DemoValues) -> Responsive<ThemeAwareValue> {
 
 fn controls() -> Vec<Control> {
     vec![
-        Control::toggle("direction", ["column", "row"]).labels(["Column", "Row"]),
+        Control::toggle("direction", ["column", "row", "responsive"])
+            .labels(["Column", "Row", "Row from md"])
+            .code(|_, values| match values.str("direction").as_str() {
+                "column" => vec![],
+                "responsive" => vec![RESPONSIVE_DIRECTION_CODE.to_string()],
+                direction => vec![format!("direction: \"{direction}\"")],
+            }),
         // `0` is plain CSS, next to the size scale.
         Control::slider("gap", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
             .default("md")
@@ -76,9 +95,9 @@ pub fn FlexPage() -> Element {
             source: "libero/src/components/layout/flex.rs",
             markdown: "/md/flex.md",
             properties: vec![props("Flex", vec![
-                prop("direction", "FlexDirection")
+                prop("direction", "Responsive<FlexDirection>")
                     .default("column")
-                    .doc("Lays the children out in a row or a column."),
+                    .doc("Lays the children out in a row or a column, or one per breakpoint, `direction: responsive(FlexDirection::Column).md(FlexDirection::Row)`. Each breakpoint takes that axis's theme defaults; an explicit `gap` stays."),
                 prop("align", "ThemeAwareValue")
                     .default("stretch in a column, center in a row")
                     .doc("Cross-axis alignment."),
@@ -123,7 +142,7 @@ pub fn FlexPage() -> Element {
                             .height("200px")
                             .padding("8px")
                             .background("muted.1"),
-                        direction: values.str("direction"),
+                        direction: direction(&values),
                         gap: gap(&values),
                         align: or_unset(values.str("align")),
                         justify: or_unset(values.str("justify")),

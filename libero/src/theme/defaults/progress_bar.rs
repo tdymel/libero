@@ -72,7 +72,7 @@ impl ProgressBarDefaults {
     }
 
     pub fn radius_sx(radius: Size) -> Sx {
-        sx().var(PROGRESS_BAR_RADIUS, SizeCss::RADIUS.value(radius))
+        sx().var(PROGRESS_BAR_RADIUS, SizeCss::RADIUS.overridable(radius))
     }
 
     pub fn theme_vars() -> Sx {

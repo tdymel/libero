@@ -60,9 +60,9 @@ pub fn HoverCardPage() -> Element {
                 prop("open", "bool")
                     .default("unset")
                     .doc("Forces the card open or closed. Unset, hover and focus decide. A card forced open cannot be dismissed."),
-                prop("radius", "Size")
+                prop("radius", "ThemeAwareValue")
                     .default(theme.hover_card.radius.as_str())
-                    .doc("The card's corner radius."),
+                    .doc("The card's corner radius, or any CSS, e.g. `radius: \"0\"`."),
                 prop("shadow", "Size")
                     .default(theme.hover_card.shadow.as_str())
                     .doc("The card's elevation."),

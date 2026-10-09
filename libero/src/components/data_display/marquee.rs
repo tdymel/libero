@@ -5,14 +5,14 @@ use crate::{
     components::{
         buttons::ActionIcon,
         common::{
-            Glyph, HtmlTag, Input, Orientation, Part, States, Variables, base_props, parts_enum,
-            variables,
+            Glyph, HtmlTag, Input, Orientation, Part, ScaleOrCss, States, Variables, base_props,
+            parts_enum, variables,
         },
         layout::use_box,
     },
     context::IconSlot,
     hooks::{use_localization, use_theme},
-    sx::{REDUCED_MOTION, StaticSx, sx},
+    sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{
         FOCUS_RING_HALO_SPREAD, MARQUEE_ANIMATION, MARQUEE_DURATION, MARQUEE_FADE_SIZE,
         MARQUEE_GAP, MARQUEE_MIN_REPEAT, MARQUEE_REPEAT, MARQUEE_SHIFT, PAPER_BACKGROUND, Size,
@@ -213,9 +213,9 @@ base_props! {
         /// Milliseconds per full cycle.
         #[props(default)]
         duration: Option<u32>,
-        /// Between copies.
+        /// Between copies: a size word or any CSS, as `gap: "0"`.
         #[props(default, into)]
-        gap: Input<Size>,
+        gap: Input<ThemeAwareValue>,
         /// Copies in a row, at least 2. Raise it when a gap crosses the view.
         #[props(default, into)]
         repeat: Input<u8>,
@@ -267,7 +267,7 @@ pub fn Marquee(props: MarqueeProps) -> Element {
         .repeat
         .copied_or(defaults.repeat)
         .max(MARQUEE_MIN_REPEAT);
-    let gap = props.gap.copied_or(defaults.gap);
+    let gap = ScaleOrCss::new(props.gap.as_ref(), defaults.gap);
 
     let mut own_paused = use_signal(|| false);
     let controlled = props.paused.is_some();
@@ -300,7 +300,7 @@ pub fn Marquee(props: MarqueeProps) -> Element {
 
     let variables: Input<Variables> = variables()
         .with(MARQUEE_REPEAT, repeat.to_string())
-        .with(MARQUEE_GAP, SizeCss::SPACING.value(gap))
+        .with(MARQUEE_GAP, gap.resolve(SizeCss::SPACING))
         .with(
             MARQUEE_DURATION.override_var(),
             props.duration.map(|duration| format!("{duration}ms")),

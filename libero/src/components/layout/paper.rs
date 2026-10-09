@@ -3,8 +3,8 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, States, Variables, base_color, base_props, contrast_color, fill_color,
-            variables,
+            HtmlTag, Input, ScaleOrCss, States, Variables, base_color, base_props, contrast_color,
+            fill_color, variables,
         },
         layout::use_box,
     },
@@ -13,7 +13,7 @@ use crate::{
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         CssVar, FOCUS_RING_HALO, GLASS_SHEEN, GlassTint, Gradient, NamedColorCss,
-        PAPER_BORDER_COLOR, PaperDefaults, SURFACE_LABEL, Size, gradient_surface_sx,
+        PAPER_BORDER_COLOR, PaperDefaults, SURFACE_LABEL, Size, SizeCss, gradient_surface_sx,
     },
 };
 
@@ -115,9 +115,9 @@ base_props! {
     // `href`/`target`: a surface rendered as an `<a>` is a clickable card.
     extends(a);
     pub struct PaperProps {
-        /// Corner radius, a step on the radius scale.
+        /// Corner radius: a step on the radius scale, or any CSS, as `radius: "0"`.
         #[props(default, into)]
-        radius: Input<Size>,
+        radius: Input<ThemeAwareValue>,
         /// Elevation, a step on the shadow scale.
         #[props(default, into)]
         shadow: Input<Size>,
@@ -179,6 +179,14 @@ pub fn Paper(props: PaperProps) -> Element {
     );
     // At most one is set: a gradient takes `color` as its first stop.
     let style = paper_variables(&props, tint).or(gradient);
+    let style = match paper_radius(&props).custom_css(SizeCss::RADIUS) {
+        Some(radius) => Some(format!(
+            "{}{}:{radius};",
+            style.unwrap_or_default(),
+            SizeCss::RADIUS.override_var().name()
+        )),
+        None => style,
+    };
 
     use_box()
         .framework_sx(props.framework_sx.unwrap_or(&PAPER_BASE_SX))
@@ -195,10 +203,15 @@ pub fn Paper(props: PaperProps) -> Element {
         )
 }
 
+/// Custom CSS rides any step's state class: the override replaces its value.
+fn paper_radius(props: &PaperProps) -> ScaleOrCss {
+    ScaleOrCss::new(props.radius.as_ref(), Size::Md)
+}
+
 /// A token only per axis the caller set, unlike `Button`: a `[data-state]` block
 /// would beat the radius or shadow a surface built on [`paper_sx`] chains on.
 fn paper_states(props: &PaperProps) -> Input<States> {
-    let radius = props.radius.as_ref();
+    let radius = props.radius.as_ref().map(|_| paper_radius(props).size);
     let shadow = props.shadow.as_ref();
     let glass = props.glass && draws_backdrop_filter();
     let gradient = props.gradient.is_some();
@@ -255,7 +268,7 @@ mod tests {
     #[test]
     fn each_axis_gets_its_own_namespaced_token() {
         let states = paper_states(&PaperProps {
-            radius: Input::Value(Size::Lg),
+            radius: Input::Value(Size::Lg.into()),
             shadow: Input::Value(Size::Xl),
             bordered: true,
             ..props()
@@ -271,7 +284,7 @@ mod tests {
     fn the_caller_s_own_states_survive() {
         let states = paper_states(&PaperProps {
             states: Input::Value(States::new().active("selected")),
-            radius: Input::Value(Size::Sm),
+            radius: Input::Value(Size::Sm.into()),
             ..props()
         });
 

@@ -92,8 +92,8 @@ impl BlockquoteDefaults {
     /// Only the two corners away from the accent bar, which stays on the left in
     /// every writing direction (`Sx` has no logical corners).
     pub fn radius_sx(radius: Size) -> Sx {
-        sx().border_top_right_radius(SizeCss::RADIUS.value(radius))
-            .border_bottom_right_radius(SizeCss::RADIUS.value(radius))
+        sx().border_top_right_radius(SizeCss::RADIUS.overridable(radius))
+            .border_bottom_right_radius(SizeCss::RADIUS.overridable(radius))
     }
 
     pub fn theme_vars() -> Sx {

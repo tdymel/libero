@@ -70,7 +70,7 @@ fn Demo() -> Element {
 | `max` | `f64` | `100.0` | Range end. At or below `min` the bar draws empty. |
 | `color` | `ThemeAwareValue` | `primary` | The fill. A theme color name paints its text shade, darker on a light page so the bar stands out from its track. Any other CSS color paints as given. |
 | `size` | `Size` | `md` | Track height, 3px at `xs` to 20px at `xxl`. |
-| `radius` | `Size` | `xl` | Corner of the track and the fill. On a thin track most steps draw the same pill. |
+| `radius` | `ThemeAwareValue` | `xl` | Corner of the track and the fill, or any CSS, e.g. `radius: "0"`. On a thin track most steps draw the same pill. |
 | `aria_valuetext` | `String` | - | Read instead of the rounded percentage, such as "4.2 MB of 12 MB". |
 | `segments` | `Vec<ProgressBarSegment>` | `[]` | Splits the track into stretches with 2px gaps, each from its `start` to the next one's, as a `Slider`'s `segments`, and fills them up to the value. The label of the stretch the value is in follows the percentage, as "60%, Upload"; `aria_valuetext` replaces both. Sorted for you; a start outside the range or a repeat is dropped, and an unlabeled stretch fills from `min` to the first start. An indeterminate bar sweeps as without them. |
 | `parts` | `Parts<ProgressBarPart>` | - | Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(ProgressBarPart::Fill, sx().background("success.6"))`. |

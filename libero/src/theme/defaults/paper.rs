@@ -83,7 +83,7 @@ impl PaperDefaults {
     };
 
     fn radius_sx(radius: Size) -> Sx {
-        sx().border_radius(SizeCss::RADIUS.value(radius))
+        sx().border_radius(SizeCss::RADIUS.overridable(radius))
     }
 
     fn shadow_sx(shadow: Size) -> Sx {

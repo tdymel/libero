@@ -8,7 +8,7 @@ Description: An `<img>` with a fallback source on load error, rounded corners an
 
 An `<img>` with a fallback source on load error, optional rounded corners, and
 an optional click-to-zoom overlay. `fit` maps straight onto `object-fit`;
-`radius` takes a step on the radius scale.
+`radius` takes a step on the radius scale or any CSS.
 
 ## Usage
 
@@ -64,7 +64,7 @@ fn Demo() -> Element {
 | `fallback_src` | `Option<String>` | `None` | Shown in place of `src` once it fails to load. |
 | `zoomed_src` | `Option<String>` | `None` | A larger source for the zoom overlay. Falls back to `src`. |
 | `fit` | `ImageFit` | `cover` | Maps onto `object-fit`. |
-| `radius` | `Size` | `0` | Corner radius, a step on the radius scale. Any other value goes through `sx`. |
+| `radius` | `ThemeAwareValue` | `0` | Corner radius, a step on the radius scale, or any CSS, e.g. `radius: "0"`. |
 | `alt` | `Option<String>` | `None` | What the picture shows. A debug build warns when neither `alt` nor `decorative` is set. |
 | `decorative` | `bool` | `false` | Marks the picture as decoration, hidden from screen readers. Wins over `alt`, with a warning in a debug build. |
 | `zoomable` | `bool` | `false` | Opens the picture in a single-picture Lightbox on click. Ignored inside a linked `ImageItem`, with a warning. The zoom button then takes `class`, `states` and the extra attributes, so `aria_label` or `data-*` land on it; `loading`, `decoding`, `fetchpriority`, `srcset`, `sizes`, `crossorigin`, `referrerpolicy` and `usemap` stay on the `<img>`. |

@@ -264,8 +264,16 @@ fn both_ua_margins_are_reset() {
         html.contains(&format!(".{figure}{{margin:0;}}")),
         "no figure reset"
     );
+    // After the radius override's reset, which `per_radius` declares first.
+    let rule = format!(".{quote}{{");
+    let block = html
+        .split(rule.as_str())
+        .nth(1)
+        .and_then(|rest| rest.split('}').next());
     assert!(
-        html.contains(&format!(".{quote}{{margin:0;")),
+        block.is_some_and(|block| block
+            .split(';')
+            .any(|declaration| declaration == "margin:0")),
         "no blockquote reset"
     );
 }

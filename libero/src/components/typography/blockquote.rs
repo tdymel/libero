@@ -3,8 +3,8 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, Part, States, Variables, attr, base_props, literal_contrast,
-            parts_enum, variables,
+            HtmlTag, Input, Part, ScaleOrCss, States, Variables, attr, base_props,
+            literal_contrast, parts_enum, variables,
         },
         layout::use_box,
     },
@@ -13,7 +13,7 @@ use crate::{
     theme::{
         ANCHOR_COLOR, AnchorDefaults, BLOCKQUOTE_BACKGROUND, BLOCKQUOTE_BORDER_COLOR,
         BLOCKQUOTE_CITE_OPACITY, BLOCKQUOTE_COLOR, BlockquoteDefaults, Color, ColorShade,
-        ColorValue, FOCUS_RING_HALO, NamedColorCss, SURFACE_LABEL, Size, TEXT_FONT_SIZE,
+        ColorValue, FOCUS_RING_HALO, NamedColorCss, SURFACE_LABEL, Size, SizeCss, TEXT_FONT_SIZE,
     },
 };
 
@@ -128,9 +128,9 @@ base_props! {
         /// shade from 6 up, is a solid fill with no separate bar or tint.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        /// Rounds the two corners away from the accent bar.
+        /// Rounds the corners away from the bar: a size word or any CSS, as `radius: "0"`.
         #[props(default, into)]
-        radius: Input<Size>,
+        radius: Input<ThemeAwareValue>,
         /// Who said it, in a `<figcaption>` outside the quote. Plain text, not a `<cite>`.
         #[props(default)]
         attribution: Option<Element>,
@@ -167,14 +167,19 @@ base_props! {
 pub fn Blockquote(props: BlockquoteProps) -> Element {
     let theme = use_theme();
     let size = props.size.copied_or(theme.blockquote.size);
-    let radius = props.radius.copied_or(theme.blockquote.radius);
+    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.blockquote.radius);
 
     let quote_states: Input<States> = States::default()
         .with(size.state_name(), true)
-        .with(radius.radius_state_name(), true)
+        .with(radius.size.radius_state_name(), true)
         .into();
     let quote_variables: Input<Variables> =
-        blockquote_variables(props.color.as_ref(), theme.blockquote.color).into();
+        blockquote_variables(props.color.as_ref(), theme.blockquote.color)
+            .with(
+                SizeCss::RADIUS.override_var(),
+                radius.custom_css(SizeCss::RADIUS),
+            )
+            .into();
 
     let quote = use_box()
         .framework_sx(&BLOCKQUOTE_SX)

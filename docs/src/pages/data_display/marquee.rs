@@ -147,9 +147,9 @@ pub fn MarqueePage() -> Element {
                 prop("duration", "u32")
                     .default("40000")
                     .doc("Milliseconds per full cycle. The same number moves a longer strip faster."),
-                prop("gap", "Size")
+                prop("gap", "ThemeAwareValue")
                     .default("md")
-                    .doc("Between copies, and between the last and the first."),
+                    .doc("Between copies, and between the last and the first, or any CSS, e.g. `gap: \"0\"`."),
                 prop("repeat", "u8")
                     .default("4")
                     .doc("Copies in a row. Raise it when a gap crosses the view. Anything below 2 renders 2."),
@@ -221,7 +221,7 @@ pub fn MarqueePage() -> Element {
                     Control::slider("duration", ["10000", "25000", "40000", "80000"])
                         .default(defaults.duration.to_string())
                         .code(integer),
-                    Control::slider("gap", ["xs", "sm", "md", "lg", "xl"])
+                    Control::slider("gap", ["0", "xs", "sm", "md", "lg", "xl"])
                         .default(defaults.gap.as_str()),
                     Control::slider("repeat", ["2", "3", "4", "5", "6"])
                         .default(defaults.repeat.to_string())

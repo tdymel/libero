@@ -6,7 +6,7 @@ use crate::{components::common::Variant, sx::ThemeAwareValue, theme::Size};
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct ButtonGroupContext {
     pub size: Option<Size>,
-    pub radius: Option<Size>,
+    pub radius: Option<ThemeAwareValue>,
     pub variant: Option<Variant>,
     pub color: Option<ThemeAwareValue>,
     pub disabled: Option<bool>,

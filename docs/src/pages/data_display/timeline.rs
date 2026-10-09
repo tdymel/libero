@@ -51,12 +51,12 @@ pub fn TimelinePage() -> Element {
                     prop("bullet_size", "Size")
                         .default("md")
                         .doc("Bullet diameter."),
-                    prop("radius", "Size")
+                    prop("radius", "ThemeAwareValue")
                         .default(theme.timeline.radius.as_str())
-                        .doc("Bullet corner radius. `xl` is a dot."),
-                    prop("gap", "Size")
+                        .doc("Bullet corner radius, or any CSS, e.g. `radius: \"0\"`. `xl` is a dot."),
+                    prop("gap", "ThemeAwareValue")
                         .default("xl")
-                        .doc("Space between events, which is also each connector's length."),
+                        .doc("Space between events, which is also each connector's length, or any CSS, e.g. `gap: \"0\"`."),
                     prop("parts", "Parts<TimelinePart>")
                         .doc("Styles for the inner parts in the Style API tab, under `sx`."),
                 ])
@@ -124,7 +124,7 @@ pub fn TimelinePage() -> Element {
                         .default("md"),
                     Control::sizes("radius")
                         .default(theme.timeline.radius.as_str()),
-                    Control::sizes("gap").default("xl"),
+                    Control::slider("gap", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default("xl"),
                     // Neither is a prop - both change what the `items` vec
                     // holds, which `Wrap` prints in full.
                     Control::switch("bullets").code(|_, _| vec![]),

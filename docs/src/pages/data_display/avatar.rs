@@ -111,9 +111,9 @@ pub fn AvatarPage() -> Element {
                     prop("size", "Size")
                         .default(theme.avatar.size.as_str())
                         .doc("The side of the square, which also sets the placeholder's font size."),
-                    prop("radius", "Size")
+                    prop("radius", "ThemeAwareValue")
                         .default(theme.avatar.radius.as_str())
-                        .doc("A step on the avatar's own radius scale, `2px` to `32px`. The default `xxl` is a circle."),
+                        .doc("A step on the avatar's own radius scale, `2px` to `32px`, or any CSS, e.g. `radius: \"0\"`. The default `xxl` is a circle."),
                     prop("variant", "Variant")
                         .default(theme.avatar.variant.as_str())
                         .doc("The placeholder's look. Hidden once a picture loads."),
@@ -136,15 +136,15 @@ pub fn AvatarPage() -> Element {
                     prop("max", "Option<usize>")
                         .default("None")
                         .doc("How many circles in total, the `+N` chip included, so the chip always stands for at least two people."),
-                    prop("spacing", "Size")
+                    prop("spacing", "ThemeAwareValue")
                         .default("sm")
-                        .doc("How far each circle overlaps the one before it."),
+                        .doc("How far each circle overlaps the one before it, or any CSS, e.g. `spacing: \"0\"`."),
                     prop("size", "Size")
                         .default(theme.avatar.size.as_str())
                         .doc("For every member and the chip."),
-                    prop("radius", "Size")
+                    prop("radius", "ThemeAwareValue")
                         .default(theme.avatar.radius.as_str())
-                        .doc("For every member and the chip."),
+                        .doc("For every member and the chip, or any CSS, e.g. `radius: \"0\"`."),
                     prop("variant", "Variant")
                         .default(theme.avatar.variant.as_str())
                         .doc("For every member and the chip."),
@@ -216,7 +216,7 @@ pub fn AvatarPage() -> Element {
                             "none" => vec![],
                             value => vec![format!("max: {value}")],
                         }),
-                    Control::sizes("spacing")
+                    Control::slider("spacing", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("sm")
                         .hidden_when(|values| !grouped(values)),
                     Control::sizes("size").default(theme.avatar.size.as_str()),

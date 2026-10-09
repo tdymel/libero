@@ -3,15 +3,15 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, Part, REPLACED_ELEMENTS, States, Variables, base_props, input_from_str,
-            inset_focus_ring_sx, inset_outline_ring_sx, parts_enum, parts_under_sx, ring_overlay,
-            ring_overlay_sx, variables,
+            HtmlTag, Input, Part, REPLACED_ELEMENTS, ScaleOrCss, States, Variables, base_props,
+            input_from_str, inset_focus_ring_sx, inset_outline_ring_sx, parts_enum, parts_under_sx,
+            ring_overlay, ring_overlay_sx, variables,
         },
         data_display::LinkedImageScope,
         layout::{InternalAnchor, use_box},
     },
     hooks::use_theme,
-    sx::{StaticSx, Sx, sx},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         ASPECT_RATIO, BarPosition, CssVar, FOCUS_RING_HALO_SPREAD, FOCUS_RING_WIDTH, GRID_ZONE_GAP,
         IMAGE_LIST_BAR_BACKGROUND, IMAGE_LIST_BAR_BACKGROUND_TOP, IMAGE_LIST_BAR_COLOR,
@@ -372,9 +372,9 @@ base_props! {
         variant: Input<ImageListVariant>,
         #[props(default, into)]
         gap: Input<Size>,
-        /// Each cell's corner radius.
+        /// Each cell's corner radius: a size word or any CSS, as `radius: "0"`.
         #[props(default, into)]
-        radius: Input<Size>,
+        radius: Input<ThemeAwareValue>,
         /// Cell aspect ratio, e.g. `16.0 / 9.0`. Ignored by `masonry`.
         #[props(default, into)]
         ratio: Input<f32>,
@@ -411,7 +411,7 @@ pub fn ImageList(props: ImageListProps) -> Element {
     let quilted = variant == ImageListVariant::Quilted;
     let cols = props.cols.copied_or(defaults.cols).map(snap_cols);
     let gap = props.gap.copied_or(defaults.gap);
-    let radius = props.radius.copied_or(defaults.radius);
+    let radius = ScaleOrCss::new(props.radius.as_ref(), defaults.radius);
 
     if masonry && props.ratio.as_ref().is_some() {
         warn(
@@ -441,7 +441,11 @@ pub fn ImageList(props: ImageListProps) -> Element {
         )
         .into();
     let base_ratio = ratio.unwrap_or(theme.aspect_ratio.ratio);
-    let cell_states = States::default().with(radius.radius_state_name(), true);
+    let cell_states = States::default().with(radius.size.radius_state_name(), true);
+    // `GridItem` takes no `variables`, so a custom radius rides the cell's own sx.
+    let radius_sx = radius
+        .custom_css(SizeCss::RADIUS)
+        .map(|css| sx().var(SizeCss::RADIUS.override_var(), css));
 
     // Prepared once, above the loop (`use_box` is a hook), and cloned per cell.
     let media_style = use_box()
@@ -556,6 +560,15 @@ pub fn ImageList(props: ImageListProps) -> Element {
                     },
                 ),
             ),
+        };
+        let cell_sx: Input<Sx> = match &radius_sx {
+            Some(radius_sx) => Input::Value(
+                cell_sx
+                    .into_option()
+                    .unwrap_or_default()
+                    .and(radius_sx.clone()),
+            ),
+            None => cell_sx,
         };
 
         rsx! {

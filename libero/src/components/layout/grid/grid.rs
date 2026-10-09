@@ -2,11 +2,13 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, States, Variables, base_props, variables},
+        common::{
+            HtmlTag, Input, States, Variables, base_props, responsive_sx, variables, with_own,
+        },
         layout::use_box,
     },
-    sx::{StaticSx, sx},
-    theme::{GRID_AREAS_VAR, GRID_COLUMNS_VAR, GRID_GAP, Size, SizeCss},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    theme::{GRID_AREAS_VAR, GRID_COLUMNS_VAR, GRID_GAP, Responsive, Size, SizeCss},
 };
 
 use super::GridTemplate;
@@ -40,9 +42,10 @@ base_props! {
         children: Element,
         /// The named-area matrix. Build it once outside the render.
         template: GridTemplate,
-        /// Between zones.
+        /// Between zones: a size word, any CSS (`gap: "0"`) or one per breakpoint,
+        /// `gap: responsive(Size::Xs).md(Size::Lg)`. Breakpoints follow the window.
         #[props(default, into)]
-        gap: Input<Size>,
+        gap: Input<Responsive<ThemeAwareValue>>,
         #[props(default, into)]
         component: Input<HtmlTag>,
     }
@@ -94,15 +97,22 @@ pub fn Grid(props: GridProps) -> Element {
         .into();
 
     let mut states = props.states.unwrap_or_default();
-    if let Some(gap) = props.gap.as_ref().copied() {
+    if let Some(ThemeAwareValue::Size(gap)) = props.gap.as_ref().map(Responsive::base_ref) {
         states = states.with(gap.state_name(), true);
     }
     let states: Input<States> = states.into();
+    let sx = with_own(
+        props
+            .gap
+            .as_ref()
+            .and_then(|gap| responsive_sx(gap, Sx::gap)),
+        &props.sx,
+    );
 
     use_box()
         .framework_sx(&GRID_BASE_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(&sx)
         .states(&states)
         .variables(&variables)
         .prepare()

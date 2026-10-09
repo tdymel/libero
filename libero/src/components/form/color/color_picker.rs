@@ -19,7 +19,7 @@ use crate::{
     },
     context::IconSlot,
     hooks::{use_localization, use_theme},
-    sx::{StaticSx, sx},
+    sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
         COLOR_PICKER_PREVIEW, COLOR_PICKER_SPACING, COLOR_PICKER_SWATCH, COLOR_PICKER_WIDTH,
         ColorPickerDefaults, CssVar, Size,
@@ -146,8 +146,9 @@ base_props! {
         #[props(default)]
         with_picker: Option<bool>,
         /// Corner radius of the swatches and the preview. Round by default.
+        /// A size word or any CSS, as `radius: "0"`.
         #[props(default, into)]
-        radius: Input<Size>,
+        radius: Input<ThemeAwareValue>,
         /// A swatch was clicked. `oninput` fires with the same color first.
         #[props(default)]
         onswatchclick: Option<EventHandler<ColorCode>>,
@@ -202,7 +203,11 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
     let size = props.size.copied_or(theme.color_picker.size);
     let with_alpha = props.with_alpha.unwrap_or(false);
     let with_picker = props.with_picker.unwrap_or(true);
-    let radius = props.radius.copied_or(theme.color_picker.radius);
+    let radius = props
+        .radius
+        .as_ref()
+        .cloned()
+        .unwrap_or(theme.color_picker.radius.into());
     if !with_picker && props.swatches.is_empty() {
         warn("ColorPicker: `with_picker: false` without `swatches` renders nothing.");
     }
@@ -304,7 +309,7 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
         let preview = with_alpha.then(|| {
             rsx! {
                 div { "data-slot": ColorPickerPart::Preview.slot(),
-                    ColorSwatch { color: ColorCode::default(), size, radius }
+                    ColorSwatch { color: ColorCode::default(), size, radius: radius.clone() }
                 }
             }
         });
@@ -386,7 +391,7 @@ struct SwatchRowProps {
     selected: Option<String>,
     with_alpha: bool,
     size: Size,
-    radius: Size,
+    radius: ThemeAwareValue,
     focusable: bool,
     oninput: Option<EventHandler<SliderChangeEvent<ColorCode>>>,
     onswatchclick: Option<EventHandler<ColorCode>>,
@@ -414,7 +419,7 @@ fn SwatchRow(props: SwatchRowProps) -> Element {
             ColorSwatch {
                 color,
                 size,
-                radius,
+                radius: radius.clone(),
                 "data-slot": ColorPickerPart::Swatch.slot(),
                 aria_label: name,
                 aria_pressed: pressed.to_string(),

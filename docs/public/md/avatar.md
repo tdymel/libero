@@ -81,7 +81,7 @@ Barbara Liskov, Margaret Hamilton".
 | `initials` | `Option<String>` | `None` | Drawn when there is no picture. Nothing is derived from `name`. |
 | `alt` | `Option<String>` | `None` | Replaces the announced name. `alt: ""` marks the avatar decorative. |
 | `size` | `Size` | `md` | The side of the square, which also sets the placeholder's font size. |
-| `radius` | `Size` | `xxl` | A step on the avatar's own radius scale, `2px` to `32px`. The default `xxl` is a circle. |
+| `radius` | `ThemeAwareValue` | `xxl` | A step on the avatar's own radius scale, `2px` to `32px`, or any CSS, e.g. `radius: "0"`. The default `xxl` is a circle. |
 | `variant` | `Variant` | `tonal` | The placeholder's look. Hidden once a picture loads. |
 | `color` | `ThemeAwareValue` | `primary` | The placeholder's tint. |
 | `parts` | `Parts<AvatarPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
@@ -93,9 +93,9 @@ Barbara Liskov, Margaret Hamilton".
 |---|---|---|---|
 | `people` | `Vec<AvatarSpec>` | required | The members. The first is drawn on top. |
 | `max` | `Option<usize>` | `None` | How many circles in total, the `+N` chip included, so the chip always stands for at least two people. |
-| `spacing` | `Size` | `sm` | How far each circle overlaps the one before it. |
+| `spacing` | `ThemeAwareValue` | `sm` | How far each circle overlaps the one before it, or any CSS, e.g. `spacing: "0"`. |
 | `size` | `Size` | `md` | For every member and the chip. |
-| `radius` | `Size` | `xxl` | For every member and the chip. |
+| `radius` | `ThemeAwareValue` | `xxl` | For every member and the chip, or any CSS, e.g. `radius: "0"`. |
 | `variant` | `Variant` | `tonal` | For every member and the chip. |
 | `color` | `ThemeAwareValue` | `primary` | The tint of every member without a `color` of its own. |
 

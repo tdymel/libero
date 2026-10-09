@@ -40,7 +40,7 @@ pub fn PaginationPage() -> Element {
                 prop("boundaries", "u8").default(theme.pagination.boundaries.to_string())
                     .doc("Pages pinned at each end. `0` counts as 1."),
                 prop("size", "Size").default(theme.pagination.size.as_str()).doc("Control box and font size."),
-                prop("radius", "Size").default(theme.pagination.radius.as_str()).doc("Corner radius, independent of `size`."),
+                prop("radius", "ThemeAwareValue").default(theme.pagination.radius.as_str()).doc("Corner radius, independent of `size`, or any CSS, e.g. `radius: \"0\"`."),
                 prop("color", "ThemeAwareValue").default(theme.pagination.color.as_str())
                     .doc("Fill of the current page. A theme color gives its text the matching `-contrast` shade, a literal color black or white."),
                 prop("disabled", "bool").default("false").doc("Disables every control."),

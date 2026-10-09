@@ -160,7 +160,9 @@ fn controls() -> Vec<Control> {
             })
             .hidden_when(wall),
         Control::switch("dense").hidden_when(wall),
-        Control::sizes("gap").default("md").hidden_when(wall),
+        Control::slider("gap", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
+            .default("md")
+            .hidden_when(wall),
     ]
 }
 
@@ -182,7 +184,7 @@ pub fn GridPage() -> Element {
             properties: vec![
                 props("Grid", vec![
                     prop("template", "GridTemplate").default("required").doc("The named-area matrix. Each row shares its width equally between its cells, and `cells(area, n)` gives one area several. An area must be a rectangle, and the rows need at most twelve columns. Build it once, as a `StaticGridTemplate` static."),
-                    prop("gap", "Size").default("md").doc("Space between zones."),
+                    prop("gap", "Responsive<ThemeAwareValue>").default("md").doc("Space between zones, or any CSS, e.g. `gap: \"0\"`, per breakpoint too."),
                     prop("component", "HtmlTag").default("div").doc("The element to render."),
                     prop("children", "Element").doc("`GridZone`s."),
                 ]),

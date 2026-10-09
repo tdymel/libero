@@ -42,9 +42,9 @@ pub fn ProgressBarPage() -> Element {
                     .default(theme.progress_bar.color.as_str())
                     .doc("The fill. A theme color name paints its text shade, darker on a light page so the bar stands out from its track. Any other CSS color paints as given."),
                 prop("size", "Size").default(theme.progress_bar.size.as_str()).doc("Track height, 3px at `xs` to 20px at `xxl`."),
-                prop("radius", "Size")
+                prop("radius", "ThemeAwareValue")
                     .default(theme.progress_bar.radius.as_str())
-                    .doc("Corner of the track and the fill. On a thin track most steps draw the same pill."),
+                    .doc("Corner of the track and the fill, or any CSS, e.g. `radius: \"0\"`. On a thin track most steps draw the same pill."),
                 prop("aria_valuetext", "String")
                     .doc("Read instead of the rounded percentage, such as \"4.2 MB of 12 MB\"."),
                 prop("segments", "Vec<ProgressBarSegment>")

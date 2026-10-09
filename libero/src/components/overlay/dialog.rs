@@ -57,9 +57,9 @@ fn dialog_variables(props: &DialogProps, default_radius: Option<Size>) -> Variab
             props
                 .radius
                 .as_ref()
-                .copied()
-                .or(default_radius)
-                .map(|radius| SizeCss::RADIUS.value(radius)),
+                .cloned()
+                .or(default_radius.map(ThemeAwareValue::from))
+                .and_then(|radius| radius.resolve(Some(SizeCss::RADIUS))),
         )
         .with(
             DIALOG_SIZE.override_var(),
@@ -99,9 +99,10 @@ base_props! {
         /// The close button's accessible name, e.g. "Close cart".
         #[props(default, into)]
         close_label: Option<String>,
-        /// Unset, `theme.dialog.radius`, else `Paper`'s.
+        /// A size step on the radius scale, or any CSS, as `radius: "0"`. Unset,
+        /// `theme.dialog.radius`, else `Paper`'s.
         #[props(default, into)]
-        radius: Input<Size>,
+        radius: Input<ThemeAwareValue>,
         /// Unset, `theme.dialog.size`.
         #[props(default, into)]
         size: Input<ThemeAwareValue>,

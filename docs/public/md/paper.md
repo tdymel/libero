@@ -44,7 +44,7 @@ Paper { sx: sx().padding("lg").box_shadow("none"), "Flat" }
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `radius` | `Size` | `md` | Corner radius, a step on the shared radius scale. |
+| `radius` | `ThemeAwareValue` | `md` | Corner radius, a step on the shared radius scale, or any CSS, e.g. `radius: "0"`. |
 | `shadow` | `Size` | `sm` | Elevation, a step on the shared shadow scale. For a flat surface use `sx().box_shadow("none")`. |
 | `bordered` | `bool` | `false` | A hairline border in the theme's surface border colour. Works together with a shadow. |
 | `glass` | `bool` | `false` | Frosted glass: translucent, blurring what is behind it, tuned by the theme's `paper.glass_background` and `paper.glass_blur`. A `color` or `gradient` tints it, and a tinted glass gets glass cues: a saturated backdrop, a top highlight and a light sheen. Use it over app chrome such as a sticky bar (this site's header is drawn with it), not over images, where text can lose contrast. Opaque when the user reduces transparency, in forced colours, and in native windows, where a coloured one is its solid fill. |

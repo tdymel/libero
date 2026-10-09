@@ -55,7 +55,7 @@ such as `side: Side::Top, align: Align::Center`.
 | `open_delay` | `u32` | `0` | Milliseconds the pointer must rest on the trigger before the card opens. |
 | `close_delay` | `u32` | `150` | Milliseconds the card waits after the pointer leaves. The pointer needs this time to reach the card, so `0` makes it unreachable. While it counts down, the card carries `data-closing`. |
 | `open` | `bool` | unset | Forces the card open or closed. Unset, hover and focus decide. A card forced open cannot be dismissed. |
-| `radius` | `Size` | `sm` | The card's corner radius. |
+| `radius` | `ThemeAwareValue` | `sm` | The card's corner radius, or any CSS, e.g. `radius: "0"`. |
 | `shadow` | `Size` | `md` | The card's elevation. |
 | `disabled` | `bool` | `false` | No card. The trigger keeps its wrapper, so enabling or disabling does not remount it or drop its focus. |
 

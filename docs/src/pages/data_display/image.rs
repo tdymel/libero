@@ -34,9 +34,9 @@ pub fn ImagePage() -> Element {
                         .default("None")
                         .doc("A larger source for the zoom overlay. Falls back to `src`."),
                     prop("fit", "ImageFit").default("cover").doc("Maps onto `object-fit`."),
-                    prop("radius", "Size")
+                    prop("radius", "ThemeAwareValue")
                         .default("0")
-                        .doc("Corner radius, a step on the radius scale. Any other value goes through `sx`."),
+                        .doc("Corner radius, a step on the radius scale, or any CSS, e.g. `radius: \"0\"`."),
                     prop("alt", "Option<String>")
                         .default("None")
                         .doc("What the picture shows. A debug build warns when neither `alt` nor `decorative` is set."),
@@ -78,7 +78,7 @@ pub fn ImagePage() -> Element {
                     Code { source: "object-fit" }
                     ", and "
                     Code { source: "radius" }
-                    " takes a step on the radius scale."
+                    " takes a step on the radius scale or any CSS."
                 }
             },
             Demo {

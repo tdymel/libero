@@ -119,8 +119,32 @@ fn a_gapped_segmented_control_keeps_every_segment_s_own_corners() {
     let root_class = classes_of(body, "div");
     let root_class = root_class.first().expect("a framework class");
     assert!(html.contains(&format!(
-        ".{root_class}[data-state~=\"size-xs\"]{{gap:var(--lsx-spacing-xs)"
+        ".{root_class}[data-state~=\"size-xs\"]{{gap:var(--lsx-spacing-override"
     )));
+    assert!(html.contains("var(--lsx-spacing-xs)"));
+}
+
+/// Todo 2663: a custom gap keeps the fallback state and overrides its value.
+#[test]
+fn a_custom_gap_overrides_the_step() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                SegmentedControl { gap: "3px", value: Emphasis::Bold, onchange: move |_| {} }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+    let body = &body[body[1..].find("<div").expect("the group") + 1..];
+    let root = attributes_of(body, "div");
+
+    assert_eq!(root["data-state"], "horizontal filled size-md");
+    assert!(
+        root["style"].contains("--lsx-spacing-override:3px"),
+        "{body}"
+    );
 }
 
 /// Every segment may shrink below its label, which ends in an ellipsis with

@@ -3,7 +3,7 @@ use crate::common::{attributes_of, body, classes_of, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::Flex,
+    components::{Flex, FlexDirection},
     sx::ThemeAwareValue,
     theme::{Size, responsive},
 };
@@ -124,4 +124,53 @@ fn a_responsive_size_gap_converts() {
         has_rule(&body(&html), media_block(&css, "48rem"), "gap:"),
         "{css}"
     );
+}
+
+/// Todo 2689: a column on a phone, a row from `md`, keeping the explicit gap there.
+#[test]
+fn a_responsive_direction_turns_at_its_breakpoint() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Flex {
+                    direction: responsive(FlexDirection::Column).md(FlexDirection::Row),
+                    gap: "xs",
+                    span { "a" }
+                }
+            }
+        }
+    }
+    let html = render(app);
+    let body = body(&html);
+    let css = html.replace(char::is_whitespace, "");
+    let md = media_block(&css, "62rem");
+
+    assert!(!has_state(&body, "row"), "the base is a column: {html}");
+    assert!(has_rule(&body, md, "flex-direction:row"), "{css}");
+    assert!(
+        !md.contains("--lsx-flex-row-spacing"),
+        "the explicit gap replaces the row default: {md}"
+    );
+}
+
+#[test]
+fn a_responsive_direction_without_a_gap_takes_the_axis_spacing() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Flex {
+                    direction: responsive(FlexDirection::Row).sm(FlexDirection::Column),
+                    span { "a" }
+                }
+            }
+        }
+    }
+    let html = render(app);
+    let body = body(&html);
+    let css = html.replace(char::is_whitespace, "");
+    let sm = media_block(&css, "48rem");
+
+    assert!(has_state(&body, "row"), "{html}");
+    assert!(has_rule(&body, sm, "flex-direction:column"), "{css}");
+    assert!(sm.contains("--lsx-flex-column-spacing"), "{sm}");
 }

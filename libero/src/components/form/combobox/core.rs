@@ -6,8 +6,8 @@ use crate::{
     components::{
         accessibility::VISUALLY_HIDDEN_FIXED_SX,
         common::{
-            ClassList, HtmlTag, Input, NavigationChord, Part, Parts, States, base_props,
-            navigation_chord,
+            ClassList, HtmlTag, Input, NavigationChord, Part, Parts, ScaleOrCss, States, Variables,
+            base_props, navigation_chord, variables,
         },
         form::DropdownPart,
         layout::{paper_sx, use_box},
@@ -17,7 +17,7 @@ use crate::{
         current_localization, use_element, use_field_list_layer, use_popover_on, use_theme,
     },
     platform::ElementApi,
-    sx::{StaticSx, Sx, sx},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{COMBOBOX_PADDING, Size, SizeCss, Z_INDEX_POPOVER},
 };
 
@@ -94,7 +94,7 @@ base_props! {
         #[props(default, into)]
         size: Input<Size>,
         #[props(default, into)]
-        radius: Input<Size>,
+        radius: Input<ThemeAwareValue>,
         /// Disabled or read-only: the list is neither drawn nor opened by a key.
         disabled: bool,
         /// Enter closes after picking. A multi-select keeps the list open.
@@ -131,9 +131,9 @@ base_props! {
 pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
     let theme = use_theme();
     let size = props.size.copied_or(theme.combobox.size);
-    let radius = props.radius.copied_or(theme.combobox.radius);
+    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.combobox.radius);
 
-    let context = use_combobox_context(props.state.id(), size, radius);
+    let context = use_combobox_context(props.state.id(), size, radius.clone());
     // For a row inside the trigger; the portaled dropdown gets it as a prop.
     use_context_provider(|| context);
 
@@ -203,7 +203,7 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
         .states
         .unwrap_or_default()
         .with(size.state_name(), true)
-        .with(radius.radius_state_name(), true)
+        .with(radius.size.radius_state_name(), true)
         .with("bordered", true)
         .with("disabled", disabled)
         .into();
@@ -239,6 +239,7 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
                 sx: props.sx,
                 parts: props.parts,
                 states,
+                radius,
                 attributes: props.attributes,
                 rows: props.rows,
                 row_keys: props.row_keys,
@@ -294,6 +295,7 @@ struct ComboboxPopupProps {
     sx: Input<Sx>,
     parts: Input<Parts<DropdownPart>>,
     states: Input<States>,
+    radius: ScaleOrCss,
     attributes: Vec<Attribute>,
     rows: Vec<Element>,
     row_keys: Vec<usize>,
@@ -323,12 +325,19 @@ fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
             .width(props.width)
             .remeasure(props.remeasure),
     );
+    let radius_variables: Input<Variables> = variables()
+        .with(
+            SizeCss::RADIUS.override_var(),
+            props.radius.custom_css(SizeCss::RADIUS),
+        )
+        .into();
     let dropdown = use_box()
         .framework_sx(&COMBOBOX_DROPDOWN_SX)
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&props.states)
+        .variables(&radius_variables)
         .style(Some(popover.style()))
         .prepare();
 
@@ -389,13 +398,13 @@ fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
 
 /// The signals every portaled row reads. Owned by the root scope and dropped by hand:
 /// a component-owned signal read from a portaled row can be dropped while still held.
-fn use_combobox_context(state_id: String, size: Size, radius: Size) -> ComboboxContext {
+fn use_combobox_context(state_id: String, size: Size, radius: ScaleOrCss) -> ComboboxContext {
     let id = use_hook(|| Signal::new_in_scope(state_id, ScopeId::ROOT));
     let mut shared_size = use_hook(|| Signal::new_in_scope(size, ScopeId::ROOT));
     if *shared_size.peek() != size {
         shared_size.set(size);
     }
-    let mut shared_radius = use_hook(|| Signal::new_in_scope(radius, ScopeId::ROOT));
+    let mut shared_radius = use_hook(|| Signal::new_in_scope(radius.clone(), ScopeId::ROOT));
     if *shared_radius.peek() != radius {
         shared_radius.set(radius);
     }

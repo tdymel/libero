@@ -131,9 +131,9 @@ pub fn ComboboxPage() -> Element {
                     prop("size", "Size")
                         .default(theme.combobox.size.as_str())
                         .doc("A row's height and font size."),
-                    prop("radius", "Size")
+                    prop("radius", "ThemeAwareValue")
                         .default(theme.combobox.radius.as_str())
-                        .doc("The dropdown's corner radius."),
+                        .doc("The dropdown's corner radius, or any CSS, e.g. `radius: \"0\"`."),
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Draws no list and ignores the keys, and the trigger reads as closed. Disable the trigger too."),
@@ -155,8 +155,8 @@ pub fn ComboboxPage() -> Element {
                         .doc("Called on a click, and by Enter while the row is active. The only way to pick."),
                     prop("size", "Size")
                         .doc("Row height and font size. Defaults to the `Combobox`'s `size`."),
-                    prop("radius", "Size")
-                        .doc("Corner radius. Defaults to the `Combobox`'s, reduced so the row nests inside the dropdown."),
+                    prop("radius", "ThemeAwareValue")
+                        .doc("Corner radius, or any CSS, e.g. `radius: \"0\"`. Defaults to the `Combobox`'s, reduced so the row nests inside the dropdown."),
                     prop("children", "Element")
                         .doc("The row's content. Put a long label in `span { \"data-slot\": \"label\" }` to end it in an ellipsis."),
                 ]),

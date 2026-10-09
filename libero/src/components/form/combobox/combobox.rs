@@ -6,7 +6,7 @@ use crate::{
         form::DropdownPart,
     },
     hooks::use_localization,
-    sx::Sx,
+    sx::{Sx, ThemeAwareValue},
     theme::Size,
 };
 
@@ -40,9 +40,9 @@ pub struct ComboboxProps<T: Clone + PartialEq + 'static> {
     /// A row's height and font size.
     #[props(default, into)]
     size: Input<Size>,
-    /// The dropdown's corner radius.
+    /// The dropdown's corner radius: a size word or any CSS, as `radius: "0"`.
     #[props(default, into)]
-    radius: Input<Size>,
+    radius: Input<ThemeAwareValue>,
     /// Draws no list and ignores the keys; the trigger reads as closed. Disable the trigger too.
     #[props(default)]
     disabled: Option<bool>,

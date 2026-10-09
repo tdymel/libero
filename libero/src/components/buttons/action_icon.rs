@@ -195,7 +195,7 @@ fn fill_from_group(props: &mut ActionIconProps, group: ButtonGroupContext) {
         }
     }
     fill(&mut props.size, group.size.map(ThemeAwareValue::Size));
-    fill(&mut props.radius, group.radius.map(ThemeAwareValue::Size));
+    fill(&mut props.radius, group.radius);
     fill(&mut props.variant, group.variant);
     fill(&mut props.color, group.color);
     props.disabled = props.disabled.or(group.disabled);

@@ -82,10 +82,7 @@ fn badge_variables(props: &BadgeProps, color: &ThemeAwareValue, variant: Variant
         .with(BADGE_ON_CONTAINER_VAR, colors.on_container)
         .with(
             BADGE_RADIUS.override_var(),
-            props
-                .radius
-                .as_ref()
-                .map(|radius| BADGE_RADII.value(*radius)),
+            props.radius.resolve(Some(BADGE_RADII)),
         )
 }
 
@@ -101,9 +98,9 @@ base_props! {
         color: Input<ThemeAwareValue>,
         #[props(default, into)]
         size: Input<Size>,
-        /// A step on the badge's own radius scale; the default is a pill.
+        /// A step on the badge's own radius scale, or any CSS, as `radius: "0"`; the default is a pill.
         #[props(default, into)]
-        radius: Input<Size>,
+        radius: Input<ThemeAwareValue>,
         /// A circle for a one- or two-character count.
         #[props(default)]
         circle: Option<bool>,

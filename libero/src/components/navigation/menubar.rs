@@ -8,8 +8,9 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, Part, Parts, ROW_HOVER_TINT, States, base_props, disabled_look_sx,
-            forced_on_sx, has_shortcut_modifier, inset_focus_ring_sx, parts_enum,
+            HtmlTag, Input, Part, Parts, ROW_HOVER_TINT, ScaleOrCss, States, Variables, base_props,
+            disabled_look_sx, forced_on_sx, has_shortcut_modifier, inset_focus_ring_sx, parts_enum,
+            variables,
         },
         layout::use_box,
     },
@@ -18,10 +19,10 @@ use crate::{
         use_theme, use_typeahead,
     },
     platform::{ElementApi, logical_key},
-    sx::{StaticSx, sx},
+    sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
         MENUBAR_GAP, MENUBAR_TRIGGER_FONT, MENUBAR_TRIGGER_PAD_X, MENUBAR_TRIGGER_PAD_Y,
-        MENUBAR_TRIGGER_RADIUS, MenubarDefaults, Size,
+        MENUBAR_TRIGGER_RADIUS, MenubarDefaults, Size, SizeCss,
     },
 };
 
@@ -144,9 +145,9 @@ base_props! {
         /// The triggers' font and padding, and each menu's item size.
         #[props(default, into)]
         size: Input<Size>,
-        /// The triggers' and the menus' corner radius.
+        /// The triggers' and the menus' corner radius: a size word or any CSS, as `radius: "0"`.
         #[props(default, into)]
-        radius: Input<Size>,
+        radius: Input<ThemeAwareValue>,
         /// Every menu's `parts`: the menus are portaled, out of `parts`' reach.
         #[props(default, into)]
         menu_parts: Input<Parts<MenuPart>>,
@@ -302,7 +303,13 @@ pub fn Menubar(props: MenubarProps) -> Element {
     );
 
     let size = props.size.copied_or(theme.menubar.size);
-    let radius = props.radius.copied_or(theme.menubar.radius);
+    // Handed to every `Menu` as the same value, so each menu keeps the bar's own fallback.
+    let radius = props
+        .radius
+        .as_ref()
+        .cloned()
+        .unwrap_or(theme.menubar.radius.into());
+    let bar_radius = ScaleOrCss::new(Some(&radius), theme.menubar.radius);
 
     let columns = props.menus.iter().enumerate().map(|(index, menu)| {
         let state = row.states[index];
@@ -423,7 +430,7 @@ pub fn Menubar(props: MenubarProps) -> Element {
                 side: props.side,
                 align: props.align,
                 size,
-                radius,
+                radius: radius.clone(),
                 loop_focus,
                 disabled,
                 onedge,
@@ -453,7 +460,13 @@ pub fn Menubar(props: MenubarProps) -> Element {
         .states
         .unwrap_or_default()
         .with(size.state_name(), true)
-        .with(radius.radius_state_name(), true)
+        .with(bar_radius.size.radius_state_name(), true)
+        .into();
+    let radius_variables: Input<Variables> = variables()
+        .with(
+            SizeCss::RADIUS.override_var(),
+            bar_radius.custom_css(SizeCss::RADIUS),
+        )
         .into();
 
     let root = use_box()
@@ -462,6 +475,7 @@ pub fn Menubar(props: MenubarProps) -> Element {
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&states)
+        .variables(&radius_variables)
         .prepare();
 
     root.element(&bar)

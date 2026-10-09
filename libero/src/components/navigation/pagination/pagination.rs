@@ -5,8 +5,9 @@ use crate::{
     components::{
         buttons::ActionIcon,
         common::{
-            Glyph, HtmlTag, Input, Part, States, Variables, base_color, base_props, contrast_color,
-            fill_color, focus_ring_sx, literal_contrast, on_state_sx, parts_enum, variables,
+            Glyph, HtmlTag, Input, Part, ScaleOrCss, States, Variables, base_color, base_props,
+            contrast_color, fill_color, focus_ring_sx, literal_contrast, on_state_sx, parts_enum,
+            variables,
         },
         layout::{BoxStyle, use_box},
     },
@@ -131,8 +132,9 @@ base_props! {
         boundaries: Option<u8>,
         #[props(default, into)]
         size: Input<Size>,
+        /// A size step on the radius scale, or any CSS, as `radius: "0"`.
         #[props(default, into)]
-        radius: Input<Size>,
+        radius: Input<ThemeAwareValue>,
         /// Fill of the current page.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
@@ -179,7 +181,7 @@ pub fn Pagination(props: PaginationProps) -> Element {
     let list = use_element();
 
     let size = props.size.copied_or(defaults.size);
-    let radius = props.radius.copied_or(defaults.radius);
+    let radius = ScaleOrCss::new(props.radius.as_ref(), defaults.radius).resolve(SizeCss::RADIUS);
     let siblings = props.siblings.unwrap_or(defaults.siblings);
     let boundaries = props.boundaries.unwrap_or(defaults.boundaries);
     let disabled = props.disabled.unwrap_or(false);
@@ -204,7 +206,7 @@ pub fn Pagination(props: PaginationProps) -> Element {
 
     let variables: Variables = variables()
         .with(PAGINATION_ACTIVE_BACKGROUND, fill_color(&active))
-        .with(PAGINATION_RADIUS, SizeCss::RADIUS.value(radius))
+        .with(PAGINATION_RADIUS, radius.clone())
         .with(PAGINATION_ACTIVE_COLOR, on_active);
 
     let total = props.total;
@@ -306,7 +308,7 @@ pub fn Pagination(props: PaginationProps) -> Element {
                     name: name(label),
                     states: control_states.clone(),
                     size,
-                    radius,
+                    radius: radius.clone(),
                     disabled: disabled || at_end,
                     // An end arrow stays natively disabled; the focus repair covers it.
                     focusable: disabled,
@@ -399,7 +401,7 @@ fn PaginationArrow(
     name: String,
     states: Input<States>,
     size: Size,
-    radius: Size,
+    radius: String,
     disabled: bool,
     focusable: bool,
     onarrow: Callback<PaginationLabel>,
@@ -421,7 +423,7 @@ fn PaginationArrow(
             sx: &PAGINATION_CONTROL_SX,
             states,
             size: PAGINATION_CONTROL_SIZE.value(size),
-            radius: SizeCss::RADIUS.value(radius),
+            radius,
             disabled,
             focusable_when_disabled: focusable,
             onclick: move |_| {

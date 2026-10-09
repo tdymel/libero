@@ -47,9 +47,9 @@ pub fn MenubarPage() -> Element {
                     prop("size", "Size")
                         .default(theme.menubar.size.as_str())
                         .doc("The triggers' font and padding, and each menu's item size."),
-                    prop("radius", "Size")
+                    prop("radius", "ThemeAwareValue")
                         .default(theme.menubar.radius.as_str())
-                        .doc("The triggers' and the menus' corner radius."),
+                        .doc("The triggers' and the menus' corner radius, or any CSS, e.g. `radius: \"0\"`."),
                     prop("menu_parts", "Parts<MenuPart>")
                         .doc("Every menu's `parts`, the `Menu` page's Style API table. The menus open in a portal, out of the bar's `sx` and `parts`."),
                     prop("parts", "Parts<MenubarPart>")

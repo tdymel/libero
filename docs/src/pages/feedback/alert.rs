@@ -37,9 +37,9 @@ pub fn AlertPage() -> Element {
                 prop("variant", "Variant")
                     .default(theme.alert.variant.as_str())
                     .doc("Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`."),
-                prop("radius", "Size")
+                prop("radius", "ThemeAwareValue")
                     .default(theme.alert.radius.as_str())
-                    .doc("Corner radius, a size step from `xs` to `xxl`."),
+                    .doc("Corner radius, a size step from `xs` to `xxl`, or any CSS, e.g. `radius: \"0\"`."),
                 prop("onclose", "EventHandler<()>")
                     .doc("Shows the close button and fires when it is pressed. Unmount the alert to close it."),
                 prop("close_label", "String")

@@ -4,14 +4,14 @@ use super::{ColorCode, color_slider::CHECKERBOARD};
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, States, Variables, base_props, disabled_look_sx, names_itself,
-            shadow_sx, use_name_warning, variables,
+            HtmlTag, Input, ScaleOrCss, States, Variables, base_props, disabled_look_sx,
+            names_itself, shadow_sx, use_name_warning, variables,
         },
         layout::use_box,
     },
     hooks::use_theme,
-    sx::{StaticSx, sx},
-    theme::{COLOR_SWATCH_RADIUS, COLOR_SWATCH_SIZE, ColorSwatchDefaults, CssVar, Size},
+    sx::{StaticSx, ThemeAwareValue, sx},
+    theme::{COLOR_SWATCH_RADIUS, COLOR_SWATCH_SIZE, ColorSwatchDefaults, CssVar, Size, SizeCss},
     tokens::HexColor,
 };
 
@@ -56,8 +56,9 @@ base_props! {
         color: ColorCode,
         #[props(default, into)]
         size: Input<Size>,
+        /// Corner radius: a size word or any CSS, as `radius: "0"`.
         #[props(default, into)]
-        radius: Input<Size>,
+        radius: Input<ThemeAwareValue>,
         /// A faint inner ring, so a color close to the background has an edge.
         #[props(default)]
         with_shadow: Option<bool>,
@@ -87,7 +88,7 @@ base_props! {
 pub fn ColorSwatch(props: ColorSwatchProps) -> Element {
     let theme = use_theme();
     let size = props.size.copied_or(theme.color_swatch.size);
-    let radius = props.radius.copied_or(theme.color_swatch.radius);
+    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.color_swatch.radius);
     let clickable = props.onclick.is_some();
     use_name_warning(
         !clickable || names_itself(&props.attributes),
@@ -98,7 +99,7 @@ pub fn ColorSwatch(props: ColorSwatchProps) -> Element {
         .states
         .unwrap_or_default()
         .with(size.state_name(), true)
-        .with(radius.radius_state_name(), true)
+        .with(radius.size.radius_state_name(), true)
         .with("shadow", props.with_shadow.unwrap_or(true))
         .with("clickable", clickable)
         .with("on-light", on_light(props.color))
@@ -106,6 +107,10 @@ pub fn ColorSwatch(props: ColorSwatchProps) -> Element {
 
     let variables: Input<Variables> = variables()
         .with(COLOR_SWATCH_COLOR, props.color.to_rgba())
+        .with(
+            SizeCss::RADIUS.override_var(),
+            radius.custom_css(SizeCss::RADIUS),
+        )
         .into();
 
     let swatch = use_box()
