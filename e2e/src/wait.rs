@@ -54,12 +54,25 @@ where
 
 /// `until` under a journal kind. Reports poll count and slowest poll: many quick polls
 /// mean a false condition, one long poll a stuck page or CDP connection (todo 364).
-pub async fn until_kind<F, Fut>(kind: &'static str, what: &str, mut check: F) -> Result<()>
+pub async fn until_kind<F, Fut>(kind: &'static str, what: &str, check: F) -> Result<()>
 where
     F: FnMut() -> Fut,
     Fut: std::future::Future<Output = Result<bool>>,
 {
-    let budget = timeout();
+    until_kind_within(timeout(), kind, what, check).await
+}
+
+/// [`until_kind`] under a `budget` of its own.
+async fn until_kind_within<F, Fut>(
+    budget: Duration,
+    kind: &'static str,
+    what: &str,
+    mut check: F,
+) -> Result<()>
+where
+    F: FnMut() -> Fut,
+    Fut: std::future::Future<Output = Result<bool>>,
+{
     let started = Instant::now();
     let deadline = started + budget;
     let (mut polls, mut slowest) = (0u32, Duration::ZERO);
@@ -166,6 +179,20 @@ pub async fn for_selector(page: &Page, selector: &str) -> Result<()> {
 pub async fn for_selector_kind(kind: &'static str, page: &Page, selector: &str) -> Result<()> {
     until_kind(kind, &format!("selector {selector}"), || {
         exists(page, selector)
+    })
+    .await
+}
+
+/// [`for_selector_kind`] for a page still navigating, within `budget`: a CDP call that fails
+/// while the document swaps is a miss, not the end of the wait.
+pub(crate) async fn for_selector_while_loading(
+    kind: &'static str,
+    page: &Page,
+    selector: &str,
+    budget: Duration,
+) -> Result<()> {
+    until_kind_within(budget, kind, &format!("selector {selector}"), || async {
+        Ok(exists(page, selector).await.unwrap_or(false))
     })
     .await
 }

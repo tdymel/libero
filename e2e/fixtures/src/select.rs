@@ -27,7 +27,32 @@ pub const ROUTES: Routes = &[
         || rsx! { SelectTallPage { top: "calc(100vh - 100px)" } },
     ),
     ("/select/long", || rsx! { SelectLongPage {} }),
+    ("/select/long-label", || rsx! { SelectLongLabelPage {} }),
 ];
+
+/// Three hundred rows opening at the top, with the one long label far below the window (2695).
+#[component]
+fn SelectLongLabelPage() -> Element {
+    let options = use_hook(|| {
+        OptionList::new((0..300).map(|row| match row {
+            250 => format!("Item {row:03} with a description far longer than any row near the top"),
+            _ => format!("Item {row:03}"),
+        }))
+    });
+
+    let mut value = use_signal(|| None::<String>);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "200px",
+            Select::<String> {
+                label: "Item",
+                options: options.clone(),
+                value: value(),
+                onchange: move |next| value.set(next),
+            }
+        }
+    }
+}
 
 /// A thousand rows in ten groups, opening on row 700: past the row count that windows (2234).
 #[component]

@@ -236,6 +236,23 @@ e2e::scenario!(
     a_long_list_windows
 );
 
+/// Todo 2695: a windowed list is as wide as its longest label, drawn or not.
+async fn a_long_list_fits_its_longest_label<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let trigger = d.rect(TRIGGER).await?;
+    d.click(TRIGGER).await?;
+    eventually(d, "the listbox", async |d| d.exists(LISTBOX).await).await?;
+    eventually(d, "the listbox wider than the trigger", async |d| {
+        Ok(d.rect(LISTBOX).await?.width > trigger.width + 100.0)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_long_select_is_as_wide_as_its_longest_label,
+    "/select/long-label",
+    a_long_list_fits_its_longest_label
+);
+
 /// Todo 1497: a click outside closes the search box's list and the focus stays
 /// where the click put it; only Escape, a pick or Clear refocus the trigger.
 pub async fn an_outside_click_keeps_its_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {

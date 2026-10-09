@@ -15,7 +15,7 @@ use crate::{
     utils::warn,
 };
 
-use super::option::{ComboboxContext, ComboboxRowContext};
+use super::option::{ComboboxContext, ComboboxOption, ComboboxRowContext};
 
 /// From this many rows the list draws only those in view (todo 2234).
 pub(crate) const VIRTUAL_ROWS: usize = 200;
@@ -72,6 +72,8 @@ pub(super) fn ComboboxDropdown(
     header: Option<Element>,
     multiselectable: bool,
     labelled_by: Option<String>,
+    /// A windowed list's longest row text, drawn hidden to give the popover its width.
+    widest: Option<String>,
     /// The theme's row height in px: a windowed list's pitch, so it never waits for a probe.
     row_height: f64,
     /// Re-provided: portaled under `PortalOutlet`, rows would otherwise lose it silently.
@@ -139,6 +141,14 @@ pub(super) fn ComboboxDropdown(
                     "role": "listbox",
                     "aria-multiselectable": multiselectable.then_some("true"),
                     "aria-labelledby": labelled_by,
+                    if let Some(widest) = widest {
+                        // Zero tall, so only its width counts; not a row, so no id or pick.
+                        div {
+                            "aria-hidden": "true",
+                            style: "height: 0; overflow: hidden; visibility: hidden; pointer-events: none",
+                            ComboboxOption { "role": "presentation", "{widest}" }
+                        }
+                    }
                     Virtualize {
                         count,
                         item_size: Some(row_height),

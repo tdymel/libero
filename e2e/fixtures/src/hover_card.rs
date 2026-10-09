@@ -20,7 +20,30 @@ pub const ROUTES: Routes = &[
     ("/hover-card-pair", || rsx! { PairTriggerPage {} }),
     ("/hover-card-scroll", || rsx! { ScrollingTextPage {} }),
     ("/hover-card-hidden", || rsx! { HiddenLastControlPage {} }),
+    ("/hover-card-tabindex", || rsx! { PositiveTabindexPage {} }),
 ];
+
+/// A card whose DOM order is not its Tab order: `tabindex` 2, 1 and none (todo 2696).
+#[component]
+fn PositiveTabindexPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button { id: "before", "Before" }
+            HoverCard {
+                aria_label: "Ada Lovelace",
+                content: rsx! {
+                    Flex { direction: "column", gap: "xs",
+                        Button { id: "card-middle", variant: "outlined", "tabindex": "2", "Profile" }
+                        Button { id: "card-first", variant: "outlined", "tabindex": "1", "Follow" }
+                        Button { id: "card-last", variant: "outlined", "Message" }
+                    }
+                },
+                Button { id: "trigger", variant: "outlined", "Ada Lovelace" }
+            }
+            Button { id: "after", "After" }
+        }
+    }
+}
 
 /// A `display: none` button last in the trigger and last in the card, both ignoring `focus()`
 /// (todo 2688).

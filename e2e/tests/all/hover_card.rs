@@ -148,6 +148,26 @@ async fn tab_crosses_past_hidden_last_controls<D: Driver>(d: &mut D, _route: &st
     eventually_focused(d, TRIGGER, "Shift+Tab from the card's first control").await
 }
 
+/// A positive `tabindex` leads the card's Tab order, whatever its place in the DOM (2696).
+async fn tab_follows_positive_tabindex<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(BEFORE).await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, TRIGGER, "Tab from Before").await?;
+    shown(d, CARD, true, "Tab onto the trigger").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, CARD_FIRST, "Tab into the card, tabindex 1").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, CARD_MIDDLE, "Tab to tabindex 2").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, CARD_LAST, "Tab to the control without a tabindex").await?;
+    d.press_shift(keyboard::TAB).await?;
+    eventually_focused(d, CARD_MIDDLE, "Shift+Tab back to tabindex 2").await?;
+    d.press_shift(keyboard::TAB).await?;
+    eventually_focused(d, CARD_FIRST, "Shift+Tab back to tabindex 1").await?;
+    d.press_shift(keyboard::TAB).await?;
+    eventually_focused(d, TRIGGER, "Shift+Tab from the first in Tab order").await
+}
+
 /// The pointer rests to open, may cross into the card, and leaving closes it.
 async fn pointer_crosses<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.hover(TRIGGER).await?;
@@ -206,6 +226,13 @@ e2e::scenario!(
     desktop: skip("958: the Tab bridge reads the card's focusables inside a handler")
 );
 e2e::scenario!(
+    tab_walks_the_card_in_positive_tabindex_order,
+    "/hover-card-tabindex",
+    tab_follows_positive_tabindex,
+    android: skip("958: the Tab bridge reads the card's focusables inside a handler"),
+    desktop: skip("958: the Tab bridge reads the card's focusables inside a handler")
+);
+e2e::scenario!(
     the_pointer_crosses_into_the_card_and_leaving_closes_it,
     "/hover-card",
     pointer_crosses
@@ -217,6 +244,8 @@ const TRIGGER_SECOND: &str = "#trigger-second";
 const CARD: &str = "[role=dialog]";
 const CARD_FIRST: &str = "#card-first";
 const CARD_LAST: &str = "#card-last";
+/// `/hover-card-tabindex`'s `tabindex` 2 button, DOM-first and Tab-second.
+const CARD_MIDDLE: &str = "#card-middle";
 const BEFORE: &str = "#before";
 const AFTER: &str = "#after";
 /// The `/hover-card-color-field` card and its read-only field (todo 446).

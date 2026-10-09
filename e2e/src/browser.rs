@@ -208,6 +208,9 @@ struct Harness {
     primed: std::sync::Once,
 }
 
+/// The first page's whole load, to its ready marker.
+const COLD_LOAD: Duration = Duration::from_secs(120);
+
 /// Navigations at once after the first, `E2E_NAVIGATIONS` to override.
 const NAVIGATIONS: usize = 16;
 
@@ -505,10 +508,24 @@ impl Fixture {
         let console = crate::passes::console::Recorder::attach(&page).await?;
 
         let at = std::time::Instant::now();
-        page.goto(&url)
-            .await
-            .with_context(|| format!("go to {url}"))
-            .inspect_err(|error| stage("navigating", at, error))?;
+        // chromiumoxide ends every command after 30 s, config aside: the first load of a run
+        // (a cold wasm bundle under load) can take longer (todo 2700).
+        let cold = !harness().primed.is_completed();
+        if cold {
+            let (loading, target) = (page.clone(), url.clone());
+            harness().runtime.spawn(async move {
+                let _ = loading.goto(&target).await;
+            });
+            crate::wait::for_selector_while_loading("navigation", &page, ready, COLD_LOAD)
+                .await
+                .with_context(|| format!("go to {url}"))
+                .inspect_err(|error| stage("navigating", at, error))?;
+        } else {
+            page.goto(&url)
+                .await
+                .with_context(|| format!("go to {url}"))
+                .inspect_err(|error| stage("navigating", at, error))?;
+        }
         // An unhandled Alt+ArrowLeft goes Back in the active tab, any test's page
         // once `frames::start` brought one to front: no `about:blank` to go back to.
         page.execute(

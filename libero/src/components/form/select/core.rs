@@ -11,8 +11,8 @@ use crate::{
         },
         form::{
             Asks, CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, PreparedField, RowCache,
-            clear_button, field_control_sx, field_parts_enum, field_props, use_chip_announcer,
-            use_field, use_field_frame, use_refocus_on_close, use_row_cache,
+            VIRTUAL_ROWS, clear_button, field_control_sx, field_parts_enum, field_props,
+            use_chip_announcer, use_field, use_field_frame, use_refocus_on_close, use_row_cache,
             with_drawn_placeholder,
         },
         layout::{BoxStyle, use_box},
@@ -399,6 +399,10 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         .prepare();
 
     let rows = select_rows(&props, &visible, state, &row_cache);
+    let widest = match rows.rows.len() >= VIRTUAL_ROWS {
+        true => widest_label(&props.row_labels, &visible),
+        false => None,
+    };
     // Written before the trigger reads it; from `ComboboxCore` it re-ran this scope per open (todo 842).
     if opened {
         state.set_rows(if props.loading.is_some() {
@@ -522,6 +526,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         autofocus: searchable.then_some(search),
         labelled_by: field.label_id(),
         parts: props.dropdown_parts,
+        widest,
     });
 
     field.render(rsx! {
@@ -551,6 +556,7 @@ struct Listbox {
     autofocus: Option<ElementHandle>,
     labelled_by: Option<String>,
     parts: Input<Parts<DropdownPart>>,
+    widest: Option<String>,
 }
 
 fn select_listbox(list: Listbox) -> Element {
@@ -575,6 +581,7 @@ fn select_listbox(list: Listbox) -> Element {
         remeasure,
         autofocus,
         labelled_by,
+        widest,
     } = list;
     let state = open.state;
 
@@ -609,6 +616,7 @@ fn select_listbox(list: Listbox) -> Element {
             width: PopoverWidth::Min,
             remeasure,
             labelled_by,
+            widest,
             parts,
             {control}
         }
@@ -981,6 +989,15 @@ fn select_row(index: usize, inputs: &SelectRowInputs) -> Element {
             {label}
         }
     }
+}
+
+/// The longest text among the visible rows, which a windowed list can't measure unless drawn.
+fn widest_label(labels: &[String], visible: &[usize]) -> Option<String> {
+    visible
+        .iter()
+        .filter_map(|index| labels.get(*index))
+        .max_by_key(|label| label.chars().count())
+        .cloned()
 }
 
 /// The kept rows, keyed by their full-list index, and their parallel group labels and disabled flags.

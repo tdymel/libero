@@ -120,6 +120,9 @@ base_props! {
         /// Remeasures on change, for a trigger that resizes while open.
         #[props(default)]
         remeasure: u64,
+        /// The longest row's text: a windowed list draws it hidden, so `Min` fits rows not drawn.
+        #[props(default)]
+        widest: Option<String>,
         children: Element,
     }
 }
@@ -248,6 +251,7 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
                 header: props.header,
                 multiselectable: props.multiselectable,
                 labelled_by: props.labelled_by,
+                widest: props.widest,
                 context,
             }
         }
@@ -302,6 +306,7 @@ struct ComboboxPopupProps {
     header: Option<Element>,
     multiselectable: bool,
     labelled_by: Option<String>,
+    widest: Option<String>,
     context: ComboboxContext,
 }
 
@@ -371,6 +376,7 @@ fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
                         header: props.header,
                         multiselectable: props.multiselectable,
                         labelled_by: props.labelled_by,
+                        widest: props.widest,
                         row_height: theme.combobox.sizes.get((context.size)()).row_height,
                         context,
                     }

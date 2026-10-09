@@ -5,7 +5,7 @@ use dioxus::{dioxus_core::AttributeValue, prelude::*};
 use super::hover_intent::{TRIGGER_WRAPPER_SX, use_hover_intent};
 use crate::{
     components::{
-        accessibility::{focus_edge, focus_first_stop, tab_stops},
+        accessibility::{focus_first_stop, tab_stops},
         common::{
             FOCUSABLE_SELECTOR, HtmlTag, Input, States, base_props, input_from_str,
             inset_focus_ring_sx,
@@ -383,12 +383,16 @@ fn trigger_tab(event: &KeyboardEvent, open: bool, anchor: ElementHandle, floatin
     let Ok(items) = anchor.query_selector_all(FOCUSABLE_SELECTOR) else {
         return;
     };
-    let Some(at) = items.iter().position(|item| item.is_focused()) else {
+    let order = tab_order(&items);
+    let Some(at) = order.iter().position(|item| items[*item].is_focused()) else {
         return;
     };
     // A later control that is `display: none` ignores `focus()`: the card follows the last that takes it.
-    let moved = focus_first_stop(&items, &tab_stops(&anchor, &items), at + 1..items.len())
-        || focus_edge(&floating, false);
+    let moved = focus_first_stop(
+        &items,
+        &tab_stops(&anchor, &items),
+        order[at + 1..].iter().copied(),
+    ) || focus_edge(&floating, false);
     if moved {
         event.prevent_default();
         // An enclosing `Modal`'s `FocusTrap` would take focus back out.
@@ -406,12 +410,13 @@ fn card_tab(event: &KeyboardEvent, anchor: ElementHandle, floating: ElementHandl
         return;
     };
     let backwards = event.modifiers().shift();
-    let Some(at) = items.iter().position(|item| item.is_focused()) else {
+    let order = tab_order(&items);
+    let Some(at) = order.iter().position(|item| items[*item].is_focused()) else {
         return;
     };
     let beyond: Vec<usize> = match backwards {
-        true => (0..at).rev().collect(),
-        false => (at + 1..items.len()).collect(),
+        true => order[..at].iter().rev().copied().collect(),
+        false => order[at + 1..].to_vec(),
     };
     // A control that is `display: none` ignores `focus()`, so the edge is the last that takes it.
     let inside = focus_first_stop(&items, &tab_stops(&floating, &items), beyond.into_iter());
@@ -419,5 +424,54 @@ fn card_tab(event: &KeyboardEvent, anchor: ElementHandle, floating: ElementHandl
     // Forward off the trigger, the browser's own Tab moves on.
     if inside || (via_trigger && backwards) {
         event.prevent_default();
+    }
+}
+
+/// Item indices in the browser's Tab order: positive `tabindex` ascending, then the rest in DOM order.
+fn tab_order(items: &[Box<dyn ElementApi>]) -> Vec<usize> {
+    let tabindex = |item: &dyn ElementApi| {
+        let value = item.attribute("tabindex").ok().flatten();
+        value.and_then(|text| text.trim().parse::<i32>().ok())
+    };
+    let indices: Vec<Option<i32>> = items.iter().map(|item| tabindex(item.as_ref())).collect();
+    order_by_tabindex(&indices)
+}
+
+fn order_by_tabindex(tabindexes: &[Option<i32>]) -> Vec<usize> {
+    let mut order: Vec<usize> = (0..tabindexes.len()).collect();
+    // Stable: equal `tabindex` and the unordered keep their DOM order.
+    order.sort_by_key(|at| match tabindexes[*at] {
+        Some(index) if index > 0 => (0, index),
+        _ => (1, 0),
+    });
+    order
+}
+
+/// The first (or last) control in Tab order that takes focus.
+fn focus_edge(root: &ElementHandle, last: bool) -> bool {
+    let Ok(items) = root.query_selector_all(FOCUSABLE_SELECTOR) else {
+        return false;
+    };
+    let stops = tab_stops(root, &items);
+    let order = tab_order(&items);
+    match last {
+        true => focus_first_stop(&items, &stops, order.into_iter().rev()),
+        false => focus_first_stop(&items, &stops, order.into_iter()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn positive_tabindex_comes_first_in_ascending_order() {
+        let tabindexes = [None, Some(0), Some(3), Some(1), Some(3), None];
+        assert_eq!(order_by_tabindex(&tabindexes), [3, 2, 4, 0, 1, 5]);
+    }
+
+    #[test]
+    fn without_a_positive_tabindex_the_dom_order_stays() {
+        assert_eq!(order_by_tabindex(&[None, Some(0), None]), [0, 1, 2]);
     }
 }
