@@ -211,6 +211,10 @@ struct Harness {
 /// The first page's whole load, to its ready marker.
 const COLD_LOAD: Duration = Duration::from_secs(120);
 
+/// Any later page's load event; a 20 s one is journalled as slow, so stalls stay visible.
+const WARM_LOAD: Duration = Duration::from_secs(60);
+const SLOW_LOAD: Duration = Duration::from_secs(20);
+
 /// Navigations at once after the first, `E2E_NAVIGATIONS` to override.
 const NAVIGATIONS: usize = 16;
 
@@ -511,20 +515,20 @@ impl Fixture {
         // chromiumoxide ends every command after 30 s, config aside: the first load of a run
         // (a cold wasm bundle under load) can take longer (todo 2700).
         let cold = !harness().primed.is_completed();
+        let (loading, target) = (page.clone(), url.clone());
+        harness().runtime.spawn(async move {
+            let _ = loading.goto(&target).await;
+        });
         if cold {
-            let (loading, target) = (page.clone(), url.clone());
-            harness().runtime.spawn(async move {
-                let _ = loading.goto(&target).await;
-            });
-            crate::wait::for_selector_while_loading("navigation", &page, ready, COLD_LOAD)
-                .await
-                .with_context(|| format!("go to {url}"))
-                .inspect_err(|error| stage("navigating", at, error))?;
+            crate::wait::for_selector_while_loading("navigation", &page, ready, COLD_LOAD).await
         } else {
-            page.goto(&url)
-                .await
-                .with_context(|| format!("go to {url}"))
-                .inspect_err(|error| stage("navigating", at, error))?;
+            // A warm `goto` failed at 30 s when the server stalled briefly under load (2761, 364).
+            crate::wait::for_load_while_loading("navigation", &page, &url, WARM_LOAD).await
+        }
+        .with_context(|| format!("go to {url}"))
+        .inspect_err(|error| stage("navigating", at, error))?;
+        if at.elapsed() > SLOW_LOAD {
+            crate::journal::note(&format!("slow navigation: {url} took {:.1?}", at.elapsed()));
         }
         // An unhandled Alt+ArrowLeft goes Back in the active tab, any test's page
         // once `frames::start` brought one to front: no `about:blank` to go back to.

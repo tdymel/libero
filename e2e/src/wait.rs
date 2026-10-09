@@ -197,6 +197,24 @@ pub(crate) async fn for_selector_while_loading(
     .await
 }
 
+/// A page off `about:blank` that fired `load`, within `budget`: what `goto` awaits, without
+/// chromiumoxide's fixed 30 s, which a short server stall outlasted (todo 2761).
+pub(crate) async fn for_load_while_loading(
+    kind: &'static str,
+    page: &Page,
+    what: &str,
+    budget: Duration,
+) -> Result<()> {
+    until_kind_within(budget, kind, what, || async {
+        let loaded = page
+            .evaluate("location.href !== 'about:blank' && document.readyState === 'complete'")
+            .await
+            .and_then(|result| Ok(result.into_value::<bool>()?));
+        Ok(loaded.unwrap_or(false))
+    })
+    .await
+}
+
 /// Whether `selector` matches right now. A negative check reads this on a state selector,
 /// not `!is_visible`, which a card opened at opacity 0 passes (1719).
 pub async fn exists(page: &Page, selector: &str) -> Result<bool> {
