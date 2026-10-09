@@ -457,6 +457,5 @@ async fn a_fixed_bar_docks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_fixed_bar_docks_everywhere,
     "/bottom-navigation/fixed",
-    a_fixed_bar_docks,
-    native: skip("the native driver has no scroll_by; the native unit docks and scrolls it")
+    a_fixed_bar_docks
 );

@@ -243,6 +243,52 @@ fn a_fixed_box_holds_at_its_insets_in_the_window() {
     assert_eq!(top(&page, "#static"), stays, "{}", page.tree());
 }
 
+fn spanning() -> Element {
+    rsx! {
+        div { height: "100px" }
+        div { width: "200px", height: "50px", position: "relative",
+            div { id: "cover", style: "position: fixed; inset: 0", "Cover" }
+            div {
+                id: "band",
+                position: "fixed",
+                top: "10px",
+                bottom: "10px",
+                left: "0",
+                right: "50%",
+                padding: "5px",
+                box_sizing: "content-box",
+                "Band"
+            }
+        }
+        div { id: "content", height: "3000px", "Content" }
+    }
+}
+
+/// Both insets on an axis and no size of its own: the box spans the window
+/// between them, not its parent (todo 2765).
+#[test]
+fn a_fixed_box_with_both_insets_spans_the_window() {
+    let mut page = mount(spanning);
+    let (width, height) = (f64::from(VIEWPORT.0), f64::from(VIEWPORT.1));
+    let expected = (
+        (0.0, 0.0, width, height),
+        (0.0, 10.0, width / 2.0, height - 20.0),
+    );
+    let placed = |page: &Page| (page.rect("#cover"), page.rect("#band"));
+    page.wait_for(|page| placed(page) == expected);
+    assert_eq!(placed(&page), expected, "{}", page.tree());
+
+    scroll_page(&mut page, 300.0);
+    page.wait_for(|page| top(page, "#content") < -100.0 && placed(page) == expected);
+    assert_eq!(placed(&page), expected, "{}", page.tree());
+
+    // The one window poll in `resize.rs` re-sizes it (todo 2768).
+    page.resize(800, 400);
+    let cover = (0.0, 0.0, 800.0, 400.0);
+    page.wait_for(|page| page.rect("#cover") == cover);
+    assert_eq!(page.rect("#cover"), cover, "{}", page.tree());
+}
+
 /// A transformed ancestor holds a `fixed` box, as on the web: it scrolls along.
 #[test]
 fn a_fixed_box_in_a_transformed_box_stays_in_it() {

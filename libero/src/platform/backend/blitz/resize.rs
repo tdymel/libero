@@ -15,7 +15,7 @@ use dioxus::prelude::*;
 use dioxus_native_dom::{NodeHandle, NodeId};
 use style::values::computed::Overflow;
 
-use super::{Doc, client_rect, doc, resolved_style_value, when_free, when_laid_out};
+use super::{Doc, client_rect, doc, resolved_style_value, sticky, when_free, when_laid_out};
 use crate::platform::{
     ContentSubscription, Dimensions, ScrollSubscription, TimerSubscription,
     backend::{origin::Origin, thread},
@@ -24,7 +24,7 @@ use crate::platform::{
 
 /// How late a change no press or key preceded is seen at most: a window
 /// resize, a timer's render, a picture that loaded.
-pub(super) const POLL: Duration = Duration::from_millis(500);
+const POLL: Duration = Duration::from_millis(500);
 
 /// After a press or key: past the frame that lays out what it rendered.
 const SETTLE: Duration = Duration::from_millis(30);
@@ -78,6 +78,8 @@ pub(super) struct Watch {
     viewport: RefCell<Vec<ViewportWatcher>>,
     /// The window's size and scale at the last check.
     window: Cell<Option<((u32, u32), f64)>>,
+    /// A box is sticky or fixed: a window resize re-places it. See [`sticky`].
+    placed: Cell<bool>,
     poll: RefCell<Option<Box<dyn TimerSubscription>>>,
     settle: RefCell<Option<Box<dyn TimerSubscription>>>,
     scrolled: Cell<bool>,
@@ -174,11 +176,49 @@ fn poll(doc: &Rc<Doc>) {
     }
 }
 
+/// Polls the window while any box is sticky or fixed, so a resize re-places them.
+pub(super) fn watch_placed(base: &BaseDocument, placed: bool) {
+    let Some(doc) = doc() else {
+        return;
+    };
+    if doc.resize.placed.replace(placed) == placed {
+        return;
+    }
+    match placed {
+        true => {
+            if doc.resize.window.get().is_none() {
+                doc.resize.window.set(Some(size(base)));
+            }
+            poll(&doc);
+        }
+        false => stop_if_idle(&doc),
+    }
+}
+
 /// The window's size and scale, `None` while the document is borrowed.
 fn window(doc: &Doc) -> Option<((u32, u32), f64)> {
     let anchor = doc.anchor()?;
     let base = anchor.try_doc()?;
-    Some((base.viewport().window_size, base.viewport().scale_f64()))
+    Some(size(&base))
+}
+
+fn size(base: &BaseDocument) -> ((u32, u32), f64) {
+    (base.viewport().window_size, base.viewport().scale_f64())
+}
+
+/// Stops the timers once nothing is watched.
+fn stop_if_idle(doc: &Doc) {
+    let idle = doc.resize.watched.borrow().is_empty()
+        && doc.resize.viewport.borrow().is_empty()
+        && !doc.resize.placed.get();
+    if idle {
+        // Taken out first, so no borrow is held across their drop.
+        let timers = (
+            doc.resize.poll.borrow_mut().take(),
+            doc.resize.settle.borrow_mut().take(),
+        );
+        drop(timers);
+    }
 }
 
 struct Subscription(u64, Weak<Doc>);
@@ -192,21 +232,15 @@ impl Drop for Subscription {
         let Some(doc) = self.1.upgrade() else {
             return;
         };
-        let empty = {
-            let mut watched = doc.resize.watched.borrow_mut();
-            let mut viewport = doc.resize.viewport.borrow_mut();
-            watched.retain(|watched| watched.id != self.0);
-            viewport.retain(|watcher| watcher.id != self.0);
-            watched.is_empty() && viewport.is_empty()
-        };
-        if empty {
-            // Taken out first, so no borrow is held across their drop.
-            let timers = (
-                doc.resize.poll.borrow_mut().take(),
-                doc.resize.settle.borrow_mut().take(),
-            );
-            drop(timers);
-        }
+        doc.resize
+            .watched
+            .borrow_mut()
+            .retain(|watched| watched.id != self.0);
+        doc.resize
+            .viewport
+            .borrow_mut()
+            .retain(|watcher| watcher.id != self.0);
+        stop_if_idle(&doc);
     }
 }
 
@@ -277,6 +311,9 @@ pub(super) fn check(doc: &Doc) {
             .is_some_and(|before| before != now)
     });
     if resized {
+        if doc.resize.placed.get() {
+            sticky::sync_soon();
+        }
         let viewport = doc.resize.viewport.borrow();
         fired.extend(
             viewport

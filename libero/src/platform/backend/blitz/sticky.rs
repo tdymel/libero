@@ -1,8 +1,8 @@
 //! `position: sticky` and `fixed`, which Blitz lays out as `relative` and
 //! `absolute`, done by `transform` at each flush and scroll. The window size is
-//! polled: Blitz reports no resize.
+//! polled in `resize.rs`: Blitz reports no resize.
 
-use std::cell::{Cell, RefCell};
+use std::cell::Cell;
 use std::collections::HashMap;
 
 use blitz_dom::{BaseDocument, QualName, ns};
@@ -12,52 +12,21 @@ use style::values::computed::{Length, LengthPercentage, position::Inset};
 use style::values::generics::position::GenericInset;
 
 use super::{
-    PORTAL_ROOT_ATTR, anchor, node_is_rtl, resize::POLL, resolved_style_value, run_or_defer,
+    PORTAL_ROOT_ATTR, anchor, node_is_rtl, resize, resolved_style_value, run_or_defer,
     when_laid_out,
 };
-use crate::platform::{TimerSubscription, backend::thread};
 
 /// The shift last written, `"x y"` in px, so an unchanged one writes nothing.
 const SHIFT_ATTR: &str = "data-lsx-sticky-shift";
 
+/// The inline `width` and `height` last written to a `fixed` box, `-` for one left alone.
+const SIZE_ATTR: &str = "data-lsx-fixed-size";
+
+/// A `fixed` box's inline size per axis, `None` where its own style sizes it.
+type Size = [Option<f32>; 2];
+
 thread_local! {
     static ARMED: Cell<bool> = const { Cell::new(false) };
-    static WINDOW: RefCell<Option<Box<dyn TimerSubscription>>> = const { RefCell::new(None) };
-}
-
-/// The window's size and scale, as a resize changes them. Known gap: an open popover
-/// does not re-place on a resize here (`on_viewport_resize` is `None` on Blitz).
-fn window(doc: &BaseDocument) -> ((u32, u32), f64) {
-    (doc.viewport().window_size, doc.viewport().scale_f64())
-}
-
-/// Starts the window poll while any box is sticky or fixed, stops it once none is.
-fn watch_window(doc: &BaseDocument, any: bool) {
-    let dropped = WINDOW.with_borrow_mut(|poll| match (any, poll.is_some()) {
-        (true, false) => {
-            let last = Cell::new(window(doc));
-            *poll = thread::timer().map(|timer| {
-                timer.every(
-                    POLL,
-                    Box::new(move || {
-                        let Some(anchor) = anchor() else {
-                            return;
-                        };
-                        let Some(now) = anchor.try_doc().map(|doc| window(&doc)) else {
-                            return;
-                        };
-                        if last.replace(now) != now {
-                            sync_soon();
-                        }
-                    }),
-                )
-            });
-            None
-        }
-        (false, true) => poll.take(),
-        _ => None,
-    });
-    drop(dropped);
 }
 
 /// Something scrolled: [`sync`] once the scroll is in the tree.
@@ -76,28 +45,29 @@ pub(super) fn sync_soon() {
 /// Moves each sticky box to where its scroller's edges hold it, and each `fixed`
 /// box onto the window.
 pub(super) fn sync(doc: &mut BaseDocument) {
-    // A box no longer sticky or fixed (a breakpoint changed) is moved back too.
+    // A box no longer sticky or fixed (a breakpoint changed) is moved and sized back too.
     let mut boxes = Vec::new();
     doc.visit(|id, node| {
         let position = node
             .primary_styles()
             .map(|styles| styles.clone_position())
             .filter(|position| matches!(position, Position::Sticky | Position::Fixed));
-        if position.is_some() || written(node).is_some_and(|shift| shift != [0.0; 2]) {
+        let moved = written(node).is_some_and(|shift| shift != [0.0; 2]);
+        if position.is_some() || moved || written_size(node) != [None; 2] {
             boxes.push((id, position));
         }
     });
-    watch_window(doc, boxes.iter().any(|(_, position)| position.is_some()));
+    resize::watch_placed(doc, boxes.iter().any(|(_, position)| position.is_some()));
     // In tree order: a `fixed` box reads the shifts of the boxes it sits in.
     let mut shifts = HashMap::new();
-    let mut changes = Vec::new();
+    let (mut changes, mut resized) = (Vec::new(), Vec::new());
     for (id, position) in boxes {
-        let shift = match position {
-            Some(Position::Sticky) => shift(doc, id),
-            Some(_) => fixed_shift(doc, id, &shifts),
-            None => Some([0.0; 2]),
+        let placed = match position {
+            Some(Position::Sticky) => shift(doc, id).map(|shift| (shift, [None; 2])),
+            Some(_) => fixed(doc, id, &shifts),
+            None => Some(([0.0; 2], [None; 2])),
         };
-        let (Some(shift), Some(node)) = (shift, doc.get_node(id)) else {
+        let (Some((shift, size)), Some(node)) = (placed, doc.get_node(id)) else {
             continue;
         };
         let written = written(node).unwrap_or([0.0; 2]);
@@ -107,8 +77,18 @@ pub(super) fn sync(doc: &mut BaseDocument) {
         if shift != written || lost {
             changes.push((id, shift));
         }
+        let had = written_size(node);
+        let lost = ["width", "height"]
+            .into_iter()
+            .zip(had)
+            .any(|(property, had)| {
+                had.is_some() && resolved_style_value(doc, id, property) == "auto"
+            });
+        if size != had || lost {
+            resized.push((id, had, size));
+        }
     }
-    if changes.is_empty() {
+    if changes.is_empty() && resized.is_empty() {
         return;
     }
     let name = QualName::new(None, ns!(), SHIFT_ATTR.into());
@@ -122,6 +102,33 @@ pub(super) fn sync(doc: &mut BaseDocument) {
             }
         }
     }
+    let name = QualName::new(None, ns!(), SIZE_ATTR.into());
+    for (id, had, size) in resized {
+        for ((property, had), size) in ["width", "height"].into_iter().zip(had).zip(size) {
+            match (had, size) {
+                (_, Some(px)) => mutator.set_style_property(id, property, &format!("{px}px")),
+                // Only an inline size the shim wrote goes.
+                (Some(_), None) => mutator.remove_style_property(id, property),
+                (None, None) => {}
+            }
+        }
+        match size == [None; 2] {
+            true => mutator.clear_attribute(id, name.clone()),
+            false => {
+                let [width, height] = size.map(|px| px.map_or("-".to_owned(), |px| px.to_string()));
+                mutator.set_attribute(id, name.clone(), &format!("{width} {height}"));
+            }
+        }
+    }
+}
+
+/// The inline size last written to `node`, `[None; 2]` if none.
+fn written_size(node: &blitz_dom::Node) -> Size {
+    let Some((width, height)) = attribute(node, SIZE_ATTR).and_then(|size| size.split_once(' '))
+    else {
+        return [None; 2];
+    };
+    [width.parse().ok(), height.parse().ok()]
 }
 
 /// The shift last written to `node`.
@@ -137,20 +144,22 @@ fn attribute<'a>(node: &'a blitz_dom::Node, name: &str) -> Option<&'a str> {
 }
 
 /// How far a `fixed` box has to move to sit at its insets in the window, which
-/// Blitz resolved against the parent box (`absolute`). Not moved inside the
-/// portal outlet (on the viewport already), under a transformed or filtered
-/// ancestor (its containing block, as on the web) or with a transform of its own.
-fn fixed_shift(
+/// Blitz resolved against the parent box (`absolute`), and its size on an axis
+/// with both insets and an `auto` size. Left alone inside the portal outlet (on
+/// the viewport already), under a transformed or filtered ancestor (its
+/// containing block, as on the web) or with a transform of its own.
+fn fixed(
     doc: &BaseDocument,
     id: NodeId,
     shifts: &HashMap<NodeId, [f32; 2]>,
-) -> Option<[f32; 2]> {
+) -> Option<([f32; 2], Size)> {
+    const ALONE: ([f32; 2], Size) = ([0.0; 2], [None; 2]);
     let node = doc.get_node(id)?;
     let styles = node.primary_styles()?;
     let position = styles.get_position();
     let ours = written(node).is_some_and(|shift| shift != [0.0; 2]);
     if !ours && resolved_style_value(doc, id, "transform") != "none" {
-        return Some([0.0; 2]);
+        return Some(ALONE);
     }
     let own = node.final_layout();
     // Its painted place in the document, and how far scrolling moved it.
@@ -158,14 +167,14 @@ fn fixed_shift(
     let mut current = node.layout_parent.get().and_then(|id| doc.get_node(id));
     while let Some(ancestor) = current {
         if attribute(ancestor, PORTAL_ROOT_ATTR).is_some() {
-            return Some([0.0; 2]);
+            return Some(ALONE);
         }
         let shift = shifts.get(&ancestor.id).copied();
         let transformed = ["transform", "filter"]
             .into_iter()
             .any(|property| resolved_style_value(doc, ancestor.id, property) != "none");
         if shift.is_none() && transformed {
-            return Some([0.0; 2]);
+            return Some(ALONE);
         }
         let ([x, y], location) = (shift.unwrap_or([0.0; 2]), ancestor.final_layout().location);
         let offset = ancestor.scroll_offset();
@@ -180,29 +189,44 @@ fn fixed_shift(
         (width as f64 / scale) as f32,
         (height as f64 / scale) as f32,
     ];
-    let margin = own.margin;
+    let (margin, padding, border) = (own.margin, own.padding, own.border);
     let axes = [
         (
             [&position.left, &position.right],
             [margin.left, margin.right],
             own.size.width,
+            padding.left + padding.right + border.left + border.right,
         ),
         (
             [&position.top, &position.bottom],
             [margin.top, margin.bottom],
             own.size.height,
+            padding.top + padding.bottom + border.top + border.bottom,
         ),
     ];
     let rtl = node
         .layout_parent
         .get()
         .is_some_and(|parent| node_is_rtl(doc, parent));
-    let mut shift = [0.0; 2];
-    for (axis, ([start, end], [before, after], size)) in axes.into_iter().enumerate() {
+    let border_box = resolved_style_value(doc, id, "box-sizing") == "border-box";
+    let had = written_size(node);
+    let (mut shift, mut sized) = ([0.0; 2], [None; 2]);
+    for (axis, ([start, end], [before, after], size, edges)) in axes.into_iter().enumerate() {
         let (start, end) = (inset(start), inset(end));
-        // Over-constrained, the containing block's direction picks the edge.
-        let start = start.filter(|_| !(axis == 0 && rtl && end.is_some()));
         let basis = Length::new(window[axis]);
+        let property = ["width", "height"][axis];
+        let auto = had[axis].is_some() || resolved_style_value(doc, id, property) == "auto";
+        // Both insets and no size of its own: it spans the window between them.
+        if let (Some(start), Some(end), true) = (start, end, auto) {
+            let outer = window[axis] - start.resolve(basis).px() - end.resolve(basis).px();
+            let outer = (outer - before - after).max(0.0);
+            sized[axis] = Some(match border_box {
+                true => outer,
+                false => (outer - edges).max(0.0),
+            });
+        }
+        // Over-constrained, the containing block's direction picks the edge.
+        let start = start.filter(|_| sized[axis].is_some() || !(axis == 0 && rtl && end.is_some()));
         let place = at[axis] - scrolled[axis];
         shift[axis] = match (start, end) {
             (Some(start), _) => start.resolve(basis).px() + before - place,
@@ -212,7 +236,7 @@ fn fixed_shift(
         }
         .round();
     }
-    Some(shift)
+    Some((shift, sized))
 }
 
 /// How far the box has to move on each axis, rounded to a pixel: held by its
