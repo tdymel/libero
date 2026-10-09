@@ -150,6 +150,18 @@ const FILL: &str = r#"(() => {
     window.__unfill = () => { IDBObjectStore.prototype.put = real; };
 })()"#;
 
+/// Sets `window.__removed` once a `delete` has committed. A late commit settles the hook
+/// with `None`, which would wipe the error a later refused write reports.
+const WATCH_REMOVE: &str = r#"(() => {
+    const real = IDBObjectStore.prototype.delete;
+    window.__removed = false;
+    IDBObjectStore.prototype.delete = function (...args) {
+        const request = real.apply(this, args);
+        this.transaction.addEventListener('complete', () => { window.__removed = true; });
+        return request;
+    };
+})()"#;
+
 /// A refused write keeps the value for the session and says why; the next good one clears it.
 #[test]
 fn a_full_store_reports_and_keeps_the_value() {
@@ -159,8 +171,12 @@ fn a_full_store_reports_and_keeps_the_value() {
             .unwrap();
         let page = &fixture.page;
         reads(page, "#loaded", "true").await.unwrap();
+        page.evaluate(WATCH_REMOVE).await.unwrap();
         click(page, "#remove").await;
         reads(page, "#stored", "false").await.unwrap();
+        wait::for_js_true(page, "window.__removed === true", "the remove to commit")
+            .await
+            .unwrap();
 
         page.evaluate(FILL).await.unwrap();
         click(page, "#add").await;

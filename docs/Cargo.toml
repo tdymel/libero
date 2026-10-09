@@ -43,6 +43,8 @@ dioxus-native = { git = "https://github.com/DioxusLabs/dioxus", optional = true,
     "file-dialog",
     "woff",
 ] }
+# The `native` build's wgpu adapter line (2789). Already in the graph through wgpu.
+log = { version = "0.4", optional = true }
 
 # `build.rs` writes the icon catalogue from every set's index; host only, not in the wasm.
 [build-dependencies]
@@ -56,7 +58,7 @@ dioxus-ssr = { git = "https://github.com/DioxusLabs/dioxus" }
 [features]
 # Render with Blitz (dioxus-native) in a winit window instead of the browser.
 # Selected by `just start-native`; `dx` needs the matching `--renderer native`.
-native = ["dioxus/native", "libero/native"]
+native = ["dioxus/native", "libero/native", "dep:log"]
 # Full Vello (compute-based) instead of the default `vello-hybrid`. Hybrid
 # keeps every decoded image in one fixed-size GPU atlas and never evicts, so
 # browsing enough docs pages panics it with `AtlasLimitReached`

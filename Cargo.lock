@@ -2477,6 +2477,7 @@ dependencies = [
  "dioxus-native",
  "dioxus-ssr",
  "libero",
+ "log",
  "pictogram",
  "pictogram-core",
  "pictogram-icons-lucide",

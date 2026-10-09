@@ -16,7 +16,8 @@ use crate::{
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
         ALERT_BODY_GAP, ALERT_GAP, ALERT_ICON_SIZE, ALERT_RADIUS, ANCHOR_COLOR, AlertDefaults,
-        AnchorDefaults, Color, CssVar, FOCUS_RING_HALO, NamedColorCss, SURFACE_LABEL, SizeCss,
+        AnchorDefaults, BUTTON_HEIGHT, Color, CssVar, FOCUS_RING_HALO, NamedColorCss,
+        SURFACE_LABEL, SizeCss,
     },
 };
 
@@ -84,7 +85,20 @@ static ALERT_BASE_SX: StaticSx = StaticSx::new(|| {
                 .flex_shrink("0")
                 .align_items("center")
                 .align_self("center")
-                .gap(ALERT_GAP.value()),
+                .gap(ALERT_GAP.value())
+                .max_width("100%")
+                // A sized Button wraps a long label and grows past its step, not clipped.
+                .selector(
+                    "& > *",
+                    sx().white_space("normal")
+                        .overflow_wrap("anywhere")
+                        .per_size(|size| {
+                            sx().height("auto").min_height(format!(
+                                "max({}, calc(1.5em + 2px))",
+                                BUTTON_HEIGHT.value(size)
+                            ))
+                        }),
+                ),
         )
         // On a wrapped row the close button keeps the end edge.
         .selector(

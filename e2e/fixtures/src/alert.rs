@@ -6,10 +6,28 @@ use libero::sx::sx;
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/alert", || rsx! { AlertPage {} })];
+pub const ROUTES: Routes = &[
+    ("/alert", || rsx! { AlertPage {} }),
+    ("/alert/long-action", || rsx! { LongActionPage {} }),
+];
 
 const COLORS: [&str; 4] = ["info", "success", "warning", "error"];
 const VARIANTS: [&str; 5] = ["filled", "tonal", "outlined", "elevated", "standard"];
+
+/// An action label with no break point, wider than the 320px stage (todo 2762).
+#[component]
+fn LongActionPage() -> Element {
+    rsx! {
+        Flex { direction: "column", max_width: "320px",
+            Alert { id: "long-action",
+                actions: rsx! {
+                    Button { size: "sm", "Supercalifragilisticexpialidocious_unbreakable_label" }
+                },
+                "Cancel before then."
+            }
+        }
+    }
+}
 
 #[component]
 fn AlertPage() -> Element {

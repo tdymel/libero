@@ -51,6 +51,41 @@ fn a_long_title_wraps_rather_than_being_cut() {
     });
 }
 
+/// An unbreakable action label wraps inside its Button; the alert's overflow cut it (todo 2762).
+#[test]
+fn an_unbreakable_action_label_wraps_instead_of_clipping() {
+    block_on(async {
+        let fixture = Fixture::open("/alert/long-action", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#long-action").await.unwrap();
+
+        let (alert, button, scroll, client): (f64, f64, f64, f64) = page
+            .evaluate(
+                "(() => { const a = document.querySelector('#long-action'); \
+                 const b = a.querySelector('[data-slot=actions] > *'); \
+                 return [a.getBoundingClientRect().right, b.getBoundingClientRect().right, \
+                         b.scrollWidth, b.clientWidth]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            button <= alert + 0.5,
+            "the button leaves the alert: {button} > {alert}px"
+        );
+        assert!(
+            scroll <= client + 1.0,
+            "the label is cut: {scroll} of {client}px shown"
+        );
+
+        fixture.console.assert_clean("the long action").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// `parts` reaches the inner parts, the instance `sx` wins a tie, a nested
 /// `Alert` is not reached, and a changed part restyles.
 #[test]

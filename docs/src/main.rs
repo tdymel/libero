@@ -28,10 +28,35 @@ fn main() {
     if !cfg!(debug_assertions) {
         let _ = dioxus::logger::init(dioxus::logger::tracing::Level::WARN);
     }
+    #[cfg(feature = "native")]
+    log::set_logger(&WgpuAdapterLog)
+        .map(|()| log::set_max_level(log::LevelFilter::Debug))
+        .ok();
     #[cfg(feature = "native-cpu")]
     dioxus_native::launch(App);
     #[cfg(not(feature = "native-cpu"))]
     dioxus::launch(App);
+}
+
+/// Prints the adapter wgpu picked. The dioxus logger bridges no `log` records, and
+/// wgpu reports it at debug level only (todo 2789).
+#[cfg(feature = "native")]
+struct WgpuAdapterLog;
+
+#[cfg(feature = "native")]
+impl log::Log for WgpuAdapterLog {
+    fn enabled(&self, metadata: &log::Metadata) -> bool {
+        metadata.target() == "wgpu_core::instance"
+    }
+
+    fn log(&self, record: &log::Record) {
+        let line = record.args().to_string();
+        if self.enabled(record.metadata()) && line.starts_with("Request adapter result") {
+            eprintln!("wgpu: {line}");
+        }
+    }
+
+    fn flush(&self) {}
 }
 
 #[derive(Clone, Routable, PartialEq, Debug)]
