@@ -333,6 +333,8 @@ shows Ctrl.
 | `Ctrl+Shift+L` | In a code block: opens its language menu. Choosing or Escape returns to the caret. |
 | `Ctrl+Shift+8` | Bulleted list. |
 | `Ctrl+Shift+7` | Numbered list. |
+| `Ctrl+Shift+9` | Task list: turns the list items at the caret into tasks, or back. Outside a list it starts one. Typing `[ ] ` or `[x] ` at the start of a list item does the same. |
+| `Ctrl+Alt+Enter` | In a task item: checks it, or unchecks it. With a selection, every task in it. |
 | `Ctrl+Shift+B` | Quote. |
 | `Ctrl+Shift+Enter` | Horizontal rule. |
 | `Ctrl+Enter` | In a code block: leaves it for a new paragraph after it. Elsewhere the key passes on, so your own `Ctrl+Enter` still runs, or sends with `onsubmit` and `SubmitOn::ModEnter`. |

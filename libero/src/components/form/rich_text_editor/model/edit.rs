@@ -196,7 +196,7 @@ impl EditorState {
         let parent = self.parent(at.block);
         if block.is_empty() {
             match parent.as_ref().map(|(_, kind, _)| kind) {
-                Some(BlockKind::ListItem) => return self.outdent(),
+                Some(BlockKind::ListItem { .. }) => return self.outdent(),
                 Some(BlockKind::Quote) if self.is_last_child(at.block) => {
                     return self.lift_out_of_quote(at.block);
                 }
@@ -212,11 +212,15 @@ impl EditorState {
         let new = self.doc.leaf(kind, tail);
         let key = new.key;
         match parent {
-            Some((item, BlockKind::ListItem, index)) => {
+            Some((item, BlockKind::ListItem { checked }, index)) => {
                 let item_block = self.doc.get_mut(item).expect("the item");
                 let rest = item_block.children_mut().split_off(index + 1);
                 let children = std::iter::once(new).chain(rest).collect();
-                let new_item = self.doc.container(BlockKind::ListItem, children);
+                // The item after a task is an open task.
+                let kind = BlockKind::ListItem {
+                    checked: checked.map(|_| false),
+                };
+                let new_item = self.doc.container(kind, children);
                 self.insert_after(item, false, new_item);
             }
             _ => self.insert_after(at.block, false, new),
@@ -241,7 +245,7 @@ impl EditorState {
         }
         let is_paragraph = block.kind == BlockKind::Paragraph;
         match self.parent(at.block) {
-            Some((_, BlockKind::ListItem, 0)) => return self.outdent(),
+            Some((_, BlockKind::ListItem { .. }, 0)) => return self.outdent(),
             Some((_, BlockKind::Quote, 0)) => return self.lift_out_of_quote(at.block),
             _ => {}
         }

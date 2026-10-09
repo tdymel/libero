@@ -58,7 +58,7 @@ impl EditorState {
         for block in taken {
             match block.kind {
                 BlockKind::List { .. } => items.extend(block.into_children()),
-                _ => items.push(self.doc.container(BlockKind::ListItem, vec![block])),
+                _ => items.push(self.doc.container(BlockKind::list_item(), vec![block])),
             }
         }
         let kind = match ordered {
@@ -70,10 +70,77 @@ impl EditorState {
         true
     }
 
+    /// Makes the selected list items open tasks, or plain items when all are tasks.
+    /// Outside a list it makes a bullet list of tasks.
+    pub fn toggle_task_list(&mut self) -> bool {
+        if self.selected_items().is_empty() && !self.toggle_list(false) {
+            return false;
+        }
+        let items = self.selected_items();
+        let all_tasks = items.iter().all(|item| self.is_task(*item));
+        for item in items {
+            let block = self.doc.get_mut(item).expect("the item");
+            block.kind = match (all_tasks, &block.kind) {
+                (true, _) => BlockKind::list_item(),
+                (false, BlockKind::ListItem { checked: Some(_) }) => continue,
+                (false, _) => BlockKind::task_item(false),
+            };
+        }
+        true
+    }
+
+    /// Checks the selected task items, or unchecks them when all are checked already.
+    pub fn toggle_task(&mut self) -> bool {
+        let tasks: Vec<NodeKey> = self
+            .selected_items()
+            .into_iter()
+            .filter(|item| self.is_task(*item))
+            .collect();
+        let checked =
+            |state: &Self, item: NodeKey| state.block(item).kind == BlockKind::task_item(true);
+        let check = !tasks.iter().all(|item| checked(self, *item));
+        for item in &tasks {
+            self.doc.get_mut(*item).expect("the item").kind = BlockKind::task_item(check);
+        }
+        !tasks.is_empty()
+    }
+
+    /// Whether the caret sits in a task item, and whether that one is checked.
+    pub fn task_state(&self) -> Option<bool> {
+        let item = self.nearest(self.caret().block, BlockKind::is_list_item)?;
+        match self.block(item).kind {
+            BlockKind::ListItem { checked } => checked,
+            _ => None,
+        }
+    }
+
+    fn is_task(&self, item: NodeKey) -> bool {
+        matches!(
+            self.block(item).kind,
+            BlockKind::ListItem { checked: Some(_) }
+        )
+    }
+
+    /// The innermost list item around each selected leaf, in document order.
+    fn selected_items(&self) -> Vec<NodeKey> {
+        let (from, to) = self.ordered();
+        let leaves = self.doc.leaves();
+        let range = self.leaf_index(from.block)..=self.leaf_index(to.block);
+        let mut items: Vec<NodeKey> = Vec::new();
+        for leaf in &leaves[range] {
+            if let Some(item) = self.nearest(*leaf, BlockKind::is_list_item)
+                && !items.contains(&item)
+            {
+                items.push(item);
+            }
+        }
+        items
+    }
+
     /// Tab in a list item: nests it under the item before it.
     pub fn indent(&mut self) -> bool {
         let at = self.caret().block;
-        let Some(item) = self.nearest(at, |kind| *kind == BlockKind::ListItem) else {
+        let Some(item) = self.nearest(at, BlockKind::is_list_item) else {
             return false;
         };
         let path = self.doc.path(item).expect("the item");
@@ -112,7 +179,7 @@ impl EditorState {
     /// it along as its children. A top-level item leaves the list.
     pub fn outdent(&mut self) -> bool {
         let at = self.caret().block;
-        let Some(item) = self.nearest(at, |kind| *kind == BlockKind::ListItem) else {
+        let Some(item) = self.nearest(at, BlockKind::is_list_item) else {
             return false;
         };
         let changed = self.lift_item(item);
@@ -136,7 +203,7 @@ impl EditorState {
         let mut moved = self.doc.at_mut(&list_path).children_mut().remove(index);
         let outer = self.parent(list_key);
         match outer {
-            Some((outer_item, BlockKind::ListItem, _)) => {
+            Some((outer_item, BlockKind::ListItem { .. }, _)) => {
                 if !trailing.is_empty() {
                     let nested = self.doc.container(list_kind, trailing);
                     moved.children_mut().push(nested);

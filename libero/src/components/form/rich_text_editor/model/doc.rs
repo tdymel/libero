@@ -44,7 +44,11 @@ pub enum BlockKind {
         #[serde(default = "one", skip_serializing_if = "is_one")]
         start: u64,
     },
-    ListItem,
+    /// `checked` is `Some` for a task item; old docs without it load as plain items.
+    ListItem {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        checked: Option<bool>,
+    },
     Rule,
     /// A caller's node, described by its `NodeSpec` in the registry.
     Custom {
@@ -99,10 +103,20 @@ impl BlockKind {
         }
     }
 
+    pub fn list_item() -> Self {
+        Self::ListItem { checked: None }
+    }
+
+    pub fn task_item(checked: bool) -> Self {
+        Self::ListItem {
+            checked: Some(checked),
+        }
+    }
+
     pub fn content(&self) -> ContentKind {
         match self {
             Self::Paragraph | Self::Heading { .. } | Self::CodeBlock { .. } => ContentKind::Inline,
-            Self::Quote | Self::List { .. } | Self::ListItem => ContentKind::Blocks,
+            Self::Quote | Self::List { .. } | Self::ListItem { .. } => ContentKind::Blocks,
             Self::Rule => ContentKind::Atom,
             Self::Custom { content, .. } => match content {
                 CustomContent::Inline => ContentKind::Inline,
@@ -110,6 +124,10 @@ impl BlockKind {
                 CustomContent::Atom => ContentKind::Atom,
             },
         }
+    }
+
+    pub fn is_list_item(&self) -> bool {
+        matches!(self, Self::ListItem { .. })
     }
 
     /// Code holds plain text only: no marks, no inline nodes.
@@ -469,10 +487,10 @@ impl Doc {
             ContentKind::Blocks => {
                 if matches!(block.kind, BlockKind::List { .. }) {
                     for child in block.children_mut() {
-                        if child.kind != BlockKind::ListItem {
+                        if !child.kind.is_list_item() {
                             let inner = std::mem::replace(
                                 child,
-                                self.container(BlockKind::ListItem, Vec::new()),
+                                self.container(BlockKind::list_item(), Vec::new()),
                             );
                             child.children_mut().push(inner);
                         }

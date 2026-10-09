@@ -4,7 +4,9 @@
 use super::doc::{BlockKind, ContentKind, Inline, slice_inlines};
 use super::mark::{Mark, MarkKind};
 use super::state::{EditorState, Position};
-use super::syntax::{BlockSyntax, DELIMITERS, autolink, block_syntax, closing_span, link};
+use super::syntax::{
+    BlockSyntax, DELIMITERS, autolink, block_syntax, closing_span, link, task_box,
+};
 
 impl EditorState {
     /// Applies the shortcut the text just typed completes. Never in code blocks.
@@ -19,7 +21,7 @@ impl EditorState {
         self.block_rule() || self.inline_rule() || self.link_rule() || self.autolink_rule()
     }
 
-    /// A prefix typed at the start of a paragraph, ended by a space.
+    /// A prefix typed at the start of a paragraph (or a task box in a list item), ended by a space.
     fn block_rule(&mut self) -> bool {
         let at = self.caret();
         let block = self.block(at.block);
@@ -30,7 +32,13 @@ impl EditorState {
         let [Inline::Text { text, .. }] = before.as_slice() else {
             return false;
         };
-        let Some(syntax) = text.strip_suffix(' ').and_then(block_syntax) else {
+        let Some(prefix) = text.strip_suffix(' ') else {
+            return false;
+        };
+        if let Some(checked) = task_box(prefix) {
+            return self.task_rule(checked);
+        }
+        let Some(syntax) = block_syntax(prefix) else {
             return false;
         };
         self.delete_range(Position::new(at.block, 0), at);
@@ -50,6 +58,17 @@ impl EditorState {
                 true
             }
         }
+    }
+
+    /// `[ ] ` or `[x] ` at the start of a list item makes it a task item.
+    fn task_rule(&mut self, checked: bool) -> bool {
+        let at = self.caret();
+        let Some((item, BlockKind::ListItem { .. }, 0)) = self.parent(at.block) else {
+            return false;
+        };
+        self.delete_range(Position::new(at.block, 0), at);
+        self.doc.get_mut(item).expect("the item").kind = BlockKind::task_item(checked);
+        true
     }
 
     /// Enter at the end of a paragraph that is a whole fence, "```rust": a code block in

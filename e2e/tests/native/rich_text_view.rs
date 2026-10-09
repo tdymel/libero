@@ -91,6 +91,39 @@ fn a_view_paints_its_code_block_and_list() {
     assert!(heading < list && list < code, "{heading} {list} {code}");
 }
 
+fn tasks() -> Element {
+    rsx! { RichTextView { id: "doc", value: Doc::from_markdown("- [x] done\n- [ ] open") } }
+}
+
+#[test]
+fn a_view_paints_a_box_beside_each_task_filled_when_checked() {
+    let page = mount(tasks);
+    let items = page.query_all("#doc li");
+    assert_eq!(items.len(), 2);
+    let checked: Vec<_> = items
+        .iter()
+        .map(|item| page.attr_of(*item, "data-checked"))
+        .collect();
+    assert_eq!(checked, [Some("true".into()), Some("false".into())]);
+    // Just inside each box's top left corner: the fill of a checked box, the page behind an open one.
+    let corner = |selector: &str| {
+        let (x, y, ..) = page.rect(selector);
+        ((x - 24.0 + 3.0) as u32, (y + 3.2 + 3.0) as u32)
+    };
+    let points = [corner("#doc li:first-child"), corner("#doc li:last-child")];
+    let [done, open] = page.painted_pixels(&points)[..] else {
+        unreachable!("two points")
+    };
+    assert!(
+        done[2] > done[0] + 60,
+        "a checked box is filled blue: {done:?}"
+    );
+    assert!(
+        open.iter().take(3).all(|c| *c > 200),
+        "an open box is empty: {open:?}"
+    );
+}
+
 #[test]
 fn the_editor_shows_its_document_through_the_view() {
     let page = mount(editor);

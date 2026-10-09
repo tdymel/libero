@@ -37,6 +37,9 @@ Start a line with # and a space for a heading, or wrap a word in **two stars**. 
 1. Type three backticks and a language
 2. Press Enter for a code block
 
+- [x] Type [ ] and a space at the start of a list item for a task
+- [ ] Check it with Ctrl+Alt+Enter
+
 > A quote holds its own paragraphs.
 >
 > - and lists
@@ -250,6 +253,8 @@ pub fn RichTextEditorPage() -> Element {
                 .key(["Ctrl+Shift+L"], "In a code block: opens its language menu. Choosing or Escape returns to the caret.")
                 .key(["Ctrl+Shift+8"], "Bulleted list.")
                 .key(["Ctrl+Shift+7"], "Numbered list.")
+                .key(["Ctrl+Shift+9"], "Task list: turns the list items at the caret into tasks, or back. Outside a list it starts one. Typing `[ ] ` or `[x] ` at the start of a list item does the same.")
+                .key(["Ctrl+Alt+Enter"], "In a task item: checks it, or unchecks it. With a selection, every task in it.")
                 .key(["Ctrl+Shift+B"], "Quote.")
                 .key(["Ctrl+Shift+Enter"], "Horizontal rule.")
                 .key(["Ctrl+Enter"], "In a code block: leaves it for a new paragraph after it. Elsewhere the key passes on, so your own `Ctrl+Enter` still runs, or sends with `onsubmit` and `SubmitOn::ModEnter`.")

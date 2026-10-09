@@ -77,6 +77,8 @@ builtins! {
     CodeBlock => "code_block",
     BulletList => "bullet_list",
     OrderedList => "ordered_list",
+    TaskList => "task_list",
+    ToggleTask => "toggle_task",
     Quote => "quote",
     Indent => "indent",
     Outdent => "outdent",
@@ -239,6 +241,8 @@ fn builtin_action(builtin: Builtin) -> Action {
         B::CodeBlock => edit(EditorState::toggle_code_block),
         B::BulletList => edit(|state| state.toggle_list(false)),
         B::OrderedList => edit(|state| state.toggle_list(true)),
+        B::TaskList => edit(EditorState::toggle_task_list),
+        B::ToggleTask => edit(EditorState::toggle_task),
         B::Quote => edit(EditorState::toggle_quote),
         B::Indent => edit(EditorState::indent),
         B::Outdent => edit(EditorState::outdent),
@@ -426,7 +430,7 @@ pub struct Keymap {
 impl Default for Keymap {
     fn default() -> Self {
         use Builtin as B;
-        let defaults: [(&str, Builtin); 33] = [
+        let defaults: [(&str, Builtin); 35] = [
             ("Mod+b", B::Bold),
             ("Mod+i", B::Italic),
             ("Mod+u", B::Underline),
@@ -442,6 +446,8 @@ impl Default for Keymap {
             ("Mod+Alt+c", B::CodeBlock),
             ("Mod+Shift+8", B::BulletList),
             ("Mod+Shift+7", B::OrderedList),
+            ("Mod+Shift+9", B::TaskList),
+            ("Mod+Alt+Enter", B::ToggleTask),
             ("Mod+Shift+b", B::Quote),
             ("Tab", B::Indent),
             ("Shift+Tab", B::Outdent),

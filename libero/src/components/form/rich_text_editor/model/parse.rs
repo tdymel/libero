@@ -1,14 +1,17 @@
 //! The Markdown reader. It reads the editor's own subset, not CommonMark, through the
 //! recognizers the typing shortcuts use ([`super::syntax`]); anything else stays text.
 //!
-//! - Blocks: `#` headings, `-`/`*`/`+` and `1.`/`1)` lists (nested by indent), `>` quotes,
+//! - Blocks: `#` headings, `-`/`*`/`+` and `1.`/`1)` lists (nested by indent, `[ ]`/`[x]`
+//!   task items), `>` quotes,
 //!   `---`/`***`/`___` rules, backtick fences. Any of them ends a paragraph.
 //! - Inline: `` `code` ``, `**bold**`, `*italic*`, `~~strike~~` as typed, `[text](url "title")`,
 //!   `<u>`, `<strong>`, `<em>`, `<s>`, `<code>` tags, backslash escapes and `\`-newline breaks.
 
 use super::doc::{Block, BlockKind, Doc, Inline};
 use super::mark::{Mark, Marks};
-use super::syntax::{BlockSyntax, DELIMITERS, block_syntax, closing_span, link, valid_inner};
+use super::syntax::{
+    BlockSyntax, DELIMITERS, block_syntax, closing_span, link, task_box, valid_inner,
+};
 
 impl Doc {
     pub fn from_markdown(markdown: &str) -> Self {
@@ -112,7 +115,10 @@ fn blocks(doc: &mut Doc, lines: &[&str], per_line: bool) -> Vec<Block> {
                 loop {
                     // Continuation lines are indented past the marker.
                     let width = indent(head.0) + head.0.trim_start().len() - head.1.len();
-                    let mut inner = vec![head.1];
+                    let (word, after) = head.1.split_at_checked(3).unwrap_or((head.1, ""));
+                    let checked =
+                        task_box(word).filter(|_| after.is_empty() || after.starts_with(' '));
+                    let mut inner = vec![if checked.is_some() { after } else { head.1 }];
                     while let Some(next) = lines
                         .get(i)
                         .filter(|next| blank(next) || indent(next) >= width)
@@ -121,7 +127,7 @@ fn blocks(doc: &mut Doc, lines: &[&str], per_line: bool) -> Vec<Block> {
                         i += 1;
                     }
                     let children = blocks(doc, &inner, per_line);
-                    items.push(doc.container(BlockKind::ListItem, children));
+                    items.push(doc.container(BlockKind::ListItem { checked }, children));
                     match lines.get(i).and_then(|l| Some((*l, line_syntax(l)?))) {
                         Some((next, (other, rest))) if same(&other) => {
                             head = (next, rest);

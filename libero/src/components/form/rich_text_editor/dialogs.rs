@@ -99,6 +99,8 @@ pub(crate) fn command_label(name: &CommandName, words: &RichTextEditorLabels) ->
         B::CodeBlock => words.code_block,
         B::BulletList => words.bullet_list,
         B::OrderedList => words.ordered_list,
+        B::TaskList => words.task_list,
+        B::ToggleTask => words.toggle_task,
         B::Quote => words.quote,
         B::Indent => words.indent,
         B::Outdent => words.outdent,
@@ -143,6 +145,8 @@ pub(crate) fn announcement(
         B::Code => state.is_active(MarkKind::Code),
         B::BulletList => state.list_kind() == Some(false),
         B::OrderedList => state.list_kind() == Some(true),
+        B::TaskList => state.task_state().is_some(),
+        B::ToggleTask => state.task_state() == Some(true),
         B::Quote => state.in_quote(),
         B::CodeBlock => state.block_kind().is_code(),
         B::Paragraph

@@ -43,6 +43,15 @@ pub(super) fn block_syntax(prefix: &str) -> Option<BlockSyntax> {
     }
 }
 
+/// A task box at the start of a list item, `[ ]` or `[x]`, without the space that ends it.
+pub(super) fn task_box(prefix: &str) -> Option<bool> {
+    match prefix {
+        "[ ]" => Some(false),
+        "[x]" | "[X]" => Some(true),
+        _ => None,
+    }
+}
+
 /// The span delimiters, code first: a code span shields its inside from the others.
 pub(super) const DELIMITERS: [(&str, Mark); 4] = [
     ("`", Mark::Code),

@@ -65,7 +65,7 @@ impl Writer<'_> {
             BlockKind::CodeBlock { language } => code_block(&block.text(), language),
             BlockKind::Quote => prefix_lines(&self.blocks(block.children()), "> ", ">"),
             BlockKind::List { ordered, start } => self.list(block, *ordered, *start, alternate),
-            BlockKind::ListItem => self.blocks(block.children()),
+            BlockKind::ListItem { .. } => self.blocks(block.children()),
             BlockKind::Rule => "---".to_string(),
             BlockKind::Custom { name, attrs, .. } => {
                 let content = match block.kind.content() {
@@ -103,6 +103,12 @@ impl Writer<'_> {
                 };
                 let content = self.item(item.children());
                 let indent = " ".repeat(marker.len() + 1);
+                let marker = match item.kind {
+                    BlockKind::ListItem {
+                        checked: Some(checked),
+                    } => format!("{marker} [{}]", if checked { 'x' } else { ' ' }),
+                    _ => marker,
+                };
                 match content.is_empty() {
                     true => marker,
                     false => {

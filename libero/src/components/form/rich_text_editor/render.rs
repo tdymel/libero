@@ -28,6 +28,36 @@ pub(crate) fn content_sx(base: Sx) -> Sx {
         .selector("& [data-code='view']", sx().with("contain", "inline-size"))
         // List items hold paragraphs: no paragraph gaps between bullets.
         .selector("& li > p", sx().margin("0"))
+        // A task item's box in the marker gutter: absolute, since the item's first child is a block.
+        .selector(
+            "& li[data-checked]",
+            sx().list_style("none").position("relative"),
+        )
+        .selector(
+            "& li[data-checked]::before",
+            sx().content("''")
+                .position("absolute")
+                .left("-1.5em")
+                .top("0.2em")
+                .width("1em")
+                .height("1em")
+                .box_sizing("border-box")
+                .border(format!(
+                    "1px solid {}",
+                    ColorCss::MUTED.value(ColorShade::S6)
+                ))
+                .border_radius("3px")
+                .font_size("1em")
+                .line_height("1em")
+                .text_align("center"),
+        )
+        .selector(
+            "& li[data-checked='true']::before",
+            sx().content("'✓'")
+                .background("primary")
+                .border_color("primary")
+                .color("primary-contrast"),
+        )
         // Inline code, links and quotes as `Code`, `Anchor` and `Blockquote` draw them.
         .selector(
             "& :not(pre) > code",
@@ -88,7 +118,9 @@ fn block(block: &Block, ctx: RenderCtx<'_>) -> Element {
             ol { start: (*start != 1).then(|| start.to_string()), {blocks(block.children(), ctx)} }
         },
         BlockKind::List { .. } => rsx! { ul { {blocks(block.children(), ctx)} } },
-        BlockKind::ListItem => rsx! { li { {blocks(block.children(), ctx)} } },
+        BlockKind::ListItem { checked } => rsx! {
+            li { "data-checked": checked.map(|checked| checked.to_string()), {blocks(block.children(), ctx)} }
+        },
         BlockKind::Rule => rsx! { hr { "data-key": key, contenteditable: "false" } },
         BlockKind::Custom { name, attrs, .. } => custom(name, attrs, key, &block.content, ctx),
     }
@@ -129,7 +161,7 @@ fn builtin_name(kind: &BlockKind) -> Option<&'static str> {
         BlockKind::Heading { .. } => "heading",
         BlockKind::Quote => "quote",
         BlockKind::List { .. } => "list",
-        BlockKind::ListItem => "list_item",
+        BlockKind::ListItem { .. } => "list_item",
         BlockKind::Rule => "rule",
         BlockKind::CodeBlock { .. } | BlockKind::Custom { .. } => return None,
     })

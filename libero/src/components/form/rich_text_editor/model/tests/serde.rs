@@ -36,6 +36,33 @@ fn json_is_compact_and_has_no_keys() {
 }
 
 #[test]
+fn task_items_store_checked_and_old_items_load_as_plain() {
+    let old = r#"{"blocks":[{"type":"list","ordered":false,"children":[
+        {"type":"list_item","children":[{"type":"paragraph","inlines":[{"type":"text","text":"a"}]}]}
+    ]}]}"#;
+    let doc: Doc = serde_json::from_str(old).unwrap();
+    assert_eq!(doc.blocks[0].children()[0].kind, BlockKind::list_item());
+
+    let doc = Doc::from_markdown("- [ ] a\n- [x] b\n- c");
+    let items: Vec<_> = serde_json::to_value(&doc).unwrap()["blocks"][0]["children"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|item| item["checked"].clone())
+        .collect();
+    assert_eq!(
+        items,
+        [
+            serde_json::json!(false),
+            serde_json::json!(true),
+            serde_json::Value::Null
+        ]
+    );
+    let back: Doc = serde_json::from_str(&serde_json::to_string(&doc).unwrap()).unwrap();
+    assert_eq!(back.rekeyed(), doc.rekeyed());
+}
+
+#[test]
 fn loading_gives_fresh_keys_and_repairs_runs_and_emptiness() {
     let json = r#"{"blocks":[
         {"type":"paragraph","inlines":[{"type":"text","text":"a"},{"type":"text","text":"b"},{"type":"text","text":""}]},
@@ -65,7 +92,7 @@ fn loading_repairs_the_structure() {
     ]}"#;
     let doc: Doc = serde_json::from_str(json).unwrap();
     assert_eq!(doc.blocks[0].kind, BlockKind::heading(6));
-    assert_eq!(doc.blocks[1].children()[0].kind, BlockKind::ListItem);
+    assert_eq!(doc.blocks[1].children()[0].kind, BlockKind::list_item());
     assert_eq!(
         doc.blocks[1].children()[0].children()[0].kind,
         BlockKind::Paragraph

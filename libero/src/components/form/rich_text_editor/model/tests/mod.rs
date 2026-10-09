@@ -7,6 +7,7 @@ mod limit;
 mod links;
 mod markdown;
 mod serde;
+mod tasks;
 
 use super::doc::{Inline, split_inlines};
 use super::{Doc, EditorState, Position, Selection};
