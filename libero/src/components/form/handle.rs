@@ -128,7 +128,8 @@ impl FormHandle {
 
 /// The error summary a failed submit leaves. Fixed lines drop out, a line whose
 /// field is still in error follows its message; none is
-/// added until the next submit, so it is not re-announced.
+/// added until the next submit, so it is not re-announced. After a valid submit, a
+/// field's explicit error rebuilds it once (`Form`, 2573).
 #[derive(Clone)]
 pub(crate) struct Summary {
     /// Outside a signal: the form reads it while rendering and trims it there.

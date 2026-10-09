@@ -243,6 +243,7 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
             id: id.clone(),
             label: props.label.text().map(str::to_string),
             name: None,
+            explicit_error: explicit.is_error(),
             status: explicit,
             owner: current_scope_id(),
         },

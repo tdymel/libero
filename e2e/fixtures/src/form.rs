@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use libero::chrono::NaiveDate;
 use libero::components::{
     Autocomplete, Button, Cascader, CascaderOption, Checkbox, ColorCode, ColorField, DateField,
-    Fields, Fieldset, FileField, Files, Flex, Form, MultiSelect, NativeSelect, NumberField,
+    FieldStatus, Fields, Fieldset, FileField, Files, Flex, Form, MultiSelect, NativeSelect, NumberField,
     Options, PasswordField, PhoneField, PinField, RadioGroup, Rating, Rule, SegmentedControl,
     Select, Slider, SliderChangeEvent, Switch, TagsField, Text, TextField, Textarea, min_length,
     not_empty, use_form,
@@ -19,7 +19,51 @@ pub const ROUTES: Routes = &[
     ("/form/targets", || rsx! { TargetsPage {} }),
     ("/form/required", || rsx! { RequiredPage {} }),
     ("/form/fieldset-disabled", || rsx! { DisabledFieldsetPage {} }),
+    ("/form/server", || rsx! { ServerStatusPage { at_once: false } }),
+    ("/form/server-sync", || rsx! { ServerStatusPage { at_once: true } }),
 ];
+
+/// Todo 2573: a server's status after a valid submit, set in `onsubmit` (`at_once`) or
+/// later by `#answer`, shows the summary; `#code`'s rule, broken after the submit, does not.
+#[component]
+fn ServerStatusPage(at_once: bool) -> Element {
+    let mut name = use_signal(|| "ada".to_string());
+    let mut code = use_signal(|| "abcd".to_string());
+    let mut server = use_signal(|| FieldStatus::Valid);
+    let mut submits = use_signal(|| 0u32);
+    let form = use_form();
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            span { id: "submits", "{submits}" }
+            Form::<()> {
+                form,
+                onsubmit: move |_| {
+                    submits += 1;
+                    server.set(FieldStatus::Valid);
+                    if at_once {
+                        server.set(FieldStatus::Error(format!("Taken, submit {submits}.")));
+                    }
+                },
+                TextField { id: "name", label: "Username", value: name(), oninput: move |text| name.set(text), status: server() }
+                TextField {
+                    id: "code",
+                    label: "Code",
+                    value: code(),
+                    oninput: move |text| code.set(text),
+                    validate: min_length(3).error("At least 3 characters."),
+                }
+                Button { id: "send", r#type: "submit", "Send" }
+            }
+            Button {
+                id: "answer",
+                onclick: move |_| server.set(FieldStatus::Error(format!("Taken, submit {submits}."))),
+                "Answer"
+            }
+            Button { id: "break", onclick: move |_| code.set("a".to_string()), "Break code" }
+            Button { id: "reset", onclick: move |_| form.reset(), "Reset" }
+        }
+    }
+}
 
 /// Todo 2572: `required` alone, no rules, blocks an empty submit; `#fill` fills all three.
 /// Todo 2655: the empty, read-only `#note` never blocks.

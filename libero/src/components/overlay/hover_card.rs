@@ -2,7 +2,10 @@ use std::{cell::Cell, rc::Rc};
 
 use dioxus::{dioxus_core::AttributeValue, prelude::*};
 
-use super::hover_intent::{TRIGGER_WRAPPER_SX, use_hover_intent};
+use super::{
+    hover_intent::{TRIGGER_WRAPPER_SX, use_hover_intent},
+    tooltip::{LONG_PRESS, TOUCH_LINGER},
+};
 use crate::{
     components::{
         accessibility::{focus_first_stop, tab_stops},
@@ -162,6 +165,9 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
 
     // Opens for keyboard focus only, as `Tooltip`: a focus after a press is the pointer's.
     let pressed = use_hook(|| Rc::new(Cell::new(false)));
+    // The last press on the trigger was a touch, until the pointer leaves: as `Tooltip`,
+    // a tap is no hover and a long press opens (2448).
+    let touch = use_hook(|| Rc::new(Cell::new(false)));
 
     // Focus leaving is decided a task later: a `focusin` in between bumps this,
     // meaning focus only moved between trigger and card.
@@ -334,10 +340,18 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
             )
     }));
 
+    let (enter, leave_touch, press_touch) = (touch.clone(), touch.clone(), touch);
+    // Released before the long press: nothing. After: it lingers, then closes.
+    let release = move |event: PointerEvent| {
+        if event.data().pointer_type() == "touch" {
+            hovered.hover(false, TOUCH_LINGER);
+        }
+    };
     wrapper
         .element(&anchor)
+        // A touch's compatibility mouse events are no hover: a tap never opens it.
         .event("onmouseenter", move |_: MouseEvent| {
-            if !disabled {
+            if !enter.get() && !disabled {
                 hovered.hover(true, open_delay)
             }
         })
@@ -347,7 +361,9 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
             let pressed = pressed.clone();
             move |_: MouseEvent| {
                 pressed.set(false);
-                hovered.hover(false, close_delay)
+                if !leave_touch.replace(false) {
+                    hovered.hover(false, close_delay)
+                }
             }
         })
         .render(
@@ -358,8 +374,17 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
                     style: CONTENTS,
                     onpointerdown: {
                         let pressed = pressed.clone();
-                        move |_| pressed.set(true)
+                        move |event: PointerEvent| {
+                            pressed.set(true);
+                            let is_touch = event.data().pointer_type() == "touch";
+                            press_touch.set(is_touch);
+                            if is_touch && !disabled {
+                                hovered.hover(true, LONG_PRESS);
+                            }
+                        }
                     },
+                    onpointerup: release,
+                    onpointercancel: release,
                     onfocusin: focus.focusin(0),
                     onfocusout: focus.focusout(0),
                     onkeydown: move |event| trigger_tab(&event, open && placed, anchor, floating),

@@ -5,7 +5,7 @@ use anyhow::{Result, ensure};
 use chromiumoxide::Page;
 use e2e::browser::Scheme;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, eventually_text};
+use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::passes::{contrast, focus, keyboard, pointer};
 use e2e::{Fixture, Viewport, wait};
 
@@ -423,6 +423,81 @@ e2e::scenario!(
     required_fields_block_an_empty_submit,
     "/form/required",
     required_blocks_an_empty_submit
+);
+
+/// Todo 2573: a status set in `onsubmit` after a valid submit shows the summary and focuses it.
+async fn a_status_in_onsubmit_shows_the_summary<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#send").await?;
+    eventually_text(d, "#submits", "1", "a valid submit").await?;
+    eventually_focused(d, SUMMARY, "the server's status").await?;
+    let summary = d.text(SUMMARY).await?;
+    ensure!(
+        summary.contains("Username: Taken, submit 1."),
+        "no Username line in the summary: {summary}"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_status_set_in_onsubmit_shows_and_focuses_the_summary,
+    "/form/server-sync",
+    a_status_in_onsubmit_shows_the_summary
+);
+
+/// Todo 2573: a status that arrives later shows one summary with the latest text, after two
+/// submits too; a rule broken after the submit shows none. A reset stops the wait.
+async fn a_late_status_shows_the_summary<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#send").await?;
+    eventually_text(d, "#submits", "1", "the first submit").await?;
+    d.click("#send").await?;
+    eventually_text(d, "#submits", "2", "the second submit").await?;
+    d.click("#break").await?;
+    eventually(d, "the broken code's own error", async |d| {
+        Ok(d.attr("#code", "aria-invalid").await?.as_deref() == Some("true"))
+    })
+    .await?;
+    d.settle().await?;
+    ensure!(
+        !d.exists(SUMMARY).await?,
+        "a rule broken after a valid submit showed the summary"
+    );
+    d.click("#answer").await?;
+    eventually_focused(d, SUMMARY, "the late status").await?;
+    let summary = d.text(SUMMARY).await?;
+    ensure!(
+        summary.matches("Username: Taken, submit 2.").count() == 1 && !summary.contains("submit 1"),
+        "not one line with the latest status: {summary}"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_late_status_after_a_valid_submit_shows_and_focuses_the_summary,
+    "/form/server",
+    a_late_status_shows_the_summary
+);
+
+async fn a_reset_stops_the_wait<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#send").await?;
+    eventually_text(d, "#submits", "1", "a valid submit").await?;
+    d.click("#reset").await?;
+    d.click("#answer").await?;
+    eventually(d, "the status under the field", async |d| {
+        Ok(d.attr("#name", "aria-invalid").await?.as_deref() == Some("true"))
+    })
+    .await?;
+    d.settle().await?;
+    ensure!(
+        !d.exists(SUMMARY).await?,
+        "a status after a reset showed the summary"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_status_after_a_reset_shows_no_summary,
+    "/form/server",
+    a_reset_stops_the_wait
 );
 
 /// Todo 2608: a disabled `Fieldset` dims its legend, description and helper to `muted.6`.

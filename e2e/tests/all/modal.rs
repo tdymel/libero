@@ -141,6 +141,59 @@ e2e::scenario!(
     modal_takes_focus
 );
 
+const SHEET: &str = "#sheet";
+
+/// Todo 2559: content that is no `Dialog` takes clicks, its text as its buttons; only
+/// the backdrop closes. The ping lands after a click-through's close would.
+async fn non_dialog_content_takes_clicks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(TRIGGER).await?;
+    eventually(d, "the sheet to open", async |d| d.exists(SHEET).await).await?;
+    d.click("#sheet-text").await?;
+    d.click("#ping").await?;
+    eventually(d, "the ping inside the sheet", async |d| {
+        Ok(d.text("#pings").await? == "1")
+    })
+    .await?;
+    ensure!(d.exists(SHEET).await?, "a click on the sheet closed it");
+    d.click_at(4.0, 4.0).await?;
+    eventually(d, "a backdrop click to close the sheet", async |d| {
+        Ok(!d.exists(SHEET).await?)
+    })
+    .await?;
+    eventually_focused(d, TRIGGER, "closing the sheet").await
+}
+
+e2e::scenario!(
+    content_that_is_no_dialog_takes_clicks,
+    "/modal/paper",
+    non_dialog_content_takes_clicks
+);
+
+/// Todo 2559: with no `Dialog` and nothing focusable, focus lands on the content box, so
+/// Escape reaches the modal and focus goes back to the trigger.
+async fn non_dialog_content_takes_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(TRIGGER).await?;
+    eventually(d, "the sheet to open", async |d| d.exists(SHEET).await).await?;
+    eventually_focused(
+        d,
+        "[data-lsx-scroll-lock] [tabindex='-1']",
+        "opening the sheet",
+    )
+    .await?;
+    d.press(keyboard::ESCAPE).await?;
+    eventually(d, "Escape to close the sheet", async |d| {
+        Ok(!d.exists(SHEET).await?)
+    })
+    .await?;
+    eventually_focused(d, TRIGGER, "closing the sheet").await
+}
+
+e2e::scenario!(
+    content_that_is_no_dialog_takes_focus_on_its_box,
+    "/modal/paper-static",
+    non_dialog_content_takes_focus
+);
+
 const ALERT: &str = "[role=alertdialog]";
 
 /// Todo 2564: an `alertdialog` keeps its role and description and ignores the

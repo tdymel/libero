@@ -224,7 +224,12 @@ pub fn FormPage() -> Element {
                     "The error shows only once the form was submitted, so tabbing through an empty "
                     "form paints nothing; after that it follows the value like any rule. "
                     "The summary keeps the problems of that submit. A line leaves once it is fixed, "
-                    "and new ones wait for the next submit."
+                    "and new ones wait for the next submit. A server's answer is a field's "
+                    Code { source: "status" }
+                    ": an error one set after a valid submit, in "
+                    Code { source: "onsubmit" }
+                    " or once a request returns, shows the summary, which takes focus and is "
+                    "announced, as a blocked submit's would."
                 }
             }
 

@@ -46,6 +46,8 @@ pub(crate) struct FieldEntry {
     /// The field's own status - its explicit `status` and its rules - whether
     /// or not it shows yet. Composite issues are kept apart.
     pub status: FieldStatus,
+    /// The explicit `status` alone is an error: a server's answer, which the summary follows (2573).
+    pub explicit_error: bool,
     /// The field's scope, which a reset re-renders.
     pub owner: ScopeId,
 }
@@ -265,6 +267,14 @@ impl FormScope {
     /// field's status and every composite issue.
     pub fn has_errors_tracked(&self) -> bool {
         errors_in(&self.fields.read(), &self.issues.read())
+    }
+
+    /// Whether a field's explicit `status` is an error, subscribing the caller to every field.
+    pub fn explicit_error_tracked(&self) -> bool {
+        self.fields
+            .read()
+            .values()
+            .any(|field| field.explicit_error)
     }
 
     /// One line per field error, in registration order, then one per

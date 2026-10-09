@@ -191,18 +191,43 @@ async fn pointer_crosses<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     shown(d, CARD, false, "the pointer leaving").await
 }
 
-/// The docs' touch claim: a tap on the trigger opens the card, a tap elsewhere closes it.
-async fn tap_opens_and_tap_elsewhere_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    d.click(TRIGGER).await?;
-    shown(d, CARD, true, "a tap on the trigger").await?;
-    d.click(BEFORE).await?;
-    shown(d, CARD, false, "a tap elsewhere").await
+/// As `Tooltip`: a long press opens the card, the release lets it close; a tap is no
+/// hover, so its compatibility `mouseenter` arms no open (2448).
+async fn long_press_opens<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    ensure!(!d.exists(CARD).await?, "open at rest");
+    d.long_press(TRIGGER, 800).await?;
+    shown(d, CARD, true, "a long press").await?;
+    shown(d, CARD, false, "the release").await?;
+    // Held only now: the long press above needs the real clock (1662).
+    if !d.hold_timers(&[LONG_PRESS_MS, OPEN_MS]).await? {
+        return Ok(());
+    }
+    d.touch_down(TRIGGER).await?;
+    eventually(d, "a held touch to arm the open", async |d| {
+        Ok(d.armed(LONG_PRESS_MS).await? == 1)
+    })
+    .await?;
+    d.touch_up(TRIGGER).await?;
+    eventually(d, "the release to cancel the open", async |d| {
+        Ok(d.armed(LONG_PRESS_MS).await? == 0)
+    })
+    .await?;
+    // Past the tap's compatibility mouse events.
+    d.settle().await?;
+    ensure!(
+        d.armed(OPEN_MS).await? == 0,
+        "a tap armed the hover open delay"
+    );
+    ensure!(!d.exists(CARD).await?, "a tap opened the card");
+    Ok(())
 }
 
 e2e::scenario!(
-    a_tap_opens_the_card_and_a_tap_elsewhere_closes_it,
+    a_long_press_opens_it_on_touch_and_a_tap_does_not,
     "/hover-card",
-    tap_opens_and_tap_elsewhere_closes
+    long_press_opens,
+    native: skip("996: Blitz has no touch input"),
+    desktop: skip("1126: no touch input under Xvfb")
 );
 e2e::scenario!(
     tab_crosses_into_the_portaled_card_and_back_on_every_backend,
@@ -255,6 +280,8 @@ const FIELD: &str = "#card input";
 /// held clock takes these two timers and no other.
 const OPEN_MS: u32 = 707;
 const CLOSE_MS: u32 = 808;
+/// `Tooltip`'s long press, which `HoverCard` shares.
+const LONG_PRESS_MS: u32 = 500;
 /// Well outside the card and the trigger, inside the fixture's padding.
 const AWAY: pointer::Point = pointer::Point { x: 2.0, y: 2.0 };
 

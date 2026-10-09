@@ -184,7 +184,7 @@ pub fn ModalPage() -> Element {
                 props("use_modal", vec![
                     prop("render", "impl FnMut(ModalScope<S, R>) -> Element")
                         .default("required")
-                        .doc("Builds the content, usually a `Dialog`, while the modal is open. Style it there: the `Dialog`'s own `sx` and `parts` reach it in the portal. Returns a `ModalHandle<S, R>`. `R` defaults to `()`, for a modal that answers nothing. Call it under `LiberoProvider`, in a component that outlives every trigger. The modal unmounts with that component, and its opening settles as dismissed."),
+                        .doc("Builds the content, usually a `Dialog`, while the modal is open. Other content, a `Paper` or a plain box, takes clicks the same; only the backdrop around it closes. Style it there: the `Dialog`'s own `sx` and `parts` reach it in the portal. Returns a `ModalHandle<S, R>`. `R` defaults to `()`, for a modal that answers nothing. Call it under `LiberoProvider`, in a component that outlives every trigger. The modal unmounts with that component, and its opening settles as dismissed."),
                 ]).without_base_props(),
                 props("ModalHandle<S, R>", vec![
                     prop("open_with", "fn(impl Into<S>) -> Opening<R>")
@@ -223,8 +223,12 @@ pub fn ModalPage() -> Element {
                     "Android's Back button dismisses the top modal, as Escape does, rather than closing the app.",
                     "When the focused control is removed, focus goes back into the modal, and Tab and Escape keep working.",
                     "A `Dialog` with `role: \"alertdialog\"` ignores a backdrop click, so a stray click is no answer.",
+                    "With nothing focusable inside and no `Dialog`, focus lands on the modal's content box, so Escape still closes it.",
                 ])
-                .must(["Name the `Dialog` with its `title`, or `aria_label`."])
+                .must([
+                    "Name the `Dialog` with its `title`, or `aria_label`.",
+                    "Prefer a `Dialog`: other content has no dialog role or name, so a screen reader is not told a dialog opened.",
+                ])
                 .example("A delete confirmation opened from a button: focus moves into the dialog, Tab stays inside it, and Escape closes it and puts focus back on the button.")
                 .limits([
                     "On Android, a modal opened without a tap (on mount or from a timer) may let Back close the app.",

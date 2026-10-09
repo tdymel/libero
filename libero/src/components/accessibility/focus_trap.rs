@@ -32,6 +32,7 @@ fn focus_first(root: &ElementHandle, tag: Option<&str>) {
             format!("{within} [data-autofocus]"),
             format!("{within} :is({FOCUSABLE_SELECTOR})"),
             format!("{within} [aria-modal=\"true\"]"),
+            format!("{within}[tabindex]"),
         ]);
         return;
     }
@@ -46,9 +47,16 @@ fn focus_first(root: &ElementHandle, tag: Option<&str>) {
             return;
         }
     }
-    // Nothing to focus: the modal dialog itself (APG), not the page behind.
-    if let Ok(target) = root.query_selector("[aria-modal=\"true\"]") {
-        let _ = target.focus();
+    // Nothing to focus: the modal dialog itself (APG), not the page behind; without one, a
+    // trap given a `tabindex` takes focus itself (`Modal`'s content box, 2559).
+    match root.query_selector("[aria-modal=\"true\"]") {
+        Ok(target) => {
+            let _ = target.focus();
+        }
+        Err(_) if root.attribute("tabindex").ok().flatten().is_some() => {
+            let _ = root.focus();
+        }
+        Err(_) => {}
     }
 }
 
@@ -208,6 +216,9 @@ base_props! {
 
 /// Keeps Tab and Shift+Tab cycling inside its children, and focuses the first one on mount.
 /// It has no Escape, and restores focus on unmount only with `restore_focus`.
+///
+/// With nothing focusable inside it focuses an `aria-modal="true"` child, or else
+/// itself when given a `tabindex` and a box (not its default `display: contents`).
 ///
 /// A native radio group is one stop, grouped by `name` only and its checked radio found by
 /// `value`: two forms sharing a radio name, or radios sharing or lacking a `value`, mislead it.

@@ -82,6 +82,7 @@ impl FieldBuilder<'_> {
                         .or_else(|| attribute_text(self.attributes, "aria-label")),
                     name: name.clone(),
                     status: worst(explicit.clone(), rules.clone()),
+                    explicit_error: explicit.is_error(),
                     owner: hook.owner,
                 },
             );

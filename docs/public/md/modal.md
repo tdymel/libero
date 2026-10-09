@@ -135,7 +135,7 @@ pub fn use_modal<S: Clone + 'static, R: Clone + 'static>(
 
 | Argument | Type | Default | Description |
 |---|---|---|---|
-| `render` | `impl FnMut(ModalScope<S, R>) -> Element` | required | Builds the content, usually a `Dialog`, while the modal is open. Style it there: the `Dialog`'s own `sx` and `parts` reach it in the portal. Returns a `ModalHandle<S, R>`. `R` defaults to `()`, for a modal that answers nothing. Call it under `LiberoProvider`, in a component that outlives every trigger. The modal unmounts with that component, and its opening settles as dismissed. |
+| `render` | `impl FnMut(ModalScope<S, R>) -> Element` | required | Builds the content, usually a `Dialog`, while the modal is open. Other content, a `Paper` or a plain box, takes clicks the same; only the backdrop around it closes. Style it there: the `Dialog`'s own `sx` and `parts` reach it in the portal. Returns a `ModalHandle<S, R>`. `R` defaults to `()`, for a modal that answers nothing. Call it under `LiberoProvider`, in a component that outlives every trigger. The modal unmounts with that component, and its opening settles as dismissed. |
 
 ### `ModalHandle<S, R = ()>`
 
@@ -191,10 +191,14 @@ modal.
   answer never runs on it.
 - Android's Back button dismisses the top modal, as Escape does, rather than
   closing the app.
+- With nothing focusable inside and no `Dialog`, focus lands on the modal's
+  content box, so Escape still closes it.
 
 ### You must
 
 - Name the `Dialog` with its `title`, or `aria_label`.
+- Prefer a `Dialog`: other content has no dialog role or name, so a screen
+  reader is not told a dialog opened.
 
 ### Example
 

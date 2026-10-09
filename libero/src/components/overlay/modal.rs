@@ -36,8 +36,9 @@ static MODAL_CONTENT_SX: StaticSx = StaticSx::new(|| {
         .overflow_y("auto")
 });
 
-// Grows with the dialog; its auto margins centre it, and drop to 0 rather than clip the top.
-// No pointer events: only a `Dialog` opts back in, the rest falls through to the hit area.
+// Grows with the content; its auto margins centre it, and drop to 0 rather than clip the top.
+// Only the padding around the content falls through to the hit area: any content takes the
+// pointer, a `Dialog` or not (2559).
 static MODAL_FRAME_SX: StaticSx = StaticSx::new(|| {
     sx().position("relative")
         .isolation("isolate")
@@ -46,10 +47,7 @@ static MODAL_FRAME_SX: StaticSx = StaticSx::new(|| {
         .min_height("100%")
         .padding("md")
         .pointer_events("none")
-        .selector(
-            "& > :is([role='dialog'], [role='alertdialog'])",
-            sx().margin("auto"),
-        )
+        .selector("& > *", sx().margin("auto").pointer_events("auto"))
 });
 
 // The backdrop click target, behind the content: inside the scroller, so the wheel over
@@ -177,7 +175,8 @@ pub(crate) fn Modal(props: ModalProps) -> Element {
             rsx! {
                 {scroll_lock}
                 Overlay { z_index: 0 }
-                FocusTrap { sx: &MODAL_CONTENT_SX,
+                // The `tabindex`: with nothing focusable and no `Dialog`, focus lands here (2559).
+                FocusTrap { sx: &MODAL_CONTENT_SX, tabindex: "-1",
                     div { class: frame_class,
                         div { class: hit_area_class, onclick: move |_| close(Dismiss::Backdrop) }
                         {props.children}

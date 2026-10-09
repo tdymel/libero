@@ -162,12 +162,17 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         .iter()
         .any(|attribute| attribute.name == "action");
     let onsubmit = props.onsubmit;
+    // Set by a valid submit to the reset count then: a server status after it rebuilds the summary.
+    let mut awaiting = use_signal(|| None::<u32>);
     let submit = use_callback(move |event: FormEvent| {
         scope.settle();
         if !handle.validate() {
+            awaiting.set(None);
             event.prevent_default();
             return;
         }
+        // Before `onsubmit`, so a status it sets at once counts too.
+        awaiting.set(Some(scope.resets()));
         if !posts {
             event.prevent_default();
         }
@@ -194,6 +199,22 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
     use_effect(move || {
         if focus_requests() > 0 {
             let _ = summary_element.focus();
+        }
+    });
+    // A field's explicit error after a valid submit shows the summary once, as a blocked
+    // submit would; a rule error from editing does not (2573). A reset gives up waiting.
+    use_effect({
+        let summary = summary.clone();
+        move || {
+            let Some(at) = awaiting() else {
+                return;
+            };
+            if scope.resets() != at {
+                awaiting.set(None);
+            } else if scope.explicit_error_tracked() {
+                awaiting.set(None);
+                summary.set(scope.summary());
+            }
         }
     });
 

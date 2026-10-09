@@ -165,6 +165,68 @@ fn a_click_reaches_a_button_in_a_modal() {
     assert_eq!(page.text("#clicks"), "1", "{}", page.tree());
 }
 
+/// Todo 2559: content that is no dialog takes clicks and sits centred; the backdrop still closes.
+#[test]
+fn content_that_is_no_dialog_takes_clicks_and_is_centred() {
+    fn sheet() -> Element {
+        let mut clicks = use_signal(|| 0);
+        let sheet = use_modal(move |_: ModalScope<()>| {
+            rsx! {
+                div { id: "sheet", width: "200px", height: "100px",
+                    button { id: "inside", onclick: move |_| clicks += 1, "Inside" }
+                }
+            }
+        });
+        rsx! {
+            Button { id: "open", onclick: move |_| { sheet.open(); }, "Open" }
+            span { id: "clicks", "{clicks}" }
+        }
+    }
+    let mut page = mount(sheet);
+    page.click("#open");
+    assert!(page.exists("#sheet"), "not opened:\n{}", page.tree());
+    let (x, y, width, height) = page.rect("#sheet");
+    let (vw, vh) = (f64::from(VIEWPORT.0), f64::from(VIEWPORT.1));
+    assert!(
+        (x + width / 2.0 - vw / 2.0).abs() <= 1.0 && (y + height / 2.0 - vh / 2.0).abs() <= 1.0,
+        "sheet at ({x}, {y}) {width}x{height}"
+    );
+    assert!(
+        page.hits("#inside"),
+        "no hit on the button:\n{}",
+        page.tree()
+    );
+    page.click("#inside");
+    assert_eq!(page.text("#clicks"), "1", "{}", page.tree());
+    assert!(page.exists("#sheet"), "a click inside closed it");
+    page.click_at(4.0, 4.0);
+    page.wait(std::time::Duration::from_millis(50));
+    assert!(!page.exists("#sheet"), "the backdrop did not close it");
+}
+
+/// Todo 2559: with no dialog and nothing focusable, focus lands on the content box.
+#[test]
+fn content_that_is_no_dialog_takes_focus_on_its_box() {
+    fn notice() -> Element {
+        let notice =
+            use_modal(|_: ModalScope<()>| rsx! { div { id: "sheet", "Nothing to focus." } });
+        rsx! {
+            Button { id: "open", onclick: move |_| { notice.open(); }, "Open" }
+        }
+    }
+    let mut page = mount(notice);
+    page.click("#open");
+    page.wait(std::time::Duration::from_millis(50));
+    assert!(
+        page.is_focused("[data-lsx-scroll-lock] [tabindex='-1']"),
+        "focus is not on the content box:\n{}",
+        page.tree()
+    );
+    page.press(Key::Escape);
+    page.wait(std::time::Duration::from_millis(50));
+    assert!(!page.exists("#sheet"), "Escape did not close it");
+}
+
 fn menu_under_header() -> Element {
     let menu = use_menu();
     let mut picked = use_signal(|| "none");

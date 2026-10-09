@@ -2,7 +2,7 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Dialog, Flex, Menu, MenuItem, Text, use_menu},
+    components::{Button, Dialog, Flex, Menu, MenuItem, Paper, Text, use_menu},
     context::Dismiss,
     hooks::{ModalScope, use_modal},
 };
@@ -20,7 +20,57 @@ pub const ROUTES: Routes = &[
     ("/modal/scrollbar", || rsx! { ScrollbarModalPage {} }),
     ("/modal/owner", || rsx! { OwnerModalPage {} }),
     ("/modal/guarded", || rsx! { GuardedModalPage {} }),
+    ("/modal/paper", || rsx! { PaperModalPage {} }),
+    ("/modal/paper-static", || rsx! { StaticPaperModalPage {} }),
 ];
+
+/// Content that is no `Dialog` takes the pointer; only the backdrop closes (2559).
+#[component]
+fn PaperModalPage() -> Element {
+    let mut pings = use_signal(|| 0_u32);
+    let sheet = use_modal(move |s: ModalScope<()>| {
+        rsx! {
+            Paper { id: "sheet",
+                Text { id: "sheet-text", "A sheet that is not a dialog." }
+                Button { id: "ping", variant: "text", onclick: move |_| pings += 1, "Ping" }
+                Button { id: "done", onclick: move |_| s.close(), "Done" }
+            }
+        }
+    });
+
+    rsx! {
+        Button {
+            id: "open-modal",
+            onclick: move |_| {
+                sheet.open();
+            },
+            "Open sheet"
+        }
+        div { id: "pings", "{pings}" }
+    }
+}
+
+/// No `Dialog` and nothing to focus: focus lands on the modal's content box (2559).
+#[component]
+fn StaticPaperModalPage() -> Element {
+    let notice = use_modal(|_: ModalScope<()>| {
+        rsx! {
+            Paper { id: "sheet",
+                Text { "Nothing here takes focus." }
+            }
+        }
+    });
+
+    rsx! {
+        Button {
+            id: "open-modal",
+            onclick: move |_| {
+                notice.open();
+            },
+            "Open notice"
+        }
+    }
+}
 
 /// An `alertdialog` ignores the backdrop (2564); a draft refuses every dismissal (2563).
 #[component]
