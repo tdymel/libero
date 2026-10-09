@@ -1,5 +1,5 @@
 # Builds the docs app once per platform (1219), dev profile, and runs the e2e suites on macOS
-# (2776). Informational: not part of the required `ci` check.
+# (2776) and Windows (2781). Informational: not part of the required `ci` check.
 name: Platforms
 
 # On by default since the repo is public (standard runners are free there, macOS and Windows too).
@@ -184,6 +184,71 @@ jobs:
           path: probe
           if-no-files-found: ignore
           retention-days: 3
+
+  # The e2e suites on Windows (2781), informational. The runner ends process trees with
+  # `taskkill` there; `shell: bash` is Git for Windows' bash.
+  windows-native:
+    runs-on: windows-2025
+    timeout-minutes: 120
+    steps:
+      # Before the checkout: LF files as on Linux (`include_str!`, snapshots), no MAX_PATH limit.
+      - run: |
+          git config --global core.autocrlf false
+          git config --global core.longpaths true
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: platforms-windows-native
+      # Both test binaries in one cargo run, as ci.yml's `native` job; no xvfb on Windows.
+      - run: cargo test -p e2e --features native --test native --test all --no-run
+      - run: cargo test -p e2e --features native --test native
+      - if: success() || failure()
+        run: cargo test -p e2e --features native --test all -- ::native
+
+  # The browser tier on Windows: the e2e runner, dx and pinned Chrome, as ci.yml's `e2e` job.
+  windows-web:
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ["1", "2"]
+    runs-on: windows-2025
+    timeout-minutes: 120
+    env:
+      SHARDS: 2
+    steps:
+      - run: |
+          git config --global core.autocrlf false
+          git config --global core.longpaths true
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          targets: wasm32-unknown-unknown
+          cache-key: platforms-windows-web
+      - uses: ./.github/actions/dx
+      # The same pin as ci.yml's `e2e` job: the AX snapshots follow Chrome's tree.
+      - id: chrome
+        uses: browser-actions/setup-chrome@v2
+        with:
+          chrome-version: 152.0.7977.82
+      # `chrome.exe --version` prints nothing on Windows; the file version says it.
+      - run: powershell -NoProfile -Command "(Get-Item '${{ steps.chrome.outputs.chrome-path }}').VersionInfo.ProductVersion"
+      - run: |
+          # Python writes CRLF on Windows; a `\r` would end up in the last filter.
+          units=$(python .github/scripts/shard.py units ${{ matrix.shard }} "$SHARDS" | tr -d '\r')
+          echo "units: $units"
+          # shellcheck disable=SC2086
+          cargo run -p e2e -- $units
+        env:
+          CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          # The runner's artifacts go to `temp_dir()`, which is `%TMP%` on Windows.
+          TMP: ${{ runner.temp }}
+          TEMP: ${{ runner.temp }}
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-e2e-artifacts-${{ matrix.shard }}
+          path: ${{ runner.temp }}/e2e-artifacts
+          if-no-files-found: ignore
 
   android:
     runs-on: ubuntu-24.04

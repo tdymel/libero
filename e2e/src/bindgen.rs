@@ -4,7 +4,6 @@
 use std::ffi::OsString;
 use std::hash::Hasher;
 use std::io::Read;
-use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Instant;
@@ -12,6 +11,7 @@ use std::time::Instant;
 use anyhow::{Context, Result};
 
 use crate::dx::locked_version;
+use crate::process::pid_alive;
 
 /// The name dx runs: the runner acts as the cache when started under it.
 pub(crate) const NAME: &str = "wasm-bindgen";
@@ -33,6 +33,10 @@ pub(crate) fn is_wrapper() -> bool {
 /// Gives `dx` a home whose locked bindgen is the cache, and returns the file the cache
 /// reports to. None when dx has not installed that bindgen yet: dx then downloads it as before.
 pub(crate) fn wrap(dx: &mut Command, root: &Path, target_dir: &Path) -> Result<Option<PathBuf>> {
+    // Windows: a symlink needs developer mode, and dx's tool is `wasm-bindgen.exe`.
+    if cfg!(not(unix)) {
+        return Ok(None);
+    }
     let tool = format!("{NAME}-{}", locked_version(root, NAME)?);
     let real_home = dx_home();
     let real = real_home.join("tools").join(&tool).join(NAME);
@@ -50,7 +54,7 @@ pub(crate) fn wrap(dx: &mut Command, root: &Path, target_dir: &Path) -> Result<O
     let exe = std::env::current_exe().context("locate the runner's executable")?;
     let link = ours.join(format!(".{NAME}-{}", std::process::id()));
     let _ = std::fs::remove_file(&link);
-    std::os::unix::fs::symlink(&exe, &link).context("link the bindgen cache")?;
+    symlink(&exe, &link).context("link the bindgen cache")?;
     std::fs::rename(&link, ours.join(NAME)).context("link the bindgen cache")?;
 
     let report = dir.join(format!("report-{}", std::process::id()));
@@ -69,8 +73,33 @@ fn link_entries(from: &Path, to: &Path, except: &str) {
     };
     for entry in entries.flatten() {
         if entry.file_name() != except {
-            let _ = std::os::unix::fs::symlink(entry.path(), to.join(entry.file_name()));
+            let _ = symlink(&entry.path(), &to.join(entry.file_name()));
         }
+    }
+}
+
+#[cfg(unix)]
+fn symlink(original: &Path, link: &Path) -> std::io::Result<()> {
+    std::os::unix::fs::symlink(original, link)
+}
+
+#[cfg(not(unix))]
+fn symlink(_: &Path, _: &Path) -> std::io::Result<()> {
+    Err(std::io::ErrorKind::Unsupported.into())
+}
+
+/// Replaces this process with `command`; returns only on failure.
+#[cfg(unix)]
+fn exec(command: &mut Command) -> anyhow::Error {
+    std::os::unix::process::CommandExt::exec(command).into()
+}
+
+/// No `exec` here: runs `command` and exits with its code.
+#[cfg(not(unix))]
+fn exec(command: &mut Command) -> anyhow::Error {
+    match command.status() {
+        Ok(status) => std::process::exit(status.code().unwrap_or(1)),
+        Err(error) => error.into(),
     }
 }
 
@@ -100,12 +129,12 @@ pub(crate) fn run() -> Result<()> {
         (std::env::var_os(CACHE_ENV), out_dir, args.last())
     else {
         // `--version` and anything else that writes nothing.
-        return Err(Command::new(&real).args(&args).exec().into());
+        return Err(exec(Command::new(&real).args(&args)));
     };
     let cache = PathBuf::from(cache);
     if let Err(error) = std::fs::create_dir_all(&cache) {
         eprintln!("wasm-bindgen cache: {error}; running the real one uncached");
-        return Err(Command::new(&real).args(&args).exec().into());
+        return Err(exec(Command::new(&real).args(&args)));
     }
     let started = Instant::now();
     let entry = cache.join(key(&real, &args, Path::new(input))?);
@@ -209,7 +238,7 @@ fn prune(cache: &Path) {
                 return true;
             };
             // A killed runner's copy: nothing else removes it.
-            if !Path::new("/proc").join(pid).exists() {
+            if !pid.parse().is_ok_and(pid_alive) {
                 let _ = std::fs::remove_dir_all(entry.path());
             }
             false

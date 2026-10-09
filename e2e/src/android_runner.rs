@@ -1,7 +1,6 @@
 //! `cargo run -p e2e -- android [filter]` (964): the scenarios' `android` arm
 //! against the fixtures APK in an emulator of its own, booted headless.
 
-use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
@@ -12,7 +11,7 @@ use super::{
     dx::{dx, workspace_root},
     http::free_port,
     own_target_dir,
-    process::{Guard, stop},
+    process::{Guard, OwnGroup, stop},
 };
 
 const PACKAGE: &str = "dev.libero.fixtures";
@@ -316,7 +315,7 @@ fn run_unit(
         .env("E2E_ANDROID_CDP", format!("127.0.0.1:{port}"))
         .env("E2E_ANDROID_SERIAL", serial)
         .env("E2E_ARTIFACTS", artifacts)
-        .process_group(0)
+        .own_group()
         .spawn()
         .context("run the tests")?;
     guard.tell(&format!("group {}", tests.id()));
@@ -461,7 +460,7 @@ fn boot_emulator(sdk: &Path, artifacts: &Path, port: u16) -> Result<Child> {
         .env("ANDROID_SDK_ROOT", sdk)
         .stdout(Stdio::from(log.try_clone()?))
         .stderr(Stdio::from(log))
-        .process_group(0)
+        .own_group()
         .spawn()
         .context("start the emulator")
 }

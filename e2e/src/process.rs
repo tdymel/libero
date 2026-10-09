@@ -1,7 +1,8 @@
 //! Runner processes: the guard, the server's process group, and processes found by command line.
+//! Unix signals process groups; Windows ends process trees with `taskkill` (todo 2781).
 
 use std::io::{BufRead, Write};
-use std::os::unix::process::CommandExt;
+#[cfg(unix)]
 use std::path::Path;
 use std::process::{Child, ChildStdin, Command, Stdio};
 use std::time::{Duration, Instant};
@@ -12,6 +13,7 @@ use anyhow::{Context, Result};
 pub(crate) const GUARD_ENV: &str = "E2E_GUARD";
 
 /// `pid ppid state cmdline`; a ppid of 1 means it outlived its run.
+#[cfg(unix)]
 pub(crate) fn describe_pid(pid: u32) -> String {
     match std::fs::read_to_string(format!("/proc/{pid}/stat")) {
         Ok(stat) => {
@@ -29,7 +31,17 @@ pub(crate) fn describe_pid(pid: u32) -> String {
     }
 }
 
+/// `pid ppid ? cmdline`: Windows has no process state to show.
+#[cfg(windows)]
+pub(crate) fn describe_pid(pid: u32) -> String {
+    match windows::processes(Some(pid)).into_iter().next() {
+        Some((pid, ppid, cmdline)) => format!("{pid} {ppid} ? {}", cmdline.trim()),
+        None => format!("{pid} ? ? (gone)"),
+    }
+}
+
 /// Where there is no `/proc`: the same four fields from `ps`.
+#[cfg(unix)]
 fn describe_with_ps(pid: u32) -> String {
     let listing = Command::new("ps")
         .args(["-o", "pid=,ppid=,state=,command=", "-p", &pid.to_string()])
@@ -58,7 +70,7 @@ impl Guard {
             .stdout(Stdio::null())
             // Out of the runner's group, so a Ctrl-C or a group kill that
             // takes the runner leaves the guard to clean up after it.
-            .process_group(0)
+            .own_group()
             .spawn()
             .context("start the guard")?;
         let pipe = child.stdin.take();
@@ -91,7 +103,7 @@ fn guard_from(input: impl BufRead) -> Result<()> {
     for line in input.lines() {
         let Ok(line) = line else { break };
         match line.split_once(' ') {
-            Some(("group", pgid)) => groups.extend(pgid.parse::<i32>().ok()),
+            Some(("group", pgid)) => groups.extend(pgid.parse::<u32>().ok()),
             Some(("profile", path)) => profiles.push(path.to_string()),
             _ if line == "done" => return Ok(()),
             _ => {}
@@ -108,19 +120,20 @@ fn guard_from(input: impl BufRead) -> Result<()> {
     };
     say("the runner died without cleaning up; stopping what it started");
     for &group in &groups {
-        unsafe { libc_kill(-group, 15) };
+        signal_group(group, Signal::Term);
     }
-    let alive = |groups: &[i32]| groups.iter().any(|&g| unsafe { libc_kill(-g, 0) } == 0);
-    wait_until(Duration::from_secs(5), || !alive(&groups));
+    wait_until(Duration::from_secs(5), || {
+        !groups.iter().any(|&group| group_alive(group))
+    });
     for &group in &groups {
-        unsafe { libc_kill(-group, 9) };
+        signal_group(group, Signal::Kill);
     }
     for profile in &profiles {
         kill_by_cmdline(profile);
         wait_until(Duration::from_secs(10), || count_by_cmdline(profile) == 0);
         // A frozen Chromium ignores SIGTERM (todo 364).
         for pid in pids_by_cmdline(profile) {
-            unsafe { libc_kill(pid as i32, 9) };
+            signal_pid(pid, Signal::Kill);
         }
         wait_until(Duration::from_secs(5), || count_by_cmdline(profile) == 0);
         let left = count_by_cmdline(profile);
@@ -153,8 +166,8 @@ pub(crate) fn wait_until(within: Duration, mut done: impl FnMut() -> bool) -> bo
 
 /// Terminates the server's whole process group, cargo and rustc included.
 pub(crate) fn stop(server: &mut Child) {
-    let pid = server.id() as i32;
-    unsafe { libc_kill(-pid, 15) };
+    let pid = server.id();
+    signal_group(pid, Signal::Term);
 
     // Grace period, so dx and cargo leave no half-written target dir.
     if wait_until(Duration::from_secs(5), || {
@@ -163,7 +176,7 @@ pub(crate) fn stop(server: &mut Child) {
         return;
     }
 
-    unsafe { libc_kill(-pid, 9) };
+    signal_group(pid, Signal::Kill);
     let _ = server.kill();
     let _ = server.wait();
 }
@@ -171,10 +184,8 @@ pub(crate) fn stop(server: &mut Child) {
 /// SIGTERMs every process whose command line contains `needle`. Scans the process
 /// table: `pkill -f` also kills the shell carrying the pattern (exit 144).
 pub(crate) fn kill_by_cmdline(needle: &str) -> usize {
-    each_matching_pid(needle, |pid| unsafe {
-        // SIGTERM, so Chrome flushes and removes its own lock file.
-        libc_kill(pid as i32, 15);
-    })
+    // SIGTERM, so Chrome flushes and removes its own lock file.
+    each_matching_pid(needle, |pid| signal_pid(pid, Signal::Term))
 }
 
 /// How many processes still match, for waiting on a kill to take effect.
@@ -201,6 +212,7 @@ fn each_matching_pid(needle: &str, mut act: impl FnMut(u32)) -> usize {
 }
 
 /// Every process's pid and command line: `/proc` where there is one, else `ps`.
+#[cfg(unix)]
 fn processes() -> Vec<(u32, String)> {
     if Path::new("/proc/self").exists() {
         proc_processes()
@@ -209,6 +221,15 @@ fn processes() -> Vec<(u32, String)> {
     }
 }
 
+#[cfg(windows)]
+fn processes() -> Vec<(u32, String)> {
+    windows::processes(None)
+        .into_iter()
+        .map(|(pid, _, cmdline)| (pid, cmdline))
+        .collect()
+}
+
+#[cfg(unix)]
 fn proc_processes() -> Vec<(u32, String)> {
     let Ok(entries) = std::fs::read_dir("/proc") else {
         return Vec::new();
@@ -224,6 +245,7 @@ fn proc_processes() -> Vec<(u32, String)> {
 }
 
 /// macOS and the BSDs have no `/proc`; `-ww` keeps long command lines whole.
+#[cfg(unix)]
 fn ps_processes() -> Vec<(u32, String)> {
     Command::new("ps")
         .args(["-axww", "-o", "pid=,command="])
@@ -233,6 +255,7 @@ fn ps_processes() -> Vec<(u32, String)> {
 }
 
 /// `  123 /usr/bin/x --flag`, one process per line.
+#[cfg_attr(windows, allow(dead_code))]
 fn parse_ps(listing: &str) -> Vec<(u32, String)> {
     listing
         .lines()
@@ -243,9 +266,138 @@ fn parse_ps(listing: &str) -> Vec<(u32, String)> {
         .collect()
 }
 
+/// Spawns into a process group of its own, so [`stop`] and the guard end its children too.
+pub(crate) trait OwnGroup {
+    fn own_group(&mut self) -> &mut Self;
+}
+
+impl OwnGroup for Command {
+    #[cfg(unix)]
+    fn own_group(&mut self) -> &mut Self {
+        std::os::unix::process::CommandExt::process_group(self, 0)
+    }
+
+    /// `CREATE_NEW_PROCESS_GROUP`: the console's Ctrl-C does not reach it; `taskkill /T`
+    /// follows the parent links, so the group needs no other bookkeeping.
+    #[cfg(windows)]
+    fn own_group(&mut self) -> &mut Self {
+        std::os::windows::process::CommandExt::creation_flags(self, 0x0000_0200)
+    }
+}
+
+#[derive(Clone, Copy)]
+pub(crate) enum Signal {
+    Term,
+    Kill,
+}
+
+#[cfg(unix)]
+impl Signal {
+    fn number(self) -> i32 {
+        match self {
+            Signal::Term => 15,
+            Signal::Kill => 9,
+        }
+    }
+}
+
+/// Signals the process group `pgid` leads.
+#[cfg(unix)]
+pub(crate) fn signal_group(pgid: u32, signal: Signal) {
+    unsafe { libc_kill(-(pgid as i32), signal.number()) };
+}
+
+#[cfg(unix)]
+pub(crate) fn group_alive(pgid: u32) -> bool {
+    unsafe { libc_kill(-(pgid as i32), 0) == 0 }
+}
+
+#[cfg(unix)]
+pub(crate) fn signal_pid(pid: u32, signal: Signal) {
+    unsafe { libc_kill(pid as i32, signal.number()) };
+}
+
+#[cfg(unix)]
+pub(crate) fn pid_alive(pid: u32) -> bool {
+    unsafe { libc_kill(pid as i32, 0) == 0 }
+}
+
+#[cfg(unix)]
 unsafe extern "C" {
     #[link_name = "kill"]
-    pub(crate) fn libc_kill(pid: i32, sig: i32) -> i32;
+    fn libc_kill(pid: i32, sig: i32) -> i32;
+}
+
+/// A console process has no SIGTERM to catch, so both signals end the tree at once.
+#[cfg(windows)]
+pub(crate) fn signal_group(root: u32, _: Signal) {
+    windows::taskkill(root, true);
+}
+
+/// The tree's root: `taskkill /T` ends its descendants with it.
+#[cfg(windows)]
+pub(crate) fn group_alive(root: u32) -> bool {
+    pid_alive(root)
+}
+
+#[cfg(windows)]
+pub(crate) fn signal_pid(pid: u32, _: Signal) {
+    windows::taskkill(pid, false);
+}
+
+#[cfg(windows)]
+pub(crate) fn pid_alive(pid: u32) -> bool {
+    Command::new("tasklist")
+        .args(["/FI", &format!("PID eq {pid}"), "/NH", "/FO", "CSV"])
+        .output()
+        .is_ok_and(|output| String::from_utf8_lossy(&output.stdout).contains(&format!("\"{pid}\"")))
+}
+
+#[cfg(windows)]
+mod windows {
+    use std::process::{Command, Stdio};
+
+    /// `/F` always: a windowless process ignores the polite close `taskkill` sends otherwise.
+    pub(super) fn taskkill(pid: u32, tree: bool) {
+        let _ = Command::new("taskkill")
+            .args(["/PID", &pid.to_string(), "/F"])
+            .args(tree.then_some("/T"))
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+    }
+
+    /// `(pid, ppid, cmdline)` from CIM, of one process or all; `wmic` is gone on Server 2025.
+    pub(super) fn processes(pid: Option<u32>) -> Vec<(u32, u32, String)> {
+        let filter = pid
+            .map(|pid| format!(" -Filter 'ProcessId={pid}'"))
+            .unwrap_or_default();
+        // `[Console]::Out`, not the pipeline: PowerShell wraps pipeline text at the console width.
+        let script = format!(
+            "Get-CimInstance Win32_Process{filter} | ForEach-Object {{ \
+             [Console]::Out.WriteLine([string]$_.ProcessId + ' ' + $_.ParentProcessId + ' ' + $_.CommandLine) }}"
+        );
+        Command::new("powershell")
+            .args(["-NoProfile", "-NonInteractive", "-Command", &script])
+            .stderr(Stdio::null())
+            .output()
+            .map(|output| super::parse_cim(&String::from_utf8_lossy(&output.stdout)))
+            .unwrap_or_default()
+    }
+}
+
+/// `pid ppid cmdline` per line, as the CIM query writes it; a system process has no command line.
+#[cfg_attr(unix, allow(dead_code))]
+fn parse_cim(listing: &str) -> Vec<(u32, u32, String)> {
+    listing
+        .lines()
+        .filter_map(|line| {
+            let mut fields = line.splitn(3, ' ');
+            let pid = fields.next()?.trim().parse().ok()?;
+            let ppid = fields.next()?.parse().ok()?;
+            Some((pid, ppid, fields.next().unwrap_or("").trim().to_string()))
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -253,6 +405,7 @@ mod tests {
     use super::*;
 
     /// A shell blocked on its stdin with `tag` on its command line; `tag` is unique per test.
+    #[cfg(unix)]
     fn tagged(tag: &str) -> Child {
         Command::new("sh")
             .args(["-c", "read line", tag])
@@ -261,6 +414,7 @@ mod tests {
             .unwrap()
     }
 
+    #[cfg(unix)]
     fn needle(test: &str) -> String {
         format!("e2e-process-test-{test}-{}", std::process::id())
     }
@@ -278,6 +432,23 @@ mod tests {
     }
 
     #[test]
+    fn cim_lines_split_into_pid_parent_and_command() {
+        let listing = "4 0 \r\n812 640 C:\\chrome.exe --user-data-dir=C:\\t\\p\r\n\r\nx 1 y\r\n";
+        assert_eq!(
+            parse_cim(listing),
+            vec![
+                (4, 0, String::new()),
+                (
+                    812,
+                    640,
+                    "C:\\chrome.exe --user-data-dir=C:\\t\\p".to_string()
+                ),
+            ]
+        );
+    }
+
+    #[test]
+    #[cfg(unix)]
     fn a_tagged_process_is_found_and_ended_by_its_command_line() {
         let tag = needle("find");
         let mut child = tagged(&tag);
@@ -292,6 +463,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn a_process_is_described_with_its_parent_state_and_command() {
         let tag = needle("describe");
         let mut child = tagged(&tag);
@@ -309,18 +481,17 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn stop_ends_the_whole_group() {
         let mut server = Command::new("sh")
             .args(["-c", "sleep 60 & wait"])
-            .process_group(0)
+            .own_group()
             .spawn()
             .unwrap();
-        let group = server.id() as i32;
+        let group = server.id();
         stop(&mut server);
         assert!(matches!(server.try_wait(), Ok(Some(_))));
-        assert!(wait_until(Duration::from_secs(5), || unsafe {
-            libc_kill(-group, 0) != 0
-        }));
+        assert!(wait_until(Duration::from_secs(5), || !group_alive(group)));
     }
 
     #[test]
@@ -338,11 +509,12 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn a_guard_whose_runner_died_stops_its_group_and_browser() {
         let tag = needle("guard");
         let mut group = Command::new("sh")
             .args(["-c", "sleep 60 & wait", &tag])
-            .process_group(0)
+            .own_group()
             .spawn()
             .unwrap();
         let profile = std::env::temp_dir().join(&tag);

@@ -153,8 +153,14 @@ pub(crate) fn chrome_profile() -> std::path::PathBuf {
 
 /// Chrome a bare `cargo test` launched: the browser is a never-dropped static and no runner
 /// reaps it, so it outlived the run with its profile (todo 2119).
+#[cfg(unix)]
 static BARE_CHROMES: std::sync::Mutex<Vec<i32>> = std::sync::Mutex::new(Vec::new());
 
+/// Unix only: the Windows CI runs set `E2E_CHROME_PROFILE` through the runner, which reaps.
+#[cfg(not(unix))]
+fn end_at_exit(_pid: u32) {}
+
+#[cfg(unix)]
 fn end_at_exit(pid: u32) {
     static REGISTER: std::sync::Once = std::sync::Once::new();
     REGISTER.call_once(|| unsafe {
@@ -167,6 +173,7 @@ fn end_at_exit(pid: u32) {
 }
 
 /// SIGTERM, so Chrome takes its children down and lets go of the profile; SIGKILL after 5 s.
+#[cfg(unix)]
 extern "C" fn end_bare_chromes() {
     let mut pids = std::mem::take(
         &mut *BARE_CHROMES
@@ -191,6 +198,7 @@ extern "C" fn end_bare_chromes() {
     let _ = std::fs::remove_dir_all(chrome_profile());
 }
 
+#[cfg(unix)]
 unsafe extern "C" {
     fn atexit(callback: extern "C" fn()) -> i32;
     fn kill(pid: i32, sig: i32) -> i32;

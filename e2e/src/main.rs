@@ -3,7 +3,6 @@
 
 use std::ffi::OsStr;
 use std::io::{BufRead, BufReader, Write};
-use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, ExitStatus, Stdio};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -21,8 +20,8 @@ mod units;
 use dx::{dx, workspace_root};
 use http::{free_port, wait_for_app, wait_for_log_line};
 use process::{
-    GUARD_ENV, Guard, count_by_cmdline, describe_pid, guard, kill_by_cmdline, libc_kill,
-    pids_by_cmdline, stop, wait_until,
+    GUARD_ENV, Guard, OwnGroup, Signal, count_by_cmdline, describe_pid, guard, kill_by_cmdline,
+    pids_by_cmdline, signal_pid, stop, wait_until,
 };
 
 /// The fixture app's `<title>` (`e2e/fixtures/Dioxus.toml`): dx's build splash cannot fake it.
@@ -157,7 +156,7 @@ fn run(target: &Target, passthrough: Vec<String>) -> Result<()> {
         ))
         .stderr(Stdio::from(log_handle))
         // Own process group, so a kill also takes its cargo and rustc children.
-        .process_group(0)
+        .own_group()
         .spawn()
         .context("start dx run")?;
     guard.tell(&format!("group {}", server.id()));
@@ -308,7 +307,7 @@ fn spawn_prebuild(root: &Path, test: &str, target_dir: &Path) -> Result<Child> {
         .arg(target_dir)
         .stdout(Stdio::null())
         .stderr(Stdio::null())
-        .process_group(0)
+        .own_group()
         .spawn()
         .context("prebuild the tests")
 }
@@ -377,7 +376,7 @@ fn run_suite(
         .stdout(Stdio::piped())
         // Its own group, so the guard can stop it and the Chrome it launched
         // without signalling whatever group the runner was started in.
-        .process_group(0)
+        .own_group()
         .spawn()
         .context("run the tests")?;
     guard.tell(&format!("group {}", tests.id()));
@@ -442,7 +441,7 @@ fn reap_browser(session: &Session, red: bool) -> Vec<u32> {
     let mut survivors = pids_by_cmdline(&needle);
     if !survivors.is_empty() {
         for &pid in &survivors {
-            unsafe { libc_kill(pid as i32, 9) };
+            signal_pid(pid, Signal::Kill);
         }
         wait_until(Duration::from_secs(5), || count_by_cmdline(&needle) == 0);
         survivors = pids_by_cmdline(&needle);

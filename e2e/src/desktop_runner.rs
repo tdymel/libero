@@ -1,13 +1,12 @@
 //! `cargo run -p e2e -- desktop [filter]` (1126): the scenarios' `desktop` arm
 //! against the fixture app in wry's WebView, all under one Xvfb display.
 
-use std::os::unix::process::CommandExt;
 use std::process::{Command, Stdio};
 
 use anyhow::{Context, Result, bail};
 
 use super::android_runner::list_arm;
-use super::{Guard, own_target_dir, workspace_root};
+use super::{Guard, OwnGroup, own_target_dir, workspace_root};
 
 /// `--ignored` runs only the `desktop: skip` scenarios, e.g. to see 1051 still red.
 pub fn run(mut filters: Vec<String>) -> Result<()> {
@@ -78,7 +77,7 @@ pub fn run(mut filters: Vec<String>) -> Result<()> {
         .env("E2E_DESKTOP_APP", target_dir.join("debug/e2e-fixtures"))
         .env("E2E_ARTIFACTS", &artifacts)
         .stdin(Stdio::null())
-        .process_group(0)
+        .own_group()
         .spawn()
         .context("run the tests under xvfb-run")?;
     guard.tell(&format!("group {}", tests.id()));
