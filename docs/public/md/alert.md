@@ -54,6 +54,28 @@ fn Demo() -> Element {
 # #[component] fn WarningGlyph() -> Element { rsx! {} }
 ```
 
+With `actions`, buttons sit beside the message, before the close button. A
+`standard` `Button` in `currentColor` reads on every variant:
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Alert, Button};
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        Alert {
+            color: "warning",
+            title: "Card expiring",
+            actions: rsx! {
+                Button { variant: "standard", color: "currentColor", size: "xs", "Update card" }
+            },
+            "Your card ends 09/26. Update it before the next invoice."
+        }
+    }
+}
+```
+
 ## Props
 
 | Prop | Type | Default | Description |
@@ -63,6 +85,7 @@ fn Demo() -> Element {
 | `color` | `ThemeAwareValue` | `info` | The tint. A theme color name or any CSS color. `error` and `warning` make the role `alert`, the rest `status`. |
 | `variant` | `Variant` | `tonal` | Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. |
 | `radius` | `ThemeAwareValue` | `md` | Corner radius, a size step from `xs` to `xxl`, or any CSS, e.g. `radius: "0"`. |
+| `actions` | `Option<Element>` | - | Buttons or links beside the message, before the close button. Give each a label that says what it does: `Button { variant: "standard", color: "currentColor", size: "xs" }` reads on every variant. |
 | `onclose` | `EventHandler<()>` | - | Shows the close button and fires when it is pressed. Unmount the alert to close it. |
 | `close_label` | `String` | `common.close` | The close button's accessible name. Unset, the localization's `common.close`, "Close" in English. |
 | `parts` | `Parts<AlertPart>` | - | Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(AlertPart::Title, sx().font_weight("700"))`. |
@@ -83,6 +106,7 @@ explains how parts work.
 | `AlertPart::Body` | `body` | The column holding the title and the message. |
 | `AlertPart::Title` | `title` | The title. |
 | `AlertPart::Message` | `message` | The message. |
+| `AlertPart::Actions` | `actions` | The row holding `actions`. |
 | `AlertPart::Close` | `close` | The close button. |
 
 ## Accessibility
@@ -93,9 +117,12 @@ explains how parts work.
   screen reader. Every other color renders the polite `role="status"`. Your
   own `role` replaces either.
 - The icon is hidden from screen readers.
+- `actions` come after the message and before the close button in `Tab` order.
 
 ### You must
 
+- Name each action by what it does, such as "Update card": the alert takes no
+  focus, so a reader finds the button by `Tab`.
 - Say the severity in the title or the message too, as the icon is not read.
 - Prefer `tonal` or `filled` for an error: `outlined` has no tint.
 - Move the focus somewhere sensible in `onclose`: closing removes the focused

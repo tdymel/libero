@@ -4,7 +4,8 @@ use dioxus::prelude::*;
 use libero::{
     components::{
         Button, Flex, Input, NotificationData, NotificationLive, NotificationOptions,
-        NotificationScope, Notifications, Paper, Text, use_notifications, use_notifications_with,
+        NotificationScope, Notifications, Paper, SnackbarData, Text, snackbar, use_notifications,
+        use_notifications_with,
     },
     theme::{AutoClose, Placement},
 };
@@ -26,7 +27,41 @@ pub const ROUTES: Routes = &[
         "/notifications-two-hosts",
         || rsx! { NotificationsTwoHostsPage {} },
     ),
+    (
+        "/notifications-snackbar",
+        || rsx! { NotificationsSnackbarPage {} },
+    ),
 ];
+
+/// A snackbar whose Undo counts its presses in `#undone`. It stays until closed.
+#[component]
+fn NotificationsSnackbarPage() -> Element {
+    let snacks = use_notifications_with(snackbar);
+    // Owned by the root: the handler runs in the notification's scope, not this page's.
+    let mut undone = use_hook(|| Signal::new_in_scope(0u32, ScopeId::ROOT));
+
+    rsx! {
+        Notifications {}
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button {
+                id: "notify",
+                onclick: move |_| {
+                    snacks
+                        .show_with(
+                            SnackbarData::new("Message archived.")
+                                .action("Undo", move || undone += 1),
+                            NotificationOptions {
+                                auto_close: Some(AutoClose::Never),
+                                ..Default::default()
+                            },
+                        );
+                },
+                "Archive"
+            }
+            Text { id: "undone", "{undone}" }
+        }
+    }
+}
 
 /// `#notify` and `#notify-assertive` pin `auto_close` off, so nothing vanishes while measured.
 /// `#notify-timed` closes after [`TIMED_AUTO_CLOSE_MS`]; the test fires that timer by hand.

@@ -12,6 +12,8 @@ use libero::{
 
 const TITLE: &str = "Card expiring";
 const MESSAGE: &str = "Your card ends 09/26. Update it before the next invoice.";
+const ACTION_CODE: &str =
+    "Button { variant: \"standard\", color: \"currentColor\", size: \"xs\", \"Update card\" }";
 
 #[component]
 pub fn AlertPage() -> Element {
@@ -40,6 +42,8 @@ pub fn AlertPage() -> Element {
                 prop("radius", "ThemeAwareValue")
                     .default(theme.alert.radius.as_str())
                     .doc("Corner radius, a size step from `xs` to `xxl`, or any CSS, e.g. `radius: \"0\"`."),
+                prop("actions", "Option<Element>")
+                    .doc("Buttons or links beside the message, before the close button. Give each a label that says what it does: `Button { variant: \"standard\", color: \"currentColor\", size: \"xs\" }` reads on every variant."),
                 prop("onclose", "EventHandler<()>")
                     .doc("Shows the close button and fires when it is pressed. Unmount the alert to close it."),
                 prop("close_label", "String")
@@ -56,14 +60,17 @@ pub fn AlertPage() -> Element {
                 (AlertPart::Body, "The column holding the title and the message."),
                 (AlertPart::Title, "The title."),
                 (AlertPart::Message, "The message."),
+                (AlertPart::Actions, "The row holding `actions`."),
                 (AlertPart::Close, "The close button."),
             ])],
             accessibility: a11y()
                 .handles([
                     "An `error` or `warning` color renders `role=\"alert\"`, which interrupts a screen reader. Every other color renders the polite `role=\"status\"`. Your own `role` replaces either.",
                     "The icon is hidden from screen readers.",
+                    "`actions` come after the message and before the close button in `Tab` order.",
                 ])
                 .must([
+                    "Name each action by what it does, such as \"Update card\": the alert takes no focus, so a reader finds the button by `Tab`.",
                     "Say the severity in the title or the message too, as the icon is not read.",
                     "Prefer `tonal` or `filled` for an error: `outlined` has no tint.",
                     "Move the focus somewhere sensible in `onclose`: closing removes the focused close button.",
@@ -109,6 +116,12 @@ pub fn AlertPage() -> Element {
                             _ => vec![],
                         }
                     }),
+                    Control::switch("actions").default("true").code(|_, values| {
+                        match values.str("actions").as_str() {
+                            "true" => vec![format!("actions: rsx! {{ {ACTION_CODE} }}")],
+                            _ => vec![],
+                        }
+                    }),
                     // A closure is not a value a control can hold, so this
                     // prints the honest minimum.
                     Control::switch("onclose").code(|_, values| {
@@ -133,6 +146,14 @@ pub fn AlertPage() -> Element {
                                 radius: values.str("radius"),
                                 title: (values.str("title") == "true").then(|| TITLE.to_string()),
                                 icon: (values.str("icon") == "true").then(|| rsx! { Pictogram { icon: lucide::check::outlined } }),
+                                actions: (values.str("actions") == "true").then(|| rsx! {
+                                    Button {
+                                        variant: "standard",
+                                        color: "currentColor",
+                                        size: "xs",
+                                        "Update card"
+                                    }
+                                }),
                                 onclose: (values.str("onclose") == "true")
                                     .then(|| EventHandler::new(move |_| {
                                         shown.set(false);

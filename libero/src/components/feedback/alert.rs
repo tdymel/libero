@@ -15,8 +15,8 @@ use crate::{
     hooks::{use_localization, use_root_id, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
-        ALERT_BODY_GAP, ALERT_ICON_SIZE, ALERT_RADIUS, ANCHOR_COLOR, AlertDefaults, AnchorDefaults,
-        Color, CssVar, FOCUS_RING_HALO, NamedColorCss, SURFACE_LABEL, SizeCss,
+        ALERT_BODY_GAP, ALERT_GAP, ALERT_ICON_SIZE, ALERT_RADIUS, ANCHOR_COLOR, AlertDefaults,
+        AnchorDefaults, Color, CssVar, FOCUS_RING_HALO, NamedColorCss, SURFACE_LABEL, SizeCss,
     },
 };
 
@@ -74,6 +74,14 @@ static ALERT_BASE_SX: StaticSx = StaticSx::new(|| {
                 .min_width("0")
                 // Wraps, never an ellipsis: cut text is unreadable (WCAG 1.4.10).
                 .with("overflow-wrap", "anywhere"),
+        )
+        .selector(
+            AlertPart::Actions.selector(),
+            sx().display("flex")
+                .flex_shrink("0")
+                .align_items("center")
+                .align_self("center")
+                .gap(ALERT_GAP.value()),
         )
         .selector(AlertPart::Title.selector(), sx().font_weight("600"));
 
@@ -155,6 +163,8 @@ parts_enum! {
         Body = "body" => "& > [data-slot='body']",
         Title = "title" => "& > [data-slot='body'] > [data-slot='title']",
         Message = "message" => "& > [data-slot='body'] > [data-slot='message']",
+        /// The `actions` row, between the body and the close button.
+        Actions = "actions" => "& > [data-slot='actions']",
         /// The close button, when `onclose` is set.
         Close = "close" => "& > [data-slot='close']",
     }
@@ -178,6 +188,9 @@ base_props! {
         /// A size step from `xs` to `xxl`, or any CSS, as `radius: "0"`.
         #[props(default, into)]
         radius: Input<ThemeAwareValue>,
+        /// Buttons or links beside the message, before the close button.
+        #[props(default)]
+        actions: Option<Element>,
         /// Set, shows the close button. The caller unmounts the alert and moves focus.
         #[props(default)]
         onclose: Option<EventHandler<()>>,
@@ -243,6 +256,7 @@ pub fn Alert(props: AlertProps) -> Element {
 
     let onclose = props.onclose;
     let icon = props.icon.clone();
+    let actions = props.actions.clone();
     let title = props.title.clone();
     let children = rsx! {
         if let Some(icon) = icon {
@@ -255,6 +269,9 @@ pub fn Alert(props: AlertProps) -> Element {
             if let Some(message) = message {
                 div { "data-slot": AlertPart::Message.slot(), id: "{id}-body", {message} }
             }
+        }
+        if let Some(actions) = actions {
+            div { "data-slot": AlertPart::Actions.slot(), {actions} }
         }
         if let Some(onclose) = onclose {
             ActionIcon {
@@ -306,6 +323,7 @@ mod tests {
                 ("body", "& > [data-slot='body']"),
                 ("title", "& > [data-slot='body'] > [data-slot='title']"),
                 ("message", "& > [data-slot='body'] > [data-slot='message']"),
+                ("actions", "& > [data-slot='actions']"),
                 ("close", "& > [data-slot='close']"),
             ]
         );

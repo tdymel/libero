@@ -1,7 +1,7 @@
 # Notifications
 
 Crate: `libero`
-Import: `use libero::components::{Notifications, NotificationData, NotificationOptions, use_notifications};`
+Import: `use libero::components::{Notifications, NotificationData, NotificationOptions, SnackbarData, snackbar, use_notifications};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/feedback/notifications/notifications.rs>
 Index: [index.md](index.md) lists every other page
 Description: A hook plus a host: render `Notifications {}` once, and `use_notifications()` shows messages from anywhere, as an `Alert` or your own template over your data.
@@ -107,11 +107,53 @@ let id = uploads.show_with(
 uploads.update(id, Upload { file: "archive.zip", percent: 40.0 });
 ```
 
+## Snackbar
+
+`snackbar` is a ready made template: a message and at most one action, such as
+Undo. Pressing the action runs your handler, then closes the snackbar. Show it
+with `AutoClose::Never`, as a keyboard reader needs `F8` to reach the action.
+The handler runs in the notification's scope, not the component's, so it
+writes state that outlives the component: a signal from a context provided
+near the root, not a `use_signal` of the component.
+
+```rust
+use dioxus::prelude::*;
+use libero::{
+    components::{Button, NotificationOptions, SnackbarData, snackbar, use_notifications_with},
+    theme::AutoClose,
+};
+
+#[component]
+fn ArchiveButton() -> Element {
+    let snacks = use_notifications_with(snackbar);
+    // Provided near the root with `use_context_provider(|| Signal::new(true))`.
+    let mut archived = use_context::<Signal<bool>>();
+
+    rsx! {
+        Button {
+            onclick: move |_| {
+                archived.set(true);
+                snacks.show_with(
+                    SnackbarData::new("Message archived.")
+                        .action("Undo", move || archived.set(false)),
+                    NotificationOptions {
+                        auto_close: Some(AutoClose::Never),
+                        ..Default::default()
+                    },
+                );
+            },
+            "Archive"
+        }
+    }
+}
+```
+
 ## Your own data
 
 `use_notifications_with` takes your own data type and a template to draw it.
 The template is a `fn`, not a capturing closure, so everything it draws travels
-in the data. `update(id, data)` redraws one notification in place.
+in the data. `update(id, data)` redraws one notification in place. `snackbar`
+is such a template, ready made.
 
 ## Stacks and timers
 
@@ -164,6 +206,19 @@ pub fn use_notifications_with<T: 'static>(
 | `icon` | `Option<Element>` | An icon. The host draws it later, so it must not carry event handlers. |
 
 `From<&str>` and `From<String>` fill `message`.
+
+### `SnackbarData`
+
+The data of the `snackbar` template.
+
+| Field | Type | Description |
+|---|---|---|
+| `message` | `String` | The text. Empty draws none. |
+| `action` | `Option<SnackbarAction>` | One button, such as Undo. Pressing it runs the handler, then closes the snackbar. |
+
+`SnackbarData::new(message).action(label, handler)` builds both. `From<&str>`
+and `From<String>` fill `message`. The handler is an `FnMut()`, kept in an
+`Rc`, so it may outlive the component that showed the snackbar.
 
 ### `NotificationOptions`
 

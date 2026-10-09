@@ -432,6 +432,66 @@ fn closing_one_hands_focus_on_and_back_out_of_an_empty_stack() {
     });
 }
 
+/// The snackbar's action sits before its close button in Tab order, takes no focus on showing,
+/// and pressing it runs the handler once and closes the snackbar, focus back on the trigger.
+#[test]
+fn the_snackbar_action_is_tabbable_runs_its_handler_and_closes_it() {
+    const ACTION: &str = "[aria-live] li [data-slot=actions] button";
+
+    block_on(async {
+        e2e::browser::at_every_viewport(async |viewport| {
+            let at = viewport.name();
+            let fixture = Fixture::open("/notifications-snackbar", viewport)
+                .await
+                .unwrap();
+            let page = &fixture.page;
+            e2e::clock::hold(page, &[EXIT_MS]).await.unwrap();
+
+            keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            wait::for_visible(page, ACTION).await.unwrap();
+            e2e::passes::focus::assert_focused(page, TRIGGER, "showing a snackbar")
+                .await
+                .unwrap_or_else(|e| panic!("at {at}: {e}"));
+
+            keyboard::press(page, keyboard::TAB).await.unwrap();
+            e2e::passes::focus::assert_focused(page, ACTION, "Tab from the trigger")
+                .await
+                .unwrap_or_else(|e| panic!("at {at}: {e}"));
+            keyboard::press(page, keyboard::TAB).await.unwrap();
+            e2e::passes::focus::assert_focused(page, CLOSE, "Tab past the action")
+                .await
+                .unwrap_or_else(|e| panic!("at {at}: {e}"));
+            keyboard::press_shift(page, keyboard::TAB).await.unwrap();
+
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            e2e::clock::until_armed(page, EXIT_MS, 1, "the snackbar to start leaving")
+                .await
+                .unwrap();
+            e2e::clock::fire(page, EXIT_MS).await.unwrap();
+            wait::for_js_true(
+                page,
+                "!document.querySelector('[aria-live] li')",
+                "the snackbar to be removed",
+            )
+            .await
+            .unwrap_or_else(|e| panic!("at {at}: {e}"));
+            let undone: String = js(page, "document.querySelector('#undone').textContent").await;
+            assert_eq!(undone, "1", "at {at}: Undo ran {undone} times");
+            e2e::passes::focus::assert_focused(page, TRIGGER, "the snackbar closing")
+                .await
+                .unwrap_or_else(|e| panic!("at {at}: {e}"));
+
+            fixture
+                .console
+                .assert_clean(&format!("the snackbar action at {at}"))
+                .unwrap();
+            fixture.close().await.unwrap();
+        })
+        .await;
+    });
+}
+
 /// A `placement` change leaves a shown notification in its stack, announced once; only a
 /// new one goes to the new stack (577).
 #[test]

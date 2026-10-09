@@ -8,7 +8,8 @@ use dioxus::prelude::*;
 use libero::{
     components::{
         Box, Button, Code, Flex, Input, NotificationData, NotificationLive, NotificationOptions,
-        Notifications, Text, Variant, use_notifications, use_notifications_with,
+        Notifications, SnackbarData, Text, Variant, snackbar, use_notifications,
+        use_notifications_with,
     },
     platform::{TimerSubscription, timer},
     sx::sx,
@@ -41,11 +42,11 @@ fn auto_close_of(value: &str) -> AutoClose {
     value.parse().map_or(AutoClose::Never, AutoClose::After)
 }
 
-/// Whether `closable: false` still leaves a way to close it: the card's actions close it, an
-/// alert that never closes on its own has nothing else. The upload draws its own Dismiss.
+/// Whether `closable: false` still leaves a way to close it: the card's and the snackbar's actions
+/// close it, an alert that never closes on its own has nothing else. The upload draws its own Dismiss.
 fn closable_shown(values: &DemoValues) -> bool {
     match values.str("template").as_str() {
-        "card" => true,
+        "card" | "snackbar" => true,
         "alert" => values.str("auto_close") != "never",
         _ => false,
     }
@@ -112,12 +113,13 @@ fn wrap_demo(values: &DemoValues, _: &str) -> String {
 
     // The handle and its data.
     let hook = match template.as_str() {
+        "snackbar" => "use_notifications_with(snackbar)",
         "card" => "use_notifications_with(card_notification)",
         "upload" => "use_notifications_with(upload_notification)",
         _ => "use_notifications()",
     };
     let mut fields = Vec::new();
-    if values.str("title") == "true" && template != "card" {
+    if values.str("title") == "true" && template == "alert" {
         fields.push("title: Some(\"Saved\".into())".to_string());
     }
     if template == "alert" {
@@ -130,7 +132,10 @@ fn wrap_demo(values: &DemoValues, _: &str) -> String {
             fields.push(format!("variant: {variant:?}.into()"));
         }
     }
-    let data = if upload {
+    let data = if template == "snackbar" {
+        "SnackbarData::new(\"Message archived.\").action(\"Undo\", || { /* restore it */ })"
+            .to_string()
+    } else if upload {
         "Upload { file: \"archive.zip\", percent: 0.0 }".to_string()
     } else if template == "card" {
         let title = match values.str("title") == "true" {
@@ -160,6 +165,9 @@ fn wrap_demo(values: &DemoValues, _: &str) -> String {
     }
     if upload {
         options.push("// A progress notification waits for its own end.".to_string());
+        options.push("auto_close: Some(AutoClose::Never)".to_string());
+    } else if template == "snackbar" {
+        options.push("// Undo is an action: it waits for the reader.".to_string());
         options.push("auto_close: Some(AutoClose::Never)".to_string());
     } else if template == "card" {
         options.push("// Reply and Mute are actions: it waits for the reader.".to_string());
@@ -252,6 +260,10 @@ pub fn NotificationsPage() -> Element {
                     prop("closable", "bool").default("true").doc("Whether the template draws a close button. Off, keep a timer or an action that closes it: Escape does not, and `F8` only focuses it."),
                     prop("live", "NotificationLive").default("Polite").doc("`Polite` or `Assertive`, how it is announced."),
                 ]),
+                props("SnackbarData", vec![
+                    prop("message", "String").doc("The text. Empty draws none."),
+                    prop("action", "Option<SnackbarAction>").doc("One button, such as Undo. Pressing it runs the handler, then closes the snackbar. `SnackbarData::new(message).action(label, handler)` builds both."),
+                ]),
                 props("NotificationHandle", vec![
                     prop("show(args)", "NotificationId").doc("Shows one with the host's options."),
                     prop("show_with(args, options)", "NotificationId").doc("Shows one with its own options."),
@@ -325,9 +337,9 @@ pub fn NotificationsPage() -> Element {
                         .hidden_when(|values| values.str("template") != "alert"),
                     // The default template is an `Alert`; your own draws none,
                     // so both of its controls go with it.
-                    Control::toggle("template", ["alert", "card", "upload"])
-                        .labels(["Alert", "Card", "Upload"])
-                        .default("alert"),
+                    Control::toggle("template", ["snackbar", "alert", "card", "upload"])
+                        .labels(["Snackbar", "Alert", "Card", "Upload"])
+                        .default("snackbar"),
                     Control::toggle(
                         "variant",
                         ["filled", "tonal", "elevated", "outlined", "standard"],
@@ -341,7 +353,9 @@ pub fn NotificationsPage() -> Element {
                     Control::toggle("live", ["polite", "assertive"])
                         .labels(["Polite", "Assertive"])
                         .default("polite"),
-                    Control::switch("title").hidden_when(|values| values.str("template") == "upload"),
+                    Control::switch("title").hidden_when(|values| {
+                        !matches!(values.str("template").as_str(), "alert" | "card")
+                    }),
                     // Off with `Never`, an alert could not be closed at all.
                     Control::switch("closable")
                         .default("true")
@@ -391,7 +405,15 @@ pub fn NotificationsPage() -> Element {
                     Code { source: "fn" }
                     ", not a capturing closure, so everything it draws travels in the data. "
                     Code { source: "update(id, data)" }
-                    " redraws one notification in place."
+                    " redraws one notification in place. "
+                    Code { source: "snackbar" }
+                    " is such a template, ready made: "
+                    Code { source: "use_notifications_with(snackbar)" }
+                    " shows a message with one action, such as Undo. Show it with "
+                    Code { source: "AutoClose::Never" }
+                    ", as a keyboard reader needs "
+                    Code { source: "F8" }
+                    " to reach the action."
                 }
             }
 

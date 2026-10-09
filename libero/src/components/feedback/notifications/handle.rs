@@ -14,7 +14,7 @@ use crate::{
 };
 
 /// Floats over the page, so it takes back the shadow `Alert` drops.
-static DEFAULT_TEMPLATE_SX: StaticSx =
+pub(super) static DEFAULT_TEMPLATE_SX: StaticSx =
     StaticSx::new(|| sx().box_shadow(SizeCss::SHADOW.value(Size::Md)));
 
 /// A template's view of the notification it draws.

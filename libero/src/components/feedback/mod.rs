@@ -10,8 +10,8 @@ pub use alert::{Alert, AlertPart, AlertProps};
 pub use loader::{Loader, LoaderProps, LoaderVariant};
 pub use notifications::{
     NotificationData, NotificationHandle, NotificationId, NotificationLive, NotificationOptions,
-    NotificationScope, Notifications, NotificationsProps, use_notifications,
-    use_notifications_with,
+    NotificationScope, Notifications, NotificationsProps, SnackbarAction, SnackbarData, snackbar,
+    use_notifications, use_notifications_with,
 };
 pub use progress_bar::{ProgressBar, ProgressBarPart, ProgressBarProps, ProgressBarSegment};
 pub use skeleton::{Skeleton, SkeletonProps};

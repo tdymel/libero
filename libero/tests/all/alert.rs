@@ -153,6 +153,38 @@ fn the_close_button_is_there_only_with_an_onclose() {
     assert_eq!(button.get("aria-label").map(String::as_str), Some("Close"));
 }
 
+/// The slot sits between the body and the close button, and is there only when given.
+#[test]
+fn the_actions_slot_sits_between_the_body_and_the_close_button() {
+    fn plain() -> Element {
+        rsx! {
+            LiberoProvider { Alert { onclose: move |_| {}, "Saved." } }
+        }
+    }
+    fn with_actions() -> Element {
+        rsx! {
+            LiberoProvider {
+                Alert {
+                    onclose: move |_| {},
+                    actions: rsx! { button { "Undo" } },
+                    "Saved."
+                }
+            }
+        }
+    }
+
+    assert!(!body(&render(plain)).contains("data-slot=\"actions\""));
+
+    let html = body(&render(with_actions));
+    let body_at = html.find(r#"data-slot="body""#).expect(&html);
+    let actions = html.find(r#"data-slot="actions""#).expect(&html);
+    let close = html.find(r#"data-slot="close""#).expect(&html);
+
+    assert!(body_at < actions && actions < close, "{html}");
+    assert_eq!(html.matches(r#"data-slot="actions""#).count(), 1, "{html}");
+    assert!(html[actions..close].contains("Undo"), "{html}");
+}
+
 /// An alert rests in the flow. `paper_sx()` brings a shadow, and the chained
 /// `none` has to replace it rather than race it in the cascade. Losing
 /// `paper_sx()`'s focus-contrast declaration would take the close button's

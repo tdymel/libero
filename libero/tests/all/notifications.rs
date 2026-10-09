@@ -13,8 +13,8 @@ use libero::{
     LiberoProvider,
     components::{
         NotificationData, NotificationHandle, NotificationId, NotificationLive,
-        NotificationOptions, NotificationScope, Notifications, Placement, use_notifications,
-        use_notifications_with,
+        NotificationOptions, NotificationScope, Notifications, Placement, SnackbarData, snackbar,
+        use_notifications, use_notifications_with,
     },
     theme::{AutoClose, NotificationsDefaults, Theme},
 };
@@ -114,6 +114,48 @@ fn the_stacks_sit_in_one_region_named_after_the_hotkey() {
         html.contains(r#"aria-label="Notifications (F9)""#),
         "{html}"
     );
+}
+
+/// The stock snackbar: its message, one action button, and the close button after it.
+#[test]
+fn the_snackbar_draws_its_message_and_one_action_before_the_close_button() {
+    fn app() -> Element {
+        let snacks = use_notifications_with(snackbar);
+        use_hook(|| snacks.show(SnackbarData::new("Message archived.").action("Undo", || {})));
+        rsx! {
+            LiberoProvider { Notifications {} }
+        }
+    }
+
+    let html = body(&render(app));
+    let item = items(&html).into_iter().next().expect("a notification");
+    let actions = item.find(r#"data-slot="actions""#).expect(item);
+    let close = item.find(r#"data-slot="close""#).expect(item);
+    let row = &item[actions..actions + item[actions..].find("</div>").expect(item)];
+
+    assert!(item.contains("Message archived."), "{item}");
+    assert!(actions < close, "{item}");
+    assert_eq!(row.matches("<button").count(), 1, "{item}");
+    assert!(row.contains("Undo"), "{item}");
+    assert!(item.contains(r#"role="group""#), "{item}");
+}
+
+/// A snackbar without an action is a plain message: no empty actions row.
+#[test]
+fn a_snackbar_without_an_action_draws_no_actions_row() {
+    fn app() -> Element {
+        let snacks = use_notifications_with(snackbar);
+        use_hook(|| snacks.show("Saved."));
+        rsx! {
+            LiberoProvider { Notifications {} }
+        }
+    }
+
+    let html = body(&render(app));
+    let item = items(&html).into_iter().next().expect("a notification");
+
+    assert!(item.contains("Saved."), "{item}");
+    assert!(!item.contains(r#"data-slot="actions""#), "{item}");
 }
 
 /// Todo 575: the hotkey's target when a template draws nothing focusable.

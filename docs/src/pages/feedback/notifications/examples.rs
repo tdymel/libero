@@ -17,6 +17,7 @@ pub(super) fn Examples(
 ) -> Element {
     let notify = use_notifications();
     let cards = use_notifications_with(card_notification);
+    let snacks = use_notifications_with(snackbar);
     let next_sender = use_hook(|| Rc::new(Cell::new(0)));
     let mut last = use_signal(String::new);
     let onaction = use_callback(move |action: String| last.set(action));
@@ -85,6 +86,16 @@ pub(super) fn Examples(
     let show = move |_| {
         if upload {
             show_upload();
+            return;
+        }
+        if template == "snackbar" {
+            snacks.show_with(
+                SnackbarData::new("Message archived.").action("Undo", move || {
+                    onaction.call("Restored the message.".into())
+                }),
+                // Undo is an action, so it waits for the reader (WCAG 2.2.1).
+                options(true),
+            );
             return;
         }
         if template == "card" {
