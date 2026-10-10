@@ -396,7 +396,9 @@ impl PinEdit {
         let emptied = raw.is_empty();
         // The cell's old character sits on whichever side the caret was not.
         // Out before the filter, so a rejected insertion does not keep it as new.
+        // A value as long as the pin or longer is an autofill, kept whole.
         if raw.len() > 1
+            && (raw.len() == 2 || raw.len() < self.length)
             && let Some(old) = self.cells[index]
         {
             if raw[0] == old {
@@ -407,8 +409,14 @@ impl PinEdit {
         }
         let accepted: Vec<char> = raw.into_iter().filter(|c| self.kind.accepts(*c)).collect();
         let next = match accepted.len() {
-            // The cell was emptied - Backspace handles its own focus.
-            0 if emptied && self.cells[index].is_some() => self.edit(index, None),
+            // Emptied without a key event (a soft keyboard's Backspace): step back as `keys` does.
+            0 if emptied && self.cells[index].is_some() => {
+                let next = self.edit(index, None);
+                if index + 1 < self.length {
+                    self.focus(index.wrapping_sub(1));
+                }
+                next
+            }
             // Every character was rejected, or an empty cell stayed empty.
             0 => self.cells.clone(),
             _ => self.place(index, accepted),

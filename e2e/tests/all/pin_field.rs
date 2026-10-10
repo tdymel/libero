@@ -448,6 +448,68 @@ fn a_paste_over_a_selected_cell_writes_the_code() {
     });
 }
 
+/// Todo 3055: an autofill replaces the focused cell's whole value, so a code that starts
+/// or ends with the cell's own digit keeps it.
+#[test]
+fn an_autofill_over_a_cell_holding_its_first_or_last_digit_keeps_every_digit() {
+    block_on(async {
+        let fixture = Fixture::open("/pin-field", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        focus_at(page, 0, 0).await;
+        press_digit(page, "1").await;
+        expect_cells(page, "1||| @1", "1 typed").await;
+
+        page.evaluate("document.querySelectorAll('[role=group] input')[0].select()")
+            .await
+            .unwrap();
+        page.execute(InsertTextParams::new("1234")).await.unwrap();
+        expect_cells(page, "1|2|3|4 @3", "1234 filled over the 1").await;
+
+        focus_at(page, 0, 0).await;
+        press_digit(page, "4").await;
+        expect_cells(page, "4|2|3|4 @1", "4 typed over the 1").await;
+        page.evaluate("document.querySelectorAll('[role=group] input')[0].select()")
+            .await
+            .unwrap();
+        page.execute(InsertTextParams::new("1234")).await.unwrap();
+        expect_cells(page, "1|2|3|4 @3", "1234 filled over the 4").await;
+
+        fixture.console.assert_clean("pin field autofill").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 3056: a soft keyboard's Backspace empties a cell with no key event, and steps
+/// back like the hardware key, except in the last cell.
+#[test]
+fn a_soft_keyboard_backspace_steps_back_from_the_emptied_cell() {
+    const EMPTY: &str = "(() => { const i = document.querySelectorAll('[role=group] input')[%]; \
+        i.focus(); i.value = ''; i.dispatchEvent(new Event('input', { bubbles: true })); })()";
+    block_on(async {
+        let fixture = Fixture::open("/pin-field", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        focus_at(page, 0, 0).await;
+        keyboard::type_text(page, "1234").await.unwrap();
+        expect_cells(page, "1|2|3|4 @3", "1234 typed").await;
+
+        page.evaluate(EMPTY.replace('%', "3")).await.unwrap();
+        expect_cells(page, "1|2|3| @3", "the last cell emptied").await;
+
+        page.evaluate(EMPTY.replace('%', "2")).await.unwrap();
+        expect_cells(page, "1|2|| @1", "a middle cell emptied").await;
+
+        fixture
+            .console
+            .assert_clean("pin field soft Backspace")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 2396: the digits of another script, pasted or typed by an Arabic-Indic or
 /// full-width keyboard, reach the cells as ASCII.
 #[test]
