@@ -477,6 +477,7 @@ pub fn Chip(props: ChipProps) -> Element {
         // No attribute keeps the browser's `on` default.
         .attr("value", props.value)
         .attr("checked", checked)
+        .attr("data-controlled", true)
         .attr("disabled", disabled)
         .attr("aria-readonly", readonly.then_some("true"))
         // Void element - `()` costs no dynamic node.

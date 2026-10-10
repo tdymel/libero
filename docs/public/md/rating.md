@@ -89,7 +89,7 @@ IconProvider {
 | `description` | `Caption` | - | Under the label. |
 | `helper` | `Caption` | - | Under the stars. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error; an empty one or `None` is `Valid`. |
-| `required` | `bool` | `false` | Marks the label with an asterisk. No `aria-required`: ARIA does not allow it on a slider. Inside a `Form`, an unrated one fails the submit. |
+| `required` | `bool` | `false` | Marks the label with an asterisk. No `aria-required`: ARIA does not allow it on a slider, so the name says the localization's `rating.required` word instead. Inside a `Form`, an unrated one fails the submit. |
 | `disabled` | `bool` | `false` | Dims the stars and drops them from the tab order. |
 | `readonly` | `bool` | `false` | Focusable, announced and posted, but neither pointer nor keys change it. |
 | `aria_label` | `String` | - | Names the rating when it has no `label`. |
@@ -138,11 +138,15 @@ explains how parts work.
   value.
 - A debug build warns when the rating has neither a visible label nor
   `aria_label`.
+- A `role="slider"` takes no `aria-required`, so a `required` rating says the
+  localization's `rating.required` word in its name instead, such as "Your
+  rating required". The asterisk stays hidden from screen readers.
 
 ### You must
 
 - Without a visible label, set `aria_label`.
-- Translate the spoken value with the localization or `format`.
+- Translate the spoken value with the localization or `format`, and the
+  `rating.required` word with the localization.
 
 ### Example
 
@@ -151,9 +155,11 @@ stop, a slider read as "3.5 of 5", and the arrows move it by half a star.
 
 ### Limits
 
-- At the default `md` size a whole star is a 28px target, a half star 14px
-  wide: the row is one slider target, and a drag reaches any half.
-  `size: "xl"` makes each half 24px wide.
+- Every star's hit area is at least 24px tall, and 24px wide at `xs` and `sm`
+  (`xs` spaces its stars out to fit), through transparent padding. At the
+  default `md` size a whole star is 28px wide, a half star 14px: the row is one
+  slider, and a drag or the arrow keys reach any half. `size: "xxl"` makes each
+  half 24px wide.
 - A solid custom icon shows the value by colour alone.
 
 ## Theme defaults

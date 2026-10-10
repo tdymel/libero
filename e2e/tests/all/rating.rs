@@ -1,7 +1,7 @@
 //! `Rating`: click, drag, keys, hover, clear and read-only, on every platform.
 
 use anyhow::{Result, ensure};
-use e2e::driver::{Driver, Platform, eventually, linger};
+use e2e::driver::{Driver, Platform, eventually};
 use e2e::passes::keyboard;
 
 const STARS: &str = "#stars";
@@ -73,16 +73,7 @@ async fn scrub<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         0.0,
     )
     .await?;
-    let scrubbed = eventually(d, "a sideways drag to scrub", async |d| {
-        Ok((3.0..=4.0).contains(&value_of(d, STARS).await?))
-    })
-    .await;
-    ensure!(
-        scrubbed.is_ok(),
-        "the drag left {}",
-        value_of(d, STARS).await?
-    );
-    Ok(())
+    becomes(d, STARS, 3.5, "a sideways drag").await
 }
 
 e2e::scenario!(a_sideways_drag_scrubs_across_the_symbols, "/rating", scrub);
@@ -92,7 +83,10 @@ e2e::scenario!(a_sideways_drag_scrubs_across_the_symbols, "/rating", scrub);
 async fn clears<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     if d.platform() == Platform::Android {
         d.drag("#clear", 0.0, -120.0).await?;
-        linger(d, 8).await;
+        eventually(d, "the swipe to scroll the page", async |d| {
+            Ok(d.scroll_pos("html").await?.1 > 0.0)
+        })
+        .await?;
         ensure!(value_of(d, "#clear").await? == 3.0, "a swipe changed it");
     }
     click_symbol(d, "#clear", 3, 0.5).await?;
@@ -131,6 +125,29 @@ e2e::scenario!(
     "/rating",
     hovers,
     android: skip("a touch screen has no hover")
+);
+
+/// Todo 2964: at every size a symbol's hit area is 24px tall and wide.
+async fn targets<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    for rating in [STARS, "#tiny", "#small"] {
+        let zones = d.rects(&format!("{rating} [data-slot=zones]")).await?;
+        ensure!(zones.len() == 5, "{rating} has {} zone rows", zones.len());
+        for rect in zones {
+            ensure!(
+                rect.width >= 23.99 && rect.height >= 23.99,
+                "{rating} zones are {}x{}",
+                rect.width,
+                rect.height
+            );
+        }
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    a_symbol_has_a_24px_hit_area_at_every_size,
+    "/rating",
+    targets
 );
 
 /// Read-only takes focus but neither clicks nor keys; display-only takes neither.

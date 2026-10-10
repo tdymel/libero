@@ -77,6 +77,24 @@ fn RatingPage() -> Element {
                 onchange: move |_| {},
             }
             Rating { id: "average", label: "Average", value: 4.3, focusable: false }
+            Rating {
+                id: "tiny",
+                label: "Tiny",
+                size: "xs",
+                value: 0.0,
+                fractions: 2,
+                onchange: |_| {},
+            }
+            Rating {
+                id: "small",
+                label: "Small",
+                size: "sm",
+                value: 0.0,
+                fractions: 2,
+                onchange: |_| {},
+            }
+            // Tall enough that a phone's vertical swipe has a page to scroll.
+            div { style: "height: 2000px" }
         }
     }
 }

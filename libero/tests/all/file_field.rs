@@ -53,6 +53,23 @@ fn a_file_field_draws_a_hidden_input_and_names_its_control() {
     assert!(body.contains("No file picked"), "{body}");
 }
 
+/// Todo 2950: without a label the caller's `aria_label` names the group too.
+#[test]
+fn an_aria_label_names_the_group_of_a_field_without_a_label() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                FileField { aria_label: "Receipt", onchange: move |_| {} }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+    let group = tag_with(&body, r#"role="group""#);
+    assert_eq!(group["aria-label"], "Receipt", "{body}");
+}
+
 #[test]
 fn a_dropzone_file_field_renders_its_prompt_instead_of_a_frame() {
     fn app() -> Element {

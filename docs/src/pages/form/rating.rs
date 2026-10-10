@@ -106,7 +106,7 @@ pub fn RatingPage() -> Element {
                 ])
                 .example("A product review, `Rating { label: \"Your rating\", fractions: 2, .. }`: one tab stop, a slider read as \"3.5 of 5\", and the arrows move it by half a star.")
                 .limits([
-                    "At the default `md` size a whole star is a 28px target, a half star 14px wide: the row is one slider target, and a drag reaches any half. `size: \"xxl\"` makes each half 24px wide.",
+                    "Every star's hit area is at least 24px tall, and 24px wide at `xs` and `sm` (`xs` spaces its stars out to fit), through transparent padding. At the default `md` size a whole star is 28px wide, a half star 14px: the row is one slider, and a drag or the arrow keys reach any half. `size: \"xxl\"` makes each half 24px wide.",
                     "A solid custom icon shows the value by colour alone.",
                 ]),
             lead: rsx! {

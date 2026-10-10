@@ -2,8 +2,8 @@
 
 use dioxus::prelude::*;
 use libero::components::{
-    ActionIcon, Button, Chip, ColorCode, ColorSwatch, Fieldset, Flex, Icon, Image, PhoneField,
-    Tree, TreeItem, TreeNode, TreeNodeRenderArgs,
+    ActionIcon, Button, Chip, ColorCode, ColorSwatch, Fieldset, Flex, Form, Icon, Image, PhoneField,
+    Tree, TreeItem, TreeNode, TreeNodeRenderArgs, use_form,
 };
 
 use crate::Routes;
@@ -12,6 +12,7 @@ pub const ROUTES: Routes = &[
     ("/chip", || rsx! { ChipPage {} }),
     ("/chip/fieldset", || rsx! { ChipFieldsetPage {} }),
     ("/chip/readonly", || rsx! { ChipReadonlyPage {} }),
+    ("/chip/reset", || rsx! { ChipResetPage {} }),
     ("/chip/removable", || rsx! { ChipRemovablePage {} }),
     ("/chip/icons", || rsx! { ChipIconsPage {} }),
     ("/chip/sizes", || rsx! { ChipSizesPage {} }),
@@ -26,6 +27,27 @@ pub const ROUTES: Routes = &[
         || rsx! { ChipTrailingPage { control: true } },
     ),
 ];
+
+/// Todo 2951: a selectable form chip beside a reset button; `#state` is what it emitted last.
+#[component]
+fn ChipResetPage() -> Element {
+    let mut on = use_signal(|| false);
+    let form = use_form();
+    rsx! {
+        Form::<()> { form,
+            Chip {
+                id: "tag",
+                name: "tags",
+                value: "rust",
+                checked: on(),
+                onchange: move |next| on.set(next),
+                "rust"
+            }
+            Button { id: "restart", onclick: move |_| form.reset(), "Reset" }
+            span { id: "state", "{on}" }
+        }
+    }
+}
 
 /// Todo 629: a readonly filter chip and a readonly form chip in a `<form>`;
 /// neither toggles, and the form one still posts.

@@ -45,6 +45,35 @@ fn an_inline_dialog_is_named_by_its_title_and_not_modal() {
     });
 }
 
+/// Todo 2947: a long word in the title breaks inside the dialog on a phone.
+#[test]
+fn a_long_dialog_title_stays_inside_the_dialog() {
+    block_on(async {
+        let fixture = Fixture::open("/dialog/long-title", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_selector(page, "#long").await.unwrap();
+
+        let past: f64 = page
+            .evaluate(
+                "(() => { const d = document.querySelector('#long'); \
+                 const t = document.getElementById(d.getAttribute('aria-labelledby')); \
+                 return t.getBoundingClientRect().width - d.getBoundingClientRect().width; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(past <= 1.0, "the title runs {past}px past the dialog");
+        fixture
+            .console
+            .assert_clean("the long dialog title")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 2561: `width: 100%` plus a margin stuck out of the container by the margin.
 #[test]
 fn an_inline_dialog_fits_its_container() {

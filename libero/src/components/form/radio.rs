@@ -9,7 +9,7 @@ use crate::{
             fill_color, focus_ring_sx, names_itself, ring_overlay, ring_overlay_sx,
             use_name_warning, variables,
         },
-        form::{field_parts_enum, field_props, use_field},
+        form::{Disabled, field_parts_enum, field_props, use_field},
         layout::use_box,
     },
     hooks::{use_cache, use_css, use_element, use_theme},
@@ -159,7 +159,9 @@ pub fn Radio(props: RadioProps) -> Element {
     let color = base_color_or(props.color.as_ref(), theme.radio.color);
 
     let size = props.size.copied_or(theme.radio.size);
-    let disabled = props.disabled.unwrap_or(false);
+    // A disabled `Fieldset` disables the input, but not the circle and label that pick it.
+    let group = try_use_context::<Disabled>();
+    let disabled = props.disabled.unwrap_or(false) || group.is_some_and(|Disabled(group)| group());
     let required = props.required.unwrap_or(false);
     let checked = props.checked.unwrap_or(false);
     // HTML's `readonly` does not apply to a radio, so the activation is refused

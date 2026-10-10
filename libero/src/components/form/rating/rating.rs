@@ -26,8 +26,12 @@ use crate::{
 /// The filled symbols' colour, resolved on the root.
 const RATING_COLOR: CssVar = CssVar::new("--lsx-rating-color");
 
+/// The smallest a symbol's hit area gets, per WCAG 2.5.8.
+const MIN_TARGET: &str = "24px";
+
 static RATING_SX: StaticSx = StaticSx::new(|| {
     let glyph = RATING_GLYPH.value();
+    let reach = format!("min(0px, ({glyph} - {MIN_TARGET}) / 2)");
     RatingDefaults::theme_vars()
         // A vertical swipe scrolls the page, a sideways one scrubs (1058).
         .and(sideways_drag_sx())
@@ -36,12 +40,14 @@ static RATING_SX: StaticSx = StaticSx::new(|| {
         // A field's column would stretch it, and a scrub maps over its width.
         .width("max-content")
         .user_select("none")
-        // Half the gap each side: the hit area spans it, so zones meet.
+        // Half the gap each side, or enough to reach the minimum width: the hit area
+        // spans it, so zones meet.
         .selector(
             format!("& > [data-slot='{}']", RatingPart::Symbol.slot()),
-            sx().position("relative")
-                .display("block")
-                .padding(format!("0 calc({} / 2)", RATING_GAP.value())),
+            sx().position("relative").display("block").padding(format!(
+                "0 max({gap} / 2, ({MIN_TARGET} - {glyph}) / 2)",
+                gap = RATING_GAP.value(),
+            )),
         )
         // Empty glyph and fill share one cell; `start` follows the direction.
         .selector(
@@ -66,11 +72,12 @@ static RATING_SX: StaticSx = StaticSx::new(|| {
                 .overflow("hidden")
                 .color(RATING_COLOR.value()),
         )
+        // Taller than a small glyph: the zones reach the minimum height without moving the row.
         .selector(
             "& [data-slot='zones']",
             sx().position("absolute")
-                .top("0")
-                .bottom("0")
+                .top(reach.clone())
+                .bottom(reach)
                 .left("0")
                 .right("0")
                 .display("flex"),

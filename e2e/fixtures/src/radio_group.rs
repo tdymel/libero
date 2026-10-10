@@ -1,7 +1,9 @@
 //! `RadioGroup`, for the `RadioSet` archetype.
 
 use dioxus::prelude::*;
-use libero::components::{FieldStatus, Flex, OptionList, Options, Radio, RadioGroup, Text};
+use libero::components::{
+    FieldStatus, Fieldset, Flex, OptionList, Options, Radio, RadioGroup, Text,
+};
 
 use crate::{Routes, common::Between};
 
@@ -16,7 +18,24 @@ pub const ROUTES: Routes = &[
         || rsx! { RadioGroupReadonlyPage {} },
     ),
     ("/radio-group/lone", || rsx! { RadioGroupLonePage {} }),
+    ("/radio-group/fieldset", || rsx! { RadioFieldsetPage {} }),
 ];
+
+/// Todo 2957: a lone radio in a disabled fieldset; `#picked` flips if its circle or label picks it.
+#[component]
+fn RadioFieldsetPage() -> Element {
+    let mut picked = use_signal(|| false);
+    rsx! {
+        Fieldset::<()> { label: "Terms", disabled: true,
+            Radio {
+                label: "Agree",
+                checked: false,
+                onselect: move |_| picked.set(true),
+            }
+        }
+        Text { id: "picked", "{picked}" }
+    }
+}
 
 /// Todo 2465: one enabled option, so the arrows are the page's.
 #[component]

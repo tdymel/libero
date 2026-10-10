@@ -207,7 +207,7 @@ explains how parts work.
 
 ### You must
 
-- Without a `label`, pass `aria_label`, which names the Browse button.
+- Without a `label`, pass `aria_label`, which names the group and the Browse button.
 
 ### Example
 

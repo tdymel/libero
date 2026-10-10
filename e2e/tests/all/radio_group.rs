@@ -48,6 +48,20 @@ e2e::scenario!(
     arrows_step_from_the_focus
 );
 
+/// Todo 2957: a radio in a disabled fieldset is not picked by its circle or its label.
+async fn a_disabled_fieldset_blocks_the_radio<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("[data-slot=circle]").await?;
+    d.click("[data-slot=label]").await?;
+    d.settle().await?;
+    eventually_text(d, "#picked", "false", "a click on the circle and the label").await
+}
+
+e2e::scenario!(
+    a_radio_in_a_disabled_fieldset_cannot_be_picked,
+    "/radio-group/fieldset",
+    a_disabled_fieldset_blocks_the_radio
+);
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("radio_group", "/radio-group")

@@ -48,7 +48,12 @@ static DIALOG_HEADER_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-static DIALOG_HEADER_TITLE_SX: StaticSx = StaticSx::new(|| sx().margin("0").flex("1"));
+static DIALOG_HEADER_TITLE_SX: StaticSx = StaticSx::new(|| {
+    sx().margin("0")
+        .flex("1")
+        // `overflow-wrap` leaves min-content alone, so a long word would push past the dialog.
+        .min_width("0")
+});
 
 fn dialog_variables(props: &DialogProps, default_radius: Option<Size>) -> Variables {
     variables()

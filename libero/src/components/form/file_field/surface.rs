@@ -1,5 +1,6 @@
 use std::{cell::Cell, rc::Rc};
 
+use dioxus::dioxus_core::AttributeValue;
 use dioxus::html::{FileData, HasFileData};
 use dioxus::prelude::*;
 
@@ -109,6 +110,14 @@ impl Surface {
         .flatten()
         .collect::<Vec<_>>()
         .join(" ");
+        // Without a label the caller's `aria_label` names the group as well as Browse.
+        let group_name = attributes
+            .iter()
+            .filter(|_| labelledby.is_none())
+            .find_map(|attribute| match &attribute.value {
+                AttributeValue::Text(text) if attribute.name == "aria-label" => Some(text.clone()),
+                _ => None,
+            });
         let press = move || {
             // A press on the input opens it natively; its own click bubbling
             // back here while `opening` is not a second press.
@@ -158,6 +167,7 @@ impl Surface {
             .attr("data-slot", FileFieldPart::Control.slot())
             .attr("role", "group")
             .attr("aria-labelledby", labelledby)
+            .attr("aria-label", group_name)
             .attr("aria-busy", loading.then_some("true"))
             .event("onclick", move |event: MouseEvent| {
                 // The button, a chip and its x answer their own clicks.

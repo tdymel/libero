@@ -39,6 +39,40 @@ async fn emitted(fixture: &Fixture) -> String {
         .unwrap()
 }
 
+/// Todo 2951: a form's reset leaves a selected chip showing its state.
+#[test]
+fn a_form_reset_keeps_a_selectable_chip_as_shown() {
+    block_on(async {
+        let fixture = Fixture::open("/chip/reset", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate("document.querySelector('#tag label').click()")
+            .await
+            .unwrap();
+        e2e::wait::for_js_true(
+            page,
+            "document.querySelector('#state').textContent === 'true'",
+            "the chip to turn on",
+        )
+        .await
+        .unwrap();
+        page.evaluate("document.querySelector('#restart').click()")
+            .await
+            .unwrap();
+        settle(&fixture).await;
+        e2e::wait::for_js_true(
+            page,
+            "document.querySelector('#tag > input').checked",
+            "the reset to leave the chip checked",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a form reset").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Before a "nothing happened" read: what the last input queued has run.
 async fn settle(fixture: &Fixture) {
     e2e::clock::settle(&fixture.page).await.unwrap();

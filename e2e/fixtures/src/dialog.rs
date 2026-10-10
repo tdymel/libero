@@ -8,7 +8,23 @@ use libero::{
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/dialog", || rsx! { DialogPage {} })];
+pub const ROUTES: Routes = &[
+    ("/dialog", || rsx! { DialogPage {} }),
+    ("/dialog/long-title", || rsx! { LongTitlePage {} }),
+];
+
+/// Todo 2947: one word in the title wider than a 320px dialog.
+#[component]
+fn LongTitlePage() -> Element {
+    rsx! {
+        Dialog {
+            id: "long",
+            title: "Donaudampfschifffahrtselektrizitaetenhauptbetriebswerkbauunterbeamtengesellschaft",
+            onclose: |_| {},
+            Text { "Narrow the list." }
+        }
+    }
+}
 
 #[component]
 fn DialogPage() -> Element {

@@ -67,7 +67,8 @@ pub(super) fn format_size(bytes: u64, words: &FileFieldLabels, decimal_separator
     let units = &words.size_units;
     let mut size = bytes as f64;
     let mut unit = 0;
-    while size >= 1000.0 && unit + 1 < units.len() {
+    // Compared as shown, so 999,999 bytes is 1.0 MB, not 1000.0 kB.
+    while (size * 10.0).round() >= 10_000.0 && unit + 1 < units.len() {
         size /= 1000.0;
         unit += 1;
     }
@@ -123,6 +124,9 @@ mod tests {
         assert_eq!(size(999), "999 B");
         assert_eq!(size(1_000), "1.0 kB");
         assert_eq!(size(12_345), "12.3 kB");
+        assert_eq!(size(999_949), "999.9 kB");
+        assert_eq!(size(999_999), "1.0 MB");
+        assert_eq!(size(999_999_999), "1.0 GB");
         assert_eq!(size(5_400_000), "5.4 MB");
         assert_eq!(size(2_000_000_000), "2.0 GB");
     }

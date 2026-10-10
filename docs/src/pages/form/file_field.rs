@@ -147,7 +147,7 @@ pub fn FileFieldPage() -> Element {
                     "A single-file dropzone holding its file hands its label, error and description to the card's remove button.",
                     "In the `dropzone` variant each card's remove button is its own tab stop.",
                 ])
-                .must(["Without a `label`, pass `aria_label`, which names the Browse button."])
+                .must(["Without a `label`, pass `aria_label`, which names the group and the Browse button."])
                 .example("An attachment field, `FileField { label: \"Attachment\" }`: a group named \"Attachment\". Browse is its tab stop: Enter opens the picker and Backspace removes the picked file."),
             lead: rsx! {
                 Text {
