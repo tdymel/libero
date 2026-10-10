@@ -1,6 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, FieldCopy, Wrap, a11y,
-    field_controls, indent, prop, props, status_prop,
+    Control, Demo, DemoFile, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls, indent,
+    prop, props, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::rich_text::{Doc, RichTextView};
@@ -53,6 +53,8 @@ fn main() {
 ---
 
 Below the rule, the next section starts."#;
+
+const VIEW_CAPTION: &str = "Showing a document: RichTextView shows the stored Doc read-only, as a message or comment list mounts one per entry, and is what the editor shows on a renderer without an editable surface (Blitz). Below, it follows the document edited above.";
 
 /// A section of the demo file one level in, for a function body.
 fn indented(name: &str) -> String {
@@ -136,7 +138,9 @@ fn captions(values: &DemoValues) -> Vec<&'static str> {
         (on.shout, "Custom command: select a word and press Ctrl+Shift+1 (Cmd on a Mac) to upper-case it, one undo step."),
         (on.mentions, "Mentions: type @ and a name, or press the @ button. While the list is open, intercept gives it the arrow keys, Enter and Escape; overlay floats it at the caret; the handle's edit swaps the typed @name for a mention node, drawn by your own component, in one undo step. Ctrl+Shift+2 runs a node command that inserts @ada."),
         (on.keymap, "Custom keymap: Ctrl+Shift+H makes a heading, and Ctrl+Shift+Enter no longer adds a rule. Ctrl+/ lists the live keymap."),
-        (values.str("toolbar") != "true", "No toolbar: the keymap, or your own buttons through a handle, drive the editor."),
+        (true, "Code blocks: a code block shows its source with fences while the caret is in it; the language button on its opening fence, the toolbar's language menu or Ctrl+Shift+L change its language."),
+        (true, "Links: a web address (http, https or mailto) followed by a space or Enter becomes a link, and undo brings the plain text back. Typing [text](address) links the text; pasting only an address links the selected text. Other schemes stay text, as does a www. address."),
+        (values.str("toolbar") != "true","No toolbar: the keymap, or your own buttons through a handle, drive the editor."),
     ]
     .into_iter()
     .filter_map(|(on, caption)| on.then_some(caption))
@@ -367,57 +371,12 @@ pub fn RichTextEditorPage() -> Element {
                         for caption in captions(&values) {
                             Text { size: "sm", "{caption}" }
                         }
+                        Text { size: "sm", {VIEW_CAPTION} }
+                        RichTextView { value: doc() }
                     }
                 },
             }
 
-            DocSection {
-                title: "Code blocks",
-                Text {
-                    "A code block shows its source with fences while the caret is in it; the language button on its opening fence, the toolbar's language menu or Ctrl+Shift+L change its language."
-                }
-            }
-
-            DocSection {
-                title: "Links",
-                Text {
-                    "A web address ("
-                    Code { source: "http" }
-                    ", "
-                    Code { source: "https" }
-                    " or "
-                    Code { source: "mailto" }
-                    ") followed by a space or Enter becomes a link; a full stop or comma that ends the sentence stays outside it, and undo brings the plain text back. Typing "
-                    Code { source: "[text](address)" }
-                    " links the text. Pasting only an address links the selected text, or inserts the address as a link. Other schemes stay text, as does a "
-                    Code { source: "www." }
-                    " address without a scheme."
-                }
-            }
-
-            DocSection {
-                title: "Showing a document",
-                Text {
-                    Code { source: "RichTextView" }
-                    " shows a stored "
-                    Code { source: "Doc" }
-                    " read-only, without an editor's state, script or history: a message or comment list mounts one per entry. It draws the same blocks, marks and code blocks, takes the same "
-                    Code { source: "nodes" }
-                    ", and is what the editor shows on a renderer without an editable surface (Blitz). Here it follows the document edited above."
-                }
-                RichTextView { value: doc() }
-            }
-
-            DocSection {
-                title: "Mentions",
-                Text {
-                    "The mentions switch adds an @ list at the caret, built from "
-                    Code { source: "intercept" }
-                    ", "
-                    Code { source: "overlay" }
-                    " and a custom node."
-                }
-            }
         }
     }
 }
