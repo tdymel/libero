@@ -182,7 +182,7 @@ mod tests {
     use super::*;
 
     /// Every template with a hole, in one order for every language.
-    fn templates(words: &Localization) -> [&'static str; 43] {
+    fn templates(words: &Localization) -> [&'static str; 44] {
         [
             words.media.position,
             words.tour.progress,
@@ -210,6 +210,7 @@ mod tests {
             words.carousel.slide,
             words.carousel.status,
             words.carousel.status_range,
+            words.carousel.status_wrap,
             words.lightbox.thumbnail,
             words.lightbox.zoomed,
             words.notifications.region,

@@ -193,16 +193,18 @@ fn CarouselControl(view: CarouselView, forward: bool, disabled: Memo<bool>) -> E
     }
 }
 
-/// The slides showing as a range; a looping window across the seam reads the resting slide.
+/// The slides showing as a range; a looping window across the seam says it wraps.
 pub(super) fn showing_status(
     labels: &CarouselLabels,
     (from, to): (usize, usize),
-    settled: usize,
     count: usize,
 ) -> String {
     match from.cmp(&to) {
         Ordering::Equal => numbered(labels.status, from, count),
-        Ordering::Greater => numbered(labels.status, settled, count),
+        Ordering::Greater => fill(
+            labels.status_wrap,
+            &[("from", &(from + 1)), ("to", &(to + 1)), ("n", &count)],
+        ),
         Ordering::Less => fill(
             labels.status_range,
             &[("from", &(from + 1)), ("to", &(to + 1)), ("n", &count)],
@@ -224,7 +226,7 @@ pub(super) fn CarouselStatus(view: CarouselView) -> Element {
     let settled = nav.settled;
     let status = match nav.per_view > 1.0 {
         // Several up, the slides showing are named, not the resting position (todo 550).
-        true => showing_status(labels, nav.showing(settled()), settled(), setup.count),
+        true => showing_status(labels, nav.showing(settled()), setup.count),
         false => {
             let (position, positions) = snap_position(
                 settled(),

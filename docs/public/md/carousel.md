@@ -62,7 +62,7 @@ reports slide 1. Where a slide visibly rests shows best with a fractional
 
 A looping strip can show the end and the start at once. Six slides three-up,
 aligned to the start and resting on slide 6, show slides 6, 1 and 2. The status
-then names the resting slide, not a range.
+then reads "Slides 6 to 2 of 6, wrapping around".
 
 A vertical carousel needs a `height`:
 
@@ -220,6 +220,7 @@ The words are `CarouselLabels` in the [localization](localization.md).
 | `slide` | `{n} of {m}` | A slide group's name. |
 | `status` | `Slide {n} of {m}` | What the live region reads one-up. `{m}` counts resting positions, not slides. |
 | `status_range` | `Slides {from}–{to} of {n}` | What it reads above one slide per view, the slides showing of all `{n}`. |
+| `status_wrap` | `Slides {from} to {to} of {n}, wrapping around` | The same for a looping window across the seam, which runs on from the last slide to the first. |
 | `pause` | `Pause slideshow` | The autoplay button's name. It stays the same when paused, and `aria-pressed` carries the state. |
 | `roledescription` | `carousel` | The region's `aria-roledescription`. |
 | `slide_roledescription` | `slide` | Each slide group's `aria-roledescription`. |

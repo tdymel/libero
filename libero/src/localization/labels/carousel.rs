@@ -16,6 +16,9 @@ pub struct CarouselLabels {
     /// The live region above one slide per view: the slides showing,
     /// `{from}` to `{to}`, of `{n}`.
     pub status_range: &'static str,
+    /// [`status_range`](Self::status_range) for a looping window across the seam, which
+    /// reads past the last slide on to the first: `{from}`, `{to}` and `{n}`.
+    pub status_wrap: &'static str,
     /// The autoplay button's name in both states: `aria-pressed` carries the state.
     pub pause: &'static str,
     /// The root's `aria-roledescription`.
@@ -34,6 +37,7 @@ impl CarouselLabels {
         slide: "{n} of {m}",
         status: "Slide {n} of {m}",
         status_range: "Slides {from}–{to} of {n}",
+        status_wrap: "Slides {from} to {to} of {n}, wrapping around",
         pause: "Pause slideshow",
         roledescription: "carousel",
         slide_roledescription: "slide",
@@ -48,6 +52,7 @@ impl CarouselLabels {
         slide: "{n} von {m}",
         status: "Folie {n} von {m}",
         status_range: "Folien {from}–{to} von {n}",
+        status_wrap: "Folien {from} bis {to} von {n}, über das Ende hinaus",
         pause: "Diashow anhalten",
         roledescription: "Karussell",
         slide_roledescription: "Folie",

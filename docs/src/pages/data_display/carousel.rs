@@ -210,7 +210,7 @@ pub fn CarouselPage() -> Element {
                 Text {
                     "A looping strip can show the end and the start at once. Six slides three-up, "
                     "aligned to the start and resting on slide 6, show slides 6, 1 and 2. "
-                    "The status then names the resting slide, not a range."
+                    "The status then reads \"Slides 6 to 2 of 6, wrapping around\"."
                 }
                 // snippet: let mut index = use_signal(|| 5);
                 // snippet: item fn demo_slides() -> Vec<Element> { vec![] }
