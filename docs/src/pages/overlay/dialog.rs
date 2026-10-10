@@ -91,6 +91,7 @@ pub fn DialogPage() -> Element {
                 ])
                 .must([
                     "Name it with `title` or `aria_label`.",
+                    "Keep the visible title's words in an `aria_label` set beside a `title`: the label replaces the title as the name, so a speech-input user who says the heading finds no match otherwise (WCAG 2.5.3).",
                     "Give an `alertdialog` an `aria_describedby` pointing at its message, so a screen reader reads it on open.",
                     "Open it in a modal: the focus trap, Escape and backdrop dismissal come from the modal. A `Dialog` on its own has none of them.",
                     "Outside a modal, give a close button `onclose`, or it closes nothing.",

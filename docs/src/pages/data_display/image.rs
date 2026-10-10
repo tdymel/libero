@@ -61,7 +61,8 @@ pub fn ImagePage() -> Element {
                 .key(["Escape"], "Closes the overlay, as do the backdrop and the Close button.")
                 .handles([
                     "`decorative` renders `alt=\"\"` and `role=\"presentation\"`.",
-                    "A zoomable image is a button named after its `alt`, \"Zoom in: <alt>\" (the localization's `image.zoom_named`).",
+                    "A zoomable image is a button named after its `alt`, \"Zoom in: <alt>\" (the localization's `image.zoom_named`). An `aria_label` of yours names the button instead.",
+                    "A zoomable picture under 24 px still takes a press in a 24 px box, its size unchanged.",
                     "An image with neither `alt` nor `decorative` warns in a debug build and renders no `alt`, so a checker still flags it, unless it is `zoomable`: its inner `<img>` gets an empty `alt` and the button is named \"Zoom in\".",
                     "A zoomable image with no `alt`, an empty one or `decorative` warns in a debug build: a checker passes its bare \"Zoom in\" button and \"Gallery\" dialog.",
                 ])

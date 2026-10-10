@@ -5,9 +5,9 @@
 use dioxus::prelude::*;
 use libero::{
     components::{
-        ActionIcon, Burger, Checkbox, Chip, ColorCode, ColorField, Dialog, Flex, NumberField,
-        Pagination, PasswordField, Radio, Select, SliderChangeEvent, Switch, TagsField,
-        TextField,
+        ActionIcon, Burger, Checkbox, Chip, ColorCode, ColorField, Dialog, Flex, Image,
+        NumberField, Pagination, PasswordField, Radio, Select, SliderChangeEvent, Switch,
+        TagsField, TextField,
     },
     theme::Size,
 };
@@ -15,6 +15,8 @@ use libero::{
 use crate::{Routes, common::Fruit};
 
 pub const ROUTES: Routes = &[("/hit-area", || rsx! { HitAreaPage {} })];
+
+const TINY_PICTURE: &str = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 4'%3E%3Crect width='4' height='4' fill='%23369'/%3E%3C/svg%3E";
 
 const SIZES: [(Size, &str); 3] = [(Size::Xs, "xs"), (Size::Md, "md"), (Size::Xl, "xl")];
 
@@ -39,6 +41,14 @@ fn HitAreaPage() -> Element {
                 ActionIcon { id: "icon-xs", aria_label: "Extra small", size: "16px", {glyph()} }
                 ActionIcon { id: "icon-sm", aria_label: "Small", size: "20px", {glyph()} }
                 ActionIcon { id: "icon-md", aria_label: "Medium", size: "md", {glyph()} }
+                div { width: "16px", height: "16px",
+                    Image {
+                        id: "zoom-tiny",
+                        src: TINY_PICTURE,
+                        alt: "A blue dot",
+                        zoomable: true,
+                    }
+                }
             }
             div { "data-case": "tags",
                 TagsField {

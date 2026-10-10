@@ -6,6 +6,18 @@ pub(crate) const COARSE_POINTER: &str = "(pointer: coarse)";
 /// Half the shortfall below 44px (WCAG 2.5.5) out on each side; `0` from 44px up.
 const COARSE_INSET: &str = "min(0px, calc((100% - 44px) / 2))";
 
+/// Half the shortfall below 24px (WCAG 2.5.8) out on each side; `0` from 24px up.
+const MIN_INSET: &str = "min(0px, calc((100% - 24px) / 2))";
+
+/// Grows a positioned element's press target to 24x24 for every pointer, drawn size
+/// unchanged. `pseudo` is a free `::before`/`::after`; an `overflow` clips it.
+pub(crate) fn min_hit_area_sx(pseudo: &str) -> Sx {
+    sx().selector(
+        pseudo,
+        sx().content("\"\"").position("absolute").inset(MIN_INSET),
+    )
+}
+
 /// Grows a positioned element's press target to 44x44 on a coarse pointer, drawn size
 /// unchanged (todo 2707). `pseudo` is a free `::before`/`::after`; an `overflow` clips it.
 pub(crate) fn coarse_hit_area_sx(pseudo: &str) -> Sx {

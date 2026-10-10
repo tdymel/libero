@@ -102,7 +102,10 @@ explains how parts work.
 
 - `decorative` renders `alt=""` and `role="presentation"`.
 - A zoomable image is a button named after its `alt`, "Zoom in: <alt>" (the
-  localization's `image.zoom_named`).
+  localization's `image.zoom_named`). An `aria_label` of yours names the button
+  instead.
+- A zoomable picture under 24 px still takes a press in a 24 px box, its size
+  unchanged.
 - An image with neither `alt` nor `decorative` warns in a debug build and
   renders no `alt`, so a checker still flags it, unless it is `zoomable`: its
   inner `<img>` gets an empty `alt` and the button is named "Zoom in".

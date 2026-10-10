@@ -67,6 +67,26 @@ fn a_zoomable_image_is_a_dialog_opener() {
     assert!(!img["class"].contains("mine"), "{img:?}");
 }
 
+/// Todo 3075: a caller's `aria_label` names the zoom button, once.
+#[test]
+fn a_callers_aria_label_names_the_zoom_button() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Image { src: "/map.png", alt: "The map", zoomable: true, aria_label: "Enlarge the map" }
+            }
+        }
+    }
+
+    let html = render(app);
+
+    assert_eq!(
+        attributes_of(&html, "button")["aria-label"],
+        "Enlarge the map"
+    );
+    assert_eq!(html.matches("aria-label=").count(), 1, "{html}");
+}
+
 /// Todo 603: `loading` reaches the `<img>` on both paths; unset renders none (eager).
 #[test]
 fn loading_lands_on_the_img() {

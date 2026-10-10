@@ -9,8 +9,8 @@ use crate::{
         common::{
             Glyph, HtmlTag, Input, Part, ScaleOrCss, States, TOOLBAR_ITEM, ToolbarItem,
             base_color_or, coarse_hit_area_sx, contrast_color, disabled_look_sx, draw_svg,
-            fill_color, focus_ring_sx, names_itself, ring_overlay, ring_overlay_sx,
-            use_name_warning, use_toolbar_item, variables,
+            fill_color, focus_ring_sx, min_hit_area_sx, names_itself, ring_overlay,
+            ring_overlay_sx, use_name_warning, use_toolbar_item, variables,
         },
         form::{Activation, Asks, field_parts_enum, field_props, use_bound, use_field},
         layout::{BoxStyle, use_box},
@@ -65,8 +65,9 @@ static CHECKBOX_BOX_SX: StaticSx = StaticSx::new(|| {
         .align_items("center")
         .justify_content("center")
         .flex("0 0 auto")
-        // Carries the click, so it carries the finger-sized hit area too.
+        // Carries the click, so it carries a 24px floor (WCAG 2.5.8) and the finger-sized area.
         .position("relative")
+        .and(min_hit_area_sx("::before"))
         .and(coarse_hit_area_sx("::before"))
         .width(CHECKBOX_BOX.value())
         .height(CHECKBOX_BOX.value())

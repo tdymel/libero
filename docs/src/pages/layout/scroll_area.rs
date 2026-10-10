@@ -113,6 +113,7 @@ pub fn ScrollAreaPage() -> Element {
                     "A debug build warns about a tab stop without a name.",
                     "On Blitz, which scrolls nothing on a key, the area scrolls itself on the arrows, Page Up and Down, Home, End and Space, as a browser does.",
                     "The bar `always` draws is hidden from screen readers and takes no focus: the area itself scrolls by keyboard, wheel and touch. Forced colours paint its thumb in the system text colour.",
+                    "The drawn track and thumb are 8px across at `thin`, under the 24 px pointer target minimum (WCAG 2.5.8). The Equivalent exception covers them: the content itself scrolls under a pointer by wheel and touch, so the bar is an extra handle, not the only way to scroll.",
                 ])
                 .must([
                     "Name the area with `aria_label` or `aria_labelledby`.",

@@ -6,8 +6,8 @@ use crate::{
         accessibility::{VISUALLY_HIDDEN_SX, hidden_input_centred_sx},
         common::{
             HtmlTag, Input, Part, States, base_color_or, coarse_hit_area_sx, disabled_look_sx,
-            fill_color, focus_ring_sx, names_itself, ring_overlay, ring_overlay_sx,
-            use_name_warning, variables,
+            fill_color, focus_ring_sx, min_hit_area_sx, names_itself, ring_overlay,
+            ring_overlay_sx, use_name_warning, variables,
         },
         form::{Disabled, field_parts_enum, field_props, use_field},
         layout::use_box,
@@ -25,8 +25,6 @@ const RADIO_COLOR: CssVar = CssVar::new("--lsx-radio-color");
 /// 0 or 1, scaling the dot - so only this var changes between the two states
 /// and the transition is free. Same trick as `Switch`'s thumb offset.
 const RADIO_ON: CssVar = CssVar::new("--lsx-radio-on");
-/// Half the shortfall below 24px, out on each side of the circle; `0` from 24px up.
-const HIT_AREA_INSET: &str = "min(0px, calc((100% - 24px) / 2))";
 
 static RADIO_CONTROL_SX: StaticSx = StaticSx::new(|| {
     RadioDefaults::theme_vars()
@@ -55,12 +53,7 @@ static RADIO_CIRCLE_SX: StaticSx = StaticSx::new(|| {
         .flex("0 0 auto")
         // Carries the click, so it carries a 24px floor (WCAG 2.5.8) and the finger-sized area.
         .position("relative")
-        .selector(
-            "::before",
-            sx().content("\"\"")
-                .position("absolute")
-                .inset(HIT_AREA_INSET),
-        )
+        .and(min_hit_area_sx("::before"))
         .and(coarse_hit_area_sx("::before"))
         .width(RADIO_CIRCLE.value())
         .height(RADIO_CIRCLE.value())

@@ -41,6 +41,8 @@ fn small_action_icons_take_presses_in_a_24px_box() {
             ("#burger-sm", 22.0),
             ("#icon-xs", 16.0),
             ("#icon-sm", 20.0),
+            // Todo 3077: a zoomable picture under 24px.
+            ("#zoom-tiny", 16.0),
             ("[data-case=password-md] [data-slot=trailing] button", 30.0),
             ("[data-case=select-md] button[aria-label=Clear]", 30.0),
             ("[data-case=color-xs] [data-slot=trailing] button", 24.0),
@@ -136,38 +138,44 @@ fn a_finger_presses_small_controls_in_a_44px_box() {
     });
 }
 
-/// Todo 3090: a label-less radio takes a mouse press 11.5px out from its 18px circle.
+/// Todos 3090, 3107: a label-less radio or checkbox takes a mouse press 11.5px out from
+/// its 18px drawn size.
 #[test]
-fn a_nameless_radio_takes_presses_in_a_24px_box() {
+fn a_nameless_radio_and_checkbox_take_presses_in_a_24px_box() {
     block_on(async {
         let fixture = Fixture::open("/hit-area", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
 
-        let hit: Hit = page
-            .evaluate(
-                "(() => {
-                    const el = document.querySelector('[data-case=radio] [data-slot=circle]');
-                    el.scrollIntoView({ block: 'center' });
-                    const r = el.getBoundingClientRect();
-                    const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
-                    const misses = [];
-                    for (const dx of [-11.5, 0, 11.5]) for (const dy of [-11.5, 0, 11.5]) {
-                        const at = document.elementFromPoint(cx + dx, cy + dy);
-                        if (!at || !el.contains(at)) misses.push([dx, dy, at ? at.outerHTML.slice(0, 60) : null]);
-                    }
-                    return { width: r.width, height: r.height, misses };
-                })()",
-            )
-            .await
-            .unwrap()
-            .into_value()
-            .unwrap();
-        assert!(hit.height < 20.0, "the circle grew its drawn size: {hit:?}");
-        assert!(
-            hit.misses.is_empty(),
-            "its 24px box lands elsewhere: {:?}",
-            hit.misses
-        );
+        for selector in [
+            "[data-case=radio] [data-slot=circle]",
+            "[data-case=checkbox] [data-slot=box]",
+        ] {
+            let hit: Hit = page
+                .evaluate(format!(
+                    "(() => {{
+                        const el = document.querySelector({selector:?});
+                        el.scrollIntoView({{ block: 'center' }});
+                        const r = el.getBoundingClientRect();
+                        const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
+                        const misses = [];
+                        for (const dx of [-11.5, 0, 11.5]) for (const dy of [-11.5, 0, 11.5]) {{
+                            const at = document.elementFromPoint(cx + dx, cy + dy);
+                            if (!at || !el.contains(at)) misses.push([dx, dy, at ? at.outerHTML.slice(0, 60) : null]);
+                        }}
+                        return {{ width: r.width, height: r.height, misses }};
+                    }})()"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(hit.height < 20.0, "{selector} grew its drawn size: {hit:?}");
+            assert!(
+                hit.misses.is_empty(),
+                "{selector}: its 24px box lands elsewhere: {:?}",
+                hit.misses
+            );
+        }
 
         fixture.console.assert_clean("a radio hit area").unwrap();
         fixture.close().await.unwrap();

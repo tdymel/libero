@@ -4,9 +4,9 @@ use crate::{
     components::{
         common::{
             ClassList, HtmlTag, Input, PROBES_AFTER_MOUNT, Part, SVG_FIT, States, Variables,
-            base_props, css_string, focus_ring_sx, input_from_str, on_failed_after_mount,
-            parts_enum, parts_under_sx, states, svg_fit, svg_fit_sx, svg_fit_variables,
-            use_svg_probe, variables,
+            base_props, css_string, focus_ring_sx, input_from_str, min_hit_area_sx,
+            on_failed_after_mount, parts_enum, parts_under_sx, states, svg_fit, svg_fit_sx,
+            svg_fit_variables, use_svg_probe, variables,
         },
         layout::use_box,
     },
@@ -111,6 +111,9 @@ static ZOOM_BUTTON_SX: StaticSx = StaticSx::new(|| {
         // The picture's radius, so the focus ring and a caller's background follow it.
         .border_radius(IMAGE_RADIUS.overridable())
         .cursor("zoom-in")
+        // A picture under 24px still takes a press in a 24px box (WCAG 2.5.8).
+        .position("relative")
+        .and(min_hit_area_sx("::before"))
         // A disabled `Fieldset` disables the `<button>` (todo 514).
         .selector("&:disabled", sx().opacity("0.5").cursor("not-allowed"))
         .focus_visible(focus_ring_sx())
@@ -378,7 +381,7 @@ fn ZoomButton(props: ZoomButtonProps) -> Element {
     // A dialog opener, not a toggle: the open state lives in the `Lightbox`.
     root.attr("type", "button")
         .attr("aria-haspopup", "dialog")
-        .attr("aria-label", label)
+        .attr_default("aria-label", label)
         .event("onclick", move |_: Event<MouseData>| {
             zoom.open_with(item.clone());
         })

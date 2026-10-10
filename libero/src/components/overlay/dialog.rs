@@ -86,6 +86,7 @@ parts_enum! {
 base_props! {
     parts(DialogPart);
     pub struct DialogProps {
+        /// Replaces the title as the name; keep the title's words in it (WCAG 2.5.3).
         #[props(default, into)]
         aria_label: Option<String>,
         /// Heading, and the accessible name unless `aria_label` overrides it.
