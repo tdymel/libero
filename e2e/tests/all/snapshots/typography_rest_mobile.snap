@@ -96,3 +96,10 @@ heading "Heading five" [level=5]
 heading "Heading six" [level=6]
   StaticText "Heading six"
 StaticText "Extra small text in a span."
+figure
+  blockquote
+    StaticText "A quote."
+  Figcaption
+    StaticText "Donaudampfschifffahrtselektrizitaetenhauptbetriebswerkbauunterbeamtengesellschaft"
+    StaticText ","
+    StaticText "Donaudampfschifffahrtselektrizitaetenhauptbetriebswerkbauunterbeamtengesellschaft"

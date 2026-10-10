@@ -102,6 +102,8 @@ static FIGCAPTION_SX: StaticSx = StaticSx::new(|| {
             "color-mix(in srgb, currentColor calc({} * 100%), transparent)",
             BLOCKQUOTE_CITE_OPACITY.value()
         ))
+        // A long word in a caption overflowed a 320px column (WCAG 1.4.10), as on the quote.
+        .overflow_wrap("break-word")
         // A link in the caption's colour needs its underline too (1.4.1).
         .and(AnchorDefaults::underline_at_rest())
         .per_size(|size| sx().font_size(format!("calc({} * 0.85)", TEXT_FONT_SIZE.value(size))))
@@ -205,10 +207,11 @@ pub fn Blockquote(props: BlockquoteProps) -> Element {
         .prepare();
     let cite_style = use_box().prepare();
 
-    let caption = match (&props.attribution, &props.work) {
+    let work = props.work.as_ref().filter(|work| !work.trim().is_empty());
+    let caption = match (&props.attribution, work) {
         (None, None) => None,
         (attribution, work) => {
-            let work = work.as_ref().map(|work| {
+            let work = work.map(|work| {
                 let work = work.clone();
                 cite_style
                     .clone()

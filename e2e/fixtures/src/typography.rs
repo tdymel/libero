@@ -97,6 +97,13 @@ fn TypographyPage() -> Element {
             Title { size: "sm", "Heading five" }
             Title { size: "xs", "Heading six" }
             Text { size: "xs", component: "span", "Extra small text in a span." }
+            // Todo 3065: the caption breaks a long attribution and work too.
+            Blockquote {
+                id: "quote-caption",
+                attribution: rsx! { span { id: "attribution-long", "{LONG_WORD}" } },
+                work: LONG_WORD,
+                "A quote."
+            }
         }
     }
 }

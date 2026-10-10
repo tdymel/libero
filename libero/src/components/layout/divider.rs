@@ -174,7 +174,7 @@ base_props! {
         /// stretches to its parent's height, so the parent must be a flex row.
         #[props(default, into)]
         orientation: Input<Orientation>,
-        /// Line thickness. Defaults to `xs`.
+        /// Line thickness. Defaults to the theme's `divider.size`, `xs` out of the box.
         #[props(default, into)]
         size: Input<Size>,
         #[props(default, into)]

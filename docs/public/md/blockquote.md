@@ -95,7 +95,7 @@ parts work.
   color, so they read on the tint. A link keeps its underline, as color alone
   does not mark it. Any other CSS color, such as `navy`, gets black or white
   from the browser's `contrast-color()`.
-- A long word breaks inside the quote rather than overflowing a narrow column.
+- A long word breaks inside the quote and its caption rather than overflowing a narrow column.
 
 ### Example
 

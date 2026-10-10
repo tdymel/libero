@@ -120,7 +120,7 @@ fn a_long_inline_code_wraps_inside_its_paragraph() {
     });
 }
 
-/// Todo 2543, 2547 and 2589: a long word in a heading, body text and a quote, and the
+/// Todo 2543, 2547, 2589 and 3065: a long word in a heading, body text, a quote and its caption, and the
 /// largest key at 320px (WCAG 1.4.10), and every key's text read out in the sentence.
 #[test]
 fn a_long_title_and_the_keys_stay_inside_the_column() {
@@ -135,6 +135,8 @@ fn a_long_title_and_the_keys_stay_inside_the_column() {
             "#title-long",
             "#text-long",
             "#quote-long",
+            "#attribution-long",
+            "#quote-caption cite",
             "#kbds kbd:last-of-type",
         ] {
             let past = overflow(page, selector).await;

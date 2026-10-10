@@ -51,7 +51,7 @@ pub fn BlockquotePage() -> Element {
                     "`work` renders in a `<cite>`, the comma kept outside it.",
                     "The caption dims its text color, not the whole caption, so a link in `attribution` keeps its own color and focus ring.",
                     "The quote text, a link and a focus ring inside take the tint's contrast color, so they read on the tint. A link keeps its underline, as color alone does not mark it. Any other CSS color, such as `navy`, gets black or white from the browser's `contrast-color()`.",
-                    "A long word breaks inside the quote rather than overflowing a narrow column.",
+                    "A long word breaks inside the quote and its caption rather than overflowing a narrow column.",
                 ])
                 .example("A quote with `attribution: rsx! { \"Ada Lovelace\" }` and `work: \"Notes\"`: a screen reader reads the quote, then \"Ada Lovelace, Notes\" as its caption, never the name as part of the quote.")
                 .limits(["`cite_url` is for machines only: browsers do not show it, so link the source yourself where readers need it."]),

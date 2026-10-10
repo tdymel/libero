@@ -93,6 +93,30 @@ fn a_speaker_and_a_work_are_separated() {
     assert!(!html.contains(", <cite"), "{html}");
 }
 
+/// Todo 3066: a blank `work` is absent, so no empty `<cite>`, no dangling comma and no
+/// empty `<figcaption>` that would make the root a nameless figure.
+#[test]
+fn a_blank_work_is_absent() {
+    fn blank_with_speaker() -> Element {
+        rsx! {
+            LiberoProvider { Blockquote { attribution: rsx! { "Ada" }, work: "  ", "A quote." } }
+        }
+    }
+    let html = body(&render(blank_with_speaker));
+    assert!(!html.contains("<cite") && !html.contains("Ada,"), "{html}");
+
+    fn blank_alone() -> Element {
+        rsx! {
+            LiberoProvider { Blockquote { work: "", "A quote." } }
+        }
+    }
+    let html = body(&render(blank_alone));
+    assert!(
+        !html.contains("<figure") && !html.contains("<figcaption"),
+        "{html}"
+    );
+}
+
 /// The third thing called "cite": an attribute, on the quote, that no browser
 /// renders.
 #[test]
