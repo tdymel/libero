@@ -14,7 +14,7 @@ use crate::{
         layout::{Collapse, use_box},
     },
     context::IconSlot,
-    hooks::{id_selector, use_element, use_resize_fallback},
+    hooks::{id_selector, use_content_changes, use_element, use_resize_fallback},
     platform::{ElementApi, fonts_ready, when_laid_out},
     str_enum::str_enum,
     sx::{FORCED_COLORS, StaticSx, Sx, sx},
@@ -529,12 +529,21 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
         when_laid_out(measure);
     }));
     // A web font that lands after the first measure widens the labels once (todo 3040).
+    // Without a fonts API (Blitz) the strip's scroll size is watched instead (todo 3134).
+    let mut watch_content = use_signal(|| false);
+    let changes = use_content_changes(strip, watch_content() && !vertical);
     use_effect(move || {
         spawn(async move {
-            if fonts_ready().await {
-                measure();
+            match fonts_ready().await {
+                true => measure(),
+                false => watch_content.set(true),
             }
         });
+    });
+    use_effect(move || {
+        if *changes.count.read() > 0 {
+            when_laid_out(measure);
+        }
     });
     let any_clickable = onstepclick.is_some()
         && (allow_next_steps

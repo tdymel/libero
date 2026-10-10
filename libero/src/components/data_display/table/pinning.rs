@@ -88,6 +88,20 @@ impl CellPin {
     }
 }
 
+/// Both insets of a header cell, the one it isn't held by `auto`: a cell moved to the
+/// other edge or unpinned would keep its old one otherwise (todo 3132).
+pub(super) fn pin_insets(pin: Option<&CellPin>) -> String {
+    let inset = |side: PinSide| match pin {
+        Some(pin) if pin.side == side => pin.inset.as_str(),
+        _ => "auto",
+    };
+    format!(
+        "inset-inline-start:{};inset-inline-end:{};",
+        inset(PinSide::Start),
+        inset(PinSide::End)
+    )
+}
+
 /// Whether the column at `position` of `order` starts a new run of one pin side.
 pub(super) fn pin_edge_at(headers: &[HeaderSpec], order: &[usize], position: usize) -> bool {
     let side = |at: usize| headers[order[at]].pin.as_ref().map(|pin| pin.side);
@@ -234,7 +248,7 @@ mod tests {
                 hideable: true,
                 hidden: false,
                 width: width.map(str::to_string),
-                style: None,
+                min_width: None,
                 body: None,
                 groups: Vec::new(),
                 pin: None,

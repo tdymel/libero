@@ -12,7 +12,7 @@ use super::{
     groups::{HeaderCell, header_rows},
     header_filters::filter_row,
     overlay::EmptyBody,
-    pinning::{CellPin, PinSide, pin_edge_at, span_pin},
+    pinning::{CellPin, PinSide, pin_edge_at, pin_insets, span_pin},
     resize::{ColumnResize, ColumnWidths, ResizeHandle, ResizeLimits},
     row_reorder::{ReorderRow, ReorderSlot, RowReorder},
     use_table::StateSlice,
@@ -108,8 +108,8 @@ pub(super) struct HeaderSpec {
     pub hidden: bool,
     /// The resolved `width`, which a pinned column further in is inset by.
     pub width: Option<String>,
-    /// The header cell's inline `width`/`min-width`, which size the column.
-    pub style: Option<String>,
+    /// The header cell's inline `min-width`, a floor next to `width`.
+    pub min_width: Option<String>,
     /// A caller's header body, which replaces the text.
     pub body: Option<Element>,
     /// The group headers above it, outermost first.
@@ -157,7 +157,7 @@ pub(super) fn header_specs<T>(
                 hideable: column.hideable,
                 hidden,
                 width: width.map(str::to_string),
-                style: width_style(width, min_width),
+                min_width: min_width.map(str::to_string),
                 body: match hidden {
                     true => None,
                     false => column.header_render.as_ref().map(|render| render()),
@@ -168,22 +168,6 @@ pub(super) fn header_specs<T>(
             }
         })
         .collect()
-}
-
-// Not `<col>`: Blitz ignores its width (blitz-table-probe). Border-box, as
-// Blitz reads a cell's width.
-fn width_style(width: Option<&str>, min_width: Option<&str>) -> Option<String> {
-    if width.is_none() && min_width.is_none() {
-        return None;
-    }
-    let mut style = String::from("box-sizing:border-box;");
-    if let Some(width) = width {
-        style.push_str(&format!("width:{width};"));
-    }
-    if let Some(min_width) = min_width {
-        style.push_str(&format!("min-width:{min_width};"));
-    }
-    Some(style)
 }
 
 /// The sorted columns by header index, in priority order.
@@ -435,24 +419,23 @@ fn adds_column(touch: Option<CopyValue<bool>>, event: &MouseEvent) -> bool {
     touched || modifiers.shift() || modifiers.ctrl() || modifiers.meta()
 }
 
-/// `share` stands in for an unsized column's width.
-fn header_style(spec: &HeaderSpec, share: Option<&str>) -> Option<String> {
-    let style = spec.style.as_deref().or(share);
-    let Some(pin) = &spec.pin else {
-        return style.map(str::to_string);
+/// `share` stands in for an unsized column's width. Every property is written each
+/// render: the renderer keeps a dropped one's last value (todo 3132). Sized on the
+/// cell, not `<col>`: Blitz ignores its width (blitz-table-probe); border-box, as
+/// Blitz reads a cell's width.
+fn header_style(spec: &HeaderSpec, share: Option<&str>) -> String {
+    let width = spec.width.as_deref().or(share).unwrap_or("auto");
+    // A pinned column holds its `width` against an overflowing table, which the
+    // next pinned column's inset counts on.
+    let floor = match (&spec.pin, &spec.width) {
+        (Some(_), Some(width)) => Some(width.as_str()),
+        _ => spec.min_width.as_deref(),
     };
-    // An overflowing table shrinks its columns below `width`, which the next
-    // pinned column's inset counts on.
-    let min_width = spec
-        .width
-        .as_ref()
-        .map(|width| format!("min-width:{width};"))
-        .unwrap_or_default();
-    Some(format!(
-        "{}{min_width}{}",
-        style.unwrap_or_default(),
-        pin.style()
-    ))
+    let floor = floor.unwrap_or("auto");
+    format!(
+        "box-sizing:border-box;width:{width};min-width:{floor};{}",
+        pin_insets(spec.pin.as_ref())
+    )
 }
 
 fn header_body(spec: &HeaderSpec) -> Element {
@@ -501,7 +484,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
     );
     // Blitz sizes columns by content even in fixed layout: an unsized one gets
     // an even share, so rows scrolling in can't widen it.
-    let share = windowed.then(|| format!("width: {}%", 100.0 / shown.len().max(1) as f64));
+    let share = windowed.then(|| format!("{}%", 100.0 / shown.len().max(1) as f64));
     // The order shows only when it tells something: with two or more sorted columns.
     let ranked = active.len() > 1;
     let active = Rc::new(active);
@@ -542,7 +525,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                                 "data-group": true,
                                 "data-pin": pin.as_ref().map(|pin| pin.side.as_str()),
                                 "data-pin-edge": pin.as_ref().filter(|pin| pin.edge).map(|_| true),
-                                style: pin.as_ref().map(CellPin::style),
+                                style: pin_insets(pin.as_ref()),
                                 "{name}"
                             }
                         }
@@ -1011,7 +994,7 @@ mod tests {
                 hideable: true,
                 hidden: false,
                 width: None,
-                style: None,
+                min_width: None,
                 body: None,
                 groups: Vec::new(),
                 pin: None,
@@ -1050,8 +1033,9 @@ mod tests {
         let headers = header_specs(&columns, &ColumnDefaults::new(), &[], spec(Some((0, 90.0))));
         assert_eq!(headers[0].width.as_deref(), Some("90px"));
         assert_eq!(
-            headers[0].style.as_deref(),
-            Some("box-sizing:border-box;width:90px;min-width:90px;")
+            header_style(&headers[0], None),
+            "box-sizing:border-box;width:90px;min-width:90px;\
+             inset-inline-start:auto;inset-inline-end:auto;"
         );
     }
 
@@ -1193,16 +1177,55 @@ mod tests {
         assert!(active_sort(&headers, &unsortable, true).is_empty());
     }
 
+    fn pin_at(side: PinSide, inset: &str) -> Option<CellPin> {
+        Some(CellPin {
+            side,
+            inset: inset.to_string(),
+            edge: false,
+        })
+    }
+
     #[test]
     fn widths_become_the_header_cells_style() {
-        assert_eq!(width_style(None, None), None);
+        let spec = |width: Option<&str>, min_width: Option<&str>, pin| HeaderSpec {
+            width: width.map(str::to_string),
+            min_width: min_width.map(str::to_string),
+            pin,
+            ..headers(&["Name"]).remove(0)
+        };
+        let insets = "inset-inline-start:auto;inset-inline-end:auto;";
+
         assert_eq!(
-            width_style(Some("6rem"), None).as_deref(),
-            Some("box-sizing:border-box;width:6rem;")
+            header_style(&spec(None, None, None), None),
+            format!("box-sizing:border-box;width:auto;min-width:auto;{insets}")
         );
         assert_eq!(
-            width_style(Some("50%"), Some("4rem")).as_deref(),
-            Some("box-sizing:border-box;width:50%;min-width:4rem;")
+            header_style(&spec(None, None, None), Some("25%")),
+            format!("box-sizing:border-box;width:25%;min-width:auto;{insets}")
+        );
+        assert_eq!(
+            header_style(&spec(Some("50%"), Some("4rem"), None), None),
+            format!("box-sizing:border-box;width:50%;min-width:4rem;{insets}")
+        );
+    }
+
+    #[test]
+    fn a_pinned_header_holds_its_width_and_one_inset() {
+        let spec = |side| HeaderSpec {
+            width: Some("6rem".to_string()),
+            pin: pin_at(side, "2rem"),
+            ..headers(&["Name"]).remove(0)
+        };
+
+        assert_eq!(
+            header_style(&spec(PinSide::Start), None),
+            "box-sizing:border-box;width:6rem;min-width:6rem;\
+             inset-inline-start:2rem;inset-inline-end:auto;"
+        );
+        assert_eq!(
+            header_style(&spec(PinSide::End), None),
+            "box-sizing:border-box;width:6rem;min-width:6rem;\
+             inset-inline-start:auto;inset-inline-end:2rem;"
         );
     }
 
@@ -1218,10 +1241,8 @@ mod tests {
         };
         let headers = header_specs(&columns, &ColumnDefaults::new(), &[], sizing);
 
-        assert_eq!(headers[0].style, None);
-        assert_eq!(
-            headers[1].style.as_deref(),
-            Some("box-sizing:border-box;width:240px;min-width:240px;")
-        );
+        assert_eq!(headers[0].min_width, None);
+        assert_eq!(headers[1].min_width.as_deref(), Some("240px"));
+        assert_eq!(headers[1].width.as_deref(), Some("240px"));
     }
 }

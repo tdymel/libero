@@ -1864,7 +1864,33 @@ async fn a_menu_pin_moves_the_column<D: Driver>(d: &mut D, _route: &str) -> Resu
             == Some("start")
             && d.rect("th[aria-label=Origin]").await?.x > d.rect("th[aria-label=Name]").await?.x)
     })
-    .await
+    .await?;
+
+    // Moved to the other edge, then unpinned: no inset of its old edge stays (3132).
+    for (label, pin, insets) in [
+        ("Pin to end", Some("end"), &["inset-inline-start:auto;"][..]),
+        (
+            "Unpin",
+            None,
+            &["inset-inline-start:auto;", "inset-inline-end:auto;"][..],
+        ),
+    ] {
+        d.click("button[aria-label=\"Origin column options\"]")
+            .await?;
+        let entry = menu_entry(d, label).await?;
+        d.click(&entry).await?;
+        eventually(d, &format!("Origin's header after {label}"), async |d| {
+            let style = d.attr("th[aria-label=Origin]", "style").await?;
+            let style = style.unwrap_or_default().replace(' ', "");
+            Ok(d.attr("th[aria-label=Origin]", "data-pin")
+                .await?
+                .as_deref()
+                == pin
+                && insets.iter().all(|inset| style.contains(inset)))
+        })
+        .await?;
+    }
+    Ok(())
 }
 
 e2e::scenario!(

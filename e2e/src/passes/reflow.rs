@@ -49,7 +49,8 @@ async fn resize(page: &Page, width: i64) -> Result<()> {
         &format!("the screen to be {width}px wide"),
     )
     .await?;
-    crate::clock::settle(page).await
+    // A frame, so a component's resize observers have reported before the next state's snapshot (3136).
+    crate::clock::frame(page).await
 }
 
 /// The outermost-deepest boxes past the right edge that scroll the page: none inside a

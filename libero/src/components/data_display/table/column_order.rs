@@ -104,7 +104,7 @@ mod tests {
                 hideable: true,
                 hidden: false,
                 width: Some("1px".into()),
-                style: None,
+                min_width: None,
                 body: None,
                 groups: Vec::new(),
                 pin: None,

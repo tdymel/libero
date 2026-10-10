@@ -512,9 +512,17 @@ fn widths_defaults_and_a_header_render_reach_the_header_cells() {
             style(&[
                 ("box-sizing", "border-box"),
                 ("width", "12rem"),
-                ("min-width", "4rem")
+                ("min-width", "4rem"),
+                ("inset-inline-start", "auto"),
+                ("inset-inline-end", "auto"),
             ]),
-            style(&[("box-sizing", "border-box"), ("min-width", "2rem")]),
+            style(&[
+                ("box-sizing", "border-box"),
+                ("width", "auto"),
+                ("min-width", "2rem"),
+                ("inset-inline-start", "auto"),
+                ("inset-inline-end", "auto"),
+            ]),
         ],
         "{body}"
     );
