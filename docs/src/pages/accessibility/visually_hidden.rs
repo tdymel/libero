@@ -31,7 +31,7 @@ pub fn VisuallyHiddenPage() -> Element {
                     .doc("The screen-reader-only content."),
             ])],
             accessibility: a11y()
-                .handles(["With `focusable`, the content shows while focus is inside it."])
+                .handles(["With `focusable`, the content shows while focus is inside it, above a sticky `Header` and below modals and popovers."])
                 .must([
                     "Place the text where it should be read, inside the link and not next to it.",
                     "Use it for text a screen reader user is missing, never to hide something sighted users need. To replace a control's whole name, use `aria_label` instead.",

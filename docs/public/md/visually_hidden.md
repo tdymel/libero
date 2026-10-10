@@ -46,7 +46,8 @@ Like every component, `VisuallyHidden` also takes the shared props `sx`, `class`
 
 ### Libero handles
 
-- With `focusable`, the content shows while focus is inside it.
+- With `focusable`, the content shows while focus is inside it, above a sticky
+  `Header` and below modals and popovers.
 
 ### You must
 
@@ -62,12 +63,20 @@ Like every component, `VisuallyHidden` also takes the shared props `sx`, `class`
 
 The link needs a target with that id; `tabindex: "-1"` lets it take the focus:
 
-```rust,ignore
-VisuallyHidden {
-    focusable: true,
-    Anchor { to: "#main", "Skip to content" }
+```rust
+use dioxus::prelude::*;
+use libero::components::{Anchor, VisuallyHidden};
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        VisuallyHidden {
+            focusable: true,
+            Anchor { to: "#main", "Skip to content" }
+        }
+        main { id: "main", tabindex: "-1", "The page" }
+    }
 }
-main { id: "main", tabindex: "-1", /* the page */ }
 ```
 
 ### Example

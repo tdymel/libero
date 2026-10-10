@@ -73,6 +73,28 @@ fn only_a_focusable_one_reveals_on_focus() {
     assert!(reveals(&html), "{html}");
 }
 
+/// A focused skip link takes the float layer above a sticky `Header` (2.4.11).
+#[test]
+fn a_focused_skip_link_takes_the_float_layer() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                VisuallyHidden { focusable: true, a { href: "#main", "Skip" } }
+            }
+        }
+    }
+
+    let html = render(app);
+    let class = classes_of(&html, "span")
+        .into_iter()
+        .find(|class| html.contains(&format!(".{class}:focus-within{{")))
+        .unwrap_or_else(|| panic!("no focus-within rule: {html}"));
+    let start = html.find(&format!(".{class}:focus-within{{")).unwrap();
+    let rule = &html[start..];
+    let rule = &rule[..rule.find('}').unwrap()];
+    assert!(rule.contains("z-index:var(--lsx-z-index-float"), "{rule}");
+}
+
 /// The hosted inputs keep the shared `absolute` recipe. Tab onto one scrolls
 /// its `relative` label into view; under `fixed` it scrolled nothing and the
 /// label stayed off-screen (todo 63, measured on four pages). `opacity: 0`

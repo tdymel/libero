@@ -5,5 +5,7 @@ expression: tree
 ---
 link "Skip to content"
   StaticText "Skip to content"
+banner
+  StaticText "Banner"
 main
   StaticText "Content"
