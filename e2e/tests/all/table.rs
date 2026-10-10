@@ -409,14 +409,27 @@ fn select_box(n: usize) -> String {
 const STOCK: &str = "th[data-sortable]:nth-child(3) button";
 const NAME: &str = "th[data-sortable]:nth-child(2) button";
 
+/// Select-all is mixed: the web reads the `indeterminate` property, since an
+/// `aria-checked` on a native checkbox is forbidden there (2952); elsewhere the attribute.
+async fn select_all_mixed<D: Driver>(d: &mut D) -> Result<bool> {
+    match d.platform() {
+        Platform::Web => Ok(d
+            .evaluate("document.querySelector('thead input').indeterminate")
+            .await?
+            == true),
+        _ => Ok(d.attr("thead input", "aria-checked").await?.as_deref() == Some("mixed")),
+    }
+}
+
 /// 1156-1a/1c: a row's box selects it without a row click, select-all mixes and
 /// fills, the selection follows its rows through a sort; a tap on touch adds a
 /// sorted column, a click on a pointer replaces it.
 async fn rows_select_and_sort<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     eventually_text(d, "#selection", "Apple", "the seeded selection").await?;
-    if d.attr("thead input", "aria-checked").await?.as_deref() != Some("mixed") {
-        bail!("select-all is not mixed with one row selected");
-    }
+    eventually(d, "select-all mixed with one row selected", async |d| {
+        select_all_mixed(d).await
+    })
+    .await?;
     // Source order: Cherry, Apple, Banana, Date, Elder.
     d.click(&select_box(3)).await?;
     eventually_text(d, "#selection", "Apple,Banana", "a row's box").await?;
@@ -459,9 +472,10 @@ async fn rows_select_and_sort<D: Driver>(d: &mut D, _route: &str) -> Result<()> 
         "select-all",
     )
     .await?;
-    if d.attr("thead input", "aria-checked").await?.is_some() {
-        bail!("select-all still mixed with every row selected");
-    }
+    eventually(d, "select-all no longer mixed", async |d| {
+        Ok(!select_all_mixed(d).await?)
+    })
+    .await?;
     Ok(())
 }
 
