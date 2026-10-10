@@ -503,6 +503,143 @@ e2e::scenario!(
     desktop: skip("958: element identity on the WebView")
 );
 
+/// Lifts `card` by its handle and waits for the lift to be announced.
+async fn lift<D: Driver>(d: &mut D, card: &str, position: &str) -> Result<()> {
+    d.focus(&format!("#{card} [data-slot=handle]")).await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_text(
+        d,
+        STATUS,
+        &format!("Lifted {card}, position {position}."),
+        "Space to lift",
+    )
+    .await
+}
+
+/// Left and Right on a lifted card put it in the next column at its slot (1216): `next` is
+/// the key towards the column after it on screen, `before` the key back.
+async fn lifted_cards_cross_by_keys<D: Driver>(
+    d: &mut D,
+    next: keyboard::Key,
+    before: keyboard::Key,
+) -> Result<()> {
+    lift(d, "Beta", "2 of 3").await?;
+    d.press(next).await?;
+    eventually_text(d, "#order", "Alpha Gamma | Delta Beta | ", "Beta to Doing").await?;
+    eventually_text(
+        d,
+        STATUS,
+        "Beta moved to Doing, position 2 of 2.",
+        "the key move across",
+    )
+    .await?;
+    eventually_focused(d, "#Beta [data-slot=handle]", "a key move across").await?;
+    ensure!(
+        d.text("#moves").await? == "0.1>1.1 ",
+        "one move to column 1"
+    );
+
+    // One slot up in Doing, then back: the slot it was lifted at, kept in To do. (A card put
+    // before another cannot be lifted again at once: see the handback, so it is not lifted here.)
+    lift(d, "Beta", "2 of 2").await?;
+    d.press(keyboard::ARROW_UP).await?;
+    d.press(before).await?;
+    eventually_text(d, "#order", "Beta Alpha Gamma | Delta | ", "Beta to To do").await?;
+    eventually_text(
+        d,
+        STATUS,
+        "Beta moved to To do, position 1 of 3.",
+        "the slot kept",
+    )
+    .await?;
+
+    // Last in To do, the slot is clamped to the end of Doing.
+    lift(d, "Gamma", "3 of 3").await?;
+    d.press(next).await?;
+    eventually_text(d, "#order", "Beta Alpha | Delta Gamma | ", "Gamma to Doing").await?;
+    eventually_text(
+        d,
+        STATUS,
+        "Gamma moved to Doing, position 2 of 2.",
+        "the slot clamped",
+    )
+    .await?;
+
+    // Into the empty column, then past the board's edge: said, and still lifted.
+    lift(d, "Gamma", "2 of 2").await?;
+    d.press(next).await?;
+    eventually_text(d, "#order", "Beta Alpha | Delta | Gamma", "Gamma to Done").await?;
+    lift(d, "Gamma", "1 of 1").await?;
+    d.press(next).await?;
+    eventually_text(
+        d,
+        STATUS,
+        "Gamma has no column on that side.",
+        "a key past the board's edge",
+    )
+    .await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_text(
+        d,
+        STATUS,
+        "Dropped Gamma at position 1 of 1.",
+        "the drop after it",
+    )
+    .await?;
+    ensure!(
+        d.text("#moves").await? == "0.1>1.1 1.1>0.0 0.2>1.1 1.1>2.0 ",
+        "the moves: {}",
+        d.text("#moves").await?
+    );
+    Ok(())
+}
+
+async fn left_and_right_move_a_lifted_card_across<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    lifted_cards_cross_by_keys(d, keyboard::ARROW_RIGHT, keyboard::ARROW_LEFT).await
+}
+
+async fn left_and_right_move_a_lifted_card_across_mirrored<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    lifted_cards_cross_by_keys(d, keyboard::ARROW_LEFT, keyboard::ARROW_RIGHT).await
+}
+
+/// A card not lifted ignores Left and Right, and a move the app refuses is not announced.
+async fn a_key_across_needs_a_lift_and_a_refused_one_is_silent<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    d.focus("#Beta [data-slot=handle]").await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    d.flush().await?;
+    ensure!(
+        d.text("#moves").await?.is_empty(),
+        "a key moved a resting card"
+    );
+
+    d.click("#refuse").await?;
+    lift(d, "Beta", "2 of 3").await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually_text(d, "#moves", "0.1>1.1 ", "the refused move").await?;
+    d.flush().await?;
+    ensure!(d.text("#order").await? == START, "a refused move moved");
+    let said = d.text(STATUS).await?;
+    ensure!(
+        !said.contains("moved"),
+        "a refused move was announced: {said}"
+    );
+    ensure!(
+        d.is_focused("#Beta [data-slot=handle]").await?,
+        "the handle lost the focus: {}",
+        d.focus_owner().await?
+    );
+    Ok(())
+}
+
 /// Right to left the first column is the right-most, so a drag towards the next one runs leftwards.
 async fn an_rtl_board_lays_its_columns_right_to_left<D: Driver>(
     d: &mut D,
@@ -521,6 +658,24 @@ async fn an_rtl_board_lays_its_columns_right_to_left<D: Driver>(
     Ok(())
 }
 
+e2e::scenario!(
+    left_and_right_put_a_lifted_card_in_the_next_column_at_its_slot,
+    "/kanban",
+    left_and_right_move_a_lifted_card_across
+);
+e2e::scenario!(
+    left_and_right_put_a_lifted_card_in_the_next_column_of_a_right_to_left_board_mirrored,
+    "/kanban/rtl",
+    left_and_right_move_a_lifted_card_across_mirrored,
+    android: skip("963: is_rtl is false on the WebView"),
+    native: skip("707: Blitz has no right-to-left scroll")
+);
+e2e::scenario!(
+    left_or_right_moves_no_resting_card_and_a_refused_move_is_not_announced,
+    "/kanban",
+    a_key_across_needs_a_lift_and_a_refused_one_is_silent,
+    desktop: skip("958: element identity on the WebView")
+);
 e2e::scenario!(
     a_right_to_left_board_lays_its_columns_from_the_right,
     "/kanban/rtl",

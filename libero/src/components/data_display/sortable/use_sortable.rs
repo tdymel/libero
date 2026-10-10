@@ -65,6 +65,7 @@ pub struct SortableItemHandle {
     pub dragging: Memo<bool>,
     /// Some item of the list is being dragged.
     pub sorting: Memo<bool>,
+    lift: Callback<bool, Option<usize>>,
     offset: Memo<f64>,
     settle: Memo<Option<f64>>,
     horizontal: Memo<bool>,
@@ -73,6 +74,12 @@ pub struct SortableItemHandle {
 }
 
 impl SortableItemHandle {
+    /// The slot a keyboard lift of this item holds. With `release` the lift ends in
+    /// silence and puts the item back: the caller moves it elsewhere.
+    pub(crate) fn lifted_slot(&self, release: bool) -> Option<usize> {
+        self.lift.call(release)
+    }
+
     /// How far the item sits from its slot, in px along the list's axis.
     pub fn offset(&self) -> f64 {
         (self.offset)()
@@ -282,6 +289,7 @@ struct SortableContext {
     onkeydown: Callback<(usize, Event<KeyboardData>)>,
     onblur: Callback<usize>,
     onstep: Callback<(usize, bool)>,
+    onlift: Callback<(usize, bool), Option<usize>>,
 }
 
 /// One node's position read, started at once: see `ElementApi::dimensions`.
@@ -854,6 +862,18 @@ pub(crate) fn use_fixed_sortable(
         }
     });
 
+    let onlift = use_callback(move |(index, release): (usize, bool)| {
+        let slot = session
+            .peek()
+            .as_ref()
+            .filter(|s| s.from == index)
+            .and_then(|s| s.keyed)?;
+        if release {
+            session.set(None);
+        }
+        Some(slot)
+    });
+
     // A move button's: one slot, no drag.
     let onstep = use_callback(move |(index, later): (usize, bool)| {
         let total = *count.peek();
@@ -976,6 +996,7 @@ pub(crate) fn use_fixed_sortable(
         onkeydown,
         onblur,
         onstep,
+        onlift,
     });
 
     SortableHandle {
@@ -1169,8 +1190,10 @@ pub(crate) fn use_spanning_sortable_item(
     let onblur = use_callback(move |_| context.onblur.call(index));
     let onearlier = use_callback(move |_| context.onstep.call((index, false)));
     let onlater = use_callback(move |_| context.onstep.call((index, true)));
+    let lift = use_callback(move |release: bool| context.onlift.call((index, release)));
 
     SortableItemHandle {
+        lift,
         element,
         handle,
         onpointerdown,

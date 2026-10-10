@@ -9,6 +9,7 @@ use dioxus::prelude::*;
 use super::{
     lanes::{Lane, Lanes, Rect},
     moves::KanbanMove,
+    shown::drop_index,
 };
 use crate::{
     components::accessibility::Announcer,
@@ -201,6 +202,19 @@ impl BoardDrag {
         shown.fold((0, 0), |(count, end), placed| {
             (count + 1, end.max(placed.index + 1))
         })
+    }
+
+    /// The `index` a card put in slot `slot` of `column` takes: just before the card
+    /// there, after the last one past it.
+    pub(super) fn slot_index(self, column: usize, slot: usize) -> usize {
+        let cards = self.cards.peek();
+        let mut indices: Vec<usize> = cards
+            .values()
+            .filter(|placed| placed.column == column)
+            .map(|placed| placed.index)
+            .collect();
+        indices.sort_unstable();
+        drop_index(&indices, None, slot)
     }
 
     /// Card `id` left its slot or the board: stamps the landing it armed with this render.

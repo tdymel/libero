@@ -121,6 +121,16 @@ struct Board {
     drag: BoardDrag,
 }
 
+/// A card put in column `column`, called `name`, at slot `slot` of `count` shown cards there.
+struct Put {
+    column: usize,
+    name: String,
+    slot: usize,
+    count: usize,
+    to: usize,
+    control: Control,
+}
+
 /// What a [`KanbanCard`] reads from its [`KanbanColumn`].
 #[derive(Clone, Copy)]
 struct ColumnView {
@@ -327,7 +337,7 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
     let described = match (touch(), (board.move_buttons)()) {
         (true, true) => words.kanban.touch_instructions,
         (true, false) => words.kanban.touch_move_to,
-        (false, _) => words.sortable.instructions,
+        (false, _) => words.kanban.instructions,
     };
     // The slot a card from another column opens grows the list, not past its edge.
     let room = room();
@@ -471,6 +481,73 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
         }
     }));
 
+    let card_name = name.clone();
+    let put = use_callback({
+        let card = name.clone();
+        move |put: Put| {
+            let from_column = *column_index.peek();
+            landing.set(Some(Landing {
+                column: put.column,
+                index: put.to,
+                control: put.control,
+                card: id,
+                from: (from_column, index),
+                left: None,
+                held: false,
+            }));
+            drag.announce_on_landing(fill(
+                words.kanban.moved,
+                &[
+                    ("label", &card),
+                    ("column", &put.name),
+                    ("n", &(put.slot + 1)),
+                    ("m", &(put.count + 1)),
+                ],
+            ));
+            board.onmove.call(KanbanMove {
+                from_column,
+                from: index,
+                to_column: put.column,
+                to: put.to,
+            });
+        }
+    });
+
+    // A lifted card's Left or Right puts it in the next column at its slot, as far as there is one.
+    let keys = carried.onkeydown;
+    let onkeydown = use_callback(move |event: Event<KeyboardData>| {
+        let forward = match event.key() {
+            Key::ArrowRight => true,
+            Key::ArrowLeft => false,
+            _ => return keys.call(event),
+        };
+        let Some(slot) = item.lifted_slot(false) else {
+            return keys.call(event);
+        };
+        event.prevent_default();
+        let next = match forward != drag.element.is_rtl() {
+            true => column_index.peek().checked_add(1),
+            false => column_index.peek().checked_sub(1),
+        };
+        let beside = next.and_then(|at| Some((at, board.labels.peek().get(at)?.clone()?)));
+        let Some((to_column, name)) = beside else {
+            announcer.say(fill(words.kanban.no_column, &[("label", &card_name)]));
+            return;
+        };
+        item.lifted_slot(true);
+        let count = drag.end(to_column).0;
+        let slot = slot.min(count);
+        let to = drag.slot_index(to_column, slot);
+        put.call(Put {
+            column: to_column,
+            name,
+            slot,
+            count,
+            to,
+            control: Control::Handle,
+        });
+    });
+
     let named = |template: &str| fill(template, &[("label", &name)]);
     let menu = use_menu();
     let here = column_index();
@@ -484,36 +561,19 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
     let items = names
         .into_iter()
         .map(|(to_column, column)| {
-            let card = name.clone();
-            MenuItem::new(column.clone())
+            let name = column.clone();
+            MenuItem::new(column)
                 .disabled(to_column == here)
                 .onselect(move |()| {
                     // After the last card shown, numbered among the shown ones (2517).
-                    let (shown, to) = drag.end(to_column);
-                    let from_column = *column_index.peek();
-                    landing.set(Some(Landing {
+                    let (count, to) = drag.end(to_column);
+                    put.call(Put {
                         column: to_column,
-                        index: to,
-                        control: Control::MoveTo,
-                        card: id,
-                        from: (from_column, index),
-                        left: None,
-                        held: false,
-                    }));
-                    drag.announce_on_landing(fill(
-                        words.kanban.moved,
-                        &[
-                            ("label", &card),
-                            ("column", &column),
-                            ("n", &(shown + 1)),
-                            ("m", &(shown + 1)),
-                        ],
-                    ));
-                    board.onmove.call(KanbanMove {
-                        from_column,
-                        from: index,
-                        to_column,
+                        name: name.clone(),
+                        slot: count,
+                        count,
                         to,
+                        control: Control::MoveTo,
                     });
                 })
                 .into()
@@ -555,7 +615,7 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
         .attr("aria-labelledby", handle_name.aria_labelledby)
         .attr("aria-describedby", (column.instructions)())
         .event("onpointerdown", carried.onpointerdown)
-        .event("onkeydown", carried.onkeydown)
+        .event("onkeydown", onkeydown)
         .event("onblur", item.onblur)
         .render(
             HtmlTag::Button,

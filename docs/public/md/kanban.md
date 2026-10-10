@@ -7,8 +7,8 @@ Index: [index.md](index.md) lists every other page
 Description: A board of columns whose cards move by drag in a column or to another, by keyboard or move buttons in a column, and to another column by a Move to menu.
 
 A board of columns. A card moves by dragging its handle, in its column or to
-another; by keyboard or with its move buttons in its column; and to another
-column with its Move to menu. `onmove` gets a `KanbanMove` with the old and new
+another; by keyboard in its column or to the next one; with its move buttons in
+its column; and to any column with its Move to menu. `onmove` gets a `KanbanMove` with the old and new
 column and index, and `apply` does it to a `Vec<Vec<T>>`.
 
 ## Usage
@@ -108,6 +108,7 @@ parts work.
 | `Space` or `Enter` | On a handle, lifts its card. Lifted, drops it where it is. |
 | `Up` or `Down` | Moves a lifted card one slot in its column. |
 | `Home` or `End` | Moves a lifted card to the top or bottom of its column. |
+| `Left` or `Right` | Puts a lifted card in the next column on that side (right to left, mirrored), at the slot it was lifted at, or last if that column has fewer cards. The lift ends there and the handle keeps focus. |
 | `Escape` | Puts a lifted or dragged card back where it was. |
 
 ### Libero handles
@@ -152,8 +153,9 @@ button there.
 
 ### Limits
 
-- The keyboard drag moves a card within its column only. Moving to another
-  column is the Move to menu.
+- Left and Right move a lifted card one column per press: it is dropped there, so
+  lift it again for the next column. On Android a right to left board's Left and
+  Right are not mirrored yet.
 - A drag scrolls the board, not the page: to reach a card or column beyond the
   window, use the Move to menu.
 - A board with a height of its own scrolls its cards by wheel and touch; the

@@ -65,6 +65,7 @@ pub fn KanbanPage() -> Element {
                 .key(["Space", "Enter"], "On a handle, lifts its card. Lifted, drops it where it is.")
                 .key(["Up", "Down"], "Moves a lifted card one slot in its column.")
                 .key(["Home", "End"], "Moves a lifted card to the top or bottom of its column.")
+                .key(["Left", "Right"], "Puts a lifted card in the next column on that side (right to left, mirrored), at the slot it was lifted at, or last if that column has fewer cards. The lift ends there and the handle keeps focus.")
                 .key(["Escape"], "Puts a lifted or dragged card back where it was.")
                 .handles([
                     "Each column is a list named by its `label`, and each card a list item.",
@@ -81,7 +82,7 @@ pub fn KanbanPage() -> Element {
                 ])
                 .example("A task board where each `KanbanCard` has `label: title`. On the \"Write\" card, Move to column opens a menu of the columns; picking Done moves the card to the end of Done, the status region says so, and focus lands on the card's Move to button there.")
                 .limits([
-                    "The keyboard drag moves a card within its column only. Moving to another column is the Move to menu.",
+                    "Left and Right move a lifted card one column per press: it is dropped there, so lift it again for the next column. On Android a right to left board's Left and Right are not mirrored yet.",
                     "A drag scrolls the board, not the page: to reach a card or column beyond the window, use the Move to menu.",
                     "A board with a height of its own scrolls its cards by wheel and touch; the scrollbar's gutter stays reserved, so a drag never changes the board's width.",
                     "Columns keep their place: the board has no column reorder.",
@@ -90,7 +91,7 @@ pub fn KanbanPage() -> Element {
             lead: rsx! {
                 Text {
                     "A board of columns. A card moves by dragging its handle, in its column or to another; "
-                    "by keyboard or with its move buttons in its column; and to another column with its Move to menu. "
+                    "by keyboard in its column or to the next one; with its move buttons in its column; and to any column with its Move to menu. "
                     Code { source: "onmove" }
                     " gets a "
                     Code { source: "KanbanMove" }
