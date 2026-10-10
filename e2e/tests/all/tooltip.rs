@@ -74,12 +74,13 @@ async fn rests_on_the_bubble<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     ensure!(d.exists(OPEN).await?, "moving onto the bubble closed it");
     if held {
         d.hover("#away").await?;
-        d.settle().await?;
-        ensure!(
-            d.attr(OPEN, "data-closing").await?.as_deref() == Some("true")
-                && d.armed(CLOSE_MS).await? == 1,
-            "leaving armed no close"
-        );
+        eventually(d, "leaving to arm the close", async |d| {
+            Ok(
+                d.attr(OPEN, "data-closing").await?.as_deref() == Some("true")
+                    && d.armed(CLOSE_MS).await? == 1,
+            )
+        })
+        .await?;
         d.fire_timers(CLOSE_MS).await?;
     } else {
         d.hover("#away").await?;

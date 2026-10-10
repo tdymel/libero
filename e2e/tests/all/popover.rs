@@ -201,10 +201,7 @@ async fn a_tap_outside_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> 
     d.click(TRIGGER).await?;
     shown(d, true, "the box to reopen").await?;
     d.click(BOX_TEXT).await?;
-    d.settle().await?;
-    if !is_shown(d).await? {
-        bail!("{:?}: a tap on the box's text closed it", d.platform());
-    }
+    // A tap that had closed it would make this one reopen it.
     d.click(TRIGGER).await?;
     shown(d, false, "the trigger to toggle it shut").await
 }

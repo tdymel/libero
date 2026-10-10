@@ -76,7 +76,6 @@ async fn timeout_fires_once<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     text_is(d, "#flashing", "on").await?;
     if held {
         armed_is(d, FLASH_MS, 1, "the click to arm the timeout").await?;
-        d.settle().await?;
         ensure!(d.text("#flashing").await? == "on", "ended before its timer");
         ensure!(d.fire_timers(FLASH_MS).await? == 1, "no timeout armed");
         armed_is(d, FLASH_MS, 0, "the timeout to fire once").await?;

@@ -47,12 +47,14 @@ async fn a_drag_up_moves_it<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 async fn a_short_drag_moves_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let pitch = pitch(d, false).await?;
     d.drag("#Beta button", 0.0, pitch * 0.3).await?;
-    d.settle().await?;
+    // A real drag after it: its move alone is reported, from an order the short one left be.
+    d.drag("#Delta button", 0.0, -pitch * 3.0).await?;
+    eventually_text(d, "#order", "Delta Alpha Beta Gamma", "a drag to the top").await?;
+    let moves = d.text("#moves").await?;
     ensure!(
-        d.text("#order").await? == "Alpha Beta Gamma Delta",
-        "a drag short of the next middle reordered"
+        moves.trim() == "3>0",
+        "the short drag reported a move: {moves:?}"
     );
-    ensure!(d.text("#moves").await?.is_empty(), "a move was reported");
     Ok(())
 }
 
@@ -130,7 +132,6 @@ async fn escape_puts_it_back<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         "Escape to cancel",
     )
     .await?;
-    d.settle().await?;
     ensure!(
         d.text("#order").await? == "Alpha Beta Gamma Delta",
         "a cancelled move reordered"

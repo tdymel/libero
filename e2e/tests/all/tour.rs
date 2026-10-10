@@ -150,11 +150,9 @@ async fn target_is_inert<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         target.y + target.height / 2.0,
     )
     .await?;
-    d.settle().await?;
-    if !d.exists(CARD).await? {
-        bail!("{:?}: a press on the target ended the tour", d.platform());
-    }
-    eventually_text(d, PROGRESS, "1 of 3", "a press on the target").await
+    // Next, handled after the press, finds the tour open and still on its first step.
+    d.click(NEXT).await?;
+    eventually_text(d, PROGRESS, "2 of 3", "Next after a press on the target").await
 }
 
 e2e::scenario!(a_press_on_the_target_does_nothing, "/tour", target_is_inert);
@@ -245,7 +243,9 @@ async fn tab_bridge<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.press(keyboard::TAB).await?;
     eventually_focused(d, "#pressable", "Tab from the card's last control").await?;
     d.press(keyboard::ARROW_LEFT).await?;
-    d.settle().await?;
+    // The Tab, handled after the arrow, is the wait before reading the progress.
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, CLOSE, "Tab from the target after an arrow").await?;
     ensure!(
         d.text(PROGRESS).await? == "2 of 2",
         "ArrowLeft on the target stepped the tour"
@@ -604,17 +604,10 @@ async fn arrow_right_stops_on_the_last_step<D: Driver>(d: &mut D, _route: &str) 
         eventually_focused(d, CARD, "ArrowRight").await?;
     }
     d.press(keyboard::ARROW_RIGHT).await?;
-    d.settle().await?;
-    ensure!(
-        d.text(PROGRESS).await? == "3 of 3",
-        "ArrowRight on the last step left it"
-    );
-    ensure!(
-        d.text(ENDED).await?.is_empty(),
-        "ArrowRight on the last step ended the tour: {}",
-        d.text(ENDED).await?
-    );
-    Ok(())
+    // Done, handled after the arrow, finds the tour open on its last step.
+    d.click(NEXT).await?;
+    modal::closed_with_focus_on(d, TRIGGER, "Done").await?;
+    eventually_text(d, ENDED, "finished", "Done").await
 }
 
 e2e::scenario!(

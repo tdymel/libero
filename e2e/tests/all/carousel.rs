@@ -132,7 +132,6 @@ const TAB_BUDGET: usize = 10;
 const INDEX: &str = "[...document.querySelectorAll('[aria-roledescription=slide]')]\
                      .findIndex(el => el.hasAttribute('data-current'))";
 
-const FIRST_CURRENT: &str = "[aria-roledescription=slide]:nth-of-type(1)[data-current]";
 const FIRST_SLIDE: &str = "[aria-roledescription=slide]:nth-of-type(1)";
 
 async fn an_arrow_on_the_track_moves<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -149,13 +148,15 @@ async fn an_arrow_on_the_track_moves<D: Driver>(d: &mut D, _route: &str) -> Resu
 async fn an_arrow_in_a_field_stays<D: Driver>(d: &mut D, field: &str) -> Result<()> {
     d.focus(field).await?;
     d.press(keyboard::ARROW_RIGHT).await?;
-    d.settle().await?;
-    ensure!(
-        d.exists(FIRST_CURRENT).await?,
-        "{:?}: the carousel took the arrow pressed in {field}",
-        d.platform()
-    );
-    Ok(())
+    // An arrow on the track, handled after it, reaches slide 2 only if the first moved nothing.
+    d.focus(TRACK).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually(
+        d,
+        &format!("the track's arrow to reach slide 2 after one in {field}"),
+        async |d| d.exists(SECOND_CURRENT).await,
+    )
+    .await
 }
 
 /// Todo 1178: with the caret at the field's end, WebKitGTK scrolled the track on an

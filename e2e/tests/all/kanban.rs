@@ -105,7 +105,6 @@ async fn a_drop_off_the_board_puts_it_back<D: Driver>(d: &mut D, _route: &str) -
         "a drop below the board",
     )
     .await?;
-    d.settle().await?;
     ensure!(
         d.text("#order").await? == START,
         "a drop off the board moved a card"
@@ -140,7 +139,6 @@ async fn escape_puts_it_back<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         "Escape to cancel",
     )
     .await?;
-    d.settle().await?;
     ensure!(d.text("#order").await? == START, "a cancel reordered");
     ensure!(d.text("#moves").await?.is_empty(), "a move was reported");
     Ok(())

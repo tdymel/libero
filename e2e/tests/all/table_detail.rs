@@ -31,15 +31,16 @@ async fn opens_under_its_row<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     if (detail.y - (row.y + row.height)).abs() > 2.0 || detail.width < table.width - 2.0 {
         bail!("the detail is not a full-width row under Cherry: {detail:?}, {row:?}, {table:?}");
     }
-    d.settle().await?;
-    if !d.text("#clicked").await?.is_empty() {
-        bail!("the toggle also clicked its row");
-    }
     d.click(CHERRY).await?;
     eventually(d, "the detail row to go", async |d| {
         Ok(!d.exists(DETAIL).await?)
     })
-    .await
+    .await?;
+    // Read after the second toggle: a row click from the first would have landed by now.
+    if !d.text("#clicked").await?.is_empty() {
+        bail!("the toggle also clicked its row");
+    }
+    Ok(())
 }
 
 e2e::scenario!(
