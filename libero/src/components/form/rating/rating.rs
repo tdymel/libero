@@ -6,7 +6,7 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, Part, States, Variables, base_color, disabled_look_sx, draw_svg,
-            has_shortcut_modifier, names_itself, use_name_warning, variables,
+            has_shortcut_modifier, names_itself, use_name_warning, variables, warning_edge,
         },
         form::{field_parts_enum, field_props, use_bound, use_field},
         layout::use_box,
@@ -25,6 +25,9 @@ use crate::{
 
 /// The filled symbols' colour, resolved on the root.
 const RATING_COLOR: CssVar = CssVar::new("--lsx-rating-color");
+
+/// The ink edge of a warning-coloured filled glyph, set with the `edged` state.
+const RATING_EDGE: CssVar = CssVar::new("--lsx-rating-edge");
 
 /// The smallest a symbol's hit area gets, per WCAG 2.5.8.
 const MIN_TARGET: &str = "24px";
@@ -83,6 +86,14 @@ static RATING_SX: StaticSx = StaticSx::new(|| {
                 .display("flex"),
         )
         .selector("& [data-slot='zone']", sx().flex("1 1 0"))
+        // Yellow alone misses 3:1 on a light page, so the filled glyph is edged in ink (todo 3128).
+        .when(
+            "edged",
+            sx().selector(
+                format!("& [data-slot='{}'] svg", RatingPart::Fill.slot()),
+                sx().stroke(RATING_EDGE.value()),
+            ),
+        )
         .when("editable", sx().cursor("pointer"))
         .when("disabled", disabled_look_sx("not-allowed"))
 });
@@ -122,7 +133,8 @@ field_props! {
         /// Rules over the value, shown on blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<f64>,
-        /// Number of symbols. Default 5.
+        /// Number of symbols. Default 5. The row never wraps: 320px holds 12 at `xs` and
+        /// `sm`, 10 at `md`, 8 at `lg`, 7 at `xl` and 6 at `xxl`.
         #[props(default)]
         count: Option<u8>,
         /// Steps per symbol: 1 whole symbols, 2 halves. Default 1.
@@ -299,6 +311,11 @@ pub fn Rating(props: RatingProps) -> Element {
         "Rating: no `label` or `aria_label`, so it is announced without a name.",
     );
 
+    let color = match props.color.as_ref() {
+        Some(color) => base_color(Some(color)),
+        None => base_color(Some(&ThemeAwareValue::Color(theme.rating.color))),
+    };
+    let edge = warning_edge(&color);
     let dragging = (drag.dragging)();
     let states: Input<States> = States::default()
         .with(size.state_name(), true)
@@ -306,13 +323,12 @@ pub fn Rating(props: RatingProps) -> Element {
         .with("dragging", dragging)
         .with("disabled", disabled)
         .with("readonly", readonly)
+        .with("edged", edge.is_some())
         .into();
-    let color = match props.color.as_ref() {
-        Some(color) => base_color(Some(color)),
-        None => base_color(Some(&ThemeAwareValue::Color(theme.rating.color))),
-    };
-    let root_variables: Input<Variables> =
-        variables().with(RATING_COLOR, color.resolve(None)).into();
+    let root_variables: Input<Variables> = variables()
+        .with(RATING_COLOR, color.resolve(None))
+        .with(RATING_EDGE, edge)
+        .into();
     let style = use_box()
         .framework_sx(&RATING_SX)
         .states(&states)

@@ -5,7 +5,7 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, Part, ScaleOrCss, States, Variables, base_color, base_props,
-            names_itself, parts_enum, text_color, use_name_warning, variables,
+            names_itself, parts_enum, text_color, use_name_warning, variables, warning_edge,
         },
         form::{SliderSegment, segment_filled, track_segments},
         layout::use_box,
@@ -179,13 +179,7 @@ fn fill_paint(color: &ThemeAwareValue) -> Option<String> {
 /// Yellow stays under 3:1 on a light track even in the text role, so warning gets an
 /// inset edge in ink: its contrast var turns white in some themes (todo 2033).
 fn fill_edge(color: &ThemeAwareValue) -> Option<String> {
-    match color {
-        ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Warning, _)) => Some(format!(
-            "inset 0 0 0 1px {}",
-            ColorValue::Shade(Color::Ink, ColorShade::S6).value()
-        )),
-        _ => None,
-    }
+    warning_edge(color).map(|ink| format!("inset 0 0 0 1px {ink}"))
 }
 
 fn progress_bar_variables(color: &ThemeAwareValue, fill: Option<String>) -> Variables {

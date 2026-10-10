@@ -37,7 +37,8 @@ pub fn RatingPage() -> Element {
                     .doc("Called with the value `value` should take next: on a click or tap, along a sideways drag, and on each key. With `0` when `clearable` clears it."),
                 prop("onhover", "EventHandler<Option<f64>>")
                     .doc("The value under a mouse or pen, and `None` once it leaves or presses. The stars show it in place of `value` meanwhile. A touch has no hover."),
-                prop("count", "u8").default("5").doc("Number of stars."),
+                prop("count", "u8").default("5")
+                    .doc("Number of stars. The row never wraps: a 320px screen with a 16px page margin holds 12 at `xs` and `sm`, 10 at `md`, 8 at `lg`, 7 at `xl` and 6 at `xxl`."),
                 prop("fractions", "u8")
                     .default("1")
                     .doc("Steps per star: `1` picks whole stars, `2` halves. Each step is a hit zone of its own."),
@@ -108,6 +109,7 @@ pub fn RatingPage() -> Element {
                 .limits([
                     "Every star's hit area is at least 24px tall, and 24px wide at `xs` and `sm` (`xs` spaces its stars out to fit), through transparent padding. At the default `md` size a whole star is 28px wide, a half star 14px: the row is one slider, and a drag or the arrow keys reach any half. `size: \"xxl\"` makes each half 24px wide.",
                     "A solid custom icon shows the value by colour alone.",
+                    "The default `warning` yellow reads about 1.9:1 on a white page, under the 3:1 of WCAG 1.4.11, so a `warning` fill is edged in ink; any other `color` is yours to check.",
                 ]),
             lead: rsx! {
                 Text {

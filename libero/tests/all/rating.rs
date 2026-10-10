@@ -44,6 +44,30 @@ fn a_rating_is_one_slider_with_its_value_spoken() {
     assert_eq!(html.matches(r#"style="width: 50%""#).count(), 1);
 }
 
+/// Todo 3128: only the warning fill, yellow under 3:1 on white, takes the ink edge.
+#[test]
+fn only_the_warning_fill_is_edged_in_ink() {
+    fn warning() -> Element {
+        rsx! {
+            LiberoProvider { Rating { aria_label: "Stars", value: 3.0, onchange: move |_| {} } }
+        }
+    }
+    fn error() -> Element {
+        rsx! {
+            LiberoProvider {
+                Rating { aria_label: "Stars", color: "error", value: 3.0, onchange: move |_| {} }
+            }
+        }
+    }
+    let edged = root_of(&render(warning), "slider");
+    assert!(edged["data-state"].contains("edged"), "{edged:?}");
+    assert!(edged["style"].contains("--lsx-rating-edge"), "{edged:?}");
+
+    let plain = root_of(&render(error), "slider");
+    assert!(!plain["data-state"].contains("edged"), "{plain:?}");
+    assert!(!plain["style"].contains("--lsx-rating-edge"), "{plain:?}");
+}
+
 #[test]
 fn format_and_the_localization_word_the_value() {
     fn formatted() -> Element {

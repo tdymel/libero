@@ -75,7 +75,7 @@ IconProvider {
 | `value` | `f64` | `0` | The rating, from 0 (unrated) to `count`. Pair it with `onchange`, or bind it with `name` in a `Form`. A value between steps draws as it is, so an average of 4.3 shows 4.3 stars. |
 | `onchange` | `EventHandler<f64>` | - | Called with the value `value` should take next: on a click or tap, along a sideways drag, and on each key. With `0` when `clearable` clears it. |
 | `onhover` | `EventHandler<Option<f64>>` | - | The value under a mouse or pen, and `None` once it leaves or presses. The stars show it in place of `value` meanwhile. A touch has no hover. |
-| `count` | `u8` | `5` | Number of stars. |
+| `count` | `u8` | `5` | Number of stars. The row never wraps: a 320px screen with a 16px page margin holds 12 at `xs` and `sm`, 10 at `md`, 8 at `lg`, 7 at `xl` and 6 at `xxl`. |
 | `fractions` | `u8` | `1` | Steps per star: `1` picks whole stars, `2` halves. Each step is a hit zone of its own. |
 | `clearable` | `bool` | `false` | Picking the current value again resets it to 0, and Home or the arrows can go below the first step. Without it, the first step is the lowest a user can pick. |
 | `icon` | `SvgData` | `IconSlot::Star` | The symbol, drawn empty and filled in `currentColor`. A stroked glyph turns solid when filled; a solid one only changes colour. |
@@ -161,6 +161,9 @@ stop, a slider read as "3.5 of 5", and the arrows move it by half a star.
   slider, and a drag or the arrow keys reach any half. `size: "xxl"` makes each
   half 24px wide.
 - A solid custom icon shows the value by colour alone.
+- The default `warning` yellow reads about 1.9:1 on a white page, under the 3:1
+  of WCAG 1.4.11, so a `warning` fill is edged in ink; any other `color` is
+  yours to check.
 
 ## Theme defaults
 
@@ -186,11 +189,12 @@ number uses the formats' decimal separator.
 | `--lsx-rating-gap-size-<size>` | Gap between stars for that size step. |
 | `--lsx-rating-glyph` / `--lsx-rating-gap` | The picked size step, resolved on the row. |
 | `--lsx-rating-color` | The filled stars' colour, resolved on the row. |
+| `--lsx-rating-edge` | The ink edge of a `warning` fill, set with the `edged` state. |
 
 ## Data attributes
 
 `data-state` on the row carries `size-*`, and `editable`, `dragging`,
-`disabled` and `readonly` when they apply. Each star is
-`data-slot="symbol"`, holding `data-slot="glyph"` (the empty star and, when
+`disabled`, `readonly` and `edged` (a `warning` fill) when they apply. Each
+star is `data-slot="symbol"`, holding `data-slot="glyph"` (the empty star and, when
 filled, `data-slot="fill"`) and, on an editable rating, `data-slot="zones"`
 with one `data-slot="zone"` per step.

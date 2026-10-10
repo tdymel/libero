@@ -5,8 +5,8 @@
 use dioxus::prelude::*;
 use libero::{
     components::{
-        ActionIcon, Burger, Checkbox, Chip, ColorCode, ColorField, Dialog, Flex, Image,
-        NumberField, Pagination, PasswordField, Radio, Select, SliderChangeEvent, Switch,
+        ActionIcon, Burger, Checkbox, Chip, ColorCode, ColorField, ColorSwatch, Dialog, Flex,
+        Image, NumberField, Pagination, PasswordField, Radio, Select, SliderChangeEvent, Switch,
         TagsField, TextField,
     },
     theme::Size,
@@ -41,6 +41,13 @@ fn HitAreaPage() -> Element {
                 ActionIcon { id: "icon-xs", aria_label: "Extra small", size: "16px", {glyph()} }
                 ActionIcon { id: "icon-sm", aria_label: "Small", size: "20px", {glyph()} }
                 ActionIcon { id: "icon-md", aria_label: "Medium", size: "md", {glyph()} }
+                ColorSwatch {
+                    id: "swatch-xs",
+                    aria_label: "Blue",
+                    size: Size::Xs,
+                    color: "#1c7ed6".parse::<ColorCode>().unwrap(),
+                    onclick: move |_| {},
+                }
                 div { width: "16px", height: "16px",
                     Image {
                         id: "zoom-tiny",

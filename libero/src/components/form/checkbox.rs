@@ -364,6 +364,8 @@ static LIGHT_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .position("relative")
         .width(CHECKBOX_BOX.value())
         .cursor("pointer")
+        // The control carries the click, so it carries the 24px floor (WCAG 2.5.8, todo 3131).
+        .and(min_hit_area_sx("::before"))
         // Over the box's centre, so a click at the input's centre lands on the box (todo 1992).
         .selector("& > input", hidden_input_centred_sx())
         .selector(
@@ -542,7 +544,12 @@ impl CheckboxLook {
             false => &self.check,
         };
         let mark = draw_svg(icon, vec![Attribute::new("stroke-width", "3", None, false)]);
-        let press = move |_| {
+        // On the control, so its 24px hit area counts as well as the box. The input's
+        // click, cancelled on the way up, is taken by the input.
+        let press = move |event: MouseEvent| {
+            if !event.default_action_enabled() {
+                return;
+            }
             toggle();
             if !disabled {
                 let _ = element.focus();
@@ -553,13 +560,13 @@ impl CheckboxLook {
                 class: self.box_class.clone(),
                 "data-slot": CheckboxPart::Box.slot(),
                 "aria-hidden": "true",
-                onclick: press,
                 {mark}
             }
         };
         control
             .clone()
             .attr("data-slot", CheckboxPart::Control.slot())
+            .event("onclick", press)
             .render(HtmlTag::Span, Vec::new(), vec![input, box_node])
     }
 }

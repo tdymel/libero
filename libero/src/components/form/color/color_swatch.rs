@@ -5,7 +5,7 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, ScaleOrCss, States, Variables, base_props, disabled_look_sx,
-            names_itself, shadow_sx, use_name_warning, variables,
+            min_hit_area_sx, names_itself, shadow_sx, use_name_warning, variables,
         },
         layout::use_box,
     },
@@ -57,7 +57,13 @@ static COLOR_SWATCH_SX: StaticSx = StaticSx::new(|| {
         // flip with the scheme, so neither may the mark on it.
         .color("#fff")
         .when("on-light", sx().color("#000"))
-        .when("clickable", sx().cursor("pointer"))
+        // A press takes a 24px box (WCAG 2.5.8, todo 3130).
+        .when(
+            "clickable",
+            sx().cursor("pointer")
+                .position("relative")
+                .and(min_hit_area_sx("::before")),
+        )
         // A disabled `Fieldset` disables a clickable swatch's `<button>` (todo 514).
         .selector("&:disabled", disabled_look_sx("not-allowed"))
 });

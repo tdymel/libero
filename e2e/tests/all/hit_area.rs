@@ -2,7 +2,7 @@
 //! box, and a slot button never grows its field's frame.
 
 use e2e::browser::block_on;
-use e2e::passes::{motion, pointer};
+use e2e::passes::{keyboard, motion, pointer};
 use e2e::{Fixture, Viewport, wait};
 use serde::Deserialize;
 
@@ -43,6 +43,8 @@ fn small_action_icons_take_presses_in_a_24px_box() {
             ("#icon-sm", 20.0),
             // Todo 3077: a zoomable picture under 24px.
             ("#zoom-tiny", 16.0),
+            // Todo 3130: a clickable swatch at the smallest size.
+            ("#swatch-xs", 16.0),
             ("[data-case=password-md] [data-slot=trailing] button", 30.0),
             ("[data-case=select-md] button[aria-label=Clear]", 30.0),
             ("[data-case=color-xs] [data-slot=trailing] button", 24.0),
@@ -178,6 +180,94 @@ fn a_nameless_radio_and_checkbox_take_presses_in_a_24px_box() {
         }
 
         fixture.console.assert_clean("a radio hit area").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 3131: a table row's light box takes a mouse press 11.5px out from its drawn size,
+/// and toggles the row's selection.
+#[test]
+fn a_table_row_checkbox_takes_presses_in_a_24px_box() {
+    block_on(async {
+        let fixture = Fixture::open("/table/select", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        let hit: Hit = page
+            .evaluate(
+                "(() => {
+                    const el = document.querySelector('tbody tr:nth-child(2) [data-slot=control]');
+                    el.scrollIntoView({ block: 'center' });
+                    const r = el.getBoundingClientRect();
+                    const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
+                    const misses = [];
+                    for (const dx of [-11.5, 0, 11.5]) for (const dy of [-11.5, 0, 11.5]) {
+                        const at = document.elementFromPoint(cx + dx, cy + dy);
+                        if (!at || !el.contains(at)) misses.push([dx, dy, at ? at.outerHTML.slice(0, 60) : null]);
+                    }
+                    return { width: r.width, height: r.height, misses };
+                })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(hit.height < 20.0, "the box grew its drawn size: {hit:?}");
+        assert!(
+            hit.misses.is_empty(),
+            "its 24px box lands elsewhere: {:?}",
+            hit.misses
+        );
+
+        let (x, y): (f64, f64) = page
+            .evaluate(
+                "(() => { const r = document.querySelector('tbody tr:nth-child(2) [data-slot=control]')\
+                 .getBoundingClientRect(); return [r.x + r.width / 2 - 11.5, r.y + r.height / 2 + 11.5]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let before: String = page
+            .evaluate("document.querySelector('#selection').textContent")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let at = pointer::Point { x, y };
+        pointer::drag(page, at, at, 1).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector('#selection').textContent !== {before:?}"),
+            "a press in the box's corner to toggle the row",
+        )
+        .await
+        .unwrap();
+        let clicked: String = page
+            .evaluate("document.querySelector('#clicked').textContent")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(clicked.is_empty(), "the corner press also clicked the row");
+
+        page.evaluate("document.querySelector('tbody tr:nth-child(2) input').focus()")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::SPACE).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector('#selection').textContent === {before:?}"),
+            "Space on the box's input to toggle the row back",
+        )
+        .await
+        .unwrap();
+
+        fixture
+            .console
+            .assert_clean("a table checkbox hit area")
+            .unwrap();
         fixture.close().await.unwrap();
     });
 }

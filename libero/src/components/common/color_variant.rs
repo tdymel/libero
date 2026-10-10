@@ -50,6 +50,17 @@ pub(crate) fn contrast_color(base: &ThemeAwareValue) -> Option<ThemeAwareValue> 
     }
 }
 
+/// Ink, for the edge a yellow `warning` graphic needs: it stays under 3:1 on a light page
+/// (todos 2033, 3128). `None` for any other colour.
+pub(crate) fn warning_edge(base: &ThemeAwareValue) -> Option<String> {
+    match base {
+        ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Warning, _)) => {
+            Some(ColorValue::Shade(Color::Ink, ColorShade::S6).value())
+        }
+        _ => None,
+    }
+}
+
 /// Black or white text for a literal fill, whichever clears 4.5:1. An unparsed colour asks
 /// the browser's `contrast-color()`.
 pub(crate) fn literal_contrast(base: &ThemeAwareValue) -> Option<String> {
