@@ -34,6 +34,8 @@ pub struct Column<T> {
     pub(super) filterable: bool,
     /// What the cell type chose; picks the column filter's operators.
     pub(super) filter_kind: FilterKind,
+    /// The choices of a select column's filter; empty for any other.
+    pub(super) options: Vec<String>,
     pub(super) width: Option<String>,
     pub(super) min_width: Option<String>,
     /// Gets a resize handle with the table's `resizable_columns`.
@@ -75,6 +77,7 @@ impl ColumnHeader {
             hideable: true,
             filterable: true,
             filter_kind: V::filter_kind(),
+            options: Vec::new(),
             width: None,
             min_width: None,
             resizable: true,
@@ -255,6 +258,23 @@ impl<T> Column<T> {
         self
     }
 
+    /// Makes it a select column: its filter picks among `options`, matched against the
+    /// cell text exactly, with the operators Is, Is not and Is any of. The quick filter
+    /// and sorting still read the cell.
+    ///
+    /// ```rust
+    /// # use libero::components::column;
+    /// # struct User { role: String }
+    /// column("Role")
+    ///     .value(|u: &User| u.role.clone())
+    ///     .options(["Admin", "Editor", "Viewer"]);
+    /// ```
+    pub fn options(mut self, options: impl IntoIterator<Item = impl Into<String>>) -> Self {
+        self.options = options.into_iter().map(Into::into).collect();
+        self.filter_kind = FilterKind::Select;
+        self
+    }
+
     /// Replaces the cell body. Sorting still uses `value`.
     ///
     /// Runs in its row's scope, again only when that row or a column changes: no hooks,
@@ -428,6 +448,7 @@ impl<T> Clone for Column<T> {
             hideable: self.hideable,
             filterable: self.filterable,
             filter_kind: self.filter_kind,
+            options: self.options.clone(),
             width: self.width.clone(),
             min_width: self.min_width.clone(),
             resizable: self.resizable,
@@ -455,6 +476,7 @@ impl<T> PartialEq for Column<T> {
             && self.hideable == other.hideable
             && self.filterable == other.filterable
             && self.filter_kind == other.filter_kind
+            && self.options == other.options
             && self.width == other.width
             && self.min_width == other.min_width
             && self.resizable == other.resizable

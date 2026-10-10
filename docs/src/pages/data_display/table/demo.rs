@@ -133,6 +133,7 @@ fn team_columns(grouped: bool) -> Vec<Column<Person>> {
             column("Role")
                 .value(|p: &Person| p.role.clone())
                 .sortable()
+                .options(["Owner", "Admin", "Viewer"])
                 .render(|p: &Person| rsx! { Chip { size: "xs", "{p.role}" } }),
         ),
         group(column("Joined").value(|p: &Person| p.joined).sortable()),

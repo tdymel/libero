@@ -36,6 +36,8 @@ pub enum FilterKind {
     Number,
     Boolean,
     Date,
+    /// One of a fixed set of options, set with `Column::options`.
+    Select,
 }
 
 /// What a cell sorts by. `Text` is pre-lowercased, so a comparison during the

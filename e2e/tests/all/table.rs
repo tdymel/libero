@@ -77,11 +77,11 @@ e2e::scenario!(
 const AREA: &str = "[data-table-scroll]";
 
 /// A `NativeSelect`: natively a listbox combobox, no `<select>`.
-const PICKER: &str = ":is(select, [role=combobox])";
+pub(crate) const PICKER: &str = ":is(select, [role=combobox])";
 
 /// Steps the focused `NativeSelect` `steps` options on. Natively the first
 /// arrow opens its listbox on the current option and Enter picks.
-async fn pick_later<D: Driver>(d: &mut D, steps: usize) -> Result<()> {
+pub(crate) async fn pick_later<D: Driver>(d: &mut D, steps: usize) -> Result<()> {
     let native = d.platform() == Platform::Native;
     if native {
         d.press(keyboard::ARROW_DOWN).await?;

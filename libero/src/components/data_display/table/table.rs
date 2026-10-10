@@ -1218,6 +1218,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         column.filterable.then(|| FilterTarget {
             column: column.header.clone(),
             kind: column.filter_kind,
+            options: column.options.clone(),
             slice: state.column_filters,
             labels,
             size,
@@ -1441,6 +1442,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .map(|column| PanelColumn {
             header: column.header.clone(),
             kind: column.filter_kind,
+            options: column.options.clone(),
         })
         .collect();
     let kept = match props.manual_filter {

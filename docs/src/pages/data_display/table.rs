@@ -27,6 +27,7 @@ const COLUMNS: &str = r#"columns: vec![
     column("Role")
         .value(|p: &Person| p.role.clone())
         .sortable()
+        .options(["Owner", "Admin", "Viewer"])
         .render(|p: &Person| rsx! { Chip { size: "xs", "{p.role}" } }),
     column("Joined").value(|p: &Person| p.joined).sortable(),
     column("Review").value(|p: &Person| p.review).sortable(),
@@ -51,6 +52,7 @@ const GROUPED_COLUMNS: &str = r#"columns: vec![
     column("Role")
         .value(|p: &Person| p.role.clone())
         .sortable()
+        .options(["Owner", "Admin", "Viewer"])
         .render(|p: &Person| rsx! { Chip { size: "xs", "{p.role}" } })
         .group("Membership"),
     column("Joined").value(|p: &Person| p.joined).sortable().group("Membership"),
@@ -271,13 +273,13 @@ pub fn TablePage() -> Element {
                     prop("onquickfilterchange", "EventHandler<String>").default("None").doc("Called with the text typed into the quick-filter field."),
                     prop("show_quick_filter", "bool").default("false").doc("Puts a search field above the table that drives the quick filter."),
                     prop("manual_filter", "bool").default("false").doc("`data` comes filtered, say from a server: the quick filter and the column filters only report through `onquickfilterchange` and `oncolumnfilterschange`. Pair it with `manual_pagination` and `row_count` when paged."),
-                    prop("column_filters", "Option<Vec<ColumnFilter>>").default("None").doc("Filters by header: `ColumnFilter::new(\"Age\", FilterOperator::GreaterThan, \"30\")`, or `ColumnFilter::between(\"Joined\", \"2026-01-01\", \"2026-06-30\")` for a date range. A row stays when it passes all of them (or any, with `filter_logic`) and the quick filter. Dates take an ISO day. Text operators ignore case, `Equals` too; number operators compare the value, not its formatted text, and take `1,5` as 1.5. An empty value, a number that does not parse, or an operator the column's type does not offer keeps every row. A hidden column's filter keeps filtering. Set, the filters are controlled: pair them with `oncolumnfilterschange`. The operators follow the column's type, such as contains or starts with for text, greater than for numbers, before, after, on or before, on or after and between for a `chrono::NaiveDate`, yes or no for booleans. A date's value field is a `DateField`, the native date input on a WebView. A `between` end left empty is open, and ends the wrong way round are swapped. A column may hold several filters: the popover and the header field edit its first, `filter_panel` all of them."),
+                    prop("column_filters", "Option<Vec<ColumnFilter>>").default("None").doc("Filters by header: `ColumnFilter::new(\"Age\", FilterOperator::GreaterThan, \"30\")`, or `ColumnFilter::between(\"Joined\", \"2026-01-01\", \"2026-06-30\")` for a date range. A row stays when it passes all of them (or any, with `filter_logic`) and the quick filter. Dates take an ISO day. Text operators ignore case, `Equals` too; number operators compare the value, not its formatted text, and take `1,5` as 1.5. An empty value, a number that does not parse, or an operator the column's type does not offer keeps every row. A hidden column's filter keeps filtering. Set, the filters are controlled: pair them with `oncolumnfilterschange`. The operators follow the column's type, such as contains or starts with for text, greater than for numbers, before, after, on or before, on or after and between for a `chrono::NaiveDate`, yes or no for booleans, is, is not and is any of for a select column (`ColumnFilter::any_of(\"Role\", [\"Admin\", \"Owner\"])`). A date's value field is a `DateField`, the native date input on a WebView. A `between` end left empty is open, and ends the wrong way round are swapped. A column may hold several filters: the popover and the header field edit its first, `filter_panel` all of them."),
                     prop("default_column_filters", "Vec<ColumnFilter>").default("[]").doc("Seeds the column filters once. Ignored when `column_filters` is set."),
                     prop("oncolumnfilterschange", "EventHandler<Vec<ColumnFilter>>").default("None").doc("Called with the filters a filter popover or a header filter asks for. Typed values arrive once typing pauses for 300 ms, an operator or yes/no pick at once."),
                     prop("filter_logic", "Option<FilterLogic>").default("None").doc("How the column filters join: `FilterLogic::And` keeps a row that passes all of them, `Or` one that passes any. The quick filter applies on top either way. Set, it is controlled."),
                     prop("default_filter_logic", "FilterLogic").default("And").doc("Seeds the filter logic once. Ignored when `filter_logic` is set."),
                     prop("onfilterlogicchange", "EventHandler<FilterLogic>").default("None").doc("Called with the filter logic a pick asks for."),
-                    prop("header_filters", "bool").default("false").doc("Adds a row of filter fields under the headers, one per `filterable` column: a text field, or Any/Yes/No for a boolean column. A field edits its column's filter with the operator the filter popover set, else the type's first: Contains for text, Equals for numbers."),
+                    prop("header_filters", "bool").default("false").doc("Adds a row of filter fields under the headers, one per `filterable` column: a text field, Any/Yes/No for a boolean column, or Any and the options for a select column (checkboxes once the popover picked Is any of). A field edits its column's filter with the operator the filter popover set, else the type's first: Contains for text, Equals for numbers."),
                     prop("filter_panel", "bool").default("false").doc("A Filters button at the start of the toolbar row, showing the active filters' count, opens a dialog of every column filter; with a `toolbar`, put `TableFilterButton` in it where the button goes instead, one line each: column, operator, value and a remove button. Add filter appends a line for the first column without one; from two lines a Match pick sets `filter_logic`. Lines apply as the popover does. `column_menu`'s Filter then opens the panel on its column's line instead of the popover."),
                     prop("pinned_columns", "Option<PinnedColumns>").default("None").doc("The columns held at the table's start and end edges while the rest scroll sideways, by header: `PinnedColumns::default().start([..]).end([..])`. Start is the left in a left-to-right page, the right in a right-to-left one. Set, pinning is controlled: pair it with `onpinnedcolumnschange`. Pair it with `scroll` or `max_height`, and give every pinned column but the outermost on its side a `width`, which it then keeps exactly."),
                     prop("default_pinned_columns", "PinnedColumns").default("none pinned").doc("Seeds the pinned columns once. Ignored when `pinned_columns` is set."),
@@ -307,6 +309,7 @@ pub fn TablePage() -> Element {
                     prop("of", "&ColumnType<V>").default("None").doc("Before `value`: starts the column from a shared `const` type, its alignment, widths and a `format` over the value. `V` must match `value`'s; the column's own settings win."),
                     prop("row_header", "bool").default("false").doc("Renders the column's cells as `th scope=\"row\"`, so a screen reader names each row by it. One per table, usually the first."),
                     prop("filterable", "bool").default("true").doc("Whether the quick filter searches the column's cell text, and whether it takes a column filter. Off for ids and codes that would match by accident."),
+                    prop("options", "Vec<String>").default("[]").doc("Makes it a select column: its filter picks among these options, matched whole against the cell text, with the operators is, is not and is any of. The quick filter and sorting still read the cell."),
                     prop("hideable", "bool").default("true").doc("Whether the column menu offers to hide the column. `hidden_columns` still hides it."),
                     prop("group", "String").default("None").doc("Puts the column under a group header, shared with the adjacent columns of the same groups. Call it once per level, outermost first. The same name under another parent is another group, and a hidden column leaves its group."),
                     prop("col_span", "fn(&T) -> usize").default("None").doc("How many shown columns a row's cell covers, from this one on, say a total row's label. The covered cells are left out; the span stops at the row's end. Capture signals, not values: the closure is not compared."),
@@ -345,7 +348,7 @@ pub fn TablePage() -> Element {
                     "Each group toggle is a button named by the group's text and row count, \"Admin, 2 rows\", with `aria-expanded`; opening or closing it is said in a polite live region, \"Admin expanded\". The table keeps its table role: group rows are rows with a button, not a tree.",
                     "A polite live region says what changed: the selected count, \"2 rows selected\"; the page range, \"4–6 of 7\"; the rows left after a filter, \"2 rows\"; the rows loaded by `onbottomreached`, \"200 rows\"; an export, \"Exported 12 rows\". The first render says nothing.",
                     "Page buttons sit in a `nav` named after the caption, and the page-size picker is labelled. The quick-filter is a labelled search field described by the table's name, so two tables' fields differ.",
-                    "Filter popovers and the filter panel are named dialogs with labelled fields. Focus moves in on open, and Escape closes them onto their button. A filtered header reads \"Age is filtered\".",
+                    "Filter popovers and the filter panel are named dialogs with labelled fields. Focus moves in on open, and Escape closes them onto their button. A filtered header reads \"Age is filtered\". A select column's Is any of is a named group of checkboxes, one per option.",
                     "Each column menu button is named after its column, \"Age column options\". It shows on hover or focus, always on touch. A move, pin, hide or width change is said in a polite live region, and the last shown column cannot be hidden: its controls say why.",
                     "Pinned and moved columns move in the DOM too, so Tab and a screen reader meet the cells in the order they are seen.",
                     "Rows and columns reorder without a drag (WCAG 2.5.7): a row has a named handle plus Move up and Move down buttons, a column moves from its menu. The header drag grip is pointer only and hidden from screen readers. While sorted or filtered the row controls stay tab stops but are `aria-disabled` and say why.",
@@ -444,7 +447,11 @@ pub fn TablePage() -> Element {
                         (false, _) => vec![],
                     }),
                     Control::switch("loading").hidden_when(from_server),
-                    Control::switch("header_filters"),
+                    // On, so the Role column's select filter shows without another switch.
+                    Control::switch("header_filters").default("true").code(|_, values| match values.str("header_filters") == "true" {
+                        true => vec!["header_filters: true".to_string()],
+                        false => vec![],
+                    }),
                     Control::switch("filter_panel"),
                     Control::switch("paginate").code(|_, values| match values.str("paginate") == "true" {
                         true => vec!["page_sizes: vec![2, 5, 10]".to_string()],

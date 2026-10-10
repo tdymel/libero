@@ -39,8 +39,12 @@ pub enum FilterOperator {
     LessOrEqual,
     IsEmpty,
     IsNotEmpty,
-    /// A boolean column's value, `"true"` or `"false"`.
+    /// A boolean column's value, `"true"` or `"false"`; a select column's option.
     Is,
+    /// A select column's cell is not the option in `value`.
+    IsNot,
+    /// A select column's cell is one of the options in `values`.
+    IsAnyOf,
     /// Date operators: the value is an ISO day, `2024-03-09`.
     Before,
     After,
@@ -342,6 +346,8 @@ fn english_operator_name(operator: FilterOperator) -> &'static str {
         IsEmpty => "Is empty",
         IsNotEmpty => "Is not empty",
         Is => "Is",
+        IsNot => "Is not",
+        IsAnyOf => "Is any of",
         Before => "Before",
         After => "After",
         OnOrBefore => "On or before",
@@ -366,6 +372,8 @@ fn german_operator_name(operator: FilterOperator) -> &'static str {
         IsEmpty => "Ist leer",
         IsNotEmpty => "Ist nicht leer",
         Is => "Ist",
+        IsNot => "Ist nicht",
+        IsAnyOf => "Ist eines von",
         Before => "Vor",
         After => "Nach",
         OnOrBefore => "Am oder vor",

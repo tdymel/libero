@@ -194,6 +194,41 @@ fn the_header_filters_row_holds_under_the_header() {
     );
 }
 
+/// S1: a select column's header filter is a listbox natively; picking an option narrows the rows.
+#[test]
+fn a_select_columns_header_filter_picks_an_option() {
+    fn app() -> Element {
+        let data = vec![
+            Person {
+                name: "Ada",
+                age: 1,
+            },
+            Person { name: "Bo", age: 2 },
+            Person { name: "Cy", age: 1 },
+        ];
+        rsx! {
+            Table {
+                aria_label: "People",
+                header_filters: true,
+                data,
+                columns: vec![
+                    column("Name").value(|p: &Person| p.name.to_string()).filterable(false),
+                    column("Rank")
+                        .value(|p: &Person| p.age.to_string())
+                        .options(["1", "2"]),
+                ],
+            }
+        }
+    }
+    let mut page = mount(app);
+    assert_eq!(page.query_all("tbody tr").len(), 3, "{}", page.tree());
+    page.click("thead [role=combobox]");
+    // Any, then 1, 2.
+    page.click("[role=option]:nth-child(3)");
+    page.wait_for(|page| page.query_all("tbody tr").len() == 1);
+    assert_eq!(page.text("tbody tr td"), "Bo", "{}", page.tree());
+}
+
 fn pinned_app(rtl: bool) -> Element {
     let columns = (0..6)
         .map(|i| {

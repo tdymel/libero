@@ -21,6 +21,8 @@ pub struct ColumnFilter {
     pub value: String,
     /// `Between`'s last day; empty, the range is open at that end.
     pub value_to: String,
+    /// `IsAnyOf`'s options; empty, the filter keeps every row.
+    pub values: Vec<String>,
 }
 
 impl ColumnFilter {
@@ -34,6 +36,23 @@ impl ColumnFilter {
             operator,
             value: value.into(),
             value_to: String::new(),
+            values: Vec::new(),
+        }
+    }
+
+    /// Rows whose cell is any of `values`, on a select column.
+    ///
+    /// ```rust
+    /// # use libero::components::ColumnFilter;
+    /// let staff = ColumnFilter::any_of("Role", ["Admin", "Editor"]);
+    /// ```
+    pub fn any_of(
+        column: impl Into<String>,
+        values: impl IntoIterator<Item = impl Into<String>>,
+    ) -> Self {
+        Self {
+            values: values.into_iter().map(Into::into).collect(),
+            ..Self::new(column, FilterOperator::IsAnyOf, "")
         }
     }
 
@@ -92,6 +111,7 @@ impl FilterOperator {
                 Equals, NotEquals, Before, After, OnOrBefore, OnOrAfter, Between, IsEmpty,
                 IsNotEmpty,
             ],
+            FilterKind::Select => &[Is, IsNot, IsAnyOf, IsEmpty, IsNotEmpty],
         }
     }
 
@@ -128,6 +148,8 @@ pub(super) enum CellTest {
     Empty(bool),
     /// Days kept, from and to, either end open.
     Days(Option<f64>, Option<f64>),
+    /// Cell text among these options, or with `true` not among them.
+    Options(Vec<String>, bool),
 }
 
 impl CellTest {
@@ -144,6 +166,15 @@ impl CellTest {
         }
         if kind == FilterKind::Date {
             return Self::days(filter);
+        }
+        if kind == FilterKind::Select {
+            return match operator {
+                IsAnyOf => {
+                    (!filter.values.is_empty()).then(|| Self::Options(filter.values.clone(), false))
+                }
+                _ => (!filter.value.is_empty())
+                    .then(|| Self::Options(vec![filter.value.clone()], operator == IsNot)),
+            };
         }
         let value = filter.value.trim();
         if value.is_empty() {
@@ -222,6 +253,9 @@ impl CellTest {
                     return false;
                 };
                 from.is_none_or(|from| *day >= from) && to.is_none_or(|to| *day <= to)
+            }
+            Self::Options(options, negate) => {
+                options.iter().any(|option| option == text) != *negate
             }
         }
     }
@@ -365,6 +399,43 @@ mod tests {
         assert!(yes.passes("Yes", &true.sort_key()));
         assert!(!yes.passes("No", &false.sort_key()));
         assert!(!yes.passes("", &SortKey::Empty));
+    }
+
+    fn pick(filter: &ColumnFilter, cell: &str) -> Option<bool> {
+        CellTest::new(filter, FilterKind::Select)
+            .map(|test| test.passes(cell, &SortKey::text(cell)))
+    }
+
+    #[test]
+    fn a_select_matches_its_option_exactly() {
+        let is = ColumnFilter::new("A", Is, "Admin");
+        assert_eq!(pick(&is, "Admin"), Some(true));
+        assert_eq!(pick(&is, "admin"), Some(false));
+        assert_eq!(pick(&is, "Administrator"), Some(false));
+        let is_not = ColumnFilter::new("A", IsNot, "Admin");
+        assert_eq!(pick(&is_not, "Admin"), Some(false));
+        // An empty cell is not the option either.
+        assert_eq!(pick(&is_not, ""), Some(true));
+    }
+
+    #[test]
+    fn a_select_any_of_keeps_the_listed_options() {
+        let any = ColumnFilter::any_of("A", ["Admin", "Editor"]);
+        assert_eq!(pick(&any, "Editor"), Some(true));
+        assert_eq!(pick(&any, "Viewer"), Some(false));
+        assert_eq!(pick(&ColumnFilter::new("A", IsEmpty, ""), ""), Some(true));
+    }
+
+    #[test]
+    fn an_unfinished_select_keeps_every_row() {
+        assert_eq!(pick(&ColumnFilter::new("A", Is, ""), "x"), None);
+        assert_eq!(pick(&ColumnFilter::new("A", IsAnyOf, "Admin"), "x"), None);
+        assert_eq!(
+            pick(&ColumnFilter::any_of("A", Vec::<String>::new()), "x"),
+            None
+        );
+        // A text operator is not the select's.
+        assert_eq!(pick(&ColumnFilter::new("A", Contains, "x"), "x"), None);
     }
 
     #[test]

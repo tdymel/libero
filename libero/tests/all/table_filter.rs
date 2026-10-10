@@ -2,7 +2,7 @@
 //! the empty state, sorting, paging and selection.
 
 use crate::common::{attributes_of, body, render};
-use crate::table_fixture::Item;
+use crate::table_fixture::{Item, head};
 
 use dioxus::prelude::*;
 use libero::{
@@ -350,6 +350,83 @@ fn header_filters_draw_a_labelled_field_per_filterable_column() {
     // `filterable(false)` leaves its cell empty.
     assert!(!head.contains("aria-label=\"Filter Code\""), "{head}");
     assert!(!body(&html).contains("London"), "{html}");
+}
+
+fn country_columns() -> Vec<Column<City>> {
+    vec![
+        column("City").value(|c: &City| c.name).row_header(),
+        column("Country").value(|c: &City| c.country).options([
+            "France",
+            "Germany",
+            "United Kingdom",
+        ]),
+    ]
+}
+
+macro_rules! country_html {
+    ($($filter:expr),+ $(,)?) => {
+        render(|| {
+            rsx! {
+                LiberoProvider {
+                    Table {
+                        aria_label: "Cities",
+                        data: cities(),
+                        columns: country_columns(),
+                        header_filters: true,
+                        default_column_filters: vec![$($filter),+],
+                    }
+                }
+            }
+        })
+    };
+}
+
+#[test]
+fn a_select_column_filters_by_its_options() {
+    use FilterOperator::*;
+    let html = country_html!(ColumnFilter::new("Country", Is, "France"));
+    let rows = body(&html);
+    assert!(rows.contains("Paris") && rows.contains("Lyon"), "{rows}");
+    assert!(!rows.contains("London"), "{rows}");
+
+    let html = country_html!(ColumnFilter::new("Country", IsNot, "France"));
+    assert!(
+        body(&html).contains("London") && !body(&html).contains("Paris"),
+        "{html}"
+    );
+
+    let html = country_html!(ColumnFilter::any_of(
+        "Country",
+        ["Germany", "United Kingdom"]
+    ));
+    assert!(
+        body(&html).contains("London") && !body(&html).contains("Lyon"),
+        "{html}"
+    );
+
+    // An option is matched whole, not as a word of the cell.
+    let html = country_html!(ColumnFilter::new("Country", Is, "United"));
+    assert!(!body(&html).contains("London"), "{html}");
+}
+
+#[test]
+fn a_select_header_filter_lists_the_options_or_their_checkboxes() {
+    use FilterOperator::*;
+    let html = country_html!(ColumnFilter::new("Country", Is, "Germany"));
+    let header = head(&html);
+    assert!(header.contains("aria-label=\"Filter Country\""), "{header}");
+    for option in ["Any", "France", "Germany", "United Kingdom"] {
+        assert!(
+            header.contains(&format!(">{option}<")),
+            "{option}: {header}"
+        );
+    }
+    assert!(!header.contains("role=\"group\""), "{header}");
+
+    let html = country_html!(ColumnFilter::any_of("Country", ["France"]));
+    let header = head(&html);
+    assert!(header.contains("role=\"group\""), "{header}");
+    assert_eq!(header.matches("type=\"checkbox\"").count(), 3, "{header}");
 }
 
 #[test]

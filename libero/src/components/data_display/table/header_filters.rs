@@ -24,6 +24,9 @@ pub(super) fn HeaderFilter(target: FilterTarget) -> Element {
             ontext: editor.ontext,
             onpick: editor.onpick,
             onday: editor.onday,
+            options: target.options,
+            onoption: editor.onoption,
+            onany: editor.onany,
         }
     }
 }

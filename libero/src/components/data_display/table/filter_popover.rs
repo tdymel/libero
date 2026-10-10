@@ -11,7 +11,7 @@ use crate::{
     components::{
         buttons::Button,
         common::{FOCUSABLE_SELECTOR, Glyph, HtmlTag, Options, attr},
-        form::{DateField, NativeSelect, TextField},
+        form::{Checkbox, DateField, NativeSelect, TextField},
         layout::{paper_sx, use_box},
     },
     context::IconSlot,
@@ -58,6 +58,29 @@ impl<V: Clone + PartialEq + 'static> Options for Choice<V> {
     }
 }
 
+/// A select column's option in a filter's `NativeSelect`; `None` is any.
+#[derive(Clone)]
+struct OptionPick {
+    option: Option<String>,
+    label: String,
+}
+
+impl PartialEq for OptionPick {
+    fn eq(&self, other: &Self) -> bool {
+        self.option == other.option
+    }
+}
+
+impl Options for OptionPick {
+    fn label(&self) -> String {
+        self.label.clone()
+    }
+
+    fn value(&self) -> String {
+        self.option.clone().unwrap_or_default()
+    }
+}
+
 /// `kind`'s operators to pick from, and `current` among them.
 pub(super) fn operator_choices(
     kind: FilterKind,
@@ -84,26 +107,23 @@ fn operator_of(filters: &[ColumnFilter], column: &str, kind: FilterKind) -> Filt
     filter_of(filters, column).map_or(FilterOperator::of(kind)[0], |filter| filter.operator)
 }
 
-/// Writes `column`'s filter value, or with `to` its `value_to`, keeping the
-/// rest. Emptied with the default operator, the item goes: it holds nothing worth keeping.
+/// Lets `edit` change `column`'s filter, keeping the rest. Emptied with the default
+/// operator, the item goes: it holds nothing worth keeping.
 fn commit(
     slice: StateSlice<Vec<ColumnFilter>>,
     column: &str,
     kind: FilterKind,
-    to: bool,
-    value: String,
+    edit: impl FnOnce(&mut ColumnFilter),
 ) {
     let filters = slice.peek();
     let operator = operator_of(&filters, column, kind);
     let mut next = filter_of(&filters, column)
         .cloned()
         .unwrap_or_else(|| ColumnFilter::new(column, operator, ""));
-    match to {
-        true => next.value_to = value,
-        false => next.value = value,
-    }
+    edit(&mut next);
     let keeps = !next.value.is_empty()
         || !next.value_to.is_empty()
+        || !next.values.is_empty()
         || operator != FilterOperator::of(kind)[0];
     let next = keeps.then_some(next);
     if filter_of(&filters, column) != next.as_ref() {
@@ -116,6 +136,8 @@ fn commit(
 pub(super) struct FilterTarget {
     pub column: String,
     pub kind: FilterKind,
+    /// A select column's options.
+    pub options: Vec<String>,
     pub slice: StateSlice<Vec<ColumnFilter>>,
     pub labels: TableLabels,
     pub size: Size,
@@ -135,6 +157,10 @@ pub(super) struct FilterEditor {
     pub onpick: Callback<Option<bool>>,
     /// A date field's change, applied at once: `true` for `Between`'s last day.
     pub onday: Callback<(bool, String)>,
+    /// A select column's single option, applied at once; `None` is any.
+    pub onoption: Callback<Option<String>>,
+    /// A select column's `IsAnyOf` options, applied at once.
+    pub onany: Callback<Vec<String>>,
 }
 
 pub(super) fn use_filter_editor(target: &FilterTarget) -> FilterEditor {
@@ -154,7 +180,7 @@ pub(super) fn use_filter_editor(target: &FilterTarget) -> FilterEditor {
                 if draft.peek().as_ref() != Some(&text) {
                     return;
                 }
-                commit(slice, &column, kind, false, text);
+                commit(slice, &column, kind, |filter| filter.value = text);
                 draft.set(None);
                 onfilter.call(());
             },
@@ -168,7 +194,26 @@ pub(super) fn use_filter_editor(target: &FilterTarget) -> FilterEditor {
     let onday = {
         let column = column.clone();
         use_callback(move |(to, text): (bool, String)| {
-            commit(slice, &column, kind, to, text);
+            commit(slice, &column, kind, |filter| match to {
+                true => filter.value_to = text,
+                false => filter.value = text,
+            });
+            onfilter.call(());
+        })
+    };
+    let onoption = {
+        let column = column.clone();
+        use_callback(move |option: Option<String>| {
+            commit(slice, &column, kind, |filter| {
+                filter.value = option.unwrap_or_default();
+            });
+            onfilter.call(());
+        })
+    };
+    let onany = {
+        let column = column.clone();
+        use_callback(move |values: Vec<String>| {
+            commit(slice, &column, kind, |filter| filter.values = values);
             onfilter.call(());
         })
     };
@@ -183,6 +228,8 @@ pub(super) fn use_filter_editor(target: &FilterTarget) -> FilterEditor {
         ontext,
         onpick,
         onday,
+        onoption,
+        onany,
     }
 }
 
@@ -203,6 +250,13 @@ pub(super) fn FilterValue(
     onpick: EventHandler<Option<bool>>,
     /// A date field's change: `true` for `Between`'s last day.
     onday: EventHandler<(bool, String)>,
+    /// A select column's options.
+    #[props(default)]
+    options: Vec<String>,
+    /// A select column's single option; `None` is any.
+    onoption: EventHandler<Option<String>>,
+    /// A select column's `IsAnyOf` options.
+    onany: EventHandler<Vec<String>>,
     /// Shown above the field; else it is named `name`, or by `filter_column`.
     #[props(default)]
     label: Option<String>,
@@ -212,6 +266,68 @@ pub(super) fn FilterValue(
     let operator = current.map_or(FilterOperator::of(kind)[0], |filter| filter.operator);
     let name = name.unwrap_or_else(|| (labels.filter_column)(&column));
     let aria_label = label.is_none().then(|| name.clone());
+    if kind == FilterKind::Select {
+        if !operator.takes_value() {
+            return rsx! {};
+        }
+        if operator == FilterOperator::IsAnyOf {
+            let picked = current
+                .map(|filter| filter.values.clone())
+                .unwrap_or_default();
+            return rsx! {
+                div {
+                    role: "group",
+                    aria_label: name,
+                    style: "display: flex; flex-direction: column; gap: 0.25rem;",
+                    for option in options.iter().cloned() {
+                        Checkbox {
+                            key: "{option}",
+                            label: option.clone(),
+                            size,
+                            checked: picked.contains(&option),
+                            onchange: {
+                                let (options, picked) = (options.clone(), picked.clone());
+                                move |on: bool| {
+                                    let next = options
+                                        .iter()
+                                        .filter(|each| match **each == option {
+                                            true => on,
+                                            false => picked.contains(*each),
+                                        })
+                                        .cloned()
+                                        .collect();
+                                    onany.call(next);
+                                }
+                            },
+                        }
+                    }
+                }
+            };
+        }
+        let mut choices = vec![OptionPick {
+            option: None,
+            label: labels.any.to_string(),
+        }];
+        choices.extend(options.iter().map(|option| OptionPick {
+            option: Some(option.clone()),
+            label: option.clone(),
+        }));
+        let value = current.map(|filter| &filter.value);
+        let picked = choices
+            .iter()
+            .find(|choice| choice.option.as_ref() == value.filter(|value| !value.is_empty()))
+            .cloned();
+        return rsx! {
+            NativeSelect {
+                label,
+                aria_label,
+                size,
+                value: picked,
+                options: choices,
+                onchange: move |choice: OptionPick| onoption.call(choice.option),
+            }
+        };
+    }
     if kind == FilterKind::Boolean {
         let choices = vec![
             Choice {
@@ -337,6 +453,7 @@ pub(super) fn FilterPopover(
     let FilterTarget {
         column,
         kind,
+        options,
         slice,
         labels,
         size,
@@ -443,11 +560,10 @@ pub(super) fn FilterPopover(
                                     .or_else(|| filter_of(&filters, &column).map(|f| f.value.clone()))
                                     .unwrap_or_default();
                                 draft.set(None);
-                                let value_to = filter_of(&filters, &column)
-                                    .map(|f| f.value_to.clone())
-                                    .unwrap_or_default();
+                                let held = filter_of(&filters, &column);
                                 let next = ColumnFilter {
-                                    value_to,
+                                    value_to: held.map(|f| f.value_to.clone()).unwrap_or_default(),
+                                    values: held.map(|f| f.values.clone()).unwrap_or_default(),
                                     ..ColumnFilter::new(column.clone(), choice.value, value)
                                 };
                                 slice.set(with_filter(&filters, &column, Some(next)));
@@ -465,6 +581,9 @@ pub(super) fn FilterPopover(
                         ontext: editor.ontext,
                         onpick: editor.onpick,
                         onday: editor.onday,
+                        options: options.clone(),
+                        onoption: editor.onoption,
+                        onany: editor.onany,
                         label: labels.value.to_string(),
                     }
                     Button {
@@ -532,6 +651,8 @@ fn operator_key(operator: FilterOperator) -> &'static str {
         IsEmpty => "is-empty",
         IsNotEmpty => "is-not-empty",
         Is => "is",
+        IsNot => "is-not",
+        IsAnyOf => "is-any-of",
         Before => "before",
         After => "after",
         OnOrBefore => "on-or-before",

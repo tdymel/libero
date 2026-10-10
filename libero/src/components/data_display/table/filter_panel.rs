@@ -55,6 +55,7 @@ static FILTER_PANEL_SX: StaticSx = StaticSx::new(|| {
 pub(super) struct PanelColumn {
     pub header: String,
     pub kind: FilterKind,
+    pub options: Vec<String>,
 }
 
 impl Options for PanelColumn {
@@ -277,6 +278,7 @@ pub(super) fn FilterPanel(
             let kind = kind_of(&item.column);
             let header = item.column.clone();
             let picked = columns.iter().find(|column| column.header == header).cloned();
+            let options = picked.as_ref().map(|column| column.options.clone()).unwrap_or_default();
             let (operators, operator) = operator_choices(kind, item.operator, labels);
             rsx! {
                 div { key: "{line}", "data-filter-line": "{line}",
@@ -326,6 +328,13 @@ pub(super) fn FilterPanel(
                                 true => item.value_to = text,
                                 false => item.value = text,
                             }));
+                        },
+                        options,
+                        onoption: move |option: Option<String>| {
+                            edit(line, Box::new(move |item| item.value = option.unwrap_or_default()));
+                        },
+                        onany: move |values: Vec<String>| {
+                            edit(line, Box::new(move |item| item.values = values));
                         },
                     }
                     ActionIcon {
