@@ -113,7 +113,7 @@
 /layout/header	Header - Libero	The page's banner landmark, a sticky, static or fixed header bar for nav and actions.	/md/header.md	Layout	/layout/box
 /layout/paper	Paper - Libero	The library's surface, with a background, a corner radius, an elevation and an optional hairline border, and no semantics of its own.	/md/paper.md	Layout	/layout/box
 /layout/scroll-area	ScrollArea - Libero	A scrollable region that fills its parent, with themed scrollbars, scroll positions in percent, edge events and row virtualization through Virtualize.	/md/scroll_area.md	Layout	/layout/box
-/layout/scroller	Scroller - Libero	A horizontal strip with a hidden scrollbar and a step control over each end, shown while there is more content that way.	/md/scroller.md	Layout	/layout/box
+/layout/scroller	Scroller - Libero	A horizontal strip with a hidden scrollbar and a step control over each end, by default shown while there is more content that way.	/md/scroller.md	Layout	/layout/box
 /layout/sidebar	Sidebar - Libero	An in-flow panel on one edge of its parent that scrolls its own content, like a nav rail or an inspector.	/md/sidebar.md	Layout	/layout/box
 /layout/splitter	Splitter - Libero	Two panes split by a divider you can drag or move with the keyboard. Nest another Splitter in a pane for more than two.	/md/splitter.md	Layout	/layout/box
 /layout/transition	Transition - Libero	Fades, slides or scales its children in on mount, and out when open turns false.	/md/transition.md	Layout	/layout/box
