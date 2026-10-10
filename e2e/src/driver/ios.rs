@@ -22,6 +22,8 @@ pub const UDID_ENV: &str = "E2E_IOS_UDID";
 pub const BUNDLE_ENV: &str = "E2E_IOS_BUNDLE";
 /// `axe` (the default) or `idb`: the tool that injects touches and keys.
 pub const INPUT_ENV: &str = "E2E_IOS_INPUT";
+/// Written into `E2E_ARTIFACTS` when the app never dialled the bridge; holds the app log's path.
+pub const NO_BRIDGE: &str = "ios-no-bridge";
 
 /// A cold app start in a simulator on a 3-core runner: a guess until the first CI run.
 const LAUNCH: Duration = Duration::from_secs(90);
@@ -115,6 +117,8 @@ impl Ios {
 
         let bridge = Bridge::accept(&listener, "iOS", LAUNCH, || Ok(())).map_err(|error| {
             let _ = simctl(&["terminate", &udid, &bundle], &[]);
+            // The runner stops the run on this marker: the next unit's app would not dial either.
+            let _ = std::fs::write(artifacts.join(NO_BRIDGE), log.display().to_string());
             error.context(format!("see {}", log.display()))
         })?;
         let mut ios = Self {

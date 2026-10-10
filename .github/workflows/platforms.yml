@@ -115,10 +115,13 @@ jobs:
         with:
           cache-key: platforms-macos-native
       # Both test binaries in one cargo run, as ci.yml's `native` job; no xvfb on macOS.
-      - run: cargo test -p e2e --features native --test native --test all --no-run
-      - run: cargo test -p e2e --features native --test native
+      # Each red-able step tees its log for `ci_annotate.py`: job logs need auth, annotations not.
+      - run: cargo test -p e2e --features native --test native --test all --no-run 2>&1 | tee "$RUNNER_TEMP/build.log"
+      - run: cargo test -p e2e --features native --test native 2>&1 | tee "$RUNNER_TEMP/native.log"
       - if: success() || failure()
-        run: cargo test -p e2e --features native --test all -- ::native
+        run: cargo test -p e2e --features native --test all -- ::native 2>&1 | tee "$RUNNER_TEMP/all.log"
+      - if: failure() || cancelled()
+        run: python3 .github/scripts/ci_annotate.py "$RUNNER_TEMP"/{build,native,all}.log
 
   # The browser tier on macOS: the e2e runner, dx and pinned Chrome, as ci.yml's `e2e` job.
   macos-web:
@@ -127,7 +130,8 @@ jobs:
       matrix:
         shard: ["1", "2"]
     runs-on: macos-26
-    timeout-minutes: 120
+    # Until green: a hang held a macOS slot for 2 h (plans/ios-mac-win/exploration.md).
+    timeout-minutes: 45
     env:
       # Two shards, not four: an account runs at most five macOS jobs at once.
       SHARDS: 2
@@ -148,12 +152,14 @@ jobs:
           units=$(python3 .github/scripts/shard.py units ${{ matrix.shard }} "$SHARDS")
           echo "units: $units"
           # shellcheck disable=SC2086
-          cargo run -p e2e -- $units
+          cargo run -p e2e -- $units 2>&1 | tee "$RUNNER_TEMP/e2e.log"
         env:
           CHROME: ${{ steps.chrome.outputs.chrome-path }}
           # The runner's artifacts go to `temp_dir()`, which is `$TMPDIR` on macOS.
           TMPDIR: ${{ runner.temp }}
-      - if: failure()
+      - if: failure() || cancelled()
+        run: python3 .github/scripts/ci_annotate.py "$RUNNER_TEMP/e2e.log"
+      - if: failure() || cancelled()
         uses: actions/upload-artifact@v7
         with:
           name: macos-e2e-artifacts-${{ matrix.shard }}
@@ -164,7 +170,7 @@ jobs:
   # no Xvfb, no xdotool, no TCC grant.
   macos-desktop:
     runs-on: macos-26
-    timeout-minutes: 120
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -181,10 +187,14 @@ jobs:
           screencapture -x "$RUNNER_TEMP/e2e-artifacts/session.png" && sips -g pixelWidth -g pixelHeight "$RUNNER_TEMP/e2e-artifacts/session.png"
           sqlite3 "$HOME/Library/Application Support/com.apple.TCC/TCC.db" 'select service, client, auth_value from access' || true
       # The runner prints `e2e desktop: macOS window {..}` per launch: key, active, occlusion, scale.
-      - run: cargo run -p e2e -- desktop
+      - run: cargo run -p e2e -- desktop 2>&1 | tee "$RUNNER_TEMP/e2e.log"
         env:
           # The runner's artifacts go to `temp_dir()`, which is `$TMPDIR` on macOS.
           TMPDIR: ${{ runner.temp }}
+          # Inside the job's 45 min, after a ~15 min cold build: a hang still uploads.
+          E2E_DESKTOP_DEADLINE: 1500
+      - if: failure() || cancelled()
+        run: python3 .github/scripts/ci_annotate.py "$RUNNER_TEMP/e2e.log"
       - if: failure()
         run: screencapture -x "$RUNNER_TEMP/e2e-artifacts/failure.png"
       - if: always()
@@ -225,7 +235,7 @@ jobs:
   # `taskkill` there; `shell: bash` is Git for Windows' bash.
   windows-native:
     runs-on: windows-2025
-    timeout-minutes: 120
+    timeout-minutes: 45
     steps:
       # Before the checkout: LF files as on Linux (`include_str!`, snapshots), no MAX_PATH limit.
       - run: |
@@ -236,10 +246,12 @@ jobs:
         with:
           cache-key: platforms-windows-native
       # Both test binaries in one cargo run, as ci.yml's `native` job; no xvfb on Windows.
-      - run: cargo test -p e2e --features native --test native --test all --no-run
-      - run: cargo test -p e2e --features native --test native
+      - run: cargo test -p e2e --features native --test native --test all --no-run 2>&1 | tee "$RUNNER_TEMP/build.log"
+      - run: cargo test -p e2e --features native --test native 2>&1 | tee "$RUNNER_TEMP/native.log"
       - if: success() || failure()
-        run: cargo test -p e2e --features native --test all -- ::native
+        run: cargo test -p e2e --features native --test all -- ::native 2>&1 | tee "$RUNNER_TEMP/all.log"
+      - if: failure() || cancelled()
+        run: python .github/scripts/ci_annotate.py "$RUNNER_TEMP"/{build,native,all}.log
 
   # The browser tier on Windows: the e2e runner, dx and pinned Chrome, as ci.yml's `e2e` job.
   windows-web:
@@ -248,7 +260,7 @@ jobs:
       matrix:
         shard: ["1", "2"]
     runs-on: windows-2025
-    timeout-minutes: 120
+    timeout-minutes: 45
     env:
       SHARDS: 2
     steps:
@@ -268,18 +280,30 @@ jobs:
           chrome-version: 152.0.7977.82
       # `chrome.exe --version` prints nothing on Windows; the file version says it.
       - run: powershell -NoProfile -Command "(Get-Item '${{ steps.chrome.outputs.chrome-path }}').VersionInfo.ProductVersion"
+      # This step went red in 43 s before cargo ran: which python, and what `shard.py` says.
+      - run: |
+          {
+            command -v python python3 || true
+            python --version
+            python .github/scripts/shard.py units ${{ matrix.shard }} "$SHARDS"
+          } 2>&1 | tee "$RUNNER_TEMP/shard.log"
       - run: |
           # Python writes CRLF on Windows; a `\r` would end up in the last filter.
           units=$(python .github/scripts/shard.py units ${{ matrix.shard }} "$SHARDS" | tr -d '\r')
           echo "units: $units"
           # shellcheck disable=SC2086
-          cargo run -p e2e -- $units
+          cargo run -p e2e -- $units 2>&1 | tee "$RUNNER_TEMP/e2e.log"
         env:
           CHROME: ${{ steps.chrome.outputs.chrome-path }}
           # The runner's artifacts go to `temp_dir()`, which is `%TMP%` on Windows.
           TMP: ${{ runner.temp }}
           TEMP: ${{ runner.temp }}
-      - if: failure()
+      - if: failure() || cancelled()
+        # Should python itself be the fault, the diagnostics' tail still lands as annotations.
+        run: |
+          python .github/scripts/ci_annotate.py "$RUNNER_TEMP/shard.log" "$RUNNER_TEMP/e2e.log" ||
+            tail -n 9 "$RUNNER_TEMP/shard.log" | sed 's/^/::error title=shard.log::/'
+      - if: failure() || cancelled()
         uses: actions/upload-artifact@v7
         with:
           name: windows-e2e-artifacts-${{ matrix.shard }}
@@ -290,7 +314,7 @@ jobs:
   # port (`--remote-debugging-port`), so no input injection and no screen size are involved.
   windows-desktop:
     runs-on: windows-2025
-    timeout-minutes: 120
+    timeout-minutes: 45
     steps:
       - run: |
           git config --global core.autocrlf false
@@ -307,12 +331,16 @@ jobs:
           Start-Process -FilePath "$env:RUNNER_TEMP\installwebview.exe" -ArgumentList '/silent', '/install' -Wait
           $key = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
           "WebView2 runtime: $((Get-ItemProperty $key -ErrorAction SilentlyContinue).pv)"
-      - run: cargo run -p e2e -- desktop
+      - run: cargo run -p e2e -- desktop 2>&1 | tee "$RUNNER_TEMP/e2e.log"
         env:
           # The runner's artifacts and the WebView2 profiles go to `temp_dir()`, `%TMP%` here.
           TMP: ${{ runner.temp }}
           TEMP: ${{ runner.temp }}
-      - if: failure()
+          # Inside the job's 45 min, after the cold build: a hang still uploads.
+          E2E_DESKTOP_DEADLINE: 1500
+      - if: failure() || cancelled()
+        run: python .github/scripts/ci_annotate.py "$RUNNER_TEMP/e2e.log"
+      - if: failure() || cancelled()
         uses: actions/upload-artifact@v7
         with:
           name: windows-desktop-artifacts
@@ -331,8 +359,10 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           cache-key: platforms-linux-desktop
-      - run: cargo run -p e2e -- desktop
-      - if: failure()
+      - run: cargo run -p e2e -- desktop 2>&1 | tee "$RUNNER_TEMP/e2e.log"
+      - if: failure() || cancelled()
+        run: python3 .github/scripts/ci_annotate.py "$RUNNER_TEMP/e2e.log"
+      - if: failure() || cancelled()
         uses: actions/upload-artifact@v7
         with:
           name: linux-desktop-artifacts
@@ -413,10 +443,12 @@ jobs:
       # HID keys as a hardware keyboard, so a focused field raises no soft keyboard.
       - run: defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool true
       # The runner prints `e2e ios: screen ..., viewport origin ...` per app launch.
-      - run: cargo run -p e2e -- ios
+      - run: cargo run -p e2e -- ios 2>&1 | tee "$RUNNER_TEMP/e2e.log"
         env:
           # The runner's artifacts go to `temp_dir()`, which is `$TMPDIR` on macOS.
           TMPDIR: ${{ runner.temp }}
+      - if: failure() || cancelled()
+        run: python3 .github/scripts/ci_annotate.py "$RUNNER_TEMP/e2e.log"
       - if: always()
         uses: actions/upload-artifact@v7
         with:

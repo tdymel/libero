@@ -3,10 +3,12 @@
 //! the session's).
 
 use std::process::{Command, Stdio};
+use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, bail};
 
 use super::android_runner::list_arm;
+use super::process::stop;
 use super::{Guard, OwnGroup, own_target_dir, workspace_root};
 
 /// `--ignored` runs only the `desktop: skip` scenarios, e.g. to see 1051 still red.
@@ -101,7 +103,26 @@ pub fn run(mut filters: Vec<String>) -> Result<()> {
         .spawn()
         .context("run the desktop tests")?;
     guard.tell(&format!("group {}", tests.id()));
-    let status = tests.wait()?;
+    // A wedged window or bridge hangs a read; `E2E_DESKTOP_DEADLINE` (seconds) overrides.
+    let deadline = std::env::var("E2E_DESKTOP_DEADLINE")
+        .ok()
+        .and_then(|secs| secs.parse().ok())
+        .unwrap_or(120 + 6 * names.len() as u64);
+    let deadline = Instant::now() + Duration::from_secs(deadline);
+    let status = loop {
+        if let Some(status) = tests.try_wait()? {
+            break status;
+        }
+        if Instant::now() > deadline {
+            stop(&mut tests);
+            guard.done();
+            bail!(
+                "e2e desktop: the run overran its deadline; stopped. App log in {}",
+                artifacts.display()
+            );
+        }
+        std::thread::sleep(Duration::from_secs(1));
+    };
     guard.done();
     if !status.success() {
         bail!(

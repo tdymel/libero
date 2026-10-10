@@ -146,8 +146,11 @@ fn run_on(
 
     // One test process per unit, under a deadline: a wedged injector or bridge hangs a read.
     let mut red = Vec::new();
+    // `e2e::driver::ios::NO_BRIDGE`.
+    let no_bridge = artifacts.join("ios-no-bridge");
     for unit in names.chunk_by(|a, b| a.split("::").next() == b.split("::").next()) {
         let name = unit[0].split("::").next().unwrap_or_default();
+        let _ = std::fs::remove_file(&no_bridge);
         let passed = run_unit(
             udid, &bundle, root, target_dir, artifacts, unit, ignored, guard,
         )?;
@@ -155,6 +158,14 @@ fn run_on(
             let shot = artifacts.join(format!("{name}.png"));
             let _ = simctl(&["io", udid, "screenshot", &shot.to_string_lossy()]);
             red.push(name);
+            // Every later unit would wait out `LAUNCH` for the same app.
+            if let Ok(app_log) = std::fs::read_to_string(&no_bridge) {
+                let _ = simctl(&["terminate", udid, &bundle]);
+                bail!(
+                    "e2e ios: the app never connected its bridge in {name}; stopped. Build log {}, app log {app_log}",
+                    artifacts.join("dx.log").display()
+                );
+            }
         }
     }
     let _ = simctl(&["terminate", udid, &bundle]);
