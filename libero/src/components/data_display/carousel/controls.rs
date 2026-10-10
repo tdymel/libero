@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
 
@@ -13,7 +15,7 @@ use crate::{
         layout::Box,
     },
     context::IconSlot,
-    localization::fill,
+    localization::{CarouselLabels, fill},
     sx::{StaticSx, Sx, sx},
     theme::{
         CAROUSEL_CONTROL_BACKGROUND, CAROUSEL_CONTROL_COLOR, CAROUSEL_CONTROL_HOVER_BACKGROUND,
@@ -191,6 +193,23 @@ fn CarouselControl(view: CarouselView, forward: bool, disabled: Memo<bool>) -> E
     }
 }
 
+/// The slides showing as a range; a looping window across the seam reads the resting slide.
+pub(super) fn showing_status(
+    labels: &CarouselLabels,
+    (from, to): (usize, usize),
+    settled: usize,
+    count: usize,
+) -> String {
+    match from.cmp(&to) {
+        Ordering::Equal => numbered(labels.status, from, count),
+        Ordering::Greater => numbered(labels.status, settled, count),
+        Ordering::Less => fill(
+            labels.status_range,
+            &[("from", &(from + 1)), ("to", &(to + 1)), ("n", &count)],
+        ),
+    }
+}
+
 /// The live region: where the strip settled, out of the places it can rest.
 #[component]
 pub(super) fn CarouselStatus(view: CarouselView) -> Element {
@@ -205,20 +224,7 @@ pub(super) fn CarouselStatus(view: CarouselView) -> Element {
     let settled = nav.settled;
     let status = match nav.per_view > 1.0 {
         // Several up, the slides showing are named, not the resting position (todo 550).
-        true => {
-            let (from, to) = nav.showing(settled());
-            match from == to {
-                true => numbered(labels.status, from, setup.count),
-                false => fill(
-                    labels.status_range,
-                    &[
-                        ("from", &(from + 1)),
-                        ("to", &(to + 1)),
-                        ("n", &setup.count),
-                    ],
-                ),
-            }
-        }
+        true => showing_status(labels, nav.showing(settled()), settled(), setup.count),
         false => {
             let (position, positions) = snap_position(
                 settled(),

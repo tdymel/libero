@@ -1,6 +1,6 @@
 use super::{
     CAROUSEL_ROOT_SX, CarouselAlign,
-    controls::{CAROUSEL_CONTROL_SX, CAROUSEL_PAUSE_SX},
+    controls::{CAROUSEL_CONTROL_SX, CAROUSEL_PAUSE_SX, showing_status},
     indicators::CAROUSEL_INDICATOR_SX,
     slide::CAROUSEL_SLIDE_SX,
     state::*,
@@ -9,6 +9,7 @@ use super::{
 use crate::{
     components::{CarouselPart, common::part_table},
     css::Stylesheet,
+    localization::CarouselLabels,
     sx::REDUCED_MOTION,
 };
 
@@ -427,15 +428,43 @@ fn the_range_counts_slides_at_least_half_showing() {
     assert_eq!(showing(0, 1, 1.0, start), (0, 0));
 }
 
-/// Todo 619: a slide leaves room for the whole ring stripe of content flush
-/// with its edge; the global reset's `border-box` keeps it inside the basis.
+/// Todo 2829: five slides three-up centred, looping, mounted on slide 0 show
+/// slides 5, 1 and 2; the range 5-2 would count down.
+#[test]
+fn a_looping_window_across_the_seam_reads_the_resting_slide() {
+    let labels = CarouselLabels::ENGLISH;
+    let nav_showing = |rest: usize| {
+        let (clones, strip) = (3, 11);
+        let (first, last) = showing(rest + clones, strip, 3.0, CarouselAlign::Center);
+        (real_for(first, 5, clones), real_for(last, 5, clones))
+    };
+
+    assert_eq!(nav_showing(0), (4, 1));
+    assert_eq!(
+        showing_status(&labels, nav_showing(0), 0, 5),
+        "Slide 1 of 5"
+    );
+    assert_eq!(
+        showing_status(&labels, nav_showing(4), 4, 5),
+        "Slide 5 of 5"
+    );
+    // Windows that do not wrap keep their range.
+    assert_eq!(
+        showing_status(&labels, nav_showing(2), 2, 5),
+        "Slides 2–4 of 5"
+    );
+    assert_eq!(showing_status(&labels, (3, 3), 3, 5), "Slide 4 of 5");
+}
+
+/// Todos 619, 2860: a slide leaves room for the whole ring, stripe and halo, of content
+/// flush with its edge; the global reset's `border-box` keeps it inside the basis.
 #[test]
 fn a_slide_pads_by_the_focus_ring() {
     let css = Stylesheet::from(&CAROUSEL_SLIDE_SX);
     let css = css.as_str();
 
     assert!(
-        css.contains("padding:calc(var(--lsx-focus-ring-offset) + var(--lsx-focus-ring-width))"),
+        css.contains("padding:var(--lsx-focus-ring-halo-spread)"),
         "{css}"
     );
 }

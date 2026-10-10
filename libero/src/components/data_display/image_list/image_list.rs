@@ -302,6 +302,8 @@ static IMAGE_LIST_BAR_SX: StaticSx = StaticSx::new(|| {
         .align_items("center")
         .gap(SizeCss::SPACING.value(Size::Sm))
         .padding(IMAGE_LIST_BAR_PADDING.value())
+        // An unbreakable word wraps in the cell instead of being clipped or spilling (todo 2858).
+        .with("overflow-wrap", "anywhere")
         // Above the stretched link, so bar controls click. No `position`: a
         // grid item takes `z-index` without it.
         .z_index("1")

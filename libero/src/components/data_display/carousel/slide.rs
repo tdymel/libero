@@ -11,9 +11,7 @@ use crate::{
     },
     platform::ElementApi,
     sx::{StaticSx, sx},
-    theme::{
-        CAROUSEL_GAP, CAROUSEL_PER_VIEW, CAROUSEL_RADIUS, FOCUS_RING_OFFSET, FOCUS_RING_WIDTH,
-    },
+    theme::{CAROUSEL_GAP, CAROUSEL_PER_VIEW, CAROUSEL_RADIUS, FOCUS_RING_HALO_SPREAD},
 };
 
 pub(super) static CAROUSEL_SLIDE_SX: StaticSx = StaticSx::new(|| {
@@ -23,13 +21,9 @@ pub(super) static CAROUSEL_SLIDE_SX: StaticSx = StaticSx::new(|| {
         .min_height("0")
         .border_radius(CAROUSEL_RADIUS.value())
         .overflow("hidden")
-        // The slide and the track clip flush at its edges: room for an outset
-        // ring on focusable content at any depth (todos 618, 619).
-        .padding(format!(
-            "calc({} + {})",
-            FOCUS_RING_OFFSET.value(),
-            FOCUS_RING_WIDTH.value()
-        ))
+        // The slide and the track clip flush at its edges: room for an outset ring and its
+        // halo on focusable content at any depth (todos 618, 619, 2860).
+        .padding(FOCUS_RING_HALO_SPREAD.value())
         .flex(format!(
             "0 0 calc((100% - ({} - 1) * {}) / {})",
             CAROUSEL_PER_VIEW.overridable(),

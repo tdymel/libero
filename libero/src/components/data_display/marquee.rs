@@ -143,9 +143,13 @@ static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
         .selector(copies, sx().flex_direction("column"))
         .selector(pause, sx().bottom(offset));
 
-    // Between the track and the toggle. Off under reduced motion, where it
-    // would cover the first copy.
+    // Between the track and the toggle. Off under reduced motion, where it would cover
+    // the first copy, and while focus is inside, where it would cover a link (todo 2857).
     let fade_edges = sx()
+        .selector(
+            "&:focus-within::before, &:focus-within::after",
+            sx().display("none"),
+        )
         .selector(
             "&::before, &::after",
             sx().content("\"\"")

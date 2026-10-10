@@ -123,7 +123,7 @@ Carousel { aria_label: "Offers", autoplay: true, autoplay_delay: 6000, slides: s
 | `draggable` | `bool` | `false` | Drag to scroll with a mouse. Touch swipes without it. On Blitz and the WebView a drag stops once the pointer leaves the track. |
 | `autoplay` | `bool` | `false` | Advances on a timer, with a pause button first in Tab order. Hover pauses it, and focus stops it until the button is pressed. Under `prefers-reduced-motion: reduce` it opens paused. Without `loop` it stops on the last slide and presses Pause; Play there starts over from the first. |
 | `autoplay_delay` | `u32` | `4000` | Milliseconds between advances. |
-| `r#loop` | `bool` | `false` | Wraps around at both ends. The cloned slides at each end are `aria-hidden` and `inert`, but repeat a slide's DOM: give interactive slide content no `id` or form `name`. |
+| `r#loop` | `bool` | `false` | Wraps around at both ends through cloned slides, which repeat a slide's DOM: give interactive slide content no `id` or form `name`. |
 | `parts` | `Parts<CarouselPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 Like every component, `Carousel` also takes the shared props `sx`, `class`,

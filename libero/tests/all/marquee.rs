@@ -186,6 +186,23 @@ fn reduced_motion_leaves_one_scrollable_copy() {
     }
 }
 
+/// Todo 2857: the opaque fade would cover a focused link and its ring.
+#[test]
+fn the_fade_hides_while_focus_is_inside() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { Marquee { fade_edges: true, "x" } }
+        }
+    }
+
+    let html = render(app);
+    let class = marquee_class(&html);
+    let rule = format!(
+        r#".{class}[data-state~="fade-edges"]:focus-within::before, .{class}[data-state~="fade-edges"]:focus-within::after{{display:none;}}"#
+    );
+    assert!(html.contains(&rule), "{rule} in {html}");
+}
+
 /// The fade is `Paper`'s surface colour, not a literal white.
 #[test]
 fn the_fade_reads_the_paper_token() {

@@ -20,7 +20,30 @@ pub const ROUTES: Routes = &[
         "/image-list-quilted-below",
         || rsx! { ImageListQuiltedBelowPage {} },
     ),
+    (
+        "/image-list-long-caption",
+        || rsx! { ImageListLongCaptionPage {} },
+    ),
 ];
+
+/// Todo 2858: a caption word wider than its cell, on an overlay and on a `Below` bar.
+#[component]
+fn ImageListLongCaptionPage() -> Element {
+    let cell = || rsx! { div { style: "background: #777" } };
+    let word = || rsx! { span { "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCD" } };
+
+    rsx! {
+        div { style: "width: 320px",
+            ImageList {
+                cols: 2u8,
+                items: vec![
+                    ImageItem::new(cell()).bar(ImageBar::new(word())),
+                    ImageItem::new(cell()).bar(ImageBar::new(word()).position(BarPosition::Below)),
+                ],
+            }
+        }
+    }
+}
 
 /// Todo 2523: unclipped `Below` bars on quilted cells of one and two rows.
 #[component]

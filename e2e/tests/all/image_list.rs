@@ -14,12 +14,15 @@ fn it_meets_the_baseline() {
 }
 
 /// How far the focused element's ring reaches past any ancestor up to `root`
-/// that clips its overflow, in px, per clipped axis. Zero or less: the whole stripe shows;
-/// zero when nothing clips.
+/// that clips its overflow, in px, per clipped axis: the stripe's outline and the halo's
+/// plain spread shadows (todo 2860). Zero or less: the whole ring shows; zero when nothing clips.
 pub fn ring_clipped(root: &str) -> String {
     format!(
         "(() => {{ const el = document.activeElement; const s = getComputedStyle(el); \
-         const reach = parseFloat(s.outlineOffset) + parseFloat(s.outlineWidth); \
+         const halo = s.boxShadow.split(/,(?![^(]*\\))/).filter(p => !p.includes('inset')) \
+           .map(p => (p.match(/-?[\\d.]+px/g) || []).map(parseFloat)) \
+           .filter(n => n.length === 4 && n[0] === 0 && n[1] === 0 && n[2] === 0).map(n => n[3]); \
+         const reach = Math.max(parseFloat(s.outlineOffset) + parseFloat(s.outlineWidth), ...halo); \
          const r = el.getBoundingClientRect(); const stop = document.querySelector('{root}'); \
          let worst = -Infinity; \
          for (let clip = el.parentElement; clip && clip !== stop.parentElement; clip = clip.parentElement) {{ \
@@ -53,6 +56,37 @@ fn a_quilted_below_bar_stays_inside_its_cell() {
                    rects.forEach((o, j) => { if (j > i && r.left < o.right - 0.5 && o.left < r.right - 0.5 \
                      && r.top < o.bottom - 0.5 && o.top < r.bottom - 0.5) out.push(`cells ${i} and ${j} overlap`); }); }); \
                  return out; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(problems.is_empty(), "{problems:?}");
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2858: a caption word wider than its cell wraps inside the bar, on an overlay
+/// bar, which clips, and on a `Below` bar, which would spill into the neighbour.
+#[test]
+fn an_unbreakable_caption_word_wraps_inside_its_cell() {
+    block_on(async {
+        let fixture = Fixture::open("/image-list-long-caption", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "[role=list] figcaption")
+            .await
+            .unwrap();
+        let problems: Vec<String> = page
+            .evaluate(
+                "(() => { const out = []; \
+                 for (const [i, bar] of document.querySelectorAll('[role=list] figcaption').entries()) { \
+                   const cell = bar.closest('li').getBoundingClientRect(); \
+                   const range = document.createRange(); range.selectNodeContents(bar); \
+                   const text = range.getBoundingClientRect(); \
+                   if (text.right > cell.right + 0.5) out.push(`bar ${i}: text ends at ${text.right} past ${cell.right}`); } \
+                 return out.length ? out : (document.querySelectorAll('[role=list] figcaption').length === 2 ? [] : ['no bars']); })()",
             )
             .await
             .unwrap()

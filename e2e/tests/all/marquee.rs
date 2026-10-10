@@ -260,32 +260,50 @@ fn a_focused_link_is_never_hidden_under_the_pause_toggle() {
 #[test]
 fn copies_that_do_not_fill_the_box_warn_once() {
     block_on(async {
-        let fixture = Fixture::open("/marquee", Viewport::Desktop).await.unwrap();
-        wait::for_visible(&fixture.page, PAUSE).await.unwrap();
-        fixture.console.settle().await.unwrap();
-        fixture
-            .console
-            .assert_clean("a marquee that fills its box")
-            .unwrap();
-        fixture.close().await.unwrap();
-
-        let fixture = Fixture::open("/marquee-short", Viewport::Desktop)
+        // The short marquee follows the filling one: its warning shows the measuring ran.
+        let fixture = Fixture::open("/marquee-pair", Viewport::Desktop)
             .await
             .unwrap();
-        let warned = || {
+        let warnings = |needle: &str| {
             fixture
                 .console
                 .peek()
                 .iter()
-                .filter(|message| message.contains("Marquee: 2 copies of"))
+                .filter(|message| message.contains(needle))
                 .count()
         };
-        wait::until("the marquee to warn", || async { Ok(warned() == 1) })
+        wait::until("the short marquee to warn", || async {
+            Ok(warnings("Marquee: 2 copies of") == 1)
+        })
+        .await
+        .unwrap();
+        fixture.console.settle().await.unwrap();
+        assert_eq!(warnings("Marquee:"), 1, "a marquee warned wrongly or twice");
+        fixture.console.drain();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2857: the fade is opaque paper at the ends, so it hides while focus is in the strip.
+#[test]
+fn the_fade_steps_aside_for_a_focused_link() {
+    block_on(async {
+        let fixture = Fixture::open("/marquee-fade", Viewport::Desktop)
             .await
             .unwrap();
-        fixture.console.settle().await.unwrap();
-        assert_eq!(warned(), 1, "the marquee warned again");
-        fixture.console.drain();
+        let page = &fixture.page;
+        wait::for_visible(page, PAUSE).await.unwrap();
+        let fades = "['::before', '::after'].map(p => \
+            getComputedStyle(document.querySelector('[data-slot=track]').parentElement, p).display)";
+        let shown: Vec<String> = page.evaluate(fades).await.unwrap().into_value().unwrap();
+        assert_eq!(shown, ["block", "block"], "the fade shows at rest");
+
+        keyboard::tab_to(page, "[data-slot=group]:first-child a:first-child", 20)
+            .await
+            .unwrap();
+        let shown: Vec<String> = page.evaluate(fades).await.unwrap().into_value().unwrap();
+        assert_eq!(shown, ["none", "none"], "the fade covers a focused link");
+        fixture.console.assert_clean("the faded marquee").unwrap();
         fixture.close().await.unwrap();
     });
 }
