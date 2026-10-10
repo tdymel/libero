@@ -298,6 +298,7 @@ pub(crate) struct TooltipOpenDelay(pub(crate) u32);
 /// Docs: <https://libero-ui.dev/buttons/action-icon>
 #[component]
 pub fn ActionIcon(props: ActionIconProps) -> Element {
+    let group = use_button_group();
     if !props.tooltip.unwrap_or(false) {
         return action_icon(props);
     }
@@ -307,7 +308,7 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
         .as_deref()
         .and_then(|chord| chord_words(chord, apple, &current_localization().shortcut_help));
     let mut label = props.aria_label.clone();
-    if !label.trim().is_empty() && opens_new_tab(&props, use_button_group()) {
+    if !label.trim().is_empty() && opens_new_tab(&props, group) {
         label = format!("{label} {}", current_localization().anchor.new_tab);
     }
     let open_delay = try_consume_context::<TooltipOpenDelay>().map(|delay| delay.0);
