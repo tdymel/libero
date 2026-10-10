@@ -16,6 +16,8 @@ pub struct KeyChord {
     /// Whether the platform is repeating a held key. Sticky Keys or a switch
     /// device turn one press into many: a toggle should ignore a repeat.
     pub repeat: bool,
+    /// The physical key; `Unidentified` where the platform does not say.
+    pub(crate) code: Code,
     /// Whether the press started in text entry; set on every press, filtered or not.
     pub(crate) text_entry: bool,
     /// A WebView's observe tags around the target, nearest first; empty elsewhere.

@@ -356,6 +356,15 @@ impl Property {
             _ => None,
         }
     }
+
+    /// The `-webkit-` name Safari and WKWebView still need beside this one.
+    pub(crate) const fn webkit_twin(self) -> Option<&'static str> {
+        match self {
+            Self::UserSelect => Some("-webkit-user-select"),
+            Self::BackdropFilter => Some("-webkit-backdrop-filter"),
+            _ => None,
+        }
+    }
 }
 
 /// A declaration's property: a known [`Property`] or any other name, custom properties included.
@@ -430,10 +439,12 @@ mod tests {
     #[test]
     fn every_builder_method_emits_its_own_declaration() {
         for (property, builder) in Property::BUILDERS {
-            assert_eq!(
-                declaration(*builder, "inherit".into()),
-                format!("{}:inherit", property.as_str())
-            );
+            let own = format!("{}:inherit", property.as_str());
+            let expected = match property.webkit_twin() {
+                Some(twin) => format!("{twin}:inherit;{own}"),
+                None => own,
+            };
+            assert_eq!(declaration(*builder, "inherit".into()), expected);
         }
     }
 

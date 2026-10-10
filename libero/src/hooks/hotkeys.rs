@@ -132,7 +132,7 @@ impl Chord {
         let key_matches = match (&self.key, &pressed.key) {
             (Key::Character(want), Key::Character(got)) => want.eq_ignore_ascii_case(got),
             (want, got) => want == got,
-        };
+        } || (held.alt() && self.alt_composed(pressed));
         // A symbol's shift is already in the key: `?` is Shift+/ on most layouts.
         let symbol = matches!(&self.key, Key::Character(text)
             if !text.chars().any(char::is_alphanumeric));
@@ -141,6 +141,24 @@ impl Chord {
             && self.meta == held.meta()
             && self.alt == held.alt()
             && (symbol || self.shift == held.shift())
+    }
+
+    /// Option on a Mac composes the key (`alt+a` gives `å`, `alt+e` a dead key):
+    /// a letter or digit chord then matches the physical key instead.
+    fn alt_composed(&self, pressed: &KeyChord) -> bool {
+        let composed = match &pressed.key {
+            Key::Character(got) => !got.is_ascii(),
+            got => *got == Key::Dead,
+        };
+        let Key::Character(want) = &self.key else {
+            return false;
+        };
+        let code = pressed.code.to_string();
+        let physical = code
+            .strip_prefix("Key")
+            .or_else(|| code.strip_prefix("Digit"))
+            .filter(|rest| rest.len() == 1);
+        composed && physical.is_some_and(|rest| want.eq_ignore_ascii_case(rest))
     }
 }
 
@@ -379,6 +397,7 @@ mod tests {
             key,
             modifiers,
             repeat: false,
+            code: Code::Unidentified,
             text_entry: false,
             scopes: Vec::new(),
         }
@@ -386,6 +405,30 @@ mod tests {
 
     fn character(text: &str) -> Key {
         Key::Character(text.into())
+    }
+
+    #[test]
+    fn an_option_chord_on_a_mac_matches_by_the_physical_key() {
+        let on = |key, code| KeyChord {
+            code,
+            ..pressed(key, Modifiers::ALT)
+        };
+        let alt_a = Chord::parse("alt+a", true).unwrap();
+        assert!(alt_a.matches(&on(character("å"), Code::KeyA)));
+        assert!(alt_a.matches(&on(Key::Dead, Code::KeyA)));
+        assert!(!alt_a.matches(&on(character("å"), Code::KeyB)));
+        assert!(!alt_a.matches(&on(character("b"), Code::KeyA)));
+        assert!(
+            Chord::parse("alt+1", true)
+                .unwrap()
+                .matches(&on(character("¡"), Code::Digit1))
+        );
+        // Without Alt held a composed key is its own character.
+        let plain = KeyChord {
+            code: Code::KeyA,
+            ..pressed(character("å"), Modifiers::empty())
+        };
+        assert!(!Chord::parse("a", false).unwrap().matches(&plain));
     }
 
     #[test]

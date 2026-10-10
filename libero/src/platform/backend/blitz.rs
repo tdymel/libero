@@ -489,6 +489,7 @@ fn keyed(event: &Event<KeyboardData>) {
             key: key.clone(),
             modifiers,
             repeat: event.is_auto_repeating(),
+            code: event.code(),
             text_entry: typing,
             scopes: Vec::new(),
         };

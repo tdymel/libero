@@ -116,6 +116,16 @@ identifier = "com.example.app""#;
 const IOS_COMMANDS: &str = "dx serve --platform ios
 dx build --platform ios";
 
+// snippet: ignore - needs dioxus's `mobile` feature
+const IOS_VIEWPORT: &str = r#"const VIEWPORT: &str = "<script>document.querySelector('meta[name=viewport]')\
+    ?.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, \
+    user-scalable=no, viewport-fit=cover');</script>";
+
+fn main() {
+    let config = dioxus::mobile::Config::new().with_custom_head(VIEWPORT.into());
+    dioxus::LaunchBuilder::new().with_cfg(config).launch(App);
+}"#;
+
 /// Where the app runs, one tab each.
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Environment {
@@ -384,6 +394,12 @@ fn IosPanel() -> Element {
                 }
             }
             CodeBlock { source: IOS_COMMANDS, language: "shell" }
+            Text {
+                "dioxus's page has no "
+                Code { source: "viewport-fit=cover" }
+                ", so the safe-area insets read 0 and Header, BottomNavigation and Lightbox run under the notch and the home indicator. Rewrite the viewport meta from the head:"
+            }
+            CodeBlock { source: IOS_VIEWPORT, language: "rust" }
         }
     }
 }

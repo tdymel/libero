@@ -388,11 +388,25 @@ mod tests {
     }
 
     fn idle_child() -> Child {
-        Command::new("sleep")
-            .arg("30")
-            .stdout(Stdio::null())
-            .spawn()
-            .unwrap()
+        #[cfg(windows)]
+        let mut command = Command::new("powershell");
+        #[cfg(windows)]
+        command.args(["-NoProfile", "-Command", "Start-Sleep 30"]);
+        #[cfg(not(windows))]
+        let mut command = Command::new("sleep");
+        #[cfg(not(windows))]
+        command.arg("30");
+        command.stdout(Stdio::null()).spawn().unwrap()
+    }
+
+    /// A process that has already exited.
+    fn dead_child() -> Child {
+        #[cfg(windows)]
+        let mut child = Command::new("cmd").args(["/C", "exit 0"]).spawn().unwrap();
+        #[cfg(not(windows))]
+        let mut child = Command::new("true").spawn().unwrap();
+        let _ = child.wait();
+        child
     }
 
     #[test]
@@ -437,8 +451,7 @@ mod tests {
         let _ = server.wait();
 
         std::fs::write(&log, "optimising\n").unwrap();
-        let mut dead = Command::new("true").spawn().unwrap();
-        let _ = dead.wait();
+        let mut dead = dead_child();
         let error = wait_for_log_line_within(Duration::from_secs(30), "done", &mut dead, &log)
             .unwrap_err()
             .to_string();
@@ -450,8 +463,7 @@ mod tests {
     fn a_dead_server_fails_the_wait_with_the_tail_of_its_log() {
         let log = std::env::temp_dir().join(format!("e2e-http-test-{}.log", std::process::id()));
         std::fs::write(&log, "compiling\nerror[E0425]: cannot find value\n").unwrap();
-        let mut server = Command::new("true").spawn().unwrap();
-        let _ = server.wait();
+        let mut server = dead_child();
         let error = wait_for_app_within(
             Duration::from_secs(30),
             &closed_port_url(),

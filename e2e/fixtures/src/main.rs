@@ -9,6 +9,11 @@ const CONSOLE_HOOK: &str = "<script>{ window.__e2eErrors = [];
     addEventListener('error', e => __e2eErrors.push(String(e.message)));
     addEventListener('unhandledrejection', e => __e2eErrors.push(String(e.reason))); }</script>";
 
+/// The docs app's viewport rewrite: dioxus-desktop's page has no `viewport-fit=cover`.
+#[cfg(any(feature = "desktop", feature = "mobile"))]
+const VIEWPORT: &str = "<script>document.querySelector('meta[name=viewport]')?.setAttribute('content', \
+    'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover');</script>";
+
 fn main() {
     e2e_fixtures::perf::install();
     // A fresh store per launch, so one scenario's kept scheme never reaches the next;
@@ -19,19 +24,23 @@ fn main() {
         std::path::PathBuf::from,
     ));
     #[cfg(feature = "desktop")]
-    if std::env::var_os("E2E_BRIDGE").is_some() {
-        let config = dioxus::desktop::Config::new().with_custom_head(CONSOLE_HOOK.into());
-        return dioxus::LaunchBuilder::new()
-            .with_cfg(config)
-            .launch(e2e_fixtures::App);
-    }
-    // `SIMCTL_CHILD_E2E_BRIDGE` on `simctl launch` reaches the app as `E2E_BRIDGE`.
-    #[cfg(feature = "ios")]
-    if std::env::var_os("E2E_BRIDGE").is_some() {
-        let config = dioxus::mobile::Config::new().with_custom_head(CONSOLE_HOOK.into());
-        return dioxus::LaunchBuilder::new()
-            .with_cfg(config)
-            .launch(e2e_fixtures::App);
-    }
+    dioxus::LaunchBuilder::new()
+        .with_cfg(dioxus::desktop::Config::new().with_custom_head(head()))
+        .launch(e2e_fixtures::App);
+    #[cfg(all(feature = "mobile", not(feature = "desktop")))]
+    dioxus::LaunchBuilder::new()
+        .with_cfg(dioxus::mobile::Config::new().with_custom_head(head()))
+        .launch(e2e_fixtures::App);
+    #[cfg(not(any(feature = "desktop", feature = "mobile")))]
     dioxus::launch(e2e_fixtures::App);
+}
+
+#[cfg(any(feature = "desktop", feature = "mobile"))]
+fn head() -> String {
+    // `SIMCTL_CHILD_E2E_BRIDGE` on `simctl launch` reaches the app as `E2E_BRIDGE`.
+    #[cfg(any(feature = "desktop", feature = "ios"))]
+    if std::env::var_os("E2E_BRIDGE").is_some() {
+        return format!("{CONSOLE_HOOK}{VIEWPORT}");
+    }
+    VIEWPORT.into()
 }

@@ -3,7 +3,7 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use dioxus::prelude::{
-    Event, FocusData, Key, KeyboardData, Modifiers, MountedData, MouseData, PointerData,
+    Code, Event, FocusData, Key, KeyboardData, Modifiers, MountedData, MouseData, PointerData,
     TransitionData,
 };
 use wasm_bindgen::{JsCast, JsValue};
@@ -1512,6 +1512,7 @@ impl WebKeyboard {
                     key,
                     modifiers,
                     repeat: event.repeat(),
+                    code: event.code().parse().unwrap_or(Code::Unidentified),
                     text_entry,
                     scopes: Vec::new(),
                 });

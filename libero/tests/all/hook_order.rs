@@ -287,7 +287,10 @@ fn crate_hits() -> Vec<String> {
     files
         .iter()
         .flat_map(|path| {
-            let name = path.strip_prefix(root).unwrap().display().to_string();
+            // `FIXED` names files with `/`, as Windows paths would not.
+            let name = (path.strip_prefix(root).unwrap())
+                .to_string_lossy()
+                .replace('\\', "/");
             audit(&name, &fs::read_to_string(path).unwrap())
         })
         .collect()

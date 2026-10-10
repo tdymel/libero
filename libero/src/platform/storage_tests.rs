@@ -144,6 +144,8 @@ fn a_stale_temporary_file_is_swept_and_a_fresh_one_kept() {
     let file = std::fs::File::create(&stale).unwrap();
     let old = std::time::SystemTime::now() - std::time::Duration::from_secs(2 * 24 * 60 * 60);
     file.set_modified(old).unwrap();
+    // Windows deletes a file still open only once its last handle closes.
+    drop(file);
     std::fs::File::create(&fresh).unwrap();
     write(&dir.0, "theme", "1").unwrap();
     assert!(!stale.exists());

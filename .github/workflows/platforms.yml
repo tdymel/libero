@@ -78,6 +78,47 @@ jobs:
           save-cache: false
       - run: cargo check -p docs --features native-vello
 
+  # ci.yml's `test` and libero's clippy on a Mac and Windows cfg, which nothing else runs; plus
+  # the iOS cfg arms on the Mac. Expect first-run reds in the tests that read sources.
+  unit:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-26
+            targets: aarch64-apple-ios-sim
+            python: python3
+          - os: windows-2025
+            targets: ""
+            python: python
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      # Before the checkout: LF files as on Linux (`include_str!`, snapshots), no MAX_PATH limit.
+      - if: runner.os == 'Windows'
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.longpaths true
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          targets: ${{ matrix.targets }}
+          components: clippy
+          cache-key: platforms-unit
+      # Every step runs whatever the last one did, so one run names every red.
+      - run: cargo test -p libero --lib --tests 2>&1 | tee "$RUNNER_TEMP/libero.log"
+      - if: success() || failure()
+        run: cargo test -p e2e --lib --bins 2>&1 | tee "$RUNNER_TEMP/e2e.log"
+      - if: success() || failure()
+        run: cargo test -p docs 2>&1 | tee "$RUNNER_TEMP/docs.log"
+      - if: success() || failure()
+        run: cargo clippy -p libero --all-targets --features desktop -- -D warnings 2>&1 | tee "$RUNNER_TEMP/clippy.log"
+      # The Apple and iOS arms (`storage.rs`, `backend/mod.rs`) only an iOS build compiles.
+      - if: runner.os == 'macOS' && (success() || failure())
+        run: cargo clippy -p libero --target aarch64-apple-ios-sim -- -D warnings 2>&1 | tee "$RUNNER_TEMP/clippy-ios.log"
+      - if: failure() || cancelled()
+        run: ${{ matrix.python }} .github/scripts/ci_annotate.py "$RUNNER_TEMP"/*.log
+
   # wry on the system WebView: WebKitGTK, WebView2, WKWebView.
   desktop:
     strategy:

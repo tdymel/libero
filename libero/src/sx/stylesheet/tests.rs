@@ -27,6 +27,24 @@ fn a_nested_breakpoint_value_is_dropped_with_a_warning() {
 }
 
 #[test]
+fn user_select_and_backdrop_filter_emit_a_webkit_twin_first() {
+    let css = Stylesheet::from(&sx().user_select("none").backdrop_filter("blur(8px)"));
+    let css = css.as_str();
+
+    for property in ["user-select", "backdrop-filter"] {
+        let prefixed = css.find(&format!("-webkit-{property}")).expect(property);
+        assert_eq!(css.matches(property).count(), 2, "{css}");
+        let after_twin = prefixed + "-webkit-".len() + property.len();
+        assert!(css[after_twin..].contains(property), "{css}");
+    }
+    assert!(
+        !Stylesheet::from(&sx().color("red"))
+            .as_str()
+            .contains("-webkit-")
+    );
+}
+
+#[test]
 fn identical_css_gets_one_class_name_however_it_was_built() {
     let direct = Stylesheet::from(&sx().padding("lg").color("red"));
     let composed = Stylesheet::from(&sx().padding("lg").and(sx().color("red")));

@@ -173,6 +173,21 @@ dx serve --platform ios
 dx build --platform ios
 ```
 
+dioxus's page has no `viewport-fit=cover`, so the safe-area insets read 0 and
+Header, BottomNavigation and Lightbox run under the notch and the home
+indicator. Rewrite the viewport meta from the head:
+
+```rust
+const VIEWPORT: &str = "<script>document.querySelector('meta[name=viewport]')\
+    ?.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, \
+    user-scalable=no, viewport-fit=cover');</script>";
+
+fn main() {
+    let config = dioxus::mobile::Config::new().with_custom_head(VIEWPORT.into());
+    dioxus::LaunchBuilder::new().with_cfg(config).launch(App);
+}
+```
+
 ## Feature flags
 
 Every feature is additive.

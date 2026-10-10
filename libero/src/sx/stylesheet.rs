@@ -196,7 +196,13 @@ fn breakpoint_at_rule(size: Size) -> AtRule {
 /// rings, and itself as the ring's halo (todo 630).
 fn property_declarations(property: &SxPropertyKey, value: &ThemeAwareValue) -> Vec<CssDeclaration> {
     let css_value = to_css_value(property, value);
-    let mut declarations = vec![CssDeclaration::new(property.as_str(), css_value.clone())];
+    let mut declarations = Vec::with_capacity(1);
+    if let SxPropertyKey::Known(known) = property
+        && let Some(prefixed) = known.webkit_twin()
+    {
+        declarations.push(CssDeclaration::new(prefixed, css_value.clone()));
+    }
+    declarations.push(CssDeclaration::new(property.as_str(), css_value.clone()));
 
     if matches!(
         property,

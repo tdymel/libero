@@ -25,6 +25,13 @@ title = "Libero"
 # the generated gradle project, the APK and the emulator's package list.
 identifier = "dev.libero.docs"
 
+# The app container and TCC grants (location, camera) key on it.
+[ios]
+identifier = "dev.libero.docs"
+
+[macos]
+identifier = "dev.libero.docs"
+
 # The capture, location and system notification demos (1220, 1221, 1348); an
 # app without the manifest entry is denied at once, with no prompt.
 [permissions]

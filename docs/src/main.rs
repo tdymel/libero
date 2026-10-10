@@ -34,9 +34,23 @@ fn main() {
         .ok();
     #[cfg(feature = "native-cpu")]
     dioxus_native::launch(App);
-    #[cfg(not(feature = "native-cpu"))]
+    #[cfg(feature = "desktop")]
+    dioxus::LaunchBuilder::new()
+        .with_cfg(dioxus::desktop::Config::new().with_custom_head(VIEWPORT.into()))
+        .launch(App);
+    #[cfg(all(feature = "mobile", not(feature = "desktop")))]
+    dioxus::LaunchBuilder::new()
+        .with_cfg(dioxus::mobile::Config::new().with_custom_head(VIEWPORT.into()))
+        .launch(App);
+    #[cfg(not(any(feature = "native-cpu", feature = "desktop", feature = "mobile")))]
     dioxus::launch(App);
 }
+
+/// dioxus-desktop's page has no `viewport-fit=cover`, so `env(safe-area-inset-*)` reads 0
+/// under a notch; `index.html` covers the web build.
+#[cfg(any(feature = "desktop", feature = "mobile"))]
+const VIEWPORT: &str = "<script>document.querySelector('meta[name=viewport]')?.setAttribute('content', \
+    'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover');</script>";
 
 /// Prints the adapter wgpu picked. The dioxus logger bridges no `log` records, and
 /// wgpu reports it at debug level only (todo 2789).

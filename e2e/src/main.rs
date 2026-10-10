@@ -684,15 +684,28 @@ mod tests {
 
         let two_days = std::time::SystemTime::now() - Duration::from_secs(2 * 24 * 60 * 60);
         for dir in [&green, &red] {
-            std::fs::File::open(dir)
-                .unwrap()
-                .set_modified(two_days)
-                .unwrap();
+            open_dir(dir).set_modified(two_days).unwrap();
         }
         prune_old_runs(&parent);
         assert!(!green.exists(), "a green run past a day goes");
         assert!(red.exists(), "a red run stays a week");
         let _ = std::fs::remove_dir_all(&parent);
+    }
+
+    /// Windows opens a directory only with backup semantics (`FILE_FLAG_BACKUP_SEMANTICS`),
+    /// and `set_modified` needs `FILE_WRITE_ATTRIBUTES`.
+    fn open_dir(dir: &std::path::Path) -> std::fs::File {
+        #[cfg(windows)]
+        {
+            use std::os::windows::fs::OpenOptionsExt;
+            std::fs::OpenOptions::new()
+                .access_mode(0x100)
+                .custom_flags(0x0200_0000)
+                .open(dir)
+                .unwrap()
+        }
+        #[cfg(not(windows))]
+        std::fs::File::open(dir).unwrap()
     }
 
     #[test]

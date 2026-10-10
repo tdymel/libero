@@ -178,9 +178,10 @@ pub(super) mod files {
         Some(super::app_dir()?.join("storage").join("local"))
     }
 
+    /// iOS builds with `mobile` only; `dirs` answers inside the app's container.
     #[cfg(all(
         not(target_os = "android"),
-        any(feature = "native", feature = "desktop")
+        any(target_os = "ios", feature = "native", feature = "desktop")
     ))]
     fn app_storage_dir() -> Option<PathBuf> {
         let app = app_name(&std::env::current_exe().ok()?)?;
@@ -197,7 +198,7 @@ pub(super) mod files {
         test,
         all(
             not(target_os = "android"),
-            any(feature = "native", feature = "desktop")
+            any(target_os = "ios", feature = "native", feature = "desktop")
         )
     ))]
     pub(super) fn app_name(exe: &Path) -> Option<std::ffi::OsString> {
@@ -210,7 +211,7 @@ pub(super) mod files {
 
     /// A server build shares this cfg: one file would be shared by every user's document.
     #[cfg(all(
-        not(target_os = "android"),
+        not(any(target_os = "android", target_os = "ios")),
         not(feature = "native"),
         not(feature = "desktop")
     ))]

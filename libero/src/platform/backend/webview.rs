@@ -15,7 +15,7 @@ use dioxus::html::{
     FileData, MountedData, MountedError, MountedResult, RenderedElementBacking, ScrollBehavior,
     ScrollLogicalPosition, ScrollToOptions,
 };
-use dioxus::prelude::{Event, Key, Modifiers, PointerData, spawn};
+use dioxus::prelude::{Code, Event, Key, Modifiers, PointerData, spawn};
 use serde_json::{Value, json};
 
 use crate::platform::a11y_media::A11yMediaSubscription;
@@ -2073,7 +2073,7 @@ const ON_KEY: &str = "const [skipTyping, clicked, seeded, observe, owner] = data
             event.preventDefault();
             event.liberoTaken = true;
         }
-        dioxus.send([name, ...chord, event.repeat, entry, inside]);
+        dioxus.send([name, ...chord, event.repeat, entry, inside, event.code]);
     };
     window.addEventListener('keydown', onKey);";
 
@@ -2109,9 +2109,21 @@ impl WebViewKeyboard {
         let task_slot = slot.clone();
         let task = spawn(async move {
             let mut script = script;
-            while let Ok((name, key, ctrl, shift, alt, meta, repeat, text_entry, scopes)) = script
-                .recv::<(String, String, bool, bool, bool, bool, bool, bool, Vec<u64>)>()
-                .await
+            while let Ok((name, key, ctrl, shift, alt, meta, repeat, text_entry, scopes, code)) =
+                script
+                    .recv::<(
+                        String,
+                        String,
+                        bool,
+                        bool,
+                        bool,
+                        bool,
+                        bool,
+                        bool,
+                        Vec<u64>,
+                        String,
+                    )>()
+                    .await
             {
                 let key = key.parse().unwrap_or(Key::Unidentified);
                 let mut modifiers = Modifiers::empty();
@@ -2124,6 +2136,7 @@ impl WebViewKeyboard {
                     key,
                     modifiers,
                     repeat,
+                    code: code.parse().unwrap_or(Code::Unidentified),
                     text_entry,
                     scopes,
                 }) {
