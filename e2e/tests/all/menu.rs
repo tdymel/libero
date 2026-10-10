@@ -140,8 +140,7 @@ async fn a_click_outside_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()
 e2e::scenario!(
     enter_opens_it_and_escape_closes_it_with_focus_back_on_the_trigger,
     "/menu-submenu-reopen",
-    enter_opens_and_escape_closes,
-    android: skip("958: element identity on the WebView")
+    enter_opens_and_escape_closes
 );
 /// `use_dismiss` (todo 46): focus moving from the trigger into the list keeps
 /// it open.
@@ -155,14 +154,12 @@ async fn a_click_opens<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_click_opens_it_and_focus_moving_into_the_list_keeps_it_open,
     "/menu-submenu-reopen",
-    a_click_opens,
-    android: skip("958: element identity on the WebView")
+    a_click_opens
 );
 e2e::scenario!(
     a_click_outside_closes_it_and_leaves_focus_where_it_went,
     "/menu-submenu-reopen",
-    a_click_outside_closes,
-    android: skip("958: element identity on the WebView")
+    a_click_outside_closes
 );
 
 /// APG: Escape and ArrowLeft in a submenu close that level only and focus its
@@ -197,8 +194,7 @@ async fn a_key_closes_only_the_submenu<D: Driver>(d: &mut D, _route: &str) -> Re
 e2e::scenario!(
     escape_and_arrow_left_close_only_the_submenu,
     "/menu-submenu-reopen",
-    a_key_closes_only_the_submenu,
-    android: skip("958: element identity on the WebView")
+    a_key_closes_only_the_submenu
 );
 
 /// `level` is open and placed: an unplaced box sits hidden at 0,0.
