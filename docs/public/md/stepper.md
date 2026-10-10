@@ -70,7 +70,7 @@ marker, not which step is current.
 | `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Overrides a step's label. `OptionLabel::rich` draws it as rsx and keeps a text name. |
 | `option_description` | `Callback<T, String>` | - | A second line under a step's label. An empty string prints none. |
 | `state` | `Callback<T, Option<StepState>>` | derived | Overrides a step's state. `None` keeps the derived one. The only way to mark a step `Error`. |
-| `onstepclick` | `EventHandler<T>` | - | Called with the picked step. Without it the steps are plain text with no tab stops. |
+| `onstepclick` | `EventHandler<T>` | - | Called with the picked step. Without it the steps are plain text with no tab stops of their own; a scrolling strip with no clickable step is one tab stop itself. |
 | `allow_next_steps` | `bool` | `false` | With `onstepclick`, lets steps not reached yet be picked too. |
 | `orientation` | `Orientation` | `horizontal` | `vertical` puts each step's content under the step itself. |
 | `label_position` | `StepLabelPosition` | `side` | `side` or `below` the marker. Ignored when vertical. Under 120px a step (360px for three), `side` draws as `below`. |

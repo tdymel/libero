@@ -237,7 +237,7 @@ base_props! {
         /// `Sticky` (default); `Fixed` content is offset by `var(--lsx-header-height)`.
         #[props(default, into)]
         position: Input<HeaderPosition>,
-        /// Height, a size or any CSS length. Unset, `theme.header.size`.
+        /// Minimum height, a size or any CSS length. Unset, `theme.header.size`.
         #[props(default, into)]
         size: Input<ThemeAwareValue>,
         /// Banner fill; a bare color takes shade 6. The first stop under a `gradient`.

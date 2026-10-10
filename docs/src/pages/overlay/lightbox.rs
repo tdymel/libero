@@ -134,7 +134,7 @@ pub fn LightboxPage() -> Element {
             markdown: "/md/lightbox.md",
             properties: vec![
                 props("LightboxOptions", vec![
-                    prop("zoom", "bool").default("true").doc("Lets the zoom buttons, the wheel, a double-click, `z`, `+` and `-` zoom, and a drag, a click or the arrows pan. On desktop and mobile a drag stops once the pointer leaves the picture."),
+                    prop("zoom", "bool").default("true").doc("Lets the zoom buttons, the wheel, a double-click, `z`, `+` and `-` zoom, and a drag, a click or the arrows pan."),
                     prop("max_zoom", "Option<f64>").default(format!("{:.1}", theme.lightbox.max_zoom)).doc("Upper scale bound. Unset, the theme's."),
                     prop("thumbnails", "bool").default("true").doc("The strip under the stage. Never shown for one picture."),
                     prop("captions", "bool").default("true").doc("Shows each item's caption."),
@@ -183,6 +183,7 @@ pub fn LightboxPage() -> Element {
                 .example("A product gallery whose photos each have their own `alt`: the viewer opens from a thumbnail, Left and Right move between photos, and Escape closes it with focus back on that thumbnail.")
                 .limits([
                     "In a desktop WebView or on Android, Tab and Shift+Tab move between the controls but can leave the viewer at its ends.",
+                    "In a desktop WebView a drag stops once the pointer leaves the picture.",
                 ]),
             lead: rsx! {
                 Text {

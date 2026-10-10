@@ -95,7 +95,7 @@ pub fn BurgerPage() -> Element {
                 ])
                 .must([
                     "Set `open` only when the burger expands a panel, and spread `aria-controls` with that panel's id.",
-                    "Leave `open` unset for a burger that opens a modal, since a modal is not expanded by its trigger.",
+                    "Leave `open` unset for a burger that opens a modal, since a modal is not expanded by its trigger. Its name is \"Open navigation\" by default, so set `label` when the modal is not navigation.",
                 ])
                 .example("A burger that opens the site menu panel, with `open: menu_open()` and `\"aria-controls\": \"site-menu\"`: a screen reader reads \"Toggle navigation\", expanded or collapsed."),
             lead: rsx! {

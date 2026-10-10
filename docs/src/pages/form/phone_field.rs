@@ -65,7 +65,7 @@ pub fn PhoneFieldPage() -> Element {
                         .default(theme.phone_field.country)
                         .doc("The country the field starts on, ISO 3166-1 alpha-2. A pick wins over it until the prop changes. A `value` with another country's dial code wins over both."),
                     prop("oncountrychange", "EventHandler<String>")
-                        .doc("The user picked another country. `oninput` fires at the same time with the number under the new dial code."),
+                        .doc("The user picked another country, or typed another country's dial code. `oninput` fires at the same time with the number under the new dial code."),
                     prop("country_select", "bool")
                         .default(theme.phone_field.country_select.to_string())
                         .doc("Shows the country picker. Off pins the country and shows its dial code as plain text."),
@@ -122,7 +122,7 @@ pub fn PhoneFieldPage() -> Element {
                 .handles([
                     "The country picker is a second tab stop.",
                     "Android's Back button closes the country list as Escape does, rather than the app.",
-                    "A typed dial code of another country moves the picker, and a polite status says so, \"Country set to Germany\", from `PhoneFieldLabels::country_set`.",
+                    "A typed dial code of another country moves the picker and fires `oncountrychange`, and a polite status says so, \"Country set to Germany\", from `PhoneFieldLabels::country_set`.",
                 ])
                 .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed text field."])
                 .example("A contact number, `PhoneField { label: \"Phone\", .. }`: Tab stops on the country picker, then on the number, and typing a letter in the open list filters the countries."),

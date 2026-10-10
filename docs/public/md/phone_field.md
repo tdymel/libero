@@ -62,7 +62,7 @@ under Germany becomes `"+4901711234567"`, which is not E.164. Say so in
 | `value` | `Option<String>` | - | The number in E.164, such as `"+12133734253"`. Leave it out and the field keeps its own text. |
 | `oninput` | `EventHandler<String>` | - | Fires on every keystroke with the E.164 the field should hold next, or an empty string once nothing is typed. |
 | `country` | `String` | `US` | The country the field starts on, ISO 3166-1 alpha-2. A pick wins over it until the prop changes. A `value` with another country's dial code wins over both. |
-| `oncountrychange` | `EventHandler<String>` | - | The user picked another country. `oninput` fires at the same time with the number under the new dial code. |
+| `oncountrychange` | `EventHandler<String>` | - | The user picked another country, or typed another country's dial code. `oninput` fires at the same time with the number under the new dial code. |
 | `country_select` | `bool` | `true` | Shows the country picker. Off pins the country and shows its dial code as plain text. |
 | `country_label` | `Callback<String, String>` | - | Overrides the name of a country. Unset, the name comes from the localization's `phone_field.country_names`, which ships in German, else English. It runs during render, so it can read a locale from context. |
 | `countries` | `Vec<String>` | - | Narrows the list to these ISO codes, in the order given. |
@@ -135,8 +135,9 @@ The dropdown is portaled out of the field, so its parts take the
 - The country picker is a second tab stop.
 - Android's Back button closes the country list as Escape does, rather than
   the app.
-- A typed dial code of another country moves the picker, and a polite status
-  says so, "Country set to Germany", from `PhoneFieldLabels::country_set`.
+- A typed dial code of another country moves the picker and fires
+  `oncountrychange`, and a polite status says so, "Country set to Germany", from
+  `PhoneFieldLabels::country_set`.
 
 ### Example
 

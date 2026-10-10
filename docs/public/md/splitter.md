@@ -120,7 +120,7 @@ Like every component, `Splitter` also takes the shared props `sx`, `class`,
   `"Resize sidebar"`. It has no name of its own.
 - Keep buttons at pane B's start edge out of the 24px next to the divider,
   which gets no press there. For example, use `padding-inline-start: 24px` on
-  pane B.
+  pane B of a side-by-side split, `padding-block-start: 24px` of a stacked one.
 
 ### Example
 

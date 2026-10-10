@@ -82,7 +82,7 @@ pair. An index past the end shows the last picture.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `zoom` | `bool` | `true` | Lets the zoom buttons, the wheel, a double-click, `z`, `+` and `-` zoom, and a drag, a click or the arrows pan. On desktop and mobile a drag stops once the pointer leaves the picture. |
+| `zoom` | `bool` | `true` | Lets the zoom buttons, the wheel, a double-click, `z`, `+` and `-` zoom, and a drag, a click or the arrows pan. |
 | `max_zoom` | `Option<f64>` | `8.0` | Upper scale bound. Unset, the theme's. |
 | `thumbnails` | `bool` | `true` | The strip under the stage. Never shown for one picture. |
 | `captions` | `bool` | `true` | Shows each item's caption. |
@@ -168,6 +168,7 @@ with focus back on that thumbnail.
 
 - In a desktop WebView or on Android, Tab and Shift+Tab move between the
   controls but can leave the viewer at its ends.
+- In a desktop WebView a drag stops once the pointer leaves the picture.
 
 ## Theme defaults
 

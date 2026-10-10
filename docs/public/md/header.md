@@ -133,5 +133,8 @@ State tokens on the root's `data-state`, space separated.
 |---|---|
 | `static` | `position` is `static`. |
 | `fixed` | `position` is `fixed`. |
+| `glass` | `glass` is set and the renderer draws a backdrop blur (not in native windows). |
+| `colored` | `color` is set without a `gradient`. |
+| `gradient` | `gradient` is set. |
 
 `sticky` is the default and has no token.

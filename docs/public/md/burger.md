@@ -96,10 +96,14 @@ Burger {
 - Set `open` only when the burger expands a panel, and spread `aria-controls`
   with that panel's id.
 - Leave `open` unset for a burger that opens a modal, since a modal is not
-  expanded by its trigger.
+  expanded by its trigger. Its name is "Open navigation" by default, so set
+  `label` when the modal is not navigation.
 
 ```rust,ignore
-Burger { onclick: move |_| modal.open() }
+Burger {
+    label: |_| "Open settings".to_string(),
+    onclick: move |_| modal.open(),
+}
 ```
 
 ### Example

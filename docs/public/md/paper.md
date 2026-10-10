@@ -87,7 +87,7 @@ articles", .. }`: a screen reader lists it as the "Related articles" landmark.
 | `radius` | `Size` | `Md` | Corner radius of a `Paper` that names none. |
 | `shadow` | `Size` | `Sm` | Elevation of a `Paper` that names none. |
 | `background` | `&'static str` | `#fff` | The surface colour. A dark theme changes this value, not any component. |
-| `contrast` | `ColorValue` | `black` | The text colour on `background`. Change both together. |
+| `contrast` | `ColorValue` | `ink.1` | The text colour on `background`. Change both together. |
 | `border_color` | `ColorValue` | `muted.3` | The `bordered` hairline. |
 
 ## CSS variables

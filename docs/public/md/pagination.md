@@ -44,7 +44,7 @@ fn Demo() -> Element {
 | `page` | `u32` | required | The current page, 1-based and clamped into range. |
 | `onchange` | `EventHandler<u32>` | - | Asks for a new page. Without it the page never changes, and the component warns. |
 | `aria_label` | `String` | required | Names the `<nav>` landmark, so two paginations on one page can be told apart. |
-| `siblings` | `u8` | `1` | Pages on each side of the current one. The row is always `2·siblings + 2·boundaries + 3` items wide, and an ellipsis never stands for a single page. |
+| `siblings` | `u8` | `1` | Pages on each side of the current one. Past `2·siblings + 2·boundaries + 3` pages the row is always that many items wide; fewer pages all show. An ellipsis never stands for a single page. |
 | `boundaries` | `u8` | `1` | Pages pinned at each end. `0` counts as 1. |
 | `size` | `Size` | `md` | Control box and font size. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`, or any CSS, e.g. `radius: "0"`. |
@@ -106,7 +106,7 @@ bare arrow.
 | `gap` | `Size` | Space between controls. |
 | `control_sizes` | `Sizes<u16>` | Control box per size step, in px. |
 | `font_sizes` | `Sizes<u16>` | Font size per size step, in px. |
-| `border` | `&'static str` | Control border colour. |
+| `border` | `ColorValue` | Control border colour. |
 
 `PaginationLabels` on `Localization::pagination`, English by default. The
 `<nav>`'s own name comes from `aria_label`, so you localise it yourself.
@@ -137,4 +137,4 @@ bare arrow.
 |---|---|
 | `size-{xs..xxl}` | The `size` in effect, on every control. |
 | `current` | The control for the current page. |
-| `disabled` | A control that cannot be activated. |
+| `disabled` | An arrow that cannot be activated: at its end, or under `disabled`. A page button carries `aria-disabled` only. |

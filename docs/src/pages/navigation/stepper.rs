@@ -101,7 +101,7 @@ pub fn StepperPage() -> Element {
                     prop("state", "Callback<T, Option<StepState>>")
                         .default("derived")
                         .doc("Overrides a step's state. `None` keeps the derived one. The only way to mark a step `Error`."),
-                    prop("onstepclick", "EventHandler<T>").doc("Called with the picked step. Without it the steps are plain text with no tab stops."),
+                    prop("onstepclick", "EventHandler<T>").doc("Called with the picked step. Without it the steps are plain text with no tab stops of their own; a scrolling strip with no clickable step is one tab stop itself."),
                     prop("allow_next_steps", "bool").default("false").doc("With `onstepclick`, lets steps not reached yet be picked too."),
                     prop("orientation", "Orientation").default("horizontal").doc("`vertical` puts each step's content under the step itself."),
                     prop("label_position", "StepLabelPosition").default("side").doc("`side` or `below` the marker. Ignored when vertical. Under 120px a step (360px for three), `side` draws as `below`."),
@@ -125,7 +125,7 @@ pub fn StepperPage() -> Element {
                 .handles([
                     "With `onstepclick`, each clickable step is a button and a tab stop. Enter and Space activate. There are no arrow keys.",
                     "`aria_label` and `aria_labelledby` land on the step list, not the root.",
-                    "A horizontal strip never widens the page (WCAG 1.4.10): the connectors shrink first, then steps that still don't fit scroll inside the strip. Labels keep their words whole; only a word wider than the strip breaks.",
+                    "A horizontal strip never widens the page (WCAG 1.4.10): the connectors shrink first, then steps that still don't fit scroll inside the strip. Labels keep their words whole; only a word wider than the strip breaks. While it scrolls and no step is clickable, the strip itself is a tab stop, so the arrow keys can scroll it in any browser.",
                 ])
                 .must([
                     "Name the steps with `aria_label` or `aria_labelledby`.",
