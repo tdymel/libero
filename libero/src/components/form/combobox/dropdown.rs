@@ -251,7 +251,7 @@ enum Slot {
     Label { label: String, key: usize },
     Row {
         index: usize,
-        /// `(aria-posinset, aria-setsize)` within its group.
+        /// `(aria-posinset, aria-setsize)` over the whole listbox: no `role="group"` wraps a windowed run.
         set: (usize, usize),
         group: Option<usize>,
     },
@@ -274,7 +274,7 @@ fn windowed_slots(
         }
         slots.extend((start..end).map(|index| Slot::Row {
             index,
-            set: (index - start + 1, end - start),
+            set: (index + 1, len),
             group,
         }));
     }
@@ -408,7 +408,7 @@ mod tests {
         );
     }
 
-    /// A named group gets a label slot keyed by its first row; positions count within the group.
+    /// A named group gets a label slot keyed by its first row; positions count over the whole list.
     #[test]
     fn a_windowed_list_puts_a_label_slot_before_each_named_group() {
         let groups = [label("DE"), label("DE"), None, label("FR")];
@@ -421,14 +421,14 @@ mod tests {
                     label: "DE".into(),
                     key: 10
                 },
-                row(0, (1, 2), Some(10)),
-                row(1, (2, 2), Some(10)),
-                row(2, (1, 1), None),
+                row(0, (1, 4), Some(10)),
+                row(1, (2, 4), Some(10)),
+                row(2, (3, 4), None),
                 Slot::Label {
                     label: "FR".into(),
                     key: 13
                 },
-                row(3, (1, 1), Some(13)),
+                row(3, (4, 4), Some(13)),
             ]
         );
     }

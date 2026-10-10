@@ -99,6 +99,14 @@ fn space_and_clicks_toggle_and_a_mixed_box_turns_true() {
         // reach the accessibility tree through the `indeterminate` property.
         let all = e2e::ax::snapshot(page, "#all").await.unwrap();
         assert!(all.contains("[checked=mixed]"), "{all}");
+        // ARIA in HTML forbids `aria-checked` on a native checkbox (todo 2952).
+        let attribute: bool = page
+            .evaluate("document.querySelector('#all').hasAttribute('aria-checked')")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(!attribute, "aria-checked on the web input");
 
         keyboard::tab_to(page, "#all", 10).await.unwrap();
         keyboard::press(page, SPACE).await.unwrap();

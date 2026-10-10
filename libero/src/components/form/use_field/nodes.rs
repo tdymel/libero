@@ -1,10 +1,11 @@
 use dioxus::{core::AttributeValue, prelude::*};
+use pictogram_icons_lucide as lucide;
 
 use super::activation::{Activation, CLICK_BOUNDARY};
 use crate::{
     components::{
         accessibility::VisuallyHidden,
-        common::Part,
+        common::{Part, draw_svg},
         form::{Caption, FieldPart, FieldStatus},
     },
     hooks::ElementHandle,
@@ -158,9 +159,15 @@ pub(in crate::components::form) fn status_node(
     let message = status.and_then(FieldStatus::message)?;
     // An error is `aria-invalid`; a warning says what it is, as GOV.UK's "Error:" does (1527).
     let warning = status.is_some_and(FieldStatus::is_warning);
+    // The shape carries the severity where colour does not (WCAG 1.4.1, todo 2820).
+    let icon = match warning {
+        true => lucide::triangle_alert::outlined,
+        false => lucide::circle_alert::outlined,
+    };
 
     Some(rsx! {
         span { "data-slot": FieldPart::Status.slot(), id: "{id}-status",
+            {draw_svg(&icon, Vec::new())}
             if warning {
                 VisuallyHidden { "{warning_word} " }
             }

@@ -22,6 +22,14 @@ pub(in crate::components::form) static FIELD_SX: StaticSx = StaticSx::new(|| {
         // A long unbroken word in a label or message wraps instead of scrolling the page (WCAG 1.4.10).
         .with("overflow-wrap", "anywhere")
         .selector(FIELD_CAPTIONS, sx().color("muted.7"))
+        // The severity icon sits in the text line, one em tall.
+        .selector(
+            "& > [data-slot='status'] > svg",
+            sx().width("1em")
+                .height("1em")
+                .vertical_align("-0.15em")
+                .with("margin-inline-end", "0.25em"),
+        )
         .selector(
             "& label > [data-slot='required']",
             sx().color("error.7")

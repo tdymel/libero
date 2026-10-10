@@ -476,7 +476,7 @@ fn every_size_fits_its_label_at_200_percent_text() {
     });
 }
 
-/// Todo 2558: an icon-only filter chip takes its checkbox name from the icon's `aria_label`.
+/// Todos 2558, 2954: an icon-only filter chip takes its checkbox name from the icon's or its own `aria_label`.
 #[test]
 fn an_icon_only_chip_is_named_by_its_icons_label() {
     block_on(async {
@@ -487,6 +487,16 @@ fn an_icon_only_chip_is_named_by_its_icons_label() {
             .await
             .unwrap();
         assert!(tree.contains("checkbox \"Favourites\""), "{tree}");
+        let named = e2e::ax::snapshot(&fixture.page, "#named").await.unwrap();
+        assert!(named.contains("checkbox \"Pinned\""), "{named}");
+        let on_root: bool = fixture
+            .page
+            .evaluate("document.querySelector('#named').hasAttribute('aria-label')")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(!on_root, "the name stays off the root span");
         fixture.close().await.unwrap();
     });
 }

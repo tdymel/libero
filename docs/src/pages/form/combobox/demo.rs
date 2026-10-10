@@ -213,6 +213,8 @@ pub(super) fn FetchingDemo(values: DemoValues) -> Element {
                 placeholder: "Type a fruit",
                 value: text(),
                 attributes: suggestions.a11y_attributes(),
+                // An editable trigger that filters a list says so (APG, todo 2905).
+                "aria-autocomplete": "list",
                 onblur: move |_| suggestions.close(),
                 oninput: move |next: String| {
                     text.set(next.clone());
@@ -279,6 +281,8 @@ pub(super) fn SuggestionsDemo(values: DemoValues) -> Element {
                 placeholder: "Type a fruit",
                 value: text(),
                 attributes: suggestions.a11y_attributes(),
+                // An editable trigger that filters a list says so (APG, todo 2905).
+                "aria-autocomplete": "list",
                 onblur: move |_| suggestions.close(),
                 oninput: move |next| {
                     text.set(next);

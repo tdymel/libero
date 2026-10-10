@@ -62,10 +62,12 @@ pub fn ChipPage() -> Element {
                 .handles([
                     "A `readonly` chip keeps its tab stop and ignores the toggle.",
                     "An `onclick` chip with `checked` sets `aria-pressed` from it; without `checked` it is a plain button.",
+                    "A selectable chip's `aria_label` goes on its checkbox, not on the root `span`.",
+                    "A chip in a list field (`MultiSelect`, `TagsField`) cut with an ellipsis shows its full text in a `title`. That is a hover reveal only: a keyboard or touch user does not get it, so keep labels short.",
                 ])
                 .must([
                     "Keep `children` to text and `Icon`: a selectable chip is a `<label>`, which takes the clicks of any control inside it.",
-                    "Name an icon-only chip: its checkbox takes the name of its label, so give the `Icon` an `aria_label`.",
+                    "Name an icon-only chip: its checkbox takes the name of its label, so give the `Icon` an `aria_label`, or the chip an `aria_label`.",
                 ])
                 .example("A filter chip, `Chip { checked, onchange, \"Vegan\" }`: Tab lands on it, Space toggles it, and a `readonly` chip keeps its tab stop but stays as it is."),
             lead: rsx! {

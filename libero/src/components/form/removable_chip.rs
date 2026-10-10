@@ -73,7 +73,8 @@ pub(crate) fn removable_chip(
                     Glyph { slot: IconSlot::Close, icon: lucide::x::outlined }
                 }
             } },
-            span { "data-slot": "label", "{label}" }
+            // The ellipsis hides text; a hover reveals it (no keyboard or touch route).
+            span { "data-slot": "label", title: "{label}", "{label}" }
         }
     }
 }

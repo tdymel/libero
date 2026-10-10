@@ -194,15 +194,15 @@ async fn in_view<D: Driver>(d: &mut D, row: &str, after: &str) -> Result<()> {
 }
 
 /// Todo 2234: a thousand rows draw only a window. The highlight stays drawn, in view and
-/// counted in its group, across a filter below the windowing threshold and back.
+/// counted in the whole list (todo 2910), across a filter below the windowing threshold and back.
 async fn a_long_list_windows<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.focus(TRIGGER).await?;
     d.press(keyboard::ARROW_DOWN).await?;
     eventually(d, "the search box", async |d| d.is_focused(SEARCH).await).await?;
     let row = highlighted(d, "opening on Item 700", "Item 700").await?;
     in_view(d, &row, "opening").await?;
-    assert_eq!(d.attr(&row, "aria-posinset").await?.as_deref(), Some("1"));
-    assert_eq!(d.attr(&row, "aria-setsize").await?.as_deref(), Some("100"));
+    assert_eq!(d.attr(&row, "aria-posinset").await?.as_deref(), Some("701"));
+    assert_eq!(d.attr(&row, "aria-setsize").await?.as_deref(), Some("1000"));
     let group = d.attr(&row, "aria-describedby").await?;
     let group = format!("#{}", group.unwrap_or_default());
     assert_eq!(d.text(&group).await?, "Group 7", "the row's description");
@@ -225,7 +225,7 @@ async fn a_long_list_windows<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     }
     let row = highlighted(d, "clearing the filter", "Item 000").await?;
     in_view(d, &row, "clearing the filter").await?;
-    assert_eq!(d.attr(&row, "aria-setsize").await?.as_deref(), Some("100"));
+    assert_eq!(d.attr(&row, "aria-setsize").await?.as_deref(), Some("1000"));
     d.press(keyboard::ENTER).await?;
     picked(d, "Some(\"Item 000\")", "Enter on a windowed row").await
 }

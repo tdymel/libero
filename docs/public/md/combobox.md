@@ -111,6 +111,8 @@ fn Demo() -> Element {
                 placeholder: "Type a fruit",
                 value: text(),
                 attributes: suggestions.a11y_attributes(),
+                // An editable trigger that filters a list says so (APG, todo 2905).
+                "aria-autocomplete": "list",
                 onblur: move |_| suggestions.close(),
                 oninput: move |next| {
                     text.set(next);
@@ -192,6 +194,8 @@ fn Demo() -> Element {
                 placeholder: "Type a fruit",
                 value: text(),
                 attributes: suggestions.a11y_attributes(),
+                // An editable trigger that filters a list says so (APG, todo 2905).
+                "aria-autocomplete": "list",
                 onblur: move |_| suggestions.close(),
                 oninput: move |next: String| {
                     text.set(next.clone());
@@ -311,8 +315,8 @@ match at any depth inside the list.
   than closing the app.
 - From 200 options the list draws only the rows in view. The highlighted row
   stays drawn for `aria-activedescendant`, a `ComboboxOption` row carries
-  `aria-posinset` and `aria-setsize`, and a grouped row is described by its
-  heading.
+  `aria-posinset` and `aria-setsize` over the whole list, and a grouped row is
+  described by its heading.
 
 ### You must
 
@@ -320,6 +324,8 @@ match at any depth inside the list.
   tie the list to it.
 - Close the list on your trigger's blur, or an enclosing `Modal` stops hearing
   Escape while the list stays open.
+- On a text field that filters the list, add `aria-autocomplete="list"`:
+  `a11y_attributes()` leaves it off, as a button trigger takes none.
 - Name the trigger: it becomes a `combobox`, which takes no name from its
   content. Point its `aria-labelledby` at a visible label, as the demos do.
 - Pass the same label's id as `labelled_by`, so the list has a name too. A

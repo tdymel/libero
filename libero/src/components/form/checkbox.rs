@@ -17,7 +17,7 @@ use crate::{
     },
     context::IconSlot,
     hooks::{ElementHandle, use_cache, use_css, use_element, use_icon, use_theme},
-    platform::ElementApi,
+    platform::{ElementApi, sets_indeterminate},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
         CHECKBOX_BOX, CHECKBOX_RADIUS, CheckboxDefaults, ChoiceVariant, CssVar, Size, SizeCss,
@@ -211,7 +211,7 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
     let element = use_element();
     let item = use_toolbar_item();
     // A browser reads a native checkbox's mixed state from the property alone;
-    // elsewhere `aria-checked="mixed"` below carries it.
+    // elsewhere `aria-checked="mixed"` below carries it (ARIA in HTML forbids it on the web).
     use_effect(use_reactive!(|indeterminate| {
         let _ = element.set_indeterminate(indeterminate);
     }));
@@ -311,7 +311,10 @@ fn checkbox_input(input: BoxStyle, checked: bool, indeterminate: bool) -> BoxSty
         .attr("type", "checkbox")
         .attr("checked", checked && !indeterminate)
         .attr("data-controlled", true)
-        .attr("aria-checked", indeterminate.then_some("mixed"))
+        .attr(
+            "aria-checked",
+            (indeterminate && !sets_indeterminate()).then_some("mixed"),
+        )
 }
 
 /// The control slot: the hidden input, the box, and the focus ring.

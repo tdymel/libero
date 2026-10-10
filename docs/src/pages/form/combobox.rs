@@ -197,11 +197,12 @@ pub fn ComboboxPage() -> Element {
                     "Focus stays on your trigger, so typing keeps working.",
                     "An open list with no options says `empty_label`, so an empty search is heard, not only seen.",
                     "Android's Back button calls `onopened(false)` while the list is open, rather than closing the app.",
-                    "From 200 options the list draws only the rows in view. The highlighted row stays drawn for `aria-activedescendant`, a `ComboboxOption` row carries `aria-posinset` and `aria-setsize`, and a grouped row is described by its heading.",
+                    "From 200 options the list draws only the rows in view. The highlighted row stays drawn for `aria-activedescendant`, a `ComboboxOption` row carries `aria-posinset` and `aria-setsize` over the whole list, and a grouped row is described by its heading.",
                 ])
                 .must([
                     "Spread `state.a11y_attributes()` on your trigger, or screen readers cannot tie the list to it.",
                     "Close the list on your trigger's blur, or an enclosing `Modal` stops hearing Escape while the list stays open.",
+                    "On a text field that filters the list, add `aria-autocomplete=\"list\"`: `a11y_attributes()` leaves it off, as a button trigger takes none.",
                     "Name the trigger: it becomes a `combobox`, which takes no name from its content. Point its `aria-labelledby` at a visible label, as the demos do.",
                     "Pass the same label's id as `labelled_by`, so the list has a name too. A `TextField`'s own `label` has the id `{id}-label`, from the `id` you give the field.",
                     "From 200 options, keep every row the theme's `row_height` tall, as a plain `ComboboxOption` is: the list places the rows it draws by that height. A debug build warns when they differ.",

@@ -118,6 +118,42 @@ fn a_warning_is_described_but_not_invalid() {
     assert!(body.contains("Unusual."));
 }
 
+/// Todo 2820: a status leads with a hidden icon, a different shape for a warning and an error.
+#[test]
+fn a_status_leads_with_a_hidden_icon_that_tells_a_warning_from_an_error() {
+    fn warning() -> Element {
+        rsx! {
+            LiberoProvider {
+                TextField {
+                    label: "Name",
+                    status: libero::components::FieldStatus::Warning("Unusual.".to_string()),
+                }
+            }
+        }
+    }
+    fn error() -> Element {
+        rsx! {
+            LiberoProvider { TextField { label: "Name", status: "Too short." } }
+        }
+    }
+    let status_of = |app: fn() -> Element| {
+        let body = body(&render(app));
+        let at = body.find(r#"data-slot="status""#).expect("no status");
+        element_at(&body, at).to_string()
+    };
+
+    let (warning, error) = (status_of(warning), status_of(error));
+    for (status, message) in [(&warning, "Unusual."), (&error, "Too short.")] {
+        assert_eq!(attributes_of(status, "svg")["aria-hidden"], "true");
+        assert!(status.find("<svg") < status.find(message), "{status}");
+    }
+    assert_ne!(
+        warning.split("</svg>").next(),
+        error.split("</svg>").next(),
+        "one icon for both"
+    );
+}
+
 /// A text slot describes the input only when the caller flags it: an icon's
 /// or a button's name must not (todo 496).
 #[test]

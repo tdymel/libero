@@ -201,7 +201,7 @@ fn a_caller_id_that_is_no_css_identifier_is_the_field_id() {
 
 /// Todo 250: a `multiple` field draws the chip `MultiSelect` and `TagsField`
 /// draw - the label in its `label` slot, and an x named after the file that
-/// is out of the tab order.
+/// is out of the tab order. The label carries its full text as a `title` (todo 2965).
 #[test]
 fn a_multiple_file_field_draws_the_shared_removable_chip() {
     fn app() -> Element {
@@ -220,7 +220,7 @@ fn a_multiple_file_field_draws_the_shared_removable_chip() {
     let html = render(app);
     let body = body(&html);
     assert!(
-        body.contains(r#"<span data-slot="label">a.txt</span>"#),
+        body.contains(r#"<span data-slot="label" title="a.txt">a.txt</span>"#),
         "{body}"
     );
     let named = body.find(r#""Remove b.txt""#).expect("the second chip's x");

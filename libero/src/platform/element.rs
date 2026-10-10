@@ -122,6 +122,11 @@ pub(crate) fn is_rtl(mounted: &Rc<MountedData>) -> bool {
     backend::is_rtl(mounted)
 }
 
+/// Whether [`ElementApi::set_indeterminate`] works: on the web alone.
+pub(crate) fn sets_indeterminate() -> bool {
+    cfg!(target_arch = "wasm32")
+}
+
 /// Blitz's `scroll_into_view` reads this (one `px`/`rem` length) since stylo
 /// does not parse `scroll-margin`. Set it beside `scroll-margin`.
 pub(crate) const SCROLL_MARGIN_VAR: &str = "--lsx-scroll-margin";

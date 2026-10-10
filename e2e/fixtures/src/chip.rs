@@ -173,6 +173,10 @@ fn ChipIconOnlyPage() -> Element {
             Chip { id: "icon-only", checked: false, onchange: move |_| {},
                 Icon { variant: "standard", size: "sm", color: "inherit", aria_label: "Favourites", Glyph {} }
             }
+            // Todo 2954: the chip's own `aria_label` names the checkbox, not the root span.
+            Chip { id: "named", checked: false, onchange: move |_| {}, aria_label: "Pinned",
+                Icon { variant: "standard", size: "sm", color: "inherit", Glyph {} }
+            }
         }
     }
 }

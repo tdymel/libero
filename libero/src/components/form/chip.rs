@@ -10,10 +10,11 @@ use crate::{
         accessibility::VISUALLY_HIDDEN_SX,
         common::{
             ACTIVE, COARSE_POINTER, Glyph, HtmlTag, Input, Part, ScaleOrCss, States, Variant,
-            VariantColors, VariantVars, base_color_or, base_props, coarse_hit_area_sx,
-            contrast_color, contrast_shade_color, disabled_look_sx, fill_color, focus_ring_sx,
-            interactive_variant_sx, on_ring_sx, on_state_sx, parts_enum, parts_under_sx,
-            ring_overlay, ring_overlay_sx, shade_color, text_color, variables, variant_colors,
+            VariantColors, VariantVars, aria_label_of, base_color_or, base_props,
+            coarse_hit_area_sx, contrast_color, contrast_shade_color, disabled_look_sx, fill_color,
+            focus_ring_sx, interactive_variant_sx, on_ring_sx, on_state_sx, parts_enum,
+            parts_under_sx, ring_overlay, ring_overlay_sx, shade_color, text_color, variables,
+            variant_colors,
         },
         form::{Activation, use_bound},
         layout::{InternalAnchor, use_box},
@@ -266,7 +267,7 @@ base_props! {
         #[props(default)]
         trailing: Option<Element>,
         /// The label. Text and `Icon` only: a `<label>` hijacks nested clicks.
-        /// An icon-only chip is named by its `Icon`'s `aria_label`.
+        /// An icon-only chip is named by its `Icon`'s `aria_label`, or on a checkbox chip by `aria_label` on the chip.
         children: Element,
     }
 }
@@ -475,9 +476,14 @@ pub fn Chip(props: ChipProps) -> Element {
             onchange(!checked);
         }
     });
+    // The name belongs on the checkbox, not the generic root span the attributes land on.
+    let aria_label = aria_label_of(&props.attributes);
+    let mut attributes = props.attributes;
+    attributes.retain(|attribute| attribute.name != "aria-label");
     let input = activation
         .wire(input)
         .attr("type", "checkbox")
+        .attr("aria-label", aria_label)
         .attr("id", id())
         .attr("name", bound.name().map(str::to_string))
         // No attribute keeps the browser's `on` default.
@@ -506,7 +512,7 @@ pub fn Chip(props: ChipProps) -> Element {
         })
         .render(
             HtmlTag::Span,
-            props.attributes,
+            attributes,
             vec![input, label, trailing, ring_overlay()],
         )
 }
