@@ -29,7 +29,7 @@ pub fn ButtonGroupPage() -> Element {
                 prop("radius", "ThemeAwareValue")
                     .doc("The group's outer corners, or any CSS, e.g. `radius: \"0\"`. The corners between two buttons are always square."),
                 prop("disabled", "bool")
-                    .doc("Disables every button inside that does not set `disabled` itself."),
+                    .doc("Disables every button inside that does not set `disabled` itself, and takes it out of the Tab order unless it sets `focusable_when_disabled`."),
                 prop("children", "Element")
                     .default("required")
                     .doc("`Button`s, `ActionIcon`s, and components built on them, such as `ThemeSwitcher`."),
@@ -42,6 +42,7 @@ pub fn ButtonGroupPage() -> Element {
                 .must(["Name the group with `aria-label`, or `aria-labelledby` on a visible heading."])
                 .example("Zoom out, Reset and Zoom in in a `ButtonGroup` with `\"aria-label\": \"Zoom\"`: a screen reader reads the three buttons as the \"Zoom\" group, and Tab stops on each one.")
                 .limits([
+                    "A disabled group does not forward `focusable_when_disabled`: set it on each button that should stay a Tab stop.",
                     "It is not a `toolbar`: no arrow-key navigation between the buttons.",
                     "For one choice out of several, use `SegmentedControl`, which is a radio group.",
                     "A child hidden with `display: none` still counts as first or last and squares its neighbour's outer corners; render a conditional control only when shown.",

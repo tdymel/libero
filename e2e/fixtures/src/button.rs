@@ -12,7 +12,16 @@ pub const ROUTES: Routes = &[
     ("/button", || rsx! { ButtonPage {} }),
     ("/button/landing", || rsx! { ButtonLanding {} }),
     ("/button/sizes", || rsx! { ButtonSizes {} }),
+    ("/button/soft-disabled", || rsx! { ButtonSoftDisabled {} }),
 ];
+
+/// Todo 2810: a disabled button that keeps its Tab stop, so its ring can fade with it.
+#[component]
+fn ButtonSoftDisabled() -> Element {
+    rsx! {
+        Button { id: "soft", disabled: true, focusable_when_disabled: true, "Soft" }
+    }
+}
 
 /// Todo 2338: a button and a segment per size, labels with descenders, for 200% text.
 #[component]

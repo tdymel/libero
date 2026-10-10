@@ -3,8 +3,21 @@ use crate::common::{attributes_of, body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{ColorCode, ColorField, ColorPicker, Swatches},
+    components::{ColorCode, ColorField, ColorPicker, ColorSwatch, Swatches},
 };
+
+/// Todo 2819: forced colours drop a swatch's background and ring unless it opts out.
+#[test]
+fn a_swatch_keeps_its_colour_under_forced_colours() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { ColorSwatch { color: ColorCode::rgba(34, 139, 230, 1.0) } }
+        }
+    }
+
+    let html = render(app);
+    assert!(html.contains("forced-color-adjust:none;"), "{html}");
+}
 
 /// Todo 710: a slider mirrors under RTL, but a colour scale's gradient runs
 /// left to right, so the hue and alpha sliders stay LTR.

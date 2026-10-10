@@ -36,6 +36,46 @@ fn the_swatches_and_the_alpha_slider_meet_the_baseline() {
         .run();
 }
 
+/// Todo 2819: forced colours keep a swatch's colour, which `background-image` carries.
+#[test]
+fn a_swatch_keeps_its_colour_in_forced_colours() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    block_on(async {
+        let fixture = Fixture::open("/color-picker-swatches", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute(
+            SetEmulatedMediaParams::builder()
+                .features(vec![MediaFeature::new("forced-colors", "active")])
+                .build(),
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(forced-colors: active)').matches",
+            "forced colours to apply",
+        )
+        .await
+        .unwrap();
+        let images: Vec<String> = page
+            .evaluate(
+                "[...document.querySelectorAll('[data-slot=swatch]')]\
+                 .map(s => getComputedStyle(s).backgroundImage)",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            images.len() == 3 && images.iter().all(|image| image.contains("linear-gradient")),
+            "{images:?}"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 3150: at `xs` and `sm`, where the sliders sit closest, a press within 12px of a
 /// slider thumb still reaches that slider, and no thumb's area takes the pad's or a
 /// swatch's presses (WCAG 2.5.8, by hit test).

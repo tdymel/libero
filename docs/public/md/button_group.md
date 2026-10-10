@@ -47,7 +47,7 @@ repository link, direction toggle and theme switcher, and on a phone the search.
 | `color` | `ThemeAwareValue` | - | Default `color` of the buttons inside. |
 | `size` | `Size` | - | Default `size` of the buttons inside. |
 | `radius` | `ThemeAwareValue` | - | The group's outer corners, or any CSS, e.g. `radius: "0"`. The corners between two buttons are always square. |
-| `disabled` | `bool` | - | Disables every button inside that does not set `disabled` itself. |
+| `disabled` | `bool` | - | Disables every button inside that does not set `disabled` itself, and takes it out of the Tab order unless it sets `focusable_when_disabled`. |
 | `children` | `Element` | `required` | `Button`s, `ActionIcon`s, and components built on them, such as `ThemeSwitcher`. |
 
 Like every component, `ButtonGroup` also takes the shared props `sx`,
@@ -74,6 +74,8 @@ each one.
 
 ### Limits
 
+- A disabled group does not forward `focusable_when_disabled`: set it on each
+  button that should stay a Tab stop.
 - It is not a `toolbar`: no arrow-key navigation between the buttons.
 - For one choice out of several, use [`SegmentedControl`](segmented_control.md),
   which is a radio group.

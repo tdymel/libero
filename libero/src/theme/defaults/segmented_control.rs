@@ -10,6 +10,7 @@ pub struct SegmentedControlDefaults {
     /// The colour a segmented control takes when a call site names none.
     pub color: Color,
     /// A check before the selected segment's label, so selection is not a colour change alone.
+    /// The picked segment grows by the check, so the strip reflows; `false` keeps its width.
     pub selected_check: bool,
 }
 

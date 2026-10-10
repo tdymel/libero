@@ -46,6 +46,53 @@ fn every_size_fits_its_label_at_200_percent_text() {
     });
 }
 
+/// Todo 2810: a focused soft-disabled button fades less, so its ring clears 3:1, and still
+/// draws an outline under forced colours.
+#[test]
+fn a_focused_disabled_button_fades_less_and_keeps_its_ring() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    const READ: &str = "(() => { const s = getComputedStyle(document.querySelector('#soft')); \
+                        return [s.opacity, s.outlineStyle, s.outlineWidth]; })()";
+    block_on(async {
+        let fixture = Fixture::open("/button/soft-disabled", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let rest: Vec<String> = page.evaluate(READ).await.unwrap().into_value().unwrap();
+        assert_eq!(rest[0], "0.5", "{rest:?}");
+
+        keyboard::tab_to(page, "#soft", 5).await.unwrap();
+        wait::for_js_true(
+            page,
+            "getComputedStyle(document.querySelector('#soft')).opacity === '0.75'",
+            "the focused soft-disabled button to fade to 0.75",
+        )
+        .await
+        .unwrap();
+
+        page.execute(
+            SetEmulatedMediaParams::builder()
+                .features(vec![MediaFeature::new("forced-colors", "active")])
+                .build(),
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(forced-colors: active)').matches",
+            "forced colours to apply",
+        )
+        .await
+        .unwrap();
+        let forced: Vec<String> = page.evaluate(READ).await.unwrap().into_value().unwrap();
+        assert!(
+            forced[1] == "solid" && forced[2] != "0px",
+            "no ring in forced colours: {forced:?}"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 586, in link mode: the one disabled `Button` the fixture has.
 #[test]
 fn a_disabled_link_shows_not_allowed_and_no_hover() {

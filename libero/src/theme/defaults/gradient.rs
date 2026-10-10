@@ -265,7 +265,12 @@ fn midpoint(a: HexColor, b: HexColor) -> HexColor {
     HexColor::new((mid(a.r(), b.r()) << 16) | (mid(a.g(), b.g()) << 8) | mid(a.b(), b.b()))
 }
 
-/// Both stops and the midpoint in `theme`; only the measurable stop where the other has no hex.
+/// `from` to `to` in a tenth of the way each: a gradient's luminance sags between the stops.
+fn span(from: HexColor, to: HexColor) -> impl Iterator<Item = HexColor> {
+    (0..=10).map(move |step| mix(to, from, step * 10))
+}
+
+/// The span between both stops in `theme`; only the measurable stop where the other has no hex.
 fn gradient_points(
     stops: &[ThemeAwareValue; 2],
     theme: &Theme,
@@ -275,7 +280,7 @@ fn gradient_points(
         stop_hex(&stops[0], theme, text),
         stop_hex(&stops[1], theme, text),
     ) {
-        (Some(from), Some(to)) => Some(vec![from, to, midpoint(from, to)]),
+        (Some(from), Some(to)) => Some(span(from, to).collect()),
         (Some(only), None) | (None, Some(only)) => Some(vec![only]),
         (None, None) => None,
     }
@@ -320,9 +325,9 @@ fn best_label(
     best.map(|(score, label, layer)| (score, label.to_string(), layer.to_string()))
 }
 
-/// The label and layer tint with the best worst-case contrast on both stops and the
-/// midpoint (luminance sags there). A stop with no hex (`"violet"`, a var) drops out
-/// with the midpoint, and says so.
+/// The label and layer tint with the best worst-case contrast along the whole span
+/// between the stops. A stop with no hex (`"violet"`, a var) drops out with the span,
+/// and says so.
 fn pick_label(stops: &[ThemeAwareValue; 2], themes: &[&Theme], text: bool) -> (String, String) {
     let best = best_label(themes, |theme| gradient_points(stops, theme, text));
     if !text {
@@ -449,7 +454,7 @@ fn mix(a: HexColor, b: HexColor, percent: u8) -> HexColor {
     HexColor::new((mix(a.r(), b.r()) << 16) | (mix(a.g(), b.g()) << 8) | mix(a.b(), b.b()))
 }
 
-/// Gradient text with a literal stop: warns where a stop, or the midpoint,
+/// Gradient text with a literal stop: warns where a point of the span
 /// falls under 4.5:1 on the page background. Palette stops come off the text ramp.
 fn check_text_stops(stops: &[ThemeAwareValue; 2], themes: &[&Theme]) {
     if !stops
@@ -463,8 +468,7 @@ fn check_text_stops(stops: &[ThemeAwareValue; 2], themes: &[&Theme]) {
         .filter_map(|theme| {
             let from = stop_hex(&stops[0], theme, true)?;
             let to = stop_hex(&stops[1], theme, true)?;
-            [from, to, midpoint(from, to)]
-                .into_iter()
+            span(from, to)
                 .map(|point| point.contrast_ratio(theme.surface))
                 .reduce(f32::min)
         })
@@ -501,8 +505,7 @@ mod tests {
     fn worst(stops: &[ThemeAwareValue; 2], theme: &Theme, label: HexColor) -> f32 {
         let from = stop_hex(&stops[0], theme, false).unwrap();
         let to = stop_hex(&stops[1], theme, false).unwrap();
-        [from, to, midpoint(from, to)]
-            .into_iter()
+        span(from, to)
             .map(|point| point.contrast_ratio(label))
             .fold(f32::MAX, f32::min)
     }
@@ -630,7 +633,7 @@ mod tests {
                 };
                 let a = stop_hex(&stops[0], theme, false).unwrap();
                 let b = stop_hex(&stops[1], theme, false).unwrap();
-                for solid in [a, b, midpoint(a, b)] {
+                for solid in span(a, b) {
                     let tint = mix(solid, theme.surface, share);
                     for point in [solid, tint, mix(WHITE, tint, sheen)] {
                         let ratio = point.contrast_ratio(paint);
@@ -693,7 +696,7 @@ mod tests {
         }
     }
 
-    /// A light pair takes a dark label, which the midpoint is checked for too.
+    /// A light pair takes a dark label, which every point of the span is checked for.
     #[test]
     fn a_light_literal_pair_takes_black() {
         let stops = stops(Some("#ffe066"), Gradient::default().to("#8ce99a"));
@@ -707,6 +710,16 @@ mod tests {
     fn a_pair_no_label_reads_on_warns() {
         crate::utils::take_warnings();
         let stops = stops(Some("#1a1a80"), Gradient::default().to("#ffe066"));
+        pick_label(&stops, &[&Theme::DEFAULT, &Theme::DARK], false);
+        let warnings = crate::utils::take_warnings();
+        assert!(warnings.iter().any(|w| w.contains("4.5:1")), "{warnings:?}");
+    }
+
+    /// Todo 2828: black reads 5.0:1 on the red to green midpoint but 3.95:1 a quarter along.
+    #[test]
+    fn a_pair_that_sags_between_the_stops_and_the_midpoint_warns() {
+        crate::utils::take_warnings();
+        let stops = stops(Some("#ff0000"), Gradient::default().to("#00ff00"));
         pick_label(&stops, &[&Theme::DEFAULT, &Theme::DARK], false);
         let warnings = crate::utils::take_warnings();
         assert!(warnings.iter().any(|w| w.contains("4.5:1")), "{warnings:?}");

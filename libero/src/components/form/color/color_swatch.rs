@@ -35,6 +35,8 @@ static COLOR_SWATCH_SX: StaticSx = StaticSx::new(|| {
         // color shows it through.
         .background(format!("linear-gradient({color}, {color}), {CHECKERBOARD}"))
         .border_style("none")
+        // Forced colours would drop the colour and its ring: the swatch is the colour.
+        .forced_color_adjust("none")
         .padding("0")
         // A clickable swatch is a `<button>`, which inherits neither (todo 2376).
         .font_family("inherit")

@@ -65,6 +65,35 @@ fn the_defaults_reach_each_button_and_its_own_prop_wins() {
     assert!(icon.contains_key("disabled"), "{icon:?}");
 }
 
+/// Todo 2815: a disabled group takes its buttons out of the Tab order, bar one that keeps it.
+#[test]
+fn a_button_keeps_its_tab_stop_in_a_disabled_group_by_its_own_prop() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                ButtonGroup { disabled: true,
+                    Button { "One" }
+                    Button { focusable_when_disabled: true, "Two" }
+                    ActionIcon { aria_label: "Three", focusable_when_disabled: true, "3" }
+                }
+            }
+        }
+    }
+    let html = body(&render(app));
+
+    let buttons: Vec<_> = html
+        .split("<button")
+        .skip(1)
+        .map(|button| attributes_of(&format!("<button{button}"), "button"))
+        .collect();
+    assert_eq!(buttons.len(), 3, "{html}");
+    assert!(buttons[0].contains_key("disabled"), "{:?}", buttons[0]);
+    for soft in &buttons[1..] {
+        assert!(!soft.contains_key("disabled"), "{soft:?}");
+        assert_eq!(soft["aria-disabled"], "true", "{soft:?}");
+    }
+}
+
 #[test]
 fn a_forwarding_toggle_takes_the_group_variant() {
     fn app() -> Element {

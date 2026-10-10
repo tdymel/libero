@@ -157,12 +157,23 @@ pub(crate) fn forced_on_sx() -> crate::sx::Sx {
     )
 }
 
+/// What a focused disabled element fades to: its ring fades with it, and half opacity
+/// leaves the stripe under 3:1 on some themes (1.4.11, todo 2810).
+const FOCUSED_DISABLED_OPACITY: &str = "0.75";
+
 /// The disabled look: half opacity, and `GrayText` under forced colours.
 pub(crate) fn disabled_look_sx(cursor: &str) -> crate::sx::Sx {
-    crate::sx::sx().opacity("0.5").cursor(cursor).media(
-        crate::sx::FORCED_COLORS,
-        crate::sx::sx().color("GrayText").border_color("GrayText"),
-    )
+    crate::sx::sx()
+        .opacity("0.5")
+        .cursor(cursor)
+        .selector(
+            "&:focus-visible",
+            crate::sx::sx().opacity(FOCUSED_DISABLED_OPACITY),
+        )
+        .media(
+            crate::sx::FORCED_COLORS,
+            crate::sx::sx().color("GrayText").border_color("GrayText"),
+        )
 }
 
 /// Draws the ring for an element focus lands inside, via `:focus-visible ~ [data-ring]`:
@@ -261,5 +272,38 @@ mod tests {
 
         assert!(css.contains("box-shadow:0 1px 2px #0003;"), "{css}");
         assert!(css.contains("--lsx-own-shadow:0 1px 2px #0003;"), "{css}");
+    }
+
+    /// Todo 2810: the stripe, faded with its focused disabled element, shows 3:1 on the page.
+    #[test]
+    fn a_focused_disabled_control_keeps_its_stripe_at_three_to_one() {
+        use super::{FOCUSED_DISABLED_OPACITY, disabled_look_sx};
+        use crate::tokens::HexColor;
+
+        let css = Stylesheet::from(&disabled_look_sx("not-allowed"));
+        let rule = format!(":focus-visible{{opacity:{FOCUSED_DISABLED_OPACITY};");
+        assert!(css.as_str().contains(&rule), "{}", css.as_str());
+
+        let alpha = (FOCUSED_DISABLED_OPACITY.parse::<f32>().unwrap() * 100.0) as u32;
+        let blend = |a: u8, b: u8| (u32::from(a) * alpha + u32::from(b) * (100 - alpha)) / 100;
+        let mut short = Vec::new();
+        for set in crate::theme::ThemeSet::CATALOGUE {
+            for theme in [Some(set.light_theme()), set.dark_theme()]
+                .into_iter()
+                .flatten()
+            {
+                let (ink, page) = (theme.ink, theme.surface);
+                let faded = HexColor::new(
+                    blend(ink.r(), page.r()) << 16
+                        | blend(ink.g(), page.g()) << 8
+                        | blend(ink.b(), page.b()),
+                );
+                let ratio = faded.contrast_ratio(page);
+                if ratio < 3.0 {
+                    short.push(format!("{}: {ratio:.2}:1", set.name()));
+                }
+            }
+        }
+        assert!(short.is_empty(), "{short:?}");
     }
 }
