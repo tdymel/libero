@@ -114,7 +114,8 @@ explains how parts work.
 ### You must
 
 - Name the steps with `aria_label` or `aria_labelledby`.
-- Give a rich label a name that contains its visible text.
+- Give a rich label a name that contains its visible text. A screen reader hears
+  the name, not the drawing, so put no link or button in it.
 
 ### Example
 

@@ -281,6 +281,10 @@ fn AccordionSection<T: Options>(
             Key::End => last,
             _ => return,
         };
+        // Home on the first or End on the last trigger scrolls the page.
+        if to == index {
+            return;
+        }
         event.prevent_default();
         let _ = root_element
             .query_selector(&id_selector(&format!("{root}-trigger-{to}")))

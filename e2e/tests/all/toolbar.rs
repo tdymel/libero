@@ -326,47 +326,53 @@ e2e::scenario!(
 );
 
 /// A separator drawn as a background fill turns `Canvas` under forced colours: invisible.
+/// The horizontal bar draws `border-inline-start`, the vertical one `border-block-start`.
 #[test]
 fn the_separator_shows_in_forced_colours() {
     use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
     block_on(async {
-        let fixture = Fixture::open("/toolbar", Viewport::Desktop).await.unwrap();
-        let page = &fixture.page;
-        page.execute(
-            SetEmulatedMediaParams::builder()
-                .features(vec![MediaFeature::new("forced-colors", "active")])
-                .build(),
-        )
-        .await
-        .unwrap();
-        wait::for_js_true(
-            page,
-            "matchMedia('(forced-colors: active)').matches",
-            "forced colours to apply",
-        )
-        .await
-        .unwrap();
-        // The page is `Canvas`; a line of the same colour is no line.
-        let [fill, edge, width]: [String; 3] = page
-            .evaluate(
-                "(() => { const probe = document.createElement('div'); \
-                 probe.style.background = 'Canvas'; document.body.append(probe); \
-                 const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \
-                 const sep = getComputedStyle(document.querySelector('[role=toolbar] [role=separator]')); \
-                 const same = (c) => c === canvas ? 'canvas' : 'drawn'; \
-                 return [same(sep.backgroundColor), same(sep.borderInlineStartColor), \
-                 sep.borderInlineStartWidth]; })()",
+        for (route, edge) in [
+            ("/toolbar", "borderInlineStart"),
+            ("/toolbar-vertical", "borderBlockStart"),
+        ] {
+            let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+            let page = &fixture.page;
+            page.execute(
+                SetEmulatedMediaParams::builder()
+                    .features(vec![MediaFeature::new("forced-colors", "active")])
+                    .build(),
             )
             .await
-            .unwrap()
-            .into_value()
             .unwrap();
-        let line = fill == "drawn" || (edge == "drawn" && width != "0px");
-        assert!(
-            line,
-            "the separator vanishes: fill {fill}, edge {edge} {width}"
-        );
-        fixture.close().await.unwrap();
+            wait::for_js_true(
+                page,
+                "matchMedia('(forced-colors: active)').matches",
+                "forced colours to apply",
+            )
+            .await
+            .unwrap();
+            // The page is `Canvas`; a line of the same colour is no line.
+            let [fill, color, width]: [String; 3] = page
+                .evaluate(format!(
+                    "(() => {{ const probe = document.createElement('div'); \
+                     probe.style.background = 'Canvas'; document.body.append(probe); \
+                     const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \
+                     const sep = getComputedStyle(document.querySelector('[role=toolbar] [role=separator]')); \
+                     const same = (c) => c === canvas ? 'canvas' : 'drawn'; \
+                     return [same(sep.backgroundColor), same(sep.{edge}Color), \
+                     sep.{edge}Width]; }})()"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            let line = fill == "drawn" || (color == "drawn" && width != "0px");
+            assert!(
+                line,
+                "the separator vanishes on {route}: fill {fill}, {edge} {color} {width}"
+            );
+            fixture.close().await.unwrap();
+        }
     });
 }
 
@@ -376,6 +382,8 @@ fn it_meets_the_baseline() {
         .focusable("#bold")
         // `Select`'s trigger sits inside its taller frame, which takes the press.
         .targets("[role=toolbar] button[data-toolbar-item]")
+        // The `Select`'s trigger; its taller frame takes the press too, but the trigger is the item.
+        .targets_spaced("[role=toolbar] [role=combobox]")
         .run();
 }
 
@@ -388,8 +396,11 @@ fn the_other_toolbars_meet_the_baseline() {
         .run();
     Suite::new("toolbar-fields", "/toolbar-fields")
         .focusable("#first")
-        // The text and number inputs sit inside their taller frames, which take the press.
         .targets("[role=toolbar] button[data-toolbar-item]")
+        // The other items: the box of a `Checkbox` and `Switch`, a segment, the text and number inputs.
+        .targets_spaced(
+            "[role=toolbar] [data-slot=control], [role=toolbar] [role=radiogroup] label",
+        )
         .run();
     Suite::new("toolbar-editor", "/toolbar-editor")
         .focusable("#bold")

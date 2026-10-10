@@ -5,19 +5,34 @@
 use anyhow::{Result, ensure};
 use e2e::driver::{Driver, eventually};
 
-/// Whether the column's first description starts below its chord.
-async fn stacked<D: Driver>(d: &mut D, column: &str) -> Result<bool> {
-    let chord = d.rect(&format!("{column} dt")).await?;
-    let description = d.rect(&format!("{column} dd")).await?;
-    Ok(description.y >= chord.y + chord.height - 1.0)
+/// Whether each of the column's descriptions starts below its chord, one entry per row.
+async fn stacked<D: Driver>(d: &mut D, column: &str) -> Result<Vec<bool>> {
+    let chords = d.rects(&format!("{column} dt")).await?;
+    let descriptions = d.rects(&format!("{column} dd")).await?;
+    ensure!(
+        !chords.is_empty() && chords.len() == descriptions.len(),
+        "{column} has {} chords and {} descriptions",
+        chords.len(),
+        descriptions.len()
+    );
+    Ok(chords
+        .iter()
+        .zip(&descriptions)
+        .map(|(chord, description)| description.y >= chord.y + chord.height - 1.0)
+        .collect())
 }
 
 async fn rows_stack_only_when_narrow<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let narrow = stacked(d, "#narrow").await?;
     ensure!(
-        stacked(d, "#narrow").await?,
-        "the narrow list keeps chord and description side by side"
+        narrow.iter().all(|stacked| *stacked),
+        "the narrow list keeps a chord and description side by side: {narrow:?}"
     );
-    ensure!(!stacked(d, "#wide").await?, "the wide list stacks its rows");
+    let wide = stacked(d, "#wide").await?;
+    ensure!(
+        wide.iter().all(|stacked| !stacked),
+        "the wide list stacks a row: {wide:?}"
+    );
     Ok(())
 }
 

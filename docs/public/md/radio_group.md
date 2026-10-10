@@ -163,7 +163,7 @@ explains how parts work.
 - The group is a `radiogroup` named by its `label`, so the question is read on
   entering it.
 - `required`, an error and read-only are set on the group, and its description,
-  helper and status are its description.
+  helper and status make up its `aria-describedby`.
 - Each option's description is read with its radio.
 - The whole group is one tab stop, and the arrows select as they move. Disabled
   options are skipped.
@@ -183,7 +183,8 @@ the arrows move and pick at once.
 ## Theme defaults
 
 `RadioDefaults` holds `variant` (`plain`, for a `Radio` and a `RadioGroup`),
-`size`, and one circle per size step (`14px` to `24px`), published as
+`size`, `color` (`primary`, the ring and dot color of a checked radio), and one
+circle per size step (`14px` to `24px`), published as
 `--lsx-radio-circle-size-*`. It is the scale the checkbox uses, so a form mixing
 the two lines up. A radio is a circle at every size, so it has no `radius`.
 

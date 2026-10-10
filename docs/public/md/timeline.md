@@ -148,6 +148,9 @@ explains how parts work.
 
 - Never put anything focusable in a `.bullet(..)`. It would stay a tab stop with
   no name. Interactive content belongs in `.content(..)`.
+- Keep a rich title (`OptionLabel::rich`) decorative: it is hidden from a screen
+  reader, which hears the name instead, so no link or button in it. Interactive
+  content belongs in `.content(..)`.
 - Say an error or other status in the title or content. The `.color(..)` accent
   alone does not carry it.
 

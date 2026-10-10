@@ -52,7 +52,7 @@ pub fn ToolbarPage() -> Element {
                         .doc("Styles for the groups and separators, under `sx`."),
                     prop("children", "Element")
                         .default("required")
-                        .doc("`Button`s, `ActionIcon`s, `Select`s, `ButtonGroup`s, fields, `ToolbarGroup`s and `ToolbarSeparator`s."),
+                        .doc("`Button`s, `ActionIcon`s, `Select`s, `ButtonGroup`s, `TextField`s, `NumberField`s, `Checkbox`es, `Switch`es, `SegmentedControl`s, `ToolbarGroup`s and `ToolbarSeparator`s."),
                 ])
                 .parts("ToolbarPart", vec![
                     (ToolbarPart::Group, "A `ToolbarGroup`, laid out along the bar."),
@@ -88,6 +88,7 @@ pub fn ToolbarPage() -> Element {
                 .example("An editor bar, `Toolbar { \"aria-label\": \"Formatting\" }` with `ToolbarGroup`s named \"Style\" and \"History\": Tab enters on one button, the arrows move through Bold, Italic, Undo and Redo, and Tab leaves the bar.")
                 .limits([
                     "Only `Button`, `ActionIcon`, `Select`, `Checkbox`, `Switch`, `SegmentedControl`, `TextField` and `NumberField` (and what is built on them) join the arrow order. Another focusable element inside stays its own tab stop.",
+                    "A long horizontal bar wraps. A `ToolbarSeparator` stays where the flow puts it, so it can end a row; it is not dropped at a wrap.",
                 ]),
             lead: rsx! {
                 Text {

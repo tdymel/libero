@@ -79,7 +79,7 @@ Like every component, `HoverCard` also takes the shared props `sx`, `class`,
   enters it and the arrow keys scroll it. A card with a link or button is not:
   the controls take the focus.
 - A trigger with nothing focusable and an unnamed card both warn in the
-  console.
+  console, in debug builds only.
 - On touch, a tap is no hover: a long press opens the card, as a `Tooltip`. It
   closes a moment after the release unless a tap lands in it, and then a tap
   elsewhere closes it. The card has no arrow.

@@ -100,6 +100,8 @@ Like every component, `Collapse` also takes the shared props `sx`, `class`,
   table or code block in a box with `overflow-x: auto`.
 - Put padding on the content, not on `Collapse`: the root keeps its own
   padding, border and margin when closed.
+- Pad the content by the focus ring's reach, 6px, when a control sits at its
+  edge: the clip cuts the ring of a focused control there.
 
 ### Example
 

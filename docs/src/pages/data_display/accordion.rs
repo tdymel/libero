@@ -100,8 +100,8 @@ pub fn AccordionPage() -> Element {
             accessibility: a11y()
                 .key(["Tab"], "Moves between the triggers: each one is a tab stop.")
                 .key(["Enter", "Space"], "Toggles the focused section.")
-                .key(["Up", "Down"], "Moves to the previous or next trigger, without toggling.")
-                .key(["Home", "End"], "Jumps to the first or last trigger, without toggling.")
+                .key(["Up", "Down"], "Moves to the previous or next enabled trigger, skipping disabled ones and wrapping at the ends, without toggling.")
+                .key(["Home", "End"], "Jumps to the first or last enabled trigger, without toggling. On the first or last one it stays the page's.")
                 .handles([
                     "Every open panel is a region named by its trigger.",
                     "Panel content wider than the panel wraps, or scrolls inside the panel, instead of being cut off.",

@@ -164,6 +164,39 @@ fn backspace_right_after_an_autolink_turns_it_back_to_text() {
 }
 
 #[test]
+fn backspace_in_the_block_an_enter_autolink_made_turns_it_back_to_text() {
+    let mut editor = editor("see https://a.example|");
+    assert!(editor.run(&Commands::builtin(), Builtin::SplitBlock));
+    assert!(backspace(&mut editor));
+    assert_eq!(show(editor.state()), "see https://a.example\n\n|");
+    assert!(backspace(&mut editor));
+    assert_eq!(show(editor.state()), "see https://a.example|");
+}
+
+#[test]
+fn another_key_after_an_enter_autolink_drops_the_revert() {
+    let mut editor = editor("https://a.example|");
+    assert!(editor.run(&Commands::builtin(), Builtin::SplitBlock));
+    editor.type_text("x");
+    assert!(backspace(&mut editor));
+    assert_eq!(
+        show(editor.state()),
+        "[https://a.example](https://a.example)\n\n|"
+    );
+}
+
+#[test]
+fn backspace_at_a_block_start_merges_without_the_enter_autolink() {
+    let mut editor = editor("[https://a.example](https://a.example)|");
+    assert!(editor.run(&Commands::builtin(), Builtin::SplitBlock));
+    assert!(backspace(&mut editor));
+    assert_eq!(
+        show(editor.state()),
+        "[https://a.example|](https://a.example)"
+    );
+}
+
+#[test]
 fn backspace_after_a_typed_markdown_link_restores_its_syntax() {
     let mut editor = editor("a [text](https://a.example \"The title\"|");
     editor.type_text(")");

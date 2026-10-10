@@ -91,7 +91,8 @@ base_props! {
         /// to the bar, and Escape in the bar hands it back. Spread its `attributes()`.
         #[props(default)]
         focus_from: Option<ElementHandle>,
-        /// `Button`s, `ActionIcon`s, `Select`s, `ButtonGroup`s, fields, [`ToolbarGroup`]s and [`ToolbarSeparator`]s.
+        /// `Button`s, `ActionIcon`s, `Select`s, `ButtonGroup`s, `TextField`s, `NumberField`s,
+        /// `Checkbox`es, `Switch`es, `SegmentedControl`s, [`ToolbarGroup`]s and [`ToolbarSeparator`]s.
         children: Element,
     }
 }

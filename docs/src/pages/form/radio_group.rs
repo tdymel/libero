@@ -189,7 +189,7 @@ pub fn RadioGroupPage() -> Element {
                 .key(["Up", "Left"], "Moves to the previous option and selects it, wrapping at the start.")
                 .handles([
                     "The group is a `radiogroup` named by its `label`, so the question is read on entering it.",
-                    "`required`, an error and read-only are set on the group, and its description, helper and status are its description.",
+                    "`required`, an error and read-only are set on the group, and its description, helper and status make up its `aria-describedby`.",
                     "Each option's description is read with its radio.",
                     "The whole group is one tab stop, and the arrows select as they move. Disabled options are skipped.",
                     "A group with no name logs a warning.",

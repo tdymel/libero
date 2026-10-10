@@ -177,6 +177,7 @@ pub fn CollapsePage() -> Element {
                     "Return focus yourself when the panel closes from inside: use `use_focus_return`, with `remember_active()` on every open and `restore()` where the panel closes.",
                     "Make wide content fit: `Collapse` clips whatever is wider than the panel, with no scrollbar. Let text wrap (`overflow-wrap: anywhere`) and put a wide table or code block in a box with `overflow-x: auto`.",
                     "Put padding on the content, not on `Collapse`: the root keeps its own padding, border and margin when closed.",
+                    "Pad the content by the focus ring's reach, 6px, when a control sits at its edge: the clip cuts the ring of a focused control there.",
                 ])
                 .example("A \"Show details\" button with `aria_expanded: open()` and `aria_controls: \"details\"` above a `Collapse { open: open(), id: \"details\", .. }`: a screen reader reads the button as expanded or collapsed, and the closed panel is skipped."),
             lead: rsx! {

@@ -108,6 +108,8 @@ Bold, Italic, Undo and Redo, and Tab leaves the bar.
   `SegmentedControl`, `TextField` and `NumberField` (and what is built on them)
   join the arrow order. Another focusable element inside stays its own tab
   stop.
+- A long horizontal bar wraps. A `ToolbarSeparator` stays where the flow puts
+  it, so it can end a row; it is not dropped at a wrap.
 
 ## Props
 
@@ -117,7 +119,7 @@ Bold, Italic, Undo and Redo, and Tab leaves the bar.
 | `loop_focus` | `bool` | `true` | Whether the arrow keys wrap at the ends. |
 | `focus_from` | `Option<ElementHandle>` | - | The element the bar serves, such as an editor: Alt+F10 inside it moves focus to the bar, Escape in the bar hands it back. Spread its `attributes()`. |
 | `parts` | `Parts<ToolbarPart>` | - | Styles for the groups and separators, under `sx`. |
-| `children` | `Element` | `required` | `Button`s, `ActionIcon`s, `Select`s, `ButtonGroup`s, fields, `ToolbarGroup`s and `ToolbarSeparator`s. |
+| `children` | `Element` | `required` | `Button`s, `ActionIcon`s, `Select`s, `ButtonGroup`s, `TextField`s, `NumberField`s, `Checkbox`es, `Switch`es, `SegmentedControl`s, `ToolbarGroup`s and `ToolbarSeparator`s. |
 
 Like every component, `Toolbar` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.

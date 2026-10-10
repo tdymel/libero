@@ -73,8 +73,8 @@ Like every component, `Accordion` also takes the shared props `sx`, `class`,
 |---|---|
 | `Tab` | Moves between the triggers: each one is a tab stop. |
 | `Enter` or `Space` | Toggles the focused section. |
-| `Up` or `Down` | Moves to the previous or next trigger, without toggling. |
-| `Home` or `End` | Jumps to the first or last trigger, without toggling. |
+| `Up` or `Down` | Moves to the previous or next enabled trigger, skipping disabled ones and wrapping at the ends, without toggling. |
+| `Home` or `End` | Jumps to the first or last enabled trigger, without toggling. On the first or last one it stays the page's. |
 
 ### Libero handles
 

@@ -172,12 +172,38 @@ fn a_lone_trigger_leaves_the_arrows_to_the_page() {
     });
 }
 
+/// Todo 2889: Home on the first trigger and End on the last stay the page's, while the
+/// same keys elsewhere still move focus.
+#[test]
+fn home_and_end_at_the_ends_leave_the_page_to_scroll() {
+    block_on(async {
+        let fixture = Fixture::open("/accordion-ends", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, "#ends-trigger-0", 10).await.unwrap();
+        assert_keys_left_to_page(page, &[keyboard::HOME]).await;
+        keyboard::press(page, keyboard::END).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement.id === 'ends-trigger-2'",
+            "focus on the last trigger",
+        )
+        .await
+        .unwrap();
+        assert_keys_left_to_page(page, &[keyboard::END]).await;
+        fixture.console.assert_clean("the ends").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Presses `keys` on the focused element and asserts none was cancelled and focus
 /// stayed: a lone roving item leaves them to the page (todos 2432, 2465).
 pub(crate) async fn assert_keys_left_to_page(page: &Page, keys: &[keyboard::Key]) {
     page.evaluate(
         "window.__prevented = []; window.__focused = document.activeElement; \
-         window.addEventListener('keydown', e => window.__prevented.push(e.defaultPrevented))",
+         if (!window.__listening) { window.__listening = true; \
+         window.addEventListener('keydown', e => window.__prevented.push(e.defaultPrevented)); }",
     )
     .await
     .unwrap();

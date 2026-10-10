@@ -12,6 +12,7 @@ pub const ROUTES: Routes = &[
     ("/accordion-long", || rsx! { LongLabelPage {} }),
     ("/accordion-wide", || rsx! { WidePanelPage {} }),
     ("/accordion-lone", || rsx! { LoneTriggerPage {} }),
+    ("/accordion-ends", || rsx! { EndsPage {} }),
 ];
 
 /// An open panel led by a button, then a word with no break opportunity and a child
@@ -47,6 +48,23 @@ fn LoneTriggerPage() -> Element {
                 open: open(),
                 onchange: move |next| open.set(next),
                 options: OptionList::from_options().disabling(|s| *s != Step::Shipping),
+                panel: |_: Step| rsx! { Text { "Body." } },
+            }
+        }
+    }
+}
+
+/// Three enabled triggers on a tall page: Home on the first and End on the last have
+/// nowhere to move focus, so they scroll the page (todo 2889).
+#[component]
+fn EndsPage() -> Element {
+    let mut open = use_signal(|| AccordionOpen::One(None::<Step>));
+    rsx! {
+        div { style: "min-height: 300vh",
+            Accordion {
+                id: "ends",
+                open: open(),
+                onchange: move |next| open.set(next),
                 panel: |_: Step| rsx! { Text { "Body." } },
             }
         }

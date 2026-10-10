@@ -182,6 +182,7 @@ fn ToggleDisabledPage() -> Element {
                 Button { id: "trigger", onclick: move |_| disabled.set(true), "Ada Lovelace" }
             }
             Button { id: "enable", onclick: move |_| disabled.set(false), "Enable" }
+            Text { id: "state", if disabled() { "disabled" } else { "enabled" } }
         }
     }
 }

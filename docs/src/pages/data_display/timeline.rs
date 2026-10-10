@@ -88,6 +88,7 @@ pub fn TimelinePage() -> Element {
                 ])
                 .must([
                     "Never put anything focusable in a `.bullet(..)`. It would stay a tab stop with no name. Interactive content belongs in `.content(..)`.",
+                    "Keep a rich title (`OptionLabel::rich`) decorative: it is hidden from a screen reader, which hears the name instead, so no link or button in it. Interactive content belongs in `.content(..)`.",
                     "Say an error or other status in the title or content. The `.color(..)` accent alone does not carry it.",
                 ])
                 .example("An order's history in a `Timeline` with `active` on the \"Shipped\" event: a screen reader reads each event's place in the list and marks \"Shipped\" as the current step. A failed delivery says \"Failed\" in its title, not only in red.")

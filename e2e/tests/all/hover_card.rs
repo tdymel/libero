@@ -796,10 +796,10 @@ fn re_enabling_with_the_pointer_elsewhere_keeps_the_card_closed() {
         .await
         .unwrap();
         pointer::click(page, "#enable").await.unwrap();
-        // The trigger is back in the wrapper span, then the renders a reopen would take.
+        // The render that enables it, then the renders a reopen would take.
         wait::for_js_true(
             page,
-            "document.querySelector('#trigger').parentElement.tagName === 'SPAN'",
+            "document.querySelector('#state').textContent === 'enabled'",
             "the card enabled again",
         )
         .await

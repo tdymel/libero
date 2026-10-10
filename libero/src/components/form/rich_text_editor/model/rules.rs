@@ -158,22 +158,29 @@ impl EditorState {
             _ => false,
         };
         if linked {
-            self.stored_marks = Some(self.current_marks());
+            self.flag_link_revert();
         }
         linked
     }
 
+    /// Marks the caret as just after a link rule, for [`revert_link_rule`](Self::revert_link_rule).
+    pub(super) fn flag_link_revert(&mut self) {
+        self.stored_marks = Some(self.current_marks());
+    }
+
     /// Backspace right after a link rule fired: a typed `[text](url)` goes back to that
-    /// text, an autolinked URL back to plain text (todo 2725).
+    /// text, an autolinked URL back to plain text (todos 2725, 2892).
     pub(super) fn revert_link_rule(&mut self) -> bool {
         let at = self.caret();
         let block = self.block(at.block);
         if self.stored_marks.is_none()
-            || at.offset == 0
             || block.kind.content() != ContentKind::Inline
             || block.kind.is_code()
         {
             return false;
+        }
+        if at.offset == 0 {
+            return self.revert_enter_autolink(at.block);
         }
         let last = slice_inlines(block.inlines(), at.offset - 1, at.offset);
         let link = last.iter().find_map(|inline| match inline {
@@ -225,6 +232,39 @@ impl EditorState {
             return false;
         }
         let inlines = self.doc.get_mut(block).expect("a leaf").inlines_mut();
+        map_marks(inlines, from, to, |marks| marks.remove(MarkKind::Link));
+        self.stored_marks = None;
+        true
+    }
+
+    /// The URL ending the block before `block`, linked by the Enter that made `block`, goes
+    /// back to plain text; the new block and the caret stay.
+    fn revert_enter_autolink(&mut self, block: NodeKey) -> bool {
+        let leaves = self.doc.leaves();
+        let Some(previous) = self
+            .leaf_index(block)
+            .checked_sub(1)
+            .map(|index| leaves[index])
+        else {
+            return false;
+        };
+        let text: Vec<char> = self.block(previous).text().chars().collect();
+        let from = word_start(&text);
+        let Some((len, href)) = autolink(&text[from..]) else {
+            return false;
+        };
+        let to = from + len;
+        let linked = to == text.len()
+            && slice_inlines(self.block(previous).inlines(), from, to)
+                .iter()
+                .all(|inline| {
+                    matches!(inline, Inline::Text { marks, .. }
+                        if marks.iter().any(|m| matches!(m, Mark::Link { href: h, .. } if *h == href)))
+                });
+        if !linked {
+            return false;
+        }
+        let inlines = self.doc.get_mut(previous).expect("a leaf").inlines_mut();
         map_marks(inlines, from, to, |marks| marks.remove(MarkKind::Link));
         self.stored_marks = None;
         true
