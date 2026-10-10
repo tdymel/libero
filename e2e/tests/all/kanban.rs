@@ -643,16 +643,22 @@ async fn ticks(page: &chromiumoxide::Page, done: &str, most: u32) -> bool {
 /// A card held still at the board's end edge scrolls the board, and drops in the column it brought in (1364).
 #[test]
 fn a_drag_held_at_the_edge_scrolls_the_board_to_a_hidden_column() {
-    drag_held_at_the_end_edge(false);
+    drag_held_at_the_end_edge(false, false);
+}
+
+/// 3157: the end the ticks reach is the board's scroll range, a classic scrollbar's gutter apart.
+#[test]
+fn a_drag_held_at_the_edge_reaches_the_end_of_a_board_with_a_classic_scrollbar() {
+    drag_held_at_the_end_edge(false, true);
 }
 
 /// Right to left the end edge is the left one, and `scrollLeft` runs negative (1436).
 #[test]
 fn a_drag_held_at_the_left_edge_scrolls_a_right_to_left_board() {
-    drag_held_at_the_end_edge(true);
+    drag_held_at_the_end_edge(true, false);
 }
 
-fn drag_held_at_the_end_edge(rtl: bool) {
+fn drag_held_at_the_end_edge(rtl: bool, classic: bool) {
     use chromiumoxide::cdp::browser_protocol::input::DispatchMouseEventType as Kind;
     use e2e::browser::{Fixture, Viewport, block_on};
     use e2e::frames::in_front;
@@ -671,13 +677,29 @@ fn drag_held_at_the_end_edge(rtl: bool) {
         )
     };
     block_on(async {
-        let fixture = Fixture::open("/kanban", Viewport::Mobile).await.unwrap();
+        // A phone draws overlay bars: a desktop board narrowed to a phone's width draws classic ones.
+        let fixture = match classic {
+            true => Fixture::open_with_scrollbars("/kanban", Viewport::Desktop).await,
+            false => Fixture::open("/kanban", Viewport::Mobile).await,
+        }
+        .unwrap();
         let page = &fixture.page;
         if rtl {
             page.evaluate("document.documentElement.dir = 'rtl'")
                 .await
                 .unwrap();
         }
+        if classic {
+            page.evaluate("document.querySelector('#board').style.maxWidth = '342px'")
+                .await
+                .unwrap();
+        }
+        let most: f64 = page
+            .evaluate("(() => { const b = document.querySelector('#board'); return b.scrollWidth - b.clientWidth; })()")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         e2e::clock::hold(page, &[AUTO_SCROLL_MS]).await.unwrap();
         let hidden: bool = page
             .evaluate(done(hidden))
@@ -719,7 +741,10 @@ fn drag_held_at_the_end_edge(rtl: bool) {
         .await
         .unwrap();
         // Held still: only the ticks scroll, up to Done's end edge and no further.
-        let at_end = done(&format!("Math.abs(d.{end} - b.{end}) < 2"));
+        let at_end = match classic {
+            true => format!("document.querySelector('#board').scrollLeft >= {most} - 2"),
+            false => done(&format!("Math.abs(d.{end} - b.{end}) < 2")),
+        };
         assert!(
             ticks(page, &at_end, 200).await,
             "a card held at the end edge did not scroll the board to its end"
@@ -732,8 +757,9 @@ fn drag_held_at_the_end_edge(rtl: bool) {
             .unwrap()
             .into_value()
             .unwrap();
+        // A classic gutter leaves Done short of the board's edge, not past its end.
         assert!(
-            !past,
+            classic || !past,
             "the board scrolled past its end into the dragged card's overflow"
         );
         let done = centre(page, "#column-2").await;

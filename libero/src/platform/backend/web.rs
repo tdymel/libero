@@ -1186,6 +1186,13 @@ impl ElementApi for WebElement {
         resolved((rect.left(), rect.top()))
     }
 
+    fn client_size(&self) -> Read<Dimensions> {
+        resolved(Dimensions {
+            width: self.element.client_width() as f64,
+            height: self.element.client_height() as f64,
+        })
+    }
+
     fn scroll_size(&self) -> Read<Dimensions> {
         resolved(Dimensions {
             width: self.element.scroll_width() as f64,

@@ -361,17 +361,25 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
             Some(board) => read(&board),
             None => Box::pin(std::future::ready(Err(PlatformError::Unsupported))),
         };
-        let board_reads = (board_rect, element.scroll_size(), element.scroll_offset());
+        let board_reads = (
+            board_rect,
+            element.scroll_size(),
+            element.client_size(),
+            element.scroll_offset(),
+        );
         spawn(async move {
-            let (board, content, scroll) = board_reads;
+            let (board, content, client, scroll) = board_reads;
             // Every read at once: one round-trip on a WebView, not one per card (todo 2018).
             let lanes_read = platform::join_all(list_reads.into_iter().zip(card_reads).map(
                 |(list, column)| {
                     platform::join(rect(list), platform::join_all(column.into_iter().map(rect)))
                 },
             ));
-            let ((board, (content, scroll)), lanes_read) = platform::join(
-                platform::join(rect(board), platform::join(content, scroll)),
+            let ((board, (content, (client, scroll))), lanes_read) = platform::join(
+                platform::join(
+                    rect(board),
+                    platform::join(content, platform::join(client, scroll)),
+                ),
                 lanes_read,
             )
             .await;
@@ -382,11 +390,14 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
                 true => content - extent,
                 false => 0.0,
             };
+            // The client box leaves out the border and a classic scrollbar the offset never covers.
+            let client = client
+                .ok()
+                .filter(|_| !platform::scroll_size_spans_border_box())
+                .map(|size| (size.width, size.height));
             let (most_x, most_y) = board.map_or((0.0, 0.0), |board| {
-                (
-                    overflow(content.0, board.width),
-                    overflow(content.1, board.height),
-                )
+                let extent = client.unwrap_or((board.width, board.height));
+                (overflow(content.0, extent.0), overflow(content.1, extent.1))
             });
             // Right to left, `scrollLeft` runs from 0 down to minus the overflow.
             let scroll_range = ScrollRange {

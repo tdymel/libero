@@ -249,6 +249,12 @@ pub trait ElementApi {
     /// Top-left corner in client (viewport) coordinates.
     fn client_offset(&self) -> Read<(f64, f64)>;
 
+    /// The padding box less its scrollbars (`clientWidth`/`clientHeight`), what a
+    /// scroll offset moves over. `Unsupported` on a WebView.
+    fn client_size(&self) -> Read<Dimensions> {
+        Box::pin(std::future::ready(Err(PlatformError::Unsupported)))
+    }
+
     /// Total scrollable content size (`scrollWidth`/`scrollHeight`).
     fn scroll_size(&self) -> Read<Dimensions>;
 

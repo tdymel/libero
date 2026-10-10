@@ -336,6 +336,10 @@ impl ElementApi for ElementHandle {
         self.read(|element| element.client_offset())
     }
 
+    fn client_size(&self) -> Read<Dimensions> {
+        self.read(|element| element.client_size())
+    }
+
     fn scroll_size(&self) -> Read<Dimensions> {
         self.read(|element| element.scroll_size())
     }
