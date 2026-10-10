@@ -139,6 +139,7 @@ fn captions(values: &DemoValues) -> Vec<&'static str> {
         (on.mentions, "Mentions: type @ and a name, or press the @ button. While the list is open, intercept gives it the arrow keys, Enter and Escape; overlay floats it at the caret; the handle's edit swaps the typed @name for a mention node, drawn by your own component, in one undo step. Ctrl+Shift+2 runs a node command that inserts @ada."),
         (on.keymap, "Custom keymap: Ctrl+Shift+H makes a heading, and Ctrl+Shift+Enter no longer adds a rule. Ctrl+/ lists the live keymap."),
         (true, "Code blocks: a code block shows its source with fences while the caret is in it; the language button on its opening fence, the toolbar's language menu or Ctrl+Shift+L change its language."),
+        (true, "Task lists: type [ ] and a space at the start of a list item, or press Ctrl+Shift+9. Click a box, or press Ctrl+Alt+Enter in its item, to check it; each is one undo step."),
         (true, "Links: a web address (http, https or mailto) followed by a space or Enter becomes a link, and undo brings the plain text back. Typing [text](address) links the text; pasting only an address links the selected text. Other schemes stay text, as does a www. address."),
         (values.str("toolbar") != "true","No toolbar: the keymap, or your own buttons through a handle, drive the editor."),
     ]
@@ -175,7 +176,7 @@ pub fn RichTextEditorPage() -> Element {
                         .default("SubmitOn::Enter")
                         .doc("The key that fires `onsubmit`: `Enter` (Shift+Enter breaks the line) or `ModEnter` (Ctrl+Enter, Cmd+Enter on Apple platforms; Enter stays a new paragraph). Mod+Enter in a code block still leaves it."),
                     prop("max_length", "usize")
-                        .doc("The most characters of plain text the document holds, counted as `Doc::plain_text` does (a line break between blocks counts one). Typing and paste stop at it. A phone keyboard's composed text cannot be refused, so there the limit is soft: the surplus is cut when the word is committed."),
+                        .doc("The most characters of plain text the document holds, counted as `Doc::plain_text` does (a line break between blocks counts one). Typing and paste stop at it, and reaching it is said in the editor's live region. A phone keyboard's composed text cannot be refused, so there the limit is soft: the surplus is cut when the word is committed."),
                     prop("spellcheck", "bool")
                         .default("false")
                         .doc("Lets the browser spell check the text. A replacement the browser offers (a spelling suggestion, autocorrect) applies to its word as one undo step. Chromium marks no text the editor writes, so there it shows no squiggles."),
@@ -280,7 +281,9 @@ pub fn RichTextEditorPage() -> Element {
                     "A shortcut that toggles a mark, list, quote or block type is said in a polite live region, \"Bold on\", \"Heading 2\".",
                     "The text type menu and a code block's language menu are menu buttons whose name includes the current choice, \"Code language: Rust\". The language button on the fence is not a tab stop; `Ctrl+Shift+L` reaches it.",
                     "The link dialog focuses its labelled URL field and shows a refused scheme as that field's error. Closing it puts the caret back in the text.",
-                    "With `onsubmit` and `SubmitOn::Enter` the text carries `enterkeyhint=\"send\"`, so a phone keyboard labels its Enter key. A send leaves focus in the text, and the handle's `clear` keeps it there.",
+                    "With `onsubmit` the text carries the send key as `aria-keyshortcuts` (`Enter`, or `Control+Enter`, `Meta+Enter` on Apple platforms, for `SubmitOn::ModEnter`), and with `SubmitOn::Enter` also `enterkeyhint=\"send\"`, so a phone keyboard labels its Enter key. A send leaves focus in the text, and the handle's `clear` keeps it there.",
+                    "With `max_length`, typing or a paste that reaches the limit says \"Character limit reached\" in the live region (`RichTextEditorLabels::limit_reached`), once until the text or the caret moves, so further refused keys stay quiet.",
+                    "A task item's box is a `role=\"checkbox\"` with `aria-checked`, named \"Task done\" (`RichTextEditorLabels::toggle_task`) and read before the item's text. It is not a tab stop and the caret never lands in it: `Ctrl+Alt+Enter` toggles the items at the caret, a click toggles its own item without moving the caret, and both say \"Task done on\" or \"off\". In `RichTextView` the box is `aria-readonly`.",
                     "Every edit goes through the document model, so undo, the `onchange` value and the screen stay in step. Input methods (IME) compose natively.",
                     "While `overlay` is set, the text carries `aria-controls`, `aria-autocomplete=\"list\"` and `aria-activedescendant` from `active_descendant`, so a screen reader reads the highlighted option. `overlay_results` says the option count, \"2 results\", in the live region when it changes.",
                 ])
@@ -291,7 +294,7 @@ pub fn RichTextEditorPage() -> Element {
                     "Make a `NodeViews` atom show its node's name as text (a mention shows `@name`). A screen reader reads the non-editable island as it is.",
                     "Give an `overlay` list `role=\"listbox\"` with an id per `role=\"option\"`, pass the highlighted one as `active_descendant` and the count as `overlay_results`, and steer it with the keyboard through `intercept`. Escape should close it.",
                     "Name each `RichTextTool` with its `label`: the button shows only its icon.",
-                    "Say in the `helper` that Enter sends and how many characters `max_length` leaves: a refused key gives no other sign.",
+                    "Say in the `helper` that Enter sends and how many characters `max_length` allows: the editor says only when the limit is reached.",
                 ])
                 .example("Release notes with `label: \"Notes\"`: a screen reader reads a multiline \"Notes\" text box. `Ctrl+B` says \"Bold on\", and `Alt+F10` moves to the toolbar, where the Bold button reads as pressed.")
                 .limits([
@@ -299,6 +302,8 @@ pub fn RichTextEditorPage() -> Element {
                     "Copy and cut write the selection as Markdown, as plain text and as `text/markdown`: a quote as `>`, a code block fenced with its language, lists, headings, rules, marks and links as written. Custom nodes write through their `NodeSpec::markdown` (pass `registry`). Cut is one undo step.",
                     "Paste reads Markdown back into formatted blocks; custom nodes stay text. Text from elsewhere is read the same way, one paragraph per line. In a code block it is pasted as is. A pasted web address alone links the selection, or becomes a link at the caret.",
                     "Drag and drop of text is ignored. A replacement with no word to replace (no target range, collapsed caret) is ignored too.",
+                    "The toolbar has no task list button yet: `Ctrl+Shift+9` or typing `[ ] ` at the start of a list item makes one.",
+                    "Headings render as `h1` to `h6` as stored, so a `RichTextView` in a comment list adds them to the page's heading outline; there is no level offset.",
                     "`spellcheck` is off by default: Chromium shows no squiggles for text the editor writes. Firefox and Safari are not verified.",
                 ]),
             lead: rich_lead(),

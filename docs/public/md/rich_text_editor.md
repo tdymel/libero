@@ -35,7 +35,7 @@ fn Demo() -> Element {
 
 Typing `# ` at the start of a paragraph makes a heading (`## ` to `###### `
 for the smaller ones), `- ` or `* ` a bulleted list, `1. ` a numbered list,
-`> ` a quote, `---` and a space a rule, and three backticks and a space (or
+`> ` a quote, `[ ] ` or `[x] ` at the start of a list item a task, `---` and a space a rule, and three backticks and a space (or
 Enter) a code block; a name after the backticks, as in ```` ```rust ````, sets
 its language. Closing `` `code` ``, `**bold**`, `*italic*` or `~~strike~~` turns the
 span into that mark. Code blocks take none of these.
@@ -282,6 +282,13 @@ A code block shows its source with fences while the caret is in it; the
 language button on its opening fence, the toolbar's language menu or
 `Ctrl+Shift+L` change its language.
 
+## Task lists
+
+Type `[ ] ` and a space at the start of a list item, or press `Ctrl+Shift+9`,
+for a task. Click its box, or press `Ctrl+Alt+Enter` in the item, to check it;
+each toggle is one undo step. Markdown writes and reads tasks as `- [ ]` and
+`- [x]`.
+
 ## Links
 
 A web address (`http`, `https` or `mailto`) followed by a space or Enter
@@ -371,9 +378,20 @@ shows Ctrl.
   on the fence is not a tab stop; `Ctrl+Shift+L` reaches it.
 - The link dialog focuses its labelled URL field and shows a refused scheme as
   that field's error. Closing it puts the caret back in the text.
-- With `onsubmit` and `SubmitOn::Enter` the text carries
+- With `onsubmit` the text carries the send key as `aria-keyshortcuts`
+  (`Enter`, or `Control+Enter`, `Meta+Enter` on Apple platforms, for
+  `SubmitOn::ModEnter`), and with `SubmitOn::Enter` also
   `enterkeyhint="send"`, so a phone keyboard labels its Enter key. A send
   leaves focus in the text, and the handle's `clear` keeps it there.
+- With `max_length`, typing or a paste that reaches the limit says "Character
+  limit reached" in the live region (`RichTextEditorLabels::limit_reached`),
+  once until the text or the caret moves, so further refused keys stay quiet.
+- A task item's box is a `role="checkbox"` with `aria-checked`, named "Task
+  done" (`RichTextEditorLabels::toggle_task`) and read before the item's text.
+  It is not a tab stop and the caret never lands in it: `Ctrl+Alt+Enter`
+  toggles the items at the caret, a click toggles its own item without moving
+  the caret, and both say "Task done on" or "off". In `RichTextView` the box
+  is `aria-readonly`.
 - Every edit goes through the document model, so undo, the `onchange` value
   and the screen stay in step. Input methods (IME) compose natively.
 - While `overlay` is set, the text carries `aria-controls`,
@@ -402,7 +420,7 @@ shows Ctrl.
   Escape should close it.
 - Name each `RichTextTool` with its `label`: the button shows only its icon.
 - Say in the `helper` that Enter sends and how many characters `max_length`
-  leaves: a refused key gives no other sign.
+  allows: the editor says only when the limit is reached.
 
 ### Example
 
@@ -423,6 +441,10 @@ the Bold button reads as pressed.
   becomes a link at the caret.
 - Drag and drop of text is ignored. A replacement with no word to replace (no
   target range, collapsed caret) is ignored too.
+- The toolbar has no task list button yet: `Ctrl+Shift+9` or typing `[ ] ` at
+  the start of a list item makes one.
+- Headings render as `h1` to `h6` as stored, so a `RichTextView` in a comment
+  list adds them to the page's heading outline; there is no level offset.
 - `spellcheck` is off by default: Chromium shows no squiggles for text the
   editor writes. Firefox and Safari are not verified.
 
@@ -439,7 +461,7 @@ the Bold button reads as pressed.
 | `placeholder` | `String` | - | Shown while the document is a single empty block, a code block aside. |
 | `onsubmit` | `EventHandler<Doc>` | - | Sends the document when `submit_on` is pressed, as in a chat or comment box. The editor keeps its text: clear it with the handle's `clear` or a new `value`. Nothing is sent from an empty document, a code block or while an `overlay` takes the key; there Enter does its usual job. With `SubmitOn::Enter` the Enter key shows as "send" on phones, and Enter pressed in a word the keyboard is still composing sends the document with that word in it. |
 | `submit_on` | `SubmitOn` | `SubmitOn::Enter` | The key that fires `onsubmit`: `Enter` (Shift+Enter breaks the line) or `ModEnter` (Ctrl+Enter, Cmd+Enter on Apple platforms; Enter stays a new paragraph). Mod+Enter in a code block still leaves it. |
-| `max_length` | `usize` | - | The most characters of plain text the document holds, counted as `Doc::plain_text` does (a line break between blocks counts one). Typing and paste stop at it. A phone keyboard's composed text cannot be refused, so there the limit is soft: the surplus is cut when the word is committed. |
+| `max_length` | `usize` | - | The most characters of plain text the document holds, counted as `Doc::plain_text` does (a line break between blocks counts one). Typing and paste stop at it, and reaching it is said in the editor's live region. A phone keyboard's composed text cannot be refused, so there the limit is soft: the surplus is cut when the word is committed. |
 | `spellcheck` | `bool` | `false` | Lets the browser spell check the text. A replacement the browser offers (a spelling suggestion, autocorrect) applies to its word as one undo step. Chromium marks no text the editor writes, so there it shows no squiggles. |
 | `toolbar` | `bool` | `true` | Shows the formatting toolbar above the text: marks, link, text type menu, lists, quote, code block, undo and redo. A narrow toolbar moves what does not fit into a More menu. |
 | `keymap` | `Keymap` | `Keymap::default()` | Which chords run which commands. `Mod` is Cmd on Apple platforms and Ctrl elsewhere. |

@@ -10,6 +10,7 @@ use crate::{
         common::{HtmlTag, Input, base_props},
         layout::use_box,
     },
+    hooks::use_localization,
     sx::{StaticSx, sx},
 };
 
@@ -44,6 +45,7 @@ base_props! {
 /// Docs: <https://libero-ui.dev/form/rich-text-editor>
 #[component]
 pub fn RichTextView(props: RichTextViewProps) -> Element {
+    let words = use_localization().rich_text_editor;
     use_box()
         .framework_sx(&VIEW_SX)
         .class(&props.class)
@@ -58,6 +60,8 @@ pub fn RichTextView(props: RichTextViewProps) -> Element {
                 RenderCtx {
                     source_code: None,
                     on_code: None,
+                    on_task: None,
+                    task_label: words.toggle_task,
                     views: &props.nodes,
                     fence: None,
                 },

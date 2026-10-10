@@ -74,6 +74,8 @@ pub struct RichTextEditorLabels {
     pub results: fn(usize) -> String,
     /// Announced when `overlay_results` drops to 0.
     pub nothing_found: &'static str,
+    /// Announced when typing or a paste meets `max_length`.
+    pub limit_reached: &'static str,
 }
 
 impl RichTextEditorLabels {
@@ -120,6 +122,7 @@ impl RichTextEditorLabels {
         leave_hint: "In a list, Tab indents. Press Escape, then Tab, to leave the editor.",
         results: english_results,
         nothing_found: "No results",
+        limit_reached: "Character limit reached",
     };
 
     pub const GERMAN: Self = Self {
@@ -165,5 +168,6 @@ impl RichTextEditorLabels {
         leave_hint: "In einer Liste rückt Tab ein. Escape, dann Tab verlässt den Editor.",
         results: german_results,
         nothing_found: "Keine Ergebnisse",
+        limit_reached: "Zeichenlimit erreicht",
     };
 }

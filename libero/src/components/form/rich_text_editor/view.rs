@@ -577,6 +577,22 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     submit.set(props.onsubmit.map(|send| (send, props.submit_on)));
     // Sends the doc when `press` is the submit key; not from a code block, a typed fence
     // (Enter opens the block) or an empty doc.
+    // Typing or a paste that meets `max_length` says so, once per change or caret move, so
+    // further refused keys stay quiet (WCAG 4.1.3, todo 2734).
+    let said_limit = use_hook(|| CopyValue::new(None::<u32>));
+    let note_limit = move || {
+        let mut said_limit = said_limit;
+        let live = editor.peek();
+        let full = live
+            .max_chars()
+            .is_some_and(|max| live.doc().plain_len() >= max);
+        drop(live);
+        let now = *revision.peek();
+        if full && *said_limit.peek() != Some(now) {
+            said_limit.set(Some(now));
+            announcer.say(words.limit_reached.to_string());
+        }
+    };
     let try_submit = move |press: &KeyPress| -> bool {
         let Some((send, on)) = *submit.peek() else {
             return false;
@@ -607,6 +623,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             Intent::Type(text) => {
                 if !taken(EditorInput::Text(text.clone())) {
                     edit(&|live| live.type_text(&text), false);
+                    note_limit();
                 }
                 true
             }
@@ -746,6 +763,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                 if entered && !try_submit(&KeyPress::new("Enter")) {
                     reconcile(editor, NodeKey(key), &text, false, &mut changed);
                 }
+                note_limit();
                 generation += 1;
             }
             if let Some((key, at_end)) = report.code
@@ -794,6 +812,26 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             enter_code(editor, key, true);
             focused.set(true);
             changed(None, true);
+        })
+    });
+    // One undo step, said as the chord says it; focus stays where it was.
+    let on_task = editable.then(|| {
+        EventHandler::new(move |item: NodeKey| {
+            let now = std::cell::Cell::new(None);
+            let mut edit = edit;
+            let toggled = edit(
+                &|live| {
+                    live.apply(Record::Step, |state| {
+                        now.set(state.toggle_task_item(item));
+                        now.get().is_some()
+                    })
+                },
+                *focused.peek(),
+            );
+            if let Some(on) = now.get().filter(|_| toggled) {
+                let template = if on { words.on } else { words.off };
+                announcer.say(template.replace("{name}", words.toggle_task));
+            }
         })
     });
     let empty = is_empty(live.doc());
@@ -893,6 +931,8 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                 RenderCtx {
                     source_code,
                     on_code,
+                    on_task,
+                    task_label: words.toggle_task,
                     views: &props.nodes,
                     fence: fence.as_ref(),
                 },
@@ -993,6 +1033,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             },
             false,
         );
+        note_limit();
     };
 
     // The selection as Markdown, in both plain text and `text/markdown` (todo 1258);
@@ -1071,6 +1112,15 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             "enterkeyhint",
             (editable && props.onsubmit.is_some() && props.submit_on == SubmitOn::Enter)
                 .then_some("send"),
+        )
+        // The send key, so a screen reader can tell Enter does not break the line (todo 2743).
+        .attr(
+            "aria-keyshortcuts",
+            (editable && props.onsubmit.is_some()).then_some(match props.submit_on {
+                SubmitOn::Enter => "Enter",
+                SubmitOn::ModEnter if apple => "Meta+Enter",
+                SubmitOn::ModEnter => "Control+Enter",
+            }),
         )
         .event("onkeydown", editable.then_some(onkeydown))
         .event("onbeforeinput", editable.then_some(onbeforeinput))

@@ -34,9 +34,8 @@ pub(crate) fn content_sx(base: Sx) -> Sx {
             sx().list_style("none").position("relative"),
         )
         .selector(
-            "& li[data-checked]::before",
-            sx().content("''")
-                .position("absolute")
+            "& [data-task]",
+            sx().position("absolute")
                 .left("-1.5em")
                 .top("0.2em")
                 .width("1em")
@@ -49,14 +48,26 @@ pub(crate) fn content_sx(base: Sx) -> Sx {
                 .border_radius("3px")
                 .font_size("1em")
                 .line_height("1em")
-                .text_align("center"),
+                .text_align("center")
+                .user_select("none"),
         )
         .selector(
-            "& li[data-checked='true']::before",
-            sx().content("'✓'")
-                .background("primary")
+            "& [data-task][aria-checked='true']::before",
+            sx().content("'✓'"),
+        )
+        .selector(
+            "& [data-task][aria-checked='true']",
+            sx().background("primary")
                 .border_color("primary")
                 .color("primary-contrast"),
+        )
+        // A 24px press area around the 1em box (WCAG 2.5.8).
+        .selector("& [data-task][data-clickable]", sx().cursor("pointer"))
+        .selector(
+            "& [data-task][data-clickable]::after",
+            sx().content("''")
+                .position("absolute")
+                .inset("calc(50% - 12px)"),
         )
         // Inline code, links and quotes as `Code`, `Anchor` and `Blockquote` draw them.
         .selector(
@@ -85,6 +96,10 @@ pub(crate) struct RenderCtx<'a> {
     pub source_code: Option<NodeKey>,
     /// Pressing a rendered code block moves the caret into it.
     pub on_code: Option<EventHandler<NodeKey>>,
+    /// Clicking a task item's box toggles it; `None` shows the box read-only.
+    pub on_task: Option<EventHandler<NodeKey>>,
+    /// Names every task box.
+    pub task_label: &'a str,
     /// The caller's components for custom nodes.
     pub views: &'a NodeViews,
     /// The language button on the source block's opening fence.
@@ -107,7 +122,7 @@ fn block(block: &Block, ctx: RenderCtx<'_>) -> Element {
         return builtin_view(name, block, key, ctx);
     }
     match &block.kind {
-        BlockKind::Paragraph => rsx! { p { "data-key": key, {inlines(block.inlines(), ctx)} } },
+        BlockKind::Paragraph => paragraph(block, None, ctx),
         BlockKind::Heading { level } => heading(*level, key, inlines(block.inlines(), ctx)),
         BlockKind::CodeBlock { language } => code(block, language, ctx),
         BlockKind::Quote => rsx! { blockquote { {blocks(block.children(), ctx)} } },
@@ -118,9 +133,30 @@ fn block(block: &Block, ctx: RenderCtx<'_>) -> Element {
             ol { start: (*start != 1).then(|| start.to_string()), {blocks(block.children(), ctx)} }
         },
         BlockKind::List { .. } => rsx! { ul { {blocks(block.children(), ctx)} } },
-        BlockKind::ListItem { checked } => rsx! {
-            li { "data-checked": checked.map(|checked| checked.to_string()), {blocks(block.children(), ctx)} }
-        },
+        BlockKind::ListItem { checked } => {
+            let task = checked.map(|checked| task_box(checked, block.key, ctx));
+            let children = block.children();
+            // Inside the first line's leaf, so a caret beside the box is still in the text.
+            let lead = children.first().filter(|first| {
+                task.is_some()
+                    && first.kind == BlockKind::Paragraph
+                    && !ctx.views.contains("paragraph")
+            });
+            let rest = if lead.is_some() {
+                &children[1..]
+            } else {
+                children
+            };
+            rsx! {
+                li { "data-checked": checked.map(|checked| checked.to_string()),
+                    match lead {
+                        Some(first) => paragraph(first, task, ctx),
+                        None => rsx! { {task} },
+                    }
+                    {blocks(rest, ctx)}
+                }
+            }
+        }
         BlockKind::Rule => rsx! { hr { "data-key": key, contenteditable: "false" } },
         BlockKind::Custom { name, attrs, .. } => custom(name, attrs, key, &block.content, ctx),
     }
@@ -194,6 +230,37 @@ fn builtin_view(name: &str, block: &Block, key: String, ctx: RenderCtx<'_>) -> E
             div { "data-key": key, "data-node": "{name}", contenteditable: "false", {view} }
         },
         _ => view.unwrap_or_else(VNode::empty),
+    }
+}
+
+/// `lead` goes before the text, skipped by the caret's offsets.
+fn paragraph(block: &Block, lead: Option<Element>, ctx: RenderCtx<'_>) -> Element {
+    rsx! { p { "data-key": block.key.0.to_string(), {lead} {inlines(block.inlines(), ctx)} } }
+}
+
+/// A task item's box: an island the caret's offsets and the text skip (`data-skip`).
+/// Not a tab stop; the keyboard toggles with the `toggle_task` chord.
+fn task_box(checked: bool, item: NodeKey, ctx: RenderCtx<'_>) -> Element {
+    let on_task = ctx.on_task;
+    rsx! {
+        span {
+            "data-task": "",
+            "data-skip": "",
+            "data-clickable": on_task.is_some().then_some(""),
+            contenteditable: "false",
+            role: "checkbox",
+            aria_checked: checked.to_string(),
+            aria_readonly: on_task.is_none().then_some("true"),
+            aria_label: ctx.task_label.to_string(),
+            // The caret stays where it was.
+            onmousedown: move |event: MouseEvent| event.prevent_default(),
+            onclick: move |event: MouseEvent| {
+                if let Some(on_task) = on_task {
+                    event.prevent_default();
+                    on_task.call(item);
+                }
+            },
+        }
     }
 }
 

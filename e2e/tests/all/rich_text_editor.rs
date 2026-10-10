@@ -834,6 +834,10 @@ fn enter_sends_a_message_and_the_limit_and_handle_serve_a_chat_box() {
         page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
         let hint: String = js(page, &format!("{EDITOR}.getAttribute('enterkeyhint')")).await;
         assert_eq!(hint, "send");
+        // Todo 2743: the send key is named on the text.
+        let keys: String = js(page, &format!("{EDITOR}.getAttribute('aria-keyshortcuts')")).await;
+        assert_eq!(keys, "Enter");
+        editor_status(page).await;
 
         keyboard::type_text(page, "hello").await.unwrap();
         out_eq(page, "hello\n").await;
@@ -868,6 +872,8 @@ fn enter_sends_a_message_and_the_limit_and_handle_serve_a_chat_box() {
         // max_length is 12: typing stops there and a paste is cut to it.
         keyboard::type_text(page, "123456789012345").await.unwrap();
         out_eq(page, "123456789012\n").await;
+        // Todo 2734: meeting the limit is said, so a refused key is not silent.
+        announced(page, "Character limit reached").await;
         paste(page, "ZZZ").await;
         select(
             page,
@@ -910,6 +916,73 @@ fn enter_sends_a_message_and_the_limit_and_handle_serve_a_chat_box() {
     });
 }
 
+/// Todo 2753: a task's box is a named checkbox outside the text. A click toggles its own item
+/// in one undo step and says so, the caret stays put, and the arrows pass over the box.
+#[test]
+fn a_task_box_click_toggles_its_item_and_the_caret_skips_it() {
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        editor_status(page).await;
+        keyboard::type_text(page, "- [ ] one").await.unwrap();
+        keyboard::press(page, ENTER).await.unwrap();
+        keyboard::type_text(page, "two").await.unwrap();
+        out_eq(page, "- [ ] one\n- [ ] two\n").await;
+
+        let first = format!("{EDITOR}.querySelector('[data-task]')");
+        holds(
+            page,
+            &format!(
+                "(() => {{ const b = {first}; const got = [b.getAttribute('role'), b.getAttribute('aria-checked'), \
+                   b.getAttribute('aria-label'), b.getAttribute('contenteditable'), String(b.hasAttribute('tabindex'))].join(); \
+                   return got === 'checkbox,false,Task done,false,false' ? 'ok' : got; }})()"
+            ),
+            "the box is a named, untabbable checkbox island",
+        )
+        .await;
+
+        press(page, &first).await;
+        out_eq(page, "- [x] one\n- [ ] two\n").await;
+        announced(page, "Task done on").await;
+        let checked: String = js(page, &format!("{first}.getAttribute('aria-checked')")).await;
+        assert_eq!(checked, "true");
+        // One undo step takes the click back; a second click checks it again.
+        keyboard::press_with(page, KEY_Z, CTRL).await.unwrap();
+        out_eq(page, "- [ ] one\n- [ ] two\n").await;
+        press(page, &first).await;
+        out_eq(page, "- [x] one\n- [ ] two\n").await;
+        // The caret stayed at the end of "two".
+        keyboard::type_text(page, "s").await.unwrap();
+        out_eq(page, "- [x] one\n- [ ] twos\n").await;
+
+        // From the start of "two", one more ArrowLeft lands at the end of "one", not in the box.
+        select(
+            page,
+            &format!(
+                "getSelection().collapse({EDITOR}.querySelectorAll('[data-key]')[1].firstChild, 0)"
+            ),
+        )
+        .await;
+        keyboard::press(page, keyboard::ARROW_LEFT).await.unwrap();
+        holds(
+            page,
+            &format!(
+                "(() => {{ const s = getSelection(); const leaf = {EDITOR}.querySelector('[data-key]'); \
+                   return leaf.contains(s.anchorNode) && s.anchorOffset === 3 ? 'ok' : `${{s.anchorNode?.textContent}}@${{s.anchorOffset}}`; }})()"
+            ),
+            "the caret at the end of \"one\"",
+        )
+        .await;
+        page.evaluate(SYNCED).await.unwrap();
+        keyboard::type_text(page, "s").await.unwrap();
+        out_eq(page, "- [x] ones\n- [ ] twos\n").await;
+        fixture.close().await.unwrap();
+    });
+}
+
 /// `SubmitOn::ModEnter`: Enter stays a new paragraph, Mod+Enter sends; the handle's `clear`
 /// and `focus` work from buttons outside the text.
 #[test]
@@ -922,6 +995,8 @@ fn mod_enter_sends_a_comment_and_the_handle_clears_and_focuses() {
         page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
         let hint: bool = js(page, &format!("{EDITOR}.hasAttribute('enterkeyhint')")).await;
         assert!(!hint, "Enter is a new paragraph here, not send");
+        let keys: String = js(page, &format!("{EDITOR}.getAttribute('aria-keyshortcuts')")).await;
+        assert_eq!(keys, "Control+Enter");
 
         keyboard::type_text(page, "note").await.unwrap();
         keyboard::press(page, ENTER).await.unwrap();

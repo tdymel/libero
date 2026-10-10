@@ -105,6 +105,19 @@ impl EditorState {
         !tasks.is_empty()
     }
 
+    /// Checks or unchecks the task item `item`, wherever the caret is; its new state.
+    pub(crate) fn toggle_task_item(&mut self, item: NodeKey) -> Option<bool> {
+        let block = self.doc.get_mut(item)?;
+        let BlockKind::ListItem {
+            checked: Some(checked),
+        } = block.kind
+        else {
+            return None;
+        };
+        block.kind = BlockKind::task_item(!checked);
+        Some(!checked)
+    }
+
     /// Whether the caret sits in a task item, and whether that one is checked.
     pub fn task_state(&self) -> Option<bool> {
         let item = self.nearest(self.caret().block, BlockKind::is_list_item)?;

@@ -133,3 +133,20 @@ fn task_commands_have_their_default_chords() {
         Some(&Builtin::ToggleTask.into())
     );
 }
+
+/// Todo 2753: a box's click toggles its own item only, wherever the caret is.
+#[test]
+fn a_task_item_toggles_by_key_and_keeps_the_caret() {
+    let mut state = EditorState::new(Doc::from_markdown("- [ ] a\n- [x] b\n- c"));
+    let caret = state.selection;
+    let items: Vec<_> = state.doc.blocks[0]
+        .children()
+        .iter()
+        .map(|item| item.key)
+        .collect();
+    assert_eq!(state.toggle_task_item(items[1]), Some(false));
+    assert_eq!(state.toggle_task_item(items[0]), Some(true));
+    assert_eq!(state.toggle_task_item(items[2]), None);
+    assert_eq!(md(&state.doc), "- [x] a\n- [ ] b\n- c");
+    assert_eq!(state.selection, caret);
+}
