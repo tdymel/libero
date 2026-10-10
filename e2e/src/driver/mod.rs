@@ -451,6 +451,9 @@ pub use android::Android;
 #[cfg(feature = "android")]
 mod android;
 
+#[cfg(any(feature = "desktop", feature = "ios"))]
+mod bridge;
+
 #[cfg(feature = "desktop")]
 pub use desktop::Desktop;
 

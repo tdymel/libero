@@ -6,8 +6,7 @@
 //! on Windows (2783) input goes over WebView2's DevTools port ([`webview2`]).
 
 use std::fs::File;
-use std::io::{BufRead, BufReader, Write};
-use std::net::{TcpListener, TcpStream};
+use std::net::TcpListener;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -15,9 +14,9 @@ use std::sync::{Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, bail};
-use serde::de::DeserializeOwned;
 
 use crate::clock::{app_clock, app_count};
+use crate::driver::bridge::{Bridge, element};
 use crate::driver::{Driver, Platform, Rect};
 use crate::passes::keyboard::Key;
 
@@ -42,8 +41,7 @@ static IDLE: Mutex<Option<Desktop>> = Mutex::new(None);
 /// scenario's app is never reused.
 pub struct Desktop {
     app: Child,
-    reader: BufReader<TcpStream>,
-    writer: TcpStream,
+    bridge: Bridge,
     #[cfg_attr(any(target_os = "macos", windows), allow(dead_code))]
     window: String,
     /// The viewport's origin in window px: the menu bar sits above the WebView.
@@ -69,7 +67,7 @@ impl Desktop {
                 // CDP sends each press's click count, so WebView2 needs no wait.
                 #[cfg(not(windows))]
                 std::thread::sleep(Duration::from_millis(500));
-                desktop.run("__e2eErrors = []")?;
+                desktop.bridge.run("__e2eErrors = []")?;
                 desktop
             }
             stale => {
@@ -78,10 +76,14 @@ impl Desktop {
             }
         };
         // Pointer back to the calibration corner: no hover left from the last scenario.
-        desktop.run("document.activeElement?.blur(); scrollTo(0, 0)")?;
+        desktop
+            .bridge
+            .run("document.activeElement?.blur(); scrollTo(0, 0)")?;
         desktop.park_pointer()?;
-        let generation: u64 = desktop.json(&format!("window.__route({route:?})"))?;
-        desktop.wait_for(&format!("[data-fixture-generation=\"{generation}\"]"))?;
+        let generation: u64 = desktop.bridge.json(&format!("window.__route({route:?})"))?;
+        desktop
+            .bridge
+            .wait_for(&format!("[data-fixture-generation=\"{generation}\"]"))?;
         Ok(desktop)
     }
 
@@ -90,7 +92,6 @@ impl Desktop {
             format!("{APP_ENV} is unset: run `cargo run -p e2e -- desktop`, which starts Xvfb")
         })?;
         let listener = TcpListener::bind("127.0.0.1:0").context("bind the bridge")?;
-        listener.set_nonblocking(true)?;
         let artifacts = std::env::var_os("E2E_ARTIFACTS")
             .map(PathBuf::from)
             .unwrap_or_else(std::env::temp_dir);
@@ -116,29 +117,16 @@ impl Desktop {
         let devtools = webview2::prepare(&mut command, &launch)?;
         let mut app = command.spawn().context("launch the fixture app")?;
 
-        // The bridge connects from `Shell`'s first effect: it is the ready signal.
-        let started = Instant::now();
-        let stream = loop {
-            match listener.accept() {
-                Ok((stream, _)) => break stream,
-                Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {}
-                Err(error) => return Err(error.into()),
-            }
-            if let Some(status) = app.try_wait()? {
-                bail!("the fixture app exited ({status}) before its bridge connected");
-            }
-            if started.elapsed() > LAUNCH {
-                let _ = app.kill();
-                bail!("the fixture app's bridge did not connect within {LAUNCH:?}");
-            }
-            std::thread::sleep(Duration::from_millis(50));
-        };
-        stream.set_nonblocking(false)?;
-        stream.set_read_timeout(Some(Duration::from_secs(20)))?;
+        let bridge = Bridge::accept(&listener, "desktop", LAUNCH, || match app.try_wait()? {
+            Some(status) => bail!("the fixture app exited ({status}) before its bridge connected"),
+            None => Ok(()),
+        })
+        .inspect_err(|_| {
+            let _ = app.kill();
+        })?;
         let mut desktop = Self {
             app,
-            reader: BufReader::new(stream.try_clone()?),
-            writer: stream,
+            bridge,
             window: String::new(),
             origin: (0.0, 0.0),
             scale: 1.0,
@@ -146,15 +134,17 @@ impl Desktop {
             cdp: None,
             unit: unit.to_string(),
         };
-        desktop.wait_for("[data-fixture-ready]")?;
+        desktop.bridge.wait_for("[data-fixture-ready]")?;
         // `Shell` installs the route hook in an effect, after the marker mounts.
-        desktop.wait_until("typeof window.__route === 'function'")?;
+        desktop
+            .bridge
+            .wait_until("typeof window.__route === 'function'")?;
         #[cfg(windows)]
         {
             desktop.cdp = Some(webview2::Cdp::connect(devtools)?);
         }
         desktop.window = desktop.find_window()?;
-        desktop.scale = desktop.json("devicePixelRatio")?;
+        desktop.scale = desktop.bridge.json("devicePixelRatio")?;
         desktop.calibrate()?;
         desktop.focus_window()?;
         Ok(desktop)
@@ -164,7 +154,7 @@ impl Desktop {
     /// (the fixture's head hook records it); keeps the app for the
     /// unit's next scenario.
     pub fn finish(mut self, what: &str) -> Result<()> {
-        let errors: Vec<String> = self.json("__e2eErrors")?;
+        let errors: Vec<String> = self.bridge.json("__e2eErrors")?;
         if !errors.is_empty() {
             bail!("{what}: console errors in the desktop WebView: {errors:?}");
         }
@@ -172,66 +162,14 @@ impl Desktop {
         Ok(())
     }
 
-    /// Runs a JS body (`return` for a value) in the page; its JSON answer.
-    pub fn eval(&mut self, body: &str) -> Result<serde_json::Value> {
-        // The bridge's own error names no cause: catch and carry the message.
-        let body = format!("try {{ {body} }} catch (e) {{ return {{ __e2eError: String(e) }}; }}");
-        let mut answer = self.request(&serde_json::to_string(&body)?)?;
-        if let Some(error) = answer.get("err") {
-            let running: String = body.chars().skip(6).take(120).collect();
-            bail!("desktop eval failed: {error}, running {running}");
-        }
-        let value = answer["ok"].take();
-        if let Some(error) = value.get("__e2eError") {
-            bail!("desktop eval threw: {error}");
-        }
-        Ok(value)
-    }
-
-    /// One request line out, its `{"ok": ..}` or `{"err": ..}` answer back.
-    fn request(&mut self, line: &str) -> Result<serde_json::Value> {
-        writeln!(self.writer, "{line}")?;
-        let mut answer = String::new();
-        self.reader
-            .read_line(&mut answer)
-            .context("read the bridge's answer")?;
-        serde_json::from_str(&answer).context("the bridge closed")
-    }
-
-    fn run(&mut self, body: &str) -> Result<()> {
-        self.eval(&format!("{body}; return null;")).map(drop)
-    }
-
-    /// A JS expression's value; `undefined` reads as `null`.
-    fn json<T: DeserializeOwned>(&mut self, expression: &str) -> Result<T> {
-        let text = self.eval(&format!("return JSON.stringify({expression}) ?? 'null';"))?;
-        let text = text.as_str().context("JSON.stringify gave no string")?;
-        Ok(serde_json::from_str(text)?)
-    }
-
-    fn wait_for(&mut self, selector: &str) -> Result<()> {
-        self.wait_until(&format!("{} !== null", element(selector)))
-    }
-
-    fn wait_until(&mut self, expression: &str) -> Result<()> {
-        let started = Instant::now();
-        while !self.json::<bool>(expression)? {
-            if started.elapsed() > LAUNCH {
-                bail!("{expression} did not hold within {LAUNCH:?}");
-            }
-            std::thread::sleep(Duration::from_millis(50));
-        }
-        Ok(())
-    }
-
     /// Where viewport 0,0 sits in the window: a pointer move at a known window
     /// point, read back as `clientX/Y`. Bottom-left, away from the fixture.
     fn calibrate(&mut self) -> Result<()> {
-        self.run("window.__e2eMove = null; addEventListener('mousemove', e => { __e2eMove = [e.clientX, e.clientY]; })")?;
+        self.bridge.run("window.__e2eMove = null; addEventListener('mousemove', e => { __e2eMove = [e.clientX, e.clientY]; })")?;
         let at = self.park_pointer()?;
         let started = Instant::now();
         let seen = loop {
-            if let Some((x, y)) = self.json::<Option<(f64, f64)>>("__e2eMove")? {
+            if let Some((x, y)) = self.bridge.json::<Option<(f64, f64)>>("__e2eMove")? {
                 break (x, y);
             }
             if started.elapsed() > Duration::from_secs(5) {
@@ -252,11 +190,13 @@ impl Desktop {
     }
 
     fn centre(&mut self, selector: &str) -> Result<(f64, f64)> {
-        self.run(&format!(
+        self.bridge.run(&format!(
             "{}.scrollIntoView({{ block: 'nearest', inline: 'nearest' }})",
             element(selector)
         ))?;
-        let rect: Rect = self.json(&format!("{}.getBoundingClientRect()", element(selector)))?;
+        let rect: Rect = self
+            .bridge
+            .json(&format!("{}.getBoundingClientRect()", element(selector)))?;
         Ok((rect.x + rect.width / 2.0, rect.y + rect.height / 2.0))
     }
 }
@@ -397,7 +337,7 @@ const SEEN: &str = "window.__e2eSeen = { up: 0, key: 0, wheel: 0, move: null };
 #[cfg(target_os = "macos")]
 impl Desktop {
     fn input(&mut self, op: serde_json::Value) -> Result<()> {
-        let answer = self.request(&op.to_string())?;
+        let answer = self.bridge.request(&op.to_string())?;
         if let Some(error) = answer.get("err") {
             bail!("desktop input {op} failed: {error}");
         }
@@ -406,9 +346,11 @@ impl Desktop {
 
     /// The app makes its window key and the WebView first responder; logs what the session gave it.
     fn find_window(&mut self) -> Result<String> {
-        let state = self.request(&serde_json::json!({ "op": "prepare" }).to_string())?;
+        let state = self
+            .bridge
+            .request(&serde_json::json!({ "op": "prepare" }).to_string())?;
         eprintln!("e2e desktop: macOS window {state}");
-        self.run(SEEN)?;
+        self.bridge.run(SEEN)?;
         Ok(String::new())
     }
 
@@ -420,7 +362,10 @@ impl Desktop {
     /// second, as a disabled control gets no mouse events at all.
     fn seen(&mut self, condition: &str) -> Result<()> {
         let started = Instant::now();
-        while !self.json::<bool>(&format!("window.__e2eSeen === undefined || {condition}"))? {
+        while !self
+            .bridge
+            .json::<bool>(&format!("window.__e2eSeen === undefined || {condition}"))?
+        {
             if started.elapsed() > Duration::from_secs(1) {
                 eprintln!("e2e desktop: the page did not see `{condition}` within 1 s");
                 return Ok(());
@@ -431,12 +376,12 @@ impl Desktop {
     }
 
     fn count(&mut self, what: &str) -> Result<u64> {
-        self.json(&format!("window.__e2eSeen?.{what} ?? 0"))
+        self.bridge.json(&format!("window.__e2eSeen?.{what} ?? 0"))
     }
 
     /// Moves the pointer to the viewport's bottom-left corner; that point.
     fn park_pointer(&mut self) -> Result<(f64, f64)> {
-        let height: f64 = self.json("innerHeight")?;
+        let height: f64 = self.bridge.json("innerHeight")?;
         let at = (2.0, height - 2.0);
         self.move_to(at.0, at.1)?;
         Ok(at)
@@ -514,10 +459,6 @@ impl Drop for Desktop {
     }
 }
 
-fn element(selector: &str) -> String {
-    format!("document.querySelector({selector:?})")
-}
-
 /// `xdotool` with `args`; its stdout.
 #[cfg(not(any(target_os = "macos", windows)))]
 fn xdotool(args: &[&str]) -> Result<String> {
@@ -578,7 +519,7 @@ impl Driver for Desktop {
     }
 
     async fn viewport(&mut self) -> Result<(f64, f64)> {
-        self.json("[innerWidth, innerHeight]")
+        self.bridge.json("[innerWidth, innerHeight]")
     }
 
     async fn press(&mut self, key: Key) -> Result<()> {
@@ -616,7 +557,7 @@ impl Driver for Desktop {
     }
 
     async fn evaluate(&mut self, expression: &str) -> Result<serde_json::Value> {
-        self.json(&format!("await ({expression})"))
+        self.bridge.json(&format!("await ({expression})"))
     }
 
     /// libero's thread timers, held in the app (2144).
@@ -634,62 +575,67 @@ impl Driver for Desktop {
     }
 
     async fn scroll_by(&mut self, dy: f64) -> Result<()> {
-        self.run(&format!("scrollBy({{ top: {dy}, behavior: 'instant' }})"))
+        self.bridge
+            .run(&format!("scrollBy({{ top: {dy}, behavior: 'instant' }})"))
     }
 
     async fn focus(&mut self, selector: &str) -> Result<()> {
-        self.run(&format!("{}.focus()", element(selector)))
+        self.bridge.run(&format!("{}.focus()", element(selector)))
     }
 
     async fn text(&mut self, selector: &str) -> Result<String> {
-        self.json(&format!("{}.textContent", element(selector)))
+        self.bridge
+            .json(&format!("{}.textContent", element(selector)))
     }
 
     async fn value(&mut self, selector: &str) -> Result<String> {
-        self.json(&format!("{}.value", element(selector)))
+        self.bridge.json(&format!("{}.value", element(selector)))
     }
 
     async fn attr(&mut self, selector: &str, name: &str) -> Result<Option<String>> {
-        self.json(&format!("{}.getAttribute({name:?})", element(selector)))
+        self.bridge
+            .json(&format!("{}.getAttribute({name:?})", element(selector)))
     }
 
     async fn exists(&mut self, selector: &str) -> Result<bool> {
-        self.json(&format!("{} !== null", element(selector)))
+        self.bridge.json(&format!("{} !== null", element(selector)))
     }
 
     async fn rect(&mut self, selector: &str) -> Result<Rect> {
-        self.json(&format!("{}.getBoundingClientRect()", element(selector)))
+        self.bridge
+            .json(&format!("{}.getBoundingClientRect()", element(selector)))
     }
 
     async fn style(&mut self, selector: &str, property: &str) -> Result<String> {
-        self.json(&format!(
+        self.bridge.json(&format!(
             "getComputedStyle({}).getPropertyValue({property:?})",
             element(selector)
         ))
     }
 
     async fn is_focused(&mut self, selector: &str) -> Result<bool> {
-        self.json(&format!(
+        self.bridge.json(&format!(
             "document.activeElement?.matches({selector:?}) ?? false"
         ))
     }
 
     async fn focused_id(&mut self) -> Result<String> {
-        self.json("document.activeElement?.id ?? ''")
+        self.bridge.json("document.activeElement?.id ?? ''")
     }
 
     async fn focus_owner(&mut self) -> Result<String> {
-        self.json("document.activeElement?.outerHTML.slice(0, 200) ?? 'nothing'")
+        self.bridge
+            .json("document.activeElement?.outerHTML.slice(0, 200) ?? 'nothing'")
     }
 
     /// The bridge answers synchronously: a flag the frame sets, polled; then `settle`'s idle
     /// rounds, as the app runs outside the WebView.
     async fn frame(&mut self) -> Result<()> {
-        self.run(
+        self.bridge.run(
             "window.__e2eFrame = false; requestAnimationFrame(() => { window.__e2eFrame = true; })",
         )?;
         let started = Instant::now();
-        while !self.json::<bool>("window.__e2eFrame")? {
+        while !self.bridge.json::<bool>("window.__e2eFrame")? {
             if started.elapsed() > self.budget() {
                 bail!("the WebView drew no frame within {:?}", self.budget());
             }

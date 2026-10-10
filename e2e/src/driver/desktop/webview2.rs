@@ -139,7 +139,7 @@ impl Desktop {
 
     /// Moves the pointer to the viewport's bottom-left corner; that point.
     pub(super) fn park_pointer(&mut self) -> Result<(f64, f64)> {
-        let height: f64 = self.json("innerHeight")?;
+        let height: f64 = self.bridge.json("innerHeight")?;
         let at = (2.0, height - 2.0);
         self.move_to(at.0, at.1)?;
         Ok(at)

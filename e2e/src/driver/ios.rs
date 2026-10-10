@@ -3,17 +3,16 @@
 //! the app's `E2E_BRIDGE` as the desktop driver does, and drives it with HID touches and keys
 //! from AXe (idb with `E2E_IOS_INPUT=idb`). Run by `cargo run -p e2e -- ios`, on macOS only.
 
-use std::io::{BufRead, BufReader, Write};
-use std::net::{TcpListener, TcpStream};
+use std::net::TcpListener;
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::{Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, bail};
-use serde::de::DeserializeOwned;
 
 use crate::clock::{app_clock, app_count};
+use crate::driver::bridge::{Bridge, element};
 use crate::driver::{Driver, Platform, Rect};
 use crate::passes::keyboard::Key;
 
@@ -45,8 +44,7 @@ enum Injector {
 /// One fixture app in the simulator; dropped, it is terminated, so a failed scenario's app is
 /// never reused.
 pub struct Ios {
-    reader: BufReader<TcpStream>,
-    writer: TcpStream,
+    bridge: Bridge,
     udid: String,
     bundle: String,
     input: Injector,
@@ -66,7 +64,7 @@ impl Ios {
         let idle = IDLE.lock().unwrap_or_else(PoisonError::into_inner).take();
         let mut ios = match idle {
             Some(mut ios) if ios.unit == unit => {
-                ios.run("__e2eErrors = []")?;
+                ios.bridge.run("__e2eErrors = []")?;
                 ios
             }
             stale => {
@@ -74,9 +72,11 @@ impl Ios {
                 Self::launch(unit)?
             }
         };
-        ios.run("document.activeElement?.blur(); scrollTo(0, 0)")?;
-        let generation: u64 = ios.json(&format!("window.__route({route:?})"))?;
-        ios.wait_for(&format!("[data-fixture-generation=\"{generation}\"]"))?;
+        ios.bridge
+            .run("document.activeElement?.blur(); scrollTo(0, 0)")?;
+        let generation: u64 = ios.bridge.json(&format!("window.__route({route:?})"))?;
+        ios.bridge
+            .wait_for(&format!("[data-fixture-generation=\"{generation}\"]"))?;
         Ok(ios)
     }
 
@@ -93,7 +93,6 @@ impl Ios {
         };
         // The simulator shares the Mac's loopback, so the app dials this listener.
         let listener = TcpListener::bind("127.0.0.1:0").context("bind the bridge")?;
-        listener.set_nonblocking(true)?;
         let artifacts = std::env::var_os("E2E_ARTIFACTS")
             .map(PathBuf::from)
             .unwrap_or_else(std::env::temp_dir);
@@ -114,28 +113,12 @@ impl Ios {
             )],
         )?;
 
-        // The bridge connects from `Shell`'s first effect: it is the ready signal.
-        let started = Instant::now();
-        let stream = loop {
-            match listener.accept() {
-                Ok((stream, _)) => break stream,
-                Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {}
-                Err(error) => return Err(error.into()),
-            }
-            if started.elapsed() > LAUNCH {
-                let _ = simctl(&["terminate", &udid, &bundle], &[]);
-                bail!(
-                    "the fixture app's bridge did not connect within {LAUNCH:?}, see {}",
-                    log.display()
-                );
-            }
-            std::thread::sleep(Duration::from_millis(50));
-        };
-        stream.set_nonblocking(false)?;
-        stream.set_read_timeout(Some(Duration::from_secs(20)))?;
+        let bridge = Bridge::accept(&listener, "iOS", LAUNCH, || Ok(())).map_err(|error| {
+            let _ = simctl(&["terminate", &udid, &bundle], &[]);
+            error.context(format!("see {}", log.display()))
+        })?;
         let mut ios = Self {
-            reader: BufReader::new(stream.try_clone()?),
-            writer: stream,
+            bridge,
             udid,
             bundle,
             input,
@@ -143,9 +126,10 @@ impl Ios {
             scale: 1.0,
             unit: unit.to_string(),
         };
-        ios.wait_for("[data-fixture-ready]")?;
+        ios.bridge.wait_for("[data-fixture-ready]")?;
         // `Shell` installs the route hook in an effect, after the marker mounts.
-        ios.wait_until("typeof window.__route === 'function'")?;
+        ios.bridge
+            .wait_until("typeof window.__route === 'function'")?;
         ios.calibrate()?;
         Ok(ios)
     }
@@ -153,7 +137,7 @@ impl Ios {
     /// The console stayed clean since the page loaded or the unit's last scenario; keeps the
     /// app for the unit's next scenario.
     pub fn finish(mut self, what: &str) -> Result<()> {
-        let errors: Vec<String> = self.json("__e2eErrors")?;
+        let errors: Vec<String> = self.bridge.json("__e2eErrors")?;
         if !errors.is_empty() {
             bail!("{what}: console errors in the iOS WebView: {errors:?}");
         }
@@ -161,68 +145,22 @@ impl Ios {
         Ok(())
     }
 
-    /// Runs a JS body (`return` for a value) in the page; its JSON answer.
-    pub fn eval(&mut self, body: &str) -> Result<serde_json::Value> {
-        let body = format!("try {{ {body} }} catch (e) {{ return {{ __e2eError: String(e) }}; }}");
-        writeln!(self.writer, "{}", serde_json::to_string(&body)?)?;
-        let mut line = String::new();
-        self.reader
-            .read_line(&mut line)
-            .context("read the bridge's answer")?;
-        let mut answer: serde_json::Value =
-            serde_json::from_str(&line).context("the bridge closed")?;
-        if let Some(error) = answer.get("err") {
-            let running: String = body.chars().skip(6).take(120).collect();
-            bail!("iOS eval failed: {error}, running {running}");
-        }
-        let value = answer["ok"].take();
-        if let Some(error) = value.get("__e2eError") {
-            bail!("iOS eval threw: {error}");
-        }
-        Ok(value)
-    }
-
-    fn run(&mut self, body: &str) -> Result<()> {
-        self.eval(&format!("{body}; return null;")).map(drop)
-    }
-
-    /// A JS expression's value; `undefined` reads as `null`.
-    fn json<T: DeserializeOwned>(&mut self, expression: &str) -> Result<T> {
-        let text = self.eval(&format!("return JSON.stringify({expression}) ?? 'null';"))?;
-        let text = text.as_str().context("JSON.stringify gave no string")?;
-        Ok(serde_json::from_str(text)?)
-    }
-
-    fn wait_for(&mut self, selector: &str) -> Result<()> {
-        self.wait_until(&format!("{} !== null", element(selector)))
-    }
-
-    fn wait_until(&mut self, expression: &str) -> Result<()> {
-        let started = Instant::now();
-        while !self.json::<bool>(expression)? {
-            if started.elapsed() > LAUNCH {
-                bail!("{expression} did not hold within {LAUNCH:?}");
-            }
-            std::thread::sleep(Duration::from_millis(50));
-        }
-        Ok(())
-    }
-
     /// Where viewport 0,0 sits on the screen: a tap at the screen's centre on the bare index
     /// page, read back as a `touchstart`'s `clientX/Y`. Printed, for the first CI runs.
     fn calibrate(&mut self) -> Result<()> {
-        self.run(
+        self.bridge.run(
             "window.__e2eTouch = null; addEventListener('touchstart', e => { \
              __e2eTouch = [e.touches[0].clientX, e.touches[0].clientY]; }, { capture: true, passive: true })",
         )?;
-        let (screen_w, screen_h, inner_w): (f64, f64, f64) =
-            self.json("[screen.width, screen.height, innerWidth]")?;
+        let (screen_w, screen_h, inner_w): (f64, f64, f64) = self
+            .bridge
+            .json("[screen.width, screen.height, innerWidth]")?;
         self.scale = screen_w / inner_w;
         let at = (screen_w / 2.0, screen_h / 2.0);
         self.tap_screen(at)?;
         let started = Instant::now();
         let seen = loop {
-            if let Some((x, y)) = self.json::<Option<(f64, f64)>>("__e2eTouch")? {
+            if let Some((x, y)) = self.bridge.json::<Option<(f64, f64)>>("__e2eTouch")? {
                 break (x, y);
             }
             if started.elapsed() > Duration::from_secs(10) {
@@ -258,12 +196,12 @@ impl Ios {
             element(selector)
         );
         for _ in 0..40 {
-            if !self.json::<bool>(&hidden)? {
+            if !self.bridge.json::<bool>(&hidden)? {
                 break;
             }
             std::thread::sleep(Duration::from_millis(50));
         }
-        self.run(&format!(
+        self.bridge.run(&format!(
             "{}.scrollIntoView({{ block: 'center', inline: 'center' }})",
             element(selector)
         ))?;
@@ -272,10 +210,10 @@ impl Ios {
             "(r => [r.x + r.width / 2, r.y + r.height / 2])({}.getBoundingClientRect())",
             element(selector)
         );
-        let mut at: (f64, f64) = self.json(&read)?;
+        let mut at: (f64, f64) = self.bridge.json(&read)?;
         for _ in 0..40 {
             std::thread::sleep(Duration::from_millis(50));
-            let next: (f64, f64) = self.json(&read)?;
+            let next: (f64, f64) = self.bridge.json(&read)?;
             let settled = (next.0 - at.0).abs() < 0.5 && (next.1 - at.1).abs() < 0.5;
             at = next;
             if settled {
@@ -300,7 +238,7 @@ impl Ios {
     /// A touch from viewport point `(x, y)` by `(dx, dy)` over `secs`, clamped to the viewport:
     /// a touch lifted off the WebView would leave it a stuck touch.
     fn swipe(&mut self, (x, y): (f64, f64), dx: f64, dy: f64, secs: f64) -> Result<()> {
-        let (vw, vh): (f64, f64) = self.json("[innerWidth, innerHeight]")?;
+        let (vw, vh): (f64, f64) = self.bridge.json("[innerWidth, innerHeight]")?;
         let clamp = |x: f64, y: f64| self.screen(x.clamp(0.0, vw - 1.0), y.clamp(0.0, vh - 1.0));
         let (from, to) = (clamp(x, y), clamp(x + dx, y + dy));
         let [x1, y1, x2, y2] = [point(from.0), point(from.1), point(to.0), point(to.1)];
@@ -413,10 +351,6 @@ impl Drop for Ios {
     }
 }
 
-fn element(selector: &str) -> String {
-    format!("document.querySelector({selector:?})")
-}
-
 /// A screen point as the injectors take it: whole points.
 fn point(at: f64) -> String {
     (at.round() as i64).to_string()
@@ -512,7 +446,7 @@ impl Driver for Ios {
     }
 
     async fn viewport(&mut self) -> Result<(f64, f64)> {
-        self.json("[innerWidth, innerHeight]")
+        self.bridge.json("[innerWidth, innerHeight]")
     }
 
     async fn press(&mut self, key: Key) -> Result<()> {
@@ -581,7 +515,7 @@ impl Driver for Ios {
     }
 
     async fn evaluate(&mut self, expression: &str) -> Result<serde_json::Value> {
-        self.json(&format!("await ({expression})"))
+        self.bridge.json(&format!("await ({expression})"))
     }
 
     /// libero's thread timers, held in the app (2144).
@@ -599,57 +533,61 @@ impl Driver for Ios {
     }
 
     async fn focus(&mut self, selector: &str) -> Result<()> {
-        self.run(&format!("{}.focus()", element(selector)))
+        self.bridge.run(&format!("{}.focus()", element(selector)))
     }
 
     async fn text(&mut self, selector: &str) -> Result<String> {
-        self.json(&format!("{}.textContent", element(selector)))
+        self.bridge
+            .json(&format!("{}.textContent", element(selector)))
     }
 
     async fn value(&mut self, selector: &str) -> Result<String> {
-        self.json(&format!("{}.value", element(selector)))
+        self.bridge.json(&format!("{}.value", element(selector)))
     }
 
     async fn attr(&mut self, selector: &str, name: &str) -> Result<Option<String>> {
-        self.json(&format!("{}.getAttribute({name:?})", element(selector)))
+        self.bridge
+            .json(&format!("{}.getAttribute({name:?})", element(selector)))
     }
 
     async fn exists(&mut self, selector: &str) -> Result<bool> {
-        self.json(&format!("{} !== null", element(selector)))
+        self.bridge.json(&format!("{} !== null", element(selector)))
     }
 
     async fn rect(&mut self, selector: &str) -> Result<Rect> {
-        self.json(&format!("{}.getBoundingClientRect()", element(selector)))
+        self.bridge
+            .json(&format!("{}.getBoundingClientRect()", element(selector)))
     }
 
     async fn style(&mut self, selector: &str, property: &str) -> Result<String> {
-        self.json(&format!(
+        self.bridge.json(&format!(
             "getComputedStyle({}).getPropertyValue({property:?})",
             element(selector)
         ))
     }
 
     async fn is_focused(&mut self, selector: &str) -> Result<bool> {
-        self.json(&format!(
+        self.bridge.json(&format!(
             "document.activeElement?.matches({selector:?}) ?? false"
         ))
     }
 
     async fn focused_id(&mut self) -> Result<String> {
-        self.json("document.activeElement?.id ?? ''")
+        self.bridge.json("document.activeElement?.id ?? ''")
     }
 
     async fn focus_owner(&mut self) -> Result<String> {
-        self.json("document.activeElement?.outerHTML.slice(0, 200) ?? 'nothing'")
+        self.bridge
+            .json("document.activeElement?.outerHTML.slice(0, 200) ?? 'nothing'")
     }
 
     /// As the desktop's: a flag the frame sets, polled, then `settle`'s idle rounds.
     async fn frame(&mut self) -> Result<()> {
-        self.run(
+        self.bridge.run(
             "window.__e2eFrame = false; requestAnimationFrame(() => { window.__e2eFrame = true; })",
         )?;
         let started = Instant::now();
-        while !self.json::<bool>("window.__e2eFrame")? {
+        while !self.bridge.json::<bool>("window.__e2eFrame")? {
             if started.elapsed() > self.budget() {
                 bail!("the WebView drew no frame within {:?}", self.budget());
             }

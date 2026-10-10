@@ -1,6 +1,6 @@
 //! `Scroller`: a strip of buttons with a step control overlaid at each end.
 
-use anyhow::Result;
+use anyhow::{Result, bail};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::{focus, keyboard, motion, pointer};
@@ -127,13 +127,24 @@ async fn tab_clears_the_control<D: Driver>(d: &mut D, _route: &str) -> Result<()
         }
     }
     eventually_focused(d, "#tag-8", "Tab along the strip").await?;
-    eventually(d, "tag-8 clear of the forward control", async |d| {
+    let cleared = eventually(d, "tag-8 clear of the forward control", async |d| {
         let strip = d.rect(STRIP).await?;
         let tag = d.rect("#tag-8").await?;
-        let forward = d.rect("#strip > button:last-of-type").await?;
+        let forward = d.rect(FORWARD).await?;
         Ok(tag.x + tag.width <= forward.x + 1.0 && tag.x >= strip.x - 1.0)
     })
-    .await
+    .await;
+    // Todo 2873: seen red on desktop only under load, never reproduced; says where things stopped.
+    if let Err(error) = cleared {
+        let (focused, strip, tag, forward) = (
+            d.focused_id().await?,
+            d.rect(STRIP).await?,
+            d.rect("#tag-8").await?,
+            d.rect(FORWARD).await?,
+        );
+        bail!("{error}: focus on {focused:?}, strip {strip:?}, tag-8 {tag:?}, forward {forward:?}");
+    }
+    Ok(())
 }
 
 e2e::scenario!(
