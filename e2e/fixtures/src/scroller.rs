@@ -10,7 +10,32 @@ pub const ROUTES: Routes = &[
     ("/scroller", || rsx! { ScrollerPage {} }),
     ("/scroller/rtl", || rsx! { ScrollerPage { rtl: true } }),
     ("/scroller/plain", || rsx! { PlainPage {} }),
+    ("/scroller/drag", || rsx! { DragPage {} }),
 ];
+
+/// Both strips are draggable by prop: `#never` has no controls and no handle, `#stepped` has controls.
+#[component]
+fn DragPage() -> Element {
+    rsx! {
+        div { style: "max-width: 300px",
+            WordStrip { id: "never", controls: "never" }
+            WordStrip { id: "stepped", controls: "always" }
+        }
+    }
+}
+
+#[component]
+fn WordStrip(id: &'static str, controls: &'static str) -> Element {
+    rsx! {
+        Scroller { id, aria_label: id, draggable: true, controls,
+            Flex { direction: "row", gap: "sm", wrap: false,
+                for i in 0..12 {
+                    span { key: "{i}", style: "white-space: nowrap", "Word {i}" }
+                }
+            }
+        }
+    }
+}
 
 /// Plain text, nothing focusable: `#wide` overflows, `#narrow` fits.
 #[component]

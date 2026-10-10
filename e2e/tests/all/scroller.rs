@@ -353,6 +353,60 @@ fn under_rtl_a_drag_to_the_right_heads_for_the_end() {
     });
 }
 
+/// Todo 3142 (2.5.7): `controls: "never"` without a handle leaves a drag no single-pointer
+/// alternative, so a `draggable` strip stays put. The stepped strip's drag after it proves
+/// the events were handled.
+#[test]
+fn a_drag_is_inert_under_controls_never() {
+    block_on(async {
+        let fixture = Fixture::open("/scroller/drag", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let never = "#never > [role=region]";
+        let stepped = "#stepped > [role=region]";
+        wait::for_js_true(
+            page,
+            &format!(
+                "(() => {{ const v = document.querySelector('{never}'); \
+                 return v.scrollWidth > v.clientWidth; }})()"
+            ),
+            "the strip to overflow",
+        )
+        .await
+        .unwrap();
+
+        for strip in [never, stepped] {
+            let from = pointer::centre_of(page, strip).await.unwrap();
+            let to = pointer::Point {
+                x: from.x - 120.0,
+                y: from.y,
+            };
+            pointer::drag(page, from, to, 12).await.unwrap();
+        }
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector('{stepped}').scrollLeft > 60"),
+            "the stepped strip's drag to follow the pointer",
+        )
+        .await
+        .unwrap();
+        let moved: f64 = page
+            .evaluate(format!("document.querySelector('{never}').scrollLeft"))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(moved, 0.0, "a drag scrolled the strip with no controls");
+
+        fixture
+            .console
+            .assert_clean("a drag under controls never")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// 2.4.11 under RTL: an item is measured from the right edge, where the
 /// strip starts.
 #[test]
