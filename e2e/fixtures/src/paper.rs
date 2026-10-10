@@ -24,6 +24,7 @@ fn PaperPage() -> Element {
             form {
                 Paper { id: "press", component: "button", Text { "Press" } }
                 Paper { id: "press-bordered", component: "button", bordered: true, Text { "Bordered" } }
+                Paper { id: "press-primary", component: "button", color: "primary", Text { "Primary" } }
             }
             Paper {
                 id: "gradient-link",

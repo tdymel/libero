@@ -1,10 +1,10 @@
 //! `ChronoField` at month level, at day level between two buttons, as a
-//! date-time field, on the digital columns and as a duration.
+//! date-time field, on the digital columns and as a duration, and a time picked before any day.
 
 use dioxus::prelude::*;
 use libero::{
     chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta, Weekday},
-    components::{Button, ChronoField, DateLevel, Flex, Input, Text},
+    components::{Button, ChronoField, DateLevel, DateRange, Flex, Input, Text},
     theme::TimePickerVariant,
 };
 
@@ -17,7 +17,61 @@ pub const ROUTES: Routes = &[
     ("/chrono-field/digital", || rsx! { DigitalFieldPage {} }),
     ("/chrono-field/duration", || rsx! { DurationFieldPage {} }),
     ("/chrono-field/clock", || rsx! { ClockFieldPage {} }),
+    ("/chrono-field/time-first", || rsx! { TimeFirstPage {} }),
+    ("/chrono-field/time-first-range", || {
+        rsx! { TimeFirstRangePage {} }
+    }),
 ];
+
+/// `today` the 9th and `min` the 10th at 09:00: a time picked before any day lands on `min`.
+fn limits() -> (Option<NaiveDate>, Option<NaiveDateTime>) {
+    (
+        NaiveDate::from_ymd_opt(2026, 10, 9),
+        NaiveDate::from_ymd_opt(2026, 10, 10).and_then(|day| day.and_hms_opt(9, 0, 0)),
+    )
+}
+
+/// An empty moment field on the digital columns, under [`limits`].
+#[component]
+fn TimeFirstPage() -> Element {
+    let mut moment = use_signal(|| None::<NaiveDateTime>);
+    let (today, min) = limits();
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            ChronoField::<NaiveDateTime> {
+                label: "Starts at",
+                today,
+                min,
+                variant: Input::Value(TimePickerVariant::Digital),
+                value: moment(),
+                onchange: move |next| moment.set(next),
+            }
+            Text { id: "readout", {moment().map(|moment| moment.to_string()).unwrap_or_default()} }
+        }
+    }
+}
+
+/// An empty range of moments on the digital columns, under [`limits`].
+#[component]
+fn TimeFirstRangePage() -> Element {
+    let mut stay = use_signal(|| None::<DateRange<NaiveDateTime>>);
+    let (today, min) = limits();
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            ChronoField::<DateRange<NaiveDateTime>> {
+                label: "Stay",
+                today,
+                min,
+                variant: Input::Value(TimePickerVariant::Digital),
+                value: stay(),
+                onchange: move |next| stay.set(next),
+            }
+            Text { id: "readout", {stay().map(|stay| stay.start.to_string()).unwrap_or_default()} }
+        }
+    }
+}
 
 /// An empty date field without `today`: the dropdown asks the clock (2313).
 #[component]

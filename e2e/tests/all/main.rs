@@ -27,6 +27,7 @@ mod color_picker;
 mod combobox;
 mod copy;
 mod data_list;
+mod date;
 mod dialog;
 mod direction_toggle;
 mod divider;

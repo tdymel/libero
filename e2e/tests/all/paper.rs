@@ -44,6 +44,41 @@ fn only_a_pressable_paper_tints_under_the_pointer() {
     });
 }
 
+/// Todo 3146: a coloured paper steps to a darker shade under the pointer instead of laying
+/// a layer of its label over the fill, which took the label under 4.5:1.
+#[test]
+fn a_coloured_paper_steps_its_shade_under_the_pointer() {
+    const FILL: &str = "(sel) => { const s = getComputedStyle(document.querySelector(sel)); \
+                        return s.backgroundColor + '|' + s.backgroundImage + '|' + s.color; }";
+    block_on(async {
+        let fixture = Fixture::open("/paper", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#press-primary").await.unwrap();
+        let fill = async |selector: &str| -> String {
+            page.evaluate(format!("({FILL})({selector:?})"))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap()
+        };
+
+        let rest = fill("#press-primary").await;
+        pointer::hover(page, "#press-primary").await.unwrap();
+        let hovered = fill("#press-primary").await;
+
+        let rest_fill = rest.split('|').next().unwrap();
+        assert!(
+            hovered.contains("|none|"),
+            "no layer over the fill: {hovered}"
+        );
+        assert!(
+            !hovered.starts_with(rest_fill),
+            "the fill steps to another shade: {rest} then {hovered}"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn a_button_paper_is_no_submit_and_drops_the_user_agent_look() {
     block_on(async {

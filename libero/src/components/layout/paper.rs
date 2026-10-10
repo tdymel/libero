@@ -4,7 +4,8 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, ScaleOrCss, States, Variables, base_color, base_props, contrast_color,
-            fill_color, focus_ring_sx, variables,
+            fill_color, focus_ring_sx, hover_color, hover_contrast_color, selected_color,
+            variables,
         },
         layout::use_box,
     },
@@ -83,15 +84,23 @@ fn glass_state_sx() -> Sx {
 
 /// A state layer over whatever fill the surface has, then the focus ring.
 fn interactive_sx() -> Sx {
-    let layer = |percent: u8, gradient: Sx| {
+    let layer = |percent: u8, gradient: Sx, step: &CssVar| {
         sx().background_image(tint_image("currentColor", percent))
             .when("gradient", gradient)
+            // A palette fill steps its shade under the on-state label, as `Button`'s filled hover.
+            .when(
+                "stepped",
+                sx().background(step.value()).color(PAPER_ON_STATE.value()),
+            )
     };
     // The UA's link colours would otherwise turn the label red while pressed.
     sx().color("inherit")
         .cursor("pointer")
-        .hover(layer(HOVER_LAYER, gradient_hover_sx()))
-        .selector(":active", layer(PRESSED_LAYER, gradient_pressed_sx()))
+        .hover(layer(HOVER_LAYER, gradient_hover_sx(), &PAPER_HOVER))
+        .selector(
+            ":active",
+            layer(PRESSED_LAYER, gradient_pressed_sx(), &PAPER_PRESSED),
+        )
         .focus_visible(focus_ring_sx())
 }
 
@@ -107,6 +116,9 @@ fn paper_interactive(component: HtmlTag, attributes: &[Attribute]) -> bool {
 // Own vars, not `PAPER_BACKGROUND`: an uncoloured `Paper` nested inside keeps the surface.
 const PAPER_FILL: CssVar = CssVar::new("--lsx-paper-fill");
 const PAPER_FILL_CONTRAST: CssVar = CssVar::new("--lsx-paper-fill-contrast");
+const PAPER_HOVER: CssVar = CssVar::new("--lsx-paper-hover");
+const PAPER_PRESSED: CssVar = CssVar::new("--lsx-paper-pressed");
+const PAPER_ON_STATE: CssVar = CssVar::new("--lsx-paper-on-state");
 /// A glass tint's share of the fill, raised past `glass_background` where the label needs it.
 pub(crate) const PAPER_TINT_SHARE: CssVar = CssVar::new("--lsx-paper-tint-share");
 
@@ -152,6 +164,9 @@ fn paper_variables(props: &PaperProps, tint: Option<GlassTint>) -> Option<String
         variables()
             .with(PAPER_FILL, fill_color(&base))
             .with(PAPER_FILL_CONTRAST, contrast.clone())
+            .with(PAPER_HOVER, hover_color(&base, true))
+            .with(PAPER_PRESSED, selected_color(&base, true))
+            .with(PAPER_ON_STATE, hover_contrast_color(&base))
             // Over `paper_sx`'s reset, as `Header` does (todo 1834).
             .with(SURFACE_LABEL, contrast.clone())
             .with(PAPER_TINT_SHARE, share)
@@ -272,6 +287,11 @@ fn paper_states(props: &PaperProps) -> Input<States> {
     let colored = props.color.as_ref().is_some() && !gradient;
 
     let interactive = paper_interactive(props.component.copied_or_default(), &props.attributes);
+    // A glass keeps its tint's label under the pointer; a literal has no shade to step.
+    let stepped = interactive
+        && colored
+        && !glass
+        && hover_color(&base_color(props.color.as_ref()), true).is_some();
 
     if radius.is_none()
         && shadow.is_none()
@@ -297,6 +317,7 @@ fn paper_states(props: &PaperProps) -> Input<States> {
         .with("glass", glass)
         .with("gradient", gradient)
         .with("interactive", interactive)
+        .with("stepped", stepped)
         .into()
 }
 

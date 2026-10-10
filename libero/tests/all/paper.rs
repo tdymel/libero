@@ -81,6 +81,36 @@ fn a_paper_takes_the_interactive_look_only_once_it_can_be_pressed() {
 }
 
 #[test]
+fn a_pressable_palette_paper_steps_its_shade_where_a_literal_or_glass_keeps_the_layer() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Paper { id: "palette", color: "primary", component: "button", "sheet" }
+                Paper { id: "literal", color: "#123456", component: "button", "sheet" }
+                Paper { id: "static", color: "primary", "sheet" }
+            }
+        }
+    }
+
+    let html = render(app);
+    let state = |tag: &str, id: &str| {
+        let at = html.find(&format!("id=\"{id}\"")).expect(id);
+        let start = html[..at].rfind(&format!("<{tag}")).expect(tag);
+        attributes_of(&html[start..], tag)["data-state"].clone()
+    };
+
+    assert_eq!(state("button", "palette"), "colored interactive stepped");
+    assert_eq!(state("button", "literal"), "colored interactive");
+    assert_eq!(state("div", "static"), "colored");
+    assert!(html.contains("--lsx-paper-hover:"), "{html}");
+    assert!(html.contains("--lsx-paper-on-state:"), "{html}");
+    assert!(
+        html.contains("[data-state~=\"stepped\"]"),
+        "the stepped rule is emitted: {html}"
+    );
+}
+
+#[test]
 fn the_interactive_look_tints_on_hover_and_press_and_rings_on_focus() {
     fn app() -> Element {
         rsx! {

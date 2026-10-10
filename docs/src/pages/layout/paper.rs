@@ -87,7 +87,7 @@ pub fn PaperPage() -> Element {
                         .doc("Fills the surface with a gradient from `color` to a second stop, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`; `Gradient::default()` is the theme's. The text colour is picked to read on both stops. With `glass`, the stops turn translucent, their share raised until the text reads 4.5:1; a literal stop's text is yours to check. Its stops carry down to any gradient inside it."),
                     prop("component", "HtmlTag")
                         .default("div")
-                        .doc("The element to render, such as `section`, `article`, `aside`, or `a` for a clickable card. An `aside` is a landmark and needs your `aria-label`; a `section` becomes one once you give it an `aria-label`. A surface that takes a press, an `a` with an `href`, a `button` or any element with an `onclick`, also tints on hover, tints deeper while pressed and shows the focus ring (the `interactive` state)."),
+                        .doc("The element to render, such as `section`, `article`, `aside`, or `a` for a clickable card. An `aside` is a landmark and needs your `aria-label`; a `section` becomes one once you give it an `aria-label`. A surface that takes a press, an `a` with an `href`, a `button` or any element with an `onclick`, also tints on hover, tints deeper while pressed and shows the focus ring (the `interactive` state). A theme `color` steps to a darker shade of itself instead, under a text colour picked to read on it."),
                     prop("variables", "Variables")
                         .doc("Custom properties set on the element's `style`, for a component built on `Paper`."),
                     prop("framework_sx", "&'static StaticSx")

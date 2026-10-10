@@ -88,8 +88,7 @@ fn luminance(hex: &str) -> f32 {
     0.2126 * channel(0) + 0.7152 * channel(2) + 0.0722 * channel(4)
 }
 
-/// The state layers of `Paper` and `Button`, in percent of the label.
-const HOVER_LAYER: f32 = 8.0;
+/// The tonal pressed layer, in percent of the label.
 const PRESSED_LAYER: f32 = 10.0;
 
 /// `fill` with `layer` percent of `label` mixed in, as `color-mix(in srgb, ..)` does.
@@ -146,15 +145,10 @@ fn short_surface_pairs(html: &str, root: &BTreeMap<String, String>) -> Vec<Strin
         let own = next_vars(&mut rest, "button", "--lsx-paper-fill:");
         let label = resolve(&own["--lsx-paper-fill-contrast"], &[&own, root]);
         let fill = resolve(&own["--lsx-paper-fill"], &[&own, root]);
-        for (state, layer) in [("hover", HOVER_LAYER), ("pressed", PRESSED_LAYER)] {
-            note(
-                "Paper",
-                color,
-                "filled",
-                state,
-                &label,
-                &layered(&fill, &label, layer),
-            );
+        let on_state = resolve(&own["--lsx-paper-on-state"], &[&own, root]);
+        for state in ["hover", "pressed"] {
+            let stepped = resolve(&own[&format!("--lsx-paper-{state}")], &[&own, root]);
+            note("Paper", color, "filled", state, &on_state, &stepped);
         }
         note("Paper", color, "filled", "rest", &label, &fill);
     }
@@ -212,30 +206,17 @@ fn short_pairs(app: fn() -> Element) -> Vec<String> {
     short
 }
 
-/// Recorded, exact: a coloured `Paper`'s 8% and 10% `currentColor` layer takes the label under
-/// 4.5:1, where `Button`'s filled hover keeps it with its own `on-state` label. Fix the layer
-/// and this list shrinks; it must then be updated.
+/// A coloured `Paper` steps its shade on hover and press under the `on-state` label, as
+/// `Button`'s filled variant does, so the light theme has no pair short.
 #[test]
-fn only_a_coloured_paper_hover_and_press_fall_short_in_the_light_theme() {
-    assert_eq!(
-        short_pairs(light),
-        [
-            "Paper primary filled hover 4.01",
-            "Paper primary filled pressed 3.86",
-            "Paper secondary filled hover 4.31",
-            "Paper secondary filled pressed 4.15",
-            "Paper error filled hover 4.02",
-            "Paper error filled pressed 3.90",
-            "Paper info filled hover 3.96",
-            "Paper info filled pressed 3.81",
-        ]
-    );
+fn no_pair_falls_short_in_the_light_theme() {
+    assert_eq!(short_pairs(light), Vec::<String>::new());
 }
 
 /// Recorded, not asserted away: a dark theme's `fill-3` of yellow and green is
 /// a mid tone that neither end of the page reads on, so no label can fix it.
 #[test]
-fn only_the_tonal_selected_yellow_and_green_and_two_paper_presses_fall_short_in_the_dark_theme() {
+fn only_the_tonal_selected_yellow_and_green_fall_short_in_the_dark_theme() {
     assert_eq!(
         short_pairs(dark),
         [
@@ -243,8 +224,6 @@ fn only_the_tonal_selected_yellow_and_green_and_two_paper_presses_fall_short_in_
             "Button success tonal selected 4.34",
             "ActionIcon warning tonal selected 3.99",
             "ActionIcon success tonal selected 4.34",
-            "Paper secondary filled pressed 4.37",
-            "Paper muted filled pressed 4.47",
         ]
     );
 }
