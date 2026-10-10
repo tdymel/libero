@@ -14,6 +14,7 @@ pub const ROUTES: Routes = &[
     ("/drawer", || rsx! { DrawerPage {} }),
     ("/drawer/tall", || rsx! { TallDrawerPage {} }),
     ("/drawer/wide", || rsx! { WideDrawerPage {} }),
+    ("/drawer/bottom-tall", || rsx! { BottomTallDrawerPage {} }),
     ("/drawer/guarded", || rsx! { GuardedDrawerPage {} }),
     ("/drawer/long-title", || rsx! { LongTitleDrawerPage {} }),
 ];
@@ -84,6 +85,37 @@ fn WideDrawerPage() -> Element {
         },
         |s: ModalScope<()>| {
             rsx! {
+                Button { id: "drawer-close", variant: "text", onclick: move |_| s.close(), "Close" }
+            }
+        },
+    );
+
+    rsx! {
+        Button {
+            id: "open-drawer",
+            onclick: move |_| {
+                nav.open();
+            },
+            "Open menu"
+        }
+    }
+}
+
+/// Todo 3002: a bottom drawer whose size outgrows the viewport, as at 200% zoom.
+#[component]
+fn BottomTallDrawerPage() -> Element {
+    let nav = use_drawer(
+        DrawerOptions {
+            anchor: "bottom".into(),
+            size: "200rem".into(),
+            aria_label: Some("Menu".into()),
+            ..Default::default()
+        },
+        |s: ModalScope<()>| {
+            rsx! {
+                for line in 0..60 {
+                    div { Anchor { to: "/", "Link {line}" } }
+                }
                 Button { id: "drawer-close", variant: "text", onclick: move |_| s.close(), "Close" }
             }
         },

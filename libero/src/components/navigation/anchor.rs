@@ -53,7 +53,7 @@ static NEW_TAB_HINT_SX: StaticSx = StaticSx::new(|| {
 });
 
 pub(crate) fn wants_new_tab_hint(target: Option<&str>, new_tab_hint: bool) -> bool {
-    target == Some("_blank") && new_tab_hint
+    target.is_some_and(|target| target.eq_ignore_ascii_case("_blank")) && new_tab_hint
 }
 
 /// Todo 579: the icon plus a hidden "(opens in a new tab)", after a link's text.

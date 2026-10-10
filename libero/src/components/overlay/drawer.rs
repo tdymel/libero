@@ -22,12 +22,17 @@ static DRAWER_SX: StaticSx = StaticSx::new(|| {
         .when(
             "anchor-start || anchor-end || anchor-top || anchor-bottom",
             // The viewport caps a wide size: a phone is narrower than `xl`.
-            sx().margin("0").border_radius("0").max_width("100vw"),
+            // The panel scrolls inside its own box, not the whole layer (3003).
+            sx().margin("0")
+                .border_radius("0")
+                .max_width("100vw")
+                .overflow_y("auto"),
         )
         .when("anchor-start", sx().height("100%"))
         .when("anchor-end", sx().height("100%"))
-        .when("anchor-top", sx().width("100%"))
-        .when("anchor-bottom", sx().width("100%"))
+        // Taller than the viewport, its far edge would sit above the scroll origin (3002).
+        .when("anchor-top", sx().width("100%").max_height("100dvh"))
+        .when("anchor-bottom", sx().width("100%").max_height("100dvh"))
         // A drawer opened from inside one must not inherit its custom size.
         .var(DRAWER_SIZE.override_var(), "initial");
 

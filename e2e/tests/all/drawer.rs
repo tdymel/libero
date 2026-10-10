@@ -174,6 +174,45 @@ fn a_drawer_taller_than_the_viewport_scrolls() {
     });
 }
 
+/// Todos 3002, 3003: a bottom drawer taller than the viewport is capped at it and
+/// scrolls inside its own box, so its first control stays on screen.
+#[test]
+fn a_bottom_drawer_taller_than_the_viewport_is_capped_and_scrolls() {
+    block_on(async {
+        e2e::browser::at_every_viewport(async |viewport| {
+            let fixture = Fixture::open("/drawer/bottom-tall", viewport)
+                .await
+                .unwrap();
+            let page = &fixture.page;
+            keyboard::tab_to(page, TRIGGER, 3).await.unwrap();
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            e2e::wait::for_visible(page, DIALOG).await.unwrap();
+            let (top, bottom, height, scrolls): (f64, f64, f64, bool) = page
+                .evaluate(
+                    "(() => { const p = document.querySelector('[role=dialog]'); \
+                     const b = p.getBoundingClientRect(); \
+                     return [b.top, b.bottom, innerHeight, p.scrollHeight > p.clientHeight]; })()",
+                )
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(
+                top >= -1.0 && bottom <= height + 1.0,
+                "the panel spans {top}..{bottom} in a {height}px viewport at {}",
+                viewport.name()
+            );
+            assert!(
+                scrolls,
+                "the panel does not scroll itself at {}",
+                viewport.name()
+            );
+            fixture.close().await.unwrap();
+        })
+        .await;
+    });
+}
+
 /// 1.4.10: the widest size is capped by the viewport, not pushed past its edge.
 #[test]
 fn a_wide_drawer_stays_inside_a_narrow_viewport() {

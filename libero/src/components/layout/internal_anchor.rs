@@ -89,7 +89,9 @@ pub(crate) fn render_anchor(
         warn(&message);
     }
 
-    let is_blank = target.as_deref() == Some("_blank");
+    let is_blank = target
+        .as_deref()
+        .is_some_and(|target| target.eq_ignore_ascii_case("_blank"));
     let router_can_handle_target = target.is_none() || is_blank;
 
     if router_can_handle_target && try_router().is_some() {

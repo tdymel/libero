@@ -27,7 +27,7 @@ pub fn AnchorPage() -> Element {
                 prop("size", "Size").default(theme.anchor.size.as_str()).doc("Text size."),
                 prop("to", "NavigationTarget")
                     .default("required")
-                    .doc("A path, a URL or a typed route (`Route::Foo {}`). With a router mounted and `target` unset or `\"_blank\"`, an internal target navigates without a page reload. A `javascript:` URL runs script on click, so check the scheme of any URL from user data."),
+                    .doc("A path, a URL or a typed route (`Route::Foo {}`). With a router mounted and `target` unset, an internal target navigates without a page reload; with `\"_blank\"` it opens a new tab with a full page load. A `javascript:` URL runs script on click, so check the scheme of any URL from user data."),
                 prop("target", "String").doc("The link's `target` attribute. `\"_blank\"` adds a small external icon and a hidden \"(opens in a new tab)\"."),
                 prop("new_tab_hint", "bool")
                     .default("true")
@@ -51,7 +51,7 @@ pub fn AnchorPage() -> Element {
                     "Make the link text say where the link goes: it is the accessible name.",
                     "Keep the underline on a link inside a paragraph: with `underline: \"never\"` it stands out by color alone.",
                 ])
-                .example("A link in a paragraph, `Anchor { to: \"https://www.rust-lang.org\", target: \"_blank\", \"The Rust website\" }`: it keeps its underline, and a screen reader reads \"The Rust website (opens in a new tab)\"."),
+                .example("A link in a paragraph, `Anchor { to: \"https://www.rust-lang.org\", target: \"_blank\", underline: \"always\", \"The Rust website\" }`: it keeps its underline, and a screen reader reads \"The Rust website (opens in a new tab)\"."),
             lead: rsx! {
                 Text {
                     "A link styled and sized like "

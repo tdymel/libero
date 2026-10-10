@@ -50,7 +50,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `size` | `Size` | `md` | Text size. |
-| `to` | `NavigationTarget` | required | A path, a URL or a typed route (`Route::Foo {}`). With a router mounted and `target` unset or `"_blank"`, an internal target navigates without a page reload. A `javascript:` URL runs script on click, so check the scheme of any URL from user data. |
+| `to` | `NavigationTarget` | required | A path, a URL or a typed route (`Route::Foo {}`). With a router mounted and `target` unset, an internal target navigates without a page reload; with `"_blank"` it opens a new tab with a full page load. A `javascript:` URL runs script on click, so check the scheme of any URL from user data. |
 | `target` | `String` | - | The link's `target` attribute. `"_blank"` adds a small external icon and a hidden "(opens in a new tab)". |
 | `new_tab_hint` | `bool` | `true` | `false` drops the icon and the hidden text a `"_blank"` target adds. |
 | `underline` | `AnchorUnderline` | `hover` | When the underline draws, `always`, `hover` or `never`. |
@@ -90,8 +90,8 @@ parts work.
 ### Example
 
 A link in a paragraph, `Anchor { to: "https://www.rust-lang.org", target:
-"_blank", "The Rust website" }`: it keeps its underline, and a screen reader
-reads "The Rust website (opens in a new tab)".
+"_blank", underline: "always", "The Rust website" }`: it keeps its underline,
+and a screen reader reads "The Rust website (opens in a new tab)".
 
 ## Theme defaults
 
