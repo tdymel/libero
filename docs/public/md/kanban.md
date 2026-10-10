@@ -1,7 +1,7 @@
 # Kanban
 
 Crate: `libero`
-Import: `use libero::components::{Kanban, KanbanCard, KanbanColumn, KanbanMove};`
+Import: `use libero::components::{Kanban, KanbanCard, KanbanColumn, KanbanColumnMove, KanbanMove};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/kanban>
 Index: [index.md](index.md) lists every other page
 Description: A board of columns whose cards move by drag in a column or to another, by keyboard or move buttons in a column, and to another column by a Move to menu.
@@ -9,7 +9,8 @@ Description: A board of columns whose cards move by drag in a column or to anoth
 A board of columns. A card moves by dragging its handle, in its column or to
 another; by keyboard in its column or to the next one; with its move buttons in
 its column; and to any column with its Move to menu. `onmove` gets a `KanbanMove` with the old and new
-column and index, and `apply` does it to a `Vec<Vec<T>>`.
+column and index, and `apply` does it to a `Vec<Vec<T>>`. With `oncolumnmove` the
+columns reorder too, by a handle and two buttons in each header.
 
 ## Usage
 
@@ -45,6 +46,21 @@ Key each column and card by its data, not its index. A drag to another column
 lands the card where it was let go; the Move to menu lands it at that column's
 end.
 
+### Column reorder
+
+Set `oncolumnmove` and each column header gets a reorder handle and, with
+`move_buttons`, two move buttons. Keep the column order as data next to the
+cards and apply each `KanbanColumnMove` to both:
+
+```rust
+let mut names = use_signal(|| vec!["To do", "Doing", "Done"]);
+// in the Kanban:
+oncolumnmove: move |step: KanbanColumnMove| {
+    step.apply(&mut names.write());
+    step.apply(&mut cards.write());
+},
+```
+
 ## Cards
 
 The cards are your content: the board draws no card look. The docs demo builds
@@ -58,7 +74,8 @@ in each column's `header`.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `onmove` | `EventHandler<KanbanMove>` | required | Fires when a card changed place: on a drop, a move button or a Move to entry. Apply it to your data with `KanbanMove::apply`; until then the board keeps its old order. |
-| `move_buttons` | `bool` | `true` | Each card's two buttons that move it one slot in its column without dragging (WCAG 2.5.7). |
+| `oncolumnmove` | `Option<EventHandler<KanbanColumnMove>>` | `None` | Fires when a column changed place, by its header's reorder handle or move buttons. Set, each column header shows them. Apply it with `KanbanColumnMove::apply` to the column names and to the cards, so the `index` of each column follows. |
+| `move_buttons` | `bool` | `true` | Each card's two buttons that move it one slot in its column without dragging (WCAG 2.5.7), and with `oncolumnmove` each column's two that move it one place on the board. |
 | `children` | `Element` | required | The `KanbanColumn`s. |
 
 ### KanbanColumn
@@ -93,6 +110,9 @@ parts work.
 |---|---|---|
 | `KanbanColumnPart::Header` | `header` | The header naming the column. |
 | `KanbanColumnPart::List` | `list` | The list holding the cards. |
+| `KanbanColumnPart::Handle` | `handle` | The header's reorder handle, with `oncolumnmove`. |
+| `KanbanColumnPart::MoveEarlier` | `move-earlier` | The header's move back button, with `oncolumnmove` and `move_buttons`. |
+| `KanbanColumnPart::MoveLater` | `move-later` | The header's move forward button. |
 | `KanbanCardPart::Handle` | `handle` | The drag handle. |
 | `KanbanCardPart::Content` | `content` | The wrapper round the card's content. |
 | `KanbanCardPart::MoveEarlier` | `move-earlier` | The move up button. |
@@ -110,6 +130,8 @@ parts work.
 | `Home` or `End` | Moves a lifted card to the top or bottom of its column. |
 | `Left` or `Right` | Puts a lifted card in the next column on that side (right to left, mirrored), at the slot it was lifted at, or last if that column has fewer cards. The lift ends there and the handle keeps focus. |
 | `Escape` | Puts a lifted or dragged card back where it was. |
+| `Space` or `Enter` | On a column's reorder handle, lifts the column; lifted, drops it where it is. |
+| `Left` or `Right` | Moves a lifted column one place on the board (right to left, mirrored). Home and End move it first or last; Escape puts it back. |
 
 ### Libero handles
 
@@ -138,6 +160,11 @@ parts work.
   columns outgrow, a card dragged near an edge scrolls the board that way. Up
   and down only once the card has moved toward that edge.
 - In a narrow column the move buttons wrap below the card's content.
+- With `oncolumnmove`, each column header has a reorder handle named "Reorder
+  To do column" and described by the column keys, and with `move_buttons` a
+  Move backward and a Move forward button, "Move To do column forward". The
+  status region says the column's lift, moves and drop, "To do column moved to
+  position 2 of 3.", and focus stays on the handle or button used.
 
 ### You must
 
@@ -160,7 +187,8 @@ button there.
   window, use the Move to menu.
 - A board with a height of its own scrolls its cards by wheel and touch; the
   scrollbar's gutter stays reserved, so a drag never changes the board's width.
-- Columns keep their place: the board has no column reorder.
+- A column moves by its handle's keys and its move buttons only; dragging a
+  column by pointer is not built yet.
 - In a filtered column a dragged card lands just before the next card shown,
   or just after the last one; Move to lands after the last card shown, before
   any hidden ones that follow.
@@ -171,6 +199,6 @@ State tokens on `data-state`.
 
 | Token | On | Condition |
 |---|---|---|
-| `sorting` | `KanbanColumn`, `KanbanCard` | A card is being dragged: by keyboard in this column, by pointer anywhere on the board. |
-| `dragging` | `KanbanCard` | This card is the one dragged. |
+| `sorting` | `KanbanColumn`, `KanbanCard` | A card is being dragged: by keyboard in this column, by pointer anywhere on the board. On `KanbanColumn` also while a column is lifted. |
+| `dragging` | `KanbanCard`, `KanbanColumn` | This card, or this column by its reorder handle, is the one lifted. |
 | `target` | `KanbanColumn` | A card dragged by pointer would land in this column. |

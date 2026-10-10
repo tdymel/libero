@@ -1,6 +1,7 @@
 /// A `Kanban` card's Move to menu. In `moved` `{label}` is the card's name,
 /// `{column}` the column's, `{n}` its position from 1 and `{m}` the card count.
-/// The handle, move buttons and drag announcements are [`SortableLabels`](super::SortableLabels).
+/// The handle, move buttons and drag announcements are [`SortableLabels`](super::SortableLabels),
+/// a column's naming it by `column`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct KanbanLabels {
     /// The menu's trigger; `{label}` names its card.
@@ -15,6 +16,12 @@ pub struct KanbanLabels {
     pub touch_instructions: &'static str,
     /// Replaces it on a touch screen with `move_buttons` off: only the Move to menu is left.
     pub touch_move_to: &'static str,
+    /// Names a column in its reorder handle, move buttons and announcements; `{label}` is its name.
+    pub column: &'static str,
+    /// The keys of a column lifted by its reorder handle.
+    pub column_instructions: &'static str,
+    /// Replaces `column_instructions` on a touch screen, where the column's move buttons are the way.
+    pub column_touch_instructions: &'static str,
 }
 
 impl KanbanLabels {
@@ -25,6 +32,9 @@ impl KanbanLabels {
         no_column: "{label} has no column on that side.",
         touch_instructions: "Use the move buttons to reorder the card, or the Move to column button to put it in another column.",
         touch_move_to: "Use the Move to column button to put the card in another column.",
+        column: "{label} column",
+        column_instructions: "Press Space to lift the column, Left and Right to move it, Home and End to move it first or last, Space again to drop it, Escape to cancel.",
+        column_touch_instructions: "Use the move buttons to reorder the column.",
     };
 
     pub const GERMAN: Self = Self {
@@ -34,5 +44,8 @@ impl KanbanLabels {
         no_column: "{label} hat auf dieser Seite keine Spalte.",
         touch_instructions: "Die Verschiebe-Schaltflächen ordnen die Karte neu an, die Schaltfläche „In Spalte verschieben“ setzt sie in eine andere Spalte.",
         touch_move_to: "Die Schaltfläche „In Spalte verschieben“ setzt die Karte in eine andere Spalte.",
+        column: "Spalte {label}",
+        column_instructions: "Leertaste hebt die Spalte an, Pfeil nach links und rechts verschieben sie, Pos1 und Ende setzen sie an den Anfang oder das Ende, erneut Leertaste legt sie ab, Escape bricht ab.",
+        column_touch_instructions: "Die Verschiebe-Schaltflächen ordnen die Spalte neu an.",
     };
 }

@@ -772,6 +772,221 @@ e2e::scenario!(
     desktop: skip("958: element identity on the WebView")
 );
 
+const COLUMNS_START: &str = "To do: Alpha Beta | Doing: Delta | Done:";
+
+/// Column `id`'s header control in `slot`, on `/kanban/column-reorder`.
+fn header(id: &str, slot: &str) -> String {
+    format!("#column-{id} > [data-slot=header] > [data-slot={slot}]")
+}
+
+async fn the_keyboard_reorders_the_columns<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(&header("to-do", "handle")).await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_text(d, STATUS, "Lifted To do column, position 1 of 3.", "Space").await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually_text(d, STATUS, "To do column moved to position 2 of 3.", "Right").await?;
+    d.press(keyboard::END).await?;
+    eventually_text(d, STATUS, "To do column moved to position 3 of 3.", "End").await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_text(
+        d,
+        "#order",
+        "Doing: Delta | Done: | To do: Alpha Beta",
+        "Space to drop",
+    )
+    .await?;
+    ensure!(d.text("#column-moves").await? == "0>2 ", "one column move");
+    eventually_text(
+        d,
+        STATUS,
+        "Dropped To do column at position 3 of 3.",
+        "the drop",
+    )
+    .await?;
+    eventually_focused(d, &header("to-do", "handle"), "a keyboard column drop").await?;
+
+    d.press(keyboard::SPACE).await?;
+    eventually_text(
+        d,
+        STATUS,
+        "Lifted To do column, position 3 of 3.",
+        "a second lift",
+    )
+    .await?;
+    d.press(keyboard::HOME).await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_text(d, "#order", COLUMNS_START, "Home, then Space").await?;
+    eventually_focused(d, &header("to-do", "handle"), "a drop at the start").await?;
+    Ok(())
+}
+
+async fn escape_puts_a_lifted_column_back<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(&header("doing", "handle")).await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_text(d, STATUS, "Lifted Doing column, position 2 of 3.", "Space").await?;
+    d.press(keyboard::ARROW_LEFT).await?;
+    eventually_text(d, STATUS, "Doing column moved to position 1 of 3.", "Left").await?;
+    d.press(keyboard::ARROW_LEFT).await?;
+    eventually_text(
+        d,
+        STATUS,
+        "Doing column is already at position 1 of 3.",
+        "Left at the start",
+    )
+    .await?;
+    d.press(keyboard::ESCAPE).await?;
+    eventually_text(
+        d,
+        STATUS,
+        "Cancelled. Doing column back at position 2 of 3.",
+        "Escape",
+    )
+    .await?;
+    ensure!(d.text("#order").await? == COLUMNS_START, "Escape moved it");
+    ensure!(
+        d.text("#column-moves").await?.is_empty(),
+        "a move was reported"
+    );
+    Ok(())
+}
+
+async fn the_move_buttons_reorder_the_columns<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(&header("doing", "move-later")).await?;
+    eventually_text(
+        d,
+        "#order",
+        "To do: Alpha Beta | Done: | Doing: Delta",
+        "Move forward",
+    )
+    .await?;
+    eventually_text(
+        d,
+        STATUS,
+        "Doing column moved to position 3 of 3.",
+        "Move forward",
+    )
+    .await?;
+    // Last now, its forward button is disabled: the back one keeps the focus.
+    eventually_focused(d, &header("doing", "move-earlier"), "a move to the end").await?;
+    d.click(&header("doing", "move-earlier")).await?;
+    eventually_text(d, "#order", COLUMNS_START, "Move back").await?;
+    eventually_focused(d, &header("doing", "move-earlier"), "a move back").await?;
+    ensure!(
+        d.text("#column-moves").await? == "1>2 2>1 ",
+        "two column moves"
+    );
+    Ok(())
+}
+
+/// After the columns traded places, the cards still go to the column where they are shown.
+async fn cards_follow_the_reordered_columns<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(&header("to-do", "move-later")).await?;
+    eventually_text(
+        d,
+        "#order",
+        "Doing: Delta | To do: Alpha Beta | Done:",
+        "the columns trade places",
+    )
+    .await?;
+    lift(d, "Alpha", "1 of 2").await?;
+    d.press(keyboard::ARROW_LEFT).await?;
+    eventually_text(
+        d,
+        "#order",
+        "Doing: Alpha Delta | To do: Beta | Done:",
+        "Left into Doing, now first",
+    )
+    .await?;
+    eventually_text(
+        d,
+        STATUS,
+        "Alpha moved to Doing, position 1 of 2.",
+        "the move",
+    )
+    .await?;
+
+    let (doing, to_do) = (
+        d.rect("#column-doing").await?,
+        d.rect("#column-to-do").await?,
+    );
+    d.drag("#Delta [data-slot=handle]", to_do.x - doing.x, 0.0)
+        .await?;
+    eventually_text(
+        d,
+        "#order",
+        "Doing: Alpha | To do: Beta Delta | Done:",
+        "a drag into the moved column",
+    )
+    .await?;
+    Ok(())
+}
+
+async fn left_moves_a_lifted_column_forward_right_to_left<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    d.focus(&header("to-do", "handle")).await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_text(d, STATUS, "Lifted To do column, position 1 of 3.", "Space").await?;
+    d.press(keyboard::ARROW_LEFT).await?;
+    eventually_text(d, STATUS, "To do column moved to position 2 of 3.", "Left").await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_text(
+        d,
+        "#order",
+        "Doing: Delta | To do: Alpha Beta | Done:",
+        "Space to drop",
+    )
+    .await?;
+    Ok(())
+}
+
+e2e::scenario!(
+    the_keyboard_reorders_the_columns_by_their_header_handle,
+    "/kanban/column-reorder",
+    the_keyboard_reorders_the_columns
+);
+e2e::scenario!(
+    escape_puts_a_lifted_column_back_unreported,
+    "/kanban/column-reorder",
+    escape_puts_a_lifted_column_back
+);
+e2e::scenario!(
+    a_columns_move_buttons_reorder_it_and_keep_the_focus,
+    "/kanban/column-reorder",
+    the_move_buttons_reorder_the_columns
+);
+e2e::scenario!(
+    cards_move_by_key_and_drag_into_reordered_columns,
+    "/kanban/column-reorder",
+    cards_follow_the_reordered_columns
+);
+e2e::scenario!(
+    left_moves_a_lifted_column_forward_on_a_right_to_left_board,
+    "/kanban/column-reorder-rtl",
+    left_moves_a_lifted_column_forward_right_to_left,
+    android: skip("963: is_rtl is false on the WebView"),
+    native: skip("707: Blitz has no right-to-left scroll")
+);
+
+#[test]
+fn the_column_reorder_meets_the_baseline() {
+    Suite::new("kanban_column_reorder", "/kanban/column-reorder")
+        .focusable("#column-to-do > [data-slot=header] > [data-slot=handle]")
+        .targets("#column-doing > [data-slot=header] > [data-slot=handle]")
+        .targets("#column-doing > [data-slot=header] > [data-slot=move-earlier]")
+        .targets("#column-doing > [data-slot=header] > [data-slot=move-later]")
+        .state(
+            "column_lifted",
+            &[
+                Step::TabTo("#column-doing > [data-slot=header] > [data-slot=handle]"),
+                Step::Press(keyboard::SPACE),
+            ],
+            "#column-doing[data-state~=dragging]",
+        )
+        .run();
+}
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("kanban", "/kanban")

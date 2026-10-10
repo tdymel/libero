@@ -9,7 +9,7 @@ use crate::{
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Kanban, KanbanCard, KanbanColumn, KanbanMove},
+    components::{Kanban, KanbanCard, KanbanColumn, KanbanColumnMove, KanbanMove},
 };
 
 fn app() -> Element {
@@ -134,6 +134,95 @@ fn an_unlabelled_cards_handle_is_named_by_its_content() {
         .and_then(|rest| rest.split('"').next())
         .unwrap_or_else(|| panic!("no aria-labelledby: {handle}"));
     assert_eq!(crate::sortable::labelled_by(&html, ids), "Reorder Write");
+}
+
+fn reorder_app() -> Element {
+    rsx! {
+        LiberoProvider {
+            Kanban { onmove: move |_: KanbanMove| {}, oncolumnmove: move |_: KanbanColumnMove| {},
+                KanbanColumn { index: 0, label: "To do",
+                    KanbanCard { index: 0, label: "Write", "Write" }
+                }
+                KanbanColumn { index: 1, label: "Done" }
+            }
+        }
+    }
+}
+
+#[test]
+fn oncolumnmove_gives_each_header_a_handle_and_two_move_buttons() {
+    let html = body(&render(reorder_app));
+
+    for column in ["To do", "Done"] {
+        for name in [
+            format!("Reorder {column} column"),
+            format!("Move {column} column backward"),
+            format!("Move {column} column forward"),
+        ] {
+            assert_eq!(
+                count(&html, &format!("aria-label=\"{name}\"")),
+                1,
+                "{name}: {html}"
+            );
+        }
+    }
+    // The first column cannot move back; the last is known only once the columns registered.
+    let disabled = |name: &str| {
+        html.split("<button")
+            .find(|tag| tag.contains(&format!("aria-label=\"{name}\"")))
+            .is_some_and(|tag| tag[..tag.find('>').unwrap()].contains("disabled"))
+    };
+    assert!(disabled("Move To do column backward"), "{html}");
+    assert!(!disabled("Move To do column forward"), "{html}");
+}
+
+#[test]
+fn a_column_handle_is_described_by_the_column_keys() {
+    let html = body(&render(reorder_app));
+
+    let handle = html
+        .split("<button")
+        .find(|tag| tag.contains("aria-label=\"Reorder To do column\""))
+        .unwrap_or_else(|| panic!("no column handle: {html}"));
+    let id = handle
+        .split("aria-describedby=\"")
+        .nth(1)
+        .and_then(|rest| rest.split('"').next())
+        .unwrap_or_else(|| panic!("no aria-describedby: {handle}"));
+    let described = html
+        .split(&format!("id=\"{id}\""))
+        .nth(1)
+        .unwrap_or_else(|| panic!("no description {id}: {html}"));
+    assert!(
+        described.contains("Press Space to lift the column"),
+        "{described}"
+    );
+}
+
+#[test]
+fn without_oncolumnmove_the_headers_have_no_controls() {
+    let html = body(&render(app));
+
+    assert!(!html.contains("Reorder To do column"), "{html}");
+    assert!(!html.contains("lift the column"), "{html}");
+}
+
+/// The column handles find their nodes by selector too.
+#[test]
+fn column_handles_register_no_onmounted() {
+    fn fixed() -> Element {
+        rsx! {
+            LiberoProvider {
+                Kanban { onmove: move |_: KanbanMove| {},
+                    KanbanColumn { index: 0, label: "To do",
+                        KanbanCard { index: 0, label: "Write", "Write" }
+                    }
+                    KanbanColumn { index: 1, label: "Done" }
+                }
+            }
+        }
+    }
+    assert_eq!(mounted_listeners(reorder_app), mounted_listeners(fixed));
 }
 
 /// Todo 2749: a card finds its parts by selector, so cards add no `onmounted`.

@@ -1,0 +1,54 @@
+---
+source: e2e/src/suite.rs
+description: kanban_column_reorder at mobile (column_lifted)
+expression: tree
+---
+button "Before"
+  StaticText "Before"
+button "Reorder To do column"
+  description "Press Space to lift the column, Left and Right to move it, Home and End to move it first or last, Space again to drop it, Escape to cancel."
+StaticText "To do"
+button "Move To do column backward" [disabled]
+button "Move To do column forward"
+list "To do"
+  listitem [level=1]
+    button "Reorder Alpha"
+      description "Press Space to lift the card, Up and Down to move it in its column, Left and Right to put it in the next column, Space again to drop it, Escape to cancel."
+    paragraph
+      StaticText "Alpha"
+    button "Move Alpha up" [disabled]
+    button "Move Alpha down"
+    button "Move Alpha to column" [expanded=false] [haspopup=menu]
+  listitem [level=1]
+    button "Reorder Beta"
+      description "Press Space to lift the card, Up and Down to move it in its column, Left and Right to put it in the next column, Space again to drop it, Escape to cancel."
+    paragraph
+      StaticText "Beta"
+    button "Move Beta up"
+    button "Move Beta down" [disabled]
+    button "Move Beta to column" [expanded=false] [haspopup=menu]
+button "Reorder Doing column"
+  description "Press Space to lift the column, Left and Right to move it, Home and End to move it first or last, Space again to drop it, Escape to cancel."
+StaticText "Doing"
+button "Move Doing column backward"
+button "Move Doing column forward"
+list "Doing"
+  listitem [level=1]
+    button "Reorder Delta"
+      description "Press Space to lift the card, Up and Down to move it in its column, Left and Right to put it in the next column, Space again to drop it, Escape to cancel."
+    paragraph
+      StaticText "Delta"
+    button "Move Delta up" [disabled]
+    button "Move Delta down" [disabled]
+    button "Move Delta to column" [expanded=false] [haspopup=menu]
+button "Reorder Done column"
+  description "Press Space to lift the column, Left and Right to move it, Home and End to move it first or last, Space again to drop it, Escape to cancel."
+StaticText "Done"
+button "Move Done column backward"
+button "Move Done column forward" [disabled]
+list "Done"
+status [atomic] [live=polite]
+  StaticText "Lifted Doing column, position 2 of 3."
+paragraph
+  StaticText "To do: Alpha Beta | Doing: Delta | Done:"
+paragraph

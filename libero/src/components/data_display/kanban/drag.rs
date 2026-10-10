@@ -634,25 +634,31 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
 pub(super) fn use_board_list(drag: BoardDrag, column: usize, list: ElementHandle) -> Memo<f64> {
     drag.tick();
     let mut lists = drag.lists;
-    let mut at = use_hook(|| CopyValue::new(None::<usize>));
+    // The slot this list wrote and what: two columns trading places must not clear each other's.
+    let mut at = use_hook(|| CopyValue::new(None::<(usize, Mounted)>));
+    let owned = |entry: &Mounted, own: &Mounted| match (entry, own) {
+        (Some(entry), Some(own)) => Rc::ptr_eq(entry, own),
+        _ => false,
+    };
     use_effect(use_reactive!(|column| {
         let _ = list.mount_token();
         let mut lists = lists.write();
-        if let Some(old) = at.replace(Some(column))
-            && let Some(entry) = lists.get_mut(old)
+        let mounted = list.mounted();
+        if let Some((old, own)) = at.replace(Some((column, mounted.clone())))
+            && let Some(entry) = lists.get_mut(old).filter(|entry| owned(entry, &own))
         {
             *entry = None;
         }
         if lists.len() <= column {
             lists.resize(column + 1, None);
         }
-        lists[column] = list.mounted();
+        lists[column] = mounted;
     }));
     use_drop(move || {
         if let Ok(mut lists) = lists.try_write()
-            && let Some(old) = *at.peek()
+            && let Some((old, own)) = at.peek().clone()
         {
-            if let Some(entry) = lists.get_mut(old) {
+            if let Some(entry) = lists.get_mut(old).filter(|entry| owned(entry, &own)) {
                 *entry = None;
             }
             while lists.last().is_some_and(Option::is_none) {

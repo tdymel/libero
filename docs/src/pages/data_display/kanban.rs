@@ -19,9 +19,12 @@ pub fn KanbanPage() -> Element {
                     prop("onmove", "EventHandler<KanbanMove>")
                         .default("required")
                         .doc("Fires when a card changed place: on a drop, a move button or a Move to entry. Apply it to your data with `KanbanMove::apply`; until then the board keeps its old order."),
+                    prop("oncolumnmove", "Option<EventHandler<KanbanColumnMove>>")
+                        .default("None")
+                        .doc("Fires when a column changed place, by its header's reorder handle or move buttons. Set, each column header shows them. Apply it with `KanbanColumnMove::apply` to the column names and to the cards, so the `index` of each column follows."),
                     prop("move_buttons", "bool")
                         .default("true")
-                        .doc("Each card's two buttons that move it one slot in its column without dragging (WCAG 2.5.7)."),
+                        .doc("Each card's two buttons that move it one slot in its column without dragging (WCAG 2.5.7), and with `oncolumnmove` each column's two that move it one place on the board."),
                     prop("children", "Element").default("required").doc("The `KanbanColumn`s."),
                 ]),
                 props("KanbanColumn", vec![
@@ -41,6 +44,9 @@ pub fn KanbanPage() -> Element {
                 .parts("KanbanColumnPart", vec![
                     (KanbanColumnPart::Header, "The header naming the column."),
                     (KanbanColumnPart::List, "The list holding the cards."),
+                    (KanbanColumnPart::Handle, "The header's reorder handle, with `oncolumnmove`."),
+                    (KanbanColumnPart::MoveEarlier, "The header's move back button, with `oncolumnmove` and `move_buttons`."),
+                    (KanbanColumnPart::MoveLater, "The header's move forward button."),
                 ]),
                 props("KanbanCard", vec![
                     prop("index", "usize")
@@ -67,6 +73,8 @@ pub fn KanbanPage() -> Element {
                 .key(["Home", "End"], "Moves a lifted card to the top or bottom of its column.")
                 .key(["Left", "Right"], "Puts a lifted card in the next column on that side (right to left, mirrored), at the slot it was lifted at, or last if that column has fewer cards. The lift ends there and the handle keeps focus.")
                 .key(["Escape"], "Puts a lifted or dragged card back where it was.")
+                .key(["Space", "Enter"], "On a column's reorder handle, lifts the column; lifted, drops it where it is.")
+                .key(["Left", "Right"], "Moves a lifted column one place on the board (right to left, mirrored). Home and End move it first or last; Escape puts it back.")
                 .handles([
                     "Each column is a list named by its `label`, and each card a list item.",
                     "Each card's handle is a button of at least 24px (WCAG 2.5.8) named with the card, \"Reorder Write\", and described by how to move it with the keys. On a touch screen with `move_buttons` on, the description points to the move buttons and the Move to column menu instead, from `KanbanLabels::touch_instructions`; with `move_buttons` off, to the menu alone, from `KanbanLabels::touch_move_to`.",
@@ -76,6 +84,7 @@ pub fn KanbanPage() -> Element {
                     "A drag starts after 4px of pointer movement (8px on touch). Only the handle takes a touch: a swipe on the rest of a card scrolls. The column under the card's centre takes it; let go off the board, it goes back.",
                     "On a board wider than its container, or with a height of its own that its columns outgrow, a card dragged near an edge scrolls the board that way. Up and down only once the card has moved toward that edge.",
                     "In a narrow column the move buttons wrap below the card's content.",
+                    "With `oncolumnmove`, each column header has a reorder handle named \"Reorder To do column\" and described by the column keys, and with `move_buttons` a Move backward and a Move forward button, \"Move To do column forward\". The status region says the column's lift, moves and drop, \"To do column moved to position 2 of 3.\", and focus stays on the handle or button used.",
                 ])
                 .must([
                     "Give each `KanbanCard` a `label`, or its controls and the announcements name it by position (\"Item 2\").",
@@ -85,7 +94,7 @@ pub fn KanbanPage() -> Element {
                     "Left and Right move a lifted card one column per press: it is dropped there, so lift it again for the next column. On Android a right to left board's Left and Right are not mirrored yet.",
                     "A drag scrolls the board, not the page: to reach a card or column beyond the window, use the Move to menu.",
                     "A board with a height of its own scrolls its cards by wheel and touch; the scrollbar's gutter stays reserved, so a drag never changes the board's width.",
-                    "Columns keep their place: the board has no column reorder.",
+                    "A column moves by its handle's keys and its move buttons only; dragging a column by pointer is not built yet.",
                     "In a filtered column a dragged card lands just before the next card shown, or just after the last one; Move to lands after the last card shown, before any hidden ones that follow.",
                 ]),
             lead: rsx! {
@@ -99,16 +108,24 @@ pub fn KanbanPage() -> Element {
                     Code { source: "apply" }
                     " does it to a "
                     Code { source: "Vec<Vec<T>>" }
-                    "."
+                    ". With "
+                    Code { source: "oncolumnmove" }
+                    " the columns reorder too, by a handle and two buttons in each header."
                 }
             },
             Demo {
                 component: "Board",
                 children_text: "",
                 file: DemoFile(include_str!("kanban/demo.rs")),
-                controls: vec![Control::switch("move_buttons").default("true")],
+                controls: vec![
+                    Control::switch("move_buttons").default("true"),
+                    Control::switch("column_reorder").default("true"),
+                ],
                 render: move |values: DemoValues| rsx! {
-                    Board { move_buttons: values.str("move_buttons") != "false" }
+                    Board {
+                        move_buttons: values.str("move_buttons") != "false",
+                        column_reorder: values.str("column_reorder") != "false",
+                    }
                 },
                 wide_preview: true,
             }

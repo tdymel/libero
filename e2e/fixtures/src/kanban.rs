@@ -2,7 +2,9 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Flex, Kanban, KanbanCard, KanbanColumn, KanbanMove, Text},
+    components::{
+        Button, Flex, Kanban, KanbanCard, KanbanColumn, KanbanColumnMove, KanbanMove, Text,
+    },
     sx::sx,
 };
 
@@ -15,7 +17,45 @@ pub const ROUTES: Routes = &[
     ("/kanban/capped", || rsx! { CappedPage {} }),
     ("/kanban/menu-only", || rsx! { MenuOnlyPage {} }),
     ("/kanban/rtl", || rsx! { div { dir: "rtl", KanbanPage { data: false, wrapped: false } } }),
+    ("/kanban/column-reorder", || rsx! { ColumnReorderPage {} }),
+    ("/kanban/column-reorder-rtl", || rsx! { div { dir: "rtl", ColumnReorderPage {} } }),
 ];
+
+/// Three columns that reorder; `#order` lists each column's name and cards split by `|`,
+/// `#column-moves` each column move.
+#[component]
+fn ColumnReorderPage() -> Element {
+    let mut names = use_signal(|| COLUMNS.to_vec());
+    let mut cards: Cards = use_signal(|| vec![vec!["Alpha", "Beta"], vec!["Delta"], vec![]]);
+    let mut moves = use_signal(String::new);
+    let order = names()
+        .iter()
+        .zip(cards())
+        .map(|(name, column)| format!("{name}:{}", column.iter().map(|card| format!(" {card}")).collect::<String>()))
+        .collect::<Vec<_>>()
+        .join(" | ");
+    rsx! {
+        Button { id: "before", "Before" }
+        Kanban {
+            id: "board",
+            onmove: move |step: KanbanMove| step.apply(&mut cards.write()),
+            oncolumnmove: move |step: KanbanColumnMove| {
+                moves.write().push_str(&format!("{}>{} ", step.from, step.to));
+                step.apply(&mut names.write());
+                step.apply(&mut cards.write());
+            },
+            for (column, label) in names().into_iter().enumerate() {
+                KanbanColumn { key: "{label}", index: column, label, id: format!("column-{}", label.replace(' ', "-").to_lowercase()),
+                    for (index, name) in cards()[column].clone().into_iter().enumerate() {
+                        KanbanCard { key: "{name}", index, id: "{name}", label: name, Text { "{name}" } }
+                    }
+                }
+            }
+        }
+        Text { id: "order", "{order}" }
+        Text { id: "column-moves", "{moves}" }
+    }
+}
 
 /// Two columns with `move_buttons` off, so Move to is a touch screen's only way across.
 #[component]

@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
 
 use super::{
+    columns::KanbanColumnMove,
     drag::{
         BoardDrag, BoardDragOptions, Control, Landing, use_board_card, use_board_drag,
         use_board_list,
@@ -26,8 +27,8 @@ use crate::{
     hooks::{current_localization, use_css, use_element, use_id, use_media_query},
     localization::fill,
     platform::{self, ElementApi},
-    sx::{StaticSx, sx},
-    theme::{PAPER_BACKGROUND, PAPER_BORDER_COLOR, PAPER_RADIUS},
+    sx::{FORCED_COLORS, StaticSx, sx},
+    theme::{PAPER_BACKGROUND, PAPER_BORDER_COLOR, PAPER_RADIUS, Size, SizeCss},
 };
 
 static KANBAN_SX: StaticSx = StaticSx::new(|| {
@@ -49,12 +50,18 @@ static KANBAN_COLUMN_SX: StaticSx = StaticSx::new(|| {
         .min_width("0")
         .padding("sm")
         .border_radius("md")
+        .position("relative")
         // Forced colours repaint the fill as Canvas; a transparent border becomes the edge.
         .border("1px solid transparent")
         .background("muted.1")
         .selector(
             KanbanColumnPart::Header.selector(),
-            sx().font_weight("600").padding("4px 0"),
+            sx().display("flex")
+                .align_items("center")
+                .gap("xs")
+                .font_weight("600")
+                .padding("4px 0")
+                .selector("& > [data-name]", sx().flex("1 1 auto").min_width("0")),
         )
         .selector(
             KanbanColumnPart::List.selector(),
@@ -67,7 +74,20 @@ static KANBAN_COLUMN_SX: StaticSx = StaticSx::new(|| {
                 // An empty column still shows where its cards go.
                 .min_height("48px"),
         )
-        .when("sorting", sx().user_select("none"))
+        .when(
+            "sorting",
+            sx().user_select("none")
+                .transition("transform 150ms ease")
+                .media("(prefers-reduced-motion: reduce)", sx().transition("none")),
+        )
+        // A column lifted by its reorder handle rises over the others, as a lifted card.
+        .when(
+            "dragging",
+            sx().z_index("1")
+                .transition("none")
+                .box_shadow(SizeCss::SHADOW.value(Size::Md))
+                .media(FORCED_COLORS, sx().outline("2px solid Highlight")),
+        )
         .when(
             "target",
             sx().border_color("primary")
@@ -119,6 +139,10 @@ struct Board {
     landing: CopyValue<Option<Landing>>,
     move_buttons: Signal<bool>,
     drag: BoardDrag,
+    /// `oncolumnmove` is set: each column shows its reorder handle.
+    reorder: Signal<bool>,
+    /// The column handles' description.
+    column_instructions: Signal<String>,
 }
 
 /// A card put in column `column`, called `name`, at slot `slot` of `count` shown cards there.
@@ -143,7 +167,12 @@ base_props! {
     pub struct KanbanProps {
         /// Called when a card changed place, in its column or to another. Apply it to your data.
         onmove: EventHandler<KanbanMove>,
-        /// Each card's two buttons moving it one slot in its column without a drag (WCAG 2.5.7).
+        /// Called when a column changed place on the board. Set, each column header shows a
+        /// reorder handle; apply the move to your column order and its cards.
+        #[props(default)]
+        oncolumnmove: Option<EventHandler<KanbanColumnMove>>,
+        /// Each card's two buttons moving it one slot in its column without a drag (WCAG 2.5.7),
+        /// and each column's two with `oncolumnmove`.
         #[props(default = true)]
         move_buttons: bool,
         /// [`KanbanColumn`]s, keyed by their data.
@@ -173,6 +202,9 @@ base_props! {
 /// # }
 /// ```
 ///
+/// Set `oncolumnmove` and the columns reorder too, by a handle in each header (keyboard)
+/// and its move buttons; keep the names in a signal and apply the [`KanbanColumnMove`] to both.
+///
 /// Docs: <https://libero-ui.dev/data-display/kanban>
 #[component]
 pub fn Kanban(props: KanbanProps) -> Element {
@@ -182,6 +214,10 @@ pub fn Kanban(props: KanbanProps) -> Element {
     if *move_buttons.peek() != props.move_buttons {
         move_buttons.set(props.move_buttons);
     }
+    let mut reorder = use_signal(|| props.oncolumnmove.is_some());
+    if *reorder.peek() != props.oncolumnmove.is_some() {
+        reorder.set(props.oncolumnmove.is_some());
+    }
     let labels = use_signal(Vec::new);
     let landing = use_hook(|| CopyValue::new(None));
     let drag = use_board_drag(BoardDragOptions {
@@ -190,6 +226,34 @@ pub fn Kanban(props: KanbanProps) -> Element {
         labels,
         landing,
     });
+    // The columns are this list's items: each `KanbanColumn` joins it before making its own.
+    let oncolumnmove = props.oncolumnmove;
+    let columns = use_sortable(SortableOptions {
+        orientation: Orientation::Horizontal,
+        onreorder: use_callback(move |step: SortableMove| {
+            if let Some(oncolumnmove) = oncolumnmove {
+                oncolumnmove.call(KanbanColumnMove {
+                    from: step.from,
+                    to: step.to,
+                });
+            }
+        }),
+    });
+    use_effect(move || columns.element.follow(Some(&drag.element)));
+    let announcement = columns.announcement;
+    use_effect(move || {
+        let said = announcement();
+        if !said.is_empty() {
+            announcer.say(said);
+        }
+    });
+    let column_instructions = use_id();
+    let words = current_localization();
+    let touch = use_media_query("(pointer: coarse)");
+    let described = match touch() && props.move_buttons {
+        true => words.kanban.column_touch_instructions,
+        false => words.kanban.column_instructions,
+    };
     use_context_provider(|| Board {
         labels,
         onmove: Callback::new(move |step| {
@@ -200,6 +264,8 @@ pub fn Kanban(props: KanbanProps) -> Element {
         landing,
         move_buttons,
         drag,
+        reorder,
+        column_instructions,
     });
 
     let board = use_box()
@@ -216,6 +282,9 @@ pub fn Kanban(props: KanbanProps) -> Element {
 
     rsx! {
         {board}
+        if reorder() {
+            div { id: "{column_instructions}", hidden: true, {described} }
+        }
         {announcer.render()}
     }
 }
@@ -227,6 +296,12 @@ parts_enum! {
         Header = "header" => "& > [data-slot='header']",
         /// The list holding the cards.
         List = "list" => "& > [data-slot='list']",
+        /// The header's reorder handle, with `oncolumnmove`.
+        Handle = "handle" => "& > [data-slot='header'] > [data-slot='handle']",
+        /// The header's move back button, with `oncolumnmove` and `move_buttons`.
+        MoveEarlier = "move-earlier" => "& > [data-slot='header'] > [data-slot='move-earlier']",
+        /// The header's move forward button.
+        MoveLater = "move-later" => "& > [data-slot='header'] > [data-slot='move-later']",
     }
 }
 
@@ -275,6 +350,30 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
                 entries.pop();
             }
         }
+    });
+
+    // Before this column's own `use_sortable`: the board's list of columns is the nearest yet.
+    let words = current_localization();
+    let column_name = fill(words.kanban.column, &[("label", &props.label)]);
+    let place = use_labelled_sortable_item(column, Some(column_name.clone()));
+    let marker = use_id();
+    let (reorder, move_buttons) = (board.reorder, board.move_buttons);
+    use_effect(move || {
+        // Again when the handle or the move buttons come or go.
+        let _ = (reorder(), move_buttons());
+        let parts = [
+            KanbanColumnPart::Handle,
+            KanbanColumnPart::MoveEarlier,
+            KanbanColumnPart::MoveLater,
+        ]
+        .map(|part| {
+            format!(
+                " > [data-slot=\"header\"] > [data-slot=\"{}\"]",
+                part.slot()
+            )
+        });
+        let column = format!("[data-kanban-column=\"{}\"]", marker.peek());
+        place.find_parts_by(&column, parts.each_ref().map(String::as_str));
     });
 
     let (onmove, mut landing, drag) = (board.onmove, board.landing, board.drag);
@@ -330,14 +429,15 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
         instructions,
         shown,
     });
-    let words = current_localization();
     let touch = use_media_query("(pointer: coarse)");
     let room = use_board_list(board.drag, column, list.element);
 
+    let sorting = (list.sorting)() || (board.drag.sorting)() || (place.sorting)();
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with("sorting", (list.sorting)() || (board.drag.sorting)())
+        .with("sorting", sorting)
+        .with("dragging", (place.dragging)())
         .with(
             "target",
             (board.drag.target)().is_some_and(|(at, _)| at == column),
@@ -374,22 +474,73 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
         .event("onpointercancel", list.onpointercancel)
         .render(HtmlTag::Ul, Vec::new(), props.children);
 
+    let move_class = use_css(Some(&SORTABLE_MOVE_SX), CssLayer::Framework);
+    // Built every render, shown only with `oncolumnmove`: the builder's styles are hooks.
+    let handle = use_box()
+        .framework_sx(&SORTABLE_HANDLE_SX)
+        .prepare()
+        .attr("data-slot", KanbanColumnPart::Handle.slot())
+        .attr("type", "button")
+        .attr(
+            "aria-label",
+            fill(words.sortable.handle, &[("label", &column_name)]),
+        )
+        .attr("aria-describedby", (board.column_instructions)())
+        .event("onkeydown", place.onkeydown)
+        .event("onblur", place.onblur)
+        .render(
+            HtmlTag::Button,
+            Vec::new(),
+            rsx! { Glyph { slot: IconSlot::Grip, icon: lucide::grip_horizontal::outlined } },
+        );
+    let handle = reorder().then_some(handle);
+    let named = |template: &str| fill(template, &[("label", &column_name)]);
+    let moves = (reorder() && move_buttons()).then(|| {
+        let (onearlier, onlater) = (place.onearlier, place.onlater);
+        rsx! {
+            button {
+                class: move_class.clone(),
+                r#type: "button",
+                "data-slot": KanbanColumnPart::MoveEarlier.slot(),
+                "aria-label": named(words.sortable.move_backward),
+                disabled: (place.first)(),
+                onclick: move |event| onearlier.call(event),
+                Glyph { slot: IconSlot::ChevronLeft, icon: lucide::chevron_left::outlined }
+            }
+            button {
+                class: move_class.clone(),
+                r#type: "button",
+                "data-slot": KanbanColumnPart::MoveLater.slot(),
+                "aria-label": named(words.sortable.move_forward),
+                disabled: (place.last)(),
+                onclick: move |event| onlater.call(event),
+                Glyph { slot: IconSlot::ChevronRight, icon: lucide::chevron_right::outlined }
+            }
+        }
+    });
+
     use_box()
         .framework_sx(&KANBAN_COLUMN_SX)
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&states)
+        .style(Some(place.style()))
         .prepare()
+        .attr("data-kanban-column", marker())
         .render(
             HtmlTag::Div,
             props.attributes,
             rsx! {
-                div { id: "{header_id}", "data-slot": KanbanColumnPart::Header.slot(),
-                    match props.header {
-                        Some(header) => header,
-                        None => rsx! { "{props.label}" },
+                div { "data-slot": KanbanColumnPart::Header.slot(),
+                    {handle}
+                    div { id: "{header_id}", "data-name": true,
+                        match props.header {
+                            Some(header) => header,
+                            None => rsx! { "{props.label}" },
+                        }
                     }
+                    {moves}
                 }
                 {items}
                 // Hidden, not visually hidden: read only as the handles' description.
@@ -753,6 +904,15 @@ mod tests {
             [
                 ("header", "& > [data-slot='header']"),
                 ("list", "& > [data-slot='list']"),
+                ("handle", "& > [data-slot='header'] > [data-slot='handle']"),
+                (
+                    "move-earlier",
+                    "& > [data-slot='header'] > [data-slot='move-earlier']"
+                ),
+                (
+                    "move-later",
+                    "& > [data-slot='header'] > [data-slot='move-later']"
+                ),
             ]
         );
         assert_eq!(
