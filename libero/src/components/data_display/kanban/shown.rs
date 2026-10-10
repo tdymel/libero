@@ -81,19 +81,19 @@ pub(super) fn use_shown_card(shown: Shown, index: usize) -> usize {
         key
     });
     let mut cards = shown.cards;
-    let mut placed = use_signal(|| None::<usize>);
-    use_effect(use_reactive!(|index| {
+    // In the render, not an effect: a card put before others must not see their old indices, or the
+    // sortable registry loses a slot to a transient position.
+    if cards.peek().get(&key) != Some(&index) {
         cards.write().insert(key, index);
-        placed.set(Some(index));
-    }));
+    }
     use_drop(move || {
         if let Ok(mut cards) = cards.try_write() {
             cards.remove(&key);
         }
     });
-    let ranked = use_memo(move || placed().map(|at| rank(&cards.read(), at)));
+    let ranked = use_memo(use_reactive!(|index| rank(&cards.read(), index)));
     match (shown.dense)() {
-        false => ranked().unwrap_or(index),
+        false => ranked(),
         true => index,
     }
 }

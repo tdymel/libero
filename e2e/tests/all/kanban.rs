@@ -539,8 +539,7 @@ async fn lifted_cards_cross_by_keys<D: Driver>(
         "one move to column 1"
     );
 
-    // One slot up in Doing, then back: the slot it was lifted at, kept in To do. (A card put
-    // before another cannot be lifted again at once: see the handback, so it is not lifted here.)
+    // One slot up in Doing, then back: the slot it was lifted at, kept in To do.
     lift(d, "Beta", "2 of 2").await?;
     d.press(keyboard::ARROW_UP).await?;
     d.press(before).await?;
@@ -550,6 +549,17 @@ async fn lifted_cards_cross_by_keys<D: Driver>(
         STATUS,
         "Beta moved to To do, position 1 of 3.",
         "the slot kept",
+    )
+    .await?;
+
+    // Put before the others, it lifts again at once.
+    lift(d, "Beta", "1 of 3").await?;
+    d.press(keyboard::ESCAPE).await?;
+    eventually_text(
+        d,
+        STATUS,
+        "Cancelled. Beta back at position 1 of 3.",
+        "Escape",
     )
     .await?;
 
@@ -607,6 +617,28 @@ async fn left_and_right_move_a_lifted_card_across_mirrored<D: Driver>(
 ) -> Result<()> {
     lifted_cards_cross_by_keys(d, keyboard::ARROW_LEFT, keyboard::ARROW_RIGHT).await
 }
+
+/// A card dropped before another of a column lifts by keyboard at once (its slot was lost to a transient position).
+async fn a_card_dropped_before_another_lifts_again<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    drag_across(d, "Beta", 1, -2.0).await?;
+    eventually_text(
+        d,
+        "#order",
+        "Alpha Gamma | Beta Delta | ",
+        "a drag to Doing's first slot",
+    )
+    .await?;
+    lift(d, "Beta", "1 of 2").await
+}
+
+e2e::scenario!(
+    a_card_dragged_before_another_of_a_column_can_be_lifted_by_keyboard_at_once,
+    "/kanban",
+    a_card_dropped_before_another_lifts_again
+);
 
 /// A card not lifted ignores Left and Right, and a move the app refuses is not announced.
 async fn a_key_across_needs_a_lift_and_a_refused_one_is_silent<D: Driver>(
