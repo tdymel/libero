@@ -847,6 +847,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             Builtin::Link => mark(MarkKind::Link),
             Builtin::BulletList => Some(state.list_kind() == Some(false)),
             Builtin::OrderedList => Some(state.list_kind() == Some(true)),
+            Builtin::TaskList => Some(state.task_state().is_some()),
             Builtin::Quote => Some(state.in_quote()),
             Builtin::CodeBlock => Some(state.block_kind().is_code()),
             _ => None,

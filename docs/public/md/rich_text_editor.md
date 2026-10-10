@@ -284,8 +284,8 @@ language button on its opening fence, the toolbar's language menu or
 
 ## Task lists
 
-Type `[ ] ` and a space at the start of a list item, or press `Ctrl+Shift+9`,
-for a task. Click its box, or press `Ctrl+Alt+Enter` in the item, to check it;
+Type `[ ] ` and a space at the start of a list item, press `Ctrl+Shift+9`
+or the toolbar's Task list button for a task. Click its box, or press `Ctrl+Alt+Enter` in the item, to check it;
 each toggle is one undo step. Markdown writes and reads tasks as `- [ ]` and
 `- [x]`.
 
@@ -441,8 +441,6 @@ the Bold button reads as pressed.
   becomes a link at the caret.
 - Drag and drop of text is ignored. A replacement with no word to replace (no
   target range, collapsed caret) is ignored too.
-- The toolbar has no task list button yet: `Ctrl+Shift+9` or typing `[ ] ` at
-  the start of a list item makes one.
 - Headings render as `h1` to `h6` as stored, so a `RichTextView` in a comment
   list adds them to the page's heading outline; there is no level offset.
 - `spellcheck` is off by default: Chromium shows no squiggles for text the

@@ -979,6 +979,17 @@ fn a_task_box_click_toggles_its_item_and_the_caret_skips_it() {
         page.evaluate(SYNCED).await.unwrap();
         keyboard::type_text(page, "s").await.unwrap();
         out_eq(page, "- [x] ones\n- [ ] twos\n").await;
+
+        // The toolbar's Task list button shows the item as a task and turns it back.
+        let button = "document.querySelector('[role=toolbar] [aria-label=\"Task list\"]')";
+        holds(
+            page,
+            &format!("(() => {{ const b = {button}; return b?.getAttribute('aria-pressed') === 'true' ? 'ok' : String(b?.outerHTML); }})()"),
+            "the Task list button pressed in a task",
+        )
+        .await;
+        press(page, button).await;
+        out_eq(page, "- ones\n- [ ] twos\n").await;
         fixture.close().await.unwrap();
     });
 }

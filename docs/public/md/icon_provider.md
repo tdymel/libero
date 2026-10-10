@@ -141,7 +141,7 @@ What a slot cannot change:
 `Sparkles`, `Star`, `Grip`, `MoveTo`, `Volume`, `VolumeOff`, `Fullscreen`,
 `ExitFullscreen`, `Captions`, `Chapters`; `RichTextEditor`'s toolbar: `Bold`, `Italic`,
 `Underline`, `Strikethrough`, `InlineCode`, `BulletList`, `OrderedList`,
-`Quote`, `CodeBlock`, `Undo`, `Redo`, `Link`; `More`, a trigger for more
+`TaskList`, `Quote`, `CodeBlock`, `Undo`, `Redo`, `Link`; `More`, a trigger for more
 options (a `Table` column menu). `IconSlot` is
 `#[non_exhaustive]`: new slots may come.
 `Star` is filled in `currentColor` for a rating's value: a stroked glyph turns

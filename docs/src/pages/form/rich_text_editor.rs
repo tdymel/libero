@@ -139,7 +139,7 @@ fn captions(values: &DemoValues) -> Vec<&'static str> {
         (on.mentions, "Mentions: type @ and a name, or press the @ button. While the list is open, intercept gives it the arrow keys, Enter and Escape; overlay floats it at the caret; the handle's edit swaps the typed @name for a mention node, drawn by your own component, in one undo step. Ctrl+Shift+2 runs a node command that inserts @ada."),
         (on.keymap, "Custom keymap: Ctrl+Shift+H makes a heading, and Ctrl+Shift+Enter no longer adds a rule. Ctrl+/ lists the live keymap."),
         (true, "Code blocks: a code block shows its source with fences while the caret is in it; the language button on its opening fence, the toolbar's language menu or Ctrl+Shift+L change its language."),
-        (true, "Task lists: type [ ] and a space at the start of a list item, or press Ctrl+Shift+9. Click a box, or press Ctrl+Alt+Enter in its item, to check it; each is one undo step."),
+        (true, "Task lists: type [ ] and a space at the start of a list item, press Ctrl+Shift+9 or the toolbar's Task list button. Click a box, or press Ctrl+Alt+Enter in its item, to check it; each is one undo step."),
         (true, "Links: a web address (http, https or mailto) followed by a space or Enter becomes a link, and undo brings the plain text back. Typing [text](address) links the text; pasting only an address links the selected text. Other schemes stay text, as does a www. address."),
         (values.str("toolbar") != "true","No toolbar: the keymap, or your own buttons through a handle, drive the editor."),
     ]
@@ -302,7 +302,6 @@ pub fn RichTextEditorPage() -> Element {
                     "Copy and cut write the selection as Markdown, as plain text and as `text/markdown`: a quote as `>`, a code block fenced with its language, lists, headings, rules, marks and links as written. Custom nodes write through their `NodeSpec::markdown` (pass `registry`). Cut is one undo step.",
                     "Paste reads Markdown back into formatted blocks; custom nodes stay text. Text from elsewhere is read the same way, one paragraph per line. In a code block it is pasted as is. A pasted web address alone links the selection, or becomes a link at the caret.",
                     "Drag and drop of text is ignored. A replacement with no word to replace (no target range, collapsed caret) is ignored too.",
-                    "The toolbar has no task list button yet: `Ctrl+Shift+9` or typing `[ ] ` at the start of a list item makes one.",
                     "Headings render as `h1` to `h6` as stored, so a `RichTextView` in a comment list adds them to the page's heading outline; there is no level offset.",
                     "`spellcheck` is off by default: Chromium shows no squiggles for text the editor writes. Firefox and Safari are not verified.",
                 ]),

@@ -125,6 +125,8 @@ pub enum IconSlot {
     BulletList,
     /// A rich text editor's numbered list toggle.
     OrderedList,
+    /// A rich text editor's task list toggle.
+    TaskList,
     /// A rich text editor's quote toggle.
     Quote,
     /// A rich text editor's code block toggle.

@@ -92,7 +92,7 @@ pub(super) struct Tool {
 }
 
 /// The buttons in bar order; block type sits between the marks and the block toggles.
-pub(super) fn tools(words: &RichTextEditorLabels) -> [Tool; 12] {
+pub(super) fn tools(words: &RichTextEditorLabels) -> [Tool; 13] {
     use {Builtin as B, Group as G, IconSlot as S};
     [
         (
@@ -152,6 +152,13 @@ pub(super) fn tools(words: &RichTextEditorLabels) -> [Tool; 12] {
             G::Blocks,
         ),
         (
+            B::TaskList,
+            words.task_list,
+            S::TaskList,
+            lucide::list_todo::outlined,
+            G::Blocks,
+        ),
+        (
             B::Quote,
             words.quote,
             S::Quote,
@@ -193,9 +200,10 @@ pub(super) fn tools(words: &RichTextEditorLabels) -> [Tool; 12] {
 
 /// Least needed first: a narrow bar hides a prefix of these. Bold, italic and the
 /// block type always stay.
-pub(super) const OVERFLOW: [Builtin; 10] = [
+pub(super) const OVERFLOW: [Builtin; 11] = [
     Builtin::CodeBlock,
     Builtin::Quote,
+    Builtin::TaskList,
     Builtin::OrderedList,
     Builtin::BulletList,
     Builtin::Code,
@@ -247,7 +255,7 @@ fn needed(hidden: usize, metrics: Metrics, extra: usize) -> f64 {
         language,
     } = metrics;
     let language = if language > 0.0 { language + gap } else { 0.0 };
-    let icons = 12 - hidden + usize::from(hidden > 0) + extra;
+    let icons = 13 - hidden + usize::from(hidden > 0) + extra;
     let history = OVERFLOW[..hidden]
         .iter()
         .filter(|builtin| matches!(builtin, Builtin::Undo | Builtin::Redo))
@@ -270,7 +278,7 @@ mod tests {
     fn a_wide_bar_hides_nothing_and_a_phone_keeps_bold_italic_and_link() {
         let metrics = Metrics::default();
         assert_eq!(hidden(800.0, metrics, 0), 0);
-        assert_eq!(hidden(342.0, metrics, 0), 9);
+        assert_eq!(hidden(342.0, metrics, 0), 10);
         assert_eq!(hidden(100.0, metrics, 0), OVERFLOW.len());
     }
 
