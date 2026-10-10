@@ -1229,6 +1229,21 @@ mod tests {
         );
     }
 
+    /// 3149: a body, filter or footer cell moved to the other edge drops its old inset.
+    #[test]
+    fn a_pinned_body_cell_writes_both_insets() {
+        let style = |side| pin_at(side, "2rem").unwrap().style();
+
+        assert_eq!(
+            style(PinSide::Start),
+            "inset-inline-start:2rem;inset-inline-end:auto;"
+        );
+        assert_eq!(
+            style(PinSide::End),
+            "inset-inline-start:auto;inset-inline-end:2rem;"
+        );
+    }
+
     /// 2017: an overflowing table keeps a resized column at its width.
     #[test]
     fn a_resized_width_is_the_columns_floor_too() {

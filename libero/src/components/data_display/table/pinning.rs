@@ -84,12 +84,12 @@ pub(super) struct CellPin {
 impl CellPin {
     /// The inline style holding it at its inset, logical so a right-to-left page flips it.
     pub fn style(&self) -> String {
-        format!("inset-inline-{}:{};", self.side.as_str(), self.inset)
+        pin_insets(Some(self))
     }
 }
 
-/// Both insets of a header cell, the one it isn't held by `auto`: a cell moved to the
-/// other edge or unpinned would keep its old one otherwise (todo 3132).
+/// Both insets of a cell, the one it isn't held by `auto`: a cell moved to the other
+/// edge or unpinned would keep its old one otherwise (todos 3132, 3149).
 pub(super) fn pin_insets(pin: Option<&CellPin>) -> String {
     let inset = |side: PinSide| match pin {
         Some(pin) if pin.side == side => pin.inset.as_str(),

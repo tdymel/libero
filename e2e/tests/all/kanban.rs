@@ -993,6 +993,90 @@ fn a_board_with_a_height_scrolls_to_the_cards_below_its_edge() {
     });
 }
 
+/// 3140: a card held at the bottom edge of a board with a height scrolls it down to its end
+/// and no further, and drops among the cards the scroll brought in.
+#[test]
+fn a_drag_held_at_the_bottom_edge_scrolls_a_capped_board_to_the_cards_below() {
+    use chromiumoxide::cdp::browser_protocol::input::DispatchMouseEventType as Kind;
+    use e2e::browser::{Fixture, Viewport, block_on};
+    use e2e::frames::in_front;
+    use e2e::passes::pointer::Point;
+    use e2e::wait;
+    const BOARD: &str = "document.querySelector('#board')";
+    block_on(async {
+        let fixture = Fixture::open("/kanban/capped", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#card-0").await.unwrap();
+        e2e::clock::hold(page, &[AUTO_SCROLL_MS]).await.unwrap();
+        let (most, bottom): (f64, f64) = page
+            .evaluate(format!(
+                "[{BOARD}.scrollHeight - {BOARD}.clientHeight, \
+                 {BOARD}.getBoundingClientRect().bottom]"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .map(|pair: Vec<f64>| (pair[0], pair[1]))
+            .unwrap();
+        assert!(most > 100.0, "the board has cards to scroll to");
+        let handle = centre(page, "#card-0 [data-slot=handle]").await;
+        let edge = Point {
+            x: handle.x,
+            y: bottom - 8.0,
+        };
+        in_front(page, async {
+            mouse_at(page, Kind::MouseMoved, handle, false).await;
+            mouse_at(page, Kind::MousePressed, handle, true).await;
+            for step in 1..=10 {
+                let t = f64::from(step) / 10.0;
+                let at = Point {
+                    x: handle.x,
+                    y: handle.y + (edge.y - handle.y) * t,
+                };
+                mouse_at(page, Kind::MouseMoved, at, true).await;
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
+        assert!(
+            ticks(page, &format!("{BOARD}.scrollTop >= {most} - 2"), 200).await,
+            "a card held at the bottom edge did not scroll the board to its end"
+        );
+        ticks(page, "false", 8).await;
+        let top: f64 = page
+            .evaluate(format!("{BOARD}.scrollTop"))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            top <= most + 2.0,
+            "the board scrolled past its end into the dragged card's overflow"
+        );
+        in_front(page, async {
+            mouse_at(page, Kind::MouseReleased, edge, false).await;
+            Ok(())
+        })
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#order').textContent.split(' ').indexOf('0') >= 17",
+            "a drop among the cards the scroll brought in",
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("a vertical edge drag")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// 2518: as above where the page draws a classic scrollbar, which headless Chromium hides.
 #[test]
 fn a_card_dragged_below_the_columns_keeps_the_board_width_with_a_classic_scrollbar() {

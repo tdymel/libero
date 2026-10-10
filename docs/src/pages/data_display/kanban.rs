@@ -73,7 +73,7 @@ pub fn KanbanPage() -> Element {
                     "A card sent to another column by the menu lands at its end, and focus follows to its Move to button. A dragged card lands where it was let go, and its handle keeps focus.",
                     "One status region for the board says each lift, move, drop and cancel, with the column and the card's place when the column changes. The words come from `SortableLabels` and `KanbanLabels` in the active `Localization`.",
                     "A drag starts after 4px of pointer movement (8px on touch). Only the handle takes a touch: a swipe on the rest of a card scrolls. The column under the card's centre takes it; let go off the board, it goes back.",
-                    "On a board wider than its container, a card dragged near a side edge scrolls the board that way.",
+                    "On a board wider than its container, or with a height of its own that its columns outgrow, a card dragged near an edge scrolls the board that way. Up and down only once the card has moved toward that edge.",
                     "In a narrow column the move buttons wrap below the card's content.",
                 ])
                 .must([
@@ -82,7 +82,7 @@ pub fn KanbanPage() -> Element {
                 .example("A task board where each `KanbanCard` has `label: title`. On the \"Write\" card, Move to column opens a menu of the columns; picking Done moves the card to the end of Done, the status region says so, and focus lands on the card's Move to button there.")
                 .limits([
                     "The keyboard drag moves a card within its column only. Moving to another column is the Move to menu.",
-                    "A drag scrolls the board sideways only, not the page: to reach a card or column above or below the window, use the Move to menu.",
+                    "A drag scrolls the board, not the page: to reach a card or column beyond the window, use the Move to menu.",
                     "A board with a height of its own scrolls its cards by wheel and touch; the scrollbar's gutter stays reserved, so a drag never changes the board's width.",
                     "Columns keep their place: the board has no column reorder.",
                     "In a filtered column a dragged card lands just before the next card shown, or just after the last one; Move to lands after the last card shown, before any hidden ones that follow.",

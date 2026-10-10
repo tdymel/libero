@@ -15,19 +15,27 @@ pub const ROUTES: Routes = &[
     ("/kanban/capped", || rsx! { CappedPage {} }),
 ];
 
-/// A 200px board whose one column holds 20 cards, most of them below the board's edge.
+/// A 200px board whose one column holds 20 cards, most of them below the board's edge;
+/// `#order` lists the cards.
 #[component]
 fn CappedPage() -> Element {
+    let mut cards: Signal<Vec<Vec<usize>>> = use_signal(|| vec![(0..20).collect()]);
+    let order = cards.read()[0]
+        .iter()
+        .map(usize::to_string)
+        .collect::<Vec<_>>()
+        .join(" ");
     rsx! {
-        Kanban { id: "board", sx: sx().height("200px"), onmove: |_: KanbanMove| {},
+        Kanban { id: "board", sx: sx().height("200px"), onmove: move |step: KanbanMove| step.apply(&mut cards.write()),
             KanbanColumn { index: 0, label: "Long",
-                for index in 0..20 {
-                    KanbanCard { key: "{index}", index, id: "card-{index}", label: "Card {index}",
-                        Text { "Card {index}" }
+                for (index, card) in cards()[0].clone().into_iter().enumerate() {
+                    KanbanCard { key: "{card}", index, id: "card-{card}", label: "Card {card}",
+                        Text { "Card {card}" }
                     }
                 }
             }
         }
+        Text { id: "order", "{order}" }
     }
 }
 

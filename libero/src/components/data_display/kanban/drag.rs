@@ -23,8 +23,34 @@ use crate::{
 
 type Mounted = Option<Rc<MountedData>>;
 
-/// The auto-scroll tick near a side edge. Natively each costs a thread, only while there.
+/// The auto-scroll tick near an edge. Natively each costs a thread, only while there.
 const AUTO_SCROLL_MS: u64 = 40;
+
+/// The least and most scroll offset along each axis, measured before the lifted card's
+/// transform widened the board's overflow: an axis with no overflow is `(0, 0)`.
+#[derive(Clone, Copy, PartialEq)]
+struct ScrollRange {
+    x: (f64, f64),
+    y: (f64, f64),
+}
+
+impl ScrollRange {
+    /// Px per tick the board scrolls each way with the pointer at `client` in `board`. Up
+    /// and down only toward the edge the pointer travelled to (`moved_y` since the press),
+    /// so a card lifted in an edge zone stays put.
+    fn step(&self, board: Rect, client: (f64, f64), moved_y: f64) -> (f64, f64) {
+        let scrolls = |(least, most): (f64, f64)| most > least;
+        let x = match scrolls(self.x) {
+            true => edge_scroll_step(client.0, board.x, board.width),
+            false => 0.0,
+        };
+        let y = match scrolls(self.y) {
+            true => edge_scroll_step(client.1, board.y, board.height),
+            false => 0.0,
+        };
+        (x, if y * moved_y > 0.0 { y } else { 0.0 })
+    }
+}
 
 /// A card's place and nodes. Not its `ElementHandle`s: the board reading those is a cross-scope read.
 #[derive(Clone)]
@@ -43,13 +69,11 @@ struct Lifted {
     id: usize,
     lanes: Lanes,
     label: String,
-    /// The board's rect when it scrolls sideways, else `None`.
+    /// The board's rect, `None` when it could not be read.
     board: Option<Rect>,
     /// The board's scroll offset at the lift.
     scroll: (f64, f64),
-    /// The least and most `scrollLeft`, measured before the lifted card's
-    /// transform widened the board's overflow.
-    scroll_range: (f64, f64),
+    scroll_range: ScrollRange,
 }
 
 /// The card just dropped at `column`, `index`: it slides in from `offset` px (1129).
@@ -114,8 +138,8 @@ pub(super) struct BoardDrag {
     pressed: CopyValue<Option<usize>>,
     lifted: Signal<Option<Lifted>>,
     travel: Signal<(f64, f64)>,
-    /// Px the board scrolled sideways since the lift: the cards moved the other way.
-    scrolled: Signal<f64>,
+    /// Px the board scrolled since the lift: the cards moved the other way.
+    scrolled: Signal<(f64, f64)>,
     settle: Signal<Option<Settle>>,
     /// Starts a card's measure at its press.
     press: Callback<usize>,
@@ -225,40 +249,45 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
     let mut pressed = use_hook(|| CopyValue::new(None::<usize>));
     let mut lifted = use_signal(|| None::<Lifted>);
     let mut travel = use_signal(|| (0.0_f64, 0.0_f64));
-    let mut scrolled = use_signal(|| 0.0_f64);
+    let mut scrolled = use_signal(|| (0.0_f64, 0.0_f64));
     let mut settle = use_signal(|| None::<Settle>);
     // A release can land before the measure: (measuring, released).
     let mut starting = use_hook(|| CopyValue::new((false, false)));
 
     let target = use_memo(move || {
         let (dx, dy) = travel();
-        lifted.read().as_ref()?.lanes.target(dx + scrolled(), dy)
+        let (sx, sy) = scrolled();
+        lifted.read().as_ref()?.lanes.target(dx + sx, dy + sy)
     });
 
-    // Near a side edge the board scrolls by `edge` px per tick, its cards' geometry with it.
-    let mut edge = use_hook(|| CopyValue::new(0.0_f64));
+    // Near an edge the board scrolls by `edge` px per tick, its cards' geometry with it.
+    let mut edge = use_hook(|| CopyValue::new((0.0_f64, 0.0_f64)));
     let auto_scroll = use_interval(
         move || {
             let step = *edge.peek();
-            let Some((from, (least, most))) = lifted
+            let Some((from, range)) = lifted
                 .peek()
                 .as_ref()
                 .map(|up| (up.scroll, up.scroll_range))
             else {
                 return;
             };
-            let now = from.0 + *scrolled.peek();
-            let next = (now + step).clamp(least, most);
+            let (sx, sy) = *scrolled.peek();
+            let now = (from.0 + sx, from.1 + sy);
+            let next = (
+                (now.0 + step.0).clamp(range.x.0, range.x.1),
+                (now.1 + step.1).clamp(range.y.0, range.y.1),
+            );
             if next == now {
                 return;
             }
-            let _ = element.scroll_to(next, from.1);
+            let _ = element.scroll_to(next.0, next.1);
             let at = element.scroll_offset();
             spawn(async move {
-                if let Ok((x, _)) = at.await
+                if let Ok((x, y)) = at.await
                     && lifted.peek().is_some()
                 {
-                    scrolled.set(x - from.0);
+                    scrolled.set((x - from.0, y - from.1));
                 }
             });
         },
@@ -331,15 +360,26 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
                 lanes_read,
             )
             .await;
-            let content = content.map_or(0.0, |size| size.width);
+            let content = content.map_or((0.0, 0.0), |size| (size.width, size.height));
             let scroll = scroll.unwrap_or_default();
-            // A board that fits has nothing to scroll: no ticks.
-            let board = board.filter(|board| content > board.width + 0.5);
-            let most = board.map_or(0.0, |board| content - board.width);
+            // An axis that fits has nothing to scroll: no ticks.
+            let overflow = |content: f64, extent: f64| match content > extent + 0.5 {
+                true => content - extent,
+                false => 0.0,
+            };
+            let (most_x, most_y) = board.map_or((0.0, 0.0), |board| {
+                (
+                    overflow(content.0, board.width),
+                    overflow(content.1, board.height),
+                )
+            });
             // Right to left, `scrollLeft` runs from 0 down to minus the overflow.
-            let scroll_range = match rtl {
-                true => (-most, 0.0),
-                false => (0.0, most),
+            let scroll_range = ScrollRange {
+                x: match rtl {
+                    true => (-most_x, 0.0),
+                    false => (0.0, most_x),
+                },
+                y: (0.0, most_y),
             };
             let mut lanes = Vec::with_capacity(lanes_read.len());
             for ((list, cards), indices) in lanes_read.into_iter().zip(indices) {
@@ -385,17 +425,18 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
             return;
         };
         let (dx, dy) = *travel.peek();
-        let dx = dx + *scrolled.peek();
+        let (sx, sy) = *scrolled.peek();
+        let (dx, dy) = (dx + sx, dy + sy);
         let lanes = &ended.lanes;
         let from = (lanes.from_column, lanes.from);
         // Let go off the board, it goes back.
         let landed = commit.then(|| lanes.target(dx, dy)).flatten();
         let to = landed.unwrap_or(from);
-        edge.set(0.0);
+        edge.set((0.0, 0.0));
         auto_scroll.stop();
         lifted.set(None);
         travel.set((0.0, 0.0));
-        scrolled.set(0.0);
+        scrolled.set((0.0, 0.0));
         pressed.set(None);
         let count = lanes.lanes[to.0].cards.len();
         let label = &ended.label;
@@ -485,12 +526,14 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
         onmove: use_callback(move |step: DragMove| {
             let delta = step.delta();
             travel.set((delta.x, delta.y));
-            let board = lifted.peek().as_ref().and_then(|up| up.board);
-            let next = board.map_or(0.0, |board| {
-                edge_scroll_step(step.client.x, board.x, board.width)
+            let next = lifted.peek().as_ref().map_or((0.0, 0.0), |up| {
+                let client = (step.client.x, step.client.y);
+                up.board.map_or((0.0, 0.0), |board| {
+                    up.scroll_range.step(board, client, delta.y)
+                })
             });
             edge.set(next);
-            match (next != 0.0, auto_scroll.active()) {
+            match (next != (0.0, 0.0), auto_scroll.active()) {
                 (true, false) => auto_scroll.start(),
                 (false, true) => auto_scroll.stop(),
                 _ => {}
@@ -680,7 +723,8 @@ pub(super) fn use_board_card(
         let up = lifted.as_ref()?;
         if up.id == id {
             let (dx, dy) = travel();
-            return Some((dx + scrolled(), dy));
+            let (sx, sy) = scrolled();
+            return Some((dx + sx, dy + sy));
         }
         let at = column();
         let slot = up.lanes.slot(at, index)?;
@@ -716,5 +760,44 @@ pub(super) fn use_board_card(
         offset,
         settle,
         settled: use_hook(|| CopyValue::new(false)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const BOARD: Rect = Rect {
+        x: 0.0,
+        y: 100.0,
+        width: 600.0,
+        height: 200.0,
+    };
+
+    fn range(x: f64, y: f64) -> ScrollRange {
+        ScrollRange {
+            x: (0.0, x),
+            y: (0.0, y),
+        }
+    }
+
+    #[test]
+    fn a_board_scrolls_only_along_the_axis_that_overflows() {
+        let at_bottom = (300.0, 296.0);
+        assert_eq!(range(0.0, 0.0).step(BOARD, at_bottom, 50.0), (0.0, 0.0));
+        assert_eq!(range(0.0, 500.0).step(BOARD, at_bottom, 50.0).0, 0.0);
+        assert!(range(0.0, 500.0).step(BOARD, at_bottom, 50.0).1 > 0.0);
+        assert!(range(400.0, 0.0).step(BOARD, (596.0, 200.0), 0.0).0 > 0.0);
+        assert_eq!(range(400.0, 0.0).step(BOARD, (596.0, 296.0), 50.0).1, 0.0);
+    }
+
+    #[test]
+    fn a_card_lifted_in_an_edge_zone_scrolls_up_or_down_only_once_it_travels_there() {
+        let range = range(0.0, 500.0);
+        assert_eq!(range.step(BOARD, (300.0, 296.0), 0.0), (0.0, 0.0));
+        assert_eq!(range.step(BOARD, (300.0, 296.0), -20.0), (0.0, 0.0));
+        assert!(range.step(BOARD, (300.0, 296.0), 3.0).1 > 0.0);
+        assert!(range.step(BOARD, (300.0, 104.0), -3.0).1 < 0.0);
+        assert_eq!(range.step(BOARD, (300.0, 104.0), 3.0), (0.0, 0.0));
     }
 }

@@ -130,8 +130,9 @@ parts work.
 - A drag starts after 4px of pointer movement (8px on touch). Only the handle
   takes a touch: a swipe on the rest of a card scrolls. The column under the
   card's centre takes it; let go off the board, it goes back.
-- On a board wider than its container, a card dragged near a side edge scrolls
-  the board that way.
+- On a board wider than its container, or with a height of its own that its
+  columns outgrow, a card dragged near an edge scrolls the board that way. Up
+  and down only once the card has moved toward that edge.
 - In a narrow column the move buttons wrap below the card's content.
 
 ### You must
@@ -150,8 +151,8 @@ button there.
 
 - The keyboard drag moves a card within its column only. Moving to another
   column is the Move to menu.
-- A drag scrolls the board sideways only, not the page: to reach a card or
-  column above or below the window, use the Move to menu.
+- A drag scrolls the board, not the page: to reach a card or column beyond the
+  window, use the Move to menu.
 - A board with a height of its own scrolls its cards by wheel and touch; the
   scrollbar's gutter stays reserved, so a drag never changes the board's width.
 - Columns keep their place: the board has no column reorder.

@@ -1866,13 +1866,20 @@ async fn a_menu_pin_moves_the_column<D: Driver>(d: &mut D, _route: &str) -> Resu
     })
     .await?;
 
-    // Moved to the other edge, then unpinned: no inset of its old edge stays (3132).
-    for (label, pin, insets) in [
-        ("Pin to end", Some("end"), &["inset-inline-start:auto;"][..]),
+    // Moved to the other edge, then unpinned: no inset of its old edge stays (3132, 3149:
+    // the body cells too, Origin's before Supplier's).
+    for (label, pin, insets, cell) in [
+        (
+            "Pin to end",
+            Some("end"),
+            &["inset-inline-start:auto;"][..],
+            Some("tbody td[data-pin=end]"),
+        ),
         (
             "Unpin",
             None,
             &["inset-inline-start:auto;", "inset-inline-end:auto;"][..],
+            None,
         ),
     ] {
         d.click("button[aria-label=\"Origin column options\"]")
@@ -1889,6 +1896,14 @@ async fn a_menu_pin_moves_the_column<D: Driver>(d: &mut D, _route: &str) -> Resu
                 && insets.iter().all(|inset| style.contains(inset)))
         })
         .await?;
+        if let Some(cell) = cell {
+            eventually(d, &format!("Origin's body cell after {label}"), async |d| {
+                let style = d.attr(cell, "style").await?;
+                let style = style.unwrap_or_default().replace(' ', "");
+                Ok(insets.iter().all(|inset| style.contains(inset)))
+            })
+            .await?;
+        }
     }
     Ok(())
 }
