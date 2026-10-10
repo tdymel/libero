@@ -172,6 +172,35 @@ fn a_focused_child_of_aspect_ratio_keeps_its_ring() {
     });
 }
 
+/// A full-width `Container` draws its ring inside its box, so a clipping parent keeps all of
+/// it (todo 2975). The ring must be drawn at all, or the bound holds for nothing.
+#[test]
+fn a_focused_container_keeps_its_ring_inside() {
+    block_on(async {
+        let fixture = Fixture::open("/layout", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#ring-container").await.unwrap();
+        page.evaluate("document.getElementById('ring-container').focus()")
+            .await
+            .unwrap();
+
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.activeElement.id === 'ring-container' \
+                 && getComputedStyle(document.activeElement).outlineStyle !== 'none' \
+                 && ({RING_CLIPPED}) <= 0"
+            ),
+            "the Container's ring inside its clip",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("the Container ring").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The px between a row Flex's first two children.
 fn gap_of(id: &str) -> String {
     format!(

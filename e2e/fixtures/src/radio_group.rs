@@ -5,7 +5,10 @@ use libero::components::{
     FieldStatus, Fieldset, Flex, OptionList, Options, Radio, RadioGroup, Text,
 };
 
-use crate::{Routes, common::Between};
+use crate::{
+    Routes,
+    common::{Between, Tick},
+};
 
 pub const ROUTES: Routes = &[
     ("/radio-group", || rsx! { RadioGroupPage {} }),
@@ -34,6 +37,7 @@ fn RadioFieldsetPage() -> Element {
             }
         }
         Text { id: "picked", "{picked}" }
+        Tick {}
     }
 }
 

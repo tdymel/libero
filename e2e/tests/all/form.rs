@@ -5,7 +5,7 @@ use anyhow::{Result, ensure};
 use chromiumoxide::Page;
 use e2e::browser::Scheme;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
+use e2e::driver::{Driver, eventually, eventually_focused, eventually_text, tick};
 use e2e::passes::{contrast, focus, keyboard, pointer};
 use e2e::{Fixture, Viewport, wait};
 
@@ -444,13 +444,6 @@ e2e::scenario!(
     a_status_in_onsubmit_shows_the_summary
 );
 
-/// Round-trips through the fixture's event queue, which runs the Form's pending effects
-/// first: the `n`th call reads `n` in `#ticks`.
-async fn after_effects<D: Driver>(d: &mut D, n: u32) -> Result<()> {
-    d.click("#tick").await?;
-    eventually_text(d, "#ticks", &n.to_string(), "the form's effects to run").await
-}
-
 /// Todo 2573: a status that arrives later shows one summary with the latest text, after two
 /// submits too; a rule broken after the submit shows none. A reset stops the wait.
 async fn a_late_status_shows_the_summary<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -463,7 +456,7 @@ async fn a_late_status_shows_the_summary<D: Driver>(d: &mut D, _route: &str) -> 
         Ok(d.attr("#code", "aria-invalid").await?.as_deref() == Some("true"))
     })
     .await?;
-    after_effects(d, 1).await?;
+    tick(d).await?;
     ensure!(
         !d.exists(SUMMARY).await?,
         "a rule broken after a valid submit showed the summary"
@@ -493,7 +486,7 @@ async fn a_reset_stops_the_wait<D: Driver>(d: &mut D, _route: &str) -> Result<()
         Ok(d.attr("#name", "aria-invalid").await?.as_deref() == Some("true"))
     })
     .await?;
-    after_effects(d, 1).await?;
+    tick(d).await?;
     ensure!(
         !d.exists(SUMMARY).await?,
         "a status after a reset showed the summary"

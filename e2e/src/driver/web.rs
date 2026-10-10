@@ -297,8 +297,13 @@ impl Driver for Web {
         };
         use futures::StreamExt;
 
-        // Inside the run's profile, which the runner removes (todo 2000).
-        let dir = crate::browser::chrome_profile().join("chooser");
+        // Inside the run's profile, which the runner removes (todo 2000). A directory per
+        // pick: parallel tests rewrote one shared file under a page reading it (2983).
+        static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+        let n = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let dir = crate::browser::chrome_profile()
+            .join("chooser")
+            .join(n.to_string());
         std::fs::create_dir_all(&dir)?;
         let mut paths = Vec::new();
         for (name, text) in files {

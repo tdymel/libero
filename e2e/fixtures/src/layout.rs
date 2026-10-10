@@ -75,6 +75,12 @@ fn LayoutPage() -> Element {
             Center { id: "stage", position: "relative", min_height: "64px",
                 "Centred"
                 Float { id: "float", placement: "top-end", LBox { component: "span", "New" } }
+                Float { id: "float-start", placement: "top-start", LBox { component: "span", "Hot" } }
+                Float { id: "float-middle", placement: "center-start", LBox { component: "span", "Mid" } }
+            }
+            // The clip is the full-width box the inset ring must stay inside (2975).
+            div { id: "clip", style: "overflow: hidden",
+                Container { id: "ring-container", tabindex: "-1", "A focusable container." }
             }
             AspectRatio { id: "ratio", ratio: 16.0 / 9.0,
                 LBox { id: "ratio-link", component: "a", href: "#ratio", "Play the video" }

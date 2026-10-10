@@ -3,7 +3,7 @@
 //! system back zone opens, mirrored under RTL, inside a scrolling `ScrollArea`.
 
 use anyhow::Result;
-use e2e::driver::{Driver, Platform, eventually};
+use e2e::driver::{Driver, Platform, eventually, tick};
 
 async fn text_is<D: Driver>(d: &mut D, selector: &str, expected: &str) -> Result<()> {
     eventually(d, &format!("{selector} to read {expected:?}"), async |d| {
@@ -21,7 +21,7 @@ async fn reports_the_direction<D: Driver>(d: &mut D, _route: &str) -> Result<()>
     let (x, y) = pad_centre(d).await?;
     // Short of the 48px distance: nothing.
     d.swipe_from(x, y, 30.0, 0.0).await?;
-    d.settle().await?;
+    tick(d).await?;
     text_is(d, "#last", "none").await?;
     d.swipe_from(x, y, 100.0, 10.0).await?;
     text_is(d, "#last", "Right").await?;
@@ -31,7 +31,7 @@ async fn reports_the_direction<D: Driver>(d: &mut D, _route: &str) -> Result<()>
 
 async fn ignores_a_mouse<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.drag("#pad", 120.0, 0.0).await?;
-    d.settle().await?;
+    tick(d).await?;
     text_is(d, "#last", "none").await
 }
 
@@ -54,7 +54,7 @@ async fn opens_from_the_band<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         d.swipe_from(IN_BACK_ZONE, y, 120.0, 0.0).await?;
     }
     d.swipe_from(IN_BAND + 120.0, y, -120.0, 0.0).await?;
-    d.settle().await?;
+    tick(d).await?;
     text_is(d, "#opens", "0").await?;
     d.swipe_from(IN_BAND, y, 120.0, 0.0).await?;
     text_is(d, "#opens", "1").await?;
@@ -68,7 +68,7 @@ async fn opens_from_the_right_under_rtl<D: Driver>(d: &mut D, _route: &str) -> R
     let (vw, vh) = d.viewport().await?;
     let y = vh / 2.0;
     d.swipe_from(IN_BAND, y, 120.0, 0.0).await?;
-    d.settle().await?;
+    tick(d).await?;
     text_is(d, "#opens", "0").await?;
     d.swipe_from(vw - IN_BAND, y, -120.0, 0.0).await?;
     text_is(d, "#opens", "1").await

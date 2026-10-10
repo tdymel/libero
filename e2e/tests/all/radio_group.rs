@@ -4,7 +4,7 @@
 use anyhow::Result;
 use e2e::archetypes::RadioSet;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually_focused, eventually_text};
+use e2e::driver::{Driver, eventually_focused, eventually_text, tick};
 use e2e::passes::target_size::MINIMUM;
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, passes::keyboard};
@@ -52,7 +52,7 @@ e2e::scenario!(
 async fn a_disabled_fieldset_blocks_the_radio<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click("[data-slot=circle]").await?;
     d.click("[data-slot=label]").await?;
-    d.settle().await?;
+    tick(d).await?;
     eventually_text(d, "#picked", "false", "a click on the circle and the label").await
 }
 

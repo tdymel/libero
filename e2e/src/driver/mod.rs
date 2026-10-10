@@ -303,6 +303,15 @@ pub async fn linger<D: Driver>(d: &mut D, rounds: usize) {
     }
 }
 
+/// Returns once the page ran what was queued before this call: a round trip through the
+/// fixture's `Tick` (`#tick`, `#ticks`), for a check that something did *not* happen.
+pub async fn tick<D: Driver>(d: &mut D) -> Result<()> {
+    let seen = d.text("#ticks").await?;
+    let next = seen.trim().parse::<u32>().context("#ticks is no count")? + 1;
+    d.click("#tick").await?;
+    eventually_text(d, "#ticks", &next.to_string(), "a tick round trip").await
+}
+
 /// Focus lands on `selector`, or fails naming what holds it.
 pub async fn eventually_focused<D: Driver>(d: &mut D, selector: &str, during: &str) -> Result<()> {
     let settled = eventually(

@@ -3,7 +3,7 @@
 use dioxus::prelude::*;
 use libero::components::Button;
 
-use crate::Routes;
+use crate::{Routes, common::Tick};
 
 pub const ROUTES: Routes = &[("/refused", || rsx! { RefusedPage {} })];
 
@@ -25,5 +25,6 @@ fn RefusedPage() -> Element {
         }
         Button { id: "last", "Last" }
         span { id: "clicks", "{clicks}" }
+        Tick {}
     }
 }

@@ -130,6 +130,31 @@ fn an_end_float_sits_at_the_end() {
     );
 }
 
+/// A `top-start` float sits in the start corner (2972).
+#[test]
+fn a_start_float_sits_at_the_start() {
+    mirrors(
+        "/layout",
+        "const f = document.getElementById('float-start').getBoundingClientRect(); \
+         const s = document.getElementById('stage').getBoundingClientRect(); \
+         return rtl ? s.right - f.right < f.left - s.left : f.left - s.left < s.right - f.right;",
+        "the float in the start corner",
+    );
+}
+
+/// A `center-start` float sits at the start edge, halfway down (2972).
+#[test]
+fn a_centred_float_sits_midway_at_the_start() {
+    mirrors(
+        "/layout",
+        "const f = document.getElementById('float-middle').getBoundingClientRect(); \
+         const s = document.getElementById('stage').getBoundingClientRect(); \
+         const start = rtl ? s.right - f.right : f.left - s.left; \
+         return Math.abs(start) < 1 && Math.abs((f.top - s.top) - (s.bottom - f.bottom)) < 1;",
+        "the float at the start edge, vertically centred",
+    );
+}
+
 /// A textarea's counter sits in its bottom end corner (1078).
 #[test]
 fn a_textarea_counter_sits_in_the_end_corner() {

@@ -11,7 +11,7 @@ use libero::components::{
     not_empty, use_form,
 };
 
-use crate::Routes;
+use crate::{Routes, common::Tick};
 
 pub const ROUTES: Routes = &[
     ("/form", || rsx! { FormPage {} }),
@@ -31,12 +31,10 @@ fn ServerStatusPage(at_once: bool) -> Element {
     let mut code = use_signal(|| "abcd".to_string());
     let mut server = use_signal(|| FieldStatus::Valid);
     let mut submits = use_signal(|| 0u32);
-    let mut ticks = use_signal(|| 0u32);
     let form = use_form();
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
             span { id: "submits", "{submits}" }
-            span { id: "ticks", "{ticks}" }
             Form::<()> {
                 form,
                 onsubmit: move |_| {
@@ -63,9 +61,7 @@ fn ServerStatusPage(at_once: bool) -> Element {
             }
             Button { id: "break", onclick: move |_| code.set("a".to_string()), "Break code" }
             Button { id: "reset", onclick: move |_| form.reset(), "Reset" }
-            // The queue runs the Form's pending effects before this event, so `#ticks`
-            // reading n means they have run.
-            Button { id: "tick", onclick: move |_| ticks += 1, "Tick" }
+            Tick {}
         }
     }
 }
