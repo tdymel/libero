@@ -17,7 +17,28 @@ pub const ROUTES: Routes = &[
     ("/drawer/bottom-tall", || rsx! { BottomTallDrawerPage {} }),
     ("/drawer/guarded", || rsx! { GuardedDrawerPage {} }),
     ("/drawer/long-title", || rsx! { LongTitleDrawerPage {} }),
+    ("/drawer/titled", || rsx! { TitledDrawerPage {} }),
 ];
+
+/// Todo 3004: `DrawerOptions::title` is the panel's heading and its name.
+#[component]
+fn TitledDrawerPage() -> Element {
+    let nav = use_drawer(
+        DrawerOptions {
+            title: Some("Filters".into()),
+            ..Default::default()
+        },
+        |s: ModalScope<()>| {
+            rsx! {
+                Button { id: "drawer-close", onclick: move |_| s.close(), "Done" }
+            }
+        },
+    );
+
+    rsx! {
+        Button { id: "open-drawer", onclick: move |_| { nav.open(); }, "Open filters" }
+    }
+}
 
 /// Todo 2985: a long word in a `Title` in the docs' column of drawer content.
 #[component]

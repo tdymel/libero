@@ -5,7 +5,7 @@ use libero::{
     LiberoProvider,
     components::{ActionIcon, Button, Flex, HoverCard, OptionList, Options, Tabs, Toolbar},
     theme::{
-        HoverCardDefaults, Side, TabsActivation, TabsDefaults, Theme, ToolbarDefaults,
+        Align, HoverCardDefaults, Side, TabsActivation, TabsDefaults, Theme, ToolbarDefaults,
     },
 };
 
@@ -16,6 +16,7 @@ pub const ROUTES: Routes = &[("/theme-defaults", || rsx! { ThemedPage {} })];
 static THEMED: Theme = Theme {
     hover_card: HoverCardDefaults {
         side: Side::Top,
+        align: Align::End,
         ..Theme::DEFAULT.hover_card
     },
     tabs: TabsDefaults {
@@ -32,7 +33,8 @@ enum Section {
     Billing,
 }
 
-/// The card has room only above its trigger when it opens on the theme's side.
+/// The card has room only above its trigger when it opens on the theme's side, and
+/// the trigger sits right of the card's start so the themed `End` align has room too.
 #[component]
 fn ThemedPage() -> Element {
     let mut section = use_signal(|| Section::Account);
@@ -41,10 +43,12 @@ fn ThemedPage() -> Element {
         LiberoProvider { themes: &THEMED,
             Flex { direction: "column", gap: "md", max_width: "420px",
                 div { style: "height: 240px" }
-                HoverCard {
-                    aria_label: "Ada Lovelace",
-                    content: rsx! { "Wrote the first algorithm." },
-                    Button { id: "trigger", variant: "outlined", "Ada Lovelace" }
+                div { style: "margin-left: 240px",
+                    HoverCard {
+                        aria_label: "Ada Lovelace",
+                        content: rsx! { "Wrote the first algorithm." },
+                        Button { id: "trigger", variant: "outlined", "Ada" }
+                    }
                 }
                 Tabs {
                     aria_label: "Settings",

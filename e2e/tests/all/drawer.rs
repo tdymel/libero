@@ -121,6 +121,33 @@ e2e::scenario!(
     android_only("1275: no Back key off Android")
 );
 
+/// Todo 3004: the title is a heading in the panel and names it.
+#[test]
+fn a_drawer_title_is_its_heading_and_name() {
+    block_on(async {
+        let fixture = Fixture::open("/drawer/titled", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 3).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        e2e::wait::for_visible(page, DIALOG).await.unwrap();
+        let facts: Vec<Option<String>> = page
+            .evaluate(
+                "(() => { const d = document.querySelector('[role=dialog]'); \
+                 const h = document.getElementById(d.getAttribute('aria-labelledby')); \
+                 return [d.getAttribute('aria-label'), h && h.tagName + ':' + h.textContent]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(facts, [None, Some("H2:Filters".into())]);
+        fixture.console.assert_clean("the titled drawer").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// An end drawer docks to the left under `dir="rtl"`.
 #[test]
 fn an_end_drawer_docks_left_in_rtl() {

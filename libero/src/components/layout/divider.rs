@@ -11,10 +11,10 @@ use crate::{
         layout::use_box,
     },
     hooks::{use_css, use_id, use_theme},
-    str_enum::str_enum,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
-        ColorCss, ColorShade, ColorValue, CssVar, DIVIDER_LINE, DividerDefaults, Size, SizeCss,
+        ColorCss, ColorShade, ColorValue, CssVar, DIVIDER_LINE, DividerDefaults, LabelPosition,
+        Size, SizeCss,
     },
 };
 
@@ -24,16 +24,6 @@ fn divider_color_value(value: &ThemeAwareValue) -> ThemeAwareValue {
             ThemeAwareValue::ColorValue(ColorValue::Shade(*color, ColorShade::S3))
         }
         other => other.clone(),
-    }
-}
-
-str_enum! {
-    /// Where a [`Divider`]'s label sits along the line.
-    pub enum LabelPosition {
-        Start = "start",
-        #[default]
-        Center = "center",
-        End = "end",
     }
 }
 
@@ -177,6 +167,7 @@ base_props! {
         /// Line thickness. Defaults to the theme's `divider.size`, `xs` out of the box.
         #[props(default, into)]
         size: Input<Size>,
+        /// Unset, the theme's `divider.label_position`, `center` out of the box.
         #[props(default, into)]
         label_position: Input<LabelPosition>,
         /// Margin on both sides of the line.
@@ -209,8 +200,8 @@ pub fn Divider(props: DividerProps) -> Element {
     let orientation = props.orientation.copied_or(Orientation::Horizontal);
     let vertical = orientation == Orientation::Vertical;
     let has_label = props.children.is_some();
-    let label_position = props.label_position.copied_or_default();
     let theme = use_theme();
+    let label_position = props.label_position.copied_or(theme.divider.label_position);
     let size = props.size.copied_or(theme.divider.size);
 
     let divider_states = props

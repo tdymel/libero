@@ -104,7 +104,7 @@ pub fn StepperPage() -> Element {
                     prop("onstepclick", "EventHandler<T>").doc("Called with the picked step. Without it the steps are plain text with no tab stops of their own; a scrolling strip with no clickable step is one tab stop itself."),
                     prop("allow_next_steps", "bool").default("false").doc("With `onstepclick`, lets steps not reached yet be picked too."),
                     prop("orientation", "Orientation").default("horizontal").doc("`vertical` puts each step's content under the step itself."),
-                    prop("label_position", "StepLabelPosition").default("side").doc("`side` or `below` the marker. Ignored when vertical. Under 120px a step (360px for three), `side` draws as `below`."),
+                    prop("label_position", "StepLabelPosition").default(theme.stepper.label_position.as_str()).doc("`side` or `below` the marker. Ignored when vertical. Under 120px a step (360px for three), `side` draws as `below`."),
                     prop("size", "Size").default(theme.stepper.size.as_str()).doc("Marker, type and spacing."),
                     prop("color", "ThemeAwareValue").default("primary").doc("The current and completed markers, and the connectors behind them."),
                     prop("parts", "Parts<StepperPart>")
@@ -160,7 +160,7 @@ pub fn StepperPage() -> Element {
                         .default("horizontal"),
                     Control::toggle("label_position", ["side", "below"])
                         .labels(["Side", "Below"])
-                        .default("side")
+                        .default(theme.stepper.label_position.as_str())
                         .hidden_when(|values| values.str("orientation") == "vertical"),
                     Control::sizes("size")
                         .default(theme.stepper.size.as_str()),

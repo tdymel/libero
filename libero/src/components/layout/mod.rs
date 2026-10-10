@@ -16,13 +16,14 @@ mod sidebar;
 mod splitter;
 mod transition;
 
+pub use crate::theme::LabelPosition;
 pub use aspect_ratio::{AspectRatio, AspectRatioProps};
 pub use r#box::{Box, BoxProps};
 pub(crate) use r#box::{BoxStyle, box_style, use_box};
 pub use center::{Center, CenterProps};
 pub use collapse::{Collapse, CollapseProps};
 pub use container::{Container, ContainerProps};
-pub use divider::{Divider, DividerPart, DividerProps, LabelPosition};
+pub use divider::{Divider, DividerPart, DividerProps};
 pub use flex::{Flex, FlexDirection, FlexProps, FlexWrap};
 pub use float::{Float, FloatProps, Placement};
 pub use grid::{

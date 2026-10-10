@@ -1,4 +1,4 @@
-//! A theme's `side`, `activation` and `loop_focus` reach the components that leave them unset.
+//! A theme's `side`, `align`, `activation` and `loop_focus` reach the components that leave them unset.
 
 use anyhow::{Result, ensure};
 use e2e::driver::{Driver, eventually, eventually_focused};
@@ -18,6 +18,22 @@ async fn the_hover_card_opens_on_the_themed_side<D: Driver>(d: &mut D, _route: &
         }
         let (card, trigger) = (d.rect("[role=dialog]").await?, d.rect("#trigger").await?);
         Ok(card.y + card.height <= trigger.y + 1.0)
+    })
+    .await
+}
+
+/// The card's end meets the trigger's end, as the themed `align: End` says (the default is start).
+async fn the_hover_card_aligns_to_the_themed_end<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.hover("#trigger").await?;
+    eventually(d, "the card's end under the trigger's end", async |d| {
+        if !d.exists("[role=dialog]").await?
+            || d.style("[role=dialog]", "visibility").await? != "visible"
+        {
+            return Ok(false);
+        }
+        let (card, trigger) = (d.rect("[role=dialog]").await?, d.rect("#trigger").await?);
+        Ok(card.width > trigger.width + 8.0
+            && (card.x + card.width - (trigger.x + trigger.width)).abs() <= 1.0)
     })
     .await
 }
@@ -46,6 +62,11 @@ e2e::scenario!(
     an_unset_hover_card_side_follows_the_theme,
     "/theme-defaults",
     the_hover_card_opens_on_the_themed_side
+);
+e2e::scenario!(
+    an_unset_hover_card_align_follows_the_theme,
+    "/theme-defaults",
+    the_hover_card_aligns_to_the_themed_end
 );
 e2e::scenario!(
     an_unset_tabs_activation_follows_the_theme,

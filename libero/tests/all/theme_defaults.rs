@@ -678,3 +678,46 @@ mod tabs_color {
         assert_ne!(followed, html(false, false));
     }
 }
+
+/// An unset `Divider` label sits where the theme says; a caller's own wins.
+mod divider_label_position {
+    use crate::common::render;
+
+    use dioxus::prelude::*;
+    use libero::{
+        LiberoProvider,
+        components::Divider,
+        theme::{DividerDefaults, LabelPosition, Theme},
+    };
+
+    static END: Theme = Theme {
+        divider: DividerDefaults {
+            label_position: LabelPosition::End,
+            ..Theme::DEFAULT.divider
+        },
+        ..Theme::DEFAULT
+    };
+
+    fn has_state(html: &str, token: &str) -> bool {
+        html.split("data-state=\"").skip(1).any(|rest| {
+            rest.split('"')
+                .next()
+                .is_some_and(|states| states.split(' ').any(|state| state == token))
+        })
+    }
+
+    #[test]
+    fn an_unset_divider_label_position_follows_the_theme() {
+        fn app() -> Element {
+            rsx! { LiberoProvider { themes: &END, Divider { "or" } } }
+        }
+        fn explicit() -> Element {
+            rsx! { LiberoProvider { themes: &END, Divider { label_position: "start", "or" } } }
+        }
+        let html = render(app);
+        assert!(has_state(&html, "label-end"), "{html}");
+        let html = render(explicit);
+        assert!(has_state(&html, "label-start"), "{html}");
+        assert!(!has_state(&html, "label-end"), "{html}");
+    }
+}

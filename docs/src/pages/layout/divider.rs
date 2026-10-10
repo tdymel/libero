@@ -43,7 +43,7 @@ pub fn DividerPage() -> Element {
                     .doc("The direction of the rule. A vertical rule needs a flex row parent."),
                 prop("size", "Size").default(theme.divider.size.as_str()).doc("Line thickness."),
                 prop("label_position", "LabelPosition")
-                    .default("center")
+                    .default(theme.divider.label_position.as_str())
                     .doc("Where the label sits along the rule."),
                 prop("spacing", "ThemeAwareValue")
                     .default("none")
@@ -81,7 +81,7 @@ pub fn DividerPage() -> Element {
                     // Meaningless without a label.
                     Control::toggle("label_position", ["start", "center", "end"])
                         .labels(["Start", "Center", "End"])
-                        .default("center")
+                        .default(theme.divider.label_position.as_str())
                         .hidden_when(|values| values.str("with_label") != "true"),
                     // Unset draws muted.4, which bare `muted` (shade 3) is not: the unset swatch is painted muted.4.
                     Control::color("color").with_unset()

@@ -122,7 +122,7 @@ pub fn ToolbarPage() -> Element {
                     Control::toggle("orientation", ["horizontal", "vertical"])
                         .labels(["Horizontal", "Vertical"])
                         .default("horizontal"),
-                    Control::switch("loop_focus").default("true"),
+                    Control::switch("loop_focus").default(theme.toolbar.loop_focus.to_string()),
                     Control::switch("focus_from").code(|_, values| match focus_from(values) {
                         true => vec!["focus_from: editor".to_string()],
                         false => vec![],

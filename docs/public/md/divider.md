@@ -103,6 +103,7 @@ reads a separator named "Advanced". A rule that only spaces two cards takes
 | Field | Type | Description |
 |---|---|---|
 | `size` | `Size` | Default `size`, `xs`. |
+| `label_position` | `LabelPosition` | Default `label_position`, `center`. |
 | `spacing` | `Option<Size>` | Default margin on both sides of the rule. `None` means `0`. |
 | `thicknesses` | `Sizes<u16>` | Line thickness in pixels per size step. |
 

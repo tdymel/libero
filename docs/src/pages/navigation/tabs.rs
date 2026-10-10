@@ -167,7 +167,7 @@ pub fn TabsPage() -> Element {
                         .default(theme.tabs.size.as_str()),
                     Control::toggle("activation", ["automatic", "manual"])
                         .labels(["Automatic", "Manual"])
-                        .default("automatic"),
+                        .default(theme.tabs.activation.as_str()),
                     Control::switch("full_width"),
                     // The flag lives inside `options`, so the switch stands
                     // for one named tab rather than for a prop of its own.

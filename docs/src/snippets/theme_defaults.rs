@@ -4,18 +4,27 @@ use super::*;
 
 use libero::theme::Theme;
 
-/// The look props `component` takes from the theme, with the value `Theme::DEFAULT` gives them.
+/// The look props `component` takes from the theme, with the value `Theme::DEFAULT` gives them,
+/// printed by `$print` (`as_str` for an enum, `to_string` for a number or a flag).
 macro_rules! looks {
-    ($component:expr; $($($name:literal),+ => $field:ident: $($prop:ident)+;)+) => {
+    ($component:expr, $print:ident; $($($name:literal),+ => $field:ident: $($prop:ident)+;)+) => {
         match $component {
-            $($($name)|+ => vec![$((stringify!($prop), Theme::DEFAULT.$field.$prop.as_str())),+],)+
+            $($($name)|+ => vec![$((stringify!($prop), Theme::DEFAULT.$field.$prop.$print().to_string())),+],)+
             _ => Vec::new(),
         }
     };
 }
 
-fn theme_looks(component: &str) -> Vec<(&'static str, &'static str)> {
-    looks! { component;
+fn theme_looks(component: &str) -> Vec<(&'static str, String)> {
+    let mut looks = theme_enum_looks(component);
+    looks.extend(looks! { component, to_string;
+        "Toolbar" => toolbar: loop_focus;
+    });
+    looks
+}
+
+fn theme_enum_looks(component: &str) -> Vec<(&'static str, String)> {
+    looks! { component, as_str;
         "Accordion" => accordion: size;
         "ActionIcon" => action_icon: size radius;
         "Alert" => alert: variant radius;
@@ -39,11 +48,11 @@ fn theme_looks(component: &str) -> Vec<(&'static str, &'static str)> {
         "DataList" => data_list: size;
         "Dialog" => dialog: size;
         "DirectionToggle" => direction_toggle: variant;
-        "Divider" => divider: size;
+        "Divider" => divider: size label_position;
         "Drawer", "DrawerOptions" => drawer: size;
         "FileField" => file_field: variant size radius;
         "Header" => header: size;
-        "HoverCard" => hover_card: radius;
+        "HoverCard" => hover_card: side align radius;
         "Icon" => icon: variant size radius;
         "ImageList" => image_list: variant radius;
         "Indicator" => indicator: size color radius;
@@ -71,10 +80,10 @@ fn theme_looks(component: &str) -> Vec<(&'static str, &'static str)> {
         "Skeleton" => skeleton: radius;
         "Slider", "RangeSlider" => slider: size color;
         "Splitter" => splitter: size;
-        "Stepper" => stepper: size;
+        "Stepper" => stepper: size label_position;
         "Switch" => switch: variant size radius color;
         "Table" => table: size;
-        "Tabs" => tabs: size color;
+        "Tabs" => tabs: size color activation;
         "TagsField" => tags_field: size radius;
         "Text" => text: size;
         "ThemeSwitcher" => theme_switcher: variant;
@@ -102,7 +111,7 @@ fn pages_print_the_theme_defaults() {
             let looks = theme_looks(component);
             for (name, default) in group.defaults() {
                 if let Some((_, expected)) = looks.iter().find(|(prop, _)| *prop == name)
-                    && default != *expected
+                    && default != expected.as_str()
                 {
                     problems.push(format!(
                         "{route}: `{component}` `{name}` row reads {default:?}, the theme {expected:?}"
@@ -114,7 +123,7 @@ fn pages_print_the_theme_defaults() {
             let looks = theme_looks(&demo.component);
             for control in &demo.controls {
                 if let Some((_, expected)) = looks.iter().find(|(prop, _)| *prop == control.name)
-                    && control.default != *expected
+                    && control.default != expected.as_str()
                 {
                     problems.push(format!(
                         "{route}: `{}` control `{}` starts at {:?}, the theme {expected:?}",

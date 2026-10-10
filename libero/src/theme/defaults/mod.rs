@@ -192,7 +192,9 @@ pub use date::{
 pub(crate) use dialog::DIALOG_DEFAULT_SIZE;
 pub use dialog::{DIALOG_SIZE, DialogDefaults};
 pub use direction_toggle::DirectionToggleDefaults;
-pub use divider::{DIVIDER_LINE, DIVIDER_SPACING, DIVIDER_THICKNESS, DividerDefaults};
+pub use divider::{
+    DIVIDER_LINE, DIVIDER_SPACING, DIVIDER_THICKNESS, DividerDefaults, LabelPosition,
+};
 pub use drawer::{DRAWER_SIZE, DrawerDefaults};
 pub(crate) use field::FIELD_CAPTIONS;
 pub use field::{
