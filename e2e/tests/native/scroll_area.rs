@@ -516,3 +516,39 @@ fn end_reaches_the_bottom_once() {
     page.press(e2e::native::Key::End);
     assert_eq!(reached_after(&mut page), "1");
 }
+
+fn one_axis() -> Element {
+    rsx! {
+        div { width: "200px", height: "80px",
+            ScrollArea { id: "vertical", focusable: true, aria_label: "Vertical",
+                div { id: "tall", width: "600px", height: "400px", "Tall" }
+            }
+        }
+        div { width: "200px", height: "80px",
+            ScrollArea { id: "unscrolled", focusable: true, aria_label: "None", scrollbars: "none",
+                div { id: "clipped", height: "400px", "Clipped" }
+            }
+        }
+    }
+}
+
+/// Todo 3079: a key scrolls only an axis the area scrolls, as a browser's
+/// `overflow: hidden` does.
+#[test]
+fn a_key_leaves_an_axis_the_area_does_not_scroll() {
+    use e2e::native::Key;
+    let mut page = mount(one_axis);
+    page.focus("#vertical");
+    let start = page.rect("#tall");
+    page.press(Key::ArrowRight);
+    page.press(Key::ArrowDown);
+    let moved = page.rect("#tall");
+    assert_eq!(moved.0, start.0, "ArrowRight scrolled the hidden x axis");
+    assert!(moved.1 < start.1, "ArrowDown did not scroll");
+
+    page.focus("#unscrolled");
+    let start = page.rect("#clipped");
+    page.press(Key::ArrowDown);
+    page.press(Key::End);
+    assert_eq!(page.rect("#clipped"), start, "a `none` area scrolled");
+}
