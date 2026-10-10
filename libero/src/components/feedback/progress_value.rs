@@ -27,8 +27,17 @@ pub(crate) fn value_now(value: f64, min: f64, max: f64) -> f64 {
     }
 }
 
+/// The rounded share, held at 99% until the value is full.
 pub(crate) fn percentage(fraction: f64) -> String {
-    format!("{}%", (fraction * 100.0).round())
+    let percent = (fraction * 100.0).round();
+    format!(
+        "{}%",
+        if fraction < 1.0 {
+            percent.min(99.0)
+        } else {
+            percent
+        }
+    )
 }
 
 /// Whole numbers without a decimal tail: "3 of 10", not "3 of 10.0". `None` for a
@@ -126,6 +135,12 @@ mod tests {
         assert_eq!(percentage(0.0), "0%");
         assert_eq!(percentage(0.425), "43%");
         assert_eq!(percentage(1.0), "100%");
+    }
+
+    #[test]
+    fn the_percentage_reads_100_only_when_full() {
+        assert_eq!(percentage(0.995), "99%");
+        assert_eq!(percentage(0.9999), "99%");
     }
 
     #[test]

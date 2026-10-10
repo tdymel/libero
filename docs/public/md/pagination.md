@@ -85,7 +85,7 @@ parts work.
 
 ### You must
 
-- Keep `theme.pagination.gap` above zero: at `xs` the controls are 22px and
+- Keep `theme.pagination.gap` at 2px or more: at `xs` the controls are 22px and
   meet the 24px target size only through the gap.
 
 ### Example

@@ -30,6 +30,11 @@ pub fn paper_sx() -> Sx {
         // No underline, so `component: "a"` reads as a card, not as a link.
         .display("block")
         .text_decoration("none")
+        // A `button` surface drops the user agent's border, font, padding and centring.
+        .border("0")
+        .font("inherit")
+        .padding("0")
+        .text_align("inherit")
         // A plain surface inside a gradient one: its buttons keep their own colour.
         .var(SURFACE_LABEL, "initial")
         .when(
@@ -238,6 +243,8 @@ pub fn Paper(props: PaperProps) -> Element {
         None => style,
     };
 
+    let component = props.component.copied_or_default();
+
     use_box()
         .framework_sx(props.framework_sx.unwrap_or(&PAPER_BASE_SX))
         .class(&props.class)
@@ -246,11 +253,8 @@ pub fn Paper(props: PaperProps) -> Element {
         .variables(&props.variables)
         .style(style)
         .prepare()
-        .render(
-            props.component.copied_or_default(),
-            props.attributes,
-            props.children,
-        )
+        .attr_default("type", (component == HtmlTag::Button).then_some("button"))
+        .render(component, props.attributes, props.children)
 }
 
 /// Custom CSS rides any step's state class: the override replaces its value.

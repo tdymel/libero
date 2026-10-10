@@ -45,6 +45,41 @@ fn only_a_pressable_paper_tints_under_the_pointer() {
 }
 
 #[test]
+fn a_button_paper_is_no_submit_and_drops_the_user_agent_look() {
+    block_on(async {
+        let fixture = Fixture::open("/paper", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#press").await.unwrap();
+
+        let look: (Option<String>, String, String, String) = page
+            .evaluate(
+                "(() => { const e = document.querySelector('#press'); const s = getComputedStyle(e); \
+                 return [e.getAttribute('type'), s.borderTopWidth, s.paddingLeft, s.textAlign]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(look.0.as_deref(), Some("button"));
+        assert_eq!(
+            (look.1.as_str(), look.2.as_str()),
+            ("0px", "0px"),
+            "{look:?}"
+        );
+        assert_ne!(look.3, "center", "{look:?}");
+
+        let bordered: String = page
+            .evaluate("getComputedStyle(document.querySelector('#press-bordered')).borderTopWidth")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(bordered, "1px", "bordered still wins the reset");
+        fixture.close().await.unwrap();
+    });
+}
+
+#[test]
 fn a_tinted_glass_paper_keeps_its_cues_under_the_pointer() {
     block_on(async {
         let fixture = Fixture::open("/paper", Viewport::Desktop).await.unwrap();

@@ -21,6 +21,10 @@ fn PaperPage() -> Element {
                 sx: sx().padding("lg"),
                 Text { "Link" }
             }
+            form {
+                Paper { id: "press", component: "button", Text { "Press" } }
+                Paper { id: "press-bordered", component: "button", bordered: true, Text { "Bordered" } }
+            }
             Paper {
                 id: "gradient-link",
                 component: "a",

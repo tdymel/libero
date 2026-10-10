@@ -371,8 +371,8 @@ base_props! {
     }
 }
 
-/// A horizontal strip with a hidden scrollbar and a step control at each end
-/// while there is more content that way.
+/// A horizontal strip with a hidden scrollbar and a step control at each end,
+/// shown by default only while there is more content that way (see `controls`).
 ///
 /// ```
 /// # use dioxus::prelude::*;

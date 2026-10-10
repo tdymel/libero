@@ -6,8 +6,8 @@ use crate::components::layout::GridSpan;
 
 /// The caption strip over, or under, one cell, holding whatever the caller renders.
 ///
-/// The default scrim is a gradient: a second text line over a bright photo can
-/// fall to 1.8:1. A `text-shadow` rescues it.
+/// The default scrim is a gradient floored at 60% black, so white text over a
+/// white photo keeps 5.74:1.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;

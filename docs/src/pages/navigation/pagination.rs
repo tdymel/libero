@@ -64,7 +64,7 @@ pub fn PaginationPage() -> Element {
                     "The page names come from the localization's `PaginationLabels`, and `label` overrides them.",
                 ])
                 .must([
-                    "Keep `theme.pagination.gap` above zero: at `xs` the controls are 22px and meet the 24px target size only through the gap.",
+                    "Keep `theme.pagination.gap` at 2px or more: at `xs` the controls are 22px and meet the 24px target size only through the gap.",
                 ])
                 .example("A results pager: each page number and enabled arrow is a button and a tab stop, and the next arrow reads \"Go to next page\" from `PaginationLabels` instead of a bare arrow."),
             lead: rsx! {

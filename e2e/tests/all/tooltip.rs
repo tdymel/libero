@@ -17,6 +17,8 @@ const AWAY: pointer::Point = pointer::Point { x: 2.0, y: 2.0 };
 const OPEN: &str = "#save-tip:not([hidden])";
 /// The touch open delay (libero's `LONG_PRESS`).
 const LONG_PRESS_MS: u32 = 500;
+/// How long a touch-opened bubble stays after the release (libero's `TOUCH_LINGER`).
+const LINGER_MS: u32 = 1500;
 /// The route's close delay.
 const CLOSE_MS: u32 = 10;
 
@@ -105,8 +107,24 @@ async fn tab_focus_opens<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 /// closes a while after the release.
 async fn long_press_opens<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     ensure!(!d.exists(OPEN).await?, "open at rest");
-    d.long_press(TRIGGER, 800).await?;
+    if !d.hold_timers(&[LONG_PRESS_MS, LINGER_MS]).await? {
+        d.long_press(TRIGGER, 800).await?;
+        is_open(d, true, "a long press").await?;
+        return is_open(d, false, "the release").await;
+    }
+    d.touch_down(TRIGGER).await?;
+    eventually(d, "a held touch to arm the open", async |d| {
+        Ok(d.armed(LONG_PRESS_MS).await? == 1)
+    })
+    .await?;
+    d.fire_timers(LONG_PRESS_MS).await?;
     is_open(d, true, "a long press").await?;
+    d.touch_up(TRIGGER).await?;
+    eventually(d, "the release to arm the close", async |d| {
+        Ok(d.armed(LINGER_MS).await? == 1)
+    })
+    .await?;
+    d.fire_timers(LINGER_MS).await?;
     is_open(d, false, "the release").await
 }
 
