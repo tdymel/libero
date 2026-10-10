@@ -1,4 +1,3 @@
-use super::CLEAR_NAME;
 use super::dropdown_parts::{SELECT_DROPDOWN, list_dropdown_parts};
 use crate::components::{
     Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls, field_props, prop,
@@ -320,7 +319,7 @@ pub fn SelectPage() -> Element {
                     "With `searchable` the search box takes over typing and holds the focus while the list is open.",
                     "Android's Back button closes the list as Escape does, rather than the app.",
                     "From 200 rows the list draws only the rows in view. The highlighted row stays drawn for `aria-activedescendant`, each row carries `aria-posinset` and `aria-setsize`, and a grouped row is described by its heading.",
-                    CLEAR_NAME,
+                    clear_name!("Fruit"),
                 ])
                 .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."])
                 .example("A country field, `Select { label: \"Country\", .. }`: on the closed field, typing \"ger\" picks Germany in place as a native select does, and Enter opens the list for browsing."),

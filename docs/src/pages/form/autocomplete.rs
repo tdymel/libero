@@ -1,4 +1,3 @@
-use super::CLEAR_NAME;
 use super::dropdown_parts::{SUGGESTION_DROPDOWN, list_dropdown_parts};
 use crate::components::{
     Control, Demo, DemoFile, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls,
@@ -183,7 +182,7 @@ pub fn AutocompletePage() -> Element {
                     "Nothing is highlighted until you arrow onto a row, so Enter on text that matches nothing still submits the form.",
                     "Android's Back button closes the list as Escape does, rather than the app.",
                     "A polite status region says how many options the typed text left (`ComboboxLabels::results`, \"2 results\"), or \"No results\".",
-                    CLEAR_NAME,
+                    clear_name!("City"),
                 ])
                 .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."])
                 .example("A city field, `Autocomplete { label: \"City\", .. }`: typing \"ber\" opens the list and the status says \"2 results\", Down highlights Berlin, and Enter picks it."),

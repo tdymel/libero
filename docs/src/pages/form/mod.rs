@@ -1,3 +1,15 @@
+/// The "Libero handles" line of every field whose `clear_button` takes the field's label,
+/// named with the page's example label.
+macro_rules! clear_name {
+    ($label:literal) => {
+        concat!(
+            "The clear button is named by the field's `label`, \"Clear ",
+            $label,
+            "\" in the example, so two clear buttons on one form tell apart. Without a `label` it is \"Clear\" alone."
+        )
+    };
+}
+
 mod autocomplete;
 mod cascader;
 mod checkbox;
@@ -33,9 +45,6 @@ mod switch;
 mod tags_field;
 mod text_field;
 mod textarea;
-
-/// The "Libero handles" line of every field whose `clear_button` takes the field's label.
-const CLEAR_NAME: &str = "The clear button is named by the field's `label`, \"Clear Fruit\", so two clear buttons on one form tell apart. Without a `label` it is \"Clear\" alone.";
 
 pub use autocomplete::AutocompletePage;
 pub use cascader::CascaderPage;

@@ -64,7 +64,11 @@ pub fn FloatPage() -> Element {
                     Code { source: "offset_x" }
                     " and a negative "
                     Code { source: "offset_y" }
-                    " hang it off the corner."
+                    " hang it off the corner in left-to-right text. Under "
+                    Code { source: "dir=rtl" }
+                    " that corner is at the left edge, so use a negative "
+                    Code { source: "offset_x" }
+                    "."
                 }
             },
             Demo {

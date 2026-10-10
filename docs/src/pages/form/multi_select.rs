@@ -1,4 +1,3 @@
-use super::CLEAR_NAME;
 use super::dropdown_parts::{SELECT_DROPDOWN, list_dropdown_parts};
 use crate::components::{
     Control, Demo, DemoFile, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls,
@@ -304,7 +303,7 @@ pub fn MultiSelectPage() -> Element {
                     "With `searchable` the search box takes over typing and holds the focus while the list is open.",
                     "Android's Back button closes the list as Escape does, rather than the app.",
                     "From 200 rows the list draws only the rows in view. The highlighted row stays drawn for `aria-activedescendant`, each row carries `aria-posinset` and `aria-setsize`, and a grouped row is described by its heading.",
-                    CLEAR_NAME,
+                    clear_name!("Toppings"),
                 ])
                 .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."])
                 .example("A tags field, `MultiSelect { label: \"Tags\", .. }`: Enter opens the list, Space ticks rows and keeps it open, and after closing it Left and Right move over the chips and Delete removes one."),

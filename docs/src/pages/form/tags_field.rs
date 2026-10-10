@@ -1,4 +1,3 @@
-use super::CLEAR_NAME;
 use super::dropdown_parts::{SUGGESTION_DROPDOWN, list_dropdown_parts};
 use crate::components::{
     Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props, readonly_prop, status_prop,
@@ -173,7 +172,7 @@ pub fn TagsFieldPage() -> Element {
                         .default("false")
                         .doc("Shows an x at the end of the frame that empties the field."),
                     prop("tag", "Callback<SelectionArgs<String>, Element>")
-                        .default("Chip")
+                        .default("removable_chip")
                         .doc("Draws one tag, remove control included. `args.remove` removes it. Make that control a `<button>` with `tabindex: \"-1\"`, and leave it out when `args.disabled` or `args.readonly` is set."),
                     prop("label", "Caption").doc("The field's caption, above the control."),
                     prop("description", "Caption").doc("Between the label and the control. What to enter."),
@@ -190,7 +189,7 @@ pub fn TagsFieldPage() -> Element {
                     (TagsFieldPart::Description, "The caption between the label and the control."),
                     (TagsFieldPart::Frame, "The bordered box around the control."),
                     (TagsFieldPart::Control, "The element the label names."),
-                    (TagsFieldPart::Trailing, "The slot after the control: a chevron, a toggle."),
+                    (TagsFieldPart::Trailing, "The slot after the control. It holds only the clear button, when `clearable` shows it."),
                     (TagsFieldPart::Tag, "One tag's chip, before the draft input."),
                     (TagsFieldPart::Helper, "The caption under the control."),
                     (TagsFieldPart::Status, "The validation message."),
@@ -210,7 +209,7 @@ pub fn TagsFieldPage() -> Element {
                 .handles([
                     "The whole field is one tab stop, plus the clear button when `clearable` shows it.",
                     "With `suggestions`, Android's Back button closes the list as Escape does, rather than the app.",
-                    CLEAR_NAME,
+                    clear_name!("Topics"),
                 ])
                 .must([
                     "A custom `tag` must make its remove control a button with `tabindex: \"-1\"`. The arrow keys focus it, and without the tabindex each tag adds a tab stop.",

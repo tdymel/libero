@@ -321,7 +321,8 @@ impl BoxStyle {
 }
 
 /// The styled element every component is built from: any tag, `sx`, states and
-/// the focus ring. A filled focusable `Box` rings itself in its fill's colours (todo 630).
+/// the focus ring. On a filled focusable `Box` only the ring's halo follows the fill; its stripe
+/// stays white on the surround (1.11:1), so inset it with `focus_visible(sx().outline_offset("-4px"))`.
 ///
 /// ```
 /// # use dioxus::prelude::*;

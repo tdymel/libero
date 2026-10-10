@@ -9,7 +9,9 @@ Description: Anchors its child to a corner or edge of the nearest positioned anc
 Anchors its child to a corner or edge of the nearest positioned ancestor, like a
 badge on an avatar. The parent sets `position: relative` itself. The offsets
 follow the page, not the placement, so on a `top-end` badge a positive
-`offset_x` and a negative `offset_y` hang it off the corner.
+`offset_x` and a negative `offset_y` hang it off the corner in left-to-right
+text. Under `dir=rtl` that corner is at the left edge, so use a negative
+`offset_x`.
 
 ## Usage
 

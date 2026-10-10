@@ -217,8 +217,9 @@ The dropdown is portaled out of the field, so its parts take the
 - From 200 rows the list draws only the rows in view. The highlighted row stays
   drawn for `aria-activedescendant`, each row carries `aria-posinset` and
   `aria-setsize`, and a grouped row is described by its heading.
-- The clear button is named by the field's `label`, "Clear Fruit", so two clear
-  buttons on one form tell apart. Without a `label` it is "Clear" alone.
+- The clear button is named by the field's `label`, "Clear Toppings" in the
+  example, so two clear buttons on one form tell apart. Without a `label` it is
+  "Clear" alone.
 
 ### Example
 

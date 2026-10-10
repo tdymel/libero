@@ -80,7 +80,7 @@ The field tells screen readers why it refused a tag, but shows nothing. The
 | `name` | `FieldName<Vec<String>>` | - | Posts each tag under this name. A path such as `Article::FIELDS.topics()` also binds the list to the surrounding `Form`'s value when the field has no `onchange`. |
 | `placeholder` | `String` | - | Shown while there are no tags. |
 | `clearable` | `bool` | `false` | Shows an x at the end of the frame that empties the field. |
-| `tag` | `Callback<SelectionArgs<String>, Element>` | `Chip` | Draws one tag, remove control included. `args.remove` removes it. Make that control a `<button>` with `tabindex: "-1"`, and leave it out when `args.disabled` or `args.readonly` is set. |
+| `tag` | `Callback<SelectionArgs<String>, Element>` | `removable_chip` | Draws one tag, remove control included. `args.remove` removes it. Make that control a `<button>` with `tabindex: "-1"`, and leave it out when `args.disabled` or `args.readonly` is set. |
 | `label` | `Caption` | - | The field's caption, above the control. |
 | `description` | `Caption` | - | Between the label and the control. What to enter. |
 | `helper` | `Caption` | - | Under the control. Formatting rules, or what the entry affects. |
@@ -110,7 +110,7 @@ explains how parts work.
 | `TagsFieldPart::Description` | `description` | The caption between the label and the control. |
 | `TagsFieldPart::Frame` | `frame` | The bordered box around the control. |
 | `TagsFieldPart::Control` | `control` | The element the label names. |
-| `TagsFieldPart::Trailing` | `trailing` | The slot after the control: a chevron, a toggle. |
+| `TagsFieldPart::Trailing` | `trailing` | The slot after the control. It holds only the clear button, when `clearable` shows it. |
 | `TagsFieldPart::Tag` | `tag` | One tag's chip, before the draft input. |
 | `TagsFieldPart::Helper` | `helper` | The caption under the control. |
 | `TagsFieldPart::Status` | `status` | The validation message. |
@@ -149,8 +149,9 @@ The dropdown is portaled out of the field, so its parts take the
   it.
 - With `suggestions`, Android's Back button closes the list as Escape does,
   rather than the app.
-- The clear button is named by the field's `label`, "Clear Fruit", so two clear
-  buttons on one form tell apart. Without a `label` it is "Clear" alone.
+- The clear button is named by the field's `label`, "Clear Topics" in the
+  example, so two clear buttons on one form tell apart. Without a `label` it is
+  "Clear" alone.
 
 ### You must
 

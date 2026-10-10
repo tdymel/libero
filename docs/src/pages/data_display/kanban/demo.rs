@@ -173,7 +173,10 @@ fn Header(label: &'static str, count: usize) -> Element {
     rsx! {
         Flex { direction: "row", justify: "space-between",
             Text { component: "span", size: "sm", "{label}" }
-            Badge { variant: "tonal", color: "muted", size: "sm", circle: true, "{count}" }
+            Badge { variant: "tonal", color: "muted", size: "sm", circle: true,
+                "{count}"
+                VisuallyHidden { if count == 1 { " issue" } else { " issues" } }
+            }
         }
     }
 }

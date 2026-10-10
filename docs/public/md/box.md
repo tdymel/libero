@@ -93,9 +93,11 @@ Like every component, `Box` also takes the shared props `sx`, `class`, `style`,
 
 ### Example
 
-A clickable card, `Box { component: "button", r#type: "button", .. }`: Tab
-reaches it and Enter or Space press it, which a clickable `div` would not
-allow.
+A clickable tile with a short text label,
+`Box { component: "button", r#type: "button", "Archive" }`: Tab reaches it and
+Enter or Space press it, which a clickable `div` would not allow. A `button`
+takes phrasing content only and its name is everything inside it, so keep a
+card with a heading, paragraphs or other controls out of one.
 
 ## Theme defaults
 
