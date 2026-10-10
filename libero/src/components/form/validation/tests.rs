@@ -309,7 +309,72 @@ fn the_summary_lists_field_errors_and_composite_errors() {
     let messages: Vec<_> = summary.iter().map(|item| item.message.as_str()).collect();
     assert_eq!(messages, ["Email: Required", "Passwords differ"]);
     assert!(summary[0].target.is_some());
-    assert!(summary[1].target.is_none());
+    assert_eq!(summary[1].target, summary[0].target);
+}
+
+#[test]
+fn a_composite_rule_naming_only_unmounted_fields_blocks_nothing() {
+    fn app() -> Element {
+        let signup = use_store(|| Signup {
+            password: "a".into(),
+            confirm: "b".into(),
+        });
+        rsx! {
+            LiberoProvider {
+                Form {
+                    value: signup,
+                    validate: [
+                        (|s: &Signup| s.password == s.confirm)
+                            .error("They differ")
+                            .on([crate::path!(Signup => confirm)]),
+                    ],
+                    Spy {}
+                    TextField { name: "email", value: "" }
+                }
+            }
+        }
+    }
+
+    let (dom, _) = mount(app);
+    dom.in_runtime(|| {
+        let scope = scope(&dom);
+        assert!(!scope.has_errors());
+        assert!(scope.summary().is_empty());
+    });
+}
+
+#[test]
+fn a_composite_rule_links_to_the_first_mounted_field_it_names() {
+    fn app() -> Element {
+        let signup = use_store(|| Signup {
+            password: "a".into(),
+            confirm: "b".into(),
+        });
+        rsx! {
+            LiberoProvider {
+                Form {
+                    value: signup,
+                    validate: [
+                        (|s: &Signup| s.password == s.confirm)
+                            .error("They differ")
+                            .on([crate::path!(Signup => confirm), crate::path!(Signup => password)]),
+                    ],
+                    Spy {}
+                    TextField { label: "Password", name: "password", value: "a" }
+                }
+            }
+        }
+    }
+
+    let (dom, _) = mount(app);
+    let summary = dom.in_runtime(|| {
+        let scope = scope(&dom);
+        assert!(scope.has_errors());
+        scope.summary()
+    });
+    assert_eq!(summary.len(), 1);
+    assert_eq!(summary[0].message, "Password: They differ");
+    assert!(summary[0].target.is_some());
 }
 
 #[test]

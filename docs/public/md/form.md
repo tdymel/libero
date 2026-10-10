@@ -117,8 +117,9 @@ fn CheckButton() -> Element {
 ## Conditional fields
 
 A field shown only for some values is a plain `if` around it. Its rules leave
-with it, so a hidden field never blocks a submit. Its value stays in the store,
-and a rule on the whole form still runs, so check the condition there too.
+with it, so a hidden field never blocks a submit, and neither does a rule whose
+`.on(..)` names only hidden fields. Its value stays in the store, and a rule on
+the whole form that names no field still runs, so check the condition there too.
 
 ```rust,ignore
 Checkbox { label: "Sign up as a company", name: Signup::FIELDS.company() }
@@ -205,6 +206,9 @@ explains how parts work. The fields take their own `parts`.
   has no text label.
 - A `Fieldset` with an error `status` is one field in error: it blocks the
   submit and has a line named by its legend.
+- A summary line of a rule with `.on(..)` links to the first field it names that
+  is on the page; a rule on the whole form that names no field links to the
+  form's first field.
 - A rule shows once focus leaves its field, not on a move inside it, such as
   from one `PinField` cell to the next. The desktop WebView cannot tell the two
   apart, so there any move shows it.

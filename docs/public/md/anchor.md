@@ -84,8 +84,9 @@ parts work.
 ### You must
 
 - Make the link text say where the link goes: it is the accessible name.
-- Keep the underline on a link inside a paragraph: with `underline: "never"`
-  it stands out by color alone.
+- Set `underline: "always"` on a link inside a paragraph: the default `hover`
+  draws it only on hover and `never` not at all, so at rest the link stands out
+  by color alone.
 
 ### Example
 

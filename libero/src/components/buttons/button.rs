@@ -13,6 +13,7 @@ use crate::{
         },
         feedback::Loader,
         layout::{render_anchor, use_box},
+        navigation::{NewTabHint, wants_new_tab_hint},
     },
     hooks::{ripple_sx, use_cache, use_gradient_style, use_ripple, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -389,6 +390,14 @@ pub fn Button(props: ButtonProps) -> Element {
                 .render(HtmlTag::A, props.attributes, label);
         }
 
+        let label = if wants_new_tab_hint(props.target.as_deref(), true) {
+            rsx! {
+                {label}
+                NewTabHint {}
+            }
+        } else {
+            label
+        };
         let mut attributes = props.attributes;
         attributes.extend(item.into_iter().flat_map(ToolbarItem::attributes));
         return render_anchor(

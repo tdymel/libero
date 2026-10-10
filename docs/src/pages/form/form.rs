@@ -172,6 +172,7 @@ pub fn FormPage() -> Element {
                     "A form becomes a `form` landmark only once it has a name. A form without a name is still valid.",
                     "Each summary line starts with its field's label, or its `aria_label` when it has no text label.",
                     "A `Fieldset` with an error `status` is one field in error: it blocks the submit and has a line named by its legend.",
+                    "A summary line of a rule with `.on(..)` links to the first field it names that is on the page; a rule on the whole form that names no field links to the form's first field.",
                     "A rule shows once focus leaves its field, not on a move inside it, such as from one `PinField` cell to the next. The desktop WebView cannot tell the two apart, so there any move shows it.",
                 ])
                 .must([
@@ -244,8 +245,10 @@ pub fn FormPage() -> Element {
                     "A field shown only for some values is a plain "
                     Code { source: "if" }
                     " around it, as the company switch shows. Its rules leave with it, so a "
-                    "hidden field never blocks a submit. Its value stays in the store, and a "
-                    "rule on the whole form still runs, so check the condition there too."
+                    "hidden field never blocks a submit, and neither does a rule whose "
+                    Code { source: ".on(..)" }
+                    " names only hidden fields. Its value stays in the store, and a rule on the "
+                    "whole form that names no field still runs, so check the condition there too."
                 }
             }
         }

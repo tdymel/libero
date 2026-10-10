@@ -6,7 +6,7 @@ use crate::{
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Anchor, NavLink},
+    components::{ActionIcon, Anchor, Button, NavLink},
 };
 
 #[derive(Clone, PartialEq, Routable)]
@@ -171,4 +171,43 @@ fn an_internal_blank_link_under_a_router_opens_a_new_tab() {
     assert_eq!(attributes["href"], "/elsewhere", "{html}");
     assert_eq!(attributes["target"], "_blank", "{html}");
     assert!(html.contains("(opens in a new tab)"), "{html}");
+}
+
+/// Todo 2996: a link-mode `Button` and `ActionIcon` announce a new tab as `Anchor` does.
+#[test]
+fn a_blank_button_and_action_icon_say_they_open_a_new_tab() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Button { to: "https://example.com", target: "_blank", "Docs" }
+                ActionIcon { aria_label: "Docs", to: "https://example.com", target: "_blank", "?" }
+                Button { to: "https://example.com", "Same" }
+                ActionIcon { aria_label: "Same", to: "https://example.com", "?" }
+            }
+        }
+    }
+
+    let html = render(app);
+    let action_icon = nth_attributes(&html, "a", 1);
+    assert_eq!(action_icon["aria-label"], "Docs (opens in a new tab)");
+    assert_eq!(nth_attributes(&html, "a", 3)["aria-label"], "Same");
+    assert_eq!(html.matches("opens in a new tab").count(), 2, "{html}");
+    assert!(html.contains("data-slot=\"new-tab\""), "{html}");
+}
+
+/// Todo 3054: without a router a relative path is `External`, but not a foreign origin.
+#[test]
+fn a_relative_link_without_a_router_gets_no_rel() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Anchor { to: "/docs", "Docs" }
+                Anchor { to: "//example.com", "Scheme-relative" }
+            }
+        }
+    }
+
+    let html = render(app);
+    assert!(!nth_attributes(&html, "a", 0).contains_key("rel"), "{html}");
+    assert_eq!(nth_attributes(&html, "a", 1)["rel"], "noopener noreferrer");
 }

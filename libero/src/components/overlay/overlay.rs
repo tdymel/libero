@@ -45,15 +45,18 @@ fn px_value(value: &ThemeAwareValue) -> Option<String> {
 }
 
 /// Dims and blurs what's behind it. Render it conditionally: there is no `open`.
+/// A click is no keyboard close, so give a closable one a button inside.
 ///
 /// ```
 /// # use dioxus::prelude::*;
-/// # use libero::components::Overlay;
+/// # use libero::components::{Button, Overlay};
 /// # fn app() -> Element {
 /// # let mut shown = use_signal(|| true);
 /// # rsx! {
 /// if shown() {
-///     Overlay { opacity: 0.6, blur: 2, onclick: move |_| shown.set(false) }
+///     Overlay { opacity: 0.6, blur: 2, onclick: move |_| shown.set(false),
+///         Button { onclick: move |_| shown.set(false), "Cancel" }
+///     }
 /// }
 /// # } }
 /// ```

@@ -13,6 +13,7 @@ use crate::{
         data_display::{Pictogram, SvgData},
         feedback::Loader,
         layout::{InternalAnchor, use_box},
+        navigation::wants_new_tab_hint,
         overlay::{Tooltip, chord_kbd, chord_words},
     },
     hooks::{
@@ -420,6 +421,13 @@ fn action_icon(mut props: ActionIconProps) -> Element {
                 .render(HtmlTag::A, props.attributes, glyph);
         }
 
+        // The name replaces the content, so the new-tab cue goes into it.
+        let aria_label = if wants_new_tab_hint(props.target.as_deref(), true) {
+            let new_tab = current_localization().anchor.new_tab;
+            aria_label.map(|label| format!("{label} {new_tab}"))
+        } else {
+            aria_label
+        };
         let mut attributes = props.attributes;
         attributes.extend(item.into_iter().flat_map(ToolbarItem::attributes));
         return rsx! {

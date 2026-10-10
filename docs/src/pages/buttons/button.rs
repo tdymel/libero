@@ -53,7 +53,7 @@ pub fn ButtonPage() -> Element {
                 prop("to", "NavigationTarget")
                     .doc("Renders a link instead of a `<button>`. Takes a path, a URL or a typed route (`Route::Foo {}`)."),
                 prop("target", "String")
-                    .doc("The link's `target` attribute."),
+                    .doc("The link's `target` attribute. `\"_blank\"` adds a small external icon and a hidden \"(opens in a new tab)\"."),
                 prop("icon", "Element")
                     .doc("Drawn before the label. It never shrinks."),
                 prop("parts", "Parts<ButtonPart>")
@@ -68,6 +68,7 @@ pub fn ButtonPage() -> Element {
             accessibility: a11y()
                 .handles([
                     "A label cut at the edge is still the full accessible name.",
+                    "A link with `target: \"_blank\"` draws a small external icon and reads a hidden \"(opens in a new tab)\".",
                     "`selected: Some(false)` announces a toggle that is off. An unset `selected` announces no state.",
                     "`focusable_when_disabled` keeps a disabled button in the Tab order, with `aria-disabled`.",
                 ])

@@ -59,7 +59,7 @@ pub fn ActionIconPage() -> Element {
                 prop("to", "NavigationTarget")
                     .doc("Renders a link instead of a `<button>`."),
                 prop("target", "String")
-                    .doc("The link's `target` attribute."),
+                    .doc("The link's `target` attribute. `\"_blank\"` adds \"(opens in a new tab)\" to the accessible name."),
                 prop("icon", "SvgData")
                     .doc("The glyph, drawn as a `Pictogram`: `pictogram_icons_lucide::x::outlined`. Wins over `children`."),
                 prop("children", "Element").doc("The icon, when it is not `SvgData`: your own svg, or any element."),
@@ -69,6 +69,7 @@ pub fn ActionIconPage() -> Element {
                     "Below 24px (a length such as `\"20px\"`) the button still takes presses in a 24x24 box centred on it.",
                     "`focusable_when_disabled` keeps a disabled button in the Tab order, with `aria-disabled`.",
                     "`tooltip` repeats the accessible name, and `shortcut` writes `aria-keyshortcuts` in the ARIA key names (`Control+B`).",
+                "A link with `target: \"_blank\"` adds \"(opens in a new tab)\" to the accessible name; the tooltip keeps the plain `aria_label`.",
                 ])
                 .must([
                     "Name the button with `aria_label`: the icon gives a screen reader nothing to read.",

@@ -284,7 +284,8 @@ impl FormScope {
     }
 
     /// One line per field error, in registration order, then one per
-    /// composite error - each linked to the first field it names.
+    /// composite error - each linked to the first mounted field it names, or to
+    /// the first field when it names none.
     pub fn summary(&self) -> Vec<SummaryItem> {
         let fields = self.fields.peek();
         let named = |name: &str| {
@@ -312,19 +313,13 @@ impl FormScope {
                 let FieldStatus::Error(message) = &issue.status else {
                     continue;
                 };
-                let item = match issue.paths.first() {
-                    Some(path) => {
-                        let target = named(path);
-                        SummaryItem {
-                            message: match target.and_then(|field| field.label.as_ref()) {
-                                Some(label) => format!("{label}: {message}"),
-                                None => message.clone(),
-                            },
-                            target: target.map(|field| field.id.clone()),
-                        }
-                    }
-                    // A `Fieldset`'s own rule: its entry shares the key, so the line goes to the group.
-                    None => match fields.get(key) {
+                if !blocks(&fields, issue) {
+                    continue;
+                }
+                let item = if issue.paths.is_empty() {
+                    // A `Fieldset`'s own rule: its entry shares the key, so the line goes to the
+                    // group. A `Form`'s own rule has no entry and goes to the first field.
+                    match fields.get(key) {
                         Some(group) => SummaryItem {
                             message: match &group.label {
                                 Some(label) => format!("{label}: {message}"),
@@ -334,9 +329,18 @@ impl FormScope {
                         },
                         None => SummaryItem {
                             message: message.clone(),
-                            target: None,
+                            target: fields.values().next().map(|field| field.id.clone()),
                         },
-                    },
+                    }
+                } else {
+                    let target = issue.paths.iter().find_map(|path| named(path));
+                    SummaryItem {
+                        message: match target.and_then(|field| field.label.as_ref()) {
+                            Some(label) => format!("{label}: {message}"),
+                            None => message.clone(),
+                        },
+                        target: target.map(|field| field.id.clone()),
+                    }
                 };
                 items.push(item);
             }
@@ -345,7 +349,8 @@ impl FormScope {
     }
 
     /// Debug builds warn about a composite rule naming a path no registered
-    /// field carries - almost always a field missing its `name`.
+    /// field carries - almost always a field missing its `name`. Such a rule
+    /// blocks nothing while none of its fields is mounted.
     pub fn warn_unknown_paths(&self) {
         if !cfg!(debug_assertions) {
             return;
@@ -371,7 +376,17 @@ fn errors_in(fields: &BTreeMap<usize, FieldEntry>, issues: &BTreeMap<usize, Vec<
         || issues
             .values()
             .flatten()
-            .any(|issue| issue.status.is_error())
+            .any(|issue| issue.status.is_error() && blocks(fields, issue))
+}
+
+/// A rule naming only unmounted fields concerns nothing on screen, like a hidden field's own rules.
+fn blocks(fields: &BTreeMap<usize, FieldEntry>, issue: &Issue) -> bool {
+    issue.paths.is_empty()
+        || issue.paths.iter().any(|path| {
+            fields
+                .values()
+                .any(|field| field.name.as_deref() == Some(path.as_str()))
+        })
 }
 
 /// Runs drop-time cleanup as the scope that owns the signals; with no runtime

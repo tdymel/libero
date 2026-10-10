@@ -24,7 +24,8 @@ fn Demo() -> Element {
 }
 ```
 
-Rendered conditionally, with a backdrop click that closes it.
+Rendered conditionally, closed by a backdrop click or by the Cancel button, which
+a keyboard reaches.
 
 ```rust
 use dioxus::prelude::*;
@@ -39,6 +40,7 @@ fn Demo() -> Element {
         if busy() {
             Overlay { blur: "4px", onclick: move |_| busy.set(false),
                 Text { "Loading..." }
+                Button { onclick: move |_| busy.set(false), "Cancel" }
             }
         }
     }
@@ -71,6 +73,8 @@ Like every component, `Overlay` also takes the shared props `sx`, `class`,
 - For a modal backdrop, use a [`Dialog`](dialog.md) in [`use_modal`](modal.md),
   which brings its own overlay. An overlay does not trap focus or hide the
   page from a screen reader.
+- Give an overlay you close on a click a keyboard close as well, such as a
+  `Button` inside it: a backdrop click alone leaves keyboard users no way out.
 
 ### Example
 
