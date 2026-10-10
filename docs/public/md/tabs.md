@@ -148,6 +148,7 @@ text name for screen readers.
 | `color` | `ThemeAwareValue` | `primary` | Indicator and selected-label color. |
 | `full_width` | `bool` | `false` | Tabs grow to fill the row, never below their label. A crowded strip still scrolls. Not themed. |
 | `activation` | `TabsActivation` | `automatic` | `Automatic` selects as the arrows move. `Manual` moves only the focus, and Enter or Space selects. Use it for slow panels. |
+| `panel_focusable` | `bool` | `true` | Whether the selected panel is a tab stop, as the APG asks when it holds no focusable content. Turn it off for a panel with its own controls. Not themed. |
 | `parts` | `Parts<TabsPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 `Tabs` also takes the shared props `sx`, `class`, `states`, and any extra HTML
@@ -189,7 +190,8 @@ explains how parts work.
 ### Libero handles
 
 - Only the selected tab is in the tab order. The selected panel is a tab stop
-  too, so content that cannot take focus stays reachable by keyboard.
+  too, so content that cannot take focus stays reachable by keyboard;
+  `panel_focusable: false` drops it for a panel that holds focusable content.
 - `aria_label` and `aria_labelledby` land on the tablist, not the root.
 - In a strip too wide for its box, the selected tab scrolls into view, also
   when `value` changes from outside.

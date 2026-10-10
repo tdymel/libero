@@ -102,6 +102,7 @@ pub fn TabsPage() -> Element {
                     prop("color", "ThemeAwareValue").default(theme.tabs.color.as_str()).doc("Indicator and selected-label color."),
                     prop("full_width", "bool").default("false").doc("Tabs grow to fill the row, never below their label. A crowded strip still scrolls. Not themed."),
                     prop("activation", "TabsActivation").default(theme.tabs.activation.as_str()).doc("`Automatic` selects as the arrows move. `Manual` moves only the focus, and Enter or Space selects. Use it for slow panels."),
+                    prop("panel_focusable", "bool").default("true").doc("Whether the selected panel is a tab stop, as the APG asks when it holds no focusable content. Turn it off for a panel with its own controls. Not themed."),
                     prop("parts", "Parts<TabsPart>")
                         .doc("Styles for the inner parts in the Style API tab, under `sx`."),
                 ])
@@ -122,7 +123,7 @@ pub fn TabsPage() -> Element {
                 .key(["Home", "End"], "Jumps to the first or last tab, selecting it as the arrows do.")
                 .key(["Enter", "Space"], "With `activation: TabsActivation::Manual`, where the arrows move only the focus: selects the focused tab.")
                 .handles([
-                    "Only the selected tab is in the tab order. The selected panel is a tab stop too, so content that cannot take focus stays reachable by keyboard.",
+                    "Only the selected tab is in the tab order. The selected panel is a tab stop too, so content that cannot take focus stays reachable by keyboard; `panel_focusable: false` drops it for a panel that holds focusable content.",
                     "`aria_label` and `aria_labelledby` land on the tablist, not the root.",
                     "In a strip too wide for its box, the selected tab scrolls into view, also when `value` changes from outside.",
                 ])
@@ -169,6 +170,7 @@ pub fn TabsPage() -> Element {
                         .labels(["Automatic", "Manual"])
                         .default(theme.tabs.activation.as_str()),
                     Control::switch("full_width"),
+                    Control::switch("panel_focusable").default("true"),
                     // The flag lives inside `options`, so the switch stands
                     // for one named tab rather than for a prop of its own.
                     Control::switch("disabled_option").code(|_, values| {
@@ -192,6 +194,7 @@ pub fn TabsPage() -> Element {
                         },
                         size: values.str("size"),
                         full_width: values.str("full_width") == "true",
+                        panel_focusable: values.str("panel_focusable") != "false",
                         activation: values.str("activation"),
                         option_label: match values.str("labels").as_str() {
                             "renamed" => Some(Callback::new(renamed)),

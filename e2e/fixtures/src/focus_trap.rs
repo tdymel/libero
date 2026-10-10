@@ -12,6 +12,7 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/focus-trap", || rsx! { StopsPage {} }),
     ("/focus-trap/radios", || rsx! { RadiosPage {} }),
+    ("/focus-trap/forms", || rsx! { FormsPage {} }),
     ("/focus-trap/nested", || rsx! { NestedPage {} }),
     ("/focus-trap/dialog", || rsx! { DialogPage {} }),
     ("/focus-trap/exit", || rsx! { ExitPage {} }),
@@ -130,6 +131,25 @@ fn RadiosPage() -> Element {
                 input { id: "s2", r#type: "radio", name: "size", value: "m" }
                 button { id: "last", "Last" }
             }
+        }
+    }
+}
+
+/// Two forms whose radios share a name, and have no value: each form is its own group.
+#[component]
+fn FormsPage() -> Element {
+    rsx! {
+        FocusTrap {
+            button { id: "first", "First" }
+            form {
+                input { id: "a1", r#type: "radio", name: "plan" }
+                input { id: "a2", r#type: "radio", name: "plan", checked: true }
+            }
+            form {
+                input { id: "b1", r#type: "radio", name: "plan" }
+                input { id: "b2", r#type: "radio", name: "plan" }
+            }
+            button { id: "last", "Last" }
         }
     }
 }

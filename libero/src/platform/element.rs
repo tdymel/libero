@@ -304,6 +304,13 @@ pub trait ElementApi {
         Err(PlatformError::Unsupported)
     }
 
+    /// Whether this element matches `selector` (`Element.matches`), so a live
+    /// state like `:checked` can be read. `Unsupported` on a WebView.
+    fn matches(&self, selector: &str) -> Result<bool, PlatformError> {
+        let _ = selector;
+        Err(PlatformError::Unsupported)
+    }
+
     /// Where a text control's selection starts (the caret), in UTF-16 units.
     /// `None` without a text selection or where the renderer cannot tell.
     fn selection_start(&self) -> Option<u32> {

@@ -51,7 +51,7 @@ fn without_web_push_it_reports_unsupported() {
         assert_eq!(push.error(), Some(PushError::Unsupported));
         assert!(!push.is_pending());
         push.unsubscribe();
-        assert_eq!(push.subscription(), None);
+        assert_eq!(push.endpoint(), None);
     });
 }
 
@@ -62,11 +62,11 @@ fn a_subscription_grants_and_an_unsubscribe_clears_it() {
     dom.in_runtime(|| {
         push.settle(Err(PushError::Failed));
         push.settle(Ok(Some(endpoint())));
-        assert_eq!(push.subscription(), Some(endpoint()));
+        assert_eq!(push.endpoint(), Some(endpoint()));
         assert_eq!(push.error(), None);
         assert_eq!(push.permission(), PermissionState::Granted);
         push.settle(Ok(None));
-        assert_eq!(push.subscription(), None);
+        assert_eq!(push.endpoint(), None);
     });
 }
 
@@ -78,6 +78,6 @@ fn a_denial_keeps_the_subscription_state() {
         push.settle(Err(PushError::Denied));
         assert_eq!(push.permission(), PermissionState::Denied);
         assert_eq!(push.error(), Some(PushError::Denied));
-        assert_eq!(push.subscription(), None);
+        assert_eq!(push.endpoint(), None);
     });
 }

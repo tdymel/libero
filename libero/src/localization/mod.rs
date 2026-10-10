@@ -2,7 +2,7 @@ mod country_names;
 mod date;
 mod fill;
 mod formats;
-mod labels;
+pub(crate) mod labels;
 mod localization;
 
 pub use date::DateLocale;

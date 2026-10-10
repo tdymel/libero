@@ -90,6 +90,25 @@ e2e::scenario!(
     desktop: skip("958: element identity on the WebView")
 );
 
+/// Radios sharing a name in two forms are two groups, and a checked one without a value counts (2340).
+async fn forms_split_a_radio_name<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually_focused(d, "#first", "mount").await?;
+    let walked = walk(d, 4, false).await?;
+    ensure!(
+        walked == ["a2", "b1", "last", "first"],
+        "Tab from First: {walked:?}"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    radio_groups_split_by_form,
+    "/focus-trap/forms",
+    forms_split_a_radio_name,
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView")
+);
+
 /// A hidden `[data-autofocus]` target took the search with it: focus stayed on Open (2299).
 async fn a_hidden_autofocus_falls_through<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click("#open").await?;

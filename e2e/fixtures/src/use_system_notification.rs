@@ -63,6 +63,6 @@ fn Notifying() -> Element {
         p { id: "push-supported", "{push.is_supported()}" }
         p { id: "push-error", "{push.error():?}" }
         p { id: "push-pending", "{push.is_pending()}" }
-        p { id: "subscription", "{push.subscription().is_some()}" }
+        p { id: "subscription", "{push.endpoint().is_some()}" }
     }
 }

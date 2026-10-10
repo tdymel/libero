@@ -72,6 +72,28 @@ fn tabs_wire_the_selected_tab_to_its_panel_and_render_only_that_one() {
 }
 
 #[test]
+fn a_panel_that_is_not_focusable_leaves_the_tab_order() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Tabs {
+                    value: Section::Account,
+                    onchange: move |_| {},
+                    panel_focusable: false,
+                    panel: |_: Section| rsx! { "body" },
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+
+    assert_eq!(body.matches("tabindex=\"0\"").count(), 1); // the tab alone
+    assert!(body.contains("role=\"tabpanel\""));
+}
+
+#[test]
 fn a_rich_tab_label_draws_its_content_and_still_names_the_tab() {
     fn app() -> Element {
         rsx! {

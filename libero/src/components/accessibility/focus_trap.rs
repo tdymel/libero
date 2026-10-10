@@ -1,5 +1,6 @@
 use std::{
     cell::{Cell, RefCell},
+    collections::HashSet,
     rc::Rc,
 };
 
@@ -112,8 +113,35 @@ impl Drop for Registered {
     }
 }
 
-/// Which of `items` are Tab stops: a native radio group is one, its checked
-/// radio (matched by `:checked` and `value`) or else its first.
+/// Each item's form as a number, 0 outside one: the items inside a form are one
+/// run per form in document order, so the runs' sizes tell which is whose.
+fn form_owners(root: &ElementHandle, items: &[Box<dyn ElementApi>]) -> Vec<usize> {
+    let forms = root.query_selector_all("form").unwrap_or_default();
+    if forms.is_empty() {
+        return vec![0; items.len()];
+    }
+    let mut runs = forms.iter().enumerate().map(|(at, form)| {
+        let inside = form.query_selector_all(FOCUSABLE_SELECTOR);
+        (at + 1, inside.map_or(0, |inside| inside.len()))
+    });
+    let (mut owner, mut left) = (0, 0);
+    items
+        .iter()
+        .map(|item| {
+            if !item.matches("form *").unwrap_or(false) {
+                return 0;
+            }
+            while left == 0 {
+                (owner, left) = runs.next().unwrap_or((usize::MAX, usize::MAX));
+            }
+            left -= 1;
+            owner
+        })
+        .collect()
+}
+
+/// Which of `items` are Tab stops: a native radio group (same `name` and form)
+/// is one, its `:checked` radio or else its first.
 pub(crate) fn tab_stops(root: &ElementHandle, items: &[Box<dyn ElementApi>]) -> Vec<bool> {
     let attr = |item: &dyn ElementApi, name| item.attribute(name).ok().flatten();
     let group = |item: &dyn ElementApi| {
@@ -123,32 +151,36 @@ pub(crate) fn tab_stops(root: &ElementHandle, items: &[Box<dyn ElementApi>]) -> 
             .flatten()
             .filter(|name| !name.is_empty())
     };
-    let checked: Vec<(String, String)> = root
-        .query_selector_all(&format!("{FOCUSABLE_SELECTOR}:checked"))
-        .unwrap_or_default()
+    let names: Vec<Option<String>> = items.iter().map(|item| group(item.as_ref())).collect();
+    if names.iter().all(Option::is_none) {
+        return vec![true; items.len()];
+    }
+    let owners = form_owners(root, items);
+    let keys: Vec<Option<(&String, usize)>> = names
         .iter()
-        .filter_map(|item| {
-            let value = attr(item.as_ref(), "value").unwrap_or_else(|| "on".into());
-            Some((group(item.as_ref())?, value))
-        })
+        .zip(&owners)
+        .map(|(name, owner)| Some((name.as_ref()?, *owner)))
         .collect();
-    let mut seen: Vec<String> = Vec::new();
-    items
+    let checked: Vec<bool> = items
         .iter()
-        .map(|item| {
-            let Some(name) = group(item.as_ref()) else {
+        .zip(&keys)
+        .map(|(item, key)| key.is_some() && item.matches(":checked").unwrap_or(false))
+        .collect();
+    let decided: HashSet<_> = keys
+        .iter()
+        .zip(&checked)
+        .filter_map(|(key, checked)| key.filter(|_| *checked))
+        .collect();
+    let mut seen = HashSet::new();
+    keys.iter()
+        .zip(&checked)
+        .map(|(key, checked)| {
+            let Some(key) = key else {
                 return true;
             };
-            if seen.contains(&name) {
-                return false;
-            }
-            let value = attr(item.as_ref(), "value").unwrap_or_else(|| "on".into());
-            let stop = match checked.iter().find(|(group, _)| *group == name) {
-                Some((_, checked)) => *checked == value,
-                None => true,
-            };
+            let stop = !seen.contains(key) && (*checked || !decided.contains(key));
             if stop {
-                seen.push(name);
+                seen.insert(*key);
             }
             stop
         })

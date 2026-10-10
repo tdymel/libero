@@ -21,7 +21,7 @@ use super::permission::{FollowedPermission, use_permission};
 ///
 /// rsx! {
 ///     button { onclick: move |_| push.subscribe(), "Get pushes" }
-///     if let Some(subscription) = push.subscription() {
+///     if let Some(subscription) = push.endpoint() {
 ///         // POST `subscription` to the app's server.
 ///         p { "Subscribed at {subscription.endpoint}" }
 ///     }
@@ -114,8 +114,8 @@ impl PushSubscription {
         self.permission.get()
     }
 
-    /// The current subscription, read after mount. Reactive.
-    pub fn subscription(&self) -> Option<PushEndpoint> {
+    /// The current subscription's endpoint, read after mount. Reactive.
+    pub fn endpoint(&self) -> Option<PushEndpoint> {
         (self.subscription)()
     }
 

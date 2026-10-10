@@ -1130,6 +1130,12 @@ impl ElementApi for WebElement {
         Ok(self.element.get_attribute(name))
     }
 
+    fn matches(&self, selector: &str) -> Result<bool, PlatformError> {
+        self.element
+            .matches(selector)
+            .map_err(|_| PlatformError::NotFound)
+    }
+
     fn selection_start(&self) -> Option<u32> {
         if let Some(input) = self.element.dyn_ref::<web_sys::HtmlInputElement>() {
             input.selection_start().ok().flatten()

@@ -2094,6 +2094,14 @@ impl ElementApi for BlitzElement {
             .map(|attr| attr.value.clone()))
     }
 
+    fn matches(&self, selector: &str) -> Result<bool, PlatformError> {
+        let doc = self.anchor.try_doc().ok_or(PlatformError::Unsupported)?;
+        let found = doc
+            .query_selector_all(selector)
+            .map_err(|_| PlatformError::NotFound)?;
+        Ok(found.contains(&self.node_id))
+    }
+
     /// The editor counts bytes; the DOM counts UTF-16 units.
     fn selection_start(&self) -> Option<u32> {
         let doc = self.anchor.try_doc()?;

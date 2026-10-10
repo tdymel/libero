@@ -54,6 +54,10 @@ pub struct TabsProps<T: Options> {
     /// `manual`: arrows move the focus, Enter or Space selects.
     #[props(default, into)]
     activation: Input<TabsActivation>,
+    /// Whether the selected panel is a tab stop (APG: when it holds no focusable content).
+    /// Turn it off for a panel with its own controls.
+    #[props(default = true)]
+    panel_focusable: bool,
     #[props(extends = GlobalAttributes)]
     attributes: Vec<Attribute>,
     #[props(default, into)]
@@ -157,7 +161,7 @@ pub fn Tabs<T: Options>(props: TabsProps<T>) -> Element {
             full_width: props.full_width.unwrap_or(false),
             manual: props.activation.copied_or(theme.tabs.activation) == TabsActivation::Manual,
             focusable: true,
-            panel_stop: true,
+            panel_stop: props.panel_focusable,
             size: props.size.copied_or(theme.tabs.size),
             sx: parts_under_sx(&props.parts, props.sx),
             class: props.class,

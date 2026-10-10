@@ -18,7 +18,7 @@ fn a_server_render_reports_no_system_notifications() {
             p { id: "pending", "{notifier.is_pending()}" }
             p { id: "push-supported", "{push.is_supported()}" }
             p { id: "push-permission", "{push.permission():?}" }
-            p { id: "subscription", "{push.subscription():?}" }
+            p { id: "subscription", "{push.endpoint():?}" }
         }
     }
 

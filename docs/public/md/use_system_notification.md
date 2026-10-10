@@ -55,7 +55,7 @@ fn Notify() -> Element {
         (false, _) | (true, Some(PushError::Unsupported)) => "unsupported here",
         (true, Some(PushError::Denied)) => "refused, notifications are not allowed",
         (true, Some(PushError::Failed)) => "the subscription failed",
-        (true, None) if push.subscription().is_some() => "subscribed",
+        (true, None) if push.endpoint().is_some() => "subscribed",
         (true, None) => "not subscribed",
     };
 
@@ -81,12 +81,12 @@ fn Notify() -> Element {
                 Button { variant: "outlined", onclick: move |_| notifier.close("demo"), "Close it" }
                 Button {
                     variant: "outlined",
-                    onclick: move |_| if push.subscription().is_some() { push.unsubscribe() } else { push.subscribe() },
-                    if push.subscription().is_some() { "Unsubscribe from push" } else { "Subscribe to push" }
+                    onclick: move |_| if push.endpoint().is_some() { push.unsubscribe() } else { push.subscribe() },
+                    if push.endpoint().is_some() { "Unsubscribe from push" } else { "Subscribe to push" }
                 }
             }
             div { role: "status", "{status}" }
-            if let Some(subscription) = push.subscription() {
+            if let Some(subscription) = push.endpoint() {
                 // POST it to the app's server, which pushes with its VAPID private key.
                 Text {
                     size: "sm",
@@ -104,7 +104,7 @@ fn Notify() -> Element {
 
 `use_push_subscription(PushOptions) -> PushSubscription` registers your
 service worker and subscribes with your server's VAPID public key.
-`subscription()` is the `PushEndpoint` your server stores and pushes to; the
+`endpoint()` is the `PushEndpoint` your server stores and pushes to; the
 worker shows what arrives. Sending, VAPID signing, FCM and APNs stay on your
 server. The demo's key is a throwaway public key: no private key exists
 anywhere in the repo, so nothing ever pushes to it. A sample worker is
@@ -189,7 +189,7 @@ pub enum PermissionState { Granted, Denied, Prompt, Unknown, Unsupported }
 |---|---|
 | `subscribe()` | Registers `service_worker`, prompts for the notification permission if needed, subscribes. |
 | `unsubscribe()` | Ends the subscription; tell your server to forget the endpoint. |
-| `subscription()` | The current `PushEndpoint`, read after mount; POST it to your server. |
+| `endpoint()` | The current `PushEndpoint`, read after mount; POST it to your server. |
 | `permission()`, `error()`, `is_supported()`, `is_pending()` | As on `SystemNotifier`. `Failed`: the worker did not register or the push service refused. |
 
 Both handles are `Copy`. `PushOptions` apply to the next `subscribe`.

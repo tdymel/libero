@@ -55,8 +55,7 @@ impl ColumnFilter {
     }
 }
 
-// Defined with the labels, which name each operator: localization sits below components.
-pub use crate::localization::{FilterLogic, FilterOperator};
+pub(super) use crate::localization::{FilterLogic, FilterOperator};
 
 impl FilterOperator {
     /// The operators a column of `kind` offers, its default first.

@@ -76,7 +76,7 @@ pub fn UseSystemNotificationPage() -> Element {
                 Text {
                     Code { source: "use_push_subscription(PushOptions) -> PushSubscription" }
                     " registers your service worker and subscribes with your server's VAPID public key. "
-                    Code { source: "subscription()" }
+                    Code { source: "endpoint()" }
                     " is the "
                     Code { source: "PushEndpoint" }
                     " your server stores and pushes to; the worker shows what arrives. Sending, VAPID signing, FCM and APNs stay on your server. The demo's key is a throwaway public key: no private key exists anywhere in the repo, so nothing ever pushes to it. A sample worker is "

@@ -50,7 +50,7 @@ pub fn Notify() -> Element {
         (false, _) | (true, Some(PushError::Unsupported)) => "unsupported here",
         (true, Some(PushError::Denied)) => "refused, notifications are not allowed",
         (true, Some(PushError::Failed)) => "the subscription failed",
-        (true, None) if push.subscription().is_some() => "subscribed",
+        (true, None) if push.endpoint().is_some() => "subscribed",
         (true, None) => "not subscribed",
     };
 
@@ -76,12 +76,12 @@ pub fn Notify() -> Element {
                 Button { variant: "outlined", onclick: move |_| notifier.close("demo"), "Close it" }
                 Button {
                     variant: "outlined",
-                    onclick: move |_| if push.subscription().is_some() { push.unsubscribe() } else { push.subscribe() },
-                    if push.subscription().is_some() { "Unsubscribe from push" } else { "Subscribe to push" }
+                    onclick: move |_| if push.endpoint().is_some() { push.unsubscribe() } else { push.subscribe() },
+                    if push.endpoint().is_some() { "Unsubscribe from push" } else { "Subscribe to push" }
                 }
             }
             div { role: "status", "{status}" }
-            if let Some(subscription) = push.subscription() {
+            if let Some(subscription) = push.endpoint() {
                 // An endpoint is one unbroken 100-200 character word (1.4.10).
                 Text {
                     size: "sm",
