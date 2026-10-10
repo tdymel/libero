@@ -42,8 +42,9 @@ static CHECKBOX_CONTROL_SX: StaticSx = StaticSx::new(|| {
         // escapes to the nearest positioned ancestor.
         .position("relative")
         .selector("& > input", hidden_input_centred_sx())
-        // On the control rather than the box, so `disabled` below reaches it.
-        .cursor("pointer")
+        // On the control rather than the box, so `disabled` below reaches it. Under `:hover`:
+        // WebView spatial navigation makes a `pointer` element a Tab stop (3156).
+        .selector("&:hover", sx().cursor("pointer"))
         // The ring hugs the box, drawn by the overlay: the focus is on the
         // input beside it.
         .selector("& > [data-ring]", ring_overlay_sx())
@@ -363,7 +364,7 @@ static LIGHT_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .display("flex")
         .position("relative")
         .width(CHECKBOX_BOX.value())
-        .cursor("pointer")
+        .selector("&:hover", sx().cursor("pointer"))
         // The control carries the click, so it carries the 24px floor (WCAG 2.5.8, todo 3131).
         .and(min_hit_area_sx("::before"))
         // Over the box's centre, so a click at the input's centre lands on the box (todo 1992).

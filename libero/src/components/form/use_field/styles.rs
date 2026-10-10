@@ -49,7 +49,8 @@ pub(in crate::components::form) static FIELD_SX: StaticSx = StaticSx::new(|| {
             sx().background(PAPER_BACKGROUND.value())
                 .border(format!("1px solid {}", PAPER_BORDER_COLOR.value()))
                 .border_radius(PAPER_RADIUS.value())
-                .cursor("pointer")
+                // Under `:hover`: WebView spatial navigation makes a `pointer` element a Tab stop (3156).
+                .hover(sx().cursor("pointer"))
                 // A stretched card keeps its content at the top.
                 .align_content("start")
                 .per_size(|size| sx().padding(FIELD_CARD_PADDING.value(size)))

@@ -304,16 +304,24 @@ e2e::scenario!(
 fn a_disabled_track_shows_it_takes_no_click() {
     block_on(async {
         let fixture = Fixture::open("/switch", Viewport::Desktop).await.unwrap();
-        let cursors: [String; 2] = fixture
-            .page
-            .evaluate(
-                "['#plain', '#disabled'].map(id => \
-                 getComputedStyle(document.querySelector(`${id} ~ [aria-hidden]`)).cursor)",
-            )
-            .await
-            .unwrap()
-            .into_value()
-            .unwrap();
+        // `pointer` only under the hover (todo 3156).
+        let mut cursors = Vec::new();
+        for id in ["plain", "disabled"] {
+            let track = format!("#{id} ~ [aria-hidden]");
+            e2e::passes::pointer::hover(&fixture.page, &track)
+                .await
+                .unwrap();
+            let cursor: String = fixture
+                .page
+                .evaluate(format!(
+                    "getComputedStyle(document.querySelector({track:?})).cursor"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            cursors.push(cursor);
+        }
         assert_eq!(cursors, ["pointer", "not-allowed"]);
         fixture.close().await.unwrap();
     });

@@ -114,6 +114,7 @@ mod sidebar;
 mod skeleton;
 mod slider;
 mod sortable;
+mod spatnav;
 mod splitter;
 mod spotlight;
 mod stepper;

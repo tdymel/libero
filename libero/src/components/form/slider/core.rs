@@ -156,7 +156,8 @@ static SLIDER_TRACK_SX: StaticSx = StaticSx::new(|| {
         .background(ColorValue::Shade(Color::Muted, ColorShade::S6).value())
         // Always a pill: at 2-10px tall every radius step clamps the same.
         .border_radius("999px")
-        .cursor("pointer")
+        // Under `:hover`: WebView spatial navigation makes a `pointer` element a Tab stop (3156).
+        .hover(sx().cursor("pointer"))
         // Forced colours drop the background but paint a transparent outline
         // (todo 506).
         .outline("1px solid transparent")

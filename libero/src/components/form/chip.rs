@@ -145,7 +145,8 @@ static CHIP_LABEL_SX: StaticSx = StaticSx::new(|| {
     sx().display("inline-flex")
         .align_items("center")
         .gap(SizeCss::SPACING.value(Size::Xs))
-        .cursor("pointer")
+        // Under `:hover`: WebView spatial navigation makes a `pointer` element a Tab stop (3156).
+        .hover(sx().cursor("pointer"))
         // No `text-overflow`: on a flex root it never applies (todo 94), and
         // the children stay unwrapped (todo 674).
         .overflow("hidden")

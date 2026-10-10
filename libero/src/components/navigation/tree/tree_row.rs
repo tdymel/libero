@@ -114,10 +114,10 @@ static TREE_ROW_CONTENT_SX: StaticSx = StaticSx::new(|| {
         .padding_left("8px")
         .padding_right("8px")
         .border_radius("4px")
-        .cursor("pointer")
         // A long unbreakable label wraps instead of widening the page (1.4.10).
         .with("overflow-wrap", "anywhere")
-        .hover(sx().background(ROW_HOVER_TINT))
+        // `pointer` under `:hover` only: WebView spatial navigation makes it a Tab stop (3156).
+        .hover(sx().background(ROW_HOVER_TINT).cursor("pointer"))
         // Pulled back over the parent's guide from its outer edge, the content left
         // in place. Not centred: half pixels round apart natively.
         .when(

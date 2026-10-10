@@ -106,7 +106,7 @@ static MULTI_VALUE_SX: StaticSx = StaticSx::new(|| {
 static MULTI_CHEVRON_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .margin_left("-4px")
-        .cursor("pointer")
+        .hover(sx().cursor("pointer"))
         .selector("& > svg", sx().width("1em").height("1em").color("muted.6"))
         .when("disabled", sx().cursor("not-allowed"))
 });

@@ -148,13 +148,17 @@ fn space_and_clicks_toggle_and_a_mixed_box_turns_true() {
 fn a_disabled_box_shows_it_takes_no_click() {
     block_on(async {
         let fixture = Fixture::open("/checkbox", Viewport::Desktop).await.unwrap();
-        let cursor = |id: &str| {
-            format!("getComputedStyle(document.querySelector('#{id} + [aria-hidden]')).cursor")
-        };
+        // `pointer` only under the hover (todo 3156).
         for (id, expected) in [("off", "not-allowed"), ("terms", "pointer")] {
+            let box_ = format!("#{id} + [aria-hidden]");
+            e2e::passes::pointer::hover(&fixture.page, &box_)
+                .await
+                .unwrap();
             let actual: String = fixture
                 .page
-                .evaluate(cursor(id))
+                .evaluate(format!(
+                    "getComputedStyle(document.querySelector({box_:?})).cursor"
+                ))
                 .await
                 .unwrap()
                 .into_value()
