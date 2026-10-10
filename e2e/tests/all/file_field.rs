@@ -383,6 +383,40 @@ fn a_read_only_single_file_dropzone_stays_reachable() {
     });
 }
 
+/// Todo 3086: removing the file of a single-file dropzone re-mounts Browse, and focus lands on it.
+#[test]
+fn removing_the_single_file_focuses_the_browse_button_it_brings_back() {
+    block_on(async {
+        let fixture = Fixture::open("/file-field/single", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, SURFACE).await.unwrap();
+        let disk = OnDisk::with(&["alpha.txt"]);
+        drop_files(page, SURFACE, disk.paths()).await;
+        wait::for_selector(page, REMOVE_ALPHA).await.unwrap();
+
+        keyboard::tab_to(page, REMOVE_ALPHA, 5).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("!document.querySelector({REMOVE_ALPHA:?})"),
+            "the card to go",
+        )
+        .await
+        .unwrap();
+        focus::wait_for_focus(page, BROWSE, "removing the only file")
+            .await
+            .unwrap();
+
+        fixture
+            .console
+            .assert_clean("removing the single file by keyboard")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Enter and Space on Browse open the picker; read-only keeps the tab order and refuses
 /// every edit; disabled leaves the tab order (529).
 #[test]

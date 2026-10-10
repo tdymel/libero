@@ -28,7 +28,7 @@ pub fn TextPage() -> Element {
                 prop("color", "ThemeAwareValue")
                     .doc("The text color: a theme color name in its text shade, or any CSS color. Unset, the text inherits. Under a gradient, its first stop."),
                 prop("gradient", "Gradient")
-                    .doc("Paints the glyphs with a gradient from `color` to a second stop, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`; `Gradient::default()` is the theme's. Keep it to large display text: the contrast of a literal CSS stop is yours to check, and a debug build warns when a hex stop reads under 4.5:1 on the page background. Solid in its first stop in forced colours and in native windows."),
+                    .doc("Paints the glyphs with a gradient from `color` to a second stop, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`; `Gradient::default()` is the theme's. Keep it to large display text: the contrast of a literal CSS stop is yours to check, and a debug build warns when a hex stop reads under 4.5:1 on the page background. Solid in its first stop in print and in native windows, the system text colour in forced colours."),
                 prop("children", "Element").default("required").doc("The text."),
             ])],
             accessibility: a11y()

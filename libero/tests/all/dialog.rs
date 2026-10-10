@@ -61,6 +61,24 @@ fn outside_a_modal_onclose_turns_the_close_button_on() {
     assert!(!body(&render(switched_off)).contains("aria-label=\"Close\""));
 }
 
+/// Todo 3083: a spread `aria-labelledby` names the dialog; the title does not replace it.
+#[test]
+fn a_spread_name_wins_over_the_titles_heading() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Dialog { title: "Tip", aria_labelledby: "other", "content" }
+            }
+        }
+    }
+
+    let html = render(app);
+    let dialog = body(&html);
+
+    assert_eq!(dialog.matches("aria-labelledby=").count(), 1, "{dialog}");
+    assert_eq!(attributes_of(&dialog, "div")["aria-labelledby"], "other");
+}
+
 thread_local! {
     static TITLE: std::cell::Cell<&'static str> = const { std::cell::Cell::new("First") };
 }

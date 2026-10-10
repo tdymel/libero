@@ -30,7 +30,7 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `size` | `Size` | `xxl` | Visual size, `xs` to `xxl`. Also picks the tag unless `component` is set. |
 | `component` | `HtmlTag` | follows `size` | The heading tag. The size's look stays. A debug build warns for a tag other than `h1` to `h6`. |
-| `gradient` | `Gradient` | - | Paints the glyphs with a gradient from the theme's first stop to a second, as `("info", 90)` or `Gradient::default().to("info").deg(90)`; `Gradient::default()` is the theme's. The contrast of a literal CSS stop is yours to check, and a debug build warns when a hex stop reads under 4.5:1 on the page background. Solid in its first stop in forced colours and in native windows. |
+| `gradient` | `Gradient` | - | Paints the glyphs with a gradient from the theme's first stop to a second, as `("info", 90)` or `Gradient::default().to("info").deg(90)`; `Gradient::default()` is the theme's. The contrast of a literal CSS stop is yours to check, and a debug build warns when a hex stop reads under 4.5:1 on the page background. Solid in its first stop in print and in native windows, the system text colour in forced colours. |
 | `children` | `Element` | required | The heading text. |
 
 Like every component, `Title` also takes the shared props `sx`, `class`, `style`,

@@ -16,6 +16,7 @@ static KBD_BASE_SX: StaticSx = StaticSx::new(|| {
         .font_weight("700")
         .padding("0.12em 0.45em")
         .text_align("center")
+        .white_space("nowrap")
 });
 
 base_props! {

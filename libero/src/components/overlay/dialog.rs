@@ -99,6 +99,7 @@ base_props! {
         onclose: Option<EventHandler<()>>,
         /// Inside a modal: whether Escape, the backdrop or Back may close it; `false`
         /// keeps it open. Unset, all three close, but an `alertdialog` ignores the backdrop.
+        /// The header close button is not asked.
         #[props(default)]
         ondismiss: Option<Callback<Dismiss, bool>>,
         /// The close button's accessible name, e.g. "Close cart".
@@ -135,7 +136,8 @@ base_props! {
 /// ```
 ///
 /// A confirmation is an `alertdialog`, described by its message; the backdrop
-/// does not close it. `ondismiss` keeps a form with unsaved input open:
+/// does not close it. `ondismiss` keeps a form with unsaved input open, but
+/// the header close button is not asked:
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
@@ -173,8 +175,9 @@ pub fn Dialog(props: DialogProps) -> Element {
         .clone()
         .filter(|label| !label.trim().is_empty());
     let title = props.title.clone().filter(|title| !title.trim().is_empty());
+    let spread_name = names_itself(&props.attributes);
     use_name_warning(
-        aria_label.is_some() || title.is_some() || names_itself(&props.attributes),
+        aria_label.is_some() || title.is_some() || spread_name,
         "Dialog: no `title`, `aria_label` or `aria-labelledby`, so it is announced as just \
          \"dialog\".",
     );
@@ -231,7 +234,7 @@ pub fn Dialog(props: DialogProps) -> Element {
         // modal's keys stay inside when nothing in it takes focus (APG).
         attributes.push(attr("tabindex", "-1"));
     }
-    if aria_label.is_none() && title.is_some() {
+    if aria_label.is_none() && title.is_some() && !spread_name {
         attributes.push(attr("aria-labelledby", title_id()));
     }
     if let Some(aria_label) = aria_label {
