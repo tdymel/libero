@@ -78,6 +78,7 @@ const EXTRA_FIXTURES: &[(&str, &[&str])] = &[
         "button",
         &[
             "accordion",
+            "action_icon",
             "bottom_navigation",
             "calendar",
             "image",
