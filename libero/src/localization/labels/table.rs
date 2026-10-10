@@ -294,7 +294,8 @@ pub struct TableLabels {
     /// The name a footer cell shows before its value.
     ///
     /// ```
-    /// use libero::localization::{Aggregate, TableLabels};
+    /// use libero::components::Aggregate;
+    /// use libero::localization::TableLabels;
     ///
     /// assert_eq!((TableLabels::ENGLISH.aggregate_name)(Aggregate::Avg), "Average");
     /// assert_eq!((TableLabels::GERMAN.aggregate_name)(Aggregate::Sum), "Summe");

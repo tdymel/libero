@@ -52,7 +52,7 @@ Set `oncolumnmove` and each column header gets a reorder handle and, with
 `move_buttons`, two move buttons. Keep the column order as data next to the
 cards and apply each `KanbanColumnMove` to both:
 
-```rust
+```rust,ignore
 let mut names = use_signal(|| vec!["To do", "Doing", "Done"]);
 // in the Kanban:
 oncolumnmove: move |step: KanbanColumnMove| {
