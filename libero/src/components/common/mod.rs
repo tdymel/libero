@@ -91,4 +91,4 @@ pub(crate) use variant_chrome::{
     BUTTON_VARS, VariantColors, VariantVars, interactive_variant_sx, variant_chrome_sx,
     variant_colors, variant_container_colors, variant_selected_sx,
 };
-pub(crate) use warnings::{is_javascript_url, names_itself, use_name_warning};
+pub(crate) use warnings::{aria_label_of, is_javascript_url, names_itself, use_name_warning};

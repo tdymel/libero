@@ -35,6 +35,9 @@ static HOVER_CARD_SX: StaticSx = StaticSx::new(|| {
         // Never past the room on its side: it scrolls instead (WCAG 1.4.10).
         .max_height(POPOVER_AVAILABLE_HEIGHT.value_or("none"))
         .overflow_y("auto")
+        // A URL or hash wider than the card breaks inside it (WCAG 1.4.10). Not `anywhere`: it
+        // shrinks the card's min-content, so a card placed in a narrow slot collapses.
+        .with("overflow-wrap", "break-word")
         // The text-only card's tab stop scrolls instead of the card, so its ring stays
         // closed; the padding keeps text clear of the ring's band.
         .when(

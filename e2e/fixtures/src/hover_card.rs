@@ -21,7 +21,31 @@ pub const ROUTES: Routes = &[
     ("/hover-card-scroll", || rsx! { ScrollingTextPage {} }),
     ("/hover-card-hidden", || rsx! { HiddenLastControlPage {} }),
     ("/hover-card-tabindex", || rsx! { PositiveTabindexPage {} }),
+    ("/hover-card-url", || rsx! { LongWordPage { link: false } }),
+    ("/hover-card-url-link", || rsx! { LongWordPage { link: true } }),
 ];
+
+const LONG_URL: &str = "https://example.com/a/very/long/path/with/no/space/to/break/it";
+
+/// A card holding one unbroken 60-character URL, as text or as a link (todo 3062).
+#[component]
+fn LongWordPage(link: bool) -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            HoverCard {
+                aria_label: "Ada Lovelace",
+                content: rsx! {
+                    if link {
+                        a { id: "card-link", href: "#", "{LONG_URL}" }
+                    } else {
+                        Text { "{LONG_URL}" }
+                    }
+                },
+                Button { id: "trigger", variant: "outlined", "Ada Lovelace" }
+            }
+        }
+    }
+}
 
 /// A card whose DOM order is not its Tab order: `tabindex` 2, 1 and none (todo 2696).
 #[component]

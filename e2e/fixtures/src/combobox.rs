@@ -14,7 +14,32 @@ pub const ROUTES: Routes = &[
     ("/combobox/refused", || rsx! { RefusedPage {} }),
     ("/combobox/none", || rsx! { NonePage {} }),
     ("/combobox/suggest", || rsx! { SuggestPage {} }),
+    ("/combobox/select-only", || rsx! { SelectOnlyPage {} }),
 ];
+
+/// A `select_only` button trigger: closed Up, Home and End open the list (3058).
+#[component]
+fn SelectOnlyPage() -> Element {
+    let fruit = use_combobox();
+
+    rsx! {
+        Combobox {
+            state: fruit,
+            options: Fruit::options().to_vec(),
+            select_only: true,
+            option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
+                ComboboxOption { onpick: move |_| fruit.close(), "{o.value.label()}" }
+            },
+            Button {
+                variant: "outlined",
+                attributes: named(fruit.a11y_attributes()),
+                onclick: move |_| fruit.toggle(),
+                onblur: move |_| fruit.close(),
+                "Pick a fruit"
+            }
+        }
+    }
+}
 
 /// A suggestion list on a text field, as the docs' demo: `#typed` echoes the field's text (2458).
 #[component]

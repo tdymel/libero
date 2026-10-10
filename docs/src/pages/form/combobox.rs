@@ -178,10 +178,10 @@ pub fn ComboboxPage() -> Element {
             ],
             accessibility: a11y()
                 .key(["Down"], "Opens the list, and moves the highlight down.")
-                .key(["Up"], "Moves the highlight up.")
+                .key(["Up"], "Moves the highlight up. With `select_only`, closed: opens the list on the first row.")
                 .key(["Alt+Down"], "Opens the list without moving the highlight.")
                 .key(["Alt+Up"],"Open: closes the list. With `select_only`, picks the highlighted row first.")
-                .key(["Home", "End"], "Jumps to the first or last row.")
+                .key(["Home", "End"], "Jumps to the first or last row. With `select_only`, closed: opens the list there.")
                 .key(["PageUp", "PageDown"], "Moves the highlight 10 rows, stopping at the first or last.")
                 .key(["Enter"], "Open: picks the highlighted row. Every open starts on the first row, so in a suggestion list Enter replaces the typed text; press `Escape` first to keep it.")
                 .key(["Escape"], "Open: closes the list and keeps the typed text. Enter then goes to the field, so a form submits.")

@@ -11,7 +11,25 @@ pub const ROUTES: Routes = &[
     ("/tags-field/echo", || rsx! { TagsEchoPage {} }),
     ("/tags-field/empty", || rsx! { TagsEmptyPage {} }),
     ("/tags-field/reject", || rsx! { TagsRejectPage {} }),
+    ("/tags-field/aria-label", || rsx! { TagsAriaLabelPage {} }),
 ];
+
+/// No visible label, only `aria_label`: the open list must still have a name (todo 3059).
+#[component]
+fn TagsAriaLabelPage() -> Element {
+    let mut topics = use_signal(Vec::<String>::new);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            TagsField {
+                aria_label: "Topics",
+                suggestions: vec!["rust".to_string(), "dioxus".to_string()],
+                value: topics(),
+                onchange: move |next| topics.set(next),
+            }
+        }
+    }
+}
 
 /// Todo 1947: room for one tag; a change clears `#rejected`, a rejection fills it.
 #[component]

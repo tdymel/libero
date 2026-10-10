@@ -106,6 +106,9 @@ base_props! {
         /// APG select-only: Tab and Alt+ArrowUp pick the highlight before closing.
         #[props(default)]
         commit_on_leave: bool,
+        /// APG select-only: a closed ArrowUp, Home or End opens on the first or last row. A skin with its own trigger keys leaves it off.
+        #[props(default)]
+        closed_row_keys: bool,
         /// Space picks the highlight, like Enter: a list with no text to type in.
         #[props(default)]
         space_picks: bool,
@@ -114,6 +117,9 @@ base_props! {
         /// Usually the field's label id.
         #[props(default)]
         labelled_by: Option<String>,
+        /// Names the list when there is no `labelled_by`: a field named by `aria-label` alone.
+        #[props(default)]
+        aria_label: Option<String>,
         /// `Match` the trigger; a select takes `Min` so a long row is never clipped.
         #[props(default = PopoverWidth::Match)]
         width: PopoverWidth,
@@ -194,6 +200,7 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
         close_on_pick: props.close_on_pick,
         caret_keys: props.caret_keys,
         commit_on_leave: props.commit_on_leave,
+        closed_row_keys: props.closed_row_keys,
         space_picks: props.space_picks,
     };
     let onkeydown = move |event: KeyboardEvent| keys.handle(event);
@@ -252,6 +259,7 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
                 header: props.header,
                 multiselectable: props.multiselectable,
                 labelled_by: props.labelled_by,
+                aria_label: props.aria_label,
                 widest: props.widest,
                 context,
             }
@@ -308,6 +316,7 @@ struct ComboboxPopupProps {
     header: Option<Element>,
     multiselectable: bool,
     labelled_by: Option<String>,
+    aria_label: Option<String>,
     widest: Vec<Element>,
     context: ComboboxContext,
 }
@@ -385,6 +394,7 @@ fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
                         header: props.header,
                         multiselectable: props.multiselectable,
                         labelled_by: props.labelled_by,
+                        aria_label: props.aria_label,
                         widest: props.widest,
                         row_height: theme.combobox.sizes.get((context.size)()).row_height,
                         context,
@@ -491,6 +501,7 @@ struct ComboboxKeys {
     close_on_pick: bool,
     caret_keys: CaretKeys,
     commit_on_leave: bool,
+    closed_row_keys: bool,
     space_picks: bool,
 }
 
@@ -569,6 +580,14 @@ impl ComboboxKeys {
             Key::ArrowDown => {
                 event.prevent_default();
                 go_to(arrows.down);
+            }
+            Key::ArrowUp | Key::Home if !opened && self.closed_row_keys => {
+                event.prevent_default();
+                go_to(arrows.first);
+            }
+            Key::End if !opened && self.closed_row_keys => {
+                event.prevent_default();
+                go_to(arrows.last);
             }
             Key::ArrowUp if opened => {
                 event.prevent_default();

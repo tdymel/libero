@@ -15,6 +15,20 @@ pub(crate) fn names_itself(attributes: &[Attribute]) -> bool {
     })
 }
 
+/// A spread `aria-label`'s text, for a part of the control (its list) that carries the name too.
+pub(crate) fn aria_label_of(attributes: &[Attribute]) -> Option<String> {
+    attributes
+        .iter()
+        .find_map(|attribute| match &attribute.value {
+            AttributeValue::Text(text)
+                if attribute.name == "aria-label" && !text.trim().is_empty() =>
+            {
+                Some(text.clone())
+            }
+            _ => None,
+        })
+}
+
 /// Warns once per mount that a role lacks its accessible name. A hook: call it on every
 /// render, whatever `named` is.
 pub(crate) fn use_name_warning(named: bool, message: &'static str) {

@@ -290,10 +290,10 @@ match at any depth inside the list.
 | Key | Action |
 |---|---|
 | `Down` | Opens the list, and moves the highlight down. |
-| `Up` | Moves the highlight up. |
+| `Up` | Moves the highlight up. With `select_only`, closed: opens the list on the first row. |
 | `Alt+Down` | Opens the list without moving the highlight. |
 | `Alt+Up` | Open: closes the list. With `select_only`, picks the highlighted row first. |
-| `Home` or `End` | Jumps to the first or last row. |
+| `Home` or `End` | Jumps to the first or last row. With `select_only`, closed: opens the list there. |
 | `PageUp` or `PageDown` | Moves the highlight 10 rows, stopping at the first or last. |
 | `Enter` | Open: picks the highlighted row. Every open starts on the first row, so in a suggestion list Enter replaces the typed text; press `Escape` first to keep it. |
 | `Escape` | Open: closes the list and keeps the typed text. Enter then goes to the field, so a form submits. |

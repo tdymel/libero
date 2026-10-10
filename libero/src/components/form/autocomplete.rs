@@ -2,7 +2,9 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, OptionSource, Options, Parts, ScaleOrCss, use_combobox},
+        common::{
+            HtmlTag, Input, OptionSource, Options, Parts, ScaleOrCss, aria_label_of, use_combobox,
+        },
         form::{
             CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, FIELD_CONTROL_SX, clear_button,
             field_props, row_label, use_bound, use_field, use_field_frame, use_row_cache,
@@ -282,6 +284,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         Some(_) => &[],
         None => &row_keys,
     });
+    let aria_label = aria_label_of(&props.attributes);
     attributes.extend(props.attributes);
     let input = field
         .aria(control)
@@ -334,6 +337,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
             disabled: disabled || readonly,
             width: PopoverWidth::Match,
             labelled_by: field.label_id(),
+            aria_label,
             parts: props.dropdown_parts,
             {frame.render(input)}
         }

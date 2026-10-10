@@ -7,7 +7,7 @@ use crate::{
         accessibility::use_announcer,
         common::{
             ComboboxState, HtmlTag, Input, Part, Parts, ScaleOrCss, TOOLBAR_ITEM, ToolbarItem,
-            ring_overlay, use_combobox, use_no_toolbar, use_toolbar_item,
+            aria_label_of, ring_overlay, use_combobox, use_no_toolbar, use_toolbar_item,
         },
         form::{
             CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, SelectionArgs, clear_button,
@@ -283,6 +283,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         .focus_ring(false)
         .prepare();
 
+    let aria_label = aria_label_of(&props.attributes);
     let input = tags_field_input(
         field.aria(control),
         Draft {
@@ -336,6 +337,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
                 nothing_found,
                 caret_keys: CaretKeys::Unhighlighted,
                 labelled_by: field.label_id(),
+                aria_label,
                 size,
                 radius: radius.value(),
                 disabled: disabled || readonly,

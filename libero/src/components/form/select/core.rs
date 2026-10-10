@@ -6,8 +6,8 @@ use crate::{
         accessibility::VisuallyHidden,
         common::{
             ComboboxState, Glyph, HtmlTag, Input, Part, Parts, ScaleOrCss, States, TOOLBAR_ITEM,
-            ToolbarItem, attr, focus_ring_sx, has_shortcut_modifier, inset_focus_ring_sx,
-            navigation_chord, ring_overlay, use_toolbar_item,
+            ToolbarItem, aria_label_of, attr, focus_ring_sx, has_shortcut_modifier,
+            inset_focus_ring_sx, navigation_chord, ring_overlay, use_toolbar_item,
         },
         form::{
             Asks, CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, PreparedField, RowCache,
@@ -528,6 +528,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         // Focused once measured; earlier is a silent no-op.
         autofocus: searchable.then_some(search),
         labelled_by: field.label_id(),
+        aria_label: aria_label_of(&props.attributes),
         parts: props.dropdown_parts,
         widest,
     });
@@ -558,6 +559,7 @@ struct Listbox {
     /// The search box, if any.
     autofocus: Option<ElementHandle>,
     labelled_by: Option<String>,
+    aria_label: Option<String>,
     parts: Input<Parts<DropdownPart>>,
     widest: Vec<Element>,
 }
@@ -584,6 +586,7 @@ fn select_listbox(list: Listbox) -> Element {
         remeasure,
         autofocus,
         labelled_by,
+        aria_label,
         widest,
     } = list;
     let state = open.state;
@@ -619,6 +622,7 @@ fn select_listbox(list: Listbox) -> Element {
             width: PopoverWidth::Min,
             remeasure,
             labelled_by,
+            aria_label,
             widest,
             parts,
             {control}

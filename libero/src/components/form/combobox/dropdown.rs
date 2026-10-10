@@ -72,6 +72,7 @@ pub(super) fn ComboboxDropdown(
     header: Option<Element>,
     multiselectable: bool,
     labelled_by: Option<String>,
+    aria_label: Option<String>,
     /// A windowed list's likely widest rows' content, drawn hidden to give the popover its width.
     widest: Vec<Element>,
     /// The theme's row height in px: a windowed list's pitch, so it never waits for a probe.
@@ -146,7 +147,8 @@ pub(super) fn ComboboxDropdown(
                     "data-slot": DropdownPart::Listbox.slot(),
                     "role": "listbox",
                     "aria-multiselectable": multiselectable.then_some("true"),
-                    "aria-labelledby": labelled_by,
+                    "aria-labelledby": labelled_by.clone(),
+                    "aria-label": aria_label.clone().filter(|_| labelled_by.is_none()),
                     if !widest.is_empty() {
                         // Zero tall, so only the widest's width counts; not rows, so no id or pick.
                         div {
@@ -196,7 +198,8 @@ pub(super) fn ComboboxDropdown(
                     "data-slot": DropdownPart::Listbox.slot(),
                     "role": "listbox",
                     "aria-multiselectable": multiselectable.then_some("true"),
-                    "aria-labelledby": labelled_by,
+                    "aria-labelledby": labelled_by.clone(),
+                    "aria-label": aria_label.clone().filter(|_| labelled_by.is_none()),
                     for (label , start , end) in runs {
                         if let Some(label) = label {
                             div {

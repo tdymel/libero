@@ -47,6 +47,29 @@ fn it_honours_the_combobox_contract() {
     });
 }
 
+/// Todo 3059: a field named by `aria_label` alone names its open list the same.
+#[test]
+fn the_listbox_is_named_by_the_fields_aria_label() {
+    block_on(async {
+        let fixture = Fixture::open("/tags-field/aria-label", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_visible(page, LISTBOX).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector('{LISTBOX}').getAttribute('aria-label') === 'Topics'"),
+            "the listbox to carry the field's aria-label",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a named listbox").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The browser draws the `placeholder` itself; the frame's native stand-in
 /// (todo 734) never reaches the web DOM. An empty field, since a held tag hides it.
 #[test]

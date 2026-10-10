@@ -112,10 +112,11 @@ pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Elem
     let loading = props.options.is_pending();
     let state = props.state;
 
-    // Every open starts at the top; reading `is_open` re-runs the effect on it.
-    use_effect(move || {
-        let _ = state.is_open();
-        state.set_active(Some(0));
+    // Every open starts at the top unless a key chose a row first; closing clears the highlight.
+    use_effect(move || match state.is_open() {
+        true if state.active_now().is_none() => state.set_active(Some(0)),
+        false => state.set_active(None),
+        true => {}
     });
 
     // Read only while open: the mount effect's write then redraws nothing.
@@ -174,6 +175,7 @@ pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Elem
             radius: props.radius,
             disabled: props.disabled.unwrap_or(false),
             commit_on_leave: props.select_only,
+            closed_row_keys: props.select_only,
             space_picks: props.select_only,
             attributes: props.attributes,
             class: props.class,

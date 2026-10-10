@@ -401,6 +401,33 @@ async fn open_scrolling_card(page: &Page) {
     .unwrap();
 }
 
+/// Todo 3062: an unbroken URL breaks inside the card, so nothing scrolls sideways (WCAG 1.4.10).
+#[test]
+fn an_unbroken_url_breaks_inside_the_card() {
+    block_on(async {
+        for route in ["/hover-card-url", "/hover-card-url-link"] {
+            let fixture = Fixture::open(route, Viewport::Mobile).await.unwrap();
+            let page = &fixture.page;
+            pointer::hover(page, TRIGGER).await.unwrap();
+            wait::for_visible(page, CARD).await.unwrap();
+            let fits = format!(
+                "(() => {{ const c = document.querySelector('{CARD}'); \
+                 const r = c.getBoundingClientRect(); const s = c.querySelector(':scope > [tabindex]'); \
+                 return c.scrollWidth <= c.clientWidth + 1 && r.right <= innerWidth + 0.5 \
+                     && (!s || s.scrollWidth <= s.clientWidth + 1); }})()"
+            );
+            wait::for_js_true(page, &fits, "the URL to break inside the card")
+                .await
+                .unwrap_or_else(|e| panic!("{route}: {e}"));
+            fixture
+                .console
+                .assert_clean("a long word in a card")
+                .unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
 /// Todo 2640: the text tab stop is a region named as the card.
 #[test]
 fn the_text_stop_is_a_region_named_as_the_card() {

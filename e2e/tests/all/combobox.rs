@@ -129,6 +129,55 @@ fn the_page_keys_jump_to_the_ends_of_a_short_list() {
     });
 }
 
+/// Todo 3058 (APG select-only): a closed Up or Home opens on the first row, End on the last.
+#[test]
+fn a_closed_select_only_list_opens_on_the_first_or_last_row_by_key() {
+    block_on(async {
+        let fixture = Fixture::open("/combobox/select-only", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        let lit_is = |at: &str| {
+            format!(
+                "(() => {{ const rows = [...document.querySelectorAll('[role=option]')]; \
+                 const lit = document.querySelector('[role=option][data-state~=active]'); \
+                 return !!lit && lit === rows.{at}; }})()"
+            )
+        };
+        for (key, at) in [
+            (keyboard::END, "at(-1)"),
+            (keyboard::ARROW_UP, "at(0)"),
+            (keyboard::END, "at(-1)"),
+            (keyboard::HOME, "at(0)"),
+        ] {
+            keyboard::press(page, key).await.unwrap();
+            wait::for_js_true(
+                page,
+                &lit_is(at),
+                &format!("{} to open on rows.{at}", key.key),
+            )
+            .await
+            .unwrap();
+            keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+            wait::for_js_true(
+                page,
+                &format!(
+                    "document.querySelector('{TRIGGER}').getAttribute('aria-expanded') === 'false'"
+                ),
+                "the list to close",
+            )
+            .await
+            .unwrap();
+        }
+        fixture
+            .console
+            .assert_clean("a select-only combobox")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 2458: a suggestion list opens on its first row, so Enter picks it; Escape closes and keeps the text.
 #[test]
 fn in_a_suggestion_list_enter_picks_the_first_row_and_escape_keeps_the_text() {
