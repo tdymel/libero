@@ -14,6 +14,7 @@ pub const ROUTES: Routes = &[
     ("/kanban/columns", || rsx! { KanbanPage { data: true, wrapped: true } }),
     ("/kanban/capped", || rsx! { CappedPage {} }),
     ("/kanban/menu-only", || rsx! { MenuOnlyPage {} }),
+    ("/kanban/rtl", || rsx! { div { dir: "rtl", KanbanPage { data: false, wrapped: false } } }),
 ];
 
 /// Two columns with `move_buttons` off, so Move to is a touch screen's only way across.
@@ -71,7 +72,7 @@ struct Data {
 /// `#refuse` makes the app ignore every move; `#add` puts Omega first in Done. With `data`,
 /// `#remove` drops Beta from the data; `#hide` stops showing Alpha, the rest keep their index.
 /// With `wrapped`, the data is read by the columns and `#order`, not the page: a data change
-/// renders those only, not the board.
+/// renders those only, not the board. `/kanban/rtl` is the plain page in a right-to-left box.
 #[component]
 fn KanbanPage(data: bool, wrapped: bool) -> Element {
     let mut cards: Cards = use_signal(|| vec![vec!["Alpha", "Beta", "Gamma"], vec!["Delta"], vec![]]);

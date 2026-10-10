@@ -503,6 +503,61 @@ e2e::scenario!(
     desktop: skip("958: element identity on the WebView")
 );
 
+/// Right to left the first column is the right-most, so a drag towards the next one runs leftwards.
+async fn an_rtl_board_lays_its_columns_right_to_left<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    let columns = [
+        d.rect("#column-0").await?,
+        d.rect("#column-1").await?,
+        d.rect("#column-2").await?,
+    ];
+    ensure!(
+        columns[1].x < columns[0].x && columns[2].x < columns[1].x,
+        "the columns run left to right: {:?}",
+        columns.map(|column| column.x)
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_right_to_left_board_lays_its_columns_from_the_right,
+    "/kanban/rtl",
+    an_rtl_board_lays_its_columns_right_to_left,
+    android: skip("963: is_rtl is false on the WebView"),
+    native: skip("707: Blitz has no right-to-left scroll")
+);
+e2e::scenario!(
+    a_handle_drag_reorders_a_column_of_a_right_to_left_board,
+    "/kanban/rtl",
+    a_drag_reorders_a_column,
+    android: skip("963: is_rtl is false on the WebView"),
+    native: skip("707: Blitz has no right-to-left scroll")
+);
+e2e::scenario!(
+    a_handle_drag_moves_a_card_leftwards_into_the_next_column_of_a_right_to_left_board,
+    "/kanban/rtl",
+    a_drag_moves_a_card_across,
+    android: skip("963: is_rtl is false on the WebView"),
+    native: skip("707: Blitz has no right-to-left scroll")
+);
+e2e::scenario!(
+    a_handle_drag_moves_a_card_into_the_empty_last_column_of_a_right_to_left_board,
+    "/kanban/rtl",
+    a_drag_fills_an_empty_column,
+    android: skip("963: is_rtl is false on the WebView"),
+    native: skip("707: Blitz has no right-to-left scroll")
+);
+e2e::scenario!(
+    the_move_to_menu_moves_a_card_across_a_right_to_left_board,
+    "/kanban/rtl",
+    the_menu_moves_a_card_across,
+    android: skip("963: is_rtl is false on the WebView"),
+    native: skip("707: Blitz has no right-to-left scroll"),
+    desktop: skip("958: element identity on the WebView")
+);
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("kanban", "/kanban")
@@ -678,17 +733,13 @@ fn drag_held_at_the_end_edge(rtl: bool, classic: bool) {
     };
     block_on(async {
         // A phone draws overlay bars: a desktop board narrowed to a phone's width draws classic ones.
+        let route = if rtl { "/kanban/rtl" } else { "/kanban" };
         let fixture = match classic {
-            true => Fixture::open_with_scrollbars("/kanban", Viewport::Desktop).await,
-            false => Fixture::open("/kanban", Viewport::Mobile).await,
+            true => Fixture::open_with_scrollbars(route, Viewport::Desktop).await,
+            false => Fixture::open(route, Viewport::Mobile).await,
         }
         .unwrap();
         let page = &fixture.page;
-        if rtl {
-            page.evaluate("document.documentElement.dir = 'rtl'")
-                .await
-                .unwrap();
-        }
         if classic {
             page.evaluate("document.querySelector('#board').style.maxWidth = '342px'")
                 .await
