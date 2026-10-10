@@ -4,8 +4,9 @@
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Anchor, Blockquote, Code, Flex, Kbd, Mark, Text, Title,
+        Anchor, Blockquote, Code, Flex, Kbd, Mark, Paper, Text, Title,
     },
+    sx::sx,
     theme::Gradient,
 };
 
@@ -14,6 +15,7 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/typography", || rsx! { TypographyPage {} }),
     ("/typography/quotes", || rsx! { QuotesPage {} }),
+    ("/typography/paper", || rsx! { PaperTitlePage {} }),
 ];
 
 const COLORS: &[&str] = &[
@@ -95,6 +97,18 @@ fn TypographyPage() -> Element {
             Title { size: "sm", "Heading five" }
             Title { size: "xs", "Heading six" }
             Text { size: "xs", component: "span", "Extra small text in a span." }
+        }
+    }
+}
+
+/// Todo 2985: a long word in a `Title` on a `Paper` in a 320px column.
+#[component]
+fn PaperTitlePage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Paper { sx: sx().padding("lg"),
+                Title { id: "paper-title", size: "xl", "Donaudampfschifffahrtsgesellschaft" }
+            }
         }
     }
 }

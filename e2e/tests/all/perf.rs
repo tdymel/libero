@@ -2156,8 +2156,8 @@ pub(crate) mod timing {
     /// One trace at a time: Chromium refuses a second while one runs in any tab.
     static TRACING: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
-    /// Elements restyled and layout objects dirtied per rep, summed from a Chromium trace:
-    /// counts that hold on a loaded host, where the milliseconds move 2x (todo 2089).
+    /// Elements restyled and layout objects dirtied per rep, summed from a Chromium trace of
+    /// `page`'s frame: counts that hold on a loaded host, where the milliseconds move 2x (todo 2089).
     async fn traced(
         page: &Page,
         reps: usize,
@@ -2186,9 +2186,13 @@ pub(crate) mod timing {
         }
         page.execute(EndParams::default()).await?;
         complete.next().await;
+        let frame = page.mainframe().await?.context("no main frame")?;
         let (mut restyled, mut dirtied) = (0.0, 0.0);
         while let Some(Some(batch)) = batches.next().now_or_never() {
             for event in &batch.value {
+                if event["args"]["beginData"]["frame"] != frame.inner().as_str() {
+                    continue;
+                }
                 match event["name"].as_str() {
                     Some("UpdateLayoutTree") => {
                         restyled += event["args"]["elementCount"].as_f64().unwrap_or(0.0)

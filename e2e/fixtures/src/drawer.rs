@@ -5,6 +5,7 @@ use libero::{
     components::{Anchor, Button, Flex, Title},
     context::Dismiss,
     hooks::{DrawerOptions, ModalScope, use_drawer},
+    sx::sx,
 };
 
 use crate::Routes;
@@ -14,7 +15,30 @@ pub const ROUTES: Routes = &[
     ("/drawer/tall", || rsx! { TallDrawerPage {} }),
     ("/drawer/wide", || rsx! { WideDrawerPage {} }),
     ("/drawer/guarded", || rsx! { GuardedDrawerPage {} }),
+    ("/drawer/long-title", || rsx! { LongTitleDrawerPage {} }),
 ];
+
+/// Todo 2985: a long word in a `Title` in the docs' column of drawer content.
+#[component]
+fn LongTitleDrawerPage() -> Element {
+    let nav = use_drawer(
+        DrawerOptions {
+            aria_label: Some("Menu".into()),
+            ..Default::default()
+        },
+        |_: ModalScope<()>| {
+            rsx! {
+                Flex { direction: "column", gap: "md", sx: sx().padding("16px"),
+                    Title { id: "drawer-title", size: "lg", "Donaudampfschifffahrtsgesellschaft" }
+                }
+            }
+        },
+    );
+
+    rsx! {
+        Button { id: "open-drawer", onclick: move |_| { nav.open(); }, "Open menu" }
+    }
+}
 
 /// `ondismiss` keeps a dirty draft open and logs each reason (2600).
 #[component]

@@ -204,6 +204,32 @@ fn a_wide_drawer_stays_inside_a_narrow_viewport() {
     });
 }
 
+/// Todo 2985: a long word in the drawer's title wraps inside the panel at 320px.
+#[test]
+fn a_long_title_stays_inside_a_narrow_drawer() {
+    block_on(async {
+        let fixture = Fixture::open("/drawer/long-title", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 3).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        e2e::wait::for_visible(page, "#drawer-title").await.unwrap();
+        let past: f64 = page
+            .evaluate(
+                "(() => { const panel = document.querySelector('[role=dialog]').getBoundingClientRect(); \
+                 const title = document.querySelector('#drawer-title'); \
+                 return Math.max(...[...title.getClientRects()].map(r => r.right)) - panel.right; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(past <= 1.0, "the title runs {past}px past the drawer");
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn it_honours_the_overlay_contract() {
     block_on(async {

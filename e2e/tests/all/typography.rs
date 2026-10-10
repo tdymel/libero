@@ -149,6 +149,38 @@ fn a_long_title_and_the_keys_stay_inside_the_column() {
     });
 }
 
+/// Todo 2985: a long word in a `Paper`'s title stays inside it at 320px.
+#[test]
+fn a_long_title_stays_inside_its_paper() {
+    block_on(async {
+        let fixture = Fixture::open("/typography/paper", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#paper-title").await.unwrap();
+
+        let past: f64 = page
+            .evaluate(
+                "(() => { const title = document.querySelector('#paper-title'); \
+                 const paper = title.parentElement; \
+                 const edge = paper.getBoundingClientRect().right \
+                     - parseFloat(getComputedStyle(paper).paddingRight); \
+                 return Math.max(...[...title.getClientRects()].map(r => r.right)) - edge; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            past <= 1.0,
+            "the title runs {past}px past its paper's padding"
+        );
+
+        fixture.console.assert_clean("the paper title").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// WCAG 1.4.12's user stylesheet: nothing may be cut or overlap under it.
 const TEXT_SPACING: &str = "(() => { const s = document.createElement('style'); \
     s.textContent = '* { line-height: 1.5 !important; letter-spacing: 0.12em !important; \
