@@ -222,6 +222,58 @@ mod dispatched {
         assert_every_press_keeps_the_focus(app, 2);
     }
 
+    thread_local! {
+        static CHANGES: std::cell::RefCell<Vec<Vec<String>>> = const { std::cell::RefCell::new(Vec::new()) };
+    }
+
+    fn drafting() -> Element {
+        rsx! {
+            LiberoProvider {
+                TagsField {
+                    label: "Topics",
+                    value: vec!["rust".to_string()],
+                    onchange: move |tags: Vec<String>| CHANGES.with_borrow_mut(|seen| seen.push(tags)),
+                }
+            }
+        }
+    }
+
+    /// Todo 2968: a key the IME is composing picks a candidate, so Enter must not
+    /// add the half-composed draft and Backspace must not take a tag back.
+    #[test]
+    fn a_composing_key_neither_adds_nor_removes_a_tag() {
+        CHANGES.with_borrow_mut(Vec::clear);
+        let Page { mut dom, rec } = Page::build(drafting);
+        let input = rec.input.expect("the draft input");
+        let press = |dom: &mut VirtualDom, event| {
+            dom.runtime()
+                .handle_event("keydown", Event::new(event, true), input);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        };
+        let type_draft = |dom: &mut VirtualDom, text: &str| {
+            dom.runtime()
+                .handle_event("input", Event::new(input_event(text), true), input);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        };
+
+        type_draft(&mut dom, "wasm");
+        press(&mut dom, composing_key_event(Key::Enter));
+        type_draft(&mut dom, "");
+        press(&mut dom, composing_key_event(Key::Backspace));
+        assert!(
+            CHANGES.with_borrow(Vec::is_empty),
+            "a composing key changed the tags"
+        );
+
+        type_draft(&mut dom, "wasm");
+        press(&mut dom, key_event(Key::Enter));
+        assert_eq!(
+            CHANGES.with_borrow(Clone::clone),
+            [["rust", "wasm"]],
+            "the same key, once committed, adds the tag"
+        );
+    }
+
     fn clearable_topics() -> Element {
         rsx! {
             LiberoProvider {

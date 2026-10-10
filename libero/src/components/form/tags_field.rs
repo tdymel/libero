@@ -742,7 +742,8 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
             }
         })
         .event("onkeydown", move |event: KeyboardEvent| {
-            if disabled || readonly {
+            // A composing key picks an IME candidate, it is not a command.
+            if disabled || readonly || event.is_composing() {
                 return;
             }
             match logical_key(&event) {

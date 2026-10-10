@@ -59,7 +59,6 @@ pub(super) fn label_node(
     label: &Caption,
     required: Option<Option<&'static str>>,
     labelled_by: bool,
-    with_id: bool,
     activation: Option<Activation>,
     focuses: Option<ElementHandle>,
 ) -> Option<Element> {
@@ -68,7 +67,7 @@ pub(super) fn label_node(
     }
 
     // `for` names only a labelable element; any other control points at the label's id.
-    let named = (labelled_by || with_id).then(|| format!("{id}-label"));
+    let named = format!("{id}-label");
     let points_at = (!labelled_by).then(|| id.to_string());
     let content = caption_content(label);
     // `aria-required` (or the spoken word) tells AT; the asterisk is decoration.
@@ -98,7 +97,7 @@ pub(super) fn label_node(
             label {
                 "data-slot": slot,
                 id: named.clone(),
-                onclick: focus_labelled(root, named.unwrap_or_default()),
+                onclick: focus_labelled(root, named),
                 {content}
                 {asterisk}
             }

@@ -29,7 +29,7 @@ macro_rules! field_props {
             $(#[$struct_meta])*
             $vis struct $name $(< $($generic: $bound),+ >)? {
                 $($fields)*
-                /// The field's caption, above the control.
+                /// The field's caption, above the control. Its element id is `{id}-label`.
                 #[props(default, into)]
                 label: crate::components::form::Caption,
                 /// Between the label and the control. What to enter.

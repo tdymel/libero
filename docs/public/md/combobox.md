@@ -68,7 +68,7 @@ selected, and carries a hidden input for a plain form post:
 ```rust
 use dioxus::prelude::*;
 use libero::components::{
-    Combobox, ComboboxOption, ComboboxOptionArgs, Options, Text, TextField, use_combobox,
+    Combobox, ComboboxOption, ComboboxOptionArgs, Options, TextField, use_combobox,
 };
 
 #[derive(Clone, Copy, PartialEq, Options)]
@@ -88,13 +88,13 @@ fn Demo() -> Element {
         .copied()
         .filter(|fruit| fruit.label().to_lowercase().contains(&text().to_lowercase()))
         .collect();
-    let label = format!("{}-label", suggestions.id());
+    let field = format!("{}-field", suggestions.id());
 
     rsx! {
         Combobox {
             state: suggestions,
             options: matches,
-            labelled_by: label.clone(),
+            labelled_by: format!("{field}-label"),
             option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
                 ComboboxOption {
                     onpick: move |_| {
@@ -104,15 +104,12 @@ fn Demo() -> Element {
                     "{o.value.label()}"
                 }
             },
-            Text { id: "{label}", size: "sm", "Fruit" }
             TextField {
+                id: field,
+                label: "Fruit",
                 placeholder: "Type a fruit",
                 value: text(),
-                attributes: [
-                    suggestions.a11y_attributes(),
-                    vec![Attribute::new("aria-labelledby", label, None, false)],
-                ]
-                .concat(),
+                attributes: suggestions.a11y_attributes(),
                 onblur: move |_| suggestions.close(),
                 oninput: move |next| {
                     text.set(next);
@@ -169,13 +166,13 @@ fn Demo() -> Element {
     // Replacing the pending answer drops it, so a slow answer never overwrites a newer one.
     let mut pending = use_signal(|| None::<Box<dyn TimerSubscription>>);
     use_drop(move || pending.set(None));
-    let label = format!("{}-label", suggestions.id());
+    let field = format!("{}-field", suggestions.id());
 
     rsx! {
         Combobox {
             state: suggestions,
             options: results().map(OptionList::from),
-            labelled_by: label.clone(),
+            labelled_by: format!("{field}-label"),
             loading_label: "Searching fruit",
             empty_label: "No fruit matches",
             empty: rsx! { Text { size: "sm", "No fruit matches" } },
@@ -188,15 +185,12 @@ fn Demo() -> Element {
                     "{o.value.label()}"
                 }
             },
-            Text { id: "{label}", size: "sm", "Fruit" }
             TextField {
+                id: field,
+                label: "Fruit",
                 placeholder: "Type a fruit",
                 value: text(),
-                attributes: [
-                    suggestions.a11y_attributes(),
-                    vec![Attribute::new("aria-labelledby", label, None, false)],
-                ]
-                .concat(),
+                attributes: suggestions.a11y_attributes(),
                 onblur: move |_| suggestions.close(),
                 oninput: move |next: String| {
                     text.set(next.clone());
@@ -327,7 +321,7 @@ match at any depth inside the list.
 - Name the trigger: it becomes a `combobox`, which takes no name from its
   content. Point its `aria-labelledby` at a visible label, as the demos do.
 - Pass the same label's id as `labelled_by`, so the list has a name too. A
-  `TextField`'s own `label` has no id to pass.
+  `TextField`'s own `label` has the id `{id}-label`, from the `id` you give the field.
 - From 200 options, keep every row the theme's `row_height` tall, as a plain
   `ComboboxOption` is: the list places the rows it draws by that height. A
   debug build warns when they differ.

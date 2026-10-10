@@ -48,20 +48,20 @@ fn it_honours_the_combobox_contract() {
 }
 
 /// The browser draws the `placeholder` itself; the frame's native stand-in
-/// (todo 734) never reaches the web DOM.
+/// (todo 734) never reaches the web DOM. An empty field, since a held tag hides it.
 #[test]
 fn the_web_draws_its_own_placeholder() {
     block_on(async {
-        let fixture = Fixture::open("/tags-field", Viewport::Desktop)
+        let fixture = Fixture::open("/tags-field/empty", Viewport::Desktop)
             .await
             .unwrap();
         wait::for_js_true(
             &fixture.page,
             &format!(
-                "!!document.querySelector('{TRIGGER}') \
+                "document.querySelector('{TRIGGER}')?.getAttribute('placeholder') === 'Add a topic' \
                  && !document.querySelector('[data-lsx-placeholder]')"
             ),
-            "the field and no stand-in span",
+            "the input's own placeholder and no stand-in span",
         )
         .await
         .unwrap();
@@ -190,6 +190,13 @@ fn a_draft_matching_no_suggestion_is_shown_and_said() {
         keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
         keyboard::type_text(page, "zzz").await.unwrap();
         crate::autocomplete::wait_for_nothing_found(page, "/tags-field").await;
+        wait::for_js_true(
+            page,
+            "[...document.querySelectorAll('[role=status]')].some(e => e.textContent === 'No results')",
+            "the live region to say exactly No results",
+        )
+        .await
+        .unwrap();
         fixture.console.assert_clean("nothing found").unwrap();
         fixture.close().await.unwrap();
     });

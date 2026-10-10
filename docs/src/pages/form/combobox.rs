@@ -37,7 +37,7 @@ fn mode_code(_: &Control, values: &DemoValues) -> Vec<String> {
         return [
             "state: suggestions",
             "options: results().map(OptionList::from)",
-            "labelled_by: label.clone()",
+            r#"labelled_by: format!("{field}-label")"#,
             r#"loading_label: "Searching fruit""#,
             r#"empty_label: "No fruit matches""#,
             r#"empty: rsx! { Text { size: "sm", sx: sx().padding("xs"), "No fruit matches" } }"#,
@@ -49,10 +49,14 @@ fn mode_code(_: &Control, values: &DemoValues) -> Vec<String> {
         true => ("state: suggestions", "options: matches"),
         false => ("state: fruit", "options: Fruit::options().to_vec()"),
     };
+    let labelled_by = match suggesting(values) {
+        true => r#"labelled_by: format!("{field}-label")"#,
+        false => "labelled_by: label.clone()",
+    };
     let mut code = vec![
         state.to_string(),
         options.to_string(),
-        "labelled_by: label.clone()".to_string(),
+        labelled_by.to_string(),
     ];
     if !suggesting(values) {
         code.push("select_only: true".to_string());
@@ -193,7 +197,7 @@ pub fn ComboboxPage() -> Element {
                     "Spread `state.a11y_attributes()` on your trigger, or screen readers cannot tie the list to it.",
                     "Close the list on your trigger's blur, or an enclosing `Modal` stops hearing Escape while the list stays open.",
                     "Name the trigger: it becomes a `combobox`, which takes no name from its content. Point its `aria-labelledby` at a visible label, as the demos do.",
-                    "Pass the same label's id as `labelled_by`, so the list has a name too. A `TextField`'s own `label` has no id to pass.",
+                    "Pass the same label's id as `labelled_by`, so the list has a name too. A `TextField`'s own `label` has the id `{id}-label`, from the `id` you give the field.",
                     "From 200 options, keep every row the theme's `row_height` tall, as a plain `ComboboxOption` is: the list places the rows it draws by that height. A debug build warns when they differ.",
                 ])
                 .example("A search field as your own trigger, with `state.a11y_attributes()` spread on it and a visible label whose id is `labelled_by`: a screen reader reads a combobox named by the label, Down moves into the list, and focus never leaves the field."),

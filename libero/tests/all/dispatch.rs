@@ -188,7 +188,7 @@ impl dioxus::html::HasFileData for FakeInput {
 /// A stand-in for the renderer's key payload. Only the key itself is ever
 /// read; nothing under test looks at the code or the modifiers.
 #[derive(Clone)]
-pub struct FakeKey(pub Key);
+pub struct FakeKey(pub Key, pub bool);
 
 impl dioxus::html::HasKeyboardData for FakeKey {
     fn key(&self) -> Key {
@@ -204,7 +204,7 @@ impl dioxus::html::HasKeyboardData for FakeKey {
         false
     }
     fn is_composing(&self) -> bool {
-        false
+        self.1
     }
     fn as_any(&self) -> &dyn std::any::Any {
         self
@@ -251,7 +251,12 @@ pub fn transition_end_event(property: &'static str) -> Rc<dyn std::any::Any> {
 }
 
 pub fn key_event(key: Key) -> Rc<dyn std::any::Any> {
-    Rc::new(PlatformEventData::new(Box::new(FakeKey(key))))
+    Rc::new(PlatformEventData::new(Box::new(FakeKey(key, false))))
+}
+
+/// A key the IME is still composing: the keydown that picks a candidate.
+pub fn composing_key_event(key: Key) -> Rc<dyn std::any::Any> {
+    Rc::new(PlatformEventData::new(Box::new(FakeKey(key, true))))
 }
 
 pub fn input_event(text: &str) -> Rc<dyn std::any::Any> {

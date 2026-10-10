@@ -60,7 +60,7 @@ pub fn TextFieldPage() -> Element {
                         .default("false")
                         .doc("The same for `trailing`, such as `kg` or a `12/20` counter."),
                     prop("label", "Caption")
-                        .doc("The field's caption, above the control. It names the field. Takes a string or an `Element`."),
+                        .doc("The field's caption, above the control. It names the field. Takes a string or an `Element`. The label's element id is `{id}-label`, so a `Combobox`'s `labelled_by` can name its list from it."),
                     prop("description", "Caption")
                         .doc("Between the label and the control. What to enter."),
                     prop("helper", "Caption")

@@ -246,8 +246,8 @@ impl<'a> FieldBuilder<'a> {
         self
     }
 
-    /// Gives a `<label for>` an id too, for a popup the control owns that
-    /// the label must also name - `Autocomplete`'s listbox.
+    /// Makes [`PreparedField::label_id`] available beside `for`, for a popup the
+    /// control owns that the label must also name - `Autocomplete`'s listbox.
     #[inline]
     pub fn label_with_id(mut self) -> Self {
         self.label_with_id = true;

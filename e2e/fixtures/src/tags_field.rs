@@ -9,6 +9,7 @@ pub const ROUTES: Routes = &[
     ("/tags-field", || rsx! { TagsFieldPage {} }),
     ("/tags-field/cursor", || rsx! { TagsCursorPage {} }),
     ("/tags-field/echo", || rsx! { TagsEchoPage {} }),
+    ("/tags-field/empty", || rsx! { TagsEmptyPage {} }),
     ("/tags-field/reject", || rsx! { TagsRejectPage {} }),
 ];
 
@@ -34,6 +35,24 @@ fn TagsRejectPage() -> Element {
                 },
             }
             Text { id: "rejected", "{rejected}" }
+        }
+    }
+}
+
+/// No tag held, so the placeholder shows.
+#[component]
+fn TagsEmptyPage() -> Element {
+    let mut topics = use_signal(Vec::<String>::new);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            TagsField {
+                label: "Topics",
+                placeholder: "Add a topic",
+                suggestions: vec!["rust".to_string()],
+                value: topics(),
+                onchange: move |next| topics.set(next),
+            }
         }
     }
 }
