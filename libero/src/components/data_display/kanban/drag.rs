@@ -586,7 +586,7 @@ pub(super) struct BoardCard {
     pub(super) dragging: Memo<bool>,
     offset: Memo<Option<(f64, f64)>>,
     settle: Memo<Option<(f64, f64)>>,
-    /// The card has settled since mount.
+    /// The card has been offset or has settled since mount.
     settled: CopyValue<bool>,
 }
 
@@ -594,14 +594,20 @@ impl BoardCard {
     /// The card's inline style while the board drags or it settles; `None` otherwise.
     pub(super) fn style(&self) -> Option<String> {
         let translate = |(x, y): (f64, f64)| format!("translate({x}px, {y}px)");
-        if let Some(offset) = (self.offset)() {
-            // Closed by `;`: a dropped settle var's reset is appended after it (1438).
-            return Some(format!("transform: {};", translate(offset)));
-        }
         let mut settled = self.settled;
+        if let Some(offset) = (self.offset)() {
+            settled.set(true);
+            // Closed by `;`: a dropped settle var's reset is appended after it (1438).
+            return Some(format!(
+                "transform: {}; animation: none;",
+                translate(offset)
+            ));
+        }
         let Some(from) = (self.settle)() else {
-            // The var's reset keeps a style written, which keeps an omitted transform (3039).
-            return settled.peek().then(|| "transform: none;".to_string());
+            // An omitted transform or animation keeps its last value (3039, 3105).
+            return settled
+                .peek()
+                .then(|| "transform: none; animation: none;".to_string());
         };
         settled.set(true);
         Some(format!(

@@ -114,7 +114,7 @@ fn Demo() -> Element {
 | `variant` | `FileFieldVariant` | `input` | `input` is one line in the field frame. `dropzone` is a tall surface to drop onto or click, with the files as cards below it. A single-file dropzone hides its surface while it holds a file. |
 | `accept` | `String` | - | The file types to take, such as `.pdf`, `image/png`, `image/*` or a comma-separated list. It applies to the picker and to a drop: a file of another type is refused, and the field says so. |
 | `capture` | `String` | - | Asks a phone for a fresh capture, `user` or `environment`. |
-| `placeholder` | `String` | - | Shown while nothing is picked. It is the dropzone's prompt when `children` is empty. With neither, the localization's `file_field.drop_file` or `drop_files`. |
+| `placeholder` | `String` | - | The `input` variant's Browse button text while nothing is picked. It is the dropzone's prompt when `children` is empty, which a `multiple` dropzone keeps after a pick. With neither, the localization's `file_field.drop_file` or `drop_files`. |
 | `clearable` | `bool` | `true` | Shows an x that empties the field. |
 | `loading` | `bool` | `false` | Shows a `Loader` while an upload runs and marks the field busy. It blocks nothing, `disabled` does that. |
 | `crop` | `CropOptions` | - | A single picked or dropped image opens in an `ImageCropper` dialog first, its box centred at 80% of the largest `aspect` allows: Apply hands `onchange` the cut file, Cancel drops it. A crop that fails keeps the dialog open on an error and hands over nothing. Under Blitz an AVIF passes through uncropped, and a WebP is cut lossless, so it can be larger than on the web. Ignored on a `multiple` field. |

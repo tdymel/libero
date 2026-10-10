@@ -242,7 +242,7 @@ pub fn SelectPage() -> Element {
                         .default(theme.select.radius.as_str())
                         .doc("Corner radius of the frame and the list. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("value", "Option<T>")
-                        .doc("The selected option. Pair it with `onchange`. `None` shows `placeholder`."),
+                        .doc("The selected option. Pair it with `onchange`. `None`, or a value no option matches, shows `placeholder`."),
                     prop("onchange", "EventHandler<Option<T>>")
                         .doc("Called with the option to select next, or `None` from the clear button."),
                     prop("name", "FieldName<Option<T>>")
@@ -258,7 +258,7 @@ pub fn SelectPage() -> Element {
                     prop("selection", "Callback<T, Element>")
                         .default("T::label()")
                         .doc("Draws the selected value inside the trigger."),
-                    prop("placeholder", "String").doc("Shown while `value` is `None`."),
+                    prop("placeholder", "String").doc("Shown while no option matches `value`."),
                     prop("clearable", "bool")
                         .default("false")
                         .doc("Shows an x in place of the chevron while something is selected. The only way `onchange` gets `None`."),

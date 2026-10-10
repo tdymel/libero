@@ -109,14 +109,14 @@ option is read out, and the arrows, typeahead and clicks skip it.
 |---|---|---|---|
 | `size` | `Size` | `md` | Height, padding and font size of the field and its rows. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius of the frame and the list. Or any CSS, e.g. `radius: "0"`. |
-| `value` | `Option<T>` | - | The selected option. Pair it with `onchange`. `None` shows `placeholder`. |
+| `value` | `Option<T>` | - | The selected option. Pair it with `onchange`. `None`, or a value no option matches, shows `placeholder`. |
 | `onchange` | `EventHandler<Option<T>>` | - | Called with the option to select next, or `None` from the clear button. |
 | `name` | `FieldName<Option<T>>` | - | Posts the selected option's `Options::value()` under this name. A path such as `Order::FIELDS.plan()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |
 | `validate` | `Validators<Option<T>>` | - | Rules over the selection, shown once the select loses focus or its form is submitted. |
 | `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. A failed fetch is an empty list, so show your own error beside the field. |
 | `option` | `Callback<SelectOptionArgs<T>, Element>` | `T::label()` | Draws one row's content. The highlight, selection and click stay the component's. Hide a decorative glyph such as an emoji with `aria-hidden`, or a screen reader reads it before the label. |
 | `selection` | `Callback<T, Element>` | `T::label()` | Draws the selected value inside the trigger. |
-| `placeholder` | `String` | - | Shown while `value` is `None`. |
+| `placeholder` | `String` | - | Shown while no option matches `value`. |
 | `clearable` | `bool` | `false` | Shows an x in place of the chevron while something is selected. The only way `onchange` gets `None`. |
 | `searchable` | `bool` | `false` | Puts a search box at the top of the list. The query is cleared when the list closes. |
 | `filter` | `Callback<SelectFilterArgs<T>, bool>` | `contains` | Narrows the options while searching. Defaults to a case-insensitive `contains` over `Options::label`. |

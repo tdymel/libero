@@ -173,7 +173,7 @@ fn a_focused_child_of_aspect_ratio_keeps_its_ring() {
 }
 
 /// A full-width `Container` draws its ring inside its box, so a clipping parent keeps all of
-/// it (todo 2975). The ring must be drawn at all, or the bound holds for nothing.
+/// it (todo 2975). The outline and the inset stripe must both be drawn, or the bound holds for nothing.
 #[test]
 fn a_focused_container_keeps_its_ring_inside() {
     block_on(async {
@@ -189,6 +189,7 @@ fn a_focused_container_keeps_its_ring_inside() {
             &format!(
                 "document.activeElement.id === 'ring-container' \
                  && getComputedStyle(document.activeElement).outlineStyle !== 'none' \
+                 && getComputedStyle(document.activeElement).boxShadow !== 'none' \
                  && ({RING_CLIPPED}) <= 0"
             ),
             "the Container's ring inside its clip",

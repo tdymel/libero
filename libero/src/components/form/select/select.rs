@@ -48,7 +48,7 @@ pub struct SelectFilterArgs<T> {
 field_props! {
     parts(SelectPart);
     pub struct SelectProps<T: Options> {
-        /// Strictly controlled: pair it with `onchange`. `None` shows `placeholder`.
+        /// Strictly controlled: pair it with `onchange`. `None`, or a value no option matches, shows `placeholder`.
         #[props(default)]
         value: Option<T>,
         /// The option to select next, or `None` when `clearable`'s x is clicked.
@@ -64,7 +64,7 @@ field_props! {
         /// Draws the selection in the trigger. Defaults to the label.
         #[props(default)]
         selection: Option<Callback<T, Element>>,
-        /// Shown while `value` is `None`.
+        /// Shown while no option matches `value`.
         #[props(default)]
         placeholder: Option<String>,
         /// A hidden input posting `Options::value()`. A field path also binds to the `Form` without `onchange`.

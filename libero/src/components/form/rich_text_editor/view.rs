@@ -139,7 +139,7 @@ field_props! {
         /// A path binds the editor to the surrounding `Form`.
         #[props(default, into)]
         name: crate::components::form::FieldName<Doc>,
-        /// Shown while the document is one empty paragraph.
+        /// Shown while the document is a single empty block, a code block aside.
         #[props(default, into)]
         placeholder: Option<String>,
         /// Sends the document when `submit_on` is pressed, as in a chat or comment box;

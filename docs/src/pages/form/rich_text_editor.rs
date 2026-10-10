@@ -168,7 +168,7 @@ pub fn RichTextEditorPage() -> Element {
                     prop("name", "FieldName<Doc>")
                         .doc("A path such as `Post::FIELDS.body()` binds the document to the surrounding `Form`'s value when the editor has no `onchange`."),
                     prop("placeholder", "String")
-                        .doc("Shown while the document is one empty paragraph."),
+                        .doc("Shown while the document is a single empty block, a code block aside."),
                     prop("onsubmit", "EventHandler<Doc>")
                         .doc("Sends the document when `submit_on` is pressed, as in a chat or comment box. The editor keeps its text: clear it with the handle's `clear` or a new `value`. Nothing is sent from an empty document, a code block or while an `overlay` takes the key; there Enter does its usual job. With `SubmitOn::Enter` the Enter key shows as \"send\" on phones, and Enter pressed in a word the keyboard is still composing sends the document with that word in it."),
                     prop("submit_on", "SubmitOn")

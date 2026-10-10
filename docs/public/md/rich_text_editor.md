@@ -436,7 +436,7 @@ the Bold button reads as pressed.
 | `onchange` | `EventHandler<Doc>` | - | Fires with the new document after every edit. Moving the caret does not fire. |
 | `validate` | `Validators<Doc>` | - | Rules over the document, shown once the field loses focus or its form is submitted. |
 | `name` | `FieldName<Doc>` | - | A path such as `Post::FIELDS.body()` binds the document to the surrounding `Form`'s value when the editor has no `onchange`. |
-| `placeholder` | `String` | - | Shown while the document is one empty paragraph. |
+| `placeholder` | `String` | - | Shown while the document is a single empty block, a code block aside. |
 | `onsubmit` | `EventHandler<Doc>` | - | Sends the document when `submit_on` is pressed, as in a chat or comment box. The editor keeps its text: clear it with the handle's `clear` or a new `value`. Nothing is sent from an empty document, a code block or while an `overlay` takes the key; there Enter does its usual job. With `SubmitOn::Enter` the Enter key shows as "send" on phones, and Enter pressed in a word the keyboard is still composing sends the document with that word in it. |
 | `submit_on` | `SubmitOn` | `SubmitOn::Enter` | The key that fires `onsubmit`: `Enter` (Shift+Enter breaks the line) or `ModEnter` (Ctrl+Enter, Cmd+Enter on Apple platforms; Enter stays a new paragraph). Mod+Enter in a code block still leaves it. |
 | `max_length` | `usize` | - | The most characters of plain text the document holds, counted as `Doc::plain_text` does (a line break between blocks counts one). Typing and paste stop at it. A phone keyboard's composed text cannot be refused, so there the limit is soft: the surplus is cut when the word is committed. |
@@ -510,4 +510,4 @@ The `--lsx-field-*` variables are [TextField](text_field.md)'s, shared unchanged
 The same as [TextField](text_field.md). The wrapper's and the frame's
 `data-state` carry `size-<size>`, `radius-<size>`, `disabled`, `required`,
 `warning` and `error`, and the caption slots carry `data-slot`. The text
-carries `data-empty` while the document is one empty paragraph.
+carries `data-empty` while the document is a single empty block, a code block aside.

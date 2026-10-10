@@ -106,13 +106,16 @@ impl SortableItemHandle {
         if offset != 0.0 || settle.is_some() {
             moved.set(true);
         }
-        if let Some(from) = settle {
-            style.push_str(&format!(
+        match settle {
+            Some(from) => style.push_str(&format!(
                 " {SORTABLE_SETTLE_FROM}: {}; animation: {SORTABLE_SETTLE} {} {};",
                 translate(from),
                 TRANSITION_DURATION.value(),
                 TRANSITION_EASING.value()
-            ));
+            )),
+            // The ended settle animation would stay, and the next identical one not replay (3105).
+            None if !style.is_empty() => style.push_str(" animation: none;"),
+            None => {}
         }
         style
     }

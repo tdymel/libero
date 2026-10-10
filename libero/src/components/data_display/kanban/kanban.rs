@@ -329,7 +329,11 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
     // The slot a card from another column opens grows the list, not past its edge.
     let room = room();
     let items = use_box()
-        .style((room > 0.0).then(|| format!("padding-bottom: {room}px")))
+        // Reverted at rest: an omitted padding would keep the last gap (3105).
+        .style(Some(match room > 0.0 {
+            true => format!("padding-bottom: {room}px"),
+            false => "padding-bottom: revert-layer".to_string(),
+        }))
         .prepare()
         .element(&list.element)
         .attr("data-slot", KanbanColumnPart::List.slot())

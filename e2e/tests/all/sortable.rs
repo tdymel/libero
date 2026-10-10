@@ -201,7 +201,10 @@ async fn a_dropped_item_settles_into_its_slot<D: Driver>(d: &mut D, _route: &str
     d.press(keyboard::SPACE).await?;
     eventually_text(d, STATUS, "Lifted Beta, position 1 of 4.", "Space to lift").await?;
     let style = d.attr("#Alpha", "style").await?.unwrap_or_default();
-    ensure!(!style.contains("animation"), "the settle stayed: {style}");
+    ensure!(
+        !style.contains("animation") || style.contains("animation: none"),
+        "the settle stayed: {style}"
+    );
     d.press(keyboard::ESCAPE).await?;
     Ok(())
 }

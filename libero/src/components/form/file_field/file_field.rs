@@ -73,7 +73,7 @@ field_props! {
         /// Asks a phone for a fresh capture - `user` or `environment`.
         #[props(default, into)]
         capture: Option<String>,
-        /// Shown while nothing is picked.
+        /// The `Input` variant's Browse text while nothing is picked; the `Dropzone`'s prompt without `children`.
         #[props(default, into)]
         placeholder: Option<String>,
         /// Shows an x that empties the field.
