@@ -38,6 +38,36 @@ fn a_drawer_renders_through_the_portal_outlet() {
     assert!(html.contains(r#"aria-label="Navigation""#), "got {html}");
 }
 
+/// Todo 3004: a `title` is a visible heading that names the panel.
+#[test]
+fn a_drawer_title_names_the_panel() {
+    #[component]
+    fn Opener() -> Element {
+        let options = DrawerOptions {
+            title: Some("Filters".into()),
+            ..Default::default()
+        };
+        let filters = use_drawer(options, |_: ModalScope<()>| rsx! { "drawer content" });
+        use_hook(move || filters.open());
+
+        rsx! {}
+    }
+
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { Opener {} }
+        }
+    }
+
+    let html = render(app);
+    let at = html.find(r#"aria-labelledby=""#).expect("a labelled panel") + 17;
+    let title_id = &html[at..at + html[at..].find('"').unwrap()];
+
+    assert!(html.contains(&format!(r#"id="{title_id}""#)), "got {html}");
+    assert!(html.contains(">Filters<"), "got {html}");
+    assert!(!html.contains("aria-label="), "got {html}");
+}
+
 static WIDE_DRAWERS: Theme = Theme {
     drawer: DrawerDefaults {
         size: Size::Lg,

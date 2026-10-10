@@ -19,8 +19,10 @@ pub struct DrawerOptions {
     /// CSS, as `size: "24rem".into()`.
     pub size: Input<ThemeAwareValue>,
     pub z_index: Input<ThemeAwareValue>,
-    /// Names the panel, which is a dialog. Unset is a `warn()`.
+    /// Names the panel, which is a dialog. With neither this nor `title` it is a `warn()`.
     pub aria_label: Option<String>,
+    /// A visible heading at the top of the panel that names it.
+    pub title: Option<String>,
     /// Styles the panel. It has no inner parts: its content is yours.
     pub sx: Input<Sx>,
     /// Whether Escape, the backdrop or Back may close it; `false` keeps it open.
@@ -67,6 +69,7 @@ where
                 size: options.size.clone(),
                 z_index: options.z_index.clone(),
                 aria_label: options.aria_label.clone(),
+                title: options.title.clone(),
                 sx: options.sx.clone(),
                 ondismiss: options.ondismiss,
                 {content}

@@ -89,6 +89,8 @@ base_props! {
         z_index: Input<ThemeAwareValue>,
         #[props(default, into)]
         aria_label: Option<String>,
+        #[props(default, into)]
+        title: Option<String>,
         #[props(default)]
         ondismiss: Option<Callback<Dismiss, bool>>,
         children: Element,
@@ -130,6 +132,7 @@ pub(crate) fn Drawer(props: DrawerProps) -> Element {
                 // A drawer's own content owns its dismissal.
                 close_button: false,
                 aria_label: props.aria_label.clone(),
+                title: props.title.clone(),
                 ondismiss: props.ondismiss,
                 class,
                 sx,

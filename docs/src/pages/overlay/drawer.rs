@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Code, Flex, Text, Title},
+    components::{Button, Code, Flex, Text},
     hooks::{DrawerOptions, ModalScope, use_drawer},
     sx::sx,
     use_theme,
@@ -14,7 +14,6 @@ const CONTENT: &str = r#"Flex {
     direction: "column",
     gap: "md",
     sx: sx().padding("16px"),
-    Title { size: "lg", component: "h2", "Temporary drawer" }
     Text { "Closes on Escape or a backdrop click." }
     Button { variant: "outlined", onclick: move |_| s.close(), "Close" }
 }"#;
@@ -27,7 +26,7 @@ fn wrap_hook(values: &DemoValues, _: &str) -> String {
              DrawerOptions {{\n        \
                  anchor: {:?}.into(),\n        \
                  size: {:?}.into(),\n        \
-                 aria_label: Some(\"Menu\".into()),\n        \
+                 title: Some(\"Temporary drawer\".into()),\n        \
                  ..Default::default()\n    \
              }},\n    \
              |s: ModalScope<()>| rsx! {{\n{}    }},\n);\n\n\
@@ -48,7 +47,7 @@ fn DrawerDemo(anchor: String, size: String) -> Element {
         DrawerOptions {
             anchor: anchor.into(),
             size: size.into(),
-            aria_label: Some("Menu".into()),
+            title: Some("Temporary drawer".into()),
             ..Default::default()
         },
         |s: ModalScope<()>| {
@@ -57,7 +56,6 @@ fn DrawerDemo(anchor: String, size: String) -> Element {
                     direction: "column",
                     gap: "md",
                     sx: sx().padding("16px"),
-                    Title { size: "lg", component: "h2", "Temporary drawer" }
                     Text { "Closes on Escape or a backdrop click." }
                     Button { variant: "outlined", onclick: move |_| s.close(), "Close" }
                 }
@@ -89,7 +87,8 @@ pub fn DrawerPage() -> Element {
                     prop("anchor", "Input<DrawerAnchor>").default("start").doc("The edge the panel docks to. `start` is the right edge under `dir=\"rtl\"`."),
                     prop("size", "Input<ThemeAwareValue>").default(theme.drawer.size.as_str()).doc("Width when docked start or end, height when docked top or bottom: a size word or any CSS, e.g. `size: \"24rem\".into()`."),
                     prop("z_index", "Input<ThemeAwareValue>").doc("Stacking order of the panel."),
-                    prop("aria_label", "Option<String>").doc("Names the panel, which is a dialog. Unset warns in a debug build."),
+                    prop("aria_label", "Option<String>").doc("Names the panel, which is a dialog. With neither this nor `title`, it warns in a debug build."),
+                    prop("title", "Option<String>").doc("A visible heading at the top of the panel that names it."),
                     prop("sx", "Input<Sx>").doc("Styles the panel. It has no inner parts: the content is yours to style."),
                     prop("ondismiss", "Option<Callback<Dismiss, bool>>").doc("Whether Escape, the backdrop or Back may close it; `false` keeps it open, e.g. over an unsaved draft. Unset, all three close."),
                 ]).without_base_props(),
@@ -100,11 +99,11 @@ pub fn DrawerPage() -> Element {
                 .handles([
                     "Focus moves into the panel, and back to the trigger once it closes, as with `use_modal`.",
                     "A dismissal settles the `Opening` with `None`, so a result handler runs with `None`: match `Some(answer)` to act on an answer only.",
-                    "An unset `aria_label` warns in a debug build.",
+                    "A `title` is a heading that names the panel; without it or `aria_label` the panel warns in a debug build.",
                     "Android's Back button closes the drawer, as Escape does, rather than the app.",
                 ])
                 .must([
-                    "Set `DrawerOptions::aria_label`, since the panel is a dialog with no name of its own.",
+                    "Set `DrawerOptions::title` or `aria_label`, since the panel is a dialog with no name of its own.",
                     "Give its content a way to close it: it has no header close button.",
                 ])
                 .example("A filters drawer, `DrawerOptions { aria_label: Some(\"Filters\".into()), .. }`: focus moves into the panel, Tab stays inside it, and Escape or the panel's own Done button closes it and returns focus to the trigger.")

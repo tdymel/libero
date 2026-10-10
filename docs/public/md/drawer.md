@@ -102,7 +102,8 @@ behave the same. See [Modal](modal.md).
 | `anchor` | `Input<DrawerAnchor>` | `start` | The edge the panel docks to. |
 | `size` | `Input<ThemeAwareValue>` | `md` | Width when docked start or end, height when docked top or bottom: a size word or any CSS, e.g. `size: "24rem".into()`. |
 | `z_index` | `Input<ThemeAwareValue>` | - | Stacking order of the panel. |
-| `aria_label` | `Option<String>` | - | Names the panel, which is a dialog. Unset warns in a debug build. |
+| `aria_label` | `Option<String>` | - | Names the panel, which is a dialog. With neither this nor `title`, it warns in a debug build. |
+| `title` | `Option<String>` | - | A visible heading at the top of the panel that names it. |
 | `sx` | `Input<Sx>` | - | Styles the panel. It has no inner parts: the content is yours to style. |
 | `ondismiss` | `Option<Callback<Dismiss, bool>>` | - | Whether Escape, the backdrop or Back may close it; `false` keeps it open, e.g. over an unsaved draft. Unset, all three close. |
 
@@ -121,13 +122,14 @@ behave the same. See [Modal](modal.md).
   `use_modal`.
 - A dismissal settles the `Opening` with `None`, so a result handler runs with
   `None`: match `Some(answer)` to act on an answer only.
-- An unset `aria_label` warns in a debug build.
+- A `title` is a heading that names the panel; without it or `aria_label` the
+  panel warns in a debug build.
 - Android's Back button closes the drawer, as Escape does, rather than the app.
 
 ### You must
 
-- Set `DrawerOptions::aria_label`, since the panel is a dialog with no name of
-  its own.
+- Set `DrawerOptions::title` or `aria_label`, since the panel is a dialog with
+  no name of its own.
 - Give its content a way to close it: it has no header close button.
 
 ### Example
