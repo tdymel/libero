@@ -64,6 +64,20 @@ fn an_unset_box_starts_at_four_fifths_of_the_largest() {
 }
 
 #[test]
+fn an_unset_locked_box_starts_on_its_ratio() {
+    // 3:2 on an 800x600 picture: whole percent would give 0.80 by 0.71.
+    let start = CropRect::starting(Some(1.125));
+    assert!(
+        (start.width / start.height - 1.125).abs() < 1e-9,
+        "{start:?}"
+    );
+    assert!(
+        (start.width - 0.8).abs() < 1e-9 && start.x == 0.1,
+        "{start:?}"
+    );
+}
+
+#[test]
 fn a_move_stops_at_the_edges() {
     let start = rect(0.1, 0.1, 0.5, 0.5);
     assert_close(start.moved(0.2, -0.05), rect(0.3, 0.05, 0.5, 0.5));

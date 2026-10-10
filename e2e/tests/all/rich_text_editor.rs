@@ -1905,6 +1905,25 @@ fn a_view_shows_a_doc_read_only_and_follows_an_editor() {
     });
 }
 
+/// Todo 3001: a caller's toggle says its new state, as the builtins do.
+#[test]
+fn a_custom_toggle_is_announced() {
+    const LOUD: &str = "[role=toolbar] button[aria-label=\"Loud\"]";
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor/custom-toggle", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        editor_status(page).await;
+        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        pointer::click(page, LOUD).await.unwrap();
+        announced(page, "Loud on").await;
+        pointer::click(page, LOUD).await.unwrap();
+        announced(page, "Loud off").await;
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn toolbar_and_menu_actions_are_announced() {
     const BULLETS: &str = "[role=toolbar] button[aria-label=\"Bulleted list\"]";

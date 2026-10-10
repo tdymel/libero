@@ -10,7 +10,8 @@
 use super::doc::{Block, BlockKind, Doc, Inline};
 use super::mark::{Mark, Marks};
 use super::syntax::{
-    BlockSyntax, DELIMITERS, block_syntax, closing_span, link, task_box, valid_inner,
+    BlockSyntax, DELIMITERS, block_syntax, brackets, closing_span, link_closed_at, task_box,
+    valid_inner,
 };
 
 impl Doc {
@@ -171,6 +172,7 @@ fn inlines(text: &str) -> Vec<Inline> {
     let mut tags = [0usize; TAG_MARKS.len()];
     // Open links: the index of their `]`, the index after their `)`, the mark.
     let mut links: Vec<(usize, usize, Mark)> = Vec::new();
+    let closes = brackets(&chars);
     let mut i = 0;
     while i < chars.len() {
         if let Some((_, end, _)) = links.last().filter(|link| link.0 <= i) {
@@ -226,7 +228,10 @@ fn inlines(text: &str) -> Vec<Inline> {
                 .last()
                 .is_some_and(|cell| cell.c == '!' && cell.active) =>
             {
-                match link(&chars, i) {
+                match closes
+                    .get(&i)
+                    .and_then(|close| link_closed_at(&chars, *close))
+                {
                     Some(found) => {
                         links.push(found);
                         i += 1;

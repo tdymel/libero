@@ -1280,6 +1280,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             .first()
             .map(|chord| chord.to_string().to_lowercase());
         let command = tool.command.clone();
+        let (active, label) = (tool.active, tool.label.clone());
         rsx! {
             ActionIcon {
                 key: "{tool.command}",
@@ -1288,7 +1289,14 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                 shortcut,
                 selected,
                 onclick: move |_| {
-                    run_command(command.clone(), true, false);
+                    // A custom toggle says its new state, as the builtins do (todo 3001).
+                    if run_command(command.clone(), true, false)
+                        && let Some(active) = active
+                    {
+                        let on = active(editor.peek().state());
+                        let template = if on { words.on } else { words.off };
+                        announcer.say(template.replace("{name}", &label));
+                    }
                 },
                 {tool.icon}
             }

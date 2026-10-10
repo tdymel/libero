@@ -98,9 +98,30 @@ fn emit_is_readable() {
         ("`a`b` <code>c</code>", "`a`b\\` `c`"),
         ("<code>a`b</code>", "<code>a\\`b</code>"),
         ("1. a\n1. b", "1. a\n2. b"),
+        // A CommonMark reader would make `&copy;` a sign (todo 3015).
+        ("&copy; & co", "\\&copy; \\& co"),
     ];
     for (source, expected) in cases {
         assert_eq!(md(&Doc::from_markdown(source)), expected, "from {source:?}");
+    }
+}
+
+#[test]
+fn unmatched_brackets_read_in_linear_time() {
+    let source = format!("{}[a](https://a.example)", "[".repeat(100_000));
+    let started = std::time::Instant::now();
+    let doc = Doc::from_markdown(&source);
+    assert!(started.elapsed().as_secs() < 2, "{:?}", started.elapsed());
+    assert_eq!(doc.blocks[0].text().chars().count(), 100_001);
+    for (source, text) in [
+        ("[[a](https://a.example)", "[a"),
+        ("[a] [b](https://a.example)", "[a] b"),
+    ] {
+        assert_eq!(
+            Doc::from_markdown(source).blocks[0].text(),
+            text,
+            "{source:?}"
+        );
     }
 }
 

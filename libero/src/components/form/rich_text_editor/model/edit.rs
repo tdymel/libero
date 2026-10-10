@@ -634,6 +634,13 @@ impl EditorState {
         self.doc.siblings_mut(&path).insert(index, block);
     }
 
+    /// Inserts `blocks` in order next to `key`, with one walk to find it (todo 3010).
+    pub(super) fn insert_all_after(&mut self, key: NodeKey, before: bool, blocks: Vec<Block>) {
+        let path = self.doc.path(key).expect("a key from this doc");
+        let index = *path.last().expect("a path") + usize::from(!before);
+        self.doc.siblings_mut(&path).splice(index..index, blocks);
+    }
+
     pub(super) fn remove(&mut self, key: NodeKey) -> Option<Block> {
         let path = self.doc.path(key)?;
         Some(self.doc.siblings_mut(&path).remove(*path.last()?))

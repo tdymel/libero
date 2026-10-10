@@ -82,6 +82,36 @@ fn a_paste_is_cut_across_blocks_to_the_limit() {
 }
 
 #[test]
+fn a_paste_into_a_doc_over_the_limit_keeps_the_text_before_the_caret() {
+    let mut state = state("abcdef|");
+    assert!(!state.paste_within("x", false, Some(3)));
+    assert_eq!(state.doc.plain_text(), "abcdef");
+    let mut selected = super::state("a|bcd|ef");
+    selected.paste_within("xy", false, Some(3));
+    assert_eq!(selected.doc.plain_text(), "axyef");
+}
+
+#[test]
+fn a_huge_paste_is_cut_before_it_is_read() {
+    let mut state = state("ab|");
+    let text = "line\n".repeat(200_000);
+    let started = std::time::Instant::now();
+    state.paste_within(&text, false, Some(12));
+    assert!(started.elapsed().as_secs() < 2, "{:?}", started.elapsed());
+    assert_eq!(state.doc.plain_text(), "abline\nline\n");
+}
+
+#[test]
+fn many_pasted_blocks_go_in_with_one_walk() {
+    let mut state = state("|");
+    let text = "line\n".repeat(20_000);
+    let started = std::time::Instant::now();
+    state.paste_within(&text, false, None);
+    assert!(started.elapsed().as_secs() < 2, "{:?}", started.elapsed());
+    assert_eq!(state.doc.blocks.len(), 20_000);
+}
+
+#[test]
 fn cutting_before_the_caret_takes_the_line_break_as_one_char() {
     check("one\n\ntwo|", |state| state.cut_before_caret(5), "on|");
     check("one\n\ntwo|", |state| state.cut_before_caret(4), "one|");

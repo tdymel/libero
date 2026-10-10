@@ -20,12 +20,26 @@ impl EditorState {
         over > 0 && self.cut_before_caret(over)
     }
 
-    /// [`paste`](Self::paste) cut to `max` chars of plain text, if there is a limit.
+    /// [`paste`](Self::paste) cut to `max` chars of plain text, if there is a limit. Only
+    /// the pasted text is cut, and the raw text is cut first so a huge paste parses little.
     pub(crate) fn paste_within(&mut self, text: &str, markdown: bool, max: Option<usize>) -> bool {
-        let changed = self.paste(text, markdown);
-        if let Some(max) = max {
-            self.cut_over(max, usize::MAX);
+        let Some(max) = max else {
+            return self.paste(text, markdown);
+        };
+        let room = self.room(max);
+        if room == 0 && self.selection.is_collapsed() {
+            return false;
         }
+        // Markdown syntax and blank lines are not plain text, so the raw cut keeps a margin.
+        let bound = room.saturating_mul(2).saturating_add(4096);
+        let text = match text.char_indices().nth(bound) {
+            Some((end, _)) => &text[..end],
+            None => text,
+        };
+        let before = self.doc.plain_len();
+        let changed = self.paste(text, markdown);
+        let grown = self.doc.plain_len().saturating_sub(before);
+        self.cut_over(max, grown);
         changed
     }
 

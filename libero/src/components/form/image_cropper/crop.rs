@@ -167,12 +167,13 @@ impl CropRect {
         }
     }
 
-    /// Where an unset box starts: 80% of [`Self::largest`], centred, in whole
-    /// percent, so a drag can move it at once (Cropper.js's `autoCropArea`).
+    /// Where an unset box starts: 80% of [`Self::largest`], centred, so a drag can move
+    /// it at once (Cropper.js's `autoCropArea`). The sides stay unrounded so a locked
+    /// aspect holds (todo 3014); the corner is in whole percent.
     pub(super) fn starting(ratio: Option<f64>) -> Self {
         let percent = |fraction: f64| (fraction * 100.0).round() / 100.0;
         let largest = Self::largest(ratio);
-        let (width, height) = (percent(largest.width * 0.8), percent(largest.height * 0.8));
+        let (width, height) = (largest.width * 0.8, largest.height * 0.8);
         Self {
             x: percent((1.0 - width) / 2.0),
             y: percent((1.0 - height) / 2.0),

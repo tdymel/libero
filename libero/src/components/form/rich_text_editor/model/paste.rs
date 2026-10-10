@@ -54,15 +54,7 @@ impl EditorState {
             false => (at.block, at.offset == 0),
         };
         let last = blocks.last().map(|block| block.key);
-        match before {
-            true => blocks
-                .into_iter()
-                .for_each(|block| self.insert_after(anchor, true, block)),
-            false => blocks
-                .into_iter()
-                .rev()
-                .for_each(|block| self.insert_after(anchor, false, block)),
-        }
+        self.insert_all_after(anchor, before, blocks);
         match (tail, last) {
             (Some(tail), _) => {
                 self.set_caret(Position::new(anchor, 0));

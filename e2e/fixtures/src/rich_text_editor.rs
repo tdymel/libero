@@ -4,7 +4,7 @@
 use dioxus::prelude::*;
 use libero::components::RichTextEditor;
 use libero::components::rich_text::{
-    Attrs, Builtin, Commands, CustomContent, Doc, EditorInput, EditorState, Inline, MarkKind,
+    Attrs, Builtin, Commands, CustomContent, Doc, EditorInput, EditorState, Inline, Mark, MarkKind,
     Marks, NodeRegistry, NodeSpec, NodeViewProps, NodeViews, Position, RichTextTool, RichTextView,
     Selection, SubmitOn, use_rich_text_editor,
 };
@@ -31,7 +31,28 @@ pub const ROUTES: Routes = &[
     ("/rich-text-editor/view", || rsx! { ViewPage {} }),
     ("/rich-text-editor/far", || rsx! { FarPage {} }),
     ("/rich-text-editor/rtl-code", || rsx! { RtlCodePage {} }),
+    ("/rich-text-editor/custom-toggle", || rsx! { CustomTogglePage {} }),
 ];
+
+/// A caller's toggle tool, for its announced state (todo 3001).
+#[component]
+fn CustomTogglePage() -> Element {
+    let commands = use_hook(|| {
+        let mut commands = Commands::default();
+        commands.register("loud", |state| state.toggle_mark(Mark::Bold));
+        commands
+    });
+    rsx! {
+        RichTextEditor {
+            label: "Notes",
+            commands,
+            tools: vec![
+                RichTextTool::new("loud", "Loud", rsx! { "L" })
+                    .active(|state| state.is_active(MarkKind::Bold)),
+            ],
+        }
+    }
+}
 
 /// The handle's buttons sit above an editor 3000px down the page.
 #[component]

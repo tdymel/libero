@@ -1,6 +1,8 @@
 //! The Markdown subset's recognizers, shared by the typing shortcuts ([`super::rules`])
 //! and the reader ([`super::parse`]), so both accept exactly the same syntax.
 
+use std::collections::HashMap;
+
 use super::mark::{Href, Mark};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -157,6 +159,32 @@ pub(super) fn link(chars: &[char], at: usize) -> Option<(usize, usize, Mark)> {
         }
         close += 1;
     }
+    link_closed_at(chars, close)
+}
+
+/// The `]` of every `[` in one pass, as [`link`] finds it, so many unmatched `[` stay
+/// linear (todo 3012).
+pub(super) fn brackets(chars: &[char]) -> HashMap<usize, usize> {
+    let (mut open, mut closes) = (Vec::new(), HashMap::new());
+    let mut i = 0;
+    while i < chars.len() {
+        match chars[i] {
+            '\\' => i += 1,
+            '[' => open.push(i),
+            ']' => {
+                if let Some(at) = open.pop() {
+                    closes.insert(at, i);
+                }
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    closes
+}
+
+/// [`link`] with its `]` already found.
+pub(super) fn link_closed_at(chars: &[char], close: usize) -> Option<(usize, usize, Mark)> {
     if chars.get(close + 1) != Some(&'(') {
         return None;
     }

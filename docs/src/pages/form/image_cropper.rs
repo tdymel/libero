@@ -15,7 +15,7 @@ fn aspect_of(values: &DemoValues) -> Option<f64> {
 }
 
 /// Where an unset cropper starts on the sample image: centred, 80% of the
-/// largest box `aspect` allows, in whole percent.
+/// largest box `aspect` allows, its corner in whole percent.
 fn starting(aspect: Option<f64>) -> CropRect {
     let (width, height) = match aspect.map(|aspect| aspect / SAMPLE_RATIO) {
         Some(ratio) if ratio <= 1.0 => (ratio, 1.0),
@@ -23,7 +23,7 @@ fn starting(aspect: Option<f64>) -> CropRect {
         None => (1.0, 1.0),
     };
     let percent = |fraction: f64| (fraction * 100.0).round() / 100.0;
-    let (width, height) = (percent(width * 0.8), percent(height * 0.8));
+    let (width, height) = (width * 0.8, height * 0.8);
     CropRect {
         x: percent((1.0 - width) / 2.0),
         y: percent((1.0 - height) / 2.0),
