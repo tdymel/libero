@@ -130,15 +130,18 @@ pub fn ThemeSwitcher(props: ThemeSwitcherProps) -> Element {
     } else {
         scheme.resolved().flipped().into()
     };
-    let aria_label = match props.label {
-        Some(label) => label.call(next),
-        None => match next {
-            ColorSchemeSetting::Light => labels.to_light,
-            ColorSchemeSetting::Dark => labels.to_dark,
-            ColorSchemeSetting::System => labels.to_system,
-        }
-        .to_string(),
-    };
+    let aria_label = props
+        .label
+        .map(|label| label.call(next))
+        .filter(|label| !label.trim().is_empty())
+        .unwrap_or_else(|| {
+            match next {
+                ColorSchemeSetting::Light => labels.to_light,
+                ColorSchemeSetting::Dark => labels.to_dark,
+                ColorSchemeSetting::System => labels.to_system,
+            }
+            .to_string()
+        });
     let group = use_button_group();
     let variant = Input::Value(
         props

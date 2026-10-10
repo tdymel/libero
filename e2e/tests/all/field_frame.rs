@@ -534,6 +534,32 @@ e2e::scenario!(
     a_field_shrinks_into_a_narrow_row
 );
 
+/// WCAG 1.4.10 (todo 3023): a label, captions and a status of one unbreakable
+/// word wrap inside a 200px field instead of overflowing it.
+async fn a_long_word_wraps_inside_the_field<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    for slot in ["label", "description", "helper", "status"] {
+        let selector = format!("#stage [data-slot={slot}]");
+        let overflow = d
+            .evaluate(&format!(
+                "(e => e.scrollWidth - e.clientWidth)(document.querySelector({selector:?}))"
+            ))
+            .await?;
+        anyhow::ensure!(
+            overflow.as_f64().is_some_and(|px| px <= 0.5),
+            "{:?}: the {slot} overflows the field by {overflow}px",
+            d.platform()
+        );
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    a_long_word_wraps_inside_the_field,
+    "/field-frame/long-word",
+    a_long_word_wraps_inside_the_field,
+    native: skip("Blitz has no script reads")
+);
+
 /// WCAG 1.4.11: the warning state recolours the border, so it must still reach 3:1.
 #[test]
 fn a_warning_frame_border_at_3_to_1() {

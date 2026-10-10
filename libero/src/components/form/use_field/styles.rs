@@ -19,6 +19,8 @@ pub(in crate::components::form) static FIELD_SX: StaticSx = StaticSx::new(|| {
         .flex_direction("column")
         // Shrinks below its input's intrinsic width in a flex row (WCAG 1.4.10).
         .min_width("0")
+        // A long unbroken word in a label or message wraps instead of scrolling the page (WCAG 1.4.10).
+        .with("overflow-wrap", "anywhere")
         .selector(FIELD_CAPTIONS, sx().color("muted.7"))
         .selector(
             "& label > [data-slot='required']",

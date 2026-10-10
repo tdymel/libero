@@ -16,7 +16,26 @@ use crate::{Routes, common::Fruit};
 pub const ROUTES: Routes = &[
     ("/field-frame", || rsx! { FieldFramePage {} }),
     ("/field-frame/narrow", || rsx! { NarrowPage {} }),
+    ("/field-frame/long-word", || rsx! { LongWordPage {} }),
 ];
+
+const LONG_WORD: &str = "Supercalifragilisticexpialidocious_Supercalifragilisticexpialidocious";
+
+/// A label, captions and a status of one unbreakable word in a 200px column.
+#[component]
+fn LongWordPage() -> Element {
+    rsx! {
+        div { id: "stage", style: "width: 200px;",
+            TextField {
+                label: LONG_WORD,
+                description: LONG_WORD,
+                helper: LONG_WORD,
+                status: FieldStatus::Error(LONG_WORD.to_string()),
+                value: "ada",
+            }
+        }
+    }
+}
 
 /// Fields as the only item of a row flex box narrower than their inputs' intrinsic width.
 #[component]

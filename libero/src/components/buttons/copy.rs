@@ -17,7 +17,7 @@ base_props! {
         /// The text a press writes to the clipboard.
         #[props(into)]
         value: String,
-        /// Unset, no chrome of its own.
+        /// Unset with `color` also unset, no chrome of its own.
         #[props(default, into)]
         variant: Input<Variant>,
         #[props(default, into)]
@@ -68,7 +68,11 @@ pub fn Copy(props: CopyProps) -> Element {
     rsx! {
         span { style: "display: contents",
             ActionIcon {
-                aria_label: props.aria_label.clone().unwrap_or_else(|| labels.copy.to_string()),
+                aria_label: props
+                    .aria_label
+                    .clone()
+                    .filter(|label| !label.trim().is_empty())
+                    .unwrap_or_else(|| labels.copy.to_string()),
                 variant: props.variant.clone(),
                 color: props.color.clone(),
                 size: props.size.clone(),

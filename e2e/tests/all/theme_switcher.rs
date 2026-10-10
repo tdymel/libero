@@ -433,6 +433,48 @@ fn each_press_steps_the_cycle_and_renames_the_button() {
     });
 }
 
+/// Todo 3022: a disabled switcher's toggle and picker are disabled buttons focus cannot
+/// reach, and a press on the picker opens no menu.
+#[test]
+fn a_disabled_theme_switcher_cannot_be_focused_or_open_the_menu() {
+    block_on(async {
+        let fixture = Fixture::open("/theme-switcher/off", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        for button in ["#off", "#off-split > button", "#off-split > div > button"] {
+            let unfocusable: bool = page
+                .evaluate(format!(
+                    "(() => {{ const b = document.querySelector('{button}'); \
+                     b.focus(); return b.disabled && document.activeElement !== b; }})()"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(unfocusable, "the disabled {button} took focus");
+        }
+
+        pointer::click(page, "#off-split > div > button")
+            .await
+            .unwrap();
+        let opened: bool = page
+            .evaluate(format!(
+                "!!document.querySelector('{MENU}') || \
+                 document.querySelector('#off-split > div > button').getAttribute('aria-expanded') === 'true'"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(!opened, "a press on the disabled picker opened the menu");
+
+        fixture.console.assert_clean("a disabled switcher").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// `menu_parts` reaches the labels of the portaled theme-set menu.
 #[test]
 fn menu_parts_style_the_portaled_menu() {

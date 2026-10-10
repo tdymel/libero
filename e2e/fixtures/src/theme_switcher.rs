@@ -14,7 +14,19 @@ pub const ROUTES: Routes = &[
     ("/theme-switcher/system", || rsx! { SystemPage {} }),
     ("/theme-switcher/named", || rsx! { NamedPage {} }),
     ("/theme-switcher/labelled", || rsx! { LabelledPage {} }),
+    ("/theme-switcher/off", || rsx! { OffPage {} }),
 ];
+
+/// Todo 3022: the toggle alone and the split form, both disabled.
+#[component]
+fn OffPage() -> Element {
+    rsx! {
+        Flex { direction: "row", gap: "md", align: "center",
+            ThemeSwitcher { id: "off", disabled: true }
+            ThemeSwitcher { id: "off-split", themes: ThemeSet::CATALOGUE, disabled: true }
+        }
+    }
+}
 
 /// Todo 2319: `label` names the setting it gets, so a test reads what it was given.
 #[component]

@@ -218,7 +218,11 @@ pub fn Tldr(props: TldrProps) -> Element {
                     radius: radius.clone(),
                     variant,
                     color,
-                    aria_label: props.aria_label.clone().unwrap_or_else(|| words.icon_only.into()),
+                    aria_label: props
+                        .aria_label
+                        .clone()
+                        .filter(|label| !label.trim().is_empty())
+                        .unwrap_or_else(|| words.icon_only.into()),
                     class: props.class.clone(),
                     sx: props.sx.clone(),
                     states: props.states.clone(),
