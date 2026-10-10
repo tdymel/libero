@@ -269,19 +269,3 @@ pub fn Radio(props: RadioProps) -> Element {
         vec![input, circle, ring_overlay()],
     ))
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::css::Stylesheet;
-
-    /// Todo 1601: forced colours drop the fade's contrast cue, so disabled turns `GrayText`.
-    #[test]
-    fn a_disabled_radio_turns_gray_text_in_forced_colours() {
-        let css = Stylesheet::from(&RADIO_CONTROL_SX).as_str().to_string();
-        assert!(
-            css.contains("@media (forced-colors: active)") && css.contains("color:GrayText"),
-            "{css}"
-        );
-    }
-}

@@ -135,7 +135,7 @@ pub fn FormPage() -> Element {
                     prop("summary_title", "String")
                         .doc("A heading over the error summary."),
                     prop("form", "FormHandle")
-                        .doc("Controls the form from outside, made with `use_form()`. Without it the form makes its own, which `use_form_context()` returns inside the form."),
+                        .doc("Controls the form from outside, made with `use_form()`. Taken once, on mount. Without it the form makes its own, which `use_form_context()` returns inside the form."),
                     prop("children", "Element")
                         .default("required")
                         .doc("The fields, fieldsets and buttons."),
@@ -201,11 +201,16 @@ pub fn FormPage() -> Element {
                     Control::switch("form").code(silent),
                     Control::switch("company").code(silent),
                 ],
-                render: move |values: DemoValues| rsx! {
-                    SignupForm {
-                        summary_title: values.str("summary_title") == "true",
-                        handle: values.str("form") == "true",
-                        company: values.str("company") == "true",
+                render: move |values: DemoValues| {
+                    let handle = values.str("form") == "true";
+                    // Keyed: the `Form` takes its `form` handle once, on mount.
+                    rsx! {
+                        SignupForm {
+                            key: "{handle}",
+                            summary_title: values.str("summary_title") == "true",
+                            handle,
+                            company: values.str("company") == "true",
+                        }
                     }
                 },
             }

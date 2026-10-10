@@ -54,7 +54,7 @@ pub fn QrCodePage() -> Element {
                     // Both are required, so they always print alongside
                     // the one prop there is to tune.
                     Control::slider("robustness", ["low", "medium", "quartile", "high"])
-                        .default("medium")
+                        .default(theme.qr_code.robustness.as_str())
                         .code(|control, values| {
                             // Required, plus the width the SVG has no
                             // intrinsic size to supply.

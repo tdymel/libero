@@ -63,6 +63,18 @@ fn SignupForm() -> Element {
 `use_form_context()` returns the same handle.
 
 ```rust,ignore
+use dioxus::prelude::*;
+use libero::components::{
+    Button, Checkbox, Fields, Flex, Form, Text, not_empty, use_form, use_form_context,
+};
+
+// Builds on Getting started's `EmailField`.
+#[derive(Clone, PartialEq, Default, Fields)]
+struct Terms {
+    email: String,
+    accepted: bool,
+}
+
 #[component]
 fn TermsForm() -> Element {
     let terms = use_store(Terms::default);
@@ -146,7 +158,7 @@ would.
 | `validate` | `Validators<V>` | - | Rules over `value`, one or an array. A rule with `.on(..)` shows its status on each field it names. |
 | `onsubmit` | `EventHandler<FormEvent>` | - | Fires on a submit with no errors. Without an `action`, the browser's own submit is cancelled. |
 | `summary_title` | `String` | - | A heading over the error summary. |
-| `form` | `FormHandle` | - | Controls the form from outside, made with `use_form()`. Without it the form makes its own, which `use_form_context()` returns inside the form. |
+| `form` | `FormHandle` | - | Controls the form from outside, made with `use_form()`. Taken once, on mount. Without it the form makes its own, which `use_form_context()` returns inside the form. |
 | `children` | `Element` | required | The fields, fieldsets and buttons. |
 
 `Form` also takes the `<form>` HTML attributes (`action`, `method`, ...) and,

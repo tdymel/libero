@@ -63,7 +63,7 @@ plus S", key by key.
 | Field | Type | Description |
 |---|---|---|
 | `size` | `Size` | Default `size` when the prop is omitted; `md`. |
-| `font_sizes` | `Sizes<u16>` | Font size in px per size step: 10, 12, 14, 16, 20, 24. |
+| `font_sizes` | `Sizes<u16>` | Pixels at a 16px root per size step: 10, 12, 14, 16, 20, 24, written as `rem`, so a key grows with a raised text size. |
 | `font_family` | `&'static str` | The keycap's font; the theme's mono stack. |
 | `background` | `&'static str` | Keycap fill; `var(--lsx-muted-1)`. |
 | `border` | `&'static str` | Border color, used on all four sides; `var(--lsx-muted-4)`. |

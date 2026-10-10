@@ -202,7 +202,7 @@ pub fn ModalPage() -> Element {
                 ]).without_base_props(),
                 props("Opening<R>", vec![
                     prop("onresult", "fn(impl FnMut(Option<R>)) -> Self")
-                        .doc("Runs when this opening settles, with `None` if it was dismissed. A replaced opening never runs it. Awaiting the `Opening` gives the same answer instead, and `None` once replaced."),
+                        .doc("Runs when this opening settles, with `None` if it was dismissed. A replaced opening runs it with `None`. Awaiting the `Opening` gives the same answer instead, and `None` once replaced."),
                     prop("close", "fn()").doc("Closes this opening, if it is still the one showing."),
                     prop(".await", "Option<R>").doc("The same outcome, as a future. Use it when async work waits on the answer, or for dialogs in sequence."),
                 ]).without_base_props(),
@@ -214,12 +214,12 @@ pub fn ModalPage() -> Element {
                 ]).without_base_props(),
             ],
             accessibility: a11y()
-                .key(["Escape"], "Dismisses the modal, as a backdrop click does, unless the `Dialog`'s `ondismiss` refuses.")
+                .key(["Escape"], "Dismisses the modal unless the `Dialog`'s `ondismiss` refuses. A backdrop click does the same, except on a `role: \"alertdialog\"`, which ignores it.")
                 .key(["Tab", "Shift+Tab"], "Moves the focus within the modal. It does not leave while the modal shows.")
                 .handles([
                     "Focus moves into the modal, and back to the trigger once it closes.",
                     "The focus trap, Escape and backdrop dismissal come from the modal. A `Dialog` on its own has none of them.",
-                    "A dismissal settles the `Opening` with `None`, so a handler written for an answer never runs on it.",
+                    "A dismissal settles the `Opening` with `None`, so a result handler runs with `None`: match `Some(answer)` to act on an answer only.",
                     "Android's Back button dismisses the top modal, as Escape does, rather than closing the app.",
                     "When the focused control is removed, focus goes back into the modal, and Tab and Escape keep working.",
                     "A `Dialog` with `role: \"alertdialog\"` ignores a backdrop click, so a stray click is no answer.",

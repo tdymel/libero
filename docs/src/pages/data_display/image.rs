@@ -33,7 +33,7 @@ pub fn ImagePage() -> Element {
                     prop("zoomed_src", "Option<String>")
                         .default("None")
                         .doc("A larger source for the zoom overlay. Falls back to `src`."),
-                    prop("fit", "ImageFit").default("cover").doc("Maps onto `object-fit`."),
+                    prop("fit", "ImageFit").default(theme.image.fit.as_str()).doc("Maps onto `object-fit`."),
                     prop("radius", "ThemeAwareValue")
                         .default("0")
                         .doc("Corner radius, a step on the radius scale, or any CSS, e.g. `radius: \"0\"`."),
@@ -62,7 +62,7 @@ pub fn ImagePage() -> Element {
                 .handles([
                     "`decorative` renders `alt=\"\"` and `role=\"presentation\"`.",
                     "A zoomable image is a button named after its `alt`, \"Zoom in: <alt>\" (the localization's `image.zoom_named`).",
-                    "An image with neither `alt` nor `decorative` warns in a debug build and renders no `alt`, so a checker still flags it.",
+                    "An image with neither `alt` nor `decorative` warns in a debug build and renders no `alt`, so a checker still flags it, unless it is `zoomable`: its inner `<img>` gets an empty `alt` and the button is named \"Zoom in\".",
                     "A zoomable image with no `alt`, an empty one or `decorative` warns in a debug build: a checker passes its bare \"Zoom in\" button and \"Gallery\" dialog.",
                 ])
                 .must(["Give every image an `alt`, or set `decorative` for one that carries nothing."])

@@ -99,7 +99,7 @@ pub fn DrawerPage() -> Element {
                 .key(["Tab", "Shift+Tab"], "Moves the focus within the panel. It does not leave while the drawer shows.")
                 .handles([
                     "Focus moves into the panel, and back to the trigger once it closes, as with `use_modal`.",
-                    "A dismissal settles the `Opening` with `None`, so a result handler never runs on it.",
+                    "A dismissal settles the `Opening` with `None`, so a result handler runs with `None`: match `Some(answer)` to act on an answer only.",
                     "An unset `aria_label` warns in a debug build.",
                     "Android's Back button closes the drawer, as Escape does, rather than the app.",
                 ])

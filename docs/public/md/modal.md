@@ -167,7 +167,7 @@ pub fn use_modal<S: Clone + 'static, R: Clone + 'static>(
 
 | Method | Returns | Description |
 |---|---|---|
-| `onresult(f: impl FnMut(Option<R>))` | `Self` | Runs when this opening settles, with `None` if it was dismissed. A replaced opening never runs it. Awaiting the `Opening` gives the same answer instead, and `None` once replaced. |
+| `onresult(f: impl FnMut(Option<R>))` | `Self` | Runs when this opening settles, with `None` if it was dismissed. A replaced opening runs it with `None`. Awaiting the `Opening` gives the same answer instead, and `None` once replaced. |
 | `close()` | `()` | Closes this opening, if it is still the one showing. |
 | `.await` | `Option<R>` | The same outcome, as a future. `None` once replaced. Use it when async work waits on the answer, or for dialogs in sequence. |
 
@@ -187,7 +187,7 @@ modal.
 
 | Key | Action |
 |---|---|
-| `Escape` | Dismisses the modal, as a backdrop click does, unless the `Dialog`'s `ondismiss` refuses. |
+| `Escape` | Dismisses the modal unless the `Dialog`'s `ondismiss` refuses. A backdrop click does the same, except on a `role: "alertdialog"`, which ignores it. |
 | `Tab` or `Shift+Tab` | Moves the focus within the modal. It does not leave while the modal shows. |
 
 ### Libero handles
@@ -195,8 +195,8 @@ modal.
 - Focus moves into the modal, and back to the trigger once it closes.
 - The focus trap, Escape and backdrop dismissal come from the modal. A `Dialog`
   on its own has none of them.
-- A dismissal settles the `Opening` with `None`, so a handler written for an
-  answer never runs on it.
+- A dismissal settles the `Opening` with `None`, so a result handler runs with
+  `None`: match `Some(answer)` to act on an answer only.
 - Android's Back button dismisses the top modal, as Escape does, rather than
   closing the app.
 - When the focused control is removed, focus goes back into the modal, and Tab

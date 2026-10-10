@@ -104,7 +104,8 @@ explains how parts work.
 - A zoomable image is a button named after its `alt`, "Zoom in: <alt>" (the
   localization's `image.zoom_named`).
 - An image with neither `alt` nor `decorative` warns in a debug build and
-  renders no `alt`, so a checker still flags it.
+  renders no `alt`, so a checker still flags it, unless it is `zoomable`: its
+  inner `<img>` gets an empty `alt` and the button is named "Zoom in".
 - A zoomable image with no `alt`, an empty one or `decorative` warns in a debug
   build: a checker passes its bare "Zoom in" button and "Gallery" dialog.
 
@@ -141,4 +142,3 @@ State tokens on the root's `data-state`, space separated.
 | Token | Condition |
 |---|---|
 | `fit-fill` / `fit-contain` / `fit-cover` / `fit-none` / `fit-scale-down` | The `fit` in effect, on the `<img>`. That is the root unless the image is `zoomable`. |
-| `zoomed` | On a `zoomable` image's `<button>` root, while the overlay is open. |

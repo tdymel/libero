@@ -193,7 +193,7 @@ explains how parts work.
 | `Home` or `End` | `input` variant with `multiple`: jumps to the first or last file. |
 | `Backspace` or `Delete` | `input` variant with `multiple`: removes the focused file. |
 | `Left` | On the Browse button, with `multiple`: moves to the last file. |
-| `Backspace` | On the Browse button: removes the last file. |
+| `Backspace` or `Delete` | On the Browse button: removes the last file. |
 
 ### Libero handles
 

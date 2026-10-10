@@ -140,7 +140,7 @@ pub fn FileFieldPage() -> Element {
                 .key(["Home", "End"], "`input` variant with `multiple`: jumps to the first or last file.")
                 .key(["Backspace", "Delete"], "`input` variant with `multiple`: removes the focused file.")
                 .key(["Left"], "On the Browse button, with `multiple`: moves to the last file.")
-                .key(["Backspace"], "On the Browse button: removes the last file.")
+                .key(["Backspace", "Delete"], "On the Browse button: removes the last file.")
                 .handles([
                     "The field is a group named by its label, holding the picked files and a Browse button.",
                     "In the `input` variant several files are one tab stop; a single file is none, Browse and clear act on it.",

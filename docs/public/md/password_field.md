@@ -93,7 +93,8 @@ explains how parts work.
 
 ### You must
 
-- Leave `label` unset only when something else names the field.
+- Leave `label` unset only when something else names the field, such as an
+  `aria_label` attribute.
 - Set `autocomplete` so password managers can fill the field: `"new-password"`
   on a sign-up form, `"current-password"` on a sign-in form.
 

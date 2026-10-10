@@ -73,8 +73,20 @@ async fn emitted(fixture: &Fixture) -> String {
         .unwrap()
 }
 
+/// Before a "nothing happened" read: what the last input queued has run.
 async fn settle(fixture: &Fixture) {
     e2e::clock::settle(&fixture.page).await.unwrap();
+}
+
+/// Waits for the last emitted value to be `expected`.
+async fn emitted_is(fixture: &Fixture, expected: &str, what: &str) {
+    e2e::wait::for_js_true(
+        &fixture.page,
+        &format!("document.querySelector('[data-emitted]').dataset.emitted === {expected:?}"),
+        what,
+    )
+    .await
+    .unwrap();
 }
 
 #[test]
@@ -90,7 +102,7 @@ fn space_and_clicks_toggle_and_a_mixed_box_turns_true() {
 
         keyboard::tab_to(page, "#all", 10).await.unwrap();
         keyboard::press(page, SPACE).await.unwrap();
-        assert_eq!(emitted(&fixture).await, "all:true");
+        emitted_is(&fixture, "all:true", "Space to tick #all").await;
         settle(&fixture).await;
         let all = e2e::ax::snapshot(page, "#all").await.unwrap();
         assert!(all.contains("[checked]"), "{all}");
@@ -103,12 +115,14 @@ fn space_and_clicks_toggle_and_a_mixed_box_turns_true() {
 
         keyboard::tab_to(page, "#locked", 10).await.unwrap();
         keyboard::press(page, SPACE).await.unwrap();
+        settle(&fixture).await;
         assert_eq!(emitted(&fixture).await, "all:true", "a readonly box moved");
 
         pointer::click(page, "#locked + [aria-hidden]")
             .await
             .unwrap();
         pointer::click(page, "#off + [aria-hidden]").await.unwrap();
+        settle(&fixture).await;
         assert_eq!(
             emitted(&fixture).await,
             "all:true",
@@ -116,11 +130,12 @@ fn space_and_clicks_toggle_and_a_mixed_box_turns_true() {
         );
 
         pointer::click(page, "#support-description").await.unwrap();
-        assert_eq!(
-            emitted(&fixture).await,
+        emitted_is(
+            &fixture,
             "support:true",
-            "the card took no click"
-        );
+            "a click on the card's description",
+        )
+        .await;
 
         fixture.console.assert_clean("checkbox keys").unwrap();
         fixture.close().await.unwrap();

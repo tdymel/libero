@@ -306,6 +306,39 @@ fn the_checked_dot_shows_in_forced_colours() {
     });
 }
 
+/// Forced colours drop the fade, so a disabled radio's circle has to turn `GrayText` itself
+/// (todo 1601).
+#[test]
+fn a_disabled_circle_turns_gray_text_in_forced_colours() {
+    block_on(async {
+        let fixture = Fixture::open("/radio-group/field", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        e2e::browser::force_colours(page).await.unwrap();
+        let [enabled, disabled, gray]: [String; 3] = page
+            .evaluate(format!(
+                "(() => {{
+                    const probe = document.createElement('div');
+                    probe.style.color = 'GrayText';
+                    document.body.append(probe);
+                    const gray = getComputedStyle(probe).color;
+                    probe.remove();
+                    const border = r => getComputedStyle(r.nextElementSibling).borderTopColor;
+                    const radios = document.querySelectorAll({RADIOS:?});
+                    return [border(radios[0]), border(radios[2]), gray];
+                }})()"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(disabled, gray, "the disabled circle's border");
+        assert_ne!(enabled, gray, "an enabled circle's border");
+        fixture.close().await.unwrap();
+    });
+}
+
 fn radio(n: usize) -> String {
     format!("[role=radiogroup] > div:nth-of-type({n}) input[type=radio]")
 }
