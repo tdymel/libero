@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{ClassList, Input, OptionSource, Parts, States},
+        common::{ClassList, Input, OptionSource, Parts, States, aria_label_of},
         form::DropdownPart,
     },
     hooks::use_localization,
@@ -36,7 +36,7 @@ pub struct ComboboxProps<T: Clone + PartialEq + 'static> {
     /// Said while fetching. Defaults to [`CommonLabels::loading`](crate::localization::CommonLabels::loading).
     #[props(default, into)]
     loading_label: Option<String>,
-    /// Names the listbox, usually the id of the trigger's label.
+    /// Names the listbox, usually the id of the trigger's label. Without it, an `aria-label` attribute does.
     #[props(default, into)]
     labelled_by: Option<String>,
     /// A row's height and font size.
@@ -116,6 +116,10 @@ pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Elem
     // Wins over `empty` and the old rows, or each keystroke flashes "no results" before the data lands.
     let loading = props.options.is_pending();
     let state = props.state;
+    // The name belongs on the listbox, not the role-less panel the attributes land on.
+    let aria_label = aria_label_of(&props.attributes);
+    let mut attributes = props.attributes;
+    attributes.retain(|attribute| attribute.name != "aria-label");
 
     // The effect keeps its first closure, so the row it opens on is read through a cell.
     let opens_on = use_hook(|| Rc::new(Cell::new(0)));
@@ -179,6 +183,7 @@ pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Elem
                     .unwrap_or_else(|| localization.combobox.nothing_found.to_string()),
             ),
             labelled_by: props.labelled_by,
+            aria_label,
             loading: loading.then(|| {
                 props
                     .loading_label
@@ -190,7 +195,7 @@ pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Elem
             commit_on_leave: props.select_only,
             closed_row_keys: props.select_only,
             space_picks: props.select_only,
-            attributes: props.attributes,
+            attributes,
             class: props.class,
             sx: props.sx,
             parts: props.parts,

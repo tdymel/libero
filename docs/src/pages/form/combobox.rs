@@ -139,7 +139,7 @@ pub fn ComboboxPage() -> Element {
                         .default("common.loading")
                         .doc("What screen readers hear while `options` is pending. A pending list shows a `Loader` instead of the rows or `empty`."),
                     prop("labelled_by", "String")
-                        .doc("The id of the element that names the list, usually the trigger's label. Screen readers read it with the list."),
+                        .doc("The id of the element that names the list, usually the trigger's label. Screen readers read it with the list. Without it, an `aria-label` on the `Combobox` names the list."),
                     prop("size", "Size")
                         .default(theme.combobox.size.as_str())
                         .doc("A row's height and font size."),
@@ -189,7 +189,7 @@ pub fn ComboboxPage() -> Element {
                 .key(["Alt+Up"],"Open: closes the list. With `select_only`, picks the highlighted row first.")
                 .key(["Home", "End"], "Jumps to the first or last row. With `select_only`, closed: opens the list there.")
                 .key(["PageUp", "PageDown"], "Moves the highlight 10 rows, stopping at the first or last.")
-                .key(["Enter"], "Open: picks the highlighted row. Every open starts on the first row (a `select_only` list on its `selected_index`), so in a suggestion list Enter replaces the typed text; press `Escape` first to keep it.")
+                .key(["Enter"], "Open: picks the highlighted row. Every open starts on the first row, unless a key named another (End: the last; a `select_only` list opens on its `selected_index`), so in a suggestion list Enter replaces the typed text; press `Escape` first to keep it.")
                 .key(["Escape"], "Open: closes the list and keeps the typed text. Enter then goes to the field, so a form submits.")
                 .key(["Space"], "With `select_only`, open: picks the highlighted row, as Enter does.")
                 .key(["Tab"], "Closes the list. With `select_only`, picks the highlighted row first.")

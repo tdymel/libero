@@ -919,6 +919,12 @@ fn a_caller_aria_label_follows_the_combobox_role() {
     });
 }
 
+/// Todo 3108: a not-searchable `Select` with only `aria-label` names its open list by it.
+#[test]
+fn an_aria_label_alone_names_the_open_list() {
+    crate::combobox::the_open_list_is_named_by_aria_label("/select/aria-only", "Fruit");
+}
+
 /// A click on the label focuses the trigger, as `<label for>` does on a
 /// native `<select>` (todo 483).
 #[test]

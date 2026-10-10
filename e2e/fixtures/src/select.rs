@@ -18,6 +18,7 @@ pub const ROUTES: Routes = &[
     ("/select/field", || rsx! { SelectFieldPage {} }),
     ("/select/readonly", || rsx! { SelectReadonlyPage {} }),
     ("/select/unlabelled", || rsx! { SelectUnlabelledPage {} }),
+    ("/select/aria-only", || rsx! { SelectAriaOnlyPage {} }),
     ("/select/refused", || rsx! { SelectRefusedPage {} }),
     ("/select/echo", || rsx! { SelectEchoPage {} }),
     ("/select/outside", || rsx! { SelectOutsidePage {} }),
@@ -195,6 +196,20 @@ fn SelectRefusedPage() -> Element {
                     }
                 },
             }
+        }
+    }
+}
+
+/// No `label`, not searchable: the caller's `aria-label` is the only name the open list can take (3108).
+#[component]
+fn SelectAriaOnlyPage() -> Element {
+    let mut value = use_signal(|| Some(Fruit::Banana));
+
+    rsx! {
+        Select {
+            "aria-label": "Fruit",
+            value: value(),
+            onchange: move |next| value.set(next),
         }
     }
 }

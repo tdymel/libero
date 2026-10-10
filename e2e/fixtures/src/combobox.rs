@@ -15,7 +15,32 @@ pub const ROUTES: Routes = &[
     ("/combobox/none", || rsx! { NonePage {} }),
     ("/combobox/suggest", || rsx! { SuggestPage {} }),
     ("/combobox/select-only", || rsx! { SelectOnlyPage {} }),
+    ("/combobox/aria-only", || rsx! { AriaOnlyPage {} }),
 ];
+
+/// No `labelled_by`: the `aria-label` attribute is the only name the list can take (3109).
+#[component]
+fn AriaOnlyPage() -> Element {
+    let fruit = use_combobox();
+
+    rsx! {
+        Combobox {
+            state: fruit,
+            options: Fruit::options().to_vec(),
+            "aria-label": "Fruit list",
+            option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
+                ComboboxOption { onpick: move |_| fruit.close(), "{o.value.label()}" }
+            },
+            Button {
+                variant: "outlined",
+                attributes: named(fruit.a11y_attributes()),
+                onclick: move |_| fruit.toggle(),
+                onblur: move |_| fruit.close(),
+                "Pick a fruit"
+            }
+        }
+    }
+}
 
 /// A `select_only` button trigger: closed Up, Home and End open the list (3058), a click on the third row (3057).
 #[component]

@@ -60,7 +60,7 @@ fn Demo() -> Element {
 | `description` | `Caption` | - | Between the label and the control. |
 | `helper` | `Caption` | - | Under the control. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error; an empty one or `None` is `Valid`. |
-| `required` | `bool` | `false` | Marks the field required and adds an asterisk to the label. |
+| `required` | `bool` | `false` | Marks the field required and adds an asterisk to the label; a field without a visible `label` shows no mark. |
 | `disabled` | `bool` | `false` | Disables typing and the dropdown, and dims the field. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead. |
 | `dropdown_parts` | `Parts<ColorDropdownPart>` | - | Styles the portaled dropdown and the picker in it. |

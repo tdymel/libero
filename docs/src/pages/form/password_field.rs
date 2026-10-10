@@ -59,7 +59,7 @@ pub fn PasswordFieldPage() -> Element {
                     status_prop(),
                     prop("required", "bool")
                         .default("false")
-                        .doc("Marks the field required and adds an asterisk to the label. Inside a `Form`, an empty one fails the submit."),
+                        .doc("Marks the field required and adds an asterisk to the label; a field without a visible `label` shows no mark. Inside a `Form`, an empty one fails the submit."),
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Disables and dims the field, reveal button included."),

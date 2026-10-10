@@ -221,7 +221,7 @@ fn Demo() -> Element {
 | `empty` | `Element` | - | Shown in place of the list when `options` is empty. |
 | `empty_label` | `String` | `combobox.nothing_found` | What screen readers hear when the open list has no options, and what it shows there without `empty`. |
 | `loading_label` | `String` | `common.loading` | What screen readers hear while `options` is pending. A pending list shows a `Loader` instead of the rows or `empty`. |
-| `labelled_by` | `String` | - | The id of the element that names the list, usually the trigger's label. Screen readers read it with the list. |
+| `labelled_by` | `String` | - | The id of the element that names the list, usually the trigger's label. Screen readers read it with the list. Without it, an `aria-label` on the `Combobox` names the list. |
 | `size` | `Size` | `md` | A row's height and font size. |
 | `radius` | `ThemeAwareValue` | `sm` | The dropdown's corner radius, or any CSS, e.g. `radius: "0"`. |
 | `disabled` | `bool` | `false` | Draws no list and ignores the keys, and the trigger reads as closed. Disable the trigger too. |
@@ -297,7 +297,7 @@ match at any depth inside the list.
 | `Alt+Up` | Open: closes the list. With `select_only`, picks the highlighted row first. |
 | `Home` or `End` | Jumps to the first or last row. With `select_only`, closed: opens the list there. |
 | `PageUp` or `PageDown` | Moves the highlight 10 rows, stopping at the first or last. |
-| `Enter` | Open: picks the highlighted row. Every open starts on the first row (a `select_only` list on its `selected_index`), so in a suggestion list Enter replaces the typed text; press `Escape` first to keep it. |
+| `Enter` | Open: picks the highlighted row. Every open starts on the first row, unless a key named another (End: the last; a `select_only` list opens on its `selected_index`), so in a suggestion list Enter replaces the typed text; press `Escape` first to keep it. |
 | `Escape` | Open: closes the list and keeps the typed text. Enter then goes to the field, so a form submits. |
 | `Space` | With `select_only`, open: picks the highlighted row, as Enter does. |
 | `Tab` | Closes the list. With `select_only`, picks the highlighted row first. |

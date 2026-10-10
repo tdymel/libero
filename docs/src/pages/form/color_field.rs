@@ -75,7 +75,7 @@ pub fn ColorFieldPage() -> Element {
                     prop("description", "Caption").doc("Between the label and the control."),
                     prop("helper", "Caption").doc("Under the control."),
                     status_prop(),
-                    prop("required", "bool").default("false").doc("Marks the field required and adds an asterisk to the label."),
+                    prop("required", "bool").default("false").doc("Marks the field required and adds an asterisk to the label; a field without a visible `label` shows no mark."),
                     prop("disabled", "bool").default("false").doc("Disables typing and the dropdown, and dims the field."),
                     readonly_prop("field"),
                     prop("dropdown_parts", "Parts<ColorDropdownPart>").doc("Styles the portaled dropdown and the picker in it."),

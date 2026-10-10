@@ -90,7 +90,7 @@ pub fn PhoneFieldPage() -> Element {
                     status_prop(),
                     prop("required", "bool")
                         .default("false")
-                        .doc("Marks the field required and adds an asterisk to the label. Inside a `Form`, an empty one fails the submit."),
+                        .doc("Marks the field required and adds an asterisk to the label; a field without a visible `label` shows no mark. Inside a `Form`, an empty one fails the submit."),
                     disabled_prop("field"),
                     readonly_prop("field").also("The country button stays focusable and opens nothing."),
                     prop("dropdown_parts", "Parts<DropdownPart>")

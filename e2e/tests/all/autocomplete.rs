@@ -57,6 +57,12 @@ fn it_honours_the_combobox_contract() {
     });
 }
 
+/// Todo 3108: with no `label`, the caller's `aria-label` names the open list.
+#[test]
+fn an_aria_label_alone_names_the_open_list() {
+    crate::combobox::the_open_list_is_named_by_aria_label("/autocomplete/aria-only", "City");
+}
+
 /// A dismissed listbox must not stay readable. Trivial while nothing animates a popover;
 /// the first animated dropdown inherits it.
 #[test]

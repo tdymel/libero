@@ -7,7 +7,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::{keyboard, pointer};
 use e2e::suite::Step;
-use e2e::{Fixture, Suite, Viewport, wait};
+use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 pub const TRIGGER: &str = "[role=combobox]";
 pub const LISTBOX: &str = "[role=listbox]";
@@ -94,6 +94,61 @@ pub(crate) fn the_trigger_names_the_lit_row(route: &str, expected: &str) {
             read.0, read.2,
             "{route}: the named row is not the lit one: {read:?}"
         );
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Opens `route`'s list by key; with no label, the caller's `aria-label` must name the listbox.
+pub(crate) fn the_open_list_is_named_by_aria_label(route: &str, name: &str) {
+    block_on(async {
+        let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_visible(page, LISTBOX).await.unwrap();
+        let read: Vec<Option<String>> = page
+            .evaluate(format!(
+                "(() => {{ const l = document.querySelector({LISTBOX:?}); \
+                 return [l.getAttribute('aria-label'), l.getAttribute('aria-labelledby')]; }})()"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            read,
+            [Some(name.to_string()), None],
+            "{route}: the listbox's aria-label and aria-labelledby"
+        );
+        let tree = ax::snapshot(page, "body").await.unwrap();
+        assert!(
+            tree.contains(&format!("listbox {name:?}")),
+            "{route}: the open list is not named {name:?}:\n{tree}"
+        );
+        fixture.console.assert_clean(route).unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 3109: a bare `Combobox`'s `aria-label` names the listbox, once, not the role-less panel.
+#[test]
+fn a_bare_combobox_aria_label_names_the_list_once() {
+    the_open_list_is_named_by_aria_label("/combobox/aria-only", "Fruit list");
+    block_on(async {
+        let fixture = Fixture::open("/combobox/aria-only", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_visible(page, LISTBOX).await.unwrap();
+        let named: usize = page
+            .evaluate("document.querySelectorAll('[aria-label=\"Fruit list\"]').length")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(named, 1, "the name sits on the listbox alone");
         fixture.close().await.unwrap();
     });
 }

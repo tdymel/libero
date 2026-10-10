@@ -11,7 +11,26 @@ pub const ROUTES: Routes = &[
     ("/autocomplete/fetch", || rsx! { AutocompleteFetchPage {} }),
     ("/autocomplete/odd", || rsx! { AutocompleteOddPage {} }),
     ("/autocomplete/none", || rsx! { AutocompleteNonePage {} }),
+    (
+        "/autocomplete/aria-only",
+        || rsx! { AutocompleteAriaOnlyPage {} },
+    ),
 ];
+
+/// No `label`: the caller's `aria-label` is the only name the open list can take (3108).
+#[component]
+fn AutocompleteAriaOnlyPage() -> Element {
+    let mut value = use_signal(String::new);
+
+    rsx! {
+        Autocomplete {
+            "aria-label": "City",
+            options: CITIES.iter().map(|c| c.to_string()).collect::<Vec<_>>(),
+            value: value(),
+            oninput: move |next| value.set(next),
+        }
+    }
+}
 
 /// A caller's `empty` over no options at all (todo 2417).
 #[component]
