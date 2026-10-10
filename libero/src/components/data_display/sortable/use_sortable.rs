@@ -430,6 +430,7 @@ fn lifts(key: &Key) -> bool {
 ///
 /// rsx! {
 ///     Box {
+///         role: "list",
 ///         onmounted: list.element.mount(),
 ///         onpointermove: move |event| list.onpointermove.call(event),
 ///         onpointerup: move |event| list.onpointerup.call(event),
@@ -446,14 +447,14 @@ fn lifts(key: &Key) -> bool {
 /// fn Fruit(index: usize, name: &'static str) -> Element {
 ///     let item = use_sortable_item(index);
 ///     rsx! {
-///         Box { onmounted: item.element.mount(), style: item.style(),
+///         Box { role: "listitem", onmounted: item.element.mount(), style: item.style(),
 ///             button {
 ///                 onmounted: item.handle.mount(),
 ///                 onpointerdown: move |event| item.onpointerdown.call(event),
 ///                 onkeydown: move |event| item.onkeydown.call(event),
 ///                 onblur: move |event| item.onblur.call(event),
 ///                 style: "touch-action: none",
-///                 "Drag {name}"
+///                 "Reorder {name}"
 ///             }
 ///         }
 ///     }

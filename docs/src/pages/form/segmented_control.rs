@@ -112,7 +112,7 @@ pub fn SegmentedControlPage() -> Element {
                         .default(theme.button.radius.as_str())
                         .doc("Radius of the control's outer corners. Inner corners are square. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("gap", "ThemeAwareValue")
-                        .doc("Space between the segments, or any CSS, e.g. `gap: \"0\"`. Set, each segment gets its own border and radius."),
+                        .doc("Space between the segments, or any CSS, e.g. `gap: \"0\"`. Set, each segment gets its own border and radius. Unset, a wrapped second line keeps the joined look, so set it where the row may wrap."),
                     prop("full_width", "bool")
                         .default("false")
                         .doc("Segments share the width evenly instead of sizing to their label. A label too long for its segment ends in an ellipsis either way."),
@@ -155,7 +155,8 @@ pub fn SegmentedControlPage() -> Element {
                 .key(["Space"], "Picks the focused segment.")
                 .key(["Enter"], "Outside a `Form`: picks the focused segment. Inside one: submits the form, as on a native radio.")
                 .must(["Without a visible label, spread `\"aria-label\"`, since the segments name the options, not the question."])
-                .example("An alignment strip with no visible label, `\"aria-label\": \"Alignment\"`: Tab enters the whole strip once, the arrows move the selection, and the next Tab leaves it."),
+                .example("An alignment strip with no visible label, `\"aria-label\": \"Alignment\"`: Tab enters the whole strip once, the arrows move the selection, and the next Tab leaves it.")
+                .limits(["A row too long for its container wraps (WCAG 1.4.10). Without `gap`, the second line keeps the joined look: its first segment overlaps by 1px and its ends stay square. Set `gap` or a vertical `orientation` where it may wrap."]),
             lead: rsx! {
                 Text {
                     "A connected strip of segments over an enum, exactly one of them selected. "

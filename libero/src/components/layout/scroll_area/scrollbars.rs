@@ -494,6 +494,17 @@ mod tests {
         left: 0.0,
     };
 
+    /// A 100px view over 400px of content, scrolled 150px along x.
+    const WIDE_SCROLLED: ScrollMetrics = ScrollMetrics {
+        view_width: 100.0,
+        view_height: 100.0,
+        content_width: 400.0,
+        content_height: 100.0,
+        x: 150.0,
+        y: 0.0,
+        left: 0.0,
+    };
+
     #[test]
     fn the_thumb_is_the_visible_share_of_the_track() {
         let bar = bars(ScrollAxis::Vertical, TALL, 8.0, (0.0, 0.0)).y.unwrap();
@@ -618,8 +629,8 @@ mod tests {
         assert!(ScrollMetrics::redraws(None, TALL, true));
         assert!(!ScrollMetrics::redraws(Some(TALL), scrolled, true));
         assert!(ScrollMetrics::redraws(Some(scrolled), grown, true));
-        let bar = bars(ScrollAxis::Vertical, scrolled, 8.0, (0.0, 0.0))
-            .y
+        let bar = bars(ScrollAxis::Horizontal, WIDE_SCROLLED, 8.0, (0.0, 0.0))
+            .x
             .unwrap();
         assert_eq!((bar.shift(true, false), bar.travel(false)), (0.0, 75.0));
         assert_eq!(bar.shift(true, true), 0.0);
@@ -639,7 +650,7 @@ mod tests {
         ));
         assert!(needs_direction(
             &bars(ScrollAxis::Both, wide, 8.0, (0.0, 0.0)),
-            600.0
+            0.0
         ));
         assert!(needs_direction(
             &bars(ScrollAxis::Vertical, wide, 8.0, (0.0, 0.0)),
@@ -654,11 +665,14 @@ mod tests {
 
         assert!(ScrollMetrics::redraws(Some(TALL), scrolled, false));
         assert!(!ScrollMetrics::redraws(Some(scrolled), scrolled, false));
-        let bar = bars(ScrollAxis::Vertical, scrolled, 8.0, (0.0, 0.0))
+        let y = bars(ScrollAxis::Vertical, scrolled, 8.0, (0.0, 0.0))
             .y
             .unwrap();
-        assert_eq!(bar.shift(false, false), 37.5);
+        assert_eq!(y.shift(false, false), 37.5);
         // An RTL x thumb shifts left from its inline start, the right edge.
-        assert_eq!(bar.shift(false, true), -37.5);
+        let x = bars(ScrollAxis::Horizontal, WIDE_SCROLLED, 8.0, (0.0, 0.0))
+            .x
+            .unwrap();
+        assert_eq!((x.shift(false, false), x.shift(false, true)), (37.5, -37.5));
     }
 }

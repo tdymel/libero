@@ -48,15 +48,25 @@ short of the other instead of pushing it. It uses the unit of `step`, and at the
 default 0 the thumbs may meet. The gap rounds up to whole steps, so
 `step: 10, min_range: 3` keeps them a full step apart.
 
-```rust,ignore
-RangeSlider {
-    label: "Price",
-    value: price(),
-    min: 0.0,
-    max: 200.0,
-    step: 5.0,
-    min_range: 25.0,
-    oninput: move |event: SliderChangeEvent<(f64, f64)>| price.set(event.value()),
+```rust
+use dioxus::prelude::*;
+use libero::components::{RangeSlider, SliderChangeEvent};
+
+#[component]
+fn Demo() -> Element {
+    let mut price = use_signal(|| (20.0, 80.0));
+
+    rsx! {
+        RangeSlider {
+            label: "Price",
+            value: price(),
+            min: 0.0,
+            max: 200.0,
+            step: 5.0,
+            min_range: 25.0,
+            oninput: move |event: SliderChangeEvent<(f64, f64)>| price.set(event.value()),
+        }
+    }
 }
 ```
 

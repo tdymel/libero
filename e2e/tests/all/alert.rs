@@ -150,7 +150,7 @@ fn a_link_on_a_fill_or_tint_is_underlined_at_rest() {
 }
 
 /// Enter on the close button calls `onclose`. Where focus goes next is the
-/// caller's: the alert is gone, so it falls to `<body>`.
+/// caller's: the fixture hands it back to the button that shows the alert.
 #[test]
 fn the_close_button_works_from_the_keyboard() {
     block_on(async {
@@ -162,6 +162,13 @@ fn the_close_button_works_from_the_keyboard() {
             page,
             "!document.querySelector('#dismissible')",
             "Enter to close the alert",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement?.id === 'show'",
+            "focus back on the show button",
         )
         .await
         .unwrap();

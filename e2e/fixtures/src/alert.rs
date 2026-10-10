@@ -2,6 +2,7 @@
 
 use dioxus::prelude::*;
 use libero::components::{Alert, AlertPart, Anchor, Button, Flex, Part, Parts};
+use libero::hooks::use_focus_return;
 use libero::sx::sx;
 
 use crate::Routes;
@@ -33,15 +34,25 @@ fn LongActionPage() -> Element {
 fn AlertPage() -> Element {
     let mut shown = use_signal(|| true);
     let mut wide = use_signal(|| true);
+    let show = use_focus_return();
 
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
-            Button { id: "show", variant: "outlined", onclick: move |_| shown.set(true), "Show the notice" }
+            Button {
+                id: "show",
+                variant: "outlined",
+                onmounted: move |event| show.remember(event),
+                onclick: move |_| shown.set(true),
+                "Show the notice"
+            }
             if shown() {
                 Alert {
                     id: "dismissible",
                     title: "Card expiring",
-                    onclose: move |_| shown.set(false),
+                    onclose: move |_| {
+                        shown.set(false);
+                        show.restore();
+                    },
                     "Update it before the next invoice."
                 }
             }
