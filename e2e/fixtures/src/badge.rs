@@ -63,6 +63,14 @@ fn BadgePage() -> Element {
                     Float { Indicator { id: "processing", processing: true } }
                 }
             }
+            // 3098: a badge on a centered Float does not inherit its shift.
+            div { id: "nested-host", position: "relative", width: "120px", height: "120px",
+                Float { id: "nested-outer", offset_y: "10px",
+                    div { width: "80px", height: "80px",
+                        Float { id: "nested-inner", placement: "top-end", Badge { "N" } }
+                    }
+                }
+            }
             Flex { gap: "xs", wrap: "wrap", align: "center",
                 for size in SIZES {
                     Kbd { size, "Ctrl" }

@@ -50,7 +50,7 @@ pub fn BoxPage() -> Element {
             ]).extends("img, a and button")],
             accessibility: a11y()
                 .handles(["`Box` adds no roles, so the semantics are whatever tag `component` names."])
-                .must(["Use `component: \"button\"` for something clickable: a clickable `div` has no keyboard support.", "Set `r#type: \"button\"` on a `button` inside a form, or it submits the form.", "Give an `img` an `alt`, empty for a decorative one."])
+                .must(["Use `component: \"button\"` for something clickable: a clickable `div` has no keyboard support.", "Set `r#type: \"button\"` on a `button` inside a form, or it submits the form.", "Give an `img` an `alt`, empty for a decorative one.", "Set `disabled`, `aria-disabled` and `aria-selected` yourself, or use the component that owns the state: the `disabled` and `selected` states only style the box."])
                 .example("A clickable tile with a short text label, `Box { component: \"button\", r#type: \"button\", \"Archive\" }`: Tab reaches it and Enter or Space press it, which a clickable `div` would not allow. A `button` takes phrasing content only and its name is everything inside it, so keep a card with a heading, paragraphs or other controls out of one."),
             lead: rsx! {
                 Text {

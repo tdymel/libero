@@ -42,7 +42,7 @@ pub fn FloatPage() -> Element {
                     .default("false")
                     .doc("Anchors to the viewport instead of the parent, so it stays put while the page scrolls. An ancestor with a `transform`, `filter`, `contain` or `container-type` still captures it."),
                 prop("z_index", "ThemeAwareValue")
-                    .default("200")
+                    .default(theme.z_index.float.to_string())
                     .doc("Stacking order."),
                 prop("children", "Element").doc("The anchored content."),
             ])],
@@ -51,6 +51,8 @@ pub fn FloatPage() -> Element {
                 .must([
                     "Write the float next to what it marks: screen readers and Tab follow the code, not where it shows.",
                     "Keep it off text and controls at 320px wide and at 200% text size: it takes no space, so nothing moves out of its way.",
+                    "Keep a `fixed` float off the control that has focus, or the focus ring is hidden behind it (WCAG 2.4.11).",
+                    "Put a notification stack in a status region (`role=\"status\"`), or its messages are not announced (WCAG 4.1.3).",
                 ])
                 .example("A \"New\" badge floated over a card's corner, written right after the card's title in the code: a screen reader reads \"Spring sale, New\", in that order."),
             lead: rsx! {

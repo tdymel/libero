@@ -91,6 +91,10 @@ Like every component, `Float` also takes the shared props `sx`, `class`,
   code, not where it shows.
 - Keep it off text and controls at 320px wide and at 200% text size: it takes
   no space, so nothing moves out of its way.
+- Keep a `fixed` float off the control that has focus, or the focus ring is
+  hidden behind it (WCAG 2.4.11).
+- Put a notification stack in a status region (`role="status"`), or its
+  messages are not announced (WCAG 4.1.3).
 
 ### Example
 

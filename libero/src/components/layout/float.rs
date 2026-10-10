@@ -17,15 +17,21 @@ input_from_str!(Placement);
 const FLOAT_TRANSLATE_X_VAR: CssVar = CssVar::new("--lsx-float-translate-x");
 const FLOAT_TRANSLATE_Y_VAR: CssVar = CssVar::new("--lsx-float-translate-y");
 
+// The per-instance vars reset to `initial` so a nested Float does not inherit them.
 static FLOAT_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().position("absolute")
+        .var(FLOAT_TRANSLATE_X_VAR, "initial")
+        .var(FLOAT_TRANSLATE_Y_VAR, "initial")
+        .var(FLOAT_OFFSET_X.override_var(), "initial")
+        .var(FLOAT_OFFSET_Y.override_var(), "initial")
+        .var(Z_INDEX_FLOAT.override_var(), "initial")
         .z_index(Z_INDEX_FLOAT.overridable())
         .transform(format!(
             "translate(calc({} + {}), calc({} + {}))",
             FLOAT_TRANSLATE_X_VAR.value_or("0%"),
-            FLOAT_OFFSET_X.value(),
+            FLOAT_OFFSET_X.overridable(),
             FLOAT_TRANSLATE_Y_VAR.value_or("0%"),
-            FLOAT_OFFSET_Y.value(),
+            FLOAT_OFFSET_Y.overridable(),
         ))
         .when("vertical-top", sx().top("0"))
         .when(
@@ -54,11 +60,11 @@ fn float_variables(props: &FloatProps) -> Variables {
     variables()
         // Through the spacing scale: `resolve(None)` dropped a size token silently.
         .with(
-            FLOAT_OFFSET_X,
+            FLOAT_OFFSET_X.override_var(),
             props.offset_x.resolve(Some(SizeCss::SPACING)),
         )
         .with(
-            FLOAT_OFFSET_Y,
+            FLOAT_OFFSET_Y.override_var(),
             props.offset_y.resolve(Some(SizeCss::SPACING)),
         )
         .with(Z_INDEX_FLOAT.override_var(), props.z_index.resolve(None))
@@ -195,7 +201,7 @@ mod tests {
             variables.to_string(),
             format!(
                 "{}:{};",
-                FLOAT_OFFSET_X.name(),
+                FLOAT_OFFSET_X.override_var().name(),
                 SizeCss::SPACING.value(Size::Md)
             )
         );
@@ -210,7 +216,7 @@ mod tests {
             variables.to_string(),
             format!(
                 "{}:calc(-1 * {});",
-                FLOAT_OFFSET_X.name(),
+                FLOAT_OFFSET_X.override_var().name(),
                 SizeCss::SPACING.value(Size::Md)
             )
         );
@@ -222,7 +228,7 @@ mod tests {
 
         assert_eq!(
             variables.to_string(),
-            format!("{}:-8px;", FLOAT_OFFSET_X.name())
+            format!("{}:-8px;", FLOAT_OFFSET_X.override_var().name())
         );
     }
 }

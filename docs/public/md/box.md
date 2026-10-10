@@ -90,6 +90,9 @@ Like every component, `Box` also takes the shared props `sx`, `class`, `style`,
   keyboard support.
 - Set `r#type: "button"` on a `button` inside a form, or it submits the form.
 - Give an `img` an `alt`, empty for a decorative one.
+- Set `disabled`, `aria-disabled` and `aria-selected` yourself, or use the
+  component that owns the state: the `disabled` and `selected` states only
+  style the box.
 
 ### Example
 

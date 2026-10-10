@@ -81,7 +81,7 @@ fn app() -> Element {
             Container { size: "sm", gutters: "lg", "container" }
             Dialog { aria_label: "Inline", size: "lg", "dialog" }
             OpenDrawer {}
-            Float { z_index: "5", "float" }
+            Float { z_index: "5", offset_x: "4px", offset_y: "4px", "float" }
             Header { size: "lg", z_index: "5", "header" }
             Icon { size: "lg", "i" }
             Image { src: "/a.svg", alt: "A", radius: "sm" }

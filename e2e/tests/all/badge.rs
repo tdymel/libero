@@ -125,6 +125,29 @@ fn an_icon_replaces_the_number_and_its_gutter() {
     });
 }
 
+/// Todo 3098: a top-end Float inside a centered, offset one sits at the outer's top.
+#[test]
+fn a_nested_float_does_not_inherit_the_outer_shift() {
+    block_on(async {
+        let fixture = Fixture::open("/badge", Viewport::Desktop).await.unwrap();
+        let [outer, inner]: [f64; 2] = fixture
+            .page
+            .evaluate(
+                "['#nested-outer', '#nested-inner'] \
+                 .map(id => document.querySelector(id).getBoundingClientRect().top)",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            (outer - inner).abs() < 0.5,
+            "the inner top is {inner}, the outer top {outer}"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Forced colours paint every fill `Canvas` and drop `box-shadow`: a bare dot
 /// and the ping must not vanish into the page, the ring stays as an outline.
 #[test]
