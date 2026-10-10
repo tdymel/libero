@@ -12,7 +12,30 @@ pub const ROUTES: Routes = &[
         "/color-picker-swatches",
         || rsx! { ColorPickerSwatchesPage {} },
     ),
+    ("/color-picker-sizes", || rsx! { ColorPickerSizesPage {} }),
 ];
+
+/// The two sizes whose sliders sit closest, each with alpha and a swatch row beneath.
+#[component]
+fn ColorPickerSizesPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md",
+            for size in ["xs", "sm"] {
+                ColorPicker {
+                    key: "{size}",
+                    id: "picker-{size}",
+                    size,
+                    with_alpha: true,
+                    value: "#1c7ed6".parse::<ColorCode>().unwrap(),
+                    swatches: ["#fa5252", "#40c057"],
+                    saturation_label: "Saturation",
+                    hue_label: "Hue",
+                    alpha_label: "Alpha",
+                }
+            }
+        }
+    }
+}
 
 /// A palette whose first swatch is the value, for the pressed state.
 #[component]

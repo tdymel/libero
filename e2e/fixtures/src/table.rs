@@ -58,7 +58,27 @@ pub const ROUTES: Routes = &[
     ),
     ("/table/infinite", || rsx! { InfiniteTablePage {} }),
     ("/table/windowed-wide", || rsx! { WindowedWideTablePage {} }),
+    ("/table/small", || rsx! { SmallTablesPage {} }),
 ];
+
+/// The two smallest sizes, whose sort buttons have the least padding.
+#[component]
+fn SmallTablesPage() -> Element {
+    rsx! {
+        for size in ["xs", "sm"] {
+            Table {
+                key: "{size}",
+                aria_label: "Fruit {size}",
+                size,
+                data: fruit(),
+                columns: vec![
+                    column("Name").value(|fruit: &Fruit| fruit.name.to_string()).sortable().row_header(),
+                    column("Stock").value(|fruit: &Fruit| fruit.stock).sortable(),
+                ],
+            }
+        }
+    }
+}
 
 /// A windowed table of six unsized columns: wider than a phone, so it scrolls (2014).
 #[component]

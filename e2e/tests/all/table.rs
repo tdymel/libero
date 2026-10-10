@@ -1140,6 +1140,16 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// Todo 3152: the sort button's padding is least at `xs` and `sm`.
+#[test]
+fn the_smallest_sizes_meet_the_baseline() {
+    Suite::new("table_small", "/table/small")
+        .no_snapshot()
+        .focusable(SORT)
+        .targets(SORT)
+        .run();
+}
+
 #[test]
 fn a_selectable_table_meets_the_baseline() {
     Suite::new("table_select", "/table/select")

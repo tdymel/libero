@@ -5,15 +5,9 @@ use dioxus::prelude::Attribute;
 
 use super::saturation::THUMB_RING;
 use crate::{
-    components::{
-        common::{Input, Part, Parts, attr, parts_enum, parts_under_sx, shadow_sx},
-        form::slider::SLIDER_HIT,
-    },
+    components::common::{Input, Part, Parts, attr, parts_enum, parts_under_sx, shadow_sx},
     sx::{StaticSx, Sx, sx},
-    theme::{
-        COLOR_PICKER_SPACING, COLOR_PICKER_THUMB, ColorPickerDefaults, OWN_SHADOW, SLIDER_THUMB,
-        SLIDER_TRACK,
-    },
+    theme::{COLOR_PICKER_THUMB, ColorPickerDefaults, OWN_SHADOW, SLIDER_THUMB, SLIDER_TRACK},
 };
 
 /// Red round the wheel and back to red, at even sixths.
@@ -72,16 +66,6 @@ static COLOR_SLIDER_SX: StaticSx = StaticSx::new(|| {
         )
         .var(SLIDER_TRACK, COLOR_PICKER_THUMB.value())
         .var(SLIDER_THUMB, COLOR_PICKER_THUMB.value())
-        // At `xs`/`sm` a 24px hit area would take the next slider's presses,
-        // so it stops at the middle of the gap.
-        .var(
-            SLIDER_HIT,
-            format!(
-                "min(24px, {} + {})",
-                COLOR_PICKER_THUMB.value(),
-                COLOR_PICKER_SPACING.value()
-            ),
-        )
 });
 
 #[cfg(test)]

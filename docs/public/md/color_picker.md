@@ -152,7 +152,9 @@ explains how parts work. `ColorSwatch` is one element and has no parts.
 ### Libero handles
 
 - Each thumb is a slider with the usual keys.
-- The saturation panel meets the 24px target size of WCAG 2.5.8 at every size.
+- The saturation panel and the hue and alpha thumbs meet the 24px target size of
+  WCAG 2.5.8 at every size. At `xs` and `sm` the two sliders sit further apart
+  than `spacing`, so their 24px squares do not overlap.
 - The swatch equal to the value is pressed and checked.
 
 ### You must
@@ -169,11 +171,6 @@ explains how parts work. `ColorSwatch` is one element and has no parts.
 A brand color picker with `swatches: Swatches::labelled(..)` naming each
 swatch "Ocean", "Forest" and so on: a screen reader reads "Ocean", not a hex
 code spelled out, and the swatch equal to the value reads as pressed.
-
-### Limits
-
-- The hue and alpha tracks meet the 24px target size of WCAG 2.5.8 from `md`
-  up, not at `sm` or `xs`.
 
 ## Theme defaults
 

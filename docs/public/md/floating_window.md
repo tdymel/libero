@@ -123,6 +123,8 @@ explains how parts work.
 ### Libero handles
 
 - A window takes focus when it opens.
+- The title bar takes presses in a box at least 24px high, whatever the page's
+  font size (WCAG 2.5.8).
 - The title bar's menu offers Move, Resize and Reset. Move and Resize show
   step buttons, one click per step, so neither needs a drag. Done or Escape
   hides them. Their group is named "Move window by steps" or "Resize window by

@@ -36,6 +36,49 @@ fn the_swatches_and_the_alpha_slider_meet_the_baseline() {
         .run();
 }
 
+/// Todo 3150: at `xs` and `sm`, where the sliders sit closest, a press within 12px of a
+/// slider thumb still reaches that slider, and no thumb's area takes the pad's or a
+/// swatch's presses (WCAG 2.5.8, by hit test).
+#[test]
+fn a_slider_thumb_takes_presses_in_a_24px_square_at_every_size() {
+    const MISSES: &str = r#"(() => {
+        const rootOf = el => el && el.closest('[data-slot=sliders] > *');
+        const misses = [];
+        for (const picker of document.querySelectorAll('[id^=picker-]')) {
+            for (const thumb of picker.querySelectorAll('[data-slot=sliders] [data-slot=thumb]')) {
+                const r = thumb.getBoundingClientRect();
+                const [cx, cy] = [r.x + r.width / 2, r.y + r.height / 2];
+                for (const [dx, dy] of [[0, -11.5], [0, 11.5], [-11.5, 0], [11.5, 0], [-11.5, -11.5], [11.5, 11.5]]) {
+                    const hit = document.elementFromPoint(cx + dx, cy + dy);
+                    if (rootOf(hit) !== rootOf(thumb)) misses.push(`${picker.id} thumb ${dx},${dy}`);
+                }
+            }
+            const pad = picker.querySelector('[data-slot=saturation]').getBoundingClientRect();
+            const hue = picker.querySelector('[data-slot=sliders] [data-slot=thumb]').getBoundingClientRect();
+            const edge = document.elementFromPoint(hue.x + hue.width / 2, pad.bottom - 1);
+            if (!edge || !edge.closest('[data-slot=saturation]')) misses.push(`${picker.id} pad edge`);
+            for (const swatch of picker.querySelectorAll('[data-slot=swatches] > button')) {
+                const s = swatch.getBoundingClientRect();
+                const hit = document.elementFromPoint(s.x + s.width / 2, s.y + 1);
+                if (hit !== swatch) misses.push(`${picker.id} swatch top`);
+            }
+        }
+        return misses.join('; ');
+    })()"#;
+    block_on(async {
+        let fixture = Fixture::open("/color-picker-sizes", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#picker-xs [data-slot=sliders] [data-slot=thumb]")
+            .await
+            .unwrap();
+        let misses: String = page.evaluate(MISSES).await.unwrap().into_value().unwrap();
+        assert_eq!(misses, "");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A move in the same task as the press, before the pad is measured, still lands (1266).
 #[test]
 fn an_early_move_on_the_pad_still_lands() {

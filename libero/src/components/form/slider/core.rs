@@ -54,9 +54,6 @@ const SLIDER_SEGMENT_REACH_END: CssVar = CssVar::new("--lsx-slider-segment-reach
 const SEGMENT_GAP: &str = "2px";
 /// A plain slider's thumb face - the color the track is pointing at.
 const SLIDER_THUMB_FILL: CssVar = CssVar::new("--lsx-slider-thumb-fill");
-/// The side of the thumb's invisible hit area. 24px unless a skin whose
-/// sliders sit closer than that sets it; see `SLIDER_THUMB_SX`.
-pub(in crate::components::form) const SLIDER_HIT: CssVar = CssVar::new("--lsx-slider-hit");
 
 /// Where a 0-1 `fraction` sits along the track, inset by half a thumb so it
 /// never overhangs.
@@ -444,8 +441,8 @@ static SLIDER_THUMB_SX: StaticSx = StaticSx::new(|| {
                 .position("absolute")
                 .top("50%")
                 .left("50%")
-                .width(SLIDER_HIT.value_or("24px"))
-                .height(SLIDER_HIT.value_or("24px"))
+                .width("24px")
+                .height("24px")
                 .transform("translate(-50%, -50%)"),
         )
 });

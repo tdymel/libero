@@ -7,7 +7,11 @@ use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, Rect, eventually, eventually_focused};
 use e2e::suite::Step;
-use e2e::{Fixture, Suite, Viewport, passes::focus, passes::keyboard, passes::pointer, wait};
+use e2e::{
+    Fixture, Suite, Viewport,
+    passes::{focus, keyboard, pointer, target_size},
+    wait,
+};
 
 pub const TRIGGER: &str = "#open-window";
 pub const DIALOG: &str = "[role=dialog]";
@@ -34,6 +38,25 @@ const STEP: f64 = 10.0;
 /// handle, close button, body button and separator.
 const TAB_BUDGET: usize = 8;
 
+/// Todo 3151: the handle's `1.5em` follows the page's font, so a 13px page draws it 19.5px
+/// high; its hit area stays 24px.
+#[test]
+fn the_move_handle_keeps_24px_under_a_smaller_page_font() {
+    block_on(async {
+        let fixture = Fixture::open("/floating-window", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate("document.documentElement.style.fontSize = '13px'")
+            .await
+            .unwrap();
+        pointer::click(page, TRIGGER).await.unwrap();
+        wait::for_visible(page, HANDLE).await.unwrap();
+        target_size::assert_minimum(page, HANDLE).await.unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("floating_window", "/floating-window")
@@ -45,6 +68,7 @@ fn it_meets_the_baseline() {
         // an invisible 24x24 box (todos 505, 566), so it meets 2.5.8 outright.
         .targets(CLOSE)
         .targets(MENU)
+        .targets(HANDLE)
         .targets_spaced(SEPARATOR)
         .state(
             "open",

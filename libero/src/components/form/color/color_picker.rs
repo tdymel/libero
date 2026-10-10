@@ -21,8 +21,8 @@ use crate::{
     hooks::{use_localization, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
-        COLOR_PICKER_PREVIEW, COLOR_PICKER_SPACING, COLOR_PICKER_SWATCH, COLOR_PICKER_WIDTH,
-        ColorPickerDefaults, CssVar, Size,
+        COLOR_PICKER_PREVIEW, COLOR_PICKER_SPACING, COLOR_PICKER_SWATCH, COLOR_PICKER_THUMB,
+        COLOR_PICKER_WIDTH, ColorPickerDefaults, CssVar, Size,
     },
     utils::warn,
 };
@@ -42,6 +42,7 @@ static COLOR_PICKER_SX: StaticSx = StaticSx::new(|| {
     let spacing = COLOR_PICKER_SPACING.value();
     let preview = COLOR_PICKER_PREVIEW.value();
     let swatch = COLOR_PICKER_SWATCH.value();
+    let thumb = COLOR_PICKER_THUMB.value();
     let live = format!(
         "rgba({}, {})",
         COLOR_PICKER_RGB.value(),
@@ -64,7 +65,10 @@ static COLOR_PICKER_SX: StaticSx = StaticSx::new(|| {
             ColorPickerPart::Sliders.selector(),
             sx().display("flex")
                 .flex_direction("column")
-                .gap(spacing.clone())
+                // Each track's 24px press area (WCAG 2.5.8) needs 24px of pitch, and room
+                // to its neighbours above and below, where the spacing alone falls short.
+                .gap(format!("max({spacing}, calc(24px - {thumb}))"))
+                .padding_block(format!("max(0px, calc((24px - {thumb}) / 2 - {spacing}))"))
                 .flex("1 1 auto")
                 .min_width("0"),
         )
