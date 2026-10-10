@@ -26,8 +26,8 @@ use crate::{
     },
     sx::{StaticSx, Sx, sx},
     theme::{
-        CHECKBOX_BOX_SIZE, CssVar, NamedColorCss, ScrollAxis, Size, TABLE_PAD_X, TABLE_PADDING_X,
-        TableDefaults,
+        CHECKBOX_BOX_SIZE, CssVar, NamedColorCss, ScrollAxis, Size, TABLE_GROUP, TABLE_PAD_X,
+        TABLE_PADDING_X, TableDefaults,
     },
     utils::warn,
 };
@@ -52,11 +52,15 @@ use super::{
     overlay::{EmptyBody, LoadingBar, SKELETON_ROWS},
     paging::{TablePager, clamp_page, page_rows, use_page_reset, use_page_size_reseed},
     pinning::{PinSide, PinnedColumns, pin_columns, pinned_extent},
-    pipeline::{KnownRows, VisibleRow, cut_page, keyed_rows, selection_scope, visible_rows},
+    pipeline::{
+        KnownRows, VisibleRow, cut_page, group_rows as nest_rows, keyed_rows, selection_scope,
+        visible_rows,
+    },
     resize::{ColumnResize, ColumnWidths, MenuWidth},
     row::{RowContext, RowState, TableRow},
+    row_groups::{GroupCells, GroupRow, GroupedRows, group_levels},
     row_reorder::{ROW_ANIMATION, ROW_TRANSFORM, RowReorder},
-    selection::Selection,
+    selection::{Selection, toggle_row},
     toolbar::{TableToolbar, TableTools, ToolView},
     use_table::{TableConfig, use_table},
     window::{
@@ -585,7 +589,47 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
             sx().with("border-inline-start", TableDefaults::border()),
         ),
     )
-    // The footer's one cell over the lead columns holds with them.
+    // After the hover and the pinned rows' surface, which it outranks by order alone.
+    .selector(
+        "& tbody tr[data-row-group]",
+        sx().background(TABLE_GROUP.value()).font_weight("600"),
+    )
+    .selector(
+        "& [data-group-toggle]",
+        sx().display("inline-flex")
+            .align_items("center")
+            .gap("4px")
+            .padding("0")
+            .border("0")
+            .border_radius("4px")
+            .background("none")
+            .font("inherit")
+            .letter_spacing("inherit")
+            .color("inherit")
+            .white_space("nowrap")
+            .cursor("pointer"),
+    )
+    .selector(
+        "& [data-group-toggle]:focus-visible",
+        inset_focus_ring_sx("0"),
+    )
+    .selector(
+        "& [data-group-toggle] svg",
+        sx().width("16px").height("16px").flex_shrink("0"),
+    )
+    .selector(
+        "& [data-group-toggle][aria-expanded=\"false\"] svg",
+        sx().transform("rotate(-90deg)"),
+    )
+    .rtl(sx().selector(
+        "& [data-group-toggle][aria-expanded=\"false\"] svg",
+        sx().transform("rotate(90deg)"),
+    ))
+    .selector(
+        "& [data-group-count]",
+        sx().font_weight("400").opacity("0.75"),
+    )
+    // The footer's and the group rows' one cell over the lead columns holds with them.
     .when(
         "pin-footer-lead",
         sx().selector(
@@ -593,6 +637,13 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
             sx().position("sticky")
                 .with("inset-inline-start", "0")
                 .z_index("1"),
+        )
+        .selector(
+            "& tbody td[data-group-lead]",
+            sx().position("sticky")
+                .with("inset-inline-start", "0")
+                .z_index("1")
+                .background("inherit"),
         ),
     )
     .when(
@@ -806,6 +857,32 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// Off while the rows are sorted or filtered. Not dragged on Blitz.
     #[props(default)]
     onrowreorder: Option<EventHandler<SortableMove>>,
+    /// The headers whose cell texts group the rows, outermost first; set, the
+    /// grouping is controlled. Each group gets a row with a toggle, groups follow
+    /// the sorted rows and empty cells form one group. Renders every row, and
+    /// rows don't reorder while grouped.
+    #[props(default)]
+    row_grouping: Option<Vec<String>>,
+    /// Seeds the grouping once. Ignored when `row_grouping` is set.
+    #[props(default)]
+    default_row_grouping: Vec<String>,
+    /// The grouping a pick asks for.
+    #[props(default)]
+    onrowgroupingchange: Option<EventHandler<Vec<String>>>,
+    /// The open groups' ids, their texts from the outermost in, joined by `/`
+    /// (`"Sales/Berlin"`, a `/` or `\` in a text escaped by `\`); set, it is controlled.
+    #[props(default)]
+    expanded_groups: Option<Vec<String>>,
+    /// Seeds the open groups once. Ignored when `expanded_groups` is set.
+    #[props(default)]
+    default_expanded_groups: Vec<String>,
+    /// The open groups a group toggle asks for.
+    #[props(default)]
+    onexpandedgroupschange: Option<EventHandler<Vec<String>>>,
+    /// How many levels of groups open the first time rows are grouped, beside
+    /// `default_expanded_groups`; 0 starts them all collapsed. Not with `expanded_groups`.
+    #[props(default)]
+    default_group_expansion: usize,
     /// Cell padding and font size.
     #[props(default, into)]
     size: Input<Size>,
@@ -1032,6 +1109,12 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         density: props.density,
         default_density: props.default_density,
         ondensitychange: props.ondensitychange,
+        row_grouping: props.row_grouping,
+        default_row_grouping: props.default_row_grouping,
+        onrowgroupingchange: props.onrowgroupingchange,
+        expanded_groups: props.expanded_groups,
+        default_expanded_groups: props.default_expanded_groups,
+        onexpandedgroupschange: props.onexpandedgroupschange,
     });
     let panel = use_panel_control();
     let announcer = use_announcer();
@@ -1167,6 +1250,9 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let mut sorted = use_hook(|| CopyValue::new(SortedRows::<T>::default()));
     let mut filtered = use_hook(|| CopyValue::new(FilteredRows::<T>::default()));
     let mut footer_rows = use_hook(|| CopyValue::new(FooterRows::<T>::default()));
+    let mut grouped_rows = use_hook(|| CopyValue::new(GroupedRows::<T>::default()));
+    let mut group_seeded = use_hook(|| CopyValue::new(false));
+    let mut group_warned = use_hook(|| CopyValue::new(false));
     let mut row_context = use_hook(|| CopyValue::new((0u64, None::<Rc<RowContext<T>>>)));
     let mut known_rows = use_hook(|| CopyValue::new(KnownRows::<T>::None));
     let mut pin_edges = use_signal(|| [None::<f64>; 2]);
@@ -1418,17 +1504,63 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         false => sorted.write().order(&data, &columns, &active),
     };
     let mut order = visible_rows(sorted_order, kept.as_deref().map(Vec::as_slice));
+    // The rows passing the filters, group rows not counted.
     let results = order.len();
     filtered_count.set(results);
     let footer = footer_rows.write().cells(&data, &columns, &order, &labels);
+    // Groups nest the sorted rows; the footer above and an export count the rows alone.
+    let levels = group_levels(&columns, &state.row_grouping.read());
+    let grouped = !levels.is_empty();
+    let texts = grouped.then(|| grouped_rows.write().texts(&data, &columns, &levels));
+    let leaves = texts.as_ref().map(|_| order.clone());
     if props.toolbar.is_some() {
-        let (data, columns, shown, order) =
-            (data.clone(), columns.clone(), layout.clone(), order.clone());
+        let (data, columns, shown, order, texts) = (
+            data.clone(),
+            columns.clone(),
+            layout.clone(),
+            order.clone(),
+            texts.clone(),
+        );
         let mut export = tools.export;
         export.set(Some(Rc::new(move || {
-            (shown_csv(&columns, &shown, &data, &order), order.len())
+            let rows = match &texts {
+                Some(texts) => nest_rows(&order, texts, &|_| true, "").0,
+                None => order.clone(),
+            };
+            (shown_csv(&columns, &shown, &data, &rows), order.len())
         })));
     }
+    if grouped && props.virtual_row_height.is_some() && !*group_warned.peek() {
+        group_warned.set(true);
+        warn("Table: `virtual_row_height` with `row_grouping` renders every row.");
+    }
+    let groups = match (texts, leaves) {
+        (Some(texts), Some(leaves)) => {
+            // The first levels open the first time there are rows to group.
+            if !*group_seeded.peek() && !data.is_empty() {
+                group_seeded.set(true);
+                let depth = props.default_group_expansion;
+                if depth > 0 && !state.expanded_groups.is_controlled() {
+                    let every: Vec<VisibleRow> = (0..data.len()).map(VisibleRow::Data).collect();
+                    let mut open = state.expanded_groups.peek();
+                    for group in nest_rows(&every, &texts, &|_| true, "").1 {
+                        if group.depth < depth && !open.contains(&group.id) {
+                            open.push(group.id);
+                        }
+                    }
+                    state.expanded_groups.seed(open);
+                }
+            }
+            let open = state.expanded_groups.read();
+            let (rows, groups) =
+                grouped_rows
+                    .write()
+                    .rows(texts, &leaves, &open, labels.group_empty);
+            order = rows;
+            groups
+        }
+        _ => Rc::from([]),
+    };
     // The count when more rows were asked for: their arrival is said once loading ends.
     let mut asked_at = use_hook(|| CopyValue::new(None::<usize>));
     let loading = props.loading;
@@ -1452,9 +1584,10 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     // A windowed table counts every row, the other pages' too (APG grid, todo 1421).
     let mut counted = (0, order.len());
     let pager = paginated.then(|| {
+        // Group rows take places on a page as the rows do.
         let total = match props.manual_pagination {
-            true => props.row_count.unwrap_or(results),
-            false => results,
+            true => props.row_count.unwrap_or(order.len()),
+            false => order.len(),
         };
         let page_size = state.page_size.read().max(1);
         let page = clamp_page(total, state.page.read(), page_size);
@@ -1489,7 +1622,9 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let has_data = !data.is_empty();
     let headers = Rc::new(headers);
     // Detail rows have their own heights.
-    let row_height = props.virtual_row_height.filter(|_| bounded && !has_detail);
+    let row_height = props
+        .virtual_row_height
+        .filter(|_| bounded && !has_detail && !grouped);
     let fixed_slots = row_height.filter(|_| has_reorder).map(|pitch| FixedSlots {
         count: order.len(),
         pitch,
@@ -1501,7 +1636,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let reorder = has_reorder.then(|| RowReorder {
         onreorder: reorder_rows,
         // The shown order is not `data`'s: a move between slots means nothing there.
-        disabled: !active.is_empty() || !words.is_empty() || !tests.is_empty(),
+        disabled: !active.is_empty() || !words.is_empty() || !tests.is_empty() || grouped,
         announcer,
         labels,
         instructions: instructions_id(),
@@ -1538,6 +1673,23 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         }
     };
     row_context.set((generation, Some(context.clone())));
+    let groups_slice = state.expanded_groups;
+    let toggle_group = use_callback(move |(id, label, open): (String, String, bool)| {
+        groups_slice.set(toggle_row(&groups_slice.peek(), &id, open));
+        announcer.say(match open {
+            true => (labels.group_expanded)(&label),
+            false => (labels.group_collapsed)(&label),
+        });
+    });
+    let group_cells = GroupCells {
+        leads: context.span - layout.len().max(1),
+        pins: layout
+            .iter()
+            .map(|&index| headers[index].pin.clone())
+            .collect(),
+        labels,
+        toggle: toggle_group,
+    };
     let striped = props.striped;
     let state_of = {
         let key_at = key_at.clone();
@@ -1598,9 +1750,11 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                         let row = &data[index];
                         context.spec(row, state_of(position, index), context.cells(row))
                     }
+                    VisibleRow::Group(_) => unreachable!("a grouped table renders every row"),
                 }),
                 key: Rc::new(move |row| match row {
                     VisibleRow::Data(index) => key_at(index),
+                    VisibleRow::Group(_) => unreachable!("a grouped table renders every row"),
                 }),
                 focused: row_focus.focused,
                 moves: row_focus.moves,
@@ -1620,6 +1774,21 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                                 state,
                                 context: context.clone(),
                                 generation,
+                            }
+                        }
+                    }
+                    VisibleRow::Group(at) => {
+                        let group = &groups[at];
+                        rsx! {
+                            GroupRow {
+                                // Apart from the row keys, which are the caller's.
+                                key: "\u{1f}{group.id}",
+                                id: group.id.clone(),
+                                label: group.label.clone(),
+                                count: group.leaves.len(),
+                                depth: group.depth,
+                                open: group.open,
+                                cells: group_cells.clone(),
                             }
                         }
                     }
@@ -1789,7 +1958,8 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         || props.header_filters
         || props.filter_panel
         || props.toolbar.is_some()
-        || onbottomreached.is_some();
+        || onbottomreached.is_some()
+        || grouped;
     let table = match announces {
         true => rsx! {
             {table}

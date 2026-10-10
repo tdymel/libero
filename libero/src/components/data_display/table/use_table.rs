@@ -47,6 +47,13 @@ impl<V: Clone + PartialEq + 'static> StateSlice<V> {
         self.controlled
     }
 
+    /// Sets an uncontrolled value without asking: a seed taken after the first render.
+    pub fn seed(mut self, next: V) {
+        if !self.controlled {
+            self.value.set(next);
+        }
+    }
+
     pub fn set(mut self, next: V) {
         if !self.controlled {
             self.value.set(next.clone());
@@ -124,6 +131,12 @@ pub(crate) struct TableConfig {
     pub density: Option<Size>,
     pub default_density: Option<Size>,
     pub ondensitychange: Option<EventHandler<Size>>,
+    pub row_grouping: Option<Vec<String>>,
+    pub default_row_grouping: Vec<String>,
+    pub onrowgroupingchange: Option<EventHandler<Vec<String>>>,
+    pub expanded_groups: Option<Vec<String>>,
+    pub default_expanded_groups: Vec<String>,
+    pub onexpandedgroupschange: Option<EventHandler<Vec<String>>>,
 }
 
 /// A table's state, one slice per feature.
@@ -150,6 +163,10 @@ pub(crate) struct TableState {
     pub column_widths: StateSlice<ColumnWidths>,
     /// The picked size, over `size`; `None` until one is picked.
     pub density: StateSlice<Option<Size>>,
+    /// The grouped columns' headers, outermost first.
+    pub row_grouping: StateSlice<Vec<String>>,
+    /// The ids of the open groups.
+    pub expanded_groups: StateSlice<Vec<String>>,
 }
 
 pub(crate) fn use_table(config: TableConfig) -> TableState {
@@ -237,7 +254,21 @@ pub(crate) fn use_table(config: TableConfig) -> TableState {
         ondensitychange.map(|_| density_change),
         "Table: a controlled `density` without `ondensitychange` never changes.",
     );
+    let row_grouping = use_state_slice(
+        config.row_grouping,
+        || config.default_row_grouping,
+        config.onrowgroupingchange,
+        "Table: a controlled `row_grouping` without `onrowgroupingchange` never changes.",
+    );
+    let expanded_groups = use_state_slice(
+        config.expanded_groups,
+        || config.default_expanded_groups,
+        config.onexpandedgroupschange,
+        "Table: a controlled `expanded_groups` without `onexpandedgroupschange` never changes.",
+    );
     TableState {
+        row_grouping,
+        expanded_groups,
         density,
         column_order,
         column_widths,

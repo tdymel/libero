@@ -153,7 +153,7 @@ async fn sorted_is_off<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
             .await?
             .unwrap_or_default();
         if d.text(&format!("[id=\"{reason}\"]")).await?
-            != "Clear the sort and filters to reorder rows"
+            != "Clear the sort, filters and grouping to reorder rows"
         {
             bail!("{selector} is described by {reason:?}, not the reason");
         }

@@ -127,6 +127,7 @@ mod table_overlay;
 mod table_perf;
 mod table_reorder;
 mod table_resize;
+mod table_row_groups;
 mod table_toolbar;
 mod tabs;
 mod tags_field;

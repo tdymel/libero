@@ -77,6 +77,7 @@ mod table;
 mod table_detail;
 mod table_groups;
 mod table_markup;
+mod table_row_groups;
 mod theme_switcher;
 mod tooltip;
 mod tour;

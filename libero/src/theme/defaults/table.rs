@@ -14,6 +14,8 @@ pub const TABLE_BORDER_COLOR: CssVar = CssVar::new("--lsx-table-border-color");
 pub const TABLE_HOVER: CssVar = CssVar::new("--lsx-table-hover");
 pub const TABLE_STRIPE: CssVar = CssVar::new("--lsx-table-stripe");
 pub const TABLE_SELECTED: CssVar = CssVar::new("--lsx-table-selected");
+pub const TABLE_GROUP: CssVar = CssVar::new("--lsx-table-group");
+pub const TABLE_GROUP_INDENT: CssVar = CssVar::new("--lsx-table-group-indent");
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TableSizeLevel {
@@ -34,6 +36,10 @@ pub struct TableDefaults {
     pub stripe_color: ColorValue,
     /// A selected row's background, hovered or not.
     pub selected_color: ColorValue,
+    /// A group row's background, with `row_grouping`.
+    pub group_color: ColorValue,
+    /// How far each nested group's label moves in, a CSS length.
+    pub group_indent: &'static str,
 }
 
 impl TableDefaults {
@@ -76,6 +82,8 @@ impl TableDefaults {
         hover_color: ColorValue::Shade(Color::Muted, ColorShade::S2),
         stripe_color: ColorValue::Shade(Color::Muted, ColorShade::S1),
         selected_color: ColorValue::Shade(Color::Primary, ColorShade::S1),
+        group_color: ColorValue::Shade(Color::Muted, ColorShade::S1),
+        group_indent: "20px",
     };
 
     pub(crate) fn border() -> String {
@@ -129,6 +137,8 @@ impl ToCssDeclarations for TableDefaults {
             TABLE_HOVER.declare(self.hover_color.value()),
             TABLE_STRIPE.declare(self.stripe_color.value()),
             TABLE_SELECTED.declare(self.selected_color.value()),
+            TABLE_GROUP.declare(self.group_color.value()),
+            TABLE_GROUP_INDENT.declare(self.group_indent),
         ];
         for size in Size::ALL {
             let level = self.sizes.get(size);

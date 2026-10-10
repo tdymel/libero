@@ -204,6 +204,20 @@ pub struct TableLabels {
     /// assert_eq!((TableLabels::ENGLISH.row_details)("Ada"), "Details for Ada");
     /// ```
     pub row_details: fn(&str) -> String,
+    /// The label of a row group whose grouped cells are empty.
+    pub group_empty: &'static str,
+    /// A group row's toggle, from the group's label and its row count.
+    ///
+    /// ```
+    /// use libero::localization::TableLabels;
+    ///
+    /// assert_eq!((TableLabels::ENGLISH.group_toggle)("Sales", 12), "Sales, 12 rows");
+    /// assert_eq!((TableLabels::GERMAN.group_toggle)("Sales", 1), "Sales, 1 Zeile");
+    /// ```
+    pub group_toggle: fn(&str, usize) -> String,
+    /// Said when a group opens or closes, from its label.
+    pub group_expanded: fn(&str) -> String,
+    pub group_collapsed: fn(&str) -> String,
     /// The column menu entry that opens the column's filter.
     pub filter: &'static str,
     /// The filter popover and a header filter field, from the header text.
@@ -602,6 +616,30 @@ fn german_row_details(row: &str) -> String {
     format!("Details zu {row}")
 }
 
+fn english_group_toggle(group: &str, count: usize) -> String {
+    format!("{group}, {}", english_results(count))
+}
+
+fn german_group_toggle(group: &str, count: usize) -> String {
+    format!("{group}, {}", german_results(count))
+}
+
+fn english_group_expanded(group: &str) -> String {
+    format!("{group} expanded")
+}
+
+fn german_group_expanded(group: &str) -> String {
+    format!("{group} aufgeklappt")
+}
+
+fn english_group_collapsed(group: &str) -> String {
+    format!("{group} collapsed")
+}
+
+fn german_group_collapsed(group: &str) -> String {
+    format!("{group} zugeklappt")
+}
+
 impl TableLabels {
     pub const ENGLISH: Self = Self {
         no_rows: "No rows",
@@ -642,9 +680,13 @@ impl TableLabels {
         column_hidden: english_column_hidden,
         resize_column: english_resize_column,
         reorder: "Reorder",
-        reorder_unavailable: "Clear the sort and filters to reorder rows",
+        reorder_unavailable: "Clear the sort, filters and grouping to reorder rows",
         details: "Details",
         row_details: english_row_details,
+        group_empty: "(empty)",
+        group_toggle: english_group_toggle,
+        group_expanded: english_group_expanded,
+        group_collapsed: english_group_collapsed,
         filter: "Filter",
         filter_column: english_filter_column,
         filtered: english_filtered,
@@ -712,9 +754,13 @@ impl TableLabels {
         column_hidden: german_column_hidden,
         resize_column: german_resize_column,
         reorder: "Neu anordnen",
-        reorder_unavailable: "Sortierung und Filter aufheben, um Zeilen neu anzuordnen",
+        reorder_unavailable: "Sortierung, Filter und Gruppierung aufheben, um Zeilen neu anzuordnen",
         details: "Details",
         row_details: german_row_details,
+        group_empty: "(leer)",
+        group_toggle: german_group_toggle,
+        group_expanded: german_group_expanded,
+        group_collapsed: german_group_collapsed,
         filter: "Filtern",
         filter_column: german_filter_column,
         filtered: german_filtered,

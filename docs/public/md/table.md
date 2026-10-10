@@ -720,6 +720,46 @@ fn Demo() -> Element {
 }
 ```
 
+Row groups: `row_grouping` names the headers whose cell texts group the rows,
+outermost first. Each group gets a row with a toggle naming its text and row
+count; `default_group_expansion: 1` opens the outermost groups at the start.
+Groups follow the sorted rows, and the open groups' ids are their texts joined
+by `/`.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Table, column};
+
+#[derive(Clone, PartialEq)]
+struct Person {
+    name: String,
+    team: String,
+    city: String,
+}
+
+#[component]
+fn Demo() -> Element {
+    let people: Vec<Person> = Vec::new();
+    let mut open = use_signal(|| vec!["Sales".to_string(), "Sales/Berlin".to_string()]);
+
+    rsx! {
+        Table {
+            caption: "Team members",
+            data: people,
+            columns: vec![
+                column("Name").value(|p: &Person| p.name.clone()).sortable().row_header(),
+                column("Team").value(|p: &Person| p.team.clone()),
+                column("City").value(|p: &Person| p.city.clone()),
+            ],
+            row_key: |p: &Person| p.name.clone(),
+            default_row_grouping: vec!["Team".to_string(), "City".to_string()],
+            expanded_groups: open(),
+            onexpandedgroupschange: move |next| open.set(next),
+        }
+    }
+}
+```
+
 ## Props
 
 ### Table
@@ -756,7 +796,14 @@ fn Demo() -> Element {
 | `expanded` | `Option<Vec<String>>` | `None` | The `row_key`s of the rows whose detail shows. Set, it is controlled: pair it with `onexpandedchange`. It survives a sort. |
 | `default_expanded` | `Vec<String>` | `[]` | Seeds the open details once. Ignored when `expanded` is set. |
 | `onexpandedchange` | `EventHandler<Vec<String>>` | `None` | Called with the open details a toggle asks for. |
-| `onrowreorder` | `EventHandler<SortableMove>` | `None` | Adds a leading column with a drag handle and Move up and Move down buttons per row. Called with a move by positions in `data`; apply it with `step.apply(&mut rows)`, the table shows the old order until you do. Off while the rows are sorted or the quick filter has text. Paged, a row moves within its page. Set `row_key` with it. |
+| `onrowreorder` | `EventHandler<SortableMove>` | `None` | Adds a leading column with a drag handle and Move up and Move down buttons per row. Called with a move by positions in `data`; apply it with `step.apply(&mut rows)`, the table shows the old order until you do. Off while the rows are sorted, filtered or grouped. Paged, a row moves within its page. Set `row_key` with it. |
+| `row_grouping` | `Option<Vec<String>>` | `None` | Groups the rows by the cell text of these headers, outermost first: `vec!["Role".into()]`. Each group gets a row of its own, with a toggle in the first shown column naming its text and row count; rows with an empty cell form one group, "(empty)". Groups follow the sorted rows, so sorting by the grouped column orders them, and a filter drops the groups it empties. The grouped column stays shown. A grouped table renders every row (`virtual_row_height` is ignored, a debug build warns), and rows don't reorder while grouped. Paged, group rows take places on a page like rows, and a group split by a page break gets no second group row. The footer and an export cover the rows alone. Set, the grouping is controlled: pair it with `onrowgroupingchange`. |
+| `default_row_grouping` | `Vec<String>` | `[]` | Seeds the grouping once. Ignored when `row_grouping` is set. |
+| `onrowgroupingchange` | `EventHandler<Vec<String>>` | `None` | Called with the grouping a pick asks for. |
+| `expanded_groups` | `Option<Vec<String>>` | `None` | The open groups' ids: their texts from the outermost group in, joined by `/`, as `"Admin"` or `"Admin/2024"`; a `/` or `\` in a text is escaped by `\`, and the empty group's text is empty. Set, it is controlled: pair it with `onexpandedgroupschange`. |
+| `default_expanded_groups` | `Vec<String>` | `[]` | Seeds the open groups once. Ignored when `expanded_groups` is set. |
+| `onexpandedgroupschange` | `EventHandler<Vec<String>>` | `None` | Called with the open groups a group toggle asks for. |
+| `default_group_expansion` | `usize` | `0` | How many levels of groups start open, the first time there are rows to group, beside `default_expanded_groups`: 1 opens the outermost groups. 0 starts every group closed. Ignored with `expanded_groups`. |
 | `size` | `Size` | `md` | Cell padding and font size. |
 | `density` | `Option<Size>` | `None` | The size a `TableDensityButton` picked, over `size`; set, it is controlled. |
 | `default_density` | `Option<Size>` | `None` | Seeds the density once. Ignored when `density` is set. |
@@ -855,6 +902,7 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `Shift+Enter` or `Shift+Space` | With `multi_sort`, on a sortable header: adds that column after the sorted ones. |
 | `Space` | On a row's checkbox: selects or deselects the row. On the header checkbox: selects or clears every row. |
 | `Enter` or `Space` | With `row_detail`, on a row's toggle: opens or closes its detail. Tab then goes into the open detail. |
+| `Enter` or `Space` | With `row_grouping`, on a group's toggle: opens or closes the group. Focus stays on the toggle. |
 | `Enter` or `Space` or `Down` | With `column_menu`, on a header's menu button: opens the column menu, keyed like `Menu`. |
 | `Space` or `Enter` | With `onrowreorder`, on a row's handle: lifts the row, then drops it. Up and Down move the lifted row, Home and End to the first or last place, Escape puts it back. |
 | `Left` or `Right` | With `resizable_columns`, on a header's resize grip: moves it 10px the way the arrow points, 50px with Shift. |
@@ -881,6 +929,10 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
   `aria-selected="true"`.
 - Each detail toggle is a button named "Details for" plus the row's name, with
   `aria-expanded` and, while open, `aria-controls`.
+- Each group toggle is a button named by the group's text and row count,
+  "Admin, 2 rows", with `aria-expanded`; opening or closing it is said in a
+  polite live region, "Admin expanded". The table keeps its table role: group
+  rows are rows with a button, not a tree.
 - A polite live region says what changed: the selected count, "2 rows
   selected"; the page range, "4–6 of 7"; the rows left after a filter, "2
   rows"; the rows loaded by `onbottomreached`, "200 rows"; an export,
@@ -971,6 +1023,8 @@ each cell of that row, and names the row's toggle "Details for Cherry".
 | `hover_color` | `ColorValue` | Row background while hovered, `muted.2`: one step past the stripe. |
 | `stripe_color` | `ColorValue` | Every other body row's background with `striped`, `muted.1`. |
 | `selected_color` | `ColorValue` | A selected row's background, hovered or not, `primary.1`. |
+| `group_color` | `ColorValue` | A group row's background with `row_grouping`, `muted.1`. |
+| `group_indent` | `&'static str` | How far each nested group's toggle moves in, `20px`. |
 
 ## CSS variables
 
@@ -984,6 +1038,8 @@ each cell of that row, and names the row's toggle "Details for Cherry".
 | `--lsx-table-hover` | `background` of a hovered body row. |
 | `--lsx-table-stripe` | `background` of every other body row with `striped`. |
 | `--lsx-table-selected` | `background` of a selected body row. |
+| `--lsx-table-group` | `background` of a group row. |
+| `--lsx-table-group-indent` | How far each nested group's toggle moves in. |
 
 ## Data attributes
 
@@ -1005,7 +1061,10 @@ default `start`.
 | `data-toolbar` | On the row above the table with `toolbar`; `data-toolbar-end` on the quick filter's box in it. |
 | `data-detail-toggle` | On the toggle column's `th` and `td`s, with `row_detail`. |
 | `data-detail` | On an open detail row, right after its row. |
-| `data-stripe` | On every other body row with `striped`, detail rows not counted. |
+| `data-stripe` | On every other body row with `striped`, detail rows not counted, group rows counted. |
+| `data-row-group` | On a group row with `row_grouping`; `data-level` gives its depth, 0 outermost. |
+| `data-group-toggle` | On a group row's toggle, holding `data-group-label` and `data-group-count`. |
+| `data-group-lead` | On a group row's one cell over the lead columns. |
 | `data-reorder` | On the reorder column's `th` and `td`s, with `onrowreorder`. |
 | `data-dragging` | On the body row being dragged or moved by keyboard. |
 | `data-group` | On a column group's header cell. |

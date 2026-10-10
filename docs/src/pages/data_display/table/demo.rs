@@ -188,7 +188,7 @@ pub fn TeamTable(values: DemoValues) -> Element {
     rsx! {
         Table {
             // A new table per switch: `page_sizes` and the pins seed once.
-            key: "{values.str(\"paginate\")}-{values.str(\"pinned\")}-{windowed}-{server}",
+            key: "{values.str(\"paginate\")}-{values.str(\"pinned\")}-{on(\"row_grouping\")}-{windowed}-{server}",
             caption: "Team members",
             size: values.str("size"),
             striped: on("striped"),
@@ -222,6 +222,11 @@ pub fn TeamTable(values: DemoValues) -> Element {
                     false => step.apply(&mut rows.write()),
                 })
             }),
+            default_row_grouping: match on("row_grouping") {
+                true => vec!["Role".to_string()],
+                false => Vec::new(),
+            },
+            default_group_expansion: 1,
             show_quick_filter: on("show_quick_filter"),
             toolbar: on("toolbar").then(|| rsx! {
                 TableColumnsButton {}

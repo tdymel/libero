@@ -127,6 +127,7 @@ mod table_groups;
 mod table_paging;
 mod table_pin;
 mod table_reorder;
+mod table_row_groups;
 mod table_select;
 mod table_toolbar;
 mod table_window;

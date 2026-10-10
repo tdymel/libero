@@ -184,7 +184,7 @@ fn row_reorder_is_off_while_sorted() {
 
     assert_eq!(disabled_controls(&body), [true; 9], "{body}");
     assert!(
-        html.contains(">Clear the sort and filters to reorder rows<"),
+        html.contains(">Clear the sort, filters and grouping to reorder rows<"),
         "{html}"
     );
 }

@@ -163,7 +163,18 @@ const PINNED: &str =
 const WINDOW_HEIGHT: &str = "320px";
 
 /// The switches `virtual_row_height` hides: it sets the cap, the rest render every row.
-const WINDOW_HIDES: [&str; 4] = ["max_height", "row_detail", "paginate", "empty"];
+const WINDOW_HIDES: [&str; 5] = [
+    "max_height",
+    "row_detail",
+    "paginate",
+    "empty",
+    "row_grouping",
+];
+
+// snippet: item #[derive(Clone, PartialEq)] struct Person { name: String }
+// snippet: in Table { caption: "Team members", data: Vec::<Person>::new(), columns: vec![], .. }
+const GROUPING: &str = r#"default_row_grouping: vec!["Role".to_string()],
+default_group_expansion: 1"#;
 
 /// Ten thousand rows, windowed.
 fn windowed(values: &DemoValues) -> bool {
@@ -229,7 +240,14 @@ pub fn TablePage() -> Element {
                     prop("expanded", "Option<Vec<String>>").default("None").doc("The `row_key`s of the rows whose detail shows. Set, it is controlled: pair it with `onexpandedchange`. It survives a sort."),
                     prop("default_expanded", "Vec<String>").default("[]").doc("Seeds the open details once. Ignored when `expanded` is set."),
                     prop("onexpandedchange", "EventHandler<Vec<String>>").default("None").doc("Called with the open details a toggle asks for."),
-                    prop("onrowreorder", "EventHandler<SortableMove>").default("None").doc("Adds a leading column with a drag handle and Move up and Move down buttons per row. Called with a move by positions in `data`; apply it with `step.apply(&mut rows)`, the table shows the old order until you do. Off while the rows are sorted or the quick filter has text. Paged, a row moves within its page. Set `row_key` with it."),
+                    prop("onrowreorder", "EventHandler<SortableMove>").default("None").doc("Adds a leading column with a drag handle and Move up and Move down buttons per row. Called with a move by positions in `data`; apply it with `step.apply(&mut rows)`, the table shows the old order until you do. Off while the rows are sorted, filtered or grouped. Paged, a row moves within its page. Set `row_key` with it."),
+                    prop("row_grouping", "Option<Vec<String>>").default("None").doc("Groups the rows by the cell text of these headers, outermost first: `vec![\"Role\".into()]`. Each group gets a row of its own, with a toggle in the first shown column naming its text and row count; rows with an empty cell form one group, \"(empty)\". Groups follow the sorted rows, so sorting by the grouped column orders them, and a filter drops the groups it empties. The grouped column stays shown. A grouped table renders every row (`virtual_row_height` is ignored, a debug build warns), and rows don't reorder while grouped. Paged, group rows take places on a page like rows, and a group split by a page break gets no second group row. The footer and an export cover the rows alone. Set, the grouping is controlled: pair it with `onrowgroupingchange`."),
+                    prop("default_row_grouping", "Vec<String>").default("[]").doc("Seeds the grouping once. Ignored when `row_grouping` is set."),
+                    prop("onrowgroupingchange", "EventHandler<Vec<String>>").default("None").doc("Called with the grouping a pick asks for."),
+                    prop("expanded_groups", "Option<Vec<String>>").default("None").doc("The open groups' ids: their texts from the outermost group in, joined by `/`, as `\"Admin\"` or `\"Admin/2024\"`; a `/` or `\\` in a text is escaped by `\\`, and the empty group's text is empty. Set, it is controlled: pair it with `onexpandedgroupschange`."),
+                    prop("default_expanded_groups", "Vec<String>").default("[]").doc("Seeds the open groups once. Ignored when `expanded_groups` is set."),
+                    prop("onexpandedgroupschange", "EventHandler<Vec<String>>").default("None").doc("Called with the open groups a group toggle asks for."),
+                    prop("default_group_expansion", "usize").default("0").doc("How many levels of groups start open, the first time there are rows to group, beside `default_expanded_groups`: 1 opens the outermost groups. 0 starts every group closed. Ignored with `expanded_groups`."),
                     prop("size", "Size").default(theme.table.size.as_str()).doc("Cell padding and font size."),
                     prop("density", "Option<Size>").default("None").doc("The size a `TableDensityButton` picked, over `size`; set, it is controlled."),
                     prop("default_density", "Option<Size>").default("None").doc("Seeds the density once. Ignored when `density` is set."),
@@ -310,6 +328,7 @@ pub fn TablePage() -> Element {
                 .key(["Shift+Enter", "Shift+Space"],"With `multi_sort`, on a sortable header: adds that column after the sorted ones.")
                 .key(["Space"], "On a row's checkbox: selects or deselects the row. On the header checkbox: selects or clears every row.")
                 .key(["Enter", "Space"], "With `row_detail`, on a row's toggle: opens or closes its detail. Tab then goes into the open detail.")
+                .key(["Enter", "Space"], "With `row_grouping`, on a group's toggle: opens or closes the group. Focus stays on the toggle.")
                 .key(["Enter", "Space", "Down"], "With `column_menu`, on a header's menu button: opens the column menu, keyed like `Menu`.")
                 .key(["Space", "Enter"], "With `onrowreorder`, on a row's handle: lifts the row, then drops it. Up and Down move the lifted row, Home and End to the first or last place, Escape puts it back.")
                 .key(["Left", "Right"], "With `resizable_columns`, on a header's resize grip: moves it 10px the way the arrow points, 50px with Shift.")
@@ -323,6 +342,7 @@ pub fn TablePage() -> Element {
                     "Only sorted headers carry `aria-sort`. With `multi_sort`, each sort button's name adds its place, \"sort order 2\", and a tap always adds the column, as touch has no Shift.",
                     "Each row's checkbox is named \"Select\" plus the row's name. The header checkbox reads mixed while some rows are selected. A selected row carries `aria-selected=\"true\"`.",
                     "Each detail toggle is a button named \"Details for\" plus the row's name, with `aria-expanded` and, while open, `aria-controls`.",
+                    "Each group toggle is a button named by the group's text and row count, \"Admin, 2 rows\", with `aria-expanded`; opening or closing it is said in a polite live region, \"Admin expanded\". The table keeps its table role: group rows are rows with a button, not a tree.",
                     "A polite live region says what changed: the selected count, \"2 rows selected\"; the page range, \"4–6 of 7\"; the rows left after a filter, \"2 rows\"; the rows loaded by `onbottomreached`, \"200 rows\"; an export, \"Exported 12 rows\". The first render says nothing.",
                     "Page buttons sit in a `nav` named after the caption, and the page-size picker is labelled. The quick-filter is a labelled search field described by the table's name, so two tables' fields differ.",
                     "Filter popovers and the filter panel are named dialogs with labelled fields. Focus moves in on open, and Escape closes them onto their button. A filtered header reads \"Age is filtered\".",
@@ -363,7 +383,7 @@ pub fn TablePage() -> Element {
                     Code { source: "columns" }
                     " reads one cell, whose type sets its sort order and alignment. Sorting, "
                     "selection, paging, filters, a column menu, pinned, resized and reordered "
-                    "columns, row details and virtual rows are each a prop away, their state held "
+                    "columns, row groups, row details and virtual rows are each a prop away, their state held "
                     "by the table or by you."
                 }
             },
@@ -432,6 +452,11 @@ pub fn TablePage() -> Element {
                     }).hidden_when(windowed),
                     Control::switch("empty").code(|_, values| match no_rows(values) {
                         true => vec![r#"empty: rsx! { "No team members yet." }"#.to_string()],
+                        false => vec![],
+                    }).hidden_when(windowed),
+                    // On, so the group rows show without another switch; every group starts open.
+                    Control::switch("row_grouping").default("true").code(|_, values| match values.str("row_grouping") == "true" && !windowed(values) {
+                        true => vec![GROUPING.to_string()],
                         false => vec![],
                     }).hidden_when(windowed),
                     Control::switch("reorder_rows").code(|_, values| match reorders(values) {

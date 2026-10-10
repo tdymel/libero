@@ -19,6 +19,7 @@ mod pinning;
 mod pipeline;
 mod resize;
 mod row;
+mod row_groups;
 mod row_reorder;
 mod selection;
 mod table;

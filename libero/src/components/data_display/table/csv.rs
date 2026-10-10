@@ -53,7 +53,7 @@ pub fn table_csv<T>(columns: &[Column<T>], data: &[T]) -> String {
     csv_of(table_text(columns, data))
 }
 
-/// [`table_csv`] of the rows at `order` in the columns at `shown`.
+/// [`table_csv`] of the data rows at `order` in the columns at `shown`; group rows are left out.
 pub(super) fn shown_csv<T>(
     columns: &[Column<T>],
     shown: &[usize],
@@ -61,11 +61,11 @@ pub(super) fn shown_csv<T>(
     order: &[VisibleRow],
 ) -> String {
     let header = shown.iter().map(|&at| columns[at].header.clone()).collect();
-    let rows = order.iter().map(|row| match *row {
-        VisibleRow::Data(row) => shown
+    let rows = order.iter().filter_map(|row| row.data()).map(|row| {
+        shown
             .iter()
             .map(|&at| (columns[at].text)(&data[row]))
-            .collect(),
+            .collect()
     });
     csv_of(std::iter::once(header).chain(rows))
 }
