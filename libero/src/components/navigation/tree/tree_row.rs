@@ -9,8 +9,8 @@ use crate::{
     components::{
         common::states,
         common::{
-            HtmlTag, Part, ROW_HOVER_TINT, focus_ring_sx, forced_on_sx, on_start_bar_sx,
-            on_tint_color,
+            HtmlTag, Part, ROW_HOVER_TINT, focus_ring_sx, focused_disabled_sx, forced_on_sx,
+            on_start_bar_sx, on_tint_color,
         },
         data_display::List,
         layout::use_box,
@@ -64,6 +64,7 @@ static TREE_ROW_SX: StaticSx = StaticSx::new(|| {
             "disabled",
             sx().opacity("0.5")
                 .cursor("not-allowed")
+                .and(focused_disabled_sx())
                 .selector("& *", sx().pointer_events("none")),
         )
         // The size state is only set with guides, as only the guide's padding reads it.

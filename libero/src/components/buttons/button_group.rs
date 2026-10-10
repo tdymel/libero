@@ -129,6 +129,9 @@ base_props! {
         /// Disables every button inside that does not set `disabled` itself.
         #[props(default)]
         disabled: Option<bool>,
+        /// Default `focusable_when_disabled` of the buttons inside: a disabled one stays a Tab stop.
+        #[props(default)]
+        focusable_when_disabled: Option<bool>,
         /// `Button`s, `ActionIcon`s, and components built on them.
         children: Element,
     }
@@ -168,6 +171,7 @@ pub fn ButtonGroup(props: ButtonGroupProps) -> Element {
         variant: props.variant.as_ref().copied(),
         color: props.color.as_ref().cloned(),
         disabled: props.disabled,
+        focusable_when_disabled: props.focusable_when_disabled,
     });
 
     let states: Input<States> = props

@@ -265,7 +265,11 @@ pub fn Button(props: ButtonProps) -> Element {
     let is_link = props.to.as_ref().is_some();
     let loading = props.loading.unwrap_or(false) && !is_link;
     // A toolbar keeps its disabled items in the arrow order.
-    let soft_disabled = disabled && props.focusable_when_disabled.unwrap_or(item.is_some());
+    let soft_disabled = disabled
+        && props
+            .focusable_when_disabled
+            .or(group.focusable_when_disabled)
+            .unwrap_or(item.is_some());
 
     if is_link && props.loading == Some(true) {
         warn("Button: `loading` is ignored on a link - an `<a>` has nothing to wait for.");

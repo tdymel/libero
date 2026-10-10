@@ -29,7 +29,9 @@ pub fn ButtonGroupPage() -> Element {
                 prop("radius", "ThemeAwareValue")
                     .doc("The group's outer corners, or any CSS, e.g. `radius: \"0\"`. The corners between two buttons are always square."),
                 prop("disabled", "bool")
-                    .doc("Disables every button inside that does not set `disabled` itself, and takes it out of the Tab order unless it sets `focusable_when_disabled`."),
+                    .doc("Disables every button inside that does not set `disabled` itself, and takes it out of the Tab order unless `focusable_when_disabled` says otherwise."),
+                prop("focusable_when_disabled", "bool")
+                    .doc("Default `focusable_when_disabled` of the buttons inside: a disabled one stays a Tab stop."),
                 prop("children", "Element")
                     .default("required")
                     .doc("`Button`s, `ActionIcon`s, and components built on them, such as `ThemeSwitcher`."),
@@ -42,7 +44,6 @@ pub fn ButtonGroupPage() -> Element {
                 .must(["Name the group with `aria-label`, or `aria-labelledby` on a visible heading."])
                 .example("Zoom out, Reset and Zoom in in a `ButtonGroup` with `\"aria-label\": \"Zoom\"`: a screen reader reads the three buttons as the \"Zoom\" group, and Tab stops on each one.")
                 .limits([
-                    "A disabled group does not forward `focusable_when_disabled`: set it on each button that should stay a Tab stop.",
                     "It is not a `toolbar`: no arrow-key navigation between the buttons.",
                     "For one choice out of several, use `SegmentedControl`, which is a radio group.",
                     "A child hidden with `display: none` still counts as first or last and squares its neighbour's outer corners; render a conditional control only when shown.",
@@ -75,6 +76,7 @@ pub fn ButtonGroupPage() -> Element {
                     Control::sizes("radius")
                         .default("sm"),
                     Control::switch("disabled"),
+                    Control::switch("focusable_when_disabled"),
                 ],
                 render: move |values: DemoValues| rsx! {
                     ButtonGroup {
@@ -88,6 +90,7 @@ pub fn ButtonGroupPage() -> Element {
                         size: values.str("size"),
                         radius: values.str("radius"),
                         disabled: values.str("disabled") == "true",
+                        focusable_when_disabled: values.str("focusable_when_disabled") == "true",
                         // demo-code: children start
                         Button { "Undo" }
                         Button { "Redo" }
@@ -107,8 +110,10 @@ pub fn ButtonGroupPage() -> Element {
                     Code { source: "size" }
                     ", "
                     Code { source: "radius" }
-                    " and "
+                    ", "
                     Code { source: "disabled" }
+                    " and "
+                    Code { source: "focusable_when_disabled" }
                     " set the default of every button inside; a button's own prop wins. "
                     "This site's header groups its repository link, direction toggle and theme switcher, and on a phone the search."
                 }

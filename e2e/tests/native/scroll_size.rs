@@ -3,7 +3,11 @@
 
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};
-use libero::components::{CodeBlock, Scroller, use_scroller};
+use libero::{
+    components::{CodeBlock, Scroller, use_scroller},
+    hooks::use_element,
+    platform::ElementApi,
+};
 
 /// Ten 100px items in a 200px strip: 800px of range.
 fn strip() -> Element {
@@ -80,6 +84,47 @@ fn a_code_block_that_overflows_a_little_is_a_tab_stop() {
     let mut page = mount(short);
     page.advance(1.0);
     assert!(!page.exists("[role=region]"), "{}", page.tree());
+}
+
+fn bordered_box() -> Element {
+    let framed = use_element();
+    let mut out = use_signal(String::new);
+    rsx! {
+        div {
+            id: "framed",
+            height: "100px",
+            overflow_y: "scroll",
+            border: "5px solid black",
+            onmounted: framed.mount(),
+            div { id: "tall", height: "400px" }
+        }
+        button {
+            id: "read",
+            onclick: move |_| {
+                // The read answers when started: a `spawn` runs while the document is borrowed.
+                let (scroll, client) = (framed.scroll_size(), framed.client_size());
+                spawn(async move {
+                    out.set(format!(
+                        "{:?} {:?}",
+                        scroll.await.map(|size| size.height),
+                        client.await.map(|size| size.height)
+                    ));
+                });
+            },
+            "Read"
+        }
+        span { id: "out", "{out}" }
+    }
+}
+
+/// Todo 3172: a 100px border-box with 5px borders and 400px of content scrolls 310px:
+/// `scrollHeight` 400 over a `clientHeight` of 90, where Blitz said 410.
+#[test]
+fn a_bordered_scroller_reports_the_web_scroll_size() {
+    let mut page = mount(bordered_box);
+    page.click("#read");
+    page.advance(0.1);
+    assert_eq!(page.text("#out"), "Ok(400.0) Ok(90.0)", "{}", page.tree());
 }
 
 fn scroll_box() -> Element {

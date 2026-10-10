@@ -1932,24 +1932,23 @@ impl ElementApi for BlitzElement {
             let layout = doc.get_node(node_id)?.final_layout();
             let (border, bar) = (layout.border, layout.scrollbar_size);
             Some(Dimensions {
-                width: f64::from(
-                    (layout.size.width - border.left - border.right - bar.width).max(0.0),
-                ),
-                height: f64::from(
-                    (layout.size.height - border.top - border.bottom - bar.height).max(0.0),
-                ),
+                width: client_extent(layout.size.width, border.left + border.right, bar.width),
+                height: client_extent(layout.size.height, border.top + border.bottom, bar.height),
             })
         })
     }
 
-    /// Taffy's `scroll_width` is the overflow, the furthest offset, not the
-    /// content's size: the box's own size is added back (todo 652).
+    /// Taffy's `scroll_width` is the overflow, the furthest offset, not the content's
+    /// size: the client box is added back, as the web's `scrollWidth` is (todos 652, 3172).
     fn scroll_size(&self) -> Read<Dimensions> {
         self.read(|doc, node_id| {
             let layout = doc.get_node(node_id)?.final_layout();
+            let (border, bar) = (layout.border, layout.scrollbar_size);
             Some(Dimensions {
-                width: (layout.size.width + layout.scroll_width()) as f64,
-                height: (layout.size.height + layout.scroll_height()) as f64,
+                width: client_extent(layout.size.width, border.left + border.right, bar.width)
+                    + f64::from(layout.scroll_width()),
+                height: client_extent(layout.size.height, border.top + border.bottom, bar.height)
+                    + f64::from(layout.scroll_height()),
             })
         })
     }
@@ -2232,6 +2231,11 @@ fn show(anchor: NodeHandle, node_id: NodeId, tries: u8, chain: bool) {
             notify_scroll();
         }
     });
+}
+
+/// One axis of the padding box less the scrollbar, `clientWidth`/`clientHeight`.
+fn client_extent(size: f32, border: f32, bar: f32) -> f64 {
+    f64::from((size - border - bar).max(0.0))
 }
 
 /// `x, y, width, height` of a node's border box in the viewport, its own scroll

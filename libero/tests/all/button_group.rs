@@ -94,6 +94,35 @@ fn a_button_keeps_its_tab_stop_in_a_disabled_group_by_its_own_prop() {
     }
 }
 
+/// Todo 3170: the group's `focusable_when_disabled` is every button's default, its own prop wins.
+#[test]
+fn a_disabled_group_forwards_focusable_when_disabled() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                ButtonGroup { disabled: true, focusable_when_disabled: true,
+                    Button { "One" }
+                    ActionIcon { aria_label: "Two", "2" }
+                    Button { focusable_when_disabled: false, "Three" }
+                }
+            }
+        }
+    }
+    let html = body(&render(app));
+
+    let buttons: Vec<_> = html
+        .split("<button")
+        .skip(1)
+        .map(|button| attributes_of(&format!("<button{button}"), "button"))
+        .collect();
+    assert_eq!(buttons.len(), 3, "{html}");
+    for soft in &buttons[..2] {
+        assert!(!soft.contains_key("disabled"), "{soft:?}");
+        assert_eq!(soft["aria-disabled"], "true", "{soft:?}");
+    }
+    assert!(buttons[2].contains_key("disabled"), "{:?}", buttons[2]);
+}
+
 #[test]
 fn a_forwarding_toggle_takes_the_group_variant() {
     fn app() -> Element {

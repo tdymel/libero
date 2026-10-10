@@ -7,8 +7,8 @@ use crate::{
         common::{
             BUTTON_HOVER_VAR, BUTTON_ON_STATE_VAR, BUTTON_SELECTED_VAR, BUTTON_VARS, Glyph,
             HtmlTag, Input, Orientation, ScaleOrCss, States, ToolbarItem, Variables, Variant,
-            disabled_look_sx, focus_ring_sx, has_shortcut_modifier, interactive_variant_sx,
-            neighbour, variables, variant_selected_sx,
+            disabled_look_sx, focus_ring_sx, focused_disabled_opacity_sx, has_shortcut_modifier,
+            interactive_variant_sx, neighbour, variables, variant_selected_sx,
         },
         form::{Activation, field_parts_enum},
         layout::use_box,
@@ -207,6 +207,11 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
             .selector(
                 "& > label[data-state~=\"disabled\"]",
                 disabled_look_sx("not-allowed").pointer_events("none"),
+            )
+            // A toolbar keeps a disabled segment focusable: its ring fades with the label.
+            .selector(
+                "& > input:focus-visible + label[data-state~=\"disabled\"]",
+                focused_disabled_opacity_sx(),
             ),
         )
     });

@@ -166,14 +166,27 @@ pub(crate) fn disabled_look_sx(cursor: &str) -> crate::sx::Sx {
     crate::sx::sx()
         .opacity("0.5")
         .cursor(cursor)
-        .selector(
-            "&:focus-visible",
-            crate::sx::sx().opacity(FOCUSED_DISABLED_OPACITY),
-        )
+        .and(focused_disabled_sx())
         .media(
             crate::sx::FORCED_COLORS,
             crate::sx::sx().color("GrayText").border_color("GrayText"),
         )
+}
+
+/// [`disabled_look_sx`] for a control whose focus lands on a child, as the input
+/// beside a `[data-ring]` overlay: the ring fades with the control, so focus inside lifts it.
+pub(crate) fn disabled_look_within_sx(cursor: &str) -> crate::sx::Sx {
+    disabled_look_sx(cursor).selector("&:focus-within", focused_disabled_opacity_sx())
+}
+
+/// The lifted opacity of a focused disabled element, for a rule that fades by its own value.
+pub(crate) fn focused_disabled_sx() -> crate::sx::Sx {
+    crate::sx::sx().selector("&:focus-visible", focused_disabled_opacity_sx())
+}
+
+/// For a disabled element whose focus is a sibling input, under a selector like `input:focus-visible + &`.
+pub(crate) fn focused_disabled_opacity_sx() -> crate::sx::Sx {
+    crate::sx::sx().opacity(FOCUSED_DISABLED_OPACITY)
 }
 
 /// Draws the ring for an element focus lands inside, via `:focus-visible ~ [data-ring]`:
@@ -272,6 +285,16 @@ mod tests {
 
         assert!(css.contains("box-shadow:0 1px 2px #0003;"), "{css}");
         assert!(css.contains("--lsx-own-shadow:0 1px 2px #0003;"), "{css}");
+    }
+
+    /// Todo 3169: a ring drawn on a child lifts the fade through the focus inside.
+    #[test]
+    fn focus_inside_lifts_the_fade_of_a_ring_drawn_on_a_child() {
+        use super::{FOCUSED_DISABLED_OPACITY, disabled_look_within_sx};
+
+        let css = Stylesheet::from(&disabled_look_within_sx("not-allowed"));
+        let rule = format!(":focus-within{{opacity:{FOCUSED_DISABLED_OPACITY};");
+        assert!(css.as_str().contains(&rule), "{}", css.as_str());
     }
 
     /// Todo 2810: the stripe, faded with its focused disabled element, shows 3:1 on the page.

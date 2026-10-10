@@ -218,6 +218,9 @@ fn fill_from_group(props: &mut ActionIconProps, group: ButtonGroupContext) {
     fill(&mut props.variant, group.variant);
     fill(&mut props.color, group.color);
     props.disabled = props.disabled.or(group.disabled);
+    props.focusable_when_disabled = props
+        .focusable_when_disabled
+        .or(group.focusable_when_disabled);
 }
 
 base_props! {

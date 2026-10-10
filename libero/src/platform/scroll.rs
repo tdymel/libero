@@ -22,12 +22,6 @@ pub(crate) fn scroll_range(data: &ScrollData) -> (f64, f64) {
     (max_x.max(0.0), max_y.max(0.0))
 }
 
-/// Whether `scroll_size` less the border-box size is the scroll range, as on Blitz;
-/// the web's is the padding box's, so `client_size` goes there. Blitz over-reports it.
-pub(crate) fn scroll_size_spans_border_box() -> bool {
-    NATIVE
-}
-
 /// Whether a scroll container clips its z-indexed descendants. Blitz paints them
 /// past any clip, so a scroller must be a stacking context there.
 pub(crate) fn clips_z_indexed() -> bool {

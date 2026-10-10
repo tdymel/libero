@@ -11,7 +11,10 @@ use crate::{
     components::{
         accessibility::VisuallyHidden,
         buttons::ActionIcon,
-        common::{Glyph, Input, Orientation, Part, States, focus_ring_sx, shadow_sx, states},
+        common::{
+            Glyph, Input, Orientation, Part, States, focus_ring_sx, focused_disabled_sx, shadow_sx,
+            states,
+        },
         layout::Box,
     },
     context::IconSlot,
@@ -85,7 +88,8 @@ pub(super) static CAROUSEL_CONTROL_SX: StaticSx = StaticSx::new(|| {
             "disabled",
             sx().opacity("0.4")
                 .cursor("default")
-                .background(CAROUSEL_CONTROL_BACKGROUND.value()),
+                .background(CAROUSEL_CONTROL_BACKGROUND.value())
+                .and(focused_disabled_sx()),
         )
         .focus_visible(focus_ring_sx())
 });

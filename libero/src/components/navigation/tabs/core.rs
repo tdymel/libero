@@ -5,8 +5,8 @@ use crate::{
     components::{
         common::{
             ClassList, HtmlTag, Input, Part, States, Variables, coarse_hit_area_sx, focus_ring_sx,
-            has_shortcut_modifier, inset_focus_ring_sx, names_itself, neighbour, reveal_inline,
-            text_color, use_name_warning, variables,
+            focused_disabled_sx, has_shortcut_modifier, inset_focus_ring_sx, names_itself,
+            neighbour, reveal_inline, text_color, use_name_warning, variables,
         },
         layout::use_box,
     },
@@ -84,7 +84,9 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             "& [role=\"tab\"][aria-disabled=\"true\"]",
-            sx().opacity("0.5").cursor("not-allowed"),
+            sx().opacity("0.5")
+                .cursor("not-allowed")
+                .and(focused_disabled_sx()),
         )
         .selector(
             "& > [role=\"tabpanel\"]",

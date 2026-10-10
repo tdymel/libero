@@ -6,7 +6,7 @@ use crate::{
         accessibility::{VISUALLY_HIDDEN_SX, hidden_input_centred_sx},
         common::{
             HtmlTag, Input, Part, ScaleOrCss, States, TOOLBAR_ITEM, ToolbarItem, base_color_or,
-            coarse_hit_area_sx, contrast_color, disabled_look_sx, fill_color, focus_ring_sx,
+            coarse_hit_area_sx, contrast_color, disabled_look_within_sx, fill_color, focus_ring_sx,
             names_itself, ring_overlay, ring_overlay_sx, use_name_warning, use_toolbar_item,
             variables,
         },
@@ -52,7 +52,7 @@ static SWITCH_CONTROL_SX: StaticSx = StaticSx::new(|| {
         // A card rings itself: the control stops being the overlay's
         // containing block, so the same overlay covers the card.
         .when("card", sx().position("static"))
-        .when("disabled", disabled_look_sx("not-allowed"))
+        .when("disabled", disabled_look_within_sx("not-allowed"))
 });
 
 static SWITCH_TRACK_SX: StaticSx = StaticSx::new(|| {

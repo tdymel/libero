@@ -416,10 +416,7 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
                 false => 0.0,
             };
             // The client box leaves out the border and a classic scrollbar the offset never covers.
-            let client = client
-                .ok()
-                .filter(|_| !platform::scroll_size_spans_border_box())
-                .map(|size| (size.width, size.height));
+            let client = client.ok().map(|size| (size.width, size.height));
             let (most_x, most_y) = board.map_or((0.0, 0.0), |board| {
                 let extent = client.unwrap_or((board.width, board.height));
                 (overflow(content.0, extent.0), overflow(content.1, extent.1))

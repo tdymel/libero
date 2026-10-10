@@ -6,8 +6,8 @@ use crate::{
         buttons::ActionIcon,
         common::{
             Glyph, HtmlTag, Input, Part, ScaleOrCss, States, Variables, base_color, base_props,
-            coarse_hit_area_sx, contrast_color, fill_color, focus_ring_sx, literal_contrast,
-            on_state_sx, parts_enum, variables,
+            coarse_hit_area_sx, contrast_color, fill_color, focus_ring_sx, focused_disabled_sx,
+            literal_contrast, on_state_sx, parts_enum, variables,
         },
         layout::{BoxStyle, use_box},
     },
@@ -54,6 +54,12 @@ static PAGINATION_LIST_SX: StaticSx = StaticSx::new(|| {
         .selector("& > li", sx().display("flex"))
 });
 
+fn faded_sx() -> crate::sx::Sx {
+    sx().opacity("0.5")
+        .cursor("default")
+        .and(focused_disabled_sx())
+}
+
 /// One style for every control, arrows included. The size vars sit here, not
 /// on the `<nav>`, so all controls share one class.
 static PAGINATION_CONTROL_SX: StaticSx = StaticSx::new(|| {
@@ -81,14 +87,11 @@ static PAGINATION_CONTROL_SX: StaticSx = StaticSx::new(|| {
                 .and(on_state_sx(None))
                 .focus_visible(focus_ring_sx()),
         )
-        .when("disabled", sx().opacity("0.5").cursor("default"))
+        .when("disabled", faded_sx())
         // Page buttons have no `disabled` state: `disabled` soft-disables them (todo 2418).
-        .selector(
-            "&[aria-disabled='true']",
-            sx().opacity("0.5").cursor("default"),
-        )
+        .selector("&[aria-disabled='true']", faded_sx())
         // A disabled `Fieldset` disables them natively (todo 514).
-        .selector("&:disabled", sx().opacity("0.5").cursor("default"))
+        .selector("&:disabled", faded_sx())
         // The row runs right to left, so the arrows point the other way.
         .rtl(sx().selector("& svg", sx().transform("scaleX(-1)")))
 });

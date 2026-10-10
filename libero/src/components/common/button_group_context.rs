@@ -10,6 +10,7 @@ pub(crate) struct ButtonGroupContext {
     pub variant: Option<Variant>,
     pub color: Option<ThemeAwareValue>,
     pub disabled: Option<bool>,
+    pub focusable_when_disabled: Option<bool>,
 }
 
 // A signal: a group re-rendered with new props must reach buttons its parent memoized.
