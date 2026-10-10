@@ -310,10 +310,12 @@ pub fn Image(props: ImageProps) -> Element {
             .attr("role", decorative_role)
             .render(HtmlTag::Img, props.attributes, ());
     }
-    let item = LightboxItem::new(
-        props.zoomed_src.clone().unwrap_or_else(|| src.clone()),
-        alt.clone().unwrap_or_default(),
-    );
+    let zoomed_src = props
+        .zoomed_src
+        .clone()
+        .filter(|zoomed| !zoomed.is_empty())
+        .unwrap_or_else(|| src.clone());
+    let item = LightboxItem::new(zoomed_src, alt.clone().unwrap_or_default());
     let (img_attributes, attributes): (Vec<_>, Vec<_>) = props
         .attributes
         .into_iter()

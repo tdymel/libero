@@ -70,7 +70,7 @@ Like every component, both also take the shared props `sx`, `class`, `style`,
 ### You must
 
 - Put each `DataListItem` directly inside the `DataList`. A wrapper element
-  between them breaks the pairing of term and description.
+  between them collapses the horizontal layout's two columns.
 
 ### Example
 

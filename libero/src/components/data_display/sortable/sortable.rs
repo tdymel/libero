@@ -129,7 +129,7 @@ base_props! {
 /// rsx! {
 ///     Sortable { onreorder: move |step: SortableMove| step.apply(&mut fruit.write()),
 ///         for (index, name) in fruit().into_iter().enumerate() {
-///             SortableItem { key: "{name}", index, "{name}" }
+///             SortableItem { key: "{name}", index, label: name, "{name}" }
 ///         }
 ///     }
 /// }
@@ -218,7 +218,8 @@ base_props! {
         /// drag, a repeat warns and some items never move. Key it by its data, not this.
         index: usize,
         /// Names the item in its controls and the announcements. Unset, the handle reads the
-        /// item's content, the rest "Item {n}" by where it was lifted.
+        /// item's content, the move buttons "Item {n}" by its current place, the
+        /// announcements by where it was lifted.
         #[props(default, into)]
         label: Option<String>,
         children: Element,

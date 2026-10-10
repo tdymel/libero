@@ -9,7 +9,8 @@ pub struct SortableLabels {
     pub instructions: &'static str,
     /// Replaces `instructions` on a touch screen, where the move buttons are the way.
     pub touch_instructions: &'static str,
-    /// Names an item without a `label` by where it was lifted.
+    /// Names an item without a `label`: by its current place on the move buttons,
+    /// by where it was lifted in the announcements.
     pub item: &'static str,
     pub lifted: &'static str,
     pub moved: &'static str,

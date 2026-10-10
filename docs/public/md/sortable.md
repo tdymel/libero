@@ -139,7 +139,7 @@ from it.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `index` | `usize` | required | The item's current position. The items run exactly 0 to n - 1: a gap stops every drag and lift, a repeat warns and some items never move, so number a filtered view or a page from 0. Key the item by its data, not by this. |
-| `label` | `Option<String>` | - | Names the item in its controls and the announcements. Unset, the handle reads the item's content ("Reorder Apple"), and the move buttons and announcements `SortableLabels::item` with its position when it was lifted. |
+| `label` | `Option<String>` | - | Names the item in its controls and the announcements. Unset, the handle reads the item's content ("Reorder Apple"), and the move buttons `SortableLabels::item` with its current position, the announcements with the position it was lifted from. |
 | `parts` | `Parts<SortableItemPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 | `children` | `Element` | required | The item's content, between the handle and the move buttons. |
 
