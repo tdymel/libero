@@ -9,7 +9,8 @@ Description: The primitive every other component is built on, rendered as any ta
 The primitive every other component is built on. `component` picks the tag, and
 attributes like `href` or `src` pass through to it. `Box` has no look of its
 own. Everything visible comes from `sx` and `states`, see
-[styling.md](styling.md).
+[styling.md](styling.md). A `button` keeps the browser's own border, font,
+padding and centring: reset them in `sx`, or use `Paper`, which does.
 
 ## Usage
 

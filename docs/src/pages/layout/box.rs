@@ -66,7 +66,13 @@ pub fn BoxPage() -> Element {
                     Code { source: "sx" }
                     " and "
                     Code { source: "states" }
-                    "."
+                    ". A "
+                    Code { source: "button" }
+                    " keeps the browser's own border, font, padding and centring: reset them in "
+                    Code { source: "sx" }
+                    ", or use "
+                    Code { source: "Paper" }
+                    ", which does."
                 }
             },
             Demo {

@@ -1,8 +1,9 @@
 /// Declares a string-parsed prop enum: the enum itself, the standard
 /// derives, `ALL`/`as_str`/`state_name`, and `From<&str>`/`From<String>`.
 ///
-/// An unrecognised string parses to the `#[default]` variant. Matching is
-/// case-insensitive; a variant may list several accepted spellings, the
+/// An unrecognised string parses to the `#[default]` variant and logs a
+/// warning, not to `None`, so a typo never reaches a theme default. Matching
+/// is case-insensitive; a variant may list several accepted spellings, the
 /// first of which is its canonical one (what `as_str` returns).
 ///
 /// ```ignore

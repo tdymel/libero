@@ -28,7 +28,7 @@ fn Demo() -> Element {
 }
 ```
 
-`value` is required. A bare number works, and `value: None` is the
+A bare number works as `value`. Omit it, or pass `value: None`, for the
 indeterminate bar.
 
 ```rust,ignore
@@ -65,7 +65,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `value` | `Option<f64>` | required | Current progress, clamped into `min..=max`. `None` makes it indeterminate. |
+| `value` | `Option<f64>` | `None` | Current progress, clamped into `min..=max`. Omitted or `None` makes it indeterminate. |
 | `min` | `f64` | `0.0` | Range start. |
 | `max` | `f64` | `100.0` | Range end. At or below `min` the bar draws empty. |
 | `color` | `ThemeAwareValue` | `primary` | The fill. A theme color name paints its text shade, darker on a light page so the bar stands out from its track. Any other CSS color paints as given. |

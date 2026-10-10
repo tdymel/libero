@@ -34,8 +34,8 @@ pub fn ProgressBarPage() -> Element {
             markdown: "/md/progress_bar.md",
             properties: vec![props("ProgressBar", vec![
                 prop("value", "Option<f64>")
-                    .default("required")
-                    .doc("Current progress, clamped into `min..=max`. `None` makes it indeterminate."),
+                    .default("None")
+                    .doc("Current progress, clamped into `min..=max`. Omitted or `None` makes it indeterminate."),
                 prop("min", "f64").default("0.0").doc("Range start."),
                 prop("max", "f64").default("100.0").doc("Range end. At or below `min` the bar draws empty."),
                 prop("color", "ThemeAwareValue")
