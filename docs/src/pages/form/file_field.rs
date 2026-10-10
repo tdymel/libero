@@ -98,7 +98,7 @@ pub fn FileFieldPage() -> Element {
                     prop("description", "Caption").doc("Between the label and the control. Which files are wanted."),
                     prop("helper", "Caption").doc("Under the control. Size limits, formats."),
                     status_prop(),
-                    prop("required", "bool").default("false").doc("Marks the field required and adds an asterisk to the label. Inside a `Form`, an empty one fails the submit."),
+                    prop("required", "bool").default("false").doc("Marks the field required and adds an asterisk to the label; a field without a visible `label` shows none, so give a required field one. Inside a `Form`, an empty one fails the submit."),
                     prop("disabled", "bool").default("false").doc("Disables picking and dropping, and dims the field."),
                     readonly_prop("field"),
                 ])
@@ -146,6 +146,7 @@ pub fn FileFieldPage() -> Element {
                     "In the `input` variant several files are one tab stop; a single file is none, Browse and clear act on it.",
                     "A single-file dropzone holding its file hands its label, error and description to the card's remove button.",
                     "In the `dropzone` variant each card's remove button is its own tab stop.",
+                    "A `readonly` field refuses a drop or a Browse press without a message: Browse says `aria-disabled` and no file is added.",
                 ])
                 .must(["Without a `label`, pass `aria_label`, which names the group and the Browse button."])
                 .example("An attachment field, `FileField { label: \"Attachment\" }`: a group named \"Attachment\". Browse is its tab stop: Enter opens the picker and Backspace removes the picked file."),

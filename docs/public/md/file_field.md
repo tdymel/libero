@@ -131,7 +131,7 @@ fn Demo() -> Element {
 | `description` | `Caption` | - | Between the label and the control. Which files are wanted. |
 | `helper` | `Caption` | - | Under the control. Size limits, formats. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error; an empty one or `None` is `Valid`. |
-| `required` | `bool` | `false` | Marks the field required and adds an asterisk to the label. Inside a `Form`, an empty one fails the submit. |
+| `required` | `bool` | `false` | Marks the field required and adds an asterisk to the label; a field without a visible `label` shows none, so give a required field one. Inside a `Form`, an empty one fails the submit. |
 | `disabled` | `bool` | `false` | Disables picking and dropping, and dims the field. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead. |
 
@@ -204,6 +204,8 @@ explains how parts work.
 - A single-file dropzone holding its file hands its label, error and
   description to the card's remove button.
 - In the `dropzone` variant each card's remove button is its own tab stop.
+- A `readonly` field refuses a drop or a Browse press without a message: Browse
+  says `aria-disabled` and no file is added.
 
 ### You must
 

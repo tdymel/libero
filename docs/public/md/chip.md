@@ -140,7 +140,7 @@ fn Demo() -> Element {
 | `onchange` | `EventHandler<bool>` | - | Called with the value `checked` should take next. Makes the chip a checkbox. |
 | `name` | `FieldName<bool>` | - | Makes the chip a checkbox that posts under this name. A path such as `Filters::FIELDS.open()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |
 | `value` | `String` | `on` | What the chip posts under its `name` when checked, so a row of filter chips can share one name. |
-| `onclick` | `EventHandler<MouseEvent>` | - | A plain action. Makes the chip a `<button>`. |
+| `onclick` | `EventHandler<MouseEvent>` | - | A plain action. Makes the chip a `<button>`; with `checked` it is a toggle button and says `aria-pressed`. |
 | `to` | `NavigationTarget` | - | Makes the chip a router-aware link. Wins over `onclick`. |
 | `target` | `String` | - | Link target, such as `_blank`. Only with `to`. `"_blank"` adds an external icon and a hidden "(opens in a new tab)". |
 | `new_tab_hint` | `bool` | `true` | `false` drops the icon and the hidden text a `"_blank"` target adds. |
@@ -174,6 +174,8 @@ explains how parts work.
 ### Libero handles
 
 - A `readonly` chip keeps its tab stop and ignores the toggle.
+- An `onclick` chip with `checked` sets `aria-pressed` from it; without
+  `checked` it is a plain button.
 
 ### You must
 

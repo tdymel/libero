@@ -37,7 +37,7 @@ pub fn ChipPage() -> Element {
                     .default("on")
                     .doc("What the chip posts under its `name` when checked, so a row of filter chips can share one name."),
                 prop("onclick", "EventHandler<MouseEvent>")
-                    .doc("A plain action. Makes the chip a `button`."),
+                    .doc("A plain action. Makes the chip a `button`; with `checked` it is a toggle button and says `aria-pressed`."),
                 prop("to", "NavigationTarget")
                     .doc("Makes the chip a router-aware link. Wins over `onclick`."),
                 prop("target", "String")
@@ -59,7 +59,10 @@ pub fn ChipPage() -> Element {
             ])],
             accessibility: a11y()
                 .key(["Space"], "Toggles a selectable chip.")
-                .handles(["A `readonly` chip keeps its tab stop and ignores the toggle."])
+                .handles([
+                    "A `readonly` chip keeps its tab stop and ignores the toggle.",
+                    "An `onclick` chip with `checked` sets `aria-pressed` from it; without `checked` it is a plain button.",
+                ])
                 .must([
                     "Keep `children` to text and `Icon`: a selectable chip is a `<label>`, which takes the clicks of any control inside it.",
                     "Name an icon-only chip: its checkbox takes the name of its label, so give the `Icon` an `aria_label`.",

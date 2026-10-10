@@ -53,6 +53,7 @@ macro_rules! field_props {
                 #[props(default)]
                 disabled: Option<bool>,
                 /// Marks the field required: the asterisk, and the state for assistive technology.
+                /// The asterisk sits in the `label`, so a field without one shows none.
                 #[props(default)]
                 required: Option<bool>,
                 $(

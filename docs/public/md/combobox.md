@@ -37,6 +37,7 @@ fn Demo() -> Element {
             options: Fruit::options().to_vec(),
             // A button has no text to type in: Space and Tab pick, as in a `Select`.
             select_only: true,
+            selected_index: picked().and_then(|fruit| Fruit::options().iter().position(|f| *f == fruit)),
             option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
                 ComboboxOption {
                     selected: picked() == Some(o.value),
@@ -225,6 +226,7 @@ fn Demo() -> Element {
 | `radius` | `ThemeAwareValue` | `sm` | The dropdown's corner radius, or any CSS, e.g. `radius: "0"`. |
 | `disabled` | `bool` | `false` | Draws no list and ignores the keys, and the trigger reads as closed. Disable the trigger too. |
 | `select_only` | `bool` | `false` | For a trigger with no text to type in, such as a button: Space picks the highlighted row like Enter, and Tab or Alt+Up pick it before closing, as a `Select` does. |
+| `selected_index` | `usize` | - | With `select_only`: the row the list opens on, usually the picked one, so Enter keeps the value instead of replacing it with the first row. Unset, or past the end, it opens on the first or last row. |
 
 `T` is any `Clone + PartialEq`. `Options` is not required, since you hand the
 list in.
@@ -295,7 +297,7 @@ match at any depth inside the list.
 | `Alt+Up` | Open: closes the list. With `select_only`, picks the highlighted row first. |
 | `Home` or `End` | Jumps to the first or last row. With `select_only`, closed: opens the list there. |
 | `PageUp` or `PageDown` | Moves the highlight 10 rows, stopping at the first or last. |
-| `Enter` | Open: picks the highlighted row. Every open starts on the first row, so in a suggestion list Enter replaces the typed text; press `Escape` first to keep it. |
+| `Enter` | Open: picks the highlighted row. Every open starts on the first row (a `select_only` list on its `selected_index`), so in a suggestion list Enter replaces the typed text; press `Escape` first to keep it. |
 | `Escape` | Open: closes the list and keeps the typed text. Enter then goes to the field, so a form submits. |
 | `Space` | With `select_only`, open: picks the highlighted row, as Enter does. |
 | `Tab` | Closes the list. With `select_only`, picks the highlighted row first. |

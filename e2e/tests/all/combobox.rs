@@ -5,7 +5,7 @@ use anyhow::{Result, ensure};
 use e2e::archetypes::Combobox;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
-use e2e::passes::keyboard;
+use e2e::passes::{keyboard, pointer};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
 
@@ -170,6 +170,32 @@ fn a_closed_select_only_list_opens_on_the_first_or_last_row_by_key() {
             .await
             .unwrap();
         }
+        fixture
+            .console
+            .assert_clean("a select-only combobox")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 3057: a select-only list opens on its `selected_index` row, not the first.
+#[test]
+fn a_select_only_list_opens_on_its_selected_row() {
+    block_on(async {
+        let fixture = Fixture::open("/combobox/select-only", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, TRIGGER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const rows = [...document.querySelectorAll('[role=option]')]; \
+             const lit = document.querySelector('[role=option][data-state~=active]'); \
+             return !!lit && lit === rows[2]; })()",
+            "the list to open on the third row",
+        )
+        .await
+        .unwrap();
         fixture
             .console
             .assert_clean("a select-only combobox")

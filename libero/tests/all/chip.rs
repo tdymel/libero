@@ -377,3 +377,23 @@ fn a_selected_chip_draws_a_hidden_check() {
     );
     assert!(!body(&render(plain)).contains("chip-check"));
 }
+
+/// Todo 3087: a chip with `onclick` and `checked` reads out as a toggle button.
+#[test]
+fn a_clickable_chip_with_checked_says_pressed() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Chip { checked: true, onclick: move |_| {}, "on" }
+                Chip { checked: false, onclick: move |_| {}, "off" }
+                Chip { onclick: move |_| {}, "plain" }
+            }
+        }
+    }
+
+    let html = render(app);
+    let buttons: Vec<&str> = html.split("<button").skip(1).collect();
+    assert!(buttons[0].contains(r#"aria-pressed="true""#), "{html}");
+    assert!(buttons[1].contains(r#"aria-pressed="false""#), "{html}");
+    assert!(!buttons[2].contains("aria-pressed"), "{html}");
+}

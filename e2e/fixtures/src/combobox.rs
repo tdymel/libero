@@ -17,7 +17,7 @@ pub const ROUTES: Routes = &[
     ("/combobox/select-only", || rsx! { SelectOnlyPage {} }),
 ];
 
-/// A `select_only` button trigger: closed Up, Home and End open the list (3058).
+/// A `select_only` button trigger: closed Up, Home and End open the list (3058), a click on the third row (3057).
 #[component]
 fn SelectOnlyPage() -> Element {
     let fruit = use_combobox();
@@ -27,6 +27,7 @@ fn SelectOnlyPage() -> Element {
             state: fruit,
             options: Fruit::options().to_vec(),
             select_only: true,
+            selected_index: Some(2),
             option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
                 ComboboxOption { onpick: move |_| fruit.close(), "{o.value.label()}" }
             },

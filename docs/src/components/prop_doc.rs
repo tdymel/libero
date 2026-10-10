@@ -55,7 +55,7 @@ pub fn status_prop() -> PropDoc {
 pub fn required_prop() -> PropDoc {
     prop("required", "bool")
         .default("false")
-        .doc("Sets `aria-required` and marks the label.")
+        .doc("Sets `aria-required` and marks the label; a field without a visible `label` shows no mark.")
 }
 
 pub fn disabled_prop(noun: &str) -> PropDoc {

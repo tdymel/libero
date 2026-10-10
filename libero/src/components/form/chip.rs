@@ -229,6 +229,7 @@ base_props! {
         #[props(default, into)]
         radius: Input<ThemeAwareValue>,
         /// Pair it with `onchange`; left out, a named chip keeps its own state.
+        /// On an `onclick` chip it is the toggle's state, read out as `aria-pressed`.
         #[props(default)]
         checked: Option<bool>,
         #[props(default)]
@@ -311,7 +312,7 @@ pub fn Chip(props: ChipProps) -> Element {
     if selectable && clickable {
         warn("Chip: `onchange` ignores `onclick`/`to` - a checkbox chip is not a button.");
     }
-    if props.checked.is_some() && props.onchange.is_none() && !bound.is_bound() {
+    if props.checked.is_some() && props.onchange.is_none() && !bound.is_bound() && !clickable {
         warn("Chip: `checked` without `onchange` can never change.");
     }
     if props.onchange.is_some() && props.checked.is_none() {
@@ -450,6 +451,7 @@ pub fn Chip(props: ChipProps) -> Element {
                 })
                 .attr("disabled", disabled)
                 .attr_default("type", "button")
+                .attr_default("aria-pressed", props.checked.map(|on| on.to_string()))
                 .render(HtmlTag::Button, props.attributes, content);
         }
 

@@ -180,6 +180,8 @@ The dropdown is portaled out of the field, so its parts take the
 
 - Nothing is highlighted until you arrow onto a row, so Enter on text that
   matches nothing still submits the form.
+- With no `options` the field is plain text and says nothing for a query;
+  `empty` or `prefiltered` makes it say "No results".
 - Android's Back button closes the list as Escape does, rather than the app.
 - A polite status region says how many options the typed text left
   (`ComboboxLabels::results`, "2 results"), or "No results".

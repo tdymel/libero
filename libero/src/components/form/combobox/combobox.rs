@@ -1,3 +1,5 @@
+use std::{cell::Cell, rc::Rc};
+
 use dioxus::prelude::*;
 
 use crate::{
@@ -50,6 +52,9 @@ pub struct ComboboxProps<T: Clone + PartialEq + 'static> {
     /// highlight like Enter, and Tab or Alt+ArrowUp pick it before closing.
     #[props(default)]
     select_only: bool,
+    /// With `select_only`: the row the list opens on, usually the picked one, instead of the first.
+    #[props(default)]
+    selected_index: Option<usize>,
     #[props(extends = GlobalAttributes)]
     attributes: Vec<Attribute>,
     #[props(default, into)]
@@ -112,9 +117,17 @@ pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Elem
     let loading = props.options.is_pending();
     let state = props.state;
 
-    // Every open starts at the top unless a key chose a row first; closing clears the highlight.
+    // The effect keeps its first closure, so the row it opens on is read through a cell.
+    let opens_on = use_hook(|| Rc::new(Cell::new(0)));
+    opens_on.set(
+        props
+            .selected_index
+            .filter(|_| props.select_only)
+            .unwrap_or(0),
+    );
+    // Every open starts at the top (or the selected row) unless a key chose a row first; closing clears the highlight.
     use_effect(move || match state.is_open() {
-        true if state.active_now().is_none() => state.set_active(Some(0)),
+        true if state.active_now().is_none() => state.set_active(Some(opens_on.get())),
         false => state.set_active(None),
         true => {}
     });
