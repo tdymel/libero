@@ -1,12 +1,12 @@
-use dioxus::prelude::*;
+use dioxus::{html::input_data::MouseButton, prelude::*, router::RouterContext};
 
 use crate::{
     components::{
         common::{
             HtmlTag, Input, StyleAttributes, Variables, base_props, is_javascript_url,
-            styling_attributes, use_style_attributes,
+            use_style_attributes,
         },
-        layout::box_style,
+        layout::{BoxStyle, box_style},
     },
     sx::StaticSx,
     utils::warn,
@@ -81,7 +81,7 @@ pub(crate) fn render_anchor(
     style_attributes: StyleAttributes,
     to: NavigationTarget,
     target: Option<String>,
-    mut onmounted: Option<impl FnMut(MountedEvent) + 'static>,
+    onmounted: Option<impl FnMut(MountedEvent) + 'static>,
     attributes: Vec<Attribute>,
     children: Element,
 ) -> Element {
@@ -92,44 +92,51 @@ pub(crate) fn render_anchor(
     let is_blank = target
         .as_deref()
         .is_some_and(|target| target.eq_ignore_ascii_case("_blank"));
-    let router_can_handle_target = target.is_none() || is_blank;
-
-    if router_can_handle_target && try_router().is_some() {
-        // `Link` renders its own `class` slot, so the class stays a prop and
-        // only the other two are folded in.
-        let attributes = styling_attributes(
-            None,
-            style_attributes.data_state,
-            style_attributes.style,
-            attributes,
-        );
-
-        return rsx! {
-            Link {
-                to,
-                class: Some(style_attributes.class),
-                new_tab: is_blank,
-                onmounted: move |event| {
-                    if let Some(onmounted) = &mut onmounted {
-                        onmounted(event);
-                    }
-                },
-                attributes,
-                {children}
-            }
-        };
-    }
+    let router = (target.is_none() || is_blank).then(try_router).flatten();
 
     // Attached only when the caller wants it: an unused listener still costs a
-    // diff every render.
-    let mut anchor = box_style(style_attributes)
-        .attr("href", navigation_target_href(to))
-        .attr("target", target);
+    // diff every render, and on a WebView a blocking round trip (todo 2986).
+    let mut anchor = match router {
+        Some(router) => routed(box_style(style_attributes), router, to, is_blank),
+        None => box_style(style_attributes)
+            .attr("href", navigation_target_href(to))
+            .attr("target", target),
+    };
     if let Some(mut onmounted) = onmounted {
         anchor = anchor.event("onmounted", move |event: MountedEvent| onmounted(event));
     }
 
     anchor.render(HtmlTag::A, attributes, children)
+}
+
+/// The router's `Link` by hand, as it attaches an `onmounted` to every anchor
+/// (todo 2986). Its `href`, `rel`, `aria-current` and click are kept.
+fn routed(
+    anchor: BoxStyle,
+    router: RouterContext,
+    to: NavigationTarget,
+    new_tab: bool,
+) -> BoxStyle {
+    let is_external = matches!(to, NavigationTarget::External(_));
+    let href = match &to {
+        NavigationTarget::Internal(url) => router.prefix().unwrap_or_default() + url,
+        NavigationTarget::External(url) => url.clone(),
+    };
+    let current =
+        matches!(&to, NavigationTarget::Internal(url) if *url == router.full_route_string());
+    anchor
+        .attr("href", href)
+        .attr("target", new_tab.then_some("_blank"))
+        .attr_default("rel", is_external.then_some("noopener noreferrer"))
+        .attr_default("aria-current", current.then_some("page"))
+        .event("onclick", move |event: MouseEvent| {
+            let primary = event.trigger_button() == Some(MouseButton::Primary);
+            if !event.modifiers().is_empty() || !primary || new_tab || is_external {
+                return;
+            }
+            event.prevent_default();
+            router.push(to.clone());
+        })
 }
 
 #[cfg(test)]

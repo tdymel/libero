@@ -159,8 +159,8 @@ impl<'a> BoxBuilder<'a> {
     }
 }
 
-/// A [`BoxStyle`] from already resolved styling, for a component with a
-/// non-element path (`InternalAnchor`'s `Link`), without resolving twice.
+/// A [`BoxStyle`] from already resolved styling (`render_anchor`), without
+/// resolving twice.
 pub(crate) fn box_style(style: StyleAttributes) -> BoxStyle {
     BoxStyle {
         own: Vec::new(),

@@ -1,7 +1,79 @@
-use crate::common::{attributes_of, body, render};
+use crate::{
+    common::{attributes_of, body, nth_attributes, render},
+    recorder::mounted_listeners,
+};
 
 use dioxus::prelude::*;
-use libero::{LiberoProvider, components::Anchor};
+use libero::{
+    LiberoProvider,
+    components::{Anchor, NavLink},
+};
+
+#[derive(Clone, PartialEq, Routable)]
+enum Route {
+    #[route("/")]
+    Home {},
+    #[route("/other")]
+    Other {},
+}
+
+#[component]
+fn Home() -> Element {
+    rsx! {
+        Anchor { to: Route::Home {}, "Home" }
+        Anchor { to: Route::Other {}, "Other" }
+        Anchor { to: "https://example.com", "Example" }
+        NavLink { to: Route::Other {}, "Nav" }
+    }
+}
+
+#[component]
+fn Other() -> Element {
+    rsx! {}
+}
+
+fn routed() -> Element {
+    rsx! {
+        LiberoProvider { Router::<Route> {} }
+    }
+}
+
+/// Todo 2986: a routed link renders as the router's `Link` would.
+#[test]
+fn a_routed_anchor_keeps_the_links_markup() {
+    let html = render(routed);
+    let home = nth_attributes(&html, "a", 0);
+    let other = nth_attributes(&html, "a", 1);
+    let external = nth_attributes(&html, "a", 2);
+
+    assert_eq!(home["href"], "/", "{home:?}");
+    assert_eq!(home["aria-current"], "page", "{home:?}");
+    assert_eq!(other["href"], "/other", "{other:?}");
+    assert!(!other.contains_key("aria-current"), "{other:?}");
+    assert_eq!(external["rel"], "noopener noreferrer", "{external:?}");
+}
+
+/// Todo 2986: the router's `Link` added an `onmounted` per anchor, a blocking
+/// WebView round trip each.
+#[test]
+fn routed_links_register_no_onmounted() {
+    #[component]
+    fn Empty() -> Element {
+        rsx! {}
+    }
+    #[derive(Clone, PartialEq, Routable)]
+    enum Bare {
+        #[route("/")]
+        Empty {},
+    }
+    fn empty() -> Element {
+        rsx! {
+            LiberoProvider { Router::<Bare> {} }
+        }
+    }
+
+    assert_eq!(mounted_listeners(routed), mounted_listeners(empty));
+}
 
 #[test]
 fn an_external_anchor_renders_a_plain_link() {
@@ -72,13 +144,13 @@ fn an_uppercase_blank_target_adds_the_new_tab_hint() {
 }
 
 #[derive(Clone, PartialEq, Routable)]
-enum Route {
+enum BlankRoute {
     #[route("/")]
-    Home {},
+    Blank {},
 }
 
 #[component]
-fn Home() -> Element {
+fn Blank() -> Element {
     rsx! {
         LiberoProvider {
             Anchor { to: "/elsewhere", target: "_BLANK", "Elsewhere" }
@@ -90,7 +162,7 @@ fn Home() -> Element {
 #[test]
 fn an_internal_blank_link_under_a_router_opens_a_new_tab() {
     fn app() -> Element {
-        rsx! { Router::<Route> {} }
+        rsx! { Router::<BlankRoute> {} }
     }
 
     let html = body(&render(app));
