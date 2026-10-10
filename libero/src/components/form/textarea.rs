@@ -35,7 +35,7 @@ static TEXTAREA_CONTROL_SX: StaticSx = StaticSx::new(|| {
 field_parts_enum! {
     /// [`Textarea`]'s inner parts, for its `parts` prop: a field's, and the counter.
     pub enum TextareaPart framed {
-        /// The `12/200` badge in the frame's corner, with `counter`. Beside the
+        /// The `12/200` badge in the frame's bottom corner, with `counter`. Beside the
         /// control, so one level deeper too where the renderer draws no placeholder.
         Counter = "counter" => "& > [data-slot='frame'] > [data-slot='counter'], & > [data-slot='frame'] > * > [data-slot='counter']",
     }
@@ -62,7 +62,7 @@ field_props! {
         /// Visible lines, which set the starting height.
         #[props(default = 3)]
         rows: u32,
-        /// Shows `12/200` in the control's corner while a `maxlength` attribute is set.
+        /// Shows `12/200` in the frame's bottom corner while a `maxlength` attribute is set.
         #[props(default)]
         counter: bool,
     }

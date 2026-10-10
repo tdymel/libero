@@ -27,6 +27,11 @@ fn ShortPage() -> Element {
             LBox { sx: sx().flex("1").min_height("0"), "Body" }
             Sidebar { id: "short-bottom", side: "bottom", aria_label: "Status", "Status" }
         }
+        // No set height: the half-height cap has nothing to resolve against.
+        Flex { direction: "column",
+            Sidebar { id: "auto-top", side: "top", aria_label: "Toolbar", "Toolbar" }
+            LBox { "Body" }
+        }
     }
 }
 

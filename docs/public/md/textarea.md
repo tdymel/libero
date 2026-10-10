@@ -48,7 +48,7 @@ fn Demo() -> Element {
 | `validate` | `Validators<String>` | - | Rules over the text, shown once the field loses focus or its form is submitted. |
 | `name` | `FieldName<String>` | - | What the field posts as. A path such as `Signup::FIELDS.bio()` also binds the text to the surrounding `Form`'s value when the field has no `oninput`. |
 | `placeholder` | `String` | - | Shown while the field is empty. |
-| `counter` | `bool` | `false` | Shows `12/200` under the control while a `maxlength` attribute is set. It counts as `maxlength` does, so an emoji counts two. |
+| `counter` | `bool` | `false` | Shows `12/200` in the frame's bottom corner while a `maxlength` attribute is set. It counts as `maxlength` does, so an emoji counts two. |
 | `label` | `Caption` | - | The field's caption, above the control. It names the field. |
 | `description` | `Caption` | - | Between the label and the control. What to enter. |
 | `helper` | `Caption` | - | Under the control. Formatting rules or limits. |
@@ -75,7 +75,7 @@ explains how parts work.
 | `TextareaPart::Frame` | `frame` | The bordered box around the control. |
 | `TextareaPart::Control` | `control` | The element the label names. |
 | `TextareaPart::Trailing` | `trailing` | The slot after the control: a chevron, a toggle. |
-| `TextareaPart::Counter` | `counter` | The `12/200` badge in the frame's corner, with `counter`. |
+| `TextareaPart::Counter` | `counter` | The `12/200` badge in the frame's bottom corner, with `counter`. |
 | `TextareaPart::Helper` | `helper` | The caption under the control. |
 | `TextareaPart::Status` | `status` | The validation message. |
 
@@ -84,10 +84,12 @@ explains how parts work.
 ### Libero handles
 
 - The visible counter is hidden from screen readers. Instead, a polite status
-  says how many characters are left once a tenth of the limit remains. Its
-  words come from the localization's `textarea.characters_left`.
+  says how many characters are left once a tenth of the limit remains, one
+  second after typing pauses. Its words come from the localization's
+  `textarea.characters_left`.
 - A controlled `value` longer than `maxlength` makes the status say by how
-  many, "2 characters too many", from `textarea.characters_over`.
+  many, "2 characters too many", from `textarea.characters_over`, after the same
+  pause.
 
 ### You must
 
@@ -97,7 +99,7 @@ explains how parts work.
 
 A bio, `Textarea { label: "Bio", maxlength: 200, counter: true }`: the counter
 is silent while you type, and from 20 characters left a polite status says how
-many remain.
+many remain once you pause for a second.
 
 ## Theme defaults
 

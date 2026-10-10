@@ -36,8 +36,8 @@ ProgressBar { aria_label: "Connecting", value: None }
 ```
 
 `segments` splits the track into stretches with gaps, one per stage, and fills
-them up to the value. A label does not change what the bar reports: name the
-stage in `aria_valuetext`.
+them up to the value. The label of the stretch the value is in follows the
+percentage a screen reader reads, as "60%, Send"; `aria_valuetext` replaces both.
 
 ```rust
 use dioxus::prelude::*;
@@ -103,7 +103,7 @@ explains how parts work.
 ### Libero handles
 
 - A screen reader reads the rounded percentage, then the label of the segment
-  the value is in, or `aria_valuetext` when you set it.
+  the value is in, as "60%, Upload"; `aria_valuetext` replaces both.
 - The bar takes no focus.
 - A theme color fills in its text shade, at 3:1 or more against the track and the page. Yellow stays short of that on a light page, so `warning` draws a 1px ink edge inside its fill.
 - With reduced motion an indeterminate bar stops sweeping and shows as a full

@@ -180,6 +180,7 @@ pub(super) fn FetchingDemo(values: DemoValues) -> Element {
     // answer never overwrites a newer query's.
     let mut pending = use_signal(|| None::<Box<dyn TimerSubscription>>);
     use_drop(move || pending.set(None));
+    let label = format!("{}-label", suggestions.id());
     // demo-code: fetching_state end
 
     rsx! {
@@ -189,6 +190,7 @@ pub(super) fn FetchingDemo(values: DemoValues) -> Element {
             disabled: disabled.then_some(true),
             state: suggestions,
             options: results().map(OptionList::from),
+            labelled_by: label.clone(),
             loading_label: "Searching fruit",
             empty_label: "No fruit matches",
             empty: rsx! { Text { size: "sm", sx: sx().padding("xs"), "No fruit matches" } },
@@ -202,13 +204,17 @@ pub(super) fn FetchingDemo(values: DemoValues) -> Element {
                 }
             },
             // demo-code: fetching_trigger start
+            Text { id: "{label}", size: "sm", "Fruit" }
             TextField {
                 sx: sx().width("280px"),
                 disabled,
-                label: "Fruit",
                 placeholder: "Type a fruit",
                 value: text(),
-                attributes: suggestions.a11y_attributes(),
+                attributes: [
+                    suggestions.a11y_attributes(),
+                    vec![Attribute::new("aria-labelledby", label, None, false)],
+                ]
+                .concat(),
                 onblur: move |_| suggestions.close(),
                 oninput: move |next: String| {
                     text.set(next.clone());
@@ -244,6 +250,7 @@ pub(super) fn SuggestionsDemo(values: DemoValues) -> Element {
                 .contains(&text().to_lowercase())
         })
         .collect();
+    let label = format!("{}-label", suggestions.id());
     // demo-code: suggestions_state end
 
     rsx! {
@@ -253,6 +260,7 @@ pub(super) fn SuggestionsDemo(values: DemoValues) -> Element {
             disabled: disabled.then_some(true),
             state: suggestions,
             options: matches,
+            labelled_by: label.clone(),
             option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
                 ComboboxOption {
                     // demo-code: suggestion_wiring start
@@ -265,13 +273,17 @@ pub(super) fn SuggestionsDemo(values: DemoValues) -> Element {
                 }
             },
             // demo-code: suggestions_trigger start
+            Text { id: "{label}", size: "sm", "Fruit" }
             TextField {
                 sx: sx().width("280px"),
                 disabled,
-                label: "Fruit",
                 placeholder: "Type a fruit",
                 value: text(),
-                attributes: suggestions.a11y_attributes(),
+                attributes: [
+                    suggestions.a11y_attributes(),
+                    vec![Attribute::new("aria-labelledby", label, None, false)],
+                ]
+                .concat(),
                 onblur: move |_| suggestions.close(),
                 oninput: move |next| {
                     text.set(next);

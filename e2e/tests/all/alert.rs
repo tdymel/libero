@@ -12,7 +12,7 @@ fn it_meets_the_baseline() {
     Suite::new("alert", "/alert")
         .waive(contrast::TODO_297)
         .focusable(CLOSE)
-        // `sm`: drawn 20x20, pressed in a 24x24 box.
+        // `xs`: a 24x24 box.
         .targets(CLOSE)
         .run();
 }

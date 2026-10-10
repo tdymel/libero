@@ -116,7 +116,10 @@ fn QuotesPage() -> Element {
             // Todo 2484: `opacity` on the caption took this link to 2.4:1.
             // Todo 2521: the link inside was 3.53:1 in the theme's link colour on the tint.
             Blockquote { id: "quote-linked", size: "xs", color: "info",
-                attribution: rsx! { Anchor { id: "attribution-link", to: "#source", "Albert Einstein" } },
+                attribution: rsx! {
+                    "Said by "
+                    Anchor { id: "attribution-link", to: "#source", "Albert Einstein" }
+                },
                 "A quote with a "
                 Anchor { id: "quote-link", to: "#source", "link" }
                 " and a linked attribution."

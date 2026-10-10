@@ -92,6 +92,28 @@ fn top_and_bottom_sidebars_leave_content_room_at_256px() {
     });
 }
 
+/// Todo 2893: under a parent with an auto height the half-height cap is `none`, so the
+/// default `md` panel keeps its full 280px.
+#[test]
+fn a_top_sidebar_in_an_auto_height_parent_is_not_capped() {
+    block_on(async {
+        let fixture = Fixture::open("/sidebar/short", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#auto-top").await.unwrap();
+
+        let height: f64 = page
+            .evaluate("document.querySelector('#auto-top').getBoundingClientRect().height")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(height, 280.0);
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Content wider than the panel scrolls sideways inside it (todo 2476): the panel
 /// and the 320px column keep their size, and the far end of the line is reachable.
 #[test]

@@ -96,6 +96,7 @@ fn Demo() -> Element {
             GridZone {
                 area: PageArea::Sidebar,
                 component: HtmlTag::Aside,
+                aria_label: "Menu",
                 GridItem { "Menu" }
             }
             GridZone {

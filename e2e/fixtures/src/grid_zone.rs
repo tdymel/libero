@@ -39,6 +39,7 @@ fn GridZonePage() -> Element {
                 GridZone { id: "area-zone", area: Body,
                     GridItem { id: "responsive-a", span, "A" }
                     GridItem { id: "responsive-b", span, "B" }
+                    div { id: "area-fixed", style: "position: fixed; top: 0; left: 0; width: 10px; height: 10px" }
                 }
             }
         }

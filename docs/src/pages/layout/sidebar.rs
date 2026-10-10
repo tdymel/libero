@@ -49,7 +49,7 @@ pub fn SidebarPage() -> Element {
                 prop("side", "SidebarSide")
                     .default("start")
                     .doc("The edge that gets the border, and whether `size` is a width or a height. `start` is the right edge under `dir=\"rtl\"`. It does not move the panel, so put it at the matching end of the DOM."),
-                prop("size", "ThemeAwareValue").default(theme.sidebar.size.as_str()).doc("The panel's width, or its height on a `top` or `bottom` side. A start or end panel takes half its parent's width at most, a top or bottom one half its height. A size word or any CSS, e.g. `size: \"18rem\"`."),
+                prop("size", "ThemeAwareValue").default(theme.sidebar.size.as_str()).doc("The panel's width, or its height on a `top` or `bottom` side. A start or end panel takes half its parent's width at most, a top or bottom one half its height, when the parent's height is set. A size word or any CSS, e.g. `size: \"18rem\"`."),
                 prop("component", "HtmlTag").default("aside").doc("The element to render, such as `nav` for a navigation panel."),
                 prop("children", "Element").doc("The panel's content, scrolled by an inner `ScrollArea`."),
                 prop("parts", "Parts<SidebarPart>")
@@ -62,7 +62,7 @@ pub fn SidebarPage() -> Element {
                 .handles([
                     "The root is an `aside`, the `complementary` landmark.",
                     "Content that overflows with nothing focusable in it makes the inner scroll area a tab stop, a `region` that takes the panel's `aria_label` or `aria_labelledby`.",
-                    "Content wider than the panel scrolls sideways, and a start or end panel takes half its parent's width at most, so the content keeps room at 320 px. A top or bottom panel takes half its parent's height at most, so the content keeps room at 256 px high.",
+                    "Content wider than the panel scrolls sideways, and a start or end panel takes half its parent's width at most, so the content keeps room at 320 px. A top or bottom panel takes half its parent's height at most, so the content keeps room at 256 px high; under an auto-height parent it has no cap, so give the parent a height.",
                 ])
                 .must([
                     "Pass `component: \"nav\"` for the site navigation.",
@@ -85,7 +85,7 @@ pub fn SidebarPage() -> Element {
                 component: "Sidebar",
                 children_text: "",
                 children_code: CONTENT.to_string(),
-                // A `md` panel is 240px, wider than the preview beside the controls.
+                // A `md` panel is 280px, wider than the preview beside the controls.
                 wide_preview: true,
                 controls: vec![
                     Control::toggle("side", ["start", "end", "top", "bottom"])

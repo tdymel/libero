@@ -50,7 +50,7 @@ pub fn TextareaPage() -> Element {
                         .doc("Shown while the field is empty."),
                     prop("counter", "bool")
                         .default("false")
-                        .doc("Shows `12/200` under the control while a `maxlength` attribute is set. It counts as `maxlength` does, so an emoji counts two."),
+                        .doc("Shows `12/200` in the frame's bottom corner while a `maxlength` attribute is set. It counts as `maxlength` does, so an emoji counts two."),
                     prop("label", "Caption")
                         .doc("The field's caption, above the control. It names the field."),
                     prop("description", "Caption")
@@ -71,18 +71,18 @@ pub fn TextareaPage() -> Element {
                     (TextareaPart::Frame, "The bordered box around the control."),
                     (TextareaPart::Control, "The element the label names."),
                     (TextareaPart::Trailing, "The slot after the control: a chevron, a toggle."),
-                    (TextareaPart::Counter, "The `12/200` badge in the frame's corner, with `counter`."),
+                    (TextareaPart::Counter, "The `12/200` badge in the frame's bottom corner, with `counter`."),
                     (TextareaPart::Helper, "The caption under the control."),
                     (TextareaPart::Status, "The validation message."),
                 ]).extends("textarea"),
             ],
             accessibility: a11y()
                 .handles([
-                    "The visible counter is hidden from screen readers. Instead, a polite status says how many characters are left once a tenth of the limit remains. Its words come from the localization's `textarea.characters_left`.",
-                    "A controlled `value` longer than `maxlength` makes the status say by how many, \"2 characters too many\", from `textarea.characters_over`.",
+                    "The visible counter is hidden from screen readers. Instead, a polite status says how many characters are left once a tenth of the limit remains, one second after typing pauses. Its words come from the localization's `textarea.characters_left`.",
+                    "A controlled `value` longer than `maxlength` makes the status say by how many, \"2 characters too many\", from `textarea.characters_over`, after the same pause.",
                 ])
                 .must(["Leave `label` unset only when something else names the field."])
-                .example("A bio, `Textarea { label: \"Bio\", maxlength: 200, counter: true }`: the counter is silent while you type, and from 20 characters left a polite status says how many remain."),
+                .example("A bio, `Textarea { label: \"Bio\", maxlength: 200, counter: true }`: the counter is silent while you type, and from 20 characters left a polite status says how many remain once you pause for a second."),
             lead: rsx! {
                 Text {
                     "A multi-line text field with the same slots as "

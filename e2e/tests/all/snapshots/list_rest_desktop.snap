@@ -1,0 +1,28 @@
+---
+source: e2e/src/suite.rs
+description: list at desktop (rest)
+expression: tree
+---
+list
+  listitem [level=1]
+    StaticText "Level one"
+    list
+      listitem [level=2]
+        StaticText "Level two"
+        list
+          listitem [level=3]
+            StaticText "Level three"
+  listitem [level=1]
+    StaticText "Raw list"
+    list
+      listitem [level=2]
+        ListMarker "◦"
+        StaticText "Plain item"
+  listitem [level=1]
+    StaticText "With an icon"
+    list
+      listitem [level=2]
+        StaticText "Nested under the icon item"
+list
+  listitem [level=1]
+    StaticText "Supercalifragilisticexpialidocious"

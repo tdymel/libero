@@ -140,6 +140,47 @@ fn the_counter_speaks_only_near_the_limit() {
     });
 }
 
+/// Todo 2909: the status waits for typing to pause (`SETTLE_MS`, 1000), not a keystroke.
+#[test]
+fn the_status_speaks_only_after_typing_pauses() {
+    block_on(async {
+        let fixture = Fixture::open("/textarea/counter", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(page, &counter_reads(0, "0/20", ""), "an empty count")
+            .await
+            .unwrap();
+        page.evaluate(
+            "(() => { const area = document.querySelectorAll('textarea')[0]; \
+               const status = area.closest('[data-frame]').parentElement.querySelector('[role=status]'); \
+               window.__pause = { typed: 0, said: 0 }; \
+               area.addEventListener('input', () => { window.__pause.typed = performance.now(); }); \
+               new MutationObserver(() => { \
+                 if (status.textContent.trim() && !window.__pause.said) window.__pause.said = performance.now(); \
+               }).observe(status, { childList: true, characterData: true, subtree: true }); \
+               area.focus(); })()",
+        )
+        .await
+        .unwrap();
+
+        keyboard::type_text(page, "012345678901234567")
+            .await
+            .unwrap();
+        wait::for_js_true(page, "window.__pause.said > 0", "the status to speak")
+            .await
+            .unwrap();
+        let gap: f64 = page
+            .evaluate("window.__pause.said - window.__pause.typed")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(gap >= 900.0, "the status spoke {gap}ms after the last key");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Axe, contrast and focus rings, light and dark, desktop and mobile. Axe
 /// skips the `aria-hidden` counter; `the_counter_meets_text_contrast` reads it.
 #[test]

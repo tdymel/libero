@@ -48,6 +48,7 @@ figure
       StaticText "link"
     StaticText "and a linked attribution."
   Figcaption
+    StaticText "Said by"
     link "Albert Einstein"
       StaticText "Albert Einstein"
 blockquote

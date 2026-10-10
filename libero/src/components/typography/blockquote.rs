@@ -102,6 +102,8 @@ static FIGCAPTION_SX: StaticSx = StaticSx::new(|| {
             "color-mix(in srgb, currentColor calc({} * 100%), transparent)",
             BLOCKQUOTE_CITE_OPACITY.value()
         ))
+        // A link in the caption's colour needs its underline too (1.4.1).
+        .and(AnchorDefaults::underline_at_rest())
         .per_size(|size| sx().font_size(format!("calc({} * 0.85)", TEXT_FONT_SIZE.value(size))))
 });
 

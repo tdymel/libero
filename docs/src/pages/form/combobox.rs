@@ -37,6 +37,7 @@ fn mode_code(_: &Control, values: &DemoValues) -> Vec<String> {
         return [
             "state: suggestions",
             "options: results().map(OptionList::from)",
+            "labelled_by: label.clone()",
             r#"loading_label: "Searching fruit""#,
             r#"empty_label: "No fruit matches""#,
             r#"empty: rsx! { Text { size: "sm", sx: sx().padding("xs"), "No fruit matches" } }"#,
@@ -48,9 +49,12 @@ fn mode_code(_: &Control, values: &DemoValues) -> Vec<String> {
         true => ("state: suggestions", "options: matches"),
         false => ("state: fruit", "options: Fruit::options().to_vec()"),
     };
-    let mut code = vec![state.to_string(), options.to_string()];
+    let mut code = vec![
+        state.to_string(),
+        options.to_string(),
+        "labelled_by: label.clone()".to_string(),
+    ];
     if !suggesting(values) {
-        code.push("labelled_by: label.clone()".to_string());
         code.push("select_only: true".to_string());
     }
     code
@@ -113,7 +117,7 @@ pub fn ComboboxPage() -> Element {
                     prop("state", "ComboboxState").default("required")
                         .doc("From `use_combobox()`. The open state, the highlighted row and the id the aria wiring uses. One state drives one combobox."),
                     prop("options", "OptionSource<T>").default("required")
-                        .doc("The options to list, already filtered. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. `None::<OptionList<T>>` is pending, for a fetch you drive yourself. Every option renders, so cap the list here. A failed fetch is an empty list, so show your own error beside the field."),
+                        .doc("The options to list, already filtered. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. `None::<OptionList<T>>` is pending, for a fetch you drive yourself. `option` runs for every option, and from 200 only the rows in view are drawn, so cap a very large list here. A failed fetch is an empty list, so show your own error beside the field."),
                     prop("option", "Callback<ComboboxOptionArgs<T>, Element>").default("required")
                         .doc("Draws one row, usually a `ComboboxOption`."),
                     prop("children", "Element")
@@ -171,6 +175,8 @@ pub fn ComboboxPage() -> Element {
             accessibility: a11y()
                 .key(["Down"], "Opens the list, and moves the highlight down.")
                 .key(["Up"], "Moves the highlight up.")
+                .key(["Alt+Down"], "Opens the list without moving the highlight.")
+                .key(["Alt+Up"],"Open: closes the list. With `select_only`, picks the highlighted row first.")
                 .key(["Home", "End"], "Jumps to the first or last row.")
                 .key(["PageUp", "PageDown"], "Moves the highlight 10 rows, stopping at the first or last.")
                 .key(["Enter"], "Open: picks the highlighted row. Every open starts on the first row, so in a suggestion list Enter replaces the typed text; press `Escape` first to keep it.")
@@ -186,8 +192,8 @@ pub fn ComboboxPage() -> Element {
                 .must([
                     "Spread `state.a11y_attributes()` on your trigger, or screen readers cannot tie the list to it.",
                     "Close the list on your trigger's blur, or an enclosing `Modal` stops hearing Escape while the list stays open.",
-                    "Name the trigger: it becomes a `combobox`, which takes no name from its content. Point a button trigger's `aria-labelledby` at a visible label, and give a text field a `label`.",
-                    "Pass the same label's id as `labelled_by`, so the list has a name too.",
+                    "Name the trigger: it becomes a `combobox`, which takes no name from its content. Point its `aria-labelledby` at a visible label, as the demos do.",
+                    "Pass the same label's id as `labelled_by`, so the list has a name too. A `TextField`'s own `label` has no id to pass.",
                     "From 200 options, keep every row the theme's `row_height` tall, as a plain `ComboboxOption` is: the list places the rows it draws by that height. A debug build warns when they differ.",
                 ])
                 .example("A search field as your own trigger, with `state.a11y_attributes()` spread on it and a visible label whose id is `labelled_by`: a screen reader reads a combobox named by the label, Down moves into the list, and focus never leaves the field."),

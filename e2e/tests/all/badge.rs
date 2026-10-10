@@ -4,7 +4,7 @@
 use e2e::browser::block_on;
 use e2e::passes::contrast;
 use e2e::suite::Suite;
-use e2e::{Fixture, Viewport, wait};
+use e2e::{Fixture, Viewport, ax, wait};
 
 #[test]
 fn it_meets_the_baseline() {
@@ -112,6 +112,14 @@ fn an_icon_replaces_the_number_and_its_gutter() {
         assert!(
             mixed_plain.starts_with("true:") && mixed_plain != "true:0",
             "the plain item lost its number or gutter: {mixed_plain}"
+        );
+        // Todo 2923: the icon item still counts, so the next one is 2, not 1.
+        let numbers = ax::snapshot(&fixture.page, "#ordered-mixed-list")
+            .await
+            .unwrap();
+        assert!(
+            numbers.contains("ListMarker \"2.\""),
+            "the item after an icon item restarts the count:\n{numbers}"
         );
         fixture.close().await.unwrap();
     });

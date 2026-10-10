@@ -68,7 +68,7 @@ selected, and carries a hidden input for a plain form post:
 ```rust
 use dioxus::prelude::*;
 use libero::components::{
-    Combobox, ComboboxOption, ComboboxOptionArgs, Options, TextField, use_combobox,
+    Combobox, ComboboxOption, ComboboxOptionArgs, Options, Text, TextField, use_combobox,
 };
 
 #[derive(Clone, Copy, PartialEq, Options)]
@@ -88,11 +88,13 @@ fn Demo() -> Element {
         .copied()
         .filter(|fruit| fruit.label().to_lowercase().contains(&text().to_lowercase()))
         .collect();
+    let label = format!("{}-label", suggestions.id());
 
     rsx! {
         Combobox {
             state: suggestions,
             options: matches,
+            labelled_by: label.clone(),
             option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
                 ComboboxOption {
                     onpick: move |_| {
@@ -102,10 +104,15 @@ fn Demo() -> Element {
                     "{o.value.label()}"
                 }
             },
+            Text { id: "{label}", size: "sm", "Fruit" }
             TextField {
                 placeholder: "Type a fruit",
                 value: text(),
-                attributes: suggestions.a11y_attributes(),
+                attributes: [
+                    suggestions.a11y_attributes(),
+                    vec![Attribute::new("aria-labelledby", label, None, false)],
+                ]
+                .concat(),
                 onblur: move |_| suggestions.close(),
                 oninput: move |next| {
                     text.set(next);
@@ -162,11 +169,13 @@ fn Demo() -> Element {
     // Replacing the pending answer drops it, so a slow answer never overwrites a newer one.
     let mut pending = use_signal(|| None::<Box<dyn TimerSubscription>>);
     use_drop(move || pending.set(None));
+    let label = format!("{}-label", suggestions.id());
 
     rsx! {
         Combobox {
             state: suggestions,
             options: results().map(OptionList::from),
+            labelled_by: label.clone(),
             loading_label: "Searching fruit",
             empty_label: "No fruit matches",
             empty: rsx! { Text { size: "sm", "No fruit matches" } },
@@ -179,10 +188,15 @@ fn Demo() -> Element {
                     "{o.value.label()}"
                 }
             },
+            Text { id: "{label}", size: "sm", "Fruit" }
             TextField {
                 placeholder: "Type a fruit",
                 value: text(),
-                attributes: suggestions.a11y_attributes(),
+                attributes: [
+                    suggestions.a11y_attributes(),
+                    vec![Attribute::new("aria-labelledby", label, None, false)],
+                ]
+                .concat(),
                 onblur: move |_| suggestions.close(),
                 oninput: move |next: String| {
                     text.set(next.clone());
@@ -206,7 +220,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `state` | `ComboboxState` | required | From `use_combobox()`. The open state, the highlighted row and the id the aria wiring uses. One state drives one combobox. |
-| `options` | `OptionSource<T>` | required | The options to list, already filtered. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. `None::<OptionList<T>>` is pending, for a fetch you drive yourself. Every option renders, so cap the list here. A failed fetch is an empty list, so show your own error beside the field. |
+| `options` | `OptionSource<T>` | required | The options to list, already filtered. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. `None::<OptionList<T>>` is pending, for a fetch you drive yourself. `option` runs for every option, and from 200 only the rows in view are drawn, so cap a very large list here. A failed fetch is an empty list, so show your own error beside the field. |
 | `option` | `Callback<ComboboxOptionArgs<T>, Element>` | required | Draws one row, usually a `ComboboxOption`. |
 | `children` | `Element` | required | The trigger, and anything that belongs with it, such as a hidden input. |
 | `empty` | `Element` | - | Shown in place of the list when `options` is empty. |
@@ -283,6 +297,8 @@ match at any depth inside the list.
 |---|---|
 | `Down` | Opens the list, and moves the highlight down. |
 | `Up` | Moves the highlight up. |
+| `Alt+Down` | Opens the list without moving the highlight. |
+| `Alt+Up` | Open: closes the list. With `select_only`, picks the highlighted row first. |
 | `Home` or `End` | Jumps to the first or last row. |
 | `PageUp` or `PageDown` | Moves the highlight 10 rows, stopping at the first or last. |
 | `Enter` | Open: picks the highlighted row. Every open starts on the first row, so in a suggestion list Enter replaces the typed text; press `Escape` first to keep it. |
@@ -309,9 +325,9 @@ match at any depth inside the list.
 - Close the list on your trigger's blur, or an enclosing `Modal` stops hearing
   Escape while the list stays open.
 - Name the trigger: it becomes a `combobox`, which takes no name from its
-  content. Point a button trigger's `aria-labelledby` at a visible label, and
-  give a text field a `label`.
-- Pass the same label's id as `labelled_by`, so the list has a name too.
+  content. Point its `aria-labelledby` at a visible label, as the demos do.
+- Pass the same label's id as `labelled_by`, so the list has a name too. A
+  `TextField`'s own `label` has no id to pass.
 - From 200 options, keep every row the theme's `row_height` tall, as a plain
   `ComboboxOption` is: the list places the rows it draws by that height. A
   debug build warns when they differ.

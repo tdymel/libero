@@ -30,6 +30,7 @@ pub fn ShortcutHelpPage() -> Element {
                 .handles([
                     "A `Dialog` named by its title, the shortcuts a description list: each chord a `dt`, what it does the `dd`.",
                     "Each key is a `kbd`. `mod` shows as Cmd on Apple platforms and Ctrl elsewhere. The modifiers, Space and named keys such as Escape take their names from the localization's `ShortcutHelpLabels`; a key missing from its `key_names` shows its `Key` name, `ArrowUp`.",
+                    "A list taller than 24rem or 60% of the window scrolls inside the dialog, and only then becomes a tab stop, a `region` named by the title, so the keyboard can scroll it.",
                 ])
                 .must([
                     "Open it with `use_modal`, which traps focus, closes on Escape and hands focus back.",

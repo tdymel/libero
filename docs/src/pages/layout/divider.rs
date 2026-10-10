@@ -62,7 +62,7 @@ pub fn DividerPage() -> Element {
             accessibility: a11y()
                 .handles([
                     "The rule is a `separator`, named by its label. Your own `aria-label` or `aria-labelledby` wins. A `role` other than `separator` turns the label naming and `aria-orientation` off.",
-                    "A long label wraps inside the line instead of running out of a narrow container.",
+                    "A long label on a horizontal rule wraps inside the line instead of running out of a narrow container. A vertical rule's label stays on one line.",
                 ])
                 .must(["Pass `role: \"none\"` for a purely visual rule."])
                 .example("A rule between two settings groups, `Divider { \"Advanced\" }`: a screen reader reads a separator named \"Advanced\". A rule that only spaces two cards takes `role: \"none\"` and is skipped."),

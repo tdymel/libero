@@ -81,5 +81,5 @@ list
   listitem [level=1]
     StaticText "Own icon"
   listitem [level=1]
-    ListMarker "1."
+    ListMarker "2."
     StaticText "Numbered"

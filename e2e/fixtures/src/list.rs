@@ -32,5 +32,13 @@ fn ListPage() -> Element {
                 }
             }
         }
+        // Todo 2923: an icon floats, and a long word wraps beside it, not below.
+        div { style: "width: 160px",
+            List { id: "long-list",
+                ListItem { id: "long-item", icon: rsx! { "*" },
+                    "Supercalifragilisticexpialidocious"
+                }
+            }
+        }
     }
 }

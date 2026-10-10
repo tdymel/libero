@@ -117,6 +117,7 @@ rsx! {
         GridZone {
             area: PageArea::Sidebar,
             component: HtmlTag::Aside,
+            aria_label: "Menu",
             GridItem { "Menu" }
         }
         GridZone {
@@ -249,6 +250,7 @@ pub fn GridPage() -> Element {
                             GridZone {
                                 area: PageArea::Sidebar,
                                 component: HtmlTag::Aside,
+                                aria_label: "Menu",
                                 GridItem { {panel("Menu", 220)} }
                             }
                             GridZone {

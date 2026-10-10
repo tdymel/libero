@@ -195,7 +195,7 @@ parts_enum! {
 base_props! {
     parts(AlertPart);
     pub struct AlertProps {
-        /// The heading and accessible name.
+        /// The title, and the accessible name.
         #[props(default, into)]
         title: Option<String>,
         /// A leading glyph, `aria-hidden`.

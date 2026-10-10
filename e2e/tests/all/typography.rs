@@ -59,6 +59,30 @@ fn every_quote_colour_meets_the_baseline() {
         .run();
 }
 
+/// Todo 2914: a link beside text in the caption is underlined at rest, as in the quote (1.4.1).
+#[test]
+fn a_link_in_the_caption_is_underlined_at_rest() {
+    block_on(async {
+        let fixture = Fixture::open("/typography/quotes", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#attribution-link").await.unwrap();
+
+        let lines: Vec<String> = page
+            .evaluate(
+                "['#quote-link', '#attribution-link'].map(id => \
+                   getComputedStyle(document.querySelector(id)).textDecorationLine)",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(lines, ["underline", "underline"]);
+        fixture.close().await.unwrap();
+    });
+}
+
 /// How far `selector` pokes out past the right edge of its paragraph (a heading: its column), in px.
 async fn overflow(page: &chromiumoxide::Page, selector: &str) -> f64 {
     page.evaluate(format!(

@@ -83,8 +83,8 @@ parts work.
 - The rule is a `separator`, named by its label. Your own `aria-label` or
   `aria-labelledby` wins. A `role` other than `separator` turns the label
   naming and `aria-orientation` off.
-- A long label wraps inside the line instead of running out of a narrow
-  container.
+- A long label on a horizontal rule wraps inside the line instead of running
+  out of a narrow container. A vertical rule's label stays on one line.
 
 ### You must
 

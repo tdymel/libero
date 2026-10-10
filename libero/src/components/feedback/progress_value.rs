@@ -20,7 +20,7 @@ pub(crate) fn fraction(component: &str, value: f64, min: f64, max: f64) -> f64 {
 pub(crate) fn value_now(value: f64, min: f64, max: f64) -> f64 {
     if !(value.is_finite() && min.is_finite() && max.is_finite()) {
         min
-    } else if min < max {
+    } else if min <= max {
         value.clamp(min, max)
     } else {
         value
@@ -104,6 +104,7 @@ mod tests {
         assert_eq!(value_now(-5.0, 0.0, 100.0), 0.0);
         assert_eq!(value_now(42.0, 0.0, 100.0), 42.0);
         assert_eq!(value_now(5.0, 10.0, 0.0), 5.0);
+        assert_eq!(value_now(5.0, 10.0, 10.0), 10.0);
         assert_eq!(value_now(f64::NAN, 0.0, 100.0), 0.0);
     }
 

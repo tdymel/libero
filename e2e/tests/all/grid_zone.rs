@@ -48,6 +48,20 @@ fn a_responsive_span_follows_its_zones_width_not_the_viewports() {
     );
 }
 
+/// Todo 2913: `container-type: inline-size` makes no containing block, so a fixed
+/// descendant of a zone below the page top stays on the viewport corner.
+#[test]
+fn a_fixed_descendant_of_a_zone_stays_on_the_viewport() {
+    holds(
+        "(() => { \
+           const zone = document.querySelector('#area-zone').getBoundingClientRect(); \
+           const fixed = document.querySelector('#area-fixed').getBoundingClientRect(); \
+           return zone.top > 0 && fixed.top === 0 && fixed.left === 0; \
+         })()",
+        "the fixed box on the viewport's corner",
+    );
+}
+
 /// A zone without an area is no query container: as a shrink-to-fit flex item
 /// a container would collapse to zero width and stack its items at x=0.
 #[test]

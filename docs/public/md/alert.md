@@ -80,7 +80,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `title` | `String` | - | The heading and the alert's accessible name. Text only. |
+| `title` | `String` | - | The title, and the alert's accessible name. Text only. |
 | `icon` | `Option<Element>` | - | A leading icon of your own, hidden from screen readers. |
 | `color` | `ThemeAwareValue` | `info` | The tint. A theme color name or any CSS color. `error` and `warning` make the role `alert`, the rest `status`. |
 | `variant` | `Variant` | `tonal` | Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. |
