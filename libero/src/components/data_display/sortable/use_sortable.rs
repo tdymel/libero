@@ -1008,6 +1008,8 @@ pub(crate) fn use_spanning_sortable_item(
     let earlier = use_element();
     let later = use_element();
     let mut slot = use_hook(|| CopyValue::new(None::<usize>));
+    // The registry's slot this item owns; `slot` is the index its effect last saw.
+    let mut placed = use_hook(|| CopyValue::new(None::<usize>));
     let id = use_hook(|| {
         let mut next_id = context.next_id;
         let id = *next_id.peek();
@@ -1020,16 +1022,9 @@ pub(crate) fn use_spanning_sortable_item(
     let mut registry = context.registry;
     let mut refocus = context.refocus;
     let mut count = context.count;
-    // After the mount and every reorder: the DOM is in its new order by then.
-    use_effect(use_reactive!(|index, label, extent| {
-        let _ = (
-            element.mount_token(),
-            handle.mount_token(),
-            extent.map(|extent| extent.mount_token()),
-        );
+    let mut register = move |index: usize, label: Option<String>, extent: Option<ElementHandle>| {
         let mut items = registry.write();
-        let before = slot.replace(Some(index));
-        if let Some(old) = before
+        if let Some(old) = placed.replace(Some(index))
             && items.get(old).is_some_and(|item| owns(item, id))
         {
             items[old] = None;
@@ -1042,14 +1037,27 @@ pub(crate) fn use_spanning_sortable_item(
             element: element.mounted(),
             handle: handle.mounted(),
             extent: extent.and_then(|extent| extent.mounted()),
-            label: label.clone(),
+            label,
         });
         trim(&mut items);
+    };
+    // In the render too: a press handled before the effect below must not measure the old order (2990).
+    if *placed.peek() != Some(index) {
+        register(index, label.clone(), extent);
+    }
+    // After the mount and every reorder: the DOM is in its new order by then.
+    use_effect(use_reactive!(|index, label, extent| {
+        let _ = (
+            element.mount_token(),
+            handle.mount_token(),
+            extent.map(|extent| extent.mount_token()),
+        );
+        register(index, label.clone(), extent);
+        let before = slot.replace(Some(index));
         let len = context
             .fixed
             .peek()
-            .map_or(items.len(), |slots| slots.count);
-        drop(items);
+            .map_or(registry.peek().len(), |slots| slots.count);
         if *count.peek() != len {
             count.set(len);
         }
@@ -1074,7 +1082,7 @@ pub(crate) fn use_spanning_sortable_item(
             *live = live.saturating_sub(1);
         }
         let mut items = registry.write();
-        if let Some(index) = *slot.peek()
+        if let Some(index) = *placed.peek()
             && items.get(index).is_some_and(|item| owns(item, id))
         {
             items[index] = None;
