@@ -12,7 +12,7 @@ use crate::{
         layout::{ScrollArea, ScrollAreaBase, ScrollPositionEvent, scroll_area_base},
     },
     hooks::Drag,
-    platform::{arrow_target, key_taken, logical_key, snaps_scroll, typing_target, when_free},
+    platform::{arrow_target, key_taken, logical_key, typing_target},
     sx::{REDUCED_MOTION, StaticSx, sx},
     theme::CAROUSEL_GAP,
 };
@@ -67,8 +67,6 @@ pub(super) fn carousel_track(
     let empty = setup.count == 0;
     let dragging = state.dragging;
     let mut current = nav.current;
-    let mut settled = nav.settled;
-    let mut seam = nav.seam;
 
     let mut onscroll = move |x: f64, y: f64| {
         let next = nav.real_for(nav.raw_at(x, y));
@@ -77,36 +75,12 @@ pub(super) fn carousel_track(
         }
     };
 
-    // Only a settled scroll moves `settled`, which the live region and `onindexchange` read.
-    let mut onscrollend = move |x: f64, y: f64| {
+    let onscrollend = move |x: f64, y: f64| {
         // A drag's per-move scrolls end too, but are no settle: they jumped the seam.
         if *dragging.peek() {
             return;
         }
-        let raw = nav.raw_at(x, y);
-        // No scroll snap natively: go to the nearest slide, as a released drag does.
-        if !snaps_scroll() {
-            let real = nav.real_for(raw);
-            when_free(move || nav.go_to(real));
-            return;
-        }
-        let next = nav.real_for(raw);
-        current.set(next);
-        if next != *settled.peek() {
-            settled.set(next);
-            if let Some(handler) = &nav.onindexchange {
-                handler.call(next);
-            }
-        }
-        // Settled on a clone: jump to the real slide; that landing crosses nothing.
-        match nav.is_clone(raw) {
-            true => nav.cross_seam(),
-            false => {
-                if *seam.peek() {
-                    seam.set(false);
-                }
-            }
-        }
+        nav.land(nav.raw_at(x, y));
     };
 
     // On the track, so the sibling controls' keys never reach it. The guards skip
@@ -134,7 +108,7 @@ pub(super) fn carousel_track(
         .with(orientation.state_name(), true)
         .with("dragging", dragging())
         // The seam jump has to be instant, or the strip visibly rewinds.
-        .with("seam", seam())
+        .with("seam", (nav.seam)())
         .into();
 
     rsx! {

@@ -13,6 +13,8 @@ pub const ROUTES: Routes = &[
     ("/carousel/buttons", || rsx! { ButtonsPage {} }),
     ("/carousel/fits", || rsx! { FitsPage {} }),
     ("/carousel/replaced", || rsx! { ReplacedPage {} }),
+    ("/carousel/drag-end", || drag_end(false)),
+    ("/carousel/drag-loop", || drag_end(true)),
 ];
 
 /// A focusable `video` as a slide's child, whose outset ring needs the slide's padding (todo 2577).
@@ -87,6 +89,20 @@ fn TextPage() -> Element {
                         Text { "Slide {n}" }
                     })
                     .collect(),
+            }
+        }
+    }
+}
+
+/// A narrow draggable strip at the page's right edge, so a drag reaches past its end (todo 3117).
+fn drag_end(looping: bool) -> Element {
+    rsx! {
+        div { style: "margin-left: 1000px; width: 200px",
+            Carousel {
+                aria_label: "Narrow slides",
+                draggable: true,
+                r#loop: looping,
+                slides: (1..=4).map(|n| rsx! { Text { "Slide {n}" } }).collect(),
             }
         }
     }

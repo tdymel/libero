@@ -10,7 +10,7 @@ use crate::{
     },
     hooks::ElementHandle,
     localization::CarouselLabels,
-    platform::{TimerSubscription, prefers_reduced_motion, timer},
+    platform::{TimerSubscription, prefers_reduced_motion, snaps_scroll, timer, when_free},
 };
 
 /// The snappable indices, inclusive: six slides three-up reach 0..=3 at start,
@@ -319,6 +319,42 @@ impl Nav {
         self.seam.set(true);
     }
 
+    fn lower_seam(mut self) {
+        if *self.seam.peek() {
+            self.seam.set(false);
+        }
+    }
+
+    /// The strip came to rest on `raw`: moves `settled`, which the live region and
+    /// `onindexchange` read, and crosses the seam from a clone.
+    pub(super) fn land(mut self, raw: usize) {
+        let next = self.real_for(raw);
+        // No scroll snap natively: go to the nearest slide; Blitz scrolls instantly.
+        if !snaps_scroll() {
+            self.lower_seam();
+            when_free(move || self.go_to(next));
+            return;
+        }
+        self.current.set(next);
+        if next != *self.settled.peek() {
+            self.settled.set(next);
+            if let Some(handler) = &self.onindexchange {
+                handler.call(next);
+            }
+        }
+        match self.is_clone(raw) {
+            true => self.cross_seam(),
+            false => self.lower_seam(),
+        }
+    }
+
+    /// Whether `offset` (pixels into a `max`-pixel range) rests on `raw`'s snap
+    /// point, so the browser has no snap left to scroll and fires no `scrollend`.
+    pub(super) fn rests_on(self, raw: usize, offset: f64, max: f64) -> bool {
+        let snap = offset_for(raw, max, self.strip_count(), self.per_view, self.align);
+        (offset - snap).abs() <= 1.0
+    }
+
     /// The first and last real slide at least half showing while the strip
     /// rests on `index`. A looping strip can wrap: `from` after `to`.
     pub(super) fn showing(self, index: usize) -> (usize, usize) {
@@ -472,6 +508,10 @@ pub(super) fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
     use_effect(use_reactive!(|nav| {
         if seam() {
             nav.scroll_to_raw(nav.raw_for(*nav.current.peek()));
+            // Blitz scrolls instantly and reports no rest for this jump (todo 3120).
+            if !snaps_scroll() {
+                nav.lower_seam();
+            }
         }
     }));
 

@@ -1075,6 +1075,81 @@ fn a_drag_and_a_step_head_for_the_end_in_either_direction() {
     });
 }
 
+/// The status text, which reads the settled slide.
+async fn status(page: &Page) -> String {
+    e2e::js(
+        page,
+        format!(
+            "(() => {{ const t = document.querySelector({TRACK:?}); \
+             return document.getElementById(t.getAttribute('aria-describedby')).textContent; }})()"
+        ),
+    )
+    .await
+}
+
+/// Drags the narrow `drag-end` strip far past its end; the browser clamps at the last snap point.
+/// Small steps: the move that starts the drag has to land on the track, not on Previous.
+async fn drag_past_the_end(page: &Page) {
+    let from = pointer::centre_of(page, TRACK).await.unwrap();
+    let to = pointer::Point { x: 20.0, y: from.y };
+    pointer::drag(page, from, to, 30).await.unwrap();
+}
+
+/// Todo 3117: a drag released on the last snap point scrolls no more, so no `scrollend`
+/// comes; the release itself settles the status.
+#[test]
+fn a_drag_released_at_the_end_settles() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/drag-end", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        drag_past_the_end(page).await;
+        wait::until("the status to name the last slide", || async move {
+            Ok(status(page).await == "Slide 4 of 4")
+        })
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a drag to the end").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 3117: a looping strip dragged onto its trailing clone crosses the seam to the
+/// real slide on release, so the next step does not sweep back across every slide.
+#[test]
+fn a_drag_released_on_a_clone_crosses_the_seam() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/drag-loop", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        instant_scroll(page).await;
+        let home = scroll_left(page).await;
+        page.evaluate(format!(
+            "(() => {{ const t = document.querySelector({TRACK:?}); window.__far = 0; \
+             t.addEventListener('scroll', () => window.__far = Math.max(window.__far, t.scrollLeft)); }})()"
+        ))
+        .await
+        .unwrap();
+        drag_past_the_end(page).await;
+        wait::for_js_true(
+            page,
+            &format!(
+                "(() => {{ const t = document.querySelector({TRACK:?}); \
+                 return window.__far >= t.scrollWidth - t.clientWidth - 1 \
+                 && Math.abs(t.scrollLeft - {home}) < 1; }})()"
+            ),
+            "the drag to reach the clone, and its release to jump to slide 1",
+        )
+        .await
+        .unwrap();
+        assert_eq!(status(page).await, "Slide 1 of 4");
+        fixture.console.assert_clean("a drag onto a clone").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 const PREVIOUS: &str = "[aria-roledescription=carousel] button[aria-label='Previous slide']";
 
 async fn scroll_left(page: &Page) -> f64 {
@@ -1254,6 +1329,45 @@ fn a_press_without_focus_leaves_the_next_entry_an_entry() {
         fixture
             .console
             .assert_clean("a focusless press on Pause")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 3118: a focusless press on Pause released off it clicks nothing; the next focus
+/// entry still stops the rotation.
+#[test]
+fn a_press_released_off_pause_leaves_the_next_entry_an_entry() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/autoplay", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        hold_rotation(page).await;
+        instant_scroll(page).await;
+        page.evaluate(format!(
+            "(() => {{ const b = document.querySelector({PAUSE:?}); \
+             const t = document.querySelector({TRACK:?}); \
+             const o = {{ bubbles: true, pointerType: 'mouse', isPrimary: true }}; \
+             b.dispatchEvent(new PointerEvent('pointerdown', o)); \
+             b.dispatchEvent(new PointerEvent('pointerout', o)); \
+             b.dispatchEvent(new PointerEvent('pointerleave', {{ ...o, bubbles: false }})); \
+             t.dispatchEvent(new PointerEvent('pointerup', o)); }})()"
+        ))
+        .await
+        .unwrap();
+        assert_pressed(page, "false", "a press released off Pause").await;
+
+        reach(page, PAUSE).await.unwrap();
+        assert_pressed(
+            page,
+            "true",
+            "focus entering after a press released off Pause",
+        )
+        .await;
+        fixture
+            .console
+            .assert_clean("a press released off Pause")
             .unwrap();
         fixture.close().await.unwrap();
     });

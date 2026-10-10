@@ -2,6 +2,7 @@
 //! one, and a keyboard-reachable `+N` chip naming the people it hides.
 
 use e2e::browser::block_on;
+use e2e::passes::keyboard;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 #[test]
@@ -26,6 +27,45 @@ fn a_broken_picture_falls_back_to_the_initials_under_the_same_name() {
         )
         .await
         .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 3119: keyboard focus on the `+N` chip shows the hidden names its `aria-label`
+/// names, and Escape closes the bubble.
+#[test]
+fn the_more_chip_tooltip_names_the_hidden_people() {
+    const CHIP: &str = "#group [tabindex='0']";
+    const HIDDEN: &str = "Radia Perlman, Barbara Liskov";
+    block_on(async {
+        let fixture = Fixture::open("/avatar", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, CHIP, 20).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "[...document.querySelectorAll('[role=tooltip]')].some(t => t.textContent === {HIDDEN:?})"
+            ),
+            "focus on the chip to show the hidden names",
+        )
+        .await
+        .unwrap();
+        let label: String = e2e::js(
+            page,
+            format!("document.querySelector({CHIP:?}).getAttribute('aria-label')"),
+        )
+        .await;
+        assert!(label.contains(HIDDEN), "the chip's name: {label:?}");
+
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        wait::for_js_true(
+            page,
+            "!document.querySelector('[role=tooltip]')",
+            "Escape to close the bubble",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("the +N chip tooltip").unwrap();
         fixture.close().await.unwrap();
     });
 }

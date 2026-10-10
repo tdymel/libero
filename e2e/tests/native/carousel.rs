@@ -84,6 +84,23 @@ fn a_looping_strip_opens_on_its_index() {
     );
 }
 
+/// Todo 3120: the instant placement's `seam` comes down once the strip rests, or every
+/// later step jumps instead of scrolling.
+#[test]
+fn a_looping_strip_lowers_the_seam_once_placed() {
+    let mut page = mount(one_up);
+    let lowered = page.wait_for(|page| {
+        !page
+            .attr(TRACK, "data-state")
+            .is_some_and(|state| state.split(' ').any(|s| s == "seam"))
+    });
+    assert!(
+        lowered,
+        "the seam stayed up: {:?}",
+        page.attr(TRACK, "data-state")
+    );
+}
+
 #[test]
 fn a_three_up_looping_strip_opens_on_its_last_slide() {
     let mut page = mount(three_up);

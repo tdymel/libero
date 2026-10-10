@@ -7,7 +7,7 @@ use crate::{
         layout::{inline_x, physical_x},
     },
     hooks::{Drag, DragMove, DragOptions, DragStart, use_distance_drag},
-    platform::{ElementApi, snaps_scroll, when_free},
+    platform::{ElementApi, snaps_scroll},
 };
 
 /// Mouse drag-to-scroll over the track. No `drag_handle_sx()`: its
@@ -62,19 +62,16 @@ pub(super) fn use_carousel_drag(
                 Orientation::Vertical => track.scroll_to(0.0, target),
             }
         }),
-        // Releasing hands the strip back to the browser, which snaps and
-        // fires `onscrollend`. Blitz does neither: the nearest slide is gone to.
         onend: Callback::new(move |()| {
             dragging.set(false);
-            if !snaps_scroll() {
-                settle_nearest(nav);
-            }
+            settle_release(nav, orientation);
         }),
     })
 }
 
-/// Goes to the slide nearest the track's scroll offset.
-fn settle_nearest(nav: Nav) {
+/// Releasing hands the strip back to the browser, which snaps and fires `onscrollend`.
+/// Not on a snap point already (an end, todo 3117), nor on Blitz: the release lands here.
+fn settle_release(nav: Nav, orientation: Orientation) {
     let element = nav.track.element;
     let (offset, content, view) = (
         element.scroll_offset(),
@@ -85,15 +82,22 @@ fn settle_nearest(nav: Nav) {
         let (Ok((x, y)), Ok(content), Ok(view)) = (offset.await, content.await, view.await) else {
             return;
         };
+        let (x, max_x, max_y) = (
+            inline_x(x),
+            content.width - view.width,
+            content.height - view.height,
+        );
         let percent = |at: f64, range: f64| match range > 0.0 {
             true => at / range * 100.0,
             false => 0.0,
         };
-        let raw = nav.raw_at(
-            percent(inline_x(x), content.width - view.width),
-            percent(y, content.height - view.height),
-        );
-        // A move reads the track, which a task finds borrowed natively.
-        when_free(move || nav.go_to(nav.real_for(raw)));
+        let raw = nav.raw_at(percent(x, max_x), percent(y, max_y));
+        let (at, max) = match orientation {
+            Orientation::Horizontal => (x, max_x),
+            Orientation::Vertical => (y, max_y),
+        };
+        if !snaps_scroll() || nav.rests_on(raw, at, max) {
+            nav.land(raw);
+        }
     });
 }

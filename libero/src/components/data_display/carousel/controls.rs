@@ -283,6 +283,12 @@ pub(super) fn carousel_pause_button(view: CarouselView, controls: bool) -> Eleme
                     pressing.set(false);
                 }
             },
+            // Released off the button, the press clicks nothing (todo 3118).
+            onpointerleave: move |_| {
+                if !*focused.peek() && *pressing.peek() {
+                    pressing.set(false);
+                }
+            },
             onclick: move |_| {
                 if !*focused.peek() {
                     released.set(true);
