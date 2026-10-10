@@ -8,7 +8,7 @@ use crate::{
         common::{Glyph, Input, Variant, base_props},
     },
     context::IconSlot,
-    hooks::{use_clipboard, use_id, use_localization, use_silent_focus_out},
+    hooks::{listener, use_clipboard, use_id, use_localization, use_silent_focus_out},
     sx::ThemeAwareValue,
 };
 
@@ -60,6 +60,9 @@ pub fn Copy(props: CopyProps) -> Element {
     let value = props.value.clone();
     let label_id = use_id();
     let described = props.label.as_ref().map(|_| label_id());
+    // Only where focus moves silently: on a WebView each `onmounted` is a blocking round trip (todo 2749).
+    let mut attributes = props.attributes.clone();
+    attributes.extend(silent.map(|silent| listener("onmounted", silent.mount())));
 
     // One item for a `ButtonGroup`: its trailing status span would be the group's last child.
     rsx! {
@@ -75,7 +78,7 @@ pub fn Copy(props: CopyProps) -> Element {
                 class: props.class.clone(),
                 sx: props.sx.clone(),
                 states: props.states.clone(),
-                attributes: props.attributes.clone(),
+                attributes,
                 // Reset first, so a second copy re-announces rather than repeating unchanged text.
                 onclick: move |_| {
                     clipboard.reset();
@@ -84,11 +87,6 @@ pub fn Copy(props: CopyProps) -> Element {
                 onmouseleave: move |_| clipboard.reset(),
                 // A keyboard or touch user never leaves with a mouse.
                 onblur: move |_| clipboard.reset(),
-                onmounted: move |event| {
-                    if let Some(silent) = silent {
-                        silent.mount()(event);
-                    }
-                },
                 if clipboard.copied() {
                     Glyph { slot: IconSlot::Check, icon: lucide::check::outlined }
                 } else if clipboard.failed() {

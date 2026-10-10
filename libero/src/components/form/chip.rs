@@ -20,7 +20,7 @@ use crate::{
         navigation::{NewTabHint, wants_new_tab_hint},
     },
     context::IconSlot,
-    hooks::{ElementHandle, use_cache, use_css, use_element, use_id, use_theme},
+    hooks::{ElementHandle, listener, use_cache, use_css, use_element, use_id, use_theme},
     platform::reads_click_targets,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ChipDefaults, ColorShade, CssVar, Size, SizeCss},
@@ -376,10 +376,13 @@ pub fn Chip(props: ChipProps) -> Element {
         {props.children}
     };
     let trailing_slot = use_element();
-    use_nested_control_warning(
-        trailing_slot,
-        clickable && !selectable && props.trailing.is_some(),
-    );
+    let nested = clickable && !selectable && props.trailing.is_some();
+    use_nested_control_warning(trailing_slot, nested);
+    // Only for the warning: on a WebView each `onmounted` is a blocking round trip (todo 2749).
+    let trailing_mount: Vec<Attribute> = (cfg!(debug_assertions) && nested)
+        .then(|| listener("onmounted", trailing_slot.mount()))
+        .into_iter()
+        .collect();
     // Where no click target can be read, a click in the trailing slot counts as
     // its control's, so the padding does not toggle the chip too (993).
     let trailing_hit = use_hook(|| Rc::new(Cell::new(false)));
@@ -393,8 +396,8 @@ pub fn Chip(props: ChipProps) -> Element {
             span {
                 class: trailing_class,
                 "data-slot": ChipPart::Trailing.slot(),
-                onmounted: trailing_slot.mount(),
                 onclick: mark_trailing,
+                ..trailing_mount,
                 {trailing}
             }
         }

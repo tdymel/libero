@@ -274,6 +274,8 @@ pub fn NavLink(props: NavLinkProps) -> Element {
         }
     }));
 
+    // Only to scroll: on a WebView each `onmounted` is a blocking round trip (todo 2749).
+    let mounted = scroll_into_view.then_some(element);
     // Above the branch, and no `InternalAnchor` scope, which would resolve it twice.
     let mut merged = None;
     let style_attributes = use_style_attributes(
@@ -326,7 +328,7 @@ pub fn NavLink(props: NavLinkProps) -> Element {
             props.target,
             disabled,
             aria_current,
-            element,
+            mounted,
             attributes,
             body,
         );
@@ -340,7 +342,7 @@ pub fn NavLink(props: NavLinkProps) -> Element {
         props.target,
         disabled,
         aria_current,
-        element,
+        mounted,
         attributes,
         body,
     );
@@ -389,7 +391,7 @@ fn nav_link(
     target: Option<String>,
     disabled: bool,
     aria_current: Option<&'static str>,
-    element: ElementHandle,
+    element: Option<ElementHandle>,
     mut attributes: Vec<Attribute>,
     body: Element,
 ) -> Element {
@@ -411,7 +413,7 @@ fn nav_link(
         style_attributes,
         to,
         target,
-        Some(element.mount()),
+        element.map(ElementHandle::mount),
         attributes,
         body,
     )

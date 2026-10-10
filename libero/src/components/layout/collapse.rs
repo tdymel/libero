@@ -148,9 +148,8 @@ pub fn Collapse(props: CollapseProps) -> Element {
         .states(&states)
         .variables(&variables)
         .prepare()
-        .event("onmounted", move |_: Event<MountedData>| {
-            presence.on_mounted()
-        })
+        // No `onmounted` (`Presence::on_mounted`): this root mounts on the first render, where
+        // `visible` already equals `open`, and a WebView pays a round trip for each (todo 2749).
         .event("ontransitionend", move |event: Event<TransitionData>| {
             presence.on_transition_end(&event)
         })

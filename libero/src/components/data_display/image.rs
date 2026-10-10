@@ -3,9 +3,10 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            ClassList, HtmlTag, Input, Part, SVG_FIT, States, Variables, base_props, css_string,
-            focus_ring_sx, input_from_str, on_failed_after_mount, parts_enum, parts_under_sx,
-            states, svg_fit, svg_fit_sx, svg_fit_variables, use_svg_probe, variables,
+            ClassList, HtmlTag, Input, PROBES_AFTER_MOUNT, Part, SVG_FIT, States, Variables,
+            base_props, css_string, focus_ring_sx, input_from_str, on_failed_after_mount,
+            parts_enum, parts_under_sx, states, svg_fit, svg_fit_sx, svg_fit_variables,
+            use_svg_probe, variables,
         },
         layout::use_box,
     },
@@ -288,12 +289,15 @@ pub fn Image(props: ImageProps) -> Element {
         .event("onerror", move |_: Event<ImageData>| {
             errored_src.set(Some(on_error_src.clone()))
         })
-        .event("onmounted", move |event: Event<MountedData>| {
-            let failed = on_mounted_src.clone();
-            on_failed_after_mount(&on_mounted_src, event.data(), &probe, move || {
-                errored_src.set(Some(failed))
-            });
-        })
+        .event(
+            "onmounted",
+            PROBES_AFTER_MOUNT.then_some(move |event: Event<MountedData>| {
+                let failed = on_mounted_src.clone();
+                on_failed_after_mount(&on_mounted_src, event.data(), &probe, move || {
+                    errored_src.set(Some(failed))
+                });
+            }),
+        )
         .attr(
             "loading",
             props.loading.as_ref().map(|loading| loading.as_str()),

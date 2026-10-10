@@ -231,7 +231,14 @@ base_props! {
 #[component]
 pub fn SortableItem(props: SortableItemProps) -> Element {
     let item = use_labelled_sortable_item(props.index, props.label.clone());
-    let view = use_context::<Signal<SortableView>>()();
+    let views = use_context::<Signal<SortableView>>();
+    let view = views();
+    let marker = use_id();
+    use_effect(move || {
+        // Again when the move buttons come or go.
+        let _ = views.read().move_buttons;
+        item.find_parts(&format!("[data-sortable-item=\"{}\"]", marker.peek()));
+    });
     let words = current_localization().sortable;
     let dragging = (item.dragging)();
     let name = item_name(words.item, props.label.as_deref(), props.index);
@@ -250,7 +257,6 @@ pub fn SortableItem(props: SortableItemProps) -> Element {
     let handle = use_box()
         .framework_sx(&SORTABLE_HANDLE_SX)
         .prepare()
-        .element(&item.handle)
         .attr("data-slot", SortableItemPart::Handle.slot())
         .attr("type", "button")
         .attr("aria-label", handle_name.aria_label)
@@ -281,7 +287,6 @@ pub fn SortableItem(props: SortableItemProps) -> Element {
                 "data-slot": SortableItemPart::MoveEarlier.slot(),
                 "aria-label": earlier,
                 disabled: (item.first)(),
-                onmounted: item.earlier.mount(),
                 onclick: move |event| onearlier.call(event),
                 if view.horizontal {
                     Glyph { slot: IconSlot::ChevronLeft, icon: lucide::chevron_left::outlined }
@@ -295,7 +300,6 @@ pub fn SortableItem(props: SortableItemProps) -> Element {
                 "data-slot": SortableItemPart::MoveLater.slot(),
                 "aria-label": later,
                 disabled: (item.last)(),
-                onmounted: item.later.mount(),
                 onclick: move |event| onlater.call(event),
                 if view.horizontal {
                     Glyph { slot: IconSlot::ChevronRight, icon: lucide::chevron_right::outlined }
@@ -314,7 +318,7 @@ pub fn SortableItem(props: SortableItemProps) -> Element {
         .states(&states)
         .style(Some(item.style()))
         .prepare()
-        .element(&item.element)
+        .attr("data-sortable-item", marker())
         .render(
             HtmlTag::Li,
             props.attributes,

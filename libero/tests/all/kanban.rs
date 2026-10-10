@@ -1,7 +1,10 @@
 //! `Kanban`'s rendered contract: labelled card lists, the controls on each card
 //! and one live region for the board.
 
-use crate::common::{body, render};
+use crate::{
+    common::{body, render},
+    recorder::mounted_listeners,
+};
 
 use dioxus::prelude::*;
 use libero::{
@@ -131,4 +134,20 @@ fn an_unlabelled_cards_handle_is_named_by_its_content() {
         .and_then(|rest| rest.split('"').next())
         .unwrap_or_else(|| panic!("no aria-labelledby: {handle}"));
     assert_eq!(crate::sortable::labelled_by(&html, ids), "Reorder Write");
+}
+
+/// Todo 2749: a card finds its parts by selector, so cards add no `onmounted`.
+#[test]
+fn cards_register_no_onmounted() {
+    fn empty() -> Element {
+        rsx! {
+            LiberoProvider {
+                Kanban { onmove: move |_: KanbanMove| {},
+                    KanbanColumn { index: 0, label: "To do" }
+                    KanbanColumn { index: 1, label: "Done" }
+                }
+            }
+        }
+    }
+    assert_eq!(mounted_listeners(app), mounted_listeners(empty));
 }

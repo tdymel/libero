@@ -76,7 +76,8 @@ pub(crate) use style_attributes::{
     ABSENT, StyleAttributes, sx_source, use_style_attributes, with_parts,
 };
 pub(crate) use svg_fit::{
-    SVG_FIT, on_failed_after_mount, svg_fit, svg_fit_sx, svg_fit_variables, use_svg_probe,
+    PROBES_AFTER_MOUNT, SVG_FIT, on_failed_after_mount, svg_fit, svg_fit_sx, svg_fit_variables,
+    use_svg_probe,
 };
 pub(crate) use toolbar_context::{
     TOOLBAR_ITEM, ToolbarItem, ToolbarScope, use_no_toolbar, use_provide_toolbar, use_toolbar,

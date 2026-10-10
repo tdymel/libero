@@ -16,7 +16,7 @@ use crate::{
         typography::Kbd,
     },
     context::IconSlot,
-    hooks::{ElementHandle, Typeahead, current_localization},
+    hooks::{ElementHandle, Typeahead, current_localization, listener},
     platform::logical_key,
     utils::warn,
 };
@@ -173,11 +173,15 @@ pub(super) fn MenuRow(props: MenuRowProps) -> Element {
         }
     };
     let described_by = item.description.as_ref().map(|_| description_id.clone());
-    let onmounted = move |event| {
-        if let Some(anchor) = anchor {
-            Runtime::current().in_scope(owner, || anchor.mount()(event));
-        }
-    };
+    // Only a submenu row anchors: on a WebView each `onmounted` is a blocking round trip (todo 2749).
+    let mounted: Vec<Attribute> = anchor
+        .map(|anchor| {
+            listener("onmounted", move |event: Event<MountedData>| {
+                Runtime::current().in_scope(owner, || anchor.mount()(event))
+            })
+        })
+        .into_iter()
+        .collect();
     let role = check.map_or("menuitem", Check::role);
     let tabindex = if tabbable { "0" } else { "-1" };
 
@@ -196,10 +200,10 @@ pub(super) fn MenuRow(props: MenuRowProps) -> Element {
                 "data-menu-index": "{index}",
                 "aria-disabled": disabled.then_some("true"),
                 "aria-describedby": described_by,
-                onmounted,
                 onclick,
                 onkeydown,
                 onmouseenter,
+                ..mounted,
                 {content}
             }
         };
@@ -220,10 +224,10 @@ pub(super) fn MenuRow(props: MenuRowProps) -> Element {
             "aria-expanded": has_submenu.then(|| is_expanded.to_string()),
             "aria-controls": is_expanded.then_some(child_id),
             "aria-describedby": described_by,
-            onmounted,
             onclick,
             onkeydown,
             onmouseenter,
+            ..mounted,
             {content}
         }
     }

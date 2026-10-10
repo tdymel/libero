@@ -25,7 +25,7 @@ use crate::{
     context::IconSlot,
     hooks::{current_localization, use_css, use_element, use_id, use_media_query},
     localization::fill,
-    platform::ElementApi,
+    platform::{self, ElementApi},
     sx::{StaticSx, sx},
     theme::{PAPER_BACKGROUND, PAPER_BORDER_COLOR, PAPER_RADIUS},
 };
@@ -420,6 +420,18 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
     let dragging = (item.dragging)() || (carried.dragging)();
 
     let trigger = use_element();
+    let marker = use_id();
+    let move_buttons = board.move_buttons;
+    use_effect(move || {
+        // Again when the move buttons come or go.
+        let _ = move_buttons();
+        let card = format!("[data-kanban-card=\"{}\"]", marker.peek());
+        item.find_parts(&card);
+        trigger.point_at(platform::mounted_by_selector(&format!(
+            "{card} > * > [data-slot=\"{}\"]",
+            KanbanCardPart::MoveTo.slot()
+        )));
+    });
     let mut landing = board.landing;
     let column_index = column.index;
     let handle_node = item.handle;
@@ -526,7 +538,6 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
     let handle = use_box()
         .framework_sx(&SORTABLE_HANDLE_SX)
         .prepare()
-        .element(&item.handle)
         .attr("data-slot", KanbanCardPart::Handle.slot())
         .attr("type", "button")
         .attr("aria-label", handle_name.aria_label)
@@ -553,7 +564,6 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
                 "data-slot": KanbanCardPart::MoveEarlier.slot(),
                 "aria-label": named(words.sortable.move_up),
                 disabled: (item.first)(),
-                onmounted: item.earlier.mount(),
                 onclick: move |event| onearlier.call(event),
                 Glyph { slot: IconSlot::ChevronUp, icon: lucide::chevron_up::outlined }
             }
@@ -563,7 +573,6 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
                 "data-slot": KanbanCardPart::MoveLater.slot(),
                 "aria-label": named(words.sortable.move_down),
                 disabled: (item.last)(),
-                onmounted: item.later.mount(),
                 onclick: move |event| onlater.call(event),
                 Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined }
             }
@@ -572,7 +581,6 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
 
     let move_to = use_box()
         .prepare()
-        .element(&trigger)
         .attr("class", move_class.clone())
         .attr("data-slot", KanbanCardPart::MoveTo.slot())
         .attr("type", "button")
@@ -591,7 +599,7 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
         .states(&states)
         .style(Some(style))
         .prepare()
-        .element(&item.element)
+        .attr("data-kanban-card", marker())
         .render(
             HtmlTag::Li,
             props.attributes,

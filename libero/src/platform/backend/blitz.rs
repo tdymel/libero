@@ -1138,18 +1138,19 @@ pub(super) fn follow_pointer(
     onmove: Callback<Event<PointerData>>,
     onup: Callback<Event<PointerData>>,
 ) {
-    let Some(handle) = capture.downcast::<NodeHandle>() else {
+    // A selector-found capture too, not just a mounted one (todo 2749).
+    let Some((anchor, node_id)) = node_of(capture) else {
         return;
     };
     FOLLOW.set(Some(Follow {
         pointer_id: event.pointer_id(),
-        capture: handle.node_id(),
+        capture: node_id,
         onmove,
         onup,
     }));
-    let cursor = handle
+    let cursor = anchor
         .try_doc()
-        .map(|doc| resolved_style_value(&doc, handle.node_id(), "cursor"))
+        .map(|doc| resolved_style_value(&doc, node_id, "cursor"))
         .unwrap_or_default();
     catch_pointer(Some(cursor));
 }

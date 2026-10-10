@@ -76,6 +76,15 @@ impl FindClickListener {
     }
 }
 
+/// How many `onmounted` listeners `app`'s first render registers: on a WebView each is a
+/// blocking round trip (todo 2749).
+pub fn mounted_listeners(app: fn() -> dioxus::prelude::Element) -> usize {
+    let mut dom = dioxus::prelude::VirtualDom::new(app);
+    let mut find = FindClickListener::default();
+    dom.rebuild(&mut find);
+    find.registered_for("mounted").len()
+}
+
 impl WriteMutations for FindClickListener {
     fn push_id(&mut self, id: ElementId) {
         self.last = Some(id);

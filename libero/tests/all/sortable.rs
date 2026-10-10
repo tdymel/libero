@@ -1,6 +1,9 @@
 //! `Sortable`'s rendered contract: each item's handle and move buttons name it.
 
-use crate::common::{body, render};
+use crate::{
+    common::{body, render},
+    recorder::mounted_listeners,
+};
 
 use dioxus::prelude::*;
 use libero::{
@@ -176,4 +179,28 @@ fn a_labelled_items_handle_keeps_its_label() {
 
     assert!(html.contains("aria-label=\"Reorder Apple\""), "{html}");
     assert!(!html.contains("aria-labelledby"), "{html}");
+}
+
+/// Todo 2749: an item finds its parts by selector, so items add no `onmounted`.
+#[test]
+fn items_register_no_onmounted() {
+    fn empty() -> Element {
+        rsx! {
+            LiberoProvider {
+                Sortable { onreorder: move |_: SortableMove| {} }
+            }
+        }
+    }
+    fn three() -> Element {
+        rsx! {
+            LiberoProvider {
+                Sortable { onreorder: move |_: SortableMove| {},
+                    SortableItem { index: 0, label: "Apple", "Apple" }
+                    SortableItem { index: 1, label: "Pear", "Pear" }
+                    SortableItem { index: 2, label: "Plum", "Plum" }
+                }
+            }
+        }
+    }
+    assert_eq!(mounted_listeners(three), mounted_listeners(empty));
 }

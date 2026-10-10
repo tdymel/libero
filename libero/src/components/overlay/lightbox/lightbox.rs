@@ -25,7 +25,7 @@ use crate::{
     },
     context::IconSlot,
     hooks::{ElementHandle, id_selector, use_element, use_id, use_localization, use_theme},
-    platform::ElementApi,
+    platform::{ElementApi, mounted_by_selector},
     sx::{StaticSx, Sx},
 };
 
@@ -168,6 +168,21 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
     }
     let picture = |i: usize| pictures.borrow()[i];
     let resized_pictures = pictures.clone();
+    // Only the showing slide, found by selector: on a WebView each `onmounted` is a blocking
+    // round trip, two per picture (todo 2749). Every handler checks it acts on that slide.
+    let shown_slide = (count > 0).then(|| picture(current));
+    use_effect(use_reactive!(|current, opening| {
+        let _ = &opening;
+        if let Some(Slide { frame, picture }) = shown_slide {
+            frame.point_at(mounted_by_selector(&format!(
+                "[data-lightbox-frame=\"{current}\"]"
+            )));
+            picture.point_at(mounted_by_selector(&id_selector(&image_id(
+                &base_id.peek(),
+                current,
+            ))));
+        }
+    }));
 
     let drag = use_lightbox_drag(
         zooming,

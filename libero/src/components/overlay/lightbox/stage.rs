@@ -202,7 +202,6 @@ pub(super) fn lightbox_slide(
             states: frame_states,
             "data-lightbox-frame": i,
             "data-slot": LightboxPart::Frame.slot(),
-            onmounted: frame.mount(),
             onwheel: move |event: Event<WheelData>| {
                 if !zoomable || i != *index.peek() {
                     return;
@@ -362,7 +361,6 @@ pub(super) fn lightbox_slide(
                         zoom.set(before);
                     }
                 },
-                onmounted: image.mount(),
                 onpointermove: move |event: Event<PointerData>| {
                     let id = event.pointer_id();
                     let at = touches.peek().iter().position(|(held, _)| *held == id);

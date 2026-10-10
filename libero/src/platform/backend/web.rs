@@ -38,6 +38,30 @@ impl dioxus::html::RenderedElementBacking for Found {
     fn as_any(&self) -> &dyn std::any::Any {
         &self.0
     }
+
+    /// As dioxus-web's own: `scroll_chain_into_view` scrolls through this.
+    fn scroll_to(
+        &self,
+        options: dioxus::html::ScrollToOptions,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = dioxus::html::MountedResult<()>>>> {
+        use dioxus::html::{ScrollBehavior as Behavior, ScrollLogicalPosition as Position};
+        let position = |position: Position| match position {
+            Position::Start => web_sys::ScrollLogicalPosition::Start,
+            Position::Center => web_sys::ScrollLogicalPosition::Center,
+            Position::End => web_sys::ScrollLogicalPosition::End,
+            Position::Nearest => web_sys::ScrollLogicalPosition::Nearest,
+        };
+        let into_view = web_sys::ScrollIntoViewOptions::new();
+        into_view.set_behavior(match options.behavior {
+            Behavior::Instant => web_sys::ScrollBehavior::Instant,
+            Behavior::Smooth => web_sys::ScrollBehavior::Smooth,
+        });
+        into_view.set_block(position(options.vertical));
+        into_view.set_inline(position(options.horizontal));
+        self.0
+            .scroll_into_view_with_scroll_into_view_options(&into_view);
+        Box::pin(async { Ok(()) })
+    }
 }
 
 pub(super) fn mounted_by_selector(selector: &str) -> Option<Rc<MountedData>> {

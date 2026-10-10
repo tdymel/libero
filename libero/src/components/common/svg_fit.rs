@@ -40,6 +40,10 @@ pub(crate) fn use_svg_probe(src: &str) -> SubscriptionSlot<dyn ContentSubscripti
     probe
 }
 
+/// Whether [`on_failed_after_mount`] can find anything: off the web an image takes no
+/// `onmounted`, as a WebView pays a blocking round trip for each (todo 2749).
+pub(crate) const PROBES_AFTER_MOUNT: bool = cfg!(target_arch = "wasm32");
+
 /// Calls `on_failed` if the `<img>` showing `src` has failed by the task after it mounted: a
 /// server-rendered one failed before hydration attached its `onerror` (todo 2529). An SVG with
 /// no size reads as empty, so a fresh image loads it instead, held in `probe` until the
