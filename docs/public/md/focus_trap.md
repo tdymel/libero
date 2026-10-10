@@ -80,6 +80,11 @@ no props at all.
   first focusable child.
 - With `restore_focus`, unmounting the trap puts focus back where it was before
   the trap took it.
+- Focus that falls to the page goes back into the trap: to the last focused
+  child after a click on plain text outside, or to the first focusable child
+  when the focused control was removed. A Tab that finds focus on the page comes
+  back into the trap.
+- A native radio group is one Tab stop: its checked radio, or else its first.
 
 ### You must
 
@@ -119,6 +124,13 @@ and Cancel close it, and focus goes back to the button that opened it.
   page body.
 - In a desktop WebView or on Android, Tab and Shift+Tab move between the
   children but do not wrap: at either end they leave the trap.
+- Focus moved on purpose to another control outside, by a click or a script,
+  stays there: the trap takes back only focus that fell to the page.
+- Radio groups are told apart by `name` alone: two forms in one trap that share
+  a radio name are one Tab stop.
+- A checked radio is found by its `value`: when radios in a group share a value
+  or have none, Tab lands on the first of them, even when a later one is
+  checked.
 
 ## Theme defaults
 

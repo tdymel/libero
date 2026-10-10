@@ -35,7 +35,7 @@ pub fn FocusTrapPage() -> Element {
                 .handles([
                     "On mount the trap focuses the element marked `data-autofocus`, or else its first focusable child.",
                     "With `restore_focus`, unmounting the trap puts focus back where it was before the trap took it.",
-                    "Focus that falls to the page, because the focused control was removed or a click landed on plain text outside, goes back to the last focused child, and the next Tab comes back into the trap.",
+                    "Focus that falls to the page goes back into the trap: to the last focused child after a click on plain text outside, or to the first focusable child when the focused control was removed. A Tab that finds focus on the page comes back into the trap.",
                     "A native radio group is one Tab stop: its checked radio, or else its first.",
                 ])
                 .must([

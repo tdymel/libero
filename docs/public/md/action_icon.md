@@ -51,7 +51,7 @@ A `Button` with an icon and no text is a wide pill and has no name unless you ad
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `variant` | `Variant` | - | Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. With `color` also unset, the button takes the surrounding text color. |
+| `variant` | `Variant` | - | Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`, `gradient`. Set alone, it takes the primary color. With neither `variant` nor `color`, the button takes the surrounding text color. |
 | `color` | `ThemeAwareValue` | - | Accent color. A theme color name or any CSS color. Set alone, it gives the theme's default variant, `filled`. Under a gradient, its first stop. |
 | `gradient` | `Gradient` | - | With `variant: "gradient"`: the second stop and the angle, as `("info", 90)` or `Gradient::default().to("info").deg(90)`. The first stop is `color`. Ignored by the other variants. |
 | `size` | `ThemeAwareValue` | `md` | A size word takes `Button`'s height at that step, so the two line up in a row, and sizes the icon inside as `Icon`'s. A length such as `"20px"` sizes the box, and the icon fills it. |
@@ -59,7 +59,7 @@ A `Button` with an icon and no text is a wide pill and has no name unless you ad
 | `aria_label` | `String` | required | The button's accessible name. |
 | `tooltip` | `bool` | `false` | Shows `aria_label` in a `Tooltip` on hover and keyboard focus. The text is the name itself, so a screen reader does not hear it twice. |
 | `shortcut` | `String` | - | The chord that runs the action, as `use_hotkeys` takes it (`"mod+b"`). Shown in the tooltip as keys named for the platform, and set as `aria-keyshortcuts`. Binding the key is up to you. |
-| `selected` | `bool` | - | Makes it a toggle button. The selected look shows once `variant` or `color` is set. Leave it unset for a plain action. |
+| `selected` | `bool` | - | Makes it a toggle button. A bare toggle shows a 1px ring while on; with `variant` or `color` set it takes that variant's selected look. Leave it unset for a plain action. |
 | `disabled` | `bool` | `false` | Disables and dims the button. |
 | `focusable_when_disabled` | `bool` | `false` | With `disabled`: keeps the button in the Tab order. It renders `aria-disabled` rather than `disabled` and ignores presses. |
 | `loading` | `bool` | `false` | Shows a `Loader` over the icon and ignores clicks. The button stays focusable. Ignored on a link. |

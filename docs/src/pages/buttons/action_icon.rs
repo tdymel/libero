@@ -24,7 +24,7 @@ pub fn ActionIconPage() -> Element {
             markdown: "/md/action_icon.md",
             properties: vec![props("ActionIcon", vec![
                 prop("variant", "Variant")
-                    .doc("Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`, `gradient`. With `color` also unset, the button takes the surrounding text color."),
+                    .doc("Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`, `gradient`. Set alone, it takes the primary color. With neither `variant` nor `color`, the button takes the surrounding text color."),
                 prop("gradient", "Gradient")
                     .doc("With `variant: \"gradient\"`: the second stop and the angle, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`. The first stop is `color`. Ignored by the other variants."),
                 prop("color", "ThemeAwareValue")
@@ -44,7 +44,7 @@ pub fn ActionIconPage() -> Element {
                 prop("shortcut", "String")
                     .doc("The chord that runs the action, as `use_hotkeys` takes it (`\"mod+b\"`). Shown in the tooltip as keys named for the platform, and set as `aria-keyshortcuts`. Binding the key is up to you."),
                 prop("selected", "bool")
-                    .doc("Makes it a toggle button. The selected look shows once `variant` or `color` is set. Leave it unset for a plain action."),
+                    .doc("Makes it a toggle button. A bare toggle shows a 1px ring while on; with `variant` or `color` set it takes that variant's selected look. Leave it unset for a plain action."),
                 prop("disabled", "bool")
                     .default("false")
                     .doc("Disables and dims the button."),
