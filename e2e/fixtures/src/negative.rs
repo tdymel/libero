@@ -31,7 +31,36 @@ pub const ROUTES: Routes = &[
     ("/broken/static-highlight", || rsx! { StaticHighlight {} }),
     ("/broken/faint-boundary", || rsx! { FaintBoundary {} }),
     ("/broken/layered-text", || rsx! { LayeredText {} }),
+    ("/broken/late", || rsx! { LateOutcomes {} }),
 ];
+
+/// Todo 3064: each button's outcome lands by another path; `Driver::flush` must see each at once.
+#[component]
+pub fn LateOutcomes() -> Element {
+    let mut handled = use_signal(|| 0u32);
+    let mut armed = use_signal(|| false);
+    let mut effected = use_signal(|| 0u32);
+    let mut spawned = use_signal(|| 0u32);
+    use_effect(move || {
+        if armed() {
+            effected += 1;
+        }
+    });
+    rsx! {
+        button { id: "handler", onclick: move |_| handled += 1, "Handler" }
+        span { id: "handled", "{handled}" }
+        button { id: "effect", onclick: move |_| armed.set(true), "Effect" }
+        span { id: "effected", "{effected}" }
+        button {
+            id: "spawn",
+            onclick: move |_| {
+                spawn(async move { spawned += 1 });
+            },
+            "Spawn"
+        }
+        span { id: "spawned", "{spawned}" }
+    }
+}
 
 /// WCAG 1.4.11: a field whose only boundary is a border near the page's white.
 #[component]

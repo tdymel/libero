@@ -119,9 +119,9 @@ fn Fruit(index: usize, name: &'static str) -> Element {
 For your own markup, `use_sortable` gives the list's handlers and
 `use_sortable_item(index)` each item's handle, element, move buttons and
 `style()`. The component is those two hooks plus a grip button, two move
-buttons and a status region. `style()` is empty while an item sits in its slot,
-so an idle item gets no stacking context or fixed-position containing block
-from it.
+buttons and a status region. `style()` is empty while an item sits in its slot
+and has never moved, and `transform: none` once it has, so an idle item gets no
+stacking context or fixed-position containing block from it.
 
 ## Props
 

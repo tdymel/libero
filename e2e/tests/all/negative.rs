@@ -769,3 +769,32 @@ fn the_pointer_pass_refuses_a_missing_target() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 3064: a click handler's write, an effect after its render and a spawned task are all
+/// in place once `flush` returns: a negative read straight after it sees what did happen.
+async fn flush_sees_every_late_outcome<D: e2e::driver::Driver>(
+    d: &mut D,
+    _route: &str,
+) -> anyhow::Result<()> {
+    for (button, outcome) in [
+        ("#handler", "#handled"),
+        ("#effect", "#effected"),
+        ("#spawn", "#spawned"),
+    ] {
+        d.click(button).await?;
+        d.flush().await?;
+        let seen = d.text(outcome).await?;
+        anyhow::ensure!(
+            seen == "1",
+            "{:?}: {button}'s outcome after a flush: {seen}",
+            d.platform()
+        );
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    flush_waits_for_handlers_effects_and_spawned_tasks,
+    "/broken/late",
+    flush_sees_every_late_outcome
+);

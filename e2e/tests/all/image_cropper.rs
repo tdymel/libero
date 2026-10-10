@@ -394,7 +394,7 @@ async fn a_disabled_cropper_takes_no_input<D: Driver>(d: &mut D, _route: &str) -
     d.press(keyboard::ARROW_RIGHT).await?;
     d.drag("#disabled [data-slot=frame]", 30.0, 20.0).await?;
     d.drag(CORNER, -30.0, -20.0).await?;
-    d.settle().await?;
+    d.flush().await?;
     let crop = d.text("#crop").await?;
     anyhow::ensure!(crop == "10,10,80,80", "the disabled cropper emitted {crop}");
     let after = values(d).await?;

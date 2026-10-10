@@ -16,7 +16,7 @@ use e2e::{Fixture, Viewport, wait};
 async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let web = d.platform() == Platform::Web;
     eventually_text(d, "#push-supported", &web.to_string(), "mount").await?;
-    d.settle().await?;
+    d.flush().await?;
     for (selector, expected) in [
         ("#error", "None"),
         ("#pending", "false"),

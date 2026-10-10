@@ -302,7 +302,7 @@ async fn typing_keeps_the_list_honest<D: Driver>(d: &mut D, _route: &str) -> Res
     .await?;
     for key in [keyboard::HOME, keyboard::END] {
         d.press(key).await?;
-        d.settle().await?;
+        d.flush().await?;
         let active = d.attr(TRIGGER, "aria-activedescendant").await?;
         ensure!(
             active.is_none(),

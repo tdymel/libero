@@ -21,7 +21,7 @@ async fn an_inert_button<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let at = d.rect("#asleep-button").await?;
     d.click_at(at.x + at.width / 2.0, at.y + at.height / 2.0)
         .await?;
-    d.settle().await?;
+    d.flush().await?;
     ensure!(
         d.text("#clicks").await? == "0",
         "an inert button's handler ran"
@@ -40,11 +40,11 @@ async fn focus_after_a_press<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click("#first").await?;
     eventually_focused(d, "#first", "a click on #first").await?;
     d.click("#off-in-card").await?;
-    d.settle().await?;
+    d.flush().await?;
     let in_card = d.focused_id().await?;
     d.click("#first").await?;
     d.click("#off").await?;
-    d.settle().await?;
+    d.flush().await?;
     let off = d.focused_id().await?;
     // A touch on a disabled control sends no mouse events, so focus stays; a
     // plain `<button disabled>` does the same on the WebView (990).

@@ -364,7 +364,7 @@ async fn escape_closes_the_list_first<D: Driver>(d: &mut D, _route: &str) -> Res
         Ok(d.attr(FORM_SELECT, "aria-expanded").await?.as_deref() == Some("false"))
     })
     .await?;
-    d.settle().await?;
+    d.flush().await?;
     ensure!(
         d.exists(CARD).await?,
         "Escape on the open Select ended the tour too"
@@ -392,7 +392,7 @@ async fn emptied_is_unseen<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         Ok(!d.exists(CARD).await?)
     })
     .await?;
-    d.settle().await?;
+    d.flush().await?;
     let seen = d.text("#seen").await?;
     ensure!(seen == "unseen", "an emptied tour was stored as {seen}");
     Ok(())

@@ -412,7 +412,7 @@ async fn the_menu_closes_before_its_dialog<D: Driver>(d: &mut D, key: Dismiss) -
         Ok(!d.exists(MENU_ITEM).await?)
     })
     .await?;
-    d.settle().await?;
+    d.flush().await?;
     ensure!(
         d.exists(DIALOG).await?,
         "one dismissal closed the dialog too"
@@ -654,8 +654,8 @@ fn the_scrollbar_and_the_wheel_beside_a_tall_dialog_scroll_it() {
                 .unwrap()
         };
 
-        // Headless Chrome neither pages nor drags on CDP presses: the hit test is the
-        // proof that the bar is live, and the press must not close.
+        // The hit test proves the bar is live; the press must not close. A press in front
+        // may page the scroller to its end, so the wheel starts from the top again.
         let track = pointer::Point {
             x: right - gutter / 2.0,
             y: bottom - 40.0,
@@ -671,28 +671,58 @@ fn the_scrollbar_and_the_wheel_beside_a_tall_dialog_scroll_it() {
             .await,
             "the scrollbar does not take the pointer"
         );
-        pointer::click_at(page, track).await.unwrap();
+        // In front: a tab behind waits for its rare frame on each press and wheel (todo 3039).
+        e2e::frames::in_front(page, pointer::click_at(page, track))
+            .await
+            .unwrap();
 
         // Also lets a close the press spawned land first: the scroller reads need the dialog.
+        wait::for_js_true(
+            page,
+            &format!(
+                "!!document.querySelector('[role=dialog]') && ({SCROLLER}.scrollTop = 0, {SCROLLER}.scrollTop === 0)"
+            ),
+            "the scroller back at its top",
+        )
+        .await
+        .unwrap();
         let before = scroll_top().await;
+        let (x, y) = (dialog_left / 2.0, bottom / 2.0);
         let beside = DispatchMouseEventParams::builder()
             .r#type(DispatchMouseEventType::MouseWheel)
-            .x(dialog_left / 2.0)
-            .y(bottom / 2.0)
+            .x(x)
+            .y(y)
             .delta_x(0.0)
             .delta_y(120.0)
             .build()
             .unwrap();
-        page.execute(beside).await.unwrap();
-        wait::for_js_true(
+        e2e::frames::in_front(page, async {
+            page.execute(beside).await?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+        let scrolled = wait::for_js_true(
             page,
             &format!(
                 "!!document.querySelector('[role=dialog]') && {SCROLLER}.scrollTop > {before}"
             ),
             "the wheel beside the dialog to scroll",
         )
-        .await
-        .unwrap();
+        .await;
+        if let Err(error) = scrolled {
+            let state: String = page
+                .evaluate(format!(
+                    "(() => {{ const s = {SCROLLER}; const at = document.elementFromPoint({x}, {y}); \
+                     return `scrollTop ${{s?.scrollTop}} of ${{s && s.scrollHeight - s.clientHeight}}, \
+                     at the wheel ${{at?.outerHTML.slice(0, 80)}}`; }})()"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            panic!("{error:#}: before {before}, {state}");
+        }
         fixture
             .console
             .assert_clean("scrolling a tall dialog")

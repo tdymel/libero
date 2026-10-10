@@ -239,7 +239,7 @@ async fn a_refused_move_is_void_after_a_data_change<D: Driver>(
     d.focus("#add").await?;
     d.press(keyboard::ENTER).await?;
     eventually_text(d, "#order", "Alpha Gamma | Delta | Omega", "Omega added").await?;
-    d.settle().await?;
+    d.flush().await?;
     ensure!(
         d.is_focused("#add").await?,
         "a card added at the refused slot took the focus: {}",
@@ -392,7 +392,7 @@ async fn a_refused_move_moves_no_focus_later<D: Driver>(d: &mut D, _route: &str)
         "Omega added",
     )
     .await?;
-    d.settle().await?;
+    d.flush().await?;
     ensure!(
         d.is_focused("#add").await?,
         "a card added at the refused slot took the focus: {}",

@@ -586,6 +586,8 @@ pub(super) struct BoardCard {
     pub(super) dragging: Memo<bool>,
     offset: Memo<Option<(f64, f64)>>,
     settle: Memo<Option<(f64, f64)>>,
+    /// The card has settled since mount.
+    settled: CopyValue<bool>,
 }
 
 impl BoardCard {
@@ -596,7 +598,12 @@ impl BoardCard {
             // Closed by `;`: a dropped settle var's reset is appended after it (1438).
             return Some(format!("transform: {};", translate(offset)));
         }
-        let from = (self.settle)()?;
+        let mut settled = self.settled;
+        let Some(from) = (self.settle)() else {
+            // The var's reset keeps a style written, which keeps an omitted transform (3039).
+            return settled.peek().then(|| "transform: none;".to_string());
+        };
+        settled.set(true);
         Some(format!(
             "transform: translate(0px, 0px); {SORTABLE_SETTLE_FROM}: {}; animation: {SORTABLE_SETTLE} {} {};",
             translate(from),
@@ -702,5 +709,6 @@ pub(super) fn use_board_card(
         dragging,
         offset,
         settle,
+        settled: use_hook(|| CopyValue::new(false)),
     }
 }

@@ -68,6 +68,8 @@ pub struct SortableItemHandle {
     offset: Memo<f64>,
     settle: Memo<Option<f64>>,
     horizontal: Memo<bool>,
+    /// The item has been off its slot or settling since mount.
+    moved: CopyValue<bool>,
 }
 
 impl SortableItemHandle {
@@ -77,8 +79,8 @@ impl SortableItemHandle {
     }
 
     /// The item's inline `style`: a `transform` moving it by [`offset`](Self::offset)
-    /// while it is off its slot (empty at rest), and just after a drop the slide
-    /// from where it was let go into its slot.
+    /// while it is off its slot (at rest empty, `none` once it moved), and just after
+    /// a drop the slide from where it was let go into its slot.
     pub fn style(&self) -> String {
         self.style_by(0.0)
     }
@@ -93,11 +95,18 @@ impl SortableItemHandle {
         };
         // Every declaration closed: the dropped settle var's reset is appended after them (1438).
         // None at rest: an idle transform makes a stacking context and a fixed-position containing block.
-        let mut style = match offset == 0.0 {
-            true => String::new(),
-            false => format!("transform: {};", translate(offset)),
+        let settle = (self.settle)();
+        let mut moved = self.moved;
+        let mut style = match (offset == 0.0, *moved.peek()) {
+            (true, false) => String::new(),
+            // A written style keeps an omitted property's last value: the offset would stay (3039).
+            (true, true) => "transform: none;".to_string(),
+            (false, _) => format!("transform: {};", translate(offset)),
         };
-        if let Some(from) = (self.settle)() {
+        if offset != 0.0 || settle.is_some() {
+            moved.set(true);
+        }
+        if let Some(from) = settle {
             style.push_str(&format!(
                 " {SORTABLE_SETTLE_FROM}: {}; animation: {SORTABLE_SETTLE} {} {};",
                 translate(from),
@@ -1174,6 +1183,7 @@ pub(crate) fn use_spanning_sortable_item(
         offset,
         settle,
         horizontal: context.horizontal,
+        moved: use_hook(|| CopyValue::new(false)),
     }
 }
 

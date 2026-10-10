@@ -269,6 +269,30 @@ pub trait Driver {
         }
         Ok(())
     }
+    /// Returns once the page ran every event queued before this call, with the render and
+    /// effects it caused: a script `click()` on the fixture shell's hidden `#e2e-flush`, so no
+    /// focus, pointer or hover moves. For a check that something did *not* happen; a timer,
+    /// a frame or a pending read needs its own wait (todo 3064). Not covered: a spawned task
+    /// that awaits JS (an eval, a promise) resumes after the round trip, so may land later.
+    async fn flush(&mut self) -> Result<()>
+    where
+        Self: Sized,
+    {
+        const FLUSH: &str = "document.getElementById('e2e-flush')";
+        let seen = self
+            .evaluate(&format!("{FLUSH}?.dataset.flushes ?? null"))
+            .await?;
+        let seen: u32 = seen
+            .as_str()
+            .context("no #e2e-flush: the page is not in the fixture shell")?
+            .parse()?;
+        self.evaluate(&format!("{FLUSH}.click()")).await?;
+        let next = (seen + 1).to_string();
+        eventually(self, "a flush round trip", async |d| {
+            Ok(d.evaluate(&format!("{FLUSH}.dataset.flushes")).await? == next.as_str())
+        })
+        .await
+    }
     /// Waits until the page drew a frame and settled: what a frame delivers (an observer's
     /// report, a scroll event) has landed.
     async fn frame(&mut self) -> Result<()>;

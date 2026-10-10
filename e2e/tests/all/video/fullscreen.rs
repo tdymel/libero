@@ -159,7 +159,7 @@ async fn tab_out_leaves_pseudo<D: Driver>(d: &mut D, _route: &str) -> Result<()>
     .await?;
     d.focus(PLAY).await?;
     d.press(keyboard::TAB).await?;
-    d.settle().await?;
+    d.flush().await?;
     let inside = d.attr("#player [role=group]", "data-fullscreen").await?;
     anyhow::ensure!(pseudo_state(inside), "a Tab inside the player left the box");
     d.focus("#player button[aria-label='Exit fullscreen']")

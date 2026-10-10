@@ -241,7 +241,7 @@ fn Page(segments: Vec<String>) -> Element {
     }
 }
 
-/// Wraps every fixture in the provider and the ready marker, nothing else: `dx` serves a 404
+/// Wraps every fixture in the provider, the ready marker and the flush counter: `dx` serves a 404
 /// placeholder at a success status during its first build, so the harness waits for the marker.
 // Marker outside the provider: axe is scoped to it, and portals render beside the provider's children.
 #[component]
@@ -256,7 +256,23 @@ fn Fixture(children: Element) -> Element {
                 LiberoProvider {
                     div { padding: "24px", {children.clone()} }
                 }
+                Flush {}
             }
+        }
+    }
+}
+
+/// `e2e::driver::Driver::flush`'s counter: a script `click()` bumps it after every event queued
+/// before. Hidden, so no tab stop, no accessibility node and no layout.
+#[component]
+fn Flush() -> Element {
+    let mut flushes = use_signal(|| 0u32);
+    rsx! {
+        div {
+            id: "e2e-flush",
+            hidden: true,
+            "data-flushes": "{flushes}",
+            onclick: move |_| flushes += 1,
         }
     }
 }

@@ -221,6 +221,15 @@ impl Driver for Native {
         Ok(self.page.focus_owner())
     }
 
+    /// Every dispatch already polls the vdom dry; one more poll runs what a read queued.
+    async fn flush(&mut self) -> Result<()>
+    where
+        Self: Sized,
+    {
+        self.page.settle();
+        Ok(())
+    }
+
     /// No paint to await: the harness resolves on demand, so a frame is one 16 ms step of the
     /// animation clock, as Blitz's own frame timer heals and redraws (todo 1667).
     async fn frame(&mut self) -> Result<()> {

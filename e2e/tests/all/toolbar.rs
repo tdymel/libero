@@ -220,7 +220,7 @@ async fn leaving_the_bar_forgets_the_editor<D: Driver>(d: &mut D, _route: &str) 
     d.click("#italic").await?;
     eventually_focused(d, "#italic", "a click back in").await?;
     d.press(keyboard::ESCAPE).await?;
-    d.settle().await?;
+    d.flush().await?;
     eventually_focused(d, "#italic", "Escape after leaving").await
 }
 

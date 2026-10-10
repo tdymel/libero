@@ -328,7 +328,7 @@ async fn an_ignored_move_leaves_no_refocus<D: Driver>(d: &mut D, _route: &str) -
     d.focus("#rotate").await?;
     d.press(keyboard::ENTER).await?;
     eventually_text(d, "#order", "Delta Alpha Beta Gamma", "the rotate").await?;
-    d.settle().await?;
+    d.flush().await?;
     eventually_focused(d, "#rotate", "a reorder after an ignored move").await?;
     Ok(())
 }
