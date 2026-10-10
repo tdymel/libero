@@ -102,6 +102,8 @@ document.addEventListener('selectionchange', report);
 // next key: input right after a press goes with its selection, until the model acks it (todo 2062).
 // `fresh`: the DOM selection is a press's until a key or a model caret (todo 2072).
 let pressed = false, fresh = false, held = 0, lastKey = '';
+// Shift on the last Enter, which an IME may report as `Process`: its "\n" breaks the line (todo 3113).
+let shiftEnter = false;
 // A press outside, as the toolbar's, reports the fresh press at once: its `selectionchange`
 // may come after the command runs (todo 2624).
 document.addEventListener('mousedown', (e) => {
@@ -115,6 +117,7 @@ document.addEventListener('mousedown', (e) => {
 const native = ['Control', 'Meta', 'Shift', 'Alt', 'AltGraph', 'CapsLock', 'Process', 'Unidentified', 'Dead'];
 document.addEventListener('keydown', (e) => {
     lastKey = e.key;
+    if (e.key === 'Enter' || e.key === 'Process') shiftEnter = e.shiftKey;
     fresh = false;
     const mod = e.ctrlKey || e.metaKey;
     if (!held || e.target !== root() || e.isComposing || native.includes(e.key)
@@ -214,7 +217,7 @@ while (true) {
     if (!r) continue;
     if (m.read !== undefined) {
         const l = leaf(m.read);
-        if (l) dioxus.send({ text: [m.read, text(l)] });
+        if (l) dioxus.send({ text: [m.read, text(l)], shift: shiftEnter });
     }
     if (m.select) {
         fresh = false;
@@ -242,6 +245,9 @@ pub(crate) struct Report {
     pub caret: Option<Caret>,
     /// A leaf's key and its DOM text, asked for by [`Surface::read`].
     pub text: Option<(u64, String)>,
+    /// With `text`: Shift was held on the last Enter, so a composed "\n" is no send.
+    #[serde(default)]
+    pub shift: bool,
     /// An arrow key left a leaf toward this rendered code block; `true` enters at its end.
     pub code: Option<(u64, bool)>,
     /// ArrowDown on the last line of a trailing code block.

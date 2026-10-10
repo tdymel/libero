@@ -10,8 +10,8 @@
 use super::doc::{Block, BlockKind, Doc, Inline};
 use super::mark::{Mark, Marks};
 use super::syntax::{
-    BlockSyntax, DELIMITERS, block_syntax, brackets, closing_span, link_closed_at, task_box,
-    valid_inner,
+    BlockSyntax, DELIMITERS, block_syntax, brackets, closing_span, code_span, link_closed_at,
+    task_box,
 };
 
 impl Doc {
@@ -283,12 +283,6 @@ fn replay(cells: Vec<Cell>) -> Vec<Cell> {
         }
     }
     out
-}
-
-/// The closing backtick of a code span opening at `at`.
-fn code_span(chars: &[char], at: usize) -> Option<usize> {
-    let end = at + 1 + chars[at + 1..].iter().position(|c| *c == '`')?;
-    valid_inner(&chars[at + 1..end], "`").then_some(end)
 }
 
 /// A [`TAG_MARKS`] tag at `at`: its index, whether it opens, and the index after it.

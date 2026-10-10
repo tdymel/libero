@@ -738,8 +738,9 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                 syncing.set(false);
             }
             if let Some((key, text)) = report.text {
-                let sends =
-                    submit.peek().is_some_and(|(_, on)| on == SubmitOn::Enter) && *can_edit.peek();
+                let sends = submit.peek().is_some_and(|(_, on)| on == SubmitOn::Enter)
+                    && *can_edit.peek()
+                    && !report.shift;
                 let entered = reconcile(editor, NodeKey(key), &text, sends, &mut changed);
                 // Enter in a composed word arrives as its "\n": send after the word is in.
                 if entered && !try_submit(&KeyPress::new("Enter")) {
@@ -1582,8 +1583,8 @@ fn enter_code(mut editor: CopyValue<LiveEditor>, key: NodeKey, at_end: bool) {
 }
 
 /// Takes the text the browser composed into leaf `key` into the model, cut to `max_length`.
-/// With `enter_sends`, a trailing "\n" is Enter pressed in the word: it is left out and
-/// `true` says so.
+/// With `enter_sends`, a "\n" ending the composed text is Enter pressed in the word: it is
+/// left out and `true` says so.
 fn reconcile(
     mut editor: CopyValue<LiveEditor>,
     key: NodeKey,
@@ -1595,7 +1596,7 @@ fn reconcile(
         return false;
     };
     let (dom, entered) = split_enter(&old, dom, enter_sends);
-    let Some((from, to, inserted)) = text_diff(&old, dom) else {
+    let Some((from, to, inserted)) = text_diff(&old, &dom) else {
         return entered;
     };
     let before = editor.peek().doc().clone();

@@ -1,6 +1,8 @@
 //! What a `beforeinput` asks for, by its `inputType`. Everything the model does not
 //! handle is cancelled; only composition reaches the DOM (it cannot be cancelled).
 
+use std::borrow::Cow;
+
 use super::model::{Builtin, Chord, EditorState, KeyPress};
 
 /// The key that sends a [`RichTextEditor`](super::RichTextEditor)'s `onsubmit`.
@@ -108,12 +110,19 @@ pub(crate) fn intent(input_type: &str, data: Option<String>) -> Intent {
     }
 }
 
-/// Enter pressed inside a composed word reaches the leaf as a trailing "\n": with
-/// `enter_sends` it is split off from the text `dom` and `true` says Enter was pressed.
-pub(crate) fn split_enter<'a>(old: &str, dom: &'a str, enter_sends: bool) -> (&'a str, bool) {
-    match dom.strip_suffix('\n') {
-        Some(rest) if enter_sends && !old.ends_with('\n') => (rest, true),
-        _ => (dom, false),
+/// Enter pressed inside a composed word reaches the leaf as a "\n" ending the text it
+/// added to `old`: with `enter_sends` it is cut from `dom` and `true` says Enter was pressed.
+pub(crate) fn split_enter<'a>(old: &str, dom: &'a str, enter_sends: bool) -> (Cow<'a, str>, bool) {
+    match text_diff(old, dom) {
+        Some((from, _, inserted)) if enter_sends && inserted.ends_with('\n') => {
+            let at = from + inserted.chars().count() - 1;
+            let rest = dom
+                .chars()
+                .enumerate()
+                .filter_map(|(i, c)| (i != at).then_some(c));
+            (rest.collect(), true)
+        }
+        _ => (Cow::Borrowed(dom), false),
     }
 }
 
@@ -188,11 +197,23 @@ mod tests {
 
     #[test]
     fn a_composed_words_trailing_newline_is_enter_only_when_enter_sends() {
-        assert_eq!(split_enter("hel", "hello\n", true), ("hello", true));
-        assert_eq!(split_enter("hel", "hello\n", false), ("hello\n", false));
-        assert_eq!(split_enter("hel", "hello", true), ("hello", false));
-        assert_eq!(split_enter("hello\n", "hello\n", true), ("hello\n", false));
-        assert_eq!(split_enter("", "\n", true), ("", true));
+        let split = |old, dom, sends| {
+            let (text, entered) = split_enter(old, dom, sends);
+            (text.into_owned(), entered)
+        };
+        assert_eq!(split("hel", "hello\n", true), ("hello".into(), true));
+        assert_eq!(split("hel", "hello\n", false), ("hello\n".into(), false));
+        assert_eq!(split("hel", "hello", true), ("hello".into(), false));
+        assert_eq!(split("hello\n", "hello\n", true), ("hello\n".into(), false));
+        assert_eq!(split("", "\n", true), ("".into(), true));
+        // After a hard break the composed word's "\n" is new (todo 3112).
+        assert_eq!(split("hi\n", "hi\n日本\n", true), ("hi\n日本".into(), true));
+        // A word composed before a trailing hard break keeps the break.
+        assert_eq!(
+            split("hello\n", "he日llo\n", true),
+            ("he日llo\n".into(), false)
+        );
+        assert_eq!(split("ab\n", "ab日\n\n", true), ("ab日\n".into(), true));
     }
 
     #[test]

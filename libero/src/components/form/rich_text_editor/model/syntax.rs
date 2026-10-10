@@ -152,6 +152,8 @@ pub(super) fn link(chars: &[char], at: usize) -> Option<(usize, usize, Mark)> {
     loop {
         match *chars.get(close)? {
             '\\' => close += 1,
+            // A `]` in a code span closes nothing (todo 3114).
+            '`' => close = code_span(chars, close).unwrap_or(close),
             '[' => depth += 1,
             ']' if depth == 0 => break,
             ']' => depth -= 1,
@@ -170,6 +172,7 @@ pub(super) fn brackets(chars: &[char]) -> HashMap<usize, usize> {
     while i < chars.len() {
         match chars[i] {
             '\\' => i += 1,
+            '`' => i = code_span(chars, i).unwrap_or(i),
             '[' => open.push(i),
             ']' => {
                 if let Some(at) = open.pop() {
@@ -181,6 +184,12 @@ pub(super) fn brackets(chars: &[char]) -> HashMap<usize, usize> {
         i += 1;
     }
     closes
+}
+
+/// The closing backtick of a code span opening at `at`.
+pub(super) fn code_span(chars: &[char], at: usize) -> Option<usize> {
+    let end = at + 1 + chars[at + 1..].iter().position(|c| *c == '`')?;
+    valid_inner(&chars[at + 1..end], "`").then_some(end)
 }
 
 /// [`link`] with its `]` already found.

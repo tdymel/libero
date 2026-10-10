@@ -1,6 +1,6 @@
 use super::md;
 use crate::components::form::rich_text_editor::model::{
-    BlockKind, Doc, Href, Inline, Mark, MarkKind, NodeRegistry, NodeSpec,
+    BlockKind, Doc, Href, Inline, Mark, MarkKind, Marks, NodeRegistry, NodeSpec,
 };
 
 /// Markdown whose model must survive `emit` then `parse` unchanged.
@@ -29,6 +29,7 @@ const CORPUS: &[&str] = &[
     "<https://auto.example> <mail@example.com>",
     "[spaces](<https://a.example/x y>)",
     "[parens](https://a.example/(x))",
+    "[`]`](https://example.com)",
     "> quote\n>\n> > nested",
     "> # heading in quote\n>\n> - list in quote",
     "- a\n- b\n- c",
@@ -360,6 +361,23 @@ fn random_marked_runs_round_trip() {
         "{} of 500 failed, e.g. {:#?}",
         failures.len(),
         &failures[..failures.len().min(8)]
+    );
+}
+
+#[test]
+fn a_bracket_in_a_code_span_does_not_close_the_link_text() {
+    let doc = Doc::from_markdown("[`]`](https://example.com) and [a `]` b](https://example.com)");
+    let link = Mark::link("https://example.com").unwrap();
+    let code_link: Marks = [Mark::Code, link.clone()].into_iter().collect();
+    assert_eq!(
+        doc.blocks[0].inlines(),
+        [
+            Inline::marked("]", code_link.clone()),
+            Inline::text(" and "),
+            Inline::marked("a ", [link.clone()].into_iter().collect()),
+            Inline::marked("]", code_link),
+            Inline::marked(" b", [link].into_iter().collect()),
+        ]
     );
 }
 
