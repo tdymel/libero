@@ -260,7 +260,10 @@ pub fn NavLink(props: NavLinkProps) -> Element {
         .with("disabled", disabled)
         .with("active", is_active && !row_draws_current())
         .into();
-    let aria_current = is_active.then_some("page");
+    // On a live link, an explicit `active: false` overrides the router `Link`'s own `aria-current`.
+    let aria_current = is_active
+        .then_some("page")
+        .or_else(|| props.active.filter(|_| !disabled).map(|_| "false"));
 
     let scroll_into_view = props.scroll_into_view.unwrap_or(false);
     let element = use_element();

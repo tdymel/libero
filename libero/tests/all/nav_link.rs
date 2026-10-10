@@ -22,6 +22,22 @@ fn nav_link_renders_a_link_with_its_active_background() {
     assert_eq!(attributes["aria-current"], "page");
 }
 
+/// Without a router, an external link gets the `rel` the router's `Link` would set.
+#[test]
+fn an_external_link_without_a_router_isolates_the_new_tab() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                NavLink { to: "https://example.com", target: "_blank", "Docs" }
+                NavLink { id: "inside", to: "/docs", "Inside" }
+            }
+        }
+    }
+
+    let html = render(app);
+    assert_eq!(html.matches("noopener noreferrer").count(), 1, "{html}");
+}
+
 /// Disabling the current page's link still marks it as the current page.
 #[test]
 fn an_active_disabled_nav_link_keeps_aria_current() {

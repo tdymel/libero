@@ -425,6 +425,8 @@ pub fn BottomNavigationItem(props: BottomNavigationItemProps) -> Element {
         span { "data-slot": "label", {props.children} }
     };
     let aria_current = selected.then_some("page");
+    // An explicit `selected: false` overrides the router `Link`'s own `aria-current` on its route.
+    let link_current = aria_current.or_else(|| props.selected.map(|_| "false"));
     let mut attributes = props.attributes;
     attributes.push(attr("data-slot", "item"));
 
@@ -437,8 +439,8 @@ pub fn BottomNavigationItem(props: BottomNavigationItemProps) -> Element {
             .attr("aria-current", aria_current)
             .render(HtmlTag::A, attributes, body),
         Some(to) => {
-            if let Some(aria_current) = aria_current {
-                attributes.push(attr("aria-current", aria_current));
+            if let Some(link_current) = link_current {
+                attributes.push(attr("aria-current", link_current));
             }
             render_anchor(
                 style_attributes,

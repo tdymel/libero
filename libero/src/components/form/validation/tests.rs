@@ -312,6 +312,37 @@ fn the_summary_lists_field_errors_and_composite_errors() {
     assert!(summary[1].target.is_none());
 }
 
+#[test]
+fn a_named_composite_summary_line_carries_the_target_fields_label() {
+    fn app() -> Element {
+        let signup = use_store(|| Signup {
+            password: "a".into(),
+            confirm: "b".into(),
+        });
+        rsx! {
+            LiberoProvider {
+                Form {
+                    value: signup,
+                    validate: [
+                        (|s: &Signup| s.password == s.confirm)
+                            .error("They differ")
+                            .on([crate::path!(Signup => confirm)]),
+                    ],
+                    Spy {}
+                    TextField { label: "Confirm", name: "confirm", value: "b" }
+                    TextField { name: "password", value: "a" }
+                }
+            }
+        }
+    }
+
+    let (dom, _) = mount(app);
+    let summary = dom.in_runtime(|| scope(&dom).summary());
+    let messages: Vec<_> = summary.iter().map(|item| item.message.as_str()).collect();
+    assert_eq!(messages, ["Confirm: They differ"]);
+    assert!(summary[0].target.is_some());
+}
+
 #[derive(Clone, PartialEq, Default)]
 struct Order {
     email: String,

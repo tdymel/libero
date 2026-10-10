@@ -128,6 +128,27 @@ fn rtl_puts_the_first_item_at_the_right() {
     });
 }
 
+/// An explicit `selected: false` on the current route overrides the router's `aria-current="page"`.
+#[test]
+fn an_unselected_link_to_the_current_route_is_not_the_current_page() {
+    block_on(async {
+        let fixture = Fixture::open("/bottom-navigation/unselected", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#not-current").await.unwrap();
+
+        let current = js::<String>(
+            page,
+            "document.querySelector('#not-current').getAttribute('aria-current')",
+        )
+        .await;
+        assert_eq!(current, "false");
+
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The name comes from the label, the badge's count from the caller's
 /// `aria-label`; the icon stays out of the tree.
 #[test]

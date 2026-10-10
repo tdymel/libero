@@ -403,6 +403,25 @@ fn a_query_on_the_address_keeps_the_route_link_current() {
     });
 }
 
+/// An explicit `active: false` on the current route overrides the router's `aria-current="page"`.
+#[test]
+fn an_inactive_link_to_the_current_route_is_not_the_current_page() {
+    block_on(async {
+        let fixture = Fixture::open("/nav-link/states", Viewport::Desktop)
+            .await
+            .unwrap();
+        let current = fixture
+            .page
+            .evaluate("document.querySelector('#not-current').getAttribute('aria-current')")
+            .await
+            .unwrap()
+            .into_value::<Option<String>>()
+            .unwrap();
+        assert_eq!(current.as_deref(), Some("false"));
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The description's contrast against the surface under it, as a string `"4.52"`.
 fn description_ratio(id: &str) -> String {
     format!(

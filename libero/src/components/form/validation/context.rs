@@ -287,11 +287,10 @@ impl FormScope {
     /// composite error - each linked to the first field it names.
     pub fn summary(&self) -> Vec<SummaryItem> {
         let fields = self.fields.peek();
-        let id_of = |name: &str| {
+        let named = |name: &str| {
             fields
                 .values()
                 .find(|field| field.name.as_deref() == Some(name))
-                .map(|field| field.id.clone())
         };
 
         let mut items: Vec<SummaryItem> = fields
@@ -314,10 +313,16 @@ impl FormScope {
                     continue;
                 };
                 let item = match issue.paths.first() {
-                    Some(path) => SummaryItem {
-                        message: message.clone(),
-                        target: id_of(path),
-                    },
+                    Some(path) => {
+                        let target = named(path);
+                        SummaryItem {
+                            message: match target.and_then(|field| field.label.as_ref()) {
+                                Some(label) => format!("{label}: {message}"),
+                                None => message.clone(),
+                            },
+                            target: target.map(|field| field.id.clone()),
+                        }
+                    }
                     // A `Fieldset`'s own rule: its entry shares the key, so the line goes to the group.
                     None => match fields.get(key) {
                         Some(group) => SummaryItem {

@@ -96,9 +96,13 @@ pub(crate) fn render_anchor(
 
     // Attached only when the caller wants it: an unused listener still costs a
     // diff every render, and on a WebView a blocking round trip (todo 2986).
+    // Without a router every string is `External`, so only an absolute URL counts as one.
+    let rel = matches!(&to, NavigationTarget::External(url) if url.contains("://") || url.starts_with("//"))
+        .then_some("noopener noreferrer");
     let mut anchor = match router {
         Some(router) => routed(box_style(style_attributes), router, to, is_blank),
         None => box_style(style_attributes)
+            .attr_default("rel", rel)
             .attr("href", navigation_target_href(to))
             .attr("target", target),
     };

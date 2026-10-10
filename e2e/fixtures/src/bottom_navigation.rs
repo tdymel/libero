@@ -11,7 +11,21 @@ pub const ROUTES: Routes = &[
     ("/bottom-navigation", || rsx! { BottomNavigationPage {} }),
     ("/bottom-navigation/fixed", || rsx! { FixedPage {} }),
     ("/bottom-navigation/scroller", || rsx! { ScrollerPage {} }),
+    ("/bottom-navigation/unselected", || rsx! { UnselectedPage {} }),
 ];
+
+/// A link to the page it is on, with `selected: false`.
+#[component]
+fn UnselectedPage() -> Element {
+    rsx! {
+        BottomNavigation { "aria-label": "Links",
+            BottomNavigationItem { id: "not-current", to: "/bottom-navigation/unselected", selected: false,
+                icon: rsx! { Pictogram { icon: lucide::house::outlined } },
+                "Same"
+            }
+        }
+    }
+}
 
 /// `/bottom-navigation/fixed`'s `#link-0..`, past any viewport's height.
 const LINKS: usize = 30;

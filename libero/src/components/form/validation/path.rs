@@ -49,7 +49,8 @@ pub struct FieldPath<Root, T> {
 
 impl<Root, T> FieldPath<Root, T> {
     /// A path by its spelling alone. It posts and names fields, but carries no
-    /// field access, so it cannot bind a field to a form's value.
+    /// field access, so it cannot bind a field to a form's value, except the
+    /// empty spelling, which binds the whole value.
     pub const fn new(path: &'static str) -> Self {
         Self::from_parts(path, &[])
     }
