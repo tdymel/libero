@@ -305,8 +305,8 @@ fn NumberFieldShell<T: NumberValue>(
             buffer.set(None);
         })
         .event("onkeydown", move |event: KeyboardEvent| {
-            // Ctrl+PageDown switches tabs, Ctrl+ArrowUp moves the caret.
-            if navigation_chord(&event).is_some() {
+            // A composing arrow picks an IME candidate; Ctrl+PageDown switches tabs, Ctrl+ArrowUp moves the caret.
+            if event.is_composing() || navigation_chord(&event).is_some() {
                 return;
             }
             let steps = match event.key() {

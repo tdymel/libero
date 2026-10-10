@@ -468,6 +468,52 @@ fn a_narrowing_search_says_its_result_count() {
     });
 }
 
+/// Todo 3033: an arrow the IME is composing picks a candidate in the search box, so it
+/// leaves the cursor alone; the plain arrow after it moves it.
+#[test]
+fn composing_arrows_leave_the_search_cursor_alone() {
+    block_on(async {
+        let fixture = Fixture::open("/cascader/search", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.activeElement === document.querySelector({SEARCH:?})"),
+            "the search box to take focus",
+        )
+        .await
+        .unwrap();
+        keyboard::type_text(page, "a").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelectorAll('[role=option]').length > 0",
+            "the matches",
+        )
+        .await
+        .unwrap();
+        let before: String = page.evaluate(CURSOR).await.unwrap().into_value().unwrap();
+        keyboard::press_composing(page, SEARCH, &["ArrowDown", "ArrowDown"])
+            .await
+            .unwrap();
+        crate::settle::painted(page).await.unwrap();
+        let after: String = page.evaluate(CURSOR).await.unwrap().into_value().unwrap();
+        assert_eq!(after, before, "a composing arrow moved the cursor");
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{CURSOR} !== {before:?}"),
+            "the plain ArrowDown to move the cursor",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("composing arrows").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The open search box carries the field's label, captions and states.
 #[test]
 fn the_open_search_box_is_announced_as_the_field() {

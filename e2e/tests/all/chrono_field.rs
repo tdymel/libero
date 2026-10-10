@@ -8,6 +8,50 @@ use e2e::{Fixture, Suite, Viewport, wait};
 
 const INPUT: &str = "input[data-controlled]";
 
+/// Todo 3033: an Enter the IME is composing picks a candidate, so the typed text is
+/// not committed yet; the plain Enter after it is.
+#[test]
+fn a_composing_enter_does_not_commit_the_typed_month() {
+    block_on(async {
+        let fixture = Fixture::open("/chrono-field/month", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        keyboard::tab_to(page, INPUT, 5).await.unwrap();
+        let before: String = page
+            .evaluate("document.querySelector('#readout').textContent.trim()")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        page.evaluate(format!("document.querySelector({INPUT:?}).select()"))
+            .await
+            .unwrap();
+        keyboard::type_text(page, "9/2026").await.unwrap();
+        keyboard::press_composing(page, INPUT, &["Enter"])
+            .await
+            .unwrap();
+        crate::settle::painted(page).await.unwrap();
+        expect(
+            page,
+            &readout_is(&before),
+            "a composing Enter to commit nothing",
+        )
+        .await;
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        expect(
+            page,
+            &readout_is("2026-09-01"),
+            "the plain Enter to commit 9/2026",
+        )
+        .await;
+
+        fixture.console.assert_clean("a composing Enter").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn a_typed_month_is_held_as_its_first_day() {
     block_on(async {

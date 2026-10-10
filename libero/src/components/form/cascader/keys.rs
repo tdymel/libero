@@ -41,7 +41,8 @@ pub(super) struct CascaderKeys {
 
 impl CascaderKeys {
     pub(super) fn handle(&self, event: KeyboardEvent) {
-        if self.disabled {
+        // A composing key picks an IME candidate in the search box (todo 3033).
+        if self.disabled || event.is_composing() {
             return;
         }
         // APG: Alt+ArrowDown opens in place, Alt+ArrowUp closes; other chords aren't ours.

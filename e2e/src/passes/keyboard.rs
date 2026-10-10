@@ -242,6 +242,28 @@ pub async fn insert_text(page: &Page, text: &str) -> Result<()> {
     Ok(())
 }
 
+/// A keydown per key name on `selector` with `isComposing` set, as an IME sends one while it
+/// picks a candidate. CDP cannot compose, so the event is dispatched from the page.
+pub async fn press_composing(page: &Page, selector: &str, keys: &[&str]) -> Result<()> {
+    let (sel, keys) = (
+        serde_json::to_string(selector)?,
+        serde_json::to_string(keys)?,
+    );
+    let sent: bool = page
+        .evaluate(format!(
+            "(() => {{ const el = document.querySelector({sel}); if (!el) return false; \
+             for (const key of {keys}) el.dispatchEvent(new KeyboardEvent('keydown', \
+             {{ key, code: key, isComposing: true, bubbles: true, cancelable: true }})); \
+             return true; }})()"
+        ))
+        .await?
+        .into_value()?;
+    if !sent {
+        bail!("no {selector} to send composing keys to");
+    }
+    Ok(())
+}
+
 /// Ctrl, Alt and Meta with each of `keys` leave `probe` (a JS expression) unchanged and are
 /// not cancelled: the chord is the browser's, as for a native control.
 pub async fn assert_chords_ignored(page: &Page, keys: &[Key], probe: &str) -> Result<()> {

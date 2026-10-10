@@ -459,8 +459,9 @@ impl PinEdit {
     fn keys(&self, index: usize, event: Event<KeyboardData>) {
         let (length, readonly) = (self.length, self.readonly);
         let modified = event.modifiers().ctrl() || event.modifiers().meta();
+        // A composing key edits the IME's candidate, not the cell (todo 3033).
         // Ctrl/Alt/Meta+arrow, Home or End is the caret's or the browser's.
-        if navigation_chord(&event).is_some() {
+        if event.is_composing() || navigation_chord(&event).is_some() {
             return;
         }
         match event.key() {

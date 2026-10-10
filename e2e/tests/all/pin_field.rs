@@ -29,6 +29,50 @@ e2e::scenario!(
     one_digit_per_cell
 );
 
+/// Todo 3033: a composing Backspace edits the IME's candidate, so it neither clears a
+/// cell nor moves focus; the plain Backspace after it does.
+#[test]
+fn a_composing_backspace_leaves_the_cells_alone() {
+    block_on(async {
+        let fixture = Fixture::open("/pin-field/echo", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        e2e::passes::pointer::click(page, CELL).await.unwrap();
+        keyboard::type_text(page, "12").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#echo').textContent === '12'",
+            "typing 12",
+        )
+        .await
+        .unwrap();
+        e2e::passes::focus::wait_for_focus(page, "[data-pin-index='2']", "two digits")
+            .await
+            .unwrap();
+        keyboard::press_composing(page, "[data-pin-index='1']", &["Backspace"])
+            .await
+            .unwrap();
+        crate::settle::painted(page).await.unwrap();
+        let held: String = page
+            .evaluate("document.querySelector('#echo').textContent")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(held, "12", "a composing Backspace cleared a cell");
+        e2e::passes::focus::wait_for_focus(page, "[data-pin-index='2']", "a composing Backspace")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::BACKSPACE).await.unwrap();
+        e2e::passes::focus::wait_for_focus(page, "[data-pin-index='1']", "the plain Backspace")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("composing Backspace").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 1564: a cell-to-cell move stays inside the field, so the rule waits until Tab
 /// leaves the cells. Web only: a WebView cannot tell, and touches on any move.
 #[test]

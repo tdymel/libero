@@ -452,6 +452,8 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         .event("onclick", move |_: MouseEvent| opened.set(true))
         .event("onblur", focus.focusout(0))
         .event("onkeydown", move |event: KeyboardEvent| match event.key() {
+            // A composing key picks an IME candidate, it is not a command.
+            _ if event.is_composing() => {}
             // Focus stays, and the error line is no live region.
             Key::Enter if unparsable() => {
                 rejected.set(true);

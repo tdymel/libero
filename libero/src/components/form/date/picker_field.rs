@@ -530,7 +530,8 @@ pub(super) fn use_picker_field<V: FieldValue>(
         })
         .event("onblur", focus.focusout(0))
         .event("onkeydown", move |event: KeyboardEvent| match event.key() {
-            _ if readonly => {}
+            // A composing Enter picks an IME candidate, it does not commit the draft.
+            _ if readonly || event.is_composing() => {}
             Key::Enter => {
                 if let Some(error) = commit_on_enter() {
                     announcer.say(error);

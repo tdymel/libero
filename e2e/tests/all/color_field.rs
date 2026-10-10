@@ -139,6 +139,45 @@ fn the_picker_thumbs_are_named_with_their_units() {
     });
 }
 
+/// Todo 3033: an Enter the IME is composing picks a candidate, so the half-typed text is
+/// not judged yet; the plain Enter after it is.
+#[test]
+fn a_composing_enter_does_not_judge_the_text() {
+    block_on(async {
+        let fixture = Fixture::open("/color-field/alpha", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, INPUT, 5).await.unwrap();
+        page.evaluate(format!("document.querySelector({INPUT:?}).select()"))
+            .await
+            .unwrap();
+        keyboard::type_text(page, "nope").await.unwrap();
+        keyboard::press_composing(page, INPUT, &["Enter"])
+            .await
+            .unwrap();
+        crate::settle::painted(page).await.unwrap();
+        let judged: bool = page
+            .evaluate(format!(
+                "document.querySelector({INPUT:?}).getAttribute('aria-invalid') === 'true'"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(!judged, "a composing Enter marked the text invalid");
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        expect(
+            page,
+            &format!("document.querySelector({INPUT:?}).getAttribute('aria-invalid') === 'true'"),
+            "the plain Enter to mark the text invalid",
+        )
+        .await;
+        fixture.console.assert_clean("a composing Enter").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 552: Enter on text that is no color marks the field invalid, shows the
 /// error and says it, while focus stays; the next keystroke clears it.
 #[test]

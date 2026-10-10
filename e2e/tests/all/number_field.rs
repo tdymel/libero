@@ -120,6 +120,40 @@ fn a_stepper_press_keeps_the_focus_on_the_field() {
     });
 }
 
+/// Todo 3033: an arrow the IME is composing picks a candidate, so it does not step the
+/// value; the plain arrow after it does.
+#[test]
+fn composing_arrows_do_not_step_the_value() {
+    block_on(async {
+        let fixture = Fixture::open("/number-field/echo", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, SPIN).await.unwrap();
+        keyboard::press_composing(page, SPIN, &["ArrowUp", "ArrowDown", "PageUp"])
+            .await
+            .unwrap();
+        crate::settle::painted(page).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#echo').textContent === '3'",
+            "the value kept through composing arrows",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::ARROW_UP).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#echo').textContent === '4'",
+            "the plain ArrowUp",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("composing arrows").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("number_field", "/number-field")
