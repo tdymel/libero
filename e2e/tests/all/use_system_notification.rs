@@ -8,7 +8,7 @@ use chromiumoxide::cdp::browser_protocol::browser::{
     PermissionDescriptor, PermissionSetting, SetPermissionParams,
 };
 use e2e::browser::{PERMISSIONS, block_on};
-use e2e::driver::{Driver, Platform, eventually, eventually_text};
+use e2e::driver::{Driver, Host, Platform, eventually, eventually_text, record_outcome};
 use e2e::passes::pointer;
 use e2e::{Fixture, Viewport, wait};
 
@@ -66,6 +66,22 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
             .await?;
             d.click("#subscribe").await?;
             eventually_text(d, "#push-error", "Some(Unsupported)", "a subscribe").await?;
+        }
+        // The page's `Notification` in WKWebView and WebView2, unpinned until the platform
+        // probe answered (todo 1239): a permission at all, recorded; no `Notification` is
+        // unsupported as on Linux.
+        Platform::Desktop if Host::current() != Host::Linux => {
+            eventually(d, "a permission state", async |d| {
+                Ok(d.text("#permission").await? != "Unknown")
+            })
+            .await?;
+            let shown = ["#supported", "#permission"];
+            record_outcome(d, "use_system_notification", &shown).await?;
+            if d.text("#supported").await? == "false" {
+                eventually_text(d, "#permission", "Unsupported", "mount").await?;
+                d.click("#show").await?;
+                eventually_text(d, "#error", "Some(Unsupported)", "a show").await?;
+            }
         }
         // Blitz and the WebView on Linux (1470) ask the session's notification
         // server; without one it is unsupported.

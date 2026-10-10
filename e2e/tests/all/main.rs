@@ -91,6 +91,7 @@ mod picker_parts;
 mod pictogram;
 mod pin_field;
 mod planted;
+mod platform_probe;
 mod polymorphic;
 mod popover;
 mod progress_bar;

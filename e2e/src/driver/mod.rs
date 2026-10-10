@@ -27,6 +27,27 @@ pub enum Platform {
     Ios,
 }
 
+/// The OS the suite runs on: [`Platform::Desktop`]'s WebView is WebKitGTK, WKWebView or
+/// WebView2 by it, so a desktop arm branches on it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Host {
+    Linux,
+    Macos,
+    Windows,
+}
+
+impl Host {
+    pub const fn current() -> Self {
+        if cfg!(target_os = "macos") {
+            Self::Macos
+        } else if cfg!(windows) {
+            Self::Windows
+        } else {
+            Self::Linux
+        }
+    }
+}
+
 /// A `getBoundingClientRect()` in CSS px.
 #[derive(Clone, Copy, Debug, Default, PartialEq, serde::Deserialize)]
 pub struct Rect {
@@ -375,6 +396,25 @@ pub async fn eventually_text<D: Driver>(
     Ok(())
 }
 
+/// Appends `selectors`' texts as one line to `outcomes.log` in the run's artifacts (and
+/// stderr), for an arm that observes a platform's answer before a test pins it.
+pub async fn record_outcome<D: Driver>(d: &mut D, what: &str, selectors: &[&str]) -> Result<()> {
+    let mut line = format!("{what} {:?}/{:?}:", d.platform(), Host::current());
+    for selector in selectors {
+        line.push_str(&format!(" {selector}={:?}", d.text(selector).await?));
+    }
+    eprintln!("{line}");
+    if let Some(dir) = crate::journal::dir() {
+        use std::io::Write;
+        let mut log = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(dir.join("outcomes.log"))?;
+        writeln!(log, "{line}")?;
+    }
+    Ok(())
+}
+
 /// Runs `$body(&mut driver, $route)` as `$name::web`, with the `native`
 /// feature as `$name::native`, with `android` as `$name::android`, with
 /// `desktop` as `$name::desktop`, with `ios` as `$name::ios`. All but native also fail on a
@@ -385,9 +425,16 @@ pub async fn eventually_text<D: Driver>(
 /// `android: skip("958 ...")`, `desktop: skip("1126 ...")`, `ios: skip("2784 ...")` and
 /// `web: skip(..)` do the same for Android, the desktop WebView, the iOS simulator and
 /// Chromium; the skips may follow each other in any order. `android_only("1275 ...")` skips
-/// every arm but Android's.
+/// every arm but Android's. `macos: skip(..)` and `windows: skip(..)` skip the desktop arm on
+/// that [`Host`] only; branch on [`Host::current`] inside the body for a part of it.
 #[macro_export]
 macro_rules! scenario {
+    (@skip $name:ident, $route:expr, $body:ident, $w:tt $n:tt $a:tt [$($d:tt)*] $i:tt; macos: skip($reason:literal) $(, $($rest:tt)*)?) => {
+        $crate::scenario!(@skip $name, $route, $body, $w $n $a [$($d)* #[cfg_attr(target_os = "macos", ignore = $reason)]] $i; $($($rest)*)?);
+    };
+    (@skip $name:ident, $route:expr, $body:ident, $w:tt $n:tt $a:tt [$($d:tt)*] $i:tt; windows: skip($reason:literal) $(, $($rest:tt)*)?) => {
+        $crate::scenario!(@skip $name, $route, $body, $w $n $a [$($d)* #[cfg_attr(windows, ignore = $reason)]] $i; $($($rest)*)?);
+    };
     (@skip $name:ident, $route:expr, $body:ident, $w:tt $n:tt $a:tt $d:tt $i:tt; web: skip($reason:literal) $(, $($rest:tt)*)?) => {
         $crate::scenario!(@skip $name, $route, $body, [#[test] #[ignore = $reason]] $n $a $d $i; $($($rest)*)?);
     };
@@ -489,3 +536,35 @@ pub use ios::Ios;
 
 #[cfg(feature = "ios")]
 pub mod ios;
+
+// Without `desktop`: there the arm the host tokens tag would launch the fixture app.
+#[cfg(all(test, not(feature = "desktop")))]
+mod tests {
+    use super::{Driver, Host};
+
+    async fn nothing<D: Driver>(_: &mut D, _: &str) -> anyhow::Result<()> {
+        Ok(())
+    }
+
+    crate::scenario!(
+        the_host_tokens_expand,
+        "/",
+        nothing,
+        macos: skip("expansion only"),
+        web: skip("expansion only"),
+        windows: skip("expansion only"),
+        native: skip("expansion only"),
+        android: skip("expansion only"),
+        ios: skip("expansion only")
+    );
+
+    #[test]
+    fn the_host_is_the_target_os() {
+        let expected = match std::env::consts::OS {
+            "macos" => Host::Macos,
+            "windows" => Host::Windows,
+            _ => Host::Linux,
+        };
+        assert_eq!(Host::current(), expected);
+    }
+}

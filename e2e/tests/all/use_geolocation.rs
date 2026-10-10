@@ -1,6 +1,7 @@
 //! `use_geolocation`: mounting asks nothing; on the web a granted fix, a
 //! watch that follows it and a denial, from Chromium's emulated position.
-//! Android locates from the emulator's GPS, Linux desktop is denied, Blitz unsupported.
+//! Android locates from the emulator's GPS, Linux desktop is denied, Blitz unsupported;
+//! macOS and Windows desktop answer at all, recorded in `outcomes.log`.
 
 use anyhow::Result;
 use chromiumoxide::Page;
@@ -9,14 +10,20 @@ use chromiumoxide::cdp::browser_protocol::browser::{
 };
 use chromiumoxide::cdp::browser_protocol::emulation::SetGeolocationOverrideParams;
 use e2e::browser::{PERMISSIONS, block_on};
-use e2e::driver::{Driver, Platform, eventually, eventually_text};
+use e2e::driver::{Driver, Host, Platform, eventually, eventually_text, record_outcome};
 use e2e::passes::pointer;
 use e2e::{Fixture, Viewport, wait};
 
 /// Nothing prompts or locates until asked; Blitz has no Geolocation API.
 async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    let supported = (d.platform() != Platform::Native).to_string();
-    eventually_text(d, "#supported", &supported, "mount").await?;
+    // WKWebView and WebView2 are unpinned until the platform probe answered (todo 1227).
+    let unpinned = d.platform() == Platform::Desktop && Host::current() != Host::Linux;
+    if unpinned {
+        eventually(d, "the fixture", async |d| d.exists("#supported").await).await?;
+    } else {
+        let supported = (d.platform() != Platform::Native).to_string();
+        eventually_text(d, "#supported", &supported, "mount").await?;
+    }
     d.flush().await?;
     for (selector, expected) in [
         ("#position", "none"),
@@ -32,6 +39,16 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
             eventually_text(d, "#permission", "Unsupported", "mount").await?;
             d.click("#locate").await?;
             eventually_text(d, "#error", "Some(Unsupported)", "a request").await?;
+        }
+        // A request answers at all, with no prompt left hanging; the answer lands in the log.
+        Platform::Desktop if unpinned => {
+            d.click("#locate").await?;
+            eventually(d, "an answer to a request", async |d| {
+                Ok(d.text("#error").await? != "None" || d.text("#position").await? != "none")
+            })
+            .await?;
+            let shown = ["#supported", "#permission", "#error", "#position"];
+            record_outcome(d, "use_geolocation", &shown).await?;
         }
         // wry gives WebKitGTK no permission handler, so it denies every request.
         Platform::Desktop => {

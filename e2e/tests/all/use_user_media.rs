@@ -1,5 +1,6 @@
 //! `use_user_media`: mounting asks nothing; on the web Chromium's fake camera
-//! opens, shows, snapshots, records, stops and is refused. Blitz is unsupported.
+//! opens, shows, snapshots, records, stops and is refused. Blitz is unsupported; macOS and
+//! Windows desktop answer at all, recorded in `outcomes.log`.
 
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
@@ -7,15 +8,21 @@ use chromiumoxide::cdp::browser_protocol::browser::{
     PermissionDescriptor, PermissionSetting, SetPermissionParams,
 };
 use e2e::browser::{PERMISSIONS, block_on};
-use e2e::driver::{Driver, Platform, eventually, eventually_text};
+use e2e::driver::{Driver, Host, Platform, eventually, eventually_text, record_outcome};
 use e2e::frames::in_front;
 use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Viewport, wait};
 
 /// Nothing prompts or opens until asked; Blitz has no capture API.
 async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    let supported = (d.platform() != Platform::Native).to_string();
-    eventually_text(d, "#supported", &supported, "mount").await?;
+    // WKWebView and WebView2 are unpinned until the platform probe answered (todo 1236).
+    let unpinned = d.platform() == Platform::Desktop && Host::current() != Host::Linux;
+    if unpinned {
+        eventually(d, "the fixture", async |d| d.exists("#supported").await).await?;
+    } else {
+        let supported = (d.platform() != Platform::Native).to_string();
+        eventually_text(d, "#supported", &supported, "mount").await?;
+    }
     d.flush().await?;
     for (selector, expected) in [
         ("#live", "false"),
@@ -31,6 +38,20 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
             eventually_text(d, "#camera", "Unsupported", "mount").await?;
             d.click("#start").await?;
             eventually_text(d, "#error", "Some(Unsupported)", "a start").await?;
+        }
+        // A start answers at all, with no prompt left hanging; a camera that opens is stopped.
+        Platform::Desktop if unpinned => {
+            d.click("#start").await?;
+            eventually(d, "an answer to a start", async |d| {
+                Ok(d.text("#error").await? != "None" || d.text("#live").await? == "true")
+            })
+            .await?;
+            let shown = ["#supported", "#camera", "#error", "#live"];
+            record_outcome(d, "use_user_media", &shown).await?;
+            if d.text("#live").await? == "true" {
+                d.click("#stop").await?;
+                eventually_text(d, "#live", "false", "a stop").await?;
+            }
         }
         // wry gives WebKitGTK no permission handler, so it denies every request.
         Platform::Desktop => {

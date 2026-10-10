@@ -238,6 +238,9 @@ jobs:
         run: python3 .github/scripts/ci_annotate.py "$RUNNER_TEMP/e2e.log"
       - if: failure()
         run: screencapture -x "$RUNNER_TEMP/e2e-artifacts/failure.png"
+      # The platform probe's facts and the unpinned arms' outcomes, as notices.
+      - if: always()
+        run: python3 .github/scripts/probe_notice.py "$RUNNER_TEMP/e2e-artifacts"
       - if: always()
         uses: actions/upload-artifact@v7
         with:
@@ -381,12 +384,16 @@ jobs:
           E2E_DESKTOP_DEADLINE: 1500
       - if: failure() || cancelled()
         run: python .github/scripts/ci_annotate.py "$RUNNER_TEMP/e2e.log"
-      - if: failure() || cancelled()
+      - if: always()
+        run: python .github/scripts/probe_notice.py "$RUNNER_TEMP/e2e-artifacts"
+      # Always: the platform probe's JSON is the point of a green run too.
+      - if: always()
         uses: actions/upload-artifact@v7
         with:
           name: windows-desktop-artifacts
           path: ${{ runner.temp }}/e2e-artifacts
           if-no-files-found: ignore
+          retention-days: 3
 
   # The desktop arm on WebKitGTK (2874), as on a seat: the runner starts one Xvfb display and
   # drives the window with `xdotool`.
@@ -403,12 +410,15 @@ jobs:
       - run: cargo run -p e2e -- desktop 2>&1 | tee "$RUNNER_TEMP/e2e.log"
       - if: failure() || cancelled()
         run: python3 .github/scripts/ci_annotate.py "$RUNNER_TEMP/e2e.log"
-      - if: failure() || cancelled()
+      - if: always()
+        run: python3 .github/scripts/probe_notice.py /tmp/e2e-artifacts
+      - if: always()
         uses: actions/upload-artifact@v7
         with:
           name: linux-desktop-artifacts
           path: /tmp/e2e-artifacts
           if-no-files-found: ignore
+          retention-days: 3
 
   android:
     runs-on: ubuntu-24.04
@@ -490,6 +500,8 @@ jobs:
           TMPDIR: ${{ runner.temp }}
       - if: failure() || cancelled()
         run: python3 .github/scripts/ci_annotate.py "$RUNNER_TEMP/e2e.log"
+      - if: always()
+        run: python3 .github/scripts/probe_notice.py "$RUNNER_TEMP/e2e-artifacts"
       - if: always()
         uses: actions/upload-artifact@v7
         with:
