@@ -184,6 +184,7 @@ pub fn Stepper<T: Options>(props: StepperProps<T>) -> Element {
             color,
             completed_label: labels.completed,
             error_label: labels.error,
+            strip_label: labels.steps,
             sx: parts_under_sx(&props.parts, props.sx),
             class: props.class,
             states: props.states,

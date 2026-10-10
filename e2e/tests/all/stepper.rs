@@ -419,6 +419,13 @@ fn a_scrolling_strip_without_buttons_takes_a_tab_stop() {
         )
         .await
         .unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#plain-9 > ol').getAttribute('aria-label') === 'Steps'",
+            "the unnamed tab-stop strip to take the default name (todo 2839)",
+        )
+        .await
+        .unwrap();
         let clickable: bool = page
             .evaluate("document.querySelector('#side-9 > ol').hasAttribute('tabindex')")
             .await
@@ -432,7 +439,8 @@ fn a_scrolling_strip_without_buttons_takes_a_tab_stop() {
             .unwrap();
         wait::for_js_true(
             page,
-            "!document.querySelector('#plain-9 > ol').hasAttribute('tabindex')",
+            "!document.querySelector('#plain-9 > ol').hasAttribute('tabindex') \
+             && !document.querySelector('#plain-9 > ol').hasAttribute('aria-label')",
             "the fitting plain strip to drop its tab stop",
         )
         .await

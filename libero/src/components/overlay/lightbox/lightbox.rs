@@ -241,6 +241,8 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
         .clone()
         .unwrap_or_else(|| localization.lightbox.label.to_string());
 
+    // The zoomable picture is the tab stop, so the stage's track takes none.
+    jump.set_slide_stop(options.zoom);
     let stage_body = match count {
         // One picture has nothing to page through, so no carousel: its region
         // and "1 of 1" would only be noise.

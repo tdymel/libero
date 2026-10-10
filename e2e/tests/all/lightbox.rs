@@ -21,6 +21,8 @@ const TRIGGER_LAST: &str = "#open-lightbox-last";
 const DIALOG: &str = "[role=dialog]";
 /// The picture that holds the tab stop: the one showing.
 const PICTURE: &str = "[role=dialog] [data-lightbox-frame] img[tabindex='0']";
+/// The stage's carousel track, which takes no tab stop with `zoom` on (todo 2833).
+const STAGE_TRACK: &str = "[role=dialog] [aria-roledescription=carousel] [role=group]";
 /// The stage's track and the boxes round it, for the scroll spy.
 const STAGE: &str = "[role=dialog] :has([data-lightbox-frame])";
 
@@ -242,6 +244,12 @@ async fn arrows_and_tab(page: &Page) -> Result<()> {
     wait::for_visible(page, DIALOG).await?;
     wait_showing(page, 0).await?;
     assert_tab_skips_inert(page).await?;
+    wait::for_js_true(
+        page,
+        &format!("document.querySelector('{STAGE_TRACK}').tabIndex < 0"),
+        "the stage track to leave the tab order while the picture holds the stop",
+    )
+    .await?;
 
     keyboard::tab_to(page, PICTURE, 12).await?;
     assert_picture_focused(page, 0).await?;

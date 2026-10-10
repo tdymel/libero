@@ -128,6 +128,8 @@ pub(super) struct BoardDrag {
     cards: CopyValue<BTreeMap<usize, Placed>>,
     lists: CopyValue<Vec<Mounted>>,
     landing: CopyValue<Option<Landing>>,
+    /// What to announce once the moved card shows at its new slot (2901).
+    pending: CopyValue<Option<String>>,
     /// The render cycles so far, see [`tick`](Self::tick).
     renders: CopyValue<u64>,
     /// A render or drop has opened this cycle and the effects have not run yet.
@@ -177,6 +179,18 @@ impl BoardDrag {
     /// change moving it is no landing (2519).
     pub(super) fn landed(self, landing: Landing, claimant: usize) -> bool {
         claimant == landing.card || landing.held || landing.left == Some(*self.renders.peek())
+    }
+
+    /// Holds `text` for [`take_pending`](Self::take_pending): a move the app refuses is never announced.
+    pub(super) fn announce_on_landing(self, text: String) {
+        let mut pending = self.pending;
+        pending.set(Some(text));
+    }
+
+    /// The held announcement, once the moved card shows at its slot.
+    pub(super) fn take_pending(self) -> Option<String> {
+        let mut pending = self.pending;
+        pending.write().take()
     }
 
     /// The number of cards mounted in `column`, and the `index` just past its last one:
@@ -238,6 +252,7 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
 
     let cards = use_hook(|| CopyValue::new(BTreeMap::<usize, Placed>::new()));
     let lists = use_hook(|| CopyValue::new(Vec::<Mounted>::new()));
+    let mut pending = use_hook(|| CopyValue::new(None::<String>));
     let next_id = use_hook(|| CopyValue::new(0_usize));
     let renders = use_hook(|| CopyValue::new(0_u64));
     let mut fresh = use_hook(|| CopyValue::new(false));
@@ -440,7 +455,7 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
         pressed.set(None);
         let count = lanes.lanes[to.0].cards.len();
         let label = &ended.label;
-        announcer.say(match (landed.is_some(), to.0 == from.0) {
+        let said = match (landed.is_some(), to.0 == from.0) {
             (false, _) => say(words.cancelled, label, from.1, count),
             (true, true) => say(words.dropped, label, to.1, count),
             (true, false) => {
@@ -455,7 +470,12 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
                     ],
                 )
             }
-        });
+        };
+        // A move waits for the render that shows it: the app may refuse it.
+        match to == from {
+            true => announcer.say(said),
+            false => pending.set(Some(said)),
+        }
         // Slots count the mounted cards; the move and the landing speak `index`.
         let from_index = lanes.lifted_index();
         let to_index = match to == from {
@@ -558,6 +578,7 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
         cards,
         lists,
         landing,
+        pending,
         renders,
         fresh,
         flush,

@@ -13,7 +13,25 @@ pub const ROUTES: Routes = &[
     ("/kanban/data", || rsx! { KanbanPage { data: true, wrapped: false } }),
     ("/kanban/columns", || rsx! { KanbanPage { data: true, wrapped: true } }),
     ("/kanban/capped", || rsx! { CappedPage {} }),
+    ("/kanban/menu-only", || rsx! { MenuOnlyPage {} }),
 ];
+
+/// Two columns with `move_buttons` off, so Move to is a touch screen's only way across.
+#[component]
+fn MenuOnlyPage() -> Element {
+    let mut cards: Cards = use_signal(|| vec![vec!["Alpha", "Beta"], vec![]]);
+    rsx! {
+        Kanban { id: "board", move_buttons: false, onmove: move |step: KanbanMove| step.apply(&mut cards.write()),
+            for (column, label) in ["To do", "Done"].into_iter().enumerate() {
+                KanbanColumn { key: "{label}", index: column, label,
+                    for (index, name) in cards()[column].clone().into_iter().enumerate() {
+                        KanbanCard { key: "{name}", index, id: "{name}", label: name, Text { "{name}" } }
+                    }
+                }
+            }
+        }
+    }
+}
 
 /// A 200px board whose one column holds 20 cards, most of them below the board's edge;
 /// `#order` lists the cards.

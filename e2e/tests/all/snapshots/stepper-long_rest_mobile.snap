@@ -3,7 +3,7 @@ source: e2e/src/suite.rs
 description: stepper-long at mobile (rest)
 expression: tree
 ---
-list
+list "Steps"
   listitem [level=1]
     StaticText "Account, Completed"
   listitem [level=1]
@@ -13,7 +13,7 @@ list
     StaticText "Review"
 region "Versandkostenberechnungsgrundlagenverordnung"
   StaticText "Body."
-list
+list "Steps"
   listitem [level=1]
     StaticText "Account, Completed"
   listitem [level=1]

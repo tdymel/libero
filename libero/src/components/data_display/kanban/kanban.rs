@@ -324,9 +324,10 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
         None => ("aria-labelledby", header_id()),
     };
     // As `Sortable`'s: a touch screen reader's tap on the handle lifts nothing (2452).
-    let described = match touch() && (board.move_buttons)() {
-        true => words.kanban.touch_instructions,
-        false => words.sortable.instructions,
+    let described = match (touch(), (board.move_buttons)()) {
+        (true, true) => words.kanban.touch_instructions,
+        (true, false) => words.kanban.touch_move_to,
+        (false, _) => words.sortable.instructions,
     };
     // The slot a card from another column opens grows the list, not past its edge.
     let room = room();
@@ -441,7 +442,7 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
     let mut landing = board.landing;
     let column_index = column.index;
     let handle_node = item.handle;
-    let (drag, id) = (board.drag, carried.id);
+    let (drag, id, announcer) = (board.drag, carried.id, board.announcer);
     use_effect(use_reactive!(|index| {
         let _ = (trigger.mount_token(), handle_node.mount_token());
         let Some(at) = landing
@@ -452,6 +453,7 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
         };
         if !drag.landed(at, id) {
             landing.set(None);
+            drag.take_pending();
             return;
         }
         let target = match at.control {
@@ -461,6 +463,9 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
         if target.mounted().is_some() {
             landing.set(None);
             let _ = target.focus();
+            if let Some(text) = drag.take_pending() {
+                announcer.say(text);
+            }
         } else if !at.held {
             landing.set(Some(Landing { held: true, ..at }));
         }
@@ -495,7 +500,7 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
                         left: None,
                         held: false,
                     }));
-                    board.announcer.say(fill(
+                    drag.announce_on_landing(fill(
                         words.kanban.moved,
                         &[
                             ("label", &card),

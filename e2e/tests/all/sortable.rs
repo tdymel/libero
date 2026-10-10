@@ -94,6 +94,11 @@ async fn the_keyboard_moves_it<D: Driver>(d: &mut D, _route: &str) -> Result<()>
     d.focus("#Alpha button").await?;
     d.press(keyboard::SPACE).await?;
     eventually_text(d, STATUS, "Lifted Alpha, position 1 of 4.", "Space to lift").await?;
+    // 2515: a lift is seen before the first arrow.
+    ensure!(
+        d.style("#Alpha", "box-shadow").await? != d.style("#Beta", "box-shadow").await?,
+        "a keyboard lift draws no cue"
+    );
     d.press(keyboard::ARROW_DOWN).await?;
     eventually_text(d, STATUS, "Alpha moved to position 2 of 4.", "ArrowDown").await?;
     d.press(keyboard::ARROW_DOWN).await?;

@@ -52,14 +52,24 @@ static CAROUSEL_VIEWPORT_SX: StaticSx = StaticSx::new(|| {
 
 /// From a caller swapping slides and `index` in one render (`Lightbox`): the move
 /// is instant, or a smooth scroll fetches lazy pictures in passing (todo 323).
-/// A count, so a swap survives a re-render before the effect.
+/// A count, so a swap survives a re-render before the effect. Also tells the track
+/// that a slide holds the tab stop, so the track takes none (todo 2833).
 #[derive(Clone, Default)]
-pub(crate) struct CarouselJump(Rc<Cell<u64>>);
+pub(crate) struct CarouselJump(Rc<Cell<u64>>, Rc<Cell<bool>>);
 
 impl CarouselJump {
     /// Marks a swap, from the render that draws it.
     pub(crate) fn swapped(&self) {
         self.0.set(self.0.get() + 1);
+    }
+
+    /// Whether the showing slide is the tab stop, set from the render that draws the track.
+    pub(crate) fn set_slide_stop(&self, stop: bool) {
+        self.1.set(stop);
+    }
+
+    fn slide_stop(&self) -> bool {
+        self.1.get()
     }
 
     fn count(&self) -> u64 {
@@ -227,6 +237,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
             .unwrap_or(theme.carousel.autoplay_delay),
         named: props.aria_label.is_some(),
         quiet,
+        track_stop: !quiet && !jump.as_ref().is_some_and(CarouselJump::slide_stop),
     };
     let state = use_carousel_state(setup);
     let drag = use_carousel_drag(setup, state, props.draggable);

@@ -166,7 +166,7 @@ pub fn ScrollerPage() -> Element {
                         .default(theme.scroller.draggable.to_string())
                         .doc("Lets the mouse drag the strip. Touch and trackpad scroll it either way. With `controls: \"never\"` it only drags when a `handle` is bound, for your own buttons (WCAG 2.5.7)."),
                     prop("onedgechange", "EventHandler<ScrollerEdges>")
-                        .doc("Fires when the strip reaches or leaves an end, and once when it is first measured."),
+                        .doc("Fires when the strip reaches or leaves an end. A strip that fits from the start reports nothing."),
                     prop("handle", "ScrollerHandle")
                         .doc("From `use_scroller()`. Its `step_forward()` and `step_back()` move the strip as the controls do, for buttons of your own."),
                     prop("children", "Element").doc("The strip."),

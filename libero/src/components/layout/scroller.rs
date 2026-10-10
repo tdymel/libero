@@ -367,7 +367,7 @@ base_props! {
         /// Off under `controls: "never"` unless a `handle` brings its own buttons (WCAG 2.5.7).
         #[props(default)]
         draggable: Option<bool>,
-        /// Fires when either edge state flips, including the first measurement.
+        /// Fires when either edge state flips. A strip that fits from the start reports nothing.
         #[props(default)]
         onedgechange: Option<EventHandler<ScrollerEdges>>,
         /// From [`use_scroller`], to step the strip from the caller's own buttons.

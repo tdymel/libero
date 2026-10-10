@@ -383,6 +383,12 @@ async fn a_refused_move_moves_no_focus_later<D: Driver>(d: &mut D, _route: &str)
     d.press(keyboard::ENTER).await?;
     eventually_text(d, "#moves", "0.1>2.0 ", "the refused move to Done").await?;
     ensure!(d.text("#order").await? == START, "a refused move moved");
+    d.flush().await?;
+    let said = d.text(STATUS).await?;
+    ensure!(
+        !said.contains("moved"),
+        "a refused move was announced: {said}"
+    );
     d.focus("#add").await?;
     d.press(keyboard::ENTER).await?;
     eventually_text(
@@ -927,6 +933,35 @@ fn a_touch_screen_describes_the_handle_by_the_move_buttons() {
                      column button to put it in another column.'"
                 ),
                 "the touch description",
+            )
+            .await
+        }
+        .await;
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+    });
+}
+
+/// 2903: with `move_buttons` off a touch screen's handle description names the Move to menu alone.
+#[test]
+fn a_touch_screen_without_move_buttons_describes_the_handle_by_the_menu() {
+    use e2e::browser::{Fixture, Viewport, block_on};
+    use e2e::wait;
+    block_on(async {
+        let fixture = Fixture::open("/kanban/menu-only", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            e2e::browser::fake_pointer(page).await?;
+            wait::for_visible(page, "#Alpha").await?;
+            e2e::browser::set_coarse_pointer(page, true).await?;
+            wait::for_js_true(
+                page,
+                "document.getElementById(document.querySelector('#Alpha [data-slot=handle]')\
+                 .getAttribute('aria-describedby')).textContent === 'Use the Move to column \
+                 button to put the card in another column.'",
+                "the menu-only touch description",
             )
             .await
         }

@@ -398,6 +398,7 @@ pub(crate) struct StepperView {
     pub color: Option<(String, String, Option<String>)>,
     pub completed_label: &'static str,
     pub error_label: &'static str,
+    pub strip_label: &'static str,
     pub class: Input<ClassList>,
     pub sx: Input<Sx>,
     pub states: Input<States>,
@@ -430,6 +431,7 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
         color,
         completed_label,
         error_label,
+        strip_label,
         class,
         sx: user_sx,
         states,
@@ -604,6 +606,9 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
         .into_iter()
         .partition(|attribute| matches!(attribute.name, "aria-label" | "aria-labelledby"));
 
+    // A focused strip needs a name; the caller's wins.
+    let strip_name = (strip_tab_stop && naming.is_empty()).then_some(strip_label);
+
     use_box()
         .framework_sx(&STEPPER_SX)
         .class(&class)
@@ -623,6 +628,7 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
                     onmounted: strip.mount(),
                     onresize: move |_| measure(),
                     tabindex: strip_tab_stop.then_some("0"),
+                    aria_label: strip_name,
                     ..naming,
                     {items.into_iter()}
                 }

@@ -17,8 +17,8 @@ use crate::{
     context::IconSlot,
     hooks::{current_localization, drag_handle_sx, use_css, use_id, use_media_query},
     localization::fill,
-    sx::{StaticSx, Sx, sx},
-    theme::FOCUS_RING_HALO_SPREAD,
+    sx::{FORCED_COLORS, StaticSx, Sx, sx},
+    theme::{FOCUS_RING_HALO_SPREAD, Size, SizeCss},
 };
 
 static SORTABLE_BASE_SX: StaticSx = StaticSx::new(|| {
@@ -56,7 +56,14 @@ pub(crate) fn sortable_item_sx() -> Sx {
             sx().transition("transform 150ms ease")
                 .media("(prefers-reduced-motion: reduce)", sx().transition("none")),
         )
-        .when("dragging", sx().z_index("1").transition("none"))
+        // A lifted item, by pointer or key, rises: a keyed lift moves nothing until its first arrow.
+        .when(
+            "dragging",
+            sx().z_index("1")
+                .transition("none")
+                .box_shadow(SizeCss::SHADOW.value(Size::Md))
+                .media(FORCED_COLORS, sx().outline("2px solid Highlight")),
+        )
 }
 
 pub(crate) static SORTABLE_HANDLE_SX: StaticSx =
@@ -398,6 +405,14 @@ mod tests {
                 ("move-later", "& > [data-slot='move-later']"),
             ]
         );
+    }
+
+    #[test]
+    fn a_lifted_item_draws_a_shadow_and_a_highlight_outline_under_forced_colours() {
+        let css = Stylesheet::from(&SORTABLE_ITEM_SX).as_str().to_string();
+
+        assert!(css.contains("box-shadow:"), "{css}");
+        assert!(css.contains("outline:2px solid Highlight"), "{css}");
     }
 
     #[test]

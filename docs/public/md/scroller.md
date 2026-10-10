@@ -46,6 +46,7 @@ fn Demo() -> Element {
             }
             Text { size: "sm", role: "status",
                 match edges() {
+                    // Only after a resize: a strip that fits from the start reports nothing.
                     Some(ScrollerEdges { at_start: true, at_end: true }) => "Everything fits",
                     Some(ScrollerEdges { at_end: false, .. }) => "More after this",
                     Some(_) => "End of the list",
@@ -73,7 +74,7 @@ strip. With `controls: "never"`, move the strip from your own buttons through a
 | `control_size` | `Size` | `md` | Width of each control and its glyph. |
 | `fade_color` | `ThemeAwareValue` | paper background | The colour the content fades into under a control. Set it to the surface the strip sits on. |
 | `draggable` | `bool` | `false` | Lets the mouse drag the strip. Touch and trackpad scroll it either way. With `controls: "never"` it only drags when a `handle` is bound, for your own buttons (WCAG 2.5.7). |
-| `onedgechange` | `EventHandler<ScrollerEdges>` | - | Fires when the strip reaches or leaves an end, and once when it is first measured. `ScrollerEdges { at_start, at_end }`, both `true` when nothing overflows. |
+| `onedgechange` | `EventHandler<ScrollerEdges>` | - | Fires when the strip reaches or leaves an end. `ScrollerEdges { at_start, at_end }`, both `true` when nothing overflows; a strip that fits from the start reports nothing. |
 | `handle` | `ScrollerHandle` | - | From `use_scroller()`. Its `step_forward()` and `step_back()` move the strip as the controls do, for buttons of your own. |
 | `children` | `Element` | required | The strip. |
 | `parts` | `Parts<ScrollerPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |

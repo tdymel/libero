@@ -109,7 +109,8 @@ explains how parts work.
   shrink first, then steps that still don't fit scroll inside the strip.
   Labels keep their words whole; only a word wider than the strip breaks.
   While it scrolls and no step is clickable, the strip itself is a tab stop,
-  so the arrow keys can scroll it in any browser.
+  so the arrow keys can scroll it in any browser. Without an `aria_label` or
+  `aria_labelledby` it is named "Steps" (`StepperLabels::steps`).
 
 ### You must
 
@@ -129,4 +130,4 @@ and Payment: a screen reader reads the list as "Checkout steps", and with
 `label_position`, `color`, `pending_color`, `error_color`, `connector_color`,
 `description_color`, `line_width` and `content_padding`. The vertical collapse
 takes `theme.collapse.duration`. The status words are `StepperLabels`
-(`completed`, `error`) in the [localization](localization.md).
+(`completed`, `error`, `steps`) in the [localization](localization.md).

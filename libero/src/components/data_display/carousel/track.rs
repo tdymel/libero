@@ -120,7 +120,7 @@ pub(super) fn carousel_track(
             },
             scrollbar_visibility: "hidden",
             // The tab stop, unlike `ScrollArea`'s default; not when empty.
-            focusable: !empty && !setup.quiet,
+            focusable: !empty && setup.track_stop,
             framework_sx: ScrollAreaBase(&CAROUSEL_TRACK_SX),
             states: track_states,
             "data-slot": CarouselPart::Track.slot(),

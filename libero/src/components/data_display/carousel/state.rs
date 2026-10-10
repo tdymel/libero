@@ -405,6 +405,8 @@ pub(super) struct CarouselSetup {
     pub(super) named: bool,
     /// Every slide fits under [`CarouselQuietWhenFits`]: no status, no track tab stop.
     pub(super) quiet: bool,
+    /// The track is a tab stop: not quiet, and no slide holds the stop instead.
+    pub(super) track_stop: bool,
 }
 
 /// `Carousel`'s live state: `nav`, what pauses autoplay, and the drag.
