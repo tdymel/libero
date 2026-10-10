@@ -820,6 +820,33 @@ fn the_pause_control_leaves_next_uncovered() {
     });
 }
 
+/// Todo 3035: the pause control sat at the root's bottom corner, over the dot row's end.
+#[test]
+fn the_pause_control_stays_off_the_dots() {
+    block_on(async {
+        for viewport in [Viewport::Desktop, Viewport::Mobile] {
+            let fixture = Fixture::open("/carousel/autoplay", viewport).await.unwrap();
+            let clear: Vec<f64> = fixture
+                .page
+                .evaluate(format!(
+                    "(() => {{ const p = document.querySelector({PAUSE:?}).getBoundingClientRect(); \
+                     const dot = document.querySelector('[aria-roledescription=carousel] [role=group] > button') \
+                       .getBoundingClientRect(); \
+                     return [p.bottom, dot.top]; }})()"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(
+                clear[0] <= clear[1],
+                "the pause control reaches the dot row at {viewport:?}: {clear:?}"
+            );
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
 /// A looping strip opens on slide 1, drawn where the component thinks it is. A smooth
 /// opening scroll never landed in a background page: the drawn slides were `inert`.
 #[test]

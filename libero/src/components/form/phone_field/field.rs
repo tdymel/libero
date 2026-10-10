@@ -242,7 +242,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
         Some(value) if countries::value_of(country, &text()) == *value => text(),
         Some(value) => countries::national_of(value, country)
             .map(|national| countries::group(country, &national).unwrap_or(national))
-            .unwrap_or_default(),
+            .unwrap_or_else(|| unlisted(value)),
     };
     // A pick or a blur re-assembles from the digits on screen, not the buffer;
     // a bare dial code on screen is the old country's, not a number.
@@ -532,6 +532,16 @@ pub(crate) fn country_for(value: Option<&str>, picked: &'static Country) -> &'st
         return picked;
     }
     countries::by_dial(&digits).unwrap_or(picked)
+}
+
+/// A value whose dial code has no row in the table, shown whole as `+digits` so it
+/// is neither blank nor dropped from the post.
+fn unlisted(value: &str) -> String {
+    let digits = digits_of(value);
+    match digits.is_empty() {
+        true => String::new(),
+        false => format!("+{digits}"),
+    }
 }
 
 /// A typed `+49 ...` or `0049 ...` whose dial code names a country: that

@@ -14,7 +14,7 @@ use crate::{
         layout::{Collapse, use_box},
     },
     context::IconSlot,
-    hooks::{id_selector, use_element},
+    hooks::{id_selector, use_element, use_resize_fallback},
     platform::{ElementApi, when_laid_out},
     str_enum::str_enum,
     sx::{FORCED_COLORS, StaticSx, Sx, sx},
@@ -510,9 +510,19 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
             }
         });
     };
-    let step_count = steps.len();
-    use_effect(use_reactive!(|(step_count, vertical)| {
-        let _ = step_count;
+    use_resize_fallback(strip, move |_| measure());
+    // Anything that widens the strip without resizing the list box re-measures.
+    let wording: Vec<(String, Option<String>)> = steps
+        .iter()
+        .map(|step| (step.name.clone(), step.description.clone()))
+        .collect();
+    use_effect(use_reactive!(|(
+        wording,
+        vertical,
+        size,
+        label_position,
+    )| {
+        let _ = (wording, size, label_position);
         if vertical {
             overflows.set(false);
         }

@@ -316,11 +316,12 @@ pub fn Carousel(props: CarouselProps) -> Element {
             if !empty && !quiet {
                 CarouselStatus { view }
             }
-            // First in Tab order, as APG's rotation control (todo 548).
-            if state.rotates {
-                {carousel_pause_button(view, controls)}
-            }
             Box { framework_sx: &CAROUSEL_VIEWPORT_SX, "data-slot": CarouselPart::Viewport.slot(),
+                // First in Tab order, as APG's rotation control (todo 548); in the
+                // viewport so it stays off the dot row (todo 3035).
+                if state.rotates {
+                    {carousel_pause_button(view, controls)}
+                }
                 {carousel_track(view, aria_label, props.draggable, drag, body)}
                 if controls {
                     CarouselControls { view }

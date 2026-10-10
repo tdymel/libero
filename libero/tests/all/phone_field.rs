@@ -120,6 +120,37 @@ fn a_value_from_another_country_renders_under_that_country() {
     );
 }
 
+/// A dial code the table lacks (global freephone `+800`) is shown whole and
+/// posted unchanged, not blanked.
+#[test]
+fn a_value_with_an_unlisted_dial_code_is_shown_and_posted() {
+    fn unlisted() -> Element {
+        rsx! {
+            LiberoProvider {
+                PhoneField {
+                    label: "Mobile",
+                    country: "US",
+                    name: "phone",
+                    value: "+8001234567",
+                    oninput: move |_: String| {},
+                }
+            }
+        }
+    }
+    let html = body(&render(unlisted));
+
+    assert_eq!(
+        attributes_of(&html, "input")
+            .get("value")
+            .map(String::as_str),
+        Some("+8001234567")
+    );
+    assert!(
+        html.contains(r#"type="hidden" name="phone" value="+8001234567""#),
+        "the value was not posted unchanged:\n{html}"
+    );
+}
+
 /// The picker is a second tab stop, and should be - it is the only way to
 /// reach what it does. `type="button"` because a button in a form submits it
 /// otherwise.
