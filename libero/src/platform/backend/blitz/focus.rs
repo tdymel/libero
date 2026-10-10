@@ -197,10 +197,9 @@ struct Moved {
 
 /// A removed node has left the slab, so focus on it reads as outside.
 fn holds(element: &Rc<MountedData>, focus: Option<NodeId>) -> bool {
-    let (Some(focus), Some(handle)) = (focus, element.downcast::<NodeHandle>()) else {
+    let (Some(focus), Some((handle, target))) = (focus, super::node_of(element)) else {
         return false;
     };
-    let target = handle.node_id();
     handle
         .try_doc()
         .is_some_and(|doc| ancestors(&doc, focus).any(|id| id == target))

@@ -107,7 +107,7 @@ pub(in crate::platform::backend) fn on_intersection(
     callback: Box<dyn Fn(bool, f64)>,
 ) -> Option<Box<dyn ContentSubscription>> {
     let root = match root {
-        Some(root) => Some(root.downcast::<NodeHandle>()?.node_id()),
+        Some(root) => Some(super::node_of(root)?.1),
         None => None,
     };
     let mut thresholds = thresholds.to_vec();
@@ -141,12 +141,12 @@ pub(in crate::platform::backend) fn on_viewport_resize(
 }
 
 fn watch(mounted: &Rc<MountedData>, kind: Kind) -> Option<Box<dyn ContentSubscription>> {
-    let anchor = mounted.downcast::<NodeHandle>()?.clone();
+    let (anchor, node_id) = super::node_of(mounted)?;
     let doc = doc()?;
     let id = doc.resize.next.replace(doc.resize.next.get() + 1);
     doc.resize.watched.borrow_mut().push(Watched {
         id,
-        node_id: anchor.node_id(),
+        node_id,
         anchor,
         last: None,
         origin: Origin::here(),

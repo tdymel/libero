@@ -580,16 +580,13 @@ pub(super) fn focus_is_in(mounted: &Rc<MountedData>) -> bool {
 }
 
 pub(super) fn element_contains(outer: &Rc<MountedData>, inner: &Rc<MountedData>) -> bool {
-    let (Some(outer), Some(inner)) = (
-        outer.downcast::<NodeHandle>(),
-        inner.downcast::<NodeHandle>(),
-    ) else {
+    // A selector-found element too: a Menu's wrapper anchors a popup (todo 2989).
+    let (Some((_, target)), Some((inner, node_id))) = (node_of(outer), node_of(inner)) else {
         return false;
     };
-    let target = outer.node_id();
     inner
         .try_doc()
-        .is_some_and(|doc| ancestors(&doc, inner.node_id()).any(|id| id == target))
+        .is_some_and(|doc| ancestors(&doc, node_id).any(|id| id == target))
 }
 
 /// The node a click just activated: the press's target, or for a key the

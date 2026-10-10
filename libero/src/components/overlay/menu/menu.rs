@@ -7,10 +7,13 @@ use super::{
 };
 use crate::{
     components::{
-        common::{HtmlTag, Input, ScaleOrCss, base_props, has_shortcut_modifier, parts_enum},
+        common::{
+            HtmlTag, Input, ScaleOrCss, base_props, css_string, has_shortcut_modifier, parts_enum,
+        },
         layout::use_box,
     },
     hooks::{Align, Side, use_element, use_press_marker, use_theme},
+    platform::mounted_by_selector,
     sx::ThemeAwareValue,
     theme::Size,
 };
@@ -102,6 +105,11 @@ pub fn Menu(props: MenuProps) -> Element {
     let floating = use_element();
     let owner = use_hook(dioxus::core::current_scope_id);
     let wrapper_box = use_box().prepare();
+    // Found, not `onmounted`: on a WebView each is a blocking round trip, one per row menu (todo 2749).
+    let wrapper_selector = format!("[data-menu-wrapper={}]", css_string(&id));
+    use_effect(use_reactive!(|wrapper_selector| {
+        wrapper.point_at(mounted_by_selector(&wrapper_selector));
+    }));
 
     let opened = state.is_open();
     // No empty `role="menu"`: it reads as "menu, 0 items" (todo 447). The state
@@ -128,7 +136,7 @@ pub fn Menu(props: MenuProps) -> Element {
     rsx! {
         {
             wrapper_box
-                .element(&wrapper)
+                .attr("data-menu-wrapper", id.clone())
                 // The caller's trigger bubbles here; Enter and Space arrive as a click.
                 .event("onclick", move |_: MouseEvent| {
                     if !disabled {
