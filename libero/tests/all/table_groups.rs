@@ -6,6 +6,9 @@ use libero::{
     components::{Table, column},
 };
 
+// An unpinned group header still writes its insets, so a later pin can't leave a stale one.
+const UNPINNED: &str = " style=\"inset-inline-start:auto;inset-inline-end:auto;\"";
+
 #[derive(Clone, PartialEq)]
 struct Row {
     first: &'static str,
@@ -47,7 +50,9 @@ fn a_group_heads_its_adjacent_columns_and_the_others_span_down() {
 
     assert_eq!(head.matches("<tr").count(), 2, "{head}");
     assert!(
-        head.contains("<th scope=\"colgroup\" colspan=\"2\" data-group=true>Name</th>"),
+        head.contains(&format!(
+            "<th scope=\"colgroup\" colspan=\"2\" data-group=true{UNPINNED}>Name</th>"
+        )),
         "{head}"
     );
     // The select-all box and the ungrouped column fill both header rows.
@@ -84,11 +89,13 @@ fn nested_groups_merge_under_the_same_parent_only() {
     assert_eq!(head.matches("<tr").count(), 3, "{head}");
     assert_eq!(head.matches(">X</th>").count(), 2, "{head}");
     assert!(
-        head.contains("colspan=\"2\" data-group=true>X</th>"),
+        head.contains(&format!("colspan=\"2\" data-group=true{UNPINNED}>X</th>")),
         "{head}"
     );
     assert!(
-        head.contains("<th scope=\"colgroup\" data-group=true>B</th>"),
+        head.contains(&format!(
+            "<th scope=\"colgroup\" data-group=true{UNPINNED}>B</th>"
+        )),
         "{head}"
     );
 }
@@ -116,7 +123,9 @@ fn a_hidden_column_narrows_its_group_and_an_emptied_group_goes() {
     let body = body(&html);
 
     assert!(
-        body.contains("<th scope=\"colgroup\" data-group=true>Name</th>"),
+        body.contains(&format!(
+            "<th scope=\"colgroup\" data-group=true{UNPINNED}>Name</th>"
+        )),
         "{body}"
     );
     assert!(!body.contains("Facts"), "{body}");

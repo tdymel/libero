@@ -158,7 +158,11 @@ fn a_pin_edge_splits_a_group_and_stops_a_span() {
     assert!(pinned.contains_key("data-pin-edge"), "{pinned:?}");
     assert_eq!(style_of(pinned)["inset-inline-start"], "0", "{pinned:?}");
     assert!(!scrolled.contains_key("data-pin"), "{scrolled:?}");
-    assert!(!scrolled.contains_key("style"), "{scrolled:?}");
+    assert_eq!(
+        style_of(scrolled)["inset-inline-start"],
+        "auto",
+        "{scrolled:?}"
+    );
     for group in &groups {
         assert!(!group.contains_key("colspan"), "{group:?}");
     }
