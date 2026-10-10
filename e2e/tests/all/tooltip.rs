@@ -107,12 +107,15 @@ async fn long_press_opens<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     ensure!(!d.exists(OPEN).await?, "open at rest");
     d.long_press(TRIGGER, 800).await?;
     is_open(d, true, "a long press").await?;
-    is_open(d, false, "the release").await?;
-    // Held only now: the long press above needs the real clock. Without a held
-    // clock a short touch's cancel is unobservable short of a fixed wait (1662).
-    if !d.hold_timers(&[LONG_PRESS_MS]).await? {
-        return Ok(());
-    }
+    is_open(d, false, "the release").await
+}
+
+/// Without a held clock a short touch's cancel is unobservable short of a fixed wait (1662).
+async fn short_touch_cancels<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    ensure!(
+        d.hold_timers(&[LONG_PRESS_MS]).await?,
+        "the driver holds no timers"
+    );
     d.touch_down(TRIGGER).await?;
     // A WebView's events reach the app after the page's own round trip.
     eventually(d, "a held touch to arm the open", async |d| {
@@ -147,6 +150,13 @@ e2e::scenario!(
     "/tooltip/quick",
     long_press_opens,
     desktop: skip("1126: no touch input under Xvfb")
+);
+e2e::scenario!(
+    a_short_touch_cancels_the_open,
+    "/tooltip/quick",
+    short_touch_cancels,
+    desktop: skip("1126: no touch input under Xvfb"),
+    native: skip("2838: the native driver holds no timers, the cancel is unobservable")
 );
 e2e::scenario!(
     escape_closes_it_under_the_pointer,

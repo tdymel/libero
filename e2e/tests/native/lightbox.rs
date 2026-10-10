@@ -281,7 +281,7 @@ fn a_zoomed_picture_leaves_the_presses_round_it_alone() {
     page.click("[role=dialog] p");
     settle(&mut page);
     assert_eq!(page.computed(PICTURE, "transform"), ZOOMED);
-    page.click("[aria-label=\"Go to slide 2\"]");
+    page.click("[aria-label=\"Go to picture 2\"]");
     settle(&mut page);
     assert_centred(&mut page, 1);
 }

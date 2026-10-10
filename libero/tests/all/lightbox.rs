@@ -66,7 +66,7 @@ fn thumbnails(html: &str) -> Vec<BTreeMap<String, String>> {
         .filter(|button| {
             button
                 .get("aria-label")
-                .is_some_and(|label| label.starts_with("Go to slide"))
+                .is_some_and(|label| label.starts_with("Go to picture"))
         })
         .collect()
 }
@@ -286,7 +286,7 @@ fn the_thumbnail_strip_roves() {
         .map(|t| t.get("aria-current").is_some_and(|c| c == "true"))
         .collect();
     assert_eq!(current, [false, true, false, false]);
-    assert_eq!(thumbnails[1]["aria-label"], "Go to slide 2");
+    assert_eq!(thumbnails[1]["aria-label"], "Go to picture 2");
 }
 
 #[test]

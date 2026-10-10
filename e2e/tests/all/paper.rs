@@ -77,13 +77,18 @@ fn a_link_paper_shows_the_focus_ring() {
         wait::for_visible(page, "#link").await.unwrap();
 
         keyboard::tab_to(page, "#link", 3).await.unwrap();
-        let ring: String = page
-            .evaluate("getComputedStyle(document.querySelector('#link')).outlineStyle")
+        let (style, width, color): (String, f64, String) = page
+            .evaluate(
+                "(() => { const s = getComputedStyle(document.querySelector('#link')); \
+                 return [s.outlineStyle, parseFloat(s.outlineWidth), s.outlineColor]; })()",
+            )
             .await
             .unwrap()
             .into_value()
             .unwrap();
-        assert_eq!(ring, "solid");
+        assert_eq!(style, "solid");
+        assert!(width > 0.0, "the ring is {width}px wide");
+        assert_ne!(color, "rgba(0, 0, 0, 0)", "the ring is transparent");
         fixture.close().await.unwrap();
     });
 }

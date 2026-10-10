@@ -29,15 +29,15 @@ dialog "Gallery" [modal]
   region "Thumbnails" [roledescription=carousel]
     group "Thumbnails"
       group "1 of 6" [roledescription=slide]
-        button "Go to slide 1" [current=true]
+        button "Go to picture 1" [current=true]
       group "2 of 6" [roledescription=slide]
-        button "Go to slide 2"
+        button "Go to picture 2"
       group "3 of 6" [roledescription=slide]
-        button "Go to slide 3"
+        button "Go to picture 3"
       group "4 of 6" [roledescription=slide]
-        button "Go to slide 4"
+        button "Go to picture 4"
       group "5 of 6" [roledescription=slide]
-        button "Go to slide 5"
+        button "Go to picture 5"
       group "6 of 6" [roledescription=slide]
-        button "Go to slide 6"
+        button "Go to picture 6"
 --> aria-controls [id="lsx-N"] (rendered above)

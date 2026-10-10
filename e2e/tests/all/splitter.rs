@@ -455,19 +455,19 @@ fn the_divider_line_shows_in_forced_colours() {
             .unwrap();
         let page = &fixture.page;
         e2e::browser::force_colours(page).await.unwrap();
-        let (line, canvas): (String, String) = page
+        let (line, canvas_text): (String, String) = page
             .evaluate(format!(
                 "(() => {{ const probe = document.createElement('div'); \
-                 probe.style.background = 'Canvas'; document.body.append(probe); \
-                 const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \
+                 probe.style.background = 'CanvasText'; document.body.append(probe); \
+                 const text = getComputedStyle(probe).backgroundColor; probe.remove(); \
                  const bar = document.querySelector({DIVIDER:?}).parentElement; \
-                 return [getComputedStyle(bar).backgroundColor, canvas]; }})()"
+                 return [getComputedStyle(bar).backgroundColor, text]; }})()"
             ))
             .await
             .unwrap()
             .into_value()
             .unwrap();
-        assert_ne!(line, canvas, "the divider line takes the page's Canvas");
+        assert_eq!(line, canvas_text, "the divider line takes the text colour");
         fixture.close().await.unwrap();
     });
 }

@@ -598,6 +598,8 @@ fn a_rule_added_after_mount_waits_for_the_field_to_lose_focus() {
             .await
             .unwrap();
         keyboard::tab_to(page, PICKER, 10).await.unwrap();
+        let moves = "Number(document.getElementById('moves').textContent)";
+        let before: u32 = page.evaluate(moves).await.unwrap().into_value().unwrap();
         keyboard::press(page, keyboard::TAB).await.unwrap();
         wait::for_js_true(
             page,
@@ -606,16 +608,16 @@ fn a_rule_added_after_mount_waits_for_the_field_to_lose_focus() {
         )
         .await
         .unwrap();
+        // The count renders after the `focusout` that would touch: a touch has rendered by then.
+        wait::for_js_true(
+            page,
+            &format!("{moves} > {before}"),
+            "the focus move to render",
+        )
+        .await
+        .unwrap();
         let shown = "document.body.textContent.includes('Enter a number.')";
-        // Two frames: a touch from the focus move would have rendered by then.
-        let early: bool = page
-            .evaluate(format!(
-                "new Promise(done => requestAnimationFrame(() => requestAnimationFrame(() => done({shown}))))"
-            ))
-            .await
-            .unwrap()
-            .into_value()
-            .unwrap();
+        let early: bool = page.evaluate(shown).await.unwrap().into_value().unwrap();
         assert!(!early, "the move inside the field touched it");
 
         keyboard::press(page, keyboard::TAB).await.unwrap();

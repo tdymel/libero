@@ -304,12 +304,12 @@ static SCROLLER_CONTROL_SX: StaticSx = StaticSx::new(|| {
             sx().cursor("default")
                 .selector("& svg", sx().opacity("0.4")),
         )
-        // Under `Auto` a control at its end hides, but never from under the focus;
-        // `visibility` drops it from the accessibility tree too (todo 2390).
+        // Under `Auto` a control at its end hides, but never from under the focus (mouse
+        // included); `visibility` drops it from the accessibility tree too (todos 2390, 2843).
         .when(
             "controls-auto && disabled",
             sx().selector(
-                "&:not(:focus-visible)",
+                "&:not(:focus)",
                 sx().opacity("0")
                     .visibility("hidden")
                     .pointer_events("none")
@@ -804,7 +804,7 @@ mod tests {
         let css = Stylesheet::from(&SCROLLER_CONTROL_SX);
         let css = css.as_str();
         let (_, hidden) = css
-            .split_once(":not(:focus-visible)")
+            .split_once(":not(:focus)")
             .unwrap_or_else(|| panic!("no auto hide rule: {css}"));
         let hidden = &hidden[..hidden.find('}').unwrap()];
 
@@ -821,7 +821,7 @@ mod tests {
     fn a_shown_control_turns_visible_without_a_transition() {
         let css = Stylesheet::from(&SCROLLER_CONTROL_SX);
         let css = css.as_str();
-        let (shown, _) = css.split_once(":not(:focus-visible)").unwrap();
+        let (shown, _) = css.split_once(":not(:focus)").unwrap();
         assert!(shown.contains("transition:opacity 150ms;"), "{css}");
         assert!(!shown.contains("visibility 150ms"), "{css}");
     }

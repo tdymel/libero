@@ -133,6 +133,8 @@ static HEADER_BASE_SX: StaticSx = StaticSx::new(|| {
     let spacing = SizeCss::SPACING.value(Size::Md);
     sx().display("flex")
         .align_items("center")
+        .flex_wrap("wrap")
+        .row_gap(SizeCss::SPACING.value(Size::Xs))
         .width("100%")
         .with(
             HEADER_HEIGHT_VAR.name(),

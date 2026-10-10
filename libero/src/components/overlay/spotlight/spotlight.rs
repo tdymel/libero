@@ -74,6 +74,10 @@ static SPOTLIGHT_BODY_SX: StaticSx = StaticSx::new(|| {
                 .border_bottom("2px solid var(--lsx-muted-3)")
                 .outline("none"),
         )
+        .selector(
+            "& > [data-slot='search']::placeholder",
+            sx().color("text-dimmed"),
+        )
         // The input always holds focus: its indicator is the underline, not a ring.
         .selector(
             "& > [data-slot='search']:focus",
@@ -540,6 +544,7 @@ fn spotlight_rows(
                         "role": "option",
                         "aria-labelledby": "{option_id}-label",
                         "aria-describedby": (!described.is_empty()).then_some(described),
+                        "aria-selected": (active == Some(row)).then_some("true"),
                         "data-active": (active == Some(row)).then_some("true"),
                         // Or the click takes focus out of the search box.
                         onmousedown: move |event: MouseEvent| event.prevent_default(),

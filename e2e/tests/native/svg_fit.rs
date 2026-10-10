@@ -120,7 +120,7 @@ fn opened() -> Page {
 fn every_svg_thumbnail_fills_its_tile() {
     let page = opened();
     for n in 1..=3 {
-        let thumbnail = format!("[aria-label=\"Go to slide {n}\"] img");
+        let thumbnail = format!("[aria-label=\"Go to picture {n}\"] img");
         let corner = painted_at(&page, &thumbnail, 0.05, 0.05);
         assert_eq!(corner, BLUE, "thumbnail {n} is letterboxed");
     }

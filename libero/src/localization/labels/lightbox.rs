@@ -4,7 +4,7 @@ pub struct LightboxLabels {
     pub label: &'static str,
     /// Names the thumbnail strip, which is a region of its own.
     pub thumbnails: &'static str,
-    /// Names a thumbnail: `{n}` is the slide number.
+    /// Names a thumbnail: `{n}` is the picture number.
     pub thumbnail: &'static str,
     /// The zoomable picture's description: its keys.
     pub keys: &'static str,
@@ -22,7 +22,7 @@ impl LightboxLabels {
     pub const ENGLISH: Self = Self {
         label: "Gallery",
         thumbnails: "Thumbnails",
-        thumbnail: "Go to slide {n}",
+        thumbnail: "Go to picture {n}",
         keys: "Z, plus or minus to zoom. Arrow keys pan a zoomed picture, or change the picture. Home and End go to the first and last picture.",
         zoomed: "Zoomed to {n}%",
         fitted: "Zoom reset",

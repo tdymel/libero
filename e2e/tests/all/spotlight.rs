@@ -153,15 +153,18 @@ async fn highlight(page: &chromiumoxide::Page) -> String {
     .await
 }
 
-/// The search box names `expected`, that row alone is drawn active, and focus
+/// The search box names `expected`, that row alone is drawn active and selected, and focus
 /// never left the search box.
 async fn expect_active(page: &chromiumoxide::Page, expected: &str, during: &str) {
     let check = format!(
         "(() => {{ const input = document.querySelector({SEARCH:?}); \
          const active = [...document.querySelectorAll({OPTIONS:?})] \
            .filter(o => o.hasAttribute('data-active')).map(o => o.id); \
+         const selected = [...document.querySelectorAll({OPTIONS:?})] \
+           .filter(o => o.getAttribute('aria-selected') === 'true').map(o => o.id); \
          return input.getAttribute('aria-activedescendant') === {expected:?} \
-           && active.length === 1 && active[0] === {expected:?}; }})()"
+           && active.length === 1 && active[0] === {expected:?} \
+           && selected.length === 1 && selected[0] === {expected:?}; }})()"
     );
     if wait::for_js_true(page, &check, during).await.is_err() {
         let actual = highlight(page).await;

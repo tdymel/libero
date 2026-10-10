@@ -215,6 +215,56 @@ fn side_and_glyph(control: &str) -> String {
     )
 }
 
+/// Todo 2843: a control the mouse stepped to the end keeps the focus, so it stays shown.
+#[test]
+fn a_clicked_control_stays_shown_at_the_end_of_the_strip() {
+    block_on(async {
+        let fixture = Fixture::open("/scroller", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        motion::set_reduced_motion(page, true).await.unwrap();
+        let ended =
+            format!("document.querySelector('{FORWARD}').getAttribute('aria-disabled') === 'true'");
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector('{FORWARD}').getAttribute('aria-disabled') === 'false'"
+            ),
+            "the forward control to offer the end",
+        )
+        .await
+        .unwrap();
+        for _ in 0..30 {
+            let done: bool = page
+                .evaluate(ended.as_str())
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            if done {
+                break;
+            }
+            pointer::click(page, FORWARD).await.unwrap();
+        }
+        wait::for_js_true(page, &ended, "the forward control to reach the end")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "(() => {{ const b = document.querySelector('{FORWARD}'); \
+                 b.getAnimations().forEach(t => t.finish()); \
+                 return document.activeElement === b \
+                 && getComputedStyle(b).visibility === 'visible' \
+                 && getComputedStyle(b).opacity === '1'; }})()"
+            ),
+            "the clicked control to stay focused and shown",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Under RTL the strip starts at its right edge: the forward control sits on
 /// the left and points left, and a step moves `scrollLeft` below 0.
 #[test]

@@ -7,7 +7,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::pointer;
 use e2e::suite::Step;
-use e2e::{Fixture, Suite, Viewport, clock, passes::keyboard, wait};
+use e2e::{Fixture, Suite, Viewport, passes::keyboard, wait};
 
 pub const TAB: &str = "[role=tab]";
 /// What the "second" state waits on. Not `TAB`: that is visible at rest, so
@@ -351,12 +351,19 @@ fn shortcut_chords_pass_through() {
         reset_tab_position(page).await.unwrap();
         keyboard::press(page, keyboard::TAB).await.unwrap();
         until_focus_and_selection(&fixture, "0:0", "Tab to focus the first tab").await;
+        page.evaluate("window.__prevented = []").await.unwrap();
         for modifier in [keyboard::ALT, keyboard::CTRL, keyboard::META] {
             keyboard::press_with(page, keyboard::ARROW_RIGHT, modifier)
                 .await
                 .unwrap();
         }
-        clock::settle(page).await.unwrap();
+        wait::for_js_true(
+            page,
+            "window.__prevented.length === 3",
+            "the three chords to reach the window",
+        )
+        .await
+        .unwrap();
         assert_eq!(focus_and_selection(&fixture).await, "0:0");
         let prevented: String = page
             .evaluate("window.__prevented.filter(Boolean).length + ''")

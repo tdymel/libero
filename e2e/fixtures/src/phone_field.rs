@@ -55,18 +55,23 @@ fn PhoneFieldRtlPage() -> Element {
     }
 }
 
-/// No rules at mount, a rule after the button (todo 2368).
+/// No rules at mount, a rule after the button (todo 2368). `#moves` counts the focus moves
+/// into the field, rendered after the `focusout` that would touch it (todo 2832).
 #[component]
 fn PhoneFieldLaterRulesPage() -> Element {
     let mut strict = use_signal(|| false);
+    let mut moves = use_signal(|| 0u32);
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
             Button { onclick: move |_| strict.set(true), "Strict" }
-            PhoneField {
-                label: "Mobile",
-                country: "DE",
-                validate: if strict() { vec![not_empty.error("Enter a number.")] } else { Vec::new() },
+            div { onfocusin: move |_| moves += 1,
+                PhoneField {
+                    label: "Mobile",
+                    country: "DE",
+                    validate: if strict() { vec![not_empty.error("Enter a number.")] } else { Vec::new() },
+                }
             }
+            Text { id: "moves", "{moves}" }
         }
     }
 }

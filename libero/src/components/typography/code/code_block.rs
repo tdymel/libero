@@ -520,14 +520,14 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
     } else {
         Vec::new()
     };
-    // In flight, one plain `pre`, not a row tree thrown away on resolve (~330 ns/line).
-    // No grammar but marking asked for: unstyled rows, so the marks still land (todo 668).
+    // Unmarked, one plain `pre` in flight, not a row tree thrown away on resolve (~330 ns/line).
+    // Marking asked for: unstyled rows until the grammar lands, so the marks show (todos 668, 2827).
     let marked = props.diff || props.highlight_lines.is_some();
     let lines = highlighted
         .read()
         .clone()
         .flatten()
-        .or_else(|| (language.is_none() && marked).then(|| plain_lines(&display_source)));
+        .or_else(|| marked.then(|| plain_lines(&display_source)));
     // No language, no label: the empty span keeps the copy button at the end.
     let label = language.map(|language| language.name(&labels));
     let copy_source = copyable.then(|| {
@@ -843,6 +843,19 @@ mod tests {
     fn a_diff_copies_the_new_side_only() {
         let source = "fn greet() {\n-    old();\n+    new();\n}";
         assert_eq!(new_side(source), "fn greet() {\n    new();\n}");
+    }
+
+    /// Todo 2827: the server render, and the frames before highlighting resolves, kept no marks.
+    #[test]
+    fn a_diff_with_a_language_shows_its_marks_before_highlighting_resolves() {
+        let html = render(|| {
+            rsx! {
+                crate::LiberoProvider {
+                    CodeBlock { source: "-let a = 1;\n+let a = 2;", language: "rust", diff: true }
+                }
+            }
+        });
+        assert_eq!(html.matches(r#"data-slot="marker""#).count(), 2, "{html}");
     }
 
     #[test]

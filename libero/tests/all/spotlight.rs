@@ -1,6 +1,6 @@
 //! `use_spotlight`'s markup: the search box is the combobox and names a
 //! listbox and an option that exist, groups are named by a real element,
-//! nothing is ever `aria-selected`, and the status region is there before it
+//! only the highlighted row is `aria-selected`, and the status region is there before it
 //! has anything to announce. Keys and the hotkey need a browser: `e2e/tests/all/spotlight.rs`.
 
 use std::cell::{Cell, RefCell};
@@ -100,10 +100,11 @@ fn the_search_box_is_a_combobox_over_a_listbox_that_exists() {
 }
 
 #[test]
-fn rows_are_options_in_named_groups_and_never_selected() {
+fn rows_are_options_in_named_groups_and_selected_only_when_highlighted() {
     let html = rendered("", None);
     let options = tags_with(&html, r#"role="option""#);
     assert_eq!(options.len(), 4);
+    // The highlighted row alone is selected (todo 2836); the e2e checks that.
     assert!(!html.contains("aria-selected"));
 
     // The ungrouped "Help" row sits bare in the listbox, with no unnamed group.
