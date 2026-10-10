@@ -583,7 +583,8 @@ fn a_column_menu_puts_a_named_menu_button_in_each_shown_header() {
     );
     assert!(body.contains("aria-label=\"Age column options\""), "{body}");
     assert!(body.contains("aria-haspopup=\"menu\""), "{body}");
-    assert_eq!(body.matches("data-menu").count(), 2, "{body}");
+    // `=`: the menu wrapper's `data-menu-wrapper` is not a menu.
+    assert_eq!(body.matches("data-menu=").count(), 2, "{body}");
     // The header's name stays its text, without the menu button's label.
     assert!(body.contains("aria-label=\"Age\""), "{body}");
     // One sort button, beside its menu button.
