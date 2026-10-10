@@ -969,7 +969,11 @@ mod dispatched {
     use dioxus::core::ElementId;
 
     use dioxus::prelude::*;
-    use libero::{LiberoProvider, chrono::NaiveTime, components::TimePicker};
+    use libero::{
+        LiberoProvider,
+        chrono::{NaiveDate, NaiveDateTime, NaiveTime},
+        components::{ChronoField, DateRange, TimePicker},
+    };
 
     /// AM from a 14:15 with `min` 02:30 lands on 02:30, not on 02:15 below the
     /// limit (todo 445).
@@ -1000,6 +1004,85 @@ mod dispatched {
 
         let html = body(&dioxus_ssr::render(&dom));
         assert!(html.contains("name=\"at\" value=\"02:30:00\""), "{html}");
+    }
+
+    /// A time picked before any day lands on a `today` below `min`: it is pulled up to
+    /// `min` (todo 3111).
+    #[test]
+    fn a_time_picked_before_any_day_is_pulled_into_min() {
+        fn app() -> Element {
+            let mut value = use_signal(|| None::<NaiveDateTime>);
+            rsx! {
+                LiberoProvider {
+                    ChronoField::<NaiveDateTime> {
+                        label: "At",
+                        today: NaiveDate::from_ymd_opt(2026, 10, 9).unwrap(),
+                        min: NaiveDate::from_ymd_opt(2026, 10, 10).unwrap().and_hms_opt(9, 0, 0).unwrap(),
+                        close_on_change: false,
+                        variant: "analog",
+                        twelve_hour: true,
+                        name: "at",
+                        value: value(),
+                        onchange: move |next| value.set(next),
+                    }
+                }
+            }
+        }
+
+        let mut page = Page::mount(app);
+        let input = page.rec.first_click.expect("the input takes clicks");
+        page.click(input);
+        page.render();
+        let time = page.rec.element("click", "text", "Time");
+        page.click(time);
+        page.render();
+        let am = page.rec.element("click", "text", "AM");
+        page.click(am);
+        page.render();
+
+        let html = body(&dioxus_ssr::render(&page.dom));
+        assert!(
+            html.contains("name=\"at\" value=\"2026-10-10T09:00:00"),
+            "{html}"
+        );
+    }
+
+    /// The same for the start of a range of moments.
+    #[test]
+    fn a_start_time_picked_before_any_day_is_pulled_into_min() {
+        fn app() -> Element {
+            let mut value = use_signal(|| None::<DateRange<NaiveDateTime>>);
+            rsx! {
+                LiberoProvider {
+                    ChronoField::<DateRange<NaiveDateTime>> {
+                        label: "Stay",
+                        today: NaiveDate::from_ymd_opt(2026, 10, 9).unwrap(),
+                        min: NaiveDate::from_ymd_opt(2026, 10, 10).unwrap().and_hms_opt(9, 0, 0).unwrap(),
+                        close_on_change: false,
+                        variant: "analog",
+                        twelve_hour: true,
+                        name: "stay",
+                        value: value(),
+                        onchange: move |next| value.set(next),
+                    }
+                }
+            }
+        }
+
+        let mut page = Page::mount(app);
+        let input = page.rec.first_click.expect("the input takes clicks");
+        page.click(input);
+        page.render();
+        let start = page.rec.element("click", "text", "Start time");
+        page.click(start);
+        page.render();
+        let am = page.rec.element("click", "text", "AM");
+        page.click(am);
+        page.render();
+
+        let html = body(&dioxus_ssr::render(&page.dom));
+        assert!(html.contains("Dates, </span>10 Oct"), "{html}");
+        assert!(html.contains("Start time, </span>9:00 AM"), "{html}");
     }
 
     /// Todo 26 item 5: a range of days closes its dropdown on the second pick,

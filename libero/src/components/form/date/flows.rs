@@ -280,7 +280,7 @@ pub(super) fn DateTimeFlow(props: DateTimeFlowProps) -> Element {
     let size = props.size.copied_or(use_theme().chrono_picker.size);
     let date = value.map(|value| value.date());
     let time = value.map(|value| value.time()).or(pending());
-    let (min_time, max_time) = time_limits(date, props.min, props.max);
+    let (min_time, max_time) = time_limits(date.or(today), props.min, props.max);
 
     let picker = match part() {
         Part::Date => rsx! {
@@ -310,7 +310,9 @@ pub(super) fn DateTimeFlow(props: DateTimeFlowProps) -> Element {
                 value: time,
                 onchange: move |next: Option<NaiveTime>| {
                     match (date.or(today), next) {
-                        (Some(day), Some(next)) => onpick.call(Some(NaiveDateTime::new(day, next))),
+                        (Some(day), Some(next)) => {
+                            onpick.call(Some(on_day(day, next, props.min, props.max)));
+                        }
                         (None, next) => pending.set(next),
                         _ => {}
                     }
@@ -456,13 +458,14 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
             }
         },
         Step::Start => {
-            let (min, max) = time_limits(start.map(|start| start.date()), props.min, props.max);
+            let start_day = start.map(|start| start.date()).or(today);
+            let (min, max) = time_limits(start_day, props.min, props.max);
             let onchange = EventHandler::new(move |time: Option<NaiveTime>| {
                 let Some(time) = time else {
                     return;
                 };
-                match start.map(|start| start.date()).or(today) {
-                    Some(day) => emit(NaiveDateTime::new(day, time), end),
+                match start_day {
+                    Some(day) => emit(on_day(day, time, props.min, props.max), end),
                     None => pending_start.set(Some(time)),
                 }
             });
