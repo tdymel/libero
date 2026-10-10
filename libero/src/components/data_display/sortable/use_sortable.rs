@@ -112,14 +112,24 @@ impl SortableItemHandle {
     /// `move-later` slots, from an effect: on a WebView each `onmounted` is a blocking round trip
     /// (todos 2584, 2749).
     pub(crate) fn find_parts(&self, item: &str) {
-        let find = |slot: &str| match slot {
-            "" => platform::mounted_by_selector(item),
-            slot => platform::mounted_by_selector(&format!("{item} > [data-slot=\"{slot}\"]")),
-        };
+        self.find_parts_by(
+            item,
+            [
+                " > [data-slot=\"handle\"]",
+                " > [data-slot=\"move-earlier\"]",
+                " > [data-slot=\"move-later\"]",
+            ],
+        );
+    }
+
+    /// [`find_parts`](Self::find_parts) for an item whose controls are not its slotted children:
+    /// the `handle`, `earlier` and `later` selectors continue the `item` selector.
+    pub(crate) fn find_parts_by(&self, item: &str, [handle, earlier, later]: [&str; 3]) {
+        let find = |part: &str| platform::mounted_by_selector(&format!("{item}{part}"));
         self.element.point_at(find(""));
-        self.handle.point_at(find("handle"));
-        self.earlier.point_at(find("move-earlier"));
-        self.later.point_at(find("move-later"));
+        self.handle.point_at(find(handle));
+        self.earlier.point_at(find(earlier));
+        self.later.point_at(find(later));
     }
 }
 
