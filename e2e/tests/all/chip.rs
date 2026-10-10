@@ -3,7 +3,7 @@
 
 use anyhow::Result;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, eventually_focused, tick};
+use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::keyboard::{self, ENTER, SPACE};
 use e2e::passes::pointer::{self, Point};
 use e2e::suite::Step;
@@ -145,7 +145,7 @@ async fn the_padding_toggles<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 async fn the_remove_x_does_not_toggle<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click("#remove").await?;
     emits(d, "remove").await?;
-    tick(d).await?;
+    d.flush().await?;
     emits(d, "remove").await
 }
 

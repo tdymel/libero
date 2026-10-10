@@ -5,7 +5,7 @@ use anyhow::{Result, ensure};
 use chromiumoxide::Page;
 use e2e::browser::Scheme;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, eventually_focused, eventually_text, tick};
+use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::passes::{contrast, focus, keyboard, pointer};
 use e2e::{Fixture, Viewport, wait};
 
@@ -456,7 +456,7 @@ async fn a_late_status_shows_the_summary<D: Driver>(d: &mut D, _route: &str) -> 
         Ok(d.attr("#code", "aria-invalid").await?.as_deref() == Some("true"))
     })
     .await?;
-    tick(d).await?;
+    d.flush().await?;
     ensure!(
         !d.exists(SUMMARY).await?,
         "a rule broken after a valid submit showed the summary"
@@ -486,7 +486,7 @@ async fn a_reset_stops_the_wait<D: Driver>(d: &mut D, _route: &str) -> Result<()
         Ok(d.attr("#name", "aria-invalid").await?.as_deref() == Some("true"))
     })
     .await?;
-    tick(d).await?;
+    d.flush().await?;
     ensure!(
         !d.exists(SUMMARY).await?,
         "a status after a reset showed the summary"

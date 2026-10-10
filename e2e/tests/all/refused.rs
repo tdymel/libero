@@ -2,13 +2,13 @@
 //! click, an `inert` subtree neither a click nor focus. Blitz gave both.
 
 use anyhow::{Result, ensure};
-use e2e::driver::{Driver, Platform, eventually_focused, tick};
+use e2e::driver::{Driver, Platform, eventually_focused};
 use e2e::passes::keyboard::TAB;
 
 async fn a_disabled_button<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click("#off-label").await?;
     d.click("#off-in-card").await?;
-    tick(d).await?;
+    d.flush().await?;
     ensure!(
         d.text("#clicks").await? == "0",
         "a disabled button's handler ran"

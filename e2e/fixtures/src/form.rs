@@ -11,7 +11,7 @@ use libero::components::{
     not_empty, use_form,
 };
 
-use crate::{Routes, common::Tick};
+use crate::Routes;
 
 pub const ROUTES: Routes = &[
     ("/form", || rsx! { FormPage {} }),
@@ -61,7 +61,6 @@ fn ServerStatusPage(at_once: bool) -> Element {
             }
             Button { id: "break", onclick: move |_| code.set("a".to_string()), "Break code" }
             Button { id: "reset", onclick: move |_| form.reset(), "Reset" }
-            Tick {}
         }
     }
 }

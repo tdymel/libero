@@ -13,7 +13,7 @@ use libero::{
     theme::Direction,
 };
 
-use crate::{Routes, common::Tick};
+use crate::Routes;
 
 pub const ROUTES: Routes = &[
     ("/use-swipe/basic", || rsx! { SwipePad {} }),
@@ -40,7 +40,6 @@ fn SwipePad() -> Element {
             onpointercancel: move |event| swipe.onpointercancel.call(event),
         }
         p { id: "last", "{said}" }
-        Tick {}
     }
 }
 
@@ -61,7 +60,6 @@ fn EdgePage() -> Element {
                 onpointercancel: move |event| swipe.onpointercancel.call(event),
                 sx: edge_swipe_sx().height("3000px"),
                 p { id: "opens", "{opens}" }
-                Tick {}
             }
         }
     }

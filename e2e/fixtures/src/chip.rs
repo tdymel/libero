@@ -6,7 +6,7 @@ use libero::components::{
     Tree, TreeItem, TreeNode, TreeNodeRenderArgs, use_form,
 };
 
-use crate::{Routes, common::Tick};
+use crate::Routes;
 
 pub const ROUTES: Routes = &[
     ("/chip", || rsx! { ChipPage {} }),
@@ -126,7 +126,6 @@ fn ChipRemovablePage() -> Element {
             }
             Chip { id: "plain", checked: false, onchange: move |_| {}, "js" }
         }
-        Tick {}
     }
 }
 
