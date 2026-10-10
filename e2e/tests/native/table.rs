@@ -595,3 +595,44 @@ fn a_wheel_moves_the_window() {
         gap(&page)
     );
 }
+
+/// Todo 3154: a cell unpinned on Blitz keeps no inset of its old pin.
+#[test]
+fn an_unpinned_body_cell_drops_its_inset() {
+    fn app() -> Element {
+        let mut pinned = use_signal(|| true);
+        let columns = (0..3)
+            .map(|i| {
+                column(format!("C{i}"))
+                    .value(|p: &Person| p.name.to_string())
+                    .width("120px")
+            })
+            .collect();
+        let pins = match pinned() {
+            true => PinnedColumns::default().start(["C0"]),
+            false => PinnedColumns::default(),
+        };
+        rsx! {
+            button { id: "unpin", onclick: move |_| pinned.set(false), "Unpin" }
+            Table {
+                aria_label: "Pins",
+                scroll: true,
+                pinned_columns: Some(pins),
+                data: vec![Person { name: "Ada", age: 36 }],
+                columns,
+            }
+        }
+    }
+    const CELL: &str = "tbody td:first-child";
+    let mut page = mount(app);
+    assert_eq!(page.computed(CELL, "inset-inline-start"), "0px");
+    page.click("#unpin");
+    page.settle();
+    assert_eq!(page.attr(CELL, "data-pin"), None);
+    assert_eq!(
+        page.computed(CELL, "inset-inline-start"),
+        "auto",
+        "style {:?}",
+        page.attr(CELL, "style")
+    );
+}

@@ -155,6 +155,8 @@ button there.
   window, use the Move to menu.
 - A board with a height of its own scrolls its cards by wheel and touch; the
   scrollbar's gutter stays reserved, so a drag never changes the board's width.
+- A drag's edge scroll stops short of the board's end by its border and a
+  classic scrollbar's thickness: to reach the last few pixels, scroll by wheel.
 - Columns keep their place: the board has no column reorder.
 - In a filtered column a dragged card lands just before the next card shown,
   or just after the last one; Move to lands after the last card shown, before
