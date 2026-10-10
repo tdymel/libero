@@ -83,6 +83,7 @@ pub fn KanbanPage() -> Element {
                 .limits([
                     "The keyboard drag moves a card within its column only. Moving to another column is the Move to menu.",
                     "A drag scrolls the board sideways only, not the page: to reach a card or column above or below the window, use the Move to menu.",
+                    "A board with a height of its own scrolls its cards by wheel and touch; the scrollbar's gutter stays reserved, so a drag never changes the board's width.",
                     "Columns keep their place: the board has no column reorder.",
                     "In a filtered column a dragged card lands just before the next card shown, or just after the last one; Move to lands after the last card shown, before any hidden ones that follow.",
                 ]),

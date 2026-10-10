@@ -45,6 +45,11 @@ const EDGE_TOLERANCE: f64 = 1.0;
 /// Mouse travel before a press becomes a drag rather than a click.
 const DRAG_THRESHOLD: f64 = 5.0;
 
+/// A drag needs a single-pointer alternative: step buttons, own or the caller's (2.5.7).
+fn draggable_with(draggable: bool, controls: ScrollerControls, has_handle: bool) -> bool {
+    draggable && (controls != ScrollerControls::Never || has_handle)
+}
+
 /// Whether the strip rests against either end. Both `true`: nothing overflows.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ScrollerEdges {
@@ -359,6 +364,7 @@ base_props! {
         #[props(default, into)]
         fade_color: Input<ThemeAwareValue>,
         /// Mouse drag-to-pan; touch and trackpad scroll natively anyway.
+        /// Off under `controls: "never"` unless a `handle` brings its own buttons (WCAG 2.5.7).
         #[props(default)]
         draggable: Option<bool>,
         /// Fires when either edge state flips, including the first measurement.
@@ -371,8 +377,8 @@ base_props! {
     }
 }
 
-/// A horizontal strip with a hidden scrollbar and a step control at each end,
-/// shown by default only while there is more content that way (see `controls`).
+/// A horizontal strip with a hidden scrollbar and a step control at each end
+/// (under `auto`, only while there is more content that way).
 ///
 /// ```
 /// # use dioxus::prelude::*;
@@ -396,6 +402,7 @@ pub fn Scroller(props: ScrollerProps) -> Element {
     let labels = use_localization().scroller;
     // Always called, so the hook order does not depend on the prop.
     let own = use_scroller();
+    let has_handle = props.handle.is_some();
     let handle = props.handle.unwrap_or(own);
     let (area, viewport) = (handle.area, handle.area.element);
     let viewport_id = use_id();
@@ -404,7 +411,11 @@ pub fn Scroller(props: ScrollerProps) -> Element {
     let size = props.control_size.copied_or(theme.scroller.control_size);
     let mut amount = handle.amount;
     amount.set(props.scroll_amount.unwrap_or(theme.scroller.scroll_amount) as f64);
-    let draggable = props.draggable.unwrap_or(theme.scroller.draggable);
+    let draggable = draggable_with(
+        props.draggable.unwrap_or(theme.scroller.draggable),
+        controls,
+        has_handle,
+    );
 
     let mut edges = use_signal(|| ScrollerEdges::UNMEASURED);
     let onedgechange = props.onedgechange;
@@ -762,6 +773,17 @@ mod tests {
             ScrollerEdges::measure(0.0, 400.0, 400.5),
             ScrollerEdges::UNMEASURED
         );
+    }
+
+    #[test]
+    fn a_drag_needs_step_buttons_of_the_strip_or_the_caller() {
+        use ScrollerControls::{Always, Auto, Never};
+
+        assert!(draggable_with(true, Auto, false));
+        assert!(draggable_with(true, Always, false));
+        assert!(draggable_with(true, Never, true));
+        assert!(!draggable_with(true, Never, false));
+        assert!(!draggable_with(false, Auto, true));
     }
 
     /// From where the strip is now, so a touch scroll in between is honoured.

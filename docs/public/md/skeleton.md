@@ -129,6 +129,9 @@ Like every component, `Skeleton` also takes the shared props `sx`, `class`,
 ### Libero handles
 
 - A skeleton says nothing to a screen reader.
+- The grey is decoration, `aria-hidden` and `inert`, and carries no state: it
+  falls outside the 3:1 non-text contrast rule (WCAG 1.4.11), and your
+  `aria-busy` region carries the loading state.
 - Content it hides is not announced and not reachable with Tab.
 - With reduced motion the pulse stops half-way.
 

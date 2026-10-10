@@ -129,6 +129,15 @@ fn publish_css(id: &str, height: &str) -> String {
     )
 }
 
+/// A `Fixed` banner always covers the content below it, so it always publishes (2.4.11).
+fn publishes_height(position: HeaderPosition, publish_height: bool) -> bool {
+    match position {
+        HeaderPosition::Static => false,
+        HeaderPosition::Sticky => publish_height,
+        HeaderPosition::Fixed => true,
+    }
+}
+
 static HEADER_BASE_SX: StaticSx = StaticSx::new(|| {
     let spacing = SizeCss::SPACING.value(Size::Md);
     sx().display("flex")
@@ -236,7 +245,7 @@ fn header_variables(props: &HeaderProps, tint: Option<GlassTint>) -> Variables {
 
 base_props! {
     pub struct HeaderProps {
-        /// `Sticky` (default); `Fixed` content is offset by `var(--lsx-header-height)`.
+        /// `Sticky` (default); offset `Fixed` content by `var(--lsx-header-height)`, which it publishes.
         #[props(default, into)]
         position: Input<HeaderPosition>,
         /// Minimum height, a size or any CSS length. Unset, `theme.header.size`.
@@ -249,7 +258,8 @@ base_props! {
         /// Stacking order. Keep it below `Z_INDEX_FLOAT` (200), or a focused skip link hides under it.
         #[props(default, into)]
         z_index: Input<ThemeAwareValue>,
-        /// Publishes the height on `:root`, so focus scrolls clear. The page's banner only.
+        /// Publishes the height on `:root`, so focus scrolls clear; a `Fixed` header always does.
+        /// The page's banner only.
         #[props(default)]
         publish_height: bool,
         /// Frosted glass, as on `Paper`: a `color` tints it.
@@ -314,7 +324,7 @@ pub fn Header(props: HeaderProps) -> Element {
             wanted: Cell::new(false),
         })
     });
-    let publishes = props.publish_height && position != HeaderPosition::Static;
+    let publishes = publishes_height(position, props.publish_height);
     let height = props
         .size
         .resolve(Some(HEADER_HEIGHT))
@@ -438,6 +448,16 @@ mod tests {
             stat.contains("min-height:var(--lsx-header-height);"),
             "{css}"
         );
+    }
+
+    #[test]
+    fn a_fixed_banner_publishes_without_asking_and_a_static_one_never_does() {
+        for publish in [false, true] {
+            assert!(publishes_height(HeaderPosition::Fixed, publish));
+            assert!(!publishes_height(HeaderPosition::Static, publish));
+        }
+        assert!(publishes_height(HeaderPosition::Sticky, true));
+        assert!(!publishes_height(HeaderPosition::Sticky, false));
     }
 
     #[test]

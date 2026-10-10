@@ -103,6 +103,33 @@ fn only_an_opted_in_header_publishes_its_height() {
     });
 }
 
+/// Todo 3041: a fixed banner covers the content, so it publishes without `publish_height`.
+#[test]
+fn a_fixed_header_publishes_its_height_unasked() {
+    block_on(async {
+        let fixture = Fixture::open("/header-fixed", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#banner").await.unwrap();
+        wait::for_js_true(
+            page,
+            &"(() => { const root = getComputedStyle(document.documentElement); \
+              return resolved('var(--lsx-header-height)') === resolved('var(--lsx-header-height-lg)') \
+              && root.scrollPaddingTop !== '0px' && root.scrollPaddingTop !== 'auto'; })()"
+                .replace("resolved", RESOLVED_HEIGHT),
+            "the fixed banner's height and scroll padding on :root",
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("the fixed header fixture")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// `#banner` and `#card` as `backdrop|background alpha|text colour`, each.
 const GLASS: &str = "(() => ['#banner', '#card'].map(id => { \
     const s = getComputedStyle(document.querySelector(id)); \

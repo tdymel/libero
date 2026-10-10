@@ -35,8 +35,10 @@ static KANBAN_SX: StaticSx = StaticSx::new(|| {
         .align_items("flex-start")
         .gap("md")
         .overflow_x("auto")
-        // Not `auto` too: a card dragged below the columns would add a scrollbar mid-drag (2454).
-        .overflow_y("hidden")
+        // A board with a height scrolls its cards (3069); the stable gutter keeps the
+        // width when a card dragged below the columns adds the scrollbar mid-drag (2454).
+        .overflow_y("auto")
+        .with("scrollbar-gutter", "stable")
 });
 
 static KANBAN_COLUMN_SX: StaticSx = StaticSx::new(|| {
@@ -639,11 +641,12 @@ mod tests {
     }
 
     #[test]
-    fn the_board_scrolls_sideways_only() {
+    fn a_board_with_a_height_scrolls_both_ways_in_a_stable_gutter() {
         let css = Stylesheet::from(&KANBAN_SX).as_str().to_string();
 
         assert!(css.contains("overflow-x:auto"), "{css}");
-        assert!(css.contains("overflow-y:hidden"), "{css}");
+        assert!(css.contains("overflow-y:auto"), "{css}");
+        assert!(css.contains("scrollbar-gutter:stable"), "{css}");
     }
 
     #[test]

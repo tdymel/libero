@@ -100,7 +100,8 @@ base_props! {
     }
 }
 
-/// A placeholder for content that is still loading.
+/// A placeholder for content that is still loading. Its grey is decoration, `aria-hidden`
+/// and `inert`: the caller's `aria-busy` region carries the state, not the 3:1 contrast.
 ///
 /// ```
 /// # use dioxus::prelude::*;

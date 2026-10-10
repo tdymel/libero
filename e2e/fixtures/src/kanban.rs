@@ -1,7 +1,10 @@
 //! `Kanban`.
 
 use dioxus::prelude::*;
-use libero::components::{Button, Flex, Kanban, KanbanCard, KanbanColumn, KanbanMove, Text};
+use libero::{
+    components::{Button, Flex, Kanban, KanbanCard, KanbanColumn, KanbanMove, Text},
+    sx::sx,
+};
 
 use crate::Routes;
 
@@ -9,7 +12,24 @@ pub const ROUTES: Routes = &[
     ("/kanban", || rsx! { KanbanPage { data: false, wrapped: false } }),
     ("/kanban/data", || rsx! { KanbanPage { data: true, wrapped: false } }),
     ("/kanban/columns", || rsx! { KanbanPage { data: true, wrapped: true } }),
+    ("/kanban/capped", || rsx! { CappedPage {} }),
 ];
+
+/// A 200px board whose one column holds 20 cards, most of them below the board's edge.
+#[component]
+fn CappedPage() -> Element {
+    rsx! {
+        Kanban { id: "board", sx: sx().height("200px"), onmove: |_: KanbanMove| {},
+            KanbanColumn { index: 0, label: "Long",
+                for index in 0..20 {
+                    KanbanCard { key: "{index}", index, id: "card-{index}", label: "Card {index}",
+                        Text { "Card {index}" }
+                    }
+                }
+            }
+        }
+    }
+}
 
 const COLUMNS: [&str; 3] = ["To do", "Doing", "Done"];
 

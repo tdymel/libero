@@ -31,7 +31,7 @@ pub fn HeaderPage() -> Element {
                     .doc("`sticky` pins to the top of the scrolling ancestor, `static` scrolls away. `fixed` pins to the viewport, so offset your content by `var(--lsx-header-height)`. In a native app `fixed` scrolls with the page for now; use `sticky`."),
                 prop("publish_height", "bool")
                     .default("false")
-                    .doc("Publishes the height as `--lsx-header-height` and `scroll-padding-top` on `:root`, so focus scrolls clear of a sticky or fixed banner. Set it on the page's own banner only."),
+                    .doc("Publishes the height as `--lsx-header-height` and `scroll-padding-top` on `:root`, so focus scrolls clear of a sticky banner. A `fixed` header always does. Set it on the page's own banner only."),
                 prop("size", "ThemeAwareValue")
                     .default(theme.header.size.as_str())
                     .doc("Minimum height. The header grows when its content wraps."),
@@ -51,12 +51,12 @@ pub fn HeaderPage() -> Element {
             accessibility: a11y()
                 .handles([
                     "Draws a `header` element, which screen readers list as the page's banner when it sits at the top level.",
-                    "With `publish_height`, an element that gets focus under a `sticky` or `fixed` header scrolls clear of it (WCAG 2.4.11). This covers the page's own scroller only.",
+                    "Under a `fixed` header, or a `sticky` one with `publish_height`, an element that gets focus scrolls clear of it (WCAG 2.4.11). This covers the page's own scroller only.",
                 ])
                 .must([
                     "Put the page's header at the top level, not inside `main`, `nav`, `section`, `article` or `aside`. Use one per page.",
                     "Put a `nav` inside it for the site's links.",
-                    "Set `publish_height` on a `sticky` or `fixed` header.",
+                    "Set `publish_height` on a `sticky` page banner. A `fixed` one needs no flag.",
                     "Keep a raised `z_index` below `Z_INDEX_FLOAT` (200). A focused skip link sits there and would hide under a higher header.",
                     "For a header stuck inside another scroller, set `scroll-padding-top: var(--lsx-header-height)` on that scroller yourself.",
                 ])

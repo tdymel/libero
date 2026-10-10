@@ -77,7 +77,15 @@ fn only_publish_height_puts_the_height_on_the_root() {
         }
     }
 
+    fn fixed() -> Element {
+        rsx! {
+            LiberoProvider { Header { position: "fixed", "site header" } }
+        }
+    }
+
     assert!(!render(quiet).contains(":root[data-lsx-header="));
+    // A fixed banner covers the content below it, so it publishes unasked.
+    assert!(render(fixed).contains(":root[data-lsx-header="));
     let html = render(banner);
     assert!(html.contains(":root[data-lsx-header="), "{html}");
     assert!(

@@ -936,13 +936,60 @@ fn a_touch_screen_describes_the_handle_by_the_move_buttons() {
     });
 }
 
-/// 2454: a card dragged below the columns adds no vertical scrollbar, so the board keeps its width.
+/// 2454: a card dragged below the columns keeps the board's width, the gutter being stable.
 #[test]
 fn a_card_dragged_below_the_columns_keeps_the_board_width() {
     use e2e::browser::{Fixture, Viewport, block_on};
     block_on(async {
         let fixture = Fixture::open("/kanban", Viewport::Desktop).await.unwrap();
         drag_below_the_columns(fixture).await;
+    });
+}
+
+/// 3069: a board with a set height scrolls by wheel to a card past its bottom edge.
+#[test]
+fn a_board_with_a_height_scrolls_to_the_cards_below_its_edge() {
+    use chromiumoxide::cdp::browser_protocol::input::{
+        DispatchMouseEventParams, DispatchMouseEventType,
+    };
+    use e2e::browser::{Fixture, Viewport, block_on};
+    use e2e::{passes::pointer, wait};
+    block_on(async {
+        let fixture = Fixture::open("/kanban/capped", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#card-0").await.unwrap();
+        let below = "(() => { const b = document.querySelector('#board').getBoundingClientRect(); \
+                     return document.querySelector('#card-19').getBoundingClientRect().top >= b.bottom; })()";
+        wait::for_js_true(page, below, "the last card below the board's edge")
+            .await
+            .unwrap();
+        let at = pointer::centre_of(page, "#card-0").await.unwrap();
+        for _ in 0..6 {
+            page.execute(
+                DispatchMouseEventParams::builder()
+                    .r#type(DispatchMouseEventType::MouseWheel)
+                    .x(at.x)
+                    .y(at.y)
+                    .delta_x(0.0)
+                    .delta_y(240.0)
+                    .build()
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        }
+        wait::for_js_true(
+            page,
+            "(() => { const b = document.querySelector('#board').getBoundingClientRect(); \
+             const c = document.querySelector('#card-19').getBoundingClientRect(); \
+             return c.bottom <= b.bottom + 1 && c.top >= b.top; })()",
+            "the wheel to bring the last card into the board",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
     });
 }
 
@@ -1010,7 +1057,7 @@ async fn drag_below_the_columns(fixture: e2e::browser::Fixture) {
         .unwrap();
     assert_eq!(
         held,
-        (width, "hidden".to_string(), 0.0),
+        (width, "auto".to_string(), 0.0),
         "the drag changed the board"
     );
     in_front(page, async {

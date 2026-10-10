@@ -520,11 +520,9 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
     } else {
         Vec::new()
     };
-    // Unmarked, one plain `pre` in flight, not a row tree thrown away on resolve (~330 ns/line).
-    // Marking asked for: unstyled rows until the grammar lands, so the marks show (todos 668, 2827).
-    // No language never highlights, so numbers are drawn by the plain rows (todo 3029).
-    let marked =
-        props.diff || props.highlight_lines.is_some() || (line_numbers && language.is_none());
+    // Only a bare block takes the plain `pre` in flight, not a row tree thrown away on resolve (~330 ns/line).
+    // Marks or numbers asked for: unstyled rows until the grammar lands, so neither pops in (todos 668, 2827, 3030).
+    let marked = props.diff || props.highlight_lines.is_some() || line_numbers;
     let lines = highlighted
         .read()
         .clone()

@@ -164,7 +164,7 @@ pub fn ScrollerPage() -> Element {
                         .doc("The colour the content fades into under a control. Set it to the surface the strip sits on."),
                     prop("draggable", "bool")
                         .default(theme.scroller.draggable.to_string())
-                        .doc("Lets the mouse drag the strip. Touch and trackpad scroll it either way."),
+                        .doc("Lets the mouse drag the strip. Touch and trackpad scroll it either way. With `controls: \"never\"` it only drags when a `handle` is bound, for your own buttons (WCAG 2.5.7)."),
                     prop("onedgechange", "EventHandler<ScrollerEdges>")
                         .doc("Fires when the strip reaches or leaves an end, and once when it is first measured."),
                     prop("handle", "ScrollerHandle")
@@ -185,13 +185,17 @@ pub fn ScrollerPage() -> Element {
                     "The strip is a tab stop while it overflows with nothing focusable inside. Focusable children take the focus themselves, and the strip scrolls each into view.",
                     "A control at its own end leaves the tab order, but keeps focus if it had it.",
                 ])
-                .must(["Name the strip with `aria_label`. It is required, as the strip is a named region and can be a tab stop."])
+                .must([
+                    "Name the strip with `aria_label`. It is required, as the strip is a named region and can be a tab stop.",
+                    "With `controls: \"never\"`, bind a `handle` and give it buttons of your own: the strip drags only then, and the buttons are the alternative to a drag.",
+                ])
                 .example("A row of category chips, `Scroller { aria_label: \"Categories\", .. }`: Tab moves from chip to chip, and the strip scrolls each one into view."),
             lead: rsx! {
                 Text {
                     "A horizontal strip with a hidden scrollbar and a step control over "
-                    "each end, shown while there is more content that way. A press scrolls "
-                    "by "
+                    "each end, by default shown while there is more content that way (see "
+                    Code { source: "controls" }
+                    "). A press scrolls by "
                     Code { source: "scroll_amount" }
                     " pixels. Touch, trackpad and the arrow keys scroll it as usual. The "
                     "content fades out under each control, so set "

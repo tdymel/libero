@@ -9,7 +9,17 @@ pub const ROUTES: Routes = &[
     ("/header", || rsx! { HeaderPage {} }),
     ("/header-static", || rsx! { StaticPage {} }),
     ("/header-glass", || rsx! { GlassPage {} }),
+    ("/header-fixed", || rsx! { FixedPage {} }),
 ];
+
+/// A fixed `lg` banner that never sets `publish_height`.
+#[component]
+fn FixedPage() -> Element {
+    rsx! {
+        Header { id: "banner", size: "lg", position: "fixed", "Banner" }
+        main { id: "content", "Content" }
+    }
+}
 
 /// A glass banner tinted by its `color`, and a plain glass `Paper`.
 #[component]

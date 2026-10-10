@@ -56,7 +56,7 @@ pub fn BadgePage() -> Element {
                 ])
                 .example("A \"Paid\" badge in an invoice row, `Badge { color: \"success\", variant: \"tonal\", \"Paid\" }`: read in place with the row, at 4.5:1 or more.")
                 .limits([
-                    "`elevated`, `outlined` and `standard` print the label in the color itself, which stays under 4.5:1 on white for `warning` (3.27:1) and `success` (4.05:1).",
+                    "`elevated`, `outlined` and `standard` print the label in the color itself, which stays under 4.5:1 on white for `warning` (3.27:1) and `success` (4.04:1).",
                 ]),
             lead: rsx! {
                 Text {

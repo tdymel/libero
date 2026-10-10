@@ -4,10 +4,10 @@ Crate: `libero`
 Import: `use libero::components::Scroller;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/scroller.rs>
 Index: [index.md](index.md) lists every other page
-Description: A horizontal strip with a hidden scrollbar and a step control over each end, shown while there is more content that way.
+Description: A horizontal strip with a hidden scrollbar and a step control over each end, by default shown while there is more content that way.
 
 A horizontal strip with a hidden scrollbar and a step control over each end,
-shown while there is more content that way. A press scrolls by `scroll_amount`
+by default shown while there is more content that way (see `controls`). A press scrolls by `scroll_amount`
 pixels. Touch, trackpad and the arrow keys scroll it as usual. The content fades
 out under each control, so set `fade_color` to the surface the strip sits on.
 
@@ -72,7 +72,7 @@ strip. With `controls: "never"`, move the strip from your own buttons through a
 | `controls` | `ScrollerControls` | `auto` | `auto` shows each control while there is content that way. `always` keeps both, dimmed at their end. `never` shows neither. |
 | `control_size` | `Size` | `md` | Width of each control and its glyph. |
 | `fade_color` | `ThemeAwareValue` | paper background | The colour the content fades into under a control. Set it to the surface the strip sits on. |
-| `draggable` | `bool` | `false` | Lets the mouse drag the strip. Touch and trackpad scroll it either way. |
+| `draggable` | `bool` | `false` | Lets the mouse drag the strip. Touch and trackpad scroll it either way. With `controls: "never"` it only drags when a `handle` is bound, for your own buttons (WCAG 2.5.7). |
 | `onedgechange` | `EventHandler<ScrollerEdges>` | - | Fires when the strip reaches or leaves an end, and once when it is first measured. `ScrollerEdges { at_start, at_end }`, both `true` when nothing overflows. |
 | `handle` | `ScrollerHandle` | - | From `use_scroller()`. Its `step_forward()` and `step_back()` move the strip as the controls do, for buttons of your own. |
 | `children` | `Element` | required | The strip. |
@@ -112,6 +112,8 @@ parts work.
 
 - Name the strip with `aria_label`. It is required, as the strip is a named
   region and can be a tab stop.
+- With `controls: "never"`, bind a `handle` and give it buttons of your own: the
+  strip drags only then, and the buttons are the alternative to a drag.
 
 ### Example
 

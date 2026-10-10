@@ -37,7 +37,7 @@ fetch only the file you need.
 - [Splitter](splitter.md): Two panes split by a divider you can drag or move with the keyboard. Nest another `Splitter` in a pane for more than two.
 - [Transition](transition.md): Fades, slides or scales its children in on mount, and out when `open` turns false.
 - [ScrollArea](scroll_area.md): A scrollable region that fills its parent, with themed scrollbars, scroll positions in percent, edge events and row virtualization through `Virtualize`.
-- [Scroller](scroller.md): A horizontal strip with a hidden scrollbar and a step control over each end, shown while there is more content that way.
+- [Scroller](scroller.md): A horizontal strip with a hidden scrollbar and a step control over each end, by default shown while there is more content that way.
 
 ## Buttons
 

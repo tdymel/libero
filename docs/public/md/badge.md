@@ -79,7 +79,7 @@ A "Paid" badge in an invoice row, `Badge { color: "success", variant: "tonal",
 
 - `elevated`, `outlined` and `standard` print the label in the color itself,
   which stays under 4.5:1 on white for `warning` (3.27:1) and `success`
-  (4.05:1).
+  (4.04:1).
 
 ## Theme defaults
 

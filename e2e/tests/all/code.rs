@@ -472,8 +472,7 @@ fn a_blank_line_keeps_its_row_without_line_numbers() {
     });
 }
 
-/// Todo 424. The gutter is drawn only once highlighting resolves, which SSR
-/// never sees; read aloud, its numbers interleave with the code.
+/// Todo 424. Read aloud, the gutter's numbers would interleave with the code.
 #[test]
 fn a_code_blocks_line_numbers_are_hidden_from_readers() {
     block_on(async {
@@ -486,7 +485,7 @@ fn a_code_blocks_line_numbers_are_hidden_from_readers() {
         wait::for_js_true(
             &fixture.page,
             &format!("{GUTTER}.length === 2"),
-            "the highlighter to draw the gutter",
+            "the gutter",
         )
         .await
         .unwrap();

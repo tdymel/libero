@@ -12,10 +12,10 @@ one. `sticky`, the default, pins to the top of the scrolling ancestor and
 `var(--lsx-header-height)`. In a native app `fixed` scrolls with the page for
 now; use `sticky`.
 
-The header is at least `size` tall and grows when its content wraps. With
-`publish_height`, a `sticky` or `fixed` header publishes its `size` on `:root`
-as `--lsx-header-height`, for whatever sits below it. Set it on the page's own
-banner only. With more than one, the last mounted wins.
+The header is at least `size` tall and grows when its content wraps. A `fixed`
+header always publishes its `size` on `:root` as `--lsx-header-height`, for
+whatever sits below it; a `sticky` one does with `publish_height`. Set it on the
+page's own banner only. With more than one, the last mounted wins.
 
 ## Usage
 
@@ -74,7 +74,7 @@ fn Demo() -> Element {
 | `glass` | `bool` | `false` | Frosted glass, as on `Paper`: content scrolling under the bar shows through, blurred. A `color` tints it, as on `Paper`. Opaque when the user reduces transparency, in forced colours, and in native windows. |
 | `gradient` | `Gradient` | - | Fills the header with a gradient from `color`, as on `Paper`: `("info", 90)` or `Gradient::default().to("info").deg(90)`; `Gradient::default()` is the theme's. The text colour and focus rings are picked to read on both stops. With `glass`, the stops turn translucent. |
 | `z_index` | `ThemeAwareValue` | `100` | Stacking order. Keep it below `Z_INDEX_FLOAT` (200), where the focused skip link sits: above it the link hides under the header (WCAG 2.4.11). |
-| `publish_height` | `bool` | `false` | Publishes the height as `--lsx-header-height` and `scroll-padding-top` on `:root`, so focus scrolls clear of a sticky or fixed banner. Set it on the page's own banner only. |
+| `publish_height` | `bool` | `false` | Publishes the height as `--lsx-header-height` and `scroll-padding-top` on `:root`, so focus scrolls clear of a sticky banner. A `fixed` header always does. Set it on the page's own banner only. |
 | `children` | `Element` | required | Nav and actions. |
 
 Like every component, `Header` also takes the shared props `sx`, `class`,
@@ -86,8 +86,8 @@ Like every component, `Header` also takes the shared props `sx`, `class`,
 
 - Draws a `header` element, which screen readers list as the page's banner
   when it sits at the top level.
-- With `publish_height`, an element that gets focus under a `sticky` or
-  `fixed` header scrolls clear of it (WCAG 2.4.11). This covers the page's own
+- Under a `fixed` header, or a `sticky` one with `publish_height`, an element
+  that gets focus scrolls clear of it (WCAG 2.4.11). This covers the page's own
   scroller only.
 
 ### You must
@@ -95,7 +95,7 @@ Like every component, `Header` also takes the shared props `sx`, `class`,
 - Put the page's header at the top level, not inside `main`, `nav`, `section`,
   `article` or `aside`. Use one per page.
 - Put a `nav` inside it for the site's links.
-- Set `publish_height` on a `sticky` or `fixed` header.
+- Set `publish_height` on a `sticky` page banner. A `fixed` one needs no flag.
 - Keep a raised `z_index` below `Z_INDEX_FLOAT` (200). A focused skip link sits
   there and would hide under a higher header.
 - For a header stuck inside another scroller, set `scroll-padding-top:
@@ -123,7 +123,7 @@ The stacking order comes from the theme's shared `z_index` scale.
 | Variable | Description |
 |---|---|
 | `--lsx-header-height-<size>` | Height for that size step. |
-| `--lsx-header-height` | The header's minimum height, from `size`. With `publish_height` it is also set on `:root`. |
+| `--lsx-header-height` | The header's minimum height, from `size`. A `fixed` header, or one with `publish_height`, also sets it on `:root`. |
 | `--lsx-header-background` | Background of a colored header. Unset leaves it neutral. |
 | `--lsx-header-color` | Text color of a colored header. Unset inherits. |
 

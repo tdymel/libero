@@ -50,8 +50,7 @@ static BARE: libero::theme::Theme = libero::theme::Theme {
 };
 
 /// `header` and `copyable` are house style: unset, each takes the theme's,
-/// and a call site still wins over it. `line_numbers` goes the same way, but
-/// the gutter is drawn only once highlighting resolves, which SSR never sees.
+/// and a call site still wins over it. `line_numbers` goes the same way.
 #[test]
 fn unset_chrome_props_follow_the_theme() {
     fn default() -> Element {
@@ -142,6 +141,29 @@ fn line_numbers_on_a_block_without_a_language_draw_a_gutter() {
     fn off() -> Element {
         rsx! {
             LiberoProvider { themes: &BARE, CodeBlock { source: "a\nb" } }
+        }
+    }
+
+    let html = body(&render(on));
+    assert_eq!(
+        html.matches(r#"data-slot="line-number""#).count(),
+        2,
+        "{html}"
+    );
+    assert!(!body(&render(off)).contains("line-number"));
+}
+
+/// Todo 3030. A language resolves later, but the gutter is in the first render, so it never pops in.
+#[test]
+fn line_numbers_on_a_block_with_a_language_draw_a_gutter_before_highlighting() {
+    fn on() -> Element {
+        rsx! {
+            LiberoProvider { CodeBlock { source: "a\nb", language: "rust" } }
+        }
+    }
+    fn off() -> Element {
+        rsx! {
+            LiberoProvider { themes: &BARE, CodeBlock { source: "a\nb", language: "rust" } }
         }
     }
 
