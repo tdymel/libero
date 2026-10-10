@@ -23,7 +23,7 @@ use crate::{
         use_element, use_id, use_popover, use_theme,
     },
     localization::TableLabels,
-    platform::{ElementApi, PlatformError, focus_selector, next_task},
+    platform::{ElementApi, PlatformError, focus_selector, is_tab, next_task},
     sx::{StaticSx, sx},
     theme::{Size, SizeCss},
 };
@@ -398,7 +398,7 @@ pub(super) fn FilterPanel(
         panel
             .element(&floating)
             .event("onkeydown", move |event: KeyboardEvent| {
-                if event.key() != Key::Tab {
+                if !is_tab(&event) {
                     return;
                 }
                 // Tab past either end leaves through the Filters button, as from it.

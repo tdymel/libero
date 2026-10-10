@@ -4,7 +4,7 @@ use super::{hover::HoverDelay, menu::MenuEdge, state::MenuFocus};
 use crate::{
     components::common::has_shortcut_modifier,
     hooks::{DismissHandle, ElementHandle, Typeahead, id_selector, typeahead_match},
-    platform::{ElementApi, PlatformError, focus_selector, logical_key},
+    platform::{ElementApi, PlatformError, focus_selector, is_tab, logical_key},
 };
 
 /// The `Copy` half of one menu's state, shared by every item's handlers.
@@ -99,7 +99,7 @@ impl Level {
                 event.prevent_default();
                 self.focus(self.len - 1);
             }
-            Key::Tab => self.tab_out(),
+            _ if is_tab(&event) => self.tab_out(),
             _ => {}
         }
     }
@@ -179,7 +179,7 @@ impl Level {
                     });
                 }
             }
-            Key::Tab => self.tab_out(),
+            _ if is_tab(&event) => self.tab_out(),
             Key::Character(ref text) if !has_shortcut_modifier(&event) => {
                 let Some(ch) = text.chars().next() else {
                     return;

@@ -17,7 +17,7 @@ use crate::{
     },
     hooks::{ElementHandle, PopoverWidth, use_element, use_localization, use_theme},
     localization::{TagsFieldLabels, fill},
-    platform::{ElementApi, logical_key},
+    platform::{ElementApi, is_tab, logical_key},
     sx::{StaticSx, sx},
     theme::Size,
     utils::warn,
@@ -586,7 +586,10 @@ fn tags_field_chips<F: Fn(Vec<String>) + Clone + 'static>(
                 onkeydown: move |event: KeyboardEvent| {
                     let key = logical_key(&event);
                     // Tab, Escape and chords pass; every other key is the cursor's.
-                    if matches!(key, Key::Tab | Key::Escape) || !event.modifiers().is_empty() {
+                    if is_tab(&event)
+                        || matches!(key, Key::Escape)
+                        || !event.modifiers().is_empty()
+                    {
                         return;
                     }
                     event.stop_propagation();

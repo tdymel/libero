@@ -22,7 +22,7 @@ use crate::{
         use_modal, use_popover, use_theme,
     },
     localization::fill,
-    platform::{ElementApi, key_taken},
+    platform::{ElementApi, is_tab, key_taken},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{PaperDefaults, Size, SizeCss, Z_INDEX_POPOVER},
 };
@@ -610,7 +610,7 @@ pub(super) fn MediaVolume(
             .attr("aria-label", labels.volume)
             // Tab leaves the card for its trigger, as a menu does.
             .event("onkeydown", move |event: KeyboardEvent| {
-                if event.key() == Key::Tab {
+                if is_tab(&event) {
                     event.prevent_default();
                     opened.set(false);
                     let _ = anchor.focus();

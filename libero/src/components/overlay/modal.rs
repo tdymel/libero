@@ -13,7 +13,7 @@ use crate::{
     },
     context::{Dismiss, ModalContext},
     hooks::{escape_closes, use_back, use_css, use_dismiss_layer, use_element, use_scroll_lock},
-    platform::{ElementApi, KeyChord, key_taken, keyboard},
+    platform::{ElementApi, KeyChord, is_tab, key_taken, keyboard},
     sx::{StaticSx, sx},
     theme::CssVar,
 };
@@ -162,7 +162,7 @@ pub(crate) fn Modal(props: ModalProps) -> Element {
             }
             // A Tab the trap left alone found nothing to focus: stay put rather than
             // walk out to the page behind. A WebView queries nothing, so Tab stays native.
-            if event.key() == Key::Tab
+            if is_tab(&event)
                 && !key_taken(&event)
                 && root.query_selector_all(FOCUSABLE_SELECTOR).is_ok()
             {

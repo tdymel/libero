@@ -20,7 +20,9 @@ use crate::{
         use_debounced_callback, use_id, use_popover, use_theme,
     },
     localization::TableLabels,
-    platform::{ElementApi, PlatformError, focus_first_of, reads_dom_synchronously, when_laid_out},
+    platform::{
+        ElementApi, PlatformError, focus_first_of, is_tab, reads_dom_synchronously, when_laid_out,
+    },
     sx::StaticSx,
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
 };
@@ -402,7 +404,7 @@ pub(super) fn FilterPopover(
         panel
             .element(&floating)
             .event("onkeydown", move |event: KeyboardEvent| {
-                if event.key() != Key::Tab {
+                if !is_tab(&event) {
                     return;
                 }
                 // Tab past either end leaves through the menu button, as from it.

@@ -14,8 +14,8 @@ use crate::{
     hooks::{ElementHandle, Hotkey, use_element, use_focus_return, use_hotkeys, use_theme},
     platform::{
         ElementApi, FocusStep, arrow_target, caret_edges, focus_among, focus_entered_from,
-        focus_lands_in, focus_selector, focused_attribute, key_taken, logical_key, silent_focus,
-        typing_target,
+        focus_lands_in, focus_selector, focused_attribute, is_tab, key_taken, logical_key,
+        silent_focus, typing_target,
     },
     sx::{StaticSx, sx},
     theme::{ColorCss, ColorShade, Size, SizeCss},
@@ -156,7 +156,7 @@ pub fn Toolbar(props: ToolbarProps) -> Element {
 
     let onkeydown = move |event: KeyboardEvent| {
         // Tab leaves the bar, so a later Escape stays the page's.
-        if logical_key(&event) == Key::Tab && *arrived.peek() {
+        if is_tab(&event) && *arrived.peek() {
             arrived.set(false);
         }
         if logical_key(&event) == Key::Escape && *arrived.peek() && !key_taken(&event) {

@@ -26,8 +26,8 @@ use crate::{
     },
     localization::fill,
     platform::{
-        ElementApi, KeyChord, OBSERVE_ATTR, arrow_target, focus_first_of, key_taken, keyboard,
-        logical_key, mounted_by_selector, prefers_reduced_motion, scroll_chain_into_view,
+        ElementApi, KeyChord, OBSERVE_ATTR, arrow_target, focus_first_of, is_tab, key_taken,
+        keyboard, logical_key, mounted_by_selector, prefers_reduced_motion, scroll_chain_into_view,
         typing_target,
     },
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, Sx, sx},
@@ -691,7 +691,7 @@ fn TourLayer(act: Callback<Move>, index: usize, options: TourOptions) -> Element
             act.call(Move::Close);
             return;
         }
-        if event.key() == Key::Tab {
+        if is_tab(&event) {
             // Off the card's edge to the target, before the trap cycles.
             let backwards = event.modifiers().shift();
             if let Some(target) = *bridged.peek()

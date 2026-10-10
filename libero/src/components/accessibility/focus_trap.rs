@@ -14,7 +14,7 @@ use crate::{
     },
     hooks::{ElementHandle, use_element, use_focus_return, use_local_state},
     platform::{
-        ElementApi, KeyChord, OBSERVE_ATTR, document, focus_first_of, key_taken, keyboard,
+        ElementApi, KeyChord, OBSERVE_ATTR, document, focus_first_of, is_tab, key_taken, keyboard,
         next_task, when_free, when_laid_out,
     },
     sx::{StaticSx, sx},
@@ -372,9 +372,7 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
         })
         .event("onkeydown", move |event: Event<KeyboardData>| {
             // A nested trap below already moved focus for this press.
-            if event.key() == Key::Tab
-                && !key_taken(&event)
-                && cycle_focus(&root, event.modifiers().shift())
+            if is_tab(&event) && !key_taken(&event) && cycle_focus(&root, event.modifiers().shift())
             {
                 event.prevent_default();
             }

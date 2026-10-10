@@ -31,7 +31,7 @@ use crate::{
         use_focus_within, use_form_owner, use_localization, use_popover_on, use_theme,
     },
     localization::DateLocale,
-    platform::{ElementApi, next_task, soft_keyboard_app},
+    platform::{ElementApi, is_tab, next_task, soft_keyboard_app},
     sx::{StaticSx, Sx, ThemeAwareValue},
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
 };
@@ -599,7 +599,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
                     open_to(false);
                 }
                 // Portaled after the page: Tab past either end goes back via the input.
-                Key::Tab => {
+                _ if is_tab(&event) => {
                     let Ok(stops) = floating.query_selector_all(FOCUSABLE_SELECTOR) else {
                         return;
                     };

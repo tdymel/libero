@@ -74,18 +74,19 @@ async fn the_pinned_group_holds<D: Driver>(d: &mut D, _route: &str) -> Result<()
         );
     }
     d.focus("th[data-sortable] button").await?;
-    for _ in 0..4 {
-        d.press(keyboard::ARROW_RIGHT).await?;
-    }
+    eventually_focused(d, "th[data-sortable] button", "focus").await?;
+    // A loaded desktop run's four presses scrolled 25px, not 160px: press until it slid (2867).
     let slid = eventually(
         d,
         "Revenue to slide under the held Place group",
         async |d| {
+            if d.rect(REVENUE).await?.x >= revenue - 40.0 {
+                d.press(keyboard::ARROW_RIGHT).await?;
+                return Ok(false);
+            }
             let held = d.rect(PINNED_GROUP).await?.x;
             let city = d.rect(CITY).await?.x;
-            Ok(d.rect(REVENUE).await?.x < revenue - 40.0
-                && (held - place.x).abs() <= 1.0
-                && (city - place.x).abs() <= 1.0)
+            Ok((held - place.x).abs() <= 1.0 && (city - place.x).abs() <= 1.0)
         },
     )
     .await;
@@ -193,15 +194,12 @@ async fn the_windowed_footer_holds_and_ends_the_rows<D: Driver>(
         bail!("the footer row is {index:?}, not row 202");
     }
     // Todo 2772: a long aggregate name is cut, not wrapped into a taller footer.
-    // Blitz reports no computed `white-space`.
-    if !matches!(d.platform(), Platform::Native) {
-        let (wrap, cut) = (
-            d.style(FOOT_Q1, "white-space").await?,
-            d.style(FOOT_Q1, "text-overflow").await?,
-        );
-        if wrap != "nowrap" || cut != "ellipsis" {
-            bail!("the footer cell wraps: white-space {wrap}, text-overflow {cut}");
-        }
+    let (wrap, cut) = (
+        d.style(FOOT_Q1, "white-space").await?,
+        d.style(FOOT_Q1, "text-overflow").await?,
+    );
+    if wrap != "nowrap" || cut != "ellipsis" {
+        bail!("the footer cell wraps: white-space {wrap}, text-overflow {cut}");
     }
     let area = d.rect(AREA).await?;
     let edge = area.y + area.height;
@@ -268,20 +266,9 @@ async fn a_focused_row_clears_the_footer<D: Driver>(d: &mut D, _route: &str) -> 
     })
     .await?;
     // Chromium centres a focused control, clearing its row; the desktop WebView stops at the
-    // padding, so the control itself is what clears (2.4.11), as on Blitz. Blitz's own focus
-    // scroll ignores the padding (1517): a Tab move reveals with it.
+    // padding, so the control itself is what clears (2.4.11), as on Blitz.
     let cleared = match d.platform() {
-        Platform::Native => {
-            d.focus(SELECT_ALL).await?;
-            for _ in 0..40 {
-                if d.is_focused(UNDER_BOX).await? {
-                    break;
-                }
-                d.press(keyboard::TAB).await?;
-            }
-            UNDER_BOX
-        }
-        Platform::Desktop => {
+        Platform::Native | Platform::Desktop => {
             d.focus(UNDER_BOX).await?;
             UNDER_BOX
         }

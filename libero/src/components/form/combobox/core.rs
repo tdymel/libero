@@ -16,7 +16,7 @@ use crate::{
         ElementHandle, POPOVER_AVAILABLE_HEIGHT, PopoverOptions, PopoverWidth,
         current_localization, use_element, use_field_list_layer, use_popover_on, use_theme,
     },
-    platform::ElementApi,
+    platform::{ElementApi, is_tab},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{COMBOBOX_PADDING, Size, SizeCss, Z_INDEX_POPOVER},
 };
@@ -611,7 +611,7 @@ impl ComboboxKeys {
                 event.prevent_default();
                 request(false);
             }
-            Key::Tab if opened => leave(),
+            _ if is_tab(&event) && opened => leave(),
             _ => {}
         }
     }

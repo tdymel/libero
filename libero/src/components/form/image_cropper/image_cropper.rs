@@ -462,8 +462,12 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     // and refits it while no key or drag has moved it.
     let (aspect, unset) = (props.aspect, props.value.is_none());
     let mut fitted = use_signal(|| None::<CropRect>);
+    // Read when a measure resolves: one started before an `aspect` change can land after it (2872).
+    let latest_aspect = use_hook(|| std::rc::Rc::new(std::cell::Cell::new(aspect)));
+    latest_aspect.set(aspect);
     let measure = use_callback(move |()| {
         let size = image.dimensions();
+        let latest_aspect = latest_aspect.clone();
         spawn(async move {
             let Ok(size) = size.await else {
                 return;
@@ -477,7 +481,8 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
             }
             let current = *held.peek();
             if unset && (current.is_none() || current == *fitted.peek()) {
-                let ratio = aspect
+                let ratio = latest_aspect
+                    .get()
                     .filter(|aspect| aspect.is_finite() && *aspect > 0.0)
                     .map(|aspect| aspect / measured);
                 let rect = CropRect::starting(ratio);

@@ -2054,7 +2054,9 @@ const ON_KEY: &str = "const [skipTyping, clicked, seeded, observe, owner] = data
         if ((event.defaultPrevented && !event.liberoTaken) || event.isComposing) return;
         const entry = typing(event.target);
         if (skipTyping && entry) return;
-        const chord = [event.key, event.ctrlKey, event.shiftKey, event.altKey, event.metaKey];
+        // WebKitGTK names Shift+Tab `Unidentified`; its `code` stays `Tab` (2868).
+        const key = event.key === 'Unidentified' && event.code === 'Tab' ? 'Tab' : event.key;
+        const chord = [key, event.ctrlKey, event.shiftKey, event.altKey, event.metaKey];
         const inside = scopes(event.target);
         // Per target kind and scope: a chord taken outside text entry stays the field's inside it.
         const name = chord.join(' ') + (entry ? ' typing' : '') + (inside.length ? ' in ' + inside.join(',') : '');

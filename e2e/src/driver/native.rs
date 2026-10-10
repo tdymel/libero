@@ -179,6 +179,10 @@ impl Driver for Native {
         Ok(self.page.text(selector))
     }
 
+    async fn value(&mut self, selector: &str) -> Result<String> {
+        Ok(self.page.editor_text(selector))
+    }
+
     async fn attr(&mut self, selector: &str, name: &str) -> Result<Option<String>> {
         Ok(self.page.attr(selector, name))
     }

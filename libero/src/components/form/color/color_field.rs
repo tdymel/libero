@@ -21,7 +21,7 @@ use crate::{
         POPOVER_AVAILABLE_HEIGHT, PopoverOptions, use_element, use_field_list_layer,
         use_focus_within, use_form_owner, use_localization, use_popover_on, use_theme,
     },
-    platform::{ElementApi, eye_dropper, next_task},
+    platform::{ElementApi, eye_dropper, is_tab, next_task},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
 };
@@ -501,7 +501,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
                 }
                 // Portaled after the page: Tab past either end goes back
                 // through the text input, then on as from the field.
-                Key::Tab => {
+                _ if is_tab(&event) => {
                     let Ok(stops) = floating.query_selector_all(FOCUSABLE_SELECTOR) else {
                         return;
                     };

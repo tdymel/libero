@@ -33,6 +33,14 @@ pub fn awaits_layout() -> bool {
     super::backend::awaits_layout()
 }
 
+/// A Tab move's focus scroll on Blitz, `scroll-padding` and `scroll-margin` honoured:
+/// for a native harness that focuses by hand (2863). Call it inside the runtime.
+#[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+#[doc(hidden)]
+pub fn reveal_in(doc: &mut blitz_dom::BaseDocument, node_id: dioxus_native_dom::NodeId) {
+    super::backend::reveal(doc, node_id);
+}
+
 #[cfg(target_arch = "wasm32")]
 mod web {
     use wasm_bindgen::JsValue;

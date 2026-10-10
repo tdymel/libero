@@ -20,7 +20,7 @@ use crate::{
         owner_link, use_dismiss, use_element, use_focus_within, use_popover_on,
         use_resize_fallback, use_theme,
     },
-    platform::{ElementApi, PlatformError, next_task, scrolls_on_keys},
+    platform::{ElementApi, PlatformError, is_tab, next_task, scrolls_on_keys},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
 };
@@ -409,7 +409,7 @@ fn attribute_text(attributes: &[Attribute], name: &str) -> Option<String> {
 /// Tab on the trigger's last focusable enters the card, which is portaled out of
 /// the Tab order; an earlier one Tabs on inside the trigger (todo 1614).
 fn trigger_tab(event: &KeyboardEvent, open: bool, anchor: ElementHandle, floating: ElementHandle) {
-    if !open || event.key() != Key::Tab || event.modifiers().shift() {
+    if !open || !is_tab(event) || event.modifiers().shift() {
         return;
     }
     let Ok(items) = anchor.query_selector_all(FOCUSABLE_SELECTOR) else {
@@ -435,7 +435,7 @@ fn trigger_tab(event: &KeyboardEvent, open: bool, anchor: ElementHandle, floatin
 /// Tab past either end goes back via the trigger's last focusable, so the browser's
 /// Tab moves on from there, not from the portal outlet. `Menu`'s `tab_out`.
 fn card_tab(event: &KeyboardEvent, anchor: ElementHandle, floating: ElementHandle) {
-    if event.key() != Key::Tab {
+    if !is_tab(event) {
         return;
     }
     let Ok(items) = floating.query_selector_all(FOCUSABLE_SELECTOR) else {

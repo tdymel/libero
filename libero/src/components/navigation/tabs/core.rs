@@ -11,7 +11,7 @@ use crate::{
         layout::use_box,
     },
     hooks::{ElementHandle, id_selector, use_element, use_focus_within},
-    platform::{ElementApi, logical_key, when_laid_out},
+    platform::{ElementApi, focus_selector, logical_key, when_laid_out},
     sx::{FORCED_COLORS, StaticSx, ThemeAwareValue, sx},
     theme::{
         CssVar, Size, SizeCss, TABS_BORDER_COLOR, TABS_GAP, TABS_HOVER, TABS_LINE, TABS_PAD_X,
@@ -272,10 +272,15 @@ fn TabStrip(
         }
         // Blitz fires no focus event for a scripted `focus()`.
         focus_on(Some(next));
-        if let Ok(tab) =
-            root_element.query_selector(&id_selector(&format!("{keydown_root}-tab-{next}")))
-        {
-            let _ = tab.focus();
+        let tab = id_selector(&format!("{keydown_root}-tab-{next}"));
+        match root_element.query_selector(&tab) {
+            Ok(tab) => {
+                let _ = tab.focus();
+            }
+            // A WebView queries nothing: the page focuses it (2871).
+            Err(_) => {
+                let _ = focus_selector(&tab);
+            }
         }
     });
 

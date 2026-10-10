@@ -1032,6 +1032,11 @@ pub(crate) fn awaits_layout() -> bool {
     false
 }
 
+#[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+pub(crate) fn reveal(doc: &mut blitz_dom::BaseDocument, node_id: dioxus_native_dom::NodeId) {
+    blitz::reveal(doc, node_id);
+}
+
 /// Only Blitz's stylo lacks the accessibility media features - see
 /// [`answers_a11y_media`](crate::platform::answers_a11y_media).
 pub(crate) const ANSWERS_A11Y_MEDIA: bool =
