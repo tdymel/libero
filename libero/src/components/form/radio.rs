@@ -34,8 +34,9 @@ static RADIO_CONTROL_SX: StaticSx = StaticSx::new(|| {
         // escapes to the nearest positioned ancestor.
         .position("relative")
         .selector("& > input", hidden_input_centred_sx())
-        // On the control rather than the circle, so `disabled` below reaches it.
-        .cursor("pointer")
+        // On the control rather than the circle, so `disabled` below reaches it. Under `:hover`:
+        // WebView spatial navigation makes a `pointer` element a Tab stop (3138).
+        .selector("&:hover", sx().cursor("pointer"))
         // Drawn by the overlay after the circle, because the focus is on the
         // input beside it - the same shape as `Checkbox`'s.
         .selector("& > [data-ring]", ring_overlay_sx())

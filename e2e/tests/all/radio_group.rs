@@ -175,6 +175,19 @@ fn a_circle_click_checks_and_focuses_the_radio() {
     });
 }
 
+/// The hovered circle's cursor.
+async fn hovered_cursor(page: &chromiumoxide::Page, index: usize) -> String {
+    let circle = format!("{RADIOS}[data-radio-index=\"{index}\"] + span");
+    e2e::passes::pointer::hover(page, &circle).await.unwrap();
+    page.evaluate(format!(
+        "getComputedStyle(document.querySelector({circle:?})).cursor"
+    ))
+    .await
+    .unwrap()
+    .into_value()
+    .unwrap()
+}
+
 /// The circle takes a click, so it shows `pointer` as `Checkbox`'s box does;
 /// a disabled one shows `not-allowed`.
 #[test]
@@ -183,32 +196,32 @@ fn the_circle_shows_it_takes_a_click() {
         let fixture = Fixture::open("/radio-group/field", Viewport::Desktop)
             .await
             .unwrap();
-        let cursors: Vec<String> = fixture
-            .page
-            .evaluate(format!(
-                "[...document.querySelectorAll({RADIOS:?})]\
-                 .map(r => getComputedStyle(r.nextElementSibling).cursor)"
-            ))
-            .await
-            .unwrap()
-            .into_value()
-            .unwrap();
+        let mut cursors = Vec::new();
+        for index in 0..3 {
+            cursors.push(hovered_cursor(&fixture.page, index).await);
+        }
         assert_eq!(cursors, ["pointer", "pointer", "not-allowed"]);
         fixture.close().await.unwrap();
 
         let fixture = Fixture::open("/radio-group", Viewport::Desktop)
             .await
             .unwrap();
-        let cursor: String = fixture
+        // Todo 3138: `pointer` at rest is a Tab stop under the Android WebView's spatial navigation.
+        let resting: String = fixture
             .page
             .evaluate(format!(
-                "getComputedStyle(document.querySelector({RADIOS:?}).nextElementSibling).cursor"
+                "getComputedStyle(document.querySelector({RADIOS:?}).parentElement).cursor"
             ))
             .await
             .unwrap()
             .into_value()
             .unwrap();
-        assert_eq!(cursor, "pointer", "a plain radio's circle");
+        assert_eq!(resting, "auto", "a plain radio's control at rest");
+        assert_eq!(
+            hovered_cursor(&fixture.page, 0).await,
+            "pointer",
+            "a plain radio's circle"
+        );
         fixture.close().await.unwrap();
     });
 }

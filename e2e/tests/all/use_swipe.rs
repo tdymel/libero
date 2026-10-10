@@ -180,21 +180,21 @@ mod an_edge_swipe_opens_while_the_page_flings {
             let mut driver = Android::open("/use-swipe/drawer").await.unwrap();
             let page = driver.page().clone();
             // The code box the whole page long: the swipe starts on it wherever the fling stops.
+            // The fling's own cancel does not count, so nothing sits between the two (3139).
             page.evaluate(
                 "document.querySelector('#scroller').style.height = '2800px';
-                 window.__cancels = 0; addEventListener('pointercancel', () => __cancels++, true)",
+                 window.__cancels = 0; let fling = null;
+                 addEventListener('pointerdown', e => { fling ??= e.pointerId; }, true);
+                 addEventListener('pointercancel', e => { if (e.pointerId !== fling) __cancels++; }, true)",
             )
             .await
             .unwrap();
             let (vw, vh) = driver.viewport().await.unwrap();
             driver
-                .fling_from(vw / 2.0, vh * 0.85, 0.0, -vh * 0.35)
-                .await
-                .unwrap();
-            // The fling's own press was cancelled too: only the swipe's counts.
-            page.evaluate("__cancels = 0").await.unwrap();
-            driver
-                .swipe_from(super::IN_BAND, vh / 2.0, 120.0, 0.0)
+                .fling_then_swipe(
+                    (vw / 2.0, vh * 0.85, 0.0, -vh * 0.35),
+                    (super::IN_BAND, vh / 2.0, 120.0, 0.0),
+                )
                 .await
                 .unwrap();
             wait::for_js_true(

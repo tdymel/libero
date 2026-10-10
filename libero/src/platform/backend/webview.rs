@@ -2287,9 +2287,10 @@ const RECORD_PRESSES: &str = "const pressed = window.__lsxPressed = new Map();
     window.addEventListener('pointercancel', release);";
 
 /// WebKitGTK scrolls the nearest scroller on an arrow the caret cannot follow past a
-/// field's edge; browsers do not (1178). Bubble phase, after every handler's say.
-#[cfg(not(target_os = "android"))]
-const ARROW_EDGES: &str = "window.addEventListener('keydown', (event) => {
+/// field's edge; browsers do not (1178). Bubble phase, after every handler's say. `data`:
+/// whether Up/Down are guarded too, see [`guard_defaults`].
+const ARROW_EDGES: &str = "const vertical = data;
+    window.addEventListener('keydown', (event) => {
         if (event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey
             || event.metaKey || event.shiftKey) return;
         const el = event.target;
@@ -2302,8 +2303,8 @@ const ARROW_EDGES: &str = "window.addEventListener('keydown', (event) => {
         const edge = {
             ArrowLeft: rtl ? last : first,
             ArrowRight: rtl ? first : last,
-            ArrowUp: !area && first,
-            ArrowDown: !area && last,
+            ArrowUp: vertical && !area && first,
+            ArrowDown: vertical && !area && last,
         }[event.key];
         if (edge) event.preventDefault();
     });";
@@ -2317,8 +2318,9 @@ pub(super) fn guard_defaults() {
         && !page.guarding_defaults.replace(true)
     {
         eval(RECORD_PRESSES);
-        #[cfg(not(target_os = "android"))]
-        eval(ARROW_EDGES);
+        // Android's spatial navigation (on after a D-pad key) scrolls on a sideways arrow at a
+        // field's edge too (3137); Up/Down stay its way out of a field on a D-pad-only device.
+        eval_with(json!(!cfg!(target_os = "android")), ARROW_EDGES);
     }
 }
 

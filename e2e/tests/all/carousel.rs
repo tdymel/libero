@@ -206,6 +206,38 @@ e2e::scenario!(
     an_arrow_on_the_range_stays
 );
 
+/// Todo 3137: the field-edge guard leaves Up/Down to Android's spatial navigation, the
+/// only way out of a field on a D-pad-only device.
+mod an_arrow_down_leaves_an_empty_text_field {
+    #[cfg(feature = "android")]
+    #[test]
+    fn android() {
+        use e2e::driver::{Android, Driver, eventually};
+
+        e2e::android::block_on(async {
+            let mut d = Android::open("/carousel").await.unwrap();
+            d.focus(super::TEXT).await.unwrap();
+            d.evaluate(&format!(
+                "document.querySelector({:?}).value = ''",
+                super::TEXT
+            ))
+            .await
+            .unwrap();
+            // The first D-pad key may only switch spatial navigation on.
+            eventually(&mut d, "ArrowDown to leave the empty field", async |d| {
+                if !d.is_focused(super::TEXT).await? {
+                    return Ok(true);
+                }
+                d.press(e2e::passes::keyboard::ARROW_DOWN).await?;
+                Ok(!d.is_focused(super::TEXT).await?)
+            })
+            .await
+            .unwrap();
+            d.finish("carousel").await.unwrap();
+        });
+    }
+}
+
 /// Every control in the slide keeps the keys that are its own, and none of
 /// them moves the strip - and a plain button, which no arm covers, does.
 #[test]
