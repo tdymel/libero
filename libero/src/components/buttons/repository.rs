@@ -1,4 +1,3 @@
-use dioxus::core::AttributeValue;
 use dioxus::prelude::*;
 
 use crate::{
@@ -206,28 +205,25 @@ pub fn Repository(props: RepositoryProps) -> Element {
     });
     let count = parsed_count(stars).filter(|&count| count > 0);
 
-    let new_tab = localization.anchor.new_tab;
     // The repo in the name, else two buttons on a page read alike.
     let subject = props
         .aria_label
         .clone()
         .unwrap_or_else(|| format!("{} {}", host.name(), props.repo));
+    // `ActionIcon` adds the new-tab cue to this.
     let aria_label = match count {
         Some(count) => format!(
-            "{subject}, {} {new_tab}",
+            "{subject}, {}",
             (localization.repository.stars)(count, &compact(count, separator))
         ),
-        None => format!("{subject} {new_tab}"),
+        None => subject,
     };
-    // A raw `aria-label` attribute is the whole-name override; `ActionIcon`'s own would win.
-    let mut attributes = props.attributes.clone();
-    let aria_label = match attributes.iter().position(|a| a.name == "aria-label") {
-        Some(at) => match attributes.remove(at).value {
-            AttributeValue::Text(raw) => raw,
-            _ => aria_label,
-        },
-        None => aria_label,
+    // A raw `aria-label` attribute is the whole name: a blank own label lets it through unchanged.
+    let aria_label = match props.attributes.iter().any(|a| a.name == "aria-label") {
+        true => String::new(),
+        false => aria_label,
     };
+    let attributes = props.attributes.clone();
     let group = use_button_group();
     let variant = props
         .variant

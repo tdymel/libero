@@ -59,7 +59,10 @@ pub fn ActionIconPage() -> Element {
                 prop("to", "NavigationTarget")
                     .doc("Renders a link instead of a `<button>`."),
                 prop("target", "String")
-                    .doc("The link's `target` attribute. `\"_blank\"` adds \"(opens in a new tab)\" to the accessible name."),
+                    .doc("The link's `target` attribute."),
+                prop("new_tab_hint", "bool")
+                    .default("true")
+                    .doc("With `target: \"_blank\"`, a small icon in the corner, and \"(opens in a new tab)\" in the accessible name and the tooltip. `false` drops all three."),
                 prop("icon", "SvgData")
                     .doc("The glyph, drawn as a `Pictogram`: `pictogram_icons_lucide::x::outlined`. Wins over `children`."),
                 prop("children", "Element").doc("The icon, when it is not `SvgData`: your own svg, or any element."),
@@ -69,7 +72,7 @@ pub fn ActionIconPage() -> Element {
                     "Below 24px (a length such as `\"20px\"`) the button still takes presses in a 24x24 box centred on it.",
                     "`focusable_when_disabled` keeps a disabled button in the Tab order, with `aria-disabled`.",
                     "`tooltip` repeats the accessible name, and `shortcut` writes `aria-keyshortcuts` in the ARIA key names (`Control+B`).",
-                "A link with `target: \"_blank\"` adds \"(opens in a new tab)\" to the accessible name; the tooltip keeps the plain `aria_label`.",
+                    "A link with `target: \"_blank\"` adds \"(opens in a new tab)\" to the accessible name and the tooltip, and draws a small icon in the corner for sighted users.",
                 ])
                 .must([
                     "Name the button with `aria_label`: the icon gives a screen reader nothing to read.",
@@ -173,6 +176,25 @@ pub fn ActionIconPage() -> Element {
                         target: (values.str("link") == "true").then(|| "_blank".to_string()),
                         aria_label: "Confirm",
                         icon: pictogram_icons_lucide::check::outlined,
+                    }
+                    // A new-tab link beside it, so its corner icon shows without the `link` switch.
+                    if !is_link(&values) {
+                        ActionIcon {
+                            variant: values.str("variant"),
+                            gradient: gradient_value(&values),
+                            color: match values.str("color").as_str() {
+                                "primary" => Input::None,
+                                color => Input::from(color),
+                            },
+                            size: values.str("size"),
+                            radius: values.str("radius"),
+                            disabled: values.str("disabled") == "true",
+                            tooltip: values.str("tooltip") == "true",
+                            to: "https://dioxuslabs.com",
+                            target: "_blank",
+                            aria_label: "Dioxus",
+                            icon: pictogram_icons_lucide::link::outlined,
+                        }
                     }
                 },
             }

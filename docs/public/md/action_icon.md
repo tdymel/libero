@@ -65,7 +65,8 @@ A `Button` with an icon and no text is a wide pill and has no name unless you ad
 | `loading` | `bool` | `false` | Shows a `Loader` over the icon and ignores clicks. The button stays focusable. Ignored on a link. |
 | `onclick` | `EventHandler<MouseEvent>` | - | Click handler. Not called on a link. |
 | `to` | `NavigationTarget` | - | Renders a link instead of a `<button>`. |
-| `target` | `String` | - | The link's `target` attribute. `"_blank"` adds "(opens in a new tab)" to the accessible name. |
+| `target` | `String` | - | The link's `target` attribute. |
+| `new_tab_hint` | `bool` | `true` | With `target: "_blank"`, a small icon in the corner, and "(opens in a new tab)" in the accessible name and the tooltip. `false` drops all three. |
 | `icon` | `SvgData` | - | The glyph, drawn as a `Pictogram`: `pictogram_icons_lucide::x::outlined`. Wins over `children`. |
 | `children` | `Element` | - | The icon, when it is not `SvgData`: your own svg, or any element. |
 
@@ -83,7 +84,7 @@ Like every component, `ActionIcon` also takes the shared props `sx`, `class`,
 - `tooltip` repeats the accessible name, and `shortcut` writes
   `aria-keyshortcuts` in the ARIA key names (`Control+B`).
 - A link with `target: "_blank"` adds "(opens in a new tab)" to the accessible
-  name; the tooltip keeps the plain `aria_label`.
+  name and the tooltip, and draws a small icon in the corner for sighted users.
 
 ### You must
 

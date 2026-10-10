@@ -1,8 +1,9 @@
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
-        common::{ButtonGroupContext, use_button_group},
+        common::{ButtonGroupContext, Glyph, use_button_group},
         common::{HtmlTag, Input, States, Variables, Variant, base_props, variables},
         common::{TOOLBAR_ITEM, ToolbarItem, use_toolbar_item},
         common::{
@@ -16,6 +17,7 @@ use crate::{
         navigation::wants_new_tab_hint,
         overlay::{Tooltip, chord_kbd, chord_words},
     },
+    context::IconSlot,
     hooks::{
         aria_keyshortcuts, child_ripple_sx, current_localization, use_gradient_style, use_ripple,
         use_theme,
@@ -73,6 +75,24 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
             "& > svg",
             sx().width(ACTION_ICON_GLYPH.overridable())
                 .height(ACTION_ICON_GLYPH.overridable()),
+        )
+        // A `_blank` link's corner cue, in the glyph's colour, so it keeps the glyph's contrast.
+        .selector(
+            "& > [data-slot='new-tab']",
+            sx().position("absolute")
+                .inset_inline_end("0")
+                .bottom("0")
+                .display("inline-flex")
+                // From the box's height, not its width, which a `Repository` pill grows.
+                .width(format!(
+                    "max(10px, calc({} * 0.34))",
+                    ACTION_ICON_SIZE.overridable()
+                ))
+                .height(format!(
+                    "max(10px, calc({} * 0.34))",
+                    ACTION_ICON_SIZE.overridable()
+                ))
+                .pointer_events("none"),
         )
         // WCAG 2.5.8: an invisible 24x24 press target round a smaller icon (todos 505, 566).
         .selector(
@@ -244,6 +264,9 @@ base_props! {
         to: Input<NavigationTarget>,
         #[props(default)]
         target: Option<String>,
+        /// With `target: "_blank"`, a corner icon, and "(opens in a new tab)" in the name and tooltip.
+        #[props(default = true)]
+        new_tab_hint: bool,
         /// The glyph, drawn as a [`Pictogram`]; `children` for anything else.
         #[props(default, into)]
         icon: Option<SvgData>,
@@ -280,7 +303,10 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
         .shortcut
         .as_deref()
         .and_then(|chord| chord_words(chord, apple, &current_localization().shortcut_help));
-    let label = props.aria_label.clone();
+    let mut label = props.aria_label.clone();
+    if !label.trim().is_empty() && opens_new_tab(&props, use_button_group()) {
+        label = format!("{label} {}", current_localization().anchor.new_tab);
+    }
     let open_delay = try_consume_context::<TooltipOpenDelay>().map(|delay| delay.0);
     rsx! {
         Tooltip {
@@ -295,6 +321,14 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
             {action_icon(props)}
         }
     }
+}
+
+/// A live `_blank` link that says so: not a disabled one, which drops its `href`.
+fn opens_new_tab(props: &ActionIconProps, group: ButtonGroupContext) -> bool {
+    let disabled = props.disabled.or(group.disabled).unwrap_or(false);
+    props.to.as_ref().is_some()
+        && !disabled
+        && wants_new_tab_hint(props.target.as_deref(), props.new_tab_hint)
 }
 
 fn action_icon(mut props: ActionIconProps) -> Element {
@@ -422,7 +456,8 @@ fn action_icon(mut props: ActionIconProps) -> Element {
         }
 
         // The name replaces the content, so the new-tab cue goes into it.
-        let aria_label = if wants_new_tab_hint(props.target.as_deref(), true) {
+        let hint = wants_new_tab_hint(props.target.as_deref(), props.new_tab_hint);
+        let aria_label = if hint {
             let new_tab = current_localization().anchor.new_tab;
             aria_label.map(|label| format!("{label} {new_tab}"))
         } else {
@@ -430,6 +465,8 @@ fn action_icon(mut props: ActionIconProps) -> Element {
         };
         let mut attributes = props.attributes;
         attributes.extend(item.into_iter().flat_map(ToolbarItem::attributes));
+        // An explicit `None` would strip a spread `aria-label` in the DOM (a blank own label).
+        attributes.extend(aria_label.map(|label| Attribute::new("aria-label", label, None, false)));
         return rsx! {
             InternalAnchor {
                 to,
@@ -439,10 +476,14 @@ fn action_icon(mut props: ActionIconProps) -> Element {
                 framework_sx: &ACTION_ICON_BASE_SX,
                 states,
                 variables,
-                "aria-label": aria_label,
                 "aria-keyshortcuts": keyshortcuts,
                 attributes,
                 {glyph}
+                if hint {
+                    span { "data-slot": "new-tab", "aria-hidden": "true",
+                        Glyph { slot: IconSlot::ExternalLink, icon: lucide::external_link::outlined }
+                    }
+                }
             }
         };
     }
@@ -509,6 +550,7 @@ mod tests {
             onclick: None,
             to: Input::None,
             target: None,
+            new_tab_hint: true,
             icon: None,
             children: None,
         }

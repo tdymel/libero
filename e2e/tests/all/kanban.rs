@@ -407,6 +407,33 @@ async fn a_refused_move_moves_no_focus_later<D: Driver>(d: &mut D, _route: &str)
     Ok(())
 }
 
+/// 3164: a same-column key drop or button move the app ignores is never announced.
+async fn a_refused_column_move_is_not_announced<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#refuse").await?;
+    d.focus("#Alpha [data-slot=handle]").await?;
+    d.press(keyboard::SPACE).await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually_text(d, STATUS, "Alpha moved to position 2 of 3.", "ArrowDown").await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_text(d, "#moves", "0.0>0.1 ", "the refused key drop").await?;
+    d.click("#Beta [data-slot=move-later]").await?;
+    eventually_text(d, "#moves", "0.0>0.1 0.1>0.2 ", "the refused button move").await?;
+    d.flush().await?;
+    ensure!(d.text("#order").await? == START, "a refused move moved");
+    let said = d.text(STATUS).await?;
+    ensure!(
+        !said.contains("Dropped") && !said.contains("Beta moved"),
+        "a refused move was announced: {said}"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_same_column_key_or_button_move_the_app_refuses_is_not_announced,
+    "/kanban",
+    a_refused_column_move_is_not_announced,
+    desktop: skip("958: element identity on the WebView")
+);
 e2e::scenario!(
     a_move_the_app_refuses_leaves_no_focus_jump_for_a_later_card,
     "/kanban",

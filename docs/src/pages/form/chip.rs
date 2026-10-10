@@ -69,7 +69,8 @@ pub fn ChipPage() -> Element {
                     "Keep `children` to text and `Icon`: a selectable chip is a `<label>`, which takes the clicks of any control inside it.",
                     "Name an icon-only chip: its checkbox takes the name of its label, so give the `Icon` an `aria_label`, or the chip an `aria_label`.",
                 ])
-                .example("A filter chip, `Chip { checked, onchange, \"Vegan\" }`: Tab lands on it, Space toggles it, and a `readonly` chip keeps its tab stop but stays as it is."),
+                .example("A filter chip, `Chip { checked, onchange, \"Vegan\" }`: Tab lands on it, Space toggles it, and a `readonly` chip keeps its tab stop but stays as it is.")
+                .limits(["With `selected_check`, picking a chip widens it by the check, so a row of chips reflows; theme `selected_check: false` keeps its width."]),
             lead: rsx! {
                 Text {
                     "A compact token. With "

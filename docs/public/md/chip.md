@@ -188,6 +188,11 @@ explains how parts work.
 - Name an icon-only chip: its checkbox takes the name of its label, so give the
   `Icon` an `aria_label`, or the chip an `aria_label`.
 
+### Limits
+
+- With `selected_check`, picking a chip widens it by the check, so a row of
+  chips reflows; theme `selected_check: false` keeps its width.
+
 ### Example
 
 A filter chip, `Chip { checked, onchange, "Vegan" }`: Tab lands on it, Space

@@ -277,8 +277,9 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
         }
     });
 
-    let (onmove, mut landing) = (board.onmove, board.landing);
+    let (onmove, mut landing, drag) = (board.onmove, board.landing, board.drag);
     let shown = use_shown();
+    let mut held = use_hook(|| CopyValue::new(false));
     let list = use_sortable(SortableOptions {
         orientation: Orientation::Vertical,
         onreorder: use_callback(move |step: SortableMove| {
@@ -289,6 +290,19 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
             let column = *index.peek();
             // The sortable counts the shown cards; the move speaks the data's indices (2579).
             let (from, to) = shown.reorder(step.from, step.to);
+            // The sortable has announced the move; it waits for the card to show there (3164).
+            if let Some(card) = drag.card_at(column, from) {
+                held.set(true);
+                landing.set(Some(Landing {
+                    column,
+                    index: to,
+                    control: Control::Keep,
+                    card,
+                    from: (column, from),
+                    left: None,
+                    held: false,
+                }));
+            }
             onmove.call(KanbanMove {
                 from_column: column,
                 from,
@@ -302,8 +316,10 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
     let announcement = list.announcement;
     use_effect(move || {
         let said = announcement();
-        if !said.is_empty() {
-            announcer.say(said);
+        match (said.is_empty(), held.replace(false)) {
+            (true, _) => {}
+            (false, true) => drag.announce_on_landing(said),
+            (false, false) => announcer.say(said),
         }
     });
 
@@ -467,12 +483,15 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
             return;
         }
         let target = match at.control {
-            Control::Handle => handle_node,
-            Control::MoveTo => trigger,
+            Control::Handle => Some(handle_node),
+            Control::MoveTo => Some(trigger),
+            Control::Keep => None,
         };
-        if target.mounted().is_some() {
+        if target.is_none_or(|target| target.mounted().is_some()) {
             landing.set(None);
-            let _ = target.focus();
+            if let Some(target) = target {
+                let _ = target.focus();
+            }
             if let Some(text) = drag.take_pending() {
                 announcer.say(text);
             }

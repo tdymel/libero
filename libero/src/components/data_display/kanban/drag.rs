@@ -90,6 +90,8 @@ struct Settle {
 pub(super) enum Control {
     Handle,
     MoveTo,
+    /// A column's own sortable has focused the move, so only the announcement waits.
+    Keep,
 }
 
 /// Where a card moved by the board lands, for its new self to take the focus.
@@ -186,6 +188,15 @@ impl BoardDrag {
     pub(super) fn announce_on_landing(self, text: String) {
         let mut pending = self.pending;
         pending.set(Some(text));
+    }
+
+    /// The board id of the card at `index` of `column`.
+    pub(super) fn card_at(self, column: usize, index: usize) -> Option<usize> {
+        let cards = self.cards.peek();
+        cards
+            .iter()
+            .find(|(_, placed)| (placed.column, placed.index) == (column, index))
+            .map(|(&id, _)| id)
     }
 
     /// The held announcement, once the moved card shows at its slot.

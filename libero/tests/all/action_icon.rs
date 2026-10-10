@@ -61,6 +61,34 @@ fn a_blank_label_leaves_a_spread_label_in_place() {
     assert_eq!(html.matches(r#"aria-label="Close""#).count(), 3, "{html}");
 }
 
+/// Todos 3166, 3173: a live `_blank` link draws a corner cue, unless opted out or disabled.
+#[test]
+fn a_blank_link_draws_a_corner_cue_unless_opted_out_or_disabled() {
+    fn blank() -> Element {
+        rsx! {
+            LiberoProvider {
+                ActionIcon { aria_label: "Docs", to: "https://example.com", target: "_blank", icon: BAR }
+            }
+        }
+    }
+    fn others() -> Element {
+        rsx! {
+            LiberoProvider {
+                ActionIcon { aria_label: "A", to: "https://example.com", target: "_blank", new_tab_hint: false, icon: BAR }
+                ActionIcon { aria_label: "B", to: "https://example.com", target: "_blank", disabled: true, icon: BAR }
+                ActionIcon { aria_label: "C", to: "https://example.com", icon: BAR }
+                ActionIcon { aria_label: "D", icon: BAR }
+            }
+        }
+    }
+
+    let html = render(blank);
+    assert_eq!(html.matches("data-slot=\"new-tab\"").count(), 1, "{html}");
+    let html = render(others);
+    assert!(!html.contains("data-slot=\"new-tab\""), "{html}");
+    assert!(!html.contains("new tab"), "{html}");
+}
+
 /// Todo 222: `ActionIcon` takes `Button`'s `selected` - `aria-pressed` both
 /// ways, the `checked` token while pressed, and nothing on a plain action.
 #[test]
