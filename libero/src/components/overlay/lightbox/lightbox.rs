@@ -19,7 +19,7 @@ use crate::{
         common::{
             Glyph, Input, Part, Variables, parts_enum, recast_parts, use_name_warning, variables,
         },
-        data_display::{Carousel, CarouselJump, CarouselQuietWhenFits},
+        data_display::{Carousel, CarouselJump},
         layout::Box,
         overlay::{Dialog, use_modal::use_modal_close},
     },
@@ -85,9 +85,6 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
     // The swap jumps, so a smooth scroll fetches nothing it passes. Counted once
     // per gallery, or the user's next move would jump too.
     let jump = use_context_provider(CarouselJump::default);
-    // Thumbnails that all fit drop the strip's status and track tab stop (todo
-    // 564). The one-up stage never fits: one picture renders no carousel.
-    use_context_provider(|| CarouselQuietWhenFits);
     let counted = use_hook(|| Rc::new(RefCell::new(opening.clone())));
     if pending && *counted.borrow() != opening {
         *counted.borrow_mut() = opening.clone();

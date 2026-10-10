@@ -13,6 +13,7 @@ pub const Z_INDEX_NOTIFICATION: CssVar = CssVar::new("--lsx-z-index-notification
 /// Plain integers: `ModalHost` computes `modal + n * modal_step` in Rust.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ZIndexDefaults {
+    /// Keep below `float`, where the focused skip link sits.
     pub header: i32,
     pub float: i32,
     /// The lowest floating window; each raised one adds `window_step`, capped below `overlay`.

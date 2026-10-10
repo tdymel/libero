@@ -73,7 +73,7 @@ fn Demo() -> Element {
 | `color` | `ThemeAwareValue` | none, a neutral background | Fills the header with shade 6 and a readable text color. A literal CSS color is used as given, with black or white text, links and focus rings, whichever reads better on it. With `glass`, a translucent tint of it, as on `Paper`. Under a gradient, its first stop. |
 | `glass` | `bool` | `false` | Frosted glass, as on `Paper`: content scrolling under the bar shows through, blurred. A `color` tints it, as on `Paper`. Opaque when the user reduces transparency, in forced colours, and in native windows. |
 | `gradient` | `Gradient` | - | Fills the header with a gradient from `color`, as on `Paper`: `("info", 90)` or `Gradient::default().to("info").deg(90)`; `Gradient::default()` is the theme's. The text colour and focus rings are picked to read on both stops. With `glass`, the stops turn translucent. |
-| `z_index` | `ThemeAwareValue` | `100` | Stacking order. |
+| `z_index` | `ThemeAwareValue` | `100` | Stacking order. Keep it below `Z_INDEX_FLOAT` (200), where the focused skip link sits: above it the link hides under the header (WCAG 2.4.11). |
 | `publish_height` | `bool` | `false` | Publishes the height as `--lsx-header-height` and `scroll-padding-top` on `:root`, so focus scrolls clear of a sticky or fixed banner. Set it on the page's own banner only. |
 | `children` | `Element` | required | Nav and actions. |
 
@@ -96,6 +96,8 @@ Like every component, `Header` also takes the shared props `sx`, `class`,
   `article` or `aside`. Use one per page.
 - Put a `nav` inside it for the site's links.
 - Set `publish_height` on a `sticky` or `fixed` header.
+- Keep a raised `z_index` below `Z_INDEX_FLOAT` (200). A focused skip link sits
+  there and would hide under a higher header.
 - For a header stuck inside another scroller, set `scroll-padding-top:
   var(--lsx-header-height)` on that scroller yourself.
 

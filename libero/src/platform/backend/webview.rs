@@ -883,6 +883,15 @@ pub(crate) async fn next_task() {
     }
 }
 
+/// Answers `true` once the page's web fonts have loaded.
+pub(crate) async fn fonts_ready() -> bool {
+    runs_scripts()
+        && eval("await document.fonts.ready; return 0;")
+            .join::<u8>()
+            .await
+            .is_ok()
+}
+
 /// The document's first match of `selector`, found again on every call (todo 2666).
 pub(crate) fn mounted_by_selector(selector: &str) -> Option<Rc<MountedData>> {
     runs_scripts().then(|| {

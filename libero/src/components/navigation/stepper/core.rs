@@ -15,7 +15,7 @@ use crate::{
     },
     context::IconSlot,
     hooks::{id_selector, use_element, use_resize_fallback},
-    platform::{ElementApi, when_laid_out},
+    platform::{ElementApi, fonts_ready, when_laid_out},
     str_enum::str_enum,
     sx::{FORCED_COLORS, StaticSx, Sx, sx},
     theme::{
@@ -528,6 +528,14 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
         }
         when_laid_out(measure);
     }));
+    // A web font that lands after the first measure widens the labels once (todo 3040).
+    use_effect(move || {
+        spawn(async move {
+            if fonts_ready().await {
+                measure();
+            }
+        });
+    });
     let any_clickable = onstepclick.is_some()
         && (allow_next_steps
             || (0..steps.len())

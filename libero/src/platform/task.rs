@@ -14,6 +14,17 @@ pub(crate) async fn page_task() {
     super::backend::webview_next_task().await;
 }
 
+/// `true` once the page's web fonts have loaded; `false` at once where there is no fonts
+/// API (Blitz).
+pub(crate) async fn fonts_ready() -> bool {
+    #[cfg(target_arch = "wasm32")]
+    return web::fonts_ready().await;
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return super::backend::webview_fonts_ready().await;
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    false
+}
+
 /// Runs `run` once element reads can answer: at once, or natively, where a
 /// render or a task holds Blitz's document, at the end of this poll.
 pub(crate) fn when_free(run: impl FnOnce() + 'static) {
@@ -43,8 +54,20 @@ pub fn reveal_in(doc: &mut blitz_dom::BaseDocument, node_id: dioxus_native_dom::
 
 #[cfg(target_arch = "wasm32")]
 mod web {
-    use wasm_bindgen::JsValue;
+    use wasm_bindgen::{JsCast, JsValue};
     use wasm_bindgen_futures::JsFuture;
+
+    pub(super) async fn fonts_ready() -> bool {
+        let ready = web_sys::window()
+            .and_then(|window| window.document())
+            .and_then(|document| js_sys::Reflect::get(&document, &JsValue::from_str("fonts")).ok())
+            .and_then(|fonts| js_sys::Reflect::get(&fonts, &JsValue::from_str("ready")).ok())
+            .and_then(|ready| ready.dyn_into::<js_sys::Promise>().ok());
+        match ready {
+            Some(ready) => JsFuture::from(ready).await.is_ok(),
+            None => false,
+        }
+    }
 
     pub(super) async fn next_task() {
         let promise = js_sys::Promise::new(&mut |resolve, _| {

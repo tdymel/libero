@@ -67,10 +67,6 @@ impl CarouselJump {
     }
 }
 
-/// Drops the status and track tab stop when every slide fits (todo 564).
-#[derive(Clone, Copy)]
-pub(crate) struct CarouselQuietWhenFits;
-
 /// Per-instance only: no themed default, `auto` suits a horizontal strip.
 const CAROUSEL_HEIGHT: CssVar = CssVar::new("--lsx-carousel-height");
 
@@ -196,18 +192,18 @@ pub fn Carousel(props: CarouselProps) -> Element {
     let status_id = use_id();
 
     let jump = try_use_context::<CarouselJump>();
-    let quiet_when_fits = try_use_context::<CarouselQuietWhenFits>().is_some();
 
     let count = props.slides.len();
     let per_view = props.per_view.copied_or(theme.carousel.per_view).max(0.1);
-    let quiet = quiet_when_fits && count as f64 <= per_view;
+    // Every slide fits and a loop has none to wrap: status, track and dot would be dead stops.
+    let quiet = count as f64 <= per_view && !(props.r#loop && count > 1);
     // `Orientation` defaults to vertical; a carousel does not.
     let orientation = props.orientation.copied_or(Orientation::Horizontal);
     let align = props.align.copied_or(theme.carousel.align);
     // No slides: no chrome, no landmark, no tab stop. The root keeps its box.
     let empty = count == 0;
     let controls = !empty && props.controls.unwrap_or(theme.carousel.controls);
-    let indicators = !empty && props.indicators.unwrap_or(theme.carousel.indicators);
+    let indicators = !empty && !quiet && props.indicators.unwrap_or(theme.carousel.indicators);
     let (first, last) = index_range(count, per_view, align);
 
     // Read in render, so a swap re-runs the controlled-index effect.

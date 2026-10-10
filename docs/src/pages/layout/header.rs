@@ -45,7 +45,7 @@ pub fn HeaderPage() -> Element {
                     .doc("Fills the header with a gradient from `color`, as on `Paper`: `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`; `Gradient::default()` is the theme's. The text colour and focus rings are picked to read on both stops. With `glass`, the stops turn translucent."),
                 prop("z_index", "ThemeAwareValue")
                     .default("100")
-                    .doc("Stacking order."),
+                    .doc("Stacking order. Keep it below `Z_INDEX_FLOAT` (200), where the focused skip link sits: above it the link hides under the header (WCAG 2.4.11)."),
                 prop("children", "Element").doc("Nav and actions."),
             ])],
             accessibility: a11y()
@@ -57,6 +57,7 @@ pub fn HeaderPage() -> Element {
                     "Put the page's header at the top level, not inside `main`, `nav`, `section`, `article` or `aside`. Use one per page.",
                     "Put a `nav` inside it for the site's links.",
                     "Set `publish_height` on a `sticky` or `fixed` header.",
+                    "Keep a raised `z_index` below `Z_INDEX_FLOAT` (200). A focused skip link sits there and would hide under a higher header.",
                     "For a header stuck inside another scroller, set `scroll-padding-top: var(--lsx-header-height)` on that scroller yourself.",
                 ])
                 .example("A page banner: `Header { publish_height: true, nav { .. } }` as the app's first child, outside `main`. A screen reader lists a banner with the navigation in it, and a link Tab focuses near the top scrolls into view instead of under the bar."),

@@ -110,6 +110,7 @@ pub fn CarouselPage() -> Element {
                     "The carousel is a region named by `aria_label`, and each slide is a group a screen reader calls a slide. Slides out of view leave the Tab and reading order.",
                     "After each move a hidden status says which slide shows, out of how many. It stays quiet while autoplay rotates (WCAG 2.2.2).",
                     "Previous and Next are buttons. The indicators are one Tab stop with the current one marked, and focus follows the slide on them.",
+                    "A carousel whose slides all fit, without `loop`, drops the status, the dots and the track's Tab stop: none of them has a place to go.",
                     "With `autoplay`, focus inside the carousel stops it until the pause button is pressed. Hover only pauses it.",
                 ])
                 .must(["Set `aria_label` to name the region. Without it the theme's generic name is used, and a debug build warns."])

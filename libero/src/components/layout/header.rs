@@ -246,6 +246,7 @@ base_props! {
         /// A literal CSS colour is used as given, its text, link and focus colours black or white.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
+        /// Stacking order. Keep it below `Z_INDEX_FLOAT` (200), or a focused skip link hides under it.
         #[props(default, into)]
         z_index: Input<ThemeAwareValue>,
         /// Publishes the height on `:root`, so focus scrolls clear. The page's banner only.

@@ -388,6 +388,15 @@ mod tests {
         assert_eq!(restore_point(10.0, 10.0, 10.0, 70.0), 70.0);
     }
 
+    /// Todo 3049: a key walk restores the step before the floor, not where the walk began.
+    #[test]
+    fn a_step_walk_to_the_floor_restores_the_last_step() {
+        let restore = (11..=70).rev().fold(70.0, |restore, from| {
+            restore_point(from as f64, from as f64 - 1.0, 10.0, restore)
+        });
+        assert_eq!(restore, 11.0);
+    }
+
     /// It positions the divider, so there is no "unset" for it.
     #[test]
     fn the_pane_fraction_is_always_a_percentage() {

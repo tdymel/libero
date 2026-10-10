@@ -41,7 +41,9 @@ pub fn ListPage() -> Element {
                         .doc("This item's own icon, in place of the list's."),
                     prop("parts", "Parts<ListItemPart>")
                         .doc("Styles for the inner parts in the Style API tab, under `sx`."),
-                    prop("children", "Element").default("required").doc("The item's content."),
+                    prop("children", "Element")
+                        .default("required")
+                        .doc("The item's content. Keep the list's font size: the icon gutter is in `em` of the list, so a `font_size` on one item misaligns its icon."),
                 ])
                 .parts("ListItemPart", vec![
                     (ListItemPart::Icon, "The icon wrapper, with an icon only."),

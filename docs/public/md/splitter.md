@@ -104,8 +104,9 @@ Like every component, `Splitter` also takes the shared props `sx`, `class`,
 - The divider is a focusable separator.
 - Double-clicking the divider resizes without dragging (WCAG 2.5.7): pane A
   collapses to `min_size`, and the next double-click restores the size it had
-  before it reached `min_size`, by a double-click, a drag or `Home`. A single
-  click only focuses the divider.
+  before the move that reached `min_size`, by a double-click, a drag or `Home`.
+  Arrow keys walking down to `min_size` restore the size one step above it. A
+  single click only focuses the divider.
 - In forced colours the divider line takes the system text colour, so it stays
   visible.
 - The divider's hit area is 24px thick (WCAG 2.5.8), so it takes presses up to

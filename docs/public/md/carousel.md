@@ -50,8 +50,9 @@ With `per_view` above 1 the strip runs out of scroll before it runs out of
 slides. Six slides three-up stop at index 3, not 5. The indicators follow, with
 four dots rather than six, each named by the first slide it shows. The live
 region names the slides in view, "Slides 1–3 of 6", counting a slide at least
-half in view. When every slide fits, there is one position, one dot, and both
-buttons are inactive. With no slides there is no status, no dots and no
+half in view. When every slide fits and the strip does not `loop`, there is
+nothing to move to: no status, no dots, and the track is not a tab stop, and
+both buttons are inactive. With no slides there is no status, no dots and no
 buttons, and the empty track is not a tab stop.
 
 `align` moves that window too. Six slides three-up reach indices 0-3 aligned to
@@ -170,6 +171,8 @@ explains how parts work.
   stays quiet while autoplay rotates (WCAG 2.2.2).
 - Previous and Next are buttons. The indicators are one Tab stop with the
   current one marked, and focus follows the slide on them.
+- A carousel whose slides all fit, without `loop`, drops the status, the dots
+  and the track's Tab stop: none of them has a place to go.
 - With `autoplay`, focus inside the carousel stops it until the pause button
   is pressed. Hover only pauses it.
 

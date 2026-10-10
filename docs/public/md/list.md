@@ -88,7 +88,7 @@ List { ordered: true,
 |---|---|---|---|
 | `icon` | `Option<Element>` | `None` | This item's own icon, in place of the list's. |
 | `parts` | `Parts<ListItemPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
-| `children` | `Element` | required | The item's content. |
+| `children` | `Element` | required | The item's content. Keep the list's font size: the icon gutter is in `em` of the list, so a `font_size` on one item misaligns its icon. |
 
 Like every component, both also take the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes.

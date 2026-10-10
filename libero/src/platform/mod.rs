@@ -173,7 +173,7 @@ pub(crate) use table::{
 pub use task::awaits_layout;
 #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
 pub use task::reveal_in;
-pub(crate) use task::{next_task, page_task, when_free, when_laid_out};
+pub(crate) use task::{fonts_ready, next_task, page_task, when_free, when_laid_out};
 pub use timer::{TimerApi, TimerSubscription, timer};
 pub(crate) use transition::transition_property;
 pub(crate) use waveform::waveform;

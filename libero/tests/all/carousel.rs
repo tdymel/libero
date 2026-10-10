@@ -60,10 +60,10 @@ fn the_dots_count_resting_positions_and_the_status_names_the_range() {
     assert!(!html.contains(r#"aria-label="Go to slide 5""#), "{html}");
 }
 
-/// Every slide in view is one resting place, whichever slide the caller holds
-/// - a lightbox's thumbnail strip opened on its last picture read "4 of 6".
+/// Every slide in view has nowhere to go, whichever slide the caller holds: no status,
+/// no dots and no track stop (todo 3034), only the inactive controls.
 #[test]
-fn a_strip_whose_slides_all_fit_is_one_position() {
+fn a_strip_whose_slides_all_fit_is_quiet() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
@@ -81,9 +81,31 @@ fn a_strip_whose_slides_all_fit_is_one_position() {
     }
 
     let html = body(&render(app));
-    assert!(html.contains("Slides 1–6 of 6"), "{html}");
-    assert!(html.contains(r#"aria-label="Go to slide 1""#), "{html}");
-    assert!(!html.contains(r#"aria-label="Go to slide 2""#), "{html}");
+    assert!(!html.contains("Slides 1–6 of 6"), "{html}");
+    assert!(!html.contains("Go to slide"), "{html}");
+    assert!(!html.contains("aria-describedby"), "{html}");
+}
+
+/// A loop with slides to wrap is not quiet, even when they all fit.
+#[test]
+fn a_looping_strip_whose_slides_fit_keeps_its_stops() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Carousel {
+                    aria_label: "Thumbnails",
+                    per_view: 6.0,
+                    r#loop: true,
+                    indicators: true,
+                    slides: six(),
+                }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    assert!(html.contains("Go to slide"), "{html}");
+    assert!(html.contains("aria-describedby"), "{html}");
 }
 
 /// Six slides three-up with dots: every part below is a projection of the same
@@ -488,7 +510,7 @@ fn an_unnamed_carousel_falls_back_to_the_theme_label() {
     assert_eq!(root["aria-label"], "Carousel");
 }
 
-/// One slide is one position: it is announced, but both controls are at an end.
+/// One slide has nowhere to go: no status or dot, and both controls are at an end.
 #[test]
 fn a_one_slide_carousel_has_nowhere_to_go() {
     fn app() -> Element {
@@ -501,16 +523,16 @@ fn a_one_slide_carousel_has_nowhere_to_go() {
 
     let html = body(&render(app));
 
-    assert!(html.contains("Slide 1 of 1"), "{html}");
+    assert!(!html.contains("Slide 1 of 1"), "{html}");
     let slide = tag_with(&html, r#"aria-label="1 of 1""#);
     assert!(!slide.contains_key("inert"), "{slide:?}");
-    let track_id = track_id_of(&html);
+    let track_id = tag_with(&html, r#"data-slot="track""#)["id"].clone();
     let controls = tags_with(&html, &format!(r#"aria-controls="{track_id}""#));
     assert_eq!(controls.len(), 2, "{html}");
     for control in &controls {
         assert_eq!(control["aria-disabled"], "true", "{control:?}");
     }
-    assert_eq!(html.matches(r#"aria-label="Go to slide"#).count(), 1);
+    assert_eq!(html.matches(r#"aria-label="Go to slide"#).count(), 0);
 }
 
 /// No slides is not one slide: there is no position to announce, nothing to go

@@ -1368,31 +1368,36 @@ fn nothing_to_rotate_shows_no_pause() {
     });
 }
 
-/// Todo 2465: one slide has nowhere to move, so the arrows and Home/End stay the page's.
+/// Todo 3034: slides that all fit have nowhere to move, so no status, dots or track tab stop.
 #[test]
-fn a_lone_slide_leaves_the_keys_to_the_page() {
+fn slides_that_all_fit_leave_no_dead_stop() {
     block_on(async {
         let fixture = Fixture::open("/carousel/fits", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;
-        keyboard::tab_to(
+        wait::for_js_true(
             page,
-            "[aria-roledescription=carousel] [role=group][aria-describedby]",
-            10,
+            "document.querySelectorAll('[aria-roledescription=carousel]').length === 2",
+            "both carousels to render",
         )
         .await
         .unwrap();
-        crate::accordion::assert_keys_left_to_page(
-            page,
-            &[
-                keyboard::ARROW_RIGHT,
-                keyboard::ARROW_LEFT,
-                keyboard::HOME,
-                keyboard::END,
-            ],
-        )
-        .await;
+        let [status, dots, stops]: [usize; 3] = page
+            .evaluate(
+                "(() => { const q = (s) => document.querySelectorAll(`[aria-roledescription=carousel] ${s}`).length; \
+                 return [q('[role=status]'), q('[data-slot=indicators]'), q('[tabindex=\"0\"]:not(button)')]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            (status, dots, stops),
+            (0, 0, 0),
+            "status, dot strips, track stops"
+        );
+        fixture.console.assert_clean("slides that fit").unwrap();
         fixture.close().await.unwrap();
     });
 }

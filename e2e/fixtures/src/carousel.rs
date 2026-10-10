@@ -52,7 +52,7 @@ fn ButtonsPage() -> Element {
     }
 }
 
-/// Autoplay with nothing to rotate: one slide, and three that fit (todo 2361).
+/// Autoplay with nothing to rotate: one slide, and three that fit (todos 2361, 3034).
 #[component]
 fn FitsPage() -> Element {
     rsx! {
@@ -60,11 +60,13 @@ fn FitsPage() -> Element {
             Carousel {
                 aria_label: "One slide",
                 autoplay: true,
+                indicators: true,
                 slides: vec![rsx! { Text { "Only slide" } }],
             }
             Carousel {
                 aria_label: "Three that fit",
                 autoplay: true,
+                indicators: true,
                 per_view: 3.0,
                 slides: (1..=3).map(|n| rsx! { Text { "Slide {n}" } }).collect(),
             }

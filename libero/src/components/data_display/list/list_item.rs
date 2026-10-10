@@ -55,7 +55,8 @@ base_props! {
     }
 }
 
-/// One `<li>` of a [`List`](super::List).
+/// One `<li>` of a [`List`](super::List). Keep the list's font size: the icon
+/// gutter is in `em` of the list, so a `font_size` on one item misaligns its icon.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
