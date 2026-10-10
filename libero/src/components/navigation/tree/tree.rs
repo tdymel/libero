@@ -524,7 +524,11 @@ fn TreeCore(props: TreeCoreProps) -> Element {
         {
             return;
         }
+        let at = |end: Option<&VisibleNode>| end.is_some_and(|end| end.id == current);
         match logical_key(&event) {
+            // Home on the first or End on the last row scrolls the page (todo 3053).
+            Key::Home if at(order.first()) => {}
+            Key::End if at(order.last()) => {}
             Key::ArrowDown => {
                 event.prevent_default();
                 go_to(sibling_id(&order, &current, 1));

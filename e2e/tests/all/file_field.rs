@@ -270,6 +270,36 @@ fn modifier_chords_leave_the_chips_alone() {
     });
 }
 
+/// Todo 3053: Home on the first chip and End on the last stay the page's.
+#[test]
+fn home_and_end_at_the_ends_leave_the_page_to_scroll() {
+    block_on(async {
+        let fixture = Fixture::open("/file-field/input", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, CONTROL).await.unwrap();
+        let disk = OnDisk::new();
+        drop_files(page, CONTROL, disk.paths()).await;
+        wait::for_selector(page, REMOVE_BETA).await.unwrap();
+        keyboard::tab_to(page, "#attachments-file-0", 10)
+            .await
+            .unwrap();
+        crate::accordion::assert_keys_left_to_page(page, &[keyboard::HOME]).await;
+        keyboard::press(page, keyboard::END).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement.id === 'attachments-file-1'",
+            "focus on the last chip",
+        )
+        .await
+        .unwrap();
+        crate::accordion::assert_keys_left_to_page(page, &[keyboard::END]).await;
+        fixture.console.assert_clean("the ends").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todos 529, 530: with a chip focused the required field is axe clean, a named group of
 /// the file list and Browse, which hears "Required" and the error.
 #[test]

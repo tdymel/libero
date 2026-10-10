@@ -202,8 +202,9 @@ fn indicator_key_target(
             true => low,
             false => index - 1,
         },
-        Key::Home => low,
-        Key::End => high,
+        // Home on the first or End on the last dot scrolls the page (todo 3053).
+        Key::Home if index > low => low,
+        Key::End if index < high => high,
         _ => return None,
     })
 }
@@ -226,5 +227,14 @@ mod tests {
             indicator_key_target(Key::ArrowRight, 1, 0, 1, false),
             Some(1)
         );
+    }
+
+    /// Todo 3053: Home on the first dot and End on the last leave the keys to the page.
+    #[test]
+    fn home_and_end_at_their_end_take_no_key() {
+        assert_eq!(indicator_key_target(Key::Home, 0, 0, 2, false), None);
+        assert_eq!(indicator_key_target(Key::End, 2, 0, 2, true), None);
+        assert_eq!(indicator_key_target(Key::Home, 2, 0, 2, false), Some(0));
+        assert_eq!(indicator_key_target(Key::End, 0, 0, 2, false), Some(2));
     }
 }

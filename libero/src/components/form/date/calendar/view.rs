@@ -149,6 +149,10 @@ impl View {
             Key::PageDown => self.nearest(add_months(tab_stop, years), 1),
             _ => return,
         };
+        // Home or End on the week's end day scrolls the page (todo 3053).
+        if matches!(logical_key(&event), Key::Home | Key::End) && next == Some(tab_stop) {
+            return;
+        }
         event.prevent_default();
         let Some(next) = next else {
             return;
@@ -236,6 +240,10 @@ impl View {
             Key::PageDown => cells_per_page,
             _ => return,
         };
+        // Home or End on the row's end cell scrolls the page (todo 3053).
+        if cells == 0 {
+            return;
+        }
         event.prevent_default();
         let (mut paged, mut active) = (self.paged, self.active);
         let next = self.clamp_cell(add_months(cell_stop, cells * months_per_cell));
@@ -310,6 +318,10 @@ impl Strip {
             Key::PageDown => view.nearest(add_days(self.stop, self.days), 1),
             _ => return,
         };
+        // Home on the first or End on the last day scrolls the page (todo 3053).
+        if matches!(logical_key(&event), Key::Home | Key::End) && next == Some(self.stop) {
+            return;
+        }
         event.prevent_default();
         let Some(next) = next else {
             return;

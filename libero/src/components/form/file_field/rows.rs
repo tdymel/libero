@@ -240,8 +240,9 @@ impl ChipKeys {
             (Key::ArrowLeft, None) if self.multiple => Some(last),
             // Past the last chip is the Browse button, not a wrap.
             (Key::ArrowRight, Some(index)) => (index < last).then_some(index + 1),
-            (Key::Home, Some(_)) => Some(0),
-            (Key::End, Some(_)) => Some(last),
+            // Home on the first or End on the last chip scrolls the page (todo 3053).
+            (Key::Home, Some(index)) if index > 0 => Some(0),
+            (Key::End, Some(index)) if index < last => Some(last),
             (Key::Backspace | Key::Delete, Some(index)) if self.editable => {
                 event.prevent_default();
                 self.remove_at.call(index);

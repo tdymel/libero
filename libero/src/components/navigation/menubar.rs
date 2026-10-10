@@ -365,6 +365,10 @@ pub fn Menubar(props: MenubarProps) -> Element {
                     // ArrowDown, ArrowUp and Escape are `Menu`'s.
                     _ => return,
                 };
+                // Home on the first or End on the last trigger scrolls the page (todo 3053).
+                if matches!(key, Key::Home | Key::End) && target == Some(index) {
+                    return;
+                }
                 event.prevent_default();
                 if let Some(target) = target {
                     row.go(target);

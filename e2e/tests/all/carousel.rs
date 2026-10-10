@@ -469,6 +469,35 @@ fn the_dots_take_the_pointer_over_24px() {
     });
 }
 
+/// Todo 3053: Home on the first dot and End on the last stay the page's.
+#[test]
+fn home_and_end_at_the_ends_leave_the_page_to_scroll() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        // The dots follow the slide's inputs and the chevrons.
+        keyboard::tab_to(
+            page,
+            "[aria-roledescription=carousel] button[id$='-indicator-0']",
+            12,
+        )
+        .await
+        .unwrap();
+        crate::accordion::assert_keys_left_to_page(page, &[keyboard::HOME]).await;
+        keyboard::press(page, keyboard::END).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement.id.endsWith('-indicator-2')",
+            "focus on the last dot",
+        )
+        .await
+        .unwrap();
+        crate::accordion::assert_keys_left_to_page(page, &[keyboard::END]).await;
+        fixture.console.assert_clean("the ends").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Per dot, whether each corner of a square `offset` out from its centre
 /// hit-tests to that dot.
 async fn dot_corners(page: &Page, offset: f64) -> Result<Vec<Vec<bool>>> {

@@ -859,3 +859,29 @@ e2e::scenario!(
     "/menu-row",
     a_short_menu_keeps_its_height
 );
+
+/// Todo 3053: Home on the first item and End on the last stay the page's.
+#[test]
+fn home_and_end_at_the_ends_leave_the_page_to_scroll() {
+    block_on(async {
+        let fixture = Fixture::open("/menu", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(page, FOCUS_ON_CUT, "focus on the first item")
+            .await
+            .unwrap();
+        crate::accordion::assert_keys_left_to_page(page, &[keyboard::HOME]).await;
+        keyboard::press(page, keyboard::END).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement?.textContent.trim() === 'Share'",
+            "focus on the last item",
+        )
+        .await
+        .unwrap();
+        crate::accordion::assert_keys_left_to_page(page, &[keyboard::END]).await;
+        fixture.console.assert_clean("the ends").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

@@ -448,3 +448,27 @@ fn it_honours_the_roving_tabindex_contract() {
         .await;
     });
 }
+
+/// Todo 3053: Home on the first item and End on the last stay the page's.
+#[test]
+fn home_and_end_at_the_ends_leave_the_page_to_scroll() {
+    block_on(async {
+        let fixture = Fixture::open("/toolbar-script-focus", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, "#one", 10).await.unwrap();
+        crate::accordion::assert_keys_left_to_page(page, &[keyboard::HOME]).await;
+        keyboard::press(page, keyboard::END).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement.id === 'three'",
+            "focus on the last item",
+        )
+        .await
+        .unwrap();
+        crate::accordion::assert_keys_left_to_page(page, &[keyboard::END]).await;
+        fixture.console.assert_clean("the ends").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

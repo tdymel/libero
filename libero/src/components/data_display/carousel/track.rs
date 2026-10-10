@@ -195,17 +195,20 @@ fn track_key_target(key: Key, orientation: Orientation, nav: Nav) -> Option<Trac
     if nav.count <= 1 || (!wraps && nav.first >= nav.last) {
         return None;
     }
-    Some(match key {
-        key if key == previous => TrackKey::Step(false),
-        key if key == next => TrackKey::Step(true),
-        Key::Home => TrackKey::To(match wraps {
-            true => 0,
-            false => nav.first,
+    let to = |index: usize| {
+        // A plain strip at that end leaves the key to the page (todo 3053); a looping one
+        // keeps it, or the native scroll lands on a clone.
+        (wraps || *nav.current.peek() != index).then_some(TrackKey::To(index))
+    };
+    match key {
+        key if key == previous => Some(TrackKey::Step(false)),
+        key if key == next => Some(TrackKey::Step(true)),
+        Key::Home => to(if wraps { 0 } else { nav.first }),
+        Key::End => to(if wraps {
+            nav.count.saturating_sub(1)
+        } else {
+            nav.last
         }),
-        Key::End => TrackKey::To(match wraps {
-            true => nav.count.saturating_sub(1),
-            false => nav.last,
-        }),
-        _ => return None,
-    })
+        _ => None,
+    }
 }

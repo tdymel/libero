@@ -263,7 +263,8 @@ fn TabStrip(
             Key::End => disabled.iter().rposition(|off| !off),
             _ => return,
         };
-        let Some(next) = next else {
+        // Home on the first or End on the last tab scrolls the page (todo 3053).
+        let Some(next) = next.filter(|&next| next != at) else {
             return;
         };
         event.prevent_default();

@@ -568,3 +568,25 @@ fn a_lone_tab_leaves_the_keys_to_the_page() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 3053: Home on the first tab and End on the last stay the page's.
+#[test]
+fn home_and_end_at_the_ends_leave_the_page_to_scroll() {
+    block_on(async {
+        let fixture = Fixture::open("/tabs", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, SELECTED, 10).await.unwrap();
+        crate::accordion::assert_keys_left_to_page(page, &[keyboard::HOME]).await;
+        keyboard::press(page, keyboard::END).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement.textContent.includes('Admin')",
+            "focus on the last tab",
+        )
+        .await
+        .unwrap();
+        crate::accordion::assert_keys_left_to_page(page, &[keyboard::END]).await;
+        fixture.console.assert_clean("the ends").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

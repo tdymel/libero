@@ -195,7 +195,16 @@ pub fn Toolbar(props: ToolbarProps) -> Element {
         }
         let Ok(items) = bar.query_selector_all(&format!("[{TOOLBAR_ITEM}]")) else {
             // A WebView queries nothing: the page walks the items, `focusin` moves the stop.
-            let ids: Vec<String> = scope.items().iter().map(u64::to_string).collect();
+            let items = scope.items();
+            // Home on the first or End on the last item scrolls the page (todo 3053).
+            let end = match event.key() {
+                Key::Home => items.first(),
+                _ => items.last(),
+            };
+            if step.is_none() && end.is_some_and(|&end| Some(end) == scope.stop()) {
+                return;
+            }
+            let ids: Vec<String> = items.iter().map(u64::to_string).collect();
             let to = match (step, event.key()) {
                 (Some(by), _) => FocusStep::By {
                     by,
@@ -222,6 +231,9 @@ pub fn Toolbar(props: ToolbarProps) -> Element {
             (None, Key::Home) => Some(0),
             (None, _) => items.len().checked_sub(1),
         };
+        if step.is_none() && target == Some(at) {
+            return;
+        }
         event.prevent_default();
         if let Some(target) = target.and_then(|target| items.get(target)) {
             // Here too: Blitz fires `focusin` before the focus moves.

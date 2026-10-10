@@ -151,6 +151,9 @@ impl Level {
                 event.prevent_default();
                 self.step(index, false);
             }
+            // Home on the first or End on the last item scrolls the page.
+            Key::Home if index == 0 => {}
+            Key::End if index + 1 == self.len => {}
             Key::Home => {
                 event.prevent_default();
                 self.focus(0);
