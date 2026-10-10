@@ -123,6 +123,30 @@ e2e::scenario!(
     android: skip("a touch screen has no hover")
 );
 
+/// Todo 3089: a key press while hovering a symbol draws the new value, not the hover.
+async fn key_over_hover<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.hover(&format!("{STARS} > [data-slot=symbol]:nth-child(3)"))
+        .await?;
+    eventually(d, "the hover read-out", async |d| {
+        Ok(!d.text("#stars-hover").await?.is_empty())
+    })
+    .await?;
+    d.focus(STARS).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    becomes(d, STARS, 0.5, "ArrowRight").await?;
+    eventually(d, "the fill to follow the value", async |d| {
+        Ok(d.rects(&format!("{STARS} [data-slot=fill]")).await?.len() == 1)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_key_press_over_a_hover_draws_the_new_value,
+    "/rating",
+    key_over_hover,
+    android: skip("a touch screen has no hover")
+);
+
 /// Todo 2964: at every size a symbol's hit area is 24px tall and wide.
 async fn targets<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     for rating in [STARS, "#tiny", "#small"] {

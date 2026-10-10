@@ -4,7 +4,8 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        ActionIcon, Button, ButtonGroup, Options, Select, Toolbar, ToolbarGroup, ToolbarSeparator,
+        ActionIcon, Button, ButtonGroup, Options, Select, TagsField, Toolbar, ToolbarGroup,
+        ToolbarSeparator,
     },
 };
 
@@ -112,6 +113,36 @@ fn a_disabled_item_in_a_toolbar_stays_focusable() {
     }
     // The caller's explicit `false` still wins.
     assert!(items[3].contains("disabled=true"), "{}", items[3]);
+}
+
+/// Todo 3092: the draft is the bar's item; the chips' x and the clear button are the field's.
+#[test]
+fn a_tags_field_in_a_toolbar_is_one_item() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Toolbar { "aria-label": "Edit",
+                    TagsField {
+                        aria_label: "Tags",
+                        value: vec!["rust".to_string(), "go".to_string()],
+                        onchange: move |_| {},
+                        clearable: true,
+                    }
+                    Button { "Save" }
+                }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    assert!(html.contains("Remove rust"), "{html}");
+    assert!(html.contains("Clear"), "{html}");
+    let items = tags_with(&html, "data-toolbar-item=");
+    assert_eq!(items.len(), 2, "{html}");
+    assert!(items[0].contains("<input"), "{}", items[0]);
+    assert!(items[0].contains(r#"tabindex="0""#), "{}", items[0]);
+    assert!(items[1].contains(r#"tabindex="-1""#), "{}", items[1]);
+    assert_eq!(html.matches(r#"tabindex="0""#).count(), 1, "{html}");
 }
 
 /// Outside a toolbar nothing changes: no marker, no roving `tabindex`.

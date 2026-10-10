@@ -255,6 +255,7 @@ pub fn Rating(props: RatingProps) -> Element {
             _ => return,
         };
         event.prevent_default();
+        set_hover.call(None);
         // A key down never raises an unrated value to the floor.
         if next != value && !(down && next > value) {
             commit.call(next);

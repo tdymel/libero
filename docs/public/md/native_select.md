@@ -42,7 +42,7 @@ fn Demo() -> Element {
 }
 ```
 
-While `value` is `None`, the `placeholder` shows as the selected entry. It
+While no option matches `value`, the `placeholder` shows as the selected entry. It
 cannot be picked again once a real value is:
 
 ```rust
@@ -175,7 +175,7 @@ fn Demo() -> Element {
 | `validate` | `Validators<Option<T>>` | - | Rules over the selection, shown once the select loses focus or its form is submitted. |
 | `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. A `Vec<T>` converts, and an `OptionList` adds disabled options and named groups. A pending source draws no options. |
 | `option_label` | `Callback<T, String>` | `T::label()` | Renames an option. Returns a `String`, since an `<option>` holds only text. |
-| `placeholder` | `String` | - | Shown while `value` is `None`, as a first entry that cannot be picked. |
+| `placeholder` | `String` | - | Shown while no option matches `value`, as a first entry that cannot be picked. |
 | `label` | `Caption` | - | The caption above the control, and the select's name. A string or an `Element`. |
 | `description` | `Caption` | - | Between the label and the control. What to pick. |
 | `helper` | `Caption` | - | Under the control. Constraints, or what the choice changes. |

@@ -485,6 +485,20 @@ fn an_unnamed_radio_warns() {
     ));
 }
 
+/// Todo 3091: `onselect` without `checked` never shows the radio picked.
+#[test]
+fn a_radio_with_onselect_and_no_checked_warns() {
+    let prefix = "Radio: `onselect` without `checked`";
+    assert!(warns(
+        || rsx! { LiberoProvider { Radio { label: "Monthly", onselect: |_| {} } } },
+        prefix
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Radio { label: "Monthly", checked: false, onselect: |_| {} } } },
+        prefix
+    ));
+}
+
 /// A group's options carry their labels, so none of them warns.
 #[test]
 fn a_radio_group_option_does_not_warn() {

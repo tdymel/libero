@@ -6,7 +6,8 @@ use crate::{
     components::{
         accessibility::use_announcer,
         common::{
-            ComboboxState, HtmlTag, Input, Part, Parts, ScaleOrCss, ring_overlay, use_combobox,
+            ComboboxState, HtmlTag, Input, Part, Parts, ScaleOrCss, TOOLBAR_ITEM, ToolbarItem,
+            ring_overlay, use_combobox, use_no_toolbar, use_toolbar_item,
         },
         form::{
             CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, SelectionArgs, clear_button,
@@ -141,6 +142,9 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
     // Refused on the input (native), the commit/delete keys, the chips' x and
     // the clear button.
     let readonly = props.readonly.unwrap_or(false);
+    let item = use_toolbar_item();
+    // The chips' x and the clear button belong to the field, not the bar.
+    use_no_toolbar();
     let held = bound.value().unwrap_or_else(|| props.value.clone());
     let announcer = use_chip_announcer(held.clone());
 
@@ -294,6 +298,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
             row_count,
             placeholder: props.placeholder,
             cursor,
+            item,
         },
         onchange.clone(),
         props.attributes,
@@ -678,6 +683,7 @@ struct Draft {
     row_count: usize,
     placeholder: Option<String>,
     cursor: TagCursor,
+    item: Option<ToolbarItem>,
 }
 
 /// The draft input, which carries the field's id, label and description.
@@ -700,6 +706,7 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
         row_count,
         placeholder,
         cursor,
+        item,
     } = draft;
     let (typing, entering, blurring) = (add.clone(), add.clone(), add);
 
@@ -718,8 +725,15 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
             "placeholder",
             held.is_empty().then_some(placeholder).flatten(),
         )
-        .attr("disabled", disabled)
-        .attr("readonly", readonly)
+        // A toolbar keeps a disabled item focusable, in its arrow order: read-only instead.
+        .attr("disabled", disabled && item.is_none())
+        .attr(
+            "aria-disabled",
+            (disabled && item.is_some()).then_some("true"),
+        )
+        .attr("readonly", readonly || (disabled && item.is_some()))
+        .attr(TOOLBAR_ITEM, item.map(ToolbarItem::key))
+        .attr("tabindex", item.map(ToolbarItem::tabindex))
         .attr("required", (required && held.is_empty()).then_some(true))
         // A caller's token wins; the browser's saved entries then cover the suggestions.
         .attr_default("autocomplete", "off")

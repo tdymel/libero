@@ -77,7 +77,7 @@ pub fn NativeSelectPage() -> Element {
                         .default("T::label()")
                         .doc("Renames an option. Returns a `String`, since an `<option>` holds only text."),
                     prop("placeholder", "String")
-                        .doc("Shown while `value` is `None`, as a first entry that cannot be picked."),
+                        .doc("Shown while no option matches `value`, as a first entry that cannot be picked."),
                     prop("label", "Caption")
                         .doc("The caption above the control, and the select's name. A string or an `Element`."),
                     prop("description", "Caption")

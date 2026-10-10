@@ -25,6 +25,8 @@ const RADIO_COLOR: CssVar = CssVar::new("--lsx-radio-color");
 /// 0 or 1, scaling the dot - so only this var changes between the two states
 /// and the transition is free. Same trick as `Switch`'s thumb offset.
 const RADIO_ON: CssVar = CssVar::new("--lsx-radio-on");
+/// Half the shortfall below 24px, out on each side of the circle; `0` from 24px up.
+const HIT_AREA_INSET: &str = "min(0px, calc((100% - 24px) / 2))";
 
 static RADIO_CONTROL_SX: StaticSx = StaticSx::new(|| {
     RadioDefaults::theme_vars()
@@ -51,8 +53,14 @@ static RADIO_CIRCLE_SX: StaticSx = StaticSx::new(|| {
         .align_items("center")
         .justify_content("center")
         .flex("0 0 auto")
-        // Carries the click, so it carries the finger-sized hit area too.
+        // Carries the click, so it carries a 24px floor (WCAG 2.5.8) and the finger-sized area.
         .position("relative")
+        .selector(
+            "::before",
+            sx().content("\"\"")
+                .position("absolute")
+                .inset(HIT_AREA_INSET),
+        )
         .and(coarse_hit_area_sx("::before"))
         .width(RADIO_CIRCLE.value())
         .height(RADIO_CIRCLE.value())
@@ -171,6 +179,9 @@ pub fn Radio(props: RadioProps) -> Element {
 
     if props.checked.is_some() && props.onselect.is_none() {
         warn("Radio: `checked` without `onselect` can never change.");
+    }
+    if props.onselect.is_some() && props.checked.is_none() {
+        warn("Radio: `onselect` without `checked` can never appear checked.");
     }
 
     let onselect = props.onselect;

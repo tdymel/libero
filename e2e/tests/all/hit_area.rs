@@ -136,6 +136,44 @@ fn a_finger_presses_small_controls_in_a_44px_box() {
     });
 }
 
+/// Todo 3090: a label-less radio takes a mouse press 11.5px out from its 18px circle.
+#[test]
+fn a_nameless_radio_takes_presses_in_a_24px_box() {
+    block_on(async {
+        let fixture = Fixture::open("/hit-area", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+
+        let hit: Hit = page
+            .evaluate(
+                "(() => {
+                    const el = document.querySelector('[data-case=radio] [data-slot=circle]');
+                    el.scrollIntoView({ block: 'center' });
+                    const r = el.getBoundingClientRect();
+                    const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
+                    const misses = [];
+                    for (const dx of [-11.5, 0, 11.5]) for (const dy of [-11.5, 0, 11.5]) {
+                        const at = document.elementFromPoint(cx + dx, cy + dy);
+                        if (!at || !el.contains(at)) misses.push([dx, dy, at ? at.outerHTML.slice(0, 60) : null]);
+                    }
+                    return { width: r.width, height: r.height, misses };
+                })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(hit.height < 20.0, "the circle grew its drawn size: {hit:?}");
+        assert!(
+            hit.misses.is_empty(),
+            "its 24px box lands elsewhere: {:?}",
+            hit.misses
+        );
+
+        fixture.console.assert_clean("a radio hit area").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The ripple grows by a transform inside a clipping child span: `overflow: hidden`
 /// on the button would clip the hit area as well.
 #[test]

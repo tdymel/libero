@@ -54,7 +54,7 @@ field_props! {
         /// Overrides `Options::label`; plain text, as `<option>` holds nothing else.
         #[props(default)]
         option_label: Option<Callback<T, String>>,
-        /// Shown while `value` is `None`, as an unpickable first entry.
+        /// Shown while no option matches `value`, as an unpickable first entry.
         #[props(default)]
         placeholder: Option<String>,
     }
