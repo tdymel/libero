@@ -699,6 +699,80 @@ mod a_touch_drag_moves_the_row_soon_on_a_slow_phone {
     }
 }
 
+/// Todo 3159: a finger's drag at row 1000 of 10k keeps the body's height every frame. The
+/// focus's wider overscan reached the rows a WebView frame before the padding: +40 rows, then -40.
+mod a_deep_windowed_drag_keeps_the_table_size {
+    #[cfg(feature = "android")]
+    #[test]
+    fn android() {
+        e2e::android::block_on(async {
+            const AREA: &str = "document.querySelector('[data-table-scroll]')";
+            const HANDLE: &str = "[aria-label=\"Reorder Row 1002\"]";
+            let mut d = e2e::driver::Android::open("/table-reorder-windowed-deep")
+                .await
+                .unwrap();
+            let page = d.page().clone();
+            // Again until it holds: the body reserves its rows a render after the mount.
+            e2e::wait::for_js_true(
+                &page,
+                &format!("({AREA}.scrollTop = 999 * 40, !!document.querySelector('{HANDLE}'))"),
+                "Row 1002 rendered",
+            )
+            .await
+            .unwrap();
+            // Every frame's body height, until 40 frames after the drop.
+            page.evaluate(format!(
+                "(() => {{ const body = {AREA}.querySelector('tbody'), moves = document.querySelector('#moves');
+                  const heights = window.__heights = []; let after = 0;
+                  const frame = () => {{
+                    heights.push(body.getBoundingClientRect().height);
+                    if (moves.textContent) after++;
+                    if (after < 40 && heights.length < 1200) requestAnimationFrame(frame);
+                    else window.__heightsDone = true;
+                  }};
+                  requestAnimationFrame(frame); }})()"
+            ))
+            .await
+            .unwrap();
+            d.paced_drag(HANDLE, (0.0, 80.0), 12, 16, 600)
+                .await
+                .unwrap();
+            e2e::wait::for_js_true(
+                &page,
+                "window.__heightsDone === true",
+                "40 frames after the drop",
+            )
+            .await
+            .unwrap();
+            let heights: Vec<f64> = page
+                .evaluate("window.__heights")
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            let moves: String = page
+                .evaluate("document.querySelector('#moves').textContent")
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert_eq!(moves, "1001>1003 ", "the drag two rows down");
+            let changes: Vec<(usize, f64)> = heights
+                .iter()
+                .enumerate()
+                .filter(|&(_, &height)| (height - heights[0]).abs() > 0.5)
+                .map(|(frame, &height)| (frame, height))
+                .collect();
+            assert!(
+                changes.is_empty(),
+                "the body was {} px, then (frame, px) {changes:?}",
+                heights[0]
+            );
+            d.finish("a deep windowed drag").await.unwrap();
+        });
+    }
+}
+
 /// Name's grip held at the scroll region's end edge scrolls Origin's end into
 /// view, then drops after it (1463, the edge scroll as Kanban's 1364).
 #[test]

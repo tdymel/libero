@@ -17,6 +17,7 @@ pub const ROUTES: Routes = &[
     ("/table-reorder-detail", || rsx! { ReorderDetailPage {} }),
     ("/table-reorder-windowed", || rsx! { ReorderWindowedPage {} }),
     ("/table-reorder-windowed-footer", || rsx! { ReorderWindowedFooterPage {} }),
+    ("/table-reorder-windowed-deep", || rsx! { ReorderWindowedDeepPage {} }),
     ("/table-column-drag", || rsx! { ColumnDragPage {} }),
     ("/table-column-scroll", || rsx! { ColumnScrollPage {} }),
 ];
@@ -92,9 +93,19 @@ fn ReorderWindowedFooterPage() -> Element {
     rsx! { WindowedRows { footer: true } }
 }
 
+/// The docs demo's size: 10k rows under a 320px cap, for a drag deep in them (todo 3159).
 #[component]
-fn WindowedRows(#[props(default)] footer: bool) -> Element {
-    let mut rows = use_signal(|| (1..=200).map(|n| format!("Row {n}")).collect::<Vec<_>>());
+fn ReorderWindowedDeepPage() -> Element {
+    rsx! { WindowedRows { count: 10_000, height: "320px" } }
+}
+
+#[component]
+fn WindowedRows(
+    #[props(default)] footer: bool,
+    #[props(default = 200)] count: usize,
+    #[props(default = "240px")] height: &'static str,
+) -> Element {
+    let mut rows = use_signal(|| (1..=count).map(|n| format!("Row {n}")).collect::<Vec<_>>());
     let mut moves = use_signal(String::new);
     let ends = {
         let rows = rows.read();
@@ -104,7 +115,7 @@ fn WindowedRows(#[props(default)] footer: bool) -> Element {
     rsx! {
         Table {
             aria_label: "Rows",
-            max_height: "240px",
+            max_height: height,
             virtual_row_height: 40.0,
             data: rows(),
             columns: vec![if footer { name.aggregate(Aggregate::Count) } else { name }],

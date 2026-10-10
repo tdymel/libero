@@ -338,11 +338,17 @@ pub fn Virtualize(
         }),
         _ => None,
     };
+    // A focus's wider overscan reached the rows a render before the padding: on a WebView each
+    // render is its own frame, and the table grew 40 rows and jumped 20 back at a drag (3159).
+    let padded = viewport
+        .as_ref()
+        .filter(|_| owned)
+        .and_then(|viewport| (viewport.spec)());
     let visible = match (owned, stage, spec) {
         // Don't wait for a measurement: server renders never get one, and
         // waiting rendered every row.
         (_, _, Some(spec)) => {
-            let (visible, beside) = spec.at(geometry);
+            let (visible, beside) = spec.padded_by(padded).at(geometry);
             kept = beside;
             visible
         }

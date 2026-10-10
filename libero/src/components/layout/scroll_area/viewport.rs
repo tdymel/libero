@@ -70,6 +70,18 @@ impl WindowSpec {
         let kept = keep_beside(&mut visible, self.keep, self.count, self.pitch);
         (visible, kept)
     }
+
+    /// This spec at the overscan of `padded`, the one the content pads by, while both window
+    /// the same rows: a new overscan then reaches rows and padding in one pass (todo 3159).
+    pub fn padded_by(self, padded: Option<WindowSpec>) -> Self {
+        match padded {
+            Some(padded) if padded.count == self.count && padded.pitch == self.pitch => Self {
+                overscan: padded.overscan,
+                ..self
+            },
+            _ => self,
+        }
+    }
 }
 
 /// The private contract between `ScrollArea` and `Virtualize`: geometry down,
@@ -255,6 +267,35 @@ mod tests {
     fn a_long_jump_reaches_two_viewports_ahead() {
         let jump = GEOMETRY.scrolled(10_000.0, 100.0);
         assert_eq!(window(1000, 20.0, jump, 0).range, 500..516);
+    }
+
+    /// The padded spec's overscan wins until it windows other rows; the kept row stays this one's.
+    #[test]
+    fn a_new_overscan_waits_for_the_padding() {
+        let spec = WindowSpec {
+            count: 1000,
+            pitch: 40.0,
+            overscan: 24,
+            keep: Some(7),
+        };
+        let padded = WindowSpec {
+            overscan: 6,
+            keep: None,
+            ..spec
+        };
+        assert_eq!(
+            spec.padded_by(Some(padded)),
+            WindowSpec {
+                overscan: 6,
+                ..spec
+            }
+        );
+        assert_eq!(spec.padded_by(None), spec);
+        let fewer = WindowSpec {
+            count: 999,
+            ..padded
+        };
+        assert_eq!(spec.padded_by(Some(fewer)), spec);
     }
 
     #[test]
