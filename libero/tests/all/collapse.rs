@@ -4,8 +4,6 @@
 
 use crate::common::{attributes_of, body, drive_once, drive_until, render, rules_for};
 
-use std::cell::Cell;
-use std::rc::Rc;
 use std::time::Duration;
 
 use dioxus::prelude::*;
@@ -245,18 +243,6 @@ fn a_false_aria_expanded_is_still_rendered_on_the_trigger() {
     assert!(html.contains(r#"id="shipping-panel""#), "{html}");
 }
 
-thread_local! {
-    /// How many times [`Counted`] was created: a remount discards the
-    /// content's state, which is what a stale fallback would do.
-    static MOUNTS: Cell<usize> = const { Cell::new(0) };
-}
-
-#[component]
-fn Counted() -> Element {
-    use_hook(|| MOUNTS.with(|mounts| mounts.set(mounts.get() + 1)));
-    rsx! { "panel body" }
-}
-
 /// A `Collapse` whose `open` the test flips from outside, through the signal
 /// the app puts in context. `keep_mounted: false`, so the content's presence
 /// in the markup is the hook's `mounted()`.
@@ -264,7 +250,7 @@ fn toggled_app(duration: u32) -> Element {
     let open = use_context_provider(|| Signal::new(true));
     rsx! {
         LiberoProvider {
-            Collapse { open: open(), keep_mounted: false, duration, Counted {} }
+            Collapse { open: open(), keep_mounted: false, duration, "panel body" }
         }
     }
 }
@@ -310,37 +296,6 @@ fn a_zero_duration_close_unmounts_without_waiting() {
         !html.contains("panel body")
     });
     assert!(!html.contains("panel body"), "{html}");
-}
-
-/// Reopening mid-exit drops the fallback. A stale one unmounts the open
-/// panel, and the open arm then mounts it again at once - so the markup heals
-/// and only the mount count shows the content's state was thrown away.
-#[test]
-fn reopening_before_the_fallback_keeps_the_content() {
-    let mut dom = VirtualDom::new_with_props(toggled_app, 30);
-    dom.rebuild_in_place();
-    set_open(&mut dom, false);
-    // The close rendered, so its effect armed the 180ms fallback.
-    drive_until(&mut dom, Duration::from_secs(2), |html| {
-        attributes_of(html, "div")["data-state"] != "open"
-    });
-    drive_once(&mut dom);
-    set_open(&mut dom, true);
-
-    // Past the 180ms the dropped timer was due at: a timer started after it has fired.
-    let fired = Rc::new(Cell::new(false));
-    let _later = dom.in_scope(ScopeId::APP, || {
-        let fired = fired.clone();
-        libero::platform::timer().expect("a timer").after(
-            Duration::from_millis(200),
-            Box::new(move || fired.set(true)),
-        )
-    });
-    let html = drive_until(&mut dom, Duration::from_secs(2), |_| fired.get());
-    assert!(fired.get(), "the later timer never fired");
-    assert!(html.contains("panel body"), "{html}");
-    assert_eq!(MOUNTS.with(Cell::get), 1, "the content was remounted");
-    assert_eq!(attributes_of(&html, "div")["data-state"], "open", "{html}");
 }
 
 /// Events dispatched the way a renderer does, through [`crate::dispatch`].

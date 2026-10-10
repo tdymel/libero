@@ -66,6 +66,7 @@ fn Demo() -> Element {
 
     rsx! {
         Box {
+            role: "list",
             onmounted: list.element.mount(),
             onpointermove: move |event| list.onpointermove.call(event),
             onpointerup: move |event| list.onpointerup.call(event),
@@ -82,23 +83,28 @@ fn Demo() -> Element {
 fn Fruit(index: usize, name: &'static str) -> Element {
     let item = use_sortable_item(index);
     rsx! {
-        Box { onmounted: item.element.mount(), style: item.style(),
+        Box {
+            role: "listitem",
+            onmounted: item.element.mount(),
+            style: item.style(),
             button {
                 onmounted: item.handle.mount(),
                 onpointerdown: move |event| item.onpointerdown.call(event),
                 onkeydown: move |event| item.onkeydown.call(event),
                 onblur: move |event| item.onblur.call(event),
                 style: "touch-action: none",
-                "Drag {name}"
+                "Reorder {name}"
             }
             button {
                 onmounted: item.earlier.mount(),
+                aria_label: "Move {name} up",
                 onclick: move |event| item.onearlier.call(event),
                 disabled: (item.first)(),
                 "Up"
             }
             button {
                 onmounted: item.later.mount(),
+                aria_label: "Move {name} down",
                 onclick: move |event| item.onlater.call(event),
                 disabled: (item.last)(),
                 "Down"
@@ -132,8 +138,8 @@ from it.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `index` | `usize` | required | The item's current position. The items run exactly 0 to n - 1: a gap or a repeat stops every drag and lift, so number a filtered view or a page from 0. Key the item by its data, not by this. |
-| `label` | `Option<String>` | `"Item {n}"` | Names the item in its controls and the announcements. Unset, the handle reads the item's content ("Reorder Apple"), and the move buttons and announcements `SortableLabels::item` with its position when it was lifted. |
+| `index` | `usize` | required | The item's current position. The items run exactly 0 to n - 1: a gap stops every drag and lift, a repeat warns and some items never move, so number a filtered view or a page from 0. Key the item by its data, not by this. |
+| `label` | `Option<String>` | - | Names the item in its controls and the announcements. Unset, the handle reads the item's content ("Reorder Apple"), and the move buttons and announcements `SortableLabels::item` with its position when it was lifted. |
 | `parts` | `Parts<SortableItemPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 | `children` | `Element` | required | The item's content, between the handle and the move buttons. |
 

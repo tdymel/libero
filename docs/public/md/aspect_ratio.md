@@ -11,7 +11,10 @@ Write `ratio` as a division, like `16.0 / 9.0`. The box has no size of its own,
 so give it a width. The child fills it and the overflow is clipped: an image or
 a video is cropped with `object-fit: cover`, not stretched, and an `a`,
 `picture` or `span` child becomes a block. Give any other inline child
-`display: block`, and a `picture`'s inner `img` the full size.
+`display: block`, and a `picture`'s inner `img` the full size. The size and
+`object-fit` reach the direct child only: an image inside a wrapper is not
+cropped unless it gets `width: 100%`, `height: 100%` and `object-fit: cover`
+itself.
 
 ## Usage
 

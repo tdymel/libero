@@ -60,6 +60,10 @@ window is pulled into it, so a centred three-up carousel asked for slide 0
 reports slide 1. Where a slide visibly rests shows best with a fractional
 `per_view`. At a whole number the alignments often rest on the same offset.
 
+A looping strip can show the end and the start at once. Six slides three-up,
+aligned to the start and resting on slide 6, show slides 6, 1 and 2. The status
+then names the resting slide, not a range.
+
 A vertical carousel needs a `height`:
 
 ```rust,ignore

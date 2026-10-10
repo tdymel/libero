@@ -214,8 +214,8 @@ parts_enum! {
 base_props! {
     parts(SortableItemPart);
     pub struct SortableItemProps {
-        /// The item's current position: the items run exactly `0..n`, a gap or a repeat
-        /// stops every drag. Key it by its data, not this.
+        /// The item's current position: the items run exactly `0..n`, a gap stops every
+        /// drag, a repeat warns and some items never move. Key it by its data, not this.
         index: usize,
         /// Names the item in its controls and the announcements. Unset, the handle reads the
         /// item's content, the rest "Item {n}" by where it was lifted.

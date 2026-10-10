@@ -963,7 +963,8 @@ fn trim(items: &mut Vec<Option<Registered>>) {
 }
 
 /// One item of the nearest [`use_sortable`] list, at `index` in its order.
-/// Panics outside one. The indices run exactly `0..n`: a gap or a repeat stops every drag.
+/// Panics outside one. The indices run exactly `0..n`: a gap stops every drag, a repeat
+/// warns and some items never move.
 ///
 /// Key the item by its data, not its index: a reorder then moves the item,
 /// focus included, instead of rebuilding it.

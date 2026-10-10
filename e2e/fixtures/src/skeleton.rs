@@ -95,7 +95,7 @@ fn GraceCard(latency: u64) -> Element {
     use_drop(move || fetch.set(None));
     let loading = !answered();
 
-    let mut slow = use_signal(|| false);
+    let mut slow = use_signal(|| timer().is_none());
     let mut grace = use_signal(|| {
         timer().map(|timer| {
             timer.after(

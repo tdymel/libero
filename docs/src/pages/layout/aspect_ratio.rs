@@ -61,7 +61,16 @@ pub fn AspectRatioPage() -> Element {
                     Code { source: "picture" }
                     "'s inner "
                     Code { source: "img" }
-                    " the full size."
+                    " the full size. The size and "
+                    Code { source: "object-fit" }
+                    " reach the direct child only: an image inside a wrapper is not cropped "
+                    "unless it gets "
+                    Code { source: "width: 100%" }
+                    ", "
+                    Code { source: "height: 100%" }
+                    " and "
+                    Code { source: "object-fit: cover" }
+                    " itself."
                 }
             },
             Demo {

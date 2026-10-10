@@ -73,7 +73,7 @@ const GRACE: Duration = Duration::from_millis(200);
 fn Card() -> Element {
     let profile = use_resource(load_profile);
     let loading = profile.read().is_none();
-    let mut slow = use_signal(|| false);
+    let mut slow = use_signal(|| timer().is_none());
     // Dropping the timer cancels it, so an unmounted card never writes `slow`.
     let mut grace = use_signal(|| {
         timer().map(|timer| timer.after(GRACE, Box::new(move || slow.set(true))))
@@ -97,9 +97,6 @@ fn Card() -> Element {
 # async fn load_profile() -> Profile { Profile }
 # #[component] fn ProfileCard(profile: Profile) -> Element { rsx! {} }
 ```
-
-The grace runs once, from mount. A card that fetches again starts a new timer
-and sets `slow` back to `false`.
 
 ## Showing through
 

@@ -98,7 +98,7 @@ State tokens on the `<dl>`'s `data-state`, space separated.
 
 | Token | Condition |
 |---|---|
-| `size-<size>` | The `gap` step in effect, which selects the gap variable. |
+| `size-<size>` | The `gap` size word, or the theme's `size` when `gap` is CSS. A breakpoint override is not reflected: only the base step is. |
 | `horizontal` | `orientation` is `horizontal`, which makes the `<dl>` a grid. |
 
 `DataListItem` sets no state tokens of its own. Its `states` prop lands on the

@@ -30,9 +30,8 @@ pub fn SortablePage() -> Element {
                 props("SortableItem", vec![
                     prop("index", "usize")
                         .default("required")
-                        .doc("The item's current position. The items run exactly 0 to n - 1: a gap or a repeat stops every drag and lift, so number a filtered view or a page from 0. Key the item by its data, not by this."),
+                        .doc("The item's current position. The items run exactly 0 to n - 1: a gap stops every drag and lift, a repeat warns and some items never move, so number a filtered view or a page from 0. Key the item by its data, not by this."),
                     prop("label", "Option<String>")
-                        .default("\"Item {n}\"")
                         .doc("Names the item in its controls and the announcements. Unset, the handle reads the item's content (\"Reorder Apple\"), and the move buttons and announcements `SortableLabels::item` with its position when it was lifted."),
                     prop("parts", "Parts<SortableItemPart>")
                         .doc("Styles for the inner parts in the Style API tab, under `sx`."),

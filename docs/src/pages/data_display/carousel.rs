@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{
+    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, a11y, prop, props,
+};
 use dioxus::prelude::*;
 use libero::{
     components::{Carousel, CarouselPart, Input, Text},
@@ -17,10 +19,22 @@ const FIXED: [&str; 4] = [
     "slides: demo_slides()",
 ];
 
+/// The looping demo, resting on the last slide so the three-up window crosses the seam.
+const SEAM: [&str; 7] = [
+    r#"aria_label: "Product photos""#,
+    "index: index()",
+    "onindexchange: move |next| index.set(next)",
+    "per_view: 3.0",
+    "r#loop: true",
+    "indicators: true",
+    "slides: demo_slides()",
+];
+
 #[component]
 pub fn CarouselPage() -> Element {
     let theme = use_theme();
     let mut index = use_signal(|| 2);
+    let mut seam_index = use_signal(|| 5);
 
     rsx! {
         DocPage {
@@ -189,6 +203,43 @@ pub fn CarouselPage() -> Element {
                         }
                     }
                 },
+            }
+
+            DocSection {
+                title: "Across the seam",
+                Text {
+                    "A looping strip can show the end and the start at once. Six slides three-up, "
+                    "aligned to the start and resting on slide 6, show slides 6, 1 and 2. "
+                    "The status then names the resting slide, not a range."
+                }
+                // snippet: let mut index = use_signal(|| 5);
+                // snippet: item fn demo_slides() -> Vec<Element> { vec![] }
+                Demo {
+                    component: "Carousel",
+                    title: "Looping window",
+                    wide_preview: true,
+                    children_text: "",
+                    fixed: SEAM.map(str::to_string).to_vec(),
+                    controls: vec![
+                        // Printed always: the theme's `align` may not be `start`.
+                        Control::toggle("align", ["start", "center", "end"])
+                            .labels(["Start", "Center", "End"])
+                            .default("start")
+                            .code(|_, values| vec![format!("align: {:?}", values.str("align"))]),
+                    ],
+                    render: move |values: DemoValues| rsx! {
+                        Carousel {
+                            aria_label: "Product photos",
+                            index: seam_index(),
+                            onindexchange: move |next| seam_index.set(next),
+                            per_view: 3.0,
+                            align: values.str("align"),
+                            r#loop: true,
+                            indicators: true,
+                            slides: demo_slides(),
+                        }
+                    },
+                }
             }
         }
     }
