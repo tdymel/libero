@@ -136,7 +136,7 @@ fn an_unlabelled_cards_handle_is_named_by_its_content() {
     assert_eq!(crate::sortable::labelled_by(&html, ids), "Reorder Write");
 }
 
-/// Todo 2749: a card finds its parts by selector, so cards add no `onmounted`.
+/// Todo 2749: a card finds its parts by selector; only each card's Menu wrapper still mounts (2989).
 #[test]
 fn cards_register_no_onmounted() {
     fn empty() -> Element {
@@ -149,5 +149,5 @@ fn cards_register_no_onmounted() {
             }
         }
     }
-    assert_eq!(mounted_listeners(app), mounted_listeners(empty));
+    assert_eq!(mounted_listeners(app), mounted_listeners(empty) + 2);
 }
