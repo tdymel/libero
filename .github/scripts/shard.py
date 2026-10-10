@@ -15,11 +15,11 @@ ALL = Path(__file__).resolve().parents[2] / "e2e/tests/all"
 
 
 def unit_weights() -> dict[str, int]:
-    mods = re.findall(r"^mod (?:r#)?(\w+);", (ALL / "main.rs").read_text(), re.M)
+    mods = re.findall(r"^mod (?:r#)?(\w+);", (ALL / "main.rs").read_text(encoding="utf-8"), re.M)
     weights = {}
     for unit in mods:
         files = [p for p in [ALL / f"{unit}.rs"] if p.is_file()] + list((ALL / unit).rglob("*.rs"))
-        weights[unit] = max(1, sum(p.read_text().count("#[test") for p in files))
+        weights[unit] = max(1, sum(p.read_text(encoding="utf-8").count("#[test") for p in files))
     return weights
 
 
