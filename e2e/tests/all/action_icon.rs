@@ -75,6 +75,34 @@ fn a_loading_icon_stays_focusable_and_swallows_presses() {
     });
 }
 
+/// Todo 3028: the press's ripple span follows the loader, which still sits over the glyph.
+#[test]
+fn a_spinner_started_by_a_press_covers_the_glyph() {
+    const LOOK: &str = "(() => {
+        const el = document.getElementById('busy');
+        const glyph = el.querySelector('[data-slot=glyph]');
+        const spinner = el.querySelector('[data-slot=spinner]');
+        if (!glyph || !spinner || !el.querySelector('[data-ripple]')) return null;
+        return [getComputedStyle(spinner).position, getComputedStyle(glyph).opacity];
+    })()";
+    block_on(async {
+        let fixture = Fixture::open("/action-icon", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        pointer::click(page, "#busy").await.unwrap();
+        wait::for_js_true(page, &format!("{LOOK} !== null"), "the spinner and ripple")
+            .await
+            .unwrap();
+        let look: Vec<String> = page.evaluate(LOOK).await.unwrap().into_value().unwrap();
+        assert_eq!(look, ["absolute", "0"], "position and glyph opacity");
+
+        fixture.console.assert_clean("pressing to load").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 1559: Android's WebView sends a tap on a disabled button's svg a click
 /// (990); a click dispatched there stands in for it.
 #[test]

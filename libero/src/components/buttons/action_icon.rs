@@ -120,17 +120,18 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
 });
 
 /// `Button`'s loading shape; the loader takes a share of the box, not of a line height.
+/// By slot, not position: a press appends a ripple span after the loader.
 fn loading_sx() -> Sx {
     sx().cursor("progress")
         .selector(
-            "& > span:first-child",
+            "& > [data-slot='glyph']",
             sx().display("inline-flex")
                 .width("100%")
                 .height("100%")
                 .opacity("0"),
         )
         .selector(
-            "& > span:last-child",
+            "& > [data-slot='spinner']",
             sx().position("absolute").inset("0").margin("auto").var(
                 LOADER_SIZE,
                 format!("calc({} * 0.6)", ACTION_ICON_SIZE.overridable()),
@@ -440,8 +441,8 @@ fn action_icon(mut props: ActionIconProps) -> Element {
 
     let children = if loading {
         rsx! {
-            span { {glyph} }
-            Loader { color: "currentColor" }
+            span { "data-slot": "glyph", {glyph} }
+            Loader { "data-slot": "spinner", color: "currentColor" }
         }
     } else {
         glyph

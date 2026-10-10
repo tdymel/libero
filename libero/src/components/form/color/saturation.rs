@@ -46,6 +46,10 @@ static PANEL_SX: StaticSx = StaticSx::new(|| {
         .user_select("none")
 });
 
+/// The dark rings round a white thumb border, shared with the hue and alpha thumbs.
+pub(super) const THUMB_RING: &str =
+    "0 0 0 1px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(0, 0, 0, 0.3)";
+
 static THUMB_SX: StaticSx = StaticSx::new(|| {
     sx().position("absolute")
         .left(format!("calc({} * 100%)", SATURATION_X.value_or("0")))
@@ -59,9 +63,7 @@ static THUMB_SX: StaticSx = StaticSx::new(|| {
         // White, then a 60% black ring: one of the two is at least 3.4:1 on
         // any colour of the pad, in either scheme (WCAG 1.4.11, todo 554).
         .border_color("#ffffff")
-        .and(shadow_sx(
-            "0 0 0 1px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(0, 0, 0, 0.3)".to_string(),
-        ))
+        .and(shadow_sx(THUMB_RING.to_string()))
         .background(SATURATION_COLOR.value())
         .cursor("grab")
 });

@@ -3,14 +3,16 @@
 
 use dioxus::prelude::Attribute;
 
+use super::saturation::THUMB_RING;
 use crate::{
     components::{
-        common::{Input, Parts, attr, parts_enum, parts_under_sx},
+        common::{Input, Part, Parts, attr, parts_enum, parts_under_sx, shadow_sx},
         form::slider::SLIDER_HIT,
     },
-    sx::{StaticSx, Sx},
+    sx::{StaticSx, Sx, sx},
     theme::{
-        COLOR_PICKER_SPACING, COLOR_PICKER_THUMB, ColorPickerDefaults, SLIDER_THUMB, SLIDER_TRACK,
+        COLOR_PICKER_SPACING, COLOR_PICKER_THUMB, ColorPickerDefaults, OWN_SHADOW, SLIDER_THUMB,
+        SLIDER_TRACK,
     },
 };
 
@@ -56,7 +58,18 @@ pub(super) fn color_slider_sx(
 }
 
 static COLOR_SLIDER_SX: StaticSx = StaticSx::new(|| {
+    let thumb = ColorSliderPart::Thumb.selector();
     ColorPickerDefaults::theme_vars()
+        // The saturation thumb's rings: the thumb is the track's own colour, so the
+        // plain slider's surface ring is under 3:1 on some hues (WCAG 1.4.11, todo 3027).
+        .selector(
+            thumb,
+            sx().border_color("#ffffff").var(OWN_SHADOW, THUMB_RING),
+        )
+        .selector(
+            format!("{thumb}:not(:focus-visible)"),
+            shadow_sx(THUMB_RING.to_string()),
+        )
         .var(SLIDER_TRACK, COLOR_PICKER_THUMB.value())
         .var(SLIDER_THUMB, COLOR_PICKER_THUMB.value())
         // At `xs`/`sm` a 24px hit area would take the next slider's presses,

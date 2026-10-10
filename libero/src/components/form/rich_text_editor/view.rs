@@ -9,7 +9,9 @@ use dioxus::core::{Runtime, current_scope_id};
 use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
 
-use super::dialogs::{LinkArgs, LinkChoice, LinkDialog, announcement, shortcut_rows};
+use super::dialogs::{
+    LinkArgs, LinkChoice, LinkDialog, announcement, shortcut_rows, tool_announcement,
+};
 use super::handle::{RichTextHandle, Runner, Status};
 use super::input::{EditorInput, Intent, SubmitOn, intent, split_enter, text_diff};
 use super::model::{
@@ -329,6 +331,11 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         keymap.set(props.keymap.clone());
         *keymap_revision.write() += 1;
     }
+    let tool_list = use_hook(|| CopyValue::new(Vec::<RichTextTool>::new()));
+    if *tool_list.peek() != props.tools {
+        let mut tool_list = tool_list;
+        tool_list.set(props.tools.clone());
+    }
     let registry = use_hook(|| CopyValue::new(None::<NodeRegistry>));
     if *registry.peek() != props.registry {
         let mut registry = registry;
@@ -455,9 +462,12 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         }
         let mut edit = edit;
         let ran = edit(&|live| live.run(&commands.peek(), name.clone()), focus);
+        // A custom toggle says its new state, as the builtins do (todos 3001, 3031).
+        let custom = || tool_announcement(&tool_list.peek(), &name, editor.peek().state(), &words);
         if ran
             && announce
-            && let Some(message) = announcement(&name, editor.peek().state(), &words)
+            && let Some(message) =
+                announcement(&name, editor.peek().state(), &words).or_else(custom)
         {
             announcer.say(message);
         }
@@ -1280,7 +1290,6 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             .first()
             .map(|chord| chord.to_string().to_lowercase());
         let command = tool.command.clone();
-        let (active, label) = (tool.active, tool.label.clone());
         rsx! {
             ActionIcon {
                 key: "{tool.command}",
@@ -1289,14 +1298,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                 shortcut,
                 selected,
                 onclick: move |_| {
-                    // A custom toggle says its new state, as the builtins do (todo 3001).
-                    if run_command(command.clone(), true, false)
-                        && let Some(active) = active
-                    {
-                        let on = active(editor.peek().state());
-                        let template = if on { words.on } else { words.off };
-                        announcer.say(template.replace("{name}", &label));
-                    }
+                    run_command(command.clone(), true, true);
                 },
                 {tool.icon}
             }

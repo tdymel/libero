@@ -2,7 +2,10 @@
 
 use dioxus::prelude::*;
 
-use super::model::{BlockKind, Builtin, CommandName, EditorState, Href, Keymap, MarkKind};
+use super::{
+    model::{BlockKind, Builtin, CommandName, EditorState, Href, Keymap, MarkKind},
+    toolbar::RichTextTool,
+};
 use crate::{
     components::{
         buttons::Button,
@@ -181,6 +184,22 @@ pub(crate) fn announcement(
     Some(template.replace("{name}", &label))
 }
 
+/// What a screen reader hears after a custom toggle in `tools` ran from the keyboard or its button.
+pub(crate) fn tool_announcement(
+    tools: &[RichTextTool],
+    name: &CommandName,
+    state: &EditorState,
+    words: &RichTextEditorLabels,
+) -> Option<String> {
+    let tool = tools.iter().find(|tool| tool.command == *name)?;
+    let template = if tool.active?(state) {
+        words.on
+    } else {
+        words.off
+    };
+    Some(template.replace("{name}", &tool.label))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -225,5 +244,22 @@ mod tests {
             announcement(&Builtin::SplitBlock.into(), &state, &words),
             None
         );
+    }
+
+    #[test]
+    fn a_custom_toggle_says_its_new_state() {
+        use crate::components::form::rich_text_editor::model::Doc;
+        let words = RichTextEditorLabels::ENGLISH;
+        let state = EditorState::new(Doc::from_markdown("ab"));
+        let tools = [
+            RichTextTool::new("on", "Marker", rsx! {}).active(|_| true),
+            RichTextTool::new("off", "Flag", rsx! {}).active(|_| false),
+            RichTextTool::new("plain", "Shout", rsx! {}),
+        ];
+        let said = |name: &'static str| tool_announcement(&tools, &name.into(), &state, &words);
+        assert_eq!(said("on").as_deref(), Some("Marker on"));
+        assert_eq!(said("off").as_deref(), Some("Flag off"));
+        assert_eq!(said("plain"), None);
+        assert_eq!(said("missing"), None);
     }
 }

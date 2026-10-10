@@ -131,6 +131,29 @@ fn a_diff_without_a_language_still_marks_its_lines() {
     assert!(!html.contains("-old") && !html.contains("+new"), "{html}");
 }
 
+/// Todo 3029. No language never highlights, so the plain rows draw the gutter.
+#[test]
+fn line_numbers_on_a_block_without_a_language_draw_a_gutter() {
+    fn on() -> Element {
+        rsx! {
+            LiberoProvider { CodeBlock { source: "a\nb" } }
+        }
+    }
+    fn off() -> Element {
+        rsx! {
+            LiberoProvider { themes: &BARE, CodeBlock { source: "a\nb" } }
+        }
+    }
+
+    let html = body(&render(on));
+    assert_eq!(
+        html.matches(r#"data-slot="line-number""#).count(),
+        2,
+        "{html}"
+    );
+    assert!(!body(&render(off)).contains("line-number"));
+}
+
 /// Todo 668. An unknown language renders plain rows rather than one plain
 /// `pre` once a line is to be highlighted.
 #[test]

@@ -214,8 +214,7 @@ impl DateLocale {
             "Dezember",
         ],
         months_short: [
-            "Jan.", "Feb.", "März", "Apr.", "Mai", "Juni", "Juli", "Aug.", "Sept.", "Okt.", "Nov.",
-            "Dez.",
+            "Jan", "Feb", "März", "Apr", "Mai", "Juni", "Juli", "Aug", "Sept", "Okt", "Nov", "Dez",
         ],
         weekdays: [
             "Sonntag",
@@ -266,4 +265,19 @@ impl DateLocale {
         minutes_value: german_minutes,
         seconds_value: german_seconds,
     };
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A month cell's visible text must be in its accessible name (WCAG 2.5.3, todo 3025).
+    #[test]
+    fn every_short_month_starts_its_full_name() {
+        for locale in [DateLocale::ENGLISH, DateLocale::GERMAN] {
+            for (short, long) in locale.months_short.iter().zip(locale.months) {
+                assert!(long.starts_with(short), "{short} / {long}");
+            }
+        }
+    }
 }

@@ -132,6 +132,18 @@ fn number(text: &str, index: usize) -> i64 {
     text.parse().unwrap_or(index as i64)
 }
 
+/// `aria-valuemin` and `aria-valuemax`: the open options, with the current value kept inside.
+fn value_range(options: &[SpinOption], now: Option<i64>) -> (Option<i64>, Option<i64>) {
+    let numbers: Vec<i64> = options
+        .iter()
+        .enumerate()
+        .filter(|(_, option)| !option.disabled)
+        .map(|(index, option)| number(option.text, index))
+        .chain(now)
+        .collect();
+    (numbers.iter().min().copied(), numbers.iter().max().copied())
+}
+
 #[derive(Props, Clone, PartialEq)]
 pub(super) struct SpinColumnProps {
     /// `data-column`: stable across locales, so a selector can find it.
@@ -302,16 +314,12 @@ pub(super) fn SpinColumn(props: SpinColumnProps) -> Element {
             .map_or("", |index| options[index].text),
     };
     let (before, after) = (beside(-1), beside(1));
-    let numbers: Vec<i64> = options
-        .iter()
-        .enumerate()
-        .map(|(index, option)| number(option.text, index))
-        .collect();
     let now = match at {
         SpinAt::At(index) => Some(number(text, index)),
         SpinAt::Past(index) => Some(number(text, index)),
         SpinAt::Empty(_) => None,
     };
+    let (value_min, value_max) = value_range(&options, now);
     let neighbour = move |delta: isize, text: &'static str| {
         rsx! {
             span {
@@ -331,8 +339,8 @@ pub(super) fn SpinColumn(props: SpinColumnProps) -> Element {
             "aria-label": label,
             "aria-valuenow": now,
             "aria-valuetext": now.is_some().then(|| valuetext.unwrap_or_else(|| text.to_string())),
-            "aria-valuemin": numbers.iter().min().copied(),
-            "aria-valuemax": numbers.iter().max().copied(),
+            "aria-valuemin": value_min,
+            "aria-valuemax": value_max,
             onmounted: handle.mount(),
             onkeydown,
             onwheel,
@@ -375,6 +383,18 @@ mod tests {
         // A page short of the end stops on the last open option.
         assert_eq!(stepped(&minutes, SpinAt::At(9), 3, false), Some(11));
         assert_eq!(stepped(&minutes, SpinAt::At(1), 3, true), Some(4));
+    }
+
+    #[test]
+    fn the_value_range_leaves_out_disabled_options() {
+        let mut minutes = options(&MINUTES);
+        for option in &mut minutes[..6] {
+            option.disabled = true;
+        }
+        assert_eq!(value_range(&minutes, Some(30)), (Some(30), Some(55)));
+        // A value ruled out stays inside its own range.
+        assert_eq!(value_range(&minutes, Some(5)), (Some(5), Some(55)));
+        assert_eq!(value_range(&minutes, None), (Some(30), Some(55)));
     }
 
     #[test]

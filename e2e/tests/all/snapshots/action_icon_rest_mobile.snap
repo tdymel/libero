@@ -7,6 +7,7 @@ button "Copy"
 button "Pin" [pressed=false]
 button "Bookmark" [pressed=false]
 button "Save" [busy=1] [disabled]
+button "Send"
 button "Delete" [disabled]
 link "Open"
 link "Disabled link" [disabled]

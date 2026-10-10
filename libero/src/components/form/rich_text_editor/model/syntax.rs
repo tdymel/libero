@@ -193,6 +193,9 @@ pub(super) fn link_closed_at(chars: &[char], close: usize) -> Option<(usize, usi
     Some((close, end, Mark::Link { href, title }))
 }
 
+/// The longest URL or title scanned, so many unclosed `[a](` stay linear (todo 3032).
+const MAX_DESTINATION: usize = 2048;
+
 /// `url "title")` after `(`: the URL, the title and the index after `)`.
 fn destination(chars: &[char], mut i: usize) -> Option<(String, Option<String>, usize)> {
     let skip = |i: &mut usize| {
@@ -204,7 +207,11 @@ fn destination(chars: &[char], mut i: usize) -> Option<(String, Option<String>, 
     let read = |i: &mut usize, stop: fn(char) -> bool| -> Option<String> {
         let mut out = String::new();
         let mut depth = 0;
+        let limit = *i + MAX_DESTINATION;
         loop {
+            if *i > limit {
+                return None;
+            }
             let mut c = *chars.get(*i)?;
             match c {
                 '\\' if chars.get(*i + 1).is_some_and(char::is_ascii_punctuation) => {
@@ -240,4 +247,21 @@ fn destination(chars: &[char], mut i: usize) -> Option<(String, Option<String>, 
         skip(&mut i);
     }
     (chars.get(i) == Some(&')')).then_some((href, title, i + 1))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn link_to(url_len: usize) -> Vec<char> {
+        format!("[a](https://{})", "x".repeat(url_len - "https://".len()))
+            .chars()
+            .collect()
+    }
+
+    #[test]
+    fn a_destination_longer_than_the_cap_stays_plain_text() {
+        assert!(link(&link_to(MAX_DESTINATION), 0).is_some());
+        assert!(link(&link_to(MAX_DESTINATION + 1), 0).is_none());
+    }
 }

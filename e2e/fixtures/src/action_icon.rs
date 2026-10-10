@@ -23,6 +23,7 @@ const SQUARE: SvgData = SvgData::new(r#"<svg viewBox="0 0 24 24"><path d="M5 5h1
 fn ActionIconPage() -> Element {
     let mut clicks = use_signal(|| 0);
     let mut pinned = use_signal(|| false);
+    let mut sending = use_signal(|| false);
     rsx! {
         Flex { direction: "row", gap: "md", align: "center",
             ActionIcon { id: "plain", aria_label: "Copy", onclick: move |_| clicks += 1, {glyph()} }
@@ -47,6 +48,14 @@ fn ActionIconPage() -> Element {
                 variant: "filled",
                 loading: true,
                 onclick: move |_| clicks += 1,
+                {glyph()}
+            }
+            ActionIcon {
+                id: "busy",
+                aria_label: "Send",
+                variant: "filled",
+                loading: sending(),
+                onclick: move |_| sending.set(true),
                 {glyph()}
             }
             ActionIcon {
