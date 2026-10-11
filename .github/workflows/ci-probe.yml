@@ -139,6 +139,15 @@ jobs:
           cache-key: ${{ needs.plan.outputs.cache }}
           # Saved on the `ci/probe-*` branches only, see the setup action.
           save-cache: true
+      - if: contains(env.EXP, 'incr')
+        id: incr
+        uses: actions/cache/restore@v6
+        with:
+          path: target/debug/incremental
+          key: incr-${{ runner.os }}-${{ needs.plan.outputs.cache }}-${{ github.sha }}
+          restore-keys: incr-${{ runner.os }}-${{ needs.plan.outputs.cache }}-
+      - if: contains(env.EXP, 'incr')
+        run: echo "CARGO_INCREMENTAL=1" >> "$GITHUB_ENV"
       - if: env.TIER == 'web'
         uses: ./.github/actions/dx
       # The same pin as ci.yml's `e2e` job: the AX snapshots follow Chrome's tree.
@@ -205,6 +214,13 @@ jobs:
         env:
           CHROME: ${{ steps.chrome.outputs.chrome-path }}
           E2E_DESKTOP_DEADLINE: 1500
+      - if: (success() || failure()) && contains(env.EXP, 'incr')
+        run: du -sh target/debug/incremental
+      - if: (success() || failure()) && contains(env.EXP, 'incr')
+        uses: actions/cache/save@v6
+        with:
+          path: target/debug/incremental
+          key: incr-${{ runner.os }}-${{ needs.plan.outputs.cache }}-${{ github.sha }}
       - if: failure() || cancelled()
         run: $PY .github/scripts/ci_annotate.py "$RUNNER_TEMP"/probe/{build,unit,native,all,e2e}.log
       - if: always()
