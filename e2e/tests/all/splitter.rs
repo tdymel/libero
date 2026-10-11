@@ -93,9 +93,7 @@ e2e::scenario!(
 e2e::scenario!(
     under_rtl_rightwards_shrinks_pane_a,
     "/splitter/rtl",
-    rtl_rightwards_shrinks,
-    android: skip("963: is_rtl reads false on the WebView"),
-    desktop: skip("963: is_rtl reads false on the WebView")
+    rtl_rightwards_shrinks
 );
 e2e::scenario!(
     the_arrows_and_home_end_move_a_focused_divider,
@@ -109,7 +107,7 @@ const COLUMN: &str = "#column [role=separator]";
 /// Todo 1039, as the Slider's 1020: on Android a vertical swipe over a vertical
 /// divider scrolls the page; a mouse still grabs at once. A sideways drag moves
 /// it, a tap starts before it ends, and a horizontal divider still drags.
-async fn a_swipe_scrolls<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+async fn a_swipe_scrolls_on_android<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let (_, height) = d.viewport().await?;
     d.drag(ROW, 0.0, -250.0).await?;
     if d.platform() == Platform::Android {
@@ -155,9 +153,9 @@ async fn a_swipe_scrolls<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 }
 
 e2e::scenario!(
-    a_vertical_swipe_over_a_vertical_divider_scrolls_the_page_and_a_sideways_drag_moves_it,
+    a_vertical_swipe_over_a_vertical_divider_scrolls_the_page_on_android_only_and_a_sideways_drag_moves_it,
     "/splitter/scroll",
-    a_swipe_scrolls
+    a_swipe_scrolls_on_android
 );
 
 /// Todo 1821: the horizontal divider takes ArrowDown/ArrowUp (step 1), Shift for the big

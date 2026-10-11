@@ -257,8 +257,9 @@ impl BoxStyle {
     }
 
     /// Wires an [`ElementHandle`](crate::hooks::ElementHandle) to this
-    /// element, so the component can measure, focus or query it.
-    pub fn element(self, handle: &crate::hooks::ElementHandle) -> Self {
+    /// element, so the component can measure, focus or query it (a WebView by its tag).
+    pub fn element(mut self, handle: &crate::hooks::ElementHandle) -> Self {
+        self.own.extend(handle.attributes());
         self.event("onmounted", handle.mount())
     }
 

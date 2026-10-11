@@ -89,11 +89,11 @@ pub(crate) use document::{VisibleBand, root_padding_right, visible_band};
 pub(crate) use element::{
     ContentSubscription, FocusStep, SCROLL_MARGIN_BOTTOM_VAR, SCROLL_MARGIN_VAR,
     SCROLL_PADDING_BOTTOM_VAR, SCROLL_PADDING_LEFT_VAR, SCROLL_PADDING_RIGHT_VAR,
-    SCROLL_PADDING_TOP_VAR, SCROLL_PADDING_VARS, click_selector, focus_among,
+    SCROLL_PADDING_TOP_VAR, SCROLL_PADDING_VARS, alias_rtl_tag, click_selector, focus_among,
     focus_closest_of_focused, focus_first_of, focus_kept, focus_selector, focus_tab_from,
-    focused_attribute, is_rtl, join, join_all, keep_focused, load_failed, mounted_by_selector,
-    on_content_change, on_form_reset, on_image_error, scroll_padding_properties, set_value_by_id,
-    sets_indeterminate,
+    focused_attribute, forget_rtl_tag, is_rtl, is_rtl_by_tag, join, join_all, keep_focused,
+    load_failed, mounted_by_selector, on_content_change, on_form_reset, on_image_error,
+    read_rtl_tag, scroll_padding_properties, set_value_by_id, sets_indeterminate,
 };
 pub use element::{Dimensions, ElementApi, Read};
 pub use error::PlatformError;

@@ -189,8 +189,7 @@ button there.
 ### Limits
 
 - Left and Right move a lifted card one column per press: it is dropped there, so
-  lift it again for the next column. On Android a right to left board's Left and
-  Right are not mirrored yet.
+  lift it again for the next column.
 - A drag scrolls the board, not the page: to reach a card or column beyond the
   window, use the Move to menu.
 - A board with a height of its own scrolls its cards by wheel and touch; the

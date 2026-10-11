@@ -6,8 +6,8 @@ use dioxus::prelude::*;
 use super::{SubscriptionSlot, use_subscription_slot};
 use crate::platform::{
     self, ContentSubscription, Dimensions, ElementApi, OBSERVE_ATTR, PlatformError, Read,
-    TagCommand, is_rtl, next_observe_tag, observes_by_tag, on_content_change, on_form_reset,
-    on_resize,
+    TagCommand, alias_rtl_tag, forget_rtl_tag, is_rtl, is_rtl_by_tag, next_observe_tag,
+    observes_by_tag, on_content_change, on_form_reset, on_resize, read_rtl_tag,
 };
 use crate::utils::bump;
 
@@ -49,7 +49,12 @@ impl ElementHandle {
     /// The `onmounted` handler that fills this handle in. Prefer
     /// `.element(&handle)` on the `Box` builder, which wires this up.
     pub fn mount(mut self) -> impl FnMut(Event<MountedData>) + 'static {
-        move |event| self.mounted.set(Some(event.data()))
+        move |event| {
+            self.mounted.set(Some(event.data()));
+            if let Some(tag) = self.tag {
+                read_rtl_tag(tag);
+            }
+        }
     }
 
     /// Reactive: an effect that reads this re-runs once the element mounts.
@@ -92,6 +97,9 @@ impl ElementHandle {
     /// Points this handle at `source`'s element. Reading `source` subscribes the
     /// calling effect, so a copy a portal reads follows the caller's mounts.
     pub(crate) fn follow(&self, source: Option<&ElementHandle>) {
+        if let (Some(tag), Some(source)) = (self.tag, source.and_then(|source| source.tag)) {
+            alias_rtl_tag(tag, source);
+        }
         let next = source.and_then(|source| source.mounted.read().clone());
         let same = match (&*self.mounted.peek(), &next) {
             (Some(now), Some(next)) => Rc::ptr_eq(now, next),
@@ -125,10 +133,11 @@ impl ElementHandle {
         self.mounted.try_peek().ok()?.clone()
     }
 
-    /// Whether the element lays out right to left; `false` until it mounts.
-    /// Not reactive, so a key handler can ask before it returns.
+    /// Whether the element lays out right to left; `false` until it mounts. Not
+    /// reactive, so a key handler can ask before it returns. A WebView answers by
+    /// the tag, which the element must carry.
     pub(crate) fn is_rtl(&self) -> bool {
-        self.mounted.peek().as_ref().is_some_and(is_rtl)
+        self.mounted.peek().as_ref().is_some_and(is_rtl) || self.tag.is_some_and(is_rtl_by_tag)
     }
 
     fn get(&self) -> Result<Box<dyn ElementApi>, PlatformError> {
@@ -164,9 +173,15 @@ impl ElementHandle {
 ///
 /// Docs: <https://libero-ui.dev/hooks/use-element>
 pub fn use_element() -> ElementHandle {
+    let tag = use_hook(|| observes_by_tag().then(next_observe_tag));
+    use_drop(move || {
+        if let Some(tag) = tag {
+            forget_rtl_tag(tag);
+        }
+    });
     ElementHandle {
         mounted: use_signal(|| None),
-        tag: use_hook(|| observes_by_tag().then(next_observe_tag)),
+        tag,
     }
 }
 

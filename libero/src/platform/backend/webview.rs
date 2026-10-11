@@ -1805,6 +1805,11 @@ struct PageState {
     guarding_values: Cell<bool>,
     /// Whether [`guard_defaults`] ran on this page.
     guarding_defaults: Cell<bool>,
+    /// Each tagged element's computed `direction` as RTL, mirrored by [`watch_direction`].
+    rtl: RefCell<HashMap<u64, bool>>,
+    /// A following handle's tag to the tag of the element it follows.
+    rtl_aliases: RefCell<HashMap<u64, u64>>,
+    watching_direction: Cell<bool>,
 }
 
 /// The focused element as the page last reported it: tag, `type`, editable, RTL,
@@ -2323,30 +2328,132 @@ fn focus_page() -> Option<Rc<PageState>> {
     Some(page)
 }
 
+/// Sends `{tag: rtl}` for each `data-lsx-observe` element whose computed `direction`
+/// changed, at start and on every `dir` change; `window.__lsxDirection(tag)` sends one tag's.
+const ON_DIRECTION: &str = "const sent = new Map();
+    const direction = (el) => getComputedStyle(el).direction === 'rtl';
+    const scan = () => {
+        const changed = {};
+        for (const el of document.querySelectorAll('[data-lsx-observe]')) {
+            const tag = el.getAttribute('data-lsx-observe');
+            const rtl = direction(el);
+            if (sent.get(tag) !== rtl) { sent.set(tag, rtl); changed[tag] = rtl; }
+        }
+        if (Object.keys(changed).length > 0) dioxus.send(changed);
+    };
+    window.__lsxDirection = (tag) => {
+        const el = document.querySelector(`[data-lsx-observe='${tag}']`);
+        if (el) { const rtl = direction(el); sent.set(String(tag), rtl); dioxus.send({ [tag]: rtl }); }
+    };
+    new MutationObserver(scan).observe(document.documentElement, {
+        subtree: true, attributes: true, attributeFilter: ['dir'],
+    });
+    scan();
+    await new Promise(() => {});";
+
+/// Starts mirroring the tagged elements' direction into Rust, once per dom, so a
+/// handler reads it synchronously (1337).
+pub(super) fn watch_direction() {
+    if !runs_scripts() {
+        return;
+    }
+    let Some(page) = page() else {
+        return;
+    };
+    if !page.watching_direction.replace(true) {
+        let script = eval(ON_DIRECTION);
+        spawn_forever(async move {
+            let mut script = script;
+            while let Ok(changed) = script.recv::<HashMap<String, bool>>().await {
+                let mut mirror = page.rtl.borrow_mut();
+                for (tag, rtl) in changed {
+                    if let Ok(tag) = tag.parse() {
+                        mirror.insert(tag, rtl);
+                    }
+                }
+            }
+        });
+    }
+}
+
+/// Reads `tag`'s direction once its element mounted, which the `dir` observer never sees.
+pub(super) fn read_rtl_tag(tag: u64) {
+    if runs_scripts() {
+        eval_with(json!(tag), "window.__lsxDirection?.(data);");
+    }
+}
+
+/// Drops what the mirror holds for `tag`, once its handle is gone.
+pub(super) fn forget_rtl_tag(tag: u64) {
+    if let Some(page) = page() {
+        page.rtl.borrow_mut().remove(&tag);
+        page.rtl_aliases.borrow_mut().remove(&tag);
+    }
+}
+
+/// Whether the element tagged `tag` laid out right to left when the page last said.
+pub(super) fn is_rtl_by_tag(tag: u64) -> bool {
+    page().is_some_and(|page| {
+        let aliases = page.rtl_aliases.borrow();
+        let tag = aliases.get(&tag).unwrap_or(&tag);
+        page.rtl.borrow().get(tag) == Some(&true)
+    })
+}
+
+/// Makes `tag` answer [`is_rtl_by_tag`] as `source`'s element does, for a handle that follows it.
+pub(super) fn alias_rtl_tag(tag: u64, source: u64) {
+    if let Some(page) = page() {
+        page.rtl_aliases.borrow_mut().insert(tag, source);
+    }
+}
+
 /// Wraps the interpreter's attribute write. Each `input` records the text it sent;
 /// a `value` write matching an older record is the render of a stale keystroke and
-/// is dropped. Any other value is the app's own and lands. Records expire after 2 s.
+/// is dropped. Any other is the app's own rewrite: it lands once every input sent
+/// is answered, or after 200 ms without input (the newest rewrite wins), so a
+/// rewriting app sees every keystroke. Records expire after 2 s.
 const GUARD_TYPED: &str = "const interpreter = window.interpreter;
     if (!interpreter || interpreter.lsxTyped) return;
     const typed = interpreter.lsxTyped = new WeakMap();
-    const live = (node) => {
+    const write = interpreter.setAttributeInner.bind(interpreter);
+    const live = (state) => {
         const now = performance.now();
-        return (typed.get(node) ?? []).filter(([, at]) => now - at < 2000);
+        return state.records.filter(([, at]) => now - at < 2000);
+    };
+    const settle = (node, state) => {
+        clearTimeout(state.timer);
+        state.timer = setTimeout(() => {
+            const held = state.stash;
+            state.stash = null;
+            state.inflight = 0;
+            if (held && node.isConnected) write(node, ...held);
+        }, 200);
     };
     window.addEventListener('input', (event) => {
         const node = event.target;
         if (!(node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement)) return;
-        typed.set(node, [...live(node), [node.value, performance.now()]]);
+        const state = typed.get(node) ?? { records: [], inflight: 0, stash: null, timer: 0 };
+        state.records = [...live(state), [node.value, performance.now()]];
+        state.inflight += 1;
+        typed.set(node, state);
+        settle(node, state);
     }, { capture: true });
-    const write = interpreter.setAttributeInner.bind(interpreter);
     interpreter.setAttributeInner = (node, field, value, ns) => {
-        if (field === 'value' && !ns && typed.has(node)) {
-            const records = live(node);
+        const state = field === 'value' && !ns ? typed.get(node) : undefined;
+        if (state) {
+            const records = live(state);
             const index = records.findIndex(([text]) => text === value);
-            if (index !== -1 && records.splice(0, index + 1) && records.length > 0) {
-                typed.set(node, records);
+            if (index !== -1) {
+                state.records = records.slice(index + 1);
+                state.inflight = state.records.length;
+            } else {
+                state.inflight = Math.max(0, state.inflight - 1);
+            }
+            if (state.inflight > 0) {
+                if (index === -1) state.stash = [field, value, ns];
                 return;
             }
+            clearTimeout(state.timer);
             typed.delete(node);
         }
         write(node, field, value, ns);

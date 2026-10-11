@@ -334,6 +334,40 @@ pub(crate) fn is_rtl(mounted: &Rc<MountedData>) -> bool {
     return false;
 }
 
+/// The WebView's mirrored direction of the element tagged `tag`; `false` elsewhere.
+pub(crate) fn is_rtl_by_tag(tag: u64) -> bool {
+    #[cfg(any(target_arch = "wasm32", feature = "native"))]
+    let _ = tag;
+    #[cfg(any(target_arch = "wasm32", feature = "native"))]
+    return false;
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return webview::is_rtl_by_tag(tag);
+}
+
+/// A WebView reads the direction of `tag`'s element now; a no-op elsewhere.
+pub(crate) fn read_rtl_tag(tag: u64) {
+    #[cfg(any(target_arch = "wasm32", feature = "native"))]
+    let _ = tag;
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    webview::read_rtl_tag(tag);
+}
+
+/// A WebView drops the mirrored direction of `tag`; a no-op elsewhere.
+pub(crate) fn forget_rtl_tag(tag: u64) {
+    #[cfg(any(target_arch = "wasm32", feature = "native"))]
+    let _ = tag;
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    webview::forget_rtl_tag(tag);
+}
+
+/// A WebView answers [`is_rtl_by_tag`] for `tag` as for `source`; a no-op elsewhere.
+pub(crate) fn alias_rtl_tag(tag: u64, source: u64) {
+    #[cfg(any(target_arch = "wasm32", feature = "native"))]
+    let _ = (tag, source);
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    webview::alias_rtl_tag(tag, source);
+}
+
 /// A WebView answers `false`: it finds the focused element by its tags instead.
 pub(crate) fn focus_is_in(mounted: &Rc<MountedData>) -> bool {
     #[cfg(not(any(target_arch = "wasm32", feature = "native")))]
@@ -371,6 +405,7 @@ pub(crate) fn Outlet() -> Element {
         webview::watch_focus();
         webview::guard_typed_values();
         webview::guard_defaults();
+        webview::watch_direction();
     });
     #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
     return rsx! {};

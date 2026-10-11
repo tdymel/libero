@@ -2,14 +2,13 @@
 //! nor opens (406). Focus stays on the trigger; the cursor is its `aria-activedescendant`.
 
 use anyhow::Result;
-use e2e::archetypes;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text};
 use e2e::passes::{keyboard, pointer};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
 
-const TRIGGER: &str = "[role=combobox]";
+pub(super) const TRIGGER: &str = "[role=combobox]";
 const SEARCH: &str = "input[role=combobox]";
 
 /// `<cursor row's label>|<open columns>|<cursor row's aria-selected>`, or
@@ -67,10 +66,10 @@ e2e::scenario!(
 );
 
 const ROOTS: &str = "[data-slot=column]";
-const LAST: &str = "[data-slot=column]:last-child";
-const BACK: &str = "[data-slot=drill-back]";
-const EUROPE: &str = "[role=option][id$='-option-0-0']";
-const FRANCE: &str = "[role=option][id$='-option-1-0']";
+pub(super) const LAST: &str = "[data-slot=column]:last-child";
+pub(super) const BACK: &str = "[data-slot=drill-back]";
+pub(super) const EUROPE: &str = "[role=option][id$='-option-0-0']";
+pub(super) const FRANCE: &str = "[role=option][id$='-option-1-0']";
 const LYON: &str = "[role=option][id$='-option-2-1']";
 
 /// Whether the viewport is below `sm` (48rem), where the list drills in (todo 1084).
@@ -79,7 +78,7 @@ async fn is_narrow<D: Driver>(d: &mut D) -> Result<bool> {
 }
 
 /// Drawn and placed: the popover stays `visibility:hidden` until measured, and a tap before that misses.
-async fn shown<D: Driver>(d: &mut D, selector: &str) -> Result<bool> {
+pub(super) async fn shown<D: Driver>(d: &mut D, selector: &str) -> Result<bool> {
     Ok(d.exists(selector).await?
         && d.style(selector, "display").await? != "none"
         && d.style(selector, "visibility").await? == "visible")
@@ -193,200 +192,6 @@ e2e::scenario!(
     "/cascader",
     a_disabled_row_looks_disabled
 );
-
-/// Android's Back closes the sheet, keeps the value, and the app stays (1300).
-async fn back_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    archetypes::back_closes(d, TRIGGER, async |d| {
-        Ok(d.attr(TRIGGER, "aria-expanded").await?.as_deref() == Some("true"))
-    })
-    .await?;
-    eventually_text(d, "#picked", "", "Back").await
-}
-
-e2e::scenario!(
-    android_back_closes_a_cascader,
-    "/cascader",
-    back_closes,
-    android_only("1275: no Back key off Android")
-);
-
-/// The same walk in a 390px browser, below `sm`.
-#[test]
-fn a_phone_drills_into_one_level_at_a_time() {
-    block_on(async {
-        let fixture = Fixture::open("/cascader", Viewport::Mobile).await.unwrap();
-        let mut driver = e2e::driver::Web { fixture };
-        taps_walk_the_levels(&mut driver, "/cascader")
-            .await
-            .unwrap();
-        driver.finish("a phone's cascader").await.unwrap();
-    });
-}
-
-/// Todos 1546 and 1658 (WCAG 2.4.11): opening scrolls a low field, helper and error
-/// included, above the sheet.
-#[test]
-fn a_phone_scrolls_a_low_trigger_above_the_sheet() {
-    use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
-    const SHEET: &str = "[data-state~=bordered]:has([role=listbox])";
-    block_on(async {
-        let fixture = Fixture::open("/cascader/low", Viewport::Mobile)
-            .await
-            .unwrap();
-        let page = &fixture.page;
-        page.execute(SetDeviceMetricsOverrideParams::new(320, 568, 1.0, true))
-            .await
-            .unwrap();
-        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
-        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
-        let clear = format!(
-            "(() => {{ const sheet = document.querySelector({SHEET:?}); \
-             if (!sheet || getComputedStyle(sheet).visibility !== 'visible') return false; \
-             return document.querySelector('#low-field').getBoundingClientRect().bottom \
-             <= sheet.getBoundingClientRect().top; }})()"
-        );
-        wait::for_js_true(page, &clear, "the field to clear the sheet")
-            .await
-            .unwrap();
-        fixture.console.assert_clean("a low cascader").unwrap();
-        fixture.close().await.unwrap();
-    });
-}
-
-/// Todo 1111: below `sm` the dropdown is a sheet on the screen's foot, edge to edge.
-#[test]
-fn a_phone_shows_the_dropdown_as_a_bottom_sheet() {
-    const SHEET: &str = "[data-state~=bordered]:has([role=listbox])";
-    block_on(async {
-        let fixture = Fixture::open("/cascader", Viewport::Mobile).await.unwrap();
-        let mut d = e2e::driver::Web { fixture };
-        d.click(TRIGGER).await.unwrap();
-        eventually(&mut d, "the roots", async |d| shown(d, EUROPE).await)
-            .await
-            .unwrap();
-        let (width, height) = d.viewport().await.unwrap();
-        let sheet = d.rect(SHEET).await.unwrap();
-        assert!(
-            sheet.x.abs() < 1.0 && (sheet.width - width).abs() < 1.0,
-            "not edge to edge: {sheet:?} in {width}"
-        );
-        assert!(
-            (sheet.y + sheet.height - height).abs() < 1.0,
-            "not at the foot: {sheet:?} in {height}"
-        );
-        assert!(sheet.height <= height * 0.7 + 1.0, "too tall: {sheet:?}");
-        d.finish("a phone's cascader sheet").await.unwrap();
-    });
-}
-
-/// The same walk in a 390px Blitz window: stylo matches the narrow rule too.
-#[cfg(feature = "native")]
-#[test]
-// Named `native_*`: the gate's native tier filters on `::native`.
-fn native_narrow_window_drills_in() {
-    let mut driver = e2e::driver::Native::open("/cascader");
-    driver.page.resize(390, 844);
-    e2e::futures::executor::block_on(taps_walk_the_levels(&mut driver, "/cascader")).unwrap();
-}
-
-/// Todo 1124: stylo applies the sheet's `!important` rules too: edge to edge, at the foot.
-#[cfg(feature = "native")]
-#[test]
-fn native_narrow_window_shows_a_bottom_sheet() {
-    let mut driver = e2e::driver::Native::open("/cascader");
-    driver.page.resize(390, 844);
-    e2e::futures::executor::block_on(async {
-        driver.click(TRIGGER).await.unwrap();
-        eventually(&mut driver, "the roots", async |d| shown(d, EUROPE).await)
-            .await
-            .unwrap();
-    });
-    let (x, y, width, height) = driver.page.rect("[data-state~=bordered]");
-    assert!(x.abs() < 1.0 && (width - 390.0).abs() < 1.0, "{x} {width}");
-    assert!((y + height - 844.0).abs() < 1.0, "{y} {height}");
-    assert!(height <= 844.0 * 0.7 + 1.0, "too tall: {height}");
-}
-
-/// Todo 1084: `any_level` on a phone, the first row picks the parent a tap only drilled into.
-#[test]
-fn a_phone_picks_a_branch_from_its_first_row() {
-    const PICK: &str = "[data-slot=pick-parent]";
-    block_on(async {
-        let fixture = Fixture::open("/cascader/any-level", Viewport::Mobile)
-            .await
-            .unwrap();
-        let mut d = e2e::driver::Web { fixture };
-        d.click(TRIGGER).await.unwrap();
-        eventually(&mut d, "the roots", async |d| shown(d, EUROPE).await)
-            .await
-            .unwrap();
-        d.click(EUROPE).await.unwrap();
-        d.click(FRANCE).await.unwrap();
-        eventually(&mut d, "France picked and opened", async |d| {
-            Ok(d.text("#picked").await? == "france" && shown(d, PICK).await?)
-        })
-        .await
-        .unwrap();
-        eventually_text(
-            &mut d,
-            &format!("{LAST} {PICK}"),
-            "Select France",
-            "the tap",
-        )
-        .await
-        .unwrap();
-        d.click(BACK).await.unwrap();
-        eventually(&mut d, "Select Europe", async |d| {
-            Ok(d.text(&format!("{LAST} {PICK}")).await? == "Select Europe")
-        })
-        .await
-        .unwrap();
-        d.click(&format!("{LAST} {PICK}")).await.unwrap();
-        eventually(&mut d, "Europe committed and closed", async |d| {
-            Ok(d.text("#picked").await? == "europe"
-                && d.attr(TRIGGER, "aria-expanded").await?.as_deref() == Some("false"))
-        })
-        .await
-        .unwrap();
-
-        d.finish("a phone's any-level cascader").await.unwrap();
-    });
-}
-
-/// Todo 1084: the hidden columns leave the tree, and the shown one keeps its name
-/// from its hidden parent row (accname follows `aria-labelledby` into hidden content).
-#[test]
-fn a_phone_names_the_one_column_by_its_parent() {
-    block_on(async {
-        let fixture = Fixture::open("/cascader", Viewport::Mobile).await.unwrap();
-        let page = &fixture.page;
-        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
-        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
-        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
-        expect(page, "France|2|true", "ArrowRight into Europe", "mobile").await;
-        let tree = e2e::ax::snapshot(page, TRIGGER).await.unwrap();
-        assert!(tree.contains("listbox \"Europe\""), "{tree}");
-        assert!(tree.contains("France"), "{tree}");
-        // Only "no node" passes: any other snapshot error is no proof (todo 1770).
-        const ROOTS: &str = "[id$='-listbox-0']";
-        wait::for_selector(page, ROOTS).await.unwrap();
-        match e2e::ax::snapshot(page, ROOTS).await {
-            Ok(tree) => assert!(
-                !tree.contains("Oceania"),
-                "the hidden roots are in the tree: {tree}"
-            ),
-            Err(e) => assert!(
-                e.to_string().starts_with("no accessibility node"),
-                "the roots' snapshot failed: {e:#}"
-            ),
-        }
-        fixture
-            .console
-            .assert_clean("a phone's cascader tree")
-            .unwrap();
-        fixture.close().await.unwrap();
-    });
-}
 
 #[test]
 fn it_meets_the_baseline() {
@@ -1125,7 +930,7 @@ const fn letter(key: &'static str, code: &'static str, vk: i64) -> keyboard::Key
     }
 }
 
-async fn expect(page: &chromiumoxide::Page, want: &str, what: &str, at: &str) {
+pub(super) async fn expect(page: &chromiumoxide::Page, want: &str, what: &str, at: &str) {
     if let Err(e) = wait::for_js_true(page, &format!("{CURSOR} === {want:?}"), what).await {
         let actual: String = page.evaluate(CURSOR).await.unwrap().into_value().unwrap();
         panic!("at {at}: {e}; cursor reads {actual:?}");

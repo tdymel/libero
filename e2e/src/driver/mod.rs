@@ -356,22 +356,33 @@ pub trait Driver {
     fn budget(&self) -> Duration;
 }
 
+/// Polls `probe` until it holds (`true`) or the budget runs out (`false`); its own error ends it.
+async fn poll<D: Driver>(
+    d: &mut D,
+    mut probe: impl AsyncFnMut(&mut D) -> Result<bool>,
+) -> Result<bool> {
+    let started = Instant::now();
+    loop {
+        if probe(d).await? {
+            return Ok(true);
+        }
+        if started.elapsed() > d.budget() {
+            return Ok(false);
+        }
+        d.idle().await;
+    }
+}
+
 /// Polls `probe` until it holds, or fails naming `what`.
 pub async fn eventually<D: Driver>(
     d: &mut D,
     what: &str,
-    mut probe: impl AsyncFnMut(&mut D) -> Result<bool>,
+    probe: impl AsyncFnMut(&mut D) -> Result<bool>,
 ) -> Result<()> {
-    let started = Instant::now();
-    loop {
-        if probe(d).await? {
-            return Ok(());
-        }
-        if started.elapsed() > d.budget() {
-            bail!("{:?}: gave up waiting for {what}", d.platform());
-        }
-        d.idle().await;
+    if poll(d, probe).await? {
+        return Ok(());
     }
+    bail!("{:?}: gave up waiting for {what}", d.platform());
 }
 
 /// Lets `rounds` idle steps pass, for a check that something did *not* happen.
@@ -383,20 +394,14 @@ pub async fn linger<D: Driver>(d: &mut D, rounds: usize) {
 
 /// Focus lands on `selector`, or fails naming what holds it.
 pub async fn eventually_focused<D: Driver>(d: &mut D, selector: &str, during: &str) -> Result<()> {
-    let settled = eventually(
-        d,
-        &format!("focus on {selector} after {during}"),
-        async |d| d.is_focused(selector).await,
-    )
-    .await;
-    if settled.is_err() {
-        bail!(
-            "{:?}: after {during}, focus is on {}, not {selector}",
-            d.platform(),
-            d.focus_owner().await?
-        );
+    if poll(d, async |d| d.is_focused(selector).await).await? {
+        return Ok(());
     }
-    Ok(())
+    bail!(
+        "{:?}: after {during}, focus is on {}, not {selector}",
+        d.platform(),
+        d.focus_owner().await?
+    );
 }
 
 /// `selector`'s text reads `expected`, or fails naming what it reads. No match yet
@@ -407,26 +412,23 @@ pub async fn eventually_text<D: Driver>(
     expected: &str,
     during: &str,
 ) -> Result<()> {
-    let settled = eventually(
-        d,
-        &format!("{selector} to read {expected:?} after {during}"),
-        async |d| Ok(d.exists(selector).await? && d.text(selector).await? == expected),
-    )
-    .await;
-    if settled.is_err() {
-        if !d.exists(selector).await? {
-            bail!(
-                "{:?}: after {during}, no element matches {selector}",
-                d.platform()
-            );
-        }
+    let held = poll(d, async |d| {
+        Ok(d.exists(selector).await? && d.text(selector).await? == expected)
+    });
+    if held.await? {
+        return Ok(());
+    }
+    if !d.exists(selector).await? {
         bail!(
-            "{:?}: after {during}, {selector} reads {:?}, not {expected:?}",
-            d.platform(),
-            d.text(selector).await?
+            "{:?}: after {during}, no element matches {selector}",
+            d.platform()
         );
     }
-    Ok(())
+    bail!(
+        "{:?}: after {during}, {selector} reads {:?}, not {expected:?}",
+        d.platform(),
+        d.text(selector).await?
+    );
 }
 
 /// Appends `selectors`' texts as one line to `outcomes.log` in the run's artifacts (and

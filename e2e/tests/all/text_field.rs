@@ -76,8 +76,7 @@ e2e::scenario!(
     fast_typing_into_a_rewriting_field_keeps_every_letter,
     "/text-field/upper",
     fast_typing_survives_a_rewrite,
-    native: skip("Blitz has no live value read; 1051 is a WebView race"),
-    desktop: skip("1051: WebKitGTK loses letters typed faster than the IPC round trip (BUTON)")
+    native: skip("Blitz has no live value read; 1051 is a WebView race")
 );
 e2e::scenario!(
     the_reveal_button_shows_a_password,

@@ -136,6 +136,27 @@ pub(crate) fn is_rtl(mounted: &Rc<MountedData>) -> bool {
     backend::is_rtl(mounted)
 }
 
+/// [`is_rtl`] for a WebView, by the tag a `use_element` handle puts on its element: the
+/// page's last report, `false` before it. `false` elsewhere.
+pub(crate) fn is_rtl_by_tag(tag: u64) -> bool {
+    backend::is_rtl_by_tag(tag)
+}
+
+/// Reads the direction of the element tagged `tag` into [`is_rtl_by_tag`]'s mirror, on a WebView.
+pub(crate) fn read_rtl_tag(tag: u64) {
+    backend::read_rtl_tag(tag);
+}
+
+/// Drops `tag` from [`is_rtl_by_tag`]'s mirror, once its handle is gone.
+pub(crate) fn forget_rtl_tag(tag: u64) {
+    backend::forget_rtl_tag(tag);
+}
+
+/// Makes [`is_rtl_by_tag`] answer for `tag` as for `source`, for a handle following another.
+pub(crate) fn alias_rtl_tag(tag: u64, source: u64) {
+    backend::alias_rtl_tag(tag, source);
+}
+
 /// Whether [`ElementApi::set_indeterminate`] works: on the web alone.
 pub(crate) fn sets_indeterminate() -> bool {
     cfg!(target_arch = "wasm32")
