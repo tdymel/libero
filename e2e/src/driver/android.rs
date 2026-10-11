@@ -117,10 +117,20 @@ impl Android {
         })
     }
 
-    /// A swipe lifted its travel again further on, so the page flings on: lifted on
-    /// its last move, a touch comes to rest.
+    /// A fast swipe, so the page flings on after the lift.
     pub async fn fling_from(&mut self, x: f64, y: f64, dx: f64, dy: f64) -> Result<()> {
-        self.stroke(pointer::Point { x, y }, dx, dy, 2.0).await
+        input(&self.fling_chain(pointer::Point { x, y }, dx, dy)).await
+    }
+
+    /// `input swipe` over 100 ms: its own moves carry the speed. Stepped `motionevent`s are
+    /// one process each, up to 190 ms apart on the FP4, too slow to fling (2598).
+    fn fling_chain(&self, from: pointer::Point, dx: f64, dy: f64) -> Vec<String> {
+        let [x, y] = self.device(from);
+        let [x2, y2] = self.device(pointer::Point {
+            x: from.x + dx,
+            y: from.y + dy,
+        });
+        vec!["swipe".into(), x, y, x2, y2, "100".into()]
     }
 
     /// A finger's drag of `selector` by `dx`, `dy` in `steps` moves `step_ms` apart,
@@ -367,9 +377,7 @@ impl Android {
         (x, y, dx, dy): (f64, f64, f64, f64),
         (sx, sy, sdx, sdy): (f64, f64, f64, f64),
     ) -> Result<()> {
-        let mut chain = self
-            .stroke_chain(pointer::Point { x, y }, dx, dy, 2.0, false)
-            .await?;
+        let mut chain = self.fling_chain(pointer::Point { x, y }, dx, dy);
         chain.extend([";".into(), "input".into()]);
         chain.extend(
             self.stroke_chain(pointer::Point { x: sx, y: sy }, sdx, sdy, 1.0, false)
