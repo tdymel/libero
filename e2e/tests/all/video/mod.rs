@@ -43,15 +43,20 @@ fn it_meets_the_baseline() {
 #[test]
 fn diag_video() {
     block_on(async {
-        let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
-        let page = &fixture.page;
-        let mut out = Vec::new();
-        for _ in 0..4 {
-            tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
-            let v: String = page.evaluate("JSON.stringify({hidden: document.hidden, vis: document.visibilityState, focus: document.hasFocus(), media: [...document.querySelectorAll('video,audio')].map(m => ({t: m.tagName, rs: m.readyState, ns: m.networkState, d: m.duration, err: m.error && [m.error.code, m.error.message], preload: m.preload, src: (m.currentSrc||'').slice(0,40), paused: m.paused})), wav: document.createElement('video').canPlayType('audio/wav'), mp4: document.createElement('video').canPlayType('video/mp4')})").await.unwrap().into_value().unwrap();
-            out.push(v);
-        }
-        panic!("DIAG {}", out.join("\n"));
+        let outs = e2e::browser::at_every_viewport(async |viewport| {
+            let started = std::time::Instant::now();
+            let fixture = Fixture::open("/video", viewport).await.unwrap();
+            let page = &fixture.page;
+            let mut out = vec![format!("{} opened after {:?}", viewport.name(), started.elapsed())];
+            for _ in 0..16 {
+                let v: String = page.evaluate("JSON.stringify([...document.querySelectorAll('video')].map(m => [m.readyState, m.networkState, m.duration]))").await.unwrap().into_value().unwrap();
+                out.push(format!("{:?} {v}", started.elapsed()));
+                tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+            }
+            out.join("\n")
+        })
+        .await;
+        panic!("DIAG {}", outs.join("\n"));
     });
 }
 
