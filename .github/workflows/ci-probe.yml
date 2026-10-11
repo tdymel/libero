@@ -113,7 +113,11 @@ jobs:
           esac
           case "$TIER" in
             unit)
-              cargo test -p libero --lib --tests -- "$FILTER" 2>&1 | tee "$logs/unit.log" ;;
+              # As platforms.yml's unit legs: libero, then the e2e runner's own tests.
+              red=0
+              cargo test -p libero --lib --tests -- "$FILTER" 2>&1 | tee "$logs/unit.log" || red=1
+              cargo test -p e2e --lib --bins -- "$FILTER" 2>&1 | tee -a "$logs/unit.log" || red=1
+              exit "$red" ;;
             native)
               cargo test -p e2e --features native --test native --test all --no-run 2>&1 | tee "$logs/build.log"
               # The shell runs `-e -o pipefail`: keep going after a red binary, as platforms.yml.
