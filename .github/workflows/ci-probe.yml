@@ -122,7 +122,9 @@ jobs:
               cargo test -p e2e --features native --test native --test all --no-run 2>&1 | tee "$logs/build.log"
               # The shell runs `-e -o pipefail`: keep going after a red binary, as platforms.yml.
               red=0
-              cargo test -p e2e --features native --test native -- "$FILTER" 2>&1 | tee "$logs/native.log" || red=1
+              # `::native` is the whole set, the native binary included, as platforms.yml.
+              only=$FILTER; if [ "$FILTER" = ::native ]; then only=; fi
+              cargo test -p e2e --features native --test native -- $only 2>&1 | tee "$logs/native.log" || red=1
               args=$(cargo test -q -p e2e --features native --test all -- ::native --list \
                 | $PY .github/scripts/ci_probe.py names "$FILTER" | tr -d '\r')
               if [ -z "$args" ]; then
