@@ -164,6 +164,12 @@ jobs:
         run: $PY .github/scripts/ci_annotate.py "$RUNNER_TEMP"/probe/{build,unit,native,all,e2e}.log
       - if: always()
         run: $PY .github/scripts/ci_probe.py summary "$RUNNER_TEMP"/probe/{unit,native,all,e2e}.log
+      # The platform probe's facts and the desktop driver's calibration, as notices.
+      - if: always() && env.TIER == 'desktop'
+        run: |
+          for dir in /tmp/e2e-artifacts "$RUNNER_TEMP/e2e-artifacts"; do
+            if [ -d "$dir" ]; then $PY .github/scripts/probe_notice.py "$dir"; fi
+          done
       # One upload root: paths on two drives fail the upload on Windows.
       - if: always()
         run: |
