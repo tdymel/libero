@@ -39,6 +39,16 @@ fn closing(text: &str, open: usize) -> usize {
     text.len()
 }
 
+/// Whether a component fn's parameter list is one `props: NameProps`, `mut` or not.
+fn takes_props_struct(params: &str) -> bool {
+    let params = params.trim();
+    params
+        .strip_prefix("mut ")
+        .unwrap_or(params)
+        .trim_start()
+        .starts_with("props:")
+}
+
 /// The fields a builder cannot leave out: no `default` or `extends`, not `Option`, not
 /// `children` (Dioxus defaults those), as `dioxus-core-macro`'s props derive decides.
 fn required_fields(fields: &str) -> Vec<String> {
@@ -122,7 +132,7 @@ fn required_props() -> BTreeMap<String, Vec<String>> {
             let params = &signature[open + 1..closing(signature, open) - 1];
             let fields = required_fields(params);
             // `props: NameProps` is the struct's, found below.
-            if !(params.trim().starts_with("props:") && fields.len() == 1) {
+            if !(takes_props_struct(params) && fields.len() == 1) {
                 required.insert(name, fields);
             }
         }
@@ -326,7 +336,7 @@ fn component_props() -> BTreeMap<String, BTreeSet<String>> {
                 continue;
             };
             let params = &signature[open + 1..closing(signature, open) - 1];
-            if !params.trim().starts_with("props:") {
+            if !takes_props_struct(params) {
                 props.insert(name, documented(params));
             }
         }
