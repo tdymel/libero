@@ -435,6 +435,8 @@ pub(super) fn FilterValue(
 pub(super) fn FilterPopover(
     target: FilterTarget,
     anchor: ElementHandle,
+    /// The button that opened it, which takes the focus back on close.
+    opener: Signal<ElementHandle>,
     open: Signal<bool>,
 ) -> Element {
     let theme = use_theme();
@@ -460,14 +462,25 @@ pub(super) fn FilterPopover(
         onfilter,
     } = target;
     // Typing still settling applies after the close: the editor lives here.
-    let close = move |refocus: bool| {
+    let held = column.clone();
+    // Clearing the filter removes its indicator: the menu button then.
+    let back = use_memo(move || match filter_of(&slice.read(), &held) {
+        Some(_) => *opener.read(),
+        None => anchor,
+    });
+    // After the popover's own remember of the anchor, which placing outlasts.
+    use_effect(move || {
+        if open() && popover.placed() {
+            popover.return_focus_to(back());
+        }
+    });
+    let close = use_callback(move |refocus: bool| {
         open.set(false);
         if refocus {
-            let _ = anchor.focus();
+            let _ = back.peek().focus();
         }
-    };
-    let mut dismiss = close;
-    popover.on_dismiss(move || dismiss(true));
+    });
+    popover.on_dismiss(move || close.call(true));
     let floating = *popover.floating();
     // The value field takes focus once placed, else the operator picker.
     let mut entered = use_signal(|| false);
@@ -517,7 +530,6 @@ pub(super) fn FilterPopover(
         ];
         attributes.push(attr("style", popover.style()));
         attributes.extend(popover.floating_events());
-        let mut close = close;
         panel
             .element(&floating)
             .event("onkeydown", move |event: KeyboardEvent| {
@@ -536,7 +548,7 @@ pub(super) fn FilterPopover(
                     (Some(at), true) => at == 0,
                 };
                 if leaves {
-                    close(true);
+                    close.call(true);
                     if backwards {
                         event.prevent_default();
                     }
@@ -609,11 +621,14 @@ pub(super) fn FilteredButton(
     column: String,
     labels: TableLabels,
     open: Signal<bool>,
+    /// This button, and the popover's focus target while it opens from here.
+    handle: ElementHandle,
+    opener: Signal<ElementHandle>,
     /// Set with `filter_panel`: opens the panel instead.
     #[props(default)]
     onopen: Option<EventHandler<()>>,
 ) -> Element {
-    let mut open = open;
+    let (mut open, mut opener) = (open, opener);
     rsx! {
         button {
             r#type: "button",
@@ -621,13 +636,17 @@ pub(super) fn FilteredButton(
             aria_label: (labels.filtered)(&column),
             aria_haspopup: "dialog",
             aria_expanded: "{open()}",
+            onmounted: handle.mount(),
             onclick: move |_| match onopen {
                 Some(onopen) => onopen.call(()),
                 // Blitz focuses the button after the click and reports it at the
                 // poll's end, which would dismiss a popover opened in it.
-                None => when_laid_out(move || {
-                    open.toggle();
-                }),
+                None => {
+                    opener.set(handle);
+                    when_laid_out(move || {
+                        open.toggle();
+                    })
+                }
             },
             Glyph { slot: IconSlot::Filter, icon: lucide::funnel::outlined }
         }

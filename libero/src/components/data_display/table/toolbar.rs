@@ -146,7 +146,7 @@ pub fn TableColumnsButton() -> Element {
         return rsx! {};
     };
     let view = tools.view.read();
-    let hidden = tools.hidden;
+    let (hidden, announcer) = (tools.hidden, tools.announcer);
     let shown = view.columns.iter().filter(|column| !column.hidden).count();
     let items: Vec<MenuEntry> = view
         .columns
@@ -163,7 +163,12 @@ pub fn TableColumnsButton() -> Element {
             item.checkbox(!off)
                 .disabled(last)
                 .keep_open()
-                .onselect(move |_| hidden.set(toggle_column(&hidden.read(), &header, off)))
+                .onselect(move |_| {
+                    hidden.set(toggle_column(&hidden.read(), &header, off));
+                    if !off {
+                        announcer.say((labels.column_hidden)(&header));
+                    }
+                })
                 .into()
         })
         .collect();

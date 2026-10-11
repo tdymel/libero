@@ -120,6 +120,8 @@ pub(super) fn ColumnMenu(
     let menu = use_menu();
     let trigger = focus.trigger(index);
     let mut filter_open = use_signal(|| false);
+    let filtered_button = use_hook(ElementHandle::new);
+    let mut opener = use_signal(move || trigger);
     let column = &columns[index];
     let shown = columns.iter().filter(|column| !column.hidden).count();
     let mut items: Vec<MenuEntry> = Vec::new();
@@ -178,7 +180,10 @@ pub(super) fn ColumnMenu(
             MenuItem::new(labels.filter)
                 .onselect(move |_| match open_panel {
                     Some(open_panel) => open_panel.call(()),
-                    None => filter_open.set(true),
+                    None => {
+                        opener.set(trigger);
+                        filter_open.set(true);
+                    }
                 })
                 .into(),
         );
@@ -301,10 +306,13 @@ pub(super) fn ColumnMenu(
                         hidden.set(toggle_column(&hidden.read(), &header, off));
                         // Hiding its own column unmounts this menu, as Hide does (todo 1490):
                         // the checkbox is gone before its state is read.
-                        if column == index && !off {
-                            if let Some(neighbour) = neighbour {
-                                focus.owe(neighbour);
-                            }
+                        if column == index
+                            && !off
+                            && let Some(neighbour) = neighbour
+                        {
+                            focus.owe(neighbour);
+                        }
+                        if !off {
                             announcer.say((labels.column_hidden)(&header));
                         }
                     })
@@ -326,7 +334,14 @@ pub(super) fn ColumnMenu(
     });
     rsx! {
         if filtered {
-            FilteredButton { column: column.header.clone(), labels, open: filter_open, onopen: open_panel }
+            FilteredButton {
+                column: column.header.clone(),
+                labels,
+                open: filter_open,
+                handle: filtered_button,
+                opener,
+                onopen: open_panel,
+            }
         }
         Menu {
             state: menu,
@@ -343,7 +358,7 @@ pub(super) fn ColumnMenu(
             }
         }
         if let Some(target) = filter.filter(|_| panel.is_none()) {
-            FilterPopover { target, anchor: trigger, open: filter_open }
+            FilterPopover { target, anchor: trigger, opener, open: filter_open }
         }
     }
 }

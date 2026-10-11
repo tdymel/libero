@@ -689,6 +689,17 @@ async fn the_column_filters_narrow_the_rows<D: Driver>(d: &mut D, _route: &str) 
     .await?;
     eventually_focused(d, MENU, "Escape").await?;
 
+    // Todo 3221: Escape returns to the filtered button that opened it, not the menu button.
+    d.click("[data-filtered]").await?;
+    eventually(d, "the reopened filter", async |d| d.exists(POPOVER).await).await?;
+    eventually_focused(d, &format!("{POPOVER} input"), "the reopened filter").await?;
+    d.press(keyboard::ESCAPE).await?;
+    eventually(d, "the closed reopened filter", async |d| {
+        Ok(!d.exists(POPOVER).await?)
+    })
+    .await?;
+    eventually_focused(d, "[data-filtered]", "Escape from the filtered button").await?;
+
     d.click("[data-filtered]").await?;
     eventually(d, "the reopened filter", async |d| d.exists(POPOVER).await).await?;
     d.click(&format!("{POPOVER} button")).await?;

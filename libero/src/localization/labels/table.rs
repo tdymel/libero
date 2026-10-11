@@ -65,7 +65,8 @@ pub struct TableLabels {
     pub no_rows: &'static str,
     /// The header checkbox of a `selectable` table.
     pub select_all: &'static str,
-    /// A row's checkbox, from the row header's text, else the first cell's.
+    /// A row's checkbox, from the row header's text, else the first cell's; with
+    /// no text there, the row's key (a debug build warns).
     ///
     /// ```
     /// use libero::localization::TableLabels;

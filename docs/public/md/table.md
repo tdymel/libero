@@ -949,7 +949,7 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `min_width` | `String` | `None` | The narrowest the column gets, any CSS length. |
 | `resizable` | `bool` | `true` | Whether the table's `resizable_columns` gives it a grip and menu entries. |
 | `resize_limits` | `(f64, f64)` | `(50, unbounded)` | How narrow and how wide a resize takes the column, in px. `min_width` still floors it on screen. |
-| `header_render` | `fn() -> Element` | `None` | Replaces the header's body, inside the sort button when sortable. The header text stays the column's name in `TableSort`. Capture signals, not values: the closure is not compared, so a changed value does not redraw the header. |
+| `header_render` | `fn() -> Element` | `None` | Replaces the header's body, inside the sort button when sortable, so keep it non-interactive then. The header text stays the column's name in `TableSort`. Capture signals, not values: the closure is not compared, so a changed value does not redraw the header. |
 | `of` | `&ColumnType<V>` | `None` | Before `value`: starts the column from a shared `const` type, its alignment, widths and a `format` over the value. `V` must match `value`'s; the column's own settings win. |
 | `row_header` | `bool` | `false` | Renders the column's cells as `th scope="row"`, so a screen reader names each row by it. One per table, usually the first. |
 | `filterable` | `bool` | `true` | Whether the quick filter searches the column's cell text, and whether it takes a column filter. Off for ids and codes that would match by accident. |
@@ -997,14 +997,15 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `Home` or `End` | With `cell_focus`, on a body cell: moves to the row's first or last cell. |
 | `Ctrl+Home` or `Ctrl+End` | With `cell_focus`: moves to the first row's first cell or the last row's last cell, scrolling it into view. |
 | `PageUp` or `PageDown` | With `cell_focus`: moves up or down by the rows one view shows, 10 when the view cannot be measured. |
-| `Escape` | In a filter popover: closes it and returns focus to the column's menu button. |
-| `Tab` or `Shift+Tab` | In a filter popover: moves between its fields; past either end it closes and Tab goes on from the menu button. |
+| `Escape` | In a filter popover: closes it and returns focus to the button that opened it: the column's menu button, or its filtered-header button. |
+| `Tab` or `Shift+Tab` | In a filter popover: moves between its fields; past either end it closes and Tab goes on from the button that opened it. |
 
 ### Libero handles
 
 - A debug build warns about an unnamed table, about `selectable`, `row_detail`
-  or `onrowreorder` without `row_key`, and about a pinned column after one
-  with no `width`.
+  or `onrowreorder` without `row_key`, about `selectable` with a first row
+  whose name cell has no text, and about a pinned column after one with no
+  `width`.
 - `.row_header()` cells are `th scope="row"`, so a screen reader reads the
   row's name as it moves down any other column. A group header is a `th
   scope="colgroup"`, read with each cell under it.
@@ -1014,7 +1015,9 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 - Only sorted headers carry `aria-sort`. With `multi_sort`, each sort button's
   name adds its place, "sort order 2", and a tap always adds the column, as
   touch has no Shift.
-- Each row's checkbox is named "Select" plus the row's name. The header
+- Each row's checkbox is named "Select" plus the row's name: the row header's
+  text, else the first cell's, else the row's key ("Select 0"), so give that
+  column text. The header
   checkbox reads mixed while some rows are selected. A selected row carries
   `aria-selected="true"`.
 - Each detail toggle is a button named "Details for" plus the row's name, with
@@ -1034,8 +1037,8 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
   Focus moves in on open, and Escape closes them onto their button. A filtered
   header reads "Age is filtered".
 - Each column menu button is named after its column, "Age column options". It
-  shows on hover or focus, always on touch. A move, pin, hide or width change
-  is said in a polite live region, and the last shown column cannot be hidden:
+  shows on hover or focus, always on touch. A move, pin, hide (from any Columns menu too) or width
+  change is said in a polite live region, and the last shown column cannot be hidden:
   its controls say why.
 - Pinned and moved columns move in the DOM too, so Tab and a screen reader
   meet the cells in the order they are seen.

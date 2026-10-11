@@ -288,6 +288,8 @@ pub(super) fn FilterPanel(
                         value: picked,
                         options: columns.to_vec(),
                         onchange: move |column: PanelColumn| {
+                            // The new column starts empty: text typed for the old one is dropped.
+                            drafts.write().remove(&line);
                             edit(line, Box::new(move |item| {
                                 *item = ColumnFilter::new(column.header, FilterOperator::of(column.kind)[0], "");
                             }));

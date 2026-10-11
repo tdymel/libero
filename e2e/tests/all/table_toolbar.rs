@@ -59,6 +59,8 @@ async fn the_pieces_work<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         Ok(d.text("thead").await?.contains("Name") && !d.text("thead").await?.contains("Stock"))
     })
     .await?;
+    // Todo 3220: a hide from the Columns menu is said.
+    eventually_text(d, "[role=status]", "Stock hidden", "the hide announcement").await?;
     // Todo 1460: the last shown column's checkbox is off and says why.
     const NAME: &str = "[role=menuitemcheckbox][aria-disabled=true]";
     eventually(d, "Name's checkbox to turn off", async |d| {

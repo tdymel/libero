@@ -794,7 +794,8 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     #[props(default, into)]
     max_height: Option<String>,
     /// With `max_height`, renders only the rows in view, each clipped to this
-    /// height in px with one line per cell. Off with `row_detail`.
+    /// height in px with one line per cell. Off with `row_detail` and while
+    /// the rows are grouped.
     #[props(default)]
     virtual_row_height: Option<f64>,
     /// With `max_height`, called when the rows scroll to their bottom, to append
@@ -1081,6 +1082,12 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
 // Generic shim: only the projection below compiles per `T`.
 #[component]
 pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
+    let grouped = props
+        .row_grouping
+        .as_ref()
+        .map_or(!props.default_row_grouping.is_empty(), |levels| {
+            !levels.is_empty()
+        });
     let state = use_table(TableConfig {
         sort: props.sort,
         default_sort: props.default_sort,
@@ -1167,6 +1174,27 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             warn(
                 "Table: `virtual_row_height` with `row_detail` renders every row: a detail \
                  row breaks the one row height.",
+            );
+        }
+        let name_column = props.columns.iter().position(|column| column.row_header);
+        let name = props.columns.get(name_column.unwrap_or(0));
+        let unnamed = |row| name.is_some_and(|column| (column.text)(row).is_empty());
+        if let Some(row) = props
+            .data
+            .first()
+            .filter(|row| props.selectable && unnamed(row))
+        {
+            let key = props.row_key.call(row).unwrap_or_else(|| "0".to_string());
+            warn(&format!(
+                "Table: `selectable` row \"{key}\" has no text in its name column (the row \
+                 header, else the first cell), so its checkbox is named by the row key. Give \
+                 the column text.",
+            ));
+        }
+        if props.virtual_row_height.is_some() && grouped {
+            warn(
+                "Table: `virtual_row_height` with `row_grouping` renders every row: the group \
+                 rows break the one row height.",
             );
         }
         if props.onrowreorder.is_some() && !props.row_key.is_set() {

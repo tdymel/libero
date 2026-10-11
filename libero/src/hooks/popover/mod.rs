@@ -133,6 +133,14 @@ impl PopoverHandle {
         self.slot.show(content);
     }
 
+    /// Where the focus goes back to on a dismissal, instead of the anchor. With
+    /// `dismiss` on.
+    pub(crate) fn return_focus_to(&self, element: ElementHandle) {
+        if let Some(dismiss) = self.dismiss {
+            dismiss.handle.focus_return().remember_element(element);
+        }
+    }
+
     /// What Escape and a press outside call, with [`PopoverOptions::dismiss`]
     /// on. Call it on every render; the latest closure wins.
     pub fn on_dismiss(&self, onclose: impl FnMut() + 'static) {

@@ -366,8 +366,9 @@ impl<T> Column<T> {
         self
     }
 
-    /// Replaces the header's body, inside the sort button when sortable. The
-    /// header text stays the column's name in [`TableSort`](super::TableSort).
+    /// Replaces the header's body, inside the sort button when sortable, so keep
+    /// it non-interactive then. The header text stays the column's name in
+    /// [`TableSort`](super::TableSort).
     ///
     /// Compared as equal to any other: capture signals, not values, or the
     /// header stays stale.
