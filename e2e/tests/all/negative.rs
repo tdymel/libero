@@ -796,5 +796,6 @@ async fn flush_sees_every_late_outcome<D: e2e::driver::Driver>(
 e2e::scenario!(
     flush_waits_for_handlers_effects_and_spawned_tasks,
     "/broken/late",
-    flush_sees_every_late_outcome
+    flush_sees_every_late_outcome,
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );

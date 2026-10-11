@@ -160,7 +160,8 @@ e2e::scenario!(
     a_click_outside_closes_it_and_leaves_focus_where_it_went,
     "/menu-submenu-reopen",
     a_click_outside_closes,
-    macos: skip("macOS WebKit does not focus a clicked button")
+    macos: skip("macOS WebKit does not focus a clicked button"),
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );
 
 /// APG: Escape and ArrowLeft in a submenu close that level only and focus its
@@ -246,7 +247,8 @@ async fn a_press_outside_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()
 e2e::scenario!(
     a_press_outside_closes_it,
     "/menu-submenu-reopen",
-    a_press_outside_closes
+    a_press_outside_closes,
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );
 
 /// The docs demo's row: the trigger and the text beside it share a centre line.
@@ -860,7 +862,8 @@ e2e::scenario!(
 e2e::scenario!(
     a_short_menu_keeps_its_height,
     "/menu-row",
-    a_short_menu_keeps_its_height
+    a_short_menu_keeps_its_height,
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );
 
 /// Todo 3053: Home on the first item and End on the last stay the page's.

@@ -184,7 +184,8 @@ async fn a_press_outside_closes_the_theme_menu<D: Driver>(d: &mut D, _route: &st
 e2e::scenario!(
     a_press_outside_closes_the_theme_menu,
     "/theme-switcher/themes",
-    a_press_outside_closes_the_theme_menu
+    a_press_outside_closes_the_theme_menu,
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );
 
 /// Test pages share one profile, so a stored `dark` would leak into later fixtures.
