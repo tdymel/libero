@@ -1,8 +1,8 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{FORCED_COLORS, Sx, sx};
 use crate::theme::{
-    Color, ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, GRADIENT_FROM, NamedColorCss, Size,
-    SizeCss, gradient_image,
+    Color, ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, GRADIENT_FROM, NamedColorCss,
+    SCROLL_AREA_COVER, Size, SizeCss, gradient_image,
 };
 
 /// The library's one surface colour: anything painted as paper reads this.
@@ -106,6 +106,7 @@ impl PaperDefaults {
                 PAPER_CONTRAST.value(),
             )
             .var(FOCUS_RING_HALO, PAPER_BACKGROUND.value())
+            .var(SCROLL_AREA_COVER, PAPER_BACKGROUND.value())
     }
 
     /// A surface with no `radius`/`shadow` carries no `data-state`; the folds apply once a caller names a step.

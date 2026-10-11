@@ -25,8 +25,8 @@ use crate::{
     },
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
-        ColorCss, ColorShade, CssVar, SKELETON_COLOR, ScrollAxis, ScrollbarSize,
-        ScrollbarVisibility,
+        ColorCss, ColorShade, CssVar, NamedColorCss, SCROLL_AREA_COVER, SKELETON_COLOR, ScrollAxis,
+        ScrollbarSize, ScrollbarVisibility,
     },
     utils::warn,
 };
@@ -113,7 +113,11 @@ static SCROLL_AREA_BASE_SX: StaticSx = StaticSx::new(|| {
         .when("axis-both", sx().overflow_x("auto").overflow_y("auto"))
         .when("axis-none", sx().overflow_x("hidden").overflow_y("hidden"))
         .scrollbar_color(format!("{} transparent", thumb_color()))
-        .when("visible-hidden", sx().scrollbar_width("none"));
+        .when("visible-hidden", sx().scrollbar_width("none"))
+        .when(
+            "static-skeleton",
+            static_skeleton(&SCROLL_AREA_PITCH_VAR.value()),
+        );
     // A stacking context of its own, so it clips a z-indexed row natively too.
     let base = match clips_z_indexed() {
         true => base,
@@ -167,8 +171,12 @@ static SCROLL_AREA_CONTENT_SX: StaticSx = StaticSx::new(|| {
         .when("virtualized", reserved)
         // The padding follows the rows a render later: an anchor jumped the scroll 20 rows (2584).
         .when("windowed", sx().with("overflow-anchor", "none"))
-        // A windowed table's area paints its own, unscrolled bars: see `static_skeleton_sx`.
-        .when("slid-skeleton", placeholder_rows_sx())
+        // Opaque over the rows only, so the area's unscrolled bars show in the padding alone.
+        .when(
+            "cover",
+            sx().background_color(SCROLL_AREA_COVER.value_or(NamedColorCss::SURFACE.value()))
+                .with("background-clip", "content-box"),
+        )
 });
 
 /// A table's skipped rows reserved in its body, not around it: a sticky `th` holds
@@ -189,42 +197,6 @@ fn table_body_reserve_sx() -> Sx {
     sx().when("table", reserve)
 }
 
-/// Skeleton bars in the padding for a fling that outruns the rows; forced colours drop the image.
-/// Static layers slid to the window's edges: a padding-sized background re-rastered every step (2131).
-fn placeholder_rows_sx() -> Sx {
-    let rows = skeleton_rows(&SCROLL_AREA_PITCH_VAR.value());
-    let layer = |shift: String| {
-        sx().content("\"\"")
-            .position("absolute")
-            .top("0")
-            .with("inset-inline", "1rem")
-            .height("100%")
-            .z_index("-1")
-            .pointer_events("none")
-            .background_image(rows.clone())
-            .with("will-change", "transform")
-            .with("transform", format!("translateY({shift})"))
-    };
-    // Under the rows, and clipped so the slid layers stretch no scroll range.
-    sx().position("relative")
-        .with("isolation", "isolate")
-        .overflow_y("clip")
-        .selector(
-            "::before",
-            layer(format!(
-                "calc({} - 100%)",
-                SCROLL_AREA_LEADING_VAR.value_or("0px")
-            )),
-        )
-        .selector(
-            "::after",
-            layer(format!(
-                "calc(100% - {})",
-                SCROLL_AREA_TRAILING_VAR.value_or("0px")
-            )),
-        )
-}
-
 /// One skeleton bar per `pitch`, centred in it.
 fn skeleton_rows(pitch: &str) -> String {
     let bar = format!("min(6px, {pitch} / 4)");
@@ -238,26 +210,32 @@ fn skeleton_rows(pitch: &str) -> String {
 /// Bars on a windowed table's scroller itself, unscrolled: a fling outran even slid bars' raster (2131).
 /// Unrastered row tiles show them, opaque rows cover them at rest; an iOS rubber band shows them at the ends.
 pub(crate) fn static_skeleton_sx(pitch: f64) -> Sx {
-    sx().background_image(skeleton_rows(&format!("{pitch}px")))
+    static_skeleton(&format!("{pitch}px"))
+}
+
+/// The same bars for a windowed list, its window covered by the content box (3251); forced colours drop them.
+fn static_skeleton(pitch: &str) -> Sx {
+    sx().background_image(skeleton_rows(pitch))
         .background_size("calc(100% - 2rem) 100%")
         .background_position("1rem 0")
         .background_repeat("no-repeat")
 }
 
-fn scroll_area_variables(color: Option<&ThemeAwareValue>) -> Variables {
-    variables().with(SCROLL_AREA_THUMB_VAR, color.and_then(|v| v.resolve(None)))
-}
-
-/// Both always, `0px` included: the style attribute is patched per property,
-/// so a dropped one would keep the last window's reserve.
-fn scroll_area_content_variables(offsets: ContentOffsets, pitch: Option<f64>) -> Variables {
+fn scroll_area_variables(color: Option<&ThemeAwareValue>, pitch: Option<f64>) -> Variables {
     variables()
-        .with(SCROLL_AREA_LEADING_VAR, format!("{}px", offsets.leading))
-        .with(SCROLL_AREA_TRAILING_VAR, format!("{}px", offsets.trailing))
+        .with(SCROLL_AREA_THUMB_VAR, color.and_then(|v| v.resolve(None)))
         .with(
             SCROLL_AREA_PITCH_VAR,
             pitch.map(|pitch| format!("{pitch}px")),
         )
+}
+
+/// Both always, `0px` included: the style attribute is patched per property,
+/// so a dropped one would keep the last window's reserve.
+fn scroll_area_content_variables(offsets: ContentOffsets) -> Variables {
+    variables()
+        .with(SCROLL_AREA_LEADING_VAR, format!("{}px", offsets.leading))
+        .with(SCROLL_AREA_TRAILING_VAR, format!("{}px", offsets.trailing))
 }
 
 /// The edges the last position rested against, so `on*reached` fires on the
@@ -512,9 +490,9 @@ fn ScrollAreaContent(content: ElementHandle, children: Element) -> Element {
                 .with("virtualized", true)
                 .with("windowed", spec.is_some())
                 .with("table", table)
-                .with("slid-skeleton", spec.is_some() && !table)
+                .with("cover", spec.is_some() && !table)
                 .into(),
-            scroll_area_content_variables(offsets, spec.map(|spec| spec.pitch)).into(),
+            scroll_area_content_variables(offsets).into(),
         )
     } else {
         (Input::None, Input::None)
@@ -633,7 +611,11 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let mut geometry = use_signal(|| None::<ScrollGeometry>);
     let spec = use_signal(|| None::<WindowSpec>);
     let virtualized = use_signal(|| false);
-    use_context_provider(|| ScrollViewport::new((root, content), geometry, spec, virtualized));
+    let table =
+        use_context_provider(|| ScrollViewport::new((root, content), geometry, spec, virtualized))
+            .table;
+    // A windowed list's pitch, for its unscrolled bars; a memo, so a moved `keep` re-renders nothing here.
+    let skeleton = use_memo(move || spec().filter(|_| !table()).map(|spec| spec.pitch));
     // A `Virtualize` child needs the height before any scroll and on every resize.
     let measure = move || {
         if root.is_mounted() {
@@ -838,9 +820,11 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
             "offset-block",
             offset && matches!(scrollbars, ScrollAxis::Horizontal | ScrollAxis::Both),
         )
+        .with("static-skeleton", skeleton().is_some())
         .into();
 
-    let variables: Input<Variables> = scroll_area_variables(props.scrollbar_color.as_ref()).into();
+    let variables: Input<Variables> =
+        scroll_area_variables(props.scrollbar_color.as_ref(), skeleton()).into();
 
     // ARIA prohibits naming a generic: the name waits for a role.
     let has_role = tab_stop
@@ -974,7 +958,7 @@ mod tests {
     #[test]
     fn a_thumb_color_resolves_with_no_scale() {
         let color = ThemeAwareValue::Color(Color::Primary);
-        let variables = scroll_area_variables(Some(&color));
+        let variables = scroll_area_variables(Some(&color), None);
 
         assert_eq!(
             variables.to_string(),
@@ -988,7 +972,16 @@ mod tests {
 
     #[test]
     fn no_thumb_color_emits_no_variable() {
-        assert_eq!(scroll_area_variables(None).to_string(), "");
+        assert_eq!(scroll_area_variables(None, None).to_string(), "");
+    }
+
+    /// Todo 3251: a windowed list's area paints its bars at the rows' pitch.
+    #[test]
+    fn a_windowed_list_hands_its_pitch_to_the_area() {
+        assert_eq!(
+            scroll_area_variables(None, Some(52.0)).to_string(),
+            format!("{}:52px;", SCROLL_AREA_PITCH_VAR.name())
+        );
     }
 
     /// A bare `Size` has no scale here, so it drops out.
@@ -996,7 +989,7 @@ mod tests {
     fn an_unresolvable_value_emits_no_variable() {
         let size = ThemeAwareValue::Size(Size::Md);
 
-        assert_eq!(scroll_area_variables(Some(&size)).to_string(), "");
+        assert_eq!(scroll_area_variables(Some(&size), None).to_string(), "");
     }
 
     fn dims(width: f64, height: f64) -> Dimensions {

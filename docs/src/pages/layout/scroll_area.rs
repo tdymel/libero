@@ -261,6 +261,14 @@ pub fn ScrollAreaPage() -> Element {
                     " above it, one per area. Without one, or as the second, it warns and "
                     "renders every row."
                 }
+                Text {
+                    "A fast fling can outrun the rows, so the area paints grey skeleton bars "
+                    "where rows are still missing. The rendered rows sit on the page surface, "
+                    "or on a "
+                    Code { source: "Paper" }
+                    "'s inside one, to hide the bars. In a container of another colour, give "
+                    "the list that background too, or its rows show a surface-coloured band."
+                }
             }
         }
     }

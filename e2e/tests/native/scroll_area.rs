@@ -552,3 +552,35 @@ fn a_key_leaves_an_axis_the_area_does_not_scroll() {
     page.press(Key::End);
     assert_eq!(page.rect("#clipped"), start, "a `none` area scrolled");
 }
+
+/// Todo 3251: a windowed list's area has skeleton bars behind its rows. Blitz paints no
+/// repeating gradient yet, so a row paints as before; once it does, the covered window hides them.
+#[test]
+fn a_windowed_row_hides_the_skeleton_bars_behind_it() {
+    fn rows() -> Element {
+        rsx! {
+            div { width: "300px", height: "200px",
+                ScrollArea {
+                    Virtualize {
+                        count: 1000,
+                        item_size: Some(40.0),
+                        item: move |i: usize| rsx! {
+                            div { "data-row": i, height: "40px", "Row {i}" }
+                        },
+                    }
+                }
+            }
+        }
+    }
+    let page = mount(rows);
+    let (x, y, w, h) = page.rect("[data-row='1']");
+    // Down the row's empty end, past its text.
+    let column: Vec<(u32, u32)> = (0..h as u32)
+        .map(|i| ((x + w * 0.8) as u32, y as u32 + i))
+        .collect();
+    let px = page.painted_pixels(&column);
+    assert!(
+        px.iter().all(|p| *p == [255, 255, 255, 255]),
+        "a bar shows through the row: {px:?}"
+    );
+}
