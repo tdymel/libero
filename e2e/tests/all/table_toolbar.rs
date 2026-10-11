@@ -6,7 +6,7 @@ use chromiumoxide::cdp::browser_protocol::browser::{
     SetDownloadBehaviorBehavior, SetDownloadBehaviorParams,
 };
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
+use e2e::driver::{Driver, Rect, eventually, eventually_focused, eventually_text};
 use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Viewport, wait};
 
@@ -107,12 +107,19 @@ e2e::scenario!(
 /// under itself and takes the focus back on Escape.
 async fn the_filter_piece_opens_the_panel<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     const BUTTON: &str = "[data-filter-panel-button]";
-    let (button, density) = (
+    let (button, density, export) = (
         d.rect(BUTTON).await?,
         d.rect("[data-table-tool=density]").await?,
+        d.rect("[data-table-tool=export]").await?,
     );
-    if button.x <= density.x || button.x >= d.rect("[data-table-tool=export]").await?.x {
-        bail!("the Filters button is not between Density and Export");
+    // Reading order: a narrow screen wraps the toolbar onto rows.
+    let after = |a: &Rect, b: &Rect| {
+        a.y >= b.y + b.height - 1.0 || (a.y + a.height > b.y + 1.0 && a.x > b.x)
+    };
+    if !after(&button, &density) || !after(&export, &button) {
+        bail!(
+            "the Filters button {button:?} is not between Density {density:?} and Export {export:?}"
+        );
     }
     d.click(BUTTON).await?;
     eventually(d, "the panel under the button", async |d| {

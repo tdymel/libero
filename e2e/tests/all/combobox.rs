@@ -397,6 +397,7 @@ async fn listbox_shows<D: Driver>(d: &mut D, after: &str) -> Result<()> {
 // `Autocomplete`, on `/autocomplete/echo`.
 
 async fn autocomplete_typing_and_enter<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.plain_keys().await?;
     d.click(TRIGGER).await?;
     d.type_text("be").await?;
     until_expanded(d, true, "typing \"be\"").await?;
@@ -509,6 +510,7 @@ e2e::scenario!(
 // `TagsField`, on `/tags-field/echo`: "rust" held.
 
 async fn tags_typing_adds<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.plain_keys().await?;
     d.click(TRIGGER).await?;
     d.type_text("css").await?;
     d.press(keyboard::ENTER).await?;

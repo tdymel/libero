@@ -2,7 +2,8 @@ use dioxus::core::{Attribute, AttributeValue};
 use dioxus::prelude::*;
 
 use crate::hooks::{
-    ElementHandle, FocusWithin, listener, use_back, use_focus_within, use_subscription_slot,
+    ElementHandle, FocusWithin, claim_back_entry, listener, use_back, use_focus_within,
+    use_subscription_slot,
 };
 use crate::platform::{self, FullscreenApi, FullscreenSubscription, focused_attribute, next_task};
 
@@ -44,6 +45,8 @@ impl FullscreenHandle {
         match self.api().filter(|_| *self.available.peek()) {
             // Refused (a headless browser, a WebView without fullscreen): drawn.
             Some(api) => {
+                // The request consumes the tap's activation, which the Back entry's push needs.
+                claim_back_entry();
                 spawn(async move {
                     if api.enter().await.is_err() {
                         drawn.set(true);

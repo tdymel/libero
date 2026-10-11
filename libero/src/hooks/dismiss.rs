@@ -150,6 +150,13 @@ pub fn use_back(active: bool, onback: Callback<()>) {
     let _ = (active, onback);
 }
 
+/// Holds the Back entry of a layer about to open, while the tap that opens it still has
+/// its activation: a fullscreen request consumes it before the layer exists (3281).
+pub(crate) fn claim_back_entry() {
+    #[cfg(target_os = "android")]
+    back::claim_entry();
+}
+
 /// On the stack until dropped.
 pub(crate) struct LayerGuard {
     id: LayerId,

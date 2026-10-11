@@ -269,6 +269,11 @@ pub trait Driver {
     async fn soft_keyboard_shown(&mut self) -> Result<bool> {
         Ok(false)
     }
+    /// Keys reach the page as plain keydowns, no input method composing the typed word (3279);
+    /// Android takes its keyboard away until the next scenario opens.
+    async fn plain_keys(&mut self) -> Result<()> {
+        Ok(())
+    }
     /// Resizes the viewport to `(width, height)` CSS px, as a soft keyboard shrinks it.
     async fn resize_viewport(&mut self, width: f64, height: f64) -> Result<()> {
         let _ = (width, height);

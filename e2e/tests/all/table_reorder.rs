@@ -3,7 +3,7 @@
 //! right moves the column, and its sort with it.
 
 use anyhow::{Result, bail};
-use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
+use e2e::driver::{Driver, Rect, eventually, eventually_focused, eventually_text};
 use e2e::passes::keyboard;
 
 const ORDER: &str = "#order";
@@ -646,11 +646,12 @@ e2e::scenario!(
     grips_keep_their_lane
 );
 
-/// Name's header grip dropped near Origin's end edge: one order change (1395).
+/// Name's header grip dropped past Origin's middle: one order change (1395). A touch's
+/// last move overshoots its end point, and a drop outside the table cancels: not at its edge.
 async fn a_grip_drag_moves_a_column<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let grip = "th[aria-label=Name] [data-drag-handle]";
     let (from, origin) = (d.rect(grip).await?, d.rect("th[aria-label=Origin]").await?);
-    let dx = origin.x + origin.width - 4.0 - (from.x + from.width / 2.0);
+    let dx = past_middle(&origin) - (from.x + from.width / 2.0);
     d.drag(grip, dx, 0.0).await?;
     eventually_text(d, "#columns", "Stock Origin Name", "a drag past Origin").await?;
     eventually(d, "Name's cells to follow, the ghost gone", async |d| {
@@ -667,6 +668,17 @@ e2e::scenario!(
     a_grip_drag_moves_a_column
 );
 
+/// A client x a tenth of `header`'s width past its middle: its end gap is the nearest, and
+/// a touch's last move overshoots by up to 35px, which still lands in the table.
+fn past_middle(header: &Rect) -> f64 {
+    header.x + header.width * 0.6
+}
+
+/// A client x a quarter of `header`'s width in: its start gap is the nearest.
+fn before_middle(header: &Rect) -> f64 {
+    header.x + header.width * 0.25
+}
+
 /// Drags `header`'s grip so its centre lands at client `x`.
 async fn drag_grip_to<D: Driver>(d: &mut D, header: &str, x: f64) -> Result<()> {
     let grip = format!("th[aria-label={header}] [data-drag-handle]");
@@ -677,17 +689,17 @@ async fn drag_grip_to<D: Driver>(d: &mut D, header: &str, x: f64) -> Result<()> 
 /// A second drag after the first, of the moved column and then another (1463).
 async fn two_grip_drags_move_columns<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let origin = d.rect("th[aria-label=Origin]").await?;
-    drag_grip_to(d, "Name", origin.x + origin.width - 4.0).await?;
+    drag_grip_to(d, "Name", past_middle(&origin)).await?;
     eventually_text(d, "#columns", "Stock Origin Name", "the first drag").await?;
     eventually(d, "the ghost gone", async |d| {
         Ok(!d.exists("[data-drag-ghost]").await?)
     })
     .await?;
     let stock = d.rect("th[aria-label=Stock]").await?;
-    drag_grip_to(d, "Name", stock.x + 4.0).await?;
+    drag_grip_to(d, "Name", before_middle(&stock)).await?;
     eventually_text(d, "#columns", "Name Stock Origin", "Name dragged back").await?;
     let origin = d.rect("th[aria-label=Origin]").await?;
-    drag_grip_to(d, "Stock", origin.x + origin.width - 4.0).await?;
+    drag_grip_to(d, "Stock", past_middle(&origin)).await?;
     eventually_text(d, "#columns", "Name Origin Stock", "Stock past Origin").await?;
     eventually(d, "headers and cells in the new order", async |d| {
         let (name, origin, stock) = (
@@ -748,8 +760,11 @@ mod a_deep_windowed_drag_keeps_the_table_size {
             // Again until it holds: the body reserves its rows a render after the mount.
             e2e::wait::for_js_true(
                 &page,
-                &format!("({AREA}.scrollTop = 999 * 40, !!document.querySelector('{HANDLE}'))"),
-                "Row 1002 rendered",
+                &format!(
+                    "({AREA}.scrollTop = 999 * 40, !!document.querySelector('{HANDLE}')
+                     && {AREA}.querySelector('tbody').getBoundingClientRect().height > 100000)"
+                ),
+                "Row 1002 rendered in the body reserving its rows",
             )
             .await
             .unwrap();

@@ -2,7 +2,7 @@
 //! forwarded DevTools socket, one shared page, input through `adb shell input`.
 
 use std::io::{BufRead, BufReader, Read, Write};
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 
 use anyhow::{Context, Result, bail};
 use chromiumoxide::handler::HandlerConfig;
@@ -146,6 +146,45 @@ pub(crate) async fn input(args: &[String]) -> Result<()> {
 pub(crate) async fn soft_keyboard_shown() -> Result<bool> {
     let state = shell(&["dumpsys".into(), "input_method".into()]).await?;
     Ok(state.contains("mInputShown=true"))
+}
+
+/// The input methods [`disable_ime`] took away, and the default among them.
+static TAKEN_IMES: Mutex<Option<(Vec<String>, String)>> = Mutex::new(None);
+
+/// Disables every input method until [`restore_ime`]: keys then reach the page as plain
+/// hardware keydowns, where Gboard composes the typed word and fields ignore its keys (3279).
+pub(crate) async fn disable_ime() -> Result<()> {
+    if TAKEN_IMES.lock().unwrap().is_some() {
+        return Ok(());
+    }
+    let listed = shell(&["ime".into(), "list".into(), "-s".into()]).await?;
+    let default = shell(&["settings get secure default_input_method".into()]).await?;
+    let imes: Vec<String> = listed
+        .lines()
+        .map(str::trim)
+        .filter(|ime| !ime.is_empty())
+        .map(String::from)
+        .collect();
+    for ime in &imes {
+        shell(&["ime".into(), "disable".into(), ime.clone()]).await?;
+    }
+    *TAKEN_IMES.lock().unwrap() = Some((imes, default.trim().to_string()));
+    Ok(())
+}
+
+/// Gives back the input methods [`disable_ime`] took, and the default one.
+pub(crate) async fn restore_ime() -> Result<()> {
+    let taken = TAKEN_IMES.lock().unwrap().take();
+    let Some((imes, default)) = taken else {
+        return Ok(());
+    };
+    for ime in imes {
+        shell(&["ime".into(), "enable".into(), ime]).await?;
+    }
+    if default.contains('/') {
+        shell(&["ime".into(), "set".into(), default]).await?;
+    }
+    Ok(())
 }
 
 /// Whether wry's `RustWebView` holds Android view focus; `document.hasFocus()`
@@ -303,6 +342,8 @@ pub(crate) fn keycode(key: &str) -> Result<u32> {
         "ArrowDown" => 20,
         "Backspace" => 67,
         "Delete" => 112,
+        "-" => 69,
+        "+" => 81,
         f if f.len() > 1
             && f.starts_with('F')
             && f[1..].parse::<u32>().is_ok_and(|n| (1..=12).contains(&n)) =>

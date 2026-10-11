@@ -79,6 +79,27 @@ impl Back {
         }
     }
 
+    /// One entry more than the open layers hold, pushed now: the layer's own `push` finds it sent.
+    fn claim(self) {
+        let mut stack = self.0;
+        let want = {
+            let Ok(mut stack) = stack.try_write() else {
+                return;
+            };
+            if stack.listening.is_none() {
+                stack.listening = Some(platform::watch_back(move || self.pressed()));
+            }
+            let want = stack.layers.len() + 1;
+            if stack.listening != Some(true) || stack.sent >= want {
+                return;
+            }
+            stack.popped = 0;
+            stack.sent = want;
+            want
+        };
+        platform::back_entries(want);
+    }
+
     fn push(self, onback: Callback<()>) -> Option<Guard> {
         let mut stack = self.0;
         let id = {
@@ -113,6 +134,10 @@ impl Drop for Guard {
         }
         self.back.sync();
     }
+}
+
+pub(super) fn claim_entry() {
+    Back::get().claim();
 }
 
 pub(super) fn use_back(open: bool, onback: Callback<()>) {

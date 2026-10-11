@@ -101,8 +101,20 @@ async fn fullscreen_toggles<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         })
         .await
     };
+    // Android's Back entry of the fullscreen: held while it fills the screen, released on every way out (3281).
+    let android = d.platform() == Platform::Android;
+    let entry = async |d: &mut D, held: bool| {
+        if !android {
+            return Ok(());
+        }
+        eventually(d, &format!("the Back entry held: {held}"), async |d| {
+            Ok((d.evaluate("history.state?.lsxBack === true").await? == true) == held)
+        })
+        .await
+    };
     // Android's native fullscreen too, which ignored Escape before 1256.
     filled(d).await?;
+    entry(d, true).await?;
     // Todo 3194 (G8): wry's WKWebView has no Fullscreen API, so the box is drawn over the viewport.
     if d.platform() == Platform::Ios {
         let state = d.attr("#player [role=group]", "data-fullscreen").await?;
@@ -127,9 +139,11 @@ async fn fullscreen_toggles<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
             .is_none())
     })
     .await?;
+    entry(d, false).await?;
     // Back leaves it too, rather than the app (1275).
-    if d.platform() == Platform::Android {
+    if android {
         filled(d).await?;
+        entry(d, true).await?;
         d.press_back().await?;
         eventually(d, "Back to give the player back", async |d| {
             Ok(d.attr("#player [role=group]", "data-fullscreen")
@@ -137,6 +151,7 @@ async fn fullscreen_toggles<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
                 .is_none())
         })
         .await?;
+        entry(d, false).await?;
     }
     filled(d).await?;
     d.click("#player button[aria-label='Exit fullscreen']")
@@ -146,7 +161,8 @@ async fn fullscreen_toggles<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
             .await?
             .is_none())
     })
-    .await
+    .await?;
+    entry(d, false).await
 }
 
 e2e::scenario!(the_fullscreen_button_toggles, "/video", fullscreen_toggles);

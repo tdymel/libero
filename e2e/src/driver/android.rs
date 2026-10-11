@@ -7,9 +7,9 @@ use chromiumoxide::cdp::browser_protocol::emulation::SetCpuThrottlingRateParams;
 use super::web::{element, evaluate, json};
 use super::{Driver, Platform, Rect};
 use crate::android::{
-    ALT, CTRL, SHIFT, download, harness, input, input_text, keycode, posted_notifications,
-    soft_keyboard_shown, tap_any_node_within, tap_node, tap_notification, tap_notification_action,
-    webview_view_focused,
+    ALT, CTRL, SHIFT, disable_ime, download, harness, input, input_text, keycode,
+    posted_notifications, restore_ime, soft_keyboard_shown, tap_any_node_within, tap_node,
+    tap_notification, tap_notification_action, webview_view_focused,
 };
 use crate::clock::{app_clock, app_count};
 use crate::passes::{focus, keyboard, pointer};
@@ -24,6 +24,7 @@ impl Android {
     pub async fn open(route: &str) -> Result<Self> {
         let harness = harness();
         let page = harness.page.clone();
+        restore_ime().await?;
         // Launched in touch mode, the WebView lacks view focus and eats the first key;
         // take it before the fixture mounts, as gaining it moves DOM focus (1052).
         if !webview_view_focused().await? {
@@ -91,23 +92,25 @@ impl Android {
     /// The first match's centre once the page stopped moving under it: a fling from the
     /// last swipe keeps it moving under a press (1104).
     async fn settled_centre(&self, selector: &str) -> Result<pointer::Point> {
+        // A page wider than the screen pans the visual viewport, which `getBoundingClientRect`
+        // ignores and a touch does not (2255); the pan animates, so it settles too (3278).
+        let pan = "[visualViewport.offsetLeft, visualViewport.offsetTop]";
         let mut at = pointer::centre_of(&self.page, selector).await?;
+        let mut offset: [f64; 2] = json(&self.page, pan).await?;
         for _ in 0..40 {
             tokio::time::sleep(Duration::from_millis(50)).await;
             let next = pointer::centre_of(&self.page, selector).await?;
-            let settled = (next.x - at.x).abs() < 0.5 && (next.y - at.y).abs() < 0.5;
-            at = next;
+            let panned: [f64; 2] = json(&self.page, pan).await?;
+            let settled = (next.x - at.x).abs() < 0.5
+                && (next.y - at.y).abs() < 0.5
+                && (panned[0] - offset[0]).abs() < 0.5
+                && (panned[1] - offset[1]).abs() < 0.5;
+            (at, offset) = (next, panned);
             if settled {
                 break;
             }
         }
-        // A page wider than the screen pans the visual viewport, which `getBoundingClientRect`
-        // ignores and a touch does not (2255).
-        let [left, top]: [f64; 2] = json(
-            &self.page,
-            "[visualViewport.offsetLeft, visualViewport.offsetTop]",
-        )
-        .await?;
+        let [left, top] = offset;
         Ok(pointer::Point {
             x: at.x - left,
             y: at.y - top,
@@ -363,11 +366,11 @@ impl Android {
         (sx, sy, sdx, sdy): (f64, f64, f64, f64),
     ) -> Result<()> {
         let mut chain = self
-            .stroke_chain(pointer::Point { x, y }, dx, dy, 2.0)
+            .stroke_chain(pointer::Point { x, y }, dx, dy, 2.0, false)
             .await?;
         chain.extend([";".into(), "input".into()]);
         chain.extend(
-            self.stroke_chain(pointer::Point { x: sx, y: sy }, sdx, sdy, 1.0)
+            self.stroke_chain(pointer::Point { x: sx, y: sy }, sdx, sdy, 1.0, false)
                 .await?,
         );
         input(&chain).await
@@ -375,17 +378,25 @@ impl Android {
 
     /// Four moves to `from + d`, lifted at `from + d * lift`.
     async fn stroke(&mut self, from: pointer::Point, dx: f64, dy: f64, lift: f64) -> Result<()> {
-        let chain = self.stroke_chain(from, dx, dy, lift).await?;
+        let chain = self.stroke_chain(from, dx, dy, lift, false).await?;
         input(&chain).await
     }
 
-    /// [`Self::stroke`]'s `input` arguments.
+    /// [`Self::stroke`] slowing into its end point: Chrome extrapolates a fast last move by
+    /// up to 8 ms of its velocity, 30px past the point a drop is read at (3278).
+    async fn drag_stroke(&mut self, from: pointer::Point, dx: f64, dy: f64) -> Result<()> {
+        let chain = self.stroke_chain(from, dx, dy, 1.0, true).await?;
+        input(&chain).await
+    }
+
+    /// [`Self::stroke`]'s `input` arguments; `eased` slows the last moves.
     async fn stroke_chain(
         &mut self,
         from: pointer::Point,
         dx: f64,
         dy: f64,
         lift: f64,
+        eased: bool,
     ) -> Result<Vec<String>> {
         // `input swipe` lifts 1-2px short of its last move, and a drag follows moves
         // only (1002): step the touch by hand, its last move on the end point.
@@ -397,7 +408,11 @@ impl Android {
         events.push("UP".into());
         let mut chain = Vec::new();
         for (i, event) in events.into_iter().enumerate() {
-            let t = if i > 4 { lift } else { i as f64 / 4.0 };
+            let t = match (i, eased) {
+                (5.., _) => lift,
+                (_, true) => [0.0, 0.5, 0.85, 0.97, 1.0][i],
+                _ => i as f64 / 4.0,
+            };
             let [x, y] = self.device(pointer::Point {
                 x: (from.x + dx * t).clamp(0.0, vw - 1.0),
                 y: (from.y + dy * t).clamp(0.0, vh - 1.0),
@@ -550,7 +565,7 @@ impl Driver for Android {
             ))
             .await?;
         let from = self.settled_centre(selector).await?;
-        self.swipe(from, dx, dy).await
+        self.drag_stroke(from, dx, dy).await
     }
 
     async fn swipe_from(&mut self, x: f64, y: f64, dx: f64, dy: f64) -> Result<()> {
@@ -672,6 +687,10 @@ impl Driver for Android {
         soft_keyboard_shown().await
     }
 
+    async fn plain_keys(&mut self) -> Result<()> {
+        disable_ime().await
+    }
+
     /// The files go to Downloads, and the system picker's row is tapped
     /// there: one file, since a tap on a row picks it and closes the picker.
     async fn choose_files(&mut self, trigger: &str, files: &[(&str, &str)]) -> Result<()> {
@@ -713,7 +732,7 @@ impl Driver for Android {
     }
 
     async fn drag_at(&mut self, x: f64, y: f64, dx: f64, dy: f64) -> Result<()> {
-        self.swipe(pointer::Point { x, y }, dx, dy).await
+        self.drag_stroke(pointer::Point { x, y }, dx, dy).await
     }
 
     /// The app runs outside the WebView: the idle rounds of `settle` carry the frame's report.
