@@ -2009,22 +2009,36 @@ fn a_windowed_table_keeps_its_header_and_pins_while_scrolled() {
     });
 }
 
+/// Whether the pinned fixture's pins hold in a scroll area `width` px wide: wide enough for
+/// Name, Origin, Supplier and the checkbox column, or too narrow for any (todo 3256).
+fn pins_hold(width: f64) -> Option<bool> {
+    match width {
+        w if w * 2.0 / 3.0 >= 760.0 => Some(true),
+        w if w <= 420.0 => Some(false),
+        _ => None,
+    }
+}
+
 /// 1156-2d: "Pin to start" in a column's menu pins it after the pinned ones.
 async fn a_menu_pin_moves_the_column<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let holds = pins_hold(d.rect(AREA).await?.width);
     d.click("button[aria-label=\"Origin column options\"]")
         .await?;
     // After Filter and the moves.
     let pin = menu_entry(d, "Pin to start").await?;
     d.click(&pin).await?;
     eventually_text(d, "#pinned", "Name,Origin|Supplier", "Pin to start").await?;
-    eventually(d, "Origin to pin past Name", async |d| {
-        Ok(d.attr("th[aria-label=Origin]", "data-pin")
-            .await?
-            .as_deref()
-            == Some("start")
-            && d.rect("th[aria-label=Origin]").await?.x > d.rect("th[aria-label=Name]").await?.x)
-    })
-    .await?;
+    if holds == Some(true) {
+        eventually(d, "Origin to pin past Name", async |d| {
+            Ok(d.attr("th[aria-label=Origin]", "data-pin")
+                .await?
+                .as_deref()
+                == Some("start")
+                && d.rect("th[aria-label=Origin]").await?.x
+                    > d.rect("th[aria-label=Name]").await?.x)
+        })
+        .await?;
+    }
 
     // Moved to the other edge, then unpinned: no inset of its old edge stays (3132, 3149:
     // the body cells too, Origin's before Supplier's).
@@ -2046,17 +2060,17 @@ async fn a_menu_pin_moves_the_column<D: Driver>(d: &mut D, _route: &str) -> Resu
             .await?;
         let entry = menu_entry(d, label).await?;
         d.click(&entry).await?;
+        // Released pins hold no inset and no side either.
+        let pin = pin.filter(|_| holds != Some(false));
         eventually(d, &format!("Origin's header after {label}"), async |d| {
             let style = d.attr("th[aria-label=Origin]", "style").await?;
             let style = style.unwrap_or_default().replace(' ', "");
-            Ok(d.attr("th[aria-label=Origin]", "data-pin")
-                .await?
-                .as_deref()
-                == pin
+            let side = d.attr("th[aria-label=Origin]", "data-pin").await?;
+            Ok((holds.is_none() || side.as_deref() == pin)
                 && insets.iter().all(|inset| style.contains(inset)))
         })
         .await?;
-        if let Some(cell) = cell {
+        if let Some(cell) = cell.filter(|_| holds == Some(true)) {
             eventually(d, &format!("Origin's body cell after {label}"), async |d| {
                 let style = d.attr(cell, "style").await?;
                 let style = style.unwrap_or_default().replace(' ', "");
@@ -2070,8 +2084,63 @@ async fn a_menu_pin_moves_the_column<D: Driver>(d: &mut D, _route: &str) -> Resu
 
 e2e::scenario!(
     a_column_menu_pins_a_column,
-    "/table/pinned-narrow",
+    "/table/pinned",
     a_menu_pin_moves_the_column
+);
+
+/// Todo 3256: pinned columns that leave the rest under a third of the area are released
+/// (the checkbox column stays held), and pin again when the area grows.
+async fn narrow_areas_release_their_pins<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const PINS: &str = "thead th[data-pin]";
+    let web = d.platform() == Platform::Web;
+    if web {
+        eventually(d, "Name and Supplier pinned", async |d| {
+            Ok(
+                d.attr("th[aria-label=Name]", "data-pin").await?.as_deref() == Some("start")
+                    && d.attr("th[aria-label=Supplier]", "data-pin")
+                        .await?
+                        .as_deref()
+                        == Some("end"),
+            )
+        })
+        .await?;
+        d.resize_viewport(412.0, 800.0).await?;
+    }
+    eventually(d, "the pins to be released", async |d| {
+        Ok(d.rect(AREA).await?.width <= 420.0 && !d.exists(PINS).await?)
+    })
+    .await?;
+    assert_eq!(
+        d.style("thead th[data-select]", "position").await?,
+        "sticky"
+    );
+    // Still reachable: no pinned column covers any header's menu button.
+    d.click("button[aria-label=\"Origin column options\"]")
+        .await?;
+    menu_entry(d, "Pin to start").await?;
+    d.press(keyboard::ESCAPE).await?;
+    if web {
+        d.resize_viewport(1280.0, 800.0).await?;
+        eventually(d, "the pins to hold again", async |d| {
+            Ok(
+                d.attr("th[aria-label=Name]", "data-pin").await?.as_deref() == Some("start")
+                    && d.attr("th[aria-label=Supplier]", "data-pin")
+                        .await?
+                        .as_deref()
+                        == Some("end"),
+            )
+        })
+        .await?;
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    narrow_areas_release_their_pins_and_wide_ones_pin_again,
+    "/table/pinned",
+    narrow_areas_release_their_pins,
+    native: skip("1024px is wide enough for the pins"),
+    desktop: skip("its window cannot be narrowed")
 );
 
 /// WCAG 2.4.11: Shift+Tab up a capped table's rows never leaves the focused

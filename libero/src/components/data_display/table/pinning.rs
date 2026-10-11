@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use super::core::HeaderSpec;
 
 /// The columns of a [`Table`](super::Table) held at its edges while the rest
@@ -134,16 +136,13 @@ pub(super) fn span_pin(headers: &[HeaderSpec], covered: &[usize]) -> Option<Cell
     })
 }
 
-/// The shown columns in display order: start-pinned ones in `pinned` order,
-/// the rest in column order, then end-pinned ones. Sets each pinned header's
-/// [`CellPin`]; `lead_width` is the toggle and checkbox columns', held with a
-/// start group. Returns the order and the pinned headers whose inset is unknown, as a
-/// column further out has no `width`.
-pub(super) fn pin_columns(
-    headers: &mut [HeaderSpec],
-    pinned: &PinnedColumns,
-    lead_width: Option<&str>,
-) -> (Vec<usize>, Vec<String>) {
+/// The least share of the scroll area's width the unpinned columns keep: pins that
+/// leave less are released (todo 3256).
+pub(super) const MIN_UNPINNED_SHARE: f64 = 1.0 / 3.0;
+
+/// The indices of the shown columns pinned to each side, in `pinned` order; one
+/// pinned to both stays at the start.
+fn pin_groups(headers: &[HeaderSpec], pinned: &PinnedColumns) -> (Vec<usize>, Vec<usize>) {
     let shown = |header: &String| {
         headers
             .iter()
@@ -161,6 +160,77 @@ pub(super) fn pin_columns(
             end.push(index);
         }
     }
+    (start, end)
+}
+
+/// What the pinned columns are measured against.
+pub(super) struct PinRoom<'a> {
+    /// The scroll area's width; `None` before it is measured.
+    pub area: Option<f64>,
+    /// The leading columns' width, held with a start group.
+    pub lead: f64,
+    /// Each pinned header's rendered width.
+    pub widths: &'a HashMap<String, f64>,
+}
+
+/// Whether `pinned` has a shown column at its start.
+pub(super) fn has_start_pins(headers: &[HeaderSpec], pinned: &PinnedColumns) -> bool {
+    !pin_groups(headers, pinned).0.is_empty()
+}
+
+/// `pinned` less the columns that crowd the unpinned ones below
+/// [`MIN_UNPINNED_SHARE`] of the area: the end side's innermost first, then the start
+/// side's. A released column's width is its last measured one, so a regrown area re-pins.
+pub(super) fn fit_pins(
+    headers: &[HeaderSpec],
+    pinned: &PinnedColumns,
+    room: &PinRoom,
+) -> PinnedColumns {
+    let Some(area) = room.area else {
+        return pinned.clone();
+    };
+    let (start, end) = pin_groups(headers, pinned);
+    let width = |index: usize| {
+        let spec = &headers[index];
+        room.widths.get(&spec.header).copied().unwrap_or_else(|| {
+            spec.width
+                .as_deref()
+                .and_then(|width| width.strip_suffix("px")?.parse().ok())
+                .unwrap_or(0.0)
+        })
+    };
+    let lead = if start.is_empty() { 0.0 } else { room.lead };
+    let mut total = lead
+        + start
+            .iter()
+            .chain(&end)
+            .map(|&index| width(index))
+            .sum::<f64>();
+    let limit = area * (1.0 - MIN_UNPINNED_SHARE);
+    let mut fitted = pinned.clone();
+    for &index in end.iter().chain(start.iter().rev()) {
+        if total <= limit {
+            break;
+        }
+        total -= width(index);
+        let header = &headers[index].header;
+        fitted.start.retain(|pinned| pinned != header);
+        fitted.end.retain(|pinned| pinned != header);
+    }
+    fitted
+}
+
+/// The shown columns in display order: start-pinned ones in `pinned` order,
+/// the rest in column order, then end-pinned ones. Sets each pinned header's
+/// [`CellPin`]; `lead_width` is the toggle and checkbox columns', held with a
+/// start group. Returns the order and the pinned headers whose inset is unknown, as a
+/// column further out has no `width`.
+pub(super) fn pin_columns(
+    headers: &mut [HeaderSpec],
+    pinned: &PinnedColumns,
+    lead_width: Option<&str>,
+) -> (Vec<usize>, Vec<String>) {
+    let (start, mut end) = pin_groups(headers, pinned);
     let middle = (0..headers.len())
         .filter(|index| !headers[*index].hidden && !start.contains(index) && !end.contains(index));
     let order: Vec<usize> = start
@@ -378,6 +448,65 @@ mod tests {
         assert_eq!(specs[1].pin, None);
         assert_eq!(specs[2].pin.as_ref().unwrap().side, PinSide::Start);
         assert_eq!(specs[0].pin.as_ref().unwrap().side, PinSide::End);
+    }
+
+    fn room(area: Option<f64>, lead: f64, widths: &HashMap<String, f64>) -> PinRoom<'_> {
+        PinRoom { area, lead, widths }
+    }
+
+    /// Todo 3256: the end side's innermost pin goes first, then the start side's.
+    #[test]
+    fn pins_leaving_the_rest_under_a_third_are_released_innermost_first() {
+        let specs = headers(&[
+            ("A", Some("100px")),
+            ("B", Some("100px")),
+            ("C", Some("100px")),
+            ("D", Some("100px")),
+            ("E", Some("100px")),
+        ]);
+        let pinned = PinnedColumns::default().start(["A", "B"]).end(["D", "E"]);
+        let widths = HashMap::new();
+        let fits = |area, lead| fit_pins(&specs, &pinned, &room(Some(area), lead, &widths));
+
+        assert_eq!(fits(600.0, 0.0), pinned);
+        assert_eq!(
+            fits(450.0, 0.0),
+            PinnedColumns::default().start(["A", "B"]).end(["E"])
+        );
+        assert_eq!(fits(300.0, 0.0), PinnedColumns::default().start(["A", "B"]));
+        assert_eq!(fits(250.0, 40.0), PinnedColumns::default().start(["A"]));
+        assert_eq!(fits(100.0, 40.0), PinnedColumns::default());
+        assert_eq!(fit_pins(&specs, &pinned, &room(None, 0.0, &widths)), pinned);
+    }
+
+    #[test]
+    fn a_measured_width_beats_the_declared_one_and_a_hidden_pin_counts_for_nothing() {
+        let mut specs = headers(&[("A", Some("100px")), ("B", None), ("C", Some("100px"))]);
+        specs[2].hidden = true;
+        let pinned = PinnedColumns::default().start(["A", "B", "C"]);
+        let wide = HashMap::from([("B".to_string(), 400.0)]);
+
+        assert_eq!(
+            fit_pins(&specs, &pinned, &room(Some(600.0), 0.0, &wide)),
+            PinnedColumns::default().start(["A", "C"])
+        );
+        assert_eq!(
+            fit_pins(&specs, &pinned, &room(Some(600.0), 0.0, &HashMap::new())),
+            pinned
+        );
+    }
+
+    #[test]
+    fn a_pin_with_no_shown_start_column_ignores_the_lead_width() {
+        let specs = headers(&[("A", Some("100px")), ("B", Some("100px"))]);
+        let pinned = PinnedColumns::default().end(["A"]);
+        let widths = HashMap::new();
+
+        assert_eq!(
+            fit_pins(&specs, &pinned, &room(Some(200.0), 90.0, &widths)),
+            pinned
+        );
+        assert!(!has_start_pins(&specs, &pinned));
     }
 
     #[test]

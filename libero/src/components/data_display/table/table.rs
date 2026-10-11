@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     rc::Rc,
 };
 
@@ -60,7 +60,10 @@ use super::{
     memo::Memo,
     overlay::{EmptyBody, LoadingBar, SKELETON_ROWS},
     paging::{TablePager, clamp_page, page_rows, use_page_reset, use_page_size_reseed},
-    pinning::{PinSide, PinnedColumns, pin_columns, pin_edge_at, pinned_extent},
+    pinning::{
+        PinRoom, PinSide, PinnedColumns, fit_pins, has_start_pins, pin_columns, pin_edge_at,
+        pinned_extent,
+    },
     pipeline::{
         KnownRows, VisibleRow, cut_page, keyed_rows, nest_rows, selection_scope, visible_rows,
     },
@@ -1451,6 +1454,14 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             pin_edges.write()[at] = Some(width);
         }
     });
+    let mut pin_widths = use_signal(HashMap::<String, f64>::new);
+    let pin_width = use_callback(move |(header, width): (String, f64)| {
+        if pin_widths.peek().get(&header) != Some(&width) {
+            pin_widths.write().insert(header, width);
+        }
+    });
+    let mut area_width = use_signal(|| None::<f64>);
+    let mut lead_px = use_signal(|| 0.0);
 
     let widths = state.column_widths.read();
     let mut headers = header_specs(
@@ -1479,7 +1490,19 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         [one] => Some(one.clone()),
         many => Some(format!("calc({})", many.join(" + "))),
     };
-    let (mut layout, unknown) = pin_columns(&mut headers, &pinned, lead_width.as_deref());
+    // The leading columns stay pinned with the start pins configured, however many the room releases.
+    let lead_pins = has_start_pins(&headers, &pinned);
+    let tracks_area = !(pinned.start.is_empty() && pinned.end.is_empty());
+    let fitted = fit_pins(
+        &headers,
+        &pinned,
+        &PinRoom {
+            area: area_width(),
+            lead: lead_px(),
+            widths: &pin_widths.read(),
+        },
+    );
+    let (mut layout, unknown) = pin_columns(&mut headers, &fitted, lead_width.as_deref());
     let column_order = state.column_order.read();
     order_unpinned(&headers, &mut layout, &column_order);
     if drags {
@@ -1499,16 +1522,23 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             current.set(plan);
         }
     }
-    let pins_start = headers.iter().any(|spec| {
-        spec.pin
-            .as_ref()
-            .is_some_and(|pin| pin.side == PinSide::Start)
-    });
+    let pins_start = lead_pins;
     let pins_select = props.selectable && pins_start;
-    let pins = headers.iter().any(|spec| spec.pin.is_some());
+    let pins = pins_start || headers.iter().any(|spec| spec.pin.is_some());
     let edges = pin_edges();
-    let pinned_pads = [(PinSide::Start, edges[0]), (PinSide::End, edges[1])]
+    let mut pinned_pads = [(PinSide::Start, edges[0]), (PinSide::End, edges[1])]
         .map(|(side, measured)| pinned_extent(&headers, side, measured));
+    // Released start pins leave the leading columns, which a focus scroll still clears.
+    let start_released = pins_start
+        && !headers.iter().any(|spec| {
+            spec.pin
+                .as_ref()
+                .is_some_and(|pin| pin.side == PinSide::Start)
+        });
+    if start_released {
+        pinned_pads[0] = lead_width.clone();
+    }
+    let lead_probe = lead_width.clone().filter(|_| lead_pins);
     let mut warned = use_hook(|| CopyValue::new(Vec::<String>::new()));
     if !unknown.is_empty() && *warned.peek() != unknown {
         warn(&format!(
@@ -2382,6 +2412,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 on_head_height: bounded.then(|| EventHandler::new(move |height| head.set(height))),
                 thead: head_element,
                 pin_edge,
+                pin_width,
                 grid: cell_focus.then_some(HeadGrid {
                     focus: grid_focus,
                     stop: grid_stop,
@@ -2492,8 +2523,29 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                     bar_inset_bottom: bounded.then_some(foot_gap),
                     // Its root, mounted by the area itself, is where a column drop counts.
                     handle: ScrollAreaHandle { element: column_drag.region },
+                    // Only a pinned table follows its area's width.
+                    onresize: tracks_area.then(|| {
+                        EventHandler::new(move |event: Event<ResizeData>| {
+                            if let Ok(size) = event.get_border_box_size()
+                                && *area_width.peek() != Some(size.width)
+                            {
+                                area_width.set(Some(size.width));
+                            }
+                        })
+                    }),
                     attributes,
                     {table}
+                    if let Some(width) = lead_probe {
+                        div {
+                            aria_hidden: "true",
+                            style: "position:absolute;visibility:hidden;pointer-events:none;height:0;width:{width}",
+                            onresize: move |event: Event<ResizeData>| {
+                                if let Ok(size) = event.get_border_box_size() {
+                                    lead_px.set(size.width);
+                                }
+                            },
+                        }
+                    }
                 }
             }
         }

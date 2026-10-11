@@ -411,6 +411,8 @@ pub(super) struct BodySpec {
     pub thead: ElementHandle,
     /// Told the rendered width of each side's innermost pinned column without `width`.
     pub pin_edge: Callback<(PinSide, f64)>,
+    /// Told each pinned header's rendered width, which the pins must leave room around.
+    pub pin_width: Callback<(String, f64)>,
     /// With `cell_focus`: the header cells are grid cells.
     pub grid: Option<HeadGrid>,
     /// With `cell_focus` on a page: every page's body rows, which `aria-rowindex` counts.
@@ -485,6 +487,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         on_head_height,
         thead,
         pin_edge,
+        pin_width,
         grid,
         paged,
     } = body;
@@ -580,16 +583,20 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                             false => body,
                         };
                         let draggable = drag.is_some() && spec.pin.is_none();
-                        // An unsized innermost pin is measured: the scroll padding clears it (todo 1973).
+                        // A pin is measured for the room it leaves; an unsized innermost one
+                        // also pads the scroll (todos 1973, 3256).
                         let measure: Vec<Attribute> = spec
                             .pin
                             .as_ref()
-                            .filter(|pin| pin.edge && spec.width.is_none())
                             .map(|pin| {
-                                let side = pin.side;
+                                let (side, header) = (pin.side, spec.header.clone());
+                                let edge = pin.edge && spec.width.is_none();
                                 listener("onresize", move |event: Event<ResizeData>| {
                                     if let Ok(size) = event.get_border_box_size() {
-                                        pin_edge.call((side, size.width));
+                                        pin_width.call((header.clone(), size.width));
+                                        if edge {
+                                            pin_edge.call((side, size.width));
+                                        }
                                     }
                                 })
                             })
