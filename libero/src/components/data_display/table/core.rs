@@ -176,11 +176,13 @@ pub(super) fn header_specs<T>(
 /// The sorted columns by header index, in priority order.
 pub(super) type ActiveSort = Vec<(usize, SortDirection)>;
 
-/// `data`'s indices in display order: source order unless a column is sorted.
+/// `data`'s indices in display order: source order unless a column is sorted, its
+/// texts then by the rules of `lang`.
 pub(super) fn row_order<T>(
     data: &[T],
     columns: &[Column<T>],
     active: &[(usize, SortDirection)],
+    lang: &str,
 ) -> Vec<usize> {
     if active.is_empty() {
         return (0..data.len()).collect();
@@ -192,14 +194,14 @@ pub(super) fn row_order<T>(
             (data.iter().map(|row| sort_key(row)).collect(), direction)
         })
         .collect();
-    sorted_order(&keys)
+    sorted_order(&keys, platform::collator(lang).as_deref())
 }
 
 /// [`row_order`] across renders: a page, selection or unrelated prop change
 /// reuses it, so sort keys are computed only when the rows, columns or sort change.
 pub(super) struct SortedRows<T>(Memo<SortInput<T>, Vec<usize>>);
 
-type SortInput<T> = (Rc<Vec<T>>, Vec<Column<T>>, ActiveSort);
+type SortInput<T> = (Rc<Vec<T>>, Vec<Column<T>>, ActiveSort, &'static str);
 
 impl<T> Default for SortedRows<T> {
     fn default() -> Self {
@@ -213,17 +215,18 @@ impl<T: PartialEq> SortedRows<T> {
         data: &Rc<Vec<T>>,
         columns: &[Column<T>],
         active: &ActiveSort,
+        lang: &'static str,
     ) -> Vec<usize> {
         if active.is_empty() {
             self.0.clear();
             return (0..data.len()).collect();
         }
-        let fresh = |(rows, cols, sort): &SortInput<T>| {
-            sort == active && cols.as_slice() == columns && same_rows(rows, data)
+        let fresh = |(rows, cols, sort, at): &SortInput<T>| {
+            sort == active && *at == lang && cols.as_slice() == columns && same_rows(rows, data)
         };
         let compute = || {
-            let input = (data.clone(), columns.to_vec(), active.clone());
-            (input, row_order(data, columns, active))
+            let input = (data.clone(), columns.to_vec(), active.clone(), lang);
+            (input, row_order(data, columns, active, lang))
         };
         self.0.get(fresh, compute).clone()
     }
@@ -317,7 +320,10 @@ pub(super) struct CellSpec {
 /// Row indices in sorted order, one key column per sorted column, the first
 /// deciding. Stable, so equal keys keep source order, and `Empty` sinks to the
 /// bottom either way.
-pub(super) fn sorted_order(keys: &[(Vec<SortKey>, SortDirection)]) -> Vec<usize> {
+pub(super) fn sorted_order(
+    keys: &[(Vec<SortKey>, SortDirection)],
+    collator: Option<&platform::Collator>,
+) -> Vec<usize> {
     let len = keys.first().map_or(0, |(column, _)| column.len());
     let mut order: Vec<usize> = (0..len).collect();
     order.sort_by(|&a, &b| {
@@ -329,8 +335,8 @@ pub(super) fn sorted_order(keys: &[(Vec<SortKey>, SortDirection)]) -> Vec<usize>
                     (true, false) => std::cmp::Ordering::Greater,
                     (false, true) => std::cmp::Ordering::Less,
                     (false, false) => match direction {
-                        SortDirection::Ascending => a.compare(b),
-                        SortDirection::Descending => a.compare(b).reverse(),
+                        SortDirection::Ascending => a.compare(b, collator),
+                        SortDirection::Descending => a.compare(b, collator).reverse(),
                     },
                 }
             })
@@ -975,7 +981,7 @@ mod tests {
     }
 
     fn sorted(keys: &[SortKey], direction: SortDirection) -> Vec<usize> {
-        sorted_order(&[(keys.to_vec(), direction)])
+        sorted_order(&[(keys.to_vec(), direction)], None)
     }
 
     #[test]
@@ -1007,9 +1013,12 @@ mod tests {
         let first = keys(&[Some(1.0), Some(2.0), Some(1.0), Some(2.0)]);
         let second = keys(&[Some(5.0), Some(6.0), Some(7.0), None]);
 
-        let order = sorted_order(&[(first.clone(), Ascending), (second.clone(), Descending)]);
+        let order = sorted_order(
+            &[(first.clone(), Ascending), (second.clone(), Descending)],
+            None,
+        );
         assert_eq!(order, vec![2, 0, 1, 3]);
-        let order = sorted_order(&[(first, Descending), (second, Ascending)]);
+        let order = sorted_order(&[(first, Descending), (second, Ascending)], None);
         assert_eq!(order, vec![1, 3, 0, 2]);
     }
 
@@ -1031,30 +1040,32 @@ mod tests {
         let up = vec![(0, Ascending)];
 
         // One key per row.
-        assert_eq!(sorted.order(&data, &columns, &up), vec![1, 2, 0]);
+        assert_eq!(sorted.order(&data, &columns, &up, "en"), vec![1, 2, 0]);
         assert_eq!(calls.get(), 3);
         // An equal copy of the rows, as each render's props are, and of the columns.
         assert_eq!(
-            sorted.order(&Rc::new(vec![3, 1, 2]), &columns.clone(), &up),
+            sorted.order(&Rc::new(vec![3, 1, 2]), &columns.clone(), &up, "en"),
             vec![1, 2, 0]
         );
         assert_eq!(calls.get(), 3);
 
-        assert_eq!(sorted.order(&data, &counted("M"), &up), vec![1, 2, 0]);
+        assert_eq!(sorted.order(&data, &counted("M"), &up, "en"), vec![1, 2, 0]);
         assert_eq!(calls.get(), 6, "a changed column reuses the old keys");
         let columns = counted("N");
-        sorted.order(&data, &columns, &up);
+        sorted.order(&data, &columns, &up, "en");
         calls.set(0);
         assert_eq!(
-            sorted.order(&data, &columns, &vec![(0, Descending)]),
+            sorted.order(&data, &columns, &vec![(0, Descending)], "en"),
             vec![0, 2, 1]
         );
         assert_eq!(calls.get(), 3, "a changed sort reuses the old keys");
+        sorted.order(&data, &columns, &vec![(0, Descending)], "de");
+        assert_eq!(calls.get(), 6, "a changed language sorts again");
         assert_eq!(
-            sorted.order(&Rc::new(vec![0, 1, 2]), &columns, &up),
+            sorted.order(&Rc::new(vec![0, 1, 2]), &columns, &up, "de"),
             vec![0, 1, 2]
         );
-        assert_eq!(calls.get(), 6, "changed rows reuse the old keys");
+        assert_eq!(calls.get(), 9, "changed rows reuse the old keys");
     }
 
     fn headers(names: &[&str]) -> Vec<HeaderSpec> {
@@ -1236,8 +1247,11 @@ mod tests {
     fn rows_keep_source_order_until_sorted() {
         let (data, columns) = ages();
 
-        assert_eq!(row_order(&data, &columns, &[]), vec![0, 1, 2]);
-        assert_eq!(row_order(&data, &columns, &[(1, Ascending)]), vec![1, 2, 0]);
+        assert_eq!(row_order(&data, &columns, &[], "en"), vec![0, 1, 2]);
+        assert_eq!(
+            row_order(&data, &columns, &[(1, Ascending)], "en"),
+            vec![1, 2, 0]
+        );
     }
 
     #[test]

@@ -17,7 +17,7 @@ fn from_server(values: &DemoValues) -> bool {
 }
 
 // snippet: item use libero::chrono::NaiveDate;
-// snippet: item #[derive(Clone, PartialEq)] struct Person { name: String, role: String, joined: NaiveDate, review: Option<NaiveDate>, bonus: Option<f64> }
+// snippet: item #[derive(Clone, PartialEq)] struct Person { name: String, role: String, joined: NaiveDate, review: Option<NaiveDate>, active: bool, bonus: Option<f64> }
 // snippet: let people: Vec<Person> = Vec::new();
 // snippet: in Table { caption: "Team members", data: people, .. }
 const COLUMNS: &str = r#"columns: vec![
@@ -33,6 +33,10 @@ const COLUMNS: &str = r#"columns: vec![
         .render(|p: &Person| rsx! { Chip { size: "xs", "{p.role}" } }),
     column("Joined").value(|p: &Person| p.joined).sortable(),
     column("Review").value(|p: &Person| p.review).sortable(),
+    column("Active")
+        .value(|p: &Person| p.active)
+        .format(|p: &Person| (if p.active { "Yes" } else { "No" }).to_string())
+        .sortable(),
     column("Bonus")
         .value(|p: &Person| p.bonus)
         .format(|p: &Person| p.bonus.map(|b| format!("{b:.1} %")).unwrap_or_default())
@@ -42,7 +46,7 @@ const COLUMNS: &str = r#"columns: vec![
 ]"#;
 
 // snippet: item use libero::chrono::NaiveDate;
-// snippet: item #[derive(Clone, PartialEq)] struct Person { name: String, role: String, joined: NaiveDate, review: Option<NaiveDate>, bonus: Option<f64> }
+// snippet: item #[derive(Clone, PartialEq)] struct Person { name: String, role: String, joined: NaiveDate, review: Option<NaiveDate>, active: bool, bonus: Option<f64> }
 // snippet: let people: Vec<Person> = Vec::new();
 // snippet: in Table { caption: "Team members", data: people, .. }
 const GROUPED_COLUMNS: &str = r#"columns: vec![
@@ -59,6 +63,11 @@ const GROUPED_COLUMNS: &str = r#"columns: vec![
         .group("Membership"),
     column("Joined").value(|p: &Person| p.joined).sortable().group("Membership"),
     column("Review").value(|p: &Person| p.review).sortable().group("Membership"),
+    column("Active")
+        .value(|p: &Person| p.active)
+        .format(|p: &Person| (if p.active { "Yes" } else { "No" }).to_string())
+        .sortable()
+        .group("Membership"),
     column("Bonus")
         .value(|p: &Person| p.bonus)
         .format(|p: &Person| p.bonus.map(|b| format!("{b:.1} %")).unwrap_or_default())
@@ -249,10 +258,23 @@ const EDIT: &str =
 /// The Bonus column's setter, after its `.sortable()`.
 const BONUS_EDIT: &str = "\n        .editable(|p: &mut Person, bonus: Option<f64>| p.bonus = bonus)\n        .validate(|_: &Person, bonus: &Option<f64>| match bonus.is_none_or(|b| (0.0..=100.0).contains(&b)) {\n            true => Ok(()),\n            false => Err(\"A percentage from 0 to 100\".into()),\n        })";
 
-/// `columns`, the Bonus column editable with the `editable` switch.
+/// The Review column's setter, after its `.sortable()`.
+const REVIEW_EDIT: &str =
+    "\n        .editable(|p: &mut Person, review: Option<NaiveDate>| p.review = review)";
+
+const REVIEW_COLUMN: &str = "column(\"Review\").value(|p: &Person| p.review).sortable()";
+
+/// The Active column up to its `.sortable()`, and its setter.
+const ACTIVE_COLUMN: &str = "column(\"Active\")\n        .value(|p: &Person| p.active)\n        .format(|p: &Person| (if p.active { \"Yes\" } else { \"No\" }).to_string())\n        .sortable()";
+const ACTIVE_EDIT: &str = "\n        .editable(|p: &mut Person, active: bool| p.active = active)";
+
+/// `columns`, the Review, Active and Bonus columns editable with the `editable` switch.
 fn columns_code(columns: &str, values: &DemoValues) -> String {
     match edits(values) {
         true => {
+            let columns = columns
+                .replacen(REVIEW_COLUMN, &format!("{REVIEW_COLUMN}{REVIEW_EDIT}"), 1)
+                .replacen(ACTIVE_COLUMN, &format!("{ACTIVE_COLUMN}{ACTIVE_EDIT}"), 1);
             let at = columns
                 .rfind(".sortable()")
                 .map_or(columns.len(), |at| at + ".sortable()".len());
@@ -376,7 +398,7 @@ pub fn TablePage() -> Element {
                     prop("header_render", "fn() -> Element").default("None").doc("Replaces the header's body, inside the sort button when sortable, so keep it non-interactive then. The header text stays the column's name in `TableSort`. Capture signals, not values: the closure is not compared, so a changed value does not redraw the header."),
                     prop("of", "&ColumnType<V>").default("None").doc("Before `value`: starts the column from a shared `const` type, its alignment, widths and a `format` over the value. `V` must match `value`'s; the column's own settings win."),
                     prop("row_header", "bool").default("false").doc("Renders the column's cells as `th scope=\"row\"`, so a screen reader names each row by it. One per table, usually the first."),
-                    prop("editable", "fn(&mut T, V)").default("None").doc("Makes the column's cells editable, turning on `cell_focus`: a double click, or Enter or F2 on the focused cell, opens a text field over the cell's value, Enter or leaving it commits through `onrowupdate`, Escape puts it back. `V: EditValue` parses the text: text, finite numbers, `bool` (`true`/`false`, any case), a `NaiveDate` (`2026-03-01`), and `Option<V>`, empty for `None`; the `bool` and date fields name their form as a placeholder. Text that does not parse keeps the field open, marked invalid; leaving the field instead puts the old value back and announces it. The other cells read as read-only."),
+                    prop("editable", "fn(&mut T, V)").default("None").doc("Makes the column's cells editable, turning on `cell_focus`: a double click, or Enter or F2 on the focused cell, opens a text field over the cell's value, Enter or leaving it commits through `onrowupdate`, Escape puts it back. `V: EditValue` parses the text: text, finite numbers, `bool` and `Option<bool>` (a checkbox: Space toggles, an `Option<bool>` one cycles empty, true, false), a `NaiveDate` (`2026-03-01`, the field names its form as a placeholder), and `Option<V>`, empty for `None`. Text that does not parse keeps the field open, marked invalid; leaving the field instead puts the old value back and announces it. The other cells read as read-only."),
                     prop("validate", "fn(&T, &V) -> Result<(), String>").default("None").doc("After `editable`: checks a parsed value against the row before the commit; an `Err` keeps the field open, marked invalid."),
                     prop("editor", "fn(EditCtx) -> Element").default("the text field").doc("After `editable`: draws your own editor in the cell. `EditCtx` gives the start `value` as text, a `label` to name it by, \"Edit Age, Ana\", and `commit` (the new text) and `cancel`. Focus it on mount; a commit that does not parse or validate keeps it open and sets `error`, the message the table shows under it: mark the field invalid with it, point its `aria-describedby` at `error_id` while `error` is set, and call `changed` when its text changes to clear it."),
                     prop("filterable", "bool").default("true").doc("Whether the quick filter searches the column's cell text, and whether it takes a column filter. Off for ids and codes that would match by accident."),
@@ -440,7 +462,7 @@ pub fn TablePage() -> Element {
                     "A footer cell reads its aggregate's name before the value, \"Average 7.8 %\", and sits in the column its header names. In a `virtual_row_height` table the footer is the last counted row, and a focus scroll stops above it.",
                     "The `toolbar` is a plain row, not a `role=\"toolbar\"`: Tab moves through it as anywhere else.",
                     "With `cell_focus`, the table is a `role=\"grid\"` and one header or body cell is its tab stop, `tabindex=\"0\"`, the rest `-1`, so Tab passes the grid in one step. Cells, column and row headers keep their roles; in a `virtual_row_height` table the focused cell's row stays rendered. The grid is `aria-readonly` without an editable column, `aria-multiselectable` with `selectable`.",
-                    "In a grid with an editable column, the other cells are `aria-readonly`. The editor is a text field named \"Edit\" plus the column and the row's name, \"Edit Bonus, Ana\", a number column's with a decimal keypad. A value that does not parse or validate marks it `aria-invalid`. On a touch screen, which has no Escape, a Cancel edit button sits beside it.",
+                    "In a grid with an editable column, the other cells are `aria-readonly`. The editor is a text field named \"Edit\" plus the column and the row's name, \"Edit Bonus, Ana\", a number column's with a decimal keypad and a `bool` column's a checkbox, mixed while an `Option<bool>` is empty. A value that does not parse or validate marks it `aria-invalid`. On a touch screen, which has no Escape, a Cancel edit button sits beside it.",
                 ])
                 .must([
                     "Name every table: `caption` shows a title, `aria_labelledby` points at a heading already on the page, `aria_label` names it without text.",

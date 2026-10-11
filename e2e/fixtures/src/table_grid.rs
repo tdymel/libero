@@ -9,6 +9,8 @@ use dioxus::prelude::*;
 use libero::{
     chrono::NaiveDate,
     components::{EditCtx, RowUpdate, Table, column},
+    hooks::use_localization_handle,
+    localization::Localization,
 };
 
 use crate::Routes;
@@ -24,6 +26,7 @@ pub const ROUTES: Routes = &[
     ("/table-grid/editable/custom", || rsx! { EditableGridPage { store: true, custom: true } }),
     ("/table-grid/editable/windowed", || rsx! { EditableGridPage { store: true, windowed: true } }),
     ("/table-grid/editable/formats", || rsx! { FormatsGridPage {} }),
+    ("/table-grid/collation", || rsx! { CollationGridPage {} }),
 ];
 
 #[derive(Clone, PartialEq)]
@@ -198,6 +201,28 @@ fn FormatsGridPage() -> Element {
             ],
             row_key: |t: &Task| t.title.to_string(),
             onrowupdate: move |update: RowUpdate<Task>| rows.write()[update.index] = update.row,
+        }
+    }
+}
+
+/// A sortable word column in Swedish, where "Ä" sorts after "Z" (todo 3294).
+#[component]
+fn CollationGridPage() -> Element {
+    let localization = use_localization_handle();
+    use_effect(move || {
+        localization.set(&Localization {
+            lang: "sv",
+            ..Localization::ENGLISH
+        })
+    });
+    rsx! {
+        Table {
+            caption: "Words",
+            data: vec!["Zoe", "Äpple", "Anna"],
+            columns: vec![
+                column("Word").value(|word: &&str| word.to_string()).sortable().row_header(),
+            ],
+            row_key: |word: &&str| word.to_string(),
         }
     }
 }

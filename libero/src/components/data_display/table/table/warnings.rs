@@ -3,12 +3,9 @@
 use super::TableProps;
 use crate::utils::warn;
 
-/// `tree` with `parent_key`, `groups_too` with a row grouping set or seeded.
-pub(super) fn warn_misuse<T: Clone + PartialEq + 'static>(
-    props: &TableProps<T>,
-    tree: bool,
-    groups_too: bool,
-) {
+pub(super) fn warn_misuse<T: Clone + PartialEq + 'static>(props: &TableProps<T>) {
+    let tree = props.parent_key.is_set();
+    let groups_too = props.row_grouping.is_some() || !props.default_row_grouping.is_empty();
     if props.selectable && !props.row_key.is_set() {
         warn(
             "Table: `selectable` without `row_key` keys the selection by row index, so it \
@@ -79,5 +76,229 @@ pub(super) fn warn_misuse<T: Clone + PartialEq + 'static>(
         for (_, what) in ignored.into_iter().filter(|(on, _)| *on) {
             warn(&format!("Table: `parent_key` {what}."));
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use dioxus::prelude::*;
+
+    use super::super::{
+        super::column::{Column, column},
+        Table,
+    };
+    use crate::{context::LiberoProvider, utils::warnings_of};
+
+    #[derive(Clone, PartialEq)]
+    struct Row {
+        name: String,
+    }
+
+    fn people() -> Vec<Row> {
+        vec![Row { name: "Ana".into() }]
+    }
+
+    fn name_column() -> Column<Row> {
+        column("Name")
+            .value(|row: &Row| row.name.clone())
+            .row_header()
+    }
+
+    fn editable_column() -> Column<Row> {
+        column("Name")
+            .value(|row: &Row| row.name.clone())
+            .editable(|row: &mut Row, name: String| row.name = name)
+    }
+
+    /// The warnings a `Table` of `people()` with these props says on mount.
+    macro_rules! table {
+        ($($props:tt)*) => {
+            warnings_of(|| {
+                rsx! {
+                    LiberoProvider {
+                        Table::<Row> {
+                            caption: "People",
+                            data: people(),
+                            columns: vec![name_column()],
+                            $($props)*
+                        }
+                    }
+                }
+            })
+        };
+    }
+
+    fn says(warnings: &[String], what: &str) -> bool {
+        warnings.iter().any(|warning| warning.contains(what))
+    }
+
+    #[test]
+    fn a_plain_table_says_nothing() {
+        assert_eq!(table!(), Vec::<String>::new());
+    }
+
+    #[test]
+    fn selectable_without_a_row_key_warns() {
+        let what = "`selectable` without `row_key`";
+        assert!(says(&table!(selectable: true), what));
+        let keyed = table!(selectable: true, row_key: |row: &Row| row.name.clone());
+        assert!(!says(&keyed, what), "{keyed:?}");
+    }
+
+    #[test]
+    fn a_row_detail_without_a_row_key_warns() {
+        let what = "`row_detail` without `row_key`";
+        assert!(says(&table!(row_detail: |_: &Row| None::<Element>), what));
+        let keyed = table!(
+            row_detail: |_: &Row| None::<Element>,
+            row_key: |row: &Row| row.name.clone()
+        );
+        assert!(!says(&keyed, what), "{keyed:?}");
+    }
+
+    #[test]
+    fn a_windowed_table_without_a_height_cap_warns() {
+        let what = "`virtual_row_height` without `max_height`";
+        assert!(says(&table!(virtual_row_height: 40.0), what));
+        let capped = table!(virtual_row_height: 40.0, max_height: "20rem");
+        assert!(!says(&capped, what), "{capped:?}");
+    }
+
+    #[test]
+    fn onbottomreached_without_a_height_cap_warns() {
+        let what = "`onbottomreached` without `max_height`";
+        assert!(says(&table!(onbottomreached: |()| {}), what));
+        let capped = table!(onbottomreached: |()| {}, max_height: "20rem");
+        assert!(!says(&capped, what), "{capped:?}");
+    }
+
+    #[test]
+    fn a_windowed_table_with_a_detail_warns() {
+        let what = "`virtual_row_height` with `row_detail`";
+        let both = table!(
+            virtual_row_height: 40.0,
+            max_height: "20rem",
+            row_detail: |_: &Row| None::<Element>
+        );
+        assert!(says(&both, what));
+        let windowed = table!(virtual_row_height: 40.0, max_height: "20rem");
+        assert!(!says(&windowed, what), "{windowed:?}");
+    }
+
+    #[test]
+    fn a_selectable_row_without_a_name_warns() {
+        let what = "has no text";
+        let unnamed = warnings_of(|| {
+            rsx! {
+                LiberoProvider {
+                    Table::<Row> {
+                        caption: "People",
+                        data: vec![Row { name: String::new() }],
+                        columns: vec![name_column()],
+                        selectable: true,
+                        row_key: |row: &Row| row.name.clone(),
+                    }
+                }
+            }
+        });
+        assert!(says(&unnamed, what), "{unnamed:?}");
+        let named = table!(selectable: true, row_key: |row: &Row| row.name.clone());
+        assert!(!says(&named, what), "{named:?}");
+    }
+
+    #[test]
+    fn row_reorder_without_a_row_key_warns() {
+        let what = "`onrowreorder` without `row_key`";
+        assert!(says(&table!(onrowreorder: |_| {}), what));
+        let keyed = table!(onrowreorder: |_| {}, row_key: |row: &Row| row.name.clone());
+        assert!(!says(&keyed, what), "{keyed:?}");
+    }
+
+    #[test]
+    fn resizable_columns_without_a_column_menu_warn() {
+        let what = "`resizable_columns` without `column_menu`";
+        assert!(says(&table!(resizable_columns: true), what));
+        let menu = table!(resizable_columns: true, column_menu: true);
+        assert!(!says(&menu, what), "{menu:?}");
+    }
+
+    #[test]
+    fn an_editable_column_without_onrowupdate_warns() {
+        let what = "editable column without `onrowupdate`";
+        let dropped = warnings_of(|| {
+            rsx! {
+                LiberoProvider {
+                    Table::<Row> {
+                        caption: "People",
+                        data: people(),
+                        columns: vec![editable_column()],
+                    }
+                }
+            }
+        });
+        assert!(says(&dropped, what), "{dropped:?}");
+        let handled = warnings_of(|| {
+            rsx! {
+                LiberoProvider {
+                    Table::<Row> {
+                        caption: "People",
+                        data: people(),
+                        columns: vec![editable_column()],
+                        onrowupdate: |_| {},
+                    }
+                }
+            }
+        });
+        assert!(!says(&handled, what), "{handled:?}");
+    }
+
+    #[test]
+    fn a_tree_says_what_it_ignores() {
+        let parent = table!(parent_key: |_: &Row| None::<String>);
+        assert!(
+            says(&parent, "`parent_key` without `row_key`"),
+            "{parent:?}"
+        );
+        let tree = table!(
+            parent_key: |_: &Row| None::<String>,
+            row_key: |row: &Row| row.name.clone()
+        );
+        assert!(!says(&tree, "`parent_key`"), "{tree:?}");
+        let grouped = table!(
+            parent_key: |_: &Row| None::<String>,
+            row_key: |row: &Row| row.name.clone(),
+            default_row_grouping: vec!["Name".to_string()]
+        );
+        assert!(
+            says(&grouped, "`parent_key` ignores `row_grouping`"),
+            "{grouped:?}"
+        );
+        let controlled = table!(
+            parent_key: |_: &Row| None::<String>,
+            row_key: |row: &Row| row.name.clone(),
+            row_grouping: Vec::<String>::new()
+        );
+        assert!(
+            says(&controlled, "`parent_key` ignores `row_grouping`"),
+            "{controlled:?}"
+        );
+        let detailed = table!(
+            parent_key: |_: &Row| None::<String>,
+            row_key: |row: &Row| row.name.clone(),
+            row_detail: |_: &Row| None::<Element>
+        );
+        assert!(
+            says(&detailed, "`parent_key` ignores `row_detail`"),
+            "{detailed:?}"
+        );
+        let reordered = table!(
+            parent_key: |_: &Row| None::<String>,
+            row_key: |row: &Row| row.name.clone(),
+            onrowreorder: |_| {}
+        );
+        assert!(
+            says(&reordered, "`parent_key` does not reorder rows"),
+            "{reordered:?}"
+        );
     }
 }

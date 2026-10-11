@@ -287,6 +287,27 @@ e2e::scenario!(
     android: skip("958: roving keys are inert in the emulator's WebView")
 );
 
+/// The browser's collator sorts by the app's language, not the browser's: in Swedish
+/// "Ä" comes after "Z".
+async fn sorts_by_language<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually(d, "the page language", async |d| {
+        Ok(d.evaluate("document.documentElement.lang").await? == "sv")
+    })
+    .await?;
+    d.click(&format!("{} button", head(1))).await?;
+    for (row, word) in [(1, "Anna"), (2, "Zoe"), (3, "Äpple")] {
+        eventually_text(d, &cell(row, 1), word, "the Swedish order").await?;
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    a_sort_follows_the_apps_language,
+    "/table-grid/collation",
+    sorts_by_language,
+    android: skip("3294: the WebView app has no Intl.Collator to call")
+);
+
 const EDITOR: &str = "[data-cell-editor] input";
 
 /// Types `text` over the open editor's value, which a renderer with `select()` has
@@ -472,28 +493,45 @@ e2e::scenario!(
     refused_blur
 );
 
-/// A yes/no and a date editor name the form they take, as placeholder and description,
-/// and the yes/no one takes it in any case.
+/// The open checkbox editor's `(checked, mixed)`: a browser reads mixed from the property alone.
+async fn box_state<D: Driver>(d: &mut D) -> Result<(bool, bool)> {
+    let checked = d
+        .evaluate(&format!("document.querySelector('{EDITOR}').checked"))
+        .await?
+        == true;
+    let mixed = match d.platform() {
+        Platform::Web => {
+            d.evaluate(&format!("document.querySelector('{EDITOR}').indeterminate"))
+                .await?
+                == true
+        }
+        _ => d.attr(EDITOR, "aria-checked").await?.as_deref() == Some("mixed"),
+    };
+    Ok((checked, mixed))
+}
+
+async fn eventually_box<D: Driver>(d: &mut D, want: (bool, bool), what: &str) -> Result<()> {
+    eventually(d, what, async |d| Ok(box_state(d).await? == want)).await
+}
+
+/// An `Option<bool>` editor is a checkbox that Space cycles empty, true, false, empty and
+/// Enter commits; a date editor names its form as a placeholder.
 async fn formats<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.double_click(&cell(1, 2)).await?;
     eventually_focused(d, EDITOR, "focus in the yes/no editor").await?;
-    if d.attr(EDITOR, "placeholder").await?.as_deref() != Some("true or false") {
-        bail!("the yes/no editor has no placeholder");
+    if d.attr(EDITOR, "type").await?.as_deref() != Some("checkbox") {
+        bail!("the yes/no editor is not a checkbox");
     }
-    let hint = d
-        .attr(EDITOR, "aria-describedby")
-        .await?
-        .unwrap_or_default();
-    eventually_text(
-        d,
-        &format!("[id='{hint}']"),
-        "true or false",
-        "the description",
-    )
-    .await?;
-    d.type_text("True").await?;
+    eventually_box(d, (false, true), "an empty value is mixed").await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_box(d, (true, false), "Space checks it").await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_box(d, (false, false), "Space unchecks it").await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_box(d, (false, true), "Space empties it").await?;
+    d.press(keyboard::SPACE).await?;
     d.press(keyboard::ENTER).await?;
-    eventually_text(d, &cell(1, 2), "true", "a capitalised yes").await?;
+    eventually_text(d, &cell(1, 2), "true", "Enter commits the check").await?;
     d.double_click(&cell(1, 3)).await?;
     eventually_focused(d, EDITOR, "focus in the date editor").await?;
     if d.attr(EDITOR, "placeholder").await?.as_deref() != Some("YYYY-MM-DD") {
@@ -505,7 +543,7 @@ async fn formats<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 }
 
 e2e::scenario!(
-    a_yes_no_and_a_date_editor_name_their_form,
+    a_yes_no_editor_is_a_checkbox_and_a_date_editor_names_its_form,
     "/table-grid/editable/formats",
     formats,
     android: skip("958: roving keys are inert in the emulator's WebView")

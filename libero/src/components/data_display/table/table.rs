@@ -30,44 +30,48 @@ use crate::{
 };
 
 use super::{
-    cell_focus::{GridRow, TreeNode, head_levels},
+    cell_focus::{GridRow, head_levels},
     column::{Column, ColumnDefaults},
     column_drag::use_column_drag,
     column_filter::{ColumnFilter, FilterLogic, cell_tests},
     column_menu::{MenuColumn, use_menu_focus},
-    core::{BodySpec, RowFn, TableSort, align_attr, lead_count, next_sort, render_body},
+    core::{BodySpec, RowFn, TableSort, lead_count, render_body},
     detail::Details,
     edit::RowUpdate,
     filter_panel::use_panel_control,
-    footer::{Foot, aggregate_cell},
-    grid::{GridRows, GridWindow, HeadGrid, TreeNav, col_indices, use_grid_focus},
+    footer::Foot,
+    grid::{GridRows, HeadGrid, col_indices, use_grid_focus},
     header_groups::header_rows,
     overlay::{EmptyBody, SKELETON_ROWS},
     paging::{use_page_reset, use_page_size_reseed},
     pinning::{PinSide, PinnedColumns, pin_edge_at},
     pipeline::{VisibleRow, selection_scope},
     resize::{ColumnResize, ColumnWidths},
-    row::{RowContext, RowState, TableRow},
-    row_groups::{GroupCells, GroupRow},
+    row::RowContext,
     row_reorder::{ROW_ANIMATION, ROW_TRANSFORM, RowReorder},
-    selection::{Selection, TreeSelect, group_state, toggle_row},
+    selection::{Selection, TreeSelect, toggle_row},
     sticky::use_edge_height,
     toolbar::{TableTools, ToolView},
     use_table::use_table,
     window::{
-        BodyRows, RowWindow, TABLE_MIN_WIDTH_VAR, TABLE_ROW_HEIGHT_VAR, reveal_slot, use_row_focus,
-        window_attributes, windowed_min_width, windowed_sx,
+        TABLE_MIN_WIDTH_VAR, TABLE_ROW_HEIGHT_VAR, reveal_slot, use_row_focus, window_attributes,
+        windowed_min_width, windowed_sx,
     },
 };
 
 mod chrome;
 mod config;
 mod layout;
+mod row_specs;
 mod visible_rows;
 mod warnings;
 
 use chrome::Chrome;
 use layout::{FilterBase, HeaderLayout, Measures, MenuSpec, column_menus, header_layout};
+use row_specs::{
+    GroupSpec, RowsSpec, StateSpec, TreeSpec, body_rows, grid_window, group_row, header_action,
+    row_state, select_action, tree_nav,
+};
 use visible_rows::{KeptRows, OrderedRows, keep_rows, order_rows, page_window};
 
 /// A draggable header's grip lane, its press target.
@@ -261,6 +265,16 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
             .background("transparent")
             .border("1px solid currentColor")
             .border_radius("2px"),
+    )
+    .selector(
+        "& [data-cell-editor] input[type='checkbox']",
+        sx().flex("none")
+            .width("1.25em")
+            .height("1.25em")
+            .margin("0")
+            .padding("0")
+            .border("revert")
+            .background("revert"),
     )
     .selector(
         "& [data-cell-editor] input:focus-visible",
@@ -1221,7 +1235,8 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
 #[component]
 pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Element {
     let tree = props.parent_key.is_set();
-    let groups_too = props.row_grouping.is_some() || !props.default_row_grouping.is_empty();
+    // Before the config takes the seeded state props out.
+    use_hook(|| warnings::warn_misuse(&props));
     let state = use_table(config::table_config(&mut props));
     let panel = use_panel_control();
     let announcer = use_announcer();
@@ -1234,7 +1249,6 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
     let menu_focus = use_menu_focus();
     let drags = props.column_menu;
     let touch = use_hook(|| CopyValue::new(false));
-    use_hook(|| warnings::warn_misuse(&props, tree, groups_too));
     let instructions_id = use_id();
     // The shown rows, which a reorder's slots map to.
     let mut shown_rows = use_hook(|| CopyValue::new(Vec::<VisibleRow>::new()));
@@ -1269,7 +1283,8 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
         .density
         .read()
         .unwrap_or(props.size.copied_or(use_theme().table.size));
-    let labels = use_localization().table;
+    let localization = use_localization();
+    let (labels, lang) = (localization.table, localization.lang);
     let resize = props.resizable_columns.then_some(ColumnResize {
         widths: state.column_widths,
         preview,
@@ -1425,7 +1440,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
         &kept_rows,
         &columns,
         &active,
-        (&layout, labels),
+        (&layout, labels, lang),
         tools,
     );
     filtered_count.set(results);
@@ -1621,53 +1636,20 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
             false => (labels.group_collapsed)(&label),
         });
     });
-    let group_cells = GroupCells {
+    let group_row = group_row(GroupSpec {
+        groups: &groups,
+        values: group_values,
+        columns: &columns,
+        headers: &headers,
+        layout: &layout,
+        keys: &keys,
+        selected_rows: &selected_rows,
+        selection: selection.as_ref(),
         leads: lead_columns,
-        pins: layout
-            .iter()
-            .map(|&index| headers[index].pin.clone())
-            .collect(),
-        aligns: layout
-            .iter()
-            .map(|&index| align_attr(headers[index].align))
-            .collect(),
         labels,
         toggle: toggle_group,
-        select: selection
-            .as_ref()
-            .map(|selection| (selection.look.clone(), select_group)),
-    };
-    let group_row = {
-        let (groups, columns, layout) = (groups.clone(), columns.clone(), layout.clone());
-        let (keys, selected_rows) = (keys.clone(), selected_rows.clone());
-        let selects = selection.is_some();
-        Rc::new(move |at: usize, attributes: Vec<Attribute>| {
-            let group = &groups[at];
-            let aggregates = group_values.as_ref().map(|values| {
-                layout
-                    .iter()
-                    .map(|&index| aggregate_cell(&columns[index], values[at][index], &labels))
-                    .collect()
-            });
-            let selected = selects
-                .then(|| group_state(&group.leaves, |index| selected_rows.contains(&keys[index])));
-            rsx! {
-                GroupRow {
-                    // Apart from the row keys, which are the caller's.
-                    key: "\u{1f}{group.id}",
-                    id: group.id.clone(),
-                    label: group.label.clone(),
-                    count: group.leaves.len(),
-                    depth: group.depth,
-                    open: group.open,
-                    aggregates: aggregates.unwrap_or_default(),
-                    selected,
-                    attributes,
-                    cells: group_cells.clone(),
-                }
-            }
-        })
-    };
+        select: select_group,
+    });
     // A tree is a treegrid: its rows are stops, its cells too with `cell_focus`.
     let grid = (cell_focus || tree).then(|| {
         let (data, context) = (data.clone(), context.clone());
@@ -1686,68 +1668,29 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
             .as_ref()
             .zip(tree_levels.as_ref())
             .map(|(parents, levels)| {
-                let places: HashMap<usize, usize> = order
-                    .iter()
-                    .filter_map(|row| row.data())
-                    .enumerate()
-                    .map(|(place, index)| (index, place))
-                    .collect();
-                let nodes = order
-                    .iter()
-                    .filter_map(|row| row.data())
-                    .map(|index| {
-                        let level = levels[index];
-                        TreeNode {
-                            parent: Some(parents[index])
-                                .filter(|&up| up != index)
-                                .and_then(|up| places.get(&up).copied()),
-                            open: level
-                                .filter(|level| level.expandable)
-                                .map(|level| level.open),
-                        }
-                    })
-                    .collect();
-                let click = props.onrowclick.map(|onrowclick| {
-                    let data = data.clone();
-                    Callback::new(move |index: usize| onrowclick.call(data[index].clone()))
-                });
-                let (data, columns, keys) = (data.clone(), columns.clone(), keys.clone());
-                TreeNav {
-                    click,
-                    nodes,
-                    parents: parents.clone(),
-                    toggle: Callback::new(move |(index, open): (usize, bool)| {
-                        let name = columns
-                            .get(name_column)
-                            .map(|column| (column.text)(&data[index]))
-                            .filter(|name| !name.is_empty())
-                            .unwrap_or_else(|| keys[index].clone());
-                        toggle_node.call((keys[index].clone(), name, open));
-                    }),
+                tree_nav(TreeSpec {
+                    data: &data,
+                    columns: &columns,
+                    keys: &keys,
+                    parents,
+                    levels,
+                    order: &order,
+                    onrowclick: props.onrowclick,
+                    name_column,
+                    toggle: toggle_node,
                     cells: cell_focus,
-                }
+                })
             });
-        let header = {
-            let (headers, active, sort) = (headers.clone(), active.clone(), state.sort);
-            let menus = props.column_menu;
-            Callback::new(move |(index, menu): (usize, bool)| match menu {
-                false if headers[index].sortable => {
-                    sort.set(next_sort(&active, &headers, index, false));
-                }
-                true if menus => menu_focus.open(index),
-                _ => {}
-            })
-        };
-        let select = selection.as_ref().map(|_| {
-            let (key_at, selected_rows, mixed) =
-                (key_at.clone(), selected_rows.clone(), mixed.clone());
-            Callback::new(move |index: usize| {
-                let key = key_at(index);
-                let mixed = mixed.as_ref().is_some_and(|mixed| mixed[index]);
-                let on = mixed || !selected_rows.contains(&key);
-                toggle.call((key, on));
-            })
-        });
+        let header = header_action(
+            headers.clone(),
+            active.clone(),
+            state.sort,
+            move |index| menu_focus.open(index),
+            props.column_menu,
+        );
+        let select = selection
+            .as_ref()
+            .map(|_| select_action(key_at.clone(), selected_rows.clone(), mixed.clone(), toggle));
         GridRows {
             // A group row's toggle is a Tab stop of its own: the arrows pass it by.
             order: (0..levels.len())
@@ -1766,16 +1709,8 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
                 VisibleRow::Data(index) => context.spans(&data[index]),
                 VisibleRow::Group(_) => Vec::new(),
             }),
-            window: row_height.map(|pitch| GridWindow {
-                pitch,
-                edges: (*head.peek(), foot_gap),
-                focused: row_focus.focused,
-                slots: order
-                    .iter()
-                    .enumerate()
-                    .filter(|(_, row)| row.data().is_some())
-                    .map(|(slot, _)| slot)
-                    .collect(),
+            window: row_height.map(|pitch| {
+                grid_window(pitch, (*head.peek(), foot_gap), row_focus.focused, &order)
             }),
             header,
             select,
@@ -1796,33 +1731,20 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
     let editing = (editable && cell_focus)
         .then(|| grid_focus.editing.cloned())
         .flatten();
-    let state_of = {
-        let key_at = key_at.clone();
-        let selects = selection.is_some();
-        move |position: usize, index: usize| {
-            let key = key_at(index);
-            RowState {
-                index,
-                stripe: striped && position % 2 == 1,
-                slot: has_reorder.then_some(position),
-                selected: selects.then(|| selected_rows.contains(&key)),
-                mixed: mixed.as_ref().is_some_and(|mixed| mixed[index]),
-                expanded: expanded.contains(&key),
-                stop: grid_stop
-                    .filter(|stop| stop.row == GridRow::Body(VisibleRow::Data(index)))
-                    .and_then(|stop| stop.col),
-                rowindex: paged.map(|(first, _)| head_rows + first + position + 1),
-                editing: editing
-                    .filter(|at| at.row == GridRow::Body(VisibleRow::Data(index)))
-                    .and_then(|at| at.col),
-                level: tree_levels.as_ref().and_then(|levels| levels[index]),
-                row_stop: grid_stop.is_some_and(|stop| {
-                    stop.col.is_none() && stop.row == GridRow::Body(VisibleRow::Data(index))
-                }),
-                key,
-            }
-        }
-    };
+    let state_of = row_state(StateSpec {
+        key_at: key_at.clone(),
+        selects: selection.is_some(),
+        selected_rows: selected_rows.clone(),
+        mixed: mixed.clone(),
+        expanded,
+        tree_levels: tree_levels.clone(),
+        striped,
+        has_reorder,
+        stop: grid_stop,
+        editing,
+        paged,
+        head_rows,
+    });
     // A keyboard lift carries the view by slot: its target row may not be rendered (todo 1408).
     let region = column_drag.region;
     use_effect(use_reactive!(|(row_height, foot_gap)| {
@@ -1872,86 +1794,27 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
             footer.is_some(),
         ));
     }
-    let rows = match row_height {
-        Some(row_height) => {
-            let (first, total) = counted;
-            attributes.extend(window_attributes(
-                head_rows,
-                total,
-                skeleton.is_some(),
-                footer.is_some(),
-            ));
-            let order: Rc<[VisibleRow]> = order.into();
-            row_focus.show(head_rows + first, order.clone());
-            // Linus (TR3): a collapse above the focused row leaves it where it was.
-            // A tree's stop row follows a collapse to its parent; another table's focused row.
-            let focused = match tree {
-                true => grid_stop
-                    .filter(|_| grid_focus.inside())
-                    .and_then(|stop| match stop.row {
-                        GridRow::Body(row) => Some(row),
-                        GridRow::Head(_) => None,
-                    }),
-                false => *row_focus.focused.peek(),
-            };
-            grid_focus.hold_in_view(focused, order.clone(), row_height);
-            BodyRows::Window(RowWindow {
-                order,
-                first,
-                total,
-                row_height,
-                row: Rc::new(move |position, index| {
-                    let row = &data[index];
-                    let state = state_of(position, index);
-                    let cells = context.cells(
-                        row,
-                        index,
-                        &state.key,
-                        state.stop,
-                        state.editing,
-                        state.level,
-                    );
-                    context.spec(row, state, cells)
-                }),
-                group: group_row,
-                key: Rc::new(move |row| match row {
-                    VisibleRow::Data(index) => key_at(index),
-                    VisibleRow::Group(at) => format!("\u{1f}{}", groups[at].id),
-                }),
-                focused: row_focus.focused,
-                moves: row_focus.moves,
-            })
-        }
-        None => BodyRows::All(
-            order
-                .into_iter()
-                .enumerate()
-                .map(|(position, row)| match row {
-                    VisibleRow::Data(index) => {
-                        let state = state_of(position, index);
-                        rsx! {
-                            TableRow::<T> {
-                                key: "{state.key}",
-                                row: data[index].clone(),
-                                state,
-                                context: context.clone(),
-                                generation,
-                            }
-                        }
-                    }
-                    VisibleRow::Group(at) => group_row(
-                        at,
-                        paged
-                            .map(|(first, _)| {
-                                let at = head_rows + first + position + 1;
-                                vec![attr("aria-rowindex", at.to_string())]
-                            })
-                            .unwrap_or_default(),
-                    ),
-                })
-                .collect(),
-        ),
-    };
+    let rows = body_rows(RowsSpec {
+        order,
+        data,
+        groups,
+        context,
+        generation,
+        key_at,
+        state_of,
+        group_row,
+        row_height,
+        counted,
+        paged,
+        head_rows,
+        tree,
+        skeleton: skeleton.is_some(),
+        footer: footer.is_some(),
+        stop: grid_stop,
+        grid_focus,
+        row_focus,
+        attributes: &mut attributes,
+    });
 
     let mut names = chrome::names(
         props.caption.take(),

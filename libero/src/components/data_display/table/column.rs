@@ -464,7 +464,8 @@ impl<T> Column<T> {
     }
 
     /// Makes the cells editable, which turns on the table's `cell_focus`: a double
-    /// click, Enter or F2 opens an editor on the value's text, and its commit hands
+    /// click, Enter or F2 opens an editor on the value's text (a checkbox for a `bool`
+    /// or `Option<bool>`, which Space toggles), and its commit hands
     /// `onrowupdate` a clone of the row with `set` applied. The caller keeps `data`.
     ///
     /// ```rust

@@ -498,11 +498,7 @@ impl<T: Clone + 'static> RowContext<T> {
             invalid.set(None);
         });
         let kind = spec.edit.as_ref().map(|edit| edit.kind).unwrap_or_default();
-        let hint = match kind {
-            EditKind::Bool => Some(self.labels.edit_hint_bool),
-            EditKind::Date => Some(self.labels.edit_hint_date),
-            _ => None,
-        };
+        let hint = (kind == EditKind::Date).then_some(self.labels.edit_hint_date);
         let custom = spec.edit.as_ref().and_then(|edit| edit.editor.clone());
         let editor = match custom {
             Some(editor) => editor(EditCtx {

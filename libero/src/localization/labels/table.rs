@@ -350,8 +350,6 @@ pub struct TableLabels {
     /// What a cell editor shows and announces for text that is not a value of the
     /// column's type.
     pub invalid_value: &'static str,
-    /// The form a yes/no cell editor takes, as its placeholder and description.
-    pub edit_hint_bool: &'static str,
     /// The form a date cell editor takes, as its placeholder and description.
     pub edit_hint_date: &'static str,
     /// A refused commit's announcement, from the column's header and the message.
@@ -854,7 +852,6 @@ impl TableLabels {
         edit_cell: english_edit_cell,
         cancel_edit: "Cancel edit",
         invalid_value: "Not a valid value",
-        edit_hint_bool: "true or false",
         edit_hint_date: "YYYY-MM-DD",
         edit_invalid: english_edit_invalid,
         edit_reverted: english_edit_reverted,
@@ -940,7 +937,6 @@ impl TableLabels {
         edit_cell: german_edit_cell,
         cancel_edit: "Bearbeitung abbrechen",
         invalid_value: "Kein gültiger Wert",
-        edit_hint_bool: "true oder false",
         edit_hint_date: "JJJJ-MM-TT",
         edit_invalid: german_edit_invalid,
         edit_reverted: german_edit_reverted,

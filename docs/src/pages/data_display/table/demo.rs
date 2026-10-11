@@ -25,6 +25,7 @@ struct Person {
     role: String,
     joined: NaiveDate,
     review: Option<NaiveDate>,
+    active: bool,
     bonus: Option<f64>,
 }
 
@@ -36,11 +37,12 @@ fn day(year: i32, month: u32, day: u32) -> NaiveDate {
 // demo-code: team start
 /// Six rows, so the date filters have dates on both sides to keep and drop.
 fn team() -> Vec<Person> {
-    let person = |name: &str, role: &str, joined, review, bonus| Person {
+    let person = |name: &str, role: &str, joined, review, active, bonus| Person {
         name: name.into(),
         role: role.into(),
         joined,
         review,
+        active,
         bonus,
     };
     vec![
@@ -49,6 +51,7 @@ fn team() -> Vec<Person> {
             "Owner",
             day(2019, 3, 4),
             Some(day(2025, 1, 15)),
+            true,
             Some(12.5),
         ),
         person(
@@ -56,14 +59,16 @@ fn team() -> Vec<Person> {
             "Admin",
             day(2021, 7, 19),
             Some(day(2024, 11, 2)),
+            true,
             Some(8.0),
         ),
-        person("Alan Turing", "Viewer", day(2023, 2, 1), None, None),
+        person("Alan Turing", "Viewer", day(2023, 2, 1), None, false, None),
         person(
             "Katherine Johnson",
             "Admin",
             day(2020, 10, 12),
             Some(day(2025, 4, 30)),
+            true,
             Some(6.5),
         ),
         person(
@@ -71,6 +76,7 @@ fn team() -> Vec<Person> {
             "Viewer",
             day(2024, 5, 27),
             None,
+            false,
             Some(2.0),
         ),
         person(
@@ -78,6 +84,7 @@ fn team() -> Vec<Person> {
             "Owner",
             day(2018, 1, 8),
             Some(day(2024, 9, 9)),
+            true,
             Some(10.0),
         ),
     ]
@@ -95,6 +102,7 @@ fn member(n: u32) -> Person {
         joined: day(2015, 1, 1) + TimeDelta::days(i64::from(n % 3_650)),
         review: (!n.is_multiple_of(3))
             .then(|| day(2025, 1, 1) + TimeDelta::days(i64::from(n % 365))),
+        active: !n.is_multiple_of(5),
         bonus: (!n.is_multiple_of(4)).then(|| f64::from(n % 150) / 10.0),
     }
 }
@@ -259,6 +267,14 @@ fn team_columns(grouped: bool, editable: bool) -> Vec<Column<Person>> {
             }),
         false => column,
     };
+    let edit_review = |column: Column<Person>| match editable {
+        true => column.editable(|p: &mut Person, review: Option<NaiveDate>| p.review = review),
+        false => column,
+    };
+    let edit_active = |column: Column<Person>| match editable {
+        true => column.editable(|p: &mut Person, active: bool| p.active = active),
+        false => column,
+    };
     vec![
         column("Name")
             .value(|p: &Person| p.name.clone())
@@ -273,7 +289,15 @@ fn team_columns(grouped: bool, editable: bool) -> Vec<Column<Person>> {
                 .render(|p: &Person| rsx! { Chip { size: "xs", "{p.role}" } }),
         ),
         group(column("Joined").value(|p: &Person| p.joined).sortable()),
-        group(column("Review").value(|p: &Person| p.review).sortable()),
+        group(edit_review(
+            column("Review").value(|p: &Person| p.review).sortable(),
+        )),
+        group(edit_active(
+            column("Active")
+                .value(|p: &Person| p.active)
+                .format(|p: &Person| (if p.active { "Yes" } else { "No" }).to_string())
+                .sortable(),
+        )),
         group(edit(
             column("Bonus")
                 .value(|p: &Person| p.bonus)

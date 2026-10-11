@@ -8,10 +8,10 @@ use pictogram_icons_lucide as lucide;
 
 use super::{cell_focus::Move, cell_value::EditKind, column::Column};
 use crate::{
-    components::{accessibility::VisuallyHidden, common::Glyph},
+    components::{accessibility::VisuallyHidden, common::Glyph, form::Activation},
     context::IconSlot,
     hooks::{ElementHandle, use_element, use_silent_focus_out_of},
-    platform::{ElementApi, is_tab},
+    platform::{ElementApi, is_tab, sets_indeterminate},
 };
 
 /// A committed cell edit: a clone of `data[index]` with the new value set. The
@@ -152,6 +152,18 @@ fn key_exit(key: &Key, tab: bool, shift: bool) -> Option<(bool, Leave)> {
     }
 }
 
+/// The text a click on a checkbox editor holding `text` leaves: a tristate box cycles
+/// empty, true, false, empty.
+fn next_check(kind: EditKind, text: &str) -> &'static str {
+    match (kind, text.trim()) {
+        (EditKind::Tristate, "") => "true",
+        (EditKind::Tristate, "true") => "false",
+        (EditKind::Tristate, _) => "",
+        (_, "true") => "false",
+        _ => "true",
+    }
+}
+
 /// One close of the editor, given whether it `done` already: saves or cancels once
 /// and answers whether it is done now. A commit that is refused leaves it open.
 fn settle(done: bool, save: bool, commit: impl FnOnce() -> bool, cancel: impl FnOnce()) -> bool {
@@ -189,13 +201,21 @@ pub(super) fn CellEditor(
     let mut done = use_hook(|| CopyValue::new(false));
     let input: ElementHandle = use_element();
     let mut focused = use_hook(|| CopyValue::new(false));
+    let boxed = matches!(kind, EditKind::Bool | EditKind::Tristate);
     use_effect(move || {
         if input.is_mounted() && !*focused.peek() {
             focused.set(true);
             let _ = input.focus();
-            let _ = input.select();
+            if !boxed {
+                let _ = input.select();
+            }
         }
     });
+    let mixed = kind == EditKind::Tristate && draft().trim().is_empty();
+    // A browser reads a checkbox's mixed state from the property alone.
+    use_effect(use_reactive!(|mixed| {
+        let _ = input.set_indeterminate(mixed);
+    }));
     let close = use_callback(move |(save, leave): (bool, Leave)| {
         let closed = settle(
             *done.peek(),
@@ -213,6 +233,18 @@ pub(super) fn CellEditor(
         .into_iter()
         .flatten()
         .collect::<Vec<_>>();
+    // A box's clicks and Space go through the form controls' activation, which sets
+    // `checked` after the browser's own toggle.
+    let activation = Activation::new(input, move || {
+        let mut draft = draft;
+        let next = next_check(kind, &draft.peek());
+        draft.set(next.to_string());
+        if invalid {
+            changed.call(());
+        }
+    });
+    let mut click = activation.input_click();
+    let mut keyup = activation.input_keyup();
     rsx! {
         div {
             "data-cell-editor": true,
@@ -224,22 +256,40 @@ pub(super) fn CellEditor(
                 VisuallyHidden { id, "{hint}" }
             }
             input {
-                r#type: "text",
+                r#type: if boxed { "checkbox" } else { "text" },
                 inputmode: (kind == EditKind::Number).then_some("decimal"),
                 aria_label: label,
                 aria_invalid: invalid.then_some("true"),
                 aria_describedby: (!described.is_empty()).then(|| described.join(" ")),
+                aria_checked: (mixed && !sets_indeterminate()).then_some("mixed"),
                 placeholder: hint,
-                value: draft(),
+                value: (!boxed).then(|| draft.read().clone()),
+                checked: boxed.then(|| draft.read().as_str() == "true"),
                 onmounted: input.mount(),
                 oninput: move |event: FormEvent| {
-                    draft.set(event.value());
-                    if invalid {
-                        changed.call(());
+                    if !boxed {
+                        draft.set(event.value());
+                        if invalid {
+                            changed.call(());
+                        }
+                    }
+                },
+                onclick: move |event: MouseEvent| {
+                    if boxed {
+                        click(event);
+                    }
+                },
+                onkeyup: move |event: KeyboardEvent| {
+                    if boxed {
+                        keyup(event);
                     }
                 },
                 onkeydown: move |event: KeyboardEvent| {
                     if event.is_composing() {
+                        return;
+                    }
+                    if boxed && activation.keydown(&event) {
+                        event.stop_propagation();
                         return;
                     }
                     let shift = event.modifiers().shift();
@@ -268,7 +318,10 @@ pub(super) fn CellEditor(
 
 #[cfg(test)]
 mod tests {
-    use super::{super::column::column, *};
+    use super::{
+        super::{cell_value::EditValue, column::column},
+        *,
+    };
     use dioxus::core::ElementId;
 
     #[derive(Clone, Debug, PartialEq)]
@@ -457,6 +510,19 @@ mod tests {
         assert_eq!(CANCELS.with(|n| n.get()), 0, "a composing Escape cancelled");
         press(false);
         assert_eq!(CANCELS.with(|n| n.get()), 1, "the plain Escape did not");
+    }
+
+    #[test]
+    fn a_checkbox_click_toggles_and_a_tristate_one_cycles() {
+        assert_eq!(<bool as EditValue>::edit_kind(), EditKind::Bool);
+        assert_eq!(<Option<bool> as EditValue>::edit_kind(), EditKind::Tristate);
+        assert_eq!(<Option<u8> as EditValue>::edit_kind(), EditKind::Number);
+        assert_eq!(next_check(EditKind::Bool, "false"), "true");
+        assert_eq!(next_check(EditKind::Bool, "true"), "false");
+        let cycle = ["", "true", "false", ""];
+        for pair in cycle.windows(2) {
+            assert_eq!(next_check(EditKind::Tristate, pair[0]), pair[1]);
+        }
     }
 
     #[test]

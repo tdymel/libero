@@ -173,7 +173,7 @@ pub(super) fn order_rows<T: Clone + PartialEq + 'static>(
     rows: &KeptRows<T>,
     columns: &Rc<Vec<Column<T>>>,
     active: &ActiveSort,
-    (layout, labels): (&[usize], TableLabels),
+    (layout, labels, lang): (&[usize], TableLabels, &'static str),
     tools: TableTools,
 ) -> OrderedRows {
     let RowCaches {
@@ -197,7 +197,7 @@ pub(super) fn order_rows<T: Clone + PartialEq + 'static>(
     // the sorted order keeps each stage's cache apart: a keystroke never re-sorts.
     let sorted_order = match props.manual_sort {
         true => (0..data.len()).collect(),
-        false => sorted.write().order(data, columns, active),
+        false => sorted.write().order(data, columns, active, lang),
     };
     let kept_rows = kept.as_deref().map(Vec::as_slice);
     let mut order = visible_rows(sorted_order, kept_rows);

@@ -1,4 +1,4 @@
-use crate::str_enum::str_enum;
+use crate::{platform::Collator, str_enum::str_enum};
 
 str_enum! {
     /// A column's horizontal alignment, from its cell type.
@@ -40,9 +40,10 @@ pub enum FilterKind {
     Select,
 }
 
-/// What a cell sorts by. `Text` is pre-lowercased and accent-folded, so a comparison
-/// during the sort allocates nothing; a text with accents follows its folded form
-/// after a NUL and the lowercased original, which orders it after its plain twin.
+/// What a cell sorts by. `Text` is pre-lowercased, so a comparison during the sort
+/// allocates nothing. Off the web it is also accent-folded: a text with accents
+/// follows its folded form after a NUL and the lowercased original, which orders it
+/// after its plain twin. On the web the browser's collator orders it by the language.
 #[derive(Clone, Debug, PartialEq)]
 pub enum SortKey {
     Text(String),
@@ -54,7 +55,7 @@ pub enum SortKey {
 impl SortKey {
     pub fn text(value: impl AsRef<str>) -> Self {
         let lower = value.as_ref().to_lowercase();
-        if lower.is_ascii() {
+        if lower.is_ascii() || cfg!(target_arch = "wasm32") {
             return Self::Text(lower);
         }
         let mut key = String::with_capacity(lower.len() * 2 + 1);
@@ -85,10 +86,14 @@ impl SortKey {
         matches!(self, Self::Empty)
     }
 
-    pub(super) fn compare(&self, other: &Self) -> std::cmp::Ordering {
+    /// `collator` orders texts by a language's rules, else their bytes.
+    pub(super) fn compare(&self, other: &Self, collator: Option<&Collator>) -> std::cmp::Ordering {
         use std::cmp::Ordering;
         match (self, other) {
-            (Self::Text(a), Self::Text(b)) => a.cmp(b),
+            (Self::Text(a), Self::Text(b)) => match collator {
+                Some(collator) => collator.compare(a, b),
+                None => a.cmp(b),
+            },
             (Self::Num(a), Self::Num(b)) => a.partial_cmp(b).unwrap_or(Ordering::Equal),
             // A `CellValue` that mixes variants has no defined order.
             _ => Ordering::Equal,
@@ -226,7 +231,10 @@ pub enum EditKind {
     #[default]
     Text,
     Number,
+    /// A checkbox.
     Bool,
+    /// A checkbox with a third, empty state: an `Option<bool>`.
+    Tristate,
     Date,
 }
 
@@ -340,7 +348,10 @@ impl<V: EditValue> EditValue for Option<V> {
     }
 
     fn edit_kind() -> EditKind {
-        V::edit_kind()
+        match V::edit_kind() {
+            EditKind::Bool => EditKind::Tristate,
+            kind => kind,
+        }
     }
 }
 
@@ -353,7 +364,7 @@ mod tests {
         assert_eq!(10u32.sort_key(), SortKey::Num(10.0));
         assert_eq!(<u32 as CellValue>::align(), CellAlign::End);
         // The trap this exists to prevent: "9" after "10" as text.
-        assert!(9u32.sort_key().compare(&10u32.sort_key()).is_lt());
+        assert!(9u32.sort_key().compare(&10u32.sort_key(), None).is_lt());
     }
 
     #[test]
@@ -369,7 +380,7 @@ mod tests {
     fn accented_text_sorts_among_its_base_letters() {
         fn order<'a>(names: &[&'a str]) -> Vec<&'a str> {
             let mut names = names.to_vec();
-            names.sort_by(|a, b| SortKey::text(a).compare(&SortKey::text(b)));
+            names.sort_by(|a, b| SortKey::text(a).compare(&SortKey::text(b), None));
             names
         }
         assert_eq!(
@@ -385,8 +396,8 @@ mod tests {
     #[test]
     fn accents_are_a_tiebreak_after_the_folded_text() {
         let (plain, accent) = (SortKey::text("resume"), SortKey::text("résumé"));
-        assert!(plain.compare(&accent).is_lt());
-        assert!(accent.compare(&SortKey::text("resumes")).is_lt());
+        assert!(plain.compare(&accent, None).is_lt());
+        assert!(accent.compare(&SortKey::text("resumes"), None).is_lt());
         assert_eq!(SortKey::text("RÉSUMÉ"), accent);
         assert_eq!(SortKey::text("Alpha"), SortKey::Text("alpha".into()));
     }
@@ -418,7 +429,7 @@ mod tests {
     fn dates_print_iso_and_sort_by_day() {
         let day = |d| chrono::NaiveDate::from_ymd_opt(2024, 3, d).unwrap();
         assert_eq!(day(9).cell_text(), "2024-03-09");
-        assert!(day(9).sort_key().compare(&day(10).sort_key()).is_lt());
+        assert!(day(9).sort_key().compare(&day(10).sort_key(), None).is_lt());
         assert_eq!(
             <chrono::NaiveDate as CellValue>::filter_kind(),
             FilterKind::Date

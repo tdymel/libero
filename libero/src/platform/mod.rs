@@ -12,6 +12,7 @@ mod capture;
 mod click;
 mod clipboard;
 mod clock;
+mod collator;
 mod color_scheme;
 mod direction;
 mod document;
@@ -77,6 +78,7 @@ pub(crate) use clipboard::clipboard;
 pub(crate) use clipboard::{ClipboardApi, Write, fake_clipboard};
 pub(crate) use clock::unix_millis;
 pub use clock::{ClockApi, clock};
+pub(crate) use collator::{Collator, collator};
 pub use color_scheme::{ColorSchemeApi, ColorSchemeSubscription, color_scheme};
 pub(crate) use direction::{
     apply_direction, apply_lang, clear_root_direction, forget_direction, set_root_direction,

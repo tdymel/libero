@@ -1011,7 +1011,7 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `header_render` | `fn() -> Element` | `None` | Replaces the header's body, inside the sort button when sortable, so keep it non-interactive then. The header text stays the column's name in `TableSort`. Capture signals, not values: the closure is not compared, so a changed value does not redraw the header. |
 | `of` | `&ColumnType<V>` | `None` | Before `value`: starts the column from a shared `const` type, its alignment, widths and a `format` over the value. `V` must match `value`'s; the column's own settings win. |
 | `row_header` | `bool` | `false` | Renders the column's cells as `th scope="row"`, so a screen reader names each row by it. One per table, usually the first. |
-| `editable` | `fn(&mut T, V)` | `None` | Makes the column's cells editable, turning on `cell_focus`: a double click, or Enter or F2 on the focused cell, opens a text field over the cell's value, Enter or leaving it commits through `onrowupdate`, Escape puts it back. `V: EditValue` parses the text: text, finite numbers, `bool` (`true`/`false`, any case), a `NaiveDate` (`2026-03-01`), and `Option<V>`, empty for `None`; the `bool` and date fields name their form as a placeholder. Text that does not parse keeps the field open, marked invalid; leaving the field instead puts the old value back and announces it. The other cells read as read-only. |
+| `editable` | `fn(&mut T, V)` | `None` | Makes the column's cells editable, turning on `cell_focus`: a double click, or Enter or F2 on the focused cell, opens a text field over the cell's value, Enter or leaving it commits through `onrowupdate`, Escape puts it back. `V: EditValue` parses the text: text, finite numbers, `bool` and `Option<bool>` (a checkbox: Space toggles, an `Option<bool>` one cycles empty, true, false), a `NaiveDate` (`2026-03-01`, the field names its form as a placeholder), and `Option<V>`, empty for `None`. Text that does not parse keeps the field open, marked invalid; leaving the field instead puts the old value back and announces it. The other cells read as read-only. |
 | `validate` | `fn(&T, &V) -> Result<(), String>` | `None` | After `editable`: checks a parsed value against the row before the commit; an `Err` keeps the field open, marked invalid. |
 | `editor` | `fn(EditCtx) -> Element` | the text field | After `editable`: draws your own editor in the cell. `EditCtx` gives the start `value` as text, a `label` to name it by, "Edit Age, Ana", and `commit` (the new text) and `cancel`. Focus it on mount; a commit that does not parse or validate keeps it open and sets `error`, the message the table shows under it: mark the field invalid with it, and call `changed` when its text changes to clear it. |
 | `filterable` | `bool` | `true` | Whether the quick filter searches the column's cell text, and whether it takes a column filter. Off for ids and codes that would match by accident. |
@@ -1150,7 +1150,8 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
   stops too and the first header cell is the first.
 - In a grid with an editable column, the other cells are `aria-readonly`. The
   editor is a text field named "Edit" plus the column and the row's name, "Edit
-  Bonus, Ana", a number column's with a decimal keypad. A value that does not
+  Bonus, Ana", a number column's with a decimal keypad and a `bool` column's a
+  checkbox, mixed while an `Option<bool>` is empty. A value that does not
   parse or validate marks it `aria-invalid`, shows the `validate` message (or
   "Not a valid value") under it, linked by `aria-describedby`, and announces it
   once; typing clears it. A custom `editor` gets the message as `EditCtx::error` and clears it with `EditCtx::changed`.
