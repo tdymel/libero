@@ -304,7 +304,7 @@ pub(crate) fn chart_palette(theme: &Theme, forced: bool) -> Vec<HexColor> {
 }
 
 /// A series' own theme colour as it is drawn: stepped to 3:1 like the palette's.
-#[cfg(any(feature = "charts", test))]
+#[cfg(feature = "charts")]
 pub(crate) fn chart_color(
     theme: &Theme,
     color: Color,
