@@ -1287,11 +1287,18 @@ async fn a_tall_dropdown_fits_the_room<D: Driver>(d: &mut D, _route: &str) -> Re
     })
     .await?;
     d.press(keyboard::END).await?;
-    eventually(d, "the last row scrolled into view", async |d| {
+    let waited = eventually(d, "the last row scrolled into view", async |d| {
         let row = d.rect("[role=option]:last-child").await?;
         Ok(row.y >= 0.0 && row.y + row.height <= height)
     })
-    .await
+    .await;
+    if let Err(e) = waited {
+        let info = d
+            .evaluate("(() => { const dd = document.querySelector('[data-slot=dropdown]'); const l = document.querySelector('[role=option]:last-child'); const r = l.getBoundingClientRect(); const dr = dd.getBoundingClientRect(); const a = document.activeElement; return JSON.stringify({ih: innerHeight, last: [r.y, r.height], dd: [dr.y, dr.height], dd_scroll: dd.scrollTop, dd_sh: dd.scrollHeight, lb_scroll: (document.querySelector('[role=listbox]')||{}).scrollTop, active: a && (a.tagName + '/' + a.getAttribute('role')), ad: a && a.getAttribute('aria-activedescendant'), sel: document.querySelectorAll('[role=option]').length, vv: window.visualViewport && [window.visualViewport.height, window.visualViewport.offsetTop, scrollY] }); })()")
+            .await?;
+        anyhow::bail!("DIAG {e}: {info}");
+    }
+    Ok(())
 }
 
 e2e::scenario!(
