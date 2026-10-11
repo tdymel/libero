@@ -87,18 +87,20 @@ fn send(env: &mut JNIEnv, activity: &JObject, data: &ShareData) -> Result<ShareO
             intent
         }
         files => {
-            let uris = env
+            let list = env
                 .new_object("java/util/ArrayList", "()V", &[])
                 .map_err(jni)?;
+            let mut uris = Vec::with_capacity(files.len());
             for file in files {
                 let uri = download(env, activity, file).map_err(jni)?;
                 env.call_method(
-                    &uris,
+                    &list,
                     "add",
                     "(Ljava/lang/Object;)Z",
                     &[JValue::Object(&uri)],
                 )
                 .map_err(jni)?;
+                uris.push(uri);
             }
             let first = mime(&files[0]);
             let mime = match files.iter().all(|file| mime(file) == first) {
@@ -106,7 +108,7 @@ fn send(env: &mut JNIEnv, activity: &JObject, data: &ShareData) -> Result<ShareO
                 false => "*/*",
             };
             let intent = send_intent(env, ACTION_SEND_MULTIPLE, mime).map_err(jni)?;
-            streams(env, &intent, &uris).map_err(jni)?;
+            streams(env, &intent, &list, &uris).map_err(jni)?;
             intent
         }
     };
@@ -185,21 +187,53 @@ fn stream(env: &mut JNIEnv, intent: &JObject, uri: &JObject) -> JniResult<()> {
         "(Ljava/lang/String;Landroid/os/Parcelable;)Landroid/content/Intent;",
         &[JValue::Object(&key), JValue::Object(uri)],
     )?;
-    grant_read(env, intent)
+    grant_read(env, intent, std::slice::from_ref(uri))
 }
 
-fn streams(env: &mut JNIEnv, intent: &JObject, uris: &JObject) -> JniResult<()> {
+fn streams(env: &mut JNIEnv, intent: &JObject, list: &JObject, uris: &[JObject]) -> JniResult<()> {
     let key = env.new_string(EXTRA_STREAM)?;
     env.call_method(
         intent,
         "putParcelableArrayListExtra",
         "(Ljava/lang/String;Ljava/util/ArrayList;)Landroid/content/Intent;",
-        &[JValue::Object(&key), JValue::Object(uris)],
+        &[JValue::Object(&key), JValue::Object(list)],
     )?;
-    grant_read(env, intent)
+    grant_read(env, intent, uris)
 }
 
-fn grant_read(env: &mut JNIEnv, intent: &JObject) -> JniResult<()> {
+/// The URIs also go in as `ClipData`: `createChooser` hands that and the grant on
+/// to the chooser, which otherwise cannot query the file names for its preview (3392).
+fn grant_read(env: &mut JNIEnv, intent: &JObject, uris: &[JObject]) -> JniResult<()> {
+    if let [first, rest @ ..] = uris {
+        let label = env.new_string("")?;
+        let clip = env
+            .call_static_method(
+                "android/content/ClipData",
+                "newRawUri",
+                "(Ljava/lang/CharSequence;Landroid/net/Uri;)Landroid/content/ClipData;",
+                &[JValue::Object(&label), JValue::Object(first)],
+            )?
+            .l()?;
+        for uri in rest {
+            let item = env.new_object(
+                "android/content/ClipData$Item",
+                "(Landroid/net/Uri;)V",
+                &[JValue::Object(uri)],
+            )?;
+            env.call_method(
+                &clip,
+                "addItem",
+                "(Landroid/content/ClipData$Item;)V",
+                &[JValue::Object(&item)],
+            )?;
+        }
+        env.call_method(
+            intent,
+            "setClipData",
+            "(Landroid/content/ClipData;)V",
+            &[JValue::Object(&clip)],
+        )?;
+    }
     env.call_method(
         intent,
         "addFlags",

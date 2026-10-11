@@ -131,6 +131,11 @@ An article's share button, `Share { url, label: "Link to this article"
 }`: the button reads "Share, Link to this article". On a phone the share sheet
 opens; on a desktop without one, the status region says "Copied".
 
+### Limits
+
+- Android's share sheet may name a shared file by a number: on Android 14 it
+  cannot read a Downloads file's name.
+
 ## CSS variables
 
 None of its own; it renders an `ActionIcon`, or a `Button` with `children`,

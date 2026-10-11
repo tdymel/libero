@@ -22,6 +22,7 @@ pub fn SaveFilePage() -> Element {
                 .example("An \"Export report.csv\" button that calls the save: the file name is in the button's text, and a status line says \"Saved report.csv\" once it reports `Saved`, since a browser download shows no dialog.")
                 .limits([
                     "On Android, text up to about 500 KB goes to the share sheet inline. Other bytes are written to Downloads and shared as a file, which stays there; before Android 10 that comes back `Failed`.",
+                    "Android's share sheet may name a shared file by a number: on Android 14 it cannot read a Downloads file's name.",
                     "The web cannot tell a finished download from a blocked one: it reports `Saved` once the browser has the file.",
                 ]),
             lead: rsx! {

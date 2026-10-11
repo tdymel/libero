@@ -159,10 +159,15 @@ static SCROLL_AREA_BASE_SX: StaticSx = StaticSx::new(|| {
 /// Reserves the rows a `Virtualize` skipped; `display: contents` until then,
 /// so an ordinary area lays out as without it.
 static SCROLL_AREA_CONTENT_SX: StaticSx = StaticSx::new(|| {
+    // The offsets change each scrolled frame: inherited, every row restyled with them, ~3 ms a frame on a phone (3393).
+    let unset = sx()
+        .with(SCROLL_AREA_LEADING_VAR.name(), "initial")
+        .with(SCROLL_AREA_TRAILING_VAR.name(), "initial");
     let reserved = sx()
         .display("block")
         .padding_top(SCROLL_AREA_LEADING_VAR.value_or("0px"))
-        .padding_bottom(SCROLL_AREA_TRAILING_VAR.value_or("0px"));
+        .padding_bottom(SCROLL_AREA_TRAILING_VAR.value_or("0px"))
+        .selector("& > :not(table), & > table > * > *", unset);
     let reserved = match reserves_rows_in_tables() {
         true => reserved.and(table_body_reserve_sx()),
         false => reserved,
