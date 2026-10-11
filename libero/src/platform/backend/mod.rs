@@ -448,6 +448,10 @@ pub(crate) const STICKS_TABLE_HEADS: bool =
 pub(crate) const MOVES_TABLE_ROWS: bool =
     !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
 
+/// Blitz fires no `resize` on a cell; see [`fires_cell_resize`](crate::platform::fires_cell_resize).
+pub(crate) const FIRES_CELL_RESIZE: bool =
+    !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
+
 /// Blitz hit-tests an inline root's absolute children off by its padding; see [`hits_absolute_in_text`](crate::platform::hits_absolute_in_text).
 pub(crate) const HITS_ABSOLUTE_IN_TEXT: bool =
     !cfg!(all(not(target_arch = "wasm32"), feature = "native"));

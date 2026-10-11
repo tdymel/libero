@@ -25,7 +25,7 @@ use crate::{
     context::IconSlot,
     hooks::listener,
     localization::labels::table::TableLabels,
-    platform::infers_grid_cells,
+    platform::{infers_grid_cells, moves_table_rows},
     theme::TABLE_GROUP_INDENT,
 };
 use pictogram_icons_lucide as lucide;
@@ -243,6 +243,10 @@ impl<T: Clone + 'static> RowContext<T> {
             }
             if let Some(grid) = &self.tree_focus {
                 attributes.extend(grid.row(index, row_stop));
+            }
+            // A `tr` paints no ring natively: its cells wear it (todo 3290).
+            if !moves_table_rows() {
+                attributes.push(attr("data-cell-ring", "true"));
             }
         }
         if let Some(onrowclick) = self.onrowclick {

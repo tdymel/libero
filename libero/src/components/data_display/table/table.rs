@@ -239,6 +239,10 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
          & thead th[tabindex]:focus-visible, & tbody > tr[aria-level]:focus-visible",
         inset_focus_ring_sx("-2px"),
     )
+    .selector(
+        "& tbody > tr[aria-level][data-cell-ring]:focus-visible > *",
+        inset_focus_ring_sx("-2px"),
+    )
     // An editing cell's field fills it, in the cell's own type.
     .selector(
         "& [data-cell-editor]",
@@ -312,9 +316,9 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         "& th[data-resizable], & th[data-draggable]",
         sx().position("relative"),
     )
-    // The header cell's box, measured for a resize's start width or a drag's layout.
+    // The header cell's box, measured for a resize's start width, a drag's layout or a pin's room.
     .selector(
-        "& [data-resize-box], & [data-drag-box]",
+        "& [data-resize-box], & [data-drag-box], & [data-pin-box]",
         sx().position("absolute")
             .top("0")
             .bottom("0")

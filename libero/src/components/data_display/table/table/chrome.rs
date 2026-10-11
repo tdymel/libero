@@ -10,6 +10,7 @@ use super::super::{
     core::CaptionSpec,
     filter::QuickFilter,
     filter_panel::{FilterPanel, FilterPanelButton, PanelColumn, PanelControl},
+    measure::LeadProbe,
     overlay::LoadingBar,
     row_reorder::RowReorder,
     toolbar::TableToolbar,
@@ -160,7 +161,7 @@ pub(super) fn chrome<T: Clone + PartialEq + 'static>(
         tracks_area,
         mut area_width,
         lead_probe,
-        mut lead_px,
+        lead_px,
         state,
         results,
         labels,
@@ -285,15 +286,7 @@ pub(super) fn chrome<T: Clone + PartialEq + 'static>(
                     attributes,
                     {table}
                     if let Some(width) = lead_probe {
-                        div {
-                            aria_hidden: "true",
-                            style: "position:absolute;visibility:hidden;pointer-events:none;height:0;width:{width}",
-                            onresize: move |event: Event<ResizeData>| {
-                                if let Ok(size) = event.get_border_box_size() {
-                                    lead_px.set(size.width);
-                                }
-                            },
-                        }
+                        LeadProbe { width, lead_px }
                     }
                 }
             }

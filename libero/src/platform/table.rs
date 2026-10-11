@@ -18,10 +18,16 @@ pub(crate) fn sticks_table_heads() -> bool {
     backend::STICKS_TABLE_HEADS
 }
 
-/// Whether a `transform` on a `<tr>` paints. Blitz's `tr` has no box, so a
-/// `Table` moves a dragged row's cells there instead.
+/// Whether a `transform` or `box-shadow` on a `<tr>` paints. Blitz's `tr` has no
+/// box, so a `Table` moves a dragged row's cells and rings a focused row's there instead.
 pub(crate) fn moves_table_rows() -> bool {
     backend::MOVES_TABLE_ROWS
+}
+
+/// Whether a table cell's `onresize` fires. Blitz fires none, so `Table` measures a
+/// pinned header through a box inside it.
+pub(crate) fn fires_cell_resize() -> bool {
+    backend::FIRES_CELL_RESIZE
 }
 
 /// Whether an absolute box in a padded box of text takes presses where it is

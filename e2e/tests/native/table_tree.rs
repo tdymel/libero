@@ -3,7 +3,7 @@
 //! treegrid (TR2): its role, and the arrows on a focused row.
 
 use dioxus::prelude::*;
-use e2e::native::{Key, mount};
+use e2e::native::{Key, Page, mount};
 use libero::components::{Table, column};
 
 #[derive(Clone, PartialEq)]
@@ -73,6 +73,82 @@ fn a_tree_is_a_treegrid_in_the_ax_tree() {
             page.tree()
         );
     }
+}
+
+fn selectable() -> Element {
+    let tasks = [
+        ("site", ""),
+        ("design", "site"),
+        ("build", "site"),
+        ("launch", ""),
+    ]
+    .map(|(id, parent)| Task { id, parent })
+    .to_vec();
+    rsx! {
+        div { width: "400px",
+            Table {
+                aria_label: "Tasks",
+                data: tasks,
+                columns: vec![column("Task").value(|t: &Task| t.id.to_string()).row_header()],
+                row_key: |t: &Task| t.id.to_string(),
+                parent_key: |t: &Task| (!t.parent.is_empty()).then(|| t.parent.to_string()),
+                default_expanded_nodes: vec!["site".to_string()],
+                selectable: true,
+            }
+        }
+    }
+}
+
+/// The pixel at the middle of `selector`'s box.
+fn centre(page: &Page, selector: &str) -> String {
+    let (x, y, width, height) = page.rect(selector);
+    page.painted_pixel((x + width / 2.0) as u32, (y + height / 2.0) as u32)
+}
+
+fn select_box(row: usize) -> String {
+    format!("tbody tr:nth-child({row}) td[data-select] span[aria-hidden]")
+}
+
+#[test]
+fn a_mixed_tree_box_paints_its_dash() {
+    let mut page = mount(selectable);
+    // Rows: site, design, build, launch.
+    let empty = centre(&page, &select_box(1));
+    page.click(&select_box(2));
+    let aria = "tbody tr:nth-child(1) td[data-select] input";
+    assert_eq!(
+        page.attr(aria, "aria-checked").as_deref(),
+        Some("mixed"),
+        "{}",
+        page.tree()
+    );
+    let mixed = centre(&page, &select_box(1));
+    let checked = centre(&page, &select_box(2));
+    assert_ne!(mixed, empty, "the mixed box paints like an empty one");
+    assert_ne!(mixed, checked, "the mixed box paints like a checked one");
+}
+
+/// 3290: a focused row's ring sits on the `tr`, which Blitz may not paint.
+#[test]
+fn a_focused_tree_row_paints_its_ring() {
+    let mut page = mount(app);
+    let (x, y, width, height) = page.rect("tbody tr:nth-child(1)");
+    let row: Vec<(u32, u32)> = (y as u32..(y + height) as u32)
+        .flat_map(|py| (x as u32..(x + width) as u32).map(move |px| (px, py)))
+        .collect();
+    let before = page.painted_pixels(&row);
+    page.tab();
+    assert!(
+        page.is_focused("tbody tr:nth-child(1)"),
+        "{}",
+        page.focus_owner()
+    );
+    let shadow = page.computed("tbody tr:nth-child(1)", "box-shadow");
+    let after = page.painted_pixels(&row);
+    assert_ne!(
+        before, after,
+        "no ring painted over the row; box-shadow {shadow}"
+    );
 }
 
 /// Blitz fires no `focusin` on a `focus()`: the keys find the row by its `data-cell`.

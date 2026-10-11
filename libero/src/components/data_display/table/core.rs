@@ -12,6 +12,7 @@ use super::{
     grid::HeadGrid,
     header_filters::filter_row,
     header_groups::{HeaderCell, header_rows},
+    measure::PinProbe,
     memo::{Memo, same_rows},
     overlay::EmptyBody,
     pinning::{CellPin, PinSide, pin_edge_at, pin_insets, span_pin},
@@ -585,6 +586,17 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                         let draggable = drag.is_some() && spec.pin.is_none();
                         // A pin is measured for the room it leaves; an unsized innermost one
                         // also pads the scroll (todos 1973, 3256).
+                        let probe = spec.pin.as_ref().filter(|_| !platform::fires_cell_resize()).map(|pin| {
+                            rsx! {
+                                PinProbe {
+                                    header: spec.header.clone(),
+                                    side: pin.side,
+                                    edge: pin.edge && spec.width.is_none(),
+                                    pin_width,
+                                    pin_edge,
+                                }
+                            }
+                        });
                         let measure: Vec<Attribute> = spec
                             .pin
                             .as_ref()
@@ -639,6 +651,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                                 {mover}
                                 {body}
                                 {grip}
+                                {probe}
                             }
                         }
                     }

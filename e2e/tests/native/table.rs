@@ -343,6 +343,36 @@ fn pinned_columns_hold_at_both_edges_right_to_left() {
     pins_hold(mount(|| pinned_app(true)), true);
 }
 
+/// Todo 3277: pins that leave the rest under a third of a narrow area are released, from
+/// widths Blitz measures itself: the unsized pins' own and the checkbox column's.
+#[test]
+fn a_narrow_area_releases_unsized_pins() {
+    fn app() -> Element {
+        rsx! {
+            div { width: "240px",
+                Table {
+                    aria_label: "Narrow",
+                    scroll: true,
+                    selectable: true,
+                    default_pinned_columns: PinnedColumns::default()
+                        .start(["Name of the person"])
+                        .end(["Supplier of the goods"]),
+                    data: vec![Person { name: "Ada", age: 36 }],
+                    columns: vec![
+                        column("Name of the person").value(|p: &Person| p.name.to_string()),
+                        column("Item").value(|p: &Person| p.name.to_string()).width("400px"),
+                        column("Supplier of the goods").value(|p: &Person| p.name.to_string()),
+                    ],
+                }
+            }
+        }
+    }
+    let mut page = mount(app);
+    // The end pin goes first: the start one and the checkbox column then fit.
+    let released = page.wait_for(|page| !page.exists("thead th[data-pin=\"end\"]"));
+    assert!(released, "pins held in 240px: {}", page.tree());
+}
+
 /// Todo 1974: a focus scroll stops short of a pinned column on either edge, which Blitz
 /// reads from the `--lsx-scroll-padding-*` vars.
 #[test]

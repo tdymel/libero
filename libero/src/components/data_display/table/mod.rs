@@ -16,6 +16,7 @@ mod footer;
 mod grid;
 mod header_filters;
 mod header_groups;
+mod measure;
 mod memo;
 mod overlay;
 mod paging;

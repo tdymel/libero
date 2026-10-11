@@ -171,8 +171,8 @@ pub(crate) use system_notification::{
     NotificationEvent, ShownNotification, raise_window, system_notification,
 };
 pub(crate) use table::{
-    hits_absolute_in_text, infers_grid_cells, lays_out_captions, moves_table_rows,
-    sticks_table_heads, widens_sized_tables,
+    fires_cell_resize, hits_absolute_in_text, infers_grid_cells, lays_out_captions,
+    moves_table_rows, sticks_table_heads, widens_sized_tables,
 };
 pub use task::awaits_layout;
 #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
