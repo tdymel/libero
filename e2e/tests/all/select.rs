@@ -1281,9 +1281,12 @@ async fn a_tall_dropdown_fits_the_room<D: Driver>(d: &mut D, _route: &str) -> Re
             return Ok(false);
         }
         let dropdown = d.rect(DROPDOWN).await?;
+        // The list shrinks to the room a task after the box is placed: End waits for that.
+        let list = d.rect(LISTBOX).await?;
         Ok(dropdown.height > 100.0
             && dropdown.y >= -1.0
-            && dropdown.y + dropdown.height <= height + 1.0)
+            && dropdown.y + dropdown.height <= height + 1.0
+            && list.y + list.height <= dropdown.y + dropdown.height + 1.0)
     })
     .await?;
     d.press(keyboard::END).await?;
