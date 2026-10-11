@@ -359,6 +359,30 @@ const SEEN: &str = "window.__e2eSeen = { up: 0, key: 0, wheel: 0, move: null };
     addEventListener('wheel', () => { __e2eSeen.wheel += 1; }, true);
     addEventListener('mousemove', (e) => { __e2eSeen.move = [e.clientX, e.clientY]; }, true)";
 
+/// A line of the macOS route search: on stderr, and in `calibration.log` of the artifacts.
+#[cfg(target_os = "macos")]
+fn mac_note(line: &str) {
+    eprintln!("e2e desktop: {line}");
+    if let Some(dir) = crate::journal::dir()
+        && let Ok(mut file) = File::options()
+            .create(true)
+            .append(true)
+            .open(dir.join("calibration.log"))
+    {
+        use std::io::Write;
+        let _ = writeln!(file, "{line}");
+    }
+}
+
+/// Each pointer route moves to its own x, so a late event never counts for the next route.
+#[cfg(target_os = "macos")]
+fn pointer_index(route: &str) -> f64 {
+    ["target", "view", "window", "post", "cg"]
+        .iter()
+        .position(|name| *name == route)
+        .unwrap_or_default() as f64
+}
+
 /// How the app hands each kind of NSEvent to its WebView (`mac_input.rs`), found per launch.
 #[cfg(target_os = "macos")]
 #[derive(Clone, Copy)]
@@ -423,89 +447,116 @@ impl Desktop {
     }
 
     /// Which route each kind of event reaches the page by: the first the page sees, as no one
-    /// knows what a hosted runner's WKWebView answers. Logged to `calibration.log`.
+    /// knows what a hosted runner's WKWebView answers. A route that stops the app answering is
+    /// skipped by the next launch; every step is noted in `calibration.log` as it starts.
     fn find_routes(&mut self) -> Result<()> {
-        static FOUND: Mutex<Option<MacRoutes>> = Mutex::new(None);
-        if let Some(found) = *FOUND.lock().unwrap_or_else(PoisonError::into_inner) {
+        static STATE: Mutex<(Option<MacRoutes>, Vec<String>)> = Mutex::new((None, Vec::new()));
+        let (found, hung) = STATE.lock().unwrap_or_else(PoisonError::into_inner).clone();
+        if let Some(found) = found {
             self.routes = found;
             return Ok(());
         }
         let height: f64 = self.bridge.json("innerHeight")?;
-        let mut log = vec![format!("page {}", self.bridge.json::<serde_json::Value>(
-            "({ focus: document.hasFocus(), visible: document.visibilityState, w: innerWidth, h: innerHeight })"
-        )?)];
-        let mut found = None;
-        for (n, route) in ["target", "view", "window", "post", "cg"]
-            .into_iter()
-            .enumerate()
-        {
-            let at = (2.0 + 8.0 * n as f64, height - 2.0);
-            let seen = self.probe_route(
-                serde_json::json!({ "op": "move", "x": at.0, "y": at.1, "via": route }),
-                &format!("__e2eSeen.move?.[0] === {}", at.0),
-            )?;
-            log.push(format!("pointer {route}: {seen}"));
-            if seen && found.is_none() {
-                found = Some(route);
-                self.routes.pointer = route;
-            }
-        }
         let at = (2.0, height - 2.0);
+        let mut pointer = None;
         let mut button = None;
-        for route in ["window", "target", "view", "post", "cg"] {
-            let up = self.count("up")?;
-            let mut seen = true;
-            for op in ["down", "up"] {
-                let condition = if op == "up" {
-                    format!("__e2eSeen.up > {up}")
-                } else {
-                    "true".to_string()
-                };
-                seen &= self.probe_route(
-                    serde_json::json!({ "op": op, "x": at.0, "y": at.1, "count": 1, "via": route }),
-                    &condition,
-                )?;
-            }
-            log.push(format!("button {route}: {seen}"));
-            if seen && button.is_none() {
-                button = Some(route);
-                self.routes.button = route;
-            }
-        }
         let mut key = None;
-        for route in ["window", "responder", "post"] {
-            let before = self.count("key")?;
-            let seen = self.probe_route(
-                serde_json::json!({ "op": "key", "key": "Escape", "via": route }),
-                &format!("__e2eSeen.key > {before}"),
-            )?;
-            log.push(format!("key {route}: {seen}"));
-            if seen && key.is_none() {
-                key = Some(route);
-                self.routes.key = route;
+        for (kind, route) in [
+            ("pointer", "target"),
+            ("pointer", "view"),
+            ("pointer", "window"),
+            ("pointer", "post"),
+            ("pointer", "cg"),
+            ("button", "window"),
+            ("button", "target"),
+            ("button", "view"),
+            ("button", "post"),
+            ("button", "cg"),
+            ("key", "window"),
+            ("key", "responder"),
+            ("key", "post"),
+        ] {
+            let name = format!("{kind} {route}");
+            if hung.contains(&name) || kind == "pointer" && pointer.is_some() && route == "cg" {
+                continue;
+            }
+            mac_note(&format!("trying {name}"));
+            let tried = match kind {
+                "pointer" => self.try_pointer(route, at.0 + 8.0 * pointer_index(route), at.1),
+                "button" => self.try_button(route, at),
+                _ => self.try_key(route),
+            };
+            let seen = tried.inspect_err(|error| {
+                mac_note(&format!("{name}: the app stopped answering ({error:#})"));
+                STATE
+                    .lock()
+                    .unwrap_or_else(PoisonError::into_inner)
+                    .1
+                    .push(name.clone());
+            })?;
+            mac_note(&format!("{name}: {seen}"));
+            let slot = match kind {
+                "pointer" => &mut pointer,
+                "button" => &mut button,
+                _ => &mut key,
+            };
+            if seen && slot.is_none() {
+                *slot = Some(route);
             }
         }
-        let summary = log.join("; ");
-        eprintln!("e2e desktop: macOS routes {summary}");
-        if let Some(dir) = crate::journal::dir()
-            && let Ok(mut file) = File::options()
-                .create(true)
-                .append(true)
-                .open(dir.join("calibration.log"))
-        {
-            use std::io::Write;
-            let _ = writeln!(file, "{summary}");
-        }
-        if found.is_none() {
-            bail!("the WebView saw no pointer move by any route: {summary}");
-        }
-        *FOUND.lock().unwrap_or_else(PoisonError::into_inner) = Some(self.routes);
+        let Some(pointer) = pointer else {
+            bail!("the WebView saw no pointer move by any route; see calibration.log");
+        };
+        self.routes = MacRoutes {
+            pointer,
+            button: button.unwrap_or(self.routes.button),
+            key: key.unwrap_or(self.routes.key),
+        };
+        mac_note(&format!(
+            "picked pointer {} button {} key {}",
+            self.routes.pointer, self.routes.button, self.routes.key
+        ));
+        STATE.lock().unwrap_or_else(PoisonError::into_inner).0 = Some(self.routes);
         Ok(())
     }
 
-    /// Sends `op` and whether the page's `condition` held within 1.5 s; no error on a refusal.
+    fn try_pointer(&mut self, route: &str, x: f64, y: f64) -> Result<bool> {
+        self.probe_route(
+            serde_json::json!({ "op": "move", "x": x, "y": y, "via": route }),
+            &format!("__e2eSeen.move?.[0] === {x}"),
+        )
+    }
+
+    fn try_button(&mut self, route: &str, at: (f64, f64)) -> Result<bool> {
+        let up = self.count("up")?;
+        let mut seen = true;
+        for op in ["down", "up"] {
+            let condition = if op == "up" {
+                format!("__e2eSeen.up > {up}")
+            } else {
+                "true".to_string()
+            };
+            seen &= self.probe_route(
+                serde_json::json!({ "op": op, "x": at.0, "y": at.1, "count": 1, "via": route }),
+                &condition,
+            )?;
+        }
+        Ok(seen)
+    }
+
+    fn try_key(&mut self, route: &str) -> Result<bool> {
+        let before = self.count("key")?;
+        self.probe_route(
+            serde_json::json!({ "op": "key", "key": "Escape", "via": route }),
+            &format!("__e2eSeen.key > {before}"),
+        )
+    }
+
+    /// Sends `op`; whether the page's `condition` held within 1.5 s. A refused op is `false`,
+    /// an app that stops answering an error.
     fn probe_route(&mut self, op: serde_json::Value, condition: &str) -> Result<bool> {
-        if self.input(op).is_err() {
+        let answer = self.bridge.request(&op.to_string())?;
+        if answer.get("err").is_some() {
             return Ok(false);
         }
         let started = Instant::now();
