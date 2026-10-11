@@ -1,0 +1,4 @@
+# ted_ci.py probe; read by .github/workflows/ci-probe.yml.
+os=macos
+tier=native
+filter=table::a_windowed_table_renders_the_rows_in_view
