@@ -18,6 +18,7 @@ mod button_group;
 mod calendar;
 mod carousel;
 mod carousel_autoplay;
+mod carousel_slide_keys;
 mod cascader;
 mod cascader_phone;
 mod checkbox;

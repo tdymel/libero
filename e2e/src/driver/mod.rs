@@ -431,6 +431,29 @@ pub async fn eventually_text<D: Driver>(
     );
 }
 
+/// A swipe up over `target`: on Android it scrolls the page, elsewhere a mouse drag grabs
+/// it and `ended` reads `grabbed`.
+pub async fn swipe_scrolls_on_android<D: Driver>(
+    d: &mut D,
+    target: &str,
+    ended: &str,
+    grabbed: &str,
+) -> Result<()> {
+    let (_, height) = d.viewport().await?;
+    d.drag(target, 0.0, -250.0).await?;
+    if d.platform() != Platform::Android {
+        return eventually_text(d, ended, grabbed, "a vertical mouse drag").await;
+    }
+    let at = d.rect(target).await?;
+    if at.y + at.height / 2.0 >= height / 2.0 - 100.0 {
+        bail!(
+            "a swipe up over {target} did not scroll: its top at {}",
+            at.y
+        );
+    }
+    Ok(())
+}
+
 /// Appends `selectors`' texts as one line to `outcomes.log` in the run's artifacts (and
 /// stderr), for an arm that observes a platform's answer before a test pins it.
 pub async fn record_outcome<D: Driver>(d: &mut D, what: &str, selectors: &[&str]) -> Result<()> {

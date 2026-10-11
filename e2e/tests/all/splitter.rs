@@ -3,7 +3,9 @@
 
 use anyhow::{Context, Result, ensure};
 use e2e::browser::block_on;
-use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text};
+use e2e::driver::{
+    Driver, Platform, eventually, eventually_focused, eventually_text, swipe_scrolls_on_android,
+};
 use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, wait};
 
@@ -93,8 +95,7 @@ e2e::scenario!(
 e2e::scenario!(
     under_rtl_rightwards_shrinks_pane_a,
     "/splitter/rtl",
-    rtl_rightwards_shrinks,
-    android: skip("1337: Android arm not run since is_rtl works on the WebView")
+    rtl_rightwards_shrinks
 );
 e2e::scenario!(
     the_arrows_and_home_end_move_a_focused_divider,
@@ -109,18 +110,7 @@ const COLUMN: &str = "#column [role=separator]";
 /// divider scrolls the page; a mouse still grabs at once. A sideways drag moves
 /// it, a tap starts before it ends, and a horizontal divider still drags.
 async fn a_swipe_scrolls_on_android<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    let (_, height) = d.viewport().await?;
-    d.drag(ROW, 0.0, -250.0).await?;
-    if d.platform() == Platform::Android {
-        let at = d.rect(ROW).await?;
-        ensure!(
-            at.y + at.height / 2.0 < height / 2.0 - 100.0,
-            "a swipe up over the divider did not scroll: its top at {}",
-            at.y
-        );
-    } else {
-        eventually_text(d, "#row-end", "50", "a vertical mouse drag").await?;
-    }
+    swipe_scrolls_on_android(d, ROW, "#row-end", "50").await?;
 
     // Blitz's `drag` waits out a double press of the last one itself.
     d.drag(ROW, 40.0, 0.0).await?;

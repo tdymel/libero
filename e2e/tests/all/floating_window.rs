@@ -870,3 +870,95 @@ fn a_tall_window_stays_reachable() {
         .await;
     });
 }
+
+/// `FloatingWindow` whose title bar is deaf to the arrows (a capturing listener): nothing a
+/// snapshot or axe sees changes.
+#[test]
+fn a_floating_window_with_a_deaf_title_bar_never_moves() {
+    block_on(async {
+        e2e::selftest::must_fail("/floating-window", Some(
+                "document.addEventListener('keydown', e => { \
+                 if (e.target.closest('[data-slot=handle]')) e.stopImmediatePropagation(); }, true)",
+            ), "the window to move by (10.0, 0.0)", async |page| keyboard_move(page).await)
+        .await;
+    });
+}
+
+/// `FloatingWindow` reporting the pre-move rect, the `owed` effect's defect. It skips the
+/// value it last wrote: a flag is already cleared by the next microtask and hung the page.
+#[test]
+fn a_floating_window_reporting_a_stale_rect_fails_the_move_report() {
+    block_on(async {
+        e2e::selftest::must_fail("/floating-window", Some(
+                "(() => { let written = null; \
+                 new MutationObserver(() => { const el = document.querySelector('#move-report'); \
+                 if (!el) return; const now = el.textContent; if (now === written) return; \
+                 const parts = now.trim().split(' '); if (parts.length !== 4) return; \
+                 written = [Number(parts[0]) - 10, parts[1], parts[2], parts[3]].join(' '); \
+                 el.textContent = written; }) \
+                 .observe(document.body, { subtree: true, childList: true, characterData: true }); })()",
+            ), "but it reported", async |page| keyboard_move(page).await)
+        .await;
+    });
+}
+
+/// `FloatingWindow` whose corner handle is deaf to Home and End only, so the arrows still
+/// resize but the caller's bounds never answer.
+#[test]
+fn a_floating_window_that_ignores_home_on_its_separator_never_reaches_the_minimum() {
+    block_on(async {
+        e2e::selftest::must_fail("/floating-window", Some(
+                "document.addEventListener('keydown', e => { \
+                 if ((e.key === 'Home' || e.key === 'End') && e.target.closest('[role=separator]')) \
+                 e.stopImmediatePropagation(); }, true)",
+            ), "Home to size the window to 240x120", async |page| keyboard_resize(page).await)
+        .await;
+    });
+}
+
+/// `FloatingWindow`'s 20x20 close button with its 24x24 press box stripped (505, 566) and
+/// crammed against the move handle, inside the 24px circle (377).
+#[test]
+fn a_floating_windows_crammed_title_bar_fails_the_spacing_exception() {
+    block_on(async {
+        e2e::selftest::must_fail(
+            "/floating-window",
+            Some(&crate::planted::stylesheet(
+                "[data-slot=title-bar] { gap: 0 !important; } \
+                 [data-slot=title-bar] button { width: 16px !important; height: 16px !important; } \
+                 [data-slot=title-bar] button::before { content: none !important; } \
+                 [data-slot=handle] { flex: 0 0 8px !important; min-width: 0 !important; }",
+            )),
+            "spacing exception fails",
+            async |page| {
+                keyboard::tab_to(page, TRIGGER, 8).await?;
+                keyboard::press(page, keyboard::ENTER).await?;
+                wait::for_visible(page, DIALOG).await?;
+                target_size::assert_minimum_or_spacing(page, CLOSE).await
+            },
+        )
+        .await;
+    });
+}
+
+/// `FloatingWindow` with `#ddd` body text: proves the baseline's axe run reaches the
+/// portaled window. Non-modal, so no scroll lock and no `UNLOCK` lift.
+#[test]
+fn a_floating_window_with_faint_text_fails_the_contrast_pass_in_the_open_state() {
+    block_on(async {
+        e2e::selftest::must_fail(
+            "/floating-window",
+            Some(&crate::planted::stylesheet(
+                "[role=dialog] [data-slot=body] * { color: #dddddd !important; }",
+            )),
+            "color-contrast",
+            async |page| {
+                keyboard::tab_to(page, TRIGGER, 8).await?;
+                keyboard::press(page, keyboard::ENTER).await?;
+                wait::for_visible(page, DIALOG).await?;
+                e2e::passes::contrast::assert_clean(page, "[data-fixture-ready]").await
+            },
+        )
+        .await;
+    });
+}

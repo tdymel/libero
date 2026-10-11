@@ -1,16 +1,16 @@
 //! Planted defects (311): each pass must fail on a real component's fixture, for the reason
 //! named. Most plants are injected after mount (a stylesheet, a capturing listener).
 
+use std::cell::Cell;
+
 use chromiumoxide::Page;
 use e2e::archetypes::{Combobox, Orientation, Overlay, RadioSet, RovingTabindex, count_tab_stops};
 use e2e::browser::block_on;
 use e2e::passes::{contrast, focus, keyboard, motion, pointer, target_size};
 use e2e::{Fixture, Scheme, Viewport, selftest, wait};
 
-use crate::carousel;
-
 /// A stylesheet appended to the document, as a plant.
-fn stylesheet(css: &str) -> String {
+pub(crate) fn stylesheet(css: &str) -> String {
     format!(
         "(() => {{ const s = document.createElement('style'); s.textContent = {}; \
          document.head.append(s); }})()",
@@ -319,15 +319,14 @@ fn spotlight_with_faint_rows_fails_the_contrast_pass_in_the_open_state() {
 }
 
 /// `contrast_covers` proved able to fail: the scroll lock pinned back inline (outranking the
-/// harness's lift stylesheet) re-creates todo 327, and the message pins `8 of 8`.
+/// harness's lift stylesheet) re-creates todo 327: every text element of the dialog is a hole.
 #[test]
 fn spotlight_rows_axe_cannot_reach_fail_the_coverage_guard() {
     block_on(async {
-        selftest::must_fail(
+        let (holes, total) = holes(
             "/spotlight",
             Some("document.body.style.setProperty('overflow', 'hidden', 'important')"),
-            "8 of 8 on-screen text element(s) under [role=dialog] were never evaluated by \
-             axe's `color-contrast` rule",
+            "[role=dialog]",
             async |page| {
                 keyboard::tab_to(page, crate::spotlight::TRIGGER, 10).await?;
                 keyboard::press(page, keyboard::ENTER).await?;
@@ -338,6 +337,7 @@ fn spotlight_rows_axe_cannot_reach_fail_the_coverage_guard() {
             },
         )
         .await;
+        assert!(holes > 0 && holes == total, "{holes} of {total} were holes");
     });
 }
 
@@ -347,12 +347,26 @@ const MENU_CLIPPED: &str = "[role=menu] { overflow: hidden !important; height: 0
      min-height: 0 !important; padding: 0 !important; border: 0 !important; }";
 
 /// Open `/menu`, run `before` (a plant that must leave the guard green), then clip
-/// the menu and run the guard again, which must fail.
-async fn menu_coverage_with(page: &Page, before: &str) -> anyhow::Result<()> {
+/// the menu and run the guard again, which must fail. `enabled` gets the rows the guard
+/// should still count: not `aria-disabled`, not `inert`.
+async fn menu_coverage_with(
+    page: &Page,
+    before: &str,
+    enabled: &Cell<usize>,
+) -> anyhow::Result<()> {
     keyboard::tab_to(page, crate::menu::TRIGGER, 10).await?;
     keyboard::press(page, keyboard::ARROW_DOWN).await?;
     wait::for_visible(page, "[role=menu]").await?;
     page.evaluate(before).await?;
+    enabled.set(
+        e2e::js(
+            page,
+            "[...document.querySelectorAll('[role=menu] *')].filter(el => \
+             !el.closest('[aria-disabled=true], [inert]') && [...el.childNodes].some(n => \
+             n.nodeType === 3 && n.textContent.trim())).length",
+        )
+        .await,
+    );
     contrast::assert_covers(page, "[data-fixture-ready]", "[role=menu]")
         .await
         .map_err(|e| anyhow::anyhow!("green half: {e:#}"))?;
@@ -362,60 +376,89 @@ async fn menu_coverage_with(page: &Page, before: &str) -> anyhow::Result<()> {
         .map(|_| ())
 }
 
-/// The guard's disabled rule (386), proved narrow: `4 of 4`, only the `aria-disabled`
-/// "Paste" dropped; `5 of 5` would mean the rule stopped working.
+/// The `N` and `M` of "N of M on-screen text element(s) under `scope` were never evaluated"
+/// from the error the guard gave on `route`.
+async fn holes(
+    route: &str,
+    defect: Option<&str>,
+    scope: &str,
+    check: impl AsyncFn(&Page) -> anyhow::Result<()>,
+) -> (usize, usize) {
+    let tail = format!(" on-screen text element(s) under {scope} were never evaluated");
+    let error = selftest::caught(route, defect, &tail, check)
+        .await
+        .unwrap_or_else(|e| panic!("{e:#}"));
+    let head = &error[..error.find(&tail).unwrap()];
+    let mut words = head.split_whitespace().rev();
+    let (total, _of, holes) = (words.next(), words.next(), words.next());
+    let number = |word: Option<&str>| word.and_then(|w| w.parse().ok()).expect(&error);
+    (number(holes), number(total))
+}
+
+/// The guard's disabled rule (386), proved narrow: every enabled row is a hole and the
+/// `aria-disabled` "Paste" is none; counting it would mean the rule stopped working.
 #[test]
 fn a_clipped_menu_fails_the_coverage_guard_on_its_enabled_rows_only() {
     block_on(async {
-        selftest::must_fail(
-            "/menu",
-            None,
-            "4 of 4 on-screen text element(s) under [role=menu] were never evaluated",
-            async |page| menu_coverage_with(page, "0").await,
-        )
+        let enabled = Cell::new(0);
+        let (holes, total) = holes("/menu", None, "[role=menu]", async |page| {
+            menu_coverage_with(page, "0", &enabled).await
+        })
         .await;
+        assert!(enabled.get() > 0, "the menu has no enabled row");
+        assert_eq!(
+            (holes, total),
+            (enabled.get(), enabled.get()),
+            "the guard did not count exactly the enabled rows"
+        );
     });
 }
 
 /// An `inert` row is skipped by axe and by the guard (todo 386): green alone,
-/// then `3 of 3` once the menu is clipped, not `4 of 4`.
+/// then one row fewer than the enabled ones once the menu is clipped.
 #[test]
 fn an_inert_menu_row_is_no_hole_but_a_clipped_menu_still_is() {
     block_on(async {
-        selftest::must_fail(
-            "/menu",
-            None,
-            "3 of 3 on-screen text element(s) under [role=menu] were never evaluated",
-            async |page| {
-                menu_coverage_with(
-                    page,
-                    "Array.from(document.querySelectorAll('[role=menuitem]'))\
-                     .find(el => el.textContent.includes('Save')).inert = true",
-                )
-                .await
-            },
-        )
+        let enabled = Cell::new(0);
+        let (holes, total) = holes("/menu", None, "[role=menu]", async |page| {
+            menu_coverage_with(
+                page,
+                "Array.from(document.querySelectorAll('[role=menuitem]'))\
+                 .find(el => el.textContent.includes('Save')).inert = true",
+                &enabled,
+            )
+            .await
+        })
         .await;
+        assert!(enabled.get() > 0, "the menu has no enabled row");
+        assert_eq!(
+            (holes, total),
+            (enabled.get(), enabled.get()),
+            "the guard counted the inert row"
+        );
     });
 }
 
 /// A closed `<details>` body keeps a rect in Chromium, but axe and the guard skip it (386):
-/// clipped, only the summary is the hole, `1 of 2`, not `2 of 3`.
+/// clipped, only the summary is the hole: one of the green half's elements, not two.
 #[test]
 fn a_closed_details_body_is_no_hole_but_its_clipped_summary_is() {
     block_on(async {
-        selftest::must_fail(
+        let green = Cell::new(0);
+        let (holes, total) = holes(
             "/menu",
             Some(
                 "(() => { const box = document.createElement('div'); box.id = 'planted-box'; \
                  box.innerHTML = '<details><summary>More</summary><p>Folded words</p></details>'; \
                  document.querySelector('[data-fixture-ready]').append(box); })()",
             ),
-            "1 of 2 on-screen text element(s) under [data-fixture-ready] were never evaluated",
+            "[data-fixture-ready]",
             async |page| {
-                contrast::assert_covers(page, "[data-fixture-ready]", "[data-fixture-ready]")
-                    .await
-                    .map_err(|e| anyhow::anyhow!("green half: {e:#}"))?;
+                green.set(
+                    contrast::assert_covers(page, "[data-fixture-ready]", "[data-fixture-ready]")
+                        .await
+                        .map_err(|e| anyhow::anyhow!("green half: {e:#}"))?,
+                );
                 page.evaluate(stylesheet(
                     "#planted-box { overflow: hidden !important; height: 0 !important; }",
                 ))
@@ -426,6 +469,11 @@ fn a_closed_details_body_is_no_hole_but_its_clipped_summary_is() {
             },
         )
         .await;
+        assert_eq!(
+            (holes, total),
+            (1, green.get()),
+            "the clipped summary is the one hole among the green half's elements"
+        );
     });
 }
 
@@ -651,51 +699,6 @@ fn a_page_pinned_light_under_dark_emulation_fails_the_scheme_check() {
     });
 }
 
-/// `Carousel`'s track guard with one arm out per plant (`crate::carousel::plant_arm_out`),
-/// each aimed at the control only that arm saves.
-#[test]
-fn a_carousel_that_ignores_key_taken_advances_under_its_own_slider() {
-    block_on(async {
-        selftest::must_fail(
-            "/carousel",
-            Some(&carousel::plant_arm_out(carousel::KEY_TAKEN)),
-            "the carousel advanced on an arrow on a slider in a slide",
-            carousel::the_slider_in_a_slide_takes_the_arrows,
-        )
-        .await;
-    });
-}
-
-/// Without `typing_target` the track eats the caret move, so the check fails on the caret,
-/// the symptom a user meets first.
-#[test]
-fn a_carousel_that_ignores_typing_target_eats_a_caret_move() {
-    block_on(async {
-        selftest::must_fail(
-            "/carousel",
-            Some(&carousel::plant_arm_out(carousel::TYPING_TARGET)),
-            "the caret in the slide's text field did not move",
-            carousel::the_caret_moves_in_a_slides_text_field,
-        )
-        .await;
-    });
-}
-
-/// Without `arrow_target` a caller's `<input type="range">` stops stepping; no other arm
-/// covers it.
-#[test]
-fn a_carousel_that_ignores_arrow_target_stops_a_raw_range() {
-    block_on(async {
-        selftest::must_fail(
-            "/carousel",
-            Some(&carousel::plant_arm_out(carousel::ARROW_TARGET)),
-            "the raw range in the slide did not step",
-            carousel::a_raw_range_in_a_slide_steps,
-        )
-        .await;
-    });
-}
-
 /// `RadioGroup`'s rows crammed under the 24px pitch (302): todo 377's proof that
 /// `targets_spaced` sees the unit's own rows as neighbours.
 #[test]
@@ -710,98 +713,6 @@ fn radio_group_rows_crammed_together_fail_the_spacing_exception() {
             "spacing exception fails",
             async |page| {
                 target_size::assert_minimum_or_spacing(page, crate::radio_group::ROWS).await
-            },
-        )
-        .await;
-    });
-}
-
-/// `FloatingWindow` whose title bar is deaf to the arrows (a capturing listener): nothing a
-/// snapshot or axe sees changes.
-#[test]
-fn a_floating_window_with_a_deaf_title_bar_never_moves() {
-    block_on(async {
-        selftest::must_fail("/floating-window", Some(
-                "document.addEventListener('keydown', e => { \
-                 if (e.target.closest('[data-slot=handle]')) e.stopImmediatePropagation(); }, true)",
-            ), "the window to move by (10.0, 0.0)", async |page| crate::floating_window::keyboard_move(page).await)
-        .await;
-    });
-}
-
-/// `FloatingWindow` reporting the pre-move rect, the `owed` effect's defect. It skips the
-/// value it last wrote: a flag is already cleared by the next microtask and hung the page.
-#[test]
-fn a_floating_window_reporting_a_stale_rect_fails_the_move_report() {
-    block_on(async {
-        selftest::must_fail("/floating-window", Some(
-                "(() => { let written = null; \
-                 new MutationObserver(() => { const el = document.querySelector('#move-report'); \
-                 if (!el) return; const now = el.textContent; if (now === written) return; \
-                 const parts = now.trim().split(' '); if (parts.length !== 4) return; \
-                 written = [Number(parts[0]) - 10, parts[1], parts[2], parts[3]].join(' '); \
-                 el.textContent = written; }) \
-                 .observe(document.body, { subtree: true, childList: true, characterData: true }); })()",
-            ), "but it reported", async |page| crate::floating_window::keyboard_move(page).await)
-        .await;
-    });
-}
-
-/// `FloatingWindow` whose corner handle is deaf to Home and End only, so the arrows still
-/// resize but the caller's bounds never answer.
-#[test]
-fn a_floating_window_that_ignores_home_on_its_separator_never_reaches_the_minimum() {
-    block_on(async {
-        selftest::must_fail("/floating-window", Some(
-                "document.addEventListener('keydown', e => { \
-                 if ((e.key === 'Home' || e.key === 'End') && e.target.closest('[role=separator]')) \
-                 e.stopImmediatePropagation(); }, true)",
-            ), "Home to size the window to 240x120", async |page| crate::floating_window::keyboard_resize(page).await)
-        .await;
-    });
-}
-
-/// `FloatingWindow`'s 20x20 close button with its 24x24 press box stripped (505, 566) and
-/// crammed against the move handle, inside the 24px circle (377).
-#[test]
-fn a_floating_windows_crammed_title_bar_fails_the_spacing_exception() {
-    block_on(async {
-        selftest::must_fail(
-            "/floating-window",
-            Some(&stylesheet(
-                "[data-slot=title-bar] { gap: 0 !important; } \
-                 [data-slot=title-bar] button { width: 16px !important; height: 16px !important; } \
-                 [data-slot=title-bar] button::before { content: none !important; } \
-                 [data-slot=handle] { flex: 0 0 8px !important; min-width: 0 !important; }",
-            )),
-            "spacing exception fails",
-            async |page| {
-                keyboard::tab_to(page, crate::floating_window::TRIGGER, 8).await?;
-                keyboard::press(page, keyboard::ENTER).await?;
-                wait::for_visible(page, crate::floating_window::DIALOG).await?;
-                target_size::assert_minimum_or_spacing(page, crate::floating_window::CLOSE).await
-            },
-        )
-        .await;
-    });
-}
-
-/// `FloatingWindow` with `#ddd` body text: proves the baseline's axe run reaches the
-/// portaled window. Non-modal, so no scroll lock and no `UNLOCK` lift.
-#[test]
-fn a_floating_window_with_faint_text_fails_the_contrast_pass_in_the_open_state() {
-    block_on(async {
-        selftest::must_fail(
-            "/floating-window",
-            Some(&stylesheet(
-                "[role=dialog] [data-slot=body] * { color: #dddddd !important; }",
-            )),
-            "color-contrast",
-            async |page| {
-                keyboard::tab_to(page, crate::floating_window::TRIGGER, 8).await?;
-                keyboard::press(page, keyboard::ENTER).await?;
-                wait::for_visible(page, crate::floating_window::DIALOG).await?;
-                contrast::assert_clean(page, "[data-fixture-ready]").await
             },
         )
         .await;
