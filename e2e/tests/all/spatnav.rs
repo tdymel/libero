@@ -38,6 +38,8 @@ const ROUTES: &[&str] = &[
     "/table-toolbar",
     "/table-reorder",
     "/table-grid",
+    "/table-tree",
+    "/table-tree-cells",
     "/tabs",
     "/stepper",
     "/tree",

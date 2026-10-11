@@ -901,7 +901,7 @@ fn Demo() -> Element {
 | `default_expanded_groups` | `Vec<String>` | `[]` | Seeds the open groups once. Ignored when `expanded_groups` is set. |
 | `onexpandedgroupschange` | `EventHandler<Vec<String>>` | `None` | Called with the open groups a group toggle asks for. |
 | `default_group_expansion` | `usize` | `0` | How many levels of groups start open, the first time there are rows to group, beside `default_expanded_groups`: 1 opens the outermost groups. 0 starts every group closed. Ignored with `expanded_groups`. |
-| `parent_key` | `RowFn<T, Option<String>>` | `None` | A row's parent's `row_key`, `None` for a root: the rows nest under their parents, each level in the sort, behind a toggle in the first shown column named by the row and its child count. A key no row has, or a cycle, makes roots; a debug build warns. A filter keeps the kept rows' parents and opens them. Set `row_key` with it. Over `row_grouping`, which it ignores and drops from the column menu; a tree renders every row (`virtual_row_height` is ignored) and shows no `row_detail`, and its rows don't reorder. |
+| `parent_key` | `RowFn<T, Option<String>>` | `None` | A row's parent's `row_key`, `None` for a root: the rows nest under their parents, each level in the sort, behind a toggle in the first shown column named by the row and its child count. A key no row has, or a cycle, makes roots; a debug build warns. A filter keeps the kept rows' parents and opens them. Set `row_key` with it. Over `row_grouping`, which it ignores and drops from the column menu; a tree renders every row (`virtual_row_height` is ignored) and shows no `row_detail`, and its rows don't reorder. The table is a `role="treegrid"` whose rows are its stops: the arrows move between them, open and close them. |
 | `expanded_nodes` | `Option<Vec<String>>` | `None` | The `row_key`s of the open tree rows. Set, it is controlled: pair it with `onexpandednodeschange`. |
 | `default_expanded_nodes` | `Vec<String>` | `[]` | Seeds the open tree rows once. Ignored when `expanded_nodes` is set. |
 | `onexpandednodeschange` | `EventHandler<Vec<String>>` | `None` | Called with the open tree rows a toggle asks for. |
@@ -1022,6 +1022,10 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `Enter` or `Space` | With `cell_focus`, on a sortable header cell itself: sorts by that column, as its button does. Focus stays on the cell. |
 | `Ctrl+Enter` | With `cell_focus` and `column_menu`, on a header cell: opens its column menu. |
 | `Shift+Space` | With `cell_focus` and `selectable`, on a body cell: selects or deselects its row. |
+| `Right` | With `parent_key`, on a row: opens a closed row; on an open one moves to its first child, or with `cell_focus` to its first cell. |
+| `Left` | With `parent_key`, on a row: closes an open row, else moves to its parent. With `cell_focus`, on a row's first cell: moves to the row. |
+| `Up` or `Down` or `Home` or `End` or `PageUp` or `PageDown` | With `parent_key`, on a row: moves to the row before or after it, the first or last row, or by the rows one view shows. Ctrl+Home and Ctrl+End do as Home and End. |
+| `Enter` | With `parent_key` and `onrowclick`, on a row: what a click on it does. |
 | `Enter` or `F2` | On an editable cell: opens its editor, the field focused and its text selected, so typing replaces it. A second tap on the stop cell does the same on a touch screen. |
 | `Enter` or `Shift+Enter` | In a cell's editor: commits the value and moves to the cell below or above. A value that does not parse or validate keeps the editor open, with its message under it. |
 | `Tab` or `Shift+Tab` | In a cell's editor: commits the value and moves to the next or previous cell; the editor of that one opens with `Enter`. |
@@ -1096,6 +1100,13 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
   `virtual_row_height` table the focused cell's row stays rendered. The grid is
   `aria-readonly` without an editable column, `aria-multiselectable` with
   `selectable`.
+- With `parent_key`, the table is a `role="treegrid"`: each body row carries
+  `aria-level`, `aria-posinset`, `aria-setsize`, and `aria-expanded` when it has
+  children, and one row is the tab stop, the first until focus moves. The row
+  toggles are no Tab stops, as Left and Right do their work, and stay in the
+  reading order. A collapse or filter that hides the focused row moves the stop,
+  and the focus, to its nearest shown parent. With `cell_focus` its cells are
+  stops too and the first header cell is the first.
 - In a grid with an editable column, the other cells are `aria-readonly`. The
   editor is a text field named "Edit" plus the column and the row's name, "Edit
   Bonus, Ana", a number column's with a decimal keypad. A value that does not
@@ -1151,8 +1162,8 @@ each cell of that row, and names the row's toggle "Details for Cherry".
 - The footer and the leading checkbox, detail and reorder cells carry no
   `aria-colindex`; the leading cells sit at the first places.
 - On Android, the arrows and page keys do not move a `cell_focus` grid's stop
-  in the emulator's WebView (todo 958); a tap does.
-- How TalkBack reads a `cell_focus` grid is not checked yet.
+  or a tree's row in the emulator's WebView (todo 958); a tap does.
+- How TalkBack reads a `cell_focus` grid or a treegrid is not checked yet.
 - On Android, the filter popover cannot look into itself, so Tab does not close
   it at its ends and focus lands on the popover rather than its value field;
   Escape and Back close it.
@@ -1216,7 +1227,7 @@ default `start`.
 | `data-node-toggle` | On a tree row's toggle in its first shown cell, with `parent_key`; `data-node-spacer` on a leaf's spacer in its place; `data-node-cell` on the block holding either and the cell's content. |
 | `data-reorder` | On the reorder column's `th` and `td`s, with `onrowreorder`. |
 | `data-dragging` | On the body row being dragged or moved by keyboard. |
-| `data-cell-stop` | On the header or body cell that is the tab stop, with `cell_focus`. |
+| `data-cell-stop` | On the header or body cell that is the tab stop, with `cell_focus`, or on the tree row that is, with `parent_key`. |
 | `data-editing` | On the body cell whose editor is open; `data-cell-editor` on the editor's box in it, `data-cell-editor-cancel` on its cancel button, shown on a touch screen only. |
 | `data-group` | On a column group's header cell. |
 | `data-footer-lead` | On the footer's one cell over the lead columns, with an aggregating column. |

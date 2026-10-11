@@ -621,6 +621,15 @@ pub fn TablePage() -> Element {
                     Code { source: "row_grouping" }
                     "."
                 }
+                Text {
+                    "The tree is a "
+                    Code { source: "treegrid" }
+                    " whose rows are its stops: Right opens a closed row and steps into an open one, "
+                    "Left closes an open row or steps out to its parent, and Up, Down, Home, End and "
+                    "the page keys move between the rows. With "
+                    Code { source: "cell_focus" }
+                    ", Right on an open row goes on to its first cell and Left on a first cell back to the row."
+                }
                 // snippet: item #[derive(Clone, PartialEq)] struct Task { id: String, parent: Option<String>, name: String, owner: String, days: u32 }
                 // snippet: let tasks: Vec<Task> = Vec::new();
                 Demo {

@@ -1,0 +1,32 @@
+---
+source: e2e/src/suite.rs
+description: table_tree at mobile (rest)
+expression: tree
+---
+LabelText
+  StaticText "Search"
+searchbox "Search"
+  description "Tasks"
+treegrid "Tasks" [readonly]
+  rowgroup
+    row "Task Owner"
+      columnheader "Task"
+        button "Task"
+          StaticText "Task"
+      columnheader "Owner"
+        StaticText "Owner"
+  row "site, 2 rows site Ada" [expanded=false] [level=1]
+    rowheader "site, 2 rows site" [readonly]
+      button "site, 2 rows" [expanded=false]
+      StaticText "site"
+    gridcell "Ada" [readonly]
+      StaticText "Ada"
+  row "launch Ada" [level=1]
+    rowheader "launch" [readonly]
+      StaticText "launch"
+    gridcell "Ada" [readonly]
+      StaticText "Ada"
+status [atomic] [live=polite]
+button "After"
+  StaticText "After"
+paragraph

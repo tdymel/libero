@@ -1,9 +1,12 @@
 //! `Table` tree rows (1156 TR1): a row's toggle opens its children under it, says
-//! so and keeps the focus; a filter keeps and opens a match's ancestors.
+//! so and keeps the focus; a filter keeps and opens a match's ancestors. A treegrid
+//! (TR2): the rows are stops the arrows move and open, its cells too with `cell_focus`.
 
 use anyhow::{Result, bail};
+use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::passes::keyboard;
+use e2e::{Fixture, Suite, Viewport, ax};
 
 const SITE: &str = "button[aria-label=\"site, 2 rows\"]";
 const LIVE: &str = "table + [role=status]";
@@ -95,3 +98,130 @@ e2e::scenario!(
     "/table-tree",
     filter_shows_ancestors
 );
+
+/// The body row `row`, from 1.
+fn row(row: usize) -> String {
+    format!("tbody tr:nth-child({row})")
+}
+
+async fn on_row<D: Driver>(d: &mut D, at: usize, after: &str) -> Result<()> {
+    eventually_focused(d, &row(at), after).await
+}
+
+/// Right opens then steps in, Left closes then steps out, Home and End reach the ends.
+async fn row_keys<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually_text(d, "tbody tr:nth-child(2) th", "launch", "closed roots").await?;
+    if d.attr(&row(1), "tabindex").await?.as_deref() != Some("0") {
+        bail!("the first row is not the stop");
+    }
+    d.focus(&row(1)).await?;
+    on_row(d, 1, "focus").await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually_text(d, "#expanded", "site", "ArrowRight on a closed row").await?;
+    eventually_text(d, LIVE, "site expanded", "the opened row").await?;
+    on_row(d, 1, "ArrowRight on a closed row").await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    on_row(d, 2, "ArrowRight on an open row").await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    on_row(d, 3, "ArrowDown").await?;
+    eventually_text(d, "tbody tr:nth-child(3) th", "build", "the second child").await?;
+    for (name, value) in [
+        ("aria-level", "2"),
+        ("aria-posinset", "2"),
+        ("aria-setsize", "2"),
+    ] {
+        if d.attr(&row(3), name).await?.as_deref() != Some(value) {
+            bail!("the second child's {name} is not {value}");
+        }
+    }
+    d.press(keyboard::ARROW_LEFT).await?;
+    on_row(d, 1, "ArrowLeft on a closed child").await?;
+    d.press(keyboard::ARROW_LEFT).await?;
+    eventually_text(d, "#expanded", "", "ArrowLeft on an open row").await?;
+    on_row(d, 1, "ArrowLeft on an open row").await?;
+    d.press(keyboard::END).await?;
+    on_row(d, 2, "End").await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    on_row(d, 2, "ArrowDown at the end").await?;
+    d.press(keyboard::HOME).await?;
+    on_row(d, 1, "Home").await?;
+    // Closed from outside, a hidden focused row hands the focus to its shown ancestor.
+    d.press(keyboard::ARROW_RIGHT).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    on_row(d, 2, "ArrowRight into the children").await?;
+    d.type_text("c").await?;
+    eventually_text(d, "#expanded", "", "the outside close").await?;
+    on_row(d, 1, "the outside close").await?;
+    // The toggles are no Tab stops: Tab leaves the table.
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, "#after", "Tab").await
+}
+
+e2e::scenario!(
+    the_arrows_move_and_open_the_tree_rows,
+    "/table-tree",
+    row_keys,
+    android: skip("958: roving keys are inert in the emulator's WebView")
+);
+
+/// With `cell_focus`: Left from a first cell takes its row, Right from an open row its first cell.
+async fn rows_and_cells<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("[data-cell-stop]").await?;
+    eventually_focused(d, "thead tr > :nth-child(1)", "the header stop").await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually_focused(d, &cell(1, 1), "ArrowDown from the header").await?;
+    d.press(keyboard::ARROW_LEFT).await?;
+    on_row(d, 1, "ArrowLeft from the first cell").await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually_text(d, "#expanded", "site", "ArrowRight on a closed row").await?;
+    on_row(d, 1, "ArrowRight on a closed row").await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually_focused(d, &cell(1, 1), "ArrowRight on an open row").await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually_focused(d, &cell(1, 2), "ArrowRight in the row").await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually_focused(d, &cell(2, 2), "ArrowDown").await?;
+    d.press(keyboard::ARROW_LEFT).await?;
+    d.press(keyboard::ARROW_LEFT).await?;
+    on_row(d, 2, "ArrowLeft twice").await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    on_row(d, 3, "ArrowDown between rows").await
+}
+
+/// The body cell in row `row`, column `col`, both from 1.
+fn cell(row: usize, col: usize) -> String {
+    format!("tbody tr:nth-child({row}) > :nth-child({col})")
+}
+
+e2e::scenario!(
+    a_tree_with_cell_focus_moves_between_rows_and_cells,
+    "/table-tree-cells",
+    rows_and_cells,
+    android: skip("958: roving keys are inert in the emulator's WebView")
+);
+
+#[test]
+fn the_treegrid_meets_the_baseline() {
+    Suite::new("table_tree", "/table-tree")
+        .focusable("tbody tr[tabindex=\"0\"]")
+        .run();
+}
+
+/// Chromium reads the tree as a treegrid, each row with its level and state.
+#[test]
+fn the_ax_tree_names_a_treegrid() {
+    block_on(async {
+        let fixture = Fixture::open("/table-tree", Viewport::Desktop)
+            .await
+            .unwrap();
+        let tree = ax::snapshot(&fixture.page, "table").await.unwrap();
+        assert!(tree.starts_with("treegrid \"Tasks\""), "{tree}");
+        assert!(tree.contains("[expanded=false] [level=1]"), "{tree}");
+        assert!(tree.contains("row \"launch Ada\" [level=1]"), "{tree}");
+        fixture
+            .console
+            .assert_clean("reading the treegrid")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

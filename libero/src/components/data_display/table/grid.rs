@@ -6,7 +6,10 @@ use std::rc::Rc;
 use dioxus::prelude::*;
 
 use super::{
-    cell_focus::{FocusTarget, GridRow, HeadCell, Move, Pos, key_move, resolve, step},
+    cell_focus::{
+        FocusTarget, GridRow, HeadCell, Move, Pos, TreeAct, TreeNode, key_move, resolve, step,
+        tree_step,
+    },
     edit::Leave,
     pipeline::VisibleRow,
     window::reveal_slot,
@@ -23,15 +26,17 @@ use crate::{
 /// Rows a PageUp or PageDown moves when the view cannot be measured.
 const PAGE_ROWS: usize = 10;
 
-/// Focus in a grid cell or a widget inside one: the filter row, the footer and the
-/// leading select, detail and reorder cells keep their keys.
+/// Focus in a grid cell or a widget inside one, or on a tree row or its toggle: the
+/// filter row, the footer and the leading select, detail and reorder cells keep their keys.
 const GRID_CELL_FOCUS: &str = "thead th[tabindex]:focus, thead th[tabindex] :focus, \
                                tbody td[tabindex]:focus, tbody th[tabindex]:focus, \
-                               tbody td[tabindex] :focus, tbody th[tabindex] :focus";
+                               tbody td[tabindex] :focus, tbody th[tabindex] :focus, \
+                               tbody > tr[aria-level]:focus, \
+                               tbody > tr[aria-level] [data-node-toggle]:focus";
 
 /// A cell's `"{data index}.{header index}"`, a header cell's `"h{level}.{header
-/// index}"`, on Blitz only: its click, Tab and `focus()` fire no `focusin`, so the
-/// silent move finds the cell by it.
+/// index}"`, a tree row's `"{data index}"`, on Blitz only: its click, Tab and
+/// `focus()` fire no `focusin`, so the silent move finds the cell by it.
 const CELL_ATTR: &str = "data-cell";
 
 /// The grid's tab stop and what moves focus to it.
@@ -53,6 +58,8 @@ pub(super) struct GridFocus {
     request: Signal<Option<Option<Reveal>>>,
     /// Marks the stop cell as `data-cell-stop`, where a WebView focuses by selector.
     id: Signal<String>,
+    /// Focus is in the table, or was on a row a re-render removed: no `focusout` then.
+    inside: CopyValue<bool>,
     table: ElementHandle,
     region: ElementHandle,
 }
@@ -89,9 +96,74 @@ pub(super) struct GridRows {
     pub select: Option<Callback<usize>>,
     /// Whether each column is editable, by header index: Enter or F2 opens its editor.
     pub editable: Rc<[bool]>,
+    /// With `parent_key`: the rows are a treegrid's.
+    pub tree: Option<TreeNav>,
+}
+
+/// A treegrid's rows: each one a stop of its own, its cells too with `cells`.
+pub(super) struct TreeNav {
+    /// The shown body rows, in order.
+    pub nodes: Vec<TreeNode>,
+    /// Each row's parent by data index, a root its own.
+    pub parents: Rc<[usize]>,
+    /// Opens (`true`) or closes a row, by data index.
+    pub toggle: Callback<(usize, bool)>,
+    /// With `onrowclick`: Enter on a row, by data index.
+    pub click: Option<Callback<usize>>,
+    pub cells: bool,
 }
 
 impl GridRows {
+    /// The stop as a target: in a tree a row of its own, or the nearest shown
+    /// ancestor of a row a collapse hid; else [`Self::at`]'s cell.
+    pub fn stop(&self, stop: Option<FocusTarget>) -> Option<FocusTarget> {
+        let Some(tree) = &self.tree else {
+            return self.at(stop).map(|at| self.target(at));
+        };
+        let shown = |index: usize| self.order.contains(&GridRow::Body(VisibleRow::Data(index)));
+        let row_stop = |index: usize| FocusTarget {
+            row: GridRow::Body(VisibleRow::Data(index)),
+            col: None,
+        };
+        let stop = match stop {
+            Some(FocusTarget {
+                row: GridRow::Body(VisibleRow::Data(from)),
+                col,
+            }) => {
+                let mut index = from;
+                while !shown(index) && tree.parents.get(index).is_some_and(|&up| up != index) {
+                    index = tree.parents[index];
+                }
+                match (shown(index), col) {
+                    (false, _) => None,
+                    (true, Some(_)) if index == from => stop,
+                    (true, _) => return Some(row_stop(index)),
+                }
+            }
+            stop => stop,
+        };
+        match stop {
+            // Without cells the first row is the first stop.
+            None if !tree.cells => self
+                .order
+                .get(self.head.len())
+                .map(|&row| FocusTarget { row, col: None }),
+            stop => self.at(stop).map(|at| self.target(at)),
+        }
+    }
+
+    /// The tree row stop `target`'s place among the body rows.
+    fn tree_row(&self, target: FocusTarget) -> Option<usize> {
+        match target {
+            FocusTarget {
+                row: row @ GridRow::Body(_),
+                col: None,
+            } => self.order.iter().position(|&at| at == row),
+            _ => None,
+        }
+        .map(|at| at - self.head.len())
+    }
+
     fn row_spans(&self, row: usize) -> Vec<usize> {
         match self.order[row] {
             GridRow::Head(level) => self.head[level].iter().map(|cell| cell.span).collect(),
@@ -235,6 +307,7 @@ pub(super) fn use_grid_focus(table: ElementHandle, region: ElementHandle) -> Gri
         armed,
         request,
         id,
+        inside: use_hook(|| CopyValue::new(false)),
         table,
         region,
     };
@@ -265,9 +338,18 @@ fn focused_cell(table: &ElementHandle) -> Option<FocusTarget> {
         .query_selector_all(&format!("[{CELL_ATTR}]"))
         .ok()?
         .into_iter()
-        .find(|cell| holds(cell.as_ref()))?;
-    let name = cell.attribute(CELL_ATTR).ok()??;
-    let (row, col) = name.split_once('.')?;
+        .find(|cell| holds(cell.as_ref()));
+    let name = match cell {
+        Some(cell) => cell.attribute(CELL_ATTR).ok()??,
+        // A tree row, or a widget in it outside a cell.
+        None => row.attribute(CELL_ATTR).ok()??,
+    };
+    let Some((row, col)) = name.split_once('.') else {
+        return Some(FocusTarget {
+            row: GridRow::Body(VisibleRow::Data(name.parse().ok()?)),
+            col: None,
+        });
+    };
     let row = match row.strip_prefix('h') {
         Some(level) => GridRow::Head(level.parse().ok()?),
         None => GridRow::Body(VisibleRow::Data(row.parse().ok()?)),
@@ -319,6 +401,58 @@ impl GridFocus {
         }
         if let Some(colindex) = colindex {
             attributes.push(attr("aria-colindex", colindex.to_string()));
+        }
+        attributes
+    }
+
+    /// The treegrid's own listeners: whether focus is in it.
+    pub fn tree_listeners(self) -> [Attribute; 2] {
+        let (mut on, mut off) = (self.inside, self.inside);
+        [
+            listener("onfocusin", move |_: Event<FocusData>| on.set(true)),
+            listener("onfocusout", move |_: Event<FocusData>| off.set(false)),
+        ]
+    }
+
+    /// Once a collapse or filter hid the stop's row, the `shown` stop takes its place,
+    /// and the focus too when it was on the hidden row.
+    pub fn follow_shown(self, shown: Option<FocusTarget>) {
+        let held = *self.stop.peek();
+        let hid = held.is_some_and(|at| matches!(at.row, GridRow::Body(_)))
+            && shown.is_some()
+            && held.map(|at| at.row) != shown.map(|at| at.row);
+        if !hid {
+            return;
+        }
+        let (mut stop, mut request, inside) = (self.stop, self.request, self.inside);
+        // After the render: no write to a signal it read.
+        spawn(async move {
+            stop.set(shown);
+            if *inside.peek() {
+                request.set(Some(None));
+            }
+        });
+    }
+
+    /// A tree row's attributes, a stop of its own as [`Self::cell`]'s are.
+    pub fn row(&self, index: usize, is_stop: bool) -> Vec<Attribute> {
+        let mut stop = self.stop;
+        let row = GridRow::Body(VisibleRow::Data(index));
+        let mut attributes = vec![
+            attr("tabindex", if is_stop { "0" } else { "-1" }),
+            // A focused cell's `focusin` bubbles here after it made itself the stop.
+            listener("onfocusin", move |_: Event<FocusData>| {
+                let held = *stop.peek();
+                if held.is_none_or(|held| held.row != row) {
+                    stop.set(Some(FocusTarget { row, col: None }));
+                }
+            }),
+        ];
+        if is_stop {
+            attributes.push(attr("data-cell-stop", self.id.peek().clone()));
+        }
+        if silent_focus().is_some() {
+            attributes.push(attr(CELL_ATTR, index.to_string()));
         }
         attributes
     }
@@ -400,12 +534,12 @@ impl GridFocus {
                 Ok(_) => true,
                 // A WebView mirrors the focus on focusin, before keydown: a `td` or `th` is a cell.
                 Err(PlatformError::Unsupported) => {
-                    matches!(focused_tag().as_deref(), Some("TD" | "TH"))
+                    matches!(focused_tag().as_deref(), Some("TD" | "TH" | "TR"))
                 }
                 Err(_) => false,
             }
         };
-        let stop = rows.at(*self.stop.peek()).map(|at| rows.target(at));
+        let stop = rows.stop(*self.stop.peek());
         match (stop, shift, ctrl) {
             (
                 Some(FocusTarget {
@@ -445,6 +579,23 @@ impl GridFocus {
                 }
                 None => false,
             },
+            // Enter on a tree row: what a click on it does, no more.
+            (
+                Some(FocusTarget {
+                    row: GridRow::Body(VisibleRow::Data(index)),
+                    col: None,
+                }),
+                false,
+                false,
+            ) if enter && on_stop("tbody") => {
+                match rows.tree.as_ref().and_then(|tree| tree.click) {
+                    Some(click) => {
+                        click.call(index);
+                        true
+                    }
+                    None => false,
+                }
+            }
             _ => false,
         }
     }
@@ -495,26 +646,9 @@ impl GridFocus {
 
     /// Moves the stop and asks for focus on it after the render.
     fn go(mut self, rows: &GridRows, by: Move) {
-        let Some(mut at) = rows.at(*self.stop.peek()) else {
+        let Some((at, target)) = self.tree_go(rows, by).or_else(|| self.cell_go(rows, by)) else {
             return;
         };
-        let from = rows.target(at);
-        let spans = |row: usize| rows.row_spans(row);
-        let mut target = from;
-        // A column's header spans the levels under its neighbours' groups: past it.
-        for _ in 0..rows.order.len() {
-            let to = step(at, by, rows.order.len(), spans);
-            let moved = to != at;
-            at = to;
-            target = rows.target(at);
-            let vertical = matches!(
-                by,
-                Move::Up | Move::Down | Move::PageUp(_) | Move::PageDown(_)
-            );
-            if target != from || !moved || !vertical {
-                break;
-            }
-        }
         if *self.stop.peek() != Some(target) {
             self.stop.set(Some(target));
         }
@@ -536,6 +670,73 @@ impl GridFocus {
             _ => None,
         };
         self.request.set(Some(reveal));
+    }
+
+    /// A treegrid's move from a row stop, or Left from a row's first cell to the row.
+    /// `None` leaves it to the cells; a toggle or no move, to nothing.
+    fn tree_go(self, rows: &GridRows, by: Move) -> Option<(Pos, FocusTarget)> {
+        let tree = rows.tree.as_ref()?;
+        let stop = rows.stop(*self.stop.peek())?;
+        let head = rows.head.len();
+        let row_at = |body: usize| {
+            let row = rows.order[head + body];
+            (
+                Pos {
+                    row: head + body,
+                    col: 0,
+                },
+                FocusTarget { row, col: None },
+            )
+        };
+        let Some(body) = rows.tree_row(stop) else {
+            // A body cell in the first column: Left takes the row.
+            let at = rows.at(Some(stop))?;
+            return match (stop.row, by) {
+                (GridRow::Body(_), Move::Left) if at.col == 0 => Some(row_at(at.row - head)),
+                _ => None,
+            };
+        };
+        match tree_step(body, by, &tree.nodes, tree.cells) {
+            TreeAct::Row(to) => Some(row_at(to)),
+            TreeAct::FirstCell => {
+                let at = Pos {
+                    row: head + body,
+                    col: 0,
+                };
+                Some((at, rows.target(at)))
+            }
+            TreeAct::Toggle(open) => {
+                if let GridRow::Body(VisibleRow::Data(index)) = stop.row {
+                    tree.toggle.call((index, open));
+                }
+                // Focus stays, and the stop with it.
+                Some(row_at(body))
+            }
+            TreeAct::Stay => Some(row_at(body)),
+        }
+    }
+
+    /// A move between cells.
+    fn cell_go(self, rows: &GridRows, by: Move) -> Option<(Pos, FocusTarget)> {
+        let mut at = rows.at(rows.stop(*self.stop.peek()))?;
+        let from = rows.target(at);
+        let spans = |row: usize| rows.row_spans(row);
+        let mut target = from;
+        // A column's header spans the levels under its neighbours' groups: past it.
+        for _ in 0..rows.order.len() {
+            let to = step(at, by, rows.order.len(), spans);
+            let moved = to != at;
+            at = to;
+            target = rows.target(at);
+            let vertical = matches!(
+                by,
+                Move::Up | Move::Down | Move::PageUp(_) | Move::PageDown(_)
+            );
+            if target != from || !moved || !vertical {
+                break;
+            }
+        }
+        Some((at, target))
     }
 
     /// The rows one view shows: the region's height over a row's. Reads start here:

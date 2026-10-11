@@ -1,5 +1,6 @@
 //! `Table` tree rows on Blitz (1156 TR1): a row's toggle opens its children under
-//! it, indented one step past it; Enter on the focused toggle closes it again.
+//! it, indented one step past it; Enter on the focused toggle closes it again. A
+//! treegrid (TR2): its role, and the arrows on a focused row.
 
 use dioxus::prelude::*;
 use e2e::native::{Key, mount};
@@ -54,5 +55,46 @@ fn a_tree_toggle_opens_its_children_under_it() {
     );
     page.focus(SITE);
     page.press(Key::Enter);
+    assert_eq!(page.query_all("tbody tr").len(), 2, "{}", page.tree());
+}
+
+#[test]
+fn a_tree_is_a_treegrid_in_the_ax_tree() {
+    let page = mount(app);
+    for (selector, role) in [
+        ("table", "TreeGrid"),
+        ("tbody tr", "Row"),
+        ("tbody th", "RowHeader"),
+    ] {
+        assert_eq!(
+            page.accessible(selector).0,
+            role,
+            "{selector}: {}",
+            page.tree()
+        );
+    }
+}
+
+/// Blitz fires no `focusin` on a `focus()`: the keys find the row by its `data-cell`.
+#[test]
+fn the_arrows_open_and_close_a_focused_row() {
+    let mut page = mount(app);
+    page.focus("tbody tr:nth-child(1)");
+    page.press(Key::ArrowRight);
+    assert_eq!(page.query_all("tbody tr").len(), 4, "{}", page.tree());
+    page.press(Key::ArrowDown);
+    page.press(Key::ArrowRight);
+    assert!(
+        page.is_focused("tbody tr:nth-child(2)"),
+        "{}",
+        page.focus_owner()
+    );
+    page.press(Key::ArrowLeft);
+    assert!(
+        page.is_focused("tbody tr:nth-child(1)"),
+        "{}",
+        page.focus_owner()
+    );
+    page.press(Key::ArrowLeft);
     assert_eq!(page.query_all("tbody tr").len(), 2, "{}", page.tree());
 }

@@ -37,7 +37,7 @@ use crate::{
 };
 
 use super::{
-    cell_focus::{GridRow, head_levels},
+    cell_focus::{GridRow, TreeNode, head_levels},
     column::{Column, ColumnDefaults},
     column_drag::{DropPlan, use_column_drag},
     column_filter::{ColumnFilter, FilterLogic, cell_tests},
@@ -54,7 +54,7 @@ use super::{
     filter_panel::{FilterPanel, FilterPanelButton, PanelColumn, use_panel_control},
     filter_popover::FilterTarget,
     footer::{Foot, FooterRows, aggregate_cell},
-    grid::{GridRows, GridWindow, HeadGrid, col_indices, use_grid_focus},
+    grid::{GridRows, GridWindow, HeadGrid, TreeNav, col_indices, use_grid_focus},
     header_filters::HeaderFilter,
     header_groups::header_rows,
     memo::Memo,
@@ -241,7 +241,7 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     // A grid cell's ring, inset: a pinned or clipped cell would cut an outer one.
     .selector(
         "& tbody td[tabindex]:focus-visible, & tbody th[tabindex]:focus-visible, \
-         & thead th[tabindex]:focus-visible",
+         & thead th[tabindex]:focus-visible, & tbody > tr[aria-level]:focus-visible",
         inset_focus_ring_sx("-2px"),
     )
     // An editing cell's field fills it, in the cell's own type.
@@ -1010,6 +1010,7 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// The `row_key` of a row's parent: the rows nest under their parents, each
     /// level in the sort, and a missing parent makes a root. Needs `row_key`. Over
     /// `row_grouping`; renders every row, which neither reorder nor show a `row_detail`.
+    /// Makes the table a `role="treegrid"` whose rows the arrows move, open and close.
     #[props(default, into)]
     parent_key: RowFn<T, Option<String>>,
     /// The `row_key`s of the open tree rows; set, they are controlled.
@@ -1981,6 +1982,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         animate_details: props.animate_details && !has_reorder,
         reorder: reorder.clone(),
         grid: cell_focus.then_some(grid_focus),
+        tree_focus: tree.then_some(grid_focus),
         onrowupdate: props.onrowupdate,
         editable,
         announcer,
@@ -2050,16 +2052,65 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             }
         })
     };
-    let grid = cell_focus.then(|| {
+    // A tree is a treegrid: its rows are stops, its cells too with `cell_focus`.
+    let grid = (cell_focus || tree).then(|| {
         let (data, context) = (data.clone(), context.clone());
         let paths: Vec<(usize, &[String])> = layout
             .iter()
             .map(|&index| (index, headers[index].groups.as_slice()))
             .collect();
-        let levels = head_levels(
-            &header_rows(&paths, |at| pin_edge_at(&headers, &layout, at)),
-            &layout,
-        );
+        let levels = match cell_focus {
+            true => head_levels(
+                &header_rows(&paths, |at| pin_edge_at(&headers, &layout, at)),
+                &layout,
+            ),
+            false => Vec::new(),
+        };
+        let tree = parents
+            .as_ref()
+            .zip(tree_levels.as_ref())
+            .map(|(parents, levels)| {
+                let places: HashMap<usize, usize> = order
+                    .iter()
+                    .filter_map(|row| row.data())
+                    .enumerate()
+                    .map(|(place, index)| (index, place))
+                    .collect();
+                let nodes = order
+                    .iter()
+                    .filter_map(|row| row.data())
+                    .map(|index| {
+                        let level = levels[index];
+                        TreeNode {
+                            parent: Some(parents[index])
+                                .filter(|&up| up != index)
+                                .and_then(|up| places.get(&up).copied()),
+                            open: level
+                                .filter(|level| level.children > 0)
+                                .map(|level| level.open),
+                        }
+                    })
+                    .collect();
+                let click = props.onrowclick.map(|onrowclick| {
+                    let data = data.clone();
+                    Callback::new(move |index: usize| onrowclick.call(data[index].clone()))
+                });
+                let (data, columns, keys) = (data.clone(), columns.clone(), keys.clone());
+                TreeNav {
+                    click,
+                    nodes,
+                    parents: parents.clone(),
+                    toggle: Callback::new(move |(index, open): (usize, bool)| {
+                        let name = columns
+                            .get(name_column)
+                            .map(|column| (column.text)(&data[index]))
+                            .filter(|name| !name.is_empty())
+                            .unwrap_or_else(|| keys[index].clone());
+                        toggle_node.call((keys[index].clone(), name, open));
+                    }),
+                    cells: cell_focus,
+                }
+            });
         let header = {
             let (headers, active, sort) = (headers.clone(), active.clone(), state.sort);
             let menus = props.column_menu;
@@ -2111,14 +2162,18 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             header,
             select,
             editable: columns.iter().map(|column| column.edit.is_some()).collect(),
+            tree,
         }
     });
-    // The stop's cell, the first header cell until one took focus.
+    // The stop's cell, the first header cell until one took focus; a tree's first row without cells.
     let grid_stop = grid
         .as_ref()
-        .and_then(|rows| rows.at(grid_focus.stop.cloned()).map(|at| rows.target(at)));
-    // With `cell_focus` on a page: every page's rows count (APG grid).
-    let paged = (cell_focus && paginated && row_height.is_none()).then_some(counted);
+        .and_then(|rows| rows.stop(grid_focus.stop.cloned()));
+    if tree {
+        grid_focus.follow_shown(grid_stop);
+    }
+    // A grid on a page: every page's rows count (APG grid).
+    let paged = ((cell_focus || tree) && paginated && row_height.is_none()).then_some(counted);
     let striped = props.striped;
     let editing = (editable && cell_focus)
         .then(|| grid_focus.editing.cloned())
@@ -2142,6 +2197,9 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                     .filter(|at| at.row == GridRow::Body(VisibleRow::Data(index)))
                     .and_then(|at| at.col),
                 level: tree_levels.as_ref().and_then(|levels| levels[index]),
+                row_stop: grid_stop.is_some_and(|stop| {
+                    stop.col.is_none() && stop.row == GridRow::Body(VisibleRow::Data(index))
+                }),
                 key,
             }
         }
@@ -2169,7 +2227,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         attributes.push(attr("aria-busy", "true"));
     }
     if let Some(rows) = grid {
-        attributes.push(attr("role", "grid"));
+        attributes.push(attr("role", if tree { "treegrid" } else { "grid" }));
         if selection.is_some() {
             attributes.push(attr("aria-multiselectable", "true"));
         }
@@ -2183,6 +2241,9 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             ));
         }
         attributes.push(grid_focus.keydown(rows));
+        if tree {
+            attributes.extend(grid_focus.tree_listeners());
+        }
     }
     if let Some((_, total)) = paged {
         attributes.extend(window_attributes(

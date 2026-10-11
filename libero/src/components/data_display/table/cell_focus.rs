@@ -145,6 +145,54 @@ pub(super) fn step(at: Pos, by: Move, rows: usize, spans: impl Fn(usize) -> Vec<
     }
 }
 
+/// A shown tree row as the keys see it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct TreeNode {
+    /// Its parent's place among the shown rows; `None` for a root.
+    pub parent: Option<usize>,
+    /// Whether its children show; `None` for a leaf.
+    pub open: Option<bool>,
+}
+
+/// What a key does on a focused tree row.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum TreeAct {
+    /// Focus the shown row at this place.
+    Row(usize),
+    FirstCell,
+    /// Open (`true`) or close the row.
+    Toggle(bool),
+    Stay,
+}
+
+/// The APG treegrid keys on the row at `at` among the shown `nodes`; `cells`
+/// when its cells take focus too. Without them Right steps into an open row's children.
+pub(super) fn tree_step(at: usize, by: Move, nodes: &[TreeNode], cells: bool) -> TreeAct {
+    let Some(node) = nodes.get(at) else {
+        return TreeAct::Stay;
+    };
+    let last = nodes.len() - 1;
+    match by {
+        Move::Right => match node.open {
+            Some(false) => TreeAct::Toggle(true),
+            _ if cells => TreeAct::FirstCell,
+            Some(true) if at < last => TreeAct::Row(at + 1),
+            _ => TreeAct::Stay,
+        },
+        Move::Left => match (node.open, node.parent) {
+            (Some(true), _) => TreeAct::Toggle(false),
+            (_, Some(parent)) => TreeAct::Row(parent),
+            _ => TreeAct::Stay,
+        },
+        Move::Up => TreeAct::Row(at.saturating_sub(1)),
+        Move::Down => TreeAct::Row((at + 1).min(last)),
+        Move::RowStart | Move::GridStart => TreeAct::Row(0),
+        Move::RowEnd | Move::GridEnd => TreeAct::Row(last),
+        Move::PageUp(page) => TreeAct::Row(at.saturating_sub(page)),
+        Move::PageDown(page) => TreeAct::Row((at + page).min(last)),
+    }
+}
+
 /// The stop's cell among the shown `order` and `layout` (header indices in display
 /// order), else the first cell: its row or column is gone. `None` without a cell.
 pub(super) fn resolve(
@@ -263,6 +311,64 @@ mod tests {
         assert_eq!(resolve(stop(0, 7), &order, &layout, three), Some(at(0, 0)));
         assert_eq!(resolve(None, &order, &layout, three), Some(at(0, 0)));
         assert_eq!(resolve(None, &[], &layout, three), None);
+    }
+
+    /// a (open) > b (closed), c (leaf); d a closed root.
+    fn tree() -> Vec<TreeNode> {
+        let node = |parent, open| TreeNode { parent, open };
+        vec![
+            node(None, Some(true)),
+            node(Some(0), Some(false)),
+            node(Some(0), None),
+            node(None, Some(false)),
+        ]
+    }
+
+    #[test]
+    fn right_opens_a_closed_row_then_steps_in() {
+        let nodes = tree();
+        assert_eq!(
+            tree_step(1, Move::Right, &nodes, false),
+            TreeAct::Toggle(true)
+        );
+        assert_eq!(tree_step(0, Move::Right, &nodes, false), TreeAct::Row(1));
+        assert_eq!(tree_step(2, Move::Right, &nodes, false), TreeAct::Stay);
+        assert_eq!(tree_step(0, Move::Right, &nodes, true), TreeAct::FirstCell);
+        assert_eq!(tree_step(2, Move::Right, &nodes, true), TreeAct::FirstCell);
+        assert_eq!(
+            tree_step(3, Move::Right, &nodes, true),
+            TreeAct::Toggle(true)
+        );
+    }
+
+    #[test]
+    fn left_closes_an_open_row_else_goes_to_its_parent() {
+        let nodes = tree();
+        assert_eq!(
+            tree_step(0, Move::Left, &nodes, false),
+            TreeAct::Toggle(false)
+        );
+        assert_eq!(tree_step(1, Move::Left, &nodes, false), TreeAct::Row(0));
+        assert_eq!(tree_step(2, Move::Left, &nodes, true), TreeAct::Row(0));
+        assert_eq!(tree_step(3, Move::Left, &nodes, false), TreeAct::Stay);
+    }
+
+    #[test]
+    fn the_vertical_keys_move_between_rows_without_wrap() {
+        let nodes = tree();
+        assert_eq!(tree_step(0, Move::Up, &nodes, false), TreeAct::Row(0));
+        assert_eq!(tree_step(3, Move::Down, &nodes, false), TreeAct::Row(3));
+        assert_eq!(tree_step(1, Move::Down, &nodes, false), TreeAct::Row(2));
+        assert_eq!(tree_step(2, Move::RowStart, &nodes, false), TreeAct::Row(0));
+        assert_eq!(tree_step(1, Move::RowEnd, &nodes, true), TreeAct::Row(3));
+        assert_eq!(
+            tree_step(0, Move::PageDown(2), &nodes, false),
+            TreeAct::Row(2)
+        );
+        assert_eq!(
+            tree_step(1, Move::PageUp(5), &nodes, false),
+            TreeAct::Row(0)
+        );
     }
 
     /// "Name" over columns 7 and 8, column 5 beside it spanning both levels.

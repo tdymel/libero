@@ -82,7 +82,8 @@ fn a_tree_starts_with_its_roots_closed() {
     // Named as a group toggle is, its state in `aria-expanded`.
     assert!(body.contains("aria-label=\"site, 2 rows\""), "{body}");
     assert_eq!(body.matches("data-node-toggle").count(), 1, "{body}");
-    assert_eq!(body.matches("aria-expanded=\"false\"").count(), 1, "{body}");
+    // The row and its toggle.
+    assert_eq!(body.matches("aria-expanded=\"false\"").count(), 2, "{body}");
     assert_eq!(body.matches("data-node-spacer").count(), 2, "{body}");
 }
 
@@ -115,8 +116,8 @@ fn open_rows_show_their_children_after_them_in_the_sort() {
         body.contains("data-level=\"2\"") || body.contains("data-level=2"),
         "{body}"
     );
-    // Two levels open: site and its children, not the grandchildren (they have none).
-    assert_eq!(body.matches("aria-expanded=\"true\"").count(), 3, "{body}");
+    // Two levels open: site and its children, not the grandchildren (they have none). Row and toggle each.
+    assert_eq!(body.matches("aria-expanded=\"true\"").count(), 6, "{body}");
 }
 
 #[test]
@@ -190,4 +191,85 @@ fn a_tree_ignores_the_row_grouping() {
     let body = body(&render(app));
     assert!(!body.contains("data-row-group"), "{body}");
     assert!(body.contains("data-node-toggle"), "{body}");
+}
+
+/// The opening tag of the row whose first cell reads `text`.
+fn row_of<'a>(body: &'a str, text: &str) -> &'a str {
+    let start = body[..at(body, text)].rfind("<tr").expect("a row");
+    let end = start + body[start..].find('>').expect("a tag");
+    &body[start..end]
+}
+
+#[test]
+fn a_tree_is_a_treegrid_whose_rows_tell_their_place() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    caption: "Tasks",
+                    data: tasks(),
+                    columns: columns(),
+                    row_key: |t: &Task| t.id.to_string(),
+                    parent_key: parent,
+                    default_expanded_nodes: vec!["site".to_string()],
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    assert!(html.contains("role=\"treegrid\""), "{html}");
+    let body = body(&html);
+    let site = row_of(&body, "site");
+    for part in [
+        "aria-level=\"1\"",
+        "aria-posinset=\"1\"",
+        "aria-setsize=\"3\"",
+        "aria-expanded=\"true\"",
+        "tabindex=\"0\"",
+    ] {
+        assert!(site.contains(part), "{part}: {site}");
+    }
+    let build = row_of(&body, "build");
+    for part in [
+        "aria-level=\"2\"",
+        "aria-posinset=\"2\"",
+        "aria-setsize=\"2\"",
+        "aria-expanded=\"false\"",
+        "tabindex=\"-1\"",
+    ] {
+        assert!(build.contains(part), "{part}: {build}");
+    }
+    // A leaf has no `aria-expanded`; the toggles leave Tab to the rows.
+    assert!(!row_of(&body, "launch").contains("aria-expanded"), "{body}");
+    assert_eq!(body.matches("tabindex=\"0\"").count(), 1, "{body}");
+    let toggle = &body[body[..body.find("data-node-toggle").expect("a toggle")]
+        .rfind("<button")
+        .expect("a button")..];
+    let toggle = &toggle[..toggle.find('>').expect("a tag")];
+    assert!(toggle.contains("tabindex=\"-1\""), "{toggle}");
+}
+
+#[test]
+fn cell_focus_leaves_the_first_stop_on_the_header() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    caption: "Tasks",
+                    data: tasks(),
+                    columns: columns(),
+                    row_key: |t: &Task| t.id.to_string(),
+                    parent_key: parent,
+                    cell_focus: true,
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    assert!(html.contains("role=\"treegrid\""), "{html}");
+    let body = &html[html.find("<tbody").expect("a body")..];
+    assert!(!body.contains("tabindex=\"0\""), "{body}");
+    assert!(row_of(body, "site").contains("tabindex=\"-1\""), "{body}");
 }

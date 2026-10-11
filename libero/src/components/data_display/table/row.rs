@@ -24,6 +24,7 @@ use crate::{
     context::IconSlot,
     hooks::listener,
     localization::labels::table::TableLabels,
+    platform::infers_grid_cells,
     theme::TABLE_GROUP_INDENT,
 };
 use pictogram_icons_lucide as lucide;
@@ -54,6 +55,8 @@ pub(super) struct RowContext<T: 'static> {
     pub reorder: Option<RowReorder>,
     /// With `cell_focus`.
     pub grid: Option<GridFocus>,
+    /// With `parent_key`: each row a treegrid stop.
+    pub tree_focus: Option<GridFocus>,
     /// With `cell_focus` and a hidden column: each column's `aria-colindex`.
     pub colindex: Option<Rc<[usize]>>,
     /// Told an editable cell's commit.
@@ -88,6 +91,7 @@ impl<T> RowContext<T> {
             animate_details,
             reorder: _,
             grid,
+            tree_focus,
             colindex,
             onrowupdate,
             editable,
@@ -134,6 +138,7 @@ impl<T> RowContext<T> {
             && boxes(self) == boxes(other)
             && reorder(self) == reorder(other)
             && grid.map(|grid| grid.stop) == other.grid.map(|grid| grid.stop)
+            && tree_focus.map(|grid| grid.stop) == other.tree_focus.map(|grid| grid.stop)
             && *colindex == other.colindex
             && *onrowupdate == other.onrowupdate
             && *editable == other.editable
@@ -163,6 +168,8 @@ pub(super) struct RowState {
     pub editing: Option<usize>,
     /// With `parent_key`: its place in the tree.
     pub level: Option<TreeLevel>,
+    /// With `parent_key`: the row itself is the stop.
+    pub row_stop: bool,
 }
 
 impl<T: Clone + 'static> RowContext<T> {
@@ -179,6 +186,7 @@ impl<T: Clone + 'static> RowContext<T> {
             rowindex,
             editing: _,
             level,
+            row_stop,
         } = state;
         let named = self.details.is_some() || self.selection.is_some() || slot.is_some();
         let name = named.then(|| {
@@ -217,6 +225,17 @@ impl<T: Clone + 'static> RowContext<T> {
         }
         if let Some(level) = level {
             attributes.push(attr("data-level", level.depth.to_string()));
+            attributes.extend([
+                attr("aria-level", (level.depth + 1).to_string()),
+                attr("aria-posinset", level.posinset.to_string()),
+                attr("aria-setsize", level.setsize.to_string()),
+            ]);
+            if level.children > 0 {
+                attributes.push(attr("aria-expanded", level.open.to_string()));
+            }
+            if let Some(grid) = &self.tree_focus {
+                attributes.extend(grid.row(index, row_stop));
+            }
         }
         if let Some(onrowclick) = self.onrowclick {
             let row = row.clone();
@@ -316,6 +335,12 @@ impl<T: Clone + 'static> RowContext<T> {
                         headers[column].row_header,
                         self.colindex.as_ref().map(|indices| indices[column]),
                     ),
+                    None if self.tree_focus.is_some()
+                        && !headers[column].row_header
+                        && !infers_grid_cells() =>
+                    {
+                        vec![attr("role", "gridcell")]
+                    }
                     None => Vec::new(),
                 };
                 match (self.grid, spec.edit.is_some()) {
@@ -382,6 +407,8 @@ impl<T: Clone + 'static> RowContext<T> {
             button {
                 r#type: "button",
                 "data-node-toggle": true,
+                // The treegrid row's arrows open and close it: no Tab stop in every row.
+                tabindex: "-1",
                 aria_label: label,
                 aria_expanded: "{open}",
                 style: indent,

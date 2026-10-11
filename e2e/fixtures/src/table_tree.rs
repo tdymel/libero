@@ -1,12 +1,16 @@
 //! `Table` of tasks nested by `parent_key`, sortable, with a quick filter; the open
-//! rows printed below.
+//! rows printed below; a "c" typed in the table closes every row. `/table-tree-cells`
+//! adds `cell_focus`.
 
 use dioxus::prelude::*;
 use libero::components::{Table, column};
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/table-tree", || rsx! { TreePage {} })];
+pub const ROUTES: Routes = &[
+    ("/table-tree", || rsx! { TreePage { cells: false } }),
+    ("/table-tree-cells", || rsx! { TreePage { cells: true } }),
+];
 
 #[derive(Clone, PartialEq)]
 struct Task {
@@ -31,10 +35,16 @@ fn tasks() -> Vec<Task> {
 }
 
 #[component]
-fn TreePage() -> Element {
+fn TreePage(cells: bool) -> Element {
     let mut expanded = use_signal(Vec::<String>::new);
     rsx! {
-        Table {
+        div {
+            onkeydown: move |event: KeyboardEvent| {
+                if event.key() == Key::Character("c".into()) {
+                    expanded.set(Vec::new());
+                }
+            },
+            Table {
             aria_label: "Tasks",
             show_quick_filter: true,
             data: tasks(),
@@ -46,7 +56,10 @@ fn TreePage() -> Element {
             parent_key: |t: &Task| (!t.parent.is_empty()).then(|| t.parent.to_string()),
             expanded_nodes: expanded(),
             onexpandednodeschange: move |next| expanded.set(next),
+            cell_focus: cells,
+            }
         }
+        button { id: "after", "After" }
         p { id: "expanded", {expanded.read().join(",")} }
     }
 }
