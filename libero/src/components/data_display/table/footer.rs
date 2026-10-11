@@ -146,13 +146,14 @@ pub(super) struct Foot {
 }
 
 /// The footer: one cell under each shown column, `leads` of them spanned by one
-/// cell before them. `rowindex` is set where the DOM leaves rows out.
+/// cell before them. `rowindex` is set where the DOM leaves rows out, `colindex`
+/// (by header index) where a hidden column leaves a gap.
 pub(super) fn footer_row(
     headers: &[HeaderSpec],
     shown: &[usize],
     mut cells: FooterCells,
     leads: usize,
-    rowindex: Option<usize>,
+    (rowindex, colindex): (Option<usize>, Option<&[usize]>),
     foot: Foot,
 ) -> Element {
     let cells: Vec<Element> = shown
@@ -167,6 +168,7 @@ pub(super) fn footer_row(
                     "data-pin": pin.map(|pin| pin.side.as_str()),
                     "data-pin-edge": pin.filter(|pin| pin.edge).map(|_| true),
                     style: pin.map(CellPin::style),
+                    aria_colindex: colindex.map(|indices| indices[index].to_string()),
                     if let Some((name, text)) = cell {
                         span { "data-footer-name": true, "{name}" }
                         "{text}"
@@ -188,6 +190,7 @@ pub(super) fn footer_row(
                     td {
                         "data-footer-lead": true,
                         colspan: (leads > 1).then(|| leads.to_string()),
+                        aria_colindex: colindex.map(|_| "1"),
                     }
                 }
                 {cells.into_iter()}

@@ -302,6 +302,12 @@ pub trait ElementApi {
         Err(PlatformError::Unsupported)
     }
 
+    /// Selects all of a text control's text, so typing replaces it. Where the
+    /// renderer cannot, `Unsupported`.
+    fn select(&self) -> Result<(), PlatformError> {
+        Err(PlatformError::Unsupported)
+    }
+
     /// An attribute as the markup has it (not live state), `None` when absent.
     /// Synchronous: a key handler decides before it returns.
     fn attribute(&self, name: &str) -> Result<Option<String>, PlatformError> {

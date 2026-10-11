@@ -2362,6 +2362,10 @@ pub(super) fn typing_target() -> bool {
         .is_some_and(|(tag, kind, editable, ..)| editable || takes_typing(&tag, kind.as_deref()))
 }
 
+pub(super) fn focused_tag() -> Option<String> {
+    focused().map(|(tag, ..)| tag)
+}
+
 pub(super) fn arrow_target() -> bool {
     focused().is_some_and(|(tag, kind, ..)| takes_arrows(&tag, kind.as_deref()))
 }

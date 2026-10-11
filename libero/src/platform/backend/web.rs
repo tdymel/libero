@@ -1136,6 +1136,17 @@ impl ElementApi for WebElement {
             .map_err(|_| PlatformError::NotFound)
     }
 
+    fn select(&self) -> Result<(), PlatformError> {
+        if let Some(input) = self.element.dyn_ref::<web_sys::HtmlInputElement>() {
+            input.select();
+        } else if let Some(text) = self.element.dyn_ref::<web_sys::HtmlTextAreaElement>() {
+            text.select();
+        } else {
+            return Err(PlatformError::NotFound);
+        }
+        Ok(())
+    }
+
     fn selection_start(&self) -> Option<u32> {
         if let Some(input) = self.element.dyn_ref::<web_sys::HtmlInputElement>() {
             input.selection_start().ok().flatten()

@@ -7,7 +7,7 @@ use super::{
     column::Column,
     core::{CellSpec, DetailSpec, HeaderSpec, RowFn, RowSpec, body_rows, render_cells},
     detail::Details,
-    edit::{CellEditor, EditCtx, RowUpdate, commit_edit},
+    edit::{CellEditor, EditCtx, EditError, Leave, RowUpdate, commit_edit},
     grid::GridFocus,
     header_groups::spanned,
     pinning::{pin_runs, span_pin},
@@ -16,7 +16,10 @@ use super::{
     selection::Selection,
 };
 use crate::{
-    components::common::{States, attr},
+    components::{
+        accessibility::Announcer,
+        common::{States, attr},
+    },
     hooks::listener,
     localization::labels::table::TableLabels,
 };
@@ -51,6 +54,7 @@ pub(super) struct RowContext<T: 'static> {
     pub onrowupdate: Option<EventHandler<RowUpdate<T>>>,
     /// Whether a column is editable: the other cells are then read-only.
     pub editable: bool,
+    pub announcer: Announcer,
     pub labels: TableLabels,
 }
 
@@ -80,6 +84,7 @@ impl<T> RowContext<T> {
             colindex,
             onrowupdate,
             editable,
+            announcer,
             labels,
         } = self;
         let cells = |context: &Self| {
@@ -124,6 +129,7 @@ impl<T> RowContext<T> {
             && *colindex == other.colindex
             && *onrowupdate == other.onrowupdate
             && *editable == other.editable
+            && *announcer == other.announcer
             && *labels == other.labels
     }
 }
@@ -292,6 +298,15 @@ impl<T: Clone + 'static> RowContext<T> {
                     attributes.push(listener("ondblclick", move |_: Event<MouseData>| {
                         grid.start(target);
                     }));
+                    attributes.push(listener(
+                        "onpointerdown",
+                        move |event: Event<PointerData>| {
+                            grid.touched(target, event.pointer_type() == "touch");
+                        },
+                    ));
+                    attributes.push(listener("onclick", move |_: Event<MouseData>| {
+                        grid.tapped(target);
+                    }));
                     if editing == Some(column) {
                         attributes.push(attr("data-editing", "true"));
                     }
@@ -325,8 +340,8 @@ impl<T: Clone + 'static> RowContext<T> {
         let label = (self.labels.edit_cell)(&spec.header, &name);
         let commit = {
             let (row, columns, key) = (row.clone(), self.columns.clone(), key.to_string());
-            let onrowupdate = self.onrowupdate;
-            Callback::new(move |(text, refocus): (String, bool)| {
+            let (onrowupdate, announcer, labels) = (self.onrowupdate, self.announcer, self.labels);
+            Callback::new(move |(text, leave): (String, Leave)| {
                 match commit_edit(&row, &columns[column], &text) {
                     Ok(next) => {
                         if let (Some(next), Some(onrowupdate)) = (next, onrowupdate) {
@@ -337,21 +352,33 @@ impl<T: Clone + 'static> RowContext<T> {
                                 row: next,
                             });
                         }
-                        grid.finish(refocus);
+                        grid.finish(leave);
                         true
                     }
-                    Err(_) => false,
+                    Err(error) => {
+                        let message = match error {
+                            EditError::Parse => labels.invalid_value.to_string(),
+                            EditError::Invalid(message) => message,
+                        };
+                        announcer.say((labels.edit_invalid)(&columns[column].header, &message));
+                        let mut invalid = grid.invalid;
+                        invalid.set(Some(message));
+                        false
+                    }
                 }
             })
         };
-        let cancel = Callback::new(move |()| grid.finish(true));
+        let cancel = Callback::new(move |()| grid.finish(Leave::Stay));
+        let error = (grid.invalid)();
+        let error_id = grid.error_id();
         let custom = spec.edit.as_ref().and_then(|edit| edit.editor.clone());
-        match custom {
+        let editor = match custom {
             Some(editor) => editor(EditCtx {
                 value,
                 label,
+                error: error.clone(),
                 commit: Callback::new(move |text: String| {
-                    commit.call((text, true));
+                    commit.call((text, Leave::Stay));
                 }),
                 cancel,
             }),
@@ -361,10 +388,22 @@ impl<T: Clone + 'static> RowContext<T> {
                     label,
                     kind: spec.edit.as_ref().map(|edit| edit.kind).unwrap_or_default(),
                     cancel_label: self.labels.cancel_edit,
+                    error: error.clone(),
+                    error_id: error_id.clone(),
                     commit,
                     cancel,
+                    changed: Callback::new(move |()| {
+                        let mut invalid = grid.invalid;
+                        invalid.set(None);
+                    }),
                 }
             },
+        };
+        rsx! {
+            {editor}
+            if let Some(message) = error {
+                div { id: error_id, "data-cell-error": true, "{message}" }
+            }
         }
     }
 }

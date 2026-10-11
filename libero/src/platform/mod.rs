@@ -119,6 +119,7 @@ pub(crate) use intersection::{
 };
 pub(crate) use keyboard::arrow_target;
 pub(crate) use keyboard::caret_edges;
+pub(crate) use keyboard::focused_tag;
 pub(crate) use keyboard::is_tab;
 pub(crate) use keyboard::key_taken;
 pub(crate) use keyboard::logical_key;

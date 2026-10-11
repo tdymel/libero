@@ -7,6 +7,7 @@ use dioxus::prelude::*;
 
 use super::{
     cell_focus::{FocusTarget, GridRow, HeadCell, Move, Pos, key_move, resolve, step},
+    edit::Leave,
     pipeline::VisibleRow,
     window::reveal_slot,
 };
@@ -14,8 +15,8 @@ use crate::{
     components::common::attr,
     hooks::{ElementHandle, listener, use_id, use_silent_focus_in},
     platform::{
-        ElementApi, PlatformError, arrow_target, focus_selector, infers_grid_cells, key_taken,
-        rtl_target, silent_focus, typing_target, when_laid_out,
+        ElementApi, PlatformError, arrow_target, focus_selector, focused_tag, infers_grid_cells,
+        key_taken, rtl_target, silent_focus, typing_target, when_laid_out,
     },
 };
 
@@ -40,6 +41,14 @@ pub(super) struct GridFocus {
     pub stop: Signal<Option<FocusTarget>>,
     /// The body cell whose editor is open, with an editable column.
     pub editing: Signal<Option<FocusTarget>>,
+    /// The message the open editor's last commit was refused with.
+    pub invalid: Signal<Option<String>>,
+    /// Moves the stop after the next render, once an editor's commit has landed.
+    pending: Signal<Option<Move>>,
+    /// The last render's rows, which `pending` moves over.
+    rows: CopyValue<Option<Rc<GridRows>>>,
+    /// The editable cell a touch began on while it was the stop: its click opens the editor.
+    armed: CopyValue<Option<FocusTarget>>,
     /// Focus the stop after the next render, revealing its slot in a window.
     request: Signal<Option<Option<Reveal>>>,
     /// Marks the stop cell as `data-cell-stop`, where a WebView focuses by selector.
@@ -170,6 +179,10 @@ pub(super) fn col_indices(layout: &[usize], columns: usize, leads: usize) -> Rc<
 pub(super) fn use_grid_focus(table: ElementHandle, region: ElementHandle) -> GridFocus {
     let stop = use_signal(|| None);
     let editing = use_signal(|| None);
+    let invalid = use_signal(|| None);
+    let pending = use_signal(|| None);
+    let rows = use_hook(|| CopyValue::new(None));
+    let armed = use_hook(|| CopyValue::new(None));
     use_silent_focus_in(table, move || {
         let mut stop = stop;
         if let Some(target) = focused_cell(&table)
@@ -213,14 +226,30 @@ pub(super) fn use_grid_focus(table: ElementHandle, region: ElementHandle) -> Gri
             });
         });
     });
-    GridFocus {
+    let grid = GridFocus {
         stop,
         editing,
+        invalid,
+        pending,
+        rows,
+        armed,
         request,
         id,
         table,
         region,
-    }
+    };
+    use_effect(move || {
+        let Some(by) = pending() else {
+            return;
+        };
+        let mut pending = pending;
+        pending.set(None);
+        match rows.peek().clone() {
+            Some(rows) => grid.go(&rows, by),
+            None => grid.request_focus(),
+        }
+    });
+    grid
 }
 
 /// The body cell holding focus or a widget with it, by its [`CELL_ATTR`].
@@ -297,6 +326,8 @@ impl GridFocus {
     /// The table's key handler: arrows, Home, End and the page keys move the stop.
     pub fn keydown(self, rows: GridRows) -> Attribute {
         let rows = Rc::new(rows);
+        let mut stored = self.rows;
+        stored.set(Some(rows.clone()));
         listener("onkeydown", move |event: Event<KeyboardData>| {
             if key_taken(&event)
                 || typing_target(&event)
@@ -349,8 +380,7 @@ impl GridFocus {
 
     /// A press on the stop cell itself, not a widget in it: Enter or Space sorts a
     /// header, Ctrl+Enter opens its menu, Enter or F2 edits an editable body cell,
-    /// Shift+Space selects its row. Whether it acted. A WebView cannot tell the
-    /// cell from its widget: never there.
+    /// Shift+Space selects its row. Whether it acted.
     fn cell_key(
         &self,
         rows: &GridRows,
@@ -366,7 +396,14 @@ impl GridFocus {
         }
         let on_stop = |part: &str| {
             let selector = format!("{part} [data-cell-stop='{}']:focus", self.id.peek());
-            self.table.query_selector(&selector).is_ok()
+            match self.table.query_selector(&selector) {
+                Ok(_) => true,
+                // A WebView mirrors the focus on focusin, before keydown: a `td` or `th` is a cell.
+                Err(PlatformError::Unsupported) => {
+                    matches!(focused_tag().as_deref(), Some("TD" | "TH"))
+                }
+                Err(_) => false,
+            }
         };
         let stop = rows.at(*self.stop.peek()).map(|at| rows.target(at));
         match (stop, shift, ctrl) {
@@ -417,16 +454,43 @@ impl GridFocus {
         if *self.stop.peek() != Some(target) {
             self.stop.set(Some(target));
         }
+        self.invalid.set(None);
         self.editing.set(Some(target));
     }
 
-    /// Closes the editor; `refocus` focuses its cell again, as the field goes with the
-    /// focus. Not after a blur, whose focus went elsewhere.
-    pub fn finish(mut self, refocus: bool) {
-        self.editing.set(None);
-        if refocus {
-            self.request.set(Some(None));
+    /// A touch on the editable cell `target` began: remembers it when it was the stop.
+    pub fn touched(mut self, target: FocusTarget, touch: bool) {
+        let held =
+            touch && *self.stop.peek() == Some(target) && *self.editing.peek() != Some(target);
+        self.armed.set(held.then_some(target));
+    }
+
+    /// The click on the editable cell `target`: a second tap on the stop opens its editor.
+    pub fn tapped(mut self, target: FocusTarget) {
+        if self.armed.take() == Some(target) {
+            self.start(target);
         }
+    }
+
+    /// Closes the editor and `leave`s: a refocus of its cell, as the field goes with the
+    /// focus, or a move of the stop. Nothing after a blur, whose focus went elsewhere.
+    pub fn finish(mut self, leave: Leave) {
+        self.editing.set(None);
+        self.invalid.set(None);
+        match leave {
+            Leave::Blur => {}
+            Leave::Stay => self.request_focus(),
+            Leave::To(by) => self.pending.set(Some(by)),
+        }
+    }
+
+    /// The id of the open editor's error message.
+    pub fn error_id(&self) -> String {
+        format!("{}-edit-error", self.id.peek())
+    }
+
+    fn request_focus(mut self) {
+        self.request.set(Some(None));
     }
 
     /// Moves the stop and asks for focus on it after the render.

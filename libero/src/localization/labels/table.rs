@@ -347,6 +347,26 @@ pub struct TableLabels {
     pub edit_cell: fn(&str, &str) -> String,
     /// A cell editor's cancel button, shown on a touch screen, where no Escape is.
     pub cancel_edit: &'static str,
+    /// What a cell editor shows and announces for text that is not a value of the
+    /// column's type.
+    pub invalid_value: &'static str,
+    /// A refused commit's announcement, from the column's header and the message.
+    ///
+    /// ```
+    /// use libero::localization::TableLabels;
+    ///
+    /// assert_eq!((TableLabels::ENGLISH.edit_invalid)("Age", "Too old"), "Age is invalid: Too old");
+    /// assert_eq!((TableLabels::GERMAN.edit_invalid)("Alter", "Zu alt"), "Alter ist ungültig: Zu alt");
+    /// ```
+    pub edit_invalid: fn(&str, &str) -> String,
+}
+
+fn english_edit_invalid(column: &str, message: &str) -> String {
+    format!("{column} is invalid: {message}")
+}
+
+fn german_edit_invalid(column: &str, message: &str) -> String {
+    format!("{column} ist ungültig: {message}")
 }
 
 fn english_edit_cell(column: &str, row: &str) -> String {
@@ -811,6 +831,8 @@ impl TableLabels {
         remove_filter: english_remove_filter,
         edit_cell: english_edit_cell,
         cancel_edit: "Cancel edit",
+        invalid_value: "Not a valid value",
+        edit_invalid: english_edit_invalid,
     };
 
     pub const GERMAN: Self = Self {
@@ -892,6 +914,8 @@ impl TableLabels {
         remove_filter: german_remove_filter,
         edit_cell: german_edit_cell,
         cancel_edit: "Bearbeitung abbrechen",
+        invalid_value: "Kein gültiger Wert",
+        edit_invalid: german_edit_invalid,
     };
 }
 

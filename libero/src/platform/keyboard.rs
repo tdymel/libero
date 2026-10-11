@@ -88,6 +88,12 @@ pub(crate) fn typing_target(event: &Event<KeyboardData>) -> bool {
     backend::typing_target(event)
 }
 
+/// The focused element's tag, uppercase, as a WebView's focus mirror has it, where
+/// the DOM cannot be asked; `None` elsewhere.
+pub(crate) fn focused_tag() -> Option<String> {
+    backend::focused_tag()
+}
+
 /// Whether this press landed on a control that steps on arrows ([`takes_arrows`]).
 /// Ask it beside [`typing_target`], never instead: the two are complements.
 pub(crate) fn arrow_target(event: &Event<KeyboardData>) -> bool {

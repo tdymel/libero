@@ -1,14 +1,15 @@
-//! `Table` with `cell_focus` (1156 D1, D2): one header or body cell is the tab stop,
+//! `Table` with `cell_focus` (1156 D1-D5): one header or body cell is the tab stop,
 //! the first header cell at first, and the arrows, Home, End and the page keys move it.
 
 use anyhow::{Result, bail};
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
+use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text};
 use e2e::passes::keyboard;
 use e2e::{Fixture, Suite, Viewport, ax};
 
 const STOP: &str = "[data-cell-stop]";
 const AREA: &str = "[data-table-scroll]";
+const STATUS: &str = "[role=status]";
 
 /// The body cell in row `row`, column `col`, both from 1.
 fn cell(row: usize, col: usize) -> String {
@@ -262,6 +263,10 @@ async fn selects<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         )
         .await?;
     }
+    // A WebView cannot `click()` the menu's button, which Ctrl+Enter presses.
+    if matches!(d.platform(), Platform::Desktop | Platform::Ios) {
+        return Ok(());
+    }
     d.press(keyboard::ARROW_UP).await?;
     eventually_focused(d, &head(2), "ArrowUp to the Name header").await?;
     d.press_ctrl(keyboard::ENTER).await?;
@@ -285,10 +290,16 @@ e2e::scenario!(
 
 const EDITOR: &str = "[data-cell-editor] input";
 
-/// Types `text` over the open editor's value.
+/// Types `text` over the open editor's value, which a renderer with `select()` has
+/// selected on open.
 async fn retype<D: Driver>(d: &mut D, text: &str) -> Result<()> {
     eventually_focused(d, EDITOR, "focus in the editor").await?;
-    d.evaluate("document.activeElement.select()").await?;
+    if matches!(
+        d.platform(),
+        Platform::Android | Platform::Desktop | Platform::Ios
+    ) {
+        d.evaluate("document.activeElement.select()").await?;
+    }
     d.type_text(text).await
 }
 
@@ -311,7 +322,7 @@ e2e::scenario!(
     double_click_edits
 );
 
-/// Enter opens and commits, F2 opens and Escape cancels; the cell keeps the focus.
+/// Enter opens and commits and moves the stop down, F2 opens and Escape cancels there.
 async fn keys_edit<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click(&cell(2, 3)).await?;
     at(d, 2, 3, "a click on Ben's city").await?;
@@ -319,12 +330,12 @@ async fn keys_edit<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     retype(d, "Bonn").await?;
     d.press(keyboard::ENTER).await?;
     eventually_text(d, &cell(2, 3), "Bonn", "Enter to commit").await?;
-    at(d, 2, 3, "focus back on the cell").await?;
+    at(d, 3, 3, "Enter moved the stop down").await?;
     d.press(keyboard::F2).await?;
     retype(d, "Paris").await?;
     d.press(keyboard::ESCAPE).await?;
-    at(d, 2, 3, "Escape back to the cell").await?;
-    eventually_text(d, &cell(2, 3), "Bonn", "Escape to cancel").await
+    at(d, 3, 3, "Escape back to the cell").await?;
+    eventually_text(d, &cell(3, 3), "Cairo", "Escape to cancel").await
 }
 
 e2e::scenario!(
@@ -334,8 +345,83 @@ e2e::scenario!(
     android: skip("958: roving keys are inert in the emulator's WebView")
 );
 
-/// An age the column's `validate` refuses keeps the editor open, marked invalid.
+/// Shift+Enter commits and moves up, Tab and Shift+Tab move right and left; no wrap.
+async fn flows<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(&cell(2, 2)).await?;
+    at(d, 2, 2, "a click on Ben's age").await?;
+    d.press(keyboard::ENTER).await?;
+    retype(d, "43").await?;
+    d.press_shift(keyboard::ENTER).await?;
+    eventually_text(d, &cell(2, 2), "43", "Shift+Enter to commit").await?;
+    at(d, 1, 2, "Shift+Enter moved the stop up").await?;
+    d.press(keyboard::ENTER).await?;
+    retype(d, "32").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_text(d, &cell(1, 2), "32", "Tab to commit").await?;
+    at(d, 1, 3, "Tab moved the stop right").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_focused(d, EDITOR, "Enter on the city").await?;
+    d.press(keyboard::TAB).await?;
+    at(d, 1, 3, "Tab at the last column").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_focused(d, EDITOR, "Enter on the city again").await?;
+    d.press_shift(keyboard::TAB).await?;
+    at(d, 1, 2, "Shift+Tab moved the stop left").await
+}
+
+e2e::scenario!(
+    tab_and_shift_enter_move_the_stop,
+    "/table-grid/editable",
+    flows,
+    android: skip("958: roving keys are inert in the emulator's WebView")
+);
+
+/// A second tap on the stop cell opens its editor; the first only makes it the stop.
+async fn second_tap<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let target = cell(2, 2);
+    d.touch_down(&target).await?;
+    d.touch_up(&target).await?;
+    at(d, 2, 2, "a first tap").await?;
+    if d.exists(EDITOR).await? {
+        bail!("the first tap opened the editor");
+    }
+    d.touch_down(&target).await?;
+    d.touch_up(&target).await?;
+    eventually_focused(d, EDITOR, "a second tap").await
+}
+
+e2e::scenario!(
+    a_second_tap_opens_the_editor,
+    "/table-grid/editable",
+    second_tap,
+    native: skip("3242: Blitz fires no pointer events for a touch"),
+    desktop: skip("no touch input in the desktop driver")
+);
+
+/// The editor opens with its text selected, so typing replaces it.
+async fn selected_on_open<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(&cell(1, 2)).await?;
+    at(d, 1, 2, "a click on Ana's age").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_focused(d, EDITOR, "Enter to open").await?;
+    d.type_text("9").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_text(d, &cell(1, 2), "9", "typing over the selection").await
+}
+
+e2e::scenario!(
+    the_editor_opens_with_its_text_selected,
+    "/table-grid/editable",
+    selected_on_open,
+    android: skip("958: roving keys are inert in the emulator's WebView"),
+    desktop: skip("3243: a WebView has no select()"),
+    ios: skip("3243: a WebView has no select()")
+);
+
+/// An age the column's `validate` refuses keeps the editor open, marked invalid, with
+/// its message shown and announced; typing clears it. A word is no number at all.
 async fn refuses<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const ERROR: &str = "[data-cell-error]";
     d.double_click(&cell(1, 2)).await?;
     retype(d, "200").await?;
     d.press(keyboard::ENTER).await?;
@@ -343,10 +429,22 @@ async fn refuses<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         Ok(d.attr(EDITOR, "aria-invalid").await?.as_deref() == Some("true"))
     })
     .await?;
+    eventually_text(d, ERROR, "Too old", "the refused commit").await?;
+    let id = d.attr(ERROR, "id").await?;
+    if id.is_none() || d.attr(EDITOR, "aria-describedby").await? != id {
+        bail!("the editor is not described by its message");
+    }
+    eventually_text(d, STATUS, "Age is invalid: Too old", "the announcement").await?;
     if !d.text("#log").await?.is_empty() {
         bail!("an invalid edit reached onrowupdate");
     }
-    Ok(())
+    retype(d, "old").await?;
+    eventually(d, "typing to clear the message", async |d| {
+        Ok(!d.exists(ERROR).await?)
+    })
+    .await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_text(d, ERROR, "Not a valid value", "a word for an age").await
 }
 
 e2e::scenario!(
@@ -368,6 +466,69 @@ e2e::scenario!(
     the_data_stays_the_callers,
     "/table-grid/editable/kept",
     kept
+);
+
+/// The cell keys are for the cell itself: Enter on a header's sort button sorts once.
+async fn sort_button_once<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const SORT: &str = "th:nth-child(2) [data-sort-button]";
+    d.focus(SORT).await?;
+    eventually_focused(d, SORT, "focus on the sort button").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_text(d, &cell(1, 1), "Cleo", "Enter to sort by age").await?;
+    d.settle().await?;
+    eventually_text(d, &cell(1, 1), "Cleo", "the sort, once").await
+}
+
+e2e::scenario!(
+    enter_on_a_sort_button_sorts_once,
+    "/table-grid",
+    sort_button_once,
+    android: skip("958: roving keys are inert in the emulator's WebView")
+);
+
+/// Space on the select-all box selects every row once, and sorts nothing.
+async fn select_box_once<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const BOX: &str = "thead input[type=checkbox]";
+    d.focus(BOX).await?;
+    eventually_focused(d, BOX, "focus on the select-all box").await?;
+    d.press(keyboard::SPACE).await?;
+    eventually(d, "Space to select every row", async |d| {
+        Ok(d.attr("tbody tr:nth-child(1)", "aria-selected")
+            .await?
+            .as_deref()
+            == Some("true"))
+    })
+    .await?;
+    d.settle().await?;
+    eventually_text(d, &cell(1, 2), "Ana", "no sort").await
+}
+
+e2e::scenario!(
+    space_on_the_select_all_box_acts_once,
+    "/table-grid/selectable",
+    select_box_once,
+    android: skip("958: roving keys are inert in the emulator's WebView")
+);
+
+/// Enter on a caller's button in an editable cell presses it and opens no editor.
+async fn button_in_a_cell<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const PING: &str = "tbody tr:nth-child(1) button";
+    d.focus(PING).await?;
+    eventually_focused(d, PING, "focus on the button").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_text(d, "#log", "Pinged Ana", "Enter on the button").await?;
+    d.settle().await?;
+    if d.exists(EDITOR).await? {
+        bail!("Enter on the button opened the editor");
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    enter_on_a_button_in_an_editable_cell_opens_no_editor,
+    "/table-grid/editable/button",
+    button_in_a_cell,
+    android: skip("958: roving keys are inert in the emulator's WebView")
 );
 
 #[test]

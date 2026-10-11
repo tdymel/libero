@@ -693,7 +693,15 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         }
         {
             footer.map(|cells| {
-                footer_row(&headers, &shown, cells, lead_columns, foot_rowindex, foot)
+                let colindex = grid.as_ref().and_then(|grid| grid.colindex.as_deref());
+                footer_row(
+                    &headers,
+                    &shown,
+                    cells,
+                    lead_columns,
+                    (foot_rowindex, colindex),
+                    foot,
+                )
             })
         }
     }

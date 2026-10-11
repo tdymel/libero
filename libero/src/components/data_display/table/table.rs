@@ -266,6 +266,12 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         "& [data-cell-editor] input[aria-invalid]",
         sx().border_color("error.6"),
     )
+    .selector(
+        "& [data-cell-error]",
+        sx().color("error.6")
+            .font_size("0.85em")
+            .text_align("start"),
+    )
     // A finger has no Escape: only a coarse pointer gets the cancel button.
     .selector(
         "& [data-cell-editor-cancel]",
@@ -1790,6 +1796,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         grid: cell_focus.then_some(grid_focus),
         onrowupdate: props.onrowupdate,
         editable,
+        announcer,
         labels,
     });
     // A new generation redraws every row; an equal context keeps the last one.
@@ -2222,6 +2229,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let announces = props.selectable
         || props.show_quick_filter
         || has_reorder
+        || editable
         || props.column_menu
         || props.header_filters
         || props.filter_panel

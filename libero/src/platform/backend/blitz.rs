@@ -2103,6 +2103,12 @@ impl ElementApi for BlitzElement {
     }
 
     /// The editor counts bytes; the DOM counts UTF-16 units.
+    fn select(&self) -> Result<(), PlatformError> {
+        let node_id = self.node_id;
+        self.command(move |doc| doc.with_text_input(node_id, |mut driver| driver.select_all()));
+        Ok(())
+    }
+
     fn selection_start(&self) -> Option<u32> {
         let doc = self.anchor.try_doc()?;
         let editor = &doc

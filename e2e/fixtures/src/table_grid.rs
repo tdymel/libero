@@ -1,7 +1,7 @@
 //! `Table` with `cell_focus` (1156 D1-D3): a grid of people between two buttons,
 //! one with a button in each row, one selectable with column menus, a windowed
 //! one of 500 rows, and one with editable Age and City cells, which stores its
-//! edits or (`/kept`) only logs them.
+//! edits or (`/kept`) only logs them, `/button` with a button in each City cell.
 
 use dioxus::prelude::*;
 use libero::components::{RowUpdate, Table, column};
@@ -15,6 +15,7 @@ pub const ROUTES: Routes = &[
     ("/table-grid/windowed", || rsx! { WindowedGridPage {} }),
     ("/table-grid/editable", || rsx! { EditableGridPage { store: true } }),
     ("/table-grid/editable/kept", || rsx! { EditableGridPage { store: false } }),
+    ("/table-grid/editable/button", || rsx! { EditableGridPage { store: true, button: true } }),
 ];
 
 #[derive(Clone, PartialEq)]
@@ -67,9 +68,21 @@ fn GridPage(#[props(default)] widgets: bool, #[props(default)] selectable: bool)
 }
 
 #[component]
-fn EditableGridPage(store: bool) -> Element {
+fn EditableGridPage(store: bool, #[props(default)] button: bool) -> Element {
     let mut rows = use_signal(people);
     let mut log = use_signal(String::new);
+    let city = column("City")
+        .value(|p: &Person| p.city.to_string())
+        .editable(|p: &mut Person, city: String| p.city = city.leak());
+    let city = match button {
+        true => city.render(move |p: &Person| {
+            let name = p.name;
+            rsx! {
+                button { r#type: "button", onclick: move |_| log.set(format!("Pinged {name}")), "Ping {name}" }
+            }
+        }),
+        false => city,
+    };
     rsx! {
         button { id: "before", "Before" }
         Table {
@@ -84,9 +97,7 @@ fn EditableGridPage(store: bool) -> Element {
                         true => Ok(()),
                         false => Err("Too old".into()),
                     }),
-                column("City")
-                    .value(|p: &Person| p.city.to_string())
-                    .editable(|p: &mut Person, city: String| p.city = city.leak()),
+                city,
             ],
             row_key: |p: &Person| p.name.to_string(),
             onrowupdate: move |update: RowUpdate<Person>| {

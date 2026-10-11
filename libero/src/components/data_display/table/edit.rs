@@ -6,12 +6,12 @@ use std::rc::Rc;
 use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
 
-use super::{cell_value::EditKind, column::Column};
+use super::{cell_focus::Move, cell_value::EditKind, column::Column};
 use crate::{
     components::common::Glyph,
     context::IconSlot,
     hooks::{ElementHandle, use_element},
-    platform::ElementApi,
+    platform::{ElementApi, is_tab},
 };
 
 /// A committed cell edit: a clone of `data[index]` with the new value set. The
@@ -63,6 +63,9 @@ pub struct EditCtx {
     pub value: String,
     /// The editor's name: "Edit Age, Ana".
     pub label: String,
+    /// Why the last commit was refused, shown under the editor and announced: mark
+    /// the field invalid with it. Cleared when the editor closes.
+    pub error: Option<String>,
     /// Takes the new text; one that does not parse or validate keeps the editor open.
     pub commit: Callback<String>,
     pub cancel: Callback<()>,
@@ -119,21 +122,34 @@ pub(super) fn commit_edit<T: Clone>(
     Ok(Some(next))
 }
 
-/// The editor in an editing cell: Enter or leaving it commits, Escape or the cancel
-/// button (on a touch screen, where no Escape is) puts the value back. `commit`
-/// takes the text and whether the cell gets the focus back (not after a blur), and
-/// answers whether it took the text; one it did not keeps the editor open.
+/// How a committed or cancelled editor closes.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(super) enum Leave {
+    /// Focus went elsewhere: it stays there.
+    Blur,
+    /// The cell takes the focus back, as the field goes with it.
+    Stay,
+    /// The stop moves on: Enter down, Shift+Enter up, Tab right, Shift+Tab left.
+    To(Move),
+}
+
+/// The editor in an editing cell: Enter, Tab or leaving it commits, Escape or the
+/// cancel button (on a touch screen, where no Escape is) puts the value back.
+/// `commit` takes the text and how to leave, and answers whether it took the text;
+/// one it did not keeps the editor open, with `error`, until the next input.
 #[component]
 pub(super) fn CellEditor(
     value: String,
     label: String,
     kind: EditKind,
     cancel_label: &'static str,
-    commit: Callback<(String, bool), bool>,
+    error: Option<String>,
+    error_id: String,
+    commit: Callback<(String, Leave), bool>,
     cancel: Callback<()>,
+    changed: Callback<()>,
 ) -> Element {
     let mut draft = use_signal(|| value.clone());
-    let mut invalid = use_signal(|| false);
     // Closed once: the blur after Enter or Escape commits nothing more.
     let mut done = use_hook(|| CopyValue::new(false));
     let input: ElementHandle = use_element();
@@ -142,22 +158,21 @@ pub(super) fn CellEditor(
         if input.is_mounted() && !*focused.peek() {
             focused.set(true);
             let _ = input.focus();
+            let _ = input.select();
         }
     });
-    // `(save, blurred)`.
-    let close = use_callback(move |(save, blurred): (bool, bool)| {
+    let close = use_callback(move |(save, leave): (bool, Leave)| {
         if *done.peek() {
             return;
         }
         if !save {
             done.set(true);
             cancel.call(());
-        } else if commit.call((draft.peek().clone(), !blurred)) {
+        } else if commit.call((draft.peek().clone(), leave)) {
             done.set(true);
-        } else {
-            invalid.set(true);
         }
     });
+    let invalid = error.is_some();
     rsx! {
         div {
             "data-cell-editor": true,
@@ -169,29 +184,34 @@ pub(super) fn CellEditor(
                 r#type: "text",
                 inputmode: (kind == EditKind::Number).then_some("decimal"),
                 aria_label: label,
-                aria_invalid: invalid().then_some("true"),
+                aria_invalid: invalid.then_some("true"),
+                aria_describedby: invalid.then_some(error_id),
                 value: draft(),
                 onmounted: input.mount(),
                 oninput: move |event: FormEvent| {
                     draft.set(event.value());
-                    if *invalid.peek() {
-                        invalid.set(false);
+                    if invalid {
+                        changed.call(());
                     }
                 },
                 onkeydown: move |event: KeyboardEvent| {
                     if event.is_composing() {
                         return;
                     }
-                    let save = match event.key() {
-                        Key::Enter => true,
-                        Key::Escape => false,
+                    let shift = event.modifiers().shift();
+                    let (save, leave) = match event.key() {
+                        Key::Enter => (true, Leave::To(if shift { Move::Up } else { Move::Down })),
+                        Key::Escape => (false, Leave::Stay),
+                        _ if is_tab(&event) => {
+                            (true, Leave::To(if shift { Move::Left } else { Move::Right }))
+                        }
                         _ => return,
                     };
                     event.prevent_default();
                     event.stop_propagation();
-                    close.call((save, false));
+                    close.call((save, leave));
                 },
-                onblur: move |_| close.call((true, true)),
+                onblur: move |_| close.call((true, Leave::Blur)),
                 ..input.attributes(),
             }
             button {
@@ -200,7 +220,7 @@ pub(super) fn CellEditor(
                 aria_label: cancel_label,
                 // Keeps the focus in the field, whose blur would commit first.
                 onmousedown: move |event: MouseEvent| event.prevent_default(),
-                onclick: move |_| close.call((false, false)),
+                onclick: move |_| close.call((false, Leave::Stay)),
                 Glyph { slot: IconSlot::Close, icon: lucide::x::outlined }
             }
         }

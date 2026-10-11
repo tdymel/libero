@@ -705,6 +705,14 @@ pub(crate) fn typing_target(event: &Event<KeyboardData>) -> bool {
     return webview::typing_target();
 }
 
+/// Only a WebView has a mirror to read - see [`focused_tag`](crate::platform::focused_tag).
+pub(crate) fn focused_tag() -> Option<String> {
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return webview::focused_tag();
+    #[cfg(any(target_arch = "wasm32", feature = "native"))]
+    return None;
+}
+
 /// As [`typing_target`] - see [`arrow_target`](crate::platform::arrow_target).
 pub(crate) fn arrow_target(event: &Event<KeyboardData>) -> bool {
     #[cfg(not(target_arch = "wasm32"))]

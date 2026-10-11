@@ -1017,8 +1017,9 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `Enter` or `Space` | With `cell_focus`, on a sortable header cell itself: sorts by that column, as its button does. Focus stays on the cell. |
 | `Ctrl+Enter` | With `cell_focus` and `column_menu`, on a header cell: opens its column menu. |
 | `Shift+Space` | With `cell_focus` and `selectable`, on a body cell: selects or deselects its row. |
-| `Enter` or `F2` | On an editable cell: opens its editor, the field focused. |
-| `Enter` | In a cell's editor: commits the value and returns focus to the cell. A value that does not parse or validate keeps the editor open. |
+| `Enter` or `F2` | On an editable cell: opens its editor, the field focused and its text selected, so typing replaces it. A second tap on the stop cell does the same on a touch screen. |
+| `Enter` or `Shift+Enter` | In a cell's editor: commits the value and moves to the cell below or above. A value that does not parse or validate keeps the editor open, with its message under it. |
+| `Tab` or `Shift+Tab` | In a cell's editor: commits the value and moves to the next or previous cell; the editor of that one opens with `Enter`. |
 | `Escape` | In a cell's editor: puts the value back and returns focus to the cell. |
 | `Escape` | In a filter popover: closes it and returns focus to the button that opened it: the column's menu button, or its filtered-header button. |
 | `Tab` or `Shift+Tab` | In a filter popover: moves between its fields; past either end it closes and Tab goes on from the button that opened it. |
@@ -1093,8 +1094,10 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 - In a grid with an editable column, the other cells are `aria-readonly`. The
   editor is a text field named "Edit" plus the column and the row's name, "Edit
   Bonus, Ana", a number column's with a decimal keypad. A value that does not
-  parse or validate marks it `aria-invalid`. On a touch screen, which has no
-  Escape, a Cancel edit button sits beside it.
+  parse or validate marks it `aria-invalid`, shows the `validate` message (or
+  "Not a valid value") under it, linked by `aria-describedby`, and announces it
+  once; typing clears it. A custom `editor` gets the message as `EditCtx::error`.
+  On a touch screen, which has no Escape, a Cancel edit button sits beside it.
 
 ### You must
 

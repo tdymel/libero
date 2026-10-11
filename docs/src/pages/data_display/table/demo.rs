@@ -174,7 +174,14 @@ fn team_columns(grouped: bool, editable: bool) -> Vec<Column<Person>> {
         false => column,
     };
     let edit = |column: Column<Person>| match editable {
-        true => column.editable(|p: &mut Person, bonus: Option<f64>| p.bonus = bonus),
+        true => column
+            .editable(|p: &mut Person, bonus: Option<f64>| p.bonus = bonus)
+            .validate(|_: &Person, bonus: &Option<f64>| {
+                match bonus.is_none_or(|bonus| (0.0..=100.0).contains(&bonus)) {
+                    true => Ok(()),
+                    false => Err("A percentage from 0 to 100".into()),
+                }
+            }),
         false => column,
     };
     vec![

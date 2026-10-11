@@ -311,6 +311,10 @@ impl ElementApi for ElementHandle {
         self.get()?.matches(selector)
     }
 
+    fn select(&self) -> Result<(), PlatformError> {
+        self.get()?.select()
+    }
+
     fn selection_start(&self) -> Option<u32> {
         self.get().ok()?.selection_start()
     }

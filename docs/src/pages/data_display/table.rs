@@ -225,8 +225,7 @@ const EDIT: &str =
     "onrowupdate: move |update: RowUpdate<Person>| rows.write()[update.index] = update.row";
 
 /// The Bonus column's setter, after its `.sortable()`.
-const BONUS_EDIT: &str =
-    "\n        .editable(|p: &mut Person, bonus: Option<f64>| p.bonus = bonus)";
+const BONUS_EDIT: &str = "\n        .editable(|p: &mut Person, bonus: Option<f64>| p.bonus = bonus)\n        .validate(|_: &Person, bonus: &Option<f64>| match bonus.is_none_or(|b| (0.0..=100.0).contains(&b)) {\n            true => Ok(()),\n            false => Err(\"A percentage from 0 to 100\".into()),\n        })";
 
 /// `columns`, the Bonus column editable with the `editable` switch.
 fn columns_code(columns: &str, values: &DemoValues) -> String {

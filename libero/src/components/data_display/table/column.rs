@@ -485,7 +485,8 @@ impl<T> Column<T> {
     }
 
     /// Checks an edited value before the commit: an `Err` keeps the editor open,
-    /// marked invalid. After [`editable`](Self::editable), with its `V`.
+    /// marked invalid, its message shown under it and announced. After
+    /// [`editable`](Self::editable), with its `V`.
     ///
     /// ```rust
     /// # use libero::components::column;
