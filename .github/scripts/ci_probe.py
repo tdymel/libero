@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+"""The ci-probe workflow's helpers (3315): one platform x tier job, one test filter.
+
+    ci_probe.py plan                   job outputs from `.github/ci-probe` or the dispatch inputs
+    ci_probe.py names <filter> < list  `--exact` names of the `::native` arms `<filter>` selects
+    ci_probe.py summary <log> ...      a `::notice` with every `test result:` line
+
+The probe file (`ted_ci.py probe` writes it on a `ci/*` branch) holds `key=value` lines:
+`os` linux|macos|windows, `tier` unit|native|web|desktop|none, `filter` e.g. `tabs::`.
+"""
+import os
+import re
+import sys
+from pathlib import Path
+
+PROBE = Path(__file__).resolve().parents[1] / "ci-probe"
+RUNNERS = {"linux": "ubuntu-24.04", "macos": "macos-26", "windows": "windows-2025"}
+TIERS = ("unit", "native", "web", "desktop")
+# The cargo cache each leg already warms in ci.yml or platforms.yml; restored, never saved.
+CACHES = {
+    ("linux", "unit"): "test",
+    ("linux", "native"): "native",
+    ("linux", "web"): "e2e",
+    ("linux", "desktop"): "platforms-linux-desktop",
+    ("macos", "unit"): "platforms-unit",
+    ("macos", "native"): "platforms-macos-native",
+    ("macos", "web"): "platforms-macos-web",
+    ("macos", "desktop"): "platforms-macos-desktop",
+    ("windows", "unit"): "platforms-unit",
+    ("windows", "native"): "platforms-windows-native",
+    ("windows", "web"): "platforms-windows-web",
+    ("windows", "desktop"): "platforms-windows-desktop",
+}
+# Reaches a shell unquoted only after this check.
+FILTER = re.compile(r"^[A-Za-z0-9_:]+$")
+
+
+def fail(message: str) -> None:
+    # Workflow commands are read from stdout.
+    print(f"::error title=ci-probe::{message}")
+    sys.exit(1)
+
+
+def read_probe() -> dict[str, str]:
+    if os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch":
+        return {key: os.environ.get(f"PROBE_{key.upper()}", "") for key in ("os", "tier", "filter")}
+    if not PROBE.is_file():
+        fail(f"no .github/{PROBE.name} file on this branch; write it with ted_ci.py probe")
+    probe = {}
+    for line in PROBE.read_text(encoding="utf-8").splitlines():
+        if line.strip() and not line.lstrip().startswith("#") and "=" in line:
+            key, value = line.split("=", 1)
+            probe[key.strip()] = value.strip()
+    return probe
+
+
+def plan() -> None:
+    probe = read_probe()
+    target, tier, test = probe.get("os", ""), probe.get("tier", ""), probe.get("filter", "")
+    if tier != "none":
+        if target not in RUNNERS:
+            fail(f"os {target!r} is not one of {', '.join(RUNNERS)}")
+        if tier not in TIERS:
+            fail(f"tier {tier!r} is not one of {', '.join(TIERS)}, none")
+        if not FILTER.match(test):
+            fail(f"filter {test!r} is not a test path like `tabs::`")
+    outputs = {
+        "os": target,
+        "tier": tier,
+        "filter": test,
+        "runner": RUNNERS.get(target, "ubuntu-24.04"),
+        "cache": CACHES.get((target, tier), ""),
+    }
+    with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+        out.writelines(f"{key}={value}\n" for key, value in outputs.items())
+    print(f"probe: {target} {tier} {test}")
+
+
+def names(test: str) -> None:
+    listed = [line.rstrip("\r")[: -len(": test")] for line in sys.stdin.read().splitlines()
+              if line.rstrip("\r").endswith(": test")]
+    # A filter ending in `::` is a prefix, as units.py and the e2e runner read it.
+    hit = [name for name in listed if name.endswith("::native")
+           and (name.startswith(test) if test.endswith("::") else test in name)]
+    print(" ".join(["--exact", *hit]) if hit else "")
+
+
+def summary(paths: list[str]) -> None:
+    lines = []
+    for path in map(Path, paths):
+        if path.is_file():
+            text = path.read_text(encoding="utf-8", errors="replace")
+            lines += [f"{path.stem}: {l.strip()}" for l in re.sub(r"\x1b\[[0-9;?]*[A-Za-z]", "", text).splitlines()
+                      if l.strip().startswith("test result:") and " 0 passed; 0 failed;" not in l]
+    body = "\n".join(lines).replace("%", "%25").replace("\n", "%0A") or "no `test result:` line in the logs"
+    print(f"::notice title=probe result::{body}")
+
+
+def main() -> None:
+    mode = sys.argv[1] if len(sys.argv) > 1 else ""
+    if mode == "plan":
+        plan()
+    elif mode == "names" and len(sys.argv) == 3:
+        names(sys.argv[2])
+    elif mode == "summary":
+        summary(sys.argv[2:])
+    else:
+        sys.exit(__doc__)
+
+
+if __name__ == "__main__":
+    main()
