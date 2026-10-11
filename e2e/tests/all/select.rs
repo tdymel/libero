@@ -32,6 +32,39 @@ async fn a_click_picks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     picked(d, "Some(Cherry)", "a click on Cherry").await
 }
 
+const SNAP: &str = "(() => { const o = document.querySelector('[role=option]:nth-child(3)'); \
+    if (!o) return 'no option'; const r = o.getBoundingClientRect(); \
+    const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); \
+    const lb = document.querySelector('[role=listbox]').getBoundingClientRect(); \
+    const dp = (e) => e ? e.tagName + '/' + e.getAttribute('role') + '/' + (e.className || '').toString().slice(0, 20) : 'none'; \
+    return JSON.stringify({ iw: innerWidth, ih: innerHeight, dpr: devicePixelRatio, opt: [r.x, r.y, r.width, r.height], \
+      lb: [lb.x, lb.y, lb.width, lb.height], hit: dp(hit), focus: document.hasFocus(), vis: document.visibilityState, \
+      ae: dp(document.activeElement), exp: document.querySelector('[role=combobox]').getAttribute('aria-expanded'), \
+      picked: document.querySelector('#picked').textContent, log: (window.__ev || []).join(' ') }); })()";
+
+async fn diag_pick<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    if d.platform() != e2e::driver::Platform::Desktop {
+        return Ok(());
+    }
+    d.evaluate("(() => { window.__ev = []; for (const t of ['pointerdown','pointerup','mousedown','mouseup','click','pointermove','focusout','blur']) document.addEventListener(t, (e) => { if (e.type !== 'pointermove' || window.__ev.length < 40) window.__ev.push(e.type + '@' + (e.target.tagName || 'doc') + '/' + (e.target.getAttribute ? e.target.getAttribute('role') : '')); }, true); return true; })()")
+        .await?;
+    d.click(TRIGGER).await?;
+    eventually(d, "the listbox", async |d| d.exists(LISTBOX).await).await?;
+    let before = d.evaluate(SNAP).await?;
+    d.click("[role=option]:nth-child(3)").await?;
+    let waited = picked(d, "Some(Cherry)", "a click on Cherry").await;
+    let after = d.evaluate(SNAP).await?;
+    if waited.is_err() {
+        d.evaluate("document.querySelector('[role=option]:nth-child(3)').click()")
+            .await?;
+        let js_click = d.text("#picked").await?;
+        anyhow::bail!("DIAG before {before} after {after} js_click {js_click}");
+    }
+    anyhow::bail!("DIAG passed; before {before} after {after}")
+}
+
+e2e::scenario!(diag_select_click, "/select/echo", diag_pick);
+
 async fn the_keys_pick<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.focus(TRIGGER).await?;
     d.press(keyboard::ARROW_DOWN).await?;
