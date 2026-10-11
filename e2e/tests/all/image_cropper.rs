@@ -775,7 +775,7 @@ const MINUS: keyboard::Key = keyboard::Key {
     text: Some("-"),
 };
 
-/// Pan mode: the arrows move the crop, + and - zoom around the still box (1368).
+/// Pan mode: the arrows and Move buttons move the picture, + and - zoom around the still box (1368, 3013).
 async fn the_keys_pan_and_zoom<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     eventually_text(d, "#crop", "30,10,40,80", "the starting square").await?;
     anyhow::ensure!(
@@ -803,10 +803,14 @@ async fn the_keys_pan_and_zoom<D: Driver>(d: &mut D, _route: &str) -> Result<()>
     d.press(MINUS).await?;
     eventually_text(d, "#crop", "30,10,40,80", "-").await?;
     d.press(keyboard::ARROW_RIGHT).await?;
-    eventually_text(d, "#crop", "31,10,40,80", "ArrowRight").await?;
-    // The image dragged a tenth of the cropper right: the crop a tenth left.
+    // The picture follows the arrow, as it follows a drag: the crop goes the other way.
+    eventually_text(d, "#crop", "29,10,40,80", "ArrowRight").await?;
     d.drag("[data-slot=frame]", root.width / 10.0, 0.0).await?;
-    eventually_text(d, "#crop", "21,10,40,80", "a drag").await
+    eventually_text(d, "#crop", "19,10,40,80", "a drag").await?;
+    d.click("#cropper [aria-label='Move right']").await?;
+    eventually_text(d, "#crop", "14,10,40,80", "Move right").await?;
+    d.click("#cropper [aria-label='Move up']").await?;
+    eventually_text(d, "#crop", "14,15,40,80", "Move up").await
 }
 
 e2e::scenario!(

@@ -374,8 +374,15 @@ pub fn TeamTable(values: DemoValues) -> Element {
                     }),
                 onrowupdate: edits(&values)
                     .then(|| {
-                        EventHandler::new(move |update: RowUpdate<Person>| {
-                            rows.write()[update.index] = update.row;
+                        let many = many.clone();
+                        EventHandler::new(move |update: RowUpdate<Person>| match windowed {
+                            true => {
+                                moved
+                                    .write()
+                                    .get_or_insert_with(|| many.get_or_init(crowd).clone())[update
+                                    .index] = update.row
+                            }
+                            false => rows.write()[update.index] = update.row,
                         })
                     }),
                 default_row_grouping: match on("row_grouping") {

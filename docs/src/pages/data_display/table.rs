@@ -235,9 +235,9 @@ fn resizes(values: &DemoValues) -> bool {
     values.str("resizable_columns") == "true"
 }
 
-/// The windowed rows have no signal of the demo's own to store an edit in.
+/// The server's batches have no signal of the demo's own to store an edit in.
 fn edits(values: &DemoValues) -> bool {
-    values.str("editable") == "true" && !windowed(values)
+    values.str("editable") == "true" && !from_server(values)
 }
 
 // snippet: item #[derive(Clone, PartialEq)] struct Person { name: String }
@@ -566,7 +566,7 @@ pub fn TablePage() -> Element {
                     Control::switch("editable").default("true").code(|_, values| match edits(values) {
                         true => vec![EDIT.to_string()],
                         false => vec![],
-                    }).hidden_when(windowed),
+                    }).hidden_when(from_server),
                     Control::switch("resizable_columns").code(|_, values| match resizes(values) {
                         true => vec![
                             "resizable_columns: true".to_string(),

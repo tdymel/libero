@@ -96,7 +96,7 @@ pub fn ImageCropperPage() -> Element {
                 .without_base_props(),
             ],
             accessibility: a11y()
-                .key(["Arrow"], "On the box: moves it. On a corner: moves that corner, resizing the box.")
+                .key(["Arrow"], "On the box: moves it, with `pan` the image, as a drag does. On a corner: moves that corner, resizing the box.")
                 .key(["Shift+Arrow"], "Ten times as far.")
                 .key(["+", "-"], "With `pan`: zoom the image in or out around the box's centre.")
                 .handles([

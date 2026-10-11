@@ -25,7 +25,7 @@ paragraph
   StaticText "10,10,80,80"
 image "A sun on blue, to pan"
 slider "Crop area" = 30 [disabled] [orientation=horizontal] [valuemax=100] [valuemin=0]
-  description "Arrow keys move the crop area, plus and minus zoom the image. Shift moves further."
+  description "Arrow keys move the image, plus and minus zoom it. Shift moves further."
 slider "Zoom" = -0.003143551293760538 [disabled] [orientation=horizontal] [valuemax=2.0768563747406006] [valuemin=-0.2231435477733612]
   description "100%"
 group "Crop area"

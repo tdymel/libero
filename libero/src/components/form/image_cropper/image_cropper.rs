@@ -706,6 +706,12 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
         drag.onpointercancel.call(event);
     };
 
+    // Keys and buttons go where the arrow points: the box in free mode, the picture in pan mode.
+    let shift = move |grabbed: Grip, dx: f64, dy: f64| match pan {
+        true => shown.panned(dx, dy),
+        false => shown.resized(grabbed, dx, dy, ratio, min),
+    };
+
     let key = move |grabbed: Grip| {
         move |event: Event<KeyboardData>| {
             if !interactive || has_shortcut_modifier(&event) {
@@ -717,10 +723,10 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
             };
             let centre = (0.5, 0.5);
             let rect = match event.key() {
-                Key::ArrowLeft => shown.resized(grabbed, -step, 0.0, ratio, min),
-                Key::ArrowRight => shown.resized(grabbed, step, 0.0, ratio, min),
-                Key::ArrowUp => shown.resized(grabbed, 0.0, -step, ratio, min),
-                Key::ArrowDown => shown.resized(grabbed, 0.0, step, ratio, min),
+                Key::ArrowLeft => shift(grabbed, -step, 0.0),
+                Key::ArrowRight => shift(grabbed, step, 0.0),
+                Key::ArrowUp => shift(grabbed, 0.0, -step),
+                Key::ArrowDown => shift(grabbed, 0.0, step),
                 Key::Character(c) if pan && (c == "+" || c == "=") => {
                     shown.zoomed(ZOOM_STEP, centre, centre, min)
                 }
@@ -789,7 +795,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     // The single-pointer alternative to every drag (WCAG 2.5.7): a press each.
     let nudge = move |dx: f64, dy: f64| {
         Callback::new(move |_: MouseEvent| {
-            let rect = shown.resized(Grip::Move, dx, dy, ratio, min);
+            let rect = shift(Grip::Move, dx, dy);
             if rect != shown {
                 emit.call(rect);
             }

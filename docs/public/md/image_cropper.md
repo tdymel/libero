@@ -112,7 +112,7 @@ explains how parts work.
 
 | Key | Action |
 |---|---|
-| `Arrow` | On the box: moves it. On a corner: moves that corner, resizing the box. |
+| `Arrow` | On the box: moves it, with `pan` the image, as a drag does. On a corner: moves that corner, resizing the box. |
 | `Shift+Arrow` | Ten times as far. |
 | `+`, `-` | With `pan`: zoom the image in or out around the box's centre. |
 

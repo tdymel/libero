@@ -113,12 +113,12 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             "& [data-slot='strip'] [data-slot='month']",
-            sx().font_size("0.75em").opacity("0.7"),
+            sx().font_size("0.75em").color("text-dimmed"),
         )
-        // Faded on the selected fill it read 3.07:1 (todo 1998).
+        // Dimmed it reads 3.07:1 on the selected fill (todo 1998), 4.08:1 on the hover fill.
         .selector(
-            "& [data-slot='strip'] [data-selected] > [data-slot='month']",
-            sx().opacity("1"),
+            "& [data-slot='strip'] :is([data-selected], [data-slot='day']:hover:not(:disabled)) > [data-slot='month']",
+            sx().color("inherit"),
         )
         .selector(
             ChronoPickerPart::Cell.selector(),

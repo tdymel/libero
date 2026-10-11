@@ -36,8 +36,8 @@ fn nav_responsive_sx(open: bool, drawer: bool) -> Sx {
         "transform 200ms ease, visibility 0s 200ms"
     };
 
-    // "Accessibility settings", the longest label, needs the 8px past `Sm` to stay on one row.
-    let width = format!("calc({} + 8px)", SIDEBAR_SIZE.value(Size::Sm));
+    // "Debounce and throttle", the longest label, needs the 24px past `Sm` to stay on one row.
+    let width = format!("calc({} + 24px)", SIDEBAR_SIZE.value(Size::Sm));
     // Absolute in the row below the header, not fixed at the header's height:
     // Blitz lays a fixed box out like an absolute one, which put it a header lower.
     let base = sx()

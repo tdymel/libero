@@ -130,15 +130,15 @@ pub(crate) async fn pick_later<D: Driver>(d: &mut D, steps: usize) -> Result<()>
     if native {
         d.press(keyboard::ARROW_DOWN).await?;
     }
-    let desktop = d.platform() == Platform::Desktop;
+    let waits = matches!(d.platform(), Platform::Desktop | Platform::Web);
     for step in 0..steps {
-        let before = match desktop {
+        let before = match waits {
             true => d.value(":focus").await?,
             false => String::new(),
         };
         d.press(keyboard::ARROW_DOWN).await?;
-        // WebKitGTK rewinds a press that lands before the last change's render.
-        if desktop {
+        // A press before the last change's render is rewound: WebKitGTK, a loaded Chromium (3305).
+        if waits {
             eventually(d, &format!("ArrowDown {}", step + 1), async |d| {
                 Ok(d.value(":focus").await? != before)
             })
