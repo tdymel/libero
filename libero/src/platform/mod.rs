@@ -40,6 +40,7 @@ mod resize;
 mod save_file;
 mod scroll;
 mod select;
+mod share;
 mod storage;
 mod style_rules;
 mod system_notification;
@@ -162,6 +163,9 @@ pub(crate) use scroll::{
 };
 pub use scroll::{ScrollApi, ScrollSubscription, scroll};
 pub(crate) use select::opens_select_picker;
+#[cfg(test)]
+pub(crate) use share::{ShareApi, Sharing, fake_share};
+pub use share::{ShareData, ShareFile, ShareOutcome, share};
 #[cfg(test)]
 pub(crate) use storage::{MemoryStorage, StorageApi, fake_storage};
 pub(crate) use storage::{StorageArea, StorageChange, StorageSubscription, storage};

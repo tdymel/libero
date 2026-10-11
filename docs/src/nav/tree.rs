@@ -129,6 +129,7 @@ pub(super) fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::CopyPage {}, "Copy"),
                 page(Route::DirectionTogglePage {}, "DirectionToggle"),
                 page(Route::RepositoryPage {}, "Repository"),
+                page(Route::ShareButtonPage {}, "ShareButton"),
                 page(Route::ThemeSwitcherPage {}, "ThemeSwitcher"),
                 page(Route::TldrPage {}, "Tldr"),
                 page(Route::ToolbarPage {}, "Toolbar"),

@@ -180,6 +180,8 @@ pub(crate) enum Route {
     DirectionTogglePage {},
     #[route("/buttons/repository")]
     RepositoryPage {},
+    #[route("/buttons/share-button")]
+    ShareButtonPage {},
     #[route("/buttons/theme-switcher")]
     ThemeSwitcherPage {},
     #[route("/buttons/tldr")]

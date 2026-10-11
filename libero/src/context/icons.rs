@@ -141,6 +141,8 @@ pub enum IconSlot {
     More,
     /// A filter: a table column's filter button.
     Filter,
+    /// A share button.
+    Share,
 }
 }
 

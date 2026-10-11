@@ -253,6 +253,11 @@ fn hooks() -> Vec<HookRow> {
             Route::CopyPage {},
         ),
         row(
+            "use_share",
+            "Opens the system share sheet, or copies the link where there is none.",
+            Route::ShareButtonPage {},
+        ),
+        row(
             "use_icon",
             "The glyph an IconProvider sets for a slot, else your default.",
             Route::IconProviderPage {},

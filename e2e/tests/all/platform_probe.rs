@@ -1,6 +1,6 @@
 //! A probe, not a feature test: what each WebView offers (secure context, capability APIs,
 //! viewport, CSS support, media queries), kept as `platform-probe-<platform>-<host>.json` in
-//! the run's artifacts. It answers todos 1227, 1236, 1239 and 1248 per OS; it asserts only
+//! the run's artifacts. It answers todos 1227, 1236, 1239, 1248 and 3334 per OS; it asserts only
 //! what holds everywhere, and on Windows desktop that the page is a secure context (3231).
 
 use anyhow::{Context, Result, ensure};
@@ -28,6 +28,8 @@ const PROBE: &str = r#"(() => {
             permissions: typeof navigator.permissions,
             cryptoSubtle: typeof window.crypto?.subtle,
             PushManager: typeof window.PushManager,
+            share: typeof navigator.share,
+            canShare: typeof navigator.canShare,
         },
         notificationPermission: read(() => window.Notification?.permission ?? null),
         fullscreenEnabled: document.fullscreenEnabled ?? null,

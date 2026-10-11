@@ -111,6 +111,7 @@ mod scroll_area;
 mod scroller;
 mod segmented_control;
 mod select;
+mod share_button;
 mod sidebar;
 mod skeleton;
 mod slider;

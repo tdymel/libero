@@ -1,0 +1,46 @@
+//! `ShareButton` icon-only, labelled, with a file, and disabled; `#outcome` echoes the last `onshare`.
+
+use dioxus::prelude::*;
+use libero::components::{Flex, ShareButton, Text};
+use libero::platform::{ShareFile, ShareOutcome};
+
+use crate::Routes;
+
+pub const ROUTES: Routes = &[("/share-button", || rsx! { ShareButtonPage {} })];
+
+#[component]
+fn ShareButtonPage() -> Element {
+    let mut outcome = use_signal(String::new);
+    let onshare = move |shared: ShareOutcome| outcome.set(format!("{shared:?}"));
+    rsx! {
+        Flex { direction: "row", gap: "md", align: "center",
+            span { id: "bare",
+                ShareButton {
+                    url: "https://libero-ui.dev",
+                    title: "Libero",
+                    text: "Components for Dioxus",
+                    onshare,
+                }
+            }
+            // The visible text the contrast pass needs; an icon button has none.
+            Text { "libero-ui.dev" }
+            span { id: "labelled",
+                ShareButton { url: "https://libero-ui.dev", label: "Link to the docs", onshare, "Share" }
+            }
+            span { id: "file",
+                ShareButton {
+                    title: "Report",
+                    files: vec![ShareFile {
+                        name: "report.csv".into(),
+                        mime: "text/csv".into(),
+                        bytes: b"a,b\n1,2\n".to_vec(),
+                    }],
+                    aria_label: "Share the report",
+                    onshare,
+                }
+            }
+            span { id: "off", ShareButton { url: "x", variant: "filled", disabled: true } }
+            span { id: "outcome", "{outcome}" }
+        }
+    }
+}

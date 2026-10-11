@@ -1,0 +1,17 @@
+---
+source: e2e/src/suite.rs
+description: share_button at mobile (rest)
+expression: tree
+---
+button "Share"
+status [atomic] [live=polite]
+paragraph
+  StaticText "libero-ui.dev"
+button "Share"
+  description "Link to the docs"
+  StaticText "Share"
+status [atomic] [live=polite]
+button "Share the report"
+status [atomic] [live=polite]
+button "Share" [disabled]
+status [atomic] [live=polite]

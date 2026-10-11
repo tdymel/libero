@@ -162,6 +162,7 @@ md_pages! {
     Scroller => "scroller",
     SegmentedControl => "segmented_control",
     Select => "select",
+    ShareButton => "share_button",
     ShortcutHelp => "shortcut_help",
     Sidebar => "sidebar",
     Skeleton => "skeleton",

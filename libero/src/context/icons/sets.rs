@@ -89,6 +89,7 @@ icon_set!(lucide: [outlined => lucide_outlined] {
     Link => link,
     More => ellipsis_vertical,
     Filter => funnel,
+    Share => share_2,
 });
 
 #[cfg(feature = "icons-material")]
@@ -152,6 +153,7 @@ icon_set!(material: [
     Link => content_link,
     More => navigation_more_vert,
     Filter => action_filter_alt,
+    Share => social_share,
 });
 
 #[cfg(feature = "icons-tabler")]
@@ -209,6 +211,7 @@ icon_set!(tabler: [outlined => tabler_outlined] {
     Link => link,
     More => dots_vertical,
     Filter => filter,
+    Share => share,
 });
 
 // No text direction glyph: the direction toggle keeps lucide's.
@@ -265,6 +268,7 @@ icon_set!(bootstrap: [outlined => bootstrap_outlined] {
     Link => link_45deg,
     More => three_dots_vertical,
     Filter => funnel,
+    Share => share,
 });
 
 // No text direction glyph: the direction toggle keeps lucide's.
@@ -328,6 +332,7 @@ icon_set!(phosphor: [
     Link => link,
     More => dots_three_vertical,
     Filter => funnel,
+    Share => share_network,
 });
 
 #[cfg(test)]

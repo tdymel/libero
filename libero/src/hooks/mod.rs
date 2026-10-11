@@ -41,6 +41,7 @@ mod presence_tests;
 mod push_subscription;
 mod ripple;
 mod scroll_lock;
+mod share;
 mod silent_focus;
 mod storage;
 mod stylesheet;
@@ -115,6 +116,7 @@ pub(crate) use presence::use_presence;
 pub use push_subscription::{PushSubscription, use_push_subscription};
 pub(crate) use ripple::{child_ripple_sx, ripple_sx, use_ripple};
 pub(crate) use scroll_lock::use_scroll_lock;
+pub use share::{Share, use_share};
 pub(crate) use silent_focus::{use_silent_focus_in, use_silent_focus_out, use_silent_focus_out_of};
 pub(crate) use storage::{LocalText, SessionText, local_text, session_text};
 pub use storage::{
