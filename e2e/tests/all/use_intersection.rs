@@ -82,7 +82,8 @@ async fn keeps_the_first_sighting<D: Driver>(d: &mut D, _route: &str) -> Result<
 e2e::scenario!(
     once_keeps_the_first_sighting,
     "/use-intersection/once",
-    keeps_the_first_sighting
+    keeps_the_first_sighting,
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );
 
 async fn the_ratio_follows_the_threshold<D: Driver>(d: &mut D, _route: &str) -> Result<()> {

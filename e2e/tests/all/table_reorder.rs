@@ -730,7 +730,8 @@ e2e::scenario!(
 e2e::scenario!(
     header_grip_drags_move_its_own_columns_twice,
     "/table-column-drag",
-    two_grip_drags_move_columns
+    two_grip_drags_move_columns,
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );
 
 /// Todo 2018: the rows measure at the press, so a finger's drag moves the row soon.
