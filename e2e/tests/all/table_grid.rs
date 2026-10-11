@@ -721,7 +721,23 @@ async fn reveals_dbg<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         let focused = d.is_focused(STOP).await.ok();
         let cell = d.rect(STOP).await.map(|r| (r.y, r.height)).ok();
         let area = d.rect(AREA).await.map(|r| (r.y, r.height)).ok();
-        bail!("DBG {e}: id {id:?} focused {focused:?} cell {cell:?} area {area:?}");
+        let first = d.rect("tbody tr:first-child").await.map(|r| (r.y, r.height)).ok();
+        let last = d.rect("tbody tr:last-child").await.map(|r| (r.y, r.height)).ok();
+        let head = d.rect("thead").await.map(|r| (r.y, r.height)).ok();
+        let again = eventually(d, "a second wait", async |d| {
+            let (cell, area) = (d.rect(STOP).await?, d.rect(AREA).await?);
+            Ok(cell.y >= area.y - 1.0 && cell.y + cell.height <= area.y + area.height + 1.0)
+        })
+        .await
+        .is_ok();
+        d.press_ctrl(keyboard::END).await?;
+        let retried = eventually(d, "a retry", async |d| {
+            let (cell, area) = (d.rect(STOP).await?, d.rect(AREA).await?);
+            Ok(cell.y >= area.y - 1.0 && cell.y + cell.height <= area.y + area.height + 1.0)
+        })
+        .await
+        .is_ok();
+        bail!("DBG {e}: id {id:?} focused {focused:?} cell {cell:?} area {area:?} first {first:?} last {last:?} head {head:?} still_waiting_ok {again} retry_ok {retried}");
     }
     Ok(())
 }
@@ -732,7 +748,7 @@ macro_rules! flake {
     };
 }
 
-flake!(flake_01 flake_02 flake_03 flake_04 flake_05 flake_06 flake_07 flake_08 flake_09 flake_10 flake_11 flake_12 flake_13 flake_14 flake_15 flake_16 flake_17 flake_18 flake_19 flake_20 flake_21 flake_22 flake_23 flake_24);
+flake!(flake_01 flake_02 flake_03 flake_04 flake_05 flake_06 flake_07 flake_08 flake_09 flake_10 flake_11 flake_12 flake_13 flake_14 flake_15 flake_16 flake_17 flake_18 flake_19 flake_20 flake_21 flake_22 flake_23 flake_24 flake_25 flake_26 flake_27 flake_28 flake_29 flake_30 flake_31 flake_32 flake_33 flake_34 flake_35 flake_36);
 
 /// Chromium reads a `role="grid"` table's cells as grid cells, its row headers as such.
 #[test]
