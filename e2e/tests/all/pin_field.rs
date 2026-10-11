@@ -26,7 +26,8 @@ async fn one_digit_per_cell<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_pin_field_takes_one_digit_per_cell_and_moves_on,
     "/pin-field/echo",
-    one_digit_per_cell
+    one_digit_per_cell,
+    macos_native: skip("3342: Blitz deletes twice on AppKit's Backspace binding")
 );
 
 /// Todo 3033: a composing Backspace edits the IME's candidate, so it neither clears a

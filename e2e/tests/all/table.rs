@@ -306,7 +306,8 @@ async fn the_window_follows_the_scroll<D: Driver>(d: &mut D, _route: &str) -> Re
 e2e::scenario!(
     a_windowed_table_renders_the_rows_in_view,
     "/table/windowed",
-    the_window_follows_the_scroll
+    the_window_follows_the_scroll,
+    macos_native: skip("Blitz's stylo panics in resolve_map on the windowed rows (a SIGSEGV in the full run)")
 );
 
 /// 1156-5c: Tab walks the row checkboxes past the rendered rows and back: the

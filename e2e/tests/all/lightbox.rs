@@ -1210,7 +1210,8 @@ e2e::scenario!(
     a_zoomed_picture_pans_only_to_its_edge,
     "/lightbox",
     pan_stops_at_the_edge,
-    macos: skip("macOS WKWebView: the stage's first scroll never settles")
+    macos: skip("macOS WKWebView: the stage's first scroll never settles"),
+    macos_native: skip("Blitz reads no script: the scenario evaluates in the page")
 );
 
 /// Todo 1067: two fingers spread zoom the picture and do not close the viewer;

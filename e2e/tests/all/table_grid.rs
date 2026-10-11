@@ -306,7 +306,8 @@ e2e::scenario!(
     "/table-grid/collation",
     sorts_by_language,
     android: skip("3294: the WebView app has no Intl.Collator to call"),
-    macos: skip("macOS WKWebView: the collator ignores the app's language")
+    macos: skip("macOS WKWebView: the collator ignores the app's language"),
+    macos_native: skip("Blitz reads no script: the scenario evaluates Intl.Collator in the page")
 );
 
 const EDITOR: &str = "[data-cell-editor] input";
@@ -547,7 +548,8 @@ e2e::scenario!(
     a_yes_no_editor_is_a_checkbox_and_a_date_editor_names_its_form,
     "/table-grid/editable/formats",
     formats,
-    android: skip("958: roving keys are inert in the emulator's WebView")
+    android: skip("958: roving keys are inert in the emulator's WebView"),
+    macos_native: skip("Blitz reads no script: the scenario evaluates in the page")
 );
 
 /// A custom editor is described by the refused value's message, and clears it by calling `changed`.
