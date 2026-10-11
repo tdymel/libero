@@ -1,5 +1,5 @@
 //! WebView2 is Chromium (2783): the app starts with a DevTools port through
-//! `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`, and input goes in over CDP's `Input` domain, as on
+//! `E2E_WEBVIEW2_DEVTOOLS_PORT`, and input goes in over CDP's `Input` domain, as on
 //! the web tier. Reads stay on the bridge. No window lookup, focus or screen size involved.
 
 use std::net::TcpListener;
@@ -35,16 +35,10 @@ pub(super) fn prepare(command: &mut Command, launch: &str) -> Result<u16> {
         .context("find a DevTools port")?
         .local_addr()?
         .port();
-    // Appended to the app's arguments; the folder replaces the default profile. The secure
-    // origin repeats the fixture's own, in case the variable replaces them (3195).
+    // The fixture adds the port to its own arguments: WebView2 dropped the
+    // `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` one (3326). The folder replaces the default profile.
     command
-        .env(
-            "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
-            format!(
-                "--remote-debugging-port={port} \
-                 --unsafely-treat-insecure-origin-as-secure=http://dioxus.index.html"
-            ),
-        )
+        .env("E2E_WEBVIEW2_DEVTOOLS_PORT", port.to_string())
         .env(
             "WEBVIEW2_USER_DATA_FOLDER",
             std::env::temp_dir().join(format!("e2e-webview2-{launch}")),
