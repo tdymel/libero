@@ -19,7 +19,7 @@ use crate::{
     hooks::{ElementHandle, listener, use_id, use_silent_focus_in, use_silent_focus_out_of},
     platform::{
         ElementApi, PlatformError, arrow_target, focus_selector, focused_tag, infers_grid_cells,
-        key_taken, meta_held, rtl_target, silent_focus, typing_target, when_laid_out,
+        key_taken, meta_held, next_task, rtl_target, silent_focus, typing_target, when_laid_out,
     },
 };
 
@@ -27,7 +27,7 @@ use crate::{
 const PAGE_ROWS: usize = 10;
 
 /// Scrolls a focused slot into view this many times at most, one per layout.
-const REVEAL_TRIES: usize = 3;
+const REVEAL_TRIES: usize = 5;
 
 /// Focus in a grid cell or a widget inside one, or on a tree row or its toggle: the
 /// filter row, the footer and the leading select, detail and reorder cells keep their keys.
@@ -372,6 +372,8 @@ fn reveal_by_scroll(region: ElementHandle, reveal: Reveal, settle: Settle, tries
                 moved: Some((top, to)),
                 ..settle
             };
+            // A task on, so the re-check reads what this scroll set going, not the same tick.
+            next_task().await;
             when_laid_out(move || reveal_by_scroll(region, reveal, settle, tries - 1));
         }
     });
