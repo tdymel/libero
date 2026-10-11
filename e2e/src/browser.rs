@@ -512,7 +512,8 @@ impl Fixture {
         .await
         .context("auto-attach without pausing new workers")?;
 
-        if scheme == Scheme::Dark {
+        // On a Mac the host's Reduce Motion would reach the page, so emulate it there too.
+        if scheme == Scheme::Dark || cfg!(target_os = "macos") {
             emulate_media(&page, scheme, None)
                 .await
                 .context("emulate the dark scheme")?;
