@@ -34,7 +34,7 @@ fn main() {
         .with_cfg(
             dioxus::desktop::Config::new()
                 .with_custom_head(head())
-                .with_windows_browser_args(WEBVIEW2_ARGS),
+                .with_windows_browser_args(webview2_args()),
         )
         .launch(e2e_fixtures::App);
     #[cfg(all(feature = "mobile", not(feature = "desktop")))]
@@ -43,6 +43,16 @@ fn main() {
         .launch(e2e_fixtures::App);
     #[cfg(not(any(feature = "desktop", feature = "mobile")))]
     dioxus::launch(e2e_fixtures::App);
+}
+
+/// [`WEBVIEW2_ARGS`] and the desktop driver's DevTools port: WebView2 ignores
+/// `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` once the app passes arguments of its own.
+#[cfg(feature = "desktop")]
+fn webview2_args() -> String {
+    match std::env::var("E2E_WEBVIEW2_DEVTOOLS_PORT") {
+        Ok(port) => format!("{WEBVIEW2_ARGS} --remote-debugging-port={port}"),
+        Err(_) => WEBVIEW2_ARGS.into(),
+    }
 }
 
 #[cfg(any(feature = "desktop", feature = "mobile"))]
