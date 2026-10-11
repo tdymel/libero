@@ -17,17 +17,17 @@ from pathlib import Path
 PROBE = Path(__file__).resolve().parents[1] / "ci-probe"
 RUNNERS = {"linux": "ubuntu-24.04", "macos": "macos-26", "windows": "windows-2025"}
 TIERS = ("unit", "native", "web", "desktop")
-# The cargo cache each leg already warms in ci.yml or platforms.yml; saved on `ci/probe-*` only.
+# The cargo cache each leg restores in ci.yml or platforms.yml; only main saves them (3413).
 CACHES = {
     ("linux", "unit"): "test",
     ("linux", "native"): "native",
     ("linux", "web"): "e2e",
-    ("linux", "desktop"): "platforms-linux-desktop",
-    ("macos", "unit"): "platforms-unit",
-    ("macos", "native"): "platforms-macos-native",
-    ("macos", "web"): "platforms-macos-web",
+    ("linux", "desktop"): "e2e",
+    ("macos", "unit"): "platforms-macos-desktop",
+    ("macos", "native"): "platforms-macos-desktop",
+    ("macos", "web"): "platforms-ios-e2e",
     ("macos", "desktop"): "platforms-macos-desktop",
-    ("windows", "unit"): "platforms-unit",
+    ("windows", "unit"): "platforms-windows-native",
     ("windows", "native"): "platforms-windows-native",
     ("windows", "web"): "platforms-windows-web",
     ("windows", "desktop"): "platforms-windows-desktop",

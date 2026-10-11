@@ -98,8 +98,8 @@ jobs:
         with:
           targets: ${{ env.TIER == 'web' && 'wasm32-unknown-unknown' || '' }}
           cache-key: ${{ needs.plan.outputs.cache }}
-          # Saved on the `ci/probe-*` branches only, see the setup action.
-          save-cache: true
+          # Main's cache of the leg, restored only (3413).
+          save-cache: false
       - if: env.TIER == 'web'
         uses: ./.github/actions/dx
       # The same pin as ci.yml's `e2e` job: the AX snapshots follow Chrome's tree.
