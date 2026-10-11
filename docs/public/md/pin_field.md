@@ -50,10 +50,10 @@ submit the code. Extra HTML attributes land on the group, not on a cell.
 |---|---|---|---|
 | `size` | `Size` | `md` | The cell's square, its font size and the gap. A cell is as tall as a `TextField` of the same size. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius of each cell, independent of `size`. Or any CSS, e.g. `radius: "0"`. |
-| `length` | `usize` | `4` | How many cells. |
-| `kind` | `PinKind` | `numeric` | `numeric` or `alphanumeric`. Any other character is ignored as it is typed. |
+| `length` | `usize` | `4` | How many cells, clamped to 1 through 32. |
+| `kind` | `PinKind` | `numeric` | `numeric` takes the digits 0-9, `alphanumeric` the ASCII letters and digits. Any other character, an accented letter too, is ignored as it is typed. |
 | `value` | `Option<String>` | - | The pin so far, one character per filled cell. Leave it out and the field keeps its own pin. |
-| `oninput` | `EventHandler<String>` | - | Fires for every accepted character with the pin the field should hold next. |
+| `oninput` | `EventHandler<String>` | - | Fires for every change of the pin, a typed character, a clear or a paste, with the pin the field should hold next. |
 | `validate` | `Validators<String>` | - | Rules over the pin, shown once the field loses focus or its form is submitted. |
 | `oncomplete` | `EventHandler<String>` | - | Fires once when the last empty cell fills. Clearing a cell arms it again. |
 | `mask` | `bool` | `false` | Hides the characters as in a password field. The value is unaffected. |

@@ -90,7 +90,7 @@ which a `style` accepts.
 | `size` | `Size` | `md` | Track height and thumb. |
 | `disabled` | `bool` | `false` | Dims the slider and stops it moving. |
 | `focusable` | `bool` | `true` | `false` keeps the thumb out of the tab order. |
-| `aria_label` | `String` | - | Names the thumb. |
+| `aria_label` | `String` | - | Names the thumb. Unset, the thumb has no name: unlike `ColorPicker`, the standalone slider falls back to no localization. |
 
 ### `AlphaSlider`
 
@@ -102,7 +102,7 @@ which a `style` accepts.
 | `size` | `Size` | `md` | Track height and thumb. |
 | `disabled` | `bool` | `false` | Dims the slider and stops it moving. |
 | `focusable` | `bool` | `true` | `false` keeps the thumb out of the tab order. |
-| `aria_label` | `String` | - | Names the thumb. |
+| `aria_label` | `String` | - | Names the thumb. Unset, the thumb has no name: unlike `ColorPicker`, the standalone slider falls back to no localization. |
 
 ### `ColorSwatch`
 

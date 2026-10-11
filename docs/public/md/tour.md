@@ -175,20 +175,20 @@ pub fn use_tour(options: TourOptions) -> TourHandle
 | `onchange` | `Option<Callback<usize>>` | - | Called with the step a button, key or handle call asks for. |
 | `onfinish` | `Option<Callback<()>>` | - | Called once when Next is pressed on the last step. |
 | `onclose` | `Option<Callback<usize>>` | - | Called with the step shown when the tour ends early: Escape, Back, Skip or the close button. Steps going empty while open end it too, with the last step shown. |
-| `mask_click` | `MaskClick` | `None` | What a press on the dimmed page does: `None`, `Close` or `Next`. |
-| `aria_label` | `Option<String>` | - | Names every step's card, over the step titles. |
-| `card` | `Option<Callback<TourView, Element>>` | - | Draws the card's inside in place of the default. |
+| `mask_click` | `MaskClick` | `None` | What a press on the dimmed page does: `None`, `Close` or `Next`. `None`, so a stray tap does not lose the tour. |
+| `aria_label` | `Option<String>` | - | Names every step's card, over the step titles. Without either, the localization's `tour.label`, with a warning in a debug build. |
+| `card` | `Option<Callback<TourView, Element>>` | - | Draws the card's inside in place of the default. The tour still places, names and focuses it; draw your own surface, a `Paper`. |
 | `sx` | `Input<Sx>` | - | Styles the card. |
-| `parts` | `Input<Parts<TourPart>>` | - | Styles the mask, the highlight and the card's parts. |
-| `storage_key` | `Option<String>` | - | Remembers in local storage that the tour was finished or closed early, for `tour.seen()`; `tour.forget()` drops it. Read at mount. |
+| `parts` | `Input<Parts<TourPart>>` | - | Styles for the mask, the highlight and the card's parts. |
+| `storage_key` | `Option<String>` | - | Remembers in local storage that the tour was finished or closed early, for `tour.seen()`; `tour.forget()` drops it. `start()` still starts: offer the tour while `!tour.seen()`. Read at mount. |
 
 ### `TourStep`
 
 | Method | Type | Default | Description |
 |---|---|---|---|
 | `new(key)` | `impl Into<String>` | required | Tells the steps apart. The card is drawn afresh when it changes. |
-| `target` | `ElementHandle` | - | The element the hole goes around. |
-| `target_selector` | `impl Into<String>` | - | A CSS selector for the target, as `"#search"`, looked up when the step shows. `target` wins. |
+| `target` | `ElementHandle` | - | The element the hole goes around, from `use_element()`, mounted with `onmounted: handle.mount()`. |
+| `target_selector` | `impl Into<String>` | - | A CSS selector for the target, as `"#search"`, looked up in the document when the step shows: for a target in another component. `target` wins. |
 | `interactive` | `bool` | `false` | Lets presses through the hole to the target, and puts the target in the Tab order beside the card. |
 | `title` | `impl Into<String>` | - | The card's heading and, unless the tour has an `aria_label`, its name. |
 | `description` | `impl Into<String>` | - | The card's text. |

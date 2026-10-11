@@ -279,21 +279,28 @@ fn several_files_are_shared_in_one_call() {
 }
 
 async fn the_share_sheet_opens<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    opens(d, BARE).await
+    opens(d, BARE, "android.intent.action.SEND").await
 }
 
 async fn the_share_sheet_opens_on_a_file<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    opens(d, FILE).await
+    opens(d, FILE, "android.intent.action.SEND").await
 }
 
 async fn the_share_sheet_opens_on_two_files<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    opens(d, FILES).await
+    opens(d, FILES, "android.intent.action.SEND_MULTIPLE").await
 }
 
-async fn opens<D: Driver>(d: &mut D, button: &str) -> Result<()> {
+/// The chooser opens over the page for an intent of `action`, which the app logs as it builds it.
+async fn opens<D: Driver>(d: &mut D, button: &str, action: &str) -> Result<()> {
+    d.clear_log().await?;
     d.click(button).await?;
     eventually(d, "the share sheet over the page", async |d| {
         d.exists("html[data-covered]").await
+    })
+    .await?;
+    let intent = format!("libero share intent: {action} ");
+    eventually(d, "the share intent in the log", async |d| {
+        Ok(!d.log_lines(&intent).await?.is_empty())
     })
     .await?;
     // The covered activity applies no edit until Back closes the share sheet.

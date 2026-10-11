@@ -50,7 +50,7 @@ fn Demo() -> Element {
 | `with_preview` | `bool` | `true` | Shows the color as a swatch in the leading slot. |
 | `with_eye_dropper` | `bool` | `true` | Adds a button in the trailing slot that picks a color off the screen. Shown only where the browser supports it, Chromium today. |
 | `disallow_input` | `bool` | `false` | Makes the text read-only, so a color comes from the dropdown alone. |
-| `fix_on_blur` | `bool` | `true` | Text that does not parse goes back to the last valid color on blur. Off, it stays and shows `color.invalid` as an error. |
+| `fix_on_blur` | `bool` | `true` | Text that does not parse goes back to the last valid color on blur. Off, it stays and shows `color.invalid` as an error. Either way the blur announces `color.invalid`. |
 | `close_on_swatch_click` | `bool` | `false` | Picking a swatch closes the dropdown. |
 | `name` | `FieldName<ColorCode>` | - | What the field posts as: its color in `format`, from a hidden input as `ColorPicker` posts it, never the text being typed. A path such as `Theme::FIELDS.accent()` also binds the color to the surrounding `Form`'s value when the field has no `oninput`. |
 | `placeholder` | `String` | - | Shown while the text is empty. |

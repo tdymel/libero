@@ -271,6 +271,15 @@ pub trait Driver {
         let _ = (x, y, dx, dy);
         bail!("{:?}: no drag from a point", self.platform())
     }
+    /// Empties the device log, so [`Driver::log_lines`] sees only what the app logs next.
+    async fn clear_log(&mut self) -> Result<()> {
+        bail!("{:?}: no device log", self.platform())
+    }
+    /// The device log's lines that contain `needle`, one per line; only Android reads it.
+    async fn log_lines(&mut self, needle: &str) -> Result<String> {
+        let _ = needle;
+        bail!("{:?}: no device log", self.platform())
+    }
     /// The system Back key, which only Android has.
     async fn press_back(&mut self) -> Result<()> {
         bail!("{:?}: no Back key", self.platform())

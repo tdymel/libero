@@ -39,7 +39,7 @@ pub fn TooltipPage() -> Element {
                 prop("label", "Element").default("required").doc("The bubble's content."),
                 prop("side", "Side")
                     .default(theme.tooltip.side.as_str())
-                    .doc("The preferred side of the trigger. The bubble flips when that side has no room."),
+                    .doc("The preferred side of the trigger. The bubble flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir=\"ltr\"`, the right under `rtl`."),
                 prop("gap", "ThemeAwareValue")
                     .default(theme.tooltip.gap.as_str())
                     .doc("Distance to the trigger, or a `px` or `rem` length, e.g. `gap: \"6px\"`. The pointer can cross it without closing the bubble. Other CSS places the bubble by the theme's gap."),

@@ -44,7 +44,7 @@ pub fn DividerPage() -> Element {
                 prop("size", "Size").default(theme.divider.size.as_str()).doc("Line thickness."),
                 prop("label_position", "LabelPosition")
                     .default(theme.divider.label_position.as_str())
-                    .doc("Where the label sits along the rule."),
+                    .doc("Where the label sits along the rule: `center`, `start` or `end`."),
                 prop("spacing", "ThemeAwareValue")
                     .default("none")
                     .doc("Margin on both sides of the rule, a spacing step or a CSS length."),

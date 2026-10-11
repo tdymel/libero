@@ -167,7 +167,7 @@ pub fn MarqueePage() -> Element {
                     .doc("Renders the pause toggle. Turn it off only when the page offers its own control through `paused`."),
                 prop("fade_edges", "bool")
                     .default("false")
-                    .doc("Fades both ends into the surface color. Only right on a surface of that color."),
+                    .doc("Fades both ends into the surface color, `--lsx-paper-background`. Only right on a surface of that color."),
                 prop("parts", "Parts<MarqueePart>")
                     .doc("Styles for the inner parts in the Style API tab, under `sx`."),
             ])

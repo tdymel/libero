@@ -63,6 +63,10 @@ pub fn MenuDemo(
                 MenuItem::new("Messages").onselect(pick("Messages")).into(),
             ])
             .into(),
+        MenuItem::new("Documentation")
+            .href("https://libero-ui.dev")
+            .new_tab_icon(true)
+            .into(),
         MenuEntry::Separator,
         MenuEntry::Group {
             label: "Sort by".into(),
@@ -71,9 +75,6 @@ pub fn MenuDemo(
         MenuItem::new("Show hidden")
             .checkbox(hidden())
             .onselect(move |_| hidden.toggle())
-            .into(),
-        MenuItem::new("Documentation")
-            .href("https://libero-ui.dev")
             .into(),
         MenuEntry::Separator,
         MenuItem::new("Delete").onselect(pick("Delete")).into(),

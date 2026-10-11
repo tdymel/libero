@@ -59,7 +59,7 @@ pub fn MenuPage() -> Element {
                         .doc("The trigger, carrying `menu.a11y_attributes()`. It needs no click or key handler of its own."),
                     prop("side", "Side")
                         .default("Bottom")
-                        .doc("Which side of the trigger the menu opens on. It flips when that side has no room."),
+                        .doc("Which side of the trigger the menu opens on. It flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir=\"ltr\"`, the right under `rtl`."),
                     prop("align", "Align")
                         .default("Start")
                         .doc("Where the menu lines up along that side."),
@@ -79,7 +79,7 @@ pub fn MenuPage() -> Element {
                         .default("false")
                         .doc("The trigger opens nothing, and an open menu closes. Disable the trigger too, so it looks disabled."),
                     prop("onedge", "Callback<MenuEdge>")
-                        .doc("Called with ← on the top level, or → on an item without a submenu. `Menubar` uses it to move to the next menu."),
+                        .doc("Called with ArrowLeft on the top level, or ArrowRight on an item without a submenu. `Menubar` uses it to move to the next menu."),
                     prop("parts", "Parts<MenuPart>")
                         .doc("Styles for the inner parts in the Style API tab, on every menu level, submenus too, as `sx` does: `Parts::new().part(MenuPart::Label, sx().font_weight(\"500\"))`."),
                 ])

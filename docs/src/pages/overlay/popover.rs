@@ -214,10 +214,10 @@ pub fn PopoverPage() -> Element {
                 props("PopoverOptions", vec![
                     prop("side", "Side")
                         .default(theme.popover.side.as_str())
-                        .doc("The preferred side of the anchor. Flipping may override it. `new` starts at `Bottom`; `theme.popover.side` is what to start from to follow the theme."),
+                        .doc("The preferred side of the anchor. Flipping may override it. `new` starts at `Bottom`; `theme.popover.side` is what to start from to follow the theme. `Start`/`End` are logical: `Start` is the left under `dir=\"ltr\"`, the right under `rtl`."),
                     prop("align", "Align")
                         .default(theme.popover.align.as_str())
-                        .doc("Where the box lines up along that side. `new` starts at `Start`; `theme.popover.align` follows the theme."),
+                        .doc("Where the box lines up along that side. `new` starts at `Start`; `theme.popover.align` follows the theme. Across `Top`/`Bottom` it follows the direction too."),
                     prop("gap", "f64")
                         .default("theme.popover.gap")
                         .doc("Pixels between the anchor and the box."),

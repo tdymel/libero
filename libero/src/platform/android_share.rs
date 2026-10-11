@@ -290,6 +290,9 @@ fn write(env: &mut JNIEnv, resolver: &JObject, uri: &JObject, bytes: &[u8]) -> J
 }
 
 fn send_intent<'a>(env: &mut JNIEnv<'a>, action: &str, mime: &str) -> JniResult<JObject<'a>> {
+    // The e2e share scenarios read this line from logcat.
+    #[cfg(debug_assertions)]
+    dioxus::prelude::debug!("libero share intent: {action} {mime}");
     let action = env.new_string(action)?;
     let intent = env.new_object(
         "android/content/Intent",

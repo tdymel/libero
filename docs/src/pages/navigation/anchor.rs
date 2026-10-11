@@ -90,12 +90,22 @@ pub fn AnchorPage() -> Element {
                         }
                     }),
                     // On here so the icon shows; the component's own default is off.
-                    Control::switch("new_tab_icon").default("true").code(|_, values| {
-                        match (values.str("internal_route").as_str(), values.str("new_tab_icon").as_str()) {
-                            ("true", _) | (_, "false") => vec![],
-                            _ => vec!["new_tab_icon: true".to_string()],
-                        }
-                    }),
+                    Control::switch("new_tab_icon")
+                        .default("true")
+                        .hidden_when(|values| {
+                            values.str("internal_route") == "true"
+                                || values.str("new_tab_hint") != "true"
+                        })
+                        .code(|_, values| {
+                            match (
+                                values.str("internal_route").as_str(),
+                                values.str("new_tab_hint").as_str(),
+                                values.str("new_tab_icon").as_str(),
+                            ) {
+                                ("true", _, _) | (_, "false", _) | (_, _, "false") => vec![],
+                                _ => vec!["new_tab_icon: true".to_string()],
+                            }
+                        }),
                     Control::toggle("underline", ["hover", "always", "never"])
                         .labels(["Hover", "Always", "Never"]),
                     Control::sizes("size")

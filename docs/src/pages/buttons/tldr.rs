@@ -33,7 +33,7 @@ pub fn TldrPage() -> Element {
                     .doc("Names the icon-only trigger. Unset, `TldrLabels::icon_only` (\"Summarize with AI\")."),
                 prop("variant", "Variant")
                     .default(theme.tldr.variant.as_str())
-                    .doc("The trigger's visual style."),
+                    .doc("The trigger's visual style. Unset, `theme.tldr.variant`."),
                 prop("size", "Size")
                     .default(theme.tldr.size.as_str())
                     .doc("The trigger's size step, the icon-only one too."),
@@ -42,7 +42,7 @@ pub fn TldrPage() -> Element {
                     .doc("Corner radius, independent of `size`, or any CSS, e.g. `radius: \"0\"`. The trigger's own is `xl` on the labelled chip, `sm` icon-only."),
                 prop("color", "ThemeAwareValue")
                     .default("neutral")
-                    .doc("The trigger's accent color. A theme color name or any CSS color."),
+                    .doc("The trigger's accent color. A theme color name or any CSS color. Unset, `theme.tldr.color`."),
                 prop("menu_parts", "Parts<MenuPart>")
                     .doc("The menu's `parts`, the `Menu` page's Style API table. The menu opens in a portal, out of the trigger's `sx`."),
             ])],

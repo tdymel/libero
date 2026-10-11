@@ -444,6 +444,7 @@ pub fn TablePage() -> Element {
                 .key(["Enter", "F2"], "On an editable cell: opens its editor, the field focused and its text selected, so typing replaces it. A second tap on the stop cell does the same on a touch screen.")
                 .key(["Enter", "Shift+Enter"], "In a cell's editor: commits the value and moves to the cell below or above. A value that does not parse or validate keeps the editor open, with its message under it.")
                 .key(["Tab", "Shift+Tab"], "In a cell's editor: commits the value and moves to the next or previous cell; the editor of that one opens with `Enter`.")
+                .key(["Space"], "In a `bool` or `Option<bool>` cell's editor, a checkbox: toggles it. An `Option<bool>` one cycles empty, true, false.")
                 .key(["Escape"], "In a cell's editor: puts the value back and returns focus to the cell.")
                 .key(["Escape"], "In a filter popover: closes it and returns focus to the button that opened it: the column's menu button, or its filtered-header button.")
                 .key(["Tab", "Shift+Tab"], "In a filter popover: moves between its fields; past either end it closes and Tab goes on from the button that opened it.")

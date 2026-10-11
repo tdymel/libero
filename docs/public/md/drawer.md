@@ -99,7 +99,7 @@ behave the same. See [Modal](modal.md).
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `anchor` | `Input<DrawerAnchor>` | `start` | The edge the panel docks to. |
+| `anchor` | `Input<DrawerAnchor>` | `start` | The edge the panel docks to. `start` is the right edge under `dir="rtl"`. |
 | `size` | `Input<ThemeAwareValue>` | `md` | Width when docked start or end, height when docked top or bottom: a size word or any CSS, e.g. `size: "24rem".into()`. |
 | `z_index` | `Input<ThemeAwareValue>` | - | Stacking order of the panel. |
 | `aria_label` | `Option<String>` | - | Names the panel, which is a dialog. With neither this nor `title`, it warns in a debug build. |

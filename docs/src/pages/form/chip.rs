@@ -37,7 +37,7 @@ pub fn ChipPage() -> Element {
                     .default("on")
                     .doc("What the chip posts under its `name` when checked, so a row of filter chips can share one name."),
                 prop("onclick", "EventHandler<MouseEvent>")
-                    .doc("A plain action. Makes the chip a `button`; with `checked` it is a toggle button and says `aria-pressed`."),
+                    .doc("A plain action. Makes the chip a `<button>`; with `checked` it is a toggle button and says `aria-pressed`."),
                 prop("to", "NavigationTarget")
                     .doc("Makes the chip a router-aware link. Wins over `onclick`."),
                 prop("target", "String")
@@ -127,6 +127,16 @@ pub fn ChipPage() -> Element {
                     Control::switch("checked")
                         .hidden_when(|values| values.str("kind") != "filter")
                         .code(|_, _| vec![]),
+                    // On here so the icon shows; the component's own default is off.
+                    Control::switch("new_tab_icon")
+                        .default("true")
+                        .hidden_when(|values| values.str("kind") != "link")
+                        .code(|_, values| {
+                            match (values.str("kind").as_str(), values.str("new_tab_icon").as_str()) {
+                                ("link", "true") => vec!["new_tab_icon: true".to_string()],
+                                _ => vec![],
+                            }
+                        }),
                     Control::switch("disabled"),
                     Control::switch("readonly")
                         .hidden_when(|values| values.str("kind") != "filter"),
@@ -152,9 +162,25 @@ pub fn ChipPage() -> Element {
                             _ => Input::None,
                         },
                         target: (values.str("kind") == "link").then(|| "_blank".to_string()),
+                        new_tab_icon: (values.str("kind") == "link"
+                            && values.str("new_tab_icon") == "true")
+                            .then_some(true),
                         disabled: values.str("disabled") == "true",
                         readonly: values.str("kind") == "filter" && values.str("readonly") == "true",
                         "rust"
+                    }
+                    // A new-tab link beside it that opts into the icon, shown without the `link` kind.
+                    if values.str("kind") != "link" {
+                        Chip {
+                            color: values.str("color"),
+                            variant: values.str("variant"),
+                            size: values.str("size"),
+                            radius: values.str("radius"),
+                            to: "https://dioxuslabs.com",
+                            target: "_blank",
+                            new_tab_icon: true,
+                            "Dioxus"
+                        }
                     }
                 },
             }

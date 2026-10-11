@@ -61,7 +61,7 @@ fn Demo() -> Element {
 | `trailing` | `Element` | - | Inside the frame, after the control, such as a clear button or a unit. |
 | `describe_leading` | `bool` | `false` | Set it when `leading` is text that belongs to the value, such as `@`, so a screen reader reads it with the input. Not for an icon or a button. |
 | `describe_trailing` | `bool` | `false` | The same for `trailing`, such as `kg` or a `12/20` counter. |
-| `label` | `Caption` | - | The field's caption, above the control. It names the field. Takes a string or an `Element`. |
+| `label` | `Caption` | - | The field's caption, above the control. It names the field. Takes a string or an `Element`. The label's element id is `{id}-label`, so a `Combobox`'s `labelled_by` can name its list from it. |
 | `description` | `Caption` | - | Between the label and the control. What to enter. |
 | `helper` | `Caption` | - | Under the control. Formatting rules, limits or a counter. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error; an empty one or `None` is `Valid`. |

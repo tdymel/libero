@@ -69,7 +69,7 @@ fn Demo() -> Element {
 | `decorative` | `bool` | `false` | Marks the picture as decoration, hidden from screen readers. Wins over `alt`, with a warning in a debug build. |
 | `zoomable` | `bool` | `false` | Opens the picture in a single-picture Lightbox on click. Ignored inside a linked `ImageItem`, with a warning. The zoom button then takes `class`, `states` and the extra attributes, so `aria_label` or `data-*` land on it; `loading`, `decoding`, `fetchpriority`, `srcset`, `sizes`, `crossorigin`, `referrerpolicy` and `usemap` stay on the `<img>`. |
 | `loading` | `ImageLoading` | `eager` | The `<img>`'s `loading`. `lazy` loads the picture only when it nears the viewport. |
-| `parts` | `Parts<ImagePart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
+| `parts` | `Parts<ImagePart>` | - | Styles for the inner parts in the Style API tab, under `sx`. With `zoomable` only. |
 
 `ImageFit` takes `fill`, `contain`, `cover`, `none` or `scale-down`.
 `ImageLoading` takes `eager` or `lazy`.

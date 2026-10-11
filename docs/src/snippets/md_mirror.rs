@@ -87,6 +87,37 @@ fn every_page_is_in_the_nav_under_its_title() {
 /// `## Props` ones before any. `## API` files options structs and handles by heading; a handle may also have a `## ` section
 /// or a table headed by its type.
 pub(super) fn md_props(md: &str) -> Vec<(String, BTreeMap<String, String>)> {
+    md_cells(md, |line| {
+        line.split(" | ")
+            .nth(2)
+            .unwrap_or_default()
+            .trim()
+            .to_string()
+    })
+}
+
+/// `md_props` with each row's description, the last cell, in place of the default, its
+/// `[text](target)` links reduced to the text as the page prints them.
+fn md_descriptions(md: &str) -> Vec<(String, BTreeMap<String, String>)> {
+    md_cells(md, |line| {
+        let cells = line.splitn(4, " | ").nth(3).unwrap_or_default();
+        let mut text = cells
+            .trim()
+            .trim_end_matches('|')
+            .trim()
+            .replace("\\|", "|");
+        while let Some(open) = text.find("](")
+            && let Some(close) = text[open..].find(')')
+            && let Some(start) = text[..open].rfind('[')
+        {
+            text.replace_range(open..open + close + 1, "");
+            text.remove(start);
+        }
+        text
+    })
+}
+
+fn md_cells(md: &str, cell: impl Fn(&str) -> String) -> Vec<(String, BTreeMap<String, String>)> {
     let mut groups: Vec<(String, BTreeMap<String, String>)> = Vec::new();
     let mut section = "";
     // The group the next row joins: none until a heading (or, in `## Props`, a row) opens one.
@@ -122,14 +153,67 @@ pub(super) fn md_props(md: &str) -> Vec<(String, BTreeMap<String, String>)> {
                 current = open(&mut groups, "");
             }
             if let Some(group) = current {
-                let default = line.split(" | ").nth(2).unwrap_or_default().trim();
-                groups[group]
-                    .1
-                    .insert(bare(name).to_string(), default.to_string());
+                groups[group].1.insert(bare(name).to_string(), cell(line));
             }
         }
     }
     groups
+}
+
+/// Todo 3370: a prop reads the same on its page and in its mirror.
+#[test]
+fn md_mirrors_describe_the_props_like_their_page() {
+    let public = Path::new(env!("CARGO_MANIFEST_DIR")).join("public");
+    let squash = |text: &str| text.split_whitespace().collect::<Vec<_>>().join(" ");
+    let mut problems = Vec::new();
+    for Rendered { pages, .. } in rendered() {
+        for RecordedPage {
+            markdown,
+            properties: groups,
+            ..
+        } in pages
+        {
+            let Some(markdown) = markdown.as_ref().filter(|_| !groups.is_empty()) else {
+                continue;
+            };
+            let Ok(md) = std::fs::read_to_string(public.join(markdown.trim_start_matches('/')))
+            else {
+                continue;
+            };
+            let mirrored = md_descriptions(&md);
+            for (index, group) in groups.iter().enumerate() {
+                let named = |heading: &str| {
+                    heading.split('<').next() == group.component().split('<').next()
+                };
+                let Some((_, listed)) = mirrored
+                    .iter()
+                    .find(|(heading, _)| named(heading))
+                    .or_else(|| {
+                        mirrored
+                            .iter()
+                            .find(|(heading, _)| index == 0 && heading.is_empty())
+                    })
+                else {
+                    continue;
+                };
+                for (name, description) in group.descriptions() {
+                    let Some(mirror) = listed.get(bare(name)).filter(|text| !text.is_empty())
+                    else {
+                        continue;
+                    };
+                    if squash(mirror) != squash(description) {
+                        problems.push(format!(
+                            "{markdown}: `{}` `{name}`\n  page:   {description}\n  mirror: {mirror}",
+                            group.component()
+                        ));
+                    }
+                }
+            }
+        }
+    }
+    problems.sort();
+    problems.dedup();
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
 }
 
 /// Todo 1038: the page's property tables and its `public/md` mirror name the same props.

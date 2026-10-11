@@ -68,7 +68,7 @@ neither stays a plain Dioxus element.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `variables` | `Variables` | - | Custom properties set on the element's `style`, so `sx` can use a changing value without a new class per value. |
-| `component` | `HtmlTag` | `div` | The element to render, any of the 111 HTML5 element names. The 28 outside the default set need the `full-polymorphism` feature and render as a `div` without it. |
+| `component` | `HtmlTag` | `div` | The element to render, any of the 111 HTML5 element names. The 28 outside the default set (document metadata, embedded and media content, `template`, `slot`, bidi and ruby) need the `full-polymorphism` feature and render as a `div` without it. |
 | `framework_sx` | `&'static StaticSx` | - | Base styles for a component built on `Box`. They sit on a CSS layer below `sx`, so a caller's `sx` still wins. |
 | `style` | `String` | - | Raw `style` declarations, applied after `variables`. |
 | `alt` | `String` | - | The `img` alt text. |

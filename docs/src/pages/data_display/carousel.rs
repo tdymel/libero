@@ -59,7 +59,7 @@ pub fn CarouselPage() -> Element {
                     prop("gap", "ThemeAwareValue").default(theme.carousel.gap.as_str()).doc("Between slides, or any CSS, e.g. `gap: \"0\"`."),
                     prop("align", "CarouselAlign")
                         .default(theme.carousel.align.as_str())
-                        .doc("Where a snapped slide comes to rest. Shows best with a fractional `per_view`. Above `per_view` 1 it also moves which slides the strip can reach."),
+                        .doc("Where a snapped slide comes to rest, `start`, `center` or `end`. Shows best with a fractional `per_view`. Above `per_view` 1 it also moves which slides the strip can reach."),
                     prop("orientation", "Orientation")
                         .default("horizontal")
                         .doc("Scroll axis."),

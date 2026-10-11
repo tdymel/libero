@@ -152,8 +152,8 @@ pub fn ActionIconPage() -> Element {
                     }),
                     Control::switch("new_tab_icon")
                         .hidden_when(|values| !is_link(values))
-                        .code(|_, values| match values.str("new_tab_icon").as_str() {
-                            "true" => vec!["new_tab_icon: true".to_string()],
+                        .code(|_, values| match (is_link(values), values.str("new_tab_icon").as_str()) {
+                            (true, "true") => vec!["new_tab_icon: true".to_string()],
                             _ => vec![],
                         }),
                 ],

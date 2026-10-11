@@ -40,7 +40,7 @@ pub fn MenubarPage() -> Element {
                         .doc("Whether the arrow keys wrap at the ends, along the bar and down each menu."),
                     prop("side", "Side")
                         .default("Bottom")
-                        .doc("Which side of its trigger every menu opens on. It flips when that side has no room."),
+                        .doc("Which side of its trigger every menu opens on. It flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir=\"ltr\"`, the right under `rtl`."),
                     prop("align", "Align")
                         .default("Start")
                         .doc("Where each menu lines up along that side."),

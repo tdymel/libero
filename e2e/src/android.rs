@@ -281,6 +281,21 @@ pub(crate) async fn tap_any_node_within(
     }
 }
 
+/// Empties the device log.
+pub(crate) async fn clear_log() -> Result<()> {
+    shell(&["logcat".into(), "-c".into()]).await.map(drop)
+}
+
+/// The device log's lines that contain `needle`.
+pub(crate) async fn log_lines(needle: &str) -> Result<String> {
+    let log = shell(&["logcat".into(), "-d".into()]).await?;
+    Ok(log
+        .lines()
+        .filter(|line| line.contains(needle))
+        .collect::<Vec<_>>()
+        .join("\n"))
+}
+
 /// The posted notifications of `package`, as `dumpsys notification` lists them.
 pub(crate) async fn posted_notifications(package: &str) -> Result<String> {
     let dump = shell(&["dumpsys".into(), "notification".into(), "--noredact".into()]).await?;

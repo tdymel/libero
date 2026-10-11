@@ -7,9 +7,9 @@ use chromiumoxide::cdp::browser_protocol::emulation::SetCpuThrottlingRateParams;
 use super::web::{element, evaluate, json};
 use super::{Driver, Platform, Rect};
 use crate::android::{
-    ALT, CTRL, SHIFT, disable_ime, download, harness, input, input_text, keycode,
-    posted_notifications, restore_ime, soft_keyboard_shown, tap_any_node_within, tap_node,
-    tap_notification, tap_notification_action, webview_view_focused,
+    ALT, CTRL, SHIFT, clear_log, disable_ime, download, harness, input, input_text, keycode,
+    log_lines, posted_notifications, restore_ime, soft_keyboard_shown, tap_any_node_within,
+    tap_node, tap_notification, tap_notification_action, webview_view_focused,
 };
 use crate::clock::{app_clock, app_count};
 use crate::passes::{focus, keyboard, pointer};
@@ -520,6 +520,14 @@ impl Driver for Android {
     /// `KEYCODE_BACK`: wry's activity hands it to the WebView's history, else finishes.
     async fn press_back(&mut self) -> Result<()> {
         input(&["keyevent".into(), "4".into()]).await
+    }
+
+    async fn clear_log(&mut self) -> Result<()> {
+        clear_log().await
+    }
+
+    async fn log_lines(&mut self, needle: &str) -> Result<String> {
+        log_lines(needle).await
     }
 
     async fn press_shift(&mut self, key: keyboard::Key) -> Result<()> {
