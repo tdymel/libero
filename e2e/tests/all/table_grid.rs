@@ -705,6 +705,35 @@ fn the_grid_meets_the_baseline() {
         .run();
 }
 
+async fn reveals_dbg<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    into_body(d, 1).await?;
+    d.press_ctrl(keyboard::END).await?;
+    let waited = eventually(d, "Ctrl+End on the last row, shown", async |d| {
+        if stop_id(d).await? != 250_000 || !d.is_focused(STOP).await? {
+            return Ok(false);
+        }
+        let (cell, area) = (d.rect(STOP).await?, d.rect(AREA).await?);
+        Ok(cell.y >= area.y - 1.0 && cell.y + cell.height <= area.y + area.height + 1.0)
+    })
+    .await;
+    if let Err(e) = waited {
+        let id = stop_id(d).await.ok();
+        let focused = d.is_focused(STOP).await.ok();
+        let cell = d.rect(STOP).await.map(|r| (r.y, r.height)).ok();
+        let area = d.rect(AREA).await.map(|r| (r.y, r.height)).ok();
+        bail!("DBG {e}: id {id:?} focused {focused:?} cell {cell:?} area {area:?}");
+    }
+    Ok(())
+}
+
+macro_rules! flake {
+    ($($name:ident)*) => {
+        $(e2e::scenario!($name, "/table-grid/windowed", reveals_dbg, android: skip("x"));)*
+    };
+}
+
+flake!(flake_01 flake_02 flake_03 flake_04 flake_05 flake_06 flake_07 flake_08 flake_09 flake_10 flake_11 flake_12 flake_13 flake_14 flake_15 flake_16 flake_17 flake_18 flake_19 flake_20 flake_21 flake_22 flake_23 flake_24);
+
 /// Chromium reads a `role="grid"` table's cells as grid cells, its row headers as such.
 #[test]
 fn the_ax_tree_names_a_grid() {
