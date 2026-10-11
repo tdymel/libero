@@ -113,7 +113,7 @@ jobs:
       - if: env.TIER == 'ios'
         run: |
           brew tap cameroncooke/axe
-          echo "axe tap: $(git -C "$(brew --repository cameroncooke/axe)" rev-parse HEAD)"
+          git -C "$(brew --repository cameroncooke/axe)" checkout --detach 64a21aa4c30e173280a0c3847b19a9a57dfcbfc0
           brew install cameroncooke/axe/axe
           axe --version
           defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool true
