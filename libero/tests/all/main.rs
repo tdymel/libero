@@ -131,6 +131,7 @@ mod table_reorder;
 mod table_row_groups;
 mod table_select;
 mod table_toolbar;
+mod table_tree;
 mod table_window;
 mod tabs;
 mod tags_field;

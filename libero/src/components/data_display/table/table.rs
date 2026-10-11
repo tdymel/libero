@@ -57,6 +57,7 @@ use super::{
     grid::{GridRows, GridWindow, HeadGrid, col_indices, use_grid_focus},
     header_filters::HeaderFilter,
     header_groups::header_rows,
+    memo::Memo,
     overlay::{EmptyBody, LoadingBar, SKELETON_ROWS},
     paging::{TablePager, clamp_page, page_rows, use_page_reset, use_page_size_reseed},
     pinning::{PinSide, PinnedColumns, pin_columns, pin_edge_at, pinned_extent},
@@ -70,6 +71,7 @@ use super::{
     selection::{Selection, group_state, toggle_row},
     sticky::use_edge_height,
     toolbar::{TableToolbar, TableTools, ToolView},
+    tree::{tree_parents, tree_rows, with_ancestors},
     use_table::{TableConfig, use_table},
     window::{
         BodyRows, RowWindow, TABLE_MIN_WIDTH_VAR, TABLE_ROW_HEIGHT_VAR, reveal_slot, use_row_focus,
@@ -699,6 +701,41 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         "& [data-group-toggle][aria-expanded=\"false\"] svg",
         sx().transform("rotate(90deg)"),
     ))
+    // A tree row's toggle, or a leaf's spacer as wide, before its first cell's text.
+    .selector(
+        "& [data-node-toggle]",
+        sx().display("inline-flex")
+            .with("vertical-align", "middle")
+            .with("margin-inline-end", "4px")
+            .padding("0")
+            .border("0")
+            .border_radius("4px")
+            .background("none")
+            .color("inherit")
+            .cursor("pointer"),
+    )
+    .selector(
+        "& [data-node-toggle]:focus-visible",
+        inset_focus_ring_sx("0"),
+    )
+    .selector(
+        "& [data-node-spacer]",
+        sx().display("inline-block")
+            .width("16px")
+            .with("margin-inline-end", "4px"),
+    )
+    .selector(
+        "& [data-node-toggle] svg",
+        sx().width("16px").height("16px").flex_shrink("0"),
+    )
+    .selector(
+        "& [data-node-toggle][aria-expanded=\"false\"] svg",
+        sx().transform("rotate(-90deg)"),
+    )
+    .rtl(sx().selector(
+        "& [data-node-toggle][aria-expanded=\"false\"] svg",
+        sx().transform("rotate(90deg)"),
+    ))
     .selector(
         "& [data-group-count]",
         sx().font_weight("400").opacity("0.75"),
@@ -967,6 +1004,24 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// `default_expanded_groups`; 0 starts them all collapsed. Not with `expanded_groups`.
     #[props(default)]
     default_group_expansion: usize,
+    /// The `row_key` of a row's parent: the rows nest under their parents, each
+    /// level in the sort, and a missing parent makes a root. Needs `row_key`. Over
+    /// `row_grouping`; renders every row, which neither reorder nor show a `row_detail`.
+    #[props(default, into)]
+    parent_key: RowFn<T, Option<String>>,
+    /// The `row_key`s of the open tree rows; set, they are controlled.
+    #[props(default)]
+    expanded_nodes: Option<Vec<String>>,
+    /// Seeds the open tree rows once. Ignored when `expanded_nodes` is set.
+    #[props(default)]
+    default_expanded_nodes: Vec<String>,
+    /// The open tree rows a toggle asks for.
+    #[props(default)]
+    onexpandednodeschange: Option<EventHandler<Vec<String>>>,
+    /// How many tree levels open the first time there are rows, beside
+    /// `default_expanded_nodes`; 0 starts them all collapsed. Not with `expanded_nodes`.
+    #[props(default)]
+    default_node_expansion: usize,
     /// Makes the table a `role="grid"` with one header or body cell as its tab stop,
     /// the first header cell at first: the arrows, Home, End, Ctrl+Home, Ctrl+End,
     /// PageUp and PageDown move it. Enter or Space on a header cell sorts it,
@@ -1156,6 +1211,8 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
 // Generic shim: only the projection below compiles per `T`.
 #[component]
 pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
+    let tree = props.parent_key.is_set();
+    let groups_too = props.row_grouping.is_some() || !props.default_row_grouping.is_empty();
     let state = use_table(TableConfig {
         sort: props.sort,
         default_sort: props.default_sort,
@@ -1205,6 +1262,9 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         expanded_groups: props.expanded_groups,
         default_expanded_groups: props.default_expanded_groups,
         onexpandedgroupschange: props.onexpandedgroupschange,
+        expanded_nodes: props.expanded_nodes,
+        default_expanded_nodes: props.default_expanded_nodes,
+        onexpandednodeschange: props.onexpandednodeschange,
     });
     let panel = use_panel_control();
     let announcer = use_announcer();
@@ -1274,6 +1334,21 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         let editable = props.columns.iter().any(|column| column.edit.is_some());
         if editable && props.onrowupdate.is_none() {
             warn("Table: an editable column without `onrowupdate` drops every edit.");
+        }
+        if tree {
+            let ignored = [
+                (
+                    !props.row_key.is_set(),
+                    "without `row_key` matches parents by row index",
+                ),
+                (groups_too, "ignores `row_grouping`"),
+                (props.row_detail.is_set(), "ignores `row_detail`"),
+                (props.onrowreorder.is_some(), "does not reorder rows"),
+                (props.virtual_row_height.is_some(), "renders every row"),
+            ];
+            for (_, what) in ignored.into_iter().filter(|(on, _)| *on) {
+                warn(&format!("Table: `parent_key` {what}."));
+            }
         }
     });
     let instructions_id = use_id();
@@ -1364,6 +1439,9 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let mut grouped_rows = use_hook(|| CopyValue::new(GroupedRows::<T>::default()));
     let mut group_aggregates = use_hook(|| CopyValue::new(GroupAggregates::<T>::default()));
     let mut group_seeded = use_hook(|| CopyValue::new(false));
+    let mut tree_parents_memo =
+        use_hook(|| CopyValue::new(Memo::<Rc<[String]>, Rc<[usize]>>::default()));
+    let mut nodes_seeded = use_hook(|| CopyValue::new(false));
     let mut row_context = use_hook(|| CopyValue::new((0u64, None::<Rc<RowContext<T>>>)));
     let mut known_rows = use_hook(|| CopyValue::new(KnownRows::<T>::None));
     let mut pin_edges = use_signal(|| [None::<f64>; 2]);
@@ -1386,7 +1464,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         },
     );
     let pinned = state.pinned_columns.read();
-    let has_detail = props.row_detail.is_set();
+    let has_detail = props.row_detail.is_set() && !tree;
     let has_reorder = props.onrowreorder.is_some();
     let leads: Vec<String> = [
         has_reorder.then(reorder_width),
@@ -1454,7 +1532,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             sortable: spec.sortable,
             hideable: spec.hideable,
             hidden: spec.hidden,
-            groupable: column.row_groupable,
+            groupable: column.row_groupable && !tree,
         })
         .collect();
     let tests = cell_tests(&props.columns, &state.column_filters.read());
@@ -1569,6 +1647,31 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             state.filter_logic.read(),
         ),
     };
+    let parents = tree.then(|| {
+        let fresh = |known: &Rc<[String]>| Rc::ptr_eq(known, &keys);
+        let compute = || {
+            let named: Vec<Option<String>> = data
+                .iter()
+                .map(|row| props.parent_key.call(row).flatten())
+                .collect();
+            let (parent, unknown) = tree_parents(&keys, &named);
+            if unknown > 0 {
+                warn(&format!(
+                    "Table: {unknown} rows name a `parent_key` no row has, so they show as roots."
+                ));
+            }
+            (keys.clone(), Rc::<[usize]>::from(parent))
+        };
+        tree_parents_memo.write().get(fresh, compute).clone()
+    });
+    // A filtered tree keeps the kept rows' ancestors, open so the kept rows show.
+    let (kept, opened) = match (kept, &parents) {
+        (Some(kept), Some(parents)) => {
+            let (shown, opened) = with_ancestors(&kept, parents);
+            (Some(Rc::new(shown)), Some(opened))
+        }
+        (kept, _) => (kept, None),
+    };
     let selection = look.map(|look| Selection {
         slice: state.selection,
         scope: selection_scope(&keys, kept.as_deref().map(Vec::as_slice)),
@@ -1629,23 +1732,31 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .write()
         .cells(&data, &columns, kept_rows, &labels);
     // Groups nest the sorted rows; the footer above and an export count the rows alone.
-    let levels = group_levels(&columns, &state.row_grouping.read());
+    let levels = match tree {
+        true => Vec::new(),
+        false => group_levels(&columns, &state.row_grouping.read()),
+    };
     let grouped = !levels.is_empty();
     let texts = grouped.then(|| grouped_rows.write().texts(&data, &columns, &levels));
     let leaves = texts.as_ref().map(|_| order.clone());
     if props.toolbar.is_some() {
-        let (data, columns, shown, order, texts) = (
+        let (data, columns, shown, order, texts, parents) = (
             data.clone(),
             columns.clone(),
             layout.clone(),
             order.clone(),
             texts.clone(),
+            parents.clone(),
         );
         let mut export = tools.export;
         export.set(Some(Rc::new(move || {
-            let rows = match &texts {
-                Some(texts) => nest_rows(&order, texts, &|_| true, "").0,
-                None => order.clone(),
+            let rows = match (&texts, &parents) {
+                (Some(texts), _) => nest_rows(&order, texts, &|_| true, "").0,
+                (_, Some(parents)) => {
+                    let leaves: Vec<usize> = order.iter().filter_map(|row| row.data()).collect();
+                    tree_rows(&leaves, parents, &|_| true).0
+                }
+                _ => order.clone(),
             };
             (shown_csv(&columns, &shown, &data, &rows), order.len())
         })));
@@ -1677,6 +1788,33 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         }
         _ => Rc::from([]),
     };
+    // A tree nests the sorted rows under their parents, the first levels open once.
+    let tree_levels = parents.as_ref().map(|parents| {
+        if !*nodes_seeded.peek() && !data.is_empty() {
+            nodes_seeded.set(true);
+            let depth = props.default_node_expansion;
+            if depth > 0 && !state.expanded_nodes.is_controlled() {
+                let every: Vec<usize> = (0..data.len()).collect();
+                let mut open = state.expanded_nodes.peek();
+                for (index, level) in tree_rows(&every, parents, &|_| true).1.iter().enumerate() {
+                    let opens =
+                        level.is_some_and(|level| level.depth < depth && level.children > 0);
+                    if opens && !open.contains(&keys[index]) {
+                        open.push(keys[index].clone());
+                    }
+                }
+                state.expanded_nodes.seed(open);
+            }
+        }
+        let open: HashSet<String> = state.expanded_nodes.read().iter().cloned().collect();
+        let leaves: Vec<usize> = order.iter().filter_map(|row| row.data()).collect();
+        let forced = |row: usize| opened.as_ref().is_some_and(|opened| opened[row]);
+        let (rows, levels) = tree_rows(&leaves, parents, &|row| {
+            forced(row) || open.contains(&keys[row])
+        });
+        order = rows;
+        levels
+    });
     let group_values = group_aggregates.write().values(&data, &columns, &groups);
     let current = (selection.clone(), groups.clone(), keys.clone());
     let select_group = use_callback(move |(id, on): (String, bool)| {
@@ -1751,8 +1889,10 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     };
     let has_data = !data.is_empty();
     let headers = Rc::new(headers);
-    // Detail rows have their own heights; group rows take the pitch.
-    let row_height = props.virtual_row_height.filter(|_| bounded && !has_detail);
+    // Detail rows have their own heights; group rows take the pitch. A tree renders every row.
+    let row_height = props
+        .virtual_row_height
+        .filter(|_| bounded && !has_detail && !tree);
     let fixed_slots = row_height.filter(|_| has_reorder).map(|pitch| FixedSlots {
         count: order.len(),
         pitch,
@@ -1764,7 +1904,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let reorder = has_reorder.then(|| RowReorder {
         onreorder: reorder_rows,
         // The shown order is not `data`'s: a move between slots means nothing there.
-        disabled: !active.is_empty() || !words.is_empty() || !tests.is_empty() || grouped,
+        disabled: !active.is_empty() || !words.is_empty() || !tests.is_empty() || grouped || tree,
         announcer,
         labels,
         instructions: instructions_id(),
@@ -1774,6 +1914,14 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     // Only with a gap: else each cell's place is its index.
     let colindex = (cell_focus && headers.iter().any(|spec| spec.hidden))
         .then(|| col_indices(&layout, headers.len(), lead_columns));
+    let nodes_slice = state.expanded_nodes;
+    let toggle_node = use_callback(move |(key, name, open): (String, String, bool)| {
+        nodes_slice.set(toggle_row(&nodes_slice.peek(), &key, open));
+        announcer.say(match open {
+            true => (labels.group_expanded)(&name),
+            false => (labels.group_collapsed)(&name),
+        });
+    });
     let context = Rc::new(RowContext {
         columns: columns.clone(),
         headers: headers.clone(),
@@ -1783,8 +1931,17 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         name_column,
         row_attrs: props.row_attrs,
         row_states: props.row_states,
-        row_detail: props.row_detail,
-        row_has_detail: props.row_has_detail,
+        row_detail: if tree {
+            RowFn::default()
+        } else {
+            props.row_detail
+        },
+        row_has_detail: if tree {
+            RowFn::default()
+        } else {
+            props.row_has_detail
+        },
+        toggle_node: tree.then_some(toggle_node),
         onrowclick: props.onrowclick,
         selection: selection.clone(),
         toggle,
@@ -1954,6 +2111,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 editing: editing
                     .filter(|at| at.row == GridRow::Body(VisibleRow::Data(index)))
                     .and_then(|at| at.col),
+                level: tree_levels.as_ref().and_then(|levels| levels[index]),
                 key,
             }
         }
@@ -2023,7 +2181,14 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 row: Rc::new(move |position, index| {
                     let row = &data[index];
                     let state = state_of(position, index);
-                    let cells = context.cells(row, index, &state.key, state.stop, state.editing);
+                    let cells = context.cells(
+                        row,
+                        index,
+                        &state.key,
+                        state.stop,
+                        state.editing,
+                        state.level,
+                    );
                     context.spec(row, state, cells)
                 }),
                 group: group_row,

@@ -14,15 +14,19 @@ use super::{
     pipeline::VisibleRow,
     row_reorder::{ReorderSlot, RowReorder},
     selection::Selection,
+    tree::TreeLevel,
 };
 use crate::{
     components::{
         accessibility::Announcer,
-        common::{States, attr},
+        common::{Glyph, States, attr},
     },
+    context::IconSlot,
     hooks::listener,
     localization::labels::table::TableLabels,
+    theme::TABLE_GROUP_INDENT,
 };
+use pictogram_icons_lucide as lucide;
 
 /// What a body row reads besides its own row: the columns, the row props and the
 /// leading columns. The same for every row of one table render.
@@ -39,6 +43,8 @@ pub(super) struct RowContext<T: 'static> {
     pub row_states: RowFn<T, States>,
     pub row_detail: RowFn<T, Option<Element>>,
     pub row_has_detail: RowFn<T, bool>,
+    /// With `parent_key`: opens or closes a tree row, by key and name.
+    pub toggle_node: Option<Callback<(String, String, bool)>>,
     pub onrowclick: Option<EventHandler<T>>,
     pub selection: Option<Selection>,
     pub toggle: Callback<(String, bool)>,
@@ -73,6 +79,7 @@ impl<T> RowContext<T> {
             row_states,
             row_detail,
             row_has_detail,
+            toggle_node,
             onrowclick,
             selection: _,
             toggle,
@@ -117,6 +124,7 @@ impl<T> RowContext<T> {
             && *row_states == other.row_states
             && *row_detail == other.row_detail
             && *row_has_detail == other.row_has_detail
+            && *toggle_node == other.toggle_node
             && *onrowclick == other.onrowclick
             && *toggle == other.toggle
             && *details == other.details
@@ -153,6 +161,8 @@ pub(super) struct RowState {
     pub rowindex: Option<usize>,
     /// The header index of its cell whose editor is open.
     pub editing: Option<usize>,
+    /// With `parent_key`: its place in the tree.
+    pub level: Option<TreeLevel>,
 }
 
 impl<T: Clone + 'static> RowContext<T> {
@@ -168,6 +178,7 @@ impl<T: Clone + 'static> RowContext<T> {
             stop: _,
             rowindex,
             editing: _,
+            level,
         } = state;
         let named = self.details.is_some() || self.selection.is_some() || slot.is_some();
         let name = named.then(|| {
@@ -203,6 +214,9 @@ impl<T: Clone + 'static> RowContext<T> {
         let mut attributes = self.row_attrs.call(row).unwrap_or_default();
         if let Some(rowindex) = rowindex {
             attributes.push(attr("aria-rowindex", rowindex.to_string()));
+        }
+        if let Some(level) = level {
+            attributes.push(attr("data-level", level.depth.to_string()));
         }
         if let Some(onrowclick) = self.onrowclick {
             let row = row.clone();
@@ -259,7 +273,7 @@ impl<T: Clone + 'static> RowContext<T> {
 
     /// The row's cells, in display order; `data[index]` is `row`, keyed `key`. With
     /// `cell_focus` the cell of header `stop` is the tab stop, and `editing`'s
-    /// holds its editor.
+    /// holds its editor. A tree row's `level` indents its first cell.
     pub fn cells(
         &self,
         row: &T,
@@ -267,65 +281,118 @@ impl<T: Clone + 'static> RowContext<T> {
         key: &str,
         stop: Option<usize>,
         editing: Option<usize>,
+        level: Option<TreeLevel>,
     ) -> Element {
         let (columns, headers) = (&self.columns, &self.headers);
-        let cells = self.layout_of(row).map(|(column, span, covered)| {
-            let spec = &columns[column];
-            let (text, body) = match (&spec.render, self.grid) {
-                (_, Some(grid)) if editing == Some(column) && spec.edit.is_some() => (
-                    String::new(),
-                    Some(self.editor(row, index, key, column, grid)),
-                ),
-                (Some(render), _) => (String::new(), Some(render(row))),
-                (None, _) => ((spec.text)(row), None),
-            };
-            let mut attributes = match &self.grid {
-                Some(grid) => grid.cell(
-                    GridRow::Body(VisibleRow::Data(index)),
-                    column,
-                    stop == Some(column),
-                    headers[column].row_header,
-                    self.colindex.as_ref().map(|indices| indices[column]),
-                ),
-                None => Vec::new(),
-            };
-            match (self.grid, spec.edit.is_some()) {
-                (Some(grid), true) => {
-                    let target = FocusTarget {
-                        row: GridRow::Body(VisibleRow::Data(index)),
-                        col: Some(column),
-                    };
-                    attributes.push(listener("ondblclick", move |_: Event<MouseData>| {
-                        grid.start(target);
-                    }));
-                    attributes.push(listener(
-                        "onpointerdown",
-                        move |event: Event<PointerData>| {
-                            grid.touched(target, event.pointer_type() == "touch");
-                        },
-                    ));
-                    attributes.push(listener("onclick", move |_: Event<MouseData>| {
-                        grid.tapped(target);
-                    }));
-                    if editing == Some(column) {
-                        attributes.push(attr("data-editing", "true"));
+        let cells = self
+            .layout_of(row)
+            .enumerate()
+            .map(|(position, (column, span, covered))| {
+                let spec = &columns[column];
+                let (text, body) = match (&spec.render, self.grid) {
+                    (_, Some(grid)) if editing == Some(column) && spec.edit.is_some() => (
+                        String::new(),
+                        Some(self.editor(row, index, key, column, grid)),
+                    ),
+                    (Some(render), _) => (String::new(), Some(render(row))),
+                    (None, _) => ((spec.text)(row), None),
+                };
+                let (text, body) = match level.filter(|_| position == 0) {
+                    Some(level) => {
+                        let lead = self.node_lead(row, key, level);
+                        // Unpadded block: Blitz misses an inline box in the padded cell (hit.rs).
+                        let body = rsx! {
+                            div { "data-node-cell": true, {lead} "{text}" {body} }
+                        };
+                        (String::new(), Some(body))
                     }
+                    None => (text, body),
+                };
+                let mut attributes = match &self.grid {
+                    Some(grid) => grid.cell(
+                        GridRow::Body(VisibleRow::Data(index)),
+                        column,
+                        stop == Some(column),
+                        headers[column].row_header,
+                        self.colindex.as_ref().map(|indices| indices[column]),
+                    ),
+                    None => Vec::new(),
+                };
+                match (self.grid, spec.edit.is_some()) {
+                    (Some(grid), true) => {
+                        let target = FocusTarget {
+                            row: GridRow::Body(VisibleRow::Data(index)),
+                            col: Some(column),
+                        };
+                        attributes.push(listener("ondblclick", move |_: Event<MouseData>| {
+                            grid.start(target);
+                        }));
+                        attributes.push(listener(
+                            "onpointerdown",
+                            move |event: Event<PointerData>| {
+                                grid.touched(target, event.pointer_type() == "touch");
+                            },
+                        ));
+                        attributes.push(listener("onclick", move |_: Event<MouseData>| {
+                            grid.tapped(target);
+                        }));
+                        if editing == Some(column) {
+                            attributes.push(attr("data-editing", "true"));
+                        }
+                    }
+                    (Some(_), false) if self.editable => {
+                        attributes.push(attr("aria-readonly", "true"));
+                    }
+                    _ => {}
                 }
-                (Some(_), false) if self.editable => {
-                    attributes.push(attr("aria-readonly", "true"));
+                CellSpec {
+                    column,
+                    text,
+                    body,
+                    span,
+                    pin: span_pin(headers, covered),
+                    attributes,
                 }
-                _ => {}
-            }
-            CellSpec {
-                column,
-                text,
-                body,
-                span,
-                pin: span_pin(headers, covered),
-                attributes,
-            }
-        });
+            });
         render_cells(cells, headers)
+    }
+
+    /// A tree row's indent and its toggle, or a spacer the toggle's width for a leaf.
+    fn node_lead(&self, row: &T, key: &str, level: TreeLevel) -> Element {
+        let indent = format!(
+            "margin-inline-start:calc({} * {})",
+            level.depth,
+            TABLE_GROUP_INDENT.value()
+        );
+        let Some(toggle) = self.toggle_node.filter(|_| level.children > 0) else {
+            return rsx! {
+                span { "data-node-spacer": true, style: indent }
+            };
+        };
+        let name = self
+            .columns
+            .get(self.name_column)
+            .map(|column| (column.text)(row))
+            .filter(|name| !name.is_empty())
+            .unwrap_or_else(|| key.to_string());
+        // State-neutral, as a group toggle's: `aria-expanded` tells open from closed.
+        let label = (self.labels.group_toggle)(&name, level.children);
+        let (key, open) = (key.to_string(), level.open);
+        rsx! {
+            button {
+                r#type: "button",
+                "data-node-toggle": true,
+                aria_label: label,
+                aria_expanded: "{open}",
+                style: indent,
+                // Not a row click.
+                onclick: move |event: MouseEvent| {
+                    event.stop_propagation();
+                    toggle((key.clone(), name.clone(), !open));
+                },
+                Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined }
+            }
+        }
     }
 
     /// The editor of `row`'s cell of header `column`: the built-in one, or the column's.
@@ -442,6 +509,7 @@ pub(super) fn TableRow<T: Clone + PartialEq + 'static>(props: TableRowProps<T>) 
             row_key: state.key.clone(),
             stop: state.stop,
             editing: state.editing,
+            level: state.level,
             context: context.clone(),
             generation,
         }
@@ -459,6 +527,7 @@ struct RowCellsProps<T: Clone + PartialEq + 'static> {
     row_key: String,
     stop: Option<usize>,
     editing: Option<usize>,
+    level: Option<TreeLevel>,
     context: Rc<RowContext<T>>,
     generation: u64,
 }
@@ -470,6 +539,7 @@ impl<T: Clone + PartialEq + 'static> PartialEq for RowCellsProps<T> {
             && self.row == other.row
             && self.stop == other.stop
             && self.editing == other.editing
+            && self.level == other.level
             && (self.context.grid.is_none()
                 || (self.index == other.index && self.row_key == other.row_key))
     }
@@ -485,8 +555,9 @@ fn RowCells<T: Clone + PartialEq + 'static>(props: RowCellsProps<T>) -> Element 
         row_key,
         stop,
         editing,
+        level,
         context,
         ..
     } = &props;
-    context.cells(row, *index, row_key, *stop, *editing)
+    context.cells(row, *index, row_key, *stop, *editing, *level)
 }

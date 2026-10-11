@@ -6,7 +6,7 @@ use libero::components::{Code, Text};
 use libero::use_theme;
 
 mod demo;
-use demo::{StaffTable, TeamTable};
+use demo::{StaffTable, TaskTable, TeamTable};
 
 /// The live table and its data, printed from its text by `wrap_data`.
 const FILE: DemoFile = DemoFile(include_str!("table/demo.rs"));
@@ -80,6 +80,20 @@ const SELECT_FIXED: [&str; 6] = [
         .value(|s: &Staff| s.role.clone())
         .format(|s: &Staff| role_label(&s.role).to_string())
         .options([("owner", "Owner"), ("admin", "Admin"), ("viewer", "Viewer")]),
+]"#,
+];
+
+const TREE_FIXED: [&str; 7] = [
+    r#"caption: "Tasks""#,
+    "data: tasks",
+    r#"row_key: |t: &Task| t.id.clone()"#,
+    r#"parent_key: |t: &Task| t.parent.clone()"#,
+    "default_node_expansion: 2",
+    "show_quick_filter: true",
+    r#"columns: vec![
+    column("Task").value(|t: &Task| t.name.clone()).sortable().row_header(),
+    column("Owner").value(|t: &Task| t.owner.clone()).sortable(),
+    column("Days").value(|t: &Task| t.days).sortable(),
 ]"#,
 ];
 
@@ -289,6 +303,11 @@ pub fn TablePage() -> Element {
                     prop("default_expanded_groups", "Vec<String>").default("[]").doc("Seeds the open groups once. Ignored when `expanded_groups` is set."),
                     prop("onexpandedgroupschange", "EventHandler<Vec<String>>").default("None").doc("Called with the open groups a group toggle asks for."),
                     prop("default_group_expansion", "usize").default("0").doc("How many levels of groups start open, the first time there are rows to group, beside `default_expanded_groups`: 1 opens the outermost groups. 0 starts every group closed. Ignored with `expanded_groups`."),
+                    prop("parent_key", "RowFn<T, Option<String>>").default("None").doc("A row's parent's `row_key`, `None` for a root: the rows nest under their parents, each level in the sort, behind a toggle in the first shown column named by the row and its child count. A key no row has, or a cycle, makes roots; a debug build warns. A filter keeps the kept rows' parents and opens them. Set `row_key` with it. Over `row_grouping`, which it ignores and drops from the column menu; a tree renders every row (`virtual_row_height` is ignored) and shows no `row_detail`, and its rows don't reorder."),
+                    prop("expanded_nodes", "Option<Vec<String>>").default("None").doc("The `row_key`s of the open tree rows. Set, it is controlled: pair it with `onexpandednodeschange`."),
+                    prop("default_expanded_nodes", "Vec<String>").default("[]").doc("Seeds the open tree rows once. Ignored when `expanded_nodes` is set."),
+                    prop("onexpandednodeschange", "EventHandler<Vec<String>>").default("None").doc("Called with the open tree rows a toggle asks for."),
+                    prop("default_node_expansion", "usize").default("0").doc("How many tree levels start open, the first time there are rows, beside `default_expanded_nodes`: 1 opens the roots. 0 starts every row closed. Ignored with `expanded_nodes`."),
                     prop("cell_focus", "bool").default("false").doc("Makes the table a `role=\"grid\"` whose header and body cells are one tab stop: Tab enters on one cell, the first header cell until focus moves, and the arrows, Home, End, Ctrl+Home, Ctrl+End, PageUp and PageDown move it. On a header cell Enter or Space sorts and Ctrl+Enter opens its column menu; on a body cell Shift+Space selects the row with `selectable`. The stop stays where it was left and follows its row through a sort. A button or field in a cell stays a tab stop of its own, and a widget that takes the arrows keeps them. The leading checkbox, detail and reorder cells, group rows, the filter row and the footer stay out of the key map. Paged, `aria-rowcount` counts every page's rows; with a hidden column each cell carries its `aria-colindex`. An editable column turns it on. Give the rows a `.row_header()` column."),
                     prop("size", "Size").default(theme.table.size.as_str()).doc("Cell padding and font size."),
                     prop("density", "Option<Size>").default("None").doc("The size a `TableDensityButton` picked, over `size`; set, it is controlled."),
@@ -585,6 +604,33 @@ pub fn TablePage() -> Element {
                     fixed: SELECT_FIXED.map(str::to_string).to_vec(),
                     controls: Vec::new(),
                     render: move |_: DemoValues| rsx! { StaffTable {} },
+                }
+            }
+
+            DocSection {
+                title: "Tree rows",
+                Text {
+                    Code { source: "parent_key" }
+                    " names each row's parent by its "
+                    Code { source: "row_key" }
+                    ": the rows nest under their parents, each level in the sort, and a row whose "
+                    "parent is missing shows as a root. A toggle in the first column opens a row; "
+                    Code { source: "default_node_expansion" }
+                    " opens the first levels once. A filter keeps the matches' parents, open. A tree "
+                    "renders every row and replaces "
+                    Code { source: "row_grouping" }
+                    "."
+                }
+                // snippet: item #[derive(Clone, PartialEq)] struct Task { id: String, parent: Option<String>, name: String, owner: String, days: u32 }
+                // snippet: let tasks: Vec<Task> = Vec::new();
+                Demo {
+                    component: "Table",
+                    title: "Tree rows",
+                    wide_preview: true,
+                    children_text: "",
+                    fixed: TREE_FIXED.map(str::to_string).to_vec(),
+                    controls: Vec::new(),
+                    render: move |_: DemoValues| rsx! { TaskTable {} },
                 }
             }
         }

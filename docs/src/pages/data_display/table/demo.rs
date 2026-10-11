@@ -168,6 +168,56 @@ pub fn StaffTable() -> Element {
     }
 }
 
+#[derive(Clone, PartialEq)]
+struct Task {
+    id: String,
+    parent: Option<String>,
+    name: String,
+    owner: String,
+    days: u32,
+}
+
+fn tasks() -> Vec<Task> {
+    [
+        ("site", "", "Website relaunch", "Ada", 0),
+        ("design", "site", "Design", "Bo", 0),
+        ("wire", "design", "Wireframes", "Bo", 3),
+        ("visual", "design", "Visual design", "Cy", 5),
+        ("build", "site", "Build", "Di", 0),
+        ("front", "build", "Frontend", "Di", 8),
+        ("back", "build", "Backend", "Ed", 6),
+        ("launch", "site", "Launch", "Ada", 1),
+    ]
+    .map(|(id, parent, name, owner, days)| Task {
+        id: id.to_string(),
+        parent: (!parent.is_empty()).then(|| parent.to_string()),
+        name: name.to_string(),
+        owner: owner.to_string(),
+        days,
+    })
+    .to_vec()
+}
+
+/// The tree example: tasks under their parent task, two levels open.
+#[component]
+pub fn TaskTable() -> Element {
+    rsx! {
+        Table {
+            caption: "Tasks",
+            data: tasks(),
+            row_key: |t: &Task| t.id.clone(),
+            parent_key: |t: &Task| t.parent.clone(),
+            default_node_expansion: 2,
+            show_quick_filter: true,
+            columns: vec![
+                column("Task").value(|t: &Task| t.name.clone()).sortable().row_header(),
+                column("Owner").value(|t: &Task| t.owner.clone()).sortable(),
+                column("Days").value(|t: &Task| t.days).sortable(),
+            ],
+        }
+    }
+}
+
 fn team_columns(grouped: bool, editable: bool) -> Vec<Column<Person>> {
     let group = |column: Column<Person>| match grouped {
         true => column.group("Membership"),

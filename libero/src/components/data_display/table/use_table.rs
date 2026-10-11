@@ -137,6 +137,9 @@ pub(crate) struct TableConfig {
     pub expanded_groups: Option<Vec<String>>,
     pub default_expanded_groups: Vec<String>,
     pub onexpandedgroupschange: Option<EventHandler<Vec<String>>>,
+    pub expanded_nodes: Option<Vec<String>>,
+    pub default_expanded_nodes: Vec<String>,
+    pub onexpandednodeschange: Option<EventHandler<Vec<String>>>,
 }
 
 /// A table's state, one slice per feature.
@@ -167,6 +170,8 @@ pub(crate) struct TableState {
     pub row_grouping: StateSlice<Vec<String>>,
     /// The ids of the open groups.
     pub expanded_groups: StateSlice<Vec<String>>,
+    /// The keys of the open tree rows.
+    pub expanded_nodes: StateSlice<Vec<String>>,
 }
 
 pub(crate) fn use_table(config: TableConfig) -> TableState {
@@ -266,9 +271,16 @@ pub(crate) fn use_table(config: TableConfig) -> TableState {
         config.onexpandedgroupschange,
         "Table: a controlled `expanded_groups` without `onexpandedgroupschange` never changes.",
     );
+    let expanded_nodes = use_state_slice(
+        config.expanded_nodes,
+        || config.default_expanded_nodes,
+        config.onexpandednodeschange,
+        "Table: a controlled `expanded_nodes` without `onexpandednodeschange` never changes.",
+    );
     TableState {
         row_grouping,
         expanded_groups,
+        expanded_nodes,
         density,
         column_order,
         column_widths,

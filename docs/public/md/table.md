@@ -901,6 +901,11 @@ fn Demo() -> Element {
 | `default_expanded_groups` | `Vec<String>` | `[]` | Seeds the open groups once. Ignored when `expanded_groups` is set. |
 | `onexpandedgroupschange` | `EventHandler<Vec<String>>` | `None` | Called with the open groups a group toggle asks for. |
 | `default_group_expansion` | `usize` | `0` | How many levels of groups start open, the first time there are rows to group, beside `default_expanded_groups`: 1 opens the outermost groups. 0 starts every group closed. Ignored with `expanded_groups`. |
+| `parent_key` | `RowFn<T, Option<String>>` | `None` | A row's parent's `row_key`, `None` for a root: the rows nest under their parents, each level in the sort, behind a toggle in the first shown column named by the row and its child count. A key no row has, or a cycle, makes roots; a debug build warns. A filter keeps the kept rows' parents and opens them. Set `row_key` with it. Over `row_grouping`, which it ignores and drops from the column menu; a tree renders every row (`virtual_row_height` is ignored) and shows no `row_detail`, and its rows don't reorder. |
+| `expanded_nodes` | `Option<Vec<String>>` | `None` | The `row_key`s of the open tree rows. Set, it is controlled: pair it with `onexpandednodeschange`. |
+| `default_expanded_nodes` | `Vec<String>` | `[]` | Seeds the open tree rows once. Ignored when `expanded_nodes` is set. |
+| `onexpandednodeschange` | `EventHandler<Vec<String>>` | `None` | Called with the open tree rows a toggle asks for. |
+| `default_node_expansion` | `usize` | `0` | How many tree levels start open, the first time there are rows, beside `default_expanded_nodes`: 1 opens the roots. 0 starts every row closed. Ignored with `expanded_nodes`. |
 | `cell_focus` | `bool` | `false` | Makes the table a `role="grid"` whose header and body cells are one tab stop: Tab enters on one cell, the first header cell until focus moves, and the arrows, Home, End, Ctrl+Home, Ctrl+End, PageUp and PageDown move it. On a header cell Enter or Space sorts and Ctrl+Enter opens its column menu; on a body cell Shift+Space selects the row with `selectable`. The stop stays where it was left and follows its row through a sort. A button or field in a cell stays a tab stop of its own, and a widget that takes the arrows keeps them. The leading checkbox, detail and reorder cells, group rows, the filter row and the footer stay out of the key map. Paged, `aria-rowcount` counts every page's rows; with a hidden column each cell carries its `aria-colindex`. An editable column turns it on. Give the rows a `.row_header()` column. |
 | `size` | `Size` | `md` | Cell padding and font size. |
 | `density` | `Option<Size>` | `None` | The size a `TableDensityButton` picked, over `size`; set, it is controlled. |
@@ -1207,6 +1212,8 @@ default `start`.
 | `data-group-toggle` | On a group row's toggle, holding `data-group-label` and `data-group-count`. |
 | `data-group-lead` | On a group row's one cell over the lead columns, the checkbox column aside: with `selectable` the group's box has a `td[data-select]` of its own. |
 | `data-group-aggregate` | On a group row's aggregate, an aggregating column's name and value over the group's rows. |
+| `data-level` | On a body row with `parent_key`: its depth in the tree, 0 for a root. |
+| `data-node-toggle` | On a tree row's toggle in its first shown cell, with `parent_key`; `data-node-spacer` on a leaf's spacer in its place; `data-node-cell` on the block holding either and the cell's content. |
 | `data-reorder` | On the reorder column's `th` and `td`s, with `onrowreorder`. |
 | `data-dragging` | On the body row being dragged or moved by keyboard. |
 | `data-cell-stop` | On the header or body cell that is the tab stop, with `cell_focus`. |

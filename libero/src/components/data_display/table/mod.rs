@@ -29,6 +29,7 @@ mod selection;
 mod sticky;
 mod table;
 mod toolbar;
+mod tree;
 mod use_table;
 mod window;
 
