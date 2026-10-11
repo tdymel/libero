@@ -2,7 +2,7 @@
 
 use dioxus::html::FileData;
 
-use crate::localization::FileFieldLabels;
+use crate::localization::{FileFieldLabels, Formats};
 
 /// A `FileField`'s value: one type for both arities, since `multiple` is a
 /// runtime prop. Converts from an `Option` or a `Vec`.
@@ -63,7 +63,7 @@ pub enum RejectReason {
 
 /// A file's size for a human: powers of 1000, one decimal past a kilobyte,
 /// in the localization's units.
-pub(super) fn format_size(bytes: u64, words: &FileFieldLabels, decimal_separator: &str) -> String {
+pub(super) fn format_size(bytes: u64, words: &FileFieldLabels, formats: &Formats) -> String {
     let units = &words.size_units;
     let mut size = bytes as f64;
     let mut unit = 0;
@@ -75,7 +75,7 @@ pub(super) fn format_size(bytes: u64, words: &FileFieldLabels, decimal_separator
     match unit {
         0 => format!("{bytes} {}", units[0]),
         _ => {
-            let number = format!("{size:.1}").replacen('.', decimal_separator, 1);
+            let number = formats.write_number(&format!("{size:.1}"));
             format!("{number} {}", units[unit])
         }
     }
@@ -119,7 +119,7 @@ mod tests {
 
     #[test]
     fn a_size_reads_the_way_a_file_manager_shows_it() {
-        let size = |bytes| format_size(bytes, &FileFieldLabels::ENGLISH, ".");
+        let size = |bytes| format_size(bytes, &FileFieldLabels::ENGLISH, &Formats::AMERICAN);
         assert_eq!(size(0), "0 B");
         assert_eq!(size(999), "999 B");
         assert_eq!(size(1_000), "1.0 kB");
@@ -139,7 +139,15 @@ mod tests {
             size_units: ["o", "ko", "Mo", "Go", "To"],
             ..FileFieldLabels::ENGLISH
         };
-        assert_eq!(format_size(12, &french, ","), "12 o");
-        assert_eq!(format_size(5_400_000, &french, ","), "5,4 Mo");
+        assert_eq!(format_size(12, &french, &Formats::GERMAN), "12 o");
+        assert_eq!(format_size(5_400_000, &french, &Formats::GERMAN), "5,4 Mo");
+    }
+
+    /// Todo 3412: a size past a thousand of the last unit takes the formats' group separator.
+    #[test]
+    fn a_size_groups_its_thousands_in_the_formats() {
+        let size = |formats| format_size(5_000_000_000_000_000, &FileFieldLabels::ENGLISH, formats);
+        assert_eq!(size(&Formats::AMERICAN), "5,000.0 TB");
+        assert_eq!(size(&Formats::GERMAN), "5.000,0 TB");
     }
 }

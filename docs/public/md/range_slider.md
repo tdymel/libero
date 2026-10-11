@@ -149,6 +149,7 @@ form.getAll("price") // ["20", "80"]
 | `step` | `V::Step` | `one option, or 1.0` | How far one step goes from `min`. A count of options on a discrete scale, a value on a continuous one, so 0 to 1 has two stops unless you pass a smaller one. Also sets how many decimals a value keeps; `0.0` is continuous and keeps a thousandth of the range. |
 | `min_range` | `V::Step` | `0` | The smallest gap the thumbs keep, in the unit of `step`. At 0 they may meet, and they never cross. |
 | `format` | `Callback<V, String>` | `bare value, or SliderValue::label` | Text of the bubbles and each thumb's `aria-valuetext`. On a discrete scale it also names the marks, so this is where a translation goes. |
+| `group_digits` | `bool` | `false` | Writes the bubbles' bare numbers grouped in thousands in the provider's `Formats`, `12,500` or `12.500`. A `format` writes its own text, so it replaces this. |
 | `marks` | `Vec<SliderMark<V>>` | `one per option, discretely` | Ticks on the track. A labeled one gets a caption below it. Replaces the marks a discrete scale draws itself. Past about six options the derived captions touch on a phone, so pass your own `marks`, or a `step` that skips options. |
 | `aria_label` | `String` | - | Names the pair when the field has no `label`: the group, and each thumb before its own word. Put in `attributes`, it would land on the wrapper instead. |
 | `aria_label_from` | `String` | `slider.minimum` | Names the lower thumb. Unset, the localization's `slider.minimum`, "Minimum" in English. |

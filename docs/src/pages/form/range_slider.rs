@@ -131,6 +131,9 @@ pub fn RangeSliderPage() -> Element {
                     prop("format", "Callback<V, String>")
                         .default("bare value, or SliderValue::label")
                         .doc("Text of the bubbles and each thumb's `aria-valuetext`. On a discrete scale it also names the marks, so this is where a translation goes."),
+                    prop("group_digits", "bool")
+                        .default("false")
+                        .doc("Writes the bubbles' bare numbers grouped in thousands in the provider's `Formats`, `12,500` or `12.500`. A `format` writes its own text, so it replaces this."),
                     prop("marks", "Vec<SliderMark<V>>")
                         .default("one per option, discretely")
                         .doc("Ticks on the track. A labeled one gets a caption below it. Replaces the marks a discrete scale draws itself. Past about six options the derived captions touch on a phone, so pass your own `marks`, or a `step` that skips options."),

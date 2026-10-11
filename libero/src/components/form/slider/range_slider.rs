@@ -42,6 +42,10 @@ field_props! {
         /// render, so it can translate.
         #[props(default)]
         format: Option<Callback<V, String>>,
+        /// Writes the bubbles' bare numbers grouped in thousands in the provider's
+        /// `Formats` (`12,500`); a `format` writes its own.
+        #[props(default)]
+        group_digits: bool,
         /// Ticks on the track, a labeled one captioned. Replaces derived marks;
         /// one outside the track (past an off-grid `max`'s last step too) is dropped.
         #[props(default)]
@@ -230,6 +234,7 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
             // The same `use_callback` every render, so the core's props can
             // compare equal.
             oninput: (props.oninput.is_some() || bound.is_bound()).then_some(emit),
+            group_digits: props.group_digits,
             preview_on_hover: props.preview_on_hover,
         }
     };

@@ -18,6 +18,11 @@ use crate::{
     platform::moves_table_rows,
 };
 
+/// Lucide's six-dot grip as one path: a row's handle is drawn per row, so each node counts.
+const ROW_GRIP: pictogram_core::Svg = pictogram_core::Svg::new(
+    r#"<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h.01M9 12h.01M9 19h.01M15 5h.01M15 12h.01M15 19h.01"/></svg>"#,
+);
+
 /// A natively moved row's `transform` and settle `animation`, for its cells.
 pub(super) const ROW_TRANSFORM: &str = "--lsx-row-transform";
 pub(super) const ROW_ANIMATION: &str = "--lsx-row-animation";
@@ -246,7 +251,7 @@ pub(super) fn ReorderRow(
                             }
                         },
                         onblur: move |event| onblur.call(event),
-                        Glyph { slot: IconSlot::Grip, icon: lucide::grip_vertical::outlined }
+                        Glyph { slot: IconSlot::Grip, icon: ROW_GRIP }
                     }
                     button {
                         class: move_class.clone(),

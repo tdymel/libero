@@ -930,6 +930,35 @@ async fn track_point(
         .into_value()?)
 }
 
+/// Todo 3412: `group_digits` writes the hover bubble's thousands in the formats'.
+#[test]
+fn group_digits_groups_the_bubble() {
+    block_on(async {
+        let fixture = Fixture::open("/slider/grouped", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            for id in ["single", "range"] {
+                pointer::move_to(page, track_point(page, id, 0.75).await?).await?;
+                wait::for_js_true(
+                    page,
+                    &preview_js("7,500"),
+                    &format!("#{id}: the grouped 7,500"),
+                )
+                .await?;
+                pointer::move_to(page, pointer::Point { x: 2.0, y: 2.0 }).await?;
+            }
+            Ok::<_, anyhow::Error>(())
+        }
+        .await;
+        let console = fixture.console.assert_clean("the grouped bubble");
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+        console.unwrap();
+    });
+}
+
 /// Todo 2212: `preview_on_hover` shows the value under a hovering mouse on a Slider and a
 /// RangeSlider; Escape hides it until the pointer leaves (WCAG 1.4.13).
 #[test]

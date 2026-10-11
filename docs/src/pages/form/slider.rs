@@ -166,6 +166,7 @@ pub fn SliderPage() -> Element {
     let mut quality = use_signal(|| Quality::Medium);
     let mut last = use_signal(|| SliderChangeEvent::Change(40.0));
     let mut last_quality = use_signal(|| SliderChangeEvent::Change(Quality::Medium));
+    let mut budget = use_signal(|| 250_000.0);
 
     rsx! {
         DocPage {
@@ -193,6 +194,9 @@ pub fn SliderPage() -> Element {
                     prop("format", "Callback<V, String>")
                         .default("bare value, or SliderValue::label")
                         .doc("Text of the bubble and the thumb's `aria-valuetext`. On a discrete scale it also names the marks, so this is where a translation goes."),
+                    prop("group_digits", "bool")
+                        .default("false")
+                        .doc("Writes the bubble's bare number grouped in thousands in the provider's `Formats`, `12,500` or `12.500`. A `format` writes its own text, so it replaces this."),
                     prop("marks", "Vec<SliderMark<V>>")
                         .default("one per option, discretely")
                         .doc("Ticks on the track. A labeled one gets a caption below it. Replaces the marks a discrete scale draws itself. Past about six options the derived captions touch on a phone, so pass your own `marks`, or a `step` that skips options."),
@@ -458,6 +462,41 @@ pub fn SliderPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_readout),
+            }
+            // snippet: let mut budget = use_signal(|| 250_000.0);
+            Demo {
+                component: "Slider",
+                title: "Grouped digits",
+                children_text: "",
+                fixed: vec![
+                    "aria_label: \"Budget\"".to_string(),
+                    "value: budget()".to_string(),
+                    "min: 0.0".to_string(),
+                    "max: 1_000_000.0".to_string(),
+                    "step: 1_000.0".to_string(),
+                    "preview_on_hover: true".to_string(),
+                    "oninput: move |event: SliderChangeEvent| budget.set(event.value())".to_string(),
+                ],
+                controls: vec![Control::switch("group_digits").default("true").code(|_, values| {
+                    match is_on(values, "group_digits") {
+                        true => vec!["group_digits: true".to_string()],
+                        false => vec![],
+                    }
+                })],
+                render: move |values: DemoValues| rsx! {
+                    Flex { direction: "column", sx: sx().width("100%"),
+                        Slider {
+                            aria_label: "Budget",
+                            value: budget(),
+                            min: 0.0,
+                            max: 1_000_000.0,
+                            step: 1_000.0,
+                            group_digits: is_on(&values, "group_digits"),
+                            preview_on_hover: true,
+                            oninput: move |event: SliderChangeEvent| budget.set(event.value()),
+                        }
+                    }
+                },
             }
         }
     }

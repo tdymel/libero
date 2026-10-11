@@ -62,8 +62,9 @@ pub struct Formats {
     pub range_separator: &'static str,
     /// Between a number's whole and its fraction: `5.4 MB`, `5,4 MB`.
     pub decimal_separator: &'static str,
-    /// Between every three digits of a number's whole, where a chart or a `NumberField`
-    /// with `group_digits` writes it: `12,500`, `12.500`; empty for none.
+    /// Between every three digits of a number's whole, where a chart, a `FileField` size,
+    /// or a `NumberField`, `Slider` or `RangeSlider` with `group_digits` writes it:
+    /// `12,500`, `12.500`; empty for none.
     pub group_separator: &'static str,
 }
 

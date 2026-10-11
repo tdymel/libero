@@ -20,7 +20,39 @@ pub const ROUTES: Routes = &[
     ("/slider/bars", || rsx! { SliderBarsPage {} }),
     ("/slider/segments", || rsx! { SliderSegmentsPage {} }),
     ("/slider/preview", || rsx! { SliderPreviewPage {} }),
+    ("/slider/grouped", || rsx! { SliderGroupedPage {} }),
 ];
+
+/// Todo 3412: 400px tracks over 0..10000 that group their bubble's thousands.
+#[component]
+fn SliderGroupedPage() -> Element {
+    let mut value = use_signal(|| 0.0f64);
+    let mut range = use_signal(|| (0.0f64, 10_000.0f64));
+    rsx! {
+        Flex { direction: "column", gap: "xl", width: "400px",
+            Slider {
+                id: "single",
+                label: "Budget",
+                value: value(),
+                max: 10_000.0,
+                step: 100.0,
+                group_digits: true,
+                preview_on_hover: true,
+                oninput: move |e: SliderChangeEvent<f64>| value.set(e.value()),
+            }
+            RangeSlider {
+                id: "range",
+                label: "Price",
+                value: range(),
+                max: 10_000.0,
+                step: 100.0,
+                group_digits: true,
+                preview_on_hover: true,
+                oninput: move |e: SliderChangeEvent<(f64, f64)>| range.set(e.value()),
+            }
+        }
+    }
+}
 
 /// Todo 2212: 400px tracks at 0 and 0..10 that preview the value under a hovering mouse.
 #[component]

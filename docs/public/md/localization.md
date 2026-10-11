@@ -75,7 +75,7 @@ static SWISS: Formats = Formats {
 | `time` | `&'static str` | How a time is shown. |
 | `range_separator` | `&'static str` | Between a range's two ends in a field's text. |
 | `decimal_separator` | `&'static str` | Between a number's whole and its fraction: `5.4 MB`, `5,4 MB`. |
-| `group_separator` | `&'static str` | Between every three digits of a number's whole, where a chart or a `NumberField` with `group_digits` writes it: `12,500`, `12.500`; empty for none. |
+| `group_separator` | `&'static str` | Between every three digits of a number's whole, where a chart, a `FileField` size, or a `NumberField`, `Slider` or `RangeSlider` with `group_digits` writes it: `12,500`, `12.500`; empty for none. |
 
 `Localization` has a group per component, plus `common` for the words many
 share. A value inside a string is a named hole such as `{n}`, so each language

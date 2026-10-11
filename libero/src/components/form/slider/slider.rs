@@ -38,6 +38,10 @@ field_props! {
         /// render, so it can translate.
         #[props(default)]
         format: Option<Callback<V, String>>,
+        /// Writes the bubble's bare number grouped in thousands in the provider's
+        /// `Formats` (`12,500`); a `format` writes its own.
+        #[props(default)]
+        group_digits: bool,
         /// Ticks on the track, a labeled one captioned. Replaces derived marks;
         /// one outside the track (past an off-grid `max`'s last step too) is dropped.
         #[props(default)]
@@ -230,6 +234,7 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
                 SliderTrack::Line => None,
                 SliderTrack::Bars(heights) => Some(heights),
             },
+            group_digits: props.group_digits,
             preview_on_hover: props.preview_on_hover,
         }
     };

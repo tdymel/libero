@@ -339,11 +339,7 @@ fn default_card(
     let labelledby = labelledby.map(|label| format!("{label} {id}"));
     let tabindex = labelledby.as_ref().map(|_| "0");
     let words = current_localization();
-    let size = format_size(
-        file.size(),
-        &words.file_field,
-        current_formats().decimal_separator,
-    );
+    let size = format_size(file.size(), &words.file_field, current_formats());
     let remove_label = fill(words.common.remove, &[("label", &name)]);
     rsx! {
         span { "data-slot": "name", "{name}" }

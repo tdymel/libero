@@ -20,7 +20,7 @@ use crate::{
         use_element, use_escape_dismiss, use_formats, use_id, use_local_state, use_localization,
         use_sideways_drag, use_theme,
     },
-    localization::fill,
+    localization::{Formats, fill},
     platform::{Dimensions, ElementApi, logical_key, next_task},
     sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, sx},
     theme::NamedColorCss,
@@ -323,10 +323,16 @@ fn value_text(
     segments: &[TrackSegment],
     segment_text: &str,
     value: f64,
-    decimal_separator: &str,
+    formats: &Formats,
+    group_digits: bool,
 ) -> (Option<String>, String) {
     let text = label.map(|label| label.call(value));
-    let bare = || value.to_string().replacen('.', decimal_separator, 1);
+    let bare = || match group_digits {
+        true => formats.write_number(&value.to_string()),
+        false => value
+            .to_string()
+            .replacen('.', formats.decimal_separator, 1),
+    };
     let text = match segment_label(segments, value) {
         Some(segment) => Some(fill(
             segment_text,
@@ -350,8 +356,9 @@ fn SliderHoverPreview(
     label: Option<Callback<f64, String>>,
     segments: Vec<TrackSegment>,
     segment_text: &'static str,
+    group_digits: bool,
 ) -> Element {
-    let decimal_separator = use_formats().decimal_separator;
+    let formats = use_formats();
     let shown = hovered().filter(|_| !dragging());
     let hide = use_callback(move |()| {
         muted.set(true);
@@ -361,7 +368,7 @@ fn SliderHoverPreview(
     let Some((value, track)) = shown else {
         return rsx! {};
     };
-    let (_, text) = value_text(label, &segments, segment_text, value, decimal_separator);
+    let (_, text) = value_text(label, &segments, segment_text, value, formats, group_digits);
     rsx! {
         TooltipPinned {
             label: rsx! { {text} },
@@ -589,6 +596,9 @@ pub(in crate::components::form) struct SliderCoreProps {
     /// Splits the line track into segments with gaps; a labelled one joins the value's text.
     #[props(default)]
     segments: Vec<SliderSegment>,
+    /// A bare value's text, with no `label`, is grouped in thousands in the formats'.
+    #[props(default)]
+    group_digits: bool,
     /// A bubble over the value a hovering mouse or pen points at.
     #[props(default)]
     preview_on_hover: bool,
@@ -1154,6 +1164,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
                 label: props.label,
                 segments: segments.clone(),
                 segment_text,
+                group_digits: props.group_digits,
             }
         }
     });
@@ -1215,6 +1226,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
                         bars: props.bars,
                         segments,
                         segment_text,
+                        group_digits: props.group_digits,
                         focusable,
                         bubble_id,
                         thumb_elements,
@@ -1254,6 +1266,7 @@ struct SliderThumbsProps {
     bars: Option<Vec<f64>>,
     segments: Vec<TrackSegment>,
     segment_text: &'static str,
+    group_digits: bool,
     focusable: bool,
     bubble_id: Signal<String>,
     thumb_elements: [ElementHandle; 2],
@@ -1301,7 +1314,7 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
     // second `use_box` would be a second hook for nothing.
     let thumb_style = use_box().framework_sx(&SLIDER_THUMB_SX).prepare();
     // The bare value's bubble, `0,5` under `Formats::GERMAN`.
-    let decimal_separator = use_formats().decimal_separator;
+    let formats = use_formats();
 
     let captions_hidden = props.captions_hidden.then_some("true");
     let marks = props.marks.iter().map(|mark| {
@@ -1345,7 +1358,8 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
             &props.segments,
             props.segment_text,
             thumb_value,
-            decimal_separator,
+            formats,
+            props.group_digits,
         );
         // `aria-labelledby` beats `aria-label`, so a range thumb lists itself
         // after the label ("Price Minimum"); a single thumb's label wins alone.
@@ -1536,8 +1550,19 @@ fn SliderHidden(live: Signal<Live>, name: String, disabled: bool) -> Element {
 mod tests {
     use super::{
         Dimensions, SliderSegment, ThumbTrack, TrackSegment, filled_bars, on_boundary,
-        segment_filled, segment_label, track_segments,
+        segment_filled, segment_label, track_segments, value_text,
     };
+    use crate::localization::Formats;
+
+    /// Todo 3412: a bare bubble groups its thousands only when asked.
+    #[test]
+    fn a_bare_bubble_groups_its_thousands_on_request() {
+        let bubble = |value, formats, group| value_text(None, &[], "", value, formats, group).1;
+        assert_eq!(bubble(12_500.5, &Formats::GERMAN, true), "12.500,5");
+        assert_eq!(bubble(-1_234_567.0, &Formats::AMERICAN, true), "-1,234,567");
+        assert_eq!(bubble(2026.0, &Formats::GERMAN, false), "2026");
+        assert_eq!(bubble(0.5, &Formats::GERMAN, false), "0,5");
+    }
 
     fn starts(segments: &[TrackSegment]) -> Vec<(f64, f64, Option<&str>)> {
         segments
