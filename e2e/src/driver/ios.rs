@@ -299,8 +299,24 @@ impl Ios {
     }
 
     /// A touch from viewport point `(x, y)` by `(dx, dy)` over `secs`, clamped to the viewport:
-    /// a touch lifted off the WebView would leave it a stuck touch.
-    fn swipe(&mut self, (x, y): (f64, f64), dx: f64, dy: f64, secs: f64) -> Result<()> {
+    /// a touch lifted off the WebView would leave it a stuck touch. AXe's `swipe` flicks a
+    /// page; its `drag` emits every move, which pointer-event drags need.
+    fn swipe(&mut self, from: (f64, f64), dx: f64, dy: f64, secs: f64) -> Result<()> {
+        self.stroke("swipe", from, dx, dy, secs)
+    }
+
+    fn drag_by(&mut self, from: (f64, f64), dx: f64, dy: f64, secs: f64) -> Result<()> {
+        self.stroke("drag", from, dx, dy, secs)
+    }
+
+    fn stroke(
+        &mut self,
+        verb: &str,
+        (x, y): (f64, f64),
+        dx: f64,
+        dy: f64,
+        secs: f64,
+    ) -> Result<()> {
         let (vw, vh): (f64, f64) = self.bridge.json("[innerWidth, innerHeight]")?;
         let clamp = |x: f64, y: f64| self.screen(x.clamp(0.0, vw - 1.0), y.clamp(0.0, vh - 1.0));
         let (from, to) = (clamp(x, y), clamp(x + dx, y + dy));
@@ -308,7 +324,7 @@ impl Ios {
         let secs = format!("{secs:.2}");
         match self.input {
             Injector::Axe => self.inject(&[
-                "swipe",
+                verb,
                 "--start-x",
                 &x1,
                 "--start-y",
@@ -619,7 +635,7 @@ impl Driver for Ios {
 
     async fn drag(&mut self, selector: &str, dx: f64, dy: f64) -> Result<()> {
         let from = self.centre(selector)?;
-        self.swipe(from, dx, dy, 0.5)
+        self.drag_by(from, dx, dy, 0.5)
     }
 
     async fn swipe_from(&mut self, x: f64, y: f64, dx: f64, dy: f64) -> Result<()> {
@@ -627,7 +643,7 @@ impl Driver for Ios {
     }
 
     async fn drag_at(&mut self, x: f64, y: f64, dx: f64, dy: f64) -> Result<()> {
-        self.swipe((x, y), dx, dy, 0.5)
+        self.drag_by((x, y), dx, dy, 0.5)
     }
 
     /// A slow swipe through the viewport's middle, so the page comes to rest.
