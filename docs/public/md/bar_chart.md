@@ -114,6 +114,8 @@ Like every component, `BarChart` also takes the shared props `sx`, `class`,
 
 - The tooltip is for the eye; screen readers hear the announcement instead, so
   `tooltip_content` reaches only sighted readers.
+- The drawing runs left to right in a right-to-left page too, and the arrows
+  follow it unflipped.
 
 ## Theme defaults
 

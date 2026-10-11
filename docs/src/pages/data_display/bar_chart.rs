@@ -74,6 +74,7 @@ pub fn BarChartPage() -> Element {
                 ])
                 .limits([
                     "The tooltip is for the eye; screen readers hear the announcement instead, so `tooltip_content` reaches only sighted readers.",
+                    "The drawing runs left to right in a right-to-left page too, and the arrows follow it unflipped.",
                 ]),
             lead: rsx! {
                 Text {
