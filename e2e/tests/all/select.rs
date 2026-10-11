@@ -1287,11 +1287,18 @@ async fn a_tall_dropdown_fits_the_room<D: Driver>(d: &mut D, _route: &str) -> Re
     })
     .await?;
     d.press(keyboard::END).await?;
-    eventually(d, "the last row scrolled into view", async |d| {
+    let waited = eventually(d, "the last row scrolled into view", async |d| {
         let row = d.rect("[role=option]:last-child").await?;
         Ok(row.y >= 0.0 && row.y + row.height <= height)
     })
-    .await
+    .await;
+    if let Err(e) = waited {
+        let info = d
+            .evaluate("(() => { const dd = document.querySelector('[data-slot=dropdown]'); const lb = document.querySelector('[role=listbox]'); const cs = getComputedStyle(lb); const dcs = getComputedStyle(dd); const r = lb.getBoundingClientRect(); return JSON.stringify({ lb_rect: [r.y, r.height], lb_max: cs.maxHeight, lb_h: cs.height, lb_overflow: cs.overflowY, dd_max: dcs.maxHeight, dd_overflow: dcs.overflowY, dd_style: dd.parentElement.getAttribute('style'), dd_own: dd.getAttribute('style'), lb_style: lb.getAttribute('style'), lb_parent: lb.parentElement.getAttribute('data-slot') }); })()")
+            .await?;
+        anyhow::bail!("DIAG {e}: {info}");
+    }
+    Ok(())
 }
 
 e2e::scenario!(
