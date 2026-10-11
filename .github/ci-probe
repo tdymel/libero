@@ -1,0 +1,6 @@
+# ted_ci.py probe; read by .github/workflows/ci-probe.yml.
+os=windows
+tier=unit
+filter=tabs
+dev=o67-finu
+env=EXP=timings
