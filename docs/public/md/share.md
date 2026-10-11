@@ -1,8 +1,8 @@
-# ShareButton
+# Share
 
 Crate: `libero`
-Import: `use libero::components::ShareButton;`
-Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/buttons/share_button.rs>
+Import: `use libero::components::Share;`
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/buttons/share.rs>
 Index: [index.md](index.md) lists every other page
 Description: A button that opens the system share sheet, or copies the link where there is none, and says "Copied".
 
@@ -22,17 +22,17 @@ without the copy fallback.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::ShareButton;
+use libero::components::Share;
 
 #[component]
 fn Demo() -> Element {
     rsx! {
-        ShareButton {
+        Share {
             url: "https://libero-ui.dev",
             title: "Libero",
             variant: "outlined",
         }
-        ShareButton { url: "https://libero-ui.dev", title: "Libero", "Share" }
+        Share { url: "https://libero-ui.dev", title: "Libero", "Share" }
     }
 }
 ```
@@ -96,7 +96,7 @@ browser reports both the same way.
 | `onshare` | `EventHandler<ShareOutcome>` | - | Called with the outcome once the share settled: `Shared`, `Copied`, `Cancelled`, `Unsupported` or `Failed(reason)`. |
 | `children` | `Element` | - | A visible label: renders a `Button` with the share glyph instead of an icon-only button. |
 
-Like every component, `ShareButton` also takes the shared props `sx`, `class`,
+Like every component, `Share` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes. They land on the button.
 
 The words are `ShareLabels` in the [localization](localization.md): `share`
@@ -127,7 +127,7 @@ glyph is the `IconSlot::Share` slot of an [IconProvider](icon_provider.md).
 
 ### Example
 
-An article's share button, `ShareButton { url, label: "Link to this article"
+An article's share button, `Share { url, label: "Link to this article"
 }`: the button reads "Share, Link to this article". On a phone the share sheet
 opens; on a desktop without one, the status region says "Copied".
 

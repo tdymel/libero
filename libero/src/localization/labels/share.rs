@@ -1,4 +1,4 @@
-/// What a `ShareButton` is named and announces.
+/// What the `Share` button is named and announces.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ShareLabels {
     /// The icon-only button's name, unless its `aria_label` replaces it.

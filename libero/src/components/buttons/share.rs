@@ -15,7 +15,7 @@ use crate::{
 };
 
 base_props! {
-    pub struct ShareButtonProps {
+    pub struct ShareProps {
         /// A title, used as the subject where the target has one.
         #[props(default, into)]
         title: Option<String>,
@@ -60,18 +60,18 @@ base_props! {
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
-/// # use libero::components::ShareButton;
+/// # use libero::components::Share;
 /// # fn app() -> Element {
 /// rsx! {
-///     ShareButton { url: "https://libero-ui.dev", title: "Libero", variant: "outlined" }
-///     ShareButton { url: "https://libero-ui.dev", "Share" }
+///     Share { url: "https://libero-ui.dev", title: "Libero", variant: "outlined" }
+///     Share { url: "https://libero-ui.dev", "Share" }
 /// }
 /// # }
 /// ```
 ///
-/// Docs: <https://libero-ui.dev/buttons/share-button>
+/// Docs: <https://libero-ui.dev/buttons/share>
 #[component]
-pub fn ShareButton(props: ShareButtonProps) -> Element {
+pub fn Share(props: ShareProps) -> Element {
     let mut share = use_share();
     let labels = use_localization().share;
     // Blitz's Tab fires no `blur`: the same reset, from the silent move.

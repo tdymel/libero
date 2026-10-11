@@ -62,7 +62,7 @@ Accessibility. The rest are shown on the component or guide page they belong to.
 | `use_stylesheet` | Registers a stylesheet of your own, above every libero layer. | [Stylesheet](use_stylesheet.md) |
 | `use_accessibility` | The reader's motion, contrast and transparency settings; forces reduced motion. | [Accessibility settings](use_accessibility.md) |
 | `use_clipboard` | Copies text and tells whether the last copy landed. | [Copy](copy.md) |
-| `use_share` | Opens the system share sheet, or copies the link where there is none. | [ShareButton](share_button.md) |
+| `use_share` | Opens the system share sheet, or copies the link where there is none. | [Share](share.md) |
 | `use_icon` | The glyph an IconProvider sets for a slot, else your default. | [IconProvider](icon_provider.md) |
 | `use_scroll_area` | Scrolls a ScrollArea from code. | [ScrollArea](scroll_area.md) |
 | `use_scroller` | Steps a Scroller from controls of your own. | [Scroller](scroller.md) |

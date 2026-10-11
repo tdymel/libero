@@ -1,6 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Code, Input, ShareButton, Text};
+use libero::components::{Code, Input, Share, Text};
 use libero::use_theme;
 
 /// The `label` switch's description, read after the name.
@@ -36,14 +36,14 @@ fn color(values: &DemoValues) -> Input<libero::sx::ThemeAwareValue> {
 }
 
 #[component]
-pub fn ShareButtonPage() -> Element {
+pub fn SharePage() -> Element {
     let theme = use_theme();
     rsx! {
         DocPage {
-            title: "ShareButton",
-            source: "libero/src/components/buttons/share_button.rs",
-            markdown: "/md/share_button.md",
-            properties: vec![props("ShareButton", vec![
+            title: "Share",
+            source: "libero/src/components/buttons/share.rs",
+            markdown: "/md/share.md",
+            properties: vec![props("Share", vec![
                 prop("title", "String")
                     .doc("A title, used as the subject where the target has one."),
                 prop("text", "String").doc("A message."),
@@ -86,7 +86,7 @@ pub fn ShareButtonPage() -> Element {
                     "Name an icon-only button after what it shares with `aria_label`, such as \"Share article\", or keep the short name and say what it shares with `label`.",
                     "For a share control of your own on `use_share()`, call `share` in the press handler and say the outcome in a status region that is already mounted.",
                 ])
-                .example("An article's share button, `ShareButton { url, label: \"Link to this article\" }`: the button reads \"Share, Link to this article\". On a phone the share sheet opens; on a desktop without one, the status region says \"Copied\"."),
+                .example("An article's share button, `Share { url, label: \"Link to this article\" }`: the button reads \"Share, Link to this article\". On a phone the share sheet opens; on a desktop without one, the status region says \"Copied\"."),
             lead: rsx! {
                 Text {
                     "A button that opens the system share sheet: the Web Share API on the "
@@ -122,7 +122,7 @@ pub fn ShareButtonPage() -> Element {
                 }
             },
             Demo {
-                component: "ShareButton",
+                component: "Share",
                 children_text: "",
                 fixed: vec![
                     format!("url: {URL:?}"),
@@ -130,7 +130,7 @@ pub fn ShareButtonPage() -> Element {
                 ],
                 controls: style_controls(),
                 render: move |values: DemoValues| rsx! {
-                    ShareButton {
+                    Share {
                         url: URL,
                         title: "Libero",
                         variant: values.str("variant"),
@@ -143,7 +143,7 @@ pub fn ShareButtonPage() -> Element {
                 },
             }
             Demo {
-                component: "ShareButton",
+                component: "Share",
                 title: "Labelled",
                 children_text: "Share",
                 fixed: vec![
@@ -152,7 +152,7 @@ pub fn ShareButtonPage() -> Element {
                 ],
                 controls: style_controls(),
                 render: move |values: DemoValues| rsx! {
-                    ShareButton {
+                    Share {
                         url: URL,
                         title: "Libero",
                         variant: values.str("variant"),

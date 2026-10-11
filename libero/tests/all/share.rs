@@ -1,4 +1,4 @@
-//! `ShareButton`'s rendered contract: the icon-only name comes from the
+//! `Share`'s rendered contract: the icon-only name comes from the
 //! localization or `aria_label`, `children` make a labelled button, and the
 //! status is mounted empty before any share.
 
@@ -7,7 +7,7 @@ use crate::common::{attributes_of, body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::ShareButton,
+    components::Share,
     localization::{Localization, ShareLabels},
 };
 
@@ -20,7 +20,7 @@ static GERMAN: Localization = Localization {
 fn the_name_comes_from_the_localization() {
     fn app() -> Element {
         rsx! {
-            LiberoProvider { localization: &GERMAN, ShareButton { url: "https://libero-ui.dev" } }
+            LiberoProvider { localization: &GERMAN, Share { url: "https://libero-ui.dev" } }
         }
     }
 
@@ -34,7 +34,7 @@ fn the_name_comes_from_the_localization() {
 fn aria_label_names_it_and_the_status_is_mounted_empty() {
     fn app() -> Element {
         rsx! {
-            LiberoProvider { ShareButton { url: "https://libero-ui.dev", aria_label: "Share this page" } }
+            LiberoProvider { Share { url: "https://libero-ui.dev", aria_label: "Share this page" } }
         }
     }
 
@@ -53,7 +53,7 @@ fn aria_label_names_it_and_the_status_is_mounted_empty() {
 fn children_render_a_labelled_button() {
     fn app() -> Element {
         rsx! {
-            LiberoProvider { ShareButton { url: "https://libero-ui.dev", "Share article" } }
+            LiberoProvider { Share { url: "https://libero-ui.dev", "Share article" } }
         }
     }
 
@@ -72,14 +72,14 @@ fn the_label_joins_a_callers_aria_describedby() {
     fn icon() -> Element {
         rsx! {
             LiberoProvider {
-                ShareButton { url: "x", label: "This page", aria_describedby: "mine" }
+                Share { url: "x", label: "This page", aria_describedby: "mine" }
             }
         }
     }
     fn labelled() -> Element {
         rsx! {
             LiberoProvider {
-                ShareButton { url: "x", label: "This page", aria_describedby: "mine", "Share" }
+                Share { url: "x", label: "This page", aria_describedby: "mine", "Share" }
             }
         }
     }
@@ -98,7 +98,7 @@ fn the_label_joins_a_callers_aria_describedby() {
 fn disabled_renders_a_disabled_button() {
     fn app() -> Element {
         rsx! {
-            LiberoProvider { ShareButton { url: "x", disabled: true } }
+            LiberoProvider { Share { url: "x", disabled: true } }
         }
     }
 

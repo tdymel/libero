@@ -41,7 +41,7 @@
 /buttons/copy	Copy - Libero	An icon button that copies a value to the clipboard and confirms it with a check and a spoken "Copied".	/md/copy.md	Buttons	/buttons/button
 /buttons/direction-toggle	DirectionToggle - Libero	An icon button that turns the app's text between left to right and right to left.	/md/direction_toggle.md	Buttons	/buttons/button
 /buttons/repository	Repository - Libero	A link to a GitHub or GitLab repository with its star count beside the host's icon.	/md/repository.md	Buttons	/buttons/button
-/buttons/share-button	ShareButton - Libero	A button that opens the system share sheet, or copies the link where there is none, and says "Copied".	/md/share_button.md	Buttons	/buttons/button
+/buttons/share	Share - Libero	A button that opens the system share sheet, or copies the link where there is none, and says "Copied".	/md/share.md	Buttons	/buttons/button
 /buttons/theme-switcher	ThemeSwitcher - Libero	An icon button that flips the colour scheme, optionally through the system's too, with an optional theme picker beside it.	/md/theme_switcher.md	Buttons	/buttons/button
 /buttons/tldr	Tldr - Libero	A menu of links that ask an AI assistant (ChatGPT, Google AI, Claude, Perplexity or your own) to summarize a page.	/md/tldr.md	Buttons	/buttons/button
 /buttons/toolbar	Toolbar - Libero	A row of buttons, action icons and selects that is one tab stop, moved through with the arrow keys.	/md/toolbar.md	Buttons	/buttons/button

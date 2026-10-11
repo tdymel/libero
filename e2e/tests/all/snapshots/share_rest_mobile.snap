@@ -1,6 +1,6 @@
 ---
 source: e2e/src/suite.rs
-description: share_button at mobile (rest)
+description: share at mobile (rest)
 expression: tree
 ---
 button "Share"

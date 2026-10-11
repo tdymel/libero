@@ -89,7 +89,7 @@ pub(crate) trait ShareApi {
 /// Returns [`ShareOutcome::Unsupported`] where no share sheet exists:
 /// [`use_share`](crate::hooks::use_share) copies the link there instead.
 ///
-/// Docs: <https://libero-ui.dev/buttons/share-button>
+/// Docs: <https://libero-ui.dev/buttons/share>
 /// ```rust,no_run
 /// use libero::platform::{ShareData, ShareOutcome, share};
 ///

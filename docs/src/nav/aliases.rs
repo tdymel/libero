@@ -71,7 +71,7 @@ fn label_aliases(label: &str) -> &'static [&'static str] {
         "Copy" => &["clipboard", "copy"],
         "DirectionToggle" => &["rtl", "ltr", "direction"],
         "Repository" => &["github", "repository"],
-        "ShareButton" => &["share", "share sheet", "web share", "send link"],
+        "Share" => &["share", "share sheet", "web share", "send link"],
         "ThemeSwitcher" => &["dark mode", "color scheme", "light dark"],
         "Tldr" => &["summarize", "summary", "ai", "chatgpt", "claude"],
         "Toolbar" => &["tool bar", "action bar", "button bar"],

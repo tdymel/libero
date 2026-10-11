@@ -1,4 +1,4 @@
-//! `ShareButton` on the web: a press hands the data to `navigator.share`, a
+//! `Share` on the web: a press hands the data to `navigator.share`, a
 //! cancel stays silent, a refusal is announced, and without a share sheet the
 //! link is copied and "Copied" said. Android opens its share sheet over JNI.
 
@@ -15,7 +15,7 @@ const FILES: &str = "#files button";
 
 #[test]
 fn it_meets_the_baseline() {
-    Suite::new("share_button", "/share-button")
+    Suite::new("share", "/share")
         .focusable(BARE)
         .focusable(LABELLED)
         .targets(BARE)
@@ -72,9 +72,7 @@ async fn strings(page: &chromiumoxide::Page, script: &str) -> Vec<String> {
 #[test]
 fn a_press_hands_the_data_to_the_share_sheet() {
     block_on(async {
-        let fixture = Fixture::open("/share-button", Viewport::Desktop)
-            .await
-            .unwrap();
+        let fixture = Fixture::open("/share", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
 
         page.evaluate(stub_share("ok", true)).await.unwrap();
@@ -115,9 +113,7 @@ fn a_press_hands_the_data_to_the_share_sheet() {
 #[test]
 fn the_button_is_busy_while_the_sheet_is_open() {
     block_on(async {
-        let fixture = Fixture::open("/share-button", Viewport::Desktop)
-            .await
-            .unwrap();
+        let fixture = Fixture::open("/share", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         let busy = format!(
             "(() => {{ const b = document.querySelector('{BARE}'); \
@@ -160,9 +156,7 @@ fn the_button_is_busy_while_the_sheet_is_open() {
 #[test]
 fn a_cancel_is_silent_and_a_refusal_is_announced() {
     block_on(async {
-        let fixture = Fixture::open("/share-button", Viewport::Desktop)
-            .await
-            .unwrap();
+        let fixture = Fixture::open("/share", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
 
         let glyph = format!("document.querySelector('{BARE} svg').innerHTML");
@@ -223,9 +217,7 @@ fn a_cancel_is_silent_and_a_refusal_is_announced() {
 #[test]
 fn without_a_share_sheet_the_link_is_copied() {
     block_on(async {
-        let fixture = Fixture::open("/share-button", Viewport::Desktop)
-            .await
-            .unwrap();
+        let fixture = Fixture::open("/share", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
 
         page.evaluate(NO_SHARE_SHEET).await.unwrap();
@@ -264,9 +256,7 @@ fn without_a_share_sheet_the_link_is_copied() {
 #[test]
 fn files_are_shared_where_can_share_takes_them() {
     block_on(async {
-        let fixture = Fixture::open("/share-button", Viewport::Desktop)
-            .await
-            .unwrap();
+        let fixture = Fixture::open("/share", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
 
         page.evaluate(stub_share("ok", true)).await.unwrap();
@@ -304,9 +294,7 @@ fn files_are_shared_where_can_share_takes_them() {
 #[test]
 fn several_files_are_shared_in_one_call() {
     block_on(async {
-        let fixture = Fixture::open("/share-button", Viewport::Desktop)
-            .await
-            .unwrap();
+        let fixture = Fixture::open("/share", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
 
         page.evaluate(stub_share("ok", true)).await.unwrap();
@@ -356,19 +344,19 @@ async fn opens<D: Driver>(d: &mut D, button: &str, action: &str) -> Result<()> {
 
 e2e::scenario!(
     android_shares_the_link_through_the_share_sheet,
-    "/share-button",
+    "/share",
     the_share_sheet_opens,
     android_only("3351: the JNI share sheet is Android's")
 );
 e2e::scenario!(
     android_shares_a_file_through_the_share_sheet,
-    "/share-button",
+    "/share",
     the_share_sheet_opens_on_a_file,
     android_only("3351: the JNI share sheet is Android's")
 );
 e2e::scenario!(
     android_shares_two_files_through_the_share_sheet,
-    "/share-button",
+    "/share",
     the_share_sheet_opens_on_two_files,
     android_only("3361: ACTION_SEND_MULTIPLE is Android's")
 );
@@ -377,9 +365,7 @@ e2e::scenario!(
 #[test]
 fn the_labelled_button_is_named_by_its_text() {
     block_on(async {
-        let fixture = Fixture::open("/share-button", Viewport::Desktop)
-            .await
-            .unwrap();
+        let fixture = Fixture::open("/share", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
 
         let tree = ax::snapshot(page, "#labelled").await.unwrap();
@@ -398,7 +384,7 @@ fn the_labelled_button_is_named_by_its_text() {
             .unwrap()
             .into_value()
             .unwrap();
-        assert!(unfocusable, "the disabled ShareButton took focus");
+        assert!(unfocusable, "the disabled Share took focus");
 
         fixture.console.assert_clean("labelled share").unwrap();
         fixture.close().await.unwrap();

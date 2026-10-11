@@ -109,8 +109,8 @@ async fn copied(text: String) -> ShareOutcome {
     }
 }
 
-/// A [`Share`] for this component. [`ShareButton`](crate::components::ShareButton)
-/// is the ready-made control built on it.
+/// A [`Share`] for this component. The [`Share`](crate::components::Share)
+/// component is the ready-made control built on it.
 pub fn use_share() -> Share {
     Share {
         outcome: use_signal(|| None),

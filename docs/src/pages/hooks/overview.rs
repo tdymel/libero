@@ -255,7 +255,7 @@ fn hooks() -> Vec<HookRow> {
         row(
             "use_share",
             "Opens the system share sheet, or copies the link where there is none.",
-            Route::ShareButtonPage {},
+            Route::SharePage {},
         ),
         row(
             "use_icon",

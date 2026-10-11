@@ -4,7 +4,7 @@ mod button_group;
 mod copy;
 mod direction_toggle;
 mod repository;
-mod share_button;
+mod share;
 mod theme_switcher;
 mod tldr;
 mod toolbar;
@@ -17,7 +17,7 @@ pub use button_group::{ButtonGroup, ButtonGroupProps};
 pub use copy::{Copy, CopyProps};
 pub use direction_toggle::{DirectionToggle, DirectionToggleProps};
 pub use repository::{RepoHost, Repository, RepositoryPart, RepositoryProps};
-pub use share_button::{ShareButton, ShareButtonProps};
+pub use share::{Share, ShareProps};
 pub use theme_switcher::{ThemeSwitcher, ThemeSwitcherPart, ThemeSwitcherProps};
 pub use tldr::{SummaryProvider, Tldr, TldrProps, summary_url};
 pub use toolbar::{

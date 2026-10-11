@@ -1,6 +1,6 @@
 ---
 source: e2e/src/suite.rs
-description: share_button at desktop (rest)
+description: share at desktop (rest)
 expression: tree
 ---
 button "Share"

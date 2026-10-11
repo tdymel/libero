@@ -122,7 +122,7 @@ mod scroller;
 mod segmented_control;
 mod select;
 mod settle;
-mod share_button;
+mod share;
 mod shortcut_help;
 mod sidebar;
 mod skeleton;
