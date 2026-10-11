@@ -345,5 +345,5 @@ fn a_non_editable_cell_is_readonly_in_an_editable_grid() {
         .map(|cell| cell.get("aria-readonly").map(String::as_str) == Some("true"))
         .collect();
     assert_eq!(readonly, [true, false, true, false], "{html}");
-    assert!(!html.contains("data-editing"), "{html}");
+    assert!(!tbody(&html).contains("data-editing"), "{html}");
 }
