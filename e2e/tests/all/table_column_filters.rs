@@ -281,6 +281,14 @@ async fn a_date_filter_narrows_the_rows<D: Driver>(d: &mut D, _route: &str) -> R
         }
     }
     d.press_shift(keyboard::TAB).await?;
+    // WebView2's date input walks its year and day segments before it lets go.
+    for _ in 0..2 {
+        let value = format!("{POPOVER} input[data-filter-value]");
+        if !(cfg!(windows) && native_input && d.is_focused(&value).await?) {
+            break;
+        }
+        d.press_shift(keyboard::TAB).await?;
+    }
     eventually_focused(d, &format!("{POPOVER} {PICKER}"), "Shift+Tab").await?;
     // Equals, then Does not equal, Before, After, On or before, On or after, Between.
     pick_later(d, 6).await?;
