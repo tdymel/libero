@@ -165,7 +165,12 @@ async fn fullscreen_toggles<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     entry(d, false).await
 }
 
-e2e::scenario!(the_fullscreen_button_toggles, "/video", fullscreen_toggles);
+e2e::scenario!(
+    the_fullscreen_button_toggles,
+    "/video",
+    fullscreen_toggles,
+    macos: skip("macOS WKWebView: Escape does not leave a WebView fullscreen")
+);
 
 fn pseudo_state(fullscreen: Option<String>) -> bool {
     fullscreen.as_deref() == Some("drawn")

@@ -81,7 +81,8 @@ e2e::scenario!(
 e2e::scenario!(
     a_press_on_a_disabled_button_focuses_what_holds_it,
     "/refused",
-    focus_after_a_press
+    focus_after_a_press,
+    macos: skip("macOS WebKit does not focus a clicked button")
 );
 e2e::scenario!(
     tab_skips_disabled_buttons_and_an_inert_subtree,

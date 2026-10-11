@@ -102,7 +102,8 @@ async fn the_column_filters_narrow_the_rows<D: Driver>(d: &mut D, _route: &str) 
 e2e::scenario!(
     the_column_filters_narrow_a_table,
     "/table/column-filter",
-    the_column_filters_narrow_the_rows
+    the_column_filters_narrow_the_rows,
+    macos: skip("macOS WKWebView: ArrowDown does not open a select filter's list")
 );
 
 /// Todo 1403: Tab past the filter dialog's last stop and Shift+Tab past its first close it,
@@ -308,7 +309,8 @@ e2e::scenario!(
     a_date_filter_narrows_a_table,
     "/table/date-filter",
     a_date_filter_narrows_the_rows,
-    android: skip("Chromium's typed date segments only")
+    android: skip("Chromium's typed date segments only"),
+    macos: skip("macOS WKWebView: ArrowDown does not open a select filter's list")
 );
 
 /// 1400: the filter panel adds lines, joins them by the logic, and moves the
@@ -393,5 +395,6 @@ e2e::scenario!(
     the_filter_panel_edits_every_filter,
     "/table/filter-panel",
     the_filter_panel_edits_every_filter,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    macos: skip("macOS WKWebView: ArrowDown does not open a select filter's list")
 );

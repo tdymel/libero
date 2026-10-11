@@ -59,12 +59,14 @@ e2e::scenario!(
 e2e::scenario!(
     enter_on_the_select_x_clears_it,
     "/trailing-button/select",
-    enter_clears_and_refocuses
+    enter_clears_and_refocuses,
+    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
 );
 e2e::scenario!(
     enter_on_the_cascader_x_clears_it,
     "/trailing-button/cascader",
-    enter_clears_and_refocuses
+    enter_clears_and_refocuses,
+    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
 );
 
 #[test]

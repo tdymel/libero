@@ -441,7 +441,8 @@ e2e::scenario!(
 e2e::scenario!(
     a_click_on_an_autocomplete_option_picks_it,
     "/autocomplete/echo",
-    autocomplete_click_picks
+    autocomplete_click_picks,
+    macos: skip("macOS WKWebView: a click on a listbox option does not register")
 );
 
 // `MultiSelect`, on `/multi-select/echo`: Cherry held.
@@ -494,12 +495,14 @@ e2e::scenario!(
 e2e::scenario!(
     a_click_on_a_multi_select_option_toggles_it,
     "/multi-select/echo",
-    multi_click_toggles
+    multi_click_toggles,
+    macos: skip("macOS WKWebView: a click on a listbox option does not register")
 );
 e2e::scenario!(
     a_click_on_a_multi_select_option_keeps_the_list_open,
     "/multi-select/echo",
-    multi_click_keeps_open
+    multi_click_keeps_open,
+    macos: skip("macOS WKWebView: a click on a listbox option does not register")
 );
 e2e::scenario!(
     backspace_in_an_empty_multi_select_drops_the_last_pick,
@@ -601,5 +604,6 @@ e2e::scenario!(
 e2e::scenario!(
     clicks_walk_a_cascader_to_a_leaf,
     "/cascader",
-    cascader_clicks
+    cascader_clicks,
+    macos: skip("macOS WKWebView: a click on a listbox option does not register")
 );

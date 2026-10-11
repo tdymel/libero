@@ -552,7 +552,9 @@ async fn zoom_in_tapped<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_tap_on_zoom_in_zooms_the_picture,
     "/lightbox",
-    zoom_in_tapped
+    zoom_in_tapped,
+    macos: skip("macOS WKWebView: the stage's first scroll never settles"),
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );
 
 /// Todo 961: a zoomed picture pans only as far as its own edge, which needs its
@@ -592,7 +594,9 @@ e2e::scenario!(
     a_zoomed_picture_pans_only_to_its_edge,
     "/lightbox",
     pan_stops_at_the_edge,
-    native: skip("3386: reads the picture's size and pan by script, which Blitz has none of")
+    native: skip("3386: reads the picture's size and pan by script, which Blitz has none of"),
+    macos: skip("macOS WKWebView: the stage's first scroll never settles"),
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );
 
 /// Todo 1067: two fingers spread zoom the picture and do not close the viewer;
@@ -626,5 +630,6 @@ e2e::scenario!(
     "/lightbox",
     pinch_zooms,
     native: skip("Blitz takes no multi-touch input"),
-    desktop: skip("1126: no touch input under Xvfb")
+    desktop: skip("1126: no touch input under Xvfb"),
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );

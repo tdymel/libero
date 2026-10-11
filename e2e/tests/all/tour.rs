@@ -112,7 +112,8 @@ async fn escape_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     escape_ends_the_tour_and_returns_focus,
     "/tour",
-    escape_closes
+    escape_closes,
+    macos: skip("macOS WebKit does not focus a clicked button")
 );
 
 async fn done_finishes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -126,7 +127,12 @@ async fn done_finishes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     eventually_text(d, ENDED, "finished", "Done").await
 }
 
-e2e::scenario!(done_on_the_last_step_finishes, "/tour", done_finishes);
+e2e::scenario!(
+    done_on_the_last_step_finishes,
+    "/tour",
+    done_finishes,
+    macos: skip("macOS WebKit does not focus a clicked button")
+);
 
 async fn traps_tab<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     modal::tab_stays_inside(d, TRIGGER).await
@@ -608,7 +614,8 @@ async fn arrow_right_stops_on_the_last_step<D: Driver>(d: &mut D, _route: &str) 
 e2e::scenario!(
     arrow_right_on_the_last_step_does_not_finish_the_tour,
     "/tour",
-    arrow_right_stops_on_the_last_step
+    arrow_right_stops_on_the_last_step,
+    macos: skip("macOS WebKit does not focus a clicked button")
 );
 
 /// 2264: the card is described by its text and its progress; a custom card by a hidden text

@@ -108,7 +108,8 @@ e2e::scenario!(
 e2e::scenario!(
     tab_enters_on_the_checked_segment_and_leaves_with_the_next_tab,
     "/segmented-control",
-    one_tab_stop
+    one_tab_stop,
+    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
 );
 /// The "right" state's wait: the last segment's label, checked. Not `CHECKED` (the radio is
 /// hidden) nor any checked label (the middle one is, at rest).

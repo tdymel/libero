@@ -405,7 +405,8 @@ e2e::scenario!(
     "/accordion",
     arrows_move_focus,
     android: skip("958: element identity on the WebView"),
-    desktop: skip("958: element identity on the WebView")
+    desktop: skip("958: element identity on the WebView"),
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     enter_opens_space_closes_and_a_closed_panel_hides,
@@ -418,7 +419,8 @@ e2e::scenario!(
     "/accordion",
     focus_returns,
     android: skip("958: element identity on the WebView"),
-    desktop: skip("958: element identity on the WebView")
+    desktop: skip("958: element identity on the WebView"),
+    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
 );
 
 /// Ctrl/Alt/Meta chords are the browser's: no focus move, no toggle.
