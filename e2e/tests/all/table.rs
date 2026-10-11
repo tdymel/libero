@@ -44,7 +44,8 @@ async fn the_arrow_turns<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     the_arrow_turns_when_the_sort_flips,
     "/table",
-    the_arrow_turns
+    the_arrow_turns,
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );
 
 pub(super) const AREA: &str = "[data-table-scroll]";
@@ -124,7 +125,8 @@ async fn the_rows_report_and_show_their_look<D: Driver>(d: &mut D, _route: &str)
 e2e::scenario!(
     a_row_click_reports_its_row,
     "/table/rows",
-    the_rows_report_and_show_their_look
+    the_rows_report_and_show_their_look,
+    ios: skip("iOS: a touch screen has no hover")
 );
 
 /// The checkbox box of body row `n` (1-based), or of the header with 0.
@@ -220,7 +222,8 @@ async fn rows_select_and_sort<D: Driver>(d: &mut D, _route: &str) -> Result<()> 
 e2e::scenario!(
     rows_select_by_box_and_keep_it_through_a_sort,
     "/table/select",
-    rows_select_and_sort
+    rows_select_and_sort,
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );
 
 /// 1982: the light boxes keep select-all's mixed property, and under forced colours

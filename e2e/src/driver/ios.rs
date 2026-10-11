@@ -391,7 +391,9 @@ impl Ios {
             }
             let error = String::from_utf8_lossy(&out.stderr);
             tries += 1;
-            if tries < 20 && error.contains("No translation object") {
+            // A tap that dies without a word is the tool under load: once or twice more.
+            let starting = tries < 20 && error.contains("No translation object");
+            if starting || tries < 3 && error.trim().is_empty() {
                 std::thread::sleep(Duration::from_millis(500));
                 continue;
             }

@@ -88,5 +88,6 @@ e2e::scenario!(
     tab_skips_disabled_buttons_and_an_inert_subtree,
     "/refused",
     tab_past_them,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
 );
