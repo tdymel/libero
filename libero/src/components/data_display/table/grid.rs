@@ -1,7 +1,7 @@
 //! `cell_focus`: one body cell is the tab stop, and the keys of
 //! [`cell_focus`](super::cell_focus) move it.
 
-use std::rc::Rc;
+use std::{cell::Cell, rc::Rc};
 
 use dioxus::prelude::*;
 
@@ -25,6 +25,9 @@ use crate::{
 
 /// Rows a PageUp or PageDown moves when the view cannot be measured.
 const PAGE_ROWS: usize = 10;
+
+/// Scrolls a focused slot into view this many times at most, one per layout.
+const REVEAL_TRIES: usize = 3;
 
 /// Focus in a grid cell or a widget inside one, or on a tree row or its toggle: the
 /// filter row, the footer and the leading select, detail and reorder cells keep their keys.
@@ -274,11 +277,14 @@ pub(super) fn use_grid_focus(table: ElementHandle, region: ElementHandle) -> Gri
     });
     let id = use_id();
     let mut request = use_signal(|| None::<Option<Reveal>>);
+    let latest = use_hook(|| Rc::new(Cell::new(0)));
     use_effect(move || {
         let Some(reveal) = request() else {
             return;
         };
         request.set(None);
+        let turn = latest.get() + 1;
+        latest.set(turn);
         let selector = format!("[data-cell-stop='{}']", id.peek());
         let focus = move || match table.query_selector(&selector) {
             Ok(cell) => {
@@ -289,22 +295,20 @@ pub(super) fn use_grid_focus(table: ElementHandle, region: ElementHandle) -> Gri
                 let _ = focus_selector(&selector);
             }
         };
-        let Some(Reveal { slot, pitch, edges }) = reveal else {
+        let Some(reveal) = reveal else {
             focus();
             return;
         };
         // Once the window's new rows are laid out: Blitz lays out after effects.
+        let settle = Settle {
+            latest: latest.clone(),
+            turn,
+            moved: None,
+        };
         when_laid_out(move || {
             focus();
             // Blitz scrolls nothing into view on a `focus()`.
-            let (offset, view) = (region.scroll_offset(), region.dimensions());
-            spawn(async move {
-                if let (Ok((x, top)), Ok(view)) = (offset.await, view.await)
-                    && let Some(top) = reveal_slot(slot, pitch, edges, top, view.height)
-                {
-                    let _ = region.scroll_to(x, top);
-                }
-            });
+            reveal_by_scroll(region, reveal, settle, REVEAL_TRIES);
         });
     });
     let grid = GridFocus {
@@ -333,6 +337,44 @@ pub(super) fn use_grid_focus(table: ElementHandle, region: ElementHandle) -> Gri
         }
     });
     grid
+}
+
+/// What lets a reveal check again: no newer focus took the turn, and the offset is
+/// still where its own last scroll left it.
+struct Settle {
+    latest: Rc<Cell<u64>>,
+    turn: u64,
+    /// The offset before and the one asked for by the last scroll.
+    moved: Option<(f64, f64)>,
+}
+
+/// Scrolls `region` to show the slot, and again after the next layout while it does not:
+/// the first scroll may read or clamp against a window not laid out yet (todo 3397).
+fn reveal_by_scroll(region: ElementHandle, reveal: Reveal, settle: Settle, tries: usize) {
+    let (offset, view) = (region.scroll_offset(), region.dimensions());
+    spawn(async move {
+        let Reveal { slot, pitch, edges } = reveal;
+        let (Ok((x, top)), Ok(view)) = (offset.await, view.await) else {
+            return;
+        };
+        let ours = settle
+            .moved
+            .is_none_or(|(from, to)| top >= from.min(to) - 1.0 && top <= from.max(to) + 1.0);
+        if settle.latest.get() != settle.turn || !ours {
+            return;
+        }
+        let Some(to) = reveal_slot(slot, pitch, edges, top, view.height) else {
+            return;
+        };
+        let _ = region.scroll_to(x, to);
+        if tries > 1 {
+            let settle = Settle {
+                moved: Some((top, to)),
+                ..settle
+            };
+            when_laid_out(move || reveal_by_scroll(region, reveal, settle, tries - 1));
+        }
+    });
 }
 
 /// The body cell holding focus or a widget with it, by its [`CELL_ATTR`].
