@@ -114,7 +114,12 @@ async fn the_keys_resize<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.press_shift(keyboard::ARROW_LEFT).await?;
     eventually_text(d, WIDTHS, "Name=110", "Shift+ArrowLeft").await?;
     d.press(keyboard::END).await?;
-    eventually_text(d, WIDTHS, "Name=300", "End").await?;
+    if let Err(e) = eventually_text(d, WIDTHS, "Name=300", "End").await {
+        let w = d.text(WIDTHS).await?;
+        let a = (d.attr(&grip, "aria-valuenow").await?, d.attr(&grip, "aria-valuemax").await?, d.attr(&grip, "aria-valuemin").await?);
+        let f = d.text(":focus").await?;
+        bail!("DIAG {e}: widths={w} aria={a:?} focus={f:?}");
+    }
     width_near(d, 300.0, "End").await?;
     eventually(d, "aria-valuenow to follow", async |d| {
         Ok(d.attr(&grip, "aria-valuenow").await?.as_deref() == Some("300"))
