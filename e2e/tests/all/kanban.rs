@@ -263,6 +263,7 @@ async fn a_filtered_column_drags_and_takes_a_card_at_its_end<D: Driver>(
     _route: &str,
 ) -> Result<()> {
     d.click("#hide").await?;
+    eventually(d, "Alpha hidden", async |d| Ok(!d.exists("#Alpha").await?)).await?;
     eventually_text(d, "#order", START, "Alpha hidden, not removed").await?;
     let (beta, gamma) = (d.rect("#Beta").await?, d.rect("#Gamma").await?);
     d.drag("#Gamma [data-slot=handle]", 0.0, beta.y - gamma.y)

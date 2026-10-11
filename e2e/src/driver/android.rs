@@ -131,43 +131,54 @@ impl Android {
         hold_ms: u64,
     ) -> Result<()> {
         let from = self.centre(selector).await?;
+        self.paced_chain(from, (dx, dy), steps, step_ms, hold_ms, true)
+            .await
+    }
+
+    /// [`Self::paced_drag`] from `from`; without `down` the touch is already down.
+    async fn paced_chain(
+        &self,
+        from: pointer::Point,
+        (dx, dy): (f64, f64),
+        steps: usize,
+        step_ms: u64,
+        hold_ms: u64,
+        down: bool,
+    ) -> Result<()> {
         let at = |t: f64| {
             self.device(pointer::Point {
                 x: from.x + dx * t,
                 y: from.y + dy * t,
             })
         };
-        let pause = |ms: u64| {
-            [
-                ";".into(),
-                "sleep".into(),
-                format!("{:.3}", ms as f64 / 1000.0),
-            ]
+        let motion = |event: &str, t: f64| {
+            let [x, y] = at(t);
+            vec!["motionevent".to_string(), event.into(), x, y]
         };
-        let [x, y] = at(0.0);
-        let mut chain: Vec<String> = vec!["motionevent".into(), "DOWN".into(), x, y];
-        for step in 1..=steps {
-            chain.extend(pause(step_ms));
-            let [x, y] = at(step as f64 / steps as f64);
-            chain.extend([
-                ";".into(),
-                "input".into(),
-                "motionevent".into(),
-                "MOVE".into(),
-                x,
-                y,
-            ]);
+        let pause = |ms: u64| vec!["sleep".to_string(), format!("{:.3}", ms as f64 / 1000.0)];
+        let mut commands = Vec::new();
+        if down {
+            commands.push(motion("DOWN", 0.0));
         }
-        chain.extend(pause(hold_ms));
-        let [x, y] = at(1.0);
-        chain.extend([
-            ";".into(),
-            "input".into(),
-            "motionevent".into(),
-            "UP".into(),
-            x,
-            y,
-        ]);
+        for step in 1..=steps {
+            if !commands.is_empty() {
+                commands.push(pause(step_ms));
+            }
+            commands.push(motion("MOVE", step as f64 / steps as f64));
+        }
+        commands.push(pause(hold_ms));
+        commands.push(motion("UP", 1.0));
+        // `input` leads the first command; the rest are `; input ...` or `; sleep ...`.
+        let mut chain = Vec::new();
+        for (i, command) in commands.into_iter().enumerate() {
+            if i > 0 {
+                chain.push(";".into());
+                if command[0] != "sleep" {
+                    chain.push("input".into());
+                }
+            }
+            chain.extend(command);
+        }
         input(&chain).await
     }
 
@@ -236,7 +247,22 @@ impl Android {
         if !json::<bool>(&self.page, &probe).await? {
             bail!("no {selector} to drag");
         }
-        self.paced_drag(selector, (dx, dy), 12, 16, 600).await?;
+        // The moves wait for the press's own measure, so a slow host cannot put it past the slop (3267).
+        let from = self.centre(selector).await?;
+        let before: u64 = json(&self.page, "window.__rectReads || 0").await?;
+        let [x, y] = self.device(from);
+        input(&["motionevent".into(), "DOWN".into(), x.clone(), y.clone()]).await?;
+        let measured = crate::wait::for_js_true(
+            &self.page,
+            &format!("(window.__rectReads || 0) > {before}"),
+            "the press measured the board",
+        )
+        .await;
+        if measured.is_err() {
+            input(&["motionevent".into(), "UP".into(), x, y]).await?;
+        }
+        measured?;
+        self.paced_chain(from, (dx, dy), 12, 16, 600, false).await?;
         let lag: serde_json::Value = json(&self.page, "window.__dragLag").await?;
         let (Some([x, y, down]), Some([moved, reads])) = (
             serde_json::from_value::<[f64; 3]>(lag["down"].clone()).ok(),
@@ -384,9 +410,26 @@ impl Android {
         Ok(chain)
     }
 
+    /// Returns once the page saw the tap: `input tap` returns before it lands, and a late
+    /// tap's focus would take the next `focus()` back (3268).
     async fn tap(&self, at: pointer::Point) -> Result<()> {
+        self.page
+            .evaluate(
+                "(() => {
+                    window.__tap?.abort();
+                    const ac = window.__tap = new AbortController();
+                    window.__tapped = false;
+                    const done = () => { window.__tapped = true; };
+                    addEventListener('click', done, { capture: true, signal: ac.signal });
+                    addEventListener('pointercancel', done, { capture: true, signal: ac.signal });
+                    // A prevented touchend raises no click.
+                    addEventListener('touchend', e => e.defaultPrevented && done(), { signal: ac.signal });
+                })()",
+            )
+            .await?;
         let [x, y] = self.device(at);
-        input(&["tap".into(), x, y]).await
+        input(&["tap".into(), x, y]).await?;
+        crate::wait::for_js_true(&self.page, "window.__tapped === true", "the tap landed").await
     }
 
     /// In touch mode (after an earlier tap opened the soft keyboard) the WebView
