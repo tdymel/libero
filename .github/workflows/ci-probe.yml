@@ -116,8 +116,9 @@ jobs:
           assign mount=$env:GITHUB_WORKSPACE\target
           "@ | Set-Content -Encoding ascii "$env:RUNNER_TEMP\dev.txt"
           diskpart /s "$env:RUNNER_TEMP\dev.txt"
-          try { Format-Volume -Path "$env:GITHUB_WORKSPACE\target\" -FileSystem ReFS -DevDrive -Force }
-          catch { Write-Host "no -DevDrive: $_"; Format-Volume -Path "$env:GITHUB_WORKSPACE\target\" -FileSystem ReFS -Force }
+          $volume = Get-Volume -FilePath "$env:GITHUB_WORKSPACE\target"
+          try { $volume | Format-Volume -FileSystem ReFS -DevDrive -Force }
+          catch { Write-Host "no -DevDrive: $_"; $volume | Format-Volume -FileSystem ReFS -Force }
           fsutil devdrv query "$env:GITHUB_WORKSPACE\target"
           Get-Volume | Format-Table
       - if: runner.os == 'Windows' && contains(env.EXP, 'lld')
