@@ -1,7 +1,7 @@
 //! `Lightbox`: the overlay archetype around a `Carousel`. An arrow moves picture and focus,
 //! no Tab lands in a hidden slide (57), and a second `open_with` jumps (323).
 
-use anyhow::{Result, bail};
+use anyhow::{Result, bail, ensure};
 use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use chromiumoxide::cdp::browser_protocol::input::{
@@ -1170,6 +1170,45 @@ e2e::scenario!(
     a_tap_on_zoom_in_zooms_the_picture,
     "/lightbox",
     zoom_in_tapped
+);
+
+/// Todo 961: a zoomed picture pans only as far as its own edge, which needs its
+/// natural size (a WebView answered none, so the bounds were the frame's).
+async fn pan_stops_at_the_edge<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    open(d).await?;
+    eventually(d, "the first picture to decode", async |d| {
+        let decoded = "document.querySelector('[role=dialog] [data-lightbox-frame=\"0\"] img')?.naturalWidth > 0";
+        Ok(d.evaluate(decoded).await? == serde_json::json!(true))
+    })
+    .await?;
+    for _ in 0..4 {
+        d.click(ZOOM_IN).await?;
+    }
+    eventually(d, "four zoom steps in", async |d| {
+        Ok((scale(d).await? - 1.25f64.powi(4)).abs() < 0.01)
+    })
+    .await?;
+    d.drag(PICTURE, -300.0, -300.0).await?;
+    let mut seen = [0.0f64; 4];
+    eventually(d, "the drag to pan the picture", async |d| {
+        seen = serde_json::from_value(d.evaluate(PAN_JS).await?)?;
+        // A wide frame leaves no room on one axis; a pan on either will do.
+        Ok(seen[0] != 0.0 || seen[1] != 0.0)
+    })
+    .await?;
+    let [dx, dy, bx, by] = seen;
+    ensure!(
+        dx.abs() <= bx + 1.0 && dy.abs() <= by + 1.0,
+        "{:?}: panned to ({dx}, {dy}), past the picture's edge ({bx}, {by})",
+        d.platform()
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_zoomed_picture_pans_only_to_its_edge,
+    "/lightbox",
+    pan_stops_at_the_edge
 );
 
 /// Todo 1067: two fingers spread zoom the picture and do not close the viewer;

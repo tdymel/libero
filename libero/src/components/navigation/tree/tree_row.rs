@@ -23,7 +23,7 @@ use crate::{
 };
 
 use super::{
-    tree::{Expansion, TreePart},
+    tree::{Expansion, FocusedRow, TreePart},
     tree_node::{ErasedRenderNode, TreeNodeErased, TreeNodeRenderArgsErased},
 };
 
@@ -236,11 +236,20 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
     // Any focus on the row takes the tab stop: a click in a child group's indent
     // focuses this `<li>`, and the root's keys only work on the stop.
     let focus_id = node.id.clone();
+    let FocusedRow(mut focused) = use_context::<FocusedRow>();
     let onfocus = move |event: Event<FocusData>| {
         // Should a renderer bubble focus, the ancestors' rows must not take the stop.
         event.stop_propagation();
         if active_id.peek().as_deref() != Some(focus_id.as_str()) {
             active_id.set(Some(focus_id.clone()));
+        }
+        focused.set(Some(focus_id.clone()));
+    };
+    let blur_id = node.id.clone();
+    let onblur = move |event: Event<FocusData>| {
+        event.stop_propagation();
+        if focused.peek().as_deref() == Some(blur_id.as_str()) {
+            focused.set(None);
         }
     };
 
@@ -323,6 +332,7 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
         .attr("aria-disabled", disabled.then_some("true"))
         .attr("tabindex", li_tabindex)
         .event("onfocus", onfocus)
+        .event("onblur", onblur)
         // A press would focus a row the roving stop is not on, where no key works.
         .event("onmousedown", move |event: Event<MouseData>| {
             if disabled {

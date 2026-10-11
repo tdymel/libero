@@ -13,12 +13,14 @@ use super::{PlatformError, backend};
 pub(crate) trait ContentSubscription {}
 
 /// Calls `callback` after `mounted`'s subtree changed (nodes, text, focusability).
-/// Blitz sees only scroll-size changes, within 0.5 s; elsewhere off the web `None`.
+/// Blitz sees only scroll-size changes, within 0.5 s; a WebView finds the element by
+/// `tag`, which it must carry ([`ElementHandle::attributes`](crate::hooks::ElementHandle::attributes)).
 pub(crate) fn on_content_change(
     mounted: &Rc<MountedData>,
+    tag: Option<u64>,
     callback: Box<dyn Fn()>,
 ) -> Option<Box<dyn ContentSubscription>> {
-    backend::on_content_change(mounted, callback)
+    backend::on_content_change(mounted, tag, callback)
 }
 
 /// Calls `on_reset` on each `reset` of the `<form>` owning `mounted`. `None` when
@@ -40,6 +42,12 @@ pub(crate) fn set_value_by_id(id: &str, value: &str) -> Result<(), PlatformError
 /// can query (1191). `Unsupported` elsewhere: `query_selector` there can.
 pub(crate) fn focus_selector(selector: &str) -> Result<(), PlatformError> {
     backend::focus_selector(selector)
+}
+
+/// Clicks the page's first match of `selector`, for a WebView, where no handle can
+/// query or click (5). `Unsupported` elsewhere.
+pub(crate) fn click_selector(selector: &str) -> Result<(), PlatformError> {
+    backend::click_selector(selector)
 }
 
 /// Focuses the tab stop after (or before) the page's first match of `selector`, as Tab

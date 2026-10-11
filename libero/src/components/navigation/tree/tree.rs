@@ -12,7 +12,10 @@ use crate::{
     hooks::{
         ElementHandle, TYPEAHEAD_RESET, typeahead_match, use_element, use_theme, use_typeahead,
     },
-    platform::{ElementApi, logical_key, when_free},
+    platform::{
+        ElementApi, OBSERVE_ATTR, PlatformError, click_selector, focus_selector, logical_key,
+        when_free,
+    },
     theme::Size,
     utils::warn,
 };
@@ -210,32 +213,87 @@ fn expand_siblings(order: &[VisibleNode], node: &VisibleNode, expansion: Expansi
     expansion.set(next);
 }
 
-// A leaf's link or button is out of the tab order, so Enter clicks it from here.
-fn click_tree_item(root: &ElementHandle, target_id: &str) {
-    let id = css_string(target_id);
-    let selector = format!("[data-tree-id={id}] a, [data-tree-id={id}] button");
-    let _ = root.query_selector(&selector).and_then(|el| el.click());
+/// The row whose `<li>` holds focus, kept from the rows' focus events for a
+/// WebView, whose handles cannot query (5).
+#[derive(Clone, Copy)]
+pub(super) struct FocusedRow(pub Signal<Option<String>>);
+
+/// This tree's rows: through the root's handle, or on a WebView by page-side
+/// selectors scoped to the root's tag, so two `Tree`s can share node ids.
+#[derive(Clone, Copy)]
+struct TreeDom {
+    root: ElementHandle,
+    focused: Signal<Option<String>>,
 }
 
-// Only while the row itself holds focus; an input inside a row keeps its keys.
-fn tree_item_focused(root: &ElementHandle, target_id: &str) -> bool {
-    let selector = format!("[data-tree-id={}]", css_string(target_id));
-    root.query_selector(&selector)
-        .is_ok_and(|el| el.is_focused())
-}
+impl TreeDom {
+    fn page_row(self, id: &str) -> String {
+        let tag = self.root.tag().unwrap_or_default();
+        format!("[{OBSERVE_ATTR}='{tag}'] [data-tree-id={}]", css_string(id))
+    }
 
-// The row's own content only (`> div`), not a nested row's in its group.
-fn row_control_focused(root: &ElementHandle, target_id: &str) -> bool {
-    let id = css_string(target_id);
-    let selector = format!("[data-tree-id={id}] > div :is(a, button)");
-    root.query_selector(&selector)
-        .is_ok_and(|el| el.is_focused())
-}
+    // A leaf's link or button is out of the tab order, so Enter clicks it from here.
+    fn click(self, target_id: &str) {
+        let id = css_string(target_id);
+        let selector = format!("[data-tree-id={id}] a, [data-tree-id={id}] button");
+        match self.root.query_selector(&selector) {
+            Err(PlatformError::Unsupported) => {
+                let row = self.page_row(target_id);
+                let _ = click_selector(&format!("{row} a, {row} button"));
+            }
+            found => {
+                let _ = found.and_then(|el| el.click());
+            }
+        }
+    }
 
-// Scoped to this tree's root, so two `Tree`s can share node ids.
-fn focus_tree_item(root: &ElementHandle, target_id: &str) {
-    let selector = format!("[data-tree-id={}]", css_string(target_id));
-    let _ = root.query_selector(&selector).and_then(|el| el.focus());
+    // Only while the row itself holds focus; an input inside a row keeps its keys.
+    fn focused(self, target_id: &str) -> bool {
+        let selector = format!("[data-tree-id={}]", css_string(target_id));
+        match self.root.query_selector(&selector) {
+            Ok(el) => el.is_focused(),
+            Err(PlatformError::Unsupported) => self.focused.peek().as_deref() == Some(target_id),
+            Err(_) => false,
+        }
+    }
+
+    // A clicked control in the row's own content (`> div`), not a nested row's,
+    // hands focus back to the row.
+    fn refocus_from_control(self, target_id: &str) {
+        let id = css_string(target_id);
+        let selector = format!("[data-tree-id={id}] > div :is(a, button)");
+        match self.root.query_selector(&selector) {
+            Err(PlatformError::Unsupported) => {
+                let row = self.page_row(target_id);
+                let _ = focus_selector(&format!("{row}:has(> div :is(a, button):focus)"));
+            }
+            found => {
+                if found.is_ok_and(|el| el.is_focused()) {
+                    self.focus(target_id);
+                }
+            }
+        }
+    }
+
+    fn focus(self, target_id: &str) {
+        let selector = format!("[data-tree-id={}]", css_string(target_id));
+        match self.root.query_selector(&selector) {
+            Err(PlatformError::Unsupported) => {
+                let _ = focus_selector(&self.page_row(target_id));
+            }
+            found => {
+                let _ = found.and_then(|el| el.focus());
+            }
+        }
+    }
+
+    // Whether focus sits anywhere in the tree.
+    fn holds_focus(self) -> bool {
+        match self.root.query_selector(":focus") {
+            Err(PlatformError::Unsupported) => self.focused.peek().is_some(),
+            found => found.is_ok(),
+        }
+    }
 }
 
 parts_enum! {
@@ -397,6 +455,8 @@ base_props! {
 fn TreeCore(props: TreeCoreProps) -> Element {
     let theme = use_theme();
     let root = use_element();
+    let FocusedRow(focused) = use_context_provider(|| FocusedRow(Signal::new(None)));
+    let dom = TreeDom { root, focused };
     let mut active_id = use_signal(|| None::<String>);
     let mut expanded = use_signal(|| {
         props
@@ -454,10 +514,10 @@ fn TreeCore(props: TreeCoreProps) -> Element {
 
     // A focused row that leaves `data` takes focus with it. Read before the
     // DOM update, while the doomed row still holds focus.
-    let refocus = vanished && root.query_selector(":focus").is_ok();
+    let refocus = vanished && dom.holds_focus();
     use_effect(use_reactive!(|resolved_active, refocus| {
         if let Some(id) = resolved_active.filter(|_| refocus) {
-            focus_tree_item(&root, &id);
+            dom.focus(&id);
         }
     }));
     // The first row with that id, as `Tabs` does.
@@ -489,7 +549,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
         let Some(current) = resolved_active_for_keydown.clone() else {
             return;
         };
-        if !tree_item_focused(&root, &current) {
+        if !dom.focused(&current) {
             return;
         }
         let order = visible_order(&data_for_keydown, &expanded.read());
@@ -502,7 +562,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
         let mut go_to = |target: Option<String>| {
             if let Some(target) = target {
                 active_id_for_keydown.set(Some(target.clone()));
-                focus_tree_item(&root, &target);
+                dom.focus(&target);
             }
         };
 
@@ -565,7 +625,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                     if node.has_children {
                         expansion.toggle(&current);
                     } else {
-                        click_tree_item(&root, &current);
+                        dom.click(&current);
                     }
                 }
             }
@@ -587,7 +647,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                     if node.has_children {
                         expansion.toggle(&current);
                     } else {
-                        click_tree_item(&root, &current);
+                        dom.click(&current);
                     }
                 }
             }
@@ -610,10 +670,8 @@ fn TreeCore(props: TreeCoreProps) -> Element {
     let onclick = move |_: Event<MouseData>| {
         spawn(async move {
             when_free(move || {
-                if let Some(id) = active_id.peek().clone()
-                    && row_control_focused(&root, &id)
-                {
-                    focus_tree_item(&root, &id);
+                if let Some(id) = active_id.peek().clone() {
+                    dom.refocus_from_control(&id);
                 }
             });
         });
@@ -637,7 +695,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
             "aria-label": props.aria_label,
             onkeydown,
             onclick,
-            attributes: props.attributes,
+            attributes: [props.attributes, root.attributes()].concat(),
             for (index , node) in props.data.iter().enumerate() {
                 TreeRow {
                     key: "{node.id}",

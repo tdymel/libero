@@ -57,8 +57,13 @@ impl ElementApi for MountedElement {
         })
     }
 
-    /// `MountedData` has no way to reach an image's own data.
+    /// `MountedData` has no way to reach an image's own data; a WebView's handle found
+    /// by selector asks the page.
     fn natural_size(&self) -> Read<Dimensions> {
+        #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+        if let Some(read) = super::webview::selected_natural_size(&self.0) {
+            return read;
+        }
         Box::pin(std::future::ready(Err(PlatformError::Unsupported)))
     }
 

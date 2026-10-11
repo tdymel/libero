@@ -503,7 +503,7 @@ fn ScrollAreaContent(content: ElementHandle, children: Element) -> Element {
         .variables(&variables)
         .prepare()
         .element(&content)
-        .render(HtmlTag::Div, Vec::new(), children)
+        .render(HtmlTag::Div, content.attributes(), children)
 }
 
 /// Scrolls its content with themed scrollbars, filling the parent by default.

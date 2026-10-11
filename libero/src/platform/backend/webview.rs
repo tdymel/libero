@@ -645,6 +645,36 @@ pub(super) fn observe_resize(
     tag: u64,
     callback: Box<dyn Fn()>,
 ) -> Option<Box<dyn ContentSubscription>> {
+    observe_tagged(
+        tag,
+        "observer = new ResizeObserver(() => dioxus.send(true));
+        observer.observe(target);",
+        callback,
+    )
+}
+
+/// A `MutationObserver` on the subtree of the element carrying `tag`'s `OBSERVE_ATTR`,
+/// as the web's `on_content_change` (963): one call per batch of records.
+pub(super) fn observe_content(
+    tag: u64,
+    callback: Box<dyn Fn()>,
+) -> Option<Box<dyn ContentSubscription>> {
+    observe_tagged(
+        tag,
+        "observer = new MutationObserver(() => dioxus.send(true));
+        observer.observe(target, { childList: true, subtree: true, characterData: true,
+            attributeFilter: ['tabindex', 'disabled', 'href', 'contenteditable', 'hidden', 'open', 'class'] });",
+        callback,
+    )
+}
+
+/// Runs `observe`, which sets `observer` watching `target`, once the element carrying
+/// `tag`'s `OBSERVE_ATTR` renders; each `dioxus.send` calls `callback`.
+fn observe_tagged(
+    tag: u64,
+    observe: &str,
+    callback: Box<dyn Fn()>,
+) -> Option<Box<dyn ContentSubscription>> {
     if !runs_scripts() {
         return None;
     }
@@ -657,8 +687,7 @@ pub(super) fn observe_resize(
             const start = () => {{
                 const target = document.querySelector('[' + attr + '=\"' + tag + '\"]');
                 if (!target) return false;
-                observer = new ResizeObserver(() => dioxus.send(true));
-                observer.observe(target);
+                {observe}
                 return true;
             }};
             const waiting = start() ? null : new MutationObserver(() => {{
@@ -1019,6 +1048,23 @@ impl RenderedElementBacking for SelectedElement {
     fn set_focus(&self, focus: bool) -> Mounted<()> {
         self.command(json!(focus), "if (value) found.focus(); else found.blur();")
     }
+}
+
+/// An `<img>` found by selector reads its natural size page-side (961); `None` for any
+/// other backing. Zero until decoded, reported as not there, as on the web.
+pub(super) fn selected_natural_size(mounted: &MountedData) -> Option<Read<Dimensions>> {
+    let read = mounted
+        .downcast::<SelectedElement>()?
+        .read::<Option<(f64, f64)>>(
+            "return found?.naturalWidth && found.naturalHeight
+            ? [found.naturalWidth, found.naturalHeight] : null;",
+        );
+    Some(Box::pin(async move {
+        match read.await {
+            Ok(Some((width, height))) => Ok(Dimensions { width, height }),
+            _ => Err(PlatformError::NotFound),
+        }
+    }))
 }
 
 fn behavior(behavior: ScrollBehavior) -> &'static str {
@@ -2408,6 +2454,15 @@ pub(super) fn focus_selector(selector: &str) -> Result<(), PlatformError> {
         return Err(PlatformError::Unsupported);
     }
     eval_with(json!(selector), "document.querySelector(data)?.focus();");
+    Ok(())
+}
+
+/// Queued, as [`focus_selector`].
+pub(super) fn click_selector(selector: &str) -> Result<(), PlatformError> {
+    if !runs_scripts() {
+        return Err(PlatformError::Unsupported);
+    }
+    eval_with(json!(selector), "document.querySelector(data)?.click();");
     Ok(())
 }
 

@@ -4,7 +4,9 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, OptionSource, Options, ScaleOrCss, recast_parts},
+        common::{
+            HtmlTag, Input, OptionSource, Options, ScaleOrCss, has_shortcut_modifier, recast_parts,
+        },
         form::{
             Asks, LiveControl, Select, SelectOptionArgs, field_control_sx, field_props, row_label,
             use_bound, use_field, use_field_frame,
@@ -12,7 +14,7 @@ use crate::{
         layout::use_box,
     },
     hooks::use_theme,
-    platform::opens_select_picker,
+    platform::{opens_select_picker, soft_keyboard_app},
     sx::{StaticSx, sx},
     tokens::NamedColorCss,
     utils::warn,
@@ -80,6 +82,18 @@ fn runs(groups: &[Option<String>]) -> Vec<(usize, usize)> {
         }
     }
     runs
+}
+
+/// The enabled option an arrow steps to from `selected`, `None` at the end. Down
+/// from no selection lands on the first.
+fn stepped(selected: Option<usize>, refused: &[bool], forward: bool) -> Option<usize> {
+    let enabled = |index: &usize| !refused[*index];
+    match (selected, forward) {
+        (None, true) => (0..refused.len()).find(enabled),
+        (None, false) => None,
+        (Some(at), true) => (at + 1..refused.len()).find(enabled),
+        (Some(at), false) => (0..at).rev().find(enabled),
+    }
 }
 
 /// A styled native `<select>` over the caller's options type.
@@ -239,6 +253,32 @@ fn NativeSelectShell<T: Options>(live: Signal<Option<T>>, field: NativeSelectPro
         })
     };
 
+    // Android's WebView may take an arrow on a closed `<select>` as a focus move
+    // to the next field (3272), so the arrows step the selection here.
+    let step_by_hand = cfg!(target_os = "android") && soft_keyboard_app();
+    let onkeydown = {
+        let (choices, posted, refused) = (choices.clone(), posted.clone(), refused.clone());
+        let bound_value = bound_value.clone();
+        move |event: KeyboardEvent| {
+            let forward = match event.key() {
+                Key::ArrowDown => true,
+                Key::ArrowUp => false,
+                _ => return,
+            };
+            if has_shortcut_modifier(&event) {
+                return;
+            }
+            event.prevent_default();
+            let current = bound_value.clone().unwrap_or_else(|| live.cloned());
+            let selected = current
+                .as_ref()
+                .and_then(|value| choices.iter().position(|option| option == value));
+            if let Some(next) = stepped(selected, &refused, forward) {
+                pick.call(posted[next].clone());
+            }
+        }
+    };
+
     let placeholder = props.placeholder.clone().unwrap_or_default();
 
     // `selected` on each `<option>`, not `value` on the `<select>`: that missed
@@ -295,6 +335,7 @@ fn NativeSelectShell<T: Options>(live: Signal<Option<T>>, field: NativeSelectPro
         .attr("data-controlled", true)
         .attr("data-placeholder", unpicked)
         .event("onchange", move |event: FormEvent| pick.call(event.value()))
+        .event("onkeydown", step_by_hand.then_some(onkeydown))
         .render(
             HtmlTag::Select,
             props.attributes,
@@ -351,7 +392,19 @@ fn listbox<T: Options>(props: NativeSelectProps<T>) -> Element {
 
 #[cfg(test)]
 mod tests {
-    use super::{repeats, runs};
+    use super::{repeats, runs, stepped};
+
+    /// Todo 3272: the arrows skip disabled options and stop at either end.
+    #[test]
+    fn an_arrow_steps_to_the_next_enabled_option() {
+        let refused = [true, false, true, false];
+        assert_eq!(stepped(None, &refused, true), Some(1));
+        assert_eq!(stepped(None, &refused, false), None);
+        assert_eq!(stepped(Some(1), &refused, true), Some(3));
+        assert_eq!(stepped(Some(3), &refused, true), None);
+        assert_eq!(stepped(Some(3), &refused, false), Some(1));
+        assert_eq!(stepped(Some(1), &refused, false), None);
+    }
 
     /// Todo 583: adjacent equal labels are one `<optgroup>`, a repeat later is another.
     #[test]

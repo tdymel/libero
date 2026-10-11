@@ -185,7 +185,8 @@ impl ContentChanges {
 }
 
 /// Counts the changes to `element`'s subtree while `enabled`, so an effect
-/// reading it re-runs. Stays `0` where the renderer cannot watch.
+/// reading it re-runs. Stays `0` where the renderer cannot watch. On a WebView
+/// the element must carry [`ElementHandle::attributes`].
 pub(crate) fn use_content_changes(element: ElementHandle, enabled: bool) -> ContentChanges {
     // Bumped from the observer, which runs outside every scope.
     let changes = use_signal(|| 0u64);
@@ -198,9 +199,9 @@ pub(crate) fn use_content_changes(element: ElementHandle, enabled: bool) -> Cont
         if !enabled {
             return;
         }
-        let watching = element
-            .mounted()
-            .and_then(|mounted| on_content_change(&mounted, Box::new(move || bump(changes))));
+        let watching = element.mounted().and_then(|mounted| {
+            on_content_change(&mounted, element.tag(), Box::new(move || bump(changes)))
+        });
         watched.set(watching);
     }));
     ContentChanges {

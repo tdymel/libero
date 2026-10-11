@@ -1,4 +1,5 @@
-//! `save_file` (2016): a button saving a small CSV, its outcome printed below.
+//! `save_file` (2016): buttons saving a small CSV and a few binary bytes, the
+//! outcome printed below.
 //! `html[data-covered]` marks frames stopping for half a second: Android's share
 //! sheet covers the activity, which draws no frame and applies no edit until it closes.
 
@@ -31,6 +32,15 @@ fn SaveFilePage() -> Element {
                 outcome.set(Some(saved));
             },
             "Save rows.csv"
+        }
+        // Not UTF-8, so Android shares it as a file (2078).
+        Button {
+            id: "save-binary",
+            onclick: move |_| async move {
+                let saved = save_file("bytes.bin", "application/octet-stream", vec![0xff, 0, 0xfe]).await;
+                outcome.set(Some(saved));
+            },
+            "Save bytes.bin"
         }
         Text { id: "outcome",
             if let Some(outcome) = outcome() {

@@ -1,11 +1,14 @@
 //! `NativeSelect` and `Textarea`: what assistive technology hears of the label,
 //! the captions and the status, and the placeholder coming back.
 
+use anyhow::Result;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 const WIRED: &str = "[data-case=wired] select";
+const GROUPED: &str = "[data-case=grouped] select";
 
 #[test]
 fn it_meets_the_baseline() {
@@ -138,7 +141,6 @@ fn groups_and_a_disabled_option_reach_assistive_technology() {
             .await
             .unwrap();
         let page = &fixture.page;
-        const GROUPED: &str = "[data-case=grouped] select";
 
         let snapshot = ax::snapshot(page, "[data-case=grouped]").await.unwrap();
         assert!(snapshot.contains(r#"group "Stone""#), "{snapshot}");
@@ -227,3 +229,33 @@ fn the_captions_the_rule_and_the_placeholder_reach_assistive_technology() {
         fixture.close().await.unwrap();
     });
 }
+
+async fn grouped_value<D: Driver>(d: &mut D, expected: &str, after: &str) -> Result<()> {
+    let script = format!("document.querySelector({GROUPED:?}).value");
+    eventually(d, &format!("{expected} after {after}"), async |d| {
+        Ok(d.evaluate(&script).await?.as_str() == Some(expected))
+    })
+    .await
+}
+
+/// Todo 3272: the arrows step a focused select and leave focus on it, also in
+/// Android's WebView, whose focus search took ArrowDown to the next field.
+async fn arrows_step<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(GROUPED).await?;
+    eventually_focused(d, GROUPED, "focus").await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    grouped_value(d, "Damson", "ArrowDown past the refused Cherry").await?;
+    eventually_focused(d, GROUPED, "ArrowDown").await?;
+    d.press(keyboard::ARROW_UP).await?;
+    grouped_value(d, "Apple", "ArrowUp").await?;
+    eventually_focused(d, GROUPED, "ArrowUp").await
+}
+
+e2e::scenario!(
+    the_arrows_step_a_focused_native_select,
+    "/native-select",
+    arrows_step,
+    native: skip("a listbox Select stands in for the <select> on Blitz"),
+    desktop: skip("WebKitGTK opens the picker on an arrow"),
+    ios: skip("WKWebView opens the picker on an arrow")
+);

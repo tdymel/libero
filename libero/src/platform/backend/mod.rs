@@ -120,19 +120,23 @@ fn offset_and_size(element: &dyn ElementApi) -> Read<((f64, f64), Dimensions)> {
     })
 }
 
-/// The web has a `MutationObserver`; Blitz watches the subtree's scroll size.
+/// The web and a WebView (by `tag`) have a `MutationObserver`; Blitz watches the
+/// subtree's scroll size.
 pub(crate) fn on_content_change(
     mounted: &Rc<MountedData>,
+    tag: Option<u64>,
     callback: Box<dyn Fn()>,
 ) -> Option<Box<dyn ContentSubscription>> {
+    #[cfg(any(target_arch = "wasm32", feature = "native"))]
+    let _ = tag;
     #[cfg(target_arch = "wasm32")]
     return web::on_content_change(mounted, callback);
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     return blitz::on_content_change(mounted, callback);
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     {
-        let _ = (mounted, callback);
-        None
+        let _ = mounted;
+        webview::observe_content(tag?, callback)
     }
 }
 
@@ -782,6 +786,17 @@ pub(crate) fn set_value_by_id(id: &str, value: &str) -> Result<(), super::Platfo
 pub(crate) fn focus_selector(selector: &str) -> Result<(), super::PlatformError> {
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     return webview::focus_selector(selector);
+    #[cfg(any(target_arch = "wasm32", feature = "native"))]
+    return {
+        let _ = selector;
+        Err(super::PlatformError::Unsupported)
+    };
+}
+
+/// Only a WebView - see [`click_selector`](crate::platform::click_selector).
+pub(crate) fn click_selector(selector: &str) -> Result<(), super::PlatformError> {
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return webview::click_selector(selector);
     #[cfg(any(target_arch = "wasm32", feature = "native"))]
     return {
         let _ = selector;
