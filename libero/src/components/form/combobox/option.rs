@@ -59,7 +59,6 @@ static COMBOBOX_ROW_SX: StaticSx = StaticSx::new(|| {
         .align_items("center")
         .gap("8px")
         .width("100%")
-        .cursor("pointer")
         .user_select("none")
         .white_space("nowrap")
         .overflow("hidden")
@@ -71,7 +70,8 @@ static COMBOBOX_ROW_SX: StaticSx = StaticSx::new(|| {
                 .text_overflow("ellipsis"),
         )
         // Hover and the keyboard's row share the tint; only the active row takes the ring.
-        .hover(sx().background(ROW_HOVER_TINT))
+        // The pointer cursor only under hover: a bare one makes the row a Tab stop under Android's spatial navigation (3158).
+        .hover(sx().background(ROW_HOVER_TINT).cursor("pointer"))
         .when("active", sx().background(ROW_HOVER_TINT))
         // The contrast twin, not `primary.7` (hard to read). A ring means active.
         .when(
@@ -87,7 +87,8 @@ static COMBOBOX_ROW_SX: StaticSx = StaticSx::new(|| {
         // Last, so it beats the tints by source order. The hover is undone by hand.
         .when(
             "disabled",
-            disabled_look_sx("not-allowed").hover(sx().background("transparent")),
+            disabled_look_sx("not-allowed")
+                .hover(sx().background("transparent").cursor("not-allowed")),
         )
 });
 

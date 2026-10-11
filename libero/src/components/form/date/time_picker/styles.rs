@@ -74,7 +74,7 @@ pub(in super::super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
                 .align_items("center")
                 .min_height("max(1.25em, 24px)")
                 .color("text-dimmed")
-                .cursor("pointer"),
+                .hover(sx().cursor("pointer")),
         )
         .selector("& [data-slot='spin']:focus-visible", focus_ring_sx())
         .selector(

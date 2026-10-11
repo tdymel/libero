@@ -78,7 +78,7 @@ static MULTI_VALUE_SX: StaticSx = StaticSx::new(|| {
         .align_self("stretch")
         // Without it a long chip pushes the frame wider instead of wrapping.
         .min_width("0")
-        .cursor("pointer")
+        .hover(sx().cursor("pointer"))
         .user_select("none")
         // Carries the `aria-activedescendant` id. `min-width: 0` lets a long chip ellipsise.
         .selector(

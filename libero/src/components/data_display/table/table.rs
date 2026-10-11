@@ -506,7 +506,7 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     .when(
         "row-click",
         sx().selector(
-            "& tbody tr:not([data-empty]):not([data-detail]):not([data-skeleton])",
+            "& tbody tr:not([data-empty]):not([data-detail]):not([data-skeleton]):hover",
             sx().cursor("pointer"),
         ),
     )

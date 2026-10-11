@@ -177,6 +177,14 @@ pub async fn a_disabled_row_looks_disabled<D: Driver>(d: &mut D, _route: &str) -
             .await?,
     );
     anyhow::ensure!(asia != europe, "label colour {asia} as an enabled row's");
+    // The pointer cursor is a hover rule (3158): the disabled row's hover keeps not-allowed.
+    for (row, cursor) in [(ASIA, "not-allowed"), (EUROPE, "pointer")] {
+        d.hover(row).await?;
+        eventually(d, "the hovered row's cursor", async |d| {
+            Ok(d.style(row, "cursor").await? == cursor)
+        })
+        .await?;
+    }
     Ok(())
 }
 

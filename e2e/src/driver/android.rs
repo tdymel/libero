@@ -250,13 +250,42 @@ impl Android {
     /// The Tab stops of the page, after a D-pad key turned spatial navigation on, that
     /// no focusable element of its own owns: a `cursor: pointer` wrapper (3156).
     pub async fn stray_tab_stops(&mut self) -> Result<Vec<String>> {
+        self.tab_walk(true).await
+    }
+
+    /// [`Self::stray_tab_stops`] from the focused element on, so an open list stays open.
+    pub async fn stray_tab_stops_open(&mut self) -> Result<Vec<String>> {
+        self.tab_walk(false).await
+    }
+
+    /// The drawn topmost elements of a `cursor: pointer` subtree that no focusable element
+    /// owns: the Tab stops spatial navigation would add, found without the Tab walk that a
+    /// list closing on Tab cuts short.
+    pub async fn pointer_wrappers(&mut self) -> Result<Vec<String>> {
+        pointer::move_to(&self.page, pointer::Point { x: -5.0, y: -5.0 }).await?;
+        json(
+            &self.page,
+            "[...document.querySelectorAll('body *')].filter(e => {
+                const cursor = el => el ? getComputedStyle(el).cursor : '';
+                if (cursor(e) !== 'pointer' || cursor(e.parentElement) === 'pointer') return false;
+                // Dioxus' toast host is not libero's.
+                if (!e.getClientRects().length || e.matches(':hover') || e.closest('#__dx-toast-inner')) return false;
+                return !e.matches('a[href], area[href], button, input, select, textarea, summary, iframe, [tabindex], [contenteditable]');
+            }).map(e => e.outerHTML.slice(0, 240))",
+        )
+        .await
+    }
+
+    async fn tab_walk(&mut self, from_top: bool) -> Result<Vec<String>> {
         self.leave_touch_mode().await?;
         input(&["keyevent".into(), keycode("ArrowDown")?.to_string()]).await?;
         // The emulator's pointer rests over the page: nothing hovered, as on a phone.
         pointer::move_to(&self.page, pointer::Point { x: -5.0, y: -5.0 }).await?;
-        self.page
-            .evaluate("document.activeElement?.blur(); scrollTo(0, 0)")
-            .await?;
+        if from_top {
+            self.page
+                .evaluate("document.activeElement?.blur(); scrollTo(0, 0)")
+                .await?;
+        }
         let describe = "(() => {
             const e = document.activeElement;
             if (!e || e === document.body) return null;
