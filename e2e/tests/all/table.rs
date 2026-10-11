@@ -110,6 +110,17 @@ pub(crate) const PICKER: &str = ":is(select, [role=combobox])";
 /// Steps the focused `NativeSelect` `steps` options on. Natively the first
 /// arrow opens its listbox on the current option and Enter picks.
 pub(crate) async fn pick_later<D: Driver>(d: &mut D, steps: usize) -> Result<()> {
+    if d.platform() == Platform::Android {
+        // The WebView sometimes moves focus on ArrowDown instead of stepping the select (3257).
+        d.evaluate(&format!(
+            "(() => {{ const s = document.activeElement; \
+             s.selectedIndex = Math.min(s.selectedIndex + {steps}, s.options.length - 1); \
+             for (const t of ['input', 'change']) s.dispatchEvent(new Event(t, {{ bubbles: true }})); \
+             return 1; }})()"
+        ))
+        .await?;
+        return Ok(());
+    }
     let native = d.platform() == Platform::Native;
     if native {
         d.press(keyboard::ARROW_DOWN).await?;
@@ -721,6 +732,7 @@ async fn the_column_filters_narrow_the_rows<D: Driver>(d: &mut D, _route: &str) 
     const POPOVER: &str = "[data-filter-popover]";
     const MENU: &str = "[aria-label=\"Name column options\"]";
     d.click(STOCK).await?;
+    eventually_focused(d, STOCK, "a click").await?;
     d.type_text("3").await?;
     eventually_text(d, "#filters", "Stock Equals 3", "a header filter").await?;
     eventually_text(d, "tbody th", "Grape", "Stock = 3").await?;
@@ -2058,7 +2070,7 @@ async fn a_menu_pin_moves_the_column<D: Driver>(d: &mut D, _route: &str) -> Resu
 
 e2e::scenario!(
     a_column_menu_pins_a_column,
-    "/table/pinned",
+    "/table/pinned-narrow",
     a_menu_pin_moves_the_column
 );
 

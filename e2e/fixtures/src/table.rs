@@ -49,6 +49,10 @@ pub const ROUTES: Routes = &[
         || rsx! { PinnedTablePage { rtl: false, sized: false } },
     ),
     (
+        "/table/pinned-narrow",
+        || rsx! { PinnedTablePage { rtl: false, narrow: true } },
+    ),
+    (
         "/table/windowed",
         || rsx! { WindowedTablePage { pinned: false } },
     ),
@@ -531,19 +535,29 @@ fn StickySelectPage() -> Element {
 
 /// The wide table, selectable with column menus: Name pinned to the start,
 /// Supplier to the end; `#pinned` echoes `onpinnedcolumnschange`. `rtl` sets
-/// `dir="rtl"` around it. Without `sized` no column declares a width (todo 2047).
+/// `dir="rtl"` around it. Without `sized` no column declares a width (todo 2047);
+/// `narrow` has short cells and no checkbox column, so the pinned pair leaves room
+/// for a column between them on a 412px phone (3256).
 #[component]
-fn PinnedTablePage(rtl: bool, #[props(default = true)] sized: bool) -> Element {
+fn PinnedTablePage(
+    rtl: bool,
+    #[props(default = true)] sized: bool,
+    #[props(default = false)] narrow: bool,
+) -> Element {
     let mut pinned = use_signal(String::new);
     let headers = [
         "Name", "Origin", "Season", "Colour", "Taste", "Storage", "Price", "Supplier",
     ];
+    let (width, tail) = match narrow {
+        true => ("120px", ""),
+        false => ("240px", "_description"),
+    };
     let columns = headers
         .into_iter()
         .map(|header| {
             let column = column(header)
-                .value(move |fruit: &Fruit| format!("{}_{header}_description", fruit.name));
-            if sized { column.width("240px") } else { column }
+                .value(move |fruit: &Fruit| format!("{}_{header}{tail}", fruit.name));
+            if sized { column.width(width) } else { column }
         })
         .collect();
     rsx! {
@@ -551,7 +565,7 @@ fn PinnedTablePage(rtl: bool, #[props(default = true)] sized: bool) -> Element {
             Table {
                 caption: "Fruit catalogue",
                 scroll: true,
-                selectable: true,
+                selectable: !narrow,
                 column_menu: true,
                 striped: true,
                 row_key: |fruit: &Fruit| fruit.name.to_string(),
