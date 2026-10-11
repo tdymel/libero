@@ -305,6 +305,7 @@ e2e::scenario!(
     a_sort_follows_the_apps_language,
     "/table-grid/collation",
     sorts_by_language,
+    native: skip("3386: reads the page language by script, Blitz has none and no Intl.Collator"),
     android: skip("3294: the WebView app has no Intl.Collator to call")
 );
 
@@ -554,6 +555,7 @@ e2e::scenario!(
     a_yes_no_editor_is_a_checkbox_and_a_date_editor_names_its_form,
     "/table-grid/editable/formats",
     formats,
+    native: skip("3386: reads the editor's checked property by script, which Blitz has none of"),
     android: skip("958: roving keys are inert in the emulator's WebView")
 );
 

@@ -1208,7 +1208,8 @@ async fn pan_stops_at_the_edge<D: Driver>(d: &mut D, _route: &str) -> Result<()>
 e2e::scenario!(
     a_zoomed_picture_pans_only_to_its_edge,
     "/lightbox",
-    pan_stops_at_the_edge
+    pan_stops_at_the_edge,
+    native: skip("3386: reads the picture's size and pan by script, which Blitz has none of")
 );
 
 /// Todo 1067: two fingers spread zoom the picture and do not close the viewer;
