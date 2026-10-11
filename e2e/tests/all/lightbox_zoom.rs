@@ -526,7 +526,7 @@ async fn open<D: Driver>(d: &mut D) -> Result<()> {
     // The stage's first scroll settles before a gesture lands on it: the
     // picture is centred and holds still from one idle to the next.
     let (width, _) = d.viewport().await?;
-    eventually(d, "the stage's first scroll to settle", async |d| {
+    if let Err(e) = eventually(d, "the stage's first scroll to settle", async |d| {
         let before = d.rect(PICTURE).await?;
         d.idle().await;
         let after = d.rect(PICTURE).await?;
@@ -534,6 +534,14 @@ async fn open<D: Driver>(d: &mut D) -> Result<()> {
         Ok(after.x == before.x && (centre - width / 2.0).abs() < 1.0)
     })
     .await
+    {
+        let v = d.viewport().await?;
+        let pic = d.rect(PICTURE).await?;
+        let dialog = d.rect("[role=dialog]").await?;
+        let j = d.evaluate("[document.documentElement.clientWidth, devicePixelRatio, visualViewport.width]").await?;
+        bail!("DIAG {e}: viewport={v:?} picture={pic:?} dialog={dialog:?} js={j}");
+    }
+    Ok(())
 }
 
 /// Todo 1068: a tap on "Zoom in" zooms (a WebView answered the frame query

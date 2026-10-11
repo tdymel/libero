@@ -451,12 +451,18 @@ e2e::scenario!(
 /// A fixed bar docks to the viewport's bottom edge, spans its width, publishes the
 /// height it measures, and a scroll leaves it there.
 async fn a_fixed_bar_docks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    eventually(d, "the bar to dock", async |d| {
+    if let Err(e) = eventually(d, "the bar to dock", async |d| {
         let (width, height) = d.viewport().await?;
         let bar = d.rect("#fixed").await?;
         Ok((bar.y + bar.height - height).abs() < 1.0 && (bar.width - width).abs() < 1.0)
     })
-    .await?;
+    .await
+    {
+        let v = d.viewport().await?;
+        let bar = d.rect("#fixed").await?;
+        let j = d.evaluate("[document.documentElement.clientWidth, document.documentElement.clientHeight, devicePixelRatio, visualViewport.width, visualViewport.height, document.documentElement.scrollHeight]").await?;
+        anyhow::bail!("DIAG {e}: viewport={v:?} bar={bar:?} js={j}");
+    }
     d.scroll_by(600.0).await?;
     d.idle().await;
     let (_, height) = d.viewport().await?;
