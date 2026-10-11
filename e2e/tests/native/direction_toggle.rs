@@ -63,6 +63,22 @@ fn space_turns_the_root_like_enter() {
     assert!(page.is_focused(BUTTON), "focus left the button");
 }
 
+/// Parallel tests share the process: a stored `rtl` mirrored later pages on Windows (3318).
+#[test]
+fn a_chosen_direction_lasts_only_its_mount() {
+    let mut page = mount(app);
+    page.click(BUTTON);
+    assert_eq!(page.attr("html", "dir").as_deref(), Some("rtl"));
+    drop(page);
+
+    let page = mount(app);
+    assert_eq!(
+        page.attr("html", "dir"),
+        None,
+        "the stored rtl reached a new page"
+    );
+}
+
 fn set_during_first_render() -> Element {
     let direction = use_direction();
     use_hook(|| direction.set(Direction::Rtl));

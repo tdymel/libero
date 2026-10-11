@@ -16,7 +16,7 @@
 
 use std::{
     cell::{Cell, RefCell},
-    path::Path,
+    path::{Path, PathBuf},
     rc::{Rc, Weak},
     sync::{
         Arc, Once, PoisonError, RwLock, RwLockReadGuard, TryLockError,
@@ -120,9 +120,11 @@ pub fn mount_in(app: fn() -> Element, scheme: ColorScheme) -> Page {
     page
 }
 
-/// Parallel tests share the process: a kept scheme or direction would leak between
-/// them, so every read and write fails and choices last the mount, as before 2228.
-const NO_STORAGE_DIR: &str = "/dev/null";
+/// A kept scheme or direction would leak between parallel tests, so storage is a file, not a
+/// directory, and every read and write fails: Windows created `/dev/null` as a folder (3318).
+fn no_storage_dir() -> PathBuf {
+    std::env::current_exe().expect("the test binary's path")
+}
 
 static STORAGE: RwLock<()> = RwLock::new(());
 
@@ -141,7 +143,7 @@ thread_local! {
 
 fn no_storage() {
     static ONCE: Once = Once::new();
-    ONCE.call_once(|| libero::platform::set_storage_dir(NO_STORAGE_DIR));
+    ONCE.call_once(|| libero::platform::set_storage_dir(no_storage_dir()));
 }
 
 /// The thread's share of [`STORAGE`]; `None` inside [`with_storage_dir`].
@@ -170,7 +172,7 @@ pub fn with_storage_dir<T>(dir: &Path, test: impl FnOnce() -> T) -> T {
     impl Drop for Restore {
         fn drop(&mut self) {
             OWNS_STORAGE.set(false);
-            libero::platform::set_storage_dir(NO_STORAGE_DIR);
+            libero::platform::set_storage_dir(no_storage_dir());
         }
     }
     no_storage();
