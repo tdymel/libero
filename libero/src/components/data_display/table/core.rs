@@ -285,14 +285,20 @@ pub(super) struct RowSpec {
     pub select: Option<Element>,
     /// With `striped`: an odd row among the shown ones, detail rows not counted.
     pub stripe: bool,
-    /// With `row_detail`: its toggle cell, and while open its detail row's id and body.
+    /// With `row_detail`: its toggle cell, and its detail row for a row with a toggle.
     pub toggle: Option<Element>,
-    pub detail: Option<(String, Element)>,
-    /// With `animate_details`, for a row with a toggle: its detail row's id and
-    /// whether it is open; the row then slides open and shut.
-    pub sliding: Option<(String, bool)>,
+    pub detail: Option<DetailSpec>,
+    /// With `animate_details`: the detail row slides open and shut.
+    pub sliding: bool,
     /// With `onrowreorder`: its slot among the shown rows and its name.
     pub reorder: Option<ReorderSlot>,
+}
+
+/// A row's detail row: its id, whether it is open, and its body while open.
+pub(super) struct DetailSpec {
+    pub id: String,
+    pub open: bool,
+    pub body: Option<Element>,
 }
 
 /// A body cell of header `column`: its text, or a caller's body, over `span`
@@ -394,15 +400,15 @@ pub(super) struct BodySpec {
     /// With `header_filters`: each header's filter field, by header index.
     pub filters: Option<Vec<Option<Element>>>,
     /// The first column header, measured where the filters row sticks under it by hand (Blitz).
-    pub head_cell: Option<ElementHandle>,
+    pub head_probe: Option<ElementHandle>,
     /// With `resizable_columns`: what the headers' resize grips share.
     pub resize: Option<ColumnResize>,
     /// With `column_menu`, off Blitz: what the unpinned headers' drag grips share.
     pub drag: Option<ColumnDrag>,
     /// With a sticky header: told its height, so a focus scroll clears it.
-    pub head_height: Option<EventHandler<f64>>,
-    /// The `thead`, which Blitz measures for `head_height`.
-    pub head: ElementHandle,
+    pub on_head_height: Option<EventHandler<f64>>,
+    /// The `thead`, which Blitz measures for `on_head_height`.
+    pub thead: ElementHandle,
     /// Told the rendered width of each side's innermost pinned column without `width`.
     pub pin_edge: Callback<(PinSide, f64)>,
     /// With `cell_focus`: the header cells are grid cells.
@@ -473,11 +479,11 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         reorder,
         reorder_header,
         filters,
-        head_cell,
+        head_probe,
         resize,
         drag,
-        head_height,
-        head,
+        on_head_height,
+        thead,
         pin_edge,
         grid,
         paged,
@@ -589,7 +595,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                             })
                             .into_iter()
                             .chain(
-                                head_cell
+                                head_probe
                                     .filter(|_| shown.first() == Some(&index))
                                     .map(|cell| listener("onmounted", cell.mount())),
                             )
@@ -631,6 +637,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                     }
                 });
             let cells: Vec<Element> = cells.collect();
+            // The lead header cells sit in the first row only: each spans every header row.
             rsx! {
                 tr { key: "{level}", aria_rowindex: indexed.then(|| (level + 1).to_string()),
                     {reorder_header.take()}
@@ -658,9 +665,9 @@ pub(super) fn render_body(body: BodySpec) -> Element {
             caption { id: spec.id, "{spec.text}" }
         }
         thead {
-            onmounted: head.mount(),
+            onmounted: thead.mount(),
             onresize: move |event: Event<ResizeData>| {
-                if let (Some(told), Ok(size)) = (head_height, event.get_border_box_size()) {
+                if let (Some(told), Ok(size)) = (on_head_height,event.get_border_box_size()) {
                     told.call(size.height);
                 }
             },
@@ -703,7 +710,7 @@ pub(super) fn body_rows(
 
 /// A row of a windowed body, which has no detail rows.
 pub(super) fn row_element(row: RowSpec, reorder: Option<&RowReorder>) -> Element {
-    debug_assert!(row.detail.is_none() && row.sliding.is_none());
+    debug_assert!(row.detail.is_none());
     row_and_detail(row, reorder).0
 }
 
@@ -728,7 +735,7 @@ fn row_and_detail(row: RowSpec, reorder: Option<&RowReorder>) -> (Element, Optio
         {cells}
     };
     let (row, detail) = match (reorder, slot) {
-        // The row draws its detail row: it moves with the row.
+        // The row draws its detail row: it moves with the row, and never slides.
         (Some(reorder), Some(ReorderSlot { slot, label })) => (
             rsx! {
                 ReorderRow {
@@ -741,7 +748,7 @@ fn row_and_detail(row: RowSpec, reorder: Option<&RowReorder>) -> (Element, Optio
                     stripe,
                     selected,
                     attributes,
-                    detail,
+                    detail: detail.and_then(|spec| spec.body.map(|body| (spec.id, body))),
                     columns,
                     pitch: reorder.fixed.map(|slots| slots.pitch),
                     {content}
@@ -760,24 +767,18 @@ fn row_and_detail(row: RowSpec, reorder: Option<&RowReorder>) -> (Element, Optio
                 {content}
             }
             },
-            match sliding {
-                Some((id, open)) => Some(rsx! {
-                    SlidingDetail {
-                        key: "{key}-detail",
-                        id,
-                        open,
-                        body: detail.map(|(_, body)| body),
-                        columns,
-                    }
+            detail.and_then(|DetailSpec { id, open, body }| match sliding {
+                true => Some(rsx! {
+                    SlidingDetail { key: "{key}-detail", id, open, body, columns }
                 }),
-                None => detail.map(|(id, body)| {
+                false => body.map(|body| {
                     rsx! {
                         tr { key: "{key}-detail", id, "data-detail": true,
                             td { colspan: "{columns}", {body} }
                         }
                     }
                 }),
-            },
+            }),
         ),
     };
     (row, detail)

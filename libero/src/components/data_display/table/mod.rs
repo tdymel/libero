@@ -26,6 +26,7 @@ mod row;
 mod row_groups;
 mod row_reorder;
 mod selection;
+mod sticky;
 mod table;
 mod toolbar;
 mod use_table;

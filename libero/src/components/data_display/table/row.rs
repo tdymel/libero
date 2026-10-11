@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use super::{
     cell_focus::{FocusTarget, GridRow},
     column::Column,
-    core::{CellSpec, HeaderSpec, RowFn, RowSpec, body_rows, render_cells},
+    core::{CellSpec, DetailSpec, HeaderSpec, RowFn, RowSpec, body_rows, render_cells},
     detail::Details,
     edit::{CellEditor, EditCtx, RowUpdate, commit_edit},
     grid::GridFocus,
@@ -189,14 +189,11 @@ impl<T: Clone + 'static> RowContext<T> {
         let details = self.details.as_ref();
         let toggle = details
             .map(|details| details.row_cell(key.clone(), name, index, open, self.toggle_detail));
-        let sliding = details
-            .zip(open)
-            .filter(|_| self.animate_details)
-            .map(|(details, open)| (details.row_id(index), open));
-        let detail = match (details, open) {
-            (Some(details), Some(true)) => detail.map(|body| (details.row_id(index), body)),
-            _ => None,
-        };
+        let detail = details.zip(open).map(|(details, open)| DetailSpec {
+            id: details.row_id(index),
+            open,
+            body: detail.filter(|_| open),
+        });
         let mut attributes = self.row_attrs.call(row).unwrap_or_default();
         if let Some(rowindex) = rowindex {
             attributes.push(attr("aria-rowindex", rowindex.to_string()));
@@ -221,7 +218,7 @@ impl<T: Clone + 'static> RowContext<T> {
             stripe,
             toggle,
             detail,
-            sliding,
+            sliding: self.animate_details,
             states: self
                 .row_states
                 .call(row)
