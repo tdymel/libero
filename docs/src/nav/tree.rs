@@ -248,9 +248,7 @@ pub(super) fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::AccordionPage {}, "Accordion"),
                 page(Route::MarqueePage {}, "Marquee"),
                 page(Route::QrCodePage {}, "QrCode"),
-                page(Route::LineChartPage {}, "LineChart"),
-                page(Route::BarChartPage {}, "BarChart"),
-                page(Route::PieChartPage {}, "PieChart"),
+                page(Route::ChartPage {}, "Chart"),
             ],
         ),
         group(
@@ -378,6 +376,22 @@ mod tests {
         ] {
             assert_eq!(old.parse::<Route>().ok(), Some(route.clone()), "{old}");
             assert!(route.to_string().starts_with("/accessibility/"), "{route}");
+        }
+    }
+
+    /// The Line, Bar and Pie chart pages merged into Chart: their old links still land.
+    #[test]
+    fn a_merged_chart_page_keeps_its_old_url() {
+        for old in [
+            "/data-display/line-chart",
+            "/data-display/bar-chart",
+            "/data-display/pie-chart",
+        ] {
+            assert_eq!(
+                old.parse::<Route>().ok(),
+                Some(Route::ChartPage {}),
+                "{old}"
+            );
         }
     }
 }

@@ -54,7 +54,7 @@ chart_props! {
 /// # }
 /// ```
 ///
-/// Docs: <https://libero-ui.dev/data-display/line-chart>
+/// Docs: <https://libero-ui.dev/data-display/chart>
 #[component]
 pub fn LineChart(props: LineChartProps) -> Element {
     let theme = use_theme();

@@ -224,7 +224,5 @@ md_pages! {
 // Behind their feature: the pages import the charts.
 #[cfg(feature = "charts")]
 md_pages! {
-    BarChart => "bar_chart",
-    LineChart => "line_chart",
-    PieChart => "pie_chart",
+    Chart => "chart",
 }

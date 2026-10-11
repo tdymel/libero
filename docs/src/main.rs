@@ -225,12 +225,12 @@ pub(crate) enum Route {
     MarqueePage {},
     #[route("/data-display/qr-code")]
     QrCodePage {},
-    #[route("/data-display/line-chart")]
-    LineChartPage {},
-    #[route("/data-display/bar-chart")]
-    BarChartPage {},
-    #[route("/data-display/pie-chart")]
-    PieChartPage {},
+    // The Line, Bar and Pie chart URLs from before they merged into Chart (2026-10-11).
+    #[redirect("/data-display/line-chart", || Route::ChartPage {})]
+    #[redirect("/data-display/bar-chart", || Route::ChartPage {})]
+    #[redirect("/data-display/pie-chart", || Route::ChartPage {})]
+    #[route("/data-display/chart")]
+    ChartPage {},
     #[route("/data-display/sortable")]
     SortablePage {},
     #[route("/data-display/kanban")]

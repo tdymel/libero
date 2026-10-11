@@ -61,7 +61,7 @@ chart_props! {
 /// # }
 /// ```
 ///
-/// Docs: <https://libero-ui.dev/data-display/bar-chart>
+/// Docs: <https://libero-ui.dev/data-display/chart>
 #[component]
 pub fn BarChart(props: BarChartProps) -> Element {
     let theme = use_theme();

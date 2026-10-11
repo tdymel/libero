@@ -54,7 +54,7 @@ chart_props! {
 /// # }
 /// ```
 ///
-/// Docs: <https://libero-ui.dev/data-display/pie-chart>
+/// Docs: <https://libero-ui.dev/data-display/chart>
 #[component]
 pub fn PieChart(props: PieChartProps) -> Element {
     let theme = use_theme();
