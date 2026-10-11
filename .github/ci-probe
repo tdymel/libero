@@ -1,0 +1,4 @@
+# ted_ci.py probe; read by .github/workflows/ci-probe.yml.
+os=windows
+tier=desktop
+filter=button::
