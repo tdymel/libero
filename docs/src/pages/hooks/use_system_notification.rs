@@ -92,7 +92,7 @@ pub fn UseSystemNotificationPage() -> Element {
                     Code { source: "desktop" }
                     " feature, the desktop's notification server over D-Bus, as for Blitz; without it WebKitGTK denies every request. macOS and Windows WebViews go through the page's "
                     Code { source: "Notification" }
-                    ", untested; WebView2 counts dioxus's page as insecure and denies it until the app marks the page secure (Getting started, Desktop). Push is web only. A click focuses the page's window, then runs "
+                    ", untested on macOS; WebView2 counts dioxus's page as insecure and denies it until the app marks the page secure (Getting started, Desktop). Push is web only. A click focuses the page's window, then runs "
                     Code { source: "on_click" }
                     "; behind a service worker only if the worker posts it back, as the sample worker does. Android: the system's notifications over JNI, after "
                     Code { source: "notifications = { description = \"..\" }" }

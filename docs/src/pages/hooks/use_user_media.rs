@@ -134,7 +134,7 @@ pub fn UseUserMediaPage() -> Element {
                     Code { source: "\"android.permission.MODIFY_AUDIO_SETTINGS\"" }
                     " under "
                     Code { source: "[android.permissions]" }
-                    ": without it every microphone request is denied. The system asks on the first start. Windows: WebView2 counts dioxus's page as insecure and has no capture API until the app marks the page secure (Getting started, Desktop); untested. Blitz and a server render have no capture API: "
+                    ": without it every microphone request is denied. The system asks on the first start. Windows: WebView2 counts dioxus's page as insecure and has no capture API until the app marks the page secure (Getting started, Desktop); the page then reports a secure context, capture itself is untested. Blitz and a server render have no capture API: "
                     Code { source: "is_supported()" }
                     " stays false and a start fails with "
                     Code { source: "Unsupported" }
