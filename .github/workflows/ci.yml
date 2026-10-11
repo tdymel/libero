@@ -1,6 +1,7 @@
 # The `ted_gate.py` tiers as parallel jobs. Zero warnings via clippy `-D warnings` per
 # configuration, not `RUSTFLAGS`, which also fails on warnings in the git-pinned dioxus and Blitz.
-# The slow tiers run sharded (2592); `ci` is the one required check.
+# The slow tiers run sharded (2592); `ci` is the one required check. Timeouts sit well above a
+# cold build, far below GitHub's 6 h default, so a hang frees its runner (3407).
 name: CI
 
 on:
@@ -25,6 +26,7 @@ env:
 jobs:
   fmt:
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -34,6 +36,7 @@ jobs:
 
   clippy:
     runs-on: ubuntu-24.04
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -46,6 +49,7 @@ jobs:
   # The libero configurations the gate does not build, and e2e with `native`.
   features:
     runs-on: ubuntu-24.04
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
       # `native` pulls Blitz's font stack (fontconfig, by pkg-config) and libero's `dbus` crate.
@@ -62,6 +66,7 @@ jobs:
 
   wasm:
     runs-on: ubuntu-24.04
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -76,6 +81,7 @@ jobs:
   # in libero/src/lib.rs, tests/all/main.rs and render_cost.rs go once clippy stops flagging `const {}` (3343).
   android:
     runs-on: ubuntu-24.04
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -87,6 +93,7 @@ jobs:
 
   test:
     runs-on: ubuntu-24.04
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -106,6 +113,7 @@ jobs:
       matrix:
         part: [docs, libero-doc, no-default]
     runs-on: ubuntu-24.04
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -132,6 +140,7 @@ jobs:
       matrix:
         shard: [1, 2, 3]
     runs-on: ubuntu-24.04
+    timeout-minutes: 45
     env:
       SHARDS: 3
     steps:
@@ -205,6 +214,7 @@ jobs:
     if: always()
     needs: [fmt, clippy, features, wasm, android, test, doc-tests, native, e2e]
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
     steps:
       - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
         run: exit 1
