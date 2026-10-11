@@ -2488,6 +2488,19 @@ pub(super) fn focus_selector(selector: &str) -> Result<(), PlatformError> {
     Ok(())
 }
 
+/// Queued, like [`focus_selector`].
+pub(super) fn focus_closest_of_focused(focused: &str, ancestor: &str) -> Result<(), PlatformError> {
+    if !runs_scripts() {
+        return Err(PlatformError::Unsupported);
+    }
+    eval_with(
+        json!([focused, ancestor]),
+        "const active = document.activeElement;
+        if (active?.matches(data[0])) active.closest(data[1])?.focus();",
+    );
+    Ok(())
+}
+
 /// Queued, as [`focus_selector`].
 pub(super) fn click_selector(selector: &str) -> Result<(), PlatformError> {
     if !runs_scripts() {

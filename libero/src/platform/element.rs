@@ -44,6 +44,12 @@ pub(crate) fn focus_selector(selector: &str) -> Result<(), PlatformError> {
     backend::focus_selector(selector)
 }
 
+/// Focuses the `ancestor` closest to the focused element when that matches `focused`, for
+/// a WebView, where no handle can query. `Unsupported` elsewhere.
+pub(crate) fn focus_closest_of_focused(focused: &str, ancestor: &str) -> Result<(), PlatformError> {
+    backend::focus_closest_of_focused(focused, ancestor)
+}
+
 /// Clicks the page's first match of `selector`, for a WebView, where no handle can
 /// query or click (5). `Unsupported` elsewhere.
 pub(crate) fn click_selector(selector: &str) -> Result<(), PlatformError> {

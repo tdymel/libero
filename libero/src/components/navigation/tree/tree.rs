@@ -13,8 +13,8 @@ use crate::{
         ElementHandle, TYPEAHEAD_RESET, typeahead_match, use_element, use_theme, use_typeahead,
     },
     platform::{
-        ElementApi, OBSERVE_ATTR, PlatformError, click_selector, focus_selector, logical_key,
-        when_free,
+        ElementApi, OBSERVE_ATTR, PlatformError, click_selector, focus_closest_of_focused,
+        focus_selector, logical_key, when_free,
     },
     theme::Size,
     utils::warn,
@@ -265,7 +265,10 @@ impl TreeDom {
         match self.root.query_selector(&selector) {
             Err(PlatformError::Unsupported) => {
                 let row = self.page_row(target_id);
-                let _ = focus_selector(&format!("{row}:has(> div :is(a, button):focus)"));
+                let _ = focus_closest_of_focused(
+                    &format!("{row} > div :is(a, button)"),
+                    &format!("[data-tree-id={id}]"),
+                );
             }
             found => {
                 if found.is_ok_and(|el| el.is_focused()) {

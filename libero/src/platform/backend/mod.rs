@@ -799,6 +799,20 @@ pub(crate) fn focus_selector(selector: &str) -> Result<(), super::PlatformError>
     };
 }
 
+/// Only a WebView - see [`focus_closest_of_focused`](crate::platform::focus_closest_of_focused).
+pub(crate) fn focus_closest_of_focused(
+    focused: &str,
+    ancestor: &str,
+) -> Result<(), super::PlatformError> {
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return webview::focus_closest_of_focused(focused, ancestor);
+    #[cfg(any(target_arch = "wasm32", feature = "native"))]
+    return {
+        let _ = (focused, ancestor);
+        Err(super::PlatformError::Unsupported)
+    };
+}
+
 /// Only a WebView - see [`click_selector`](crate::platform::click_selector).
 pub(crate) fn click_selector(selector: &str) -> Result<(), super::PlatformError> {
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
