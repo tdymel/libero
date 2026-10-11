@@ -278,7 +278,8 @@ e2e::scenario!(
 e2e::scenario!(
     escape_stays_put_once_focus_left_the_bar,
     "/toolbar-editor",
-    leaving_the_bar_forgets_the_editor
+    leaving_the_bar_forgets_the_editor,
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     escape_still_hands_back_after_a_dialog_of_the_bar,
@@ -288,22 +289,27 @@ e2e::scenario!(
 e2e::scenario!(
     shortcut_help_lists_the_chords,
     "/toolbar-editor",
-    the_help_lists_the_chords
+    the_help_lists_the_chords,
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     fields_join_the_arrow_order,
     "/toolbar-fields",
-    fields_pass_arrows_on_at_their_ends
+    fields_pass_arrows_on_at_their_ends,
+    macos: skip("2862: WKWebView: ArrowLeft at a caret's start keeps the field"),
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     a_script_focus_moves_the_tab_stop,
     "/toolbar-script-focus",
-    script_focus_moves_the_stop
+    script_focus_moves_the_stop,
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 e2e::scenario!(
     an_item_shown_later_keeps_its_dom_place,
     "/toolbar-script-focus",
-    a_late_item_keeps_its_place
+    a_late_item_keeps_its_place,
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     the_arrows_rove_over_every_kind_of_item,
@@ -318,12 +324,14 @@ e2e::scenario!(
 e2e::scenario!(
     tabbing_back_in_returns_to_the_last_item,
     "/toolbar",
-    the_tab_stop_follows_focus
+    the_tab_stop_follows_focus,
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 e2e::scenario!(
     a_disabled_item_ignores_clicks_and_keys,
     "/toolbar",
-    a_disabled_item_stays_inert
+    a_disabled_item_stays_inert,
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     a_vertical_toolbar_moves_on_up_and_down,

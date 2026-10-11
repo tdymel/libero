@@ -313,6 +313,13 @@ pub async fn assert_chords_ignored_with(
             if modifier & ALT != 0 && matches!(key.key, "ArrowLeft" | "Home") {
                 continue;
             }
+            // Chrome on a Mac takes Cmd with a navigation key (Back, scrolls), and macOS Ctrl with an
+            // arrow (Spaces, Mission Control): no keyup reaches the page, and the stall hangs Chrome.
+            if cfg!(target_os = "macos")
+                && (modifier & META != 0 || modifier & CTRL != 0 && key.key.starts_with("Arrow"))
+            {
+                continue;
+            }
             // The page never sees these; see [`switches_tabs`].
             if switches_tabs(*key, modifier) {
                 continue;

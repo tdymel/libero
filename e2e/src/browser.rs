@@ -86,6 +86,8 @@ pub async fn emulate_media(
     reduced_motion: Option<bool>,
 ) -> Result<()> {
     let mut features = vec![MediaFeature::new("prefers-color-scheme", scheme.name())];
+    // A Mac's Reduce Motion setting reaches headless Chrome; a run must not depend on the host's.
+    let reduced_motion = reduced_motion.or(cfg!(target_os = "macos").then_some(false));
     if let Some(reduced) = reduced_motion {
         let value = if reduced { "reduce" } else { "no-preference" };
         features.push(MediaFeature::new("prefers-reduced-motion", value));

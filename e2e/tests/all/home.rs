@@ -22,7 +22,8 @@ e2e::scenario!(
     "/home-booking",
     arrow_down_enters_on_the_typed_day,
     android: skip("958: element identity on the WebView"),
-    desktop: skip("958: element identity on the WebView")
+    desktop: skip("958: element identity on the WebView"),
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 const TAB_BOOK: &str = "[role=tab][aria-selected=true]";

@@ -404,13 +404,15 @@ e2e::scenario!(
 e2e::scenario!(
     a_resize_wins_over_the_callers_sx_size,
     "/floating-window-sized",
-    a_resize_beats_the_callers_size
+    a_resize_beats_the_callers_size,
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 e2e::scenario!(
     a_drag_past_the_edge_keeps_it_in_the_viewport,
     "/floating-window",
-    a_drag_past_the_edge
+    a_drag_past_the_edge,
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 e2e::scenario!(
@@ -427,12 +429,14 @@ e2e::scenario!(
 e2e::scenario!(
     a_title_bar_drag_moves_it_with_the_pointer,
     "/floating-window",
-    a_title_bar_drag
+    a_title_bar_drag,
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     drags_leave_their_handle_focused,
     "/floating-window",
     drags_leave_the_handle_focused,
     android: skip("958: element identity on the WebView"),
-    desktop: skip("958: element identity on the WebView")
+    desktop: skip("958: element identity on the WebView"),
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );

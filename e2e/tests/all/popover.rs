@@ -209,7 +209,8 @@ async fn a_tap_outside_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> 
 e2e::scenario!(
     a_tap_outside_closes_it_and_one_inside_does_not,
     "/popover",
-    a_tap_outside_closes
+    a_tap_outside_closes,
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// Todo 1425: a field's portaled dropdown, opened from inside the box, counts as
@@ -249,7 +250,8 @@ e2e::scenario!(
     "/popover/field",
     a_field_dropdown_stays_inside,
     android: skip("1425: no synchronous containment on the WebView"),
-    desktop: skip("1425: no synchronous containment on the WebView")
+    desktop: skip("1425: no synchronous containment on the WebView"),
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// Android's Back closes the box, and the app stays (1289).

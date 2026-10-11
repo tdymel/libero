@@ -88,14 +88,16 @@ e2e::scenario!(
     "/modal",
     modal_traps_tab,
     android: skip("958: element identity on the WebView"),
-    desktop: skip("958: element identity on the WebView")
+    desktop: skip("958: element identity on the WebView"),
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     tab_cycles_through_every_button_in_a_modal,
     "/modal",
     modal_tab_cycles,
     android: skip("959: the trap cannot wrap Tab on a WebView"),
-    desktop: skip("959: the trap cannot wrap Tab on a WebView")
+    desktop: skip("959: the trap cannot wrap Tab on a WebView"),
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// A WebView's trap cannot cycle, but Tab must still move between the dialog's buttons: the
@@ -113,13 +115,16 @@ async fn modal_tab_moves_on<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     tab_moves_between_the_buttons_of_a_modal,
     "/modal",
-    modal_tab_moves_on
+    modal_tab_moves_on,
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     a_backdrop_click_closes_a_modal,
     "/modal",
     modal_backdrop_closes,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    macos: skip("upstream: WebKit does not focus a clicked button"),
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// The trap focuses inside on open, so the first Escape is the dialog's, and focus
@@ -138,7 +143,9 @@ async fn modal_takes_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_modal_takes_focus_and_the_first_escape_closes_it,
     "/modal",
-    modal_takes_focus
+    modal_takes_focus,
+    macos: skip("upstream: WebKit does not focus a clicked button"),
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 const SHEET: &str = "#sheet";
@@ -166,7 +173,9 @@ async fn non_dialog_content_takes_clicks<D: Driver>(d: &mut D, _route: &str) -> 
 e2e::scenario!(
     content_that_is_no_dialog_takes_clicks,
     "/modal/paper",
-    non_dialog_content_takes_clicks
+    non_dialog_content_takes_clicks,
+    macos: skip("upstream: WebKit does not focus a clicked button"),
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// Todo 2720: the trap opens on and cycles in `tabindex` order, not DOM order, both ways.
@@ -189,7 +198,8 @@ e2e::scenario!(
     "/modal/tabindex",
     tab_follows_positive_tabindex,
     android: skip("958: element identity on the WebView"),
-    desktop: skip("958: element identity on the WebView")
+    desktop: skip("958: element identity on the WebView"),
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 
 /// Todo 2559: with no `Dialog` and nothing focusable, focus lands on the content box, so
@@ -214,7 +224,9 @@ async fn non_dialog_content_takes_focus<D: Driver>(d: &mut D, _route: &str) -> R
 e2e::scenario!(
     content_that_is_no_dialog_takes_focus_on_its_box,
     "/modal/paper-static",
-    non_dialog_content_takes_focus
+    non_dialog_content_takes_focus,
+    macos: skip("upstream: WebKit does not focus a clicked button"),
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 const ALERT: &str = "[role=alertdialog]";
@@ -254,7 +266,9 @@ e2e::scenario!(
     an_alertdialog_ignores_the_backdrop,
     "/modal/guarded",
     alert_ignores_the_backdrop,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    macos: skip("upstream: WebKit does not focus a clicked button"),
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// Todo 2563: `ondismiss` hears each dismissal and keeps a draft open; with the
@@ -281,7 +295,9 @@ e2e::scenario!(
     ondismiss_keeps_a_draft_open,
     "/modal/guarded",
     a_draft_vetoes_dismissal,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    macos: skip("upstream: WebKit does not focus a clicked button"),
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 #[test]
@@ -504,7 +520,8 @@ e2e::scenario!(
     "/modal/menu",
     escape_closes_the_menu_first,
     android: skip("958: element identity on the WebView"),
-    desktop: skip("958: element identity on the WebView")
+    desktop: skip("958: element identity on the WebView"),
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 async fn eval_bool(page: &chromiumoxide::Page, js: &str) -> bool {

@@ -51,7 +51,8 @@ async fn a_tap_focuses_the_search<D: Driver>(d: &mut D, _route: &str) -> Result<
 e2e::scenario!(
     a_tap_on_the_trigger_focuses_the_search_box,
     "/spotlight",
-    a_tap_focuses_the_search
+    a_tap_focuses_the_search,
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 
 const FIRST_ROW: &str = "[role=dialog] [role=option]";
@@ -101,7 +102,8 @@ async fn a_hovered_row_is_tinted<D: Driver>(d: &mut D, _route: &str) -> Result<(
 e2e::scenario!(
     a_hovered_row_is_tinted_and_does_not_move_the_highlight,
     "/spotlight",
-    a_hovered_row_is_tinted
+    a_hovered_row_is_tinted,
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 #[test]
