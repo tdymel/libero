@@ -2274,15 +2274,22 @@ pub(crate) mod timing {
         page.execute(EndParams::default()).await?;
         complete.next().await;
         let frame = page.mainframe().await?.context("no main frame")?;
-        let mut counts = vec![0; names.len()];
+        let (mut started, mut seen) = (0.0, Vec::new());
         while let Some(Some(batch)) = batches.next().now_or_never() {
             for event in &batch.value {
-                if event["args"]["data"]["frame"] != frame.inner().as_str() {
-                    continue;
+                let ts = event["ts"].as_f64().unwrap_or(0.0);
+                if event["name"] == "TracingStartedInBrowser" {
+                    started = ts;
+                } else if event["args"]["data"]["frame"] == frame.inner().as_str() {
+                    seen.push((ts, event["name"].as_str().unwrap_or_default().to_string()));
                 }
-                if let Some(at) = names.iter().position(|name| event["name"] == *name) {
-                    counts[at] += 1;
-                }
+            }
+        }
+        // A page's chunk of the previous trace can reach this one late: skip what ran before it (3414).
+        let mut counts = vec![0; names.len()];
+        for (_, name) in seen.iter().filter(|(ts, _)| *ts >= started) {
+            if let Some(at) = names.iter().position(|wanted| wanted == name) {
+                counts[at] += 1;
             }
         }
         Ok(counts)
