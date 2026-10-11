@@ -1,0 +1,5 @@
+# ted_ci.py probe; read by .github/workflows/ci-probe.yml.
+os=windows
+tier=desktop
+filter=select::a_tall_select_below_fits_the_room::
+dev=olaf-50
