@@ -148,6 +148,9 @@ fn KanbanPage(data: bool, wrapped: bool) -> Element {
             Text { id: "moves", "{moves}" }
             Button { id: "after", "After" }
             Button { id: "refuse", onclick: move |_| refuse.set(true), "Refuse moves" }
+            if refuse() {
+                Text { id: "refusing", "Refusing" }
+            }
             Button { id: "add", onclick: move |_| cards.write()[2].insert(0, "Omega"), "Add Omega" }
             if data {
                 Button { id: "remove", onclick: move |_| cards.write()[0].retain(|name| *name != "Beta"), "Remove Beta" }
