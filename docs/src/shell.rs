@@ -5,7 +5,7 @@ use libero::{
         Header, Icon, Kbd, Pictogram, Repository, ScrollArea, ScrollAreaHandle, SpotlightHandle,
         SpotlightOptions, ThemeSwitcher, spotlight_filter, use_scroll_area, use_spotlight,
     },
-    hooks::{ElementHandle, edge_swipe_sx, use_element, use_media_query},
+    hooks::{ElementHandle, edge_swipe_sx, use_back, use_element, use_media_query},
     platform::ElementApi,
     sx::{Sx, sx},
     theme::{
@@ -46,6 +46,12 @@ fn RouteEffects(
             let _ = focused.blur();
         }
     }
+    // Android's Back steps back one route instead of leaving; the web keeps its history (3323).
+    let history = router();
+    use_back(
+        history.can_go_back(),
+        use_callback(move |()| history.go_back()),
+    );
     heading_focus::use_scroll_reset(route.clone(), area, content, section);
     heading_focus::use_heading_focus(route.clone(), open(), content, section);
     // Any route change closes the drawer (search, pager, TLDR, body link, back); focus stays put.

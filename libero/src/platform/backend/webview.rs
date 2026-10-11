@@ -1768,25 +1768,22 @@ fn watch_media(query: &'static str, answer: impl Fn(bool) + 'static) {
     });
 }
 
-/// [`back_entries`] in the page. Chromium skips on Back an entry pushed with no gesture
-/// since the last navigation (2240): after a Back, a missing one waits for a tap or key.
+/// [`back_entries`] in the page. Chromium honours one pushed entry per user activation and
+/// skips on Back the one before a second (2240): one push per tap or key, the rest owed.
+/// A tap, Enter or Space with nothing owed is reported, for Rust to bank an entry (3322).
 #[cfg(target_os = "android")]
 const BACK_ENTRIES: &str =
-    "const back = window.__lsxBack = { held: 0, want: 0, ignore: 0, owed: false };
+    "const back = window.__lsxBack = { held: 0, want: 0, ignore: 0, spent: false };
     back.settle = (push) => {
         if (back.want < back.held) {
             back.ignore++;
             history.go(back.want - back.held);
             back.held = back.want;
-        } else if (back.want > back.held && push && navigator.userActivation?.isActive !== false) {
-            for (; back.held < back.want; back.held++) history.pushState({ lsxBack: true }, '');
-        }
-        const owed = back.want > back.held;
-        if (owed !== back.owed) {
-            const listen = owed ? addEventListener : removeEventListener;
-            listen('pointerup', back.settle, true);
-            listen('keydown', back.settle, true);
-            back.owed = owed;
+        } else if (back.want > back.held && push && !back.spent
+            && navigator.userActivation?.isActive !== false) {
+            history.pushState({ lsxBack: true }, '');
+            back.held++;
+            back.spent = true;
         }
     };
     addEventListener('popstate', () => {
@@ -1794,12 +1791,21 @@ const BACK_ENTRIES: &str =
         back.held = Math.max(0, back.held - 1);
         dioxus.send(true);
         back.settle(false);
-    });";
+    });
+    const activated = (tap) => {
+        back.spent = false;
+        if (back.want > back.held) back.settle(true);
+        else if (tap && back.want > 0) dioxus.send(false);
+    };
+    addEventListener('pointerup', () => activated(true), true);
+    addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') activated(!event.repeat && (event.key === 'Enter' || event.key === ' '));
+    }, true);";
 
-/// Back pops one of [`back_entries`]' history entries: `onback` runs, unless the
-/// page took it back itself. Starts here, as [`watch_media`] does.
+/// Back pops one of [`back_entries`]' history entries: `onback(true)` runs, unless the
+/// page took it back itself; a tap while some are held, `onback(false)`.
 #[cfg(target_os = "android")]
-pub(super) fn watch_back(onback: impl Fn() + 'static) -> bool {
+pub(super) fn watch_back(onback: impl Fn(bool) + 'static) -> bool {
     if !runs_scripts() {
         return false;
     }
@@ -1809,8 +1815,8 @@ pub(super) fn watch_back(onback: impl Fn() + 'static) -> bool {
     );
     spawn_forever(async move {
         let mut script = script;
-        while script.recv::<bool>().await.is_ok() {
-            onback();
+        while let Ok(back) = script.recv::<bool>().await {
+            onback(back);
         }
     });
     true

@@ -31,8 +31,7 @@ async fn back_steps_down_below_a_menu<D: Driver>(d: &mut D, _route: &str) -> Res
 
     d.press_back().await?;
     eventually(d, "Back to step down", async |d| Ok(step(d).await? == "2")).await?;
-    // Still active: its entry returns only within a gesture, WebView 133 skips one pushed without (2240).
-    d.click(STEP).await?;
+    // Each tap banked the steps an entry (3322): no tap between the Backs.
     d.press_back().await?;
     eventually(d, "Back to step down again", async |d| {
         Ok(step(d).await? == "1")
@@ -50,4 +49,27 @@ e2e::scenario!(
     "/use-back",
     back_steps_down_below_a_menu,
     android_only("2003: no Back key off Android")
+);
+
+/// Back after Back, no tap between: each Next tap earned its entry (3322).
+async fn back_steps_down_twice<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#next").await?;
+    d.click("#next").await?;
+    eventually(d, "two steps on", async |d| Ok(step(d).await? == "3")).await?;
+    d.press_back().await?;
+    eventually(d, "Back to step down", async |d| Ok(step(d).await? == "2")).await?;
+    d.press_back().await?;
+    eventually(d, "the second Back to step down", async |d| {
+        Ok(step(d).await? == "1")
+    })
+    .await?;
+    ensure!(d.exists("#next").await?, "the app left at step 1");
+    Ok(())
+}
+
+e2e::scenario!(
+    android_back_steps_down_twice_without_a_tap,
+    "/use-back",
+    back_steps_down_twice,
+    android_only("3322: no Back key off Android")
 );

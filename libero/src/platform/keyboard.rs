@@ -117,10 +117,10 @@ pub(crate) fn soft_keyboard_app() -> bool {
     backend::soft_keyboard_app()
 }
 
-/// Runs `onback` on each Android Back that pops one of the [`back_entries`];
-/// `false` where Back never reaches the page (no WebView).
+/// Runs `onback(true)` on each Android Back that pops one of the [`back_entries`],
+/// `onback(false)` on a tap that may bank one more; `false` where Back never reaches the page.
 #[cfg(target_os = "android")]
-pub(crate) fn watch_back(onback: impl Fn() + 'static) -> bool {
+pub(crate) fn watch_back(onback: impl Fn(bool) + 'static) -> bool {
     backend::watch_back(onback)
 }
 

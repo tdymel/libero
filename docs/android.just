@@ -79,7 +79,9 @@ apk_dir := clean(root / "target/android")
 
 # Signed release APK, arm64 for a phone (`x86_64` for the emulator). `dx` only
 # packages gradle's debug variant, so gradle builds the release one itself.
-apk-android arch="aarch64": _dx (_android-icon "release")
+# `suffix` (`.seat7`, from `ted_phone.py suffix`) makes `dev.libero.docs.seat7`, so a
+# seat's install on the shared phone leaves the others' and the Maintainer's alone (3316).
+apk-android arch="aarch64" suffix="": _dx (_android-icon "release")
     #!/usr/bin/env bash
     set -euo pipefail
     cd {{root}}/docs
@@ -89,18 +91,19 @@ apk-android arch="aarch64": _dx (_android-icon "release")
     {{aenv}} {{dx}} build --platform android --release --target {{arch}}-linux-android {{mfeat}}
     # No R8: it strips the Kotlin classes wry reaches only through JNI.
     sed -i 's/isMinifyEnabled = true/isMinifyEnabled = false/' "$app/app/build.gradle.kts"
+    sed -i 's/applicationId = "dev.libero.docs"/applicationId = "dev.libero.docs{{suffix}}"/' "$app/app/build.gradle.kts"
     (cd "$app" && {{aenv}} ./gradlew -q assembleRelease)
     [ -f "{{keystore}}" ] || keytool -genkeypair -keystore "{{keystore}}" -storepass "{{ks_pass}}" \
         -alias libero-docs -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Libero docs"
     tools=$(ls -d {{sdk}}/build-tools/* | sort -V | tail -1)
     # The commit is in the file name, so a stale APK shows at once; the
     # unstamped name stays as a symlink to the newest build.
-    apk="{{apk_dir}}/libero-docs-{{arch}}-$(git -C {{root}} describe --always --dirty).apk"
+    apk="{{apk_dir}}/libero-docs{{suffix}}-{{arch}}-$(git -C {{root}} describe --always --dirty).apk"
     mkdir -p "{{apk_dir}}"
-    rm -f "{{apk_dir}}"/libero-docs-{{arch}}-*.apk
+    rm -f "{{apk_dir}}"/libero-docs{{suffix}}-{{arch}}-*.apk
     "$tools/zipalign" -f -p 4 "$app/app/build/outputs/apk/release/app-release-unsigned.apk" "$apk"
     "$tools/apksigner" sign --ks "{{keystore}}" --ks-pass "pass:{{ks_pass}}" "$apk"
-    ln -sf "$(basename "$apk")" "{{apk_dir}}/libero-docs-{{arch}}.apk"
+    ln -sf "$(basename "$apk")" "{{apk_dir}}/libero-docs{{suffix}}-{{arch}}.apk"
     echo "$apk"
 
 # Regenerates `docs/android/res` from `assets/logo.svg`: an adaptive icon (the
@@ -121,10 +124,11 @@ android-icons:
     done
     python3 android/notification_icon.py assets/logo.svg android/res/drawable/libero_notification.xml
 
-# Installs `apk-android`'s newest file on the one device `adb devices` shows.
-install-android arch="aarch64":
-    @echo "installing $(readlink "{{apk_dir}}/libero-docs-{{arch}}.apk")"
-    adb install -r "{{apk_dir}}/libero-docs-{{arch}}.apk"
+# Installs `apk-android`'s newest file on the one device `adb devices` shows
+# (`ANDROID_SERIAL` picks one; `ted_phone.py run` sets it).
+install-android arch="aarch64" suffix="":
+    @echo "installing $(readlink "{{apk_dir}}/libero-docs{{suffix}}-{{arch}}.apk")"
+    adb install -r "{{apk_dir}}/libero-docs{{suffix}}-{{arch}}.apk"
 
 # The app's own log lines; a Rust panic surfaces here and nowhere else.
 android-logcat:

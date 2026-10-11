@@ -16,6 +16,8 @@ use crate::passes::console::Recorder;
 pub const CDP_ENV: &str = "E2E_ANDROID_CDP";
 /// The `adb -s` serial of the device the runner set up.
 pub const SERIAL_ENV: &str = "E2E_ANDROID_SERIAL";
+/// The fixtures app's package id, with the seat's suffix on a shared phone (3316).
+pub const PACKAGE_ENV: &str = "E2E_ANDROID_PACKAGE";
 
 pub(crate) struct Harness {
     pub runtime: Runtime,

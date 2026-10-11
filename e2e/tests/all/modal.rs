@@ -461,6 +461,40 @@ e2e::scenario!(
     android_only("1275: no Back key off Android")
 );
 
+/// The history entries the page holds for Back (`webview.rs` `BACK_ENTRIES`).
+const BACK_HELD: &str = "window.__lsxBack?.held ?? -1";
+
+/// Taps in a dialog bank Back entries (3322); one Back closes it and takes them all,
+/// so the next Back reaches the app.
+async fn taps_leave_no_back_entry<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    open(d, TRIGGER).await?;
+    for _ in 0..2 {
+        d.click(MENU_TRIGGER).await?;
+        eventually(d, "the menu to open", async |d| d.exists(MENU_ITEM).await).await?;
+        d.click(MENU_ITEM).await?;
+        eventually(d, "the item to close the menu", async |d| {
+            Ok(!d.exists(MENU_ITEM).await?)
+        })
+        .await?;
+    }
+    d.press_back().await?;
+    eventually(d, "one Back to close the dialog", async |d| {
+        Ok(!d.exists(DIALOG).await?)
+    })
+    .await?;
+    eventually(d, "the page to hold no Back entry", async |d| {
+        Ok(d.evaluate(BACK_HELD).await? == 0)
+    })
+    .await
+}
+
+e2e::scenario!(
+    android_taps_in_a_dialog_leave_no_back_entry,
+    "/modal/menu",
+    taps_leave_no_back_entry,
+    android_only("3322: no Back key off Android")
+);
+
 async fn escape_closes_the_menu_first<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     the_menu_closes_before_its_dialog(d, Dismiss::Escape).await
 }

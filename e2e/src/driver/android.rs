@@ -719,8 +719,9 @@ impl Driver for Android {
     }
 
     async fn posted_notifications(&mut self) -> Result<String> {
-        // The fixtures app's identifier, as in the runner's `PACKAGE`.
-        posted_notifications("dev.libero.fixtures").await
+        let package = std::env::var(crate::android::PACKAGE_ENV)
+            .unwrap_or_else(|_| "dev.libero.fixtures".into());
+        posted_notifications(&package).await
     }
 
     async fn tap_notification(&mut self, title: &str) -> Result<()> {

@@ -861,7 +861,7 @@ pub(crate) fn focus_kept(token: u64) {
 
 /// Only the WebView - see [`watch_back`](crate::platform::watch_back).
 #[cfg(target_os = "android")]
-pub(crate) fn watch_back(onback: impl Fn() + 'static) -> bool {
+pub(crate) fn watch_back(onback: impl Fn(bool) + 'static) -> bool {
     #[cfg(not(feature = "native"))]
     return webview::watch_back(onback);
     #[cfg(feature = "native")]

@@ -128,8 +128,8 @@ impl DismissLayer {
 /// Android's Back button runs `onback` instead of leaving the app, while
 /// `active`. The newest active one wins, so a `Modal` or menu opened later
 /// closes first. Does nothing on web and desktop, which have no such button.
-/// Activate it within a tap: an `onback` that leaves it active (the steps below)
-/// gets the next Back only after another tap or key, else that Back leaves the app.
+/// Activate it within a tap. An `onback` that leaves it active (the steps below) gets one
+/// Back for that tap and one per later tap, Enter or Space while on top, 16 at most.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
