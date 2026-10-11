@@ -58,7 +58,12 @@ pub fn run(mut filters: Vec<String>) -> Result<()> {
         bail!("the desktop fixture app failed to build");
     }
 
-    let names = list_arm("desktop", &root, &target_dir, &filters, ignored)?;
+    // Windows cannot replace the running `e2e.exe`, which `--features desktop` rebuilds.
+    let test_dir = match cfg!(windows) {
+        true => target_dir.join("desktop-tests"),
+        false => target_dir.clone(),
+    };
+    let names = list_arm("desktop", &root, &test_dir, &filters, ignored)?;
     if names.is_empty() {
         bail!("no desktop scenario matches {filters:?}");
     }
@@ -85,7 +90,7 @@ pub fn run(mut filters: Vec<String>) -> Result<()> {
             "all",
             "--target-dir",
         ])
-        .arg(&target_dir)
+        .arg(&test_dir)
         .args(["--", "--exact", "--test-threads=1", "--format", "pretty"])
         .args(ignored.then_some("--ignored"))
         .args(&names)

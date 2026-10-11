@@ -270,6 +270,9 @@ pub(super) fn list_arm(
         .stderr(Stdio::inherit())
         .output()
         .context("list the tests")?;
+    if !listed.status.success() {
+        bail!("listing the {arm} tests failed: {}", listed.status);
+    }
     Ok(String::from_utf8_lossy(&listed.stdout)
         .lines()
         .filter_map(|line| line.strip_suffix(": test"))

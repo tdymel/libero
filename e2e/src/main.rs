@@ -174,7 +174,10 @@ fn run(target: &Target, passthrough: Vec<String>) -> Result<()> {
         let exact = list_tests(&root, target.test, &target_dir)
             .map(|listed| units::exact(&listed, &passthrough));
         match exact {
-            Ok(exact) if !exact.is_empty() => test_args = exact,
+            Ok((exact, count)) if count > 0 => {
+                test_args = exact;
+                eprintln!("e2e: the filter selects {count} test(s)");
+            }
             outcome => {
                 stop(&mut server);
                 guard.done();
@@ -182,8 +185,6 @@ fn run(target: &Target, passthrough: Vec<String>) -> Result<()> {
                 bail!("no test ran: the name filter {passthrough:?} matched no test");
             }
         }
-        let names = test_args.iter().skip_while(|arg| *arg != "--exact").count() - 1;
-        eprintln!("e2e: the filter selects {names} test(s), run --exact");
     }
 
     let mut ready = wait_for_app(&session.base_url, target.title, &mut server, &dx_log);

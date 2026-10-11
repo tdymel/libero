@@ -49,11 +49,12 @@ pub(crate) fn listed(stdout: &str) -> Vec<String> {
         .collect()
 }
 
-/// The arguments that run exactly what `args` select: a `foo::` filter as a prefix, any
-/// other as libtest's substring. Empty when nothing matches, since no filter runs all.
-pub(crate) fn exact(listed: &[String], args: &[String]) -> Vec<String> {
-    let (filters, skips, mut rest) = split(args);
-    let names: Vec<String> = listed
+/// Past this many bytes of test names the command line risks Windows' 32 767 character limit.
+const NAMES_BUDGET: usize = 16_000;
+
+/// The listed names the filters select, with a `foo::` filter as a prefix.
+fn selected<'a>(listed: &'a [String], filters: &[&str], skips: &[&str]) -> Vec<&'a String> {
+    listed
         .iter()
         .filter(|name| {
             filters.iter().any(|filter| match filter.ends_with("::") {
@@ -61,14 +62,72 @@ pub(crate) fn exact(listed: &[String], args: &[String]) -> Vec<String> {
                 false => name.contains(filter),
             }) && !skips.iter().any(|skip| name.contains(skip))
         })
-        .cloned()
+        .collect()
+}
+
+/// The filters as libtest's substrings, with a `--skip unit::` for each other unit whose names
+/// they would also catch. None when a skip would drop a selected name.
+fn skipping(
+    listed: &[String],
+    filters: &[&str],
+    skips: &[&str],
+    mut rest: Vec<String>,
+    names: &[&String],
+) -> Option<Vec<String>> {
+    let mut extra: Vec<String> = listed
+        .iter()
+        .filter(|name| filters.iter().any(|filter| name.contains(filter)) && !names.contains(name))
+        .filter_map(|name| Some(format!("{}::", name.split_once("::")?.0)))
         .collect();
+    extra.sort();
+    extra.dedup();
+    if extra
+        .iter()
+        .any(|skip| names.iter().any(|name| name.contains(skip)))
+    {
+        return None;
+    }
+    let skips: Vec<&str> = skips
+        .iter()
+        .copied()
+        .chain(extra.iter().map(String::as_str))
+        .collect();
+    let kept = listed.iter().filter(|name| {
+        filters.iter().any(|filter| name.contains(filter))
+            && !skips.iter().any(|skip| name.contains(skip))
+    });
+    if kept.count() != names.len() {
+        return None;
+    }
+    rest.extend(filters.iter().map(|filter| filter.to_string()));
+    for skip in skips {
+        rest.extend(["--skip".to_string(), skip.to_string()]);
+    }
+    Some(rest)
+}
+
+/// The arguments that run exactly what `args` select and how many tests that is: a `foo::`
+/// filter as a prefix, any other as libtest's substring. Empty when nothing matches, since no
+/// filter runs all. A selection too long for a command line becomes filters and skips.
+pub(crate) fn exact(listed: &[String], args: &[String]) -> (Vec<String>, usize) {
+    exact_within(listed, args, NAMES_BUDGET)
+}
+
+fn exact_within(listed: &[String], args: &[String], budget: usize) -> (Vec<String>, usize) {
+    let (filters, skips, mut rest) = split(args);
+    let names = selected(listed, &filters, &skips);
     if names.is_empty() {
-        return names;
+        return (Vec::new(), 0);
+    }
+    let count = names.len();
+    if names.iter().map(|name| name.len() + 1).sum::<usize>() > budget
+        && let Some(compact) = skipping(listed, &filters, &skips, rest.clone(), &names)
+    {
+        return (compact, count);
     }
     rest.push("--exact".into());
-    rest.extend(names);
-    rest
+    rest.extend(names.into_iter().cloned());
+    (rest, count)
 }
 
 /// Units whose tests open other modules' fixtures too, from the route literals in their sources
@@ -188,13 +247,43 @@ mod tests {
         let args = exact(&strings(LISTED), &strings(&["table::", "--nocapture"]));
         assert_eq!(
             args,
-            strings(&[
-                "--nocapture",
-                "--exact",
-                "table::a_wide_table_meets_the_baseline",
-                "table::sticky::a_header_sticks",
-            ])
+            (
+                strings(&[
+                    "--nocapture",
+                    "--exact",
+                    "table::a_wide_table_meets_the_baseline",
+                    "table::sticky::a_header_sticks",
+                ]),
+                2
+            )
         );
+    }
+
+    #[test]
+    fn a_long_selection_becomes_filters_and_skips() {
+        let args = strings(&["table::", "select::", "--nocapture"]);
+        assert_eq!(
+            exact_within(&strings(LISTED), &args, 10),
+            (
+                strings(&[
+                    "--nocapture",
+                    "table::",
+                    "select::",
+                    "--skip",
+                    "multi_select::",
+                    "--skip",
+                    "sortable_table::",
+                ]),
+                3
+            )
+        );
+    }
+
+    #[test]
+    fn a_skip_that_would_drop_a_selected_name_keeps_the_exact_names() {
+        let listed = strings(&["x::y::t", "y::x::z"]);
+        let (args, count) = exact_within(&listed, &strings(&["x::"]), 1);
+        assert_eq!((args, count), (strings(&["--exact", "x::y::t"]), 1));
     }
 
     #[test]
@@ -209,7 +298,7 @@ mod tests {
         ]);
         assert!(wanted(&args));
         assert_eq!(
-            exact(&strings(LISTED), &args),
+            exact(&strings(LISTED), &args).0,
             strings(&[
                 "--test-threads",
                 "2",
@@ -222,7 +311,7 @@ mod tests {
 
     #[test]
     fn no_match_and_explicit_modes_are_left_alone() {
-        assert!(exact(&strings(LISTED), &strings(&["tabel::"])).is_empty());
+        assert!(exact(&strings(LISTED), &strings(&["tabel::"])).0.is_empty());
         assert!(!wanted(&strings(&["table::", "--exact"])));
         assert!(!wanted(&strings(&["table::", "--list"])));
         assert!(!wanted(&strings(&["table", "--test-threads", "2"])));
@@ -290,7 +379,9 @@ mod tests {
             if ALWAYS_BUILT.contains(&module.as_str()) {
                 continue;
             }
-            let source = std::fs::read_to_string(&path).unwrap();
+            let source = std::fs::read_to_string(&path)
+                .unwrap()
+                .replace("\r\n", "\n");
             let Some(start) = source.find("pub const ROUTES") else {
                 continue;
             };
