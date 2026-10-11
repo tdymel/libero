@@ -16,7 +16,7 @@ use super::{
 };
 use crate::{
     components::common::attr,
-    hooks::{ElementHandle, listener, use_id, use_silent_focus_in},
+    hooks::{ElementHandle, listener, use_id, use_silent_focus_in, use_silent_focus_out_of},
     platform::{
         ElementApi, PlatformError, arrow_target, focus_selector, focused_tag, infers_grid_cells,
         key_taken, meta_held, rtl_target, silent_focus, typing_target, when_laid_out,
@@ -60,8 +60,8 @@ pub(super) struct GridFocus {
     id: Signal<String>,
     /// Focus is in the table, or was on a row a re-render removed: no `focusout` then.
     inside: CopyValue<bool>,
-    /// A window's focused row and its slot at the last render.
-    held: CopyValue<Option<(VisibleRow, usize)>>,
+    /// A window's rows at the last render.
+    held: CopyValue<Option<Rc<[VisibleRow]>>>,
     table: ElementHandle,
     region: ElementHandle,
 }
@@ -257,13 +257,20 @@ pub(super) fn use_grid_focus(table: ElementHandle, region: ElementHandle) -> Gri
     let pending = use_signal(|| None);
     let rows = use_hook(|| CopyValue::new(None));
     let armed = use_hook(|| CopyValue::new(None));
+    let inside = use_hook(|| CopyValue::new(false));
+    // Blitz's silent moves fire no `focusin` for `tree_listeners` to hear.
     use_silent_focus_in(table, move || {
-        let mut stop = stop;
+        let (mut stop, mut inside) = (stop, inside);
+        inside.set(true);
         if let Some(target) = focused_cell(&table)
             && *stop.peek() != Some(target)
         {
             stop.set(Some(target));
         }
+    });
+    use_silent_focus_out_of(table, move || {
+        let mut inside = inside;
+        inside.set(false);
     });
     let id = use_id();
     let mut request = use_signal(|| None::<Option<Reveal>>);
@@ -309,7 +316,7 @@ pub(super) fn use_grid_focus(table: ElementHandle, region: ElementHandle) -> Gri
         armed,
         request,
         id,
-        inside: use_hook(|| CopyValue::new(false)),
+        inside,
         held: use_hook(|| CopyValue::new(None)),
         table,
         region,
@@ -443,23 +450,31 @@ impl GridFocus {
     }
 
     /// In a window, rows opened or closed above the focused row move it by slots:
-    /// the view scrolls as far, so the row stays where it was. `focused` is its row and slot.
-    pub fn hold_in_view(self, focused: Option<(VisibleRow, usize)>, pitch: f64) {
+    /// the view scrolls as far, so the row stays where it was. `order` is the window's rows.
+    pub fn hold_in_view(self, focused: Option<VisibleRow>, order: Rc<[VisibleRow]>, pitch: f64) {
+        // The last render's rows, not its focus: a focus move may render no table (todo 3317).
         let mut held = self.held;
-        let last = *held.peek();
-        held.set(focused);
-        let (Some((row, slot)), Some((was, from))) = (focused, last) else {
+        let last = held.replace(Some(order.clone()));
+        let (Some(row), Some(last)) = (focused, last) else {
             return;
         };
-        if row != was || slot == from {
+        let slot_in = |rows: &[VisibleRow]| rows.iter().position(|&at| at == row);
+        let (Some(slot), Some(from)) = (slot_in(&order), slot_in(&last)) else {
+            return;
+        };
+        if slot == from {
             return;
         }
         let shift = (slot as f64 - from as f64) * pitch;
-        let (region, offset) = (self.region, self.region.scroll_offset());
-        spawn(async move {
-            if let Ok((x, top)) = offset.await {
-                let _ = region.scroll_to(x, (top + shift).max(0.0));
-            }
+        let region = self.region;
+        // Blitz's document is busy while this renders: its offset reads after.
+        when_laid_out(move || {
+            let offset = region.scroll_offset();
+            spawn(async move {
+                if let Ok((x, top)) = offset.await {
+                    let _ = region.scroll_to(x, (top + shift).max(0.0));
+                }
+            });
         });
     }
 

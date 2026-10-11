@@ -254,7 +254,8 @@ e2e::scenario!(
     a_long_press_on_a_link_trigger_opens_no_link_menu,
     "/hover-card-link",
     long_press_keeps_the_link_menu_shut,
-    desktop: skip("1126: no touch input under Xvfb")
+    desktop: skip("1126: no touch input under Xvfb"),
+    native: skip("3317: Blitz opens no link menu on a long press, and a script reads its suppression")
 );
 e2e::scenario!(
     tab_crosses_into_the_portaled_card_and_back_on_every_backend,

@@ -152,6 +152,14 @@ impl Driver for Native {
         Ok(())
     }
 
+    /// A release with no press: Blitz clicks, and nothing pressed takes focus.
+    async fn script_click(&mut self, selector: &str) -> Result<()> {
+        let (x, y, width, height) = self.page.rect(selector);
+        self.page
+            .release_at((x + width / 2.0) as f32, (y + height / 2.0) as f32);
+        Ok(())
+    }
+
     async fn drag(&mut self, selector: &str, dx: f64, dy: f64) -> Result<()> {
         self.page.drag(selector, dx as f32, dy as f32);
         Ok(())

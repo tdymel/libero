@@ -123,6 +123,12 @@ pub trait Driver {
         let _ = expression;
         bail!("{:?}: no script reads", self.platform())
     }
+    /// The first match's `click()` from a script: its handlers run, nothing is pressed.
+    async fn script_click(&mut self, selector: &str) -> Result<()> {
+        self.evaluate(&format!("{}.click()", query(selector)))
+            .await
+            .map(drop)
+    }
     /// The first match's `(scrollLeft, scrollTop)`.
     async fn scroll_pos(&mut self, selector: &str) -> Result<(f64, f64)> {
         let value = self

@@ -81,6 +81,11 @@ async fn a_cap_added_later_pads_the_scroll_by_the_header<D: Driver>(
     d: &mut D,
     _route: &str,
 ) -> Result<()> {
+    // Blitz's stylo lacks `scroll-padding`: it reads the var the Table sets beside it.
+    let property = match d.platform() {
+        Platform::Native => "--lsx-scroll-padding-top",
+        _ => "scroll-padding-top",
+    };
     d.click("#cap").await?;
     eventually(
         d,
@@ -89,8 +94,8 @@ async fn a_cap_added_later_pads_the_scroll_by_the_header<D: Driver>(
             if !d.exists(AREA).await? {
                 return Ok(false);
             }
-            let padding = d.style(AREA, "scroll-padding-top").await?;
-            let padding: f64 = padding.trim_end_matches("px").parse().unwrap_or(0.0);
+            let padding = d.style(AREA, property).await?;
+            let padding: f64 = padding.trim().trim_end_matches("px").parse().unwrap_or(0.0);
             let header = d.rect("thead").await?.height;
             Ok(padding > 1.0 && (padding - header).abs() <= 1.0)
         },
