@@ -5,7 +5,7 @@ use pictogram_icons_lucide as lucide;
 
 use super::{
     cell_value::FilterKind,
-    column_filter::{ColumnFilter, FilterLogic, FilterOperator},
+    column_filter::{ColumnFilter, FilterLogic, FilterOperator, SelectOption},
     filter_popover::{Choice, FILTER_POPOVER_SX, FilterTarget, FilterValue, operator_choices},
     use_table::StateSlice,
 };
@@ -55,7 +55,7 @@ static FILTER_PANEL_SX: StaticSx = StaticSx::new(|| {
 pub(super) struct PanelColumn {
     pub header: String,
     pub kind: FilterKind,
-    pub options: Vec<String>,
+    pub options: Vec<SelectOption>,
 }
 
 impl Options for PanelColumn {

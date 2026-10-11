@@ -10,8 +10,8 @@ use std::time::Duration;
 
 use libero::chrono::{NaiveDate, TimeDelta};
 use libero::components::{
-    Aggregate, Button, Chip, Column, ColumnWidths, PinnedColumns, RowFn, Table, TableColumnsButton,
-    TableDensityButton, TableExportButton, TableFilterButton, column,
+    Aggregate, Button, Chip, Column, ColumnFilter, ColumnWidths, PinnedColumns, RowFn, Table,
+    TableColumnsButton, TableDensityButton, TableExportButton, TableFilterButton, column,
 };
 use libero::hooks::SortableMove;
 use libero::platform::{TimerSubscription, save_file, timer};
@@ -117,6 +117,56 @@ fn fetch(from: usize) -> Vec<Person> {
     (1..=10_000).skip(from).take(BATCH).map(member).collect()
 }
 // demo-code: server end
+
+#[derive(Clone, PartialEq)]
+struct Staff {
+    name: String,
+    role: String,
+}
+
+fn staff() -> Vec<Staff> {
+    [
+        ("Ada", "owner"),
+        ("Bo", "admin"),
+        ("Cy", "viewer"),
+        ("Di", "admin"),
+        ("Ed", "viewer"),
+    ]
+    .map(|(name, role)| Staff {
+        name: name.to_string(),
+        role: role.to_string(),
+    })
+    .to_vec()
+}
+
+fn role_label(role: &str) -> &'static str {
+    match role {
+        "owner" => "Owner",
+        "admin" => "Admin",
+        _ => "Viewer",
+    }
+}
+
+/// The select column example: stored role codes, shown as names, filtered by the codes.
+#[component]
+pub fn StaffTable() -> Element {
+    rsx! {
+        Table {
+            caption: "Staff",
+            data: staff(),
+            row_key: |s: &Staff| s.name.clone(),
+            header_filters: true,
+            default_column_filters: vec![ColumnFilter::any_of("Role", ["owner", "admin"])],
+            columns: vec![
+                column("Name").value(|s: &Staff| s.name.clone()).row_header(),
+                column("Role")
+                    .value(|s: &Staff| s.role.clone())
+                    .format(|s: &Staff| role_label(&s.role).to_string())
+                    .options([("owner", "Owner"), ("admin", "Admin"), ("viewer", "Viewer")]),
+            ],
+        }
+    }
+}
 
 fn team_columns(grouped: bool) -> Vec<Column<Person>> {
     let group = |column: Column<Person>| match grouped {

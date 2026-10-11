@@ -19,11 +19,11 @@ struct Staff {
 fn SelectFilterTablePage() -> Element {
     let mut filters = use_signal(String::new);
     let data: Vec<Staff> = [
-        ("Ada", "Admin"),
-        ("Bo", "Editor"),
-        ("Cy", "Viewer"),
-        ("Di", "Admin"),
-        ("Ed", "Editor"),
+        ("Ada", "admin"),
+        ("Bo", "editor"),
+        ("Cy", "viewer"),
+        ("Di", "admin"),
+        ("Ed", "editor"),
     ]
     .into_iter()
     .map(|(name, role)| Staff { name, role })
@@ -36,7 +36,8 @@ fn SelectFilterTablePage() -> Element {
                 column("Name").value(|row: &Staff| row.name.to_string()).row_header(),
                 column("Role")
                     .value(|row: &Staff| row.role.to_string())
-                    .options(["Admin", "Editor", "Viewer"]),
+                    .format(|row: &Staff| row.role.to_uppercase())
+                    .options([("admin", "Admin"), ("editor", "Editor"), ("viewer", "Viewer")]),
             ],
             row_key: |row: &Staff| row.name.to_string(),
             column_menu: true,

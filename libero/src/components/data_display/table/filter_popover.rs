@@ -4,14 +4,16 @@ use pictogram_icons_lucide as lucide;
 
 use super::{
     cell_value::FilterKind,
-    column_filter::{ColumnFilter, FilterOperator, filter_of, with_filter, without_column},
+    column_filter::{
+        ColumnFilter, FilterOperator, SelectOption, filter_of, with_filter, without_column,
+    },
     use_table::StateSlice,
 };
 use crate::{
     components::{
         buttons::Button,
         common::{FOCUSABLE_SELECTOR, Glyph, HtmlTag, Options, attr},
-        form::{Checkbox, DateField, NativeSelect, TextField},
+        form::{Checkbox, DateField, MultiSelect, NativeSelect, SelectionArgs, TextField},
         layout::{paper_sx, use_box},
     },
     context::IconSlot,
@@ -23,7 +25,7 @@ use crate::{
     platform::{
         ElementApi, PlatformError, focus_first_of, is_tab, reads_dom_synchronously, when_laid_out,
     },
-    sx::StaticSx,
+    sx::{StaticSx, sx},
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
 };
 
@@ -55,6 +57,16 @@ impl<V: Clone + PartialEq + 'static> Options for Choice<V> {
 
     fn value(&self) -> String {
         self.key.to_string()
+    }
+}
+
+impl Options for SelectOption {
+    fn label(&self) -> String {
+        self.label.clone()
+    }
+
+    fn value(&self) -> String {
+        self.value.clone()
     }
 }
 
@@ -137,7 +149,7 @@ pub(super) struct FilterTarget {
     pub column: String,
     pub kind: FilterKind,
     /// A select column's options.
-    pub options: Vec<String>,
+    pub options: Vec<SelectOption>,
     pub slice: StateSlice<Vec<ColumnFilter>>,
     pub labels: TableLabels,
     pub size: Size,
@@ -153,6 +165,8 @@ pub(super) struct FilterEditor {
     pub draft: Signal<Option<String>>,
     /// Typing: shown at once, applied once it settles.
     pub ontext: Callback<String>,
+    /// An operator pick, applied at once with the value and draft kept.
+    pub onoperator: Callback<FilterOperator>,
     /// A boolean pick, applied at once; `None` is any.
     pub onpick: Callback<Option<bool>>,
     /// A date field's change, applied at once: `true` for `Between`'s last day.
@@ -217,6 +231,27 @@ pub(super) fn use_filter_editor(target: &FilterTarget) -> FilterEditor {
             onfilter.call(());
         })
     };
+    let onoperator = {
+        let column = column.clone();
+        use_callback(move |operator: FilterOperator| {
+            let filters = slice.peek();
+            let held = filter_of(&filters, &column);
+            // Typed text not applied yet moves to the new operator.
+            let value = draft
+                .peek()
+                .clone()
+                .or_else(|| held.map(|filter| filter.value.clone()))
+                .unwrap_or_default();
+            draft.set(None);
+            let next = ColumnFilter {
+                value_to: held.map(|f| f.value_to.clone()).unwrap_or_default(),
+                values: held.map(|f| f.values.clone()).unwrap_or_default(),
+                ..ColumnFilter::new(column.clone(), operator, value)
+            };
+            slice.set(with_filter(&filters, &column, Some(next)));
+            onfilter.call(());
+        })
+    };
     let onpick = use_callback(move |on: Option<bool>| {
         let next =
             on.map(|on| ColumnFilter::new(column.clone(), FilterOperator::Is, on.to_string()));
@@ -226,6 +261,7 @@ pub(super) fn use_filter_editor(target: &FilterTarget) -> FilterEditor {
     FilterEditor {
         draft,
         ontext,
+        onoperator,
         onpick,
         onday,
         onoption,
@@ -252,8 +288,8 @@ pub(super) fn FilterValue(
     onday: EventHandler<(bool, String)>,
     /// A select column's options.
     #[props(default)]
-    options: Vec<String>,
-    /// A select column's single option; `None` is any.
+    options: Vec<SelectOption>,
+    /// A select column's single option's value; `None` is any.
     onoption: EventHandler<Option<String>>,
     /// A select column's `IsAnyOf` options.
     onany: EventHandler<Vec<String>>,
@@ -261,6 +297,9 @@ pub(super) fn FilterValue(
     #[props(default)]
     label: Option<String>,
     #[props(default)] name: Option<String>,
+    /// A one-line `IsAnyOf` pick for the header filters row, in place of the checkbox column.
+    #[props(default)]
+    compact: bool,
 ) -> Element {
     let current = filter.as_ref();
     let operator = current.map_or(FilterOperator::of(kind)[0], |filter| filter.operator);
@@ -274,6 +313,18 @@ pub(super) fn FilterValue(
             let picked = current
                 .map(|filter| filter.values.clone())
                 .unwrap_or_default();
+            if compact {
+                return rsx! {
+                    CompactAnyOf {
+                        name,
+                        size,
+                        any: labels.any,
+                        options,
+                        picked,
+                        onany,
+                    }
+                };
+            }
             return rsx! {
                 div {
                     role: "group",
@@ -281,10 +332,10 @@ pub(super) fn FilterValue(
                     style: "display: flex; flex-direction: column; gap: 0.25rem;",
                     for option in options.iter().cloned() {
                         Checkbox {
-                            key: "{option}",
-                            label: option.clone(),
+                            key: "{option.value}",
+                            label: option.label.clone(),
                             size,
-                            checked: picked.contains(&option),
+                            checked: picked.contains(&option.value),
                             onchange: {
                                 let (options, picked) = (options.clone(), picked.clone());
                                 move |on: bool| {
@@ -292,9 +343,9 @@ pub(super) fn FilterValue(
                                         .iter()
                                         .filter(|each| match **each == option {
                                             true => on,
-                                            false => picked.contains(*each),
+                                            false => picked.contains(&each.value),
                                         })
-                                        .cloned()
+                                        .map(|each| each.value.clone())
                                         .collect();
                                     onany.call(next);
                                 }
@@ -309,8 +360,8 @@ pub(super) fn FilterValue(
             label: labels.any.to_string(),
         }];
         choices.extend(options.iter().map(|option| OptionPick {
-            option: Some(option.clone()),
-            label: option.clone(),
+            option: Some(option.value.clone()),
+            label: option.label.clone(),
         }));
         let value = current.map(|filter| &filter.value);
         let picked = choices
@@ -425,6 +476,60 @@ pub(super) fn FilterValue(
             inputmode: (kind == FilterKind::Number).then_some("decimal"),
             "data-filter-value": true,
             oninput: move |text: String| ontext.call(text),
+        }
+    }
+}
+
+/// `IsAnyOf` as one line: a `MultiSelect` whose picks collapse to the first label and a count.
+#[component]
+fn CompactAnyOf(
+    name: String,
+    size: Size,
+    any: &'static str,
+    options: Vec<SelectOption>,
+    picked: Vec<String>,
+    onany: EventHandler<Vec<String>>,
+) -> Element {
+    let held: Vec<SelectOption> = options
+        .iter()
+        .filter(|option| picked.contains(&option.value))
+        .cloned()
+        .collect();
+    let summary = match held.split_first() {
+        Some((first, [])) => Some((first.clone(), first.label.clone())),
+        Some((first, rest)) => Some((first.clone(), format!("{} +{}", first.label, rest.len()))),
+        None => None,
+    };
+    let selection = Callback::new(move |args: SelectionArgs<SelectOption>| match &summary {
+        Some((first, text)) if args.value == *first => {
+            rsx! {
+                span {
+                    "data-filter-summary": true,
+                    style: "white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
+                    "{text}"
+                }
+            }
+        }
+        _ => rsx! {},
+    });
+    let ordered = options.clone();
+    rsx! {
+        MultiSelect::<SelectOption> {
+            aria_label: name,
+            size,
+            sx: sx().min_width("9rem"),
+            placeholder: any,
+            options: options.clone(),
+            value: held,
+            selection,
+            onchange: move |next: Vec<SelectOption>| {
+                let values = ordered
+                    .iter()
+                    .filter(|option| next.contains(option))
+                    .map(|option| option.value.clone())
+                    .collect();
+                onany.call(values);
+            },
         }
     }
 }
@@ -565,21 +670,7 @@ pub(super) fn FilterPopover(
                             value: picked,
                             options: operators,
                             onchange: move |choice: Choice<FilterOperator>| {
-                                let filters = slice.peek();
-                                let value = draft
-                                    .peek()
-                                    .clone()
-                                    .or_else(|| filter_of(&filters, &column).map(|f| f.value.clone()))
-                                    .unwrap_or_default();
-                                draft.set(None);
-                                let held = filter_of(&filters, &column);
-                                let next = ColumnFilter {
-                                    value_to: held.map(|f| f.value_to.clone()).unwrap_or_default(),
-                                    values: held.map(|f| f.values.clone()).unwrap_or_default(),
-                                    ..ColumnFilter::new(column.clone(), choice.value, value)
-                                };
-                                slice.set(with_filter(&filters, &column, Some(next)));
-                                onfilter.call(());
+                                editor.onoperator.call(choice.value);
                             },
                         }
                     }

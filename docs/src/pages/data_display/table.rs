@@ -1,10 +1,12 @@
-use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, prop, props};
+use crate::components::{
+    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props,
+};
 use dioxus::prelude::*;
 use libero::components::{Code, Text};
 use libero::use_theme;
 
 mod demo;
-use demo::TeamTable;
+use demo::{StaffTable, TeamTable};
 
 /// The live table and its data, printed from its text by `wrap_data`.
 const FILE: DemoFile = DemoFile(include_str!("table/demo.rs"));
@@ -65,6 +67,25 @@ const GROUPED_COLUMNS: &str = r#"columns: vec![
         .sortable()
         .group("Membership"),
 ]"#;
+
+// snippet: item #[derive(Clone, PartialEq)] struct Staff { name: String, role: String }
+// snippet: item fn role_label(role: &str) -> &'static str { "" }
+// snippet: let staff: Vec<Staff> = Vec::new();
+// snippet: in Table { caption: "Staff", data: staff, .. }
+const SELECT_FIXED: [&str; 6] = [
+    r#"caption: "Staff""#,
+    "data: staff",
+    r#"row_key: |s: &Staff| s.name.clone()"#,
+    "header_filters: true",
+    r#"default_column_filters: vec![ColumnFilter::any_of("Role", ["owner", "admin"])]"#,
+    r#"columns: vec![
+    column("Name").value(|s: &Staff| s.name.clone()).row_header(),
+    column("Role")
+        .value(|s: &Staff| s.role.clone())
+        .format(|s: &Staff| role_label(&s.role).to_string())
+        .options([("owner", "Owner"), ("admin", "Admin"), ("viewer", "Viewer")]),
+]"#,
+];
 
 /// The rows are the fixture, and the snippet only compiles with them, so the
 /// code block carries the struct and the data above the `Table` itself.
@@ -280,7 +301,7 @@ pub fn TablePage() -> Element {
                     prop("filter_logic", "Option<FilterLogic>").default("None").doc("How the column filters join: `FilterLogic::And` keeps a row that passes all of them, `Or` one that passes any. The quick filter applies on top either way. Set, it is controlled."),
                     prop("default_filter_logic", "FilterLogic").default("And").doc("Seeds the filter logic once. Ignored when `filter_logic` is set."),
                     prop("onfilterlogicchange", "EventHandler<FilterLogic>").default("None").doc("Called with the filter logic a pick asks for."),
-                    prop("header_filters", "bool").default("false").doc("Adds a row of filter fields under the headers, one per `filterable` column: a text field, Any/Yes/No for a boolean column, or Any and the options for a select column (checkboxes once the popover picked Is any of). A field edits its column's filter with the operator the filter popover set, else the type's first: Contains for text, Equals for numbers."),
+                    prop("header_filters", "bool").default("false").doc("Adds a row of filter fields under the headers, one per `filterable` column: a text field, Any/Yes/No for a boolean column, or Any and the options for a select column (one multi-select showing the first pick and a count once the popover picked Is any of). A field edits its column's filter with the operator the filter popover set, else the type's first: Contains for text, Equals for numbers."),
                     prop("filter_panel", "bool").default("false").doc("A Filters button at the start of the toolbar row, showing the active filters' count, opens a dialog of every column filter; with a `toolbar`, put `TableFilterButton` in it where the button goes instead, one line each: column, operator, value and a remove button. Add filter appends a line for the first column without one; from two lines a Match pick sets `filter_logic`. Lines apply as the popover does. `column_menu`'s Filter then opens the panel on its column's line instead of the popover."),
                     prop("pinned_columns", "Option<PinnedColumns>").default("None").doc("The columns held at the table's start and end edges while the rest scroll sideways, by header: `PinnedColumns::default().start([..]).end([..])`. Start is the left in a left-to-right page, the right in a right-to-left one. Set, pinning is controlled: pair it with `onpinnedcolumnschange`. Pair it with `scroll` or `max_height`, and give every pinned column but the outermost on its side a `width`, which it then keeps exactly."),
                     prop("default_pinned_columns", "PinnedColumns").default("none pinned").doc("Seeds the pinned columns once. Ignored when `pinned_columns` is set."),
@@ -310,7 +331,7 @@ pub fn TablePage() -> Element {
                     prop("of", "&ColumnType<V>").default("None").doc("Before `value`: starts the column from a shared `const` type, its alignment, widths and a `format` over the value. `V` must match `value`'s; the column's own settings win."),
                     prop("row_header", "bool").default("false").doc("Renders the column's cells as `th scope=\"row\"`, so a screen reader names each row by it. One per table, usually the first."),
                     prop("filterable", "bool").default("true").doc("Whether the quick filter searches the column's cell text, and whether it takes a column filter. Off for ids and codes that would match by accident."),
-                    prop("options", "Vec<String>").default("[]").doc("Makes it a select column: its filter picks among these options, matched whole against the cell text, with the operators is, is not and is any of. The quick filter and sorting still read the cell."),
+                    prop("options", "Vec<SelectOption>").default("[]").doc("Makes it a select column: its filter picks among these options, with the operators is, is not and is any of. A `SelectOption` is a `&str`, or a `(value, label)` pair: values match the raw cell text, before `format`, and are what a `ColumnFilter` holds; labels are shown. The quick filter and sorting still read the cell."),
                     prop("hideable", "bool").default("true").doc("Whether the column menu offers to hide the column. `hidden_columns` still hides it."),
                     prop("row_groupable", "bool").default("true").doc("Whether the column menu offers to group the rows by the column. `row_grouping` still groups by it."),
                     prop("group", "String").default("None").doc("Puts the column under a group header, shared with the adjacent columns of the same groups. Call it once per level, outermost first. The same name under another parent is another group, and a hidden column leaves its group."),
@@ -354,7 +375,7 @@ pub fn TablePage() -> Element {
                     "Each group toggle is a button named by the group's text and row count, \"Admin, 2 rows\", with `aria-expanded`; opening or closing it is said in a polite live region, \"Admin expanded\". The table keeps its table role: group rows are rows with a button, not a tree.",
                     "A polite live region says what changed: the selected count, \"2 rows selected\"; the page range, \"4–6 of 7\"; the rows left after a filter, \"2 rows\"; the rows loaded by `onbottomreached`, \"200 rows\"; an export, \"Exported 12 rows\". The first render says nothing.",
                     "Page buttons sit in a `nav` named after the caption, and the page-size picker is labelled. The quick-filter is a labelled search field described by the table's name, so two tables' fields differ.",
-                    "Filter popovers and the filter panel are named dialogs with labelled fields. Focus moves in on open, and Escape closes them onto their button. A filtered header reads \"Age is filtered\". A select column's Is any of is a named group of checkboxes, one per option.",
+                    "Filter popovers and the filter panel are named dialogs with labelled fields. Focus moves in on open, and Escape closes them onto their button. A filtered header reads \"Age is filtered\". A select column's Is any of is a named group of checkboxes, one per option, and in the header filters row a named multi-select.",
                     "Each column menu button is named after its column, \"Age column options\". It shows on hover or focus, always on touch. A move, pin, hide (from any Columns menu too) or width change is said in a polite live region, and the last shown column cannot be hidden: its controls say why.",
                     "Pinned and moved columns move in the DOM too, so Tab and a screen reader meet the cells in the order they are seen.",
                     "Rows and columns reorder without a drag (WCAG 2.5.7): a row has a named handle plus Move up and Move down buttons, a column moves from its menu. The header drag grip is pointer only and hidden from screen readers. While sorted or filtered the row controls stay tab stops but are `aria-disabled` and say why.",
@@ -500,6 +521,32 @@ pub fn TablePage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     TeamTable { values }
                 },
+            }
+
+            DocSection {
+                title: "Select columns",
+                Text {
+                    Code { source: ".options(..)" }
+                    " makes a column's filter pick among values, each with a label: a "
+                    Code { source: "(value, label)" }
+                    " pair, or a bare string for both. The values match the cell's raw text, "
+                    "before "
+                    Code { source: ".format(..)" }
+                    ", and are what a "
+                    Code { source: "ColumnFilter" }
+                    " holds, so stored codes shown as names still filter. With "
+                    Code { source: "header_filters" }
+                    ", Is any of is one field showing the first label and a count."
+                }
+                Demo {
+                    component: "Table",
+                    title: "Select column",
+                    wide_preview: true,
+                    children_text: "",
+                    fixed: SELECT_FIXED.map(str::to_string).to_vec(),
+                    controls: Vec::new(),
+                    render: move |_: DemoValues| rsx! { StaffTable {} },
+                }
             }
         }
     }

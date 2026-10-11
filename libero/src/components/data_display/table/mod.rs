@@ -33,7 +33,7 @@ pub use cell_value::{CellAlign, CellValue, FilterKind, SortDirection, SortKey};
 pub use column::{Column, ColumnDefaults, ColumnHeader, ColumnType, TypedColumnHeader, column};
 // Defined with the labels, which name each one: localization sits below components.
 pub use crate::localization::labels::table::{Aggregate, FilterLogic, FilterOperator};
-pub use column_filter::ColumnFilter;
+pub use column_filter::{ColumnFilter, SelectOption};
 pub use core::{RowFn, TableSort};
 pub use csv::{table_csv, table_text};
 pub use pinning::{PinSide, PinnedColumns};

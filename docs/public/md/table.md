@@ -761,37 +761,50 @@ fn Demo() -> Element {
 }
 ```
 
-A select column: `options` makes its filter pick among them. In a column menu or
-a header filter, Is and Is not take one option, Is any of takes several as
-checkboxes. A filter is also set from code, with `ColumnFilter::any_of`.
+A select column: `options` makes its filter pick among values, each with a
+label: a `(value, label)` pair, or a bare string for both. The values match the
+cell's raw text, before `.format(..)`, and are what a `ColumnFilter` holds, so
+stored codes shown as names still filter. In a column menu or a header filter,
+Is and Is not take one option, Is any of takes several: checkboxes in the
+popover, one field showing the first label and a count in the header filters
+row. A filter is also set from code, with `ColumnFilter::any_of`.
 
 ```rust
 use dioxus::prelude::*;
 use libero::components::{ColumnFilter, Table, column};
 
 #[derive(Clone, PartialEq)]
-struct Person {
-    id: u32,
+struct Staff {
     name: String,
     role: String,
 }
 
+fn role_label(role: &str) -> &'static str {
+    match role {
+        "owner" => "Owner",
+        "admin" => "Admin",
+        _ => "Viewer",
+    }
+}
+
 #[component]
 fn Demo() -> Element {
-    let people: Vec<Person> = Vec::new();
+    let staff: Vec<Staff> = Vec::new();
 
     rsx! {
         Table {
-            caption: "Team members",
-            data: people,
-            columns: vec![
-                column("Name").value(|p: &Person| p.name.clone()).row_header(),
-                column("Role")
-                    .value(|p: &Person| p.role.clone())
-                    .options(["Owner", "Admin", "Viewer"]),
-            ],
+            caption: "Staff",
+            data: staff,
+            row_key: |s: &Staff| s.name.clone(),
             header_filters: true,
-            default_column_filters: vec![ColumnFilter::any_of("Role", ["Owner", "Admin"])],
+            default_column_filters: vec![ColumnFilter::any_of("Role", ["owner", "admin"])],
+            columns: vec![
+                column("Name").value(|s: &Staff| s.name.clone()).row_header(),
+                column("Role")
+                    .value(|s: &Staff| s.role.clone())
+                    .format(|s: &Staff| role_label(&s.role).to_string())
+                    .options([("owner", "Owner"), ("admin", "Admin"), ("viewer", "Viewer")]),
+            ],
         }
     }
 }
@@ -917,7 +930,7 @@ fn Demo() -> Element {
 | `filter_logic` | `Option<FilterLogic>` | `None` | How the column filters join: `FilterLogic::And` keeps a row that passes all of them, `Or` one that passes any. The quick filter applies on top either way. Set, it is controlled. |
 | `default_filter_logic` | `FilterLogic` | `And` | Seeds the filter logic once. Ignored when `filter_logic` is set. |
 | `onfilterlogicchange` | `EventHandler<FilterLogic>` | `None` | Called with the filter logic a pick asks for. |
-| `header_filters` | `bool` | `false` | Adds a row of filter fields under the headers, one per `filterable` column: a text field, Any/Yes/No for a boolean column, or Any and the options for a select column (checkboxes once the popover picked Is any of). A field edits its column's filter with the operator the filter popover set, else the type's first: Contains for text, Equals for numbers. |
+| `header_filters` | `bool` | `false` | Adds a row of filter fields under the headers, one per `filterable` column: a text field, Any/Yes/No for a boolean column, or Any and the options for a select column (one multi-select showing the first pick and a count once the popover picked Is any of). A field edits its column's filter with the operator the filter popover set, else the type's first: Contains for text, Equals for numbers. |
 | `filter_panel` | `bool` | `false` | A Filters button at the start of the toolbar row, showing the active filters' count, opens a dialog of every column filter; with a `toolbar`, put `TableFilterButton` in it where the button goes instead, one line each: column, operator, value and a remove button. Add filter appends a line for the first column without one; from two lines a Match pick sets `filter_logic`. Lines apply as the popover does. `column_menu`'s Filter then opens the panel on its column's line instead of the popover. |
 | `pinned_columns` | `Option<PinnedColumns>` | `None` | The columns held at the table's start and end edges while the rest scroll sideways, by header: `PinnedColumns::default().start([..]).end([..])`. Start is the left in a left-to-right page, the right in a right-to-left one. Set, pinning is controlled: pair it with `onpinnedcolumnschange`. Pair it with `scroll` or `max_height`, and give every pinned column but the outermost on its side a `width`, which it then keeps exactly. |
 | `default_pinned_columns` | `PinnedColumns` | none pinned | Seeds the pinned columns once. Ignored when `pinned_columns` is set. |
@@ -953,7 +966,7 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `of` | `&ColumnType<V>` | `None` | Before `value`: starts the column from a shared `const` type, its alignment, widths and a `format` over the value. `V` must match `value`'s; the column's own settings win. |
 | `row_header` | `bool` | `false` | Renders the column's cells as `th scope="row"`, so a screen reader names each row by it. One per table, usually the first. |
 | `filterable` | `bool` | `true` | Whether the quick filter searches the column's cell text, and whether it takes a column filter. Off for ids and codes that would match by accident. |
-| `options` | `Vec<String>` | `[]` | Makes it a select column: its filter picks among these options, matched whole against the cell text, with the operators is, is not and is any of. The quick filter and sorting still read the cell. |
+| `options` | `Vec<SelectOption>` | `[]` | Makes it a select column: its filter picks among these options, with the operators is, is not and is any of. A `SelectOption` is a `&str`, or a `(value, label)` pair: values match the raw cell text, before `format`, and are what a `ColumnFilter` holds; labels are shown. The quick filter and sorting still read the cell. |
 | `hideable` | `bool` | `true` | Whether the column menu offers to hide the column. `hidden_columns` still hides it. |
 | `row_groupable` | `bool` | `true` | Whether the column menu offers to group the rows by the column. `row_grouping` still groups by it. |
 | `group` | `String` | `None` | Puts the column under a group header, shared with the adjacent columns of the same groups. Call it once per level, outermost first. The same name under another parent is another group, and a hidden column leaves its group. |
@@ -1033,7 +1046,7 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 - Page buttons sit in a `nav` named after the caption, and the page-size
   picker is labelled. The quick-filter is a labelled search field described by
   the table's name, so two tables' fields differ.
-- Filter popovers and the filter panel are named dialogs with labelled fields. A select column's Is any of is a named group of checkboxes, one per option.
+- Filter popovers and the filter panel are named dialogs with labelled fields. A select column's Is any of is a named group of checkboxes, one per option, and in the header filters row a named multi-select.
   Focus moves in on open, and Escape closes them onto their button. A filtered
   header reads "Age is filtered".
 - Each column menu button is named after its column, "Age column options". It

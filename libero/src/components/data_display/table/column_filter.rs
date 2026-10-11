@@ -74,6 +74,46 @@ impl ColumnFilter {
     }
 }
 
+/// One choice of a select column's filter: `value` is what a [`ColumnFilter`] holds and
+/// the cell's raw text must equal, `label` is what the filter shows.
+///
+/// ```rust
+/// # use libero::components::SelectOption;
+/// let plain = SelectOption::from("Admin");
+/// let labelled = SelectOption::from(("admin", "Administrator"));
+/// assert_eq!(plain.label, "Admin");
+/// assert_eq!(labelled.value, "admin");
+/// ```
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SelectOption {
+    pub value: String,
+    pub label: String,
+}
+
+impl From<&str> for SelectOption {
+    fn from(text: &str) -> Self {
+        Self::from(text.to_string())
+    }
+}
+
+impl From<String> for SelectOption {
+    fn from(text: String) -> Self {
+        Self {
+            label: text.clone(),
+            value: text,
+        }
+    }
+}
+
+impl<V: Into<String>, L: Into<String>> From<(V, L)> for SelectOption {
+    fn from((value, label): (V, L)) -> Self {
+        Self {
+            value: value.into(),
+            label: label.into(),
+        }
+    }
+}
+
 pub(super) use crate::localization::{FilterLogic, FilterOperator};
 
 impl FilterOperator {
@@ -148,7 +188,7 @@ pub(super) enum CellTest {
     Empty(bool),
     /// Days kept, from and to, either end open.
     Days(Option<f64>, Option<f64>),
-    /// Cell text among these options, or with `true` not among them.
+    /// Raw cell text among these options, or with `true` not among them.
     Options(Vec<String>, bool),
 }
 
@@ -287,7 +327,12 @@ pub(super) fn passes_all<T>(
 ) -> bool {
     let passes = |(index, test): &(usize, CellTest)| {
         let column = &columns[*index];
-        test.passes(&(column.text)(row), &(column.sort_key)(row))
+        // A select option names the raw value, not what `format` shows.
+        let text = match test {
+            CellTest::Options(..) => (column.value_text)(row),
+            _ => (column.text)(row),
+        };
+        test.passes(&text, &(column.sort_key)(row))
     };
     match logic {
         FilterLogic::And => tests.iter().all(passes),
@@ -424,6 +469,32 @@ mod tests {
         assert_eq!(pick(&any, "Editor"), Some(true));
         assert_eq!(pick(&any, "Viewer"), Some(false));
         assert_eq!(pick(&ColumnFilter::new("A", IsEmpty, ""), ""), Some(true));
+    }
+
+    #[test]
+    fn a_select_option_matches_the_raw_value_not_the_formatted_text() {
+        let columns = vec![
+            column("Role")
+                .value(|row: &String| row.clone())
+                .format(|row: &String| row.to_uppercase())
+                .options([("admin", "Administrator"), ("editor", "Editor")]),
+        ];
+        let tests = cell_tests(&columns, &[ColumnFilter::new("Role", Is, "admin")]);
+        let kept = |row: &str| passes_all(&row.to_string(), &columns, &tests, FilterLogic::And);
+        assert!(kept("admin"));
+        assert!(!kept("ADMIN"));
+        assert!(!kept("editor"));
+    }
+
+    #[test]
+    fn plain_strings_and_pairs_make_options() {
+        assert_eq!(SelectOption::from("Admin").value, "Admin");
+        assert_eq!(SelectOption::from("Admin").label, "Admin");
+        let pair = SelectOption::from(("admin", "Administrator"));
+        assert_eq!(
+            (pair.value.as_str(), pair.label.as_str()),
+            ("admin", "Administrator")
+        );
     }
 
     #[test]

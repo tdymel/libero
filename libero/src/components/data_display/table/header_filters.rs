@@ -27,6 +27,7 @@ pub(super) fn HeaderFilter(target: FilterTarget) -> Element {
             options: target.options,
             onoption: editor.onoption,
             onany: editor.onany,
+            compact: true,
         }
     }
 }

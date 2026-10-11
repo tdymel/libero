@@ -43,7 +43,7 @@ pub use sortable::{Sortable, SortableItem, SortableItemPart, SortableItemProps, 
 pub use table::{
     Aggregate, CellAlign, CellValue, Column, ColumnDefaults, ColumnFilter, ColumnHeader,
     ColumnType, ColumnWidths, FilterKind, FilterLogic, FilterOperator, PinSide, PinnedColumns,
-    RowFn, SortDirection, SortKey, Table, TableColumnsButton, TableDensityButton,
+    RowFn, SelectOption, SortDirection, SortKey, Table, TableColumnsButton, TableDensityButton,
     TableExportButton, TableFilterButton, TableProps, TableSort, TypedColumnHeader, column,
     table_csv, table_text,
 };

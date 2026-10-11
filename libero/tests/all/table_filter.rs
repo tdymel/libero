@@ -410,7 +410,7 @@ fn a_select_column_filters_by_its_options() {
 }
 
 #[test]
-fn a_select_header_filter_lists_the_options_or_their_checkboxes() {
+fn a_select_header_filter_lists_the_options_or_sums_up_its_picks() {
     use FilterOperator::*;
     let html = country_html!(ColumnFilter::new("Country", Is, "Germany"));
     let header = head(&html);
@@ -423,10 +423,47 @@ fn a_select_header_filter_lists_the_options_or_their_checkboxes() {
     }
     assert!(!header.contains("role=\"group\""), "{header}");
 
+    // Is any of takes one line in the row: a named multi-select, not a checkbox column.
     let html = country_html!(ColumnFilter::any_of("Country", ["France"]));
     let header = head(&html);
-    assert!(header.contains("role=\"group\""), "{header}");
-    assert_eq!(header.matches("type=\"checkbox\"").count(), 3, "{header}");
+    assert!(header.contains("aria-label=\"Filter Country\""), "{header}");
+    assert!(
+        header.contains("data-filter-summary=true>France<"),
+        "{header}"
+    );
+    assert!(!header.contains("type=\"checkbox\""), "{header}");
+
+    let html = country_html!(ColumnFilter::any_of("Country", ["France", "Germany"]));
+    assert!(head(&html).contains(">France +1<"), "{html}");
+}
+
+#[test]
+fn a_select_option_shows_its_label_and_filters_by_its_value() {
+    let html = render(|| {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "Cities",
+                    data: cities(),
+                    columns: vec![
+                        column("City").value(|c: &City| c.name).row_header(),
+                        column("Country")
+                            .value(|c: &City| c.country)
+                            .format(|c: &City| c.country.to_uppercase())
+                            .options([("France", "The French Republic"), ("Germany", "Germany")]),
+                    ],
+                    header_filters: true,
+                    default_column_filters: vec![ColumnFilter::new("Country", FilterOperator::Is, "France")],
+                }
+            }
+        }
+    });
+    assert!(head(&html).contains(">The French Republic<"), "{html}");
+    assert!(
+        body(&html).contains("Paris") && !body(&html).contains("London"),
+        "{html}"
+    );
+    assert!(body(&html).contains("FRANCE"), "{html}");
 }
 
 #[test]

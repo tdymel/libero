@@ -4,6 +4,7 @@ use dioxus::prelude::*;
 
 use super::{
     cell_value::{CellAlign, CellValue, FilterKind, SortKey},
+    column_filter::SelectOption,
     resize::ResizeLimits,
 };
 use crate::localization::Aggregate;
@@ -37,7 +38,7 @@ pub struct Column<T> {
     /// What the cell type chose; picks the column filter's operators.
     pub(super) filter_kind: FilterKind,
     /// The choices of a select column's filter; empty for any other.
-    pub(super) options: Vec<String>,
+    pub(super) options: Vec<SelectOption>,
     pub(super) width: Option<String>,
     pub(super) min_width: Option<String>,
     /// Gets a resize handle with the table's `resizable_columns`.
@@ -54,6 +55,8 @@ pub struct Column<T> {
     pub(super) sort_key: Rc<dyn Fn(&T) -> SortKey>,
     /// The cell as plain text, drawn inline in its `td`.
     pub(super) text: Rc<dyn Fn(&T) -> String>,
+    /// The value's own text, which `format` leaves alone; a select option matches it.
+    pub(super) value_text: Rc<dyn Fn(&T) -> String>,
     /// A caller's cell body, which replaces `text`.
     pub(super) render: Option<CellRender<T>>,
 }
@@ -69,6 +72,7 @@ impl ColumnHeader {
     pub fn value<T, V: CellValue>(self, value: impl Fn(&T) -> V + 'static) -> Column<T> {
         let value = Rc::new(value);
         let sort_value = value.clone();
+        let raw_value = value.clone();
 
         Column {
             header: self.header,
@@ -92,6 +96,7 @@ impl ColumnHeader {
             aggregate_format: None,
             sort_key: Rc::new(move |row| sort_value(row).sort_key()),
             text: Rc::new(move |row| value(row).cell_text()),
+            value_text: Rc::new(move |row| raw_value(row).cell_text()),
             render: None,
         }
     }
@@ -274,18 +279,19 @@ impl<T> Column<T> {
         self
     }
 
-    /// Makes it a select column: its filter picks among `options`, matched against the
-    /// cell text exactly, with the operators Is, Is not and Is any of. The quick filter
-    /// and sorting still read the cell.
+    /// Makes it a select column: its filter picks among `options`, with the operators Is,
+    /// Is not and Is any of. Values match the raw cell text, labels are shown, so a
+    /// [`format`](Self::format)ted or translated cell still filters. The quick filter and
+    /// sorting still read the cell.
     ///
     /// ```rust
     /// # use libero::components::column;
     /// # struct User { role: String }
     /// column("Role")
     ///     .value(|u: &User| u.role.clone())
-    ///     .options(["Admin", "Editor", "Viewer"]);
+    ///     .options([("admin", "Administrator"), ("editor", "Editor")]);
     /// ```
-    pub fn options(mut self, options: impl IntoIterator<Item = impl Into<String>>) -> Self {
+    pub fn options(mut self, options: impl IntoIterator<Item = impl Into<SelectOption>>) -> Self {
         self.options = options.into_iter().map(Into::into).collect();
         self.filter_kind = FilterKind::Select;
         self
@@ -479,6 +485,7 @@ impl<T> Clone for Column<T> {
             aggregate_format: self.aggregate_format.clone(),
             sort_key: self.sort_key.clone(),
             text: self.text.clone(),
+            value_text: self.value_text.clone(),
             render: self.render.clone(),
         }
     }
