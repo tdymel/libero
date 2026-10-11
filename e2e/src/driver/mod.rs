@@ -84,6 +84,10 @@ pub trait Driver {
     async fn press_shift(&mut self, key: Key) -> Result<()>;
     /// A chord with Ctrl held; give `key` no `text`.
     async fn press_ctrl(&mut self, key: Key) -> Result<()>;
+    /// A chord with libero's `mod` held: Cmd where the app runs on Apple, else Ctrl.
+    async fn press_mod(&mut self, key: Key) -> Result<()> {
+        self.press_ctrl(key).await
+    }
     /// A chord with Alt held; give `key` no `text`.
     async fn press_alt(&mut self, key: Key) -> Result<()> {
         let _ = key;

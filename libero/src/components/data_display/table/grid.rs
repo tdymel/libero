@@ -19,7 +19,7 @@ use crate::{
     hooks::{ElementHandle, listener, use_id, use_silent_focus_in},
     platform::{
         ElementApi, PlatformError, arrow_target, focus_selector, focused_tag, infers_grid_cells,
-        key_taken, rtl_target, silent_focus, typing_target, when_laid_out,
+        key_taken, meta_held, rtl_target, silent_focus, typing_target, when_laid_out,
     },
 };
 
@@ -500,7 +500,7 @@ impl GridFocus {
                 return;
             }
             let modifiers = event.modifiers();
-            let ctrl = modifiers.ctrl() || modifiers.meta();
+            let ctrl = modifiers.ctrl() || meta_held(modifiers);
             if modifiers.alt() {
                 return;
             }

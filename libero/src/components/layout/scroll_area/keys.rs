@@ -43,7 +43,8 @@ fn key_move(key: &Key, shift: bool, on_area: bool, view_height: f64) -> Option<M
 /// does not scroll too.
 pub(crate) fn scroll_on_key(root: ElementHandle, event: Event<KeyboardData>) {
     let modifiers = event.modifiers();
-    if modifiers.intersects(Modifiers::CONTROL | Modifiers::ALT | Modifiers::META)
+    if modifiers
+        .intersects(Modifiers::CONTROL | Modifiers::ALT | Modifiers::META | Modifiers::SUPER)
         || key_taken(&event)
         || typing_target(&event)
     {

@@ -111,6 +111,11 @@ pub(crate) fn mod_is_meta() -> bool {
     backend::mod_is_meta()
 }
 
+/// Whether Cmd (or the Windows key) is held: browsers say `META`, Blitz `SUPER`.
+pub(crate) fn meta_held(modifiers: Modifiers) -> bool {
+    modifiers.intersects(Modifiers::META | Modifiers::SUPER)
+}
+
 /// Whether a tap on a field raises a soft keyboard that covers its dropdown: a
 /// mobile WebView app. The web answers `false`, touch screens included.
 pub(crate) fn soft_keyboard_app() -> bool {
@@ -220,7 +225,7 @@ pub(crate) fn reserved_chord(key: &Key, modifiers: Modifiers) -> Option<&'static
     let Key::Character(text) = key else {
         return None;
     };
-    if !(modifiers.ctrl() || modifiers.meta()) || modifiers.alt() {
+    if !(modifiers.ctrl() || meta_held(modifiers)) || modifiers.alt() {
         return None;
     }
     match text.to_ascii_lowercase().as_str() {
@@ -240,7 +245,7 @@ pub(crate) fn reserved_chord_warning(key: &Key, modifiers: Modifiers) -> Option<
         let mut chord = String::new();
         // Ctrl and Cmd as one: a hotkey binds both.
         for (held, name) in [
-            (modifiers.ctrl() || modifiers.meta(), "Ctrl/Cmd+"),
+            (modifiers.ctrl() || meta_held(modifiers), "Ctrl/Cmd+"),
             (modifiers.alt(), "Alt+"),
             (modifiers.shift(), "Shift+"),
         ] {

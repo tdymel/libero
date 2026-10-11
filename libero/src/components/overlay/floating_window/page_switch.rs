@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     context::WindowHost,
     hooks::{ElementHandle, use_dismiss_layer, use_subscription_slot},
-    platform::{ElementApi, KeyChord, KeySubscription, keyboard},
+    platform::{ElementApi, KeyChord, KeySubscription, keyboard, meta_held},
     utils::bump,
 };
 
@@ -41,7 +41,7 @@ pub(super) fn use_page_switch(
             if chord.key != Key::F6
                 || modifiers.ctrl()
                 || modifiers.alt()
-                || modifiers.meta()
+                || meta_held(modifiers)
                 || !host.is_top(id)
                 || layer.any_open()
             {

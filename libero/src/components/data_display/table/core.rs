@@ -428,7 +428,7 @@ fn adds_column(touch: Option<CopyValue<bool>>, event: &MouseEvent) -> bool {
     let touched = *touch.read();
     touch.set(false);
     let modifiers = event.modifiers();
-    touched || modifiers.shift() || modifiers.ctrl() || modifiers.meta()
+    touched || modifiers.shift() || modifiers.ctrl() || platform::meta_held(modifiers)
 }
 
 /// `share` stands in for an unsized column's width. Every property is written each
