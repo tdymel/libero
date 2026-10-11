@@ -419,16 +419,14 @@ e2e::scenario!(
     "/audio/sources-failing",
     the_failed_sources_are_explained,
     web: skip("audio::every_source_failing_shows_the_error is the web's arm"),
-    native: skip("Blitz plays no media and shows the fallback"),
-    android: skip("2665: checked on the desktop WebView only")
+    native: skip("Blitz plays no media and shows the fallback")
 );
 e2e::scenario!(
     every_video_source_failing_shows_the_error,
     "/video/sources-failing",
     the_failed_sources_are_explained,
     web: skip("video::every_source_failing_shows_the_error is the web's arm"),
-    native: skip("Blitz plays no media and shows the fallback"),
-    android: skip("2665: checked on the desktop WebView only")
+    native: skip("Blitz plays no media and shows the fallback")
 );
 
 /// Todo 1399: the speaker mutes and unmutes; the chevron opens the volume slider

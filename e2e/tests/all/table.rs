@@ -782,6 +782,52 @@ e2e::scenario!(
     the_column_filters_narrow_the_rows
 );
 
+/// Todo 1403: Tab past the filter dialog's last stop and Shift+Tab past its first close it,
+/// the Tab on to the stop after the menu button.
+async fn tab_leaves_the_filter<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const POPOVER: &str = "[data-filter-popover]";
+    const MENU: &str = "[aria-label=\"Name column options\"]";
+    async fn open<D: Driver>(d: &mut D) -> Result<()> {
+        d.focus(MENU).await?;
+        d.press(keyboard::ENTER).await?;
+        eventually_focused(d, "[role=menuitem]", "the opened column menu").await?;
+        d.press(keyboard::HOME).await?;
+        eventually_text(d, "[role=menuitem]:focus", "Filter", "Home").await?;
+        d.press(keyboard::ENTER).await?;
+        eventually_focused(d, &format!("{POPOVER} input"), "the opened filter").await
+    }
+    // Clear is disabled without a filter: the value field is the last stop.
+    open(d).await?;
+    d.press(keyboard::TAB).await?;
+    eventually(d, "the filter closed by Tab", async |d| {
+        Ok(!d.exists(POPOVER).await? && !d.is_focused(MENU).await?)
+    })
+    .await?;
+    d.press_shift(keyboard::TAB).await?;
+    eventually_focused(d, MENU, "Shift+Tab back to the menu button").await?;
+
+    open(d).await?;
+    d.press_shift(keyboard::TAB).await?;
+    eventually_focused(
+        d,
+        &format!("{POPOVER} {PICKER}"),
+        "Shift+Tab to the operator",
+    )
+    .await?;
+    d.press_shift(keyboard::TAB).await?;
+    eventually(d, "the filter closed by Shift+Tab", async |d| {
+        Ok(!d.exists(POPOVER).await?)
+    })
+    .await?;
+    eventually_focused(d, MENU, "Shift+Tab past the first stop").await
+}
+
+e2e::scenario!(
+    tab_past_either_end_of_a_column_filter_closes_it,
+    "/table/column-filter",
+    tab_leaves_the_filter
+);
+
 /// Todo 2048, 1.4.10: in a short viewport the filter popover caps at the room on its
 /// side and scrolls inside, rather than running off the screen.
 #[test]

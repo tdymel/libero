@@ -2384,10 +2384,10 @@ pub(super) fn focus_selector(selector: &str) -> Result<(), PlatformError> {
     Ok(())
 }
 
-/// The tab stop next to `selector`'s match: positive `tabindex` ascending, then 0 in
-/// DOM order (2720). With none that way, the match keeps focus.
+/// The tab stop next to `selector`'s match (the focused element for ""): positive `tabindex`
+/// ascending, then 0 in DOM order (2720). With none that way, the match keeps focus.
 const FOCUS_TAB_FROM: &str = "const [selector, backwards] = data;
-    const from = document.querySelector(selector);
+    const from = selector ? document.querySelector(selector) : document.activeElement;
     if (!from) return;
     const candidates = document.querySelectorAll('a[href], area[href], button, input, select, \
         textarea, summary, iframe, [tabindex], [contenteditable]:not([contenteditable=\"false\"])');

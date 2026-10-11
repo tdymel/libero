@@ -23,7 +23,8 @@ use crate::{
     },
     localization::TableLabels,
     platform::{
-        ElementApi, PlatformError, focus_first_of, is_tab, reads_dom_synchronously, when_laid_out,
+        ElementApi, PlatformError, focus_first_of, focus_lands_in, focus_tab_from, is_tab,
+        page_task, reads_dom_synchronously, when_laid_out,
     },
     sx::{StaticSx, sx},
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
@@ -623,6 +624,17 @@ pub(super) fn FilterPopover(
     let (operators, picked) = operator_choices(kind, operator, labels);
     let name = (labels.filter_column)(&column);
     let panel = use_box().framework_sx(&FILTER_POPOVER_SX).prepare();
+    // A WebView's Tab past the end: on from the menu button, once the close has handed it focus.
+    let mut tab_on = use_signal(|| false);
+    use_effect(move || {
+        if !open() && tab_on() {
+            tab_on.set(false);
+            spawn(async {
+                page_task().await;
+                let _ = focus_tab_from("", false);
+            });
+        }
+    });
     let content = open().then(|| {
         let column = column.clone();
         let clear_column = column.clone();
@@ -642,11 +654,24 @@ pub(super) fn FilterPopover(
                     return;
                 }
                 // Tab past either end leaves through the menu button, as from it.
-                let Ok(items) = floating.query_selector_all(FOCUSABLE_SELECTOR) else {
-                    return;
+                let backwards = event.modifiers().shift();
+                let items = match floating.query_selector_all(FOCUSABLE_SELECTOR) {
+                    Ok(items) => items,
+                    // A WebView queries nothing and has moved focus already: close if it left the box (1403).
+                    Err(PlatformError::Unsupported) => {
+                        let at = id_selector(&box_id.peek());
+                        spawn(async move {
+                            page_task().await;
+                            if matches!(focus_lands_in(&at).await, Ok(false)) {
+                                close.call(true);
+                                tab_on.set(!backwards);
+                            }
+                        });
+                        return;
+                    }
+                    Err(_) => return,
                 };
                 let at = items.iter().position(|item| item.is_focused());
-                let backwards = event.modifiers().shift();
                 let leaves = match (at, backwards) {
                     (None, _) => true,
                     (Some(at), false) => at + 1 >= items.len(),

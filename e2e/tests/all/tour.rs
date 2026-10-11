@@ -175,12 +175,7 @@ async fn selector_target<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     hole_on(d, "#picked", "starting the tour").await
 }
 
-e2e::scenario!(
-    a_selector_targets_a_step,
-    "/tour/more",
-    selector_target,
-    android: skip("2666: the WebView lookup is checked on desktop only")
-);
+e2e::scenario!(a_selector_targets_a_step, "/tour/more", selector_target);
 
 /// Steps on to the interactive step of `/tour/more`.
 async fn to_pressable<D: Driver>(d: &mut D) -> Result<()> {

@@ -85,7 +85,12 @@ impl Android {
                 element(selector)
             ))
             .await?;
-        // A fling from the last swipe keeps the page moving under a press (1104).
+        self.settled_centre(selector).await
+    }
+
+    /// The first match's centre once the page stopped moving under it: a fling from the
+    /// last swipe keeps it moving under a press (1104).
+    async fn settled_centre(&self, selector: &str) -> Result<pointer::Point> {
         let mut at = pointer::centre_of(&self.page, selector).await?;
         for _ in 0..40 {
             tokio::time::sleep(Duration::from_millis(50)).await;
@@ -96,7 +101,17 @@ impl Android {
                 break;
             }
         }
-        Ok(at)
+        // A page wider than the screen pans the visual viewport, which `getBoundingClientRect`
+        // ignores and a touch does not (2255).
+        let [left, top]: [f64; 2] = json(
+            &self.page,
+            "[visualViewport.offsetLeft, visualViewport.offsetTop]",
+        )
+        .await?;
+        Ok(pointer::Point {
+            x: at.x - left,
+            y: at.y - top,
+        })
     }
 
     /// A swipe lifted its travel again further on, so the page flings on: lifted on
@@ -349,7 +364,8 @@ impl Android {
         // `input swipe` lifts 1-2px short of its last move, and a drag follows moves
         // only (1002): step the touch by hand, its last move on the end point.
         // A touch lifted off the screen leaves the WebView a stuck touch that eats later drags.
-        let (vw, vh) = self.viewport().await?;
+        let [vw, vh]: [f64; 2] =
+            json(&self.page, "[visualViewport.width, visualViewport.height]").await?;
         let mut events = vec!["DOWN".to_string()];
         events.extend(std::iter::repeat_n("MOVE".to_string(), 4));
         events.push("UP".into());
@@ -474,7 +490,23 @@ impl Driver for Android {
     }
 
     async fn drag(&mut self, selector: &str, dx: f64, dy: f64) -> Result<()> {
-        let from = self.centre(selector).await?;
+        self.centre(selector).await?;
+        // A drag's end past the screen's edge is clamped short (2255): pan it into view, sideways.
+        self.page
+            .evaluate(format!(
+                "(e => {{
+                    const r = e.getBoundingClientRect();
+                    const end = document.createElement('div');
+                    end.style.cssText = `position:absolute;pointer-events:none;width:48px;height:48px;\
+                        left:${{r.x + r.width / 2 + {dx} + scrollX - 24}}px;top:${{r.y + r.height / 2 + scrollY - 24}}px`;
+                    document.body.append(end);
+                    end.scrollIntoView({{ block: 'nearest', inline: 'nearest' }});
+                    end.remove();
+                }})({})",
+                element(selector)
+            ))
+            .await?;
+        let from = self.settled_centre(selector).await?;
         self.swipe(from, dx, dy).await
     }
 
