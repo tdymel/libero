@@ -16,7 +16,9 @@ use std::time::{Duration, Instant};
 use anyhow::{Context, Result, bail};
 
 use crate::clock::{app_clock, app_count};
-use crate::driver::bridge::{Bridge, element, note};
+#[cfg(target_os = "macos")]
+use crate::driver::bridge::note;
+use crate::driver::bridge::{Bridge, element};
 use crate::driver::{Driver, Platform, Rect};
 use crate::passes::keyboard::Key;
 
@@ -724,6 +726,18 @@ impl Driver for Desktop {
 
     async fn press_ctrl(&mut self, key: Key) -> Result<()> {
         self.chord(&["ctrl"], key)
+    }
+
+    /// Cmd on macOS, where libero's `mod` is the Apple key.
+    async fn press_mod(&mut self, key: Key) -> Result<()> {
+        self.chord(
+            &[if cfg!(target_os = "macos") {
+                "meta"
+            } else {
+                "ctrl"
+            }],
+            key,
+        )
     }
 
     async fn press_alt(&mut self, key: Key) -> Result<()> {
