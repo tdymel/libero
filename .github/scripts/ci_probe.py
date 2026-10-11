@@ -6,7 +6,8 @@
     ci_probe.py summary <log> ...      a `::notice` with every `test result:` line
 
 The probe file (`ted_ci.py probe` writes it on a `ci/*` branch) holds `key=value` lines:
-`os` linux|macos|windows, `tier` unit|native|web|desktop|ios|none, `filter` e.g. `tabs::`.
+`os` linux|macos|windows, `tier` unit|native|web|desktop|ios|none, `filter` e.g. `tabs::`,
+and optionally `env`, `NAME=value` pairs for the test run.
 """
 import os
 import re
@@ -34,6 +35,8 @@ CACHES = {
 }
 # Reaches a shell unquoted only after this check.
 FILTER = re.compile(r"^[A-Za-z0-9_:]+$")
+# Space-separated `NAME=value` pairs exported to the probe's test run, e.g. `RUST_TEST_THREADS=1`.
+ENV = re.compile(r"^([A-Z][A-Z0-9_]*=[A-Za-z0-9_.]*)?( [A-Z][A-Z0-9_]*=[A-Za-z0-9_.]*)*$")
 
 
 def fail(message: str) -> None:
@@ -44,7 +47,7 @@ def fail(message: str) -> None:
 
 def read_probe() -> dict[str, str]:
     if os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch":
-        return {key: os.environ.get(f"PROBE_{key.upper()}", "") for key in ("os", "tier", "filter")}
+        return {key: os.environ.get(f"PROBE_{key.upper()}", "") for key in ("os", "tier", "filter", "env")}
     if not PROBE.is_file():
         fail(f"no .github/{PROBE.name} file on this branch; write it with ted_ci.py probe")
     probe = {}
@@ -67,10 +70,13 @@ def plan() -> None:
             fail("tier ios runs on macos only")
         if not FILTER.match(test):
             fail(f"filter {test!r} is not a test path like `tabs::`")
+        if not ENV.match(probe.get("env", "")):
+            fail(f"env {probe.get('env')!r} is not `NAME=value` pairs")
     outputs = {
         "os": target,
         "tier": tier,
         "filter": test,
+        "env": probe.get("env", ""),
         "runner": RUNNERS.get(target, "ubuntu-24.04"),
         "cache": CACHES.get((target, tier), ""),
     }
