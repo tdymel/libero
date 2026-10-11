@@ -31,7 +31,7 @@ pub fn BadgePage() -> Element {
                     .doc("With `variant: \"gradient\"`: the second stop and the angle, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`. The first stop is `color`. Ignored by the other variants."),
                 prop("color", "ThemeAwareValue")
                     .default(theme.badge.color.as_str())
-                    .doc("A theme color name or a CSS color. A theme color also sets a label color that reads on it. Under a gradient, its first stop."),
+                    .doc("A theme color name or a CSS color. A theme color also sets a label color that reads on it. Under a gradient, its first stop; unset, the theme's `badge.color` seeds it."),
                 prop("size", "Size")
                     .default(theme.badge.size.as_str())
                     .doc("Height, horizontal padding and font size, on a scale smaller than a chip's."),

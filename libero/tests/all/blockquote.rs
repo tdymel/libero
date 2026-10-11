@@ -220,10 +220,20 @@ fn size_and_radius_are_independent_axes_with_rules_behind_them() {
     );
     assert!(
         html.contains(&format!(
-            ".{class}[data-state~=\"radius-sm\"]{{border-top-right-radius:"
+            ".{class}[data-state~=\"radius-sm\"]{{border-start-end-radius:"
         )),
         "{html}"
     );
+}
+
+/// Todo 2915: the accent bar follows the writing direction, like the corners away from it.
+#[test]
+fn the_accent_bar_is_at_the_inline_start() {
+    let html = render(bare_app);
+
+    assert!(html.contains("border-inline-start:"), "{html}");
+    assert!(!html.contains("border-left:"), "{html}");
+    assert!(!html.contains("border-top-right-radius"), "{html}");
 }
 
 /// The attribution is a *sibling* of the quote, so an `em` on it resolves

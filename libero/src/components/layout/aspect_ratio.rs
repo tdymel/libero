@@ -44,6 +44,11 @@ static ASPECT_RATIO_BASE_SX: StaticSx = StaticSx::new(|| {
             "& > *:focus-visible::after",
             ring_overlay_sx().content("\"\"").and(inset_ring()),
         )
+        // A text child is not cut at 200% text (todo 2937); media keep the crop.
+        .selector(
+            format!("&:has(> :not(:is({REPLACED_ELEMENTS}, a, picture, span, [data-ring])))"),
+            sx().overflow("visible"),
+        )
 });
 
 fn ring_offset() -> String {
@@ -219,6 +224,17 @@ mod tests {
             rule(css, " > :where(a, picture, span){").contains("display:block"),
             "{css}"
         );
+    }
+
+    /// Todo 2937: only a box holding media or a wrapper of it clips.
+    #[test]
+    fn a_text_child_is_not_clipped() {
+        let sheet = crate::css::Stylesheet::from(&ASPECT_RATIO_BASE_SX);
+        let css = sheet.as_str();
+
+        assert!(css.contains("overflow:hidden"), "{css}");
+        let selector = ":has(> :not(:is(img, video, iframe, canvas, svg, embed, object, a, picture, span, [data-ring]))){";
+        assert!(rule(css, selector).contains("overflow:visible"), "{css}");
     }
 
     /// Todo 2535: the overlay anchors on the root, so a positioned child keeps its place.

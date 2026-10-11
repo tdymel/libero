@@ -35,6 +35,7 @@ pub fn AspectRatioPage() -> Element {
                 .handles(["A focused child keeps its focus ring: it is drawn inside the clip."])
                 .must([
                 "Keep nothing meaningful at the child's edges: they get cropped.",
+                "Leave room below a text child: at larger text it can run past the box.",
                 "Give an image `alt` text that describes what the reader can see.",
             ])
                 .example("A video thumbnail in `AspectRatio { ratio: 16.0 / 9.0, .. }` with an image whose `alt` is \"Sunset over the harbour\": the picture is cropped at its edges, and the play button in its centre keeps its focus ring."),
@@ -70,7 +71,8 @@ pub fn AspectRatioPage() -> Element {
                     Code { source: "height: 100%" }
                     " and "
                     Code { source: "object-fit: cover" }
-                    " itself."
+                    " itself. Any other child, such as text, is not clipped: at larger "
+                    "text runs past the box or grows it instead of losing lines."
                 }
             },
             Demo {

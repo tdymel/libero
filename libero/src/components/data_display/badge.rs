@@ -133,9 +133,14 @@ pub fn Badge(props: BadgeProps) -> Element {
         .cloned()
         .unwrap_or_else(|| ThemeAwareValue::from(theme.badge.color));
     let variables: Input<Variables> = badge_variables(&props, &color, variant).into();
+    // A themed color seeds the first stop of an unset one (todo 2699).
+    let seed = props
+        .color
+        .as_ref()
+        .or_else(|| (theme.badge.color != BadgeDefaults::DEFAULT.color).then_some(&color));
     let gradient = use_gradient_style(
         props.gradient.as_ref(),
-        props.color.as_ref(),
+        seed,
         variant == Variant::Gradient,
         false,
     );

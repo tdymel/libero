@@ -23,7 +23,7 @@ pub fn DataListPage() -> Element {
                         .doc("`horizontal` puts each description beside its term, `vertical` below it."),
                     prop("gap", "Responsive<ThemeAwareValue>")
                         .default(theme.data_list.size.as_str())
-                        .doc("Gap between rows, and between a term and its description, or any CSS, e.g. `gap: \"0\"`, per breakpoint too."),
+                        .doc("Gap between rows, or any CSS, e.g. `gap: \"0\"`, per breakpoint too. In a vertical list a description sits half that gap under its term."),
                     prop("children", "Element")
                         .default("required")
                         .doc("`DataListItem`s, or any `dt` and `dd` content."),

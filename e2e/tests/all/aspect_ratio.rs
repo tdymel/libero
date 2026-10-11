@@ -93,6 +93,25 @@ fn the_child_fills_the_box_cropped_whatever_its_display() {
     });
 }
 
+/// Todo 2937: a text child's box does not clip it, a picture's box still crops.
+#[test]
+fn a_text_child_is_not_clipped_but_a_picture_is() {
+    block_on(async {
+        let fixture = Fixture::open("/aspect-ratio-children", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let overflow: Vec<String> = js(
+            page,
+            "['#text-ratio', '#cover-ratio'].map(id => getComputedStyle(document.querySelector(id)).overflow)",
+        )
+        .await;
+        assert_eq!(overflow, ["visible", "hidden"]);
+        fixture.console.assert_clean("a text child").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 2535: the overlay anchors on the root, so focus does not move a positioned child.
 #[test]
 fn focus_leaves_a_positioned_child_in_place() {

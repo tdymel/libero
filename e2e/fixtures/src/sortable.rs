@@ -159,8 +159,10 @@ fn HookItem(index: usize, name: &'static str, clicks: Signal<i32>) -> Element {
     let item = use_sortable_item(index);
     rsx! {
         Box { id: "{name}", onmounted: item.element.mount(), style: item.style(),
+            div { id: "help-{name}", hidden: true, {item.instructions} }
             button {
                 onmounted: item.handle.mount(),
+                aria_describedby: "help-{name}",
                 onpointerdown: move |event| item.onpointerdown.call(event),
                 onkeydown: move |event| item.onkeydown.call(event),
                 onblur: move |event| item.onblur.call(event),

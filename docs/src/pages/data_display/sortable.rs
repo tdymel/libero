@@ -109,7 +109,9 @@ pub fn SortablePage() -> Element {
                     Code { source: "use_sortable_item(index)" }
                     " each item's handle, element, move buttons and "
                     Code { source: "style()" }
-                    ". The component is those two hooks plus a grip button, two move buttons and a status region."
+                    ", and "
+                    Code { source: "instructions" }
+                    ", the key help to render as the grab handle's description. The component is those two hooks plus a grip button, two move buttons and a status region."
                 }
             }
         }

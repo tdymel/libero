@@ -7,7 +7,7 @@ use crate::{
     },
     hooks::use_theme,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{DATA_LIST_GAP, DataListDefaults, Responsive},
+    theme::{DATA_LIST_GAP, DATA_LIST_ROW_GAP, DataListDefaults, Responsive},
 };
 
 // Pins the UA's `dl`/`dd` margins and `dt` bold.
@@ -26,6 +26,14 @@ static DATA_LIST_SX: StaticSx = StaticSx::new(|| {
         .display("flex")
         .flex_direction("column")
         .and(data_list_reset_sx())
+        // A description sits closer to its term than a row to the next (todo 2541).
+        .selector(
+            "& dt + dd",
+            sx().with(
+                "margin-block-start",
+                format!("calc({} / -2)", DATA_LIST_ROW_GAP.value()),
+            ),
+        )
         .when(
             "horizontal",
             // A term wraps past half the list, so descriptions keep room at 320px (1.4.10).
@@ -33,7 +41,10 @@ static DATA_LIST_SX: StaticSx = StaticSx::new(|| {
                 .grid_template_columns("fit-content(50%) minmax(0, 1fr)")
                 .align_items("baseline")
                 .selector("& dt", sx().grid_column("1"))
-                .selector("& dd", sx().grid_column("2")),
+                .selector(
+                    "& dd",
+                    sx().grid_column("2").with("margin-block-start", "0"),
+                ),
         )
 });
 
@@ -42,7 +53,7 @@ base_props! {
         /// `"horizontal"`: descriptions beside their term; default `"vertical"`: below.
         #[props(default, into)]
         orientation: Input<Orientation>,
-        /// Gap between rows, and between a term and its description: a size word, any CSS
+        /// Gap between rows (half of it between a term and its description, vertical only): a size word, any CSS
         /// (`gap: "0"`) or one per breakpoint, `gap: responsive(Size::Xs).md(Size::Lg)`.
         #[props(default, into)]
         gap: Input<Responsive<ThemeAwareValue>>,
@@ -88,8 +99,10 @@ pub fn DataList(props: DataListProps) -> Element {
     let sx = with_own(
         props.gap.as_ref().and_then(|gap| {
             responsive_sx(gap, |sx, value| match value {
-                ThemeAwareValue::Size(size) => sx.gap(DATA_LIST_GAP.value(size)),
-                css => sx.gap(css),
+                ThemeAwareValue::Size(size) => sx
+                    .gap(DATA_LIST_GAP.value(size))
+                    .var(DATA_LIST_ROW_GAP, DATA_LIST_GAP.value(size)),
+                css => sx.gap(css.clone()).var(DATA_LIST_ROW_GAP, css),
             })
         }),
         &props.sx,

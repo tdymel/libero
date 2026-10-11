@@ -105,6 +105,38 @@ fn a_press_is_announced_and_leaving_resets_it() {
     });
 }
 
+/// Todo 2824: with no `navigator.clipboard` (a non-secure origin) a press announces the failure.
+#[test]
+fn a_missing_clipboard_announces_the_failure() {
+    block_on(async {
+        let fixture = Fixture::open("/copy", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+
+        page.evaluate(
+            "(() => { Object.defineProperty(Navigator.prototype, 'clipboard', \
+             { get: () => undefined, configurable: true }); return true; })()",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, BARE).await.unwrap();
+        wait::for_js_true(
+            page,
+            &status_is("bare", "Copy failed"),
+            "the failure to be announced",
+        )
+        .await
+        .unwrap();
+        fixture.console.settle().await.unwrap();
+        let said = fixture.console.drain();
+        assert!(
+            said.iter().any(|m| m.contains("clipboard write failed")),
+            "{said:?}"
+        );
+
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A disabled `Copy` is a disabled button that focus cannot reach.
 #[test]
 fn a_disabled_copy_cannot_be_focused() {

@@ -679,6 +679,51 @@ mod tabs_color {
     }
 }
 
+/// Todo 2699: a theme's `color` seeds the first stop of an unset gradient badge.
+mod badge_gradient_color {
+    use crate::common::{body, render};
+
+    use dioxus::prelude::*;
+    use libero::{
+        LiberoProvider,
+        components::Badge,
+        theme::{BadgeDefaults, Color, Theme},
+    };
+
+    static SECONDARY: Theme = Theme {
+        badge: BadgeDefaults {
+            color: Color::Secondary,
+            ..Theme::DEFAULT.badge
+        },
+        ..Theme::DEFAULT
+    };
+
+    fn app() -> Element {
+        rsx! { LiberoProvider { themes: &SECONDARY, Badge { variant: "gradient", "New" } } }
+    }
+
+    fn explicit() -> Element {
+        rsx! {
+            LiberoProvider { themes: &SECONDARY,
+                Badge { variant: "gradient", color: "secondary", "New" }
+            }
+        }
+    }
+
+    fn plain() -> Element {
+        rsx! { LiberoProvider { Badge { variant: "gradient", "New" } } }
+    }
+
+    #[test]
+    fn an_unset_gradient_badge_takes_the_themed_color_as_its_first_stop() {
+        let themed = body(&render(app));
+
+        assert_eq!(themed, body(&render(explicit)));
+        assert!(themed.contains("--lsx-gradient-from"), "{themed}");
+        assert_ne!(themed, body(&render(plain)));
+    }
+}
+
 /// An unset `Divider` label sits where the theme says; a caller's own wins.
 mod divider_label_position {
     use crate::common::render;

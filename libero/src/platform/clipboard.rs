@@ -23,7 +23,14 @@ mod web {
         fn write_text(&self, text: String) -> Write {
             Box::pin(async move {
                 let window = web_sys::window().ok_or(PlatformError::Unsupported)?;
-                let promise = window.navigator().clipboard().write_text(&text);
+                let navigator = window.navigator();
+                // `navigator.clipboard` is undefined outside a secure context.
+                if js_sys::Reflect::get(&navigator, &"clipboard".into())
+                    .is_ok_and(|clipboard| clipboard.is_undefined() || clipboard.is_null())
+                {
+                    return Err(PlatformError::Unsupported);
+                }
+                let promise = navigator.clipboard().write_text(&text);
                 JsFuture::from(promise)
                     .await
                     .map(|_| ())

@@ -47,7 +47,9 @@ grab `handle` with its `onpointerdown`, `onkeydown` and `onblur`, and
 slide into its slot after a drop. `earlier`/`onearlier` and `later`/`onlater`
 wire your move buttons, `first` and `last` say when to disable them.
 `dragging` and `sorting` say whether this item, or any, is dragged. A hook
-item is named by position in the announcements.
+item is named by position in the announcements. `instructions` is the
+localized key help for the grab handle: render it in a hidden element with an
+id of yours and point the handle's `aria-describedby` at that id.
 
 ```rust
 use dioxus::prelude::*;
@@ -87,8 +89,10 @@ fn Fruit(index: usize, name: &'static str) -> Element {
             role: "listitem",
             onmounted: item.element.mount(),
             style: item.style(),
+            div { id: "help-{name}", hidden: true, {item.instructions} }
             button {
                 onmounted: item.handle.mount(),
+                aria_describedby: "help-{name}",
                 onpointerdown: move |event| item.onpointerdown.call(event),
                 onkeydown: move |event| item.onkeydown.call(event),
                 onblur: move |event| item.onblur.call(event),

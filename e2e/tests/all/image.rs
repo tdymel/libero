@@ -222,11 +222,24 @@ fn the_zoom_button_opens_a_named_dialog_and_escape_returns_focus() {
         )
         .await
         .unwrap();
+        // Todo 2984: the button says its overlay is open.
+        let zoomed = "(document.querySelector('#zoom').getAttribute('data-state') || '') \
+                      .split(' ').includes('zoomed')";
+        wait::for_js_true(page, zoomed, "the zoom button marked zoomed")
+            .await
+            .unwrap();
         keyboard::press(page, ESCAPE).await.unwrap();
         wait::for_js_true(
             page,
             "document.activeElement?.id === 'zoom'",
             "focus back on the zoom button",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("!({zoomed})"),
+            "the mark gone with the overlay",
         )
         .await
         .unwrap();

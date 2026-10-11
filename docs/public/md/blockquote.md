@@ -9,8 +9,8 @@ Description: A quotation in a tinted frame with an accent bar, with the attribut
 A quotation in a tinted frame with an accent bar. The attribution sits in a
 `<figcaption>` outside the `<blockquote>`, so a screen reader does not read the
 speaker's name as part of the quote. `size` scales the text with the frame, on
-[Text](text.md)'s scale. The accent bar is on the left in every writing
-direction.
+[Text](text.md)'s scale. The accent bar sits at the start of the line, on
+the right in a right-to-left writing direction.
 
 ## Usage
 

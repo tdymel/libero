@@ -183,7 +183,7 @@ pub use combobox::{
     ComboboxDefaults, ComboboxSizeLevel,
 };
 pub use container::{CONTAINER_GUTTERS, CONTAINER_SIZE, ContainerDefaults};
-pub use data_list::{DATA_LIST_GAP, DataListDefaults};
+pub use data_list::{DATA_LIST_GAP, DATA_LIST_ROW_GAP, DataListDefaults};
 pub use date::{
     CHRONO_DAY, CHRONO_DAY_SIZE_SIZE, CHRONO_FONT_SIZE, CHRONO_FONT_SIZE_SIZE, CalendarVariant,
     ChronoFieldDefaults, ChronoPickerDefaults, ChronoSizeLevel, DateLevel, TimePickerDefaults,

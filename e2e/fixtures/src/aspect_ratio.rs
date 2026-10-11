@@ -34,6 +34,9 @@ fn ChildrenPage() -> Element {
             AspectRatio { id: "cover-ratio", ratio: 1.0,
                 img { id: "cover", src: PICTURE, alt: "A blue field" }
             }
+            AspectRatio { id: "text-ratio", ratio: 21.0 / 9.0,
+                p { id: "text", style: "margin: 0", "Text" }
+            }
         }
     }
 }

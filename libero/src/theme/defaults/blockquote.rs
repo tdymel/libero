@@ -80,7 +80,7 @@ impl BlockquoteDefaults {
             BLOCKQUOTE_PADDING_Y.value(size),
             BLOCKQUOTE_PADDING_X.value(size)
         ))
-        .border_left(format!(
+        .border_inline_start(format!(
             "{} solid {}",
             BLOCKQUOTE_BORDER_WIDTH.value(size),
             BLOCKQUOTE_BORDER_COLOR.value()
@@ -89,11 +89,10 @@ impl BlockquoteDefaults {
         .line_height(TEXT_LINE_HEIGHT.value(size))
     }
 
-    /// Only the two corners away from the accent bar, which stays on the left in
-    /// every writing direction (`Sx` has no logical corners).
+    /// Only the two corners away from the accent bar, which sits at the inline start (todo 2915).
     pub fn radius_sx(radius: Size) -> Sx {
-        sx().border_top_right_radius(SizeCss::RADIUS.overridable(radius))
-            .border_bottom_right_radius(SizeCss::RADIUS.overridable(radius))
+        sx().border_start_end_radius(SizeCss::RADIUS.overridable(radius))
+            .border_end_end_radius(SizeCss::RADIUS.overridable(radius))
     }
 
     pub fn theme_vars() -> Sx {

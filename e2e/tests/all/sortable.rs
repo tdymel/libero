@@ -718,6 +718,21 @@ fn a_touch_screen_describes_the_handle_by_the_move_buttons() {
     });
 }
 
+/// Todo 2936: a hook-built handle is described by the key instructions the hook hands out.
+#[test]
+fn a_hook_handle_is_described_by_the_instructions() {
+    block_on(async {
+        let fixture = Fixture::open("/sortable/hook", Viewport::Desktop)
+            .await
+            .unwrap();
+        let description = e2e::ax::description(&fixture.page, "#Alpha button")
+            .await
+            .unwrap();
+        assert!(!description.is_empty(), "the handle has no description");
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("sortable", "/sortable")

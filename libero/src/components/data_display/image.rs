@@ -65,6 +65,8 @@ static IMAGE_BASE_SX: StaticSx = StaticSx::new(|| {
 /// `fallback_src` painted as the `<img>`'s background, for a renderer that
 /// fires no `error`: it shows where the picture fails to load (todo 935).
 const FALLBACK_UNDER: &str = "fallback-under";
+/// On the zoom button while its overlay is open.
+const ZOOMED: &str = "zoomed";
 const FALLBACK_LAYERS: CssVar = CssVar::new("--lsx-image-fallback-layers");
 const FALLBACK_SIZE: CssVar = CssVar::new("--lsx-image-fallback-size");
 
@@ -368,12 +370,18 @@ fn ZoomButton(props: ZoomButtonProps) -> Element {
         ..LightboxOptions::default()
     });
     let variables: Input<Variables> = props.variables.clone().into();
+    let states: Input<States> = props
+        .states
+        .clone()
+        .unwrap_or_default()
+        .with(ZOOMED, zoom.is_open())
+        .into();
     let root = use_box()
         .framework_sx(&ZOOM_BUTTON_SX)
         .variables(&variables)
         .class(&props.class)
         .sx(&props.sx)
-        .states(&props.states)
+        .states(&states)
         .prepare();
 
     let label = zoom_label(&props.alt, &use_localization().image);

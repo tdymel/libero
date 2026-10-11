@@ -145,3 +145,4 @@ State tokens on the root's `data-state`, space separated.
 | Token | Condition |
 |---|---|
 | `fit-fill` / `fit-contain` / `fit-cover` / `fit-none` / `fit-scale-down` | The `fit` in effect, on the `<img>`. That is the root unless the image is `zoomable`. |
+| `zoomed` | On the zoom button of a `zoomable` image while its overlay is open. |

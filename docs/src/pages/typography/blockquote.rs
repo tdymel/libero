@@ -66,7 +66,7 @@ pub fn BlockquotePage() -> Element {
                     Code { source: "size" }
                     " scales the text with the frame, on "
                     Code { source: "Text" }
-                    "'s scale. The accent bar is on the left in every writing direction."
+                    "'s scale. The accent bar sits at the start of the line, on the right in a right-to-left writing direction."
                 }
             },
             Demo {

@@ -47,7 +47,7 @@ the first column and every description in the second.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `orientation` | `Orientation` | `vertical` | `horizontal` puts each description beside its term, `vertical` below it. |
-| `gap` | `Responsive<ThemeAwareValue>` | `md` | Gap between rows, and between a term and its description, or any CSS, e.g. `gap: "0"`, per breakpoint too. |
+| `gap` | `Responsive<ThemeAwareValue>` | `md` | Gap between rows, or any CSS, e.g. `gap: "0"`, per breakpoint too. In a vertical list a description sits half that gap under its term. |
 | `children` | `Element` | required | `DataListItem`s, or any `dt` and `dd` content. |
 
 ### DataListItem
@@ -84,13 +84,14 @@ An order summary with a `DataListItem` per row, such as "Status" and
 | Field | Type | Description |
 |---|---|---|
 | `size` | `Size` | Size step `gap` falls back to when the prop is omitted. |
-| `gaps` | `Sizes<u8>` | Row and term-to-description gap per size step, in px. |
+| `gaps` | `Sizes<u8>` | Row gap per size step, in px. A vertical list halves it between a term and its description. |
 
 ## CSS variables
 
 | Variable | Description |
 |---|---|
-| `--lsx-data-list-gap-<size>` | Row and term-to-description gap for that size step. |
+| `--lsx-data-list-gap-<size>` | Row gap for that size step. |
+| `--lsx-data-list-row-gap` | The row gap in effect on the list, set by the theme size or the `gap` prop. |
 
 ## Data attributes
 

@@ -14,7 +14,8 @@ a video is cropped with `object-fit: cover`, not stretched, and an `a`,
 `display: block`, and a `picture`'s inner `img` the full size. The size and
 `object-fit` reach the direct child only: an image inside a wrapper is not
 cropped unless it gets `width: 100%`, `height: 100%` and `object-fit: cover`
-itself.
+itself. Any other child, such as text, is not clipped: larger text runs
+past the box or grows it instead of losing lines.
 
 ## Usage
 
@@ -58,6 +59,7 @@ Like every component, `AspectRatio` also takes the shared props `sx`, `class`,
 ### You must
 
 - Keep nothing meaningful at the child's edges: they get cropped.
+- Leave room below a text child: at larger text it can run past the box.
 - Give an image `alt` text that describes what the reader can see.
 
 ### Example
