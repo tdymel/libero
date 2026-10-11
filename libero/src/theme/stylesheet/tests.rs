@@ -69,7 +69,7 @@ fn the_fill_ramp_is_still_a_ramp() {
 #[test]
 fn every_default_fill_carries_its_own_foreground() {
     // Against the painted foreground: a dark theme's ink is not pure white.
-    for theme in [&Theme::DEFAULT, &Theme::DARK] {
+    for theme in [&Theme::DEFAULT, &Theme::DARK, &crate::theme::NORD_LIGHT] {
         let css = Stylesheet::from(theme).as_str().to_string();
 
         for name in PALETTE {
@@ -171,7 +171,6 @@ fn every_shipped_set_reads_on_its_own_page() {
             "Kanagawa light: warning",
             "Kanagawa Dragon light: warning",
             "kettek16 light: warning",
-            "Nord light: secondary warning",
             "One light: warning",
             "Osmium light: secondary warning",
             "Rosé Pine light: warning",

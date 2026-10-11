@@ -1,5 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, Wrap, a11y, indent, prop, props,
+    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, Remount, Wrap, a11y, indent, prop,
+    props,
 };
 use dioxus::prelude::*;
 use libero::components::{
@@ -204,13 +205,14 @@ pub fn FormPage() -> Element {
                 ],
                 render: move |values: DemoValues| {
                     let handle = values.str("form") == "true";
-                    // Keyed: the `Form` takes its `form` handle once, on mount.
+                    // Remounted: the `Form` takes its `form` handle once, on mount.
                     rsx! {
-                        SignupForm {
-                            key: "{handle}",
-                            summary_title: values.str("summary_title") == "true",
-                            handle,
-                            company: values.str("company") == "true",
+                        Remount { on: "{handle}",
+                            SignupForm {
+                                summary_title: values.str("summary_title") == "true",
+                                handle,
+                                company: values.str("company") == "true",
+                            }
                         }
                     }
                 },

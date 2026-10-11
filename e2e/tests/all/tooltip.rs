@@ -170,6 +170,31 @@ e2e::scenario!(
     long_press_opens,
     desktop: skip("1126: no touch input under Xvfb")
 );
+/// Todo 3237: the long press that opens the bubble leaves the browser's link menu shut.
+async fn long_press_keeps_the_link_menu_shut<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    // The browsers' own long press fires `contextmenu` where the driver's touch does not.
+    const MENU: &str = "(() => { const menu = new MouseEvent('contextmenu', \
+        { bubbles: true, cancelable: true }); \
+        document.querySelector('#link').dispatchEvent(menu); return menu.defaultPrevented; })()";
+    ensure!(
+        !d.evaluate(MENU).await?.as_bool().unwrap_or(true),
+        "a pointer's menu was suppressed"
+    );
+    d.touch_down("#link").await?;
+    eventually(d, "a touch to suppress the link menu", async |d| {
+        Ok(d.evaluate(MENU).await?.as_bool() == Some(true))
+    })
+    .await?;
+    d.touch_up("#link").await
+}
+
+e2e::scenario!(
+    a_long_press_on_a_link_trigger_opens_no_link_menu,
+    "/tooltip-link",
+    long_press_keeps_the_link_menu_shut,
+    desktop: skip("1126: no touch input under Xvfb"),
+    native: skip("3237: the native driver reads no script")
+);
 e2e::scenario!(
     a_short_touch_cancels_the_open,
     "/tooltip/quick",

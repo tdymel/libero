@@ -14,7 +14,25 @@ pub const ROUTES: Routes = &[
     ("/tooltip-long", || rsx! { TooltipLongPage {} }),
     ("/tooltip-toggle", || rsx! { TooltipTogglePage {} }),
     ("/tooltip-gap", || rsx! { TooltipGapPage {} }),
+    ("/tooltip-link", || rsx! { TooltipLinkPage {} }),
 ];
+
+/// A link as the trigger, whose long press opens the browser's link menu (todo 3237).
+#[component]
+fn TooltipLinkPage() -> Element {
+    rsx! {
+        div { margin_left: "200px", padding_top: "40px",
+            Tooltip {
+                label: rsx! { "Opens the profile" },
+                label_id: "save-tip",
+                side: "bottom",
+                open_delay: 10,
+                close_delay: 10,
+                a { id: "link", href: "#ada", "aria-describedby": "save-tip", "Ada Lovelace" }
+            }
+        }
+    }
+}
 
 /// A label with no break opportunity, forced open, for reflow at 320px (todo 2384).
 #[component]

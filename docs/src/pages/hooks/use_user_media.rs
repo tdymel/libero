@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, DocSection, a11y};
+use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, DocSection, Remount, a11y};
 use dioxus::prelude::*;
 use libero::components::{Code, Text};
 
@@ -63,7 +63,11 @@ pub fn UseUserMediaPage() -> Element {
                 render: move |values: DemoValues| {
                     let camera = values.str("camera") == "true";
                     let microphone = values.str("microphone") == "true";
-                    rsx! { CaptureBooth { key: "{camera}{microphone}", camera, microphone } }
+                    rsx! {
+                        Remount { on: "{camera}{microphone}",
+                            CaptureBooth { camera, microphone }
+                        }
+                    }
                 },
             }
 

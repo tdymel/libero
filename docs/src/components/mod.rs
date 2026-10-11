@@ -5,6 +5,7 @@ mod doc_section;
 mod icon_catalogue;
 mod pictogram_note;
 mod prop_doc;
+mod remount;
 
 pub use a11y_doc::{A11yDoc, A11yPanel, a11y};
 #[cfg(test)]
@@ -22,3 +23,4 @@ pub use prop_doc::{
     PartsPanel, PropGroup, PropertyTable, disabled_prop, prop, props, prose, readonly_prop,
     required_prop, status_prop,
 };
+pub use remount::Remount;

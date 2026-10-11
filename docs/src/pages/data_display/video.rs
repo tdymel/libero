@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Remount, a11y, prop, props,
+};
 use dioxus::prelude::*;
 use libero::{
     components::{
@@ -186,32 +188,33 @@ pub fn VideoPage() -> Element {
                 render: move |values: DemoValues| {
                     let muted = values.str("muted");
                     rsx! {
-                        Video {
-                            key: "{muted}",
-                            src: crate::samples::SAMPLE_VIDEO,
-                            label: "Big Buck Bunny",
-                            poster: crate::samples::SAMPLE_POSTER,
-                            aspect_ratio: "16 / 9",
-                            tracks: vec![
-                                MediaTrack {
-                                    src: crate::samples::SAMPLE_CAPTIONS.into(),
-                                    kind: TrackKind::Captions,
-                                    srclang: "en".into(),
-                                    label: "English".into(),
-                                    default: true,
-                                },
-                                MediaTrack {
-                                    src: crate::samples::SAMPLE_UNTERTITEL.into(),
-                                    kind: TrackKind::Subtitles,
-                                    srclang: "de".into(),
-                                    label: "Deutsch".into(),
-                                    default: false,
-                                },
-                            ],
-                            chapters: chapters(),
-                            size: Input::from(Size::from(values.str("size").as_str())),
-                            muted: muted == "true",
-                            looping: values.str("looping") == "true",
+                        Remount { on: muted.clone(),
+                            Video {
+                                src: crate::samples::SAMPLE_VIDEO,
+                                label: "Big Buck Bunny",
+                                poster: crate::samples::SAMPLE_POSTER,
+                                aspect_ratio: "16 / 9",
+                                tracks: vec![
+                                    MediaTrack {
+                                        src: crate::samples::SAMPLE_CAPTIONS.into(),
+                                        kind: TrackKind::Captions,
+                                        srclang: "en".into(),
+                                        label: "English".into(),
+                                        default: true,
+                                    },
+                                    MediaTrack {
+                                        src: crate::samples::SAMPLE_UNTERTITEL.into(),
+                                        kind: TrackKind::Subtitles,
+                                        srclang: "de".into(),
+                                        label: "Deutsch".into(),
+                                        default: false,
+                                    },
+                                ],
+                                chapters: chapters(),
+                                size: Input::from(Size::from(values.str("size").as_str())),
+                                muted: muted == "true",
+                                looping: values.str("looping") == "true",
+                            }
                         }
                     }
                 },

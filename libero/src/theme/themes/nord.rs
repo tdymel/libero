@@ -13,15 +13,17 @@ const GRADIENT: GradientDefaults = GradientDefaults {
     ..GradientDefaults::DEFAULT
 };
 
-/// Nord, bright ambiance. `primary`, `info` and `success` are Nord's `88C0D0`, `8FBCBB` and
-/// `A3BE8C` darkened, hue kept, until their text role reads at 4.5:1 (todo 2034).
+/// Nord, bright ambiance. `primary`, `secondary`, `info` and `success` are Nord's `88C0D0`,
+/// `B48EAD`, `8FBCBB` and `A3BE8C` darkened, `warning` is Libero's amber `FAB005` darkened,
+/// hue kept, until their text role reads at 4.5:1 (todos 2034, 3236).
 pub static NORD_LIGHT: Theme = Theme {
     surface: HexColor::new(0xECEFF4),
     ink: HexColor::new(0x2E3440),
     neutral: HexColor::new(0x2E3440),
     muted: HexColor::new(0x4C566A),
     primary: HexColor::new(0x6B98A4),
-    secondary: HexColor::new(0xB48EAD),
+    secondary: HexColor::new(0xA985A3),
+    warning: HexColor::new(0xBE8604),
     info: HexColor::new(0x729696),
     success: HexColor::new(0x829870),
     error: HexColor::new(0xBF616A),

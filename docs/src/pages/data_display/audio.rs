@@ -1,5 +1,7 @@
 use super::video::volume_parts;
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Remount, a11y, prop, props,
+};
 use dioxus::prelude::*;
 use libero::{
     components::{Audio, AudioPart, Code, CodeBlock, Input, Text},
@@ -116,13 +118,14 @@ pub fn AudioPage() -> Element {
                 render: move |values: DemoValues| {
                     let muted = values.str("muted");
                     rsx! {
-                        Audio {
-                            key: "{muted}",
-                            src: crate::samples::SAMPLE_AUDIO,
-                            label: "Wikipedia guitar solo",
-                            size: Input::from(Size::from(values.str("size").as_str())),
-                            muted: muted == "true",
-                            looping: values.str("looping") == "true",
+                        Remount { on: muted.clone(),
+                            Audio {
+                                src: crate::samples::SAMPLE_AUDIO,
+                                label: "Wikipedia guitar solo",
+                                size: Input::from(Size::from(values.str("size").as_str())),
+                                muted: muted == "true",
+                                looping: values.str("looping") == "true",
+                            }
                         }
                     }
                 },

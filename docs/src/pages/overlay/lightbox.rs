@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Remount, Wrap, a11y, prop, props,
+};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Code, Image, Kbd, LightboxPart, Text},
@@ -207,13 +209,14 @@ pub fn LightboxPage() -> Element {
                     let on = |name: &str| values.str(name) == "true";
                     let key = SWITCHES.map(|name| values.str(name)).join("-");
                     rsx! {
-                        LightboxDemo {
-                            key: "{key}",
-                            zoom: on("zoom"),
-                            thumbnails: on("thumbnails"),
-                            captions: on("captions"),
-                            controls: on("controls"),
-                            close_on_swipe_down: on("close_on_swipe_down"),
+                        Remount { on: key,
+                            LightboxDemo {
+                                zoom: on("zoom"),
+                                thumbnails: on("thumbnails"),
+                                captions: on("captions"),
+                                controls: on("controls"),
+                                close_on_swipe_down: on("close_on_swipe_down"),
+                            }
                         }
                     }
                 },

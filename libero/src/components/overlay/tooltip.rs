@@ -257,7 +257,8 @@ pub fn Tooltip(props: TooltipProps) -> Element {
     };
 
     let leave = pressed.clone();
-    let (enter, leave_touch, press_touch) = (touch.clone(), touch.clone(), touch.clone());
+    let (enter, leave_touch, press_touch, menu_touch) =
+        (touch.clone(), touch.clone(), touch.clone(), touch);
     let mut wrapper = wrapper
         .element(&anchor)
         // A touch's compatibility mouse events are no hover: a tap never opens it.
@@ -278,6 +279,12 @@ pub fn Tooltip(props: TooltipProps) -> Element {
             press_touch.set(is_touch);
             if is_touch && !owned && !disabled {
                 hover.hover(true, LONG_PRESS);
+            }
+        })
+        // The long press opens the bubble: a link's menu would cover it (3237).
+        .event("oncontextmenu", move |event: MouseEvent| {
+            if menu_touch.get() && !owned && !disabled {
+                event.prevent_default();
             }
         })
         // Released before the long press: nothing. After: it lingers, then closes.
