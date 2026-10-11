@@ -35,6 +35,7 @@ const C: Key = Key {
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("video", "/video")
+        .ready("#player [data-slot=seek] [role=slider]:not([aria-disabled=true])")
         .focusable(PLAY)
         .targets(PLAY)
         .run();

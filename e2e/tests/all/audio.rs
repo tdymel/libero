@@ -30,6 +30,7 @@ const L: Key = Key {
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("audio", "/audio")
+        .ready("#player [data-slot=seek] [role=slider]:not([aria-disabled=true])")
         .focusable(PLAY)
         .focusable(SEEK)
         .focusable(CHEVRON)
