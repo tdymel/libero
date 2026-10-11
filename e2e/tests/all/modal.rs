@@ -119,7 +119,8 @@ e2e::scenario!(
     a_backdrop_click_closes_a_modal,
     "/modal",
     modal_backdrop_closes,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    macos: skip("macOS WebKit does not focus a clicked button")
 );
 
 /// The trap focuses inside on open, so the first Escape is the dialog's, and focus
@@ -138,7 +139,8 @@ async fn modal_takes_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_modal_takes_focus_and_the_first_escape_closes_it,
     "/modal",
-    modal_takes_focus
+    modal_takes_focus,
+    macos: skip("macOS WebKit does not focus a clicked button")
 );
 
 const SHEET: &str = "#sheet";
@@ -166,7 +168,8 @@ async fn non_dialog_content_takes_clicks<D: Driver>(d: &mut D, _route: &str) -> 
 e2e::scenario!(
     content_that_is_no_dialog_takes_clicks,
     "/modal/paper",
-    non_dialog_content_takes_clicks
+    non_dialog_content_takes_clicks,
+    macos: skip("macOS WebKit does not focus a clicked button")
 );
 
 /// Todo 2720: the trap opens on and cycles in `tabindex` order, not DOM order, both ways.
@@ -214,7 +217,8 @@ async fn non_dialog_content_takes_focus<D: Driver>(d: &mut D, _route: &str) -> R
 e2e::scenario!(
     content_that_is_no_dialog_takes_focus_on_its_box,
     "/modal/paper-static",
-    non_dialog_content_takes_focus
+    non_dialog_content_takes_focus,
+    macos: skip("macOS WebKit does not focus a clicked button")
 );
 
 const ALERT: &str = "[role=alertdialog]";
@@ -254,7 +258,8 @@ e2e::scenario!(
     an_alertdialog_ignores_the_backdrop,
     "/modal/guarded",
     alert_ignores_the_backdrop,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    macos: skip("macOS WebKit does not focus a clicked button")
 );
 
 /// Todo 2563: `ondismiss` hears each dismissal and keeps a draft open; with the
@@ -281,7 +286,8 @@ e2e::scenario!(
     ondismiss_keeps_a_draft_open,
     "/modal/guarded",
     a_draft_vetoes_dismissal,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    macos: skip("macOS WebKit does not focus a clicked button")
 );
 
 #[test]

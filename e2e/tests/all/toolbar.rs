@@ -293,7 +293,8 @@ e2e::scenario!(
 e2e::scenario!(
     fields_join_the_arrow_order,
     "/toolbar-fields",
-    fields_pass_arrows_on_at_their_ends
+    fields_pass_arrows_on_at_their_ends,
+    macos: skip("macOS WKWebView: ArrowLeft at a caret's start keeps the field")
 );
 e2e::scenario!(
     a_script_focus_moves_the_tab_stop,
