@@ -1,4 +1,4 @@
-use crate::common::{body, render};
+use crate::common::{attributes_of, body, render, tags_with};
 
 use dioxus::prelude::*;
 use libero::{
@@ -227,7 +227,7 @@ fn groups_follow_the_sorted_rows() {
 }
 
 #[test]
-fn a_group_row_spans_the_lead_columns_with_one_cell() {
+fn a_group_row_spans_the_lead_columns_before_its_box() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
@@ -239,19 +239,95 @@ fn a_group_row_spans_the_lead_columns_with_one_cell() {
                     selectable: true,
                     row_key: |row: &Row| row.name.to_string(),
                     row_detail: |row: &Row| Some(rsx! { "{row.city}" }),
+                    onrowreorder: |_| {},
                 }
             }
         }
     }
 
     let body = body(&render(app));
+    // One cell over the handle and toggle columns, then the group's box.
     assert_eq!(body.matches("data-group-lead").count(), 3, "{body}");
-    assert!(
-        body.contains("colspan=\"2\"") || body.contains("colspan=2"),
+    assert_eq!(
+        body.matches("colspan=\"2\"").count() + body.matches("colspan=2").count(),
+        3,
         "{body}"
     );
-    // Group rows have no checkbox of their own; select-all stays.
-    assert_eq!(body.matches("type=\"checkbox\"").count(), 1, "{body}");
+    assert_eq!(body.matches("type=\"checkbox\"").count(), 1 + 3, "{body}");
+    assert!(
+        body.contains("aria-label=\"Select group Sales, 2 rows\""),
+        "{body}"
+    );
+}
+
+#[test]
+fn a_group_box_is_checked_with_all_its_rows_and_mixed_with_some() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    caption: "People",
+                    data: people(),
+                    columns: columns(),
+                    default_row_grouping: vec!["City".to_string()],
+                    selectable: true,
+                    row_key: |row: &Row| row.name.to_string(),
+                    // Berlin is Ada and Dan, Rome is Bea and Cy.
+                    default_selection: vec!["Ada".to_string(), "Dan".to_string(), "Cy".to_string()],
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    let input = |label: &str| {
+        let at = body
+            .find(&format!("aria-label=\"{label}\""))
+            .unwrap_or_else(|| panic!("no {label}: {body}"));
+        let start = body[..at].rfind("<input").unwrap();
+        body[start..at + body[at..].find('>').unwrap()].to_string()
+    };
+    let berlin = input("Select group Berlin, 2 rows");
+    assert!(
+        berlin.contains("checked") && !berlin.contains("mixed"),
+        "{berlin}"
+    );
+    assert!(
+        input("Select group Rome, 2 rows").contains("aria-checked=\"mixed\""),
+        "{body}"
+    );
+}
+
+#[test]
+fn a_windowed_grouped_table_counts_its_group_rows() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "People",
+                    max_height: "300px",
+                    virtual_row_height: 40.0,
+                    data: people(),
+                    columns: columns(),
+                    default_row_grouping: team(),
+                    default_group_expansion: 1,
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    // The header row, three group rows and four rows.
+    assert_eq!(attributes_of(&html, "table")["aria-rowcount"], "8");
+    let rows = tags_with(&body(&html), "<tr");
+    let group = rows
+        .iter()
+        .find(|row| row.contains_key("data-row-group"))
+        .unwrap_or_else(|| panic!("no group row: {html}"));
+    assert_eq!(group["aria-rowindex"], "2", "{rows:?}");
+    // After the header row: Sales, then Ada.
+    assert_eq!(rows[2]["aria-rowindex"], "3", "{rows:?}");
+    assert!(!rows[2].contains_key("data-row-group"), "{rows:?}");
 }
 
 #[test]

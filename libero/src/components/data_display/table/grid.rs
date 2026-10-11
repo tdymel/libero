@@ -61,6 +61,8 @@ pub(super) struct GridWindow {
     pub pitch: f64,
     pub edges: (f64, f64),
     pub focused: Signal<Option<VisibleRow>>,
+    /// Each grid row's slot in the window, which counts the group rows the arrows pass by.
+    pub slots: Rc<[usize]>,
 }
 
 /// What a key press reads: the header levels, then the shown rows; the shown
@@ -460,8 +462,9 @@ impl GridFocus {
                 if *focused.peek() != Some(row) {
                     focused.set(Some(row));
                 }
+                let body = at.row - head;
                 Some(Reveal {
-                    slot: at.row - head,
+                    slot: window.slots.get(body).copied().unwrap_or(body),
                     pitch: window.pitch,
                     edges: window.edges,
                 })

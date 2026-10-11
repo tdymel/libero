@@ -3,7 +3,7 @@
 //! menu groups by a column and stops. G4: a group row sums its rows under the column.
 
 use anyhow::{Result, bail};
-use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
+use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text};
 use e2e::passes::keyboard;
 
 use crate::table::menu_entry;
@@ -30,14 +30,14 @@ async fn opens_under_its_row<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     if d.attr(SALES, "aria-expanded").await?.as_deref() != Some("true") {
         bail!("the open toggle is not expanded");
     }
-    // One lead cell spans the checkbox column; the group row has no box.
-    if d.exists("tr[data-row-group] input[type=checkbox]").await? {
-        bail!("a group row has a checkbox");
+    // The group's box sits in the checkbox column, with no lead cell beside it.
+    if d.exists("tr[data-row-group] td[data-group-lead]").await? {
+        bail!("a lead cell beside the group's box");
     }
-    let lead = d.rect("tr[data-row-group] td[data-group-lead]").await?;
+    let group = d.rect("tr[data-row-group] td[data-select]").await?;
     let check = d.rect("tbody tr:nth-child(2) td[data-select]").await?;
-    if (lead.width - check.width).abs() > 1.0 {
-        bail!("the lead cell {lead:?} is not as wide as the checkbox column {check:?}");
+    if (group.x - check.x).abs() > 1.0 || (group.width - check.width).abs() > 1.0 {
+        bail!("the group's box cell {group:?} is not over the row boxes {check:?}");
     }
     d.click(SALES).await?;
     eventually_text(d, "#expanded", "", "a second click").await?;
@@ -167,4 +167,91 @@ e2e::scenario!(
     a_group_row_sums_its_rows_under_the_column,
     "/table-row-groups",
     sums_under_the_column
+);
+
+const SALES_BOX: &str = "input[aria-label=\"Select group Sales, 2 rows\"]";
+
+/// G3: a closed group's box selects its rows and says so; one row off mixes it.
+async fn box_selects_the_group<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(&format!(
+        "tr[data-row-group]:has({SALES_BOX}) td[data-select] span[aria-hidden]"
+    ))
+    .await?;
+    eventually_text(d, "#selection", "Ada,Cy", "a click on Sales' box").await?;
+    eventually_text(d, LIVE, "2 rows selected", "the group's selection").await?;
+    eventually_focused(d, SALES_BOX, "a click on Sales' box").await?;
+    d.click(SALES).await?;
+    eventually_text(d, "tbody tr:nth-child(2) th", "Ada", "the opened rows").await?;
+    d.click("tbody tr:nth-child(2) td[data-select] span[aria-hidden]")
+        .await?;
+    eventually_text(d, "#selection", "Cy", "a click on Ada's box").await?;
+    eventually(d, "Sales' box to mix", async |d| match d.platform() {
+        Platform::Web => Ok(d
+            .evaluate(&format!(
+                "document.querySelector({SALES_BOX:?}).indeterminate"
+            ))
+            .await?
+            == true),
+        _ => Ok(d.attr(SALES_BOX, "aria-checked").await?.as_deref() == Some("mixed")),
+    })
+    .await?;
+    // A mixed box selects the rest.
+    d.click(&format!(
+        "tr[data-row-group]:has({SALES_BOX}) td[data-select] span[aria-hidden]"
+    ))
+    .await?;
+    eventually_text(d, "#selection", "Cy,Ada", "a click on the mixed box").await
+}
+
+e2e::scenario!(
+    a_group_box_selects_the_groups_rows,
+    "/table-row-groups",
+    box_selects_the_group
+);
+
+/// G3: 10k rows in four open groups render a window; the group rows take the 40px
+/// pitch and count in `aria-rowindex`, and End brings the last row in.
+async fn windowed_groups<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const SALES_ROW: &str = "tr[aria-rowindex=\"2\"][data-row-group]";
+    const LAST: &str = "tr[aria-rowindex=\"10005\"]";
+    eventually(d, "only the first rows to render", async |d| {
+        Ok(
+            d.attr("table", "aria-rowcount").await?.as_deref() == Some("10005")
+                && d.exists(SALES_ROW).await?
+                && !d.exists("tr[aria-rowindex=\"60\"]").await?,
+        )
+    })
+    .await?;
+    let group = d.rect(&format!("{SALES_ROW} td:last-child")).await?;
+    if (group.height - 40.0).abs() > 1.0 {
+        bail!("a group row is {}px, not its 40px row_height", group.height);
+    }
+    // Ops follows Sales' 2500 rows.
+    let ops = "tr[aria-rowindex=\"2503\"][data-row-group]";
+    let sales_toggle = "button[aria-label=\"Sales, 2500 rows\"]";
+    d.focus(sales_toggle).await?;
+    d.press(keyboard::END).await?;
+    eventually(d, "the last row to show", async |d| {
+        Ok(d.exists(LAST).await? && !d.exists("tr[aria-rowindex=\"3\"]").await?)
+    })
+    .await?;
+    // The focused group row stays rendered out of view.
+    eventually_focused(d, sales_toggle, "End").await?;
+    d.press(keyboard::HOME).await?;
+    eventually(d, "the first rows to come back", async |d| {
+        Ok(d.exists("tr[aria-rowindex=\"3\"]").await? && !d.exists(LAST).await?)
+    })
+    .await?;
+    if d.exists(ops).await? {
+        bail!("Ops' group row rendered at the top");
+    }
+    d.click(&format!("{SALES_ROW} td[data-select] span[aria-hidden]"))
+        .await?;
+    eventually_text(d, "#selection", "2500", "a click on Sales' box").await
+}
+
+e2e::scenario!(
+    a_windowed_grouped_table_renders_the_rows_in_view,
+    "/table-row-groups/windowed",
+    windowed_groups
 );

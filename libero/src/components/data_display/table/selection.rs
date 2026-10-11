@@ -46,7 +46,7 @@ impl Selection {
                 scope: "col",
                 rowspan: (rowspan > 1).then(|| rowspan.to_string()),
                 "data-select": true,
-                SelectAll {
+                MixedSelect {
                     aria_label: self.labels.select_all,
                     look: self.look.clone(),
                     state: LightState {
@@ -63,6 +63,11 @@ impl Selection {
     /// Turns the row of `key` on or off, for [`Self::row_cell`]'s stable `toggle`.
     pub fn toggle(&self, key: &str, on: bool) {
         self.set(toggle_row(&self.slice.read(), key, on));
+    }
+
+    /// Turns every row of `keys` on or off, as a group row's box does.
+    pub fn toggle_rows(&self, keys: &[String], on: bool) {
+        self.set(toggle_all(&self.slice.read(), keys, on));
     }
 
     /// `name` names the row in its box's label; `toggle` is [`Self::toggle`] behind a `use_callback`.
@@ -115,9 +120,10 @@ fn RowSelect(
     }
 }
 
-/// The header's box. A browser reads a native checkbox's mixed state from the property alone.
+/// A box over many rows: the header's or a group row's. A browser reads a native
+/// checkbox's mixed state from the property alone.
 #[component]
-fn SelectAll(
+pub(super) fn MixedSelect(
     aria_label: String,
     look: Rc<CheckboxLook>,
     state: LightState,
@@ -129,6 +135,17 @@ fn SelectAll(
         let _ = element.set_indeterminate(indeterminate);
     }));
     look.render(element, state, aria_label, move |on| onchange.call(on))
+}
+
+/// A group row's box: checked with each of its `rows` selected, mixed with some.
+pub(super) fn group_state(rows: &[usize], selected: impl Fn(usize) -> bool) -> LightState {
+    let count = rows.iter().filter(|&&index| selected(index)).count();
+    let all = count > 0 && count == rows.len();
+    LightState {
+        checked: all,
+        indeterminate: count > 0 && !all,
+        disabled: rows.is_empty(),
+    }
 }
 
 /// `selection` with `key` in or out, the others in their order.
@@ -190,5 +207,17 @@ mod tests {
             keys(&["x", "b", "a", "c"])
         );
         assert_eq!(toggle_all(&selection, &rows, false), keys(&["x"]));
+    }
+
+    #[test]
+    fn a_group_box_is_checked_with_all_its_rows_and_mixed_with_some() {
+        let state = |selected: &[usize]| {
+            let state = group_state(&[1, 3, 4], |index| selected.contains(&index));
+            (state.checked, state.indeterminate)
+        };
+        assert_eq!(state(&[]), (false, false));
+        assert_eq!(state(&[0, 3]), (false, true));
+        assert_eq!(state(&[1, 3, 4]), (true, false));
+        assert!(group_state(&[], |_| true).disabled);
     }
 }

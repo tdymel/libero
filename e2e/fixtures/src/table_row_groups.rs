@@ -1,6 +1,7 @@
 //! `Table` grouped by team, with a checkbox column and an Age sum in each group
 //! row; the open groups printed below.
 //! `/menu`: ungrouped, grouped from the column menu, the grouping printed below.
+//! `/windowed`: 10k rows in four open groups under a 320px cap, 40px rows, selectable.
 
 use dioxus::prelude::*;
 use libero::components::{Aggregate, Table, column};
@@ -10,6 +11,7 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/table-row-groups", || rsx! { RowGroupsPage {} }),
     ("/table-row-groups/menu", || rsx! { GroupMenuPage {} }),
+    ("/table-row-groups/windowed", || rsx! { WindowedGroupsPage {} }),
 ];
 
 #[derive(Clone, PartialEq)]
@@ -28,6 +30,7 @@ fn people() -> Vec<Person> {
 #[component]
 fn RowGroupsPage() -> Element {
     let mut expanded = use_signal(Vec::<String>::new);
+    let mut selection = use_signal(Vec::<String>::new);
     rsx! {
         Table {
             aria_label: "People",
@@ -43,8 +46,47 @@ fn RowGroupsPage() -> Element {
             default_row_grouping: vec!["Team".to_string()],
             expanded_groups: expanded(),
             onexpandedgroupschange: move |next| expanded.set(next),
+            onselectionchange: move |next| selection.set(next),
         }
         p { id: "expanded", {expanded.read().join(",")} }
+        p { id: "selection", {selection.read().join(",")} }
+    }
+}
+
+#[derive(Clone, PartialEq)]
+struct Member {
+    name: String,
+    team: &'static str,
+}
+
+const TEAMS: [&str; 4] = ["Sales", "Ops", "Legal", "Labs"];
+
+#[component]
+fn WindowedGroupsPage() -> Element {
+    let mut selection = use_signal(Vec::<String>::new);
+    let members: Vec<Member> = (0..10_000)
+        .map(|at| Member {
+            name: format!("Person {at}"),
+            team: TEAMS[at % TEAMS.len()],
+        })
+        .collect();
+    rsx! {
+        Table {
+            aria_label: "Members",
+            selectable: true,
+            max_height: "320px",
+            virtual_row_height: 40.0,
+            data: members,
+            columns: vec![
+                column("Name").value(|m: &Member| m.name.clone()).sortable().row_header(),
+                column("Team").value(|m: &Member| m.team.to_string()),
+            ],
+            row_key: |m: &Member| m.name.clone(),
+            default_row_grouping: vec!["Team".to_string()],
+            default_group_expansion: 1,
+            onselectionchange: move |next: Vec<String>| selection.set(next),
+        }
+        p { id: "selection", "{selection.read().len()}" }
     }
 }
 

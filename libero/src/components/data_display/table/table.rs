@@ -67,7 +67,7 @@ use super::{
     row::{RowContext, RowState, TableRow},
     row_groups::{GroupAggregates, GroupCells, GroupRow, GroupedRows, group_levels},
     row_reorder::{ROW_ANIMATION, ROW_TRANSFORM, RowReorder},
-    selection::{Selection, toggle_row},
+    selection::{Selection, group_state, toggle_row},
     sticky::use_edge_height,
     toolbar::{TableToolbar, TableTools, ToolView},
     use_table::{TableConfig, use_table},
@@ -856,8 +856,7 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     #[props(default, into)]
     max_height: Option<String>,
     /// With `max_height`, renders only the rows in view, each clipped to this
-    /// height in px with one line per cell. Off with `row_detail` and while
-    /// the rows are grouped.
+    /// height in px with one line per cell, group rows too. Off with `row_detail`.
     #[props(default)]
     virtual_row_height: Option<f64>,
     /// With `max_height`, called when the rows scroll to their bottom, to append
@@ -938,8 +937,8 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     onrowupdate: Option<EventHandler<RowUpdate<T>>>,
     /// The headers whose cell texts group the rows, outermost first; set, the
     /// grouping is controlled. Each group gets a row with a toggle, groups follow
-    /// the sorted rows and empty cells form one group. Renders every row, and
-    /// rows don't reorder while grouped.
+    /// the sorted rows and empty cells form one group. With `selectable`, a group's
+    /// box selects its rows. Rows don't reorder while grouped.
     #[props(default)]
     row_grouping: Option<Vec<String>>,
     /// Seeds the grouping once. Ignored when `row_grouping` is set.
@@ -1359,7 +1358,6 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let mut grouped_rows = use_hook(|| CopyValue::new(GroupedRows::<T>::default()));
     let mut group_aggregates = use_hook(|| CopyValue::new(GroupAggregates::<T>::default()));
     let mut group_seeded = use_hook(|| CopyValue::new(false));
-    let mut group_warned = use_hook(|| CopyValue::new(false));
     let mut row_context = use_hook(|| CopyValue::new((0u64, None::<Rc<RowContext<T>>>)));
     let mut known_rows = use_hook(|| CopyValue::new(KnownRows::<T>::None));
     let mut pin_edges = use_signal(|| [None::<f64>; 2]);
@@ -1646,10 +1644,6 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             (shown_csv(&columns, &shown, &data, &rows), order.len())
         })));
     }
-    if grouped && props.virtual_row_height.is_some() && !*group_warned.peek() {
-        group_warned.set(true);
-        warn("Table: `virtual_row_height` with `row_grouping` renders every row.");
-    }
     let groups = match (texts, leaves) {
         (Some(texts), Some(leaves)) => {
             // The first levels open the first time there are rows to group.
@@ -1678,6 +1672,16 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         _ => Rc::from([]),
     };
     let group_values = group_aggregates.write().values(&data, &columns, &groups);
+    let current = (selection.clone(), groups.clone(), keys.clone());
+    let select_group = use_callback(move |(id, on): (String, bool)| {
+        let (selection, groups, keys) = &current;
+        if let (Some(selection), Some(group)) =
+            (selection, groups.iter().find(|group| group.id == id))
+        {
+            let rows: Vec<String> = group.leaves.iter().map(|&at| keys[at].clone()).collect();
+            selection.toggle_rows(&rows, on);
+        }
+    });
     // The count when more rows were asked for: their arrival is said once loading ends.
     let mut asked_at = use_hook(|| CopyValue::new(None::<usize>));
     let loading = props.loading;
@@ -1735,13 +1739,14 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     // Not while loading: a count of no rows yet would read as a total.
     let footer = footer.filter(|_| skeleton.is_none());
     let foot_gap = if footer.is_some() { *foot.read() } else { 0.0 };
-    let key_at: Rc<dyn Fn(usize) -> String> = Rc::new(move |index| keys[index].clone());
+    let key_at: Rc<dyn Fn(usize) -> String> = {
+        let keys = keys.clone();
+        Rc::new(move |index| keys[index].clone())
+    };
     let has_data = !data.is_empty();
     let headers = Rc::new(headers);
-    // Detail rows have their own heights.
-    let row_height = props
-        .virtual_row_height
-        .filter(|_| bounded && !has_detail && !grouped);
+    // Detail rows have their own heights; group rows take the pitch.
+    let row_height = props.virtual_row_height.filter(|_| bounded && !has_detail);
     let fixed_slots = row_height.filter(|_| has_reorder).map(|pitch| FixedSlots {
         count: order.len(),
         pitch,
@@ -1816,6 +1821,40 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             .collect(),
         labels,
         toggle: toggle_group,
+        select: selection
+            .as_ref()
+            .map(|selection| (selection.look.clone(), select_group)),
+    };
+    let group_row = {
+        let (groups, columns, layout) = (groups.clone(), columns.clone(), layout.clone());
+        let (keys, selected_rows) = (keys.clone(), selected_rows.clone());
+        let selects = selection.is_some();
+        Rc::new(move |at: usize, attributes: Vec<Attribute>| {
+            let group = &groups[at];
+            let aggregates = group_values.as_ref().map(|values| {
+                layout
+                    .iter()
+                    .map(|&index| aggregate_cell(&columns[index], values[at][index], &labels))
+                    .collect()
+            });
+            let selected = selects
+                .then(|| group_state(&group.leaves, |index| selected_rows.contains(&keys[index])));
+            rsx! {
+                GroupRow {
+                    // Apart from the row keys, which are the caller's.
+                    key: "\u{1f}{group.id}",
+                    id: group.id.clone(),
+                    label: group.label.clone(),
+                    count: group.leaves.len(),
+                    depth: group.depth,
+                    open: group.open,
+                    aggregates: aggregates.unwrap_or_default(),
+                    selected,
+                    attributes,
+                    cells: group_cells.clone(),
+                }
+            }
+        })
     };
     let grid = cell_focus.then(|| {
         let (data, context) = (data.clone(), context.clone());
@@ -1868,6 +1907,12 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 pitch,
                 edges: (*head.peek(), foot_gap),
                 focused: row_focus.focused,
+                slots: order
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, row)| row.data().is_some())
+                    .map(|(slot, _)| slot)
+                    .collect(),
             }),
             header,
             select,
@@ -1961,7 +2006,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 skeleton.is_some(),
                 footer.is_some(),
             ));
-            let order: Rc<[usize]> = order.iter().filter_map(|row| row.data()).collect();
+            let order: Rc<[VisibleRow]> = order.into();
             row_focus.show(head_rows + first, order.clone());
             BodyRows::Window(RowWindow {
                 order,
@@ -1974,7 +2019,11 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                     let cells = context.cells(row, index, &state.key, state.stop, state.editing);
                     context.spec(row, state, cells)
                 }),
-                key: key_at,
+                group: group_row,
+                key: Rc::new(move |row| match row {
+                    VisibleRow::Data(index) => key_at(index),
+                    VisibleRow::Group(at) => format!("\u{1f}{}", groups[at].id),
+                }),
                 focused: row_focus.focused,
                 moves: row_focus.moves,
             })
@@ -1996,31 +2045,15 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                             }
                         }
                     }
-                    VisibleRow::Group(at) => {
-                        let group = &groups[at];
-                        let aggregates = group_values.as_ref().map(|values| {
-                            layout
-                                .iter()
-                                .map(|&index| {
-                                    aggregate_cell(&columns[index], values[at][index], &labels)
-                                })
-                                .collect()
-                        });
-                        rsx! {
-                            GroupRow {
-                                // Apart from the row keys, which are the caller's.
-                                key: "\u{1f}{group.id}",
-                                id: group.id.clone(),
-                                label: group.label.clone(),
-                                count: group.leaves.len(),
-                                depth: group.depth,
-                                open: group.open,
-                                aggregates: aggregates.unwrap_or_default(),
-                                cells: group_cells.clone(),
-                                rowindex: paged.map(|(first, _)| head_rows + first + position + 1),
-                            }
-                        }
-                    }
+                    VisibleRow::Group(at) => group_row(
+                        at,
+                        paged
+                            .map(|(first, _)| {
+                                let at = head_rows + first + position + 1;
+                                vec![attr("aria-rowindex", at.to_string())]
+                            })
+                            .unwrap_or_default(),
+                    ),
                 })
                 .collect(),
         ),

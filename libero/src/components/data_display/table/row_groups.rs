@@ -9,9 +9,15 @@ use super::{
     memo::{Memo, same_rows},
     pinning::CellPin,
     pipeline::{GroupInfo, VisibleRow, nest_rows},
+    selection::MixedSelect,
 };
 use crate::{
-    components::common::Glyph, context::IconSlot, localization::TableLabels,
+    components::{
+        common::Glyph,
+        form::{CheckboxLook, LightState},
+    },
+    context::IconSlot,
+    localization::TableLabels,
     theme::TABLE_GROUP_INDENT,
 };
 
@@ -161,7 +167,11 @@ pub(super) struct GroupCells {
     pub labels: TableLabels,
     /// Opens or shuts the group of an id, named by a label.
     pub toggle: Callback<(String, String, bool)>,
+    pub select: Option<GroupSelect>,
 }
+
+/// With `selectable`: the boxes' look, and the selection of a group's rows by its id.
+pub(super) type GroupSelect = (Rc<CheckboxLook>, Callback<(String, bool)>);
 
 /// A group row: a toggle naming the group and its row count in the first shown
 /// column, then each shown column's aggregate over the group's rows, if any. Its
@@ -176,10 +186,14 @@ pub(super) fn GroupRow(
     /// An aggregate's name and text per shown column; empty without aggregates.
     #[props(default)]
     aggregates: Rc<[Option<(&'static str, String)>]>,
-    cells: GroupCells,
-    /// With `cell_focus` on a page: its `aria-rowindex`.
+    /// With `selectable`: its box, over the group's rows.
     #[props(default)]
-    rowindex: Option<usize>,
+    selected: Option<LightState>,
+    /// Its `aria-rowindex` when windowed or with `cell_focus` on a page, and a
+    /// windowed row's focus listeners.
+    #[props(default)]
+    attributes: Vec<Attribute>,
+    cells: GroupCells,
 ) -> Element {
     let GroupCells {
         leads,
@@ -187,8 +201,31 @@ pub(super) fn GroupRow(
         aligns,
         labels,
         toggle,
+        select,
     } = cells;
     let name = (labels.group_toggle)(&label, count);
+    // The checkbox column leads after the handles and toggles, so it gets its own cell.
+    let select = select.zip(selected).map(|((look, choose), state)| {
+        let id = id.clone();
+        rsx! {
+            td {
+                key: "{leads}select",
+                "data-select": true,
+                // As a row's box: no reach to Blitz's focus guard (todo 1406).
+                onclick: |event| {
+                    event.stop_propagation();
+                    event.prevent_default();
+                },
+                MixedSelect {
+                    aria_label: (labels.select_group)(&label, count),
+                    look,
+                    state,
+                    onchange: move |on| choose((id.clone(), on)),
+                }
+            }
+        }
+    });
+    let leads = leads - usize::from(select.is_some());
     let indent = format!(
         "margin-inline-start:calc({depth} * {})",
         TABLE_GROUP_INDENT.value()
@@ -229,7 +266,7 @@ pub(super) fn GroupRow(
         }
     });
     rsx! {
-        tr { "data-row-group": true, "data-level": "{depth}", aria_rowindex: rowindex.map(|at| at.to_string()),
+        tr { "data-row-group": true, "data-level": "{depth}", ..attributes,
             if leads > 0 {
                 td {
                     key: "lead{leads}",
@@ -237,6 +274,7 @@ pub(super) fn GroupRow(
                     colspan: (leads > 1).then(|| leads.to_string()),
                 }
             }
+            {select}
             {cells}
         }
     }

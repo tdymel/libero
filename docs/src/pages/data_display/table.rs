@@ -182,13 +182,7 @@ const PINNED: &str =
 const WINDOW_HEIGHT: &str = "320px";
 
 /// The switches `virtual_row_height` hides: it sets the cap, the rest render every row.
-const WINDOW_HIDES: [&str; 5] = [
-    "max_height",
-    "row_detail",
-    "paginate",
-    "empty",
-    "row_grouping",
-];
+const WINDOW_HIDES: [&str; 4] = ["max_height", "row_detail", "paginate", "empty"];
 
 // snippet: item #[derive(Clone, PartialEq)] struct Person { name: String }
 // snippet: in Table { caption: "Team members", data: Vec::<Person>::new(), columns: vec![], .. }
@@ -289,7 +283,7 @@ pub fn TablePage() -> Element {
                     prop("onexpandedchange", "EventHandler<Vec<String>>").default("None").doc("Called with the open details a toggle asks for."),
                     prop("onrowreorder", "EventHandler<SortableMove>").default("None").doc("Adds a leading column with a drag handle and Move up and Move down buttons per row. Called with a move by positions in `data`; apply it with `step.apply(&mut rows)`, the table shows the old order until you do. Off while the rows are sorted, filtered or grouped. Paged, a row moves within its page. Set `row_key` with it."),
                     prop("onrowupdate", "EventHandler<RowUpdate<T>>").default("None").doc("Called when an `.editable(..)` cell commits, with a `RowUpdate`: the row's `key`, its `index` in `data`, the edited `column`'s header and `row`, a clone of the row with the new value set. Store it, `rows.write()[update.index] = update.row`; the table keeps no copy, so the cell shows `data` again until you do. An unchanged value calls nothing."),
-                    prop("row_grouping", "Option<Vec<String>>").default("None").doc("Groups the rows by the cell text of these headers, outermost first: `vec![\"Role\".into()]`. Each group gets a row of its own, with a toggle in the first shown column naming its text and row count; rows with an empty cell form one group, \"(empty)\". Groups follow the sorted rows, so sorting by the grouped column orders them, and a filter drops the groups it empties. The grouped column stays shown. A grouped table renders every row (`virtual_row_height` is ignored, a debug build warns), and rows don't reorder while grouped. Paged, group rows take places on a page like rows, and a group split by a page break gets no second group row. The footer and an export cover the rows alone. Set, the grouping is controlled: pair it with `onrowgroupingchange`."),
+                    prop("row_grouping", "Option<Vec<String>>").default("None").doc("Groups the rows by the cell text of these headers, outermost first: `vec![\"Role\".into()]`. Each group gets a row of its own, with a toggle in the first shown column naming its text and row count; rows with an empty cell form one group, \"(empty)\". Groups follow the sorted rows, so sorting by the grouped column orders them, and a filter drops the groups it empties. The grouped column stays shown. With `selectable`, each group row gets a box that selects or clears the group's rows, open or not, checked when all are selected and mixed when some are. With `virtual_row_height`, group rows take one row height each and count in `aria-rowindex`. Rows don't reorder while grouped. Paged, group rows take places on a page like rows, and a group split by a page break gets no second group row. The footer and an export cover the rows alone. Set, the grouping is controlled: pair it with `onrowgroupingchange`."),
                     prop("default_row_grouping", "Vec<String>").default("[]").doc("Seeds the grouping once. Ignored when `row_grouping` is set."),
                     prop("onrowgroupingchange", "EventHandler<Vec<String>>").default("None").doc("Called with the grouping a pick asks for."),
                     prop("expanded_groups", "Option<Vec<String>>").default("None").doc("The open groups' ids: their texts from the outermost group in, joined by `/`, as `\"Admin\"` or `\"Admin/2024\"`; a `/` or `\\` in a text is escaped by `\\`, and the empty group's text is empty. Set, it is controlled: pair it with `onexpandedgroupschange`."),
@@ -500,7 +494,8 @@ pub fn TablePage() -> Element {
                         true => vec![PINNED.to_string()],
                         false => vec![],
                     }),
-                    Control::switch("selectable"),
+                    // On, so the group rows' boxes show without another switch.
+                    Control::switch("selectable").default("true"),
                     Control::switch("multi_sort"),
                     Control::switch("column_menu").default("true"),
                     // On, so the grid's focus ring shows on a click without another switch.
@@ -532,10 +527,10 @@ pub fn TablePage() -> Element {
                         false => vec![],
                     }).hidden_when(windowed),
                     // On, so the group rows show without another switch; every group starts open.
-                    Control::switch("row_grouping").default("true").code(|_, values| match values.str("row_grouping") == "true" && !windowed(values) {
+                    Control::switch("row_grouping").default("true").code(|_, values| match values.str("row_grouping") == "true" {
                         true => vec![GROUPING.to_string()],
                         false => vec![],
-                    }).hidden_when(windowed),
+                    }),
                     Control::switch("reorder_rows").code(|_, values| match reorders(values) {
                         true => vec![REORDER.to_string()],
                         false => vec![],

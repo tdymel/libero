@@ -220,6 +220,15 @@ pub struct TableLabels {
     /// assert_eq!((TableLabels::GERMAN.group_toggle)("Sales", 1), "Sales, 1 Zeile");
     /// ```
     pub group_toggle: fn(&str, usize) -> String,
+    /// A group row's checkbox, from the group's label and its row count.
+    ///
+    /// ```
+    /// use libero::localization::TableLabels;
+    ///
+    /// assert_eq!((TableLabels::ENGLISH.select_group)("Sales", 12), "Select group Sales, 12 rows");
+    /// assert_eq!((TableLabels::GERMAN.select_group)("Sales", 1), "Gruppe Sales auswählen, 1 Zeile");
+    /// ```
+    pub select_group: fn(&str, usize) -> String,
     /// Said when a group opens or closes, from its label.
     pub group_expanded: fn(&str) -> String,
     pub group_collapsed: fn(&str) -> String,
@@ -666,6 +675,14 @@ fn german_group_toggle(group: &str, count: usize) -> String {
     format!("{group}, {}", german_results(count))
 }
 
+fn english_select_group(group: &str, count: usize) -> String {
+    format!("Select group {group}, {}", english_results(count))
+}
+
+fn german_select_group(group: &str, count: usize) -> String {
+    format!("Gruppe {group} auswählen, {}", german_results(count))
+}
+
 fn english_group_by(column: &str) -> String {
     format!("Group by {column}")
 }
@@ -759,6 +776,7 @@ impl TableLabels {
         row_details: english_row_details,
         group_empty: "(empty)",
         group_toggle: english_group_toggle,
+        select_group: english_select_group,
         group_expanded: english_group_expanded,
         group_collapsed: english_group_collapsed,
         group_by: english_group_by,
@@ -839,6 +857,7 @@ impl TableLabels {
         row_details: german_row_details,
         group_empty: "(leer)",
         group_toggle: german_group_toggle,
+        select_group: german_select_group,
         group_expanded: german_group_expanded,
         group_collapsed: german_group_collapsed,
         group_by: german_group_by,
