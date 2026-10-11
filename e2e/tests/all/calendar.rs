@@ -18,18 +18,21 @@ fn it_meets_the_baseline() {
 }
 
 /// Todo 2341. The page's clock jumps 40 days; focus coming into an inline picker marks
-/// the new today, not the one read at mount.
+/// the new today, not the one read at mount. Pinned, so a midnight in the run changes nothing (3247).
 #[test]
 fn an_inline_picker_asks_the_clock_again_on_focus_in() {
-    const TODAY_IS_NOW: &str = "(() => { const d = new Date(); \
-        const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; \
-        return document.querySelector('[role=grid] [aria-current=date]:not([data-outside])')?.getAttribute('data-date') === iso; })()";
+    fn marks(date: &str) -> String {
+        format!(
+            "document.querySelector('[role=grid] [aria-current=date]:not([data-outside])')?.getAttribute('data-date') === '{date}'"
+        )
+    }
     block_on(async {
         let fixture = Fixture::open("/calendar/clock", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;
-        wait::for_js_true(page, TODAY_IS_NOW, "the mount to mark today")
+        e2e::clock::pin_today(page, "2031-06-15").await.unwrap();
+        wait::for_js_true(page, &marks("2031-06-15"), "the mount to mark today")
             .await
             .unwrap();
         page.evaluate(
@@ -42,7 +45,7 @@ fn an_inline_picker_asks_the_clock_again_on_focus_in() {
         .unwrap();
         keyboard::tab_to(page, "#before", 3).await.unwrap();
         keyboard::press(page, keyboard::TAB).await.unwrap();
-        wait::for_js_true(page, TODAY_IS_NOW, "focus-in to mark the new today")
+        wait::for_js_true(page, &marks("2031-07-25"), "focus-in to mark the new today")
             .await
             .unwrap();
         fixture

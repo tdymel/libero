@@ -13,18 +13,25 @@ import android.webkit.MimeTypeMap
 import java.io.File
 import java.io.FileNotFoundException
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 
 /** Called from Rust over manganis `#[ffi]`: stages a file to share and names its URI. */
 class LiberoShare(private val activity: Activity) {
-    /** A fresh path for a file called `name`; shares older than a day are removed first. */
+    private val cleaning = AtomicBoolean()
+
+    /** A fresh path for a file called `name`; shares older than a day go in the background. */
     fun stagePath(name: String): String {
         val root = LiberoShareProvider.root(activity)
-        val old = System.currentTimeMillis() - 24 * 60 * 60 * 1000L
-        root.listFiles()?.filter { it.lastModified() < old }?.forEach { it.deleteRecursively() }
+        if (cleaning.compareAndSet(false, true)) Thread { removeOld(root) }.start()
         val folder = File(root, UUID.randomUUID().toString())
         folder.mkdirs()
         val safe = name.replace('/', '_').replace('\u0000', '_').ifBlank { "file" }
         return File(folder, safe).path
+    }
+
+    private fun removeOld(root: File) {
+        val old = System.currentTimeMillis() - 24 * 60 * 60 * 1000L
+        root.listFiles()?.filter { it.lastModified() < old }?.forEach { it.deleteRecursively() }
     }
 
     fun contentUri(path: String): String {

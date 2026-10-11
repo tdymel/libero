@@ -11,6 +11,7 @@ use dioxus_desktop::wry::prelude::{
     },
 };
 use futures_channel::oneshot;
+use std::sync::Arc;
 
 use super::share::{ShareApi, ShareData, ShareFile, ShareOutcome, Sharing, text_fields};
 
@@ -39,17 +40,56 @@ pub(super) static SHARE: AndroidShare = AndroidShare;
 
 impl ShareApi for AndroidShare {
     fn share(&self, data: ShareData) -> Sharing {
-        let opened = on_main_thread(move |env, activity| {
-            let uris = stage(env, activity, &data.files)?;
-            send(env, activity, &data, &uris)
+        let data = Arc::new(data);
+        let named = on_main_thread({
+            let data = Arc::clone(&data);
+            move |env, activity| stage(env, activity, &data.files)
         });
         Box::pin(async move {
-            match opened.await {
+            match open(data, named).await {
                 Ok(outcome) => outcome,
                 Err(error) => ShareOutcome::Failed(error),
             }
         })
     }
+}
+
+/// A file's staged path and the `content://` URI the provider serves it at.
+type Staged = (String, String);
+
+/// Writes the files off the main thread between its two jobs: naming the paths and
+/// opening the chooser.
+async fn open(
+    data: Arc<ShareData>,
+    named: impl Future<Output = Result<Vec<Staged>, String>>,
+) -> Result<ShareOutcome, String> {
+    let named = named.await?;
+    let uris = write_files(Arc::clone(&data), named).await?;
+    on_main_thread(move |env, activity| send(env, activity, &data, &uris)).await
+}
+
+/// Writes `data`'s files to their staged paths on a worker thread; answers their URIs.
+async fn write_files(data: Arc<ShareData>, named: Vec<Staged>) -> Result<Vec<String>, String> {
+    if named.is_empty() {
+        return Ok(Vec::new());
+    }
+    let (reply, answer) = oneshot::channel();
+    std::thread::spawn(move || {
+        let written = data
+            .files
+            .iter()
+            .zip(named)
+            .map(|(file, (path, uri))| {
+                std::fs::write(path, &file.bytes)
+                    .map(|()| uri)
+                    .map_err(|error| error.to_string())
+            })
+            .collect();
+        let _ = reply.send(written);
+    });
+    answer
+        .await
+        .unwrap_or_else(|_| Err("the share files were not written".to_string()))
 }
 
 /// Runs `job` on the main thread with the activity and answers with its result;
@@ -100,8 +140,8 @@ pub(super) fn app_object(
     env.new_global_ref(object)
 }
 
-/// Writes each file where the provider serves it and answers its `content://` URI.
-fn stage(env: &mut JNIEnv, activity: &JObject, files: &[ShareFile]) -> Result<Vec<String>, String> {
+/// Names where the provider serves each file and its `content://` URI; writes nothing.
+fn stage(env: &mut JNIEnv, activity: &JObject, files: &[ShareFile]) -> Result<Vec<Staged>, String> {
     if files.is_empty() {
         return Ok(Vec::new());
     }
@@ -112,8 +152,8 @@ fn stage(env: &mut JNIEnv, activity: &JObject, files: &[ShareFile]) -> Result<Ve
         .iter()
         .map(|file| {
             let path = stage_path(&bridge, file.name.clone()).map_err(|error| error.to_string())?;
-            std::fs::write(&path, &file.bytes).map_err(|error| error.to_string())?;
-            content_uri(&bridge, path).map_err(|error| error.to_string())
+            let uri = content_uri(&bridge, path.clone()).map_err(|error| error.to_string())?;
+            Ok((path, uri))
         })
         .collect()
 }
