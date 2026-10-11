@@ -129,8 +129,8 @@ On Windows dioxus serves the page from `http://dioxus.index.html`, which
 WebView2 does not count as a secure context: the camera, microphone, location,
 notifications and clipboard APIs are missing. Mark that one origin secure,
 never a wildcard or a list: it is your app's own bundled page. Keep wry's
-default arguments, which these replace. Expected to work, not yet confirmed on
-Windows:
+default arguments, which these replace. Confirmed on Windows CI, where the
+page then reports a secure context:
 
 ```rust,ignore
 // wry 0.55's defaults, then the app's own page origin.

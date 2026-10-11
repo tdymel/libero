@@ -306,6 +306,7 @@ e2e::scenario!(
     "/table-grid/collation",
     sorts_by_language,
     native: skip("3386: reads the page language by script, Blitz has none and no Intl.Collator"),
+    desktop: skip("3400: the app sorts in Rust by accent-folded letters, only the web build has an Intl.Collator"),
     android: skip("3294: the WebView app has no Intl.Collator to call")
 );
 

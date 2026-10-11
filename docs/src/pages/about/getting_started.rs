@@ -346,7 +346,7 @@ fn DesktopPanel() -> Element {
             Text {
                 "On Windows dioxus serves the page from "
                 Code { source: "http://dioxus.index.html" }
-                ", which WebView2 does not count as a secure context: the camera, microphone, location, notifications and clipboard APIs are missing. Mark that one origin secure, never a wildcard or a list: it is your app's own bundled page. Keep wry's default arguments, which these replace. Expected to work, not yet confirmed on Windows:"
+                ", which WebView2 does not count as a secure context: the camera, microphone, location, notifications and clipboard APIs are missing. Mark that one origin secure, never a wildcard or a list: it is your app's own bundled page. Keep wry's default arguments, which these replace. Confirmed on Windows CI, where the page then reports a secure context:"
             }
             CodeBlock { source: WINDOWS_SECURE_ORIGIN, language: "rust" }
         }
