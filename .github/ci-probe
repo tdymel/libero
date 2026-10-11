@@ -1,0 +1,4 @@
+# ted_ci.py probe; read by .github/workflows/ci-probe.yml.
+os=macos
+tier=web
+filter=color_picker::+floating_window_resize::+focus_return::+home::+image::
