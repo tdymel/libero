@@ -15,8 +15,8 @@ use e2e::{Fixture, Viewport, wait};
 
 /// Nothing prompts or opens until asked; Blitz has no capture API.
 async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    // WKWebView and WebView2 are unpinned until the platform probe answered (todos 1236, 3194);
-    // the iOS simulator has no camera.
+    // WKWebView and WebView2 are pinned to a class of answers, not a value, until the platform
+    // probe ran (todos 1236, 3193, 3232); the iOS simulator has no camera.
     let unpinned = match d.platform() {
         Platform::Ios => true,
         Platform::Desktop => Host::current() != Host::Linux,
@@ -87,7 +87,9 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
     Ok(())
 }
 
-/// A start answers at all, with no prompt left hanging; a camera that opens is stopped.
+/// A start answers at all, with no prompt left hanging; a camera that opens is stopped, and
+/// a refusal is the platform's own, not a failure of the hook. The first CI outcomes pin
+/// the exact answer per OS (todos 3193, 3232).
 async fn answers_at_all<D: Driver>(d: &mut D) -> Result<()> {
     d.click("#start").await?;
     eventually(d, "an answer to a start", async |d| {
@@ -98,7 +100,14 @@ async fn answers_at_all<D: Driver>(d: &mut D) -> Result<()> {
     record_outcome(d, "use_user_media", &shown).await?;
     if d.text("#live").await? == "true" {
         d.click("#stop").await?;
-        eventually_text(d, "#live", "false", "a stop").await?;
+        return eventually_text(d, "#live", "false", "a stop").await;
+    }
+    let error = d.text("#error").await?;
+    if !["Some(Unsupported)", "Some(Denied)", "Some(NotFound)"].contains(&error.as_str()) {
+        bail!(
+            "{:?}: a start with no camera opened reads {error:?}, not a refusal or a missing device",
+            d.platform()
+        );
     }
     Ok(())
 }

@@ -27,7 +27,11 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
         eventually_text(d, selector, expected, "mount").await?;
     }
     match d.platform() {
-        Platform::Ios => recorded(d).await?,
+        // WKWebView outside Safari defines no `Notification` (3232); the outcome is logged first.
+        Platform::Ios => {
+            recorded(d).await?;
+            eventually_text(d, "#supported", "false", "mount").await?;
+        }
         // Todo 1348: the system's notifications over JNI; the runner revokes the permission.
         Platform::Android => {
             eventually_text(d, "#supported", "true", "mount").await?;
@@ -94,9 +98,9 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
     Ok(())
 }
 
-/// The page's `Notification` in WKWebView and WebView2, unpinned until the platform probe
-/// answered (todos 1239, 3194): a permission at all, recorded; no `Notification` is
-/// unsupported as on Linux.
+/// The page's `Notification` in WKWebView and WebView2: a permission at all, recorded
+/// (macOS and Windows stay unpinned until the first outcomes, todos 1239, 3193); no
+/// `Notification` is unsupported as on Linux.
 async fn recorded<D: Driver>(d: &mut D) -> Result<()> {
     eventually(d, "a permission state", async |d| {
         Ok(d.text("#permission").await? != "Unknown")

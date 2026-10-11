@@ -384,6 +384,7 @@ jobs:
           E2E_DESKTOP_DEADLINE: 1500
       - if: failure() || cancelled()
         run: python .github/scripts/ci_annotate.py "$RUNNER_TEMP/e2e.log"
+      # The `secure` notice and the probe test's assert confirm the secure origin (3231).
       - if: always()
         run: python .github/scripts/probe_notice.py "$RUNNER_TEMP/e2e-artifacts"
       # Always: the platform probe's JSON is the point of a green run too.

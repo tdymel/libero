@@ -4,7 +4,7 @@
 //! denied, Blitz unsupported;
 //! macOS and Windows desktop answer at all, recorded in `outcomes.log`.
 
-use anyhow::Result;
+use anyhow::{Result, bail};
 use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::browser::{
     PermissionDescriptor, PermissionSetting, SetPermissionParams,
@@ -64,6 +64,11 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
             .await?;
             let shown = ["#supported", "#permission", "#error", "#position"];
             record_outcome(d, "use_geolocation", &shown).await?;
+            // Both engines ship the API; the per-OS answer waits for the first outcomes (3193).
+            eventually_text(d, "#supported", "true", "a request").await?;
+            if d.text("#error").await? == "Some(Unsupported)" {
+                bail!("{:?}: a request reads Unsupported", Host::current());
+            }
         }
         // wry gives WebKitGTK no permission handler, so it denies every request.
         Platform::Desktop => {

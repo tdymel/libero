@@ -1,10 +1,10 @@
 //! A probe, not a feature test: what each WebView offers (secure context, capability APIs,
 //! viewport, CSS support, media queries), kept as `platform-probe-<platform>-<host>.json` in
 //! the run's artifacts. It answers todos 1227, 1236, 1239 and 1248 per OS; it asserts only
-//! what holds everywhere.
+//! what holds everywhere, and on Windows desktop that the page is a secure context (3231).
 
 use anyhow::{Context, Result, ensure};
-use e2e::driver::{Driver, Host, eventually_text};
+use e2e::driver::{Driver, Host, Platform, eventually_text};
 use serde_json::Value;
 
 /// One object of facts; every read is guarded, so an engine lacking one still answers.
@@ -91,6 +91,16 @@ async fn probe<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         "localStorage round trip: {}",
         facts["localStorage"]
     );
+    // The docs say "expected to work" until this holds on `windows-desktop` (3231).
+    if d.platform() == Platform::Desktop && Host::current() == Host::Windows {
+        ensure!(
+            facts["isSecureContext"] == Value::Bool(true),
+            "dioxus's page is no secure context on WebView2 (origin {}, isSecureContext {}): \
+             is `with_windows_browser_args` read? {line}",
+            facts["origin"],
+            facts["isSecureContext"]
+        );
+    }
     Ok(())
 }
 

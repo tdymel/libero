@@ -3,13 +3,26 @@
 
     probe_notice.py <artifacts dir>
 
-One `::notice` per `platform-probe-*.json` and one for all `outcomes.log` lines under the dir
+A short `::notice` (origin, secure context, capability APIs) and the full one per
+`platform-probe-*.json`, and one for all `outcomes.log` lines under the dir
 (`e2e/tests/all/platform_probe.rs`, `e2e::driver::record_outcome`). Nothing found says so.
 """
+import json
 import sys
 from pathlib import Path
 
 from ci_annotate import clip, escape
+
+
+def secure(text: str) -> str:
+    """The origin, `isSecureContext` and the capability APIs' types: the answer to todo 3231 first."""
+    try:
+        facts = json.loads(text)
+    except ValueError:
+        return "unreadable probe file"
+    types = facts.get("typeof", {})
+    apis = " ".join(f"{name}={types.get(name)}" for name in ("mediaDevices", "Notification", "geolocation", "clipboard"))
+    return f"origin={facts.get('origin')} isSecureContext={facts.get('isSecureContext')} {apis}"
 
 
 def main() -> None:
@@ -19,6 +32,7 @@ def main() -> None:
     probes = sorted(root.rglob("platform-probe-*.json")) if root.is_dir() else []
     for probe in probes:
         text = probe.read_text(encoding="utf-8", errors="replace").strip()
+        print(f"::notice title={escape(probe.stem + ' secure', True)}::{escape(secure(text))}")
         print(f"::notice title={escape(probe.stem, True)}::{escape(clip(text, 4000))}")
     outcomes = [
         line
