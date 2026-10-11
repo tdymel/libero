@@ -70,7 +70,8 @@ e2e::scenario!(
 e2e::scenario!(
     fast_typing_into_a_text_field_keeps_every_letter,
     "/text-field/echo",
-    fast_typing_keeps_every_letter
+    fast_typing_keeps_every_letter,
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     fast_typing_into_a_rewriting_field_keeps_every_letter,
