@@ -263,6 +263,8 @@ fn server_command(
         "false",
         "--hot-reload",
         "false",
+        // So a mid-run rebuild names its trigger in `dx.log` (todo 3374).
+        "--verbose",
     ]);
     // `E2E_RELEASE=1`: optimised fixtures, for the frame-time report (1086).
     if std::env::var_os("E2E_RELEASE").is_some() {

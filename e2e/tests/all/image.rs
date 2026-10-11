@@ -98,6 +98,22 @@ async fn open_missed_error(fixture: &Fixture) {
     pointer::click(page, "#mount").await.unwrap();
 }
 
+/// Waits for the page's cropper to warn about its source, then drops it from the recording
+/// (todo 3378: the warn can land after a bare drain and fail the close check).
+async fn drain_cropper_warning(fixture: &Fixture) {
+    wait::until("the cropper's source warning", || async {
+        fixture.console.settle().await?;
+        Ok(fixture
+            .console
+            .peek()
+            .iter()
+            .any(|message| message.contains("`src` failed to load")))
+    })
+    .await
+    .unwrap();
+    fixture.console.drain();
+}
+
 /// A raster and an SVG picture that fail to decode (todo 2671: an SVG reads empty, not failed).
 const MISSED_ERROR_ROUTES: [&str; 2] = ["/image/missed-error", "/image/missed-error-svg"];
 
@@ -115,8 +131,7 @@ fn an_image_that_failed_before_its_listener_shows_the_fallback() {
             )
             .await
             .unwrap();
-            // The cropper on the page warns about its source.
-            fixture.console.drain();
+            drain_cropper_warning(&fixture).await;
             fixture.close().await.unwrap();
         }
     });
@@ -138,8 +153,7 @@ fn an_avatar_that_failed_before_its_listener_shows_its_initials() {
             )
             .await
             .unwrap();
-            // The cropper on the page warns about its source.
-            fixture.console.drain();
+            drain_cropper_warning(&fixture).await;
             fixture.close().await.unwrap();
         }
     });
@@ -161,8 +175,7 @@ fn a_cropper_that_failed_before_its_listener_reports_and_draws_no_box() {
             )
             .await
             .unwrap();
-            // The cropper on the page warns about its source.
-            fixture.console.drain();
+            drain_cropper_warning(&fixture).await;
             fixture.close().await.unwrap();
         }
     });
