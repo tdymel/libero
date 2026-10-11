@@ -1,12 +1,11 @@
 ---
 source: e2e/src/suite.rs
-assertion_line: 618
 description: table_grid at mobile (rest)
 expression: tree
 ---
 button "Before"
   StaticText "Before"
-grid "Team"
+grid "Team" [readonly]
   caption
     StaticText "Team"
   rowgroup
@@ -20,39 +19,39 @@ grid "Team"
       columnheader "City"
         StaticText "City"
   row "Ana 31 Lisbon"
-    rowheader "Ana"
+    rowheader "Ana" [readonly]
       StaticText "Ana"
-    gridcell "31"
+    gridcell "31" [readonly]
       StaticText "31"
-    gridcell "Lisbon"
+    gridcell "Lisbon" [readonly]
       StaticText "Lisbon"
   row "Ben 42 Berlin"
-    rowheader "Ben"
+    rowheader "Ben" [readonly]
       StaticText "Ben"
-    gridcell "42"
+    gridcell "42" [readonly]
       StaticText "42"
-    gridcell "Berlin"
+    gridcell "Berlin" [readonly]
       StaticText "Berlin"
   row "Cleo 27 Cairo"
-    rowheader "Cleo"
+    rowheader "Cleo" [readonly]
       StaticText "Cleo"
-    gridcell "27"
+    gridcell "27" [readonly]
       StaticText "27"
-    gridcell "Cairo"
+    gridcell "Cairo" [readonly]
       StaticText "Cairo"
   row "Dev 55 Delhi"
-    rowheader "Dev"
+    rowheader "Dev" [readonly]
       StaticText "Dev"
-    gridcell "55"
+    gridcell "55" [readonly]
       StaticText "55"
-    gridcell "Delhi"
+    gridcell "Delhi" [readonly]
       StaticText "Delhi"
   row "Eli 38 Essen"
-    rowheader "Eli"
+    rowheader "Eli" [readonly]
       StaticText "Eli"
-    gridcell "38"
+    gridcell "38" [readonly]
       StaticText "38"
-    gridcell "Essen"
+    gridcell "Essen" [readonly]
       StaticText "Essen"
 button "After"
   StaticText "After"

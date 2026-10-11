@@ -893,6 +893,7 @@ fn Demo() -> Element {
 | `default_expanded` | `Vec<String>` | `[]` | Seeds the open details once. Ignored when `expanded` is set. |
 | `onexpandedchange` | `EventHandler<Vec<String>>` | `None` | Called with the open details a toggle asks for. |
 | `onrowreorder` | `EventHandler<SortableMove>` | `None` | Adds a leading column with a drag handle and Move up and Move down buttons per row. Called with a move by positions in `data`; apply it with `step.apply(&mut rows)`, the table shows the old order until you do. Off while the rows are sorted, filtered or grouped. Paged, a row moves within its page. Set `row_key` with it. |
+| `onrowupdate` | `EventHandler<RowUpdate<T>>` | `None` | Called when an `.editable(..)` cell commits, with a `RowUpdate`: the row's `key`, its `index` in `data`, the edited `column`'s header and `row`, a clone of the row with the new value set. Store it, `rows.write()[update.index] = update.row`; the table keeps no copy, so the cell shows `data` again until you do. An unchanged value calls nothing. |
 | `row_grouping` | `Option<Vec<String>>` | `None` | Groups the rows by the cell text of these headers, outermost first: `vec!["Role".into()]`. Each group gets a row of its own, with a toggle in the first shown column naming its text and row count; rows with an empty cell form one group, "(empty)". Groups follow the sorted rows, so sorting by the grouped column orders them, and a filter drops the groups it empties. The grouped column stays shown. A grouped table renders every row (`virtual_row_height` is ignored, a debug build warns), and rows don't reorder while grouped. Paged, group rows take places on a page like rows, and a group split by a page break gets no second group row. The footer and an export cover the rows alone. Set, the grouping is controlled: pair it with `onrowgroupingchange`. |
 | `default_row_grouping` | `Vec<String>` | `[]` | Seeds the grouping once. Ignored when `row_grouping` is set. |
 | `onrowgroupingchange` | `EventHandler<Vec<String>>` | `None` | Called with the grouping a pick asks for. |
@@ -900,7 +901,7 @@ fn Demo() -> Element {
 | `default_expanded_groups` | `Vec<String>` | `[]` | Seeds the open groups once. Ignored when `expanded_groups` is set. |
 | `onexpandedgroupschange` | `EventHandler<Vec<String>>` | `None` | Called with the open groups a group toggle asks for. |
 | `default_group_expansion` | `usize` | `0` | How many levels of groups start open, the first time there are rows to group, beside `default_expanded_groups`: 1 opens the outermost groups. 0 starts every group closed. Ignored with `expanded_groups`. |
-| `cell_focus` | `bool` | `false` | Makes the table a `role="grid"` whose body cells are one tab stop: Tab enters on one cell, the first body cell until focus moves, and the arrows, Home, End, Ctrl+Home, Ctrl+End, PageUp and PageDown move it. The stop stays where it was left and follows its row through a sort. A button or field in a cell stays a tab stop of its own, and a widget that takes the arrows keeps them. The leading checkbox, detail and reorder cells, group rows, the header and the footer stay out of the key map. Give the rows a `.row_header()` column. |
+| `cell_focus` | `bool` | `false` | Makes the table a `role="grid"` whose header and body cells are one tab stop: Tab enters on one cell, the first header cell until focus moves, and the arrows, Home, End, Ctrl+Home, Ctrl+End, PageUp and PageDown move it. On a header cell Enter or Space sorts and Ctrl+Enter opens its column menu; on a body cell Shift+Space selects the row with `selectable`. The stop stays where it was left and follows its row through a sort. A button or field in a cell stays a tab stop of its own, and a widget that takes the arrows keeps them. The leading checkbox, detail and reorder cells, group rows, the filter row and the footer stay out of the key map. Paged, `aria-rowcount` counts every page's rows; with a hidden column each cell carries its `aria-colindex`. An editable column turns it on. Give the rows a `.row_header()` column. |
 | `size` | `Size` | `md` | Cell padding and font size. |
 | `density` | `Option<Size>` | `None` | The size a `TableDensityButton` picked, over `size`; set, it is controlled. |
 | `default_density` | `Option<Size>` | `None` | Seeds the density once. Ignored when `density` is set. |
@@ -965,6 +966,9 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `header_render` | `fn() -> Element` | `None` | Replaces the header's body, inside the sort button when sortable, so keep it non-interactive then. The header text stays the column's name in `TableSort`. Capture signals, not values: the closure is not compared, so a changed value does not redraw the header. |
 | `of` | `&ColumnType<V>` | `None` | Before `value`: starts the column from a shared `const` type, its alignment, widths and a `format` over the value. `V` must match `value`'s; the column's own settings win. |
 | `row_header` | `bool` | `false` | Renders the column's cells as `th scope="row"`, so a screen reader names each row by it. One per table, usually the first. |
+| `editable` | `fn(&mut T, V)` | `None` | Makes the column's cells editable, turning on `cell_focus`: a double click, or Enter or F2 on the focused cell, opens a text field over the cell's value, Enter or leaving it commits through `onrowupdate`, Escape puts it back. `V: EditValue` parses the text: text, numbers, `bool` (`true`/`false`), a `NaiveDate` (`2026-03-01`), and `Option<V>`, empty for `None`. Text that does not parse keeps the field open, marked invalid. The other cells read as read-only. |
+| `validate` | `fn(&T, &V) -> Result<(), String>` | `None` | After `editable`: checks a parsed value against the row before the commit; an `Err` keeps the field open, marked invalid. |
+| `editor` | `fn(EditCtx) -> Element` | the text field | After `editable`: draws your own editor in the cell. `EditCtx` gives the start `value` as text, a `label` to name it by, "Edit Age, Ana", and `commit` (the new text) and `cancel`. Focus it on mount; a commit that does not parse or validate keeps it open, without a mark. |
 | `filterable` | `bool` | `true` | Whether the quick filter searches the column's cell text, and whether it takes a column filter. Off for ids and codes that would match by accident. |
 | `options` | `Vec<SelectOption>` | `[]` | Makes it a select column: its filter picks among these options, with the operators is, is not and is any of. A `SelectOption` is a `&str`, or a `(value, label)` pair: values match the raw cell text, before `format`, and are what a `ColumnFilter` holds; labels are shown. The quick filter and sorting still read the cell. |
 | `hideable` | `bool` | `true` | Whether the column menu offers to hide the column. `hidden_columns` still hides it. |
@@ -1006,10 +1010,16 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `Space` or `Enter` | With `onrowreorder`, on a row's handle: lifts the row, then drops it. Up and Down move the lifted row, Home and End to the first or last place, Escape puts it back. |
 | `Left` or `Right` | With `resizable_columns`, on a header's resize grip: moves it 10px the way the arrow points, 50px with Shift. |
 | `Home` or `End` | On a resize grip: narrows the column to its minimum, or widens it to its maximum when it has one. |
-| `Left` or `Right` or `Up` or `Down` | With `cell_focus`, on a body cell or a button in one: moves to the next cell that way, stopping at the edges. A cell spanning columns is one stop. |
-| `Home` or `End` | With `cell_focus`, on a body cell: moves to the row's first or last cell. |
-| `Ctrl+Home` or `Ctrl+End` | With `cell_focus`: moves to the first row's first cell or the last row's last cell, scrolling it into view. |
+| `Left` or `Right` or `Up` or `Down` | With `cell_focus`, on a header or body cell or a button in one: moves to the next cell that way, stopping at the edges. A cell spanning columns or header rows is one stop. |
+| `Home` or `End` | With `cell_focus`, on a cell: moves to the row's first or last cell. |
+| `Ctrl+Home` or `Ctrl+End` | With `cell_focus`: moves to the first header cell or the last row's last cell, scrolling it into view. |
 | `PageUp` or `PageDown` | With `cell_focus`: moves up or down by the rows one view shows, 10 when the view cannot be measured. |
+| `Enter` or `Space` | With `cell_focus`, on a sortable header cell itself: sorts by that column, as its button does. Focus stays on the cell. |
+| `Ctrl+Enter` | With `cell_focus` and `column_menu`, on a header cell: opens its column menu. |
+| `Shift+Space` | With `cell_focus` and `selectable`, on a body cell: selects or deselects its row. |
+| `Enter` or `F2` | On an editable cell: opens its editor, the field focused. |
+| `Enter` | In a cell's editor: commits the value and returns focus to the cell. A value that does not parse or validate keeps the editor open. |
+| `Escape` | In a cell's editor: puts the value back and returns focus to the cell. |
 | `Escape` | In a filter popover: closes it and returns focus to the button that opened it: the column's menu button, or its filtered-header button. |
 | `Tab` or `Shift+Tab` | In a filter popover: moves between its fields; past either end it closes and Tab goes on from the button that opened it. |
 
@@ -1017,8 +1027,8 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 
 - A debug build warns about an unnamed table, about `selectable`, `row_detail`
   or `onrowreorder` without `row_key`, about `selectable` with a first row
-  whose name cell has no text, and about a pinned column after one with no
-  `width`.
+  whose name cell has no text, about an editable column without
+  `onrowupdate`, and about a pinned column after one with no `width`.
 - `.row_header()` cells are `th scope="row"`, so a screen reader reads the
   row's name as it moves down any other column. A group header is a `th
   scope="colgroup"`, read with each cell under it.
@@ -1074,10 +1084,17 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
   footer is the last counted row, and a focus scroll stops above it.
 - The `toolbar` is a plain row, not a `role="toolbar"`: Tab moves through it
   as anywhere else.
-- With `cell_focus`, the table is a `role="grid"` and one body cell is its tab
-  stop, `tabindex="0"`, the rest `-1`, so Tab passes the grid in one step.
-  Cells and row headers keep their roles; in a `virtual_row_height` table the
-  focused cell's row stays rendered.
+- With `cell_focus`, the table is a `role="grid"` and one header or body cell
+  is its tab stop, `tabindex="0"`, the rest `-1`, so Tab passes the grid in one
+  step. Cells, column and row headers keep their roles; in a
+  `virtual_row_height` table the focused cell's row stays rendered. The grid is
+  `aria-readonly` without an editable column, `aria-multiselectable` with
+  `selectable`.
+- In a grid with an editable column, the other cells are `aria-readonly`. The
+  editor is a text field named "Edit" plus the column and the row's name, "Edit
+  Bonus, Ana", a number column's with a decimal keypad. A value that does not
+  parse or validate marks it `aria-invalid`. On a touch screen, which has no
+  Escape, a Cancel edit button sits beside it.
 
 ### You must
 
@@ -1117,8 +1134,14 @@ each cell of that row, and names the row's toggle "Details for Cherry".
   keyboard and the move buttons reorder there.
 - On Blitz, a header has no drag grip: columns reorder from the column menu
   there.
-- With `cell_focus`, the header cells are not in the key map yet: Up stops at
-  the first body row, and the headers stay tab stops of their own.
+- On a WebView (Android, iOS, desktop), Enter, Space, Ctrl+Enter, Shift+Space
+  and F2 on a `cell_focus` cell do nothing, as the page cannot tell the cell
+  from a widget in it: a header's sort and menu buttons, a row's checkbox and a
+  double click do the same there.
+- An editor's invalid mark says nothing: the reason a `validate` gives is not
+  shown or announced yet.
+- The footer and the leading checkbox, detail and reorder cells carry no
+  `aria-colindex`; the leading cells sit at the first places.
 - On Android, the arrows and page keys do not move a `cell_focus` grid's stop
   in the emulator's WebView (todo 958); a tap does.
 - How TalkBack reads a `cell_focus` grid is not checked yet.
@@ -1183,7 +1206,8 @@ default `start`.
 | `data-group-aggregate` | On a group row's aggregate, an aggregating column's name and value over the group's rows. |
 | `data-reorder` | On the reorder column's `th` and `td`s, with `onrowreorder`. |
 | `data-dragging` | On the body row being dragged or moved by keyboard. |
-| `data-cell-stop` | On the body cell that is the tab stop, with `cell_focus`. |
+| `data-cell-stop` | On the header or body cell that is the tab stop, with `cell_focus`. |
+| `data-editing` | On the body cell whose editor is open; `data-cell-editor` on the editor's box in it, `data-cell-editor-cancel` on its cancel button, shown on a touch screen only. |
 | `data-group` | On a column group's header cell. |
 | `data-footer-lead` | On the footer's one cell over the lead columns, with an aggregating column. |
 | `data-footer-name` | On the span naming an aggregate before the value in a footer cell. |

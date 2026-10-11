@@ -3,9 +3,11 @@ use std::rc::Rc;
 use dioxus::prelude::*;
 
 use super::{
+    cell_focus::{FocusTarget, GridRow},
     column::Column,
     core::{CellSpec, HeaderSpec, RowFn, RowSpec, body_rows, render_cells},
     detail::Details,
+    edit::{CellEditor, EditCtx, RowUpdate, commit_edit},
     grid::GridFocus,
     groups::spanned,
     pinning::{pin_runs, span_pin},
@@ -13,7 +15,11 @@ use super::{
     row_reorder::{ReorderSlot, RowReorder},
     selection::Selection,
 };
-use crate::{components::common::States, hooks::listener};
+use crate::{
+    components::common::{States, attr},
+    hooks::listener,
+    localization::labels::table::TableLabels,
+};
 
 /// What a body row reads besides its own row: the columns, the row props and the
 /// leading columns. The same for every row of one table render.
@@ -39,6 +45,13 @@ pub(super) struct RowContext<T: 'static> {
     pub reorder: Option<RowReorder>,
     /// With `cell_focus`.
     pub grid: Option<GridFocus>,
+    /// With `cell_focus` and a hidden column: each column's `aria-colindex`.
+    pub colindex: Option<Rc<[usize]>>,
+    /// Told an editable cell's commit.
+    pub onrowupdate: Option<EventHandler<RowUpdate<T>>>,
+    /// Whether a column is editable: the other cells are then read-only.
+    pub editable: bool,
+    pub labels: TableLabels,
 }
 
 impl<T> RowContext<T> {
@@ -84,6 +97,10 @@ impl<T> RowContext<T> {
             && boxes(self) == boxes(other)
             && reorder(self) == reorder(other)
             && self.grid.map(|grid| grid.stop) == other.grid.map(|grid| grid.stop)
+            && self.colindex == other.colindex
+            && self.onrowupdate == other.onrowupdate
+            && self.editable == other.editable
+            && self.labels == other.labels
     }
 }
 
@@ -102,6 +119,10 @@ pub(super) struct RowState {
     pub expanded: bool,
     /// With `cell_focus`, in the stop's row: the stop's header index.
     pub stop: Option<usize>,
+    /// With `cell_focus` on a page: its `aria-rowindex`.
+    pub rowindex: Option<usize>,
+    /// The header index of its cell whose editor is open.
+    pub editing: Option<usize>,
 }
 
 impl<T: Clone + 'static> RowContext<T> {
@@ -115,6 +136,8 @@ impl<T: Clone + 'static> RowContext<T> {
             selected,
             expanded,
             stop: _,
+            rowindex,
+            editing: _,
         } = state;
         let columns = &self.columns;
         let name = || {
@@ -150,6 +173,9 @@ impl<T: Clone + 'static> RowContext<T> {
             _ => None,
         };
         let mut attributes = self.row_attrs.call(row).unwrap_or_default();
+        if let Some(rowindex) = rowindex {
+            attributes.push(attr("aria-rowindex", rowindex.to_string()));
+        }
         if let Some(onrowclick) = self.onrowclick {
             let row = row.clone();
             attributes.push(listener("onclick", move |_: Event<MouseData>| {
@@ -202,25 +228,56 @@ impl<T: Clone + 'static> RowContext<T> {
         self.layout_of(row).map(|(_, span, _)| span).collect()
     }
 
-    /// The row's cells, in display order; `data[index]` is `row`, and with
-    /// `cell_focus` the cell of header `stop` is the tab stop.
-    pub fn cells(&self, row: &T, index: usize, stop: Option<usize>) -> Element {
+    /// The row's cells, in display order; `data[index]` is `row`, keyed `key`. With
+    /// `cell_focus` the cell of header `stop` is the tab stop, and `editing`'s
+    /// holds its editor.
+    pub fn cells(
+        &self,
+        row: &T,
+        index: usize,
+        key: &str,
+        stop: Option<usize>,
+        editing: Option<usize>,
+    ) -> Element {
         let (columns, headers) = (&self.columns, &self.headers);
         let cells = self.layout_of(row).map(|(column, span, covered)| {
             let spec = &columns[column];
-            let (text, body) = match &spec.render {
-                Some(render) => (String::new(), Some(render(row))),
-                None => ((spec.text)(row), None),
+            let (text, body) = match (&spec.render, self.grid) {
+                (_, Some(grid)) if editing == Some(column) && spec.edit.is_some() => (
+                    String::new(),
+                    Some(self.editor(row, index, key, column, grid)),
+                ),
+                (Some(render), _) => (String::new(), Some(render(row))),
+                (None, _) => ((spec.text)(row), None),
             };
-            let attributes = match &self.grid {
+            let mut attributes = match &self.grid {
                 Some(grid) => grid.cell(
-                    VisibleRow::Data(index),
+                    GridRow::Body(VisibleRow::Data(index)),
                     column,
                     stop == Some(column),
                     headers[column].row_header,
+                    self.colindex.as_ref().map(|indices| indices[column]),
                 ),
                 None => Vec::new(),
             };
+            match (self.grid, spec.edit.is_some()) {
+                (Some(grid), true) => {
+                    let target = FocusTarget {
+                        row: GridRow::Body(VisibleRow::Data(index)),
+                        col: Some(column),
+                    };
+                    attributes.push(listener("ondblclick", move |_: Event<MouseData>| {
+                        grid.start(target);
+                    }));
+                    if editing == Some(column) {
+                        attributes.push(attr("data-editing", "true"));
+                    }
+                }
+                (Some(_), false) if self.editable => {
+                    attributes.push(attr("aria-readonly", "true"));
+                }
+                _ => {}
+            }
             CellSpec {
                 column,
                 text,
@@ -231,6 +288,61 @@ impl<T: Clone + 'static> RowContext<T> {
             }
         });
         render_cells(cells, headers)
+    }
+
+    /// The editor of `row`'s cell of header `column`: the built-in one, or the column's.
+    fn editor(&self, row: &T, index: usize, key: &str, column: usize, grid: GridFocus) -> Element {
+        let spec = &self.columns[column];
+        let value = (spec.value_text)(row);
+        let name = self
+            .columns
+            .get(self.name_column)
+            .map(|named| (named.text)(row))
+            .unwrap_or_else(|| key.to_string());
+        let label = (self.labels.edit_cell)(&spec.header, &name);
+        let commit = {
+            let (row, columns, key) = (row.clone(), self.columns.clone(), key.to_string());
+            let onrowupdate = self.onrowupdate;
+            Callback::new(move |(text, refocus): (String, bool)| {
+                match commit_edit(&row, &columns[column], &text) {
+                    Ok(next) => {
+                        if let (Some(next), Some(onrowupdate)) = (next, onrowupdate) {
+                            onrowupdate.call(RowUpdate {
+                                key: key.clone(),
+                                index,
+                                column: columns[column].header.clone(),
+                                row: next,
+                            });
+                        }
+                        grid.finish(refocus);
+                        true
+                    }
+                    Err(_) => false,
+                }
+            })
+        };
+        let cancel = Callback::new(move |()| grid.finish(true));
+        let custom = spec.edit.as_ref().and_then(|edit| edit.editor.clone());
+        match custom {
+            Some(editor) => editor(EditCtx {
+                value,
+                label,
+                commit: Callback::new(move |text: String| {
+                    commit.call((text, true));
+                }),
+                cancel,
+            }),
+            None => rsx! {
+                CellEditor {
+                    value,
+                    label,
+                    kind: spec.edit.as_ref().map(|edit| edit.kind).unwrap_or_default(),
+                    cancel_label: self.labels.cancel_edit,
+                    commit,
+                    cancel,
+                }
+            },
+        }
     }
 }
 
@@ -263,7 +375,9 @@ pub(super) fn TableRow<T: Clone + PartialEq + 'static>(props: TableRowProps<T>) 
         RowCells::<T> {
             row: row.clone(),
             index: state.index,
+            row_key: state.key.clone(),
             stop: state.stop,
+            editing: state.editing,
             context: context.clone(),
             generation,
         }
@@ -278,18 +392,22 @@ pub(super) fn TableRow<T: Clone + PartialEq + 'static>(props: TableRowProps<T>) 
 struct RowCellsProps<T: Clone + PartialEq + 'static> {
     row: T,
     index: usize,
+    row_key: String,
     stop: Option<usize>,
+    editing: Option<usize>,
     context: Rc<RowContext<T>>,
     generation: u64,
 }
 
 impl<T: Clone + PartialEq + 'static> PartialEq for RowCellsProps<T> {
     fn eq(&self, other: &Self) -> bool {
-        // The index only names a grid cell's focus target.
+        // The index and key only name a grid cell's focus target and edit.
         self.generation == other.generation
             && self.row == other.row
             && self.stop == other.stop
-            && (self.context.grid.is_none() || self.index == other.index)
+            && self.editing == other.editing
+            && (self.context.grid.is_none()
+                || (self.index == other.index && self.row_key == other.row_key))
     }
 }
 
@@ -297,5 +415,14 @@ impl<T: Clone + PartialEq + 'static> PartialEq for RowCellsProps<T> {
 /// the row around them only.
 #[component]
 fn RowCells<T: Clone + PartialEq + 'static>(props: RowCellsProps<T>) -> Element {
-    props.context.cells(&props.row, props.index, props.stop)
+    let RowCellsProps {
+        row,
+        index,
+        row_key,
+        stop,
+        editing,
+        context,
+        ..
+    } = &props;
+    context.cells(row, *index, row_key, *stop, *editing)
 }

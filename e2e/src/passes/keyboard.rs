@@ -91,6 +91,12 @@ pub const ARROW_DOWN: Key = Key {
     vk: 40,
     text: None,
 };
+pub const F2: Key = Key {
+    key: "F2",
+    code: "F2",
+    vk: 113,
+    text: None,
+};
 pub const F10: Key = Key {
     key: "F10",
     code: "F10",

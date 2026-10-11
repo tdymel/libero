@@ -184,6 +184,9 @@ pub(super) fn GroupRow(
     #[props(default)]
     aggregates: Rc<[Option<(&'static str, String)>]>,
     cells: GroupCells,
+    /// With `cell_focus` on a page: its `aria-rowindex`.
+    #[props(default)]
+    rowindex: Option<usize>,
 ) -> Element {
     let GroupCells {
         leads,
@@ -233,7 +236,7 @@ pub(super) fn GroupRow(
         }
     });
     rsx! {
-        tr { "data-row-group": true, "data-level": "{depth}",
+        tr { "data-row-group": true, "data-level": "{depth}", aria_rowindex: rowindex.map(|at| at.to_string()),
             if leads > 0 {
                 td {
                     key: "lead{leads}",

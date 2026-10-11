@@ -78,6 +78,15 @@ impl MenuFocus {
             .or_insert_with(|| ElementHandle::new_in_scope(self.owner))
     }
 
+    /// Opens header `index`'s menu as a click on its button would, else focuses the button.
+    pub(super) fn open(self, index: usize) {
+        if let Some(trigger) = self.triggers.peek().get(&index)
+            && trigger.click().is_err()
+        {
+            let _ = trigger.focus();
+        }
+    }
+
     fn owe(mut self, index: usize) {
         self.owed.set(Some(index));
     }

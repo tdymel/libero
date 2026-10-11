@@ -327,6 +327,25 @@ pub struct TableLabels {
     pub filter_line_operator: fn(&str) -> String,
     pub filter_line_value: fn(&str) -> String,
     pub remove_filter: fn(&str) -> String,
+    /// A cell editor's name, from its column's header and its row's name.
+    ///
+    /// ```
+    /// use libero::localization::TableLabels;
+    ///
+    /// assert_eq!((TableLabels::ENGLISH.edit_cell)("Age", "Ana"), "Edit Age, Ana");
+    /// assert_eq!((TableLabels::GERMAN.edit_cell)("Alter", "Ana"), "Alter bearbeiten, Ana");
+    /// ```
+    pub edit_cell: fn(&str, &str) -> String,
+    /// A cell editor's cancel button, shown on a touch screen, where no Escape is.
+    pub cancel_edit: &'static str,
+}
+
+fn english_edit_cell(column: &str, row: &str) -> String {
+    format!("Edit {column}, {row}")
+}
+
+fn german_edit_cell(column: &str, row: &str) -> String {
+    format!("{column} bearbeiten, {row}")
 }
 
 fn english_filter_column(column: &str) -> String {
@@ -772,6 +791,8 @@ impl TableLabels {
         filter_line_operator: line_operator,
         filter_line_value: english_line_value,
         remove_filter: english_remove_filter,
+        edit_cell: english_edit_cell,
+        cancel_edit: "Cancel edit",
     };
 
     pub const GERMAN: Self = Self {
@@ -850,6 +871,8 @@ impl TableLabels {
         filter_line_operator: german_line_operator,
         filter_line_value: german_line_value,
         remove_filter: german_remove_filter,
+        edit_cell: german_edit_cell,
+        cancel_edit: "Bearbeitung abbrechen",
     };
 }
 

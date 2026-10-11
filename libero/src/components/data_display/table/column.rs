@@ -3,8 +3,9 @@ use std::rc::Rc;
 use dioxus::prelude::*;
 
 use super::{
-    cell_value::{CellAlign, CellValue, FilterKind, SortKey},
+    cell_value::{CellAlign, CellValue, EditValue, FilterKind, SortKey},
     column_filter::SelectOption,
+    edit::{ColumnEdit, EditCtx},
     resize::ResizeLimits,
 };
 use crate::localization::Aggregate;
@@ -55,10 +56,12 @@ pub struct Column<T> {
     pub(super) sort_key: Rc<dyn Fn(&T) -> SortKey>,
     /// The cell as plain text, drawn inline in its `td`.
     pub(super) text: Rc<dyn Fn(&T) -> String>,
-    /// The value's own text, which `format` leaves alone; a select option matches it.
+    /// The value's own text, which `format` leaves alone: a select option matches it and an editor starts from it.
     pub(super) value_text: Rc<dyn Fn(&T) -> String>,
     /// A caller's cell body, which replaces `text`.
     pub(super) render: Option<CellRender<T>>,
+    /// With `editable`.
+    pub(super) edit: Option<ColumnEdit<T>>,
 }
 
 type CellRender<T> = Rc<dyn Fn(&T) -> Element>;
@@ -98,6 +101,7 @@ impl ColumnHeader {
             text: Rc::new(move |row| value(row).cell_text()),
             value_text: Rc::new(move |row| raw_value(row).cell_text()),
             render: None,
+            edit: None,
         }
     }
 
@@ -458,6 +462,76 @@ impl<T> Column<T> {
         self.aggregate_format = Some(Rc::new(format));
         self
     }
+
+    /// Makes the cells editable, which turns on the table's `cell_focus`: a double
+    /// click, Enter or F2 opens an editor on the value's text, and its commit hands
+    /// `onrowupdate` a clone of the row with `set` applied. The caller keeps `data`.
+    ///
+    /// ```rust
+    /// # use libero::components::column;
+    /// # #[derive(Clone)] struct User { age: u32 }
+    /// column("Age")
+    ///     .value(|u: &User| u.age)
+    ///     .editable(|u: &mut User, age: u32| u.age = age);
+    /// ```
+    pub fn editable<V: EditValue>(mut self, set: impl Fn(&mut T, V) + 'static) -> Self {
+        self.edit = Some(ColumnEdit {
+            kind: V::edit_kind(),
+            set: Rc::new(move |row, text| V::parse(text).map(|value| set(row, value))),
+            validate: None,
+            editor: None,
+        });
+        self
+    }
+
+    /// Checks an edited value before the commit: an `Err` keeps the editor open,
+    /// marked invalid. After [`editable`](Self::editable), with its `V`.
+    ///
+    /// ```rust
+    /// # use libero::components::column;
+    /// # #[derive(Clone)] struct User { age: u32 }
+    /// column("Age")
+    ///     .value(|u: &User| u.age)
+    ///     .editable(|u: &mut User, age: u32| u.age = age)
+    ///     .validate(|_: &User, age: &u32| match *age <= 150 {
+    ///         true => Ok(()),
+    ///         false => Err("At most 150".to_string()),
+    ///     });
+    /// ```
+    pub fn validate<V: EditValue>(
+        mut self,
+        check: impl Fn(&T, &V) -> Result<(), String> + 'static,
+    ) -> Self {
+        if let Some(edit) = &mut self.edit {
+            edit.validate = Some(Rc::new(move |row, text| match V::parse(text) {
+                Some(value) => check(row, &value),
+                None => Ok(()),
+            }));
+        }
+        self
+    }
+
+    /// Replaces the built-in editor, after [`editable`](Self::editable). Hook-less
+    /// as `render`; a component it draws may use hooks, and commits or cancels
+    /// through the [`EditCtx`].
+    ///
+    /// ```rust
+    /// # use dioxus::prelude::*;
+    /// # use libero::components::{EditCtx, column};
+    /// # #[derive(Clone)] struct User { role: String }
+    /// column("Role")
+    ///     .value(|u: &User| u.role.clone())
+    ///     .editable(|u: &mut User, role: String| u.role = role)
+    ///     .editor(|ctx: EditCtx| rsx! {
+    ///         button { onclick: move |_| ctx.commit.call("Admin".to_string()), "Admin" }
+    ///     });
+    /// ```
+    pub fn editor(mut self, editor: impl Fn(EditCtx) -> Element + 'static) -> Self {
+        if let Some(edit) = &mut self.edit {
+            edit.editor = Some(Rc::new(editor));
+        }
+        self
+    }
 }
 
 // Hand-written: a derive would demand `T: Clone`, which the `Rc` fields don't.
@@ -487,6 +561,7 @@ impl<T> Clone for Column<T> {
             text: self.text.clone(),
             value_text: self.value_text.clone(),
             render: self.render.clone(),
+            edit: self.edit.clone(),
         }
     }
 }
@@ -510,6 +585,7 @@ impl<T> PartialEq for Column<T> {
             && self.resize_limits == other.resize_limits
             && self.groups == other.groups
             && self.aggregate == other.aggregate
+            && self.edit.as_ref().map(|edit| edit.kind) == other.edit.as_ref().map(|edit| edit.kind)
     }
 }
 

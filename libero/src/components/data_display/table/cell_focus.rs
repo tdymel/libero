@@ -2,14 +2,22 @@
 
 use dioxus::prelude::Key;
 
-use super::pipeline::VisibleRow;
+use super::{groups::HeaderCell, pipeline::VisibleRow};
 use crate::platform::logical_arrow;
 
+/// A row of the grid: a header row by level, top first, or a body row.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum GridRow {
+    Head(usize),
+    Body(VisibleRow),
+}
+
 /// Where the grid's tab stop sits: a row, and a cell of it by header index, which
-/// a hide or move of other columns leaves alone. `None` is the row itself.
+/// a hide or move of other columns leaves alone. `None` is the row itself. A
+/// header cell is named by the level it starts at and its first column's index.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) struct FocusTarget {
-    pub row: VisibleRow,
+    pub row: GridRow,
     pub col: Option<usize>,
 }
 
@@ -51,6 +59,38 @@ pub(super) fn key_move(key: Key, ctrl: bool, rtl: bool, page: usize) -> Option<M
         (Key::PageDown, false) => Move::PageDown(page),
         _ => return None,
     })
+}
+
+/// A header cell as the arrows see it: its first shown column, its width, and the
+/// level it starts at, as a column's header spans down to the last level.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct HeadCell {
+    pub start: usize,
+    pub span: usize,
+    pub level: usize,
+}
+
+/// Each header level's cells by start, a column's header in every level it spans.
+pub(super) fn head_levels(rows: &[Vec<HeaderCell>], layout: &[usize]) -> Vec<Vec<HeadCell>> {
+    let mut levels = vec![Vec::new(); rows.len()];
+    for (level, cells) in rows.iter().enumerate() {
+        for cell in cells {
+            let (start, span, down) = match *cell {
+                HeaderCell::Group { start, span, .. } => (start, span.max(1), 1),
+                HeaderCell::Column { index, rowspan } => {
+                    let start = layout.iter().position(|&shown| shown == index);
+                    (start.unwrap_or(0), 1, rowspan.max(1))
+                }
+            };
+            for below in levels.iter_mut().skip(level).take(down) {
+                below.push(HeadCell { start, span, level });
+            }
+        }
+    }
+    for cells in &mut levels {
+        cells.sort_by_key(|cell| cell.start);
+    }
+    levels
 }
 
 /// The first column of the cell covering column `col`, in a row of cells `spans` wide.
@@ -109,7 +149,7 @@ pub(super) fn step(at: Pos, by: Move, rows: usize, spans: impl Fn(usize) -> Vec<
 /// order), else the first cell: its row or column is gone. `None` without a cell.
 pub(super) fn resolve(
     stop: Option<FocusTarget>,
-    order: &[VisibleRow],
+    order: &[GridRow],
     layout: &[usize],
     spans: impl Fn(usize) -> Vec<usize>,
 ) -> Option<Pos> {
@@ -209,11 +249,11 @@ mod tests {
 
     #[test]
     fn a_lost_stop_falls_back_to_the_first_cell() {
-        let order = [2, 0, 1].map(VisibleRow::Data);
+        let order = [2, 0, 1].map(|index| GridRow::Body(VisibleRow::Data(index)));
         let layout = [4, 1, 3];
         let stop = |row, col| {
             Some(FocusTarget {
-                row: VisibleRow::Data(row),
+                row: GridRow::Body(VisibleRow::Data(row)),
                 col: Some(col),
             })
         };
@@ -223,5 +263,41 @@ mod tests {
         assert_eq!(resolve(stop(0, 7), &order, &layout, three), Some(at(0, 0)));
         assert_eq!(resolve(None, &order, &layout, three), Some(at(0, 0)));
         assert_eq!(resolve(None, &[], &layout, three), None);
+    }
+
+    /// "Name" over columns 7 and 8, column 5 beside it spanning both levels.
+    #[test]
+    fn a_column_header_lives_in_every_level_it_spans() {
+        let rows = vec![
+            vec![
+                HeaderCell::Column {
+                    index: 5,
+                    rowspan: 2,
+                },
+                HeaderCell::Group {
+                    name: "Name".into(),
+                    start: 1,
+                    span: 2,
+                },
+            ],
+            vec![
+                HeaderCell::Column {
+                    index: 7,
+                    rowspan: 1,
+                },
+                HeaderCell::Column {
+                    index: 8,
+                    rowspan: 1,
+                },
+            ],
+        ];
+        let cell = |start, span, level| HeadCell { start, span, level };
+        assert_eq!(
+            head_levels(&rows, &[5, 7, 8]),
+            vec![
+                vec![cell(0, 1, 0), cell(1, 2, 0)],
+                vec![cell(0, 1, 0), cell(1, 1, 1), cell(2, 1, 1)],
+            ]
+        );
     }
 }

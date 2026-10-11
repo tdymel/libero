@@ -1,5 +1,5 @@
-//! `Table` with `cell_focus` (1156 D1): one body cell is the tab stop, and the
-//! arrows, Home, End and the page keys move it.
+//! `Table` with `cell_focus` (1156 D1, D2): one header or body cell is the tab stop,
+//! the first header cell at first, and the arrows, Home, End and the page keys move it.
 
 use anyhow::{Result, bail};
 use e2e::browser::block_on;
@@ -15,13 +15,25 @@ fn cell(row: usize, col: usize) -> String {
     format!("tbody tr:nth-child({row}) > :nth-child({col})")
 }
 
+/// The header cell of column `col`, from 1.
+fn head(col: usize) -> String {
+    format!("thead tr > :nth-child({col})")
+}
+
 async fn at<D: Driver>(d: &mut D, row: usize, col: usize, after: &str) -> Result<()> {
     eventually_focused(d, &cell(row, col), after).await
 }
 
-async fn arrows<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+/// Focus on the stop, the first header cell, then ArrowDown into the first row.
+async fn into_body<D: Driver>(d: &mut D, col: usize) -> Result<()> {
     d.focus(STOP).await?;
-    at(d, 1, 1, "focus on the stop").await?;
+    eventually_focused(d, &head(col), "focus on the stop, the first header cell").await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    at(d, 1, col, "ArrowDown from the header").await
+}
+
+async fn arrows<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    into_body(d, 1).await?;
     d.press(keyboard::ARROW_RIGHT).await?;
     at(d, 1, 2, "ArrowRight").await?;
     d.press(keyboard::ARROW_DOWN).await?;
@@ -32,14 +44,15 @@ async fn arrows<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.press(keyboard::ARROW_LEFT).await?;
     d.press(keyboard::ARROW_UP).await?;
     at(d, 1, 1, "ArrowLeft at the edge, then ArrowUp").await?;
-    d.press(keyboard::ARROW_UP).await?;
-    at(d, 1, 1, "ArrowUp at the top").await?;
     for (row, col, tabindex) in [(1, 1, "0"), (2, 2, "-1"), (1, 2, "-1")] {
         if d.attr(&cell(row, col), "tabindex").await?.as_deref() != Some(tabindex) {
             bail!("cell {row},{col} is not tabindex {tabindex}");
         }
     }
-    Ok(())
+    d.press(keyboard::ARROW_UP).await?;
+    eventually_focused(d, &head(1), "ArrowUp from the first row to the header").await?;
+    d.press(keyboard::ARROW_UP).await?;
+    eventually_focused(d, &head(1), "ArrowUp at the top").await
 }
 
 e2e::scenario!(
@@ -50,16 +63,16 @@ e2e::scenario!(
 );
 
 async fn home_end<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    d.focus(STOP).await?;
-    at(d, 1, 1, "focus on the stop").await?;
+    into_body(d, 1).await?;
     d.press(keyboard::END).await?;
     at(d, 1, 3, "End").await?;
     d.press_ctrl(keyboard::END).await?;
     at(d, 5, 3, "Ctrl+End").await?;
     d.press(keyboard::HOME).await?;
     at(d, 5, 1, "Home").await?;
+    // The header row is the grid's first.
     d.press_ctrl(keyboard::HOME).await?;
-    at(d, 1, 1, "Ctrl+Home").await
+    eventually_focused(d, &head(1), "Ctrl+Home").await
 }
 
 e2e::scenario!(
@@ -83,12 +96,14 @@ async fn click_moves<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 
 e2e::scenario!(a_click_moves_the_stop, "/table-grid", click_moves);
 
-/// Shift+Tab from after the table lands on the stop, which keeps its place after Tab leaves.
+/// Tab lands on the stop, which keeps its place after Tab leaves and Shift+Tab comes back.
 async fn one_stop<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    d.focus("#after").await?;
-    eventually_focused(d, "#after", "focus").await?;
-    d.press_shift(keyboard::TAB).await?;
-    at(d, 1, 1, "Shift+Tab into the grid").await?;
+    // The header's sort buttons sit after the first header cell: Tab in from before.
+    d.focus("#before").await?;
+    eventually_focused(d, "#before", "focus").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, &head(1), "Tab into the grid").await?;
+    d.press(keyboard::ARROW_DOWN).await?;
     d.press(keyboard::ARROW_DOWN).await?;
     d.press(keyboard::ARROW_RIGHT).await?;
     at(d, 2, 2, "ArrowDown, ArrowRight").await?;
@@ -109,7 +124,9 @@ e2e::scenario!(
 async fn sort_keeps<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click(&cell(2, 2)).await?;
     at(d, 2, 2, "a click on Ben's age").await?;
-    d.click("th:nth-child(2) [data-sort-button]").await?;
+    // A press would move the stop to the header cell: a script click sorts alone.
+    d.evaluate("document.querySelector('th:nth-child(2) [data-sort-button]').click()")
+        .await?;
     eventually_text(d, &cell(4, 1), "Ben", "the age sort").await?;
     eventually_text(d, STOP, "42", "the stop after the sort").await?;
     if d.attr(&cell(4, 2), "tabindex").await?.as_deref() != Some("0") {
@@ -123,8 +140,7 @@ e2e::scenario!(a_sort_keeps_the_focused_cell, "/table-grid", sort_keeps);
 /// A button in a cell stays a Tab stop; an arrow from it moves to the next cell.
 async fn from_a_widget<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     const GREET: &str = "tbody tr:nth-child(1) button";
-    d.focus(STOP).await?;
-    at(d, 1, 1, "focus on the stop").await?;
+    into_body(d, 1).await?;
     d.press(keyboard::TAB).await?;
     eventually_focused(d, GREET, "Tab to the button").await?;
     eventually(d, "the button's cell to be the stop", async |d| {
@@ -151,8 +167,7 @@ async fn stop_id<D: Driver>(d: &mut D) -> Result<u32> {
 
 /// 300px of 40px rows under a header: a view is about six rows.
 async fn page_down<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    d.focus(STOP).await?;
-    eventually_focused(d, STOP, "focus on the stop").await?;
+    into_body(d, 1).await?;
     d.press(keyboard::PAGE_DOWN).await?;
     eventually(d, "PageDown to move a view", async |d| {
         Ok(stop_id(d).await? > 1 && d.is_focused(STOP).await?)
@@ -179,8 +194,7 @@ e2e::scenario!(
 /// Ctrl+End reaches the last row's last cell (500 squared), out of the window, and shows
 /// it; Ctrl+Home comes back.
 async fn reveals<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    d.focus(STOP).await?;
-    eventually_focused(d, STOP, "focus on the stop").await?;
+    into_body(d, 1).await?;
     d.press_ctrl(keyboard::END).await?;
     eventually(d, "Ctrl+End on the last row, shown", async |d| {
         if stop_id(d).await? != 250_000 || !d.is_focused(STOP).await? {
@@ -191,9 +205,11 @@ async fn reveals<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     })
     .await?;
     d.press_ctrl(keyboard::HOME).await?;
+    eventually_focused(d, &head(1), "Ctrl+Home on the header").await?;
+    d.press(keyboard::ARROW_DOWN).await?;
     eventually(
         d,
-        "Ctrl+Home on the first row, below the header",
+        "ArrowDown on the first row, below the header",
         async |d| {
             if stop_id(d).await? != 1 || !d.is_focused(STOP).await? {
                 return Ok(false);
@@ -210,6 +226,148 @@ e2e::scenario!(
     "/table-grid/windowed",
     reveals,
     android: skip("958: roving keys are inert in the emulator's WebView")
+);
+
+/// Enter on the Age header cell sorts it up, Space down; focus stays on the cell.
+async fn header_sorts<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(STOP).await?;
+    eventually_focused(d, &head(1), "focus on the stop").await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually_focused(d, &head(2), "ArrowRight to Age").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_text(d, &cell(1, 1), "Cleo", "Enter to sort by age").await?;
+    eventually_focused(d, &head(2), "focus on the sorted header cell").await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_text(d, &cell(1, 1), "Dev", "Space to sort down").await
+}
+
+e2e::scenario!(
+    enter_on_a_header_sorts,
+    "/table-grid",
+    header_sorts,
+    android: skip("958: roving keys are inert in the emulator's WebView")
+);
+
+/// Shift+Space on a body cell toggles its row; Ctrl+Enter on a header cell opens its menu.
+async fn selects<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const ANA: &str = "tbody tr:nth-child(1)";
+    // The leading checkbox cell is no grid cell: the stop starts on Name.
+    into_body(d, 2).await?;
+    for selected in ["true", "false"] {
+        d.press_shift(keyboard::SPACE).await?;
+        eventually(
+            d,
+            &format!("Shift+Space to make Ana {selected}"),
+            async |d| Ok(d.attr(ANA, "aria-selected").await?.as_deref() == Some(selected)),
+        )
+        .await?;
+    }
+    d.press(keyboard::ARROW_UP).await?;
+    eventually_focused(d, &head(2), "ArrowUp to the Name header").await?;
+    d.press_ctrl(keyboard::ENTER).await?;
+    eventually(d, "Ctrl+Enter to open the Name menu", async |d| {
+        Ok(
+            d.attr(&format!("{} [aria-haspopup]", head(2)), "aria-expanded")
+                .await?
+                .as_deref()
+                == Some("true"),
+        )
+    })
+    .await
+}
+
+e2e::scenario!(
+    shift_space_selects_the_row,
+    "/table-grid/selectable",
+    selects,
+    android: skip("958: roving keys are inert in the emulator's WebView")
+);
+
+const EDITOR: &str = "[data-cell-editor] input";
+
+/// Types `text` over the open editor's value.
+async fn retype<D: Driver>(d: &mut D, text: &str) -> Result<()> {
+    eventually_focused(d, EDITOR, "focus in the editor").await?;
+    d.evaluate("document.activeElement.select()").await?;
+    d.type_text(text).await
+}
+
+/// A double click opens Ana's age; leaving the field commits, and the caller stores it.
+async fn double_click_edits<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.double_click(&cell(1, 2)).await?;
+    retype(d, "40").await?;
+    d.click("#after").await?;
+    eventually_text(d, &cell(1, 2), "40", "the stored edit").await?;
+    eventually_text(d, "#log", "Ana 0 Age: 40 Lisbon", "onrowupdate").await?;
+    if d.exists(EDITOR).await? {
+        bail!("the editor stays open after the blur");
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    a_double_click_edits_and_blur_commits,
+    "/table-grid/editable",
+    double_click_edits
+);
+
+/// Enter opens and commits, F2 opens and Escape cancels; the cell keeps the focus.
+async fn keys_edit<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(&cell(2, 3)).await?;
+    at(d, 2, 3, "a click on Ben's city").await?;
+    d.press(keyboard::ENTER).await?;
+    retype(d, "Bonn").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_text(d, &cell(2, 3), "Bonn", "Enter to commit").await?;
+    at(d, 2, 3, "focus back on the cell").await?;
+    d.press(keyboard::F2).await?;
+    retype(d, "Paris").await?;
+    d.press(keyboard::ESCAPE).await?;
+    at(d, 2, 3, "Escape back to the cell").await?;
+    eventually_text(d, &cell(2, 3), "Bonn", "Escape to cancel").await
+}
+
+e2e::scenario!(
+    enter_commits_and_escape_cancels,
+    "/table-grid/editable",
+    keys_edit,
+    android: skip("958: roving keys are inert in the emulator's WebView")
+);
+
+/// An age the column's `validate` refuses keeps the editor open, marked invalid.
+async fn refuses<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.double_click(&cell(1, 2)).await?;
+    retype(d, "200").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually(d, "the editor to be invalid", async |d| {
+        Ok(d.attr(EDITOR, "aria-invalid").await?.as_deref() == Some("true"))
+    })
+    .await?;
+    if !d.text("#log").await?.is_empty() {
+        bail!("an invalid edit reached onrowupdate");
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    an_invalid_value_keeps_the_editor,
+    "/table-grid/editable",
+    refuses
+);
+
+/// A handler that stores nothing leaves the caller's value in the cell.
+async fn kept<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.double_click(&cell(1, 2)).await?;
+    retype(d, "40").await?;
+    d.click("#after").await?;
+    eventually_text(d, "#log", "Ana 0 Age: 40 Lisbon", "onrowupdate").await?;
+    eventually_text(d, &cell(1, 2), "31", "the caller's age").await
+}
+
+e2e::scenario!(
+    the_data_stays_the_callers,
+    "/table-grid/editable/kept",
+    kept
 );
 
 #[test]

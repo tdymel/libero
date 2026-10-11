@@ -33,6 +33,7 @@ use crate::{
 };
 
 use super::{
+    cell_focus::{GridRow, head_levels},
     column::{Column, ColumnDefaults},
     column_drag::{DropPlan, use_column_drag},
     column_filter::{ColumnFilter, FilterLogic, cell_tests},
@@ -40,19 +41,21 @@ use super::{
     column_order::{moved, order_unpinned, ranked},
     core::{
         BodySpec, CaptionSpec, RowFn, SortedRows, TableSort, WidthSpec, active_sort, align_attr,
-        header_specs, render_body,
+        header_specs, next_sort, render_body,
     },
     csv::shown_csv,
     detail::Details,
+    edit::RowUpdate,
     filter::{FilteredRows, QuickFilter, query_words},
     filter_panel::{FilterPanel, FilterPanelButton, PanelColumn, use_panel_control},
     filter_popover::FilterTarget,
     footer::{Foot, FooterRows, aggregate_cell, use_edge_height},
-    grid::{GridRows, GridWindow, use_grid_focus},
+    grid::{GridRows, GridWindow, HeadGrid, col_indices, use_grid_focus},
+    groups::header_rows,
     header_filters::HeaderFilter,
     overlay::{EmptyBody, LoadingBar, SKELETON_ROWS},
     paging::{TablePager, clamp_page, page_rows, use_page_reset, use_page_size_reseed},
-    pinning::{PinSide, PinnedColumns, pin_columns, pinned_extent},
+    pinning::{PinSide, PinnedColumns, pin_columns, pin_edge_at, pinned_extent},
     pipeline::{
         KnownRows, VisibleRow, cut_page, group_rows as nest_rows, keyed_rows, selection_scope,
         visible_rows,
@@ -228,8 +231,62 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     .selector("& [data-filtered]:focus-visible", inset_focus_ring_sx("0"))
     // A grid cell's ring, inset: a pinned or clipped cell would cut an outer one.
     .selector(
-        "& tbody td[tabindex]:focus-visible, & tbody th[tabindex]:focus-visible",
+        "& tbody td[tabindex]:focus-visible, & tbody th[tabindex]:focus-visible, \
+         & thead th[tabindex]:focus-visible",
         inset_focus_ring_sx("-2px"),
+    )
+    // An editing cell's field fills it, in the cell's own type.
+    .selector(
+        "& [data-cell-editor]",
+        sx().display("flex").align_items("center").gap("2px"),
+    )
+    .selector(
+        "& [data-cell-editor] input",
+        sx().flex("1 1 auto")
+            .min_width("0")
+            .width("100%")
+            .padding("0 4px")
+            .font("inherit")
+            .color("inherit")
+            .text_align("inherit")
+            .background("transparent")
+            .border("1px solid currentColor")
+            .border_radius("2px"),
+    )
+    .selector(
+        "& [data-cell-editor] input:focus-visible",
+        inset_focus_ring_sx("0"),
+    )
+    .selector(
+        "& [data-cell-editor] input[aria-invalid]",
+        sx().border_color("error.6"),
+    )
+    // A finger has no Escape: only a coarse pointer gets the cancel button.
+    .selector(
+        "& [data-cell-editor-cancel]",
+        sx().display("none").media(
+            COARSE,
+            sx().display("inline-flex")
+                .align_items("center")
+                .justify_content("center")
+                .flex("none")
+                .width("24px")
+                .height("24px")
+                .padding("0")
+                .border("0")
+                .border_radius("4px")
+                .background("none")
+                .color("inherit")
+                .cursor("pointer"),
+        ),
+    )
+    .selector(
+        "& [data-cell-editor-cancel] svg",
+        sx().width("16px").height("16px"),
+    )
+    .selector(
+        "& [data-cell-editor-cancel]:focus-visible",
+        inset_focus_ring_sx("0"),
     )
     .selector(
         "& [data-filter-cell]",
@@ -869,6 +926,11 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// Off while the rows are sorted or filtered. Not dragged on Blitz.
     #[props(default)]
     onrowreorder: Option<EventHandler<SortableMove>>,
+    /// Called with an edited clone of a row when an
+    /// [`editable`](Column::editable) cell commits; store it, `Table` keeps no copy.
+    /// An editable column turns `cell_focus` on.
+    #[props(default)]
+    onrowupdate: Option<EventHandler<RowUpdate<T>>>,
     /// The headers whose cell texts group the rows, outermost first; set, the
     /// grouping is controlled. Each group gets a row with a toggle, groups follow
     /// the sorted rows and empty cells form one group. Renders every row, and
@@ -895,8 +957,10 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// `default_expanded_groups`; 0 starts them all collapsed. Not with `expanded_groups`.
     #[props(default)]
     default_group_expansion: usize,
-    /// Makes the table a `role="grid"` with one body cell as its tab stop: the
-    /// arrows, Home, End, Ctrl+Home, Ctrl+End, PageUp and PageDown move it.
+    /// Makes the table a `role="grid"` with one header or body cell as its tab stop,
+    /// the first header cell at first: the arrows, Home, End, Ctrl+Home, Ctrl+End,
+    /// PageUp and PageDown move it. Enter or Space on a header cell sorts it,
+    /// Ctrl+Enter opens its column menu, Shift+Space selects a body cell's row.
     #[props(default)]
     cell_focus: bool,
     /// Cell padding and font size.
@@ -1196,6 +1260,10 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 "Table: `resizable_columns` without `column_menu` resizes by drag only, out of \
                  reach of the keyboard and of a pointer that cannot drag (WCAG 2.5.7).",
             );
+        }
+        let editable = props.columns.iter().any(|column| column.edit.is_some());
+        if editable && props.onrowupdate.is_none() {
+            warn("Table: an editable column without `onrowupdate` drops every edit.");
         }
     });
     let instructions_id = use_id();
@@ -1535,6 +1603,8 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .position(|column| column.row_header)
         .unwrap_or(0);
     let columns = Rc::new(props.columns);
+    let editable = columns.iter().any(|column| column.edit.is_some());
+    let cell_focus = props.cell_focus || editable;
     // Filter, sort, then page; a `manual_*` stage is the caller's. Filtering
     // the sorted order keeps each stage's cache apart: a keystroke never re-sorts.
     let sorted_order = match props.manual_sort {
@@ -1681,14 +1751,17 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         instructions: instructions_id(),
         fixed: fixed_slots,
     });
+    let lead_columns =
+        usize::from(selection.is_some()) + usize::from(has_detail) + usize::from(has_reorder);
+    // Only with a gap: else each cell's place is its index.
+    let colindex = (cell_focus && headers.iter().any(|spec| spec.hidden))
+        .then(|| col_indices(&layout, headers.len(), lead_columns));
     let context = Rc::new(RowContext {
         columns: columns.clone(),
         headers: headers.clone(),
         layout: layout.clone(),
-        span: layout.len().max(1)
-            + usize::from(selection.is_some())
-            + usize::from(has_detail)
-            + usize::from(has_reorder),
+        span: layout.len().max(1) + lead_columns,
+        colindex: colindex.clone(),
         name_column,
         row_attrs: props.row_attrs,
         row_states: props.row_states,
@@ -1702,7 +1775,10 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         // A dragged row carries its detail row itself.
         animate_details: props.animate_details && !has_reorder,
         reorder: reorder.clone(),
-        grid: props.cell_focus.then_some(grid_focus),
+        grid: cell_focus.then_some(grid_focus),
+        onrowupdate: props.onrowupdate,
+        editable,
+        labels,
     });
     // A new generation redraws every row; an equal context keeps the last one.
     let generation = {
@@ -1734,16 +1810,49 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         labels,
         toggle: toggle_group,
     };
-    let grid = props.cell_focus.then(|| {
+    let grid = cell_focus.then(|| {
         let (data, context) = (data.clone(), context.clone());
+        let paths: Vec<(usize, &[String])> = layout
+            .iter()
+            .map(|&index| (index, headers[index].groups.as_slice()))
+            .collect();
+        let levels = head_levels(
+            &header_rows(&paths, |at| pin_edge_at(&headers, &layout, at)),
+            &layout,
+        );
+        let header = {
+            let (headers, active, sort) = (headers.clone(), active.clone(), state.sort);
+            let menus = props.column_menu;
+            Callback::new(move |(index, menu): (usize, bool)| match menu {
+                false if headers[index].sortable => {
+                    sort.set(next_sort(&active, &headers, index, false));
+                }
+                true if menus => menu_focus.open(index),
+                _ => {}
+            })
+        };
+        let select = selection.as_ref().map(|_| {
+            let (key_at, selected_rows) = (key_at.clone(), selected_rows.clone());
+            Callback::new(move |index: usize| {
+                let key = key_at(index);
+                let on = !selected_rows.contains(&key);
+                toggle.call((key, on));
+            })
+        });
         GridRows {
             // A group row's toggle is a Tab stop of its own: the arrows pass it by.
-            order: order
-                .iter()
-                .copied()
-                .filter(|row| row.data().is_some())
+            order: (0..levels.len())
+                .map(GridRow::Head)
+                .chain(
+                    order
+                        .iter()
+                        .copied()
+                        .filter(|row| row.data().is_some())
+                        .map(GridRow::Body),
+                )
                 .collect(),
             layout: layout.clone(),
+            head: Rc::new(levels),
             spans: Rc::new(move |row| match row {
                 VisibleRow::Data(index) => context.spans(&data[index]),
                 VisibleRow::Group(_) => Vec::new(),
@@ -1753,14 +1862,21 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 edges: (*head.peek(), foot_gap),
                 focused: row_focus.focused,
             }),
+            header,
+            select,
+            editable: columns.iter().map(|column| column.edit.is_some()).collect(),
         }
     });
-    // The stop's row and header index.
-    let grid_stop = grid.as_ref().and_then(|rows| {
-        rows.at(grid_focus.stop.cloned())
-            .map(|at| (rows.order[at.row], rows.layout[at.col]))
-    });
+    // The stop's cell, the first header cell until one took focus.
+    let grid_stop = grid
+        .as_ref()
+        .and_then(|rows| rows.at(grid_focus.stop.cloned()).map(|at| rows.target(at)));
+    // With `cell_focus` on a page: every page's rows count (APG grid).
+    let paged = (cell_focus && paginated && row_height.is_none()).then_some(counted);
     let striped = props.striped;
+    let editing = (editable && cell_focus)
+        .then(|| grid_focus.editing.cloned())
+        .flatten();
     let state_of = {
         let key_at = key_at.clone();
         let selects = selection.is_some();
@@ -1773,8 +1889,12 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 selected: selects.then(|| selected_rows.contains(&key)),
                 expanded: expanded.contains(&key),
                 stop: grid_stop
-                    .filter(|&(row, _)| row == VisibleRow::Data(index))
-                    .map(|(_, col)| col),
+                    .filter(|stop| stop.row == GridRow::Body(VisibleRow::Data(index)))
+                    .and_then(|stop| stop.col),
+                rowindex: paged.map(|(first, _)| head_rows + first + position + 1),
+                editing: editing
+                    .filter(|at| at.row == GridRow::Body(VisibleRow::Data(index)))
+                    .and_then(|at| at.col),
                 key,
             }
         }
@@ -1803,7 +1923,27 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     }
     if let Some(rows) = grid {
         attributes.push(attr("role", "grid"));
+        if selection.is_some() {
+            attributes.push(attr("aria-multiselectable", "true"));
+        }
+        if !editable {
+            attributes.push(attr("aria-readonly", "true"));
+        }
+        if colindex.is_some() {
+            attributes.push(attr(
+                "aria-colcount",
+                (lead_columns + headers.len()).to_string(),
+            ));
+        }
         attributes.push(grid_focus.keydown(rows));
+    }
+    if let Some((_, total)) = paged {
+        attributes.extend(window_attributes(
+            head_rows,
+            total,
+            skeleton.is_some(),
+            footer.is_some(),
+        ));
     }
     let rows = match row_height {
         Some(row_height) => {
@@ -1825,7 +1965,8 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                     VisibleRow::Data(index) => {
                         let row = &data[index];
                         let state = state_of(position, index);
-                        let cells = context.cells(row, index, state.stop);
+                        let cells =
+                            context.cells(row, index, &state.key, state.stop, state.editing);
                         context.spec(row, state, cells)
                     }
                     VisibleRow::Group(_) => unreachable!("a grouped table renders every row"),
@@ -1876,6 +2017,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                                 open: group.open,
                                 aggregates: aggregates.unwrap_or_default(),
                                 cells: group_cells.clone(),
+                                rowindex: paged.map(|(first, _)| head_rows + first + position + 1),
                             }
                         }
                     }
@@ -2035,6 +2177,12 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 head_height: bounded.then(|| EventHandler::new(move |height| head.set(height))),
                 head: head_element,
                 pin_edge,
+                grid: cell_focus.then_some(HeadGrid {
+                    focus: grid_focus,
+                    stop: grid_stop,
+                    colindex,
+                }),
+                paged: paged.map(|(_, total)| total),
             }),
         );
     // The live region: valid in no part of a table, so beside it.

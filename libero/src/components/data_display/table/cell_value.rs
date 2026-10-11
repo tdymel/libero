@@ -186,6 +186,105 @@ impl<V: CellValue> CellValue for Option<V> {
     }
 }
 
+/// Which editor an editable column's cells open, from its cell type.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[non_exhaustive]
+pub enum EditKind {
+    #[default]
+    Text,
+    Number,
+    Bool,
+    Date,
+}
+
+/// A cell type an [`editable`](super::Column::editable) column takes back from its
+/// editor's text, which starts as the value's `cell_text`.
+///
+/// ```rust
+/// use libero::components::{CellValue, EditValue};
+///
+/// struct Percent(u8);
+///
+/// impl CellValue for Percent {
+///     fn cell_text(&self) -> String {
+///         self.0.to_string()
+///     }
+/// }
+///
+/// impl EditValue for Percent {
+///     fn parse(text: &str) -> Option<Self> {
+///         text.trim().parse().ok().filter(|n| *n <= 100).map(Percent)
+///     }
+/// }
+/// ```
+pub trait EditValue: CellValue + Sized {
+    /// The value of `text`, `None` when it is not one.
+    fn parse(text: &str) -> Option<Self>;
+
+    fn edit_kind() -> EditKind {
+        EditKind::Text
+    }
+}
+
+impl EditValue for String {
+    fn parse(text: &str) -> Option<Self> {
+        Some(text.to_string())
+    }
+}
+
+impl EditValue for bool {
+    fn parse(text: &str) -> Option<Self> {
+        text.trim().parse().ok()
+    }
+
+    fn edit_kind() -> EditKind {
+        EditKind::Bool
+    }
+}
+
+macro_rules! numeric_edit_value {
+    ($($ty:ty),+ $(,)?) => {
+        $(
+            impl EditValue for $ty {
+                fn parse(text: &str) -> Option<Self> {
+                    text.trim().parse().ok()
+                }
+
+                fn edit_kind() -> EditKind {
+                    EditKind::Number
+                }
+            }
+        )+
+    };
+}
+
+numeric_edit_value!(i8, i16, i32, i64, isize, u8, u16, u32, u64, usize, f32, f64);
+
+/// Parsed as `2024-03-09`, the form `cell_text` prints.
+impl EditValue for chrono::NaiveDate {
+    fn parse(text: &str) -> Option<Self> {
+        chrono::NaiveDate::parse_from_str(text.trim(), "%Y-%m-%d").ok()
+    }
+
+    fn edit_kind() -> EditKind {
+        EditKind::Date
+    }
+}
+
+/// An empty text is `None`.
+impl<V: EditValue> EditValue for Option<V> {
+    fn parse(text: &str) -> Option<Self> {
+        match text.trim() {
+            "" => Some(None),
+            _ => V::parse(text).map(Some),
+        }
+    }
+
+    fn edit_kind() -> EditKind {
+        V::edit_kind()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

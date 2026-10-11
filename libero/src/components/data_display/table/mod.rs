@@ -8,6 +8,7 @@ mod column_order;
 mod core;
 mod csv;
 mod detail;
+mod edit;
 mod filter;
 mod filter_panel;
 mod filter_popover;
@@ -29,13 +30,16 @@ mod toolbar;
 mod use_table;
 mod window;
 
-pub use cell_value::{CellAlign, CellValue, FilterKind, SortDirection, SortKey};
+pub use cell_value::{
+    CellAlign, CellValue, EditKind, EditValue, FilterKind, SortDirection, SortKey,
+};
 pub use column::{Column, ColumnDefaults, ColumnHeader, ColumnType, TypedColumnHeader, column};
 // Defined with the labels, which name each one: localization sits below components.
 pub use crate::localization::labels::table::{Aggregate, FilterLogic, FilterOperator};
 pub use column_filter::{ColumnFilter, SelectOption};
 pub use core::{RowFn, TableSort};
 pub use csv::{table_csv, table_text};
+pub use edit::{EditCtx, RowUpdate};
 pub use pinning::{PinSide, PinnedColumns};
 pub use resize::ColumnWidths;
 pub use table::{Table, TableProps};

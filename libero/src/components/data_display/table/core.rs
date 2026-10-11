@@ -9,6 +9,7 @@ use super::{
     column_drag::{ColumnDrag, ColumnDragGrip},
     detail::SlidingDetail,
     footer::{Foot, FooterCells, footer_row},
+    grid::HeadGrid,
     groups::{HeaderCell, header_rows},
     header_filters::filter_row,
     overlay::EmptyBody,
@@ -407,6 +408,10 @@ pub(super) struct BodySpec {
     pub head: ElementHandle,
     /// Told the rendered width of each side's innermost pinned column without `width`.
     pub pin_edge: Callback<(PinSide, f64)>,
+    /// With `cell_focus`: the header cells are grid cells.
+    pub grid: Option<HeadGrid>,
+    /// With `cell_focus` on a page: every page's body rows, which `aria-rowindex` counts.
+    pub paged: Option<usize>,
 }
 
 /// Whether a header click adds its column to the others: a modifier, or a touch,
@@ -472,6 +477,8 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         head_height,
         head,
         pin_edge,
+        grid,
+        paged,
     } = body;
     let columns = shown.len().max(1)
         + usize::from(select_all.is_some())
@@ -479,6 +486,8 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         + usize::from(reorder.is_some());
     let empty = rows.is_empty().then_some(empty);
     let windowed = matches!(rows, BodyRows::Window(_));
+    // The rows the DOM leaves out still count: another page's, or out of the window.
+    let indexed = windowed || paged.is_some();
     let leads = (
         reorder.is_some(),
         detail_header.is_some(),
@@ -519,6 +528,10 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                     HeaderCell::Group { name, start, span } => {
                         // Groups split at a pin edge: one over pinned columns sticks with them.
                         let pin = span_pin(&headers, &shown[start..start + span]);
+                        let cell = grid
+                            .as_ref()
+                            .map(|grid| grid.cell(level, shown[start]))
+                            .unwrap_or_default();
                         rsx! {
                             th {
                                 key: "g{position}",
@@ -528,12 +541,17 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                                 "data-pin": pin.as_ref().map(|pin| pin.side.as_str()),
                                 "data-pin-edge": pin.as_ref().filter(|pin| pin.edge).map(|_| true),
                                 style: pin_insets(pin.as_ref()),
+                                ..cell,
                                 "{name}"
                             }
                         }
                     }
                     HeaderCell::Column { index, rowspan } => {
                         let spec = &headers[index];
+                        let cell = grid
+                            .as_ref()
+                            .map(|grid| grid.cell(level, index))
+                            .unwrap_or_default();
                         let grip = resize.zip(spec.resize).map(|(resize, limits)| {
                             rsx! {
                                 ResizeHandle {
@@ -604,6 +622,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                                     .find(|(column, _)| *column == index)
                                     .map(|(_, direction)| direction.aria_value()),
                                 ..measure,
+                                ..cell,
                                 {mover}
                                 {body}
                                 {grip}
@@ -613,7 +632,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                 });
             let cells: Vec<Element> = cells.collect();
             rsx! {
-                tr { key: "{level}", aria_rowindex: windowed.then(|| (level + 1).to_string()),
+                tr { key: "{level}", aria_rowindex: indexed.then(|| (level + 1).to_string()),
                     {reorder_header.take()}
                     {detail_header.take()}
                     {select_all.take()}
@@ -625,14 +644,14 @@ pub(super) fn render_body(body: BodySpec) -> Element {
     // Under the header rows, so it counts after them.
     let filter_row = filters.map(|cells| {
         let (reorder, detail, select) = leads;
-        let rowindex = windowed.then_some(head_rows.len() + 1);
+        let rowindex = indexed.then_some(head_rows.len() + 1);
         filter_row(&headers, &shown, cells, reorder, detail, select, rowindex)
     });
     let head_levels = head_rows.len() + usize::from(filter_row.is_some());
     // After the body's rows, or its one empty row.
     let foot_rowindex = match &rows {
         BodyRows::Window(window) => Some(head_levels + window.total.max(1) + 1),
-        BodyRows::All(_) => None,
+        BodyRows::All(_) => paged.map(|total| head_levels + total.max(1) + 1),
     };
     rsx! {
         if let Some(spec) = caption {
@@ -650,7 +669,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         }
         {
             let body = rsx! {
-                {empty.map(|empty| empty.render(columns, windowed.then_some(head_levels + 1)))}
+                {empty.map(|empty| empty.render(columns, indexed.then_some(head_levels + 1)))}
                 match rows {
                     BodyRows::All(rows) => rsx! {
                         {rows.into_iter()}

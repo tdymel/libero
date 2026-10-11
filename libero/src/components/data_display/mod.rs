@@ -42,10 +42,10 @@ pub use qr_code::{QrCode, QrCodeProps};
 pub use sortable::{Sortable, SortableItem, SortableItemPart, SortableItemProps, SortableProps};
 pub use table::{
     Aggregate, CellAlign, CellValue, Column, ColumnDefaults, ColumnFilter, ColumnHeader,
-    ColumnType, ColumnWidths, FilterKind, FilterLogic, FilterOperator, PinSide, PinnedColumns,
-    RowFn, SelectOption, SortDirection, SortKey, Table, TableColumnsButton, TableDensityButton,
-    TableExportButton, TableFilterButton, TableProps, TableSort, TypedColumnHeader, column,
-    table_csv, table_text,
+    ColumnType, ColumnWidths, EditCtx, EditKind, EditValue, FilterKind, FilterLogic,
+    FilterOperator, PinSide, PinnedColumns, RowFn, RowUpdate, SelectOption, SortDirection, SortKey,
+    Table, TableColumnsButton, TableDensityButton, TableExportButton, TableFilterButton,
+    TableProps, TableSort, TypedColumnHeader, column, table_csv, table_text,
 };
 pub use timeline::{Timeline, TimelineEvent, TimelineLine, TimelinePart, TimelineProps};
 pub use video::{Chapter, MediaTrack, TrackKind, Video, VideoPart, VideoProps};

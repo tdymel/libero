@@ -1,6 +1,6 @@
 use super::{
-    MAX_HEIGHT, SCROLL_WIDTH, WINDOW_HEIGHT, WINDOW_HIDES, from_server, no_rows, reorders, resizes,
-    windowed,
+    MAX_HEIGHT, SCROLL_WIDTH, WINDOW_HEIGHT, WINDOW_HIDES, edits, from_server, no_rows, reorders,
+    resizes, windowed,
 };
 use crate::components::DemoValues;
 use dioxus::prelude::*;
@@ -10,7 +10,8 @@ use std::time::Duration;
 
 use libero::chrono::{NaiveDate, TimeDelta};
 use libero::components::{
-    Aggregate, Button, Chip, Column, ColumnFilter, ColumnWidths, PinnedColumns, RowFn, Table,
+    Aggregate, Button, Chip, Column, ColumnFilter, ColumnWidths, PinnedColumns, RowFn, RowUpdate,
+    Table,
     TableColumnsButton, TableDensityButton, TableExportButton, TableFilterButton, column,
 };
 use libero::hooks::SortableMove;
@@ -168,9 +169,13 @@ pub fn StaffTable() -> Element {
     }
 }
 
-fn team_columns(grouped: bool) -> Vec<Column<Person>> {
+fn team_columns(grouped: bool, editable: bool) -> Vec<Column<Person>> {
     let group = |column: Column<Person>| match grouped {
         true => column.group("Membership"),
+        false => column,
+    };
+    let edit = |column: Column<Person>| match editable {
+        true => column.editable(|p: &mut Person, bonus: Option<f64>| p.bonus = bonus),
         false => column,
     };
     vec![
@@ -188,14 +193,14 @@ fn team_columns(grouped: bool) -> Vec<Column<Person>> {
         ),
         group(column("Joined").value(|p: &Person| p.joined).sortable()),
         group(column("Review").value(|p: &Person| p.review).sortable()),
-        group(
+        group(edit(
             column("Bonus")
                 .value(|p: &Person| p.bonus)
                 .format(|p: &Person| p.bonus.map(|b| format!("{b:.1} %")).unwrap_or_default())
                 .aggregate(Aggregate::Avg)
                 .aggregate_format(|b| format!("{b:.1} %"))
                 .sortable(),
-        ),
+        )),
     ]
 }
 
@@ -274,6 +279,11 @@ pub fn TeamTable(values: DemoValues) -> Element {
                     false => step.apply(&mut rows.write()),
                 })
             }),
+            onrowupdate: edits(&values).then(|| {
+                EventHandler::new(move |update: RowUpdate<Person>| {
+                    rows.write()[update.index] = update.row;
+                })
+            }),
             default_row_grouping: match on("row_grouping") {
                 true => vec!["Role".to_string()],
                 false => Vec::new(),
@@ -311,7 +321,7 @@ pub fn TeamTable(values: DemoValues) -> Element {
                 (false, true) => Vec::new(),
                 (false, false) => rows(),
             },
-            columns: team_columns(on("column_groups")),
+            columns: team_columns(on("column_groups"), edits(&values)),
         }
     }
 }
