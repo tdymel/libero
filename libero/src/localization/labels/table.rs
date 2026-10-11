@@ -350,6 +350,10 @@ pub struct TableLabels {
     /// What a cell editor shows and announces for text that is not a value of the
     /// column's type.
     pub invalid_value: &'static str,
+    /// The form a yes/no cell editor takes, as its placeholder and description.
+    pub edit_hint_bool: &'static str,
+    /// The form a date cell editor takes, as its placeholder and description.
+    pub edit_hint_date: &'static str,
     /// A refused commit's announcement, from the column's header and the message.
     ///
     /// ```
@@ -359,6 +363,24 @@ pub struct TableLabels {
     /// assert_eq!((TableLabels::GERMAN.edit_invalid)("Alter", "Zu alt"), "Alter ist ungültig: Zu alt");
     /// ```
     pub edit_invalid: fn(&str, &str) -> String,
+    /// A refused commit on blur, which puts the old value back, from the column's header
+    /// and the message.
+    ///
+    /// ```
+    /// use libero::localization::TableLabels;
+    ///
+    /// assert_eq!((TableLabels::ENGLISH.edit_reverted)("Age", "Too old"), "Age not changed: Too old");
+    /// assert_eq!((TableLabels::GERMAN.edit_reverted)("Alter", "Zu alt"), "Alter nicht geändert: Zu alt");
+    /// ```
+    pub edit_reverted: fn(&str, &str) -> String,
+}
+
+fn english_edit_reverted(column: &str, message: &str) -> String {
+    format!("{column} not changed: {message}")
+}
+
+fn german_edit_reverted(column: &str, message: &str) -> String {
+    format!("{column} nicht geändert: {message}")
 }
 
 fn english_edit_invalid(column: &str, message: &str) -> String {
@@ -832,7 +854,10 @@ impl TableLabels {
         edit_cell: english_edit_cell,
         cancel_edit: "Cancel edit",
         invalid_value: "Not a valid value",
+        edit_hint_bool: "true or false",
+        edit_hint_date: "YYYY-MM-DD",
         edit_invalid: english_edit_invalid,
+        edit_reverted: english_edit_reverted,
     };
 
     pub const GERMAN: Self = Self {
@@ -915,7 +940,10 @@ impl TableLabels {
         edit_cell: german_edit_cell,
         cancel_edit: "Bearbeitung abbrechen",
         invalid_value: "Kein gültiger Wert",
+        edit_hint_bool: "true oder false",
+        edit_hint_date: "JJJJ-MM-TT",
         edit_invalid: german_edit_invalid,
+        edit_reverted: german_edit_reverted,
     };
 }
 

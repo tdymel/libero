@@ -40,8 +40,9 @@ pub enum FilterKind {
     Select,
 }
 
-/// What a cell sorts by. `Text` is pre-lowercased, so a comparison during the
-/// sort allocates nothing.
+/// What a cell sorts by. `Text` is pre-lowercased and accent-folded, so a comparison
+/// during the sort allocates nothing; a text with accents follows its folded form
+/// after a NUL and the lowercased original, which orders it after its plain twin.
 #[derive(Clone, Debug, PartialEq)]
 pub enum SortKey {
     Text(String),
@@ -52,7 +53,22 @@ pub enum SortKey {
 
 impl SortKey {
     pub fn text(value: impl AsRef<str>) -> Self {
-        Self::Text(value.as_ref().to_lowercase())
+        let lower = value.as_ref().to_lowercase();
+        if lower.is_ascii() {
+            return Self::Text(lower);
+        }
+        let mut key = String::with_capacity(lower.len() * 2 + 1);
+        for c in lower.chars() {
+            match fold_accent(c) {
+                Some(plain) => key.push_str(plain),
+                None => key.push(c),
+            }
+        }
+        if key != lower {
+            key.push('\0');
+            key.push_str(&lower);
+        }
+        Self::Text(key)
     }
 
     /// `NaN` has no position in an ordering, so it becomes `Empty`. Integers
@@ -78,6 +94,23 @@ impl SortKey {
             _ => Ordering::Equal,
         }
     }
+}
+
+/// The unaccented form of a lowercase Latin letter, so "émile" sorts among the e's.
+/// Umlauts fold to their base letter, not to "ae".
+fn fold_accent(c: char) -> Option<&'static str> {
+    Some(match c {
+        'à' | 'á' | 'â' | 'ã' | 'ä' | 'å' | 'ā' => "a",
+        'ç' | 'ć' | 'č' => "c",
+        'è' | 'é' | 'ê' | 'ë' | 'ē' => "e",
+        'ì' | 'í' | 'î' | 'ï' | 'ī' => "i",
+        'ñ' | 'ń' => "n",
+        'ò' | 'ó' | 'ô' | 'õ' | 'ö' | 'ø' | 'ō' => "o",
+        'ù' | 'ú' | 'û' | 'ü' | 'ū' => "u",
+        'ý' | 'ÿ' => "y",
+        'ß' => "ss",
+        _ => return None,
+    })
 }
 
 /// What a column's cell type tells `Table`: how to print it, how to order it,
@@ -234,7 +267,14 @@ impl EditValue for String {
 
 impl EditValue for bool {
     fn parse(text: &str) -> Option<Self> {
-        text.trim().parse().ok()
+        let text = text.trim();
+        if text.eq_ignore_ascii_case("true") {
+            Some(true)
+        } else if text.eq_ignore_ascii_case("false") {
+            Some(false)
+        } else {
+            None
+        }
     }
 
     fn edit_kind() -> EditKind {
@@ -258,7 +298,26 @@ macro_rules! numeric_edit_value {
     };
 }
 
-numeric_edit_value!(i8, i16, i32, i64, isize, u8, u16, u32, u64, usize, f32, f64);
+numeric_edit_value!(i8, i16, i32, i64, isize, u8, u16, u32, u64, usize);
+
+/// Not `NaN`, `inf` or `infinity`, which `str::parse` takes but no ordering or sum can.
+macro_rules! float_edit_value {
+    ($($ty:ty),+ $(,)?) => {
+        $(
+            impl EditValue for $ty {
+                fn parse(text: &str) -> Option<Self> {
+                    text.trim().parse().ok().filter(|n: &Self| n.is_finite())
+                }
+
+                fn edit_kind() -> EditKind {
+                    EditKind::Number
+                }
+            }
+        )+
+    };
+}
+
+float_edit_value!(f32, f64);
 
 /// Parsed as `2024-03-09`, the form `cell_text` prints.
 impl EditValue for chrono::NaiveDate {
@@ -307,6 +366,32 @@ mod tests {
     }
 
     #[test]
+    fn accented_text_sorts_among_its_base_letters() {
+        fn order<'a>(names: &[&'a str]) -> Vec<&'a str> {
+            let mut names = names.to_vec();
+            names.sort_by(|a, b| SortKey::text(a).compare(&SortKey::text(b)));
+            names
+        }
+        assert_eq!(
+            order(&[
+                "Zoe", "Émile", "Ärger", "Eli", "Ben", "emil", "Straße", "Strasse"
+            ]),
+            [
+                "Ärger", "Ben", "Eli", "emil", "Émile", "Strasse", "Straße", "Zoe"
+            ]
+        );
+    }
+
+    #[test]
+    fn accents_are_a_tiebreak_after_the_folded_text() {
+        let (plain, accent) = (SortKey::text("resume"), SortKey::text("résumé"));
+        assert!(plain.compare(&accent).is_lt());
+        assert!(accent.compare(&SortKey::text("resumes")).is_lt());
+        assert_eq!(SortKey::text("RÉSUMÉ"), accent);
+        assert_eq!(SortKey::text("Alpha"), SortKey::Text("alpha".into()));
+    }
+
+    #[test]
     fn nan_has_no_position_so_it_sorts_as_empty() {
         assert_eq!(f64::NAN.sort_key(), SortKey::Empty);
     }
@@ -338,6 +423,24 @@ mod tests {
             <chrono::NaiveDate as CellValue>::filter_kind(),
             FilterKind::Date
         );
+    }
+
+    #[test]
+    fn a_float_edit_refuses_what_has_no_place_in_an_order() {
+        for text in ["NaN", "nan", "inf", "-inf", "infinity", "-Infinity"] {
+            assert_eq!(<f64 as EditValue>::parse(text), None, "{text}");
+            assert_eq!(<f32 as EditValue>::parse(text), None, "{text}");
+            assert_eq!(<Option<f64> as EditValue>::parse(text), None, "{text}");
+        }
+        assert_eq!(<f64 as EditValue>::parse(" -1.5 "), Some(-1.5));
+        assert_eq!(<f32 as EditValue>::parse("1e3"), Some(1000.0));
+    }
+
+    #[test]
+    fn a_bool_edit_ignores_case() {
+        assert_eq!(<bool as EditValue>::parse(" True "), Some(true));
+        assert_eq!(<bool as EditValue>::parse("FALSE"), Some(false));
+        assert_eq!(<bool as EditValue>::parse("yes"), None);
     }
 
     #[test]

@@ -2,10 +2,14 @@
 //! one with a button in each row, one selectable with column menus, a windowed
 //! one of 500 rows, and one with editable Age and City cells, which stores its
 //! edits or (`/kept`) only logs them, `/button` with a button in each City cell,
-//! `/custom` with its own Age editor, `/windowed` with fixed 28px rows.
+//! `/custom` with its own Age editor, `/windowed` with fixed 28px rows, `/formats`
+//! with empty yes/no and date cells.
 
 use dioxus::prelude::*;
-use libero::components::{EditCtx, RowUpdate, Table, column};
+use libero::{
+    chrono::NaiveDate,
+    components::{EditCtx, RowUpdate, Table, column},
+};
 
 use crate::Routes;
 
@@ -19,6 +23,7 @@ pub const ROUTES: Routes = &[
     ("/table-grid/editable/button", || rsx! { EditableGridPage { store: true, button: true } }),
     ("/table-grid/editable/custom", || rsx! { EditableGridPage { store: true, custom: true } }),
     ("/table-grid/editable/windowed", || rsx! { EditableGridPage { store: true, windowed: true } }),
+    ("/table-grid/editable/formats", || rsx! { FormatsGridPage {} }),
 ];
 
 #[derive(Clone, PartialEq)]
@@ -158,6 +163,41 @@ fn EditableGridPage(
         }
         output { id: "log", "{log}" }
         button { id: "after", "After" }
+    }
+}
+
+#[derive(Clone, PartialEq)]
+struct Task {
+    title: &'static str,
+    done: Option<bool>,
+    due: Option<NaiveDate>,
+}
+
+#[component]
+fn FormatsGridPage() -> Element {
+    let mut rows = use_signal(|| {
+        vec![Task {
+            title: "Ship",
+            done: None,
+            due: None,
+        }]
+    });
+    rsx! {
+        Table {
+            caption: "Tasks",
+            data: rows(),
+            columns: vec![
+                column("Title").value(|t: &Task| t.title.to_string()).row_header(),
+                column("Done")
+                    .value(|t: &Task| t.done)
+                    .editable(|t: &mut Task, done: Option<bool>| t.done = done),
+                column("Due")
+                    .value(|t: &Task| t.due)
+                    .editable(|t: &mut Task, due: Option<NaiveDate>| t.due = due),
+            ],
+            row_key: |t: &Task| t.title.to_string(),
+            onrowupdate: move |update: RowUpdate<Task>| rows.write()[update.index] = update.row,
+        }
     }
 }
 

@@ -449,6 +449,69 @@ e2e::scenario!(
     refuses
 );
 
+/// Leaving the field with a refused value closes the editor, puts the old value back and
+/// announces it, so no editor stays behind in a row the focus left.
+async fn refused_blur<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.double_click(&cell(1, 2)).await?;
+    retype(d, "200").await?;
+    d.click("#after").await?;
+    eventually_text(d, STATUS, "Age not changed: Too old", "the announcement").await?;
+    eventually(d, "the editor to close", async |d| {
+        Ok(!d.exists(EDITOR).await?)
+    })
+    .await?;
+    eventually_text(d, &cell(1, 2), "31", "the old value").await?;
+    if !d.text("#log").await?.is_empty() {
+        bail!("a refused edit reached onrowupdate");
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    a_refused_blur_puts_the_old_value_back,
+    "/table-grid/editable",
+    refused_blur
+);
+
+/// A yes/no and a date editor name the form they take, as placeholder and description,
+/// and the yes/no one takes it in any case.
+async fn formats<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.double_click(&cell(1, 2)).await?;
+    eventually_focused(d, EDITOR, "focus in the yes/no editor").await?;
+    if d.attr(EDITOR, "placeholder").await?.as_deref() != Some("true or false") {
+        bail!("the yes/no editor has no placeholder");
+    }
+    let hint = d
+        .attr(EDITOR, "aria-describedby")
+        .await?
+        .unwrap_or_default();
+    eventually_text(
+        d,
+        &format!("[id='{hint}']"),
+        "true or false",
+        "the description",
+    )
+    .await?;
+    d.type_text("True").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_text(d, &cell(1, 2), "true", "a capitalised yes").await?;
+    d.double_click(&cell(1, 3)).await?;
+    eventually_focused(d, EDITOR, "focus in the date editor").await?;
+    if d.attr(EDITOR, "placeholder").await?.as_deref() != Some("YYYY-MM-DD") {
+        bail!("the date editor has no placeholder");
+    }
+    d.type_text("2024-03-09").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_text(d, &cell(1, 3), "2024-03-09", "a typed date").await
+}
+
+e2e::scenario!(
+    a_yes_no_and_a_date_editor_name_their_form,
+    "/table-grid/editable/formats",
+    formats,
+    android: skip("958: roving keys are inert in the emulator's WebView")
+);
+
 /// A custom editor clears the refused value's message by calling `changed`.
 async fn custom_clears<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     const CUSTOM: &str = "#custom-editor";

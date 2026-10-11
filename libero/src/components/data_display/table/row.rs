@@ -4,6 +4,7 @@ use dioxus::prelude::*;
 
 use super::{
     cell_focus::{FocusTarget, GridRow},
+    cell_value::EditKind,
     column::Column,
     core::{CellSpec, DetailSpec, HeaderSpec, RowFn, RowSpec, body_rows, render_cells},
     detail::Details,
@@ -454,7 +455,13 @@ impl<T: Clone + 'static> RowContext<T> {
                             EditError::Parse => labels.invalid_value.to_string(),
                             EditError::Invalid(message) => message,
                         };
-                        announcer.say((labels.edit_invalid)(&columns[column].header, &message));
+                        let header = &columns[column].header;
+                        if leave == Leave::Blur {
+                            announcer.say((labels.edit_reverted)(header, &message));
+                            grid.finish(Leave::Blur);
+                            return true;
+                        }
+                        announcer.say((labels.edit_invalid)(header, &message));
                         let mut invalid = grid.invalid;
                         invalid.set(Some(message));
                         false
@@ -469,6 +476,12 @@ impl<T: Clone + 'static> RowContext<T> {
             let mut invalid = grid.invalid;
             invalid.set(None);
         });
+        let kind = spec.edit.as_ref().map(|edit| edit.kind).unwrap_or_default();
+        let hint = match kind {
+            EditKind::Bool => Some(self.labels.edit_hint_bool),
+            EditKind::Date => Some(self.labels.edit_hint_date),
+            _ => None,
+        };
         let custom = spec.edit.as_ref().and_then(|edit| edit.editor.clone());
         let editor = match custom {
             Some(editor) => editor(EditCtx {
@@ -485,10 +498,11 @@ impl<T: Clone + 'static> RowContext<T> {
                 CellEditor {
                     value,
                     label,
-                    kind: spec.edit.as_ref().map(|edit| edit.kind).unwrap_or_default(),
+                    kind,
                     cancel_label: self.labels.cancel_edit,
                     error: error.clone(),
                     error_id: error_id.clone(),
+                    hint,
                     commit,
                     cancel,
                     changed,

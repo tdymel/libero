@@ -8,7 +8,7 @@ use pictogram_icons_lucide as lucide;
 
 use super::{cell_focus::Move, cell_value::EditKind, column::Column};
 use crate::{
-    components::common::Glyph,
+    components::{accessibility::VisuallyHidden, common::Glyph},
     context::IconSlot,
     hooks::{ElementHandle, use_element},
     platform::{ElementApi, is_tab},
@@ -135,10 +135,37 @@ pub(super) enum Leave {
     To(Move),
 }
 
+/// What a key does in the editor: whether to save, and how to leave. `None` types on.
+fn key_exit(key: &Key, tab: bool, shift: bool) -> Option<(bool, Leave)> {
+    match key {
+        Key::Enter => Some((true, Leave::To(if shift { Move::Up } else { Move::Down }))),
+        Key::Escape => Some((false, Leave::Stay)),
+        _ if tab => Some((
+            true,
+            Leave::To(if shift { Move::Left } else { Move::Right }),
+        )),
+        _ => None,
+    }
+}
+
+/// One close of the editor, given whether it `done` already: saves or cancels once
+/// and answers whether it is done now. A commit that is refused leaves it open.
+fn settle(done: bool, save: bool, commit: impl FnOnce() -> bool, cancel: impl FnOnce()) -> bool {
+    if done {
+        return true;
+    }
+    if save {
+        return commit();
+    }
+    cancel();
+    true
+}
+
 /// The editor in an editing cell: Enter, Tab or leaving it commits, Escape or the
 /// cancel button (on a touch screen, where no Escape is) puts the value back.
 /// `commit` takes the text and how to leave, and answers whether it took the text;
-/// one it did not keeps the editor open, with `error`, until the next input.
+/// one it did not keeps the editor open, with `error`, until the next input; on a
+/// blur it closes the editor and answers `true`, the old value back.
 #[component]
 pub(super) fn CellEditor(
     value: String,
@@ -147,6 +174,8 @@ pub(super) fn CellEditor(
     cancel_label: &'static str,
     error: Option<String>,
     error_id: String,
+    /// The form the text takes, for a kind that has no obvious one.
+    hint: Option<&'static str>,
     commit: Callback<(String, Leave), bool>,
     cancel: Callback<()>,
     changed: Callback<()>,
@@ -164,17 +193,20 @@ pub(super) fn CellEditor(
         }
     });
     let close = use_callback(move |(save, leave): (bool, Leave)| {
-        if *done.peek() {
-            return;
-        }
-        if !save {
-            done.set(true);
-            cancel.call(());
-        } else if commit.call((draft.peek().clone(), leave)) {
-            done.set(true);
-        }
+        let closed = settle(
+            *done.peek(),
+            save,
+            || commit.call((draft.peek().clone(), leave)),
+            || cancel.call(()),
+        );
+        done.set(closed);
     });
     let invalid = error.is_some();
+    let hint_id = hint.map(|_| format!("{error_id}-hint"));
+    let described = [invalid.then(|| error_id.clone()), hint_id.clone()]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
     rsx! {
         div {
             "data-cell-editor": true,
@@ -182,12 +214,16 @@ pub(super) fn CellEditor(
             onclick: move |event: MouseEvent| event.stop_propagation(),
             ondoubleclick: move |event: MouseEvent| event.stop_propagation(),
             onpointerdown: move |event: PointerEvent| event.stop_propagation(),
+            if let (Some(hint), Some(id)) = (hint, hint_id) {
+                VisuallyHidden { id, "{hint}" }
+            }
             input {
                 r#type: "text",
                 inputmode: (kind == EditKind::Number).then_some("decimal"),
                 aria_label: label,
                 aria_invalid: invalid.then_some("true"),
-                aria_describedby: invalid.then_some(error_id),
+                aria_describedby: (!described.is_empty()).then(|| described.join(" ")),
+                placeholder: hint,
                 value: draft(),
                 onmounted: input.mount(),
                 oninput: move |event: FormEvent| {
@@ -201,13 +237,8 @@ pub(super) fn CellEditor(
                         return;
                     }
                     let shift = event.modifiers().shift();
-                    let (save, leave) = match event.key() {
-                        Key::Enter => (true, Leave::To(if shift { Move::Up } else { Move::Down })),
-                        Key::Escape => (false, Leave::Stay),
-                        _ if is_tab(&event) => {
-                            (true, Leave::To(if shift { Move::Left } else { Move::Right }))
-                        }
-                        _ => return,
+                    let Some((save, leave)) = key_exit(&event.key(), is_tab(&event), shift) else {
+                        return;
                     };
                     event.prevent_default();
                     event.stop_propagation();
@@ -280,6 +311,55 @@ mod tests {
         // The value's own text, not a `format`ted one.
         let formatted = age().format(|p: &Person| format!("{} years", p.age));
         assert_eq!(commit_edit(&ana(), &formatted, "31"), Ok(None));
+    }
+
+    #[test]
+    fn enter_and_tab_save_and_move_escape_cancels() {
+        let exit = |key: Key, tab, shift| key_exit(&key, tab, shift);
+        assert_eq!(
+            exit(Key::Enter, false, false),
+            Some((true, Leave::To(Move::Down)))
+        );
+        assert_eq!(
+            exit(Key::Enter, false, true),
+            Some((true, Leave::To(Move::Up)))
+        );
+        assert_eq!(
+            exit(Key::Tab, true, false),
+            Some((true, Leave::To(Move::Right)))
+        );
+        assert_eq!(
+            exit(Key::Tab, true, true),
+            Some((true, Leave::To(Move::Left)))
+        );
+        assert_eq!(exit(Key::Escape, false, false), Some((false, Leave::Stay)));
+        assert_eq!(exit(Key::Character("a".into()), false, false), None);
+        assert_eq!(exit(Key::ArrowLeft, false, false), None);
+    }
+
+    #[test]
+    fn a_refused_commit_stays_open_and_a_closed_editor_acts_once() {
+        let (mut commits, mut cancels) = (0, 0);
+        let mut run = |done, save, accept| {
+            settle(
+                done,
+                save,
+                || {
+                    commits += 1;
+                    accept
+                },
+                || cancels += 1,
+            )
+        };
+        assert!(!run(false, true, false), "a refused commit keeps it open");
+        assert!(run(false, true, true), "an accepted commit closes it");
+        assert!(
+            run(true, true, true),
+            "a blur after Enter does nothing more"
+        );
+        assert!(run(true, false, true), "nor after Escape");
+        assert!(run(false, false, false), "Escape closes it");
+        assert_eq!((commits, cancels), (2, 1));
     }
 
     #[test]
