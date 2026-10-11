@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use dioxus::prelude::*;
 use pictogram_core::Svg as SvgData;
 use pictogram_icons_lucide as lucide;
@@ -18,7 +20,7 @@ use crate::{
     },
     context::IconSlot,
     hooks::{ElementHandle, use_cache, use_css, use_element, use_icon, use_theme},
-    platform::{ElementApi, sets_indeterminate},
+    platform::{self, ElementApi, mounted_by_selector, sets_indeterminate},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
         CHECKBOX_BOX, CHECKBOX_RADIUS, CheckboxDefaults, ChoiceVariant, CssVar, Size, SizeCss,
@@ -519,6 +521,42 @@ impl CheckboxLook {
         aria_label: String,
         onchange: impl Fn(bool) + Clone + 'static,
     ) -> Element {
+        self.render_box(
+            Some(element),
+            Rc::new(move || {
+                let _ = element.focus();
+            }),
+            state,
+            aria_label,
+            onchange,
+        )
+    }
+
+    /// As [`render`](Self::render), the input found by `selector` when focused: no
+    /// `onmounted`, a blocking round trip per box on a WebView (todo 3252).
+    pub fn render_found(
+        &self,
+        selector: String,
+        state: LightState,
+        aria_label: String,
+        onchange: impl Fn(bool) + Clone + 'static,
+    ) -> Element {
+        let focus = move || {
+            if let Some(input) = mounted_by_selector(&selector) {
+                let _ = platform::element(&input).focus();
+            }
+        };
+        self.render_box(None, Rc::new(focus), state, aria_label, onchange)
+    }
+
+    fn render_box(
+        &self,
+        element: Option<ElementHandle>,
+        focus: Rc<dyn Fn()>,
+        state: LightState,
+        aria_label: String,
+        onchange: impl Fn(bool) + Clone + 'static,
+    ) -> Element {
         let LightState {
             checked,
             indeterminate,
@@ -530,14 +568,20 @@ impl CheckboxLook {
                 onchange(next);
             }
         };
-        let input = checkbox_input(
-            Activation::new(element, toggle.clone()).wire(self.input.clone()),
-            checked,
-            indeterminate,
-        )
-        .attr("disabled", disabled)
-        .attr("aria-label", aria_label)
-        .render(HtmlTag::Input, Vec::new(), ());
+        let activation = match element {
+            Some(element) => Activation::new(element, toggle.clone()),
+            None => Activation::focusing(
+                {
+                    let focus = focus.clone();
+                    move || focus()
+                },
+                toggle.clone(),
+            ),
+        };
+        let input = checkbox_input(activation.wire(self.input.clone()), checked, indeterminate)
+            .attr("disabled", disabled)
+            .attr("aria-label", aria_label)
+            .render(HtmlTag::Input, Vec::new(), ());
         let control = match (disabled, indeterminate, checked) {
             (true, ..) => &self.disabled,
             (_, true, _) => &self.mixed,
@@ -557,7 +601,7 @@ impl CheckboxLook {
             }
             toggle();
             if !disabled {
-                let _ = element.focus();
+                focus();
             }
         };
         let box_node = rsx! {

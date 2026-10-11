@@ -477,6 +477,13 @@ async fn rows_select_and_sort<D: Driver>(d: &mut D, _route: &str) -> Result<()> 
     // Source order: Cherry, Apple, Banana, Date, Elder.
     d.click(&select_box(3)).await?;
     eventually_text(d, "#selection", "Apple,Banana", "a row's box").await?;
+    // Found by selector, not a mounted handle (todo 3252).
+    eventually_focused(
+        d,
+        "tbody tr:nth-child(3) td[data-select] input",
+        "a row's box",
+    )
+    .await?;
     if !d.text("#clicked").await?.is_empty() {
         bail!("a row's box also clicked its row");
     }

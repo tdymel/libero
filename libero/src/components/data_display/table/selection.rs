@@ -8,7 +8,7 @@ use crate::{
         accessibility::Announcer,
         form::{CheckboxLook, LightState},
     },
-    hooks::use_element,
+    hooks::{use_element, use_id},
     localization::TableLabels,
     platform::ElementApi,
 };
@@ -134,22 +134,25 @@ fn RowSelect(
     checked: bool,
     toggle: Callback<(String, bool)>,
 ) -> Element {
-    let element = use_element();
+    // Found on focus, no `onmounted`: a windowed fling mounts hundreds (todo 3252).
+    let id = use_id();
     let state = LightState {
         checked,
         indeterminate: false,
         disabled: false,
     };
+    let input = format!("td[data-row-select=\"{}\"] input", id.peek());
     rsx! {
         td {
             "data-select": true,
+            "data-row-select": id,
             // The box is not a row click. Stopped, it no longer reaches Blitz's focus
             // guard, whose default would clear the focus the box gave its input (todo 1406).
             onclick: |event| {
                 event.stop_propagation();
                 event.prevent_default();
             },
-            {look.render(element, state, aria_label, move |on| toggle((row.clone(), on)))}
+            {look.render_found(input, state, aria_label, move |on| toggle((row.clone(), on)))}
         }
     }
 }
