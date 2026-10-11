@@ -47,7 +47,8 @@ use crate::select::{
 e2e::scenario!(
     an_outside_click_leaves_a_searchable_cascader,
     "/cascader/outside",
-    an_outside_click_keeps_its_focus
+    an_outside_click_keeps_its_focus,
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     tab_from_a_cascader_search_moves_on,
@@ -147,7 +148,8 @@ pub async fn taps_walk_the_levels<D: Driver>(d: &mut D, _route: &str) -> Result<
 e2e::scenario!(
     taps_walk_the_cascader_levels,
     "/cascader",
-    taps_walk_the_levels
+    taps_walk_the_levels,
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 const ASIA: &str = "[role=option][id$='-option-0-1']";
@@ -190,7 +192,8 @@ pub async fn a_disabled_row_looks_disabled<D: Driver>(d: &mut D, _route: &str) -
 e2e::scenario!(
     a_disabled_cascader_row_looks_disabled,
     "/cascader",
-    a_disabled_row_looks_disabled
+    a_disabled_row_looks_disabled,
+    ios: skip("a touch screen has no hover")
 );
 
 #[test]

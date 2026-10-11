@@ -6,13 +6,14 @@
 use std::net::TcpListener;
 use std::path::PathBuf;
 use std::process::Command;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, bail};
 
 use crate::clock::{app_clock, app_count};
-use crate::driver::bridge::{Bridge, element};
+use crate::driver::bridge::{Bridge, element, note};
 use crate::driver::{Driver, Platform, Rect};
 use crate::passes::keyboard::Key;
 
@@ -206,6 +207,28 @@ impl Ios {
             "e2e ios: screen {screen_w}x{screen_h} pt, innerWidth {inner_w}, viewport origin {:?} pt, via {:?}",
             self.origin, self.input
         );
+        static KEYS_NOTED: AtomicBool = AtomicBool::new(false);
+        if !KEYS_NOTED.swap(true, Ordering::Relaxed) {
+            self.note_keys()?;
+        }
+        Ok(())
+    }
+
+    /// What the page sees of some HID keys, noted once per run: the first CI runs' answer to
+    /// which keys the simulator's WebView takes from the injector.
+    fn note_keys(&mut self) -> Result<()> {
+        self.bridge.run(
+            "window.__e2eKeys = []; for (const type of ['keydown', 'keyup', 'beforeinput']) { \
+             addEventListener(type, e => { __e2eKeys.push(type + ':' + (e.key ?? e.data) + ':' + (e.code ?? '')); }, true); }",
+        )?;
+        for (name, usage) in [("a", 4), ("Tab", 43), ("ArrowDown", 81), ("Enter", 40)] {
+            self.key(usage)?;
+            std::thread::sleep(Duration::from_millis(400));
+            let seen: Vec<String> = self.bridge.json("__e2eKeys.splice(0)")?;
+            note(&format!(
+                "ios key {name} (usage {usage}) reached the page as {seen:?}"
+            ));
+        }
         Ok(())
     }
 
@@ -365,18 +388,27 @@ impl Ios {
             Injector::Axe => "axe",
             Injector::Idb => "idb",
         };
-        let out = Command::new(tool)
-            .args(args)
-            .args(["--udid", &self.udid])
-            .output()
-            .with_context(|| format!("run {tool}"))?;
-        if !out.status.success() {
-            bail!(
-                "{tool} {args:?} failed: {}",
-                String::from_utf8_lossy(&out.stderr).trim()
-            );
+        // AXe's accessibility translation is not up for the first seconds of a fresh simulator.
+        let mut tries = 0;
+        loop {
+            let out = Command::new(tool)
+                .args(args)
+                .args(["--udid", &self.udid])
+                .output()
+                .with_context(|| format!("run {tool}"))?;
+            if out.status.success() {
+                return Ok(String::from_utf8_lossy(&out.stdout).into_owned());
+            }
+            let error = String::from_utf8_lossy(&out.stderr);
+            tries += 1;
+            // A tap that dies without a word is the tool under load: once or twice more.
+            let starting = tries < 20 && error.contains("No translation object");
+            if starting || tries < 3 && error.trim().is_empty() {
+                std::thread::sleep(Duration::from_millis(500));
+                continue;
+            }
+            bail!("{tool} {args:?} failed: {}", error.trim());
         }
-        Ok(String::from_utf8_lossy(&out.stdout).into_owned())
     }
 }
 

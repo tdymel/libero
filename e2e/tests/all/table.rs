@@ -44,7 +44,8 @@ async fn the_arrow_turns<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     the_arrow_turns_when_the_sort_flips,
     "/table",
-    the_arrow_turns
+    the_arrow_turns,
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 pub(super) const AREA: &str = "[data-table-scroll]";
@@ -124,7 +125,8 @@ async fn the_rows_report_and_show_their_look<D: Driver>(d: &mut D, _route: &str)
 e2e::scenario!(
     a_row_click_reports_its_row,
     "/table/rows",
-    the_rows_report_and_show_their_look
+    the_rows_report_and_show_their_look,
+    ios: skip("a touch screen has no hover")
 );
 
 /// The checkbox box of body row `n` (1-based), or of the header with 0.
@@ -220,7 +222,8 @@ async fn rows_select_and_sort<D: Driver>(d: &mut D, _route: &str) -> Result<()> 
 e2e::scenario!(
     rows_select_by_box_and_keep_it_through_a_sort,
     "/table/select",
-    rows_select_and_sort
+    rows_select_and_sort,
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// 1982: the light boxes keep select-all's mixed property, and under forced colours
@@ -392,7 +395,8 @@ async fn the_pages_turn_sort_and_resize<D: Driver>(d: &mut D, _route: &str) -> R
 e2e::scenario!(
     a_paged_table_turns_sorts_and_resizes,
     "/table/paged",
-    the_pages_turn_sort_and_resize
+    the_pages_turn_sort_and_resize,
+    macos: skip("3432: WKWebView: the page range reads 7-7 of 7 after page 5")
 );
 
 /// 1156-0b: with `row_key`, a row prepended on top leaves the others' nodes alone.

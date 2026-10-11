@@ -26,7 +26,8 @@ async fn one_digit_per_cell<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_pin_field_takes_one_digit_per_cell_and_moves_on,
     "/pin-field/echo",
-    one_digit_per_cell
+    one_digit_per_cell,
+    macos_native: skip("3342: Blitz deletes twice on AppKit's Backspace binding")
 );
 
 /// Todo 3033: a composing Backspace edits the IME's candidate, so it neither clears a
@@ -158,7 +159,8 @@ e2e::scenario!(
     the_rule_waits_for_focus_to_leave,
     web: skip("the_rule_waits_until_focus_leaves_the_cells checks it after two frames"),
     desktop: skip("1564: a WebView cannot tell a move inside the field from a blur"),
-    android: skip("1564: a WebView cannot tell a move inside the field from a blur")
+    android: skip("1564: a WebView cannot tell a move inside the field from a blur"),
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 async fn cells_read<D: Driver>(d: &mut D, expected: [&str; 4], during: &str) -> Result<()> {
@@ -201,7 +203,8 @@ e2e::scenario!(
     "/pin-field/echo",
     retyped_text_without_a_key,
     native: skip("no text without a key on Blitz"),
-    desktop: skip("1126: no text without a key (no IME path) under xdotool")
+    desktop: skip("1126: no text without a key (no IME path) under xdotool"),
+    ios: skip("3416: no text without a key through AXe")
 );
 
 const DELETE: keyboard::Key = keyboard::Key {

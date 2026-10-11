@@ -32,7 +32,8 @@ async fn one_slot_swapped<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     one_slot_swaps_and_redraws_on_a_new_set,
     "/icon-provider",
-    one_slot_swapped
+    one_slot_swapped,
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 async fn whole_set_drawn<D: Driver>(d: &mut D, _route: &str) -> Result<()> {

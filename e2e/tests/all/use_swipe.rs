@@ -229,7 +229,8 @@ e2e::scenario!(
     a_mouse_drag_is_never_a_swipe,
     "/use-swipe/basic",
     ignores_a_mouse,
-    android: skip("adb drags with a finger")
+    android: skip("adb drags with a finger"),
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     an_edge_swipe_opens_only_from_the_band_past_the_back_zone,

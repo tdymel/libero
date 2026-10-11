@@ -128,9 +128,16 @@ async fn answers_at_all<D: Driver>(d: &mut D) -> Result<()> {
         return eventually_text(d, "#live", "false", "a stop").await;
     }
     // Refusals the engines give without a camera: no mediaDevices or insecure page, a denied
-    // grant (wry's WKWebView delegate auto-grants, then TCC may refuse), no device.
+    // grant (wry's WKWebView delegate auto-grants, then TCC may refuse), no device; the
+    // camera-less macOS runner's WKWebView answers `Constraint` (CI probe, 2026-10-11).
     let error = d.text("#error").await?;
-    if !["Some(Unsupported)", "Some(Denied)", "Some(NotFound)"].contains(&error.as_str()) {
+    let refusals = [
+        "Some(Unsupported)",
+        "Some(Denied)",
+        "Some(NotFound)",
+        "Some(Constraint)",
+    ];
+    if !refusals.contains(&error.as_str()) {
         bail!(
             "{:?}: a start with no camera opened reads {error:?}, not a refusal or a missing device",
             d.platform()

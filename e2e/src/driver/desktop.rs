@@ -16,6 +16,8 @@ use std::time::{Duration, Instant};
 use anyhow::{Context, Result, bail};
 
 use crate::clock::{app_clock, app_count};
+#[cfg(target_os = "macos")]
+use crate::driver::bridge::note;
 use crate::driver::bridge::{Bridge, element};
 use crate::driver::{Driver, Platform, Rect};
 use crate::passes::keyboard::Key;
@@ -48,6 +50,8 @@ pub struct Desktop {
     #[cfg_attr(any(target_os = "macos", windows), allow(dead_code))]
     origin: (f64, f64),
     scale: f64,
+    #[cfg(target_os = "macos")]
+    routes: MacRoutes,
     #[cfg(windows)]
     cdp: Option<webview2::Cdp>,
     /// The test module path minus the scenario: one app per unit (~5 s a launch).
@@ -130,6 +134,8 @@ impl Desktop {
             window: String::new(),
             origin: (0.0, 0.0),
             scale: 1.0,
+            #[cfg(target_os = "macos")]
+            routes: MacRoutes::default(),
             #[cfg(windows)]
             cdp: None,
             unit: unit.to_string(),
@@ -165,6 +171,8 @@ impl Desktop {
     /// Where viewport 0,0 sits in the window: a pointer move at a known window
     /// point, read back as `clientX/Y`. Bottom-left, away from the fixture.
     fn calibrate(&mut self) -> Result<()> {
+        #[cfg(target_os = "macos")]
+        self.find_routes()?;
         self.bridge.run("window.__e2eMove = null; addEventListener('mousemove', e => { __e2eMove = [e.clientX, e.clientY]; })")?;
         let at = self.park_pointer()?;
         let started = Instant::now();
@@ -353,6 +361,35 @@ const SEEN: &str = "window.__e2eSeen = { up: 0, key: 0, wheel: 0, move: null };
     addEventListener('wheel', () => { __e2eSeen.wheel += 1; }, true);
     addEventListener('mousemove', (e) => { __e2eSeen.move = [e.clientX, e.clientY]; }, true)";
 
+/// Each pointer route moves to its own x, so a late event never counts for the next route.
+#[cfg(target_os = "macos")]
+fn pointer_index(route: &str) -> f64 {
+    ["target", "view", "window", "post", "cg"]
+        .iter()
+        .position(|name| *name == route)
+        .unwrap_or_default() as f64
+}
+
+/// How the app hands each kind of NSEvent to its WebView (`mac_input.rs`), found per launch.
+#[cfg(target_os = "macos")]
+#[derive(Clone, Copy)]
+struct MacRoutes {
+    pointer: &'static str,
+    button: &'static str,
+    key: &'static str,
+}
+
+#[cfg(target_os = "macos")]
+impl Default for MacRoutes {
+    fn default() -> Self {
+        Self {
+            pointer: "target",
+            button: "target",
+            key: "window",
+        }
+    }
+}
+
 /// macOS input (2782): ops on the bridge that the app turns into NSEvents for its WKWebView
 /// (`e2e/fixtures/src/mac_input.rs`). No TCC grant, no shared cursor, no window lookup.
 #[cfg(target_os = "macos")]
@@ -396,6 +433,133 @@ impl Desktop {
         Ok(())
     }
 
+    /// Which route each kind of event reaches the page by: the first the page sees, as no one
+    /// knows what a hosted runner's WKWebView answers. A route that stops the app answering is
+    /// skipped by the next launch; every step is noted in `calibration.log` as it starts.
+    fn find_routes(&mut self) -> Result<()> {
+        static STATE: Mutex<(Option<MacRoutes>, Vec<String>)> = Mutex::new((None, Vec::new()));
+        let (found, hung) = STATE.lock().unwrap_or_else(PoisonError::into_inner).clone();
+        if let Some(found) = found {
+            self.routes = found;
+            return Ok(());
+        }
+        let height: f64 = self.bridge.json("innerHeight")?;
+        let at = (2.0, height - 2.0);
+        // The window's own events reach the page only once the real cursor is over it.
+        self.input(serde_json::json!({ "op": "enter" }))?;
+        let mut pointer = None;
+        let mut button = None;
+        let mut key = None;
+        for (kind, route) in [
+            ("pointer", "target"),
+            ("pointer", "view"),
+            ("pointer", "window"),
+            ("pointer", "post"),
+            ("pointer", "cg"),
+            ("button", "target"),
+            ("button", "view"),
+            ("button", "post"),
+            ("button", "cg"),
+            ("key", "window"),
+            ("key", "responder"),
+            ("key", "post"),
+        ] {
+            let name = format!("{kind} {route}");
+            if hung.contains(&name) || kind == "pointer" && pointer.is_some() && route == "cg" {
+                continue;
+            }
+            note(&format!("trying {name}"));
+            let tried = match kind {
+                "pointer" => self.try_pointer(route, at.0 + 8.0 * pointer_index(route), at.1),
+                "button" => self.try_button(route, at),
+                _ => self.try_key(route),
+            };
+            let seen = tried.inspect_err(|error| {
+                note(&format!("{name}: the app stopped answering ({error:#})"));
+                STATE
+                    .lock()
+                    .unwrap_or_else(PoisonError::into_inner)
+                    .1
+                    .push(name.clone());
+            })?;
+            note(&format!("{name}: {seen}"));
+            let slot = match kind {
+                "pointer" => &mut pointer,
+                "button" => &mut button,
+                _ => &mut key,
+            };
+            if seen && slot.is_none() {
+                *slot = Some(route);
+            }
+        }
+        let Some(pointer) = pointer else {
+            bail!("the WebView saw no pointer move by any route; see calibration.log");
+        };
+        self.routes = MacRoutes {
+            pointer,
+            button: button.unwrap_or(self.routes.button),
+            key: key.unwrap_or(self.routes.key),
+        };
+        note(&format!(
+            "picked pointer {} button {} key {}",
+            self.routes.pointer, self.routes.button, self.routes.key
+        ));
+        STATE.lock().unwrap_or_else(PoisonError::into_inner).0 = Some(self.routes);
+        Ok(())
+    }
+
+    fn try_pointer(&mut self, route: &str, x: f64, y: f64) -> Result<bool> {
+        self.probe_route(
+            serde_json::json!({ "op": "move", "x": x, "y": y, "via": route }),
+            &format!("__e2eSeen.move?.[0] === {x}"),
+        )
+    }
+
+    fn try_button(&mut self, route: &str, at: (f64, f64)) -> Result<bool> {
+        let up = self.count("up")?;
+        let mut seen = true;
+        for op in ["down", "up"] {
+            let condition = if op == "up" {
+                format!("__e2eSeen.up > {up}")
+            } else {
+                "true".to_string()
+            };
+            seen &= self.probe_route(
+                serde_json::json!({ "op": op, "x": at.0, "y": at.1, "count": 1, "via": route }),
+                &condition,
+            )?;
+        }
+        Ok(seen)
+    }
+
+    fn try_key(&mut self, route: &str) -> Result<bool> {
+        let before = self.count("key")?;
+        self.probe_route(
+            serde_json::json!({ "op": "key", "key": "Escape", "via": route }),
+            &format!("__e2eSeen.key > {before}"),
+        )
+    }
+
+    /// Sends `op`; whether the page's `condition` held within 1.5 s. A refused op is `false`,
+    /// an app that stops answering an error.
+    fn probe_route(&mut self, op: serde_json::Value, condition: &str) -> Result<bool> {
+        let answer = self.bridge.request(&op.to_string())?;
+        if answer.get("err").is_some() {
+            return Ok(false);
+        }
+        let started = Instant::now();
+        while started.elapsed() < Duration::from_millis(1500) {
+            if self
+                .bridge
+                .json::<bool>(&format!("window.__e2eSeen !== undefined && ({condition})"))?
+            {
+                return Ok(true);
+            }
+            std::thread::sleep(Duration::from_millis(25));
+        }
+        Ok(false)
+    }
+
     fn count(&mut self, what: &str) -> Result<u64> {
         self.bridge.json(&format!("window.__e2eSeen?.{what} ?? 0"))
     }
@@ -409,7 +573,8 @@ impl Desktop {
     }
 
     fn move_to(&mut self, x: f64, y: f64) -> Result<()> {
-        self.input(serde_json::json!({ "op": "move", "x": x, "y": y }))?;
+        let via = self.routes.pointer;
+        self.input(serde_json::json!({ "op": "move", "x": x, "y": y, "via": via }))?;
         self.seen(&format!(
             "Math.abs(__e2eSeen.move?.[0] - {x}) <= 1 && Math.abs(__e2eSeen.move?.[1] - {y}) <= 1"
         ))
@@ -418,9 +583,12 @@ impl Desktop {
     fn click_point(&mut self, x: f64, y: f64, count: u32) -> Result<()> {
         self.move_to(x, y)?;
         let before = self.count("up")?;
+        let via = self.routes.button;
         for n in 1..=count {
             for op in ["down", "up"] {
-                self.input(serde_json::json!({ "op": op, "x": x, "y": y, "count": n }))?;
+                self.input(
+                    serde_json::json!({ "op": op, "x": x, "y": y, "count": n, "via": via }),
+                )?;
             }
         }
         self.seen(&format!("__e2eSeen.up >= {}", before + u64::from(count)))
@@ -428,16 +596,19 @@ impl Desktop {
 
     fn drag_by(&mut self, x: f64, y: f64, dx: f64, dy: f64) -> Result<()> {
         self.move_to(x, y)?;
-        self.input(serde_json::json!({ "op": "down", "x": x, "y": y, "count": 1 }))?;
+        let via = self.routes.button;
+        self.input(serde_json::json!({ "op": "down", "x": x, "y": y, "count": 1, "via": via }))?;
         for step in 1..=8 {
             let t = step as f64 / 8.0;
             let (x, y) = (x + dx * t, y + dy * t);
-            self.input(serde_json::json!({ "op": "move", "x": x, "y": y, "held": true }))?;
+            self.input(
+                serde_json::json!({ "op": "move", "x": x, "y": y, "held": true, "via": via }),
+            )?;
             std::thread::sleep(Duration::from_millis(16));
         }
         let before = self.count("up")?;
         let (x, y) = (x + dx, y + dy);
-        self.input(serde_json::json!({ "op": "up", "x": x, "y": y, "count": 1 }))?;
+        self.input(serde_json::json!({ "op": "up", "x": x, "y": y, "count": 1, "via": via }))?;
         self.seen(&format!("__e2eSeen.up > {before}"))
     }
 
@@ -451,7 +622,8 @@ impl Desktop {
 
     fn chord(&mut self, mods: &[&str], key: Key) -> Result<()> {
         let before = self.count("key")?;
-        self.input(serde_json::json!({ "op": "key", "key": key.key, "mods": mods }))?;
+        let via = self.routes.key;
+        self.input(serde_json::json!({ "op": "key", "key": key.key, "mods": mods, "via": via }))?;
         self.seen(&format!("__e2eSeen.key > {before}"))
     }
 
@@ -465,7 +637,8 @@ impl Desktop {
                 '\t' => "Tab".to_string(),
                 ch => ch.to_string(),
             };
-            self.input(serde_json::json!({ "op": "key", "key": key }))?;
+            let via = self.routes.key;
+            self.input(serde_json::json!({ "op": "key", "key": key, "via": via }))?;
             typed += 1;
             std::thread::sleep(Duration::from_millis(ms));
         }
@@ -553,6 +726,18 @@ impl Driver for Desktop {
 
     async fn press_ctrl(&mut self, key: Key) -> Result<()> {
         self.chord(&["ctrl"], key)
+    }
+
+    /// Cmd on macOS, where libero's `mod` is the Apple key.
+    async fn press_mod(&mut self, key: Key) -> Result<()> {
+        self.chord(
+            &[if cfg!(target_os = "macos") {
+                "meta"
+            } else {
+                "ctrl"
+            }],
+            key,
+        )
     }
 
     async fn press_alt(&mut self, key: Key) -> Result<()> {

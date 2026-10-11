@@ -9,6 +9,21 @@ use std::time::{Duration, Instant};
 use anyhow::{Context, Result, bail};
 use serde::de::DeserializeOwned;
 
+#[cfg(any(target_os = "macos", feature = "ios"))]
+/// A line of a driver's calibration: on stderr, and in `calibration.log` of the run's artifacts,
+/// which the probe workflow turns into a notice.
+pub fn note(line: &str) {
+    eprintln!("e2e: {line}");
+    if let Some(dir) = crate::journal::dir()
+        && let Ok(mut file) = std::fs::File::options()
+            .create(true)
+            .append(true)
+            .open(dir.join("calibration.log"))
+    {
+        let _ = writeln!(file, "{line}");
+    }
+}
+
 /// One connected fixture app.
 pub struct Bridge {
     reader: BufReader<TcpStream>,
