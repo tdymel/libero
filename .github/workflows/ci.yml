@@ -72,6 +72,19 @@ jobs:
       - run: cargo clippy -p libero --target wasm32-unknown-unknown -- -D warnings
       - run: cargo clippy -p docs --target wasm32-unknown-unknown -- -D warnings
 
+  # The `cfg(target_os = "android")` code. The `cfg_attr` allows of `missing_const_for_thread_local`
+  # in libero/src/lib.rs, tests/all/main.rs and render_cost.rs go once clippy stops flagging `const {}` (3343).
+  android:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          targets: aarch64-linux-android
+          components: clippy
+          cache-key: android
+      - run: cargo clippy -p libero --all-targets --target aarch64-linux-android -- -D warnings
+
   test:
     runs-on: ubuntu-24.04
     steps:
@@ -186,7 +199,7 @@ jobs:
   # The one required check: green only when every job above is.
   ci:
     if: always()
-    needs: [fmt, clippy, features, wasm, test, doc-tests, native, e2e]
+    needs: [fmt, clippy, features, wasm, android, test, doc-tests, native, e2e]
     runs-on: ubuntu-24.04
     steps:
       - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
