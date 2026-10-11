@@ -1,6 +1,8 @@
 # Builds the docs app once per platform (1219), dev profile, and runs the e2e suites on macOS
 # (2776), Windows (2781, 2783), an iOS simulator (2784) and the Linux desktop WebView (2874).
 # Informational: not part of the required `ci` check.
+# Cargo caches: only the windows-native, -web, -desktop, macos-desktop and ios-e2e legs save (cold 13-39 min,
+# warm 4-6), so ci.yml's keys stay within 10 GB; the others restore the nearest saved build of their OS (3413).
 name: Platforms
 
 # On by default since the repo is public (standard runners are free there, macOS and Windows too).
@@ -37,7 +39,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           targets: wasm32-unknown-unknown
-          cache-key: platforms-web
+          cache-key: e2e
           save-cache: false
       - uses: ./.github/actions/dx
       - working-directory: docs
@@ -59,7 +61,7 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libdbus-1-dev
       - uses: ./.github/actions/setup
         with:
-          cache-key: platforms-native
+          cache-key: native
           save-cache: false
       - uses: ./.github/actions/dx
       - working-directory: docs
@@ -77,7 +79,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
         with:
-          cache-key: platforms-native-check
+          cache-key: ${{ runner.os == 'Windows' && 'platforms-windows-native' || 'platforms-macos-desktop' }}
           save-cache: false
       - run: cargo check -p docs --features native-vello
 
@@ -107,7 +109,8 @@ jobs:
         with:
           targets: ${{ matrix.targets }}
           components: clippy
-          cache-key: platforms-unit
+          cache-key: ${{ runner.os == 'Windows' && 'platforms-windows-native' || 'platforms-macos-desktop' }}
+          save-cache: false
       # Every step runs whatever the last one did, so one run names every red.
       - run: cargo test -p libero --lib --tests 2>&1 | tee "$RUNNER_TEMP/libero.log"
       - if: success() || failure()
@@ -136,9 +139,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libgtk-3-dev libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
       - uses: ./.github/actions/setup
         with:
-          cache-key: platforms-desktop
-          # macOS only: the cold WKWebView build is the slow one; Linux and Windows stay restore-only.
-          save-cache: ${{ runner.os == 'macOS' }}
+          cache-key: ${{ runner.os == 'Linux' && 'e2e' || runner.os == 'Windows' && 'platforms-windows-desktop' || 'platforms-macos-desktop' }}
+          save-cache: false
       - uses: ./.github/actions/dx
       - working-directory: docs
         run: dx build --platform desktop --renderer webview --debug-symbols=false --features desktop
@@ -157,7 +159,8 @@ jobs:
           system_profiler SPDisplaysDataType
       - uses: ./.github/actions/setup
         with:
-          cache-key: platforms-macos-native
+          cache-key: platforms-macos-desktop
+          save-cache: false
       # Both test binaries in one cargo run, as ci.yml's `native` job; no xvfb on macOS.
       # Each red-able step tees its log for `ci_annotate.py`: job logs need auth, annotations not.
       - run: cargo test -p e2e --features native --test native --test all --no-run 2>&1 | tee "$RUNNER_TEMP/build.log"
@@ -184,7 +187,8 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           targets: wasm32-unknown-unknown
-          cache-key: platforms-macos-web
+          cache-key: platforms-ios-e2e
+          save-cache: false
       - uses: ./.github/actions/dx
       # The same pin as ci.yml's `e2e` job: the AX snapshots follow Chrome's tree.
       - id: chrome
@@ -411,7 +415,8 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libgtk-3-dev libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev fonts-dejavu-core xvfb xdotool
       - uses: ./.github/actions/setup
         with:
-          cache-key: platforms-linux-desktop
+          cache-key: e2e
+          save-cache: false
       - run: cargo run -p e2e --features desktop -- desktop 2>&1 | tee "$RUNNER_TEMP/e2e.log"
       - if: failure() || cancelled()
         run: python3 .github/scripts/ci_annotate.py "$RUNNER_TEMP/e2e.log"
@@ -441,7 +446,7 @@ jobs:
         with:
           targets: aarch64-linux-android
           components: clippy
-          cache-key: platforms-android
+          cache-key: android
           save-cache: false
       - uses: ./.github/actions/dx
       # `dx` finds the NDK only with ANDROID_HOME exported; the image sets it, the rest is ours.
@@ -473,7 +478,8 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           targets: aarch64-apple-ios-sim
-          cache-key: platforms-ios
+          cache-key: platforms-ios-e2e
+          save-cache: false
       - uses: ./.github/actions/dx
       - working-directory: docs
         run: dx build --platform ios --target aarch64-apple-ios-sim --debug-symbols=false --features mobile
