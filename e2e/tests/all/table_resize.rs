@@ -66,9 +66,9 @@ fn a_touch_in_the_grip_lane_resizes_the_column() {
         )
         .await
         .unwrap();
-        let edge: (f64, f64) = page
+        let (edge, width): ((f64, f64), f64) = page
             .evaluate(format!(
-                "(r => [r.right, r.y + r.height / 2])(document.querySelector('{NAME}').getBoundingClientRect())"
+                "(r => [[r.right, r.y + r.height / 2], r.width])(document.querySelector('{NAME}').getBoundingClientRect())"
             ))
             .await
             .unwrap()
@@ -85,7 +85,10 @@ fn a_touch_in_the_grip_lane_resizes_the_column() {
         touch_drag(page, from, to, 8).await.unwrap();
         wait::for_js_true(
             page,
-            "parseFloat(document.querySelector('#widths').textContent.replace('Name=', '')) >= 175",
+            &format!(
+                "parseFloat(document.querySelector('#widths').textContent.replace('Name=', '')) >= {}",
+                width + 55.0
+            ),
             "a touch drag in the grip lane to widen Name by about 60px",
         )
         .await

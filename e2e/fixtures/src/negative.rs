@@ -74,13 +74,13 @@ pub fn FaintBoundary() -> Element {
     }
 }
 
-/// WCAG 1.4.3 over a positioned layer that covers part of the text: axe leaves
-/// it undecided ("partially obscured"), the sweep measures it.
+/// WCAG 1.4.3 over a positioned layer painted by a gradient: axe leaves it undecided
+/// (a background image, whatever the font), the sweep measures it.
 #[component]
 pub fn LayeredText() -> Element {
     rsx! {
         div { style: "position: relative; padding: 8px; max-width: 240px;",
-            span { style: "position: absolute; inset: 0 30% 0 0; background: #f4f4f4;" }
+            span { style: "position: absolute; inset: 0; background: linear-gradient(#f4f4f4, #f4f4f4);" }
             span { id: "layered", style: "position: relative; color: #c0c0c0;", "Faint text over a layer" }
         }
     }

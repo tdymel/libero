@@ -510,11 +510,10 @@ impl Fixture {
         .await
         .context("auto-attach without pausing new workers")?;
 
-        if scheme == Scheme::Dark {
-            emulate_media(&page, scheme, None)
-                .await
-                .context("emulate the dark scheme")?;
-        }
+        // Motion on: the Windows runner has animations off and reports `reduce` (3435).
+        emulate_media(&page, scheme, Some(false))
+            .await
+            .context("emulate the scheme and motion")?;
 
         // Before `goto`, deliberately. See the field's doc comment.
         let console = crate::passes::console::Recorder::attach(&page).await?;
