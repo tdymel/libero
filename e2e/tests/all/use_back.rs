@@ -73,3 +73,41 @@ e2e::scenario!(
     back_steps_down_twice,
     android_only("3322: no Back key off Android")
 );
+
+const DEPTH: &str = "#depth";
+
+async fn depth<D: Driver>(d: &mut D) -> Result<String> {
+    Ok(d.text(DEPTH).await?.trim().to_string())
+}
+
+async fn expect_depth<D: Driver>(d: &mut D, what: &str, want: &str) -> Result<()> {
+    eventually(d, what, async |d| Ok(depth(d).await? == want)).await
+}
+
+/// The docs shell's `use_back(can_go_back, go_back)` over route depths: each Back goes one
+/// route up, whether the taps came in a run or between Backs (3384).
+async fn back_walks_the_routes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    for _ in 0..4 {
+        d.click("#deeper").await?;
+    }
+    expect_depth(d, "depth 4", "4").await?;
+    d.press_back().await?;
+    expect_depth(d, "Back to depth 3", "3").await?;
+    d.press_back().await?;
+    expect_depth(d, "Back to depth 2", "2").await?;
+
+    d.click("#deeper").await?;
+    expect_depth(d, "depth 3 again", "3").await?;
+    for (what, want) in [("depth 2", "2"), ("depth 1", "1"), ("the start", "0")] {
+        d.press_back().await?;
+        expect_depth(d, &format!("Back to {what}"), want).await?;
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    android_back_walks_the_routes,
+    "/use-back/route/0",
+    back_walks_the_routes,
+    android_only("3384: no Back key off Android")
+);

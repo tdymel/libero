@@ -5,7 +5,7 @@ use crate::{
     components::{
         accessibility::VisuallyHidden,
         buttons::{ActionIcon, Button},
-        common::{Glyph, Input, Variant, base_props},
+        common::{Glyph, Input, States, Variant, base_props},
         data_display::Icon,
     },
     context::IconSlot,
@@ -83,6 +83,16 @@ pub fn ShareButton(props: ShareButtonProps) -> Element {
     let described = props.label.as_ref().map(|_| label_id());
     let mut attributes = props.attributes.clone();
     attributes.extend(silent.map(|silent| listener("onmounted", silent.mount())));
+    let pending = share.pending();
+    if pending {
+        attributes.push(Attribute::new("aria-busy", "true", None, false));
+    }
+    let states: Input<States> = props
+        .states
+        .clone()
+        .unwrap_or_default()
+        .with("pending", pending)
+        .into();
     let aria_label = props
         .aria_label
         .clone()
@@ -129,7 +139,7 @@ pub fn ShareButton(props: ShareButtonProps) -> Element {
                     aria_describedby: described,
                     class: props.class.clone(),
                     sx: props.sx.clone(),
-                    states: props.states.clone(),
+                    states,
                     attributes,
                     icon: rsx! {
                         Icon { variant: "standard", size: "sm", color: "inherit", {glyph} }
@@ -151,7 +161,7 @@ pub fn ShareButton(props: ShareButtonProps) -> Element {
                     aria_describedby: described,
                     class: props.class.clone(),
                     sx: props.sx.clone(),
-                    states: props.states.clone(),
+                    states,
                     attributes,
                     onclick,
                     onmouseleave: move |_| share.reset(),

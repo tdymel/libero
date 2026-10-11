@@ -10,7 +10,8 @@ use crate::{
         data_display::List,
     },
     hooks::{
-        ElementHandle, TYPEAHEAD_RESET, typeahead_match, use_element, use_theme, use_typeahead,
+        ElementHandle, TYPEAHEAD_RESET, listener, typeahead_match, use_element, use_theme,
+        use_typeahead,
     },
     platform::{
         ElementApi, OBSERVE_ATTR, PlatformError, click_selector, focus_closest_of_focused,
@@ -224,6 +225,8 @@ pub(super) struct FocusedRow(pub Signal<Option<String>>);
 struct TreeDom {
     root: ElementHandle,
     focused: Signal<Option<String>>,
+    /// Whether focus is anywhere in the tree, from its `focusin`/`focusout`.
+    inside: Signal<bool>,
 }
 
 impl TreeDom {
@@ -290,10 +293,10 @@ impl TreeDom {
         }
     }
 
-    // Whether focus sits anywhere in the tree.
+    // Whether focus sits anywhere in the tree; a WebView's row button counts too.
     fn holds_focus(self) -> bool {
         match self.root.query_selector(":focus") {
-            Err(PlatformError::Unsupported) => self.focused.peek().is_some(),
+            Err(PlatformError::Unsupported) => *self.inside.peek(),
             found => found.is_ok(),
         }
     }
@@ -459,7 +462,12 @@ fn TreeCore(props: TreeCoreProps) -> Element {
     let theme = use_theme();
     let root = use_element();
     let FocusedRow(focused) = use_context_provider(|| FocusedRow(Signal::new(None)));
-    let dom = TreeDom { root, focused };
+    let mut inside = use_signal(|| false);
+    let dom = TreeDom {
+        root,
+        focused,
+        inside,
+    };
     let mut active_id = use_signal(|| None::<String>);
     let mut expanded = use_signal(|| {
         props
@@ -680,6 +688,11 @@ fn TreeCore(props: TreeCoreProps) -> Element {
         });
     };
 
+    // A move inside fires `focusout` then `focusin`, so the last write is `true`.
+    let focus_attributes = vec![
+        listener("onfocusin", move |_: FocusEvent| inside.set(true)),
+        listener("onfocusout", move |_: FocusEvent| inside.set(false)),
+    ];
     let root_sx = props.sx.into_option().unwrap_or_default();
     let open_keys: Vec<u64> = props
         .data
@@ -698,7 +711,12 @@ fn TreeCore(props: TreeCoreProps) -> Element {
             "aria-label": props.aria_label,
             onkeydown,
             onclick,
-            attributes: [props.attributes, root.attributes()].concat(),
+            attributes: [
+                props.attributes,
+                root.attributes(),
+                focus_attributes,
+            ]
+            .concat(),
             for (index , node) in props.data.iter().enumerate() {
                 TreeRow {
                     key: "{node.id}",

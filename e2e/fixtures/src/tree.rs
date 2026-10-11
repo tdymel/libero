@@ -15,6 +15,7 @@ pub const ROUTES: Routes = &[
     ("/tree/links", || rsx! { LinkTreePage {} }),
     ("/tree/links/arrived", || rsx! { "arrived" }),
     ("/tree/delete", || rsx! { DeleteTreePage {} }),
+    ("/tree/button-delete", || rsx! { ButtonDeleteTreePage {} }),
     ("/tree/default", || rsx! { DefaultTreePage {} }),
     // Todo 2465: one visible row, so its keys are the page's.
     (
@@ -239,6 +240,34 @@ fn DeleteTreePage() -> Element {
                     }
                 },
             }
+        }
+    }
+}
+
+/// Todo 3382: each row's button removes its own row, so focus sits in a vanishing button.
+#[component]
+fn ButtonDeleteTreePage() -> Element {
+    let mut data = use_signal(|| {
+        ["a.rs", "b.rs", "c.rs"]
+            .map(|id| TreeNode::new(id, id))
+            .to_vec()
+    });
+
+    rsx! {
+        Tree {
+            aria_label: "Files",
+            data: data(),
+            render_node: move |args: TreeNodeRenderArgs<&'static str>| {
+                let id = args.id.to_string();
+                rsx! {
+                    "{args.data}"
+                    button {
+                        tabindex: args.tabindex,
+                        onclick: move |_| data.write().retain(|node| node.id != id),
+                        "Delete"
+                    }
+                }
+            },
         }
     }
 }

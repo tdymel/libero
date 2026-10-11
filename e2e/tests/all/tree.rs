@@ -109,6 +109,22 @@ e2e::scenario!(
     enter_clicks_the_link
 );
 
+/// Todo 3382: a row whose own button had the focus and vanished leaves it on a row, not `<body>`.
+async fn button_row_vanishes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("[data-tree-id='b.rs'] button").await?;
+    eventually(d, "b.rs to leave the tree", async |d| {
+        Ok(!d.exists("[data-tree-id='b.rs']").await?)
+    })
+    .await?;
+    eventually_focused(d, ROW, "deleting b.rs by its button").await
+}
+
+e2e::scenario!(
+    a_vanished_rows_button_hands_focus_to_the_next_row,
+    "/tree/button-delete",
+    button_row_vanishes
+);
+
 const STAR: keyboard::Key = keyboard::Key {
     key: "*",
     code: "NumpadMultiply",

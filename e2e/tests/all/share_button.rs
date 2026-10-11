@@ -36,6 +36,7 @@ fn stub_share(answer: &str, files: bool) -> String {
                     title: data.title, text: data.text, url: data.url,
                     files: (data.files ?? []).map((file) => `${{file.name}} ${{file.type}} ${{file.size}}`),
                 }}));
+                if ('{answer}' === 'pending') return new Promise((done) => {{ window.__settle = done; }});
                 return '{answer}' === 'ok' ? Promise.resolve()
                     : Promise.reject(new DOMException('stubbed', '{answer}'));
             }});
@@ -105,6 +106,51 @@ fn a_press_hands_the_data_to_the_share_sheet() {
         assert_eq!(name, "Share");
 
         fixture.console.assert_clean("sharing").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 3383: while the sheet is open the button is `aria-busy` and `data-state` says
+/// `pending`; a second press shares nothing, and both go when the share settles.
+#[test]
+fn the_button_is_busy_while_the_sheet_is_open() {
+    block_on(async {
+        let fixture = Fixture::open("/share-button", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let busy = format!(
+            "(() => {{ const b = document.querySelector('{BARE}'); \
+             return `${{b.getAttribute('aria-busy')}} ${{b.dataset.state ?? ''}}`; }})()"
+        );
+        let busy_is = |text: &str| format!("({busy}).includes('{text}')");
+
+        page.evaluate(stub_share("pending", true)).await.unwrap();
+        keyboard::tab_to(page, BARE, 5).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(page, &busy_is("true"), "aria-busy while the sheet is open")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &busy_is("pending"), "the pending state")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "window.__shared.length === 1",
+            "the second press to share nothing",
+        )
+        .await
+        .unwrap();
+
+        page.evaluate("window.__settle()").await.unwrap();
+        wait::for_js_true(page, &outcome_is("Shared"), "the share to settle")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &busy_is("null "), "the busy marks to go")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("a pending share").unwrap();
         fixture.close().await.unwrap();
     });
 }
