@@ -195,8 +195,10 @@ async fn pointer_crosses<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 /// hover, so its compatibility `mouseenter` arms no open (2448).
 async fn long_press_opens<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     ensure!(!d.exists(CARD).await?, "open at rest");
-    d.long_press(TRIGGER, 800).await?;
+    // Lifted only once the card shows: a timed hold races the page's long-press timer under load.
+    d.touch_down(TRIGGER).await?;
     shown(d, CARD, true, "a long press").await?;
+    d.touch_up(TRIGGER).await?;
     shown(d, CARD, false, "the release").await?;
     // Held only now: the long press above needs the real clock (1662).
     if !d.hold_timers(&[LONG_PRESS_MS, OPEN_MS]).await? {
@@ -236,8 +238,9 @@ async fn long_press_keeps_the_link_menu_shut<D: Driver>(d: &mut D, _route: &str)
          (e) => window.__menus.push(e.defaultPrevented)); return true; })()",
     )
     .await?;
-    d.long_press("#link", 1000).await?;
+    d.touch_down("#link").await?;
     shown(d, "[role=dialog]", true, "a long press on the link").await?;
+    d.touch_up("#link").await?;
     let menus: Vec<bool> = serde_json::from_value(d.evaluate("window.__menus").await?)?;
     ensure!(
         menus.iter().all(|&prevented| prevented),

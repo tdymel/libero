@@ -41,8 +41,10 @@ async fn past_the_delay<D: Driver>(d: &mut D, held: bool) -> Result<()> {
 }
 
 async fn a_held_touch_fires_once<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    d.long_press(TARGET, 900).await?;
+    // Lifted once the press fired: a timed hold races the page's timer under load.
+    d.touch_down(TARGET).await?;
     text_is(d, "#holds", "1").await?;
+    d.touch_up(TARGET).await?;
     // Held only now: the first press timer has to run on the real clock.
     let held = d.hold_timers(&[PRESS_MS]).await?;
     past_the_delay(d, held).await?;
