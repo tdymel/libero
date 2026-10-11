@@ -109,7 +109,8 @@ fn a_press_hands_the_data_to_the_share_sheet() {
     });
 }
 
-/// A closed sheet (`AbortError`) says nothing; a refused one (`NotAllowedError`) says "Share failed".
+/// A closed sheet (`AbortError`) says nothing; a refused one (`NotAllowedError`) says
+/// "Share failed" and swaps the glyph for the alert one.
 #[test]
 fn a_cancel_is_silent_and_a_refusal_is_announced() {
     block_on(async {
@@ -117,6 +118,14 @@ fn a_cancel_is_silent_and_a_refusal_is_announced() {
             .await
             .unwrap();
         let page = &fixture.page;
+
+        let glyph = format!("document.querySelector('{BARE} svg').innerHTML");
+        let rest: String = page
+            .evaluate(glyph.clone())
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
 
         page.evaluate(stub_share("AbortError", true)).await.unwrap();
         pointer::click(page, BARE).await.unwrap();
@@ -130,6 +139,13 @@ fn a_cancel_is_silent_and_a_refusal_is_announced() {
                 .into_value::<bool>()
                 .unwrap()
         );
+        let cancelled: String = page
+            .evaluate(glyph.clone())
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(cancelled, rest, "a cancel changed the glyph");
 
         page.evaluate(stub_share("NotAllowedError", true))
             .await
@@ -149,6 +165,8 @@ fn a_cancel_is_silent_and_a_refusal_is_announced() {
         )
         .await
         .unwrap();
+        let failed: String = page.evaluate(glyph).await.unwrap().into_value().unwrap();
+        assert_ne!(failed, rest, "a refusal left the share glyph as it was");
 
         fixture.close().await.unwrap();
     });

@@ -106,6 +106,8 @@ pub fn ShareButton(props: ShareButtonProps) -> Element {
     };
     let glyph = if share.copied() {
         rsx! { Glyph { slot: IconSlot::Check, icon: lucide::check::outlined } }
+    } else if share.failed() {
+        rsx! { Glyph { slot: IconSlot::CopyFailed, icon: lucide::circle_alert::outlined } }
     } else {
         rsx! { Glyph { slot: IconSlot::Share, icon: lucide::share_2::outlined } }
     };

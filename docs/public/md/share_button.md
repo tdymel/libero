@@ -110,8 +110,8 @@ glyph is the `IconSlot::Share` slot of an [IconProvider](icon_provider.md).
 - The button keeps its focus through a share. The sheet is the system's own
   dialog and announces itself, so the status stays silent.
 - Where no share sheet exists, an always-mounted `role="status"` region says
-  "Copied" once the link is on the clipboard, or that sharing failed. A
-  cancelled sheet says nothing.
+  "Copied" once the link is on the clipboard, or that sharing failed, and the
+  icon turns into a check or an alert. A cancelled sheet says nothing.
 - The icon and the status reset when the pointer or the focus leaves.
 - Unset, the icon-only button's `aria_label` is the localization's `share`.
   The words are `ShareLabels`.

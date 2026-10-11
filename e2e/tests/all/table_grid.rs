@@ -523,6 +523,14 @@ async fn formats<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         bail!("the yes/no editor is not a checkbox");
     }
     eventually_box(d, (false, true), "an empty value is mixed").await?;
+    let size = d.rect(EDITOR).await?;
+    if size.width < 24.0 || size.height < 24.0 {
+        bail!(
+            "the checkbox editor is {}x{} px, under 24x24",
+            size.width,
+            size.height
+        );
+    }
     d.press(keyboard::SPACE).await?;
     eventually_box(d, (true, false), "Space checks it").await?;
     d.press(keyboard::SPACE).await?;

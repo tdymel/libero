@@ -271,6 +271,8 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         sx().flex("none")
             .width("1.25em")
             .height("1.25em")
+            .min_width("24px")
+            .min_height("24px")
             .margin("0")
             .padding("0")
             .border("revert")

@@ -77,7 +77,7 @@ pub fn ShareButtonPage() -> Element {
             accessibility: a11y()
                 .handles([
                     "The button keeps its focus through a share. The sheet is the system's own dialog and announces itself, so the status stays silent.",
-                    "Where no share sheet exists, an always-mounted `role=\"status\"` region says \"Copied\" once the link is on the clipboard, or that sharing failed. A cancelled sheet says nothing.",
+                    "Where no share sheet exists, an always-mounted `role=\"status\"` region says \"Copied\" once the link is on the clipboard, or that sharing failed, and the icon turns into a check or an alert. A cancelled sheet says nothing.",
                     "The icon and the status reset when the pointer or the focus leaves.",
                     "Unset, the icon-only button's `aria_label` is the localization's `share`. The words are `ShareLabels`.",
                     "`label` becomes the button's description through a hidden element, so the name stays short: \"Share, Link to this page\".",

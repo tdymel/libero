@@ -333,7 +333,8 @@ pub fn FloatingWindowPage() -> Element {
                     // Set by the preview's buttons, never by the panel.
                     Control::toggle("example", ["inspector", "notes", "layers", "all"])
                         .hidden_when(|_| true),
-                    Control::switch("resizable"),
+                    // On, so the resize handle and the menu's Resize show without another switch.
+                    Control::switch("resizable").default("true"),
                     Control::switch("pinned"),
                     Control::switch("onmove"),
                 ],
