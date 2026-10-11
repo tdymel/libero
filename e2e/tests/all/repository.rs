@@ -46,6 +46,39 @@ fn a_count_on_a_fill_takes_the_label_colour() {
     });
 }
 
+/// The new-tab corner cue sits in the pill's end padding, clear of the count's text.
+#[test]
+fn the_new_tab_cue_clears_the_count() {
+    block_on(async {
+        let fixture = Fixture::open("/repository/stubbed", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#github [data-slot='count']")
+            .await
+            .unwrap();
+        let (count_end, cue_start, cue_end, pill_end): (f64, f64, f64, f64) = page
+            .evaluate(
+                "(() => { const a = document.querySelector('#github'); \
+                 const c = a.querySelector('[data-slot=\"count\"]').getBoundingClientRect(); \
+                 const n = a.querySelector('[data-slot=\"new-tab\"]').getBoundingClientRect(); \
+                 const rtl = getComputedStyle(a).direction === 'rtl'; \
+                 const p = a.getBoundingClientRect(); \
+                 return rtl ? [-c.left, -n.right, -n.left, -p.left] : [c.right, n.left, n.right, p.right]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            cue_start >= count_end,
+            "the cue starts at {cue_start}, the count ends at {count_end}"
+        );
+        assert!(cue_end <= pill_end + 0.5, "the cue leaves the pill");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Replaces `fetch` with one answering `body` (`null`: a network error) and
 /// recording each URL and counting settled answers in `__settled`, then mounts
 /// both buttons and waits for both to have asked.

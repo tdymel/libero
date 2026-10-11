@@ -564,6 +564,50 @@ fn a_disabled_row_shows_not_allowed_and_takes_no_focus() {
     });
 }
 
+/// Todo 3192: a row under a disabled branch, itself disabled or not, fades once and lifts to
+/// 0.75 with the focus.
+#[test]
+fn a_focused_row_under_a_disabled_branch_fades_to_three_quarters() {
+    fn opacity(id: &str) -> String {
+        format!(
+            "(() => {{ let o = 1; \
+             for (let e = document.querySelector('[data-tree-id=\"{id}\"]'); e; e = e.parentElement) \
+             o *= Number(getComputedStyle(e).opacity); return o; }})()"
+        )
+    }
+    block_on(async {
+        let fixture = Fixture::open("/tree/disabled", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        for id in ["inner", "inner-off"] {
+            let rest: f64 = page
+                .evaluate(opacity(id))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert_eq!(rest, 0.5, "{id}'s resting fade");
+            page.evaluate(format!(
+                "document.querySelector('[data-tree-id=\"{id}\"]').focus()"
+            ))
+            .await
+            .unwrap();
+            wait::for_js_true(
+                page,
+                &format!("{} === 0.75", opacity(id)),
+                "the focused row to fade to 0.75",
+            )
+            .await
+            .unwrap();
+            page.evaluate("document.activeElement.blur()")
+                .await
+                .unwrap();
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 2465: one visible leaf row has nowhere to move, so the arrows and Home/End stay the page's.
 #[test]
 fn a_lone_row_leaves_the_keys_to_the_page() {

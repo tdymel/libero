@@ -568,15 +568,10 @@ mod tests {
                 }
             }
         }
-        // Recorded: Nord's official pastel accents stay (todo 2034); warning clears by its edge (todo 2033).
-        assert_eq!(
-            short,
-            [
-                "Nord light primary: 2.39:1",
-                "Nord light info: 2.48:1",
-                "Nord light success: 2.44:1",
-            ],
-            "the shipped fills' contrast moved"
+        // Warning clears by its edge (todo 2033).
+        assert!(
+            short.is_empty(),
+            "the shipped fills' contrast moved: {short:?}"
         );
     }
 

@@ -43,6 +43,11 @@ const ACTION_ICON_ON_STATE_VAR: CssVar = CssVar::new("--lsx-action-icon-on-state
 /// Half the shortfall below 24px, out on each side of the box; `0` from 24px up.
 const HIT_AREA_INSET: &str = "min(0px, calc((100% - 24px) / 2))";
 
+/// The new-tab cue's side, from the box's height, not its width, which a `Repository` pill grows.
+pub(crate) fn new_tab_cue_side() -> String {
+    format!("max(10px, calc({} * 0.34))", ACTION_ICON_SIZE.overridable())
+}
+
 const ACTION_ICON_VARS: VariantVars<'static> = VariantVars {
     color: &ACTION_ICON_COLOR_VAR,
     fill: &ACTION_ICON_FILL_VAR,
@@ -83,15 +88,8 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
                 .inset_inline_end("0")
                 .bottom("0")
                 .display("inline-flex")
-                // From the box's height, not its width, which a `Repository` pill grows.
-                .width(format!(
-                    "max(10px, calc({} * 0.34))",
-                    ACTION_ICON_SIZE.overridable()
-                ))
-                .height(format!(
-                    "max(10px, calc({} * 0.34))",
-                    ACTION_ICON_SIZE.overridable()
-                ))
+                .width(new_tab_cue_side())
+                .height(new_tab_cue_side())
                 .pointer_events("none"),
         )
         // WCAG 2.5.8: an invisible 24x24 press target round a smaller icon (todos 505, 566).

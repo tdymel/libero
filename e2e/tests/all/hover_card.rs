@@ -228,6 +228,30 @@ e2e::scenario!(
     long_press_opens,
     desktop: skip("1126: no touch input under Xvfb")
 );
+/// Todo 2750: the long press that opens the card leaves the browser's link menu shut, which
+/// would cover the card.
+async fn long_press_keeps_the_link_menu_shut<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.evaluate(
+        "(() => { window.__menus = []; window.addEventListener('contextmenu', \
+         (e) => window.__menus.push(e.defaultPrevented)); return true; })()",
+    )
+    .await?;
+    d.long_press("#link", 1000).await?;
+    shown(d, "[role=dialog]", true, "a long press on the link").await?;
+    let menus: Vec<bool> = serde_json::from_value(d.evaluate("window.__menus").await?)?;
+    ensure!(
+        menus.iter().all(|&prevented| prevented),
+        "a link menu was left to open: {menus:?}"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_long_press_on_a_link_trigger_opens_no_link_menu,
+    "/hover-card-link",
+    long_press_keeps_the_link_menu_shut,
+    desktop: skip("1126: no touch input under Xvfb")
+);
 e2e::scenario!(
     tab_crosses_into_the_portaled_card_and_back_on_every_backend,
     "/hover-card",

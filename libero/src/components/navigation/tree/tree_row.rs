@@ -9,8 +9,8 @@ use crate::{
     components::{
         common::states,
         common::{
-            HtmlTag, Part, ROW_HOVER_TINT, focus_ring_sx, focused_disabled_sx, forced_on_sx,
-            on_start_bar_sx, on_tint_color,
+            HtmlTag, Part, ROW_HOVER_TINT, focus_ring_sx, focused_disabled_opacity_sx,
+            forced_on_sx, on_start_bar_sx, on_tint_color,
         },
         data_display::List,
         layout::use_box,
@@ -62,9 +62,10 @@ static TREE_ROW_SX: StaticSx = StaticSx::new(|| {
         )
         .when(
             "disabled",
+            // Focus on this row or any row under it lifts the fade the ring would share.
             sx().opacity("0.5")
                 .cursor("not-allowed")
-                .and(focused_disabled_sx())
+                .selector("&:focus-within", focused_disabled_opacity_sx())
                 .selector("& *", sx().pointer_events("none")),
         )
         // The size state is only set with guides, as only the guide's padding reads it.
@@ -253,9 +254,9 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
         }
     };
 
-    // The node's own flag: the ancestor's opacity already covers this row.
+    // The node's own flag, unless an ancestor's opacity already covers this row.
     let row_states = states()
-        .with("disabled", node.disabled)
+        .with("disabled", node.disabled && !props.ancestor_disabled)
         .with("guides", props.guides)
         .with(props.size.state_name(), props.guides)
         .into();

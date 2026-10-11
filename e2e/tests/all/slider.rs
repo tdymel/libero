@@ -1073,6 +1073,33 @@ fn a_disabled_slider_shows_not_allowed_and_ignores_the_pointer() {
     });
 }
 
+/// Todo 3191: focus on a disabled slider's thumb lifts the fade its ring would share.
+#[test]
+fn focus_on_a_disabled_thumb_lifts_the_fade() {
+    const OPACITY: &str = "(() => { let o = 1; \
+         for (let e = document.querySelector('#locked [role=slider]'); e; e = e.parentElement) \
+         o *= Number(getComputedStyle(e).opacity); return o; })()";
+    block_on(async {
+        let fixture = Fixture::open("/slider/states", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let rest: f64 = page.evaluate(OPACITY).await.unwrap().into_value().unwrap();
+        assert_eq!(rest, 0.5, "the disabled slider's resting fade");
+        page.evaluate("document.querySelector('#locked [role=slider]').focus()")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{OPACITY} === 0.75"),
+            "the focused disabled thumb to fade to 0.75",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Where each thumb sits along its track (0 left edge, 1 right edge), and the
 /// track's rect `[left, top, width, height]`.
 const ALONG: &str = "(() => { const thumbs = [...document.querySelectorAll('[role=slider]')]; \

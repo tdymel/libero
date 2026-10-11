@@ -21,6 +21,22 @@ pub const ROUTES: Routes = &[
         "/tree/lone",
         || rsx! { Tree { aria_label: "Files", data: vec![TreeNode::new("README.md", "README.md")] } },
     ),
+    // Todo 3192: rows under a disabled branch, one disabled itself.
+    (
+        "/tree/disabled",
+        || rsx! {
+            Tree {
+                aria_label: "Files",
+                data: vec![
+                    TreeNode::new("locked", "locked").disabled(true).children(vec![
+                        TreeNode::new("inner", "inner"),
+                        TreeNode::new("inner-off", "inner-off").disabled(true),
+                    ]),
+                ],
+                default_expanded: HashSet::from(["locked".to_string()]),
+            }
+        },
+    ),
     ("/tree/controlled", || rsx! { ControlledTreePage {} }),
     ("/tree/chevron", || rsx! { ChevronTreePage {} }),
     ("/tree/activate", || rsx! { ActivateTreePage {} }),

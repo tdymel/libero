@@ -343,7 +343,8 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
             )
     }));
 
-    let (enter, leave_touch, press_touch) = (touch.clone(), touch.clone(), touch);
+    let (enter, leave_touch, press_touch, menu_touch) =
+        (touch.clone(), touch.clone(), touch.clone(), touch);
     // Released before the long press: nothing. After: it lingers, then closes.
     let release = move |event: PointerEvent| {
         if event.data().pointer_type() == "touch" {
@@ -384,6 +385,12 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
                             if is_touch && !disabled {
                                 hovered.hover(true, LONG_PRESS);
                             }
+                        }
+                    },
+                    // The long press opens the card: a link's menu would cover it (2750).
+                    oncontextmenu: move |event: MouseEvent| {
+                        if menu_touch.get() && !disabled {
+                            event.prevent_default();
                         }
                     },
                     onpointerup: release,

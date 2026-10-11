@@ -7,7 +7,7 @@ use crate::{
         accessibility::visually_hidden_sx,
         buttons::ActionIcon,
         common::{
-            Glyph, HtmlTag, Input, Part, States, Variables, base_props, disabled_look_sx,
+            Glyph, HtmlTag, Input, Part, States, Variables, base_props, disabled_look_within_sx,
             focus_ring_sx, has_shortcut_modifier, on_failed_after_mount, parts_enum, use_svg_probe,
             variables,
         },
@@ -319,7 +319,7 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
         )
         .when(
             "disabled",
-            disabled_look_sx("not-allowed")
+            disabled_look_within_sx("not-allowed")
                 .selector(
                     "& > [data-slot='mask'], & > [data-slot='frame'], & > [data-slot='frame'] > [data-slot='handle']",
                     sx().cursor("not-allowed"),

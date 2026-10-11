@@ -171,7 +171,7 @@ fn every_shipped_set_reads_on_its_own_page() {
             "Kanagawa light: warning",
             "Kanagawa Dragon light: warning",
             "kettek16 light: warning",
-            "Nord light: primary secondary warning info success",
+            "Nord light: secondary warning",
             "One light: warning",
             "Osmium light: secondary warning",
             "Rosé Pine light: warning",

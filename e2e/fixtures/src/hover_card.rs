@@ -21,9 +21,22 @@ pub const ROUTES: Routes = &[
     ("/hover-card-scroll", || rsx! { ScrollingTextPage {} }),
     ("/hover-card-hidden", || rsx! { HiddenLastControlPage {} }),
     ("/hover-card-tabindex", || rsx! { PositiveTabindexPage {} }),
+    ("/hover-card-link", || rsx! { LinkTriggerPage {} }),
     ("/hover-card-url", || rsx! { LongWordPage { link: false } }),
     ("/hover-card-url-link", || rsx! { LongWordPage { link: true } }),
 ];
+
+/// A link as the trigger, whose long press opens the browser's link menu (todo 2750).
+#[component]
+fn LinkTriggerPage() -> Element {
+    rsx! {
+        HoverCard {
+            aria_label: "Ada Lovelace",
+            content: rsx! { Text { "Wrote the first algorithm meant for a machine." } },
+            a { id: "link", href: "#ada", "Ada Lovelace" }
+        }
+    }
+}
 
 const LONG_URL: &str = "https://example.com/a/very/long/path/with/no/space/to/break/it";
 

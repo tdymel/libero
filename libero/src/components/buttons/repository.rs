@@ -1,5 +1,6 @@
 use dioxus::prelude::*;
 
+use super::action_icon::new_tab_cue_side;
 use crate::{
     components::{
         buttons::ActionIcon,
@@ -107,6 +108,7 @@ static GLYPH_SX: StaticSx = StaticSx::new(|| {
 });
 
 /// With a count, the square grows into a pill. On a wrapper, leaving the caller's `sx` alone.
+/// The end padding is the new-tab cue's side, so the cue clears the count.
 static STARS_SX: StaticSx = StaticSx::new(|| {
     sx().display("contents").when(
         "stars",
@@ -114,6 +116,7 @@ static STARS_SX: StaticSx = StaticSx::new(|| {
             "& > a",
             sx().width("auto")
                 .padding_inline("sm")
+                .padding_inline_end(format!("calc({} + 2px)", new_tab_cue_side()))
                 .gap("xs")
                 .font_size("sm")
                 .text_decoration("none"),
