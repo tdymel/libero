@@ -138,11 +138,16 @@ pub(crate) const SCROLL_MARGIN_BOTTOM_VAR: &str = "--lsx-scroll-margin-bottom";
 /// A scroller's `scroll-padding` per side (top, right, bottom, left) for Blitz,
 /// whose stylo lacks the property: set them beside it.
 pub(crate) const SCROLL_PADDING_VARS: [&str; 4] = [
-    "--lsx-scroll-padding-top",
-    "--lsx-scroll-padding-right",
-    "--lsx-scroll-padding-bottom",
-    "--lsx-scroll-padding-left",
+    SCROLL_PADDING_TOP_VAR,
+    SCROLL_PADDING_RIGHT_VAR,
+    SCROLL_PADDING_BOTTOM_VAR,
+    SCROLL_PADDING_LEFT_VAR,
 ];
+
+pub(crate) const SCROLL_PADDING_TOP_VAR: &str = "--lsx-scroll-padding-top";
+pub(crate) const SCROLL_PADDING_RIGHT_VAR: &str = "--lsx-scroll-padding-right";
+pub(crate) const SCROLL_PADDING_BOTTOM_VAR: &str = "--lsx-scroll-padding-bottom";
+pub(crate) const SCROLL_PADDING_LEFT_VAR: &str = "--lsx-scroll-padding-left";
 
 /// [`SCROLL_PADDING_VARS`] registered with `inherits: false`, as `scroll-padding` does not
 /// inherit; Blitz's stylo honours `@property`. `None` off Blitz, where nothing reads them.

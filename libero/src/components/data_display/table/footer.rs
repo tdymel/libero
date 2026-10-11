@@ -6,6 +6,7 @@ use super::{
     cell_value::SortKey,
     column::Column,
     core::{HeaderSpec, align_attr},
+    memo::{Memo, same_rows},
     pinning::CellPin,
 };
 use crate::{
@@ -96,17 +97,11 @@ type FooterInput<T> = (Rc<Vec<T>>, Vec<Column<T>>, Option<Vec<bool>>);
 /// The aggregates across renders: recomputed only when the rows, the columns or
 /// the rows passing the filters change, not on a page, selection or sort.
 /// The rows add up in data order, so a sort never moves a float sum's last digits.
-pub(super) struct FooterRows<T> {
-    input: Option<FooterInput<T>>,
-    values: Vec<Option<f64>>,
-}
+pub(super) struct FooterRows<T>(Memo<FooterInput<T>, Vec<Option<f64>>>);
 
 impl<T> Default for FooterRows<T> {
     fn default() -> Self {
-        Self {
-            input: None,
-            values: Vec::new(),
-        }
+        Self(Memo::default())
     }
 }
 
@@ -121,25 +116,24 @@ impl<T: PartialEq> FooterRows<T> {
         labels: &TableLabels,
     ) -> Option<FooterCells> {
         if columns.iter().all(|column| column.aggregate.is_none()) {
-            *self = Self::default();
+            self.0.clear();
             return None;
         }
-        let fresh = self.input.as_ref().is_some_and(|(known, cols, rows)| {
-            rows.as_deref() == kept
-                && cols.as_slice() == columns
-                && (Rc::ptr_eq(known, data) || known == data)
-        });
-        if !fresh {
+        let fresh = |(known, cols, rows): &FooterInput<T>| {
+            rows.as_deref() == kept && cols.as_slice() == columns && same_rows(known, data)
+        };
+        let compute = || {
             let indices: Vec<usize> = (0..data.len())
                 .filter(|&index| kept.is_none_or(|kept| kept[index]))
                 .collect();
-            self.values = aggregate_values(columns, data, &indices);
-            self.input = Some((data.clone(), columns.to_vec(), kept.map(<[bool]>::to_vec)));
-        }
+            let input = (data.clone(), columns.to_vec(), kept.map(<[bool]>::to_vec));
+            (input, aggregate_values(columns, data, &indices))
+        };
+        let values = self.0.get(fresh, compute);
         Some(
             columns
                 .iter()
-                .zip(&self.values)
+                .zip(values)
                 .map(|(column, value)| aggregate_cell(column, *value, labels))
                 .collect(),
         )

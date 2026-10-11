@@ -102,6 +102,33 @@ e2e::scenario!(
     android: skip("958: element identity on the WebView")
 );
 
+/// The pinned toggles lead the checkboxes, which stay inset past them (3217).
+async fn pins_the_toggles_before_the_checkboxes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let inset = async |d: &mut D, cell: &str| -> Result<f64> {
+        let value = d.style(cell, "inset-inline-start").await?;
+        value
+            .trim_end_matches("px")
+            .parse()
+            .map_err(|_| anyhow::anyhow!("{cell} has inset-inline-start {value:?}"))
+    };
+    let toggle = inset(d, "tbody td[data-detail-toggle]").await?;
+    let select = inset(d, "tbody td[data-select]").await?;
+    if toggle != 0.0 || select < 24.0 {
+        bail!("the checkboxes do not sit past the toggles: {select}px against {toggle}px");
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    pinned_toggles_push_the_checkboxes_past_them,
+    "/table-detail-pinned",
+    pins_the_toggles_before_the_checkboxes,
+    native: skip("3217: one web run guards the cascade"),
+    android: skip("3217: one web run guards the cascade"),
+    desktop: skip("3217: one web run guards the cascade"),
+    ios: skip("3217: one web run guards the cascade")
+);
+
 /// 1391: the detail slides open to its full height, Tab reaches into it, and
 /// it stays through its slide shut before it goes.
 async fn slides_open_and_shut<D: Driver>(d: &mut D, _route: &str) -> Result<()> {

@@ -2,7 +2,7 @@
 //! details and the last row click printed below.
 
 use dioxus::prelude::*;
-use libero::components::{Table, column};
+use libero::components::{PinnedColumns, Table, column};
 
 use crate::Routes;
 
@@ -11,6 +11,10 @@ pub const ROUTES: Routes = &[
     (
         "/table-detail-animated",
         || rsx! { DetailTablePage { animate: true } },
+    ),
+    (
+        "/table-detail-pinned",
+        || rsx! { DetailTablePage { pinned: true } },
     ),
 ];
 
@@ -41,15 +45,22 @@ fn fruit() -> Vec<Fruit> {
     ]
 }
 
-/// Banana has no detail, so no toggle. `animate` slides the details (1391).
+/// Banana has no detail, so no toggle. `animate` slides the details (1391); `pinned`
+/// holds the Name column at the start, beside the toggles and checkboxes.
 #[component]
-fn DetailTablePage(#[props(default)] animate: bool) -> Element {
+fn DetailTablePage(#[props(default)] animate: bool, #[props(default)] pinned: bool) -> Element {
     let mut expanded = use_signal(Vec::<String>::new);
     let mut clicked = use_signal(String::new);
     rsx! {
         Table {
             aria_label: "Fruit",
             striped: true,
+            scroll: pinned,
+            selectable: pinned,
+            default_pinned_columns: match pinned {
+                true => PinnedColumns::default().start(["Name"]),
+                false => PinnedColumns::default(),
+            },
             data: fruit(),
             columns: vec![
                 column("Name").value(|fruit: &Fruit| fruit.name.to_string()).sortable().row_header(),

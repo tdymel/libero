@@ -5,6 +5,7 @@ use dioxus::prelude::*;
 use super::{
     column::Column,
     column_filter::{CellTest, FilterLogic, passes_all},
+    memo::{Memo, same_rows},
     use_table::StateSlice,
 };
 use crate::{
@@ -94,9 +95,8 @@ pub(super) fn quick_filter(texts: &[String], words: &[String]) -> Vec<bool> {
 /// rows, columns or filters reruns them, so a sort or page change does not.
 /// The lowercased cell texts outlive a query change, so typing skips them.
 pub(super) struct FilteredRows<T> {
-    input: Option<FilterInput<T>>,
-    kept: Rc<Vec<bool>>,
-    texts: Option<(TextInput<T>, Vec<String>)>,
+    kept: Memo<FilterInput<T>, Rc<Vec<bool>>>,
+    texts: Memo<TextInput<T>, Vec<String>>,
 }
 
 type TextInput<T> = (Rc<Vec<T>>, Vec<Column<T>>, Vec<usize>);
@@ -113,15 +113,10 @@ type FilterInput<T> = (
 impl<T> Default for FilteredRows<T> {
     fn default() -> Self {
         Self {
-            input: None,
-            kept: Rc::default(),
-            texts: None,
+            kept: Memo::default(),
+            texts: Memo::default(),
         }
     }
-}
-
-fn same_rows<T: PartialEq>(cached: &Rc<Vec<T>>, data: &Rc<Vec<T>>) -> bool {
-    Rc::ptr_eq(cached, data) || cached == data
 }
 
 impl<T: PartialEq> FilteredRows<T> {
@@ -136,54 +131,56 @@ impl<T: PartialEq> FilteredRows<T> {
         logic: FilterLogic,
     ) -> Option<Rc<Vec<bool>>> {
         if words.is_empty() && tests.is_empty() {
-            self.input = None;
-            self.kept = Rc::default();
+            self.kept.clear();
             return None;
         }
-        let fresh =
-            self.input
-                .as_ref()
-                .is_some_and(|(rows, cols, cells, query, checks, joined)| {
-                    query == words
-                        && checks == tests
-                        && *joined == logic
-                        && cells == searched
-                        && cols.as_slice() == columns
-                        && same_rows(rows, data)
-                });
-        if !fresh {
+        let fresh = |(rows, cols, cells, query, checks, joined): &FilterInput<T>| {
+            query == words
+                && checks == tests
+                && *joined == logic
+                && cells == searched
+                && cols.as_slice() == columns
+                && same_rows(rows, data)
+        };
+        let texts = &mut self.texts;
+        let compute = || {
             let mut kept = match words.is_empty() {
                 true => vec![true; data.len()],
-                false => quick_filter(self.texts(data, columns, searched), words),
+                false => quick_filter(cell_texts(texts, data, columns, searched), words),
             };
             if !tests.is_empty() {
                 for (keep, row) in kept.iter_mut().zip(data.iter()) {
                     *keep = *keep && passes_all(row, columns, tests, logic);
                 }
             }
-            self.kept = Rc::new(kept);
-            self.input = Some((
+            let input = (
                 data.clone(),
                 columns.to_vec(),
                 searched.to_vec(),
                 words.to_vec(),
                 tests.to_vec(),
                 logic,
-            ));
-        }
-        Some(self.kept.clone())
+            );
+            (input, Rc::new(kept))
+        };
+        Some(self.kept.get(fresh, compute).clone())
     }
+}
 
-    fn texts(&mut self, data: &Rc<Vec<T>>, columns: &[Column<T>], searched: &[usize]) -> &[String] {
-        let fresh = self.texts.as_ref().is_some_and(|((rows, cols, cells), _)| {
-            cells == searched && cols.as_slice() == columns && same_rows(rows, data)
-        });
-        if !fresh {
-            let texts = searched_texts(data, columns, searched);
-            self.texts = Some(((data.clone(), columns.to_vec(), searched.to_vec()), texts));
-        }
-        self.texts.as_ref().map_or(&[], |(_, texts)| texts)
-    }
+fn cell_texts<'a, T: PartialEq>(
+    memo: &'a mut Memo<TextInput<T>, Vec<String>>,
+    data: &Rc<Vec<T>>,
+    columns: &[Column<T>],
+    searched: &[usize],
+) -> &'a [String] {
+    let fresh = |(rows, cols, cells): &TextInput<T>| {
+        cells == searched && cols.as_slice() == columns && same_rows(rows, data)
+    };
+    let compute = || {
+        let input = (data.clone(), columns.to_vec(), searched.to_vec());
+        (input, searched_texts(data, columns, searched))
+    };
+    memo.get(fresh, compute)
 }
 
 #[cfg(test)]

@@ -6,8 +6,9 @@ use pictogram_icons_lucide as lucide;
 use super::{
     column::Column,
     footer::aggregate_values,
+    memo::{Memo, same_rows},
     pinning::CellPin,
-    pipeline::{GroupInfo, VisibleRow, group_rows},
+    pipeline::{GroupInfo, VisibleRow, nest_rows},
 };
 use crate::{
     components::common::Glyph, context::IconSlot, localization::TableLabels,
@@ -36,19 +37,15 @@ type RowsInput = (GroupTexts, Vec<VisibleRow>, Vec<String>, &'static str);
 /// The groups across renders: the texts are read again only when the rows or the
 /// grouped columns change, the groups when the rows shown or the open groups do.
 pub(super) struct GroupedRows<T> {
-    texts_of: Option<TextsInput<T>>,
-    texts: GroupTexts,
-    rows_of: Option<RowsInput>,
-    rows: (Vec<VisibleRow>, Rc<[GroupInfo]>),
+    texts: Memo<TextsInput<T>, GroupTexts>,
+    rows: Memo<RowsInput, (Vec<VisibleRow>, Rc<[GroupInfo]>)>,
 }
 
 impl<T> Default for GroupedRows<T> {
     fn default() -> Self {
         Self {
-            texts_of: None,
-            texts: Rc::default(),
-            rows_of: None,
-            rows: (Vec::new(), Rc::from([])),
+            texts: Memo::default(),
+            rows: Memo::default(),
         }
     }
 }
@@ -60,19 +57,18 @@ impl<T: PartialEq> GroupedRows<T> {
         columns: &[Column<T>],
         levels: &[usize],
     ) -> GroupTexts {
-        let fresh = self.texts_of.as_ref().is_some_and(|(known, cols, at)| {
-            at == levels && cols.as_slice() == columns && (Rc::ptr_eq(known, data) || known == data)
-        });
-        if !fresh {
-            self.texts = Rc::new(
-                levels
-                    .iter()
-                    .map(|&index| data.iter().map(|row| (columns[index].text)(row)).collect())
-                    .collect(),
-            );
-            self.texts_of = Some((data.clone(), columns.to_vec(), levels.to_vec()));
-        }
-        self.texts.clone()
+        let fresh = |(known, cols, at): &TextsInput<T>| {
+            at == levels && cols.as_slice() == columns && same_rows(known, data)
+        };
+        let compute = || {
+            let input = (data.clone(), columns.to_vec(), levels.to_vec());
+            let texts = levels
+                .iter()
+                .map(|&index| data.iter().map(|row| (columns[index].text)(row)).collect())
+                .collect();
+            (input, Rc::new(texts))
+        };
+        self.texts.get(fresh, compute).clone()
     }
 
     /// The `leaves` in their groups, each open group's rows after its row.
@@ -83,19 +79,16 @@ impl<T: PartialEq> GroupedRows<T> {
         open: &[String],
         empty: &'static str,
     ) -> (Vec<VisibleRow>, Rc<[GroupInfo]>) {
-        let fresh = self
-            .rows_of
-            .as_ref()
-            .is_some_and(|(known, rows, ids, label)| {
-                Rc::ptr_eq(known, &texts) && rows == leaves && ids == open && *label == empty
-            });
-        if !fresh {
+        let fresh = |(known, rows, ids, label): &RowsInput| {
+            Rc::ptr_eq(known, &texts) && rows == leaves && ids == open && *label == empty
+        };
+        let compute = || {
             let (rows, groups) =
-                group_rows(leaves, &texts, &|id| open.iter().any(|o| o == id), empty);
-            self.rows = (rows, groups.into());
-            self.rows_of = Some((texts, leaves.to_vec(), open.to_vec(), empty));
-        }
-        self.rows.clone()
+                nest_rows(leaves, &texts, &|id| open.iter().any(|o| o == id), empty);
+            let input = (texts.clone(), leaves.to_vec(), open.to_vec(), empty);
+            (input, (rows, groups.into()))
+        };
+        self.rows.get(fresh, compute).clone()
     }
 }
 

@@ -2,7 +2,7 @@
 
 use dioxus::prelude::Key;
 
-use super::{groups::HeaderCell, pipeline::VisibleRow};
+use super::{header_groups::HeaderCell, pipeline::VisibleRow};
 use crate::platform::logical_arrow;
 
 /// A row of the grid: a header row by level, top first, or a body row.

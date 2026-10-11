@@ -4,7 +4,7 @@
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text, linger};
+use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text};
 use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
@@ -164,14 +164,14 @@ async fn scrolls_under_the_header<D: Driver>(
         if d.platform() != Platform::Desktop {
             continue;
         }
-        // Held still over 4 idle rounds, not a fixed 7.5 s.
+        // Still over three polls in a row.
         let mut last = tops(d).await?.1;
+        let mut still = 0;
         eventually(d, "the step's scroll to settle", async |d| {
-            linger(d, 4).await;
             let now = tops(d).await?.1;
-            let still = now == last;
+            still = if now == last { still + 1 } else { 0 };
             last = now;
-            Ok(still)
+            Ok(still >= 3)
         })
         .await?;
     }
@@ -2026,8 +2026,7 @@ async fn a_focused_row_stays_below_the_header<D: Driver>(d: &mut D, _route: &str
         d.press(keyboard::TAB).await?;
         d.settle().await?;
     }
-    // Polls each step instead of a fixed `linger(d, 100)`, 2.5 s per Tab and
-    // 150 s of the table unit (823). The page may scroll a frame after the focus.
+    // Each step polls, as the page may scroll a frame after the focus.
     for step in 0..30 {
         d.press_shift(keyboard::TAB).await?;
         eventually(

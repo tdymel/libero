@@ -7,7 +7,7 @@ use std::{collections::HashMap, ops::Range, rc::Rc};
 pub(super) enum VisibleRow {
     /// A row of `data`, by its index there.
     Data(usize),
-    /// A group row, by its index in the [`GroupInfo`] list of [`group_rows`].
+    /// A group row, by its index in the [`GroupInfo`] list of [`nest_rows`].
     Group(usize),
 }
 
@@ -45,7 +45,7 @@ pub(super) fn group_id(path: &[String]) -> String {
 /// The `leaves` nested into groups, one level per entry of `texts` (each by `data`
 /// index). Groups follow first appearance, so a sort orders them; an `open` one
 /// shows its rows.
-pub(super) fn group_rows(
+pub(super) fn nest_rows(
     leaves: &[VisibleRow],
     texts: &[Vec<String>],
     open: &dyn Fn(&str) -> bool,
@@ -235,7 +235,7 @@ mod tests {
     #[test]
     fn groups_follow_first_appearance_and_open_ones_show_their_rows() {
         let texts = texts(&[&["b", "a", "b", "a"]]);
-        let (rows, groups) = group_rows(&data(&[0, 1, 2, 3]), &texts, &|id| id == "b", "-");
+        let (rows, groups) = nest_rows(&data(&[0, 1, 2, 3]), &texts, &|id| id == "b", "-");
         use VisibleRow::*;
         assert_eq!(rows, [Group(0), Data(0), Data(2), Group(1)]);
         assert_eq!(groups[0].leaves, [0, 2]);
@@ -246,7 +246,7 @@ mod tests {
     #[test]
     fn a_new_sort_reorders_the_groups_and_their_rows() {
         let texts = texts(&[&["b", "a", "b", "a"]]);
-        let (rows, groups) = group_rows(&data(&[3, 2, 1, 0]), &texts, &|_| true, "-");
+        let (rows, groups) = nest_rows(&data(&[3, 2, 1, 0]), &texts, &|_| true, "-");
         use VisibleRow::*;
         assert_eq!(
             rows,
@@ -258,7 +258,7 @@ mod tests {
     #[test]
     fn nested_groups_carry_their_path_and_depth() {
         let texts = texts(&[&["x", "x", "y"], &["1", "2", "1"]]);
-        let (rows, groups) = group_rows(&data(&[0, 1, 2]), &texts, &|id| id != "y", "-");
+        let (rows, groups) = nest_rows(&data(&[0, 1, 2]), &texts, &|id| id != "y", "-");
         use VisibleRow::*;
         assert_eq!(
             rows,
@@ -273,7 +273,7 @@ mod tests {
     #[test]
     fn an_empty_text_is_one_group_under_the_empty_label() {
         let texts = texts(&[&["", "a", ""]]);
-        let (_, groups) = group_rows(&data(&[0, 1, 2]), &texts, &|_| false, "(empty)");
+        let (_, groups) = nest_rows(&data(&[0, 1, 2]), &texts, &|_| false, "(empty)");
         assert_eq!(groups[0].label, "(empty)");
         assert_eq!((groups[0].id.as_str(), groups[0].leaves.len()), ("", 2));
     }

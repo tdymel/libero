@@ -25,7 +25,8 @@ use crate::{
         use_theme,
     },
     platform::{
-        ElementApi, SCROLL_PADDING_VARS, lays_out_captions, sticks_table_heads, widens_sized_tables,
+        ElementApi, SCROLL_PADDING_BOTTOM_VAR, SCROLL_PADDING_LEFT_VAR, SCROLL_PADDING_RIGHT_VAR,
+        SCROLL_PADDING_TOP_VAR, lays_out_captions, sticks_table_heads, widens_sized_tables,
     },
     sx::{StaticSx, Sx, sx},
     theme::{
@@ -44,7 +45,7 @@ use super::{
     column_order::{moved, order_unpinned, ranked},
     core::{
         BodySpec, CaptionSpec, RowFn, SortedRows, TableSort, WidthSpec, active_sort, align_attr,
-        header_specs, next_sort, render_body,
+        header_specs, lead_count, next_sort, render_body,
     },
     csv::shown_csv,
     detail::Details,
@@ -54,14 +55,13 @@ use super::{
     filter_popover::FilterTarget,
     footer::{Foot, FooterRows, aggregate_cell, use_edge_height},
     grid::{GridRows, GridWindow, HeadGrid, col_indices, use_grid_focus},
-    groups::header_rows,
     header_filters::HeaderFilter,
+    header_groups::header_rows,
     overlay::{EmptyBody, LoadingBar, SKELETON_ROWS},
     paging::{TablePager, clamp_page, page_rows, use_page_reset, use_page_size_reseed},
     pinning::{PinSide, PinnedColumns, pin_columns, pin_edge_at, pinned_extent},
     pipeline::{
-        KnownRows, VisibleRow, cut_page, group_rows as nest_rows, keyed_rows, selection_scope,
-        visible_rows,
+        KnownRows, VisibleRow, cut_page, keyed_rows, nest_rows, selection_scope, visible_rows,
     },
     resize::{ColumnResize, ColumnWidths, MenuWidth},
     row::{RowContext, RowState, TableRow},
@@ -1757,8 +1757,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         instructions: instructions_id(),
         fixed: fixed_slots,
     });
-    let lead_columns =
-        usize::from(selection.is_some()) + usize::from(has_detail) + usize::from(has_reorder);
+    let lead_columns = lead_count((has_reorder, has_detail, selection.is_some()));
     // Only with a gap: else each cell's place is its index.
     let colindex = (cell_focus && headers.iter().any(|spec| spec.hidden))
         .then(|| col_indices(&layout, headers.len(), lead_columns));
@@ -1804,7 +1803,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         });
     });
     let group_cells = GroupCells {
-        leads: context.span - layout.len().max(1),
+        leads: lead_columns,
         pins: layout
             .iter()
             .map(|&index| headers[index].pin.clone())
@@ -2247,8 +2246,8 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                         }
                         // Blitz reads the left and right vars: its `<length>` registration resolves the calc.
                         for ((property, var), pad) in [
-                            ("scroll-padding-inline-start", SCROLL_PADDING_VARS[3]),
-                            ("scroll-padding-inline-end", SCROLL_PADDING_VARS[1]),
+                            ("scroll-padding-inline-start", SCROLL_PADDING_LEFT_VAR),
+                            ("scroll-padding-inline-end", SCROLL_PADDING_RIGHT_VAR),
                         ]
                         .into_iter()
                         .zip(pinned_pads)
@@ -2264,13 +2263,13 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                                 let pads = pads
                                     .max_height(height)
                                     .with("scroll-padding-top", pad.clone())
-                                    .with(SCROLL_PADDING_VARS[0], pad);
+                                    .with(SCROLL_PADDING_TOP_VAR, pad);
                                 // The sticky footer covers the bottom, as the header the top.
                                 match foot_gap > 0.0 {
                                     true => {
                                         let pad = format!("{foot_gap}px");
                                         pads.with("scroll-padding-bottom", pad.clone())
-                                            .with(SCROLL_PADDING_VARS[2], pad)
+                                            .with(SCROLL_PADDING_BOTTOM_VAR, pad)
                                     }
                                     false => pads,
                                 }
@@ -2360,22 +2359,4 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             {pager}
         },
     )
-}
-
-#[cfg(test)]
-mod tests {
-    use super::TABLE_SX;
-    use crate::css::Stylesheet;
-
-    #[test]
-    fn pinned_toggles_push_the_checkboxes_past_them() {
-        let stylesheet = Stylesheet::from(&*TABLE_SX);
-        let css = stylesheet.as_str();
-        let rule = |state: &str| {
-            css.find(&format!("[data-state~=\"{state}\"] [data-select]{{"))
-                .unwrap_or_else(|| panic!("{state}: {css}"))
-        };
-        // Equally specific: the later rule's inset wins.
-        assert!(rule("pin-select") < rule("pin-detail"));
-    }
 }

@@ -9,7 +9,7 @@ use super::{
     detail::Details,
     edit::{CellEditor, EditCtx, RowUpdate, commit_edit},
     grid::GridFocus,
-    groups::spanned,
+    header_groups::spanned,
     pinning::{pin_runs, span_pin},
     pipeline::VisibleRow,
     row_reorder::{ReorderSlot, RowReorder},
@@ -58,6 +58,30 @@ impl<T> RowContext<T> {
     /// Whether rows drawn with `other` come out the same. Closures compare equal, as a
     /// column's do: a re-declared one does not redraw every row.
     pub fn same(&self, other: &Self) -> bool {
+        // Every field is named: a new one fails to compile until it is compared or skipped.
+        let Self {
+            columns,
+            headers: _,
+            layout,
+            span,
+            name_column,
+            row_attrs,
+            row_states,
+            row_detail,
+            row_has_detail,
+            onrowclick,
+            selection: _,
+            toggle,
+            details,
+            toggle_detail,
+            animate_details,
+            reorder: _,
+            grid,
+            colindex,
+            onrowupdate,
+            editable,
+            labels,
+        } = self;
         let cells = |context: &Self| {
             context
                 .headers
@@ -80,27 +104,27 @@ impl<T> RowContext<T> {
                 )
             })
         };
-        self.columns == other.columns
-            && self.layout == other.layout
-            && self.span == other.span
-            && self.name_column == other.name_column
-            && self.row_attrs == other.row_attrs
-            && self.row_states == other.row_states
-            && self.row_detail == other.row_detail
-            && self.row_has_detail == other.row_has_detail
-            && self.onrowclick == other.onrowclick
-            && self.toggle == other.toggle
-            && self.details == other.details
-            && self.toggle_detail == other.toggle_detail
-            && self.animate_details == other.animate_details
+        *columns == other.columns
+            && *layout == other.layout
+            && *span == other.span
+            && *name_column == other.name_column
+            && *row_attrs == other.row_attrs
+            && *row_states == other.row_states
+            && *row_detail == other.row_detail
+            && *row_has_detail == other.row_has_detail
+            && *onrowclick == other.onrowclick
+            && *toggle == other.toggle
+            && *details == other.details
+            && *toggle_detail == other.toggle_detail
+            && *animate_details == other.animate_details
             && cells(self) == cells(other)
             && boxes(self) == boxes(other)
             && reorder(self) == reorder(other)
-            && self.grid.map(|grid| grid.stop) == other.grid.map(|grid| grid.stop)
-            && self.colindex == other.colindex
-            && self.onrowupdate == other.onrowupdate
-            && self.editable == other.editable
-            && self.labels == other.labels
+            && grid.map(|grid| grid.stop) == other.grid.map(|grid| grid.stop)
+            && *colindex == other.colindex
+            && *onrowupdate == other.onrowupdate
+            && *editable == other.editable
+            && *labels == other.labels
     }
 }
 

@@ -10,8 +10,9 @@ use super::{
     detail::SlidingDetail,
     footer::{Foot, FooterCells, footer_row},
     grid::HeadGrid,
-    groups::{HeaderCell, header_rows},
     header_filters::filter_row,
+    header_groups::{HeaderCell, header_rows},
+    memo::{Memo, same_rows},
     overlay::EmptyBody,
     pinning::{CellPin, PinSide, pin_edge_at, pin_insets, span_pin},
     resize::{ColumnResize, ColumnWidths, ResizeHandle, ResizeLimits},
@@ -195,19 +196,13 @@ pub(super) fn row_order<T>(
 
 /// [`row_order`] across renders: a page, selection or unrelated prop change
 /// reuses it, so sort keys are computed only when the rows, columns or sort change.
-pub(super) struct SortedRows<T> {
-    input: Option<SortInput<T>>,
-    order: Vec<usize>,
-}
+pub(super) struct SortedRows<T>(Memo<SortInput<T>, Vec<usize>>);
 
 type SortInput<T> = (Rc<Vec<T>>, Vec<Column<T>>, ActiveSort);
 
 impl<T> Default for SortedRows<T> {
     fn default() -> Self {
-        Self {
-            input: None,
-            order: Vec::new(),
-        }
+        Self(Memo::default())
     }
 }
 
@@ -219,17 +214,17 @@ impl<T: PartialEq> SortedRows<T> {
         active: &ActiveSort,
     ) -> Vec<usize> {
         if active.is_empty() {
-            *self = Self::default();
+            self.0.clear();
             return (0..data.len()).collect();
         }
-        let fresh = self.input.as_ref().is_some_and(|(rows, cols, sort)| {
-            sort == active && cols.as_slice() == columns && (Rc::ptr_eq(rows, data) || rows == data)
-        });
-        if !fresh {
-            self.order = row_order(data, columns, active);
-            self.input = Some((data.clone(), columns.to_vec(), active.clone()));
-        }
-        self.order.clone()
+        let fresh = |(rows, cols, sort): &SortInput<T>| {
+            sort == active && cols.as_slice() == columns && same_rows(rows, data)
+        };
+        let compute = || {
+            let input = (data.clone(), columns.to_vec(), active.clone());
+            (input, row_order(data, columns, active))
+        };
+        self.0.get(fresh, compute).clone()
     }
 }
 
@@ -454,6 +449,11 @@ fn header_body(spec: &HeaderSpec) -> Element {
     }
 }
 
+/// How many columns lead a row before its data cells: the handle, toggle and checkbox ones.
+pub(super) fn lead_count((reorder, detail, select): (bool, bool, bool)) -> usize {
+    usize::from(reorder) + usize::from(detail) + usize::from(select)
+}
+
 pub(super) fn render_body(body: BodySpec) -> Element {
     let BodySpec {
         caption,
@@ -482,19 +482,17 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         grid,
         paged,
     } = body;
-    let columns = shown.len().max(1)
-        + usize::from(select_all.is_some())
-        + usize::from(detail_header.is_some())
-        + usize::from(reorder.is_some());
-    let empty = rows.is_empty().then_some(empty);
-    let windowed = matches!(rows, BodyRows::Window(_));
-    // The rows the DOM leaves out still count: another page's, or out of the window.
-    let indexed = windowed || paged.is_some();
     let leads = (
         reorder.is_some(),
         detail_header.is_some(),
         select_all.is_some(),
     );
+    let lead_columns = lead_count(leads);
+    let columns = shown.len().max(1) + lead_columns;
+    let empty = rows.is_empty().then_some(empty);
+    let windowed = matches!(rows, BodyRows::Window(_));
+    // The rows the DOM leaves out still count: another page's, or out of the window.
+    let indexed = windowed || paged.is_some();
     // Blitz sizes columns by content even in fixed layout: an unsized one gets
     // an even share, so rows scrolling in can't widen it.
     let share = windowed.then(|| format!("{}%", 100.0 / shown.len().max(1) as f64));
@@ -688,8 +686,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         }
         {
             footer.map(|cells| {
-                let leads = columns - shown.len().max(1);
-                footer_row(&headers, &shown, cells, leads, foot_rowindex, foot)
+                footer_row(&headers, &shown, cells, lead_columns, foot_rowindex, foot)
             })
         }
     }
