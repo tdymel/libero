@@ -158,11 +158,8 @@ pub(crate) fn outcome_of(answer: Option<String>) -> ShareOutcome {
     }
 }
 
-/// The non-blank text fields, in [`SHARE_SCRIPT`]'s argument order.
-#[cfg(any(
-    target_arch = "wasm32",
-    all(not(target_os = "android"), not(feature = "native"))
-))]
+/// The non-blank title, text and url, in [`SHARE_SCRIPT`]'s argument order.
+#[cfg(any(target_arch = "wasm32", not(feature = "native")))]
 pub(crate) fn text_fields(data: &ShareData) -> [Option<&str>; 3] {
     [&data.title, &data.text, &data.url].map(ShareData::field)
 }
@@ -245,8 +242,7 @@ pub(crate) fn fake_share(fake: &'static dyn ShareApi) -> FakeShareGuard {
     FakeShareGuard
 }
 
-/// `None` where the target has no share sheet: Blitz, a server render, and
-/// Android until its share-sheet arm lands with the MediaStore path (todo 3334 U3).
+/// `None` where the target has no share sheet: Blitz, a server render.
 fn share_api() -> Option<&'static dyn ShareApi> {
     #[cfg(test)]
     if let Some(fake) = FAKE.with(std::cell::Cell::get) {
@@ -260,10 +256,9 @@ fn share_api() -> Option<&'static dyn ShareApi> {
         not(feature = "native")
     ))]
     return super::backend::webview_share();
-    #[cfg(all(
-        not(target_arch = "wasm32"),
-        any(target_os = "android", feature = "native")
-    ))]
+    #[cfg(all(target_os = "android", not(feature = "native")))]
+    return Some(&super::android_share::SHARE);
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     return None;
 }
 
@@ -331,7 +326,7 @@ mod tests {
         assert!(SHARED.with_borrow(Vec::is_empty));
     }
 
-    #[cfg(not(feature = "desktop"))]
+    #[cfg(not(any(feature = "desktop", target_os = "android")))]
     #[test]
     fn share_is_unsupported_without_a_page() {
         assert_eq!(

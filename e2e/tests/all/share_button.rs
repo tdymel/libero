@@ -1,8 +1,10 @@
 //! `ShareButton` on the web: a press hands the data to `navigator.share`, a
 //! cancel stays silent, a refusal is announced, and without a share sheet the
-//! link is copied and "Copied" said.
+//! link is copied and "Copied" said. Android opens its share sheet over JNI.
 
+use anyhow::Result;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, eventually_text};
 use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
@@ -232,6 +234,38 @@ fn files_are_shared_where_can_share_takes_them() {
         fixture.close().await.unwrap();
     });
 }
+
+async fn the_share_sheet_opens<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    opens(d, BARE).await
+}
+
+async fn the_share_sheet_opens_on_a_file<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    opens(d, FILE).await
+}
+
+async fn opens<D: Driver>(d: &mut D, button: &str) -> Result<()> {
+    d.click(button).await?;
+    eventually(d, "the share sheet over the page", async |d| {
+        d.exists("html[data-covered]").await
+    })
+    .await?;
+    // The covered activity applies no edit until Back closes the share sheet.
+    d.press_back().await?;
+    eventually_text(d, "#outcome", "Shared", "the share outcome").await
+}
+
+e2e::scenario!(
+    android_shares_the_link_through_the_share_sheet,
+    "/share-button",
+    the_share_sheet_opens,
+    android_only("3351: the JNI share sheet is Android's")
+);
+e2e::scenario!(
+    android_shares_a_file_through_the_share_sheet,
+    "/share-button",
+    the_share_sheet_opens_on_a_file,
+    android_only("3351: the JNI share sheet is Android's")
+);
 
 /// The labelled mode is named by its text, described by `label`, and a disabled one takes no focus.
 #[test]

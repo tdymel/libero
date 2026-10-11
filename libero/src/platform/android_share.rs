@@ -1,0 +1,335 @@
+//! Android's system share sheet over JNI on the main thread, for `share` (3351)
+//! and `save_file` (2016): text inline, files through Downloads (2078).
+
+use dioxus_desktop::wry::prelude::{
+    JNIEnv, JObject, dispatch,
+    jni::{self, errors::Result as JniResult, objects::JValue},
+};
+use futures_channel::oneshot;
+
+use super::share::{ShareApi, ShareData, ShareFile, ShareOutcome, Sharing, text_fields};
+
+const ACTION_SEND: &str = "android.intent.action.SEND";
+const ACTION_SEND_MULTIPLE: &str = "android.intent.action.SEND_MULTIPLE";
+const EXTRA_TEXT: &str = "android.intent.extra.TEXT";
+const EXTRA_STREAM: &str = "android.intent.extra.STREAM";
+const EXTRA_SUBJECT: &str = "android.intent.extra.SUBJECT";
+const FLAG_GRANT_READ_URI_PERMISSION: i32 = 1;
+/// Android 10, which added `MediaStore.Downloads`.
+const MIN_DOWNLOADS_SDK: i32 = 29;
+const OCTET_STREAM: &str = "application/octet-stream";
+
+pub(super) struct AndroidShare;
+
+pub(super) static SHARE: AndroidShare = AndroidShare;
+
+impl ShareApi for AndroidShare {
+    fn share(&self, data: ShareData) -> Sharing {
+        let opened = on_main_thread(move |env, activity| send(env, activity, &data));
+        Box::pin(async move {
+            match opened.await {
+                Ok(outcome) => outcome,
+                Err(error) => ShareOutcome::Failed(error),
+            }
+        })
+    }
+}
+
+/// Runs `job` on the main thread with the activity and answers with its result;
+/// a pending Java exception is logged and cleared.
+pub(super) fn on_main_thread<T: Send + 'static>(
+    job: impl FnOnce(&mut JNIEnv, &JObject) -> Result<T, String> + Send + 'static,
+) -> impl Future<Output = Result<T, String>> {
+    let (reply, answer) = oneshot::channel();
+    dispatch(move |env, activity, _webview| {
+        let done = job(env, activity);
+        if env.exception_check().unwrap_or(false) {
+            let _ = env.exception_describe();
+            let _ = env.exception_clear();
+        }
+        let _ = reply.send(done);
+    });
+    async move {
+        answer
+            .await
+            .unwrap_or_else(|_| Err("the share sheet did not open".to_string()))
+    }
+}
+
+/// One chooser for the whole of `data`: files as `EXTRA_STREAM` where Downloads
+/// exists, the text and url joined into `EXTRA_TEXT`, the title as subject.
+fn send(env: &mut JNIEnv, activity: &JObject, data: &ShareData) -> Result<ShareOutcome, String> {
+    let [title, text, url] = text_fields(data);
+    let message = [text, url]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>()
+        .join("\n");
+    let files = match data.files.is_empty() || sdk(env)? < MIN_DOWNLOADS_SDK {
+        true => &[][..],
+        false => data.files.as_slice(),
+    };
+    // A title alone is all the text there is.
+    let message = match message.is_empty() && files.is_empty() {
+        true => title.unwrap_or_default().to_string(),
+        false => message,
+    };
+    if message.is_empty() && files.is_empty() {
+        return Ok(ShareOutcome::Unsupported);
+    }
+    let jni = |error: jni::errors::Error| error.to_string();
+    let intent = match files {
+        [] => send_intent(env, ACTION_SEND, "text/plain").map_err(jni)?,
+        [file] => {
+            let uri = download(env, activity, file).map_err(jni)?;
+            let intent = send_intent(env, ACTION_SEND, mime(file)).map_err(jni)?;
+            stream(env, &intent, &uri).map_err(jni)?;
+            intent
+        }
+        files => {
+            let uris = env
+                .new_object("java/util/ArrayList", "()V", &[])
+                .map_err(jni)?;
+            for file in files {
+                let uri = download(env, activity, file).map_err(jni)?;
+                env.call_method(
+                    &uris,
+                    "add",
+                    "(Ljava/lang/Object;)Z",
+                    &[JValue::Object(&uri)],
+                )
+                .map_err(jni)?;
+            }
+            let first = mime(&files[0]);
+            let mime = match files.iter().all(|file| mime(file) == first) {
+                true => first,
+                false => "*/*",
+            };
+            let intent = send_intent(env, ACTION_SEND_MULTIPLE, mime).map_err(jni)?;
+            streams(env, &intent, &uris).map_err(jni)?;
+            intent
+        }
+    };
+    if !message.is_empty() {
+        put(env, &intent, EXTRA_TEXT, &message).map_err(jni)?;
+    }
+    if let Some(title) = title {
+        put(env, &intent, EXTRA_SUBJECT, title).map_err(jni)?;
+    }
+    choose(env, activity, &intent, title).map_err(jni)?;
+    Ok(ShareOutcome::Shared)
+}
+
+/// `ACTION_SEND` as `text/plain`, so messengers and notes take it too, in a chooser titled `name`.
+pub(super) fn share_text(
+    env: &mut JNIEnv,
+    activity: &JObject,
+    name: &str,
+    text: &str,
+) -> JniResult<()> {
+    let intent = send_intent(env, ACTION_SEND, "text/plain")?;
+    put(env, &intent, EXTRA_TEXT, text)?;
+    put(env, &intent, EXTRA_SUBJECT, name)?;
+    choose(env, activity, &intent, Some(name))
+}
+
+/// Writes `file` to Downloads through MediaStore (no permission, no FileProvider
+/// in the app's manifest), then shares that `content://` URI as `EXTRA_STREAM`.
+pub(super) fn share_file(
+    env: &mut JNIEnv,
+    activity: &JObject,
+    file: &ShareFile,
+) -> Result<(), String> {
+    if sdk(env)? < MIN_DOWNLOADS_SDK {
+        return Err("files are shared from Android 10 on".to_string());
+    }
+    let jni = |error: jni::errors::Error| error.to_string();
+    let uri = download(env, activity, file).map_err(jni)?;
+    let intent = send_intent(env, ACTION_SEND, mime(file)).map_err(jni)?;
+    stream(env, &intent, &uri)
+        .and_then(|()| put(env, &intent, EXTRA_SUBJECT, &file.name))
+        .and_then(|()| choose(env, activity, &intent, Some(&file.name)))
+        .map_err(jni)
+}
+
+fn sdk(env: &mut JNIEnv) -> Result<i32, String> {
+    env.get_static_field("android/os/Build$VERSION", "SDK_INT", "I")
+        .and_then(|sdk| sdk.i())
+        .map_err(|error| error.to_string())
+}
+
+fn mime(file: &ShareFile) -> &str {
+    match file.mime.is_empty() {
+        true => OCTET_STREAM,
+        false => &file.mime,
+    }
+}
+
+fn put(env: &mut JNIEnv, intent: &JObject, key: &str, value: &str) -> JniResult<()> {
+    let key = env.new_string(key)?;
+    let value = env.new_string(value)?;
+    env.call_method(
+        intent,
+        "putExtra",
+        "(Ljava/lang/String;Ljava/lang/String;)Landroid/content/Intent;",
+        &[JValue::Object(&key), JValue::Object(&value)],
+    )?;
+    Ok(())
+}
+
+fn stream(env: &mut JNIEnv, intent: &JObject, uri: &JObject) -> JniResult<()> {
+    let key = env.new_string(EXTRA_STREAM)?;
+    env.call_method(
+        intent,
+        "putExtra",
+        "(Ljava/lang/String;Landroid/os/Parcelable;)Landroid/content/Intent;",
+        &[JValue::Object(&key), JValue::Object(uri)],
+    )?;
+    grant_read(env, intent)
+}
+
+fn streams(env: &mut JNIEnv, intent: &JObject, uris: &JObject) -> JniResult<()> {
+    let key = env.new_string(EXTRA_STREAM)?;
+    env.call_method(
+        intent,
+        "putParcelableArrayListExtra",
+        "(Ljava/lang/String;Ljava/util/ArrayList;)Landroid/content/Intent;",
+        &[JValue::Object(&key), JValue::Object(uris)],
+    )?;
+    grant_read(env, intent)
+}
+
+fn grant_read(env: &mut JNIEnv, intent: &JObject) -> JniResult<()> {
+    env.call_method(
+        intent,
+        "addFlags",
+        "(I)Landroid/content/Intent;",
+        &[JValue::Int(FLAG_GRANT_READ_URI_PERMISSION)],
+    )?;
+    Ok(())
+}
+
+/// A new `MediaStore.Downloads` entry holding `file`; a failed write removes it.
+fn download<'a>(
+    env: &mut JNIEnv<'a>,
+    activity: &JObject,
+    file: &ShareFile,
+) -> JniResult<JObject<'a>> {
+    let values = env.new_object("android/content/ContentValues", "()V", &[])?;
+    for (key, value) in [
+        ("_display_name", file.name.as_str()),
+        ("mime_type", mime(file)),
+    ] {
+        let key = env.new_string(key)?;
+        let value = env.new_string(value)?;
+        env.call_method(
+            &values,
+            "put",
+            "(Ljava/lang/String;Ljava/lang/String;)V",
+            &[JValue::Object(&key), JValue::Object(&value)],
+        )?;
+    }
+    let collection = env
+        .get_static_field(
+            "android/provider/MediaStore$Downloads",
+            "EXTERNAL_CONTENT_URI",
+            "Landroid/net/Uri;",
+        )?
+        .l()?;
+    let resolver = env
+        .call_method(
+            activity,
+            "getContentResolver",
+            "()Landroid/content/ContentResolver;",
+            &[],
+        )?
+        .l()?;
+    let uri = env
+        .call_method(
+            &resolver,
+            "insert",
+            "(Landroid/net/Uri;Landroid/content/ContentValues;)Landroid/net/Uri;",
+            &[JValue::Object(&collection), JValue::Object(&values)],
+        )?
+        .l()?;
+    if uri.is_null() {
+        return Err(jni::errors::Error::NullPtr(
+            "MediaStore refused the download",
+        ));
+    }
+    if let Err(error) = write(env, &resolver, &uri, &file.bytes) {
+        let _ = env.exception_clear();
+        let _ = env.call_method(
+            &resolver,
+            "delete",
+            "(Landroid/net/Uri;Ljava/lang/String;[Ljava/lang/String;)I",
+            &[
+                JValue::Object(&uri),
+                JValue::Object(&JObject::null()),
+                JValue::Object(&JObject::null()),
+            ],
+        );
+        return Err(error);
+    }
+    Ok(uri)
+}
+
+fn write(env: &mut JNIEnv, resolver: &JObject, uri: &JObject, bytes: &[u8]) -> JniResult<()> {
+    let out = env
+        .call_method(
+            resolver,
+            "openOutputStream",
+            "(Landroid/net/Uri;)Ljava/io/OutputStream;",
+            &[JValue::Object(uri)],
+        )?
+        .l()?;
+    let array = env.byte_array_from_slice(bytes)?;
+    env.call_method(&out, "write", "([B)V", &[JValue::Object(&array)])?;
+    env.call_method(&out, "close", "()V", &[])?;
+    Ok(())
+}
+
+fn send_intent<'a>(env: &mut JNIEnv<'a>, action: &str, mime: &str) -> JniResult<JObject<'a>> {
+    let action = env.new_string(action)?;
+    let intent = env.new_object(
+        "android/content/Intent",
+        "(Ljava/lang/String;)V",
+        &[JValue::Object(&action)],
+    )?;
+    let mime = env.new_string(mime)?;
+    env.call_method(
+        &intent,
+        "setType",
+        "(Ljava/lang/String;)Landroid/content/Intent;",
+        &[JValue::Object(&mime)],
+    )?;
+    Ok(intent)
+}
+
+/// The system chooser over `intent`, titled `title` or the system's default.
+fn choose(
+    env: &mut JNIEnv,
+    activity: &JObject,
+    intent: &JObject,
+    title: Option<&str>,
+) -> JniResult<()> {
+    let title = match title {
+        Some(title) => env.new_string(title)?.into(),
+        None => JObject::null(),
+    };
+    let chooser = env
+        .call_static_method(
+            "android/content/Intent",
+            "createChooser",
+            "(Landroid/content/Intent;Ljava/lang/CharSequence;)Landroid/content/Intent;",
+            &[JValue::Object(intent), JValue::Object(&title)],
+        )?
+        .l()?;
+    env.call_method(
+        activity,
+        "startActivity",
+        "(Landroid/content/Intent;)V",
+        &[JValue::Object(&chooser)],
+    )?;
+    Ok(())
+}

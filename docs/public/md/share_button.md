@@ -71,7 +71,7 @@ fn ShareReport(csv: String) -> Element {
 |---|---|---|
 | Web | `navigator.share`, files where `canShare` takes them | copies the link |
 | Desktop and iOS WebView | `navigator.share` where the engine has it | copies the link |
-| Android | not yet: copies the link | |
+| Android | the system share sheet; files from Android 10 on, each leaving a copy in Downloads | before Android 10 the title, text and link go without the files |
 | Blitz (`native`) | none | copies the link |
 
 `ShareOutcome::Cancelled` also covers a sheet with no target to pick: the

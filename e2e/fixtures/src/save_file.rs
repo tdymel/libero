@@ -11,9 +11,8 @@ use crate::Routes;
 
 pub const ROUTES: Routes = &[("/save-file", || rsx! { SaveFilePage {} })];
 
-#[component]
-fn SaveFilePage() -> Element {
-    let mut outcome = use_signal(|| None::<SaveOutcome>);
+/// Sets `html[data-covered]` once frames stop for half a second.
+pub(crate) fn use_covered_mark() {
     use_effect(|| {
         document::eval(
             "let drawn = performance.now();
@@ -24,6 +23,12 @@ fn SaveFilePage() -> Element {
             }, 100);",
         );
     });
+}
+
+#[component]
+fn SaveFilePage() -> Element {
+    let mut outcome = use_signal(|| None::<SaveOutcome>);
+    use_covered_mark();
     rsx! {
         Button {
             id: "save",

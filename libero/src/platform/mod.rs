@@ -5,6 +5,8 @@
 //! come through [`use_element`](crate::hooks::use_element), not an accessor.
 
 mod a11y_media;
+#[cfg(all(target_os = "android", not(feature = "native")))]
+mod android_share;
 mod backend;
 mod capture;
 mod click;

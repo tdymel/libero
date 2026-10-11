@@ -12,6 +12,8 @@ pub const ROUTES: Routes = &[("/share-button", || rsx! { ShareButtonPage {} })];
 fn ShareButtonPage() -> Element {
     let mut outcome = use_signal(String::new);
     let onshare = move |shared: ShareOutcome| outcome.set(format!("{shared:?}"));
+    // Android's share sheet covers the activity (3351).
+    crate::save_file::use_covered_mark();
     rsx! {
         Flex { direction: "row", gap: "md", align: "center",
             span { id: "bare",
