@@ -37,7 +37,7 @@ pub(crate) use internal_anchor::{InternalAnchor, render_anchor};
 pub use paper::{Paper, PaperProps, paper_sx};
 pub(crate) use scroll_area::{
     RowsInTable, ScrollAreaBase, inline_x, physical_x, scroll_area_base, scroll_on_key,
-    use_kept_slot,
+    static_skeleton_sx, use_kept_slot,
 };
 pub use scroll_area::{
     ScrollArea, ScrollAreaHandle, ScrollAreaPart, ScrollAreaProps, ScrollPositionEvent, Virtualize,

@@ -166,10 +166,9 @@ static SCROLL_AREA_CONTENT_SX: StaticSx = StaticSx::new(|| {
     sx().display("contents")
         .when("virtualized", reserved)
         // The padding follows the rows a render later: an anchor jumped the scroll 20 rows (2584).
-        .when(
-            "windowed",
-            placeholder_rows_sx().with("overflow-anchor", "none"),
-        )
+        .when("windowed", sx().with("overflow-anchor", "none"))
+        // A windowed table's area paints its own, unscrolled bars: see `static_skeleton_sx`.
+        .when("slid-skeleton", placeholder_rows_sx())
 });
 
 /// A table's skipped rows reserved in its body, not around it: a sticky `th` holds
@@ -193,13 +192,7 @@ fn table_body_reserve_sx() -> Sx {
 /// Skeleton bars in the padding for a fling that outruns the rows; forced colours drop the image.
 /// Static layers slid to the window's edges: a padding-sized background re-rastered every step (2131).
 fn placeholder_rows_sx() -> Sx {
-    let pitch = SCROLL_AREA_PITCH_VAR.value();
-    let bar = format!("min(6px, {pitch} / 4)");
-    let color = SKELETON_COLOR.value();
-    let rows = format!(
-        "repeating-linear-gradient(to bottom, transparent 0 calc({pitch} / 2 - {bar}), \
-         {color} 0 calc({pitch} / 2 + {bar}), transparent 0 {pitch})"
-    );
+    let rows = skeleton_rows(&SCROLL_AREA_PITCH_VAR.value());
     let layer = |shift: String| {
         sx().content("\"\"")
             .position("absolute")
@@ -230,6 +223,25 @@ fn placeholder_rows_sx() -> Sx {
                 SCROLL_AREA_TRAILING_VAR.value_or("0px")
             )),
         )
+}
+
+/// One skeleton bar per `pitch`, centred in it.
+fn skeleton_rows(pitch: &str) -> String {
+    let bar = format!("min(6px, {pitch} / 4)");
+    let color = SKELETON_COLOR.value();
+    format!(
+        "repeating-linear-gradient(to bottom, transparent 0 calc({pitch} / 2 - {bar}), \
+         {color} 0 calc({pitch} / 2 + {bar}), transparent 0 {pitch})"
+    )
+}
+
+/// Bars on a windowed table's scroller itself, unscrolled: a fling outran even slid bars' raster (2131).
+/// Unrastered row tiles show them, opaque rows cover them at rest; an iOS rubber band shows them at the ends.
+pub(crate) fn static_skeleton_sx(pitch: f64) -> Sx {
+    sx().background_image(skeleton_rows(&format!("{pitch}px")))
+        .background_size("calc(100% - 2rem) 100%")
+        .background_position("1rem 0")
+        .background_repeat("no-repeat")
 }
 
 fn scroll_area_variables(color: Option<&ThemeAwareValue>) -> Variables {
@@ -491,6 +503,7 @@ fn ScrollAreaContent(content: ElementHandle, children: Element) -> Element {
     // Unvirtualized content is `display: contents` and reserves nothing.
     let (states, variables): (Input<States>, Input<Variables>) = if (viewport.virtualized)() {
         let spec = (viewport.spec)();
+        let table = (viewport.table)();
         let offsets = spec
             .map(|spec| spec.at((viewport.geometry)()).0.offsets)
             .unwrap_or_default();
@@ -498,7 +511,8 @@ fn ScrollAreaContent(content: ElementHandle, children: Element) -> Element {
             States::default()
                 .with("virtualized", true)
                 .with("windowed", spec.is_some())
-                .with("table", (viewport.table)())
+                .with("table", table)
+                .with("slid-skeleton", spec.is_some() && !table)
                 .into(),
             scroll_area_content_variables(offsets, spec.map(|spec| spec.pitch)).into(),
         )

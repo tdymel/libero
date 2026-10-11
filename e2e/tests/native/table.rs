@@ -61,6 +61,33 @@ fn a_row_line_is_one_thin_theme_line() {
     );
 }
 
+/// Todo 2131: a windowed table's area has skeleton bars behind its rows. Blitz paints no
+/// repeating gradient yet, so a row paints as before; once it does, the opaque row hides them.
+#[test]
+fn a_windowed_row_hides_the_skeleton_bars_behind_it() {
+    fn app() -> Element {
+        rsx! {
+            Table {
+                max_height: "300px",
+                virtual_row_height: 40.0,
+                data: (1..=200).collect::<Vec<u32>>(),
+                columns: vec![column("Name").value(|row: &u32| format!("{row}"))],
+            }
+        }
+    }
+    let page = mount(app);
+    let (x, y, w, h) = page.rect("tbody tr:nth-child(2) td");
+    // Down the row's empty end, short of its line.
+    let column: Vec<(u32, u32)> = (1..(h as u32 - 2))
+        .map(|i| ((x + w * 0.9) as u32, y as u32 + i))
+        .collect();
+    let px = page.painted_pixels(&column);
+    assert!(
+        px.iter().all(|p| *p == [255, 255, 255, 255]),
+        "a bar shows through the row: {px:?}"
+    );
+}
+
 /// Todo 850: Blitz lays out no `<caption>`, so natively it is a div before the
 /// table that names it, in the web caption's look.
 #[test]

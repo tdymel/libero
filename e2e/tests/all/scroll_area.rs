@@ -151,8 +151,8 @@ e2e::scenario!(
     rows_stay_in_view_through_a_fling,
     "/scroll-area",
     rows_stay_in_view,
-    desktop: skip("2131: the window trails a WebView fling, 80px of 120 blank"),
-    android: skip("2131: the window trails a WebView fling")
+    desktop: skip("2131: rows trail a WebView fling, 80px of 120; skeleton bars paint the gap"),
+    android: skip("2131: rows trail a WebView fling; skeleton bars paint the gap")
 );
 
 /// The list's scrolling box, and the lowest row index it has in the document.

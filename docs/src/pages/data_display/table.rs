@@ -597,3 +597,39 @@ pub fn TablePage() -> Element {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use dioxus::dioxus_core::NoOpMutations;
+    use libero::context::LiberoProvider;
+    use std::cell::Cell;
+
+    thread_local! {
+        static WINDOWED: Cell<bool> = const { Cell::new(false) };
+    }
+
+    #[test]
+    fn flipping_virtual_row_height_drops_the_seeded_grouping() {
+        fn app() -> Element {
+            let values = DemoValues::defaults(&[
+                Control::switch("row_grouping").default("true"),
+                Control::switch("virtual_row_height"),
+            ])
+            .with("virtual_row_height", &WINDOWED.get().to_string());
+            rsx! {
+                LiberoProvider { TeamTable { values } }
+            }
+        }
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        let grouped = dioxus_ssr::render(&dom);
+        assert!(grouped.contains("aria-expanded"), "{grouped}");
+        WINDOWED.set(true);
+        dom.mark_dirty(ScopeId::APP);
+        dom.render_immediate(&mut NoOpMutations);
+        // Kept, the grouping renders all ten thousand rows past the window.
+        let rows = dioxus_ssr::render(&dom).matches("<tr").count();
+        assert!(rows < 100, "{rows} rows");
+    }
+}

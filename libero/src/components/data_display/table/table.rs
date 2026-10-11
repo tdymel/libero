@@ -14,7 +14,10 @@ use crate::{
             inset_focus_ring_sx, names_itself, use_name_warning, variables,
         },
         form::use_checkbox_look,
-        layout::{ScrollArea, ScrollAreaBase, ScrollAreaHandle, scroll_area_base, use_box},
+        layout::{
+            ScrollArea, ScrollAreaBase, ScrollAreaHandle, scroll_area_base, static_skeleton_sx,
+            use_box,
+        },
         overlay::MenuPart,
     },
     hooks::{
@@ -2239,6 +2242,9 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                         // Pinned columns cover the inline edges; a focus scroll stops inside them (todo 1791).
                         // The lead widths read the cell padding, resolved on the table below: again here.
                         let mut pads = sx().var(TABLE_PAD_X, TABLE_PADDING_X.value(size));
+                        if let Some(pitch) = row_height {
+                            pads = pads.and(static_skeleton_sx(pitch));
+                        }
                         // Blitz reads the left and right vars: its `<length>` registration resolves the calc.
                         for ((property, var), pad) in [
                             ("scroll-padding-inline-start", SCROLL_PADDING_VARS[3]),

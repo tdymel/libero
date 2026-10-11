@@ -240,87 +240,101 @@ pub fn TeamTable(values: DemoValues) -> Element {
             && !(windowed && WINDOW_HIDES.contains(&name))
             && !(server && name == "loading")
     };
+    // Keyed in a loop, as a root's own key never remounts: pages, pins and grouping seed once.
+    let remount = format!(
+        "{}-{}-{}-{windowed}-{server}",
+        values.str("paginate"),
+        values.str("pinned"),
+        on("row_grouping")
+    );
     rsx! {
-        Table {
-            // A new table per switch: `page_sizes` and the pins seed once.
-            key: "{values.str(\"paginate\")}-{values.str(\"pinned\")}-{on(\"row_grouping\")}-{windowed}-{server}",
-            caption: "Team members",
-            size: values.str("size"),
-            striped: on("striped"),
-            scroll: on("scroll"),
-            sx: match on("scroll") {
-                true => sx().min_width(SCROLL_WIDTH),
-                false => sx(),
-            },
-            max_height: match windowed {
-                true => Some(WINDOW_HEIGHT.to_string()),
-                false => on("max_height").then(|| MAX_HEIGHT.to_string()),
-            },
-            virtual_row_height: windowed.then_some(40.0),
-            default_pinned_columns: match on("pinned") {
-                true => PinnedColumns::default().start(["Name"]).end(["Bonus"]),
-                false => PinnedColumns::default(),
-            },
-            selectable: on("selectable"),
-            multi_sort: on("multi_sort"),
-            cell_focus: on("cell_focus"),
-            column_menu: on("column_menu"),
-            row_detail: match on("row_detail") {
-                true => (|p: &Person| Some(rsx! { "{p.name} joined as {p.role}." })).into(),
-                false => RowFn::default(),
-            },
-            onrowreorder: reorders(&values).then(|| {
-                let many = many.clone();
-                EventHandler::new(move |step: SortableMove| match windowed {
-                    true => step.apply(
-                        moved.write().get_or_insert_with(|| many.get_or_init(crowd).clone()),
-                    ),
-                    false => step.apply(&mut rows.write()),
-                })
-            }),
-            onrowupdate: edits(&values).then(|| {
-                EventHandler::new(move |update: RowUpdate<Person>| {
-                    rows.write()[update.index] = update.row;
-                })
-            }),
-            default_row_grouping: match on("row_grouping") {
-                true => vec!["Role".to_string()],
-                false => Vec::new(),
-            },
-            default_group_expansion: 1,
-            show_quick_filter: on("show_quick_filter"),
-            toolbar: on("toolbar").then(|| rsx! {
-                TableColumnsButton {}
-                TableDensityButton {}
-                TableExportButton {
-                    onexport: move |csv: String| {
-                        spawn(async move {
-                            save_file("team.csv", "text/csv", csv.into_bytes()).await;
-                        });
+        for remount in [remount] {
+            Table {
+                key: "{remount}",
+                caption: "Team members",
+                size: values.str("size"),
+                striped: on("striped"),
+                scroll: on("scroll"),
+                sx: match on("scroll") {
+                    true => sx().min_width(SCROLL_WIDTH),
+                    false => sx(),
+                },
+                max_height: match windowed {
+                    true => Some(WINDOW_HEIGHT.to_string()),
+                    false => on("max_height").then(|| MAX_HEIGHT.to_string()),
+                },
+                virtual_row_height: windowed.then_some(40.0),
+                default_pinned_columns: match on("pinned") {
+                    true => PinnedColumns::default().start(["Name"]).end(["Bonus"]),
+                    false => PinnedColumns::default(),
+                },
+                selectable: on("selectable"),
+                multi_sort: on("multi_sort"),
+                cell_focus: on("cell_focus"),
+                column_menu: on("column_menu"),
+                row_detail: match on("row_detail") {
+                    true => (|p: &Person| Some(rsx! { "{p.name} joined as {p.role}." })).into(),
+                    false => RowFn::default(),
+                },
+                onrowreorder: reorders(&values)
+                    .then(|| {
+                        let many = many.clone();
+                        EventHandler::new(move |step: SortableMove| match windowed {
+                            true => {
+                                step.apply(
+                                    moved
+                                        .write()
+                                        .get_or_insert_with(|| many.get_or_init(crowd).clone()),
+                                )
+                            }
+                            false => step.apply(&mut rows.write()),
+                        })
+                    }),
+                onrowupdate: edits(&values)
+                    .then(|| {
+                        EventHandler::new(move |update: RowUpdate<Person>| {
+                            rows.write()[update.index] = update.row;
+                        })
+                    }),
+                default_row_grouping: match on("row_grouping") {
+                    true => vec!["Role".to_string()],
+                    false => Vec::new(),
+                },
+                default_group_expansion: 1,
+                show_quick_filter: on("show_quick_filter"),
+                toolbar: on("toolbar").then(|| rsx! {
+                    TableColumnsButton {}
+                    TableDensityButton {}
+                    TableExportButton {
+                        onexport: move |csv: String| {
+                            spawn(async move {
+                                save_file("team.csv", "text/csv", csv.into_bytes()).await;
+                            });
+                        },
                     }
-                }
-                if on("filter_panel") {
-                    TableFilterButton {}
-                }
-                Button { variant: "outlined", size: "sm", "Add member" }
-            }),
-            loading: on("loading") || (server && loading()),
-            onbottomreached: server.then(|| EventHandler::new(move |()| load())),
-            header_filters: on("header_filters"),
-            filter_panel: on("filter_panel"),
-            resizable_columns: resizes(&values),
-            column_widths: resizes(&values).then(|| widths.cloned()),
-            oncolumnwidthschange: move |next: ColumnWidths| widths.set(next),
-            row_key: |p: &Person| p.name.clone(),
-            page_sizes: if on("paginate") { vec![2, 5, 10] } else { vec![] },
-            empty: no_rows(&values).then(|| rsx! { "No team members yet." }),
-            data: match (windowed, no_rows(&values)) {
-                _ if server => loaded(),
-                (true, _) => moved().unwrap_or_else(|| many.get_or_init(crowd).clone()),
-                (false, true) => Vec::new(),
-                (false, false) => rows(),
-            },
-            columns: team_columns(on("column_groups"), edits(&values)),
+                    if on("filter_panel") {
+                        TableFilterButton {}
+                    }
+                    Button { variant: "outlined", size: "sm", "Add member" }
+                }),
+                loading: on("loading") || (server && loading()),
+                onbottomreached: server.then(|| EventHandler::new(move |()| load())),
+                header_filters: on("header_filters"),
+                filter_panel: on("filter_panel"),
+                resizable_columns: resizes(&values),
+                column_widths: resizes(&values).then(|| widths.cloned()),
+                oncolumnwidthschange: move |next: ColumnWidths| widths.set(next),
+                row_key: |p: &Person| p.name.clone(),
+                page_sizes: if on("paginate") { vec![2, 5, 10] } else { vec![] },
+                empty: no_rows(&values).then(|| rsx! { "No team members yet." }),
+                data: match (windowed, no_rows(&values)) {
+                    _ if server => loaded(),
+                    (true, _) => moved().unwrap_or_else(|| many.get_or_init(crowd).clone()),
+                    (false, true) => Vec::new(),
+                    (false, false) => rows(),
+                },
+                columns: team_columns(on("column_groups"), edits(&values)),
+            }
         }
     }
 }

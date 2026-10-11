@@ -1,6 +1,6 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
-use crate::theme::{Color, ColorShade, ColorValue, CssVar, Size, SizeCss, Sizes};
+use crate::theme::{Color, ColorShade, ColorValue, CssVar, NamedColorCss, Size, SizeCss, Sizes};
 
 pub const TABLE_FONT_SIZE: SizeCss = SizeCss::new("--lsx-table-font-size-");
 pub const TABLE_PADDING_X: SizeCss = SizeCss::new("--lsx-table-padding-x-");
@@ -107,6 +107,15 @@ impl TableDefaults {
             .selector("& thead th", sx().border_bottom(Self::border()))
             // On the cells: a row's own border draws only when borders collapse.
             .selector("& tbody tr > *", sx().border_bottom(Self::border()))
+            // Opaque as the sticky header, over the area's static skeleton bars (2131). Before the
+            // states, which win by order.
+            .when(
+                "windowed",
+                sx().selector(
+                    "& tbody > tr",
+                    sx().background(NamedColorCss::SURFACE.value()),
+                ),
+            )
             .selector("& tbody tr:hover", sx().background(TABLE_HOVER.value()))
             // A row's detail is no row of its own.
             .selector(
