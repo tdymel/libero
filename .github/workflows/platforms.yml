@@ -228,7 +228,7 @@ jobs:
           screencapture -x "$RUNNER_TEMP/e2e-artifacts/session.png" && sips -g pixelWidth -g pixelHeight "$RUNNER_TEMP/e2e-artifacts/session.png"
           sqlite3 "$HOME/Library/Application Support/com.apple.TCC/TCC.db" 'select service, client, auth_value from access' || true
       # The runner prints `e2e desktop: macOS window {..}` per launch: key, active, occlusion, scale.
-      - run: cargo run -p e2e -- desktop 2>&1 | tee "$RUNNER_TEMP/e2e.log"
+      - run: cargo run -p e2e --features desktop -- desktop 2>&1 | tee "$RUNNER_TEMP/e2e.log"
         env:
           # The runner's artifacts go to `temp_dir()`, which is `$TMPDIR` on macOS.
           TMPDIR: ${{ runner.temp }}
@@ -375,7 +375,8 @@ jobs:
           Start-Process -FilePath "$env:RUNNER_TEMP\installwebview.exe" -ArgumentList '/silent', '/install' -Wait
           $key = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
           "WebView2 runtime: $((Get-ItemProperty $key -ErrorAction SilentlyContinue).pv)"
-      - run: cargo run -p e2e -- desktop 2>&1 | tee "$RUNNER_TEMP/e2e.log"
+      # The tests' feature: their build reuses the runner's target dir, not a second one (3407).
+      - run: cargo run -p e2e --features desktop -- desktop 2>&1 | tee "$RUNNER_TEMP/e2e.log"
         env:
           # The runner's artifacts and the WebView2 profiles go to `temp_dir()`, `%TMP%` here.
           TMP: ${{ runner.temp }}
@@ -408,7 +409,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           cache-key: platforms-linux-desktop
-      - run: cargo run -p e2e -- desktop 2>&1 | tee "$RUNNER_TEMP/e2e.log"
+      - run: cargo run -p e2e --features desktop -- desktop 2>&1 | tee "$RUNNER_TEMP/e2e.log"
       - if: failure() || cancelled()
         run: python3 .github/scripts/ci_annotate.py "$RUNNER_TEMP/e2e.log"
       - if: always()

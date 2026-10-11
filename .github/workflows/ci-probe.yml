@@ -151,7 +151,8 @@ jobs:
             web)
               cargo run -p e2e -- "$FILTER" 2>&1 | tee "$logs/e2e.log" ;;
             desktop)
-              cargo run -p e2e -- desktop "$FILTER" 2>&1 | tee "$logs/e2e.log" ;;
+              # The tests' feature: their build reuses the runner's target dir, Windows too (3407).
+              cargo run -p e2e --features desktop -- desktop "$FILTER" 2>&1 | tee "$logs/e2e.log" ;;
           esac
         env:
           CHROME: ${{ steps.chrome.outputs.chrome-path }}
