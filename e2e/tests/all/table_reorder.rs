@@ -44,6 +44,39 @@ e2e::scenario!(
     android: skip("958: element identity on the WebView")
 );
 
+/// A keyboard move to the first or last place hands the focus to the other move button,
+/// not to the body (3298: the audit's loss did not reproduce).
+async fn a_move_to_an_end_hands_the_focus_on<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let up = "button[aria-label=\"Move Apple up\"]";
+    d.focus(up).await?;
+    eventually_focused(d, up, "focus").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_text(d, ORDER, "Apple Cherry Banana Damson", "Move Apple up").await?;
+    eventually_focused(
+        d,
+        "button[aria-label=\"Move Apple down\"]",
+        "Move up at the first row",
+    )
+    .await?;
+    let down = "button[aria-label=\"Move Banana down\"]";
+    d.focus(down).await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_text(d, ORDER, "Apple Cherry Damson Banana", "Move Banana down").await?;
+    eventually_focused(
+        d,
+        "button[aria-label=\"Move Banana up\"]",
+        "Move down at the last row",
+    )
+    .await
+}
+
+e2e::scenario!(
+    a_move_to_either_end_hands_the_focus_on,
+    "/table-reorder",
+    a_move_to_an_end_hands_the_focus_on,
+    android: skip("958: element identity on the WebView")
+);
+
 async fn keys_move_a_row<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let damson = handle("Damson");
     d.focus(&damson).await?;

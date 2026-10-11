@@ -442,7 +442,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         }
         if *name == Builtin::Shortcuts.into() {
             help_modal
-                .open_with(shortcut_rows(&keymap.peek(), &words))
+                .open_with(shortcut_rows(&keymap.peek(), &tool_list.peek(), &words))
                 .onresult(move |_| {
                     let mut changed = changed;
                     changed(None, true);
@@ -758,10 +758,11 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                 let sends = submit.peek().is_some_and(|(_, on)| on == SubmitOn::Enter)
                     && *can_edit.peek()
                     && !report.shift;
-                let entered = reconcile(editor, NodeKey(key), &text, sends, &mut changed);
+                let soft = report.shift;
+                let entered = reconcile(editor, NodeKey(key), &text, sends, soft, &mut changed);
                 // Enter in a composed word arrives as its "\n": send after the word is in.
                 if entered && !try_submit(&KeyPress::new("Enter")) {
-                    reconcile(editor, NodeKey(key), &text, false, &mut changed);
+                    reconcile(editor, NodeKey(key), &text, false, soft, &mut changed);
                 }
                 note_limit();
                 generation += 1;
@@ -1633,14 +1634,26 @@ fn enter_code(mut editor: CopyValue<LiveEditor>, key: NodeKey, at_end: bool) {
         .select(Selection::caret(Position::new(key, at)));
 }
 
+/// Types composed `text`; with `soft`, a "\n" ending it is Shift+Enter, a line break (todo 3301).
+fn insert_composed(state: &mut EditorState, text: &str, soft: bool) -> bool {
+    match text.strip_suffix('\n').filter(|_| soft) {
+        Some(text) => {
+            state.insert_text(text);
+            state.insert_hard_break()
+        }
+        None => state.insert_text(text),
+    }
+}
+
 /// Takes the text the browser composed into leaf `key` into the model, cut to `max_length`.
 /// With `enter_sends`, a "\n" ending the composed text is Enter pressed in the word: it is
-/// left out and `true` says so.
+/// left out and `true` says so. With `soft`, it is a line break instead.
 fn reconcile(
     mut editor: CopyValue<LiveEditor>,
     key: NodeKey,
     dom: &str,
     enter_sends: bool,
+    soft: bool,
     changed: &mut impl FnMut(Option<Doc>, bool),
 ) -> bool {
     let Some(old) = editor.peek().doc().get(key).map(|block| block.text()) else {
@@ -1658,7 +1671,7 @@ fn reconcile(
             Position::new(key, to),
         ));
         state.delete_selection();
-        state.insert_text(&inserted);
+        insert_composed(state, &inserted, soft);
         if let Some(max) = max {
             state.cut_over(max, inserted.chars().count());
         }
@@ -1671,6 +1684,23 @@ fn reconcile(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_composed_shift_enter_is_a_line_break_not_a_paragraph() {
+        let at_end = |markdown: &str| {
+            let mut state = EditorState::new(Doc::from_markdown(markdown));
+            let block = state.doc.blocks[0].key;
+            let len = state.doc.blocks[0].text().chars().count();
+            state.select(Selection::caret(Position::new(block, len)));
+            state
+        };
+        let (mut soft, mut hard) = (at_end("ab"), at_end("ab"));
+        assert!(insert_composed(&mut soft, "日本\n", true));
+        assert!(insert_composed(&mut hard, "日本\n", false));
+        assert_eq!(soft.doc.blocks.len(), 1);
+        assert_eq!(soft.doc.blocks[0].text(), "ab日本\n");
+        assert_eq!(hard.doc.blocks.len(), 2);
+    }
 
     #[test]
     fn late_echoes_of_typing_do_not_reset() {

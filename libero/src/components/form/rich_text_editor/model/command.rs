@@ -429,6 +429,7 @@ impl Chord {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Keymap {
     bindings: Vec<(Chord, CommandName)>,
+    labels: Vec<(CommandName, String)>,
 }
 
 impl Default for Keymap {
@@ -483,6 +484,7 @@ impl Keymap {
     pub fn empty() -> Self {
         Self {
             bindings: Vec::new(),
+            labels: Vec::new(),
         }
     }
 
@@ -503,6 +505,26 @@ impl Keymap {
         let command = command.into();
         self.bindings.retain(|(_, bound)| *bound != command);
         self
+    }
+
+    /// Names a custom `command` in the shortcut list, which shows its raw name otherwise.
+    pub fn describe(
+        &mut self,
+        command: impl Into<CommandName>,
+        label: impl Into<String>,
+    ) -> &mut Self {
+        let (command, label) = (command.into(), label.into());
+        self.labels.retain(|(named, _)| *named != command);
+        self.labels.push((command, label));
+        self
+    }
+
+    /// The label [`describe`](Self::describe) gave `command`.
+    pub fn label_of(&self, command: &CommandName) -> Option<&str> {
+        self.labels
+            .iter()
+            .find(|(named, _)| named == command)
+            .map(|(_, label)| label.as_str())
     }
 
     pub fn command_for(&self, press: &KeyPress, apple: bool) -> Option<&CommandName> {

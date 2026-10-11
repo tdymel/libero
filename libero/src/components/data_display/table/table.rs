@@ -115,8 +115,13 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         "& [data-footer-name]",
         sx().font_size("0.85em")
             .font_weight("400")
-            .opacity("0.75")
+            .color("text-dimmed")
             .with("margin-inline-end", "6px"),
+    )
+    // On a group row's tinted fill the dimmed token is 4.08:1: the row's ink, lighter by weight.
+    .selector(
+        "& tbody tr[data-row-group] [data-footer-name]",
+        sx().color("inherit"),
     )
     // A row header is semantics, not a look: it reads like its row.
     .selector("& tbody th", sx().font_weight("inherit"))
@@ -188,7 +193,9 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     )
     .selector(
         "& [data-sort-button] [data-sort-order]",
-        sx().font_size("0.75em").font_weight("600").opacity("0.75"),
+        sx().font_size("0.75em")
+            .font_weight("600")
+            .color("text-dimmed"),
     )
     // The label takes the room, the menu button its glyph's.
     .selector(
@@ -742,10 +749,7 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         "& [data-node-toggle][aria-expanded=\"false\"] svg",
         sx().transform("rotate(90deg)"),
     ))
-    .selector(
-        "& [data-group-count]",
-        sx().font_weight("400").opacity("0.75"),
-    )
+    .selector("& [data-group-count]", sx().font_weight("400"))
     // Apart from the toggle when the toggle's column aggregates too.
     .selector(
         "& [data-group-toggle] + [data-group-aggregate]",

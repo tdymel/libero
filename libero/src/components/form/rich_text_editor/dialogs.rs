@@ -120,13 +120,23 @@ pub(crate) fn command_label(name: &CommandName, words: &RichTextEditorLabels) ->
     Some(word.to_string())
 }
 
-/// The keymap as `ShortcutHelp` rows, in binding order.
-pub(crate) fn shortcut_rows(keymap: &Keymap, words: &RichTextEditorLabels) -> Vec<Shortcut> {
+/// The keymap as `ShortcutHelp` rows, in binding order; a custom command takes the keymap's
+/// label, else its tool's.
+pub(crate) fn shortcut_rows(
+    keymap: &Keymap,
+    tools: &[RichTextTool],
+    words: &RichTextEditorLabels,
+) -> Vec<Shortcut> {
     keymap
         .bindings()
         .iter()
         .filter_map(|(chord, name)| {
-            let label = command_label(name, words)?;
+            let tool = tools.iter().find(|tool| tool.command == *name);
+            let label = match (keymap.label_of(name), tool) {
+                (Some(label), _) => label.to_string(),
+                (None, Some(tool)) => tool.label.clone(),
+                (None, None) => command_label(name, words)?,
+            };
             Some(Shortcut::new(chord.to_string().to_lowercase(), label))
         })
         .collect()
@@ -209,7 +219,7 @@ mod tests {
     #[test]
     fn every_default_row_is_a_chord_shortcut_help_shows() {
         let words = RichTextEditorLabels::ENGLISH;
-        let rows = shortcut_rows(&Keymap::default(), &words);
+        let rows = shortcut_rows(&Keymap::default(), &[], &words);
         assert!(
             rows.iter()
                 .any(|row| *row == Shortcut::new("mod+k", "Link"))
@@ -224,6 +234,28 @@ mod tests {
             let chord = chord.to_string().to_lowercase();
             assert!(chord_keys(&chord, false, &help).is_some(), "{chord}");
         }
+    }
+
+    #[test]
+    fn a_custom_command_is_named_by_its_keymap_label_or_tool() {
+        let words = RichTextEditorLabels::ENGLISH;
+        let chord = |text: &str| text.parse().expect("a chord");
+        let mut keymap = Keymap::empty();
+        keymap
+            .bind(chord("Mod+Shift+1"), "shout")
+            .bind(chord("Mod+Shift+2"), "mention")
+            .bind(chord("Mod+Shift+3"), "other")
+            .describe("shout", "Shout the selection");
+        let tools = [RichTextTool::new("mention", "Mention someone", rsx! {})];
+        let rows = shortcut_rows(&keymap, &tools, &words);
+        assert_eq!(
+            rows,
+            [
+                Shortcut::new("mod+shift+1", "Shout the selection"),
+                Shortcut::new("mod+shift+2", "Mention someone"),
+                Shortcut::new("mod+shift+3", "other"),
+            ]
+        );
     }
 
     #[test]

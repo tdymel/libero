@@ -235,11 +235,13 @@ fn demo_keymap(on: Extensions) -> Keymap {
     if on.shout {
         // demo-code: shout-chord start
         keymap.bind(Chord::parse("Mod+Shift+1").unwrap(), "shout");
+        keymap.describe("shout", "Shout the selection");
         // demo-code: shout-chord end
     }
     if on.mentions {
         // demo-code: mention-chord start
         keymap.bind(Chord::parse("Mod+Shift+2").unwrap(), "mention");
+        keymap.describe("mention", "Insert a mention");
         // demo-code: mention-chord end
     }
     if on.keymap {

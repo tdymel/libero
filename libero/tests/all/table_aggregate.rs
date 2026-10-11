@@ -93,6 +93,32 @@ fn every_aggregate_reads_the_numbers_and_names_itself() {
     assert_eq!(sum["data-align"], "end", "{sum:?}");
 }
 
+/// Dimmed by the text token, not by `opacity`, which depends on the ink (3299).
+#[test]
+fn the_aggregate_name_and_the_sort_rank_are_dimmed_by_the_text_token() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "Stock",
+                    data: stock(),
+                    columns: vec![column("Cents").value(|row: &Stock| row.cents).aggregate(Aggregate::Sum)],
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    for tail in ["[data-footer-name]", "[data-sort-button] [data-sort-order]"] {
+        let rule = table_rule(&html, tail);
+        assert!(!rule.contains_key("opacity"), "{tail}: {rule:?}");
+        assert!(rule["color"].contains("text-dimmed"), "{tail}: {rule:?}");
+    }
+    // A group row's tinted fill takes the row's ink: the token is 4.08:1 there.
+    let grouped = table_rule(&html, "tr[data-row-group] [data-footer-name]");
+    assert_eq!(grouped["color"], "inherit", "{grouped:?}");
+}
+
 #[test]
 fn the_footer_covers_the_filtered_rows_of_every_page() {
     fn app() -> Element {
