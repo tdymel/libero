@@ -321,6 +321,7 @@ pub async fn assert_chords_ignored_with(
             if switches_tabs(*key, modifier) {
                 continue;
             }
+            eprintln!("PROBE chord {name}+{}", key.key);
             press_with(page, *key, modifier).await?;
             sent.push(format!("{name}+{}", key.key));
             // One chord at a time: under load input outruns timers, so a later chord's move or
