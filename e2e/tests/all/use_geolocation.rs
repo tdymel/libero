@@ -11,7 +11,9 @@ use chromiumoxide::cdp::browser_protocol::browser::{
 };
 use chromiumoxide::cdp::browser_protocol::emulation::SetGeolocationOverrideParams;
 use e2e::browser::{PERMISSIONS, block_on};
-use e2e::driver::{Driver, Host, Platform, eventually, eventually_text, record_outcome};
+use e2e::driver::{
+    Driver, Host, Platform, eventually, eventually_answered, eventually_text, record_outcome,
+};
 use e2e::passes::pointer;
 use e2e::{Fixture, Viewport, wait};
 
@@ -39,11 +41,15 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
         // logged before the fix is asserted, so a red run still says what WKWebView gave.
         Platform::Ios => {
             d.click("#locate").await?;
-            eventually(d, "an answer to a request", async |d| {
-                Ok(d.text("#error").await? != "None" || d.text("#position").await? != "none")
-            })
-            .await?;
             let shown = ["#supported", "#permission", "#error", "#position"];
+            eventually_answered(
+                d,
+                "use_geolocation",
+                "an answer to a request",
+                &shown,
+                answered,
+            )
+            .await?;
             record_outcome(d, "use_geolocation", &shown).await?;
             eventually(d, "the simulator's position", async |d| {
                 Ok(d.text("#position").await?.starts_with("52.520, 13.405"))
@@ -58,13 +64,18 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
         // A request answers at all, with no prompt left hanging; the answer lands in the log.
         Platform::Desktop if unpinned => {
             d.click("#locate").await?;
-            eventually(d, "an answer to a request", async |d| {
-                Ok(d.text("#error").await? != "None" || d.text("#position").await? != "none")
-            })
-            .await?;
             let shown = ["#supported", "#permission", "#error", "#position"];
+            // wry 0.55.1 handles no geolocation prompt on Windows: a hung one times out by name.
+            eventually_answered(
+                d,
+                "use_geolocation",
+                "an answer to a request",
+                &shown,
+                answered,
+            )
+            .await?;
             record_outcome(d, "use_geolocation", &shown).await?;
-            // Both engines ship the API; the per-OS answer waits for the first outcomes (3193).
+            // WKWebView and WebView2 both ship the API; exact per-OS answers wait for CI (3193).
             eventually_text(d, "#supported", "true", "a request").await?;
             if d.text("#error").await? == "Some(Unsupported)" {
                 bail!("{:?}: a request reads Unsupported", Host::current());
@@ -92,6 +103,11 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
         Platform::Web => {}
     }
     Ok(())
+}
+
+/// A request ended in a fix or an error.
+async fn answered<D: Driver>(d: &mut D) -> Result<bool> {
+    Ok(d.text("#error").await? != "None" || d.text("#position").await? != "none")
 }
 
 e2e::scenario!(

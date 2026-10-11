@@ -9,7 +9,9 @@ use chromiumoxide::cdp::browser_protocol::browser::{
     PermissionDescriptor, PermissionSetting, SetPermissionParams,
 };
 use e2e::browser::{PERMISSIONS, block_on};
-use e2e::driver::{Driver, Host, Platform, eventually, eventually_text, record_outcome};
+use e2e::driver::{
+    Driver, Host, Platform, eventually, eventually_answered, eventually_text, record_outcome,
+};
 use e2e::passes::pointer;
 use e2e::{Fixture, Viewport, wait};
 
@@ -102,11 +104,16 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
 /// (macOS and Windows stay unpinned until the first outcomes, todos 1239, 3193); no
 /// `Notification` is unsupported as on Linux.
 async fn recorded<D: Driver>(d: &mut D) -> Result<()> {
-    eventually(d, "a permission state", async |d| {
-        Ok(d.text("#permission").await? != "Unknown")
-    })
-    .await?;
     let shown = ["#supported", "#permission"];
+    // wry 0.55.1 leaves WebView2's own notification prompt; a hung one times out by name.
+    eventually_answered(
+        d,
+        "use_system_notification",
+        "a permission state",
+        &shown,
+        async |d| Ok(d.text("#permission").await? != "Unknown"),
+    )
+    .await?;
     record_outcome(d, "use_system_notification", &shown).await?;
     if d.text("#supported").await? == "false" {
         eventually_text(d, "#permission", "Unsupported", "mount").await?;

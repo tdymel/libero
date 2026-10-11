@@ -408,7 +408,32 @@ pub async fn eventually_text<D: Driver>(
 /// Appends `selectors`' texts as one line to `outcomes.log` in the run's artifacts (and
 /// stderr), for an arm that observes a platform's answer before a test pins it.
 pub async fn record_outcome<D: Driver>(d: &mut D, what: &str, selectors: &[&str]) -> Result<()> {
-    let mut line = format!("{what} {:?}/{:?}:", d.platform(), Host::current());
+    write_outcome(d, what, "", selectors).await
+}
+
+/// [`eventually`] for an answer a platform may never give, such as a hung permission prompt:
+/// a timeout is logged as its own `timeout` outcome with `selectors`' texts, then fails.
+pub async fn eventually_answered<D: Driver>(
+    d: &mut D,
+    outcome: &str,
+    what: &str,
+    selectors: &[&str],
+    probe: impl AsyncFnMut(&mut D) -> Result<bool>,
+) -> Result<()> {
+    let answered = eventually(d, what, probe).await;
+    if answered.is_err() {
+        write_outcome(d, outcome, " timeout", selectors).await?;
+    }
+    answered
+}
+
+async fn write_outcome<D: Driver>(
+    d: &mut D,
+    what: &str,
+    tag: &str,
+    selectors: &[&str],
+) -> Result<()> {
+    let mut line = format!("{what} {:?}/{:?}{tag}:", d.platform(), Host::current());
     for selector in selectors {
         line.push_str(&format!(" {selector}={:?}", d.text(selector).await?));
     }

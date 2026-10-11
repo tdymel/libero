@@ -8,7 +8,9 @@ use chromiumoxide::cdp::browser_protocol::browser::{
     PermissionDescriptor, PermissionSetting, SetPermissionParams,
 };
 use e2e::browser::{PERMISSIONS, block_on};
-use e2e::driver::{Driver, Host, Platform, eventually, eventually_text, record_outcome};
+use e2e::driver::{
+    Driver, Host, Platform, eventually, eventually_answered, eventually_text, record_outcome,
+};
 use e2e::frames::in_front;
 use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Viewport, wait};
@@ -92,16 +94,23 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
 /// the exact answer per OS (todos 3193, 3232).
 async fn answers_at_all<D: Driver>(d: &mut D) -> Result<()> {
     d.click("#start").await?;
-    eventually(d, "an answer to a start", async |d| {
-        Ok(d.text("#error").await? != "None" || d.text("#live").await? == "true")
-    })
-    .await?;
     let shown = ["#supported", "#camera", "#error", "#live"];
+    // A prompt nobody answers (wry 0.55.1 leaves WebView2's own) times out by name.
+    eventually_answered(
+        d,
+        "use_user_media",
+        "an answer to a start",
+        &shown,
+        async |d| Ok(d.text("#error").await? != "None" || d.text("#live").await? == "true"),
+    )
+    .await?;
     record_outcome(d, "use_user_media", &shown).await?;
     if d.text("#live").await? == "true" {
         d.click("#stop").await?;
         return eventually_text(d, "#live", "false", "a stop").await;
     }
+    // Refusals the engines give without a camera: no mediaDevices or insecure page, a denied
+    // grant (wry's WKWebView delegate auto-grants, then TCC may refuse), no device.
     let error = d.text("#error").await?;
     if !["Some(Unsupported)", "Some(Denied)", "Some(NotFound)"].contains(&error.as_str()) {
         bail!(
