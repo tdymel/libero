@@ -233,20 +233,21 @@ e2e::scenario!(
 /// Todo 2750: the long press that opens the card leaves the browser's link menu shut, which
 /// would cover the card.
 async fn long_press_keeps_the_link_menu_shut<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    d.evaluate(
-        "(() => { window.__menus = []; window.addEventListener('contextmenu', \
-         (e) => window.__menus.push(e.defaultPrevented)); return true; })()",
-    )
-    .await?;
+    // The browsers' own long press fires `contextmenu` where the driver's touch does not.
+    const MENU: &str = "(() => { const menu = new MouseEvent('contextmenu', \
+        { bubbles: true, cancelable: true }); \
+        document.querySelector('#link').dispatchEvent(menu); return menu.defaultPrevented; })()";
+    ensure!(
+        !d.evaluate(MENU).await?.as_bool().unwrap_or(true),
+        "a pointer's menu was suppressed"
+    );
     d.touch_down("#link").await?;
     shown(d, "[role=dialog]", true, "a long press on the link").await?;
-    d.touch_up("#link").await?;
-    let menus: Vec<bool> = serde_json::from_value(d.evaluate("window.__menus").await?)?;
-    ensure!(
-        menus.iter().all(|&prevented| prevented),
-        "a link menu was left to open: {menus:?}"
-    );
-    Ok(())
+    eventually(d, "the long press to suppress the link menu", async |d| {
+        Ok(d.evaluate(MENU).await?.as_bool() == Some(true))
+    })
+    .await?;
+    d.touch_up("#link").await
 }
 
 e2e::scenario!(

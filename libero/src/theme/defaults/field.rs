@@ -16,6 +16,11 @@ pub const FIELD_CARD_PADDING: SizeCss = SizeCss::new("--lsx-field-card-padding-"
 /// Matches WebKit on iOS and iPadOS only.
 const IOS_ONLY: &str = "(-webkit-touch-callout: none)";
 
+/// Lifts a text input's `font_size` to 16px on iOS, which zooms into a smaller one.
+pub(crate) fn ios_text_floor_sx(font_size: impl std::fmt::Display) -> Sx {
+    sx().supports(IOS_ONLY, sx().font_size(format!("max(16px, {font_size})")))
+}
+
 /// A field wrapper's caption slots, not the label, the frame or the control.
 /// `:where` keeps the specificity of a bare `[data-slot]`.
 pub(crate) const FIELD_CAPTIONS: &str =
@@ -138,11 +143,7 @@ impl FieldDefaults {
 
     fn frame_size_sx(size: Size) -> Sx {
         sx().font_size(FIELD_FONT_SIZE.value(size))
-            // iOS zooms the page into a focused input under 16px; only iOS knows this property.
-            .supports(
-                IOS_ONLY,
-                sx().font_size(format!("max(16px, {})", FIELD_FONT_SIZE.value(size))),
-            )
+            .and(ios_text_floor_sx(FIELD_FONT_SIZE.value(size)))
             .min_height(FIELD_HEIGHT.value(size))
             .padding_top(FIELD_PADDING_Y.value(size))
             .padding_bottom(FIELD_PADDING_Y.value(size))
@@ -217,5 +218,17 @@ mod tests {
             .unwrap_or_else(|| panic!("no iOS query: {css}"));
         let lifts = css[supports..].matches("max(16px, ").count();
         assert_eq!(lifts, Size::ALL.len(), "{css}");
+    }
+
+    #[test]
+    fn the_floor_keeps_the_text_at_16px_or_the_given_size_on_ios_only() {
+        static PROBE: StaticSx = StaticSx::new(|| sx().and(ios_text_floor_sx("1em")));
+        let css = Stylesheet::from(&PROBE);
+        let css = css.as_str();
+        assert!(
+            css.contains("@supports (-webkit-touch-callout: none)"),
+            "{css}"
+        );
+        assert!(css.contains("font-size:max(16px, 1em)"), "{css}");
     }
 }

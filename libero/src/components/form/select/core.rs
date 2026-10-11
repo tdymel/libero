@@ -24,7 +24,7 @@ use crate::{
     },
     platform::{ElementApi, blur_counts, focus_tab_from, is_tab, logical_key},
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{FOCUS_RING_WIDTH, Size},
+    theme::{FOCUS_RING_WIDTH, Size, ios_text_floor_sx},
 };
 
 /// The chevron sits inside the control, so clicking it opens the list. A multi-select's trigger sits in `MULTI_VALUE_SX`'s flow.
@@ -122,6 +122,7 @@ static SEARCH_SX: StaticSx = StaticSx::new(|| {
         .font_size("inherit")
         .letter_spacing("inherit")
         .line_height("1.5")
+        .and(ios_text_floor_sx("1em"))
         .padding("4px 8px")
         .border_bottom("1px solid")
         // The box's only boundary: 3:1, as a field frame (WCAG 1.4.11, todo 490).

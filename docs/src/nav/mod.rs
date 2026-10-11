@@ -11,7 +11,7 @@ use libero::{
     theme::{SIDEBAR_SIZE, Size},
 };
 
-use crate::Route;
+use crate::{Route, components::Remount};
 
 mod aliases;
 mod drag;
@@ -171,44 +171,45 @@ pub fn DocsNav(
                 style: pulled.map(|px| pulled_style(px, rtl)),
                 attributes: measure.attributes(),
                 Flex { direction: "column", gap: "sm",
-                    Tree {
-                        // Remounts between drawer and column: Blitz kept the
-                        // drawer's text layout, one letter per line (838).
-                        key: "{drawer}",
-                        aria_label: "Documentation pages",
-                        size: "xs",
-                        // The tree's guide under each section's chevron marks the current page.
-                        guides: true,
-                        sx: sx().gap("0").selector("& ul", sx().gap("0")),
-                        data,
-                        expanded: expanded(),
-                        onexpandedchange: move |open: HashSet<String>| expanded.set(open),
-                        // The tab stop starts on the current page, not "About".
-                        current: current_path,
-                        render_node: move |args: TreeNodeRenderArgs<NavEntry>| {
-                            if args.expanded.is_some() {
-                                return default_tree_render(args);
-                            }
-                            // A page link (not a chevron) closes the panel and focuses the burger. `NavLink`
-                            // has no `onclick`, so a `display: contents` wrapper catches the bubble.
-                            rsx! {
-                                div {
-                                display: "contents",
-                                onclick: move |_| close(),
-                                    NavLink {
-                                        to: NavigationTarget::Internal(args.id),
-                                        // `Tree`'s roving `<li>` is the only tab stop.
-                                        tabindex: args.tabindex,
-                                        scroll_into_view: true,
-                                        // The guide is the one active indicator, so `NavLink`'s start bar goes.
-                                        sx: sx()
-                                                                                .align_self("stretch")
-                                                                                .when("active", sx().with("background-image", "none")),
-                                        "{args.data.label}"
+                    // Remounts between drawer and column: Blitz kept the
+                    // drawer's text layout, one letter per line (838).
+                    Remount { on: drawer.to_string(),
+                        Tree {
+                            aria_label: "Documentation pages",
+                            size: "xs",
+                            // The tree's guide under each section's chevron marks the current page.
+                            guides: true,
+                            sx: sx().gap("0").selector("& ul", sx().gap("0")),
+                            data,
+                            expanded: expanded(),
+                            onexpandedchange: move |open: HashSet<String>| expanded.set(open),
+                            // The tab stop starts on the current page, not "About".
+                            current: current_path,
+                            render_node: move |args: TreeNodeRenderArgs<NavEntry>| {
+                                if args.expanded.is_some() {
+                                    return default_tree_render(args);
+                                }
+                                // A page link (not a chevron) closes the panel and focuses the burger. `NavLink`
+                                // has no `onclick`, so a `display: contents` wrapper catches the bubble.
+                                rsx! {
+                                    div {
+                                    display: "contents",
+                                    onclick: move |_| close(),
+                                        NavLink {
+                                            to: NavigationTarget::Internal(args.id),
+                                            // `Tree`'s roving `<li>` is the only tab stop.
+                                            tabindex: args.tabindex,
+                                            scroll_into_view: true,
+                                            // The guide is the one active indicator, so `NavLink`'s start bar goes.
+                                            sx: sx()
+                                                                                    .align_self("stretch")
+                                                                                    .when("active", sx().with("background-image", "none")),
+                                            "{args.data.label}"
+                                        }
                                     }
                                 }
-                            }
-                        },
+                            },
+                        }
                     }
                 }
             }

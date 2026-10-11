@@ -31,7 +31,7 @@ use crate::{
     sx::{StaticSx, Sx, sx},
     theme::{
         CHECKBOX_BOX_SIZE, CssVar, NamedColorCss, ScrollAxis, Size, TABLE_GROUP, TABLE_PAD_X,
-        TABLE_PADDING_X, TableDefaults,
+        TABLE_PADDING_X, TableDefaults, ios_text_floor_sx,
     },
     utils::warn,
 };
@@ -250,6 +250,7 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
             .width("100%")
             .padding("0 4px")
             .font("inherit")
+            .and(ios_text_floor_sx("1em"))
             .color("inherit")
             .text_align("inherit")
             .background("transparent")
@@ -2359,4 +2360,24 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             {pager}
         },
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::TABLE_SX;
+    use crate::css::Stylesheet;
+
+    #[test]
+    fn a_cell_editor_is_at_least_16px_on_ios_so_focus_does_not_zoom() {
+        let stylesheet = Stylesheet::from(&*TABLE_SX);
+        let css = stylesheet.as_str();
+        let editor = css
+            .find("[data-cell-editor] input{")
+            .unwrap_or_else(|| panic!("no editor rule: {css}"));
+        let rule = &css[editor..];
+        let supports = rule
+            .find("@supports (-webkit-touch-callout: none)")
+            .unwrap_or_else(|| panic!("no iOS query: {css}"));
+        assert!(rule[supports..].contains("max(16px, 1em)"), "{css}");
+    }
 }

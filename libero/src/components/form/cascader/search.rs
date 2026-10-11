@@ -9,7 +9,7 @@ use crate::{
     hooks::ElementHandle,
     platform::{ElementApi, blur_counts},
     sx::{StaticSx, sx},
-    theme::FOCUS_RING_WIDTH,
+    theme::{FOCUS_RING_WIDTH, ios_text_floor_sx},
 };
 
 /// The search box above the rows, as on `Select`. Not a field control, so it carries its own chrome.
@@ -23,6 +23,7 @@ pub(super) static CASCADER_SEARCH_SX: StaticSx = StaticSx::new(|| {
         .font_size("inherit")
         .letter_spacing("inherit")
         .line_height("1.5")
+        .and(ios_text_floor_sx("1em"))
         .padding("4px 8px")
         .border_bottom("1px solid")
         // The box's only boundary: 3:1, as a field frame (WCAG 1.4.11, todo 490).

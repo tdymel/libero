@@ -21,7 +21,7 @@ use crate::{
     theme::{
         SPOTLIGHT_DESCRIPTION_COLOR, SPOTLIGHT_GROUP_COLOR, SPOTLIGHT_MAX_LIST_HEIGHT,
         SPOTLIGHT_PADDING, SPOTLIGHT_SEARCH_FONT_SIZE, SPOTLIGHT_TOP_OFFSET, SPOTLIGHT_WIDTH, Size,
-        SizeCss,
+        SizeCss, ios_text_floor_sx,
     },
     utils::warn,
 };
@@ -68,6 +68,7 @@ static SPOTLIGHT_BODY_SX: StaticSx = StaticSx::new(|| {
                 .font("inherit")
                 .letter_spacing("inherit")
                 .font_size(SPOTLIGHT_SEARCH_FONT_SIZE.value())
+                .and(ios_text_floor_sx(SPOTLIGHT_SEARCH_FONT_SIZE.value()))
                 .color("inherit")
                 .background("transparent")
                 .border("0")
