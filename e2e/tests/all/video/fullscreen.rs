@@ -169,7 +169,8 @@ e2e::scenario!(
     the_fullscreen_button_toggles,
     "/video",
     fullscreen_toggles,
-    macos: skip("macOS WKWebView: Escape does not leave a WebView fullscreen")
+    macos: skip("macOS WKWebView: Escape does not leave a WebView fullscreen"),
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );
 
 fn pseudo_state(fullscreen: Option<String>) -> bool {
@@ -214,7 +215,8 @@ async fn tab_out_leaves_pseudo<D: Driver>(d: &mut D, _route: &str) -> Result<()>
 e2e::scenario!(
     a_tab_out_of_the_drawn_fullscreen_leaves_it,
     "/video/refused",
-    tab_out_leaves_pseudo
+    tab_out_leaves_pseudo,
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );
 
 /// Todo 1370: in fullscreen the page's portal is outside the player, which hides

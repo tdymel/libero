@@ -108,7 +108,8 @@ async fn a_hovered_option_tints<D: Driver>(d: &mut D, _route: &str) -> Result<()
 e2e::scenario!(
     a_hovered_select_option_tints_like_the_keyboard_s_row,
     "/select/echo",
-    a_hovered_option_tints
+    a_hovered_option_tints,
+    ios: skip("iOS: a touch screen has no hover")
 );
 
 #[test]
@@ -379,7 +380,8 @@ pub async fn an_outside_click_keeps_its_focus<D: Driver>(d: &mut D, _route: &str
 e2e::scenario!(
     an_outside_click_leaves_a_searchable_select,
     "/select/outside",
-    an_outside_click_keeps_its_focus
+    an_outside_click_keeps_its_focus,
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );
 
 /// The trigger while the search box holds the combobox role.
