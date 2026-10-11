@@ -12,6 +12,7 @@ use super::{
     http::free_port,
     own_target_dir,
     process::{Guard, OwnGroup, stop},
+    units,
 };
 
 const PACKAGE: &str = "dev.libero.fixtures";
@@ -365,13 +366,11 @@ pub(super) fn list_arm(
     if !listed.status.success() {
         bail!("listing the {arm} tests failed: {}", listed.status);
     }
-    Ok(String::from_utf8_lossy(&listed.stdout)
-        .lines()
-        .filter_map(|line| line.strip_suffix(": test"))
+    let arm_tests = units::listed(&String::from_utf8_lossy(&listed.stdout))
+        .into_iter()
         .filter(|name| name.ends_with(&suffix))
-        .filter(|name| filters.is_empty() || filters.iter().any(|f| name.contains(f.as_str())))
-        .map(str::to_string)
-        .collect())
+        .collect();
+    Ok(units::filtered(arm_tests, filters))
 }
 
 /// One unit's scenarios on a freshly launched app; whether they passed. A

@@ -150,12 +150,33 @@ MultiSelect {
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the select from the tab order and the post instead. |
 | `dropdown_parts` | `Parts<DropdownPart>` | - | Styles the portaled dropdown and its inner parts. |
 
-`SelectOptionArgs<T>` carries `value`, `index`, `selected` and `disabled`.
-`SelectionArgs<T>` carries `value`, `remove`, `disabled` and `readonly`. `SelectFilterArgs<T>` carries
-`value` and `query`.
-
 Like every component, it also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes. The attributes land on the trigger.
+
+### `SelectOptionArgs`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `value` | `T` | - | The option this row draws. |
+| `index` | `usize` | - | The row's position among the rows drawn. |
+| `selected` | `bool` | - | Part of the selection, for a checkmark. |
+| `disabled` | `bool` | - | The list refuses this row. The greying and `aria-disabled` are drawn anyway. |
+
+### `SelectFilterArgs`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `value` | `T` | - | The option under test. |
+| `query` | `String` | - | What is typed in the search box. |
+
+### `SelectionArgs`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `value` | `T` | - | The value this chip draws. |
+| `remove` | `Callback<()>` | - | Drops this value, the same edit as picking its row again. |
+| `disabled` | `bool` | - | The field is disabled: `remove` does nothing, so draw no remove control. |
+| `readonly` | `bool` | - | The field is read-only: `remove` does nothing, so draw no remove control. |
 
 ## Style API
 

@@ -130,11 +130,24 @@ option is read out, and the arrows, typeahead and clicks skip it.
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the select from the tab order and the post instead. |
 | `dropdown_parts` | `Parts<DropdownPart>` | - | Styles the portaled dropdown and its inner parts. |
 
-`SelectOptionArgs<T>` carries `value`, `index`, `selected` and `disabled`.
-`SelectFilterArgs<T>` carries `value` and `query`.
-
 Like every component, it also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes. The attributes land on the trigger.
+
+### `SelectOptionArgs`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `value` | `T` | - | The option this row draws. |
+| `index` | `usize` | - | The row's position among the rows drawn. |
+| `selected` | `bool` | - | Part of the selection, for a checkmark. |
+| `disabled` | `bool` | - | The list refuses this row. The greying and `aria-disabled` are drawn anyway. |
+
+### `SelectFilterArgs`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `value` | `T` | - | The option under test. |
+| `query` | `String` | - | What is typed in the search box. |
 
 ## Style API
 

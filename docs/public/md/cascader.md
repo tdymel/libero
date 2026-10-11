@@ -131,12 +131,26 @@ Cascader {
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead. |
 | `dropdown_parts` | `Parts<DropdownPart>` | - | Styles the portaled dropdown and its inner parts. |
 
-`CascaderNodeArgs<T>` carries `value`, `label`, `level`, `expanded` and
-`selected`. `CascaderFilterArgs<T>` carries `query`, `label` and `path`, the
-values from root to option.
-
 Like every component, it also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes. The attributes land on the trigger.
+
+### `CascaderNodeArgs`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `value` | `T` | - | The option this row draws. |
+| `label` | `String` | - | The option's label. |
+| `level` | `usize` | - | The option's column: 0 for a root. |
+| `expanded` | `bool` | - | The column to the right holds this option's children. |
+| `selected` | `bool` | - | This option holds the committed value. |
+
+### `CascaderFilterArgs`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `query` | `String` | - | What is typed in the search box. |
+| `label` | `String` | - | The path's labels joined by `separator`, what the default filter matches. |
+| `path` | `Vec<T>` | - | The values from the root to the option. The last one is what this path commits. |
 
 ## Style API
 

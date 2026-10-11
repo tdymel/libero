@@ -65,6 +65,19 @@ fn selected<'a>(listed: &'a [String], filters: &[&str], skips: &[&str]) -> Vec<&
         .collect()
 }
 
+/// The `names` the `filters` select: a `foo::` filter as a prefix, any other as a substring;
+/// all of them when there are no filters.
+pub(crate) fn filtered(names: Vec<String>, filters: &[String]) -> Vec<String> {
+    let filters: Vec<&str> = filters.iter().map(String::as_str).collect();
+    match filters.is_empty() {
+        true => names,
+        false => selected(&names, &filters, &[])
+            .into_iter()
+            .cloned()
+            .collect(),
+    }
+}
+
 /// The filters as libtest's substrings, with a `--skip unit::` for each other unit whose names
 /// they would also catch. None when a skip would drop a selected name.
 fn skipping(
@@ -255,6 +268,23 @@ mod tests {
                 2
             )
         );
+    }
+
+    #[test]
+    fn the_runners_listing_keeps_a_unit_as_a_prefix() {
+        let names = || strings(LISTED);
+        assert_eq!(
+            filtered(names(), &strings(&["table::"])),
+            strings(&[
+                "table::a_wide_table_meets_the_baseline",
+                "table::sticky::a_header_sticks"
+            ])
+        );
+        assert_eq!(
+            filtered(names(), &strings(&["sticky", "select::"])),
+            strings(&["table::sticky::a_header_sticks", "select::it_opens"])
+        );
+        assert_eq!(filtered(names(), &[]), names());
     }
 
     #[test]

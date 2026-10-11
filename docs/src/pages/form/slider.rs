@@ -254,7 +254,8 @@ pub fn SliderPage() -> Element {
                 props("SliderSegment", vec![
                     prop("start", "V").doc("Where the stretch starts; it ends at the next one's start, or `max`."),
                     prop("label", "Option<String>").doc("Names the values inside it. `SliderSegment::labeled(start, label)`."),
-                ]),
+                ])
+                .without_base_props(),
                 props("SliderMark", vec![
                     prop("value", "V").doc("Where the tick sits on the track."),
                     prop("label", "String").doc("Caption below the tick. Leave it out for a bare tick."),

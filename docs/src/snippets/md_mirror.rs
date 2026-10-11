@@ -201,9 +201,14 @@ fn md_mirrors_describe_the_props_like_their_page() {
                             .find(|(heading, _)| index == 0 && heading.is_empty())
                     })
                 else {
+                    // A group with no prop of its own has no table; the rest must have one.
+                    if group.names().next().is_some() {
+                        problems.push(format!("{markdown}: no table for `{}`", group.component()));
+                    }
                     continue;
                 };
                 for (name, description) in group.descriptions() {
+                    // A handle's two-column table has no description cell; the names test covers its rows.
                     let Some(mirror) = listed.get(bare(name)).filter(|text| !text.is_empty())
                     else {
                         continue;

@@ -125,11 +125,22 @@ Autocomplete {
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead. |
 | `dropdown_parts` | `Parts<DropdownPart>` | - | Styles the portaled dropdown and its inner parts. |
 
-`AutocompleteOptionArgs<T>` carries `value` and `index`.
-`AutocompleteFilterArgs<T>` carries `value` and `query`.
-
 Like every component, it also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes. The attributes land on the input.
+
+### `AutocompleteOptionArgs`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `value` | `T` | - | The suggestion this row draws. |
+| `index` | `usize` | - | The row's position in the narrowed list. |
+
+### `AutocompleteFilterArgs`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `value` | `T` | - | The suggestion under test. |
+| `query` | `String` | - | The text in the field. |
 
 ## Style API
 

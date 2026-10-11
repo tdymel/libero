@@ -216,6 +216,13 @@ fn Demo() -> Element {
 | `track` | `SliderTrack` | `Line` | How the track is drawn. `SliderTrack::Bars(heights)` draws a row of rounded bars, each as tall as its fraction (0 to 1) of a taller track, like `Audio`'s waveform; the bars up to the value fill in `color`. |
 | `preview_on_hover` | `bool` | `false` | Shows a bubble over the value a hovering mouse or pen points at, before a press picks it. Escape hides it until the pointer leaves the slider. Touch has no hover, so it never shows there. The bubble follows the pointer and goes when it leaves the slider, so it is not hoverable (WCAG 1.4.13). |
 
+### `SliderSegment`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `start` | `V` | - | Where the stretch starts; it ends at the next one's start, or `max`. |
+| `label` | `Option<String>` | - | Names the values inside it. `SliderSegment::labeled(start, label)`. |
+
 ### `SliderMark`
 
 | Prop | Type | Default | Description |
