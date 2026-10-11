@@ -20,6 +20,9 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: 0
+  # No debug info: CI prints no backtraces, and a Windows probe built 16% faster (3407).
+  # The same in every workflow, since the cargo cache key hashes it.
+  CARGO_PROFILE_DEV_DEBUG: 0
   # All 30 grammars.
   CODE_LANGS: code-lang-bash,code-lang-c,code-lang-cpp,code-lang-csharp,code-lang-css,code-lang-dart,code-lang-go,code-lang-graphql,code-lang-haskell,code-lang-html,code-lang-java,code-lang-javascript,code-lang-json,code-lang-kotlin,code-lang-lua,code-lang-markdown,code-lang-objective-c,code-lang-perl,code-lang-php,code-lang-powershell,code-lang-python,code-lang-r,code-lang-ruby,code-lang-rust,code-lang-scala,code-lang-sql,code-lang-swift,code-lang-toml,code-lang-typescript,code-lang-yaml
 
