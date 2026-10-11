@@ -8,7 +8,9 @@ use std::sync::LazyLock;
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result};
-use chromiumoxide::cdp::browser_protocol::emulation::SetFocusEmulationEnabledParams;
+use chromiumoxide::cdp::browser_protocol::emulation::{
+    MediaFeature, SetEmulatedMediaParams, SetFocusEmulationEnabledParams,
+};
 use chromiumoxide::cdp::browser_protocol::input::{
     DispatchMouseEventParams, DispatchMouseEventType, MouseButton,
 };
@@ -105,6 +107,13 @@ impl Cdp {
             // Focus and blur as in a foreground window, whatever the desktop's own focus.
             page.execute(SetFocusEmulationEnabledParams::new(true))
                 .await?;
+            // The runner has Windows' animations off, so it reports reduced motion: the web tier's default.
+            page.execute(
+                SetEmulatedMediaParams::builder()
+                    .feature(MediaFeature::new("prefers-reduced-motion", "no-preference"))
+                    .build(),
+            )
+            .await?;
             Ok(Self {
                 page,
                 _browser: browser,
