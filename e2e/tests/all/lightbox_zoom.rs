@@ -553,7 +553,7 @@ e2e::scenario!(
     a_tap_on_zoom_in_zooms_the_picture,
     "/lightbox",
     zoom_in_tapped,
-    macos: skip("2862: WKWebView: the stage's first scroll never settles"),
+    macos: skip("3432: WKWebView: the stage's first scroll never settles"),
     ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
@@ -595,7 +595,7 @@ e2e::scenario!(
     "/lightbox",
     pan_stops_at_the_edge,
     native: skip("3386: reads the picture's size and pan by script, which Blitz has none of"),
-    macos: skip("2862: WKWebView: the stage's first scroll never settles"),
+    macos: skip("3432: WKWebView: the stage's first scroll never settles"),
     ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
