@@ -200,6 +200,15 @@ pub(super) fn windowed_sx() -> Sx {
                 .border("1px solid currentColor")
                 .border_radius("2px"),
         )
+        // The last column's message ends at its cell's end edge, not past the scroll edge (todo 3355).
+        .selector(
+            "& tbody > tr > td:last-child[data-editing]:not([data-pin])",
+            sx().position("relative"),
+        )
+        .selector(
+            "& tbody > tr > td:last-child[data-editing] [data-cell-error]",
+            sx().with("inset-inline-end", "0"),
+        )
         .selector(
             "& tfoot > tr > *",
             sx().white_space("nowrap")

@@ -421,7 +421,7 @@ fn MentionsPage(#[props(default)] spellcheck: bool) -> Element {
     let users: Vec<&'static str> = match &query {
         Some(query) if dismissed.read().as_ref() != Some(query) => USERS
             .into_iter()
-            .filter(|user| user.starts_with(query.as_str()))
+            .filter(|user| user.starts_with(&query.to_lowercase()))
             .collect(),
         _ => Vec::new(),
     };

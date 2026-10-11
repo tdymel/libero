@@ -30,7 +30,10 @@ use crate::{
     components::{
         accessibility::use_announcer,
         buttons::{ActionIcon, Button, Toolbar, ToolbarGroup, ToolbarSeparator},
-        common::{Glyph, HtmlTag, Input, ScaleOrCss, attr, names_itself, use_name_warning},
+        common::{
+            Glyph, HtmlTag, Input, ScaleOrCss, attr, coarse_hit_area_sx, names_itself,
+            use_name_warning,
+        },
         form::{field_props, use_bound, use_field, use_field_frame},
         layout::use_box,
         overlay::{Menu, MenuEntry, MenuItem, Shortcut, ShortcutHelp, use_menu},
@@ -114,6 +117,12 @@ static SURFACE_SX: StaticSx = StaticSx::new(|| {
     .selector(
         "& [data-fence] > div",
         sx().display("inline-block").margin_inline_start("0.25rem"),
+    )
+    // The 24px language button takes a finger-sized press (todo 3345).
+    .selector(
+        "& [data-fence] button",
+        sx().position("relative")
+            .and(coarse_hit_area_sx("::before")),
     )
     .selector(
         "&[data-empty]::before",

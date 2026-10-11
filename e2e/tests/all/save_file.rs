@@ -10,7 +10,11 @@ async fn the_share_sheet_opens<D: Driver>(d: &mut D, _route: &str) -> Result<()>
 
 /// Todo 2078: bytes that are no text go to Downloads, then to the sheet as a file.
 async fn the_share_sheet_opens_on_a_file<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    shares(d, "#save-binary").await
+    let shared = shares(d, "#save-binary").await;
+    // The app wrote `bytes.bin` to Downloads; the phone keeps it otherwise (todo 3348).
+    #[cfg(feature = "android")]
+    e2e::android::remove_download("bytes.bin").await?;
+    shared
 }
 
 async fn shares<D: Driver>(d: &mut D, button: &str) -> Result<()> {

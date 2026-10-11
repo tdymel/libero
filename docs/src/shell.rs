@@ -327,7 +327,8 @@ fn shell_header(
                         Pictogram { icon: lucide::search::outlined }
                     }
                 }
-                Repository { repo: REPO }
+                // Wide enough for the count, so it arriving late moves no neighbour (todo 3336).
+                Repository { repo: REPO, sx: sx().min_width("3.5rem") }
                 // Lets a reviewer check any component right to left.
                 DirectionToggle {}
                 // In the header, so any page can be checked in every scheme and palette.

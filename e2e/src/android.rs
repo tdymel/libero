@@ -227,6 +227,28 @@ pub(crate) async fn download(name: &str, text: &str) -> Result<()> {
         .map(drop)
 }
 
+/// Deletes the MediaStore rows of the Downloads files named `name`, the file with them.
+pub async fn remove_download(name: &str) -> Result<()> {
+    // `adb shell` joins its arguments into one line for the device's shell.
+    let filter = format!("\"_display_name='{}'\"", name.replace('\'', ""));
+    let on_rows = |verb: &str| {
+        [
+            "content".to_string(),
+            verb.into(),
+            "--uri".into(),
+            "content://media/external/downloads".into(),
+            "--where".into(),
+            filter.clone(),
+        ]
+    };
+    shell(&on_rows("delete")).await?;
+    let left = shell(&on_rows("query")).await?;
+    if !left.contains("No result found") {
+        bail!("Downloads still lists {name}: {left}");
+    }
+    Ok(())
+}
+
 /// Taps the first on-screen node carrying `wanted` (`text="…"`), in whatever
 /// app is on top (the system picker), once it shows.
 pub(crate) async fn tap_node(wanted: &str) -> Result<()> {
