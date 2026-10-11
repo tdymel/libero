@@ -59,6 +59,7 @@ pub struct RowUpdate<T> {
 /// What a custom [`editor`](super::Column::editor) gets: the text it starts from,
 /// its name, and the commit and cancel that close it.
 #[derive(Clone, PartialEq)]
+#[non_exhaustive]
 pub struct EditCtx {
     pub value: String,
     /// The editor's name: "Edit Age, Ana".
@@ -66,6 +67,9 @@ pub struct EditCtx {
     /// Why the last commit was refused, shown under the editor and announced: mark
     /// the field invalid with it. Cleared when the editor closes.
     pub error: Option<String>,
+    /// The id of the element showing `error`, which exists only while `error` is `Some`:
+    /// set the field's `aria-describedby` to it then, and not otherwise.
+    pub error_id: String,
     /// Call it when the text changed: it clears `error`, as typing does in the built-in editor.
     pub changed: Callback<()>,
     /// Takes the new text; one that does not parse or validate keeps the editor open.

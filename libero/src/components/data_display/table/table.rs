@@ -11,7 +11,7 @@ use crate::{
         accessibility::use_announcer,
         common::{
             ClassList, HtmlTag, Input, LogicalTextAlign, Parts, States, Variables, attr,
-            inset_focus_ring_sx, names_itself, use_name_warning, variables,
+            inset_focus_ring_sx, min_hit_area_sx, names_itself, use_name_warning, variables,
         },
         form::use_checkbox_look,
         layout::{
@@ -715,7 +715,10 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
             .border_radius("4px")
             .background("none")
             .color("inherit")
-            .cursor("pointer"),
+            .cursor("pointer")
+            // The 16px chevron takes presses in a 24px box (WCAG 2.5.8).
+            .position("relative")
+            .and(min_hit_area_sx("::before")),
     )
     .selector(
         "& [data-node-toggle]:focus-visible",

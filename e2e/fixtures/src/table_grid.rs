@@ -86,6 +86,7 @@ fn AgeEditor(ctx: EditCtx) -> Element {
             id: "custom-editor",
             aria_label: ctx.label.clone(),
             aria_invalid: ctx.error.is_some().then_some("true"),
+            aria_describedby: ctx.error.is_some().then(|| ctx.error_id.clone()),
             value: draft(),
             onmounted: move |mounted| async move {
                 let _ = mounted.data().set_focus(true).await;

@@ -488,6 +488,7 @@ impl<T: Clone + 'static> RowContext<T> {
                 value,
                 label,
                 error: error.clone(),
+                error_id: error_id.clone(),
                 commit: Callback::new(move |text: String| {
                     commit.call((text, Leave::Stay));
                 }),

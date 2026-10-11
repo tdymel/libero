@@ -512,7 +512,7 @@ e2e::scenario!(
     android: skip("958: roving keys are inert in the emulator's WebView")
 );
 
-/// A custom editor clears the refused value's message by calling `changed`.
+/// A custom editor is described by the refused value's message, and clears it by calling `changed`.
 async fn custom_clears<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     const CUSTOM: &str = "#custom-editor";
     d.double_click(&cell(1, 2)).await?;
@@ -522,6 +522,10 @@ async fn custom_clears<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     eventually_text(d, "[data-cell-error]", "Too old", "the refused commit").await?;
     if d.attr(CUSTOM, "aria-invalid").await?.as_deref() != Some("true") {
         bail!("the custom editor got no error");
+    }
+    let id = d.attr("[data-cell-error]", "id").await?;
+    if id.is_none() || d.attr(CUSTOM, "aria-describedby").await? != id {
+        bail!("the custom editor is not described by its message");
     }
     d.type_text("1").await?;
     eventually(d, "typing to clear the message", async |d| {

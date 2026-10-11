@@ -71,6 +71,15 @@ e2e::scenario!(
     keyboard_toggles
 );
 
+/// The 16px chevron is pressed in a 24x24 box (WCAG 2.5.8).
+#[test]
+fn the_tree_toggle_meets_the_target_size() {
+    Suite::new("table_tree", "/table-tree")
+        .targets(SITE)
+        .no_snapshot()
+        .run();
+}
+
 /// "front" matches deep down: site and build show above it, opened, while the rest go.
 async fn filter_shows_ancestors<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click("input[type=search]").await?;

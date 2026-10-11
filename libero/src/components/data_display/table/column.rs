@@ -524,7 +524,14 @@ impl<T> Column<T> {
     ///     .value(|u: &User| u.role.clone())
     ///     .editable(|u: &mut User, role: String| u.role = role)
     ///     .editor(|ctx: EditCtx| rsx! {
-    ///         button { onclick: move |_| ctx.commit.call("Admin".to_string()), "Admin" }
+    ///         input {
+    ///             aria_label: ctx.label,
+    ///             aria_invalid: ctx.error.is_some().then_some("true"),
+    ///             aria_describedby: ctx.error.is_some().then_some(ctx.error_id),
+    ///             value: ctx.value,
+    ///             oninput: move |_| ctx.changed.call(()),
+    ///             onchange: move |event| ctx.commit.call(event.value()),
+    ///         }
     ///     });
     /// ```
     pub fn editor(mut self, editor: impl Fn(EditCtx) -> Element + 'static) -> Self {
