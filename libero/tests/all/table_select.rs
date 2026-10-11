@@ -80,7 +80,8 @@ fn sm_table() -> Element {
 
 /// The markup of the first body row's checkbox cell, inside its `<td>`.
 fn row_cell(table: &str) -> String {
-    let cell = table.split("<td data-select=true>").nth(1).unwrap();
+    let cell = table.split("<td data-select=true").nth(1).unwrap();
+    let cell = &cell[cell.find('>').unwrap() + 1..];
     cell[..cell.find("</td>").unwrap()].to_string()
 }
 
