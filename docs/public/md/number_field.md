@@ -101,6 +101,28 @@ fn Demo() -> Element {
 }
 ```
 
+`group_digits` writes `1,234,567.5` (`1.234.567,5` under `Formats::GERMAN`)
+while the field is not focused:
+
+```rust
+use dioxus::prelude::*;
+use libero::components::NumberField;
+
+#[component]
+fn Demo() -> Element {
+    let mut amount = use_signal(|| Some(1_234_567.5f64));
+
+    rsx! {
+        NumberField {
+            label: "Amount",
+            group_digits: true,
+            value: amount(),
+            onchange: move |next| amount.set(next),
+        }
+    }
+}
+```
+
 ## Props
 
 ### `NumberField<T: NumberValue>`
@@ -118,6 +140,7 @@ fn Demo() -> Element {
 | `name` | `FieldName<Option<T>>` | - | What the field posts as. A path such as `Signup::FIELDS.age()` also binds the number to the surrounding `Form`'s value when the field has no `onchange`. |
 | `placeholder` | `String` | - | Shown while the field is empty. |
 | `steppers` | `bool` | `false` | Shows minus and plus buttons in the trailing slot. The arrow keys step the value either way. |
+| `group_digits` | `bool` | `false` | Writes the thousands grouped in the provider's `Formats`, `1,234,567.5` or `1.234.567,5`, while the field is not focused; typing sees the bare number. Built-in number types only. Grouped text typed or pasted parses either way. |
 | `increment_label` | `String` | `number_field.increase` | Names the plus button, such as "Add a guest". Unset, the localization's `number_field.increase`, "Increase" in English. |
 | `decrement_label` | `String` | `number_field.decrease` | Names the minus button. Unset, the localization's `number_field.decrease`, "Decrease" in English. |
 | `label` | `Caption` | - | The field's caption, above the control. It names the field. |

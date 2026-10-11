@@ -44,6 +44,30 @@ async fn typing_commits<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     eventually_text(d, "#echo", "42", "typing 42, Enter").await
 }
 
+/// Todo 3390: grouped while not focused, the bare number while typing.
+async fn grouped_until_focused<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const AMOUNT: &str = "#amount";
+    eventually(d, "grouped at rest", async |d| {
+        Ok(d.value(AMOUNT).await? == "1,234,567.5")
+    })
+    .await?;
+    d.click(AMOUNT).await?;
+    eventually(d, "bare while focused", async |d| {
+        Ok(d.value(AMOUNT).await? == "1234567.5")
+    })
+    .await?;
+    d.press(keyboard::TAB).await?;
+    eventually(d, "grouped again once left", async |d| {
+        Ok(d.value(AMOUNT).await? == "1,234,567.5")
+    })
+    .await
+}
+
+e2e::scenario!(
+    group_digits_groups_until_focused,
+    "/number-field/grouped",
+    grouped_until_focused
+);
 e2e::scenario!(
     the_steppers_step_a_number_field,
     "/number-field/echo",

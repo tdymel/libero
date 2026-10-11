@@ -103,6 +103,7 @@ pub(super) fn use_hidden_series(
 pub(super) struct LegendEntry {
     pub(super) name: String,
     pub(super) color: String,
+    pub(super) dashed: bool,
     pub(super) hidden: bool,
 }
 
@@ -130,6 +131,7 @@ pub(super) fn ChartLegend(
                         span {
                             "data-chart-swatch": true,
                             "data-hidden": entry.hidden.then_some("true"),
+                            "data-dashed": entry.dashed.then_some("true"),
                             style: "--lsx-chart-swatch:{entry.color}",
                         }
                         "{entry.name}"

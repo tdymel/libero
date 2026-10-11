@@ -93,6 +93,7 @@ pub fn NumberFieldPage() -> Element {
     let mut quantity = use_signal(|| Some(4i32));
     let mut weight = use_signal(|| Some(1.5f64));
     let mut price = use_signal(|| Some(Cents(1234)));
+    let mut amount = use_signal(|| Some(1_234_567.5f64));
 
     rsx! {
         DocPage {
@@ -125,6 +126,9 @@ pub fn NumberFieldPage() -> Element {
                     prop("steppers", "bool")
                         .default("false")
                         .doc("Shows minus and plus buttons in the trailing slot. The arrow keys step the value either way."),
+                    prop("group_digits", "bool")
+                        .default("false")
+                        .doc("Writes the thousands grouped in the provider's `Formats`, `1,234,567.5` or `1.234.567,5`, while the field is not focused; typing sees the bare number. Built-in number types only. Grouped text typed or pasted parses either way."),
                     prop("increment_label", "String")
                         .default("number_field.increase")
                         .doc("Names the plus button, such as \"Add a guest\". Unset, the localization's `number_field.increase`, \"Increase\" in English."),
@@ -336,6 +340,31 @@ pub fn NumberFieldPage() -> Element {
                                 onchange: move |next| quantity.set(next),
                             }
                         },
+                    }
+                },
+            }
+            // snippet: let mut amount = use_signal(|| Some(1_234_567.5f64));
+            Demo {
+                component: "NumberField",
+                title: "Grouped digits",
+                children_text: "",
+                fixed: vec![
+                    "label: \"Amount\"".to_string(),
+                    "value: amount()".to_string(),
+                    "onchange: move |next| amount.set(next)".to_string(),
+                ],
+                controls: vec![Control::switch("group_digits").default("true").code(|_, values| {
+                    match values.str("group_digits").as_str() {
+                        "true" => vec!["group_digits: true".to_string()],
+                        _ => vec![],
+                    }
+                })],
+                render: move |values: DemoValues| rsx! {
+                    NumberField {
+                        label: "Amount",
+                        group_digits: values.str("group_digits") == "true",
+                        value: amount(),
+                        onchange: move |next| amount.set(next),
                     }
                 },
             }

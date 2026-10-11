@@ -40,9 +40,13 @@ async fn hovers<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         d.exists("#chart [data-chart-dot]").await?,
         "no active marker"
     );
+    let crosshair = d.rect("#chart [data-chart-crosshair]").await?;
+    // It spans the plot, not the x axis' labels under it.
+    let labels = d.rects("#chart [data-chart-drawing] text").await?;
+    let axis_labels = labels.iter().map(|t| t.y).fold(f64::MIN, f64::max);
     ensure!(
-        d.exists("#chart [data-chart-crosshair]").await?,
-        "no crosshair"
+        crosshair.y > plot.y + 0.5 && crosshair.y + crosshair.height <= axis_labels,
+        "the crosshair left the plot: {crosshair:?}, x labels at {axis_labels}"
     );
     Ok(())
 }

@@ -17,7 +17,11 @@ use crate::{
         layout::use_box,
     },
     context::IconSlot,
-    hooks::{current_localization, use_element, use_form_owner, use_formats, use_theme},
+    hooks::{
+        current_localization, use_element, use_form_owner, use_formats, use_silent_focus_in,
+        use_silent_focus_out_of, use_theme,
+    },
+    localization::Formats,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::Size,
     utils::{ascii_digit, warn},
@@ -76,6 +80,10 @@ field_props! {
         /// Shows the minus/plus buttons. The arrow keys step either way.
         #[props(default)]
         steppers: bool,
+        /// Writes the thousands grouped (`12,500`) while the field is not focused; typing
+        /// sees the bare number. Built-in number types only: a custom one writes itself.
+        #[props(default)]
+        group_digits: bool,
         /// Names the raising stepper. Defaults to `number_field.increase`.
         #[props(default, into)]
         increment_label: Option<String>,
@@ -163,7 +171,19 @@ fn NumberFieldShell<T: NumberValue>(
     let step = props.step.unwrap_or_else(T::default_step);
     let onchange = props.onchange;
     let setter = bound.setter();
-    let separator = float_separator::<T>(use_formats().decimal_separator);
+    let formats = use_formats();
+    let separator = Separators::of::<T>(formats);
+    let grouped = props.group_digits && built_in::<T>();
+    let mut focused = use_signal(|| false);
+    // Blitz's Tab and libero's `focus()` fire no `focusin`/`focusout`.
+    let focus = move |now: bool| {
+        let mut focused = focused;
+        if *focused.peek() != now {
+            focused.set(now);
+        }
+    };
+    use_silent_focus_in(anchor, move || focus(grouped));
+    use_silent_focus_out_of(anchor, move || focus(false));
     let kind = use_hook(Keypad::<T>::of);
 
     let publish = move |next: Option<T>| {
@@ -320,15 +340,23 @@ fn NumberFieldShell<T: NumberValue>(
             event.prevent_default();
             nudge.call(steps);
         });
+    // `focusin`/`focusout`: a caller's own `onfocus` and `onblur` stay theirs.
+    let input = match grouped {
+        true => input
+            .event("onfocusin", move |_: FocusEvent| focused.set(true))
+            .event("onfocusout", move |_: FocusEvent| focused.set(false)),
+        false => input,
+    };
     let attributes = props.attributes;
     let draw = Rc::new(move || {
         let current = bound_value.unwrap_or_else(|| live.cloned());
         let display = match &*buffer.read() {
             Some(edit) if edit.shows(current, separator) => edit.text.clone(),
             _ => current
-                .map(|value| match separator {
-                    Some(separator) => value.format().replacen('.', separator, 1),
-                    None => value.format(),
+                .map(|value| match (grouped && !focused(), separator.decimal) {
+                    (true, _) => formats.write_number(&value.format()),
+                    (false, Some(decimal)) => value.format().replacen('.', decimal, 1),
+                    (false, None) => value.format(),
                 })
                 .unwrap_or_default(),
         };
@@ -351,17 +379,73 @@ struct Edit<T> {
 }
 
 impl<T: NumberValue> Edit<T> {
-    fn shows(&self, current: Option<T>, separator: Option<&str>) -> bool {
+    fn shows(&self, current: Option<T>, separator: Separators) -> bool {
         self.held == current || parse::<T>(&self.text, separator) == current
     }
 }
 
-/// The formats' decimal separator where it is not `.`, for the built-in floats
-/// only: a custom `NumberValue` owns its text, which may already be localized.
-fn float_separator<T: 'static>(separator: &'static str) -> Option<&'static str> {
-    let float =
-        TypeId::of::<T>() == TypeId::of::<f64>() || TypeId::of::<T>() == TypeId::of::<f32>();
-    (float && separator != ".").then_some(separator)
+/// The formats' separators a field reads besides Rust's own text. Built-in numbers only:
+/// a custom `NumberValue` owns its text, which may already be localized.
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Separators {
+    /// The decimal separator where it is not `.`, floats only.
+    decimal: Option<&'static str>,
+    /// The group separator, dropped where it splits the whole into threes.
+    group: Option<&'static str>,
+}
+
+impl Separators {
+    fn of<T: 'static>(formats: &Formats) -> Self {
+        let float =
+            TypeId::of::<T>() == TypeId::of::<f64>() || TypeId::of::<T>() == TypeId::of::<f32>();
+        let group = formats.group_separator;
+        Self {
+            decimal: (float && formats.decimal_separator != ".")
+                .then_some(formats.decimal_separator),
+            group: (built_in::<T>() && !group.is_empty()).then_some(group),
+        }
+    }
+}
+
+/// One of Rust's own number types, whose text `NumberField` may write in the locale.
+fn built_in<T: 'static>() -> bool {
+    [
+        TypeId::of::<f32>(),
+        TypeId::of::<f64>(),
+        TypeId::of::<i8>(),
+        TypeId::of::<i16>(),
+        TypeId::of::<i32>(),
+        TypeId::of::<i64>(),
+        TypeId::of::<i128>(),
+        TypeId::of::<isize>(),
+        TypeId::of::<u8>(),
+        TypeId::of::<u16>(),
+        TypeId::of::<u32>(),
+        TypeId::of::<u64>(),
+        TypeId::of::<u128>(),
+        TypeId::of::<usize>(),
+    ]
+    .contains(&TypeId::of::<T>())
+}
+
+/// `text` without its group separators when they split the whole into threes, as
+/// `12.500,5`; else `None`, so a German `1.5` from a numpad stays a decimal.
+fn ungrouped(text: &str, group: &str) -> Option<String> {
+    let (sign, rest) = match text.trim().strip_prefix('-') {
+        Some(rest) => ("-", rest),
+        None => ("", text.trim()),
+    };
+    let parts: Vec<&str> = rest.split(group).collect();
+    let digits = |part: &str| part.chars().take_while(char::is_ascii_digit).count();
+    let (first, last) = (parts.first()?, parts.last()?);
+    let grouped = parts.len() > 1
+        && (1..=3).contains(&first.len())
+        && digits(first) == first.len()
+        && parts[1..parts.len() - 1]
+            .iter()
+            .all(|part| part.len() == 3 && digits(part) == 3)
+        && digits(last) == 3;
+    grouped.then(|| format!("{sign}{}", parts.concat()))
 }
 
 /// What `T` can hold, read once per field from its parse.
@@ -403,11 +487,15 @@ fn aria_number<T: NumberValue>(number: Option<T>) -> Option<String> {
 }
 
 /// `T::parse`, taking the separator as well as `.`: a German user on a US
-/// layout or a numpad types `1.5`.
-fn parse<T: NumberValue>(text: &str, separator: Option<&str>) -> Option<T> {
+/// layout or a numpad types `1.5`. Grouped text (`12,500`) parses too.
+fn parse<T: NumberValue>(text: &str, separator: Separators) -> Option<T> {
     let text = ascii_digits(text);
-    match separator {
-        Some(separator) => T::parse(&text.replacen(separator, ".", 1)),
+    let text = match separator.group.and_then(|group| ungrouped(&text, group)) {
+        Some(bare) => Cow::Owned(bare),
+        None => text,
+    };
+    match separator.decimal {
+        Some(decimal) => T::parse(&text.replacen(decimal, ".", 1)),
         None => T::parse(&text),
     }
 }
@@ -475,7 +563,17 @@ fn Steppers(
 
 #[cfg(test)]
 mod tests {
-    use super::{aria_number, parse};
+    use super::{Separators, aria_number, parse};
+    use crate::localization::Formats;
+
+    const NONE: Separators = Separators {
+        decimal: None,
+        group: None,
+    };
+    const COMMA: Separators = Separators {
+        decimal: Some(","),
+        group: None,
+    };
 
     /// Todo 2436: `aria-valuenow="NaN"` and `aria-valuemax="inf"` are no numbers.
     #[test]
@@ -491,18 +589,64 @@ mod tests {
     /// Todo 2646: the Arabic and full-width decimal separators fold to `.`.
     #[test]
     fn non_ascii_decimal_separators_parse() {
-        assert_eq!(parse::<f64>("1\u{066B}5", None), Some(1.5));
-        assert_eq!(parse::<f64>("\u{FF11}\u{FF0E}\u{FF15}", None), Some(1.5));
-        assert_eq!(parse::<f64>("1\u{066B}5", Some(",")), Some(1.5));
+        assert_eq!(parse::<f64>("1\u{066B}5", NONE), Some(1.5));
+        assert_eq!(parse::<f64>("\u{FF11}\u{FF0E}\u{FF15}", NONE), Some(1.5));
+        assert_eq!(parse::<f64>("1\u{066B}5", COMMA), Some(1.5));
+    }
+
+    /// Todo 3390: text grouped in the locale parses; a numpad's `1.5` stays a decimal.
+    #[test]
+    fn grouped_text_parses_in_the_locale() {
+        let german = Separators::of::<f64>(&Formats::GERMAN);
+        assert_eq!(parse::<f64>("12.500,5", german), Some(12_500.5));
+        assert_eq!(parse::<f64>("-1.234.567", german), Some(-1_234_567.0));
+        assert_eq!(parse::<f64>("1.5", german), Some(1.5));
+        assert_eq!(
+            parse::<i32>("2.026", Separators::of::<i32>(&Formats::GERMAN)),
+            Some(2026)
+        );
+
+        let american = Separators::of::<f64>(&Formats::AMERICAN);
+        assert_eq!(parse::<f64>("12,500.5", american), Some(12_500.5));
+        assert_eq!(parse::<f64>("1,5", american), None);
+        assert_eq!(parse::<f64>("12,50", american), None);
+        assert_eq!(
+            parse::<u32>("1234", Separators::of::<u32>(&Formats::AMERICAN)),
+            Some(1234)
+        );
+    }
+
+    /// Todo 3390: `group_digits` writes the shown number grouped in the locale.
+    #[test]
+    fn group_digits_writes_the_number_grouped() {
+        use super::NumberField;
+        use crate::LiberoProvider;
+        use dioxus::prelude::*;
+
+        fn render(app: fn() -> Element) -> String {
+            let mut dom = VirtualDom::new(app);
+            dom.rebuild_in_place();
+            dioxus_ssr::render(&dom)
+        }
+        let grouped = render(|| {
+            rsx! {
+                LiberoProvider { formats: &Formats::GERMAN,
+                    NumberField::<f64> { label: "Amount", value: Some(12_500.5), group_digits: true, onchange: |_| {} }
+                    NumberField::<u32> { label: "Year", value: Some(2026), onchange: |_| {} }
+                }
+            }
+        });
+        assert!(grouped.contains("value=\"12.500,5\""), "{grouped}");
+        assert!(grouped.contains("value=\"2026\""), "{grouped}");
     }
 
     /// Todo 2414: these typed digits never parsed and reverted on blur.
     #[test]
     fn non_ascii_digits_parse() {
-        assert_eq!(parse::<i32>("\u{0661}\u{0662}", None), Some(12));
-        assert_eq!(parse::<i32>("\u{06F4}\u{06F2}", None), Some(42));
-        assert_eq!(parse::<i32>("\u{FF0D}\u{FF17}", None), Some(-7));
-        assert_eq!(parse::<f64>("\u{FF11},\u{FF15}", Some(",")), Some(1.5));
-        assert_eq!(parse::<i32>("12", None), Some(12));
+        assert_eq!(parse::<i32>("\u{0661}\u{0662}", NONE), Some(12));
+        assert_eq!(parse::<i32>("\u{06F4}\u{06F2}", NONE), Some(42));
+        assert_eq!(parse::<i32>("\u{FF0D}\u{FF17}", NONE), Some(-7));
+        assert_eq!(parse::<f64>("\u{FF11},\u{FF15}", COMMA), Some(1.5));
+        assert_eq!(parse::<i32>("12", NONE), Some(12));
     }
 }

@@ -10,7 +10,26 @@ pub const ROUTES: Routes = &[
     ("/number-field/echo", || rsx! { NumberFieldEchoPage {} }),
     ("/number-field/reset", || rsx! { NumberFieldResetPage {} }),
     ("/number-field/rtl", || rsx! { NumberFieldRtlPage {} }),
+    ("/number-field/grouped", || rsx! { NumberFieldGroupedPage {} }),
 ];
+
+/// Todo 3390: `group_digits` groups the number until the field takes the focus.
+#[component]
+fn NumberFieldGroupedPage() -> Element {
+    let mut amount = use_signal(|| Some(1_234_567.5f64));
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            NumberField {
+                id: "amount",
+                label: "Amount",
+                group_digits: true,
+                value: amount(),
+                onchange: move |next| amount.set(next),
+            }
+            Button { id: "after", "After" }
+        }
+    }
+}
 
 /// Todo 2608: a negative number under `dir=rtl` still reads `-5`.
 #[component]

@@ -383,6 +383,7 @@ mod tests {
             geometry: super::super::engine::Geometry {
                 width: 1.0,
                 height: 1.0,
+                plot: super::super::engine::Plot::whole(1.0, 1.0),
                 marks: vec![sector(0, "M0,0 Z"), sector(1, "M0,0 Z")],
             },
         };

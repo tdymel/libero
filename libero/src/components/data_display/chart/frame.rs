@@ -107,6 +107,21 @@ static CHART_BASE_SX: StaticSx = StaticSx::new(|| {
             sx().background_color("transparent")
                 .box_shadow("inset 0 0 0 2px var(--lsx-chart-swatch)"),
         )
+        // A dashed line's key is a dash, as drawn.
+        .selector(
+            "& [data-chart-swatch][data-dashed]",
+            sx().height("3px")
+                .border_radius("0")
+                .box_shadow("none")
+                .with(
+                    "background",
+                    "repeating-linear-gradient(90deg, var(--lsx-chart-swatch) 0 4px, transparent 4px 7px)",
+                ),
+        )
+        .selector(
+            "& [data-chart-swatch][data-dashed][data-hidden]",
+            sx().opacity("0.5"),
+        )
         .selector(
             ChartPart::Empty.selector(),
             sx().position("absolute")
@@ -301,6 +316,7 @@ impl Frame {
             .map(|series| LegendEntry {
                 name: series.name.clone(),
                 color: series.color.clone(),
+                dashed: series.dashed,
                 hidden: hidden_names.contains(&series.name),
             })
             .collect();
@@ -492,6 +508,7 @@ pub(super) fn overlay_series(specs: &[SeriesSpec], series: &[Series]) -> Vec<Ove
         .map(|(i, spec)| OverlaySeries {
             name: spec.name.clone(),
             color: spec.color.to_string(),
+            dashed: spec.dashed,
             unit: series.get(i).and_then(|series| series.unit.clone()),
         })
         .collect()

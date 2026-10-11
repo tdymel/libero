@@ -18,6 +18,8 @@ const PERCENT_MARK: char = '\u{2062}';
 /// Ahead of each label on a bar: written as the y labels, but not pinned to the axis.
 const LABEL_MARK: char = '\u{2063}';
 const DASH: &str = "6,4";
+/// An axis' tick is 5 long; an axis or grid line is longer.
+const PLOT_TICK: f32 = 10.0;
 /// The pie's radius over half the plot's shorter side, as the renderer caps it.
 const PIE_FILL: f32 = 0.8;
 /// A label on a bar is drawn in this, then given the ink that reads on its bar.
@@ -34,8 +36,69 @@ const ON_BAR_FILL: &str = "fill=\"#010203\"";
 pub(crate) struct Geometry {
     pub(crate) width: f32,
     pub(crate) height: f32,
+    /// The area inside the axes; a pie's is the whole SVG.
+    pub(crate) plot: Plot,
     /// Series by series, in data order; a gap has no mark.
     pub(crate) marks: Vec<Mark>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct Plot {
+    pub(crate) left: f32,
+    pub(crate) top: f32,
+    pub(crate) right: f32,
+    pub(crate) bottom: f32,
+}
+
+impl Plot {
+    pub(crate) fn whole(width: f32, height: f32) -> Self {
+        Self {
+            left: 0.0,
+            top: 0.0,
+            right: width,
+            bottom: height,
+        }
+    }
+
+    /// The box the axes and grid lines span; ticks are too short to count.
+    fn of(svg: &str, width: f32, height: f32) -> Self {
+        let mut found: Option<Self> = None;
+        let mut rest = svg;
+        while let Some(open) = rest.find("<line ") {
+            let close = rest[open..]
+                .find('>')
+                .map_or(rest.len(), |close| open + close + 1);
+            let attributes = attributes(&rest[open..close]);
+            rest = &rest[close..];
+            let number = |name| attribute(&attributes, name)?.parse::<f32>().ok();
+            let (Some(x1), Some(y1), Some(x2), Some(y2)) =
+                (number("x1"), number("y1"), number("x2"), number("y2"))
+            else {
+                continue;
+            };
+            if (x2 - x1).hypot(y2 - y1) <= PLOT_TICK {
+                continue;
+            }
+            let line = Self {
+                left: x1.min(x2),
+                top: y1.min(y2),
+                right: x1.max(x2),
+                bottom: y1.max(y2),
+            };
+            found = Some(match found {
+                Some(plot) => Self {
+                    left: plot.left.min(line.left),
+                    top: plot.top.min(line.top),
+                    right: plot.right.max(line.right),
+                    bottom: plot.bottom.max(line.bottom),
+                },
+                None => line,
+            });
+        }
+        found
+            .filter(|plot| plot.right > plot.left && plot.bottom > plot.top)
+            .unwrap_or(Self::whole(width, height))
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -172,12 +235,13 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
     });
     let marks = match_marks(&expected, &triggers);
     Some(Drawn {
-        svg: spec.ink.paint(svg),
         geometry: Geometry {
             width: spec.width,
             height: spec.height,
+            plot: Plot::of(&svg, spec.width, spec.height),
             marks,
         },
+        svg: spec.ink.paint(svg),
     })
 }
 
@@ -280,7 +344,7 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
             let mut chart = charts_rs::HorizontalBarChart::new(series, x);
             style_bars!(chart, spec, unit);
             chart.stack_percent = percent;
-            chart.svg().ok()?
+            pin_to_ticks(&chart.svg().ok()?, spec.width, write)
         }
         false => {
             let mut chart = charts_rs::BarChart::new(series, x);
@@ -318,12 +382,13 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
         spec.ink.on(spec.series[series].color)
     });
     Some(Drawn {
-        svg: spec.ink.paint(svg),
         geometry: Geometry {
             width: spec.width,
             height: spec.height,
+            plot: Plot::of(&svg, spec.width, spec.height),
             marks,
         },
+        svg: spec.ink.paint(svg),
     })
 }
 
@@ -455,6 +520,7 @@ pub(crate) fn draw_pie(spec: &PieSpec) -> Option<Drawn> {
         geometry: Geometry {
             width: spec.width,
             height: spec.height,
+            plot: Plot::whole(spec.width, spec.height),
             marks: match_marks(&expected, &triggers),
         },
     })
@@ -662,6 +728,21 @@ fn relabel(svg: &str, mark: char, axis: impl Fn(f64) -> String) -> String {
 /// The renderer places a y label by its own text's width; written again in the locale it
 /// would leave the axis. Pins each one by the right end the renderer gave it.
 fn pin_to_axis(svg: &str) -> String {
+    pin_labels(svg, Pin::<fn(f64) -> String>::End)
+}
+
+/// A lying bar chart's value labels sit under their ticks: pinned by their centre, as
+/// `axis` writes them, and kept inside the `width`.
+fn pin_to_ticks(svg: &str, width: f32, axis: impl Fn(f64) -> String) -> String {
+    pin_labels(svg, Pin::Middle { width, axis })
+}
+
+enum Pin<F> {
+    End,
+    Middle { width: f32, axis: F },
+}
+
+fn pin_labels<F: Fn(f64) -> String>(svg: &str, pin: Pin<F>) -> String {
     let mut out = String::with_capacity(svg.len());
     let mut rest = svg;
     while let Some(open) = rest.find("<text") {
@@ -676,13 +757,25 @@ fn pin_to_axis(svg: &str) -> String {
         let x = attribute(&attributes, "x").and_then(|x| x.parse::<f32>().ok());
         match x {
             Some(x) if label.starts_with(AXIS_MARK) => {
-                let end = x + text_width(&attributes, label);
+                let drawn = text_width(&attributes, label);
+                let (x, anchor) = match &pin {
+                    Pin::End => (x + drawn, "end"),
+                    Pin::Middle { width, axis } => {
+                        let number = label[AXIS_MARK.len_utf8()..].split(' ').next();
+                        let half = number
+                            .and_then(scaled)
+                            .map_or(drawn, |value| text_width(&attributes, &axis(value)))
+                            / 2.0;
+                        let centre = x + drawn / 2.0;
+                        (centre.min(width - half).max(half), "middle")
+                    }
+                };
                 let kept: String = attributes
                     .iter()
                     .filter(|(attribute, _)| *attribute != "x")
                     .map(|(attribute, value)| format!(" {attribute}=\"{value}\""))
                     .collect();
-                out.push_str(&format!("<text x=\"{end}\" text-anchor=\"end\"{kept}>"));
+                out.push_str(&format!("<text x=\"{x}\" text-anchor=\"{anchor}\"{kept}>"));
             }
             _ => out.push_str(tag),
         }
@@ -1122,6 +1215,96 @@ mod tests {
         assert!(values.svg.contains("3 kg"), "{}", values.svg);
         let none = draw_pie(&pie(PieLabels::None, Some(0.4))).expect("drawn");
         assert!(!none.svg.contains("<text"), "{}", none.svg);
+    }
+
+    /// The plot is the box inside the axes, grid or not: above the x labels, right of
+    /// the y labels, and every mark in it.
+    #[test]
+    fn the_plot_is_the_box_inside_the_axes() {
+        let mut lines = line(vec![spec("A", &[Some(1.0), Some(3.0)])], &["Mon", "Tue"]);
+        lines.grid = false;
+        let mut lying = bars(BarLayout::Grouped, true);
+        lying.grid = false;
+        for geometry in [
+            draw_line(&lines).expect("drawn").geometry,
+            draw_bar(&bars(BarLayout::Stacked, false))
+                .expect("drawn")
+                .geometry,
+            draw_bar(&lying).expect("drawn").geometry,
+        ] {
+            let plot = geometry.plot;
+            assert!(plot.left > 10.0 && plot.top > 0.0, "{plot:?}");
+            assert!(plot.bottom < geometry.height - 10.0, "{plot:?}");
+            assert!(plot.right <= geometry.width, "{plot:?}");
+            for mark in &geometry.marks {
+                let (x, y) = hit_anchor(&mark.shape);
+                assert!(
+                    (plot.left..=plot.right).contains(&x) && (plot.top..=plot.bottom).contains(&y),
+                    "{mark:?} {plot:?}"
+                );
+            }
+        }
+        let pie = draw_pie(&pie(PieLabels::Percent, None))
+            .expect("drawn")
+            .geometry;
+        assert_eq!(pie.plot, Plot::whole(pie.width, pie.height));
+    }
+
+    /// Lying, the value labels under the plot, written again grouped, stay centred on
+    /// their ticks.
+    #[test]
+    fn lying_value_labels_sit_on_their_ticks() {
+        let mut lying = bars(BarLayout::Grouped, true);
+        lying.series = vec![spec("A", &[Some(12_400.0), Some(31_000.0), Some(8_000.0)])];
+        let svg = draw_bar(&lying).expect("drawn").svg;
+        let ticks: Vec<f32> = svg
+            .split("<line ")
+            .skip(1)
+            .filter_map(|tag| {
+                let number = |name: &str| -> Option<f32> {
+                    tag.split(&format!("{name}=\""))
+                        .nth(1)?
+                        .split('"')
+                        .next()?
+                        .parse()
+                        .ok()
+                };
+                let (x1, x2, y1, y2) = (number("x1")?, number("x2")?, number("y1")?, number("y2")?);
+                (x1 == x2 && y2 - y1 == 5.0).then_some(x1)
+            })
+            .collect();
+        let labels: Vec<f32> = svg
+            .split("<text x=\"")
+            .skip(1)
+            .filter(|tag| tag.contains("text-anchor=\"middle\""))
+            .filter_map(|tag| tag.split('"').next()?.parse().ok())
+            .collect();
+        assert!(labels.len() > 2 && svg.contains("10.400"), "{svg}");
+        // The last one ends at the SVG's edge rather than past it.
+        let (last, inner) = labels.split_last().expect("labels");
+        for label in inner {
+            assert!(
+                ticks.iter().any(|tick| (tick - label).abs() < 1.0),
+                "{label} off {ticks:?}"
+            );
+        }
+        assert!(
+            *last > inner[inner.len() - 1] && *last < 320.0 - 15.0,
+            "{last}"
+        );
+    }
+
+    fn hit_anchor(shape: &MarkShape) -> (f32, f32) {
+        match *shape {
+            MarkShape::Point { x, y } => (x, y),
+            MarkShape::Rect {
+                x,
+                y,
+                width,
+                height,
+            } => (x + width / 2.0, y + height / 2.0),
+            MarkShape::Sector { .. } => panic!("{shape:?}"),
+        }
     }
 
     /// Contract: a slice is a trigger `path`, one per series.

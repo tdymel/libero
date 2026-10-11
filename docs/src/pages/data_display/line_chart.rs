@@ -66,7 +66,7 @@ pub fn LineChartPage() -> Element {
                     "A hidden summary gives the x range and each line's lowest and highest value, and where the highest is.",
                     "A hidden table holds every value, up to the theme's `table_cell_cap` cells.",
                     "The plot is one tab stop, a `role=\"application\"` described as a chart, so a screen reader hands it the arrows. Each point the keys reach is announced, as \"This week, Tue: 132\".",
-                    "The legend's entries are toggle buttons: pressed while their line shows, struck through when hidden. The last shown line's button is `aria-disabled`.",
+                    "The legend's entries are toggle buttons: pressed while their line shows, struck through when hidden. The last shown line's button is `aria-disabled`. A dashed line's key is a dash, as drawn.",
                     "On a touch screen a tap pins a point's tooltip, a second tap on it clicks; a vertical swipe still scrolls the page.",
                     "Each line's palette colour reaches 3:1 on the page and on a card, in every shipped theme and color scheme; one too close to an earlier one, also for colour-blind eyes, is skipped.",
                     "In forced colours the lines keep their colours on the system background; axes and labels take the system text colour.",

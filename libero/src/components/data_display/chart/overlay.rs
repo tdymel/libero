@@ -5,7 +5,7 @@ use dioxus::{html::geometry::ElementPoint, prelude::*};
 
 use super::{
     ChartPart, ChartPoint, ValueFormat,
-    engine::{Drawn, Geometry, Mark, MarkShape},
+    engine::{Drawn, Geometry, Mark, MarkShape, Plot},
     hit::{self, Step},
 };
 use crate::{
@@ -21,6 +21,8 @@ use crate::{
 
 /// Room between a point and its tooltip, in px.
 const TIP_GAP: f64 = 12.0;
+/// Half the marker's stroke, so all of it lies inside its bar.
+const MARKER_INSET: f32 = 1.0;
 
 /// The overlay's rules, under the chart's plot.
 pub(super) fn overlay_sx() -> Sx {
@@ -90,6 +92,8 @@ pub(super) fn overlay_sx() -> Sx {
 pub(super) struct OverlaySeries {
     pub(super) name: String,
     pub(super) color: String,
+    /// Drawn dashed: its legend key is a dash.
+    pub(super) dashed: bool,
     /// The series' own unit; unset, the chart's.
     pub(super) unit: Option<String>,
 }
@@ -410,19 +414,28 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
     let view_box = geometry
         .map(|geometry| format!("0 0 {} {}", geometry.width, geometry.height))
         .unwrap_or_default();
+    let plot = geometry.map(|g| g.plot).unwrap_or(Plot::whole(0.0, 0.0));
     let marker = current.map(|mark| match &mark.shape {
         MarkShape::Point { x, y } => {
-            let bottom = geometry.map(|g| g.height).unwrap_or_default();
+            let Plot { top, bottom, .. } = plot;
             rsx! {
                 if tooltip {
-                    line { "data-chart-crosshair": true, x1: "{x}", x2: "{x}", y1: "0", y2: "{bottom}" }
+                    line { "data-chart-crosshair": true, x1: "{x}", x2: "{x}", y1: "{top}", y2: "{bottom}" }
                 }
                 circle { "data-chart-dot": true, cx: "{x}", cy: "{y}", r: "5", fill: color(mark), "stroke-width": "2" }
             }
         }
-        MarkShape::Rect { x, y, width, height } => rsx! {
-            rect { "data-chart-marker": true, x: "{x}", y: "{y}", width: "{width}", height: "{height}", fill: "none" }
-        },
+        MarkShape::Rect { x, y, width, height } => {
+            // Within the bar and the plot, its stroke too: it never covers an axis.
+            let left = x.max(plot.left) + MARKER_INSET;
+            let top = y.max(plot.top) + MARKER_INSET;
+            let right = (x + width).min(plot.right) - MARKER_INSET;
+            let bottom = (y + height).min(plot.bottom) - MARKER_INSET;
+            let (width, height) = ((right - left).max(0.0), (bottom - top).max(0.0));
+            rsx! {
+                rect { "data-chart-marker": true, x: "{left}", y: "{top}", width: "{width}", height: "{height}", fill: "none" }
+            }
+        }
         MarkShape::Sector { path } => rsx! {
             path { "data-chart-marker": true, d: "{path}", fill: "none" }
         },

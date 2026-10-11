@@ -62,9 +62,33 @@ pub struct Formats {
     pub range_separator: &'static str,
     /// Between a number's whole and its fraction: `5.4 MB`, `5,4 MB`.
     pub decimal_separator: &'static str,
-    /// Between every three digits of a number's whole, where a chart writes it:
-    /// `12,500`, `12.500`; empty for none.
+    /// Between every three digits of a number's whole, where a chart or a `NumberField`
+    /// with `group_digits` writes it: `12,500`, `12.500`; empty for none.
     pub group_separator: &'static str,
+}
+
+impl Formats {
+    /// A number Rust wrote (`-12500.5`) in these separators (`-12,500.5`, `-12.500,5`).
+    pub(crate) fn write_number(&self, number: &str) -> String {
+        let (whole, fraction) = number.split_once('.').unwrap_or((number, ""));
+        let (sign, digits) = match whole.strip_prefix('-') {
+            Some(digits) => ("-", digits),
+            None => ("", whole),
+        };
+        let mut out = String::with_capacity(number.len() + digits.len() / 3 * 2);
+        out.push_str(sign);
+        for (i, digit) in digits.chars().enumerate() {
+            if i > 0 && (digits.len() - i) % 3 == 0 {
+                out.push_str(self.group_separator);
+            }
+            out.push(digit);
+        }
+        if !fraction.is_empty() {
+            out.push_str(self.decimal_separator);
+            out.push_str(fraction);
+        }
+        out
+    }
 }
 
 impl Formats {

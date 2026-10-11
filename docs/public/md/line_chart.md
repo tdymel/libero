@@ -126,6 +126,7 @@ Like every component, `LineChart` also takes the shared props `sx`, `class`,
   "This week, Tue: 132".
 - The legend's entries are toggle buttons: pressed while their line shows,
   struck through when hidden. The last shown line's button is `aria-disabled`.
+  A dashed line's key is a dash, as drawn.
 - On a touch screen a tap pins a point's tooltip, a second tap on it clicks; a
   vertical swipe still scrolls the page.
 - Each line's palette colour reaches 3:1 on the page and on a card, in every

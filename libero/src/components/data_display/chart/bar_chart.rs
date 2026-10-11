@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use super::{
     Series, XValues,
-    engine::{self, BarSpec},
+    engine::{self, BarSpec, SeriesSpec},
     frame::{
         Frame, Interaction, chart_unit, overlay_series, series_specs, shown_places, summary,
         table_rows, use_plot_size,
@@ -86,7 +86,14 @@ pub fn BarChart(props: BarChartProps) -> Element {
         .iter()
         .all(|series| series.values.iter().all(Option::is_none));
     let forced = use_accessibility().forced_colors();
-    let all_specs = series_specs(theme, forced, &props.series);
+    // Bars are never dashed, so neither are their legend keys.
+    let all_specs: Vec<SeriesSpec> = series_specs(theme, forced, &props.series)
+        .into_iter()
+        .map(|spec| SeriesSpec {
+            dashed: false,
+            ..spec
+        })
+        .collect();
     let names: Vec<String> = all_specs.iter().map(|s| s.name.clone()).collect();
     let hidden = use_hidden_series(
         &props.hidden,

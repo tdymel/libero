@@ -265,6 +265,23 @@ mod tests {
         assert!(specs[8].dashed && !specs[7].dashed);
     }
 
+    /// A dashed line's legend key is a dash; a solid one's is not.
+    #[test]
+    fn a_dashed_line_has_a_dashed_legend_key() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    LineChart {
+                        title: "Visitors",
+                        x: ["Mon", "Tue"],
+                        series: vec![Series::new("This week", [1.0, 2.0]), Series::new("Last week", [2.0, 1.0]).dashed()],
+                    }
+                }
+            }
+        });
+        assert_eq!(html.matches("data-dashed=\"true\"").count(), 1, "{html}");
+    }
+
     /// A hidden series leaves the drawing, not the legend; the last shown one stays.
     #[test]
     fn a_default_hidden_series_is_not_drawn() {

@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use super::{
-    Slice, ValueFormat,
+    ChartColor, Slice, ValueFormat,
     engine::{self, PieSpec, SeriesSpec},
     frame::{Frame, Interaction, TableRows, hex, overlay_series, shown_places, use_plot_size},
     legend::use_hidden_series,
@@ -11,7 +11,7 @@ use crate::{
     components::common::{Input, names_itself, use_name_warning},
     hooks::{use_accessibility, use_formats, use_localization, use_root_id, use_theme},
     localization::{ChartLabels, fill},
-    theme::{ChartInk, PieLabels, chart_palette},
+    theme::{ChartInk, HexColor, PieLabels, chart_palette},
 };
 
 chart_props! {
@@ -77,14 +77,17 @@ pub fn PieChart(props: PieChartProps) -> Element {
     let empty = total <= 0.0;
     let forced = use_accessibility().forced_colors();
     let palette = chart_palette(theme, forced);
+    let colors = slice_colors(&palette, &props.slices, |i, color| {
+        hex(theme, forced, &palette, i, color)
+    });
     let all_slices: Vec<SeriesSpec> = props
         .slices
         .iter()
-        .enumerate()
-        .map(|(i, slice)| SeriesSpec {
+        .zip(colors)
+        .map(|(slice, color)| SeriesSpec {
             name: slice.name.clone(),
             values: vec![Some(share_of(slice.value))],
-            color: hex(theme, forced, &palette, i, slice.color),
+            color,
             dashed: false,
         })
         .collect();
@@ -178,6 +181,31 @@ pub fn PieChart(props: PieChartProps) -> Element {
         &props.states,
         props.attributes,
     )
+}
+
+/// Every slice's colour. Round the circle the last slice touches the first: when the palette
+/// wrapped to the first's colour, it takes the next one unlike both its neighbours.
+fn slice_colors(
+    palette: &[HexColor],
+    slices: &[Slice],
+    color: impl Fn(usize, Option<ChartColor>) -> HexColor,
+) -> Vec<HexColor> {
+    let mut colors: Vec<HexColor> = slices
+        .iter()
+        .enumerate()
+        .map(|(i, slice)| color(i, slice.color))
+        .collect();
+    let last = colors.len().saturating_sub(1);
+    if last >= 2 && slices[last].color.is_none() && colors[last] == colors[0] {
+        let neighbours = [colors[0], colors[last - 1]];
+        if let Some(next) = (1..palette.len())
+            .map(|step| palette[(last + step) % palette.len()])
+            .find(|hex| !neighbours.contains(hex))
+        {
+            colors[last] = next;
+        }
+    }
+    colors
 }
 
 /// A slice's part of the pie: a negative or missing value takes none.
@@ -322,6 +350,34 @@ mod tests {
 
         assert!(html.contains("data-slot=\"center\""), "{html}");
         assert!(html.contains("2 users"), "{html}");
+    }
+
+    /// One slice past the palette: the last takes a colour unlike the first and its other
+    /// neighbour; a set colour stays.
+    #[test]
+    fn the_last_slice_never_repeats_the_first_colour() {
+        let palette = [
+            HexColor::new(0x111111),
+            HexColor::new(0x222222),
+            HexColor::new(0x333333),
+        ];
+        let pick = |slices: &[Slice]| {
+            slice_colors(&palette, slices, |i, color| match color {
+                Some(ChartColor::Hex(hex)) => hex,
+                _ => palette[i % palette.len()],
+            })
+        };
+        let slices: Vec<Slice> = (0..4).map(|i| Slice::new(i.to_string(), 1.0)).collect();
+        assert_eq!(
+            pick(&slices),
+            [palette[0], palette[1], palette[2], palette[1]]
+        );
+
+        let mut set = slices.clone();
+        set[3].color = Some(ChartColor::Hex(palette[0]));
+        assert_eq!(pick(&set)[3], palette[0]);
+        let two: Vec<Slice> = slices[..2].to_vec();
+        assert_eq!(pick(&two), [palette[0], palette[1]]);
     }
 
     #[test]

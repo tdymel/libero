@@ -100,9 +100,15 @@ async fn hovers<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         tip.contains("Q2") && tip.contains("132") && !tip.contains("2026"),
         "tooltip {tip:?}"
     );
+    // The marker's stroke stays inside its bar, off the x axis.
+    let marker = d.rect("#chart [data-chart-marker]").await?;
+    let bars = d.rects("#chart [data-chart-drawing] rect").await?;
     ensure!(
-        d.exists("#chart [data-chart-marker]").await?,
-        "no active marker"
+        bars.iter().any(|bar| marker.x >= bar.x
+            && marker.y >= bar.y
+            && marker.x + marker.width <= bar.x + bar.width + 0.01
+            && marker.y + marker.height <= bar.y + bar.height + 0.01),
+        "the marker {marker:?} is not inside a bar"
     );
     Ok(())
 }

@@ -301,10 +301,10 @@ impl ValueFormat {
             Self::Fixed(decimals) => format!("{value:.*}", usize::from(*decimals)),
             Self::Percent => {
                 let share = trim_zeros(format!("{:.1}", value * 100.0));
-                return format!("{}%", localize(&share, formats));
+                return format!("{}%", formats.write_number(&share));
             }
         };
-        let number = localize(&number, formats);
+        let number = formats.write_number(&number);
         match unit.filter(|unit| !unit.is_empty()) {
             Some(unit) => format!("{number} {unit}"),
             None => number,
@@ -318,28 +318,6 @@ pub(crate) fn ungrouped(formats: &Formats) -> Formats {
         group_separator: "",
         ..*formats
     }
-}
-
-/// A number Rust wrote (`-12500.5`) in the locale's separators (`-12,500.5`, `-12.500,5`).
-fn localize(number: &str, formats: &Formats) -> String {
-    let (whole, fraction) = number.split_once('.').unwrap_or((number, ""));
-    let (sign, digits) = match whole.strip_prefix('-') {
-        Some(digits) => ("-", digits),
-        None => ("", whole),
-    };
-    let mut out = String::with_capacity(number.len() + digits.len() / 3 * 2);
-    out.push_str(sign);
-    for (i, digit) in digits.chars().enumerate() {
-        if i > 0 && (digits.len() - i) % 3 == 0 {
-            out.push_str(formats.group_separator);
-        }
-        out.push(digit);
-    }
-    if !fraction.is_empty() {
-        out.push_str(formats.decimal_separator);
-        out.push_str(fraction);
-    }
-    out
 }
 
 fn trim_zeros(number: String) -> String {
