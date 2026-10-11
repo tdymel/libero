@@ -6,8 +6,10 @@ use super::{
     column::Column,
     core::{CellSpec, HeaderSpec, RowFn, RowSpec, body_rows, render_cells},
     detail::Details,
+    grid::GridFocus,
     groups::spanned,
     pinning::{pin_runs, span_pin},
+    pipeline::VisibleRow,
     row_reorder::{ReorderSlot, RowReorder},
     selection::Selection,
 };
@@ -35,6 +37,8 @@ pub(super) struct RowContext<T: 'static> {
     pub toggle_detail: Callback<(String, bool)>,
     pub animate_details: bool,
     pub reorder: Option<RowReorder>,
+    /// With `cell_focus`.
+    pub grid: Option<GridFocus>,
 }
 
 impl<T> RowContext<T> {
@@ -79,6 +83,7 @@ impl<T> RowContext<T> {
             && cells(self) == cells(other)
             && boxes(self) == boxes(other)
             && reorder(self) == reorder(other)
+            && self.grid.map(|grid| grid.stop) == other.grid.map(|grid| grid.stop)
     }
 }
 
@@ -95,6 +100,8 @@ pub(super) struct RowState {
     pub selected: Option<bool>,
     /// Its key is among the open details.
     pub expanded: bool,
+    /// With `cell_focus`, in the stop's row: the stop's header index.
+    pub stop: Option<usize>,
 }
 
 impl<T: Clone + 'static> RowContext<T> {
@@ -107,6 +114,7 @@ impl<T: Clone + 'static> RowContext<T> {
             slot,
             selected,
             expanded,
+            stop: _,
         } = state;
         let columns = &self.columns;
         let name = || {
@@ -172,36 +180,56 @@ impl<T: Clone + 'static> RowContext<T> {
         }
     }
 
-    /// The row's cells, in display order.
-    pub fn cells(&self, row: &T) -> Element {
+    /// The row's cells as `(header index, colspan, covered shown columns)`, in display order.
+    fn layout_of<'a>(&'a self, row: &'a T) -> impl Iterator<Item = (usize, usize, &'a [usize])> {
         let (columns, headers) = (&self.columns, &self.headers);
-        let cells = pin_runs(headers, &self.layout)
-            .flat_map(|run| {
-                let mut at = 0;
-                spanned(run, |index| {
-                    columns[index].col_span.as_ref().map_or(1, |span| span(row))
-                })
-                .into_iter()
-                .map(move |(index, span)| {
-                    let covered = &run[at..at + span];
-                    at += span;
-                    (index, span, covered)
-                })
+        pin_runs(headers, &self.layout).flat_map(move |run| {
+            let mut at = 0;
+            spanned(run, |index| {
+                columns[index].col_span.as_ref().map_or(1, |span| span(row))
             })
-            .map(|(index, span, covered)| {
-                let column = &columns[index];
-                let (text, body) = match &column.render {
-                    Some(render) => (String::new(), Some(render(row))),
-                    None => ((column.text)(row), None),
-                };
-                CellSpec {
-                    column: index,
-                    text,
-                    body,
-                    span,
-                    pin: span_pin(headers, covered),
-                }
-            });
+            .into_iter()
+            .map(move |(index, span)| {
+                let covered = &run[at..at + span];
+                at += span;
+                (index, span, covered)
+            })
+        })
+    }
+
+    /// The widths of the row's cells, in shown columns.
+    pub fn spans(&self, row: &T) -> Vec<usize> {
+        self.layout_of(row).map(|(_, span, _)| span).collect()
+    }
+
+    /// The row's cells, in display order; `data[index]` is `row`, and with
+    /// `cell_focus` the cell of header `stop` is the tab stop.
+    pub fn cells(&self, row: &T, index: usize, stop: Option<usize>) -> Element {
+        let (columns, headers) = (&self.columns, &self.headers);
+        let cells = self.layout_of(row).map(|(column, span, covered)| {
+            let spec = &columns[column];
+            let (text, body) = match &spec.render {
+                Some(render) => (String::new(), Some(render(row))),
+                None => ((spec.text)(row), None),
+            };
+            let attributes = match &self.grid {
+                Some(grid) => grid.cell(
+                    VisibleRow::Data(index),
+                    column,
+                    stop == Some(column),
+                    headers[column].row_header,
+                ),
+                None => Vec::new(),
+            };
+            CellSpec {
+                column,
+                text,
+                body,
+                span,
+                pin: span_pin(headers, covered),
+                attributes,
+            }
+        });
         render_cells(cells, headers)
     }
 }
@@ -232,7 +260,13 @@ pub(super) fn TableRow<T: Clone + PartialEq + 'static>(props: TableRowProps<T>) 
         generation,
     } = props;
     let cells = rsx! {
-        RowCells::<T> { row: row.clone(), context: context.clone(), generation }
+        RowCells::<T> {
+            row: row.clone(),
+            index: state.index,
+            stop: state.stop,
+            context: context.clone(),
+            generation,
+        }
     };
     let spec = context.spec(&row, state, cells);
     rsx! {
@@ -243,13 +277,19 @@ pub(super) fn TableRow<T: Clone + PartialEq + 'static>(props: TableRowProps<T>) 
 #[derive(Props, Clone)]
 struct RowCellsProps<T: Clone + PartialEq + 'static> {
     row: T,
+    index: usize,
+    stop: Option<usize>,
     context: Rc<RowContext<T>>,
     generation: u64,
 }
 
 impl<T: Clone + PartialEq + 'static> PartialEq for RowCellsProps<T> {
     fn eq(&self, other: &Self) -> bool {
-        self.generation == other.generation && self.row == other.row
+        // The index only names a grid cell's focus target.
+        self.generation == other.generation
+            && self.row == other.row
+            && self.stop == other.stop
+            && (self.context.grid.is_none() || self.index == other.index)
     }
 }
 
@@ -257,5 +297,5 @@ impl<T: Clone + PartialEq + 'static> PartialEq for RowCellsProps<T> {
 /// the row around them only.
 #[component]
 fn RowCells<T: Clone + PartialEq + 'static>(props: RowCellsProps<T>) -> Element {
-    props.context.cells(&props.row)
+    props.context.cells(&props.row, props.index, props.stop)
 }

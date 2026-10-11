@@ -1,0 +1,227 @@
+//! The grid's key map and steps, pure: positions in, positions out.
+
+use dioxus::prelude::Key;
+
+use super::pipeline::VisibleRow;
+use crate::platform::logical_arrow;
+
+/// Where the grid's tab stop sits: a row, and a cell of it by header index, which
+/// a hide or move of other columns leaves alone. `None` is the row itself.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct FocusTarget {
+    pub row: VisibleRow,
+    pub col: Option<usize>,
+}
+
+/// A cell by position: its row among the shown ones, the first shown column it covers.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct Pos {
+    pub row: usize,
+    pub col: usize,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Move {
+    Left,
+    Right,
+    Up,
+    Down,
+    RowStart,
+    RowEnd,
+    GridStart,
+    GridEnd,
+    PageUp(usize),
+    PageDown(usize),
+}
+
+/// The move a key asks for, `page` rows for PageUp and PageDown. `ctrl` takes Home
+/// and End to the grid's corners and leaves every other key alone.
+pub(super) fn key_move(key: Key, ctrl: bool, rtl: bool, page: usize) -> Option<Move> {
+    let page = page.max(1);
+    Some(match (logical_arrow(key, rtl), ctrl) {
+        (Key::ArrowLeft, false) => Move::Left,
+        (Key::ArrowRight, false) => Move::Right,
+        (Key::ArrowUp, false) => Move::Up,
+        (Key::ArrowDown, false) => Move::Down,
+        (Key::Home, false) => Move::RowStart,
+        (Key::End, false) => Move::RowEnd,
+        (Key::Home, true) => Move::GridStart,
+        (Key::End, true) => Move::GridEnd,
+        (Key::PageUp, false) => Move::PageUp(page),
+        (Key::PageDown, false) => Move::PageDown(page),
+        _ => return None,
+    })
+}
+
+/// The first column of the cell covering column `col`, in a row of cells `spans` wide.
+pub(super) fn owner(spans: &[usize], col: usize) -> usize {
+    let mut start = 0;
+    for &span in spans {
+        if col < start + span.max(1) {
+            return start;
+        }
+        start += span.max(1);
+    }
+    // Past the row's end: its last cell.
+    start - spans.last().map_or(0, |&span| span.max(1))
+}
+
+/// Where `by` takes the cell at `at` among `rows` rows, whose cells `spans(row)`
+/// lists by width. Stops at the edges, no wrap (APG data grid).
+pub(super) fn step(at: Pos, by: Move, rows: usize, spans: impl Fn(usize) -> Vec<usize>) -> Pos {
+    if rows == 0 {
+        return at;
+    }
+    let last_row = rows - 1;
+    let in_row = |row: usize, col: usize| Pos {
+        row,
+        col: owner(&spans(row), col),
+    };
+    let width = |row: usize| spans(row).iter().map(|&span| span.max(1)).sum::<usize>();
+    let here = spans(at.row);
+    let start = owner(&here, at.col);
+    match by {
+        Move::Left => in_row(at.row, start.saturating_sub(1)),
+        Move::Right => {
+            let span = here
+                .iter()
+                .scan(0, |next, &span| {
+                    let first = *next;
+                    *next += span.max(1);
+                    Some((first, span.max(1)))
+                })
+                .find(|&(first, _)| first == start)
+                .map_or(1, |(_, span)| span);
+            in_row(at.row, (start + span).min(width(at.row).saturating_sub(1)))
+        }
+        Move::Up => in_row(at.row.saturating_sub(1), at.col),
+        Move::Down => in_row((at.row + 1).min(last_row), at.col),
+        Move::RowStart => in_row(at.row, 0),
+        Move::RowEnd => in_row(at.row, width(at.row).saturating_sub(1)),
+        Move::GridStart => in_row(0, 0),
+        Move::GridEnd => in_row(last_row, width(last_row).saturating_sub(1)),
+        Move::PageUp(page) => in_row(at.row.saturating_sub(page), at.col),
+        Move::PageDown(page) => in_row((at.row + page).min(last_row), at.col),
+    }
+}
+
+/// The stop's cell among the shown `order` and `layout` (header indices in display
+/// order), else the first cell: its row or column is gone. `None` without a cell.
+pub(super) fn resolve(
+    stop: Option<FocusTarget>,
+    order: &[VisibleRow],
+    layout: &[usize],
+    spans: impl Fn(usize) -> Vec<usize>,
+) -> Option<Pos> {
+    if order.is_empty() || layout.is_empty() {
+        return None;
+    }
+    let (row, col) = stop
+        .and_then(|stop| {
+            let row = order.iter().position(|&row| row == stop.row)?;
+            let col = match stop.col {
+                Some(col) => layout.iter().position(|&shown| shown == col)?,
+                None => 0,
+            };
+            Some((row, col))
+        })
+        .unwrap_or((0, 0));
+    Some(Pos {
+        row,
+        col: owner(&spans(row), col),
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn at(row: usize, col: usize) -> Pos {
+        Pos { row, col }
+    }
+
+    /// Three rows of four single cells.
+    fn plain(_: usize) -> Vec<usize> {
+        vec![1, 1, 1, 1]
+    }
+
+    #[test]
+    fn an_arrow_stops_at_the_edge() {
+        assert_eq!(step(at(0, 0), Move::Left, 3, plain), at(0, 0));
+        assert_eq!(step(at(0, 0), Move::Up, 3, plain), at(0, 0));
+        assert_eq!(step(at(2, 3), Move::Right, 3, plain), at(2, 3));
+        assert_eq!(step(at(2, 3), Move::Down, 3, plain), at(2, 3));
+        assert_eq!(step(at(1, 1), Move::Right, 3, plain), at(1, 2));
+        assert_eq!(step(at(1, 1), Move::Down, 3, plain), at(2, 1));
+    }
+
+    #[test]
+    fn home_and_end_stay_in_the_row() {
+        assert_eq!(step(at(1, 2), Move::RowStart, 3, plain), at(1, 0));
+        assert_eq!(step(at(1, 1), Move::RowEnd, 3, plain), at(1, 3));
+    }
+
+    #[test]
+    fn ctrl_home_and_end_reach_the_grid_corners() {
+        assert_eq!(key_move(Key::Home, true, false, 1), Some(Move::GridStart));
+        assert_eq!(key_move(Key::End, true, false, 1), Some(Move::GridEnd));
+        assert_eq!(key_move(Key::ArrowDown, true, false, 1), None);
+        assert_eq!(step(at(1, 2), Move::GridStart, 3, plain), at(0, 0));
+        assert_eq!(step(at(1, 2), Move::GridEnd, 3, plain), at(2, 3));
+    }
+
+    #[test]
+    fn page_down_moves_by_the_given_rows() {
+        assert_eq!(
+            key_move(Key::PageDown, false, false, 0),
+            Some(Move::PageDown(1))
+        );
+        assert_eq!(step(at(0, 1), Move::PageDown(5), 20, plain), at(5, 1));
+        assert_eq!(step(at(18, 1), Move::PageDown(5), 20, plain), at(19, 1));
+        assert_eq!(step(at(3, 1), Move::PageUp(5), 20, plain), at(0, 1));
+    }
+
+    #[test]
+    fn rtl_swaps_sideways_arrows() {
+        assert_eq!(key_move(Key::ArrowLeft, false, true, 1), Some(Move::Right));
+        assert_eq!(key_move(Key::ArrowRight, false, true, 1), Some(Move::Left));
+        assert_eq!(key_move(Key::ArrowUp, false, true, 1), Some(Move::Up));
+        assert_eq!(key_move(Key::Home, false, true, 1), Some(Move::RowStart));
+    }
+
+    /// Row 1 spans its first three columns in one cell.
+    #[test]
+    fn a_spanned_cell_owns_its_columns() {
+        let spans = |row: usize| {
+            if row == 1 {
+                vec![3, 1]
+            } else {
+                vec![1, 1, 1, 1]
+            }
+        };
+        assert_eq!(step(at(0, 2), Move::Down, 3, spans), at(1, 0));
+        assert_eq!(step(at(1, 0), Move::Right, 3, spans), at(1, 3));
+        assert_eq!(step(at(1, 3), Move::Left, 3, spans), at(1, 0));
+        assert_eq!(step(at(1, 3), Move::Up, 3, spans), at(0, 3));
+        assert_eq!(owner(&[3, 1], 2), 0);
+        assert_eq!(owner(&[3, 1], 9), 3);
+    }
+
+    #[test]
+    fn a_lost_stop_falls_back_to_the_first_cell() {
+        let order = [2, 0, 1].map(VisibleRow::Data);
+        let layout = [4, 1, 3];
+        let stop = |row, col| {
+            Some(FocusTarget {
+                row: VisibleRow::Data(row),
+                col: Some(col),
+            })
+        };
+        let three = |_| vec![1, 1, 1];
+        assert_eq!(resolve(stop(0, 3), &order, &layout, three), Some(at(1, 2)));
+        assert_eq!(resolve(stop(9, 3), &order, &layout, three), Some(at(0, 0)));
+        assert_eq!(resolve(stop(0, 7), &order, &layout, three), Some(at(0, 0)));
+        assert_eq!(resolve(None, &order, &layout, three), Some(at(0, 0)));
+        assert_eq!(resolve(None, &[], &layout, three), None);
+    }
+}

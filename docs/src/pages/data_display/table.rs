@@ -250,6 +250,7 @@ pub fn TablePage() -> Element {
                     prop("default_expanded_groups", "Vec<String>").default("[]").doc("Seeds the open groups once. Ignored when `expanded_groups` is set."),
                     prop("onexpandedgroupschange", "EventHandler<Vec<String>>").default("None").doc("Called with the open groups a group toggle asks for."),
                     prop("default_group_expansion", "usize").default("0").doc("How many levels of groups start open, the first time there are rows to group, beside `default_expanded_groups`: 1 opens the outermost groups. 0 starts every group closed. Ignored with `expanded_groups`."),
+                    prop("cell_focus", "bool").default("false").doc("Makes the table a `role=\"grid\"` whose body cells are one tab stop: Tab enters on one cell, the first body cell until focus moves, and the arrows, Home, End, Ctrl+Home, Ctrl+End, PageUp and PageDown move it. The stop stays where it was left and follows its row through a sort. A button or field in a cell stays a tab stop of its own, and a widget that takes the arrows keeps them. The leading checkbox, detail and reorder cells, group rows, the header and the footer stay out of the key map. Give the rows a `.row_header()` column."),
                     prop("size", "Size").default(theme.table.size.as_str()).doc("Cell padding and font size."),
                     prop("density", "Option<Size>").default("None").doc("The size a `TableDensityButton` picked, over `size`; set, it is controlled."),
                     prop("default_density", "Option<Size>").default("None").doc("Seeds the density once. Ignored when `density` is set."),
@@ -336,6 +337,10 @@ pub fn TablePage() -> Element {
                 .key(["Space", "Enter"], "With `onrowreorder`, on a row's handle: lifts the row, then drops it. Up and Down move the lifted row, Home and End to the first or last place, Escape puts it back.")
                 .key(["Left", "Right"], "With `resizable_columns`, on a header's resize grip: moves it 10px the way the arrow points, 50px with Shift.")
                 .key(["Home", "End"], "On a resize grip: narrows the column to its minimum, or widens it to its maximum when it has one.")
+                .key(["Left", "Right", "Up", "Down"], "With `cell_focus`, on a body cell or a button in one: moves to the next cell that way, stopping at the edges. A cell spanning columns is one stop.")
+                .key(["Home", "End"], "With `cell_focus`, on a body cell: moves to the row's first or last cell.")
+                .key(["Ctrl+Home", "Ctrl+End"], "With `cell_focus`: moves to the first row's first cell or the last row's last cell, scrolling it into view.")
+                .key(["PageUp", "PageDown"], "With `cell_focus`: moves up or down by the rows one view shows, 10 when the view cannot be measured.")
                 .key(["Escape"], "In a filter popover: closes it and returns focus to the column's menu button.")
                 .key(["Tab", "Shift+Tab"], "In a filter popover: moves between its fields; past either end it closes and Tab goes on from the menu button.")
                 .handles([
@@ -357,6 +362,7 @@ pub fn TablePage() -> Element {
                     "With `virtual_row_height`, `aria-rowcount` and `aria-rowindex` give the full count and each row's place, \"row 5 001 of 10 001\". Tab walks past the rendered rows, and the row holding focus stays rendered.",
                     "A footer cell reads its aggregate's name before the value, \"Average 7.8 %\", and sits in the column its header names. In a `virtual_row_height` table the footer is the last counted row, and a focus scroll stops above it.",
                     "The `toolbar` is a plain row, not a `role=\"toolbar\"`: Tab moves through it as anywhere else.",
+                    "With `cell_focus`, the table is a `role=\"grid\"` and one body cell is its tab stop, `tabindex=\"0\"`, the rest `-1`, so Tab passes the grid in one step. Cells and row headers keep their roles; in a `virtual_row_height` table the focused cell's row stays rendered.",
                 ])
                 .must([
                     "Name every table: `caption` shows a title, `aria_labelledby` points at a heading already on the page, `aria_label` names it without text.",
@@ -374,6 +380,9 @@ pub fn TablePage() -> Element {
                     "On Blitz, a `max_height` table with column groups keeps only its last header row in place; the group rows scroll away with the rows. The same holds for the `header_filters` row.",
                     "On Blitz, a row's handle does not drag: Blitz paints no moved table row. The keyboard and the move buttons reorder there.",
                     "On Blitz, a header has no drag grip: columns reorder from the column menu there.",
+                    "With `cell_focus`, the header cells are not in the key map yet: Up stops at the first body row, and the headers stay tab stops of their own.",
+                    "On Android, the arrows and page keys do not move a `cell_focus` grid's stop in the emulator's WebView (todo 958); a tap does.",
+                    "How TalkBack reads a `cell_focus` grid is not checked yet.",
                     "On Android, the filter popover cannot look into itself, so Tab does not close it at its ends and focus lands on the popover rather than its value field; Escape and Back close it.",
                 ]),
             lead: rsx! {
@@ -435,6 +444,8 @@ pub fn TablePage() -> Element {
                     Control::switch("selectable"),
                     Control::switch("multi_sort"),
                     Control::switch("column_menu"),
+                    // On, so the grid's focus ring shows on a click without another switch.
+                    Control::switch("cell_focus").default("true"),
                     Control::switch("row_detail").code(|_, values| match values.str("row_detail") == "true" {
                         true => vec![DETAIL.to_string()],
                         false => vec![],

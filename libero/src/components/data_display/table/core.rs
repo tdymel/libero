@@ -305,6 +305,8 @@ pub(super) struct CellSpec {
     pub body: Option<Element>,
     pub span: usize,
     pub pin: Option<CellPin>,
+    /// With `cell_focus`: its tab stop and focus listener.
+    pub attributes: Vec<Attribute>,
 }
 
 /// Row indices in sorted order, one key column per sorted column, the first
@@ -766,6 +768,7 @@ pub(super) fn render_cells(
              body,
              span,
              pin,
+             attributes,
          }| {
             if headers[column].row_header {
                 rsx! {
@@ -777,6 +780,7 @@ pub(super) fn render_cells(
                         "data-pin": pin.as_ref().map(|pin| pin.side.as_str()),
                         "data-pin-edge": pin.as_ref().filter(|pin| pin.edge).map(|_| true),
                         style: pin.as_ref().map(CellPin::style),
+                        ..attributes,
                         "{text}"
                         {body}
                     }
@@ -790,6 +794,7 @@ pub(super) fn render_cells(
                         "data-pin": pin.as_ref().map(|pin| pin.side.as_str()),
                         "data-pin-edge": pin.as_ref().filter(|pin| pin.edge).map(|_| true),
                         style: pin.as_ref().map(CellPin::style),
+                        ..attributes,
                         // Text inline: a nested node per cell costs ~1 us a sort.
                         "{text}"
                         {body}

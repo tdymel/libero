@@ -123,6 +123,7 @@ mod table_controlled;
 mod table_detail;
 mod table_filter;
 mod table_fixture;
+mod table_grid;
 mod table_groups;
 mod table_paging;
 mod table_pin;

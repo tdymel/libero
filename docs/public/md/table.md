@@ -886,6 +886,7 @@ fn Demo() -> Element {
 | `default_expanded_groups` | `Vec<String>` | `[]` | Seeds the open groups once. Ignored when `expanded_groups` is set. |
 | `onexpandedgroupschange` | `EventHandler<Vec<String>>` | `None` | Called with the open groups a group toggle asks for. |
 | `default_group_expansion` | `usize` | `0` | How many levels of groups start open, the first time there are rows to group, beside `default_expanded_groups`: 1 opens the outermost groups. 0 starts every group closed. Ignored with `expanded_groups`. |
+| `cell_focus` | `bool` | `false` | Makes the table a `role="grid"` whose body cells are one tab stop: Tab enters on one cell, the first body cell until focus moves, and the arrows, Home, End, Ctrl+Home, Ctrl+End, PageUp and PageDown move it. The stop stays where it was left and follows its row through a sort. A button or field in a cell stays a tab stop of its own, and a widget that takes the arrows keeps them. The leading checkbox, detail and reorder cells, group rows, the header and the footer stay out of the key map. Give the rows a `.row_header()` column. |
 | `size` | `Size` | `md` | Cell padding and font size. |
 | `density` | `Option<Size>` | `None` | The size a `TableDensityButton` picked, over `size`; set, it is controlled. |
 | `default_density` | `Option<Size>` | `None` | Seeds the density once. Ignored when `density` is set. |
@@ -990,6 +991,10 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `Space` or `Enter` | With `onrowreorder`, on a row's handle: lifts the row, then drops it. Up and Down move the lifted row, Home and End to the first or last place, Escape puts it back. |
 | `Left` or `Right` | With `resizable_columns`, on a header's resize grip: moves it 10px the way the arrow points, 50px with Shift. |
 | `Home` or `End` | On a resize grip: narrows the column to its minimum, or widens it to its maximum when it has one. |
+| `Left` or `Right` or `Up` or `Down` | With `cell_focus`, on a body cell or a button in one: moves to the next cell that way, stopping at the edges. A cell spanning columns is one stop. |
+| `Home` or `End` | With `cell_focus`, on a body cell: moves to the row's first or last cell. |
+| `Ctrl+Home` or `Ctrl+End` | With `cell_focus`: moves to the first row's first cell or the last row's last cell, scrolling it into view. |
+| `PageUp` or `PageDown` | With `cell_focus`: moves up or down by the rows one view shows, 10 when the view cannot be measured. |
 | `Escape` | In a filter popover: closes it and returns focus to the column's menu button. |
 | `Tab` or `Shift+Tab` | In a filter popover: moves between its fields; past either end it closes and Tab goes on from the menu button. |
 
@@ -1051,6 +1056,10 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
   footer is the last counted row, and a focus scroll stops above it.
 - The `toolbar` is a plain row, not a `role="toolbar"`: Tab moves through it
   as anywhere else.
+- With `cell_focus`, the table is a `role="grid"` and one body cell is its tab
+  stop, `tabindex="0"`, the rest `-1`, so Tab passes the grid in one step.
+  Cells and row headers keep their roles; in a `virtual_row_height` table the
+  focused cell's row stays rendered.
 
 ### You must
 
@@ -1090,6 +1099,11 @@ each cell of that row, and names the row's toggle "Details for Cherry".
   keyboard and the move buttons reorder there.
 - On Blitz, a header has no drag grip: columns reorder from the column menu
   there.
+- With `cell_focus`, the header cells are not in the key map yet: Up stops at
+  the first body row, and the headers stay tab stops of their own.
+- On Android, the arrows and page keys do not move a `cell_focus` grid's stop
+  in the emulator's WebView (todo 958); a tap does.
+- How TalkBack reads a `cell_focus` grid is not checked yet.
 - On Android, the filter popover cannot look into itself, so Tab does not close
   it at its ends and focus lands on the popover rather than its value field;
   Escape and Back close it.
@@ -1150,6 +1164,7 @@ default `start`.
 | `data-group-lead` | On a group row's one cell over the lead columns. |
 | `data-reorder` | On the reorder column's `th` and `td`s, with `onrowreorder`. |
 | `data-dragging` | On the body row being dragged or moved by keyboard. |
+| `data-cell-stop` | On the body cell that is the tab stop, with `cell_focus`. |
 | `data-group` | On a column group's header cell. |
 | `data-footer-lead` | On the footer's one cell over the lead columns, with an aggregating column. |
 | `data-footer-name` | On the span naming an aggregate before the value in a footer cell. |

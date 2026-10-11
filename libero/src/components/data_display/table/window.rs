@@ -13,7 +13,7 @@ use crate::{
         common::attr,
         layout::{RowsInTable, Virtualize},
     },
-    hooks::{ElementHandle, listener, use_silent_focus_within},
+    hooks::{ElementHandle, listener, use_silent_focus_in, use_silent_focus_out_of},
     platform::{ElementApi, next_task},
     sx::{Sx, sx},
     theme::CssVar,
@@ -67,26 +67,25 @@ pub(super) struct RowFocus {
     pub moves: CopyValue<u64>,
     /// The header rows and the shown rows, as last rendered.
     shown: CopyValue<(usize, Rc<[VisibleRow]>)>,
-    /// The table, on Blitz only: its Tab and `focus()` fire no `focusin`.
-    table: Option<ElementHandle>,
 }
 
-pub(super) fn use_row_focus() -> RowFocus {
+/// `table` is the table's handle: on Blitz its Tab and `focus()` fire no `focusin`.
+pub(super) fn use_row_focus(table: ElementHandle) -> RowFocus {
     let focused = use_signal(|| None::<VisibleRow>);
     let shown = use_hook(|| CopyValue::new((0, Rc::<[VisibleRow]>::from([]))));
     let moves = use_hook(|| CopyValue::new(0u64));
-    let table = use_silent_focus_within(move |table, inside| {
-        let at = inside.then(|| focused_row(&table, &shown.peek())).flatten();
+    let follow = move |at: Option<VisibleRow>| {
         let mut focused = focused;
         if *focused.peek() != at {
             focused.set(at);
         }
-    });
+    };
+    use_silent_focus_in(table, move || follow(focused_row(&table, &shown.peek())));
+    use_silent_focus_out_of(table, move || follow(None));
     RowFocus {
         focused,
         moves,
         shown,
-        table,
     }
 }
 
@@ -106,10 +105,6 @@ impl RowFocus {
         if next != at {
             self.focused.set(Some(VisibleRow::Data(next)));
         }
-    }
-
-    pub fn attributes(&self) -> Option<Attribute> {
-        self.table.map(|table| listener("onmounted", table.mount()))
     }
 }
 

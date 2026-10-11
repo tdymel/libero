@@ -29,3 +29,9 @@ pub(crate) fn moves_table_rows() -> bool {
 pub(crate) fn hits_absolute_in_text() -> bool {
     backend::HITS_ABSOLUTE_IN_TEXT
 }
+
+/// Whether a `<td>` in a `role="grid"` table reads as a grid cell. Blitz's
+/// accessibility tree maps it to a plain cell, so `Table` writes the role there.
+pub(crate) fn infers_grid_cells() -> bool {
+    backend::INFERS_GRID_CELLS
+}

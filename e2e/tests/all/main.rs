@@ -124,6 +124,7 @@ mod switch;
 mod table;
 mod table_detail;
 mod table_filter;
+mod table_grid;
 mod table_groups;
 mod table_overlay;
 mod table_perf;

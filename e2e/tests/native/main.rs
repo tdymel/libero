@@ -75,6 +75,7 @@ mod switch;
 mod sx_supports;
 mod table;
 mod table_detail;
+mod table_grid;
 mod table_groups;
 mod table_markup;
 mod table_row_groups;

@@ -438,6 +438,10 @@ pub(crate) const MOVES_TABLE_ROWS: bool =
 pub(crate) const HITS_ABSOLUTE_IN_TEXT: bool =
     !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
 
+/// Blitz's AX tree reads every `<td>` as a cell; see [`infers_grid_cells`](crate::platform::infers_grid_cells).
+pub(crate) const INFERS_GRID_CELLS: bool =
+    !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
+
 /// No Blitz backend draws a `backdrop-filter`; see [`draws_backdrop_filter`](crate::platform::draws_backdrop_filter).
 pub(crate) const DRAWS_BACKDROP_FILTER: bool =
     !cfg!(all(not(target_arch = "wasm32"), feature = "native"));

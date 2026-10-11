@@ -209,6 +209,7 @@ pub fn TeamTable(values: DemoValues) -> Element {
             },
             selectable: on("selectable"),
             multi_sort: on("multi_sort"),
+            cell_focus: on("cell_focus"),
             column_menu: on("column_menu"),
             row_detail: match on("row_detail") {
                 true => (|p: &Person| Some(rsx! { "{p.name} joined as {p.role}." })).into(),

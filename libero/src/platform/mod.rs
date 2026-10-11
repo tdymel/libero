@@ -130,6 +130,7 @@ pub(crate) use keyboard::warn_reserved_chord;
 pub use keyboard::{KeyChord, KeySubscription, KeyboardApi, keyboard};
 #[cfg(target_os = "android")]
 pub(crate) use keyboard::{back_entries, watch_back};
+pub(crate) use keyboard::{logical_arrow, rtl_target};
 pub(crate) use max_length::fit_max_length;
 pub(crate) use media::{MediaApi, MediaState, MediaSubscription, media};
 pub use media_query::{MediaQueryApi, MediaQuerySubscription, media_query};
@@ -168,8 +169,8 @@ pub(crate) use system_notification::{
     NotificationEvent, ShownNotification, raise_window, system_notification,
 };
 pub(crate) use table::{
-    hits_absolute_in_text, lays_out_captions, moves_table_rows, sticks_table_heads,
-    widens_sized_tables,
+    hits_absolute_in_text, infers_grid_cells, lays_out_captions, moves_table_rows,
+    sticks_table_heads, widens_sized_tables,
 };
 pub use task::awaits_layout;
 #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
