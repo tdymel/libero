@@ -14,7 +14,15 @@ pub const ROUTES: Routes = &[
     ("/audio/sources-failing", || rsx! { SourcesFailingPage {} }),
     // Todo 2679: a healthy player mounted after load, its first `<source>` still to try.
     ("/audio/late", || rsx! { LatePage {} }),
+    // Todo 1509: a rising tone, whose decoded bars rise where the silent file's stay flat.
+    ("/audio/rising", || rsx! { RisingPage {} }),
 ];
+
+#[component]
+fn RisingPage() -> Element {
+    let src = use_hook(|| rising_wav(4));
+    rsx! { div { id: "rising", Audio { src, label: "Rising" } } }
+}
 
 #[component]
 fn LatePage() -> Element {
@@ -50,6 +58,18 @@ fn SourcesFailingPage() -> Element {
 /// A silent 8 kHz, 8-bit mono WAV of `seconds`, as a `data:` URL: no file to serve,
 /// and every Chromium decodes PCM.
 pub(crate) fn silent_wav(seconds: u32) -> String {
+    wav(seconds, |_| 0.0)
+}
+
+/// A 440 Hz tone whose volume rises from a sixth to full over `seconds`.
+fn rising_wav(seconds: u32) -> String {
+    wav(seconds, |at| {
+        (0.17 + 0.83 * at) * (std::f64::consts::TAU * 440.0 * at * seconds as f64).sin()
+    })
+}
+
+/// `wave` at `at` in 0..1 of the file, in -1..1, as 8-bit PCM.
+fn wav(seconds: u32, wave: impl Fn(f64) -> f64) -> String {
     let samples = 8000 * seconds;
     let mut bytes = Vec::with_capacity(44 + samples as usize);
     bytes.extend_from_slice(b"RIFF");
@@ -64,7 +84,10 @@ pub(crate) fn silent_wav(seconds: u32) -> String {
     bytes.extend_from_slice(&8u16.to_le_bytes());
     bytes.extend_from_slice(b"data");
     bytes.extend_from_slice(&samples.to_le_bytes());
-    bytes.resize(44 + samples as usize, 128); // 8-bit silence is the midpoint
+    // 8-bit silence is the midpoint.
+    bytes.extend((0..samples).map(|index| {
+        (128.0 + 127.0 * wave(index as f64 / samples as f64)).round() as u8
+    }));
     format!("data:audio/wav;base64,{}", base64(&bytes))
 }
 

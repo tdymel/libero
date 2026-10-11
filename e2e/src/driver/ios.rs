@@ -148,7 +148,10 @@ impl Ios {
         // `Shell` installs the route hook in an effect, after the marker mounts.
         ios.bridge
             .wait_until("typeof window.__route === 'function'")?;
-        ios.calibrate()?;
+        if let Err(error) = ios.calibrate() {
+            ios.keep_failure();
+            return Err(error);
+        }
         Ok(ios)
     }
 
@@ -177,7 +180,14 @@ impl Ios {
             .json("[screen.width, screen.height, innerWidth]")?;
         self.scale = screen_w / inner_w;
         let at = (screen_w / 2.0, screen_h / 2.0);
-        self.tap_screen(at)?;
+        // The first axe call after a boot can find no accessibility element to tap yet.
+        let first = Instant::now();
+        while let Err(error) = self.tap_screen(at) {
+            if first.elapsed() > Duration::from_secs(20) {
+                return Err(error);
+            }
+            std::thread::sleep(Duration::from_millis(250));
+        }
         let started = Instant::now();
         let seen = loop {
             if let Some((x, y)) = self.bridge.json::<Option<(f64, f64)>>("__e2eTouch")? {
@@ -370,8 +380,33 @@ impl Ios {
     }
 }
 
+impl Ios {
+    /// Keeps the screen and page text of a red scenario before the app stops; the runner's own
+    /// shot comes after.
+    fn keep_failure(&mut self) {
+        let dir = std::env::var_os("E2E_ARTIFACTS")
+            .map(PathBuf::from)
+            .unwrap_or_else(std::env::temp_dir);
+        let name = self.unit.replace("::", "-");
+        let shot = dir.join(format!("{name}-failure.png"));
+        let _ = simctl(
+            &["io", &self.udid, "screenshot", &shot.to_string_lossy()],
+            &[],
+        );
+        if let Ok(text) = self.bridge.json::<String>("document.body.innerText") {
+            let _ = std::fs::write(dir.join(format!("{name}-failure.txt")), text);
+        }
+        if let Ok(tree) = self.inject_output(&["describe-ui"]) {
+            let _ = std::fs::write(dir.join(format!("{name}-failure.json")), tree);
+        }
+    }
+}
+
 impl Drop for Ios {
     fn drop(&mut self) {
+        if std::thread::panicking() {
+            self.keep_failure();
+        }
         let _ = simctl(&["terminate", &self.udid, &self.bundle], &[]);
     }
 }
@@ -549,6 +584,25 @@ impl Driver for Ios {
         match self.input {
             Injector::Axe => self.inject_output(&["describe-ui"]),
             Injector::Idb => self.inject_output(&["ui", "describe-all"]),
+        }
+    }
+
+    /// Presses `trigger`, then taps the dialog's Allow button, found by its label once it shows.
+    async fn allow_permission(&mut self, trigger: &str) -> Result<()> {
+        if self.input != Injector::Axe {
+            bail!("Ios: only axe taps a dialog by its label");
+        }
+        self.click(trigger).await?;
+        self.overlaid = true;
+        let started = Instant::now();
+        loop {
+            match self.inject(&["tap", "--label", "Allow"]) {
+                Ok(()) => return Ok(()),
+                Err(error) if started.elapsed() > Duration::from_secs(15) => {
+                    return Err(error.context("no Allow button after the press"));
+                }
+                Err(_) => std::thread::sleep(Duration::from_millis(100)),
+            }
         }
     }
 

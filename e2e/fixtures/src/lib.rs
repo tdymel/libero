@@ -254,7 +254,11 @@ fn Fixture(children: Element) -> Element {
                 "data-fixture-ready": "true",
                 "data-fixture-generation": "{generation}",
                 LiberoProvider {
-                    div { padding: "24px", {children.clone()} }
+                    // The second declaration clears a phone's status bar; a renderer without `env()` keeps the first.
+                    div {
+                        style: "padding: 24px; padding-top: calc(24px + env(safe-area-inset-top, 0px))",
+                        {children.clone()}
+                    }
                 }
                 Flush {}
             }

@@ -1,7 +1,9 @@
 //! `Audio` and `use_media`: the controls follow the element, keys act only
 //! inside the player, and a broken source says so.
 
+use anyhow::Result;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually};
 use e2e::passes::keyboard::{self, Key};
 use e2e::passes::{pointer, target_size};
 use e2e::{Fixture, Suite, Viewport, js, wait};
@@ -177,6 +179,29 @@ fn the_bars_follow_the_decoded_sound() {
         fixture.close().await.unwrap();
     });
 }
+
+const RISING_BARS: &str = "[...document.querySelectorAll('#rising [data-slot=bars] > span')]
+    .map((bar) => parseFloat(bar.style.height))";
+
+/// Todo 1509: a rising tone's decoded bars rise, in every WebView that decodes audio.
+async fn the_bars_rise_with_the_tone<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually(d, "bars that rise with the tone", async |d| {
+        let heights = d.evaluate(RISING_BARS).await?;
+        let heights: Vec<f64> = heights
+            .as_array()
+            .map(|bars| bars.iter().filter_map(|bar| bar.as_f64()).collect())
+            .unwrap_or_default();
+        Ok(heights.len() > 2 && heights[0] < 30.0 && heights[heights.len() - 1] > 90.0)
+    })
+    .await
+}
+
+e2e::scenario!(
+    the_bars_rise_with_the_decoded_tone,
+    "/audio/rising",
+    the_bars_rise_with_the_tone,
+    native: skip("Blitz has no Web Audio to decode with")
+);
 
 /// Shift and the key that types `?` on a German layout, ß's.
 const QUESTION_DE: Key = Key {

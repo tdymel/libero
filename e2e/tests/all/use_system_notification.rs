@@ -1,7 +1,7 @@
 //! `use_system_notification` and `use_push_subscription`: mounting asks nothing;
 //! on the web a granted show and close, a denial, and push registering its worker.
 //! Android's dialog, posted notification, tap (1348) and action (2126); push is web only.
-//! macOS and Windows desktop and iOS answer at all, recorded in `outcomes.log`.
+//! iOS is unsupported; macOS and Windows desktop answer at all, recorded in `outcomes.log`.
 
 use anyhow::Result;
 use chromiumoxide::Page;
@@ -29,10 +29,12 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
         eventually_text(d, selector, expected, "mount").await?;
     }
     match d.platform() {
-        // WKWebView outside Safari defines no `Notification` (3232); the outcome is logged first.
+        // WKWebView outside Safari defines no `Notification` (CI outcome, 2026-10-11).
         Platform::Ios => {
-            recorded(d).await?;
             eventually_text(d, "#supported", "false", "mount").await?;
+            eventually_text(d, "#permission", "Unsupported", "mount").await?;
+            d.click("#show").await?;
+            eventually_text(d, "#error", "Some(Unsupported)", "a show").await?;
         }
         // Todo 1348: the system's notifications over JNI; the runner revokes the permission.
         Platform::Android => {
@@ -100,7 +102,7 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
     Ok(())
 }
 
-/// The page's `Notification` in WKWebView and WebView2: a permission at all, recorded
+/// The page's `Notification` in macOS's WKWebView and WebView2: a permission at all, recorded
 /// (macOS and Windows stay unpinned until the first outcomes, todos 1239, 3193); no
 /// `Notification` is unsupported as on Linux.
 async fn recorded<D: Driver>(d: &mut D) -> Result<()> {

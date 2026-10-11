@@ -1,6 +1,6 @@
 //! `use_user_media`: mounting asks nothing; on the web Chromium's fake camera
-//! opens, shows, snapshots, records, stops and is refused. Blitz is unsupported; macOS and
-//! Windows desktop and iOS answer at all, recorded in `outcomes.log`.
+//! opens, shows, snapshots, records, stops and is refused. Blitz is unsupported, the iOS
+//! simulator opens; macOS and Windows desktop answer at all, recorded in `outcomes.log`.
 
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
@@ -17,13 +17,9 @@ use e2e::{Fixture, Viewport, wait};
 
 /// Nothing prompts or opens until asked; Blitz has no capture API.
 async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    // WKWebView and WebView2 are pinned to a class of answers, not a value, until the platform
-    // probe ran (todos 1236, 3193, 3232); the iOS simulator has no camera.
-    let unpinned = match d.platform() {
-        Platform::Ios => true,
-        Platform::Desktop => Host::current() != Host::Linux,
-        _ => false,
-    };
+    // WKWebView on macOS and WebView2 stay pinned to a class of answers until CI's desktop
+    // legs run (todos 1236, 3193).
+    let unpinned = d.platform() == Platform::Desktop && Host::current() != Host::Linux;
     if unpinned {
         eventually(d, "the fixture", async |d| d.exists("#supported").await).await?;
     } else {
@@ -45,13 +41,35 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
             d.click("#start").await?;
             eventually_text(d, "#error", "Some(Unsupported)", "a start").await?;
         }
-        Platform::Ios => answers_at_all(d).await?,
+        // The simulator's WKWebView grants and opens a capture (CI outcome, 2026-10-11).
+        Platform::Ios => {
+            d.click("#start").await?;
+            eventually_text(d, "#live", "true", "a start").await?;
+            eventually_text(d, "#camera", "Granted", "a start").await?;
+            eventually_text(d, "#error", "None", "a start").await?;
+            d.click("#stop").await?;
+            eventually_text(d, "#live", "false", "a stop").await?;
+        }
         Platform::Desktop if unpinned => answers_at_all(d).await?,
-        // wry gives WebKitGTK no permission handler, so it denies every request.
+        // wry gives WebKitGTK no permission handler, so it denies every request; Ubuntu's
+        // answers `Constraint` with the camera still `Prompt` (CI outcome, 2026-10-11).
         Platform::Desktop => {
             d.click("#start").await?;
-            eventually_text(d, "#error", "Some(Denied)", "a start").await?;
-            eventually_text(d, "#camera", "Denied", "a denial").await?;
+            let shown = ["#supported", "#camera", "#error"];
+            eventually_answered(
+                d,
+                "use_user_media",
+                "an answer to a start",
+                &shown,
+                async |d| Ok(d.text("#error").await? != "None"),
+            )
+            .await?;
+            record_outcome(d, "use_user_media", &shown).await?;
+            let error = d.text("#error").await?;
+            if error != "Some(Constraint)" {
+                eventually_text(d, "#error", "Some(Denied)", "a start").await?;
+                eventually_text(d, "#camera", "Denied", "a denial").await?;
+            }
             fullscreen_beside_the_capture(d).await?;
             d.press(keyboard::ESCAPE).await?;
             eventually_text(d, "#is-fullscreen", "false", "Escape").await?;

@@ -37,24 +37,16 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
         eventually_text(d, selector, expected, "mount").await?;
     }
     match d.platform() {
-        // The runner granted location and set the simulator's position (3194); the answer is
-        // logged before the fix is asserted, so a red run still says what WKWebView gave.
+        // The runner granted the app location and set the simulator's position (3194);
+        // WKWebView still asks once per origin, and the dialog's Allow answers it (3232).
         Platform::Ios => {
-            d.click("#locate").await?;
-            let shown = ["#supported", "#permission", "#error", "#position"];
-            eventually_answered(
-                d,
-                "use_geolocation",
-                "an answer to a request",
-                &shown,
-                answered,
-            )
-            .await?;
-            record_outcome(d, "use_geolocation", &shown).await?;
+            d.allow_permission("#locate").await?;
             eventually(d, "the simulator's position", async |d| {
                 Ok(d.text("#position").await?.starts_with("52.520, 13.405"))
             })
             .await?;
+            eventually_text(d, "#permission", "Granted", "a fix").await?;
+            eventually_text(d, "#error", "None", "a fix").await?;
         }
         Platform::Native => {
             eventually_text(d, "#permission", "Unsupported", "mount").await?;
