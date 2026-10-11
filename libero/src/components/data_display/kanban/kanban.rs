@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
 
 use super::{
+    column_drag::{ColumnDrag, use_column_drag},
     columns::KanbanColumnMove,
     drag::{
         BoardDrag, BoardDragOptions, Control, Landing, use_board_card, use_board_drag,
@@ -143,6 +144,8 @@ struct Board {
     reorder: Signal<bool>,
     /// The column handles' description.
     column_instructions: Signal<String>,
+    /// A column's pointer drag, apart from a card's.
+    columns: ColumnDrag,
 }
 
 /// A card put in column `column`, called `name`, at slot `slot` of `count` shown cards there.
@@ -240,6 +243,7 @@ pub fn Kanban(props: KanbanProps) -> Element {
         }),
     });
     use_effect(move || columns.element.follow(Some(&drag.element)));
+    let column_drag = use_column_drag(drag.element, columns.sorting);
     let announcement = columns.announcement;
     use_effect(move || {
         let said = announcement();
@@ -266,6 +270,24 @@ pub fn Kanban(props: KanbanProps) -> Element {
         drag,
         reorder,
         column_instructions,
+        columns: column_drag,
+    });
+
+    // One listener per event on the root: the card drag and the column drag each take theirs.
+    let onpointermove = use_callback(move |event: Event<PointerData>| {
+        column_drag.track(event.client_coordinates().x);
+        drag.onpointermove.call(event.clone());
+        columns.onpointermove.call(event);
+    });
+    let onpointerup = use_callback(move |event: Event<PointerData>| {
+        column_drag.release();
+        drag.onpointerup.call(event.clone());
+        columns.onpointerup.call(event);
+    });
+    let onpointercancel = use_callback(move |event: Event<PointerData>| {
+        column_drag.release();
+        drag.onpointercancel.call(event.clone());
+        columns.onpointercancel.call(event);
     });
 
     let board = use_box()
@@ -275,9 +297,9 @@ pub fn Kanban(props: KanbanProps) -> Element {
         .states(&props.states)
         .prepare()
         .element(&drag.element)
-        .event("onpointermove", drag.onpointermove)
-        .event("onpointerup", drag.onpointerup)
-        .event("onpointercancel", drag.onpointercancel)
+        .event("onpointermove", onpointermove)
+        .event("onpointerup", onpointerup)
+        .event("onpointercancel", onpointercancel)
         .render(HtmlTag::Div, props.attributes, props.children);
 
     rsx! {
@@ -474,6 +496,15 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
         .event("onpointercancel", list.onpointercancel)
         .render(HtmlTag::Ul, Vec::new(), props.children);
 
+    // A column never drags while a card does, by pointer or keys.
+    let (card_drag, column_drag) = (board.drag.sorting, board.columns);
+    let onpress = use_callback(move |event: Event<PointerData>| {
+        if *card_drag.peek() || *list.sorting.peek() {
+            return;
+        }
+        column_drag.press();
+        place.onpointerdown.call(event);
+    });
     let move_class = use_css(Some(&SORTABLE_MOVE_SX), CssLayer::Framework);
     // Built every render, shown only with `oncolumnmove`: the builder's styles are hooks.
     let handle = use_box()
@@ -486,6 +517,7 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
             fill(words.sortable.handle, &[("label", &column_name)]),
         )
         .attr("aria-describedby", (board.column_instructions)())
+        .event("onpointerdown", onpress)
         .event("onkeydown", place.onkeydown)
         .event("onblur", place.onblur)
         .render(
@@ -776,6 +808,13 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
         .join(" ");
     let move_class = use_css(Some(&SORTABLE_MOVE_SX), CssLayer::Framework);
     let handle_name = use_handle_name(words.sortable.handle, props.label.as_deref());
+    let (press, column_drag) = (carried.onpointerdown, board.columns);
+    let onpress = use_callback(move |event: Event<PointerData>| {
+        // A card never drags while a column is lifted.
+        if !column_drag.busy() {
+            press.call(event);
+        }
+    });
     let handle = use_box()
         .framework_sx(&SORTABLE_HANDLE_SX)
         .prepare()
@@ -784,7 +823,7 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
         .attr("aria-label", handle_name.aria_label)
         .attr("aria-labelledby", handle_name.aria_labelledby)
         .attr("aria-describedby", (column.instructions)())
-        .event("onpointerdown", carried.onpointerdown)
+        .event("onpointerdown", onpress)
         .event("onkeydown", onkeydown)
         .event("onblur", item.onblur)
         .render(

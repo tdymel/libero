@@ -85,6 +85,7 @@ pub fn KanbanPage() -> Element {
                     "On a board wider than its container, or with a height of its own that its columns outgrow, a card dragged near an edge scrolls the board that way. Up and down only once the card has moved toward that edge.",
                     "In a narrow column the move buttons wrap below the card's content.",
                     "With `oncolumnmove`, each column header has a reorder handle named \"Reorder To do column\" and described by the column keys, and with `move_buttons` a Move backward and a Move forward button, \"Move To do column forward\". The status region says the column's lift, moves and drop, \"To do column moved to position 2 of 3.\", and focus stays on the handle or button used.",
+                    "A column drags by its handle with a pointer or a touch, as a card does; a swipe on the rest of the header scrolls. Held near a side of a board wider than its container, it scrolls the board that way. While a column is lifted a card handle takes no press, and the other way round.",
                 ])
                 .must([
                     "Give each `KanbanCard` a `label`, or its controls and the announcements name it by position (\"Item 2\").",
@@ -94,7 +95,7 @@ pub fn KanbanPage() -> Element {
                     "Left and Right move a lifted card one column per press: it is dropped there, so lift it again for the next column. On Android a right to left board's Left and Right are not mirrored yet.",
                     "A drag scrolls the board, not the page: to reach a card or column beyond the window, use the Move to menu.",
                     "A board with a height of its own scrolls its cards by wheel and touch; the scrollbar's gutter stays reserved, so a drag never changes the board's width.",
-                    "A column moves by its handle's keys and its move buttons only; dragging a column by pointer is not built yet.",
+                    "A column move that `oncolumnmove` refuses is still announced.",
                     "In a filtered column a dragged card lands just before the next card shown, or just after the last one; Move to lands after the last card shown, before any hidden ones that follow.",
                 ]),
             lead: rsx! {
@@ -110,7 +111,7 @@ pub fn KanbanPage() -> Element {
                     Code { source: "Vec<Vec<T>>" }
                     ". With "
                     Code { source: "oncolumnmove" }
-                    " the columns reorder too, by a handle and two buttons in each header."
+                    " the columns reorder too: drag a header's handle, or use its keys or the two buttons beside it."
                 }
             },
             Demo {

@@ -1,3 +1,4 @@
+mod column_drag;
 mod columns;
 mod drag;
 mod kanban;

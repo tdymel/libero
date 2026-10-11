@@ -969,6 +969,208 @@ e2e::scenario!(
     native: skip("707: Blitz has no right-to-left scroll")
 );
 
+/// To do's handle dragged by the gap to Doing: it takes Doing's place.
+async fn a_handle_drag_reorders_the_columns<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let (to_do, doing) = (
+        d.rect("#column-to-do").await?,
+        d.rect("#column-doing").await?,
+    );
+    d.drag(&header("to-do", "handle"), doing.x - to_do.x, 0.0)
+        .await?;
+    eventually_text(
+        d,
+        "#order",
+        "Doing: Delta | To do: Alpha Beta | Done:",
+        "a column drag",
+    )
+    .await?;
+    ensure!(d.text("#column-moves").await? == "0>1 ", "one column move");
+    eventually_text(
+        d,
+        STATUS,
+        "Dropped To do column at position 2 of 3.",
+        "the drop",
+    )
+    .await?;
+    eventually_focused(d, &header("to-do", "handle"), "a column drag").await?;
+
+    // A card still drags into the column that moved, level with its first card.
+    let (doing, to_do) = (
+        d.rect("#column-doing").await?,
+        d.rect("#column-to-do").await?,
+    );
+    d.drag("#Delta [data-slot=handle]", to_do.x - doing.x, 0.0)
+        .await?;
+    eventually_text(
+        d,
+        "#order",
+        "Doing: | To do: Delta Alpha Beta | Done:",
+        "a card drag after a column drag",
+    )
+    .await?;
+    Ok(())
+}
+
+e2e::scenario!(
+    a_header_handle_drag_reorders_the_columns,
+    "/kanban/column-reorder",
+    a_handle_drag_reorders_the_columns
+);
+e2e::scenario!(
+    a_header_handle_drag_reorders_the_columns_of_a_right_to_left_board,
+    "/kanban/column-reorder-rtl",
+    a_handle_drag_reorders_the_columns,
+    android: skip("963: is_rtl is false on the WebView"),
+    native: skip("707: Blitz has no right-to-left scroll")
+);
+
+/// A finger drags a column by its handle; a swipe on the header's name scrolls the board.
+#[test]
+fn a_touch_drags_a_column_by_its_handle_and_a_swipe_elsewhere_scrolls() {
+    use e2e::browser::{Fixture, Viewport, block_on};
+    use e2e::passes::pointer::{Point, touch_drag};
+    use e2e::wait;
+    block_on(async {
+        let fixture = Fixture::open("/kanban/column-reorder", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        const MOVED: &str = "Doing: Delta | To do: Alpha Beta | Done:";
+        // The drag goes first: a swipe's fling would move the board under it.
+        let (handle, to_do) = (
+            centre(page, &header("doing", "handle")).await,
+            centre(page, &header("to-do", "handle")).await,
+        );
+        touch_drag(
+            page,
+            handle,
+            Point {
+                x: to_do.x,
+                y: handle.y,
+            },
+            12,
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector('#order').textContent === {MOVED:?}"),
+            "a touch drag of the handle moves the column",
+        )
+        .await
+        .unwrap();
+
+        let name = "#column-doing > [data-slot=header] > [data-name]";
+        let at = centre(page, name).await;
+        let before: f64 = page
+            .evaluate("document.querySelector('#board').scrollLeft")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        touch_drag(
+            page,
+            at,
+            Point {
+                x: at.x - 120.0,
+                y: at.y,
+            },
+            8,
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector('#board').scrollLeft > {}",
+                before + 20.0
+            ),
+            "a swipe on the header scrolls the board",
+        )
+        .await
+        .unwrap();
+        let order: String = page
+            .evaluate("document.querySelector('#order').textContent")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(order, MOVED, "a swipe moved a column");
+        fixture.console.assert_clean("a column touch drag").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A column held at the board's end edge scrolls it there, then drops last.
+#[test]
+fn a_column_held_at_the_end_edge_scrolls_the_board() {
+    use chromiumoxide::cdp::browser_protocol::input::DispatchMouseEventType as Kind;
+    use e2e::browser::{Fixture, Viewport, block_on};
+    use e2e::frames::in_front;
+    use e2e::passes::pointer::Point;
+    use e2e::wait;
+    const BOARD: &str = "document.querySelector('#board')";
+    block_on(async {
+        let fixture = Fixture::open("/kanban/column-reorder", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let most: f64 = page
+            .evaluate(format!("{BOARD}.scrollWidth - {BOARD}.clientWidth"))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(most > 100.0, "the board has columns to scroll to");
+        e2e::clock::hold(page, &[AUTO_SCROLL_MS]).await.unwrap();
+        let right: f64 = page
+            .evaluate(format!("{BOARD}.getBoundingClientRect().right"))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let handle = centre(page, &header("to-do", "handle")).await;
+        let edge = Point {
+            x: right - 8.0,
+            y: handle.y,
+        };
+        in_front(page, async {
+            mouse_at(page, Kind::MouseMoved, handle, false).await;
+            mouse_at(page, Kind::MousePressed, handle, true).await;
+            for step in 1..=10 {
+                let t = f64::from(step) / 10.0;
+                let at = Point {
+                    x: handle.x + (edge.x - handle.x) * t,
+                    y: handle.y,
+                };
+                mouse_at(page, Kind::MouseMoved, at, true).await;
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
+        assert!(
+            ticks(page, &format!("{BOARD}.scrollLeft >= {most} - 2"), 200).await,
+            "a column held at the end edge did not scroll the board to its end"
+        );
+        in_front(page, async {
+            mouse_at(page, Kind::MouseReleased, edge, false).await;
+            Ok(())
+        })
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#order').textContent === 'Doing: Delta | Done: | To do: Alpha Beta'",
+            "a drop past the columns the scroll brought in",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a column edge drag").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn the_column_reorder_meets_the_baseline() {
     Suite::new("kanban_column_reorder", "/kanban/column-reorder")
