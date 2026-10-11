@@ -423,12 +423,14 @@ e2e::scenario!(
 e2e::scenario!(
     a_right_to_left_row_reorders_by_a_leftward_drag,
     "/sortable/rtl",
-    an_rtl_row_drags_leftwards
+    an_rtl_row_drags_leftwards,
+    android: skip("1337: Android arm not run since is_rtl works on the WebView")
 );
 e2e::scenario!(
     a_right_to_left_row_moves_by_the_mirrored_arrows_and_buttons,
     "/sortable/rtl",
-    an_rtl_row_moves_by_the_mirrored_arrows
+    an_rtl_row_moves_by_the_mirrored_arrows,
+    android: skip("1337: Android arm not run since is_rtl works on the WebView")
 );
 e2e::scenario!(
     a_click_on_a_hook_handle_clicks_and_a_drag_does_not,
