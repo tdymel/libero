@@ -309,8 +309,10 @@ pub async fn assert_chords_ignored_with(
     let mut sent = Vec::new();
     for &(name, modifier) in modifiers {
         for key in keys {
-            // Honoured, these two navigate away (Back, home page).
-            if modifier & ALT != 0 && matches!(key.key, "ArrowLeft" | "Home") {
+            // Honoured, these two navigate away (Back, home page); Cmd does so on a Mac.
+            let navigates =
+                modifier & ALT != 0 || cfg!(target_os = "macos") && modifier & META != 0;
+            if navigates && matches!(key.key, "ArrowLeft" | "Home") {
                 continue;
             }
             // The page never sees these; see [`switches_tabs`].
