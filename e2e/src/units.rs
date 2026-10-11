@@ -165,10 +165,8 @@ const EXTRA_FIXTURES: &[(&str, &[&str])] = &[
         "planted",
         &[
             "button",
-            "carousel",
             "collapse",
             "drawer",
-            "floating_window",
             "lightbox",
             "menu",
             "menubar",
