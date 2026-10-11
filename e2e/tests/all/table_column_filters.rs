@@ -255,10 +255,11 @@ async fn a_date_filter_narrows_the_rows<D: Driver>(d: &mut D, _route: &str) -> R
     eventually_text(d, "[role=menuitem]:focus", "Filter", "Home").await?;
     d.press(keyboard::ENTER).await?;
     eventually(d, "the opened filter", async |d| d.exists(POPOVER).await).await?;
+    // WebView2 lands the focus a task after the popover mounts: Shift+Tab waits for it.
+    let value = format!("{POPOVER} input[data-filter-value]");
+    eventually_focused(d, &value, "the opened filter").await?;
     if !native_input {
         // Into the value field's calendar and back: the popover stays open throughout.
-        let value = format!("{POPOVER} input[data-filter-value]");
-        eventually_focused(d, &value, "the opened filter").await?;
         d.press(keyboard::ARROW_DOWN).await?;
         eventually_focused(
             d,
