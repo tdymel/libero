@@ -179,7 +179,7 @@ impl Probe {
 /// [`ScrollArea`] above it can show.
 ///
 /// The rows sit on the page surface (a `Paper`'s, inside one), over skeleton bars a fast
-/// fling shows; in a container of another colour, give the list that background.
+/// fling shows; in a container of another colour, set [`SCROLL_AREA_COVER`](crate::theme::SCROLL_AREA_COVER) on it.
 ///
 /// ```
 /// # use dioxus::prelude::*;

@@ -6,9 +6,11 @@ pub(crate) const SCROLL_AREA_RANGE_Y: CssVar = CssVar::new("--lsx-scroll-area-ra
 pub(crate) const SCROLL_AREA_RANGE_X: CssVar = CssVar::new("--lsx-scroll-area-range-x");
 /// How far a drawn thumb travels along its track, in px; negative for an RTL x thumb.
 pub(crate) const SCROLL_AREA_THUMB_TRAVEL: CssVar = CssVar::new("--lsx-scroll-area-thumb-travel");
-/// What a windowed list's rows sit on, over the area's skeleton bars: the page surface
-/// when unset, a paper surface sets its own (3251).
-pub(crate) const SCROLL_AREA_COVER: CssVar = CssVar::new("--lsx-scroll-area-cover");
+/// The colour a windowed `Virtualize` list's rows sit on, over the area's skeleton bars. The
+/// page surface when unset; `Paper` and every paper surface set their own. Set it on a
+/// container of another colour, once for every list inside:
+/// `sx().background("#fde").var(SCROLL_AREA_COVER, "#fde")`.
+pub const SCROLL_AREA_COVER: CssVar = CssVar::new("--lsx-scroll-area-cover");
 
 /// Keeps the drawn bars' layers still and moves their thumbs while the content
 /// scrolls, on the compositor. Without scroll timelines, inline styles do it.

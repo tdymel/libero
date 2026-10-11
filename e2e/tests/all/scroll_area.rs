@@ -353,6 +353,65 @@ mod the_window_follows_a_touch_fling {
     }
 }
 
+/// Per list, the colour its window covers the skeleton bars with and the first painted colour
+/// above its area, for the row `row` of each match of `lists`.
+const COVER_VS_SURFACE: &str = r#"(lists) => lists.map(list => {
+    const row = document.querySelector(list);
+    let cover = row;
+    while (cover && getComputedStyle(cover).backgroundClip !== 'content-box') cover = cover.parentElement;
+    const area = cover.parentElement;
+    let surface = area.parentElement;
+    while (getComputedStyle(surface).backgroundColor === 'rgba(0, 0, 0, 0)') surface = surface.parentElement;
+    return [list, getComputedStyle(cover).backgroundColor, getComputedStyle(surface).backgroundColor];
+})"#;
+
+/// Todos 3266, 3265: a windowed list covers its bars in the colour of the surface it sits on, as a
+/// `Paper`, a `Combobox` dropdown (`paper_sx`) and a container that sets `--lsx-scroll-area-cover`.
+#[test]
+fn a_windowed_list_covers_its_bars_in_the_surface_it_sits_on() {
+    block_on(async {
+        let fixture = Fixture::open("/scroll-area/cover", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate("document.querySelector('#cover-trigger').click()")
+            .await
+            .unwrap();
+        let lists = [
+            "#cover-paper [data-row='1']",
+            "#cover-custom [data-row='1']",
+            "[role=listbox] [role=option]",
+        ];
+        wait::for_js_true(
+            page,
+            "!!document.querySelector('[role=listbox] [role=option]') && !!document.querySelector('#cover-paper [data-row]')",
+            "the lists' rows",
+        )
+        .await
+        .unwrap();
+
+        for scheme in ["light", "dark"] {
+            page.evaluate(format!(
+                "document.documentElement.setAttribute('data-lsx-theme', '{scheme}')"
+            ))
+            .await
+            .unwrap();
+            let pairs: Vec<(String, String, String)> = page
+                .evaluate(format!("({COVER_VS_SURFACE})({lists:?})"))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            for (list, cover, surface) in pairs {
+                assert_eq!(cover, surface, "{scheme}: {list} shows a band");
+            }
+        }
+
+        fixture.console.assert_clean("covering the lists").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The `#region` area's scrollbar thumb colour, as the `thumb` of [`thumb_contrast`].
 const REGION_THUMB: &str = "getComputedStyle(document.querySelector('#region')).scrollbarColor";
 

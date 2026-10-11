@@ -2,8 +2,11 @@
 
 use dioxus::prelude::*;
 use libero::components::{
-    Flex, ScrollArea, ScrollPositionEvent, Text, Virtualize, use_scroll_area,
+    Button, Combobox, ComboboxOption, ComboboxOptionArgs, Flex, Paper, ScrollArea,
+    ScrollPositionEvent, Text, Virtualize, use_combobox, use_scroll_area,
 };
+use libero::sx::sx;
+use libero::theme::SCROLL_AREA_COVER;
 
 use crate::Routes;
 
@@ -15,7 +18,54 @@ pub const ROUTES: Routes = &[
     ("/scroll-area/bars", || rsx! { BarsPage {} }),
     ("/scroll-area/rewrap", || rsx! { RewrapPage {} }),
     ("/scroll-area/offset", || rsx! { OffsetPage {} }),
+    ("/scroll-area/cover", || rsx! { CoverPage {} }),
 ];
+
+/// A windowed list of 300 rows in a `Paper`, in a container of another colour that hands the list
+/// its own cover, and in a `Combobox` dropdown (todos 3265, 3266).
+#[component]
+fn CoverPage() -> Element {
+    let fruit = use_combobox();
+    let list = || {
+        rsx! {
+            ScrollArea { "aria-label": "Rows",
+                Virtualize {
+                    count: 300,
+                    item_size: Some(32.0),
+                    item: move |i: usize| rsx! {
+                        div { "data-row": i, style: "height: 32px", "Row {i}" }
+                    },
+                }
+            }
+        }
+    };
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Paper { id: "cover-paper", sx: sx().height("160px"), {list()} }
+            Flex {
+                id: "cover-custom",
+                direction: "column",
+                sx: sx().height("160px").background("#fde").var(SCROLL_AREA_COVER, "#fde"),
+                {list()}
+            }
+            Combobox {
+                state: fruit,
+                options: (0..300).map(|i| format!("Option {i}")).collect::<Vec<String>>(),
+                "aria-label": "Options",
+                option: move |o: ComboboxOptionArgs<String>| rsx! {
+                    ComboboxOption { onpick: move |_| fruit.close(), "{o.value}" }
+                },
+                Button {
+                    id: "cover-trigger",
+                    variant: "outlined",
+                    attributes: fruit.a11y_attributes(),
+                    onclick: move |_| fruit.toggle(),
+                    "Open"
+                }
+            }
+        }
+    }
+}
 
 /// Rows with a control flush at the end edge, in an area with `offset_scrollbars`, one
 /// without, one under RTL, and one whose few rows fit (todo 2494).

@@ -266,8 +266,9 @@ pub fn ScrollAreaPage() -> Element {
                     "where rows are still missing. The rendered rows sit on the page surface, "
                     "or on a "
                     Code { source: "Paper" }
-                    "'s inside one, to hide the bars. In a container of another colour, give "
-                    "the list that background too, or its rows show a surface-coloured band."
+                    "'s inside one, to hide the bars. In a container of another colour, set "
+                    Code { source: "SCROLL_AREA_COVER" }
+                    " on it to that colour, or its rows show a surface-coloured band."
                 }
             }
         }
