@@ -31,9 +31,88 @@ impl KanbanColumnMove {
     }
 }
 
+/// A column move told to the app: its words wait until the column shows at its new place,
+/// so a move the app refuses is never said (3196).
+#[derive(Clone, Debug, Default, PartialEq)]
+pub(super) struct ColumnLanding {
+    step: Option<KanbanColumnMove>,
+    landed: bool,
+    held: Option<String>,
+}
+
+impl ColumnLanding {
+    /// The app was told of `step`: the sortable's next words wait for it.
+    pub(super) fn expect(&mut self, step: KanbanColumnMove) {
+        *self = Self {
+            step: Some(step),
+            ..Self::default()
+        };
+    }
+
+    /// The sortable's words: what to say now, `None` while they wait for the move to show.
+    pub(super) fn words(&mut self, said: String) -> Option<String> {
+        if self.step.is_some() && !self.landed && self.held.is_none() {
+            self.held = Some(said);
+            return None;
+        }
+        *self = Self::default();
+        Some(said)
+    }
+
+    /// A column went from position `from` to `to`: the held words, if that is the move.
+    pub(super) fn moved(&mut self, from: usize, to: usize) -> Option<String> {
+        if self.step != Some(KanbanColumnMove { from, to }) {
+            return None;
+        }
+        let said = self.held.take();
+        match said {
+            Some(_) => *self = Self::default(),
+            None => self.landed = true,
+        }
+        said
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    const STEP: KanbanColumnMove = KanbanColumnMove { from: 0, to: 2 };
+
+    #[test]
+    fn a_move_is_said_once_the_column_shows_there() {
+        let mut landing = ColumnLanding::default();
+        landing.expect(STEP);
+        assert_eq!(landing.words("moved".into()), None);
+        assert_eq!(landing.moved(1, 0), None);
+        assert_eq!(landing.moved(0, 2), Some("moved".into()));
+        assert_eq!(landing, ColumnLanding::default());
+    }
+
+    #[test]
+    fn a_column_shown_before_the_words_lets_them_through() {
+        let mut landing = ColumnLanding::default();
+        landing.expect(STEP);
+        assert_eq!(landing.moved(0, 2), None);
+        assert_eq!(landing.words("moved".into()), Some("moved".into()));
+    }
+
+    #[test]
+    fn a_refused_move_is_never_said_and_the_next_words_are() {
+        let mut landing = ColumnLanding::default();
+        landing.expect(STEP);
+        assert_eq!(landing.words("moved".into()), None);
+        assert_eq!(landing.words("lifted".into()), Some("lifted".into()));
+        assert_eq!(landing.moved(0, 2), None);
+    }
+
+    #[test]
+    fn words_without_a_move_are_said_at_once() {
+        assert_eq!(
+            ColumnLanding::default().words("lifted".into()),
+            Some("lifted".into())
+        );
+    }
 
     fn moved(from: usize, to: usize) -> Vec<char> {
         let mut columns = vec!['a', 'b', 'c', 'd'];

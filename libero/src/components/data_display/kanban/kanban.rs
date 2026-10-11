@@ -3,7 +3,7 @@ use pictogram_icons_lucide as lucide;
 
 use super::{
     column_drag::{ColumnDrag, use_column_drag},
-    columns::KanbanColumnMove,
+    columns::{ColumnLanding, KanbanColumnMove},
     drag::{
         BoardDrag, BoardDragOptions, Control, Landing, use_board_card, use_board_drag,
         use_board_list,
@@ -146,6 +146,8 @@ struct Board {
     column_instructions: Signal<String>,
     /// A column's pointer drag, apart from a card's.
     columns: ColumnDrag,
+    /// A column move's words, said once the column shows at its new place.
+    column_landing: CopyValue<ColumnLanding>,
 }
 
 /// A card put in column `column`, called `name`, at slot `slot` of `count` shown cards there.
@@ -171,7 +173,7 @@ base_props! {
         /// Called when a card changed place, in its column or to another. Apply it to your data.
         onmove: EventHandler<KanbanMove>,
         /// Called when a column changed place on the board. Set, each column header shows a
-        /// reorder handle; apply the move to your column order and its cards.
+        /// reorder handle; apply the move to your column order and its cards, keyed by data.
         #[props(default)]
         oncolumnmove: Option<EventHandler<KanbanColumnMove>>,
         /// Each card's two buttons moving it one slot in its column without a drag (WCAG 2.5.7),
@@ -205,7 +207,7 @@ base_props! {
 /// # }
 /// ```
 ///
-/// Set `oncolumnmove` and the columns reorder too, by a handle in each header (keyboard)
+/// Set `oncolumnmove` and the columns reorder too, by a handle in each header (drag or keys)
 /// and its move buttons; keep the names in a signal and apply the [`KanbanColumnMove`] to both.
 ///
 /// Docs: <https://libero-ui.dev/data-display/kanban>
@@ -231,14 +233,17 @@ pub fn Kanban(props: KanbanProps) -> Element {
     });
     // The columns are this list's items: each `KanbanColumn` joins it before making its own.
     let oncolumnmove = props.oncolumnmove;
+    let mut column_landing = use_hook(|| CopyValue::new(ColumnLanding::default()));
     let columns = use_sortable(SortableOptions {
         orientation: Orientation::Horizontal,
         onreorder: use_callback(move |step: SortableMove| {
             if let Some(oncolumnmove) = oncolumnmove {
-                oncolumnmove.call(KanbanColumnMove {
+                let step = KanbanColumnMove {
                     from: step.from,
                     to: step.to,
-                });
+                };
+                column_landing.write().expect(step);
+                oncolumnmove.call(step);
             }
         }),
     });
@@ -247,7 +252,10 @@ pub fn Kanban(props: KanbanProps) -> Element {
     let announcement = columns.announcement;
     use_effect(move || {
         let said = announcement();
-        if !said.is_empty() {
+        if said.is_empty() {
+            return;
+        }
+        if let Some(said) = column_landing.write().words(said) {
             announcer.say(said);
         }
     });
@@ -271,6 +279,7 @@ pub fn Kanban(props: KanbanProps) -> Element {
         reorder,
         column_instructions,
         columns: column_drag,
+        column_landing,
     });
 
     // One listener per event on the root: the card drag and the column drag each take theirs.
@@ -354,6 +363,14 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
     if *index.peek() != column {
         index.set(column);
     }
+    let (mut column_landing, announcer) = (board.column_landing, board.announcer);
+    let mut shown_at = use_hook(|| CopyValue::new(column));
+    use_effect(move || {
+        let (from, to) = (shown_at.replace(index()), index());
+        if let Some(said) = column_landing.write().moved(from, to) {
+            announcer.say(said);
+        }
+    });
     let mut labels = board.labels;
     let label = props.label.clone();
     use_effect(use_reactive!(|column, label| {

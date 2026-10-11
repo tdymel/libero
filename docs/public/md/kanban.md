@@ -74,7 +74,7 @@ in each column's `header`.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `onmove` | `EventHandler<KanbanMove>` | required | Fires when a card changed place: on a drop, a move button or a Move to entry. Apply it to your data with `KanbanMove::apply`; until then the board keeps its old order. |
-| `oncolumnmove` | `Option<EventHandler<KanbanColumnMove>>` | `None` | Fires when a column changed place, by its header's reorder handle or move buttons. Set, each column header shows them. Apply it with `KanbanColumnMove::apply` to the column names and to the cards, so the `index` of each column follows. |
+| `oncolumnmove` | `Option<EventHandler<KanbanColumnMove>>` | `None` | Fires when a column changed place, by a drag or the keys of its header's reorder handle, or by its move buttons. Set, each column header shows them. Apply it with `KanbanColumnMove::apply` to the column names and to the cards, so the `index` of each column follows; until then the board keeps its old order. |
 | `move_buttons` | `bool` | `true` | Each card's two buttons that move it one slot in its column without dragging (WCAG 2.5.7), and with `oncolumnmove` each column's two that move it one place on the board. |
 | `children` | `Element` | required | The `KanbanColumn`s. |
 
@@ -164,7 +164,9 @@ parts work.
   To do column" and described by the column keys, and with `move_buttons` a
   Move backward and a Move forward button, "Move To do column forward". The
   status region says the column's lift, moves and drop, "To do column moved to
-  position 2 of 3.", and focus stays on the handle or button used.
+  position 2 of 3.", and focus stays on the handle or button used. A drop or
+  button move is said once the column shows at its new place, so a move
+  `oncolumnmove` refuses is not announced.
 - A column drags by its handle with a pointer or a touch, as a card does; a
   swipe on the rest of the header scrolls. Held near a side of a board wider
   than its container, it scrolls the board that way. While a column is lifted a
@@ -174,6 +176,8 @@ parts work.
 
 - Give each `KanbanCard` a `label`, or its controls and the announcements name
   it by position ("Item 2").
+- With `oncolumnmove`, key each `KanbanColumn` by its data, not its `index`, or
+  a column move is never announced.
 
 ### Example
 
@@ -191,7 +195,8 @@ button there.
   window, use the Move to menu.
 - A board with a height of its own scrolls its cards by wheel and touch; the
   scrollbar's gutter stays reserved, so a drag never changes the board's width.
-- A column move that `oncolumnmove` refuses is still announced.
+- Right to left, the drags are checked in browsers only, not on Android or
+  under the native renderer.
 - In a filtered column a dragged card lands just before the next card shown,
   or just after the last one; Move to lands after the last card shown, before
   any hidden ones that follow.

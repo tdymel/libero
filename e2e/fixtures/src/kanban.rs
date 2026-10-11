@@ -17,14 +17,15 @@ pub const ROUTES: Routes = &[
     ("/kanban/capped", || rsx! { CappedPage {} }),
     ("/kanban/menu-only", || rsx! { MenuOnlyPage {} }),
     ("/kanban/rtl", || rsx! { div { dir: "rtl", KanbanPage { data: false, wrapped: false } } }),
-    ("/kanban/column-reorder", || rsx! { ColumnReorderPage {} }),
-    ("/kanban/column-reorder-rtl", || rsx! { div { dir: "rtl", ColumnReorderPage {} } }),
+    ("/kanban/column-reorder", || rsx! { ColumnReorderPage { refuse: false } }),
+    ("/kanban/column-reorder-rtl", || rsx! { div { dir: "rtl", ColumnReorderPage { refuse: false } } }),
+    ("/kanban/column-reorder-refused", || rsx! { ColumnReorderPage { refuse: true } }),
 ];
 
 /// Three columns that reorder; `#order` lists each column's name and cards split by `|`,
-/// `#column-moves` each column move.
+/// `#column-moves` each column move. With `refuse`, the app ignores every column move.
 #[component]
-fn ColumnReorderPage() -> Element {
+fn ColumnReorderPage(refuse: bool) -> Element {
     let mut names = use_signal(|| COLUMNS.to_vec());
     let mut cards: Cards = use_signal(|| vec![vec!["Alpha", "Beta"], vec!["Delta"], vec![]]);
     let mut moves = use_signal(String::new);
@@ -41,8 +42,10 @@ fn ColumnReorderPage() -> Element {
             onmove: move |step: KanbanMove| step.apply(&mut cards.write()),
             oncolumnmove: move |step: KanbanColumnMove| {
                 moves.write().push_str(&format!("{}>{} ", step.from, step.to));
-                step.apply(&mut names.write());
-                step.apply(&mut cards.write());
+                if !refuse {
+                    step.apply(&mut names.write());
+                    step.apply(&mut cards.write());
+                }
             },
             for (column, label) in names().into_iter().enumerate() {
                 KanbanColumn { key: "{label}", index: column, label, id: format!("column-{}", label.replace(' ', "-").to_lowercase()),

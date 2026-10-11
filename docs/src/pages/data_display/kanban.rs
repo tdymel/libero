@@ -21,7 +21,7 @@ pub fn KanbanPage() -> Element {
                         .doc("Fires when a card changed place: on a drop, a move button or a Move to entry. Apply it to your data with `KanbanMove::apply`; until then the board keeps its old order."),
                     prop("oncolumnmove", "Option<EventHandler<KanbanColumnMove>>")
                         .default("None")
-                        .doc("Fires when a column changed place, by its header's reorder handle or move buttons. Set, each column header shows them. Apply it with `KanbanColumnMove::apply` to the column names and to the cards, so the `index` of each column follows."),
+                        .doc("Fires when a column changed place, by a drag or the keys of its header's reorder handle, or by its move buttons. Set, each column header shows them. Apply it with `KanbanColumnMove::apply` to the column names and to the cards, so the `index` of each column follows; until then the board keeps its old order."),
                     prop("move_buttons", "bool")
                         .default("true")
                         .doc("Each card's two buttons that move it one slot in its column without dragging (WCAG 2.5.7), and with `oncolumnmove` each column's two that move it one place on the board."),
@@ -84,18 +84,19 @@ pub fn KanbanPage() -> Element {
                     "A drag starts after 4px of pointer movement (8px on touch). Only the handle takes a touch: a swipe on the rest of a card scrolls. The column under the card's centre takes it; let go off the board, it goes back.",
                     "On a board wider than its container, or with a height of its own that its columns outgrow, a card dragged near an edge scrolls the board that way. Up and down only once the card has moved toward that edge.",
                     "In a narrow column the move buttons wrap below the card's content.",
-                    "With `oncolumnmove`, each column header has a reorder handle named \"Reorder To do column\" and described by the column keys, and with `move_buttons` a Move backward and a Move forward button, \"Move To do column forward\". The status region says the column's lift, moves and drop, \"To do column moved to position 2 of 3.\", and focus stays on the handle or button used.",
+                    "With `oncolumnmove`, each column header has a reorder handle named \"Reorder To do column\" and described by the column keys, and with `move_buttons` a Move backward and a Move forward button, \"Move To do column forward\". The status region says the column's lift, moves and drop, \"To do column moved to position 2 of 3.\", and focus stays on the handle or button used. A drop or button move is said once the column shows at its new place, so a move `oncolumnmove` refuses is not announced.",
                     "A column drags by its handle with a pointer or a touch, as a card does; a swipe on the rest of the header scrolls. Held near a side of a board wider than its container, it scrolls the board that way. While a column is lifted a card handle takes no press, and the other way round.",
                 ])
                 .must([
                     "Give each `KanbanCard` a `label`, or its controls and the announcements name it by position (\"Item 2\").",
+                    "With `oncolumnmove`, key each `KanbanColumn` by its data, not its `index`, or a column move is never announced.",
                 ])
                 .example("A task board where each `KanbanCard` has `label: title`. On the \"Write\" card, Move to column opens a menu of the columns; picking Done moves the card to the end of Done, the status region says so, and focus lands on the card's Move to button there.")
                 .limits([
                     "Left and Right move a lifted card one column per press: it is dropped there, so lift it again for the next column. On Android a right to left board's Left and Right are not mirrored yet.",
                     "A drag scrolls the board, not the page: to reach a card or column beyond the window, use the Move to menu.",
                     "A board with a height of its own scrolls its cards by wheel and touch; the scrollbar's gutter stays reserved, so a drag never changes the board's width.",
-                    "A column move that `oncolumnmove` refuses is still announced.",
+                    "Right to left, the drags are checked in browsers only, not on Android or under the native renderer.",
                     "In a filtered column a dragged card lands just before the next card shown, or just after the last one; Move to lands after the last card shown, before any hidden ones that follow.",
                 ]),
             lead: rsx! {

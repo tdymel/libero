@@ -878,6 +878,39 @@ async fn the_move_buttons_reorder_the_columns<D: Driver>(d: &mut D, _route: &str
     Ok(())
 }
 
+/// 3196: a column move the app ignores, by button or key drop, is never announced.
+async fn a_refused_column_reorder_is_not_announced<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    d.click(&header("doing", "move-later")).await?;
+    eventually_text(d, "#column-moves", "1>2 ", "the refused button move").await?;
+    d.focus(&header("to-do", "handle")).await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_text(d, STATUS, "Lifted To do column, position 1 of 3.", "Space").await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually_text(d, STATUS, "To do column moved to position 2 of 3.", "Right").await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_text(d, "#column-moves", "1>2 0>1 ", "the refused key drop").await?;
+    d.flush().await?;
+    ensure!(
+        d.text("#order").await? == COLUMNS_START,
+        "a refused move moved"
+    );
+    let said = d.text(STATUS).await?;
+    ensure!(
+        !said.contains("Dropped") && !said.contains("Doing column moved"),
+        "a refused column move was announced: {said}"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_column_move_the_app_refuses_is_not_announced,
+    "/kanban/column-reorder-refused",
+    a_refused_column_reorder_is_not_announced
+);
+
 /// After the columns traded places, the cards still go to the column where they are shown.
 async fn cards_follow_the_reordered_columns<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click(&header("to-do", "move-later")).await?;
