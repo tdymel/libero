@@ -365,18 +365,25 @@ impl Ios {
             Injector::Axe => "axe",
             Injector::Idb => "idb",
         };
-        let out = Command::new(tool)
-            .args(args)
-            .args(["--udid", &self.udid])
-            .output()
-            .with_context(|| format!("run {tool}"))?;
-        if !out.status.success() {
-            bail!(
-                "{tool} {args:?} failed: {}",
-                String::from_utf8_lossy(&out.stderr).trim()
-            );
+        // AXe's accessibility translation is not up for the first seconds of a fresh simulator.
+        let mut tries = 0;
+        loop {
+            let out = Command::new(tool)
+                .args(args)
+                .args(["--udid", &self.udid])
+                .output()
+                .with_context(|| format!("run {tool}"))?;
+            if out.status.success() {
+                return Ok(String::from_utf8_lossy(&out.stdout).into_owned());
+            }
+            let error = String::from_utf8_lossy(&out.stderr);
+            tries += 1;
+            if tries < 20 && error.contains("No translation object") {
+                std::thread::sleep(Duration::from_millis(500));
+                continue;
+            }
+            bail!("{tool} {args:?} failed: {}", error.trim());
         }
-        Ok(String::from_utf8_lossy(&out.stdout).into_owned())
     }
 }
 
