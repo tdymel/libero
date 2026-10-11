@@ -52,6 +52,23 @@ pub(super) fn prepare(command: &mut Command, launch: &str) -> Result<u16> {
     Ok(port)
 }
 
+/// The WebView2 browser processes' command lines and listening ports, for a DevTools port that
+/// never answered.
+fn webview_processes() -> String {
+    let script = "Get-CimInstance Win32_Process -Filter \"Name='msedgewebview2.exe'\" | \
+         Where-Object { $_.CommandLine -notmatch '--type=' } | ForEach-Object { \
+         $ports = (Get-NetTCPConnection -State Listen -OwningProcess $_.ProcessId \
+         -ErrorAction SilentlyContinue).LocalPort -join ','; \
+         [Console]::Out.WriteLine('[' + $_.ProcessId + ' listens ' + $ports + '] ' + $_.CommandLine) }";
+    Command::new("powershell")
+        .args(["-NoProfile", "-NonInteractive", "-Command", script])
+        .output()
+        .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string())
+        .ok()
+        .filter(|listing| !listing.is_empty())
+        .unwrap_or_else(|| "none: is the runtime installed?".into())
+}
+
 /// The app's page over CDP.
 pub(super) struct Cdp {
     page: Page,
@@ -76,7 +93,8 @@ impl Cdp {
                     Err(error) if started.elapsed() > LAUNCH => {
                         return Err(error).with_context(|| {
                             format!(
-                                "connect to WebView2's DevTools at {url}: is the runtime installed?"
+                                "connect to WebView2's DevTools at {url}; its processes: {}",
+                                webview_processes()
                             )
                         });
                     }
