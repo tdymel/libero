@@ -288,7 +288,8 @@ e2e::scenario!(
     a_focused_windowed_row_clears_the_footer,
     "/table-groups/footer-window",
     a_focused_row_clears_the_footer,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );
 
 e2e::scenario!(
@@ -296,5 +297,6 @@ e2e::scenario!(
     "/table-groups/footer-window",
     the_windowed_footer_holds_and_ends_the_rows,
     android: skip("958: element identity on the WebView"),
-    macos: skip("macOS WKWebView: the wheel never brings the windowed list to rest")
+    macos: skip("macOS WKWebView: the wheel never brings the windowed list to rest"),
+    ios: skip("iOS: a touch screen has no wheel")
 );

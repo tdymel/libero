@@ -1170,7 +1170,8 @@ e2e::scenario!(
     a_tap_on_zoom_in_zooms_the_picture,
     "/lightbox",
     zoom_in_tapped,
-    macos: skip("macOS WKWebView: the stage's first scroll never settles")
+    macos: skip("macOS WKWebView: the stage's first scroll never settles"),
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );
 
 /// Todo 961: a zoomed picture pans only as far as its own edge, which needs its
@@ -1211,7 +1212,8 @@ e2e::scenario!(
     "/lightbox",
     pan_stops_at_the_edge,
     macos: skip("macOS WKWebView: the stage's first scroll never settles"),
-    macos_native: skip("Blitz reads no script: the scenario evaluates in the page")
+    macos_native: skip("Blitz reads no script: the scenario evaluates in the page"),
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );
 
 /// Todo 1067: two fingers spread zoom the picture and do not close the viewer;
@@ -1245,7 +1247,8 @@ e2e::scenario!(
     "/lightbox",
     pinch_zooms,
     native: skip("Blitz takes no multi-touch input"),
-    desktop: skip("1126: no touch input under Xvfb")
+    desktop: skip("1126: no touch input under Xvfb"),
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );
 
 /// `LightboxOptions::sx` reaches the portaled dialog, `parts` the caption and thumbnails.

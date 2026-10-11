@@ -150,7 +150,8 @@ async fn tab_clears_the_control<D: Driver>(d: &mut D, _route: &str) -> Result<()
 e2e::scenario!(
     a_tabbed_item_clears_the_forward_control,
     "/scroller",
-    tab_clears_the_control
+    tab_clears_the_control,
+    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
 );
 
 /// Todo 1625: the strip is a tab stop only while it overflows with nothing focusable

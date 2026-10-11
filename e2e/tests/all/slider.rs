@@ -111,7 +111,8 @@ e2e::scenario!(
 e2e::scenario!(
     pressing_the_track_centre_and_dragging_right_follows_the_pointer,
     "/slider/drag",
-    centre_drag
+    centre_drag,
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );
 
 const BUBBLE: &str = "[role=tooltip]:not([hidden])";
@@ -225,7 +226,8 @@ async fn a_swipe_scrolls<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_vertical_swipe_scrolls_the_page_and_a_sideways_drag_or_a_tap_moves_it,
     "/slider/scroll",
-    a_swipe_scrolls
+    a_swipe_scrolls,
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );
 
 /// Todo 1179: a drag released past the track's end still tracks to the max and
@@ -250,7 +252,8 @@ async fn a_release_outside_ends<D: Driver>(d: &mut D, _route: &str) -> Result<()
 e2e::scenario!(
     a_drag_released_past_the_end_tracks_and_ends,
     "/slider/scroll",
-    a_release_outside_ends
+    a_release_outside_ends,
+    ios: skip("iOS: a touch screen has no hover")
 );
 
 /// Todo 1200: a 6px drag ending on the thumb commits once and holds; the
@@ -288,7 +291,8 @@ async fn a_short_drag_on_the_thumb<D: Driver>(d: &mut D, _route: &str) -> Result
 e2e::scenario!(
     a_short_drag_ending_on_the_thumb_holds_and_the_next_tap_lands,
     "/slider/scroll",
-    a_short_drag_on_the_thumb
+    a_short_drag_on_the_thumb,
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );
 
 /// Todo 483: the label focuses the thumb it names by id.
