@@ -108,19 +108,17 @@ jobs:
       - if: runner.os == 'Windows' && contains(env.EXP, 'devdrive')
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force "$env:GITHUB_WORKSPACE\target" | Out-Null
           @"
           create vdisk file=D:\dev.vhdx maximum=20480 type=expandable
           attach vdisk
           create partition primary
-          assign mount=$env:GITHUB_WORKSPACE\target
+          assign letter=V
           "@ | Set-Content -Encoding ascii "$env:RUNNER_TEMP\dev.txt"
           diskpart /s "$env:RUNNER_TEMP\dev.txt"
-          $volume = Get-Volume -FilePath "$env:GITHUB_WORKSPACE\target"
-          try { $volume | Format-Volume -FileSystem ReFS -DevDrive -Force }
-          catch { Write-Host "no -DevDrive: $_"; $volume | Format-Volume -FileSystem ReFS -Force }
-          fsutil devdrv query "$env:GITHUB_WORKSPACE\target"
-          Get-Volume | Format-Table
+          Format-Volume -DriveLetter V -FileSystem ReFS -DevDrive -Force
+          fsutil devdrv query V:
+          New-Item -ItemType Directory V:\target, V:\cargo | Out-Null
+          "CARGO_TARGET_DIR=V:\target", "CARGO_HOME=V:\cargo" | Add-Content $env:GITHUB_ENV
       - if: runner.os == 'Windows' && contains(env.EXP, 'lld')
         shell: pwsh
         run: |
