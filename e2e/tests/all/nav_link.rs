@@ -58,7 +58,7 @@ e2e::scenario!(
     the_toggle_works_from_the_keyboard_everywhere,
     "/nav-link/states",
     the_toggle_works_from_the_keyboard,
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 
 /// The link's bottom plus its 8rem margin meets the sidebar's bottom.

@@ -86,19 +86,19 @@ e2e::scenario!(
     a_drag_moves_the_divider_and_leaves_it_focused,
     "/splitter",
     a_drag_leaves_it_focused,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     a_double_click_collapses_pane_a_and_restores_it,
     "/splitter",
     a_double_click_collapses,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     under_rtl_rightwards_shrinks_pane_a,
     "/splitter/rtl",
     rtl_rightwards_shrinks,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     the_arrows_and_home_end_move_a_focused_divider,
@@ -150,7 +150,7 @@ e2e::scenario!(
     a_vertical_swipe_over_a_vertical_divider_scrolls_the_page_on_android_only_and_a_sideways_drag_moves_it,
     "/splitter/scroll",
     a_swipe_scrolls_on_android,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// Todo 1821: the horizontal divider takes ArrowDown/ArrowUp (step 1), Shift for the big

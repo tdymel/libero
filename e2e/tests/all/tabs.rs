@@ -119,7 +119,7 @@ e2e::scenario!(
     "/tabs-disabled",
     shift_tab_from_disabled,
     desktop: skip("958: element identity on the WebView (Shift+Tab stays in the strip)"),
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 e2e::scenario!(
     tab_leaves_the_strip_and_shift_tab_comes_back_to_the_selected_tab,

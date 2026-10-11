@@ -299,7 +299,7 @@ e2e::scenario!(
     "/file-field/crop",
     a_picked_image_is_cropped,
     native: skip("Blitz runs no script to stub the picker; `crop_bytes` unit tests cover the cut"),
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// The box and the image around it take touches (2113); the bars under the image still scroll the page.
@@ -643,13 +643,13 @@ e2e::scenario!(
     the_box_refits_a_new_picture,
     "/image-cropper/refit",
     the_box_refits_a_new_picture,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     a_tiny_box_still_moves,
     "/image-cropper/tiny",
     a_tiny_box_still_moves,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 async fn the_arrows_move_the_box<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -737,7 +737,7 @@ e2e::scenario!(
     the_starting_box_takes_a_handle_drag_and_a_move,
     "/image-cropper/start",
     the_starting_box_resizes_and_moves,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 e2e::scenario!(
@@ -754,13 +754,13 @@ e2e::scenario!(
     a_drag_on_a_corner_resizes_and_focuses_it,
     "/image-cropper",
     a_drag_resizes_from_a_corner,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     a_drag_on_the_box_moves_it,
     "/image-cropper",
     a_drag_moves_the_box,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     an_aspect_holds_through_a_key,
@@ -823,7 +823,7 @@ e2e::scenario!(
     pan_mode_keys_move_and_zoom,
     "/image-cropper/pan",
     the_keys_pan_and_zoom,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// Pan mode: the zoom bar sits under the image, clear of the still box's lower

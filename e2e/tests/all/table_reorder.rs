@@ -164,7 +164,7 @@ e2e::scenario!(
     an_open_detail_drags_with_its_row,
     "/table-reorder-detail",
     a_detail_drags_with_its_row,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 async fn sorted_is_off<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -208,7 +208,7 @@ e2e::scenario!(
     row_reorder_is_off_while_sorted,
     "/table-reorder",
     sorted_is_off,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// The menu of Name, sorted: sort ascending, descending, unsort, Filter, Group by, the moves.
@@ -260,7 +260,7 @@ e2e::scenario!(
     a_column_menu_moves_a_column_and_its_sort,
     "/table-reorder",
     a_menu_moves_a_column,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 fn menu_button(header: &str) -> String {
@@ -524,7 +524,7 @@ e2e::scenario!(
     "/table-reorder-windowed",
     deep_move_up_keeps_scroll_and_focus,
     android: skip("958: element identity on the WebView"),
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// Todo 1872: Row 1's grip held at the bottom edge scrolls the windowed rows on,
@@ -670,7 +670,7 @@ e2e::scenario!(
     a_header_grip_drag_moves_a_column,
     "/table-reorder",
     a_grip_drag_moves_a_column,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// A client x a tenth of `header`'s width past its middle: its end gap is the nearest, and
@@ -724,7 +724,7 @@ e2e::scenario!(
     header_grip_drags_move_columns_twice,
     "/table-reorder",
     two_grip_drags_move_columns,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 e2e::scenario!(

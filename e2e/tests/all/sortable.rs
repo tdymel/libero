@@ -414,31 +414,31 @@ e2e::scenario!(
     a_horizontal_list_reorders_by_a_sideways_drag,
     "/sortable/horizontal",
     a_row_reorders_sideways,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     the_neighbours_of_a_lifted_item_slide_and_the_lifted_item_does_not,
     "/sortable",
     neighbours_slide_the_lifted_item_does_not,
-    macos: skip("macOS: no transition runs on the runner (Reduce Motion?)")
+    macos: skip("MACTODO: no transition runs on the runner (Reduce Motion?)")
 );
 e2e::scenario!(
     a_right_to_left_row_reorders_by_a_leftward_drag,
     "/sortable/rtl",
     an_rtl_row_drags_leftwards,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     a_right_to_left_row_moves_by_the_mirrored_arrows_and_buttons,
     "/sortable/rtl",
     an_rtl_row_moves_by_the_mirrored_arrows,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     a_click_on_a_hook_handle_clicks_and_a_drag_does_not,
     "/sortable/hook",
     a_click_stays_a_click,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     space_lifts_the_arrows_move_and_space_drops_with_each_step_announced,
@@ -464,7 +464,7 @@ e2e::scenario!(
     a_dropped_item_settles_into_its_slot_until_the_next_lift,
     "/sortable",
     a_dropped_item_settles_into_its_slot,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 /// Touch only: a mouse drag on text selects it.
 mod a_swipe_on_an_items_text_scrolls_the_page_and_moves_nothing {

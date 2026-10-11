@@ -121,7 +121,7 @@ e2e::scenario!(
     "/rating",
     hovers,
     android: skip("a touch screen has no hover"),
-    ios: skip("iOS: a touch screen has no hover")
+    ios: skip("a touch screen has no hover")
 );
 
 /// Todo 3089: a key press while hovering a symbol draws the new value, not the hover.
@@ -146,7 +146,7 @@ e2e::scenario!(
     "/rating",
     key_over_hover,
     android: skip("a touch screen has no hover"),
-    ios: skip("iOS: a touch screen has no hover")
+    ios: skip("a touch screen has no hover")
 );
 
 /// Todo 2964: at every size a symbol's hit area is 24px tall and wide.

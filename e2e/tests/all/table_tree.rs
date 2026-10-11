@@ -172,7 +172,7 @@ e2e::scenario!(
     "/table-tree",
     row_keys,
     android: skip("958: roving keys are inert in the emulator's WebView"),
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 
 /// With `cell_focus`: Left from a first cell takes its row, Right from an open row its first cell.
@@ -256,7 +256,7 @@ e2e::scenario!(
     a_tree_box_selects_its_descendants_and_mixes_its_ancestors,
     "/table-tree-select",
     tree_selection,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// A row with `row_has_children` opens before its children load, then shows them.

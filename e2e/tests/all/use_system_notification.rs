@@ -129,7 +129,7 @@ e2e::scenario!(
     mounting_asks_nothing_until_a_request,
     "/use-system-notification",
     mounting_asks_nothing,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 async fn set_permission(page: &Page, setting: PermissionSetting) -> Result<()> {

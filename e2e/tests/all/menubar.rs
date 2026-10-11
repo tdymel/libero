@@ -126,7 +126,7 @@ e2e::scenario!(
     the_arrows_rove,
     android: skip("958: element identity on the WebView"),
     desktop: skip("958: element identity on the WebView"),
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     arrow_down_opens_a_menu_and_escape_hands_focus_back,
@@ -142,7 +142,7 @@ e2e::scenario!(
     hovering_another_trigger_switches_the_open_menu,
     "/menubar-docs",
     hovering_switches,
-    ios: skip("iOS: a touch screen has no hover")
+    ios: skip("a touch screen has no hover")
 );
 
 #[test]

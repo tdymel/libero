@@ -57,27 +57,27 @@ e2e::scenario!(
     traps_tab,
     android: skip("959: Tab leaves the drawer for the body on the WebView"),
     desktop: skip("959: Shift+Tab from the first control leaves the drawer on the WebView"),
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     a_backdrop_click_closes_a_drawer,
     "/drawer",
     backdrop_closes,
-    macos: skip("macOS WebKit does not focus a clicked button"),
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    macos: skip("upstream: WebKit does not focus a clicked button"),
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     a_button_in_a_drawer_closes_it_and_focus_returns,
     "/drawer",
     close_button_closes,
-    macos: skip("macOS WebKit does not focus a clicked button"),
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    macos: skip("upstream: WebKit does not focus a clicked button"),
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     a_right_drawer_hugs_the_right_edge,
     "/drawer",
     hugs_the_end,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// Opening moves focus in; the first Escape closes it and hands focus to the trigger.
@@ -92,8 +92,8 @@ e2e::scenario!(
     escape_closes_a_drawer_and_returns_focus,
     "/drawer",
     escape_closes,
-    macos: skip("macOS WebKit does not focus a clicked button"),
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    macos: skip("upstream: WebKit does not focus a clicked button"),
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// Todo 2600: `DrawerOptions::ondismiss` hears each dismissal and keeps a draft open;
@@ -123,8 +123,8 @@ e2e::scenario!(
     "/drawer/guarded",
     a_draft_vetoes_dismissal,
     android: skip("958: element identity on the WebView"),
-    macos: skip("macOS WebKit does not focus a clicked button"),
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    macos: skip("upstream: WebKit does not focus a clicked button"),
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// Android's Back closes the drawer, and the app stays (1289).

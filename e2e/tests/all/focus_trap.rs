@@ -68,7 +68,7 @@ e2e::scenario!(
     tab_passes_over_hidden_stops,
     android: skip("958: element identity on the WebView"),
     desktop: skip("958: element identity on the WebView"),
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// The radio groups alone, in a trap a click opens.
@@ -89,7 +89,7 @@ e2e::scenario!(
     a_radio_group_is_one_stop,
     android: skip("958: element identity on the WebView"),
     desktop: skip("958: element identity on the WebView"),
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 
 /// Radios sharing a name in two forms are two groups, and a checked one without a value counts (2340).
@@ -109,7 +109,7 @@ e2e::scenario!(
     forms_split_a_radio_name,
     android: skip("958: element identity on the WebView"),
     desktop: skip("958: element identity on the WebView"),
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// A hidden `[data-autofocus]` target took the search with it: focus stayed on Open (2299).
@@ -125,7 +125,7 @@ e2e::scenario!(
     a_hidden_autofocus_falls_through,
     android: skip("958: element identity on the WebView"),
     desktop: skip("958: element identity on the WebView"),
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 
 const SWITCH: &str = "[aria-label='activate focus trap']";
@@ -156,7 +156,7 @@ e2e::scenario!(
     the_trap_lets_go,
     android: skip("958: element identity on the WebView"),
     desktop: skip("958: element identity on the WebView"),
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 
 /// Both traps used to answer the one press: focus skipped a stop and walked
@@ -184,7 +184,7 @@ e2e::scenario!(
     a_nested_trap_moves_focus_once,
     android: skip("958: element identity on the WebView"),
     desktop: skip("958: element identity on the WebView"),
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// Focus that leaves without a Tab (2297): a click on text outside comes back, a blur that

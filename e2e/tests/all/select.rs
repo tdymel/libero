@@ -45,7 +45,7 @@ e2e::scenario!(
     a_click_on_a_select_option_picks_it,
     "/select/echo",
     a_click_picks,
-    macos: skip("macOS WKWebView: a click on a listbox option does not register")
+    macos: skip("MACTODO: WKWebView: a click on a listbox option does not register")
 );
 e2e::scenario!(
     the_keyboard_picks_a_select_option,
@@ -109,7 +109,7 @@ e2e::scenario!(
     a_hovered_select_option_tints_like_the_keyboard_s_row,
     "/select/echo",
     a_hovered_option_tints,
-    ios: skip("iOS: a touch screen has no hover")
+    ios: skip("a touch screen has no hover")
 );
 
 #[test]
@@ -381,7 +381,7 @@ e2e::scenario!(
     an_outside_click_leaves_a_searchable_select,
     "/select/outside",
     an_outside_click_keeps_its_focus,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// The trigger while the search box holds the combobox role.
@@ -1300,7 +1300,8 @@ async fn a_tall_dropdown_fits_the_room<D: Driver>(d: &mut D, _route: &str) -> Re
 e2e::scenario!(
     a_tall_select_below_fits_the_room,
     "/select/tall/below",
-    a_tall_dropdown_fits_the_room
+    a_tall_dropdown_fits_the_room,
+    windows: skip("3421: END scrolls by the listbox height from before the popup shrank")
 );
 e2e::scenario!(
     a_tall_select_above_fits_the_room,

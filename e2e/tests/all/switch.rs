@@ -178,7 +178,7 @@ e2e::scenario!(
     space_enter_the_label_and_the_track_each_toggle_it_once,
     "/switch",
     each_toggles_once,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// Todo 508: Enter submits the form around the switch, as it does around a
@@ -298,7 +298,7 @@ e2e::scenario!(
     a_track_click_focuses_the_switch,
     "/switch",
     a_track_click_focuses,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// The track shows `not-allowed` like the rest of a disabled switch.

@@ -111,13 +111,13 @@ e2e::scenario!(
     an_unset_hover_card_side_follows_the_theme,
     "/theme-defaults",
     the_hover_card_opens_on_the_themed_side,
-    ios: skip("iOS: a touch screen has no hover")
+    ios: skip("a touch screen has no hover")
 );
 e2e::scenario!(
     an_unset_hover_card_align_follows_the_theme,
     "/theme-defaults",
     the_hover_card_aligns_to_the_themed_end,
-    ios: skip("iOS: a touch screen has no hover")
+    ios: skip("a touch screen has no hover")
 );
 e2e::scenario!(
     an_unset_tabs_activation_follows_the_theme,

@@ -136,7 +136,7 @@ e2e::scenario!(
     "/pie-chart",
     clicks,
     native: skip("charts are parked on Blitz"),
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// A legend button takes its slice out of the pie: the others' shares grow.

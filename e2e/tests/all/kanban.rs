@@ -531,7 +531,7 @@ e2e::scenario!(
     "/kanban",
     the_own_column_is_disabled,
     desktop: skip("958: element identity on the WebView"),
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 
 /// Lifts `card` by its handle and waits for the lift to be announced.
@@ -731,7 +731,7 @@ e2e::scenario!(
     "/kanban/rtl",
     left_and_right_move_a_lifted_card_across_mirrored,
     native: skip("707: Blitz has no right-to-left scroll"),
-    macos: skip("macOS WKWebView: the RTL column order differs from WebKitGTK's")
+    macos: skip("upstream: WebKit orders the RTL columns unlike WebKitGTK")
 );
 e2e::scenario!(
     left_or_right_moves_no_resting_card_and_a_refused_move_is_not_announced,
@@ -756,7 +756,7 @@ e2e::scenario!(
     "/kanban/rtl",
     a_drag_moves_a_card_across,
     native: skip("707: Blitz has no right-to-left scroll"),
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     a_handle_drag_moves_a_card_into_the_empty_last_column_of_a_right_to_left_board,
@@ -999,7 +999,7 @@ e2e::scenario!(
     "/kanban/column-reorder-rtl",
     left_moves_a_lifted_column_forward_right_to_left,
     native: skip("707: Blitz has no right-to-left scroll"),
-    macos: skip("macOS WKWebView: the RTL column order differs from WebKitGTK's")
+    macos: skip("upstream: WebKit orders the RTL columns unlike WebKitGTK")
 );
 
 /// To do's handle dragged by the gap to Doing: it takes Doing's place.
@@ -1054,7 +1054,7 @@ e2e::scenario!(
     "/kanban/column-reorder-rtl",
     a_handle_drag_reorders_the_columns,
     native: skip("707: Blitz has no right-to-left scroll"),
-    macos: skip("macOS WKWebView: the RTL column order differs from WebKitGTK's")
+    macos: skip("upstream: WebKit orders the RTL columns unlike WebKitGTK")
 );
 
 /// A finger drags a column by its handle; a swipe on the header's name scrolls the board.

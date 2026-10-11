@@ -77,6 +77,6 @@ e2e::scenario!(
     "/table-filter/select",
     a_select_filter_narrows_the_rows,
     android: skip("958: element identity on the WebView"),
-    macos: skip("macOS WKWebView: ArrowDown does not open a select filter's list"),
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    macos: skip("MACTODO: WKWebView: ArrowDown does not open a select filter's list"),
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );

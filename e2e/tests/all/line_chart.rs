@@ -57,7 +57,7 @@ e2e::scenario!(
     hovers,
     android: skip("a touch screen has no hover"),
     native: skip("charts are parked on Blitz"),
-    ios: skip("iOS: a touch screen has no hover")
+    ios: skip("a touch screen has no hover")
 );
 
 /// Arrows walk a line and cross to the other at the same x; Enter clicks; Escape clears.
@@ -116,7 +116,7 @@ e2e::scenario!(
     "/line-chart",
     clicks,
     native: skip("charts are parked on Blitz"),
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// A legend button hides its line from the drawing; the last shown one stays.

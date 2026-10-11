@@ -119,7 +119,7 @@ e2e::scenario!(
     hovers,
     android: skip("a touch screen has no hover"),
     native: skip("charts are parked on Blitz"),
-    ios: skip("iOS: a touch screen has no hover")
+    ios: skip("a touch screen has no hover")
 );
 
 /// Arrows walk a series and cross to the other in the same category; Enter clicks.
@@ -192,7 +192,7 @@ e2e::scenario!(
     "/bar-chart",
     clicks,
     native: skip("charts are parked on Blitz"),
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// A legend button hides its series' bars; the last shown one stays.

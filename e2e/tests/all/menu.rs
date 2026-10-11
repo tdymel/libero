@@ -160,8 +160,8 @@ e2e::scenario!(
     a_click_outside_closes_it_and_leaves_focus_where_it_went,
     "/menu-submenu-reopen",
     a_click_outside_closes,
-    macos: skip("macOS WebKit does not focus a clicked button"),
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    macos: skip("upstream: WebKit does not focus a clicked button"),
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// APG: Escape and ArrowLeft in a submenu close that level only and focus its
@@ -248,7 +248,7 @@ e2e::scenario!(
     a_press_outside_closes_it,
     "/menu-submenu-reopen",
     a_press_outside_closes,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// The docs demo's row: the trigger and the text beside it share a centre line.
@@ -851,19 +851,21 @@ e2e::scenario!(
     a_tall_menu_below_fits_the_room,
     "/menu-tall/below",
     a_tall_menu_fits_the_room,
-    macos: skip("macOS WKWebView: a wheel scroll inside the menu never lands")
+    macos: skip("MACTODO: WKWebView: a wheel scroll inside the menu never lands"),
+    windows: skip("3421: END scrolls by the listbox height from before the popup shrank")
 );
 e2e::scenario!(
     a_tall_menu_above_fits_the_room,
     "/menu-tall/above",
     a_tall_menu_fits_the_room,
-    macos: skip("macOS WKWebView: the last item never scrolls into view")
+    macos: skip("MACTODO: WKWebView: the last item never scrolls into view"),
+    windows: skip("3421: END scrolls by the listbox height from before the popup shrank")
 );
 e2e::scenario!(
     a_short_menu_keeps_its_height,
     "/menu-row",
     a_short_menu_keeps_its_height,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// Todo 3053: Home on the first item and End on the last stay the page's.

@@ -48,7 +48,7 @@ e2e::scenario!(
     a_target_is_in_the_viewport_only_while_scrolled_to,
     "/use-intersection/viewport",
     in_view_only_while_scrolled_to,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 async fn a_clipped_target_stays_out<D: Driver>(d: &mut D, _route: &str) -> Result<()> {

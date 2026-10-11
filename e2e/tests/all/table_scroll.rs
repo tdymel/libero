@@ -32,7 +32,7 @@ e2e::scenario!(
     "/table/wide",
     the_tabbed_last_header_shows,
     android: skip("958: element identity on the WebView"),
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 
 /// Todo 3204: a table capped after its mount still measures its header for the scroll padding.
@@ -66,7 +66,7 @@ e2e::scenario!(
     a_cap_added_later_is_measured,
     "/table/cap-toggle",
     a_cap_added_later_pads_the_scroll_by_the_header,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// The header row's top, the first body row's top and the area's top.
@@ -225,8 +225,9 @@ e2e::scenario!(
     a_windowed_table_renders_the_rows_in_view,
     "/table/windowed",
     the_window_follows_the_scroll,
-    macos_native: skip("Blitz's stylo panics in resolve_map on the windowed rows (a SIGSEGV in the full run)"),
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    macos_native: skip("upstream: Blitz's stylo panics in resolve_map on the windowed rows (a SIGSEGV in the full run)"),
+    windows_native: skip("upstream: Blitz's stylo panics in calc.rs on the windowed rows"),
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// 1156-5c: Tab walks the row checkboxes past the rendered rows and back: the
@@ -264,7 +265,7 @@ e2e::scenario!(
     tab_walks_the_rows_of_a_windowed_table,
     "/table/windowed",
     tab_walks_past_the_window,
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 
 /// 1156-5d: End at the bottom asks for the next batch, each End once, and the
@@ -292,7 +293,7 @@ e2e::scenario!(
     end_at_the_bottom_loads_more_rows,
     "/table/infinite",
     end_loads_the_next_rows,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 async fn row_count_is<D: Driver>(d: &mut D, rows: &str) -> Result<()> {
@@ -326,7 +327,7 @@ e2e::scenario!(
     "/table/sticky-plain",
     a_plain_capped_table_is_a_named_stop,
     android: skip("958: element identity on the WebView"),
-    macos: skip("macOS WKWebView: a wheel step never scrolls the capped rows")
+    macos: skip("MACTODO: WKWebView: a wheel step never scrolls the capped rows")
 );
 
 /// Todo 1455: scrolled step by step, the rendered rows always cover the area under the header.
@@ -705,5 +706,5 @@ e2e::scenario!(
     "/table/sticky-select",
     a_focused_row_stays_below_the_header,
     android: skip("958: element identity on the WebView"),
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );

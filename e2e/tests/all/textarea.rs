@@ -18,7 +18,7 @@ e2e::scenario!(
     typing_into_a_textarea_reaches_its_value,
     "/textarea/echo",
     typing_reaches_the_value,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// Todo 1201: WebKitGTK scrolled the nearest scroller on an arrow the caret cannot

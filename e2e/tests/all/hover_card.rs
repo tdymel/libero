@@ -64,19 +64,19 @@ e2e::scenario!(
     escape_on_the_trigger_closes_a_pointer_opened_card,
     "/hover-card",
     escape_on_the_trigger,
-    ios: skip("iOS: a touch screen has no hover")
+    ios: skip("a touch screen has no hover")
 );
 e2e::scenario!(
     escape_closes_a_pointer_opened_card_with_focus_elsewhere,
     "/hover-card",
     escape_with_focus_elsewhere,
-    ios: skip("iOS: a touch screen has no hover")
+    ios: skip("a touch screen has no hover")
 );
 e2e::scenario!(
     escape_closes_a_select_list_in_the_card_before_the_card,
     "/hover-card-select",
     escape_closes_the_list_first,
-    ios: skip("iOS: a touch screen has no hover")
+    ios: skip("a touch screen has no hover")
 );
 
 /// Tab crosses into the portaled card and out past its last control; Shift+Tab walks back.
@@ -232,7 +232,7 @@ e2e::scenario!(
     "/hover-card",
     long_press_opens,
     desktop: skip("1126: no touch input under Xvfb"),
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 /// Todo 2750: the long press that opens the card leaves the browser's link menu shut, which
 /// would cover the card.
@@ -260,7 +260,7 @@ e2e::scenario!(
     long_press_keeps_the_link_menu_shut,
     desktop: skip("1126: no touch input under Xvfb"),
     native: skip("3317: Blitz opens no link menu on a long press, and a script reads its suppression"),
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     tab_crosses_into_the_portaled_card_and_back_on_every_backend,
@@ -268,7 +268,7 @@ e2e::scenario!(
     tab_crosses,
     android: skip("958: the Tab bridge reads the card's focusables inside a handler"),
     desktop: skip("958: the Tab bridge reads the card's focusables inside a handler"),
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 e2e::scenario!(
     tab_enters_the_card_only_from_the_triggers_last_focusable,
@@ -276,7 +276,7 @@ e2e::scenario!(
     tab_crosses_a_pair,
     android: skip("958: the Tab bridge reads the card's focusables inside a handler"),
     desktop: skip("958: the Tab bridge reads the card's focusables inside a handler"),
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 e2e::scenario!(
     tab_crosses_past_a_hidden_last_control_on_the_trigger_and_the_card,
@@ -284,7 +284,7 @@ e2e::scenario!(
     tab_crosses_past_hidden_last_controls,
     android: skip("958: the Tab bridge reads the card's focusables inside a handler"),
     desktop: skip("958: the Tab bridge reads the card's focusables inside a handler"),
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 e2e::scenario!(
     tab_walks_the_card_in_positive_tabindex_order,
@@ -292,13 +292,13 @@ e2e::scenario!(
     tab_follows_positive_tabindex,
     android: skip("958: the Tab bridge reads the card's focusables inside a handler"),
     desktop: skip("958: the Tab bridge reads the card's focusables inside a handler"),
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 e2e::scenario!(
     the_pointer_crosses_into_the_card_and_leaving_closes_it,
     "/hover-card",
     pointer_crosses,
-    ios: skip("iOS: a touch screen has no hover")
+    ios: skip("a touch screen has no hover")
 );
 
 const TRIGGER: &str = "#trigger";
@@ -426,7 +426,7 @@ e2e::scenario!(
     a_scrolling_card_is_a_tab_stop,
     android: skip("958: the Tab bridge reads the card's focusables inside a handler"),
     desktop: skip("958: the Tab bridge reads the card's focusables inside a handler"),
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 
 /// Hovers the trigger of the scrolling card and waits for its text stop.

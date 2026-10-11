@@ -390,7 +390,7 @@ e2e::scenario!(
     items_take_the_keyboard_and_the_pointer_everywhere,
     "/bottom-navigation",
     items_take_the_keyboard_and_the_pointer,
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 
 /// 2.4.11: a link tabbed to in the pane a sticky bar closes is not left under the bar.
@@ -419,7 +419,7 @@ e2e::scenario!(
     a_sticky_bar_in_a_pane_clears_the_focused_link,
     "/bottom-navigation/scroller",
     a_sticky_bar_in_a_pane_leaves_the_focused_link_clear,
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 
 /// 2.4.11 for the fixed bar (todo 1827): each link Tab reaches, the one in view but behind the
@@ -448,7 +448,7 @@ e2e::scenario!(
     a_fixed_bar_clears_the_focused_link,
     "/bottom-navigation/fixed",
     a_fixed_bar_leaves_the_focused_link_clear,
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 
 /// A fixed bar docks to the viewport's bottom edge, spans its width, publishes the
@@ -482,5 +482,5 @@ e2e::scenario!(
     a_fixed_bar_docks_everywhere,
     "/bottom-navigation/fixed",
     a_fixed_bar_docks,
-    macos: skip("macOS WKWebView: the fixed bar never docks")
+    macos: skip("MACTODO: WKWebView: the fixed bar never docks")
 );

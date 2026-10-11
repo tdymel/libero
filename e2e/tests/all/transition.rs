@@ -37,7 +37,7 @@ e2e::scenario!(
     it_enters_and_unmounts_its_content_once_closed,
     "/transition",
     enters_and_exits,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// An omitted `open` renders open at once and enters by the `appear` keyframe, not a state flip.
@@ -59,7 +59,7 @@ e2e::scenario!(
     it_animates_in_on_mount_without_open,
     "/transition-mount",
     enters_on_mount,
-    macos: skip("macOS: no transition runs on the runner (Reduce Motion?)")
+    macos: skip("MACTODO: no transition runs on the runner (Reduce Motion?)")
 );
 
 /// Closed it is shrunk to nothing; open it is untransformed, its origin the bottom right corner.
@@ -93,7 +93,7 @@ e2e::scenario!(
     it_grows_an_origin_kind_from_its_corner,
     "/transition-corner",
     grows_from_its_corner,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// A caller's `from` blurs the closed state, animates with the rest, and clears once open.
@@ -116,8 +116,8 @@ e2e::scenario!(
     it_animates_a_callers_from_state,
     "/transition-from",
     blurs_from_its_from_state,
-    macos: skip("macOS: no transition runs on the runner (Reduce Motion?)"),
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    macos: skip("MACTODO: no transition runs on the runner (Reduce Motion?)"),
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// Under reduced motion nothing transitions. The same check at `no-preference` must see

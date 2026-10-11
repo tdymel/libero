@@ -89,7 +89,7 @@ e2e::scenario!(
     room_below_the_picker,
     native: skip("Blitz reports no window resize (todo 2129)"),
     desktop: skip("no soft keyboard, and wry's window is not resized here"),
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     a_picker_the_keyboard_covers_scrolls_back_with_its_list,
@@ -98,7 +98,7 @@ e2e::scenario!(
     native: skip("Blitz reports no window resize (todo 2129)"),
     android: skip("the keyboard's height is the device's: the first scenario covers it"),
     desktop: skip("no soft keyboard, and wry's window is not resized here"),
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// Todo 2173: mobile Chrome's keyboard shrinks only the visual viewport. A 2x page scale

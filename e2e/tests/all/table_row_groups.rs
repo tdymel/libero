@@ -97,7 +97,7 @@ e2e::scenario!(
     the_sort_orders_the_groups,
     "/table-row-groups",
     sort_orders_groups,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// G2: "Group by Team" groups the rows and says so; "Stop grouping by Team" undoes it.
@@ -143,7 +143,7 @@ e2e::scenario!(
     the_column_menu_groups_by_a_column,
     "/table-row-groups/menu",
     menu_groups,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// G4: Sales' row shows the sum of its two ages in the Age column, right-aligned
@@ -255,7 +255,7 @@ e2e::scenario!(
     a_windowed_grouped_table_renders_the_rows_in_view,
     "/table-row-groups/windowed",
     windowed_groups,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// 3303: a group closed above the focused row leaves the row where it was.

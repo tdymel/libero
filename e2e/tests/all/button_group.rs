@@ -271,7 +271,7 @@ e2e::scenario!(
     the_focused_button_is_lifted_over_its_neighbours,
     "/button-group",
     the_ring_rises,
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 e2e::scenario!(
     a_button_s_own_disabled_beats_the_group_s,

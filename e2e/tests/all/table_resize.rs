@@ -41,7 +41,7 @@ e2e::scenario!(
     a_header_grip_drags_the_width_within_its_limits,
     "/table-resize",
     a_drag_resizes,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// Todo 2015: a finger 18px inside the header's end edge, past the old 8px grip, still resizes.
@@ -126,7 +126,7 @@ e2e::scenario!(
     the_keys_resize_a_column_from_its_grip,
     "/table-resize",
     the_keys_resize,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// Clicks the open menu's entry reading `label`, once it shows (todo 1502).
@@ -181,7 +181,7 @@ e2e::scenario!(
     the_column_menu_widens_narrows_and_resets_a_width,
     "/table-resize",
     the_menu_resizes,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// Todo 2017: in an overflowing table, Widen shows on the column, not only in the state.
@@ -207,5 +207,5 @@ e2e::scenario!(
     an_overflowing_tables_column_widens_from_its_menu,
     "/table-resize/wide",
     an_overflowing_column_widens,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );

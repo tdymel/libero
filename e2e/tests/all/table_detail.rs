@@ -76,7 +76,7 @@ e2e::scenario!(
     an_open_detail_follows_its_row_through_a_sort,
     "/table-detail",
     follows_the_sort,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// Enter opens, Tab goes into the detail, which follows its toggle.
@@ -101,7 +101,7 @@ e2e::scenario!(
     "/table-detail",
     keyboard_opens,
     android: skip("958: element identity on the WebView"),
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 
 /// The pinned toggles lead the checkboxes, which stay inset past them (3217).
@@ -166,5 +166,5 @@ e2e::scenario!(
     "/table-detail-animated",
     slides_open_and_shut,
     android: skip("958: element identity on the WebView"),
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );

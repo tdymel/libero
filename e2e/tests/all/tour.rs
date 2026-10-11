@@ -113,8 +113,8 @@ e2e::scenario!(
     escape_ends_the_tour_and_returns_focus,
     "/tour",
     escape_closes,
-    macos: skip("macOS WebKit does not focus a clicked button"),
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    macos: skip("upstream: WebKit does not focus a clicked button"),
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 
 async fn done_finishes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -132,8 +132,8 @@ e2e::scenario!(
     done_on_the_last_step_finishes,
     "/tour",
     done_finishes,
-    macos: skip("macOS WebKit does not focus a clicked button"),
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    macos: skip("upstream: WebKit does not focus a clicked button"),
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 
 async fn traps_tab<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -146,7 +146,7 @@ e2e::scenario!(
     traps_tab,
     android: skip("959: Tab leaves a trap for the body on the WebView"),
     desktop: skip("959: Shift+Tab from the first control leaves a trap on the WebView"),
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 
 /// The mask covers the hole too: the highlighted element takes no press.
@@ -264,7 +264,7 @@ e2e::scenario!(
     tab_bridge,
     android: skip("959: a WebView handle queries no focusables to bridge by"),
     desktop: skip("959: a WebView handle queries no focusables to bridge by"),
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// 2225: closing the tour stores it as seen under its key; `forget` drops that.
@@ -322,7 +322,7 @@ e2e::scenario!(
     hidden_edges,
     android: skip("959: a WebView handle queries no focusables to bridge by"),
     desktop: skip("959: a WebView handle queries no focusables to bridge by"),
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 
 /// 2720: Tab enters an interactive target, walks it and leaves it in `tabindex` order, both ways.
@@ -353,7 +353,7 @@ e2e::scenario!(
     tabindex_order,
     android: skip("959: a WebView handle queries no focusables to bridge by"),
     desktop: skip("959: a WebView handle queries no focusables to bridge by"),
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 
 /// 2674: Escape on the target's open Select closes the list only; the next ends the tour.
@@ -386,7 +386,7 @@ e2e::scenario!(
     escape_closes_the_list_first,
     android: skip("959: a WebView handle queries no focusables to bridge by"),
     desktop: skip("959: a WebView handle queries no focusables to bridge by"),
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// 2677: steps emptied while open end the tour without storing it as seen.
@@ -538,7 +538,7 @@ e2e::scenario!(
     a_nested_target_scrolls_into_view,
     "/tour/nested",
     nested_target,
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 
 /// The target growing with nothing scrolled or resized moves the hole (2223).
@@ -623,8 +623,8 @@ e2e::scenario!(
     arrow_right_on_the_last_step_does_not_finish_the_tour,
     "/tour",
     arrow_right_stops_on_the_last_step,
-    macos: skip("macOS WebKit does not focus a clicked button"),
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    macos: skip("upstream: WebKit does not focus a clicked button"),
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 
 /// 2264: the card is described by its text and its progress; a custom card by a hidden text

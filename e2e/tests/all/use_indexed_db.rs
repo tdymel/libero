@@ -34,7 +34,7 @@ e2e::scenario!(
     writes_reach_every_handle_and_remove_falls_back,
     "/use-indexed-db",
     writes_and_removes,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 async fn reads(page: &Page, selector: &str, text: &str) -> Result<()> {

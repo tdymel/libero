@@ -82,13 +82,13 @@ e2e::scenario!(
     a_press_on_a_disabled_button_focuses_what_holds_it,
     "/refused",
     focus_after_a_press,
-    macos: skip("macOS WebKit does not focus a clicked button"),
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    macos: skip("upstream: WebKit does not focus a clicked button"),
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 e2e::scenario!(
     tab_skips_disabled_buttons_and_an_inert_subtree,
     "/refused",
     tab_past_them,
     android: skip("958: element identity on the WebView"),
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );

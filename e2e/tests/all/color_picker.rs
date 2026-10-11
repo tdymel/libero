@@ -640,7 +640,7 @@ e2e::scenario!(
     a_click_on_a_swatch_picks_its_colour,
     "/color-picker-swatches",
     a_swatch_click_picks,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     a_typed_colour_commits_on_enter,

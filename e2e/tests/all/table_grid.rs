@@ -119,7 +119,7 @@ e2e::scenario!(
     "/table-grid",
     one_stop,
     android: skip("958: roving keys are inert in the emulator's WebView"),
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 
 /// Ben's age stays the stop when the age sort moves his row from second to fourth.
@@ -159,7 +159,7 @@ e2e::scenario!(
     "/table-grid/widgets",
     from_a_widget,
     android: skip("958: roving keys are inert in the emulator's WebView"),
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 
 /// The stop cell's number, the row's id in the windowed grid.
@@ -310,7 +310,7 @@ e2e::scenario!(
     native: skip("3386: reads the page language by script, Blitz has none and no Intl.Collator"),
     desktop: skip("3400: the app sorts in Rust by accent-folded letters, only the web build has an Intl.Collator"),
     android: skip("3294: the WebView app has no Intl.Collator to call"),
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 const EDITOR: &str = "[data-cell-editor] input";
@@ -342,7 +342,7 @@ e2e::scenario!(
     a_double_click_edits_and_blur_commits,
     "/table-grid/editable",
     double_click_edits,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// Enter opens and commits and moves the stop down, F2 opens and Escape cancels there.
@@ -419,7 +419,7 @@ e2e::scenario!(
     second_tap,
     native: skip("3242: Blitz fires no pointer events for a touch"),
     desktop: skip("no touch input in the desktop driver"),
-    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 
 /// The editor opens with its text selected, so typing replaces it.
@@ -498,7 +498,7 @@ e2e::scenario!(
     a_refused_blur_puts_the_old_value_back,
     "/table-grid/editable",
     refused_blur,
-    ios: skip("iOS: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// The open checkbox editor's `(checked, mixed)`: a browser reads mixed from the property alone.
