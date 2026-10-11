@@ -530,7 +530,8 @@ e2e::scenario!(
     the_move_to_menu_lists_every_column_with_the_cards_own_disabled,
     "/kanban",
     the_own_column_is_disabled,
-    desktop: skip("958: element identity on the WebView")
+    desktop: skip("958: element identity on the WebView"),
+    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
 );
 
 /// Lifts `card` by its handle and waits for the lift to be announced.
@@ -754,7 +755,8 @@ e2e::scenario!(
     a_handle_drag_moves_a_card_leftwards_into_the_next_column_of_a_right_to_left_board,
     "/kanban/rtl",
     a_drag_moves_a_card_across,
-    native: skip("707: Blitz has no right-to-left scroll")
+    native: skip("707: Blitz has no right-to-left scroll"),
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     a_handle_drag_moves_a_card_into_the_empty_last_column_of_a_right_to_left_board,
