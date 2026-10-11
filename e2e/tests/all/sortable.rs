@@ -733,6 +733,25 @@ fn a_hook_handle_is_described_by_the_instructions() {
     });
 }
 
+/// Todo 3226: a hook user gets the touch text too, which points to the move buttons.
+#[test]
+fn a_hook_hands_out_the_touch_instructions() {
+    block_on(async {
+        let fixture = Fixture::open("/sortable/hook", Viewport::Desktop)
+            .await
+            .unwrap();
+        let outcome = wait::for_js_true(
+            &fixture.page,
+            "document.querySelector('#touch-help-Alpha').textContent === \
+             'Use the move buttons to reorder the item.'",
+            "the touch instructions",
+        )
+        .await;
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+    });
+}
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("sortable", "/sortable")

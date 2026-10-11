@@ -54,7 +54,7 @@ fn main() {
 /// under a notch; `index.html` covers the web build.
 #[cfg(any(feature = "desktop", feature = "mobile"))]
 const VIEWPORT: &str = "<script>document.querySelector('meta[name=viewport]')?.setAttribute('content', \
-    'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover');</script>";
+    'width=device-width, initial-scale=1, viewport-fit=cover');</script>";
 
 /// wry 0.55.1's WebView2 arguments, which these replace, plus dioxus's Windows page origin
 /// made a secure context: without it capture, location and notifications are missing.

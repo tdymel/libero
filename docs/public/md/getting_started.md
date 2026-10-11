@@ -193,12 +193,13 @@ dx build --platform ios
 
 dioxus's page has no `viewport-fit=cover`, so the safe-area insets read 0 and
 Header, BottomNavigation and Lightbox run under the notch and the home
-indicator. Rewrite the viewport meta from the head:
+indicator. It also sets `maximum-scale=1, user-scalable=no`, which blocks pinch
+zoom (WCAG 1.4.4); fields keep their text at 16px on iOS, so the page does not
+need it. Rewrite the viewport meta from the head:
 
 ```rust,ignore
 const VIEWPORT: &str = "<script>document.querySelector('meta[name=viewport]')\
-    ?.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, \
-    user-scalable=no, viewport-fit=cover');</script>";
+    ?.setAttribute('content', 'width=device-width, initial-scale=1, viewport-fit=cover');</script>";
 
 fn main() {
     let config = dioxus::mobile::Config::new().with_custom_head(VIEWPORT.into());

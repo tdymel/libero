@@ -9,6 +9,7 @@ mod audio;
 mod autocomplete;
 mod avatar;
 mod badge;
+mod blockquote;
 mod bottom_navigation;
 mod boundary;
 mod button;

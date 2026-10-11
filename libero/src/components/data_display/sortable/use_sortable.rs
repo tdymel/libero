@@ -54,6 +54,9 @@ pub struct SortableItemHandle {
     /// The localized key instructions for the grab handle. Render them in a hidden element with
     /// an id of yours and point the handle's `aria-describedby` at it.
     pub instructions: &'static str,
+    /// The text for a touch screen that shows the move buttons: a tap lifts nothing, so it
+    /// points to them. Use it instead of `instructions` there.
+    pub touch_instructions: &'static str,
     /// A button moving the item one slot up (back, in a row), without a drag.
     pub earlier: ElementHandle,
     pub onearlier: Callback<Event<MouseData>>,
@@ -1203,6 +1206,7 @@ pub(crate) fn use_spanning_sortable_item(
         onkeydown,
         onblur,
         instructions: current_localization().sortable.instructions,
+        touch_instructions: current_localization().sortable.touch_instructions,
         earlier,
         onearlier,
         later,

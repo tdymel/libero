@@ -12,7 +12,7 @@ const CONSOLE_HOOK: &str = "<script>{ window.__e2eErrors = [];
 /// The docs app's viewport rewrite: dioxus-desktop's page has no `viewport-fit=cover`.
 #[cfg(any(feature = "desktop", feature = "mobile"))]
 const VIEWPORT: &str = "<script>document.querySelector('meta[name=viewport]')?.setAttribute('content', \
-    'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover');</script>";
+    'width=device-width, initial-scale=1, viewport-fit=cover');</script>";
 
 /// The docs app's WebView2 arguments: wry 0.55.1's defaults, and dioxus's
 /// `http://dioxus.index.html` page made a secure context (3195). Read on Windows only.

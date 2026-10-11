@@ -1,5 +1,5 @@
 //! The WebView apps' viewport rewrite (`main.rs`): a probe padded by the top safe-area inset,
-//! and a field under 16px, which iOS zooms into on focus unless the viewport stops it.
+//! and a `sm` field, which iOS zooms into on focus unless its text is 16px.
 
 use dioxus::prelude::*;
 use libero::components::TextField;

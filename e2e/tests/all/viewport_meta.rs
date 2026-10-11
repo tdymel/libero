@@ -15,6 +15,10 @@ async fn covers_the_notch<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         content.contains("viewport-fit=cover"),
         "viewport meta: {content:?}"
     );
+    ensure!(
+        !content.contains("user-scalable") && !content.contains("maximum-scale"),
+        "viewport meta blocks pinch zoom: {content:?}"
+    );
     if d.platform() == Platform::Ios {
         let inset = d
             .evaluate(
@@ -37,8 +41,8 @@ e2e::scenario!(
     native: skip("Blitz has no viewport meta")
 );
 
-/// Todo 3194 (G12): a tap into a field under 16px leaves the page at scale 1; iOS zooms in
-/// unless the viewport's `maximum-scale=1` stops it.
+/// Todo 3194 (G12): a tap into a `sm` field leaves the page at scale 1: the viewport allows
+/// zoom (todo 3187), so the field's own 16px floor on iOS has to stop it.
 async fn small_field_keeps_the_scale<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     eventually(d, "the small field", async |d| {
         d.exists("#small-field").await

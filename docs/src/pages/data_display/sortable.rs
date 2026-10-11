@@ -111,7 +111,9 @@ pub fn SortablePage() -> Element {
                     Code { source: "style()" }
                     ", and "
                     Code { source: "instructions" }
-                    ", the key help to render as the grab handle's description. The component is those two hooks plus a grip button, two move buttons and a status region."
+                    ", the key help to render as the grab handle's description, and "
+                    Code { source: "touch_instructions" }
+                    " for a touch screen showing the move buttons. The component is those two hooks plus a grip button, two move buttons and a status region."
                 }
             }
         }

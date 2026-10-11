@@ -37,6 +37,13 @@ fn ChildrenPage() -> Element {
             AspectRatio { id: "text-ratio", ratio: 21.0 / 9.0,
                 p { id: "text", style: "margin: 0", "Text" }
             }
+            AspectRatio { id: "grow-ratio", ratio: 21.0 / 9.0,
+                div {
+                    id: "grow",
+                    style: "display: flex; align-items: center; font-size: 48px",
+                    "Larger text wraps past the box"
+                }
+            }
         }
     }
 }

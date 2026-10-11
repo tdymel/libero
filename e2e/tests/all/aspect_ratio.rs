@@ -112,6 +112,24 @@ fn a_text_child_is_not_clipped_but_a_picture_is() {
     });
 }
 
+/// Todo 3225: a flex text child taller than the ratio box grows the box instead of spilling.
+#[test]
+fn a_text_child_taller_than_the_ratio_grows_the_box() {
+    block_on(async {
+        let fixture = Fixture::open("/aspect-ratio-children", Viewport::Desktop)
+            .await
+            .unwrap();
+        let spill: f64 = js(
+            &fixture.page,
+            "(() => { const box = document.querySelector('#grow-ratio'), child = document.querySelector('#grow'); \
+             return child.scrollHeight - box.getBoundingClientRect().height; })()",
+        )
+        .await;
+        assert!(spill <= 0.5, "the text runs {spill}px past the box");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 2535: the overlay anchors on the root, so focus does not move a positioned child.
 #[test]
 fn focus_leaves_a_positioned_child_in_place() {

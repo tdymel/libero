@@ -13,6 +13,9 @@ pub const FIELD_GAP: CssVar = CssVar::new("--lsx-field-gap");
 pub const FIELD_FRAME_GAP: CssVar = CssVar::new("--lsx-field-frame-gap");
 pub const FIELD_CARD_PADDING: SizeCss = SizeCss::new("--lsx-field-card-padding-");
 
+/// Matches WebKit on iOS and iPadOS only.
+const IOS_ONLY: &str = "(-webkit-touch-callout: none)";
+
 /// A field wrapper's caption slots, not the label, the frame or the control.
 /// `:where` keeps the specificity of a bare `[data-slot]`.
 pub(crate) const FIELD_CAPTIONS: &str =
@@ -135,6 +138,11 @@ impl FieldDefaults {
 
     fn frame_size_sx(size: Size) -> Sx {
         sx().font_size(FIELD_FONT_SIZE.value(size))
+            // iOS zooms the page into a focused input under 16px; only iOS knows this property.
+            .supports(
+                IOS_ONLY,
+                sx().font_size(format!("max(16px, {})", FIELD_FONT_SIZE.value(size))),
+            )
             .min_height(FIELD_HEIGHT.value(size))
             .padding_top(FIELD_PADDING_Y.value(size))
             .padding_bottom(FIELD_PADDING_Y.value(size))
@@ -176,6 +184,8 @@ impl ToCssDeclarations for FieldDefaults {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::css::Stylesheet;
+    use crate::sx::StaticSx;
 
     fn rem(length: &str) -> f32 {
         length.trim_end_matches("rem").parse().unwrap()
@@ -195,5 +205,17 @@ mod tests {
                 "{pair:?}"
             );
         }
+    }
+
+    #[test]
+    fn ios_lifts_every_size_to_16px_so_focus_does_not_zoom() {
+        static PROBE: StaticSx = StaticSx::new(FieldDefaults::frame_theme_vars);
+        let css = Stylesheet::from(&PROBE);
+        let css = css.as_str();
+        let supports = css
+            .find("@supports (-webkit-touch-callout: none)")
+            .unwrap_or_else(|| panic!("no iOS query: {css}"));
+        let lifts = css[supports..].matches("max(16px, ").count();
+        assert_eq!(lifts, Size::ALL.len(), "{css}");
     }
 }

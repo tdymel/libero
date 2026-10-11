@@ -49,7 +49,9 @@ wire your move buttons, `first` and `last` say when to disable them.
 `dragging` and `sorting` say whether this item, or any, is dragged. A hook
 item is named by position in the announcements. `instructions` is the
 localized key help for the grab handle: render it in a hidden element with an
-id of yours and point the handle's `aria-describedby` at that id.
+id of yours and point the handle's `aria-describedby` at that id. Where you
+show the move buttons on a touch screen, use `touch_instructions` instead: a
+tap lifts nothing, so it points to the buttons.
 
 ```rust
 use dioxus::prelude::*;

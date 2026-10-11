@@ -44,12 +44,22 @@ static ASPECT_RATIO_BASE_SX: StaticSx = StaticSx::new(|| {
             "& > *:focus-visible::after",
             ring_overlay_sx().content("\"\"").and(inset_ring()),
         )
-        // A text child is not cut at 200% text (todo 2937); media keep the crop.
+        // A text child is not cut at 200% text (todo 2937) and grows the box (todo 3225);
+        // media keep the crop.
         .selector(
-            format!("&:has(> :not(:is({REPLACED_ELEMENTS}, a, picture, span, [data-ring])))"),
+            format!("&:has(> {})", text_child()),
             sx().overflow("visible"),
         )
+        .selector(
+            format!("& > {}", text_child()),
+            sx().height("auto").min_height("100%"),
+        )
 });
+
+/// Any child that is not media, a wrapper of it, or the ring overlay.
+fn text_child() -> String {
+    format!(":not(:is({REPLACED_ELEMENTS}, a, picture, span, [data-ring]))")
+}
 
 fn ring_offset() -> String {
     format!("calc(-1 * {})", FOCUS_RING_WIDTH.value())
@@ -235,6 +245,18 @@ mod tests {
         assert!(css.contains("overflow:hidden"), "{css}");
         let selector = ":has(> :not(:is(img, video, iframe, canvas, svg, embed, object, a, picture, span, [data-ring]))){";
         assert!(rule(css, selector).contains("overflow:visible"), "{css}");
+    }
+
+    /// Todo 3225: a text child may outgrow the box, so the box grows with it.
+    #[test]
+    fn a_text_child_grows_the_box() {
+        let sheet = crate::css::Stylesheet::from(&ASPECT_RATIO_BASE_SX);
+        let css = sheet.as_str();
+
+        let selector = " > :not(:is(img, video, iframe, canvas, svg, embed, object, a, picture, span, [data-ring])){";
+        let text = rule(css, selector);
+        assert!(text.contains("height:auto"), "{css}");
+        assert!(text.contains("min-height:100%"), "{css}");
     }
 
     /// Todo 2535: the overlay anchors on the root, so a positioned child keeps its place.

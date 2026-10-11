@@ -128,8 +128,7 @@ dx build --platform ios";
 
 // snippet: ignore - needs dioxus's `mobile` feature
 const IOS_VIEWPORT: &str = r#"const VIEWPORT: &str = "<script>document.querySelector('meta[name=viewport]')\
-    ?.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, \
-    user-scalable=no, viewport-fit=cover');</script>";
+    ?.setAttribute('content', 'width=device-width, initial-scale=1, viewport-fit=cover');</script>";
 
 fn main() {
     let config = dioxus::mobile::Config::new().with_custom_head(VIEWPORT.into());
@@ -413,7 +412,9 @@ fn IosPanel() -> Element {
             Text {
                 "dioxus's page has no "
                 Code { source: "viewport-fit=cover" }
-                ", so the safe-area insets read 0 and Header, BottomNavigation and Lightbox run under the notch and the home indicator. Rewrite the viewport meta from the head:"
+                ", so the safe-area insets read 0 and Header, BottomNavigation and Lightbox run under the notch and the home indicator. It also sets "
+                Code { source: "maximum-scale=1, user-scalable=no" }
+                ", which blocks pinch zoom (WCAG 1.4.4); fields keep their text at 16px on iOS, so the page does not need it. Rewrite the viewport meta from the head:"
             }
             CodeBlock { source: IOS_VIEWPORT, language: "rust" }
         }

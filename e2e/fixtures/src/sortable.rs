@@ -160,6 +160,7 @@ fn HookItem(index: usize, name: &'static str, clicks: Signal<i32>) -> Element {
     rsx! {
         Box { id: "{name}", onmounted: item.element.mount(), style: item.style(),
             div { id: "help-{name}", hidden: true, {item.instructions} }
+            div { id: "touch-help-{name}", hidden: true, {item.touch_instructions} }
             button {
                 onmounted: item.handle.mount(),
                 aria_describedby: "help-{name}",
