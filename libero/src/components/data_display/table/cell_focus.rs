@@ -172,11 +172,15 @@ pub(super) fn tree_step(at: usize, by: Move, nodes: &[TreeNode], cells: bool) ->
         return TreeAct::Stay;
     };
     let last = nodes.len() - 1;
+    // An open row whose children have not loaded yet has none to step to.
+    let child = nodes
+        .get(at + 1)
+        .is_some_and(|next| next.parent == Some(at));
     match by {
         Move::Right => match node.open {
             Some(false) => TreeAct::Toggle(true),
             _ if cells => TreeAct::FirstCell,
-            Some(true) if at < last => TreeAct::Row(at + 1),
+            Some(true) if child => TreeAct::Row(at + 1),
             _ => TreeAct::Stay,
         },
         Move::Left => match (node.open, node.parent) {
@@ -339,6 +343,10 @@ mod tests {
             tree_step(3, Move::Right, &nodes, true),
             TreeAct::Toggle(true)
         );
+        // Open, its children not loaded yet: the next row is a sibling.
+        let mut waiting = tree();
+        waiting[1].open = Some(true);
+        assert_eq!(tree_step(1, Move::Right, &waiting, false), TreeAct::Stay);
     }
 
     #[test]

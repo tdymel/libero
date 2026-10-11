@@ -187,27 +187,52 @@ fn tasks() -> Vec<Task> {
         ("front", "build", "Frontend", "Di", 8),
         ("back", "build", "Backend", "Ed", 6),
         ("launch", "site", "Launch", "Ada", 1),
+        ("retro", "", "Retrospective", "Cy", 0),
     ]
-    .map(|(id, parent, name, owner, days)| Task {
+    .map(task)
+    .to_vec()
+}
+
+fn task((id, parent, name, owner, days): (&str, &str, &str, &str, u32)) -> Task {
+    Task {
         id: id.to_string(),
         parent: (!parent.is_empty()).then(|| parent.to_string()),
         name: name.to_string(),
         owner: owner.to_string(),
         days,
-    })
-    .to_vec()
+    }
 }
 
-/// The tree example: tasks under their parent task, two levels open.
+/// The tree example: tasks under their parent task, two levels open, one row's
+/// children loaded when it first opens, one subtree partly selected.
 #[component]
 pub fn TaskTable() -> Element {
+    let mut loaded = use_signal(|| false);
+    let mut rows = tasks();
+    if loaded() {
+        rows.extend(
+            [
+                ("notes", "retro", "Notes", "Cy", 1),
+                ("follow", "retro", "Follow-ups", "Ed", 2),
+            ]
+            .map(task),
+        );
+    }
     rsx! {
         Table {
             caption: "Tasks",
-            data: tasks(),
+            data: rows,
             row_key: |t: &Task| t.id.clone(),
             parent_key: |t: &Task| t.parent.clone(),
             default_node_expansion: 2,
+            row_has_children: |t: &Task| t.id == "retro",
+            onexpandednodeschange: move |open: Vec<String>| {
+                if open.iter().any(|key| key == "retro") {
+                    loaded.set(true);
+                }
+            },
+            selectable: true,
+            default_selection: vec!["wire".to_string()],
             show_quick_filter: true,
             columns: vec![
                 column("Task").value(|t: &Task| t.name.clone()).sortable().row_header(),

@@ -60,6 +60,8 @@ pub(super) struct GridFocus {
     id: Signal<String>,
     /// Focus is in the table, or was on a row a re-render removed: no `focusout` then.
     inside: CopyValue<bool>,
+    /// A windowed tree's stop row and its slot at the last render.
+    held: CopyValue<Option<(VisibleRow, usize)>>,
     table: ElementHandle,
     region: ElementHandle,
 }
@@ -308,6 +310,7 @@ pub(super) fn use_grid_focus(table: ElementHandle, region: ElementHandle) -> Gri
         request,
         id,
         inside: use_hook(|| CopyValue::new(false)),
+        held: use_hook(|| CopyValue::new(None)),
         table,
         region,
     };
@@ -430,6 +433,27 @@ impl GridFocus {
             stop.set(shown);
             if *inside.peek() {
                 request.set(Some(None));
+            }
+        });
+    }
+
+    /// In a windowed tree, rows opened or closed above the focused stop row move it
+    /// by slots: the view scrolls as far, so the row stays where it was.
+    pub fn hold_in_view(self, stop: Option<(VisibleRow, usize)>, pitch: f64) {
+        let mut held = self.held;
+        let last = *held.peek();
+        held.set(stop);
+        let (Some((row, slot)), Some((was, from))) = (stop, last) else {
+            return;
+        };
+        if row != was || slot == from || !*self.inside.peek() {
+            return;
+        }
+        let shift = (slot as f64 - from as f64) * pitch;
+        let (region, offset) = (self.region, self.region.scroll_offset());
+        spawn(async move {
+            if let Ok((x, top)) = offset.await {
+                let _ = region.scroll_to(x, (top + shift).max(0.0));
             }
         });
     }

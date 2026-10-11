@@ -273,3 +273,117 @@ fn cell_focus_leaves_the_first_stop_on_the_header() {
     assert!(!body.contains("tabindex=\"0\""), "{body}");
     assert!(row_of(body, "site").contains("tabindex=\"-1\""), "{body}");
 }
+
+/// The checkbox of the row whose first cell reads `text`.
+fn box_of<'a>(body: &'a str, text: &str) -> &'a str {
+    let start = body[..at(body, text)].rfind("<tr").expect("a row");
+    let input = start + body[start..].find("<input").expect("a box");
+    &body[input..input + body[input..].find('>').expect("a tag")]
+}
+
+#[test]
+fn a_tree_box_is_mixed_with_some_of_its_rows_selected() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    caption: "Tasks",
+                    data: tasks(),
+                    columns: columns(),
+                    row_key: |t: &Task| t.id.to_string(),
+                    parent_key: parent,
+                    default_node_expansion: 2,
+                    selectable: true,
+                    default_selection: vec!["wire".to_string(), "front".to_string(), "back".to_string()],
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    // site and design hold some selected rows; build all its children but not itself.
+    for mixed in ["site", "design", "build"] {
+        assert!(
+            box_of(&body, mixed).contains("aria-checked=\"mixed\""),
+            "{mixed}: {body}"
+        );
+    }
+    let wire = box_of(&body, "wire");
+    assert!(
+        wire.contains("checked") && !wire.contains("mixed"),
+        "{wire}"
+    );
+    assert!(!box_of(&body, "launch").contains("checked"), "{body}");
+    // The row tells its own selection, not its subtree's.
+    assert!(
+        row_of(&body, "wire").contains("aria-selected=\"true\""),
+        "{body}"
+    );
+    assert!(
+        row_of(&body, "site").contains("aria-selected=\"false\""),
+        "{body}"
+    );
+}
+
+#[test]
+fn a_row_whose_children_load_later_has_a_toggle() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    caption: "Tasks",
+                    data: tasks(),
+                    columns: columns(),
+                    row_key: |t: &Task| t.id.to_string(),
+                    parent_key: parent,
+                    row_has_children: |t: &Task| t.id == "launch" || t.id == "lost",
+                    expanded_nodes: vec!["lost".to_string()],
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    // Named as any tree toggle, by its loaded rows.
+    assert!(body.contains("aria-label=\"launch, 0 rows\""), "{body}");
+    let launch = row_of(&body, "launch");
+    assert!(launch.contains("aria-expanded=\"false\""), "{launch}");
+    assert!(!launch.contains("aria-busy"), "{launch}");
+    // Opened, its children not here yet.
+    let lost = row_of(&body, "lost");
+    assert!(
+        lost.contains("aria-expanded=\"true\"") && lost.contains("aria-busy=\"true\""),
+        "{lost}"
+    );
+    assert!(body.contains("aria-label=\"site, 2 rows\""), "{body}");
+}
+
+#[test]
+fn a_windowed_tree_stays_a_treegrid() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    caption: "Tasks",
+                    data: tasks(),
+                    columns: columns(),
+                    row_key: |t: &Task| t.id.to_string(),
+                    parent_key: parent,
+                    default_node_expansion: 1,
+                    max_height: "200px",
+                    virtual_row_height: 40.0,
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    assert!(html.contains("role=\"treegrid\""), "{html}");
+    // Every shown row counts: site, design, build, launch, lost.
+    assert!(html.contains("aria-rowcount=\"6\""), "{html}");
+    let body = body(&html);
+    assert!(
+        row_of(&body, "design").contains("aria-level=\"2\""),
+        "{body}"
+    );
+}

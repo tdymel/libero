@@ -83,12 +83,20 @@ const SELECT_FIXED: [&str; 6] = [
 ]"#,
 ];
 
-const TREE_FIXED: [&str; 7] = [
+const TREE_FIXED: [&str; 11] = [
     r#"caption: "Tasks""#,
     "data: tasks",
     r#"row_key: |t: &Task| t.id.clone()"#,
     r#"parent_key: |t: &Task| t.parent.clone()"#,
     "default_node_expansion: 2",
+    r#"row_has_children: |t: &Task| t.id == "retro""#,
+    r#"onexpandednodeschange: move |open: Vec<String>| {
+    if open.iter().any(|key| key == "retro") {
+        loaded.set(true);
+    }
+}"#,
+    "selectable: true",
+    r#"default_selection: vec!["wire".to_string()]"#,
     "show_quick_filter: true",
     r#"columns: vec![
     column("Task").value(|t: &Task| t.name.clone()).sortable().row_header(),
@@ -303,7 +311,8 @@ pub fn TablePage() -> Element {
                     prop("default_expanded_groups", "Vec<String>").default("[]").doc("Seeds the open groups once. Ignored when `expanded_groups` is set."),
                     prop("onexpandedgroupschange", "EventHandler<Vec<String>>").default("None").doc("Called with the open groups a group toggle asks for."),
                     prop("default_group_expansion", "usize").default("0").doc("How many levels of groups start open, the first time there are rows to group, beside `default_expanded_groups`: 1 opens the outermost groups. 0 starts every group closed. Ignored with `expanded_groups`."),
-                    prop("parent_key", "RowFn<T, Option<String>>").default("None").doc("A row's parent's `row_key`, `None` for a root: the rows nest under their parents, each level in the sort, behind a toggle in the first shown column named by the row and its child count. A key no row has, or a cycle, makes roots; a debug build warns. A filter keeps the kept rows' parents and opens them. Set `row_key` with it. Over `row_grouping`, which it ignores and drops from the column menu; a tree renders every row (`virtual_row_height` is ignored) and shows no `row_detail`, and its rows don't reorder."),
+                    prop("parent_key", "RowFn<T, Option<String>>").default("None").doc("A row's parent's `row_key`, `None` for a root: the rows nest under their parents, each level in the sort, behind a toggle in the first shown column named by the row and its child count. A key no row has, or a cycle, makes roots; a debug build warns. A filter keeps the kept rows' parents and opens them. Set `row_key` with it. Over `row_grouping`, which it ignores and drops from the column menu; a tree shows no `row_detail` and its rows don't reorder. With `virtual_row_height` its rows window as flat rows do. With `selectable`, a row's box selects the row and its descendants the filter keeps; a parent turns selected once all its descendants are and clears when one clears, and its box is mixed while only some of the row and its descendants are selected. A row's `aria-selected` tells its own selection."),
+                    prop("row_has_children", "RowFn<T, bool>").default("None").doc("Whether a tree row has children not in `data` yet, from a `|row: &T| ..` closure: the row gets a closed toggle. Opening it calls `onexpandednodeschange` with its key: append its children to `data`, their `parent_key` naming it, or return `false` for it once it has none. Until either, the open row stays `aria-busy`. A row with children in `data` is a parent whatever this returns."),
                     prop("expanded_nodes", "Option<Vec<String>>").default("None").doc("The `row_key`s of the open tree rows. Set, it is controlled: pair it with `onexpandednodeschange`."),
                     prop("default_expanded_nodes", "Vec<String>").default("[]").doc("Seeds the open tree rows once. Ignored when `expanded_nodes` is set."),
                     prop("onexpandednodeschange", "EventHandler<Vec<String>>").default("None").doc("Called with the open tree rows a toggle asks for."),
@@ -617,9 +626,27 @@ pub fn TablePage() -> Element {
                     "parent is missing shows as a root. A toggle in the first column opens a row; "
                     Code { source: "default_node_expansion" }
                     " opens the first levels once. A filter keeps the matches' parents, open. A tree "
-                    "renders every row and replaces "
+                    "replaces "
                     Code { source: "row_grouping" }
-                    "."
+                    " and windows with "
+                    Code { source: "virtual_row_height" }
+                    " as a flat table does."
+                }
+                Text {
+                    "With "
+                    Code { source: "selectable" }
+                    ", a row's box selects the row and its descendants; a parent's box fills once all "
+                    "of them are selected and shows mixed with some, as Website relaunch and Design do "
+                    "here. To load children on demand, "
+                    Code { source: "row_has_children" }
+                    " gives a row a toggle before any child is in "
+                    Code { source: "data" }
+                    ": opening it asks through "
+                    Code { source: "onexpandednodeschange" }
+                    ", and the row reads as busy until you append its children, as Retrospective does, "
+                    "or answer "
+                    Code { source: "false" }
+                    " for a row that turns out to have none."
                 }
                 Text {
                     "The tree is a "
@@ -632,6 +659,7 @@ pub fn TablePage() -> Element {
                 }
                 // snippet: item #[derive(Clone, PartialEq)] struct Task { id: String, parent: Option<String>, name: String, owner: String, days: u32 }
                 // snippet: let tasks: Vec<Task> = Vec::new();
+                // snippet: let mut loaded = use_signal(|| false);
                 Demo {
                     component: "Table",
                     title: "Tree rows",

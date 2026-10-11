@@ -11,7 +11,9 @@ pub(super) struct TreeLevel {
     pub depth: usize,
     /// Its shown children; 0 for a leaf.
     pub children: usize,
-    /// Whether its children show.
+    /// It has a toggle: shown children, or `row_has_children` before they load.
+    pub expandable: bool,
+    /// Whether its children show, or would once loaded.
     pub open: bool,
     /// 1-based, among its shown siblings.
     pub posinset: usize,
@@ -88,10 +90,12 @@ pub(super) fn with_ancestors(kept: &[bool], parent: &[usize]) -> (Vec<bool>, Vec
 
 /// The sorted `order` nested under the parents: each level keeps the sort, an `open`
 /// row shows its children after it. A row whose parent is not in `order` is a root.
+/// A childless row is `expandable` when its children load on demand.
 pub(super) fn tree_rows(
     order: &[usize],
     parent: &[usize],
     open: &dyn Fn(usize) -> bool,
+    expandable: &dyn Fn(usize) -> bool,
 ) -> TreeRows {
     let mut shown = vec![false; parent.len()];
     for &row in order {
@@ -118,16 +122,18 @@ pub(super) fn tree_rows(
         *next += 1;
         let (posinset, setsize) = (*next, siblings.len());
         let kids = children.get(&row).unwrap_or(&none);
-        let open = !kids.is_empty() && open(row);
+        let can = !kids.is_empty() || expandable(row);
+        let open = can && open(row);
         levels[row] = Some(TreeLevel {
             depth: stack.len() - 1,
             children: kids.len(),
+            expandable: can,
             open,
             posinset,
             setsize,
         });
         rows.push(VisibleRow::Data(row));
-        if open {
+        if open && !kids.is_empty() {
             stack.push((kids, 0));
         }
     }
@@ -158,7 +164,7 @@ mod tests {
             &parents(&[None, Some("a"), Some("a"), Some("b")]),
         );
         assert_eq!((parent.as_slice(), unknown), (&[0, 0, 0, 1][..], 0));
-        let (rows, levels) = tree_rows(&[3, 2, 1, 0], &parent, &|_| true);
+        let (rows, levels) = tree_rows(&[3, 2, 1, 0], &parent, &|_| true, &|_| false);
         assert_eq!(rows, data(&[0, 2, 1, 3]));
         let level = levels[1].unwrap();
         assert_eq!(
@@ -174,10 +180,23 @@ mod tests {
             &keys(&["a", "b", "c"]),
             &parents(&[None, Some("a"), Some("b")]),
         );
-        let (rows, levels) = tree_rows(&[0, 1, 2], &parent, &|row| row == 1);
+        let (rows, levels) = tree_rows(&[0, 1, 2], &parent, &|row| row == 1, &|_| false);
         assert_eq!(rows, data(&[0]));
         assert!(!levels[0].unwrap().open && levels[0].unwrap().children == 1);
         assert_eq!(levels[2], None);
+    }
+
+    #[test]
+    fn a_row_whose_children_load_later_opens_with_none_shown() {
+        // a > b; c childless but expandable, open.
+        let (parent, _) = tree_parents(&keys(&["a", "b", "c"]), &parents(&[None, Some("a"), None]));
+        let (rows, levels) = tree_rows(&[0, 1, 2], &parent, &|row| row == 2, &|row| row != 1);
+        assert_eq!(rows, data(&[0, 2]));
+        let (a, c) = (levels[0].unwrap(), levels[2].unwrap());
+        assert!(a.expandable && !a.open);
+        assert!(c.expandable && c.open && c.children == 0);
+        let (_, levels) = tree_rows(&[0, 1, 2], &parent, &|_| true, &|_| false);
+        assert!(!levels[2].unwrap().expandable && !levels[2].unwrap().open);
     }
 
     #[test]
@@ -189,7 +208,7 @@ mod tests {
         );
         assert_eq!(unknown, 1);
         assert_eq!(parent, [0, 1, 2, 3, 2]);
-        let (rows, _) = tree_rows(&[0, 1, 2, 3, 4], &parent, &|_| true);
+        let (rows, _) = tree_rows(&[0, 1, 2, 3, 4], &parent, &|_| true, &|_| false);
         assert_eq!(rows, data(&[0, 1, 2, 4, 3]));
     }
 
@@ -198,7 +217,7 @@ mod tests {
         let count: usize = 50_000;
         let parent: Vec<usize> = (0..count).map(|row| row.saturating_sub(1)).collect();
         let order: Vec<usize> = (0..count).collect();
-        let (rows, levels) = tree_rows(&order, &parent, &|_| true);
+        let (rows, levels) = tree_rows(&order, &parent, &|_| true, &|_| false);
         assert_eq!(rows.len(), count);
         assert_eq!(levels[count - 1].unwrap().depth, count - 1);
     }
@@ -211,7 +230,7 @@ mod tests {
         assert_eq!(shown, [true, true, true, false]);
         assert_eq!(opened, [true, true, false, false]);
         let order: Vec<usize> = (0..4).filter(|&row| shown[row]).collect();
-        let (rows, _) = tree_rows(&order, &parent, &|row| opened[row]);
+        let (rows, _) = tree_rows(&order, &parent, &|row| opened[row], &|_| false);
         assert_eq!(rows, data(&[0, 1, 2]));
     }
 }

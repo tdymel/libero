@@ -1,10 +1,11 @@
 //! `Table` tree rows (1156 TR1): a row's toggle opens its children under it, says
 //! so and keeps the focus; a filter keeps and opens a match's ancestors. A treegrid
 //! (TR2): the rows are stops the arrows move and open, its cells too with `cell_focus`.
+//! TR3: a row's box selects its subtree, a row loads its children on demand, a tree windows.
 
 use anyhow::{Result, bail};
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
+use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text};
 use e2e::passes::keyboard;
 use e2e::{Fixture, Suite, Viewport, ax};
 
@@ -206,6 +207,138 @@ e2e::scenario!(
     a_tree_with_cell_focus_moves_between_rows_and_cells,
     "/table-tree-cells",
     rows_and_cells,
+    android: skip("958: roving keys are inert in the emulator's WebView")
+);
+
+/// Body row `n`'s box, from 1.
+fn select_box(n: usize) -> String {
+    format!("tbody tr:nth-child({n}) td[data-select] span[aria-hidden]")
+}
+
+/// Whether body row `n`'s box is mixed: a browser reads the property alone.
+async fn mixed<D: Driver>(d: &mut D, n: usize) -> Result<bool> {
+    let input = format!("tbody tr:nth-child({n}) td[data-select] input");
+    match d.platform() {
+        Platform::Web => Ok(d
+            .evaluate(&format!("document.querySelector('{input}').indeterminate"))
+            .await?
+            == true),
+        _ => Ok(d.attr(&input, "aria-checked").await?.as_deref() == Some("mixed")),
+    }
+}
+
+/// A row's box takes its descendants along and fills or empties its ancestors' boxes.
+async fn tree_selection<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    // site open: site, design, build, launch.
+    eventually_text(d, &format!("{} th", row(3)), "build", "site open").await?;
+    d.click(&select_box(3)).await?;
+    eventually_text(d, "#selection", "back,build,front", "build's box").await?;
+    eventually(d, "site mixed with build's rows", async |d| {
+        mixed(d, 1).await
+    })
+    .await?;
+    d.click(&select_box(2)).await?;
+    eventually_text(
+        d,
+        "#selection",
+        "back,build,design,front,site,wire",
+        "design's box filling site",
+    )
+    .await?;
+    eventually(d, "site no longer mixed", async |d| Ok(!mixed(d, 1).await?)).await?;
+    d.click(&select_box(3)).await?;
+    eventually_text(d, "#selection", "design,wire", "build's box off").await?;
+    eventually(d, "site mixed again", async |d| mixed(d, 1).await).await
+}
+
+e2e::scenario!(
+    a_tree_box_selects_its_descendants_and_mixes_its_ancestors,
+    "/table-tree-select",
+    tree_selection
+);
+
+/// A row with `row_has_children` opens before its children load, then shows them.
+async fn lazy_children<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let launch = "button[aria-label=\"launch, 0 rows\"]";
+    d.click(launch).await?;
+    eventually_text(d, "#expanded", "site,launch", "the ask to open").await?;
+    eventually(d, "the open row to be busy", async |d| {
+        Ok(d.attr(&row(4), "aria-busy").await?.as_deref() == Some("true"))
+    })
+    .await?;
+    d.click("#load").await?;
+    eventually_text(d, &format!("{} th", row(5)), "ship", "the loaded children").await?;
+    eventually_text(d, &format!("{} th", row(6)), "tell", "the loaded children").await?;
+    if d.attr(&row(4), "aria-busy").await?.is_some() {
+        bail!("the row stays busy with its children shown");
+    }
+    if d.attr("button[aria-label=\"launch, 2 rows\"]", "aria-expanded")
+        .await?
+        .as_deref()
+        != Some("true")
+    {
+        bail!("the loaded row's toggle is not counted and open");
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    a_row_opens_before_its_children_load,
+    "/table-tree-select",
+    lazy_children
+);
+
+/// The focused row reads `text` and shows in the scroll area.
+async fn shown_focused<D: Driver>(d: &mut D, text: &str, after: &str) -> Result<()> {
+    eventually(
+        d,
+        &format!("{text} focused and shown after {after}"),
+        async |d| {
+            if d.text("tbody tr:focus th").await?.trim() != text {
+                return Ok(false);
+            }
+            let (row, area) = (
+                d.rect("tbody tr:focus").await?,
+                d.rect("[data-table-scroll]").await?,
+            );
+            Ok(row.y >= area.y - 1.0 && row.y + row.height <= area.y + area.height + 1.0)
+        },
+    )
+    .await
+}
+
+/// The arrows reach rows the window has not rendered, and open rows keep their place.
+async fn windowed_keys<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let focused = "tbody tr:focus th";
+    let state = d.attr("table", "data-state").await?.unwrap_or_default();
+    if !state.split_whitespace().any(|state| state == "windowed") {
+        bail!("the tree is not windowed: {state:?}");
+    }
+    d.focus(&row(1)).await?;
+    on_row(d, 1, "focus").await?;
+    d.press(keyboard::END).await?;
+    shown_focused(d, "r39 c3", "End past the window").await?;
+    d.press(keyboard::ARROW_LEFT).await?;
+    shown_focused(d, "r39", "ArrowLeft to the parent").await?;
+    if d.attr("tbody tr:focus", "aria-posinset").await?.as_deref() != Some("40") {
+        bail!("the last root is not 40th of its set");
+    }
+    // A collapse far above the window keeps the stop, and its row in view.
+    d.type_text("x").await?;
+    // The header row and 196 body rows.
+    eventually(d, "r0 to close", async |d| {
+        Ok(d.attr("table", "aria-rowcount").await?.as_deref() == Some("197"))
+    })
+    .await?;
+    shown_focused(d, "r39", "the collapse above").await?;
+    d.press(keyboard::HOME).await?;
+    eventually_text(d, focused, "r0", "Home").await
+}
+
+e2e::scenario!(
+    the_arrows_move_through_a_windowed_tree,
+    "/table-tree-window",
+    windowed_keys,
     android: skip("958: roving keys are inert in the emulator's WebView")
 );
 

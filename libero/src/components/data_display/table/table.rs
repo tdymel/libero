@@ -71,7 +71,7 @@ use super::{
     row::{RowContext, RowState, TableRow},
     row_groups::{GroupAggregates, GroupCells, GroupRow, GroupedRows, group_levels},
     row_reorder::{ROW_ANIMATION, ROW_TRANSFORM, RowReorder},
-    selection::{Selection, group_state, toggle_row},
+    selection::{Selection, TreeSelect, group_state, toggle_row},
     sticky::use_edge_height,
     toolbar::{TableToolbar, TableTools, ToolView},
     tree::{tree_parents, tree_rows, with_ancestors},
@@ -1012,10 +1012,16 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     default_group_expansion: usize,
     /// The `row_key` of a row's parent: the rows nest under their parents, each
     /// level in the sort, and a missing parent makes a root. Needs `row_key`. Over
-    /// `row_grouping`; renders every row, which neither reorder nor show a `row_detail`.
-    /// Makes the table a `role="treegrid"` whose rows the arrows move, open and close.
+    /// `row_grouping`; the rows neither reorder nor show a `row_detail`. Makes the
+    /// table a `role="treegrid"` whose rows the arrows move, open and close. With
+    /// `selectable`, a row's box selects its descendants, mixed with some selected.
     #[props(default, into)]
     parent_key: RowFn<T, Option<String>>,
+    /// Whether a tree row has children not in `data` yet: it gets a toggle, and
+    /// opening it asks via `onexpandednodeschange`. Append its children to `data`,
+    /// or return `false` once it has none: the open row stays busy until then.
+    #[props(default, into)]
+    row_has_children: RowFn<T, bool>,
     /// The `row_key`s of the open tree rows; set, they are controlled.
     #[props(default)]
     expanded_nodes: Option<Vec<String>>,
@@ -1351,7 +1357,6 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 (groups_too, "ignores `row_grouping`"),
                 (props.row_detail.is_set(), "ignores `row_detail`"),
                 (props.onrowreorder.is_some(), "does not reorder rows"),
-                (props.virtual_row_height.is_some(), "renders every row"),
             ];
             for (_, what) in ignored.into_iter().filter(|(on, _)| *on) {
                 warn(&format!("Table: `parent_key` {what}."));
@@ -1712,6 +1717,10 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         announcer,
         labels,
         look: Rc::new(look),
+        tree: parents.as_ref().map(|parents| {
+            let scope = kept.as_deref().map(Vec::as_slice);
+            Rc::new(TreeSelect::new(keys.clone(), parents.clone(), scope))
+        }),
     });
     // Stable, so a row's box memoizes when its row did not change.
     let current = selection.clone();
@@ -1742,6 +1751,11 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     };
     let expanded: Rc<HashSet<String>> = Rc::new(expanded_keys.iter().cloned().collect());
     let selected_rows: Rc<HashSet<String>> = Rc::new(selected_keys.iter().cloned().collect());
+    // A tree row's box is mixed with some of its subtree selected.
+    let mixed: Option<Rc<[bool]>> = selection
+        .as_ref()
+        .and_then(|selection| selection.tree.as_ref())
+        .map(|tree| tree.mixed(|row| selected_rows.contains(&keys[row])).into());
     // A row's checkbox and toggle are named by its row header, else its first cell.
     let name_column = props
         .columns
@@ -1788,7 +1802,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 (Some(texts), _) => nest_rows(&order, texts, &|_| true, "").0,
                 (_, Some(parents)) => {
                     let leaves: Vec<usize> = order.iter().filter_map(|row| row.data()).collect();
-                    tree_rows(&leaves, parents, &|_| true).0
+                    tree_rows(&leaves, parents, &|_| true, &|_| false).0
                 }
                 _ => order.clone(),
             };
@@ -1830,7 +1844,8 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             if depth > 0 && !state.expanded_nodes.is_controlled() {
                 let every: Vec<usize> = (0..data.len()).collect();
                 let mut open = state.expanded_nodes.peek();
-                for (index, level) in tree_rows(&every, parents, &|_| true).1.iter().enumerate() {
+                let levels = tree_rows(&every, parents, &|_| true, &|_| false).1;
+                for (index, level) in levels.iter().enumerate() {
                     let opens =
                         level.is_some_and(|level| level.depth < depth && level.children > 0);
                     if opens && !open.contains(&keys[index]) {
@@ -1843,9 +1858,13 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         let open: HashSet<String> = state.expanded_nodes.read().iter().cloned().collect();
         let leaves: Vec<usize> = order.iter().filter_map(|row| row.data()).collect();
         let forced = |row: usize| opened.as_ref().is_some_and(|opened| opened[row]);
-        let (rows, levels) = tree_rows(&leaves, parents, &|row| {
-            forced(row) || open.contains(&keys[row])
-        });
+        let lazy = |row: usize| props.row_has_children.call(&data[row]) == Some(true);
+        let (rows, levels) = tree_rows(
+            &leaves,
+            parents,
+            &|row| forced(row) || open.contains(&keys[row]),
+            &lazy,
+        );
         order = rows;
         levels
     });
@@ -1923,10 +1942,8 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     };
     let has_data = !data.is_empty();
     let headers = Rc::new(headers);
-    // Detail rows have their own heights; group rows take the pitch. A tree renders every row.
-    let row_height = props
-        .virtual_row_height
-        .filter(|_| bounded && !has_detail && !tree);
+    // Detail rows have their own heights; group and tree rows take the pitch.
+    let row_height = props.virtual_row_height.filter(|_| bounded && !has_detail);
     let fixed_slots = row_height.filter(|_| has_reorder).map(|pitch| FixedSlots {
         count: order.len(),
         pitch,
@@ -2089,7 +2106,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                                 .filter(|&up| up != index)
                                 .and_then(|up| places.get(&up).copied()),
                             open: level
-                                .filter(|level| level.children > 0)
+                                .filter(|level| level.expandable)
                                 .map(|level| level.open),
                         }
                     })
@@ -2126,10 +2143,12 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             })
         };
         let select = selection.as_ref().map(|_| {
-            let (key_at, selected_rows) = (key_at.clone(), selected_rows.clone());
+            let (key_at, selected_rows, mixed) =
+                (key_at.clone(), selected_rows.clone(), mixed.clone());
             Callback::new(move |index: usize| {
                 let key = key_at(index);
-                let on = !selected_rows.contains(&key);
+                let mixed = mixed.as_ref().is_some_and(|mixed| mixed[index]);
+                let on = mixed || !selected_rows.contains(&key);
                 toggle.call((key, on));
             })
         });
@@ -2191,6 +2210,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 stripe: striped && position % 2 == 1,
                 slot: has_reorder.then_some(position),
                 selected: selects.then(|| selected_rows.contains(&key)),
+                mixed: mixed.as_ref().is_some_and(|mixed| mixed[index]),
                 expanded: expanded.contains(&key),
                 stop: grid_stop
                     .filter(|stop| stop.row == GridRow::Body(VisibleRow::Data(index)))
@@ -2267,6 +2287,17 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             ));
             let order: Rc<[VisibleRow]> = order.into();
             row_focus.show(head_rows + first, order.clone());
+            // Linus (TR3): a collapse above the focused row leaves it where it was.
+            if tree {
+                let stop = grid_stop.and_then(|stop| match stop.row {
+                    GridRow::Body(row) => order
+                        .iter()
+                        .position(|&at| at == row)
+                        .map(|slot| (row, slot)),
+                    GridRow::Head(_) => None,
+                });
+                grid_focus.hold_in_view(stop, row_height);
+            }
             BodyRows::Window(RowWindow {
                 order,
                 first,

@@ -856,6 +856,45 @@ fn Demo() -> Element {
 }
 ```
 
+Tree rows nest under the row their `parent_key` names. With `selectable`, a
+row's box selects its descendants too and a parent's box shows mixed while some
+are selected. `row_has_children` gives a row a toggle before its children are
+in `data`: opening it asks through `onexpandednodeschange`, and you append them.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Table, column};
+
+#[derive(Clone, PartialEq)]
+struct Folder {
+    id: String,
+    parent: Option<String>,
+}
+
+#[component]
+fn Demo() -> Element {
+    let mut folders = use_signal(|| vec![Folder { id: "docs".into(), parent: None }]);
+
+    rsx! {
+        Table {
+            caption: "Folders",
+            data: folders(),
+            columns: vec![column("Folder").value(|f: &Folder| f.id.clone()).row_header()],
+            row_key: |f: &Folder| f.id.clone(),
+            parent_key: |f: &Folder| f.parent.clone(),
+            row_has_children: |f: &Folder| f.id == "docs",
+            selectable: true,
+            onexpandednodeschange: move |open: Vec<String>| {
+                let loaded = folders.read().iter().any(|f| f.parent.as_deref() == Some("docs"));
+                if open.iter().any(|key| key == "docs") && !loaded {
+                    folders.write().push(Folder { id: "guides".into(), parent: Some("docs".into()) });
+                }
+            },
+        }
+    }
+}
+```
+
 ## Props
 
 ### Table
@@ -901,7 +940,8 @@ fn Demo() -> Element {
 | `default_expanded_groups` | `Vec<String>` | `[]` | Seeds the open groups once. Ignored when `expanded_groups` is set. |
 | `onexpandedgroupschange` | `EventHandler<Vec<String>>` | `None` | Called with the open groups a group toggle asks for. |
 | `default_group_expansion` | `usize` | `0` | How many levels of groups start open, the first time there are rows to group, beside `default_expanded_groups`: 1 opens the outermost groups. 0 starts every group closed. Ignored with `expanded_groups`. |
-| `parent_key` | `RowFn<T, Option<String>>` | `None` | A row's parent's `row_key`, `None` for a root: the rows nest under their parents, each level in the sort, behind a toggle in the first shown column named by the row and its child count. A key no row has, or a cycle, makes roots; a debug build warns. A filter keeps the kept rows' parents and opens them. Set `row_key` with it. Over `row_grouping`, which it ignores and drops from the column menu; a tree renders every row (`virtual_row_height` is ignored) and shows no `row_detail`, and its rows don't reorder. The table is a `role="treegrid"` whose rows are its stops: the arrows move between them, open and close them. |
+| `parent_key` | `RowFn<T, Option<String>>` | `None` | A row's parent's `row_key`, `None` for a root: the rows nest under their parents, each level in the sort, behind a toggle in the first shown column named by the row and its child count. A key no row has, or a cycle, makes roots; a debug build warns. A filter keeps the kept rows' parents and opens them. Set `row_key` with it. Over `row_grouping`, which it ignores and drops from the column menu; a tree shows no `row_detail` and its rows don't reorder. With `virtual_row_height` its rows window as flat rows do. With `selectable`, a row's box selects the row and its descendants the filter keeps; a parent turns selected once all its descendants are and clears when one clears, and its box is mixed while only some of the row and its descendants are selected. A row's `aria-selected` tells its own selection. The table is a `role="treegrid"` whose rows are its stops: the arrows move between them, open and close them. |
+| `row_has_children` | `RowFn<T, bool>` | `None` | Whether a tree row has children not in `data` yet, from a `\|row: &T\| ..` closure: the row gets a closed toggle. Opening it calls `onexpandednodeschange` with its key: append its children to `data`, their `parent_key` naming it, or return `false` for it once it has none. Until either, the open row stays `aria-busy`. A row with children in `data` is a parent whatever this returns. |
 | `expanded_nodes` | `Option<Vec<String>>` | `None` | The `row_key`s of the open tree rows. Set, it is controlled: pair it with `onexpandednodeschange`. |
 | `default_expanded_nodes` | `Vec<String>` | `[]` | Seeds the open tree rows once. Ignored when `expanded_nodes` is set. |
 | `onexpandednodeschange` | `EventHandler<Vec<String>>` | `None` | Called with the open tree rows a toggle asks for. |
@@ -1102,7 +1142,8 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
   `selectable`.
 - With `parent_key`, the table is a `role="treegrid"`: each body row carries
   `aria-level`, `aria-posinset`, `aria-setsize`, and `aria-expanded` when it has
-  children, and one row is the tab stop, the first until focus moves. The row
+  children or `row_has_children` says it will, `aria-busy` while open before they
+  load, and one row is the tab stop, the first until focus moves. The row
   toggles are no Tab stops, as Left and Right do their work, and stay in the
   reading order. A collapse or filter that hides the focused row moves the stop,
   and the focus, to its nearest shown parent. With `cell_focus` its cells are

@@ -159,6 +159,8 @@ pub(super) struct RowState {
     pub slot: Option<usize>,
     /// With `selectable`.
     pub selected: Option<bool>,
+    /// A tree row's box: some of it and its descendants selected, not all.
+    pub mixed: bool,
     /// Its key is among the open details.
     pub expanded: bool,
     /// With `cell_focus`, in the stop's row: the stop's header index.
@@ -182,6 +184,7 @@ impl<T: Clone + 'static> RowContext<T> {
             stripe,
             slot,
             selected,
+            mixed,
             expanded,
             stop: _,
             rowindex,
@@ -231,8 +234,12 @@ impl<T: Clone + 'static> RowContext<T> {
                 attr("aria-posinset", level.posinset.to_string()),
                 attr("aria-setsize", level.setsize.to_string()),
             ]);
-            if level.children > 0 {
+            if level.expandable {
                 attributes.push(attr("aria-expanded", level.open.to_string()));
+            }
+            // Opened before its children loaded.
+            if level.open && level.children == 0 {
+                attributes.push(attr("aria-busy", "true"));
             }
             if let Some(grid) = &self.tree_focus {
                 attributes.extend(grid.row(index, row_stop));
@@ -245,7 +252,13 @@ impl<T: Clone + 'static> RowContext<T> {
             }));
         }
         let select = self.selection.as_ref().map(|selection| {
-            selection.row_cell(key.clone(), name, selected == Some(true), self.toggle)
+            selection.row_cell(
+                key.clone(),
+                name,
+                selected == Some(true),
+                mixed,
+                self.toggle,
+            )
         });
         RowSpec {
             span: self.span,
@@ -390,7 +403,7 @@ impl<T: Clone + 'static> RowContext<T> {
             level.depth,
             TABLE_GROUP_INDENT.value()
         );
-        let Some(toggle) = self.toggle_node.filter(|_| level.children > 0) else {
+        let Some(toggle) = self.toggle_node.filter(|_| level.expandable) else {
             return rsx! {
                 span { "data-node-spacer": true, style: indent }
             };
