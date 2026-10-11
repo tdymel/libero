@@ -6,7 +6,7 @@
     ci_probe.py summary <log> ...      a `::notice` with every `test result:` line
 
 The probe file (`ted_ci.py probe` writes it on a `ci/*` branch) holds `key=value` lines:
-`os` linux|macos|windows, `tier` unit|native|web|desktop|none, `filter` e.g. `tabs::`.
+`os` linux|macos|windows, `tier` unit|native|web|desktop|ios|none, `filter` e.g. `tabs::`.
 """
 import os
 import re
@@ -15,7 +15,7 @@ from pathlib import Path
 
 PROBE = Path(__file__).resolve().parents[1] / "ci-probe"
 RUNNERS = {"linux": "ubuntu-24.04", "macos": "macos-26", "windows": "windows-2025"}
-TIERS = ("unit", "native", "web", "desktop")
+TIERS = ("unit", "native", "web", "desktop", "ios")
 # The cargo cache each leg already warms in ci.yml or platforms.yml; restored, never saved.
 CACHES = {
     ("linux", "unit"): "test",
@@ -26,6 +26,7 @@ CACHES = {
     ("macos", "native"): "platforms-macos-native",
     ("macos", "web"): "platforms-macos-web",
     ("macos", "desktop"): "platforms-macos-desktop",
+    ("macos", "ios"): "platforms-ios-e2e",
     ("windows", "unit"): "platforms-unit",
     ("windows", "native"): "platforms-windows-native",
     ("windows", "web"): "platforms-windows-web",
@@ -62,6 +63,8 @@ def plan() -> None:
             fail(f"os {target!r} is not one of {', '.join(RUNNERS)}")
         if tier not in TIERS:
             fail(f"tier {tier!r} is not one of {', '.join(TIERS)}, none")
+        if tier == "ios" and target != "macos":
+            fail("tier ios runs on macos only")
         if not FILTER.match(test):
             fail(f"filter {test!r} is not a test path like `tabs::`")
     outputs = {

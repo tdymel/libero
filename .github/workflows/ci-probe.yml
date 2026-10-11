@@ -14,7 +14,7 @@ on:
         default: linux
       tier:
         type: choice
-        options: [unit, native, web, desktop]
+        options: [unit, native, web, desktop, ios]
         default: unit
       filter:
         description: A test path like `tabs::`, a prefix when it ends in `::`.
@@ -63,7 +63,7 @@ jobs:
     if: needs.plan.outputs.tier != 'none'
     name: ${{ needs.plan.outputs.os }} ${{ needs.plan.outputs.tier }} ${{ needs.plan.outputs.filter }}
     runs-on: ${{ needs.plan.outputs.runner }}
-    timeout-minutes: 60
+    timeout-minutes: ${{ needs.plan.outputs.tier == 'ios' && 90 || 60 }}
     env:
       OS: ${{ needs.plan.outputs.os }}
       TIER: ${{ needs.plan.outputs.tier }}
@@ -82,10 +82,10 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libgtk-3-dev libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev fonts-dejavu-core xvfb xdotool
       - uses: ./.github/actions/setup
         with:
-          targets: ${{ env.TIER == 'web' && 'wasm32-unknown-unknown' || '' }}
+          targets: ${{ env.TIER == 'web' && 'wasm32-unknown-unknown' || env.TIER == 'ios' && 'aarch64-apple-ios-sim' || '' }}
           cache-key: ${{ needs.plan.outputs.cache }}
           save-cache: false
-      - if: env.TIER == 'web'
+      - if: env.TIER == 'web' || env.TIER == 'ios'
         uses: ./.github/actions/dx
       # The same pin as ci.yml's `e2e` job: the AX snapshots follow Chrome's tree.
       - if: env.TIER == 'web'
@@ -102,6 +102,12 @@ jobs:
         run: |
           Invoke-WebRequest https://go.microsoft.com/fwlink/p/?LinkId=2124703 -OutFile "$env:RUNNER_TEMP\installwebview.exe"
           Start-Process -FilePath "$env:RUNNER_TEMP\installwebview.exe" -ArgumentList '/silent', '/install' -Wait
+      # As platforms.yml's `ios-e2e`: AXe injects the touches, a hardware keyboard raises no soft one.
+      - if: env.TIER == 'ios'
+        run: |
+          brew install cameroncooke/axe/axe
+          axe --version
+          defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool true
       - name: Probe
         run: |
           logs="$RUNNER_TEMP/probe"
@@ -134,6 +140,8 @@ jobs:
               cargo run -p e2e -- "$FILTER" 2>&1 | tee "$logs/e2e.log" ;;
             desktop)
               cargo run -p e2e -- desktop "$FILTER" 2>&1 | tee "$logs/e2e.log" ;;
+            ios)
+              cargo run -p e2e -- ios "$FILTER" 2>&1 | tee "$logs/e2e.log" ;;
           esac
         env:
           CHROME: ${{ steps.chrome.outputs.chrome-path }}
@@ -143,7 +151,7 @@ jobs:
       - if: always()
         run: $PY .github/scripts/ci_probe.py summary "$RUNNER_TEMP"/probe/{unit,native,all,e2e}.log
       # The platform probe's facts and the desktop driver's calibration, as notices.
-      - if: always() && env.TIER == 'desktop'
+      - if: always() && (env.TIER == 'desktop' || env.TIER == 'ios')
         run: |
           for dir in /tmp/e2e-artifacts "$RUNNER_TEMP/e2e-artifacts"; do
             if [ -d "$dir" ]; then $PY .github/scripts/probe_notice.py "$dir"; fi
