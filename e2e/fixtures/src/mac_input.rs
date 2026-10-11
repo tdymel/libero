@@ -312,6 +312,14 @@ fn key_chars(key: &str) -> String {
         "End" => '\u{f72b}',
         "PageUp" => '\u{f72c}',
         "PageDown" => '\u{f72d}',
+        // NSF1FunctionKey and on, one code point apiece.
+        f if f
+            .strip_prefix('F')
+            .and_then(|n| n.parse::<u32>().ok())
+            .is_some_and(|n| (1..=12).contains(&n)) =>
+        {
+            char::from_u32(0xf703 + f[1..].parse::<u32>().unwrap_or(1)).unwrap_or('\u{f704}')
+        }
         _ => return key.to_string(),
     };
     special.to_string()
@@ -334,6 +342,18 @@ fn keystroke(key: &str) -> Option<(u16, bool)> {
         ("ArrowRight", 124),
         ("ArrowDown", 125),
         ("ArrowUp", 126),
+        ("F1", 122),
+        ("F2", 120),
+        ("F3", 99),
+        ("F4", 118),
+        ("F5", 96),
+        ("F6", 97),
+        ("F7", 98),
+        ("F8", 100),
+        ("F9", 101),
+        ("F10", 109),
+        ("F11", 103),
+        ("F12", 111),
     ];
     // Unshifted, shifted, key code.
     const CHARS: &[(&str, &str, u16)] = &[
