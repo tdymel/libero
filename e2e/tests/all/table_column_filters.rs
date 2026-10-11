@@ -281,8 +281,8 @@ async fn a_date_filter_narrows_the_rows<D: Driver>(d: &mut D, _route: &str) -> R
         }
     }
     d.press_shift(keyboard::TAB).await?;
-    // WebView2's date input walks its year and day segments before it lets go.
-    for _ in 0..2 {
+    // WebView2's date input walks its segments and its picker button before it lets go.
+    for _ in 0..5 {
         let value = format!("{POPOVER} input[data-filter-value]");
         if !(cfg!(windows) && native_input && d.is_focused(&value).await?) {
             break;
