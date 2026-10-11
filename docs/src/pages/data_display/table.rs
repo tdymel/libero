@@ -68,10 +68,6 @@ const GROUPED_COLUMNS: &str = r#"columns: vec![
         .group("Membership"),
 ]"#;
 
-// snippet: item #[derive(Clone, PartialEq)] struct Staff { name: String, role: String }
-// snippet: item fn role_label(role: &str) -> &'static str { "" }
-// snippet: let staff: Vec<Staff> = Vec::new();
-// snippet: in Table { caption: "Staff", data: staff, .. }
 const SELECT_FIXED: [&str; 6] = [
     r#"caption: "Staff""#,
     "data: staff",
@@ -584,6 +580,9 @@ pub fn TablePage() -> Element {
                     Code { source: "header_filters" }
                     ", Is any of is one field showing the first label and a count."
                 }
+                // snippet: item #[derive(Clone, PartialEq)] struct Staff { name: String, role: String }
+                // snippet: item fn role_label(role: &str) -> &'static str { "" }
+                // snippet: let staff: Vec<Staff> = Vec::new();
                 Demo {
                     component: "Table",
                     title: "Select column",
