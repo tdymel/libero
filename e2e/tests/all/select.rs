@@ -1281,9 +1281,16 @@ async fn a_tall_dropdown_fits_the_room<D: Driver>(d: &mut D, _route: &str) -> Re
             return Ok(false);
         }
         let dropdown = d.rect(DROPDOWN).await?;
-        Ok(dropdown.height > 100.0
+        // A box stays hidden until placed, and only then caps its list to the room: End waits for that.
+        let shown = d
+            .evaluate("getComputedStyle(document.querySelector('[data-slot=dropdown]')).visibility === 'visible'")
+            .await?;
+        let list = d.rect(LISTBOX).await?;
+        Ok(shown == true
+            && dropdown.height > 100.0
             && dropdown.y >= -1.0
-            && dropdown.y + dropdown.height <= height + 1.0)
+            && dropdown.y + dropdown.height <= height + 1.0
+            && list.y + list.height <= dropdown.y + dropdown.height + 1.0)
     })
     .await?;
     d.press(keyboard::END).await?;
