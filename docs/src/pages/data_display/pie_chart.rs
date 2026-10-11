@@ -7,6 +7,10 @@ use libero::{
     theme::{ChartTable, LegendPosition, PieLabels},
 };
 
+fn on(value: bool) -> &'static str {
+    if value { "true" } else { "false" }
+}
+
 fn slices() -> Vec<Slice> {
     vec![
         Slice::new("Chrome", 62.0),
@@ -41,30 +45,40 @@ pub fn PieChartPage() -> Element {
                     prop("loading", "bool").default("false").doc("A placeholder instead of the plot, and `aria-busy` on the chart."),
                     prop("empty", "Option<Element>").doc("Shown in the plot when the slices sum to nothing. Unset, \"No data\"."),
                     prop("table", "ChartTable").default(ChartTable::default().as_str()).doc("The data as a table: `hidden` for screen readers, `visible`, or `off`."),
-                    prop("tooltip", "Option<bool>").doc("Shared with `LineChart`; no tooltip on slices yet."),
-                    prop("tooltip_content", "Option<Callback<ChartPoint, Element>>").doc("Shared with `LineChart`; not used on slices yet."),
-                    prop("onpointclick", "Option<EventHandler<ChartPoint>>").doc("Shared with `LineChart`; slices do not call it yet."),
-                    prop("onactivechange", "Option<EventHandler<Option<ChartPoint>>>").doc("Shared with `LineChart`; slices do not call it yet."),
-                    prop("hidden", "Option<Vec<String>>").doc("Shared with `LineChart`; the legend does not hide slices yet."),
-                    prop("default_hidden", "Vec<String>").default("[]").doc("Shared with `LineChart`; not used on slices yet."),
-                    prop("onhiddenchange", "Option<EventHandler<Vec<String>>>").doc("Shared with `LineChart`; slices do not call it yet."),
+                    prop("tooltip", "Option<bool>").default(on(theme.chart.tooltip)).doc("A tooltip with the slice's value and share at the pointer's or the keys' slice."),
+                    prop("tooltip_content", "Option<Callback<ChartPoint, Element>>").doc("The tooltip's content instead of the slice's name, value and share."),
+                    prop("onpointclick", "Option<EventHandler<ChartPoint>>").doc("A click on a slice, a second tap on a pinned one, or Enter on the keys' slice. `index` is the slice's place in `slices`, `x` and `series_name` its name."),
+                    prop("onactivechange", "Option<EventHandler<Option<ChartPoint>>>").doc("The slice under the pointer or the keys; `None` when it leaves."),
+                    prop("hidden", "Option<Vec<String>>").doc("The names of the slices the legend hides; set, they are controlled."),
+                    prop("default_hidden", "Vec<String>").default("[]").doc("Seeds the hidden slices once. Ignored when `hidden` is set."),
+                    prop("onhiddenchange", "Option<EventHandler<Vec<String>>>").doc("The hidden slices a legend button asks for. The last shown slice stays."),
                 ]),
             ],
             accessibility: a11y()
+                .key(["Tab"], "Into the plot, then on to the legend's buttons.")
+                .key(["ArrowRight", "ArrowDown"], "The next slice, clockwise.")
+                .key(["ArrowLeft", "ArrowUp"], "The previous slice.")
+                .key(["Home", "End"], "The first or last slice.")
+                .key(["Enter", "Space"], "Calls `onpointclick` with the slice.")
+                .key(["Escape"], "Clears the slice and its tooltip.")
                 .handles([
                     "The chart is a `role=\"figure\"` named by `title`. The drawing is hidden from screen readers.",
                     "A hidden summary gives the total, then each slice's value and share.",
                     "A hidden table holds each slice's value and share.",
+                    "The plot is one tab stop, a `role=\"application\"` described as a chart, so a screen reader hands it the arrows. Each slice the keys reach is announced, as \"Chrome: 62, 62%.\"",
+                    "The legend's entries are toggle buttons: pressed while their slice shows, struck through when hidden. The last shown slice's button is `aria-disabled`.",
+                    "On a touch screen a tap pins a slice's tooltip, a second tap on it clicks; a vertical swipe still scrolls the page.",
                     "Slices take the theme's palette, drawn in the current color scheme.",
                 ])
                 .must([
                     "Give a `title`, or name the chart with `aria_label`.",
                     "Keep `labels` or the legend: colour alone does not tell slices apart.",
                     "Keep to a few slices; fold the small ones into one \"Other\".",
+                    "Name every slice differently: the legend hides them by name.",
                 ])
                 .limits([
-                    "No tooltip and no keyboard path over the slices yet: the summary and the table are the way to the values.",
-                    "The legend only names the slices: the props `LineChart` uses to hide series and report points are taken but not wired yet.",
+                    "A hidden slice leaves the drawing, so the shown ones' shares grow; the summary and the table keep every slice.",
+                    "The tooltip is for the eye; screen readers hear the announcement instead, so `tooltip_content` reaches only sighted readers.",
                     "`grid` draws nothing on a pie.",
                 ]),
             lead: rsx! {
@@ -99,6 +113,7 @@ pub fn PieChartPage() -> Element {
                     Control::switch("donut"),
                     Control::select("legend", ["bottom", "top", "start", "end", "none"]),
                     Control::toggle("table", ["hidden", "visible", "off"]),
+                    Control::switch("tooltip").default(on(theme.chart.tooltip)),
                     Control::switch("loading"),
                 ],
                 render: move |values: DemoValues| rsx! {
@@ -110,6 +125,7 @@ pub fn PieChartPage() -> Element {
                         center: rsx! { "1,204 users" },
                         legend: LegendPosition::from(values.str("legend").as_str()),
                         table: ChartTable::from(values.str("table").as_str()),
+                        tooltip: values.str("tooltip") == "true",
                         loading: values.str("loading") == "true",
                     }
                 },

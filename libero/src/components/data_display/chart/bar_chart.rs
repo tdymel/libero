@@ -3,7 +3,11 @@ use dioxus::prelude::*;
 use super::{
     Series, XValues,
     engine::{self, BarSpec},
-    frame::{Frame, series_specs, summary, swatches, table_rows, use_plot_size},
+    frame::{
+        Frame, Interaction, overlay_series, series_specs, shown_places, summary, table_rows,
+        use_plot_size,
+    },
+    legend::use_hidden_series,
     props::chart_props,
 };
 use crate::{
@@ -81,13 +85,23 @@ pub fn BarChart(props: BarChartProps) -> Element {
         .series
         .iter()
         .all(|series| series.values.iter().all(Option::is_none));
+    let all_specs = series_specs(theme, &props.series);
+    let names: Vec<String> = all_specs.iter().map(|s| s.name.clone()).collect();
+    let hidden = use_hidden_series(
+        &props.hidden,
+        &props.default_hidden,
+        props.onhiddenchange,
+        &names,
+    );
+    let shown = shown_places(&all_specs, &hidden.get());
+    let horizontal = props.orientation.copied_or(Orientation::Vertical) == Orientation::Horizontal;
     let spec = BarSpec {
         width,
         height,
         x: x.clone(),
-        series: series_specs(theme, &props.series),
+        series: shown.iter().map(|i| all_specs[*i].clone()).collect(),
         layout: props.layout.copied_or(theme.chart.bar_layout),
-        horizontal: props.orientation.copied_or(Orientation::Vertical) == Orientation::Horizontal,
+        horizontal,
         radius: f32::from(
             theme
                 .radius
@@ -100,7 +114,9 @@ pub fn BarChart(props: BarChartProps) -> Element {
         unit: props.unit.clone(),
         decimal,
     };
-    let drawn = use_memo(use_reactive!(|spec| engine::draw_bar(&spec)));
+    let drawn = use_memo(use_reactive!(|spec, shown| {
+        engine::draw_bar(&spec).map(|drawn| drawn.with_series(&shown))
+    }));
 
     let write = |value: f64| {
         props
@@ -129,15 +145,28 @@ pub fn BarChart(props: BarChartProps) -> Element {
         loading: props.loading,
         empty,
         empty_slot: props.empty.clone(),
-        svg: drawn.read().as_ref().map(|drawn| drawn.svg.clone()),
+        drawn,
         center: None,
         legend: Frame::legend(&props.legend, theme, props.series.len()),
-        swatches: swatches(&spec.series),
+        legend_label: labels.legend,
+        series: overlay_series(&all_specs),
+        hidden,
+        x,
         summary,
         table,
         rows,
-        plot: size.element,
+        plot: size,
         aspect_ratio: props.aspect_ratio,
+        interaction: Interaction {
+            format: props.value_format,
+            unit: props.unit.clone(),
+            decimal,
+            tooltip: props.tooltip.unwrap_or(theme.chart.tooltip),
+            tooltip_content: props.tooltip_content,
+            onpointclick: props.onpointclick,
+            onactivechange: props.onactivechange,
+            swap_axes: horizontal,
+        },
     }
     .render(
         &props.class,
@@ -180,6 +209,39 @@ mod tests {
         assert!(html.contains("2025: 3 to 5, highest at Q2."), "{html}");
         assert!(
             html.contains("<th scope=\"row\">Q2</th><td>5</td><td></td>"),
+            "{html}"
+        );
+    }
+
+    /// A hidden series leaves the bars, not the legend or the table; the plot takes keys.
+    #[test]
+    fn a_default_hidden_series_is_not_drawn_and_the_plot_is_walkable() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    BarChart {
+                        title: "Sales",
+                        x: ["Q1", "Q2"],
+                        series: vec![Series::new("2025", [3.0, 5.0]), Series::new("2026", [4.0, 6.0])],
+                        default_hidden: vec!["2026".to_string()],
+                    }
+                }
+            }
+        });
+
+        assert_eq!(html.matches("<rect").count(), 2, "{html}");
+        assert!(html.contains("aria-label=\"Series\""), "{html}");
+        assert!(html.contains("aria-pressed=\"false\""), "{html}");
+        assert!(
+            html.contains("aria-pressed=\"true\" aria-disabled=\"true\""),
+            "{html}"
+        );
+        assert!(
+            html.contains("<th scope=\"row\">Q2</th><td>5</td><td>6</td>"),
+            "{html}"
+        );
+        assert!(
+            html.contains("role=\"application\" tabindex=\"0\""),
             "{html}"
         );
     }

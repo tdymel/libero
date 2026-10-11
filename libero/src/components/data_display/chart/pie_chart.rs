@@ -3,7 +3,8 @@ use dioxus::prelude::*;
 use super::{
     Slice, ValueFormat,
     engine::{self, PieSpec, SeriesSpec},
-    frame::{Frame, TableRows, hex, swatches, use_plot_size},
+    frame::{Frame, Interaction, TableRows, hex, overlay_series, shown_places, use_plot_size},
+    legend::use_hidden_series,
     props::chart_props,
 };
 use crate::{
@@ -74,7 +75,7 @@ pub fn PieChart(props: PieChartProps) -> Element {
 
     let total: f64 = props.slices.iter().map(|slice| share_of(slice.value)).sum();
     let empty = total <= 0.0;
-    let slices: Vec<SeriesSpec> = props
+    let all_slices: Vec<SeriesSpec> = props
         .slices
         .iter()
         .enumerate()
@@ -85,10 +86,18 @@ pub fn PieChart(props: PieChartProps) -> Element {
             dashed: false,
         })
         .collect();
+    let names: Vec<String> = all_slices.iter().map(|s| s.name.clone()).collect();
+    let hidden = use_hidden_series(
+        &props.hidden,
+        &props.default_hidden,
+        props.onhiddenchange,
+        &names,
+    );
+    let shown = shown_places(&all_slices, &hidden.get());
     let spec = PieSpec {
         width,
         height,
-        slices,
+        slices: shown.iter().map(|i| all_slices[*i].clone()).collect(),
         donut: props.donut.then_some(theme.chart.donut_thickness),
         labels: props.labels.copied_or(theme.chart.pie_labels),
         start_angle: props.start_angle,
@@ -97,7 +106,17 @@ pub fn PieChart(props: PieChartProps) -> Element {
         unit: props.unit.clone(),
         decimal,
     };
-    let drawn = use_memo(use_reactive!(|spec| engine::draw_pie(&spec)));
+    let drawn = use_memo(use_reactive!(|spec, shown| {
+        // The shown slices may sum to nothing while hidden ones do not: a blank plot.
+        let drawable = spec
+            .slices
+            .iter()
+            .any(|s| s.values[0].is_some_and(|v| v > 0.0));
+        drawable
+            .then(|| engine::draw_pie(&spec))
+            .flatten()
+            .map(|drawn| drawn.with_indices(&shown))
+    }));
 
     let write = |value: f64| {
         props
@@ -127,15 +146,28 @@ pub fn PieChart(props: PieChartProps) -> Element {
         loading: props.loading,
         empty,
         empty_slot: props.empty.clone(),
-        svg: drawn.read().as_ref().map(|drawn| drawn.svg.clone()),
+        drawn,
         center: props.center.clone().filter(|_| props.donut),
         legend: Frame::legend(&props.legend, theme, props.slices.len()),
-        swatches: swatches(&spec.slices),
+        legend_label: labels.slices,
+        series: overlay_series(&all_slices),
+        hidden,
+        x: names,
         summary,
         table,
         rows,
-        plot: size.element,
+        plot: size,
         aspect_ratio: props.aspect_ratio,
+        interaction: Interaction {
+            format: props.value_format,
+            unit: props.unit.clone(),
+            decimal,
+            tooltip: props.tooltip.unwrap_or(theme.chart.tooltip),
+            tooltip_content: props.tooltip_content,
+            onpointclick: props.onpointclick,
+            onactivechange: props.onactivechange,
+            swap_axes: false,
+        },
     }
     .render(
         &props.class,
@@ -235,6 +267,39 @@ mod tests {
         );
         // Labels in percent by default.
         assert!(html.contains(">75%<") || html.contains("75%\n"), "{html}");
+    }
+
+    /// A hidden slice leaves the pie, so the others' shares grow; the summary keeps all.
+    #[test]
+    fn a_default_hidden_slice_is_not_drawn_and_the_plot_is_walkable() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    PieChart {
+                        title: "Browsers",
+                        slices: vec![Slice::new("Chrome", 1.0), Slice::new("Safari", 1.0), Slice::new("Other", 2.0)],
+                        default_hidden: vec!["Other".to_string()],
+                    }
+                }
+            }
+        });
+
+        let drawing = html
+            .split("data-chart-drawing")
+            .nth(1)
+            .and_then(|rest| rest.split("</svg>").next())
+            .unwrap_or_default();
+        assert!(
+            drawing.contains("50%") && !drawing.contains("25%"),
+            "{html}"
+        );
+        assert!(html.contains("Other: 2, 50%."), "{html}");
+        assert!(html.contains("aria-label=\"Slices\""), "{html}");
+        assert!(html.contains("aria-pressed=\"false\""), "{html}");
+        assert!(
+            html.contains("role=\"application\" tabindex=\"0\""),
+            "{html}"
+        );
     }
 
     #[test]

@@ -41,30 +41,39 @@ pub fn BarChartPage() -> Element {
                     prop("loading", "bool").default("false").doc("A placeholder instead of the plot, and `aria-busy` on the chart."),
                     prop("empty", "Option<Element>").doc("Shown in the plot when there is no value at all. Unset, \"No data\"."),
                     prop("table", "ChartTable").default(ChartTable::default().as_str()).doc("The data as a table: `hidden` for screen readers, `visible`, or `off`."),
-                    prop("tooltip", "Option<bool>").doc("Shared with `LineChart`; no tooltip on bars yet."),
-                    prop("tooltip_content", "Option<Callback<ChartPoint, Element>>").doc("Shared with `LineChart`; not used on bars yet."),
-                    prop("onpointclick", "Option<EventHandler<ChartPoint>>").doc("Shared with `LineChart`; bars do not call it yet."),
-                    prop("onactivechange", "Option<EventHandler<Option<ChartPoint>>>").doc("Shared with `LineChart`; bars do not call it yet."),
-                    prop("hidden", "Option<Vec<String>>").doc("Shared with `LineChart`; the legend does not hide bars yet."),
-                    prop("default_hidden", "Vec<String>").default("[]").doc("Shared with `LineChart`; not used on bars yet."),
-                    prop("onhiddenchange", "Option<EventHandler<Vec<String>>>").doc("Shared with `LineChart`; bars do not call it yet."),
+                    prop("tooltip", "Option<bool>").default(on(theme.chart.tooltip)).doc("A tooltip at the pointer's or the keys' bar."),
+                    prop("tooltip_content", "Option<Callback<ChartPoint, Element>>").doc("The tooltip's content instead of the category and each series' value there."),
+                    prop("onpointclick", "Option<EventHandler<ChartPoint>>").doc("A click on a bar, a second tap on a pinned one, or Enter on the keys' bar."),
+                    prop("onactivechange", "Option<EventHandler<Option<ChartPoint>>>").doc("The bar under the pointer or the keys; `None` when it leaves."),
+                    prop("hidden", "Option<Vec<String>>").doc("The names of the series the legend hides; set, they are controlled."),
+                    prop("default_hidden", "Vec<String>").default("[]").doc("Seeds the hidden series once. Ignored when `hidden` is set."),
+                    prop("onhiddenchange", "Option<EventHandler<Vec<String>>>").doc("The hidden series a legend button asks for. The last shown series stays."),
                 ]),
             ],
             accessibility: a11y()
+                .key(["Tab"], "Into the plot, then on to the legend's buttons.")
+                .key(["ArrowRight", "ArrowLeft"], "The next or previous category's bar of the series; `horizontal`, the next or previous series' bar in the category.")
+                .key(["ArrowDown", "ArrowUp"], "The next or previous series' bar in the category; `horizontal`, the next or previous category, top to bottom.")
+                .key(["Home", "End"], "The series' first or last bar.")
+                .key(["Enter", "Space"], "Calls `onpointclick` with the bar.")
+                .key(["Escape"], "Clears the bar and its tooltip.")
                 .handles([
                     "The chart is a `role=\"figure\"` named by `title`. The drawing is hidden from screen readers.",
                     "A hidden summary gives the category range and each series' lowest and highest value, and where the highest is.",
                     "A hidden table holds every value, up to the theme's `table_cell_cap` cells; a `percent` chart's table keeps the values, not the shares.",
+                    "The plot is one tab stop, a `role=\"application\"` described as a chart, so a screen reader hands it the arrows. Each bar the keys reach is announced, as \"2026, Q3: 150\".",
+                    "The legend's entries are toggle buttons: pressed while their series shows, struck through when hidden. The last shown series' button is `aria-disabled`.",
+                    "On a touch screen a tap pins a bar's tooltip, a second tap on it clicks; a vertical swipe still scrolls the page.",
                     "Bars take the theme's palette, drawn in the current color scheme.",
                 ])
                 .must([
                     "Give a `title`, or name the chart with `aria_label`.",
                     "Say in `description` what the reader should see, as \"Q3 grew the most\".",
                     "Keep the legend, or `value_labels`, when series are told apart by colour alone.",
+                    "Name every series differently: the legend hides them by name.",
                 ])
                 .limits([
-                    "No tooltip and no keyboard path over the bars yet: the summary and the table are the way to the values.",
-                    "The legend only names the series: the props `LineChart` uses to hide them and report points are taken but not wired yet.",
+                    "The tooltip is for the eye; screen readers hear the announcement instead, so `tooltip_content` reaches only sighted readers.",
                 ]),
             lead: rsx! {
                 Text {
@@ -102,6 +111,7 @@ pub fn BarChartPage() -> Element {
                     Control::switch("value_labels"),
                     Control::select("legend", ["bottom", "top", "start", "end", "none"]),
                     Control::toggle("table", ["hidden", "visible", "off"]),
+                    Control::switch("tooltip").default(on(theme.chart.tooltip)),
                     Control::switch("loading"),
                 ],
                 render: move |values: DemoValues| rsx! {
@@ -115,6 +125,7 @@ pub fn BarChartPage() -> Element {
                         value_labels: values.str("value_labels") == "true",
                         legend: LegendPosition::from(values.str("legend").as_str()),
                         table: ChartTable::from(values.str("table").as_str()),
+                        tooltip: values.str("tooltip") == "true",
                         loading: values.str("loading") == "true",
                     }
                 },

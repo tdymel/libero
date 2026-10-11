@@ -29,6 +29,8 @@ pub struct ChartLabels {
     pub keys: &'static str,
     /// The legend's name: its buttons show and hide series.
     pub legend: &'static str,
+    /// A pie legend's name: its buttons show and hide slices.
+    pub slices: &'static str,
     /// A point as the keys announce it: `{name}` its series, `{x}` and `{value}` its own.
     pub point: &'static str,
     /// A pie table's column headers.
@@ -53,6 +55,7 @@ impl ChartLabels {
         chart: "chart",
         keys: "Arrow keys move between points, Enter selects one.",
         legend: "Series",
+        slices: "Slices",
         point: "{name}, {x}: {value}",
         value: "Value",
         share: "Share",
@@ -74,6 +77,7 @@ impl ChartLabels {
         chart: "Diagramm",
         keys: "Pfeiltasten wechseln zwischen den Punkten, Eingabe wählt einen aus.",
         legend: "Reihen",
+        slices: "Segmente",
         point: "{name}, {x}: {value}",
         value: "Wert",
         share: "Anteil",

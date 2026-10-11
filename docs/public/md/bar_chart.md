@@ -37,6 +37,10 @@ summary keep the values. `orientation: "horizontal"` lays the categories down
 the side, the first at the top. `value_labels: true` writes each bar's value on
 it, inside the bar when stacked.
 
+The pointer or the arrow keys pick a bar: a tooltip shows the category and each
+series' value there. `onpointclick` reports a clicked bar, and the legend's
+buttons hide and show series.
+
 ## Props
 
 | Prop | Type | Default | Description |
@@ -57,18 +61,29 @@ it, inside the bar when stacked.
 | `loading` | `bool` | `false` | A placeholder instead of the plot, and `aria-busy` on the chart. |
 | `empty` | `Option<Element>` | | Shown in the plot when there is no value at all. Unset, "No data". |
 | `table` | `ChartTable` | `hidden` | The data as a table: `hidden` for screen readers, `visible`, or `off`. |
-| `tooltip` | `Option<bool>` | | Shared with `LineChart`; no tooltip on bars yet. |
-| `tooltip_content` | `Option<Callback<ChartPoint, Element>>` | | Shared with `LineChart`; not used on bars yet. |
-| `onpointclick` | `Option<EventHandler<ChartPoint>>` | | Shared with `LineChart`; bars do not call it yet. |
-| `onactivechange` | `Option<EventHandler<Option<ChartPoint>>>` | | Shared with `LineChart`; bars do not call it yet. |
-| `hidden` | `Option<Vec<String>>` | | Shared with `LineChart`; the legend does not hide bars yet. |
-| `default_hidden` | `Vec<String>` | `[]` | Shared with `LineChart`; not used on bars yet. |
-| `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | Shared with `LineChart`; bars do not call it yet. |
+| `tooltip` | `Option<bool>` | `true` | A tooltip at the pointer's or the keys' bar. |
+| `tooltip_content` | `Option<Callback<ChartPoint, Element>>` | | The tooltip's content instead of the category and each series' value there. |
+| `onpointclick` | `Option<EventHandler<ChartPoint>>` | | A click on a bar, a second tap on a pinned one, or Enter on the keys' bar. |
+| `onactivechange` | `Option<EventHandler<Option<ChartPoint>>>` | | The bar under the pointer or the keys; `None` when it leaves. |
+| `hidden` | `Option<Vec<String>>` | | The names of the series the legend hides; set, they are controlled. |
+| `default_hidden` | `Vec<String>` | `[]` | Seeds the hidden series once. Ignored when `hidden` is set. |
+| `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | The hidden series a legend button asks for. The last shown series stays. |
 
 Like every component, `BarChart` also takes the shared props `sx`, `class`,
 `style`, `states`, `parts` (`ChartPart`), and any extra HTML attributes.
 
 ## Accessibility
+
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Tab` | Into the plot, then on to the legend's buttons. |
+| `ArrowRight` / `ArrowLeft` | The next or previous category's bar of the series; `horizontal`, the next or previous series' bar in the category. |
+| `ArrowDown` / `ArrowUp` | The next or previous series' bar in the category; `horizontal`, the next or previous category, top to bottom. |
+| `Home` / `End` | The series' first or last bar. |
+| `Enter` / `Space` | Calls `onpointclick` with the bar. |
+| `Escape` | Clears the bar and its tooltip. |
 
 ### Libero handles
 
@@ -78,6 +93,13 @@ Like every component, `BarChart` also takes the shared props `sx`, `class`,
   value, and where the highest is.
 - A hidden table holds every value, up to the theme's `table_cell_cap` cells; a
   `percent` chart's table keeps the values, not the shares.
+- The plot is one tab stop, a `role="application"` described as a chart, so a
+  screen reader hands it the arrows. Each bar the keys reach is announced, as
+  "2026, Q3: 150".
+- The legend's entries are toggle buttons: pressed while their series shows,
+  struck through when hidden. The last shown series' button is `aria-disabled`.
+- On a touch screen a tap pins a bar's tooltip, a second tap on it clicks; a
+  vertical swipe still scrolls the page.
 - Bars take the theme's palette, drawn in the current color scheme.
 
 ### You must
@@ -86,13 +108,12 @@ Like every component, `BarChart` also takes the shared props `sx`, `class`,
 - Say in `description` what the reader should see, as "Q3 grew the most".
 - Keep the legend, or `value_labels`, when series are told apart by colour
   alone.
+- Name every series differently: the legend hides them by name.
 
 ### Limits
 
-- No tooltip and no keyboard path over the bars yet: the summary and the table
-  are the way to the values.
-- The legend only names the series: the props `LineChart` uses to hide them and
-  report points are taken but not wired yet.
+- The tooltip is for the eye; screen readers hear the announcement instead, so
+  `tooltip_content` reaches only sighted readers.
 
 ## Theme defaults
 

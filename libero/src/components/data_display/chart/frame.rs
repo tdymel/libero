@@ -1,8 +1,14 @@
-//! What every chart puts around its drawing: title, legend, summary and data table.
+//! What every chart puts around its drawing: title, toggle legend, summary, data table,
+//! and the interactive overlay on the plot.
 
 use dioxus::prelude::*;
 
-use super::{ChartColor, ChartPart, Series, engine::SeriesSpec};
+use super::{
+    ChartColor, ChartPart, ChartPoint, Series, ValueFormat,
+    engine::{Drawn, SeriesSpec},
+    legend::{ChartLegend, HiddenSeries, LegendEntry, legend_sx},
+    overlay::{ChartOverlay, OverlaySeries, overlay_sx},
+};
 use crate::{
     components::{
         accessibility::visually_hidden_sx,
@@ -54,8 +60,12 @@ static CHART_BASE_SX: StaticSx = StaticSx::new(|| {
                 .flex("1 1 auto")
                 .min_width("0")
                 .with("aspect-ratio", CHART_ASPECT_RATIO.value())
-                .selector("& > [aria-hidden]", sx().width("100%").height("100%"))
-                .selector("& svg", sx().display("block")),
+                .selector(
+                    "& > [data-chart-drawing]",
+                    sx().width("100%").height("100%"),
+                )
+                .selector("& svg", sx().display("block"))
+                .and(overlay_sx()),
         )
         .selector(
             ChartPart::Center.selector(),
@@ -78,11 +88,12 @@ static CHART_BASE_SX: StaticSx = StaticSx::new(|| {
                 .margin("0")
                 .padding("0")
                 .with("list-style", "none")
-                .font_size("sm"),
+                .font_size("sm")
+                .and(legend_sx()),
         )
         .selector(
             ChartPart::LegendItem.selector(),
-            sx().display("inline-flex").align_items("center").gap("xs"),
+            sx().display("inline-flex").align_items("center"),
         )
         .selector(
             "& [data-chart-swatch]",
@@ -90,8 +101,14 @@ static CHART_BASE_SX: StaticSx = StaticSx::new(|| {
                 .width(CHART_SWATCH_SIZE.value())
                 .height(CHART_SWATCH_SIZE.value())
                 .border_radius("2px")
+                .background_color("var(--lsx-chart-swatch)")
                 // The swatch is the series' only key: forced colours would blank it.
                 .forced_color_adjust("none"),
+        )
+        .selector(
+            "& [data-chart-swatch][data-hidden]",
+            sx().background_color("transparent")
+                .box_shadow("inset 0 0 0 2px var(--lsx-chart-swatch)"),
         )
         .selector(
             ChartPart::Empty.selector(),
@@ -163,17 +180,36 @@ pub(super) struct Frame {
     /// No value at all: `empty_slot`, or the localized "No data".
     pub(super) empty: bool,
     pub(super) empty_slot: Option<Element>,
-    pub(super) svg: Option<String>,
+    pub(super) drawn: Memo<Option<Drawn>>,
     /// Over the drawing's middle, as a donut's centre.
     pub(super) center: Option<Element>,
     pub(super) legend: LegendPosition,
-    /// Name and colour of every legend entry.
-    pub(super) swatches: Vec<(String, String)>,
+    /// The legend's accessible name: `labels.legend`, a pie's `labels.slices`.
+    pub(super) legend_label: &'static str,
+    /// Every series, or a pie's slices, hidden ones too: the legend's entries.
+    pub(super) series: Vec<OverlaySeries>,
+    pub(super) hidden: HiddenSeries,
+    /// The x values as written; a pie's slice names.
+    pub(super) x: Vec<String>,
     pub(super) summary: Vec<String>,
     pub(super) table: ChartTable,
     pub(super) rows: Option<TableRows>,
-    pub(super) plot: ElementHandle,
+    pub(super) plot: PlotSize,
     pub(super) aspect_ratio: Option<f32>,
+    pub(super) interaction: Interaction,
+}
+
+/// What the overlay needs beyond the drawing: how to write values and whom to tell.
+pub(super) struct Interaction {
+    pub(super) format: ValueFormat,
+    pub(super) unit: Option<String>,
+    pub(super) decimal: &'static str,
+    pub(super) tooltip: bool,
+    pub(super) tooltip_content: Option<Callback<ChartPoint, Element>>,
+    pub(super) onpointclick: Option<EventHandler<ChartPoint>>,
+    pub(super) onactivechange: Option<EventHandler<Option<ChartPoint>>>,
+    /// A horizontal bar chart's: up and down walk the categories, as drawn.
+    pub(super) swap_axes: bool,
 }
 
 impl Frame {
@@ -217,15 +253,19 @@ impl Frame {
             loading,
             empty,
             empty_slot,
-            svg,
+            drawn,
             center,
             legend,
-            swatches,
+            legend_label,
+            series,
+            hidden,
+            x,
             summary,
             table,
             rows,
             plot,
             aspect_ratio,
+            interaction,
         } = self;
         let states: Input<States> = states
             .clone()
@@ -249,6 +289,29 @@ impl Frame {
             .collect::<Vec<_>>()
             .join(" ");
         let caption = title.clone().unwrap_or_else(|| labels.table.to_string());
+        let hidden_names = hidden.get();
+        let entries: Vec<LegendEntry> = series
+            .iter()
+            .map(|series| LegendEntry {
+                name: series.name.clone(),
+                color: series.color.clone(),
+                hidden: hidden_names.contains(&series.name),
+            })
+            .collect();
+        let names: Vec<String> = series.iter().map(|series| series.name.clone()).collect();
+        let ontoggle = move |name: String| hidden.toggle(&name, &names);
+        let svg = drawn.read().as_ref().map(|drawn| drawn.svg.clone());
+        let element = plot.element;
+        let Interaction {
+            format,
+            unit,
+            decimal,
+            tooltip,
+            tooltip_content,
+            onpointclick,
+            onactivechange,
+            swap_axes,
+        } = interaction;
 
         let children = rsx! {
             if let Some(title) = title {
@@ -260,8 +323,8 @@ impl Frame {
             div { "data-slot": ChartPart::Body.slot(),
                 div {
                     "data-slot": ChartPart::Plot.slot(),
-                    onmounted: plot.mount(),
-                    ..plot.attributes(),
+                    onmounted: element.mount(),
+                    ..element.attributes(),
                     if loading {
                         Skeleton { height: "100%" }
                     } else if empty {
@@ -273,22 +336,31 @@ impl Frame {
                         }
                     } else if let Some(svg) = svg {
                         // The figure's summary and table speak for the drawing.
-                        div { "aria-hidden": "true", dangerous_inner_html: "{svg}" }
+                        div { "data-chart-drawing": true, "aria-hidden": "true", dangerous_inner_html: "{svg}" }
                         if let Some(center) = center {
                             div { "data-slot": ChartPart::Center.slot(), {center} }
+                        }
+                        ChartOverlay {
+                            drawn,
+                            box_size: plot.box_size,
+                            series,
+                            x,
+                            format,
+                            unit,
+                            decimal,
+                            labels,
+                            title_id: title_id.clone(),
+                            keys_id: format!("{id}-keys"),
+                            tooltip,
+                            tooltip_content,
+                            onpointclick,
+                            onactivechange,
+                            swap_axes,
                         }
                     }
                 }
                 if legend != LegendPosition::None && !loading && !empty {
-                    // The summary names every series: the legend is for the eye.
-                    ul { "data-slot": ChartPart::Legend.slot(), "aria-hidden": "true",
-                        for (name, color) in swatches {
-                            li { key: "{name}", "data-slot": ChartPart::LegendItem.slot(),
-                                span { "data-chart-swatch": true, style: "background:{color}" }
-                                "{name}"
-                            }
-                        }
-                    }
+                    ChartLegend { entries, label: legend_label, ontoggle }
                 }
             }
             if !summary.is_empty() {
@@ -389,11 +461,21 @@ pub(super) fn series_specs(theme: &Theme, series: &[Series]) -> Vec<SeriesSpec> 
         .collect()
 }
 
-/// The legend's entries: every series' name and colour.
-pub(super) fn swatches(specs: &[SeriesSpec]) -> Vec<(String, String)> {
+/// Every series' name and colour, for the legend and the tooltip.
+pub(super) fn overlay_series(specs: &[SeriesSpec]) -> Vec<OverlaySeries> {
     specs
         .iter()
-        .map(|spec| (spec.name.clone(), spec.color.to_string()))
+        .map(|spec| OverlaySeries {
+            name: spec.name.clone(),
+            color: spec.color.to_string(),
+        })
+        .collect()
+}
+
+/// The places of the specs the legend leaves shown.
+pub(super) fn shown_places(specs: &[SeriesSpec], hidden: &[String]) -> Vec<usize> {
+    (0..specs.len())
+        .filter(|i| !hidden.contains(&specs[*i].name))
         .collect()
 }
 
@@ -472,6 +554,8 @@ pub(super) fn table_rows(
 pub(super) struct PlotSize {
     pub(super) element: ElementHandle,
     size: Signal<Option<(f32, f32)>>,
+    /// Unsnapped, in CSS px: the overlay maps the pointer with it.
+    pub(super) box_size: Signal<Option<(f64, f64)>>,
 }
 
 impl PlotSize {
@@ -486,6 +570,7 @@ impl PlotSize {
 pub(super) fn use_plot_size() -> PlotSize {
     let element = use_element();
     let mut size = use_signal(|| None);
+    let mut box_size = use_signal(|| None);
     let mut measured = move |width: f64, height: f64| {
         if width <= 0.0 || height <= 0.0 {
             return;
@@ -493,6 +578,9 @@ pub(super) fn use_plot_size() -> PlotSize {
         let next = Some((snap(width as f32), snap(height as f32)));
         if *size.peek() != next {
             size.set(next);
+        }
+        if *box_size.peek() != Some((width, height)) {
+            box_size.set(Some((width, height)));
         }
     };
     use_resize_fallback(element, move |event| {
@@ -513,5 +601,9 @@ pub(super) fn use_plot_size() -> PlotSize {
             }
         });
     });
-    PlotSize { element, size }
+    PlotSize {
+        element,
+        size,
+        box_size,
+    }
 }

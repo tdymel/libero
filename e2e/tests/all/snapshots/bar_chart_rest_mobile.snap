@@ -6,6 +6,16 @@ expression: tree
 figure "Sales"
   description "Bar chart from Q1 to Q3. 2025: 101 to 132, highest at Q2. 2026: 140 to 150, highest at Q3."
   StaticText "Sales"
+  application "Sales" [roledescription=chart]
+    description "Arrow keys move between points, Enter selects one."
+  status [atomic] [live=polite]
+  list "Series"
+    listitem [level=1]
+      button "2025" [pressed]
+        StaticText "2025"
+    listitem [level=1]
+      button "2026" [pressed]
+        StaticText "2026"
   paragraph
     StaticText "Bar chart from Q1 to Q3."
   paragraph
@@ -43,3 +53,6 @@ figure "Sales"
         StaticText "101"
       cell "150"
         StaticText "150"
+paragraph
+paragraph
+paragraph

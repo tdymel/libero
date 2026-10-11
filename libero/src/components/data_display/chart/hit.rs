@@ -5,11 +5,22 @@ use std::f32::consts::TAU;
 use super::engine::{Drawn, Mark, MarkShape};
 
 impl Drawn {
-    /// Marks name their series by its place among the drawn ones; this maps them to
-    /// `shown`, their places in the chart's `series`, so hiding one renames none.
+    /// Maps marks from their series' place among the drawn ones to `shown`, its place in
+    /// `series`, and sorts them by series then x for the keys: a lying bar chart's run up.
     pub(super) fn with_series(mut self, shown: &[usize]) -> Self {
         for mark in &mut self.geometry.marks {
             mark.series = shown.get(mark.series).copied().unwrap_or(mark.series);
+        }
+        self.geometry
+            .marks
+            .sort_by_key(|mark| (mark.series, mark.index));
+        self
+    }
+
+    /// The same for a pie's slices, which marks name by index.
+    pub(super) fn with_indices(mut self, shown: &[usize]) -> Self {
+        for mark in &mut self.geometry.marks {
+            mark.index = shown.get(mark.index).copied().unwrap_or(mark.index);
         }
         self
     }
@@ -165,8 +176,21 @@ pub(super) enum Step {
     Last,
 }
 
-/// The mark a key moves to. Along a series for lines and bars; a pie, one mark per
-/// series, walks its slices with every arrow.
+impl Step {
+    /// Along the series becomes across them, for a chart whose x axis runs down.
+    pub(super) fn swapped(self) -> Self {
+        match self {
+            Self::Next => Self::Down,
+            Self::Previous => Self::Up,
+            Self::Down => Self::Next,
+            Self::Up => Self::Previous,
+            step => step,
+        }
+    }
+}
+
+/// The mark a key moves to. Along a series for lines and bars; a pie walks its slices
+/// with every arrow.
 pub(super) fn walk(marks: &[Mark], active: Option<usize>, step: Step) -> Option<usize> {
     let last = marks.len().checked_sub(1)?;
     let Some(active) = active.filter(|active| *active <= last) else {
@@ -175,7 +199,8 @@ pub(super) fn walk(marks: &[Mark], active: Option<usize>, step: Step) -> Option<
             _ => 0,
         });
     };
-    let flat = marks.iter().all(|mark| mark.index == marks[0].index);
+    let flat = matches!(marks[0].shape, MarkShape::Sector { .. })
+        || marks.iter().all(|mark| mark.index == marks[0].index);
     let current = &marks[active];
     let same_series = |mark: &&Mark| mark.series == current.series;
     let in_series = || {
@@ -231,10 +256,11 @@ mod tests {
         }
     }
 
-    fn sector(series: usize, path: &str) -> Mark {
+    /// As the engine harvests a pie: one series, a slice per index.
+    fn sector(index: usize, path: &str) -> Mark {
         Mark {
-            series,
-            index: 0,
+            series: 0,
+            index,
             value: 0.0,
             shape: MarkShape::Sector {
                 path: path.to_string(),
@@ -340,5 +366,33 @@ mod tests {
         assert_eq!(walk(&marks, Some(2), Step::Next), Some(2));
         assert_eq!(walk(&marks, Some(2), Step::Up), Some(1));
         assert_eq!(walk(&marks, Some(1), Step::Last), Some(2));
+        assert_eq!(walk(&marks, Some(1), Step::First), Some(0));
+    }
+
+    #[test]
+    fn swapped_keys_cross_the_series_sideways() {
+        let marks = lines();
+        assert_eq!(walk(&marks, Some(0), Step::Next.swapped()), Some(3));
+        assert_eq!(walk(&marks, Some(0), Step::Down.swapped()), Some(1));
+    }
+
+    #[test]
+    fn a_hidden_slice_keeps_the_others_places() {
+        let drawn = Drawn {
+            svg: String::new(),
+            geometry: super::super::engine::Geometry {
+                width: 1.0,
+                height: 1.0,
+                marks: vec![sector(0, "M0,0 Z"), sector(1, "M0,0 Z")],
+            },
+        };
+        let indices: Vec<usize> = drawn
+            .with_indices(&[0, 2])
+            .geometry
+            .marks
+            .iter()
+            .map(|mark| mark.index)
+            .collect();
+        assert_eq!(indices, [0, 2]);
     }
 }

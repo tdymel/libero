@@ -37,6 +37,10 @@ fn Demo() -> Element {
 sets its colour, otherwise it takes the theme's palette for its place. A slice's
 share is its value over the sum; a negative or missing value takes none.
 
+The pointer or the arrow keys pick a slice: a tooltip shows its value and share.
+`onpointclick` reports a clicked slice, and the legend's buttons hide and show
+slices.
+
 ## Props
 
 | Prop | Type | Default | Description |
@@ -56,18 +60,29 @@ share is its value over the sum; a negative or missing value takes none.
 | `loading` | `bool` | `false` | A placeholder instead of the plot, and `aria-busy` on the chart. |
 | `empty` | `Option<Element>` | | Shown in the plot when the slices sum to nothing. Unset, "No data". |
 | `table` | `ChartTable` | `hidden` | The data as a table: `hidden` for screen readers, `visible`, or `off`. |
-| `tooltip` | `Option<bool>` | | Shared with `LineChart`; no tooltip on slices yet. |
-| `tooltip_content` | `Option<Callback<ChartPoint, Element>>` | | Shared with `LineChart`; not used on slices yet. |
-| `onpointclick` | `Option<EventHandler<ChartPoint>>` | | Shared with `LineChart`; slices do not call it yet. |
-| `onactivechange` | `Option<EventHandler<Option<ChartPoint>>>` | | Shared with `LineChart`; slices do not call it yet. |
-| `hidden` | `Option<Vec<String>>` | | Shared with `LineChart`; the legend does not hide slices yet. |
-| `default_hidden` | `Vec<String>` | `[]` | Shared with `LineChart`; not used on slices yet. |
-| `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | Shared with `LineChart`; slices do not call it yet. |
+| `tooltip` | `Option<bool>` | `true` | A tooltip with the slice's value and share at the pointer's or the keys' slice. |
+| `tooltip_content` | `Option<Callback<ChartPoint, Element>>` | | The tooltip's content instead of the slice's name, value and share. |
+| `onpointclick` | `Option<EventHandler<ChartPoint>>` | | A click on a slice, a second tap on a pinned one, or Enter on the keys' slice. `index` is the slice's place in `slices`, `x` and `series_name` its name. |
+| `onactivechange` | `Option<EventHandler<Option<ChartPoint>>>` | | The slice under the pointer or the keys; `None` when it leaves. |
+| `hidden` | `Option<Vec<String>>` | | The names of the slices the legend hides; set, they are controlled. |
+| `default_hidden` | `Vec<String>` | `[]` | Seeds the hidden slices once. Ignored when `hidden` is set. |
+| `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | The hidden slices a legend button asks for. The last shown slice stays. |
 
 Like every component, `PieChart` also takes the shared props `sx`, `class`,
 `style`, `states`, `parts` (`ChartPart`), and any extra HTML attributes.
 
 ## Accessibility
+
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Tab` | Into the plot, then on to the legend's buttons. |
+| `ArrowRight` / `ArrowDown` | The next slice, clockwise. |
+| `ArrowLeft` / `ArrowUp` | The previous slice. |
+| `Home` / `End` | The first or last slice. |
+| `Enter` / `Space` | Calls `onpointclick` with the slice. |
+| `Escape` | Clears the slice and its tooltip. |
 
 ### Libero handles
 
@@ -75,6 +90,13 @@ Like every component, `PieChart` also takes the shared props `sx`, `class`,
   screen readers.
 - A hidden summary gives the total, then each slice's value and share.
 - A hidden table holds each slice's value and share.
+- The plot is one tab stop, a `role="application"` described as a chart, so a
+  screen reader hands it the arrows. Each slice the keys reach is announced, as
+  "Chrome: 62, 62%."
+- The legend's entries are toggle buttons: pressed while their slice shows,
+  struck through when hidden. The last shown slice's button is `aria-disabled`.
+- On a touch screen a tap pins a slice's tooltip, a second tap on it clicks; a
+  vertical swipe still scrolls the page.
 - Slices take the theme's palette, drawn in the current color scheme.
 
 ### You must
@@ -82,13 +104,14 @@ Like every component, `PieChart` also takes the shared props `sx`, `class`,
 - Give a `title`, or name the chart with `aria_label`.
 - Keep `labels` or the legend: colour alone does not tell slices apart.
 - Keep to a few slices; fold the small ones into one "Other".
+- Name every slice differently: the legend hides them by name.
 
 ### Limits
 
-- No tooltip and no keyboard path over the slices yet: the summary and the
-  table are the way to the values.
-- The legend only names the slices: the props `LineChart` uses to hide series
-  and report points are taken but not wired yet.
+- A hidden slice leaves the drawing, so the shown ones' shares grow; the
+  summary and the table keep every slice.
+- The tooltip is for the eye; screen readers hear the announcement instead, so
+  `tooltip_content` reaches only sighted readers.
 - `grid` draws nothing on a pie.
 
 ## Theme defaults

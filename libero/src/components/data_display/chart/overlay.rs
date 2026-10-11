@@ -111,6 +111,23 @@ pub(super) struct ChartOverlayProps {
     pub(super) tooltip_content: Option<Callback<ChartPoint, Element>>,
     pub(super) onpointclick: Option<EventHandler<ChartPoint>>,
     pub(super) onactivechange: Option<EventHandler<Option<ChartPoint>>>,
+    /// Up and down walk the x values, left and right the series: a horizontal bar chart.
+    pub(super) swap_axes: bool,
+}
+
+/// The series a mark belongs to; a pie's slices are its entries, one per index.
+fn entry<'a>(series: &'a [OverlaySeries], mark: &Mark) -> Option<&'a OverlaySeries> {
+    match mark.shape {
+        MarkShape::Sector { .. } => series.get(mark.index),
+        _ => series.get(mark.series),
+    }
+}
+
+/// A slice's part of the drawn ones, as the pie's labels write it.
+fn share(marks: &[Mark], mark: &Mark, decimal: &str) -> String {
+    let total: f64 = marks.iter().map(|mark| mark.value).sum();
+    let part = if total > 0.0 { mark.value / total } else { 0.0 };
+    ValueFormat::Percent.format(part, None, decimal)
 }
 
 /// SVG units to the box's px: the plot scales its SVG to fit and centres it.
@@ -177,6 +194,7 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
         tooltip_content,
         onpointclick,
         onactivechange,
+        swap_axes,
     } = props;
     let announcer = use_announcer();
     // By series and x index: a redraw keeps the point while it is drawn.
@@ -193,8 +211,7 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
         let (series, x) = (series.clone(), x.clone());
         move |mark: &Mark| ChartPoint {
             series: mark.series,
-            series_name: series
-                .get(mark.series)
+            series_name: entry(&series, mark)
                 .map(|series| series.name.clone())
                 .unwrap_or_default(),
             index: mark.index,
@@ -207,6 +224,13 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
             .peek()
             .as_ref()
             .and_then(|drawn| read(&drawn.geometry))
+    };
+    let slice_share = move |mark: &Mark| {
+        drawn
+            .peek()
+            .as_ref()
+            .map(|drawn| share(&drawn.geometry.marks, mark, decimal))
+            .unwrap_or_default()
     };
     let mut set_active = {
         let point_of = point_of.clone();
@@ -324,6 +348,7 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
                 _ => return,
             };
             event.prevent_default();
+            let step = if swap_axes { step.swapped() } else { step };
             let key = *active.peek();
             let Some(mark) = with_marks(&|geometry| {
                 let current = geometry
@@ -336,14 +361,25 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
             };
             set_active(Some(&mark));
             let point = point_of(&mark);
-            announcer.say(fill(
-                labels.point,
-                &[
-                    ("name", &point.series_name),
-                    ("x", &point.x),
-                    ("value", &write(point.value)),
-                ],
-            ));
+            let value = write(point.value);
+            announcer.say(match mark.shape {
+                MarkShape::Sector { .. } => fill(
+                    labels.slice,
+                    &[
+                        ("name", &point.series_name),
+                        ("value", &value),
+                        ("share", &slice_share(&mark)),
+                    ],
+                ),
+                _ => fill(
+                    labels.point,
+                    &[
+                        ("name", &point.series_name),
+                        ("x", &point.x),
+                        ("value", &value),
+                    ],
+                ),
+            });
         }
     };
     let onfocusout = move |_: Event<FocusData>| {
@@ -362,8 +398,7 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
             .find(|mark| Some((mark.series, mark.index)) == key)
     });
     let color = |mark: &Mark| {
-        series
-            .get(mark.series)
+        entry(&series, mark)
             .map(|series| series.color.clone())
             .unwrap_or_default()
     };
@@ -398,6 +433,7 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
                     &series,
                     &x,
                     &write,
+                    decimal,
                 ),
             };
             Some((style, body))
@@ -439,33 +475,39 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
     }
 }
 
-/// The x value, then each drawn series' value there; a pie's slice alone.
+/// The x value, then each drawn series' value there; a pie's slice alone, with its share.
 fn tip_body(
     active: &Mark,
     marks: &[Mark],
     series: &[OverlaySeries],
     x: &[String],
     write: &impl Fn(f64) -> String,
+    decimal: &str,
 ) -> Element {
     let name = |mark: &Mark| {
-        series
-            .get(mark.series)
+        entry(series, mark)
             .map(|series| (series.name.clone(), series.color.clone()))
             .unwrap_or_default()
     };
     let rows: Vec<(bool, String, String, String)> = match active.shape {
-        MarkShape::Sector { .. } => vec![active],
+        MarkShape::Sector { .. } => {
+            let (name, color) = name(active);
+            let value = format!(
+                "{} ({})",
+                write(active.value),
+                share(marks, active, decimal)
+            );
+            vec![(true, name, color, value)]
+        }
         _ => marks
             .iter()
             .filter(|mark| mark.index == active.index)
+            .map(|mark| {
+                let (name, color) = name(mark);
+                (mark == active, name, color, write(mark.value))
+            })
             .collect(),
-    }
-    .into_iter()
-    .map(|mark| {
-        let (name, color) = name(mark);
-        (mark == active, name, color, write(mark.value))
-    })
-    .collect();
+    };
     let heading = match active.shape {
         MarkShape::Sector { .. } => None,
         _ => x.get(active.index).cloned(),

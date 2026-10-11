@@ -6,6 +6,19 @@ expression: tree
 figure "Browsers"
   description "Pie chart, total 100. Chrome: 60, 60%. Safari: 25, 25%. Other: 15, 15%."
   StaticText "Browsers"
+  application "Browsers" [roledescription=chart]
+    description "Arrow keys move between points, Enter selects one."
+  status [atomic] [live=polite]
+  list "Slices"
+    listitem [level=1]
+      button "Chrome" [pressed]
+        StaticText "Chrome"
+    listitem [level=1]
+      button "Safari" [pressed]
+        StaticText "Safari"
+    listitem [level=1]
+      button "Other" [pressed]
+        StaticText "Other"
   paragraph
     StaticText "Pie chart, total 100."
   paragraph
@@ -46,3 +59,6 @@ figure "Browsers"
         StaticText "15"
       cell "15%"
         StaticText "15%"
+paragraph
+paragraph
+paragraph

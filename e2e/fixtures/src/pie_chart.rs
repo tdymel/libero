@@ -1,7 +1,8 @@
-//! `PieChart`: a pie with its shares, and a donut with a centre.
+//! `PieChart`: a pie with its shares and read-outs of the active slice, the clicks and
+//! the hidden slices, and a donut with a centre.
 
 use dioxus::prelude::*;
-use libero::components::{PieChart, Slice};
+use libero::components::{ChartPoint, PieChart, Slice};
 
 use crate::Routes;
 
@@ -18,12 +19,31 @@ fn slices() -> Vec<Slice> {
     ]
 }
 
+fn describe(point: &ChartPoint) -> String {
+    format!("{} {} {}", point.series_name, point.index, point.value)
+}
+
 #[component]
 fn Pie() -> Element {
+    let mut active = use_signal(String::new);
+    let mut clicked = use_signal(String::new);
+    let mut hidden = use_signal(String::new);
     rsx! {
         div { max_width: "480px",
-            PieChart { id: "chart", title: "Browsers", slices: slices() }
+            PieChart {
+                id: "chart",
+                title: "Browsers",
+                slices: slices(),
+                onactivechange: move |point: Option<ChartPoint>| {
+                    active.set(point.as_ref().map(describe).unwrap_or_default())
+                },
+                onpointclick: move |point: ChartPoint| clicked.set(describe(&point)),
+                onhiddenchange: move |names: Vec<String>| hidden.set(names.join(",")),
+            }
         }
+        p { id: "active", "{active}" }
+        p { id: "clicked", "{clicked}" }
+        p { id: "hidden", "{hidden}" }
     }
 }
 
