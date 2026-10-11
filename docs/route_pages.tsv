@@ -32,6 +32,7 @@
 /hooks/use-indexed-db	IndexedDB - Libero	A larger value kept under a key in IndexedDB, loaded and saved without blocking the page; a file per key off the web.	/md/use_indexed_db.md	Hooks	/hooks
 /hooks/use-user-media	User media - Libero	The camera and microphone with a preview, a PNG snapshot, a chunked video or audio recording and a camera switch; never prompts on mount.	/md/use_user_media.md	Hooks	/hooks
 /hooks/use-system-notification	System notifications - Libero	Notifications the operating system draws and a web push subscription; never prompt on mount.	/md/use_system_notification.md	Hooks	/hooks
+/hooks/use-fcm	Firebase messaging - Libero	Android's Firebase Cloud Messaging token and the messages received while running, behind the fcm feature.	/md/use_fcm.md	Hooks	/hooks
 /hooks/save-file	Save file - Libero	Saves bytes the app made as a file: a download on the web, a save dialog on the desktop and Blitz, the share sheet on Android.	/md/save_file.md	Hooks	/hooks
 /hooks/use-theme-set	Theme set - Libero	Reads and swaps the active theme set, which a theme picker is built on.	/md/use_theme_set.md	Hooks	/hooks
 /hooks/use-stylesheet	Stylesheet - Libero	Registers a stylesheet of your own above every libero layer and returns its class.	/md/use_stylesheet.md	Hooks	/hooks

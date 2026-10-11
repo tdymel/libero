@@ -38,6 +38,11 @@ pub struct PageSnippets;
 #[doc = include_str!("../tests/page_snippets_charts.md")]
 pub struct PageSnippetsCharts;
 
+/// [`PageSnippets`] of the pages marked `// page-snippets: fcm`, which need the feature.
+#[cfg(feature = "fcm")]
+#[doc = include_str!("../tests/page_snippets_fcm.md")]
+pub struct PageSnippetsFcm;
+
 /// Fails, naming the command, when [`PageSnippets`] is older than a docs page: stale, it
 /// compiles code the pages no longer print (todo 2069).
 ///
@@ -225,4 +230,9 @@ md_pages! {
 #[cfg(feature = "charts")]
 md_pages! {
     Chart => "chart",
+}
+
+#[cfg(feature = "fcm")]
+md_pages! {
+    UseFcm => "use_fcm",
 }

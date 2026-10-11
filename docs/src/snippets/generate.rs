@@ -1,10 +1,13 @@
 //! Writes every page's snippets to `libero/tests/page_snippets.md`, a chart page's to
-//! `page_snippets_charts.md`: libero compiles those only with its `charts` feature.
+//! `page_snippets_charts.md` and an fcm page's to `page_snippets_fcm.md`: libero compiles
+//! those only with that feature.
 
 use super::*;
 
 /// The line a page that needs libero's `charts` feature carries.
 const CHARTS_PAGE: &str = "// page-snippets: charts";
+/// The line a page that needs libero's `fcm` feature carries.
+const FCM_PAGE: &str = "// page-snippets: fcm";
 
 #[test]
 fn page_snippets_are_current() {
@@ -31,6 +34,7 @@ fn page_snippets_are_current() {
          `cargo test -p docs page_snippets`.\n",
     );
     let mut charts = out.replace("# Page snippets", "# Chart page snippets");
+    let mut fcm = out.replace("# Page snippets", "# Firebase page snippets");
     let mut problems = Vec::new();
     let ignore = |out: &mut String, heading: &str, why: &str, body: &str| {
         let _ = write!(
@@ -41,9 +45,10 @@ fn page_snippets_are_current() {
     };
 
     for (path, source) in &sources {
-        let out = match source.contains(CHARTS_PAGE) {
-            true => &mut charts,
-            false => &mut out,
+        let out = match (source.contains(CHARTS_PAGE), source.contains(FCM_PAGE)) {
+            (true, _) => &mut charts,
+            (_, true) => &mut fcm,
+            _ => &mut out,
         };
         let page = snippets(source);
         for snippet in &page {
@@ -90,9 +95,10 @@ fn page_snippets_are_current() {
             }
             continue;
         };
-        let out = match source.contains(CHARTS_PAGE) {
-            true => &mut charts,
-            false => &mut out,
+        let out = match (source.contains(CHARTS_PAGE), source.contains(FCM_PAGE)) {
+            (true, _) => &mut charts,
+            (_, true) => &mut fcm,
+            _ => &mut out,
         };
         let lines = demo_markers(source);
         if demos.is_empty() && lines.is_empty() {
@@ -202,4 +208,5 @@ fn page_snippets_are_current() {
         &charts,
     )
     .unwrap();
+    std::fs::write(root.join("../libero/tests/page_snippets_fcm.md"), &fcm).unwrap();
 }

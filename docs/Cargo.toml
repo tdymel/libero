@@ -20,6 +20,8 @@ libero = { path = "../libero", default-features = false, features = [
     "icons-tabler",
     # The chart pages; plain routes until wasm-split lands (938).
     "charts",
+    # The use_fcm page's demo (3404); the docs APK carries firebase-messaging for it.
+    "fcm",
 ] }
 # The `Pictogram` and `Icon` demos' glyphs; libero's own pin.
 pictogram-core = "0.5"

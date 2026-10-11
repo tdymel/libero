@@ -243,7 +243,7 @@ pub trait Driver {
         let _ = trigger;
         bail!("{:?}: no permission dialog to answer", self.platform())
     }
-    /// The screen's accessibility text, system sheets and pickers included; only iOS reads it.
+    /// The screen's accessibility text, system sheets and pickers included; iOS and Android read it.
     async fn system_text(&mut self) -> Result<String> {
         bail!("{:?}: no system UI to read", self.platform())
     }

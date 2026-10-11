@@ -147,6 +147,7 @@
   <url><loc>https://libero-ui.dev/hooks/use-indexed-db</loc></url>
   <url><loc>https://libero-ui.dev/hooks/use-user-media</loc></url>
   <url><loc>https://libero-ui.dev/hooks/use-system-notification</loc></url>
+  <url><loc>https://libero-ui.dev/hooks/use-fcm</loc></url>
   <url><loc>https://libero-ui.dev/hooks/save-file</loc></url>
   <url><loc>https://libero-ui.dev/hooks/use-theme-set</loc></url>
   <url><loc>https://libero-ui.dev/hooks/use-stylesheet</loc></url>

@@ -161,6 +161,8 @@ pub(crate) enum Route {
     UseUserMediaPage {},
     #[route("/hooks/use-system-notification")]
     UseSystemNotificationPage {},
+    #[route("/hooks/use-fcm")]
+    UseFcmPage {},
     #[route("/hooks/save-file")]
     SaveFilePage {},
     #[route("/hooks/use-theme-set")]

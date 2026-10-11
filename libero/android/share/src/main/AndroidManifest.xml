@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- Serves shared files by name to the share sheet; reads only through the share intent's grant. -->
+        <provider
+            android:name="dev.libero.share.LiberoShareProvider"
+            android:authorities="${applicationId}.libero.share"
+            android:exported="false"
+            android:grantUriPermissions="true" />
+    </application>
+</manifest>

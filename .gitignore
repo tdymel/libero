@@ -3,6 +3,7 @@ target
 # Written by `cargo test -p docs page_snippets`, compiled by libero's doc-tests
 libero/tests/page_snippets.md
 libero/tests/page_snippets_charts.md
+libero/tests/page_snippets_fcm.md
 
 # Signing keys for `just apk-android`, should $LIBERO_KEYSTORE point in here
 *.jks

@@ -93,6 +93,7 @@ jobs:
           components: clippy
           cache-key: android
       - run: cargo clippy -p libero --all-targets --target aarch64-linux-android -- -D warnings
+      - run: cargo clippy -p libero --all-targets --features fcm --target aarch64-linux-android -- -D warnings
 
   test:
     runs-on: ubuntu-24.04
@@ -134,6 +135,9 @@ jobs:
       # The chart docs and their pages' snippets compile only with the feature.
       - if: matrix.part == 'libero-doc'
         run: cargo test -p libero --doc --features charts -- chart Chart
+      # Likewise the Firebase page and its snippets with `fcm`.
+      - if: matrix.part == 'libero-doc'
+        run: cargo test -p libero --doc --features fcm -- fcm Fcm
       - if: matrix.part == 'no-default'
         run: cargo test -p libero --no-default-features
 

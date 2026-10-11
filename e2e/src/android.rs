@@ -281,6 +281,25 @@ pub(crate) async fn tap_any_node_within(
     }
 }
 
+/// Every node's `text` and `content-desc` on screen, one per line, whatever app is on top.
+pub(crate) async fn screen_text() -> Result<String> {
+    let dump =
+        shell(&["uiautomator dump /sdcard/lsx-ui.xml >/dev/null && cat /sdcard/lsx-ui.xml".into()])
+            .await?;
+    Ok(dump
+        .split("<node ")
+        .flat_map(|node| {
+            ["text=\"", "content-desc=\""]
+                .into_iter()
+                .filter_map(move |key| {
+                    let value = node.split(key).nth(1)?.split('"').next()?;
+                    (!value.is_empty()).then_some(value)
+                })
+        })
+        .collect::<Vec<_>>()
+        .join("\n"))
+}
+
 /// Empties the device log.
 pub(crate) async fn clear_log() -> Result<()> {
     shell(&["logcat".into(), "-c".into()]).await.map(drop)

@@ -19,6 +19,8 @@ mod document;
 mod element;
 mod error;
 mod eye_dropper;
+#[cfg(feature = "fcm")]
+mod fcm;
 mod file_dialog;
 mod focus;
 mod form;
@@ -98,6 +100,17 @@ pub(crate) use element::{
 pub use element::{Dimensions, ElementApi, Read};
 pub use error::PlatformError;
 pub(crate) use eye_dropper::eye_dropper;
+#[cfg(feature = "fcm")]
+pub(crate) use fcm::FcmState;
+#[cfg(all(feature = "fcm", debug_assertions))]
+#[doc(hidden)]
+pub use fcm::fcm_probe;
+#[cfg(feature = "fcm")]
+pub use fcm::{FcmError, FcmMessage, FcmOptions};
+#[cfg(all(feature = "fcm", target_os = "android", not(feature = "native")))]
+pub(crate) use fcm::{
+    flush_events as fcm_flush, register_app as fcm_register, state as fcm_state, watch as fcm_watch,
+};
 #[cfg(all(
     not(target_arch = "wasm32"),
     feature = "native",

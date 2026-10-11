@@ -228,6 +228,7 @@ fn label_aliases(label: &str) -> &'static [&'static str] {
         "Fullscreen" => &["use_fullscreen", "full screen", "maximize"],
         "Back button" => &["use_back", "android", "hardware back"],
         "Save file" => &["save_file", "download", "export", "share"],
+        "Firebase messaging" => &["use_fcm", "fcm", "firebase", "push", "android"],
         "Geolocation" => &[
             "use_geolocation",
             "location",

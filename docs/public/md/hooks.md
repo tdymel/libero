@@ -51,6 +51,7 @@ Accessibility. The rest are shown on the component or guide page they belong to.
 | `use_user_media_devices` | The page's cameras and microphones, live. | [User media](use_user_media.md) |
 | `use_system_notification` | Notifications the operating system draws, and their permission. | [System notifications](use_system_notification.md) |
 | `use_push_subscription` | A web push subscription for the app's server to push to. | [System notifications](use_system_notification.md) |
+| `use_fcm` | Android's Firebase Cloud Messaging token and messages, behind the fcm feature. | [Firebase messaging](use_fcm.md) |
 | `use_theme` | The active theme, for values CSS cannot carry. | [Theming](theming.md) |
 | `use_theme_set` | Reads and swaps the active theme set. | [Theme set](use_theme_set.md) |
 | `use_color_scheme` | Reads and sets the light or dark colour scheme. | [ThemeSwitcher](theme_switcher.md) |

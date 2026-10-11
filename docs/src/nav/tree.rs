@@ -301,6 +301,7 @@ pub(super) fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::UseIndexedDbPage {}, "IndexedDB"),
                 page(Route::UseUserMediaPage {}, "User media"),
                 page(Route::UseSystemNotificationPage {}, "System notifications"),
+                page(Route::UseFcmPage {}, "Firebase messaging"),
                 page(Route::SaveFilePage {}, "Save file"),
                 page(Route::UseThemeSetPage {}, "Theme set"),
                 page(Route::UseStylesheetPage {}, "Stylesheet"),

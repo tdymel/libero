@@ -8,8 +8,8 @@ use super::web::{element, evaluate, json};
 use super::{Driver, Platform, Rect};
 use crate::android::{
     ALT, CTRL, SHIFT, clear_log, disable_ime, download, harness, input, input_text, keycode,
-    log_lines, posted_notifications, restore_ime, soft_keyboard_shown, tap_any_node_within,
-    tap_node, tap_notification, tap_notification_action, webview_view_focused,
+    log_lines, posted_notifications, restore_ime, screen_text, soft_keyboard_shown,
+    tap_any_node_within, tap_node, tap_notification, tap_notification_action, webview_view_focused,
 };
 use crate::clock::{app_clock, app_count};
 use crate::passes::{focus, keyboard, pointer};
@@ -734,6 +734,10 @@ impl Driver for Android {
         tap_any_node_within(&ALLOW, crate::wait::timeout()).await?;
         let _ = tap_any_node_within(&ALLOW, Duration::from_secs(3)).await;
         Ok(())
+    }
+
+    async fn system_text(&mut self) -> Result<String> {
+        screen_text().await
     }
 
     async fn posted_notifications(&mut self) -> Result<String> {

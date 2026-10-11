@@ -187,6 +187,7 @@ fetch only the file you need.
 - [IndexedDB](use_indexed_db.md): A larger value kept under a key in IndexedDB, loaded and saved without blocking the page; a file per key off the web.
 - [User media](use_user_media.md): The camera and microphone with a preview, a PNG snapshot, a chunked video or audio recording and a camera switch; never prompts on mount.
 - [System notifications](use_system_notification.md): Notifications the operating system draws and a web push subscription; never prompt on mount.
+- [Firebase messaging](use_fcm.md): Android's Firebase Cloud Messaging token and the messages received while running, behind the `fcm` feature.
 - [Save file](save_file.md): Saves bytes the app made as a file: a download on the web, a save dialog on the desktop and Blitz, the share sheet on Android.
 - [Theme set](use_theme_set.md): Reads and swaps the active theme set, which a theme picker is built on.
 - [Stylesheet](use_stylesheet.md): Registers a stylesheet of your own above every libero layer and returns its class.

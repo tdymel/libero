@@ -1,9 +1,14 @@
 //! Android's system share sheet over JNI on the main thread, for `share` (3351)
-//! and `save_file` (2016): text inline, files through Downloads (2078).
+//! and `save_file` (2016): text inline, `share`'s files through libero's own content
+//! provider (3408), `save_file`'s through Downloads (2078).
 
 use dioxus_desktop::wry::prelude::{
     JNIEnv, JObject, dispatch,
-    jni::{self, errors::Result as JniResult, objects::JValue},
+    jni::{
+        self,
+        errors::Result as JniResult,
+        objects::{GlobalRef, JClass, JValue},
+    },
 };
 use futures_channel::oneshot;
 
@@ -19,13 +24,25 @@ const FLAG_GRANT_READ_URI_PERMISSION: i32 = 1;
 const MIN_DOWNLOADS_SDK: i32 = 29;
 const OCTET_STREAM: &str = "application/octet-stream";
 
+// The module's provider serves staged files by name: the chooser cannot read a
+// MediaStore row's name (3392). Its manifest merges into every Android app.
+#[manganis::ffi("android/share")]
+unsafe extern "Kotlin" {
+    pub type LiberoShare;
+    pub fn stage_path(this: &LiberoShare, name: String) -> String;
+    pub fn content_uri(this: &LiberoShare, path: String) -> String;
+}
+
 pub(super) struct AndroidShare;
 
 pub(super) static SHARE: AndroidShare = AndroidShare;
 
 impl ShareApi for AndroidShare {
     fn share(&self, data: ShareData) -> Sharing {
-        let opened = on_main_thread(move |env, activity| send(env, activity, &data));
+        let opened = on_main_thread(move |env, activity| {
+            let uris = stage(env, activity, &data.files)?;
+            send(env, activity, &data, &uris)
+        });
         Box::pin(async move {
             match opened.await {
                 Ok(outcome) => outcome,
@@ -56,43 +73,90 @@ pub(super) fn on_main_thread<T: Send + 'static>(
     }
 }
 
-/// One chooser for the whole of `data`: files as `EXTRA_STREAM` where Downloads
-/// exists, the text and url joined into `EXTRA_TEXT`, the title as subject.
-fn send(env: &mut JNIEnv, activity: &JObject, data: &ShareData) -> Result<ShareOutcome, String> {
+/// An instance of the app's `class` (dotted), built with the activity. Through the
+/// activity's class loader: `#[ffi]`'s own `FindClass` sees only the boot classes here.
+pub(super) fn app_object(
+    env: &mut JNIEnv,
+    activity: &JObject,
+    class: &str,
+) -> JniResult<GlobalRef> {
+    let loader = env
+        .call_method(activity, "getClassLoader", "()Ljava/lang/ClassLoader;", &[])?
+        .l()?;
+    let name = env.new_string(class)?;
+    let class = env
+        .call_method(
+            &loader,
+            "loadClass",
+            "(Ljava/lang/String;)Ljava/lang/Class;",
+            &[JValue::Object(&name)],
+        )?
+        .l()?;
+    let object = env.new_object(
+        JClass::from(class),
+        "(Landroid/app/Activity;)V",
+        &[JValue::Object(activity)],
+    )?;
+    env.new_global_ref(object)
+}
+
+/// Writes each file where the provider serves it and answers its `content://` URI.
+fn stage(env: &mut JNIEnv, activity: &JObject, files: &[ShareFile]) -> Result<Vec<String>, String> {
+    if files.is_empty() {
+        return Ok(Vec::new());
+    }
+    let bridge = app_object(env, activity, "dev.libero.share.LiberoShare")
+        .map(LiberoShare::from_global_ref)
+        .map_err(|error| error.to_string())?;
+    files
+        .iter()
+        .map(|file| {
+            let path = stage_path(&bridge, file.name.clone()).map_err(|error| error.to_string())?;
+            std::fs::write(&path, &file.bytes).map_err(|error| error.to_string())?;
+            content_uri(&bridge, path).map_err(|error| error.to_string())
+        })
+        .collect()
+}
+
+/// One chooser for the whole of `data`: the staged `uris` as `EXTRA_STREAM`, the
+/// text and url joined into `EXTRA_TEXT`, the title as subject.
+fn send(
+    env: &mut JNIEnv,
+    activity: &JObject,
+    data: &ShareData,
+    uris: &[String],
+) -> Result<ShareOutcome, String> {
     let [title, text, url] = text_fields(data);
     let message = [text, url]
         .into_iter()
         .flatten()
         .collect::<Vec<_>>()
         .join("\n");
-    let files = match data.files.is_empty() || sdk(env)? < MIN_DOWNLOADS_SDK {
-        true => &[][..],
-        false => data.files.as_slice(),
-    };
     // A title alone is all the text there is.
-    let message = match message.is_empty() && files.is_empty() {
+    let message = match message.is_empty() && uris.is_empty() {
         true => title.unwrap_or_default().to_string(),
         false => message,
     };
-    if message.is_empty() && files.is_empty() {
+    if message.is_empty() && uris.is_empty() {
         return Ok(ShareOutcome::Unsupported);
     }
     let jni = |error: jni::errors::Error| error.to_string();
-    let intent = match files {
+    let files = data.files.as_slice();
+    let intent = match uris {
         [] => send_intent(env, ACTION_SEND, "text/plain").map_err(jni)?,
-        [file] => {
-            let uri = download(env, activity, file).map_err(jni)?;
-            let intent = send_intent(env, ACTION_SEND, mime(file)).map_err(jni)?;
+        [uri] => {
+            let uri = parse_uri(env, uri).map_err(jni)?;
+            let intent = send_intent(env, ACTION_SEND, mime(&files[0])).map_err(jni)?;
             stream(env, &intent, &uri).map_err(jni)?;
             intent
         }
-        files => {
+        staged => {
             let list = env
                 .new_object("java/util/ArrayList", "()V", &[])
                 .map_err(jni)?;
-            let mut uris = Vec::with_capacity(files.len());
-            for file in files {
-                let uri = download(env, activity, file).map_err(jni)?;
+            let mut uris = Vec::with_capacity(staged.len());
+            for uri in staged {
+                let uri = parse_uri(env, uri).map_err(jni)?;
                 env.call_method(
                     &list,
                     "add",
@@ -241,6 +305,17 @@ fn grant_read(env: &mut JNIEnv, intent: &JObject, uris: &[JObject]) -> JniResult
         &[JValue::Int(FLAG_GRANT_READ_URI_PERMISSION)],
     )?;
     Ok(())
+}
+
+fn parse_uri<'a>(env: &mut JNIEnv<'a>, uri: &str) -> JniResult<JObject<'a>> {
+    let uri = env.new_string(uri)?;
+    env.call_static_method(
+        "android/net/Uri",
+        "parse",
+        "(Ljava/lang/String;)Landroid/net/Uri;",
+        &[JValue::Object(&uri)],
+    )?
+    .l()
 }
 
 /// A new `MediaStore.Downloads` entry holding `file`; a failed write removes it.

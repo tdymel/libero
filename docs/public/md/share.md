@@ -72,7 +72,7 @@ fn ShareReport(csv: String) -> Element {
 |---|---|---|
 | Web | `navigator.share`, files where `canShare` takes them | copies the link |
 | Desktop and iOS WebView | `navigator.share` where the engine has it | copies the link |
-| Android | the system share sheet; files from Android 10 on, each leaving a copy in Downloads | before Android 10 the title, text and link go without the files |
+| Android | the system share sheet, files by name from the app's cache (kept a day) | none needed |
 | Blitz (`native`) | none | copies the link |
 
 `ShareOutcome::Cancelled` also covers a sheet with no target to pick: the
@@ -130,11 +130,6 @@ glyph is the `IconSlot::Share` slot of an [IconProvider](icon_provider.md).
 An article's share button, `Share { url, label: "Link to this article"
 }`: the button reads "Share, Link to this article". On a phone the share sheet
 opens; on a desktop without one, the status region says "Copied".
-
-### Limits
-
-- Android's share sheet may name a shared file by a number: on Android 14 it
-  cannot read a Downloads file's name.
 
 ## CSS variables
 

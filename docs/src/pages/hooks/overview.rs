@@ -198,6 +198,11 @@ fn hooks() -> Vec<HookRow> {
             Route::UseSystemNotificationPage {},
         ),
         row(
+            "use_fcm",
+            "Android's Firebase Cloud Messaging token and messages, behind the fcm feature.",
+            Route::UseFcmPage {},
+        ),
+        row(
             "use_theme",
             "The active theme, for values CSS cannot carry.",
             Route::ThemingPage {},

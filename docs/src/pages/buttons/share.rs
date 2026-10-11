@@ -86,10 +86,7 @@ pub fn SharePage() -> Element {
                     "Name an icon-only button after what it shares with `aria_label`, such as \"Share article\", or keep the short name and say what it shares with `label`.",
                     "For a share control of your own on `use_share()`, call `share` in the press handler and say the outcome in a status region that is already mounted.",
                 ])
-                .example("An article's share button, `Share { url, label: \"Link to this article\" }`: the button reads \"Share, Link to this article\". On a phone the share sheet opens; on a desktop without one, the status region says \"Copied\".")
-                .limits([
-                    "Android's share sheet may name a shared file by a number: on Android 14 it cannot read a Downloads file's name.",
-                ]),
+                .example("An article's share button, `Share { url, label: \"Link to this article\" }`: the button reads \"Share, Link to this article\". On a phone the share sheet opens; on a desktop without one, the status region says \"Copied\"."),
             lead: rsx! {
                 Text {
                     "A button that opens the system share sheet: the Web Share API on the "

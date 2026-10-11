@@ -120,6 +120,8 @@ dbus = { version = "0.9", optional = true }
 [target.'cfg(target_os = "android")'.dependencies]
 dioxus-desktop = { git = "https://github.com/DioxusLabs/dioxus", default-features = false, features = ["tokio_runtime", "devtools"] }
 futures-channel = "0.3"
+# `#[ffi]` ships `android/share` (todo 3408) as a Gradle module into the app.
+manganis = { git = "https://github.com/DioxusLabs/dioxus", default-features = false }
 
 # Render-to-string, for the component tests in `tests/` - the same dioxus rev
 # this crate builds against.
@@ -147,6 +149,9 @@ desktop = ["dep:futures-channel", "dep:dbus", "dep:dioxus-desktop", "dep:rfd"]
 # For e2e harnesses only (todo 2144): `platform::held_clock` holds the thread timer's
 # named delays until fired, as a test clock. Never in an app build.
 held-clock = []
+# `use_fcm` (todo 3404): Firebase Cloud Messaging on Android. Ships the Gradle module
+# `android/fcm` and firebase-messaging into the app, so it is off by default.
+fcm = []
 # For e2e harnesses only (todo 1514): under `native`, `platform::fake_file_dialog`
 # answers the next pick in place of rfd's dialog. Never in an app build.
 fake-file-dialog = []

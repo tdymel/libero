@@ -8,6 +8,8 @@ mod dismiss;
 mod drag;
 mod element;
 mod element_rect;
+#[cfg(feature = "fcm")]
+mod fcm;
 mod focus_return;
 mod focus_within;
 mod formats;
@@ -55,6 +57,8 @@ mod timers_tests;
 mod typeahead;
 mod user_media;
 
+#[cfg(feature = "fcm")]
+pub use crate::platform::{FcmError, FcmMessage, FcmOptions};
 pub use crate::platform::{
     GeolocationError, GeolocationOptions, MediaDevice, NotificationAction, PermissionState,
     Position, PushEndpoint, PushError, PushOptions, StorageError, SystemNotification,
@@ -81,6 +85,8 @@ pub(crate) use drag::{
 pub use element::{ElementHandle, use_element};
 pub(crate) use element::{use_content_changes, use_form_owner, use_resize_fallback};
 pub(crate) use element_rect::{ElementRect, use_element_rect};
+#[cfg(feature = "fcm")]
+pub use fcm::{Fcm, use_fcm};
 pub use focus_return::{FocusReturn, use_focus_return};
 pub(crate) use focus_within::{FocusChange, FocusWithin, use_focus_within};
 pub(crate) use formats::current_formats;

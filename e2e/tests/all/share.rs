@@ -313,19 +313,27 @@ fn several_files_are_shared_in_one_call() {
 }
 
 async fn the_share_sheet_opens<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    opens(d, BARE, "android.intent.action.SEND").await
+    opens(d, BARE, "android.intent.action.SEND", None).await
 }
 
+/// Todo 3408: the chooser names the file, read from libero's own provider.
 async fn the_share_sheet_opens_on_a_file<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    opens(d, FILE, "android.intent.action.SEND").await
+    opens(d, FILE, "android.intent.action.SEND", Some("report.csv")).await
 }
 
 async fn the_share_sheet_opens_on_two_files<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    opens(d, FILES, "android.intent.action.SEND_MULTIPLE").await
+    opens(
+        d,
+        FILES,
+        "android.intent.action.SEND_MULTIPLE",
+        Some("a.csv"),
+    )
+    .await
 }
 
-/// The chooser opens over the page for an intent of `action`, which the app logs as it builds it.
-async fn opens<D: Driver>(d: &mut D, button: &str, action: &str) -> Result<()> {
+/// The chooser opens over the page for an intent of `action`, which the app logs as it
+/// builds it, and shows `name` in its preview.
+async fn opens<D: Driver>(d: &mut D, button: &str, action: &str, name: Option<&str>) -> Result<()> {
     d.clear_log().await?;
     d.click(button).await?;
     eventually(d, "the share sheet over the page", async |d| {
@@ -337,6 +345,12 @@ async fn opens<D: Driver>(d: &mut D, button: &str, action: &str) -> Result<()> {
         Ok(!d.log_lines(&intent).await?.is_empty())
     })
     .await?;
+    if let Some(name) = name {
+        eventually(d, "the file's name in the share sheet", async |d| {
+            Ok(d.system_text().await?.contains(name))
+        })
+        .await?;
+    }
     // The covered activity applies no edit until Back closes the share sheet.
     d.press_back().await?;
     eventually_text(d, "#outcome", "Shared", "the share outcome").await
