@@ -120,7 +120,13 @@ async fn the_keys_resize<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         let f = d.text(":focus").await?;
         bail!("DIAG {e}: widths={w} aria={a:?} focus={f:?}");
     }
-    width_near(d, 300.0, "End").await?;
+    if let Err(e) = width_near(d, 300.0, "End").await {
+        let r = d.rect(NAME).await?;
+        let t = d.rect("table").await?;
+        let v = d.viewport().await?;
+        let s = d.rect("th").await?;
+        bail!("DIAG2 {e}: name={r:?} table={t:?} viewport={v:?} firstth={s:?}");
+    }
     eventually(d, "aria-valuenow to follow", async |d| {
         Ok(d.attr(&grip, "aria-valuenow").await?.as_deref() == Some("300"))
     })
