@@ -3,9 +3,10 @@
 //! the app's `E2E_BRIDGE` as the desktop driver does, and drives it with HID touches and keys
 //! from AXe (idb with `E2E_IOS_INPUT=idb`). Run by `cargo run -p e2e -- ios`, on macOS only.
 
+use std::io::Write;
 use std::net::TcpListener;
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::{Command, Output};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, PoisonError};
 use std::time::{Duration, Instant};
@@ -16,6 +17,7 @@ use crate::clock::{app_clock, app_count};
 use crate::driver::bridge::{Bridge, element, note};
 use crate::driver::{Driver, Platform, Rect};
 use crate::passes::keyboard::Key;
+use crate::wait::output_within;
 
 /// The booted simulator; set by the runner.
 pub const UDID_ENV: &str = "E2E_IOS_UDID";
@@ -26,8 +28,15 @@ pub const INPUT_ENV: &str = "E2E_IOS_INPUT";
 /// Written into `E2E_ARTIFACTS` when the app never dialled the bridge; holds the app log's path.
 pub const NO_BRIDGE: &str = "ios-no-bridge";
 
+/// Written into `E2E_ARTIFACTS`: every injector and simctl call, begun and ended; the runner
+/// prints its tail when a unit overruns.
+pub const TRACE: &str = "ios-trace.log";
+
 /// A cold app start in a simulator on a 3-core runner: a guess until the first CI run.
 const LAUNCH: Duration = Duration::from_secs(90);
+
+/// An injector or simctl call that takes longer is wedged; the longest real one is a swipe.
+const TOOL_LIMIT: Duration = Duration::from_secs(45);
 
 /// HID usages (keyboard page 0x07) of the left modifiers.
 const SHIFT: u8 = 225;
@@ -68,6 +77,7 @@ impl Ios {
     /// unit or failed; `window.__route` remounts the fixture.
     pub fn open(module: &str, route: &str) -> Result<Self> {
         let unit = module.rsplit_once("::").map_or(module, |(unit, _)| unit);
+        trace(&format!("= {module} {route}"));
         let idle = IDLE.lock().unwrap_or_else(PoisonError::into_inner).take();
         let mut ios = match idle {
             Some(mut ios) if ios.unit == unit => {
@@ -391,11 +401,10 @@ impl Ios {
         // AXe's accessibility translation is not up for the first seconds of a fresh simulator.
         let mut tries = 0;
         loop {
-            let out = Command::new(tool)
-                .args(args)
-                .args(["--udid", &self.udid])
-                .output()
-                .with_context(|| format!("run {tool}"))?;
+            let out = traced(
+                Command::new(tool).args(args).args(["--udid", &self.udid]),
+                &format!("{tool} {args:?}"),
+            )?;
             if out.status.success() {
                 return Ok(String::from_utf8_lossy(&out.stdout).into_owned());
             }
@@ -443,6 +452,29 @@ impl Drop for Ios {
     }
 }
 
+/// `command` under [`TOOL_LIMIT`], each call noted in [`TRACE`]: a call that never returns is
+/// the last line without its `<`.
+fn traced(command: &mut Command, label: &str) -> Result<Output> {
+    trace(&format!("> {label}"));
+    let started = Instant::now();
+    let out = output_within(command, TOOL_LIMIT).with_context(|| format!("{label} hung"));
+    trace(&format!("< {label} {:?}", started.elapsed()));
+    out
+}
+
+fn trace(line: &str) {
+    let dir = std::env::var_os("E2E_ARTIFACTS")
+        .map(PathBuf::from)
+        .unwrap_or_else(std::env::temp_dir);
+    let file = std::fs::File::options()
+        .create(true)
+        .append(true)
+        .open(dir.join(TRACE));
+    if let Ok(mut file) = file {
+        let _ = writeln!(file, "{line}");
+    }
+}
+
 /// A screen point as the injectors take it: whole points.
 fn point(at: f64) -> String {
     (at.round() as i64).to_string()
@@ -450,12 +482,13 @@ fn point(at: f64) -> String {
 
 /// `xcrun simctl` with `args` and `env`; its stdout.
 fn simctl(args: &[&str], env: &[(&str, &str)]) -> Result<String> {
-    let out = Command::new("xcrun")
-        .arg("simctl")
-        .args(args)
-        .envs(env.iter().copied())
-        .output()
-        .context("run xcrun simctl")?;
+    let out = traced(
+        Command::new("xcrun")
+            .arg("simctl")
+            .args(args)
+            .envs(env.iter().copied()),
+        &format!("simctl {args:?}"),
+    )?;
     if !out.status.success() {
         bail!(
             "simctl {args:?} failed: {}",

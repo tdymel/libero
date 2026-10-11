@@ -14,6 +14,14 @@ use super::{
     own_target_dir,
     process::{Guard, OwnGroup, stop},
 };
+use e2e::wait::output_within;
+
+/// `e2e::driver::ios::TRACE`.
+const TRACE: &str = "ios-trace.log";
+
+/// A simctl call that takes longer is wedged; booting and installing are the long ones.
+const SIMCTL_LIMIT: Duration = Duration::from_secs(60);
+const BOOT_LIMIT: Duration = Duration::from_secs(300);
 
 /// `--ignored` runs only the `ios: skip` scenarios.
 pub fn run(mut filters: Vec<String>) -> Result<()> {
@@ -43,13 +51,14 @@ pub fn run(mut filters: Vec<String>) -> Result<()> {
     let (udid, booted_here) = match std::env::var("E2E_IOS_UDID") {
         Ok(udid) => (udid, false),
         Err(_) => {
-            let devices = simctl(&["list", "-j", "devices", "available"])?;
+            // The first call starts CoreSimulator, which took over 60 s on a loaded runner.
+            let devices = simctl_within(&["list", "-j", "devices", "available"], BOOT_LIMIT)?;
             let wanted = std::env::var("E2E_IOS_DEVICE").ok();
             let (udid, name, runtime) = pick_device(&devices, wanted.as_deref())?;
             eprintln!("e2e ios: booting {name} ({runtime}), {udid}");
             // Already booted fails with a message, not a broken device.
             let _ = simctl(&["boot", &udid]);
-            simctl(&["bootstatus", &udid, "-b"])?;
+            simctl_within(&["bootstatus", &udid, "-b"], BOOT_LIMIT)?;
             (udid, true)
         }
     };
@@ -125,13 +134,8 @@ fn run_on(
         bail!("no CFBundleIdentifier in {}", plist.display());
     }
     eprintln!("e2e ios: installing {} ({bundle})", app.display());
-    simctl(&["install", udid, &app.to_string_lossy()])?;
-    // No driver answers the permission dialogs, so grant up front, as on Android; simctl
-    // grants no camera, which the simulator lacks. The position is the Android arm's.
-    for service in ["location", "microphone"] {
-        let _ = simctl(&["privacy", udid, "grant", service, &bundle]);
-    }
-    let _ = simctl(&["location", udid, "set", "52.52,13.405"]);
+    simctl_within(&["install", udid, &app.to_string_lossy()], BOOT_LIMIT)?;
+    grant(udid, &bundle);
 
     let names = list_arm("ios", root, target_dir, filters, ignored)?;
     let names: Vec<String> = if ignored {
@@ -160,8 +164,16 @@ fn run_on(
         )?;
         if !passed {
             let shot = artifacts.join(format!("{name}.png"));
-            let _ = simctl(&["io", udid, "screenshot", &shot.to_string_lossy()]);
+            let drew = simctl_within(
+                &["io", udid, "screenshot", &shot.to_string_lossy()],
+                Duration::from_secs(30),
+            )
+            .is_ok();
             red.push(name);
+            if !drew || !booted(udid) {
+                eprintln!("e2e ios: the simulator stopped answering in {name}; rebooting it");
+                reboot(udid, &app, &bundle)?;
+            }
             // Every later unit would wait out `LAUNCH` for the same app.
             if let Ok(app_log) = std::fs::read_to_string(&no_bridge) {
                 let _ = simctl(&["terminate", udid, &bundle]);
@@ -225,6 +237,11 @@ fn run_unit(
         if Instant::now() > deadline {
             eprintln!("e2e ios: {} overran its deadline; stopped", unit[0]);
             stop(&mut tests);
+            if let Ok(trace) = std::fs::read_to_string(artifacts.join(TRACE)) {
+                let lines: Vec<&str> = trace.lines().collect();
+                let from = lines.len().saturating_sub(12);
+                eprintln!("e2e ios: the last calls:\n{}", lines[from..].join("\n"));
+            }
             return Ok(false);
         }
         std::thread::sleep(Duration::from_secs(1));
@@ -283,13 +300,52 @@ fn pick_device(json: &str, wanted: Option<&str>) -> Result<(String, String, Stri
     bail!("no available iOS simulator matches {wanted:?}; `xcrun simctl list devices` lists them")
 }
 
+/// No driver answers the permission dialogs, so grant up front, as on Android; simctl
+/// grants no camera, which the simulator lacks. The position is the Android arm's.
+fn grant(udid: &str, bundle: &str) {
+    for service in ["location", "microphone"] {
+        let _ = simctl(&["privacy", udid, "grant", service, bundle]);
+    }
+    let _ = simctl(&["location", udid, "set", "52.52,13.405"]);
+}
+
+/// Whether simctl lists the simulator as booted.
+fn booted(udid: &str) -> bool {
+    let Ok(listed) = simctl(&["list", "-j", "devices"]) else {
+        return false;
+    };
+    let Ok(listed) = serde_json::from_str::<serde_json::Value>(&listed) else {
+        return false;
+    };
+    listed["devices"]
+        .as_object()
+        .into_iter()
+        .flat_map(|runtimes| runtimes.values())
+        .filter_map(|devices| devices.as_array())
+        .flatten()
+        .any(|device| device["udid"] == udid && device["state"] == "Booted")
+}
+
+/// A simulator that crashed or hung after a unit's overrun: shut down, boot, and install and
+/// grant again, so the next unit finds the app.
+fn reboot(udid: &str, app: &Path, bundle: &str) -> Result<()> {
+    let _ = simctl(&["shutdown", udid]);
+    let _ = simctl(&["boot", udid]);
+    simctl_within(&["bootstatus", udid, "-b"], BOOT_LIMIT)?;
+    simctl_within(&["install", udid, &app.to_string_lossy()], BOOT_LIMIT)?;
+    grant(udid, bundle);
+    Ok(())
+}
+
 /// `xcrun simctl` with `args`; its stdout, or an error with its stderr.
 fn simctl(args: &[&str]) -> Result<String> {
-    let output = Command::new("xcrun")
-        .arg("simctl")
-        .args(args)
-        .output()
-        .context("run xcrun simctl")?;
+    simctl_within(args, SIMCTL_LIMIT)
+}
+
+/// [`simctl`], failed if it runs longer than `limit`.
+fn simctl_within(args: &[&str], limit: Duration) -> Result<String> {
+    let output = output_within(Command::new("xcrun").arg("simctl").args(args), limit)
+        .with_context(|| format!("simctl {}", args.join(" ")))?;
     if !output.status.success() {
         bail!(
             "simctl {}: {}",
@@ -322,6 +378,15 @@ mod tests {
         let (udid, name, runtime) = pick_device(LIST, None).unwrap();
         assert_eq!((udid.as_str(), name.as_str()), ("NEW-17", "iPhone 17 Pro"));
         assert_eq!(runtime, "iOS-26-2");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_wedged_call_fails_at_its_limit_and_a_quick_one_answers() {
+        let hung = output_within(Command::new("sleep").arg("30"), Duration::from_millis(200));
+        assert!(hung.unwrap_err().to_string().contains("still running"));
+        let done = output_within(Command::new("echo").arg("hi"), Duration::from_secs(5)).unwrap();
+        assert_eq!(String::from_utf8_lossy(&done.stdout).trim(), "hi");
     }
 
     #[test]
