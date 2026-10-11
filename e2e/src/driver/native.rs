@@ -126,15 +126,10 @@ impl Driver for Native {
         Ok(())
     }
 
-    /// The app runs in this process: Cmd on a macOS host, which blitz-shell reports as SUPER.
+    /// The app runs in this process: its host's [`crate::native::MOD`].
     async fn press_mod(&mut self, key: keyboard::Key) -> Result<()> {
         let key = native_key(key)?;
-        let held = if cfg!(target_os = "macos") {
-            crate::native::Modifiers::SUPER
-        } else {
-            crate::native::Modifiers::CONTROL
-        };
-        self.page.press_with(key, held);
+        self.page.press_with(key, crate::native::MOD);
         Ok(())
     }
 
