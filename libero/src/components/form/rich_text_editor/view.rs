@@ -43,7 +43,7 @@ use crate::{
         use_theme,
     },
     localization::RichTextEditorLabels,
-    platform::{Dimensions, ElementApi, mod_is_meta},
+    platform::{Dimensions, ElementApi, meta_held, mod_is_meta},
     sx::{StaticSx, sx},
     theme::Z_INDEX_POPOVER,
 };
@@ -998,7 +998,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             key: event.key().to_string(),
             code: event.code().to_string(),
             ctrl: modifiers.ctrl(),
-            meta: modifiers.meta(),
+            meta: meta_held(modifiers),
             alt: modifiers.alt(),
             shift: modifiers.shift(),
         };

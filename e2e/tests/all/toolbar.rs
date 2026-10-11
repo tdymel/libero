@@ -3,7 +3,7 @@
 use anyhow::{Result, ensure};
 use e2e::archetypes::{Orientation, RovingTabindex};
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, eventually_focused};
+use e2e::driver::{Driver, Host, Platform, eventually, eventually_focused};
 use e2e::passes::keyboard;
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
@@ -252,7 +252,18 @@ async fn the_help_lists_the_chords<D: Driver>(d: &mut D, _route: &str) -> Result
     let title = d.text("[role=dialog] [data-slot=title]").await?;
     ensure!(title == "Keyboard shortcuts", "title: {title:?}");
     let chords = d.text("[role=dialog] dl").await?;
-    for want in ["Alt", "F10", "Go to the toolbar", "Ctrl", "Shift", "K"] {
+    // An app on Apple names Option and Cmd; a browser here runs on Linux.
+    let apple = match d.platform() {
+        Platform::Native | Platform::Desktop => Host::current() == Host::Macos,
+        Platform::Ios => true,
+        Platform::Web | Platform::Android => false,
+    };
+    let (alt, ctrl) = if apple {
+        ("Option", "Cmd")
+    } else {
+        ("Alt", "Ctrl")
+    };
+    for want in [alt, "F10", "Go to the toolbar", ctrl, "Shift", "K"] {
         ensure!(chords.contains(want), "no {want:?} in {chords:?}");
     }
     d.press(keyboard::ESCAPE).await?;

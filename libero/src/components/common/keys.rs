@@ -1,9 +1,11 @@
+use crate::platform::meta_held;
+
 /// Whether a key press is a shortcut rather than typing. Not Shift: it types capitals.
 pub(crate) fn has_shortcut_modifier(event: &dioxus::prelude::KeyboardEvent) -> bool {
     use dioxus::prelude::ModifiersInteraction;
 
     let modifiers = event.data().modifiers();
-    modifiers.ctrl() || modifiers.alt() || modifiers.meta()
+    modifiers.ctrl() || modifiers.alt() || meta_held(modifiers)
 }
 
 /// What a navigation key under Ctrl, Alt or Meta means to a field.
@@ -36,7 +38,7 @@ pub(crate) fn navigation_chord(event: &dioxus::prelude::KeyboardEvent) -> Option
         return None;
     }
     let modifiers = event.data().modifiers();
-    let alt_only = modifiers.alt() && !modifiers.ctrl() && !modifiers.meta();
+    let alt_only = modifiers.alt() && !modifiers.ctrl() && !meta_held(modifiers);
     Some(match event.key() {
         Key::ArrowDown if alt_only => NavigationChord::Open,
         Key::ArrowUp if alt_only => NavigationChord::Close,

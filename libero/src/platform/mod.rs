@@ -123,6 +123,7 @@ pub(crate) use keyboard::focused_tag;
 pub(crate) use keyboard::is_tab;
 pub(crate) use keyboard::key_taken;
 pub(crate) use keyboard::logical_key;
+pub(crate) use keyboard::meta_held;
 pub(crate) use keyboard::mod_is_meta;
 #[cfg(test)]
 pub(crate) use keyboard::reserved_chord_warning;

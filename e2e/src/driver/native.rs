@@ -126,6 +126,13 @@ impl Driver for Native {
         Ok(())
     }
 
+    /// The app runs in this process: its host's [`crate::native::MOD`].
+    async fn press_mod(&mut self, key: keyboard::Key) -> Result<()> {
+        let key = native_key(key)?;
+        self.page.press_with(key, crate::native::MOD);
+        Ok(())
+    }
+
     async fn press_alt(&mut self, key: keyboard::Key) -> Result<()> {
         let key = native_key(key)?;
         self.page.press_with(key, crate::native::Modifiers::ALT);
@@ -137,6 +144,14 @@ impl Driver for Native {
             self.page
                 .press(crate::native::Key::Character(ch.to_string()));
         }
+        Ok(())
+    }
+
+    /// A release with no press: Blitz clicks, and nothing pressed takes focus.
+    async fn script_click(&mut self, selector: &str) -> Result<()> {
+        let (x, y, width, height) = self.page.rect(selector);
+        self.page
+            .release_at((x + width / 2.0) as f32, (y + height / 2.0) as f32);
         Ok(())
     }
 

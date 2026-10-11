@@ -10,7 +10,7 @@ use super::{cell_focus::Move, cell_value::EditKind, column::Column};
 use crate::{
     components::{accessibility::VisuallyHidden, common::Glyph},
     context::IconSlot,
-    hooks::{ElementHandle, use_element},
+    hooks::{ElementHandle, use_element, use_silent_focus_out_of},
     platform::{ElementApi, is_tab},
 };
 
@@ -205,6 +205,8 @@ pub(super) fn CellEditor(
         );
         done.set(closed);
     });
+    // Blitz focuses a pressed button without a `blur` here (todo 3263).
+    use_silent_focus_out_of(input, move || close.call((true, Leave::Blur)));
     let invalid = error.is_some();
     let hint_id = hint.map(|_| format!("{error_id}-hint"));
     let described = [invalid.then(|| error_id.clone()), hint_id.clone()]

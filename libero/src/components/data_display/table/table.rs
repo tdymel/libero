@@ -1894,13 +1894,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
                     }),
                 false => *row_focus.focused.peek(),
             };
-            let focused = focused.and_then(|row| {
-                order
-                    .iter()
-                    .position(|&at| at == row)
-                    .map(|slot| (row, slot))
-            });
-            grid_focus.hold_in_view(focused, row_height);
+            grid_focus.hold_in_view(focused, order.clone(), row_height);
             BodyRows::Window(RowWindow {
                 order,
                 first,

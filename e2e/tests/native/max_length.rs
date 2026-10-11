@@ -2,7 +2,7 @@
 //! where it was inserted, before a caller hears it.
 
 use dioxus::prelude::*;
-use e2e::native::{Key, Modifiers, Page, mount};
+use e2e::native::{Key, MOD, Page, mount};
 use libero::components::{Text, TextField, Textarea};
 
 fn app() -> Element {
@@ -17,7 +17,7 @@ fn app() -> Element {
 
 fn paste(page: &mut Page, text: &str) {
     page.set_clipboard(text);
-    page.press_with(Key::Character("v".into()), Modifiers::CONTROL);
+    page.press_with(Key::Character("v".into()), MOD);
 }
 
 #[test]

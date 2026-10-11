@@ -84,6 +84,10 @@ pub trait Driver {
     async fn press_shift(&mut self, key: Key) -> Result<()>;
     /// A chord with Ctrl held; give `key` no `text`.
     async fn press_ctrl(&mut self, key: Key) -> Result<()>;
+    /// A chord with libero's `mod` held: Cmd where the app runs on Apple, else Ctrl.
+    async fn press_mod(&mut self, key: Key) -> Result<()> {
+        self.press_ctrl(key).await
+    }
     /// A chord with Alt held; give `key` no `text`.
     async fn press_alt(&mut self, key: Key) -> Result<()> {
         let _ = key;
@@ -118,6 +122,12 @@ pub trait Driver {
     async fn evaluate(&mut self, expression: &str) -> Result<serde_json::Value> {
         let _ = expression;
         bail!("{:?}: no script reads", self.platform())
+    }
+    /// The first match's `click()` from a script: its handlers run, nothing is pressed.
+    async fn script_click(&mut self, selector: &str) -> Result<()> {
+        self.evaluate(&format!("{}.click()", query(selector)))
+            .await
+            .map(drop)
     }
     /// The first match's `(scrollLeft, scrollTop)`.
     async fn scroll_pos(&mut self, selector: &str) -> Result<(f64, f64)> {

@@ -170,13 +170,13 @@ e2e::scenario!(
 );
 
 const SALES_BOX: &str = "input[aria-label=\"Select group Sales, 2 rows\"]";
+/// Sales' drawn box: Sales leads the rows, and Blitz cannot parse `:has(...)`.
+const SALES_BOX_MARK: &str =
+    "tbody tr[data-row-group]:first-child td[data-select] span[aria-hidden]";
 
 /// G3: a closed group's box selects its rows and says so; one row off mixes it.
 async fn box_selects_the_group<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    d.click(&format!(
-        "tr[data-row-group]:has({SALES_BOX}) td[data-select] span[aria-hidden]"
-    ))
-    .await?;
+    d.click(SALES_BOX_MARK).await?;
     eventually_text(d, "#selection", "Ada,Cy", "a click on Sales' box").await?;
     eventually_text(d, LIVE, "2 rows selected", "the group's selection").await?;
     eventually_focused(d, SALES_BOX, "a click on Sales' box").await?;
@@ -196,10 +196,7 @@ async fn box_selects_the_group<D: Driver>(d: &mut D, _route: &str) -> Result<()>
     })
     .await?;
     // A mixed box selects the rest.
-    d.click(&format!(
-        "tr[data-row-group]:has({SALES_BOX}) td[data-select] span[aria-hidden]"
-    ))
-    .await?;
+    d.click(SALES_BOX_MARK).await?;
     eventually_text(d, "#selection", "Cy,Ada", "a click on the mixed box").await
 }
 

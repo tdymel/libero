@@ -126,8 +126,7 @@ async fn sort_keeps<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click(&cell(2, 2)).await?;
     at(d, 2, 2, "a click on Ben's age").await?;
     // A press would move the stop to the header cell: a script click sorts alone.
-    d.evaluate("document.querySelector('th:nth-child(2) [data-sort-button]').click()")
-        .await?;
+    d.script_click("th:nth-child(2) [data-sort-button]").await?;
     eventually_text(d, &cell(4, 1), "Ben", "the age sort").await?;
     eventually_text(d, STOP, "42", "the stop after the sort").await?;
     if d.attr(&cell(4, 2), "tabindex").await?.as_deref() != Some("0") {

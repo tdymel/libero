@@ -16,7 +16,7 @@ use crate::{
     },
     hooks::{ElementHandle, use_element, use_localization, use_theme},
     localization::fill,
-    platform::{ElementApi, PlatformError, set_value_by_id},
+    platform::{ElementApi, PlatformError, meta_held, set_value_by_id},
     sx::{StaticSx, sx},
     theme::{FIELD_HEIGHT, PinFieldDefaults},
     utils::fold_digit,
@@ -466,7 +466,7 @@ impl PinEdit {
     /// that are dropped before they reach the DOM.
     fn keys(&self, index: usize, event: Event<KeyboardData>) {
         let (length, readonly) = (self.length, self.readonly);
-        let modified = event.modifiers().ctrl() || event.modifiers().meta();
+        let modified = event.modifiers().ctrl() || meta_held(event.modifiers());
         // A composing key edits the IME's candidate, not the cell (todo 3033).
         // Ctrl/Alt/Meta+arrow, Home or End is the caret's or the browser's.
         if event.is_composing() || navigation_chord(&event).is_some() {

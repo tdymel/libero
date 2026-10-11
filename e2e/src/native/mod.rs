@@ -59,6 +59,13 @@ mod warnings;
 pub use blitz_traits::shell::ColorScheme;
 pub use dioxus::prelude::{Code, Key, Location, Modifiers};
 
+/// The platform's command modifier: Cmd on a macOS host, which blitz-shell reports as SUPER.
+pub const MOD: Modifiers = if cfg!(target_os = "macos") {
+    Modifiers::SUPER
+} else {
+    Modifiers::CONTROL
+};
+
 /// The viewport every test renders into, CSS pixels at scale 1.
 pub const VIEWPORT: (u32, u32) = (1024, 768);
 
@@ -640,6 +647,12 @@ impl Page {
             KeyState::Pressed,
             modifiers,
         )));
+        // macOS Blitz edits text by the shell's standard key bindings, not the key (todo 3317).
+        if cfg!(target_os = "macos")
+            && let Some(binding) = apple_key_binding(&key, modifiers)
+        {
+            self.dispatch(UiEvent::AppleStandardKeybinding(binding.into()));
+        }
         self.dispatch(UiEvent::KeyUp(key_event(
             key,
             KeyState::Released,
@@ -1302,6 +1315,15 @@ fn key_event(key: Key, state: KeyState, modifiers: Modifiers) -> BlitzKeyEvent {
         is_composing: false,
         state,
         text,
+    }
+}
+
+/// The AppKit command a macOS shell sends after a key Blitz leaves to it: only Backspace.
+fn apple_key_binding(key: &Key, modifiers: Modifiers) -> Option<&'static str> {
+    match key {
+        Key::Backspace if modifiers.contains(Modifiers::ALT) => Some("deleteWordBackward:"),
+        Key::Backspace => Some("deleteBackward:"),
+        _ => None,
     }
 }
 

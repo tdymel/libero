@@ -7,7 +7,9 @@ use crate::hooks::{
     popover::{OpenPopups, focus_in_popup_of, use_open_popups},
 };
 use crate::localization::ShortcutHelpLabels;
-use crate::platform::{KeyChord, KeySubscription, keyboard, mod_is_meta, warn_reserved_chord};
+use crate::platform::{
+    KeyChord, KeySubscription, keyboard, meta_held, mod_is_meta, warn_reserved_chord,
+};
 use crate::utils::bump;
 
 /// One keyboard shortcut for [`use_hotkeys`]: a chord such as `"mod+k"` and what
@@ -138,7 +140,7 @@ impl Chord {
             if !text.chars().any(char::is_alphanumeric));
         key_matches
             && self.ctrl == held.ctrl()
-            && self.meta == held.meta()
+            && self.meta == meta_held(held)
             && self.alt == held.alt()
             && (symbol || self.shift == held.shift())
     }
@@ -508,9 +510,23 @@ mod tests {
     fn a_bare_named_key_rejects_ctrl_alt_and_meta() {
         let chord = Chord::parse("f8", false).unwrap();
         assert!(chord.matches(&pressed(Key::F8, Modifiers::empty())));
-        for held in [Modifiers::CONTROL, Modifiers::ALT, Modifiers::META] {
+        for held in [
+            Modifiers::CONTROL,
+            Modifiers::ALT,
+            Modifiers::META,
+            Modifiers::SUPER,
+        ] {
             assert!(!chord.matches(&pressed(Key::F8, held)));
         }
+    }
+
+    /// Blitz's shell reports Cmd as `SUPER` (todo 3317).
+    #[test]
+    fn an_apple_mod_chord_takes_cmd_as_meta_or_super() {
+        let chord = Chord::parse("mod+k", true).unwrap();
+        assert!(chord.matches(&pressed(character("k"), Modifiers::META)));
+        assert!(chord.matches(&pressed(character("k"), Modifiers::SUPER)));
+        assert!(!chord.matches(&pressed(character("k"), Modifiers::CONTROL)));
     }
 
     fn entry(within: Vec<ElementHandle>) -> Entry {

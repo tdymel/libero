@@ -6,7 +6,7 @@ use anyhow::Result;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::keyboard::{self, Key};
 
-/// A chord's key carries no text: a held Ctrl types nothing.
+/// A chord's key carries no text: a held Ctrl or Cmd types nothing.
 const K: Key = Key {
     key: "k",
     code: "KeyK",
@@ -29,9 +29,9 @@ async fn count_is<D: Driver>(d: &mut D, selector: &str, expected: &str) -> Resul
 
 async fn mod_k_runs_once_per_press<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.focus("#plain").await?;
-    d.press_ctrl(K).await?;
+    d.press_mod(K).await?;
     count_is(d, "#open", "1").await?;
-    d.press_ctrl(K).await?;
+    d.press_mod(K).await?;
     count_is(d, "#open", "2").await
 }
 
@@ -40,7 +40,7 @@ async fn text_entry_keeps_the_chord_unless_included<D: Driver>(
     _route: &str,
 ) -> Result<()> {
     d.focus("#field").await?;
-    d.press_ctrl(K).await?;
+    d.press_mod(K).await?;
     d.idle().await;
     count_is(d, "#open", "0").await?;
     d.press_ctrl(J).await?;
@@ -49,11 +49,11 @@ async fn text_entry_keeps_the_chord_unless_included<D: Driver>(
 
 async fn an_unmounted_listener_stops<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.focus("#plain").await?;
-    d.press_ctrl(K).await?;
+    d.press_mod(K).await?;
     count_is(d, "#open", "1").await?;
     d.click("#remove").await?;
     d.idle().await;
-    d.press_ctrl(K).await?;
+    d.press_mod(K).await?;
     d.idle().await;
     count_is(d, "#open", "1").await
 }
@@ -63,12 +63,12 @@ async fn unmounting_one_instance_leaves_the_other<D: Driver>(
     _route: &str,
 ) -> Result<()> {
     d.focus("#plain").await?;
-    d.press_ctrl(K).await?;
+    d.press_mod(K).await?;
     count_is(d, "#open", "1").await?;
     count_is(d, "#other", "1").await?;
     d.click("#remove").await?;
     d.idle().await;
-    d.press_ctrl(K).await?;
+    d.press_mod(K).await?;
     count_is(d, "#other", "2").await?;
     count_is(d, "#open", "1").await
 }
