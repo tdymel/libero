@@ -10,6 +10,9 @@ use libero::{
 const X: [&str; 7] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const THIS_WEEK: [f64; 7] = [120.0, 132.0, 101.0, 134.0, 90.0, 230.0, 210.0];
 const LAST_WEEK: [f64; 7] = [98.0, 110.0, 115.0, 120.0, 104.0, 170.0, 180.0];
+// Uneven samples: the gaps show only on a number axis.
+const HOURS: [f64; 7] = [0.0, 1.0, 2.0, 6.0, 12.0, 18.0, 24.0];
+const TEMPERATURE: [f64; 7] = [14.0, 13.5, 13.0, 15.5, 22.0, 20.5, 15.0];
 
 fn on(value: bool) -> &'static str {
     if value { "true" } else { "false" }
@@ -25,7 +28,7 @@ pub fn LineChartPage() -> Element {
             markdown: "/md/line_chart.md",
             properties: vec![
                 props("LineChart", vec![
-                    prop("x", "XValues").default("required").doc("The x axis, one value per point: labels or numbers."),
+                    prop("x", "XValues").default("required").doc("The x axis, one value per point: labels, one evenly spaced slot each, or numbers, each point at its value."),
                     prop("series", "Vec<Series>").default("required").doc("The lines, each with one value per x value. `None` is a gap."),
                     prop("title", "Option<String>").doc("Shown above the chart, and its accessible name."),
                     prop("description", "Option<String>").doc("A sentence under the title: what to read from the chart."),
@@ -64,6 +67,11 @@ pub fn LineChartPage() -> Element {
                     Code { source: "charts" }
                     " feature. Web and Android."
                 }
+                Text {
+                    "Text labels sit in evenly spaced slots. Numbers ("
+                    Code { source: "x: vec![0.0, 1.0, 6.0]" }
+                    ") sit at their value on a number axis, so uneven samples keep their gaps."
+                }
             },
             Demo {
                 component: "LineChart",
@@ -101,6 +109,28 @@ pub fn LineChartPage() -> Element {
                         legend: LegendPosition::from(values.str("legend").as_str()),
                         table: ChartTable::from(values.str("table").as_str()),
                         loading: values.str("loading") == "true",
+                    }
+                },
+            }
+            Demo {
+                component: "LineChart",
+                title: "Numeric x",
+                children_text: "",
+                fixed: vec![
+                    "title: \"Temperature\"".to_string(),
+                    format!("x: vec!{HOURS:?}"),
+                    format!("series: vec![Series::new(\"Outside\", {TEMPERATURE:?})]"),
+                    "unit: \"°C\"".to_string(),
+                ],
+                controls: vec![Control::select("curve", ["linear", "smooth", "step"])
+                    .default(theme.chart.curve.as_str())],
+                render: move |values: DemoValues| rsx! {
+                    LineChart {
+                        title: "Temperature",
+                        x: HOURS.to_vec(),
+                        series: vec![Series::new("Outside", TEMPERATURE)],
+                        unit: "°C",
+                        curve: Curve::from(values.str("curve").as_str()),
                     }
                 },
             }

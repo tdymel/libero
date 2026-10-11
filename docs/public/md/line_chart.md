@@ -33,6 +33,11 @@ fn Demo() -> Element {
 `Series::new` takes any numbers, or `Option`s of them: `None`, `NaN` and
 infinity are gaps. `Series::from_rows("Revenue", &rows, |row| row.revenue)` and
 `XValues::from_rows(&rows, |row| row.month.clone())` read a list of records.
+
+`x` is one of two kinds. Text labels (`["Mon", "Tue"]`, `XValues::Categories`) sit
+in evenly spaced slots, whatever they say. Numbers (`vec![0.0, 1.0, 6.0]`,
+`XValues::Numbers`) sit at their value on a number axis, so uneven samples keep
+their gaps; the axis ticks at round values and writes them with `value_format`.
 `.color("success.7")` or `.color("#1e88e5")` sets a series' colour; otherwise it
 takes the theme's palette for its place.
 
@@ -40,7 +45,7 @@ takes the theme's palette for its place.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `x` | `XValues` | required | The x axis, one value per point: labels or numbers. |
+| `x` | `XValues` | required | The x axis, one value per point: labels, one evenly spaced slot each, or numbers, each point at its value. |
 | `series` | `Vec<Series>` | required | The lines, each with one value per x value. `None` is a gap. |
 | `title` | `Option<String>` | | Shown above the chart, and its accessible name. |
 | `description` | `Option<String>` | | A sentence under the title: what to read from the chart. |

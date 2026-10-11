@@ -13,8 +13,10 @@ use crate::{
 /// ```
 #[derive(Clone, Debug, PartialEq)]
 pub enum XValues {
+    /// Labels, one evenly spaced slot each, whatever they say.
     Categories(Vec<String>),
-    /// Numbers, written with the chart's `value_format`, one step apart each.
+    /// Numbers on a value axis: each point sits at its number, so `1, 2, 10` leaves a gap
+    /// of eight steps. Written with the chart's `value_format`; keep them finite.
     Numbers(Vec<f64>),
 }
 
@@ -33,6 +35,14 @@ impl XValues {
 
     pub fn is_empty(&self) -> bool {
         self.len() == 0
+    }
+
+    /// The numbers of a value axis; none for categories.
+    pub(crate) fn numbers(&self) -> &[f64] {
+        match self {
+            Self::Categories(_) => &[],
+            Self::Numbers(values) => values,
+        }
     }
 
     /// Every x value as the chart writes it.

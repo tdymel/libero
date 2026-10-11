@@ -214,6 +214,7 @@ pub fn LineChart(props: LineChartProps) -> Element {
         width,
         height,
         x: x.clone(),
+        x_numbers: props.x.numbers().to_vec(),
         series: series_specs(theme, &props.series),
         curve: props.curve.copied_or(theme.chart.curve),
         grid: props.grid.unwrap_or(theme.chart.grid),
