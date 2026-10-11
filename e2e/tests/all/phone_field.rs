@@ -88,7 +88,8 @@ e2e::scenario!(
     "/phone-field/low",
     room_below_the_picker,
     native: skip("Blitz reports no window resize (todo 2129)"),
-    desktop: skip("no soft keyboard, and wry's window is not resized here")
+    desktop: skip("no soft keyboard, and wry's window is not resized here"),
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     a_picker_the_keyboard_covers_scrolls_back_with_its_list,
