@@ -20,6 +20,10 @@ on:
         description: A test path like `tabs::`, a prefix when it ends in `::`.
         type: string
         required: true
+      env:
+        description: Space-separated NAME=value pairs for the test run.
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -43,6 +47,7 @@ jobs:
       os: ${{ steps.plan.outputs.os }}
       tier: ${{ steps.plan.outputs.tier }}
       filter: ${{ steps.plan.outputs.filter }}
+      env: ${{ steps.plan.outputs.env }}
       runner: ${{ steps.plan.outputs.runner }}
       cache: ${{ steps.plan.outputs.cache }}
       dev: ${{ steps.plan.outputs.dev }}
@@ -56,6 +61,7 @@ jobs:
           PROBE_OS: ${{ inputs.os }}
           PROBE_TIER: ${{ inputs.tier }}
           PROBE_FILTER: ${{ inputs.filter }}
+          PROBE_ENV: ${{ inputs.env }}
 
   # `tier=none`: joins the dev's group below, which cancels their running probe.
   cancel:
@@ -82,6 +88,7 @@ jobs:
       OS: ${{ needs.plan.outputs.os }}
       TIER: ${{ needs.plan.outputs.tier }}
       FILTER: ${{ needs.plan.outputs.filter }}
+      PROBE_ENV: ${{ needs.plan.outputs.env }}
       PY: ${{ needs.plan.outputs.os == 'windows' && 'python' || 'python3' }}
     steps:
       # Before the checkout: LF files as on Linux (`include_str!`, snapshots), no MAX_PATH limit.
@@ -121,6 +128,8 @@ jobs:
         run: |
           logs="$RUNNER_TEMP/probe"
           mkdir -p "$logs"
+          # `plan` validated the pairs: the unquoted expansion splits them, nothing else.
+          if [ -n "$PROBE_ENV" ]; then export $PROBE_ENV; fi
           # The runner's artifacts go to `temp_dir()`: `$TMPDIR` on macOS, `%TMP%` on Windows.
           case "$RUNNER_OS" in
             macOS) export TMPDIR="$RUNNER_TEMP" ;;
