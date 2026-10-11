@@ -27,7 +27,7 @@ pub(crate) trait SaveFileApi {
 }
 
 /// Saves `bytes` as a file named `name`: a download on the web, a save dialog
-/// on the desktop, the share sheet on Android (text only).
+/// on the desktop, the share sheet on Android (a file in Downloads, unless small text).
 ///
 /// Docs: <https://libero-ui.dev/hooks/save-file>
 /// ```rust,no_run

@@ -21,7 +21,7 @@ pub fn SaveFilePage() -> Element {
                 ])
                 .example("An \"Export report.csv\" button that calls the save: the file name is in the button's text, and a status line says \"Saved report.csv\" once it reports `Saved`, since a browser download shows no dialog.")
                 .limits([
-                    "Android shares text only, under about 500 KB; other bytes come back `Failed`.",
+                    "On Android, text up to about 500 KB goes to the share sheet inline. Other bytes are written to Downloads and shared as a file, which stays there; before Android 10 that comes back `Failed`.",
                     "The web cannot tell a finished download from a blocked one: it reports `Saved` once the browser has the file.",
                 ]),
             lead: rsx! {
@@ -29,7 +29,7 @@ pub fn SaveFilePage() -> Element {
                     Code { source: "save_file(name, mime, bytes).await" }
                     " saves bytes your app made, an export or a report, as a file the user keeps. "
                     "The web downloads it, the desktop and Blitz open a save dialog, and Android "
-                    "opens the share sheet for text. It returns a "
+                    "opens the share sheet. It returns a "
                     Code { source: "SaveOutcome" }
                     ": "
                     Code { source: "Saved" }

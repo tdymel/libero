@@ -8,7 +8,7 @@ Description: Saves bytes the app made as a file: a download on the web, a save d
 
 `save_file(name, mime, bytes).await` saves bytes your app made, an export or a
 report, as a file the user keeps. The web downloads it, the desktop and Blitz
-open a save dialog, and Android opens the share sheet for text. It returns a
+open a save dialog, and Android opens the share sheet. It returns a
 `SaveOutcome`: `Saved`, `Shared`, `Cancelled` or `Failed(reason)`.
 
 ## Usage
@@ -62,7 +62,7 @@ pub enum SaveOutcome {
 |---|---|
 | Web | A download named `name`, typed `mime`; `Saved` once the browser has it. Checked by the e2e suite. |
 | Desktop (WebView), Blitz | The system save dialog, `name` filled in; `Saved`, or `Cancelled` when closed. |
-| Android (WebView) | The share sheet with the bytes as text, `name` as its title; `Shared`. Bytes that are not UTF-8, or over about 500 KB, fail. |
+| Android (WebView) | The share sheet; `Shared`. UTF-8 text up to about 500 KB goes inline with `name` as its title, anything else as a file in Downloads from Android 10 on, `Failed` before. |
 | Liveview, fullstack | The browser downloads it through the page. |
 | Server render, no page | `Failed("not supported on this platform")`. |
 
@@ -87,6 +87,8 @@ button's text, and a status line says "Saved report.csv" once it reports
 
 ### Limits
 
-- Android shares text only, under about 500 KB; other bytes come back `Failed`.
+- On Android, text up to about 500 KB goes to the share sheet inline. Other
+  bytes are written to Downloads and shared as a file, which stays there;
+  before Android 10 that comes back `Failed`.
 - The web cannot tell a finished download from a blocked one: it reports
   `Saved` once the browser has the file.

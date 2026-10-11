@@ -11,6 +11,7 @@ use e2e::{Fixture, Suite, Viewport, ax, wait};
 const BARE: &str = "#bare button";
 const LABELLED: &str = "#labelled button";
 const FILE: &str = "#file button";
+const FILES: &str = "#files button";
 
 #[test]
 fn it_meets_the_baseline() {
@@ -235,12 +236,40 @@ fn files_are_shared_where_can_share_takes_them() {
     });
 }
 
+/// Two files reach `navigator.share` together, in one call.
+#[test]
+fn several_files_are_shared_in_one_call() {
+    block_on(async {
+        let fixture = Fixture::open("/share-button", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        page.evaluate(stub_share("ok", true)).await.unwrap();
+        pointer::click(page, FILES).await.unwrap();
+        wait::for_js_true(page, &outcome_is("Shared"), "the share to settle")
+            .await
+            .unwrap();
+        assert_eq!(
+            strings(page, "window.__shared").await,
+            [r#"{"title":"Reports","files":["a.csv text/csv 8","b.txt text/plain 5"]}"#]
+        );
+
+        fixture.console.assert_clean("sharing two files").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 async fn the_share_sheet_opens<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     opens(d, BARE).await
 }
 
 async fn the_share_sheet_opens_on_a_file<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     opens(d, FILE).await
+}
+
+async fn the_share_sheet_opens_on_two_files<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    opens(d, FILES).await
 }
 
 async fn opens<D: Driver>(d: &mut D, button: &str) -> Result<()> {
@@ -265,6 +294,12 @@ e2e::scenario!(
     "/share-button",
     the_share_sheet_opens_on_a_file,
     android_only("3351: the JNI share sheet is Android's")
+);
+e2e::scenario!(
+    android_shares_two_files_through_the_share_sheet,
+    "/share-button",
+    the_share_sheet_opens_on_two_files,
+    android_only("3361: ACTION_SEND_MULTIPLE is Android's")
 );
 
 /// The labelled mode is named by its text, described by `label`, and a disabled one takes no focus.

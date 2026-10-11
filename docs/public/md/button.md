@@ -44,7 +44,7 @@ pill without an accessible name.
 |---|---|---|---|
 | `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color. Under a gradient, its first stop. Unset, a `standard` or `outlined` button on a gradient `Paper`, a coloured or gradient `Header`, a filled, tonal or gradient `Alert` or a `Mark` takes that surface's text color. |
 | `variant` | `Variant` | `filled` | Visual style, from most to least emphasis: `filled`, `tonal`, `elevated`, `outlined`, `standard`. `gradient` fills it from `color` into the theme's second stop. |
-| `gradient` | `Gradient` | - | With `variant: "gradient"`: the second stop and the angle, as `("info", 90)` or `Gradient::default().to("info").deg(90)`. The first stop is `color`. Ignored by the other variants. |
+| `gradient` | `Gradient` | - | With `variant: "gradient"`: the second stop and the angle, as `("info", 90)` or `Gradient::default().to("info").deg(90)`. The first stop is `color`. A literal CSS stop's label contrast is yours to check. Ignored by the other variants. |
 | `radius` | `ThemeAwareValue` | `md` | Corner radius, independent of `size`, or any CSS, e.g. `radius: "0"`. |
 | `size` | `Size` | `md` | Height, padding and font size. |
 | `full_width` | `bool` | `false` | Stretches the button to fill its container. |

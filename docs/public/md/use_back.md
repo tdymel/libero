@@ -25,11 +25,18 @@ fn Steps() -> Element {
     let mut step = use_signal(|| 1);
     // On Android, Back goes one step back while there is one; at the first, it leaves the app.
     use_back(step() > 1, Callback::new(move |()| step -= 1));
-
     rsx! {
         Flex { direction: "column", gap: "sm", align: "flex-start",
             Text { "Step {step} of 3" }
-            Button { onclick: move |_| step += 1, "Next" }
+            Flex { gap: "sm",
+                Button {
+                    variant: "outlined",
+                    disabled: step() == 1,
+                    onclick: move |_| step -= 1,
+                    "Previous"
+                }
+                Button { disabled: step() == 3, onclick: move |_| step += 1, "Next" }
+            }
         }
     }
 }
@@ -43,7 +50,7 @@ pub fn use_back(active: bool, onback: Callback<()>)
 
 | Platform | Support |
 |---|---|
-| Android (WebView) | Back runs `onback`, checked by the e2e suite on the emulator. |
+| Android (WebView) | Back runs `onback`. |
 | Web, desktop, Blitz | Does nothing. |
 
 ## Accessibility
@@ -70,3 +77,5 @@ the same for everyone else.
 - Activated without a tap (on mount, from a timer), the first Back may still
   leave the app: Android's WebView skips a history entry pushed without a user
   gesture.
+- A Back that leaves the hook active (one wizard step back) needs a tap, Enter
+  or Space before the next Back reaches it; two Backs in a row leave the app.

@@ -1,4 +1,4 @@
-//! `ShareButton` icon-only, labelled, with a file, and disabled; `#outcome` echoes the last `onshare`.
+//! `ShareButton` icon-only, labelled, with one file, with two files, and disabled; `#outcome` echoes the last `onshare`.
 
 use dioxus::prelude::*;
 use libero::components::{Flex, ShareButton, Text};
@@ -38,6 +38,17 @@ fn ShareButtonPage() -> Element {
                         bytes: b"a,b\n1,2\n".to_vec(),
                     }],
                     aria_label: "Share the report",
+                    onshare,
+                }
+            }
+            span { id: "files",
+                ShareButton {
+                    title: "Reports",
+                    files: vec![
+                        ShareFile { name: "a.csv".into(), mime: "text/csv".into(), bytes: b"a,b\n1,2\n".to_vec() },
+                        ShareFile { name: "b.txt".into(), mime: "text/plain".into(), bytes: b"hello".to_vec() },
+                    ],
+                    aria_label: "Share both reports",
                     onshare,
                 }
             }

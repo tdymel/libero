@@ -13,5 +13,7 @@ button "Share"
 status [atomic] [live=polite]
 button "Share the report"
 status [atomic] [live=polite]
+button "Share both reports"
+status [atomic] [live=polite]
 button "Share" [disabled]
 status [atomic] [live=polite]

@@ -63,7 +63,7 @@ pub fn ShareButtonPage() -> Element {
                     .doc("Corner radius, independent of `size`."),
                 prop("aria_label", "String")
                     .default("\"Share\"")
-                    .doc("The button's name, such as \"Share this article\". Unset, the localization's, or the `children` text."),
+                    .doc("The button's name, such as \"Share this article\". Unset, the name is the localization's `share`, or the `children` text."),
                 prop("label", "String")
                     .doc("Describes what a press shares, read after the name, such as \"Link to this page\"."),
                 prop("disabled", "bool")
@@ -76,7 +76,7 @@ pub fn ShareButtonPage() -> Element {
             ])],
             accessibility: a11y()
                 .handles([
-                    "The share sheet is the system's own dialog: focus returns to the button when it closes.",
+                    "The button keeps its focus through a share. The sheet is the system's own dialog and announces itself, so the status stays silent.",
                     "Where no share sheet exists, an always-mounted `role=\"status\"` region says \"Copied\" once the link is on the clipboard, or that sharing failed. A cancelled sheet says nothing.",
                     "The icon and the status reset when the pointer or the focus leaves.",
                     "Unset, the icon-only button's `aria_label` is the localization's `share`. The words are `ShareLabels`.",
@@ -112,7 +112,9 @@ pub fn ShareButtonPage() -> Element {
                     Code { source: "copied()" }
                     " and "
                     Code { source: "failed()" }
-                    " follow once it settled, and "
+                    " follow once it settled, "
+                    Code { source: "pending()" }
+                    " says one is still open (a press meanwhile is ignored), and "
                     Code { source: "reset()" }
                     " clears them. "
                     Code { source: "libero::platform::share" }

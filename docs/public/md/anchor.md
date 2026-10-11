@@ -19,7 +19,12 @@ use libero::components::Anchor;
 #[component]
 fn Demo() -> Element {
     rsx! {
-        Anchor { to: "https://dioxuslabs.com", target: "_blank", "Read the Dioxus docs" }
+        Anchor {
+            to: "https://dioxuslabs.com",
+            target: "_blank",
+            new_tab_icon: true,
+            "Read the Dioxus docs"
+        }
     }
 }
 ```

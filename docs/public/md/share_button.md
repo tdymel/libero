@@ -14,8 +14,9 @@ press copies the link, the icon turns into a check and a screen reader hears
 For a share control of your own, build on `use_share()`: `share(ShareData)`
 opens the sheet (call it in the press handler: the browser allows it only
 inside a user action), `outcome()`, `shared()`, `copied()` and `failed()`
-follow once it settled, and `reset()` clears them. `libero::platform::share`
-is the same without the copy fallback.
+follow once it settled, `pending()` says one is still open (a press meanwhile
+is ignored), and `reset()` clears them. `libero::platform::share` is the same
+without the copy fallback.
 
 ## Usage
 
@@ -89,7 +90,7 @@ browser reports both the same way.
 | `color` | `ThemeAwareValue` | - | Accent color. A theme color name or any CSS color. |
 | `size` | `ThemeAwareValue` | `md` | Button size. With `children`, only a size word applies. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
-| `aria_label` | `String` | `"Share"` | The button's name, such as "Share this article". Unset, the localization's, or the `children` text. |
+| `aria_label` | `String` | `"Share"` | The button's name, such as "Share this article". Unset, the name is the localization's `share`, or the `children` text. |
 | `label` | `String` | - | Describes what a press shares, read after the name, such as "Link to this page". |
 | `disabled` | `bool` | `false` | Disables and dims the button. |
 | `onshare` | `EventHandler<ShareOutcome>` | - | Called with the outcome once the share settled: `Shared`, `Copied`, `Cancelled`, `Unsupported` or `Failed(reason)`. |
@@ -106,8 +107,8 @@ glyph is the `IconSlot::Share` slot of an [IconProvider](icon_provider.md).
 
 ### Libero handles
 
-- The share sheet is the system's own dialog: focus returns to the button when
-  it closes.
+- The button keeps its focus through a share. The sheet is the system's own
+  dialog and announces itself, so the status stays silent.
 - Where no share sheet exists, an always-mounted `role="status"` region says
   "Copied" once the link is on the clipboard, or that sharing failed. A
   cancelled sheet says nothing.

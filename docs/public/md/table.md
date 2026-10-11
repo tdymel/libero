@@ -9,8 +9,8 @@ Description: A sortable data table built from a row type and a list of column de
 A data table over your own row type. `data` holds the rows, and each
 `column(..)` in `columns` reads one cell, whose type sets its sort order and
 alignment. Sorting, selection, paging, filters, a column menu, pinned, resized
-and reordered columns, row details and virtual rows are each a prop away, their
-state held by the table or by you.
+and reordered columns, row groups, tree rows, row details, cell editing and
+virtual rows are each a prop away, their state held by the table or by you.
 
 ## Usage
 
@@ -810,6 +810,46 @@ fn Demo() -> Element {
 }
 ```
 
+An `.editable(..)` column edits its cells in place: a double click, a second
+tap, or Enter or F2 opens a field, Enter, Tab or leaving it commits. The table
+keeps no copy of the edit: `onrowupdate` hands you the row with the new value
+set, and you store it.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{RowUpdate, Table, column};
+
+#[derive(Clone, PartialEq)]
+struct User {
+    name: String,
+    age: u32,
+}
+
+#[component]
+fn Demo() -> Element {
+    let mut users = use_signal(|| vec![User { name: "Ana".into(), age: 31 }]);
+
+    rsx! {
+        Table {
+            aria_label: "Users",
+            data: users(),
+            row_key: |u: &User| u.name.clone(),
+            columns: vec![
+                column("Name").value(|u: &User| u.name.clone()).row_header(),
+                column("Age")
+                    .value(|u: &User| u.age)
+                    .editable(|u: &mut User, age: u32| u.age = age)
+                    .validate(|_: &User, age: &u32| match *age <= 150 {
+                        true => Ok(()),
+                        false => Err("Up to 150".into()),
+                    }),
+            ],
+            onrowupdate: move |update: RowUpdate<User>| users.write()[update.index] = update.row,
+        }
+    }
+}
+```
+
 An actions column has no type of its own: a column whose `render` draws the
 buttons. Switch off what makes no sense for it, name each button after its row,
 and keep the header text, it names the column for a screen reader.
@@ -999,9 +1039,9 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `header` | `String` | required | The column's title, the argument to `column(..)`. |
-| `value` | `fn(&T) -> V` | required | Reads one cell out of a row. `V`'s `CellValue` impl sets the sort order and alignment. |
+| `value` | `fn(&T) -> V` | required | Reads one cell out of a row. `V` sets the sort order and alignment. Text sorts as text and aligns left, numbers sort numerically and align right, and `Option<V>` renders `None` empty and sorts it last. Your own type joins them with one `impl CellValue`. |
 | `sortable` | `bool` | `false` | Turns the header into a sort button. |
-| `render` | `fn(&T) -> Element` | `None` | Replaces the cell body. Sorting still uses `value`. |
+| `render` | `fn(&T) -> Element` | `None` | Replaces the cell body. Sorting still uses `value`. Capture signals: a closure that captures a plain value redraws only rows whose data changed. |
 | `format` | `fn(&T) -> String` | `None` | Replaces the cell text, say a price with its currency. Sorting and alignment still follow `value`. |
 | `align` | `CellAlign` | follows the cell type | Overrides the alignment the cell type chose and `column_defaults`. |
 | `width` | `String` | `None` | The column's width, any CSS length. Columns without one share the rest. |
@@ -1011,9 +1051,9 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `header_render` | `fn() -> Element` | `None` | Replaces the header's body, inside the sort button when sortable, so keep it non-interactive then. The header text stays the column's name in `TableSort`. Capture signals, not values: the closure is not compared, so a changed value does not redraw the header. |
 | `of` | `&ColumnType<V>` | `None` | Before `value`: starts the column from a shared `const` type, its alignment, widths and a `format` over the value. `V` must match `value`'s; the column's own settings win. |
 | `row_header` | `bool` | `false` | Renders the column's cells as `th scope="row"`, so a screen reader names each row by it. One per table, usually the first. |
-| `editable` | `fn(&mut T, V)` | `None` | Makes the column's cells editable, turning on `cell_focus`: a double click, or Enter or F2 on the focused cell, opens a text field over the cell's value, Enter or leaving it commits through `onrowupdate`, Escape puts it back. `V: EditValue` parses the text: text, finite numbers, `bool` and `Option<bool>` (a checkbox: Space toggles, an `Option<bool>` one cycles empty, true, false), a `NaiveDate` (`2026-03-01`, the field names its form as a placeholder), and `Option<V>`, empty for `None`. Text that does not parse keeps the field open, marked invalid; leaving the field instead puts the old value back and announces it. The other cells read as read-only. |
+| `editable` | `fn(&mut T, V)` | `None` | Makes the column's cells editable, turning on `cell_focus`: a double click, a second tap, or Enter or F2 on the focused cell, opens a text field over the cell's value, Enter, Tab or leaving it commits through `onrowupdate`, Escape puts it back. `V: EditValue` parses the text: text, finite numbers, `bool` and `Option<bool>` (a checkbox: Space toggles, an `Option<bool>` one cycles empty, true, false), a `NaiveDate` (`2026-03-01`, the field names its form as a placeholder), and `Option<V>`, empty for `None`. Text that does not parse keeps the field open, marked invalid; leaving the field instead puts the old value back and announces it. The other cells read as read-only. |
 | `validate` | `fn(&T, &V) -> Result<(), String>` | `None` | After `editable`: checks a parsed value against the row before the commit; an `Err` keeps the field open, marked invalid. |
-| `editor` | `fn(EditCtx) -> Element` | the text field | After `editable`: draws your own editor in the cell. `EditCtx` gives the start `value` as text, a `label` to name it by, "Edit Age, Ana", and `commit` (the new text) and `cancel`. Focus it on mount; a commit that does not parse or validate keeps it open and sets `error`, the message the table shows under it: mark the field invalid with it, and call `changed` when its text changes to clear it. |
+| `editor` | `fn(EditCtx) -> Element` | the text field | After `editable`: draws your own editor in the cell. `EditCtx` gives the start `value` as text, a `label` to name it by, "Edit Age, Ana", and `commit` (the new text) and `cancel`. Focus it on mount; a commit that does not parse or validate keeps it open and sets `error`, the message the table shows under it: mark the field invalid with it, point its `aria-describedby` at `error_id` while `error` is set, and call `changed` when its text changes to clear it. |
 | `filterable` | `bool` | `true` | Whether the quick filter searches the column's cell text, and whether it takes a column filter. Off for ids and codes that would match by accident. |
 | `options` | `Vec<SelectOption>` | `[]` | Makes it a select column: its filter picks among these options, with the operators is, is not and is any of. A `SelectOption` is a `&str`, or a `(value, label)` pair: values match the raw cell text, before `format`, and are what a `ColumnFilter` holds; labels are shown. The quick filter and sorting still read the cell. |
 | `hideable` | `bool` | `true` | Whether the column menu offers to hide the column. `hidden_columns` still hides it. |
@@ -1195,16 +1235,11 @@ each cell of that row, and names the row's toggle "Details for Cherry".
   keyboard and the move buttons reorder there.
 - On Blitz, a header has no drag grip: columns reorder from the column menu
   there.
-- On a WebView (Android, iOS, desktop), Enter, Space, Ctrl+Enter, Shift+Space
-  and F2 on a `cell_focus` cell do nothing, as the page cannot tell the cell
-  from a widget in it: a header's sort and menu buttons, a row's checkbox and a
-  double click do the same there.
-- An editor's invalid mark says nothing: the reason a `validate` gives is not
-  shown or announced yet.
 - The footer and the leading checkbox, detail and reorder cells carry no
   `aria-colindex`; the leading cells sit at the first places.
-- On Android, the arrows and page keys do not move a `cell_focus` grid's stop
-  or a tree's row in the emulator's WebView (todo 958); a tap does.
+- On Android, the arrows, the page keys, Enter and F2 do not reach a
+  `cell_focus` grid or a tree's rows in the emulator's WebView (todo 958); a
+  tap, a double click and a second tap do.
 - How TalkBack reads a `cell_focus` grid or a treegrid is not checked yet.
 - On Android, the filter popover cannot look into itself, so Tab does not close
   it at its ends and focus lands on the popover rather than its value field;
