@@ -2,7 +2,9 @@ use std::collections::HashSet;
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Flex, NavLink, Sidebar, Tree, TreeNode, TreeNodeRenderArgs, default_tree_render},
+    components::{
+        Box, Flex, NavLink, Sidebar, Tree, TreeNode, TreeNodeRenderArgs, default_tree_render,
+    },
     hooks::{
         ElementHandle, SwipeDirection, SwipeEvent, SwipeOptions, use_back, use_direction, use_swipe,
     },
@@ -45,6 +47,8 @@ fn nav_responsive_sx(open: bool, drawer: bool) -> Sx {
         .top("0")
         .height("100%")
         .width("100%")
+        // `Sidebar` caps itself at half its row: the phone drawer fills the screen.
+        .max_width("none")
         // Overlapping the content, so it needs its own background.
         .background("surface")
         // `auto` would paint below any positioned content; well under `Modal`'s 1000.
@@ -82,6 +86,18 @@ fn nav_responsive_sx(open: bool, drawer: bool) -> Sx {
             .selector(":where([dir=rtl]) &", sx().transform("none"))
             .visibility("visible"),
     )
+}
+
+/// Covers the page behind a drawer narrower than it: a press there closes the drawer.
+fn scrim_sx() -> Sx {
+    sx().position("absolute")
+        .top("0")
+        .left("0")
+        .width("100%")
+        .height("100%")
+        // Right below the drawer's 10.
+        .z_index("9")
+        .background("rgba(0, 0, 0, 0.4)")
 }
 
 /// The closed drawer `px` out from its start edge, the right one under RTL.
@@ -159,6 +175,9 @@ pub fn DocsNav(
             onpointermove: move |event| swipe.onpointermove.call(event),
             onpointerup: move |event| swipe.onpointerup.call(event),
             onpointercancel: move |event| swipe.onpointercancel.call(event),
+            if open() {
+                Box { sx: scrim_sx(), aria_hidden: "true", onclick: move |_| close() }
+            }
             Sidebar {
                 // What the header's `Burger` names in its `aria-controls`.
                 id: "docs-nav",

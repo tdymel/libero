@@ -4,6 +4,7 @@
 
 use e2e::browser::block_on;
 use e2e::passes::contrast::COLOUR_JS;
+use e2e::passes::pointer::{self, Point};
 use e2e::passes::{contrast, keyboard};
 use e2e::{Fixture, Scheme, Viewport, wait};
 
@@ -152,6 +153,85 @@ fn the_drawer_and_the_skip_link_move_focus() {
         .await
         .unwrap();
 
+        close(fixture).await;
+    });
+}
+
+/// Todo 3410: below `Sm` the open drawer fills the screen under the header, and the burger
+/// stays reachable to close it.
+#[test]
+fn the_mobile_drawer_fills_the_screen() {
+    block_on(async {
+        let fixture = Fixture::open_until(
+            "/about/styling",
+            Viewport::Mobile,
+            Scheme::Light,
+            "#docs-main h1",
+        )
+        .await
+        .unwrap();
+        let page = &fixture.page;
+
+        pointer::click(page, BURGER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const r = document.querySelector('nav#docs-nav').getBoundingClientRect(); \
+             return r.x === 0 && Math.abs(r.width - innerWidth) <= 1 \
+             && Math.abs(r.bottom - innerHeight) <= 1; })()",
+            "the drawer to fill the screen below the header",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, BURGER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('button[aria-controls=docs-nav]').getAttribute('aria-expanded') === 'false'",
+            "the burger to close the full-screen drawer",
+        )
+        .await
+        .unwrap();
+        close(fixture).await;
+    });
+}
+
+/// Todo 3410: a drawer narrower than the page closes on a press outside it (Home has the
+/// drawer at every width).
+#[test]
+fn a_press_outside_the_drawer_closes_it() {
+    block_on(async {
+        let fixture = Fixture::open_until("/", Viewport::Desktop, Scheme::Light, "#docs-main *")
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        pointer::click(page, BURGER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const r = document.querySelector('nav#docs-nav').getBoundingClientRect(); \
+             return r.x === 0 && r.width > 200 && r.width < innerWidth / 2; })()",
+            "the drawer to slide in narrower than the page",
+        )
+        .await
+        .unwrap();
+        pointer::click_at(
+            page,
+            Point {
+                x: 1000.0,
+                y: 500.0,
+            },
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector('{BURGER}').getAttribute('aria-expanded') === 'false' \
+                 && document.activeElement === document.querySelector('{BURGER}')"
+            ),
+            "a press outside to close the drawer onto the burger",
+        )
+        .await
+        .unwrap();
         close(fixture).await;
     });
 }
