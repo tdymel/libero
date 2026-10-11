@@ -544,6 +544,18 @@ async fn sweep_must_report(route: &str, family: &'static str, element: &'static 
 }
 
 #[test]
+fn diag_layered() {
+    block_on(async {
+        let fixture = Fixture::open("/broken/layered-text", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let geo: String = page.evaluate("(() => { const t = document.querySelector('#layered'); const rs = [...t.getClientRects()].map(r => [r.left, r.right, r.top, r.bottom].map(Math.round)); const layer = t.previousElementSibling.getBoundingClientRect(); return JSON.stringify({rs, layer: [layer.left, layer.right, layer.top, layer.bottom].map(Math.round), font: getComputedStyle(t).fontFamily, fs: getComputedStyle(t).fontSize}); })()").await.unwrap().into_value().unwrap();
+        let checked = e2e::sweep::check(page, Viewport::Desktop, "/broken/layered-text", "light desktop").await.unwrap();
+        let hits: Vec<String> = checked.hits.iter().map(|h| format!("{}|{}|{}", h.family, h.element, h.value)).collect();
+        panic!("DIAG geo={geo}\nhits={hits:#?}");
+    });
+}
+
+#[test]
 fn the_sweep_reports_each_family() {
     block_on(async {
         sweep_must_report("/broken/contrast", "text-contrast", "#faint", "").await;
