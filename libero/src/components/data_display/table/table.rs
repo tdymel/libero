@@ -1082,12 +1082,6 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
 // Generic shim: only the projection below compiles per `T`.
 #[component]
 pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
-    let grouped = props
-        .row_grouping
-        .as_ref()
-        .map_or(!props.default_row_grouping.is_empty(), |levels| {
-            !levels.is_empty()
-        });
     let state = use_table(TableConfig {
         sort: props.sort,
         default_sort: props.default_sort,
@@ -1190,12 +1184,6 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                  header, else the first cell), so its checkbox is named by the row key. Give \
                  the column text.",
             ));
-        }
-        if props.virtual_row_height.is_some() && grouped {
-            warn(
-                "Table: `virtual_row_height` with `row_grouping` renders every row: the group \
-                 rows break the one row height.",
-            );
         }
         if props.onrowreorder.is_some() && !props.row_key.is_set() {
             warn(
