@@ -228,6 +228,14 @@ e2e::scenario!(
     android: skip("958: roving keys are inert in the emulator's WebView")
 );
 
+macro_rules! flake {
+    ($($name:ident)*) => {
+        $(e2e::scenario!($name, "/table-grid/windowed", reveals, android: skip("x"));)*
+    };
+}
+
+flake!(flake_01 flake_02 flake_03 flake_04 flake_05 flake_06 flake_07 flake_08 flake_09 flake_10 flake_11 flake_12 flake_13 flake_14 flake_15 flake_16 flake_17 flake_18 flake_19 flake_20 flake_21 flake_22 flake_23 flake_24 flake_25 flake_26 flake_27 flake_28 flake_29 flake_30 flake_31 flake_32 flake_33 flake_34 flake_35 flake_36 flake_37 flake_38 flake_39 flake_40 flake_41 flake_42 flake_43 flake_44 flake_45 flake_46 flake_47 flake_48 flake_49 flake_50 flake_51 flake_52 flake_53 flake_54 flake_55 flake_56 flake_57 flake_58 flake_59 flake_60 flake_61 flake_62 flake_63 flake_64 flake_65 flake_66 flake_67 flake_68 flake_69 flake_70 flake_71 flake_72);
+
 /// Enter on the Age header cell sorts it up, Space down; focus stays on the cell.
 async fn header_sorts<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.focus(STOP).await?;
