@@ -77,6 +77,11 @@ def plan() -> None:
 
 
 def names(test: str) -> None:
+    # The whole set as platforms.yml runs it: 500 `--exact` names pass Windows' command-line limit.
+    if test == "::native":
+        sys.stdin.read()
+        print("::native")
+        return
     listed = [line.rstrip("\r")[: -len(": test")] for line in sys.stdin.read().splitlines()
               if line.rstrip("\r").endswith(": test")]
     # A filter ending in `::` is a prefix, as units.py and the e2e runner read it.
