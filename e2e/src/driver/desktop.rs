@@ -194,11 +194,32 @@ impl Desktop {
             "{}.scrollIntoView({{ block: 'nearest', inline: 'nearest' }})",
             element(selector)
         ))?;
-        let rect: Rect = self
-            .bridge
-            .json(&format!("{}.getBoundingClientRect()", element(selector)))?;
+        // A popup is hidden until placed, a frame or more after it mounts: aim where it rests.
+        let rested = format!(
+            "(async () => {{ const e = {}; const a = e.getBoundingClientRect(); \
+             await new Promise((r) => {{ requestAnimationFrame(() => r()); setTimeout(r, 100); }}); \
+             const b = e.getBoundingClientRect(); \
+             return {{ settled: getComputedStyle(e).visibility !== 'hidden' && a.x === b.x && a.y === b.y \
+             && a.width === b.width && a.height === b.height, \
+             rect: {{ x: b.x, y: b.y, width: b.width, height: b.height }} }}; }})()",
+            element(selector)
+        );
+        let started = Instant::now();
+        let rect = loop {
+            let Rested { settled, rect } = self.bridge.json(&format!("await {rested}"))?;
+            if settled || started.elapsed() > Duration::from_secs(2) {
+                break rect;
+            }
+        };
         Ok((rect.x + rect.width / 2.0, rect.y + rect.height / 2.0))
     }
+}
+
+/// An element's rect and whether it is shown and held still across a frame.
+#[derive(serde::Deserialize)]
+struct Rested {
+    settled: bool,
+    rect: Rect,
 }
 
 #[cfg(not(any(target_os = "macos", windows)))]
