@@ -136,7 +136,7 @@ jobs:
           # `plan` validated the pairs: the unquoted expansion splits them, nothing else.
           if [ -n "$PROBE_ENV" ]; then export $PROBE_ENV; fi
           # `shard:N:M` is the Nth of M slices of the units, as the platform legs split them.
-          filters="$FILTER"
+          filters="${FILTER//+/ }"
           case "$FILTER" in
             shard:*) IFS=: read -r _ n m <<< "$FILTER"
               filters=$($PY .github/scripts/shard.py units "$n" "$m" | tr -d '\r') ;;

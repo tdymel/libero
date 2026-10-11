@@ -33,8 +33,8 @@ CACHES = {
     ("windows", "web"): "platforms-windows-web",
     ("windows", "desktop"): "platforms-windows-desktop",
 }
-# Reaches a shell unquoted only after this check.
-FILTER = re.compile(r"^[A-Za-z0-9_:]+$")
+# Reaches a shell unquoted only after this check; `+` joins several paths, as `tabs::+menu::`.
+FILTER = re.compile(r"^[A-Za-z0-9_:+]+$")
 # Space-separated `NAME=value` pairs exported to the probe's test run, e.g. `RUST_TEST_THREADS=1`.
 ENV = re.compile(r"^([A-Z][A-Z0-9_]*=[A-Za-z0-9_.]*)?( [A-Z][A-Z0-9_]*=[A-Za-z0-9_.]*)*$")
 # Names the dev's concurrency group on a shared `ci/probe-*` branch; empty is one group per branch.
