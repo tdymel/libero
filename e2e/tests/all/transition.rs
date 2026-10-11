@@ -59,7 +59,7 @@ e2e::scenario!(
     it_animates_in_on_mount_without_open,
     "/transition-mount",
     enters_on_mount,
-    macos: skip("2862: no transition runs on the runner (Reduce Motion?)")
+    macos: skip("3432: no transition runs on the runner (Reduce Motion?)")
 );
 
 /// Closed it is shrunk to nothing; open it is untransformed, its origin the bottom right corner.
@@ -116,7 +116,7 @@ e2e::scenario!(
     it_animates_a_callers_from_state,
     "/transition-from",
     blurs_from_its_from_state,
-    macos: skip("2862: no transition runs on the runner (Reduce Motion?)"),
+    macos: skip("3432: no transition runs on the runner (Reduce Motion?)"),
     ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 

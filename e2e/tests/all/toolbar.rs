@@ -296,7 +296,7 @@ e2e::scenario!(
     fields_join_the_arrow_order,
     "/toolbar-fields",
     fields_pass_arrows_on_at_their_ends,
-    macos: skip("2862: WKWebView: ArrowLeft at a caret's start keeps the field"),
+    macos: skip("3432: WKWebView: ArrowLeft at a caret's start keeps the field"),
     ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(

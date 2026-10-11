@@ -104,7 +104,7 @@ e2e::scenario!(
     the_column_filters_narrow_a_table,
     "/table/column-filter",
     the_column_filters_narrow_the_rows,
-    macos: skip("2862: WKWebView: ArrowDown does not open a select filter's list"),
+    macos: skip("3432: WKWebView: ArrowDown does not open a select filter's list"),
     ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
@@ -314,7 +314,7 @@ e2e::scenario!(
     "/table/date-filter",
     a_date_filter_narrows_the_rows,
     android: skip("Chromium's typed date segments only"),
-    macos: skip("2862: WKWebView: ArrowDown does not open a select filter's list"),
+    macos: skip("3432: WKWebView: ArrowDown does not open a select filter's list"),
     windows: skip("3422: Shift+Tab never leaves the date input on WebView2"),
     ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
@@ -402,6 +402,6 @@ e2e::scenario!(
     "/table/filter-panel",
     the_filter_panel_edits_every_filter,
     android: skip("958: element identity on the WebView"),
-    macos: skip("2862: WKWebView: ArrowDown does not open a select filter's list"),
+    macos: skip("3432: WKWebView: ArrowDown does not open a select filter's list"),
     ios: skip("3416: the simulator's tap or drag did not drive the page")
 );

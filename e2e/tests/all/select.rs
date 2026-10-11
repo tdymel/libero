@@ -45,7 +45,7 @@ e2e::scenario!(
     a_click_on_a_select_option_picks_it,
     "/select/echo",
     a_click_picks,
-    macos: skip("2862: WKWebView: a click on a listbox option does not register")
+    macos: skip("3432: WKWebView: a click on a listbox option does not register")
 );
 e2e::scenario!(
     the_keyboard_picks_a_select_option,

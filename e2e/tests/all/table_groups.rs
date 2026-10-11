@@ -297,6 +297,6 @@ e2e::scenario!(
     "/table-groups/footer-window",
     the_windowed_footer_holds_and_ends_the_rows,
     android: skip("958: element identity on the WebView"),
-    macos: skip("2862: WKWebView: the wheel never brings the windowed list to rest"),
+    macos: skip("3432: WKWebView: the wheel never brings the windowed list to rest"),
     ios: skip("a touch screen has no wheel")
 );
