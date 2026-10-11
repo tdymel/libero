@@ -12,7 +12,7 @@ inputs:
     description: One cargo cache per job, so jobs building different configurations do not evict each other.
     required: true
   save-cache:
-    description: Save the cargo cache on main. `false` restores only, so rare jobs do not evict ci.yml's caches.
+    description: Save the cargo cache on main and the fixed `ci/probe-*` branches. `false` restores only, so rare jobs do not evict ci.yml's caches.
     default: "true"
 
 runs:
@@ -23,8 +23,11 @@ runs:
         targets: ${{ inputs.targets }}
         components: ${{ inputs.components }}
 
-    # Also caches `~/.cargo/git`, where the git-pinned dioxus and Blitz land.
+    # Also caches `~/.cargo/git`, where the git-pinned dioxus and Blitz land. A branch reads
+    # only its own and main's caches, so other `ci/*` branches restore only (3407).
     - uses: Swatinem/rust-cache@v2
       with:
         shared-key: ${{ inputs.cache-key }}
-        save-if: ${{ inputs.save-cache == 'true' && github.ref == 'refs/heads/main' }}
+        save-if: ${{ inputs.save-cache == 'true' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/ci/probe-')) }}
+        # A red test leaves the dependencies built: most platform jobs are red, and saved nothing.
+        cache-on-failure: true

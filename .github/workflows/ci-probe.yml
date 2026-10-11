@@ -24,11 +24,6 @@ on:
 permissions:
   contents: read
 
-# A newer push to the branch cancels the running probe; `tier=none` cancels without a new one.
-concurrency:
-  group: ci-probe-${{ github.ref }}
-  cancel-in-progress: true
-
 env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: 0
@@ -47,6 +42,7 @@ jobs:
       filter: ${{ steps.plan.outputs.filter }}
       runner: ${{ steps.plan.outputs.runner }}
       cache: ${{ steps.plan.outputs.cache }}
+      dev: ${{ steps.plan.outputs.dev }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -58,12 +54,27 @@ jobs:
           PROBE_TIER: ${{ inputs.tier }}
           PROBE_FILTER: ${{ inputs.filter }}
 
+  # `tier=none`: joins the dev's group below, which cancels their running probe.
+  cancel:
+    needs: plan
+    if: needs.plan.outputs.tier == 'none'
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: ci-probe-${{ github.ref }}-${{ needs.plan.outputs.dev }}
+      cancel-in-progress: true
+    steps:
+      - run: echo "cancelled the running probe of ${{ needs.plan.outputs.dev }}"
+
   probe:
     needs: plan
     if: needs.plan.outputs.tier != 'none'
     name: ${{ needs.plan.outputs.os }} ${{ needs.plan.outputs.tier }} ${{ needs.plan.outputs.filter }}
     runs-on: ${{ needs.plan.outputs.runner }}
     timeout-minutes: 60
+    # The shared `ci/probe-<os>-<tier>` branches (3407): a dev's newer push cancels only their own probe.
+    concurrency:
+      group: ci-probe-${{ github.ref }}-${{ needs.plan.outputs.dev }}
+      cancel-in-progress: true
     env:
       OS: ${{ needs.plan.outputs.os }}
       TIER: ${{ needs.plan.outputs.tier }}
@@ -84,7 +95,8 @@ jobs:
         with:
           targets: ${{ env.TIER == 'web' && 'wasm32-unknown-unknown' || '' }}
           cache-key: ${{ needs.plan.outputs.cache }}
-          save-cache: false
+          # Saved on the `ci/probe-*` branches only, see the setup action.
+          save-cache: true
       - if: env.TIER == 'web'
         uses: ./.github/actions/dx
       # The same pin as ci.yml's `e2e` job: the AX snapshots follow Chrome's tree.
