@@ -5,7 +5,7 @@
 
 A short `::notice` (origin, secure context, capability APIs) and the full one per
 `platform-probe-*.json`, and one for all `outcomes.log` lines under the dir
-(`e2e/tests/all/platform_probe.rs`, `e2e::driver::record_outcome`). Nothing found says so.
+(`e2e/tests/all/platform_probe.rs`, `e2e::driver::record_outcome`), and the macOS desktop driver's `calibration.log`. Nothing found says so.
 """
 import json
 import sys
@@ -36,7 +36,7 @@ def main() -> None:
         print(f"::notice title={escape(probe.stem, True)}::{escape(clip(text, 4000))}")
     outcomes = [
         line
-        for log in (sorted(root.rglob("outcomes.log")) if root.is_dir() else [])
+        for log in (sorted([*root.rglob("outcomes.log"), *root.rglob("calibration.log")]) if root.is_dir() else [])
         for line in log.read_text(encoding="utf-8", errors="replace").splitlines()
         if line.strip()
     ]
