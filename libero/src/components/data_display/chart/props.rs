@@ -1,11 +1,13 @@
 use crate::{
     components::common::{input_from_str, parts_enum},
-    theme::{ChartTable, Curve, LegendPosition},
+    theme::{BarLayout, ChartTable, Curve, LegendPosition, PieLabels},
 };
 
 input_from_str!(Curve);
 input_from_str!(LegendPosition);
 input_from_str!(ChartTable);
+input_from_str!(BarLayout);
+input_from_str!(PieLabels);
 
 parts_enum! {
     /// A chart's inner parts, for its `parts` prop.
@@ -21,6 +23,8 @@ parts_enum! {
         Empty = "empty" => "& > [data-slot='body'] > [data-slot='plot'] > [data-slot='empty']",
         /// The box at the pointer's or the keys' point.
         Tooltip = "tooltip" => "& > [data-slot='body'] > [data-slot='plot'] > [data-slot='tooltip']",
+        /// A donut's middle, holding `PieChart`'s `center`.
+        Center = "center" => "& > [data-slot='body'] > [data-slot='plot'] > [data-slot='center']",
         /// The data table's scroll box, hidden unless `table: "visible"`.
         Table = "table" => "& > [data-slot='table']",
     }
@@ -125,6 +129,10 @@ mod tests {
                 (
                     "tooltip",
                     "& > [data-slot='body'] > [data-slot='plot'] > [data-slot='tooltip']"
+                ),
+                (
+                    "center",
+                    "& > [data-slot='body'] > [data-slot='plot'] > [data-slot='center']"
                 ),
                 ("table", "& > [data-slot='table']"),
             ]

@@ -1,11 +1,16 @@
+mod bar_chart;
 mod data;
 mod engine;
+mod frame;
 mod hit;
 mod legend;
 mod line_chart;
 mod overlay;
+mod pie_chart;
 mod props;
 
+pub use bar_chart::{BarChart, BarChartProps};
 pub use data::{ChartColor, ChartPoint, Series, Slice, Value, ValueFormat, XValues};
 pub use line_chart::{LineChart, LineChartProps};
+pub use pie_chart::{PieChart, PieChartProps};
 pub use props::ChartPart;

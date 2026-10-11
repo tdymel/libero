@@ -192,6 +192,8 @@ fn label_aliases(label: &str) -> &'static [&'static str] {
         "Marquee" => &["ticker", "scrolling text"],
         "QrCode" => &["qr", "qrcode", "barcode"],
         "LineChart" => &["chart", "graph", "plot", "trend"],
+        "BarChart" => &["chart", "column chart", "histogram", "stacked bar"],
+        "PieChart" => &["chart", "donut", "doughnut", "ring chart"],
         "Title" => &["heading", "h1", "headline"],
         "Text" => &["typography", "paragraph", "body text", "font"],
         "Mark" => &["highlight"],

@@ -249,6 +249,8 @@ pub(super) fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::MarqueePage {}, "Marquee"),
                 page(Route::QrCodePage {}, "QrCode"),
                 page(Route::LineChartPage {}, "LineChart"),
+                page(Route::BarChartPage {}, "BarChart"),
+                page(Route::PieChartPage {}, "PieChart"),
             ],
         ),
         group(

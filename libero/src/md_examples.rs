@@ -221,8 +221,10 @@ md_pages! {
     VisuallyHidden => "visually_hidden",
 }
 
-// Behind its feature: the page imports `LineChart`.
+// Behind their feature: the pages import the charts.
 #[cfg(feature = "charts")]
 md_pages! {
+    BarChart => "bar_chart",
     LineChart => "line_chart",
+    PieChart => "pie_chart",
 }

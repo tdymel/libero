@@ -8,7 +8,7 @@ publish = false
 # Same git dioxus as `libero` and `docs`, so the fixture app is built from the
 # identical dioxus the library is.
 dioxus = { git = "https://github.com/DioxusLabs/dioxus", default-features = true, features = ["router"] }
-# `/icon-provider`'s whole-set select (1133); `/line-chart` (3368).
+# `/icon-provider`'s whole-set select (1133); `/line-chart` (3368), `/bar-chart` and `/pie-chart` (3335).
 libero = { path = "../../libero", features = ["icons-tabler", "charts"] }
 pictogram-icons-lucide = "0.5"
 # The desktop driver's bridge (1126): socket thread to the eval loop.

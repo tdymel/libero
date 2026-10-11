@@ -146,6 +146,8 @@ fetch only the file you need.
 - [Marquee](marquee.md): Content that scrolls on its own in an endless loop, with a pause toggle and a still fallback under reduced motion.
 - [QrCode](qr_code.md): Encodes a string as a scalable QR code, rendered as an inline SVG.
 - [LineChart](line_chart.md): Series of values over a shared x axis as lines, with a summary and the data as a table for screen readers.
+- [BarChart](bar_chart.md): Values per category as bars, grouped, stacked or stacked to 100%, upright or lying, with a summary and the data as a table for screen readers.
+- [PieChart](pie_chart.md): Parts of a whole as slices of a pie or a donut, with a summary and the data as a table for screen readers.
 
 ## Typography
 

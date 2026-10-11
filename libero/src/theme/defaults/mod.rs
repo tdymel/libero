@@ -151,8 +151,8 @@ pub use carousel::{
 pub use cascader::CascaderDefaults;
 pub use center::{CENTER_DISPLAY, CenterDefaults};
 pub use chart::{
-    CHART_ASPECT_RATIO, CHART_LEGEND_GAP, CHART_SWATCH_SIZE, ChartDefaults, ChartTable, Curve,
-    LegendPosition,
+    BarLayout, CHART_ASPECT_RATIO, CHART_LEGEND_GAP, CHART_SWATCH_SIZE, ChartDefaults, ChartTable,
+    Curve, LegendPosition, PieLabels,
 };
 #[cfg(feature = "charts")]
 pub(crate) use chart::{ChartInk, chart_hex};

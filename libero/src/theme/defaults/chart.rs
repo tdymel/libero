@@ -1,6 +1,7 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::str_enum::str_enum;
 use crate::theme::{Color, ColorShade, CssVar};
+use crate::tokens::Size;
 #[cfg(any(feature = "charts", test))]
 use crate::{
     theme::{HexColor, Theme},
@@ -46,6 +47,31 @@ str_enum! {
     }
 }
 
+str_enum! {
+    /// How a bar chart sets its series' bars at one x value.
+    pub enum BarLayout {
+        /// Side by side.
+        #[default]
+        Grouped = "grouped",
+        /// On top of each other: the stack is the total.
+        Stacked = "stacked",
+        /// Stacked, every stack scaled to 100%: each bar is its series' share.
+        Percent = "percent",
+    }
+}
+
+str_enum! {
+    /// What a pie chart writes beside each slice.
+    pub enum PieLabels {
+        None = "none",
+        Value = "value",
+        /// The slice's share of the whole.
+        #[default]
+        Percent = "percent",
+        Name = "name",
+    }
+}
+
 /// Theme defaults for `LineChart` and the other charts, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ChartDefaults {
@@ -62,6 +88,14 @@ pub struct ChartDefaults {
     /// A tooltip and a crosshair under the pointer and the keys.
     pub tooltip: bool,
     pub stroke_width: f32,
+    pub bar_layout: BarLayout,
+    /// Corner radius of a bar, a step on the theme's radius scale.
+    pub bar_radius: Size,
+    /// Each bar's value written at its end.
+    pub value_labels: bool,
+    /// A donut's ring width over the pie's radius.
+    pub donut_thickness: f32,
+    pub pie_labels: PieLabels,
     /// The most cells the data table holds; a larger chart keeps only its summary.
     pub table_cell_cap: usize,
     pub legend_gap: &'static str,
@@ -88,6 +122,11 @@ impl ChartDefaults {
         points_limit: 200,
         tooltip: true,
         stroke_width: 2.0,
+        bar_layout: BarLayout::Grouped,
+        bar_radius: Size::Xs,
+        value_labels: false,
+        donut_thickness: 0.4,
+        pie_labels: PieLabels::Percent,
         table_cell_cap: 2_000,
         legend_gap: "16px",
         swatch_size: "12px",
@@ -112,6 +151,21 @@ pub(crate) struct ChartInk {
     pub(crate) label: HexColor,
     pub(crate) axis: HexColor,
     pub(crate) grid: HexColor,
+    /// Parts two pie slices.
+    pub(crate) surface: HexColor,
+}
+
+#[cfg(any(feature = "charts", test))]
+impl ChartInk {
+    /// Black or white, whichever reads better on `fill`: one of them always passes 4.5:1,
+    /// where a theme's dimmed ends may not.
+    pub(crate) fn on(&self, fill: HexColor) -> HexColor {
+        let (black, white) = (HexColor::new(0x000000), HexColor::new(0xFFFFFF));
+        match black.contrast_ratio(fill) >= white.contrast_ratio(fill) {
+            true => black,
+            false => white,
+        }
+    }
 }
 
 #[cfg(any(feature = "charts", test))]
@@ -133,6 +187,7 @@ impl ChartInk {
             axis: muted(ColorShade::S6),
             // Decorative, like a table's row lines.
             grid: muted(ColorShade::S3),
+            surface: theme.surface,
         }
     }
 }
@@ -171,5 +226,17 @@ mod tests {
         assert_ne!(light, dark);
         assert!(light.label.contrast_ratio(Theme::DEFAULT.surface) >= 4.5);
         assert!(dark.label.contrast_ratio(Theme::DARK.surface) >= 4.5);
+    }
+
+    /// A value on a bar reads on every palette colour, in either scheme.
+    #[test]
+    fn text_on_a_bar_reads_on_the_palette() {
+        for theme in [&Theme::DEFAULT, &Theme::DARK] {
+            let ink = ChartInk::of(theme);
+            for (color, shade) in ChartDefaults::DEFAULT.palette {
+                let bar = chart_hex(theme, color, shade);
+                assert!(ink.on(bar).contrast_ratio(bar) >= 4.5, "{color:?} {bar}");
+            }
+        }
     }
 }

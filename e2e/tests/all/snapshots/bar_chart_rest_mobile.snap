@@ -1,0 +1,45 @@
+---
+source: e2e/src/suite.rs
+description: bar_chart at mobile (rest)
+expression: tree
+---
+figure "Sales"
+  description "Bar chart from Q1 to Q3. 2025: 101 to 132, highest at Q2. 2026: 140 to 150, highest at Q3."
+  StaticText "Sales"
+  paragraph
+    StaticText "Bar chart from Q1 to Q3."
+  paragraph
+    StaticText "2025: 101 to 132, highest at Q2."
+  paragraph
+    StaticText "2026: 140 to 150, highest at Q3."
+  table "Sales"
+    caption
+      StaticText "Sales"
+    rowgroup
+      row
+        columnheader "Category"
+          StaticText "Category"
+        columnheader "2025"
+          StaticText "2025"
+        columnheader "2026"
+          StaticText "2026"
+    row
+      rowheader "Q1"
+        StaticText "Q1"
+      cell "120"
+        StaticText "120"
+      cell "140"
+        StaticText "140"
+    row
+      rowheader "Q2"
+        StaticText "Q2"
+      cell "132"
+        StaticText "132"
+      cell
+    row
+      rowheader "Q3"
+        StaticText "Q3"
+      cell "101"
+        StaticText "101"
+      cell "150"
+        StaticText "150"
