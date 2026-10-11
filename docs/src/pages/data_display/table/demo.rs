@@ -11,8 +11,7 @@ use std::time::Duration;
 use libero::chrono::{NaiveDate, TimeDelta};
 use libero::components::{
     Aggregate, Button, Chip, Column, ColumnFilter, ColumnWidths, PinnedColumns, RowFn, RowUpdate,
-    Table,
-    TableColumnsButton, TableDensityButton, TableExportButton, TableFilterButton, column,
+    Table, TableColumnsButton, TableDensityButton, TableExportButton, TableFilterButton, column,
 };
 use libero::hooks::SortableMove;
 use libero::platform::{TimerSubscription, save_file, timer};
