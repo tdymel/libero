@@ -12,7 +12,10 @@ use crate::{
 };
 
 use super::{
-    core::{Picked, SelectCore, SelectPart, SelectionDraw, SelectionRenderArgs, use_picked},
+    core::{
+        Picked, SelectCore, SelectPart, SelectionDraw, SelectionRenderArgs, use_chip_handles,
+        use_picked,
+    },
     select::{SelectFilterArgs, SelectOptionArgs, SelectionArgs, draw_open_rows, use_search_mask},
 };
 
@@ -118,38 +121,72 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
     let disabled = bound.disabled(props.disabled);
     let readonly = props.readonly.unwrap_or(false);
 
+    let chips = use_chip_handles();
     // Stable callbacks, so a closed select's `SelectCore` compares equal and skips.
     let removable = held.clone();
     let remove_change = onchange.clone();
     let onremove = use_callback(move |index: usize| drop_at(&removable, index, &remove_change));
-    // Each chip wrapper carries the id `aria-activedescendant` points at.
+    // Each chip wrapper is a named group the keyboard's focus walks over.
     let picked = held.clone();
     let draw_selection = props.selection;
     let draw = use_callback(move |args: SelectionRenderArgs| {
         let chips = picked.iter().cloned().enumerate().map(|(index, value)| {
+            let focus = args.focus.clone();
+            let label = value.label();
             // Guarded as Backspace is, since a caller's `selection` gets it too.
             let remove = Callback::new(move |_: ()| {
                 if !disabled && !readonly {
+                    if let Some(focus) = &focus {
+                        focus.before_removal(index);
+                    }
                     onremove.call(index);
                 }
             });
-            match &draw_selection {
+            let chip = match &draw_selection {
                 Some(selection) => selection.call(SelectionArgs {
                     value,
                     remove,
                     disabled,
                     readonly,
                 }),
-                None => removable_chip(value.label(), remove, size, disabled || readonly),
-            }
+                None => removable_chip(label.clone(), remove, size, disabled || readonly),
+            };
+            (chip, remove, label)
         });
         rsx! {
-            for (index, chip) in chips.enumerate() {
+            for (index, (chip, remove, label)) in chips.enumerate() {
                 span {
                     key: "{index}",
                     "data-slot": SelectPart::Chip.slot(),
-                    id: "{args.id_prefix}-{index}",
+                    id: args.focus.as_ref().map(|focus| focus.id(index)),
+                    role: "group",
+                    aria_label: "{label}",
+                    tabindex: "-1",
                     "data-cursor": (args.cursor == Some(index)).then_some("true"),
+                    onfocusin: {
+                        let focus = args.focus.clone();
+                        move |_| {
+                            if let Some(focus) = &focus {
+                                focus.entered(index);
+                            }
+                        }
+                    },
+                    onfocusout: {
+                        let focus = args.focus.clone();
+                        move |_| {
+                            if let Some(focus) = &focus {
+                                focus.left(index);
+                            }
+                        }
+                    },
+                    onkeydown: {
+                        let focus = args.focus.clone();
+                        move |event: KeyboardEvent| {
+                            if let Some(focus) = &focus {
+                                focus.key(&event, index, remove);
+                            }
+                        }
+                    },
                     {chip}
                 }
             }
@@ -220,6 +257,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
             value_labels,
             chip_count: held.len(),
             onremove,
+            chips: Some(chips),
             placeholder: props.placeholder,
             name: bound.name().map(str::to_string),
             rules,

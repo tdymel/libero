@@ -18,7 +18,25 @@ pub const ROUTES: Routes = &[
         || rsx! { MultiSelectRefusedPage {} },
     ),
     ("/multi-select/echo", || rsx! { MultiSelectEchoPage {} }),
+    ("/multi-select/chips", || rsx! { MultiSelectChipsPage {} }),
 ];
+
+/// Three chips held, for the keyboard's walk over them (todo 2976).
+#[component]
+fn MultiSelectChipsPage() -> Element {
+    let mut value = use_signal(|| vec![Fruit::Apple, Fruit::Banana, Fruit::Cherry]);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            MultiSelect {
+                label: "Fruit",
+                value: value(),
+                onchange: move |next| value.set(next),
+            }
+            Text { id: "echo", "{value:?}" }
+        }
+    }
+}
 
 /// Cherry held, the value echoed in `#echo`, for the shared web/native scenarios.
 #[component]

@@ -252,6 +252,84 @@ fn a_refused_pick_keeps_the_old_selection() {
     });
 }
 
+const DELETE: keyboard::Key = keyboard::Key {
+    key: "Delete",
+    code: "Delete",
+    vk: 46,
+    text: None,
+};
+
+fn chip_x(label: &str) -> String {
+    format!("[role=group][aria-label='{label}'] button[aria-label='Remove {label}']")
+}
+
+/// Todo 2976: ArrowLeft from the trigger puts real focus on the last chip's x, the arrows
+/// walk, Delete and Backspace remove it with the focus moving on first, and ArrowRight
+/// past the last chip returns to the trigger.
+#[test]
+fn the_chips_take_the_focus_and_remove() {
+    use e2e::passes::focus::wait_for_focus;
+    block_on(async {
+        let fixture = Fixture::open("/multi-select/chips", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let echoes = async |want: &str, during: &str| {
+            wait::for_js_true(
+                page,
+                &format!("document.querySelector('#echo').textContent === {want:?}"),
+                during,
+            )
+            .await
+            .unwrap();
+        };
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+
+        let steps = [
+            (keyboard::ARROW_LEFT, "Cherry"),
+            (keyboard::ARROW_LEFT, "Banana"),
+            (keyboard::ARROW_LEFT, "Apple"),
+            // The first chip is the end of the walk.
+            (keyboard::ARROW_LEFT, "Apple"),
+            (keyboard::ARROW_RIGHT, "Banana"),
+        ];
+        for (key, label) in steps {
+            keyboard::press(page, key).await.unwrap();
+            wait_for_focus(page, &chip_x(label), key.key).await.unwrap();
+        }
+        let described: bool = page
+            .evaluate(format!(
+                "document.querySelector({TRIGGER:?}).hasAttribute('aria-activedescendant')"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(!described, "a chip has the focus, not a descendant");
+
+        // The next chip slides into the removed one's place.
+        keyboard::press(page, DELETE).await.unwrap();
+        echoes("[Apple, Cherry]", "Delete on Banana").await;
+        wait_for_focus(page, &chip_x("Cherry"), "Delete")
+            .await
+            .unwrap();
+
+        keyboard::press(page, keyboard::BACKSPACE).await.unwrap();
+        echoes("[Apple]", "Backspace on the last").await;
+        wait_for_focus(page, &chip_x("Apple"), "Backspace on the last")
+            .await
+            .unwrap();
+
+        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+        wait_for_focus(page, TRIGGER, "ArrowRight past the last")
+            .await
+            .unwrap();
+
+        fixture.console.assert_clean("the chips' focus").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A refused first row: the trigger names the row the list lights (1271).
 #[test]
 fn the_trigger_skips_a_refused_first_row() {

@@ -295,13 +295,14 @@ pub fn MultiSelectPage() -> Element {
                 .key(["PageUp", "PageDown"], "Open: moves the highlight 10 rows, stopping at the first or last.")
                 .key(["Enter", "Space"], "Open: toggles the row and keeps the list open.")
                 .key(["Escape", "Tab", "Alt+Up"], "Open: close the list.")
-                .key(["Left", "Right"], "Move over the chips.")
-                .key(["Backspace", "Delete"], "Removes the chip you are on, or the last one. Inside the search box `Backspace` only edits the query.")
+                .key(["Left", "Right"], "Move the focus over the chips, from the trigger to the last one and back past it.")
+                .key(["Backspace", "Delete"], "Removes the focused chip and moves the focus on, or the last chip from the trigger. Inside the search box `Backspace` only edits the query.")
                 .key(["Letter"], "Jumps to a matching label and opens the list there. Unlike on `Select`, it never changes the value in place, since a pick here toggles.")
                 .handles([
                     "Disabled options are read out but skipped.",
                     "With `searchable` the search box takes over typing and holds the focus while the list is open.",
                     "Android's Back button closes the list as Escape does, rather than the app.",
+                    "Each chip is a group named by its label, and the focus lands on its remove button, \"Remove Cherry\".",
                     "From 200 rows the list draws only the rows in view. The highlighted row stays drawn for `aria-activedescendant`, each row carries `aria-posinset` and `aria-setsize` over the whole list, and a grouped row is described by its heading.",
                     clear_name!("Toppings"),
                 ])

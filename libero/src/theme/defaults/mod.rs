@@ -312,7 +312,7 @@ pub use rating::{
     RATING_GAP, RATING_GAP_SIZE, RATING_GLYPH, RATING_GLYPH_SIZE, RatingDefaults, RatingSizeLevel,
 };
 pub use repository::RepositoryDefaults;
-pub use ripple::{RIPPLE_ANIMATION, RIPPLE_CLIP_ANIMATION, RIPPLE_KEYFRAMES, RIPPLE_STATE};
+pub use ripple::{RIPPLE_ANIMATION, RIPPLE_KEYFRAMES, RIPPLE_STATE};
 pub use scroll_area::{
     SCROLL_AREA_COVER, ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility,
 };

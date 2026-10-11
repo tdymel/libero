@@ -19,10 +19,12 @@ use crate::{
     },
     context::IconSlot,
     hooks::{
-        ElementHandle, PopoverWidth, TYPEAHEAD_RESET, Typeahead, typeahead_match, use_element,
-        use_localization, use_theme, use_typeahead,
+        ElementHandle, PopoverWidth, TYPEAHEAD_RESET, Typeahead, id_selector, typeahead_match,
+        use_element, use_localization, use_theme, use_typeahead,
     },
-    platform::{ElementApi, blur_counts, focus_tab_from, is_tab, logical_key},
+    platform::{
+        ElementApi, PlatformError, blur_counts, focus_selector, focus_tab_from, is_tab, logical_key,
+    },
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{FOCUS_RING_WIDTH, Size, ios_text_floor_sx},
 };
@@ -80,20 +82,23 @@ static MULTI_VALUE_SX: StaticSx = StaticSx::new(|| {
         .min_width("0")
         .hover(sx().cursor("pointer"))
         .user_select("none")
-        // Carries the `aria-activedescendant` id. `min-width: 0` lets a long chip ellipsise.
+        // The focusable wrapper. `min-width: 0` lets a long chip ellipsise.
         .selector(
             format!("& > [data-slot='{}']", SelectPart::Chip.slot()),
-            sx().display("inline-flex").max_width("100%").min_width("0"),
+            sx().display("inline-flex")
+                .max_width("100%")
+                .min_width("0")
+                .outline("none"),
         )
         // A flex line of its own, or the button hangs off the label's baseline.
         .selector(
             "& [data-slot='remove']",
             sx().display("inline-flex").align_items("center"),
         )
-        // The keyboard's chip; the only mark, as the trigger keeps focus. On the drawn chip, for its radius.
+        // A chip without an x takes the focus itself; the ring goes on the drawn chip, for its radius.
         .selector(
             format!(
-                "& > [data-slot='{}'][data-cursor='true'] > *",
+                "& > [data-slot='{}']:focus-visible > *",
                 SelectPart::Chip.slot()
             ),
             focus_ring_sx(),
@@ -138,11 +143,101 @@ static SEARCH_SX: StaticSx = StaticSx::new(|| {
 /// [`SEARCH_SX`]'s padding and bottom border, where a drawn placeholder sits.
 const SEARCH_INSET: &str = "4px 8px 5px";
 
-/// The keyboard's chip, and the id prefix `aria-activedescendant` points into.
+/// The chip holding focus, and the walk over them; a single select has no chips.
 #[derive(Clone, PartialEq)]
 pub(crate) struct SelectionRenderArgs {
     pub cursor: Option<usize>,
-    pub id_prefix: String,
+    pub focus: Option<ChipFocus>,
+}
+
+/// What the chips' handlers touch. A handler runs in the scope that drew its chip, so
+/// the caller owns these, not `SelectCore`.
+#[derive(Clone, Copy, PartialEq)]
+pub(crate) struct ChipHandles {
+    /// The chip holding focus, an index into the selection order, not `rows`.
+    cursor: Signal<Option<usize>>,
+    slot: ElementHandle,
+    trigger: ElementHandle,
+}
+
+pub(crate) fn use_chip_handles() -> ChipHandles {
+    ChipHandles {
+        cursor: use_signal(|| None),
+        slot: use_element(),
+        trigger: use_element(),
+    }
+}
+
+/// A multi-select's chips and its trigger, where real focus walks.
+#[derive(Clone, PartialEq)]
+pub(crate) struct ChipFocus {
+    handles: ChipHandles,
+    id_prefix: String,
+    count: usize,
+}
+
+impl ChipFocus {
+    /// The chip wrapper's id.
+    pub(crate) fn id(&self, index: usize) -> String {
+        format!("{}-{index}", self.id_prefix)
+    }
+
+    /// Focuses the chip's x (its wrapper if it has none), the trigger for `None`.
+    pub(crate) fn focus(&self, index: Option<usize>) {
+        let Some(index) = index else {
+            let _ = self.handles.trigger.focus();
+            return;
+        };
+        let chip = id_selector(&self.id(index));
+        let button = format!("{chip} button");
+        let slot = self.handles.slot;
+        let focused = slot
+            .query_selector(&button)
+            .and_then(|button| button.focus())
+            .or_else(|_| slot.query_selector(&chip).and_then(|chip| chip.focus()));
+        // A WebView queries nothing below a handle.
+        if let Err(PlatformError::Unsupported) = focused {
+            let _ = focus_selector(&button).or_else(|_| focus_selector(&chip));
+        }
+    }
+
+    pub(crate) fn entered(&self, index: usize) {
+        let mut cursor = self.handles.cursor;
+        cursor.set(Some(index));
+    }
+
+    pub(crate) fn left(&self, index: usize) {
+        let mut cursor = self.handles.cursor;
+        if *cursor.peek() == Some(index) {
+            cursor.set(None);
+        }
+    }
+
+    /// Moves focus off chip `index` before it goes: the next chip slides in, else the one before, else the trigger.
+    pub(crate) fn before_removal(&self, index: usize) {
+        if *self.handles.cursor.peek() == Some(index) {
+            self.focus(match index + 1 < self.count {
+                true => Some(index),
+                false => index.checked_sub(1),
+            });
+        }
+    }
+
+    /// The arrows walk, Backspace and Delete remove; Tab, Escape and chords pass.
+    pub(crate) fn key(&self, event: &KeyboardEvent, index: usize, remove: Callback<()>) {
+        let key = logical_key(event);
+        if is_tab(event) || matches!(key, Key::Escape) || !event.modifiers().is_empty() {
+            return;
+        }
+        match key {
+            Key::ArrowLeft => self.focus(Some(index.saturating_sub(1))),
+            Key::ArrowRight => self.focus(Some(index + 1).filter(|next| *next < self.count)),
+            Key::Backspace | Key::Delete => remove.call(()),
+            _ => return,
+        }
+        event.stop_propagation();
+        event.prevent_default();
+    }
 }
 
 /// A skin's drawing may compare equal; a caller's never does, as it can read unseen state.
@@ -223,6 +318,9 @@ field_props! {
         /// An index into the selection order, not `rows`. Without it the chip keys do nothing.
         #[props(default)]
         onremove: Option<EventHandler<usize>>,
+        /// Owned by the caller whose chip handlers use them; a single select has none.
+        #[props(default)]
+        chips: Option<ChipHandles>,
         #[props(default)]
         placeholder: Option<String>,
         /// Shows an x in place of the chevron while something is selected.
@@ -277,10 +375,12 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
 
     // Here, so the skins stay stateless.
     let query = use_signal(String::new);
-    // The keyboard's chip, an index into the selection order, not `rows`.
-    let cursor = use_signal(|| None::<usize>);
+    let own_chips = use_chip_handles();
+    let chip_handles = props.chips.unwrap_or(own_chips);
+    let cursor = chip_handles.cursor;
     let search = use_element();
-    let trigger_element = use_element();
+    let trigger_element = chip_handles.trigger;
+    let chips_element = chip_handles.slot;
     let toolbar_item = use_toolbar_item();
     let row_cache = use_row_cache();
 
@@ -299,7 +399,6 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     let empty = required && !picked.read().selected.iter().any(|selected| *selected);
     let open = SelectOpen {
         state,
-        cursor,
         picked,
         query,
         matches: props.matches,
@@ -446,7 +545,11 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         )
     });
 
-    let id_prefix = format!("{}-chip", state.id());
+    let chip_focus = ChipFocus {
+        handles: chip_handles,
+        id_prefix: format!("{}-chip", state.id()),
+        count: chip_count,
+    };
     let placeholder = props.placeholder.clone().unwrap_or_default();
     let (content, chips) = match multiple {
         true => {
@@ -456,7 +559,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
                 props.selection.map(|selection| {
                     selection.draw.call(SelectionRenderArgs {
                         cursor: chip_cursor,
-                        id_prefix: id_prefix.clone(),
+                        focus: Some(chip_focus.clone()),
                     })
                 }),
                 &props.value_labels,
@@ -485,14 +588,12 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         TriggerKeys {
             open,
             chip_count,
-            chip_cursor,
-            cursor,
+            chips: chip_focus,
             onremove: props.onremove,
         },
         typed,
         TriggerParts {
             element: trigger_element,
-            id_prefix,
             opened,
             searchable,
             multiple,
@@ -503,7 +604,13 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         content,
         attributes,
     );
-    let control = select_control(multiple, value_slot, open, chips, trigger);
+    let control = select_control(
+        multiple,
+        value_slot.element(&chips_element),
+        open,
+        chips,
+        trigger,
+    );
 
     let listbox = select_listbox(Listbox {
         rows,
@@ -631,11 +738,10 @@ fn select_listbox(list: Listbox) -> Element {
     }
 }
 
-/// Opening arms the selected row and drops the chip cursor: one `aria-activedescendant`, one owner.
+/// Opening arms the selected row.
 #[derive(Clone, Copy)]
 struct SelectOpen {
     state: ComboboxState,
-    cursor: Signal<Option<usize>>,
     picked: Signal<Picked>,
     query: Signal<String>,
     matches: Option<Callback<String, Vec<bool>>>,
@@ -658,8 +764,6 @@ impl SelectOpen {
     fn open(self, next: bool) {
         if next && !self.state.is_open() {
             self.state.set_active(Some(self.first_selected()));
-            let mut cursor = self.cursor;
-            cursor.set(None);
         }
         self.state.set_open(next);
     }
@@ -725,18 +829,16 @@ impl SelectTypeahead {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 struct TriggerKeys {
     open: SelectOpen,
     chip_count: usize,
-    chip_cursor: Option<usize>,
-    cursor: Signal<Option<usize>>,
+    chips: ChipFocus,
     onremove: Option<EventHandler<usize>>,
 }
 
 struct TriggerParts {
     element: ElementHandle,
-    id_prefix: String,
     /// The list is open and usable.
     opened: bool,
     searchable: bool,
@@ -760,7 +862,6 @@ fn select_trigger(
 ) -> Element {
     let TriggerParts {
         element,
-        id_prefix,
         opened,
         searchable,
         multiple,
@@ -778,13 +879,6 @@ fn select_trigger(
         true => vec![attr("aria-haspopup", "listbox")],
         false => aria,
     };
-    // Only while closed: the open list is the other owner of this attribute.
-    if let Some(index) = keys.chip_cursor.filter(|_| !opened) {
-        attributes.push(attr(
-            "aria-activedescendant",
-            format!("{id_prefix}-{index}"),
-        ));
-    }
     attributes.extend(extra);
 
     control
@@ -818,7 +912,7 @@ fn select_trigger(
             }
         })
         .event("onkeydown", move |event: KeyboardEvent| {
-            trigger_key(&event, keys, &typed)
+            trigger_key(&event, &keys, &typed)
         })
         // While searchable, focus moves to the search box, whose blur closes instead.
         .event("onblur", move |event: FocusEvent| {
@@ -838,15 +932,15 @@ fn select_trigger(
         )
 }
 
-/// The chips take Left, Right and Backspace; the list the rest. Silent while the search box has focus.
-fn trigger_key(event: &KeyboardEvent, keys: TriggerKeys, typed: &SelectTypeahead) {
+/// ArrowLeft hands focus to the last chip, Backspace drops it; the list the rest. Silent while the search box has focus.
+fn trigger_key(event: &KeyboardEvent, keys: &TriggerKeys, typed: &SelectTypeahead) {
     let TriggerKeys {
         open,
         chip_count,
-        chip_cursor,
-        mut cursor,
+        chips,
         onremove,
     } = keys;
+    let (open, chip_count) = (*open, *chip_count);
     let state = open.state;
     // A chord is the browser's, or Alt+ArrowDown/Up for `ComboboxCore` (APG).
     if open.disabled || open.readonly || navigation_chord(event).is_some() {
@@ -855,27 +949,14 @@ fn trigger_key(event: &KeyboardEvent, keys: TriggerKeys, typed: &SelectTypeahead
     match logical_key(event) {
         Key::ArrowLeft if chip_count > 0 => {
             event.prevent_default();
-            let index = match chip_cursor {
-                Some(index) => index.saturating_sub(1),
-                // From no cursor, the last chip, the one Backspace takes.
-                None => chip_count - 1,
-            };
-            cursor.set(Some(index));
-        }
-        Key::ArrowRight if chip_count > 0 => {
-            event.prevent_default();
-            cursor.set(match chip_cursor {
-                Some(index) if index + 1 < chip_count => Some(index + 1),
-                // Past the last chip is back to no cursor, not a wrap.
-                _ => None,
-            });
+            chips.focus(Some(chip_count - 1));
         }
         Key::Backspace | Key::Delete if chip_count > 0 => {
             let Some(onremove) = onremove else {
                 return;
             };
             event.prevent_default();
-            onremove.call(chip_cursor.unwrap_or(chip_count - 1));
+            onremove.call(chip_count - 1);
         }
         // APG select-only: ArrowUp opens on the selection, Home/End on the first/last enabled row.
         key @ (Key::ArrowUp | Key::Home | Key::End) if !state.is_open() => {
@@ -1194,7 +1275,7 @@ fn SelectValue(
         Some(selection) => {
             let drawn = selection.draw.call(SelectionRenderArgs {
                 cursor: None,
-                id_prefix: String::new(),
+                focus: None,
             });
             rsx! { span { "data-slot": SelectPart::Value.slot(), {drawn} } }
         }

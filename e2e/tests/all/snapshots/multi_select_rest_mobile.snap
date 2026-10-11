@@ -5,8 +5,9 @@ expression: tree
 ---
 LabelText
   StaticText "Fruit"
-StaticText "Cherry"
-button "Remove Cherry"
+group "Cherry"
+  StaticText "Cherry"
+  button "Remove Cherry"
 combobox "Fruit" = Cherry [expanded=false] [haspopup=listbox]
   StaticText "Cherry"
 status [atomic] [live=polite]

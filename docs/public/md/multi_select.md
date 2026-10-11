@@ -204,8 +204,8 @@ The dropdown is portaled out of the field, so its parts take the
 | `PageUp` or `PageDown` | Open: moves the highlight 10 rows, stopping at the first or last. |
 | `Enter` or `Space` | Open: toggles the row and keeps the list open. |
 | `Escape`, `Tab` or `Alt+Up` | Open: close the list. |
-| `Left` or `Right` | Move over the chips. |
-| `Backspace` or `Delete` | Removes the chip you are on, or the last one. Inside the search box `Backspace` only edits the query. |
+| `Left` or `Right` | Move the focus over the chips, from the trigger to the last one and back past it. |
+| `Backspace` or `Delete` | Removes the focused chip and moves the focus on, or the last chip from the trigger. Inside the search box `Backspace` only edits the query. |
 | `Letter` | Jumps to a matching label and opens the list there. Unlike on `Select`, it never changes the value in place, since a pick here toggles. |
 
 ### Libero handles
@@ -214,6 +214,8 @@ The dropdown is portaled out of the field, so its parts take the
 - With `searchable` the search box takes over typing and holds the focus while
   the list is open.
 - Android's Back button closes the list as Escape does, rather than the app.
+- Each chip is a group named by its label, and the focus lands on its remove
+  button, "Remove Cherry".
 - From 200 rows the list draws only the rows in view. The highlighted row stays
   drawn for `aria-activedescendant`, each row carries `aria-posinset` and
   `aria-setsize` over the whole list, and a grouped row is described by its
@@ -247,5 +249,5 @@ starting `size` and `radius`.
 The wrapper, the frame and the trigger carry the field's `data-state` tokens
 `size-<size>`, `radius-<size>`, `disabled`, `required`, `warning`, `error`.
 The trigger adds `multiple`. The rows are `ComboboxOption`s,
-with `active` and `selected`. Each chip sits in a `data-slot="chip"` wrapper that
-carries its id, and the one under the keyboard cursor adds `data-cursor="true"`.
+with `active` and `selected`. Each chip sits in a `data-slot="chip"` wrapper, a
+group that carries its id, and the one holding the focus adds `data-cursor="true"`.
