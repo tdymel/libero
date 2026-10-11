@@ -848,7 +848,8 @@ async fn a_short_menu_keeps_its_height<D: Driver>(d: &mut D, _route: &str) -> Re
 e2e::scenario!(
     a_tall_menu_below_fits_the_room,
     "/menu-tall/below",
-    a_tall_menu_fits_the_room
+    a_tall_menu_fits_the_room,
+    macos: skip("macOS WKWebView: the last item never scrolls into view")
 );
 e2e::scenario!(
     a_tall_menu_above_fits_the_room,

@@ -501,7 +501,8 @@ e2e::scenario!(
 e2e::scenario!(
     a_click_on_a_multi_select_option_keeps_the_list_open,
     "/multi-select/echo",
-    multi_click_keeps_open
+    multi_click_keeps_open,
+    macos: skip("macOS WKWebView: a click on a listbox option does not register")
 );
 e2e::scenario!(
     backspace_in_an_empty_multi_select_drops_the_last_pick,

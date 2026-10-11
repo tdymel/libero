@@ -404,7 +404,8 @@ e2e::scenario!(
     a_plain_capped_table_scrolls_as_a_named_region,
     "/table/sticky-plain",
     a_plain_capped_table_is_a_named_stop,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    macos: skip("macOS WKWebView: a step never scrolls the capped rows")
 );
 
 /// 1156-0b/0c: a row click reports its row; states, stripes, `sm` padding and
