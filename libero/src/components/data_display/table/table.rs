@@ -14,73 +14,61 @@ use crate::{
             inset_focus_ring_sx, min_hit_area_sx, names_itself, use_name_warning, variables,
         },
         form::use_checkbox_look,
-        layout::{
-            ScrollArea, ScrollAreaBase, ScrollAreaHandle, scroll_area_base, static_skeleton_sx,
-            use_box,
-        },
+        layout::{scroll_area_base, use_box},
         overlay::MenuPart,
     },
     hooks::{
         use_debounced_callback, use_element, use_id, use_localization, use_resize_fallback,
         use_theme,
     },
-    platform::{
-        ElementApi, SCROLL_PADDING_BOTTOM_VAR, SCROLL_PADDING_LEFT_VAR, SCROLL_PADDING_RIGHT_VAR,
-        SCROLL_PADDING_TOP_VAR, lays_out_captions, sticks_table_heads, widens_sized_tables,
-    },
+    platform::{ElementApi, sticks_table_heads, widens_sized_tables},
     sx::{StaticSx, Sx, sx},
     theme::{
-        CHECKBOX_BOX_SIZE, CssVar, NamedColorCss, ScrollAxis, Size, TABLE_GROUP, TABLE_PAD_X,
-        TABLE_PADDING_X, TableDefaults, ios_text_floor_sx,
+        CHECKBOX_BOX_SIZE, CssVar, NamedColorCss, Size, TABLE_GROUP, TABLE_PAD_X, TableDefaults,
+        ios_text_floor_sx,
     },
-    utils::warn,
 };
 
 use super::{
     cell_focus::{GridRow, TreeNode, head_levels},
     column::{Column, ColumnDefaults},
-    column_drag::{DropPlan, use_column_drag},
+    column_drag::use_column_drag,
     column_filter::{ColumnFilter, FilterLogic, cell_tests},
-    column_menu::{ColumnMenu, MenuColumn, use_menu_focus},
-    column_order::{moved, order_unpinned, ranked},
-    core::{
-        BodySpec, CaptionSpec, RowFn, SortedRows, TableSort, WidthSpec, active_sort, align_attr,
-        header_specs, lead_count, next_sort, render_body,
-    },
-    csv::shown_csv,
+    column_menu::{MenuColumn, use_menu_focus},
+    core::{BodySpec, RowFn, TableSort, align_attr, lead_count, next_sort, render_body},
     detail::Details,
     edit::RowUpdate,
-    filter::{FilteredRows, QuickFilter, query_words},
-    filter_panel::{FilterPanel, FilterPanelButton, PanelColumn, use_panel_control},
-    filter_popover::FilterTarget,
-    footer::{Foot, FooterRows, aggregate_cell},
+    filter_panel::use_panel_control,
+    footer::{Foot, aggregate_cell},
     grid::{GridRows, GridWindow, HeadGrid, TreeNav, col_indices, use_grid_focus},
-    header_filters::HeaderFilter,
     header_groups::header_rows,
-    memo::Memo,
-    overlay::{EmptyBody, LoadingBar, SKELETON_ROWS},
-    paging::{TablePager, clamp_page, page_rows, use_page_reset, use_page_size_reseed},
-    pinning::{
-        PinRoom, PinSide, PinnedColumns, fit_pins, has_start_pins, pin_columns, pin_edge_at,
-        pinned_extent,
-    },
-    pipeline::{
-        KnownRows, VisibleRow, cut_page, keyed_rows, nest_rows, selection_scope, visible_rows,
-    },
-    resize::{ColumnResize, ColumnWidths, MenuWidth},
+    overlay::{EmptyBody, SKELETON_ROWS},
+    paging::{use_page_reset, use_page_size_reseed},
+    pinning::{PinSide, PinnedColumns, pin_edge_at},
+    pipeline::{VisibleRow, selection_scope},
+    resize::{ColumnResize, ColumnWidths},
     row::{RowContext, RowState, TableRow},
-    row_groups::{GroupAggregates, GroupCells, GroupRow, GroupedRows, group_levels},
+    row_groups::{GroupCells, GroupRow},
     row_reorder::{ROW_ANIMATION, ROW_TRANSFORM, RowReorder},
     selection::{Selection, TreeSelect, group_state, toggle_row},
     sticky::use_edge_height,
-    toolbar::{TableToolbar, TableTools, ToolView},
-    tree::{tree_parents, tree_rows, with_ancestors},
-    use_table::{TableConfig, use_table},
+    toolbar::{TableTools, ToolView},
+    use_table::use_table,
     window::{
         BodyRows, RowWindow, TABLE_MIN_WIDTH_VAR, TABLE_ROW_HEIGHT_VAR, reveal_slot, use_row_focus,
         window_attributes, windowed_min_width, windowed_sx,
     },
 };
+
+mod chrome;
+mod config;
+mod layout;
+mod visible_rows;
+mod warnings;
+
+use chrome::Chrome;
+use layout::{FilterBase, HeaderLayout, Measures, MenuSpec, column_menus, header_layout};
+use visible_rows::{KeptRows, OrderedRows, keep_rows, order_rows, page_window};
 
 /// A draggable header's grip lane, its press target.
 const GRIP_LANE: &str = "24px";
@@ -1227,62 +1215,10 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
 /// Docs: <https://libero-ui.dev/data-display/table>
 // Generic shim: only the projection below compiles per `T`.
 #[component]
-pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
+pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Element {
     let tree = props.parent_key.is_set();
     let groups_too = props.row_grouping.is_some() || !props.default_row_grouping.is_empty();
-    let state = use_table(TableConfig {
-        sort: props.sort,
-        default_sort: props.default_sort,
-        onsortchange: props.onsortchange,
-        selection: props.selection,
-        default_selection: props.default_selection,
-        onselectionchange: props.onselectionchange,
-        page: props.page,
-        default_page: props.default_page,
-        onpagechange: props.onpagechange,
-        page_size: props.page_size,
-        default_page_size: props
-            .default_page_size
-            .or(props.page_sizes.first().copied())
-            .unwrap_or(10),
-        onpagesizechange: props.onpagesizechange,
-        hidden_columns: props.hidden_columns,
-        default_hidden_columns: props.default_hidden_columns,
-        onhiddencolumnschange: props.onhiddencolumnschange,
-        quick_filter: props.quick_filter,
-        default_quick_filter: props.default_quick_filter,
-        onquickfilterchange: props.onquickfilterchange,
-        column_filters: props.column_filters,
-        default_column_filters: props.default_column_filters,
-        oncolumnfilterschange: props.oncolumnfilterschange,
-        filter_logic: props.filter_logic,
-        default_filter_logic: props.default_filter_logic,
-        onfilterlogicchange: props.onfilterlogicchange,
-        pinned_columns: props.pinned_columns,
-        default_pinned_columns: props.default_pinned_columns,
-        onpinnedcolumnschange: props.onpinnedcolumnschange,
-        expanded: props.expanded,
-        default_expanded: props.default_expanded,
-        onexpandedchange: props.onexpandedchange,
-        column_order: props.column_order,
-        default_column_order: props.default_column_order,
-        oncolumnorderchange: props.oncolumnorderchange,
-        column_widths: props.column_widths,
-        default_column_widths: props.default_column_widths,
-        oncolumnwidthschange: props.oncolumnwidthschange,
-        density: props.density,
-        default_density: props.default_density,
-        ondensitychange: props.ondensitychange,
-        row_grouping: props.row_grouping,
-        default_row_grouping: props.default_row_grouping,
-        onrowgroupingchange: props.onrowgroupingchange,
-        expanded_groups: props.expanded_groups,
-        default_expanded_groups: props.default_expanded_groups,
-        onexpandedgroupschange: props.onexpandedgroupschange,
-        expanded_nodes: props.expanded_nodes,
-        default_expanded_nodes: props.default_expanded_nodes,
-        onexpandednodeschange: props.onexpandednodeschange,
-    });
+    let state = use_table(config::table_config(&mut props));
     let panel = use_panel_control();
     let announcer = use_announcer();
     let tools = use_context_provider(|| {
@@ -1294,79 +1230,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let menu_focus = use_menu_focus();
     let drags = props.column_menu;
     let touch = use_hook(|| CopyValue::new(false));
-    use_hook(|| {
-        if props.selectable && !props.row_key.is_set() {
-            warn(
-                "Table: `selectable` without `row_key` keys the selection by row index, so it \
-                 moves to other rows when `data` changes.",
-            );
-        }
-        if props.row_detail.is_set() && !props.row_key.is_set() {
-            warn(
-                "Table: `row_detail` without `row_key` keys the open details by row index, so \
-                 they move to other rows when `data` changes.",
-            );
-        }
-        if props.virtual_row_height.is_some() && props.max_height.is_none() {
-            warn("Table: `virtual_row_height` without `max_height` renders every row.");
-        }
-        if props.onbottomreached.is_some() && props.max_height.is_none() {
-            warn(
-                "Table: `onbottomreached` without `max_height` never fires: the page scrolls, not the table.",
-            );
-        }
-        if props.virtual_row_height.is_some() && props.row_detail.is_set() {
-            warn(
-                "Table: `virtual_row_height` with `row_detail` renders every row: a detail \
-                 row breaks the one row height.",
-            );
-        }
-        let name_column = props.columns.iter().position(|column| column.row_header);
-        let name = props.columns.get(name_column.unwrap_or(0));
-        let unnamed = |row| name.is_some_and(|column| (column.text)(row).is_empty());
-        if let Some(row) = props
-            .data
-            .first()
-            .filter(|row| props.selectable && unnamed(row))
-        {
-            let key = props.row_key.call(row).unwrap_or_else(|| "0".to_string());
-            warn(&format!(
-                "Table: `selectable` row \"{key}\" has no text in its name column (the row \
-                 header, else the first cell), so its checkbox is named by the row key. Give \
-                 the column text.",
-            ));
-        }
-        if props.onrowreorder.is_some() && !props.row_key.is_set() {
-            warn(
-                "Table: `onrowreorder` without `row_key` keys the rows by index, so a moved row \
-                 is rebuilt and its handle loses the focus.",
-            );
-        }
-        if props.resizable_columns && !props.column_menu {
-            warn(
-                "Table: `resizable_columns` without `column_menu` resizes by drag only, out of \
-                 reach of the keyboard and of a pointer that cannot drag (WCAG 2.5.7).",
-            );
-        }
-        let editable = props.columns.iter().any(|column| column.edit.is_some());
-        if editable && props.onrowupdate.is_none() {
-            warn("Table: an editable column without `onrowupdate` drops every edit.");
-        }
-        if tree {
-            let ignored = [
-                (
-                    !props.row_key.is_set(),
-                    "without `row_key` matches parents by row index",
-                ),
-                (groups_too, "ignores `row_grouping`"),
-                (props.row_detail.is_set(), "ignores `row_detail`"),
-                (props.onrowreorder.is_some(), "does not reorder rows"),
-            ];
-            for (_, what) in ignored.into_iter().filter(|(on, _)| *on) {
-                warn(&format!("Table: `parent_key` {what}."));
-            }
-        }
-    });
+    use_hook(|| warnings::warn_misuse(&props, tree, groups_too));
     let instructions_id = use_id();
     // The shown rows, which a reorder's slots map to.
     let mut shown_rows = use_hook(|| CopyValue::new(Vec::<VisibleRow>::new()));
@@ -1414,17 +1278,11 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         move |()| announcer.say((labels.results)(*filtered_count.peek())),
         500,
     );
-    let filter_target = |index: usize| {
-        let column = &props.columns[index];
-        column.filterable.then(|| FilterTarget {
-            column: column.header.clone(),
-            kind: column.filter_kind,
-            options: column.options.clone(),
-            slice: state.column_filters,
-            labels,
-            size,
-            onfilter,
-        })
+    let filter = FilterBase {
+        state,
+        labels,
+        size,
+        onfilter,
     };
     let bounded = props.max_height.is_some();
     let (head_element, mut head) = use_edge_height(bounded);
@@ -1449,17 +1307,8 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .prepare();
     let root_box = use_box().framework_sx(&TABLE_ROOT_SX).prepare();
     let look = use_checkbox_look(size, props.selectable);
-    let mut sorted = use_hook(|| CopyValue::new(SortedRows::<T>::default()));
-    let mut filtered = use_hook(|| CopyValue::new(FilteredRows::<T>::default()));
-    let mut footer_rows = use_hook(|| CopyValue::new(FooterRows::<T>::default()));
-    let mut grouped_rows = use_hook(|| CopyValue::new(GroupedRows::<T>::default()));
-    let mut group_aggregates = use_hook(|| CopyValue::new(GroupAggregates::<T>::default()));
-    let mut group_seeded = use_hook(|| CopyValue::new(false));
-    let mut tree_parents_memo =
-        use_hook(|| CopyValue::new(Memo::<Rc<[String]>, Rc<[usize]>>::default()));
-    let mut nodes_seeded = use_hook(|| CopyValue::new(false));
+    let caches = visible_rows::use_row_caches::<T>();
     let mut row_context = use_hook(|| CopyValue::new((0u64, None::<Rc<RowContext<T>>>)));
-    let mut known_rows = use_hook(|| CopyValue::new(KnownRows::<T>::None));
     let mut pin_edges = use_signal(|| [None::<f64>; 2]);
     let pin_edge = use_callback(move |(side, width): (PinSide, f64)| {
         let at = usize::from(side == PinSide::End);
@@ -1473,101 +1322,29 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             pin_widths.write().insert(header, width);
         }
     });
-    let mut area_width = use_signal(|| None::<f64>);
-    let mut lead_px = use_signal(|| 0.0);
+    let area_width = use_signal(|| None::<f64>);
+    let lead_px = use_signal(|| 0.0);
 
-    let widths = state.column_widths.read();
-    let mut headers = header_specs(
-        &props.columns,
-        &props.column_defaults,
-        &state.hidden_columns.read(),
-        WidthSpec {
-            resizable: props.resizable_columns,
-            widths: &widths,
-            preview: resize.and_then(|_| preview()),
-        },
-    );
-    let pinned = state.pinned_columns.read();
     let has_detail = props.row_detail.is_set() && !tree;
     let has_reorder = props.onrowreorder.is_some();
-    let leads: Vec<String> = [
-        has_reorder.then(reorder_width),
-        has_detail.then(detail_width),
-        props.selectable.then(|| select_width(size)),
-    ]
-    .into_iter()
-    .flatten()
-    .collect();
-    let lead_width = match leads.as_slice() {
-        [] => None,
-        [one] => Some(one.clone()),
-        many => Some(format!("calc({})", many.join(" + "))),
-    };
-    // The leading columns stay pinned with the start pins configured, however many the room releases.
-    let lead_pins = has_start_pins(&headers, &pinned);
-    let tracks_area = !(pinned.start.is_empty() && pinned.end.is_empty());
-    let fitted = fit_pins(
-        &headers,
-        &pinned,
-        &PinRoom {
-            area: area_width(),
-            lead: lead_px(),
-            widths: &pin_widths.read(),
+    let warned = use_hook(|| CopyValue::new(Vec::<String>::new()));
+    let header = header_layout(
+        &props,
+        state,
+        resize.and_then(|_| preview()),
+        size,
+        (has_detail, has_reorder),
+        Measures {
+            area_width,
+            lead_px,
+            pin_widths,
+            pin_edges,
+            warned,
         },
+        drags.then_some(column_drag),
     );
-    let (mut layout, unknown) = pin_columns(&mut headers, &fitted, lead_width.as_deref());
-    let column_order = state.column_order.read();
-    order_unpinned(&headers, &mut layout, &column_order);
-    if drags {
-        let plan = DropPlan {
-            ranked: ranked(&headers, &column_order)
-                .into_iter()
-                .map(|index| headers[index].header.clone())
-                .collect(),
-            unpinned: layout
-                .iter()
-                .filter(|&&index| headers[index].pin.is_none())
-                .map(|&index| (index, headers[index].header.clone()))
-                .collect(),
-        };
-        let mut current = column_drag.plan;
-        if *current.peek() != plan {
-            current.set(plan);
-        }
-    }
-    let pins_start = lead_pins;
-    let pins_select = props.selectable && pins_start;
-    let pins = pins_start || headers.iter().any(|spec| spec.pin.is_some());
-    let edges = pin_edges();
-    let mut pinned_pads = [(PinSide::Start, edges[0]), (PinSide::End, edges[1])]
-        .map(|(side, measured)| pinned_extent(&headers, side, measured));
-    // Released start pins leave the leading columns, which a focus scroll still clears.
-    let start_released = pins_start
-        && !headers.iter().any(|spec| {
-            spec.pin
-                .as_ref()
-                .is_some_and(|pin| pin.side == PinSide::Start)
-        });
-    if start_released {
-        pinned_pads[0] = lead_width.clone();
-    }
-    let lead_probe = lead_width.clone().filter(|_| lead_pins);
-    let mut warned = use_hook(|| CopyValue::new(Vec::<String>::new()));
-    if !unknown.is_empty() && *warned.peek() != unknown {
-        warn(&format!(
-            "Table: pinned columns {unknown:?} sit past a pinned column without `width`, so \
-             their offset is unknown and they overlap it."
-        ));
-        warned.set(unknown);
-    }
-    let active = active_sort(&headers, &state.sort.read(), props.multi_sort);
-    let group_rows = layout
-        .iter()
-        .map(|&index| headers[index].groups.len())
-        .max()
-        .unwrap_or(0);
-    let head_rows = group_rows + 1 + usize::from(props.header_filters);
-    let menu_columns: Rc<[MenuColumn]> = headers
+    let menu_columns: Rc<[MenuColumn]> = header
+        .headers
         .iter()
         .zip(&props.columns)
         .map(|(spec, column)| MenuColumn {
@@ -1588,133 +1365,74 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         });
     }
     let menus = match props.column_menu {
-        true => {
-            let columns = menu_columns;
-            let active = Rc::new(active.clone());
-            (0..headers.len())
-                .map(|index| {
-                    // The next shown column, else the one before.
-                    let at = layout.iter().position(|&shown| shown == index);
-                    let neighbour = at.and_then(|at| {
-                        layout
-                            .get(at + 1)
-                            .or_else(|| at.checked_sub(1).and_then(|before| layout.get(before)))
-                            .copied()
-                    });
-                    rsx! {
-                        ColumnMenu {
-                            index,
-                            columns: columns.clone(),
-                            // A move swaps it with the next shown unpinned column: one place over.
-                            moves: (
-                                moved(&headers, &column_order, index, false).zip(at),
-                                moved(&headers, &column_order, index, true)
-                                    .zip(at)
-                                    .map(|(next, at)| (next, at + 2)),
-                            ),
-                            order: state.column_order,
-                            width: resize.zip(headers[index].resize).map(|(resize, limits)| MenuWidth {
-                                resize,
-                                limits,
-                                width: widths.get(&headers[index].header).copied(),
-                                announcer,
-                            }),
-                            active: active.clone(),
-                            sort: state.sort,
-                            multi_sort: props.multi_sort,
-                            hidden: state.hidden_columns,
-                            pinned: state.pinned_columns,
-                            grouping: state.row_grouping,
-                            labels,
-                            size,
-                            parts: props.column_menu_parts.clone(),
-                            filter: filter_target(index),
-                            panel: props.filter_panel.then_some(panel),
-                            focus: menu_focus,
-                            neighbour,
-                            announcer,
-                        }
-                    }
-                })
-                .collect()
-        }
+        true => column_menus(
+            &props,
+            &header,
+            MenuSpec {
+                columns: menu_columns,
+                resize,
+                filter,
+                panel,
+                focus: menu_focus,
+                announcer,
+            },
+        ),
         false => Vec::new(),
     };
-    let filter_cells = props.header_filters.then(|| {
-        (0..headers.len())
-            .map(|index| {
-                filter_target(index).map(|target| {
-                    rsx! {
-                        HeaderFilter { key: "{target.column}", target }
-                    }
-                })
-            })
-            .collect::<Vec<_>>()
-    });
+    let filter_cells = props
+        .header_filters
+        .then(|| layout::filter_cells(&props.columns, filter));
+    let HeaderLayout {
+        headers,
+        layout,
+        lead_width,
+        tracks_area,
+        pins_start,
+        pins_select,
+        pins,
+        pinned_pads,
+        lead_probe,
+        active,
+        group_rows,
+        head_rows,
+        ..
+    } = header;
 
-    let (data, keys) = keyed_rows(
-        &known_rows.peek(),
-        props.data,
-        props.row_key.is_set(),
-        |row| props.row_key.call(row),
+    let columns = Rc::new(std::mem::take(&mut props.columns));
+    let kept_rows = keep_rows(
+        &mut props,
+        caches,
+        state,
+        &columns,
+        |index| headers[index].hidden,
+        &tests,
     );
-    known_rows.set(Some((data.clone(), props.row_key.is_set(), keys.clone())));
-    // The quick filter searches the shown, filterable columns.
-    let words = query_words(&state.quick_filter.read());
-    let searched: Vec<usize> = props
-        .columns
-        .iter()
-        .zip(&headers)
-        .enumerate()
-        .filter(|(_, (column, spec))| column.filterable && !spec.hidden)
-        .map(|(index, _)| index)
-        .collect();
-    let panel_columns: Vec<PanelColumn> = props
-        .columns
-        .iter()
-        .filter(|column| column.filterable)
-        .map(|column| PanelColumn {
-            header: column.header.clone(),
-            kind: column.filter_kind,
-            options: column.options.clone(),
-        })
-        .collect();
-    let kept = match props.manual_filter {
-        true => None,
-        false => filtered.write().kept(
-            &data,
-            &props.columns,
-            &searched,
-            &words,
-            &tests,
-            state.filter_logic.read(),
-        ),
-    };
-    let parents = tree.then(|| {
-        let fresh = |known: &Rc<[String]>| Rc::ptr_eq(known, &keys);
-        let compute = || {
-            let named: Vec<Option<String>> = data
-                .iter()
-                .map(|row| props.parent_key.call(row).flatten())
-                .collect();
-            let (parent, unknown) = tree_parents(&keys, &named);
-            if unknown > 0 {
-                warn(&format!(
-                    "Table: {unknown} rows name a `parent_key` no row has, so they show as roots."
-                ));
-            }
-            (keys.clone(), Rc::<[usize]>::from(parent))
-        };
-        tree_parents_memo.write().get(fresh, compute).clone()
-    });
-    // A filtered tree keeps the kept rows' ancestors, open so the kept rows show.
-    let (kept, opened) = match (kept, &parents) {
-        (Some(kept), Some(parents)) => {
-            let (shown, opened) = with_ancestors(&kept, parents);
-            (Some(Rc::new(shown)), Some(opened))
-        }
-        (kept, _) => (kept, None),
-    };
+    let OrderedRows {
+        mut order,
+        results,
+        footer,
+        grouped,
+        groups,
+        tree_levels,
+    } = order_rows(
+        &props,
+        caches,
+        state,
+        &kept_rows,
+        &columns,
+        &active,
+        (&layout, labels),
+        tools,
+    );
+    filtered_count.set(results);
+    let KeptRows {
+        data,
+        keys,
+        words,
+        kept,
+        parents,
+        ..
+    } = kept_rows;
     let selection = look.map(|look| Selection {
         slice: state.selection,
         scope: selection_scope(&keys, kept.as_deref().map(Vec::as_slice)),
@@ -1761,118 +1479,14 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .and_then(|selection| selection.tree.as_ref())
         .map(|tree| tree.mixed(|row| selected_rows.contains(&keys[row])).into());
     // A row's checkbox and toggle are named by its row header, else its first cell.
-    let name_column = props
-        .columns
+    let name_column = columns
         .iter()
         .position(|column| column.row_header)
         .unwrap_or(0);
-    let columns = Rc::new(props.columns);
     let editable = columns.iter().any(|column| column.edit.is_some());
     let cell_focus = props.cell_focus || editable;
-    // Filter, sort, then page; a `manual_*` stage is the caller's. Filtering
-    // the sorted order keeps each stage's cache apart: a keystroke never re-sorts.
-    let sorted_order = match props.manual_sort {
-        true => (0..data.len()).collect(),
-        false => sorted.write().order(&data, &columns, &active),
-    };
-    let kept_rows = kept.as_deref().map(Vec::as_slice);
-    let mut order = visible_rows(sorted_order, kept_rows);
-    // The rows passing the filters, group rows not counted.
-    let results = order.len();
-    filtered_count.set(results);
-    let footer = footer_rows
-        .write()
-        .cells(&data, &columns, kept_rows, &labels);
-    // Groups nest the sorted rows; the footer above and an export count the rows alone.
-    let levels = match tree {
-        true => Vec::new(),
-        false => group_levels(&columns, &state.row_grouping.read()),
-    };
-    let grouped = !levels.is_empty();
-    let texts = grouped.then(|| grouped_rows.write().texts(&data, &columns, &levels));
-    let leaves = texts.as_ref().map(|_| order.clone());
-    if props.toolbar.is_some() {
-        let (data, columns, shown, order, texts, parents) = (
-            data.clone(),
-            columns.clone(),
-            layout.clone(),
-            order.clone(),
-            texts.clone(),
-            parents.clone(),
-        );
-        let mut export = tools.export;
-        export.set(Some(Rc::new(move || {
-            let rows = match (&texts, &parents) {
-                (Some(texts), _) => nest_rows(&order, texts, &|_| true, "").0,
-                (_, Some(parents)) => {
-                    let leaves: Vec<usize> = order.iter().filter_map(|row| row.data()).collect();
-                    tree_rows(&leaves, parents, &|_| true, &|_| false).0
-                }
-                _ => order.clone(),
-            };
-            (shown_csv(&columns, &shown, &data, &rows), order.len())
-        })));
-    }
-    let groups = match (texts, leaves) {
-        (Some(texts), Some(leaves)) => {
-            // The first levels open the first time there are rows to group.
-            if !*group_seeded.peek() && !data.is_empty() {
-                group_seeded.set(true);
-                let depth = props.default_group_expansion;
-                if depth > 0 && !state.expanded_groups.is_controlled() {
-                    let every: Vec<VisibleRow> = (0..data.len()).map(VisibleRow::Data).collect();
-                    let mut open = state.expanded_groups.peek();
-                    for group in nest_rows(&every, &texts, &|_| true, "").1 {
-                        if group.depth < depth && !open.contains(&group.id) {
-                            open.push(group.id);
-                        }
-                    }
-                    state.expanded_groups.seed(open);
-                }
-            }
-            let open = state.expanded_groups.read();
-            let (rows, groups) =
-                grouped_rows
-                    .write()
-                    .rows(texts, &leaves, &open, labels.group_empty);
-            order = rows;
-            groups
-        }
-        _ => Rc::from([]),
-    };
-    // A tree nests the sorted rows under their parents, the first levels open once.
-    let tree_levels = parents.as_ref().map(|parents| {
-        if !*nodes_seeded.peek() && !data.is_empty() {
-            nodes_seeded.set(true);
-            let depth = props.default_node_expansion;
-            if depth > 0 && !state.expanded_nodes.is_controlled() {
-                let every: Vec<usize> = (0..data.len()).collect();
-                let mut open = state.expanded_nodes.peek();
-                let levels = tree_rows(&every, parents, &|_| true, &|_| false).1;
-                for (index, level) in levels.iter().enumerate() {
-                    let opens =
-                        level.is_some_and(|level| level.depth < depth && level.children > 0);
-                    if opens && !open.contains(&keys[index]) {
-                        open.push(keys[index].clone());
-                    }
-                }
-                state.expanded_nodes.seed(open);
-            }
-        }
-        let open: HashSet<String> = state.expanded_nodes.read().iter().cloned().collect();
-        let leaves: Vec<usize> = order.iter().filter_map(|row| row.data()).collect();
-        let forced = |row: usize| opened.as_ref().is_some_and(|opened| opened[row]);
-        let lazy = |row: usize| props.row_has_children.call(&data[row]) == Some(true);
-        let (rows, levels) = tree_rows(
-            &leaves,
-            parents,
-            &|row| forced(row) || open.contains(&keys[row]),
-            &lazy,
-        );
-        order = rows;
-        levels
-    });
-    let group_values = group_aggregates.write().values(&data, &columns, &groups);
+    let mut aggregates = caches.aggregates;
+    let group_values = aggregates.write().values(&data, &columns, &groups);
     let current = (selection.clone(), groups.clone(), keys.clone());
     let select_group = use_callback(move |(id, on): (String, bool)| {
         let (selection, groups, keys) = &current;
@@ -1903,33 +1517,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             handler.call(());
         }
     });
-    // A windowed table counts every row, the other pages' too (APG grid, todo 1421).
-    let mut counted = (0, order.len());
-    let pager = paginated.then(|| {
-        // Group rows take places on a page as the rows do.
-        let total = match props.manual_pagination {
-            true => props.row_count.unwrap_or(order.len()),
-            false => order.len(),
-        };
-        let page_size = state.page_size.read().max(1);
-        let page = clamp_page(total, state.page.read(), page_size);
-        let shown = page_rows(total, page, page_size);
-        if !props.manual_pagination {
-            cut_page(&mut order, shown.clone());
-        }
-        counted = (shown.start, total.max(shown.start + order.len()));
-        rsx! {
-            TablePager {
-                state,
-                total,
-                page,
-                page_size,
-                page_sizes: props.page_sizes,
-                caption: props.caption.clone(),
-                size,
-            }
-        }
-    });
+    let (pager, counted) = page_window(&mut props, state, paginated, size, &mut order);
     if has_reorder {
         shown_rows.set(order.clone());
     }
@@ -1984,17 +1572,17 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         span: layout.len().max(1) + lead_columns,
         colindex: colindex.clone(),
         name_column,
-        row_attrs: props.row_attrs,
-        row_states: props.row_states,
+        row_attrs: std::mem::take(&mut props.row_attrs),
+        row_states: std::mem::take(&mut props.row_states),
         row_detail: if tree {
             RowFn::default()
         } else {
-            props.row_detail
+            std::mem::take(&mut props.row_detail)
         },
         row_has_detail: if tree {
             RowFn::default()
         } else {
-            props.row_has_detail
+            std::mem::take(&mut props.row_has_detail)
         },
         toggle_node: tree.then_some(toggle_node),
         onrowclick: props.onrowclick,
@@ -2248,7 +1836,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             }
         });
     }));
-    let mut attributes = props.attributes;
+    let mut attributes = std::mem::take(&mut props.attributes);
     // Only while no row shows: some readers hold back a busy subtree's rows.
     if skeleton.is_some() {
         attributes.push(attr("aria-busy", "true"));
@@ -2292,16 +1880,23 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             let order: Rc<[VisibleRow]> = order.into();
             row_focus.show(head_rows + first, order.clone());
             // Linus (TR3): a collapse above the focused row leaves it where it was.
-            if tree {
-                let stop = grid_stop.and_then(|stop| match stop.row {
-                    GridRow::Body(row) => order
-                        .iter()
-                        .position(|&at| at == row)
-                        .map(|slot| (row, slot)),
-                    GridRow::Head(_) => None,
-                });
-                grid_focus.hold_in_view(stop, row_height);
-            }
+            // A tree's stop row follows a collapse to its parent; another table's focused row.
+            let focused = match tree {
+                true => grid_stop
+                    .filter(|_| grid_focus.inside())
+                    .and_then(|stop| match stop.row {
+                        GridRow::Body(row) => Some(row),
+                        GridRow::Head(_) => None,
+                    }),
+                false => *row_focus.focused.peek(),
+            };
+            let focused = focused.and_then(|row| {
+                order
+                    .iter()
+                    .position(|&at| at == row)
+                    .map(|slot| (row, slot))
+            });
+            grid_focus.hold_in_view(focused, row_height);
             BodyRows::Window(RowWindow {
                 order,
                 first,
@@ -2360,54 +1955,15 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         ),
     };
 
-    let described_by = props.caption.as_ref().map(|_| caption_id());
-    let mut caption = props.caption.map(|text| CaptionSpec {
-        text,
-        id: caption_id(),
-    });
-    // The region takes the table's name: its caption, else the caller's label.
-    let region_name: Vec<Attribute> = match &caption {
-        Some(spec) => vec![attr("aria-labelledby", spec.id.clone())],
-        None if scrolls => attributes
-            .iter()
-            .filter(|a| matches!(a.name, "aria-label" | "aria-labelledby"))
-            .cloned()
-            .collect(),
-        None => Vec::new(),
-    };
-    // Without a caption, the table's own name tells its quick filter apart (todo 1376).
-    let text_attr = |name: &str| {
-        attributes
-            .iter()
-            .find(|a| a.name == name)
-            .and_then(|a| match &a.value {
-                dioxus::core::AttributeValue::Text(text) => Some(text.clone()),
-                _ => None,
-            })
-    };
-    let (described_by, table_label) = match described_by {
-        Some(id) => (Some(id), None),
-        None => match text_attr("aria-labelledby") {
-            Some(ids) => (Some(ids), None),
-            None => (None, text_attr("aria-label")),
-        },
-    };
+    let mut names = chrome::names(
+        props.caption.take(),
+        caption_id(),
+        &mut attributes,
+        scrolls,
+        bounded,
+    );
 
-    // Blitz skips a `<caption>`, and a capped table's would scroll away over its
-    // sticky header: a div before the table then, naming it.
-    let before = if lays_out_captions() && !bounded {
-        None
-    } else {
-        caption.take()
-    };
-    if let Some(spec) = &before
-        && !names_itself(&attributes)
-    {
-        attributes.push(attr("aria-labelledby", spec.id.clone()));
-    }
-
-    let states: Input<States> = props
-        .states
+    let states: Input<States> = std::mem::take(&mut props.states)
         .unwrap_or_default()
         .with(size.state_name(), true)
         .with("striped", props.striped)
@@ -2447,11 +2003,15 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         (None, true) => EmptyBody::Message(
             props
                 .no_results
+                .take()
                 .unwrap_or_else(|| rsx! { "{labels.no_results}" }),
         ),
-        (None, false) => {
-            EmptyBody::Message(props.empty.unwrap_or_else(|| rsx! { "{labels.no_rows}" }))
-        }
+        (None, false) => EmptyBody::Message(
+            props
+                .empty
+                .take()
+                .unwrap_or_else(|| rsx! { "{labels.no_rows}" }),
+        ),
     };
     let variables: Input<Variables> = variables()
         .with(
@@ -2479,7 +2039,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             HtmlTag::Table,
             attributes,
             render_body(BodySpec {
-                caption,
+                caption: names.caption.take(),
                 headers,
                 order: layout,
                 rows,
@@ -2531,191 +2091,37 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         || props.toolbar.is_some()
         || onbottomreached.is_some()
         || grouped;
-    let table = match announces {
-        true => rsx! {
-            {table}
-            {announcer.render()}
-            {reorder.as_ref().map(RowReorder::instructions)}
-        },
-        false => table,
-    };
-    let before = before.map(|spec| {
-        caption_box.render(
-            HtmlTag::Div,
-            vec![attr("id", spec.id)],
-            rsx! { "{spec.text}" },
-        )
-    });
-    // Capped, above the scroll area: the header then starts at its top (todo 1454).
-    let (before, above) = match bounded {
-        true => (None, before),
-        false => (before, None),
-    };
-    let table = match before {
-        // One box, so a flex row does not set them side by side.
-        Some(caption) => match scrolls || pager.is_some() {
-            true => rsx! {
-                {caption}
-                {table}
-            },
-            false => rsx! {
-                div { {caption} {table} }
-            },
-        },
-        None => table,
-    };
-    // A tab stop, a named region, only while it overflows with no header
-    // button inside to scroll it from (decision 7).
-    let table = match scrolls {
-        true => {
-            let mut attributes = region_name;
-            attributes.push(attr("data-table-scroll", "true"));
-            let max_height = props.max_height.clone();
-            rsx! {
-                ScrollArea {
-                    scrollbars: if bounded { ScrollAxis::Both } else { ScrollAxis::Horizontal },
-                    framework_sx: ScrollAreaBase(&TABLE_SCROLL_SX),
-                    sx: {
-                        // Pinned columns cover the inline edges; a focus scroll stops inside them (todo 1791).
-                        // The lead widths read the cell padding, resolved on the table below: again here.
-                        let mut pads = sx().var(TABLE_PAD_X, TABLE_PADDING_X.value(size));
-                        if let Some(pitch) = row_height {
-                            pads = pads.and(static_skeleton_sx(pitch));
-                        }
-                        // Blitz reads the left and right vars: its `<length>` registration resolves the calc.
-                        for ((property, var), pad) in [
-                            ("scroll-padding-inline-start", SCROLL_PADDING_LEFT_VAR),
-                            ("scroll-padding-inline-end", SCROLL_PADDING_RIGHT_VAR),
-                        ]
-                        .into_iter()
-                        .zip(pinned_pads)
-                        {
-                            if let Some(pad) = pad {
-                                pads = pads.with(property, pad.clone()).with(var, pad);
-                            }
-                        }
-                        match max_height {
-                            Some(height) => {
-                                // The sticky header covers the top; a focus scroll stops below it.
-                                let pad = format!("{}px", head());
-                                let pads = pads
-                                    .max_height(height)
-                                    .with("scroll-padding-top", pad.clone())
-                                    .with(SCROLL_PADDING_TOP_VAR, pad);
-                                // The sticky footer covers the bottom, as the header the top.
-                                match foot_gap > 0.0 {
-                                    true => {
-                                        let pad = format!("{foot_gap}px");
-                                        pads.with("scroll-padding-bottom", pad.clone())
-                                            .with(SCROLL_PADDING_BOTTOM_VAR, pad)
-                                    }
-                                    false => pads,
-                                }
-                            }
-                            None => pads,
-                        }
-                    },
-                    onbottomreached: onbottomreached.map(|_| bottom_reached),
-                    // The scrollbar runs beside the rows only, not the sticky header (todo 1454).
-                    bar_inset_top: bounded.then(|| *head.read()),
-                    // Nor the sticky footer at the bottom.
-                    bar_inset_bottom: bounded.then_some(foot_gap),
-                    // Its root, mounted by the area itself, is where a column drop counts.
-                    handle: ScrollAreaHandle { element: column_drag.region },
-                    // Only a pinned table follows its area's width.
-                    onresize: tracks_area.then(|| {
-                        EventHandler::new(move |event: Event<ResizeData>| {
-                            if let Ok(size) = event.get_border_box_size()
-                                && *area_width.peek() != Some(size.width)
-                            {
-                                area_width.set(Some(size.width));
-                            }
-                        })
-                    }),
-                    attributes,
-                    {table}
-                    if let Some(width) = lead_probe {
-                        div {
-                            aria_hidden: "true",
-                            style: "position:absolute;visibility:hidden;pointer-events:none;height:0;width:{width}",
-                            onresize: move |event: Event<ResizeData>| {
-                                if let Ok(size) = event.get_border_box_size() {
-                                    lead_px.set(size.width);
-                                }
-                            },
-                        }
-                    }
-                }
-            }
-        }
-        false => table,
-    };
-    let search = props.show_quick_filter.then(|| {
-        rsx! {
-            QuickFilter {
-                slice: state.quick_filter,
-                results,
-                announcer,
-                labels,
-                size,
-                caption: described_by,
-                table_label,
-            }
-        }
-    });
-    // A placeholder while off, so toggling `loading` keeps the table's nodes.
-    let bar = (props.loading && skeleton.is_none()).then(|| {
-        rsx! {
-            LoadingBar { labels }
-        }
-    });
-    let table = match above {
-        Some(caption) => rsx! {
-            div {
-                {caption}
-                {bar}
-                {table}
-            }
-        },
-        None => rsx! {
-            {bar}
-            {table}
-        },
-    };
-    // With a `toolbar`, its `TableFilterButton` stands in for the button (todo 1448).
-    let own_button = props.toolbar.is_none();
-    let start = props.filter_panel.then(|| {
-        let columns: Rc<[PanelColumn]> = panel_columns.into();
-        rsx! {
-            if own_button {
-                FilterPanelButton { control: panel, labels, size, active: active_filters }
-            }
-            FilterPanel {
-                control: panel,
-                columns,
-                slice: state.column_filters,
-                logic: state.filter_logic,
-                labels,
-                size,
-                onfilter,
-            }
-        }
-    });
-    let search = match (start, props.toolbar) {
-        (None, None) => search,
-        (start, content) => Some(rsx! {
-            TableToolbar { start, content, search }
-        }),
-    };
-    // Outside the scroll region, so the controls stay put while it scrolls. One box,
-    // or a flex parent squeezes the zero-height loading bar to no width (todo 1461).
-    root_box.render(
-        HtmlTag::Div,
-        Vec::new(),
-        rsx! {
-            {search}
-            {table}
-            {pager}
+    let loading_bar = props.loading && skeleton.is_none();
+    chrome::chrome(
+        props,
+        table,
+        Chrome {
+            names,
+            caption_box,
+            root_box,
+            announcer,
+            reorder,
+            announces,
+            size,
+            row_height,
+            pinned_pads,
+            head,
+            foot_gap,
+            bottom_reached,
+            region: column_drag.region,
+            tracks_area,
+            area_width,
+            lead_probe,
+            lead_px,
+            state,
+            results,
+            labels,
+            loading_bar,
+            panel,
+            active_filters,
+            columns,
+            onfilter,
+            pager,
         },
     )
 }

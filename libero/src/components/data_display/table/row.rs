@@ -415,7 +415,11 @@ impl<T: Clone + 'static> RowContext<T> {
             .filter(|name| !name.is_empty())
             .unwrap_or_else(|| key.to_string());
         // State-neutral, as a group toggle's: `aria-expanded` tells open from closed.
-        let label = (self.labels.group_toggle)(&name, level.children);
+        // A lazy row before its children load counts none: its bare name, not a false "0 rows".
+        let label = match level.children {
+            0 => name.clone(),
+            count => (self.labels.group_toggle)(&name, count),
+        };
         let (key, open) = (key.to_string(), level.open);
         rsx! {
             button {

@@ -60,7 +60,7 @@ pub(super) struct GridFocus {
     id: Signal<String>,
     /// Focus is in the table, or was on a row a re-render removed: no `focusout` then.
     inside: CopyValue<bool>,
-    /// A windowed tree's stop row and its slot at the last render.
+    /// A window's focused row and its slot at the last render.
     held: CopyValue<Option<(VisibleRow, usize)>>,
     table: ElementHandle,
     region: ElementHandle,
@@ -437,16 +437,21 @@ impl GridFocus {
         });
     }
 
-    /// In a windowed tree, rows opened or closed above the focused stop row move it
-    /// by slots: the view scrolls as far, so the row stays where it was.
-    pub fn hold_in_view(self, stop: Option<(VisibleRow, usize)>, pitch: f64) {
+    /// Whether focus is in the treegrid, as its [`Self::tree_listeners`] last heard.
+    pub fn inside(self) -> bool {
+        *self.inside.peek()
+    }
+
+    /// In a window, rows opened or closed above the focused row move it by slots:
+    /// the view scrolls as far, so the row stays where it was. `focused` is its row and slot.
+    pub fn hold_in_view(self, focused: Option<(VisibleRow, usize)>, pitch: f64) {
         let mut held = self.held;
         let last = *held.peek();
-        held.set(stop);
-        let (Some((row, slot)), Some((was, from))) = (stop, last) else {
+        held.set(focused);
+        let (Some((row, slot)), Some((was, from))) = (focused, last) else {
             return;
         };
-        if row != was || slot == from || !*self.inside.peek() {
+        if row != was || slot == from {
             return;
         }
         let shift = (slot as f64 - from as f64) * pitch;

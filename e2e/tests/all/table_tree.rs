@@ -259,7 +259,8 @@ e2e::scenario!(
 
 /// A row with `row_has_children` opens before its children load, then shows them.
 async fn lazy_children<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    let launch = "button[aria-label=\"launch, 0 rows\"]";
+    // Named alone until its children load: "0 rows" would be false (3304).
+    let launch = "button[aria-label=\"launch\"]";
     d.click(launch).await?;
     eventually_text(d, "#expanded", "site,launch", "the ask to open").await?;
     eventually(d, "the open row to be busy", async |d| {

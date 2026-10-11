@@ -2,6 +2,7 @@
 //! row; the open groups printed below.
 //! `/menu`: ungrouped, grouped from the column menu, the grouping printed below.
 //! `/windowed`: 10k rows in four open groups under a 320px cap, 40px rows, selectable.
+//! `/held`: 200 rows in four open groups, windowed so; an "x" closes Sales, the first.
 
 use dioxus::prelude::*;
 use libero::components::{Aggregate, Table, column};
@@ -12,6 +13,7 @@ pub const ROUTES: Routes = &[
     ("/table-row-groups", || rsx! { RowGroupsPage {} }),
     ("/table-row-groups/menu", || rsx! { GroupMenuPage {} }),
     ("/table-row-groups/windowed", || rsx! { WindowedGroupsPage {} }),
+    ("/table-row-groups/held", || rsx! { HeldGroupsPage {} }),
 ];
 
 #[derive(Clone, PartialEq)]
@@ -87,6 +89,41 @@ fn WindowedGroupsPage() -> Element {
             onselectionchange: move |next: Vec<String>| selection.set(next),
         }
         p { id: "selection", "{selection.read().len()}" }
+    }
+}
+
+#[component]
+fn HeldGroupsPage() -> Element {
+    let mut expanded = use_signal(|| TEAMS.map(String::from).to_vec());
+    let members: Vec<Member> = (0..200)
+        .map(|at| Member {
+            name: format!("Person {at}"),
+            team: TEAMS[at / 50],
+        })
+        .collect();
+    rsx! {
+        div {
+            onkeydown: move |event: KeyboardEvent| {
+                if event.key() == Key::Character("x".into()) {
+                    expanded.write().retain(|id| id != "Sales");
+                }
+            },
+            Table {
+                aria_label: "Members",
+                selectable: true,
+                max_height: "320px",
+                virtual_row_height: 40.0,
+                data: members,
+                columns: vec![
+                    column("Name").value(|m: &Member| m.name.clone()).row_header(),
+                    column("Team").value(|m: &Member| m.team.to_string()),
+                ],
+                row_key: |m: &Member| m.name.clone(),
+                default_row_grouping: vec!["Team".to_string()],
+                expanded_groups: expanded(),
+                onexpandedgroupschange: move |next| expanded.set(next),
+            }
+        }
     }
 }
 

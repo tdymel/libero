@@ -344,8 +344,9 @@ fn a_row_whose_children_load_later_has_a_toggle() {
     }
 
     let body = body(&render(app));
-    // Named as any tree toggle, by its loaded rows.
-    assert!(body.contains("aria-label=\"launch, 0 rows\""), "{body}");
+    // Named alone until its rows load: "0 rows" would be false (3304).
+    assert!(body.contains("aria-label=\"launch\""), "{body}");
+    assert!(!body.contains("0 rows"), "{body}");
     let launch = row_of(&body, "launch");
     assert!(launch.contains("aria-expanded=\"false\""), "{launch}");
     assert!(!launch.contains("aria-busy"), "{launch}");

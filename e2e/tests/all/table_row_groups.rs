@@ -255,3 +255,35 @@ e2e::scenario!(
     "/table-row-groups/windowed",
     windowed_groups
 );
+
+/// 3303: a group closed above the focused row leaves the row where it was.
+async fn held_in_view<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    // Person 52: Ops' third row, after Sales' group row and 50 rows and Ops' group row.
+    const ROW: &str = "tr[aria-rowindex=\"56\"]";
+    let input = format!("{ROW} td[data-select] input");
+    d.scroll_to("[data-table-scroll]", 0.0, 52.0 * 40.0).await?;
+    eventually(d, "Ops' rows to render", async |d| d.exists(&input).await).await?;
+    d.focus(&input).await?;
+    eventually_focused(d, &input, "focus").await?;
+    let before = d.rect(ROW).await?;
+    d.type_text("x").await?;
+    // The header row and 154 body rows.
+    eventually(d, "Sales to close", async |d| {
+        Ok(d.attr("table", "aria-rowcount").await?.as_deref() == Some("155"))
+    })
+    .await?;
+    // Sales' 50 rows gone, Person 52 sits 50 places up.
+    const MOVED: &str = "tr[aria-rowindex=\"6\"]";
+    eventually_focused(d, &format!("{MOVED} td[data-select] input"), "the close").await?;
+    eventually(d, "the focused row where it was", async |d| {
+        Ok(d.text(&format!("{MOVED} th")).await?.trim() == "Person 52"
+            && (d.rect(MOVED).await?.y - before.y).abs() <= 2.0)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_group_closed_above_the_focused_row_leaves_it_in_place,
+    "/table-row-groups/held",
+    held_in_view
+);
