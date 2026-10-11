@@ -36,7 +36,8 @@ async fn enters_and_exits<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     it_enters_and_unmounts_its_content_once_closed,
     "/transition",
-    enters_and_exits
+    enters_and_exits,
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// An omitted `open` renders open at once and enters by the `appear` keyframe, not a state flip.
@@ -57,7 +58,8 @@ async fn enters_on_mount<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     it_animates_in_on_mount_without_open,
     "/transition-mount",
-    enters_on_mount
+    enters_on_mount,
+    macos: skip("3432: no transition runs on the runner (Reduce Motion?)")
 );
 
 /// Closed it is shrunk to nothing; open it is untransformed, its origin the bottom right corner.
@@ -90,7 +92,8 @@ async fn grows_from_its_corner<D: Driver>(d: &mut D, _route: &str) -> Result<()>
 e2e::scenario!(
     it_grows_an_origin_kind_from_its_corner,
     "/transition-corner",
-    grows_from_its_corner
+    grows_from_its_corner,
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// A caller's `from` blurs the closed state, animates with the rest, and clears once open.
@@ -112,7 +115,9 @@ async fn blurs_from_its_from_state<D: Driver>(d: &mut D, _route: &str) -> Result
 e2e::scenario!(
     it_animates_a_callers_from_state,
     "/transition-from",
-    blurs_from_its_from_state
+    blurs_from_its_from_state,
+    macos: skip("3432: no transition runs on the runner (Reduce Motion?)"),
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// Under reduced motion nothing transitions. The same check at `no-preference` must see

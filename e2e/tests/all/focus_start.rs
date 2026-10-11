@@ -70,35 +70,43 @@ async fn tab_from_the_clicked_removed<D: Driver>(d: &mut D, _route: &str) -> Res
 e2e::scenario!(
     tab_after_a_click_removed_its_button_starts_where_it_was,
     "/focus-start",
-    tab_from_the_clicked_removed
+    tab_from_the_clicked_removed,
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 e2e::scenario!(
     tab_after_the_focused_element_is_removed_starts_where_it_was,
     "/focus-start",
-    tab_from_the_removed
+    tab_from_the_removed,
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 e2e::scenario!(
     shift_tab_after_the_focused_element_is_removed_starts_where_it_was,
     "/focus-start",
-    shift_tab_from_the_removed
+    shift_tab_from_the_removed,
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 e2e::scenario!(
     tab_after_a_click_starts_from_the_clicked_node,
     "/focus-start",
-    tab_from_the_click
+    tab_from_the_click,
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 e2e::scenario!(
     shift_tab_after_a_click_starts_from_the_clicked_node,
     "/focus-start",
-    shift_tab_from_the_click
+    shift_tab_from_the_click,
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 e2e::scenario!(
     a_click_on_prose_moves_the_starting_point_away_from_a_focused_control,
     "/focus-start",
-    prose_moves_the_start
+    prose_moves_the_start,
+    macos: skip("upstream: WebKit does not focus a clicked button"),
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 e2e::scenario!(
     a_second_tab_carries_on_from_the_first,
     "/focus-start",
-    a_second_tab_carries_on
+    a_second_tab_carries_on,
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );

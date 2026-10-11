@@ -16,6 +16,8 @@ pub mod journal;
 pub mod native;
 pub mod passes;
 pub mod selftest;
+#[cfg(test)]
+mod skips;
 pub mod suite;
 pub mod sweep;
 pub mod timing;
