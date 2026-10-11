@@ -787,7 +787,19 @@ async fn a_tall_menu_fits_the_room<D: Driver>(d: &mut D, _route: &str) -> Result
             return Ok(false);
         }
         let menu = d.rect(MENU).await?;
-        Ok(menu.height > 100.0 && menu.y >= -1.0 && menu.y + menu.height <= height + 1.0)
+        // A box stays hidden until placed, and only then caps its scroller to the room: End waits for that.
+        let fits = d
+            .evaluate(
+                "(() => { const m = document.querySelector('[role=menu]'); \
+                 return getComputedStyle(m).visibility === 'visible' && [...m.querySelectorAll('*')].every((e) => \
+                 getComputedStyle(e).overflowY === 'visible' || e.getBoundingClientRect().bottom \
+                 <= m.getBoundingClientRect().bottom + 1); })()",
+            )
+            .await?;
+        Ok(menu.height > 100.0
+            && menu.y >= -1.0
+            && menu.y + menu.height <= height + 1.0
+            && fits == true)
     })
     .await?;
     d.press(keyboard::END).await?;
