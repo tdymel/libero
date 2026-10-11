@@ -436,6 +436,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           targets: aarch64-linux-android
+          components: clippy
           cache-key: platforms-android
           save-cache: false
       - uses: ./.github/actions/dx
@@ -457,6 +458,7 @@ jobs:
           name: docs-android
           path: target/dx/docs/debug/android/app/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 3
+      - run: cargo clippy -p libero --all-targets --target aarch64-linux-android -- -D warnings
 
   # Simulator build, unsigned. Launching it is 1091.
   ios:

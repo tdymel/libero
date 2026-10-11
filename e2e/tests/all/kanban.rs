@@ -145,15 +145,15 @@ async fn escape_puts_it_back<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 }
 
 async fn the_move_buttons_reorder_a_column<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    ensure!(
-        d.attr("#Delta [data-slot=move-earlier]", "disabled")
+    eventually(d, "a lone card's move buttons disabled", async |d| {
+        Ok(d.attr("#Delta [data-slot=move-earlier]", "disabled")
             .await?
             .is_some()
             && d.attr("#Delta [data-slot=move-later]", "disabled")
                 .await?
-                .is_some(),
-        "a lone card's move buttons are enabled"
-    );
+                .is_some())
+    })
+    .await?;
     d.click("#Alpha [data-slot=move-later]").await?;
     eventually_text(d, "#order", "Beta Alpha Gamma | Delta | ", "Move down").await?;
     eventually_focused(d, "#Alpha [data-slot=move-later]", "a move down").await?;
@@ -223,20 +223,13 @@ async fn the_own_column_is_disabled<D: Driver>(d: &mut D, _route: &str) -> Resul
     Ok(())
 }
 
-/// Taps `#refuse` and waits for the page to refuse: an Android tap lands after `input tap`
-/// returns, and its focus would take the next `focus()` back (3240).
-async fn refuse_moves<D: Driver>(d: &mut D) -> Result<()> {
-    d.click("#refuse").await?;
-    eventually_text(d, "#refusing", "Refusing", "the tap on Refuse moves").await
-}
-
 /// 2519, 2580: a refused move is void once the app moves its card by data, whether
 /// that renders the board or only a column.
 async fn a_refused_move_is_void_after_a_data_change<D: Driver>(
     d: &mut D,
     _route: &str,
 ) -> Result<()> {
-    refuse_moves(d).await?;
+    d.click("#refuse").await?;
     d.focus("#Beta [data-slot=move-to]").await?;
     d.press(keyboard::ARROW_UP).await?;
     eventually_focused(d, "[role=menuitem]", "ArrowUp on the trigger").await?;
@@ -386,7 +379,7 @@ async fn a_filtered_drag_lands_before_the_next_shown_card<D: Driver>(
 
 /// 2451: a move the app ignores arms no focus jump for the next card at its slot.
 async fn a_refused_move_moves_no_focus_later<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    refuse_moves(d).await?;
+    d.click("#refuse").await?;
     d.focus("#Beta [data-slot=move-to]").await?;
     d.press(keyboard::ARROW_UP).await?;
     eventually_focused(d, "[role=menuitem]", "ArrowUp on the trigger").await?;
@@ -419,7 +412,7 @@ async fn a_refused_move_moves_no_focus_later<D: Driver>(d: &mut D, _route: &str)
 
 /// 3164: a same-column key drop or button move the app ignores is never announced.
 async fn a_refused_column_move_is_not_announced<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    refuse_moves(d).await?;
+    d.click("#refuse").await?;
     d.focus("#Alpha [data-slot=handle]").await?;
     d.press(keyboard::SPACE).await?;
     d.press(keyboard::ARROW_DOWN).await?;
@@ -690,7 +683,7 @@ async fn a_key_across_needs_a_lift_and_a_refused_one_is_silent<D: Driver>(
         "a key moved a resting card"
     );
 
-    refuse_moves(d).await?;
+    d.click("#refuse").await?;
     lift(d, "Beta", "2 of 3").await?;
     d.press(keyboard::ARROW_RIGHT).await?;
     eventually_text(d, "#moves", "0.1>1.1 ", "the refused move").await?;

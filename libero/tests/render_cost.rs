@@ -37,6 +37,9 @@
 //! the parent's diff. Price those with a first render instead. Whether a
 //! component skips is asserted by render count in `tests/all/render_counts.rs`.
 
+// Clippy on android reports the `const {}` thread_locals as not const.
+#![cfg_attr(target_os = "android", allow(clippy::missing_const_for_thread_local))]
+
 use std::any::Any;
 use std::cell::RefCell;
 use std::rc::Rc;

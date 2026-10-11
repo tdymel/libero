@@ -11,6 +11,9 @@
 //! `render_cost` stays its own binary: it is a release-mode measurement, not
 //! part of the suite.
 
+// Clippy on android reports the `const {}` thread_locals as not const.
+#![cfg_attr(target_os = "android", allow(clippy::missing_const_for_thread_local))]
+
 mod accordion;
 mod action_icon;
 mod alert;

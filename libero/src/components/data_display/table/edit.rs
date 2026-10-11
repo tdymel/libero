@@ -269,6 +269,7 @@ pub(super) fn CellEditor(
 #[cfg(test)]
 mod tests {
     use super::{super::column::column, *};
+    use dioxus::core::ElementId;
 
     #[derive(Clone, Debug, PartialEq)]
     struct Person {
@@ -366,6 +367,96 @@ mod tests {
         assert!(run(true, false, true), "nor after Escape");
         assert!(run(false, false, false), "Escape closes it");
         assert_eq!((commits, cancels), (2, 1));
+    }
+
+    thread_local! {
+        static CANCELS: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+    }
+
+    #[derive(Default)]
+    struct Keydowns {
+        last: Option<ElementId>,
+        keydown: Option<ElementId>,
+    }
+
+    impl dioxus::core::WriteMutations for Keydowns {
+        fn push_id(&mut self, id: ElementId) {
+            self.last = Some(id);
+        }
+        fn set_id(&mut self, id: ElementId) {
+            self.last = Some(id);
+        }
+        fn add_event_listener(&mut self, name: &str) {
+            if name == "keydown" {
+                self.keydown = self.last;
+            }
+        }
+        fn child(&mut self, _index: usize) {}
+        fn pop(&mut self) {}
+        fn create_element(&mut self, _tag: &str, _ns: Option<&str>) {}
+        fn create_text(&mut self, _value: &str) {}
+        fn clone(&mut self) {}
+        fn append_children(&mut self, _m: usize) {}
+        fn replace_with(&mut self, _m: usize) {}
+        fn insert_after(&mut self, _m: usize) {}
+        fn insert_before(&mut self, _m: usize) {}
+        fn set_attribute(
+            &mut self,
+            _n: &str,
+            _ns: Option<&str>,
+            _v: &dioxus::core::AttributeValue,
+        ) {
+        }
+        fn set_text(&mut self, _value: &str) {}
+        fn remove_event_listener(&mut self, _name: &str) {}
+        fn remove(&mut self) {}
+    }
+
+    fn editor() -> Element {
+        rsx! {
+            CellEditor {
+                value: "Ana",
+                label: "Name",
+                kind: EditKind::Text,
+                cancel_label: "Cancel",
+                error: None,
+                error_id: "name-error",
+                hint: None,
+                commit: move |_: (String, Leave)| true,
+                cancel: move |_| CANCELS.with(|n| n.set(n.get() + 1)),
+                changed: move |_| {},
+            }
+        }
+    }
+
+    /// Todo 3295: a key the IME is composing picks a candidate, so a composing Escape
+    /// must not cancel the edit; the same key once committed does.
+    #[test]
+    fn a_composing_key_does_not_close_the_editor() {
+        use crate::test_converter::{FakeEscape, TestConverter};
+
+        dioxus::html::set_event_converter(Box::new(TestConverter));
+        CANCELS.with(|n| n.set(0));
+        let mut dom = VirtualDom::new(editor);
+        let mut rec = Keydowns::default();
+        dom.rebuild(&mut rec);
+        let input = rec.keydown.expect("the input's keydown listener");
+        let mut press = |composing| {
+            let press = FakeEscape {
+                composing,
+                ..Default::default()
+            };
+            let data: Rc<dyn std::any::Any> =
+                Rc::new(dioxus::html::PlatformEventData::new(Box::new(press)));
+            dom.runtime()
+                .handle_event("keydown", Event::new(data, true), input);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        };
+
+        press(true);
+        assert_eq!(CANCELS.with(|n| n.get()), 0, "a composing Escape cancelled");
+        press(false);
+        assert_eq!(CANCELS.with(|n| n.get()), 1, "the plain Escape did not");
     }
 
     #[test]

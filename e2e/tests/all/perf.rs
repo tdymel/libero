@@ -618,6 +618,8 @@ fn a_fling_paints_the_skeleton_rows_once() {
 fn a_trace_counts_only_its_own_pages_paints() {
     block_on(async {
         let fixture = open("/perf/scroll").await;
+        // A frame paints after its rAF callback: one more drains the open's last paint (3325).
+        clock::next_frame(&fixture.page).await.unwrap();
         let mut other = None;
         let painted = timing::trace_counts(&fixture.page, &["PaintImage"], async || {
             let opened = open("/perf/scroll").await;
