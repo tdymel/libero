@@ -6,7 +6,8 @@
     ci_probe.py summary <log> ...      a `::notice` with every `test result:` line
 
 The probe file (`ted_ci.py probe` writes it on a `ci/*` branch) holds `key=value` lines:
-`os` linux|macos|windows, `tier` unit|native|web|desktop|none, `filter` e.g. `tabs::`.
+`os` linux|macos|windows, `tier` unit|native|web|desktop|none, `filter` e.g. `tabs::`, and
+optionally `dev`, whose probes on a shared `ci/probe-*` branch cancel only each other.
 """
 import os
 import re
@@ -16,7 +17,7 @@ from pathlib import Path
 PROBE = Path(__file__).resolve().parents[1] / "ci-probe"
 RUNNERS = {"linux": "ubuntu-24.04", "macos": "macos-26", "windows": "windows-2025"}
 TIERS = ("unit", "native", "web", "desktop")
-# The cargo cache each leg already warms in ci.yml or platforms.yml; restored, never saved.
+# The cargo cache each leg already warms in ci.yml or platforms.yml; saved on `ci/probe-*` only.
 CACHES = {
     ("linux", "unit"): "test",
     ("linux", "native"): "native",
@@ -33,6 +34,8 @@ CACHES = {
 }
 # Reaches a shell unquoted only after this check.
 FILTER = re.compile(r"^[A-Za-z0-9_:]+$")
+# Names the dev's concurrency group on a shared `ci/probe-*` branch; empty is one group per branch.
+DEV = re.compile(r"^[A-Za-z0-9_-]*$")
 
 
 def fail(message: str) -> None:
@@ -57,6 +60,9 @@ def read_probe() -> dict[str, str]:
 def plan() -> None:
     probe = read_probe()
     target, tier, test = probe.get("os", ""), probe.get("tier", ""), probe.get("filter", "")
+    dev = probe.get("dev", "")
+    if not DEV.match(dev):
+        fail(f"dev {dev!r} is not a name like `olaf-53`")
     if tier != "none":
         if target not in RUNNERS:
             fail(f"os {target!r} is not one of {', '.join(RUNNERS)}")
@@ -70,6 +76,7 @@ def plan() -> None:
         "filter": test,
         "runner": RUNNERS.get(target, "ubuntu-24.04"),
         "cache": CACHES.get((target, tier), ""),
+        "dev": dev,
     }
     with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
         out.writelines(f"{key}={value}\n" for key, value in outputs.items())

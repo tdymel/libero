@@ -59,8 +59,9 @@ pub fn run(mut filters: Vec<String>) -> Result<()> {
         bail!("the desktop fixture app failed to build");
     }
 
-    // Windows cannot replace the running `e2e.exe`, which `--features desktop` rebuilds.
-    let test_dir = match cfg!(windows) {
+    // Windows cannot replace the running `e2e.exe`, which `--features desktop` rebuilds, unless
+    // the runner was built with it (CI): then no second target dir compiles everything twice.
+    let test_dir = match cfg!(windows) && !cfg!(feature = "desktop") {
         true => target_dir.join("desktop-tests"),
         false => target_dir.clone(),
     };
