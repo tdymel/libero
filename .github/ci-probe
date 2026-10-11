@@ -1,0 +1,6 @@
+# ted_ci.py probe; read by .github/workflows/ci-probe.yml.
+os=windows
+tier=native
+filter=scratch_rtl
+dev=cb1
+env=EXP=timings
