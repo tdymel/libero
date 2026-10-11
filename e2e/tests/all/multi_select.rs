@@ -1,8 +1,10 @@
 //! `MultiSelect`: the combobox archetype. The chips sit beside the combobox, so its value
 //! reads `Cherry`, not `Cherry Remove Cherry` (70 (b)).
 
+use anyhow::{Result, ensure};
 use e2e::archetypes::Combobox;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually_focused, eventually_text};
 use e2e::suite::Step;
 use e2e::{
     Fixture, Suite, Viewport, clock,
@@ -263,72 +265,49 @@ fn chip_x(label: &str) -> String {
     format!("[role=group][aria-label='{label}'] button[aria-label='Remove {label}']")
 }
 
-/// Todo 2976: ArrowLeft from the trigger puts real focus on the last chip's x, the arrows
-/// walk, Delete and Backspace remove it with the focus moving on first, and ArrowRight
-/// past the last chip returns to the trigger.
-#[test]
-fn the_chips_take_the_focus_and_remove() {
-    use e2e::passes::focus::wait_for_focus;
-    block_on(async {
-        let fixture = Fixture::open("/multi-select/chips", Viewport::Desktop)
-            .await
-            .unwrap();
-        let page = &fixture.page;
-        let echoes = async |want: &str, during: &str| {
-            wait::for_js_true(
-                page,
-                &format!("document.querySelector('#echo').textContent === {want:?}"),
-                during,
-            )
-            .await
-            .unwrap();
-        };
-        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+/// Todo 2976 (3376 on a WebView): ArrowLeft from the trigger puts real focus on the last
+/// chip's x, the arrows walk, Delete and Backspace remove it with the focus moving on first,
+/// and ArrowRight past the last chip returns to the trigger.
+async fn the_chips_take_the_focus_and_remove_on<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually_text(d, "#echo", "[Apple, Banana, Cherry]", "mounting").await?;
+    d.focus(TRIGGER).await?;
+    eventually_focused(d, TRIGGER, "focusing the trigger").await?;
 
-        let steps = [
-            (keyboard::ARROW_LEFT, "Cherry"),
-            (keyboard::ARROW_LEFT, "Banana"),
-            (keyboard::ARROW_LEFT, "Apple"),
-            // The first chip is the end of the walk.
-            (keyboard::ARROW_LEFT, "Apple"),
-            (keyboard::ARROW_RIGHT, "Banana"),
-        ];
-        for (key, label) in steps {
-            keyboard::press(page, key).await.unwrap();
-            wait_for_focus(page, &chip_x(label), key.key).await.unwrap();
-        }
-        let described: bool = page
-            .evaluate(format!(
-                "document.querySelector({TRIGGER:?}).hasAttribute('aria-activedescendant')"
-            ))
-            .await
-            .unwrap()
-            .into_value()
-            .unwrap();
-        assert!(!described, "a chip has the focus, not a descendant");
+    let steps = [
+        (keyboard::ARROW_LEFT, "Cherry"),
+        (keyboard::ARROW_LEFT, "Banana"),
+        (keyboard::ARROW_LEFT, "Apple"),
+        // The first chip is the end of the walk.
+        (keyboard::ARROW_LEFT, "Apple"),
+        (keyboard::ARROW_RIGHT, "Banana"),
+    ];
+    for (key, label) in steps {
+        d.press(key).await?;
+        eventually_focused(d, &chip_x(label), key.key).await?;
+    }
+    ensure!(
+        d.attr(TRIGGER, "aria-activedescendant").await?.is_none(),
+        "a chip has the focus, not a descendant"
+    );
 
-        // The next chip slides into the removed one's place.
-        keyboard::press(page, DELETE).await.unwrap();
-        echoes("[Apple, Cherry]", "Delete on Banana").await;
-        wait_for_focus(page, &chip_x("Cherry"), "Delete")
-            .await
-            .unwrap();
+    // The next chip slides into the removed one's place.
+    d.press(DELETE).await?;
+    eventually_text(d, "#echo", "[Apple, Cherry]", "Delete on Banana").await?;
+    eventually_focused(d, &chip_x("Cherry"), "Delete").await?;
 
-        keyboard::press(page, keyboard::BACKSPACE).await.unwrap();
-        echoes("[Apple]", "Backspace on the last").await;
-        wait_for_focus(page, &chip_x("Apple"), "Backspace on the last")
-            .await
-            .unwrap();
+    d.press(keyboard::BACKSPACE).await?;
+    eventually_text(d, "#echo", "[Apple]", "Backspace on the last").await?;
+    eventually_focused(d, &chip_x("Apple"), "Backspace on the last").await?;
 
-        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
-        wait_for_focus(page, TRIGGER, "ArrowRight past the last")
-            .await
-            .unwrap();
-
-        fixture.console.assert_clean("the chips' focus").unwrap();
-        fixture.close().await.unwrap();
-    });
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually_focused(d, TRIGGER, "ArrowRight past the last").await
 }
+
+e2e::scenario!(
+    the_chips_take_the_focus_and_remove,
+    "/multi-select/chips",
+    the_chips_take_the_focus_and_remove_on
+);
 
 /// A refused first row: the trigger names the row the list lights (1271).
 #[test]

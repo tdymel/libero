@@ -501,12 +501,12 @@ async fn box_state<D: Driver>(d: &mut D) -> Result<(bool, bool)> {
         .await?
         == true;
     let mixed = match d.platform() {
-        Platform::Web => {
+        Platform::Native => d.attr(EDITOR, "aria-checked").await?.as_deref() == Some("mixed"),
+        _ => {
             d.evaluate(&format!("document.querySelector('{EDITOR}').indeterminate"))
                 .await?
                 == true
         }
-        _ => d.attr(EDITOR, "aria-checked").await?.as_deref() == Some("mixed"),
     };
     Ok((checked, mixed))
 }
@@ -555,8 +555,7 @@ e2e::scenario!(
     a_yes_no_editor_is_a_checkbox_and_a_date_editor_names_its_form,
     "/table-grid/editable/formats",
     formats,
-    native: skip("3386: reads the editor's checked property by script, which Blitz has none of"),
-    android: skip("958: roving keys are inert in the emulator's WebView")
+    native: skip("3386: reads the editor's checked property by script, which Blitz has none of")
 );
 
 /// A custom editor is described by the refused value's message, and clears it by calling `changed`.

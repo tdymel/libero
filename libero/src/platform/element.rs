@@ -157,9 +157,9 @@ pub(crate) fn alias_rtl_tag(tag: u64, source: u64) {
     backend::alias_rtl_tag(tag, source);
 }
 
-/// Whether [`ElementApi::set_indeterminate`] works: on the web alone.
+/// Whether [`ElementApi::set_indeterminate`] works: on the web and a WebView that runs scripts.
 pub(crate) fn sets_indeterminate() -> bool {
-    cfg!(target_arch = "wasm32")
+    cfg!(target_arch = "wasm32") || backend::observes_by_tag()
 }
 
 /// Blitz's `scroll_into_view` reads this (one `px`/`rem` length) since stylo

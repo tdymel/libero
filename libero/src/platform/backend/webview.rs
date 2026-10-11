@@ -569,11 +569,18 @@ pub(super) fn command_by_tag(tag: u64, command: TagCommand) -> Result<(), Platfo
     let method = match command {
         TagCommand::Click => "click",
         TagCommand::Select => "select",
+        TagCommand::Mixed => "mixed",
+        TagCommand::Unmixed => "unmixed",
     };
     eval_with(
         json!([OBSERVE_ATTR, tag.to_string(), method]),
         "const [attr, tag, method] = data;
-        document.querySelector(`[${attr}=\"${tag}\"]`)?.[method]?.();",
+        const element = document.querySelector(`[${attr}=\"${tag}\"]`);
+        if (method === 'mixed' || method === 'unmixed') {
+            if (element) element.indeterminate = method === 'mixed';
+        } else {
+            element?.[method]?.();
+        }",
     );
     Ok(())
 }

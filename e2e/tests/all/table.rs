@@ -138,15 +138,17 @@ fn select_box(n: usize) -> String {
 const STOCK: &str = "th[data-sortable]:nth-child(3) button";
 const NAME: &str = "th[data-sortable]:nth-child(2) button";
 
-/// Select-all is mixed: the web reads the `indeterminate` property, since an
-/// `aria-checked` on a native checkbox is forbidden there (2952); elsewhere the attribute.
+/// Select-all is mixed: a browser (web, WebView) reads the `indeterminate` property, since an
+/// `aria-checked` on a native checkbox is forbidden there (2952); Blitz the attribute.
 async fn select_all_mixed<D: Driver>(d: &mut D) -> Result<bool> {
     match d.platform() {
-        Platform::Web => Ok(d
+        Platform::Native => {
+            Ok(d.attr("thead input", "aria-checked").await?.as_deref() == Some("mixed"))
+        }
+        _ => Ok(d
             .evaluate("document.querySelector('thead input').indeterminate")
             .await?
             == true),
-        _ => Ok(d.attr("thead input", "aria-checked").await?.as_deref() == Some("mixed")),
     }
 }
 

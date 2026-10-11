@@ -134,6 +134,8 @@ rows are still missing. The rendered rows sit on the page surface, or on a
 | `children` | `Element` | required | The scrollable content. |
 | `parts` | `Parts<ScrollAreaPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
+### `Virtualize`
+
 `Virtualize` renders no element, so it takes no styling props.
 
 | Prop | Type | Default | Description |

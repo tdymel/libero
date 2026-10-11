@@ -318,8 +318,19 @@ impl ElementApi for ElementHandle {
         self.get()?.set_files(files)
     }
 
+    /// On a WebView by [`attributes`](Self::attributes)' tag, which the element must carry.
     fn set_indeterminate(&self, indeterminate: bool) -> Result<(), PlatformError> {
-        self.get()?.set_indeterminate(indeterminate)
+        match (self.get()?.set_indeterminate(indeterminate), self.tag) {
+            (Err(PlatformError::Unsupported), Some(tag)) => {
+                let command = if indeterminate {
+                    TagCommand::Mixed
+                } else {
+                    TagCommand::Unmixed
+                };
+                platform::command_by_tag(tag, command)
+            }
+            (result, _) => result,
+        }
     }
 
     fn set_value(&self, value: &str) -> Result<(), PlatformError> {

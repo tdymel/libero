@@ -186,13 +186,15 @@ async fn box_selects_the_group<D: Driver>(d: &mut D, _route: &str) -> Result<()>
         .await?;
     eventually_text(d, "#selection", "Cy", "a click on Ada's box").await?;
     eventually(d, "Sales' box to mix", async |d| match d.platform() {
-        Platform::Web => Ok(d
+        Platform::Native => {
+            Ok(d.attr(SALES_BOX, "aria-checked").await?.as_deref() == Some("mixed"))
+        }
+        _ => Ok(d
             .evaluate(&format!(
                 "document.querySelector({SALES_BOX:?}).indeterminate"
             ))
             .await?
             == true),
-        _ => Ok(d.attr(SALES_BOX, "aria-checked").await?.as_deref() == Some("mixed")),
     })
     .await?;
     // A mixed box selects the rest.

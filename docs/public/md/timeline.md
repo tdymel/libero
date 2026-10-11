@@ -116,9 +116,9 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `new(title)` | `impl Into<OptionLabel>` | required | The event's name, optionally with its own rendering, which a screen reader skips for the name. |
 | `.content(..)` | `Element` | none | The body below the title. |
-| `.bullet(..)` | `Element` | the dot | An icon or avatar inside the bullet. Inverts when active. |
-| `.color(..)` | `impl Into<ThemeAwareValue>` | inherits | This event's own accent. |
-| `.line(..)` | `TimelineLine` | `Solid` | The connector below this event, `Solid`, `Dashed` or `Dotted`. The last event has none. |
+| `.bullet(..)` | `Element` | the dot | An icon or avatar inside the bullet in place of the dot. It inverts when active. |
+| `.color(..)` | `impl Into<ThemeAwareValue>` | inherits | This event's own accent, such as an error step in an ordinary run. |
+| `.line(..)` | `TimelineLine` | `Solid` | The connector below this event, `Solid`, `Dashed` or `Dotted`. |
 
 Like every component, `Timeline` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.

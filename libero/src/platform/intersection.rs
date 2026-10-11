@@ -41,6 +41,8 @@ pub(crate) fn computed_px_by_tag(tag: u64, property: &str) -> super::Read<Option
 pub(crate) enum TagCommand {
     Click,
     Select,
+    Mixed,
+    Unmixed,
 }
 
 /// Runs `command` on the element carrying `tag`, queued, by the page's script: a WebView's

@@ -83,9 +83,9 @@ fn every_page_is_in_the_nav_under_its_title() {
 }
 
 /// The names in a mirror's `## Props` and `## API` tables with their third cell (the default),
-/// per `###` group; `""` names the
-/// `## Props` ones before any. `## API` files options structs and handles by heading; a handle may also have a `## ` section
-/// or a table headed by its type.
+/// per `###` group; `""` names the `## Props` ones before any. `## API` files options structs
+/// and handles by heading; a handle or an options struct may also have a `## ` section, or a
+/// table headed by its type.
 pub(super) fn md_props(md: &str) -> Vec<(String, BTreeMap<String, String>)> {
     md_cells(md, |line| {
         line.split(" | ")
@@ -130,12 +130,19 @@ fn md_cells(md: &str, cell: impl Fn(&str) -> String) -> Vec<(String, BTreeMap<St
         if let Some(heading) = line.strip_prefix("## ") {
             section = heading.trim();
             current = None;
-            // A handle may have a `## ` section of its own, named by its type.
-            if section.trim_matches('`').ends_with("Handle") {
-                current = open(&mut groups, section.trim_matches('`'));
+            // A handle or an options struct may have a `## ` section of its own, named by its type.
+            let name = section.trim_matches('`');
+            if name.ends_with("Handle") || name.ends_with("Options") {
+                current = open(&mut groups, name);
             }
         } else if current.is_none() && !matches!(section, "Props" | "API") {
             continue;
+        } else if matches!(section, "Props" | "API")
+            && let Some(name) = line.strip_prefix('`').and_then(|l| l.strip_suffix('`'))
+            && name.starts_with(|c: char| c.is_uppercase())
+        {
+            // A type named on a line of its own heads the table below it.
+            current = open(&mut groups, name);
         } else if let Some(heading) = line.strip_prefix("### ") {
             if matches!(section, "Props" | "API") {
                 current = open(&mut groups, heading.trim().trim_matches('`'));

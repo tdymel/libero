@@ -219,11 +219,11 @@ fn select_box(n: usize) -> String {
 async fn mixed<D: Driver>(d: &mut D, n: usize) -> Result<bool> {
     let input = format!("tbody tr:nth-child({n}) td[data-select] input");
     match d.platform() {
-        Platform::Web => Ok(d
+        Platform::Native => Ok(d.attr(&input, "aria-checked").await?.as_deref() == Some("mixed")),
+        _ => Ok(d
             .evaluate(&format!("document.querySelector('{input}').indeterminate"))
             .await?
             == true),
-        _ => Ok(d.attr(&input, "aria-checked").await?.as_deref() == Some("mixed")),
     }
 }
 
