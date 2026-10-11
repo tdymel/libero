@@ -1,0 +1,5 @@
+# ted_ci.py probe; read by .github/workflows/ci-probe.yml.
+os=windows
+tier=desktop
+filter=table_column_filters::a_date_filter_narrows_a_table::
+dev=olaf-50
