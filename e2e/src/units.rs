@@ -133,11 +133,11 @@ fn exact_within(listed: &[String], args: &[String], budget: usize) -> (Vec<Strin
 /// Units whose tests open other modules' fixtures too, from the route literals in their sources
 /// (`tests::extra_fixtures_list_the_routes_each_unit_opens` keeps it so).
 const EXTRA_FIXTURES: &[(&str, &[&str])] = &[
+    ("action_icon", &["button"]),
     (
         "button",
         &[
             "accordion",
-            "action_icon",
             "bottom_navigation",
             "calendar",
             "image",
@@ -386,7 +386,8 @@ mod tests {
                 continue;
             };
             let block = &source[start..];
-            let block = &block[..block.find("\n];").unwrap_or(block.len())];
+            // `];` also ends a one-line `ROUTES`, whose page may link another module's route.
+            let block = &block[..block.find("];").unwrap_or(block.len())];
             for route in route_literals(block) {
                 owners.insert(route, module.clone());
             }
