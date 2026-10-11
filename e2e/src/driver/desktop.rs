@@ -16,7 +16,7 @@ use std::time::{Duration, Instant};
 use anyhow::{Context, Result, bail};
 
 use crate::clock::{app_clock, app_count};
-use crate::driver::bridge::{Bridge, element};
+use crate::driver::bridge::{Bridge, element, note};
 use crate::driver::{Driver, Platform, Rect};
 use crate::passes::keyboard::Key;
 
@@ -359,21 +359,6 @@ const SEEN: &str = "window.__e2eSeen = { up: 0, key: 0, wheel: 0, move: null };
     addEventListener('wheel', () => { __e2eSeen.wheel += 1; }, true);
     addEventListener('mousemove', (e) => { __e2eSeen.move = [e.clientX, e.clientY]; }, true)";
 
-/// A line of the macOS route search: on stderr, and in `calibration.log` of the artifacts.
-#[cfg(target_os = "macos")]
-fn mac_note(line: &str) {
-    eprintln!("e2e desktop: {line}");
-    if let Some(dir) = crate::journal::dir()
-        && let Ok(mut file) = File::options()
-            .create(true)
-            .append(true)
-            .open(dir.join("calibration.log"))
-    {
-        use std::io::Write;
-        let _ = writeln!(file, "{line}");
-    }
-}
-
 /// Each pointer route moves to its own x, so a late event never counts for the next route.
 #[cfg(target_os = "macos")]
 fn pointer_index(route: &str) -> f64 {
@@ -481,21 +466,21 @@ impl Desktop {
             if hung.contains(&name) || kind == "pointer" && pointer.is_some() && route == "cg" {
                 continue;
             }
-            mac_note(&format!("trying {name}"));
+            note(&format!("trying {name}"));
             let tried = match kind {
                 "pointer" => self.try_pointer(route, at.0 + 8.0 * pointer_index(route), at.1),
                 "button" => self.try_button(route, at),
                 _ => self.try_key(route),
             };
             let seen = tried.inspect_err(|error| {
-                mac_note(&format!("{name}: the app stopped answering ({error:#})"));
+                note(&format!("{name}: the app stopped answering ({error:#})"));
                 STATE
                     .lock()
                     .unwrap_or_else(PoisonError::into_inner)
                     .1
                     .push(name.clone());
             })?;
-            mac_note(&format!("{name}: {seen}"));
+            note(&format!("{name}: {seen}"));
             let slot = match kind {
                 "pointer" => &mut pointer,
                 "button" => &mut button,
@@ -513,7 +498,7 @@ impl Desktop {
             button: button.unwrap_or(self.routes.button),
             key: key.unwrap_or(self.routes.key),
         };
-        mac_note(&format!(
+        note(&format!(
             "picked pointer {} button {} key {}",
             self.routes.pointer, self.routes.button, self.routes.key
         ));

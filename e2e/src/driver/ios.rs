@@ -6,13 +6,14 @@
 use std::net::TcpListener;
 use std::path::PathBuf;
 use std::process::Command;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, bail};
 
 use crate::clock::{app_clock, app_count};
-use crate::driver::bridge::{Bridge, element};
+use crate::driver::bridge::{Bridge, element, note};
 use crate::driver::{Driver, Platform, Rect};
 use crate::passes::keyboard::Key;
 
@@ -206,6 +207,28 @@ impl Ios {
             "e2e ios: screen {screen_w}x{screen_h} pt, innerWidth {inner_w}, viewport origin {:?} pt, via {:?}",
             self.origin, self.input
         );
+        static KEYS_NOTED: AtomicBool = AtomicBool::new(false);
+        if !KEYS_NOTED.swap(true, Ordering::Relaxed) {
+            self.note_keys()?;
+        }
+        Ok(())
+    }
+
+    /// What the page sees of some HID keys, noted once per run: the first CI runs' answer to
+    /// which keys the simulator's WebView takes from the injector.
+    fn note_keys(&mut self) -> Result<()> {
+        self.bridge.run(
+            "window.__e2eKeys = []; for (const type of ['keydown', 'keyup', 'beforeinput']) { \
+             addEventListener(type, e => { __e2eKeys.push(type + ':' + (e.key ?? e.data) + ':' + (e.code ?? '')); }, true); }",
+        )?;
+        for (name, usage) in [("a", 4), ("Tab", 43), ("ArrowDown", 81), ("Enter", 40)] {
+            self.key(usage)?;
+            std::thread::sleep(Duration::from_millis(400));
+            let seen: Vec<String> = self.bridge.json("__e2eKeys.splice(0)")?;
+            note(&format!(
+                "ios key {name} (usage {usage}) reached the page as {seen:?}"
+            ));
+        }
         Ok(())
     }
 
