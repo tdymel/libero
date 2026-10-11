@@ -174,8 +174,23 @@ pub(crate) async fn disable_ime() -> Result<()> {
     Ok(())
 }
 
+/// Sets the AOSP keyboard until [`restore_ime`] (the next `open`): it composes each word,
+/// which a Gboard without suggestions (the FP4's) never does. `false` where it is not enabled.
+pub async fn composing_ime() -> Result<bool> {
+    const AOSP: &str = "com.android.inputmethod.latin/.LatinIME";
+    restore_ime().await?;
+    let listed = shell(&["ime".into(), "list".into(), "-s".into()]).await?;
+    if !listed.lines().any(|ime| ime.trim() == AOSP) {
+        return Ok(false);
+    }
+    let default = shell(&["settings get secure default_input_method".into()]).await?;
+    *TAKEN_IMES.lock().unwrap() = Some((Vec::new(), default.trim().to_string()));
+    shell(&["ime".into(), "set".into(), AOSP.into()]).await?;
+    Ok(true)
+}
+
 /// Gives back the input methods [`disable_ime`] took, and the default one.
-pub(crate) async fn restore_ime() -> Result<()> {
+pub async fn restore_ime() -> Result<()> {
     let taken = TAKEN_IMES.lock().unwrap().take();
     let Some((imes, default)) = taken else {
         return Ok(());

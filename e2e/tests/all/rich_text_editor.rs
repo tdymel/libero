@@ -1131,6 +1131,85 @@ fn android() {
     });
 }
 
+/// Todos 2733, 3144, 1432 on a composing soft keyboard: Enter in a composed word sends it,
+/// Shift+Enter there breaks the line, and Enter on an open mention list picks.
+#[cfg(feature = "android")]
+mod composing_keyboard {
+    use super::*;
+
+    #[test]
+    fn android() {
+        use e2e::android::{composing_ime, restore_ime};
+        use e2e::driver::{Android, Driver, eventually};
+
+        const RECORD: &str =
+            "window.__composed = 0; addEventListener('compositionstart', () => __composed++)";
+
+        async fn open(route: &str) -> Option<Android> {
+            let mut d = Android::open(route).await.unwrap();
+            if !composing_ime().await.unwrap() {
+                eprintln!("no AOSP keyboard enabled: skipped");
+                return None;
+            }
+            d.page().evaluate(RECORD).await.unwrap();
+            d.click("[role=textbox]").await.unwrap();
+            eventually(&mut d, "the editor to take focus", async |d| {
+                d.is_focused("[role=textbox]").await
+            })
+            .await
+            .unwrap();
+            Some(d)
+        }
+        async fn text_is(d: &mut Android, selector: &str, want: &str) {
+            let mut last = String::new();
+            let held = eventually(d, want, async |d| {
+                last = d.text(selector).await?;
+                Ok(last == want)
+            })
+            .await;
+            assert!(held.is_ok(), "{selector} reads {last:?}, want {want:?}");
+        }
+
+        e2e::android::block_on(async {
+            let Some(mut d) = open("/rich-text-editor/chat-spellcheck").await else {
+                return;
+            };
+            d.type_text("hello wor").await.unwrap();
+            d.press(ENTER).await.unwrap();
+            text_is(&mut d, "#sent", "hello wor").await;
+            text_is(&mut d, "#out", "").await;
+            d.type_text("ab").await.unwrap();
+            d.press_shift(ENTER).await.unwrap();
+            text_is(&mut d, "#out", "ab\\\n\n").await;
+            text_is(&mut d, "#sent", "hello wor").await;
+            let composed: u32 = js(d.page(), "window.__composed").await;
+
+            let Some(mut d) = open("/rich-text-editor/mentions-spellcheck").await else {
+                return;
+            };
+            d.type_text("hi @gr").await.unwrap();
+            eventually(&mut d, "the mention list", async |d| {
+                d.exists("#mention-list").await
+            })
+            .await
+            .unwrap();
+            // Placed under the caret, above the soft keyboard.
+            let above: bool = js(
+            d.page(),
+            "document.getElementById('mention-list').getBoundingClientRect().bottom <= visualViewport.height",
+        )
+        .await;
+            assert!(above, "the mention list sits under the soft keyboard");
+            d.press(ENTER).await.unwrap();
+            text_is(&mut d, "#out", "hi \u{fffc} ").await;
+            let composed = composed + js::<u32>(d.page(), "window.__composed").await;
+            restore_ime().await.unwrap();
+            assert!(composed > 0, "the keyboard composed no word");
+            d.finish("composing keyboard").await.unwrap();
+        });
+    }
+}
+
 #[test]
 fn toolbar_buttons_keep_the_caret_and_composition_lands_in_the_model() {
     block_on(async {

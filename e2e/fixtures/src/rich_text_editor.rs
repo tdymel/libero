@@ -24,8 +24,11 @@ pub const ROUTES: Routes = &[
     ("/rich-text-editor/trailing", || rsx! { TrailingPage {} }),
     ("/rich-text-editor/mentions", || rsx! { MentionsPage {} }),
     ("/rich-text-editor/mentions-modal", || rsx! { MentionsModalPage {} }),
+    ("/rich-text-editor/mentions-spellcheck", || rsx! { MentionsPage { spellcheck: true } }),
     ("/rich-text-editor/narrow", || rsx! { NarrowPage {} }),
     ("/rich-text-editor/chat", || rsx! { SendBox { submit_on: SubmitOn::Enter, max_length: 12 } }),
+    // Spell checked, so Gboard composes each word (todos 2733, 3144).
+    ("/rich-text-editor/chat-spellcheck", || rsx! { SendBox { submit_on: SubmitOn::Enter, spellcheck: true } }),
     ("/rich-text-editor/comment", || rsx! { SendBox { submit_on: SubmitOn::ModEnter } }),
     ("/rich-text-editor/states", || rsx! { StatesPage {} }),
     ("/rich-text-editor/view", || rsx! { ViewPage {} }),
@@ -223,7 +226,11 @@ fn HandlePage() -> Element {
 
 /// A send box: `onsubmit` lists what was sent in `#sent` and clears through the handle.
 #[component]
-fn SendBox(submit_on: SubmitOn, max_length: Option<usize>) -> Element {
+fn SendBox(
+    submit_on: SubmitOn,
+    max_length: Option<usize>,
+    #[props(default)] spellcheck: bool,
+) -> Element {
     let mut doc = use_signal(Doc::new);
     let mut sent = use_signal(Vec::<String>::new);
     let editor = use_rich_text_editor();
@@ -235,6 +242,7 @@ fn SendBox(submit_on: SubmitOn, max_length: Option<usize>) -> Element {
             handle: editor,
             submit_on,
             max_length,
+            spellcheck,
             onchange: move |next| doc.set(next),
             onsubmit: move |sending: Doc| {
                 sent.write().push(sending.plain_text());
@@ -399,7 +407,7 @@ fn MentionsModalPage() -> Element {
 /// Type `@` and a name: a list under the caret, steered by the arrow keys through
 /// `intercept`, and a toolbar button of the caller's that types the `@`.
 #[component]
-fn MentionsPage() -> Element {
+fn MentionsPage(#[props(default)] spellcheck: bool) -> Element {
     let mut doc = use_signal(Doc::new);
     let editor = use_rich_text_editor();
     let mut active = use_signal(|| 0usize);
@@ -470,6 +478,7 @@ fn MentionsPage() -> Element {
                 overlay,
                 active_descendant: picked.map(|user| format!("mention-{user}")),
                 overlay_results: count,
+                spellcheck,
                 value: doc(),
                 onchange: move |next| doc.set(next),
             }
