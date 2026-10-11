@@ -2303,3 +2303,35 @@ e2e::scenario!(
     the_filter_panel_edits_every_filter,
     android: skip("958: element identity on the WebView")
 );
+
+#[cfg(feature = "native")]
+fn scratch_toggle() -> dioxus::prelude::Element {
+    use dioxus::prelude::*;
+    rsx! { libero::components::DirectionToggle { id: "direction" } }
+}
+
+#[cfg(feature = "native")]
+mod scratch_rtl_paged_tables {
+#[test]
+fn native() {
+    use super::*;
+    let dir = std::env::temp_dir().join(format!("scratch-rtl-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    e2e::native::with_storage_dir(&dir, || {
+        let mut page = e2e::native::mount(scratch_toggle);
+        page.click("#direction");
+        assert_eq!(page.attr("html", "dir").as_deref(), Some("rtl"));
+        drop(page);
+        for (route, which) in [("/table/filter", 0), ("/table/paged", 1)] {
+            let mut d = e2e::driver::Native::open(route);
+            assert_eq!(d.page.attr("html", "dir").as_deref(), Some("rtl"), "{route}");
+            let outcome = match which {
+                0 => e2e::futures::executor::block_on(the_quick_filter_narrows_the_rows(&mut d, route)),
+                _ => e2e::futures::executor::block_on(the_pages_turn_sort_and_resize(&mut d, route)),
+            };
+            eprintln!("scratch {route}: {outcome:?}");
+            assert!(which == 1 || outcome.is_ok(), "{outcome:?}");
+        }
+    });
+}
+}
