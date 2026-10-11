@@ -7,6 +7,7 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{ActionIcon, Anchor, Button, NavLink},
+    theme::{AnchorDefaults, Theme},
 };
 
 #[derive(Clone, PartialEq, Routable)]
@@ -92,13 +93,13 @@ fn an_external_anchor_renders_a_plain_link() {
     assert!(body(&html).contains("Example"));
 }
 
-/// Todo 579: a new tab is announced and drawn, and the caller can opt out.
+/// Todos 579, 3324: a new tab is announced, drawn only on request, and the caller can opt out.
 #[test]
 fn a_blank_target_adds_the_new_tab_hint_unless_opted_out() {
     fn blank() -> Element {
         rsx! {
             LiberoProvider {
-                Anchor { to: "https://example.com", target: "_blank", "Example" }
+                Anchor { to: "https://example.com", target: "_blank", new_tab_icon: true, "Example" }
             }
         }
     }
@@ -125,6 +126,50 @@ fn a_blank_target_adds_the_new_tab_hint_unless_opted_out() {
         let html = body(&render(app));
         assert!(!html.contains("new tab"), "{html}");
         assert!(!html.contains("<svg"), "{html}");
+    }
+}
+
+/// Todo 3324: the icon is off by default and on by the theme, the prop wins; the hint text stays.
+#[test]
+fn the_new_tab_icon_is_off_unless_the_theme_or_the_prop_turns_it_on() {
+    static ICONS: Theme = Theme {
+        anchor: AnchorDefaults {
+            new_tab_icon: true,
+            ..Theme::DEFAULT.anchor
+        },
+        ..Theme::DEFAULT
+    };
+    fn plain() -> Element {
+        rsx! {
+            LiberoProvider {
+                Anchor { to: "https://example.com", target: "_blank", "Example" }
+            }
+        }
+    }
+    fn themed() -> Element {
+        rsx! {
+            LiberoProvider { themes: &ICONS,
+                Anchor { to: "https://example.com", target: "_blank", "Example" }
+            }
+        }
+    }
+    fn themed_but_off() -> Element {
+        rsx! {
+            LiberoProvider { themes: &ICONS,
+                Anchor { to: "https://example.com", target: "_blank", new_tab_icon: false, "Example" }
+            }
+        }
+    }
+
+    for (app, icon) in [
+        (plain as fn() -> Element, false),
+        (themed, true),
+        (themed_but_off, false),
+    ] {
+        let html = body(&render(app));
+        assert!(html.contains("(opens in a new tab)"), "{html}");
+        assert_eq!(html.contains("<svg"), icon, "{html}");
+        assert_eq!(html.contains("data-slot=\"new-tab\""), icon, "{html}");
     }
 }
 
@@ -183,6 +228,7 @@ fn a_blank_button_and_action_icon_say_they_open_a_new_tab() {
                 ActionIcon { aria_label: "Docs", to: "https://example.com", target: "_blank", "?" }
                 Button { to: "https://example.com", "Same" }
                 ActionIcon { aria_label: "Same", to: "https://example.com", "?" }
+                Button { to: "https://example.com", target: "_blank", new_tab_icon: true, "Icon" }
             }
         }
     }
@@ -191,8 +237,9 @@ fn a_blank_button_and_action_icon_say_they_open_a_new_tab() {
     let action_icon = nth_attributes(&html, "a", 1);
     assert_eq!(action_icon["aria-label"], "Docs (opens in a new tab)");
     assert_eq!(nth_attributes(&html, "a", 3)["aria-label"], "Same");
-    assert_eq!(html.matches("opens in a new tab").count(), 2, "{html}");
-    assert!(html.contains("data-slot=\"new-tab\""), "{html}");
+    assert_eq!(html.matches("opens in a new tab").count(), 3, "{html}");
+    // Todo 3324: only the button that asks for it draws the icon.
+    assert_eq!(html.matches("data-slot=\"new-tab\"").count(), 1, "{html}");
 }
 
 /// Todo 3054: without a router a relative path is `External`, but not a foreign origin.

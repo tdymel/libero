@@ -101,10 +101,13 @@ pub fn MenuPage() -> Element {
                     prop("submenu", "Vec<MenuEntry>")
                         .doc("Opens a second menu beside the item instead. An item runs a command or opens a submenu, and the later call wins."),
                     prop("href", "String")
-                        .doc("Makes the item a link: an `<a>` that opens the URL in a new tab, so middle-click and the context menu work. Replaces `onselect` and `submenu`. A disabled link has no `href`. The label ends in a new-tab icon and a hidden \"(opens in a new tab)\", as on `Anchor`."),
+                        .doc("Makes the item a link: an `<a>` that opens the URL in a new tab, so middle-click and the context menu work. Replaces `onselect` and `submenu`. A disabled link has no `href`. The label ends in a hidden \"(opens in a new tab)\", as on `Anchor`."),
                     prop("new_tab_hint", "bool")
                         .default("true")
-                        .doc("With `href`: `false` drops the new-tab icon and the hidden hint."),
+                        .doc("With `href`: `false` drops the hidden hint and the new-tab icon."),
+                    prop("new_tab_icon", "bool")
+                        .default(if theme.anchor.new_tab_icon { "true" } else { "false" })
+                        .doc("With `href`: draws the new-tab icon after the label. Unset, the theme's `anchor.new_tab_icon`, which is off."),
                     prop("keep_open", "()")
                         .doc("Choosing the item leaves the menu open, and focus stays on it, whatever the menu's `close_on_select` says. `close_on_select(bool)` overrides it either way."),
                     prop("leading", "Element")

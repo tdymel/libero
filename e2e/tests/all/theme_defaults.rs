@@ -1,4 +1,4 @@
-//! A theme's `side`, `align`, `activation` and `loop_focus` reach the components that leave them unset.
+//! A theme's `side`, `align`, `activation`, `loop_focus` and `new_tab_icon` reach the components that leave them unset.
 
 use anyhow::{Result, ensure};
 use e2e::driver::{Driver, eventually, eventually_focused};
@@ -58,6 +58,55 @@ async fn the_toolbar_stops_at_its_ends<D: Driver>(d: &mut D, _route: &str) -> Re
     eventually_focused(d, "#two", "ArrowRight after a stop at the start").await
 }
 
+/// The theme's `new_tab_icon: true` draws the icon; the call site's `false` still wins.
+async fn a_themed_link_draws_the_new_tab_icon<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    ensure!(
+        d.exists("#themed-link [data-slot=new-tab]").await?,
+        "the themed link has no icon"
+    );
+    ensure!(
+        !d.exists("#themed-link-off [data-slot=new-tab]").await?,
+        "`new_tab_icon: false` drew the icon"
+    );
+    Ok(())
+}
+
+/// With the library's theme, no `_blank` link draws the icon (the default is off), and each still says so.
+async fn an_unthemed_link_draws_no_icon_but_says_so<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    for id in ["anchor", "button", "action-icon"] {
+        ensure!(
+            !d.exists(&format!("#{id} [data-slot=new-tab]")).await?,
+            "#{id} draws the new-tab icon"
+        );
+    }
+    for id in ["anchor", "button"] {
+        let text = d.text(&format!("#{id}")).await?;
+        ensure!(
+            text.contains("(opens in a new tab)"),
+            "#{id} reads {text:?}"
+        );
+    }
+    let label = d.attr("#action-icon", "aria-label").await?;
+    ensure!(
+        label.as_deref() == Some("Action (opens in a new tab)"),
+        "the action icon is named {label:?}"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    an_unset_new_tab_icon_follows_the_theme,
+    "/theme-defaults",
+    a_themed_link_draws_the_new_tab_icon
+);
+e2e::scenario!(
+    an_unset_new_tab_icon_is_off_by_default,
+    "/theme-defaults/plain",
+    an_unthemed_link_draws_no_icon_but_says_so
+);
 e2e::scenario!(
     an_unset_hover_card_side_follows_the_theme,
     "/theme-defaults",

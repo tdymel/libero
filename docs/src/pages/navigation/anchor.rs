@@ -28,10 +28,13 @@ pub fn AnchorPage() -> Element {
                 prop("to", "NavigationTarget")
                     .default("required")
                     .doc("A path, a URL or a typed route (`Route::Foo {}`). With a router mounted and `target` unset, an internal target navigates without a page reload; with `\"_blank\"` it opens a new tab with a full page load. A `javascript:` URL runs script on click, so check the scheme of any URL from user data."),
-                prop("target", "String").doc("The link's `target` attribute. `\"_blank\"` adds a small external icon and a hidden \"(opens in a new tab)\"."),
+                prop("target", "String").doc("The link's `target` attribute. `\"_blank\"` adds a hidden \"(opens in a new tab)\"."),
                 prop("new_tab_hint", "bool")
                     .default("true")
-                    .doc("`false` drops the icon and the hidden text a `\"_blank\"` target adds."),
+                    .doc("`false` drops the hidden text a `\"_blank\"` target adds, and the icon."),
+                prop("new_tab_icon", "bool")
+                    .default(if theme.anchor.new_tab_icon { "true" } else { "false" })
+                    .doc("With the hint, draws a small external icon after the text. Unset, the theme's `anchor.new_tab_icon`, which is off. `Button`, `ActionIcon`, `Chip`, `NavLink`, `Repository` and `MenuItem` take it too."),
                 prop("underline", "AnchorUnderline")
                     .default("hover")
                     .doc("When the underline draws, `always`, `hover` or `never`."),
@@ -40,11 +43,11 @@ pub fn AnchorPage() -> Element {
                     .doc("Styles for the inner parts in the Style API tab, under `sx`."),
             ])
             .parts("AnchorPart", vec![
-                (AnchorPart::NewTab, "The new-tab icon after the text, with `target: \"_blank\"` only."),
+                (AnchorPart::NewTab, "The new-tab icon after the text, with `target: \"_blank\"` and `new_tab_icon` only."),
             ])],
             accessibility: a11y()
                 .handles([
-                    "A `target: \"_blank\"` link draws a small external icon and reads a hidden \"(opens in a new tab)\". `new_tab_hint: false` drops both, for a link whose text already says it.",
+                    "A `target: \"_blank\"` link reads a hidden \"(opens in a new tab)\". `new_tab_icon: true` also draws a small external icon, for sighted users. `new_tab_hint: false` drops both, for a link whose text already says it.",
                     "In a filled, tonal or gradient `Alert`, a colored `Header` and a `Mark`, a link takes the text color, so `underline: \"hover\"` draws its underline at rest there too.",
                 ])
                 .must([
@@ -86,6 +89,13 @@ pub fn AnchorPage() -> Element {
                             _ => vec!["new_tab_hint: false".to_string()],
                         }
                     }),
+                    // On here so the icon shows; the component's own default is off.
+                    Control::switch("new_tab_icon").default("true").code(|_, values| {
+                        match (values.str("internal_route").as_str(), values.str("new_tab_icon").as_str()) {
+                            ("true", _) | (_, "false") => vec![],
+                            _ => vec!["new_tab_icon: true".to_string()],
+                        }
+                    }),
                     Control::toggle("underline", ["hover", "always", "never"])
                         .labels(["Hover", "Always", "Never"]),
                     Control::sizes("size")
@@ -95,6 +105,7 @@ pub fn AnchorPage() -> Element {
                     let underline = values.str("underline");
                     let size = values.str("size");
                     let new_tab_hint = values.str("new_tab_hint") == "true";
+                    let new_tab_icon = values.str("new_tab_icon") == "true";
                     match values.str("internal_route").as_str() {
                         "true" => rsx! {
                             Anchor {
@@ -109,6 +120,7 @@ pub fn AnchorPage() -> Element {
                                 to: HREF,
                                 target: "_blank",
                                 new_tab_hint,
+                                new_tab_icon,
                                 underline,
                                 size,
                                 {EXTERNAL_LABEL}

@@ -41,10 +41,13 @@ pub fn ChipPage() -> Element {
                 prop("to", "NavigationTarget")
                     .doc("Makes the chip a router-aware link. Wins over `onclick`."),
                 prop("target", "String")
-                    .doc("Link target, such as `_blank`. Only with `to`. `\"_blank\"` adds an external icon and a hidden \"(opens in a new tab)\"."),
+                    .doc("Link target, such as `_blank`. Only with `to`. `\"_blank\"` adds a hidden \"(opens in a new tab)\"."),
                 prop("new_tab_hint", "bool")
                     .default("true")
-                    .doc("`false` drops the icon and the hidden text a `\"_blank\"` target adds."),
+                    .doc("`false` drops the hidden text a `\"_blank\"` target adds, and the icon."),
+                prop("new_tab_icon", "bool")
+                    .default(if theme.anchor.new_tab_icon { "true" } else { "false" })
+                    .doc("With the hint, draws an external icon after the label. Unset, the theme's `anchor.new_tab_icon`, which is off."),
                 prop("icon", "Element")
                     .doc("Drawn before the label, with a gap. It never shrinks."),
                 prop("trailing", "Element")
@@ -55,7 +58,7 @@ pub fn ChipPage() -> Element {
             .parts("ChipPart", vec![
                 (ChipPart::Icon, "The leading glyph's wrapper."),
                 (ChipPart::Trailing, "The slot after the label, with `trailing`."),
-                (ChipPart::NewTab, "The new-tab icon after the label, on a `to` chip with `target: \"_blank\"` only."),
+                (ChipPart::NewTab, "The new-tab icon after the label, on a `to` chip with `target: \"_blank\"` and `new_tab_icon` only."),
             ])],
             accessibility: a11y()
                 .key(["Space"], "Toggles a selectable chip.")

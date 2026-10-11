@@ -227,6 +227,9 @@ base_props! {
         to: Input<NavigationTarget>,
         #[props(default)]
         target: Option<String>,
+        /// With `target: "_blank"`, draws the new-tab icon. Unset, the theme's `anchor.new_tab_icon`, off.
+        #[props(default)]
+        new_tab_icon: Option<bool>,
         /// Drawn before the label.
         #[props(default)]
         icon: Option<Element>,
@@ -397,7 +400,7 @@ pub fn Button(props: ButtonProps) -> Element {
         let label = if wants_new_tab_hint(props.target.as_deref(), true) {
             rsx! {
                 {label}
-                NewTabHint {}
+                NewTabHint { icon: props.new_tab_icon }
             }
         } else {
             label

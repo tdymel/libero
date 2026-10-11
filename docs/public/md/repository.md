@@ -50,6 +50,7 @@ default features off has to add it back.
 | `size` | `ThemeAwareValue` | `md` | Button size. The icon takes half of it. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
 | `aria_label` | `String` | - | Replaces the name's subject, the host and repository; the star count and new-tab cue still follow. A raw `"aria-label"` attribute replaces the whole name. |
+| `new_tab_icon` | `bool` | `false` | Draws the new-tab icon in the corner of the link. Unset, the theme's `anchor.new_tab_icon`, which is off. |
 | `parts` | `Parts<RepositoryPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 Like every component, `Repository` also takes the shared props `sx`, `class`,

@@ -152,7 +152,7 @@ pub(super) fn MenuRow(props: MenuRowProps) -> Element {
         span { "data-slot": MenuPart::Label.slot(),
             "{item.label}"
             if hint {
-                NewTabHint { in_text: true }
+                NewTabHint { in_text: true, icon: item.new_tab_icon }
             }
         }
         if let Some(trailing) = item.trailing.clone() {

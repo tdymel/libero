@@ -3,17 +3,27 @@
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{ActionIcon, Button, Flex, HoverCard, OptionList, Options, Tabs, Toolbar},
+    components::{
+        ActionIcon, Anchor, Button, Flex, HoverCard, OptionList, Options, Tabs, Toolbar,
+    },
     theme::{
-        Align, HoverCardDefaults, Side, TabsActivation, TabsDefaults, Theme, ToolbarDefaults,
+        Align, AnchorDefaults, HoverCardDefaults, Side, TabsActivation, TabsDefaults, Theme,
+        ToolbarDefaults,
     },
 };
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/theme-defaults", || rsx! { ThemedPage {} })];
+pub const ROUTES: Routes = &[
+    ("/theme-defaults", || rsx! { ThemedPage {} }),
+    ("/theme-defaults/plain", || rsx! { PlainPage {} }),
+];
 
 static THEMED: Theme = Theme {
+    anchor: AnchorDefaults {
+        new_tab_icon: true,
+        ..Theme::DEFAULT.anchor
+    },
     hover_card: HoverCardDefaults {
         side: Side::Top,
         align: Align::End,
@@ -60,6 +70,34 @@ fn ThemedPage() -> Element {
                 Toolbar { "aria-label": "Tools",
                     ActionIcon { id: "one", aria_label: "One", "1" }
                     ActionIcon { id: "two", aria_label: "Two", "2" }
+                }
+                Anchor { id: "themed-link", to: "https://example.com", target: "_blank", "Docs" }
+                Anchor {
+                    id: "themed-link-off",
+                    to: "https://example.com",
+                    target: "_blank",
+                    new_tab_icon: false,
+                    "Docs"
+                }
+            }
+        }
+    }
+}
+
+/// The library's own theme: a `_blank` link draws no icon but still says it opens a new tab.
+#[component]
+fn PlainPage() -> Element {
+    rsx! {
+        LiberoProvider {
+            Flex { direction: "column", gap: "md",
+                Anchor { id: "anchor", to: "https://example.com", target: "_blank", "Anchor" }
+                Button { id: "button", to: "https://example.com", target: "_blank", "Button" }
+                ActionIcon {
+                    id: "action-icon",
+                    aria_label: "Action",
+                    to: "https://example.com",
+                    target: "_blank",
+                    "A"
                 }
             }
         }

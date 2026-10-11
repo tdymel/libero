@@ -181,9 +181,12 @@ base_props! {
         to: NavigationTarget,
         #[props(default)]
         target: Option<String>,
-        /// With `target: "_blank"`, an icon and a hidden "(opens in a new tab)".
+        /// With `target: "_blank"`, a hidden "(opens in a new tab)". `false` drops it and the icon.
         #[props(default = true)]
         new_tab_hint: bool,
+        /// With the hint, draws the new-tab icon. Unset, the theme's `anchor.new_tab_icon`, off.
+        #[props(default)]
+        new_tab_icon: Option<bool>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         /// Marks the current page. Unset, `to` is compared against the router's route.
@@ -319,7 +322,7 @@ pub fn NavLink(props: NavLinkProps) -> Element {
     let body = rsx! {
         {body}
         if hint {
-            NewTabHint {}
+            NewTabHint { icon: props.new_tab_icon }
         }
     };
     // A hook, so above the branch.

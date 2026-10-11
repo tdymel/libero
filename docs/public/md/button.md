@@ -54,7 +54,8 @@ pill without an accessible name.
 | `loading` | `bool` | `false` | Shows a `Loader` over the label and ignores clicks. The button stays focusable and keeps its width. Ignored on a link. |
 | `onclick` | `EventHandler<MouseEvent>` | - | Click handler. Not called on a link. |
 | `to` | `NavigationTarget` | - | Renders a link instead of a `<button>`. Takes a path, a URL or a typed route (`Route::Foo {}`). |
-| `target` | `String` | - | The link's `target` attribute. `"_blank"` adds a small external icon and a hidden "(opens in a new tab)". |
+| `target` | `String` | - | The link's `target` attribute. `"_blank"` adds a hidden "(opens in a new tab)". |
+| `new_tab_icon` | `bool` | `false` | With `target: "_blank"`, draws a small external icon after the label. Unset, the theme's `anchor.new_tab_icon`, which is off. |
 | `icon` | `Element` | - | Drawn before the label. It never shrinks. |
 | `parts` | `Parts<ButtonPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 | `children` | `Element` | required | The label, on one line. A long one is cut at the edge. |
@@ -78,8 +79,8 @@ parts work.
 ### Libero handles
 
 - A label cut at the edge is still the full accessible name.
-- A link with `target: "_blank"` draws a small external icon and reads a hidden
-  "(opens in a new tab)".
+- A link with `target: "_blank"` reads a hidden "(opens in a new tab)". With
+  `new_tab_icon`, it also draws a small external icon.
 - `selected: Some(false)` announces a toggle that is off. An unset `selected`
   announces no state.
 - `focusable_when_disabled` keeps a disabled button in the Tab order, with

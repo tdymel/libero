@@ -185,7 +185,7 @@ fn a_blank_link_chip_adds_the_new_tab_hint_unless_opted_out() {
     fn blank() -> Element {
         rsx! {
             LiberoProvider {
-                Chip { to: "https://example.com", target: "_blank", "Example" }
+                Chip { to: "https://example.com", target: "_blank", new_tab_icon: true, "Example" }
             }
         }
     }

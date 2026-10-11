@@ -61,10 +61,17 @@ fn a_blank_label_leaves_a_spread_label_in_place() {
     assert_eq!(html.matches(r#"aria-label="Close""#).count(), 3, "{html}");
 }
 
-/// Todos 3166, 3173: a live `_blank` link draws a corner cue, unless opted out or disabled.
+/// Todos 3166, 3173, 3324: a live `_blank` link draws a corner cue on request, unless opted out or disabled.
 #[test]
 fn a_blank_link_draws_a_corner_cue_unless_opted_out_or_disabled() {
     fn blank() -> Element {
+        rsx! {
+            LiberoProvider {
+                ActionIcon { aria_label: "Docs", to: "https://example.com", target: "_blank", new_tab_icon: true, icon: BAR }
+            }
+        }
+    }
+    fn plain() -> Element {
         rsx! {
             LiberoProvider {
                 ActionIcon { aria_label: "Docs", to: "https://example.com", target: "_blank", icon: BAR }
@@ -84,6 +91,9 @@ fn a_blank_link_draws_a_corner_cue_unless_opted_out_or_disabled() {
 
     let html = render(blank);
     assert_eq!(html.matches("data-slot=\"new-tab\"").count(), 1, "{html}");
+    let html = render(plain);
+    assert!(!html.contains("data-slot=\"new-tab\""), "{html}");
+    assert!(html.contains("Docs (opens in a new tab)"), "{html}");
     let html = render(others);
     assert!(!html.contains("data-slot=\"new-tab\""), "{html}");
     assert!(!html.contains("new tab"), "{html}");

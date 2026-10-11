@@ -62,7 +62,10 @@ pub fn ActionIconPage() -> Element {
                     .doc("The link's `target` attribute."),
                 prop("new_tab_hint", "bool")
                     .default("true")
-                    .doc("With `target: \"_blank\"`, a small icon in the corner, and \"(opens in a new tab)\" in the accessible name and the tooltip. `false` drops all three."),
+                    .doc("With `target: \"_blank\"`, \"(opens in a new tab)\" in the accessible name and the tooltip. `false` drops it and the icon."),
+                prop("new_tab_icon", "bool")
+                    .default(if theme.anchor.new_tab_icon { "true" } else { "false" })
+                    .doc("With the hint, a small icon in the corner for sighted users. Unset, the theme's `anchor.new_tab_icon`, which is off."),
                 prop("icon", "SvgData")
                     .doc("The glyph, drawn as a `Pictogram`: `pictogram_icons_lucide::x::outlined`. Wins over `children`."),
                 prop("children", "Element").doc("The icon, when it is not `SvgData`: your own svg, or any element."),
@@ -72,7 +75,7 @@ pub fn ActionIconPage() -> Element {
                     "Below 24px (a length such as `\"20px\"`) the button still takes presses in a 24x24 box centred on it.",
                     "`focusable_when_disabled` keeps a disabled button in the Tab order, with `aria-disabled`.",
                     "`tooltip` repeats the accessible name, and `shortcut` writes `aria-keyshortcuts` in the ARIA key names (`Control+B`).",
-                    "A link with `target: \"_blank\"` adds \"(opens in a new tab)\" to the accessible name and the tooltip, and draws a small icon in the corner for sighted users.",
+                    "A link with `target: \"_blank\"` adds \"(opens in a new tab)\" to the accessible name and the tooltip. With `new_tab_icon`, it also draws a small icon in the corner for sighted users.",
                 ])
                 .must([
                     "Name the button with `aria_label`: the icon gives a screen reader nothing to read.",
@@ -147,6 +150,12 @@ pub fn ActionIconPage() -> Element {
                         ],
                         _ => vec![],
                     }),
+                    Control::switch("new_tab_icon")
+                        .hidden_when(|values| !is_link(values))
+                        .code(|_, values| match values.str("new_tab_icon").as_str() {
+                            "true" => vec!["new_tab_icon: true".to_string()],
+                            _ => vec![],
+                        }),
                 ],
                 render: move |values: DemoValues| rsx! {
                     ActionIcon {
@@ -174,10 +183,11 @@ pub fn ActionIconPage() -> Element {
                             _ => Input::None,
                         },
                         target: (values.str("link") == "true").then(|| "_blank".to_string()),
+                        new_tab_icon: (values.str("new_tab_icon") == "true").then_some(true),
                         aria_label: "Confirm",
                         icon: pictogram_icons_lucide::check::outlined,
                     }
-                    // A new-tab link beside it, so its corner icon shows without the `link` switch.
+                    // A new-tab link beside it that opts into the corner icon, shown without the `link` switch.
                     if !is_link(&values) {
                         ActionIcon {
                             variant: values.str("variant"),
@@ -192,6 +202,7 @@ pub fn ActionIconPage() -> Element {
                             tooltip: values.str("tooltip") == "true",
                             to: "https://dioxuslabs.com",
                             target: "_blank",
+                            new_tab_icon: true,
                             aria_label: "Dioxus",
                             icon: pictogram_icons_lucide::link::outlined,
                         }

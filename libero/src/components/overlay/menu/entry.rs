@@ -61,6 +61,7 @@ pub struct MenuItem {
     pub(super) description: Option<String>,
     pub(super) close_on_select: Option<bool>,
     pub(super) new_tab_hint: bool,
+    pub(super) new_tab_icon: Option<bool>,
 }
 
 /// A checkable item's kind and state: one choice of several, or a toggle.
@@ -105,6 +106,7 @@ impl MenuItem {
             description: None,
             close_on_select: None,
             new_tab_hint: true,
+            new_tab_icon: None,
         }
     }
 
@@ -122,7 +124,7 @@ impl MenuItem {
 
     /// Opens `url` in a new tab: the item is an `<a>` with `role="menuitem"`, so
     /// middle-click and the context menu work. As on `Anchor`, the label ends in a
-    /// new-tab icon and a hidden "(opens in a new tab)". Replaces an
+    /// hidden "(opens in a new tab)", and in an icon with [`new_tab_icon`](Self::new_tab_icon). Replaces an
     /// [`onselect`](Self::onselect) or [`submenu`](Self::submenu). A disabled link has no `href`.
     ///
     /// ```no_run
@@ -136,9 +138,15 @@ impl MenuItem {
         self
     }
 
-    /// With [`href`](Self::href): `false` drops the new-tab icon and hidden hint.
+    /// With [`href`](Self::href): `false` drops the hidden hint and the new-tab icon.
     pub fn new_tab_hint(mut self, hint: bool) -> Self {
         self.new_tab_hint = hint;
+        self
+    }
+
+    /// With [`href`](Self::href): draws the new-tab icon. Unset, the theme's `anchor.new_tab_icon`, off.
+    pub fn new_tab_icon(mut self, icon: bool) -> Self {
+        self.new_tab_icon = Some(icon);
         self
     }
 
@@ -232,6 +240,7 @@ impl MenuItem {
         self.disabled == other.disabled
             && self.check == other.check
             && self.new_tab_hint == other.new_tab_hint
+            && self.new_tab_icon == other.new_tab_icon
             && self.submenu_items().is_some() == other.submenu_items().is_some()
             && self.label == other.label
             && self.href_url() == other.href_url()

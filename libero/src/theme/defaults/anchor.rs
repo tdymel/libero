@@ -24,6 +24,9 @@ pub struct AnchorDefaults {
     pub size: Size,
     pub underline: AnchorUnderline,
     pub color: Color,
+    /// Whether a `_blank` link draws the new-tab icon, on `Anchor`, `Button`, `ActionIcon`,
+    /// `Chip`, `NavLink` and `MenuItem`. `false`: the hidden "(opens in a new tab)" stays.
+    pub new_tab_icon: bool,
 }
 
 impl AnchorDefaults {
@@ -31,6 +34,7 @@ impl AnchorDefaults {
         size: Size::Md,
         underline: AnchorUnderline::Hover,
         color: Color::Primary,
+        new_tab_icon: false,
     };
 
     /// `Text`'s own sizing plus the link colour.

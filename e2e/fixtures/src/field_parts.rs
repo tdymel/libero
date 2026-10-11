@@ -101,7 +101,7 @@ fn FieldPartsPage() -> Element {
                 parts: Parts::new().part(ChipPart::Icon, sx().padding_left("6px")),
                 "Tagged"
             }
-            Chip { id: "link-chip", to: "https://example.com", target: "_blank",
+            Chip { id: "link-chip", to: "https://example.com", target: "_blank", new_tab_icon: true,
                 parts: Parts::new().part(ChipPart::NewTab, sx().padding_left("4px")),
                 "Docs"
             }

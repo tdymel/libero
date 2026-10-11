@@ -63,7 +63,7 @@ fn NavStatesPage() -> Element {
                 "Read "
                 Anchor { id: "inline", to: "/nav-link", "the inline link" }
                 " in a sentence, or "
-                Anchor { id: "external", to: "https://example.com", target: "_blank", "the external one" }
+                Anchor { id: "external", to: "https://example.com", target: "_blank", new_tab_icon: true, "the external one" }
                 "."
             }
             Flex { gap: "md", align: "center",

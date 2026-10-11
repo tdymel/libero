@@ -257,9 +257,12 @@ base_props! {
         to: Input<NavigationTarget>,
         #[props(default)]
         target: Option<String>,
-        /// As on `Anchor`: the new-tab icon and hidden hint. `false` drops both.
+        /// As on `Anchor`: the hidden new-tab hint. `false` drops it and the icon.
         #[props(default = true)]
         new_tab_hint: bool,
+        /// As on `Anchor`: draws the new-tab icon. Unset, the theme's `anchor.new_tab_icon`, off.
+        #[props(default)]
+        new_tab_icon: Option<bool>,
         /// Drawn before the label; it never shrinks.
         #[props(default)]
         icon: Option<Element>,
@@ -437,7 +440,7 @@ pub fn Chip(props: ChipProps) -> Element {
                     attributes: props.attributes,
                     {labelled}
                     if hint {
-                        NewTabHint {}
+                        NewTabHint { icon: props.new_tab_icon }
                     }
                     {trailing}
                 }

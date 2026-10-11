@@ -54,7 +54,7 @@ pub fn TldrPage() -> Element {
                 .key(["Escape"], "Closes the menu and returns focus to the trigger.")
                 .handles([
                     "It is `Menu`'s menu button: the trigger has `aria-haspopup` and `aria-expanded`, the links sit in a group named \"Summarize with\".",
-                    "Each link is an `<a role=\"menuitem\">` with a real `href`, so middle-click and the context menu work. It opens in a new tab, `rel=\"noopener noreferrer\"`, and its name ends in \"(opens in a new tab)\" beside a new-tab icon.",
+                    "Each link is an `<a role=\"menuitem\">` with a real `href`, so middle-click and the context menu work. It opens in a new tab, `rel=\"noopener noreferrer\"`, and its name ends in \"(opens in a new tab)\".",
                     "The provider marks are hidden from assistive technology; the provider's name starts the link's name.",
                     "The icon-only trigger is named \"Summarize with AI\". Every word comes from `TldrLabels` in the localization.",
                 ])

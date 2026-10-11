@@ -61,7 +61,7 @@ fn a_blank_target_adds_the_new_tab_hint_unless_opted_out() {
     fn blank() -> Element {
         rsx! {
             LiberoProvider {
-                NavLink { to: "https://example.com", target: "_blank", "Example" }
+                NavLink { to: "https://example.com", target: "_blank", new_tab_icon: true, "Example" }
             }
         }
     }

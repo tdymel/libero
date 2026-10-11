@@ -374,16 +374,21 @@ fn a_shortcut_is_announced_by_attribute_not_by_name() {
 fn a_link_item_is_an_anchor_that_opens_a_new_tab() {
     let html = opened(|| {
         vec![
-            MenuItem::new("Docs").href("https://libero-ui.dev").into(),
+            MenuItem::new("Docs")
+                .href("https://libero-ui.dev")
+                .new_tab_icon(true)
+                .into(),
             MenuItem::new("Blog")
                 .href("https://example.com")
                 .disabled(true)
+                .new_tab_icon(true)
                 .into(),
             MenuItem::new("Copy").onselect(|_| {}).into(),
             MenuItem::new("News")
                 .href("https://example.com")
                 .new_tab_hint(false)
                 .into(),
+            MenuItem::new("Plain").href("https://example.com").into(),
         ]
     });
     let (anchors, buttons) = (tags_with(&html, "<a"), tags_with(&html, "<button"));
@@ -406,13 +411,13 @@ fn a_link_item_is_an_anchor_that_opens_a_new_tab() {
     let copy = tags_with(&html, r#"data-menu-index="2""#);
     assert!(buttons.contains(&copy[0]), "{copy:?}");
 
-    // Todo 1495: the links but News, which opts out, end in Anchor's new-tab hint.
+    // Todos 1495, 3324: the links but News, which opts out, end in the hint; only Docs and Blog draw the icon.
     assert_eq!(
         tags_with(&html, r#"data-slot="new-tab""#).len(),
         2,
         "{html}"
     );
-    assert_eq!(html.matches("(opens in a new tab)").count(), 2, "{html}");
+    assert_eq!(html.matches("(opens in a new tab)").count(), 3, "{html}");
 }
 
 /// Events dispatched the way a renderer does, through [`crate::dispatch`].

@@ -193,11 +193,12 @@ fn Glyph() -> Element {
 fn ChipNewTabPage() -> Element {
     rsx! {
         Flex { direction: "row", gap: "md",
-            Chip { id: "new-tab", to: "https://example.com", target: "_blank", "External" }
+            Chip { id: "new-tab", to: "https://example.com", target: "_blank", new_tab_icon: true, "External" }
             Chip {
                 id: "new-tab-long",
                 to: "https://example.com",
                 target: "_blank",
+                new_tab_icon: true,
                 style: "max-width: 120px",
                 span { style: "min-width: 0; overflow: hidden; text-overflow: ellipsis",
                     "Versandkostenberechnungsgrundlage"

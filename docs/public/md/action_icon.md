@@ -66,7 +66,8 @@ A `Button` with an icon and no text is a wide pill and has no name unless you ad
 | `onclick` | `EventHandler<MouseEvent>` | - | Click handler. Not called on a link. |
 | `to` | `NavigationTarget` | - | Renders a link instead of a `<button>`. |
 | `target` | `String` | - | The link's `target` attribute. |
-| `new_tab_hint` | `bool` | `true` | With `target: "_blank"`, a small icon in the corner, and "(opens in a new tab)" in the accessible name and the tooltip. `false` drops all three. |
+| `new_tab_hint` | `bool` | `true` | With `target: "_blank"`, "(opens in a new tab)" in the accessible name and the tooltip. `false` drops it and the icon. |
+| `new_tab_icon` | `bool` | `false` | With the hint, a small icon in the corner for sighted users. Unset, the theme's `anchor.new_tab_icon`, which is off. |
 | `icon` | `SvgData` | - | The glyph, drawn as a `Pictogram`: `pictogram_icons_lucide::x::outlined`. Wins over `children`. |
 | `children` | `Element` | - | The icon, when it is not `SvgData`: your own svg, or any element. |
 
@@ -84,7 +85,8 @@ Like every component, `ActionIcon` also takes the shared props `sx`, `class`,
 - `tooltip` repeats the accessible name, and `shortcut` writes
   `aria-keyshortcuts` in the ARIA key names (`Control+B`).
 - A link with `target: "_blank"` adds "(opens in a new tab)" to the accessible
-  name and the tooltip, and draws a small icon in the corner for sighted users.
+  name and the tooltip. With `new_tab_icon`, it also draws a small icon in the
+  corner for sighted users.
 
 ### You must
 

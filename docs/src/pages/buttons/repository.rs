@@ -31,6 +31,9 @@ pub fn RepositoryPage() -> Element {
                     .doc("Corner radius, independent of `size`."),
                 prop("aria_label", "String")
                     .doc("Replaces the name's subject, the host and repository; the star count and new-tab cue still follow. A raw `\"aria-label\"` attribute replaces the whole name."),
+                prop("new_tab_icon", "bool")
+                    .default(if theme.anchor.new_tab_icon { "true" } else { "false" })
+                    .doc("Draws the new-tab icon in the corner of the link. Unset, the theme's `anchor.new_tab_icon`, which is off."),
                 prop("parts", "Parts<RepositoryPart>")
                     .doc("Styles for the inner parts in the Style API tab, under `sx`."),
             ])
@@ -77,6 +80,13 @@ pub fn RepositoryPage() -> Element {
                     Control::sizes("size").default("md"),
                     Control::sizes("radius")
                         .default("sm"),
+                    // On here so the icon shows; the component's own default is off.
+                    Control::switch("new_tab_icon").default("true").code(|_, values| {
+                        match values.str("new_tab_icon").as_str() {
+                            "true" => vec!["new_tab_icon: true".to_string()],
+                            _ => vec![],
+                        }
+                    }),
                 ],
                 render: move |values: DemoValues| {
                     let (repo, host) = match values.str("host").as_str() {
@@ -94,6 +104,7 @@ pub fn RepositoryPage() -> Element {
                             },
                             size: values.str("size"),
                             radius: values.str("radius"),
+                            new_tab_icon: values.str("new_tab_icon") == "true",
                         }
                     }
                 },

@@ -108,20 +108,27 @@ static GLYPH_SX: StaticSx = StaticSx::new(|| {
 });
 
 /// With a count, the square grows into a pill. On a wrapper, leaving the caller's `sx` alone.
-/// The end padding is the new-tab cue's side, so the cue clears the count.
+/// With the new-tab icon drawn, the end padding is the cue's side, so the cue clears the count.
 static STARS_SX: StaticSx = StaticSx::new(|| {
-    sx().display("contents").when(
-        "stars",
-        sx().selector(
-            "& > a",
-            sx().width("auto")
-                .padding_inline("sm")
-                .padding_inline_end(format!("calc({} + 2px)", new_tab_cue_side()))
-                .gap("xs")
-                .font_size("sm")
-                .text_decoration("none"),
-        ),
-    )
+    sx().display("contents")
+        .when(
+            "stars",
+            sx().selector(
+                "& > a",
+                sx().width("auto")
+                    .padding_inline("sm")
+                    .gap("xs")
+                    .font_size("sm")
+                    .text_decoration("none"),
+            ),
+        )
+        .when(
+            "cue",
+            sx().selector(
+                "& > a",
+                sx().padding_inline_end(format!("calc({} + 2px)", new_tab_cue_side())),
+            ),
+        )
 });
 
 /// Text needs 4.5:1, which an unfilled or muted tonal label can miss.
@@ -159,6 +166,9 @@ base_props! {
         /// still follow. A raw `"aria-label"` attribute replaces the name whole.
         #[props(default, into)]
         aria_label: Option<String>,
+        /// Draws the new-tab icon in the corner. Unset, the theme's `anchor.new_tab_icon`, off.
+        #[props(default)]
+        new_tab_icon: Option<bool>,
     }
 }
 
@@ -271,7 +281,11 @@ pub fn Repository(props: RepositoryProps) -> Element {
         let shown = compact(count, separator);
         count_box.render(HtmlTag::Span, Vec::new(), rsx! { "{shown}" })
     });
-    let wrapper_states: Input<States> = States::new().with("stars", count.is_some()).into();
+    let new_tab_icon = props.new_tab_icon.unwrap_or(theme.anchor.new_tab_icon);
+    let wrapper_states: Input<States> = States::new()
+        .with("stars", count.is_some())
+        .with("cue", count.is_some() && new_tab_icon)
+        .into();
     let wrapper = use_box()
         .framework_sx(&STARS_SX)
         .states(&wrapper_states)
@@ -285,6 +299,7 @@ pub fn Repository(props: RepositoryProps) -> Element {
                 aria_label,
                 to: host.page_url(&props.repo),
                 target: "_blank",
+                new_tab_icon,
                 variant: Input::Value(variant),
                 color: color.map_or(Input::None, Input::Value),
                 size: props.size.clone(),

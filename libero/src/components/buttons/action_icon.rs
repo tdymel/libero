@@ -265,9 +265,12 @@ base_props! {
         to: Input<NavigationTarget>,
         #[props(default)]
         target: Option<String>,
-        /// With `target: "_blank"`, a corner icon, and "(opens in a new tab)" in the name and tooltip.
+        /// With `target: "_blank"`, "(opens in a new tab)" in the name and tooltip. `false` drops it and the icon.
         #[props(default = true)]
         new_tab_hint: bool,
+        /// With the hint, draws a corner icon. Unset, the theme's `anchor.new_tab_icon`, off.
+        #[props(default)]
+        new_tab_icon: Option<bool>,
         /// The glyph, drawn as a [`Pictogram`]; `children` for anything else.
         #[props(default, into)]
         icon: Option<SvgData>,
@@ -368,7 +371,9 @@ fn action_icon(mut props: ActionIconProps) -> Element {
     }
 
     let has_variant_styling = props.variant.as_ref().is_some() || props.color.as_ref().is_some();
-    let variant = props.variant.copied_or(use_theme().action_icon.variant);
+    let theme = use_theme();
+    let variant = props.variant.copied_or(theme.action_icon.variant);
+    let new_tab_icon = props.new_tab_icon.unwrap_or(theme.anchor.new_tab_icon);
     let variables: Input<Variables> =
         action_icon_variables(&props, variant, has_variant_styling).into();
     let gradient = use_gradient_style(
@@ -481,7 +486,7 @@ fn action_icon(mut props: ActionIconProps) -> Element {
                 "aria-keyshortcuts": keyshortcuts,
                 attributes,
                 {glyph}
-                if hint {
+                if hint && new_tab_icon {
                     span { "data-slot": "new-tab", "aria-hidden": "true",
                         Glyph { slot: IconSlot::ExternalLink, icon: lucide::external_link::outlined }
                     }
@@ -553,6 +558,7 @@ mod tests {
             to: Input::None,
             target: None,
             new_tab_hint: true,
+            new_tab_icon: None,
             icon: None,
             children: None,
         }

@@ -142,8 +142,9 @@ fn Demo() -> Element {
 | `value` | `String` | `on` | What the chip posts under its `name` when checked, so a row of filter chips can share one name. |
 | `onclick` | `EventHandler<MouseEvent>` | - | A plain action. Makes the chip a `<button>`; with `checked` it is a toggle button and says `aria-pressed`. |
 | `to` | `NavigationTarget` | - | Makes the chip a router-aware link. Wins over `onclick`. |
-| `target` | `String` | - | Link target, such as `_blank`. Only with `to`. `"_blank"` adds an external icon and a hidden "(opens in a new tab)". |
-| `new_tab_hint` | `bool` | `true` | `false` drops the icon and the hidden text a `"_blank"` target adds. |
+| `target` | `String` | - | Link target, such as `_blank`. Only with `to`. `"_blank"` adds a hidden "(opens in a new tab)". |
+| `new_tab_hint` | `bool` | `true` | `false` drops the hidden text a `"_blank"` target adds, and the icon. |
+| `new_tab_icon` | `bool` | `false` | With the hint, draws an external icon after the label. Unset, the theme's `anchor.new_tab_icon`, which is off. |
 | `icon` | `Element` | - | Drawn before the label, with a gap. It never shrinks. |
 | `trailing` | `Element` | - | Drawn after the label, with a gap, such as a remove button. It never shrinks. Not on an `onclick` or `to` chip, which is a button already. |
 | `children` | `Element` | required | The label, cut at the chip's edge. Text and `Icon` only. |
@@ -161,7 +162,7 @@ explains how parts work.
 |---|---|---|
 | `ChipPart::Icon` | `chip-icon` | The leading glyph's wrapper. |
 | `ChipPart::Trailing` | `chip-trailing` | The slot after the label, with `trailing`. |
-| `ChipPart::NewTab` | `new-tab` | The new-tab icon after the label, on a `to` chip with `target: "_blank"` only. |
+| `ChipPart::NewTab` | `new-tab` | The new-tab icon after the label, on a `to` chip with `target: "_blank"` and `new_tab_icon` only. |
 
 ## Accessibility
 

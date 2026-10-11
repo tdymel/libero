@@ -51,8 +51,9 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `size` | `Size` | `md` | Text size. |
 | `to` | `NavigationTarget` | required | A path, a URL or a typed route (`Route::Foo {}`). With a router mounted and `target` unset, an internal target navigates without a page reload; with `"_blank"` it opens a new tab with a full page load. A `javascript:` URL runs script on click, so check the scheme of any URL from user data. |
-| `target` | `String` | - | The link's `target` attribute. `"_blank"` adds a small external icon and a hidden "(opens in a new tab)". |
-| `new_tab_hint` | `bool` | `true` | `false` drops the icon and the hidden text a `"_blank"` target adds. |
+| `target` | `String` | - | The link's `target` attribute. `"_blank"` adds a hidden "(opens in a new tab)". |
+| `new_tab_hint` | `bool` | `true` | `false` drops the hidden text a `"_blank"` target adds, and the icon. |
+| `new_tab_icon` | `bool` | `false` | With the hint, draws a small external icon after the text. Unset, the theme's `anchor.new_tab_icon`, which is off. `Button`, `ActionIcon`, `Chip`, `NavLink`, `Repository` and `MenuItem` take it too. |
 | `underline` | `AnchorUnderline` | `hover` | When the underline draws, `always`, `hover` or `never`. |
 | `children` | `Element` | required | The link's content. |
 | `parts` | `Parts<AnchorPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
@@ -68,15 +69,15 @@ parts work.
 
 | Part | `data-slot` | Description |
 |---|---|---|
-| `AnchorPart::NewTab` | `new-tab` | The new-tab icon after the text, with `target: "_blank"` only. |
+| `AnchorPart::NewTab` | `new-tab` | The new-tab icon after the text, with `target: "_blank"` and `new_tab_icon` only. |
 
 ## Accessibility
 
 ### Libero handles
 
-- A `target: "_blank"` link draws a small external icon and reads a hidden
-  "(opens in a new tab)". `new_tab_hint: false` drops both, for a link whose
-  text already says it.
+- A `target: "_blank"` link reads a hidden "(opens in a new tab)".
+  `new_tab_icon: true` also draws a small external icon, for sighted users.
+  `new_tab_hint: false` drops both, for a link whose text already says it.
 - In a filled, tonal or gradient `Alert`, a colored `Header` and a `Mark`,
   a link takes the text color, so `underline: "hover"` draws its underline at
   rest there too.
@@ -104,6 +105,7 @@ and a screen reader reads "The Rust website (opens in a new tab)".
 | `size` | `Size` | Default `size`, `md`. |
 | `underline` | `AnchorUnderline` | Default `underline`, `hover`. |
 | `color` | `Color` | The link color, `primary`. |
+| `new_tab_icon` | `bool` | Default `new_tab_icon` of `Anchor`, `Button`, `ActionIcon`, `Chip`, `NavLink`, `Repository` and `MenuItem`, `false`. |
 
 ## CSS variables
 

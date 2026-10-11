@@ -46,10 +46,13 @@ pub fn NavLinkPage() -> Element {
             markdown: "/md/nav_link.md",
             properties: vec![props("NavLink", vec![
                 prop("to", "NavigationTarget").default("required").doc("A path, a URL or a typed route, as in `Anchor::to`."),
-                prop("target", "String").doc("The link's `target` attribute. `\"_blank\"` adds a small external icon and a hidden \"(opens in a new tab)\"."),
+                prop("target", "String").doc("The link's `target` attribute. `\"_blank\"` adds a hidden \"(opens in a new tab)\"."),
                 prop("new_tab_hint", "bool")
                     .default("true")
-                    .doc("`false` drops the icon and the hidden text a `\"_blank\"` target adds."),
+                    .doc("`false` drops the hidden text a `\"_blank\"` target adds, and the icon."),
+                prop("new_tab_icon", "bool")
+                    .default(if theme.anchor.new_tab_icon { "true" } else { "false" })
+                    .doc("With the hint, draws a small external icon after the label. Unset, the theme's `anchor.new_tab_icon`, which is off."),
                 prop("color", "ThemeAwareValue").default("primary").doc("Colours the active link's tint and start bar. Only the color family counts: the tint is its lightest shade."),
                 prop("active", "bool")
                     .default("follows the route")
@@ -70,14 +73,14 @@ pub fn NavLinkPage() -> Element {
                 (NavLinkPart::Body, "The column holding the label and the description, with `description` only."),
                 (NavLinkPart::Label, "The link's content, with `description` only."),
                 (NavLinkPart::Description, "The dimmed line under the label."),
-                (NavLinkPart::NewTab, "The new-tab icon after the label, with `target: \"_blank\"` only."),
+                (NavLinkPart::NewTab, "The new-tab icon after the label, with `target: \"_blank\"` and `new_tab_icon` only."),
             ])],
             accessibility: a11y()
                 .handles([
                     "`description` is read as the link's description, not its name, so \"Docs\" stays \"Docs\" in a links list.",
                     "With `nested`, a disclosure button follows the link with its own tab stop. It carries `aria-expanded` and `aria-controls`, and its name is the localized \"Show links\" plus the link's name (\"Show links Docs\").",
                     "Enter or Space on the disclosure button toggles the panel, and the link still navigates.",
-                    "A `target: \"_blank\"` link draws a small external icon and reads a hidden \"(opens in a new tab)\". `new_tab_hint: false` drops both.",
+                    "A `target: \"_blank\"` link reads a hidden \"(opens in a new tab)\". `new_tab_icon: true` also draws a small external icon. `new_tab_hint: false` drops both.",
                 ])
                 .must(["Wrap a list of them in a `<nav>` to make a navigation landmark."])
                 .limits(["In a native app, Tab still enters the nested links of a closed panel."])

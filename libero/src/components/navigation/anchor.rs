@@ -56,34 +56,42 @@ pub(crate) fn wants_new_tab_hint(target: Option<&str>, new_tab_hint: bool) -> bo
     target.is_some_and(|target| target.eq_ignore_ascii_case("_blank")) && new_tab_hint
 }
 
-/// Todo 579: the icon plus a hidden "(opens in a new tab)", after a link's text.
+/// Todo 579: a hidden "(opens in a new tab)" and, with `icon` (unset: the theme's
+/// `new_tab_icon`, todo 3324), the icon, after a link's text.
 /// `in_text`: the link lays out inline, not as a flex row such as `Chip`'s.
 #[component]
-pub(crate) fn NewTabHint(#[props(default)] in_text: bool) -> Element {
+pub(crate) fn NewTabHint(
+    #[props(default)] in_text: bool,
+    #[props(default)] icon: Option<bool>,
+) -> Element {
     let class = use_css(Some(&NEW_TAB_HINT_SX), CssLayer::Framework);
     let new_tab = use_localization().anchor.new_tab;
+    let drawn = icon.unwrap_or(use_theme().anchor.new_tab_icon);
 
     // The no-break space keeps the icon on the last word's line. Natively in text it
     // goes before the span, as the name's space: Blitz drops it at an inline element's start (891).
+    // Without the icon it is a plain space, which a link's end collapses instead of underlining.
     let native = cfg!(all(not(target_arch = "wasm32"), feature = "native"));
-    let (before, inside, gap) = if in_text && native {
-        ("\u{a0}", "", "")
-    } else {
-        ("", "\u{a0}", " ")
+    let (before, inside, gap) = match (in_text && native, drawn) {
+        (true, true) => ("\u{a0}", "", ""),
+        (true, false) => (" ", "", ""),
+        (false, true) => ("", "\u{a0}", " "),
+        (false, false) => ("", "", " "),
     };
     rsx! {
         {before}
-        span {
-            class,
-            "data-slot": AnchorPart::NewTab.slot(),
-            "aria-hidden": "true",
-            {inside}
-            Glyph { slot: IconSlot::ExternalLink, icon: lucide::external_link::outlined }
+        if drawn {
+            span {
+                class,
+                "data-slot": AnchorPart::NewTab.slot(),
+                "aria-hidden": "true",
+                {inside}
+                Glyph { slot: IconSlot::ExternalLink, icon: lucide::external_link::outlined }
+            }
         }
         VisuallyHidden { "{gap}{new_tab}" }
     }
 }
-
 parts_enum! {
     /// [`Anchor`]'s inner parts, for its `parts` prop.
     pub enum AnchorPart {
@@ -104,9 +112,12 @@ base_props! {
         target: Option<String>,
         #[props(default, into)]
         underline: Input<AnchorUnderline>,
-        /// With `target: "_blank"`, an icon and a hidden "(opens in a new tab)".
+        /// With `target: "_blank"`, a hidden "(opens in a new tab)". `false` drops it and the icon.
         #[props(default = true)]
         new_tab_hint: bool,
+        /// With the hint, draws the new-tab icon. Unset, the theme's `anchor.new_tab_icon`, off.
+        #[props(default)]
+        new_tab_icon: Option<bool>,
         children: Element,
     }
 }
@@ -156,7 +167,7 @@ pub fn Anchor(props: AnchorProps) -> Element {
     let children = match wants_new_tab_hint(props.target.as_deref(), props.new_tab_hint) {
         true => rsx! {
             {props.children}
-            NewTabHint { in_text: true }
+            NewTabHint { in_text: true, icon: props.new_tab_icon }
         },
         false => props.children,
     };

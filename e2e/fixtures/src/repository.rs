@@ -59,7 +59,7 @@ fn StubbedPage() -> Element {
     rsx! {
         if seeded() == Some(true) {
             Flex { direction: "row", gap: "md",
-                Repository { id: "github", repo: "example/repo" }
+                Repository { id: "github", repo: "example/repo", new_tab_icon: true }
                 Repository { id: "tonal", repo: "example/repo", variant: "tonal" }
                 Repository { id: "filled", repo: "example/repo", variant: "filled" }
                 // Unset: the theme's gradient, as `muted`'s stops miss 4.5:1 for every label (todo 1650).

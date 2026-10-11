@@ -53,7 +53,10 @@ pub fn ButtonPage() -> Element {
                 prop("to", "NavigationTarget")
                     .doc("Renders a link instead of a `<button>`. Takes a path, a URL or a typed route (`Route::Foo {}`)."),
                 prop("target", "String")
-                    .doc("The link's `target` attribute. `\"_blank\"` adds a small external icon and a hidden \"(opens in a new tab)\"."),
+                    .doc("The link's `target` attribute. `\"_blank\"` adds a hidden \"(opens in a new tab)\"."),
+                prop("new_tab_icon", "bool")
+                    .default(if theme.anchor.new_tab_icon { "true" } else { "false" })
+                    .doc("With `target: \"_blank\"`, draws a small external icon after the label. Unset, the theme's `anchor.new_tab_icon`, which is off."),
                 prop("icon", "Element")
                     .doc("Drawn before the label. It never shrinks."),
                 prop("parts", "Parts<ButtonPart>")
@@ -68,7 +71,7 @@ pub fn ButtonPage() -> Element {
             accessibility: a11y()
                 .handles([
                     "A label cut at the edge is still the full accessible name.",
-                    "A link with `target: \"_blank\"` draws a small external icon and reads a hidden \"(opens in a new tab)\".",
+                    "A link with `target: \"_blank\"` reads a hidden \"(opens in a new tab)\". With `new_tab_icon`, it also draws a small external icon.",
                     "`selected: Some(false)` announces a toggle that is off. An unset `selected` announces no state.",
                     "`focusable_when_disabled` keeps a disabled button in the Tab order, with `aria-disabled`.",
                 ])
@@ -130,6 +133,12 @@ pub fn ButtonPage() -> Element {
                         ],
                         _ => vec![],
                     }),
+                    Control::switch("new_tab_icon")
+                        .hidden_when(|values| !is_link(values))
+                        .code(|_, values| match values.str("new_tab_icon").as_str() {
+                            "true" => vec!["new_tab_icon: true".to_string()],
+                            _ => vec![],
+                        }),
                     // A `GlobalAttributes` pass-through, printed as the raw identifier. A link has no `type`.
                     Control::toggle("type", ["button", "submit", "reset"])
                         .labels(["Button", "Submit", "Reset"])
@@ -165,7 +174,20 @@ pub fn ButtonPage() -> Element {
                             _ => Input::None,
                         },
                         target: (values.str("link") == "true").then(|| "_blank".to_string()),
+                        new_tab_icon: (values.str("new_tab_icon") == "true").then_some(true),
                         "Save changes"
+                    }
+                    // A new-tab link beside it that opts into the icon, shown without the `link` switch.
+                    if !is_link(&values) {
+                        Button {
+                            variant: values.str("variant"),
+                            color: values.str("color"),
+                            size: values.str("size"),
+                            to: "https://dioxuslabs.com",
+                            target: "_blank",
+                            new_tab_icon: true,
+                            "Dioxus"
+                        }
                     }
                 },
             }
