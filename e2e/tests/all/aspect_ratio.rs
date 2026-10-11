@@ -103,10 +103,16 @@ fn a_text_child_is_not_clipped_but_a_picture_is() {
         let page = &fixture.page;
         let overflow: Vec<String> = js(
             page,
-            "['#text-ratio', '#cover-ratio'].map(id => getComputedStyle(document.querySelector(id)).overflow)",
+            "['#text-ratio', '#cover-ratio', '#cover'].map(id => getComputedStyle(document.querySelector(id)).overflow)",
         )
         .await;
-        assert_eq!(overflow, ["visible", "hidden"]);
+        assert_eq!(overflow, ["visible", "visible", "hidden"]);
+        let corner: String = js(
+            page,
+            "getComputedStyle(document.querySelector('#cover')).borderTopLeftRadius",
+        )
+        .await;
+        assert_eq!(corner, "12px", "the picture rounds with the box");
         fixture.console.assert_clean("a text child").unwrap();
         fixture.close().await.unwrap();
     });

@@ -17,7 +17,6 @@ static ASPECT_RATIO_BASE_SX: StaticSx = StaticSx::new(|| {
     // Relative so a static child's overlay anchors here, never moving a positioned child (todo 2535).
     sx().aspect_ratio(ASPECT_RATIO.overridable())
         .position("relative")
-        .overflow("hidden")
         // `object-fit` crops a replaced child instead of stretching it (todo 2533).
         .selector(
             "& > *",
@@ -44,12 +43,14 @@ static ASPECT_RATIO_BASE_SX: StaticSx = StaticSx::new(|| {
             "& > *:focus-visible::after",
             ring_overlay_sx().content("\"\"").and(inset_ring()),
         )
-        // A text child is not cut at 200% text (todo 2937) and grows the box (todo 3225);
-        // media keep the crop.
+        // The box clips nothing, so a text child is not cut at 200% text (todo 2937): media
+        // and their wrappers crop themselves, to the box's corners. No `:has()`, which
+        // Blitz drops (todo 3230).
         .selector(
-            format!("&:has(> {})", text_child()),
-            sx().overflow("visible"),
+            format!("& > :is({REPLACED_ELEMENTS}, a, picture, span)"),
+            sx().overflow("hidden").border_radius("inherit"),
         )
+        // A text child grows the box (todo 3225).
         .selector(
             format!("& > {}", text_child()),
             sx().height("auto").min_height("100%"),
@@ -236,15 +237,17 @@ mod tests {
         );
     }
 
-    /// Todo 2937: only a box holding media or a wrapper of it clips.
+    /// Todos 2937, 3230: the box clips nothing; media and their wrappers clip themselves.
     #[test]
     fn a_text_child_is_not_clipped() {
         let sheet = crate::css::Stylesheet::from(&ASPECT_RATIO_BASE_SX);
         let css = sheet.as_str();
 
-        assert!(css.contains("overflow:hidden"), "{css}");
-        let selector = ":has(> :not(:is(img, video, iframe, canvas, svg, embed, object, a, picture, span, [data-ring]))){";
-        assert!(rule(css, selector).contains("overflow:visible"), "{css}");
+        let selector = " > :is(img, video, iframe, canvas, svg, embed, object, a, picture, span){";
+        let media = rule(css, selector);
+        assert!(media.contains("overflow:hidden"), "{css}");
+        assert!(media.contains("border-radius:inherit"), "{css}");
+        assert_eq!(css.matches("overflow:hidden").count(), 1, "{css}");
     }
 
     /// Todo 3225: a text child may outgrow the box, so the box grows with it.

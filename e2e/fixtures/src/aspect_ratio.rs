@@ -31,7 +31,7 @@ fn ChildrenPage() -> Element {
             AspectRatio { id: "span-ratio", ratio: 16.0 / 9.0,
                 span { id: "span", "Inline child" }
             }
-            AspectRatio { id: "cover-ratio", ratio: 1.0,
+            AspectRatio { id: "cover-ratio", ratio: 1.0, style: "border-radius: 12px",
                 img { id: "cover", src: PICTURE, alt: "A blue field" }
             }
             AspectRatio { id: "text-ratio", ratio: 21.0 / 9.0,
