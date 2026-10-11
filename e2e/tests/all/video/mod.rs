@@ -40,6 +40,21 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+#[test]
+fn diag_video() {
+    block_on(async {
+        let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let mut out = Vec::new();
+        for _ in 0..4 {
+            tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+            let v: String = page.evaluate("JSON.stringify({hidden: document.hidden, vis: document.visibilityState, focus: document.hasFocus(), media: [...document.querySelectorAll('video,audio')].map(m => ({t: m.tagName, rs: m.readyState, ns: m.networkState, d: m.duration, err: m.error && [m.error.code, m.error.message], preload: m.preload, src: (m.currentSrc||'').slice(0,40), paused: m.paused})), wav: document.createElement('video').canPlayType('audio/wav'), mp4: document.createElement('video').canPlayType('video/mp4')})").await.unwrap().into_value().unwrap();
+            out.push(v);
+        }
+        panic!("DIAG {}", out.join("\n"));
+    });
+}
+
 /// Every shown button and the time of `#player`'s bar lie inside the player, none
 /// above its top; `one_row`: all on one line.
 fn controls_fit(width: u32, one_row: bool) -> String {

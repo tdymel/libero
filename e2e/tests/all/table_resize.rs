@@ -43,6 +43,30 @@ e2e::scenario!(
     a_drag_resizes
 );
 
+#[test]
+fn diag_touch() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    use e2e::browser::{Fixture, Viewport, block_on};
+    use e2e::passes::pointer::{Point, touch_drag};
+    use e2e::wait;
+    block_on(async {
+        let fixture = Fixture::open("/table-resize", Viewport::Mobile).await.unwrap();
+        let page = &fixture.page;
+        page.execute(SetTouchEmulationEnabledParams::new(true)).await.unwrap();
+        wait::for_js_true(page, "matchMedia('(pointer: coarse)').matches", "a coarse pointer").await.unwrap();
+        page.evaluate("window.__ev = []; for (const t of ['pointerdown','pointermove','pointerup','pointercancel','touchstart','touchmove','touchend','touchcancel','click']) document.addEventListener(t, e => window.__ev.push(t + ':' + (e.target.tagName||'') + '.' + (e.target.getAttribute && (e.target.getAttribute('data-resize-handle')!==null ? 'GRIP' : (e.target.id||''))) + '@' + Math.round(e.clientX||(e.touches&&e.touches[0]&&e.touches[0].clientX)||0)), true);").await.unwrap();
+        let info: String = page.evaluate("(() => { const hs = [...document.querySelectorAll('[data-resize-handle]')]; return JSON.stringify({ths:[...document.querySelectorAll('th')].map(t=>{const r=t.getBoundingClientRect();return [t.textContent.trim().slice(0,10), Math.round(r.left), Math.round(r.right), Math.round(r.top), Math.round(r.bottom)]}), grips: hs.map(h=>{const r=h.getBoundingClientRect(); const s=getComputedStyle(h); return [Math.round(r.left),Math.round(r.right),Math.round(r.top),Math.round(r.bottom), s.touchAction, s.pointerEvents]}), widths: document.querySelector('#widths').textContent, dpr: devicePixelRatio, iw: innerWidth, coarse: matchMedia('(pointer: coarse)').matches, any: matchMedia('(any-pointer: coarse)').matches, hover: matchMedia('(hover: none)').matches}); })()").await.unwrap().into_value().unwrap();
+        let name_edge: (f64, f64) = page.evaluate(format!("(r => [r.right, r.y + r.height / 2])(document.querySelector('{NAME}').getBoundingClientRect())")).await.unwrap().into_value().unwrap();
+        let from = Point { x: name_edge.0 - 18.0, y: name_edge.1 };
+        let to = Point { x: from.x + 60.0, y: from.y };
+        let under: String = page.evaluate(format!("(e => e ? e.tagName + '|' + e.className + '|' + (e.getAttribute('data-resize-handle')!==null) : 'none')(document.elementFromPoint({}, {}))", from.x, from.y)).await.unwrap().into_value().unwrap();
+        touch_drag(page, from, to, 8).await.unwrap();
+        tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+        let ev: String = page.evaluate("JSON.stringify(window.__ev.slice(0,40)) + ' widths=' + document.querySelector('#widths').textContent").await.unwrap().into_value().unwrap();
+        panic!("DIAG info={info}\nfrom={from:?} under={under}\nev={ev}");
+    });
+}
+
 /// Todo 2015: a finger 18px inside the header's end edge, past the old 8px grip, still resizes.
 #[test]
 fn a_touch_in_the_grip_lane_resizes_the_column() {
