@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 
 use super::super::sortable::SortableMove;
 use super::{
-    core::{HeaderSpec, RowSpec, body_rows},
+    core::{HeaderSpec, RowSpec, row_element},
     pipeline::VisibleRow,
     row_reorder::RowReorder,
 };
@@ -44,16 +44,17 @@ impl BodyRows {
 /// A windowed body: the shown rows, projected as they scroll in. No
 /// detail rows: they would break the one row height the window assumes.
 pub(super) struct RowWindow {
-    pub order: Rc<[VisibleRow]>,
+    /// The shown rows as `data` indices: a windowed body has no group rows.
+    pub order: Rc<[usize]>,
     /// The rows on the pages before this one, counted in `aria-rowindex`.
     pub first: usize,
     /// Every row on every page.
     pub total: usize,
     pub row_height: f64,
     /// A row's spec by its position among the shown rows.
-    pub row: Rc<dyn Fn(usize, VisibleRow) -> RowSpec>,
+    pub row: Rc<dyn Fn(usize, usize) -> RowSpec>,
     /// A row's key, so its node follows it through a sort.
-    pub key: Rc<dyn Fn(VisibleRow) -> String>,
+    pub key: Rc<dyn Fn(usize) -> String>,
     /// The row holding focus, kept rendered out of view.
     pub focused: Signal<Option<VisibleRow>>,
     pub moves: CopyValue<u64>,
@@ -66,13 +67,13 @@ pub(super) struct RowFocus {
     /// Bumped by each row `focusin`: a `focusout` clears `focused` only if none followed.
     pub moves: CopyValue<u64>,
     /// The header rows and the shown rows, as last rendered.
-    shown: CopyValue<(usize, Rc<[VisibleRow]>)>,
+    shown: CopyValue<(usize, Rc<[usize]>)>,
 }
 
 /// `table` is the table's handle: on Blitz its Tab and `focus()` fire no `focusin`.
 pub(super) fn use_row_focus(table: ElementHandle) -> RowFocus {
     let focused = use_signal(|| None::<VisibleRow>);
-    let shown = use_hook(|| CopyValue::new((0, Rc::<[VisibleRow]>::from([]))));
+    let shown = use_hook(|| CopyValue::new((0, Rc::<[usize]>::from([]))));
     let moves = use_hook(|| CopyValue::new(0u64));
     let follow = move |at: Option<VisibleRow>| {
         let mut focused = focused;
@@ -91,7 +92,7 @@ pub(super) fn use_row_focus(table: ElementHandle) -> RowFocus {
 
 impl RowFocus {
     /// Remembers the window's rows, so a silent move maps back to its row.
-    pub fn show(mut self, head_rows: usize, order: Rc<[VisibleRow]>) {
+    pub fn show(mut self, head_rows: usize, order: Rc<[usize]>) {
         self.shown.set((head_rows, order));
     }
 
@@ -121,7 +122,7 @@ fn moved_index(at: usize, SortableMove { from, to }: SortableMove) -> usize {
 /// The body row holding focus, by its `aria-rowindex`.
 fn focused_row(
     table: &ElementHandle,
-    (head_rows, order): &(usize, Rc<[VisibleRow]>),
+    (head_rows, order): &(usize, Rc<[usize]>),
 ) -> Option<VisibleRow> {
     let row = table
         .query_selector_all("tbody > tr")
@@ -129,7 +130,8 @@ fn focused_row(
         .into_iter()
         .find(|row| row.is_focused() || row.query_selector(":focus").is_ok())?;
     let index: usize = row.attribute("aria-rowindex").ok()??.parse().ok()?;
-    order.get(index.checked_sub(head_rows + 1)?).copied()
+    let at = order.get(index.checked_sub(head_rows + 1)?)?;
+    Some(VisibleRow::Data(*at))
 }
 
 /// The rows the DOM leaves out still count: the header rows plus every body row,
@@ -226,7 +228,9 @@ pub(super) fn render_window(
         mut focused,
         mut moves,
     } = window;
-    let keep_rendered = focused().and_then(|focused| order.iter().position(|&at| at == focused));
+    let keep_rendered = focused()
+        .and_then(VisibleRow::data)
+        .and_then(|focused| order.iter().position(|&at| at == focused));
     let keyed = order.clone();
     rsx! {
         RowsInTable {}
@@ -241,15 +245,15 @@ pub(super) fn render_window(
                 let mut spec = row(position, index);
                 spec.attributes.push(listener("onfocusin", move |_: Event<FocusData>| {
                     *moves.write() += 1;
-                    if *focused.peek() != Some(index) {
-                        focused.set(Some(index));
+                    if *focused.peek() != Some(VisibleRow::Data(index)) {
+                        focused.set(Some(VisibleRow::Data(index)));
                     }
                 }));
                 // A key proves the focus where Blitz fired no `focusin` (todo 2252). Only when unset:
                 // a drop's key bubbles here after `RowFocus::follow` moved the index.
                 spec.attributes.push(listener("onkeydown", move |_: Event<KeyboardData>| {
                     if focused.peek().is_none() {
-                        focused.set(Some(index));
+                        focused.set(Some(VisibleRow::Data(index)));
                     }
                 }));
                 // A task later: Tab to the next row is no moment without a focused row,
@@ -258,15 +262,13 @@ pub(super) fn render_window(
                     let left = *moves.peek();
                     spawn(async move {
                         next_task().await;
-                        if *moves.peek() == left && *focused.peek() == Some(index) {
+                        if *moves.peek() == left && *focused.peek() == Some(VisibleRow::Data(index)) {
                             focused.set(None);
                         }
                     });
                 }));
                 spec.attributes.push(attr("aria-rowindex", (head_rows + first + position + 1).to_string()));
-                body_rows(spec, 0, reorder.as_ref())
-                    .next()
-                    .unwrap_or_else(VNode::empty)
+                row_element(spec, reorder.as_ref())
             },
         }
     }

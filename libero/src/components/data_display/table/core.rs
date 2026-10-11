@@ -278,6 +278,8 @@ pub(super) fn next_sort(
 /// `data`. A cell is its text, or a caller's body.
 pub(super) struct RowSpec {
     pub key: String,
+    /// The columns its detail row spans, the leading ones too.
+    pub span: usize,
     /// The row's `data-state`.
     pub states: Option<String>,
     pub attributes: Vec<Attribute>,
@@ -696,11 +698,22 @@ pub(super) fn render_body(body: BodySpec) -> Element {
 /// A row, then its detail row while open: siblings, each keyed.
 pub(super) fn body_rows(
     row: RowSpec,
-    columns: usize,
     reorder: Option<&RowReorder>,
 ) -> impl Iterator<Item = Element> {
+    let (row, detail) = row_and_detail(row, reorder);
+    std::iter::once(row).chain(detail)
+}
+
+/// A row of a windowed body, which has no detail rows.
+pub(super) fn row_element(row: RowSpec, reorder: Option<&RowReorder>) -> Element {
+    debug_assert!(row.detail.is_none() && row.sliding.is_none());
+    row_and_detail(row, reorder).0
+}
+
+fn row_and_detail(row: RowSpec, reorder: Option<&RowReorder>) -> (Element, Option<Element>) {
     let RowSpec {
         key,
+        span: columns,
         states,
         attributes,
         cells,
@@ -770,7 +783,7 @@ pub(super) fn body_rows(
             },
         ),
     };
-    std::iter::once(row).chain(detail)
+    (row, detail)
 }
 
 /// A row's cells, each its text or a caller's body.
@@ -894,6 +907,17 @@ fn sort_button(spec: &HeaderSpec, index: usize, context: SortContext) -> Element
             onpointerdown: move |event: PointerEvent| {
                 if let Some(mut touch) = touch {
                     touch.set(event.pointer_type() != "mouse");
+                }
+            },
+            // A cancelled press or a key press has no click of its own to spend the mark.
+            onpointercancel: move |_| {
+                if let Some(mut touch) = touch {
+                    touch.set(false);
+                }
+            },
+            onkeydown: move |_| {
+                if let Some(mut touch) = touch {
+                    touch.set(false);
                 }
             },
             onclick: move |event: MouseEvent| {

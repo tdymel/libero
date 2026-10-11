@@ -59,7 +59,32 @@ pub const ROUTES: Routes = &[
     ("/table/infinite", || rsx! { InfiniteTablePage {} }),
     ("/table/windowed-wide", || rsx! { WindowedWideTablePage {} }),
     ("/table/small", || rsx! { SmallTablesPage {} }),
+    ("/table/cap-toggle", || rsx! { CapToggleTablePage {} }),
 ];
+
+/// Forty fruits whose `max_height` is switched on by `#cap` after the mount.
+#[component]
+fn CapToggleTablePage() -> Element {
+    let mut capped = use_signal(|| false);
+    let data: Vec<Fruit> = (1..=40)
+        .map(|stock| Fruit {
+            name: ["Apple", "Banana", "Cherry", "Date"][stock as usize % 4],
+            stock,
+        })
+        .collect();
+    rsx! {
+        button { id: "cap", onclick: move |_| capped.set(true), "Cap" }
+        Table {
+            caption: "Fruit stock",
+            max_height: capped().then(|| "200px".to_string()),
+            data,
+            columns: vec![
+                column("Name").value(|fruit: &Fruit| fruit.name.to_string()),
+                column("Stock").value(|fruit: &Fruit| fruit.stock),
+            ],
+        }
+    }
+}
 
 /// The two smallest sizes, whose sort buttons have the least padding.
 #[component]

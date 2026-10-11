@@ -139,14 +139,15 @@ impl<T: Clone + 'static> RowContext<T> {
             rowindex,
             editing: _,
         } = state;
-        let columns = &self.columns;
-        let name = || {
-            columns
+        let named = self.details.is_some() || self.selection.is_some() || slot.is_some();
+        let name = named.then(|| {
+            self.columns
                 .get(self.name_column)
                 .map(|column| (column.text)(row))
                 .filter(|name| !name.is_empty())
                 .unwrap_or_else(|| key.clone())
-        };
+        });
+        let name = name.as_deref().unwrap_or_default();
         let (open, detail) = match self.row_has_detail.call(row) {
             Some(has) => {
                 let open = has.then_some(expanded);
@@ -163,7 +164,7 @@ impl<T: Clone + 'static> RowContext<T> {
         };
         let details = self.details.as_ref();
         let toggle = details
-            .map(|details| details.row_cell(key.clone(), &name(), index, open, self.toggle_detail));
+            .map(|details| details.row_cell(key.clone(), name, index, open, self.toggle_detail));
         let sliding = details
             .zip(open)
             .filter(|_| self.animate_details)
@@ -183,12 +184,13 @@ impl<T: Clone + 'static> RowContext<T> {
             }));
         }
         let select = self.selection.as_ref().map(|selection| {
-            selection.row_cell(key.clone(), &name(), selected == Some(true), self.toggle)
+            selection.row_cell(key.clone(), name, selected == Some(true), self.toggle)
         });
         RowSpec {
+            span: self.span,
             reorder: slot.map(|slot| ReorderSlot {
                 slot,
-                label: name(),
+                label: name.to_string(),
             }),
             selected,
             select,
@@ -384,7 +386,7 @@ pub(super) fn TableRow<T: Clone + PartialEq + 'static>(props: TableRowProps<T>) 
     };
     let spec = context.spec(&row, state, cells);
     rsx! {
-        {body_rows(spec, context.span, context.reorder.as_ref())}
+        {body_rows(spec, context.reorder.as_ref())}
     }
 }
 

@@ -7,7 +7,6 @@ use super::{
     column::Column,
     core::{HeaderSpec, align_attr},
     pinning::CellPin,
-    pipeline::VisibleRow,
 };
 use crate::{
     hooks::{ElementHandle, use_element, use_resize_fallback},
@@ -92,10 +91,11 @@ pub(super) fn aggregate_cell<T>(
     Some(((labels.aggregate_name)(aggregate), text))
 }
 
-type FooterInput<T> = (Rc<Vec<T>>, Vec<Column<T>>, Vec<VisibleRow>);
+type FooterInput<T> = (Rc<Vec<T>>, Vec<Column<T>>, Option<Vec<bool>>);
 
 /// The aggregates across renders: recomputed only when the rows, the columns or
 /// the rows passing the filters change, not on a page, selection or sort.
+/// The rows add up in data order, so a sort never moves a float sum's last digits.
 pub(super) struct FooterRows<T> {
     input: Option<FooterInput<T>>,
     values: Vec<Option<f64>>,
@@ -111,28 +111,30 @@ impl<T> Default for FooterRows<T> {
 }
 
 impl<T: PartialEq> FooterRows<T> {
-    /// The footer of `columns` over the `data` rows at `rows`, in any order; `None`
+    /// The footer of `columns` over the `data` rows `kept` (all when `None`); `None`
     /// when no column aggregates.
     pub fn cells(
         &mut self,
         data: &Rc<Vec<T>>,
         columns: &[Column<T>],
-        rows: &[VisibleRow],
+        kept: Option<&[bool]>,
         labels: &TableLabels,
     ) -> Option<FooterCells> {
         if columns.iter().all(|column| column.aggregate.is_none()) {
             *self = Self::default();
             return None;
         }
-        let fresh = self.input.as_ref().is_some_and(|(known, cols, order)| {
-            order == rows
+        let fresh = self.input.as_ref().is_some_and(|(known, cols, rows)| {
+            rows.as_deref() == kept
                 && cols.as_slice() == columns
                 && (Rc::ptr_eq(known, data) || known == data)
         });
         if !fresh {
-            let indices: Vec<usize> = rows.iter().filter_map(|row| row.data()).collect();
+            let indices: Vec<usize> = (0..data.len())
+                .filter(|&index| kept.is_none_or(|kept| kept[index]))
+                .collect();
             self.values = aggregate_values(columns, data, &indices);
-            self.input = Some((data.clone(), columns.to_vec(), rows.to_vec()));
+            self.input = Some((data.clone(), columns.to_vec(), kept.map(<[bool]>::to_vec)));
         }
         Some(
             columns
@@ -155,7 +157,7 @@ pub(super) fn use_edge_height(bounded: bool) -> (ElementHandle, Signal<f64>) {
             height.set(size.height);
         }
     });
-    use_effect(move || {
+    use_effect(use_reactive!(|bounded| {
         if !bounded || !element.is_mounted() {
             return;
         }
@@ -167,7 +169,7 @@ pub(super) fn use_edge_height(bounded: bool) -> (ElementHandle, Signal<f64>) {
                 height.set(size.height);
             }
         });
-    });
+    }));
     (element, height)
 }
 
@@ -293,23 +295,27 @@ mod tests {
         };
         let data = Rc::new(vec![1, 2, 3, 4]);
         let mut footer = FooterRows::default();
-        let cells = |footer: &mut FooterRows<u32>, rows: &[usize]| {
-            let rows: Vec<VisibleRow> = rows.iter().copied().map(VisibleRow::Data).collect();
-            footer.cells(&data, &counted, &rows, &TableLabels::ENGLISH)
+        let cells = |footer: &mut FooterRows<u32>, kept: Option<&[bool]>| {
+            footer.cells(&data, &counted, kept, &TableLabels::ENGLISH)
         };
 
+        let all_but_second = [true, false, true, true];
         assert_eq!(
-            cells(&mut footer, &[0, 2, 3]),
+            cells(&mut footer, Some(&all_but_second)),
             Some(vec![Some(("Sum", "8 in all".to_string()))])
         );
         assert_eq!(calls.get(), 3);
-        cells(&mut footer, &[0, 2, 3]);
+        cells(&mut footer, Some(&all_but_second));
         assert_eq!(calls.get(), 3, "the same rows reuse the sums");
         assert_eq!(
-            cells(&mut footer, &[1]),
+            cells(&mut footer, Some(&[false, true, false, false])),
             Some(vec![Some(("Sum", "2 in all".to_string()))])
         );
         assert_eq!(calls.get(), 4);
+        assert_eq!(
+            cells(&mut footer, None),
+            Some(vec![Some(("Sum", "10 in all".to_string()))])
+        );
     }
 
     #[test]
@@ -317,8 +323,7 @@ mod tests {
         let columns = vec![column("N").value(|n: &u32| *n)];
         let data = Rc::new(vec![1]);
 
-        let rows = [VisibleRow::Data(0)];
-        let cells = FooterRows::default().cells(&data, &columns, &rows, &TableLabels::ENGLISH);
+        let cells = FooterRows::default().cells(&data, &columns, None, &TableLabels::ENGLISH);
         assert_eq!(cells, None);
     }
 }

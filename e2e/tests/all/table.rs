@@ -76,6 +76,34 @@ e2e::scenario!(
 
 const AREA: &str = "[data-table-scroll]";
 
+/// Todo 3204: a table capped after its mount still measures its header for the scroll padding.
+async fn a_cap_added_later_pads_the_scroll_by_the_header<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    d.click("#cap").await?;
+    eventually(
+        d,
+        "the scroll padding to equal the header's height",
+        async |d| {
+            if !d.exists(AREA).await? {
+                return Ok(false);
+            }
+            let padding = d.style(AREA, "scroll-padding-top").await?;
+            let padding: f64 = padding.trim_end_matches("px").parse().unwrap_or(0.0);
+            let header = d.rect("thead").await?.height;
+            Ok(padding > 1.0 && (padding - header).abs() <= 1.0)
+        },
+    )
+    .await
+}
+
+e2e::scenario!(
+    a_cap_added_later_is_measured,
+    "/table/cap-toggle",
+    a_cap_added_later_pads_the_scroll_by_the_header
+);
+
 /// A `NativeSelect`: natively a listbox combobox, no `<select>`.
 pub(crate) const PICKER: &str = ":is(select, [role=combobox])";
 
@@ -571,6 +599,44 @@ fn a_shift_click_adds_a_sorted_column() {
 }
 
 const SHIFT: i64 = 8;
+
+/// Ends a `touch_down` on `selector` as the browser does when it takes the touch to
+/// scroll: CDP refuses a `touchCancel`.
+async fn cancel_touch(page: &Page, selector: &str) -> Result<()> {
+    let script = format!(
+        "document.querySelector({selector:?}).dispatchEvent(\
+         new PointerEvent('pointercancel', {{bubbles: true, pointerType: 'touch'}}))"
+    );
+    page.evaluate(script).await?;
+    Ok(())
+}
+
+/// Todo 3202: a cancelled touch on a header leaves no mark that makes a later keyboard click add.
+#[test]
+fn a_cancelled_touch_does_not_make_the_next_key_press_add_a_column() {
+    block_on(async {
+        let fixture = Fixture::open("/table/select", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        pointer::click(page, STOCK).await.unwrap();
+        wait_text(page, "#sort", "Stock ascending").await;
+        pointer::touch_down(page, NAME).await.unwrap();
+        cancel_touch(page, NAME).await.unwrap();
+        page.find_element(NAME)
+            .await
+            .unwrap()
+            .focus()
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait_text(page, "#sort", "Name ascending").await;
+
+        fixture.console.assert_clean("a cancelled touch").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
 
 async fn wait_text(page: &Page, selector: &str, expected: &str) {
     wait::for_js_true(

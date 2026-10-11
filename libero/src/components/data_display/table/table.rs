@@ -1611,11 +1611,14 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         true => (0..data.len()).collect(),
         false => sorted.write().order(&data, &columns, &active),
     };
-    let mut order = visible_rows(sorted_order, kept.as_deref().map(Vec::as_slice));
+    let kept_rows = kept.as_deref().map(Vec::as_slice);
+    let mut order = visible_rows(sorted_order, kept_rows);
     // The rows passing the filters, group rows not counted.
     let results = order.len();
     filtered_count.set(results);
-    let footer = footer_rows.write().cells(&data, &columns, &order, &labels);
+    let footer = footer_rows
+        .write()
+        .cells(&data, &columns, kept_rows, &labels);
     // Groups nest the sorted rows; the footer above and an export count the rows alone.
     let levels = group_levels(&columns, &state.row_grouping.read());
     let grouped = !levels.is_empty();
@@ -1954,27 +1957,20 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 skeleton.is_some(),
                 footer.is_some(),
             ));
-            let order: Rc<[VisibleRow]> = order.into();
+            let order: Rc<[usize]> = order.iter().filter_map(|row| row.data()).collect();
             row_focus.show(head_rows + first, order.clone());
             BodyRows::Window(RowWindow {
                 order,
                 first,
                 total,
                 row_height,
-                row: Rc::new(move |position, row| match row {
-                    VisibleRow::Data(index) => {
-                        let row = &data[index];
-                        let state = state_of(position, index);
-                        let cells =
-                            context.cells(row, index, &state.key, state.stop, state.editing);
-                        context.spec(row, state, cells)
-                    }
-                    VisibleRow::Group(_) => unreachable!("a grouped table renders every row"),
+                row: Rc::new(move |position, index| {
+                    let row = &data[index];
+                    let state = state_of(position, index);
+                    let cells = context.cells(row, index, &state.key, state.stop, state.editing);
+                    context.spec(row, state, cells)
                 }),
-                key: Rc::new(move |row| match row {
-                    VisibleRow::Data(index) => key_at(index),
-                    VisibleRow::Group(_) => unreachable!("a grouped table renders every row"),
-                }),
+                key: key_at,
                 focused: row_focus.focused,
                 moves: row_focus.moves,
             })
