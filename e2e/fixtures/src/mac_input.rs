@@ -22,6 +22,12 @@ pub fn run(view: &NSView, op: &Value) -> Result<Value, String> {
     let number = |name: &str| op[name].as_f64().ok_or(format!("{op}: no number `{name}`"));
     match op["op"].as_str().unwrap_or_default() {
         "prepare" => Ok(prepare(mtm, view, &window)),
+        "enter" => {
+            let size = view.bounds().size;
+            let at = point(view, size.width / 2.0, size.height / 2.0);
+            hid_mouse(view, &window, NSEventType::MouseMoved, at)?;
+            Ok(Value::Null)
+        }
         "move" => {
             let at = point(view, number("x")?, number("y")?);
             let kind = if op["held"].as_bool() == Some(true) {

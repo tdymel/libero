@@ -397,7 +397,7 @@ impl Default for MacRoutes {
     fn default() -> Self {
         Self {
             pointer: "target",
-            button: "window",
+            button: "target",
             key: "window",
         }
     }
@@ -458,6 +458,8 @@ impl Desktop {
         }
         let height: f64 = self.bridge.json("innerHeight")?;
         let at = (2.0, height - 2.0);
+        // The window's own events reach the page only once the real cursor is over it.
+        self.input(serde_json::json!({ "op": "enter" }))?;
         let mut pointer = None;
         let mut button = None;
         let mut key = None;
@@ -467,7 +469,6 @@ impl Desktop {
             ("pointer", "window"),
             ("pointer", "post"),
             ("pointer", "cg"),
-            ("button", "window"),
             ("button", "target"),
             ("button", "view"),
             ("button", "post"),
