@@ -3,6 +3,8 @@ mod audio;
 mod avatar;
 mod badge;
 mod carousel;
+#[cfg(feature = "charts")]
+mod chart;
 mod data_list;
 mod icon;
 mod image;
@@ -25,6 +27,11 @@ pub use avatar::{Avatar, AvatarGroup, AvatarGroupProps, AvatarPart, AvatarProps,
 pub use badge::{Badge, BadgeProps};
 pub(crate) use carousel::CarouselJump;
 pub use carousel::{Carousel, CarouselAlign, CarouselPart, CarouselProps};
+#[cfg(feature = "charts")]
+pub use chart::{
+    ChartColor, ChartPart, ChartPoint, LineChart, LineChartProps, Series, Slice, Value,
+    ValueFormat, XValues,
+};
 pub use data_list::{DataList, DataListItem, DataListItemProps, DataListProps};
 pub use icon::{Icon, IconProps};
 pub use image::{Image, ImageFit, ImageLoading, ImagePart, ImageProps};

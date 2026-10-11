@@ -45,6 +45,9 @@ serde = { version = "1", features = ["derive"] }
 # Only to name `NativeFileData::byte_stream`'s return type for a picked or
 # cropped file. Already in dioxus's tree.
 futures-core = "0.3"
+# The charts' SVG, behind `charts`. Exact pin: libero reads geometry out of its SVG text,
+# a format only the contract test in `chart/engine.rs` guards.
+charts-rs = { version = "=2.1.0", optional = true, default-features = false }
 
 # Everything web-specific is wasm32-only, so a native build (`cargo test`, or
 # any future non-web renderer) compiles without it and the platform-backed
@@ -207,3 +210,5 @@ code-lang-swift = []
 code-lang-toml = []
 code-lang-typescript = []
 code-lang-yaml = []
+# `LineChart` and its kin, drawn by charts-rs (+~240 KB brotli on the web).
+charts = ["dep:charts-rs"]

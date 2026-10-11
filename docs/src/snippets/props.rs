@@ -272,6 +272,20 @@ const FIELD_PROPS: [&str; 9] = [
     "readonly",
 ];
 
+/// What `chart_props!` adds to every chart's struct.
+const CHART_PROPS: [&str; 10] = [
+    "title",
+    "description",
+    "legend",
+    "grid",
+    "value_format",
+    "unit",
+    "aspect_ratio",
+    "loading",
+    "empty",
+    "table",
+];
+
 /// `(component, part slot)` of a shared part enum the component never draws, so its table
 /// leaves it out. A frame's `leading`/`trailing` draw only where `use_field_frame` gets one.
 const KNOWN_GAPS: &[(&str, &str)] = &[
@@ -317,7 +331,7 @@ fn documented(fields: &str) -> BTreeSet<String> {
         .collect()
 }
 
-/// Every libero component's own props by name, `field_props!`'s included: a `#[component]`
+/// Every libero component's own props by name, `field_props!`'s and `chart_props!`'s included: a `#[component]`
 /// fn's parameters or its `<Name>Props` struct's fields.
 fn component_props() -> BTreeMap<String, BTreeSet<String>> {
     let mut props = BTreeMap::new();
@@ -367,6 +381,11 @@ fn component_props() -> BTreeMap<String, BTreeSet<String>> {
                         .filter(|name| !header.contains(&format!("without({name})")))
                         .map(|name| name.to_string()),
                 );
+            }
+            if let Some(macro_at) = before.rfind("chart_props! {")
+                && !before[macro_at..].contains("struct ")
+            {
+                names.extend(CHART_PROPS.iter().map(|name| name.to_string()));
             }
             props.entry(component.to_string()).or_insert(names);
         }

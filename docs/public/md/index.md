@@ -145,6 +145,7 @@ fetch only the file you need.
 - [Accordion](accordion.md): Sections over an enum, each a heading whose button opens its panel, with one or many open.
 - [Marquee](marquee.md): Content that scrolls on its own in an endless loop, with a pause toggle and a still fallback under reduced motion.
 - [QrCode](qr_code.md): Encodes a string as a scalable QR code, rendered as an inline SVG.
+- [LineChart](line_chart.md): Series of values over a shared x axis as lines, with a summary and the data as a table for screen readers.
 
 ## Typography
 

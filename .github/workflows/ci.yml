@@ -94,6 +94,7 @@ jobs:
           cache-key: test
       - run: cargo test -p libero --lib --tests
       - run: cargo test -p libero --lib --features "$CODE_LANGS" highlight
+      - run: cargo test -p libero --lib --features charts chart
       # The harness's own unit tests (exact filters, console classifier, focus-ring maths): no browser.
       - run: cargo test -p e2e --lib --bins
       # The two file checks of the browser suite, which the unit shards below never select.
@@ -119,6 +120,9 @@ jobs:
         run: cargo test -p docs page_snippets
       - if: matrix.part == 'libero-doc'
         run: cargo test -p libero --doc
+      # The chart docs and their pages' snippets compile only with the feature.
+      - if: matrix.part == 'libero-doc'
+        run: cargo test -p libero --doc --features charts -- chart Chart
       - if: matrix.part == 'no-default'
         run: cargo test -p libero --no-default-features
 

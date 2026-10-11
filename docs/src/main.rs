@@ -225,6 +225,8 @@ pub(crate) enum Route {
     MarqueePage {},
     #[route("/data-display/qr-code")]
     QrCodePage {},
+    #[route("/data-display/line-chart")]
+    LineChartPage {},
     #[route("/data-display/sortable")]
     SortablePage {},
     #[route("/data-display/kanban")]

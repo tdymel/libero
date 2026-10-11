@@ -18,6 +18,8 @@ libero = { path = "../libero", default-features = false, features = [
     "icons-material",
     "icons-phosphor",
     "icons-tabler",
+    # The chart pages; plain routes until wasm-split lands (938).
+    "charts",
 ] }
 # The `Pictogram` and `Icon` demos' glyphs; libero's own pin.
 pictogram-core = "0.5"

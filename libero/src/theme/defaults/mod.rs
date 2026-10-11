@@ -13,6 +13,7 @@ mod button;
 mod carousel;
 mod cascader;
 mod center;
+mod chart;
 mod checkbox;
 mod chip;
 mod circular_progress;
@@ -149,6 +150,12 @@ pub use carousel::{
 };
 pub use cascader::CascaderDefaults;
 pub use center::{CENTER_DISPLAY, CenterDefaults};
+pub use chart::{
+    CHART_ASPECT_RATIO, CHART_LEGEND_GAP, CHART_SWATCH_SIZE, ChartDefaults, ChartTable, Curve,
+    LegendPosition,
+};
+#[cfg(feature = "charts")]
+pub(crate) use chart::{ChartInk, chart_hex};
 pub use checkbox::{CHECKBOX_BOX, CHECKBOX_BOX_SIZE, CHECKBOX_RADIUS, CheckboxDefaults};
 pub use chip::{CHIP_FONT_SIZE, CHIP_HEIGHT, CHIP_PADDING_X, ChipDefaults, ChipSizeLevel};
 pub use circular_progress::{

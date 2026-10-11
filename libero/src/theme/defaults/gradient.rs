@@ -218,7 +218,7 @@ pub(crate) fn gradient_selected_sx() -> Sx {
 }
 
 /// The theme's base colour for `color`, `None` for a colour with no hex.
-fn palette(theme: &Theme, color: Color) -> Option<HexColor> {
+pub(super) fn palette(theme: &Theme, color: Color) -> Option<HexColor> {
     Some(match color {
         Color::Primary => theme.primary,
         Color::Secondary => theme.secondary,

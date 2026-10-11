@@ -33,6 +33,11 @@ macro_rules! md_pages {
 #[doc = include_str!("../tests/page_snippets.md")] // Missing? Run `cargo test -p docs page_snippets` first.
 pub struct PageSnippets;
 
+/// [`PageSnippets`] of the pages marked `// page-snippets: charts`, which need the feature.
+#[cfg(feature = "charts")]
+#[doc = include_str!("../tests/page_snippets_charts.md")]
+pub struct PageSnippetsCharts;
+
 /// Fails, naming the command, when [`PageSnippets`] is older than a docs page: stale, it
 /// compiles code the pages no longer print (todo 2069).
 ///
@@ -214,4 +219,10 @@ md_pages! {
     UseUserMedia => "use_user_media",
     Video => "video",
     VisuallyHidden => "visually_hidden",
+}
+
+// Behind its feature: the page imports `LineChart`.
+#[cfg(feature = "charts")]
+md_pages! {
+    LineChart => "line_chart",
 }

@@ -324,6 +324,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "arc-swap"
+version = "1.9.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c049c0be4daef0b145cb3555416b3b8ef5b7888a38aea1a3a155801fe7b0810b"
+dependencies = [
+ "rustversion",
+]
+
+[[package]]
 name = "archunit"
 version = "0.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1101,6 +1110,18 @@ checksum = "f1f927b07c74ba84c7e5fe4db2baeb3e996ab2688992e39ac68ce3220a677c7e"
 dependencies = [
  "base64 0.22.1",
  "encoding_rs",
+]
+
+[[package]]
+name = "charts-rs"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "101c244ce2b1bc1aa01306e023c252b60051ce0cb7124c4056a1024491c32e6e"
+dependencies = [
+ "arc-swap",
+ "serde",
+ "serde_json",
+ "ttf-parser",
 ]
 
 [[package]]
@@ -4470,6 +4491,7 @@ dependencies = [
  "archunit",
  "blitz-dom",
  "blitz-traits",
+ "charts-rs",
  "chrono",
  "cursor-icon",
  "dbus",

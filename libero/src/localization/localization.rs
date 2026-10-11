@@ -71,6 +71,7 @@ pub struct Localization {
     pub rating: RatingLabels,
     pub menu: MenuLabels,
     pub table: TableLabels,
+    pub chart: ChartLabels,
     pub shortcut_help: ShortcutHelpLabels,
     pub rich_text_editor: RichTextEditorLabels,
     pub tour: TourLabels,
@@ -123,6 +124,7 @@ impl Localization {
         rating: RatingLabels::ENGLISH,
         menu: MenuLabels::ENGLISH,
         table: TableLabels::ENGLISH,
+        chart: ChartLabels::ENGLISH,
         shortcut_help: ShortcutHelpLabels::ENGLISH,
         rich_text_editor: RichTextEditorLabels::ENGLISH,
         tour: TourLabels::ENGLISH,
@@ -174,6 +176,7 @@ impl Localization {
         rating: RatingLabels::GERMAN,
         menu: MenuLabels::GERMAN,
         table: TableLabels::GERMAN,
+        chart: ChartLabels::GERMAN,
         shortcut_help: ShortcutHelpLabels::GERMAN,
         rich_text_editor: RichTextEditorLabels::GERMAN,
         tour: TourLabels::GERMAN,
@@ -185,8 +188,11 @@ mod tests {
     use super::*;
 
     /// Every template with a hole, in one order for every language.
-    fn templates(words: &Localization) -> [&'static str; 44] {
+    fn templates(words: &Localization) -> [&'static str; 47] {
         [
+            words.chart.range,
+            words.chart.series,
+            words.chart.series_empty,
             words.media.position,
             words.tour.progress,
             words.common.remove,
@@ -278,6 +284,9 @@ mod tests {
             ("y", &20),
             ("time", &"1:05"),
             ("duration", &"4:56"),
+            ("kind", &"Line chart"),
+            ("first", &"Mon"),
+            ("last", &"Fri"),
         ];
         for words in [&Localization::ENGLISH, &Localization::GERMAN] {
             for template in templates(words) {

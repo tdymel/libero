@@ -1,6 +1,10 @@
-//! Writes every page's snippets to `libero/tests/page_snippets.md`.
+//! Writes every page's snippets to `libero/tests/page_snippets.md`, a chart page's to
+//! `page_snippets_charts.md`: libero compiles those only with its `charts` feature.
 
 use super::*;
+
+/// The line a page that needs libero's `charts` feature carries.
+const CHARTS_PAGE: &str = "// page-snippets: charts";
 
 #[test]
 fn page_snippets_are_current() {
@@ -26,6 +30,7 @@ fn page_snippets_are_current() {
          `libero/src/md_examples.rs`. Gitignored; do not edit: change the page, then run \
          `cargo test -p docs page_snippets`.\n",
     );
+    let mut charts = out.replace("# Page snippets", "# Chart page snippets");
     let mut problems = Vec::new();
     let ignore = |out: &mut String, heading: &str, why: &str, body: &str| {
         let _ = write!(
@@ -36,13 +41,17 @@ fn page_snippets_are_current() {
     };
 
     for (path, source) in &sources {
+        let out = match source.contains(CHARTS_PAGE) {
+            true => &mut charts,
+            false => &mut out,
+        };
         let page = snippets(source);
         for snippet in &page {
             let heading = format!("{path} `{}`", snippet.name);
             let language = printed_language(source, &snippet.name);
             match (ignored(snippet), &language) {
                 (Err(problem), _) => problems.push(format!("{path} {problem}")),
-                (Ok(Some(why)), _) => ignore(&mut out, &heading, &why, &snippet.body),
+                (Ok(Some(why)), _) => ignore(out, &heading, &why, &snippet.body),
                 (Ok(None), Some(language)) if language != "rust" => problems.push(format!(
                     "{path} {}: printed as `{language}`, not Rust: mark it \
                      `// snippet: ignore - {language}`",
@@ -81,6 +90,10 @@ fn page_snippets_are_current() {
             }
             continue;
         };
+        let out = match source.contains(CHARTS_PAGE) {
+            true => &mut charts,
+            false => &mut out,
+        };
         let lines = demo_markers(source);
         if demos.is_empty() && lines.is_empty() {
             continue;
@@ -108,7 +121,7 @@ fn page_snippets_are_current() {
                     continue;
                 }
                 Ok(Some(why)) => {
-                    ignore(&mut out, &heading, &why, &sources.join("\n\n"));
+                    ignore(out, &heading, &why, &sources.join("\n\n"));
                     continue;
                 }
                 Ok(None) => {}
@@ -184,4 +197,9 @@ fn page_snippets_are_current() {
     );
     // Gitignored, so nothing to commit. Always written: its age tells libero a page is newer.
     std::fs::write(root.join("../libero/tests/page_snippets.md"), &out).unwrap();
+    std::fs::write(
+        root.join("../libero/tests/page_snippets_charts.md"),
+        &charts,
+    )
+    .unwrap();
 }
