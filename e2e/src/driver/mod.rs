@@ -474,8 +474,9 @@ async fn write_outcome<D: Driver>(
 /// `android: skip("958 ...")`, `desktop: skip("1126 ...")`, `ios: skip("2784 ...")` and
 /// `web: skip(..)` do the same for Android, the desktop WebView, the iOS simulator and
 /// Chromium; the skips may follow each other in any order. `android_only("1275 ...")` skips
-/// every arm but Android's, `ios_only(..)` every arm but iOS's. `macos: skip(..)` and `windows: skip(..)` skip the desktop arm on
-/// that [`Host`] only; branch on [`Host::current`] inside the body for a part of it.
+/// every arm but Android's, `ios_only(..)` every arm but iOS's. `macos: skip(..)` and `windows: skip(..)` skip the
+/// desktop arm on that [`Host`] only, `macos_web`, `macos_native`, `windows_web` and `windows_native` the web or
+/// native arm; branch on [`Host::current`] inside the body for a part of it.
 #[macro_export]
 macro_rules! scenario {
     (@skip $name:ident, $route:expr, $body:ident, $w:tt $n:tt $a:tt [$($d:tt)*] $i:tt; macos: skip($reason:literal) $(, $($rest:tt)*)?) => {
@@ -483,6 +484,18 @@ macro_rules! scenario {
     };
     (@skip $name:ident, $route:expr, $body:ident, $w:tt $n:tt $a:tt [$($d:tt)*] $i:tt; windows: skip($reason:literal) $(, $($rest:tt)*)?) => {
         $crate::scenario!(@skip $name, $route, $body, $w $n $a [$($d)* #[cfg_attr(windows, ignore = $reason)]] $i; $($($rest)*)?);
+    };
+    (@skip $name:ident, $route:expr, $body:ident, [$($w:tt)*] $n:tt $a:tt $d:tt $i:tt; macos_web: skip($reason:literal) $(, $($rest:tt)*)?) => {
+        $crate::scenario!(@skip $name, $route, $body, [$($w)* #[cfg_attr(target_os = "macos", ignore = $reason)]] $n $a $d $i; $($($rest)*)?);
+    };
+    (@skip $name:ident, $route:expr, $body:ident, $w:tt [$($n:tt)*] $a:tt $d:tt $i:tt; macos_native: skip($reason:literal) $(, $($rest:tt)*)?) => {
+        $crate::scenario!(@skip $name, $route, $body, $w [$($n)* #[cfg_attr(target_os = "macos", ignore = $reason)]] $a $d $i; $($($rest)*)?);
+    };
+    (@skip $name:ident, $route:expr, $body:ident, [$($w:tt)*] $n:tt $a:tt $d:tt $i:tt; windows_web: skip($reason:literal) $(, $($rest:tt)*)?) => {
+        $crate::scenario!(@skip $name, $route, $body, [$($w)* #[cfg_attr(windows, ignore = $reason)]] $n $a $d $i; $($($rest)*)?);
+    };
+    (@skip $name:ident, $route:expr, $body:ident, $w:tt [$($n:tt)*] $a:tt $d:tt $i:tt; windows_native: skip($reason:literal) $(, $($rest:tt)*)?) => {
+        $crate::scenario!(@skip $name, $route, $body, $w [$($n)* #[cfg_attr(windows, ignore = $reason)]] $a $d $i; $($($rest)*)?);
     };
     (@skip $name:ident, $route:expr, $body:ident, $w:tt $n:tt $a:tt $d:tt $i:tt; web: skip($reason:literal) $(, $($rest:tt)*)?) => {
         $crate::scenario!(@skip $name, $route, $body, [#[test] #[ignore = $reason]] $n $a $d $i; $($($rest)*)?);
@@ -603,6 +616,10 @@ mod tests {
         "/",
         nothing,
         macos: skip("expansion only"),
+        macos_web: skip("expansion only"),
+        macos_native: skip("expansion only"),
+        windows_web: skip("expansion only"),
+        windows_native: skip("expansion only"),
         web: skip("expansion only"),
         windows: skip("expansion only"),
         native: skip("expansion only"),

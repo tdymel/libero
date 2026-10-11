@@ -305,7 +305,8 @@ e2e::scenario!(
     a_sort_follows_the_apps_language,
     "/table-grid/collation",
     sorts_by_language,
-    android: skip("3294: the WebView app has no Intl.Collator to call")
+    android: skip("3294: the WebView app has no Intl.Collator to call"),
+    macos: skip("macOS WKWebView: the collator ignores the app's language")
 );
 
 const EDITOR: &str = "[data-cell-editor] input";

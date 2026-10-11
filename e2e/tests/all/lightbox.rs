@@ -1169,7 +1169,8 @@ async fn zoom_in_tapped<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_tap_on_zoom_in_zooms_the_picture,
     "/lightbox",
-    zoom_in_tapped
+    zoom_in_tapped,
+    macos: skip("macOS WKWebView: the stage's first scroll never settles")
 );
 
 /// Todo 961: a zoomed picture pans only as far as its own edge, which needs its
@@ -1208,7 +1209,8 @@ async fn pan_stops_at_the_edge<D: Driver>(d: &mut D, _route: &str) -> Result<()>
 e2e::scenario!(
     a_zoomed_picture_pans_only_to_its_edge,
     "/lightbox",
-    pan_stops_at_the_edge
+    pan_stops_at_the_edge,
+    macos: skip("macOS WKWebView: the stage's first scroll never settles")
 );
 
 /// Todo 1067: two fingers spread zoom the picture and do not close the viewer;

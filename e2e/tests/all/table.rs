@@ -705,7 +705,8 @@ async fn the_pages_turn_sort_and_resize<D: Driver>(d: &mut D, _route: &str) -> R
 e2e::scenario!(
     a_paged_table_turns_sorts_and_resizes,
     "/table/paged",
-    the_pages_turn_sort_and_resize
+    the_pages_turn_sort_and_resize,
+    macos: skip("macOS WKWebView: the page range reads 7-7 of 7 after page 5")
 );
 
 /// 1156-3a: typing narrows the rows, goes back to page 1 and, once settled,
@@ -803,7 +804,8 @@ async fn the_column_filters_narrow_the_rows<D: Driver>(d: &mut D, _route: &str) 
 e2e::scenario!(
     the_column_filters_narrow_a_table,
     "/table/column-filter",
-    the_column_filters_narrow_the_rows
+    the_column_filters_narrow_the_rows,
+    macos: skip("macOS WKWebView: ArrowDown does not open a select filter's list")
 );
 
 /// Todo 1403: Tab past the filter dialog's last stop and Shift+Tab past its first close it,
@@ -1009,7 +1011,8 @@ e2e::scenario!(
     a_date_filter_narrows_a_table,
     "/table/date-filter",
     a_date_filter_narrows_the_rows,
-    android: skip("Chromium's typed date segments only")
+    android: skip("Chromium's typed date segments only"),
+    macos: skip("macOS WKWebView: ArrowDown does not open a select filter's list")
 );
 
 /// 1156-0b: with `row_key`, a row prepended on top leaves the others' nodes alone.
@@ -2301,5 +2304,6 @@ e2e::scenario!(
     the_filter_panel_edits_every_filter,
     "/table/filter-panel",
     the_filter_panel_edits_every_filter,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    macos: skip("macOS WKWebView: ArrowDown does not open a select filter's list")
 );

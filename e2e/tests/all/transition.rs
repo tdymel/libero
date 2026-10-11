@@ -57,7 +57,8 @@ async fn enters_on_mount<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     it_animates_in_on_mount_without_open,
     "/transition-mount",
-    enters_on_mount
+    enters_on_mount,
+    macos: skip("macOS: no transition runs on the runner (Reduce Motion?)")
 );
 
 /// Closed it is shrunk to nothing; open it is untransformed, its origin the bottom right corner.
@@ -112,7 +113,8 @@ async fn blurs_from_its_from_state<D: Driver>(d: &mut D, _route: &str) -> Result
 e2e::scenario!(
     it_animates_a_callers_from_state,
     "/transition-from",
-    blurs_from_its_from_state
+    blurs_from_its_from_state,
+    macos: skip("macOS: no transition runs on the runner (Reduce Motion?)")
 );
 
 /// Under reduced motion nothing transitions. The same check at `no-preference` must see

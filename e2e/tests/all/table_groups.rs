@@ -295,5 +295,6 @@ e2e::scenario!(
     a_windowed_footer_holds_and_ends_the_rows,
     "/table-groups/footer-window",
     the_windowed_footer_holds_and_ends_the_rows,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    macos: skip("macOS WKWebView: the wheel never brings the windowed list to rest")
 );

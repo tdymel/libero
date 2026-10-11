@@ -95,7 +95,8 @@ e2e::scenario!(
 e2e::scenario!(
     a_click_on_prose_moves_the_starting_point_away_from_a_focused_control,
     "/focus-start",
-    prose_moves_the_start
+    prose_moves_the_start,
+    macos: skip("macOS WebKit does not focus a clicked button")
 );
 e2e::scenario!(
     a_second_tab_carries_on_from_the_first,

@@ -159,7 +159,8 @@ e2e::scenario!(
 e2e::scenario!(
     a_click_outside_closes_it_and_leaves_focus_where_it_went,
     "/menu-submenu-reopen",
-    a_click_outside_closes
+    a_click_outside_closes,
+    macos: skip("macOS WebKit does not focus a clicked button")
 );
 
 /// APG: Escape and ArrowLeft in a submenu close that level only and focus its
@@ -852,7 +853,8 @@ e2e::scenario!(
 e2e::scenario!(
     a_tall_menu_above_fits_the_room,
     "/menu-tall/above",
-    a_tall_menu_fits_the_room
+    a_tall_menu_fits_the_room,
+    macos: skip("macOS WKWebView: the last item never scrolls into view")
 );
 e2e::scenario!(
     a_short_menu_keeps_its_height,

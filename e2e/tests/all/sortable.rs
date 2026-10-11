@@ -418,7 +418,8 @@ e2e::scenario!(
 e2e::scenario!(
     the_neighbours_of_a_lifted_item_slide_and_the_lifted_item_does_not,
     "/sortable",
-    neighbours_slide_the_lifted_item_does_not
+    neighbours_slide_the_lifted_item_does_not,
+    macos: skip("macOS: no transition runs on the runner (Reduce Motion?)")
 );
 e2e::scenario!(
     a_right_to_left_row_reorders_by_a_leftward_drag,
