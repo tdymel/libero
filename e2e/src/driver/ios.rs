@@ -365,13 +365,14 @@ impl Ios {
         }
     }
 
-    fn chord(&self, modifier: u8, key: Key) -> Result<()> {
+    fn chord(&self, modifiers: &[u8], key: Key) -> Result<()> {
         let (usage, _) = hid_usage(key)?;
+        let modifiers: Vec<String> = modifiers.iter().map(u8::to_string).collect();
         match self.input {
             Injector::Axe => self.inject(&[
                 "key-combo",
                 "--modifiers",
-                &modifier.to_string(),
+                &modifiers.join(","),
                 "--key",
                 &usage.to_string(),
             ]),
@@ -574,23 +575,31 @@ impl Driver for Ios {
         self.bridge.json("[innerWidth, innerHeight]")
     }
 
+    /// A Tab is Option+Tab: WebKit's own skips buttons and links on iOS, Option+Tab visits
+    /// every control.
     async fn press(&mut self, key: Key) -> Result<()> {
+        if key.code == "Tab" && self.input == Injector::Axe {
+            return self.chord(&[ALT], key);
+        }
         match hid_usage(key)? {
             (usage, false) => self.key(usage),
-            (_, true) => self.chord(SHIFT, key),
+            (_, true) => self.chord(&[SHIFT], key),
         }
     }
 
     async fn press_shift(&mut self, key: Key) -> Result<()> {
-        self.chord(SHIFT, key)
+        if key.code == "Tab" && self.input == Injector::Axe {
+            return self.chord(&[ALT, SHIFT], key);
+        }
+        self.chord(&[SHIFT], key)
     }
 
     async fn press_ctrl(&mut self, key: Key) -> Result<()> {
-        self.chord(CTRL, key)
+        self.chord(&[CTRL], key)
     }
 
     async fn press_alt(&mut self, key: Key) -> Result<()> {
-        self.chord(ALT, key)
+        self.chord(&[ALT], key)
     }
 
     /// One injector call per character, at about a typist's pace: one call for the lot

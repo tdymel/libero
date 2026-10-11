@@ -23,11 +23,11 @@ const TRACE: &str = "ios-trace.log";
 const SIMCTL_LIMIT: Duration = Duration::from_secs(60);
 const BOOT_LIMIT: Duration = Duration::from_secs(300);
 
-/// `--ignored` runs only the `ios: skip` scenarios.
+/// `--ignored`, or `E2E_IOS_IGNORED` for a CI probe, runs only the `ios: skip` scenarios.
 pub fn run(mut filters: Vec<String>) -> Result<()> {
     let before = filters.len();
     filters.retain(|filter| filter != "--ignored");
-    let ignored = filters.len() != before;
+    let ignored = filters.len() != before || std::env::var_os("E2E_IOS_IGNORED").is_some();
     // `e2e::driver::ios::INPUT_ENV`: the runner is built without the feature.
     let input = std::env::var("E2E_IOS_INPUT").unwrap_or_else(|_| "axe".into());
     for tool in ["xcrun", input.as_str()] {
