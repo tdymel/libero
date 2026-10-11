@@ -9,6 +9,7 @@ use std::time::{Duration, Instant};
 use anyhow::{Context, Result, bail};
 use serde::de::DeserializeOwned;
 
+#[cfg(any(target_os = "macos", feature = "ios"))]
 /// A line of a driver's calibration: on stderr, and in `calibration.log` of the run's artifacts,
 /// which the probe workflow turns into a notice.
 pub fn note(line: &str) {
