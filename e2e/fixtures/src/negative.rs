@@ -80,7 +80,7 @@ pub fn FaintBoundary() -> Element {
 pub fn LayeredText() -> Element {
     rsx! {
         div { style: "position: relative; padding: 8px; max-width: 240px;",
-            span { style: "position: absolute; inset: 0 30% 0 0; background: #f4f4f4;" }
+            span { style: "position: absolute; inset: 0 auto 0 0; width: 80px; background: #f4f4f4;" }
             span { id: "layered", style: "position: relative; color: #c0c0c0;", "Faint text over a layer" }
         }
     }
