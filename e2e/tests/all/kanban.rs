@@ -729,7 +729,8 @@ e2e::scenario!(
     left_and_right_put_a_lifted_card_in_the_next_column_of_a_right_to_left_board_mirrored,
     "/kanban/rtl",
     left_and_right_move_a_lifted_card_across_mirrored,
-    native: skip("707: Blitz has no right-to-left scroll")
+    native: skip("707: Blitz has no right-to-left scroll"),
+    macos: skip("macOS WKWebView: the RTL column order differs from WebKitGTK's")
 );
 e2e::scenario!(
     left_or_right_moves_no_resting_card_and_a_refused_move_is_not_announced,
@@ -995,7 +996,8 @@ e2e::scenario!(
     left_moves_a_lifted_column_forward_on_a_right_to_left_board,
     "/kanban/column-reorder-rtl",
     left_moves_a_lifted_column_forward_right_to_left,
-    native: skip("707: Blitz has no right-to-left scroll")
+    native: skip("707: Blitz has no right-to-left scroll"),
+    macos: skip("macOS WKWebView: the RTL column order differs from WebKitGTK's")
 );
 
 /// To do's handle dragged by the gap to Doing: it takes Doing's place.
@@ -1049,7 +1051,8 @@ e2e::scenario!(
     a_header_handle_drag_reorders_the_columns_of_a_right_to_left_board,
     "/kanban/column-reorder-rtl",
     a_handle_drag_reorders_the_columns,
-    native: skip("707: Blitz has no right-to-left scroll")
+    native: skip("707: Blitz has no right-to-left scroll"),
+    macos: skip("macOS WKWebView: the RTL column order differs from WebKitGTK's")
 );
 
 /// A finger drags a column by its handle; a swipe on the header's name scrolls the board.

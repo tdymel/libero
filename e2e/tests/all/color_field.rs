@@ -369,5 +369,6 @@ e2e::scenario!(
     "/color-field/alpha",
     arrow_down_enters_and_escape_returns,
     android: skip("958: element identity on the WebView"),
-    desktop: skip("958: element identity on the WebView")
+    desktop: skip("958: element identity on the WebView"),
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );

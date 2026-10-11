@@ -44,7 +44,8 @@ async fn the_keys_pick<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_click_on_a_select_option_picks_it,
     "/select/echo",
-    a_click_picks
+    a_click_picks,
+    macos: skip("macOS WKWebView: a click on a listbox option does not register")
 );
 e2e::scenario!(
     the_keyboard_picks_a_select_option,

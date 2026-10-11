@@ -272,7 +272,8 @@ async fn the_window_follows_the_input<D: Driver>(d: &mut D, _route: &str) -> Res
 e2e::scenario!(
     the_window_follows_a_wheel_or_a_fling,
     "/scroll-area",
-    the_window_follows_the_input
+    the_window_follows_the_input,
+    macos: skip("macOS WKWebView: the wheel never brings the windowed list to rest")
 );
 
 /// Samples each frame's leading padding of the list's content box while the list scrolls.

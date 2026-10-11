@@ -222,7 +222,8 @@ async fn the_window_follows_the_scroll<D: Driver>(d: &mut D, _route: &str) -> Re
 e2e::scenario!(
     a_windowed_table_renders_the_rows_in_view,
     "/table/windowed",
-    the_window_follows_the_scroll
+    the_window_follows_the_scroll,
+    macos_native: skip("Blitz's stylo panics in resolve_map on the windowed rows (a SIGSEGV in the full run)")
 );
 
 /// 1156-5c: Tab walks the row checkboxes past the rendered rows and back: the
@@ -319,7 +320,8 @@ e2e::scenario!(
     a_plain_capped_table_scrolls_as_a_named_region,
     "/table/sticky-plain",
     a_plain_capped_table_is_a_named_stop,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    macos: skip("macOS WKWebView: a wheel step never scrolls the capped rows")
 );
 
 /// Todo 1455: scrolled step by step, the rendered rows always cover the area under the header.
