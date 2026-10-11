@@ -1,0 +1,158 @@
+# One platform x tier job with one test filter (3315), to debug a CI red in minutes instead of
+# the full matrix. A `ci/*` push reads `.github/ci-probe` (written by team-common `ted_ci.py`);
+# a dispatch takes the same three inputs. The step bodies are platforms.yml's and ci.yml's.
+name: CI probe
+
+on:
+  push:
+    branches: ["ci/**"]
+  workflow_dispatch:
+    inputs:
+      os:
+        type: choice
+        options: [linux, macos, windows]
+        default: linux
+      tier:
+        type: choice
+        options: [unit, native, web, desktop]
+        default: unit
+      filter:
+        description: A test path like `tabs::`, a prefix when it ends in `::`.
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+# A newer push to the branch cancels the running probe; `tier=none` cancels without a new one.
+concurrency:
+  group: ci-probe-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      os: ${{ steps.plan.outputs.os }}
+      tier: ${{ steps.plan.outputs.tier }}
+      filter: ${{ steps.plan.outputs.filter }}
+      runner: ${{ steps.plan.outputs.runner }}
+      cache: ${{ steps.plan.outputs.cache }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: .github
+      - id: plan
+        run: python3 .github/scripts/ci_probe.py plan
+        env:
+          PROBE_OS: ${{ inputs.os }}
+          PROBE_TIER: ${{ inputs.tier }}
+          PROBE_FILTER: ${{ inputs.filter }}
+
+  probe:
+    needs: plan
+    if: needs.plan.outputs.tier != 'none'
+    name: ${{ needs.plan.outputs.os }} ${{ needs.plan.outputs.tier }} ${{ needs.plan.outputs.filter }}
+    runs-on: ${{ needs.plan.outputs.runner }}
+    timeout-minutes: 60
+    env:
+      OS: ${{ needs.plan.outputs.os }}
+      TIER: ${{ needs.plan.outputs.tier }}
+      FILTER: ${{ needs.plan.outputs.filter }}
+      PY: ${{ needs.plan.outputs.os == 'windows' && 'python' || 'python3' }}
+    steps:
+      # Before the checkout: LF files as on Linux (`include_str!`, snapshots), no MAX_PATH limit.
+      - if: runner.os == 'Windows'
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.longpaths true
+      - uses: actions/checkout@v7
+      - if: runner.os == 'Linux' && env.TIER == 'native'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libdbus-1-dev fonts-dejavu-core xvfb
+      - if: runner.os == 'Linux' && env.TIER == 'desktop'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libgtk-3-dev libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev fonts-dejavu-core xvfb xdotool
+      - uses: ./.github/actions/setup
+        with:
+          targets: ${{ env.TIER == 'web' && 'wasm32-unknown-unknown' || '' }}
+          cache-key: ${{ needs.plan.outputs.cache }}
+          save-cache: false
+      - if: env.TIER == 'web'
+        uses: ./.github/actions/dx
+      # The same pin as ci.yml's `e2e` job: the AX snapshots follow Chrome's tree.
+      - if: env.TIER == 'web'
+        id: chrome
+        uses: browser-actions/setup-chrome@v2
+        with:
+          chrome-version: 152.0.7977.82
+      # Ubuntu 24.04 blocks the unprivileged user namespaces Chrome's sandbox needs.
+      - if: runner.os == 'Linux' && env.TIER == 'web'
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      # The image lists no WebView2 runtime; as platforms.yml's `windows-desktop`.
+      - if: runner.os == 'Windows' && env.TIER == 'desktop'
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://go.microsoft.com/fwlink/p/?LinkId=2124703 -OutFile "$env:RUNNER_TEMP\installwebview.exe"
+          Start-Process -FilePath "$env:RUNNER_TEMP\installwebview.exe" -ArgumentList '/silent', '/install' -Wait
+      - name: Probe
+        run: |
+          logs="$RUNNER_TEMP/probe"
+          mkdir -p "$logs"
+          # The runner's artifacts go to `temp_dir()`: `$TMPDIR` on macOS, `%TMP%` on Windows.
+          case "$RUNNER_OS" in
+            macOS) export TMPDIR="$RUNNER_TEMP" ;;
+            Windows) export TMP="$RUNNER_TEMP" TEMP="$RUNNER_TEMP" ;;
+          esac
+          case "$TIER" in
+            unit)
+              cargo test -p libero --lib --tests -- "$FILTER" 2>&1 | tee "$logs/unit.log" ;;
+            native)
+              cargo test -p e2e --features native --test native --test all --no-run 2>&1 | tee "$logs/build.log"
+              # The shell runs `-e -o pipefail`: keep going after a red binary, as platforms.yml.
+              red=0
+              cargo test -p e2e --features native --test native -- "$FILTER" 2>&1 | tee "$logs/native.log" || red=1
+              args=$(cargo test -q -p e2e --features native --test all -- ::native --list \
+                | $PY .github/scripts/ci_probe.py names "$FILTER" | tr -d '\r')
+              if [ -z "$args" ]; then
+                echo "no ::native scenario matches $FILTER" | tee "$logs/all.log"
+                exit "$red"
+              fi
+              xvfb=()
+              if [ "$RUNNER_OS" = Linux ]; then xvfb=(xvfb-run -a -s "-screen 0 1280x800x24"); fi
+              # shellcheck disable=SC2086
+              "${xvfb[@]}" cargo test -p e2e --features native --test all -- $args 2>&1 | tee "$logs/all.log" || red=1
+              exit "$red" ;;
+            web)
+              cargo run -p e2e -- "$FILTER" 2>&1 | tee "$logs/e2e.log" ;;
+            desktop)
+              cargo run -p e2e -- desktop "$FILTER" 2>&1 | tee "$logs/e2e.log" ;;
+          esac
+        env:
+          CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          E2E_DESKTOP_DEADLINE: 1500
+      - if: failure() || cancelled()
+        run: $PY .github/scripts/ci_annotate.py "$RUNNER_TEMP"/probe/{build,unit,native,all,e2e}.log
+      - if: always()
+        run: $PY .github/scripts/ci_probe.py summary "$RUNNER_TEMP"/probe/{unit,native,all,e2e}.log
+      # One upload root: paths on two drives fail the upload on Windows.
+      - if: always()
+        run: |
+          mkdir -p "$RUNNER_TEMP/probe"
+          for dir in /tmp/e2e-artifacts "$RUNNER_TEMP/e2e-artifacts"; do
+            if [ -d "$dir" ]; then cp -r "$dir" "$RUNNER_TEMP/probe/"; fi
+          done
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: probe-${{ needs.plan.outputs.os }}-${{ needs.plan.outputs.tier }}
+          path: ${{ runner.temp }}/probe
+          if-no-files-found: ignore
+          retention-days: 3
