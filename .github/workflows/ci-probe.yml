@@ -121,6 +121,12 @@ jobs:
           mkdir -p "$logs"
           # `plan` validated the pairs: the unquoted expansion splits them, nothing else.
           if [ -n "$PROBE_ENV" ]; then export $PROBE_ENV; fi
+          # `shard:N:M` is the Nth of M slices of the units, as the platform legs split them.
+          filters="$FILTER"
+          case "$FILTER" in
+            shard:*) IFS=: read -r _ n m <<< "$FILTER"
+              filters=$($PY .github/scripts/shard.py units "$n" "$m" | tr -d '\r') ;;
+          esac
           # The runner's artifacts go to `temp_dir()`: `$TMPDIR` on macOS, `%TMP%` on Windows.
           case "$RUNNER_OS" in
             macOS) export TMPDIR="$RUNNER_TEMP" ;;
@@ -146,11 +152,14 @@ jobs:
               "${xvfb[@]}" cargo test -p e2e --features native --test all -- $args 2>&1 | tee "$logs/all.log" || red=1
               exit "$red" ;;
             web)
-              cargo run -p e2e -- "$FILTER" 2>&1 | tee "$logs/e2e.log" ;;
+              # shellcheck disable=SC2086
+              cargo run -p e2e -- $filters 2>&1 | tee "$logs/e2e.log" ;;
             desktop)
-              cargo run -p e2e -- desktop "$FILTER" 2>&1 | tee "$logs/e2e.log" ;;
+              # shellcheck disable=SC2086
+              cargo run -p e2e -- desktop $filters 2>&1 | tee "$logs/e2e.log" ;;
             ios)
-              cargo run -p e2e -- ios "$FILTER" 2>&1 | tee "$logs/e2e.log" ;;
+              # shellcheck disable=SC2086
+              cargo run -p e2e -- ios $filters 2>&1 | tee "$logs/e2e.log" ;;
           esac
         env:
           CHROME: ${{ steps.chrome.outputs.chrome-path }}
