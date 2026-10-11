@@ -2,13 +2,14 @@
 //! against the fixture app in wry's WebView, all under one Xvfb display (macOS and Windows:
 //! the session's).
 
+use std::path::Path;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, bail};
 
 use super::android_runner::list_arm;
-use super::process::stop;
+use super::process::{Signal, pids_by_cmdline, stop};
 use super::{Guard, OwnGroup, own_target_dir, workspace_root};
 
 /// `--ignored` runs only the `desktop: skip` scenarios, e.g. to see 1051 still red.
@@ -68,6 +69,10 @@ pub fn run(mut filters: Vec<String>) -> Result<()> {
         bail!("no desktop scenario matches {filters:?}");
     }
     eprintln!("e2e desktop: running {} scenario(s)", names.len());
+    let app = target_dir.join(format!(
+        "debug/e2e-fixtures{}",
+        std::env::consts::EXE_SUFFIX
+    ));
 
     // One display for the run; never the Maintainer's (`DISPLAY=:0`).
     let mut command = if cfg!(any(target_os = "macos", windows)) {
@@ -95,13 +100,7 @@ pub fn run(mut filters: Vec<String>) -> Result<()> {
         .args(ignored.then_some("--ignored"))
         .args(&names)
         // `e2e::driver::desktop::APP_ENV`: the runner is built without the feature.
-        .env(
-            "E2E_DESKTOP_APP",
-            target_dir.join(format!(
-                "debug/e2e-fixtures{}",
-                std::env::consts::EXE_SUFFIX
-            )),
-        )
+        .env("E2E_DESKTOP_APP", &app)
         .env("E2E_ARTIFACTS", &artifacts)
         .stdin(Stdio::null())
         .own_group()
@@ -120,6 +119,7 @@ pub fn run(mut filters: Vec<String>) -> Result<()> {
         }
         if Instant::now() > deadline {
             stop(&mut tests);
+            stop_apps(&app);
             guard.done();
             bail!(
                 "e2e desktop: the run overran its deadline; stopped. App log in {}",
@@ -128,6 +128,7 @@ pub fn run(mut filters: Vec<String>) -> Result<()> {
         }
         std::thread::sleep(Duration::from_secs(1));
     };
+    stop_apps(&app);
     guard.done();
     if !status.success() {
         bail!(
@@ -136,4 +137,15 @@ pub fn run(mut filters: Vec<String>) -> Result<()> {
         );
     }
     Ok(())
+}
+
+/// The last scenario's app idles for reuse and outlives the tests; on Windows it and its
+/// WebView2 hold the runner's inherited stdout open, so a `| tee` never ended (3326).
+fn stop_apps(app: &Path) {
+    for pid in pids_by_cmdline(&app.to_string_lossy()) {
+        #[cfg(windows)]
+        super::process::signal_group(pid, Signal::Kill);
+        #[cfg(unix)]
+        super::process::signal_pid(pid, Signal::Term);
+    }
 }
