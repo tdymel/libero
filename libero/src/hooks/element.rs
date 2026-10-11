@@ -5,8 +5,9 @@ use dioxus::prelude::*;
 
 use super::{SubscriptionSlot, use_subscription_slot};
 use crate::platform::{
-    self, ContentSubscription, Dimensions, ElementApi, OBSERVE_ATTR, PlatformError, Read, is_rtl,
-    next_observe_tag, observes_by_tag, on_content_change, on_form_reset, on_resize,
+    self, ContentSubscription, Dimensions, ElementApi, OBSERVE_ATTR, PlatformError, Read,
+    TagCommand, is_rtl, next_observe_tag, observes_by_tag, on_content_change, on_form_reset,
+    on_resize,
 };
 use crate::utils::bump;
 
@@ -279,8 +280,14 @@ impl ElementApi for ElementHandle {
         self.get()?.blur()
     }
 
+    /// On a WebView by [`attributes`](Self::attributes)' tag, which the element must carry.
     fn click(&self) -> Result<(), PlatformError> {
-        self.get()?.click()
+        match (self.get()?.click(), self.tag) {
+            (Err(PlatformError::Unsupported), Some(tag)) => {
+                platform::command_by_tag(tag, TagCommand::Click)
+            }
+            (result, _) => result,
+        }
     }
 
     fn reset(&self) -> Result<(), PlatformError> {
@@ -311,8 +318,14 @@ impl ElementApi for ElementHandle {
         self.get()?.matches(selector)
     }
 
+    /// On a WebView by [`attributes`](Self::attributes)' tag, which the element must carry.
     fn select(&self) -> Result<(), PlatformError> {
-        self.get()?.select()
+        match (self.get()?.select(), self.tag) {
+            (Err(PlatformError::Unsupported), Some(tag)) => {
+                platform::command_by_tag(tag, TagCommand::Select)
+            }
+            (result, _) => result,
+        }
     }
 
     fn selection_start(&self) -> Option<u32> {

@@ -156,6 +156,20 @@ pub(crate) fn computed_px_by_tag(tag: u64, property: &str) -> super::Read<Option
 }
 
 /// Only a WebView finds an element by its tag; see [`observes_by_tag`].
+pub(crate) fn command_by_tag(
+    tag: u64,
+    command: crate::platform::TagCommand,
+) -> Result<(), super::PlatformError> {
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return webview::command_by_tag(tag, command);
+    #[cfg(any(target_arch = "wasm32", feature = "native"))]
+    {
+        let _ = (tag, command);
+        Err(super::PlatformError::Unsupported)
+    }
+}
+
+/// Only a WebView finds an element by its tag; see [`observes_by_tag`].
 pub(crate) fn has_match_by_tag(tag: u64, selector: &str) -> super::Read<bool> {
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     return webview::has_match(tag, selector);

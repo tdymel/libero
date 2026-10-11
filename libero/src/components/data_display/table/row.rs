@@ -371,6 +371,10 @@ impl<T: Clone + 'static> RowContext<T> {
         let cancel = Callback::new(move |()| grid.finish(Leave::Stay));
         let error = (grid.invalid)();
         let error_id = grid.error_id();
+        let changed = Callback::new(move |()| {
+            let mut invalid = grid.invalid;
+            invalid.set(None);
+        });
         let custom = spec.edit.as_ref().and_then(|edit| edit.editor.clone());
         let editor = match custom {
             Some(editor) => editor(EditCtx {
@@ -380,6 +384,7 @@ impl<T: Clone + 'static> RowContext<T> {
                 commit: Callback::new(move |text: String| {
                     commit.call((text, Leave::Stay));
                 }),
+                changed,
                 cancel,
             }),
             None => rsx! {
@@ -392,10 +397,7 @@ impl<T: Clone + 'static> RowContext<T> {
                     error_id: error_id.clone(),
                     commit,
                     cancel,
-                    changed: Callback::new(move |()| {
-                        let mut invalid = grid.invalid;
-                        invalid.set(None);
-                    }),
+                    changed,
                 }
             },
         };

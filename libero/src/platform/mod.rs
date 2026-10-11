@@ -114,8 +114,8 @@ pub(crate) use image_crop::{data_url, image_crop};
 pub(crate) use indexed_db::{IndexedDbApi, MemoryIndexedDb, fake_indexed_db};
 pub(crate) use indexed_db::{Op, indexed_db};
 pub(crate) use intersection::{
-    INTERSECT_ATTR, OBSERVE_ATTR, OWNER_ATTR, computed_px_by_tag, has_match_by_tag,
-    next_observe_tag, observes_by_tag, on_intersection,
+    INTERSECT_ATTR, OBSERVE_ATTR, OWNER_ATTR, TagCommand, command_by_tag, computed_px_by_tag,
+    has_match_by_tag, next_observe_tag, observes_by_tag, on_intersection,
 };
 pub(crate) use keyboard::arrow_target;
 pub(crate) use keyboard::caret_edges;

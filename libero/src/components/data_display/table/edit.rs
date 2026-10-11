@@ -66,6 +66,8 @@ pub struct EditCtx {
     /// Why the last commit was refused, shown under the editor and announced: mark
     /// the field invalid with it. Cleared when the editor closes.
     pub error: Option<String>,
+    /// Call it when the text changed: it clears `error`, as typing does in the built-in editor.
+    pub changed: Callback<()>,
     /// Takes the new text; one that does not parse or validate keeps the editor open.
     pub commit: Callback<String>,
     pub cancel: Callback<()>,

@@ -36,6 +36,19 @@ pub(crate) fn computed_px_by_tag(tag: u64, property: &str) -> super::Read<Option
     backend::computed_px_by_tag(tag, property)
 }
 
+/// What [`command_by_tag`] does to the element.
+#[derive(Clone, Copy)]
+pub(crate) enum TagCommand {
+    Click,
+    Select,
+}
+
+/// Runs `command` on the element carrying `tag`, queued, by the page's script: a WebView's
+/// handles cannot click or select. `Unsupported` on every other renderer.
+pub(crate) fn command_by_tag(tag: u64, command: TagCommand) -> Result<(), super::PlatformError> {
+    backend::command_by_tag(tag, command)
+}
+
 /// Whether something under the element carrying `tag` matches `selector`, read
 /// by the page's script. `Unsupported` on every other renderer.
 pub(crate) fn has_match_by_tag(tag: u64, selector: &str) -> super::Read<bool> {

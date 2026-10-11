@@ -263,8 +263,8 @@ async fn selects<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         )
         .await?;
     }
-    // A WebView cannot `click()` the menu's button, which Ctrl+Enter presses.
-    if matches!(d.platform(), Platform::Desktop | Platform::Ios) {
+    // 3259: not run on an iOS device.
+    if d.platform() == Platform::Ios {
         return Ok(());
     }
     d.press(keyboard::ARROW_UP).await?;
@@ -294,10 +294,7 @@ const EDITOR: &str = "[data-cell-editor] input";
 /// selected on open.
 async fn retype<D: Driver>(d: &mut D, text: &str) -> Result<()> {
     eventually_focused(d, EDITOR, "focus in the editor").await?;
-    if matches!(
-        d.platform(),
-        Platform::Android | Platform::Desktop | Platform::Ios
-    ) {
+    if matches!(d.platform(), Platform::Android | Platform::Ios) {
         d.evaluate("document.activeElement.select()").await?;
     }
     d.type_text(text).await
@@ -414,8 +411,7 @@ e2e::scenario!(
     "/table-grid/editable",
     selected_on_open,
     android: skip("958: roving keys are inert in the emulator's WebView"),
-    desktop: skip("3243: a WebView has no select()"),
-    ios: skip("3243: a WebView has no select()")
+    ios: skip("3262: not run on an iOS device")
 );
 
 /// An age the column's `validate` refuses keeps the editor open, marked invalid, with
@@ -451,6 +447,63 @@ e2e::scenario!(
     an_invalid_value_keeps_the_editor,
     "/table-grid/editable",
     refuses
+);
+
+/// A custom editor clears the refused value's message by calling `changed`.
+async fn custom_clears<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const CUSTOM: &str = "#custom-editor";
+    d.double_click(&cell(1, 2)).await?;
+    eventually_focused(d, CUSTOM, "focus in the custom editor").await?;
+    d.type_text("200").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_text(d, "[data-cell-error]", "Too old", "the refused commit").await?;
+    if d.attr(CUSTOM, "aria-invalid").await?.as_deref() != Some("true") {
+        bail!("the custom editor got no error");
+    }
+    d.type_text("1").await?;
+    eventually(d, "typing to clear the message", async |d| {
+        Ok(!d.exists("[data-cell-error]").await?)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_custom_editor_clears_the_error_by_changed,
+    "/table-grid/editable/custom",
+    custom_clears,
+    android: skip("958: roving keys are inert in the emulator's WebView")
+);
+
+/// In a fixed-row-height table the refused value's message hangs over the next row.
+async fn error_overlay<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const ERROR: &str = "[data-cell-error]";
+    d.double_click(&cell(1, 2)).await?;
+    retype(d, "200").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_text(d, ERROR, "Too old", "the refused commit").await?;
+    let shown = d
+        .evaluate(&format!(
+            "(e => {{ const r = e.getBoundingClientRect(); \
+             const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height - 2); \
+             return hit?.closest('[data-cell-error]') === e; }})(document.querySelector('{ERROR}'))"
+        ))
+        .await?;
+    if shown != serde_json::Value::Bool(true) {
+        bail!("the message is clipped by its row");
+    }
+    let row = d.rect("tbody tr:nth-child(1)").await?.height;
+    if (row - 28.0).abs() > 0.5 {
+        bail!("the message stretched its row to {row}px, the window's pitch is 28px");
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    an_error_shows_in_a_fixed_row_height_table,
+    "/table-grid/editable/windowed",
+    error_overlay,
+    android: skip("958: roving keys are inert in the emulator's WebView"),
+    native: skip("no script reads")
 );
 
 /// A handler that stores nothing leaves the caller's value in the cell.

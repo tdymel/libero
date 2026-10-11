@@ -16,7 +16,7 @@ use crate::{
     hooks::{ElementHandle, listener, use_silent_focus_in, use_silent_focus_out_of},
     platform::{ElementApi, next_task},
     sx::{Sx, sx},
-    theme::CssVar,
+    theme::{CssVar, NamedColorCss},
 };
 
 /// Rows kept beyond each edge while a row holds focus: a held Tab outruns the
@@ -184,6 +184,21 @@ pub(super) fn windowed_sx() -> Sx {
                 .white_space("nowrap")
                 .overflow("hidden")
                 .text_overflow("ellipsis"),
+        )
+        // An editing cell lets its refused value's message hang under the row, over the next.
+        .selector("& tbody > tr > [data-editing]", sx().overflow("visible"))
+        .selector(
+            "& [data-cell-error]",
+            sx().position("absolute")
+                .z_index("2")
+                .width("max-content")
+                .max_width("20em")
+                .box_sizing("border-box")
+                .padding("2px 4px")
+                .white_space("normal")
+                .background(NamedColorCss::SURFACE.value())
+                .border("1px solid currentColor")
+                .border_radius("2px"),
         )
         .selector(
             "& tfoot > tr > *",

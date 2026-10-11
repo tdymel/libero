@@ -25,7 +25,7 @@ use crate::{
     context::IconSlot,
     hooks::{Align, ElementHandle},
     localization::TableLabels,
-    platform::ElementApi,
+    platform::{ElementApi, next_observe_tag, observes_by_tag},
     theme::Size,
 };
 
@@ -72,10 +72,9 @@ pub(super) fn use_menu_focus() -> MenuFocus {
 impl MenuFocus {
     fn trigger(self, index: usize) -> ElementHandle {
         let mut triggers = self.triggers;
-        *triggers
-            .write()
-            .entry(index)
-            .or_insert_with(|| ElementHandle::new_in_scope(self.owner))
+        *triggers.write().entry(index).or_insert_with(|| {
+            ElementHandle::new_in_scope(self.owner).retag(observes_by_tag().then(next_observe_tag))
+        })
     }
 
     /// Opens header `index`'s menu as a click on its button would, else focuses the button.
@@ -363,6 +362,7 @@ pub(super) fn ColumnMenu(
                 "data-column-menu": true,
                 onmounted: trigger.mount(),
                 ..attributes,
+                ..trigger.attributes(),
                 Glyph { slot: IconSlot::More, icon: lucide::ellipsis_vertical::outlined }
             }
         }

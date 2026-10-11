@@ -968,7 +968,7 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `row_header` | `bool` | `false` | Renders the column's cells as `th scope="row"`, so a screen reader names each row by it. One per table, usually the first. |
 | `editable` | `fn(&mut T, V)` | `None` | Makes the column's cells editable, turning on `cell_focus`: a double click, or Enter or F2 on the focused cell, opens a text field over the cell's value, Enter or leaving it commits through `onrowupdate`, Escape puts it back. `V: EditValue` parses the text: text, numbers, `bool` (`true`/`false`), a `NaiveDate` (`2026-03-01`), and `Option<V>`, empty for `None`. Text that does not parse keeps the field open, marked invalid. The other cells read as read-only. |
 | `validate` | `fn(&T, &V) -> Result<(), String>` | `None` | After `editable`: checks a parsed value against the row before the commit; an `Err` keeps the field open, marked invalid. |
-| `editor` | `fn(EditCtx) -> Element` | the text field | After `editable`: draws your own editor in the cell. `EditCtx` gives the start `value` as text, a `label` to name it by, "Edit Age, Ana", and `commit` (the new text) and `cancel`. Focus it on mount; a commit that does not parse or validate keeps it open, without a mark. |
+| `editor` | `fn(EditCtx) -> Element` | the text field | After `editable`: draws your own editor in the cell. `EditCtx` gives the start `value` as text, a `label` to name it by, "Edit Age, Ana", and `commit` (the new text) and `cancel`. Focus it on mount; a commit that does not parse or validate keeps it open and sets `error`, the message the table shows under it: mark the field invalid with it, and call `changed` when its text changes to clear it. |
 | `filterable` | `bool` | `true` | Whether the quick filter searches the column's cell text, and whether it takes a column filter. Off for ids and codes that would match by accident. |
 | `options` | `Vec<SelectOption>` | `[]` | Makes it a select column: its filter picks among these options, with the operators is, is not and is any of. A `SelectOption` is a `&str`, or a `(value, label)` pair: values match the raw cell text, before `format`, and are what a `ColumnFilter` holds; labels are shown. The quick filter and sorting still read the cell. |
 | `hideable` | `bool` | `true` | Whether the column menu offers to hide the column. `hidden_columns` still hides it. |
@@ -1096,7 +1096,7 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
   Bonus, Ana", a number column's with a decimal keypad. A value that does not
   parse or validate marks it `aria-invalid`, shows the `validate` message (or
   "Not a valid value") under it, linked by `aria-describedby`, and announces it
-  once; typing clears it. A custom `editor` gets the message as `EditCtx::error`.
+  once; typing clears it. A custom `editor` gets the message as `EditCtx::error` and clears it with `EditCtx::changed`.
   On a touch screen, which has no Escape, a Cancel edit button sits beside it.
 
 ### You must

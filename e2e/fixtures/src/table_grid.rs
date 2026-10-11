@@ -1,10 +1,11 @@
 //! `Table` with `cell_focus` (1156 D1-D3): a grid of people between two buttons,
 //! one with a button in each row, one selectable with column menus, a windowed
 //! one of 500 rows, and one with editable Age and City cells, which stores its
-//! edits or (`/kept`) only logs them, `/button` with a button in each City cell.
+//! edits or (`/kept`) only logs them, `/button` with a button in each City cell,
+//! `/custom` with its own Age editor, `/windowed` with fixed 28px rows.
 
 use dioxus::prelude::*;
-use libero::components::{RowUpdate, Table, column};
+use libero::components::{EditCtx, RowUpdate, Table, column};
 
 use crate::Routes;
 
@@ -16,6 +17,8 @@ pub const ROUTES: Routes = &[
     ("/table-grid/editable", || rsx! { EditableGridPage { store: true } }),
     ("/table-grid/editable/kept", || rsx! { EditableGridPage { store: false } }),
     ("/table-grid/editable/button", || rsx! { EditableGridPage { store: true, button: true } }),
+    ("/table-grid/editable/custom", || rsx! { EditableGridPage { store: true, custom: true } }),
+    ("/table-grid/editable/windowed", || rsx! { EditableGridPage { store: true, windowed: true } }),
 ];
 
 #[derive(Clone, PartialEq)]
@@ -67,10 +70,57 @@ fn GridPage(#[props(default)] widgets: bool, #[props(default)] selectable: bool)
     }
 }
 
+/// A custom Age editor: it marks itself invalid by `error` and clears it by `changed`.
 #[component]
-fn EditableGridPage(store: bool, #[props(default)] button: bool) -> Element {
+fn AgeEditor(ctx: EditCtx) -> Element {
+    let mut draft = use_signal(|| ctx.value.clone());
+    let commit = ctx.commit;
+    let changed = ctx.changed;
+    rsx! {
+        input {
+            id: "custom-editor",
+            aria_label: ctx.label.clone(),
+            aria_invalid: ctx.error.is_some().then_some("true"),
+            value: draft(),
+            onmounted: move |mounted| async move {
+                let _ = mounted.data().set_focus(true).await;
+            },
+            oninput: move |event| {
+                draft.set(event.value());
+                changed.call(());
+            },
+            onkeydown: move |event| {
+                if event.key() == Key::Enter {
+                    event.stop_propagation();
+                    commit.call(draft());
+                }
+            },
+        }
+    }
+}
+
+#[component]
+fn EditableGridPage(
+    store: bool,
+    #[props(default)] button: bool,
+    #[props(default)] custom: bool,
+    #[props(default)] windowed: bool,
+) -> Element {
     let mut rows = use_signal(people);
     let mut log = use_signal(String::new);
+    let age = column("Age")
+        .value(|p: &Person| p.age)
+        .editable(|p: &mut Person, age: u32| p.age = age)
+        .validate(|_: &Person, age: &u32| match *age <= 150 {
+            true => Ok(()),
+            false => Err("Too old".into()),
+        });
+    let age = match custom {
+        true => age.editor(|ctx: EditCtx| rsx! { AgeEditor { ctx } }),
+        false => age,
+    };
+    let max_height = windowed.then(|| "300px".to_string());
+    let virtual_row_height = windowed.then_some(28.0);
     let city = column("City")
         .value(|p: &Person| p.city.to_string())
         .editable(|p: &mut Person, city: String| p.city = city.leak());
@@ -87,16 +137,12 @@ fn EditableGridPage(store: bool, #[props(default)] button: bool) -> Element {
         button { id: "before", "Before" }
         Table {
             caption: "Team",
+            max_height,
+            virtual_row_height,
             data: rows(),
             columns: vec![
                 column("Name").value(|p: &Person| p.name.to_string()).row_header(),
-                column("Age")
-                    .value(|p: &Person| p.age)
-                    .editable(|p: &mut Person, age: u32| p.age = age)
-                    .validate(|_: &Person, age: &u32| match *age <= 150 {
-                        true => Ok(()),
-                        false => Err("Too old".into()),
-                    }),
+                age,
                 city,
             ],
             row_key: |p: &Person| p.name.to_string(),

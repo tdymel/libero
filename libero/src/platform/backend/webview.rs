@@ -34,7 +34,7 @@ use crate::platform::{
     A11yMediaApi, ColorSchemeApi, ColorSchemeSubscription, ContentSubscription, Dimensions,
     DocumentApi, ElementApi, FocusStep, INTERSECT_ATTR, KeyChord, KeySubscription, KeyboardApi,
     MediaQueryApi, MediaQuerySubscription, OBSERVE_ATTR, OWNER_ATTR, PRESS_MARKER_ATTR,
-    PlatformError, PressApi, PressSubscription, Read, ScrollApi, ScrollSubscription,
+    PlatformError, PressApi, PressSubscription, Read, ScrollApi, ScrollSubscription, TagCommand,
     capture::{
         CAPTURE_ATTR, CAPTURE_SCRIPT, CaptureApi, CaptureEvent, CaptureSession,
         CaptureSubscription, DEVICES_SCRIPT, DeviceList,
@@ -557,6 +557,23 @@ pub(super) fn computed_px(tag: u64, property: &str) -> Read<Option<f64>> {
             _ => Err(PlatformError::Unsupported),
         }
     })
+}
+
+/// Queued, like [`focus_selector`]; nothing happens while no element carries the tag.
+pub(super) fn command_by_tag(tag: u64, command: TagCommand) -> Result<(), PlatformError> {
+    if !runs_scripts() {
+        return Err(PlatformError::Unsupported);
+    }
+    let method = match command {
+        TagCommand::Click => "click",
+        TagCommand::Select => "select",
+    };
+    eval_with(
+        json!([OBSERVE_ATTR, tag.to_string(), method]),
+        "const [attr, tag, method] = data;
+        document.querySelector(`[${attr}=\"${tag}\"]`)?.[method]?.();",
+    );
+    Ok(())
 }
 
 /// Whether a descendant of the element tagged `tag` matches `selector`;
