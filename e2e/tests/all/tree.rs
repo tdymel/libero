@@ -122,7 +122,8 @@ async fn button_row_vanishes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_vanished_rows_button_hands_focus_to_the_next_row,
     "/tree/button-delete",
-    button_row_vanishes
+    button_row_vanishes,
+    native: skip("3406: Blitz hands the vanished button's focus to a container div, parked with native")
 );
 
 const STAR: keyboard::Key = keyboard::Key {

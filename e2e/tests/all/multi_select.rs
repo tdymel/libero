@@ -306,7 +306,8 @@ async fn the_chips_take_the_focus_and_remove_on<D: Driver>(d: &mut D, _route: &s
 e2e::scenario!(
     the_chips_take_the_focus_and_remove,
     "/multi-select/chips",
-    the_chips_take_the_focus_and_remove_on
+    the_chips_take_the_focus_and_remove_on,
+    native: skip("3406: Blitz hands a removed chip's focus to a container div, parked with native")
 );
 
 /// A refused first row: the trigger names the row the list lights (1271).
