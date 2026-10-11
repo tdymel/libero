@@ -18,9 +18,11 @@ pub const ROUTES: Routes = &[
         "/popover/place/below",
         || rsx! { PlacedPage { left: "200px", top: "100px" } },
     ),
+    // Inside a 393px phone: a wider page makes the layout viewport taller than 100vh,
+    // with room below the anchor (3331).
     (
         "/popover/place/flip",
-        || rsx! { PlacedPage { left: "200px", top: "calc(100vh - 60px)" } },
+        || rsx! { PlacedPage { left: "100px", top: "calc(100vh - 60px)" } },
     ),
     (
         "/popover/place/shift",

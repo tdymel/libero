@@ -416,6 +416,9 @@ fn run_unit(
         .context("run the tests")?;
     guard.tell(&format!("group {}", tests.id()));
     let deadline = Instant::now() + Duration::from_secs(60 + 30 * unit.len() as u64);
+    let home = home_package(serial);
+    // Twice in a row: one read may land while a system dialog swaps in.
+    let mut away = 0;
     let passed = loop {
         if let Some(status) = tests.try_wait()? {
             break status.success();
@@ -427,6 +430,16 @@ fn run_unit(
             );
             stop(&mut tests);
             break false;
+        }
+        match left_app(serial, home.as_deref()) {
+            Some(why) if away > 0 => {
+                let module = unit[0].split("::").next().unwrap_or_default();
+                eprintln!("e2e android: a {module}:: scenario {why}; stopped");
+                stop(&mut tests);
+                break false;
+            }
+            Some(_) => away += 1,
+            None => away = 0,
         }
         std::thread::sleep(Duration::from_secs(1));
     };
@@ -529,6 +542,49 @@ fn start_app(serial: &str) -> Result<String> {
         std::thread::sleep(Duration::from_millis(250));
     }
     Ok(pid)
+}
+
+/// The launcher's package, which Back at the app's root returns to.
+fn home_package(serial: &str) -> Option<String> {
+    let resolved = adb(
+        serial,
+        &[
+            "shell",
+            "cmd",
+            "package",
+            "resolve-activity",
+            "--brief",
+            "-a",
+            "android.intent.action.MAIN",
+            "-c",
+            "android.intent.category.HOME",
+        ],
+    )
+    .ok()?;
+    let component = resolved.lines().rev().find(|line| line.contains('/'))?;
+    Some(component.trim().split('/').next()?.to_string())
+}
+
+/// Why the app is gone from the screen, if it is: a scenario that left it hangs
+/// CDP until the unit's deadline, holding a shared phone that long (3332).
+fn left_app(serial: &str, home: Option<&str>) -> Option<String> {
+    let package = package();
+    let pid = adb(serial, &["shell", &format!("pidof {package} || true")]).ok()?;
+    if pid.trim().is_empty() {
+        return Some("lost the app's process".into());
+    }
+    let home = home?;
+    let resumed = adb(
+        serial,
+        &[
+            "shell",
+            "dumpsys activity activities | grep ResumedActivity || true",
+        ],
+    )
+    .ok()?;
+    resumed
+        .contains(&format!(" {home}/"))
+        .then(|| "left the app for the launcher (Back at the root?)".into())
 }
 
 /// Whether `adb devices` lists `serial` as ready.

@@ -167,7 +167,9 @@ impl Android {
             if !commands.is_empty() {
                 commands.push(pause(step_ms));
             }
-            commands.push(motion("MOVE", step as f64 / steps as f64));
+            // Eased out: Chrome extrapolates a fast last move past the drop point (3278, 3313).
+            let left = 1.0 - step as f64 / steps as f64;
+            commands.push(motion("MOVE", 1.0 - left * left));
         }
         commands.push(pause(hold_ms));
         commands.push(motion("UP", 1.0));

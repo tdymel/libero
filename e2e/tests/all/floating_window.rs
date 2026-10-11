@@ -879,11 +879,15 @@ async fn opened<D: Driver>(d: &mut D) -> Result<Rect> {
 
 /// Waits for `report` to read the drawn rect, and returns that rect.
 async fn reported<D: Driver>(d: &mut D, report: &str, what: &str) -> Result<Rect> {
-    eventually(d, &format!("{what} reported in {report}"), async |d| {
+    let seen = eventually(d, &format!("{what} reported in {report}"), async |d| {
         let drawn = rect_line(d.rect(DIALOG).await?);
         Ok(d.text(report).await? == drawn)
     })
-    .await?;
+    .await;
+    if let Err(e) = seen {
+        let (text, drawn) = (d.text(report).await?, rect_line(d.rect(DIALOG).await?));
+        bail!("{e}: it reads {text:?}, the window is drawn at {drawn:?}");
+    }
     d.rect(DIALOG).await
 }
 
@@ -998,6 +1002,28 @@ async fn the_separator_clamps<D: Driver>(d: &mut D, _route: &str) -> Result<()> 
     assert_eq!(
         d.attr(SEPARATOR, "aria-valuemax").await?,
         Some(max.0.to_string())
+    );
+    Ok(())
+}
+
+/// Todo 3311: a window at the right edge that grows moves left in the render the
+/// report reads, so `onresize` reports where it is drawn.
+async fn a_resize_at_the_right_edge<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    opened(d).await?;
+    let (vw, _) = d.viewport().await?;
+    d.drag(HANDLE, 900.0, 0.0).await?;
+    eventually(d, "a drag to the right edge", async |d| {
+        let r = d.rect(DIALOG).await?;
+        Ok(near(r.x + r.width, vw))
+    })
+    .await?;
+    let before = d.rect(DIALOG).await?;
+    d.focus(SEPARATOR).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    let after = reported(d, RESIZE_REPORT, "the step at the edge").await?;
+    assert!(
+        after.width > before.width && after.x + after.width <= vw + 1.0,
+        "the step left {before:?} at {after:?} in {vw}"
     );
     Ok(())
 }
@@ -1175,6 +1201,11 @@ e2e::scenario!(
     the_separator_resizes_it_and_clamps_to_the_callers_bounds,
     "/floating-window",
     the_separator_clamps
+);
+e2e::scenario!(
+    a_resize_at_the_right_edge_reports_where_it_is_drawn,
+    "/floating-window",
+    a_resize_at_the_right_edge
 );
 e2e::scenario!(
     the_title_bar_menu_resizes_and_resets,

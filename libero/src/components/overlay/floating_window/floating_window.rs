@@ -170,7 +170,11 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
 
     let (float_placement, offset_x, offset_y) = match position() {
         Some((x, y)) => {
-            let measured = measured();
+            // The new size, not the last measured one: a report reads this render (3311).
+            let measured = size()
+                .zip(bounds())
+                .map(|(requested, bounds)| bounds.fit(requested))
+                .or(measured());
             // The offsets are physical, from the left: under RTL that corner is the end.
             let left = match root.is_rtl() {
                 true => Placement::TopEnd,
