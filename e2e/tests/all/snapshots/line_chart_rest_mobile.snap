@@ -1,0 +1,72 @@
+---
+source: e2e/src/suite.rs
+description: line_chart at mobile (rest)
+expression: tree
+---
+figure "Visitors"
+  description "Line chart from Mon to Fri. This week: 90 to 134, highest at Thu. Last week: 20 to 40, highest at Fri."
+  StaticText "Visitors"
+  application "Visitors" [roledescription=chart]
+    description "Arrow keys move between points, Enter selects one."
+  status [atomic] [live=polite]
+  list "Series"
+    listitem [level=1]
+      button "This week" [pressed]
+        StaticText "This week"
+    listitem [level=1]
+      button "Last week" [pressed]
+        StaticText "Last week"
+  paragraph
+    StaticText "Line chart from Mon to Fri."
+  paragraph
+    StaticText "This week: 90 to 134, highest at Thu."
+  paragraph
+    StaticText "Last week: 20 to 40, highest at Fri."
+  table "Visitors"
+    caption
+      StaticText "Visitors"
+    rowgroup
+      row
+        columnheader "Category"
+          StaticText "Category"
+        columnheader "This week"
+          StaticText "This week"
+        columnheader "Last week"
+          StaticText "Last week"
+    row
+      rowheader "Mon"
+        StaticText "Mon"
+      cell "120"
+        StaticText "120"
+      cell "20"
+        StaticText "20"
+    row
+      rowheader "Tue"
+        StaticText "Tue"
+      cell "132"
+        StaticText "132"
+      cell "30"
+        StaticText "30"
+    row
+      rowheader "Wed"
+        StaticText "Wed"
+      cell "101"
+        StaticText "101"
+      cell
+    row
+      rowheader "Thu"
+        StaticText "Thu"
+      cell "134"
+        StaticText "134"
+      cell "25"
+        StaticText "25"
+    row
+      rowheader "Fri"
+        StaticText "Fri"
+      cell "90"
+        StaticText "90"
+      cell "40"
+        StaticText "40"
+paragraph
+paragraph
+paragraph

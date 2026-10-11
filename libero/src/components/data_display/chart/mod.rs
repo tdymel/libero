@@ -1,6 +1,9 @@
 mod data;
 mod engine;
+mod hit;
+mod legend;
 mod line_chart;
+mod overlay;
 mod props;
 
 pub use data::{ChartColor, ChartPoint, Series, Slice, Value, ValueFormat, XValues};

@@ -59,6 +59,8 @@ pub struct ChartDefaults {
     /// A dot on every point of a line, up to [`points_limit`](Self::points_limit) points.
     pub points: bool,
     pub points_limit: usize,
+    /// A tooltip and a crosshair under the pointer and the keys.
+    pub tooltip: bool,
     pub stroke_width: f32,
     /// The most cells the data table holds; a larger chart keeps only its summary.
     pub table_cell_cap: usize,
@@ -84,6 +86,7 @@ impl ChartDefaults {
         grid: true,
         points: true,
         points_limit: 200,
+        tooltip: true,
         stroke_width: 2.0,
         table_cell_cap: 2_000,
         legend_gap: "16px",

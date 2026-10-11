@@ -273,7 +273,7 @@ const FIELD_PROPS: [&str; 9] = [
 ];
 
 /// What `chart_props!` adds to every chart's struct.
-const CHART_PROPS: [&str; 10] = [
+const CHART_PROPS: [&str; 17] = [
     "title",
     "description",
     "legend",
@@ -284,6 +284,13 @@ const CHART_PROPS: [&str; 10] = [
     "loading",
     "empty",
     "table",
+    "tooltip",
+    "tooltip_content",
+    "onpointclick",
+    "onactivechange",
+    "hidden",
+    "default_hidden",
+    "onhiddenchange",
 ];
 
 /// `(component, part slot)` of a shared part enum the component never draws, so its table

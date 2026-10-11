@@ -17,6 +17,14 @@ pub struct ChartLabels {
     pub table: &'static str,
     /// The header of the table's first column, the x values.
     pub category: &'static str,
+    /// What a screen reader calls the plot the keys walk.
+    pub chart: &'static str,
+    /// How to walk the plot's points, read after its name.
+    pub keys: &'static str,
+    /// The legend's name: its buttons show and hide series.
+    pub legend: &'static str,
+    /// A point as the keys announce it: `{name}` its series, `{x}` and `{value}` its own.
+    pub point: &'static str,
 }
 
 impl ChartLabels {
@@ -29,6 +37,10 @@ impl ChartLabels {
         loading: "Loading chart",
         table: "Chart data",
         category: "Category",
+        chart: "chart",
+        keys: "Arrow keys move between points, Enter selects one.",
+        legend: "Series",
+        point: "{name}, {x}: {value}",
     };
 
     pub const GERMAN: Self = Self {
@@ -40,5 +52,9 @@ impl ChartLabels {
         loading: "Diagramm wird geladen",
         table: "Diagrammdaten",
         category: "Kategorie",
+        chart: "Diagramm",
+        keys: "Pfeiltasten wechseln zwischen den Punkten, Eingabe wählt einen aus.",
+        legend: "Reihen",
+        point: "{name}, {x}: {value}",
     };
 }

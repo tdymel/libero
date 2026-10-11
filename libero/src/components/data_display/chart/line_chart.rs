@@ -3,6 +3,8 @@ use dioxus::prelude::*;
 use super::{
     ChartColor, ChartPart, Series, XValues,
     engine::{self, LineSpec, SeriesSpec},
+    legend::{ChartLegend, LegendEntry, legend_sx, use_hidden_series},
+    overlay::{ChartOverlay, OverlaySeries, overlay_sx},
     props::chart_props,
 };
 use crate::{
@@ -60,8 +62,12 @@ static CHART_BASE_SX: StaticSx = StaticSx::new(|| {
                 .flex("1 1 auto")
                 .min_width("0")
                 .with("aspect-ratio", CHART_ASPECT_RATIO.value())
-                .selector("& > [aria-hidden]", sx().width("100%").height("100%"))
-                .selector("& svg", sx().display("block")),
+                .selector(
+                    "& > [data-chart-drawing]",
+                    sx().width("100%").height("100%"),
+                )
+                .selector("& svg", sx().display("block"))
+                .and(overlay_sx()),
         )
         .selector(
             ChartPart::Legend.selector(),
@@ -73,11 +79,12 @@ static CHART_BASE_SX: StaticSx = StaticSx::new(|| {
                 .margin("0")
                 .padding("0")
                 .with("list-style", "none")
-                .font_size("sm"),
+                .font_size("sm")
+                .and(legend_sx()),
         )
         .selector(
             ChartPart::LegendItem.selector(),
-            sx().display("inline-flex").align_items("center").gap("xs"),
+            sx().display("inline-flex").align_items("center"),
         )
         .selector(
             "& [data-chart-swatch]",
@@ -85,8 +92,14 @@ static CHART_BASE_SX: StaticSx = StaticSx::new(|| {
                 .width(CHART_SWATCH_SIZE.value())
                 .height(CHART_SWATCH_SIZE.value())
                 .border_radius("2px")
+                .background_color("var(--lsx-chart-swatch)")
                 // The swatch is the series' only key: forced colours would blank it.
                 .forced_color_adjust("none"),
+        )
+        .selector(
+            "& [data-chart-swatch][data-hidden]",
+            sx().background_color("transparent")
+                .box_shadow("inset 0 0 0 2px var(--lsx-chart-swatch)"),
         )
         .selector(
             ChartPart::Empty.selector(),
@@ -210,12 +223,25 @@ pub fn LineChart(props: LineChartProps) -> Element {
         .iter()
         .all(|series| series.values.iter().all(Option::is_none));
     let points = props.points.unwrap_or(theme.chart.points) && x.len() <= theme.chart.points_limit;
+    let names: Vec<String> = props.series.iter().map(|s| s.name.clone()).collect();
+    let hidden = use_hidden_series(
+        &props.hidden,
+        &props.default_hidden,
+        props.onhiddenchange,
+        &names,
+    );
+    let hidden_names = hidden.get();
+    let all_specs = series_specs(theme, &props.series);
+    // Drawn series' places in `series`, to map the marks back.
+    let shown: Vec<usize> = (0..all_specs.len())
+        .filter(|i| !hidden_names.contains(&names[*i]))
+        .collect();
     let spec = LineSpec {
         width,
         height,
         x: x.clone(),
         x_numbers: props.x.numbers().to_vec(),
-        series: series_specs(theme, &props.series),
+        series: shown.iter().map(|i| all_specs[*i].clone()).collect(),
         curve: props.curve.copied_or(theme.chart.curve),
         grid: props.grid.unwrap_or(theme.chart.grid),
         points,
@@ -225,7 +251,9 @@ pub fn LineChart(props: LineChartProps) -> Element {
         unit: props.unit.clone(),
         decimal,
     };
-    let drawn = use_memo(use_reactive!(|spec| engine::draw_line(&spec)));
+    let drawn = use_memo(use_reactive!(|spec, shown| {
+        engine::draw_line(&spec).map(|drawn| drawn.with_series(&shown))
+    }));
 
     let legend = match props.legend.as_ref() {
         Some(position) => *position,
@@ -279,13 +307,24 @@ pub fn LineChart(props: LineChartProps) -> Element {
         .title
         .clone()
         .unwrap_or_else(|| labels.table.to_string());
-    let swatches: Vec<(String, String)> = spec
-        .series
+    let overlay_series: Vec<OverlaySeries> = all_specs
         .iter()
-        .map(|series| (series.name.clone(), series.color.to_string()))
+        .map(|series| OverlaySeries {
+            name: series.name.clone(),
+            color: series.color.to_string(),
+        })
+        .collect();
+    let entries: Vec<LegendEntry> = overlay_series
+        .iter()
+        .map(|series| LegendEntry {
+            name: series.name.clone(),
+            color: series.color.clone(),
+            hidden: hidden_names.contains(&series.name),
+        })
         .collect();
     let plot_element = size.element;
     let svg = drawn.read().as_ref().map(|drawn| drawn.svg.clone());
+    let ontoggle = move |name: String| hidden.toggle(&name, &names);
 
     let children = rsx! {
         if let Some(title) = props.title.clone() {
@@ -310,19 +349,27 @@ pub fn LineChart(props: LineChartProps) -> Element {
                     }
                 } else if let Some(svg) = svg {
                     // The figure's summary and table speak for the drawing.
-                    div { "aria-hidden": "true", dangerous_inner_html: "{svg}" }
+                    div { "data-chart-drawing": true, "aria-hidden": "true", dangerous_inner_html: "{svg}" }
+                    ChartOverlay {
+                        drawn,
+                        box_size: size.box_size,
+                        series: overlay_series,
+                        x: x.clone(),
+                        format: props.value_format,
+                        unit: props.unit.clone(),
+                        decimal,
+                        labels,
+                        title_id: title_id.clone(),
+                        keys_id: format!("{id}-keys"),
+                        tooltip: props.tooltip.unwrap_or(theme.chart.tooltip),
+                        tooltip_content: props.tooltip_content,
+                        onpointclick: props.onpointclick,
+                        onactivechange: props.onactivechange,
+                    }
                 }
             }
             if legend != LegendPosition::None && !props.loading && !empty {
-                // The summary names every series: the legend is for the eye.
-                ul { "data-slot": ChartPart::Legend.slot(), "aria-hidden": "true",
-                    for (name, color) in swatches {
-                        li { key: "{name}", "data-slot": ChartPart::LegendItem.slot(),
-                            span { "data-chart-swatch": true, style: "background:{color}" }
-                            "{name}"
-                        }
-                    }
-                }
+                ChartLegend { entries, label: labels.legend, ontoggle }
             }
         }
         if !summary.is_empty() {
@@ -495,6 +542,8 @@ fn table_rows(
 struct PlotSize {
     element: crate::hooks::ElementHandle,
     size: Signal<Option<(f32, f32)>>,
+    /// Unsnapped, in CSS px: the overlay maps the pointer with it.
+    box_size: Signal<Option<(f64, f64)>>,
 }
 
 impl PlotSize {
@@ -506,6 +555,7 @@ impl PlotSize {
 fn use_plot_size() -> PlotSize {
     let element = use_element();
     let mut size = use_signal(|| None);
+    let mut box_size = use_signal(|| None);
     let mut measured = move |width: f64, height: f64| {
         if width <= 0.0 || height <= 0.0 {
             return;
@@ -513,6 +563,9 @@ fn use_plot_size() -> PlotSize {
         let next = Some((snap(width as f32), snap(height as f32)));
         if *size.peek() != next {
             size.set(next);
+        }
+        if *box_size.peek() != Some((width, height)) {
+            box_size.set(Some((width, height)));
         }
     };
     use_resize_fallback(element, move |event| {
@@ -533,7 +586,11 @@ fn use_plot_size() -> PlotSize {
             }
         });
     });
-    PlotSize { element, size }
+    PlotSize {
+        element,
+        size,
+        box_size,
+    }
 }
 
 #[cfg(test)]
@@ -578,9 +635,39 @@ mod tests {
             html.contains("<th scope=\"row\">Tue</th><td>3</td><td></td>"),
             "{html}"
         );
-        // Two series: a legend, for the eye only.
+        // Two series: a legend of toggles, and a plot the keys walk.
+        assert!(html.contains("aria-label=\"Series\""), "{html}");
+        assert_eq!(html.matches("aria-pressed=\"true\"").count(), 2, "{html}");
         assert!(
-            html.contains("aria-hidden=\"true\" data-slot=\"legend\""),
+            html.contains("role=\"application\" tabindex=\"0\""),
+            "{html}"
+        );
+        assert!(html.contains("aria-roledescription=\"chart\""), "{html}");
+    }
+
+    /// A hidden series leaves the drawing, not the legend; the last shown one stays.
+    #[test]
+    fn a_default_hidden_series_is_not_drawn() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    LineChart {
+                        title: "Visitors",
+                        x: ["Mon", "Tue"],
+                        series: vec![
+                            Series::new("This week", [1.0, 3.0]),
+                            Series::new("Last week", [2.0, 1.0]).dashed(),
+                        ],
+                        default_hidden: vec!["Last week".to_string()],
+                    }
+                }
+            }
+        });
+
+        assert!(!html.contains("stroke-dasharray=\""), "{html}");
+        assert!(html.contains("aria-pressed=\"false\""), "{html}");
+        assert!(
+            html.contains("aria-pressed=\"true\" aria-disabled=\"true\""),
             "{html}"
         );
     }

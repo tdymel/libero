@@ -42,22 +42,40 @@ pub fn LineChartPage() -> Element {
                     prop("loading", "bool").default("false").doc("A placeholder instead of the plot, and `aria-busy` on the chart."),
                     prop("empty", "Option<Element>").doc("Shown in the plot when there is no value at all. Unset, \"No data\"."),
                     prop("table", "ChartTable").default(ChartTable::default().as_str()).doc("The data as a table: `hidden` for screen readers, `visible`, or `off`."),
+                    prop("tooltip", "Option<bool>").default(on(theme.chart.tooltip)).doc("A tooltip and a crosshair at the pointer's or the keys' point."),
+                    prop("tooltip_content", "Option<Callback<ChartPoint, Element>>").doc("The tooltip's content instead of the x value and each line's value there."),
+                    prop("onpointclick", "Option<EventHandler<ChartPoint>>").doc("A click on a point, a second tap on a pinned one, or Enter on the keys' point."),
+                    prop("onactivechange", "Option<EventHandler<Option<ChartPoint>>>").doc("The point under the pointer or the keys; `None` when it leaves."),
+                    prop("hidden", "Option<Vec<String>>").doc("The names of the lines the legend hides; set, they are controlled."),
+                    prop("default_hidden", "Vec<String>").default("[]").doc("Seeds the hidden lines once. Ignored when `hidden` is set."),
+                    prop("onhiddenchange", "Option<EventHandler<Vec<String>>>").doc("The hidden lines a legend button asks for. The last shown line stays."),
                 ]),
             ],
             accessibility: a11y()
+                .key(["Tab"], "Into the plot, then on to the legend's buttons.")
+                .key(["ArrowRight", "ArrowLeft"], "The next or previous point of the line, as drawn: left to right in either text direction.")
+                .key(["ArrowDown", "ArrowUp"], "The next or previous line at the same x value, or its nearest point.")
+                .key(["Home", "End"], "The line's first or last point.")
+                .key(["Enter", "Space"], "Calls `onpointclick` with the point.")
+                .key(["Escape"], "Clears the point and its tooltip.")
                 .handles([
                     "The chart is a `role=\"figure\"` named by `title`. The drawing is hidden from screen readers.",
                     "A hidden summary gives the x range and each line's lowest and highest value, and where the highest is.",
                     "A hidden table holds every value, up to the theme's `table_cell_cap` cells.",
+                    "The plot is one tab stop, a `role=\"application\"` described as a chart, so a screen reader hands it the arrows. Each point the keys reach is announced, as \"This week, Tue: 132\".",
+                    "The legend's entries are toggle buttons: pressed while their line shows, struck through when hidden. The last shown line's button is `aria-disabled`.",
+                    "On a touch screen a tap pins a point's tooltip, a second tap on it clicks; a vertical swipe still scrolls the page.",
                     "Lines take the theme's palette, drawn in the current color scheme.",
                 ])
                 .must([
                     "Give a `title`, or name the chart with `aria_label`.",
                     "Say in `description` what the reader should see, as \"Visitors peaked on Saturday\".",
                     "Tell lines apart by more than colour: `dashed()` on a series, or their names in the legend.",
+                    "Name every series differently: the legend hides them by name.",
                 ])
                 .limits([
-                    "No tooltip and no keyboard path over the points yet: the summary and the table are the way to the values.",
+                    "The tooltip is for the eye; screen readers hear the announcement instead, so `tooltip_content` reaches only sighted readers.",
+                    "The x axis runs left to right in a right-to-left page too.",
                 ]),
             lead: rsx! {
                 Text {
@@ -95,6 +113,7 @@ pub fn LineChartPage() -> Element {
                         }),
                     Control::select("legend", ["bottom", "top", "start", "end", "none"]),
                     Control::toggle("table", ["hidden", "visible", "off"]),
+                    Control::switch("tooltip").default(on(theme.chart.tooltip)),
                     Control::switch("loading"),
                 ],
                 render: move |values: DemoValues| rsx! {
@@ -108,6 +127,7 @@ pub fn LineChartPage() -> Element {
                         curve: Curve::from(values.str("curve").as_str()),
                         legend: LegendPosition::from(values.str("legend").as_str()),
                         table: ChartTable::from(values.str("table").as_str()),
+                        tooltip: values.str("tooltip") == "true",
                         loading: values.str("loading") == "true",
                     }
                 },

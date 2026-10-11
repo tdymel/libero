@@ -19,6 +19,8 @@ parts_enum! {
         LegendItem = "legend-item" => "& > [data-slot='body'] > [data-slot='legend'] > [data-slot='legend-item']",
         /// What the plot shows without data: `empty`, or the localized "No data".
         Empty = "empty" => "& > [data-slot='body'] > [data-slot='plot'] > [data-slot='empty']",
+        /// The box at the pointer's or the keys' point.
+        Tooltip = "tooltip" => "& > [data-slot='body'] > [data-slot='plot'] > [data-slot='tooltip']",
         /// The data table's scroll box, hidden unless `table: "visible"`.
         Table = "table" => "& > [data-slot='table']",
     }
@@ -68,6 +70,27 @@ macro_rules! chart_props {
                 /// The data as a table: hidden for screen readers by default.
                 #[props(default, into)]
                 table: Input<crate::theme::ChartTable>,
+                /// A tooltip and a crosshair at the pointer's or the keys' point. Unset, the theme's.
+                #[props(default)]
+                tooltip: Option<bool>,
+                /// The tooltip's content instead of the x value and each series' value.
+                #[props(default)]
+                tooltip_content: Option<Callback<super::ChartPoint, Element>>,
+                /// A click or tap on a point, or Enter on the keys' point.
+                #[props(default)]
+                onpointclick: Option<EventHandler<super::ChartPoint>>,
+                /// The point under the pointer or the keys, `None` when it leaves.
+                #[props(default)]
+                onactivechange: Option<EventHandler<Option<super::ChartPoint>>>,
+                /// The series' names the legend hides; set, they are controlled.
+                #[props(default)]
+                hidden: Option<Vec<String>>,
+                /// Seeds the hidden series once. Ignored when `hidden` is set.
+                #[props(default)]
+                default_hidden: Vec<String>,
+                /// The hidden series a legend button asks for. The last shown one stays.
+                #[props(default)]
+                onhiddenchange: Option<EventHandler<Vec<String>>>,
             }
         }
     };
@@ -98,6 +121,10 @@ mod tests {
                 (
                     "empty",
                     "& > [data-slot='body'] > [data-slot='plot'] > [data-slot='empty']"
+                ),
+                (
+                    "tooltip",
+                    "& > [data-slot='body'] > [data-slot='plot'] > [data-slot='tooltip']"
                 ),
                 ("table", "& > [data-slot='table']"),
             ]
