@@ -257,6 +257,12 @@ fn server_command(
         "127.0.0.1",
         "--port",
         &port.to_string(),
+        // `dx run` still watches and hot-reloads by default: a sibling build or a checkout
+        // rebuilt the bundle mid-run (todo 2027).
+        "--watch",
+        "false",
+        "--hot-reload",
+        "false",
     ]);
     // `E2E_RELEASE=1`: optimised fixtures, for the frame-time report (1086).
     if std::env::var_os("E2E_RELEASE").is_some() {
