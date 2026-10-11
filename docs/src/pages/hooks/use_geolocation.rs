@@ -72,7 +72,7 @@ pub fn UseGeolocationPage() -> Element {
                 Text {
                     "Web: a secure context (HTTPS or localhost). Android: declare "
                     Code { source: "[permissions] location" }
-                    " in Dioxus.toml; the system asks on the first request. macOS and Windows WebViews are untested. Blitz and a server render have no Geolocation API: "
+                    " in Dioxus.toml; the system asks on the first request. Windows: WebView2 counts dioxus's page as insecure and denies every request unless the app marks it secure (Getting started, Desktop). macOS and iOS WebViews are untested. Blitz and a server render have no Geolocation API: "
                     Code { source: "is_supported()" }
                     " stays false and a request fails with "
                     Code { source: "Unsupported" }

@@ -36,7 +36,11 @@ fn main() {
     dioxus_native::launch(App);
     #[cfg(feature = "desktop")]
     dioxus::LaunchBuilder::new()
-        .with_cfg(dioxus::desktop::Config::new().with_custom_head(VIEWPORT.into()))
+        .with_cfg(
+            dioxus::desktop::Config::new()
+                .with_custom_head(VIEWPORT.into())
+                .with_windows_browser_args(WEBVIEW2_ARGS),
+        )
         .launch(App);
     #[cfg(all(feature = "mobile", not(feature = "desktop")))]
     dioxus::LaunchBuilder::new()
@@ -51,6 +55,12 @@ fn main() {
 #[cfg(any(feature = "desktop", feature = "mobile"))]
 const VIEWPORT: &str = "<script>document.querySelector('meta[name=viewport]')?.setAttribute('content', \
     'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover');</script>";
+
+/// wry 0.55.1's WebView2 arguments, which these replace, plus dioxus's Windows page origin
+/// made a secure context: without it capture, location and notifications are missing.
+#[cfg(feature = "desktop")]
+const WEBVIEW2_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection \
+    --unsafely-treat-insecure-origin-as-secure=http://dioxus.index.html";
 
 /// Prints the adapter wgpu picked. The dioxus logger bridges no `log` records, and
 /// wgpu reports it at debug level only (todo 2789).

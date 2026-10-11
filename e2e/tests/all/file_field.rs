@@ -86,7 +86,36 @@ e2e::scenario!(
     "/file-field/pick",
     picks_and_reads,
     native: skip("rfd opens the desktop portal's dialog, which no driver answers"),
-    desktop: skip("1126: the GTK file chooser is not driven")
+    desktop: skip("1126: the GTK file chooser is not driven"),
+    ios: skip("3194: the simulator's picker opens but is not driven; see browse_opens_the_ios_picker")
+);
+
+/// What WebKit's picker for a bare `<input type=file>` offers on an iPhone, by recall: the
+/// page's own Browse button names none of them.
+const IOS_PICKER: [&str; 3] = ["Photo Library", "Choose File", "Take Photo"];
+
+/// Todo 3194: Browse clicks a detached input from a script; WebKit opens a picker only inside
+/// a user gesture, so the system's menu showing is the proof. Nothing is picked.
+async fn opens_the_ios_picker<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#receipt").await?;
+    let shown = eventually(d, "the system picker", async |d| {
+        let screen = d.system_text().await?;
+        Ok(IOS_PICKER.iter().any(|label| screen.contains(label)))
+    })
+    .await;
+    if shown.is_err() {
+        let screen = d.system_text().await?;
+        let head: String = screen.chars().take(2000).collect();
+        anyhow::bail!("no system picker after Browse; the screen reads: {head}");
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    browse_opens_the_ios_picker,
+    "/file-field/pick",
+    opens_the_ios_picker,
+    ios_only("the system picker's text is read on iOS only")
 );
 
 /// Todo 2217: Android starts a pick on its event thread and ends it on the render thread;
@@ -103,7 +132,8 @@ e2e::scenario!(
     "/file-field/pick",
     picks_twice,
     native: skip("rfd opens the desktop portal's dialog, which no driver answers"),
-    desktop: skip("1126: the GTK file chooser is not driven")
+    desktop: skip("1126: the GTK file chooser is not driven"),
+    ios: skip("3194: the simulator's picker opens but is not driven; see browse_opens_the_ios_picker")
 );
 
 /// WCAG 1.4.11: the dashed border is all that shows the dropzone's extent

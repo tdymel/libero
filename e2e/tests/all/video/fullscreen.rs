@@ -103,6 +103,23 @@ async fn fullscreen_toggles<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     };
     // Android's native fullscreen too, which ignored Escape before 1256.
     filled(d).await?;
+    // Todo 3194 (G8): wry's WKWebView has no Fullscreen API, so the box is drawn over the viewport.
+    if d.platform() == Platform::Ios {
+        let state = d.attr("#player [role=group]", "data-fullscreen").await?;
+        anyhow::ensure!(
+            pseudo_state(state.clone()),
+            "iOS fullscreen is {state:?}, not drawn"
+        );
+        let (width, height) = d.viewport().await?;
+        let rect = d.rect("#player [role=group]").await?;
+        anyhow::ensure!(
+            rect.x <= 0.5
+                && rect.y <= 0.5
+                && rect.width >= width - 1.0
+                && rect.height >= height - 1.0,
+            "the drawn box {rect:?} leaves part of the {width}x{height} viewport"
+        );
+    }
     d.press(keyboard::ESCAPE).await?;
     eventually(d, "Escape to give the player back", async |d| {
         Ok(d.attr("#player [role=group]", "data-fullscreen")

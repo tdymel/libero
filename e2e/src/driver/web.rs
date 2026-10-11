@@ -188,6 +188,17 @@ impl Driver for Web {
         evaluate(&self.fixture.page, expression).await
     }
 
+    async fn relaunch(&mut self) -> Result<()> {
+        let page = &self.fixture.page;
+        page.reload().await?;
+        crate::wait::for_js_true(
+            page,
+            "document.querySelector('[data-fixture-ready]') !== null",
+            "the fixture after a reload",
+        )
+        .await
+    }
+
     async fn scroll_by(&mut self, dy: f64) -> Result<()> {
         // Instant: a smooth scroll restarts on every poll and never arrives.
         let scroll = format!("(window.scrollBy({{ top: {dy}, behavior: 'instant' }}), true)");

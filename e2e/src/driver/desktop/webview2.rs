@@ -35,11 +35,15 @@ pub(super) fn prepare(command: &mut Command, launch: &str) -> Result<u16> {
         .context("find a DevTools port")?
         .local_addr()?
         .port();
-    // Appended to wry's own arguments; the folder replaces the default profile.
+    // Appended to the app's arguments; the folder replaces the default profile. The secure
+    // origin repeats the fixture's own, in case the variable replaces them (3195).
     command
         .env(
             "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
-            format!("--remote-debugging-port={port}"),
+            format!(
+                "--remote-debugging-port={port} \
+                 --unsafely-treat-insecure-origin-as-secure=http://dioxus.index.html"
+            ),
         )
         .env(
             "WEBVIEW2_USER_DATA_FOLDER",

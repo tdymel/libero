@@ -67,9 +67,10 @@ fn ShareLocation() -> Element {
 
 Web: a secure context (HTTPS or localhost). Android: declare
 `[permissions] location` in Dioxus.toml; the system asks on the first request.
-macOS and Windows WebViews are untested. Blitz and a server render have no
-Geolocation API: `is_supported()` stays false and a request fails with
-`Unsupported`.
+Windows: WebView2 counts dioxus's page as insecure and denies every request
+unless the app marks it secure (Getting started, Desktop). macOS and iOS
+WebViews are untested. Blitz and a server render have no Geolocation API:
+`is_supported()` stays false and a request fails with `Unsupported`.
 
 ## API
 
@@ -120,7 +121,8 @@ pub enum PermissionState { Granted, Denied, Prompt, Unknown, Unsupported }
 | Web | Full, in a secure context. |
 | Android (WebView) | Full with `[permissions] location` in Dioxus.toml; the permission reads `Unknown` until a fix. |
 | Linux desktop (WebKitGTK) | Every request is `Denied`. |
-| macOS, Windows desktop | Untested. |
+| Windows desktop (WebView2) | `Denied` unless the app marks dioxus's page secure (Getting started, Desktop); untested. |
+| macOS desktop, iOS | Untested. |
 | Blitz, server render | `Unsupported`. |
 
 ## Accessibility

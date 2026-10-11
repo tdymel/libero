@@ -125,6 +125,24 @@ On Linux you need:
   (`libwebkit2gtk-4.1-dev libgtk-3-dev libxdo-dev` on Debian and Ubuntu,
   `webkit2gtk-4.1 xdotool` on Arch).
 
+On Windows dioxus serves the page from `http://dioxus.index.html`, which
+WebView2 does not count as a secure context: the camera, microphone, location,
+notifications and clipboard APIs are missing. Mark that one origin secure,
+never a wildcard or a list: it is your app's own bundled page. Keep wry's
+default arguments, which these replace. Expected to work, not yet confirmed on
+Windows:
+
+```rust,ignore
+// wry 0.55's defaults, then the app's own page origin.
+const WEBVIEW2_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection \
+    --unsafely-treat-insecure-origin-as-secure=http://dioxus.index.html";
+
+fn main() {
+    let config = dioxus::desktop::Config::new().with_windows_browser_args(WEBVIEW2_ARGS);
+    dioxus::LaunchBuilder::new().with_cfg(config).launch(App);
+}
+```
+
 ### Android
 
 Early: Android runs, but it is the least tested target. Focus traps and tree

@@ -1,6 +1,7 @@
 //! `use_geolocation`: mounting asks nothing; on the web a granted fix, a
 //! watch that follows it and a denial, from Chromium's emulated position.
-//! Android locates from the emulator's GPS, Linux desktop is denied, Blitz unsupported;
+//! Android and iOS locate from the emulator's or simulator's position, Linux desktop is
+//! denied, Blitz unsupported;
 //! macOS and Windows desktop answer at all, recorded in `outcomes.log`.
 
 use anyhow::Result;
@@ -34,7 +35,21 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
         eventually_text(d, selector, expected, "mount").await?;
     }
     match d.platform() {
-        Platform::Ios => anyhow::bail!("2784: no iOS flow for the location grant and fix yet"),
+        // The runner granted location and set the simulator's position (3194); the answer is
+        // logged before the fix is asserted, so a red run still says what WKWebView gave.
+        Platform::Ios => {
+            d.click("#locate").await?;
+            eventually(d, "an answer to a request", async |d| {
+                Ok(d.text("#error").await? != "None" || d.text("#position").await? != "none")
+            })
+            .await?;
+            let shown = ["#supported", "#permission", "#error", "#position"];
+            record_outcome(d, "use_geolocation", &shown).await?;
+            eventually(d, "the simulator's position", async |d| {
+                Ok(d.text("#position").await?.starts_with("52.520, 13.405"))
+            })
+            .await?;
+        }
         Platform::Native => {
             eventually_text(d, "#permission", "Unsupported", "mount").await?;
             d.click("#locate").await?;
@@ -77,8 +92,7 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
 e2e::scenario!(
     mounting_asks_nothing_until_a_request,
     "/use-geolocation",
-    mounting_asks_nothing,
-    ios: skip("2784: no iOS flow for the location grant and fix yet")
+    mounting_asks_nothing
 );
 
 /// Feeds the emulator's GPS provider, the one a high-accuracy request reads.

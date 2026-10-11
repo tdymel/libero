@@ -30,8 +30,7 @@ pub fn UseUserMediaPage() -> Element {
                 .limits([
                     "A denial is usually permanent for the site: the browser does not ask again, and libero cannot open its settings.",
                     "The Linux desktop WebView (WebKitGTK) denies every request, because wry answers no permission request there.",
-                    "macOS's WebView grants every page itself; the system's camera prompt is the only consent gate, so ask in your own UI first.",
-                ]),
+                    "macOS's WebView grants every page itself; the system's camera prompt is the only consent gate, so ask in your own UI first.",                ]),
             lead: rsx! {
                 Text {
                     Code { source: "use_user_media(options) -> UserMedia" }
@@ -131,7 +130,7 @@ pub fn UseUserMediaPage() -> Element {
                     Code { source: "\"android.permission.MODIFY_AUDIO_SETTINGS\"" }
                     " under "
                     Code { source: "[android.permissions]" }
-                    ": without it every microphone request is denied. The system asks on the first start. Windows is untested. Blitz and a server render have no capture API: "
+                    ": without it every microphone request is denied. The system asks on the first start. Windows: WebView2 counts dioxus's page as insecure and has no capture API until the app marks the page secure (Getting started, Desktop); untested. Blitz and a server render have no capture API: "
                     Code { source: "is_supported()" }
                     " stays false and a start fails with "
                     Code { source: "Unsupported" }

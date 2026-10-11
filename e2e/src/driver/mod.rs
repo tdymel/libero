@@ -233,6 +233,15 @@ pub trait Driver {
         let _ = trigger;
         bail!("{:?}: no permission dialog to answer", self.platform())
     }
+    /// The screen's accessibility text, system sheets and pickers included; only iOS reads it.
+    async fn system_text(&mut self) -> Result<String> {
+        bail!("{:?}: no system UI to read", self.platform())
+    }
+    /// Ends the app and starts it again on the same route, as a user reopening it; the web
+    /// reloads the page.
+    async fn relaunch(&mut self) -> Result<()> {
+        bail!("{:?}: no relaunch", self.platform())
+    }
     /// The app's posted system notifications, one record per line; only Android reads them.
     async fn posted_notifications(&mut self) -> Result<String> {
         bail!("{:?}: no system notifications to read", self.platform())
@@ -425,7 +434,7 @@ pub async fn record_outcome<D: Driver>(d: &mut D, what: &str, selectors: &[&str]
 /// `android: skip("958 ...")`, `desktop: skip("1126 ...")`, `ios: skip("2784 ...")` and
 /// `web: skip(..)` do the same for Android, the desktop WebView, the iOS simulator and
 /// Chromium; the skips may follow each other in any order. `android_only("1275 ...")` skips
-/// every arm but Android's. `macos: skip(..)` and `windows: skip(..)` skip the desktop arm on
+/// every arm but Android's, `ios_only(..)` every arm but iOS's. `macos: skip(..)` and `windows: skip(..)` skip the desktop arm on
 /// that [`Host`] only; branch on [`Host::current`] inside the body for a part of it.
 #[macro_export]
 macro_rules! scenario {
@@ -452,6 +461,9 @@ macro_rules! scenario {
     };
     (@skip $name:ident, $route:expr, $body:ident, $w:tt $n:tt $a:tt $d:tt $i:tt; android_only($reason:literal) $(, $($rest:tt)*)?) => {
         $crate::scenario!(@skip $name, $route, $body, [#[test] #[ignore = $reason]] [#[test] #[ignore = $reason]] $a [#[test] #[ignore = $reason]] [#[test] #[ignore = $reason]]; $($($rest)*)?);
+    };
+    (@skip $name:ident, $route:expr, $body:ident, $w:tt $n:tt $a:tt $d:tt $i:tt; ios_only($reason:literal) $(, $($rest:tt)*)?) => {
+        $crate::scenario!(@skip $name, $route, $body, [#[test] #[ignore = $reason]] [#[test] #[ignore = $reason]] [#[test] #[ignore = $reason]] [#[test] #[ignore = $reason]] $i; $($($rest)*)?);
     };
     (@skip $name:ident, $route:expr, $body:ident, $w:tt $n:tt $a:tt $d:tt $i:tt;) => {
         $crate::scenario!(@all $name, $route, $body, $w, $n, $a, $d, $i);
@@ -555,6 +567,14 @@ mod tests {
         windows: skip("expansion only"),
         native: skip("expansion only"),
         android: skip("expansion only"),
+        ios: skip("expansion only")
+    );
+
+    crate::scenario!(
+        the_ios_only_token_expands,
+        "/",
+        nothing,
+        ios_only("expansion only"),
         ios: skip("expansion only")
     );
 

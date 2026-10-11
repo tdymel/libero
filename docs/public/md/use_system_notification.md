@@ -116,7 +116,9 @@ itself, with no libero code: see the recipe below.
 Web: a secure context (HTTPS or localhost). Desktop WebView on Linux: with
 libero's `desktop` feature, the desktop's notification server over D-Bus, as
 for Blitz; without it WebKitGTK denies every request. macOS and Windows
-WebViews go through the page's `Notification`, untested. Push is web only.
+WebViews go through the page's `Notification`, untested; WebView2 counts
+dioxus's page as insecure and denies it until the app marks the page secure
+(Getting started, Desktop). Push is web only.
 Android: the system's notifications over JNI, after
 `notifications = { description = ".." }` under `[permissions]` in the app's
 `Dioxus.toml`; a tap reopens the app and runs `on_click`. The status bar icon

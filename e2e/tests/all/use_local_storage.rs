@@ -54,6 +54,28 @@ e2e::scenario!(
     writes_and_removes
 );
 
+/// Todo 3194: the local area outlives the app; iOS kept it in memory only before S1's
+/// storage arm. The web's relaunch is a reload.
+async fn outlives_the_app<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    cleared(d).await?;
+    d.click("#add-local").await?;
+    eventually_text(d, "#stored", "true", "an add").await?;
+    d.relaunch().await?;
+    eventually_text(d, "#local", "1", "a relaunch").await?;
+    eventually_text(d, "#stored", "true", "a relaunch").await?;
+    d.click("#remove-local").await?;
+    eventually_text(d, "#stored", "false", "remove").await
+}
+
+e2e::scenario!(
+    the_local_area_outlives_a_relaunch,
+    "/use-local-storage/relaunch",
+    outlives_the_app,
+    native: skip("Blitz has no relaunch in the driver"),
+    android: skip("no relaunch in the Android driver; its store is the files directory"),
+    desktop: skip("a launch gets a fresh E2E_STORAGE_DIR, so a relaunch keeps nothing")
+);
+
 async fn reads(page: &Page, selector: &str, text: &str) -> Result<()> {
     let expression = format!("document.querySelector({selector:?})?.textContent === {text:?}");
     wait::for_js_true(page, &expression, &format!("{selector} to read {text}")).await

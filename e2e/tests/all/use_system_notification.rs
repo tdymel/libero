@@ -1,6 +1,7 @@
 //! `use_system_notification` and `use_push_subscription`: mounting asks nothing;
 //! on the web a granted show and close, a denial, and push registering its worker.
 //! Android's dialog, posted notification, tap (1348) and action (2126); push is web only.
+//! macOS and Windows desktop and iOS answer at all, recorded in `outcomes.log`.
 
 use anyhow::Result;
 use chromiumoxide::Page;
@@ -26,7 +27,7 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
         eventually_text(d, selector, expected, "mount").await?;
     }
     match d.platform() {
-        Platform::Ios => anyhow::bail!("2784: no iOS flow for the notification permission yet"),
+        Platform::Ios => recorded(d).await?,
         // Todo 1348: the system's notifications over JNI; the runner revokes the permission.
         Platform::Android => {
             eventually_text(d, "#supported", "true", "mount").await?;
@@ -67,22 +68,7 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
             d.click("#subscribe").await?;
             eventually_text(d, "#push-error", "Some(Unsupported)", "a subscribe").await?;
         }
-        // The page's `Notification` in WKWebView and WebView2, unpinned until the platform
-        // probe answered (todo 1239): a permission at all, recorded; no `Notification` is
-        // unsupported as on Linux.
-        Platform::Desktop if Host::current() != Host::Linux => {
-            eventually(d, "a permission state", async |d| {
-                Ok(d.text("#permission").await? != "Unknown")
-            })
-            .await?;
-            let shown = ["#supported", "#permission"];
-            record_outcome(d, "use_system_notification", &shown).await?;
-            if d.text("#supported").await? == "false" {
-                eventually_text(d, "#permission", "Unsupported", "mount").await?;
-                d.click("#show").await?;
-                eventually_text(d, "#error", "Some(Unsupported)", "a show").await?;
-            }
-        }
+        Platform::Desktop if Host::current() != Host::Linux => recorded(d).await?,
         // Blitz and the WebView on Linux (1470) ask the session's notification
         // server; without one it is unsupported.
         Platform::Native | Platform::Desktop => {
@@ -108,11 +94,28 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
     Ok(())
 }
 
+/// The page's `Notification` in WKWebView and WebView2, unpinned until the platform probe
+/// answered (todos 1239, 3194): a permission at all, recorded; no `Notification` is
+/// unsupported as on Linux.
+async fn recorded<D: Driver>(d: &mut D) -> Result<()> {
+    eventually(d, "a permission state", async |d| {
+        Ok(d.text("#permission").await? != "Unknown")
+    })
+    .await?;
+    let shown = ["#supported", "#permission"];
+    record_outcome(d, "use_system_notification", &shown).await?;
+    if d.text("#supported").await? == "false" {
+        eventually_text(d, "#permission", "Unsupported", "mount").await?;
+        d.click("#show").await?;
+        eventually_text(d, "#error", "Some(Unsupported)", "a show").await?;
+    }
+    Ok(())
+}
+
 e2e::scenario!(
     mounting_asks_nothing_until_a_request,
     "/use-system-notification",
-    mounting_asks_nothing,
-    ios: skip("2784: no iOS flow for the notification permission yet")
+    mounting_asks_nothing
 );
 
 async fn set_permission(page: &Page, setting: PermissionSetting) -> Result<()> {

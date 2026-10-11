@@ -14,6 +14,12 @@ const CONSOLE_HOOK: &str = "<script>{ window.__e2eErrors = [];
 const VIEWPORT: &str = "<script>document.querySelector('meta[name=viewport]')?.setAttribute('content', \
     'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover');</script>";
 
+/// The docs app's WebView2 arguments: wry 0.55.1's defaults, and dioxus's
+/// `http://dioxus.index.html` page made a secure context (3195). Read on Windows only.
+#[cfg(feature = "desktop")]
+const WEBVIEW2_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection \
+    --unsafely-treat-insecure-origin-as-secure=http://dioxus.index.html";
+
 fn main() {
     e2e_fixtures::perf::install();
     // A fresh store per launch, so one scenario's kept scheme never reaches the next;
@@ -25,7 +31,11 @@ fn main() {
     ));
     #[cfg(feature = "desktop")]
     dioxus::LaunchBuilder::new()
-        .with_cfg(dioxus::desktop::Config::new().with_custom_head(head()))
+        .with_cfg(
+            dioxus::desktop::Config::new()
+                .with_custom_head(head())
+                .with_windows_browser_args(WEBVIEW2_ARGS),
+        )
         .launch(e2e_fixtures::App);
     #[cfg(all(feature = "mobile", not(feature = "desktop")))]
     dioxus::LaunchBuilder::new()

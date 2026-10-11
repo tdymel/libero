@@ -56,6 +56,10 @@ pub struct Ios {
     scale: f64,
     /// The test module path minus the scenario: one app per unit.
     unit: String,
+    /// The scenario's route, which a relaunch opens again.
+    route: String,
+    /// A system sheet may still cover the app, so the next scenario launches a fresh one.
+    overlaid: bool,
 }
 
 impl Ios {
@@ -74,12 +78,20 @@ impl Ios {
                 Self::launch(unit)?
             }
         };
-        ios.bridge
-            .run("document.activeElement?.blur(); scrollTo(0, 0)")?;
-        let generation: u64 = ios.bridge.json(&format!("window.__route({route:?})"))?;
-        ios.bridge
-            .wait_for(&format!("[data-fixture-generation=\"{generation}\"]"))?;
+        ios.route = route.to_string();
+        ios.mount()?;
         Ok(ios)
+    }
+
+    /// Remounts the fixture on `self.route`, focus and scroll reset.
+    fn mount(&mut self) -> Result<()> {
+        self.bridge
+            .run("document.activeElement?.blur(); scrollTo(0, 0)")?;
+        let generation: u64 = self
+            .bridge
+            .json(&format!("window.__route({:?})", self.route))?;
+        self.bridge
+            .wait_for(&format!("[data-fixture-generation=\"{generation}\"]"))
     }
 
     fn launch(unit: &str) -> Result<Self> {
@@ -129,6 +141,8 @@ impl Ios {
             origin: (0.0, 0.0),
             scale: 1.0,
             unit: unit.to_string(),
+            route: String::new(),
+            overlaid: false,
         };
         ios.bridge.wait_for("[data-fixture-ready]")?;
         // `Shell` installs the route hook in an effect, after the marker mounts.
@@ -145,7 +159,9 @@ impl Ios {
         if !errors.is_empty() {
             bail!("{what}: console errors in the iOS WebView: {errors:?}");
         }
-        *IDLE.lock().unwrap_or_else(PoisonError::into_inner) = Some(self);
+        if !self.overlaid {
+            *IDLE.lock().unwrap_or_else(PoisonError::into_inner) = Some(self);
+        }
         Ok(())
     }
 
@@ -330,6 +346,11 @@ impl Ios {
 
     /// The injector with `args` against this simulator.
     fn inject(&self, args: &[&str]) -> Result<()> {
+        self.inject_output(args).map(drop)
+    }
+
+    /// As [`Ios::inject`]; the tool's stdout.
+    fn inject_output(&self, args: &[&str]) -> Result<String> {
         let tool = match self.input {
             Injector::Axe => "axe",
             Injector::Idb => "idb",
@@ -345,7 +366,7 @@ impl Ios {
                 String::from_utf8_lossy(&out.stderr).trim()
             );
         }
-        Ok(())
+        Ok(String::from_utf8_lossy(&out.stdout).into_owned())
     }
 }
 
@@ -520,6 +541,25 @@ impl Driver for Ios {
 
     async fn evaluate(&mut self, expression: &str) -> Result<serde_json::Value> {
         self.bridge.json(&format!("await ({expression})"))
+    }
+
+    /// The injector's accessibility dump of the whole screen, as JSON text.
+    async fn system_text(&mut self) -> Result<String> {
+        self.overlaid = true;
+        match self.input {
+            Injector::Axe => self.inject_output(&["describe-ui"]),
+            Injector::Idb => self.inject_output(&["ui", "describe-all"]),
+        }
+    }
+
+    /// `simctl launch --terminate-running-process` ends the running app. The old handle is
+    /// forgotten: its drop would terminate the new one.
+    async fn relaunch(&mut self) -> Result<()> {
+        let fresh = Self::launch(&self.unit)?;
+        let route = std::mem::take(&mut self.route);
+        std::mem::forget(std::mem::replace(self, fresh));
+        self.route = route;
+        self.mount()
     }
 
     /// libero's thread timers, held in the app (2144).

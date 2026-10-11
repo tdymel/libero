@@ -126,8 +126,12 @@ fn run_on(
     }
     eprintln!("e2e ios: installing {} ({bundle})", app.display());
     simctl(&["install", udid, &app.to_string_lossy()])?;
-    // `use_geolocation`: no driver answers its dialog, so grant up front, as on Android.
-    let _ = simctl(&["privacy", udid, "grant", "location", &bundle]);
+    // No driver answers the permission dialogs, so grant up front, as on Android; simctl
+    // grants no camera, which the simulator lacks. The position is the Android arm's.
+    for service in ["location", "microphone"] {
+        let _ = simctl(&["privacy", udid, "grant", service, &bundle]);
+    }
+    let _ = simctl(&["location", udid, "set", "52.52,13.405"]);
 
     let names = list_arm("ios", root, target_dir, filters, ignored)?;
     let names: Vec<String> = if ignored {

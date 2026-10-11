@@ -12,15 +12,16 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/use-local-storage", || rsx! { Kept { prefix: "e2e-storage" } }),
     ("/use-local-storage/reload", || rsx! { Kept { prefix: "e2e-storage-reload" } }),
+    ("/use-local-storage/relaunch", || rsx! { Kept { prefix: "e2e-storage-relaunch" } }),
     ("/use-local-storage/tabs", || rsx! { Kept { prefix: "e2e-storage-tabs" } }),
     ("/use-local-storage/errors", || rsx! { Kept { prefix: "e2e-storage-errors" } }),
     ("/use-local-storage/late", || rsx! { Late {} }),
 ];
 
 /// Off the web, the run's directory (`E2E_STORAGE_DIR`), never the user's data dir.
-/// Android keeps the app's own files directory.
+/// Android and iOS keep libero's default in the app's own container.
 fn point_storage_dir() {
-    #[cfg(not(any(target_arch = "wasm32", target_os = "android")))]
+    #[cfg(not(any(target_arch = "wasm32", target_os = "android", target_os = "ios")))]
     libero::platform::set_storage_dir(
         std::env::var_os("E2E_STORAGE_DIR")
             .map(std::path::PathBuf::from)
