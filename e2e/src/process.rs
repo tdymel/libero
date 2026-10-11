@@ -1,10 +1,11 @@
 //! Runner processes: the guard, the server's process group, and processes found by command line.
 //! Unix signals process groups; Windows ends process trees with `taskkill` (todo 2781).
 
-use std::io::{BufRead, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 #[cfg(unix)]
 use std::path::Path;
-use std::process::{Child, ChildStdin, Command, Stdio};
+use std::process::{Child, ChildStdin, Command, ExitStatus, Stdio};
+use std::sync::mpsc::{self, RecvTimeoutError};
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result};
@@ -179,6 +180,39 @@ pub(crate) fn stop(server: &mut Child) {
     signal_group(pid, Signal::Kill);
     let _ = server.kill();
     let _ = server.wait();
+}
+
+/// Hands `each` the lines of `child`'s piped stdout until it exits, then its status. Not until
+/// end-of-file: on Windows the Chrome a test launched inherits the pipe and outlives the child.
+pub(crate) fn lines_until_exit(
+    child: &mut Child,
+    stdout: impl Read + Send + 'static,
+    mut each: impl FnMut(String),
+) -> Result<ExitStatus> {
+    let (send, lines) = mpsc::channel();
+    std::thread::spawn(move || {
+        for line in BufReader::new(stdout).lines() {
+            if send.send(line).is_err() {
+                break;
+            }
+        }
+    });
+    loop {
+        match lines.recv_timeout(Duration::from_millis(200)) {
+            Ok(line) => each(line?),
+            Err(RecvTimeoutError::Disconnected) => return Ok(child.wait()?),
+            Err(RecvTimeoutError::Timeout) => {
+                let Some(status) = child.try_wait()? else {
+                    continue;
+                };
+                // What the child wrote before it exited is in the pipe already.
+                while let Ok(line) = lines.recv_timeout(Duration::from_millis(500)) {
+                    each(line?);
+                }
+                return Ok(status);
+            }
+        }
+    }
 }
 
 /// SIGTERMs every process whose command line contains `needle`. Scans the process
@@ -428,6 +462,27 @@ mod tests {
                 (1, "/sbin/init splash".to_string()),
                 (4242, "sh -c read line tag".to_string()),
             ]
+        );
+    }
+
+    /// A grandchild holding the pipe, as Chrome on Windows, does not hold the run.
+    #[cfg(unix)]
+    #[test]
+    fn the_lines_end_with_the_child_not_the_pipe() {
+        let mut child = Command::new("sh")
+            .args(["-c", "sleep 5 & echo one; echo two"])
+            .stdout(Stdio::piped())
+            .spawn()
+            .unwrap();
+        let stdout = child.stdout.take().unwrap();
+        let started = Instant::now();
+        let mut lines = Vec::new();
+        let status = lines_until_exit(&mut child, stdout, |line| lines.push(line)).unwrap();
+        assert!(status.success());
+        assert_eq!(lines, ["one", "two"]);
+        assert!(
+            started.elapsed() < Duration::from_secs(4),
+            "waited for the pipe"
         );
     }
 

@@ -2,7 +2,7 @@
 //! port, runs the tests, then stops everything; a guard process cleans up if it dies (todo 313).
 
 use std::ffi::OsStr;
-use std::io::{BufRead, BufReader, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, ExitStatus, Stdio};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -390,8 +390,7 @@ fn run_suite(
     let stdout = tests.stdout.take().context("the tests' stdout")?;
     // Teed to a file: a caller's `| tail` cut the per-test detail twice (todo 364).
     let mut log = std::fs::File::create(session.artifacts.join("test-output.log")).ok();
-    for line in BufReader::new(stdout).lines() {
-        let line = line.context("read the tests' output")?;
+    let status = process::lines_until_exit(&mut tests, stdout, |line| {
         tally += e2e::journal::Tally::from_summary(&line);
         if let Some((test, passed)) = e2e::journal::test_outcome(&line) {
             match (e2e::journal::drives_a_browser(test), passed) {
@@ -406,9 +405,10 @@ fn run_suite(
             let _ = writeln!(log, "{line}");
         }
         println!("{line}");
-    }
+    })
+    .context("read the tests' output")?;
     Ok(Outcome {
-        status: tests.wait().context("wait for the tests")?,
+        status,
         tally,
         browser,
         set_aside,
