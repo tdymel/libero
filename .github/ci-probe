@@ -1,0 +1,6 @@
+# ted_ci.py probe; read by .github/workflows/ci-probe.yml.
+os=macos
+tier=web
+filter=shard:3:4
+dev=olaf-66
+env=RUST_TEST_THREADS=1
