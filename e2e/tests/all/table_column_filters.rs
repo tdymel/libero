@@ -280,8 +280,13 @@ async fn a_date_filter_narrows_the_rows<D: Driver>(d: &mut D, _route: &str) -> R
             );
         }
     }
-    d.press_shift(keyboard::TAB).await?;
-    eventually_focused(d, &format!("{POPOVER} {PICKER}"), "Shift+Tab").await?;
+    d.evaluate("(() => { window.__ev = []; const name = (e) => e ? (e.tagName + '/' + (e.getAttribute && (e.getAttribute('role') || e.getAttribute('type') || e.getAttribute('data-slot')) || '')) : 'null'; document.addEventListener('keydown', (e) => window.__ev.push('keydown ' + e.key + ' shift=' + e.shiftKey + ' target=' + name(e.target) + ' phase=capture'), true); window.addEventListener('keydown', (e) => window.__ev.push('keydown-bubbled defaultPrevented=' + e.defaultPrevented), false); document.addEventListener('focusin', (e) => window.__ev.push('focusin ' + name(e.target)), true); document.addEventListener('focusout', (e) => window.__ev.push('focusout ' + name(e.target) + ' to ' + name(e.relatedTarget)), true); return true; })()").await?;
+    for _ in 0..3 {
+        d.press_shift(keyboard::TAB).await?;
+    }
+    let log = d.evaluate("window.__ev.join(' | ')").await?;
+    let active = d.evaluate("document.activeElement.tagName + ' ' + document.activeElement.type").await?;
+    anyhow::bail!("DIAG {log} ; active {active}");
     // Equals, then Does not equal, Before, After, On or before, On or after, Between.
     pick_later(d, 6).await?;
     eventually_text(

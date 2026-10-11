@@ -790,15 +790,21 @@ async fn a_tall_menu_fits_the_room<D: Driver>(d: &mut D, _route: &str) -> Result
         Ok(menu.height > 100.0 && menu.y >= -1.0 && menu.y + menu.height <= height + 1.0)
     })
     .await?;
+    let series = d.evaluate("(async () => { const out = []; for (let i = 0; i < 40; i++) { const m = document.querySelector('[role=menu]'); if (!m) { await new Promise((r) => requestAnimationFrame(r)); continue; } const r = m.getBoundingClientRect(); const kids = [...m.querySelectorAll('*')].filter((e) => e.scrollHeight > e.clientHeight + 1 && getComputedStyle(e).overflowY !== 'visible').map((e) => e.tagName + ':' + e.clientHeight + '/' + e.scrollHeight); out.push([Math.round(r.y), Math.round(r.height), m.clientHeight, m.scrollHeight, kids.join(',')].join(' ')); await new Promise((r) => requestAnimationFrame(r)); } return out.filter((v, i, a) => i === 0 || v !== a[i - 1]); })()").await?;
     d.press(keyboard::END).await?;
-    eventually(d, "the last item scrolled into view", async |d| {
+    let waited = eventually(d, "the last item scrolled into view", async |d| {
         if d.text(":focus").await? != "Item 40" {
             return Ok(false);
         }
         let item = d.rect(":focus").await?;
         Ok(item.y >= 0.0 && item.y + item.height <= height)
     })
-    .await
+    .await;
+    if let Err(e) = waited {
+        let info = d.evaluate("(() => { const m = document.querySelector('[role=menu]'); const f = document.activeElement; const r = f.getBoundingClientRect(); const chain = []; for (let e = f.parentElement; e && e !== document.body; e = e.parentElement) { chain.push(e.tagName + '/' + (e.getAttribute('role') || e.getAttribute('data-slot') || '') + ' ch=' + e.clientHeight + ' sh=' + e.scrollHeight + ' st=' + Math.round(e.scrollTop) + ' ov=' + getComputedStyle(e).overflowY + ' mh=' + getComputedStyle(e).maxHeight); } return JSON.stringify({ih: innerHeight, focus: [r.y, r.height], chain}); })()").await?;
+        anyhow::bail!("DIAG {e}: series {series} then {info}");
+    }
+    Ok(())
 }
 
 /// Todo 2633: a hovered item takes the shared row tint in both schemes; `muted.1` was near

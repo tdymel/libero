@@ -1275,6 +1275,7 @@ fn the_trigger_skips_a_refused_first_row() {
 async fn a_tall_dropdown_fits_the_room<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     const DROPDOWN: &str = "[data-slot=dropdown]";
     d.click(TRIGGER).await?;
+    let series = d.evaluate("(async () => { const out = []; for (let i = 0; i < 40; i++) { const dd = document.querySelector('[data-slot=dropdown]'); const lb = document.querySelector('[role=listbox]'); if (dd && lb) { const a = dd.getBoundingClientRect(); const b = lb.getBoundingClientRect(); out.push([Math.round(a.y), Math.round(a.height), Math.round(b.height), lb.clientHeight, lb.scrollHeight, dd.getAttribute('style').match(/available-height:[0-9.]+/)].join(' ')); } await new Promise((r) => requestAnimationFrame(r)); } return out.filter((v, i, a) => i === 0 || v !== a[i - 1]); })()").await?;
     let (_, height) = d.viewport().await?;
     eventually(d, "the open dropdown inside the viewport", async |d| {
         if !d.exists(DROPDOWN).await? {
@@ -1287,11 +1288,15 @@ async fn a_tall_dropdown_fits_the_room<D: Driver>(d: &mut D, _route: &str) -> Re
     })
     .await?;
     d.press(keyboard::END).await?;
-    eventually(d, "the last row scrolled into view", async |d| {
+    let waited = eventually(d, "the last row scrolled into view", async |d| {
         let row = d.rect("[role=option]:last-child").await?;
         Ok(row.y >= 0.0 && row.y + row.height <= height)
     })
-    .await
+    .await;
+    if let Err(e) = waited {
+        anyhow::bail!("DIAG {e}: series {series}");
+    }
+    Ok(())
 }
 
 e2e::scenario!(
