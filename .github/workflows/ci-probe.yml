@@ -90,6 +90,44 @@ jobs:
           git config --global core.autocrlf false
           git config --global core.longpaths true
       - uses: actions/checkout@v7
+      # EXPERIMENT (3413): `--env EXP=a,b` of ted_ci.py; removed before merge.
+      - run: echo "EXP=$(sed -n 's/^env=EXP=//p' .github/ci-probe)" >> "$GITHUB_ENV"
+      - if: runner.os == 'Windows' && contains(env.EXP, 'diag')
+        shell: pwsh
+        run: |
+          Get-PSDrive -PSProvider FileSystem | Format-Table
+          Get-Volume | Format-Table
+          Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled, AntivirusEnabled, IsTamperProtected | Format-List
+          fsutil devdrv query
+          (Get-Command Format-Volume).Parameters.Keys -join ' '
+          Get-Command New-VHD, Mount-VHD -ErrorAction SilentlyContinue | Format-Table
+          Get-CimInstance Win32_Processor | Select-Object Name, NumberOfCores, NumberOfLogicalProcessors | Format-List
+          & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          Get-ChildItem "$env:USERPROFILE\.rustup\toolchains" -ErrorAction SilentlyContinue
+          exit 1
+      - if: runner.os == 'Windows' && contains(env.EXP, 'devdrive')
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force "$env:GITHUB_WORKSPACE\target" | Out-Null
+          @"
+          create vdisk file=D:\dev.vhdx maximum=20480 type=expandable
+          attach vdisk
+          create partition primary
+          assign mount=$env:GITHUB_WORKSPACE\target
+          "@ | Set-Content -Encoding ascii "$env:RUNNER_TEMP\dev.txt"
+          diskpart /s "$env:RUNNER_TEMP\dev.txt"
+          try { Format-Volume -Path "$env:GITHUB_WORKSPACE\target\" -FileSystem ReFS -DevDrive -Force }
+          catch { Write-Host "no -DevDrive: $_"; Format-Volume -Path "$env:GITHUB_WORKSPACE\target\" -FileSystem ReFS -Force }
+          fsutil devdrv query "$env:GITHUB_WORKSPACE\target"
+          Get-Volume | Format-Table
+      - if: runner.os == 'Windows' && contains(env.EXP, 'lld')
+        shell: pwsh
+        run: |
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          cmd /c "`"$vs\VC\Auxiliary\Build\vcvars64.bat`" && set" | ForEach-Object {
+            if ($_ -match '^(LIB|LIBPATH|INCLUDE)=(.*)$') { "$($Matches[1])=$($Matches[2])" | Add-Content $env:GITHUB_ENV }
+          }
+          "CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER=rust-lld.exe" | Add-Content $env:GITHUB_ENV
       - if: runner.os == 'Linux' && env.TIER == 'native'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libdbus-1-dev fonts-dejavu-core xvfb
       - if: runner.os == 'Linux' && env.TIER == 'desktop'
@@ -126,6 +164,8 @@ jobs:
             macOS) export TMPDIR="$RUNNER_TEMP" ;;
             Windows) export TMP="$RUNNER_TEMP" TEMP="$RUNNER_TEMP" ;;
           esac
+          timings=(); if [[ "$EXP" == *timings* ]]; then timings=(--timings); fi
+          if [[ "$EXP" == *offline* ]]; then export CARGO_NET_OFFLINE=true; fi
           case "$TIER" in
             unit)
               # As platforms.yml's unit legs: libero, then the e2e runner's own tests.
@@ -134,7 +174,11 @@ jobs:
               cargo test -p e2e --lib --bins -- "$FILTER" 2>&1 | tee -a "$logs/unit.log" || red=1
               exit "$red" ;;
             native)
-              cargo test -p e2e --features native --test native --test all --no-run 2>&1 | tee "$logs/build.log"
+              cargo test -p e2e --features native --test native --test all --no-run "${timings[@]}" 2>&1 | tee "$logs/build.log"
+              if [[ "$EXP" == *devdrive* ]]; then
+                tar -cf - -P -C "$GITHUB_WORKSPACE" target | wc -c
+                du -sh target
+              fi
               # The shell runs `-e -o pipefail`: keep going after a red binary, as platforms.yml.
               red=0
               # `::native` is the whole set, the native binary included, as platforms.yml.
@@ -168,6 +212,7 @@ jobs:
       - if: always()
         run: |
           mkdir -p "$RUNNER_TEMP/probe"
+          if [ -d target/cargo-timings ]; then cp -r target/cargo-timings "$RUNNER_TEMP/probe/"; fi
           for dir in /tmp/e2e-artifacts "$RUNNER_TEMP/e2e-artifacts"; do
             if [ -d "$dir" ]; then cp -r "$dir" "$RUNNER_TEMP/probe/"; fi
           done
