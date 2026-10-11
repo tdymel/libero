@@ -97,7 +97,11 @@ Like every component, `PieChart` also takes the shared props `sx`, `class`,
   struck through when hidden. The last shown slice's button is `aria-disabled`.
 - On a touch screen a tap pins a slice's tooltip, a second tap on it clicks; a
   vertical swipe still scrolls the page.
-- Slices take the theme's palette, drawn in the current color scheme.
+- Each slice's palette colour reaches 3:1 on the page and on a card, in every
+  shipped theme and color scheme; one too close to an earlier one, also for
+  colour-blind eyes, is skipped.
+- In forced colours the slices keep their colours on the system background; axes
+  and labels take the system text colour.
 
 ### You must
 
@@ -108,6 +112,8 @@ Like every component, `PieChart` also takes the shared props `sx`, `class`,
 
 ### Limits
 
+- A hex colour (`.color("#1e88e5")`) is drawn as given: check its 3:1 on your
+  page.
 - A hidden slice leaves the drawing, so the shown ones' shares grow; the
   summary and the table keep every slice.
 - The tooltip is for the eye; screen readers hear the announcement instead, so
@@ -121,7 +127,7 @@ Like every component, `PieChart` also takes the shared props `sx`, `class`,
 | Field | Type | Description |
 |---|---|---|
 | `aspect_ratio` | `f32` | Width over height of the plot. |
-| `palette` | `[(Color, ColorShade); 8]` | Slice colours in order; the ninth slice starts over. |
+| `palette` | `[(Color, ColorShade); 8]` | Slice colours in order, each at least 3:1 on the page (a shade darker if not); one that reads like an earlier one is skipped; past the last they start over. |
 | `legend` | `LegendPosition` | Where the legend sits with two slices or more. |
 | `donut_thickness` | `f32` | A donut's ring width over the pie's radius. |
 | `pie_labels` | `PieLabels` | Default `labels`. |

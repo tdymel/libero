@@ -4,15 +4,15 @@ use super::{
     Series, XValues,
     engine::{self, LineSpec},
     frame::{
-        Frame, Interaction, overlay_series, series_specs, shown_places, summary, table_rows,
-        use_plot_size,
+        Frame, Interaction, chart_unit, overlay_series, series_specs, shown_places, summary,
+        table_rows, use_plot_size,
     },
     legend::use_hidden_series,
     props::chart_props,
 };
 use crate::{
     components::common::{Input, names_itself, use_name_warning},
-    hooks::{use_formats, use_localization, use_root_id, use_theme},
+    hooks::{use_accessibility, use_formats, use_localization, use_root_id, use_theme},
     theme::{ChartInk, Curve},
 };
 
@@ -59,7 +59,7 @@ chart_props! {
 pub fn LineChart(props: LineChartProps) -> Element {
     let theme = use_theme();
     let labels = use_localization().chart;
-    let decimal = use_formats().decimal_separator;
+    let formats = use_formats();
     let id = use_root_id(&props.attributes);
     use_name_warning(
         props.title.is_some() || names_itself(&props.attributes),
@@ -73,13 +73,14 @@ pub fn LineChart(props: LineChartProps) -> Element {
     let size = use_plot_size();
     let (width, height) = size.get(ratio);
 
-    let x = props.x.labels(&props.value_format, decimal);
+    let x = props.x.labels(&props.value_format, formats);
     let empty = props
         .series
         .iter()
         .all(|series| series.values.iter().all(Option::is_none));
     let points = props.points.unwrap_or(theme.chart.points) && x.len() <= theme.chart.points_limit;
-    let all_specs = series_specs(theme, &props.series);
+    let forced = use_accessibility().forced_colors();
+    let all_specs = series_specs(theme, forced, &props.series);
     let names: Vec<String> = all_specs.iter().map(|s| s.name.clone()).collect();
     let hidden = use_hidden_series(
         &props.hidden,
@@ -89,6 +90,7 @@ pub fn LineChart(props: LineChartProps) -> Element {
     );
     // Drawn series' places in `series`, to map the marks back.
     let shown = shown_places(&all_specs, &hidden.get());
+    let unit = chart_unit(&props.unit, &props.series);
     let spec = LineSpec {
         width,
         height,
@@ -99,19 +101,18 @@ pub fn LineChart(props: LineChartProps) -> Element {
         grid: props.grid.unwrap_or(theme.chart.grid),
         points,
         stroke_width: theme.chart.stroke_width,
-        ink: ChartInk::of(theme),
+        ink: ChartInk::of(theme, forced),
         format: props.value_format,
-        unit: props.unit.clone(),
-        decimal,
+        unit: unit.clone(),
+        formats,
     };
     let drawn = use_memo(use_reactive!(|spec, shown| {
         engine::draw_line(&spec).map(|drawn| drawn.with_series(&shown))
     }));
 
-    let write = |value: f64| {
-        props
-            .value_format
-            .format(value, props.unit.as_deref(), decimal)
+    let write = |series: &Series, value: f64| {
+        let unit = series.unit.as_deref().or(unit.as_deref());
+        props.value_format.format(value, unit, formats)
     };
     let summary = match (props.loading, empty) {
         (true, _) => vec![labels.loading.to_string()],
@@ -139,7 +140,7 @@ pub fn LineChart(props: LineChartProps) -> Element {
         center: None,
         legend: Frame::legend(&props.legend, theme, props.series.len()),
         legend_label: labels.legend,
-        series: overlay_series(&all_specs),
+        series: overlay_series(&all_specs, &props.series),
         hidden,
         x,
         summary,
@@ -149,8 +150,8 @@ pub fn LineChart(props: LineChartProps) -> Element {
         aspect_ratio: props.aspect_ratio,
         interaction: Interaction {
             format: props.value_format,
-            unit: props.unit.clone(),
-            decimal,
+            unit: unit.clone(),
+            formats,
             tooltip: props.tooltip.unwrap_or(theme.chart.tooltip),
             tooltip_content: props.tooltip_content,
             onpointclick: props.onpointclick,
@@ -217,6 +218,51 @@ mod tests {
             "{html}"
         );
         assert!(html.contains("aria-roledescription=\"chart\""), "{html}");
+    }
+
+    /// Todo 3335 s5: values group in the locale, a series' own unit beats the chart's,
+    /// and a unit every series shares labels the axis.
+    #[test]
+    fn values_are_grouped_and_carry_their_series_unit() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider { formats: &crate::localization::Formats::GERMAN,
+                    LineChart {
+                        title: "Revenue",
+                        x: ["Q1", "Q2"],
+                        unit: "EUR",
+                        series: vec![
+                            Series::new("Revenue", [12_500.5, 14_000.0]),
+                            Series::new("Margin", [12.5, 14.0]).unit("%"),
+                        ],
+                    }
+                }
+            }
+        });
+        assert!(
+            html.contains("<th scope=\"row\">Q1</th><td>12.500,5 EUR</td><td>12,5 %</td>"),
+            "{html}"
+        );
+
+        let units = [
+            Series::new("a", [1.0]).unit("kg"),
+            Series::new("b", [2.0]).unit("kg"),
+        ];
+        assert_eq!(chart_unit(&None, &units).as_deref(), Some("kg"));
+        assert_eq!(chart_unit(&Some("g".into()), &units).as_deref(), Some("g"));
+        let mixed = [units[0].clone(), Series::new("c", [3.0])];
+        assert_eq!(chart_unit(&None, &mixed), None);
+    }
+
+    /// Past the palette's end a line starts over in the first colour, dashed.
+    #[test]
+    fn the_ninth_series_repeats_the_first_colour_dashed() {
+        let series: Vec<Series> = (0..9)
+            .map(|i| Series::new(format!("s{i}"), [1.0]))
+            .collect();
+        let specs = series_specs(&crate::theme::Theme::DEFAULT, false, &series);
+        assert_eq!(specs[8].color, specs[0].color);
+        assert!(specs[8].dashed && !specs[7].dashed);
     }
 
     /// A hidden series leaves the drawing, not the legend; the last shown one stays.
@@ -288,6 +334,6 @@ mod tests {
         });
 
         assert!(!html.contains("<table"), "{html}");
-        assert!(html.contains("A: 0 to 1499, highest at 1499."), "{html}");
+        assert!(html.contains("A: 0 to 1,499, highest at 1499."), "{html}");
     }
 }

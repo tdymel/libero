@@ -13,7 +13,7 @@ use crate::{
         accessibility::use_announcer,
         common::{Part, focus_ring_sx},
     },
-    localization::{ChartLabels, fill},
+    localization::{ChartLabels, Formats, fill},
     sx::{REDUCED_MOTION, Sx, sx},
     theme::{Size, SizeCss, TOOLTIP_BACKGROUND, TOOLTIP_COLOR},
     tokens::NamedColorCss,
@@ -90,6 +90,8 @@ pub(super) fn overlay_sx() -> Sx {
 pub(super) struct OverlaySeries {
     pub(super) name: String,
     pub(super) color: String,
+    /// The series' own unit; unset, the chart's.
+    pub(super) unit: Option<String>,
 }
 
 #[derive(Props, Clone, PartialEq)]
@@ -102,7 +104,7 @@ pub(super) struct ChartOverlayProps {
     pub(super) x: Vec<String>,
     pub(super) format: ValueFormat,
     pub(super) unit: Option<String>,
-    pub(super) decimal: &'static str,
+    pub(super) formats: &'static Formats,
     pub(super) labels: ChartLabels,
     /// The chart's title, the plot's name.
     pub(super) title_id: Option<String>,
@@ -124,10 +126,10 @@ fn entry<'a>(series: &'a [OverlaySeries], mark: &Mark) -> Option<&'a OverlaySeri
 }
 
 /// A slice's part of the drawn ones, as the pie's labels write it.
-fn share(marks: &[Mark], mark: &Mark, decimal: &str) -> String {
+fn share(marks: &[Mark], mark: &Mark, formats: &Formats) -> String {
     let total: f64 = marks.iter().map(|mark| mark.value).sum();
     let part = if total > 0.0 { mark.value / total } else { 0.0 };
-    ValueFormat::Percent.format(part, None, decimal)
+    ValueFormat::Percent.format(part, None, formats)
 }
 
 /// SVG units to the box's px: the plot scales its SVG to fit and centres it.
@@ -186,7 +188,7 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
         x,
         format,
         unit,
-        decimal,
+        formats,
         labels,
         title_id,
         keys_id,
@@ -204,8 +206,11 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
     let mut tap_on_active = use_signal(|| false);
 
     let write = {
-        let unit = unit.clone();
-        move |value: f64| format.format(value, unit.as_deref(), decimal)
+        let (series, unit) = (series.clone(), unit.clone());
+        move |mark: &Mark| {
+            let own = entry(&series, mark).and_then(|series| series.unit.as_deref());
+            format.format(mark.value, own.or(unit.as_deref()), formats)
+        }
     };
     let point_of = {
         let (series, x) = (series.clone(), x.clone());
@@ -229,7 +234,7 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
         drawn
             .peek()
             .as_ref()
-            .map(|drawn| share(&drawn.geometry.marks, mark, decimal))
+            .map(|drawn| share(&drawn.geometry.marks, mark, formats))
             .unwrap_or_default()
     };
     let mut set_active = {
@@ -361,7 +366,7 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
             };
             set_active(Some(&mark));
             let point = point_of(&mark);
-            let value = write(point.value);
+            let value = write(&mark);
             announcer.say(match mark.shape {
                 MarkShape::Sector { .. } => fill(
                     labels.slice,
@@ -433,7 +438,7 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
                     &series,
                     &x,
                     &write,
-                    decimal,
+                    formats,
                 ),
             };
             Some((style, body))
@@ -481,8 +486,8 @@ fn tip_body(
     marks: &[Mark],
     series: &[OverlaySeries],
     x: &[String],
-    write: &impl Fn(f64) -> String,
-    decimal: &str,
+    write: &impl Fn(&Mark) -> String,
+    formats: &Formats,
 ) -> Element {
     let name = |mark: &Mark| {
         entry(series, mark)
@@ -492,11 +497,7 @@ fn tip_body(
     let rows: Vec<(bool, String, String, String)> = match active.shape {
         MarkShape::Sector { .. } => {
             let (name, color) = name(active);
-            let value = format!(
-                "{} ({})",
-                write(active.value),
-                share(marks, active, decimal)
-            );
+            let value = format!("{} ({})", write(active), share(marks, active, formats));
             vec![(true, name, color, value)]
         }
         _ => marks
@@ -504,7 +505,7 @@ fn tip_body(
             .filter(|mark| mark.index == active.index)
             .map(|mark| {
                 let (name, color) = name(mark);
-                (mark == active, name, color, write(mark.value))
+                (mark == active, name, color, write(mark))
             })
             .collect(),
     };

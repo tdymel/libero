@@ -143,6 +143,59 @@ e2e::scenario!(
     native: skip("charts are parked on Blitz")
 );
 
+/// `[background, text fills, series strokes]` of the drawing, and `Canvas` and `CanvasText`.
+const INK: &str = "(() => { const probe = document.createElement('i'); document.body.append(probe); \
+     probe.style.cssText = 'color: CanvasText; background: Canvas'; const p = getComputedStyle(probe); \
+     const system = [p.backgroundColor, p.color]; probe.remove(); \
+     const drawing = document.querySelector('#chart [data-chart-drawing]'); \
+     const fills = [...drawing.querySelectorAll('svg text')].map(t => getComputedStyle(t).fill); \
+     const strokes = [...drawing.querySelectorAll('svg [stroke^=\"#\"]')].map(s => getComputedStyle(s).stroke); \
+     return JSON.stringify([getComputedStyle(drawing).backgroundColor, fills, strokes, system, drawing.innerHTML.includes('#0201')]); })()";
+
+/// Forced colours put the drawing on `Canvas` with `CanvasText` labels; the lines keep their hex.
+#[test]
+fn forced_colours_draw_the_ink_in_system_colours() {
+    use e2e::browser::{block_on, force_colours};
+    use e2e::{Fixture, Viewport, wait};
+    block_on(async {
+        let fixture = Fixture::open("/line-chart", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        force_colours(page).await.unwrap();
+        // The chart hears the media change and redraws a moment later.
+        wait::for_js_true(
+            page,
+            "!!document.querySelector('#chart [data-chart-drawing] svg')?.outerHTML.includes('CanvasText')",
+            "the drawing redrawn in system colours",
+        )
+        .await
+        .unwrap();
+        let ink: String = page.evaluate(INK).await.unwrap().into_value().unwrap();
+        let (background, fills, strokes, [canvas, text], stand_in): (
+            String,
+            Vec<String>,
+            Vec<String>,
+            [String; 2],
+            bool,
+        ) = serde_json::from_str(&ink).unwrap();
+        assert_eq!(background, canvas, "the drawing's background");
+        assert!(
+            !fills.is_empty() && fills.iter().all(|fill| *fill == text),
+            "label fills {fills:?}, CanvasText {text}"
+        );
+        assert!(
+            !strokes.is_empty()
+                && strokes
+                    .iter()
+                    .all(|stroke| *stroke != text && *stroke != canvas),
+            "series strokes {strokes:?}"
+        );
+        assert!(!stand_in, "a stand-in ink colour is left in the drawing");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A vertical swipe over the plot scrolls the page: the plot takes only sideways moves.
 async fn swipes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.drag(LAYER, 0.0, -120.0).await?;

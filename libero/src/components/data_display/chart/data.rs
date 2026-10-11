@@ -1,4 +1,5 @@
 use crate::{
+    localization::Formats,
     theme::{Color, ColorShade, HexColor},
     utils::warn,
 };
@@ -45,13 +46,14 @@ impl XValues {
         }
     }
 
-    /// Every x value as the chart writes it.
-    pub(crate) fn labels(&self, format: &ValueFormat, decimal: &str) -> Vec<String> {
+    /// Every x value as the chart writes it; numbers ungrouped, as years are written.
+    pub(crate) fn labels(&self, format: &ValueFormat, formats: &Formats) -> Vec<String> {
+        let ungrouped = ungrouped(formats);
         match self {
             Self::Categories(values) => values.clone(),
             Self::Numbers(values) => values
                 .iter()
-                .map(|value| format.format(*value, None, decimal))
+                .map(|value| format.format(*value, None, &ungrouped))
                 .collect(),
         }
     }
@@ -175,7 +177,8 @@ impl From<&str> for ChartColor {
 /// # use libero::components::Series;
 /// let revenue = Series::new("Revenue", [120.0, 132.0, 101.0]).color("success");
 /// let costs = Series::new("Costs", [Some(80), None, Some(95)]).dashed();
-/// # let _ = (revenue, costs);
+/// let share = Series::new("Share", [0.4, 0.5, 0.45]).unit("%");
+/// # let _ = (revenue, costs, share);
 /// ```
 #[derive(Clone, Debug, PartialEq)]
 pub struct Series {
@@ -185,6 +188,8 @@ pub struct Series {
     pub color: Option<ChartColor>,
     /// A dashed line: a second cue beside the colour.
     pub dashed: bool,
+    /// Written after each value in the tooltip, summary and table. Unset, the chart's `unit`.
+    pub unit: Option<String>,
 }
 
 impl Series {
@@ -197,6 +202,7 @@ impl Series {
             values: values.into_iter().map(|value| value.into().0).collect(),
             color: None,
             dashed: false,
+            unit: None,
         }
     }
 
@@ -216,6 +222,12 @@ impl Series {
 
     pub fn dashed(mut self) -> Self {
         self.dashed = true;
+        self
+    }
+
+    /// The series' own unit, where series of one chart measure different things.
+    pub fn unit(mut self, unit: impl Into<String>) -> Self {
+        self.unit = Some(unit.into());
         self
     }
 }
@@ -281,23 +293,53 @@ pub enum ValueFormat {
 }
 
 impl ValueFormat {
-    /// `value` with the `unit` after a space and the locale's decimal separator.
-    pub(crate) fn format(&self, value: f64, unit: Option<&str>, decimal: &str) -> String {
+    /// `value` with the `unit` after a space, in the locale's decimal and group separators.
+    pub(crate) fn format(&self, value: f64, unit: Option<&str>, formats: &Formats) -> String {
         let number = match self {
             Self::Custom(format) => return format(value),
             Self::Auto => trim_zeros(format!("{value:.2}")),
             Self::Fixed(decimals) => format!("{value:.*}", usize::from(*decimals)),
             Self::Percent => {
-                return format!("{}%", trim_zeros(format!("{:.1}", value * 100.0)))
-                    .replace('.', decimal);
+                let share = trim_zeros(format!("{:.1}", value * 100.0));
+                return format!("{}%", localize(&share, formats));
             }
         };
-        let number = number.replace('.', decimal);
+        let number = localize(&number, formats);
         match unit.filter(|unit| !unit.is_empty()) {
             Some(unit) => format!("{number} {unit}"),
             None => number,
         }
     }
+}
+
+/// `formats` without a group separator, for an x axis' numbers.
+pub(crate) fn ungrouped(formats: &Formats) -> Formats {
+    Formats {
+        group_separator: "",
+        ..*formats
+    }
+}
+
+/// A number Rust wrote (`-12500.5`) in the locale's separators (`-12,500.5`, `-12.500,5`).
+fn localize(number: &str, formats: &Formats) -> String {
+    let (whole, fraction) = number.split_once('.').unwrap_or((number, ""));
+    let (sign, digits) = match whole.strip_prefix('-') {
+        Some(digits) => ("-", digits),
+        None => ("", whole),
+    };
+    let mut out = String::with_capacity(number.len() + digits.len() / 3 * 2);
+    out.push_str(sign);
+    for (i, digit) in digits.chars().enumerate() {
+        if i > 0 && (digits.len() - i) % 3 == 0 {
+            out.push_str(formats.group_separator);
+        }
+        out.push(digit);
+    }
+    if !fraction.is_empty() {
+        out.push_str(formats.decimal_separator);
+        out.push_str(fraction);
+    }
+    out
 }
 
 fn trim_zeros(number: String) -> String {
@@ -324,12 +366,44 @@ mod tests {
 
     #[test]
     fn a_value_is_written_in_the_locale() {
+        let (en, de) = (&Formats::AMERICAN, &Formats::GERMAN);
         let auto = ValueFormat::Auto;
-        assert_eq!(auto.format(2.5, Some("kg"), ","), "2,5 kg");
-        assert_eq!(auto.format(3.0, None, "."), "3");
-        assert_eq!(auto.format(-0.001, None, "."), "0");
-        assert_eq!(ValueFormat::Fixed(2).format(1.0, None, "."), "1.00");
-        assert_eq!(ValueFormat::Percent.format(0.425, None, ","), "42,5%");
+        assert_eq!(auto.format(2.5, Some("kg"), de), "2,5 kg");
+        assert_eq!(auto.format(3.0, None, en), "3");
+        assert_eq!(auto.format(-0.001, None, en), "0");
+        assert_eq!(ValueFormat::Fixed(2).format(1.0, None, en), "1.00");
+        assert_eq!(ValueFormat::Percent.format(0.425, None, de), "42,5%");
+    }
+
+    /// Todo 3335 s5: the whole is grouped in threes with the locale's separator.
+    #[test]
+    fn a_large_value_is_grouped_in_the_locale() {
+        let (en, de) = (&Formats::AMERICAN, &Formats::GERMAN);
+        let auto = ValueFormat::Auto;
+        assert_eq!(auto.format(12_500.5, Some("EUR"), en), "12,500.5 EUR");
+        assert_eq!(auto.format(12_500.5, Some("EUR"), de), "12.500,5 EUR");
+        assert_eq!(auto.format(-1_234_567.0, None, en), "-1,234,567");
+        assert_eq!(auto.format(999.0, None, en), "999");
+        assert_eq!(
+            ValueFormat::Fixed(1).format(100_000.0, None, de),
+            "100.000,0"
+        );
+        assert_eq!(ValueFormat::Percent.format(12.5, None, en), "1,250%");
+        let none = Formats {
+            group_separator: "",
+            ..Formats::AMERICAN
+        };
+        assert_eq!(auto.format(12_500.0, None, &none), "12500");
+    }
+
+    /// A numeric x axis is often years: its labels stay ungrouped.
+    #[test]
+    fn numbers_on_the_x_axis_are_not_grouped() {
+        let years = XValues::from(vec![2025, 2026]);
+        assert_eq!(
+            years.labels(&ValueFormat::Auto, &Formats::AMERICAN),
+            ["2025", "2026"]
+        );
     }
 
     #[test]

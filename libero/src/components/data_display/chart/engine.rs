@@ -3,8 +3,11 @@
 
 use charts_rs::{AxisType, Color as InkColor, LineStep, Position, Symbol};
 
-use super::data::ValueFormat;
-use crate::theme::{BarLayout, ChartInk, Curve, HexColor, PieLabels};
+use super::data::{ValueFormat, ungrouped};
+use crate::{
+    localization::Formats,
+    theme::{BarLayout, ChartInk, Curve, HexColor, PieLabels},
+};
 
 /// Ahead of each y-axis label, so [`sanitize`] can write it again in the locale.
 const AXIS_MARK: char = '\u{2060}';
@@ -12,6 +15,8 @@ const AXIS_MARK: char = '\u{2060}';
 const X_MARK: char = '\u{2061}';
 /// Ahead of each percentage the renderer writes, to write it again in the locale.
 const PERCENT_MARK: char = '\u{2062}';
+/// Ahead of each label on a bar: written as the y labels, but not pinned to the axis.
+const LABEL_MARK: char = '\u{2063}';
 const DASH: &str = "6,4";
 /// The pie's radius over half the plot's shorter side, as the renderer caps it.
 const PIE_FILL: f32 = 0.8;
@@ -87,7 +92,7 @@ pub(crate) struct LineSpec {
     pub(crate) ink: ChartInk,
     pub(crate) format: ValueFormat,
     pub(crate) unit: Option<String>,
-    pub(crate) decimal: &'static str,
+    pub(crate) formats: &'static Formats,
 }
 
 fn ink(hex: HexColor) -> InkColor {
@@ -147,19 +152,27 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
         y.font.color = ink(spec.ink.label);
         y.formatter = Some(format!("{AXIS_MARK}{{c}}{unit}"));
     }
-    let svg = chart.svg().ok()?;
+    let write = |label| {
+        spec.format
+            .format(label, spec.unit.as_deref(), spec.formats)
+    };
+    let mut svg = chart.svg().ok()?;
+    if let Some(width) = y_width(&svg, write) {
+        if let Some(y) = chart.y_axis_configs.first_mut() {
+            y.width = Some(width);
+        }
+        svg = chart.svg().ok()?;
+    }
 
     let expected: Vec<_> = expected_marks(&spec.series);
-    let (svg, triggers) = sanitize(&svg, |label| {
-        spec.format
-            .format(label, spec.unit.as_deref(), spec.decimal)
-    });
+    let (svg, triggers) = sanitize(&pin_to_axis(&svg), write);
+    let x_formats = ungrouped(spec.formats);
     let svg = relabel(&svg, X_MARK, |label| {
-        spec.format.format(label, None, spec.decimal)
+        spec.format.format(label, None, &x_formats)
     });
     let marks = match_marks(&expected, &triggers);
     Some(Drawn {
-        svg,
+        svg: spec.ink.paint(svg),
         geometry: Geometry {
             width: spec.width,
             height: spec.height,
@@ -184,12 +197,12 @@ pub(crate) struct BarSpec {
     pub(crate) ink: ChartInk,
     pub(crate) format: ValueFormat,
     pub(crate) unit: Option<String>,
-    pub(crate) decimal: &'static str,
+    pub(crate) formats: &'static Formats,
 }
 
 /// The settings a vertical and a horizontal bar chart share; both deref to the same base.
 macro_rules! style_bars {
-    ($chart:ident, $spec:ident, $format:expr) => {
+    ($chart:ident, $spec:ident, $unit:expr) => {
         $chart.width = $spec.width;
         $chart.height = $spec.height;
         $chart.background_color = InkColor::transparent();
@@ -199,7 +212,7 @@ macro_rules! style_bars {
         $chart.tooltip.show = true;
         $chart.animation = None;
         $chart.series.colors = $spec.series.iter().map(|s| ink(s.color)).collect();
-        $chart.series.label.formatter = $format.clone();
+        $chart.series.label.formatter = format!("{LABEL_MARK}{{c}}{}", $unit);
         $chart.grid.stroke_color = match $spec.grid {
             true => ink($spec.ink.grid),
             false => InkColor::transparent(),
@@ -209,7 +222,7 @@ macro_rules! style_bars {
         if let Some(y) = $chart.y_axis_configs.first_mut() {
             y.stroke_color = ink($spec.ink.axis);
             y.font.color = ink($spec.ink.label);
-            y.formatter = Some($format);
+            y.formatter = Some(format!("{AXIS_MARK}{{c}}{}", $unit));
         }
         // In a stack a label sits on its bar, not on the next one's; past a lying bar's end
         // the longest one's label would leave the plot.
@@ -251,38 +264,42 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
         .collect();
     let x = order.iter().map(|&i| spec.x[i].clone()).collect();
     let percent = spec.layout == BarLayout::Percent;
-    let format = match percent {
-        true => format!("{PERCENT_MARK}{{c}}"),
-        false => format!("{AXIS_MARK}{{c}}{}", unit_suffix(spec.unit.as_deref())),
+    // A percent chart's values are shares out of 100.
+    let unit = match percent {
+        true => String::new(),
+        false => unit_suffix(spec.unit.as_deref()),
+    };
+    let write = |value: f64| match percent {
+        true => ValueFormat::Percent.format(value / 100.0, None, spec.formats),
+        false => spec
+            .format
+            .format(value, spec.unit.as_deref(), spec.formats),
     };
     let svg = match spec.horizontal {
         true => {
             let mut chart = charts_rs::HorizontalBarChart::new(series, x);
-            style_bars!(chart, spec, format);
+            style_bars!(chart, spec, unit);
             chart.stack_percent = percent;
-            chart.svg()
+            chart.svg().ok()?
         }
         false => {
             let mut chart = charts_rs::BarChart::new(series, x);
-            style_bars!(chart, spec, format);
+            style_bars!(chart, spec, unit);
             chart.stack_percent = percent;
-            chart.svg()
+            let mut svg = chart.svg().ok()?;
+            if let Some(width) = y_width(&svg, write) {
+                if let Some(y) = chart.y_axis_configs.first_mut() {
+                    y.width = Some(width);
+                }
+                svg = chart.svg().ok()?;
+            }
+            pin_to_axis(&svg)
         }
-    }
-    .ok()?;
+    };
 
     let rounded = format!(" rx=\"{0}\" ry=\"{0}\"", spec.radius);
-    let (svg, triggers) = inert(
-        &svg,
-        |label| {
-            spec.format
-                .format(label, spec.unit.as_deref(), spec.decimal)
-        },
-        &rounded,
-    );
-    let svg = relabel(&svg, PERCENT_MARK, |share| {
-        ValueFormat::Percent.format(share / 100.0, None, spec.decimal)
-    });
+    let (svg, triggers) = inert(&svg, write, &rounded);
+    let svg = relabel(&svg, LABEL_MARK, write);
     let last = spec.x.len().saturating_sub(1);
     let marks = match_marks(&expected_marks(&ordered), &triggers)
         .into_iter()
@@ -301,7 +318,7 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
         spec.ink.on(spec.series[series].color)
     });
     Some(Drawn {
-        svg,
+        svg: spec.ink.paint(svg),
         geometry: Geometry {
             width: spec.width,
             height: spec.height,
@@ -369,7 +386,7 @@ pub(crate) struct PieSpec {
     pub(crate) ink: ChartInk,
     pub(crate) format: ValueFormat,
     pub(crate) unit: Option<String>,
-    pub(crate) decimal: &'static str,
+    pub(crate) formats: &'static Formats,
 }
 
 pub(crate) fn draw_pie(spec: &PieSpec) -> Option<Drawn> {
@@ -416,12 +433,12 @@ pub(crate) fn draw_pie(spec: &PieSpec) -> Option<Drawn> {
         &svg,
         |label| {
             spec.format
-                .format(label, spec.unit.as_deref(), spec.decimal)
+                .format(label, spec.unit.as_deref(), spec.formats)
         },
         &edge,
     );
     let svg = relabel(&svg, PERCENT_MARK, |share| {
-        ValueFormat::Percent.format(share / 100.0, None, spec.decimal)
+        ValueFormat::Percent.format(share / 100.0, None, spec.formats)
     });
     // Every slice is drawn, an empty one too.
     let expected: Vec<_> = spec
@@ -434,7 +451,7 @@ pub(crate) fn draw_pie(spec: &PieSpec) -> Option<Drawn> {
         })
         .collect();
     Some(Drawn {
-        svg,
+        svg: spec.ink.paint(svg),
         geometry: Geometry {
             width: spec.width,
             height: spec.height,
@@ -642,6 +659,72 @@ fn relabel(svg: &str, mark: char, axis: impl Fn(f64) -> String) -> String {
     out
 }
 
+/// The renderer places a y label by its own text's width; written again in the locale it
+/// would leave the axis. Pins each one by the right end the renderer gave it.
+fn pin_to_axis(svg: &str) -> String {
+    let mut out = String::with_capacity(svg.len());
+    let mut rest = svg;
+    while let Some(open) = rest.find("<text") {
+        let Some(close) = rest[open..].find('>').map(|close| open + close) else {
+            break;
+        };
+        out.push_str(&rest[..open]);
+        let tag = &rest[open..=close];
+        let label = &rest[close + 1..];
+        let label = label[..label.find('<').unwrap_or(label.len())].trim();
+        let attributes = attributes(tag);
+        let x = attribute(&attributes, "x").and_then(|x| x.parse::<f32>().ok());
+        match x {
+            Some(x) if label.starts_with(AXIS_MARK) => {
+                let end = x + text_width(&attributes, label);
+                let kept: String = attributes
+                    .iter()
+                    .filter(|(attribute, _)| *attribute != "x")
+                    .map(|(attribute, value)| format!(" {attribute}=\"{value}\""))
+                    .collect();
+                out.push_str(&format!("<text x=\"{end}\" text-anchor=\"end\"{kept}>"));
+            }
+            _ => out.push_str(tag),
+        }
+        rest = &rest[close + 1..];
+    }
+    out.push_str(rest);
+    out
+}
+
+/// The y axis' width once `axis` writes its labels, when that is more than the renderer
+/// kept for them.
+fn y_width(svg: &str, axis: impl Fn(f64) -> String) -> Option<f32> {
+    let mut kept = 0.0f32;
+    let mut needed = 0.0f32;
+    let mut rest = svg;
+    while let Some(open) = rest.find("<text") {
+        let close = open + rest[open..].find('>')?;
+        let attributes = attributes(&rest[open..=close]);
+        let label = &rest[close + 1..];
+        let label = label[..label.find('<').unwrap_or(label.len())].trim();
+        if let Some(number) = label.strip_prefix(AXIS_MARK) {
+            let number = number.split(' ').next().unwrap_or_default();
+            kept = kept.max(text_width(&attributes, label));
+            if let Some(value) = scaled(number) {
+                needed = needed.max(text_width(&attributes, &axis(value)));
+            }
+        }
+        rest = &rest[close + 1..];
+    }
+    // The renderer's own room: the label's width and 5.
+    (needed > kept).then_some(needed + 5.0)
+}
+
+/// A label's width in the renderer's own measure, in the tag's font.
+fn text_width(attributes: &[(&str, &str)], text: &str) -> f32 {
+    let family = attribute(attributes, "font-family").unwrap_or(charts_rs::DEFAULT_FONT_FAMILY);
+    let size = attribute(attributes, "font-size")
+        .and_then(|size| size.parse().ok())
+        .unwrap_or(14.0);
+    charts_rs::measure_text_width_family(family, size, text).map_or(0.0, |text| text.width())
+}
+
 /// A number the renderer may have written with a `k`, `M`, `G` or `T` suffix: `1.5k`.
 fn scaled(text: &str) -> Option<f64> {
     let factor = match text.chars().last()? {
@@ -686,10 +769,10 @@ mod tests {
             grid: true,
             points: true,
             stroke_width: 2.0,
-            ink: ChartInk::of(&Theme::DEFAULT),
+            ink: ChartInk::of(&Theme::DEFAULT, false),
             format: ValueFormat::Auto,
             unit: Some("kg".to_string()),
-            decimal: ",",
+            formats: &Formats::GERMAN,
         }
     }
 
@@ -700,6 +783,45 @@ mod tests {
             color: chart_hex(&Theme::DEFAULT, Color::Primary, ColorShade::S6),
             dashed: false,
         }
+    }
+
+    /// Contract with the pinned `charts-rs`: under forced colours the ink it draws is ours to
+    /// trade, so no stand-in hex is left and the series keep theirs.
+    #[test]
+    fn forced_ink_leaves_no_stand_in_in_the_svg() {
+        let mut spec = line(vec![spec("A", &[Some(1.0), Some(3.0)])], &["Mon", "Tue"]);
+        spec.ink = ChartInk::of(&Theme::DEFAULT, true);
+        let svg = draw_line(&spec).expect("drawn").svg;
+        assert!(!svg.contains("#020"), "{svg}");
+        assert!(svg.contains("CanvasText"));
+        assert!(svg.contains(&spec.series[0].color.to_string()));
+    }
+
+    /// The y labels, written again grouped and with their unit, end on one line left of
+    /// the plot: the axis grows to hold them.
+    #[test]
+    fn grouped_y_labels_end_left_of_the_plot() {
+        let drawn = draw_line(&line(
+            vec![spec("A", &[Some(12_400.0), Some(21_300.0)])],
+            &["Q1", "Q2"],
+        ))
+        .expect("drawn");
+        let ends: Vec<f32> = drawn
+            .svg
+            .split("<text x=\"")
+            .skip(1)
+            .filter(|tag| tag.contains("text-anchor=\"end\""))
+            .filter_map(|tag| tag.split('"').next()?.parse().ok())
+            .collect();
+        assert!(ends.len() > 2, "{}", drawn.svg);
+        assert!(ends.iter().all(|end| *end == ends[0]), "{ends:?}");
+        assert!(drawn.svg.contains("18.000 kg"), "{}", drawn.svg);
+        let first = xs(&drawn)[0];
+        assert!(
+            ends[0] < first,
+            "labels end at {} past the plot at {first}",
+            ends[0]
+        );
     }
 
     /// Contract with the pinned `charts-rs`: a line's points come back in data order,
@@ -872,10 +994,10 @@ mod tests {
             radius: 4.0,
             value_labels: true,
             grid: true,
-            ink: ChartInk::of(&Theme::DEFAULT),
+            ink: ChartInk::of(&Theme::DEFAULT, false),
             format: ValueFormat::Auto,
             unit: None,
-            decimal: ",",
+            formats: &Formats::GERMAN,
         }
     }
 
@@ -947,7 +1069,7 @@ mod tests {
         assert!(!drawn.svg.contains('\u{2061}'), "{}", drawn.svg);
         // Labels on the bars take the ink that reads on them.
         assert!(!drawn.svg.contains(ON_BAR_FILL), "{}", drawn.svg);
-        let on = ChartInk::of(&Theme::DEFAULT).on(spec("A", &[]).color);
+        let on = ChartInk::of(&Theme::DEFAULT, false).on(spec("A", &[]).color);
         assert!(
             drawn.svg.contains(&format!("fill=\"{on}\"")),
             "{on}: {}",
@@ -963,10 +1085,10 @@ mod tests {
             donut,
             labels,
             start_angle: 0.0,
-            ink: ChartInk::of(&Theme::DEFAULT),
+            ink: ChartInk::of(&Theme::DEFAULT, false),
             format: ValueFormat::Auto,
             unit: Some("kg".to_string()),
-            decimal: ",",
+            formats: &Formats::GERMAN,
         }
     }
 

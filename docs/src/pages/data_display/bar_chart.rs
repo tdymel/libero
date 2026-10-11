@@ -64,7 +64,8 @@ pub fn BarChartPage() -> Element {
                     "The plot is one tab stop, a `role=\"application\"` described as a chart, so a screen reader hands it the arrows. Each bar the keys reach is announced, as \"2026, Q3: 150\".",
                     "The legend's entries are toggle buttons: pressed while their series shows, struck through when hidden. The last shown series' button is `aria-disabled`.",
                     "On a touch screen a tap pins a bar's tooltip, a second tap on it clicks; a vertical swipe still scrolls the page.",
-                    "Bars take the theme's palette, drawn in the current color scheme.",
+                    "Each bar's palette colour reaches 3:1 on the page and on a card, in every shipped theme and color scheme; one too close to an earlier one, also for colour-blind eyes, is skipped.",
+                    "In forced colours the bars keep their colours on the system background; axes and labels take the system text colour.",
                 ])
                 .must([
                     "Give a `title`, or name the chart with `aria_label`.",
@@ -73,6 +74,7 @@ pub fn BarChartPage() -> Element {
                     "Name every series differently: the legend hides them by name.",
                 ])
                 .limits([
+                    "A hex colour (`.color(\"#1e88e5\")`) is drawn as given: check its 3:1 on your page.",
                     "The tooltip is for the eye; screen readers hear the announcement instead, so `tooltip_content` reaches only sighted readers.",
                     "The drawing runs left to right in a right-to-left page too, and the arrows follow it unflipped.",
                 ]),

@@ -17,12 +17,12 @@ use crate::{
         layout::use_box,
     },
     hooks::{ElementHandle, use_element, use_resize_fallback},
-    localization::{ChartLabels, fill},
+    localization::{ChartLabels, Formats, fill},
     platform::ElementApi,
-    sx::{StaticSx, Sx, sx},
+    sx::{FORCED_COLORS, StaticSx, Sx, sx},
     theme::{
-        CHART_ASPECT_RATIO, CHART_LEGEND_GAP, CHART_SWATCH_SIZE, ChartTable, LegendPosition, Theme,
-        chart_hex,
+        CHART_ASPECT_RATIO, CHART_LEGEND_GAP, CHART_SWATCH_SIZE, ChartTable, HexColor,
+        LegendPosition, Theme, chart_color, chart_palette,
     },
 };
 
@@ -60,10 +60,7 @@ static CHART_BASE_SX: StaticSx = StaticSx::new(|| {
                 .flex("1 1 auto")
                 .min_width("0")
                 .with("aspect-ratio", CHART_ASPECT_RATIO.value())
-                .selector(
-                    "& > [data-chart-drawing]",
-                    sx().width("100%").height("100%"),
-                )
+                .selector("& > [data-chart-drawing]", drawing_sx())
                 .selector("& svg", sx().display("block"))
                 .and(overlay_sx()),
         )
@@ -167,6 +164,15 @@ static CHART_BASE_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
+/// The drawing fills the plot. Forced colours keep its series' colours, which name them
+/// (drawn for a black or white `Canvas`); its ink is drawn in system colours.
+pub(super) fn drawing_sx() -> Sx {
+    sx().width("100%").height("100%").media(
+        FORCED_COLORS,
+        sx().forced_color_adjust("none").background("Canvas"),
+    )
+}
+
 /// The table's column heads after the first, then per row its label and cells.
 pub(super) type TableRows = (Vec<String>, Vec<(String, Vec<String>)>);
 
@@ -203,7 +209,7 @@ pub(super) struct Frame {
 pub(super) struct Interaction {
     pub(super) format: ValueFormat,
     pub(super) unit: Option<String>,
-    pub(super) decimal: &'static str,
+    pub(super) formats: &'static Formats,
     pub(super) tooltip: bool,
     pub(super) tooltip_content: Option<Callback<ChartPoint, Element>>,
     pub(super) onpointclick: Option<EventHandler<ChartPoint>>,
@@ -305,7 +311,7 @@ impl Frame {
         let Interaction {
             format,
             unit,
-            decimal,
+            formats,
             tooltip,
             tooltip_content,
             onpointclick,
@@ -347,7 +353,7 @@ impl Frame {
                             x,
                             format,
                             unit,
-                            decimal,
+                            formats,
                             labels,
                             title_id: title_id.clone(),
                             keys_id: format!("{id}-keys"),
@@ -436,38 +442,57 @@ pub(super) fn snap(length: f32) -> f32 {
     ((length / SIZE_STEP).round() * SIZE_STEP).max(SIZE_STEP)
 }
 
-/// The hex of the `i`th series or slice: its own colour, else the theme palette's.
-pub(super) fn hex(theme: &Theme, i: usize, color: Option<ChartColor>) -> crate::theme::HexColor {
-    let palette = theme.chart.palette;
-    let (fallback, shade) = palette[i % palette.len()];
+/// The hex of the `i`th series or slice: its own (a theme colour stepped to 3:1, a hex as
+/// given), else the drawn palette's ([`chart_palette`]) for its place.
+pub(super) fn hex(
+    theme: &Theme,
+    forced: bool,
+    palette: &[HexColor],
+    i: usize,
+    color: Option<ChartColor>,
+) -> HexColor {
     match color {
         Some(ChartColor::Hex(hex)) => hex,
-        Some(ChartColor::Palette(color, shade)) => chart_hex(theme, color, shade),
-        None => chart_hex(theme, fallback, shade),
+        Some(ChartColor::Palette(color, shade)) => chart_color(theme, color, shade, forced),
+        None => palette[i % palette.len()],
     }
 }
 
-/// Each series with its hex.
-pub(super) fn series_specs(theme: &Theme, series: &[Series]) -> Vec<SeriesSpec> {
+/// The chart's unit: its own, else the one every series shares, for the y axis.
+pub(super) fn chart_unit(unit: &Option<String>, series: &[Series]) -> Option<String> {
+    unit.clone().or_else(|| {
+        let shared = series.first()?.unit.as_ref()?;
+        series
+            .iter()
+            .all(|series| series.unit.as_ref() == Some(shared))
+            .then(|| shared.clone())
+    })
+}
+
+/// Each series with its hex; past the palette's end a line repeats a colour dashed.
+pub(super) fn series_specs(theme: &Theme, forced: bool, series: &[Series]) -> Vec<SeriesSpec> {
+    let palette = chart_palette(theme, forced);
     series
         .iter()
         .enumerate()
         .map(|(i, series)| SeriesSpec {
             name: series.name.clone(),
             values: series.values.clone(),
-            color: hex(theme, i, series.color),
-            dashed: series.dashed,
+            color: hex(theme, forced, &palette, i, series.color),
+            dashed: series.dashed || (series.color.is_none() && i >= palette.len()),
         })
         .collect()
 }
 
-/// Every series' name and colour, for the legend and the tooltip.
-pub(super) fn overlay_series(specs: &[SeriesSpec]) -> Vec<OverlaySeries> {
+/// Every series' name, colour and own unit, for the legend and the tooltip.
+pub(super) fn overlay_series(specs: &[SeriesSpec], series: &[Series]) -> Vec<OverlaySeries> {
     specs
         .iter()
-        .map(|spec| OverlaySeries {
+        .enumerate()
+        .map(|(i, spec)| OverlaySeries {
             name: spec.name.clone(),
             color: spec.color.to_string(),
+            unit: series.get(i).and_then(|series| series.unit.clone()),
         })
         .collect()
 }
@@ -485,7 +510,7 @@ pub(super) fn summary(
     kind: &str,
     x: &[String],
     series: &[Series],
-    write: impl Fn(f64) -> String,
+    write: impl Fn(&Series, f64) -> String,
 ) -> Vec<String> {
     let mut sentences = Vec::new();
     if let (Some(first), Some(last)) = (x.first(), x.last()) {
@@ -508,8 +533,8 @@ pub(super) fn summary(
                 labels.series,
                 &[
                     ("name", &series.name),
-                    ("min", &write(min)),
-                    ("max", &write(max)),
+                    ("min", &write(series, min)),
+                    ("max", &write(series, max)),
                     ("x", &x.get(at).cloned().unwrap_or_default()),
                 ],
             ),
@@ -523,7 +548,7 @@ pub(super) fn summary(
 pub(super) fn table_rows(
     x: &[String],
     series: &[Series],
-    write: impl Fn(f64) -> String,
+    write: impl Fn(&Series, f64) -> String,
 ) -> TableRows {
     let head = series.iter().map(|series| series.name.clone()).collect();
     let rows = x
@@ -538,7 +563,7 @@ pub(super) fn table_rows(
                         .get(i)
                         .copied()
                         .flatten()
-                        .map(&write)
+                        .map(|value| write(series, value))
                         .unwrap_or_default()
                 })
                 .collect();

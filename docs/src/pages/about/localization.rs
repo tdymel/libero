@@ -23,6 +23,7 @@ const SHIPPED: [(&str, &str, &str, &str); 2] = [
 
 const CUSTOM_FORMATS: &str = r#"static SWISS: Formats = Formats {
     decimal_separator: ".",
+    group_separator: "'",
     ..Formats::GERMAN
 };"#;
 

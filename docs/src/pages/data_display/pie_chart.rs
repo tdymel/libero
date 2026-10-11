@@ -68,7 +68,8 @@ pub fn PieChartPage() -> Element {
                     "The plot is one tab stop, a `role=\"application\"` described as a chart, so a screen reader hands it the arrows. Each slice the keys reach is announced, as \"Chrome: 62, 62%.\"",
                     "The legend's entries are toggle buttons: pressed while their slice shows, struck through when hidden. The last shown slice's button is `aria-disabled`.",
                     "On a touch screen a tap pins a slice's tooltip, a second tap on it clicks; a vertical swipe still scrolls the page.",
-                    "Slices take the theme's palette, drawn in the current color scheme.",
+                    "Each slice's palette colour reaches 3:1 on the page and on a card, in every shipped theme and color scheme; one too close to an earlier one, also for colour-blind eyes, is skipped.",
+                    "In forced colours the slices keep their colours on the system background; axes and labels take the system text colour.",
                 ])
                 .must([
                     "Give a `title`, or name the chart with `aria_label`.",
@@ -77,6 +78,7 @@ pub fn PieChartPage() -> Element {
                     "Name every slice differently: the legend hides them by name.",
                 ])
                 .limits([
+                    "A hex colour (`.color(\"#1e88e5\")`) is drawn as given: check its 3:1 on your page.",
                     "A hidden slice leaves the drawing, so the shown ones' shares grow; the summary and the table keep every slice.",
                     "The tooltip is for the eye; screen readers hear the announcement instead, so `tooltip_content` reaches only sighted readers.",
                     "`grid` draws nothing on a pie.",

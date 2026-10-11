@@ -13,6 +13,9 @@ const LAST_WEEK: [f64; 7] = [98.0, 110.0, 115.0, 120.0, 104.0, 170.0, 180.0];
 // Uneven samples: the gaps show only on a number axis.
 const HOURS: [f64; 7] = [0.0, 1.0, 2.0, 6.0, 12.0, 18.0, 24.0];
 const TEMPERATURE: [f64; 7] = [14.0, 13.5, 13.0, 15.5, 22.0, 20.5, 15.0];
+const QUARTERS: [&str; 4] = ["Q1", "Q2", "Q3", "Q4"];
+const REVENUE_2025: [f64; 4] = [12_400.0, 15_250.5, 14_100.0, 18_900.0];
+const REVENUE_2026: [f64; 4] = [13_800.0, 16_400.0, 17_950.0, 21_300.0];
 
 fn on(value: bool) -> &'static str {
     if value { "true" } else { "false" }
@@ -65,7 +68,8 @@ pub fn LineChartPage() -> Element {
                     "The plot is one tab stop, a `role=\"application\"` described as a chart, so a screen reader hands it the arrows. Each point the keys reach is announced, as \"This week, Tue: 132\".",
                     "The legend's entries are toggle buttons: pressed while their line shows, struck through when hidden. The last shown line's button is `aria-disabled`.",
                     "On a touch screen a tap pins a point's tooltip, a second tap on it clicks; a vertical swipe still scrolls the page.",
-                    "Lines take the theme's palette, drawn in the current color scheme.",
+                    "Each line's palette colour reaches 3:1 on the page and on a card, in every shipped theme and color scheme; one too close to an earlier one, also for colour-blind eyes, is skipped.",
+                    "In forced colours the lines keep their colours on the system background; axes and labels take the system text colour.",
                 ])
                 .must([
                     "Give a `title`, or name the chart with `aria_label`.",
@@ -74,6 +78,7 @@ pub fn LineChartPage() -> Element {
                     "Name every series differently: the legend hides them by name.",
                 ])
                 .limits([
+                    "A hex colour (`.color(\"#1e88e5\")`) is drawn as given: check its 3:1 on your page.",
                     "The tooltip is for the eye; screen readers hear the announcement instead, so `tooltip_content` reaches only sighted readers.",
                     "The x axis runs left to right in a right-to-left page too.",
                 ]),
@@ -151,6 +156,30 @@ pub fn LineChartPage() -> Element {
                         series: vec![Series::new("Outside", TEMPERATURE)],
                         unit: "°C",
                         curve: Curve::from(values.str("curve").as_str()),
+                    }
+                },
+            }
+            Demo {
+                component: "LineChart",
+                title: "Units and thousands",
+                children_text: "",
+                fixed: vec![
+                    "title: \"Revenue\"".to_string(),
+                    format!("x: {QUARTERS:?}"),
+                    format!(
+                        "series: vec![Series::new(\"2025\", {REVENUE_2025:?}).unit(\"EUR\"), Series::new(\"2026\", {REVENUE_2026:?}).unit(\"EUR\")]"
+                    ),
+                ],
+                controls: vec![Control::toggle("table", ["hidden", "visible", "off"]).default("visible")],
+                render: move |values: DemoValues| rsx! {
+                    LineChart {
+                        title: "Revenue",
+                        x: QUARTERS,
+                        series: vec![
+                            Series::new("2025", REVENUE_2025).unit("EUR"),
+                            Series::new("2026", REVENUE_2026).unit("EUR"),
+                        ],
+                        table: ChartTable::from(values.str("table").as_str()),
                     }
                 },
             }

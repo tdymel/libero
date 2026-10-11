@@ -150,12 +150,14 @@ pub use carousel::{
 };
 pub use cascader::CascaderDefaults;
 pub use center::{CENTER_DISPLAY, CenterDefaults};
+#[cfg(all(feature = "charts", test))]
+pub(crate) use chart::chart_hex;
 pub use chart::{
     BarLayout, CHART_ASPECT_RATIO, CHART_LEGEND_GAP, CHART_SWATCH_SIZE, ChartDefaults, ChartTable,
     Curve, LegendPosition, PieLabels,
 };
 #[cfg(feature = "charts")]
-pub(crate) use chart::{ChartInk, chart_hex};
+pub(crate) use chart::{ChartInk, chart_color, chart_palette};
 pub use checkbox::{CHECKBOX_BOX, CHECKBOX_BOX_SIZE, CHECKBOX_RADIUS, CheckboxDefaults};
 pub use chip::{CHIP_FONT_SIZE, CHIP_HEIGHT, CHIP_PADDING_X, ChipDefaults, ChipSizeLevel};
 pub use circular_progress::{

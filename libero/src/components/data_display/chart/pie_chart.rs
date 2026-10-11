@@ -9,9 +9,9 @@ use super::{
 };
 use crate::{
     components::common::{Input, names_itself, use_name_warning},
-    hooks::{use_formats, use_localization, use_root_id, use_theme},
+    hooks::{use_accessibility, use_formats, use_localization, use_root_id, use_theme},
     localization::{ChartLabels, fill},
-    theme::{ChartInk, PieLabels},
+    theme::{ChartInk, PieLabels, chart_palette},
 };
 
 chart_props! {
@@ -59,7 +59,7 @@ chart_props! {
 pub fn PieChart(props: PieChartProps) -> Element {
     let theme = use_theme();
     let labels = use_localization().chart;
-    let decimal = use_formats().decimal_separator;
+    let formats = use_formats();
     let id = use_root_id(&props.attributes);
     use_name_warning(
         props.title.is_some() || names_itself(&props.attributes),
@@ -75,6 +75,8 @@ pub fn PieChart(props: PieChartProps) -> Element {
 
     let total: f64 = props.slices.iter().map(|slice| share_of(slice.value)).sum();
     let empty = total <= 0.0;
+    let forced = use_accessibility().forced_colors();
+    let palette = chart_palette(theme, forced);
     let all_slices: Vec<SeriesSpec> = props
         .slices
         .iter()
@@ -82,7 +84,7 @@ pub fn PieChart(props: PieChartProps) -> Element {
         .map(|(i, slice)| SeriesSpec {
             name: slice.name.clone(),
             values: vec![Some(share_of(slice.value))],
-            color: hex(theme, i, slice.color),
+            color: hex(theme, forced, &palette, i, slice.color),
             dashed: false,
         })
         .collect();
@@ -101,10 +103,10 @@ pub fn PieChart(props: PieChartProps) -> Element {
         donut: props.donut.then_some(theme.chart.donut_thickness),
         labels: props.labels.copied_or(theme.chart.pie_labels),
         start_angle: props.start_angle,
-        ink: ChartInk::of(theme),
+        ink: ChartInk::of(theme, forced),
         format: props.value_format,
         unit: props.unit.clone(),
-        decimal,
+        formats,
     };
     let drawn = use_memo(use_reactive!(|spec, shown| {
         // The shown slices may sum to nothing while hidden ones do not: a blank plot.
@@ -121,9 +123,9 @@ pub fn PieChart(props: PieChartProps) -> Element {
     let write = |value: f64| {
         props
             .value_format
-            .format(value, props.unit.as_deref(), decimal)
+            .format(value, props.unit.as_deref(), formats)
     };
-    let share = |value: f64| ValueFormat::Percent.format(share_of(value) / total, None, decimal);
+    let share = |value: f64| ValueFormat::Percent.format(share_of(value) / total, None, formats);
     let summary = match (props.loading, empty) {
         (true, _) => vec![labels.loading.to_string()],
         (false, true) => Vec::new(),
@@ -150,7 +152,7 @@ pub fn PieChart(props: PieChartProps) -> Element {
         center: props.center.clone().filter(|_| props.donut),
         legend: Frame::legend(&props.legend, theme, props.slices.len()),
         legend_label: labels.slices,
-        series: overlay_series(&all_slices),
+        series: overlay_series(&all_slices, &[]),
         hidden,
         x: names,
         summary,
@@ -161,7 +163,7 @@ pub fn PieChart(props: PieChartProps) -> Element {
         interaction: Interaction {
             format: props.value_format,
             unit: props.unit.clone(),
-            decimal,
+            formats,
             tooltip: props.tooltip.unwrap_or(theme.chart.tooltip),
             tooltip_content: props.tooltip_content,
             onpointclick: props.onpointclick,

@@ -62,10 +62,13 @@ pub struct Formats {
     pub range_separator: &'static str,
     /// Between a number's whole and its fraction: `5.4 MB`, `5,4 MB`.
     pub decimal_separator: &'static str,
+    /// Between every three digits of a number's whole, where a chart writes it:
+    /// `12,500`, `12.500`; empty for none.
+    pub group_separator: &'static str,
 }
 
 impl Formats {
-    /// Sunday first, a 12-hour clock, `September 14, 2026`, `5.4`.
+    /// Sunday first, a 12-hour clock, `September 14, 2026`, `12,500.4`.
     pub const AMERICAN: Self = Self {
         first_weekday: Weekday::Sun,
         date: american_date,
@@ -73,9 +76,10 @@ impl Formats {
         time: "h:mm A",
         range_separator: " – ",
         decimal_separator: ".",
+        group_separator: ",",
     };
 
-    /// Monday first, a 24-hour clock, `14. September 2026`, `5,4`.
+    /// Monday first, a 24-hour clock, `14. September 2026`, `12.500,4`.
     pub const GERMAN: Self = Self {
         first_weekday: Weekday::Mon,
         date: german_date,
@@ -83,6 +87,7 @@ impl Formats {
         time: "HH:mm",
         range_separator: " – ",
         decimal_separator: ",",
+        group_separator: ".",
     };
 }
 
@@ -99,6 +104,7 @@ mod tests {
         assert_eq!((american.date)(DateLevel::Year), "YYYY");
         assert_eq!(american.time, "h:mm A");
         assert_eq!(american.decimal_separator, ".");
+        assert_eq!(american.group_separator, ",");
     }
 
     #[test]
@@ -110,6 +116,7 @@ mod tests {
         assert_eq!((german.date)(DateLevel::Year), "YYYY");
         assert_eq!(german.time, "HH:mm");
         assert_eq!(german.decimal_separator, ",");
+        assert_eq!(german.group_separator, ".");
     }
 
     /// A copy compares equal, so the same formats twice does not re-render.

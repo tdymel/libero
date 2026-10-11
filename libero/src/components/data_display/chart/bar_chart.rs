@@ -4,15 +4,15 @@ use super::{
     Series, XValues,
     engine::{self, BarSpec},
     frame::{
-        Frame, Interaction, overlay_series, series_specs, shown_places, summary, table_rows,
-        use_plot_size,
+        Frame, Interaction, chart_unit, overlay_series, series_specs, shown_places, summary,
+        table_rows, use_plot_size,
     },
     legend::use_hidden_series,
     props::chart_props,
 };
 use crate::{
     components::common::{Input, Orientation, names_itself, use_name_warning},
-    hooks::{use_formats, use_localization, use_root_id, use_theme},
+    hooks::{use_accessibility, use_formats, use_localization, use_root_id, use_theme},
     theme::{BarLayout, ChartInk},
     tokens::Size,
 };
@@ -66,7 +66,7 @@ chart_props! {
 pub fn BarChart(props: BarChartProps) -> Element {
     let theme = use_theme();
     let labels = use_localization().chart;
-    let decimal = use_formats().decimal_separator;
+    let formats = use_formats();
     let id = use_root_id(&props.attributes);
     use_name_warning(
         props.title.is_some() || names_itself(&props.attributes),
@@ -80,12 +80,13 @@ pub fn BarChart(props: BarChartProps) -> Element {
     let size = use_plot_size();
     let (width, height) = size.get(ratio);
 
-    let x = props.x.labels(&props.value_format, decimal);
+    let x = props.x.labels(&props.value_format, formats);
     let empty = props
         .series
         .iter()
         .all(|series| series.values.iter().all(Option::is_none));
-    let all_specs = series_specs(theme, &props.series);
+    let forced = use_accessibility().forced_colors();
+    let all_specs = series_specs(theme, forced, &props.series);
     let names: Vec<String> = all_specs.iter().map(|s| s.name.clone()).collect();
     let hidden = use_hidden_series(
         &props.hidden,
@@ -95,6 +96,7 @@ pub fn BarChart(props: BarChartProps) -> Element {
     );
     let shown = shown_places(&all_specs, &hidden.get());
     let horizontal = props.orientation.copied_or(Orientation::Vertical) == Orientation::Horizontal;
+    let unit = chart_unit(&props.unit, &props.series);
     let spec = BarSpec {
         width,
         height,
@@ -109,19 +111,18 @@ pub fn BarChart(props: BarChartProps) -> Element {
         ),
         value_labels: props.value_labels.unwrap_or(theme.chart.value_labels),
         grid: props.grid.unwrap_or(theme.chart.grid),
-        ink: ChartInk::of(theme),
+        ink: ChartInk::of(theme, forced),
         format: props.value_format,
-        unit: props.unit.clone(),
-        decimal,
+        unit: unit.clone(),
+        formats,
     };
     let drawn = use_memo(use_reactive!(|spec, shown| {
         engine::draw_bar(&spec).map(|drawn| drawn.with_series(&shown))
     }));
 
-    let write = |value: f64| {
-        props
-            .value_format
-            .format(value, props.unit.as_deref(), decimal)
+    let write = |series: &Series, value: f64| {
+        let unit = series.unit.as_deref().or(unit.as_deref());
+        props.value_format.format(value, unit, formats)
     };
     let summary = match (props.loading, empty) {
         (true, _) => vec![labels.loading.to_string()],
@@ -149,7 +150,7 @@ pub fn BarChart(props: BarChartProps) -> Element {
         center: None,
         legend: Frame::legend(&props.legend, theme, props.series.len()),
         legend_label: labels.legend,
-        series: overlay_series(&all_specs),
+        series: overlay_series(&all_specs, &props.series),
         hidden,
         x,
         summary,
@@ -159,8 +160,8 @@ pub fn BarChart(props: BarChartProps) -> Element {
         aspect_ratio: props.aspect_ratio,
         interaction: Interaction {
             format: props.value_format,
-            unit: props.unit.clone(),
-            decimal,
+            unit: unit.clone(),
+            formats,
             tooltip: props.tooltip.unwrap_or(theme.chart.tooltip),
             tooltip_content: props.tooltip_content,
             onpointclick: props.onpointclick,

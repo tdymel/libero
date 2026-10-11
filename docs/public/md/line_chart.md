@@ -39,7 +39,9 @@ in evenly spaced slots, whatever they say. Numbers (`vec![0.0, 1.0, 6.0]`,
 `XValues::Numbers`) sit at their value on a number axis, so uneven samples keep
 their gaps; the axis ticks at round values and writes them with `value_format`.
 `.color("success.7")` or `.color("#1e88e5")` sets a series' colour; otherwise it
-takes the theme's palette for its place.
+takes the theme's palette for its place. `.unit("%")` gives a series its own unit
+in the tooltip, summary and table; a unit every series shares labels the y axis.
+Values group their thousands as the `Formats` say: `12,500` or `12.500`.
 
 The pointer or the arrow keys pick a point: a tooltip shows the x value and
 each line's value there. `onpointclick` reports a clicked point, and the
@@ -126,7 +128,11 @@ Like every component, `LineChart` also takes the shared props `sx`, `class`,
   struck through when hidden. The last shown line's button is `aria-disabled`.
 - On a touch screen a tap pins a point's tooltip, a second tap on it clicks; a
   vertical swipe still scrolls the page.
-- Lines take the theme's palette, drawn in the current color scheme.
+- Each line's palette colour reaches 3:1 on the page and on a card, in every
+  shipped theme and color scheme; one too close to an earlier one, also for
+  colour-blind eyes, is skipped.
+- In forced colours the lines keep their colours on the system background; axes
+  and labels take the system text colour.
 
 ### You must
 
@@ -139,6 +145,8 @@ Like every component, `LineChart` also takes the shared props `sx`, `class`,
 
 ### Limits
 
+- A hex colour (`.color("#1e88e5")`) is drawn as given: check its 3:1 on your
+  page.
 - The tooltip is for the eye; screen readers hear the announcement instead, so
   `tooltip_content` reaches only sighted readers.
 - The x axis runs left to right in a right-to-left page too.
@@ -150,7 +158,7 @@ Like every component, `LineChart` also takes the shared props `sx`, `class`,
 | Field | Type | Description |
 |---|---|---|
 | `aspect_ratio` | `f32` | Width over height of the plot. |
-| `palette` | `[(Color, ColorShade); 8]` | Series colours in order; the ninth series starts over. |
+| `palette` | `[(Color, ColorShade); 8]` | Series colours in order, each at least 3:1 on the page (a shade darker if not); one that reads like an earlier one is skipped; past the last they start over, a line dashed. |
 | `curve` | `Curve` | Default `curve`. |
 | `legend` | `LegendPosition` | Where the legend sits with two series or more. |
 | `grid` | `bool` | Default `grid`. |
