@@ -152,7 +152,8 @@ e2e::scenario!(
     "/scroll-area",
     rows_stay_in_view,
     desktop: skip("2131: rows trail a WebView fling, 80px of 120; skeleton bars paint the gap"),
-    android: skip("2131: rows trail a WebView fling; skeleton bars paint the gap")
+    android: skip("2131: rows trail a WebView fling; skeleton bars paint the gap"),
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );
 
 /// The list's scrolling box, and the lowest row index it has in the document.
@@ -273,7 +274,8 @@ e2e::scenario!(
     the_window_follows_a_wheel_or_a_fling,
     "/scroll-area",
     the_window_follows_the_input,
-    macos: skip("macOS WKWebView: the wheel never brings the windowed list to rest")
+    macos: skip("macOS WKWebView: the wheel never brings the windowed list to rest"),
+    ios: skip("iOS: a touch screen has no wheel")
 );
 
 /// Samples each frame's leading padding of the list's content box while the list scrolls.

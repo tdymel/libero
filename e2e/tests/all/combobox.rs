@@ -538,7 +538,8 @@ async fn tags_backspace_removes<D: Driver>(d: &mut D, _route: &str) -> Result<()
 e2e::scenario!(
     typing_and_enter_add_a_tag,
     "/tags-field/echo",
-    tags_typing_adds
+    tags_typing_adds,
+    ios: skip("iOS: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     a_suggestion_picked_by_the_keys_becomes_a_tag,

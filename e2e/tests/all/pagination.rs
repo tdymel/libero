@@ -105,15 +105,17 @@ e2e::scenario!(
     "/pagination",
     a_disabling_arrow_hands_focus_on,
     android: skip("958: element identity on the WebView"),
-    desktop: skip("958: element identity on the WebView")
+    desktop: skip("958: element identity on the WebView"),
+    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
 );
 e2e::scenario!(
     a_late_answer_hands_focus_to_the_current_page_too,
     // The caller sets the page 150 ms after `onchange`.
-    "/pagination-async",
+        "/pagination-async",
     a_disabling_arrow_hands_focus_on,
     android: skip("958: element identity on the WebView"),
-    desktop: skip("958: element identity on the WebView")
+    desktop: skip("958: element identity on the WebView"),
+    ios: skip("iOS WebKit: focus stays on <body> after a Tab or a tap")
 );
 
 /// Todo 526: the current page is no change, so its click emits nothing, like
