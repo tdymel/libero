@@ -50,8 +50,12 @@ pub(super) fn overlay_sx() -> Sx {
                 .background_color(TOOLTIP_BACKGROUND.value())
                 .color(TOOLTIP_COLOR.value())
                 .box_shadow(SizeCss::SHADOW.value(Size::Sm))
+                // Forced colours drop the shadow but paint a transparent outline.
+                .outline("1px solid transparent")
                 .font_size("sm")
-                .white_space("nowrap")
+                // As wide as its rows up to the plot's width, where a long name wraps.
+                .width("max-content")
+                .with("overflow-wrap", "anywhere")
                 .with(
                     "transition",
                     "left 120ms ease-out, top 120ms ease-out, bottom 120ms ease-out, transform 120ms ease-out",
@@ -65,7 +69,9 @@ pub(super) fn overlay_sx() -> Sx {
         .selector(
             "& > [data-slot='tooltip'] [data-chart-row] > :last-child",
             sx().with("margin-inline-start", "auto")
-                .with("padding-inline-start", "12px"),
+                .with("padding-inline-start", "12px")
+                .with("flex", "none")
+                .white_space("nowrap"),
         )
         .selector(
             "& > [data-slot='tooltip'] [data-active]",
@@ -478,6 +484,8 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
             // The plot owns its arrows: screen readers pass them on only to an application.
             role: "application",
             "aria-roledescription": labels.chart,
+            // An application needs a name: without a title, the chart label.
+            "aria-label": title_id.is_none().then_some(labels.chart),
             "aria-labelledby": title_id,
             "aria-describedby": keys_id.clone(),
             tabindex: "0",

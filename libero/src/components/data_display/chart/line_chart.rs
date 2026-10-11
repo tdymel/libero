@@ -218,6 +218,30 @@ mod tests {
             "{html}"
         );
         assert!(html.contains("aria-roledescription=\"chart\""), "{html}");
+        assert!(html.contains("role=\"list\""), "{html}");
+    }
+
+    /// An application needs a name: with no title the plot takes the chart label.
+    #[test]
+    fn an_untitled_plot_is_named_by_the_chart_label() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    LineChart { x: ["Mon", "Tue"], series: vec![Series::new("Visits", [1.0, 2.0])] }
+                }
+            }
+        });
+
+        let layer = html
+            .find("role=\"application\"")
+            .unwrap_or_else(|| panic!("no plot layer: {html}"));
+        let start = html[..layer].rfind('<').unwrap_or(0);
+        let tag = &html[start
+            ..html[layer..]
+                .find('>')
+                .map_or(html.len(), |end| layer + end)];
+        assert!(tag.contains("aria-label=\"chart\""), "{tag}");
+        assert!(!tag.contains("aria-labelledby"), "{tag}");
     }
 
     /// Todo 3335 s5: values group in the locale, a series' own unit beats the chart's,

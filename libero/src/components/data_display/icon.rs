@@ -11,7 +11,7 @@ use crate::{
         layout::use_box,
     },
     hooks::{use_cache, use_gradient_style, use_theme},
-    sx::{StaticSx, ThemeAwareValue, sx},
+    sx::{FORCED_COLORS, StaticSx, ThemeAwareValue, sx},
     theme::{CssVar, Gradient, ICON_DEFAULT_RADIUS, ICON_DEFAULT_SIZE, ICON_SIZE, SizeCss},
 };
 
@@ -70,6 +70,11 @@ static ICON_MASK_SX: StaticSx = StaticSx::new(|| {
         .background("currentColor")
         .with("-webkit-mask", "center / contain no-repeat")
         .mask("center / contain no-repeat")
+        // Forced colours reset the fill to `Canvas`; this keeps it the parent's system colour.
+        .media(
+            FORCED_COLORS,
+            sx().forced_color_adjust("preserve-parent-color"),
+        )
 });
 
 fn icon_mask_style(src: &str) -> String {
@@ -247,6 +252,20 @@ mod tests {
             "{css}"
         );
         assert!(css.contains(";mask:center / contain no-repeat;"), "{css}");
+    }
+
+    /// Forced colours turned the `currentColor` fill into `Canvas`: the glyph vanished.
+    #[test]
+    fn a_masked_glyph_keeps_its_fill_under_forced_colours() {
+        let css = crate::css::Stylesheet::from(&ICON_MASK_SX);
+        let css = css.as_str();
+        let forced = css
+            .find("@media (forced-colors: active)")
+            .unwrap_or_else(|| panic!("no forced-colours rule: {css}"));
+        assert!(
+            css[forced..].contains("forced-color-adjust:preserve-parent-color"),
+            "{css}"
+        );
     }
 
     #[test]

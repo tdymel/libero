@@ -117,7 +117,8 @@ pub(super) fn ChartLegend(
 ) -> Element {
     let last = entries.iter().filter(|entry| !entry.hidden).count() <= 1;
     rsx! {
-        ul { "data-slot": ChartPart::Legend.slot(), "aria-label": "{label}",
+        // Unstyled, Safari drops the list role.
+        ul { "data-slot": ChartPart::Legend.slot(), role: "list", "aria-label": "{label}",
             for entry in entries {
                 li { key: "{entry.name}", "data-slot": ChartPart::LegendItem.slot(),
                     button {

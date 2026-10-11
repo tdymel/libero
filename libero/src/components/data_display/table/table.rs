@@ -236,7 +236,10 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
             .color("inherit")
             .cursor("pointer"),
     )
-    .selector("& [data-filtered]:focus-visible", inset_focus_ring_sx("0"))
+    .selector(
+        "& [data-filtered]:focus-visible",
+        inset_focus_ring_sx("-2px"),
+    )
     // A grid cell's ring, inset: a pinned or clipped cell would cut an outer one.
     .selector(
         "& tbody td[tabindex]:focus-visible, & tbody th[tabindex]:focus-visible, \
@@ -280,7 +283,7 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     )
     .selector(
         "& [data-cell-editor] input:focus-visible",
-        inset_focus_ring_sx("0"),
+        inset_focus_ring_sx("-2px"),
     )
     .selector(
         "& [data-cell-editor] input[aria-invalid]",
@@ -317,7 +320,7 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     )
     .selector(
         "& [data-cell-editor-cancel]:focus-visible",
-        inset_focus_ring_sx("0"),
+        inset_focus_ring_sx("-2px"),
     )
     .selector(
         "& [data-filter-cell]",
@@ -325,7 +328,7 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     )
     .selector(
         "& [data-column-menu]:focus-visible",
-        inset_focus_ring_sx("0"),
+        inset_focus_ring_sx("-2px"),
     )
     // The sticky rules below outrank it: a sticky cell places the grip as well.
     .selector(
@@ -407,7 +410,7 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     )
     .selector(
         "& [data-resize-handle]:focus-visible",
-        inset_focus_ring_sx("0"),
+        inset_focus_ring_sx("-2px"),
     )
     // The grip owns a 24px lane (WCAG 2.5.8): the header's content, its menu
     // button too, starts past it (todo 1483).
@@ -534,7 +537,7 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     )
     .selector(
         "& [data-detail-button]:focus-visible",
-        inset_focus_ring_sx("0"),
+        inset_focus_ring_sx("-2px"),
     )
     .selector(
         "& [data-detail-button] svg",
@@ -705,7 +708,7 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     )
     .selector(
         "& [data-group-toggle]:focus-visible",
-        inset_focus_ring_sx("0"),
+        inset_focus_ring_sx("-2px"),
     )
     .selector(
         "& [data-group-toggle] svg",
@@ -737,7 +740,7 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     )
     .selector(
         "& [data-node-toggle]:focus-visible",
-        inset_focus_ring_sx("0"),
+        inset_focus_ring_sx("-2px"),
     )
     .selector(
         "& [data-node-spacer]",
@@ -2006,5 +2009,18 @@ mod tests {
             .find("@supports (-webkit-touch-callout: none)")
             .unwrap_or_else(|| panic!("no iOS query: {css}"));
         assert!(rule[supports..].contains("max(16px, 1em)"), "{css}");
+    }
+
+    /// An offset of `0` made the inset ring's `calc` a number, so the browser dropped the
+    /// `box-shadow`: the cell editor and seven other controls had no ring.
+    #[test]
+    fn every_inset_ring_draws_a_stripe() {
+        let stylesheet = Stylesheet::from(&*TABLE_SX);
+        let css = stylesheet.as_str();
+        assert!(!css.contains("(-1 * (0"), "{css}");
+        assert!(
+            css.contains("[data-cell-editor] input:focus-visible{"),
+            "{css}"
+        );
     }
 }
