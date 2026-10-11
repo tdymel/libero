@@ -2,7 +2,6 @@
 """Splits the e2e tests into balanced CI shards, keeping each unit (`tests/all/<unit>`) whole.
 
     shard.py units <index> <total>          `unit::` filters for `cargo run -p e2e`, from main.rs
-    shard.py names <index> <total> < list   `--exact` names from libtest `--list` output
 
 A unit's weight is its `#[test]` count; units go greedily to the lightest shard, so
 every unit lands in exactly one shard and the split is stable for the same sources.
@@ -39,14 +38,6 @@ def main() -> None:
         sys.exit(f"shard {index} is not within 1..{total}")
     if mode == "units":
         print(" ".join(f"{unit}::" for unit in assign(unit_weights(), total)[index - 1]))
-    elif mode == "names":
-        names = [line[: -len(": test")] for line in sys.stdin.read().splitlines() if line.endswith(": test")]
-        weights: dict[str, int] = {}
-        for name in names:
-            weights[name.split("::")[0]] = weights.get(name.split("::")[0], 0) + 1
-        mine = set(assign(weights, total)[index - 1])
-        picked = [name for name in names if name.split("::")[0] in mine]
-        print(" ".join(["--exact", *picked]) if picked else "")
     else:
         sys.exit(__doc__)
 

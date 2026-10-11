@@ -141,15 +141,10 @@ jobs:
       - if: matrix.part == 'no-default'
         run: cargo test -p libero --no-default-features
 
+  # One job: three shards built the same binaries three times for under a minute of tests (3413).
   native:
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3]
     runs-on: ubuntu-24.04
     timeout-minutes: 45
-    env:
-      SHARDS: 3
     steps:
       - uses: actions/checkout@v7
       # Blitz's font stack links fontconfig; libero's `dbus` crate needs libdbus.
@@ -160,15 +155,10 @@ jobs:
       # Both test binaries in one cargo run, so they build side by side (the gate's `native-build`).
       - run: cargo test -p e2e --features native --test native --test all --no-run
       # The Blitz-only tests: paint, stylo, Blitz's event order.
-      - if: matrix.shard == 1
-        run: cargo test -p e2e --features native --test native
-      # This shard's units of the shared e2e scenarios on the Blitz backend (822).
-      - run: |
-          args=$(cargo test -q -p e2e --features native --test all -- ::native --list \
-            | python3 .github/scripts/shard.py names ${{ matrix.shard }} "$SHARDS")
-          if [ -z "$args" ]; then echo "no native scenarios in shard ${{ matrix.shard }}"; exit 0; fi
-          # shellcheck disable=SC2086
-          xvfb-run -a -s "-screen 0 1280x800x24" cargo test -p e2e --features native --test all -- $args
+      - run: cargo test -p e2e --features native --test native
+      # The shared e2e scenarios on the Blitz backend (822).
+      - if: success() || failure()
+        run: xvfb-run -a -s "-screen 0 1280x800x24" cargo test -p e2e --features native --test all -- ::native
 
   e2e:
     strategy:
