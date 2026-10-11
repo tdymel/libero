@@ -13,11 +13,6 @@ const LAST_WEEK: [f64; 7] = [98.0, 110.0, 115.0, 120.0, 104.0, 170.0, 180.0];
 const QUARTERS: [&str; 4] = ["Q1", "Q2", "Q3", "Q4"];
 const SALES_2025: [f64; 4] = [120.0, 132.0, 101.0, 134.0];
 const SALES_2026: [f64; 4] = [140.0, 128.0, 150.0, 162.0];
-// Uneven samples: the gaps show only on a number axis.
-const HOURS: [f64; 7] = [0.0, 1.0, 2.0, 6.0, 12.0, 18.0, 24.0];
-const TEMPERATURE: [f64; 7] = [14.0, 13.5, 13.0, 15.5, 22.0, 20.5, 15.0];
-const REVENUE_2025: [f64; 4] = [12_400.0, 15_250.5, 14_100.0, 18_900.0];
-const REVENUE_2026: [f64; 4] = [13_800.0, 16_400.0, 17_950.0, 21_300.0];
 
 fn on(value: bool) -> &'static str {
     if value { "true" } else { "false" }
@@ -281,52 +276,6 @@ pub fn ChartPage() -> Element {
                                 legend, table, tooltip, loading,
                             }
                         },
-                    }
-                },
-            }
-            Demo {
-                component: "LineChart",
-                title: "Numeric x",
-                children_text: "",
-                fixed: vec![
-                    "title: \"Temperature\"".to_string(),
-                    format!("x: vec!{HOURS:?}"),
-                    format!("series: vec![Series::new(\"Outside\", {TEMPERATURE:?})]"),
-                    "unit: \"°C\"".to_string(),
-                ],
-                controls: vec![Control::select("curve", ["linear", "smooth", "step"])
-                    .default(theme.chart.curve.as_str())],
-                render: move |values: DemoValues| rsx! {
-                    LineChart {
-                        title: "Temperature",
-                        x: HOURS.to_vec(),
-                        series: vec![Series::new("Outside", TEMPERATURE)],
-                        unit: "°C",
-                        curve: Curve::from(values.str("curve").as_str()),
-                    }
-                },
-            }
-            Demo {
-                component: "LineChart",
-                title: "Units and thousands",
-                children_text: "",
-                fixed: vec![
-                    "title: \"Revenue\"".to_string(),
-                    format!("x: {QUARTERS:?}"),
-                    format!(
-                        "series: vec![Series::new(\"2025\", {REVENUE_2025:?}).unit(\"EUR\"), Series::new(\"2026\", {REVENUE_2026:?}).unit(\"EUR\")]"
-                    ),
-                ],
-                controls: vec![Control::toggle("table", ["hidden", "visible", "off"]).default("visible")],
-                render: move |values: DemoValues| rsx! {
-                    LineChart {
-                        title: "Revenue",
-                        x: QUARTERS,
-                        series: vec![
-                            Series::new("2025", REVENUE_2025).unit("EUR"),
-                            Series::new("2026", REVENUE_2026).unit("EUR"),
-                        ],
-                        table: ChartTable::from(values.str("table").as_str()),
                     }
                 },
             }
