@@ -3,7 +3,7 @@ use crate::common::{body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Column, SortDirection, Table, TableSort, column},
+    components::{Aggregate, Column, SortDirection, Table, TableSort, column},
 };
 
 #[derive(Clone, PartialEq)]
@@ -252,4 +252,45 @@ fn a_group_row_spans_the_lead_columns_with_one_cell() {
     );
     // Group rows have no checkbox of their own; select-all stays.
     assert_eq!(body.matches("type=\"checkbox\"").count(), 1, "{body}");
+}
+
+#[test]
+fn a_group_row_shows_each_columns_aggregate_over_its_rows() {
+    #[derive(Clone, PartialEq)]
+    struct Sale {
+        team: &'static str,
+        amount: u32,
+    }
+
+    fn app() -> Element {
+        let data = [("Sales", 3), ("Ops", 4), ("Sales", 5)]
+            .map(|(team, amount)| Sale { team, amount })
+            .to_vec();
+        rsx! {
+            LiberoProvider {
+                Table {
+                    caption: "Sales",
+                    data,
+                    columns: vec![
+                        column("Team").value(|s: &Sale| s.team.to_string()),
+                        column("Amount")
+                            .value(|s: &Sale| s.amount)
+                            .aggregate(Aggregate::Sum)
+                            .aggregate_format(|sum| format!("{sum} EUR")),
+                    ],
+                    default_row_grouping: team(),
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    // Closed groups still sum their rows; the footer sums them all.
+    assert!(at(&body, "8 EUR") < at(&body, "4 EUR"), "{body}");
+    assert!(shows(&body, "12 EUR"), "{body}");
+    assert_eq!(body.matches("data-group-aggregate").count(), 2, "{body}");
+    assert!(
+        body.contains("data-align=\"end\"") || body.contains("data-align=end"),
+        "{body}"
+    );
 }

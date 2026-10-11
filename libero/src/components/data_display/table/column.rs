@@ -30,6 +30,8 @@ pub struct Column<T> {
     pub(super) sortable: bool,
     pub(super) row_header: bool,
     pub(super) hideable: bool,
+    /// The column menu offers to group the rows by it.
+    pub(super) row_groupable: bool,
     /// Searched by the quick filter, offered a column filter.
     pub(super) filterable: bool,
     /// What the cell type chose; picks the column filter's operators.
@@ -75,6 +77,7 @@ impl ColumnHeader {
             sortable: false,
             row_header: false,
             hideable: true,
+            row_groupable: true,
             filterable: true,
             filter_kind: V::filter_kind(),
             options: Vec::new(),
@@ -245,6 +248,19 @@ impl<T> Column<T> {
         self
     }
 
+    /// Whether the column menu offers to group the rows by it; on by default.
+    /// `row_grouping` still groups by it.
+    ///
+    /// ```rust
+    /// # use libero::components::column;
+    /// # struct User { name: String }
+    /// column("Name").value(|u: &User| u.name.clone()).row_groupable(false);
+    /// ```
+    pub fn row_groupable(mut self, row_groupable: bool) -> Self {
+        self.row_groupable = row_groupable;
+        self
+    }
+
     /// Whether the quick filter searches its cell text and a column filter
     /// applies to it; on by default.
     ///
@@ -405,7 +421,8 @@ impl<T> Column<T> {
     /// Adds a footer cell under the column that sums up its numeric cells, or counts
     /// the filled ones, over the rows passing the filters on every page. With
     /// `manual_pagination` those are the loaded rows only: the footer shows no
-    /// total of rows the table doesn't hold.
+    /// total of rows the table doesn't hold. With `row_grouping`, each group row
+    /// shows it too, over the group's rows.
     ///
     /// ```rust
     /// # use libero::components::{Aggregate, column};
@@ -446,6 +463,7 @@ impl<T> Clone for Column<T> {
             sortable: self.sortable,
             row_header: self.row_header,
             hideable: self.hideable,
+            row_groupable: self.row_groupable,
             filterable: self.filterable,
             filter_kind: self.filter_kind,
             options: self.options.clone(),
@@ -474,6 +492,7 @@ impl<T> PartialEq for Column<T> {
             && self.sortable == other.sortable
             && self.row_header == other.row_header
             && self.hideable == other.hideable
+            && self.row_groupable == other.row_groupable
             && self.filterable == other.filterable
             && self.filter_kind == other.filter_kind
             && self.options == other.options
@@ -554,6 +573,7 @@ mod tests {
         assert!(a != b.clone().sortable());
         assert!(a != b.clone().row_header());
         assert!(a != b.clone().hideable(false));
+        assert!(a != b.clone().row_groupable(false));
         assert!(a != b.clone().width("4rem"));
         assert!(a != b.clone().min_width("4rem"));
         assert!(a != b.clone().resizable(false));

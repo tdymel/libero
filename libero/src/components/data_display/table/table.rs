@@ -39,15 +39,15 @@ use super::{
     column_menu::{ColumnMenu, MenuColumn, use_menu_focus},
     column_order::{moved, order_unpinned, ranked},
     core::{
-        BodySpec, CaptionSpec, RowFn, SortedRows, TableSort, WidthSpec, active_sort, header_specs,
-        render_body,
+        BodySpec, CaptionSpec, RowFn, SortedRows, TableSort, WidthSpec, active_sort, align_attr,
+        header_specs, render_body,
     },
     csv::shown_csv,
     detail::Details,
     filter::{FilteredRows, QuickFilter, query_words},
     filter_panel::{FilterPanel, FilterPanelButton, PanelColumn, use_panel_control},
     filter_popover::FilterTarget,
-    footer::{Foot, FooterRows, use_edge_height},
+    footer::{Foot, FooterRows, aggregate_cell, use_edge_height},
     grid::{GridRows, GridWindow, use_grid_focus},
     header_filters::HeaderFilter,
     overlay::{EmptyBody, LoadingBar, SKELETON_ROWS},
@@ -59,7 +59,7 @@ use super::{
     },
     resize::{ColumnResize, ColumnWidths, MenuWidth},
     row::{RowContext, RowState, TableRow},
-    row_groups::{GroupCells, GroupRow, GroupedRows, group_levels},
+    row_groups::{GroupAggregates, GroupCells, GroupRow, GroupedRows, group_levels},
     row_reorder::{ROW_ANIMATION, ROW_TRANSFORM, RowReorder},
     selection::{Selection, toggle_row},
     toolbar::{TableToolbar, TableTools, ToolView},
@@ -634,6 +634,11 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     .selector(
         "& [data-group-count]",
         sx().font_weight("400").opacity("0.75"),
+    )
+    // Apart from the toggle when the toggle's column aggregates too.
+    .selector(
+        "& [data-group-toggle] + [data-group-aggregate]",
+        sx().with("margin-inline-start", "12px"),
     )
     // The footer's and the group rows' one cell over the lead columns holds with them.
     .when(
@@ -1263,6 +1268,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let mut filtered = use_hook(|| CopyValue::new(FilteredRows::<T>::default()));
     let mut footer_rows = use_hook(|| CopyValue::new(FooterRows::<T>::default()));
     let mut grouped_rows = use_hook(|| CopyValue::new(GroupedRows::<T>::default()));
+    let mut group_aggregates = use_hook(|| CopyValue::new(GroupAggregates::<T>::default()));
     let mut group_seeded = use_hook(|| CopyValue::new(false));
     let mut group_warned = use_hook(|| CopyValue::new(false));
     let mut row_context = use_hook(|| CopyValue::new((0u64, None::<Rc<RowContext<T>>>)));
@@ -1349,11 +1355,13 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let head_rows = group_rows + 1 + usize::from(props.header_filters);
     let menu_columns: Rc<[MenuColumn]> = headers
         .iter()
-        .map(|spec| MenuColumn {
+        .zip(&props.columns)
+        .map(|(spec, column)| MenuColumn {
             header: spec.header.clone(),
             sortable: spec.sortable,
             hideable: spec.hideable,
             hidden: spec.hidden,
+            groupable: column.row_groupable,
         })
         .collect();
     let tests = cell_tests(&props.columns, &state.column_filters.read());
@@ -1402,6 +1410,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                             multi_sort: props.multi_sort,
                             hidden: state.hidden_columns,
                             pinned: state.pinned_columns,
+                            grouping: state.row_grouping,
                             labels,
                             size,
                             parts: props.column_menu_parts.clone(),
@@ -1574,6 +1583,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         }
         _ => Rc::from([]),
     };
+    let group_values = group_aggregates.write().values(&data, &columns, &groups);
     // The count when more rows were asked for: their arrival is said once loading ends.
     let mut asked_at = use_hook(|| CopyValue::new(None::<usize>));
     let loading = props.loading;
@@ -1701,6 +1711,10 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             .iter()
             .map(|&index| headers[index].pin.clone())
             .collect(),
+        aligns: layout
+            .iter()
+            .map(|&index| align_attr(headers[index].align))
+            .collect(),
         labels,
         toggle: toggle_group,
     };
@@ -1827,6 +1841,14 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                     }
                     VisibleRow::Group(at) => {
                         let group = &groups[at];
+                        let aggregates = group_values.as_ref().map(|values| {
+                            layout
+                                .iter()
+                                .map(|&index| {
+                                    aggregate_cell(&columns[index], values[at][index], &labels)
+                                })
+                                .collect()
+                        });
                         rsx! {
                             GroupRow {
                                 // Apart from the row keys, which are the caller's.
@@ -1836,6 +1858,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                                 count: group.leaves.len(),
                                 depth: group.depth,
                                 open: group.open,
+                                aggregates: aggregates.unwrap_or_default(),
                                 cells: group_cells.clone(),
                             }
                         }

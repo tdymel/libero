@@ -61,6 +61,37 @@ impl Tally {
     }
 }
 
+/// Each column's aggregate over the `data` rows at `indices`, by header index.
+pub(super) fn aggregate_values<T>(
+    columns: &[Column<T>],
+    data: &[T],
+    indices: &[usize],
+) -> Vec<Option<f64>> {
+    columns
+        .iter()
+        .map(|column| {
+            let aggregate = column.aggregate?;
+            let keys = indices.iter().map(|&index| (column.sort_key)(&data[index]));
+            Tally::of(keys).value(aggregate)
+        })
+        .collect()
+}
+
+/// An aggregate's name and its value as the column formats it.
+pub(super) fn aggregate_cell<T>(
+    column: &Column<T>,
+    value: Option<f64>,
+    labels: &TableLabels,
+) -> Option<(&'static str, String)> {
+    let aggregate = column.aggregate?;
+    let value = value?;
+    let text = match &column.aggregate_format {
+        Some(format) => format(value),
+        None => value.to_string(),
+    };
+    Some(((labels.aggregate_name)(aggregate), text))
+}
+
 type FooterInput<T> = (Rc<Vec<T>>, Vec<Column<T>>, Vec<VisibleRow>);
 
 /// The aggregates across renders: recomputed only when the rows, the columns or
@@ -99,32 +130,15 @@ impl<T: PartialEq> FooterRows<T> {
                 && (Rc::ptr_eq(known, data) || known == data)
         });
         if !fresh {
-            self.values = columns
-                .iter()
-                .map(|column| {
-                    let aggregate = column.aggregate?;
-                    let keys = rows
-                        .iter()
-                        .filter_map(|row| row.data())
-                        .map(|index| (column.sort_key)(&data[index]));
-                    Tally::of(keys).value(aggregate)
-                })
-                .collect();
+            let indices: Vec<usize> = rows.iter().filter_map(|row| row.data()).collect();
+            self.values = aggregate_values(columns, data, &indices);
             self.input = Some((data.clone(), columns.to_vec(), rows.to_vec()));
         }
         Some(
             columns
                 .iter()
                 .zip(&self.values)
-                .map(|(column, value)| {
-                    let aggregate = column.aggregate?;
-                    let value = (*value)?;
-                    let text = match &column.aggregate_format {
-                        Some(format) => format(value),
-                        None => value.to_string(),
-                    };
-                    Some(((labels.aggregate_name)(aggregate), text))
-                })
+                .map(|(column, value)| aggregate_cell(column, *value, labels))
                 .collect(),
         )
     }

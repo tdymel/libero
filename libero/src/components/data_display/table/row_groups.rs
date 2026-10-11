@@ -1,10 +1,11 @@
-use std::rc::Rc;
+use std::{collections::HashMap, rc::Rc};
 
 use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
 
 use super::{
     column::Column,
+    footer::aggregate_values,
     pinning::CellPin,
     pipeline::{GroupInfo, VisibleRow, group_rows},
 };
@@ -98,19 +99,80 @@ impl<T: PartialEq> GroupedRows<T> {
     }
 }
 
+/// A group's aggregates by header index.
+pub(super) type GroupValues = Rc<[Option<f64>]>;
+
+type KnownValues = HashMap<String, (Vec<usize>, GroupValues)>;
+type ValuesInput<T> = (Rc<Vec<T>>, Vec<Column<T>>);
+
+/// The groups' aggregates across renders, by group id: a group keeps its values
+/// while its rows stay, so opening a group computes none but its new subgroups'.
+pub(super) struct GroupAggregates<T> {
+    of: Option<ValuesInput<T>>,
+    known: KnownValues,
+}
+
+impl<T> Default for GroupAggregates<T> {
+    fn default() -> Self {
+        Self {
+            of: None,
+            known: HashMap::new(),
+        }
+    }
+}
+
+impl<T: PartialEq> GroupAggregates<T> {
+    /// Each group's aggregates, in `groups` order; `None` when no column aggregates.
+    pub fn values(
+        &mut self,
+        data: &Rc<Vec<T>>,
+        columns: &[Column<T>],
+        groups: &[GroupInfo],
+    ) -> Option<Vec<GroupValues>> {
+        if groups.is_empty() || columns.iter().all(|column| column.aggregate.is_none()) {
+            *self = Self::default();
+            return None;
+        }
+        let fresh = self.of.as_ref().is_some_and(|(known, cols)| {
+            cols.as_slice() == columns && (Rc::ptr_eq(known, data) || known == data)
+        });
+        if !fresh {
+            self.known.clear();
+            self.of = Some((data.clone(), columns.to_vec()));
+        }
+        let mut known = std::mem::take(&mut self.known);
+        let values = groups
+            .iter()
+            .map(|group| {
+                let values = match known.remove(&group.id) {
+                    Some((leaves, values)) if leaves == group.leaves => values,
+                    _ => aggregate_values(columns, data, &group.leaves).into(),
+                };
+                self.known
+                    .insert(group.id.clone(), (group.leaves.clone(), values.clone()));
+                values
+            })
+            .collect();
+        Some(values)
+    }
+}
+
 /// The group rows' cells: the lead columns spanned by one, then one per shown column.
 #[derive(Clone, PartialEq)]
 pub(super) struct GroupCells {
     pub leads: usize,
     /// Each shown column's pin, in display order.
     pub pins: Rc<[Option<CellPin>]>,
+    /// Each shown column's `data-align`, in display order.
+    pub aligns: Rc<[Option<&'static str>]>,
     pub labels: TableLabels,
     /// Opens or shuts the group of an id, named by a label.
     pub toggle: Callback<(String, String, bool)>,
 }
 
 /// A group row: a toggle naming the group and its row count in the first shown
-/// column. Its own scope, so a table render that leaves the group as it was skips it.
+/// column, then each shown column's aggregate over the group's rows, if any. Its
+/// own scope, so a table render that leaves the group as it was skips it.
 #[component]
 pub(super) fn GroupRow(
     id: String,
@@ -118,11 +180,15 @@ pub(super) fn GroupRow(
     count: usize,
     depth: usize,
     open: bool,
+    /// An aggregate's name and text per shown column; empty without aggregates.
+    #[props(default)]
+    aggregates: Rc<[Option<(&'static str, String)>]>,
     cells: GroupCells,
 ) -> Element {
     let GroupCells {
         leads,
         pins,
+        aligns,
         labels,
         toggle,
     } = cells;
@@ -148,13 +214,21 @@ pub(super) fn GroupRow(
                 }
             }
         });
+        let aggregate = aggregates.get(position).cloned().flatten();
         rsx! {
             td {
                 key: "{position}",
+                "data-align": aligns.get(position).copied().flatten(),
                 "data-pin": pin.as_ref().map(|pin| pin.side.as_str()),
                 "data-pin-edge": pin.as_ref().filter(|pin| pin.edge).map(|_| true),
                 style: pin.as_ref().map(CellPin::style),
                 {button}
+                if let Some((name, text)) = aggregate {
+                    span { "data-group-aggregate": true,
+                        span { "data-footer-name": true, "{name}" }
+                        "{text}"
+                    }
+                }
             }
         }
     });
@@ -218,5 +292,51 @@ mod tests {
         assert!(Rc::ptr_eq(&groups, &again));
         let (rows, _) = cache.rows(texts, &leaves, &["x".into()], "-");
         assert_eq!(rows.len(), 3);
+    }
+
+    fn group(id: &str, leaves: &[usize]) -> GroupInfo {
+        GroupInfo {
+            path: vec![id.to_string()],
+            depth: 0,
+            label: id.to_string(),
+            leaves: leaves.to_vec(),
+            id: id.to_string(),
+            open: false,
+        }
+    }
+
+    #[test]
+    fn group_aggregates_sum_each_groups_rows_and_are_reused_by_id() {
+        use std::cell::Cell;
+
+        use crate::localization::Aggregate;
+
+        let calls = Rc::new(Cell::new(0));
+        let counted = calls.clone();
+        let columns = vec![
+            column("N")
+                .value(move |n: &u32| {
+                    counted.set(counted.get() + 1);
+                    *n
+                })
+                .aggregate(Aggregate::Sum),
+            column("Text").value(|n: &u32| n.to_string()),
+        ];
+        let data = Rc::new(vec![1, 2, 3, 4]);
+        let mut cache = GroupAggregates::default();
+        let groups = [group("a", &[0, 2]), group("b", &[1, 3])];
+        let values = cache.values(&data, &columns, &groups).unwrap();
+        assert_eq!(
+            (&*values[0], &*values[1]),
+            (&[Some(4.0), None][..], &[Some(6.0), None][..])
+        );
+        assert_eq!(calls.get(), 4);
+        // A new group list with "a" unchanged: only "c" is summed.
+        let again = cache
+            .values(&data, &columns, &[group("a", &[0, 2]), group("c", &[3])])
+            .unwrap();
+        assert!(Rc::ptr_eq(&values[0], &again[0]));
+        assert_eq!((again[1][0], calls.get()), (Some(4.0), 5));
+        assert!(cache.values(&data, &columns[1..], &groups).is_none());
     }
 }

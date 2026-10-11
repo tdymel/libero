@@ -36,6 +36,8 @@ pub(super) struct MenuColumn {
     pub sortable: bool,
     pub hideable: bool,
     pub hidden: bool,
+    /// Offered as a row grouping level.
+    pub groupable: bool,
 }
 
 /// Focus after a menu pick that moved its header in the DOM (a pin) or removed
@@ -84,7 +86,7 @@ impl MenuFocus {
 /// The column order after one move, and the column's new place.
 pub(super) type ColumnMove = Option<(Vec<String>, usize)>;
 
-/// A header's menu: sort, filter, move, width, pin, hide, and the columns to show.
+/// A header's menu: sort, filter, group, move, width, pin, hide, and the columns to show.
 #[component]
 pub(super) fn ColumnMenu(
     index: usize,
@@ -94,6 +96,7 @@ pub(super) fn ColumnMenu(
     multi_sort: bool,
     hidden: StateSlice<Vec<String>>,
     pinned: StateSlice<PinnedColumns>,
+    grouping: StateSlice<Vec<String>>,
     /// The column order after a move towards the start and towards the end, with the
     /// column's place among the shown ones from 1; `None` at that edge.
     moves: (ColumnMove, ColumnMove),
@@ -162,7 +165,7 @@ pub(super) fn ColumnMenu(
         }
         items.push(MenuEntry::Separator);
     }
-    // Sort, filter, move, width, pin, hide.
+    // Sort, filter, group, move, width, pin, hide.
     let target = filter.clone();
     let open_panel = use_callback(move |()| {
         if let (Some(panel), Some(target)) = (panel, &target) {
@@ -176,6 +179,23 @@ pub(super) fn ColumnMenu(
                 .onselect(move |_| match open_panel {
                     Some(open_panel) => open_panel.call(()),
                     None => filter_open.set(true),
+                })
+                .into(),
+        );
+        items.push(MenuEntry::Separator);
+    }
+    if column.groupable {
+        let header = column.header.clone();
+        let grouped = grouping.read().contains(&header);
+        let (label, said) = match grouped {
+            true => (labels.ungroup, labels.column_ungrouped),
+            false => (labels.group_by, labels.column_grouped),
+        };
+        items.push(
+            MenuItem::new(label(&header))
+                .onselect(move |_| {
+                    grouping.set(regrouped(&grouping.read(), &header, !grouped));
+                    announcer.say(said(&header));
                 })
                 .into(),
         );
@@ -362,6 +382,15 @@ pub(super) fn sorted_by(
         .collect()
 }
 
+/// `grouping` with `header` as its innermost level, or without it.
+pub(super) fn regrouped(grouping: &[String], header: &str, group: bool) -> Vec<String> {
+    let mut next: Vec<String> = grouping.iter().filter(|h| *h != header).cloned().collect();
+    if group {
+        next.push(header.to_string());
+    }
+    next
+}
+
 /// `hidden` with `header` shown or hidden, the others in their order.
 pub(super) fn toggle_column(hidden: &[String], header: &str, show: bool) -> Vec<String> {
     let mut next: Vec<String> = hidden.iter().filter(|h| *h != header).cloned().collect();
@@ -384,6 +413,7 @@ mod tests {
                 sortable: true,
                 hideable: true,
                 hidden: false,
+                groupable: true,
             })
             .collect()
     }
@@ -425,5 +455,14 @@ mod tests {
         assert_eq!(toggle_column(&hidden, "B", false), vec!["A", "B"]);
         assert_eq!(toggle_column(&hidden, "A", true), Vec::<String>::new());
         assert_eq!(toggle_column(&hidden, "A", false), vec!["A"]);
+    }
+
+    #[test]
+    fn group_by_nests_innermost_and_ungroup_keeps_the_rest_in_order() {
+        let grouping = vec!["A".to_string(), "B".to_string()];
+
+        assert_eq!(regrouped(&grouping, "C", true), vec!["A", "B", "C"]);
+        assert_eq!(regrouped(&grouping, "A", false), vec!["B"]);
+        assert_eq!(regrouped(&grouping, "A", true), vec!["B", "A"]);
     }
 }

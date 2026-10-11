@@ -1425,9 +1425,10 @@ fn a_column_menu_sorts_hides_and_shows_columns() {
                 "[...document.querySelectorAll('[role^=menuitem]')]\
                  .find(e => e.textContent.trim() === {item:?})"
             );
-            // A real press at the item's centre, once the placed menu shows it there.
+            // A real press at the item's centre, once the placed menu shows it there,
+            // scrolled into a menu taller than the viewport.
             let centre = format!(
-                "(() => {{ const e = {find}; if (!e) return null; \
+                "(() => {{ const e = {find}; if (!e) return null; e.scrollIntoView({{ block: 'nearest' }}); \
                  const r = e.getBoundingClientRect(); const [x, y] = [r.x + r.width / 2, r.y + r.height / 2]; \
                  return e.contains(document.elementFromPoint(x, y)) ? [x, y] : null; }})()"
             );
@@ -2065,7 +2066,7 @@ async fn the_filter_panel_edits_every_filter<D: Driver>(d: &mut D, _route: &str)
 }
 
 /// Waits for the open menu's entry reading `label`; todo 1502: the entries, not only its first.
-async fn menu_entry<D: Driver>(d: &mut D, label: &str) -> Result<String> {
+pub(crate) async fn menu_entry<D: Driver>(d: &mut D, label: &str) -> Result<String> {
     let mut found = None;
     eventually(d, &format!("the menu's {label} entry"), async |d| {
         for index in 0..12 {

@@ -724,7 +724,8 @@ Row groups: `row_grouping` names the headers whose cell texts group the rows,
 outermost first. Each group gets a row with a toggle naming its text and row
 count; `default_group_expansion: 1` opens the outermost groups at the start.
 Groups follow the sorted rows, and the open groups' ids are their texts joined
-by `/`.
+by `/`. With `column_menu`, a column's menu groups the rows by it or stops;
+`row_groupable(false)` leaves that entry out.
 
 ```rust
 use dioxus::prelude::*;
@@ -928,7 +929,7 @@ fn Demo() -> Element {
 | `column_widths` | `Option<ColumnWidths>` | `None` | Resized widths in px by header, a `BTreeMap<String, f64>`, over the columns' own `width`. Set, the widths are controlled: pair them with `oncolumnwidthschange`. |
 | `default_column_widths` | `ColumnWidths` | `{}` | Seeds the widths once. Ignored when `column_widths` is set. |
 | `oncolumnwidthschange` | `EventHandler<ColumnWidths>` | `None` | Called with the widths a grip drag asks for when it ends, each grip key, and with each Widen, Narrow or Reset width. |
-| `column_menu` | `bool` | `false` | Puts a menu button in each header: sort ascending or descending, unsort, add to the sort with `multi_sort`, filter a `filterable` column, move the column left or right past the next shown one, widen, narrow or reset it with `resizable_columns`, pin to the start or end or unpin, hide the column, and a Columns submenu that shows or hides the others. A pinned column has no move entries. Filter opens a popover with the operators of the column's type, a value and Clear; a filtered column's header then shows a filter button that reopens it. |
+| `column_menu` | `bool` | `false` | Puts a menu button in each header: sort ascending or descending, unsort, add to the sort with `multi_sort`, filter a `filterable` column, group the rows by it or stop (a new grouping level goes innermost), move the column left or right past the next shown one, widen, narrow or reset it with `resizable_columns`, pin to the start or end or unpin, hide the column, and a Columns submenu that shows or hides the others. A pinned column has no move entries. Filter opens a popover with the operators of the column's type, a value and Clear; a filtered column's header then shows a filter button that reopens it. |
 | `column_menu_parts` | `Parts<MenuPart>` | none | The column menus' `parts`, the `Menu` page's Style API. The menus open in a portal, out of the table's `sx`. |
 
 Like every component, `Table` also takes the shared props `sx`, `class`,
@@ -954,9 +955,10 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `filterable` | `bool` | `true` | Whether the quick filter searches the column's cell text, and whether it takes a column filter. Off for ids and codes that would match by accident. |
 | `options` | `Vec<String>` | `[]` | Makes it a select column: its filter picks among these options, matched whole against the cell text, with the operators is, is not and is any of. The quick filter and sorting still read the cell. |
 | `hideable` | `bool` | `true` | Whether the column menu offers to hide the column. `hidden_columns` still hides it. |
+| `row_groupable` | `bool` | `true` | Whether the column menu offers to group the rows by the column. `row_grouping` still groups by it. |
 | `group` | `String` | `None` | Puts the column under a group header, shared with the adjacent columns of the same groups. Call it once per level, outermost first. The same name under another parent is another group, and a hidden column leaves its group. |
 | `col_span` | `fn(&T) -> usize` | `None` | How many shown columns a row's cell covers, from this one on, say a total row's label. The covered cells are left out; the span stops at the row's end. Capture signals, not values: the closure is not compared. |
-| `aggregate` | `Aggregate` | `None` | Adds a footer cell under the column that sums up its rows: `Sum`, `Avg`, `Min` or `Max` of the numeric cells, or `Count` of the filled ones. It covers the rows that pass the quick filter and the column filters, on every page. With `manual_pagination` it covers the loaded rows only: the table shows no total of rows it does not hold. A column without an aggregate gets an empty footer cell; with none at all there is no footer. The footer sticks to the bottom of a `max_height` table, as the header sticks to the top. Each cell names its aggregate before the value, from the localized `table.aggregate_name`. |
+| `aggregate` | `Aggregate` | `None` | Adds a footer cell under the column that sums up its rows: `Sum`, `Avg`, `Min` or `Max` of the numeric cells, or `Count` of the filled ones. It covers the rows that pass the quick filter and the column filters, on every page. With `row_grouping`, each group row shows it too, over the group's rows, open or not. With `manual_pagination` it covers the loaded rows only: the table shows no total of rows it does not hold. A column without an aggregate gets an empty footer cell; with none at all there is no footer. The footer sticks to the bottom of a `max_height` table, as the header sticks to the top. Each cell names its aggregate before the value, from the localized `table.aggregate_name`. |
 | `aggregate_format` | `fn(f64) -> String` | the number | The footer cell's text from the aggregate, say a price with its currency; by default the number as Rust prints it, so format a `Sum` or `Avg` of fractions. Not compared: capture signals, not values. |
 
 `column()` is a builder, not a component, so it takes no shared props.
@@ -1162,6 +1164,7 @@ default `start`.
 | `data-row-group` | On a group row with `row_grouping`; `data-level` gives its depth, 0 outermost. |
 | `data-group-toggle` | On a group row's toggle, holding `data-group-label` and `data-group-count`. |
 | `data-group-lead` | On a group row's one cell over the lead columns. |
+| `data-group-aggregate` | On a group row's aggregate, an aggregating column's name and value over the group's rows. |
 | `data-reorder` | On the reorder column's `th` and `td`s, with `onrowreorder`. |
 | `data-dragging` | On the body row being dragged or moved by keyboard. |
 | `data-cell-stop` | On the body cell that is the tab stop, with `cell_focus`. |

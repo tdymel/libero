@@ -222,6 +222,19 @@ pub struct TableLabels {
     /// Said when a group opens or closes, from its label.
     pub group_expanded: fn(&str) -> String,
     pub group_collapsed: fn(&str) -> String,
+    /// The column menu entries that add a column to the row grouping and take it out.
+    ///
+    /// ```
+    /// use libero::localization::TableLabels;
+    ///
+    /// assert_eq!((TableLabels::ENGLISH.group_by)("Team"), "Group by Team");
+    /// assert_eq!((TableLabels::GERMAN.ungroup)("Team"), "Nicht mehr nach Team gruppieren");
+    /// ```
+    pub group_by: fn(&str) -> String,
+    pub ungroup: fn(&str) -> String,
+    /// Said after those entries, from the header text.
+    pub column_grouped: fn(&str) -> String,
+    pub column_ungrouped: fn(&str) -> String,
     /// The column menu entry that opens the column's filter.
     pub filter: &'static str,
     /// The filter popover and a header filter field, from the header text.
@@ -633,6 +646,38 @@ fn german_group_toggle(group: &str, count: usize) -> String {
     format!("{group}, {}", german_results(count))
 }
 
+fn english_group_by(column: &str) -> String {
+    format!("Group by {column}")
+}
+
+fn german_group_by(column: &str) -> String {
+    format!("Nach {column} gruppieren")
+}
+
+fn english_ungroup(column: &str) -> String {
+    format!("Stop grouping by {column}")
+}
+
+fn german_ungroup(column: &str) -> String {
+    format!("Nicht mehr nach {column} gruppieren")
+}
+
+fn english_column_grouped(column: &str) -> String {
+    format!("Rows grouped by {column}")
+}
+
+fn german_column_grouped(column: &str) -> String {
+    format!("Zeilen nach {column} gruppiert")
+}
+
+fn english_column_ungrouped(column: &str) -> String {
+    format!("Rows no longer grouped by {column}")
+}
+
+fn german_column_ungrouped(column: &str) -> String {
+    format!("Zeilen nicht mehr nach {column} gruppiert")
+}
+
 fn english_group_expanded(group: &str) -> String {
     format!("{group} expanded")
 }
@@ -696,6 +741,10 @@ impl TableLabels {
         group_toggle: english_group_toggle,
         group_expanded: english_group_expanded,
         group_collapsed: english_group_collapsed,
+        group_by: english_group_by,
+        ungroup: english_ungroup,
+        column_grouped: english_column_grouped,
+        column_ungrouped: english_column_ungrouped,
         filter: "Filter",
         filter_column: english_filter_column,
         filtered: english_filtered,
@@ -770,6 +819,10 @@ impl TableLabels {
         group_toggle: german_group_toggle,
         group_expanded: german_group_expanded,
         group_collapsed: german_group_collapsed,
+        group_by: german_group_by,
+        ungroup: german_ungroup,
+        column_grouped: german_column_grouped,
+        column_ungrouped: german_column_ungrouped,
         filter: "Filtern",
         filter_column: german_filter_column,
         filtered: german_filtered,
@@ -830,6 +883,10 @@ mod tests {
                 labels.column_pinned_end,
                 labels.column_unpinned,
                 labels.column_hidden,
+                labels.group_by,
+                labels.ungroup,
+                labels.column_grouped,
+                labels.column_ungrouped,
             ] {
                 assert!(said("Stock").contains("Stock"), "{}", said("Stock"));
             }

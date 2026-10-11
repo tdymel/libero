@@ -176,7 +176,7 @@ e2e::scenario!(
     sorted_is_off
 );
 
-/// The menu of Name, sorted: sort ascending, descending, unsort, Filter, the moves.
+/// The menu of Name, sorted: sort ascending, descending, unsort, Filter, Group by, the moves.
 async fn a_menu_moves_a_column<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click("th[aria-label=Name] [data-sort-button]").await?;
     eventually(d, "Name sorted", async |d| {
@@ -185,13 +185,13 @@ async fn a_menu_moves_a_column<D: Driver>(d: &mut D, _route: &str) -> Result<()>
     .await?;
     d.click("button[aria-label=\"Name column options\"]")
         .await?;
-    let right = "[role=menuitem][data-menu-index=\"5\"]";
+    let right = "[role=menuitem][data-menu-index=\"6\"]";
     eventually(d, "the column menu to open", async |d| {
         d.exists(right).await
     })
     .await?;
     if d.text(right).await? != "Move right" {
-        bail!("entry 5 reads {:?}", d.text(right).await?);
+        bail!("entry 6 reads {:?}", d.text(right).await?);
     }
     d.click(right).await?;
     eventually_text(d, "#columns", "Stock Name Origin", "Move right").await?;
