@@ -53,6 +53,9 @@ static CHART_BASE_SX: StaticSx = StaticSx::new(|| {
         .gap("xs")
         // The hidden summary sits inside, not at the page's corner.
         .position("relative")
+        // Its width, not its content's: a loading or empty plot in a flex row keeps its size.
+        .width("100%")
+        .box_sizing("border-box")
         .min_width("0")
         .selector(ChartPart::Title.selector(), sx().font_weight("600"))
         .selector(ChartPart::Description.selector(), sx().color("text-dimmed"))
@@ -479,6 +482,7 @@ impl Frame {
                 div {
                     "data-slot": ChartPart::Plot.slot(),
                     onmounted: element.mount(),
+                    onresize: move |event| plot.onresize.call(event),
                     ..element.attributes(),
                     if loading {
                         Skeleton { height: "100%" }
@@ -876,6 +880,8 @@ pub(super) struct PlotSize {
     size: Signal<Option<(f32, f32)>>,
     /// Unsnapped, in CSS px: the overlay maps the pointer with it.
     pub(super) box_size: Signal<Option<(f64, f64)>>,
+    /// The plot's `onresize`: the web fires it, Blitz gets it from the fallback.
+    onresize: Callback<Event<ResizeData>>,
 }
 
 impl PlotSize {
@@ -903,11 +909,12 @@ pub(super) fn use_plot_size() -> PlotSize {
             box_size.set(Some((width, height)));
         }
     };
-    use_resize_fallback(element, move |event| {
+    let onresize = use_callback(move |event: Event<ResizeData>| {
         if let Ok(border) = event.get_border_box_size() {
             measured(border.width, border.height);
         }
     });
+    use_resize_fallback(element, move |event| onresize.call(event));
     use_effect(move || {
         if !element.is_mounted() {
             return;
@@ -925,5 +932,6 @@ pub(super) fn use_plot_size() -> PlotSize {
         element,
         size,
         box_size,
+        onresize,
     }
 }

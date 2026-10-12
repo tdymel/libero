@@ -11,7 +11,18 @@ pub const ROUTES: Routes = &[
     ("/pie-chart/donut", || rsx! { Donut {} }),
     ("/pie-chart/gauge", || rsx! { Gauge {} }),
     ("/pie-chart/rounded", || rsx! { Rounded {} }),
+    ("/pie-chart/loading", || rsx! { Loading {} }),
 ];
+
+/// A loading pie in a centring flex row, as the docs preview holds it.
+#[component]
+fn Loading() -> Element {
+    rsx! {
+        div { width: "480px", display: "flex", justify_content: "center",
+            PieChart { id: "chart", title: "Browsers", slices: slices(), loading: true }
+        }
+    }
+}
 
 /// A pie and a donut whose slices have rounded corners (3479).
 #[component]

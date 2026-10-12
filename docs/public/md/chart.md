@@ -592,7 +592,7 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `start_angle` | `f32` | `0` | Where the first slice starts, in degrees clockwise from 12 o'clock. |
 | `end_angle` | `Option<f32>` | a full turn | Where the last slice ends, in the same degrees: `start_angle: -90.0, end_angle: 90.0` is a half pie, a gauge with `donut`. At or before the start, it counts a turn on: `90.0` to `-90.0` is the lower half. |
 | `rose` | `bool` | `false` | A nightingale rose: every slice the same angle, its radius by its value. |
-| `label_position` | `PieLabelPosition` | `outside` | `outside` beside each slice, or `inside` on it in the ink that reads there. Inside, a label wider than its slice is left out; the summary keeps it. |
+| `label_position` | `PieLabelPosition` | `outside` | `outside` beside each slice, or `inside` on it in the ink that reads there. Inside, a label too wide or too tall for its slice is left out; the summary keeps it. |
 | `min_label_angle` | `Option<f32>` | `0` | A slice narrower than this many degrees gets no label; the summary still names it. |
 | `slice_gap` | `Option<f32>` | `1` | Between two slices, in pixels, in the page's colour. |
 | `slice_radius` | `Size` | `none` | Corner radius of a slice, on the theme's radius scale; a thin slice or a thin ring takes less. Unset, square. |

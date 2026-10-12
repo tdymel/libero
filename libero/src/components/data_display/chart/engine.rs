@@ -1437,12 +1437,18 @@ pub(crate) fn draw_pie(spec: &PieSpec) -> Option<Drawn> {
         false => (centre, hole),
     };
 
-    // A line of the page between two slices of a close colour.
-    let edge = format!(
-        " stroke=\"{}\" stroke-width=\"{}\"",
-        spec.ink.surface,
+    // A line of the page between two slices of a close colour; a lone slice has no seam.
+    let shares = spec
+        .slices
+        .iter()
+        .filter(|s| s.values.first().copied().flatten().is_some_and(|v| v > 0.0))
+        .count();
+    let gap = if shares > 1 {
         spec.slice_gap.max(0.0)
-    );
+    } else {
+        0.0
+    };
+    let edge = format!(" stroke=\"{}\" stroke-width=\"{gap}\"", spec.ink.surface);
     let (svg, triggers) = inert(
         &svg,
         |label| {
@@ -1779,11 +1785,22 @@ fn ink_slice_labels(
                 .iter()
                 .find(|(_, outline)| super::hit::contains(outline, x, y))
         });
-        // A label wider than its slice is dropped; the summary still has it.
+        // A label wider or taller than its slice is dropped; the summary still has it.
         let half = text_width(&attributes, label.trim()) / 2.0;
+        let rise = number("font-size").unwrap_or(14.0) * 0.35;
+        // Glyphs leave a box's corners empty: those are checked a little in.
+        let inset = half * 0.8;
         if let (Some((x, y)), Some((_, outline))) = (middle, on)
-            && !(super::hit::contains(outline, x - half, y)
-                && super::hit::contains(outline, x + half, y))
+            && ![
+                (-half, 0.0),
+                (half, 0.0),
+                (-inset, -rise),
+                (inset, -rise),
+                (inset, rise),
+                (-inset, rise),
+            ]
+            .iter()
+            .all(|(dx, dy)| super::hit::contains(outline, x + dx, y + dy))
         {
             rest = rest.find("</text>").map_or("", |close| &rest[close + 7..]);
             continue;
@@ -3430,6 +3447,17 @@ mod tests {
         assert!(svg.contains("75%") && !svg.contains("25%"), "{svg}");
     }
 
+    /// A slice that takes the whole pie, beside empty ones, shows no seam up to 12 o'clock.
+    #[test]
+    fn a_lone_slice_has_no_seam() {
+        let mut lone = pie(PieLabels::Percent, None);
+        lone.slice_gap = 4.0;
+        lone.slices = vec![spec("A", &[Some(0.0)]), spec("B", &[Some(3.0)])];
+        let svg = draw_pie(&lone).expect("drawn").svg;
+        assert!(!svg.contains("stroke-width=\"4\""), "{svg}");
+        assert!(svg.contains("stroke-width=\"0\""), "{svg}");
+    }
+
     /// A label inside sits on its own slice: not in a thin donut's hole, nor by a rose's
     /// small slice's centre.
     #[test]
@@ -3482,6 +3510,50 @@ mod tests {
         assert!(drawn.svg.contains("Chrome"), "{}", drawn.svg);
         assert!(!drawn.svg.contains("Internet Explorer"), "{}", drawn.svg);
         assert_eq!(drawn.geometry.marks.len(), 2, "{:?}", drawn.geometry);
+    }
+
+    /// On a half pie, the 10% label fits its slice's width but not its height: it would
+    /// reach onto the next slice, so it is dropped.
+    #[test]
+    fn a_label_taller_than_its_slice_is_dropped() {
+        let mut half = pie(PieLabels::Percent, None);
+        (half.width, half.height) = (304.0, 168.0);
+        (half.start_angle, half.end_angle) = (-90.0, Some(90.0));
+        half.labels_inside = true;
+        half.slices = [("A", 62.0), ("B", 20.0), ("C", 10.0), ("D", 8.0)]
+            .map(|(name, value)| spec(name, &[Some(value)]))
+            .to_vec();
+        let svg = draw_pie(&half).expect("drawn").svg;
+        let labels = text_contents(&svg);
+        assert!(labels.iter().any(|label| label.starts_with("62")), "{svg}");
+        assert!(!labels.iter().any(|label| label.starts_with("10")), "{svg}");
+    }
+
+    /// A donut's ring holds the labels of its wide slices: a box's corner just past the ring,
+    /// where no glyph reaches, keeps its label.
+    #[test]
+    fn a_ring_keeps_its_wide_slices_labels() {
+        let mut ring = pie(PieLabels::Percent, Some(0.4));
+        (ring.width, ring.height) = (304.0, 168.0);
+        ring.labels_inside = true;
+        ring.slices = [("A", 62.0), ("B", 20.0), ("C", 10.0), ("D", 8.0)]
+            .map(|(name, value)| spec(name, &[Some(value)]))
+            .to_vec();
+        let svg = draw_pie(&ring).expect("drawn").svg;
+        let labels = text_contents(&svg);
+        assert!(
+            ["62", "20"]
+                .iter()
+                .all(|share| labels.iter().any(|label| label.starts_with(share))),
+            "{svg}"
+        );
+    }
+
+    fn text_contents(svg: &str) -> Vec<&str> {
+        svg.split("<text ")
+            .skip(1)
+            .filter_map(|text| Some(text.split_once('>')?.1.split('<').next()?.trim()))
+            .collect()
     }
 
     /// Every label keeps inside the SVG: a pie's beside its slices on a phone, a bar's

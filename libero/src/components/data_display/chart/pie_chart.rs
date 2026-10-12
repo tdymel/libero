@@ -39,8 +39,8 @@ chart_props! {
         /// A nightingale rose: every slice the same angle, its radius by its value.
         #[props(default)]
         rose: bool,
-        /// Beside each slice or on it, where one wider than its slice is left out. Unset, the
-        /// theme's.
+        /// Beside each slice or on it, where one that does not fit its slice is left out.
+        /// Unset, the theme's.
         #[props(default, into)]
         label_position: Input<PieLabelPosition>,
         /// A slice narrower than this many degrees gets no label. Unset, the theme's.

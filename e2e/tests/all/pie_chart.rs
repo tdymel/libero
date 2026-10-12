@@ -45,6 +45,56 @@ fn the_slices_carry_their_shares() {
     });
 }
 
+/// A plot that narrows after its first measure is drawn again at its new width, so its text
+/// keeps its size.
+#[test]
+fn a_narrowed_plot_is_drawn_again_at_its_width() {
+    e2e::browser::block_on(async {
+        let fixture = Fixture::open("/pie-chart", Viewport::Desktop)
+            .await
+            .unwrap();
+        wait::for_js_true(
+            &fixture.page,
+            "document.querySelector('#chart svg')?.getAttribute('viewBox')?.startsWith('0 0 480 ')",
+            "the pie drawn at 480 px",
+        )
+        .await
+        .unwrap();
+        e2e::js::<String>(
+            &fixture.page,
+            "document.querySelector('#chart').parentElement.style.maxWidth = '320px'",
+        )
+        .await;
+        wait::for_js_true(
+            &fixture.page,
+            "document.querySelector('#chart svg')?.getAttribute('viewBox')?.startsWith('0 0 320 ')",
+            "the pie drawn again at 320 px",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A loading chart in a flex row keeps the row's width, its placeholder the plot's size,
+/// rather than shrink to its title.
+#[test]
+fn a_loading_chart_keeps_its_width_in_a_flex_row() {
+    e2e::browser::block_on(async {
+        let fixture = Fixture::open("/pie-chart/loading", Viewport::Desktop)
+            .await
+            .unwrap();
+        wait::for_js_true(
+            &fixture.page,
+            "document.querySelector('#chart [data-slot=plot]')?.getBoundingClientRect().width === 480",
+            "the loading plot 480 px wide",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// In a right-to-left page the labels stay where they are drawn left to right, beside
 /// their slices rather than flipped over them.
 #[test]
