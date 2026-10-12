@@ -49,6 +49,7 @@ fn y_range(values: &DemoValues) -> Option<(f64, f64)> {
     match (values.str("y_range").as_str(), values.str("type").as_str()) {
         ("auto", _) => None,
         (_, "bar") => Some((-50.0, 200.0)),
+        _ if values.str("area") == "stacked" => Some((0.0, 450.0)),
         _ => Some((50.0, 250.0)),
     }
 }
@@ -92,6 +93,8 @@ pub fn ChartPage() -> Element {
                     prop("description", "Option<String>").doc("A sentence under the title: what to read from the chart."),
                     prop("curve", "Curve").default(theme.chart.curve.as_str()).doc("`linear`, `smooth` or `step`."),
                     prop("points", "Option<bool>").default(on(theme.chart.points)).doc("A dot on every point; never past the theme's `points_limit` points."),
+                    prop("area", "Option<bool>").default(on(theme.chart.area)).doc("The area under each line filled in its colour, at the theme's `area_opacity`."),
+                    prop("stacked", "bool").default("false").doc("Each line drawn on top of the ones before it, so the top one is the total; with `area`, each fills down to the line below. The tooltip and the keys keep each line's own value."),
                     prop("y_min", "Option<f64>").doc("The y axis' lowest value. Unset, 0 or the lowest value below it."),
                     prop("y_max", "Option<f64>").doc("The y axis' highest value. Unset, a round number at or over the highest value."),
                     prop("y_ticks", "Option<usize>").default(theme.chart.y_ticks.to_string()).doc("The steps the y axis is cut into: 4 writes 5 labels."),
@@ -174,7 +177,7 @@ pub fn ChartPage() -> Element {
                 .key(["Escape"], "Clears the point and its tooltip.")
                 .handles([
                     "The chart is a `role=\"figure\"` named by `title`. The drawing is hidden from screen readers.",
-                    "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is, then the axes' titles; a pie's, the total, then each slice's value and share.",
+                    "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is, then the axes' titles and, stacked, that the top line is the total; a pie's, the total, then each slice's value and share.",
                     "The plot is one tab stop, a `role=\"application\"` described as a chart, so a screen reader hands it the arrows. Each point the keys reach is announced, as \"This week, Tue: 132\" or \"Chrome: 62, 62%.\"",
                     "The legend's entries are toggle buttons: pressed while their series or slice shows, struck through when hidden. The last shown one's button is `aria-disabled`. A dashed line's key is a dash, as drawn; once a line sets a `symbol`, each key is its line's point shape.",
                     "On a touch screen a tap pins a point's tooltip, a second tap on it clicks; a vertical swipe still scrolls the page.",
@@ -246,6 +249,14 @@ pub fn ChartPage() -> Element {
                     Control::select("curve", ["linear", "smooth", "step"])
                         .default(theme.chart.curve.as_str())
                         .hidden_when(is("line")),
+                    Control::toggle("area", ["filled", "stacked", "none"])
+                        .default("filled")
+                        .hidden_when(is("line"))
+                        .code(|_, values| match values.str("area").as_str() {
+                            "filled" => vec!["area: true".to_string()],
+                            "stacked" => vec!["area: true".to_string(), "stacked: true".to_string()],
+                            _ => vec![],
+                        }),
                     Control::select("layout", ["grouped", "stacked", "percent"])
                         .default(theme.chart.bar_layout.as_str())
                         .hidden_when(is("bar")),
@@ -337,6 +348,8 @@ pub fn ChartPage() -> Element {
                                     Series::new("Last week", LAST_WEEK).dashed().symbol(PointSymbol::Square),
                                 ],
                                 curve: Curve::from(values.str("curve").as_str()),
+                                area: values.str("area") != "none",
+                                stacked: values.str("area") == "stacked",
                                 y_min, y_max, y_ticks, x_title, y_title,
                                 legend, tooltip, loading,
                             }

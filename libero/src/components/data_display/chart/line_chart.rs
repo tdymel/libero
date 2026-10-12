@@ -29,6 +29,13 @@ chart_props! {
         /// A dot on every point. Unset, the theme's; never past its `points_limit` points.
         #[props(default)]
         points: Option<bool>,
+        /// The area under each line filled in its colour, see-through. Unset, the theme's.
+        #[props(default)]
+        area: Option<bool>,
+        /// Each line drawn on top of the ones before it, so the top one is the total; with
+        /// `area`, each fills down to the line below. The tooltip keeps each line's own value.
+        #[props(default)]
+        stacked: bool,
         /// The y axis' lowest value. Unset, 0 or the lowest value below it.
         #[props(default)]
         y_min: Option<f64>,
@@ -120,6 +127,11 @@ pub fn LineChart(props: LineChartProps) -> Element {
             x_title: props.x_title.clone(),
             y_title: props.y_title.clone(),
         },
+        area: props
+            .area
+            .unwrap_or(theme.chart.area)
+            .then_some(theme.chart.area_opacity),
+        stacked: props.stacked,
         grid: props.grid.unwrap_or(theme.chart.grid),
         points,
         stroke_width: theme.chart.stroke_width,
@@ -142,6 +154,9 @@ pub fn LineChart(props: LineChartProps) -> Element {
         (false, false) => {
             let mut sentences = summary(&labels, labels.line, &x, &props.series, write);
             sentences.extend(axis_titles(&labels, &props.x_title, &props.y_title));
+            if props.stacked {
+                sentences.push(labels.stacked.to_string());
+            }
             sentences
         }
     };
@@ -403,6 +418,28 @@ mod tests {
             html.contains("X axis: Day.") && html.contains("Y axis: Visits."),
             "{html}"
         );
+    }
+
+    /// Areas are see-through at the theme's opacity; a stack's summary says what its heights mean.
+    #[test]
+    fn stacked_areas_are_drawn_and_summarized() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    LineChart {
+                        title: "Visitors",
+                        x: ["Mon", "Tue"],
+                        series: vec![Series::new("Web", [1.0, 2.0]), Series::new("App", [3.0, 1.0])],
+                        area: true,
+                        stacked: true,
+                    }
+                }
+            }
+        });
+        assert_eq!(html.matches("fill-opacity=\"0.2\"").count(), 2, "{html}");
+        assert!(html.contains("the top one is the total."), "{html}");
+        // Each line still reports its own values.
+        assert!(html.contains("App: 1 to 3, highest at Mon."), "{html}");
     }
 
     #[test]

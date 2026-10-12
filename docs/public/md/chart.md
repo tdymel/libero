@@ -35,6 +35,7 @@ fn Demo() -> Element {
                     .dashed()
                     .symbol(PointSymbol::Square),
             ],
+            area: true,
         }
     }
 }
@@ -54,7 +55,8 @@ in the tooltip and summary; a unit every series shares labels the y axis.
 Values group their thousands as the `Formats` say: `12,500` or `12.500`.
 `.symbol(PointSymbol::Square)` draws a line's points as squares, `Triangle` or
 `Diamond` as those: a cue beside the colour. Once one line sets its shape, every
-legend key shows its line's.
+legend key shows its line's. `area: true` fills under each line in its colour,
+see-through at the theme's `area_opacity`, so the grid and the other lines show.
 
 `BarChart` takes the same `Series`:
 
@@ -163,6 +165,32 @@ fn Demo() -> Element {
 }
 ```
 
+`stacked: true` draws each line on top of the ones before it, so the top one is
+the total; with `area`, each fills down to the line below. The tooltip, the keys
+and the summary keep each line's own value, and the summary says the top line is
+the total.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{LineChart, Series};
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        LineChart {
+            title: "Visitors by device",
+            x: ["Mon", "Tue", "Wed", "Thu", "Fri"],
+            series: vec![
+                Series::new("Desktop", [80.0, 92.0, 71.0, 84.0, 60.0]),
+                Series::new("Mobile", [40.0, 40.0, 30.0, 50.0, 30.0]),
+            ],
+            area: true,
+            stacked: true,
+        }
+    }
+}
+```
+
 The pointer or the arrow keys pick a point, a bar or a slice: a tooltip shows
 its values there. `onpointclick` reports a clicked one, and the legend's buttons
 hide and show series or slices.
@@ -243,6 +271,8 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `description` | `Option<String>` | | A sentence under the title: what to read from the chart. |
 | `curve` | `Curve` | `linear` | `linear`, `smooth` or `step`. |
 | `points` | `Option<bool>` | `true` | A dot on every point; never past the theme's `points_limit` points. |
+| `area` | `Option<bool>` | `false` | The area under each line filled in its colour, at the theme's `area_opacity`. |
+| `stacked` | `bool` | `false` | Each line drawn on top of the ones before it, so the top one is the total; with `area`, each fills down to the line below. The tooltip and the keys keep each line's own value. |
 | `y_min` | `Option<f64>` | | The y axis' lowest value. Unset, 0 or the lowest value below it. |
 | `y_max` | `Option<f64>` | | The y axis' highest value. Unset, a round number at or over the highest value. |
 | `y_ticks` | `Option<usize>` | `6` | The steps the y axis is cut into: 4 writes 5 labels. |
@@ -342,7 +372,8 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 - The chart is a `role="figure"` named by `title`. The drawing is hidden from
   screen readers.
 - A hidden summary gives the x range and each series' lowest and highest value,
-  and where the highest is, then the axes' titles; a pie's, the total, then each
+  and where the highest is, then the axes' titles and, stacked, that the top line
+  is the total; a pie's, the total, then each
   slice's value and share.
 - The plot is one tab stop, a `role="application"` described as a chart, so a
   screen reader hands it the arrows. Each point the keys reach is announced, as
@@ -397,6 +428,8 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 | `points_limit` | `usize` | No dots past this many points. |
 | `tooltip` | `bool` | Default `tooltip`. |
 | `stroke_width` | `f32` | Line width, in pixels. |
+| `area` | `bool` | Default `area`. |
+| `area_opacity` | `f32` | How opaque an area under a line is, from 0 to 1. |
 | `y_ticks` | `usize` | Default `y_ticks`. |
 | `bar_layout` | `BarLayout` | Default `layout`. |
 | `bar_radius` | `Size` | Default `radius`. |

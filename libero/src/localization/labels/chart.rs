@@ -33,6 +33,8 @@ pub struct ChartLabels {
     pub x_axis: &'static str,
     /// The y axis' `{title}`, in the summary.
     pub y_axis: &'static str,
+    /// The summary of a stacked line chart: what its heights mean.
+    pub stacked: &'static str,
 }
 
 impl ChartLabels {
@@ -54,6 +56,7 @@ impl ChartLabels {
         point: "{name}, {x}: {value}",
         x_axis: "X axis: {title}.",
         y_axis: "Y axis: {title}.",
+        stacked: "Stacked: each line adds to the ones before it, the top one is the total.",
     };
 
     pub const GERMAN: Self = Self {
@@ -74,5 +77,6 @@ impl ChartLabels {
         point: "{name}, {x}: {value}",
         x_axis: "X-Achse: {title}.",
         y_axis: "Y-Achse: {title}.",
+        stacked: "Gestapelt: jede Linie addiert sich zu den vorigen, die oberste ist die Summe.",
     };
 }

@@ -162,6 +162,9 @@ pub(crate) struct LineSpec {
     pub(crate) x_numbers: Vec<f64>,
     pub(crate) series: Vec<SeriesSpec>,
     pub(crate) curve: Curve,
+    /// The areas' opacity; `None`, no area.
+    pub(crate) area: Option<f32>,
+    pub(crate) stacked: bool,
     pub(crate) axes: Axes,
     pub(crate) grid: bool,
     pub(crate) points: bool,
@@ -233,6 +236,7 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
             drawn.colors = Some(vec![Some(ink(series.color))]);
             drawn.stroke_dash_array = series.dashed.then(|| DASH.to_string());
             drawn.symbol = Some(symbol(spec, series));
+            drawn.stack = spec.stacked.then(|| "stack".to_string());
             match spec.curve {
                 Curve::Linear => {}
                 Curve::Smooth => drawn.smooth = Some(true),
@@ -251,6 +255,8 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
     chart.tooltip.show = true;
     chart.animation = None;
     chart.series.stroke_width = spec.stroke_width;
+    chart.series.fill = spec.area.is_some();
+    chart.series.fill_opacity = spec.area;
     chart.series.colors = spec.series.iter().map(|s| ink(s.color)).collect();
     chart.grid.stroke_color = match spec.grid {
         true => ink(spec.ink.grid),
@@ -1120,6 +1126,8 @@ mod tests {
             x_numbers: Vec::new(),
             series,
             curve: Curve::Linear,
+            area: None,
+            stacked: false,
             axes: axes(),
             grid: true,
             points: true,
@@ -1196,6 +1204,35 @@ mod tests {
             assert!(!drawn.svg.contains("<circle"), "{symbol:?}: {}", drawn.svg);
             assert_eq!(drawn.geometry.marks.len(), 3, "{symbol:?}");
         }
+    }
+
+    /// An area is filled see-through at the theme's opacity; stacked, each line sits on the
+    /// one before and its point keeps its own value.
+    #[test]
+    fn stacked_areas_fill_between_the_lines() {
+        let series = vec![
+            spec("A", &[Some(1.0), Some(2.0)]),
+            spec("B", &[Some(3.0), Some(1.0)]),
+        ];
+        let mut spec = line(series, &["a", "b"]);
+        spec.area = Some(Theme::DEFAULT.chart.area_opacity);
+        let alone = draw_line(&spec).expect("drawn");
+        spec.stacked = true;
+        let stacked = draw_line(&spec).expect("drawn");
+        assert!(
+            stacked.svg.contains("fill-opacity=\"0.2\""),
+            "{}",
+            stacked.svg
+        );
+        let values: Vec<f64> = stacked.geometry.marks.iter().map(|m| m.value).collect();
+        assert_eq!(values, [1.0, 2.0, 3.0, 1.0]);
+        let y = |drawn: &Drawn, i: usize| match drawn.geometry.marks[i].shape {
+            MarkShape::Point { y, .. } => y,
+            _ => panic!(),
+        };
+        // At b, B's 1 is under A's 2 alone, stacked over it at 2 + 1.
+        assert!(y(&alone, 3) > y(&alone, 1), "{}", alone.svg);
+        assert!(y(&stacked, 3) < y(&stacked, 1), "{}", stacked.svg);
     }
 
     /// A lying bar chart's value axis is at the bottom: the y title goes there.

@@ -91,6 +91,10 @@ pub struct ChartDefaults {
     /// A tooltip and a crosshair under the pointer and the keys.
     pub tooltip: bool,
     pub stroke_width: f32,
+    /// The area under each line filled.
+    pub area: bool,
+    /// How opaque an area under a line is, from 0 to 1: low, so the lines and grid show through.
+    pub area_opacity: f32,
     /// The steps a line or bar chart's value axis is cut into.
     pub y_ticks: usize,
     pub bar_layout: BarLayout,
@@ -126,6 +130,8 @@ impl ChartDefaults {
         points_limit: 200,
         tooltip: true,
         stroke_width: 2.0,
+        area: false,
+        area_opacity: 0.2,
         y_ticks: 6,
         bar_layout: BarLayout::Grouped,
         bar_radius: Size::Xs,
