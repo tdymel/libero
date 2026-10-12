@@ -51,7 +51,8 @@ async fn arrow_down_opens_and_escape_returns<D: Driver>(d: &mut D, _route: &str)
     d.focus(&trigger(1)).await?;
     d.press(keyboard::ARROW_DOWN).await?;
     only_open(d, 1, "ArrowDown").await?;
-    eventually_focused(d, "[role=menuitem]", "ArrowDown").await?;
+    // The trigger is a menuitem too: wait for focus inside the menu.
+    eventually_focused(d, "[role=menu] [role=menuitem]", "ArrowDown").await?;
     d.press(keyboard::ESCAPE).await?;
     eventually(d, "Escape to close it", async |d| {
         Ok(!d.exists(MENU).await?)
