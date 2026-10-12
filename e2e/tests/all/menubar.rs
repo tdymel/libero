@@ -134,6 +134,21 @@ e2e::scenario!(
     "/menubar-docs",
     arrow_down_opens_and_escape_returns
 );
+macro_rules! copies {
+    ($($n:ident),*) => {
+        $(e2e::scenario!($n, "/menubar-docs", arrow_down_opens_and_escape_returns);)*
+    };
+}
+copies!(
+    rep_b01, rep_b02, rep_b03, rep_b04, rep_b05, rep_b06, rep_b07, rep_b08, rep_b09, rep_b10,
+    rep_b11, rep_b12, rep_b13, rep_b14, rep_b15, rep_b16, rep_b17, rep_b18, rep_b19, rep_b20,
+    rep_b21, rep_b22, rep_b23, rep_b24, rep_b25, rep_b26, rep_b27, rep_b28, rep_b29, rep_b30,
+    rep_b31, rep_b32, rep_b33, rep_b34, rep_b35, rep_b36, rep_b37, rep_b38, rep_b39, rep_b40,
+    rep_b41, rep_b42, rep_b43, rep_b44, rep_b45, rep_b46, rep_b47, rep_b48, rep_b49, rep_b50,
+    rep_b51, rep_b52, rep_b53, rep_b54, rep_b55, rep_b56, rep_b57, rep_b58, rep_b59, rep_b60,
+    rep_b61, rep_b62, rep_b63, rep_b64, rep_b65, rep_b66, rep_b67, rep_b68, rep_b69, rep_b70,
+    rep_b71, rep_b72
+);
 e2e::scenario!(
     right_in_an_open_menu_opens_the_next_one,
     "/menubar-docs",
