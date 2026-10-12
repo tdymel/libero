@@ -301,6 +301,26 @@ e2e::scenario!(
     native: skip("Blitz runs no script to stub the picker; `crop_bytes` unit tests cover the cut")
 );
 
+async fn crop_stress_body<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#stub-picker").await?;
+    let held = eventually_text(d, "#stubbed", "true", "stubbing the picker").await;
+    if let Err(err) = held {
+        let patched = d
+            .evaluate("String(!HTMLInputElement.prototype.click.toString().includes('native code'))")
+            .await?;
+        anyhow::bail!("{err}; picker patched: {patched}");
+    }
+    Ok(())
+}
+
+macro_rules! crop_stress {
+    ($($name:ident)*) => {
+        $(e2e::scenario!($name, "/file-field/crop", crop_stress_body, ios_only("stress"));)*
+    };
+}
+
+crop_stress!(crop_stress_01 crop_stress_02 crop_stress_03 crop_stress_04 crop_stress_05 crop_stress_06 crop_stress_07 crop_stress_08 crop_stress_09 crop_stress_10 crop_stress_11 crop_stress_12 crop_stress_13 crop_stress_14 crop_stress_15 crop_stress_16 crop_stress_17 crop_stress_18 crop_stress_19 crop_stress_20 crop_stress_21 crop_stress_22 crop_stress_23 crop_stress_24 crop_stress_25 crop_stress_26 crop_stress_27 crop_stress_28 crop_stress_29 crop_stress_30);
+
 /// The box and the image around it take touches (2113); the bars under the image still scroll the page.
 async fn the_image_claims_touches<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     // An id, not `:has(...)`, which Blitz cannot parse.
