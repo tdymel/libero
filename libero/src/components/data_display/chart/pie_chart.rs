@@ -32,13 +32,14 @@ chart_props! {
         #[props(default)]
         start_angle: f32,
         /// Where the last slice ends, in the same degrees: `-90` to `90` is a half pie, a
-        /// gauge as a `donut`. Unset, a full turn.
+        /// gauge as a `donut`; at or before the start, it counts a turn on. Unset, a full turn.
         #[props(default)]
         end_angle: Option<f32>,
         /// A nightingale rose: every slice the same angle, its radius by its value.
         #[props(default)]
         rose: bool,
-        /// Beside each slice or on it. Unset, the theme's.
+        /// Beside each slice or on it, where one wider than its slice is left out. Unset, the
+        /// theme's.
         #[props(default, into)]
         label_position: Input<PieLabelPosition>,
         /// A slice narrower than this many degrees gets no label. Unset, the theme's.

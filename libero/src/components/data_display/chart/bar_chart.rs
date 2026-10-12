@@ -17,6 +17,7 @@ use crate::{
     hooks::{use_accessibility, use_formats, use_localization, use_root_id, use_theme},
     theme::{BarLabelPosition, BarLayout, ChartInk, chart_palette},
     tokens::Size,
+    utils::warn,
 };
 
 chart_props! {
@@ -38,10 +39,12 @@ chart_props! {
         /// Each bar's value written on it. Unset, the theme's.
         #[props(default)]
         value_labels: Option<bool>,
-        /// The value axis' lowest value. Unset, 0 or the lowest value below it.
+        /// The value axis' lowest value. Unset, 0 or the lowest value below it. Ignored by
+        /// `percent`, which runs 0 to 100%.
         #[props(default)]
         y_min: Option<f64>,
         /// The value axis' highest value. Unset, a round number at or over the highest value.
+        /// Ignored by `percent`.
         #[props(default)]
         y_max: Option<f64>,
         /// The steps the value axis is cut into: 4 writes 5 labels. Unset, the theme's.
@@ -54,7 +57,8 @@ chart_props! {
         #[props(default, into)]
         y_title: Option<String>,
         /// `"inside"` the bar or `"outside"` past its end; a stack writes inside. Unset, the
-        /// theme's, else inside a lying bar or one with error ranges, past the rest's end.
+        /// theme's, else chart-wide: inside on a `horizontal` chart or once any shown series
+        /// has error ranges, past the end otherwise.
         #[props(default, into)]
         value_label_position: Input<BarLabelPosition>,
         /// The share of a category's band its bars fill, clamped to `0.1..=1`. Unset, the
@@ -147,6 +151,16 @@ pub fn BarChart(props: BarChartProps) -> Element {
     let horizontal = props.orientation.copied_or(Orientation::Vertical) == Orientation::Horizontal;
     let unit = chart_unit(&props.unit, &props.series);
     let layout = props.layout.copied_or(theme.chart.bar_layout);
+    // Shares run 0 to 100%: raw bounds would stretch them.
+    let percent = layout == BarLayout::Percent;
+    let ignored_bounds = percent && (props.y_min.is_some() || props.y_max.is_some());
+    use_hook(move || {
+        if ignored_bounds {
+            warn(
+                "BarChart: `y_min` and `y_max` do nothing on a `percent` layout, which runs 0 to 100%.",
+            );
+        }
+    });
     // In a stack a label sits on its own segment, never on the next one's.
     let labels_inside = layout != BarLayout::Grouped
         || match props
@@ -188,8 +202,8 @@ pub fn BarChart(props: BarChartProps) -> Element {
         ),
         value_labels: props.value_labels.unwrap_or(theme.chart.value_labels),
         axes: Axes {
-            min: props.y_min,
-            max: props.y_max,
+            min: props.y_min.filter(|_| !percent),
+            max: props.y_max.filter(|_| !percent),
             ticks: props.y_ticks.unwrap_or(theme.chart.y_ticks),
             x_title: props.x_title.clone(),
             y_title: props.y_title.clone(),
@@ -430,6 +444,31 @@ mod tests {
         assert_eq!(bars(&html), 4, "{html}");
         assert!(html.contains("75%"), "{html}");
         assert!(html.contains("A: 1 to 3, highest at b."), "{html}");
+    }
+
+    /// A percent axis runs 0 to 100% whatever `y_min` and `y_max` say.
+    #[test]
+    fn a_percent_axis_ignores_the_bounds() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    BarChart {
+                        title: "Shares",
+                        layout: "percent",
+                        x: ["a", "b"],
+                        series: vec![Series::new("A", [1.0, 3.0]), Series::new("B", [3.0, 1.0])],
+                        y_min: -50.0,
+                        y_max: 200.0,
+                    }
+                }
+            }
+        });
+        let drawing = html.split("data-chart-drawing=").nth(1).unwrap_or_default();
+        assert!(drawing.contains("\n100%\n"), "{html}");
+        assert!(
+            !drawing.contains("\n200%\n") && !drawing.contains("\n-50%\n"),
+            "{html}"
+        );
     }
 
     /// Unset, upright bars with error ranges write their values inside, off the error bars.

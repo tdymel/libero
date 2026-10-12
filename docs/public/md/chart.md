@@ -518,17 +518,17 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `orientation` | `Orientation` | `vertical` | `horizontal` lays the categories down the side, top to bottom. |
 | `radius` | `Size` | `xs` | Corner radius of a bar's free end, the one away from its axis, on the theme's radius scale. |
 | `value_labels` | `Option<bool>` | `false` | Each bar's value written on it. |
-| `y_min` | `Option<f64>` | | The value axis' lowest value. Unset, 0 or the lowest value below it. |
-| `y_max` | `Option<f64>` | | The value axis' highest value. Unset, a round number at or over the highest value. |
+| `y_min` | `Option<f64>` | | The value axis' lowest value. Unset, 0 or the lowest value below it. Ignored by `percent`, which runs 0 to 100%. |
+| `y_max` | `Option<f64>` | | The value axis' highest value. Unset, a round number at or over the highest value. Ignored by `percent`. |
 | `y_ticks` | `Option<usize>` | `6` | The steps the value axis is cut into: 4 writes 5 labels. |
 | `x_title` | `Option<String>` | | Along the categories: what they are. Under them, or beside them when `horizontal`. |
 | `y_title` | `Option<String>` | | Along the values: what they measure. Beside them, or under them when `horizontal`. |
-| `value_label_position` | `BarLabelPosition` | inside a lying bar or one with error ranges, past the rest's end | `inside` the bar, in the ink that reads on it, or `outside` past its end. A stack always writes inside. |
+| `value_label_position` | `BarLabelPosition` | chart-wide: inside on a `horizontal` chart or once any shown series has error ranges, past the end otherwise | `inside` the bar, in the ink that reads on it, or `outside` past its end. A stack always writes inside. |
 | `bar_width` | `Option<f32>` | 5 px off each side of the band | The share of a category's band its bars fill, clamped to `0.1..=1`. |
 | `bar_gap` | `Option<f32>` | `3` | Between two bars of a group, in pixels. |
 | `legend` | `LegendPosition` | bottom with two series or more | `bottom`, `top`, `start`, `end` or `none`. |
 | `grid` | `Option<bool>` | `true` | Guide lines across the values. |
-| `value_format` | `ValueFormat` | `Auto` | How values are written on the axis, the bars, in the tooltip and in the summary. |
+| `value_format` | `ValueFormat` | `Auto` | How values are written on the axis, the bars, in the tooltip and in the summary. On `percent` the axis and the bars write shares in percent. |
 | `unit` | `Option<String>` | | After every value, as `"kg"`. |
 | `aspect_ratio` | `Option<f32>` | `16 / 9` | Width over height of the plot. |
 | `loading` | `bool` | `false` | A placeholder instead of the plot, and `aria-busy` on the chart. |
@@ -553,12 +553,12 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `title` | `Option<String>` | | Shown above the chart, and its accessible name. |
 | `description` | `Option<String>` | | A sentence under the title: what to read from the chart. |
 | `donut` | `bool` | `false` | A ring instead of a full pie, `center` in its middle. |
-| `labels` | `PieLabels` | `percent` | Beside each slice: `percent`, `value`, `name` or `none`. |
+| `labels` | `PieLabels` | `percent` | Beside each slice: `percent`, `value`, `name` or `none`. One too long for the room ends in an ellipsis; the tooltip and the summary write it whole. |
 | `center` | `Option<Element>` | | In a donut's hole, as a total, kept off the ring; its text shrinks in a small hole, the rest is clipped. |
 | `start_angle` | `f32` | `0` | Where the first slice starts, in degrees clockwise from 12 o'clock. |
-| `end_angle` | `Option<f32>` | a full turn | Where the last slice ends, in the same degrees: `start_angle: -90.0, end_angle: 90.0` is a half pie, a gauge with `donut`. |
+| `end_angle` | `Option<f32>` | a full turn | Where the last slice ends, in the same degrees: `start_angle: -90.0, end_angle: 90.0` is a half pie, a gauge with `donut`. At or before the start, it counts a turn on: `90.0` to `-90.0` is the lower half. |
 | `rose` | `bool` | `false` | A nightingale rose: every slice the same angle, its radius by its value. |
-| `label_position` | `PieLabelPosition` | `outside` | `outside` beside each slice, or `inside` on it in the ink that reads there. |
+| `label_position` | `PieLabelPosition` | `outside` | `outside` beside each slice, or `inside` on it in the ink that reads there. Inside, a label wider than its slice is left out; the summary keeps it. |
 | `min_label_angle` | `Option<f32>` | `0` | A slice narrower than this many degrees gets no label; the summary still names it. |
 | `slice_gap` | `Option<f32>` | `1` | Between two slices, in pixels, in the page's colour. |
 | `legend` | `LegendPosition` | bottom with two slices or more | `bottom`, `top`, `start`, `end` or `none`. |
@@ -587,7 +587,7 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 
 | Key | Action |
 |---|---|
-| `Tab` | Into the plot, then on to the legend's buttons. |
+| `Tab` | Into the plot and the legend's buttons in the order drawn: a legend at the top or the start comes first. |
 | `ArrowRight` / `ArrowLeft` | Line: the next or previous point of the line, as drawn, left to right in either text direction. Bar: the next or previous category's bar of the series; `horizontal`, the next or previous series' bar in the category. Pie: the next or previous slice, clockwise. |
 | `ArrowDown` / `ArrowUp` | Line: the next or previous line at the same x value, or its nearest point. Bar: the next or previous series' bar in the category; `horizontal`, the next or previous category, top to bottom. Pie: the next or previous slice. |
 | `Home` / `End` | The line's or the series' first or last point or bar; a pie's first or last slice. |
@@ -697,7 +697,7 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 | `bar_layout` | `BarLayout` | Default `layout`. |
 | `bar_radius` | `Size` | Default `radius`. |
 | `value_labels` | `bool` | Default `value_labels`. |
-| `bar_label_position` | `Option<BarLabelPosition>` | Default `value_label_position`; `None` inside a stack, a lying bar or one with error ranges, else past the end. |
+| `bar_label_position` | `Option<BarLabelPosition>` | Default `value_label_position`; `None` inside a stack, a lying chart or one where any shown series has error ranges, else past the end. |
 | `bar_width` | `Option<f32>` | Default `bar_width`; `None` leaves 5 px each side. |
 | `bar_gap` | `f32` | Default `bar_gap`, in pixels. |
 | `donut_thickness` | `f32` | A donut's ring width over the pie's radius. |

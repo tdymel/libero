@@ -124,8 +124,8 @@ pub struct ChartDefaults {
     pub bar_radius: Size,
     /// Each bar's value written at its end.
     pub value_labels: bool,
-    /// Where the value labels sit; `None` inside a stack, a lying bar or one with error
-    /// ranges, else past the end.
+    /// Where the value labels sit; `None` inside a stack, a lying chart or one where any
+    /// shown series has error ranges, else past the end.
     pub bar_label_position: Option<BarLabelPosition>,
     /// The share of a category's band its bars fill, `0.1..=1`; `None` leaves 5 px each side.
     pub bar_width: Option<f32>,

@@ -1038,11 +1038,15 @@ pub(crate) struct PieSpec {
 }
 
 impl PieSpec {
-    /// The degrees the slices share.
+    /// The degrees the slices share. An end at or before the start counts a turn on.
     fn span(&self) -> f32 {
         match self.end_angle {
             Some(end) if end.is_finite() && end > self.start_angle => {
                 (end - self.start_angle).min(360.0)
+            }
+            Some(end) if end.is_finite() => {
+                let span = (end - self.start_angle).rem_euclid(360.0);
+                if span > 0.0 { span } else { 360.0 }
             }
             _ => 360.0,
         }
@@ -1201,6 +1205,10 @@ pub(crate) fn draw_pie(spec: &PieSpec) -> Option<Drawn> {
     let svg = relabel(&svg, PERCENT_MARK, |share| {
         ValueFormat::Percent.format(share / 100.0, None, spec.formats)
     });
+    let svg = match spec.labels_inside {
+        true => svg,
+        false => cut_labels(&svg, spec.width),
+    };
     // Every slice is drawn, an empty one too.
     let expected: Vec<_> = spec
         .slices
@@ -1283,6 +1291,63 @@ fn centre_inside_labels(svg: &str, centre: (f32, f32), hole: f32) -> String {
     out
 }
 
+/// Cuts a label that leaves the SVG at a side short with an ellipsis, inside [`EDGE`]; the
+/// tooltip and the summary keep the whole text.
+fn cut_labels(svg: &str, width: f32) -> String {
+    let mut out = String::with_capacity(svg.len());
+    let mut rest = svg;
+    while let Some(start) = rest.find("<text ") {
+        out.push_str(&rest[..start]);
+        let end = rest[start..]
+            .find('>')
+            .map_or(rest.len(), |end| start + end + 1);
+        let tag = &rest[start..end];
+        rest = &rest[end..];
+        let attributes = attributes(tag);
+        let text_end = rest.find('<').unwrap_or(rest.len());
+        let label = unescape(rest[..text_end].trim());
+        let anchor = attribute(&attributes, "text-anchor");
+        let Some(x) = attribute(&attributes, "x").and_then(|x| x.parse::<f32>().ok()) else {
+            out.push_str(tag);
+            continue;
+        };
+        let drawn = text_width(&attributes, &label);
+        let left = match anchor {
+            Some("middle") => x - drawn / 2.0,
+            Some("end") => x - drawn,
+            _ => x,
+        };
+        let (from, to) = (left.max(EDGE), (left + drawn).min(width - EDGE));
+        let tip = attribute(&attributes, "class") == Some("ct-tip");
+        if tip || label.is_empty() || (from <= left && to >= left + drawn) {
+            out.push_str(tag);
+            continue;
+        }
+        let mut chars: Vec<char> = label.chars().collect();
+        let mut cut = String::from("…");
+        while chars.pop().is_some() {
+            cut = chars.iter().collect::<String>().trim_end().to_string() + "…";
+            if text_width(&attributes, &cut) <= to - from || chars.is_empty() {
+                break;
+            }
+        }
+        let x = match anchor {
+            Some("middle") => (from + to) / 2.0,
+            Some("end") => to,
+            _ => from,
+        };
+        let kept: String = attributes
+            .iter()
+            .filter(|(attribute, _)| *attribute != "x")
+            .map(|(attribute, value)| format!(" {attribute}=\"{value}\""))
+            .collect();
+        out.push_str(&format!("<text x=\"{x}\"{kept}>\n{}\n", escape(&cut)));
+        rest = &rest[text_end..];
+    }
+    out.push_str(rest);
+    out
+}
+
 /// Gives every label drawn on a slice the ink that reads on that slice; one off every
 /// slice takes `off`.
 fn ink_slice_labels(
@@ -1324,13 +1389,21 @@ fn ink_slice_labels(
             };
             (x, y - size * 0.35)
         });
-        let hex = middle
-            .and_then(|(x, y)| {
-                outlines
-                    .iter()
-                    .find(|(_, outline)| super::hit::contains(outline, x, y))
-            })
-            .map_or(off, |(slice, _)| ink(*slice));
+        let on = middle.and_then(|(x, y)| {
+            outlines
+                .iter()
+                .find(|(_, outline)| super::hit::contains(outline, x, y))
+        });
+        // A label wider than its slice is dropped; the summary still has it.
+        let half = text_width(&attributes, label.trim()) / 2.0;
+        if let (Some((x, y)), Some((_, outline))) = (middle, on)
+            && !(super::hit::contains(outline, x - half, y)
+                && super::hit::contains(outline, x + half, y))
+        {
+            rest = rest.find("</text>").map_or("", |close| &rest[close + 7..]);
+            continue;
+        }
+        let hex = on.map_or(off, |(slice, _)| ink(*slice));
         out.push_str(&tag.replace(ON_BAR_FILL, &format!("fill=\"{hex}\"")));
     }
     out.push_str(rest);
@@ -2659,6 +2732,21 @@ mod tests {
         );
     }
 
+    /// An end before the start counts a turn on: 3 o'clock to 9 o'clock is the lower half.
+    #[test]
+    fn an_end_before_the_start_wraps_round() {
+        let mut wrapped = pie(PieLabels::None, Some(0.4));
+        (wrapped.start_angle, wrapped.end_angle) = (90.0, Some(-90.0));
+        let mut lower = wrapped.clone();
+        lower.end_angle = Some(270.0);
+        assert_eq!(wrapped.span(), 180.0);
+        let (wrapped, lower) = (draw_pie(&wrapped), draw_pie(&lower));
+        assert_eq!(
+            wrapped.map(|d| d.geometry.marks),
+            lower.map(|d| d.geometry.marks)
+        );
+    }
+
     /// A rose gives every slice the same angle and the larger value the longer radius.
     #[test]
     fn a_rose_s_slices_reach_out_by_value() {
@@ -2732,7 +2820,8 @@ mod tests {
                 .zip(numbers(&drawn.svg, "<text ", "y"))
                 .map(|(x, y)| (x, y - 14.0 * 0.35))
                 .collect();
-            assert_eq!(middles.len(), 3, "{}", drawn.svg);
+            // The rose's smallest slice is a ring thinner than its label: that one is dropped.
+            assert_eq!(middles.len(), if rose { 2 } else { 3 }, "{}", drawn.svg);
             for (slice, (x, y)) in middles.iter().enumerate() {
                 assert!(
                     super::super::hit::contains(&outlines[slice], *x, *y),
@@ -2741,6 +2830,20 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// A label wider than its slice is dropped rather than spill onto the next one.
+    #[test]
+    fn a_label_wider_than_its_slice_is_dropped() {
+        let mut inside = pie(PieLabels::Name, None);
+        inside.labels_inside = true;
+        inside.slices = [("Chrome", 85.0), ("Internet Explorer", 15.0)]
+            .map(|(name, value)| spec(name, &[Some(value)]))
+            .to_vec();
+        let drawn = draw_pie(&inside).expect("drawn");
+        assert!(drawn.svg.contains("Chrome"), "{}", drawn.svg);
+        assert!(!drawn.svg.contains("Internet Explorer"), "{}", drawn.svg);
+        assert_eq!(drawn.geometry.marks.len(), 2, "{:?}", drawn.geometry);
     }
 
     /// Every label keeps inside the SVG: a pie's beside its slices on a phone, a bar's
@@ -2771,6 +2874,24 @@ mod tests {
             panic!("{drawn:?}")
         };
         assert!(path.starts_with("M140,90 "), "{path}");
+    }
+
+    /// A name too long to fit beside a pie at its least radius ends in an ellipsis.
+    #[test]
+    fn a_long_name_beside_a_pie_is_cut_short() {
+        let mut small = pie(PieLabels::Name, None);
+        (small.width, small.height) = (288.0, 162.0);
+        small.slices = [
+            ("Chrome", 50.0),
+            ("Internet Explorer", 30.0),
+            ("Safari & Co", 20.0),
+        ]
+        .map(|(name, value)| spec(name, &[Some(value)]))
+        .to_vec();
+        let drawn = draw_pie(&small).expect("drawn");
+        assert_eq!(overflow(&drawn.svg, 288.0, 162.0), None, "{}", drawn.svg);
+        assert!(drawn.svg.contains('…'), "{}", drawn.svg);
+        assert!(drawn.svg.contains(">\nChrome\n<"), "{}", drawn.svg);
     }
 
     /// The plot is the box inside the axes, grid or not: above the x labels, right of

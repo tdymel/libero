@@ -293,6 +293,7 @@ mod tests {
     use crate::{
         LiberoProvider,
         components::data_display::{MarkLine, MarkPoint},
+        theme::LegendPosition,
     };
 
     fn render(app: fn() -> Element) -> String {
@@ -554,6 +555,33 @@ mod tests {
             html.contains("On the right y axis: Rain.") && html.contains("Right y axis: Rainfall."),
             "{html}"
         );
+    }
+
+    /// A legend drawn at the top or the start comes before the plot in the DOM, so Tab
+    /// meets it first; at the bottom or the end it comes after.
+    #[test]
+    fn the_legend_follows_its_place_in_the_tab_order() {
+        fn chart(legend: LegendPosition) -> Element {
+            rsx! {
+                LiberoProvider {
+                    LineChart {
+                        title: "Visitors",
+                        x: ["Mon", "Tue"],
+                        series: vec![Series::new("A", [1.0, 2.0]), Series::new("B", [2.0, 1.0])],
+                        legend,
+                    }
+                }
+            }
+        }
+        let order = |html: String| {
+            let legend = html.find("aria-label=\"Series\"").expect("a legend");
+            let plot = html.find("role=\"application\"").expect("a plot");
+            legend < plot
+        };
+        assert!(order(render(|| chart(LegendPosition::Top))));
+        assert!(order(render(|| chart(LegendPosition::Start))));
+        assert!(!order(render(|| chart(LegendPosition::Bottom))));
+        assert!(!order(render(|| chart(LegendPosition::End))));
     }
 
     /// A stack leaves its right axis line unstacked, and the summary says so.

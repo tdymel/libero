@@ -179,14 +179,15 @@ static CHART_BASE_SX: StaticSx = StaticSx::new(|| {
                 .color("text-dimmed"),
         )
         .selector("& > [data-chart-summary]", visually_hidden_sx())
+        // At the top and the start the legend comes first in the DOM too, so Tab meets it as
+        // drawn; `row` puts the first at the start edge in either direction.
         .when(
             "legend-top",
-            sx().selector(ChartPart::Body.selector(), column("column-reverse")),
+            sx().selector(ChartPart::Body.selector(), column("column")),
         )
-        // `row-reverse` puts the legend at the start edge in either direction.
         .when(
             "legend-start",
-            sx().selector(ChartPart::Body.selector(), side("row-reverse")),
+            sx().selector(ChartPart::Body.selector(), side("row")),
         )
         .when(
             "legend-end",
@@ -359,6 +360,13 @@ impl Frame {
             .collect();
         let names: Vec<String> = series.iter().map(|series| series.name.clone()).collect();
         let ontoggle = move |name: String| hidden.toggle(&name, &names);
+        let legend_element = (legend != LegendPosition::None && !loading && !empty)
+            .then(|| rsx! { ChartLegend { entries, label: legend_label, ontoggle } });
+        // Drawn first at the top or the start, so first in the DOM there.
+        let (legend_before, legend_after) = match legend {
+            LegendPosition::Top | LegendPosition::Start => (legend_element, None),
+            _ => (None, legend_element),
+        };
         let svg = drawn.read().as_ref().map(|drawn| drawn.svg.clone());
         let center_style = drawn.read().as_ref().map(|drawn| {
             let geometry = &drawn.geometry;
@@ -447,6 +455,7 @@ impl Frame {
                 }
             }
             div { "data-slot": ChartPart::Body.slot(),
+                {legend_before}
                 div {
                     "data-slot": ChartPart::Plot.slot(),
                     onmounted: element.mount(),
@@ -489,9 +498,7 @@ impl Frame {
                         }
                     }
                 }
-                if legend != LegendPosition::None && !loading && !empty {
-                    ChartLegend { entries, label: legend_label, ontoggle }
-                }
+                {legend_after}
             }
             // Says what the save buttons did; the plot's own speaks for the plot.
             if tools && export_button {
