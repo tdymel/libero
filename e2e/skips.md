@@ -19,6 +19,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `bar_chart::hovering_shows_the_bar_s_tooltip_and_marker` | ios | a touch screen has no hover |
 | `bar_chart::hovering_shows_the_bar_s_tooltip_and_marker` | native | charts are parked on Blitz |
 | `bar_chart::the_keys_follow_lying_bars` | native | charts are parked on Blitz |
+| `bar_chart::the_keys_read_a_bar_s_range` | native | charts are parked on Blitz |
 | `bar_chart::the_keys_walk_the_bars` | native | charts are parked on Blitz |
 | `bar_chart::the_legend_hides_and_shows_a_series` | native | charts are parked on Blitz |
 | `bottom_navigation::a_fixed_bar_docks_everywhere` | macos desktop | 3432: WKWebView: the fixed bar never docks |
