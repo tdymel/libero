@@ -133,10 +133,18 @@ impl ScrollViewport {
 
     /// Frees the claim of a `Virtualize` going away: one remounted in its place
     /// (a Table turning on `onrowreorder`) rendered first and claimed nothing.
-    /// The geometry write rerenders it, to claim again.
+    /// The geometry write rerenders it, to claim again. The window and its box go with it,
+    /// so a plain list in the area afterwards is not padded and tracked as a windowed one.
     pub fn release(&self) {
         self.claimed.set(false);
-        let mut geometry = self.geometry;
+        let (mut virtualized, mut spec, mut geometry) =
+            (self.virtualized, self.spec, self.geometry);
+        if let Ok(mut virtualized) = virtualized.try_write() {
+            *virtualized = false;
+        }
+        if let Ok(mut spec) = spec.try_write() {
+            *spec = None;
+        }
         if let Ok(mut geometry) = geometry.try_write() {
             let _ = &mut *geometry;
         }

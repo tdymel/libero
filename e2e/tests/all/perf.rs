@@ -275,7 +275,8 @@ fn a_multi_select_pick_stays_in_budget() {
 
 /// The rows a key or an arrow leaves alone skip (todo 2022). A kept row keeps its key, id and
 /// pick slot through a filter, so only the highlight's old and new rows redraw (todo 2046).
-/// The first key drops below the 200-row window threshold, so all 138 rows mount once (todo 2709).
+/// The first key drops below the 200-row window threshold, so all 138 rows mount once (todo 2709)
+/// and the area redraws once to drop its window (todo 3454).
 #[test]
 fn a_searchable_select_filter_and_arrow_stay_in_budget() {
     block_on(async {
@@ -305,7 +306,7 @@ fn a_searchable_select_filter_and_arrow_stay_in_budget() {
                 ("ComboboxDropdown", 1),
                 ("ComboboxRow", 138),
                 ("ComboboxOption", 138),
-                ("ScrollArea", 1),
+                ("ScrollArea", 2),
                 ("ScrollAreaContent", 2),
                 ("ScrollAreaBars", 2),
                 ("Fragment", 1),
@@ -319,6 +320,14 @@ fn a_searchable_select_filter_and_arrow_stay_in_budget() {
         wait::for_js_true(page, &active_row_is(1), "the arrow")
             .await
             .unwrap();
+        // The highlight scrolls the list, and a scroll report lands up to half a second late.
+        wait::for_js_true(
+            page,
+            "document.querySelector('[role=listbox]').scrollTop > 0",
+            "the list following the arrow",
+        )
+        .await
+        .unwrap();
         let arrowed = settled(page, "arrowing").await;
         assert_within(
             &arrowed,
