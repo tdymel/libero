@@ -37,6 +37,11 @@ async fn hover_open<D: Driver>(d: &mut D) -> Result<()> {
 
 async fn hover_places_and_leaving_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     hover_open(d).await?;
+    // The bubble mounts hidden at 0,0 until placed, a round trip later on a WebView.
+    eventually(d, "the bubble to be placed", async |d| {
+        Ok(d.style(OPEN, "visibility").await? == "visible")
+    })
+    .await?;
     let t = d.rect(TRIGGER).await?;
     let b = d.rect(OPEN).await?;
     let gap = b.y - (t.y + t.height);

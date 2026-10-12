@@ -104,10 +104,13 @@ async fn one_stop<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     eventually_focused(d, "#before", "focus").await?;
     d.press(keyboard::TAB).await?;
     eventually_focused(d, &head(1), "Tab into the grid").await?;
+    // A WebView delivers a key a round trip late: each move lands before the next press.
     d.press(keyboard::ARROW_DOWN).await?;
+    at(d, 1, 1, "ArrowDown").await?;
     d.press(keyboard::ARROW_DOWN).await?;
+    at(d, 2, 1, "the second ArrowDown").await?;
     d.press(keyboard::ARROW_RIGHT).await?;
-    at(d, 2, 2, "ArrowDown, ArrowRight").await?;
+    at(d, 2, 2, "ArrowRight").await?;
     d.press(keyboard::TAB).await?;
     eventually_focused(d, "#after", "Tab out of the grid").await?;
     d.press_shift(keyboard::TAB).await?;
