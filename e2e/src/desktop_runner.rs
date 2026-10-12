@@ -13,7 +13,7 @@ use super::process::{Signal, pids_by_cmdline, stop};
 use super::{Guard, OwnGroup, own_target_dir, workspace_root};
 
 /// Past this many bytes of names a Windows command line (32 767 characters) fails (os error 206).
-const NAMES_BUDGET: usize = if cfg!(windows) { 20_000 } else { usize::MAX };
+const NAMES_BUDGET: usize = 20_000;
 
 /// `--ignored` runs only the `desktop: skip` scenarios, e.g. to see 1051 still red.
 pub fn run(mut filters: Vec<String>) -> Result<()> {
@@ -86,7 +86,12 @@ pub fn run(mut filters: Vec<String>) -> Result<()> {
         .unwrap_or(120 + 6 * names.len() as u64);
     let deadline = Instant::now() + Duration::from_secs(deadline);
     let mut passed = true;
-    for batch in batches(&names) {
+    let budget = if cfg!(windows) {
+        NAMES_BUDGET
+    } else {
+        usize::MAX
+    };
+    for batch in batches(&names, budget) {
         // Never the Maintainer's display (`DISPLAY=:0`).
         let mut command = if cfg!(any(target_os = "macos", windows)) {
             Command::new(env!("CARGO"))
@@ -149,10 +154,10 @@ pub fn run(mut filters: Vec<String>) -> Result<()> {
 }
 
 /// The names in runs whose command line stays within the budget.
-fn batches(names: &[String]) -> Vec<&[String]> {
+fn batches(names: &[String], budget: usize) -> Vec<&[String]> {
     let (mut batches, mut start, mut len) = (Vec::new(), 0, 0);
     for (at, name) in names.iter().enumerate() {
-        if len + name.len() + 1 > NAMES_BUDGET {
+        if len + name.len() + 1 > budget {
             batches.push(&names[start..at]);
             (start, len) = (at, 0);
         }
@@ -170,5 +175,17 @@ fn stop_apps(app: &Path) {
         super::process::signal_group(pid, Signal::Kill);
         #[cfg(unix)]
         super::process::signal_pid(pid, Signal::Term);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::batches;
+
+    #[test]
+    fn names_split_where_the_budget_ends_and_keep_their_order() {
+        let names: Vec<String> = ["aaa", "bbb", "ccc", "dd"].map(String::from).to_vec();
+        assert_eq!(batches(&names, 8), [&names[..2], &names[2..]]);
+        assert_eq!(batches(&names, usize::MAX), [&names[..]]);
     }
 }
