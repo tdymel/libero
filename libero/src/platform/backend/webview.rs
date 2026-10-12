@@ -359,22 +359,29 @@ pub(super) fn on_viewport_resize(callback: Box<dyn Fn()>) -> Option<Box<dyn Scro
 /// px is dropped: Android rocks a device px at an edge for seconds (todo 2178).
 const ON_ELEMENT_SCROLL: &str = "const selector = '[' + data[0] + '=\"' + data[1] + '\"]';
     let queued = null, armed = false, seq = 0, top = NaN, left = NaN;
+    const id = Math.random().toString(36).slice(2, 6);
+    const L = (...a) => { (window.__ld = window.__ld || []).push([Math.round(performance.now()), id, ...a]); if (window.__ld.length > 400) window.__ld.shift(); };
+    L('install', selector);
     const send = (s, ended) => {
-        if (!s.isConnected) return;
-        if (!ended && Math.abs(s.scrollTop - top) < 1 && Math.abs(s.scrollLeft - left) < 1) return;
+        if (!s.isConnected) { L('send:disconnected'); return; }
+        if (!ended && Math.abs(s.scrollTop - top) < 1 && Math.abs(s.scrollLeft - left) < 1) { L('send:dedupe', s.scrollTop, top); return; }
         top = s.scrollTop;
         left = s.scrollLeft;
         seq += 1;
+        L('send', seq, s.scrollTop, ended);
         dioxus.send([seq, s.scrollTop, s.scrollLeft, s.scrollWidth, s.scrollHeight, s.clientWidth, s.clientHeight, ended]);
     };
     const flush = () => {
         armed = false;
+        L('flush', queued !== null);
         if (queued !== null) send(queued, false);
         queued = null;
     };
     const ours = (event) => event.target instanceof Element && event.target.matches(selector);
     const tick = (event) => {
-        if (!ours(event)) return;
+        const o = ours(event);
+        if (event.target instanceof Element && event.target.getAttribute('role') === 'listbox') L('tick', o, armed, event.target.scrollTop);
+        if (!o) return;
         if (armed) {
             queued = event.target;
             return;
@@ -384,7 +391,9 @@ const ON_ELEMENT_SCROLL: &str = "const selector = '[' + data[0] + '=\"' + data[1
         requestAnimationFrame(flush);
     };
     const end = (event) => {
-        if (!ours(event)) return;
+        const o = ours(event);
+        if (event.target instanceof Element && event.target.getAttribute('role') === 'listbox') L('end', o, event.target.scrollTop);
+        if (!o) return;
         queued = null;
         send(event.target, true);
     };
