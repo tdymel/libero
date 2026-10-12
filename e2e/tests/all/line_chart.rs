@@ -77,7 +77,10 @@ async fn pen_leaves<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     eventually(d, "the tooltip", async |d| d.exists(TOOLTIP).await).await?;
     d.evaluate("window.penLeave()").await?;
     reads(d, "#active", "", "the pen leaving").await?;
-    eventually(d, "the tooltip to leave", async |d| Ok(!d.exists(TOOLTIP).await?)).await
+    eventually(d, "the tooltip to leave", async |d| {
+        Ok(!d.exists(TOOLTIP).await?)
+    })
+    .await
 }
 
 e2e::scenario!(

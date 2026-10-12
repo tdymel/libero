@@ -2457,13 +2457,19 @@ mod tests {
         let drawn = draw_bar(&narrow).expect("drawn");
         let plot = drawn.geometry.plot;
         let unit = (plot.right - plot.left) / 40.0;
-        assert!(unit < 2.0 * RENDERER_MARGIN, "the band is not narrow: {unit}");
+        assert!(
+            unit < 2.0 * RENDERER_MARGIN,
+            "the band is not narrow: {unit}"
+        );
         let found = rects(&drawn);
         assert_eq!(found.len(), 80, "{found:?}");
         for [x, _, width, _] in &found {
             let band = ((x - plot.left) / unit).floor();
             let end = plot.left + unit * (band + 1.0);
-            assert!(*width > 1.0 && x + width <= end + 0.1, "{x}+{width} past {end}");
+            assert!(
+                *width > 1.0 && x + width <= end + 0.1,
+                "{x}+{width} past {end}"
+            );
         }
     }
 
