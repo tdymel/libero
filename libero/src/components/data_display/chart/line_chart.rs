@@ -158,7 +158,12 @@ pub fn LineChart(props: LineChartProps) -> Element {
         center: None,
         legend: Frame::legend(&props.legend, theme, props.series.len()),
         legend_label: labels.legend,
-        series: overlay_series(&all_specs, &props.series),
+        // Once one line sets its shape, every key shows its own.
+        series: overlay_series(
+            &all_specs,
+            &props.series,
+            points && props.series.iter().any(|series| series.symbol.is_some()),
+        ),
         hidden,
         x,
         summary,
@@ -344,6 +349,27 @@ mod tests {
             html.contains("aria-pressed=\"true\" aria-disabled=\"true\""),
             "{html}"
         );
+    }
+
+    /// Once a line sets its shape, every legend key shows its line's: the second cue there too.
+    #[test]
+    fn a_point_symbol_shapes_every_legend_key() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    LineChart {
+                        title: "Visitors",
+                        x: ["Mon", "Tue"],
+                        series: vec![
+                            Series::new("This week", [1.0, 2.0]),
+                            Series::new("Last week", [2.0, 1.0]).symbol(crate::theme::PointSymbol::Square),
+                        ],
+                    }
+                }
+            }
+        });
+        assert!(html.contains("data-symbol=\"circle\""), "{html}");
+        assert!(html.contains("data-symbol=\"square\""), "{html}");
     }
 
     /// The titles are drawn by their axes and, as the drawing is hidden, said in the summary.

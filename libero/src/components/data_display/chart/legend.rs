@@ -4,6 +4,7 @@ use super::ChartPart;
 use crate::{
     components::common::{Part, focus_ring_sx},
     sx::{Sx, sx},
+    theme::PointSymbol,
     tokens::NamedColorCss,
     utils::warn,
 };
@@ -104,6 +105,7 @@ pub(super) struct LegendEntry {
     pub(super) name: String,
     pub(super) color: String,
     pub(super) dashed: bool,
+    pub(super) symbol: Option<PointSymbol>,
     pub(super) hidden: bool,
 }
 
@@ -133,6 +135,7 @@ pub(super) fn ChartLegend(
                             "data-chart-swatch": true,
                             "data-hidden": entry.hidden.then_some("true"),
                             "data-dashed": entry.dashed.then_some("true"),
+                            "data-symbol": entry.symbol.map(|symbol| symbol.as_str()),
                             style: "--lsx-chart-swatch:{entry.color}",
                         }
                         "{entry.name}"

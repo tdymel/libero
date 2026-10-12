@@ -10,7 +10,7 @@ use libero::{
         Anchor, BarChart, Code, LineChart, Orientation, PieChart, Series, Slice, Table, Text,
         XValues, column,
     },
-    theme::{BarLayout, Curve, LegendPosition, PieLabels},
+    theme::{BarLayout, Curve, LegendPosition, PieLabels, PointSymbol},
 };
 
 const DAYS: [&str; 7] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -176,7 +176,7 @@ pub fn ChartPage() -> Element {
                     "The chart is a `role=\"figure\"` named by `title`. The drawing is hidden from screen readers.",
                     "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is, then the axes' titles; a pie's, the total, then each slice's value and share.",
                     "The plot is one tab stop, a `role=\"application\"` described as a chart, so a screen reader hands it the arrows. Each point the keys reach is announced, as \"This week, Tue: 132\" or \"Chrome: 62, 62%.\"",
-                    "The legend's entries are toggle buttons: pressed while their series or slice shows, struck through when hidden. The last shown one's button is `aria-disabled`. A dashed line's key is a dash, as drawn.",
+                    "The legend's entries are toggle buttons: pressed while their series or slice shows, struck through when hidden. The last shown one's button is `aria-disabled`. A dashed line's key is a dash, as drawn; once a line sets a `symbol`, each key is its line's point shape.",
                     "On a touch screen a tap pins a point's tooltip, a second tap on it clicks; a vertical swipe still scrolls the page.",
                     "Each series' or slice's palette colour reaches 3:1 on the page and on a card, in every shipped theme and color scheme; one too close to an earlier one, also for colour-blind eyes, is skipped.",
                     "In forced colours the lines, bars and slices keep their colours on the system background; axes and labels take the system text colour.",
@@ -184,7 +184,7 @@ pub fn ChartPage() -> Element {
                 .must([
                     "Give a `title`, or name the chart with `aria_label`.",
                     "Say in `description` what the reader should see, as \"Visitors peaked on Saturday\".",
-                    "Tell series apart by more than colour: `dashed()` on a line, the legend, `value_labels` on bars, `labels` on a pie.",
+                    "Tell series apart by more than colour: `dashed()` or `symbol()` on a line, the legend, `value_labels` on bars, `labels` on a pie.",
                     "Name every series and slice differently: the legend hides them by name.",
                     "Keep a pie to a few slices; fold the small ones into one \"Other\".",
                     "Where every value matters, show the data in a `Table` beside the chart too.",
@@ -239,7 +239,7 @@ pub fn ChartPage() -> Element {
                                 "title: \"Visitors\"".to_string(),
                                 format!("x: {DAYS:?}"),
                                 format!(
-                                    "series: vec![Series::new(\"This week\", {THIS_WEEK:?}), Series::new(\"Last week\", {LAST_WEEK:?}).dashed()]"
+                                    "series: vec![Series::new(\"This week\", {THIS_WEEK:?}), Series::new(\"Last week\", {LAST_WEEK:?}).dashed().symbol(PointSymbol::Square)]"
                                 ),
                             ],
                         }),
@@ -334,7 +334,7 @@ pub fn ChartPage() -> Element {
                                 x: DAYS,
                                 series: vec![
                                     Series::new("This week", THIS_WEEK),
-                                    Series::new("Last week", LAST_WEEK).dashed(),
+                                    Series::new("Last week", LAST_WEEK).dashed().symbol(PointSymbol::Square),
                                 ],
                                 curve: Curve::from(values.str("curve").as_str()),
                                 y_min, y_max, y_ticks, x_title, y_title,

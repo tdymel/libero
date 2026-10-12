@@ -21,6 +21,7 @@ Lines and bars take one or more `Series` over a shared x axis; a pie takes
 ```rust
 use dioxus::prelude::*;
 use libero::components::{LineChart, Series};
+use libero::theme::PointSymbol;
 
 #[component]
 fn Demo() -> Element {
@@ -30,7 +31,9 @@ fn Demo() -> Element {
             x: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
             series: vec![
                 Series::new("This week", [120.0, 132.0, 101.0, 134.0, 90.0, 230.0, 210.0]),
-                Series::new("Last week", [98.0, 110.0, 115.0, 120.0, 104.0, 170.0, 180.0]).dashed(),
+                Series::new("Last week", [98.0, 110.0, 115.0, 120.0, 104.0, 170.0, 180.0])
+                    .dashed()
+                    .symbol(PointSymbol::Square),
             ],
         }
     }
@@ -49,6 +52,9 @@ their gaps; the axis ticks at round values and writes them with `value_format`.
 takes the theme's palette for its place. `.unit("%")` gives a series its own unit
 in the tooltip and summary; a unit every series shares labels the y axis.
 Values group their thousands as the `Formats` say: `12,500` or `12.500`.
+`.symbol(PointSymbol::Square)` draws a line's points as squares, `Triangle` or
+`Diamond` as those: a cue beside the colour. Once one line sets its shape, every
+legend key shows its line's.
 
 `BarChart` takes the same `Series`:
 
@@ -343,7 +349,8 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   "This week, Tue: 132" or "Chrome: 62, 62%."
 - The legend's entries are toggle buttons: pressed while their series or slice
   shows, struck through when hidden. The last shown one's button is
-  `aria-disabled`. A dashed line's key is a dash, as drawn.
+  `aria-disabled`. A dashed line's key is a dash, as drawn; once a line sets a
+  `symbol`, each key is its line's point shape.
 - On a touch screen a tap pins a point's tooltip, a second tap on it clicks; a
   vertical swipe still scrolls the page.
 - Each series' or slice's palette colour reaches 3:1 on the page and on a card,
@@ -357,7 +364,7 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 - Give a `title`, or name the chart with `aria_label`.
 - Say in `description` what the reader should see, as "Visitors peaked on
   Saturday".
-- Tell series apart by more than colour: `dashed()` on a line, the legend,
+- Tell series apart by more than colour: `dashed()` or `symbol()` on a line, the legend,
   `value_labels` on bars, `labels` on a pie.
 - Name every series and slice differently: the legend hides them by name.
 - Keep a pie to a few slices; fold the small ones into one "Other".

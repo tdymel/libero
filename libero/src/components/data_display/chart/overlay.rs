@@ -100,6 +100,8 @@ pub(super) struct OverlaySeries {
     pub(super) color: String,
     /// Drawn dashed: its legend key is a dash.
     pub(super) dashed: bool,
+    /// The shape its points are drawn in, for its legend key; `None`, a plain swatch.
+    pub(super) symbol: Option<crate::theme::PointSymbol>,
     /// The series' own unit; unset, the chart's.
     pub(super) unit: Option<String>,
 }

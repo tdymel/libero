@@ -26,6 +26,17 @@ str_enum! {
 }
 
 str_enum! {
+    /// The shape of a line's points: a cue beside the colour, also in the legend.
+    pub enum PointSymbol {
+        #[default]
+        Circle = "circle",
+        Square = "square",
+        Triangle = "triangle",
+        Diamond = "diamond",
+    }
+}
+
+str_enum! {
     /// Where a chart's legend sits, or `None` for no legend. Start and end follow the text direction.
     pub enum LegendPosition {
         #[default]

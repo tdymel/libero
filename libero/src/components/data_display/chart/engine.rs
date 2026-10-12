@@ -6,7 +6,7 @@ use charts_rs::{AxisType, Color as InkColor, LineStep, Position, Symbol};
 use super::data::{ValueFormat, ungrouped};
 use crate::{
     localization::Formats,
-    theme::{BarLayout, ChartInk, Curve, HexColor, PieLabels},
+    theme::{BarLayout, ChartInk, Curve, HexColor, PieLabels, PointSymbol},
 };
 
 /// Ahead of each y-axis label, so [`sanitize`] can write it again in the locale.
@@ -143,6 +143,13 @@ pub(crate) struct SeriesSpec {
     pub(crate) values: Vec<Option<f64>>,
     pub(crate) color: HexColor,
     pub(crate) dashed: bool,
+    pub(crate) extras: SeriesExtras,
+}
+
+/// What a series asks beyond its values and look; a bar or a slice draws none of it.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub(crate) struct SeriesExtras {
+    pub(crate) symbol: PointSymbol,
 }
 
 /// Everything a line chart's SVG depends on, so a memo redraws only on a change.
@@ -204,6 +211,18 @@ fn ink(hex: HexColor) -> InkColor {
     InkColor::from((hex.r(), hex.g(), hex.b()))
 }
 
+/// A point's marker, sized so every shape covers about a circle's area.
+fn symbol(spec: &LineSpec, series: &SeriesSpec) -> Symbol {
+    let (r, fill) = (spec.stroke_width + 1.0, Some(ink(series.color)));
+    match (spec.points, series.extras.symbol) {
+        (false, _) => Symbol::None,
+        (true, PointSymbol::Circle) => Symbol::Circle(r, fill),
+        (true, PointSymbol::Square) => Symbol::Rect(r * 0.9, fill),
+        (true, PointSymbol::Triangle) => Symbol::Triangle(r * 1.35, fill),
+        (true, PointSymbol::Diamond) => Symbol::Diamond(r * 1.25, fill),
+    }
+}
+
 pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
     let series = spec
         .series
@@ -213,10 +232,7 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
             let mut drawn = charts_rs::Series::new_nullable(series.name.clone(), values);
             drawn.colors = Some(vec![Some(ink(series.color))]);
             drawn.stroke_dash_array = series.dashed.then(|| DASH.to_string());
-            drawn.symbol = Some(match spec.points {
-                true => Symbol::Circle(spec.stroke_width + 1.0, Some(ink(series.color))),
-                false => Symbol::None,
-            });
+            drawn.symbol = Some(symbol(spec, series));
             match spec.curve {
                 Curve::Linear => {}
                 Curve::Smooth => drawn.smooth = Some(true),
@@ -1159,6 +1175,29 @@ mod tests {
         assert!(svg.contains("rotate(-90)"), "{svg}");
     }
 
+    /// Each shape draws its own marker at every point, in the series' colour; the points are
+    /// still harvested.
+    #[test]
+    fn a_series_draws_its_point_symbol() {
+        let mut series = spec("A", &[Some(1.0), Some(3.0), Some(2.0)]);
+        for (symbol, tag) in [
+            (PointSymbol::Square, "<rect"),
+            (PointSymbol::Triangle, "<polygon"),
+            (PointSymbol::Diamond, "<polygon"),
+        ] {
+            series.extras.symbol = symbol;
+            let drawn = draw_line(&line(vec![series.clone()], &["a", "b", "c"])).expect("drawn");
+            assert_eq!(
+                drawn.svg.matches(tag).count(),
+                3,
+                "{symbol:?}: {}",
+                drawn.svg
+            );
+            assert!(!drawn.svg.contains("<circle"), "{symbol:?}: {}", drawn.svg);
+            assert_eq!(drawn.geometry.marks.len(), 3, "{symbol:?}");
+        }
+    }
+
     /// A lying bar chart's value axis is at the bottom: the y title goes there.
     #[test]
     fn a_horizontal_bar_chart_swaps_its_titles() {
@@ -1180,6 +1219,7 @@ mod tests {
             values: values.to_vec(),
             color: chart_hex(&Theme::DEFAULT, Color::Primary, ColorShade::S6),
             dashed: false,
+            extras: SeriesExtras::default(),
         }
     }
 

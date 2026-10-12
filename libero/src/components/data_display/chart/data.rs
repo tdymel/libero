@@ -1,6 +1,6 @@
 use crate::{
     localization::Formats,
-    theme::{Color, ColorShade, HexColor},
+    theme::{Color, ColorShade, HexColor, PointSymbol},
     utils::warn,
 };
 
@@ -190,6 +190,8 @@ pub struct Series {
     pub dashed: bool,
     /// Written after each value in the tooltip and summary. Unset, the chart's `unit`.
     pub unit: Option<String>,
+    /// The shape of a line's points and of its legend key. Unset, a circle.
+    pub symbol: Option<PointSymbol>,
 }
 
 impl Series {
@@ -203,6 +205,7 @@ impl Series {
             color: None,
             dashed: false,
             unit: None,
+            symbol: None,
         }
     }
 
@@ -228,6 +231,12 @@ impl Series {
     /// The series' own unit, where series of one chart measure different things.
     pub fn unit(mut self, unit: impl Into<String>) -> Self {
         self.unit = Some(unit.into());
+        self
+    }
+
+    /// A line's points as squares, triangles or diamonds: told apart without the colour.
+    pub fn symbol(mut self, symbol: PointSymbol) -> Self {
+        self.symbol = Some(symbol);
         self
     }
 }

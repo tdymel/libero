@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 
 use super::{
     ChartColor, ChartPart, ChartPoint, Series, ValueFormat,
-    engine::{Drawn, SeriesSpec},
+    engine::{Drawn, SeriesExtras, SeriesSpec},
     legend::{ChartLegend, HiddenSeries, LegendEntry, legend_sx},
     overlay::{ChartOverlay, OverlaySeries, overlay_sx},
 };
@@ -132,6 +132,30 @@ static CHART_BASE_SX: StaticSx = StaticSx::new(|| {
         .selector(
             "& [data-chart-swatch][data-dashed][data-hidden]",
             sx().opacity("0.5"),
+        )
+        // A line's points' shape, as drawn; it wins over the dash.
+        .selector(
+            "& [data-chart-swatch][data-symbol]",
+            sx().height(CHART_SWATCH_SIZE.value())
+                .border_radius("0")
+                .box_shadow("none")
+                .with("background", "var(--lsx-chart-swatch)"),
+        )
+        .selector(
+            "& [data-chart-swatch][data-symbol='circle']",
+            sx().border_radius("50%"),
+        )
+        .selector(
+            "& [data-chart-swatch][data-symbol='triangle']",
+            sx().with("clip-path", "polygon(50% 0, 100% 100%, 0 100%)"),
+        )
+        .selector(
+            "& [data-chart-swatch][data-symbol='diamond']",
+            sx().with("clip-path", "polygon(50% 0, 100% 50%, 50% 100%, 0 50%)"),
+        )
+        .selector(
+            "& [data-chart-swatch][data-symbol][data-hidden]",
+            sx().opacity("0.35"),
         )
         .selector(
             ChartPart::Empty.selector(),
@@ -276,6 +300,7 @@ impl Frame {
                 name: series.name.clone(),
                 color: series.color.clone(),
                 dashed: series.dashed,
+                symbol: series.symbol,
                 hidden: hidden_names.contains(&series.name),
             })
             .collect();
@@ -443,12 +468,20 @@ pub(super) fn series_specs(theme: &Theme, forced: bool, series: &[Series]) -> Ve
             values: series.values.clone(),
             color: hex(theme, forced, &palette, i, series.color),
             dashed: series.dashed || (series.color.is_none() && i >= palette.len()),
+            extras: SeriesExtras {
+                symbol: series.symbol.unwrap_or_default(),
+            },
         })
         .collect()
 }
 
-/// Every series' name, colour and own unit, for the legend and the tooltip.
-pub(super) fn overlay_series(specs: &[SeriesSpec], series: &[Series]) -> Vec<OverlaySeries> {
+/// Every series' name, colour and own unit, for the legend and the tooltip; with
+/// `symbols`, the shape of its points too.
+pub(super) fn overlay_series(
+    specs: &[SeriesSpec],
+    series: &[Series],
+    symbols: bool,
+) -> Vec<OverlaySeries> {
     specs
         .iter()
         .enumerate()
@@ -456,6 +489,7 @@ pub(super) fn overlay_series(specs: &[SeriesSpec], series: &[Series]) -> Vec<Ove
             name: spec.name.clone(),
             color: spec.color.to_string(),
             dashed: spec.dashed,
+            symbol: symbols.then_some(spec.extras.symbol),
             unit: series.get(i).and_then(|series| series.unit.clone()),
         })
         .collect()

@@ -88,6 +88,7 @@ pub fn PieChart(props: PieChartProps) -> Element {
             values: vec![Some(share_of(slice.value))],
             color,
             dashed: false,
+            extras: Default::default(),
         })
         .collect();
     let names: Vec<String> = all_slices.iter().map(|s| s.name.clone()).collect();
@@ -146,7 +147,7 @@ pub fn PieChart(props: PieChartProps) -> Element {
         center: props.center.clone().filter(|_| props.donut),
         legend: Frame::legend(&props.legend, theme, props.slices.len()),
         legend_label: labels.slices,
-        series: overlay_series(&all_slices, &[]),
+        series: overlay_series(&all_slices, &[], false),
         hidden,
         x: names,
         summary,

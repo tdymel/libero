@@ -175,7 +175,7 @@ pub fn BarChart(props: BarChartProps) -> Element {
         center: None,
         legend: Frame::legend(&props.legend, theme, props.series.len()),
         legend_label: labels.legend,
-        series: overlay_series(&all_specs, &props.series),
+        series: overlay_series(&all_specs, &props.series, false),
         hidden,
         x,
         summary,

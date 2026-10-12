@@ -154,7 +154,7 @@ pub use center::{CENTER_DISPLAY, CenterDefaults};
 pub(crate) use chart::chart_hex;
 pub use chart::{
     BarLayout, CHART_ASPECT_RATIO, CHART_LEGEND_GAP, CHART_SWATCH_SIZE, ChartDefaults, Curve,
-    LegendPosition, PieLabels,
+    LegendPosition, PieLabels, PointSymbol,
 };
 #[cfg(feature = "charts")]
 pub(crate) use chart::{ChartInk, chart_color, chart_palette};
