@@ -10,16 +10,18 @@ mod line_chart;
 mod overlay;
 mod pie_chart;
 mod props;
+mod scatter_chart;
 mod zoom;
 
 pub use bar_chart::{BarChart, BarChartProps};
 pub use data::{
-    ChartColor, ChartPoint, MarkLine, MarkPoint, Series, SeriesKind, Slice, Value, ValueFormat,
-    XValues,
+    ChartColor, ChartPoint, MarkLine, MarkPoint, ScatterPoint, ScatterSeries, Series, SeriesKind,
+    Slice, Trend, Value, ValueFormat, XValues,
 };
 pub use export::{ChartHandle, use_chart};
 pub use funnel_chart::{FunnelChart, FunnelChartProps};
 pub use line_chart::{LineChart, LineChartProps};
 pub use pie_chart::{PieChart, PieChartProps};
 pub use props::ChartPart;
+pub use scatter_chart::{ScatterChart, ScatterChartProps};
 pub use zoom::ChartRange;

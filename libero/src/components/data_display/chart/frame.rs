@@ -9,7 +9,7 @@ use super::{
     engine::{Drawn, Plot, SeriesExtras, SeriesSpec},
     export::{ExportSource, file_name},
     legend::{ChartLegend, HiddenSeries, LegendEntry, legend_sx},
-    overlay::{ChartOverlay, OverlaySeries, overlay_sx},
+    overlay::{ChartOverlay, Layout, OverlaySeries, overlay_sx},
     zoom::Zoom,
 };
 use crate::{
@@ -284,6 +284,7 @@ pub(super) struct Interaction {
     pub(super) onactivechange: Option<EventHandler<Option<ChartPoint>>>,
     /// A horizontal bar chart's: up and down walk the categories, as drawn.
     pub(super) swap_axes: bool,
+    pub(super) layout: Layout,
     /// Set, a drag or Shift with the arrows selects a band of x values.
     pub(super) onrange: Option<EventHandler<Option<ChartRange>>>,
 }
@@ -423,6 +424,7 @@ impl Frame {
             onpointclick,
             onactivechange,
             swap_axes,
+            layout,
             onrange,
         } = interaction;
         let tools = !loading && !empty && !all_hidden && (zoom.is_some() || export_button);
@@ -535,6 +537,7 @@ impl Frame {
                             onpointclick,
                             onactivechange,
                             swap_axes,
+                            layout,
                             zoom,
                             onrange,
                         }
@@ -625,11 +628,18 @@ pub(super) fn hex(
 
 /// The chart's unit: its own, else the one every series shares, for the y axis.
 pub(super) fn chart_unit(unit: &Option<String>, series: &[Series]) -> Option<String> {
+    chart_unit_of(unit, series.iter().map(|series| &series.unit))
+}
+
+/// [`chart_unit`] over each series' own unit.
+pub(super) fn chart_unit_of<'a>(
+    unit: &Option<String>,
+    mut units: impl Iterator<Item = &'a Option<String>> + Clone,
+) -> Option<String> {
     unit.clone().or_else(|| {
-        let shared = series.first()?.unit.as_ref()?;
-        series
-            .iter()
-            .all(|series| series.unit.as_ref() == Some(shared))
+        let shared = units.clone().next()?.as_ref()?;
+        units
+            .all(|unit| unit.as_ref() == Some(shared))
             .then(|| shared.clone())
     })
 }
@@ -677,6 +687,8 @@ pub(super) fn overlay_series(
                 .get(i)
                 .map(|series| series.errors.clone())
                 .unwrap_or_default(),
+            xs: Vec::new(),
+            points: Vec::new(),
         })
         .collect()
 }

@@ -5,7 +5,8 @@ use libero::use_theme;
 use libero::{
     components::{
         BarChart, ChartRange, Code, FunnelChart, LineChart, MarkLine, MarkPoint, Orientation,
-        PieChart, Series, SeriesKind, Slice, Table, Text, column,
+        PieChart, ScatterChart, ScatterSeries, Series, SeriesKind, Slice, Table, Text, Trend,
+        column,
     },
     theme::{
         BarLabelPosition, BarLayout, Curve, LegendPosition, PieLabelPosition, PieLabels,
@@ -46,6 +47,25 @@ const STAGES: [(&str, f64); 5] = [
     ("Checkouts", 300.0),
     ("Orders", 210.0),
 ];
+/// A shop's weeks: ad spend and sales in k€, and orders as the bubble's size.
+const ONLINE: [(f64, f64, f64); 7] = [
+    (12.0, 34.0, 80.0),
+    (18.0, 41.0, 120.0),
+    (25.0, 52.0, 90.0),
+    (31.0, 58.0, 150.0),
+    (38.0, 71.0, 200.0),
+    (44.0, 76.0, 140.0),
+    (52.0, 90.0, 240.0),
+];
+const STORES: [(f64, f64, f64); 7] = [
+    (8.0, 22.0, 50.0),
+    (15.0, 30.0, 70.0),
+    (22.0, 33.0, 110.0),
+    (28.0, 45.0, 60.0),
+    (35.0, 47.0, 130.0),
+    (41.0, 55.0, 100.0),
+    (48.0, 60.0, 160.0),
+];
 
 fn on(value: bool) -> &'static str {
     if value { "true" } else { "false" }
@@ -60,14 +80,50 @@ fn stages() -> Vec<Slice> {
 }
 
 /// Hides a control unless the type is `kind`; `axes` hides it on a pie and a funnel, `shares`
-/// shows it on both.
+/// shows it on both, `series` on lines and bars only.
 fn is(kind: &'static str) -> fn(&DemoValues) -> bool {
     match kind {
         "bar" => |values| values.str("type") != "bar",
         "pie" => |values| values.str("type") != "pie",
+        "scatter" => |values| values.str("type") != "scatter",
         "axes" => |values| matches!(values.str("type").as_str(), "pie" | "funnel"),
         "shares" => |values| !matches!(values.str("type").as_str(), "pie" | "funnel"),
+        "series" => |values| !matches!(values.str("type").as_str(), "line" | "bar"),
         _ => |values| values.str("type") != "line",
+    }
+}
+
+/// The scatter chart's series, as bubbles when the switch says, in code and as built.
+fn scatter_series(values: &DemoValues) -> (String, Vec<ScatterSeries>) {
+    let bubbles = values.str("bubbles") == "true";
+    let series = [("Online", ONLINE), ("Stores", STORES)].map(|(name, points)| {
+        let pairs: Vec<(f64, f64)> = points.iter().map(|p| (p.0, p.1)).collect();
+        match bubbles {
+            true => (
+                format!("ScatterSeries::new({name:?}, {points:?})"),
+                ScatterSeries::new(name, points),
+            ),
+            false => (
+                format!("ScatterSeries::new({name:?}, {pairs:?})"),
+                ScatterSeries::new(name, pairs),
+            ),
+        }
+    });
+    let code = series.iter().map(|s| s.0.as_str()).collect::<Vec<_>>();
+    (
+        format!("series: vec![{}]", code.join(", ")),
+        series.into_iter().map(|s| s.1).collect(),
+    )
+}
+
+/// The scatter chart's trend line, in code and as built.
+fn trend(values: &DemoValues) -> Option<(&'static str, Trend)> {
+    match values.str("trend").as_str() {
+        "linear" => Some(("Trend::Linear", Trend::Linear)),
+        "exponential" => Some(("Trend::Exponential", Trend::Exponential)),
+        "logarithmic" => Some(("Trend::Logarithmic", Trend::Logarithmic)),
+        "polynomial" => Some(("Trend::Polynomial(2)", Trend::Polynomial(2))),
+        _ => None,
     }
 }
 
@@ -76,6 +132,7 @@ fn y_range(values: &DemoValues) -> Option<(f64, f64)> {
     match (values.str("y_range").as_str(), values.str("type").as_str()) {
         ("auto", _) => None,
         (_, "bar") => Some((-50.0, 150.0)),
+        (_, "scatter") => Some((0.0, 100.0)),
         _ if values.str("area") == "stacked" => Some((0.0, 400.0)),
         _ => Some((50.0, 250.0)),
     }
@@ -89,6 +146,7 @@ fn axis_titles(values: &DemoValues) -> Option<(&'static str, &'static str)> {
     ) {
         (false, _) => None,
         (true, "bar") => Some(("Quarter", "Profit")),
+        (true, "scatter") => Some(("Ad spend (k€)", "Sales (k€)")),
         (true, _) => Some(("Day", "Visitors")),
     }
 }
@@ -169,6 +227,15 @@ fn table(values: &DemoValues) -> (&'static str, &'static str, Vec<&'static str>,
             STAGES
                 .iter()
                 .map(|(name, count)| (*name, vec![*count]))
+                .collect(),
+        ),
+        "scatter" => (
+            "Ad spend and sales",
+            "Channel",
+            vec!["Ad spend", "Sales", "Orders"],
+            [("Online", ONLINE), ("Stores", STORES)]
+                .iter()
+                .flat_map(|(name, points)| points.iter().map(|p| (*name, vec![p.0, p.1, p.2])))
                 .collect(),
         ),
         _ if conversion(values).is_some() => (
@@ -318,6 +385,7 @@ fn component(values: &DemoValues, source: &str) -> String {
         "bar" => "BarChart",
         "pie" => "PieChart",
         "funnel" => "FunnelChart",
+        "scatter" => "ScatterChart",
         _ => "LineChart",
     };
     let mut chart = source.replacen("Chart", name, 1);
@@ -485,12 +553,41 @@ pub fn ChartPage() -> Element {
                     prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom."),
                     prop("export_button", "Option<bool>").default(on(theme.chart.export_button)).doc("Save as SVG and Save as PNG buttons above the plot."),
                 ]),
+                props("ScatterChart", vec![
+                    prop("series", "Vec<ScatterSeries>").default("required").doc("The groups of points, each an x and a y, `ScatterSeries::new(\"Online\", [(12.0, 34.0)])`. A third value, a size, makes the series bubbles, their area by it. A point with an x or y that is not a number is left out."),
+                    prop("title", "Option<String>").doc("Shown above the chart, and its accessible name."),
+                    prop("description", "Option<String>").doc("A sentence under the title: what to read from the chart."),
+                    prop("trend", "Option<Trend>").doc("A curve fitted through each series' points, in its colour: `Linear`, `Exponential` over the points above y 0, `Logarithmic` over those right of x 0, or `Polynomial(n)`, its order held to 2 to 6."),
+                    prop("x_min", "Option<f64>").doc("The x axis' lowest value. Unset, a round number at or under the lowest x."),
+                    prop("x_max", "Option<f64>").doc("The x axis' highest value. Unset, a round number at or over the highest x."),
+                    prop("y_min", "Option<f64>").doc("The y axis' lowest value. Unset, a round number at or under the lowest y."),
+                    prop("y_max", "Option<f64>").doc("The y axis' highest value. Unset, a round number at or over the highest y."),
+                    prop("y_ticks", "Option<usize>").default(theme.chart.y_ticks.to_string()).doc("About how many steps each axis is cut into."),
+                    prop("x_title", "Option<String>").doc("Under the x axis: what it measures."),
+                    prop("y_title", "Option<String>").doc("Beside the y axis, read upward: what it measures."),
+                    prop("legend", "LegendPosition").default("bottom with two series or more").doc("`bottom`, `top`, `start`, `end` or `none`. Each key is its series' point shape."),
+                    prop("grid", "Option<bool>").default(on(theme.chart.grid)).doc("Horizontal guide lines."),
+                    prop("value_format", "ValueFormat").default("Auto").doc("How values are written on the axes, in the tooltip and in the summary."),
+                    prop("unit", "Option<String>").doc("After every y value, as `\"kg\"`; a series' own `unit` wins."),
+                    prop("aspect_ratio", "Option<f32>").default("16 / 9").doc("Width over height of the plot."),
+                    prop("loading", "bool").default("false").doc("A placeholder instead of the plot, and `aria-busy` on the chart."),
+                    prop("empty", "Option<Element>").doc("Shown in the plot when there is no point at all. Unset, \"No data\"."),
+                    prop("tooltip", "Option<bool>").default(on(theme.chart.tooltip)).doc("A tooltip and a crosshair at the pointer's nearest or the keys' point."),
+                    prop("tooltip_content", "Option<Callback<ChartPoint, Element>>").doc("The tooltip's content instead of the series and the point's x, y and size."),
+                    prop("onpointclick", "Option<EventHandler<ChartPoint>>").doc("A click on a point, a second tap on a pinned one, or Enter on the keys' point. `index` is the point's place in its series."),
+                    prop("onactivechange", "Option<EventHandler<Option<ChartPoint>>>").doc("The point under the pointer or the keys; `None` when it leaves."),
+                    prop("hidden", "Option<Vec<String>>").doc("The names of the series the legend hides; set, they are controlled."),
+                    prop("default_hidden", "Vec<String>").default("[]").doc("Seeds the hidden series once. Ignored when `hidden` is set."),
+                    prop("onhiddenchange", "Option<EventHandler<Vec<String>>>").doc("The hidden series a legend button asks for. The last shown series stays."),
+                    prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it."),
+                    prop("export_button", "Option<bool>").default(on(theme.chart.export_button)).doc("Save as SVG and Save as PNG buttons above the plot."),
+                ]),
             ],
             accessibility: a11y()
                 .key(["Tab"], "Into the plot and the legend's buttons in the order drawn: a legend at the top or the start comes first.")
-                .key(["ArrowRight", "ArrowLeft"], "Line: the next or previous point of the line, as drawn, left to right in either text direction. Bar: the next or previous category's bar of the series; `horizontal`, the next or previous series' bar in the category. Pie: the next or previous slice, clockwise. Funnel: the next or previous stage, top down.")
-                .key(["ArrowDown", "ArrowUp"], "Line: the next or previous line at the same x value, or its nearest point. Bar: the next or previous series' bar in the category; `horizontal`, the next or previous category, top to bottom. Pie and funnel: the next or previous slice or stage.")
-                .key(["Home", "End"], "The line's or the series' first or last point or bar; a pie's first or last slice, a funnel's top or bottom stage.")
+                .key(["ArrowRight", "ArrowLeft"], "Line: the next or previous point of the line, as drawn, left to right in either text direction. Bar: the next or previous category's bar of the series; `horizontal`, the next or previous series' bar in the category. Pie: the next or previous slice, clockwise. Funnel: the next or previous stage, top down. Scatter: the series' next or previous point, left to right.")
+                .key(["ArrowDown", "ArrowUp"], "Line: the next or previous line at the same x value, or its nearest point. Bar: the next or previous series' bar in the category; `horizontal`, the next or previous category, top to bottom. Pie and funnel: the next or previous slice or stage. Scatter: the next or previous series' point nearest in x.")
+                .key(["Home", "End"], "The line's or the series' first or last point or bar; a pie's first or last slice, a funnel's top or bottom stage; a scatter series' leftmost or rightmost point.")
                 .key(["Enter", "Space"], "Calls `onpointclick` with the point, bar or slice.")
                 .key(["Escape"], "Clears the brushed band, else the point and its tooltip. A tooltip a pointer hovers closes with Escape wherever focus is, and stays closed until the pointer leaves the plot.")
                 .key(["+", "-"], "With `zoom`: zooms the x axis, a lying bar chart's categories, in or out around the keys' point; the arrows carry the window along at its edge.")
@@ -499,8 +596,8 @@ pub fn ChartPage() -> Element {
                 .handles([
                     "The chart is a `role=\"figure\"` named by `title`, else by a spread `aria-label`, else \"chart\". The drawing is hidden from screen readers.",
                     "A loading chart says \"Loading chart\" in a live region when it starts, and its summary says it too.",
-                    "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is, then each mark line's name and value and each marked point's place and value, each line's error band and each bar series' error bars with their outer ends, the series drawn as a line over bars, the series on the right y axis, the axes' titles and, stacked, that the top line is the total; a pie's, the total, then each slice's value and share; a funnel's, its first and last stage, then each stage's value and share of the first.",
-                    "The plot is one tab stop, a `role=\"application\"` described as a chart, so a screen reader hands it the arrows. Each point the keys reach is announced, as \"This week, Tue: 132\" or \"Chrome: 62, 62%.\"",
+                    "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is, then each mark line's name and value and each marked point's place and value, each line's error band and each bar series' error bars with their outer ends, the series drawn as a line over bars, the series on the right y axis, the axes' titles and, stacked, that the top line is the total; a pie's, the total, then each slice's value and share; a funnel's, its first and last stage, then each stage's value and share of the first; a scatter's, each series' count of points and its x and y ranges, a bubble series' sizes and each trend line's kind and direction, as \"Online: linear trend, rising.\"",
+                    "The plot is one tab stop, a `role=\"application\"` described as a chart, so a screen reader hands it the arrows. Each point the keys reach is announced, as \"This week, Tue: 132\", \"Chrome: 62, 62%.\" or \"Online: x 12, y 34, size 80\".",
                     "The legend's entries are toggle buttons: pressed while their series or slice shows, struck through when hidden. The last shown one's button is `aria-disabled`. Should `hidden` or `default_hidden` name every one, the plot and the summary say \"All series are hidden.\" and the legend stays. A dashed line's key is a dash, as drawn; once a line sets a `symbol`, each key is its line's point shape. A line among bars is keyed by a short stroke, the bars by squares.",
                     "On a touch screen a tap pins a point's tooltip, a second tap on it clicks; a vertical swipe still scrolls the page.",
                     "With `zoom`, the shown range is announced once a zoom or pan settles, as \"Showing Tue to Fri\"; the Reset zoom button stays focusable while there is nothing to reset. Ctrl or Cmd with the wheel zooms only a zoomable plot, so the page zoom works everywhere else.",
@@ -530,7 +627,8 @@ pub fn ChartPage() -> Element {
                     "`.colors` and `.negative_color` add no meaning of their own: a loss already hangs below the axis. The legend keeps the series' colour.",
                     "A percent stack draws no error bars and reads the range in its tooltip; on any other layout the value axis reaches the far end of a range unless `y_min` or `y_max` is set. A line draws its ranges as a band, only around its points and not when `stacked`.",
                     "A rose's radius and a slice under `min_label_angle` are read by eye or not at all; the summary gives every value.",
-                    "`zoom` and `onrange` are for lines and bars; a pie and a funnel export only.",
+                    "`zoom` and `onrange` are for lines and bars; a pie, a funnel and a scatter export only.",
+                    "A bubble's size and a trend line are read by eye; the tooltip, the announcement and the summary give the sizes and each trend's direction. Bubbles are drawn largest first, so a small one stays on top.",
                     "A funnel is drawn widest stage first; the keys, the summary and the legend keep the order of `stages`. A hidden stage leaves the drawing and the others widen to the largest shown; percent labels stay shares of the first stage.",
                     "An export keeps the normal palette in forced colours. `png()` is `None` on Blitz and on the server, and the PNG button says it could not save.",
                     "A mark line is drawn on a line chart that is not `stacked`, on upright, `grouped` bars and on a line among upright bars, and only inside the y axis' ends; the summary leaves out the ones not drawn, except past the ends. A marked point is drawn on a line only, in a line chart or among upright bars.",
@@ -544,8 +642,10 @@ pub fn ChartPage() -> Element {
                     Code { source: "BarChart" }
                     ", "
                     Code { source: "PieChart" }
-                    " and "
+                    ", "
                     Code { source: "FunnelChart" }
+                    " and "
+                    Code { source: "ScatterChart" }
                     ", each drawn as an SVG that fills its width, with a tooltip, the arrow keys, a legend that hides and shows, and a summary for screen readers. Needs the "
                     Code { source: "charts" }
                     " feature. Web and Android."
@@ -559,7 +659,11 @@ pub fn ChartPage() -> Element {
                     Code { source: ".secondary_axis()" }
                     "; in an upright bar chart, a series is drawn as a line over the bars with "
                     Code { source: ".kind(SeriesKind::Line)" }
-                    "."
+                    ". A scatter takes "
+                    Code { source: "ScatterSeries" }
+                    " of x and y pairs, bubbles with a size as a third value, and fits a "
+                    Code { source: "trend" }
+                    " line through each."
                 }
                 Text {
                     "Lines and bars zoom and pan their x axis with "
@@ -578,9 +682,9 @@ pub fn ChartPage() -> Element {
                 children_text: "",
                 wrap: Wrap(component),
                 controls: vec![
-                    Control::toggle("type", ["line", "bar", "pie", "funnel"])
+                    Control::toggle("type", ["line", "bar", "pie", "funnel", "scatter"])
                         .default("line")
-                        .labels(["Line", "Bar", "Pie", "Funnel"])
+                        .labels(["Line", "Bar", "Pie", "Funnel", "Scatter"])
                         .code(|_, values| {
                             let mark = marks_code(values);
                             match values.str("type").as_str() {
@@ -600,6 +704,10 @@ pub fn ChartPage() -> Element {
                             "funnel" => vec![
                                 "title: \"Checkout\"".to_string(),
                                 "stages: vec![Slice::new(\"Visits\", 1200.0), Slice::new(\"Product views\", 860.0), Slice::new(\"Carts\", 480.0), Slice::new(\"Checkouts\", 300.0), Slice::new(\"Orders\", 210.0)]".to_string(),
+                            ],
+                            "scatter" => vec![
+                                "title: \"Ad spend and sales\"".to_string(),
+                                scatter_series(values).0,
                             ],
                             _ => vec![
                                 "title: \"Visitors\"".to_string(),
@@ -706,13 +814,25 @@ pub fn ChartPage() -> Element {
                             _ => vec![],
                         }
                     }),
+                    Control::select("trend", ["linear", "exponential", "logarithmic", "polynomial", "none"])
+                        .default("linear")
+                        .hidden_when(is("scatter"))
+                        .code(|_, values| match trend(values) {
+                            Some((code, _)) => vec![format!("trend: {code}")],
+                            None => vec![],
+                        }),
+                    // A third value per point, the orders, sizes each bubble.
+                    Control::switch("bubbles")
+                        .default("true")
+                        .hidden_when(is("scatter"))
+                        .code(|_, _| vec![]),
                     Control::toggle("mark_point", ["max", "min", "both", "none"])
                         .default("max")
                         .hidden_when(is("line"))
                         .code(|_, _| vec![]),
                     Control::toggle("mark_line", ["average", "target", "none"])
                         .default("average")
-                        .hidden_when(is("axes"))
+                        .hidden_when(is("series"))
                         .code(|_, _| vec![]),
                     Control::switch("error_band")
                         .default("true")
@@ -760,7 +880,7 @@ pub fn ChartPage() -> Element {
                         }),
                     Control::select("legend", legend),
                     Control::switch("tooltip").default(on(theme.chart.tooltip)),
-                    Control::switch("zoom").default("true").hidden_when(is("axes")).code(|_, values| {
+                    Control::switch("zoom").default("true").hidden_when(is("series")).code(|_, values| {
                         match (values.str("zoom").as_str(), values.str("type").as_str()) {
                             ("true", "line" | "bar") => vec![
                                 "zoom: true".to_string(),
@@ -841,6 +961,15 @@ pub fn ChartPage() -> Element {
                                 title: "Checkout",
                                 stages: stages(),
                                 labels: PieLabels::from(values.str("labels").as_str()),
+                                legend, tooltip, loading, export_button,
+                            }
+                        },
+                        "scatter" => rsx! {
+                            ScatterChart {
+                                title: "Ad spend and sales",
+                                series: scatter_series(&values).1,
+                                trend: trend(&values).map(|t| t.1),
+                                y_min, y_max, y_ticks, x_title, y_title,
                                 legend, tooltip, loading, export_button,
                             }
                         },

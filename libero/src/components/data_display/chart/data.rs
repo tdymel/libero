@@ -443,13 +443,134 @@ impl From<(&str, f64)> for Slice {
     }
 }
 
+/// One point of a [`ScatterSeries`]: where it sits and, for a bubble, its size.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ScatterPoint {
+    pub x: f64,
+    pub y: f64,
+    /// A bubble's size: its area grows with it. `None`, a plain point.
+    pub size: Option<f64>,
+}
+
+impl ScatterPoint {
+    /// Drawn only with a finite x and y; a size that is not finite counts as none.
+    pub(crate) fn finite(&self) -> Option<(f64, f64, Option<f64>)> {
+        (self.x.is_finite() && self.y.is_finite())
+            .then(|| (self.x, self.y, self.size.filter(|size| size.is_finite())))
+    }
+}
+
+impl<X: Into<Value>, Y: Into<Value>> From<(X, Y)> for ScatterPoint {
+    fn from((x, y): (X, Y)) -> Self {
+        Self {
+            x: x.into().0.unwrap_or(f64::NAN),
+            y: y.into().0.unwrap_or(f64::NAN),
+            size: None,
+        }
+    }
+}
+
+impl<X: Into<Value>, Y: Into<Value>, S: Into<Value>> From<(X, Y, S)> for ScatterPoint {
+    fn from((x, y, size): (X, Y, S)) -> Self {
+        Self {
+            size: size.into().0,
+            ..Self::from((x, y))
+        }
+    }
+}
+
+/// One group of a [`ScatterChart`](super::ScatterChart): a name and its points.
+///
+/// ```rust
+/// # use libero::components::ScatterSeries;
+/// # use libero::theme::PointSymbol;
+/// let heights = ScatterSeries::new("Girls", [(150, 42.5), (160, 51.0)]).color("success");
+/// let bubbles = ScatterSeries::new("Cities", [(1.2, 40.0, 900), (3.4, 22.0, 120)])
+///     .symbol(PointSymbol::Square);
+/// # let _ = (heights, bubbles);
+/// ```
+#[derive(Clone, Debug, PartialEq)]
+pub struct ScatterSeries {
+    pub name: String,
+    /// A point with an x or y that is not finite is left out.
+    pub points: Vec<ScatterPoint>,
+    /// Unset, the theme's palette colour for the series' place.
+    pub color: Option<ChartColor>,
+    /// The shape of its points and its legend key. Unset, circle, triangle, square and
+    /// diamond by the series' place; a bubble is a circle.
+    pub symbol: Option<PointSymbol>,
+    /// Written after each y value in the tooltip and summary. Unset, the chart's `unit`.
+    pub unit: Option<String>,
+}
+
+impl ScatterSeries {
+    pub fn new<P: Into<ScatterPoint>>(
+        name: impl Into<String>,
+        points: impl IntoIterator<Item = P>,
+    ) -> Self {
+        Self {
+            name: name.into(),
+            points: points.into_iter().map(Into::into).collect(),
+            color: None,
+            symbol: None,
+            unit: None,
+        }
+    }
+
+    /// One point per row: `ScatterSeries::from_rows("Sales", &rows, |r| (r.price, r.sold))`.
+    pub fn from_rows<T, P: Into<ScatterPoint>>(
+        name: impl Into<String>,
+        rows: &[T],
+        point: impl Fn(&T) -> P,
+    ) -> Self {
+        Self::new(name, rows.iter().map(point))
+    }
+
+    pub fn color(mut self, color: impl Into<ChartColor>) -> Self {
+        self.color = Some(color.into());
+        self
+    }
+
+    pub fn symbol(mut self, symbol: PointSymbol) -> Self {
+        self.symbol = Some(symbol);
+        self
+    }
+
+    pub fn unit(mut self, unit: impl Into<String>) -> Self {
+        self.unit = Some(unit.into());
+        self
+    }
+
+    /// Any point with a size makes the series bubbles.
+    pub(crate) fn is_bubble(&self) -> bool {
+        self.points
+            .iter()
+            .any(|point| point.finite().is_some_and(|p| p.2.is_some()))
+    }
+}
+
+/// The curve a [`ScatterChart`](super::ScatterChart) fits through each series' points, by
+/// least squares, in the series' colour.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Trend {
+    /// A straight line.
+    Linear,
+    /// `y = a·e^(b·x)`, fitted to the points above 0.
+    Exponential,
+    /// `y = a + b·ln(x)`, fitted to the points right of 0.
+    Logarithmic,
+    /// A polynomial of this order, held to 2 to 6: a first order is `Linear`, a higher one
+    /// only chases the points' noise.
+    Polynomial(u8),
+}
+
 /// A point of a chart, as a click or a focus reports it.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ChartPoint {
     /// The series' place in `series`.
     pub series: usize,
     pub series_name: String,
-    /// The point's place on the x axis.
+    /// The point's place on the x axis; a scatter point's place in its series.
     pub index: usize,
     /// The x value as the chart writes it.
     pub x: String,

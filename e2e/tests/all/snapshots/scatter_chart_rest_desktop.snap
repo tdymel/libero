@@ -1,0 +1,31 @@
+---
+source: e2e/src/suite.rs
+description: scatter_chart at desktop (rest)
+expression: tree
+---
+figure "Spend and sales"
+  description "Scatter chart from 10 to 30. A: 3 points, x from 10 to 30, y from 30 to 45. A: linear trend, rising. B: 2 points, x from 13 to 28, y from 20 to 25. B: linear trend, rising."
+  StaticText "Spend and sales"
+  application "Spend and sales" [roledescription=chart]
+    description "Arrow keys move between points, Enter selects one."
+  status [atomic] [live=polite]
+  list "Series"
+    listitem [level=1]
+      button "A" [pressed]
+        StaticText "A"
+    listitem [level=1]
+      button "B" [pressed]
+        StaticText "B"
+  paragraph
+    StaticText "Scatter chart from 10 to 30."
+  paragraph
+    StaticText "A: 3 points, x from 10 to 30, y from 30 to 45."
+  paragraph
+    StaticText "A: linear trend, rising."
+  paragraph
+    StaticText "B: 2 points, x from 13 to 28, y from 20 to 25."
+  paragraph
+    StaticText "B: linear trend, rising."
+paragraph
+paragraph
+paragraph

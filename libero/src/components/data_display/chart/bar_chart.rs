@@ -10,6 +10,7 @@ use super::{
         with_extras,
     },
     legend::use_hidden_series,
+    overlay::Layout,
     props::chart_props,
     zoom::{cut, use_zoom, windowed},
 };
@@ -376,6 +377,7 @@ pub fn BarChart(props: BarChartProps) -> Element {
             onpointclick: props.onpointclick,
             onactivechange: props.onactivechange,
             swap_axes: horizontal,
+            layout: Layout::Columns,
             onrange: props.onrange,
         },
         export,

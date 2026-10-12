@@ -31,7 +31,8 @@ pub use carousel::{Carousel, CarouselAlign, CarouselPart, CarouselProps};
 pub use chart::{
     BarChart, BarChartProps, ChartColor, ChartHandle, ChartPart, ChartPoint, ChartRange,
     FunnelChart, FunnelChartProps, LineChart, LineChartProps, MarkLine, MarkPoint, PieChart,
-    PieChartProps, Series, SeriesKind, Slice, Value, ValueFormat, XValues, use_chart,
+    PieChartProps, ScatterChart, ScatterChartProps, ScatterPoint, ScatterSeries, Series,
+    SeriesKind, Slice, Trend, Value, ValueFormat, XValues, use_chart,
 };
 pub use data_list::{DataList, DataListItem, DataListItemProps, DataListProps};
 pub use icon::{Icon, IconProps};

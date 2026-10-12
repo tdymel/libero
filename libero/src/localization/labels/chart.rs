@@ -9,6 +9,7 @@ pub struct ChartLabels {
     pub bar: &'static str,
     pub pie: &'static str,
     pub funnel: &'static str,
+    pub scatter: &'static str,
     pub range: &'static str,
     /// `range` of an x axis with one value, `{first}`.
     pub range_one: &'static str,
@@ -44,6 +45,24 @@ pub struct ChartLabels {
     pub stages: &'static str,
     /// A point as the keys announce it: `{name}` its series, `{x}` and `{value}` its own.
     pub point: &'static str,
+    /// A scatter point as the keys announce it: `{value}` is its `scatter_value`.
+    pub point_free: &'static str,
+    /// A scatter point's `{x}` and `{y}`, in its tooltip and as the keys say it.
+    pub scatter_value: &'static str,
+    /// The same for a bubble, with its `{size}`.
+    pub bubble_value: &'static str,
+    /// A scatter series in the summary: `{count}` points, x from `{xmin}` to `{xmax}`, y from
+    /// `{min}` to `{max}`.
+    pub scatter_series: &'static str,
+    /// After a bubble series' sentence: its sizes from `{min}` to `{max}`.
+    pub bubble_sizes: &'static str,
+    /// A scatter series' trend line in the summary: `{kind}` one of `trends`, `{direction}`
+    /// one of `directions`, as it runs left to right.
+    pub trend: &'static str,
+    /// Linear, exponential, logarithmic and polynomial.
+    pub trends: [&'static str; 4],
+    /// Rising, falling and flat.
+    pub directions: [&'static str; 3],
     /// The x axis' `{title}`, in the summary.
     pub x_axis: &'static str,
     /// The y axis' `{title}`, in the summary.
@@ -98,6 +117,7 @@ impl ChartLabels {
         bar: "Bar chart",
         pie: "Pie chart",
         funnel: "Funnel chart",
+        scatter: "Scatter chart",
         range: "{kind} from {first} to {last}.",
         range_one: "{kind} for {first}.",
         series: "{name}: {min} to {max}, highest at {x}.",
@@ -117,6 +137,14 @@ impl ChartLabels {
         slices: "Slices",
         stages: "Stages",
         point: "{name}, {x}: {value}",
+        point_free: "{name}: {value}",
+        scatter_value: "x {x}, y {y}",
+        bubble_value: "x {x}, y {y}, size {size}",
+        scatter_series: "{name}: {count} points, x from {xmin} to {xmax}, y from {min} to {max}.",
+        bubble_sizes: "{name}: sizes from {min} to {max}.",
+        trend: "{name}: {kind} trend, {direction}.",
+        trends: ["linear", "exponential", "logarithmic", "polynomial"],
+        directions: ["rising", "falling", "flat"],
         x_axis: "X axis: {title}.",
         y_axis: "Y axis: {title}.",
         y2_axis: "Right y axis: {title}.",
@@ -150,6 +178,7 @@ impl ChartLabels {
         bar: "Balkendiagramm",
         pie: "Kreisdiagramm",
         funnel: "Trichterdiagramm",
+        scatter: "Streudiagramm",
         range: "{kind} von {first} bis {last}.",
         range_one: "{kind} für {first}.",
         series: "{name}: {min} bis {max}, am höchsten bei {x}.",
@@ -169,6 +198,14 @@ impl ChartLabels {
         slices: "Segmente",
         stages: "Stufen",
         point: "{name}, {x}: {value}",
+        point_free: "{name}: {value}",
+        scatter_value: "x {x}, y {y}",
+        bubble_value: "x {x}, y {y}, Größe {size}",
+        scatter_series: "{name}: {count} Punkte, x von {xmin} bis {xmax}, y von {min} bis {max}.",
+        bubble_sizes: "{name}: Größen von {min} bis {max}.",
+        trend: "{name}: {kind}er Trend, {direction}.",
+        trends: ["linear", "exponentiell", "logarithmisch", "polynomial"],
+        directions: ["steigend", "fallend", "flach"],
         x_axis: "X-Achse: {title}.",
         y_axis: "Y-Achse: {title}.",
         y2_axis: "Rechte Y-Achse: {title}.",

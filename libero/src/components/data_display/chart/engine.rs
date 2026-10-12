@@ -6,7 +6,7 @@ use charts_rs::{
     MarkLineCategory, Position, SeriesCategory, Symbol,
 };
 
-use super::data::{ValueFormat, ungrouped};
+use super::data::{Trend, ValueFormat, ungrouped};
 use crate::{
     localization::Formats,
     theme::{BarLayout, ChartInk, Curve, HexColor, PieLabels, PointSymbol},
@@ -563,6 +563,246 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
     })
 }
 
+/// A scatter series as drawn: its finite points, each with its place in the series.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct ScatterSpecSeries {
+    pub(crate) name: String,
+    pub(crate) points: Vec<(usize, f64, f64, Option<f64>)>,
+    pub(crate) color: HexColor,
+    pub(crate) symbol: PointSymbol,
+}
+
+/// Everything a scatter chart's SVG depends on.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct ScatterSpec {
+    pub(crate) width: f32,
+    pub(crate) height: f32,
+    pub(crate) series: Vec<ScatterSpecSeries>,
+    /// Sized points: every series' points are bubbles, a point without a size the middle size.
+    pub(crate) bubble: bool,
+    pub(crate) trend: Option<Trend>,
+    /// The y axis' ends and steps, both titles.
+    pub(crate) axes: Axes,
+    pub(crate) x_min: Option<f64>,
+    pub(crate) x_max: Option<f64>,
+    pub(crate) grid: bool,
+    /// A plain point's radius.
+    pub(crate) radius: f32,
+    pub(crate) ink: ChartInk,
+    pub(crate) format: ValueFormat,
+    pub(crate) unit: Option<String>,
+    pub(crate) formats: &'static Formats,
+}
+
+/// A scatter point's marker, sized so every shape covers about a circle's area.
+fn scatter_symbol(symbol: PointSymbol, r: f32) -> Symbol {
+    match symbol {
+        PointSymbol::Circle => Symbol::Circle(r, None),
+        PointSymbol::Square => Symbol::Rect(r * 0.9, None),
+        PointSymbol::Triangle => Symbol::Triangle(r * 1.35, None),
+        PointSymbol::Diamond => Symbol::Diamond(r * 1.25, None),
+    }
+}
+
+/// The scatter's points in the renderer's order: bubbles largest first, as it draws them.
+fn scatter_marks(spec: &ScatterSpec) -> Vec<(usize, usize, f64, &str)> {
+    spec.series
+        .iter()
+        .enumerate()
+        .flat_map(|(s, series)| {
+            let mut points: Vec<_> = series.points.iter().collect();
+            if spec.bubble {
+                let size = |p: &(usize, f64, f64, Option<f64>)| p.3.map_or(0.0, |v| v as f32);
+                points.sort_by(|a, b| size(b).total_cmp(&size(a)));
+            }
+            points
+                .into_iter()
+                .map(move |&(i, _, y, _)| (s, i, y, series.name.as_str()))
+        })
+        .collect()
+}
+
+pub(crate) fn draw_scatter(spec: &ScatterSpec) -> Option<Drawn> {
+    let series = spec
+        .series
+        .iter()
+        .map(|series| {
+            let values = series
+                .points
+                .iter()
+                .flat_map(|&(_, x, y, size)| {
+                    let size = spec.bubble.then_some(size.map(|v| v as f32));
+                    [Some(x as f32), Some(y as f32)].into_iter().chain(size)
+                })
+                .collect();
+            charts_rs::Series::new_nullable(series.name.clone(), values)
+        })
+        .collect();
+    let mut chart = charts_rs::ScatterChart::new(series);
+    chart.width = spec.width;
+    chart.height = spec.height;
+    chart.background_color = InkColor::transparent();
+    chart.title.text = String::new();
+    chart.legend.show = Some(false);
+    chart.tooltip.show = true;
+    chart.animation = None;
+    chart.series.colors = spec.series.iter().map(|s| ink(s.color)).collect();
+    chart.series.stroke_width = 2.0;
+    chart.bubble = spec.bubble;
+    // The largest bubble a tenth of the plot's short side, so a small chart is not buried.
+    chart.bubble_min_size = spec.radius;
+    chart.bubble_max_size = (spec.width.min(spec.height) / 10.0).clamp(spec.radius * 2.0, 30.0);
+    chart.series_symbol_sizes = vec![spec.radius; spec.series.len()];
+    chart.series_symbols = spec
+        .series
+        .iter()
+        .map(|s| match spec.bubble {
+            // Translucent, so overlapping bubbles and the trend lines show through.
+            true => Symbol::Circle(spec.radius, Some(ink(s.color).with_alpha(150))),
+            false => scatter_symbol(s.symbol, spec.radius),
+        })
+        .collect();
+    chart.regression = spec.trend.map(|trend| match trend {
+        Trend::Linear => charts_rs::Regression::Linear,
+        Trend::Exponential => charts_rs::Regression::Exponential,
+        Trend::Logarithmic => charts_rs::Regression::Logarithmic,
+        Trend::Polynomial(_) => charts_rs::Regression::Polynomial,
+    });
+    if let Some(Trend::Polynomial(order)) = spec.trend {
+        chart.regression_order = usize::from(order.clamp(2, 6));
+    }
+    chart.grid.stroke_color = match spec.grid {
+        true => ink(spec.ink.grid),
+        false => InkColor::transparent(),
+    };
+    chart.x_axis.stroke_color = ink(spec.ink.axis);
+    chart.x_axis.font.color = ink(spec.ink.label);
+    if let Some(y) = chart.y_axis_configs.first_mut() {
+        y.stroke_color = ink(spec.ink.axis);
+        y.font.color = ink(spec.ink.label);
+        y.formatter = Some(format!(
+            "{AXIS_MARK}{{c}}{}",
+            unit_suffix(spec.unit.as_deref())
+        ));
+    }
+    spec.axes
+        .style(&mut chart.base, &mut chart.y_axis_configs, false);
+    // Both axes fit the data: a scatter reads its spread, not its distance from 0.
+    let column = |values: Vec<f64>| {
+        [charts_rs::Series::new(
+            String::new(),
+            values.into_iter().map(|v| v as f32).collect(),
+        )]
+    };
+    let points = || spec.series.iter().flat_map(|s| &s.points);
+    if let Some(y) = chart.y_axis_configs.first_mut() {
+        round_axis(&column(points().map(|p| p.2).collect()), 0, y, None, false);
+    }
+    let mut x = chart.y_axis_configs.first().cloned().unwrap_or_default();
+    x.title = None;
+    x.min = spec.x_min.map(|min| min as f32);
+    x.max = spec.x_max.map(|max| max as f32);
+    x.formatter = Some(format!("{X_MARK}{{c}}"));
+    round_axis(
+        &column(points().map(|p| p.1).collect()),
+        0,
+        &mut x,
+        None,
+        false,
+    );
+    chart.x_axis_config = x;
+
+    let auto = spec.format == ValueFormat::Auto;
+    // A scatter's x is a measure, grouped as its y; not a year.
+    let write = |svg: &str, mark: char| {
+        let unit = (mark != X_MARK).then_some(spec.unit.as_deref()).flatten();
+        let (formats, compact) = (spec.formats, &spec.axes.compact);
+        let plain = move |label| spec.format.format(label, unit, formats);
+        axis_write(svg, mark, auto, unit, formats, compact, plain)
+    };
+    let exact = |svg: &str, chart: &charts_rs::ScatterChart| {
+        let svg = exact_axes(svg, &chart.y_axis_configs, false);
+        exact_ticks(&svg, X_MARK, &chart.x_axis_config, true)
+    };
+    let svg = fitted(&mut chart, spec.width, spec.height, |chart| {
+        let svg = chart.svg().ok()?;
+        let full = exact(&svg, chart);
+        match y_width(&svg, &full, AXIS_MARK, write(&full, AXIS_MARK)) {
+            Some(width) => {
+                if let Some(y) = chart.y_axis_configs.first_mut() {
+                    y.width = Some(width);
+                }
+                chart.svg().ok()
+            }
+            None => Some(svg),
+        }
+    })?;
+
+    let svg = trends_on_top(&exact(&pin_to_axis(&svg), &chart));
+    let (svg, triggers) = inert(&svg, write(&svg, AXIS_MARK), "", true);
+    let write_x = write(&svg, X_MARK);
+    let svg = pin_to_ticks(&svg, X_MARK, spec.width, &write_x);
+    let svg = relabel(&svg, X_MARK, write_x);
+    // A shape's centre is its point.
+    let triggers: Vec<Trigger> = triggers
+        .into_iter()
+        .map(|trigger| {
+            let (x, y) = match trigger.shape {
+                MarkShape::Rect {
+                    x,
+                    y,
+                    width,
+                    height,
+                } => (x + width / 2.0, y + height / 2.0),
+                MarkShape::Point { x, y } => (x, y),
+                // A triangle or diamond: its corners' middle.
+                MarkShape::Sector { ref path } => {
+                    let corners: Vec<f32> = path
+                        .split_whitespace()
+                        .filter_map(|n| n.parse().ok())
+                        .collect();
+                    let count = (corners.len() / 2).max(1) as f32;
+                    let sum = |odd: usize| corners.iter().skip(odd).step_by(2).sum::<f32>();
+                    (sum(0) / count, sum(1) / count)
+                }
+            };
+            Trigger {
+                shape: MarkShape::Point { x, y },
+                ..trigger
+            }
+        })
+        .collect();
+    let marks = match_marks(&scatter_marks(spec), &triggers);
+    Some(Drawn {
+        geometry: Geometry {
+            width: spec.width,
+            height: spec.height,
+            plot: Plot::of(&svg, spec.width, spec.height),
+            marks,
+            hole: 0.0,
+            share_of: None,
+        },
+        svg: spec.ink.paint(svg),
+    })
+}
+
+/// The trend lines moved after every point: the renderer draws each after its own series', so
+/// a later series' points would hide it.
+fn trends_on_top(svg: &str) -> String {
+    let (mut rest, mut lines) = (svg.to_string(), String::new());
+    while let Some(at) = rest.find("class=\"ct-regression\"") {
+        let (Some(start), Some(len)) = (rest[..at].rfind('<'), rest[at..].find("/>")) else {
+            break;
+        };
+        lines.extend(rest.drain(start..at + len + 2));
+    }
+    match rest.rfind("</svg>") {
+        Some(end) => rest.insert_str(end, &lines),
+        None => rest.push_str(&lines),
+    }
+    rest
+}
+
 /// Everything a bar chart's SVG depends on.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct BarSpec {
@@ -677,12 +917,14 @@ fn percent_axes(axes: &Axes, series: &[SeriesSpec]) -> Axes {
 }
 
 /// Puts axis `index`'s unset ends on whole steps of 1, 2, 2.5 or 5 times a power of ten, the
-/// step count nearest its `split_number`, or exactly `count` steps; set ends stay.
+/// step count nearest its `split_number`, or exactly `count` steps; set ends stay. With
+/// `zero`, the axis spans 0 too.
 fn round_axis(
     list: &[charts_rs::Series],
     index: usize,
     config: &mut charts_rs::YAxisConfig,
     count: Option<usize>,
+    zero: bool,
 ) {
     if config.min.is_some() && config.max.is_some() {
         return;
@@ -716,8 +958,9 @@ fn round_axis(
         return;
     }
     let (min, max) = (config.min.map(f64::from), config.max.map(f64::from));
-    let low = min.unwrap_or(values.iter().fold(0.0, |low, v| v.min(low)));
-    let high = max.unwrap_or(values.iter().fold(0.0, |high, v| v.max(high)));
+    let start = if zero { 0.0 } else { values[0] };
+    let low = min.unwrap_or(values.iter().fold(start, |low, v| v.min(low)));
+    let high = max.unwrap_or(values.iter().fold(start, |high, v| v.max(high)));
     // Only zeros: an axis up to 1.
     let high = match (high > low, max) {
         (false, None) => low + 1.0,
@@ -777,11 +1020,11 @@ fn round_axis(
 /// [`round_axis`] on the left axis, and the right one cut into as many steps.
 fn round_axes(base: &charts_rs::ChartBase, y: &mut [charts_rs::YAxisConfig]) {
     if let Some(left) = y.first_mut() {
-        round_axis(&base.series_list, 0, left, None);
+        round_axis(&base.series_list, 0, left, None, true);
     }
     let count = y.first().map(|left| left.split_number);
     if let Some(right) = y.get_mut(1) {
-        round_axis(&base.series_list, 1, right, count);
+        round_axis(&base.series_list, 1, right, count, true);
     }
 }
 
@@ -1066,7 +1309,7 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
         }
     };
 
-    let (svg, triggers) = inert(&svg, axis(&svg), "");
+    let (svg, triggers) = inert(&svg, axis(&svg), "", false);
     let svg = relabel(&svg, AXIS2_MARK, axis2(&svg));
     // The renderer's margins would leave a narrow band's bars a sliver.
     let narrow = {
@@ -1759,6 +2002,7 @@ pub(crate) fn draw_pie(spec: &PieSpec) -> Option<Drawn> {
                 .format(label, spec.unit.as_deref(), spec.formats)
         },
         &edge,
+        false,
     );
     let (svg, triggers) = round_slices(svg, triggers, centre, spec.slice_radius);
     let svg = relabel(&svg, PERCENT_MARK, |share| {
@@ -1867,6 +2111,7 @@ pub(crate) fn draw_funnel(spec: &FunnelSpec) -> Option<Drawn> {
                 .format(label, spec.unit.as_deref(), spec.formats)
         },
         "",
+        false,
     );
     let svg = relabel(&svg, PERCENT_MARK, |value| match spec.first > 0.0 {
         true => ValueFormat::Percent.format(value / spec.first, None, spec.formats),
@@ -2504,11 +2749,17 @@ pub(crate) struct Trigger {
 /// The renderer's SVG made inert: no own tooltips, no `<title>`s, the page's font, its
 /// y labels written by `axis`, sized by its container. Returns the triggers it dropped.
 pub(crate) fn sanitize(svg: &str, axis: impl Fn(f64) -> String) -> (String, Vec<Trigger>) {
-    inert(svg, axis, "")
+    inert(svg, axis, "", false)
 }
 
-/// [`sanitize`], with `extra` attributes on every kept mark.
-fn inert(svg: &str, axis: impl Fn(f64) -> String, extra: &str) -> (String, Vec<Trigger>) {
+/// [`sanitize`], with `extra` attributes on every kept mark; with `circles`, a circle trigger
+/// is a scatter's point, kept, not a line's invisible target.
+fn inert(
+    svg: &str,
+    axis: impl Fn(f64) -> String,
+    extra: &str,
+    circles: bool,
+) -> (String, Vec<Trigger>) {
     let mut out = String::with_capacity(svg.len());
     let mut triggers = Vec::new();
     let mut rest = svg;
@@ -2539,7 +2790,7 @@ fn inert(svg: &str, axis: impl Fn(f64) -> String, extra: &str) -> (String, Vec<T
             }
             let end = end_of(rest);
             // A line's trigger is an invisible circle; a bar or a slice is the mark itself.
-            if name != "circle" {
+            if name != "circle" || circles {
                 out.push_str(&self_closing(name, &attributes, extra));
             }
             rest = &rest[end..];
@@ -2602,7 +2853,7 @@ fn trigger(name: &str, attributes: &[(&str, &str)]) -> Option<Trigger> {
         "path" => MarkShape::Sector {
             path: attribute(attributes, "d")?.to_string(),
         },
-        // A funnel's stage, as the path of its corners.
+        // A funnel's stage or a scatter's triangle or diamond, as the path of its corners.
         "polygon" => {
             let corners: Vec<&str> = attribute(attributes, "points")?
                 .split_whitespace()
@@ -2954,6 +3205,106 @@ fn unescape(text: &str) -> String {
 mod tests {
     use super::*;
     use crate::theme::{Color, ColorShade, Theme, chart_hex};
+
+    fn scatter(points: &[(f64, f64, Option<f64>)], symbol: PointSymbol) -> ScatterSpec {
+        let series = |name: &str, symbol| ScatterSpecSeries {
+            name: name.to_string(),
+            points: points
+                .iter()
+                .enumerate()
+                .map(|(i, &(x, y, size))| (i, x, y, size))
+                .collect(),
+            color: chart_hex(&Theme::DEFAULT, Color::Primary, ColorShade::S6),
+            symbol,
+        };
+        ScatterSpec {
+            width: 320.0,
+            height: 180.0,
+            series: vec![series("A", PointSymbol::Circle), series("B", symbol)],
+            bubble: points.iter().any(|p| p.2.is_some()),
+            trend: None,
+            axes: axes(),
+            x_min: None,
+            x_max: None,
+            grid: true,
+            radius: 5.0,
+            ink: ChartInk::of(&Theme::DEFAULT, false),
+            format: ValueFormat::Auto,
+            unit: None,
+            formats: &Formats::GERMAN,
+        }
+    }
+
+    /// Every point is a mark at its place, kept visible, its shape's centre; the axes fit the
+    /// data, not 0, and are written in the locale.
+    #[test]
+    fn scatter_points_are_marks_on_fitted_axes() {
+        let points = [
+            (150.0, 42.5, None),
+            (160.0, 51.0, None),
+            (175.5, 70.0, None),
+        ];
+        for symbol in [
+            PointSymbol::Triangle,
+            PointSymbol::Square,
+            PointSymbol::Diamond,
+        ] {
+            let drawn = draw_scatter(&scatter(&points, symbol)).expect("drawn");
+            let marks = &drawn.geometry.marks;
+            assert_eq!(marks.len(), 6, "{symbol:?}: {}", drawn.svg);
+            let at = |m: &Mark| match m.shape {
+                MarkShape::Point { x, y } => (x, y),
+                _ => panic!("{m:?}"),
+            };
+            // Both series lie on each other: B's centres are A's.
+            for i in 0..3 {
+                let (a, b) = (at(&marks[i]), at(&marks[i + 3]));
+                assert!(
+                    (a.0 - b.0).abs() < 0.6 && (a.1 - b.1).abs() < 0.6,
+                    "{a:?} {b:?}"
+                );
+                assert_eq!((marks[i].series, marks[i].index), (0, i));
+            }
+            assert!(at(&marks[0]).0 < at(&marks[1]).0 && at(&marks[1]).1 < at(&marks[0]).1);
+            assert_eq!(marks[2].value, 70.0);
+            assert!(drawn.svg.contains("<circle"), "{}", drawn.svg);
+            assert!(!drawn.svg.contains("ct-"), "{}", drawn.svg);
+            // Not from 0: the x axis starts near the lowest x.
+            assert!(!drawn.svg.contains(">\n0\n<"), "{}", drawn.svg);
+            assert!(drawn.svg.contains("150"), "{}", drawn.svg);
+        }
+    }
+
+    /// Bubbles are drawn largest first; the marks keep each point's place in its series.
+    #[test]
+    fn bubbles_keep_their_places() {
+        let points = [
+            (1.0, 1.0, Some(10.0)),
+            (2.0, 2.0, Some(90.0)),
+            (3.0, 3.0, Some(40.0)),
+        ];
+        let mut spec = scatter(&points, PointSymbol::Circle);
+        spec.trend = Some(Trend::Linear);
+        let drawn = draw_scatter(&spec).expect("drawn");
+        let order: Vec<_> = drawn
+            .geometry
+            .marks
+            .iter()
+            .map(|m| (m.series, m.index))
+            .collect();
+        assert_eq!(order, [(0, 1), (0, 2), (0, 0), (1, 1), (1, 2), (1, 0)]);
+        // The trend line is drawn, its formula not.
+        assert!(!drawn.svg.contains("y ="), "{}", drawn.svg);
+        // Both trend lines over every bubble, the bubbles translucent.
+        let last_bubble = drawn.svg.rfind("<circle").expect("bubbles");
+        assert_eq!(
+            drawn.svg[last_bubble..].matches("<path").count(),
+            2,
+            "{}",
+            drawn.svg
+        );
+        assert!(drawn.svg.contains("fill-opacity"), "{}", drawn.svg);
+    }
 
     fn line(series: Vec<SeriesSpec>, x: &[&str]) -> LineSpec {
         LineSpec {

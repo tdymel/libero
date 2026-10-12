@@ -120,6 +120,7 @@ mod rich_text_editor_toolbar;
 mod rtl_keys;
 mod rtl_layout;
 mod save_file;
+mod scatter_chart;
 mod scroll_area;
 mod scroller;
 mod segmented_control;

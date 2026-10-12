@@ -10,6 +10,7 @@ use super::{
         with_extras,
     },
     legend::use_hidden_series,
+    overlay::Layout,
     props::chart_props,
     zoom::{cut, use_zoom, windowed},
 };
@@ -274,6 +275,7 @@ pub fn LineChart(props: LineChartProps) -> Element {
             onpointclick: props.onpointclick,
             onactivechange: props.onactivechange,
             swap_axes: false,
+            layout: Layout::Columns,
             onrange: props.onrange,
         },
         export,

@@ -143,6 +143,22 @@ pub(super) struct OverlaySeries {
     pub(super) unit: Option<String>,
     /// Each value's error range, written after it.
     pub(super) errors: Vec<Option<(f64, f64)>>,
+    /// A scatter's x values as written, by index; empty elsewhere.
+    pub(super) xs: Vec<String>,
+    /// A scatter's points as the tooltip and the keys say them, by index.
+    pub(super) points: Vec<String>,
+}
+
+/// How a chart's points lie, for the pointer, the keys, the crosshair and the tooltip.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub(super) enum Layout {
+    /// In columns over the x values: lines, bars, slices.
+    #[default]
+    Columns,
+    /// Anywhere, each with its own x: a scatter's.
+    Free,
+    /// On a radar's spokes, one column per spoke.
+    Spokes,
 }
 
 #[derive(Props, Clone, PartialEq)]
@@ -166,6 +182,7 @@ pub(super) struct ChartOverlayProps {
     pub(super) onactivechange: Option<EventHandler<Option<ChartPoint>>>,
     /// Up and down walk the x values, left and right the series: a horizontal bar chart.
     pub(super) swap_axes: bool,
+    pub(super) layout: Layout,
     pub(super) zoom: Option<Zoom>,
     pub(super) onrange: Option<EventHandler<Option<ChartRange>>>,
 }
@@ -279,6 +296,7 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
         onpointclick,
         onactivechange,
         swap_axes,
+        layout,
         zoom,
         onrange,
     } = props;
@@ -358,7 +376,12 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
                 .map(|series| series.name.clone())
                 .unwrap_or_default(),
             index: mark.index,
-            x: x.get(mark.index).cloned().unwrap_or_default(),
+            x: match layout {
+                Layout::Free => entry(&series, mark).and_then(|series| series.xs.get(mark.index)),
+                _ => x.get(mark.index),
+            }
+            .cloned()
+            .unwrap_or_default(),
             value: mark.value,
         }
     };
@@ -416,7 +439,11 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
         with_marks(&|geometry| {
             let fit = Fit::of((geometry.width, geometry.height), *box_size.peek());
             let (x, y) = fit.to_svg(point.x, point.y);
-            hit::hit(&geometry.marks, x, y).map(|i| geometry.marks[i].clone())
+            let found = match layout {
+                Layout::Columns => hit::hit(&geometry.marks, x, y),
+                _ => hit::nearest(&geometry.marks, x, y),
+            };
+            found.map(|i| geometry.marks[i].clone())
         })
     };
     let click = {
@@ -430,15 +457,23 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
     let say_point = {
         let point_of = point_of.clone();
         let write = write.clone();
+        let series = series.clone();
         move |mark: &Mark| {
             let point = point_of(mark);
             let value = write(mark);
-            announcer.say(match mark.shape {
-                MarkShape::Sector { .. } if of_first().is_some_and(|first| first <= 0.0) => fill(
-                    labels.stage_value,
-                    &[("name", &point.series_name), ("value", &value)],
+            let own = entry(&series, mark).and_then(|series| series.points.get(mark.index));
+            announcer.say(match (layout, own, &mark.shape) {
+                (Layout::Free, Some(own), _) => fill(
+                    labels.point_free,
+                    &[("name", &point.series_name), ("value", own)],
                 ),
-                MarkShape::Sector { .. } if of_first().is_some() => fill(
+                (.., MarkShape::Sector { .. }) if of_first().is_some_and(|first| first <= 0.0) => {
+                    fill(
+                        labels.stage_value,
+                        &[("name", &point.series_name), ("value", &value)],
+                    )
+                }
+                (.., MarkShape::Sector { .. }) if of_first().is_some() => fill(
                     labels.stage,
                     &[
                         ("name", &point.series_name),
@@ -446,7 +481,7 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
                         ("share", &slice_share(mark)),
                     ],
                 ),
-                MarkShape::Sector { .. } => fill(
+                (.., MarkShape::Sector { .. }) => fill(
                     labels.slice,
                     &[
                         ("name", &point.series_name),
@@ -866,7 +901,11 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
                     .marks
                     .iter()
                     .position(|mark| Some((mark.series, mark.index)) == key);
-                hit::walk(&geometry.marks, current, step).map(|next| geometry.marks[next].clone())
+                let next = match layout {
+                    Layout::Free => hit::walk_free(&geometry.marks, current, step),
+                    _ => hit::walk(&geometry.marks, current, step),
+                };
+                next.map(|next| geometry.marks[next].clone())
             }) else {
                 return;
             };
@@ -935,10 +974,14 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
     let plot = geometry.map(|g| g.plot).unwrap_or(Plot::whole(0.0, 0.0));
     let marker = current.map(|mark| match &mark.shape {
         MarkShape::Point { x, y } => {
-            let Plot { top, bottom, .. } = plot;
+            let Plot { left, top, right, bottom } = plot;
+            // A scatter's point is read on both axes; a radar's spoke is drawn already.
             rsx! {
-                if tooltip {
+                if tooltip && layout != Layout::Spokes {
                     line { "data-chart-crosshair": true, x1: "{x}", x2: "{x}", y1: "{top}", y2: "{bottom}" }
+                }
+                if tooltip && layout == Layout::Free {
+                    line { "data-chart-crosshair": true, x1: "{left}", x2: "{right}", y1: "{y}", y2: "{y}" }
                 }
                 circle { "data-chart-dot": true, cx: "{x}", cy: "{y}", r: "5", fill: color(mark), "stroke-width": "2" }
             }
@@ -1002,6 +1045,7 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
                     &x,
                     &write,
                     formats,
+                    layout,
                 ),
             };
             Some((style, body))
@@ -1062,6 +1106,7 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
 }
 
 /// The x value, then each drawn series' value there; a pie's slice alone, with its share.
+#[allow(clippy::too_many_arguments)]
 fn tip_body(
     active: &Mark,
     marks: &[Mark],
@@ -1070,14 +1115,21 @@ fn tip_body(
     x: &[String],
     write: &impl Fn(&Mark) -> String,
     formats: &Formats,
+    layout: Layout,
 ) -> Element {
     let name = |mark: &Mark| {
         entry(series, mark)
             .map(|series| (series.name.clone(), series.color.clone()))
             .unwrap_or_default()
     };
-    let rows: Vec<(bool, String, String, String)> = match active.shape {
-        MarkShape::Sector { .. } => {
+    let own = entry(series, active).and_then(|series| series.points.get(active.index));
+    let rows: Vec<(bool, String, String, String)> = match (layout, own, &active.shape) {
+        // A scatter's point alone: no other point shares its x.
+        (Layout::Free, Some(own), _) => {
+            let (name, color) = name(active);
+            vec![(true, name, color, own.clone())]
+        }
+        (.., MarkShape::Sector { .. }) => {
             let (name, color) = name(active);
             let value = match share_of {
                 Some(first) if first <= 0.0 => write(active),
@@ -1098,8 +1150,8 @@ fn tip_body(
             })
             .collect(),
     };
-    let heading = match active.shape {
-        MarkShape::Sector { .. } => None,
+    let heading = match (layout, &active.shape) {
+        (Layout::Free, _) | (_, MarkShape::Sector { .. }) => None,
         _ => x.get(active.index).cloned(),
     };
     rsx! {

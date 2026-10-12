@@ -1,14 +1,15 @@
 # Chart
 
 Crate: `libero`, feature `charts`
-Import: `use libero::components::{BarChart, ChartHandle, ChartRange, FunnelChart, LineChart, PieChart, Series, Slice, use_chart};`
+Import: `use libero::components::{BarChart, ChartHandle, ChartRange, FunnelChart, LineChart, PieChart, ScatterChart, ScatterSeries, Series, Slice, Trend, use_chart};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/chart>
 Index: [index.md](index.md) lists every other page
-Description: Line, bar, pie and funnel charts as SVG, with a tooltip, arrow keys, a toggle legend, and a summary for screen readers.
+Description: Line, bar, pie, funnel and scatter charts as SVG, with a tooltip, arrow keys, a toggle legend, and a summary for screen readers.
 
-`LineChart`, `BarChart`, `PieChart` and `FunnelChart`, each drawn as an SVG
-that fills its width, with a tooltip, the arrow keys, a legend that hides and shows, and a
-summary for screen readers. Needs the `charts` feature. Web and Android.
+`LineChart`, `BarChart`, `PieChart`, `FunnelChart` and `ScatterChart`, each
+drawn as an SVG that fills its width, with a tooltip, the arrow keys, a legend
+that hides and shows, and a summary for screen readers. Needs the `charts`
+feature. Web and Android.
 
 A chart only draws. To show its values as a table too, put them in a
 [Table](table.md).
@@ -17,7 +18,9 @@ Lines and bars take one or more `Series` over a shared x axis; a pie takes
 `Slice`s, each a name and a value, and a funnel takes them as its stages, top
 to bottom. A line of another size or unit goes on a
 right y axis with `.secondary_axis()`; in an upright bar chart, a series is
-drawn as a line over the bars with `.kind(SeriesKind::Line)`.
+drawn as a line over the bars with `.kind(SeriesKind::Line)`. A scatter takes
+`ScatterSeries` of x and y pairs, bubbles with a size as a third value, and fits
+a `trend` line through each.
 
 Lines and bars zoom and pan their x axis with `zoom` and brush a range for
 `onrange`. Every chart exports as SVG or PNG through a `use_chart()` handle or
@@ -254,6 +257,36 @@ fn Demo() -> Element {
     }
 }
 ```
+
+`ScatterChart` takes points by two numbers, x and y. A third, a size, makes the
+series bubbles, their area by it. `trend` fits a curve through each series'
+points in its colour: `Trend::Linear`, `Exponential` (over the points above y 0),
+`Logarithmic` (right of x 0) or `Polynomial(n)`, its order held to 2 to 6. Both
+axes end on round numbers; `x_min`, `x_max`, `y_min` and `y_max` fix them.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{ScatterChart, ScatterSeries, Trend};
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        ScatterChart {
+            title: "Ad spend and sales",
+            x_title: "Ad spend (k€)",
+            y_title: "Sales (k€)",
+            trend: Trend::Linear,
+            series: vec![
+                ScatterSeries::new("Online", [(12.0, 34.0, 80.0), (25.0, 52.0, 90.0), (38.0, 71.0, 200.0)]),
+                ScatterSeries::new("Stores", [(8.0, 22.0, 50.0), (22.0, 33.0, 110.0), (35.0, 47.0, 130.0)]),
+            ],
+        }
+    }
+}
+```
+
+`ScatterSeries::from_rows("Sales", &rows, |r| (r.price, r.sold))` builds a series
+from your rows; `.color`, `.symbol` and `.unit` work as on `Series`.
 
 `y_min` and `y_max` fix the value axis' ends, `y_ticks` the steps between them.
 `x_title` and `y_title` say what each axis counts; the summary reads them out.
@@ -664,6 +697,38 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom. |
 | `export_button` | `Option<bool>` | `false` | Save as SVG and Save as PNG buttons above the plot. |
 
+### `ScatterChart`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `series` | `Vec<ScatterSeries>` | required | The groups of points, each an x and a y, `ScatterSeries::new("Online", [(12.0, 34.0)])`. A third value, a size, makes the series bubbles, their area by it. A point with an x or y that is not a number is left out. |
+| `title` | `Option<String>` | | Shown above the chart, and its accessible name. |
+| `description` | `Option<String>` | | A sentence under the title: what to read from the chart. |
+| `trend` | `Option<Trend>` | | A curve fitted through each series' points, in its colour: `Linear`, `Exponential` over the points above y 0, `Logarithmic` over those right of x 0, or `Polynomial(n)`, its order held to 2 to 6. |
+| `x_min` | `Option<f64>` | | The x axis' lowest value. Unset, a round number at or under the lowest x. |
+| `x_max` | `Option<f64>` | | The x axis' highest value. Unset, a round number at or over the highest x. |
+| `y_min` | `Option<f64>` | | The y axis' lowest value. Unset, a round number at or under the lowest y. |
+| `y_max` | `Option<f64>` | | The y axis' highest value. Unset, a round number at or over the highest y. |
+| `y_ticks` | `Option<usize>` | `4` | About how many steps each axis is cut into. |
+| `x_title` | `Option<String>` | | Under the x axis: what it measures. |
+| `y_title` | `Option<String>` | | Beside the y axis, read upward: what it measures. |
+| `legend` | `LegendPosition` | bottom with two series or more | `bottom`, `top`, `start`, `end` or `none`. Each key is its series' point shape. |
+| `grid` | `Option<bool>` | `true` | Horizontal guide lines. |
+| `value_format` | `ValueFormat` | `Auto` | How values are written on the axes, in the tooltip and in the summary. |
+| `unit` | `Option<String>` | | After every y value, as `"kg"`; a series' own `unit` wins. |
+| `aspect_ratio` | `Option<f32>` | `16 / 9` | Width over height of the plot. |
+| `loading` | `bool` | `false` | A placeholder instead of the plot, and `aria-busy` on the chart. |
+| `empty` | `Option<Element>` | | Shown in the plot when there is no point at all. Unset, "No data". |
+| `tooltip` | `Option<bool>` | `true` | A tooltip and a crosshair at the pointer's nearest or the keys' point. |
+| `tooltip_content` | `Option<Callback<ChartPoint, Element>>` | | The tooltip's content instead of the series and the point's x, y and size. |
+| `onpointclick` | `Option<EventHandler<ChartPoint>>` | | A click on a point, a second tap on a pinned one, or Enter on the keys' point. `index` is the point's place in its series. |
+| `onactivechange` | `Option<EventHandler<Option<ChartPoint>>>` | | The point under the pointer or the keys; `None` when it leaves. |
+| `hidden` | `Option<Vec<String>>` | | The names of the series the legend hides; set, they are controlled. |
+| `default_hidden` | `Vec<String>` | `[]` | Seeds the hidden series once. Ignored when `hidden` is set. |
+| `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | The hidden series a legend button asks for. The last shown series stays. |
+| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it. |
+| `export_button` | `Option<bool>` | `false` | Save as SVG and Save as PNG buttons above the plot. |
+
 Like every component, each chart also takes the shared props `sx`, `class`,
 `style`, `states`, `parts` (`ChartPart`), and any extra HTML attributes.
 
@@ -674,9 +739,9 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 | Key | Action |
 |---|---|
 | `Tab` | Into the plot and the legend's buttons in the order drawn: a legend at the top or the start comes first. |
-| `ArrowRight` / `ArrowLeft` | Line: the next or previous point of the line, as drawn, left to right in either text direction. Bar: the next or previous category's bar of the series; `horizontal`, the next or previous series' bar in the category. Pie: the next or previous slice, clockwise. Funnel: the next or previous stage, top down. |
-| `ArrowDown` / `ArrowUp` | Line: the next or previous line at the same x value, or its nearest point. Bar: the next or previous series' bar in the category; `horizontal`, the next or previous category, top to bottom. Pie and funnel: the next or previous slice or stage. |
-| `Home` / `End` | The line's or the series' first or last point or bar; a pie's first or last slice, a funnel's top or bottom stage. |
+| `ArrowRight` / `ArrowLeft` | Line: the next or previous point of the line, as drawn, left to right in either text direction. Bar: the next or previous category's bar of the series; `horizontal`, the next or previous series' bar in the category. Pie: the next or previous slice, clockwise. Funnel: the next or previous stage, top down. Scatter: the series' next or previous point, left to right. |
+| `ArrowDown` / `ArrowUp` | Line: the next or previous line at the same x value, or its nearest point. Bar: the next or previous series' bar in the category; `horizontal`, the next or previous category, top to bottom. Pie and funnel: the next or previous slice or stage. Scatter: the next or previous series' point nearest in x. |
+| `Home` / `End` | The line's or the series' first or last point or bar; a pie's first or last slice, a funnel's top or bottom stage; a scatter series' leftmost or rightmost point. |
 | `Enter` / `Space` | Calls `onpointclick` with the point, bar or slice. |
 | `Escape` | Clears the brushed band, else the point and its tooltip. A tooltip a pointer hovers closes with Escape wherever focus is, and stays closed until the pointer leaves the plot. |
 | `+` / `-` | With `zoom`: zooms the x axis, a lying bar chart's categories, in or out around the keys' point; the arrows carry the window along at its edge. |
@@ -696,10 +761,12 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   bars, the series on the right y axis, the axes' titles and, stacked, that the
   top line is the total; a pie's, the total, then each slice's value and share;
   a funnel's, its first and last stage, then each stage's value and share of
-  the first.
+  the first; a scatter's, each series' count of points and its x and y ranges,
+  a bubble series' sizes and each trend line's kind and direction, as "Online:
+  linear trend, rising."
 - The plot is one tab stop, a `role="application"` described as a chart, so a
   screen reader hands it the arrows. Each point the keys reach is announced, as
-  "This week, Tue: 132" or "Chrome: 62, 62%."
+  "This week, Tue: 132", "Chrome: 62, 62%." or "Online: x 12, y 34, size 80".
 - The legend's entries are toggle buttons: pressed while their series or slice
   shows, struck through when hidden. The last shown one's button is
   `aria-disabled`. Should `hidden` or `default_hidden` name every one, the plot
@@ -761,7 +828,11 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   not when `stacked`.
 - A rose's radius and a slice under `min_label_angle` are read by eye or not at
   all; the summary gives every value.
-- `zoom` and `onrange` are for lines and bars; a pie and a funnel export only.
+- `zoom` and `onrange` are for lines and bars; a pie, a funnel and a scatter
+  export only.
+- A bubble's size and a trend line are read by eye; the tooltip, the
+  announcement and the summary give the sizes and each trend's direction.
+  Bubbles are drawn largest first, so a small one stays on top.
 - A funnel is drawn widest stage first; the keys, the summary and the legend
   keep the order of `stages`. A hidden stage leaves the drawing and the others widen to
   the largest shown; percent labels stay shares of the first stage.

@@ -287,6 +287,12 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `refused::tab_skips_disabled_buttons_and_an_inert_subtree` | android | 958: element identity on the WebView |
 | `save_file::android_shares_binary_bytes_as_a_file` | all but android | 2078: the share sheet is Android's |
 | `save_file::android_shares_text_through_the_share_sheet` | all but android | 2016: the share sheet is Android's |
+| `scatter_chart::bubbles_say_their_sizes` | native | charts are parked on Blitz |
+| `scatter_chart::hovering_picks_the_nearest_point` | android | a touch screen has no hover |
+| `scatter_chart::hovering_picks_the_nearest_point` | ios | a touch screen has no hover |
+| `scatter_chart::hovering_picks_the_nearest_point` | native | charts are parked on Blitz |
+| `scatter_chart::the_keys_walk_the_points` | native | charts are parked on Blitz |
+| `scatter_chart::the_legend_hides_and_shows_a_series` | native | charts are parked on Blitz |
 | `scroll_area::a_jump_mid_list_renders_the_window_there` | android | 2177: the WebView does not follow the jump |
 | `scroll_area::rows_stay_in_view_through_a_fling` | android | 2131: rows trail a WebView fling; skeleton bars paint the gap |
 | `scroll_area::rows_stay_in_view_through_a_fling` | desktop | 2131: rows trail a WebView fling, 80px of 120; skeleton bars paint the gap |

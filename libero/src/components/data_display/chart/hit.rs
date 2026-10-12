@@ -1,6 +1,6 @@
 //! Which mark a pointer or a key lands on, from the harvested [`Geometry`](super::engine::Geometry).
 
-use std::f32::consts::TAU;
+use std::{cmp::Ordering, f32::consts::TAU};
 
 use super::engine::{Drawn, Mark, MarkShape};
 
@@ -14,6 +14,22 @@ impl Drawn {
         self.geometry
             .marks
             .sort_by_key(|mark| (mark.series, mark.index));
+        self
+    }
+
+    /// The same for a scatter, each series' points sorted left to right, then bottom up.
+    pub(super) fn with_points(mut self, shown: &[usize]) -> Self {
+        for mark in &mut self.geometry.marks {
+            mark.series = shown.get(mark.series).copied().unwrap_or(mark.series);
+        }
+        self.geometry.marks.sort_by(|a, b| {
+            let (ax, ay) = anchor(&a.shape);
+            let (bx, by) = anchor(&b.shape);
+            a.series
+                .cmp(&b.series)
+                .then(ax.total_cmp(&bx))
+                .then(by.total_cmp(&ay))
+        });
         self
     }
 
@@ -64,6 +80,55 @@ pub(super) fn hit(marks: &[Mark], x: f32, y: f32) -> Option<usize> {
     }
     // A line among bars wins near its points; elsewhere the bar under the pointer does.
     by(&|mark| point(mark).filter(|(dx, dy)| dx.hypot(*dy) <= POINT_REACH)).or_else(|| by(&rect))
+}
+
+/// The point nearest `(x, y)` by distance: a scatter's or a radar's, which share no columns.
+pub(super) fn nearest(marks: &[Mark], x: f32, y: f32) -> Option<usize> {
+    let distance = |mark: &Mark| {
+        let (mx, my) = anchor(&mark.shape);
+        (mx - x).hypot(my - y)
+    };
+    (0..marks.len()).min_by(|a, b| distance(&marks[*a]).total_cmp(&distance(&marks[*b])))
+}
+
+/// A scatter's key step: along a series in its marks' order (left to right), across to the
+/// next or previous series' point nearest in x, then in y.
+pub(super) fn walk_free(marks: &[Mark], active: Option<usize>, step: Step) -> Option<usize> {
+    let last = marks.len().checked_sub(1)?;
+    let Some(active) = active.filter(|active| *active <= last) else {
+        return Some(match step {
+            Step::Previous | Step::Last => last,
+            _ => 0,
+        });
+    };
+    let current = &marks[active];
+    let in_series = || (0..marks.len()).filter(|i| marks[*i].series == current.series);
+    let target = match step {
+        Step::First => in_series().next(),
+        Step::Last => in_series().next_back(),
+        Step::Next => in_series().find(|i| *i > active),
+        Step::Previous => in_series().rfind(|i| *i < active),
+        Step::Down | Step::Up => {
+            let mut series: Vec<usize> = marks.iter().map(|mark| mark.series).collect();
+            series.dedup();
+            let at = series.iter().position(|s| *s == current.series)?;
+            let target = match step {
+                Step::Down => series.get(at + 1),
+                _ => at.checked_sub(1).and_then(|at| series.get(at)),
+            };
+            let (x, y) = anchor(&current.shape);
+            let off = |i: &usize| {
+                let (mx, my) = anchor(&marks[*i].shape);
+                ((mx - x).abs(), (my - y).abs())
+            };
+            target.and_then(|&target| {
+                (0..marks.len())
+                    .filter(|i| marks[*i].series == target)
+                    .min_by(|a, b| off(a).partial_cmp(&off(b)).unwrap_or(Ordering::Equal))
+            })
+        }
+    };
+    Some(target.unwrap_or(active))
 }
 
 /// How far from a line's point among bars the pointer still picks it, in SVG units.
@@ -262,6 +327,40 @@ mod tests {
             value: 0.0,
             shape: MarkShape::Point { x, y },
         }
+    }
+
+    /// A scatter's marks sort left to right whatever the data order; the pointer picks the
+    /// nearest by distance, the keys walk along and across to the nearest.
+    #[test]
+    fn scatter_points_walk_left_to_right_and_across_to_the_nearest() {
+        let drawn = Drawn {
+            svg: String::new(),
+            geometry: super::super::engine::Geometry {
+                width: 100.0,
+                height: 100.0,
+                plot: super::super::engine::Plot::whole(100.0, 100.0),
+                marks: vec![
+                    point(0, 0, 50.0, 50.0),
+                    point(0, 1, 10.0, 90.0),
+                    point(1, 0, 48.0, 10.0),
+                    point(1, 1, 80.0, 52.0),
+                ],
+                hole: 0.0,
+                share_of: None,
+            },
+        };
+        let marks = drawn.with_points(&[0, 1]).geometry.marks;
+        let keys: Vec<_> = marks.iter().map(|m| (m.series, m.index)).collect();
+        assert_eq!(keys, [(0, 1), (0, 0), (1, 0), (1, 1)]);
+        // Nearest in the plane, not by column: (48, 10) is closer in x only.
+        assert_eq!(nearest(&marks, 75.0, 50.0), Some(3));
+        assert_eq!(walk_free(&marks, Some(0), Step::Next), Some(1));
+        assert_eq!(walk_free(&marks, Some(1), Step::Next), Some(1));
+        // Across to the nearest in x, however far in y.
+        assert_eq!(walk_free(&marks, Some(1), Step::Down), Some(2));
+        assert_eq!(walk_free(&marks, Some(3), Step::Up), Some(1));
+        assert_eq!(walk_free(&marks, Some(3), Step::First), Some(2));
+        assert_eq!(walk_free(&marks, None, Step::Last), Some(3));
     }
 
     /// As the engine harvests a pie: one series, a slice per index.

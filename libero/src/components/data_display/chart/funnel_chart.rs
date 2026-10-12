@@ -6,6 +6,7 @@ use super::{
     export::ExportSource,
     frame::{Frame, Interaction, hex, overlay_series, shown_places, use_plot_size},
     legend::use_hidden_series,
+    overlay::Layout,
     props::chart_props,
 };
 use crate::{
@@ -181,6 +182,7 @@ pub fn FunnelChart(props: FunnelChartProps) -> Element {
             onpointclick: props.onpointclick,
             onactivechange: props.onactivechange,
             swap_axes: false,
+            layout: Layout::Columns,
             onrange: None,
         },
         export,
