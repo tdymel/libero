@@ -15,8 +15,12 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `audio::the_bars_rise_with_the_decoded_tone` | native | Blitz has no Web Audio to decode with |
 | `bar_chart::a_click_on_a_bar_reports_it` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `bar_chart::a_click_on_a_bar_reports_it` | native | charts are parked on Blitz |
+| `bar_chart::a_loading_chart_says_so` | native | charts are parked on Blitz |
 | `bar_chart::a_pointer_on_a_line_s_point_picks_it` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `bar_chart::a_pointer_on_a_line_s_point_picks_it` | native | charts are parked on Blitz |
+| `bar_chart::escape_closes_a_hovered_tooltip_without_focus` | android | a touch screen has no hover |
+| `bar_chart::escape_closes_a_hovered_tooltip_without_focus` | ios | a touch screen has no hover |
+| `bar_chart::escape_closes_a_hovered_tooltip_without_focus` | native | charts are parked on Blitz |
 | `bar_chart::hovering_shows_the_bar_s_tooltip_and_marker` | android | a touch screen has no hover |
 | `bar_chart::hovering_shows_the_bar_s_tooltip_and_marker` | ios | a touch screen has no hover |
 | `bar_chart::hovering_shows_the_bar_s_tooltip_and_marker` | native | charts are parked on Blitz |
@@ -253,6 +257,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `picker_dialog::android_back_closes_a_date_field` | all but android | 1275: no Back key off Android |
 | `pie_chart::a_click_on_a_slice_reports_it` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `pie_chart::a_click_on_a_slice_reports_it` | native | charts are parked on Blitz |
+| `pie_chart::a_hidden_slice_grows_the_shares_the_eye_reads_not_the_summary` | native | charts are parked on Blitz |
 | `pie_chart::the_keys_walk_the_slices` | native | charts are parked on Blitz |
 | `pie_chart::the_legend_hides_and_shows_a_slice` | native | charts are parked on Blitz |
 | `pin_field::a_digit_retyped_without_a_key_leaves_no_drifted_cell` | desktop | 1126: no text without a key (no IME path) under xdotool |
