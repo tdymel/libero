@@ -167,7 +167,7 @@ impl Ios {
         ios.bridge
             .run("document.documentElement.style.touchAction = 'manipulation'")?;
         ios.bridge.run(
-            "window.__ev = []; const t0 = performance.now(); const log = (n, e) => { __ev.push(Math.round(performance.now() - t0) + ' ' + n + ' ' + (e && e.target && e.target.tagName ? e.target.tagName + (e.target.getAttribute && e.target.getAttribute('role') ? '/' + e.target.getAttribute('role') : '') : '') + ' vv' + visualViewport.scale.toFixed(2) + ' x' + Math.round(scrollX)); if (__ev.length > 400) __ev.shift(); }; \
+            "window.__ev = []; const t0 = performance.now(); const log = (n, e) => { __ev.push(Math.round(performance.now() - t0) + ' ' + n + ' ' + (e && e.target && e.target.tagName ? e.target.tagName + (e.target.getAttribute && e.target.getAttribute('role') ? '/' + e.target.getAttribute('role') : '') : '') + (e && e.target && e.target.tagName === 'INPUT' ? ' fs=' + getComputedStyle(e.target).fontSize + ' id=' + e.target.id : '') + ' vv' + visualViewport.scale.toFixed(2) + ' x' + Math.round(scrollX)); if (__ev.length > 400) __ev.shift(); }; \
              for (const n of ['touchstart','touchend','pointerdown','click','dblclick','focusin','focusout','scroll']) addEventListener(n, e => log(n, e), true); \
              visualViewport.addEventListener('resize', e => log('vvresize', e)); visualViewport.addEventListener('scroll', e => log('vvscroll', e));",
         )?;
