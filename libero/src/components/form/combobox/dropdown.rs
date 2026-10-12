@@ -193,6 +193,8 @@ pub(super) fn ComboboxDropdown(
             rsx! {
                 ScrollArea {
                     sx: sx().max_height(max_height),
+                    // The same area as the windowed list's: a new tag would leave its scroll listener deaf.
+                    handle: area,
                     scroll_position_y: scroll_y,
                     id: listbox_id(&id),
                     "data-slot": DropdownPart::Listbox.slot(),
