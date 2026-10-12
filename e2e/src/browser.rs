@@ -209,7 +209,8 @@ unsafe extern "C" {
 
 struct Harness {
     runtime: Runtime,
-    browser: Browser,
+    /// The browser fixtures open in and its launch count: [`relaunch`] swaps it (todo 3444).
+    browser: std::sync::Mutex<(u32, std::sync::Arc<Browser>)>,
     /// A second browser with classic scrollbars, launched on first use.
     classic: tokio::sync::OnceCell<Browser>,
     /// Caps concurrent navigations until `goto` returns: the first runs alone up to its
@@ -224,6 +225,10 @@ const COLD_LOAD: Duration = Duration::from_secs(120);
 /// Any later page's load event; a 20 s one is journalled as slow, so stalls stay visible.
 const WARM_LOAD: Duration = Duration::from_secs(60);
 const SLOW_LOAD: Duration = Duration::from_secs(20);
+
+/// Creating a tab takes milliseconds; past this Chrome is wedged. On macOS one busy renderer
+/// blocked every later `createTarget` to the shard's end (todo 3444).
+const CREATE_PAGE: Duration = Duration::from_secs(60);
 
 /// Navigations at once after the first, `E2E_NAVIGATIONS` to override.
 const NAVIGATIONS: usize = 16;
@@ -294,16 +299,17 @@ pub async fn page_permit(pages: usize) -> PagePermit {
     PagePermit(Some(permit))
 }
 
-/// Launches Chromium. `classic_scrollbars` drops `--hide-scrollbars`, which headless
-/// mode adds and no page can undo (todo 1317; CDP's `setScrollbarsHidden` broke permissions).
-async fn launch(classic_scrollbars: bool) -> Browser {
+/// Launches Chromium on `profile`, inside the run's own so the runner cleans it up.
+/// `classic_scrollbars` drops `--hide-scrollbars`, which headless mode adds and no page can
+/// undo (todo 1317; CDP's `setScrollbarsHidden` broke permissions).
+async fn launch(classic_scrollbars: bool, profile: std::path::PathBuf) -> Browser {
     let mut config = BrowserConfig::builder()
         // Headless, and with a window big enough that the desktop
         // viewport override is never clamped by the outer window.
         .window_size(1280, 900)
         // Own profile per run: the fixed default hits "SingletonLock: File exists"
         // after one interrupted run, or with two runs at once.
-        .user_data_dir(chrome_profile())
+        .user_data_dir(profile)
         // Long enough for a cold wasm bundle.
         .request_timeout(Duration::from_secs(120))
         // Instant scrolls: a background page stalls smooth ones (todo 687).
@@ -311,12 +317,7 @@ async fn launch(classic_scrollbars: bool) -> Browser {
         // A fake camera and microphone for `use_user_media`; the grant stays a CDP call.
         .arg("use-fake-device-for-media-stream");
     if classic_scrollbars {
-        // Inside the run's profile, so the runner cleans it up too.
-        config = config
-            .with_head()
-            .arg("headless")
-            .arg("mute-audio")
-            .user_data_dir(chrome_profile().join("classic-scrollbars"));
+        config = config.with_head().arg("headless").arg("mute-audio");
     }
     let config = config.build().expect("browser config");
     let (mut browser, mut handler) = Browser::launch(config).await.expect("launch chromium");
@@ -334,15 +335,114 @@ async fn launch(classic_scrollbars: bool) -> Browser {
 fn harness() -> &'static Harness {
     HARNESS.get_or_init(|| {
         let runtime = Runtime::new().expect("tokio runtime");
-        let browser = runtime.block_on(launch(false));
+        let browser = runtime.block_on(launch(false, chrome_profile()));
         Harness {
             runtime,
-            browser,
+            browser: std::sync::Mutex::new((0, std::sync::Arc::new(browser))),
             classic: tokio::sync::OnceCell::new(),
             navigations: tokio::sync::Semaphore::new(1),
             primed: std::sync::Once::new(),
         }
     })
+}
+
+/// The current main browser and its launch count.
+fn browser() -> (u32, std::sync::Arc<Browser>) {
+    let current = harness()
+        .browser
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    (current.0, current.1.clone())
+}
+
+fn blank_tab() -> Result<chromiumoxide::cdp::browser_protocol::target::CreateTargetParams> {
+    chromiumoxide::cdp::browser_protocol::target::CreateTargetParams::builder()
+        .url("about:blank")
+        .background(true)
+        .build()
+        .map_err(anyhow::Error::msg)
+}
+
+/// Opens a tab in the main browser. A stall relaunches Chrome and tries once more, so it
+/// costs the tests on the wedged Chrome, not the rest of the shard (todo 3444).
+async fn new_tab() -> Result<Page> {
+    let (launched, browser) = self::browser();
+    if let Ok(page) = tokio::time::timeout(CREATE_PAGE, browser.new_page(blank_tab()?)).await {
+        return page.context("open a page");
+    }
+    drop(browser);
+    relaunch(launched).await;
+    let (_, browser) = self::browser();
+    tokio::time::timeout(CREATE_PAGE, browser.new_page(blank_tab()?))
+        .await
+        .map_err(|_| anyhow::anyhow!("a relaunched Chrome stalled creating a page too"))?
+        .context("open a page")
+}
+
+/// Replaces the browser of launch `stalled` and journals the pages open in it; a no-op when
+/// another test relaunched it already. Dropping the old one kills its Chrome.
+async fn relaunch(stalled: u32) {
+    static ALONE: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+    let _alone = ALONE.lock().await;
+    if browser().0 != stalled {
+        return;
+    }
+    let report = format!(
+        "chrome stalled {CREATE_PAGE:?} creating a page for {}; relaunching. Open pages, \
+         oldest first: {}",
+        std::thread::current().name().unwrap_or("unnamed"),
+        open_tabs::report()
+    );
+    eprintln!("e2e: {report}");
+    crate::journal::note(&report);
+    let profile = chrome_profile().join(format!("relaunch-{}", stalled + 1));
+    let fresh = std::sync::Arc::new(launch(false, profile).await);
+    let old = std::mem::replace(
+        &mut *harness()
+            .browser
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()),
+        (stalled + 1, fresh),
+    );
+    drop(old);
+}
+
+/// The fixture pages open now, for the stall report: which page wedged Chrome.
+mod open_tabs {
+    use std::sync::Mutex;
+    use std::time::Instant;
+
+    use chromiumoxide::cdp::browser_protocol::target::TargetId;
+
+    static OPEN: Mutex<Vec<(TargetId, String, String, Instant)>> = Mutex::new(Vec::new());
+
+    fn open() -> std::sync::MutexGuard<'static, Vec<(TargetId, String, String, Instant)>> {
+        OPEN.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
+    pub(super) fn opened(target: &TargetId, url: &str) {
+        let test = std::thread::current()
+            .name()
+            .unwrap_or("unnamed")
+            .to_string();
+        open().push((target.clone(), url.to_string(), test, Instant::now()));
+    }
+
+    pub(super) fn closed(target: &TargetId) {
+        open().retain(|(open, ..)| open != target);
+    }
+
+    pub(super) fn report() -> String {
+        let open = open();
+        if open.is_empty() {
+            return "none".into();
+        }
+        let tabs: Vec<String> = open
+            .iter()
+            .map(|(_, url, test, at)| format!("{url} ({test}, {:.0?} ago)", at.elapsed()))
+            .collect();
+        tabs.join(", ")
+    }
 }
 
 /// Run an async body on the shared runtime. Tests are ordinary `#[test]` fns.
@@ -370,6 +470,7 @@ struct ClosesOnDrop(Option<Page>);
 impl Drop for ClosesOnDrop {
     fn drop(&mut self) {
         if let Some(page) = self.0.take() {
+            open_tabs::closed(page.target_id());
             // Spawned: `Drop` cannot await, and it may run inside `block_on`.
             harness().runtime.spawn(async move {
                 let _ = page.close().await;
@@ -379,17 +480,22 @@ impl Drop for ClosesOnDrop {
 }
 
 /// A tab no test closes, the active one after [`crate::frames::Front::release`]: closing a
-/// test's active tab would activate another test's and end its fullscreen.
-pub(crate) async fn home() -> Result<&'static Page> {
-    static HOME: tokio::sync::OnceCell<Page> = tokio::sync::OnceCell::const_new();
-    HOME.get_or_try_init(|| async {
-        harness()
-            .browser
-            .new_page("about:blank")
-            .await
-            .context("open the home tab")
-    })
-    .await
+/// test's active tab would activate another test's and end its fullscreen. One per launch.
+pub(crate) async fn home() -> Result<Page> {
+    static HOME: tokio::sync::Mutex<Option<(u32, Page)>> = tokio::sync::Mutex::const_new(None);
+    let (launched, browser) = browser();
+    let mut home = HOME.lock().await;
+    if let Some((at, page)) = &*home
+        && *at == launched
+    {
+        return Ok(page.clone());
+    }
+    let page = browser
+        .new_page("about:blank")
+        .await
+        .context("open the home tab")?;
+    *home = Some((launched, page.clone()));
+    Ok(page)
 }
 
 impl Fixture {
@@ -412,14 +518,17 @@ impl Fixture {
         scheme: Scheme,
         ready: &str,
     ) -> Result<Self> {
-        Self::open_on(&harness().browser, route, viewport, scheme, ready).await
+        Self::open_on(None, route, viewport, scheme, ready).await
     }
 
     /// [`Fixture::open`] with classic scrollbars, which every other page hides (todo 1317).
     pub async fn open_with_scrollbars(route: &str, viewport: Viewport) -> Result<Self> {
-        let browser = harness().classic.get_or_init(|| launch(true)).await;
+        let browser = harness()
+            .classic
+            .get_or_init(|| launch(true, chrome_profile().join("classic-scrollbars")))
+            .await;
         Self::open_on(
-            browser,
+            Some(browser),
             route,
             viewport,
             Scheme::Light,
@@ -428,8 +537,9 @@ impl Fixture {
         .await
     }
 
+    /// `browser` None: the main one, relaunched when creating the page stalls.
     async fn open_on(
-        browser: &Browser,
+        browser: Option<&Browser>,
         route: &str,
         viewport: Viewport,
         scheme: Scheme,
@@ -463,17 +573,12 @@ impl Fixture {
 
         // Background plus focus emulation: foreground pages timed out on navigation
         // 1-2 times a run, background alone was 5x slower (measured 2026-09-19).
-        let page = browser
-            .new_page(
-                chromiumoxide::cdp::browser_protocol::target::CreateTargetParams::builder()
-                    .url("about:blank")
-                    .background(true)
-                    .build()
-                    .map_err(anyhow::Error::msg)?,
-            )
-            .await
-            .context("open a page")
-            .inspect_err(|error| stage("creating the page", navigation_started, error))?;
+        let page = match browser {
+            Some(browser) => browser.new_page(blank_tab()?).await.context("open a page"),
+            None => new_tab().await,
+        }
+        .inspect_err(|error| stage("creating the page", navigation_started, error))?;
+        open_tabs::opened(page.target_id(), &url);
         // Armed at once, so every `?` below closes the page too.
         let closes_on_drop = ClosesOnDrop(Some(page.clone()));
 
@@ -663,6 +768,7 @@ impl Fixture {
         // A closed target's undelivered events are lost.
         self.console.settle().await?;
         self.closes_on_drop.0 = None;
+        open_tabs::closed(self.page.target_id());
         self.page.close().await.context("close the page")?;
         let messages = self.console.peek();
         let warned = crate::passes::console::signal_warnings(&messages);
