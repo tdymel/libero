@@ -1463,7 +1463,14 @@ pub(crate) fn draw_pie(spec: &PieSpec) -> Option<Drawn> {
     });
     let svg = match spec.labels_inside {
         true => svg,
-        false => cut_labels(&svg, spec.width),
+        false => {
+            let values: Vec<f64> = spec
+                .slices
+                .iter()
+                .map(|s| s.values.first().copied().flatten().unwrap_or(0.0))
+                .collect();
+            drop_colliding_labels(&cut_labels(&svg, spec.width), &values)
+        }
     };
     // Every slice is drawn, an empty one too.
     let expected: Vec<_> = spec
@@ -1684,6 +1691,84 @@ fn centre_inside_labels(svg: &str, centre: (f32, f32), hole: f32) -> String {
 
 /// Cuts a label that leaves the SVG at a side short with an ellipsis, inside [`EDGE`]; the
 /// tooltip and the summary keep the whole text.
+/// Drops the outside labels that overlap a larger slice's, with their leader lines: the
+/// smaller slice's goes first. `values` are the slices' in drawing order.
+fn drop_colliding_labels(svg: &str, values: &[f64]) -> String {
+    // Per label: its slice's value, its box, and the byte ranges of its leader and its text.
+    let mut labels: Vec<(f64, [f32; 4], Vec<std::ops::Range<usize>>)> = Vec::new();
+    let (mut slice, mut leader) = (None::<usize>, None);
+    let mut at = 0;
+    while let Some(found) = svg[at..].find('<') {
+        let start = at + found;
+        let end = svg[start..]
+            .find('>')
+            .map_or(svg.len(), |end| start + end + 1);
+        let tag = &svg[start..end];
+        at = end;
+        if tag.starts_with("<path ") {
+            match tag.contains("fill=\"none\"") {
+                true => leader = Some(start..end),
+                false => {
+                    slice = Some(slice.map_or(0, |i| i + 1));
+                    leader = None;
+                }
+            }
+        } else if tag.starts_with("<text ") {
+            let close = svg[end..]
+                .find("</text>")
+                .map_or(svg.len(), |close| end + close + 7);
+            at = close;
+            let attributes = attributes(tag);
+            let number = |name| attribute(&attributes, name)?.parse::<f32>().ok();
+            let (Some(x), Some(y), Some(index)) = (number("x"), number("y"), slice) else {
+                continue;
+            };
+            let label = unescape(svg[end..close].trim_end_matches("</text>").trim());
+            let width = text_width(&attributes, &label);
+            let left = match attribute(&attributes, "text-anchor") {
+                Some("middle") => x - width / 2.0,
+                Some("end") => x - width,
+                _ => x,
+            };
+            let size = number("font-size").unwrap_or(14.0);
+            let ranges = leader
+                .take()
+                .into_iter()
+                .chain(std::iter::once(start..close))
+                .collect();
+            let value = values.get(index).copied().unwrap_or(0.0);
+            labels.push((
+                value,
+                [left, y - size * 0.75, left + width, y + size * 0.25],
+                ranges,
+            ));
+        }
+    }
+    let mut order: Vec<usize> = (0..labels.len()).collect();
+    order.sort_by(|a, b| labels[*b].0.total_cmp(&labels[*a].0));
+    let mut kept: Vec<[f32; 4]> = Vec::new();
+    let mut dropped: Vec<std::ops::Range<usize>> = Vec::new();
+    for i in order {
+        let [left, top, right, bottom] = labels[i].1;
+        let overlaps = kept
+            .iter()
+            .any(|[l, t, r, b]| left < *r && *l < right && top < *b && *t < bottom);
+        match overlaps {
+            true => dropped.extend(labels[i].2.iter().cloned()),
+            false => kept.push(labels[i].1),
+        }
+    }
+    dropped.sort_by_key(|range| range.start);
+    let mut out = String::with_capacity(svg.len());
+    let mut from = 0;
+    for range in dropped {
+        out.push_str(&svg[from..range.start]);
+        from = range.end;
+    }
+    out.push_str(&svg[from..]);
+    out
+}
+
 fn cut_labels(svg: &str, width: f32) -> String {
     let mut out = String::with_capacity(svg.len());
     let mut rest = svg;
@@ -3445,6 +3530,32 @@ mod tests {
         inside.min_label_angle = 100.0;
         let svg = draw_pie(&inside).expect("drawn").svg;
         assert!(svg.contains("75%") && !svg.contains("25%"), "{svg}");
+    }
+
+    /// Of two outside labels that overlap, the smaller slice's leaves with its leader line;
+    /// the largest slice keeps its label and no two left overlap.
+    #[test]
+    fn colliding_outside_labels_keep_the_larger_slice_s() {
+        let mut many = pie(PieLabels::Percent, None);
+        (many.width, many.height) = (304.0, 168.0);
+        let values: Vec<f64> = (1..=14).map(f64::from).collect();
+        many.slices = values
+            .iter()
+            .map(|value| spec(&format!("S{value}"), &[Some(*value)]))
+            .collect();
+        let svg = draw_pie(&many).expect("drawn").svg;
+        let labels = text_contents(&svg);
+        assert!(labels.len() < 14, "{svg}");
+        assert!(
+            labels.iter().any(|label| label.starts_with("13,3")),
+            "{svg}"
+        );
+        assert_eq!(
+            svg.matches("fill=\"none\"").count(),
+            labels.len(),
+            "a leader line per label: {svg}"
+        );
+        assert_eq!(drop_colliding_labels(&svg, &values), svg);
     }
 
     /// A slice that takes the whole pie, beside empty ones, shows no seam up to 12 o'clock.

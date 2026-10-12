@@ -95,6 +95,27 @@ fn a_loading_chart_keeps_its_width_in_a_flex_row() {
     });
 }
 
+/// On a narrow chart a side legend leaves the plot its width: the end's goes under the
+/// plot, the start's over it, as the DOM and Tab order them.
+#[test]
+fn a_narrow_chart_stacks_its_side_legend() {
+    e2e::browser::block_on(async {
+        let fixture = Fixture::open("/pie-chart/narrow", Viewport::Desktop)
+            .await
+            .unwrap();
+        wait::for_visible(&fixture.page, "#start svg path")
+            .await
+            .unwrap();
+        const PLACES: &str = "['#chart', '#start'].map(id => { \
+             const plot = document.querySelector(id + ' [data-slot=plot]').getBoundingClientRect(); \
+             const legend = document.querySelector(id + ' [data-slot=legend]').getBoundingClientRect(); \
+             return [plot.width, legend.top >= plot.bottom, legend.bottom <= plot.top]; })";
+        let places: Vec<(f64, bool, bool)> = e2e::js(&fixture.page, PLACES).await;
+        assert_eq!(places, [(280.0, true, false), (280.0, false, true)]);
+        fixture.close().await.unwrap();
+    });
+}
+
 /// In a right-to-left page the labels stay where they are drawn left to right, beside
 /// their slices rather than flipped over them.
 #[test]

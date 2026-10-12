@@ -5,7 +5,7 @@ use libero::use_theme;
 use libero::{
     components::{
         BarChart, ChartRange, Code, LineChart, MarkLine, MarkPoint, Orientation, PieChart, Series,
-        SeriesKind, Slice, Table, Text, column, use_chart,
+        SeriesKind, Slice, Table, Text, column,
     },
     theme::{
         BarLabelPosition, BarLayout, Curve, LegendPosition, PieLabelPosition, PieLabels,
@@ -294,7 +294,11 @@ fn component(values: &DemoValues, source: &str) -> String {
         "pie" => "PieChart",
         _ => "LineChart",
     };
-    let chart = source.replacen("Chart", name, 1);
+    let mut chart = source.replacen("Chart", name, 1);
+    // `onrange` sets this signal.
+    if values.str("zoom") == "true" && name != "PieChart" {
+        chart = format!("let mut selected = use_signal(|| None::<ChartRange>);\n\n{chart}");
+    }
     match values.str("table") == "true" {
         true => format!("{chart}\n{}", table_code(values)),
         false => chart,
@@ -324,7 +328,6 @@ fn data_table(values: &DemoValues) -> Element {
 pub fn ChartPage() -> Element {
     let theme = use_theme();
     let legend = ["bottom", "top", "start", "end", "none"];
-    let chart = use_chart();
     let mut selected = use_signal(|| None::<ChartRange>);
     rsx! {
         DocPage {
@@ -347,7 +350,7 @@ pub fn ChartPage() -> Element {
                     prop("x_title", "Option<String>").doc("Under the x axis: what it counts."),
                     prop("y_title", "Option<String>").doc("Beside the y axis, read upward: what it measures."),
                     prop("y2_title", "Option<String>").doc("Beside the right y axis, read downward: what its `Series::secondary_axis()` series measure."),
-                    prop("legend", "LegendPosition").default("bottom with two series or more").doc("`bottom`, `top`, `start`, `end` or `none`."),
+                    prop("legend", "LegendPosition").default("bottom with two series or more").doc("`bottom`, `top`, `start`, `end` or `none`. On a chart under 300 px wide, `start` goes above the plot and `end` below it."),
                     prop("grid", "Option<bool>").default(on(theme.chart.grid)).doc("Horizontal guide lines."),
                     prop("value_format", "ValueFormat").default("Auto").doc("How values are written on the axis, in the tooltip and in the summary."),
                     prop("unit", "Option<String>").doc("After every value, as `\"kg\"`."),
@@ -384,7 +387,7 @@ pub fn ChartPage() -> Element {
                     prop("value_label_position", "BarLabelPosition").default("chart-wide: inside on a `horizontal` chart or once any shown series has error ranges, past the end otherwise").doc("`inside` the bar, in the ink that reads on it, or `outside` past its end. A stack always writes inside."),
                     prop("bar_width", "Option<f32>").default("5 px each side of a band").doc("The share of a category's band its bars fill, clamped to `0.1..=1`."),
                     prop("bar_gap", "Option<f32>").default(theme.chart.bar_gap.to_string()).doc("Between two bars of a group, in pixels."),
-                    prop("legend", "LegendPosition").default("bottom with two series or more").doc("`bottom`, `top`, `start`, `end` or `none`."),
+                    prop("legend", "LegendPosition").default("bottom with two series or more").doc("`bottom`, `top`, `start`, `end` or `none`. On a chart under 300 px wide, `start` goes above the plot and `end` below it."),
                     prop("grid", "Option<bool>").default(on(theme.chart.grid)).doc("Guide lines across the values."),
                     prop("value_format", "ValueFormat").default("Auto").doc("How values are written on the axis, the bars, in the tooltip and in the summary. On `percent` the axis and the bars write shares in percent."),
                     prop("unit", "Option<String>").doc("After every value, as `\"kg\"`."),
@@ -408,7 +411,7 @@ pub fn ChartPage() -> Element {
                     prop("title", "Option<String>").doc("Shown above the chart, and its accessible name."),
                     prop("description", "Option<String>").doc("A sentence under the title: what to read from the chart."),
                     prop("donut", "bool").default("false").doc("A ring instead of a full pie, `center` in its middle."),
-                    prop("labels", "PieLabels").default(theme.chart.pie_labels.as_str()).doc("Beside each slice: `percent`, `value`, `name` or `none`. One too long for the room ends in an ellipsis; the tooltip and the summary write it whole."),
+                    prop("labels", "PieLabels").default(theme.chart.pie_labels.as_str()).doc("Beside each slice: `percent`, `value`, `name` or `none`. One too long for the room ends in an ellipsis; one that would overlap a larger slice's is left out. The tooltip and the summary write each whole."),
                     prop("center", "Option<Element>").doc("In a donut's hole, as a total, kept off the ring; its text shrinks in a small hole, the rest is clipped."),
                     prop("start_angle", "f32").default("0").doc("Where the first slice starts, in degrees clockwise from 12 o'clock."),
                     prop("end_angle", "Option<f32>").default("a full turn").doc("Where the last slice ends, in the same degrees: `start_angle: -90.0, end_angle: 90.0` is a half pie, a gauge with `donut`. At or before the start, it counts a turn on: `90.0` to `-90.0` is the lower half."),
@@ -417,11 +420,11 @@ pub fn ChartPage() -> Element {
                     prop("min_label_angle", "Option<f32>").default(theme.chart.min_label_angle.to_string()).doc("A slice narrower than this many degrees gets no label; the summary still names it."),
                     prop("slice_gap", "Option<f32>").default(theme.chart.slice_gap.to_string()).doc("Between two slices, in pixels, in the page's colour."),
                     prop("slice_radius", "Size").default(theme.chart.slice_radius.map_or("none", |size| size.as_str())).doc("Corner radius of a slice, on the theme's radius scale; a thin slice or a thin ring takes less. Unset, square."),
-                    prop("legend", "LegendPosition").default("bottom with two slices or more").doc("`bottom`, `top`, `start`, `end` or `none`."),
+                    prop("legend", "LegendPosition").default("bottom with two slices or more").doc("`bottom`, `top`, `start`, `end` or `none`. On a chart under 300 px wide, `start` goes above the plot and `end` below it."),
                     prop("value_format", "ValueFormat").default("Auto").doc("How values are written beside the slices, in the tooltip and in the summary."),
                     prop("unit", "Option<String>").doc("After every value, as `\"kg\"`."),
                     prop("grid", "Option<bool>").doc("Shared with the other charts; a pie has no grid to draw."),
-                    prop("aspect_ratio", "Option<f32>").default("16 / 9").doc("Width over height of the plot."),
+                    prop("aspect_ratio", "Option<f32>").default("4 / 3").doc("Width over height of the plot. Unset, the theme's `pie_aspect_ratio`, squarer than the other charts' `aspect_ratio`."),
                     prop("loading", "bool").default("false").doc("A placeholder instead of the plot, and `aria-busy` on the chart."),
                     prop("empty", "Option<Element>").doc("Shown in the plot when the slices sum to nothing. Unset, \"No data\"."),
                     prop("tooltip", "Option<bool>").default(on(theme.chart.tooltip)).doc("A tooltip with the slice's value and share at the pointer's or the keys' slice."),
@@ -519,8 +522,6 @@ pub fn ChartPage() -> Element {
                     "s."
                 }
             },
-            // snippet: let mut selected = use_signal(|| None::<ChartRange>);
-            // snippet: let chart = use_chart();
             Demo {
                 component: "Chart",
                 children_text: "",
@@ -715,7 +716,7 @@ pub fn ChartPage() -> Element {
                     }),
                     Control::switch("export_button").default("true").code(|_, values| {
                         match values.str("export_button").as_str() {
-                            "true" => vec!["export_button: true".to_string(), "handle: chart".to_string()],
+                            "true" => vec!["export_button: true".to_string()],
                             _ => vec![],
                         }
                     }),
@@ -757,7 +758,7 @@ pub fn ChartPage() -> Element {
                                 },
                                 bar_width: values.str("bar_width").parse::<f32>().ok(),
                                 y_min, y_max, y_ticks, x_title, y_title, y2_title: y2_title.clone(),
-                                                                legend, tooltip, loading, zoom, onrange, export_button, handle: chart,
+                                legend, tooltip, loading, zoom, onrange, export_button,
                             }
                         }),
                         "pie" => {
@@ -776,7 +777,7 @@ pub fn ChartPage() -> Element {
                                     slice_gap: values.str("slice_gap").parse::<f32>().ok(),
                                     slice_radius: or_unset::<Size>(values.str("slice_radius")),
                                     center: rsx! { "1,204 users" },
-                                    legend, tooltip, loading, export_button, handle: chart,
+                                    legend, tooltip, loading, export_button,
                                 }
                             }
                         }
@@ -792,7 +793,7 @@ pub fn ChartPage() -> Element {
                                 area: values.str("area") != "none",
                                 stacked: values.str("area") == "stacked",
                                 y_min, y_max, y_ticks, x_title, y_title, y2_title,
-                                                                legend, tooltip, loading, zoom, onrange, export_button, handle: chart,
+                                legend, tooltip, loading, zoom, onrange, export_button,
                             }
                         }),
                     };

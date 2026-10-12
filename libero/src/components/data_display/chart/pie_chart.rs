@@ -90,7 +90,7 @@ pub fn PieChart(props: PieChartProps) -> Element {
 
     let ratio = props
         .aspect_ratio
-        .unwrap_or(theme.chart.aspect_ratio)
+        .unwrap_or(theme.chart.pie_aspect_ratio)
         .max(0.1);
     let size = use_plot_size();
     let (width, height) = size.get(ratio);
@@ -209,7 +209,7 @@ pub fn PieChart(props: PieChartProps) -> Element {
         x: names,
         summary,
         plot: size,
-        aspect_ratio: props.aspect_ratio,
+        aspect_ratio: Some(ratio),
         interaction: Interaction {
             format: props.value_format,
             unit: props.unit.clone(),
@@ -434,6 +434,24 @@ mod tests {
         assert_eq!(pick(&set)[3], palette[0]);
         let two: Vec<Slice> = slices[..2].to_vec();
         assert_eq!(pick(&two), [palette[0], palette[1]]);
+    }
+
+    /// Unset, a pie's plot takes the theme's squarer `pie_aspect_ratio`, the SVG drawn at it.
+    #[test]
+    fn a_pie_is_squarer_than_a_line() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    PieChart { title: "Browsers", slices: vec![Slice::new("A", 1.0)] }
+                }
+            }
+        });
+        assert!(
+            html.contains("--lsx-chart-aspect-ratio:1.3333334")
+                || html.contains("--lsx-chart-aspect-ratio: 1.3333334"),
+            "{html}"
+        );
+        assert!(html.contains("viewBox=\"0 0 640 480\""), "{html}");
     }
 
     #[test]

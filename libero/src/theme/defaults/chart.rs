@@ -98,8 +98,10 @@ str_enum! {
 /// Theme defaults for `LineChart` and the other charts, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ChartDefaults {
-    /// Width over height of the plot.
+    /// Width over height of a line's or a bar chart's plot.
     pub aspect_ratio: f32,
+    /// A pie's width over height: squarer than a line's, so the circle fills more of it.
+    pub pie_aspect_ratio: f32,
     /// Series colours in order, from the brand ramp. Each is drawn at least 3:1 on the page
     /// (a step darker if not), one that reads like an earlier one is skipped, and past the
     /// last the colours start over, a line dashed.
@@ -152,6 +154,7 @@ pub struct ChartDefaults {
 impl ChartDefaults {
     pub const DEFAULT: Self = Self {
         aspect_ratio: 16.0 / 9.0,
+        pie_aspect_ratio: 4.0 / 3.0,
         palette: [
             (Color::Primary, ColorShade::S6),
             (Color::Warning, ColorShade::S7),

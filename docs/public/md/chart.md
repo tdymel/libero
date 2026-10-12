@@ -520,7 +520,7 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `x_title` | `Option<String>` | | Under the x axis: what it counts. |
 | `y_title` | `Option<String>` | | Beside the y axis, read upward: what it measures. |
 | `y2_title` | `Option<String>` | | Beside the right y axis, read downward: what its `Series::secondary_axis()` series measure. |
-| `legend` | `LegendPosition` | bottom with two series or more | `bottom`, `top`, `start`, `end` or `none`. |
+| `legend` | `LegendPosition` | bottom with two series or more | `bottom`, `top`, `start`, `end` or `none`. On a chart under 300 px wide, `start` goes above the plot and `end` below it. |
 | `grid` | `Option<bool>` | `true` | Horizontal guide lines. |
 | `value_format` | `ValueFormat` | `Auto` | How values are written on the axis, in the tooltip and in the summary. |
 | `unit` | `Option<String>` | | After every value, as `"kg"`. |
@@ -560,7 +560,7 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `value_label_position` | `BarLabelPosition` | chart-wide: inside on a `horizontal` chart or once any shown series has error ranges, past the end otherwise | `inside` the bar, in the ink that reads on it, or `outside` past its end. A stack always writes inside. |
 | `bar_width` | `Option<f32>` | 5 px off each side of the band | The share of a category's band its bars fill, clamped to `0.1..=1`. |
 | `bar_gap` | `Option<f32>` | `3` | Between two bars of a group, in pixels. |
-| `legend` | `LegendPosition` | bottom with two series or more | `bottom`, `top`, `start`, `end` or `none`. |
+| `legend` | `LegendPosition` | bottom with two series or more | `bottom`, `top`, `start`, `end` or `none`. On a chart under 300 px wide, `start` goes above the plot and `end` below it. |
 | `grid` | `Option<bool>` | `true` | Guide lines across the values. |
 | `value_format` | `ValueFormat` | `Auto` | How values are written on the axis, the bars, in the tooltip and in the summary. On `percent` the axis and the bars write shares in percent. |
 | `unit` | `Option<String>` | | After every value, as `"kg"`. |
@@ -587,7 +587,7 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `title` | `Option<String>` | | Shown above the chart, and its accessible name. |
 | `description` | `Option<String>` | | A sentence under the title: what to read from the chart. |
 | `donut` | `bool` | `false` | A ring instead of a full pie, `center` in its middle. |
-| `labels` | `PieLabels` | `percent` | Beside each slice: `percent`, `value`, `name` or `none`. One too long for the room ends in an ellipsis; the tooltip and the summary write it whole. |
+| `labels` | `PieLabels` | `percent` | Beside each slice: `percent`, `value`, `name` or `none`. One too long for the room ends in an ellipsis; one that would overlap a larger slice's is left out. The tooltip and the summary write each whole. |
 | `center` | `Option<Element>` | | In a donut's hole, as a total, kept off the ring; its text shrinks in a small hole, the rest is clipped. |
 | `start_angle` | `f32` | `0` | Where the first slice starts, in degrees clockwise from 12 o'clock. |
 | `end_angle` | `Option<f32>` | a full turn | Where the last slice ends, in the same degrees: `start_angle: -90.0, end_angle: 90.0` is a half pie, a gauge with `donut`. At or before the start, it counts a turn on: `90.0` to `-90.0` is the lower half. |
@@ -596,11 +596,11 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `min_label_angle` | `Option<f32>` | `0` | A slice narrower than this many degrees gets no label; the summary still names it. |
 | `slice_gap` | `Option<f32>` | `1` | Between two slices, in pixels, in the page's colour. |
 | `slice_radius` | `Size` | `none` | Corner radius of a slice, on the theme's radius scale; a thin slice or a thin ring takes less. Unset, square. |
-| `legend` | `LegendPosition` | bottom with two slices or more | `bottom`, `top`, `start`, `end` or `none`. |
+| `legend` | `LegendPosition` | bottom with two slices or more | `bottom`, `top`, `start`, `end` or `none`. On a chart under 300 px wide, `start` goes above the plot and `end` below it. |
 | `value_format` | `ValueFormat` | `Auto` | How values are written beside the slices, in the tooltip and in the summary. |
 | `unit` | `Option<String>` | | After every value, as `"kg"`. |
 | `grid` | `Option<bool>` | | Shared with the other charts; a pie has no grid to draw. |
-| `aspect_ratio` | `Option<f32>` | `16 / 9` | Width over height of the plot. |
+| `aspect_ratio` | `Option<f32>` | `4 / 3` | Width over height of the plot. Unset, the theme's `pie_aspect_ratio`, squarer than the other charts' `aspect_ratio`. |
 | `loading` | `bool` | `false` | A placeholder instead of the plot, and `aria-busy` on the chart. |
 | `empty` | `Option<Element>` | | Shown in the plot when the slices sum to nothing. Unset, "No data". |
 | `tooltip` | `Option<bool>` | `true` | A tooltip with the slice's value and share at the pointer's or the keys' slice. |
@@ -731,7 +731,8 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 
 | Field | Type | Description |
 |---|---|---|
-| `aspect_ratio` | `f32` | Width over height of the plot. |
+| `aspect_ratio` | `f32` | Width over height of a line's or a bar chart's plot. |
+| `pie_aspect_ratio` | `f32` | Width over height of a pie's plot, `4 / 3`: squarer, so the circle fills more of it. |
 | `palette` | `[(Color, ColorShade); 8]` | Series and slice colours in order, each at least 3:1 on the page (a shade darker if not); one that reads like an earlier one is skipped; past the last they start over, a line dashed. |
 | `curve` | `Curve` | Default `curve`. |
 | `legend` | `LegendPosition` | Where the legend sits with two series or slices or more. |

@@ -51,7 +51,8 @@ macro_rules! chart_props {
                 /// A sentence under the title: what to read from the chart.
                 #[props(default, into)]
                 description: Option<String>,
-                /// Unset, at the bottom when there is more than one series.
+                /// Unset, at the bottom when there is more than one series. Under 300 px wide,
+                /// `start` goes above the plot and `end` below it.
                 #[props(default, into)]
                 legend: Input<crate::theme::LegendPosition>,
                 /// Horizontal guide lines. Unset, the theme's.

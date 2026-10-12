@@ -12,7 +12,19 @@ pub const ROUTES: Routes = &[
     ("/pie-chart/gauge", || rsx! { Gauge {} }),
     ("/pie-chart/rounded", || rsx! { Rounded {} }),
     ("/pie-chart/loading", || rsx! { Loading {} }),
+    ("/pie-chart/narrow", || rsx! { Narrow {} }),
 ];
+
+/// Legends at the start and the end of a pie too narrow for them beside it.
+#[component]
+fn Narrow() -> Element {
+    rsx! {
+        div { width: "280px",
+            PieChart { id: "chart", title: "Browsers", slices: slices(), legend: "end" }
+            PieChart { id: "start", title: "Browsers first", slices: slices(), legend: "start" }
+        }
+    }
+}
 
 /// A loading pie in a centring flex row, as the docs preview holds it.
 #[component]

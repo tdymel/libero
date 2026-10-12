@@ -201,13 +201,31 @@ static CHART_BASE_SX: StaticSx = StaticSx::new(|| {
         )
         .when(
             "legend-start",
-            sx().selector(ChartPart::Body.selector(), side("row")),
+            sx().selector(ChartPart::Body.selector(), side("row"))
+                .container_query(CHART_CONTAINER, NARROW, stacked()),
         )
         .when(
             "legend-end",
-            sx().selector(ChartPart::Body.selector(), side("row")),
+            sx().selector(ChartPart::Body.selector(), side("row"))
+                .container_query(CHART_CONTAINER, NARROW, stacked()),
         )
+        .container(CHART_CONTAINER)
 });
+
+const CHART_CONTAINER: &str = "lsx-chart";
+/// Under this, a legend beside the plot would leave it too small: it goes above or below.
+const NARROW: &str = "(max-width: 300px)";
+
+/// A side legend over or under the plot, in DOM order: the start's above, the end's below.
+fn stacked() -> Sx {
+    sx().selector(
+        ChartPart::Body.selector(),
+        sx().flex_direction("column").selector(
+            "& > [data-slot='legend']",
+            sx().flex_direction("row").justify_content("center"),
+        ),
+    )
+}
 
 /// The drawing fills the plot. Forced colours keep its series' colours, which name them
 /// (drawn for a black or white `Canvas`); its ink is drawn in system colours. It runs left
