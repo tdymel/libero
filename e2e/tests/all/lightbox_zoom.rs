@@ -527,7 +527,7 @@ async fn open<D: Driver>(d: &mut D) -> Result<()> {
     // picture is centred and holds still from one idle to the next.
     // The page's width: a classic scrollbar narrows it below the viewport's.
     let width = d.rect("html").await?.width;
-    eventually(d, "the stage's first scroll to settle", async |d| {
+    if let Err(e) = eventually(d, "the stage's first scroll to settle", async |d| {
         let before = d.rect(PICTURE).await?;
         d.idle().await;
         let after = d.rect(PICTURE).await?;
@@ -535,6 +535,15 @@ async fn open<D: Driver>(d: &mut D) -> Result<()> {
         Ok(after.x == before.x && (centre - width / 2.0).abs() < 1.0)
     })
     .await
+    {
+        let v = d.viewport().await?;
+        let pic = d.rect(PICTURE).await?;
+        let html = d.rect("html").await?;
+        let dialog = d.rect("[role=dialog]").await?;
+        let j = d.evaluate("[document.documentElement.clientWidth, devicePixelRatio, visualViewport.width, document.documentElement.getBoundingClientRect().width]").await?;
+        anyhow::bail!("DIAG {e}: width={width} viewport={v:?} html={html:?} picture={pic:?} dialog={dialog:?} js={j}");
+    }
+    Ok(())
 }
 
 /// Todo 1068: a tap on "Zoom in" zooms (a WebView answered the frame query

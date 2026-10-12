@@ -210,7 +210,7 @@ async fn the_windowed_footer_holds_and_ends_the_rows<D: Driver>(
             foot.y + foot.height
         );
     }
-    eventually(d, "the last row above the footer", async |d| {
+    if let Err(e) = eventually(d, "the last row above the footer", async |d| {
         d.wheel("tbody tr", 20000.0).await?;
         if !d.exists(LAST_ROW).await? {
             return Ok(false);
@@ -218,7 +218,13 @@ async fn the_windowed_footer_holds_and_ends_the_rows<D: Driver>(
         let (row, foot) = (d.rect(LAST_ROW).await?, d.rect(FOOT_Q1).await?);
         Ok(row.y + row.height <= foot.y + 1.0)
     })
-    .await?;
+    .await
+    {
+        let first = d.rect("tbody tr").await?;
+        let last = d.exists(LAST_ROW).await?;
+        let j = d.evaluate(&format!("(() => {{ const a = document.querySelector('{AREA}'); return [a.scrollTop, a.scrollHeight, a.clientHeight, document.querySelectorAll('tbody tr').length]; }})()")).await?;
+        anyhow::bail!("DIAG {e}: first={first:?} last_exists={last} area_scroll={j}");
+    }
     let foot = d.rect(FOOT_Q1).await?;
     if (edge - (foot.y + foot.height)).abs() > 2.0 {
         bail!(

@@ -479,7 +479,10 @@ async fn an_early_drop_keeps_its_focus<D: Driver>(d: &mut D, _route: &str) -> Re
     eventually_text(d, LIVE, "Row 1 moved to position 200 of 200.", "End").await?;
     d.press(keyboard::SPACE).await?;
     eventually_text(d, "#ends", "Row 2 Row 1", "the drop at the end").await?;
-    eventually_focused(d, HANDLE, "the drop at the end").await?;
+    if let Err(e) = eventually_focused(d, HANDLE, "the drop at the end").await {
+        let j = d.evaluate("[document.activeElement.outerHTML.slice(0, 200), [...document.querySelectorAll('[aria-label^=\"Reorder Row \"]')].map((e) => e.getAttribute('aria-label')).slice(0, 12), document.querySelector('#ends').textContent, document.querySelector('table + [role=status]').textContent]").await?;
+        anyhow::bail!("DIAG {e}: {j}");
+    }
     d.press(keyboard::SPACE).await?;
     eventually_text(
         d,
