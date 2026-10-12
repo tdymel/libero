@@ -258,6 +258,7 @@ stress_copies!(
     stress_a17 stress_a18 stress_a19 stress_a20 stress_a21 stress_a22 stress_a23 stress_a24
     stress_a25 stress_a26 stress_a27 stress_a28 stress_a29 stress_a30 stress_a31 stress_a32
     stress_a33 stress_a34 stress_a35 stress_a36 stress_a37 stress_a38 stress_a39 stress_a40
+    stress_a41 stress_a42 stress_a43 stress_a44 stress_a45 stress_a46 stress_a47 stress_a48
 );
 
 /// Todo 2695: a windowed list is as wide as its longest label, drawn or not.
