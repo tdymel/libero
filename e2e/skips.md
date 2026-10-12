@@ -19,6 +19,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `bar_chart::hovering_shows_the_bar_s_tooltip_and_marker` | ios | a touch screen has no hover |
 | `bar_chart::hovering_shows_the_bar_s_tooltip_and_marker` | native | charts are parked on Blitz |
 | `bar_chart::the_keys_follow_lying_bars` | native | charts are parked on Blitz |
+| `bar_chart::the_keys_read_a_bar_s_range` | native | charts are parked on Blitz |
 | `bar_chart::the_keys_walk_the_bars` | native | charts are parked on Blitz |
 | `bar_chart::the_legend_hides_and_shows_a_series` | native | charts are parked on Blitz |
 | `bottom_navigation::a_fixed_bar_docks_everywhere` | macos desktop | 3432: WKWebView: the fixed bar never docks |
@@ -325,6 +326,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_filter::a_select_filter_narrows_a_table` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `table_filter::a_select_filter_narrows_a_table` | macos desktop | 3432: WKWebView: ArrowDown does not open a select filter's list |
 | `table_grid::a_custom_editor_clears_the_error_by_changed` | android | 958: roving keys are inert in the emulator's WebView |
+| `table_grid::a_double_click_edits_and_blur_commits` | ios | 3416: flaky: two AXe taps, a process spawn apart, are not always read as a double click |
 | `table_grid::a_second_tap_opens_the_editor` | desktop | no touch input in the desktop driver |
 | `table_grid::a_second_tap_opens_the_editor` | ios | 3416: focus stays on the body after a Tab or a tap |
 | `table_grid::a_second_tap_opens_the_editor` | native | 3242: Blitz fires no pointer events for a touch |

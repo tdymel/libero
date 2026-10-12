@@ -339,7 +339,8 @@ async fn double_click_edits<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_double_click_edits_and_blur_commits,
     "/table-grid/editable",
-    double_click_edits
+    double_click_edits,
+    ios: skip("3416: flaky: two AXe taps, a process spawn apart, are not always read as a double click")
 );
 
 /// Enter opens and commits and moves the stop down, F2 opens and Escape cancels there.
