@@ -238,6 +238,18 @@ e2e::scenario!(
     a_long_list_windows
 );
 
+macro_rules! stress_copies {
+    ($($name:ident)*) => {
+        $(e2e::scenario!($name, "/select/long", a_long_list_windows);)*
+    };
+}
+
+stress_copies!(
+    stress_a01 stress_a02 stress_a03 stress_a04 stress_a05 stress_a06 stress_a07 stress_a08
+    stress_a09 stress_a10 stress_a11 stress_a12 stress_a13 stress_a14 stress_a15 stress_a16
+    stress_a17 stress_a18 stress_a19 stress_a20 stress_a21 stress_a22 stress_a23 stress_a24
+);
+
 /// Todo 2695: a windowed list is as wide as its longest label, drawn or not.
 async fn a_long_list_fits_its_longest_label<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let trigger = d.rect(TRIGGER).await?;
