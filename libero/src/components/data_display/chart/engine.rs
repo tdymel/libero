@@ -54,6 +54,8 @@ pub(crate) struct Geometry {
     pub(crate) marks: Vec<Mark>,
     /// A donut's hole radius, round the SVG's middle; 0 without one.
     pub(crate) hole: f32,
+    /// A funnel's stages are shares of its first, a pie's slices of their sum: `None`.
+    pub(crate) share_of: Option<f64>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -555,6 +557,7 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
             plot,
             marks,
             hole: 0.0,
+            share_of: None,
         },
         svg: spec.ink.paint(svg),
     })
@@ -1141,6 +1144,7 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
             plot,
             marks,
             hole: 0.0,
+            share_of: None,
         },
         svg: spec.ink.paint(svg),
     })
@@ -1801,8 +1805,141 @@ pub(crate) fn draw_pie(spec: &PieSpec) -> Option<Drawn> {
             },
             marks,
             hole,
+            share_of: None,
         },
     })
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct FunnelSpec {
+    pub(crate) width: f32,
+    pub(crate) height: f32,
+    pub(crate) stages: Vec<SeriesSpec>,
+    pub(crate) labels: PieLabels,
+    /// A percent label is a share of this, the first stage's value.
+    pub(crate) first: f64,
+    pub(crate) ink: ChartInk,
+    pub(crate) format: ValueFormat,
+    pub(crate) unit: Option<String>,
+    pub(crate) formats: &'static Formats,
+}
+
+pub(crate) fn draw_funnel(spec: &FunnelSpec) -> Option<Drawn> {
+    let value = |stage: &SeriesSpec| {
+        stage
+            .values
+            .first()
+            .copied()
+            .flatten()
+            .filter(|v| v.is_finite())
+            .unwrap_or(0.0)
+            .max(0.0)
+    };
+    let series = spec
+        .stages
+        .iter()
+        .map(|stage| charts_rs::Series::new(stage.name.clone(), vec![value(stage) as f32]))
+        .collect();
+    let mut chart = charts_rs::FunnelChart::new(series);
+    chart.width = spec.width;
+    chart.height = spec.height;
+    chart.background_color = InkColor::transparent();
+    chart.title.text = String::new();
+    chart.legend.show = Some(false);
+    chart.tooltip.show = true;
+    chart.animation = None;
+    chart.margin = Default::default();
+    chart.series.colors = spec.stages.iter().map(|s| ink(s.color)).collect();
+    chart.series_label_position = Some("inside".to_string());
+    chart.series.label.font.color = ON_BAR;
+    chart.series.label.formatter = match spec.labels {
+        PieLabels::Value => format!("{AXIS_MARK}{{c}}{}", unit_suffix(spec.unit.as_deref())),
+        PieLabels::Percent => format!("{PERCENT_MARK}{{c}}"),
+        PieLabels::Name => "{a}".to_string(),
+        // Blank, as an empty one is the renderer's "{a}: {c}"; `ink_slice_labels` drops it.
+        PieLabels::None => " ".to_string(),
+    };
+    let svg = centre_stage_labels(&chart.svg().ok()?);
+    let (svg, triggers) = inert(
+        &svg,
+        |label| {
+            spec.format
+                .format(label, spec.unit.as_deref(), spec.formats)
+        },
+        "",
+    );
+    let svg = relabel(&svg, PERCENT_MARK, |value| match spec.first > 0.0 {
+        true => ValueFormat::Percent.format(value / spec.first, None, spec.formats),
+        false => String::new(),
+    });
+    // The renderer draws the widest stage first; a sort keeps ties in data order.
+    let mut order: Vec<usize> = (0..spec.stages.len()).collect();
+    order.sort_by(|a, b| {
+        let (a, b) = (
+            value(&spec.stages[*a]) as f32,
+            value(&spec.stages[*b]) as f32,
+        );
+        b.partial_cmp(&a).unwrap_or(std::cmp::Ordering::Equal)
+    });
+    let expected: Vec<_> = order
+        .iter()
+        .map(|&i| (0, i, value(&spec.stages[i]), spec.stages[i].name.as_str()))
+        .collect();
+    let mut marks = match_marks(&expected, &triggers);
+    let svg = ink_slice_labels(
+        &svg,
+        &marks,
+        |stage| spec.ink.on(spec.stages[stage].color),
+        spec.ink.label,
+    );
+    // The keys walk the author's order, as the summary and the legend read.
+    marks.sort_by_key(|mark| mark.index);
+    Some(Drawn {
+        svg: spec.ink.paint(svg),
+        geometry: Geometry {
+            width: spec.width,
+            height: spec.height,
+            plot: Plot::whole(spec.width, spec.height),
+            marks,
+            hole: 0.0,
+            share_of: Some(spec.first),
+        },
+    })
+}
+
+/// Anchors every label on a stage at its middle, on its baseline: the renderer writes it
+/// from its left end round a central baseline, measured in its own font.
+fn centre_stage_labels(svg: &str) -> String {
+    let mut out = String::with_capacity(svg.len());
+    let mut rest = svg;
+    while let Some(start) = rest.find("<text ") {
+        out.push_str(&rest[..start]);
+        let end = rest[start..]
+            .find('>')
+            .map_or(rest.len(), |end| start + end + 1);
+        let tag = &rest[start..end];
+        rest = &rest[end..];
+        let attributes = attributes(tag);
+        let number = |name| attribute(&attributes, name)?.parse::<f32>().ok();
+        let label = rest[..rest.find('<').unwrap_or(rest.len())].trim();
+        let (Some(x), Some(y), true) = (number("x"), number("y"), tag.contains(ON_BAR_FILL)) else {
+            out.push_str(tag);
+            continue;
+        };
+        let size = number("font-size").unwrap_or(14.0);
+        let kept: String = attributes
+            .iter()
+            .filter(|(attribute, _)| !matches!(*attribute, "x" | "y" | "dominant-baseline"))
+            .map(|(attribute, value)| format!(" {attribute}=\"{value}\""))
+            .collect();
+        out.push_str(&format!(
+            "<text x=\"{}\" y=\"{}\" text-anchor=\"middle\"{kept}>",
+            x + text_width(&attributes, label) / 2.0,
+            y + size * 0.35
+        ));
+    }
+    out.push_str(rest);
+    out
 }
 
 /// Every slice's path drawn again with its corners rounded by `radius`, in the SVG and in
@@ -2267,6 +2404,10 @@ fn ink_slice_labels(
         let attributes = attributes(tag);
         let number = |name| attribute(&attributes, name)?.parse::<f32>().ok();
         let label = &rest[..rest.find('<').unwrap_or(rest.len())];
+        if label.trim().is_empty() {
+            rest = rest.find("</text>").map_or("", |close| &rest[close + 7..]);
+            continue;
+        }
         // The renderer writes a label on a slice from its left end; `centre_inside_labels`
         // anchors it at its middle.
         let middle = number("x").zip(number("y")).map(|(x, y)| {
@@ -2461,6 +2602,20 @@ fn trigger(name: &str, attributes: &[(&str, &str)]) -> Option<Trigger> {
         "path" => MarkShape::Sector {
             path: attribute(attributes, "d")?.to_string(),
         },
+        // A funnel's stage, as the path of its corners.
+        "polygon" => {
+            let corners: Vec<&str> = attribute(attributes, "points")?
+                .split_whitespace()
+                .collect();
+            let first = corners.first()?.replace(',', " ");
+            let rest: String = corners[1..]
+                .iter()
+                .map(|corner| format!(" L {}", corner.replace(',', " ")))
+                .collect();
+            MarkShape::Sector {
+                path: format!("M {first}{rest} Z"),
+            }
+        }
         _ => return None,
     };
     Some(Trigger {
@@ -4597,5 +4752,62 @@ mod tests {
         for pair in labels.windows(2) {
             assert!(pair[0].1 <= pair[1].0, "{pair:?}");
         }
+    }
+
+    fn funnel(labels: PieLabels, values: &[f64]) -> FunnelSpec {
+        FunnelSpec {
+            width: 480.0,
+            height: 320.0,
+            stages: values
+                .iter()
+                .enumerate()
+                .map(|(i, v)| spec(&format!("S{i}"), &[Some(*v)]))
+                .collect(),
+            labels,
+            first: values.first().copied().unwrap_or(0.0),
+            ink: ChartInk::of(&Theme::DEFAULT, false),
+            format: ValueFormat::Auto,
+            unit: None,
+            formats: &Formats::AMERICAN,
+        }
+    }
+
+    /// Stages are drawn widest first, each under its own anchor, and walked in data order.
+    #[test]
+    fn a_funnel_draws_its_stages_widest_first() {
+        let drawn = draw_funnel(&funnel(PieLabels::Value, &[100.0, 40.0, 60.0])).expect("drawn");
+        let order: Vec<_> = drawn.geometry.marks.iter().map(|m| m.index).collect();
+        assert_eq!(order, [0, 1, 2], "{}", drawn.svg);
+        let mut tops = Vec::new();
+        for mark in &drawn.geometry.marks {
+            let (x, y) = super::super::hit::anchor(&mark.shape);
+            let outline = super::super::hit::outline(match &mark.shape {
+                MarkShape::Sector { path } => path,
+                _ => panic!("{mark:?}"),
+            });
+            assert!(super::super::hit::contains(&outline, x, y), "{mark:?}");
+            tops.push(y);
+        }
+        assert!(tops[0] < tops[2] && tops[2] < tops[1], "{tops:?}");
+        assert!(!drawn.svg.contains("ct-trigger") && !drawn.svg.contains("<title"));
+    }
+
+    /// A percent is a share of the first stage; a label too wide for its stage is dropped.
+    #[test]
+    fn a_funnel_writes_percent_of_the_first_stage() {
+        let drawn = draw_funnel(&funnel(PieLabels::Percent, &[200.0, 50.0])).expect("drawn");
+        let labels: Vec<_> = texts(&drawn.svg).into_iter().map(|t| t.3).collect();
+        assert!(labels.contains(&"100%".to_string()), "{labels:?}");
+        assert!(labels.contains(&"25%".to_string()), "{labels:?}");
+
+        let mut narrow = funnel(PieLabels::Name, &[1000.0, 1.0]);
+        narrow.stages[1].name = "A very long stage name".to_string();
+        let drawn = draw_funnel(&narrow).expect("drawn");
+        let labels: Vec<_> = texts(&drawn.svg).into_iter().map(|t| t.3).collect();
+        assert_eq!(labels, ["S0"], "{}", drawn.svg);
+        assert!(!drawn.svg.contains("A very long"), "{}", drawn.svg);
+
+        let drawn = draw_funnel(&funnel(PieLabels::None, &[2.0, 1.0])).expect("drawn");
+        assert!(texts(&drawn.svg).is_empty(), "{}", drawn.svg);
     }
 }

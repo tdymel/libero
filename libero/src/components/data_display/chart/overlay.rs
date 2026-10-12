@@ -206,9 +206,9 @@ fn entry<'a>(series: &'a [OverlaySeries], mark: &Mark) -> Option<&'a OverlaySeri
     }
 }
 
-/// A slice's part of the drawn ones, as the pie's labels write it.
-fn share(marks: &[Mark], mark: &Mark, formats: &Formats) -> String {
-    let total: f64 = marks.iter().map(|mark| mark.value).sum();
+/// A slice's part of the drawn ones, a stage's of the funnel's first, as the labels write it.
+fn share(marks: &[Mark], share_of: Option<f64>, mark: &Mark, formats: &Formats) -> String {
+    let total = share_of.unwrap_or_else(|| marks.iter().map(|mark| mark.value).sum());
     let part = if total > 0.0 { mark.value / total } else { 0.0 };
     ValueFormat::Percent.format(part, None, formats)
 }
@@ -372,8 +372,21 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
         drawn
             .peek()
             .as_ref()
-            .map(|drawn| share(&drawn.geometry.marks, mark, formats))
+            .map(|drawn| {
+                share(
+                    &drawn.geometry.marks,
+                    drawn.geometry.share_of,
+                    mark,
+                    formats,
+                )
+            })
             .unwrap_or_default()
+    };
+    let of_first = move || {
+        drawn
+            .peek()
+            .as_ref()
+            .and_then(|drawn| drawn.geometry.share_of)
     };
     let mut set_active = {
         let point_of = point_of.clone();
@@ -421,6 +434,18 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
             let point = point_of(mark);
             let value = write(mark);
             announcer.say(match mark.shape {
+                MarkShape::Sector { .. } if of_first().is_some_and(|first| first <= 0.0) => fill(
+                    labels.stage_value,
+                    &[("name", &point.series_name), ("value", &value)],
+                ),
+                MarkShape::Sector { .. } if of_first().is_some() => fill(
+                    labels.stage,
+                    &[
+                        ("name", &point.series_name),
+                        ("value", &value),
+                        ("share", &slice_share(mark)),
+                    ],
+                ),
                 MarkShape::Sector { .. } => fill(
                     labels.slice,
                     &[
@@ -972,6 +997,7 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
                 None => tip_body(
                     mark,
                     geometry.map_or(&[][..], |g| &g.marks[..]),
+                    geometry.and_then(|g| g.share_of),
                     &series,
                     &x,
                     &write,
@@ -1039,6 +1065,7 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
 fn tip_body(
     active: &Mark,
     marks: &[Mark],
+    share_of: Option<f64>,
     series: &[OverlaySeries],
     x: &[String],
     write: &impl Fn(&Mark) -> String,
@@ -1052,7 +1079,14 @@ fn tip_body(
     let rows: Vec<(bool, String, String, String)> = match active.shape {
         MarkShape::Sector { .. } => {
             let (name, color) = name(active);
-            let value = format!("{} ({})", write(active), share(marks, active, formats));
+            let value = match share_of {
+                Some(first) if first <= 0.0 => write(active),
+                _ => format!(
+                    "{} ({})",
+                    write(active),
+                    share(marks, share_of, active, formats)
+                ),
+            };
             vec![(true, name, color, value)]
         }
         _ => marks

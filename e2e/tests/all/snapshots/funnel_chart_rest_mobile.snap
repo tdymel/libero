@@ -1,0 +1,33 @@
+---
+source: e2e/src/suite.rs
+assertion_line: 618
+description: funnel_chart at mobile (rest)
+expression: tree
+---
+figure "Checkout"
+  description "Funnel chart from Visits to Orders. Visits: 1,000, 100% of the first. Carts: 400, 40% of the first. Orders: 100, 10% of the first."
+  StaticText "Checkout"
+  application "Checkout" [roledescription=chart]
+    description "Arrow keys move between points, Enter selects one."
+  status [atomic] [live=polite]
+  list "Stages"
+    listitem [level=1]
+      button "Visits" [pressed]
+        StaticText "Visits"
+    listitem [level=1]
+      button "Carts" [pressed]
+        StaticText "Carts"
+    listitem [level=1]
+      button "Orders" [pressed]
+        StaticText "Orders"
+  paragraph
+    StaticText "Funnel chart from Visits to Orders."
+  paragraph
+    StaticText "Visits: 1,000, 100% of the first."
+  paragraph
+    StaticText "Carts: 400, 40% of the first."
+  paragraph
+    StaticText "Orders: 100, 10% of the first."
+paragraph
+paragraph
+paragraph

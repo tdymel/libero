@@ -1,20 +1,21 @@
 # Chart
 
 Crate: `libero`, feature `charts`
-Import: `use libero::components::{BarChart, ChartHandle, ChartRange, LineChart, PieChart, Series, Slice, use_chart};`
+Import: `use libero::components::{BarChart, ChartHandle, ChartRange, FunnelChart, LineChart, PieChart, Series, Slice, use_chart};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/chart>
 Index: [index.md](index.md) lists every other page
-Description: Line, bar and pie charts as SVG, with a tooltip, arrow keys, a toggle legend, and a summary for screen readers.
+Description: Line, bar, pie and funnel charts as SVG, with a tooltip, arrow keys, a toggle legend, and a summary for screen readers.
 
-`LineChart`, `BarChart` and `PieChart`, each drawn as an SVG that fills its
-width, with a tooltip, the arrow keys, a legend that hides and shows, and a
+`LineChart`, `BarChart`, `PieChart` and `FunnelChart`, each drawn as an SVG
+that fills its width, with a tooltip, the arrow keys, a legend that hides and shows, and a
 summary for screen readers. Needs the `charts` feature. Web and Android.
 
 A chart only draws. To show its values as a table too, put them in a
 [Table](table.md).
 
 Lines and bars take one or more `Series` over a shared x axis; a pie takes
-`Slice`s, each a name and a value. A line of another size or unit goes on a
+`Slice`s, each a name and a value, and a funnel takes them as its stages, top
+to bottom. A line of another size or unit goes on a
 right y axis with `.secondary_axis()`; in an upright bar chart, a series is
 drawn as a line over the bars with `.kind(SeriesKind::Line)`.
 
@@ -224,6 +225,31 @@ fn Demo() -> Element {
             end_angle: 90.0,
             label_position: "inside",
             center: rsx! { "72 GB" },
+        }
+    }
+}
+```
+
+`FunnelChart` takes its stages as slices, top to bottom, each as wide as its
+value over the largest. Its `labels` write a stage's `percent` of the first
+stage, its `value` or `name` on it; one wider than its stage is left out.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{FunnelChart, Slice};
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        FunnelChart {
+            title: "Checkout",
+            stages: vec![
+                Slice::new("Visits", 1200.0),
+                Slice::new("Product views", 860.0),
+                Slice::new("Carts", 480.0),
+                Slice::new("Checkouts", 300.0),
+                Slice::new("Orders", 210.0),
+            ],
         }
     }
 }
@@ -579,6 +605,31 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom. |
 | `export_button` | `Option<bool>` | `false` | Save as SVG and Save as PNG buttons above the plot. |
 
+### `FunnelChart`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `stages` | `Vec<Slice>` | required | The stages, top to bottom, each as wide as its value over the largest. Drawn widest first: a stage larger than the one before it moves up, with a warning in development. A negative value has no width. |
+| `title` | `Option<String>` | | Shown above the chart, and its accessible name. |
+| `description` | `Option<String>` | | A sentence under the title: what to read from the chart. |
+| `labels` | `PieLabels` | `percent` | On each stage: `percent`, its share of the first stage, `value`, `name` or `none`, in the ink that reads there. A label wider than its stage is left out; the tooltip and the summary keep it. |
+| `legend` | `LegendPosition` | bottom with two stages or more | `bottom`, `top`, `start`, `end` or `none`. On a chart under 300 px wide, `start` goes above the plot and `end` below it. |
+| `value_format` | `ValueFormat` | `Auto` | How values are written on the stages, in the tooltip and in the summary. |
+| `unit` | `Option<String>` | | After every value, as `"kg"`. |
+| `grid` | `Option<bool>` | | Shared with the other charts; a funnel has no grid to draw. |
+| `aspect_ratio` | `Option<f32>` | `4 / 3` | Width over height of the plot. Unset, the theme's `pie_aspect_ratio`. |
+| `loading` | `bool` | `false` | A placeholder instead of the plot, and `aria-busy` on the chart. |
+| `empty` | `Option<Element>` | | Shown in the plot when no stage has a value. Unset, "No data". |
+| `tooltip` | `Option<bool>` | `true` | A tooltip with the stage's value at the pointer's or the keys' stage. |
+| `tooltip_content` | `Option<Callback<ChartPoint, Element>>` | | The tooltip's content instead of the stage's name and value. |
+| `onpointclick` | `Option<EventHandler<ChartPoint>>` | | A click on a stage, a second tap on a pinned one, or Enter on the keys' stage. `index` is the stage's place in `stages`, `x` and `series_name` its name. |
+| `onactivechange` | `Option<EventHandler<Option<ChartPoint>>>` | | The stage under the pointer or the keys; `None` when it leaves. |
+| `hidden` | `Option<Vec<String>>` | | The names of the stages the legend hides; set, they are controlled. |
+| `default_hidden` | `Vec<String>` | `[]` | Seeds the hidden stages once. Ignored when `hidden` is set. |
+| `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | The hidden stages a legend button asks for. The last shown stage stays. |
+| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it. |
+| `export_button` | `Option<bool>` | `false` | Save as SVG and Save as PNG buttons above the plot. |
+
 ### `PieChart`
 
 | Prop | Type | Default | Description |
@@ -623,9 +674,9 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 | Key | Action |
 |---|---|
 | `Tab` | Into the plot and the legend's buttons in the order drawn: a legend at the top or the start comes first. |
-| `ArrowRight` / `ArrowLeft` | Line: the next or previous point of the line, as drawn, left to right in either text direction. Bar: the next or previous category's bar of the series; `horizontal`, the next or previous series' bar in the category. Pie: the next or previous slice, clockwise. |
-| `ArrowDown` / `ArrowUp` | Line: the next or previous line at the same x value, or its nearest point. Bar: the next or previous series' bar in the category; `horizontal`, the next or previous category, top to bottom. Pie: the next or previous slice. |
-| `Home` / `End` | The line's or the series' first or last point or bar; a pie's first or last slice. |
+| `ArrowRight` / `ArrowLeft` | Line: the next or previous point of the line, as drawn, left to right in either text direction. Bar: the next or previous category's bar of the series; `horizontal`, the next or previous series' bar in the category. Pie: the next or previous slice, clockwise. Funnel: the next or previous stage, top down. |
+| `ArrowDown` / `ArrowUp` | Line: the next or previous line at the same x value, or its nearest point. Bar: the next or previous series' bar in the category; `horizontal`, the next or previous category, top to bottom. Pie and funnel: the next or previous slice or stage. |
+| `Home` / `End` | The line's or the series' first or last point or bar; a pie's first or last slice, a funnel's top or bottom stage. |
 | `Enter` / `Space` | Calls `onpointclick` with the point, bar or slice. |
 | `Escape` | Clears the brushed band, else the point and its tooltip. A tooltip a pointer hovers closes with Escape wherever focus is, and stays closed until the pointer leaves the plot. |
 | `+` / `-` | With `zoom`: zooms the x axis, a lying bar chart's categories, in or out around the keys' point; the arrows carry the window along at its edge. |
@@ -643,7 +694,9 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   point's place and value, each line's error band and each bar series'
   error bars with their outer ends, the series drawn as a line over
   bars, the series on the right y axis, the axes' titles and, stacked, that the
-  top line is the total; a pie's, the total, then each slice's value and share.
+  top line is the total; a pie's, the total, then each slice's value and share;
+  a funnel's, its first and last stage, then each stage's value and share of
+  the first.
 - The plot is one tab stop, a `role="application"` described as a chart, so a
   screen reader hands it the arrows. Each point the keys reach is announced, as
   "This week, Tue: 132" or "Chrome: 62, 62%."
@@ -708,7 +761,10 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   not when `stacked`.
 - A rose's radius and a slice under `min_label_angle` are read by eye or not at
   all; the summary gives every value.
-- `zoom` and `onrange` are for lines and bars; a pie exports only.
+- `zoom` and `onrange` are for lines and bars; a pie and a funnel export only.
+- A funnel is drawn widest stage first; the keys, the summary and the legend
+  keep the order of `stages`. A hidden stage leaves the drawing and the others widen to
+  the largest shown; percent labels stay shares of the first stage.
 - An export keeps the normal palette in forced colours. `png()` is `None` on
   Blitz and on the server, and the PNG button says it could not save.
 - A mark line is drawn on a line chart that is not `stacked`, on upright,

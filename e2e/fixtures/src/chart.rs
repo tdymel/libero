@@ -1,8 +1,9 @@
-//! The docs page's type switch: one `SegmentedControl` over a line, a bar and a pie chart.
+//! The docs page's type switch: one `SegmentedControl` over a line, a bar, a pie and a
+//! funnel chart.
 
 use dioxus::prelude::*;
 use libero::components::{
-    BarChart, LineChart, OptionLabel, PieChart, SegmentedControl, Series, Slice,
+    BarChart, FunnelChart, LineChart, OptionLabel, PieChart, SegmentedControl, Series, Slice,
 };
 
 use crate::Routes;
@@ -21,11 +22,12 @@ fn Switch() -> Element {
                 full_width: true,
                 "aria-label": "Type",
                 value: kind(),
-                options: ["line", "bar", "pie"].map(String::from).to_vec(),
+                options: ["line", "bar", "pie", "funnel"].map(String::from).to_vec(),
                 option_label: |option: String| OptionLabel::from(match option.as_str() {
                     "line" => "Line",
                     "bar" => "Bar",
-                    _ => "Pie",
+                    "pie" => "Pie",
+                    _ => "Funnel",
                 }),
                 onchange: move |next: String| kind.set(next),
             }
@@ -46,6 +48,13 @@ fn Switch() -> Element {
                         id: "chart",
                         title: "Browsers",
                         slices: vec![Slice::new("Chrome", 62.0), Slice::new("Safari", 20.0), Slice::new("Other", 18.0)],
+                    }
+                },
+                "funnel" => rsx! {
+                    FunnelChart {
+                        id: "chart",
+                        title: "Checkout",
+                        stages: vec![Slice::new("Visits", 1200.0), Slice::new("Carts", 480.0), Slice::new("Orders", 210.0)],
                     }
                 },
                 _ => rsx! {

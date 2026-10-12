@@ -58,6 +58,7 @@ mod focus_start;
 mod focus_trap;
 mod form;
 mod frames;
+mod funnel_chart;
 mod gradient;
 mod grid_zone;
 mod header;

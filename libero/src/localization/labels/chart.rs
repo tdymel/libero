@@ -8,6 +8,7 @@ pub struct ChartLabels {
     pub line: &'static str,
     pub bar: &'static str,
     pub pie: &'static str,
+    pub funnel: &'static str,
     pub range: &'static str,
     /// `range` of an x axis with one value, `{first}`.
     pub range_one: &'static str,
@@ -19,6 +20,10 @@ pub struct ChartLabels {
     pub slice: &'static str,
     /// A slice whose value is missing or not a number.
     pub slice_empty: &'static str,
+    /// A funnel's stage: `{value}` and `{share}`, its share of the first stage.
+    pub stage: &'static str,
+    /// A stage when the first has no value to share.
+    pub stage_value: &'static str,
     /// In a pie's summary while the legend hides a slice: its shares count the hidden ones.
     pub shares_of_all: &'static str,
     /// The plot and the summary of a chart with nothing to draw.
@@ -35,6 +40,8 @@ pub struct ChartLabels {
     pub legend: &'static str,
     /// A pie legend's name: its buttons show and hide slices.
     pub slices: &'static str,
+    /// A funnel legend's name.
+    pub stages: &'static str,
     /// A point as the keys announce it: `{name}` its series, `{x}` and `{value}` its own.
     pub point: &'static str,
     /// The x axis' `{title}`, in the summary.
@@ -90,6 +97,7 @@ impl ChartLabels {
         line: "Line chart",
         bar: "Bar chart",
         pie: "Pie chart",
+        funnel: "Funnel chart",
         range: "{kind} from {first} to {last}.",
         range_one: "{kind} for {first}.",
         series: "{name}: {min} to {max}, highest at {x}.",
@@ -97,6 +105,8 @@ impl ChartLabels {
         total: "{kind}, total {total}.",
         slice: "{name}: {value}, {share}.",
         slice_empty: "{name}: no value.",
+        stage: "{name}: {value}, {share} of the first.",
+        stage_value: "{name}: {value}.",
         shares_of_all: "Shares count the hidden slices too.",
         no_data: "No data",
         all_hidden: "All series are hidden.",
@@ -105,6 +115,7 @@ impl ChartLabels {
         keys: "Arrow keys move between points, Enter selects one.",
         legend: "Series",
         slices: "Slices",
+        stages: "Stages",
         point: "{name}, {x}: {value}",
         x_axis: "X axis: {title}.",
         y_axis: "Y axis: {title}.",
@@ -138,6 +149,7 @@ impl ChartLabels {
         line: "Liniendiagramm",
         bar: "Balkendiagramm",
         pie: "Kreisdiagramm",
+        funnel: "Trichterdiagramm",
         range: "{kind} von {first} bis {last}.",
         range_one: "{kind} für {first}.",
         series: "{name}: {min} bis {max}, am höchsten bei {x}.",
@@ -145,6 +157,8 @@ impl ChartLabels {
         total: "{kind}, insgesamt {total}.",
         slice: "{name}: {value}, {share}.",
         slice_empty: "{name}: kein Wert.",
+        stage: "{name}: {value}, {share} der ersten Stufe.",
+        stage_value: "{name}: {value}.",
         shares_of_all: "Die Anteile zählen die ausgeblendeten Segmente mit.",
         no_data: "Keine Daten",
         all_hidden: "Alle Reihen sind ausgeblendet.",
@@ -153,6 +167,7 @@ impl ChartLabels {
         keys: "Pfeiltasten wechseln zwischen den Punkten, Eingabe wählt einen aus.",
         legend: "Reihen",
         slices: "Segmente",
+        stages: "Stufen",
         point: "{name}, {x}: {value}",
         x_axis: "X-Achse: {title}.",
         y_axis: "Y-Achse: {title}.",

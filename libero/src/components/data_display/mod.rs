@@ -29,9 +29,9 @@ pub(crate) use carousel::CarouselJump;
 pub use carousel::{Carousel, CarouselAlign, CarouselPart, CarouselProps};
 #[cfg(feature = "charts")]
 pub use chart::{
-    BarChart, BarChartProps, ChartColor, ChartHandle, ChartPart, ChartPoint, ChartRange, LineChart,
-    LineChartProps, MarkLine, MarkPoint, PieChart, PieChartProps, Series, SeriesKind, Slice, Value,
-    ValueFormat, XValues, use_chart,
+    BarChart, BarChartProps, ChartColor, ChartHandle, ChartPart, ChartPoint, ChartRange,
+    FunnelChart, FunnelChartProps, LineChart, LineChartProps, MarkLine, MarkPoint, PieChart,
+    PieChartProps, Series, SeriesKind, Slice, Value, ValueFormat, XValues, use_chart,
 };
 pub use data_list::{DataList, DataListItem, DataListItemProps, DataListProps};
 pub use icon::{Icon, IconProps};

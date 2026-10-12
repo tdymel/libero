@@ -4,8 +4,8 @@ use dioxus::prelude::*;
 use libero::use_theme;
 use libero::{
     components::{
-        BarChart, ChartRange, Code, LineChart, MarkLine, MarkPoint, Orientation, PieChart, Series,
-        SeriesKind, Slice, Table, Text, column,
+        BarChart, ChartRange, Code, FunnelChart, LineChart, MarkLine, MarkPoint, Orientation,
+        PieChart, Series, SeriesKind, Slice, Table, Text, column,
     },
     theme::{
         BarLabelPosition, BarLayout, Curve, LegendPosition, PieLabelPosition, PieLabels,
@@ -39,6 +39,13 @@ const BROWSERS: [(&str, f64); 4] = [
     ("Firefox", 10.0),
     ("Other", 8.0),
 ];
+const STAGES: [(&str, f64); 5] = [
+    ("Visits", 1200.0),
+    ("Product views", 860.0),
+    ("Carts", 480.0),
+    ("Checkouts", 300.0),
+    ("Orders", 210.0),
+];
 
 fn on(value: bool) -> &'static str {
     if value { "true" } else { "false" }
@@ -48,11 +55,18 @@ fn slices() -> Vec<Slice> {
     BROWSERS.into_iter().map(Slice::from).collect()
 }
 
+fn stages() -> Vec<Slice> {
+    STAGES.into_iter().map(Slice::from).collect()
+}
+
+/// Hides a control unless the type is `kind`; `axes` hides it on a pie and a funnel, `shares`
+/// shows it on both.
 fn is(kind: &'static str) -> fn(&DemoValues) -> bool {
     match kind {
         "bar" => |values| values.str("type") != "bar",
         "pie" => |values| values.str("type") != "pie",
-        "axes" => |values| values.str("type") == "pie",
+        "axes" => |values| matches!(values.str("type").as_str(), "pie" | "funnel"),
+        "shares" => |values| !matches!(values.str("type").as_str(), "pie" | "funnel"),
         _ => |values| values.str("type") != "line",
     }
 }
@@ -146,6 +160,15 @@ fn table(values: &DemoValues) -> (&'static str, &'static str, Vec<&'static str>,
             BROWSERS
                 .iter()
                 .map(|(name, share)| (*name, vec![*share]))
+                .collect(),
+        ),
+        "funnel" => (
+            "Checkout",
+            "Stage",
+            vec!["Visitors"],
+            STAGES
+                .iter()
+                .map(|(name, count)| (*name, vec![*count]))
                 .collect(),
         ),
         _ if conversion(values).is_some() => (
@@ -294,11 +317,12 @@ fn component(values: &DemoValues, source: &str) -> String {
     let name = match values.str("type").as_str() {
         "bar" => "BarChart",
         "pie" => "PieChart",
+        "funnel" => "FunnelChart",
         _ => "LineChart",
     };
     let mut chart = source.replacen("Chart", name, 1);
     // `onrange` sets this signal.
-    if values.str("zoom") == "true" && name != "PieChart" {
+    if values.str("zoom") == "true" && matches!(name, "LineChart" | "BarChart") {
         chart = format!("let mut selected = use_signal(|| None::<ChartRange>);\n\n{chart}");
     }
     match values.str("table") == "true" {
@@ -408,6 +432,28 @@ pub fn ChartPage() -> Element {
                     prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom."),
                     prop("export_button", "Option<bool>").default(on(theme.chart.export_button)).doc("Save as SVG and Save as PNG buttons above the plot."),
                 ]),
+                props("FunnelChart", vec![
+                    prop("stages", "Vec<Slice>").default("required").doc("The stages, top to bottom, each as wide as its value over the largest. Drawn widest first: a stage larger than the one before it moves up, with a warning in development. A negative value has no width."),
+                    prop("title", "Option<String>").doc("Shown above the chart, and its accessible name."),
+                    prop("description", "Option<String>").doc("A sentence under the title: what to read from the chart."),
+                    prop("labels", "PieLabels").default(theme.chart.pie_labels.as_str()).doc("On each stage: `percent`, its share of the first stage, `value`, `name` or `none`, in the ink that reads there. A label wider than its stage is left out; the tooltip and the summary keep it."),
+                    prop("legend", "LegendPosition").default("bottom with two stages or more").doc("`bottom`, `top`, `start`, `end` or `none`. On a chart under 300 px wide, `start` goes above the plot and `end` below it."),
+                    prop("value_format", "ValueFormat").default("Auto").doc("How values are written on the stages, in the tooltip and in the summary."),
+                    prop("unit", "Option<String>").doc("After every value, as `\"kg\"`."),
+                    prop("grid", "Option<bool>").doc("Shared with the other charts; a funnel has no grid to draw."),
+                    prop("aspect_ratio", "Option<f32>").default("4 / 3").doc("Width over height of the plot. Unset, the theme's `pie_aspect_ratio`."),
+                    prop("loading", "bool").default("false").doc("A placeholder instead of the plot, and `aria-busy` on the chart."),
+                    prop("empty", "Option<Element>").doc("Shown in the plot when no stage has a value. Unset, \"No data\"."),
+                    prop("tooltip", "Option<bool>").default(on(theme.chart.tooltip)).doc("A tooltip with the stage's value at the pointer's or the keys' stage."),
+                    prop("tooltip_content", "Option<Callback<ChartPoint, Element>>").doc("The tooltip's content instead of the stage's name and value."),
+                    prop("onpointclick", "Option<EventHandler<ChartPoint>>").doc("A click on a stage, a second tap on a pinned one, or Enter on the keys' stage. `index` is the stage's place in `stages`, `x` and `series_name` its name."),
+                    prop("onactivechange", "Option<EventHandler<Option<ChartPoint>>>").doc("The stage under the pointer or the keys; `None` when it leaves."),
+                    prop("hidden", "Option<Vec<String>>").doc("The names of the stages the legend hides; set, they are controlled."),
+                    prop("default_hidden", "Vec<String>").default("[]").doc("Seeds the hidden stages once. Ignored when `hidden` is set."),
+                    prop("onhiddenchange", "Option<EventHandler<Vec<String>>>").doc("The hidden stages a legend button asks for. The last shown stage stays."),
+                    prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it."),
+                    prop("export_button", "Option<bool>").default(on(theme.chart.export_button)).doc("Save as SVG and Save as PNG buttons above the plot."),
+                ]),
                 props("PieChart", vec![
                     prop("slices", "Vec<Slice>").default("required").doc("The slices, each a share of their sum. A negative value takes no share."),
                     prop("title", "Option<String>").doc("Shown above the chart, and its accessible name."),
@@ -442,9 +488,9 @@ pub fn ChartPage() -> Element {
             ],
             accessibility: a11y()
                 .key(["Tab"], "Into the plot and the legend's buttons in the order drawn: a legend at the top or the start comes first.")
-                .key(["ArrowRight", "ArrowLeft"], "Line: the next or previous point of the line, as drawn, left to right in either text direction. Bar: the next or previous category's bar of the series; `horizontal`, the next or previous series' bar in the category. Pie: the next or previous slice, clockwise.")
-                .key(["ArrowDown", "ArrowUp"], "Line: the next or previous line at the same x value, or its nearest point. Bar: the next or previous series' bar in the category; `horizontal`, the next or previous category, top to bottom. Pie: the next or previous slice.")
-                .key(["Home", "End"], "The line's or the series' first or last point or bar; a pie's first or last slice.")
+                .key(["ArrowRight", "ArrowLeft"], "Line: the next or previous point of the line, as drawn, left to right in either text direction. Bar: the next or previous category's bar of the series; `horizontal`, the next or previous series' bar in the category. Pie: the next or previous slice, clockwise. Funnel: the next or previous stage, top down.")
+                .key(["ArrowDown", "ArrowUp"], "Line: the next or previous line at the same x value, or its nearest point. Bar: the next or previous series' bar in the category; `horizontal`, the next or previous category, top to bottom. Pie and funnel: the next or previous slice or stage.")
+                .key(["Home", "End"], "The line's or the series' first or last point or bar; a pie's first or last slice, a funnel's top or bottom stage.")
                 .key(["Enter", "Space"], "Calls `onpointclick` with the point, bar or slice.")
                 .key(["Escape"], "Clears the brushed band, else the point and its tooltip. A tooltip a pointer hovers closes with Escape wherever focus is, and stays closed until the pointer leaves the plot.")
                 .key(["+", "-"], "With `zoom`: zooms the x axis, a lying bar chart's categories, in or out around the keys' point; the arrows carry the window along at its edge.")
@@ -453,7 +499,7 @@ pub fn ChartPage() -> Element {
                 .handles([
                     "The chart is a `role=\"figure\"` named by `title`, else by a spread `aria-label`, else \"chart\". The drawing is hidden from screen readers.",
                     "A loading chart says \"Loading chart\" in a live region when it starts, and its summary says it too.",
-                    "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is, then each mark line's name and value and each marked point's place and value, each line's error band and each bar series' error bars with their outer ends, the series drawn as a line over bars, the series on the right y axis, the axes' titles and, stacked, that the top line is the total; a pie's, the total, then each slice's value and share.",
+                    "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is, then each mark line's name and value and each marked point's place and value, each line's error band and each bar series' error bars with their outer ends, the series drawn as a line over bars, the series on the right y axis, the axes' titles and, stacked, that the top line is the total; a pie's, the total, then each slice's value and share; a funnel's, its first and last stage, then each stage's value and share of the first.",
                     "The plot is one tab stop, a `role=\"application\"` described as a chart, so a screen reader hands it the arrows. Each point the keys reach is announced, as \"This week, Tue: 132\" or \"Chrome: 62, 62%.\"",
                     "The legend's entries are toggle buttons: pressed while their series or slice shows, struck through when hidden. The last shown one's button is `aria-disabled`. Should `hidden` or `default_hidden` name every one, the plot and the summary say \"All series are hidden.\" and the legend stays. A dashed line's key is a dash, as drawn; once a line sets a `symbol`, each key is its line's point shape. A line among bars is keyed by a short stroke, the bars by squares.",
                     "On a touch screen a tap pins a point's tooltip, a second tap on it clicks; a vertical swipe still scrolls the page.",
@@ -484,7 +530,8 @@ pub fn ChartPage() -> Element {
                     "`.colors` and `.negative_color` add no meaning of their own: a loss already hangs below the axis. The legend keeps the series' colour.",
                     "A percent stack draws no error bars and reads the range in its tooltip; on any other layout the value axis reaches the far end of a range unless `y_min` or `y_max` is set. A line draws its ranges as a band, only around its points and not when `stacked`.",
                     "A rose's radius and a slice under `min_label_angle` are read by eye or not at all; the summary gives every value.",
-                    "`zoom` and `onrange` are for lines and bars; a pie exports only.",
+                    "`zoom` and `onrange` are for lines and bars; a pie and a funnel export only.",
+                    "A funnel is drawn widest stage first; the keys, the summary and the legend keep the order of `stages`. A hidden stage leaves the drawing and the others widen to the largest shown; percent labels stay shares of the first stage.",
                     "An export keeps the normal palette in forced colours. `png()` is `None` on Blitz and on the server, and the PNG button says it could not save.",
                     "A mark line is drawn on a line chart that is not `stacked`, on upright, `grouped` bars and on a line among upright bars, and only inside the y axis' ends; the summary leaves out the ones not drawn, except past the ends. A marked point is drawn on a line only, in a line chart or among upright bars.",
                     "A `SeriesKind::Line` series is drawn as a line on an upright `BarChart` only; a `horizontal` one draws it as a bar and warns in development. A line among bars never stacks, and on a `percent` chart it is read on the right y axis.",
@@ -495,8 +542,10 @@ pub fn ChartPage() -> Element {
                     Code { source: "LineChart" }
                     ", "
                     Code { source: "BarChart" }
-                    " and "
+                    ", "
                     Code { source: "PieChart" }
+                    " and "
+                    Code { source: "FunnelChart" }
                     ", each drawn as an SVG that fills its width, with a tooltip, the arrow keys, a legend that hides and shows, and a summary for screen readers. Needs the "
                     Code { source: "charts" }
                     " feature. Web and Android."
@@ -506,7 +555,7 @@ pub fn ChartPage() -> Element {
                     Code { source: "Series" }
                     " over a shared x axis; a pie takes "
                     Code { source: "Slice" }
-                    "s, each a name and a value. A line of another size or unit goes on a right y axis with "
+                    "s, each a name and a value, and a funnel takes them as its stages, top to bottom. A line of another size or unit goes on a right y axis with "
                     Code { source: ".secondary_axis()" }
                     "; in an upright bar chart, a series is drawn as a line over the bars with "
                     Code { source: ".kind(SeriesKind::Line)" }
@@ -529,9 +578,9 @@ pub fn ChartPage() -> Element {
                 children_text: "",
                 wrap: Wrap(component),
                 controls: vec![
-                    Control::toggle("type", ["line", "bar", "pie"])
+                    Control::toggle("type", ["line", "bar", "pie", "funnel"])
                         .default("line")
-                        .labels(["Line", "Bar", "Pie"])
+                        .labels(["Line", "Bar", "Pie", "Funnel"])
                         .code(|_, values| {
                             let mark = marks_code(values);
                             match values.str("type").as_str() {
@@ -547,6 +596,10 @@ pub fn ChartPage() -> Element {
                             "pie" => vec![
                                 "title: \"Browsers\"".to_string(),
                                 "slices: vec![Slice::new(\"Chrome\", 62.0), Slice::new(\"Safari\", 20.0), Slice::new(\"Firefox\", 10.0), Slice::new(\"Other\", 8.0)]".to_string(),
+                            ],
+                            "funnel" => vec![
+                                "title: \"Checkout\"".to_string(),
+                                "stages: vec![Slice::new(\"Visits\", 1200.0), Slice::new(\"Product views\", 860.0), Slice::new(\"Carts\", 480.0), Slice::new(\"Checkouts\", 300.0), Slice::new(\"Orders\", 210.0)]".to_string(),
                             ],
                             _ => vec![
                                 "title: \"Visitors\"".to_string(),
@@ -607,7 +660,7 @@ pub fn ChartPage() -> Element {
                         }),
                     Control::select("labels", ["percent", "value", "name", "none"])
                         .default(theme.chart.pie_labels.as_str())
-                        .hidden_when(is("pie")),
+                        .hidden_when(is("shares")),
                     Control::toggle("label_position", ["outside", "inside"])
                         .default(theme.chart.pie_label_position.as_str())
                         .hidden_when(is("pie")),
@@ -707,7 +760,7 @@ pub fn ChartPage() -> Element {
                         }),
                     Control::select("legend", legend),
                     Control::switch("tooltip").default(on(theme.chart.tooltip)),
-                    Control::switch("zoom").default("true").hidden_when(|values| values.str("type") == "pie").code(|_, values| {
+                    Control::switch("zoom").default("true").hidden_when(is("axes")).code(|_, values| {
                         match (values.str("zoom").as_str(), values.str("type").as_str()) {
                             ("true", "line" | "bar") => vec![
                                 "zoom: true".to_string(),
@@ -783,6 +836,14 @@ pub fn ChartPage() -> Element {
                                 }
                             }
                         }
+                        "funnel" => rsx! {
+                            FunnelChart {
+                                title: "Checkout",
+                                stages: stages(),
+                                labels: PieLabels::from(values.str("labels").as_str()),
+                                legend, tooltip, loading, export_button,
+                            }
+                        },
                         _ => brushed(zoom, selected, rsx! {
                             LineChart {
                                 title: "Visitors",
