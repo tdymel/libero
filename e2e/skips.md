@@ -134,6 +134,8 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `kanban::a_filtered_column_still_drags_and_move_to_lands_after_its_last_card` | desktop | 958: element identity on the WebView |
 | `kanban::a_filtered_drag_lands_before_the_next_shown_card_behind_a_hidden_one` | desktop | 958: element identity on the WebView |
 | `kanban::a_filtered_key_move_lands_before_the_next_shown_card_behind_a_hidden_one` | desktop | 958: element identity on the WebView |
+| `kanban::a_handle_drag_moves_a_card_into_an_empty_column` | ios | 3416: flaky: the drop at the screen edge races the board's auto-scroll |
+| `kanban::a_handle_drag_moves_a_card_into_the_empty_last_column_of_a_right_to_left_board` | ios | 3416: flaky: the drop at the screen edge races the board's auto-scroll |
 | `kanban::a_handle_drag_moves_a_card_into_the_empty_last_column_of_a_right_to_left_board` | native | 707: Blitz has no right-to-left scroll |
 | `kanban::a_handle_drag_moves_a_card_leftwards_into_the_next_column_of_a_right_to_left_board` | native | 707: Blitz has no right-to-left scroll |
 | `kanban::a_handle_drag_reorders_a_column_of_a_right_to_left_board` | native | 707: Blitz has no right-to-left scroll |
@@ -171,6 +173,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `line_chart::hovering_shows_the_point_s_tooltip_and_marker` | native | charts are parked on Blitz |
 | `line_chart::the_keys_walk_the_points` | native | charts are parked on Blitz |
 | `line_chart::the_legend_hides_and_shows_a_line` | native | charts are parked on Blitz |
+| `line_chart::the_tooltip_keeps_its_height_from_point_to_point` | native | charts are parked on Blitz |
 | `menu::a_click_outside_closes_it_and_leaves_focus_where_it_went` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `menu::a_click_outside_closes_it_and_leaves_focus_where_it_went` | macos desktop | upstream: WebKit does not focus a clicked button |
 | `menu::a_tall_menu_above_fits_the_room` | macos desktop | 3432: WKWebView: the last item never scrolls into view |

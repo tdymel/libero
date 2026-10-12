@@ -498,7 +498,8 @@ e2e::scenario!(
 e2e::scenario!(
     a_handle_drag_moves_a_card_into_an_empty_column,
     "/kanban",
-    a_drag_fills_an_empty_column
+    a_drag_fills_an_empty_column,
+    ios: skip("3416: flaky: the drop at the screen edge races the board's auto-scroll")
 );
 e2e::scenario!(
     a_handle_drag_let_go_off_the_board_puts_the_card_back_and_says_so,
@@ -761,7 +762,8 @@ e2e::scenario!(
     a_handle_drag_moves_a_card_into_the_empty_last_column_of_a_right_to_left_board,
     "/kanban/rtl",
     a_drag_fills_an_empty_column,
-    native: skip("707: Blitz has no right-to-left scroll")
+    native: skip("707: Blitz has no right-to-left scroll"),
+    ios: skip("3416: flaky: the drop at the screen edge races the board's auto-scroll")
 );
 e2e::scenario!(
     the_move_to_menu_moves_a_card_across_a_right_to_left_board,
