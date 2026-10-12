@@ -1706,7 +1706,6 @@ mod tests {
         assert!(svg.contains("rotate(-90)"), "{svg}");
     }
 
-    /// Each shape draws its own marker at every point, in the series' colour; the points are
     /// A series on the right axis is drawn by its own scale, labelled in its unit there.
     #[test]
     fn a_secondary_series_is_measured_on_the_right() {
@@ -1743,6 +1742,7 @@ mod tests {
         assert!(*y < (plot.top + plot.bottom) / 2.0, "{y} in {plot:?}");
     }
 
+    /// Each shape draws its own marker at every point, in the series' colour; the points are
     /// still harvested.
     #[test]
     fn a_series_draws_its_point_symbol() {
