@@ -87,6 +87,43 @@ fn a_donut_s_center_sits_in_its_middle() {
     });
 }
 
+/// A half donut's centre sits in the half of the hole under the arc; its labels are on it.
+#[test]
+fn a_gauge_s_center_sits_under_its_arc() {
+    e2e::browser::block_on(async {
+        let fixture = Fixture::open("/pie-chart/gauge", Viewport::Desktop)
+            .await
+            .unwrap();
+        wait::for_visible(&fixture.page, "#center").await.unwrap();
+        // The first slice starts at 9 o'clock on the hole: its middle is a hole right of it.
+        let [cx, cy, hole, slot_x, slot_y, half]: [f64; 6] = e2e::js(
+            &fixture.page,
+            "(() => { const svg = document.querySelector('#chart svg'); \
+             const box = svg.getBoundingClientRect(); \
+             const scale = box.width / svg.viewBox.baseVal.width; \
+             const d = svg.querySelector('path').getAttribute('d'); \
+             const [x, y] = d.slice(1).split(' ')[0].split(',').map(Number); \
+             const hole = Math.min(...[...d.matchAll(/A([\\d.]+) /g)].map(m => +m[1]).filter(r => r > 0)); \
+             const slot = document.querySelector('#chart [data-slot=center]').getBoundingClientRect(); \
+             return [box.x + (x + hole) * scale, box.y + y * scale, hole * scale, \
+               slot.x + slot.width / 2, slot.y + slot.height / 2, slot.width / 2]; })()",
+        )
+        .await;
+        assert!(
+            (slot_x - cx).abs() < 2.0 && (slot_y - (cy - hole / 2.0)).abs() < 2.0,
+            "centre at {slot_x},{slot_y}, middle {cx},{cy}, hole {hole}"
+        );
+        assert!(half > 0.0 && half <= hole / 2.0, "{half} in {hole}");
+        let labels: Vec<String> = e2e::js(
+            &fixture.page,
+            "[...document.querySelectorAll('#chart svg text')].map(t => t.textContent.trim())",
+        )
+        .await;
+        assert_eq!(labels, ["60%", "25%", "15%"]);
+        fixture.close().await.unwrap();
+    });
+}
+
 async fn reads<D: Driver>(d: &mut D, id: &str, want: &str, what: &str) -> Result<()> {
     let label = format!("{what}: {id} to read {want:?}");
     eventually(d, &label, async |d| Ok(d.text(id).await? == want)).await

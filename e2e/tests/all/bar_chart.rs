@@ -129,6 +129,81 @@ fn stacked_lying_bars_read_top_down() {
     });
 }
 
+/// Half-band bars, a loss in its own colour with its value on it, an error bar per bar
+/// centred on it.
+#[test]
+fn styled_bars_keep_their_width_colour_and_ranges() {
+    e2e::browser::block_on(async {
+        let fixture = Fixture::open("/bar-chart/styled", Viewport::Desktop)
+            .await
+            .unwrap();
+        wait::for_visible(&fixture.page, "#chart [data-chart-drawing] path")
+            .await
+            .unwrap();
+        let bars: Vec<[f64; 2]> = e2e::js(
+            &fixture.page,
+            "[...document.querySelectorAll('#chart [data-chart-drawing] path')] \
+             .map(p => p.getBBox()).map(b => [b.x + b.width / 2, b.width])",
+        )
+        .await;
+        assert_eq!(bars.len(), 3);
+        let band = bars[1][0] - bars[0][0];
+        assert!(
+            bars.iter()
+                .all(|[_, width]| (width / band - 0.5).abs() < 0.03),
+            "{bars:?}"
+        );
+        let fills: Vec<String> = e2e::js(
+            &fixture.page,
+            "[...document.querySelectorAll('#chart [data-chart-drawing] path')] \
+             .map(p => p.getAttribute('fill').toLowerCase())",
+        )
+        .await;
+        assert!(fills[1] == "#c92a2a" && fills[0] != fills[1], "{fills:?}");
+        let ranges: Vec<f64> = e2e::js(
+            &fixture.page,
+            "[...document.querySelectorAll('#chart [data-chart-drawing] line')] \
+             .filter(l => l.getAttribute('x1') === l.getAttribute('x2') && +l.getAttribute('y1') !== +l.getAttribute('y2')) \
+             .map(l => +l.getAttribute('x1'))",
+        )
+        .await;
+        for [centre, _] in &bars {
+            assert!(
+                ranges.iter().any(|x| (x - centre).abs() < 0.5),
+                "no range on {centre}: {ranges:?}"
+            );
+        }
+        let labels: Vec<String> = e2e::js(
+            &fixture.page,
+            "[...document.querySelectorAll('#chart svg text')].map(t => t.textContent.trim())",
+        )
+        .await;
+        assert!(labels.contains(&"-40".to_string()), "{labels:?}");
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The keys' bar is announced and tipped with its error range.
+async fn ranges<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(LAYER).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually(d, "the announcement", async |d| {
+        Ok(d.text("#chart [role=status]").await? == "2026, Q1: 120 (110–130)")
+    })
+    .await?;
+    eventually(d, "the tooltip", async |d| {
+        Ok(d.exists(TOOLTIP).await? && d.text(TOOLTIP).await?.contains("120 (110–130)"))
+    })
+    .await
+}
+
+e2e::scenario!(
+    the_keys_read_a_bar_s_range,
+    "/bar-chart/styled",
+    ranges,
+    native: skip("charts are parked on Blitz")
+);
+
 async fn reads<D: Driver>(d: &mut D, id: &str, want: &str, what: &str) -> Result<()> {
     let label = format!("{what}: {id} to read {want:?}");
     eventually(d, &label, async |d| Ok(d.text(id).await? == want)).await

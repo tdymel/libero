@@ -9,6 +9,7 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/pie-chart", || rsx! { Pie {} }),
     ("/pie-chart/donut", || rsx! { Donut {} }),
+    ("/pie-chart/gauge", || rsx! { Gauge {} }),
 ];
 
 fn slices() -> Vec<Slice> {
@@ -58,6 +59,25 @@ fn Donut() -> Element {
                 donut: true,
                 labels: "none",
                 center: rsx! { span { id: "center", "100 users" } },
+            }
+        }
+    }
+}
+
+/// A half donut over 9 to 3 o'clock, its labels on the slices, a centre under the arc.
+#[component]
+fn Gauge() -> Element {
+    rsx! {
+        div { max_width: "480px",
+            PieChart {
+                id: "chart",
+                title: "Browsers",
+                slices: slices(),
+                donut: true,
+                start_angle: -90.0,
+                end_angle: 90.0,
+                label_position: "inside",
+                center: rsx! { span { id: "center", "100" } },
             }
         }
     }

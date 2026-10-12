@@ -11,7 +11,7 @@ use crate::{
     components::common::{Input, names_itself, use_name_warning},
     hooks::{use_accessibility, use_formats, use_localization, use_root_id, use_theme},
     localization::{ChartLabels, fill},
-    theme::{ChartInk, HexColor, PieLabels, chart_palette},
+    theme::{ChartInk, HexColor, PieLabelPosition, PieLabels, chart_palette},
 };
 
 chart_props! {
@@ -30,6 +30,22 @@ chart_props! {
         /// Where the first slice starts, in degrees clockwise from 12 o'clock.
         #[props(default)]
         start_angle: f32,
+        /// Where the last slice ends, in the same degrees: `-90` to `90` is a half pie, a
+        /// gauge as a `donut`. Unset, a full turn.
+        #[props(default)]
+        end_angle: Option<f32>,
+        /// A nightingale rose: every slice the same angle, its radius by its value.
+        #[props(default)]
+        rose: bool,
+        /// Beside each slice or on it. Unset, the theme's.
+        #[props(default, into)]
+        label_position: Input<PieLabelPosition>,
+        /// A slice narrower than this many degrees gets no label. Unset, the theme's.
+        #[props(default)]
+        min_label_angle: Option<f32>,
+        /// Between two slices, in pixels. Unset, the theme's.
+        #[props(default)]
+        slice_gap: Option<f32>,
     }
 }
 
@@ -106,6 +122,14 @@ pub fn PieChart(props: PieChartProps) -> Element {
         donut: props.donut.then_some(theme.chart.donut_thickness),
         labels: props.labels.copied_or(theme.chart.pie_labels),
         start_angle: props.start_angle,
+        end_angle: props.end_angle,
+        rose: props.rose,
+        slice_gap: props.slice_gap.unwrap_or(theme.chart.slice_gap),
+        labels_inside: props
+            .label_position
+            .copied_or(theme.chart.pie_label_position)
+            == PieLabelPosition::Inside,
+        min_label_angle: props.min_label_angle.unwrap_or(theme.chart.min_label_angle),
         ink: ChartInk::of(theme, forced),
         format: props.value_format,
         unit: props.unit.clone(),

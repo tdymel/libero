@@ -111,6 +111,38 @@ fn Demo() -> Element {
 }
 ```
 
+`bar_width` is the share of a category's band its bars fill, from `0.1` to `1`;
+`bar_gap` the pixels between two bars of a group. `value_label_position` puts a
+value `"inside"` its bar or `"outside"` past its end; unset, a lying bar or one with
+error ranges writes inside, an upright one past its end. A stack always writes inside.
+
+A series colours its bars one by one with `.colors(["success", "primary"])`, or
+the ones below 0 with `.negative_color("error")`. `.errors([(low, high), ..])`
+gives each value a range: an upright grouped bar draws it as an error bar, and
+the tooltip and the keys write it after the value, as "120 (110–130)".
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{BarChart, Series};
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        BarChart {
+            title: "Profit with its range",
+            x: ["Q1", "Q2", "Q3", "Q4"],
+            series: vec![
+                Series::new("2025", [40.0, 55.0, -25.0, 62.0])
+                    .negative_color("error")
+                    .errors([(30.0, 52.0), (44.0, 63.0), (-31.0, -19.0), (50.0, 71.0)]),
+            ],
+            bar_width: 0.6,
+            value_labels: true,
+        }
+    }
+}
+```
+
 `PieChart` takes slices:
 
 ```rust
@@ -138,6 +170,32 @@ fn Demo() -> Element {
 `Slice::from(("Chrome", 62.0))` builds a slice from a pair; `.color("success")`
 sets its colour, otherwise it takes the theme's palette for its place. A slice's
 share is its value over the sum; a negative or missing value takes none.
+
+`end_angle` ends the slices before a full turn: from `-90` to `90` degrees a
+`donut` is a gauge, its `center` under the arc. `rose: true` gives every slice
+the same angle and its value as its radius. `label_position: "inside"` writes a
+label on its slice, `min_label_angle` drops the label of a slice narrower than
+that many degrees. `slice_gap` sets the pixels between two slices.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{PieChart, Slice};
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        PieChart {
+            title: "Storage used",
+            slices: vec![Slice::new("Used", 72.0), Slice::new("Free", 28.0)],
+            donut: true,
+            start_angle: -90.0,
+            end_angle: 90.0,
+            label_position: "inside",
+            center: rsx! { "72 GB" },
+        }
+    }
+}
+```
 
 `y_min` and `y_max` fix the value axis' ends, `y_ticks` the steps between them.
 `x_title` and `y_title` say what each axis counts; the summary reads them out.
@@ -310,6 +368,9 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `y_ticks` | `Option<usize>` | `6` | The steps the value axis is cut into: 4 writes 5 labels. |
 | `x_title` | `Option<String>` | | Along the categories: what they are. Under them, or beside them when `horizontal`. |
 | `y_title` | `Option<String>` | | Along the values: what they measure. Beside them, or under them when `horizontal`. |
+| `value_label_position` | `BarLabelPosition` | inside a lying bar or one with error ranges, past the rest's end | `inside` the bar, in the ink that reads on it, or `outside` past its end. A stack always writes inside. |
+| `bar_width` | `Option<f32>` | 5 px off each side of the band | The share of a category's band its bars fill, clamped to `0.1..=1`. |
+| `bar_gap` | `Option<f32>` | `3` | Between two bars of a group, in pixels. |
 | `legend` | `LegendPosition` | bottom with two series or more | `bottom`, `top`, `start`, `end` or `none`. |
 | `grid` | `Option<bool>` | `true` | Guide lines across the values. |
 | `value_format` | `ValueFormat` | `Auto` | How values are written on the axis, the bars, in the tooltip and in the summary. |
@@ -336,6 +397,11 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `labels` | `PieLabels` | `percent` | Beside each slice: `percent`, `value`, `name` or `none`. |
 | `center` | `Option<Element>` | | In a donut's hole, as a total, kept off the ring; its text shrinks in a small hole, the rest is clipped. |
 | `start_angle` | `f32` | `0` | Where the first slice starts, in degrees clockwise from 12 o'clock. |
+| `end_angle` | `Option<f32>` | a full turn | Where the last slice ends, in the same degrees: `start_angle: -90.0, end_angle: 90.0` is a half pie, a gauge with `donut`. |
+| `rose` | `bool` | `false` | A nightingale rose: every slice the same angle, its radius by its value. |
+| `label_position` | `PieLabelPosition` | `outside` | `outside` beside each slice, or `inside` on it in the ink that reads there. |
+| `min_label_angle` | `Option<f32>` | `0` | A slice narrower than this many degrees gets no label; the summary still names it. |
+| `slice_gap` | `Option<f32>` | `1` | Between two slices, in pixels, in the page's colour. |
 | `legend` | `LegendPosition` | bottom with two slices or more | `bottom`, `top`, `start`, `end` or `none`. |
 | `value_format` | `ValueFormat` | `Auto` | How values are written beside the slices, in the tooltip and in the summary. |
 | `unit` | `Option<String>` | | After every value, as `"kg"`. |
@@ -389,6 +455,9 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   for colour-blind eyes, is skipped.
 - In forced colours the lines, bars and slices keep their colours on the system
   background; axes and labels take the system text colour.
+- A bar's error range is written after its value in the tooltip and the
+  announcement, as "120 (110–130)".
+- A label on a bar or a slice takes black or white, whichever reads on it.
 
 ### You must
 
@@ -412,6 +481,12 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 - A hidden slice leaves the drawing, so the shown ones' shares grow; the
   summary keeps every slice.
 - `grid` draws nothing on a pie.
+- `.colors` and `.negative_color` add no meaning of their own: a loss already
+  hangs below the axis. The legend keeps the series' colour.
+- Error bars draw on upright grouped bars only; a stack or a lying chart reads
+  the range in its tooltip alone.
+- A rose's radius and a slice under `min_label_angle` are read by eye or not at
+  all; the summary gives every value.
 
 ## Theme defaults
 
@@ -434,8 +509,14 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 | `bar_layout` | `BarLayout` | Default `layout`. |
 | `bar_radius` | `Size` | Default `radius`. |
 | `value_labels` | `bool` | Default `value_labels`. |
+| `bar_label_position` | `Option<BarLabelPosition>` | Default `value_label_position`; `None` inside a stack, a lying bar or one with error ranges, else past the end. |
+| `bar_width` | `Option<f32>` | Default `bar_width`; `None` leaves 5 px each side. |
+| `bar_gap` | `f32` | Default `bar_gap`, in pixels. |
 | `donut_thickness` | `f32` | A donut's ring width over the pie's radius. |
 | `pie_labels` | `PieLabels` | Default `labels`. |
+| `pie_label_position` | `PieLabelPosition` | Default `label_position`. |
+| `slice_gap` | `f32` | Default `slice_gap`, in pixels. |
+| `min_label_angle` | `f32` | Default `min_label_angle`, in degrees. |
 | `legend_gap` | `&'static str` | Between the plot and the legend. |
 | `swatch_size` | `&'static str` | A legend swatch's side. |
 

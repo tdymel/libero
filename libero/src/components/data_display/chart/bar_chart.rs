@@ -4,8 +4,8 @@ use super::{
     Series, XValues,
     engine::{self, Axes, BarSpec, SeriesSpec},
     frame::{
-        Frame, Interaction, axis_titles, chart_unit, overlay_series, series_specs, shown_places,
-        summary, use_plot_size,
+        Frame, Interaction, axis_titles, chart_unit, hex, overlay_series, series_specs,
+        shown_places, summary, use_plot_size,
     },
     legend::use_hidden_series,
     props::chart_props,
@@ -13,7 +13,7 @@ use super::{
 use crate::{
     components::common::{Input, Orientation, names_itself, use_name_warning},
     hooks::{use_accessibility, use_formats, use_localization, use_root_id, use_theme},
-    theme::{BarLayout, ChartInk},
+    theme::{BarLabelPosition, BarLayout, ChartInk, chart_palette},
     tokens::Size,
 };
 
@@ -51,6 +51,17 @@ chart_props! {
         /// Along the values: what they measure. Beside them, or under them when `horizontal`.
         #[props(default, into)]
         y_title: Option<String>,
+        /// `"inside"` the bar or `"outside"` past its end; a stack writes inside. Unset, the
+        /// theme's, else inside a lying bar or one with error ranges, past the rest's end.
+        #[props(default, into)]
+        value_label_position: Input<BarLabelPosition>,
+        /// The share of a category's band its bars fill, clamped to `0.1..=1`. Unset, the
+        /// theme's.
+        #[props(default)]
+        bar_width: Option<f32>,
+        /// Between two bars of a group, in pixels. Unset, the theme's.
+        #[props(default)]
+        bar_gap: Option<f32>,
     }
 }
 
@@ -119,12 +130,27 @@ pub fn BarChart(props: BarChartProps) -> Element {
     let shown = shown_places(&all_specs, &hidden.get());
     let horizontal = props.orientation.copied_or(Orientation::Vertical) == Orientation::Horizontal;
     let unit = chart_unit(&props.unit, &props.series);
+    let layout = props.layout.copied_or(theme.chart.bar_layout);
+    // In a stack a label sits on its own segment, never on the next one's.
+    let labels_inside = layout != BarLayout::Grouped
+        || match props
+            .value_label_position
+            .as_ref()
+            .copied()
+            .or(theme.chart.bar_label_position)
+        {
+            Some(position) => position == BarLabelPosition::Inside,
+            // An error bar would cross a label past the bar's end.
+            None => horizontal || shown.iter().any(|i| !props.series[*i].errors.is_empty()),
+        };
+    let palette = chart_palette(theme, forced);
+    let color = |color| hex(theme, forced, &palette, 0, Some(color));
     let spec = BarSpec {
         width,
         height,
         x: x.clone(),
         series: shown.iter().map(|i| all_specs[*i].clone()).collect(),
-        layout: props.layout.copied_or(theme.chart.bar_layout),
+        layout,
         horizontal,
         radius: f32::from(
             theme
@@ -139,6 +165,27 @@ pub fn BarChart(props: BarChartProps) -> Element {
             x_title: props.x_title.clone(),
             y_title: props.y_title.clone(),
         },
+        labels_inside,
+        bar_colors: shown
+            .iter()
+            .map(|i| {
+                let series = &props.series[*i];
+                (0..series.values.len())
+                    .map(|index| {
+                        let negative = series.values[index].is_some_and(|value| value < 0.0);
+                        let own = series.colors.get(index).copied().flatten();
+                        own.or(series.negative_color.filter(|_| negative))
+                            .map(color)
+                    })
+                    .collect()
+            })
+            .collect(),
+        errors: shown
+            .iter()
+            .map(|i| props.series[*i].errors.clone())
+            .collect(),
+        bar_width: props.bar_width.or(theme.chart.bar_width),
+        bar_gap: props.bar_gap.unwrap_or(theme.chart.bar_gap),
         grid: props.grid.unwrap_or(theme.chart.grid),
         ink: ChartInk::of(theme, forced),
         format: props.value_format,
@@ -295,6 +342,39 @@ mod tests {
         assert_eq!(bars(&html), 4, "{html}");
         assert!(html.contains("75%"), "{html}");
         assert!(html.contains("A: 1 to 3, highest at b."), "{html}");
+    }
+
+    /// Unset, upright bars with error ranges write their values inside, off the error bars.
+    #[test]
+    fn error_ranges_keep_the_labels_inside() {
+        fn chart(position: Option<BarLabelPosition>) -> Element {
+            rsx! {
+                LiberoProvider {
+                    BarChart {
+                        title: "Profit",
+                        x: ["a", "b"],
+                        series: vec![Series::new("A", [3.0, 5.0]).errors([(2.0, 4.0), (4.0, 7.0)])],
+                        value_labels: true,
+                        value_label_position: position,
+                    }
+                }
+            }
+        }
+        let drawing = |html: String| {
+            html.split("data-chart-drawing")
+                .nth(1)
+                .unwrap_or_default()
+                .to_string()
+        };
+        let auto = drawing(render(|| chart(None)));
+        assert_eq!(
+            auto,
+            drawing(render(|| chart(Some(BarLabelPosition::Inside))))
+        );
+        assert_ne!(
+            auto,
+            drawing(render(|| chart(Some(BarLabelPosition::Outside))))
+        );
     }
 
     #[test]

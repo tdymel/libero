@@ -34,13 +34,16 @@ const ON_BAR: InkColor = InkColor {
     a: 255,
 };
 const ON_BAR_FILL: &str = "fill=\"#010203\"";
+/// The renderer's room at each side of a band and between two bars of a group, in px.
+const RENDERER_MARGIN: f32 = 5.0;
+const RENDERER_GAP: f32 = 3.0;
 
 /// Where every mark of a drawn chart sits, in the SVG's own units.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Geometry {
     pub(crate) width: f32,
     pub(crate) height: f32,
-    /// The area inside the axes; a pie's is the whole SVG.
+    /// The area inside the axes; a pie's is the square its `center` fills.
     pub(crate) plot: Plot,
     /// Series by series, in data order; a gap has no mark.
     pub(crate) marks: Vec<Mark>,
@@ -328,6 +331,16 @@ pub(crate) struct BarSpec {
     pub(crate) radius: f32,
     pub(crate) value_labels: bool,
     pub(crate) axes: Axes,
+    /// The value labels in the middle of their bars rather than past their ends.
+    pub(crate) labels_inside: bool,
+    /// Per series, a bar's own colour per x value; `None`, the series' colour.
+    pub(crate) bar_colors: Vec<Vec<Option<HexColor>>>,
+    /// Per series, each value's error range; drawn on upright grouped bars only.
+    pub(crate) errors: Vec<Vec<Option<(f64, f64)>>>,
+    /// The share of a category's band its bars fill; `None`, the renderer's 5 px margins.
+    pub(crate) bar_width: Option<f32>,
+    /// Between two bars of a group, in pixels.
+    pub(crate) bar_gap: f32,
     pub(crate) grid: bool,
     pub(crate) ink: ChartInk,
     pub(crate) format: ValueFormat,
@@ -364,9 +377,7 @@ macro_rules! style_bars {
             &mut $chart.y_axis_configs,
             $spec.horizontal,
         );
-        // In a stack a label sits on its bar, not on the next one's; past a lying bar's end
-        // the longest one's label would leave the plot.
-        let inside = $spec.layout != BarLayout::Grouped || $spec.horizontal;
+        let inside = $spec.labels_inside;
         $chart.series_label_position = inside.then_some(Position::Inside);
         $chart.series.label.font.color = match inside {
             true => ON_BAR,
@@ -392,13 +403,37 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
             ..series.clone()
         })
         .collect();
+    let bar_color = |series: usize, index: usize| {
+        spec.bar_colors
+            .get(series)
+            .and_then(|colors| colors.get(index).copied().flatten())
+            .unwrap_or(spec.series[series].color)
+    };
+    // A range on a stacked or lying bar would not read against its own segment.
+    let errors = spec.layout == BarLayout::Grouped && !spec.horizontal;
     let series = ordered
         .iter()
-        .map(|series| {
+        .enumerate()
+        .map(|(s, series)| {
             let values = series.values.iter().map(|v| v.map(|v| v as f32)).collect();
             let mut drawn = charts_rs::Series::new_nullable(series.name.clone(), values);
             drawn.label_show = spec.value_labels;
             drawn.stack = (spec.layout != BarLayout::Grouped).then(|| "stack".to_string());
+            drawn.colors = Some(order.iter().map(|&i| Some(ink(bar_color(s, i)))).collect());
+            let ranges: Vec<Option<(f64, f64)>> = order
+                .iter()
+                .map(|&i| spec.errors.get(s).and_then(|e| e.get(i).copied().flatten()))
+                .collect();
+            if errors && ranges.iter().any(Option::is_some) {
+                let end = |pick: fn((f64, f64)) -> f64| {
+                    ranges.iter().map(|r| r.map(|r| pick(r) as f32)).collect()
+                };
+                drawn.error_bar = Some(charts_rs::SeriesBand {
+                    lower: end(|r| r.0),
+                    upper: end(|r| r.1),
+                    stroke_width: None,
+                });
+            }
             drawn
         })
         .collect();
@@ -442,6 +477,10 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
     };
 
     let (svg, triggers) = inert(&svg, write, "");
+    let (svg, triggers) = match spec.bar_width.is_some() || spec.bar_gap != RENDERER_GAP {
+        true => relayout(&svg, triggers, &expected_marks(&ordered), spec),
+        false => (svg, triggers),
+    };
     let negative: Vec<bool> = expected_marks(&ordered)
         .iter()
         .map(|&(_, _, value, _)| value < 0.0)
@@ -462,9 +501,14 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
             ..mark
         })
         .collect::<Vec<_>>();
-    let svg = ink_bar_labels(&svg, &marks, |series| {
-        spec.ink.on(spec.series[series].color)
+    let svg = ink_bar_labels(&svg, &marks, |mark| {
+        spec.ink.on(bar_color(mark.series, mark.index))
     });
+    // An error bar is drawn in the labels' ink; one on a bar is in the page's.
+    let svg = svg.replace(
+        "stroke=\"#010203\"",
+        &format!("stroke=\"{}\"", spec.ink.label),
+    );
     Some(Drawn {
         geometry: Geometry {
             width: spec.width,
@@ -568,8 +612,151 @@ fn round_free_ends(
     out
 }
 
+/// The bars set again across their axis at the spec's width and gap, each centred in its
+/// band as the renderer centres them; their labels and error bars move with their centres.
+fn relayout(
+    svg: &str,
+    triggers: Vec<Trigger>,
+    expected: &[(usize, usize, f64, &str)],
+    spec: &BarSpec,
+) -> (String, Vec<Trigger>) {
+    let count = spec.x.len();
+    if expected.len() != triggers.len() || count == 0 {
+        return (svg.to_string(), triggers);
+    }
+    let plot = Plot::of(svg, spec.width, spec.height);
+    let (start, span) = match spec.horizontal {
+        true => (plot.top, plot.bottom - plot.top),
+        false => (plot.left, plot.right - plot.left),
+    };
+    let grouped = spec.layout == BarLayout::Grouped;
+    let slots = if grouped { spec.series.len().max(1) } else { 1 };
+    let unit = span / count as f32;
+    let group = match spec.bar_width {
+        Some(share) => unit * share.clamp(0.1, 1.0),
+        None => unit - 2.0 * RENDERER_MARGIN,
+    };
+    let gap = spec.bar_gap.max(0.0).min(group / slots as f32 / 2.0);
+    let width = ((group - gap * (slots - 1) as f32) / slots as f32).max(1.0);
+    // Old `(from, to)` across the axis to the new ones, one per drawn bar.
+    let mut moves: Vec<((f32, f32), (f32, f32))> = Vec::new();
+    let triggers = triggers
+        .into_iter()
+        .zip(expected)
+        .map(|(trigger, &(series, index, ..))| {
+            let MarkShape::Rect {
+                x,
+                y,
+                width: w,
+                height: h,
+            } = trigger.shape
+            else {
+                return trigger;
+            };
+            // A lying chart's first category is at the bottom.
+            let band = if spec.horizontal {
+                count - 1 - index
+            } else {
+                index
+            };
+            let slot = if grouped { series } else { 0 };
+            let from = start + unit * band as f32 + (unit - group) / 2.0;
+            // Round trips through the SVG's text unchanged.
+            let new: f32 = format!("{}", from + (width + gap) * slot as f32)
+                .parse()
+                .unwrap_or_default();
+            let old = if spec.horizontal { (y, h) } else { (x, w) };
+            moves.push((old, (new, width)));
+            let shape = match spec.horizontal {
+                true => MarkShape::Rect {
+                    x,
+                    y: new,
+                    width: w,
+                    height: width,
+                },
+                false => MarkShape::Rect {
+                    x: new,
+                    y,
+                    width,
+                    height: h,
+                },
+            };
+            Trigger { shape, ..trigger }
+        })
+        .collect();
+
+    let near = |a: f32, b: f32| (a - b).abs() < 0.15;
+    let centre = |(at, size): (f32, f32)| at + size / 2.0;
+    let shift = |middle: f32| {
+        moves
+            .iter()
+            .find(|(old, _)| near(centre(*old), middle))
+            .map(|(old, new)| centre(*new) - centre(*old))
+    };
+    let (along, size) = if spec.horizontal {
+        ("y", "height")
+    } else {
+        ("x", "width")
+    };
+    let mut out = String::with_capacity(svg.len());
+    let mut rest = svg;
+    while let Some(open) = rest.find('<') {
+        out.push_str(&rest[..open]);
+        let close = rest[open..]
+            .find('>')
+            .map_or(rest.len(), |close| open + close + 1);
+        let tag = &rest[open..close];
+        rest = &rest[close..];
+        let name = tag_name(tag);
+        let attributes = attributes(tag);
+        let number = |name: &str| attribute(&attributes, name)?.parse::<f32>().ok();
+        let replaced: Vec<(&str, f32)> = match name {
+            "rect" => number(along)
+                .zip(number(size))
+                .and_then(|old| moves.iter().find(|(from, _)| *from == old))
+                .map(|(_, (at, width))| vec![(along, *at), (size, *width)])
+                .unwrap_or_default(),
+            "text" => number(along)
+                .and_then(|at| Some(vec![(along, at + shift(at)?)]))
+                .unwrap_or_default(),
+            "line" => {
+                let ends = if spec.horizontal {
+                    ["y1", "y2"]
+                } else {
+                    ["x1", "x2"]
+                };
+                number(ends[0])
+                    .zip(number(ends[1]))
+                    .and_then(|(a, b)| {
+                        let by = shift((a + b) / 2.0)?;
+                        Some(vec![(ends[0], a + by), (ends[1], b + by)])
+                    })
+                    .unwrap_or_default()
+            }
+            _ => Vec::new(),
+        };
+        if replaced.is_empty() {
+            out.push_str(tag);
+            continue;
+        }
+        let kept: String = attributes
+            .iter()
+            .map(
+                |(attribute, value)| match replaced.iter().find(|(name, _)| name == attribute) {
+                    Some((_, number)) => format!(" {attribute}=\"{number}\""),
+                    None => format!(" {attribute}=\"{value}\""),
+                },
+            )
+            .collect();
+        let end = if tag.ends_with("/>") { "/>" } else { ">" };
+        out.push_str(&format!("<{name}{kept}{end}"));
+    }
+    out.push_str(rest);
+    (out, triggers)
+}
+
 /// Gives every label drawn on a bar the ink that reads on the bar nearest to it.
-fn ink_bar_labels(svg: &str, marks: &[Mark], ink: impl Fn(usize) -> HexColor) -> String {
+fn ink_bar_labels(svg: &str, marks: &[Mark], ink: impl Fn(&Mark) -> HexColor) -> String {
     let distance = |mark: &Mark, (x, y): (f32, f32)| match mark.shape {
         MarkShape::Rect {
             x: left,
@@ -603,7 +790,7 @@ fn ink_bar_labels(svg: &str, marks: &[Mark], ink: impl Fn(usize) -> HexColor) ->
             });
         match nearest {
             Some(mark) => {
-                out.push_str(&tag.replace(ON_BAR_FILL, &format!("fill=\"{}\"", ink(mark.series))))
+                out.push_str(&tag.replace(ON_BAR_FILL, &format!("fill=\"{}\"", ink(mark))))
             }
             None => out.push_str(tag),
         }
@@ -624,10 +811,62 @@ pub(crate) struct PieSpec {
     pub(crate) labels: PieLabels,
     /// Degrees clockwise from 12 o'clock.
     pub(crate) start_angle: f32,
+    /// Where the last slice ends, in the same degrees; `None`, a full turn on.
+    pub(crate) end_angle: Option<f32>,
+    /// Every slice the same angle, its radius by its value: a nightingale rose.
+    pub(crate) rose: bool,
+    /// Between two slices, in pixels.
+    pub(crate) slice_gap: f32,
+    /// Labels on their slices rather than beside them.
+    pub(crate) labels_inside: bool,
+    /// A slice narrower than this many degrees gets no label.
+    pub(crate) min_label_angle: f32,
     pub(crate) ink: ChartInk,
     pub(crate) format: ValueFormat,
     pub(crate) unit: Option<String>,
     pub(crate) formats: &'static Formats,
+}
+
+impl PieSpec {
+    /// The degrees the slices share.
+    fn span(&self) -> f32 {
+        match self.end_angle {
+            Some(end) if end.is_finite() && end > self.start_angle => {
+                (end - self.start_angle).min(360.0)
+            }
+            _ => 360.0,
+        }
+    }
+}
+
+/// A point `radius` from `(cx, cy)` at `angle` degrees clockwise from 12 o'clock.
+fn on_circle((cx, cy): (f32, f32), radius: f32, angle: f32) -> (f32, f32) {
+    let (sin, cos) = angle.to_radians().sin_cos();
+    (cx + radius * sin, cy - radius * cos)
+}
+
+/// The box round the part of the unit circle from `start` over `span` degrees with a hole
+/// of radius `hole`, `[left, top, right, bottom]`, as the renderer centres it.
+fn arc_box(start: f32, span: f32, hole: f32) -> [f32; 4] {
+    let mut angles = vec![start, start + span];
+    let mut cardinal = (start / 90.0).ceil() * 90.0;
+    while cardinal < start + span {
+        angles.push(cardinal);
+        cardinal += 90.0;
+    }
+    let mut found = [f32::MAX, f32::MAX, f32::MIN, f32::MIN];
+    for angle in angles {
+        for radius in [hole, 1.0] {
+            let (x, y) = on_circle((0.0, 0.0), radius, angle);
+            found = [
+                found[0].min(x),
+                found[1].min(y),
+                found[2].max(x),
+                found[3].max(y),
+            ];
+        }
+    }
+    found
 }
 
 pub(crate) fn draw_pie(spec: &PieSpec) -> Option<Drawn> {
@@ -647,11 +886,18 @@ pub(crate) fn draw_pie(spec: &PieSpec) -> Option<Drawn> {
     chart.legend.show = Some(false);
     chart.tooltip.show = true;
     chart.animation = None;
-    chart.rose_type = Some(false);
+    chart.rose_type = Some(spec.rose);
     chart.border_radius = Some(0.0);
     chart.start_angle = spec.start_angle;
+    let span = spec.span();
+    chart.end_angle = (span < 360.0).then_some(spec.start_angle + span);
     chart.series.colors = spec.slices.iter().map(|s| ink(s.color)).collect();
-    chart.series.label.font.color = ink(spec.ink.label);
+    chart.series_label_position = spec.labels_inside.then(|| "inside".to_string());
+    chart.min_show_label_angle = spec.min_label_angle.max(0.0);
+    chart.series.label.font.color = match spec.labels_inside {
+        true => ON_BAR,
+        false => ink(spec.ink.label),
+    };
     chart.series.label.formatter = match spec.labels {
         PieLabels::Value => format!("{AXIS_MARK}{{c}}{}", unit_suffix(spec.unit.as_deref())),
         PieLabels::Percent => format!("{PERCENT_MARK}{{d}}"),
@@ -662,23 +908,43 @@ pub(crate) fn draw_pie(spec: &PieSpec) -> Option<Drawn> {
         // Past a full turn: no slice is wide enough for a label.
         chart.min_show_label_angle = 361.0;
     }
-    let ring = |radius: f32| {
-        spec.donut
-            .map_or(0.0, |ring| radius * (1.0 - ring.clamp(0.05, 1.0)))
+    let hole_share = spec.donut.map_or(0.0, |ring| 1.0 - ring.clamp(0.05, 1.0));
+    let ring = |radius: f32| radius * hole_share;
+    let partial = span < 360.0;
+    // The renderer centres a part of the circle on what is drawn of it, in the whole SVG.
+    let [left, top, right, bottom] = arc_box(spec.start_angle, span, hole_share);
+    let middle = |radius: f32| match partial {
+        true => (
+            spec.width / 2.0 - (left + right) / 2.0 * radius,
+            spec.height / 2.0 - (top + bottom) / 2.0 * radius,
+        ),
+        false => (spec.width / 2.0, spec.height / 2.0),
     };
-    // A square canvas around the middle, its radius the renderer's share of it: the pie
-    // stays centred as it shrinks for labels that would leave the SVG.
+    // A full pie on a square canvas around the middle, its radius the renderer's share of
+    // it: the pie stays centred as it shrinks for labels that would leave the SVG.
     let mut draw = |radius: f32| {
         let side = radius * 2.0 / PIE_FILL;
         chart.radius = radius;
         chart.inner_radius = ring(radius);
-        chart.margin.left = (spec.width - side) / 2.0;
+        chart.margin.left = if partial {
+            0.0
+        } else {
+            (spec.width - side) / 2.0
+        };
         chart.margin.right = chart.margin.left;
-        chart.margin.top = (spec.height - side) / 2.0;
+        chart.margin.top = if partial {
+            0.0
+        } else {
+            (spec.height - side) / 2.0
+        };
         chart.margin.bottom = chart.margin.top;
         chart.svg().ok()
     };
-    let full = spec.width.min(spec.height) * PIE_FILL / 2.0;
+    let full = match partial {
+        true => (spec.width * PIE_FILL / (right - left).max(0.1))
+            .min(spec.height * PIE_FILL / (bottom - top).max(0.1)),
+        false => spec.width.min(spec.height) * PIE_FILL / 2.0,
+    };
     let mut radius = full;
     let mut svg = draw(radius)?;
     // A label moves in by at most what the radius loses: a few rounds settle it.
@@ -694,9 +960,22 @@ pub(crate) fn draw_pie(spec: &PieSpec) -> Option<Drawn> {
         svg = draw(radius)?;
     }
     let hole = ring(radius);
+    let centre = middle(radius);
+    // What `center` fills: the hole, or the half of it a ring of half a turn or less bends round.
+    let (inner, inner_radius) = match span <= 180.0 {
+        true => (
+            on_circle(centre, hole / 2.0, spec.start_angle + span / 2.0),
+            hole / 2.0,
+        ),
+        false => (centre, hole),
+    };
 
     // A line of the page between two slices of a close colour.
-    let edge = format!(" stroke=\"{}\" stroke-width=\"1\"", spec.ink.surface);
+    let edge = format!(
+        " stroke=\"{}\" stroke-width=\"{}\"",
+        spec.ink.surface,
+        spec.slice_gap.max(0.0)
+    );
     let (svg, triggers) = inert(
         &svg,
         |label| {
@@ -718,16 +997,80 @@ pub(crate) fn draw_pie(spec: &PieSpec) -> Option<Drawn> {
             (0, i, value, slice.name.as_str())
         })
         .collect();
+    let marks = match_marks(&expected, &triggers);
+    let svg = ink_slice_labels(
+        &svg,
+        &marks,
+        |slice| spec.ink.on(spec.slices[slice].color),
+        spec.ink.label,
+    );
     Some(Drawn {
         svg: spec.ink.paint(svg),
         geometry: Geometry {
             width: spec.width,
             height: spec.height,
-            plot: Plot::whole(spec.width, spec.height),
-            marks: match_marks(&expected, &triggers),
+            plot: Plot {
+                left: inner.0 - inner_radius,
+                top: inner.1 - inner_radius,
+                right: inner.0 + inner_radius,
+                bottom: inner.1 + inner_radius,
+            },
+            marks,
             hole,
         },
     })
+}
+
+/// Gives every label drawn on a slice the ink that reads on that slice; one off every
+/// slice takes `off`.
+fn ink_slice_labels(
+    svg: &str,
+    marks: &[Mark],
+    ink: impl Fn(usize) -> HexColor,
+    off: HexColor,
+) -> String {
+    let outlines: Vec<(usize, _)> = marks
+        .iter()
+        .filter_map(|mark| match &mark.shape {
+            MarkShape::Sector { path } => Some((mark.index, super::hit::outline(path))),
+            _ => None,
+        })
+        .collect();
+    let mut out = String::with_capacity(svg.len());
+    let mut rest = svg;
+    while let Some(start) = rest.find("<text ") {
+        out.push_str(&rest[..start]);
+        let end = rest[start..]
+            .find('>')
+            .map_or(rest.len(), |end| start + end + 1);
+        let tag = &rest[start..end];
+        rest = &rest[end..];
+        if !tag.contains(ON_BAR_FILL) {
+            out.push_str(tag);
+            continue;
+        }
+        let attributes = attributes(tag);
+        let number = |name| attribute(&attributes, name)?.parse::<f32>().ok();
+        let label = &rest[..rest.find('<').unwrap_or(rest.len())];
+        // The renderer writes a label on a slice from its left end, centred there.
+        let middle = number("x").zip(number("y")).map(|(x, y)| {
+            let size = number("font-size").unwrap_or(14.0);
+            (
+                x + text_width(&attributes, label.trim()) / 2.0,
+                y - size * 0.35,
+            )
+        });
+        let hex = middle
+            .and_then(|(x, y)| {
+                outlines
+                    .iter()
+                    .find(|(_, outline)| super::hit::contains(outline, x, y))
+            })
+            .map_or(off, |(slice, _)| ink(*slice));
+        out.push_str(&tag.replace(ON_BAR_FILL, &format!("fill=\"{hex}\"")));
+    }
+    out.push_str(rest);
+    out
 }
 
 fn unit_suffix(unit: Option<&str>) -> String {
@@ -1469,6 +1812,11 @@ mod tests {
             radius: 4.0,
             value_labels: true,
             axes: axes(),
+            labels_inside: layout != BarLayout::Grouped || horizontal,
+            bar_colors: Vec::new(),
+            errors: Vec::new(),
+            bar_width: None,
+            bar_gap: RENDERER_GAP,
             grid: true,
             ink: ChartInk::of(&Theme::DEFAULT, false),
             format: ValueFormat::Auto,
@@ -1629,6 +1977,172 @@ mod tests {
         }
     }
 
+    /// The `name` attribute of every `tag` in the SVG that has one.
+    fn numbers(svg: &str, tag: &str, name: &str) -> Vec<f32> {
+        svg.split(tag)
+            .skip(1)
+            .filter_map(|tag| {
+                let tag = &tag[..tag.find('>')?];
+                tag.split(&format!(" {name}=\""))
+                    .nth(1)
+                    .or_else(|| tag.strip_prefix(&format!("{name}=\"")))?
+                    .split('"')
+                    .next()?
+                    .parse()
+                    .ok()
+            })
+            .collect()
+    }
+
+    fn rects(drawn: &Drawn) -> Vec<[f32; 4]> {
+        drawn
+            .geometry
+            .marks
+            .iter()
+            .map(|mark| match mark.shape {
+                MarkShape::Rect {
+                    x,
+                    y,
+                    width,
+                    height,
+                } => [x, y, width, height],
+                _ => panic!("{mark:?}"),
+            })
+            .collect()
+    }
+
+    /// Set again at the renderer's own width and gap, every bar stays where it was drawn.
+    #[test]
+    fn a_relayout_at_the_renderer_s_measures_moves_nothing() {
+        for (layout, horizontal) in [
+            (BarLayout::Grouped, false),
+            (BarLayout::Grouped, true),
+            (BarLayout::Stacked, false),
+        ] {
+            let spec = bars(layout, horizontal);
+            let drawn = draw_bar(&spec).expect("drawn");
+            // The marks are in the renderer's order; it lists a lying chart's x bottom up.
+            let marks = &drawn.geometry.marks;
+            let triggers: Vec<Trigger> = marks
+                .iter()
+                .map(|mark| Trigger {
+                    series: spec.series[mark.series].name.clone(),
+                    shape: mark.shape.clone(),
+                })
+                .collect();
+            let expected: Vec<_> = marks
+                .iter()
+                .map(|mark| {
+                    let index = if horizontal {
+                        2 - mark.index
+                    } else {
+                        mark.index
+                    };
+                    (mark.series, index, mark.value, "")
+                })
+                .collect();
+            let (_, moved) = relayout(&drawn.svg, triggers.clone(), &expected, &spec);
+            for (before, after) in triggers.iter().zip(&moved) {
+                let (
+                    MarkShape::Rect {
+                        x: a,
+                        y: b,
+                        width: c,
+                        height: d,
+                    },
+                    MarkShape::Rect {
+                        x: e,
+                        y: f,
+                        width: g,
+                        height: h,
+                    },
+                ) = (&before.shape, &after.shape)
+                else {
+                    panic!("{before:?}");
+                };
+                for (old, new) in [(a, e), (b, f), (c, g), (d, h)] {
+                    assert!(
+                        (old - new).abs() < 0.2,
+                        "{layout:?} {horizontal}: {before:?} to {after:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    /// Half its band, each bar of a pair is half that less the gap's half; its label moves
+    /// with its centre.
+    #[test]
+    fn bars_fill_their_share_of_the_band() {
+        let mut spec = bars(BarLayout::Grouped, false);
+        spec.bar_width = Some(0.5);
+        spec.bar_gap = 10.0;
+        let wide = draw_bar(&spec).expect("drawn");
+        let plot = wide.geometry.plot;
+        let unit = (plot.right - plot.left) / 3.0;
+        let found = rects(&wide);
+        let labels = numbers(&wide.svg, "<text ", "x");
+        for [x, _, width, _] in &found {
+            assert!((width - (unit * 0.5 - 10.0) / 2.0).abs() < 0.2, "{found:?}");
+            let centre = x + width / 2.0;
+            assert!(
+                labels.iter().any(|label| (label - centre).abs() < 0.2),
+                "no label at {centre}: {labels:?}"
+            );
+        }
+        // A of b and B of b: one gap apart.
+        let (a, b) = (found[1], found[3]);
+        assert!((b[0] - (a[0] + a[2]) - 10.0).abs() < 0.2, "{found:?}");
+    }
+
+    /// A bar's own colour wins over its series'; a negative one's too; its label reads on it.
+    #[test]
+    fn a_bar_takes_its_own_colour() {
+        let mut spec = bars(BarLayout::Stacked, false);
+        let (red, dark) = (HexColor::new(0xE03131), HexColor::new(0x101010));
+        spec.bar_colors = vec![vec![None, Some(red)], vec![Some(dark)]];
+        let svg = draw_bar(&spec).expect("drawn").svg;
+        assert!(svg.contains(&format!("fill=\"{red}\"")), "{svg}");
+        assert!(svg.contains(&format!("fill=\"{dark}\"")), "{svg}");
+        assert!(
+            svg.contains("fill=\"#FFFFFF\""),
+            "white on the dark bar: {svg}"
+        );
+    }
+
+    /// Upright grouped bars carry their error ranges, the axis reaching the highest end;
+    /// a stack carries none.
+    #[test]
+    fn error_bars_stand_on_upright_grouped_bars() {
+        let mut spec = bars(BarLayout::Grouped, false);
+        spec.value_labels = false;
+        spec.errors = vec![vec![Some((0.5, 1.5)), Some((2.0, 9.0))]];
+        let drawn = draw_bar(&spec).expect("drawn");
+        let [x, _, width, _] = rects(&drawn)[1];
+        let centre = x + width / 2.0;
+        let upright = numbers(&drawn.svg, "<line ", "x1")
+            .into_iter()
+            .zip(numbers(&drawn.svg, "<line ", "x2"))
+            .any(|(x1, x2)| (x1 - centre).abs() < 0.2 && (x2 - centre).abs() < 0.2);
+        assert!(upright, "no error bar at {centre}: {}", drawn.svg);
+        assert!(drawn.svg.contains("\n10\n"), "{}", drawn.svg);
+        assert!(!drawn.svg.contains("#010203"), "{}", drawn.svg);
+
+        spec.layout = BarLayout::Stacked;
+        let stacked = draw_bar(&spec).expect("drawn").svg;
+        assert!(!stacked.contains("\n10\n"), "{stacked}");
+    }
+
+    /// Outside, a lying bar's label is past its end in the page's ink.
+    #[test]
+    fn a_lying_bar_s_label_can_sit_past_its_end() {
+        let mut spec = bars(BarLayout::Grouped, true);
+        spec.labels_inside = false;
+        let drawn = draw_bar(&spec).expect("drawn");
+        assert!(!drawn.svg.contains(ON_BAR_FILL), "{}", drawn.svg);
+        assert_eq!(overflow(&drawn.svg, 320.0, 180.0), None, "{}", drawn.svg);
+    }
+
     fn pie(labels: PieLabels, donut: Option<f32>) -> PieSpec {
         PieSpec {
             width: 320.0,
@@ -1637,6 +2151,11 @@ mod tests {
             donut,
             labels,
             start_angle: 0.0,
+            end_angle: None,
+            rose: false,
+            slice_gap: 1.0,
+            labels_inside: false,
+            min_label_angle: 0.0,
             ink: ChartInk::of(&Theme::DEFAULT, false),
             format: ValueFormat::Auto,
             unit: Some("kg".to_string()),
@@ -1674,6 +2193,83 @@ mod tests {
         assert!(values.svg.contains("3 kg"), "{}", values.svg);
         let none = draw_pie(&pie(PieLabels::None, Some(0.4))).expect("drawn");
         assert!(!none.svg.contains("<text"), "{}", none.svg);
+    }
+
+    fn sector_points(mark: &Mark) -> Vec<(f32, f32)> {
+        match &mark.shape {
+            MarkShape::Sector { path } => super::super::hit::outline(path).concat(),
+            _ => panic!("{mark:?}"),
+        }
+    }
+
+    /// A half donut from 9 to 3 o'clock lies above its middle and takes a larger radius
+    /// than a full one; its `center` room is the upper half of the hole.
+    #[test]
+    fn a_half_donut_bends_over_its_middle() {
+        let mut full = pie(PieLabels::None, Some(0.4));
+        full.height = 180.0;
+        let mut half = full.clone();
+        let full = draw_pie(&full).expect("drawn");
+        (half.start_angle, half.end_angle) = (-90.0, Some(90.0));
+        let half = draw_pie(&half).expect("drawn");
+        let points: Vec<(f32, f32)> = half.geometry.marks.iter().flat_map(sector_points).collect();
+        let (low, high) = points.iter().fold((f32::MAX, f32::MIN), |(low, high), p| {
+            (low.min(p.1), high.max(p.1))
+        });
+        let room = half.geometry.plot;
+        let middle_y = room.bottom;
+        assert!(high <= middle_y + 0.5, "{high} below {middle_y}");
+        assert!(half.geometry.hole > full.geometry.hole, "{half:?}");
+        assert!(high - low > full.geometry.hole, "{low}..{high}");
+        assert!(
+            (room.right - room.left - half.geometry.hole).abs() < 0.5,
+            "{room:?}"
+        );
+    }
+
+    /// A rose gives every slice the same angle and the larger value the longer radius.
+    #[test]
+    fn a_rose_s_slices_reach_out_by_value() {
+        let mut rose = pie(PieLabels::None, None);
+        rose.rose = true;
+        let drawn = draw_pie(&rose).expect("drawn");
+        let reach = |mark: &Mark| {
+            sector_points(mark)
+                .iter()
+                .map(|(x, y)| (x - 160.0).hypot(y - 160.0))
+                .fold(0.0, f32::max)
+        };
+        let marks = &drawn.geometry.marks;
+        assert!(reach(&marks[1]) > reach(&marks[0]) + 10.0, "{marks:?}");
+        // A, the smaller value, still spans half the turn: it reaches 6 o'clock.
+        assert!(
+            sector_points(&marks[0])
+                .iter()
+                .any(|(x, y)| (x - 160.0).abs() < 1.0 && *y > 160.0),
+            "{marks:?}"
+        );
+    }
+
+    /// On its slice a label takes the ink that reads there; a slice narrower than the
+    /// least angle has none. The slices part by the gap.
+    #[test]
+    fn labels_inside_read_on_their_slice() {
+        let mut inside = pie(PieLabels::Percent, None);
+        inside.labels_inside = true;
+        inside.slice_gap = 4.0;
+        let drawn = draw_pie(&inside).expect("drawn");
+        let on = inside.ink.on(inside.slices[1].color);
+        assert!(
+            drawn.svg.contains(&format!("fill=\"{on}\"")),
+            "{}",
+            drawn.svg
+        );
+        assert!(!drawn.svg.contains(ON_BAR_FILL), "{}", drawn.svg);
+        assert!(drawn.svg.contains("stroke-width=\"4\""), "{}", drawn.svg);
+
+        inside.min_label_angle = 100.0;
+        let svg = draw_pie(&inside).expect("drawn").svg;
+        assert!(svg.contains("75%") && !svg.contains("25%"), "{svg}");
     }
 
     /// Every label keeps inside the SVG: a pie's beside its slices on a phone, a bar's
@@ -1733,10 +2329,6 @@ mod tests {
                 );
             }
         }
-        let pie = draw_pie(&pie(PieLabels::Percent, None))
-            .expect("drawn")
-            .geometry;
-        assert_eq!(pie.plot, Plot::whole(pie.width, pie.height));
     }
 
     /// Lying, the value labels under the plot, written again grouped, stay centred on

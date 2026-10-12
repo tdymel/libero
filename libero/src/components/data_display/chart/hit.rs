@@ -151,7 +151,7 @@ fn arc(from: (f32, f32), to: (f32, f32), r: f32, large: bool, sweep: bool) -> Ve
 }
 
 /// Even-odd over every ring, so a donut's hole is outside.
-fn contains(rings: &[Vec<(f32, f32)>], x: f32, y: f32) -> bool {
+pub(super) fn contains(rings: &[Vec<(f32, f32)>], x: f32, y: f32) -> bool {
     let mut inside = false;
     for ring in rings {
         for (i, &(ax, ay)) in ring.iter().enumerate() {

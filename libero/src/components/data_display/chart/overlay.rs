@@ -104,6 +104,8 @@ pub(super) struct OverlaySeries {
     pub(super) symbol: Option<crate::theme::PointSymbol>,
     /// The series' own unit; unset, the chart's.
     pub(super) unit: Option<String>,
+    /// Each value's error range, written after it.
+    pub(super) errors: Vec<Option<(f64, f64)>>,
 }
 
 #[derive(Props, Clone, PartialEq)]
@@ -221,8 +223,20 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
     let write = {
         let (series, unit) = (series.clone(), unit.clone());
         move |mark: &Mark| {
-            let own = entry(&series, mark).and_then(|series| series.unit.as_deref());
-            format.format(mark.value, own.or(unit.as_deref()), formats)
+            let entry = entry(&series, mark);
+            let unit = entry
+                .and_then(|series| series.unit.as_deref())
+                .or(unit.as_deref());
+            let value = format.format(mark.value, unit, formats);
+            let range = entry.and_then(|series| series.errors.get(mark.index).copied().flatten());
+            match range {
+                Some((low, high)) => format!(
+                    "{value} ({}–{})",
+                    format.format(low, None, formats),
+                    format.format(high, unit, formats)
+                ),
+                None => value,
+            }
         }
     };
     let point_of = {

@@ -178,7 +178,10 @@ impl From<&str> for ChartColor {
 /// let revenue = Series::new("Revenue", [120.0, 132.0, 101.0]).color("success");
 /// let costs = Series::new("Costs", [Some(80), None, Some(95)]).dashed();
 /// let share = Series::new("Share", [0.4, 0.5, 0.45]).unit("%");
-/// # let _ = (revenue, costs, share);
+/// let profit = Series::new("Profit", [40, -15, 20])
+///     .negative_color("error")
+///     .errors([(35, 45), (-20, -10), (15, 25)]);
+/// # let _ = (revenue, costs, share, profit);
 /// ```
 #[derive(Clone, Debug, PartialEq)]
 pub struct Series {
@@ -192,6 +195,12 @@ pub struct Series {
     pub unit: Option<String>,
     /// The shape of a line's points and of its legend key. Unset, a circle.
     pub symbol: Option<PointSymbol>,
+    /// A bar's own colour, one per x value; `None` or past the end, the series' colour.
+    pub colors: Vec<Option<ChartColor>>,
+    /// The colour of a bar below 0. Unset, the series' colour.
+    pub negative_color: Option<ChartColor>,
+    /// Each value's error range, `(low, high)` per x value; `None`, no error bar there.
+    pub errors: Vec<Option<(f64, f64)>>,
 }
 
 impl Series {
@@ -206,6 +215,9 @@ impl Series {
             dashed: false,
             unit: None,
             symbol: None,
+            colors: Vec::new(),
+            negative_color: None,
+            errors: Vec::new(),
         }
     }
 
@@ -237,6 +249,31 @@ impl Series {
     /// A line's points as squares, triangles or diamonds: told apart without the colour.
     pub fn symbol(mut self, symbol: PointSymbol) -> Self {
         self.symbol = Some(symbol);
+        self
+    }
+
+    /// A colour per bar, in x order: `.colors(["success", "warning", "error"])`.
+    pub fn colors<C: Into<ChartColor>>(mut self, colors: impl IntoIterator<Item = C>) -> Self {
+        self.colors = colors.into_iter().map(|color| Some(color.into())).collect();
+        self
+    }
+
+    /// The bars below 0 in `color`: `.negative_color("error")`.
+    pub fn negative_color(mut self, color: impl Into<ChartColor>) -> Self {
+        self.negative_color = Some(color.into());
+        self
+    }
+
+    /// An error range per value, `(low, high)` in x order; a missing or not finite end
+    /// leaves that value without one: `.errors([(110, 130), (125, 140)])`.
+    pub fn errors<V: Into<Value>>(mut self, errors: impl IntoIterator<Item = (V, V)>) -> Self {
+        self.errors = errors
+            .into_iter()
+            .map(|(low, high)| {
+                let (low, high) = (low.into().0?, high.into().0?);
+                Some((low.min(high), low.max(high)))
+            })
+            .collect();
         self
     }
 }

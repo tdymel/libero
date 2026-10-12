@@ -10,7 +10,10 @@ use libero::{
         Anchor, BarChart, Code, LineChart, Orientation, PieChart, Series, Slice, Table, Text,
         XValues, column,
     },
-    theme::{BarLayout, Curve, LegendPosition, PieLabels, PointSymbol},
+    theme::{
+        BarLabelPosition, BarLayout, Curve, LegendPosition, PieLabelPosition, PieLabels,
+        PointSymbol,
+    },
 };
 
 const DAYS: [&str; 7] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -129,6 +132,9 @@ pub fn ChartPage() -> Element {
                     prop("y_ticks", "Option<usize>").default(theme.chart.y_ticks.to_string()).doc("The steps the value axis is cut into: 4 writes 5 labels."),
                     prop("x_title", "Option<String>").doc("Along the categories: what they are. Under them, or beside them when `horizontal`."),
                     prop("y_title", "Option<String>").doc("Along the values: what they measure. Beside them, or under them when `horizontal`."),
+                    prop("value_label_position", "BarLabelPosition").default("inside a lying bar or one with error ranges, past the rest's end").doc("`inside` the bar, in the ink that reads on it, or `outside` past its end. A stack always writes inside."),
+                    prop("bar_width", "Option<f32>").default("5 px each side of a band").doc("The share of a category's band its bars fill, clamped to `0.1..=1`."),
+                    prop("bar_gap", "Option<f32>").default(theme.chart.bar_gap.to_string()).doc("Between two bars of a group, in pixels."),
                     prop("legend", "LegendPosition").default("bottom with two series or more").doc("`bottom`, `top`, `start`, `end` or `none`."),
                     prop("grid", "Option<bool>").default(on(theme.chart.grid)).doc("Guide lines across the values."),
                     prop("value_format", "ValueFormat").default("Auto").doc("How values are written on the axis, the bars, in the tooltip and in the summary."),
@@ -152,6 +158,11 @@ pub fn ChartPage() -> Element {
                     prop("labels", "PieLabels").default(theme.chart.pie_labels.as_str()).doc("Beside each slice: `percent`, `value`, `name` or `none`."),
                     prop("center", "Option<Element>").doc("In a donut's hole, as a total, kept off the ring; its text shrinks in a small hole, the rest is clipped."),
                     prop("start_angle", "f32").default("0").doc("Where the first slice starts, in degrees clockwise from 12 o'clock."),
+                    prop("end_angle", "Option<f32>").default("a full turn").doc("Where the last slice ends, in the same degrees: `start_angle: -90.0, end_angle: 90.0` is a half pie, a gauge with `donut`."),
+                    prop("rose", "bool").default("false").doc("A nightingale rose: every slice the same angle, its radius by its value."),
+                    prop("label_position", "PieLabelPosition").default(theme.chart.pie_label_position.as_str()).doc("`outside` beside each slice, or `inside` on it in the ink that reads there."),
+                    prop("min_label_angle", "Option<f32>").default(theme.chart.min_label_angle.to_string()).doc("A slice narrower than this many degrees gets no label; the summary still names it."),
+                    prop("slice_gap", "Option<f32>").default(theme.chart.slice_gap.to_string()).doc("Between two slices, in pixels, in the page's colour."),
                     prop("legend", "LegendPosition").default("bottom with two slices or more").doc("`bottom`, `top`, `start`, `end` or `none`."),
                     prop("value_format", "ValueFormat").default("Auto").doc("How values are written beside the slices, in the tooltip and in the summary."),
                     prop("unit", "Option<String>").doc("After every value, as `\"kg\"`."),
@@ -183,6 +194,8 @@ pub fn ChartPage() -> Element {
                     "On a touch screen a tap pins a point's tooltip, a second tap on it clicks; a vertical swipe still scrolls the page.",
                     "Each series' or slice's palette colour reaches 3:1 on the page and on a card, in every shipped theme and color scheme; one too close to an earlier one, also for colour-blind eyes, is skipped.",
                     "In forced colours the lines, bars and slices keep their colours on the system background; axes and labels take the system text colour.",
+                    "A bar's error range is written after its value in the tooltip and the announcement, as \"120 (110–130)\".",
+                    "A label on a bar or a slice takes black or white, whichever reads on it.",
                 ])
                 .must([
                     "Give a `title`, or name the chart with `aria_label`.",
@@ -198,6 +211,9 @@ pub fn ChartPage() -> Element {
                     "The drawing runs left to right in a right-to-left page too, and the arrows follow it unflipped.",
                     "A hidden slice leaves the drawing, so the shown ones' shares grow; the summary keeps every slice.",
                     "`grid` draws nothing on a pie.",
+                    "`.colors` and `.negative_color` add no meaning of their own: a loss already hangs below the axis. The legend keeps the series' colour.",
+                    "Error bars draw on upright grouped bars only; a stack or a lying chart reads the range in its tooltip alone.",
+                    "A rose's radius and a slice under `min_label_angle` are read by eye or not at all; the summary gives every value.",
                 ]),
             lead: rsx! {
                 Text {
@@ -267,9 +283,59 @@ pub fn ChartPage() -> Element {
                     Control::switch("value_labels")
                         .default(on(theme.chart.value_labels))
                         .hidden_when(is("bar")),
+                    // A position shows its labels without the switch.
+                    Control::select("value_label_position", ["auto", "inside", "outside"])
+                        .default("auto")
+                        .hidden_when(is("bar"))
+                        .code(|_, values| match values.str("value_label_position").as_str() {
+                            "auto" => vec![],
+                            position => {
+                                let mut lines = vec![format!("value_label_position: \"{position}\"")];
+                                if values.str("value_labels") != "true" {
+                                    lines.insert(0, "value_labels: true".to_string());
+                                }
+                                lines
+                            }
+                        }),
+                    Control::slider("bar_width", ["auto", "0.4", "0.6", "0.8", "1.0"])
+                        .default("auto")
+                        .hidden_when(is("bar"))
+                        .code(|_, values| match values.str("bar_width").as_str() {
+                            "auto" => vec![],
+                            share => vec![format!("bar_width: {share}")],
+                        }),
                     Control::select("labels", ["percent", "value", "name", "none"])
                         .default(theme.chart.pie_labels.as_str())
                         .hidden_when(is("pie")),
+                    Control::toggle("label_position", ["outside", "inside"])
+                        .default(theme.chart.pie_label_position.as_str())
+                        .hidden_when(is("pie")),
+                    Control::slider("min_label_angle", ["0", "15", "30", "45"])
+                        .default("0")
+                        .hidden_when(is("pie"))
+                        .code(|_, values| match values.str("min_label_angle").as_str() {
+                            "0" => vec![],
+                            angle => vec![format!("min_label_angle: {angle}.0")],
+                        }),
+                    Control::switch("rose").hidden_when(is("pie")),
+                    Control::select("end_angle", ["full", "half"])
+                        .default("full")
+                        .labels(["Full turn", "Half: -90 to 90"])
+                        .hidden_when(is("pie"))
+                        .code(|_, values| match values.str("end_angle").as_str() {
+                            "half" => vec![
+                                "start_angle: -90.0".to_string(),
+                                "end_angle: 90.0".to_string(),
+                            ],
+                            _ => vec![],
+                        }),
+                    Control::slider("slice_gap", ["0", "1", "2", "4", "8"])
+                        .default("1")
+                        .hidden_when(is("pie"))
+                        .code(|_, values| match values.str("slice_gap").as_str() {
+                            "1" => vec![],
+                            gap => vec![format!("slice_gap: {gap}.0")],
+                        }),
                     Control::switch("donut").hidden_when(is("pie")).code(|_, values| {
                         match values.str("donut").as_str() {
                             "true" => vec![
@@ -324,21 +390,36 @@ pub fn ChartPage() -> Element {
                                 layout: BarLayout::from(values.str("layout").as_str()),
                                 orientation: Orientation::from(values.str("orientation").as_str()),
                                 radius: values.str("radius"),
-                                value_labels: values.str("value_labels") == "true",
+                                value_labels: values.str("value_labels") == "true"
+                                    || values.str("value_label_position") != "auto",
+                                value_label_position: match values.str("value_label_position").as_str() {
+                                    "auto" => None,
+                                    position => Some(BarLabelPosition::from(position)),
+                                },
+                                bar_width: values.str("bar_width").parse::<f32>().ok(),
                                 y_min, y_max, y_ticks, x_title, y_title,
                                 legend, tooltip, loading,
                             }
                         },
-                        "pie" => rsx! {
-                            PieChart {
-                                title: "Browsers",
-                                slices: slices(),
-                                labels: PieLabels::from(values.str("labels").as_str()),
-                                donut: values.str("donut") == "true",
-                                center: rsx! { "1,204 users" },
-                                legend, tooltip, loading,
+                        "pie" => {
+                            let half = values.str("end_angle") == "half";
+                            rsx! {
+                                PieChart {
+                                    title: "Browsers",
+                                    slices: slices(),
+                                    labels: PieLabels::from(values.str("labels").as_str()),
+                                    label_position: PieLabelPosition::from(values.str("label_position").as_str()),
+                                    min_label_angle: values.str("min_label_angle").parse::<f32>().ok(),
+                                    donut: values.str("donut") == "true",
+                                    rose: values.str("rose") == "true",
+                                    start_angle: if half { -90.0 } else { 0.0 },
+                                    end_angle: half.then_some(90.0),
+                                    slice_gap: values.str("slice_gap").parse::<f32>().ok(),
+                                    center: rsx! { "1,204 users" },
+                                    legend, tooltip, loading,
+                                }
                             }
-                        },
+                        }
                         _ => rsx! {
                             LineChart {
                                 title: "Visitors",
@@ -357,6 +438,33 @@ pub fn ChartPage() -> Element {
                     }
                 },
             }
+            DocSection { title: "Bar colours and error ranges",
+                Text {
+                    "A series can colour its bars one by one with "
+                    Code { source: ".colors([..])" }
+                    ", or its losses with "
+                    Code { source: ".negative_color(..)" }
+                    "; the bar's place below the axis says the same. "
+                    Code { source: ".errors([(low, high), ..])" }
+                    " draws a range over each upright bar of a grouped chart, and the tooltip and the keys read it out."
+                }
+                ProfitRanges {}
+                Ranking {}
+            }
+            DocSection { title: "Half donut and rose",
+                Text {
+                    Code { source: "end_angle" }
+                    " ends the slices before a full turn: from -90 to 90 degrees a "
+                    Code { source: "donut" }
+                    " becomes a gauge, its "
+                    Code { source: "center" }
+                    " under the arc. "
+                    Code { source: "rose" }
+                    " gives every slice the same angle and its value as its radius."
+                }
+                Gauge {}
+                Rose {}
+            }
             DocSection { title: "With a table",
                 Text {
                     "A chart only draws its data. Where every value matters, show the same rows in a "
@@ -365,6 +473,70 @@ pub fn ChartPage() -> Element {
                 }
                 SalesWithTable {}
             }
+        }
+    }
+}
+
+/// Losses in their own colour, a range over every bar.
+#[component]
+fn ProfitRanges() -> Element {
+    rsx! {
+        BarChart {
+            title: "Profit with its range",
+            x: QUARTERS,
+            series: vec![
+                Series::new("2025", PROFIT_2025)
+                    .negative_color("error")
+                    .errors([(30.0, 52.0), (44.0, 63.0), (-31.0, -19.0), (50.0, 71.0)]),
+            ],
+            bar_width: 0.6,
+            value_labels: true,
+        }
+    }
+}
+
+/// A colour per bar, the leader first.
+#[component]
+fn Ranking() -> Element {
+    rsx! {
+        BarChart {
+            title: "Sales per team",
+            x: ["North", "South", "East"],
+            series: vec![
+                Series::new("Sales", [162.0, 128.0, 101.0])
+                    .colors(["success", "primary", "neutral"]),
+            ],
+            orientation: "horizontal",
+            value_labels: true,
+        }
+    }
+}
+
+/// A half donut with its total under the arc.
+#[component]
+fn Gauge() -> Element {
+    rsx! {
+        PieChart {
+            title: "Storage used",
+            slices: vec![Slice::new("Used", 72.0), Slice::new("Free", 28.0).color("neutral.3")],
+            donut: true,
+            start_angle: -90.0,
+            end_angle: 90.0,
+            label_position: "inside",
+            center: rsx! { "72 GB" },
+        }
+    }
+}
+
+/// Every browser the same angle, its share as its radius.
+#[component]
+fn Rose() -> Element {
+    rsx! {
+        PieChart {
+            title: "Browsers as a rose",
+            slices: slices(),
+            rose: true,
+            labels: "name",
         }
     }
 }

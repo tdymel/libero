@@ -62,6 +62,28 @@ str_enum! {
 }
 
 str_enum! {
+    /// Where a bar chart writes each bar's value.
+    pub enum BarLabelPosition {
+        /// In the middle of the bar, in the ink that reads on it.
+        #[default]
+        Inside = "inside",
+        /// Past the bar's free end.
+        Outside = "outside",
+    }
+}
+
+str_enum! {
+    /// Where a pie chart writes each slice's label.
+    pub enum PieLabelPosition {
+        /// Beside the slice, on a line out of it.
+        #[default]
+        Outside = "outside",
+        /// On the slice, in the ink that reads on it.
+        Inside = "inside",
+    }
+}
+
+str_enum! {
     /// What a pie chart writes beside each slice.
     pub enum PieLabels {
         None = "none",
@@ -102,9 +124,21 @@ pub struct ChartDefaults {
     pub bar_radius: Size,
     /// Each bar's value written at its end.
     pub value_labels: bool,
+    /// Where the value labels sit; `None` inside a stack, a lying bar or one with error
+    /// ranges, else past the end.
+    pub bar_label_position: Option<BarLabelPosition>,
+    /// The share of a category's band its bars fill, `0.1..=1`; `None` leaves 5 px each side.
+    pub bar_width: Option<f32>,
+    /// Between two bars of a group, in pixels.
+    pub bar_gap: f32,
     /// A donut's ring width over the pie's radius.
     pub donut_thickness: f32,
     pub pie_labels: PieLabels,
+    pub pie_label_position: PieLabelPosition,
+    /// Between two slices, in pixels.
+    pub slice_gap: f32,
+    /// A slice narrower than this many degrees gets no label.
+    pub min_label_angle: f32,
     pub legend_gap: &'static str,
     pub swatch_size: &'static str,
 }
@@ -136,8 +170,14 @@ impl ChartDefaults {
         bar_layout: BarLayout::Grouped,
         bar_radius: Size::Xs,
         value_labels: false,
+        bar_label_position: None,
+        bar_width: None,
+        bar_gap: 3.0,
         donut_thickness: 0.4,
         pie_labels: PieLabels::Percent,
+        pie_label_position: PieLabelPosition::Outside,
+        slice_gap: 1.0,
+        min_label_angle: 0.0,
         legend_gap: "16px",
         swatch_size: "12px",
     };

@@ -1,12 +1,14 @@
 use crate::{
     components::common::{input_from_str, parts_enum},
-    theme::{BarLayout, Curve, LegendPosition, PieLabels},
+    theme::{BarLabelPosition, BarLayout, Curve, LegendPosition, PieLabelPosition, PieLabels},
 };
 
 input_from_str!(Curve);
 input_from_str!(LegendPosition);
 input_from_str!(BarLayout);
 input_from_str!(PieLabels);
+input_from_str!(BarLabelPosition);
+input_from_str!(PieLabelPosition);
 
 parts_enum! {
     /// A chart's inner parts, for its `parts` prop.

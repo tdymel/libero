@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 
 use super::{
     ChartColor, ChartPart, ChartPoint, Series, ValueFormat,
-    engine::{Drawn, SeriesExtras, SeriesSpec},
+    engine::{Drawn, Plot, SeriesExtras, SeriesSpec},
     legend::{ChartLegend, HiddenSeries, LegendEntry, legend_sx},
     overlay::{ChartOverlay, OverlaySeries, overlay_sx},
 };
@@ -307,10 +307,10 @@ impl Frame {
         let names: Vec<String> = series.iter().map(|series| series.name.clone()).collect();
         let ontoggle = move |name: String| hidden.toggle(&name, &names);
         let svg = drawn.read().as_ref().map(|drawn| drawn.svg.clone());
-        let center_style = drawn
-            .read()
-            .as_ref()
-            .map(|drawn| center_style(drawn.geometry.hole, drawn.geometry.width));
+        let center_style = drawn.read().as_ref().map(|drawn| {
+            let geometry = &drawn.geometry;
+            center_style(geometry.plot, geometry.width, geometry.height)
+        });
         let element = plot.element;
         let Interaction {
             format,
@@ -403,15 +403,18 @@ impl Frame {
     }
 }
 
-/// A donut's centre: a circle a gap inside the hole, its content in the square within,
-/// its text shrinking with a small hole. In percent of the plot's `width`, as drawn.
-fn center_style(hole: f32, width: f32) -> String {
-    let diameter = 2.0 * (hole - CENTER_GAP).max(0.0);
+/// A donut's centre: a circle a gap inside `room` (the hole, or a half ring's half of it),
+/// its content in the square within, its text shrinking with a small hole. In percent of
+/// the drawing's `width` and `height`.
+fn center_style(room: Plot, width: f32, height: f32) -> String {
+    let diameter = (room.right - room.left - 2.0 * CENTER_GAP).max(0.0);
     let percent = |px: f32| px / width.max(1.0) * 100.0;
     let padding = diameter * (1.0 - std::f32::consts::FRAC_1_SQRT_2) / 2.0;
     let font = diameter * 0.16;
     format!(
-        "width:{:.2}%;padding:{:.2}%;font-size:clamp(0.75rem,{font:.1}px,1em)",
+        "left:{:.2}%;top:{:.2}%;width:{:.2}%;padding:{:.2}%;font-size:clamp(0.75rem,{font:.1}px,1em)",
+        percent((room.left + room.right) / 2.0),
+        (room.top + room.bottom) / 2.0 / height.max(1.0) * 100.0,
         percent(diameter),
         percent(padding)
     )
@@ -491,6 +494,10 @@ pub(super) fn overlay_series(
             dashed: spec.dashed,
             symbol: symbols.then_some(spec.extras.symbol),
             unit: series.get(i).and_then(|series| series.unit.clone()),
+            errors: series
+                .get(i)
+                .map(|series| series.errors.clone())
+                .unwrap_or_default(),
         })
         .collect()
 }

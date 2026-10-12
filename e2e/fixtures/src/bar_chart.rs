@@ -9,6 +9,7 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/bar-chart", || rsx! { Grouped {} }),
     ("/bar-chart/stacked", || rsx! { Stacked {} }),
+    ("/bar-chart/styled", || rsx! { Styled {} }),
 ];
 
 fn series() -> Vec<Series> {
@@ -66,5 +67,27 @@ fn Stacked() -> Element {
             }
         }
         p { id: "active", "{active}" }
+    }
+}
+
+/// One series: half-band bars, a loss in its own colour, error ranges, values inside.
+#[component]
+fn Styled() -> Element {
+    rsx! {
+        div { max_width: "480px",
+            BarChart {
+                id: "chart",
+                title: "Profit",
+                x: ["Q1", "Q2", "Q3"],
+                series: vec![
+                    Series::new("2026", [120, -40, 150])
+                        .negative_color("#c92a2a")
+                        .errors([(110, 130), (-50, -30), (135, 165)]),
+                ],
+                bar_width: 0.5,
+                value_labels: true,
+                value_label_position: "inside",
+            }
+        }
     }
 }
