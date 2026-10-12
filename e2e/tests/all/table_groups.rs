@@ -211,7 +211,8 @@ async fn the_windowed_footer_holds_and_ends_the_rows<D: Driver>(
         );
     }
     eventually(d, "the last row above the footer", async |d| {
-        d.wheel("tbody tr", 20000.0).await?;
+        // Over the area: the first row's centre scrolls out of it and the wheel then hits nothing.
+        d.wheel(AREA, 20000.0).await?;
         if !d.exists(LAST_ROW).await? {
             return Ok(false);
         }
