@@ -387,6 +387,7 @@ Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --
 | `table_scroll::a_windowed_table_renders_the_rows_in_view` | macos native | upstream: Blitz's stylo panics in resolve_map on the windowed rows (a SIGSEGV in the full run) |
 | `table_scroll::a_windowed_table_renders_the_rows_in_view` | windows native | upstream: Blitz's stylo panics in calc.rs on the windowed rows |
 | `table_scroll::end_at_the_bottom_loads_more_rows` | ios | 3416: the simulator's tap or drag did not drive the page |
+| `table_tree::a_tree_box_selects_its_descendants_and_mixes_its_ancestors` | ios | 3416: flaky: a tap on a tree box sometimes leaves a half selection |
 | `table_tree::a_tree_with_cell_focus_moves_between_rows_and_cells` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_tree::the_arrows_move_and_open_the_tree_rows` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_tree::the_arrows_move_through_a_windowed_tree` | android | 958: roving keys are inert in the emulator's WebView |
