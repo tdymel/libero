@@ -174,6 +174,9 @@ struct Doc {
     /// Reads waiting for the next poll's layout. See [`when_laid_out`].
     laid_out: RefCell<Vec<Deferred>>,
     laid_out_wait: RefCell<Option<Box<dyn TimerSubscription>>>,
+    /// The [`when_laid_out_retry`] waits still to fire, and their timers.
+    retrying: Cell<usize>,
+    retry_waits: RefCell<Vec<Box<dyn TimerSubscription>>>,
     /// [`Listener`]'s own element.
     wrapper: RefCell<Option<NodeHandle>>,
     /// [`PortalRoot`]'s viewport-wide box. See [`HIT_AREA_STYLE`].
@@ -225,6 +228,8 @@ impl Doc {
             deferred: RefCell::new(Vec::new()),
             laid_out: RefCell::new(Vec::new()),
             laid_out_wait: RefCell::new(None),
+            retrying: Cell::new(0),
+            retry_waits: RefCell::new(Vec::new()),
             wrapper: RefCell::new(None),
             hit_area: RefCell::new(None),
             scheme: Cell::new(ColorScheme::Light),
@@ -1453,7 +1458,7 @@ pub(super) fn when_laid_out(run: Box<dyn FnOnce()>) {
     let weak = Rc::downgrade(&doc);
     let wait = super::thread::timer().map(|timer| {
         timer.after(
-            Duration::from_millis(16),
+            Duration::ZERO,
             Box::new(move || {
                 let Some(doc) = weak.upgrade() else {
                     return;
@@ -1468,8 +1473,39 @@ pub(super) fn when_laid_out(run: Box<dyn FnOnce()>) {
     drop(doc.laid_out_wait.replace(wait));
 }
 
+/// How much longer each retry waits: about a frame.
+const RETRY_STEP: Duration = Duration::from_millis(16);
+
+/// [`when_laid_out`] after `failed` retries, each a frame later than the one before: the
+/// zero-delay wake can come before the shell's layout and burn every try in one frame.
+pub(super) fn when_laid_out_retry(failed: u8, run: Box<dyn FnOnce()>) {
+    let (Some(doc), true) = (doc(), failed > 0) else {
+        return when_laid_out(run);
+    };
+    let Some(timer) = super::thread::timer() else {
+        return when_laid_out(run);
+    };
+    let weak = Rc::downgrade(&doc);
+    doc.retrying.set(doc.retrying.get() + 1);
+    let wait = timer.after(
+        RETRY_STEP * u32::from(failed),
+        Box::new(move || {
+            let Some(doc) = weak.upgrade() else {
+                return;
+            };
+            when_laid_out(run);
+            doc.retrying.set(doc.retrying.get() - 1);
+        }),
+    );
+    let mut waits = doc.retry_waits.borrow_mut();
+    if doc.retrying.get() == 1 {
+        waits.clear();
+    }
+    waits.push(wait);
+}
+
 pub(super) fn awaits_layout() -> bool {
-    doc().is_some_and(|doc| !doc.laid_out.borrow().is_empty())
+    doc().is_some_and(|doc| !doc.laid_out.borrow().is_empty() || doc.retrying.get() > 0)
 }
 
 fn heal_now() {

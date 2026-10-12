@@ -9,7 +9,7 @@ use crate::{
     hooks::{ElementHandle, Rect, use_subscription_slot},
     platform::{
         ContentSubscription, Dimensions, ElementApi, ScrollSubscription, document, next_task,
-        observe_resize, on_viewport_resize, scroll, when_laid_out,
+        observe_resize, on_viewport_resize, scroll, when_laid_out, when_laid_out_retry,
     },
     utils::bump,
 };
@@ -120,7 +120,7 @@ pub(crate) fn use_element_rect(target: Option<ElementHandle>, active: bool) -> E
             let tries = waited.get();
             if size.width == 0.0 && size.height == 0.0 && tries < UNLAID_TRIES {
                 waited.set(tries + 1);
-                when_laid_out(move || bump(tick));
+                when_laid_out_retry(tries, move || bump(tick));
                 return;
             }
             let rect = Rect {
