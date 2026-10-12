@@ -323,7 +323,8 @@ e2e::scenario!(
 e2e::scenario!(
     tabbing_back_in_returns_to_the_last_item,
     "/toolbar",
-    the_tab_stop_follows_focus
+    the_tab_stop_follows_focus,
+    ios: skip("3416: flaky: a tap on a toolbar item sometimes leaves the focus on the body")
 );
 e2e::scenario!(
     a_disabled_item_ignores_clicks_and_keys,

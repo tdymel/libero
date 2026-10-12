@@ -410,6 +410,7 @@ Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --
 | `toolbar::fields_join_the_arrow_order` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `toolbar::fields_join_the_arrow_order` | macos desktop | 3432: WKWebView: ArrowLeft at a caret's start keeps the field |
 | `toolbar::shortcut_help_lists_the_chords` | ios | 3416: the simulator's tap or drag did not drive the page |
+| `toolbar::tabbing_back_in_returns_to_the_last_item` | ios | 3416: flaky: a tap on a toolbar item sometimes leaves the focus on the body |
 | `tooltip::a_long_press_on_a_link_trigger_opens_no_link_menu` | desktop | 1126: no touch input under Xvfb |
 | `tooltip::a_long_press_on_a_link_trigger_opens_no_link_menu` | native | 3237: the native driver reads no script |
 | `tooltip::a_long_press_opens_it_on_touch` | desktop | 1126: no touch input under Xvfb |
