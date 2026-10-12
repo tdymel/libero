@@ -192,6 +192,13 @@ async fn in_view<D: Driver>(d: &mut D, row: &str, after: &str) -> Result<()> {
         },
     )
     .await;
+    if settled.is_err() {
+        let probe = format!(
+            "(() => {{ const l = document.querySelector({LISTBOX:?}); const kids = [...l.querySelectorAll('[role=option]')].map(r => r.id.split('-').pop()); return JSON.stringify({{st: l.scrollTop, sh: l.scrollHeight, ch: l.clientHeight, kids: kids.slice(0, 40), html: l.innerHTML.slice(0, 600)}}); }})()"
+        );
+        let diag = d.evaluate(&probe).await;
+        return Err(anyhow::anyhow!("{after}: {row} seen {seen:?} diag {diag:?}"));
+    }
     settled.map_err(|error| error.context(format!("row y, height, list y, height: {seen:?}")))
 }
 
@@ -248,6 +255,8 @@ stress_copies!(
     stress_a01 stress_a02 stress_a03 stress_a04 stress_a05 stress_a06 stress_a07 stress_a08
     stress_a09 stress_a10 stress_a11 stress_a12 stress_a13 stress_a14 stress_a15 stress_a16
     stress_a17 stress_a18 stress_a19 stress_a20 stress_a21 stress_a22 stress_a23 stress_a24
+    stress_a25 stress_a26 stress_a27 stress_a28 stress_a29 stress_a30 stress_a31 stress_a32
+    stress_a33 stress_a34 stress_a35 stress_a36 stress_a37 stress_a38 stress_a39 stress_a40
 );
 
 /// Todo 2695: a windowed list is as wide as its longest label, drawn or not.
