@@ -194,7 +194,7 @@ async fn in_view<D: Driver>(d: &mut D, row: &str, after: &str) -> Result<()> {
     .await;
     if settled.is_err() {
         let probe = format!(
-            "(async () => {{ const l = document.querySelector({LISTBOX:?}); const r = document.getElementById({row:?}.slice(1)); const state = () => JSON.stringify({{st: l.scrollTop, y: r.getBoundingClientRect().y, first: [...l.querySelectorAll('[role=option]')].map(o => o.id.split('-').pop()).slice(0, 3)}}); const out = {{s0: state()}}; const t = performance.now(); out.raf = await new Promise(res => {{ requestAnimationFrame(() => res(performance.now() - t)); setTimeout(() => res(-1), 3000); }}); out.s1 = state(); await new Promise(res => setTimeout(res, 1500)); out.s2 = state(); l.scrollBy(0, 1); await new Promise(res => setTimeout(res, 1000)); out.s3 = state(); return JSON.stringify(out); }})()"
+            "(async () => {{ const l = document.querySelector({LISTBOX:?}); const r = document.getElementById({row:?}.slice(1)); const state = () => JSON.stringify({{st: l.scrollTop, y: r.getBoundingClientRect().y, first: [...l.querySelectorAll('[role=option]')].map(o => o.id.split('-').pop()).slice(0, 3)}}); const out = {{s0: state()}}; const t = performance.now(); out.raf = await new Promise(res => {{ requestAnimationFrame(() => res(performance.now() - t)); setTimeout(() => res(-1), 3000); }}); out.s1 = state(); await new Promise(res => setTimeout(res, 1500)); out.s2 = state(); l.scrollBy(0, 1); await new Promise(res => setTimeout(res, 1000)); out.s3 = state(); out.ev = window.__ev; return JSON.stringify(out); }})()"
         );
         let diag = d.evaluate(&probe).await;
         return Err(anyhow::anyhow!("{after}: {row} seen {seen:?} diag {diag:?}"));
@@ -205,6 +205,7 @@ async fn in_view<D: Driver>(d: &mut D, row: &str, after: &str) -> Result<()> {
 /// Todo 2234: a thousand rows draw only a window. The highlight stays drawn, in view and
 /// counted in the whole list (todo 2910), across a filter below the windowing threshold and back.
 async fn a_long_list_windows<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.evaluate("(() => { window.__ev = []; const t0 = performance.now(); const log = (...a) => window.__ev.push([Math.round(performance.now() - t0), ...a]); addEventListener('scroll', e => log('scroll', e.target.scrollTop), {capture: true, passive: true}); const orig = Element.prototype.scrollTo; Element.prototype.scrollTo = function(...a) { const before = this.scrollTop; const r = orig.apply(this, a); log('scrollTo', JSON.stringify(a), before, this.scrollTop, this.scrollHeight); return r; }; return 1; })()").await?;
     d.focus(TRIGGER).await?;
     d.press(keyboard::ARROW_DOWN).await?;
     eventually(d, "the search box", async |d| d.is_focused(SEARCH).await).await?;
