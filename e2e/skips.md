@@ -113,6 +113,10 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `focus_trap::tab_passes_over_a_stop_that_is_not_rendered` | android | 958: element identity on the WebView |
 | `focus_trap::tab_passes_over_a_stop_that_is_not_rendered` | desktop | 958: element identity on the WebView |
 | `focus_trap::tab_passes_over_a_stop_that_is_not_rendered` | ios | 3416: the simulator's tap or drag did not drive the page |
+| `funnel_chart::a_click_on_a_stage_reports_it` | ios | 3416: the simulator's tap or drag did not drive the page |
+| `funnel_chart::a_click_on_a_stage_reports_it` | native | charts are parked on Blitz |
+| `funnel_chart::the_keys_walk_the_stages` | native | charts are parked on Blitz |
+| `funnel_chart::the_legend_hides_and_shows_a_stage` | native | charts are parked on Blitz |
 | `home::arrow_down_after_typing_enters_on_the_typed_day` | android | 958: element identity on the WebView |
 | `home::arrow_down_after_typing_enters_on_the_typed_day` | desktop | 958: element identity on the WebView |
 | `home::arrow_down_after_typing_enters_on_the_typed_day` | ios | 3416: the simulator's tap or drag did not drive the page |
