@@ -380,7 +380,7 @@ const ON_ELEMENT_SCROLL: &str = "const selector = '[' + data[0] + '=\"' + data[1
     const ours = (event) => event.target instanceof Element && event.target.matches(selector);
     const tick = (event) => {
         const o = ours(event);
-        if (event.target instanceof Element && event.target.getAttribute('role') === 'listbox') L('tick', o, armed, event.target.scrollTop);
+        if (event.target instanceof Element && event.target.getAttribute('role') === 'listbox') L('tick', o, armed, event.target.scrollTop, event.target.getAttribute('data-lsx-observe'), event.target.id);
         if (!o) return;
         if (armed) {
             queued = event.target;
