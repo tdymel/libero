@@ -4,9 +4,10 @@ use dioxus::prelude::*;
 use libero::use_theme;
 use libero::{
     components::{
-        BarChart, Candle, CandlestickChart, ChartRange, Code, FunnelChart, HeatmapChart, LineChart,
-        MarkLine, MarkPoint, Orientation, PieChart, ScatterChart, ScatterSeries, Series,
-        SeriesKind, Slice, Table, Text, Trend, column,
+        BarChart, Button, Candle, CandlestickChart, ChartHandle, ChartRange, Code, Flex,
+        FunnelChart, HeatmapChart, LineChart, MarkLine, MarkPoint, Orientation, PieChart,
+        ScatterChart, ScatterSeries, Series, SeriesKind, Slice, Table, Text, Trend, column,
+        use_chart,
     },
     theme::{
         BarLabelPosition, BarLayout, Curve, LegendPosition, PieLabelPosition, PieLabels,
@@ -432,6 +433,57 @@ fn marked(values: &DemoValues, series: Series) -> Series {
         .fold(series, Series::mark_point)
 }
 
+/// Whether the chart is a line or bar chart with `zoom` on.
+fn zoomable(values: &DemoValues) -> bool {
+    values.str("zoom") == "true" && matches!(values.str("type").as_str(), "line" | "bar")
+}
+
+/// The buttons under the chart, as code: save as SVG and PNG, and Reset zoom with `zoom`.
+fn buttons_code(zoom: bool) -> String {
+    let mut code = String::from(
+        "Button {\n    onclick: move |_| async move {\n        chart.save_svg(\"chart.svg\").await;\n    },\n    \"Save as SVG\"\n}\nButton {\n    onclick: move |_| async move {\n        chart.save_png(\"chart.png\").await;\n    },\n    \"Save as PNG\"\n}",
+    );
+    if zoom {
+        code += "\nButton {\n    disabled: !chart.is_zoomed(),\n    onclick: move |_| chart.reset_zoom(),\n    \"Reset zoom\"\n}";
+    }
+    code
+}
+
+/// The demo's buttons under `drawn`, each calling the chart's `handle`.
+fn with_buttons(values: &DemoValues, chart: ChartHandle, drawn: Element) -> Element {
+    if values.str("buttons") != "true" {
+        return drawn;
+    }
+    let zoom = zoomable(values);
+    rsx! {
+        div { width: "100%",
+            {drawn}
+            Flex { direction: "row", gap: "sm", wrap: true,
+                Button {
+                    onclick: move |_| async move {
+                        chart.save_svg("chart.svg").await;
+                    },
+                    "Save as SVG"
+                }
+                Button {
+                    onclick: move |_| async move {
+                        chart.save_png("chart.png").await;
+                    },
+                    "Save as PNG"
+                }
+                if zoom {
+                    Button {
+                        disabled: !chart.is_zoomed(),
+                        focusable_when_disabled: true,
+                        onclick: move |_| chart.reset_zoom(),
+                        "Reset zoom"
+                    }
+                }
+            }
+        }
+    }
+}
+
 /// The type's component in place of the generated `Chart`, and the table under it when shown.
 fn component(values: &DemoValues, source: &str) -> String {
     let name = match values.str("type").as_str() {
@@ -444,9 +496,15 @@ fn component(values: &DemoValues, source: &str) -> String {
         _ => "LineChart",
     };
     let mut chart = source.replacen("Chart", name, 1);
+    if values.str("buttons") == "true" {
+        chart = format!("{chart}\n{}", buttons_code(zoomable(values)));
+    }
     // `onrange` sets this signal.
-    if values.str("zoom") == "true" && matches!(name, "LineChart" | "BarChart") {
+    if zoomable(values) {
         chart = format!("let mut selected = use_signal(|| None::<ChartRange>);\n\n{chart}");
+    }
+    if values.str("buttons") == "true" {
+        chart = format!("let chart = use_chart();\n\n{chart}");
     }
     match values.str("table") == "true" {
         true => format!("{chart}\n{}", table_code(values)),
@@ -478,6 +536,7 @@ pub fn ChartPage() -> Element {
     let theme = use_theme();
     let legend = ["bottom", "top", "start", "end", "none"];
     let mut selected = use_signal(|| None::<ChartRange>);
+    let chart = use_chart();
     rsx! {
         DocPage {
             title: "Chart",
@@ -513,10 +572,9 @@ pub fn ChartPage() -> Element {
                     prop("hidden", "Option<Vec<String>>").doc("The names of the lines the legend hides; set, they are controlled."),
                     prop("default_hidden", "Vec<String>").default("[]").doc("Seeds the hidden lines once. Ignored when `hidden` is set."),
                     prop("onhiddenchange", "Option<EventHandler<Vec<String>>>").doc("The hidden lines a legend button asks for. The last shown line stays."),
-                    prop("zoom", "Option<bool>").default(on(theme.chart.zoom)).doc("Zoom and pan the x axis: Ctrl or Cmd with the wheel, a pinch, a drag (Shift or Alt with it once `onrange` is set), the keys, and a Reset zoom button."),
+                    prop("zoom", "Option<bool>").default(on(theme.chart.zoom)).doc("Zoom and pan the x axis: Ctrl or Cmd with the wheel, a pinch, a drag (Shift or Alt with it once `onrange` is set), the keys. Reset it from code with the `handle`."),
                     prop("onrange", "Option<EventHandler<Option<ChartRange>>>").doc("Set, a drag or Shift with an arrow brushes a band of x values; Shift or Alt with a drag pans instead. `None` when Escape clears it."),
-                    prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom."),
-                    prop("export_button", "Option<bool>").default(on(theme.chart.export_button)).doc("Save as SVG and Save as PNG buttons above the plot."),
+                    prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom and says whether it is zoomed."),
                 ]),
                 props("BarChart", vec![
                     prop("x", "XValues").default("required").doc("The categories, one per bar or group of bars."),
@@ -550,10 +608,9 @@ pub fn ChartPage() -> Element {
                     prop("hidden", "Option<Vec<String>>").doc("The names of the series the legend hides; set, they are controlled."),
                     prop("default_hidden", "Vec<String>").default("[]").doc("Seeds the hidden series once. Ignored when `hidden` is set."),
                     prop("onhiddenchange", "Option<EventHandler<Vec<String>>>").doc("The hidden series a legend button asks for. The last shown series stays."),
-                    prop("zoom", "Option<bool>").default(on(theme.chart.zoom)).doc("Zoom and pan along the categories: Ctrl or Cmd with the wheel, a pinch, a drag (Shift or Alt with it once `onrange` is set), the keys, and a Reset zoom button."),
+                    prop("zoom", "Option<bool>").default(on(theme.chart.zoom)).doc("Zoom and pan along the categories: Ctrl or Cmd with the wheel, a pinch, a drag (Shift or Alt with it once `onrange` is set), the keys. Reset it from code with the `handle`."),
                     prop("onrange", "Option<EventHandler<Option<ChartRange>>>").doc("Set, a drag or Shift with an arrow brushes a band of categories; Shift or Alt with a drag pans instead. `None` when Escape clears it."),
-                    prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom."),
-                    prop("export_button", "Option<bool>").default(on(theme.chart.export_button)).doc("Save as SVG and Save as PNG buttons above the plot."),
+                    prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom and says whether it is zoomed."),
                 ]),
                 props("FunnelChart", vec![
                     prop("stages", "Vec<Slice>").default("required").doc("The stages, top to bottom, each as wide as its value over the largest. Drawn widest first: a stage larger than the one before it moves up, with a warning in development. A negative value has no width."),
@@ -575,7 +632,6 @@ pub fn ChartPage() -> Element {
                     prop("default_hidden", "Vec<String>").default("[]").doc("Seeds the hidden stages once. Ignored when `hidden` is set."),
                     prop("onhiddenchange", "Option<EventHandler<Vec<String>>>").doc("The hidden stages a legend button asks for. The last shown stage stays."),
                     prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it."),
-                    prop("export_button", "Option<bool>").default(on(theme.chart.export_button)).doc("Save as SVG and Save as PNG buttons above the plot."),
                 ]),
                 props("HeatmapChart", vec![
                     prop("x", "Vec<String>").default("required").doc("The columns' names, left to right."),
@@ -603,7 +659,6 @@ pub fn ChartPage() -> Element {
                     prop("onpointclick", "Option<EventHandler<ChartPoint>>").doc("A click on a cell, a second tap on a pinned one, or Enter on the keys' cell. `series` and `series_name` are its row, `index` and `x` its column."),
                     prop("onactivechange", "Option<EventHandler<Option<ChartPoint>>>").doc("The cell under the pointer or the keys; `None` when it leaves."),
                     prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it."),
-                    prop("export_button", "Option<bool>").default(on(theme.chart.export_button)).doc("Save as SVG and Save as PNG buttons above the plot."),
                 ]),
                 props("CandlestickChart", vec![
                     prop("x", "Vec<String>").default("required").doc("The periods' names, left to right, evenly spaced."),
@@ -634,7 +689,6 @@ pub fn ChartPage() -> Element {
                     prop("onpointclick", "Option<EventHandler<ChartPoint>>").doc("A click on a candle, a second tap on a pinned one, or Enter on the keys' candle. `index` is its place in `candles`, `value` its close."),
                     prop("onactivechange", "Option<EventHandler<Option<ChartPoint>>>").doc("The candle under the pointer or the keys; `None` when it leaves."),
                     prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it."),
-                    prop("export_button", "Option<bool>").default(on(theme.chart.export_button)).doc("Save as SVG and Save as PNG buttons above the plot."),
                 ]),
                 props("PieChart", vec![
                     prop("slices", "Vec<Slice>").default("required").doc("The slices, each a share of their sum. A negative value takes no share."),
@@ -664,8 +718,7 @@ pub fn ChartPage() -> Element {
                     prop("hidden", "Option<Vec<String>>").doc("The names of the slices the legend hides; set, they are controlled."),
                     prop("default_hidden", "Vec<String>").default("[]").doc("Seeds the hidden slices once. Ignored when `hidden` is set."),
                     prop("onhiddenchange", "Option<EventHandler<Vec<String>>>").doc("The hidden slices a legend button asks for. The last shown slice stays."),
-                    prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom."),
-                    prop("export_button", "Option<bool>").default(on(theme.chart.export_button)).doc("Save as SVG and Save as PNG buttons above the plot."),
+                    prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it."),
                 ]),
                 props("ScatterChart", vec![
                     prop("series", "Vec<ScatterSeries>").default("required").doc("The groups of points, each an x and a y, `ScatterSeries::new(\"Online\", [(12.0, 34.0)])`. A third value, a size, makes the series bubbles, their area by it. A point with an x or y that is not a number is left out."),
@@ -694,7 +747,6 @@ pub fn ChartPage() -> Element {
                     prop("default_hidden", "Vec<String>").default("[]").doc("Seeds the hidden series once. Ignored when `hidden` is set."),
                     prop("onhiddenchange", "Option<EventHandler<Vec<String>>>").doc("The hidden series a legend button asks for. The last shown series stays."),
                     prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it."),
-                    prop("export_button", "Option<bool>").default(on(theme.chart.export_button)).doc("Save as SVG and Save as PNG buttons above the plot."),
                 ]),
             ],
             accessibility: a11y()
@@ -716,9 +768,10 @@ pub fn ChartPage() -> Element {
                     "A candle never tells its direction by colour alone: a rising one is hollow, a falling one filled, and the key under the plot says which is which; an OHLC bar ticks its open left and its close right.",
                     "The legend's entries are toggle buttons: pressed while their series or slice shows, struck through when hidden. The last shown one's button is `aria-disabled`. Should `hidden` or `default_hidden` name every one, the plot and the summary say \"All series are hidden.\" and the legend stays. A dashed line's key is a dash, as drawn; once a line sets a `symbol`, each key is its line's point shape. A line among bars is keyed by a short stroke, the bars by squares.",
                     "On a touch screen a tap pins a point's tooltip, a second tap on it clicks; a vertical swipe still scrolls the page.",
-                    "With `zoom`, the shown range is announced once a zoom or pan settles, as \"Showing Tue to Fri\"; the Reset zoom button stays focusable while there is nothing to reset. Ctrl or Cmd with the wheel zooms only a zoomable plot, so the page zoom works everywhere else.",
+                    "With `zoom`, the shown range is announced once a zoom or pan settles, as \"Showing Tue to Fri\". Ctrl or Cmd with the wheel zooms only a zoomable plot, so the page zoom works everywhere else.",
                     "A drag with `onrange` set brushes; Shift or Alt with it pans. The band is outlined as well as tinted, and announced as \"Selected Tue to Thu\".",
-                    "A saved SVG is self-contained: its colours resolved, its font named, the chart's `title` as its `<title>`. The save buttons announce what they saved.",
+                    "A saved SVG is self-contained: its colours resolved, its font named, the chart's `title` as its `<title>`.",
+                    "The chart draws no buttons: the ones you render from the `use_chart()` handle are yours to name, to announce what they saved and to keep focusable while there is nothing to reset.",
                     "Each series' or slice's palette colour reaches 3:1 on the page and on a card, in every shipped theme and color scheme; one too close to an earlier one, also for colour-blind eyes, is skipped.",
                     "In forced colours the lines, bars and slices keep their colours on the system background; axes and labels take the system text colour.",
                     "A bar's or a point's error range is written after its value in the tooltip and the announcement, as \"120 (110–130)\".",
@@ -747,7 +800,7 @@ pub fn ChartPage() -> Element {
                     "A bubble's size and a trend line are read by eye; the tooltip, the announcement and the summary give the sizes and each trend's direction. Bubbles are drawn largest first, so a small one stays on top.",
                     "A heatmap's scale is drawn under the plot whatever `legend` says, but `none`; in forced colours its cells keep the scale's colours and their black or white values; the axes, the names and an empty cell's outline take the system's.",
                     "A funnel is drawn widest stage first; the keys, the summary and the legend keep the order of `stages`. A hidden stage leaves the drawing and the others widen to the largest shown; percent labels stay shares of the first stage.",
-                    "An export keeps the normal palette in forced colours. `png()` is `None` on Blitz and on the server, and the PNG button says it could not save.",
+                    "An export keeps the normal palette in forced colours. `png()` is `None` on Blitz and on the server, and `save_png` returns `SaveOutcome::Failed`.",
                     "A mark line is drawn on a line chart that is not `stacked`, on upright, `grouped` bars and on a line among upright bars, and only inside the y axis' ends; the summary leaves out the ones not drawn, except past the ends. A marked point is drawn on a line only, in a line chart or among upright bars.",
                     "A `SeriesKind::Line` series is drawn as a line on an upright `BarChart` only; a `horizontal` one draws it as a bar and warns in development. A line among bars never stacks, and on a `percent` chart it is read on the right y axis.",
                     "A right y axis is drawn on a line chart and on an upright bar chart, though not for a `percent` chart's bars, which share one scale; `y_min` and `y_max` set the left one, a `stacked` line chart stacks only the left one's lines, and stacked bars stack apart on each axis. Give its series a `symbol` or `dashed()` and a `y2_title`, so the reader can tell which axis a series is read on.",
@@ -797,9 +850,7 @@ pub fn ChartPage() -> Element {
                     Code { source: "onrange" }
                     ". Every chart exports as SVG or PNG through a "
                     Code { source: "use_chart()" }
-                    " handle or the "
-                    Code { source: "export_button" }
-                    "s."
+                    " handle, which also resets a zoom and says whether the chart is zoomed; the chart draws no buttons, render your own."
                 }
             },
             Demo {
@@ -1046,9 +1097,10 @@ pub fn ChartPage() -> Element {
                             _ => vec![],
                         }
                     }),
-                    Control::switch("export_button").default("true").code(|_, values| {
-                        match values.str("export_button").as_str() {
-                            "true" => vec!["export_button: true".to_string()],
+                    // Save and Reset zoom buttons the demo draws from the handle, the way a user would.
+                    Control::switch("buttons").default("true").code(|_, values| {
+                        match values.str("buttons").as_str() {
+                            "true" => vec!["handle: chart".to_string()],
                             _ => vec![],
                         }
                     }),
@@ -1070,7 +1122,7 @@ pub fn ChartPage() -> Element {
                         titles.map(|t| t.1.to_string()),
                     );
                     let zoom = values.str("zoom") == "true";
-                    let export_button = values.str("export_button") == "true";
+                    let handle = (values.str("buttons") == "true").then_some(chart);
                     let onrange = zoom.then_some(EventHandler::new(move |range: Option<ChartRange>| selected.set(range)));
                     let drawn = match values.str("type").as_str() {
                         "bar" => brushed(zoom, selected, rsx! {
@@ -1090,7 +1142,7 @@ pub fn ChartPage() -> Element {
                                 },
                                 bar_width: values.str("bar_width").parse::<f32>().ok(),
                                 y_min, y_max, y_ticks, x_title, y_title, y2_title: y2_title.clone(),
-                                legend, tooltip, loading, zoom, onrange, export_button,
+                                legend, tooltip, loading, zoom, onrange, handle,
                             }
                         }),
                         "pie" => {
@@ -1109,7 +1161,7 @@ pub fn ChartPage() -> Element {
                                     slice_gap: values.str("slice_gap").parse::<f32>().ok(),
                                     slice_radius: or_unset::<Size>(values.str("slice_radius")),
                                     center: rsx! { "1,204 users" },
-                                    legend, tooltip, loading, export_button,
+                                    legend, tooltip, loading, handle,
                                 }
                             }
                         }
@@ -1118,7 +1170,7 @@ pub fn ChartPage() -> Element {
                                 title: "Checkout",
                                 stages: stages(),
                                 labels: PieLabels::from(values.str("labels").as_str()),
-                                legend, tooltip, loading, export_button,
+                                legend, tooltip, loading, handle,
                             }
                         },
                         "scatter" => rsx! {
@@ -1127,7 +1179,7 @@ pub fn ChartPage() -> Element {
                                 series: scatter_series(&values).1,
                                 trend: trend(&values).map(|t| t.1),
                                 y_min, y_max, y_ticks, x_title, y_title,
-                                legend, tooltip, loading, export_button,
+                                legend, tooltip, loading, handle,
                             }
                         },
                         "heatmap" => rsx! {
@@ -1138,7 +1190,7 @@ pub fn ChartPage() -> Element {
                                 values: VISITS.map(|row| row.to_vec()).to_vec(),
                                 steps: values.str("steps").parse::<usize>().ok(),
                                 cell_labels: values.str("cell_labels") == "true",
-                                legend, tooltip, loading, export_button,
+                                legend, tooltip, loading, handle,
                             }
                         },
                         "candlestick" => rsx! {
@@ -1148,7 +1200,7 @@ pub fn ChartPage() -> Element {
                                 candles: candles(),
                                 style: values.str("style"),
                                 y_min, y_max, y_ticks, x_title, y_title,
-                                legend, tooltip, loading, export_button,
+                                legend, tooltip, loading, handle,
                             }
                         },
                         _ => brushed(zoom, selected, rsx! {
@@ -1163,10 +1215,11 @@ pub fn ChartPage() -> Element {
                                 area: values.str("area") != "none",
                                 stacked: values.str("area") == "stacked",
                                 y_min, y_max, y_ticks, x_title, y_title, y2_title,
-                                legend, tooltip, loading, zoom, onrange, export_button,
+                                legend, tooltip, loading, zoom, onrange, handle,
                             }
                         }),
                     };
+                    let drawn = with_buttons(&values, chart, drawn);
                     match values.str("table") == "true" {
                         true => rsx! {
                             div { width: "100%",

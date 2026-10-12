@@ -157,8 +157,6 @@ pub struct ChartDefaults {
     pub min_label_angle: f32,
     /// Zoom and pan along a line's or a bar chart's x axis.
     pub zoom: bool,
-    /// "Save as SVG" and "Save as PNG" buttons above every chart.
-    pub export_button: bool,
     pub legend_gap: &'static str,
     pub swatch_size: &'static str,
 }
@@ -201,7 +199,6 @@ impl ChartDefaults {
         slice_radius: None,
         min_label_angle: 0.0,
         zoom: false,
-        export_button: false,
         legend_gap: "16px",
         swatch_size: "12px",
     };

@@ -117,7 +117,11 @@ pub fn LineChart(props: LineChartProps) -> Element {
     let (width, height) = size.get(ratio);
 
     let x = props.x.labels(&props.value_format, formats);
-    let zoom = use_zoom(x.len(), props.zoom.unwrap_or(theme.chart.zoom));
+    let zoom = use_zoom(
+        x.len(),
+        props.zoom.unwrap_or(theme.chart.zoom),
+        props.handle,
+    );
     let window = zoom.map_or((0, x.len()), |zoom| zoom.range());
     let empty = props
         .series
@@ -280,7 +284,6 @@ pub fn LineChart(props: LineChartProps) -> Element {
         },
         export,
         handle: props.handle,
-        export_button: props.export_button.unwrap_or(theme.chart.export_button),
         zoom,
     }
     .render(

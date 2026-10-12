@@ -3,7 +3,10 @@
 
 use dioxus::prelude::*;
 
-use super::engine::{Drawn, Mark, MarkShape, SeriesSpec};
+use super::{
+    ChartHandle,
+    engine::{Drawn, Mark, MarkShape, SeriesSpec},
+};
 
 /// The fewest x values a zoom narrows to.
 pub(super) const MIN_POINTS: usize = 2;
@@ -128,9 +131,11 @@ impl Zoom {
     }
 }
 
-/// The chart's [`Zoom`] over `len` x values while `enabled`. Called on every render.
-pub(super) fn use_zoom(len: usize, enabled: bool) -> Option<Zoom> {
-    let window = use_signal(|| None);
+/// The chart's [`Zoom`] over `len` x values while `enabled`, its window the `handle`'s so
+/// the page that owns the handle may read it. Called on every render.
+pub(super) fn use_zoom(len: usize, enabled: bool, handle: Option<ChartHandle>) -> Option<Zoom> {
+    let own = use_signal(|| None);
+    let window = handle.map_or(own, |handle| handle.window());
     enabled.then_some(Zoom { window, len })
 }
 
@@ -290,9 +295,9 @@ mod tests {
         assert_eq!(index_span(&marks, 4, true), Some((0.0, 5.0)));
     }
 
-    /// The plot takes the gestures and says its keys; the reset waits for a zoom.
+    /// The plot takes the gestures and says its keys; it draws no buttons.
     #[test]
-    fn a_zoomable_chart_has_a_reset_and_its_keys() {
+    fn a_zoomable_chart_has_its_keys_and_no_buttons() {
         use crate::{
             LiberoProvider,
             components::data_display::{LineChart, Series},
@@ -313,8 +318,7 @@ mod tests {
         dom.rebuild_in_place();
         let html = dioxus_ssr::render(&dom);
         assert!(html.contains("data-gestures=\"true\""), "{html}");
-        assert!(html.contains("data-chart-tool=\"reset\""), "{html}");
-        assert!(html.contains(">Reset zoom<"), "{html}");
+        assert!(!html.contains("<button"), "{html}");
         assert!(
             html.contains("0 resets the zoom.") && html.contains("Escape clears it."),
             "{html}"

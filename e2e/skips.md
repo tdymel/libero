@@ -202,6 +202,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `line_chart::hovering_shows_the_point_s_tooltip_and_marker` | ios | a touch screen has no hover |
 | `line_chart::hovering_shows_the_point_s_tooltip_and_marker` | native | charts are parked on Blitz |
 | `line_chart::the_chart_exports_as_svg_and_png` | native | charts are parked on Blitz |
+| `line_chart::the_handle_resets_the_zoom_and_says_it_is_zoomed` | native | charts are parked on Blitz |
 | `line_chart::the_keys_walk_the_points` | native | charts are parked on Blitz |
 | `line_chart::the_keys_zoom_pan_and_brush` | native | charts are parked on Blitz |
 | `line_chart::the_legend_hides_and_shows_a_line` | native | charts are parked on Blitz |

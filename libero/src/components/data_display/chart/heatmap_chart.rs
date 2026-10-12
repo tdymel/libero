@@ -213,7 +213,6 @@ pub fn HeatmapChart(props: HeatmapChartProps) -> Element {
         },
         export,
         handle: props.handle,
-        export_button: props.export_button.unwrap_or(theme.chart.export_button),
         zoom: None,
     }
     .render(

@@ -536,7 +536,7 @@ async fn zooms_down<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         Ok(!range.is_empty() && !range.starts_with("Jan"))
     })
     .await?;
-    d.click("#chart [data-chart-tool=reset]").await?;
+    d.click("#reset").await?;
     says(d, "Showing Jan to Jun", "the reset").await
 }
 

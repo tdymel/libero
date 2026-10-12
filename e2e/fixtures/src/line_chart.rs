@@ -52,6 +52,7 @@ fn ZoomPage() -> Element {
     let mut range = use_signal(String::new);
     let mut svg = use_signal(String::new);
     let mut png = use_signal(String::new);
+    let mut saved = use_signal(String::new);
     rsx! {
         div { max_width: "480px",
             LineChart {
@@ -60,7 +61,6 @@ fn ZoomPage() -> Element {
                 x: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"],
                 series: vec![Series::new("Visits", [3, 5, 4, 6, 8, 7, 9, 12])],
                 zoom: true,
-                export_button: true,
                 handle: chart,
                 onactivechange: move |point: Option<ChartPoint>| {
                     active.set(point.as_ref().map(describe).unwrap_or_default())
@@ -73,6 +73,21 @@ fn ZoomPage() -> Element {
                     )
                 },
             }
+        }
+        Button {
+            id: "reset",
+            disabled: !chart.is_zoomed(),
+            focusable_when_disabled: true,
+            onclick: move |_| chart.reset_zoom(),
+            "Reset zoom"
+        }
+        Button {
+            id: "save-svg",
+            onclick: move |_| async move {
+                let outcome = chart.save_svg("visitors.svg").await;
+                saved.set(format!("{outcome:?}"));
+            },
+            "Save as SVG"
         }
         Button {
             id: "read-svg",
@@ -95,6 +110,7 @@ fn ZoomPage() -> Element {
         p { id: "range", "{range}" }
         p { id: "svg", "{svg}" }
         p { id: "png", "{png}" }
+        p { id: "saved", "{saved}" }
         div { height: "150vh" }
     }
 }

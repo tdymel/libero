@@ -2,7 +2,9 @@
 //! bars, with read-outs of the active bar, the clicks and the hidden series.
 
 use dioxus::prelude::*;
-use libero::components::{BarChart, ChartPoint, ChartRange, MarkPoint, Series, SeriesKind};
+use libero::components::{
+    BarChart, Button, ChartPoint, ChartRange, MarkPoint, Series, SeriesKind, use_chart,
+};
 
 use crate::Routes;
 
@@ -149,6 +151,7 @@ fn Styled() -> Element {
 /// Lying bars that zoom down their side, with the brushed range read out.
 #[component]
 fn Zoomable() -> Element {
+    let chart = use_chart();
     let mut range = use_signal(String::new);
     rsx! {
         div { max_width: "480px",
@@ -159,10 +162,18 @@ fn Zoomable() -> Element {
                 series: vec![Series::new("2026", [3, 5, 4, 6, 8, 7])],
                 orientation: "horizontal",
                 zoom: true,
+                handle: chart,
                 onrange: move |selected: Option<ChartRange>| {
                     range.set(selected.map(|r| format!("{} {}", r.from, r.to)).unwrap_or_default())
                 },
             }
+        }
+        Button {
+            id: "reset",
+            disabled: !chart.is_zoomed(),
+            focusable_when_disabled: true,
+            onclick: move |_| chart.reset_zoom(),
+            "Reset zoom"
         }
         p { id: "range", "{range}" }
     }

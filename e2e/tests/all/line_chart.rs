@@ -304,7 +304,7 @@ e2e::scenario!(
 );
 
 const STATUS: &str = "#chart [role=status]";
-const RESET: &str = "#chart [data-chart-tool=reset]";
+const RESET: &str = "#reset";
 const PLUS: keyboard::Key = keyboard::Key {
     key: "+",
     code: "Equal",
@@ -421,10 +421,7 @@ e2e::scenario!(
     ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
-const SAVED: &str = "[...document.querySelectorAll('#chart [role=status]')]\
-     .some(status => status.textContent === 'Saved visitors.svg')";
-
-/// The handle reads a titled SVG and a PNG; the built-in button saves and says so.
+/// The handle reads a titled SVG and a PNG, and saves the SVG for a button of the page's own.
 async fn exports<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click("#read-svg").await?;
     reads(d, "#svg", "true true", "the SVG").await?;
@@ -432,14 +429,34 @@ async fn exports<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     reads(d, "#png", "true", "the PNG").await?;
     // Android hands a saved file to the share sheet, which would cover the page.
     if d.platform() == Platform::Web {
-        d.click("#chart [data-chart-tool=svg]").await?;
-        eventually(d, "the SVG button to say it saved", async |d| {
-            Ok(d.evaluate(SAVED).await? == true)
-        })
-        .await?;
+        d.click("#save-svg").await?;
+        reads(d, "#saved", "Saved", "the SVG save").await?;
     }
     Ok(())
 }
+
+/// The handle says the chart is zoomed and its reset button, the page's own, shows it all again.
+async fn resets<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(LAYER).await?;
+    d.press(PLUS).await?;
+    eventually(d, "the reset to wake", async |d| {
+        Ok(d.attr(RESET, "aria-disabled").await?.as_deref() != Some("true"))
+    })
+    .await?;
+    d.click(RESET).await?;
+    says(d, "Showing Jan to Aug", "the reset").await?;
+    eventually(d, "the reset to sleep", async |d| {
+        Ok(d.attr(RESET, "aria-disabled").await?.as_deref() == Some("true"))
+    })
+    .await
+}
+
+e2e::scenario!(
+    the_handle_resets_the_zoom_and_says_it_is_zoomed,
+    "/line-chart-zoom",
+    resets,
+    native: skip("charts are parked on Blitz")
+);
 
 e2e::scenario!(
     the_chart_exports_as_svg_and_png,

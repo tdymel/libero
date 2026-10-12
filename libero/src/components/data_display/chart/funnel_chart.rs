@@ -187,7 +187,6 @@ pub fn FunnelChart(props: FunnelChartProps) -> Element {
         },
         export,
         handle: props.handle,
-        export_button: props.export_button.unwrap_or(theme.chart.export_button),
         zoom: None,
     }
     .render(

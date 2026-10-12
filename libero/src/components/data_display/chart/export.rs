@@ -106,33 +106,41 @@ fn escape(text: &str) -> String {
         .replace('>', "&gt;")
 }
 
-/// A chart's drawing as an SVG or PNG file, and its zoom reset, from code. Made with
+/// A chart's drawing as an SVG or PNG file, and its zoom, from code. Made with
 /// [`use_chart`], passed as a chart's `handle`.
 #[derive(Clone, Copy, PartialEq)]
 pub struct ChartHandle {
     source: CopyValue<Option<ExportSource>>,
-    zoom: CopyValue<Option<Zoom>>,
+    zoom: Signal<Option<Zoom>>,
+    /// The chart's zoom window, owned here so the page reads it without a warning.
+    window: Signal<Option<(usize, usize)>>,
 }
 
 impl ChartHandle {
+    pub(super) fn window(&self) -> Signal<Option<(usize, usize)>> {
+        self.window
+    }
+
     pub(super) fn attach(&self, source: ExportSource, zoom: Option<Zoom>) {
-        let (mut slot, mut zoom_slot) = (self.source, self.zoom);
+        let mut slot = self.source;
         if let Ok(mut slot) = slot.try_write() {
             *slot = Some(source);
         }
-        if let Ok(mut slot) = zoom_slot.try_write() {
-            *slot = zoom;
-        }
+        set_zoom(self.zoom, zoom);
     }
 
-    /// On the chart's drop: its zoom's signal goes with it.
+    /// On the chart's drop: its drawing and its zoom go with it.
     pub(super) fn detach(&self) {
-        let (mut source, mut zoom) = (self.source, self.zoom);
+        let mut source = self.source;
         if let Ok(mut slot) = source.try_write() {
             *slot = None;
         }
-        if let Ok(mut slot) = zoom.try_write() {
-            *slot = None;
+        set_zoom(self.zoom, None);
+        let mut window = self.window;
+        if window.try_peek().is_ok_and(|held| held.is_some())
+            && let Ok(mut held) = window.try_write()
+        {
+            *held = None;
         }
     }
 
@@ -167,17 +175,34 @@ impl ChartHandle {
         }
     }
 
-    /// Back to the whole x axis, as the chart's reset button does.
+    /// Back to the whole x axis. Does nothing on a chart without `zoom`.
     pub fn reset_zoom(&self) {
         if let Some(zoom) = self.zoom.try_peek().ok().and_then(|zoom| *zoom) {
             zoom.reset();
         }
     }
+
+    /// Whether the chart shows less than its whole x axis. Reactive: read in a component
+    /// or a memo, it re-runs on every zoom, pan and reset; `false` without `zoom`.
+    pub fn is_zoomed(&self) -> bool {
+        let zoom = self.zoom.try_read().ok().and_then(|zoom| *zoom);
+        zoom.is_some_and(|zoom| zoom.is_zoomed())
+    }
+}
+
+/// Written only on a change: a reader of [`ChartHandle::is_zoomed`] re-runs on it.
+fn set_zoom(mut slot: Signal<Option<Zoom>>, zoom: Option<Zoom>) {
+    if slot.try_peek().is_ok_and(|held| *held != zoom)
+        && let Ok(mut held) = slot.try_write()
+    {
+        *held = zoom;
+    }
 }
 
 const NOTHING_DRAWN: &str = "the chart has no drawing";
 
-/// A handle to a chart's drawing: pass it as the chart's `handle`, then save or read it.
+/// A handle to a chart's drawing: pass it as the chart's `handle`, then save or read it, and
+/// reset its zoom. The chart draws no buttons; render your own.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -189,6 +214,7 @@ const NOTHING_DRAWN: &str = "the chart has no drawing";
 ///         title: "Visitors",
 ///         x: ["Mon", "Tue", "Wed"],
 ///         series: vec![Series::new("Visits", [3, 5, 4])],
+///         zoom: true,
 ///         handle: chart,
 ///     }
 ///     Button {
@@ -197,33 +223,20 @@ const NOTHING_DRAWN: &str = "the chart has no drawing";
 ///         },
 ///         "Save as PNG"
 ///     }
+///     Button {
+///         disabled: !chart.is_zoomed(),
+///         onclick: move |_| chart.reset_zoom(),
+///         "Reset zoom"
+///     }
 /// }
 /// # }
 /// ```
 pub fn use_chart() -> ChartHandle {
     use_hook(|| ChartHandle {
         source: CopyValue::new(None),
-        zoom: CopyValue::new(None),
+        zoom: Signal::new(None),
+        window: Signal::new(None),
     })
-}
-
-/// A file name from the chart's title: `visitors.png`, else `chart.png`.
-pub(super) fn file_name(title: Option<&str>, extension: &str) -> String {
-    let stem: String = title
-        .unwrap_or_default()
-        .chars()
-        .map(|ch| match ch.is_alphanumeric() {
-            true => ch.to_lowercase().next().unwrap_or(ch),
-            false => '-',
-        })
-        .collect();
-    let stem = stem
-        .split('-')
-        .filter(|part| !part.is_empty())
-        .collect::<Vec<_>>()
-        .join("-");
-    let stem = if stem.is_empty() { "chart" } else { &stem };
-    format!("{stem}.{extension}")
 }
 
 #[cfg(test)]
@@ -283,18 +296,13 @@ mod tests {
                         x: ["Mon", "Tue"],
                         series: vec![Series::new("Visits", [1.0, 2.0])],
                         handle: chart,
-                        export_button: true,
                     }
                 }
             }
         });
         dom.rebuild_in_place();
         let html = dioxus_ssr::render(&dom);
-        assert!(
-            html.contains(">Save as SVG<") && html.contains(">Save as PNG<"),
-            "{html}"
-        );
-        assert!(html.contains("data-slot=\"toolbar\""), "{html}");
+        assert!(!html.contains("<button"), "{html}");
         let handle = HANDLE.get().unwrap();
         let svg = dom.in_runtime(|| handle.svg()).expect("drawn");
         assert!(svg.starts_with("<svg width=\"640\""), "{svg}");
@@ -303,12 +311,37 @@ mod tests {
     }
 
     #[test]
-    fn a_title_names_the_file() {
-        assert_eq!(
-            file_name(Some("Weekly visitors, 2026"), "svg"),
-            "weekly-visitors-2026.svg"
-        );
-        assert_eq!(file_name(None, "png"), "chart.png");
-        assert_eq!(file_name(Some("!!"), "png"), "chart.png");
+    fn the_handle_reads_and_resets_the_zoom() {
+        use crate::{
+            LiberoProvider,
+            components::data_display::{LineChart, Series},
+        };
+        thread_local! {
+            static HANDLE: std::cell::Cell<Option<ChartHandle>> = const { std::cell::Cell::new(None) };
+        }
+        let mut dom = VirtualDom::new(|| {
+            let chart = use_chart();
+            HANDLE.set(Some(chart));
+            rsx! {
+                LiberoProvider {
+                    LineChart {
+                        x: ["Mon", "Tue", "Wed", "Thu"],
+                        series: vec![Series::new("Visits", [1.0, 2.0, 3.0, 4.0])],
+                        zoom: true,
+                        handle: chart,
+                    }
+                }
+            }
+        });
+        dom.rebuild_in_place();
+        let handle = HANDLE.get().unwrap();
+        dom.in_runtime(|| {
+            let zoom = (*handle.zoom.peek()).expect("a zoomable chart");
+            assert!(!handle.is_zoomed());
+            zoom.set((1, 3));
+            assert!(handle.is_zoomed());
+            handle.reset_zoom();
+            assert!(!handle.is_zoomed());
+        });
     }
 }

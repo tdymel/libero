@@ -7,7 +7,7 @@ use super::{
     ChartColor, ChartHandle, ChartPart, ChartPoint, ChartRange, Series, ValueFormat,
     data::{MarkLineAt, MarkPoint},
     engine::{Drawn, Plot, SeriesExtras, SeriesSpec},
-    export::{ExportSource, file_name},
+    export::ExportSource,
     legend::{ChartLegend, HiddenSeries, LegendEntry, legend_sx},
     overlay::{ChartOverlay, Layout, OverlaySeries, overlay_sx},
     zoom::Zoom,
@@ -15,7 +15,6 @@ use super::{
 use crate::{
     components::{
         accessibility::{use_announcer, visually_hidden_sx},
-        buttons::Button,
         common::{
             ClassList, HtmlTag, Input, Part, Parts, States, Variables, names_itself, variables,
         },
@@ -24,13 +23,12 @@ use crate::{
     },
     hooks::{ElementHandle, use_element, use_resize_fallback},
     localization::{ChartLabels, Formats, fill},
-    platform::{ElementApi, SaveOutcome, save_file},
+    platform::ElementApi,
     sx::{FORCED_COLORS, StaticSx, Sx, sx},
     theme::{
         CHART_ASPECT_RATIO, CHART_LEGEND_GAP, CHART_SWATCH_SIZE, HexColor, LegendPosition, Theme,
         chart_color, chart_palette,
     },
-    tokens::Size,
 };
 
 /// Before the first measure, and on the server: the SVG scales to its box from here.
@@ -59,13 +57,6 @@ static CHART_BASE_SX: StaticSx = StaticSx::new(|| {
         .min_width("0")
         .selector(ChartPart::Title.selector(), sx().font_weight("600"))
         .selector(ChartPart::Description.selector(), sx().color("text-dimmed"))
-        .selector(
-            ChartPart::Toolbar.selector(),
-            sx().display("flex")
-                .flex_wrap("wrap")
-                .justify_content("flex-end")
-                .gap("xs"),
-        )
         .selector(
             ChartPart::Body.selector(),
             sx().display("flex")
@@ -265,10 +256,9 @@ pub(super) struct Frame {
     pub(super) plot: PlotSize,
     pub(super) aspect_ratio: Option<f32>,
     pub(super) interaction: Interaction,
-    /// A fresh drawing for the handle and the export buttons.
+    /// A fresh drawing for the handle.
     pub(super) export: ExportSource,
     pub(super) handle: Option<ChartHandle>,
-    pub(super) export_button: bool,
     /// Set on a line or bar chart with `zoom`.
     pub(super) zoom: Option<Zoom>,
 }
@@ -332,7 +322,6 @@ impl Frame {
             interaction,
             export,
             handle,
-            export_button,
             zoom,
         } = self;
         if let Some(handle) = handle {
@@ -427,37 +416,6 @@ impl Frame {
             layout,
             onrange,
         } = interaction;
-        let tools = !loading && !empty && !all_hidden && (zoom.is_some() || export_button);
-        let save = move |extension: &'static str| {
-            let export = export.clone();
-            let name = file_name(export.title.as_deref(), extension);
-            move |_| {
-                let (export, name) = (export.clone(), name.clone());
-                spawn(async move {
-                    let outcome = match extension {
-                        "png" => match export.png().await {
-                            Some(png) => save_file(&name, "image/png", png).await,
-                            None => SaveOutcome::Failed(String::new()),
-                        },
-                        _ => match export.svg() {
-                            Some((svg, ..)) => {
-                                save_file(&name, "image/svg+xml", svg.into_bytes()).await
-                            }
-                            None => SaveOutcome::Failed(String::new()),
-                        },
-                    };
-                    match outcome {
-                        SaveOutcome::Saved | SaveOutcome::Shared => {
-                            announcer.say(fill(labels.saved, &[("name", &name)]));
-                        }
-                        SaveOutcome::Failed(_) => {
-                            announcer.say(fill(labels.save_failed, &[("name", &name)]));
-                        }
-                        SaveOutcome::Cancelled => {}
-                    }
-                });
-            }
-        };
 
         let children = rsx! {
             if let Some(title) = title {
@@ -465,37 +423,6 @@ impl Frame {
             }
             if let Some(description) = description {
                 div { "data-slot": ChartPart::Description.slot(), id: "{id}-description", "{description}" }
-            }
-            if tools {
-                div { "data-slot": ChartPart::Toolbar.slot(),
-                    if let Some(zoom) = zoom {
-                        Button {
-                            variant: "standard",
-                            size: Size::Sm,
-                            disabled: !zoom.is_zoomed(),
-                            focusable_when_disabled: true,
-                            "data-chart-tool": "reset",
-                            onclick: move |_| zoom.reset(),
-                            "{labels.reset_zoom}"
-                        }
-                    }
-                    if export_button {
-                        Button {
-                            variant: "standard",
-                            size: Size::Sm,
-                            "data-chart-tool": "svg",
-                            onclick: save("svg"),
-                            "{labels.save_svg}"
-                        }
-                        Button {
-                            variant: "standard",
-                            size: Size::Sm,
-                            "data-chart-tool": "png",
-                            onclick: save("png"),
-                            "{labels.save_png}"
-                        }
-                    }
-                }
             }
             div { "data-slot": ChartPart::Body.slot(),
                 {legend_before}
@@ -545,8 +472,8 @@ impl Frame {
                 }
                 {legend_after}
             }
-            // Says that the chart loads and what the save buttons did; the plot's own speaks for the plot.
-            if loading || tools && export_button {
+            // Says that the chart loads; the plot's own speaks for the plot.
+            if loading {
                 {announcer.render()}
             }
             if !summary.is_empty() {

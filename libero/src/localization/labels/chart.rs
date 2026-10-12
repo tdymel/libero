@@ -113,18 +113,11 @@ pub struct ChartLabels {
     pub zoom_keys: &'static str,
     /// Read after `keys` on a plot with a brush.
     pub brush_keys: &'static str,
-    /// The zoom's reset button.
-    pub reset_zoom: &'static str,
     /// After a zoom or a pan: `{first}` and `{last}` the shown ends of the x axis.
     pub showing: &'static str,
     /// The brush's band: `{first}` and `{last}` its ends.
     pub selected: &'static str,
     pub selection_cleared: &'static str,
-    pub save_svg: &'static str,
-    pub save_png: &'static str,
-    /// After an export button: `{name}` the file's name.
-    pub saved: &'static str,
-    pub save_failed: &'static str,
     /// A mark line's own name, unless given one: at the average, the lowest, the highest
     /// value, or at a fixed one.
     pub average: &'static str,
@@ -206,14 +199,9 @@ impl ChartLabels {
         secondary_unstacked: "Lines on the right y axis are not stacked.",
         zoom_keys: "Plus and minus zoom, 0 resets the zoom.",
         brush_keys: "Shift with an arrow key selects a range, Escape clears it.",
-        reset_zoom: "Reset zoom",
         showing: "Showing {first} to {last}",
         selected: "Selected {first} to {last}",
         selection_cleared: "Selection cleared",
-        save_svg: "Save as SVG",
-        save_png: "Save as PNG",
-        saved: "Saved {name}",
-        save_failed: "Could not save {name}",
         average: "Average",
         lowest: "Lowest",
         highest: "Highest",
@@ -287,14 +275,9 @@ impl ChartLabels {
         secondary_unstacked: "Linien auf der rechten Y-Achse sind nicht gestapelt.",
         zoom_keys: "Plus und Minus zoomen, 0 setzt den Zoom zurück.",
         brush_keys: "Umschalt mit einer Pfeiltaste wählt einen Bereich, Escape hebt ihn auf.",
-        reset_zoom: "Zoom zurücksetzen",
         showing: "Zeigt {first} bis {last}",
         selected: "{first} bis {last} ausgewählt",
         selection_cleared: "Auswahl aufgehoben",
-        save_svg: "Als SVG speichern",
-        save_png: "Als PNG speichern",
-        saved: "{name} gespeichert",
-        save_failed: "{name} konnte nicht gespeichert werden",
         average: "Durchschnitt",
         lowest: "Tiefstwert",
         highest: "Höchstwert",

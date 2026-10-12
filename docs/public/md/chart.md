@@ -25,8 +25,9 @@ a `trend` line through each. A candlestick chart takes a `Candle` per period,
 its open, high, low and close.
 
 Lines and bars zoom and pan their x axis with `zoom` and brush a range for
-`onrange`. Every chart exports as SVG or PNG through a `use_chart()` handle or
-the `export_button`s.
+`onrange`. Every chart exports as SVG or PNG through a `use_chart()` handle,
+which also resets a zoom and says whether the chart is zoomed; the chart draws
+no buttons, render your own.
 
 ## Usage
 
@@ -536,12 +537,14 @@ fn Demo() -> Element {
 ```
 
 `zoom: true` lets the reader zoom the x axis with Ctrl or Cmd and the wheel, a
-pinch, a drag or `+`, `-` and `0`, and adds a Reset zoom button. With `onrange`
+pinch, a drag or `+`, `-` and `0`. With `onrange`
 set, a drag brushes a band of x values instead, and Shift or Alt with the drag
-pans. `use_chart()` gives a handle the app reads the drawing through:
-`svg()`, `png().await`, `save_svg(name)` and `save_png(name)` (through
-`save_file`: a download on the web, the share sheet on Android).
-`export_button: true` adds Save as SVG and Save as PNG buttons.
+pans. The chart draws no buttons: `use_chart()` gives a handle your own buttons
+call. It reads the drawing through `svg()` and `png().await`, saves it with
+`save_svg(name)` and `save_png(name)` (through `save_file`: a download on the
+web, the share sheet on Android), resets the zoom with `reset_zoom()` and
+tells in `is_zoomed()`, which re-runs the component that reads it, whether the
+chart shows less than its whole axis.
 
 ```rust
 use dioxus::prelude::*;
@@ -558,7 +561,6 @@ fn Demo() -> Element {
             series: vec![Series::new("This week", [120, 132, 101, 134, 90, 230, 210])],
             zoom: true,
             onrange: move |range| selected.set(range),
-            export_button: true,
             handle: chart,
         }
         if let Some(range) = selected() {
@@ -568,7 +570,12 @@ fn Demo() -> Element {
             onclick: move |_| async move {
                 chart.save_png("visitors.png").await;
             },
-            "Download"
+            "Save as PNG"
+        }
+        Button {
+            disabled: !chart.is_zoomed(),
+            onclick: move |_| chart.reset_zoom(),
+            "Reset zoom"
         }
     }
 }
@@ -647,10 +654,9 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `hidden` | `Option<Vec<String>>` | | The names of the lines the legend hides; set, they are controlled. |
 | `default_hidden` | `Vec<String>` | `[]` | Seeds the hidden lines once. Ignored when `hidden` is set. |
 | `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | The hidden lines a legend button asks for. The last shown line stays. |
-| `zoom` | `Option<bool>` | `false` | Zoom and pan the x axis: Ctrl or Cmd with the wheel, a pinch, a drag (Shift or Alt with it once `onrange` is set), the keys, and a Reset zoom button. |
+| `zoom` | `Option<bool>` | `false` | Zoom and pan the x axis: Ctrl or Cmd with the wheel, a pinch, a drag (Shift or Alt with it once `onrange` is set), the keys. Reset it from code with the `handle`. |
 | `onrange` | `Option<EventHandler<Option<ChartRange>>>` | | Set, a drag or Shift with an arrow brushes a band of x values; Shift or Alt with a drag pans instead. `None` when Escape clears it. |
-| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom. |
-| `export_button` | `Option<bool>` | `false` | Save as SVG and Save as PNG buttons above the plot. |
+| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom and says whether it is zoomed. |
 
 ### `BarChart`
 
@@ -687,10 +693,9 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `hidden` | `Option<Vec<String>>` | | The names of the series the legend hides; set, they are controlled. |
 | `default_hidden` | `Vec<String>` | `[]` | Seeds the hidden series once. Ignored when `hidden` is set. |
 | `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | The hidden series a legend button asks for. The last shown series stays. |
-| `zoom` | `Option<bool>` | `false` | Zoom and pan along the categories: Ctrl or Cmd with the wheel, a pinch, a drag (Shift or Alt with it once `onrange` is set), the keys, and a Reset zoom button. |
+| `zoom` | `Option<bool>` | `false` | Zoom and pan along the categories: Ctrl or Cmd with the wheel, a pinch, a drag (Shift or Alt with it once `onrange` is set), the keys. Reset it from code with the `handle`. |
 | `onrange` | `Option<EventHandler<Option<ChartRange>>>` | | Set, a drag or Shift with an arrow brushes a band of categories; Shift or Alt with a drag pans instead. `None` when Escape clears it. |
-| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom. |
-| `export_button` | `Option<bool>` | `false` | Save as SVG and Save as PNG buttons above the plot. |
+| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom and says whether it is zoomed. |
 
 ### `FunnelChart`
 
@@ -715,7 +720,6 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `default_hidden` | `Vec<String>` | `[]` | Seeds the hidden stages once. Ignored when `hidden` is set. |
 | `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | The hidden stages a legend button asks for. The last shown stage stays. |
 | `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it. |
-| `export_button` | `Option<bool>` | `false` | Save as SVG and Save as PNG buttons above the plot. |
 
 ### `HeatmapChart`
 
@@ -746,7 +750,6 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `onpointclick` | `Option<EventHandler<ChartPoint>>` | | A click on a cell, a second tap on a pinned one, or Enter on the keys' cell. `series` and `series_name` are its row, `index` and `x` its column. |
 | `onactivechange` | `Option<EventHandler<Option<ChartPoint>>>` | | The cell under the pointer or the keys; `None` when it leaves. |
 | `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it. |
-| `export_button` | `Option<bool>` | `false` | Save as SVG and Save as PNG buttons above the plot. |
 
 ### `CandlestickChart`
 
@@ -780,7 +783,6 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `onpointclick` | `Option<EventHandler<ChartPoint>>` | | A click on a candle, a second tap on a pinned one, or Enter on the keys' candle. `index` is its place in `candles`, `value` its close. |
 | `onactivechange` | `Option<EventHandler<Option<ChartPoint>>>` | | The candle under the pointer or the keys; `None` when it leaves. |
 | `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it. |
-| `export_button` | `Option<bool>` | `false` | Save as SVG and Save as PNG buttons above the plot. |
 
 ### `PieChart`
 
@@ -813,8 +815,7 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `hidden` | `Option<Vec<String>>` | | The names of the slices the legend hides; set, they are controlled. |
 | `default_hidden` | `Vec<String>` | `[]` | Seeds the hidden slices once. Ignored when `hidden` is set. |
 | `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | The hidden slices a legend button asks for. The last shown slice stays. |
-| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom. |
-| `export_button` | `Option<bool>` | `false` | Save as SVG and Save as PNG buttons above the plot. |
+| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it. |
 
 ### `ScatterChart`
 
@@ -846,7 +847,6 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `default_hidden` | `Vec<String>` | `[]` | Seeds the hidden series once. Ignored when `hidden` is set. |
 | `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | The hidden series a legend button asks for. The last shown series stays. |
 | `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it. |
-| `export_button` | `Option<bool>` | `false` | Save as SVG and Save as PNG buttons above the plot. |
 
 Like every component, each chart also takes the shared props `sx`, `class`,
 `style`, `states`, `parts` (`ChartPart`), and any extra HTML attributes.
@@ -907,13 +907,15 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 - On a touch screen a tap pins a point's tooltip, a second tap on it clicks; a
   vertical swipe still scrolls the page.
 - With `zoom`, the shown range is announced once a zoom or pan settles, as
-  "Showing Tue to Fri"; the Reset zoom button stays focusable while there is
-  nothing to reset. Ctrl or Cmd with the wheel zooms only a zoomable plot, so
+  "Showing Tue to Fri". Ctrl or Cmd with the wheel zooms only a zoomable plot, so
   the page zoom works everywhere else.
 - A drag with `onrange` set brushes; Shift or Alt with it pans. The band is
   outlined as well as tinted, and announced as "Selected Tue to Thu".
 - A saved SVG is self-contained: its colours resolved, its font named, the
-  chart's `title` as its `<title>`. The save buttons announce what they saved.
+  chart's `title` as its `<title>`.
+- The chart draws no buttons: the ones you render from the `use_chart()` handle
+  are yours to name, to announce what they saved and to keep focusable while
+  there is nothing to reset.
 - Each series' or slice's palette colour reaches 3:1 on the page and on a card,
   in every shipped theme and color scheme; one too close to an earlier one, also
   for colour-blind eyes, is skipped.
@@ -970,7 +972,7 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   keep the order of `stages`. A hidden stage leaves the drawing and the others widen to
   the largest shown; percent labels stay shares of the first stage.
 - An export keeps the normal palette in forced colours. `png()` is `None` on
-  Blitz and on the server, and the PNG button says it could not save.
+  Blitz and on the server, and `save_png` returns `SaveOutcome::Failed`.
 - A mark line is drawn on a line chart that is not `stacked`, on upright,
   `grouped` bars and on a line among upright bars, and only inside the y axis'
   ends; the summary leaves out the ones not drawn, except past the ends. A
@@ -1017,7 +1019,6 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 | `slice_radius` | `Option<Size>` | Default `slice_radius`; `None` leaves the corners square. |
 | `min_label_angle` | `f32` | Default `min_label_angle`, in degrees. |
 | `zoom` | `bool` | Default `zoom`. |
-| `export_button` | `bool` | Default `export_button`. |
 | `legend_gap` | `&'static str` | Between the plot and the legend. |
 | `swatch_size` | `&'static str` | A legend swatch's side. |
 
