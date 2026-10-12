@@ -4,19 +4,25 @@
     shard.py units <index> <total>          `unit::` filters for `cargo run -p e2e`, from main.rs
 
 A unit's weight is its `#[test]` count; units go greedily to the lightest shard, so
-every unit lands in exactly one shard and the split is stable for the same sources.
+every unit lands in exactly one shard and the split is stable for the same sources. The
+performance units (`perf`, `table_perf`) land in none unless `E2E_PERF` is set.
 """
+import os
 import re
 import sys
 from pathlib import Path
 
 ALL = Path(__file__).resolve().parents[2] / "e2e/tests/all"
+# Performance scenarios never run in a shard (todo 3454); `E2E_PERF=1` brings them back.
+PERF = {"perf", "table_perf"}
 
 
 def unit_weights() -> dict[str, int]:
     mods = re.findall(r"^mod (?:r#)?(\w+);", (ALL / "main.rs").read_text(encoding="utf-8"), re.M)
     weights = {}
     for unit in mods:
+        if unit in PERF and "E2E_PERF" not in os.environ:
+            continue
         files = [p for p in [ALL / f"{unit}.rs"] if p.is_file()] + list((ALL / unit).rglob("*.rs"))
         weights[unit] = max(1, sum(p.read_text(encoding="utf-8").count("#[test") for p in files))
     return weights

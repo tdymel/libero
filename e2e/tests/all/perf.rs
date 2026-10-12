@@ -1,5 +1,6 @@
 //! Render counts per interaction in a browser (821), each scope held to a budget once
-//! rendering stops. The probe proves the counter first (463).
+//! rendering stops. The probe proves the counter first (463). Never run on CI (todo 3454):
+//! locally `cargo run -p e2e -- perf::`, on CI only with `E2E_PERF=1`.
 
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};

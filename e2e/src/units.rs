@@ -208,6 +208,20 @@ const EXTRA_FIXTURES: &[(&str, &[&str])] = &[
     ("video", &["audio"]),
 ];
 
+/// The units of the performance scenarios (`perf`, `table_perf`), as a skip.
+const PERF_SKIP: &str = "perf::";
+
+/// Whether this run leaves the performance scenarios out: on CI unless `E2E_PERF` is set (todo 3454).
+pub(crate) fn perf_off() -> bool {
+    std::env::var_os("CI").is_some() && std::env::var_os("E2E_PERF").is_none()
+}
+
+/// `args` with the performance scenarios skipped, so no run reaches them and none is a skip-as-red.
+pub(crate) fn without_perf(mut args: Vec<String>) -> Vec<String> {
+    args.extend(["--skip".to_string(), PERF_SKIP.to_string()]);
+    args
+}
+
 /// The fixture modules the filters need (todo 1618), for `E2E_FIXTURES`: each filter's unit
 /// and its extras. None, so all build, when a filter is no `unit::...` or its unit has no
 /// module of its own among `modules`.
@@ -335,6 +349,19 @@ mod tests {
                 "select::it_opens",
             ])
         );
+    }
+
+    #[test]
+    fn the_perf_units_are_skipped_whatever_the_filters() {
+        let listed = strings(&["perf::a_budget", "table_perf::a_timing", "table::it_sorts"]);
+        let all = exact(&listed, &without_perf(strings(&["table::", "perf::"])));
+        assert_eq!(all, (strings(&["--exact", "table::it_sorts"]), 1));
+        assert!(
+            exact(&listed, &without_perf(strings(&["perf::"])))
+                .0
+                .is_empty()
+        );
+        assert!(wanted(&without_perf(strings(&["table::"]))));
     }
 
     #[test]

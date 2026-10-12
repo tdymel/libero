@@ -240,6 +240,9 @@ fn render(skips: &[Skip]) -> String {
          Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; \
          edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or \
          the engine (revisit on their update, todo 3362), a number names the todo that removes it.\n\n\
+         The performance scenarios (units `perf`, `table_perf`) are no skips but run on request only: \
+         the runner leaves them out on CI and `shard.py` assigns them to no shard, unless `E2E_PERF` \
+         is set (todo 3454).\n\n\
          | Test | Platform | Reason |\n| --- | --- | --- |\n",
     );
     for skip in skips {

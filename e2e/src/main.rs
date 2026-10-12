@@ -118,6 +118,13 @@ fn docs_test(args: &mut Vec<String>) -> Option<&'static str> {
 }
 
 fn run(target: &Target, passthrough: Vec<String>) -> Result<()> {
+    let passthrough = match units::perf_off() {
+        true => {
+            eprintln!("e2e: CI skips the perf scenarios; E2E_PERF=1 runs them");
+            units::without_perf(passthrough)
+        }
+        false => passthrough,
+    };
     let root = workspace_root()?;
     let port = free_port()?;
     let dx = dx(&root)?;
