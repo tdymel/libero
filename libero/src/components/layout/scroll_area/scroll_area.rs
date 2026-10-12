@@ -389,6 +389,7 @@ fn measure_area(root: ElementHandle, mut geometry: Signal<Option<ScrollGeometry>
                 },
                 _ => ScrollGeometry::default(),
             };
+            warn(&format!("DIAG measure_area {measured:?} was {:?}", *geometry.peek()));
             if *geometry.peek() != Some(measured) {
                 geometry.set(Some(measured));
             }
@@ -405,6 +406,7 @@ fn measure_offset(root: ElementHandle, mut geometry: Signal<Option<ScrollGeometr
             let (Ok((_, top)), Some(known)) = (offset.await, *geometry.peek()) else {
                 return;
             };
+            warn(&format!("DIAG measure_offset top={top} known={}", known.offset));
             if known.offset != top {
                 geometry.set(Some(known.scrolled(top, known.viewport)));
             }
@@ -738,6 +740,7 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         // no new scroll (todo 2178).
         let (top, left) = (data.scroll_top(), data.scroll_left());
         let rested = *rested_at.peek();
+        warn(&format!("DIAG scroll_data top={top} rested={rested:?} scrolling={} geom={:?}", *is_scrolling.peek(), (*geometry.peek()).map(|g| g.offset)));
         if !*is_scrolling.peek()
             && rested.is_some_and(|(y, x)| (top - y).abs() < 1.0 && (left - x).abs() < 1.0)
         {
@@ -878,6 +881,7 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         })),
         false => None,
     };
+    warn(&format!("DIAG render handler={} virtualized={virtualized} reported={reported}", handler.is_some()));
     latest.set(handler);
 
     // `ResizeObserver` reports once on observe: the mount-time check.

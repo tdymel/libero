@@ -350,6 +350,7 @@ fn follow_highlight(
             return;
         }
         let off = (size.height - height).abs() > 1.0;
+        crate::utils::warn(&format!("DIAG follow y={y:?} scroll_h={} want={height} tries={tries}", size.height));
         if off && tries > 0 {
             next_task().await;
             return when_laid_out(move || {
