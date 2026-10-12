@@ -19,6 +19,8 @@ const LAST_WEEK: [f64; 7] = [98.0, 110.0, 115.0, 120.0, 104.0, 170.0, 180.0];
 const QUARTERS: [&str; 4] = ["Q1", "Q2", "Q3", "Q4"];
 const SALES_2025: [f64; 4] = [120.0, 132.0, 101.0, 134.0];
 const SALES_2026: [f64; 4] = [140.0, 128.0, 150.0, 162.0];
+const PROFIT_2025: [f64; 4] = [40.0, 55.0, -25.0, 62.0];
+const PROFIT_2026: [f64; 4] = [30.0, -15.0, 20.0, 48.0];
 
 fn on(value: bool) -> &'static str {
     if value { "true" } else { "false" }
@@ -90,7 +92,7 @@ pub fn ChartPage() -> Element {
                     prop("description", "Option<String>").doc("A sentence under the title: what to read from the chart."),
                     prop("layout", "BarLayout").default(theme.chart.bar_layout.as_str()).doc("`grouped` side by side, `stacked`, or `percent`: stacked to 100%."),
                     prop("orientation", "Orientation").default("vertical").doc("`horizontal` lays the categories down the side, top to bottom."),
-                    prop("radius", "Size").default(theme.chart.bar_radius.as_str()).doc("Corner radius of every bar, on the theme's radius scale."),
+                    prop("radius", "Size").default(theme.chart.bar_radius.as_str()).doc("Corner radius of a bar's free end, the one away from its axis, on the theme's radius scale."),
                     prop("value_labels", "Option<bool>").default(on(theme.chart.value_labels)).doc("Each bar's value written on it."),
                     prop("legend", "LegendPosition").default("bottom with two series or more").doc("`bottom`, `top`, `start`, `end` or `none`."),
                     prop("grid", "Option<bool>").default(on(theme.chart.grid)).doc("Guide lines across the values."),
@@ -191,10 +193,10 @@ pub fn ChartPage() -> Element {
                         .labels(["LineChart", "BarChart", "PieChart"])
                         .code(|_, values| match values.str("type").as_str() {
                             "bar" => vec![
-                                "title: \"Sales\"".to_string(),
+                                "title: \"Profit\"".to_string(),
                                 format!("x: {QUARTERS:?}"),
                                 format!(
-                                    "series: vec![Series::new(\"2025\", {SALES_2025:?}), Series::new(\"2026\", {SALES_2026:?})]"
+                                    "series: vec![Series::new(\"2025\", {PROFIT_2025:?}), Series::new(\"2026\", {PROFIT_2026:?})]"
                                 ),
                             ],
                             "pie" => vec![
@@ -245,9 +247,9 @@ pub fn ChartPage() -> Element {
                     match values.str("type").as_str() {
                         "bar" => rsx! {
                             BarChart {
-                                title: "Sales",
+                                title: "Profit",
                                 x: QUARTERS,
-                                series: vec![Series::new("2025", SALES_2025), Series::new("2026", SALES_2026)],
+                                series: vec![Series::new("2025", PROFIT_2025), Series::new("2026", PROFIT_2026)],
                                 layout: BarLayout::from(values.str("layout").as_str()),
                                 orientation: Orientation::from(values.str("orientation").as_str()),
                                 radius: values.str("radius"),
@@ -287,20 +289,6 @@ pub fn ChartPage() -> Element {
                     " beside it: a screen reader can read it cell by cell, and a reader can sort it."
                 }
                 SalesWithTable {}
-            }
-            DocSection { title: "Stacked bars",
-                Text {
-                    "A stack is rounded at its outer ends only: where two bars meet, their corners stay square. Grouped bars keep "
-                    Code { source: "radius" }
-                    " on every corner."
-                }
-                BarChart {
-                    title: "Sales",
-                    x: QUARTERS,
-                    series: vec![Series::new("2025", SALES_2025), Series::new("2026", SALES_2026)],
-                    layout: "stacked",
-                    radius: "lg",
-                }
             }
         }
     }

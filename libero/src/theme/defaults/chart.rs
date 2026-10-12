@@ -81,7 +81,7 @@ pub struct ChartDefaults {
     pub tooltip: bool,
     pub stroke_width: f32,
     pub bar_layout: BarLayout,
-    /// Corner radius of a bar, a step on the theme's radius scale.
+    /// Corner radius of a bar's free end, a step on the theme's radius scale.
     pub bar_radius: Size,
     /// Each bar's value written at its end.
     pub value_labels: bool,

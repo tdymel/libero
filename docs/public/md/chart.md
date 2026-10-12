@@ -77,8 +77,10 @@ summary keep the values. `orientation: "horizontal"` lays the categories down
 the side, the first at the top. `value_labels: true` writes each bar's value on
 it, inside the bar when stacked.
 
-A stack is rounded at its outer ends only: where two bars meet, their corners
-stay square. Grouped bars keep `radius` on every corner.
+A bar is rounded at its free end only, the one away from the axis it grows from:
+the top of a rising bar, the bottom of a falling one, the right end of a lying
+one. The end at the axis and an end against another bar stay square, so a stack
+rounds its topmost positive and its lowest negative segment.
 
 ```rust
 use dioxus::prelude::*;
@@ -234,7 +236,7 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `description` | `Option<String>` | | A sentence under the title: what to read from the chart. |
 | `layout` | `BarLayout` | `grouped` | `grouped` side by side, `stacked`, or `percent`: stacked to 100%. |
 | `orientation` | `Orientation` | `vertical` | `horizontal` lays the categories down the side, top to bottom. |
-| `radius` | `Size` | `xs` | Corner radius of every bar, on the theme's radius scale. |
+| `radius` | `Size` | `xs` | Corner radius of a bar's free end, the one away from its axis, on the theme's radius scale. |
 | `value_labels` | `Option<bool>` | `false` | Each bar's value written on it. |
 | `legend` | `LegendPosition` | bottom with two series or more | `bottom`, `top`, `start`, `end` or `none`. |
 | `grid` | `Option<bool>` | `true` | Guide lines across the values. |

@@ -375,13 +375,12 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
         }
     };
 
-    let (svg, triggers) = match spec.layout {
-        BarLayout::Grouped => inert(&svg, write, &format!(" rx=\"{0}\" ry=\"{0}\"", spec.radius)),
-        _ => {
-            let (svg, triggers) = inert(&svg, write, "");
-            (round_outer_ends(&svg, &triggers, spec.radius), triggers)
-        }
-    };
+    let (svg, triggers) = inert(&svg, write, "");
+    let negative: Vec<bool> = expected_marks(&ordered)
+        .iter()
+        .map(|&(_, _, value, _)| value < 0.0)
+        .collect();
+    let svg = round_free_ends(&svg, &triggers, &negative, spec.horizontal, spec.radius);
     let svg = relabel(&svg, LABEL_MARK, write);
     let last = spec.x.len().saturating_sub(1);
     let marks = match_marks(&expected_marks(&ordered), &triggers)
@@ -412,9 +411,16 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
     })
 }
 
-/// A stack's bars as paths rounded only at the stack's outer ends: a corner where a bar
-/// touches another stays square.
-fn round_outer_ends(svg: &str, triggers: &[Trigger], radius: f32) -> String {
+/// The bars as paths rounded only at the free end, the one away from the axis they grow
+/// from (the top of a rising bar, the bottom of a falling one, the right end of a lying
+/// one); the end at the axis and an end against another bar stay square.
+fn round_free_ends(
+    svg: &str,
+    triggers: &[Trigger],
+    negative: &[bool],
+    horizontal: bool,
+    radius: f32,
+) -> String {
     let bars: Vec<[f32; 4]> = triggers
         .iter()
         .filter_map(|trigger| match trigger.shape {
@@ -447,22 +453,32 @@ fn round_outer_ends(svg: &str, triggers: &[Trigger], radius: f32) -> String {
             continue;
         };
         let [left, top, right, bottom] = [x, y, x + width, y + height];
-        let others = bars
+        let own = [left, top, right, bottom];
+        let falls = bars
             .iter()
-            .filter(|other| **other != [left, top, right, bottom]);
-        let mut touched = [false; 4];
-        for &[l, t, r, b] in others {
-            touched[0] |= near(r, left) && overlap(t, b, top, bottom);
-            touched[1] |= near(b, top) && overlap(l, r, left, right);
-            touched[2] |= near(l, right) && overlap(t, b, top, bottom);
-            touched[3] |= near(t, bottom) && overlap(l, r, left, right);
+            .position(|bar| *bar == own)
+            .and_then(|i| negative.get(i))
+            .copied()
+            .unwrap_or(false);
+        let mut touched = false;
+        for &[l, t, r, b] in bars.iter().filter(|other| **other != own) {
+            touched |= match (horizontal, falls) {
+                (false, false) => near(b, top) && overlap(l, r, left, right),
+                (false, true) => near(t, bottom) && overlap(l, r, left, right),
+                (true, false) => near(l, right) && overlap(t, b, top, bottom),
+                (true, true) => near(r, left) && overlap(t, b, top, bottom),
+            };
         }
-        let r = radius.min(width / 2.0).min(height / 2.0).max(0.0);
-        let corner = |a: usize, b: usize| match touched[a] || touched[b] {
+        let r = match touched {
             true => 0.0,
-            false => r,
+            false => radius.min(width / 2.0).min(height / 2.0).max(0.0),
         };
-        let [tl, tr, br, bl] = [corner(0, 1), corner(2, 1), corner(2, 3), corner(0, 3)];
+        let [tl, tr, br, bl] = match (horizontal, falls) {
+            (false, false) => [r, r, 0.0, 0.0],
+            (false, true) => [0.0, 0.0, r, r],
+            (true, false) => [0.0, r, r, 0.0],
+            (true, true) => [r, 0.0, 0.0, r],
+        };
         let d = format!(
             "M{},{top} H{} A{tr},{tr} 0 0 1 {right},{} V{} A{br},{br} 0 0 1 {},{bottom} H{} A{bl},{bl} 0 0 1 {left},{} V{} A{tl},{tl} 0 0 1 {},{top} Z",
             left + tl,
@@ -1291,6 +1307,30 @@ mod tests {
         }
     }
 
+    /// Which corners of each bar path are rounded, as `[top left, top right, bottom right,
+    /// bottom left]`, in drawing order.
+    fn corners(svg: &str) -> Vec<[bool; 4]> {
+        svg.split("<path d=\"")
+            .skip(1)
+            .map(|path| {
+                let d = path.split('"').next().unwrap_or_default();
+                let arcs: Vec<bool> = d
+                    .split('A')
+                    .skip(1)
+                    .map(|arc| arc.split(',').next() != Some("0"))
+                    .collect();
+                // The path walks top right, bottom right, bottom left, top left.
+                [arcs[3], arcs[0], arcs[1], arcs[2]]
+            })
+            .collect()
+    }
+
+    const TOP: [bool; 4] = [true, true, false, false];
+    const BOTTOM: [bool; 4] = [false, false, true, true];
+    const RIGHT: [bool; 4] = [false, true, true, false];
+    const LEFT: [bool; 4] = [true, false, false, true];
+    const SQUARE: [bool; 4] = [false; 4];
+
     /// Contract: grouped bars come back series by series, rounded, a gap without a bar.
     #[test]
     fn grouped_bars_are_harvested_in_data_order() {
@@ -1302,7 +1342,7 @@ mod tests {
         // A's 3 is taller than its 1, and A's bar sits left of B's in the same group.
         assert!(rect(&marks[1]).3 > rect(&marks[0]).3);
         assert!(rect(&marks[0]).0 < rect(&marks[2]).0);
-        assert_eq!(drawn.svg.matches("rx=\"4\"").count(), 5, "{}", drawn.svg);
+        assert_eq!(corners(&drawn.svg), [TOP; 5], "{}", drawn.svg);
         assert!(!drawn.svg.contains("data-series"), "{}", drawn.svg);
     }
 
@@ -1355,28 +1395,55 @@ mod tests {
         );
     }
 
-    /// A stack rounds only its outer ends; where two bars touch the corners are square.
+    /// A bar rounds only its free end: A's bars sit under B's, B's are on top or alone.
     #[test]
-    fn a_stack_rounds_only_its_outer_ends() {
-        for horizontal in [false, true] {
-            let drawn = draw_bar(&bars(BarLayout::Stacked, horizontal)).expect("drawn");
+    fn a_stack_rounds_only_its_top_segment() {
+        for (layout, horizontal, free) in [
+            (BarLayout::Stacked, false, TOP),
+            (BarLayout::Stacked, true, RIGHT),
+            (BarLayout::Percent, false, TOP),
+            (BarLayout::Percent, true, RIGHT),
+        ] {
+            let drawn = draw_bar(&bars(layout, horizontal)).expect("drawn");
             assert!(!drawn.svg.contains("<rect"), "{}", drawn.svg);
-            // At a and b two bars share a stack, each rounding its two outer corners;
-            // at c B stands alone, rounded all round.
-            let mut rounded: Vec<usize> = drawn
-                .svg
-                .split("<path d=\"")
-                .skip(1)
-                .map(|path| {
-                    path.split('"')
-                        .next()
-                        .unwrap_or_default()
-                        .matches("A4,4 ")
-                        .count()
-                })
+            let want = [SQUARE, SQUARE, free, free, free];
+            assert_eq!(corners(&drawn.svg), want, "{}", drawn.svg);
+        }
+    }
+
+    /// Grouped, every bar rounds its free end.
+    #[test]
+    fn grouped_bars_round_only_their_free_end() {
+        for (horizontal, free) in [(false, TOP), (true, RIGHT)] {
+            let drawn = draw_bar(&bars(BarLayout::Grouped, horizontal)).expect("drawn");
+            assert_eq!(corners(&drawn.svg), [free; 5], "{}", drawn.svg);
+        }
+    }
+
+    /// A negative value rounds its far end below (left of) the axis; a mixed stack the
+    /// topmost positive and the lowest negative segment.
+    #[test]
+    fn a_negative_bar_rounds_the_end_away_from_the_axis() {
+        for (horizontal, up, down) in [(false, TOP, BOTTOM), (true, RIGHT, LEFT)] {
+            let spec = BarSpec {
+                series: vec![
+                    spec("A", &[Some(2.0), Some(-1.0), Some(2.0)]),
+                    spec("B", &[Some(3.0), Some(-2.0), Some(-1.0)]),
+                ],
+                ..bars(BarLayout::Stacked, horizontal)
+            };
+            let drawn = draw_bar(&spec).expect("drawn");
+            let marks = &drawn.geometry.marks;
+            let mut found: Vec<_> = marks
+                .iter()
+                .zip(corners(&drawn.svg))
+                .map(|(mark, corners)| ((mark.series, mark.index), corners))
                 .collect();
-            rounded.sort();
-            assert_eq!(rounded, [2, 2, 2, 2, 4], "{}", drawn.svg);
+            found.sort_by_key(|(place, _)| *place);
+            let found: Vec<_> = found.into_iter().map(|(_, corners)| corners).collect();
+            // A at a, b, c, then B at a, b, c.
+            let want = [SQUARE, SQUARE, up, up, down, down];
+            assert_eq!(found, want, "{}", drawn.svg);
         }
     }
 

@@ -32,7 +32,7 @@ fn the_bars_are_drawn_at_the_plot_s_width() {
         // A gap in a series draws no bar.
         let bars: usize = e2e::js(
             &fixture.page,
-            "document.querySelectorAll('#chart svg rect').length",
+            "document.querySelectorAll('#chart [data-chart-drawing] path').length",
         )
         .await;
         assert_eq!(bars, 5);
@@ -47,6 +47,49 @@ fn the_bars_are_drawn_at_the_plot_s_width() {
     });
 }
 
+/// Per bar, the radius of its corners as `[top left, top right, bottom right, bottom left]`.
+const CORNERS: &str = "[...document.querySelectorAll('#chart [data-chart-drawing] path')] \
+    .map(p => p.getAttribute('d').split('A').slice(1).map(parseFloat)) \
+    .map(([tr, br, bl, tl]) => [tl, tr, br, bl])";
+
+/// A bar is rounded at its free end only, the one away from the axis (3469).
+#[test]
+fn a_bar_rounds_only_its_free_end() {
+    e2e::browser::block_on(async {
+        let fixture = Fixture::open("/bar-chart", Viewport::Desktop)
+            .await
+            .unwrap();
+        wait::for_visible(&fixture.page, "#chart [data-chart-drawing] path")
+            .await
+            .unwrap();
+        let rising: Vec<[f64; 4]> = e2e::js(&fixture.page, CORNERS).await;
+        assert_eq!(rising.len(), 5);
+        assert!(
+            rising
+                .iter()
+                .all(|[tl, tr, br, bl]| *tl > 0.0 && *tr > 0.0 && *br == 0.0 && *bl == 0.0),
+            "{rising:?}"
+        );
+        fixture.close().await.unwrap();
+        let fixture = Fixture::open("/bar-chart/stacked", Viewport::Desktop)
+            .await
+            .unwrap();
+        wait::for_visible(&fixture.page, "#chart [data-chart-drawing] path")
+            .await
+            .unwrap();
+        // Lying, only the right end rounds, and only where no bar follows: 3 stacks.
+        let lying: Vec<[f64; 4]> = e2e::js(&fixture.page, CORNERS).await;
+        assert!(
+            lying
+                .iter()
+                .all(|[tl, tr, br, bl]| *tl == 0.0 && *bl == 0.0 && (*tr > 0.0) == (*br > 0.0)),
+            "{lying:?}"
+        );
+        assert_eq!(lying.iter().filter(|c| c[1] > 0.0).count(), 3, "{lying:?}");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Lying, the first category is the top row, a stack's bars share it end to end, and
 /// each value is written on its bar.
 #[test]
@@ -55,7 +98,7 @@ fn stacked_lying_bars_read_top_down() {
         let fixture = Fixture::open("/bar-chart/stacked", Viewport::Desktop)
             .await
             .unwrap();
-        // A stack's bars are paths, rounded at its outer ends only (3466).
+        // Every bar is a path, rounded at its free end only (3469).
         wait::for_visible(&fixture.page, "#chart [data-chart-drawing] path")
             .await
             .unwrap();
@@ -104,7 +147,7 @@ async fn hovers<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     );
     // The marker's stroke stays inside its bar, off the x axis.
     let marker = d.rect("#chart [data-chart-marker]").await?;
-    let bars = d.rects("#chart [data-chart-drawing] rect").await?;
+    let bars = d.rects("#chart [data-chart-drawing] path").await?;
     ensure!(
         bars.iter().any(|bar| marker.x >= bar.x
             && marker.y >= bar.y
@@ -175,7 +218,7 @@ e2e::scenario!(
 
 /// A click picks the bar under it. A tap pins it, a second tap on it clicks.
 async fn clicks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    let bar = d.rect("#chart [data-chart-drawing] rect").await?;
+    let bar = d.rect("#chart [data-chart-drawing] path").await?;
     let (x, y) = (bar.x + bar.width / 2.0, bar.y + bar.height / 2.0);
     d.click_at(x, y).await?;
     if d.platform() == Platform::Android {
@@ -201,7 +244,7 @@ e2e::scenario!(
 async fn legend<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let first = "#chart [data-slot=legend-item]:nth-child(1) button";
     let second = "#chart [data-slot=legend-item]:nth-child(2) button";
-    let bars = "#chart [data-chart-drawing] rect";
+    let bars = "#chart [data-chart-drawing] path";
     d.click(second).await?;
     reads(d, "#hidden", "2026", "a click on 2026").await?;
     eventually(d, "2026's bars to leave", async |d| {

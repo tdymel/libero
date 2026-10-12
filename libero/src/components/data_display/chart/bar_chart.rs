@@ -30,7 +30,7 @@ chart_props! {
         /// `"horizontal"` lays the categories down the side, top to bottom. Unset, vertical.
         #[props(default, into)]
         orientation: Input<Orientation>,
-        /// Corner radius of every bar. Unset, the theme's.
+        /// Corner radius of a bar's free end, the one away from its axis. Unset, the theme's.
         #[props(default, into)]
         radius: Input<Size>,
         /// Each bar's value written on it. Unset, the theme's.
@@ -186,6 +186,16 @@ mod tests {
         dioxus_ssr::render(&dom)
     }
 
+    /// The bars drawn: each is a path.
+    fn bars(html: &str) -> usize {
+        html.split("data-chart-drawing")
+            .nth(1)
+            .and_then(|rest| rest.split("</svg>").next())
+            .unwrap_or_default()
+            .matches("<path")
+            .count()
+    }
+
     /// The server's HTML has the bars, the name and what a screen reader reads instead.
     #[test]
     fn the_first_render_is_a_named_figure_with_bars_and_a_summary() {
@@ -202,7 +212,7 @@ mod tests {
         });
 
         assert!(html.contains("role=\"figure\""), "{html}");
-        assert_eq!(html.matches("<rect").count(), 3, "{html}");
+        assert_eq!(bars(&html), 3, "{html}");
         assert!(html.contains("Bar chart from Q1 to Q2."), "{html}");
         assert!(html.contains("2025: 3 to 5, highest at Q2."), "{html}");
         assert!(!html.contains("<table"), "{html}");
@@ -224,7 +234,7 @@ mod tests {
             }
         });
 
-        assert_eq!(html.matches("<rect").count(), 2, "{html}");
+        assert_eq!(bars(&html), 2, "{html}");
         assert!(html.contains("aria-label=\"Series\""), "{html}");
         assert!(html.contains("aria-pressed=\"false\""), "{html}");
         assert!(
@@ -256,13 +266,7 @@ mod tests {
             }
         });
 
-        // A stack's bars are paths, rounded at its outer ends only.
-        let drawing = html
-            .split("data-chart-drawing")
-            .nth(1)
-            .and_then(|rest| rest.split("</svg>").next())
-            .unwrap_or_default();
-        assert_eq!(drawing.matches("<path").count(), 4, "{html}");
+        assert_eq!(bars(&html), 4, "{html}");
         assert!(html.contains("75%"), "{html}");
         assert!(html.contains("A: 1 to 3, highest at b."), "{html}");
     }
