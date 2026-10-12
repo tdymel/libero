@@ -1,0 +1,5 @@
+# ted_ci.py probe; read by .github/workflows/ci-probe.yml.
+os=windows
+tier=web
+filter=rich_text_editor_input::a_mention_list_in_a_modal_counts_as_inside_c
+dev=olaf-93
