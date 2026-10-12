@@ -20,7 +20,7 @@ use crate::{
         accessibility::use_announcer,
         common::{Part, focus_ring_sx},
     },
-    hooks::{use_debounced_callback, use_element},
+    hooks::{use_debounced_callback, use_element, use_escape_dismiss},
     localization::{ChartLabels, Formats, fill},
     platform::{ElementApi, wheel_travel_y},
     sx::{FORCED_COLORS, REDUCED_MOTION, Sx, sx},
@@ -328,6 +328,8 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
     // A tap pinned the point; a second tap on it is the click.
     let mut pinned = use_signal(|| false);
     let mut tap_on_active = use_signal(|| false);
+    // Escape dismissed the tooltip: a hovering pointer shows none until it leaves.
+    let mut muted = use_signal(|| false);
 
     let write = {
         let (series, unit) = (series.clone(), unit.clone());
@@ -386,6 +388,17 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
             }
         }
     };
+    // Escape from anywhere on the page, as a hover tooltip takes no focus (WCAG 1.4.13).
+    let dismiss = use_callback({
+        let mut set_active = set_active.clone();
+        move |()| {
+            muted.set(true);
+            pinned.set(false);
+            set_active(None);
+            announcer.clear();
+        }
+    });
+    let _ = use_escape_dismiss(tooltip && active.read().is_some(), true, dismiss);
     let at_pointer = move |point: ElementPoint| {
         with_marks(&|geometry| {
             let fit = Fit::of((geometry.width, geometry.height), *box_size.peek());
@@ -607,7 +620,7 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
                     _ => {}
                 }
             }
-            if event.pointer_type() == "touch" && !*pinned.peek() {
+            if *muted.peek() || event.pointer_type() == "touch" && !*pinned.peek() {
                 return;
             }
             set_active(at_pointer(event.element_coordinates()).as_ref());
@@ -732,6 +745,7 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
         move |event: Event<PointerData>| {
             // A touch leaves at every lift: its point stays pinned. A pen hovers, as a mouse.
             if event.pointer_type() != "touch" {
+                muted.set(false);
                 pinned.set(false);
                 set_active(None);
             }

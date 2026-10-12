@@ -19,11 +19,13 @@ pub struct ChartLabels {
     pub slice: &'static str,
     /// A slice whose value is missing or not a number.
     pub slice_empty: &'static str,
+    /// In a pie's summary while the legend hides a slice: its shares count the hidden ones.
+    pub shares_of_all: &'static str,
     /// The plot and the summary of a chart with nothing to draw.
     pub no_data: &'static str,
     /// The plot and the summary of a chart whose legend hides every series or slice.
     pub all_hidden: &'static str,
-    /// The summary while the chart is loading.
+    /// The summary while the chart is loading, said once when it starts.
     pub loading: &'static str,
     /// What a screen reader calls the plot the keys walk.
     pub chart: &'static str,
@@ -93,6 +95,7 @@ impl ChartLabels {
         total: "{kind}, total {total}.",
         slice: "{name}: {value}, {share}.",
         slice_empty: "{name}: no value.",
+        shares_of_all: "Shares count the hidden slices too.",
         no_data: "No data",
         all_hidden: "All series are hidden.",
         loading: "Loading chart",
@@ -139,6 +142,7 @@ impl ChartLabels {
         total: "{kind}, insgesamt {total}.",
         slice: "{name}: {value}, {share}.",
         slice_empty: "{name}: kein Wert.",
+        shares_of_all: "Die Anteile zählen die ausgeblendeten Segmente mit.",
         no_data: "Keine Daten",
         all_hidden: "Alle Reihen sind ausgeblendet.",
         loading: "Diagramm wird geladen",

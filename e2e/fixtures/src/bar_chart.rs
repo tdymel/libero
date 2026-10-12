@@ -12,6 +12,7 @@ pub const ROUTES: Routes = &[
     ("/bar-chart/styled", || rsx! { Styled {} }),
     ("/bar-chart/zoom", || rsx! { Zoomable {} }),
     ("/bar-chart/line", || rsx! { WithLine {} }),
+    ("/bar-chart/loading", || rsx! { Loading {} }),
 ];
 
 fn series() -> Vec<Series> {
@@ -113,6 +114,22 @@ fn Zoomable() -> Element {
             }
         }
         p { id: "range", "{range}" }
+    }
+}
+
+/// A chart that loads from the first render.
+#[component]
+fn Loading() -> Element {
+    rsx! {
+        div { max_width: "480px",
+            BarChart {
+                id: "chart",
+                title: "Sales",
+                x: ["Q1", "Q2", "Q3"],
+                series: series(),
+                loading: true,
+            }
+        }
     }
 }
 

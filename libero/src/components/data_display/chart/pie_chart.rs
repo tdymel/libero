@@ -171,7 +171,14 @@ pub fn PieChart(props: PieChartProps) -> Element {
     let summary = match (props.loading, empty) {
         (true, _) => vec![labels.loading.to_string()],
         (false, true) => Vec::new(),
-        (false, false) => summary(&labels, &props.slices, write(total), write, share),
+        (false, false) => {
+            let mut sentences = summary(&labels, &props.slices, write(total), write, share);
+            // After the total, before the shares it qualifies.
+            if shown.len() < all_slices.len() {
+                sentences.insert(1, labels.shares_of_all.to_string());
+            }
+            sentences
+        }
     };
 
     Frame {
@@ -309,6 +316,7 @@ mod tests {
         assert!(html.contains("Pie chart, total 4."), "{html}");
         assert!(html.contains("Chrome: 3, 75%."), "{html}");
         assert!(html.contains("Safari: 1, 25%."), "{html}");
+        assert!(!html.contains("Shares count"), "{html}");
         assert!(!html.contains("<table"), "{html}");
         // Labels in percent by default.
         assert!(html.contains(">75%<") || html.contains("75%\n"), "{html}");
@@ -357,6 +365,10 @@ mod tests {
             "{html}"
         );
         assert!(html.contains("Other: 2, 50%."), "{html}");
+        assert!(
+            html.contains("Shares count the hidden slices too."),
+            "{html}"
+        );
         assert!(html.contains("aria-label=\"Slices\""), "{html}");
         assert!(html.contains("aria-pressed=\"false\""), "{html}");
         assert!(

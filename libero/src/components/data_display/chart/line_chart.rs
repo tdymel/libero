@@ -426,7 +426,8 @@ mod tests {
         assert_eq!(html.matches("data-dashed=\"true\"").count(), 1, "{html}");
     }
 
-    /// A hidden series leaves the drawing, not the legend; the last shown one stays.
+    /// A hidden series leaves the drawing, not the legend or the summary (3487); the last
+    /// shown one stays.
     #[test]
     fn a_default_hidden_series_is_not_drawn() {
         let html = render(|| {
@@ -446,6 +447,10 @@ mod tests {
         });
 
         assert!(!html.contains("stroke-dasharray=\""), "{html}");
+        assert!(
+            html.contains("Last week: 1 to 2, highest at Mon."),
+            "{html}"
+        );
         assert!(html.contains("aria-pressed=\"false\""), "{html}");
         assert!(
             html.contains("aria-pressed=\"true\" aria-disabled=\"true\""),

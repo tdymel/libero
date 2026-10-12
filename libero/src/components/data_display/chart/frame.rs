@@ -16,7 +16,9 @@ use crate::{
     components::{
         accessibility::{use_announcer, visually_hidden_sx},
         buttons::Button,
-        common::{ClassList, HtmlTag, Input, Part, Parts, States, Variables, variables},
+        common::{
+            ClassList, HtmlTag, Input, Part, Parts, States, Variables, names_itself, variables,
+        },
         feedback::Skeleton,
         layout::use_box,
     },
@@ -325,6 +327,13 @@ impl Frame {
             }
         });
         let announcer = use_announcer();
+        // After the first render, so the region exists when it speaks.
+        use_effect(use_reactive!(|(loading,)| {
+            match loading {
+                true => announcer.say(labels.loading.to_string()),
+                false => announcer.clear(),
+            }
+        }));
         let states: Input<States> = states
             .clone()
             .unwrap_or_default()
@@ -350,6 +359,7 @@ impl Frame {
             false => summary,
         };
         let title_id = title.as_ref().map(|_| format!("{id}-title"));
+        let unnamed = title.is_none() && !names_itself(&attributes);
         let description_id = description.as_ref().map(|_| format!("{id}-description"));
         let summary_id = (!summary.is_empty()).then(|| format!("{id}-summary"));
         let described_by = [description_id, summary_id]
@@ -510,8 +520,8 @@ impl Frame {
                 }
                 {legend_after}
             }
-            // Says what the save buttons did; the plot's own speaks for the plot.
-            if tools && export_button {
+            // Says that the chart loads and what the save buttons did; the plot's own speaks for the plot.
+            if loading || tools && export_button {
                 {announcer.render()}
             }
             if !summary.is_empty() {
@@ -535,6 +545,7 @@ impl Frame {
             .attr("role", "figure")
             .attr("id", id())
             .attr("aria-labelledby", title_id)
+            .attr("aria-label", unnamed.then_some(labels.chart))
             .attr(
                 "aria-describedby",
                 (!described_by.is_empty()).then_some(described_by),

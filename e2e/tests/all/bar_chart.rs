@@ -242,6 +242,38 @@ e2e::scenario!(
     ios: skip("a touch screen has no hover")
 );
 
+/// Escape closes a hovered tooltip though focus never entered the plot (3428).
+async fn escapes_a_hover<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.hover(LAYER).await?;
+    eventually(d, "the tooltip", async |d| d.exists(TOOLTIP).await).await?;
+    d.press(keyboard::ESCAPE).await?;
+    eventually(d, "the tooltip to close", async |d| {
+        Ok(!d.exists(TOOLTIP).await?)
+    })
+    .await
+}
+
+e2e::scenario!(
+    escape_closes_a_hovered_tooltip_without_focus,
+    "/bar-chart",
+    escapes_a_hover,
+    android: skip("a touch screen has no hover"),
+    native: skip("charts are parked on Blitz"),
+    ios: skip("a touch screen has no hover")
+);
+
+/// A loading chart says so in a live region, not only in its summary (3488).
+async fn loads<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    says(d, "Loading chart", "a loading chart").await
+}
+
+e2e::scenario!(
+    a_loading_chart_says_so,
+    "/bar-chart/loading",
+    loads,
+    native: skip("charts are parked on Blitz")
+);
+
 /// Arrows walk a series and cross to the other in the same category; Enter clicks.
 async fn keys<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.focus(LAYER).await?;

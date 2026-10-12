@@ -435,6 +435,40 @@ mod tests {
         assert!(!html.contains("<table"), "{html}");
     }
 
+    /// Without a title the figure is still named, as the plot is; a spread label wins.
+    #[test]
+    fn an_untitled_figure_is_named_chart_unless_the_page_names_it() {
+        let figure = |html: &str| {
+            let at = html.find("role=\"figure\"").expect("a figure");
+            let from = html[..at].rfind("<div").unwrap_or(0);
+            html[from..at + html[at..].find('>').unwrap_or(0)].to_string()
+        };
+        let plain = render(|| {
+            rsx! {
+                LiberoProvider {
+                    BarChart { x: ["Q1"], series: vec![Series::new("2025", [3.0])] }
+                }
+            }
+        });
+        assert!(
+            figure(&plain).contains("aria-label=\"chart\""),
+            "{}",
+            figure(&plain)
+        );
+        let named = render(|| {
+            rsx! {
+                LiberoProvider {
+                    BarChart {
+                        aria_label: "Sales",
+                        x: ["Q1"],
+                        series: vec![Series::new("2025", [3.0])],
+                    }
+                }
+            }
+        });
+        assert_eq!(named.matches("aria-label=\"Sales\"").count(), 1, "{named}");
+    }
+
     /// One category is named once, not as a range from it to itself.
     #[test]
     fn one_category_is_not_a_range() {

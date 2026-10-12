@@ -625,15 +625,17 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 | `ArrowDown` / `ArrowUp` | Line: the next or previous line at the same x value, or its nearest point. Bar: the next or previous series' bar in the category; `horizontal`, the next or previous category, top to bottom. Pie: the next or previous slice. |
 | `Home` / `End` | The line's or the series' first or last point or bar; a pie's first or last slice. |
 | `Enter` / `Space` | Calls `onpointclick` with the point, bar or slice. |
-| `Escape` | Clears the brushed band, else the point and its tooltip. |
+| `Escape` | Clears the brushed band, else the point and its tooltip. A tooltip a pointer hovers closes with Escape wherever focus is, and stays closed until the pointer leaves the plot. |
 | `+` / `-` | With `zoom`: zooms the x axis, a lying bar chart's categories, in or out around the keys' point; the arrows carry the window along at its edge. |
 | `0` | With `zoom`: shows every x value or category again. |
 | `Shift+ArrowRight` / `Shift+ArrowLeft` | With `onrange`: brushes from the keys' point to the next or previous x value. |
 
 ### Libero handles
 
-- The chart is a `role="figure"` named by `title`. The drawing is hidden from
-  screen readers.
+- The chart is a `role="figure"` named by `title`, else by a spread
+  `aria-label`, else "chart". The drawing is hidden from screen readers.
+- A loading chart says "Loading chart" in a live region when it starts, and its
+  summary says it too.
 - A hidden summary gives the x range and each series' lowest and highest value,
   and where the highest is, then each mark line's name and value and each marked
   point's place and value, each line's error band and each upright grouped
@@ -688,8 +690,13 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   `tooltip_content` reaches only sighted readers.
 - The drawing runs left to right in a right-to-left page too, and the arrows
   follow it unflipped.
-- A hidden slice leaves the drawing, so the shown ones' shares grow; the
-  summary keeps every slice.
+- A hidden slice leaves the drawing, so the shown ones' shares grow in the
+  labels, the tooltip and the announcement; the summary keeps every slice and
+  its share of all, and says so while one is hidden.
+- The summary describes the data, not the drawing: a series the legend hides
+  stays in it, with its mark lines and error band.
+- The tooltip follows the point and takes no pointer, so it is not hoverable
+  (WCAG 1.4.13); Escape closes it and the announcement gives the same values.
 - `grid` draws nothing on a pie.
 - `.colors` and `.negative_color` add no meaning of their own: a loss already
   hangs below the axis. The legend keeps the series' colour.

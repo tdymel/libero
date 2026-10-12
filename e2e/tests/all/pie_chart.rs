@@ -220,6 +220,37 @@ e2e::scenario!(
     ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
+/// With a slice hidden, the tooltip and the keys' announcement give the share the labels
+/// show (of the shown), the summary the share of all (3429, documented).
+async fn hidden_share<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#chart [data-slot=legend-item]:nth-child(3) button")
+        .await?;
+    reads(d, "#hidden", "Other", "a click on Other").await?;
+    d.focus(LAYER).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually(d, "the announcement", async |d| {
+        Ok(d.text("#chart [role=status]").await? == "Chrome: 60, 70.6%.")
+    })
+    .await?;
+    eventually(d, "the tooltip", async |d| {
+        Ok(d.exists(TOOLTIP).await? && d.text(TOOLTIP).await?.contains("60 (70.6%)"))
+    })
+    .await?;
+    let summary = d.text("#chart [data-chart-summary]").await?;
+    ensure!(
+        summary.contains("Chrome: 60, 60%.") && summary.contains("Shares count the hidden"),
+        "{summary}"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_hidden_slice_grows_the_shares_the_eye_reads_not_the_summary,
+    "/pie-chart",
+    hidden_share,
+    native: skip("charts are parked on Blitz")
+);
+
 /// A legend button takes its slice out of the pie: the others' shares grow.
 async fn legend<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let other = "#chart [data-slot=legend-item]:nth-child(3) button";
