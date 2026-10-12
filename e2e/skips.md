@@ -187,6 +187,7 @@ Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --
 | `lightbox_zoom::a_zoomed_picture_pans_only_to_its_edge` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `lightbox_zoom::a_zoomed_picture_pans_only_to_its_edge` | macos desktop | 3432: WKWebView: the stage's first scroll never settles |
 | `lightbox_zoom::a_zoomed_picture_pans_only_to_its_edge` | native | 3386: reads the picture's size and pan by script, which Blitz has none of |
+| `lightbox_zoom::a_zoomed_picture_pans_only_to_its_edge` | windows desktop | upstream: Dioxus' asset! gives a backslashed file path (D:\a\..\1.svg) off the bundle, which WebView2 cannot load, so no picture decodes |
 | `line_chart::a_click_on_a_point_reports_it` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `line_chart::a_click_on_a_point_reports_it` | native | charts are parked on Blitz |
 | `line_chart::a_vertical_swipe_over_the_plot_scrolls_the_page` | desktop | a mouse drag scrolls nothing |
@@ -423,6 +424,7 @@ Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --
 | `table_reorder::a_pin_or_hide_from_the_menu_keeps_focus_on_a_menu_button` | android | 958: element identity on the WebView |
 | `table_reorder::a_windowed_table_reorders_past_its_window` | android | 958: element identity on the WebView |
 | `table_reorder::an_early_keyboard_drop_keeps_its_focus` | android | 958: element identity on the WebView |
+| `table_reorder::an_early_keyboard_drop_keeps_its_focus` | windows desktop | a drop made before the window follows the scroll leaves the focus on the body in WebView2 |
 | `table_reorder::an_open_detail_drags_with_its_row` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `table_reorder::header_grip_drags_move_columns_twice` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `table_reorder::hiding_a_column_from_its_own_columns_submenu_keeps_focus` | android | 958: element identity on the WebView |

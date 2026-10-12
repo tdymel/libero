@@ -502,7 +502,8 @@ e2e::scenario!(
     an_early_keyboard_drop_keeps_its_focus,
     "/table-reorder-windowed",
     an_early_drop_keeps_its_focus,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    windows: skip("a drop made before the window follows the scroll leaves the focus on the body in WebView2")
 );
 
 /// Todo 2584: a deep windowed row's Move up keeps the scroll and the focus; with
