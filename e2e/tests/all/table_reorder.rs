@@ -417,8 +417,12 @@ async fn a_windowed_table_reorders<D: Driver>(d: &mut D, _route: &str) -> Result
     d.click("[aria-label=\"Move Row 1 up\"]").await?;
     eventually_text(d, "#moves", "0>1 1>0 ", "Move up").await?;
 
-    d.focus(HANDLE).await?;
-    eventually_focused(d, HANDLE, "the handle").await?;
+    // The move hands the focus on a task later and would take it back from the handle.
+    eventually(d, "the focus on the handle", async |d| {
+        d.focus(HANDLE).await?;
+        d.exists(&format!("{HANDLE}:focus")).await
+    })
+    .await?;
     d.press(keyboard::SPACE).await?;
     eventually_text(d, LIVE, "Lifted Row 1, position 1 of 200.", "Space").await?;
     d.press(keyboard::END).await?;
@@ -470,13 +474,25 @@ async fn an_early_drop_keeps_its_focus<D: Driver>(d: &mut D, _route: &str) -> Re
     const HANDLE: &str = "[aria-label=\"Reorder Row 1\"]";
     d.focus(HANDLE).await?;
     eventually_focused(d, HANDLE, "the handle").await?;
+    // A WebView takes a key a task after the last: each key waits for the one before.
+    const LIVE: &str = "table + [role=status]";
     d.press(keyboard::SPACE).await?;
+    eventually_text(d, LIVE, "Lifted Row 1, position 1 of 200.", "the lift").await?;
     d.press(keyboard::END).await?;
+    eventually_text(d, LIVE, "Row 1 moved to position 200 of 200.", "End").await?;
     d.press(keyboard::SPACE).await?;
     eventually_text(d, "#ends", "Row 2 Row 1", "the drop at the end").await?;
     eventually_focused(d, HANDLE, "the drop at the end").await?;
     d.press(keyboard::SPACE).await?;
+    eventually_text(
+        d,
+        LIVE,
+        "Lifted Row 1, position 200 of 200.",
+        "the second lift",
+    )
+    .await?;
     d.press(keyboard::HOME).await?;
+    eventually_text(d, LIVE, "Row 1 moved to position 1 of 200.", "Home").await?;
     d.press(keyboard::SPACE).await?;
     eventually_text(d, "#ends", "Row 1 Row 200", "the drop after Home").await?;
     eventually_focused(d, HANDLE, "the drop after Home").await

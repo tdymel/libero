@@ -525,7 +525,8 @@ async fn open<D: Driver>(d: &mut D) -> Result<()> {
     .await?;
     // The stage's first scroll settles before a gesture lands on it: the
     // picture is centred and holds still from one idle to the next.
-    let (width, _) = d.viewport().await?;
+    // The page's width: a classic scrollbar narrows it below the viewport's.
+    let width = d.rect("html").await?.width;
     eventually(d, "the stage's first scroll to settle", async |d| {
         let before = d.rect(PICTURE).await?;
         d.idle().await;

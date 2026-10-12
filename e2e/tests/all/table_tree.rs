@@ -193,6 +193,7 @@ async fn rows_and_cells<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.press(keyboard::ARROW_DOWN).await?;
     eventually_focused(d, &cell(2, 2), "ArrowDown").await?;
     d.press(keyboard::ARROW_LEFT).await?;
+    eventually_focused(d, &cell(2, 1), "the first ArrowLeft").await?;
     d.press(keyboard::ARROW_LEFT).await?;
     on_row(d, 2, "ArrowLeft twice").await?;
     d.press(keyboard::ARROW_DOWN).await?;

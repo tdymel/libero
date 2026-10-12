@@ -455,7 +455,9 @@ e2e::scenario!(
 /// height it measures, and a scroll leaves it there.
 async fn a_fixed_bar_docks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     eventually(d, "the bar to dock", async |d| {
-        let (width, height) = d.viewport().await?;
+        let (_, height) = d.viewport().await?;
+        // The page's width, which a classic scrollbar narrows below the viewport's.
+        let width = d.rect("html").await?.width;
         let bar = d.rect("#fixed").await?;
         Ok((bar.y + bar.height - height).abs() < 1.0 && (bar.width - width).abs() < 1.0)
     })

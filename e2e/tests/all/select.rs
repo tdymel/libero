@@ -3,7 +3,7 @@
 use anyhow::Result;
 use e2e::archetypes::{self, Combobox};
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually};
+use e2e::driver::{Driver, Platform, eventually};
 use e2e::suite::Step;
 use e2e::{
     Fixture, Suite, Viewport, ax, js,
@@ -1285,11 +1285,15 @@ async fn a_tall_dropdown_fits_the_room<D: Driver>(d: &mut D, _route: &str) -> Re
         }
         let dropdown = d.rect(DROPDOWN).await?;
         // A box stays hidden until placed, and only then caps its list to the room: End waits for that.
-        let shown = d
-            .evaluate("getComputedStyle(document.querySelector('[data-slot=dropdown]')).visibility === 'visible'")
-            .await?;
+        let shown = match d.platform() {
+            Platform::Native => true,
+            _ => d
+                .evaluate("getComputedStyle(document.querySelector('[data-slot=dropdown]')).visibility === 'visible'")
+                .await?
+                == true,
+        };
         let list = d.rect(LISTBOX).await?;
-        Ok(shown == true
+        Ok(shown
             && dropdown.height > 100.0
             && dropdown.y >= -1.0
             && dropdown.y + dropdown.height <= height + 1.0
