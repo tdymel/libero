@@ -1,13 +1,13 @@
 # Chart
 
 Crate: `libero`, feature `charts`
-Import: `use libero::components::{BarChart, Candle, CandlestickChart, ChartHandle, ChartRange, FunnelChart, HeatmapChart, LineChart, PieChart, ScatterChart, ScatterSeries, Series, Slice, Trend, use_chart};`
+Import: `use libero::components::{BarChart, Candle, CandlestickChart, ChartHandle, ChartRange, FunnelChart, HeatmapChart, LineChart, PieChart, RadarAxis, RadarChart, ScatterChart, ScatterSeries, Series, Slice, Trend, use_chart};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/chart>
 Index: [index.md](index.md) lists every other page
-Description: Line, bar, pie, funnel, scatter, heatmap and candlestick charts as SVG, with a tooltip, arrow keys, a toggle legend, and a summary for screen readers.
+Description: Line, bar, pie, funnel, scatter, heatmap, candlestick and radar charts as SVG, with a tooltip, arrow keys, a toggle legend, and a summary for screen readers.
 
 `LineChart`, `BarChart`, `PieChart`, `FunnelChart`, `ScatterChart`,
-`HeatmapChart` and `CandlestickChart`, each
+`HeatmapChart`, `CandlestickChart` and `RadarChart`, each
 drawn as an SVG that fills its width, with a tooltip, the arrow keys, a legend
 that hides and shows, and a summary for screen readers. Needs the `charts`
 feature. Web and Android.
@@ -22,7 +22,8 @@ right y axis with `.secondary_axis()`; in an upright bar chart, a series is
 drawn as a line over the bars with `.kind(SeriesKind::Line)`. A scatter takes
 `ScatterSeries` of x and y pairs, bubbles with a size as a third value, and fits
 a `trend` line through each. A candlestick chart takes a `Candle` per period,
-its open, high, low and close.
+its open, high, low and close. A radar takes `RadarAxis` spokes and one
+`Series` value per spoke.
 
 Lines and bars zoom and pan their x axis with `zoom` and brush a range for
 `onrange`. Every chart exports as SVG or PNG through a `use_chart()` handle,
@@ -338,6 +339,36 @@ fn Demo() -> Element {
                 Candle::new(30.0, 34.0, 28.0, 33.0),
             ],
             unit: "€",
+        }
+    }
+}
+```
+
+`RadarChart` puts several measures on spokes round a centre, clockwise from the
+top: each `RadarAxis` runs from 0 to its `max` at the rim, unset the axis'
+largest value rounded up. Each `Series` gives one value per axis; a missing one
+is drawn at the centre. `filled` and `rings` set the shapes' fill and the web.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{RadarAxis, RadarChart, Series};
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        RadarChart {
+            title: "Phones",
+            axes: vec![
+                RadarAxis::from(("Battery", 10.0)),
+                ("Camera", 10.0).into(),
+                ("Screen", 10.0).into(),
+                ("Speed", 10.0).into(),
+                ("Value", 10.0).into(),
+            ],
+            series: vec![
+                Series::new("Phone A", [8.0, 6.0, 7.0, 9.0, 5.0]),
+                Series::new("Phone B", [6.0, 9.0, 8.0, 6.0, 7.0]),
+            ],
         }
     }
 }
@@ -848,6 +879,32 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | The hidden series a legend button asks for. The last shown series stays. |
 | `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it. |
 
+### `RadarChart`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `axes` | `Vec<RadarAxis>` | required | The spokes, clockwise from the top, at least three: `"Speed".into()` or `("Speed", 10.0).into()`, the value at its rim. Unset, the rim is the axis' largest value rounded up to 1, 2, 2.5 or 5 times a power of ten. Fewer than three show the empty state. |
+| `series` | `Vec<Series>` | required | One value per axis each, in the axes' order. A missing value is drawn at the centre; a series with more or fewer values than axes warns in development and is cut or padded. |
+| `title` | `Option<String>` | | Shown above the chart, and its accessible name. |
+| `description` | `Option<String>` | | A sentence under the title: what to read from the chart. |
+| `filled` | `Option<bool>` | `true` | Each series' shape filled, translucent, inside its outline. |
+| `rings` | `Option<usize>` | `5` | The web's rings, its steps from the centre to the rim. |
+| `legend` | `LegendPosition` | bottom with two series or more | `bottom`, `top`, `start`, `end` or `none`. Each key is its series' point shape. |
+| `grid` | `Option<bool>` | `true` | The web: its rings and spokes. |
+| `value_format` | `ValueFormat` | `Auto` | How values are written in the tooltip and in the summary. |
+| `unit` | `Option<String>` | | After every value, as `"pts"`; a series' own `unit` wins. |
+| `aspect_ratio` | `Option<f32>` | `4 / 3` | Width over height of the plot. Unset, the theme's `pie_aspect_ratio`. |
+| `loading` | `bool` | `false` | A placeholder instead of the plot, and `aria-busy` on the chart. |
+| `empty` | `Option<Element>` | | Shown in the plot when there is no value or fewer than three axes. Unset, "No data". |
+| `tooltip` | `Option<bool>` | `true` | A tooltip with each series' value on the axis of the pointer's nearest or the keys' point. |
+| `tooltip_content` | `Option<Callback<ChartPoint, Element>>` | | The tooltip's content instead of the axis and each series' value there. |
+| `onpointclick` | `Option<EventHandler<ChartPoint>>` | | A click on a point, a second tap on a pinned one, or Enter on the keys' point. `index` is the axis' place in `axes`, `x` its name. |
+| `onactivechange` | `Option<EventHandler<Option<ChartPoint>>>` | | The point under the pointer or the keys; `None` when it leaves. |
+| `hidden` | `Option<Vec<String>>` | | The names of the series the legend hides; set, they are controlled. |
+| `default_hidden` | `Vec<String>` | `[]` | Seeds the hidden series once. Ignored when `hidden` is set. |
+| `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | The hidden series a legend button asks for. The last shown series stays. |
+| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it. |
+
 Like every component, each chart also takes the shared props `sx`, `class`,
 `style`, `states`, `parts` (`ChartPart`), and any extra HTML attributes.
 
@@ -858,9 +915,9 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 | Key | Action |
 |---|---|
 | `Tab` | Into the plot and the legend's buttons in the order drawn: a legend at the top or the start comes first. |
-| `ArrowRight` / `ArrowLeft` | Line: the next or previous point of the line, as drawn, left to right in either text direction. Bar: the next or previous category's bar of the series; `horizontal`, the next or previous series' bar in the category. Pie: the next or previous slice, clockwise. Funnel: the next or previous stage, top down. Scatter: the series' next or previous point, left to right. Heatmap: the next or previous cell in the row, left to right. Candlestick: the next or previous candle, left to right. |
-| `ArrowDown` / `ArrowUp` | Line: the next or previous line at the same x value, or its nearest point. Bar: the next or previous series' bar in the category; `horizontal`, the next or previous category, top to bottom. Pie and funnel: the next or previous slice or stage. Scatter: the next or previous series' point nearest in x. Heatmap: the row below or above, at the nearest column. |
-| `Home` / `End` | The line's or the series' first or last point or bar; a pie's first or last slice, a funnel's top or bottom stage; a scatter series' leftmost or rightmost point; a heatmap row's first or last cell; the first or last candle. |
+| `ArrowRight` / `ArrowLeft` | Line: the next or previous point of the line, as drawn, left to right in either text direction. Bar: the next or previous category's bar of the series; `horizontal`, the next or previous series' bar in the category. Pie: the next or previous slice, clockwise. Funnel: the next or previous stage, top down. Scatter: the series' next or previous point, left to right. Heatmap: the next or previous cell in the row, left to right. Candlestick: the next or previous candle, left to right. Radar: the series' point on the next or previous axis, clockwise. |
+| `ArrowDown` / `ArrowUp` | Line: the next or previous line at the same x value, or its nearest point. Bar: the next or previous series' bar in the category; `horizontal`, the next or previous category, top to bottom. Pie and funnel: the next or previous slice or stage. Scatter: the next or previous series' point nearest in x. Heatmap: the row below or above, at the nearest column. Radar: the next or previous series' point on the same axis. |
+| `Home` / `End` | The line's or the series' first or last point or bar; a pie's first or last slice, a funnel's top or bottom stage; a scatter series' leftmost or rightmost point; a heatmap row's first or last cell; the first or last candle; a radar series' point on the first or last axis. |
 | `Enter` / `Space` | Calls `onpointclick` with the point, bar or slice. |
 | `Escape` | Clears the brushed band, else the point and its tooltip. A tooltip a pointer hovers closes with Escape wherever focus is, and stays closed until the pointer leaves the plot. |
 | `+` / `-` | With `zoom`: zooms the x axis, a lying bar chart's categories, in or out around the keys' point; the arrows carry the window along at its edge. |
@@ -887,7 +944,8 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   12 rows or 150 cells, a pointer to the keys instead); a candlestick chart's,
   its periods, the first open and the last close with the change, the highest
   high and the lowest low with their periods, and how many candles rose, fell
-  and stayed.
+  and stayed; a radar's, its axes, then each series' highest and lowest axis
+  and the axes it has no value on.
 - The plot is one tab stop, a `role="application"` described as a chart, so a
   screen reader hands it the arrows. Each point the keys reach is announced, as
   "This week, Tue: 132", "Chrome: 62, 62%." "Online: x 12, y 34, size 80" or, for a heatmap's cell, "Tue, 12: 46"; a candle reads its four prices and its direction, as "Price, May: open 33, high 44, low 32, close 43, up".
@@ -961,7 +1019,10 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 - A rose's radius and a slice under `min_label_angle` are read by eye or not at
   all; the summary gives every value.
 - `zoom` and `onrange` are for lines and bars; a pie, a funnel, a scatter, a
-  heatmap and a candlestick chart export only.
+  heatmap, a candlestick chart and a radar export only.
+- A radar's web writes no values on its rings; each axis may have its own rim,
+  so the tooltip, the announcement and the summary give the values. A value past
+  its axis' `max` is drawn at the rim.
 - A bubble's size and a trend line are read by eye; the tooltip, the
   announcement and the summary give the sizes and each trend's direction.
   Bubbles are drawn largest first, so a small one stays on top.
@@ -994,7 +1055,7 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 | Field | Type | Description |
 |---|---|---|
 | `aspect_ratio` | `f32` | Width over height of a line's or a bar chart's plot. |
-| `pie_aspect_ratio` | `f32` | Width over height of a pie's plot, `4 / 3`: squarer, so the circle fills more of it. |
+| `pie_aspect_ratio` | `f32` | Width over height of a pie's and a radar's plot, `4 / 3`: squarer, so the circle fills more of it. |
 | `palette` | `[(Color, ColorShade); 8]` | Series and slice colours in order, each at least 3:1 on the page (a shade darker if not); one that reads like an earlier one is skipped; past the last they start over, a line dashed. |
 | `curve` | `Curve` | Default `curve`. |
 | `legend` | `LegendPosition` | Where the legend sits with two series or slices or more. |
@@ -1018,6 +1079,8 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 | `slice_gap` | `f32` | Default `slice_gap`, in pixels. |
 | `slice_radius` | `Option<Size>` | Default `slice_radius`; `None` leaves the corners square. |
 | `min_label_angle` | `f32` | Default `min_label_angle`, in degrees. |
+| `radar_filled` | `bool` | Default `filled` of a `RadarChart`. |
+| `radar_rings` | `usize` | Default `rings` of a `RadarChart`. |
 | `zoom` | `bool` | Default `zoom`. |
 | `legend_gap` | `&'static str` | Between the plot and the legend. |
 | `swatch_size` | `&'static str` | A legend swatch's side. |

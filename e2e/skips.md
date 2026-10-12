@@ -285,6 +285,11 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `popover::a_field_dropdown_opened_inside_counts_as_inside` | desktop | 1425: no synchronous containment on the WebView |
 | `popover::a_field_dropdown_opened_inside_counts_as_inside` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `popover::android_back_closes_a_popover` | all but android | 1275: no Back key off Android |
+| `radar_chart::hovering_picks_the_nearest_point` | android | a touch screen has no hover |
+| `radar_chart::hovering_picks_the_nearest_point` | ios | a touch screen has no hover |
+| `radar_chart::hovering_picks_the_nearest_point` | native | charts are parked on Blitz |
+| `radar_chart::the_keys_walk_the_spokes` | native | charts are parked on Blitz |
+| `radar_chart::the_legend_hides_and_shows_a_series` | native | charts are parked on Blitz |
 | `rating::a_key_press_over_a_hover_draws_the_new_value` | android | a touch screen has no hover |
 | `rating::a_key_press_over_a_hover_draws_the_new_value` | ios | a touch screen has no hover |
 | `rating::hovering_previews_without_changing_the_value` | android | a touch screen has no hover |

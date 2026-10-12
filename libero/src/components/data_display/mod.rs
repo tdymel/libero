@@ -32,8 +32,8 @@ pub use chart::{
     BarChart, BarChartProps, Candle, CandlestickChart, CandlestickChartProps, ChartColor,
     ChartHandle, ChartPart, ChartPoint, ChartRange, FunnelChart, FunnelChartProps, HeatmapChart,
     HeatmapChartProps, LineChart, LineChartProps, MarkLine, MarkPoint, PieChart, PieChartProps,
-    ScatterChart, ScatterChartProps, ScatterPoint, ScatterSeries, Series, SeriesKind, Slice, Trend,
-    Value, ValueFormat, XValues, use_chart,
+    RadarAxis, RadarChart, RadarChartProps, ScatterChart, ScatterChartProps, ScatterPoint,
+    ScatterSeries, Series, SeriesKind, Slice, Trend, Value, ValueFormat, XValues, use_chart,
 };
 pub use data_list::{DataList, DataListItem, DataListItemProps, DataListProps};
 pub use icon::{Icon, IconProps};

@@ -110,6 +110,7 @@ mod polymorphic;
 mod popover;
 mod progress_bar;
 mod qr_code;
+mod radar_chart;
 mod radio_group;
 mod range_slider;
 mod rating;

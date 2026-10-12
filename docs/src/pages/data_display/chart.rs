@@ -6,8 +6,8 @@ use libero::{
     components::{
         BarChart, Button, Candle, CandlestickChart, ChartHandle, ChartRange, Code, Flex,
         FunnelChart, HeatmapChart, LineChart, MarkLine, MarkPoint, Orientation, PieChart,
-        ScatterChart, ScatterSeries, Series, SeriesKind, Slice, Table, Text, Trend, column,
-        use_chart,
+        RadarAxis, RadarChart, ScatterChart, ScatterSeries, Series, SeriesKind, Slice, Table, Text,
+        Trend, column, use_chart,
     },
     theme::{
         BarLabelPosition, BarLayout, Curve, LegendPosition, PieLabelPosition, PieLabels,
@@ -88,6 +88,10 @@ const PRICES: [(f64, f64, f64, f64); 8] = [
     (41.0, 43.0, 39.0, 41.0),
     (41.0, 50.0, 39.0, 48.0),
 ];
+/// Two phones' review scores out of 10.
+const FEATURES: [&str; 5] = ["Battery", "Camera", "Screen", "Speed", "Value"];
+const PHONE_A: [f64; 5] = [8.0, 6.0, 7.0, 9.0, 5.0];
+const PHONE_B: [f64; 5] = [6.0, 9.0, 8.0, 6.0, 7.0];
 
 fn on(value: bool) -> &'static str {
     if value { "true" } else { "false" }
@@ -109,8 +113,8 @@ fn names(names: &[&str]) -> Vec<String> {
     names.iter().map(|name| name.to_string()).collect()
 }
 
-/// Hides a control unless the type is `kind`; `axes` hides it on a pie, a funnel and a
-/// heatmap, `shares` shows it on a pie and a funnel, `series` on lines and bars only.
+/// Hides a control unless the type is `kind`; `axes` hides it on a pie, a funnel, a heatmap
+/// and a radar, `shares` shows it on a pie and a funnel, `series` on lines and bars only.
 fn is(kind: &'static str) -> fn(&DemoValues) -> bool {
     match kind {
         "bar" => |values| values.str("type") != "bar",
@@ -118,7 +122,13 @@ fn is(kind: &'static str) -> fn(&DemoValues) -> bool {
         "scatter" => |values| values.str("type") != "scatter",
         "heatmap" => |values| values.str("type") != "heatmap",
         "candlestick" => |values| values.str("type") != "candlestick",
-        "axes" => |values| matches!(values.str("type").as_str(), "pie" | "funnel" | "heatmap"),
+        "radar" => |values| values.str("type") != "radar",
+        "axes" => |values| {
+            matches!(
+                values.str("type").as_str(),
+                "pie" | "funnel" | "heatmap" | "radar"
+            )
+        },
         "shares" => |values| !matches!(values.str("type").as_str(), "pie" | "funnel"),
         "series" => |values| !matches!(values.str("type").as_str(), "line" | "bar"),
         _ => |values| values.str("type") != "line",
@@ -291,6 +301,12 @@ fn table(values: &DemoValues) -> (&'static str, &'static str, Vec<&'static str>,
                 .zip(PRICES)
                 .map(|(month, (o, h, l, c))| (*month, vec![o, h, l, c]))
                 .collect(),
+        ),
+        "radar" => (
+            "Phones",
+            "Feature",
+            vec!["Phone A", "Phone B"],
+            rows(&FEATURES, &[&PHONE_A, &PHONE_B]),
         ),
         _ if conversion(values).is_some() => (
             "Visitors",
@@ -493,6 +509,7 @@ fn component(values: &DemoValues, source: &str) -> String {
         "scatter" => "ScatterChart",
         "heatmap" => "HeatmapChart",
         "candlestick" => "CandlestickChart",
+        "radar" => "RadarChart",
         _ => "LineChart",
     };
     let mut chart = source.replacen("Chart", name, 1);
@@ -748,12 +765,35 @@ pub fn ChartPage() -> Element {
                     prop("onhiddenchange", "Option<EventHandler<Vec<String>>>").doc("The hidden series a legend button asks for. The last shown series stays."),
                     prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it."),
                 ]),
+                props("RadarChart", vec![
+                    prop("axes", "Vec<RadarAxis>").default("required").doc("The spokes, clockwise from the top, at least three: `\"Speed\".into()` or `(\"Speed\", 10.0).into()`, the value at its rim. Unset, the rim is the axis' largest value rounded up to 1, 2, 2.5 or 5 times a power of ten. Fewer than three show the empty state."),
+                    prop("series", "Vec<Series>").default("required").doc("One value per axis each, in the axes' order. A missing value is drawn at the centre; a series with more or fewer values than axes warns in development and is cut or padded."),
+                    prop("title", "Option<String>").doc("Shown above the chart, and its accessible name."),
+                    prop("description", "Option<String>").doc("A sentence under the title: what to read from the chart."),
+                    prop("filled", "Option<bool>").default(on(theme.chart.radar_filled)).doc("Each series' shape filled, translucent, inside its outline."),
+                    prop("rings", "Option<usize>").default(theme.chart.radar_rings.to_string()).doc("The web's rings, its steps from the centre to the rim."),
+                    prop("legend", "LegendPosition").default("bottom with two series or more").doc("`bottom`, `top`, `start`, `end` or `none`. Each key is its series' point shape."),
+                    prop("grid", "Option<bool>").default(on(theme.chart.grid)).doc("The web: its rings and spokes."),
+                    prop("value_format", "ValueFormat").default("Auto").doc("How values are written in the tooltip and in the summary."),
+                    prop("unit", "Option<String>").doc("After every value, as `\"pts\"`; a series' own `unit` wins."),
+                    prop("aspect_ratio", "Option<f32>").default("4 / 3").doc("Width over height of the plot. Unset, the theme's `pie_aspect_ratio`."),
+                    prop("loading", "bool").default("false").doc("A placeholder instead of the plot, and `aria-busy` on the chart."),
+                    prop("empty", "Option<Element>").doc("Shown in the plot when there is no value or fewer than three axes. Unset, \"No data\"."),
+                    prop("tooltip", "Option<bool>").default(on(theme.chart.tooltip)).doc("A tooltip with each series' value on the axis of the pointer's nearest or the keys' point."),
+                    prop("tooltip_content", "Option<Callback<ChartPoint, Element>>").doc("The tooltip's content instead of the axis and each series' value there."),
+                    prop("onpointclick", "Option<EventHandler<ChartPoint>>").doc("A click on a point, a second tap on a pinned one, or Enter on the keys' point. `index` is the axis' place in `axes`, `x` its name."),
+                    prop("onactivechange", "Option<EventHandler<Option<ChartPoint>>>").doc("The point under the pointer or the keys; `None` when it leaves."),
+                    prop("hidden", "Option<Vec<String>>").doc("The names of the series the legend hides; set, they are controlled."),
+                    prop("default_hidden", "Vec<String>").default("[]").doc("Seeds the hidden series once. Ignored when `hidden` is set."),
+                    prop("onhiddenchange", "Option<EventHandler<Vec<String>>>").doc("The hidden series a legend button asks for. The last shown series stays."),
+                    prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it."),
+                ]),
             ],
             accessibility: a11y()
                 .key(["Tab"], "Into the plot and the legend's buttons in the order drawn: a legend at the top or the start comes first.")
-                .key(["ArrowRight", "ArrowLeft"], "Line: the next or previous point of the line, as drawn, left to right in either text direction. Bar: the next or previous category's bar of the series; `horizontal`, the next or previous series' bar in the category. Pie: the next or previous slice, clockwise. Funnel: the next or previous stage, top down. Scatter: the series' next or previous point, left to right. Heatmap: the next or previous cell in the row, left to right. Candlestick: the next or previous candle, left to right.")
-                .key(["ArrowDown", "ArrowUp"], "Line: the next or previous line at the same x value, or its nearest point. Bar: the next or previous series' bar in the category; `horizontal`, the next or previous category, top to bottom. Pie and funnel: the next or previous slice or stage. Scatter: the next or previous series' point nearest in x. Heatmap: the row below or above, at the nearest column.")
-                .key(["Home", "End"], "The line's or the series' first or last point or bar; a pie's first or last slice, a funnel's top or bottom stage; a scatter series' leftmost or rightmost point; a heatmap row's first or last cell; the first or last candle.")
+                .key(["ArrowRight", "ArrowLeft"], "Line: the next or previous point of the line, as drawn, left to right in either text direction. Bar: the next or previous category's bar of the series; `horizontal`, the next or previous series' bar in the category. Pie: the next or previous slice, clockwise. Funnel: the next or previous stage, top down. Scatter: the series' next or previous point, left to right. Heatmap: the next or previous cell in the row, left to right. Candlestick: the next or previous candle, left to right. Radar: the series' point on the next or previous axis, clockwise.")
+                .key(["ArrowDown", "ArrowUp"], "Line: the next or previous line at the same x value, or its nearest point. Bar: the next or previous series' bar in the category; `horizontal`, the next or previous category, top to bottom. Pie and funnel: the next or previous slice or stage. Scatter: the next or previous series' point nearest in x. Heatmap: the row below or above, at the nearest column. Radar: the next or previous series' point on the same axis.")
+                .key(["Home", "End"], "The line's or the series' first or last point or bar; a pie's first or last slice, a funnel's top or bottom stage; a scatter series' leftmost or rightmost point; a heatmap row's first or last cell; the first or last candle; a radar series' point on the first or last axis.")
                 .key(["Enter", "Space"], "Calls `onpointclick` with the point, bar or slice.")
                 .key(["Escape"], "Clears the brushed band, else the point and its tooltip. A tooltip a pointer hovers closes with Escape wherever focus is, and stays closed until the pointer leaves the plot.")
                 .key(["+", "-"], "With `zoom`: zooms the x axis, a lying bar chart's categories, in or out around the keys' point; the arrows carry the window along at its edge.")
@@ -762,7 +802,7 @@ pub fn ChartPage() -> Element {
                 .handles([
                     "The chart is a `role=\"figure\"` named by `title`, else by a spread `aria-label`, else \"chart\". The drawing is hidden from screen readers.",
                     "A loading chart says \"Loading chart\" in a live region when it starts, and its summary says it too.",
-                    "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is, then each mark line's name and value and each marked point's place and value, each line's error band and each bar series' error bars with their outer ends, the series drawn as a line over bars, the series on the right y axis, the axes' titles and, stacked, that the top line is the total; a pie's, the total, then each slice's value and share; a funnel's, its first and last stage, then each stage's value and share of the first; a scatter's, each series' count of points and its x and y ranges, a bubble series' sizes and each trend line's kind and direction, as \"Online: linear trend, rising.\"; a heatmap's, its rows by columns and its lowest and highest value, the highest and the lowest cell, then each row's cells (above 12 rows or 150 cells, a pointer to the keys instead); a candlestick chart's, its periods, the first open and the last close with the change, the highest high and the lowest low with their periods, and how many candles rose, fell and stayed.",
+                    "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is, then each mark line's name and value and each marked point's place and value, each line's error band and each bar series' error bars with their outer ends, the series drawn as a line over bars, the series on the right y axis, the axes' titles and, stacked, that the top line is the total; a pie's, the total, then each slice's value and share; a funnel's, its first and last stage, then each stage's value and share of the first; a scatter's, each series' count of points and its x and y ranges, a bubble series' sizes and each trend line's kind and direction, as \"Online: linear trend, rising.\"; a heatmap's, its rows by columns and its lowest and highest value, the highest and the lowest cell, then each row's cells (above 12 rows or 150 cells, a pointer to the keys instead); a candlestick chart's, its periods, the first open and the last close with the change, the highest high and the lowest low with their periods, and how many candles rose, fell and stayed; a radar's, its axes, then each series' highest and lowest axis and the axes it has no value on.",
                     "The plot is one tab stop, a `role=\"application\"` described as a chart, so a screen reader hands it the arrows. Each point the keys reach is announced, as \"This week, Tue: 132\", \"Chrome: 62, 62%.\" \"Online: x 12, y 34, size 80\" or, for a heatmap's cell, \"Tue, 12: 46\"; a candle reads its four prices and its direction, as \"Price, May: open 33, high 44, low 32, close 43, up\".",
                     "A heatmap never tells by colour alone: each cell writes its value where it fits, in black or white by the cell; an empty cell is outlined, dashed, and the scale under the plot keys it as \"No value\".",
                     "A candle never tells its direction by colour alone: a rising one is hollow, a falling one filled, and the key under the plot says which is which; an OHLC bar ticks its open left and its close right.",
@@ -796,7 +836,8 @@ pub fn ChartPage() -> Element {
                     "`.colors` and `.negative_color` add no meaning of their own: a loss already hangs below the axis. The legend keeps the series' colour.",
                     "A percent stack draws no error bars and reads the range in its tooltip; on any other layout the value axis reaches the far end of a range unless `y_min` or `y_max` is set. A line draws its ranges as a band, only around its points and not when `stacked`.",
                     "A rose's radius and a slice under `min_label_angle` are read by eye or not at all; the summary gives every value.",
-                    "`zoom` and `onrange` are for lines and bars; a pie, a funnel, a scatter, a heatmap and a candlestick chart export only.",
+                    "`zoom` and `onrange` are for lines and bars; a pie, a funnel, a scatter, a heatmap, a candlestick chart and a radar export only.",
+                    "A radar's web writes no values on its rings; each axis may have its own rim, so the tooltip, the announcement and the summary give the values. A value past its axis' `max` is drawn at the rim.",
                     "A bubble's size and a trend line are read by eye; the tooltip, the announcement and the summary give the sizes and each trend's direction. Bubbles are drawn largest first, so a small one stays on top.",
                     "A heatmap's scale is drawn under the plot whatever `legend` says, but `none`; in forced colours its cells keep the scale's colours and their black or white values; the axes, the names and an empty cell's outline take the system's.",
                     "A funnel is drawn widest stage first; the keys, the summary and the legend keep the order of `stages`. A hidden stage leaves the drawing and the others widen to the largest shown; percent labels stay shares of the first stage.",
@@ -818,8 +859,10 @@ pub fn ChartPage() -> Element {
                     Code { source: "ScatterChart" }
                     ", "
                     Code { source: "HeatmapChart" }
-                    " and "
+                    ", "
                     Code { source: "CandlestickChart" }
+                    " and "
+                    Code { source: "RadarChart" }
                     ", each drawn as an SVG that fills its width, with a tooltip, the arrow keys, a legend that hides and shows, and a summary for screen readers. Needs the "
                     Code { source: "charts" }
                     " feature. Web and Android."
@@ -841,7 +884,11 @@ pub fn ChartPage() -> Element {
                     Code { source: "trend" }
                     " line through each. A candlestick chart takes a "
                     Code { source: "Candle" }
-                    " per period, its open, high, low and close."
+                    " per period, its open, high, low and close. A radar takes "
+                    Code { source: "RadarAxis" }
+                    " spokes and one "
+                    Code { source: "Series" }
+                    " value per spoke."
                 }
                 Text {
                     "Lines and bars zoom and pan their x axis with "
@@ -858,9 +905,13 @@ pub fn ChartPage() -> Element {
                 children_text: "",
                 wrap: Wrap(component),
                 controls: vec![
-                    Control::toggle("type", ["line", "bar", "pie", "funnel", "scatter", "heatmap", "candlestick"])
+                    // A select: eight types overflow a segmented toggle.
+                    Control::select(
+                        "type",
+                        ["line", "bar", "pie", "funnel", "scatter", "heatmap", "candlestick", "radar"],
+                    )
                         .default("line")
-                        .labels(["Line", "Bar", "Pie", "Funnel", "Scatter", "Heatmap", "Candlestick"])
+                        .labels(["Line", "Bar", "Pie", "Funnel", "Scatter", "Heatmap", "Candlestick", "Radar"])
                         .code(|_, values| {
                             let mark = marks_code(values);
                             match values.str("type").as_str() {
@@ -898,6 +949,14 @@ pub fn ChartPage() -> Element {
                                     "candles: vec![{}]",
                                     PRICES.map(|(o, h, l, c)| format!("Candle::new({o:?}, {h:?}, {l:?}, {c:?})")).join(", ")
                                 ),
+                            ],
+                            "radar" => vec![
+                                "title: \"Phones\"".to_string(),
+                                format!(
+                                    "axes: vec![{}]",
+                                    FEATURES.map(|name| format!("({name:?}, 10.0).into()")).join(", ")
+                                ),
+                                format!("series: vec![Series::new(\"Phone A\", {PHONE_A:?}), Series::new(\"Phone B\", {PHONE_B:?})]"),
                             ],
                             _ => vec![
                                 "title: \"Visitors\"".to_string(),
@@ -1034,6 +1093,16 @@ pub fn ChartPage() -> Element {
                         .default("true")
                         .hidden_when(is("scatter"))
                         .code(|_, _| vec![]),
+                    Control::switch("filled")
+                        .default(on(theme.chart.radar_filled))
+                        .hidden_when(is("radar")),
+                    Control::slider("rings", ["2", "3", "4", "5", "6", "8", "10"])
+                        .default(theme.chart.radar_rings.to_string())
+                        .hidden_when(is("radar"))
+                        .code(|control, values| match values.str("rings") {
+                            rings if rings == control.default => vec![],
+                            rings => vec![format!("rings: {rings}")],
+                        }),
                     Control::toggle("mark_point", ["max", "min", "both", "none"])
                         .default("max")
                         .hidden_when(is("line"))
@@ -1200,6 +1269,16 @@ pub fn ChartPage() -> Element {
                                 candles: candles(),
                                 style: values.str("style"),
                                 y_min, y_max, y_ticks, x_title, y_title,
+                                legend, tooltip, loading, handle,
+                            }
+                        },
+                        "radar" => rsx! {
+                            RadarChart {
+                                title: "Phones",
+                                axes: FEATURES.map(|name| RadarAxis::from((name, 10.0))).to_vec(),
+                                series: vec![Series::new("Phone A", PHONE_A), Series::new("Phone B", PHONE_B)],
+                                filled: values.str("filled") == "true",
+                                rings: values.str("rings").parse::<usize>().ok(),
                                 legend, tooltip, loading, handle,
                             }
                         },

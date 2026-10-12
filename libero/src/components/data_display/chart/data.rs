@@ -193,7 +193,8 @@ pub struct Series {
     pub dashed: bool,
     /// Written after each value in the tooltip and summary. Unset, the chart's `unit`.
     pub unit: Option<String>,
-    /// The shape of a line's points and of its legend key. Unset, a circle.
+    /// The shape of a line's points and of its legend key. Unset, a circle; on a radar,
+    /// circle, triangle, square and diamond by the series' place.
     pub symbol: Option<PointSymbol>,
     /// A bar's own colour, one per x value; `None` or past the end, the series' colour.
     pub colors: Vec<Option<ChartColor>>,
@@ -605,6 +606,46 @@ pub enum Trend {
     /// A polynomial of this order, held to 2 to 6: a first order is `Linear`, a higher one
     /// only chases the points' noise.
     Polynomial(u8),
+}
+
+/// One spoke of a [`RadarChart`](super::RadarChart): its name and the value at its rim.
+///
+/// ```rust
+/// # use libero::components::RadarAxis;
+/// let axes: Vec<RadarAxis> = vec!["Speed".into(), ("Range", 500.0).into()];
+/// # let _ = axes;
+/// ```
+#[derive(Clone, Debug, PartialEq)]
+pub struct RadarAxis {
+    pub name: String,
+    /// The value at the rim. Unset, the axis' largest value rounded up to a round number.
+    pub max: Option<f64>,
+}
+
+impl RadarAxis {
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            max: None,
+        }
+    }
+
+    pub fn max(mut self, max: f64) -> Self {
+        self.max = Some(max);
+        self
+    }
+}
+
+impl From<&str> for RadarAxis {
+    fn from(name: &str) -> Self {
+        Self::new(name)
+    }
+}
+
+impl From<(&str, f64)> for RadarAxis {
+    fn from((name, max): (&str, f64)) -> Self {
+        Self::new(name).max(max)
+    }
 }
 
 /// A point of a chart, as a click or a focus reports it.

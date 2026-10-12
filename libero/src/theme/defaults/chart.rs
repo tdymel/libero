@@ -112,7 +112,8 @@ str_enum! {
 pub struct ChartDefaults {
     /// Width over height of a line's or a bar chart's plot.
     pub aspect_ratio: f32,
-    /// A pie's width over height: squarer than a line's, so the circle fills more of it.
+    /// A pie's and a radar's width over height: squarer than a line's, so the circle fills
+    /// more of it.
     pub pie_aspect_ratio: f32,
     /// Series colours in order, from the brand ramp. Each is drawn at least 3:1 on the page
     /// (a step darker if not), one that reads like an earlier one is skipped, and past the
@@ -155,6 +156,10 @@ pub struct ChartDefaults {
     pub slice_radius: Option<Size>,
     /// A slice narrower than this many degrees gets no label.
     pub min_label_angle: f32,
+    /// A radar's series shapes are filled, translucent, inside their outline.
+    pub radar_filled: bool,
+    /// The rings of a radar's web, its steps from the centre to the rim.
+    pub radar_rings: usize,
     /// Zoom and pan along a line's or a bar chart's x axis.
     pub zoom: bool,
     pub legend_gap: &'static str,
@@ -198,6 +203,8 @@ impl ChartDefaults {
         slice_gap: 1.0,
         slice_radius: None,
         min_label_angle: 0.0,
+        radar_filled: true,
+        radar_rings: 5,
         zoom: false,
         legend_gap: "16px",
         swatch_size: "12px",

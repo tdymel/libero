@@ -95,6 +95,13 @@ pub struct ChartLabels {
     pub trends: [&'static str; 4],
     /// Rising, falling and flat.
     pub directions: [&'static str; 3],
+    pub radar: &'static str,
+    /// The start of a radar's summary: `{count}` axes, `{names}` theirs in order.
+    pub radar_axes: &'static str,
+    /// A radar series: `{max}` its highest value on axis `{high}`, `{min}` its lowest on `{low}`.
+    pub radar_series: &'static str,
+    /// After a radar series' sentence: the `{axes}` it has no value on, drawn at the centre.
+    pub radar_missing: &'static str,
     /// The x axis' `{title}`, in the summary.
     pub x_axis: &'static str,
     /// The y axis' `{title}`, in the summary.
@@ -190,6 +197,10 @@ impl ChartLabels {
         trend: "{name}: {kind} trend, {direction}.",
         trends: ["linear", "exponential", "logarithmic", "polynomial"],
         directions: ["rising", "falling", "flat"],
+        radar: "Radar chart",
+        radar_axes: "{kind} over {count} axes: {names}.",
+        radar_series: "{name}: highest on {high}, {max}; lowest on {low}, {min}.",
+        radar_missing: "{name}: no value on {axes}, drawn at the centre.",
         x_axis: "X axis: {title}.",
         y_axis: "Y axis: {title}.",
         y2_axis: "Right y axis: {title}.",
@@ -266,6 +277,10 @@ impl ChartLabels {
         trend: "{name}: {kind}er Trend, {direction}.",
         trends: ["linear", "exponentiell", "logarithmisch", "polynomial"],
         directions: ["steigend", "fallend", "flach"],
+        radar: "Netzdiagramm",
+        radar_axes: "{kind} mit {count} Achsen: {names}.",
+        radar_series: "{name}: am höchsten bei {high}, {max}; am niedrigsten bei {low}, {min}.",
+        radar_missing: "{name}: kein Wert bei {axes}, in der Mitte gezeichnet.",
         x_axis: "X-Achse: {title}.",
         y_axis: "Y-Achse: {title}.",
         y2_axis: "Rechte Y-Achse: {title}.",
