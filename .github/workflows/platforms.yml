@@ -218,7 +218,8 @@ jobs:
   # no Xvfb, no xdotool, no TCC grant.
   macos-desktop:
     runs-on: macos-26
-    timeout-minutes: 45
+    # A cold build is ~16 min, the scenarios ~13 min (2862).
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -239,8 +240,8 @@ jobs:
         env:
           # The runner's artifacts go to `temp_dir()`, which is `$TMPDIR` on macOS.
           TMPDIR: ${{ runner.temp }}
-          # Inside the job's 45 min, after a ~15 min cold build: a hang still uploads.
-          E2E_DESKTOP_DEADLINE: 1500
+          # Inside the job's 60 min, after a ~16 min cold build: a hang still uploads.
+          E2E_DESKTOP_DEADLINE: 1800
       - if: failure() || cancelled()
         run: python3 .github/scripts/ci_annotate.py "$RUNNER_TEMP/e2e.log"
       - if: failure()
@@ -487,8 +488,15 @@ jobs:
   # The scenarios' `ios` arm in a simulator (2784), informational: the fixture app answers the
   # e2e bridge over loopback and AXe injects HID touches and keys. No phone, no signing.
   ios-e2e:
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ["1", "2", "3", "4", "5", "6"]
     runs-on: macos-26
-    timeout-minutes: 180
+    # One run of all units took 150 min (2875); a cold run spends ~35 min on the fixture build and install.
+    timeout-minutes: 120
+    env:
+      SHARDS: 6
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -496,10 +504,14 @@ jobs:
           targets: aarch64-apple-ios-sim
           cache-key: platforms-ios-e2e
       - uses: ./.github/actions/dx
-      # Unpinned: the tap has one formula; the version lands in the log.
+      # Pinned to the tap commit the runs that drove the simulator used (2875); the version lands in the log.
       - run: |
+          brew tap cameroncooke/axe
+          git -C "$(brew --repository cameroncooke/axe)" checkout --detach "$AXE_TAP"
           brew install cameroncooke/axe/axe
           axe --version
+        env:
+          AXE_TAP: 64a21aa4c30e173280a0c3847b19a9a57dfcbfc0
       # What the image offers; the runner boots the newest runtime's first iPhone.
       - run: |
           xcrun simctl list runtimes
@@ -507,7 +519,11 @@ jobs:
       # HID keys as a hardware keyboard, so a focused field raises no soft keyboard.
       - run: defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool true
       # The runner prints `e2e ios: screen ..., viewport origin ...` per app launch.
-      - run: cargo run -p e2e -- ios 2>&1 | tee "$RUNNER_TEMP/e2e.log"
+      - run: |
+          units=$(python3 .github/scripts/shard.py units ${{ matrix.shard }} "$SHARDS")
+          echo "units: $units"
+          # shellcheck disable=SC2086
+          cargo run -p e2e -- ios $units 2>&1 | tee "$RUNNER_TEMP/e2e.log"
         env:
           # The runner's artifacts go to `temp_dir()`, which is `$TMPDIR` on macOS.
           TMPDIR: ${{ runner.temp }}
@@ -518,7 +534,7 @@ jobs:
       - if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: ios-e2e-artifacts
+          name: ios-e2e-artifacts-${{ matrix.shard }}
           path: ${{ runner.temp }}/e2e-artifacts
           if-no-files-found: ignore
           retention-days: 3

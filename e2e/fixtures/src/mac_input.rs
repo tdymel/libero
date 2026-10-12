@@ -6,7 +6,10 @@ use objc2::{MainThreadMarker, Message};
 use objc2_app_kit::{
     NSApplication, NSEvent, NSEventModifierFlags, NSEventType, NSScreen, NSView, NSWindow,
 };
-use objc2_core_graphics::{CGEvent, CGScrollEventUnit};
+use objc2_core_foundation::CGPoint;
+use objc2_core_graphics::{
+    CGEvent, CGEventTapLocation, CGEventType, CGMouseButton, CGScrollEventUnit,
+};
 use objc2_foundation::{NSPoint, NSProcessInfo, NSString};
 use serde_json::{Value, json};
 
@@ -19,6 +22,12 @@ pub fn run(view: &NSView, op: &Value) -> Result<Value, String> {
     let number = |name: &str| op[name].as_f64().ok_or(format!("{op}: no number `{name}`"));
     match op["op"].as_str().unwrap_or_default() {
         "prepare" => Ok(prepare(mtm, view, &window)),
+        "enter" => {
+            let size = view.bounds().size;
+            let at = point(view, size.width / 2.0, size.height / 2.0);
+            hid_mouse(view, &window, NSEventType::MouseMoved, at)?;
+            Ok(Value::Null)
+        }
         "move" => {
             let at = point(view, number("x")?, number("y")?);
             let kind = if op["held"].as_bool() == Some(true) {
@@ -26,7 +35,14 @@ pub fn run(view: &NSView, op: &Value) -> Result<Value, String> {
             } else {
                 NSEventType::MouseMoved
             };
-            mouse(view, &window, kind, at, 0)?;
+            mouse(
+                view,
+                &window,
+                kind,
+                at,
+                0,
+                op["via"].as_str().unwrap_or("target"),
+            )?;
             Ok(Value::Null)
         }
         "down" | "up" => {
@@ -36,12 +52,14 @@ pub fn run(view: &NSView, op: &Value) -> Result<Value, String> {
             } else {
                 NSEventType::LeftMouseUp
             };
+            let count = op["count"].as_i64().unwrap_or(1) as isize;
             mouse(
                 view,
                 &window,
                 kind,
                 at,
-                op["count"].as_i64().unwrap_or(1) as isize,
+                count,
+                op["via"].as_str().unwrap_or("window"),
             )?;
             Ok(Value::Null)
         }
@@ -55,7 +73,7 @@ pub fn run(view: &NSView, op: &Value) -> Result<Value, String> {
                 .as_array()
                 .map(|mods| mods.iter().filter_map(Value::as_str).collect())
                 .unwrap_or_default();
-            key_event(&window, key, &mods)?;
+            key_event(&window, key, &mods, op["via"].as_str().unwrap_or("window"))?;
             Ok(Value::Null)
         }
         other => Err(format!("unknown input op {other:?}")),
@@ -109,14 +127,16 @@ fn target(view: &NSView, at: NSPoint) -> Retained<NSView> {
     view.hitTest(local).unwrap_or_else(|| view.retain())
 }
 
-/// Buttons go through `sendEvent:` like a real click; moves go straight to the view under the
-/// point, as WebKitTestRunner does, since a window routes them by tracking area, not by event.
+/// Where a mouse event is handed in, `via`: the view under the point (`target`), the WebView
+/// (`view`), the window's `sendEvent:` (`window`), the app's queue (`post`) or the HID tap (`cg`).
+/// Which one WKWebView answers on a hosted runner is found by the driver's calibration.
 fn mouse(
     view: &NSView,
     window: &NSWindow,
     kind: NSEventType,
     at: NSPoint,
     count: isize,
+    via: &str,
 ) -> Result<(), String> {
     let pressure = if kind == NSEventType::LeftMouseDown {
         1.0
@@ -135,10 +155,54 @@ fn mouse(
         pressure,
     )
     .ok_or("NSEvent refused a mouse event")?;
-    match kind {
-        NSEventType::MouseMoved => target(view, at).mouseMoved(&event),
-        _ => window.sendEvent(&event),
+    match via {
+        "target" => deliver(&target(view, at), kind, &event),
+        "view" => deliver(view, kind, &event),
+        "window" => window.sendEvent(&event),
+        "post" => NSApplication::sharedApplication(MainThreadMarker::from(view))
+            .postEvent_atStart(&event, false),
+        "cg" => hid_mouse(view, window, kind, at)?,
+        other => return Err(format!("unknown input route {other:?}")),
     }
+    Ok(())
+}
+
+/// The responder method an event of `kind` would reach, called directly.
+fn deliver(view: &NSView, kind: NSEventType, event: &NSEvent) {
+    match kind {
+        NSEventType::LeftMouseDown => view.mouseDown(event),
+        NSEventType::LeftMouseUp => view.mouseUp(event),
+        NSEventType::LeftMouseDragged => view.mouseDragged(event),
+        _ => view.mouseMoved(event),
+    }
+}
+
+/// A real HID mouse event at the point, as a pointer device would send it; needs the
+/// process's PostEvent grant, which a hosted runner may not give.
+fn hid_mouse(
+    view: &NSView,
+    window: &NSWindow,
+    kind: NSEventType,
+    at: NSPoint,
+) -> Result<(), String> {
+    let on_screen = window.convertPointToScreen(at);
+    let top = NSScreen::screens(MainThreadMarker::from(view))
+        .firstObject()
+        .map_or(0.0, |screen| screen.frame().size.height);
+    let kind = match kind {
+        NSEventType::LeftMouseDown => CGEventType::LeftMouseDown,
+        NSEventType::LeftMouseUp => CGEventType::LeftMouseUp,
+        NSEventType::LeftMouseDragged => CGEventType::LeftMouseDragged,
+        _ => CGEventType::MouseMoved,
+    };
+    let event = CGEvent::new_mouse_event(
+        None,
+        kind,
+        CGPoint::new(on_screen.x, top - on_screen.y),
+        CGMouseButton::Left,
+    )
+    .ok_or("CGEvent refused a mouse event")?;
+    CGEvent::post(CGEventTapLocation::HIDEventTap, Some(&event));
     Ok(())
 }
 
@@ -160,17 +224,14 @@ fn wheel(view: &NSView, window: &NSWindow, x: f64, y: f64, dy: f64) -> Result<()
         0,
     )
     .ok_or("CGEvent refused a wheel event")?;
-    CGEvent::set_location(
-        Some(&event),
-        objc2_core_foundation::CGPoint::new(on_screen.x, top - on_screen.y),
-    );
+    CGEvent::set_location(Some(&event), CGPoint::new(on_screen.x, top - on_screen.y));
     let event = NSEvent::eventWithCGEvent(&event).ok_or("NSEvent refused the CGEvent wheel")?;
     target(view, at).scrollWheel(&event);
     Ok(())
 }
 
 /// One key down and up to the first responder; `mods` among shift, ctrl, alt, meta.
-fn key_event(window: &NSWindow, key: &str, mods: &[&str]) -> Result<(), String> {
+fn key_event(window: &NSWindow, key: &str, mods: &[&str], via: &str) -> Result<(), String> {
     let (code, shifted) = keystroke(key).ok_or(format!("no macOS key for {key:?}"))?;
     let mut flags = NSEventModifierFlags::empty();
     for name in mods {
@@ -215,7 +276,22 @@ fn key_event(window: &NSWindow, key: &str, mods: &[&str]) -> Result<(), String> 
             code,
         )
         .ok_or("NSEvent refused a key event")?;
-        window.sendEvent(&event);
+        match via {
+            "window" => window.sendEvent(&event),
+            "responder" => {
+                let responder = window
+                    .firstResponder()
+                    .ok_or("the window has no first responder")?;
+                if kind == NSEventType::KeyDown {
+                    responder.keyDown(&event);
+                } else {
+                    responder.keyUp(&event);
+                }
+            }
+            "post" => NSApplication::sharedApplication(MainThreadMarker::from(window))
+                .postEvent_atStart(&event, false),
+            other => return Err(format!("unknown key route {other:?}")),
+        }
     }
     Ok(())
 }
@@ -236,6 +312,14 @@ fn key_chars(key: &str) -> String {
         "End" => '\u{f72b}',
         "PageUp" => '\u{f72c}',
         "PageDown" => '\u{f72d}',
+        // NSF1FunctionKey and on, one code point apiece.
+        f if f
+            .strip_prefix('F')
+            .and_then(|n| n.parse::<u32>().ok())
+            .is_some_and(|n| (1..=12).contains(&n)) =>
+        {
+            char::from_u32(0xf703 + f[1..].parse::<u32>().unwrap_or(1)).unwrap_or('\u{f704}')
+        }
         _ => return key.to_string(),
     };
     special.to_string()
@@ -258,6 +342,18 @@ fn keystroke(key: &str) -> Option<(u16, bool)> {
         ("ArrowRight", 124),
         ("ArrowDown", 125),
         ("ArrowUp", 126),
+        ("F1", 122),
+        ("F2", 120),
+        ("F3", 99),
+        ("F4", 118),
+        ("F5", 96),
+        ("F6", 97),
+        ("F7", 98),
+        ("F8", 100),
+        ("F9", 101),
+        ("F10", 109),
+        ("F11", 103),
+        ("F12", 111),
     ];
     // Unshifted, shifted, key code.
     const CHARS: &[(&str, &str, u16)] = &[

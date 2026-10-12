@@ -320,7 +320,8 @@ async fn the_player_follows_its_element<D: Driver>(d: &mut D, _route: &str) -> R
 e2e::scenario!(
     an_audio_player_follows_its_element,
     "/audio",
-    the_player_follows_its_element
+    the_player_follows_its_element,
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     a_video_player_follows_its_element,

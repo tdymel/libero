@@ -46,7 +46,8 @@ async fn a_tap_opens_only_the_calendar<D: Driver>(d: &mut D, _route: &str) -> Re
 e2e::scenario!(
     a_tap_on_a_date_range_field_opens_only_the_calendar,
     "/date-range-field",
-    a_tap_opens_only_the_calendar
+    a_tap_opens_only_the_calendar,
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// Android's Back closes the dropdown, keeps the value, and the app stays (1300).

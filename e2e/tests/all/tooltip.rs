@@ -165,14 +165,16 @@ e2e::scenario!(
     "/tooltip/quick",
     hover_places_and_leaving_closes,
     web: skip("1760: hover_shows_the_bubble_and_the_pointer_can_cross_the_gap places and leaves it"),
-    android: skip("996: no hover on touch; a long press opens it instead")
+    android: skip("996: no hover on touch; a long press opens it instead"),
+    ios: skip("a touch screen has no hover")
 );
 e2e::scenario!(
     the_pointer_can_rest_on_the_bubble,
     "/tooltip/quick",
     rests_on_the_bubble,
     web: skip("1760: hover_shows_the_bubble_and_the_pointer_can_cross_the_gap rests on it"),
-    android: skip("996: no hover on touch; a long press opens it instead")
+    android: skip("996: no hover on touch; a long press opens it instead"),
+    ios: skip("a touch screen has no hover")
 );
 e2e::scenario!(
     a_long_press_opens_it_on_touch,
@@ -216,13 +218,15 @@ e2e::scenario!(
     escape_closes_it_under_the_pointer,
     "/tooltip/quick",
     escape_under_the_pointer,
-    web: skip("1760: escape_closes_it_under_the_pointer_and_on_focus covers it")
+    web: skip("1760: escape_closes_it_under_the_pointer_and_on_focus covers it"),
+    ios: skip("a touch screen has no hover")
 );
 e2e::scenario!(
     tab_focus_opens_it,
     "/tooltip/quick",
     tab_focus_opens,
-    web: skip("1760: tab_focus_shows_the_bubble_and_leaving_hides_it covers it")
+    web: skip("1760: tab_focus_shows_the_bubble_and_leaving_hides_it covers it"),
+    ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
 
 #[test]

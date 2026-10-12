@@ -89,7 +89,8 @@ async fn opens_and_unmounts<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     it_opens_to_its_content_and_unmounts_it_once_closed,
     "/collapse",
-    opens_and_unmounts
+    opens_and_unmounts,
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
 /// A kept-mounted panel's content is out of the tab order and the tree while
