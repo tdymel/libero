@@ -166,7 +166,11 @@ Web: a secure context (HTTPS or localhost). Android: declare
 `"android.permission.MODIFY_AUDIO_SETTINGS"` under `[android.permissions]`:
 without it every microphone request is denied. The system asks on the first
 start. Windows: WebView2 counts dioxus's page as insecure and has no capture
-API until the app marks the page secure (Getting started, Desktop); the page then reports a secure context, capture itself is untested.
+API until the app marks the page secure (Getting started, Desktop); the page then
+reports a secure context and a start answers `NotFound` on CI's runner, which has
+no camera; capture itself is untested. macOS's WebView answers a start the same
+way (`Constraint`), capture untested. iOS's WebView opens and stops a capture in
+the simulator; a device is untested.
 Blitz and a server render have no capture API: `is_supported()` stays false and a start fails with `Unsupported`. Screen
 capture and speaker choice are not covered.
 
@@ -234,8 +238,9 @@ pub enum PermissionState { Granted, Denied, Prompt, Unknown, Unsupported }
 | Web | Full, in a secure context. |
 | Android (WebView) | Full with `[permissions] camera` and `microphone` in Dioxus.toml, plus `MODIFY_AUDIO_SETTINGS` under `[android.permissions]` for the microphone. |
 | Linux desktop (WebKitGTK) | Every start is `Denied`. |
-| macOS desktop | Untested; the WebView grants every page, the system's prompt is the only gate. |
-| Windows desktop | Untested. |
+| macOS desktop (WKWebView) | A start answers `Constraint` on CI's runner, which has no camera; capture is untested. The WebView grants every page, the system's prompt is the only gate. |
+| Windows desktop (WebView2) | On a secure page a start answers `NotFound` on CI's runner, which has no camera; capture is untested. |
+| iOS (WKWebView) | Opens and stops a capture in the simulator, `Granted`; a device is untested. |
 | Blitz, server render | `Unsupported`. |
 
 ## Accessibility

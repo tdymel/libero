@@ -116,9 +116,11 @@ itself, with no libero code: see the recipe below.
 Web: a secure context (HTTPS or localhost). Desktop WebView on Linux: with
 libero's `desktop` feature, the desktop's notification server over D-Bus, as
 for Blitz; without it WebKitGTK denies every request. macOS and Windows
-WebViews go through the page's `Notification`, untested on macOS; WebView2 counts
-dioxus's page as insecure and denies it until the app marks the page secure
-(Getting started, Desktop). Push is web only.
+WebViews go through the page's `Notification`, which reads `Prompt` on CI's
+runner, showing one is untested; WebView2 counts dioxus's page as insecure and
+denies it until the app marks the page secure (Getting started, Desktop). iOS's
+WebView defines no `Notification`: `is_supported()` stays false and calls fail
+with `Unsupported`. Push is web only.
 Android: the system's notifications over JNI, after
 `notifications = { description = ".." }` under `[permissions]` in the app's
 `Dioxus.toml`; a tap reopens the app and runs `on_click`. The status bar icon
@@ -200,7 +202,8 @@ Both handles are `Copy`. `PushOptions` apply to the next `subscribe`.
 |---|---|---|
 | Web | Full, in a secure context. Chrome on Android shows through the page's service worker, which must forward clicks (below). | Full, in a secure context; iOS Safari only for a Home Screen web app. |
 | Linux desktop (WebKitGTK) | With libero's `desktop` feature, the desktop's notification server, always `Granted`; a click raises the window and runs `on_click`. Without it every request is `Denied`. | `Unsupported`. |
-| macOS, Windows desktop | Untested; a click runs `on_click` and, with libero's `desktop` feature, raises the window. | `Unsupported`. |
+| macOS, Windows desktop | The page's `Notification` exists and reads `Prompt` on CI's runner; showing one and its click are untested, a click is meant to run `on_click` and, with libero's `desktop` feature, raise the window. | `Unsupported`. |
+| iOS (WKWebView) | `Unsupported`: the WebView defines no `Notification`, checked in the simulator. | `Unsupported`. |
 | Android (WebView) | Full, through the system's `NotificationManager`, with `notifications` under `[permissions]`; one channel named after the app. `icon` is the large icon, drawn to a PNG by the WebView; the status bar shows the `libero_notification` drawable, else the launcher icon. An action reopens the app. | `Unsupported`; FCM needs app-level Kotlin (recipe below). |
 | Blitz on Linux | Full, through the desktop's notification server; always `Granted`. A click runs `on_click` without raising the window. | `Unsupported`. |
 | Blitz on macOS and Windows, server render | `Unsupported`. | `Unsupported`. |

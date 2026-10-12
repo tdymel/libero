@@ -68,8 +68,10 @@ fn ShareLocation() -> Element {
 Web: a secure context (HTTPS or localhost). Android: declare
 `[permissions] location` in Dioxus.toml; the system asks on the first request.
 Windows: WebView2 counts dioxus's page as insecure and denies every request
-unless the app marks it secure (Getting started, Desktop). macOS and iOS
-WebViews are untested. Blitz and a server render have no Geolocation API:
+unless the app marks it secure (Getting started, Desktop). iOS's WebView asks
+once per origin and then locates in the simulator, a device is untested; a
+request in macOS's WebView ends in `Denied` on CI's runner, a fix is untested.
+Blitz and a server render have no Geolocation API:
 `is_supported()` stays false and a request fails with `Unsupported`.
 
 ## API
@@ -121,8 +123,9 @@ pub enum PermissionState { Granted, Denied, Prompt, Unknown, Unsupported }
 | Web | Full, in a secure context. |
 | Android (WebView) | Full with `[permissions] location` in Dioxus.toml; the permission reads `Unknown` until a fix. |
 | Linux desktop (WebKitGTK) | Every request is `Denied`. |
-| Windows desktop (WebView2) | `Denied` unless the app marks dioxus's page secure (Getting started, Desktop); untested. |
-| macOS desktop, iOS | Untested. |
+| Windows desktop (WebView2) | `Denied` unless the app marks dioxus's page secure (Getting started, Desktop); then the permission reads `Prompt` and a request times out on CI's runner, which has no position. A fix is untested. |
+| macOS desktop (WKWebView) | A request ends in `Denied` on CI's runner; a fix is untested. |
+| iOS (WKWebView) | Full in the simulator: after the WebView's own prompt, which asks once per origin, a fix from its set position. A device is untested. |
 | Blitz, server render | `Unsupported`. |
 
 ## Accessibility

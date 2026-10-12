@@ -61,7 +61,9 @@ screen. `FullscreenHandle` is `Copy`.
 | Web | Native where the browser grants it, else drawn. |
 | Linux desktop (WebKitGTK) | Native, checked by the e2e suite; drawn when refused. |
 | Android (WebView) | Native, checked by the e2e suite on the emulator; drawn when refused. |
-| macOS, Windows desktop | Untested. |
+| macOS desktop (WKWebView) | CI's probe reads no `document.fullscreenEnabled`; the e2e suite checks the drawn box, but Escape out of the video player's fullscreen is skipped (upstream), so whether `enter()` goes native or draws is untested. |
+| Windows desktop (WebView2) | The Fullscreen API is there (CI's probe); the e2e suite enters and leaves the video player's fullscreen, native or drawn. |
+| iOS (WKWebView) | CI's probe finds no Fullscreen API in the simulator, so `enter()` draws; the e2e suite checks the drawn box. |
 | Blitz, server render | Always drawn. |
 
 ## Accessibility
