@@ -29,6 +29,10 @@ pub struct ChartLabels {
     pub slices: &'static str,
     /// A point as the keys announce it: `{name}` its series, `{x}` and `{value}` its own.
     pub point: &'static str,
+    /// The x axis' `{title}`, in the summary.
+    pub x_axis: &'static str,
+    /// The y axis' `{title}`, in the summary.
+    pub y_axis: &'static str,
 }
 
 impl ChartLabels {
@@ -48,6 +52,8 @@ impl ChartLabels {
         legend: "Series",
         slices: "Slices",
         point: "{name}, {x}: {value}",
+        x_axis: "X axis: {title}.",
+        y_axis: "Y axis: {title}.",
     };
 
     pub const GERMAN: Self = Self {
@@ -66,5 +72,7 @@ impl ChartLabels {
         legend: "Reihen",
         slices: "Segmente",
         point: "{name}, {x}: {value}",
+        x_axis: "X-Achse: {title}.",
+        y_axis: "Y-Achse: {title}.",
     };
 }

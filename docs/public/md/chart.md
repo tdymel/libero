@@ -131,6 +131,32 @@ fn Demo() -> Element {
 sets its colour, otherwise it takes the theme's palette for its place. A slice's
 share is its value over the sum; a negative or missing value takes none.
 
+`y_min` and `y_max` fix the value axis' ends, `y_ticks` the steps between them.
+`x_title` and `y_title` say what each axis counts; the summary reads them out.
+Both `LineChart` and `BarChart` take them; a `horizontal` bar chart writes its
+`y_title` under the values.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{LineChart, Series};
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        LineChart {
+            title: "Visitors",
+            x: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+            series: vec![Series::new("This week", [120.0, 132.0, 101.0, 134.0, 90.0, 230.0, 210.0])],
+            y_min: 50.0,
+            y_max: 250.0,
+            y_ticks: 4usize,
+            x_title: "Day",
+            y_title: "Visits",
+        }
+    }
+}
+```
+
 The pointer or the arrow keys pick a point, a bar or a slice: a tooltip shows
 its values there. `onpointclick` reports a clicked one, and the legend's buttons
 hide and show series or slices.
@@ -211,6 +237,11 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `description` | `Option<String>` | | A sentence under the title: what to read from the chart. |
 | `curve` | `Curve` | `linear` | `linear`, `smooth` or `step`. |
 | `points` | `Option<bool>` | `true` | A dot on every point; never past the theme's `points_limit` points. |
+| `y_min` | `Option<f64>` | | The y axis' lowest value. Unset, 0 or the lowest value below it. |
+| `y_max` | `Option<f64>` | | The y axis' highest value. Unset, a round number at or over the highest value. |
+| `y_ticks` | `Option<usize>` | `6` | The steps the y axis is cut into: 4 writes 5 labels. |
+| `x_title` | `Option<String>` | | Under the x axis: what it counts. |
+| `y_title` | `Option<String>` | | Beside the y axis, read upward: what it measures. |
 | `legend` | `LegendPosition` | bottom with two series or more | `bottom`, `top`, `start`, `end` or `none`. |
 | `grid` | `Option<bool>` | `true` | Horizontal guide lines. |
 | `value_format` | `ValueFormat` | `Auto` | How values are written on the axis, in the tooltip and in the summary. |
@@ -238,6 +269,11 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `orientation` | `Orientation` | `vertical` | `horizontal` lays the categories down the side, top to bottom. |
 | `radius` | `Size` | `xs` | Corner radius of a bar's free end, the one away from its axis, on the theme's radius scale. |
 | `value_labels` | `Option<bool>` | `false` | Each bar's value written on it. |
+| `y_min` | `Option<f64>` | | The value axis' lowest value. Unset, 0 or the lowest value below it. |
+| `y_max` | `Option<f64>` | | The value axis' highest value. Unset, a round number at or over the highest value. |
+| `y_ticks` | `Option<usize>` | `6` | The steps the value axis is cut into: 4 writes 5 labels. |
+| `x_title` | `Option<String>` | | Along the categories: what they are. Under them, or beside them when `horizontal`. |
+| `y_title` | `Option<String>` | | Along the values: what they measure. Beside them, or under them when `horizontal`. |
 | `legend` | `LegendPosition` | bottom with two series or more | `bottom`, `top`, `start`, `end` or `none`. |
 | `grid` | `Option<bool>` | `true` | Guide lines across the values. |
 | `value_format` | `ValueFormat` | `Auto` | How values are written on the axis, the bars, in the tooltip and in the summary. |
@@ -300,8 +336,8 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 - The chart is a `role="figure"` named by `title`. The drawing is hidden from
   screen readers.
 - A hidden summary gives the x range and each series' lowest and highest value,
-  and where the highest is; a pie's, the total, then each slice's value and
-  share.
+  and where the highest is, then the axes' titles; a pie's, the total, then each
+  slice's value and share.
 - The plot is one tab stop, a `role="application"` described as a chart, so a
   screen reader hands it the arrows. Each point the keys reach is announced, as
   "This week, Tue: 132" or "Chrome: 62, 62%."
@@ -354,6 +390,7 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 | `points_limit` | `usize` | No dots past this many points. |
 | `tooltip` | `bool` | Default `tooltip`. |
 | `stroke_width` | `f32` | Line width, in pixels. |
+| `y_ticks` | `usize` | Default `y_ticks`. |
 | `bar_layout` | `BarLayout` | Default `layout`. |
 | `bar_radius` | `Size` | Default `radius`. |
 | `value_labels` | `bool` | Default `value_labels`. |

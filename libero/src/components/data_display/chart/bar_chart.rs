@@ -2,10 +2,10 @@ use dioxus::prelude::*;
 
 use super::{
     Series, XValues,
-    engine::{self, BarSpec, SeriesSpec},
+    engine::{self, Axes, BarSpec, SeriesSpec},
     frame::{
-        Frame, Interaction, chart_unit, overlay_series, series_specs, shown_places, summary,
-        use_plot_size,
+        Frame, Interaction, axis_titles, chart_unit, overlay_series, series_specs, shown_places,
+        summary, use_plot_size,
     },
     legend::use_hidden_series,
     props::chart_props,
@@ -36,6 +36,21 @@ chart_props! {
         /// Each bar's value written on it. Unset, the theme's.
         #[props(default)]
         value_labels: Option<bool>,
+        /// The value axis' lowest value. Unset, 0 or the lowest value below it.
+        #[props(default)]
+        y_min: Option<f64>,
+        /// The value axis' highest value. Unset, a round number at or over the highest value.
+        #[props(default)]
+        y_max: Option<f64>,
+        /// The steps the value axis is cut into: 4 writes 5 labels. Unset, the theme's.
+        #[props(default)]
+        y_ticks: Option<usize>,
+        /// Along the categories: what they are. Under them, or beside them when `horizontal`.
+        #[props(default, into)]
+        x_title: Option<String>,
+        /// Along the values: what they measure. Beside them, or under them when `horizontal`.
+        #[props(default, into)]
+        y_title: Option<String>,
     }
 }
 
@@ -117,6 +132,13 @@ pub fn BarChart(props: BarChartProps) -> Element {
                 .get(props.radius.copied_or(theme.chart.bar_radius)),
         ),
         value_labels: props.value_labels.unwrap_or(theme.chart.value_labels),
+        axes: Axes {
+            min: props.y_min,
+            max: props.y_max,
+            ticks: props.y_ticks.unwrap_or(theme.chart.y_ticks),
+            x_title: props.x_title.clone(),
+            y_title: props.y_title.clone(),
+        },
         grid: props.grid.unwrap_or(theme.chart.grid),
         ink: ChartInk::of(theme, forced),
         format: props.value_format,
@@ -134,7 +156,11 @@ pub fn BarChart(props: BarChartProps) -> Element {
     let summary = match (props.loading, empty) {
         (true, _) => vec![labels.loading.to_string()],
         (false, true) => Vec::new(),
-        (false, false) => summary(&labels, labels.bar, &x, &props.series, write),
+        (false, false) => {
+            let mut sentences = summary(&labels, labels.bar, &x, &props.series, write);
+            sentences.extend(axis_titles(&labels, &props.x_title, &props.y_title));
+            sentences
+        }
     };
 
     Frame {

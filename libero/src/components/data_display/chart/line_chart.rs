@@ -2,10 +2,10 @@ use dioxus::prelude::*;
 
 use super::{
     Series, XValues,
-    engine::{self, LineSpec},
+    engine::{self, Axes, LineSpec},
     frame::{
-        Frame, Interaction, chart_unit, overlay_series, series_specs, shown_places, summary,
-        use_plot_size,
+        Frame, Interaction, axis_titles, chart_unit, overlay_series, series_specs, shown_places,
+        summary, use_plot_size,
     },
     legend::use_hidden_series,
     props::chart_props,
@@ -29,6 +29,21 @@ chart_props! {
         /// A dot on every point. Unset, the theme's; never past its `points_limit` points.
         #[props(default)]
         points: Option<bool>,
+        /// The y axis' lowest value. Unset, 0 or the lowest value below it.
+        #[props(default)]
+        y_min: Option<f64>,
+        /// The y axis' highest value. Unset, a round number at or over the highest value.
+        #[props(default)]
+        y_max: Option<f64>,
+        /// The steps the y axis is cut into: 4 writes 5 labels. Unset, the theme's.
+        #[props(default)]
+        y_ticks: Option<usize>,
+        /// Under the x axis: what it counts.
+        #[props(default, into)]
+        x_title: Option<String>,
+        /// Beside the y axis, read upward: what it measures.
+        #[props(default, into)]
+        y_title: Option<String>,
     }
 }
 
@@ -98,6 +113,13 @@ pub fn LineChart(props: LineChartProps) -> Element {
         x_numbers: props.x.numbers().to_vec(),
         series: shown.iter().map(|i| all_specs[*i].clone()).collect(),
         curve: props.curve.copied_or(theme.chart.curve),
+        axes: Axes {
+            min: props.y_min,
+            max: props.y_max,
+            ticks: props.y_ticks.unwrap_or(theme.chart.y_ticks),
+            x_title: props.x_title.clone(),
+            y_title: props.y_title.clone(),
+        },
         grid: props.grid.unwrap_or(theme.chart.grid),
         points,
         stroke_width: theme.chart.stroke_width,
@@ -117,7 +139,11 @@ pub fn LineChart(props: LineChartProps) -> Element {
     let summary = match (props.loading, empty) {
         (true, _) => vec![labels.loading.to_string()],
         (false, true) => Vec::new(),
-        (false, false) => summary(&labels, labels.line, &x, &props.series, write),
+        (false, false) => {
+            let mut sentences = summary(&labels, labels.line, &x, &props.series, write);
+            sentences.extend(axis_titles(&labels, &props.x_title, &props.y_title));
+            sentences
+        }
     };
 
     Frame {
@@ -316,6 +342,39 @@ mod tests {
         assert!(html.contains("aria-pressed=\"false\""), "{html}");
         assert!(
             html.contains("aria-pressed=\"true\" aria-disabled=\"true\""),
+            "{html}"
+        );
+    }
+
+    /// The titles are drawn by their axes and, as the drawing is hidden, said in the summary.
+    #[test]
+    fn axis_titles_are_drawn_and_summarized() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    LineChart {
+                        title: "Visitors",
+                        x: ["Mon", "Tue"],
+                        series: vec![Series::new("This week", [120.0, 132.0])],
+                        y_min: 100.0,
+                        y_max: 140.0,
+                        y_ticks: 2usize,
+                        x_title: "Day",
+                        y_title: "Visits",
+                    }
+                }
+            }
+        });
+        assert!(
+            html.contains("\nDay\n") && html.contains("\nVisits\n"),
+            "{html}"
+        );
+        assert!(
+            html.contains("&#10;120&#10;") || html.contains("\n120\n"),
+            "{html}"
+        );
+        assert!(
+            html.contains("X axis: Day.") && html.contains("Y axis: Visits."),
             "{html}"
         );
     }

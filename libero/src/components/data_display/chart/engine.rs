@@ -155,6 +155,7 @@ pub(crate) struct LineSpec {
     pub(crate) x_numbers: Vec<f64>,
     pub(crate) series: Vec<SeriesSpec>,
     pub(crate) curve: Curve,
+    pub(crate) axes: Axes,
     pub(crate) grid: bool,
     pub(crate) points: bool,
     pub(crate) stroke_width: f32,
@@ -162,6 +163,41 @@ pub(crate) struct LineSpec {
     pub(crate) format: ValueFormat,
     pub(crate) unit: Option<String>,
     pub(crate) formats: &'static Formats,
+}
+
+/// What a line or bar chart's axes are given beyond its data.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub(crate) struct Axes {
+    /// The value axis' ends; unset, from the data and 0.
+    pub(crate) min: Option<f64>,
+    pub(crate) max: Option<f64>,
+    /// The steps the value axis is cut into.
+    pub(crate) ticks: usize,
+    pub(crate) x_title: Option<String>,
+    pub(crate) y_title: Option<String>,
+}
+
+impl Axes {
+    /// `lying`: the renderer's first y config is a horizontal bar chart's value axis, at the
+    /// bottom, and its x title the categories' beside them.
+    fn style(
+        &self,
+        chart: &mut charts_rs::ChartBase,
+        y: &mut [charts_rs::YAxisConfig],
+        lying: bool,
+    ) {
+        let (bottom, side) = match lying {
+            true => (&self.y_title, &self.x_title),
+            false => (&self.x_title, &self.y_title),
+        };
+        chart.x_axis.title = bottom.clone().unwrap_or_default();
+        if let Some(first) = y.first_mut() {
+            first.min = self.min.map(|min| min as f32);
+            first.max = self.max.map(|max| max as f32);
+            first.split_number = self.ticks.max(1);
+            first.title = side.clone();
+        }
+    }
 }
 
 fn ink(hex: HexColor) -> InkColor {
@@ -221,6 +257,8 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
         y.font.color = ink(spec.ink.label);
         y.formatter = Some(format!("{AXIS_MARK}{{c}}{unit}"));
     }
+    spec.axes
+        .style(&mut chart.base, &mut chart.y_axis_configs, false);
     let write = |label| {
         spec.format
             .format(label, spec.unit.as_deref(), spec.formats)
@@ -267,6 +305,7 @@ pub(crate) struct BarSpec {
     /// Corner radius of every bar, in pixels.
     pub(crate) radius: f32,
     pub(crate) value_labels: bool,
+    pub(crate) axes: Axes,
     pub(crate) grid: bool,
     pub(crate) ink: ChartInk,
     pub(crate) format: ValueFormat,
@@ -298,6 +337,11 @@ macro_rules! style_bars {
             y.font.color = ink($spec.ink.label);
             y.formatter = Some(format!("{AXIS_MARK}{{c}}{}", $unit));
         }
+        $spec.axes.style(
+            &mut $chart.base,
+            &mut $chart.y_axis_configs,
+            $spec.horizontal,
+        );
         // In a stack a label sits on its bar, not on the next one's; past a lying bar's end
         // the longest one's label would leave the plot.
         let inside = $spec.layout != BarLayout::Grouped || $spec.horizontal;
@@ -1060,6 +1104,7 @@ mod tests {
             x_numbers: Vec::new(),
             series,
             curve: Curve::Linear,
+            axes: axes(),
             grid: true,
             points: true,
             stroke_width: 2.0,
@@ -1068,6 +1113,65 @@ mod tests {
             unit: Some("kg".to_string()),
             formats: &Formats::GERMAN,
         }
+    }
+
+    fn axes() -> Axes {
+        Axes {
+            ticks: Theme::DEFAULT.chart.y_ticks,
+            ..Axes::default()
+        }
+    }
+
+    /// The renderer's own step count is the theme's, so an unset `y_ticks` changes nothing.
+    #[test]
+    fn the_theme_s_ticks_are_the_renderer_s() {
+        let chart = charts_rs::LineChart::new(Vec::new(), Vec::new());
+        assert_eq!(
+            chart.y_axis_configs[0].split_number,
+            Theme::DEFAULT.chart.y_ticks
+        );
+    }
+
+    /// Fixed ends and a step count give exactly those labels; titles sit by their axes.
+    #[test]
+    fn a_fixed_axis_range_and_titles_are_drawn() {
+        let mut spec = line(vec![spec("A", &[Some(12.0), Some(31.0)])], &["Q1", "Q2"]);
+        spec.axes = Axes {
+            min: Some(10.0),
+            max: Some(50.0),
+            ticks: 4,
+            x_title: Some("Quarter".to_string()),
+            y_title: Some("Weight".to_string()),
+        };
+        let svg = draw_line(&spec).expect("drawn").svg;
+        for label in [
+            "10 kg",
+            "20 kg",
+            "30 kg",
+            "40 kg",
+            "50 kg",
+            "\nQuarter\n",
+            "\nWeight\n",
+        ] {
+            assert!(svg.contains(label), "{label}: {svg}");
+        }
+        assert!(!svg.contains("60 kg") && !svg.contains("\n0 kg"), "{svg}");
+        assert!(svg.contains("rotate(-90)"), "{svg}");
+    }
+
+    /// A lying bar chart's value axis is at the bottom: the y title goes there.
+    #[test]
+    fn a_horizontal_bar_chart_swaps_its_titles() {
+        let mut spec = bars(BarLayout::Grouped, true);
+        spec.axes.x_title = Some("Team".to_string());
+        spec.axes.y_title = Some("Score".to_string());
+        let svg = draw_bar(&spec).expect("drawn").svg;
+        let rotated = svg
+            .split("<text")
+            .find(|tag| tag.contains("rotate(-90)"))
+            .unwrap_or_else(|| panic!("{svg}"));
+        assert!(rotated.contains("\nTeam\n"), "{rotated}");
+        assert!(svg.contains("\nScore\n"), "{svg}");
     }
 
     fn spec(name: &str, values: &[Option<f64>]) -> SeriesSpec {
@@ -1287,6 +1391,7 @@ mod tests {
             horizontal,
             radius: 4.0,
             value_labels: true,
+            axes: axes(),
             grid: true,
             ink: ChartInk::of(&Theme::DEFAULT, false),
             format: ValueFormat::Auto,

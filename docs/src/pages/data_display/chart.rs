@@ -39,7 +39,29 @@ fn is(kind: &'static str) -> fn(&DemoValues) -> bool {
     match kind {
         "bar" => |values| values.str("type") != "bar",
         "pie" => |values| values.str("type") != "pie",
+        "axes" => |values| values.str("type") == "pie",
         _ => |values| values.str("type") != "line",
+    }
+}
+
+/// The value axis' fixed ends, `y_min` and `y_max`, for the chart type.
+fn y_range(values: &DemoValues) -> Option<(f64, f64)> {
+    match (values.str("y_range").as_str(), values.str("type").as_str()) {
+        ("auto", _) => None,
+        (_, "bar") => Some((-50.0, 200.0)),
+        _ => Some((50.0, 250.0)),
+    }
+}
+
+/// `x_title` and `y_title` for the chart type.
+fn axis_titles(values: &DemoValues) -> Option<(&'static str, &'static str)> {
+    match (
+        values.str("axis_titles") == "true",
+        values.str("type").as_str(),
+    ) {
+        (false, _) => None,
+        (true, "bar") => Some(("Quarter", "Profit")),
+        (true, _) => Some(("Day", "Visitors")),
     }
 }
 
@@ -70,6 +92,11 @@ pub fn ChartPage() -> Element {
                     prop("description", "Option<String>").doc("A sentence under the title: what to read from the chart."),
                     prop("curve", "Curve").default(theme.chart.curve.as_str()).doc("`linear`, `smooth` or `step`."),
                     prop("points", "Option<bool>").default(on(theme.chart.points)).doc("A dot on every point; never past the theme's `points_limit` points."),
+                    prop("y_min", "Option<f64>").doc("The y axis' lowest value. Unset, 0 or the lowest value below it."),
+                    prop("y_max", "Option<f64>").doc("The y axis' highest value. Unset, a round number at or over the highest value."),
+                    prop("y_ticks", "Option<usize>").default(theme.chart.y_ticks.to_string()).doc("The steps the y axis is cut into: 4 writes 5 labels."),
+                    prop("x_title", "Option<String>").doc("Under the x axis: what it counts."),
+                    prop("y_title", "Option<String>").doc("Beside the y axis, read upward: what it measures."),
                     prop("legend", "LegendPosition").default("bottom with two series or more").doc("`bottom`, `top`, `start`, `end` or `none`."),
                     prop("grid", "Option<bool>").default(on(theme.chart.grid)).doc("Horizontal guide lines."),
                     prop("value_format", "ValueFormat").default("Auto").doc("How values are written on the axis, in the tooltip and in the summary."),
@@ -94,6 +121,11 @@ pub fn ChartPage() -> Element {
                     prop("orientation", "Orientation").default("vertical").doc("`horizontal` lays the categories down the side, top to bottom."),
                     prop("radius", "Size").default(theme.chart.bar_radius.as_str()).doc("Corner radius of a bar's free end, the one away from its axis, on the theme's radius scale."),
                     prop("value_labels", "Option<bool>").default(on(theme.chart.value_labels)).doc("Each bar's value written on it."),
+                    prop("y_min", "Option<f64>").doc("The value axis' lowest value. Unset, 0 or the lowest value below it."),
+                    prop("y_max", "Option<f64>").doc("The value axis' highest value. Unset, a round number at or over the highest value."),
+                    prop("y_ticks", "Option<usize>").default(theme.chart.y_ticks.to_string()).doc("The steps the value axis is cut into: 4 writes 5 labels."),
+                    prop("x_title", "Option<String>").doc("Along the categories: what they are. Under them, or beside them when `horizontal`."),
+                    prop("y_title", "Option<String>").doc("Along the values: what they measure. Beside them, or under them when `horizontal`."),
                     prop("legend", "LegendPosition").default("bottom with two series or more").doc("`bottom`, `top`, `start`, `end` or `none`."),
                     prop("grid", "Option<bool>").default(on(theme.chart.grid)).doc("Guide lines across the values."),
                     prop("value_format", "ValueFormat").default("Auto").doc("How values are written on the axis, the bars, in the tooltip and in the summary."),
@@ -142,7 +174,7 @@ pub fn ChartPage() -> Element {
                 .key(["Escape"], "Clears the point and its tooltip.")
                 .handles([
                     "The chart is a `role=\"figure\"` named by `title`. The drawing is hidden from screen readers.",
-                    "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is; a pie's, the total, then each slice's value and share.",
+                    "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is, then the axes' titles; a pie's, the total, then each slice's value and share.",
                     "The plot is one tab stop, a `role=\"application\"` described as a chart, so a screen reader hands it the arrows. Each point the keys reach is announced, as \"This week, Tue: 132\" or \"Chrome: 62, 62%.\"",
                     "The legend's entries are toggle buttons: pressed while their series or slice shows, struck through when hidden. The last shown one's button is `aria-disabled`. A dashed line's key is a dash, as drawn.",
                     "On a touch screen a tap pins a point's tooltip, a second tap on it clicks; a vertical swipe still scrolls the page.",
@@ -236,6 +268,26 @@ pub fn ChartPage() -> Element {
                             _ => vec![],
                         }
                     }),
+                    Control::select("y_range", ["fixed", "auto"]).hidden_when(is("axes")).code(
+                        |_, values| match y_range(values) {
+                            Some((min, max)) => vec![format!("y_min: {min:?}"), format!("y_max: {max:?}")],
+                            None => vec![],
+                        },
+                    ),
+                    Control::slider("y_ticks", ["2", "3", "4", "5", "6", "8", "10"])
+                        .default(theme.chart.y_ticks.to_string())
+                        .hidden_when(is("axes"))
+                        .code(|control, values| match values.str("y_ticks") {
+                            ticks if ticks == control.default => vec![],
+                            ticks => vec![format!("y_ticks: {ticks}")],
+                        }),
+                    Control::switch("axis_titles")
+                        .default("true")
+                        .hidden_when(is("axes"))
+                        .code(|_, values| match axis_titles(values) {
+                            Some((x, y)) => vec![format!("x_title: {x:?}"), format!("y_title: {y:?}")],
+                            None => vec![],
+                        }),
                     Control::select("legend", legend),
                     Control::switch("tooltip").default(on(theme.chart.tooltip)),
                     Control::switch("loading"),
@@ -244,6 +296,14 @@ pub fn ChartPage() -> Element {
                     let legend = LegendPosition::from(values.str("legend").as_str());
                     let tooltip = values.str("tooltip") == "true";
                     let loading = values.str("loading") == "true";
+                    let range = y_range(&values);
+                    let (y_min, y_max) = (range.map(|r| r.0), range.map(|r| r.1));
+                    let y_ticks = values.str("y_ticks").parse::<usize>().ok();
+                    let titles = axis_titles(&values);
+                    let (x_title, y_title) = (
+                        titles.map(|t| t.0.to_string()),
+                        titles.map(|t| t.1.to_string()),
+                    );
                     match values.str("type").as_str() {
                         "bar" => rsx! {
                             BarChart {
@@ -254,6 +314,7 @@ pub fn ChartPage() -> Element {
                                 orientation: Orientation::from(values.str("orientation").as_str()),
                                 radius: values.str("radius"),
                                 value_labels: values.str("value_labels") == "true",
+                                y_min, y_max, y_ticks, x_title, y_title,
                                 legend, tooltip, loading,
                             }
                         },
@@ -276,6 +337,7 @@ pub fn ChartPage() -> Element {
                                     Series::new("Last week", LAST_WEEK).dashed(),
                                 ],
                                 curve: Curve::from(values.str("curve").as_str()),
+                                y_min, y_max, y_ticks, x_title, y_title,
                                 legend, tooltip, loading,
                             }
                         },

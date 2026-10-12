@@ -80,6 +80,8 @@ pub struct ChartDefaults {
     /// A tooltip and a crosshair under the pointer and the keys.
     pub tooltip: bool,
     pub stroke_width: f32,
+    /// The steps a line or bar chart's value axis is cut into.
+    pub y_ticks: usize,
     pub bar_layout: BarLayout,
     /// Corner radius of a bar's free end, a step on the theme's radius scale.
     pub bar_radius: Size,
@@ -113,6 +115,7 @@ impl ChartDefaults {
         points_limit: 200,
         tooltip: true,
         stroke_width: 2.0,
+        y_ticks: 6,
         bar_layout: BarLayout::Grouped,
         bar_radius: Size::Xs,
         value_labels: false,

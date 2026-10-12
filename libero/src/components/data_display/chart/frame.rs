@@ -508,6 +508,18 @@ pub(super) fn summary(
     sentences
 }
 
+/// The axes' titles, which the drawing hides with itself.
+pub(super) fn axis_titles(
+    labels: &ChartLabels,
+    x: &Option<String>,
+    y: &Option<String>,
+) -> Vec<String> {
+    [(labels.x_axis, x), (labels.y_axis, y)]
+        .into_iter()
+        .filter_map(|(label, title)| Some(fill(label, &[("title", title.as_ref()?)])))
+        .collect()
+}
+
 /// The plot's size, snapped, once it is measured: by its resizes, and at mount in case
 /// the first resize comes late.
 #[derive(Clone, Copy)]
