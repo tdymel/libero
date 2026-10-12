@@ -87,6 +87,8 @@ fn AgeEditor(ctx: EditCtx) -> Element {
     rsx! {
         input {
             id: "custom-editor",
+            // iOS zooms the page into a smaller field and keeps the zoom for the unit's next scenarios.
+            font_size: "16px",
             aria_label: ctx.label.clone(),
             aria_invalid: ctx.error.is_some().then_some("true"),
             aria_describedby: ctx.error.is_some().then(|| ctx.error_id.clone()),
