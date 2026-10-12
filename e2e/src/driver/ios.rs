@@ -166,6 +166,11 @@ impl Ios {
         // Two quick taps would zoom the page instead of making a double click (3481).
         ios.bridge
             .run("document.documentElement.style.touchAction = 'manipulation'")?;
+        ios.bridge.run(
+            "window.__ev = []; const t0 = performance.now(); const log = (n, e) => { __ev.push(Math.round(performance.now() - t0) + ' ' + n + ' ' + (e && e.target && e.target.tagName ? e.target.tagName + (e.target.getAttribute && e.target.getAttribute('role') ? '/' + e.target.getAttribute('role') : '') : '') + ' vv' + visualViewport.scale.toFixed(2) + ' x' + Math.round(scrollX)); if (__ev.length > 400) __ev.shift(); }; \
+             for (const n of ['touchstart','touchend','pointerdown','click','dblclick','focusin','focusout','scroll']) addEventListener(n, e => log(n, e), true); \
+             visualViewport.addEventListener('resize', e => log('vvresize', e)); visualViewport.addEventListener('scroll', e => log('vvscroll', e));",
+        )?;
         Ok(ios)
     }
 
@@ -582,8 +587,17 @@ impl Driver for Ios {
     /// Two HID taps; whether WebKit reads them as a `dblclick` is unverified.
     async fn double_click(&mut self, selector: &str) -> Result<()> {
         let (x, y) = self.centre(selector)?;
+        self.bridge.run("__ev.length = 0")?;
         self.tap(x, y)?;
-        self.tap(x, y)
+        self.tap(x, y)?;
+        std::thread::sleep(Duration::from_millis(1500));
+        let scale: f64 = self.bridge.json("visualViewport.scale")?;
+        let editor: bool = self.bridge.json("!!document.querySelector('[data-cell-editor]')")?;
+        if scale != 1.0 || !editor {
+            let log: Vec<String> = self.bridge.json("__ev.slice(-40)")?;
+            bail!("DIAG zoomed to {scale} after the taps at {x},{y}: {}", log.join(" | "));
+        }
+        Ok(())
     }
 
     async fn click_at(&mut self, x: f64, y: f64) -> Result<()> {
