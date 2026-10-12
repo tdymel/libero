@@ -204,7 +204,9 @@ fn forced_colours_draw_the_ink_in_system_colours() {
 
 /// A vertical swipe over the plot scrolls the page: the plot takes only sideways moves.
 async fn swipes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    d.drag(LAYER, 0.0, -120.0).await?;
+    let plot = d.rect(LAYER).await?;
+    let (x, y) = (plot.x + plot.width / 2.0, plot.y + plot.height / 2.0);
+    d.swipe_from(x, y, 0.0, -120.0).await?;
     eventually(d, "the swipe to scroll the page", async |d| {
         Ok(d.scroll_pos("html").await?.1 > 0.0)
     })
