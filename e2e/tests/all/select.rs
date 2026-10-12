@@ -205,7 +205,7 @@ async fn in_view<D: Driver>(d: &mut D, row: &str, after: &str) -> Result<()> {
 /// Todo 2234: a thousand rows draw only a window. The highlight stays drawn, in view and
 /// counted in the whole list (todo 2910), across a filter below the windowing threshold and back.
 async fn a_long_list_windows<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    d.evaluate("(() => { window.__ev = []; const t0 = performance.now(); const log = (...a) => window.__ev.push([Math.round(performance.now() - t0), ...a]); addEventListener('scroll', e => log('scroll', e.target.scrollTop), {capture: true, passive: true}); const orig = Element.prototype.scrollTo; Element.prototype.scrollTo = function(...a) { const before = this.scrollTop; const r = orig.apply(this, a); log('scrollTo', JSON.stringify(a), before, this.scrollTop, this.scrollHeight); return r; }; return 1; })()").await?;
+    d.evaluate("(() => { if (window.__spy) { removeEventListener('scroll', window.__spy, {capture: true}); Element.prototype.scrollTo = window.__origScrollTo; } window.__ev = []; const t0 = performance.now(); const log = (...a) => window.__ev.push([Math.round(performance.now() - t0), ...a]); window.__spy = e => log('scroll', e.target.scrollTop); addEventListener('scroll', window.__spy, {capture: true, passive: true}); const orig = window.__origScrollTo = Element.prototype.scrollTo; Element.prototype.scrollTo = function(...a) { const before = this.scrollTop; const r = orig.apply(this, a); log('scrollTo', JSON.stringify(a), before, this.scrollTop, this.scrollHeight); return r; }; return 1; })()").await?;
     d.focus(TRIGGER).await?;
     d.press(keyboard::ARROW_DOWN).await?;
     eventually(d, "the search box", async |d| d.is_focused(SEARCH).await).await?;
