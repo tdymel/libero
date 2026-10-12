@@ -100,8 +100,7 @@ async fn the_pieces_work<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     the_toolbar_pieces_export_hide_columns_and_set_the_density,
     "/table-toolbar",
-    the_pieces_work,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    the_pieces_work
 );
 
 /// 1448: the Filters piece sits where the toolbar puts it, opens the panel
@@ -139,8 +138,7 @@ async fn the_filter_piece_opens_the_panel<D: Driver>(d: &mut D, _route: &str) ->
 e2e::scenario!(
     the_filter_piece_opens_the_panel_under_itself,
     "/table-toolbar",
-    the_filter_piece_opens_the_panel,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    the_filter_piece_opens_the_panel
 );
 
 /// 2084: in a flex parent narrower than the table the toolbar wraps at the parent's width.

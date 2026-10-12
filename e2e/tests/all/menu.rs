@@ -247,8 +247,7 @@ async fn a_press_outside_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()
 e2e::scenario!(
     a_press_outside_closes_it,
     "/menu-submenu-reopen",
-    a_press_outside_closes,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    a_press_outside_closes
 );
 
 /// The docs demo's row: the trigger and the text beside it share a centre line.
@@ -880,8 +879,7 @@ e2e::scenario!(
 e2e::scenario!(
     a_short_menu_keeps_its_height,
     "/menu-row",
-    a_short_menu_keeps_its_height,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    a_short_menu_keeps_its_height
 );
 
 /// Todo 3053: Home on the first item and End on the last stay the page's.

@@ -48,8 +48,7 @@ async fn arc_follows_the_value<D: Driver>(d: &mut D, _route: &str) -> Result<()>
 e2e::scenario!(
     the_arc_follows_the_value,
     "/circular-progress",
-    arc_follows_the_value,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    arc_follows_the_value
 );
 
 /// `[arc colour, track colour, page colour]` contrast probe: arc on track, arc on page.

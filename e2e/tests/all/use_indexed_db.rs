@@ -33,8 +33,7 @@ async fn writes_and_removes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     writes_reach_every_handle_and_remove_falls_back,
     "/use-indexed-db",
-    writes_and_removes,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    writes_and_removes
 );
 
 async fn reads(page: &Page, selector: &str, text: &str) -> Result<()> {

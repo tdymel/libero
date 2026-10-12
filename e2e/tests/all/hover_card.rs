@@ -231,8 +231,7 @@ e2e::scenario!(
     a_long_press_opens_it_on_touch_and_a_tap_does_not,
     "/hover-card",
     long_press_opens,
-    desktop: skip("1126: no touch input under Xvfb"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    desktop: skip("1126: no touch input under Xvfb")
 );
 /// Todo 2750: the long press that opens the card leaves the browser's link menu shut, which
 /// would cover the card.
@@ -259,8 +258,7 @@ e2e::scenario!(
     "/hover-card-link",
     long_press_keeps_the_link_menu_shut,
     desktop: skip("1126: no touch input under Xvfb"),
-    native: skip("3317: Blitz opens no link menu on a long press, and a script reads its suppression"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    native: skip("3317: Blitz opens no link menu on a long press, and a script reads its suppression")
 );
 e2e::scenario!(
     tab_crosses_into_the_portaled_card_and_back_on_every_backend,

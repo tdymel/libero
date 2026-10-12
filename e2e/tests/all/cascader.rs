@@ -47,8 +47,7 @@ use crate::select::{
 e2e::scenario!(
     an_outside_click_leaves_a_searchable_cascader,
     "/cascader/outside",
-    an_outside_click_keeps_its_focus,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    an_outside_click_keeps_its_focus
 );
 e2e::scenario!(
     tab_from_a_cascader_search_moves_on,

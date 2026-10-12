@@ -413,8 +413,7 @@ e2e::scenario!(
 e2e::scenario!(
     a_horizontal_list_reorders_by_a_sideways_drag,
     "/sortable/horizontal",
-    a_row_reorders_sideways,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    a_row_reorders_sideways
 );
 e2e::scenario!(
     the_neighbours_of_a_lifted_item_slide_and_the_lifted_item_does_not,
@@ -425,14 +424,12 @@ e2e::scenario!(
 e2e::scenario!(
     a_right_to_left_row_reorders_by_a_leftward_drag,
     "/sortable/rtl",
-    an_rtl_row_drags_leftwards,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    an_rtl_row_drags_leftwards
 );
 e2e::scenario!(
     a_right_to_left_row_moves_by_the_mirrored_arrows_and_buttons,
     "/sortable/rtl",
-    an_rtl_row_moves_by_the_mirrored_arrows,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    an_rtl_row_moves_by_the_mirrored_arrows
 );
 e2e::scenario!(
     a_click_on_a_hook_handle_clicks_and_a_drag_does_not,

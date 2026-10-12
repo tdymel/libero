@@ -243,7 +243,6 @@ async fn space_toggles<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_click_on_the_box_toggles_a_checkbox,
     "/checkbox",
-    a_box_click_toggles,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    a_box_click_toggles
 );
 e2e::scenario!(space_toggles_a_focused_checkbox, "/checkbox", space_toggles);

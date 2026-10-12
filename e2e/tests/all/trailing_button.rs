@@ -59,14 +59,12 @@ e2e::scenario!(
 e2e::scenario!(
     enter_on_the_select_x_clears_it,
     "/trailing-button/select",
-    enter_clears_and_refocuses,
-    ios: skip("3416: focus stays on the body after a Tab or a tap")
+    enter_clears_and_refocuses
 );
 e2e::scenario!(
     enter_on_the_cascader_x_clears_it,
     "/trailing-button/cascader",
-    enter_clears_and_refocuses,
-    ios: skip("3416: focus stays on the body after a Tab or a tap")
+    enter_clears_and_refocuses
 );
 
 #[test]

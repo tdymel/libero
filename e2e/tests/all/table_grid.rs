@@ -118,8 +118,7 @@ e2e::scenario!(
     tab_enters_and_leaves_in_one_stop,
     "/table-grid",
     one_stop,
-    android: skip("958: roving keys are inert in the emulator's WebView"),
-    ios: skip("3416: focus stays on the body after a Tab or a tap")
+    android: skip("958: roving keys are inert in the emulator's WebView")
 );
 
 /// Ben's age stays the stop when the age sort moves his row from second to fourth.
@@ -158,8 +157,7 @@ e2e::scenario!(
     an_arrow_leaves_a_widget_for_the_next_cell,
     "/table-grid/widgets",
     from_a_widget,
-    android: skip("958: roving keys are inert in the emulator's WebView"),
-    ios: skip("3416: focus stays on the body after a Tab or a tap")
+    android: skip("958: roving keys are inert in the emulator's WebView")
 );
 
 /// The stop cell's number, the row's id in the windowed grid.
@@ -341,8 +339,7 @@ async fn double_click_edits<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_double_click_edits_and_blur_commits,
     "/table-grid/editable",
-    double_click_edits,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    double_click_edits
 );
 
 /// Enter opens and commits and moves the stop down, F2 opens and Escape cancels there.
@@ -437,8 +434,7 @@ e2e::scenario!(
     the_editor_opens_with_its_text_selected,
     "/table-grid/editable",
     selected_on_open,
-    android: skip("958: roving keys are inert in the emulator's WebView"),
-    ios: skip("3262: not run on an iOS device")
+    android: skip("958: roving keys are inert in the emulator's WebView")
 );
 
 /// An age the column's `validate` refuses keeps the editor open, marked invalid, with
@@ -497,8 +493,7 @@ async fn refused_blur<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_refused_blur_puts_the_old_value_back,
     "/table-grid/editable",
-    refused_blur,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    refused_blur
 );
 
 /// The open checkbox editor's `(checked, mixed)`: a browser reads mixed from the property alone.

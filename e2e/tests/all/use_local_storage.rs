@@ -51,8 +51,7 @@ async fn writes_and_removes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     writes_reach_every_handle_and_remove_falls_back,
     "/use-local-storage",
-    writes_and_removes,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    writes_and_removes
 );
 
 /// Todo 3194: the local area outlives the app; iOS kept it in memory only before S1's
@@ -74,8 +73,7 @@ e2e::scenario!(
     outlives_the_app,
     native: skip("Blitz has no relaunch in the driver"),
     android: skip("no relaunch in the Android driver; its store is the files directory"),
-    desktop: skip("a launch gets a fresh E2E_STORAGE_DIR, so a relaunch keeps nothing"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    desktop: skip("a launch gets a fresh E2E_STORAGE_DIR, so a relaunch keeps nothing")
 );
 
 async fn reads(page: &Page, selector: &str, text: &str) -> Result<()> {

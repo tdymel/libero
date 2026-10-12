@@ -233,6 +233,5 @@ async fn a_press_turns_the_root<D: Driver>(d: &mut D, _route: &str) -> Result<()
 e2e::scenario!(
     a_press_turns_the_root_on_every_backend,
     "/direction-toggle/shielded",
-    a_press_turns_the_root,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    a_press_turns_the_root
 );

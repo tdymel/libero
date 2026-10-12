@@ -127,8 +127,7 @@ async fn space_toggles<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_click_on_the_label_toggles_it,
     "/chip",
-    a_click_on_the_label_toggles,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    a_click_on_the_label_toggles
 );
 /// Todo 941: Blitz placed the label's `::after` hit area against the label, so
 /// the pill's padding took no click natively.
@@ -154,14 +153,12 @@ e2e::scenario!(space_toggles_the_focused_chip, "/chip", space_toggles);
 e2e::scenario!(
     the_remove_x_leaves_the_chip_as_it_is,
     "/chip/removable",
-    the_remove_x_does_not_toggle,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    the_remove_x_does_not_toggle
 );
 e2e::scenario!(
     a_click_on_the_pills_padding_toggles_it,
     "/chip",
-    the_padding_toggles,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    the_padding_toggles
 );
 
 /// Todo 491: a selected chip showed only a faint tint.

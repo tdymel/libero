@@ -51,8 +51,7 @@ async fn a_tap_focuses_the_search<D: Driver>(d: &mut D, _route: &str) -> Result<
 e2e::scenario!(
     a_tap_on_the_trigger_focuses_the_search_box,
     "/spotlight",
-    a_tap_focuses_the_search,
-    ios: skip("3416: focus stays on the body after a Tab or a tap")
+    a_tap_focuses_the_search
 );
 
 const FIRST_ROW: &str = "[role=dialog] [role=option]";

@@ -81,8 +81,7 @@ async fn bare_table<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_table_without_toolbar_shows_its_loading_bar_and_details,
     "/table-overlay-bare",
-    bare_table,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    bare_table
 );
 
 async fn toolbar_layout<D: Driver>(d: &mut D, _route: &str) -> Result<()> {

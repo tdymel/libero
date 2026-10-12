@@ -105,8 +105,7 @@ async fn answered<D: Driver>(d: &mut D) -> Result<bool> {
 e2e::scenario!(
     mounting_asks_nothing_until_a_request,
     "/use-geolocation",
-    mounting_asks_nothing,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    mounting_asks_nothing
 );
 
 /// Feeds the emulator's GPS provider, the one a high-accuracy request reads.

@@ -108,8 +108,7 @@ e2e::scenario!(
 e2e::scenario!(
     tab_enters_on_the_checked_segment_and_leaves_with_the_next_tab,
     "/segmented-control",
-    one_tab_stop,
-    ios: skip("3416: focus stays on the body after a Tab or a tap")
+    one_tab_stop
 );
 /// The "right" state's wait: the last segment's label, checked. Not `CHECKED` (the radio is
 /// hidden) nor any checked label (the middle one is, at rest).

@@ -96,8 +96,7 @@ async fn sort_orders_groups<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     the_sort_orders_the_groups,
     "/table-row-groups",
-    sort_orders_groups,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    sort_orders_groups
 );
 
 /// G2: "Group by Team" groups the rows and says so; "Stop grouping by Team" undoes it.
@@ -142,8 +141,7 @@ async fn menu_groups<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     the_column_menu_groups_by_a_column,
     "/table-row-groups/menu",
-    menu_groups,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    menu_groups
 );
 
 /// G4: Sales' row shows the sum of its two ages in the Age column, right-aligned

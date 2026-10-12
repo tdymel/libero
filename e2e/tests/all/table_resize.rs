@@ -212,6 +212,5 @@ async fn an_overflowing_column_widens<D: Driver>(d: &mut D, _route: &str) -> Res
 e2e::scenario!(
     an_overflowing_tables_column_widens_from_its_menu,
     "/table-resize/wide",
-    an_overflowing_column_widens,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    an_overflowing_column_widens
 );

@@ -215,8 +215,7 @@ async fn tab_out_leaves_pseudo<D: Driver>(d: &mut D, _route: &str) -> Result<()>
 e2e::scenario!(
     a_tab_out_of_the_drawn_fullscreen_leaves_it,
     "/video/refused",
-    tab_out_leaves_pseudo,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    tab_out_leaves_pseudo
 );
 
 /// Todo 1370: in fullscreen the page's portal is outside the player, which hides

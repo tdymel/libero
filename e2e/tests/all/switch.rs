@@ -177,8 +177,7 @@ async fn each_toggles_once<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     space_enter_the_label_and_the_track_each_toggle_it_once,
     "/switch",
-    each_toggles_once,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    each_toggles_once
 );
 
 /// Todo 508: Enter submits the form around the switch, as it does around a
@@ -297,8 +296,7 @@ async fn a_track_click_focuses<D: Driver>(d: &mut D, _route: &str) -> Result<()>
 e2e::scenario!(
     a_track_click_focuses_the_switch,
     "/switch",
-    a_track_click_focuses,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    a_track_click_focuses
 );
 
 /// The track shows `not-allowed` like the rest of a disabled switch.

@@ -65,8 +65,7 @@ async fn a_cap_added_later_pads_the_scroll_by_the_header<D: Driver>(
 e2e::scenario!(
     a_cap_added_later_is_measured,
     "/table/cap-toggle",
-    a_cap_added_later_pads_the_scroll_by_the_header,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    a_cap_added_later_pads_the_scroll_by_the_header
 );
 
 /// The header row's top, the first body row's top and the area's top.
@@ -264,8 +263,7 @@ async fn tab_walks_past_the_window<D: Driver>(d: &mut D, _route: &str) -> Result
 e2e::scenario!(
     tab_walks_the_rows_of_a_windowed_table,
     "/table/windowed",
-    tab_walks_past_the_window,
-    ios: skip("3416: focus stays on the body after a Tab or a tap")
+    tab_walks_past_the_window
 );
 
 /// 1156-5d: End at the bottom asks for the next batch, each End once, and the
@@ -705,6 +703,5 @@ e2e::scenario!(
     a_focused_row_control_is_not_hidden_by_the_sticky_header,
     "/table/sticky-select",
     a_focused_row_stays_below_the_header,
-    android: skip("958: element identity on the WebView"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    android: skip("958: element identity on the WebView")
 );

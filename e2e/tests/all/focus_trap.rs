@@ -124,8 +124,7 @@ e2e::scenario!(
     "/focus-trap/autofocus",
     a_hidden_autofocus_falls_through,
     android: skip("958: element identity on the WebView"),
-    desktop: skip("958: element identity on the WebView"),
-    ios: skip("3416: focus stays on the body after a Tab or a tap")
+    desktop: skip("958: element identity on the WebView")
 );
 
 const SWITCH: &str = "[aria-label='activate focus trap']";
@@ -155,8 +154,7 @@ e2e::scenario!(
     "/focus-trap/exit",
     the_trap_lets_go,
     android: skip("958: element identity on the WebView"),
-    desktop: skip("958: element identity on the WebView"),
-    ios: skip("3416: focus stays on the body after a Tab or a tap")
+    desktop: skip("958: element identity on the WebView")
 );
 
 /// Both traps used to answer the one press: focus skipped a stop and walked

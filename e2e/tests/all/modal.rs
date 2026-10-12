@@ -115,8 +115,7 @@ async fn modal_tab_moves_on<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     tab_moves_between_the_buttons_of_a_modal,
     "/modal",
-    modal_tab_moves_on,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    modal_tab_moves_on
 );
 e2e::scenario!(
     a_backdrop_click_closes_a_modal,

@@ -208,8 +208,7 @@ e2e::scenario!(
 e2e::scenario!(
     a_menu_opened_inside_the_scope_counts_as_inside,
     "/use-hotkeys/within-menu",
-    a_menu_opened_inside_counts_as_inside,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    a_menu_opened_inside_counts_as_inside
 );
 e2e::scenario!(
     a_scoped_hotkey_fires_only_with_focus_inside_its_elements,

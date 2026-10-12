@@ -225,8 +225,7 @@ e2e::scenario!(
     tab_focus_opens_it,
     "/tooltip/quick",
     tab_focus_opens,
-    web: skip("1760: tab_focus_shows_the_bubble_and_leaving_hides_it covers it"),
-    ios: skip("3416: focus stays on the body after a Tab or a tap")
+    web: skip("1760: tab_focus_shows_the_bubble_and_leaving_hides_it covers it")
 );
 
 #[test]

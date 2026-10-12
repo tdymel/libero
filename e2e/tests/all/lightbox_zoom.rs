@@ -554,8 +554,7 @@ e2e::scenario!(
     a_tap_on_zoom_in_zooms_the_picture,
     "/lightbox",
     zoom_in_tapped,
-    macos: skip("3432: WKWebView: the stage's first scroll never settles"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    macos: skip("3432: WKWebView: the stage's first scroll never settles")
 );
 
 /// Todo 961: a zoomed picture pans only as far as its own edge, which needs its
@@ -597,8 +596,7 @@ e2e::scenario!(
     pan_stops_at_the_edge,
     native: skip("3386: reads the picture's size and pan by script, which Blitz has none of"),
     macos: skip("3432: WKWebView: the stage's first scroll never settles"),
-    windows: skip("upstream: Dioxus' asset! gives a backslashed file path (D:\\a\\..\\1.svg) off the bundle, which WebView2 cannot load, so no picture decodes"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    windows: skip("upstream: Dioxus' asset! gives a backslashed file path (D:\\a\\..\\1.svg) off the bundle, which WebView2 cannot load, so no picture decodes")
 );
 
 /// Todo 1067: two fingers spread zoom the picture and do not close the viewer;

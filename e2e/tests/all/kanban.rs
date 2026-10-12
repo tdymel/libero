@@ -755,8 +755,7 @@ e2e::scenario!(
     a_handle_drag_moves_a_card_leftwards_into_the_next_column_of_a_right_to_left_board,
     "/kanban/rtl",
     a_drag_moves_a_card_across,
-    native: skip("707: Blitz has no right-to-left scroll"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    native: skip("707: Blitz has no right-to-left scroll")
 );
 e2e::scenario!(
     a_handle_drag_moves_a_card_into_the_empty_last_column_of_a_right_to_left_board,

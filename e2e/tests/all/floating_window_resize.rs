@@ -429,8 +429,7 @@ e2e::scenario!(
 e2e::scenario!(
     a_title_bar_drag_moves_it_with_the_pointer,
     "/floating-window",
-    a_title_bar_drag,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    a_title_bar_drag
 );
 e2e::scenario!(
     drags_leave_their_handle_focused,

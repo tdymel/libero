@@ -100,14 +100,12 @@ e2e::scenario!(
 e2e::scenario!(
     an_interval_ticks_until_it_is_stopped,
     "/use-timers/interval",
-    interval_starts_and_stops,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    interval_starts_and_stops
 );
 e2e::scenario!(
     a_timeout_ends_what_it_started,
     "/use-timers/interval",
-    timeout_fires_once,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    timeout_fires_once
 );
 
 const DEBOUNCE_MS: u32 = 717;

@@ -44,8 +44,7 @@ async fn the_arrow_turns<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     the_arrow_turns_when_the_sort_flips,
     "/table",
-    the_arrow_turns,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    the_arrow_turns
 );
 
 pub(super) const AREA: &str = "[data-table-scroll]";

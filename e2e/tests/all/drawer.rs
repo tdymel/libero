@@ -73,12 +73,7 @@ e2e::scenario!(
     macos: skip("upstream: WebKit does not focus a clicked button"),
     ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
-e2e::scenario!(
-    a_right_drawer_hugs_the_right_edge,
-    "/drawer",
-    hugs_the_end,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
-);
+e2e::scenario!(a_right_drawer_hugs_the_right_edge, "/drawer", hugs_the_end);
 
 /// Opening moves focus in; the first Escape closes it and hands focus to the trigger.
 async fn escape_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {

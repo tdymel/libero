@@ -380,8 +380,7 @@ pub async fn an_outside_click_keeps_its_focus<D: Driver>(d: &mut D, _route: &str
 e2e::scenario!(
     an_outside_click_leaves_a_searchable_select,
     "/select/outside",
-    an_outside_click_keeps_its_focus,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    an_outside_click_keeps_its_focus
 );
 
 /// The trigger while the search box holds the combobox role.

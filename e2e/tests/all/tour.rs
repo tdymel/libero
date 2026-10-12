@@ -537,8 +537,7 @@ async fn nested_target<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_nested_target_scrolls_into_view,
     "/tour/nested",
-    nested_target,
-    ios: skip("3416: focus stays on the body after a Tab or a tap")
+    nested_target
 );
 
 /// The target growing with nothing scrolled or resized moves the hole (2223).
