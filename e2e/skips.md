@@ -33,6 +33,9 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `bar_chart::the_legend_hides_and_shows_a_series` | native | charts are parked on Blitz |
 | `bottom_navigation::a_fixed_bar_docks_everywhere` | macos desktop | 3432: WKWebView: the fixed bar never docks |
 | `button_group::the_focused_button_is_lifted_over_its_neighbours` | ios | 3416: focus stays on the body after a Tab or a tap |
+| `candlestick_chart::a_click_on_a_candle_reports_it` | ios | 3416: the simulator's tap or drag did not drive the page |
+| `candlestick_chart::a_click_on_a_candle_reports_it` | native | charts are parked on Blitz |
+| `candlestick_chart::the_keys_walk_the_candles` | native | charts are parked on Blitz |
 | `carousel_autoplay::tab_from_pause_within_the_carousel` | android | 2652 is the desktop WebView's arm |
 | `carousel_autoplay::tab_from_pause_within_the_carousel` | native | native::carousel has the Blitz arm |
 | `carousel_autoplay::tab_from_pause_within_the_carousel` | web | tab_from_pause_to_the_track_is_no_new_entry is the web's arm |

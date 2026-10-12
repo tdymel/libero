@@ -152,7 +152,7 @@ pub use cascader::CascaderDefaults;
 pub use center::{CENTER_DISPLAY, CenterDefaults};
 pub use chart::{
     BarLabelPosition, BarLayout, CHART_ASPECT_RATIO, CHART_LEGEND_GAP, CHART_SWATCH_SIZE,
-    ChartDefaults, Curve, LegendPosition, PieLabelPosition, PieLabels, PointSymbol,
+    CandleStyle, ChartDefaults, Curve, LegendPosition, PieLabelPosition, PieLabels, PointSymbol,
 };
 #[cfg(feature = "charts")]
 pub(crate) use chart::{ChartInk, chart_color, chart_hex, chart_palette};

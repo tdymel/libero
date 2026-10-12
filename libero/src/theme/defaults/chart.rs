@@ -95,6 +95,18 @@ str_enum! {
     }
 }
 
+str_enum! {
+    /// How a candlestick chart draws a period's four prices.
+    pub enum CandleStyle {
+        /// A body from the open to the close on a wick from the low to the high: hollow when
+        /// the price rose, filled when it fell.
+        #[default]
+        Candle = "candle",
+        /// A line from the low to the high, the open ticked to its left, the close to its right.
+        Ohlc = "ohlc",
+    }
+}
+
 /// Theme defaults for `LineChart` and the other charts, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ChartDefaults {

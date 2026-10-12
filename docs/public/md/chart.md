@@ -1,13 +1,13 @@
 # Chart
 
 Crate: `libero`, feature `charts`
-Import: `use libero::components::{BarChart, ChartHandle, ChartRange, FunnelChart, HeatmapChart, LineChart, PieChart, ScatterChart, ScatterSeries, Series, Slice, Trend, use_chart};`
+Import: `use libero::components::{BarChart, Candle, CandlestickChart, ChartHandle, ChartRange, FunnelChart, HeatmapChart, LineChart, PieChart, ScatterChart, ScatterSeries, Series, Slice, Trend, use_chart};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/chart>
 Index: [index.md](index.md) lists every other page
-Description: Line, bar, pie, funnel, scatter and heatmap charts as SVG, with a tooltip, arrow keys, a toggle legend, and a summary for screen readers.
+Description: Line, bar, pie, funnel, scatter, heatmap and candlestick charts as SVG, with a tooltip, arrow keys, a toggle legend, and a summary for screen readers.
 
-`LineChart`, `BarChart`, `PieChart`, `FunnelChart`, `ScatterChart` and
-`HeatmapChart`, each
+`LineChart`, `BarChart`, `PieChart`, `FunnelChart`, `ScatterChart`,
+`HeatmapChart` and `CandlestickChart`, each
 drawn as an SVG that fills its width, with a tooltip, the arrow keys, a legend
 that hides and shows, and a summary for screen readers. Needs the `charts`
 feature. Web and Android.
@@ -21,7 +21,8 @@ to bottom; a heatmap takes a grid of values, a row per name in `y`. A line of an
 right y axis with `.secondary_axis()`; in an upright bar chart, a series is
 drawn as a line over the bars with `.kind(SeriesKind::Line)`. A scatter takes
 `ScatterSeries` of x and y pairs, bubbles with a size as a third value, and fits
-a `trend` line through each.
+a `trend` line through each. A candlestick chart takes a `Candle` per period,
+its open, high, low and close.
 
 Lines and bars zoom and pan their x axis with `zoom` and brush a range for
 `onrange`. Every chart exports as SVG or PNG through a `use_chart()` handle or
@@ -310,6 +311,32 @@ fn Demo() -> Element {
                 vec![11.0, 28.0, 52.0, 44.0, 27.0, 10.0],
             ],
             steps: 5,
+        }
+    }
+}
+```
+
+`CandlestickChart` draws a period's open, high, low and close as a candle, and
+never tells the direction by colour alone: a rising candle is hollow, a falling
+one filled, and a key under the plot says so. `style: "ohlc"` draws OHLC bars.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Candle, CandlestickChart};
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        CandlestickChart {
+            title: "Share price",
+            x: ["Jan", "Feb", "Mar", "Apr"].map(String::from).to_vec(),
+            candles: vec![
+                Candle::new(32.0, 38.0, 30.0, 36.0),
+                Candle::new(36.0, 41.0, 34.0, 35.0),
+                Candle::new(35.0, 37.0, 29.0, 30.0),
+                Candle::new(30.0, 34.0, 28.0, 33.0),
+            ],
+            unit: "€",
         }
     }
 }
@@ -721,6 +748,40 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it. |
 | `export_button` | `Option<bool>` | `false` | Save as SVG and Save as PNG buttons above the plot. |
 
+### `CandlestickChart`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `x` | `Vec<String>` | required | The periods' names, left to right, evenly spaced. |
+| `candles` | `Vec<Candle>` | required | A candle per `x`, `Candle::new(open, high, low, close)` or from a tuple. A price that is not a number, or a candle missing at the end, leaves a gap; a high under the body or a low over it warns in development. |
+| `name` | `Option<String>` | "Price" | The prices' name in the tooltip and the summary. |
+| `style` | `CandleStyle` | candle | `candle`: a body from the open to the close on a wick, hollow when it rose, filled when it fell. `ohlc`: a bar from the low to the high with the open ticked left and the close right. |
+| `up_color` | `Option<ChartColor>` | success | A rising candle's colour, as `"success.6"` or a hex. |
+| `down_color` | `Option<ChartColor>` | error | A falling candle's colour. |
+| `title` | `Option<String>` | | Shown above the chart, and its accessible name. |
+| `description` | `Option<String>` | | A sentence under the title: what to read from the chart. |
+| `y_min` | `Option<f64>` | | The price axis' lowest value. Unset, a round number at or under the lowest low. |
+| `y_max` | `Option<f64>` | | The price axis' highest value. Unset, a round number at or over the highest high. |
+| `y_ticks` | `Option<usize>` | `6` | The steps the price axis is cut into. |
+| `x_title` | `Option<String>` | | Under the periods: what they are. |
+| `y_title` | `Option<String>` | | Beside the price axis, read upward: what it measures. |
+| `legend` | `LegendPosition` | bottom | The Up and Down key, under the plot; `none` leaves it out. |
+| `grid` | `Option<bool>` | `true` | Horizontal guide lines. |
+| `value_format` | `ValueFormat` | `Auto` | How prices are written on the axis, in the tooltip and in the summary. |
+| `unit` | `Option<String>` | | After every price, as `"€"`. |
+| `hidden` | `Option<Vec<String>>` | | Shared with the other charts; a candlestick chart hides nothing. |
+| `default_hidden` | `Vec<String>` | `[]` | Shared with the other charts; a candlestick chart hides nothing. |
+| `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | Shared with the other charts; never called by a candlestick chart. |
+| `aspect_ratio` | `Option<f32>` | `16 / 9` | Width over height of the plot and its key. |
+| `loading` | `bool` | `false` | A placeholder instead of the plot, and `aria-busy` on the chart. |
+| `empty` | `Option<Element>` | | Shown in the plot when no candle has its four prices. Unset, "No data". |
+| `tooltip` | `Option<bool>` | `true` | A tooltip with the period's open, high, low and close at the pointer's or the keys' candle. |
+| `tooltip_content` | `Option<Callback<ChartPoint, Element>>` | | The tooltip's content instead of the period and its prices. |
+| `onpointclick` | `Option<EventHandler<ChartPoint>>` | | A click on a candle, a second tap on a pinned one, or Enter on the keys' candle. `index` is its place in `candles`, `value` its close. |
+| `onactivechange` | `Option<EventHandler<Option<ChartPoint>>>` | | The candle under the pointer or the keys; `None` when it leaves. |
+| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it. |
+| `export_button` | `Option<bool>` | `false` | Save as SVG and Save as PNG buttons above the plot. |
+
 ### `PieChart`
 
 | Prop | Type | Default | Description |
@@ -797,9 +858,9 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 | Key | Action |
 |---|---|
 | `Tab` | Into the plot and the legend's buttons in the order drawn: a legend at the top or the start comes first. |
-| `ArrowRight` / `ArrowLeft` | Line: the next or previous point of the line, as drawn, left to right in either text direction. Bar: the next or previous category's bar of the series; `horizontal`, the next or previous series' bar in the category. Pie: the next or previous slice, clockwise. Funnel: the next or previous stage, top down. Scatter: the series' next or previous point, left to right. Heatmap: the next or previous cell in the row, left to right. |
+| `ArrowRight` / `ArrowLeft` | Line: the next or previous point of the line, as drawn, left to right in either text direction. Bar: the next or previous category's bar of the series; `horizontal`, the next or previous series' bar in the category. Pie: the next or previous slice, clockwise. Funnel: the next or previous stage, top down. Scatter: the series' next or previous point, left to right. Heatmap: the next or previous cell in the row, left to right. Candlestick: the next or previous candle, left to right. |
 | `ArrowDown` / `ArrowUp` | Line: the next or previous line at the same x value, or its nearest point. Bar: the next or previous series' bar in the category; `horizontal`, the next or previous category, top to bottom. Pie and funnel: the next or previous slice or stage. Scatter: the next or previous series' point nearest in x. Heatmap: the row below or above, at the nearest column. |
-| `Home` / `End` | The line's or the series' first or last point or bar; a pie's first or last slice, a funnel's top or bottom stage; a scatter series' leftmost or rightmost point; a heatmap row's first or last cell. |
+| `Home` / `End` | The line's or the series' first or last point or bar; a pie's first or last slice, a funnel's top or bottom stage; a scatter series' leftmost or rightmost point; a heatmap row's first or last cell; the first or last candle. |
 | `Enter` / `Space` | Calls `onpointclick` with the point, bar or slice. |
 | `Escape` | Clears the brushed band, else the point and its tooltip. A tooltip a pointer hovers closes with Escape wherever focus is, and stays closed until the pointer leaves the plot. |
 | `+` / `-` | With `zoom`: zooms the x axis, a lying bar chart's categories, in or out around the keys' point; the arrows carry the window along at its edge. |
@@ -823,13 +884,19 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   a bubble series' sizes and each trend line's kind and direction, as "Online:
   linear trend, rising."; a heatmap's, its rows by columns and its lowest and
   highest value, the highest and the lowest cell, then each row's cells (above
-  12 rows or 150 cells, a pointer to the keys instead).
+  12 rows or 150 cells, a pointer to the keys instead); a candlestick chart's,
+  its periods, the first open and the last close with the change, the highest
+  high and the lowest low with their periods, and how many candles rose, fell
+  and stayed.
 - The plot is one tab stop, a `role="application"` described as a chart, so a
   screen reader hands it the arrows. Each point the keys reach is announced, as
-  "This week, Tue: 132", "Chrome: 62, 62%." "Online: x 12, y 34, size 80" or, for a heatmap's cell, "Tue, 12: 46".
+  "This week, Tue: 132", "Chrome: 62, 62%." "Online: x 12, y 34, size 80" or, for a heatmap's cell, "Tue, 12: 46"; a candle reads its four prices and its direction, as "Price, May: open 33, high 44, low 32, close 43, up".
 - A heatmap never tells by colour alone: each cell writes its value where it
   fits, in black or white by the cell; an empty cell is outlined, dashed, and
   the scale under the plot keys it as "No value".
+- A candle never tells its direction by colour alone: a rising one is hollow, a
+  falling one filled, and the key under the plot says which is which; an OHLC
+  bar ticks its open left and its close right.
 - The legend's entries are toggle buttons: pressed while their series or slice
   shows, struck through when hidden. The last shown one's button is
   `aria-disabled`. Should `hidden` or `default_hidden` name every one, the plot
@@ -891,8 +958,8 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   not when `stacked`.
 - A rose's radius and a slice under `min_label_angle` are read by eye or not at
   all; the summary gives every value.
-- `zoom` and `onrange` are for lines and bars; a pie, a funnel, a scatter and a
-  heatmap export only.
+- `zoom` and `onrange` are for lines and bars; a pie, a funnel, a scatter, a
+  heatmap and a candlestick chart export only.
 - A bubble's size and a trend line are read by eye; the tooltip, the
   announcement and the summary give the sizes and each trend's direction.
   Bubbles are drawn largest first, so a small one stays on top.

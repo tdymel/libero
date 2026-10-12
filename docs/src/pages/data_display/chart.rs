@@ -4,9 +4,9 @@ use dioxus::prelude::*;
 use libero::use_theme;
 use libero::{
     components::{
-        BarChart, ChartRange, Code, FunnelChart, HeatmapChart, LineChart, MarkLine, MarkPoint,
-        Orientation, PieChart, ScatterChart, ScatterSeries, Series, SeriesKind, Slice, Table, Text,
-        Trend, column,
+        BarChart, Candle, CandlestickChart, ChartRange, Code, FunnelChart, HeatmapChart, LineChart,
+        MarkLine, MarkPoint, Orientation, PieChart, ScatterChart, ScatterSeries, Series,
+        SeriesKind, Slice, Table, Text, Trend, column,
     },
     theme::{
         BarLabelPosition, BarLayout, Curve, LegendPosition, PieLabelPosition, PieLabels,
@@ -75,6 +75,18 @@ const VISITS: [[f64; 6]; 5] = [
     [14.0, 31.0, 39.0, 33.0, 29.0, 16.0],
     [10.0, 24.0, 33.0, 28.0, 31.0, 21.0],
 ];
+const MONTHS: [&str; 8] = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"];
+/// A share's months: open, high, low and close in €.
+const PRICES: [(f64, f64, f64, f64); 8] = [
+    (32.0, 38.0, 30.0, 36.0),
+    (36.0, 41.0, 34.0, 35.0),
+    (35.0, 37.0, 29.0, 30.0),
+    (30.0, 34.0, 28.0, 33.0),
+    (33.0, 44.0, 32.0, 43.0),
+    (43.0, 46.0, 40.0, 41.0),
+    (41.0, 43.0, 39.0, 41.0),
+    (41.0, 50.0, 39.0, 48.0),
+];
 
 fn on(value: bool) -> &'static str {
     if value { "true" } else { "false" }
@@ -86,6 +98,10 @@ fn slices() -> Vec<Slice> {
 
 fn stages() -> Vec<Slice> {
     STAGES.into_iter().map(Slice::from).collect()
+}
+
+fn candles() -> Vec<Candle> {
+    PRICES.into_iter().map(Candle::from).collect()
 }
 
 fn names(names: &[&str]) -> Vec<String> {
@@ -100,6 +116,7 @@ fn is(kind: &'static str) -> fn(&DemoValues) -> bool {
         "pie" => |values| values.str("type") != "pie",
         "scatter" => |values| values.str("type") != "scatter",
         "heatmap" => |values| values.str("type") != "heatmap",
+        "candlestick" => |values| values.str("type") != "candlestick",
         "axes" => |values| matches!(values.str("type").as_str(), "pie" | "funnel" | "heatmap"),
         "shares" => |values| !matches!(values.str("type").as_str(), "pie" | "funnel"),
         "series" => |values| !matches!(values.str("type").as_str(), "line" | "bar"),
@@ -147,6 +164,7 @@ fn y_range(values: &DemoValues) -> Option<(f64, f64)> {
         ("auto", _) => None,
         (_, "bar") => Some((-50.0, 150.0)),
         (_, "scatter") => Some((0.0, 100.0)),
+        (_, "candlestick") => Some((20.0, 60.0)),
         _ if values.str("area") == "stacked" => Some((0.0, 400.0)),
         _ => Some((50.0, 250.0)),
     }
@@ -161,6 +179,7 @@ fn axis_titles(values: &DemoValues) -> Option<(&'static str, &'static str)> {
         (false, _) => None,
         (true, "bar") => Some(("Quarter", "Profit")),
         (true, "scatter") => Some(("Ad spend (k€)", "Sales (k€)")),
+        (true, "candlestick") => Some(("Month", "Price (€)")),
         (true, _) => Some(("Day", "Visitors")),
     }
 }
@@ -260,6 +279,16 @@ fn table(values: &DemoValues) -> (&'static str, &'static str, Vec<&'static str>,
                 .iter()
                 .zip(VISITS)
                 .map(|(day, row)| (*day, row.to_vec()))
+                .collect(),
+        ),
+        "candlestick" => (
+            "Share price",
+            "Month",
+            vec!["Open", "High", "Low", "Close"],
+            MONTHS
+                .iter()
+                .zip(PRICES)
+                .map(|(month, (o, h, l, c))| (*month, vec![o, h, l, c]))
                 .collect(),
         ),
         _ if conversion(values).is_some() => (
@@ -411,6 +440,7 @@ fn component(values: &DemoValues, source: &str) -> String {
         "funnel" => "FunnelChart",
         "scatter" => "ScatterChart",
         "heatmap" => "HeatmapChart",
+        "candlestick" => "CandlestickChart",
         _ => "LineChart",
     };
     let mut chart = source.replacen("Chart", name, 1);
@@ -575,6 +605,37 @@ pub fn ChartPage() -> Element {
                     prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it."),
                     prop("export_button", "Option<bool>").default(on(theme.chart.export_button)).doc("Save as SVG and Save as PNG buttons above the plot."),
                 ]),
+                props("CandlestickChart", vec![
+                    prop("x", "Vec<String>").default("required").doc("The periods' names, left to right, evenly spaced."),
+                    prop("candles", "Vec<Candle>").default("required").doc("A candle per `x`, `Candle::new(open, high, low, close)` or from a tuple. A price that is not a number, or a candle missing at the end, leaves a gap; a high under the body or a low over it warns in development."),
+                    prop("name", "Option<String>").default("\"Price\"").doc("The prices' name in the tooltip and the summary."),
+                    prop("style", "CandleStyle").default("candle").doc("`candle`: a body from the open to the close on a wick, hollow when it rose, filled when it fell. `ohlc`: a bar from the low to the high with the open ticked left and the close right."),
+                    prop("up_color", "Option<ChartColor>").default("success").doc("A rising candle's colour, as `\"success.6\"` or a hex."),
+                    prop("down_color", "Option<ChartColor>").default("error").doc("A falling candle's colour."),
+                    prop("title", "Option<String>").doc("Shown above the chart, and its accessible name."),
+                    prop("description", "Option<String>").doc("A sentence under the title: what to read from the chart."),
+                    prop("y_min", "Option<f64>").doc("The price axis' lowest value. Unset, a round number at or under the lowest low."),
+                    prop("y_max", "Option<f64>").doc("The price axis' highest value. Unset, a round number at or over the highest high."),
+                    prop("y_ticks", "Option<usize>").default(theme.chart.y_ticks.to_string()).doc("The steps the price axis is cut into."),
+                    prop("x_title", "Option<String>").doc("Under the periods: what they are."),
+                    prop("y_title", "Option<String>").doc("Beside the price axis, read upward: what it measures."),
+                    prop("legend", "LegendPosition").default("bottom").doc("The Up and Down key, under the plot; `none` leaves it out."),
+                    prop("grid", "Option<bool>").default(on(theme.chart.grid)).doc("Horizontal guide lines."),
+                    prop("value_format", "ValueFormat").default("Auto").doc("How prices are written on the axis, in the tooltip and in the summary."),
+                    prop("unit", "Option<String>").doc("After every price, as `\"€\"`."),
+                    prop("hidden", "Option<Vec<String>>").doc("Shared with the other charts; a candlestick chart hides nothing."),
+                    prop("default_hidden", "Vec<String>").default("[]").doc("Shared with the other charts; a candlestick chart hides nothing."),
+                    prop("onhiddenchange", "Option<EventHandler<Vec<String>>>").doc("Shared with the other charts; never called by a candlestick chart."),
+                    prop("aspect_ratio", "Option<f32>").default("16 / 9").doc("Width over height of the plot and its key."),
+                    prop("loading", "bool").default("false").doc("A placeholder instead of the plot, and `aria-busy` on the chart."),
+                    prop("empty", "Option<Element>").doc("Shown in the plot when no candle has its four prices. Unset, \"No data\"."),
+                    prop("tooltip", "Option<bool>").default(on(theme.chart.tooltip)).doc("A tooltip with the period's open, high, low and close at the pointer's or the keys' candle."),
+                    prop("tooltip_content", "Option<Callback<ChartPoint, Element>>").doc("The tooltip's content instead of the period and its prices."),
+                    prop("onpointclick", "Option<EventHandler<ChartPoint>>").doc("A click on a candle, a second tap on a pinned one, or Enter on the keys' candle. `index` is its place in `candles`, `value` its close."),
+                    prop("onactivechange", "Option<EventHandler<Option<ChartPoint>>>").doc("The candle under the pointer or the keys; `None` when it leaves."),
+                    prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it."),
+                    prop("export_button", "Option<bool>").default(on(theme.chart.export_button)).doc("Save as SVG and Save as PNG buttons above the plot."),
+                ]),
                 props("PieChart", vec![
                     prop("slices", "Vec<Slice>").default("required").doc("The slices, each a share of their sum. A negative value takes no share."),
                     prop("title", "Option<String>").doc("Shown above the chart, and its accessible name."),
@@ -638,9 +699,9 @@ pub fn ChartPage() -> Element {
             ],
             accessibility: a11y()
                 .key(["Tab"], "Into the plot and the legend's buttons in the order drawn: a legend at the top or the start comes first.")
-                .key(["ArrowRight", "ArrowLeft"], "Line: the next or previous point of the line, as drawn, left to right in either text direction. Bar: the next or previous category's bar of the series; `horizontal`, the next or previous series' bar in the category. Pie: the next or previous slice, clockwise. Funnel: the next or previous stage, top down. Scatter: the series' next or previous point, left to right. Heatmap: the next or previous cell in the row, left to right.")
+                .key(["ArrowRight", "ArrowLeft"], "Line: the next or previous point of the line, as drawn, left to right in either text direction. Bar: the next or previous category's bar of the series; `horizontal`, the next or previous series' bar in the category. Pie: the next or previous slice, clockwise. Funnel: the next or previous stage, top down. Scatter: the series' next or previous point, left to right. Heatmap: the next or previous cell in the row, left to right. Candlestick: the next or previous candle, left to right.")
                 .key(["ArrowDown", "ArrowUp"], "Line: the next or previous line at the same x value, or its nearest point. Bar: the next or previous series' bar in the category; `horizontal`, the next or previous category, top to bottom. Pie and funnel: the next or previous slice or stage. Scatter: the next or previous series' point nearest in x. Heatmap: the row below or above, at the nearest column.")
-                .key(["Home", "End"], "The line's or the series' first or last point or bar; a pie's first or last slice, a funnel's top or bottom stage; a scatter series' leftmost or rightmost point; a heatmap row's first or last cell.")
+                .key(["Home", "End"], "The line's or the series' first or last point or bar; a pie's first or last slice, a funnel's top or bottom stage; a scatter series' leftmost or rightmost point; a heatmap row's first or last cell; the first or last candle.")
                 .key(["Enter", "Space"], "Calls `onpointclick` with the point, bar or slice.")
                 .key(["Escape"], "Clears the brushed band, else the point and its tooltip. A tooltip a pointer hovers closes with Escape wherever focus is, and stays closed until the pointer leaves the plot.")
                 .key(["+", "-"], "With `zoom`: zooms the x axis, a lying bar chart's categories, in or out around the keys' point; the arrows carry the window along at its edge.")
@@ -649,9 +710,10 @@ pub fn ChartPage() -> Element {
                 .handles([
                     "The chart is a `role=\"figure\"` named by `title`, else by a spread `aria-label`, else \"chart\". The drawing is hidden from screen readers.",
                     "A loading chart says \"Loading chart\" in a live region when it starts, and its summary says it too.",
-                    "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is, then each mark line's name and value and each marked point's place and value, each line's error band and each bar series' error bars with their outer ends, the series drawn as a line over bars, the series on the right y axis, the axes' titles and, stacked, that the top line is the total; a pie's, the total, then each slice's value and share; a funnel's, its first and last stage, then each stage's value and share of the first; a scatter's, each series' count of points and its x and y ranges, a bubble series' sizes and each trend line's kind and direction, as \"Online: linear trend, rising.\"; a heatmap's, its rows by columns and its lowest and highest value, the highest and the lowest cell, then each row's cells (above 12 rows or 150 cells, a pointer to the keys instead).",
-                    "The plot is one tab stop, a `role=\"application\"` described as a chart, so a screen reader hands it the arrows. Each point the keys reach is announced, as \"This week, Tue: 132\", \"Chrome: 62, 62%.\" \"Online: x 12, y 34, size 80\" or, for a heatmap's cell, \"Tue, 12: 46\".",
+                    "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is, then each mark line's name and value and each marked point's place and value, each line's error band and each bar series' error bars with their outer ends, the series drawn as a line over bars, the series on the right y axis, the axes' titles and, stacked, that the top line is the total; a pie's, the total, then each slice's value and share; a funnel's, its first and last stage, then each stage's value and share of the first; a scatter's, each series' count of points and its x and y ranges, a bubble series' sizes and each trend line's kind and direction, as \"Online: linear trend, rising.\"; a heatmap's, its rows by columns and its lowest and highest value, the highest and the lowest cell, then each row's cells (above 12 rows or 150 cells, a pointer to the keys instead); a candlestick chart's, its periods, the first open and the last close with the change, the highest high and the lowest low with their periods, and how many candles rose, fell and stayed.",
+                    "The plot is one tab stop, a `role=\"application\"` described as a chart, so a screen reader hands it the arrows. Each point the keys reach is announced, as \"This week, Tue: 132\", \"Chrome: 62, 62%.\" \"Online: x 12, y 34, size 80\" or, for a heatmap's cell, \"Tue, 12: 46\"; a candle reads its four prices and its direction, as \"Price, May: open 33, high 44, low 32, close 43, up\".",
                     "A heatmap never tells by colour alone: each cell writes its value where it fits, in black or white by the cell; an empty cell is outlined, dashed, and the scale under the plot keys it as \"No value\".",
+                    "A candle never tells its direction by colour alone: a rising one is hollow, a falling one filled, and the key under the plot says which is which; an OHLC bar ticks its open left and its close right.",
                     "The legend's entries are toggle buttons: pressed while their series or slice shows, struck through when hidden. The last shown one's button is `aria-disabled`. Should `hidden` or `default_hidden` name every one, the plot and the summary say \"All series are hidden.\" and the legend stays. A dashed line's key is a dash, as drawn; once a line sets a `symbol`, each key is its line's point shape. A line among bars is keyed by a short stroke, the bars by squares.",
                     "On a touch screen a tap pins a point's tooltip, a second tap on it clicks; a vertical swipe still scrolls the page.",
                     "With `zoom`, the shown range is announced once a zoom or pan settles, as \"Showing Tue to Fri\"; the Reset zoom button stays focusable while there is nothing to reset. Ctrl or Cmd with the wheel zooms only a zoomable plot, so the page zoom works everywhere else.",
@@ -681,7 +743,7 @@ pub fn ChartPage() -> Element {
                     "`.colors` and `.negative_color` add no meaning of their own: a loss already hangs below the axis. The legend keeps the series' colour.",
                     "A percent stack draws no error bars and reads the range in its tooltip; on any other layout the value axis reaches the far end of a range unless `y_min` or `y_max` is set. A line draws its ranges as a band, only around its points and not when `stacked`.",
                     "A rose's radius and a slice under `min_label_angle` are read by eye or not at all; the summary gives every value.",
-                    "`zoom` and `onrange` are for lines and bars; a pie, a funnel, a scatter and a heatmap export only.",
+                    "`zoom` and `onrange` are for lines and bars; a pie, a funnel, a scatter, a heatmap and a candlestick chart export only.",
                     "A bubble's size and a trend line are read by eye; the tooltip, the announcement and the summary give the sizes and each trend's direction. Bubbles are drawn largest first, so a small one stays on top.",
                     "A heatmap's scale is drawn under the plot whatever `legend` says, but `none`; in forced colours its cells keep the scale's colours and their black or white values; the axes, the names and an empty cell's outline take the system's.",
                     "A funnel is drawn widest stage first; the keys, the summary and the legend keep the order of `stages`. A hidden stage leaves the drawing and the others widen to the largest shown; percent labels stay shares of the first stage.",
@@ -701,8 +763,10 @@ pub fn ChartPage() -> Element {
                     Code { source: "FunnelChart" }
                     ", "
                     Code { source: "ScatterChart" }
-                    " and "
+                    ", "
                     Code { source: "HeatmapChart" }
+                    " and "
+                    Code { source: "CandlestickChart" }
                     ", each drawn as an SVG that fills its width, with a tooltip, the arrow keys, a legend that hides and shows, and a summary for screen readers. Needs the "
                     Code { source: "charts" }
                     " feature. Web and Android."
@@ -722,7 +786,9 @@ pub fn ChartPage() -> Element {
                     Code { source: "ScatterSeries" }
                     " of x and y pairs, bubbles with a size as a third value, and fits a "
                     Code { source: "trend" }
-                    " line through each."
+                    " line through each. A candlestick chart takes a "
+                    Code { source: "Candle" }
+                    " per period, its open, high, low and close."
                 }
                 Text {
                     "Lines and bars zoom and pan their x axis with "
@@ -741,9 +807,9 @@ pub fn ChartPage() -> Element {
                 children_text: "",
                 wrap: Wrap(component),
                 controls: vec![
-                    Control::toggle("type", ["line", "bar", "pie", "funnel", "scatter", "heatmap"])
+                    Control::toggle("type", ["line", "bar", "pie", "funnel", "scatter", "heatmap", "candlestick"])
                         .default("line")
-                        .labels(["Line", "Bar", "Pie", "Funnel", "Scatter", "Heatmap"])
+                        .labels(["Line", "Bar", "Pie", "Funnel", "Scatter", "Heatmap", "Candlestick"])
                         .code(|_, values| {
                             let mark = marks_code(values);
                             match values.str("type").as_str() {
@@ -773,6 +839,14 @@ pub fn ChartPage() -> Element {
                                 format!("x: {HOURS:?}.map(String::from).to_vec()"),
                                 format!("y: {WEEKDAYS:?}.map(String::from).to_vec()"),
                                 format!("values: {VISITS:?}.map(|row| row.to_vec()).to_vec()"),
+                            ],
+                            "candlestick" => vec![
+                                "title: \"Share price\"".to_string(),
+                                format!("x: {MONTHS:?}.map(String::from).to_vec()"),
+                                format!(
+                                    "candles: vec![{}]",
+                                    PRICES.map(|(o, h, l, c)| format!("Candle::new({o:?}, {h:?}, {l:?}, {c:?})")).join(", ")
+                                ),
                             ],
                             _ => vec![
                                 "title: \"Visitors\"".to_string(),
@@ -845,6 +919,10 @@ pub fn ChartPage() -> Element {
                             "true" => vec![],
                             _ => vec!["cell_labels: false".to_string()],
                         }),
+                    Control::toggle("style", ["candle", "ohlc"])
+                        .default("candle")
+                        .labels(["Candles", "OHLC bars"])
+                        .hidden_when(is("candlestick")),
                     Control::select("labels", ["percent", "value", "name", "none"])
                         .default(theme.chart.pie_labels.as_str())
                         .hidden_when(is("shares")),
@@ -1060,6 +1138,16 @@ pub fn ChartPage() -> Element {
                                 values: VISITS.map(|row| row.to_vec()).to_vec(),
                                 steps: values.str("steps").parse::<usize>().ok(),
                                 cell_labels: values.str("cell_labels") == "true",
+                                legend, tooltip, loading, export_button,
+                            }
+                        },
+                        "candlestick" => rsx! {
+                            CandlestickChart {
+                                title: "Share price",
+                                x: names(&MONTHS),
+                                candles: candles(),
+                                style: values.str("style"),
+                                y_min, y_max, y_ticks, x_title, y_title,
                                 legend, tooltip, loading, export_button,
                             }
                         },

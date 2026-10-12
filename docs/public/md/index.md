@@ -145,7 +145,7 @@ fetch only the file you need.
 - [Accordion](accordion.md): Sections over an enum, each a heading whose button opens its panel, with one or many open.
 - [Marquee](marquee.md): Content that scrolls on its own in an endless loop, with a pause toggle and a still fallback under reduced motion.
 - [QrCode](qr_code.md): Encodes a string as a scalable QR code, rendered as an inline SVG.
-- [Chart](chart.md): Line, bar, pie, funnel, scatter and heatmap charts as SVG, with a tooltip, arrow keys, a toggle legend, and a summary for screen readers.
+- [Chart](chart.md): Line, bar, pie, funnel, scatter, heatmap and candlestick charts as SVG, with a tooltip, arrow keys, a toggle legend, and a summary for screen readers.
 
 ## Typography
 

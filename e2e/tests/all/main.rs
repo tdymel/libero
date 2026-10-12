@@ -16,6 +16,7 @@ mod boundary;
 mod button;
 mod button_group;
 mod calendar;
+mod candlestick_chart;
 mod carousel;
 mod carousel_autoplay;
 mod carousel_slide_keys;

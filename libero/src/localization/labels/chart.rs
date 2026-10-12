@@ -38,6 +38,25 @@ pub struct ChartLabels {
     pub no_value: &'static str,
     /// Ends a large heatmap's summary in place of its rows.
     pub cells_by_keys: &'static str,
+    pub candlestick: &'static str,
+    /// A candlestick chart's series name when it has none.
+    pub price: &'static str,
+    /// A candle's prices, `{open}`, `{high}`, `{low}`, `{close}`, and its `{direction}`.
+    pub candle: &'static str,
+    pub up: &'static str,
+    pub down: &'static str,
+    pub unchanged: &'static str,
+    /// The keys of a rising and a falling candle under the plot.
+    pub up_key: &'static str,
+    pub down_key: &'static str,
+    /// The start of a candlestick chart's summary: `{count}` periods, `{first}` to `{last}`.
+    pub candle_range: &'static str,
+    /// The first `{open}` and the last `{close}`, and the `{change}` between them.
+    pub candle_change: &'static str,
+    /// The highest `{high}` on `{high_x}` and the lowest `{low}` on `{low_x}`.
+    pub candle_extremes: &'static str,
+    /// How many candles rose (`{up}`), fell (`{down}`) and stayed (`{flat}`).
+    pub candle_count: &'static str,
     /// In a pie's summary while the legend hides a slice: its shares count the hidden ones.
     pub shares_of_all: &'static str,
     /// The plot and the summary of a chart with nothing to draw.
@@ -148,6 +167,18 @@ impl ChartLabels {
         cell_empty: "{x} no value",
         no_value: "No value",
         cells_by_keys: "Use the arrow keys to read each cell.",
+        candlestick: "Candlestick chart",
+        price: "Price",
+        candle: "open {open}, high {high}, low {low}, close {close}, {direction}",
+        up: "up",
+        down: "down",
+        unchanged: "unchanged",
+        up_key: "Up",
+        down_key: "Down",
+        candle_range: "{kind} of {count} periods from {first} to {last}.",
+        candle_change: "Opened at {open}, closed at {close}: {change}.",
+        candle_extremes: "Highest: {high} on {high_x}. Lowest: {low} on {low_x}.",
+        candle_count: "{up} up, {down} down, {flat} unchanged.",
         shares_of_all: "Shares count the hidden slices too.",
         no_data: "No data",
         all_hidden: "All series are hidden.",
@@ -217,6 +248,18 @@ impl ChartLabels {
         cell_empty: "{x} kein Wert",
         no_value: "Kein Wert",
         cells_by_keys: "Mit den Pfeiltasten lässt sich jede Zelle lesen.",
+        candlestick: "Kerzendiagramm",
+        price: "Kurs",
+        candle: "Eröffnung {open}, Hoch {high}, Tief {low}, Schluss {close}, {direction}",
+        up: "gestiegen",
+        down: "gefallen",
+        unchanged: "unverändert",
+        up_key: "Gestiegen",
+        down_key: "Gefallen",
+        candle_range: "{kind} mit {count} Perioden von {first} bis {last}.",
+        candle_change: "Eröffnet bei {open}, geschlossen bei {close}: {change}.",
+        candle_extremes: "Höchster Kurs: {high} am {high_x}. Tiefster Kurs: {low} am {low_x}.",
+        candle_count: "{up} gestiegen, {down} gefallen, {flat} unverändert.",
         shares_of_all: "Die Anteile zählen die ausgeblendeten Segmente mit.",
         no_data: "Keine Daten",
         all_hidden: "Alle Reihen sind ausgeblendet.",

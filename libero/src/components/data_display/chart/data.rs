@@ -443,6 +443,49 @@ impl From<(&str, f64)> for Slice {
     }
 }
 
+/// One period of a [`CandlestickChart`](super::CandlestickChart): its open, high, low and
+/// close. A price that is not finite leaves the period empty.
+///
+/// ```rust
+/// # use libero::components::Candle;
+/// let monday = Candle::new(20.0, 38.0, 10.0, 34.0);
+/// let tuesday: Candle = (34.0, 40.0, 28.0, 30.0).into();
+/// # let _ = (monday, tuesday);
+/// ```
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Candle {
+    pub open: f64,
+    pub high: f64,
+    pub low: f64,
+    pub close: f64,
+}
+
+impl Candle {
+    pub fn new(open: f64, high: f64, low: f64, close: f64) -> Self {
+        Self {
+            open,
+            high,
+            low,
+            close,
+        }
+    }
+
+    /// Open, high, low and close, when all are finite.
+    pub(crate) fn prices(&self) -> Option<[f64; 4]> {
+        let prices = [self.open, self.high, self.low, self.close];
+        prices
+            .iter()
+            .all(|price| price.is_finite())
+            .then_some(prices)
+    }
+}
+
+impl From<(f64, f64, f64, f64)> for Candle {
+    fn from((open, high, low, close): (f64, f64, f64, f64)) -> Self {
+        Self::new(open, high, low, close)
+    }
+}
+
 /// One point of a [`ScatterSeries`]: where it sits and, for a bubble, its size.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ScatterPoint {

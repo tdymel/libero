@@ -1,4 +1,5 @@
 mod bar_chart;
+mod candlestick_chart;
 mod data;
 mod engine;
 mod export;
@@ -15,9 +16,10 @@ mod scatter_chart;
 mod zoom;
 
 pub use bar_chart::{BarChart, BarChartProps};
+pub use candlestick_chart::{CandlestickChart, CandlestickChartProps};
 pub use data::{
-    ChartColor, ChartPoint, MarkLine, MarkPoint, ScatterPoint, ScatterSeries, Series, SeriesKind,
-    Slice, Trend, Value, ValueFormat, XValues,
+    Candle, ChartColor, ChartPoint, MarkLine, MarkPoint, ScatterPoint, ScatterSeries, Series,
+    SeriesKind, Slice, Trend, Value, ValueFormat, XValues,
 };
 pub use export::{ChartHandle, use_chart};
 pub use funnel_chart::{FunnelChart, FunnelChartProps};

@@ -20,6 +20,9 @@ radiogroup "Type"
   radio "Heatmap" [checked=false]
   LabelText
     StaticText "Heatmap"
+  radio "Candlestick" [checked=false]
+  LabelText
+    StaticText "Candlestick"
 figure "Visitors"
   description "Line chart from Mon to Wed. This week: 101 to 132, highest at Tue. Last week: 98 to 115, highest at Wed."
   StaticText "Visitors"

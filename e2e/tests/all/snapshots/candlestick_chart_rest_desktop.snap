@@ -1,0 +1,22 @@
+---
+source: e2e/src/suite.rs
+assertion_line: 618
+description: candlestick_chart at desktop (rest)
+expression: tree
+---
+figure "Share price"
+  description "Candlestick chart of 3 periods from Mon to Wed. Opened at 20, closed at 30: +10 (+50%). Highest: 40 on Tue. Lowest: 10 on Mon. 1 up, 1 down, 1 unchanged."
+  StaticText "Share price"
+  application "Share price" [roledescription=chart]
+    description "Arrow keys move between points, Enter selects one."
+  status [atomic] [live=polite]
+  paragraph
+    StaticText "Candlestick chart of 3 periods from Mon to Wed."
+  paragraph
+    StaticText "Opened at 20, closed at 30: +10 (+50%)."
+  paragraph
+    StaticText "Highest: 40 on Tue. Lowest: 10 on Mon."
+  paragraph
+    StaticText "1 up, 1 down, 1 unchanged."
+paragraph
+paragraph

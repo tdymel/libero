@@ -145,7 +145,8 @@ pub(super) struct OverlaySeries {
     pub(super) errors: Vec<Option<(f64, f64)>>,
     /// A scatter's x values as written, by index; empty elsewhere.
     pub(super) xs: Vec<String>,
-    /// A scatter's points as the tooltip and the keys say them, by index.
+    /// A point as the tooltip and the keys say it, by index: a scatter's x and y, a candle's
+    /// prices. Empty, its value.
     pub(super) points: Vec<String>,
 }
 
@@ -353,6 +354,9 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
         let (series, unit) = (series.clone(), unit.clone());
         move |mark: &Mark| {
             let entry = entry(&series, mark);
+            if let Some(own) = entry.and_then(|series| series.points.get(mark.index)) {
+                return own.clone();
+            }
             let unit = entry
                 .and_then(|series| series.unit.as_deref())
                 .or(unit.as_deref());

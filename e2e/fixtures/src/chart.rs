@@ -1,9 +1,9 @@
 //! The docs page's type switch: one `SegmentedControl` over a line, a bar, a pie, a
-//! funnel chart and a heatmap.
+//! funnel chart, a heatmap and a candlestick chart.
 
 use dioxus::prelude::*;
 use libero::components::{
-    BarChart, FunnelChart, HeatmapChart, LineChart, OptionLabel, PieChart, SegmentedControl, Series, Slice,
+    BarChart, Candle, CandlestickChart, FunnelChart, HeatmapChart, LineChart, OptionLabel, PieChart, SegmentedControl, Series, Slice,
 };
 
 use crate::Routes;
@@ -22,13 +22,14 @@ fn Switch() -> Element {
                 full_width: true,
                 "aria-label": "Type",
                 value: kind(),
-                options: ["line", "bar", "pie", "funnel", "heatmap"].map(String::from).to_vec(),
+                options: ["line", "bar", "pie", "funnel", "heatmap", "candlestick"].map(String::from).to_vec(),
                 option_label: |option: String| OptionLabel::from(match option.as_str() {
                     "line" => "Line",
                     "bar" => "Bar",
                     "pie" => "Pie",
                     "funnel" => "Funnel",
-                    _ => "Heatmap",
+                    "heatmap" => "Heatmap",
+                    _ => "Candlestick",
                 }),
                 onchange: move |next: String| kind.set(next),
             }
@@ -65,6 +66,14 @@ fn Switch() -> Element {
                         x: ["9 am", "12 pm"].map(String::from).to_vec(),
                         y: ["Mon", "Tue"].map(String::from).to_vec(),
                         values: vec![vec![12.0, 30.0], vec![8.0, 26.0]],
+                    }
+                },
+                "candlestick" => rsx! {
+                    CandlestickChart {
+                        id: "chart",
+                        title: "Share price",
+                        x: ["Mon", "Tue"].map(String::from).to_vec(),
+                        candles: vec![Candle::new(20.0, 38.0, 10.0, 34.0), Candle::new(34.0, 40.0, 28.0, 30.0)],
                     }
                 },
                 _ => rsx! {
