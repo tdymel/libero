@@ -294,7 +294,7 @@ pub fn ChartPage() -> Element {
                 .key(["Shift+ArrowRight", "Shift+ArrowLeft"], "With `onrange`: brushes from the keys' point to the next or previous x value.")
                 .handles([
                     "The chart is a `role=\"figure\"` named by `title`. The drawing is hidden from screen readers.",
-                    "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is, then each mark line's name and value and each marked point's place and value, the series on the right y axis, the axes' titles and, stacked, that the top line is the total; a pie's, the total, then each slice's value and share.",
+                    "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is, then each mark line's name and value and each marked point's place and value, each line's error band and its outer ends, the series on the right y axis, the axes' titles and, stacked, that the top line is the total; a pie's, the total, then each slice's value and share.",
                     "The plot is one tab stop, a `role=\"application\"` described as a chart, so a screen reader hands it the arrows. Each point the keys reach is announced, as \"This week, Tue: 132\" or \"Chrome: 62, 62%.\"",
                     "The legend's entries are toggle buttons: pressed while their series or slice shows, struck through when hidden. The last shown one's button is `aria-disabled`. A dashed line's key is a dash, as drawn; once a line sets a `symbol`, each key is its line's point shape.",
                     "On a touch screen a tap pins a point's tooltip, a second tap on it clicks; a vertical swipe still scrolls the page.",

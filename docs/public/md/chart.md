@@ -603,7 +603,8 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   screen readers.
 - A hidden summary gives the x range and each series' lowest and highest value,
   and where the highest is, then each mark line's name and value and each marked
-  point's place and value, the series on the right y axis, the axes'
+  point's place and value, each line's error band and its outer ends, the
+  series on the right y axis, the axes'
   titles and, stacked, that the top line is the total; a pie's, the total, then each
   slice's value and share.
 - The plot is one tab stop, a `role="application"` described as a chart, so a

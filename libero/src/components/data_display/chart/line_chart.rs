@@ -5,8 +5,9 @@ use super::{
     engine::{self, Axes, LineSpec},
     export::ExportSource,
     frame::{
-        Frame, Interaction, axis_titles, chart_unit, mark_line_specs, mark_point_specs,
-        overlay_series, series_specs, shown_places, summary, use_plot_size, with_extras,
+        Frame, Interaction, axis_titles, band_summary, chart_unit, mark_line_specs,
+        mark_point_specs, overlay_series, series_specs, shown_places, summary, use_plot_size,
+        with_extras,
     },
     legend::use_hidden_series,
     props::chart_props,
@@ -210,6 +211,10 @@ pub fn LineChart(props: LineChartProps) -> Element {
         (false, false) => {
             let mut sentences = summary(&labels, labels.line, &x, &props.series, write);
             sentences.extend(marked);
+            // A stack draws no band: its lines sit at their sums.
+            if !props.stacked {
+                sentences.extend(band_summary(&labels, &props.series, write));
+            }
             if !right.is_empty() {
                 let names: Vec<&str> = right.iter().map(|series| series.name.as_str()).collect();
                 sentences.push(fill(labels.secondary, &[("names", &names.join(", "))]));
@@ -512,6 +517,11 @@ mod tests {
             }
         });
         assert!(html.contains("ct-band"), "{html}");
+        assert!(
+            html.contains("Visits: a band shows each value")
+                && html.contains("range, 90 to 145 in all."),
+            "{html}"
+        );
     }
 
     /// A right axis series is labelled in its own unit there; the summary names it.

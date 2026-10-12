@@ -777,6 +777,34 @@ pub(super) fn mark_point_specs(
     sentences
 }
 
+/// A sentence per series whose error ranges a line chart bands, with the band's outer ends.
+pub(super) fn band_summary(
+    labels: &ChartLabels,
+    series: &[Series],
+    write: impl Fn(&Series, f64) -> String,
+) -> Vec<String> {
+    series
+        .iter()
+        .filter_map(|series| {
+            let ranges = series
+                .errors
+                .iter()
+                .zip(&series.values)
+                .filter_map(|(range, value)| value.and(*range));
+            let low = ranges.clone().map(|range| range.0).reduce(f64::min)?;
+            let high = ranges.map(|range| range.1).reduce(f64::max)?;
+            Some(fill(
+                labels.band,
+                &[
+                    ("name", &series.name),
+                    ("low", &write(series, low)),
+                    ("high", &write(series, high)),
+                ],
+            ))
+        })
+        .collect()
+}
+
 /// The axes' titles, which the drawing hides with itself.
 pub(super) fn axis_titles(
     labels: &ChartLabels,

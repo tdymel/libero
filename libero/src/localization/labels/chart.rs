@@ -65,6 +65,8 @@ pub struct ChartLabels {
     pub mark_line: &'static str,
     /// A mark line in the summary, `{name}` its series.
     pub mark_line_summary: &'static str,
+    /// A line's error band in the summary: `{low}` and `{high}` its lowest and highest ends.
+    pub band: &'static str,
     /// A marked point in the summary: `{label}` is `lowest` or `highest`, `{x}` where it is.
     pub mark_point: &'static str,
 }
@@ -108,6 +110,7 @@ impl ChartLabels {
         mark_line: "{label}: {value}",
         mark_line_summary: "{name}: {label} line at {value}.",
         mark_point: "{name}: {label} marked at {x}, {value}.",
+        band: "{name}: a band shows each value's range, {low} to {high} in all.",
     };
 
     pub const GERMAN: Self = Self {
@@ -148,5 +151,6 @@ impl ChartLabels {
         mark_line: "{label}: {value}",
         mark_line_summary: "{name}: Linie {label} bei {value}.",
         mark_point: "{name}: {label} markiert bei {x}, {value}.",
+        band: "{name}: ein Band zeigt den Bereich jedes Werts, insgesamt {low} bis {high}.",
     };
 }
