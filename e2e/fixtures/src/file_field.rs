@@ -67,7 +67,8 @@ fn FileResetPage() -> Element {
 
 /// The next file chooser answers itself with a 40 x 20 PNG, as no driver answers
 /// GTK's (1126): a detached input (the WebViews') at `click()`, an attached one at its event.
-const STUB_PICKER: &str = "const click = HTMLInputElement.prototype.click;
+const STUB_PICKER: &str = "if (!window.__e2eStubbed) { window.__e2eStubbed = true;
+    const click = HTMLInputElement.prototype.click;
     const answer = (input) => {
         HTMLInputElement.prototype.click = click;
         document.removeEventListener('click', onClick, true);
@@ -88,7 +89,7 @@ const STUB_PICKER: &str = "const click = HTMLInputElement.prototype.click;
     HTMLInputElement.prototype.click = function () {
         if (this.type !== 'file' || this.isConnected) return click.call(this);
         answer(this);
-    };";
+    }; }";
 
 /// A square crop of a dropped image (1218): `#rect` reads the crop in whole
 /// percent, `#out` the file `onchange` got, with its PNG size. `#stub-picker`

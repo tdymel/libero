@@ -271,8 +271,15 @@ fn a_broken_image_in_the_crop_dialog_says_so() {
 /// The same crop through Browse, the PNG handed to the page's canvas and back
 /// as base64 in a WebView (1230).
 async fn a_picked_image_is_cropped<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    d.click("#stub-picker").await?;
-    eventually_text(d, "#stubbed", "true", "stubbing the picker").await?;
+    // A simulator tap can get lost; the stub arms once, so a second tap is harmless.
+    eventually(d, "the picker to be stubbed", async |d| {
+        if d.text("#stubbed").await? == "true" {
+            return Ok(true);
+        }
+        d.click("#stub-picker").await?;
+        Ok(false)
+    })
+    .await?;
     d.click("#avatar").await?;
     eventually(d, "the crop dialog to open", async |d| {
         d.exists("[role=dialog] [data-slot=box]").await
