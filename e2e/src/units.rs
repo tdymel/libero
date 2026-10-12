@@ -79,7 +79,8 @@ pub(crate) fn filtered(names: Vec<String>, filters: &[String]) -> Vec<String> {
 }
 
 /// The filters as libtest's substrings, with a `--skip unit::` for each other unit whose names
-/// they would also catch. None when a skip would drop a selected name.
+/// they would also catch (the test's whole name where `unit::` is inside a selected name, as
+/// `button::` in `trailing_button::`). None when a skip would drop a selected name.
 fn skipping(
     listed: &[String],
     filters: &[&str],
@@ -90,7 +91,13 @@ fn skipping(
     let mut extra: Vec<String> = listed
         .iter()
         .filter(|name| filters.iter().any(|filter| name.contains(filter)) && !names.contains(name))
-        .filter_map(|name| Some(format!("{}::", name.split_once("::")?.0)))
+        .filter_map(|name| {
+            let unit = format!("{}::", name.split_once("::")?.0);
+            Some(match names.iter().any(|kept| kept.contains(&unit)) {
+                true => name.clone(),
+                false => unit,
+            })
+        })
         .collect();
     extra.sort();
     extra.dedup();
@@ -323,9 +330,26 @@ mod tests {
 
     #[test]
     fn a_skip_that_would_drop_a_selected_name_keeps_the_exact_names() {
-        let listed = strings(&["x::y::t", "y::x::z"]);
+        let listed = strings(&["x::q::x::a", "q::x::a"]);
         let (args, count) = exact_within(&listed, &strings(&["x::"]), 1);
-        assert_eq!((args, count), (strings(&["--exact", "x::y::t"]), 1));
+        assert_eq!((args, count), (strings(&["--exact", "x::q::x::a"]), 1));
+    }
+
+    #[test]
+    fn a_unit_inside_a_selected_name_is_skipped_by_the_whole_test_name() {
+        let listed = strings(&["trailing_button::a", "button::x_layout::web"]);
+        let args = strings(&["trailing_button::", "layout::"]);
+        let (args, count) = exact_within(&listed, &args, 1);
+        assert_eq!(count, 1);
+        assert_eq!(
+            args,
+            strings(&[
+                "trailing_button::",
+                "layout::",
+                "--skip",
+                "button::x_layout::web"
+            ])
+        );
     }
 
     #[test]
