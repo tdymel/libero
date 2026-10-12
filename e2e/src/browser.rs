@@ -336,6 +336,7 @@ fn harness() -> &'static Harness {
     HARNESS.get_or_init(|| {
         let runtime = Runtime::new().expect("tokio runtime");
         let browser = runtime.block_on(launch(false, chrome_profile()));
+        runtime.spawn(watch());
         Harness {
             runtime,
             browser: std::sync::Mutex::new((0, std::sync::Arc::new(browser))),
@@ -371,7 +372,11 @@ async fn new_tab() -> Result<Page> {
         return page.context("open a page");
     }
     drop(browser);
-    relaunch(launched).await;
+    let test = std::thread::current()
+        .name()
+        .unwrap_or("unnamed")
+        .to_string();
+    relaunch(launched, &test).await;
     let (_, browser) = self::browser();
     tokio::time::timeout(CREATE_PAGE, browser.new_page(blank_tab()?))
         .await
@@ -379,18 +384,38 @@ async fn new_tab() -> Result<Page> {
         .context("open a page")
 }
 
+/// Opens and closes a tab every [`WATCH_EVERY`]: with every test stuck inside a wedged
+/// page none opens one, and main's macOS shard hung silent for 20 min (todo 3444).
+async fn watch() {
+    const WATCH_EVERY: Duration = Duration::from_secs(20);
+    loop {
+        tokio::time::sleep(WATCH_EVERY).await;
+        let (launched, browser) = browser();
+        let Ok(blank) = blank_tab() else { return };
+        match tokio::time::timeout(CREATE_PAGE, browser.new_page(blank)).await {
+            Ok(Ok(page)) => {
+                let _ = page.close().await;
+            }
+            Ok(Err(_)) => {}
+            Err(_) => {
+                drop(browser);
+                relaunch(launched, "the watchdog").await;
+            }
+        }
+    }
+}
+
 /// Replaces the browser of launch `stalled` and journals the pages open in it; a no-op when
-/// another test relaunched it already. Dropping the old one kills its Chrome.
-async fn relaunch(stalled: u32) {
+/// another caller relaunched it already. Dropping the old one kills its Chrome.
+async fn relaunch(stalled: u32, by: &str) {
     static ALONE: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
     let _alone = ALONE.lock().await;
     if browser().0 != stalled {
         return;
     }
     let report = format!(
-        "chrome stalled {CREATE_PAGE:?} creating a page for {}; relaunching. Open pages, \
+        "chrome stalled {CREATE_PAGE:?} creating a page for {by}; relaunching. Open pages, \
          oldest first: {}",
-        std::thread::current().name().unwrap_or("unnamed"),
         open_tabs::report()
     );
     eprintln!("e2e: {report}");
