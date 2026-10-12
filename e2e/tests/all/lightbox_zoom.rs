@@ -560,11 +560,15 @@ e2e::scenario!(
 /// natural size (a WebView answered none, so the bounds were the frame's).
 async fn pan_stops_at_the_edge<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     open(d).await?;
-    eventually(d, "the first picture to decode", async |d| {
+    if let Err(e) = eventually(d, "the first picture to decode", async |d| {
         let decoded = "document.querySelector('[role=dialog] [data-lightbox-frame=\"0\"] img')?.naturalWidth > 0";
         Ok(d.evaluate(decoded).await? == serde_json::json!(true))
     })
-    .await?;
+    .await
+    {
+        let j = d.evaluate("(async () => { const i = document.querySelector('[role=dialog] [data-lightbox-frame=\"0\"] img'); if (!i) return 'no img'; let f; try { const r = await fetch(i.currentSrc); f = [r.status, r.headers.get('content-type'), (await r.text()).slice(0, 150)]; } catch (x) { f = String(x); } return [i.currentSrc, i.complete, i.naturalWidth, i.naturalHeight, i.getBoundingClientRect().width, f, document.querySelectorAll('[role=dialog] img').length]; })()").await?;
+        anyhow::bail!("DIAG {e}: {j}");
+    }
     for _ in 0..4 {
         d.click(ZOOM_IN).await?;
     }
