@@ -33,6 +33,10 @@ pub struct ChartLabels {
     pub x_axis: &'static str,
     /// The y axis' `{title}`, in the summary.
     pub y_axis: &'static str,
+    /// The right y axis' `{title}`, in the summary.
+    pub y2_axis: &'static str,
+    /// The summary of a line chart with a right y axis: `{names}` the series it measures.
+    pub secondary: &'static str,
     /// The summary of a stacked line chart: what its heights mean.
     pub stacked: &'static str,
     /// Read after `keys` on a zoomable plot.
@@ -84,6 +88,8 @@ impl ChartLabels {
         point: "{name}, {x}: {value}",
         x_axis: "X axis: {title}.",
         y_axis: "Y axis: {title}.",
+        y2_axis: "Right y axis: {title}.",
+        secondary: "On the right y axis: {names}.",
         stacked: "Stacked: each line adds to the ones before it, the top one is the total.",
         zoom_keys: "Plus and minus zoom, 0 resets the zoom.",
         brush_keys: "Shift with an arrow key selects a range, Escape clears it.",
@@ -122,6 +128,8 @@ impl ChartLabels {
         point: "{name}, {x}: {value}",
         x_axis: "X-Achse: {title}.",
         y_axis: "Y-Achse: {title}.",
+        y2_axis: "Rechte Y-Achse: {title}.",
+        secondary: "Auf der rechten Y-Achse: {names}.",
         stacked: "Gestapelt: jede Linie addiert sich zu den vorigen, die oberste ist die Summe.",
         zoom_keys: "Plus und Minus zoomen, 0 setzt den Zoom zurück.",
         brush_keys: "Umschalt mit einer Pfeiltaste wählt einen Bereich, Escape hebt ihn auf.",

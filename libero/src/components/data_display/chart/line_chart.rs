@@ -15,6 +15,7 @@ use super::{
 use crate::{
     components::common::{Input, names_itself, use_name_warning},
     hooks::{use_accessibility, use_formats, use_localization, use_root_id, use_theme},
+    localization::fill,
     theme::{ChartInk, Curve},
 };
 
@@ -53,6 +54,10 @@ chart_props! {
         /// Beside the y axis, read upward: what it measures.
         #[props(default, into)]
         y_title: Option<String>,
+        /// Beside the right y axis, read downward: what its
+        /// [`Series::secondary_axis`] series measure.
+        #[props(default, into)]
+        y2_title: Option<String>,
         /// Zoom and pan along the x axis: Ctrl or Cmd with the wheel, a pinch, a drag,
         /// the plus, minus and 0 keys, and a reset button. Unset, the theme's.
         #[props(default)]
@@ -126,6 +131,13 @@ pub fn LineChart(props: LineChartProps) -> Element {
     // Drawn series' places in `series`, to map the marks back.
     let shown = shown_places(&all_specs, &hidden.get());
     let unit = chart_unit(&props.unit, &props.series);
+    let (right, left): (Vec<Series>, Vec<Series>) = props
+        .series
+        .iter()
+        .cloned()
+        .partition(|series| series.secondary_axis);
+    // Each y axis writes the unit its series share.
+    let y2_unit = chart_unit(&None, &right).or(props.unit.clone());
     let write = |series: &Series, value: f64| {
         let unit = series.unit.as_deref().or(unit.as_deref());
         props.value_format.format(value, unit, formats)
@@ -158,6 +170,7 @@ pub fn LineChart(props: LineChartProps) -> Element {
             ticks: props.y_ticks.unwrap_or(theme.chart.y_ticks),
             x_title: props.x_title.clone(),
             y_title: props.y_title.clone(),
+            y2_title: props.y2_title.clone(),
         },
         area: props
             .area
@@ -169,7 +182,8 @@ pub fn LineChart(props: LineChartProps) -> Element {
         stroke_width: theme.chart.stroke_width,
         ink: ChartInk::of(theme, forced),
         format: props.value_format,
-        unit: unit.clone(),
+        unit: chart_unit(&props.unit, &left),
+        y2_unit,
         formats,
     };
     // The file keeps the normal palette under forced colours.
@@ -192,7 +206,16 @@ pub fn LineChart(props: LineChartProps) -> Element {
         (false, false) => {
             let mut sentences = summary(&labels, labels.line, &x, &props.series, write);
             sentences.extend(marked);
-            sentences.extend(axis_titles(&labels, &props.x_title, &props.y_title));
+            if !right.is_empty() {
+                let names: Vec<&str> = right.iter().map(|series| series.name.as_str()).collect();
+                sentences.push(fill(labels.secondary, &[("names", &names.join(", "))]));
+            }
+            sentences.extend(axis_titles(
+                &labels,
+                &props.x_title,
+                &props.y_title,
+                &props.y2_title,
+            ));
             if props.stacked {
                 sentences.push(labels.stacked.to_string());
             }
@@ -463,6 +486,32 @@ mod tests {
         );
         assert!(
             html.contains("X axis: Day.") && html.contains("Y axis: Visits."),
+            "{html}"
+        );
+    }
+
+    /// A right axis series is labelled in its own unit there; the summary names it.
+    #[test]
+    fn a_secondary_axis_is_drawn_and_summarized() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    LineChart {
+                        title: "Weather",
+                        x: ["Mon", "Tue"],
+                        series: vec![
+                            Series::new("Temperature", [12.0, 18.0]).unit("°C"),
+                            Series::new("Rain", [2.0, 6.0]).unit("mm").secondary_axis(),
+                        ],
+                        y2_title: "Rainfall",
+                    }
+                }
+            }
+        });
+        assert!(html.contains(" °C") && html.contains(" mm"), "{html}");
+        assert!(html.contains("\nRainfall\n"), "{html}");
+        assert!(
+            html.contains("On the right y axis: Rain.") && html.contains("Right y axis: Rainfall."),
             "{html}"
         );
     }

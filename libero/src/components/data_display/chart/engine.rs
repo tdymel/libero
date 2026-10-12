@@ -19,6 +19,8 @@ const X_MARK: char = '\u{2061}';
 const PERCENT_MARK: char = '\u{2062}';
 /// Ahead of each label on a bar: written as the y labels, but not pinned to the axis.
 const LABEL_MARK: char = '\u{2063}';
+/// Before every right y axis label, written again with that axis' unit.
+const AXIS2_MARK: char = '\u{2064}';
 const DASH: &str = "6,4";
 /// An axis' tick is 5 long; an axis or grid line is longer.
 const PLOT_TICK: f32 = 10.0;
@@ -159,6 +161,8 @@ pub(crate) struct SeriesExtras {
     pub(crate) mark_lines: Vec<(f64, String)>,
     /// Each marked point's x index and the text pinned by it.
     pub(crate) mark_points: Vec<(usize, String)>,
+    /// Measured on the right y axis.
+    pub(crate) secondary: bool,
 }
 
 /// Everything a line chart's SVG depends on, so a memo redraws only on a change.
@@ -181,6 +185,8 @@ pub(crate) struct LineSpec {
     pub(crate) ink: ChartInk,
     pub(crate) format: ValueFormat,
     pub(crate) unit: Option<String>,
+    /// The right y axis' unit.
+    pub(crate) y2_unit: Option<String>,
     pub(crate) formats: &'static Formats,
 }
 
@@ -194,6 +200,8 @@ pub(crate) struct Axes {
     pub(crate) ticks: usize,
     pub(crate) x_title: Option<String>,
     pub(crate) y_title: Option<String>,
+    /// A line chart's right y axis, read downward.
+    pub(crate) y2_title: Option<String>,
 }
 
 impl Axes {
@@ -216,20 +224,31 @@ impl Axes {
             first.split_number = self.ticks.max(1);
             first.title = side.clone();
         }
+        // Cut like the left one, so its labels sit on the grid's lines.
+        if let Some(second) = y.get_mut(1) {
+            second.split_number = self.ticks.max(1);
+            second.title = self.y2_title.clone();
+        }
     }
 }
 
-/// Every series' mark lines inside the value axis' ends, where unset the data's extent and
+/// Every series' mark lines inside its value axis' ends, where unset the data's extent and
 /// 0, which the axis always spans; in the order the renderer draws them.
 fn kept_mark_lines<'a>(series: &'a [SeriesSpec], axes: &Axes) -> Vec<Vec<&'a (f64, String)>> {
-    let values = series
-        .iter()
-        .flat_map(|s| s.values.iter().flatten().copied());
-    let low = axes.min.unwrap_or(values.clone().fold(0.0, f64::min));
-    let high = axes.max.unwrap_or(values.fold(0.0, f64::max));
+    let ends = |secondary: bool| {
+        let values = series
+            .iter()
+            .filter(|s| s.extras.secondary == secondary)
+            .flat_map(|s| s.values.iter().flatten().copied());
+        let fixed = |end: Option<f64>| end.filter(|_| !secondary);
+        let low = fixed(axes.min).unwrap_or(values.clone().fold(0.0, f64::min));
+        (low, fixed(axes.max).unwrap_or(values.fold(0.0, f64::max)))
+    };
+    let axis = [ends(false), ends(true)];
     series
         .iter()
         .map(|series| {
+            let (low, high) = axis[series.extras.secondary as usize];
             let lines = series.extras.mark_lines.iter();
             lines
                 .filter(|(value, _)| (low..=high).contains(value))
@@ -356,8 +375,9 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
                 drawn.mark_lines = lines.iter().copied().map(renderer_mark_line).collect();
             }
             drawn.stroke_dash_array = series.dashed.then(|| DASH.to_string());
+            drawn.y_axis_index = series.extras.secondary as usize;
             drawn.symbol = Some(symbol(spec, series));
-            drawn.stack = spec.stacked.then(|| "stack".to_string());
+            drawn.stack = (spec.stacked && !series.extras.secondary).then(|| "stack".to_string());
             match spec.curve {
                 Curve::Linear => {}
                 Curve::Smooth => drawn.smooth = Some(true),
@@ -390,15 +410,24 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
         chart.x_axis.values = spec.x_numbers.clone();
         chart.x_axis.formatter = Some(format!("{X_MARK}{{c}}"));
     }
-    let unit = spec
-        .unit
-        .as_deref()
-        .map(|unit| format!(" {unit}"))
-        .unwrap_or_default();
+    let unit = |unit: &Option<String>| {
+        unit.as_deref()
+            .map(|unit| format!(" {unit}"))
+            .unwrap_or_default()
+    };
     if let Some(y) = chart.y_axis_configs.first_mut() {
         y.stroke_color = ink(spec.ink.axis);
         y.font.color = ink(spec.ink.label);
-        y.formatter = Some(format!("{AXIS_MARK}{{c}}{unit}"));
+        y.formatter = Some(format!("{AXIS_MARK}{{c}}{}", unit(&spec.unit)));
+    }
+    let right = spec.series.iter().any(|series| series.extras.secondary);
+    if let Some(left) = chart.y_axis_configs.first().filter(|_| right) {
+        let second = charts_rs::YAxisConfig {
+            formatter: Some(format!("{AXIS2_MARK}{{c}}{}", unit(&spec.y2_unit))),
+            ..left.clone()
+        };
+        chart.y_axis_configs.truncate(1);
+        chart.y_axis_configs.push(second);
     }
     spec.axes
         .style(&mut chart.base, &mut chart.y_axis_configs, false);
@@ -406,11 +435,19 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
         spec.format
             .format(label, spec.unit.as_deref(), spec.formats)
     };
+    let write2 = |label| {
+        spec.format
+            .format(label, spec.y2_unit.as_deref(), spec.formats)
+    };
     let svg = fitted(&mut chart, spec.width, spec.height, |chart| {
         let mut svg = chart.svg().ok()?;
-        if let Some(width) = y_width(&svg, write) {
-            if let Some(y) = chart.y_axis_configs.first_mut() {
-                y.width = Some(width);
+        let widths = [
+            y_width(&svg, AXIS_MARK, write),
+            y_width(&svg, AXIS2_MARK, write2),
+        ];
+        if widths.iter().any(Option::is_some) {
+            for (y, width) in chart.y_axis_configs.iter_mut().zip(widths) {
+                y.width = width.or(y.width);
             }
             svg = chart.svg().ok()?;
         }
@@ -419,6 +456,7 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
 
     let expected: Vec<_> = expected_marks(&spec.series);
     let (svg, triggers) = sanitize(&pin_to_axis(&svg), write);
+    let svg = relabel(&svg, AXIS2_MARK, write2);
     let x_formats = ungrouped(spec.formats);
     let svg = relabel(&svg, X_MARK, |label| {
         spec.format.format(label, None, &x_formats)
@@ -599,7 +637,7 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
             chart.stack_percent = percent;
             fitted(&mut chart, spec.width, spec.height, |chart| {
                 let mut svg = chart.svg().ok()?;
-                if let Some(width) = y_width(&svg, write) {
+                if let Some(width) = y_width(&svg, AXIS_MARK, write) {
                     if let Some(y) = chart.y_axis_configs.first_mut() {
                         y.width = Some(width);
                     }
@@ -1474,7 +1512,7 @@ fn pin_labels<F: Fn(f64) -> String>(svg: &str, pin: Pin<F>) -> String {
 
 /// The y axis' width once `axis` writes its labels, when that is more than the renderer
 /// kept for them.
-fn y_width(svg: &str, axis: impl Fn(f64) -> String) -> Option<f32> {
+fn y_width(svg: &str, mark: char, axis: impl Fn(f64) -> String) -> Option<f32> {
     let mut kept = 0.0f32;
     let mut needed = 0.0f32;
     let mut rest = svg;
@@ -1483,7 +1521,7 @@ fn y_width(svg: &str, axis: impl Fn(f64) -> String) -> Option<f32> {
         let attributes = attributes(&rest[open..=close]);
         let label = &rest[close + 1..];
         let label = label[..label.find('<').unwrap_or(label.len())].trim();
-        if let Some(number) = label.strip_prefix(AXIS_MARK) {
+        if let Some(number) = label.strip_prefix(mark) {
             let number = number.split(' ').next().unwrap_or_default();
             kept = kept.max(text_width(&attributes, label));
             if let Some(value) = scaled(number) {
@@ -1618,6 +1656,7 @@ mod tests {
             ink: ChartInk::of(&Theme::DEFAULT, false),
             format: ValueFormat::Auto,
             unit: Some("kg".to_string()),
+            y2_unit: None,
             formats: &Formats::GERMAN,
         }
     }
@@ -1649,6 +1688,7 @@ mod tests {
             ticks: 4,
             x_title: Some("Quarter".to_string()),
             y_title: Some("Weight".to_string()),
+            y2_title: None,
         };
         let svg = draw_line(&spec).expect("drawn").svg;
         for label in [
@@ -1667,6 +1707,42 @@ mod tests {
     }
 
     /// Each shape draws its own marker at every point, in the series' colour; the points are
+    /// A series on the right axis is drawn by its own scale, labelled in its unit there.
+    #[test]
+    fn a_secondary_series_is_measured_on_the_right() {
+        let mut rain = spec("Rain", &[Some(2.0), Some(4.0)]);
+        rain.extras.secondary = true;
+        let mut spec = line(
+            vec![spec("A", &[Some(120.0), Some(310.0)]), rain],
+            &["Q1", "Q2"],
+        );
+        spec.y2_unit = Some("mm".to_string());
+        spec.axes.y2_title = Some("Rainfall".to_string());
+        let drawn = draw_line(&spec).expect("drawn");
+        let plot = &drawn.geometry.plot;
+        assert!(drawn.svg.contains("\nRainfall\n"), "{}", drawn.svg);
+        assert!(!drawn.svg.contains(AXIS2_MARK), "{}", drawn.svg);
+        let mut rest = drawn.svg.as_str();
+        let mut right = 0;
+        while let Some(at) = rest.find(" mm\n") {
+            let tag = &rest[rest[..at].rfind("<text").expect("a label")..at];
+            let x = attribute(&attributes(tag), "x").and_then(|x| x.parse::<f32>().ok());
+            assert!(x.is_some_and(|x| x >= plot.right), "{tag}");
+            right += 1;
+            rest = &rest[at + 1..];
+        }
+        assert!(right >= 2, "{}", drawn.svg);
+        let high = drawn
+            .geometry
+            .marks
+            .iter()
+            .find(|m| m.series == 1 && m.index == 1);
+        let Some(MarkShape::Point { y, .. }) = high.map(|mark| &mark.shape) else {
+            panic!("no point");
+        };
+        assert!(*y < (plot.top + plot.bottom) / 2.0, "{y} in {plot:?}");
+    }
+
     /// still harvested.
     #[test]
     fn a_series_draws_its_point_symbol() {

@@ -582,6 +582,7 @@ pub(super) fn series_specs(theme: &Theme, forced: bool, series: &[Series]) -> Ve
                 symbol: series.symbol.unwrap_or_default(),
                 mark_lines: Vec::new(),
                 mark_points: Vec::new(),
+                secondary: series.secondary_axis,
             },
         })
         .collect()
@@ -781,8 +782,9 @@ pub(super) fn axis_titles(
     labels: &ChartLabels,
     x: &Option<String>,
     y: &Option<String>,
+    y2: &Option<String>,
 ) -> Vec<String> {
-    [(labels.x_axis, x), (labels.y_axis, y)]
+    [(labels.x_axis, x), (labels.y_axis, y), (labels.y2_axis, y2)]
         .into_iter()
         .filter_map(|(label, title)| Some(fill(label, &[("title", title.as_ref()?)])))
         .collect()

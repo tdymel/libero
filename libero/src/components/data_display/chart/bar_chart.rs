@@ -191,6 +191,7 @@ pub fn BarChart(props: BarChartProps) -> Element {
             ticks: props.y_ticks.unwrap_or(theme.chart.y_ticks),
             x_title: props.x_title.clone(),
             y_title: props.y_title.clone(),
+            y2_title: None,
         },
         labels_inside,
         bar_colors: shown
@@ -240,7 +241,7 @@ pub fn BarChart(props: BarChartProps) -> Element {
         (false, false) => {
             let mut sentences = summary(&labels, labels.bar, &x, &props.series, write);
             sentences.extend(marked);
-            sentences.extend(axis_titles(&labels, &props.x_title, &props.y_title));
+            sentences.extend(axis_titles(&labels, &props.x_title, &props.y_title, &None));
             sentences
         }
     };

@@ -14,7 +14,8 @@ A chart only draws. To show its values as a table too, put them in a
 [Table](table.md).
 
 Lines and bars take one or more `Series` over a shared x axis; a pie takes
-`Slice`s, each a name and a value.
+`Slice`s, each a name and a value. A line of another size or unit goes on a
+right y axis with `.secondary_axis()`.
 
 Lines and bars zoom and pan their x axis with `zoom` and brush a range for
 `onrange`. Every chart exports as SVG or PNG through a `use_chart()` handle or
@@ -280,6 +281,36 @@ fn Demo() -> Element {
 }
 ```
 
+`.secondary_axis()` measures a line on a second y axis at the right, by its own
+scale and in the unit its series share, titled by `y2_title`. Give it a `symbol`
+or `dashed()` too, so its line is told apart without its colour. The summary
+names the series on the right axis.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{LineChart, Series};
+use libero::theme::PointSymbol;
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        LineChart {
+            title: "Weather",
+            x: ["Mon", "Tue", "Wed", "Thu", "Fri"],
+            series: vec![
+                Series::new("Temperature", [12.0, 15.0, 14.0, 18.0, 16.0]).unit("°C"),
+                Series::new("Rain", [2.0, 0.0, 6.5, 1.0, 3.0])
+                    .unit("mm")
+                    .symbol(PointSymbol::Triangle)
+                    .secondary_axis(),
+            ],
+            y_title: "Temperature",
+            y2_title: "Rain",
+        }
+    }
+}
+```
+
 `stacked: true` draws each line on top of the ones before it, so the top one is
 the total; with `area`, each fills down to the line below. The tooltip, the keys
 and the summary keep each line's own value, and the summary says the top line is
@@ -432,6 +463,7 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `y_ticks` | `Option<usize>` | `6` | The steps the y axis is cut into: 4 writes 5 labels. |
 | `x_title` | `Option<String>` | | Under the x axis: what it counts. |
 | `y_title` | `Option<String>` | | Beside the y axis, read upward: what it measures. |
+| `y2_title` | `Option<String>` | | Beside the right y axis, read downward: what its `Series::secondary_axis()` series measure. |
 | `legend` | `LegendPosition` | bottom with two series or more | `bottom`, `top`, `start`, `end` or `none`. |
 | `grid` | `Option<bool>` | `true` | Horizontal guide lines. |
 | `value_format` | `ValueFormat` | `Auto` | How values are written on the axis, in the tooltip and in the summary. |
@@ -548,7 +580,7 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   screen readers.
 - A hidden summary gives the x range and each series' lowest and highest value,
   and where the highest is, then each mark line's name and value and each marked
-  point's place and value, the axes'
+  point's place and value, the series on the right y axis, the axes'
   titles and, stacked, that the top line is the total; a pie's, the total, then each
   slice's value and share.
 - The plot is one tab stop, a `role="application"` described as a chart, so a
@@ -612,6 +644,10 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   `grouped` bars, and only inside the y axis' ends; the summary leaves out the
   ones not drawn, except past the ends. A marked point is drawn on a line chart
   only.
+- A right y axis is drawn on a line chart only; `y_min` and `y_max` set the left
+  one, and a `stacked` chart stacks only the left one's lines. Give its series a
+  `symbol` or `dashed()` and a `y2_title`, so the reader can tell which axis a
+  line is read on.
 
 ## Theme defaults
 

@@ -205,6 +205,8 @@ pub struct Series {
     pub mark_lines: Vec<MarkLine>,
     /// A line's lowest or highest point, its value pinned by it.
     pub mark_points: Vec<MarkPoint>,
+    /// Measured on a line chart's second y axis, at the right.
+    pub secondary_axis: bool,
 }
 
 impl Series {
@@ -224,6 +226,7 @@ impl Series {
             errors: Vec::new(),
             mark_lines: Vec::new(),
             mark_points: Vec::new(),
+            secondary_axis: false,
         }
     }
 
@@ -296,6 +299,13 @@ impl Series {
         if !self.mark_points.contains(&point) {
             self.mark_points.push(point);
         }
+        self
+    }
+
+    /// Measured on a line chart's y axis at the right, by its own scale and unit: for a
+    /// series of another size or kind, `Series::new("Rain", [12, 30]).unit("mm").secondary_axis()`.
+    pub fn secondary_axis(mut self) -> Self {
+        self.secondary_axis = true;
         self
     }
 }

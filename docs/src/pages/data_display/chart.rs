@@ -19,6 +19,7 @@ use libero::{
 const DAYS: [&str; 7] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const THIS_WEEK: [f64; 7] = [120.0, 132.0, 101.0, 134.0, 90.0, 230.0, 210.0];
 const LAST_WEEK: [f64; 7] = [98.0, 110.0, 115.0, 120.0, 104.0, 170.0, 180.0];
+const CONVERSION: [f64; 7] = [2.1, 2.4, 1.8, 2.6, 1.5, 3.4, 3.1];
 const QUARTERS: [&str; 4] = ["Q1", "Q2", "Q3", "Q4"];
 const SALES_2025: [f64; 4] = [120.0, 132.0, 101.0, 134.0];
 const SALES_2026: [f64; 4] = [140.0, 128.0, 150.0, 162.0];
@@ -67,6 +68,19 @@ fn axis_titles(values: &DemoValues) -> Option<(&'static str, &'static str)> {
         (true, "bar") => Some(("Quarter", "Profit")),
         (true, _) => Some(("Day", "Visitors")),
     }
+}
+
+/// The line chart's series on the right axis, in code and as built.
+fn conversion(values: &DemoValues) -> Option<(String, Series)> {
+    (values.str("type") == "line" && values.str("secondary_axis") == "true").then(|| {
+        (
+            format!(", Series::new(\"Conversion\", {CONVERSION:?}).unit(\"%\").symbol(PointSymbol::Triangle).secondary_axis()"),
+            Series::new("Conversion", CONVERSION)
+                .unit("%")
+                .symbol(PointSymbol::Triangle)
+                .secondary_axis(),
+        )
+    })
 }
 
 /// The first series' mark line, in code and as built, for the chart type.
@@ -158,6 +172,7 @@ pub fn ChartPage() -> Element {
                     prop("y_ticks", "Option<usize>").default(theme.chart.y_ticks.to_string()).doc("The steps the y axis is cut into: 4 writes 5 labels."),
                     prop("x_title", "Option<String>").doc("Under the x axis: what it counts."),
                     prop("y_title", "Option<String>").doc("Beside the y axis, read upward: what it measures."),
+                    prop("y2_title", "Option<String>").doc("Beside the right y axis, read downward: what its `Series::secondary_axis()` series measure."),
                     prop("legend", "LegendPosition").default("bottom with two series or more").doc("`bottom`, `top`, `start`, `end` or `none`."),
                     prop("grid", "Option<bool>").default(on(theme.chart.grid)).doc("Horizontal guide lines."),
                     prop("value_format", "ValueFormat").default("Auto").doc("How values are written on the axis, in the tooltip and in the summary."),
@@ -256,7 +271,7 @@ pub fn ChartPage() -> Element {
                 .key(["Shift+ArrowRight", "Shift+ArrowLeft"], "With `onrange`: brushes from the keys' point to the next or previous x value.")
                 .handles([
                     "The chart is a `role=\"figure\"` named by `title`. The drawing is hidden from screen readers.",
-                    "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is, then each mark line's name and value and each marked point's place and value, the axes' titles and, stacked, that the top line is the total; a pie's, the total, then each slice's value and share.",
+                    "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is, then each mark line's name and value and each marked point's place and value, the series on the right y axis, the axes' titles and, stacked, that the top line is the total; a pie's, the total, then each slice's value and share.",
                     "The plot is one tab stop, a `role=\"application\"` described as a chart, so a screen reader hands it the arrows. Each point the keys reach is announced, as \"This week, Tue: 132\" or \"Chrome: 62, 62%.\"",
                     "The legend's entries are toggle buttons: pressed while their series or slice shows, struck through when hidden. The last shown one's button is `aria-disabled`. A dashed line's key is a dash, as drawn; once a line sets a `symbol`, each key is its line's point shape.",
                     "On a touch screen a tap pins a point's tooltip, a second tap on it clicks; a vertical swipe still scrolls the page.",
@@ -288,6 +303,7 @@ pub fn ChartPage() -> Element {
                     "`zoom` and `onrange` are for lines and bars; a pie exports only.",
                     "An export keeps the normal palette in forced colours. `png()` is `None` on Blitz and on the server, and the PNG button says it could not save.",
                     "A mark line is drawn on a line chart that is not `stacked` and on upright, `grouped` bars, and only inside the y axis' ends; the summary leaves out the ones not drawn, except past the ends. A marked point is drawn on a line chart only.",
+                    "A right y axis is drawn on a line chart only; `y_min` and `y_max` set the left one, and a `stacked` chart stacks only the left one's lines. Give its series a `symbol` or `dashed()` and a `y2_title`, so the reader can tell which axis a line is read on.",
                 ]),
             lead: rsx! {
                 Text {
@@ -305,7 +321,9 @@ pub fn ChartPage() -> Element {
                     Code { source: "Series" }
                     " over a shared x axis; a pie takes "
                     Code { source: "Slice" }
-                    "s, each a name and a value."
+                    "s, each a name and a value. A line of another size or unit goes on a right y axis with "
+                    Code { source: ".secondary_axis()" }
+                    "."
                 }
                 Text {
                     "Lines and bars zoom and pan their x axis with "
@@ -347,7 +365,8 @@ pub fn ChartPage() -> Element {
                                 "title: \"Visitors\"".to_string(),
                                 format!("x: {DAYS:?}"),
                                 format!(
-                                    "series: vec![Series::new(\"This week\", {THIS_WEEK:?}){mark}, Series::new(\"Last week\", {LAST_WEEK:?}).dashed().symbol(PointSymbol::Square)]"
+                                    "series: vec![Series::new(\"This week\", {THIS_WEEK:?}){mark}, Series::new(\"Last week\", {LAST_WEEK:?}).dashed().symbol(PointSymbol::Square){}]",
+                                    conversion(values).map(|c| c.0).unwrap_or_default()
                                 ),
                             ],
                         }}),
@@ -442,6 +461,10 @@ pub fn ChartPage() -> Element {
                         .default("average")
                         .hidden_when(is("axes"))
                         .code(|_, _| vec![]),
+                    Control::switch("secondary_axis")
+                        .default("true")
+                        .hidden_when(is("line"))
+                        .code(|_, _| vec![]),
                     Control::select("y_range", ["fixed", "auto"]).hidden_when(is("axes")).code(
                         |_, values| match y_range(values) {
                             Some((min, max)) => vec![format!("y_min: {min:?}"), format!("y_max: {max:?}")],
@@ -459,7 +482,13 @@ pub fn ChartPage() -> Element {
                         .default("true")
                         .hidden_when(is("axes"))
                         .code(|_, values| match axis_titles(values) {
-                            Some((x, y)) => vec![format!("x_title: {x:?}"), format!("y_title: {y:?}")],
+                            Some((x, y)) => {
+                                let mut lines = vec![format!("x_title: {x:?}"), format!("y_title: {y:?}")];
+                                if conversion(values).is_some() {
+                                    lines.push("y2_title: \"Conversion\"".to_string());
+                                }
+                                lines
+                            }
                             None => vec![],
                         }),
                     Control::select("legend", legend),
@@ -489,6 +518,7 @@ pub fn ChartPage() -> Element {
                     let (y_min, y_max) = (range.map(|r| r.0), range.map(|r| r.1));
                     let y_ticks = values.str("y_ticks").parse::<usize>().ok();
                     let titles = axis_titles(&values);
+                    let y2_title = titles.and(conversion(&values)).map(|_| "Conversion".to_string());
                     let (x_title, y_title) = (
                         titles.map(|t| t.0.to_string()),
                         titles.map(|t| t.1.to_string()),
@@ -542,11 +572,11 @@ pub fn ChartPage() -> Element {
                                 series: vec![
                                     marked(&values, Series::new("This week", THIS_WEEK)),
                                     Series::new("Last week", LAST_WEEK).dashed().symbol(PointSymbol::Square),
-                                ],
+                                ].into_iter().chain(conversion(&values).map(|c| c.1)).collect::<Vec<_>>(),
                                 curve: Curve::from(values.str("curve").as_str()),
                                 area: values.str("area") != "none",
                                 stacked: values.str("area") == "stacked",
-                                y_min, y_max, y_ticks, x_title, y_title,
+                                y_min, y_max, y_ticks, x_title, y_title, y2_title,
                                                                 legend, tooltip, loading, zoom, onrange, export_button, handle: chart,
                             }
                         }),
