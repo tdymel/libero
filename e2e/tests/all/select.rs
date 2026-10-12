@@ -194,7 +194,7 @@ async fn in_view<D: Driver>(d: &mut D, row: &str, after: &str) -> Result<()> {
     .await;
     if settled.is_err() {
         let probe = format!(
-            "(() => {{ const l = document.querySelector({LISTBOX:?}); const kids = [...l.querySelectorAll('[role=option]')].map(r => r.id.split('-').pop()); return JSON.stringify({{st: l.scrollTop, sh: l.scrollHeight, ch: l.clientHeight, kids: kids.slice(0, 40), html: l.innerHTML.slice(0, 600)}}); }})()"
+            "(async () => {{ const l = document.querySelector({LISTBOX:?}); const r = document.getElementById({row:?}.slice(1)); const state = () => JSON.stringify({{st: l.scrollTop, y: r.getBoundingClientRect().y, first: [...l.querySelectorAll('[role=option]')].map(o => o.id.split('-').pop()).slice(0, 3)}}); const out = {{s0: state()}}; const t = performance.now(); out.raf = await new Promise(res => {{ requestAnimationFrame(() => res(performance.now() - t)); setTimeout(() => res(-1), 3000); }}); out.s1 = state(); await new Promise(res => setTimeout(res, 1500)); out.s2 = state(); l.scrollBy(0, 1); await new Promise(res => setTimeout(res, 1000)); out.s3 = state(); return JSON.stringify(out); }})()"
         );
         let diag = d.evaluate(&probe).await;
         return Err(anyhow::anyhow!("{after}: {row} seen {seen:?} diag {diag:?}"));
