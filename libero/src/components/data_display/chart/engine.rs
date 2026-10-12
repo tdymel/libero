@@ -1171,6 +1171,10 @@ pub(crate) fn draw_pie(spec: &PieSpec) -> Option<Drawn> {
     }
     let hole = ring(radius);
     let centre = middle(radius);
+    let svg = match spec.labels_inside {
+        true => centre_inside_labels(&svg, centre, hole),
+        false => svg,
+    };
     // What `center` fills: the hole, or the half of it a ring of half a turn or less bends round.
     let (inner, inner_radius) = match span <= 180.0 {
         true => (
@@ -1231,6 +1235,54 @@ pub(crate) fn draw_pie(spec: &PieSpec) -> Option<Drawn> {
     })
 }
 
+/// Moves every label on a slice to the middle of its slice's band, between the hole and the
+/// slice's own radius. The renderer puts it two thirds of that radius out from `centre`,
+/// in a donut's hole or by a rose's small slice's centre; anchored at its middle, it stays
+/// centred once written again.
+fn centre_inside_labels(svg: &str, centre: (f32, f32), hole: f32) -> String {
+    let mut out = String::with_capacity(svg.len());
+    let mut rest = svg;
+    while let Some(start) = rest.find("<text ") {
+        out.push_str(&rest[..start]);
+        let end = rest[start..]
+            .find('>')
+            .map_or(rest.len(), |end| start + end + 1);
+        let tag = &rest[start..end];
+        rest = &rest[end..];
+        let attributes = attributes(tag);
+        let number = |name| attribute(&attributes, name)?.parse::<f32>().ok();
+        let label = rest[..rest.find('<').unwrap_or(rest.len())].trim();
+        let on_slice = tag.contains(ON_BAR_FILL) && attribute(&attributes, "text-anchor").is_none();
+        let (Some(x), Some(y), true) = (number("x"), number("y"), on_slice) else {
+            out.push_str(tag);
+            continue;
+        };
+        let (dx, dy) = (
+            x + text_width(&attributes, label) / 2.0 - centre.0,
+            y - centre.1,
+        );
+        let distance = dx.hypot(dy);
+        if distance < 0.5 {
+            out.push_str(tag);
+            continue;
+        }
+        let outer = distance * 1.5;
+        let scale = (hole + outer) / 2.0 / distance;
+        let size = number("font-size").unwrap_or(14.0);
+        let (x, y) = (centre.0 + dx * scale, centre.1 + dy * scale + size * 0.35);
+        let kept: String = attributes
+            .iter()
+            .filter(|(attribute, _)| !matches!(*attribute, "x" | "y"))
+            .map(|(attribute, value)| format!(" {attribute}=\"{value}\""))
+            .collect();
+        out.push_str(&format!(
+            "<text x=\"{x}\" y=\"{y}\" text-anchor=\"middle\"{kept}>"
+        ));
+    }
+    out.push_str(rest);
+    out
+}
+
 /// Gives every label drawn on a slice the ink that reads on that slice; one off every
 /// slice takes `off`.
 fn ink_slice_labels(
@@ -1262,13 +1314,15 @@ fn ink_slice_labels(
         let attributes = attributes(tag);
         let number = |name| attribute(&attributes, name)?.parse::<f32>().ok();
         let label = &rest[..rest.find('<').unwrap_or(rest.len())];
-        // The renderer writes a label on a slice from its left end, centred there.
+        // The renderer writes a label on a slice from its left end; `centre_inside_labels`
+        // anchors it at its middle.
         let middle = number("x").zip(number("y")).map(|(x, y)| {
             let size = number("font-size").unwrap_or(14.0);
-            (
-                x + text_width(&attributes, label.trim()) / 2.0,
-                y - size * 0.35,
-            )
+            let x = match attribute(&attributes, "text-anchor") {
+                Some("middle") => x,
+                _ => x + text_width(&attributes, label.trim()) / 2.0,
+            };
+            (x, y - size * 0.35)
         });
         let hex = middle
             .and_then(|(x, y)| {
@@ -2648,6 +2702,45 @@ mod tests {
         inside.min_label_angle = 100.0;
         let svg = draw_pie(&inside).expect("drawn").svg;
         assert!(svg.contains("75%") && !svg.contains("25%"), "{svg}");
+    }
+
+    /// A label inside sits on its own slice: not in a thin donut's hole, nor by a rose's
+    /// small slice's centre.
+    #[test]
+    fn labels_inside_stay_on_their_slice() {
+        for rose in [false, true] {
+            let mut inside = pie(PieLabels::Percent, Some(0.25));
+            inside.slices = vec![
+                spec("A", &[Some(60.0)]),
+                spec("B", &[Some(25.0)]),
+                spec("C", &[Some(15.0)]),
+            ];
+            inside.rose = rose;
+            inside.labels_inside = true;
+            let drawn = draw_pie(&inside).expect("drawn");
+            let outlines: Vec<_> = drawn
+                .geometry
+                .marks
+                .iter()
+                .map(|mark| match &mark.shape {
+                    MarkShape::Sector { path } => super::super::hit::outline(path),
+                    _ => panic!("{mark:?}"),
+                })
+                .collect();
+            let middles: Vec<(f32, f32)> = numbers(&drawn.svg, "<text ", "x")
+                .into_iter()
+                .zip(numbers(&drawn.svg, "<text ", "y"))
+                .map(|(x, y)| (x, y - 14.0 * 0.35))
+                .collect();
+            assert_eq!(middles.len(), 3, "{}", drawn.svg);
+            for (slice, (x, y)) in middles.iter().enumerate() {
+                assert!(
+                    super::super::hit::contains(&outlines[slice], *x, *y),
+                    "rose {rose}: label {slice} at {x},{y} off its slice: {}",
+                    drawn.svg
+                );
+            }
+        }
     }
 
     /// Every label keeps inside the SVG: a pie's beside its slices on a phone, a bar's

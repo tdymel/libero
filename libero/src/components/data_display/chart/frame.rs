@@ -195,12 +195,16 @@ static CHART_BASE_SX: StaticSx = StaticSx::new(|| {
 });
 
 /// The drawing fills the plot. Forced colours keep its series' colours, which name them
-/// (drawn for a black or white `Canvas`); its ink is drawn in system colours.
+/// (drawn for a black or white `Canvas`); its ink is drawn in system colours. It runs left
+/// to right in a right-to-left page too: there its labels' `start` anchor would flip them.
 pub(super) fn drawing_sx() -> Sx {
-    sx().width("100%").height("100%").media(
-        FORCED_COLORS,
-        sx().forced_color_adjust("none").background("Canvas"),
-    )
+    sx().width("100%")
+        .height("100%")
+        .with("direction", "ltr")
+        .media(
+            FORCED_COLORS,
+            sx().forced_color_adjust("none").background("Canvas"),
+        )
 }
 
 /// A chart's drawing and everything said about it, ready to render.
@@ -323,6 +327,18 @@ impl Frame {
             )
             .into();
 
+        let hidden_names = hidden.get();
+        // Every series hidden: the plot and the summary say so; the legend stays to show one.
+        let all_hidden = !loading
+            && !empty
+            && !series.is_empty()
+            && series
+                .iter()
+                .all(|series| hidden_names.contains(&series.name));
+        let summary = match all_hidden {
+            true => vec![labels.all_hidden.to_string()],
+            false => summary,
+        };
         let title_id = title.as_ref().map(|_| format!("{id}-title"));
         let description_id = description.as_ref().map(|_| format!("{id}-description"));
         let summary_id = (!summary.is_empty()).then(|| format!("{id}-summary"));
@@ -331,7 +347,6 @@ impl Frame {
             .flatten()
             .collect::<Vec<_>>()
             .join(" ");
-        let hidden_names = hidden.get();
         let entries: Vec<LegendEntry> = series
             .iter()
             .map(|series| LegendEntry {
@@ -361,7 +376,7 @@ impl Frame {
             swap_axes,
             onrange,
         } = interaction;
-        let tools = !loading && !empty && (zoom.is_some() || export_button);
+        let tools = !loading && !empty && !all_hidden && (zoom.is_some() || export_button);
         let save = move |extension: &'static str| {
             let export = export.clone();
             let name = file_name(export.title.as_deref(), extension);
@@ -445,6 +460,8 @@ impl Frame {
                                 None => rsx! { "{labels.no_data}" },
                             }
                         }
+                    } else if all_hidden {
+                        div { "data-slot": ChartPart::Empty.slot(), "{labels.all_hidden}" }
                     } else if let Some(svg) = svg {
                         // The figure's summary speaks for the drawing.
                         div { "data-chart-drawing": true, "aria-hidden": "true", dangerous_inner_html: "{svg}" }
@@ -628,11 +645,13 @@ pub(super) fn summary(
     write: impl Fn(&Series, f64) -> String,
 ) -> Vec<String> {
     let mut sentences = Vec::new();
-    if let (Some(first), Some(last)) = (x.first(), x.last()) {
-        sentences.push(fill(
+    match x {
+        [] => {}
+        [only] => sentences.push(fill(labels.range_one, &[("kind", &kind), ("first", only)])),
+        [first, .., last] => sentences.push(fill(
             labels.range,
             &[("kind", &kind), ("first", first), ("last", last)],
-        ));
+        )),
     }
     for series in series {
         let values = series
@@ -777,7 +796,8 @@ pub(super) fn mark_point_specs(
     sentences
 }
 
-/// A sentence per series whose error ranges a line chart bands, with the band's outer ends.
+/// A sentence per series with error ranges, as a line's band or a bar's error bars, with
+/// their outer ends.
 pub(super) fn band_summary(
     labels: &ChartLabels,
     series: &[Series],

@@ -263,6 +263,9 @@ fn summary(
         &[("kind", &labels.pie), ("total", &total)],
     )];
     sentences.extend(slices.iter().map(|slice| {
+        if !slice.value.is_finite() {
+            return fill(labels.slice_empty, &[("name", &slice.name)]);
+        }
         fill(
             labels.slice,
             &[
@@ -308,6 +311,24 @@ mod tests {
         assert!(!html.contains("<table"), "{html}");
         // Labels in percent by default.
         assert!(html.contains(">75%<") || html.contains("75%\n"), "{html}");
+    }
+
+    /// A slice that is not a number is said to have no value, not "NaN".
+    #[test]
+    fn a_missing_slice_value_reads_as_none() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    PieChart {
+                        title: "Browsers",
+                        slices: vec![Slice::new("Chrome", f64::NAN), Slice::new("Safari", 1.0)],
+                    }
+                }
+            }
+        });
+        assert!(html.contains("Chrome: no value."), "{html}");
+        assert!(html.contains("Pie chart, total 1."), "{html}");
+        assert!(!html.contains("NaN"), "{html}");
     }
 
     /// A hidden slice leaves the pie, so the others' shares grow; the summary keeps all.

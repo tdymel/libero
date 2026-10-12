@@ -5,8 +5,8 @@ use super::{
     engine::{self, Axes, BarSpec, SeriesSpec},
     export::ExportSource,
     frame::{
-        Frame, Interaction, axis_titles, chart_unit, hex, mark_line_specs, overlay_series,
-        series_specs, shown_places, summary, use_plot_size, with_extras,
+        Frame, Interaction, axis_titles, band_summary, chart_unit, hex, mark_line_specs,
+        overlay_series, series_specs, shown_places, summary, use_plot_size, with_extras,
     },
     legend::use_hidden_series,
     props::chart_props,
@@ -166,7 +166,8 @@ pub fn BarChart(props: BarChartProps) -> Element {
         props.value_format.format(value, unit, formats)
     };
     // Only upright bars side by side stand at their own values.
-    let marked = match !horizontal && layout == BarLayout::Grouped {
+    let upright_grouped = !horizontal && layout == BarLayout::Grouped;
+    let marked = match upright_grouped {
         true => mark_line_specs(&labels, &mut all_specs, &props.series, write),
         false => Vec::new(),
     };
@@ -242,6 +243,10 @@ pub fn BarChart(props: BarChartProps) -> Element {
         (false, false) => {
             let mut sentences = summary(&labels, labels.bar, &x, &props.series, write);
             sentences.extend(marked);
+            // Error bars are drawn on these alone.
+            if upright_grouped {
+                sentences.extend(band_summary(&labels, &props.series, write));
+            }
             sentences.extend(axis_titles(&labels, &props.x_title, &props.y_title, &None));
             sentences
         }
@@ -333,6 +338,47 @@ mod tests {
         assert!(!html.contains("<table"), "{html}");
     }
 
+    /// One category is named once, not as a range from it to itself.
+    #[test]
+    fn one_category_is_not_a_range() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    BarChart {
+                        title: "Sales",
+                        x: ["Q1"],
+                        series: vec![Series::new("2025", [3.0])],
+                    }
+                }
+            }
+        });
+        assert!(html.contains("Bar chart for Q1."), "{html}");
+        assert!(!html.contains("from Q1 to Q1"), "{html}");
+    }
+
+    /// Every series hidden: the plot and the summary say so, the legend stays to show one.
+    #[test]
+    fn every_series_hidden_says_so_and_keeps_the_legend() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    BarChart {
+                        title: "Sales",
+                        x: ["Q1", "Q2"],
+                        series: vec![Series::new("2025", [3.0, 5.0]), Series::new("2026", [4.0, 6.0])],
+                        default_hidden: vec!["2025".to_string(), "2026".to_string()],
+                    }
+                }
+            }
+        });
+        assert_eq!(html.matches("All series are hidden.").count(), 2, "{html}");
+        assert!(html.contains("aria-label=\"Series\""), "{html}");
+        assert!(
+            !html.contains("No data") && !html.contains("data-chart-drawing="),
+            "{html}"
+        );
+    }
+
     /// A hidden series leaves the bars, not the legend or the summary; the plot takes keys.
     #[test]
     fn a_default_hidden_series_is_not_drawn_and_the_plot_is_walkable() {
@@ -408,7 +454,13 @@ mod tests {
                 .unwrap_or_default()
                 .to_string()
         };
-        let auto = drawing(render(|| chart(None)));
+        let auto_html = render(|| chart(None));
+        // The summary says the drawn ranges.
+        assert!(
+            auto_html.contains("A: each value has a range, 2 to 7 in all."),
+            "{auto_html}"
+        );
+        let auto = drawing(auto_html);
         assert_eq!(
             auto,
             drawing(render(|| chart(Some(BarLabelPosition::Inside))))

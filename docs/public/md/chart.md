@@ -337,7 +337,7 @@ fn Demo() -> Element {
 `stacked: true` draws each line on top of the ones before it, so the top one is
 the total; with `area`, each fills down to the line below. The tooltip, the keys
 and the summary keep each line's own value, and the summary says the top line is
-the total.
+the total. A line on the right y axis is not stacked, and the summary says so.
 
 ```rust
 use dioxus::prelude::*;
@@ -480,7 +480,7 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `curve` | `Curve` | `linear` | `linear`, `smooth` or `step`. |
 | `points` | `Option<bool>` | `true` | A dot on every point; never past the theme's `points_limit` points. |
 | `area` | `Option<bool>` | `false` | The area under each line filled in its colour, at the theme's `area_opacity`. |
-| `stacked` | `bool` | `false` | Each line drawn on top of the ones before it, so the top one is the total; with `area`, each fills down to the line below. The tooltip and the keys keep each line's own value. |
+| `stacked` | `bool` | `false` | Each line drawn on top of the ones before it, so the top one is the total; with `area`, each fills down to the line below. The tooltip and the keys keep each line's own value. A line on the right y axis is not stacked. |
 | `y_min` | `Option<f64>` | | The y axis' lowest value. Unset, 0 or the lowest value below it. |
 | `y_max` | `Option<f64>` | | The y axis' highest value. Unset, a round number at or over the highest value. |
 | `y_ticks` | `Option<usize>` | `6` | The steps the y axis is cut into: 4 writes 5 labels. |
@@ -603,8 +603,8 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   screen readers.
 - A hidden summary gives the x range and each series' lowest and highest value,
   and where the highest is, then each mark line's name and value and each marked
-  point's place and value, each line's error band and its outer ends, the
-  series on the right y axis, the axes'
+  point's place and value, each line's error band and each upright grouped
+  series' error bars with their outer ends, the series on the right y axis, the axes'
   titles and, stacked, that the top line is the total; a pie's, the total, then each
   slice's value and share.
 - The plot is one tab stop, a `role="application"` described as a chart, so a
@@ -612,7 +612,9 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   "This week, Tue: 132" or "Chrome: 62, 62%."
 - The legend's entries are toggle buttons: pressed while their series or slice
   shows, struck through when hidden. The last shown one's button is
-  `aria-disabled`. A dashed line's key is a dash, as drawn; once a line sets a
+  `aria-disabled`. Should `hidden` or `default_hidden` name every one, the plot
+  and the summary say "All series are hidden." and the legend stays. A dashed
+  line's key is a dash, as drawn; once a line sets a
   `symbol`, each key is its line's point shape.
 - On a touch screen a tap pins a point's tooltip, a second tap on it clicks; a
   vertical swipe still scrolls the page.

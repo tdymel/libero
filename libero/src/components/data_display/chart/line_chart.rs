@@ -38,6 +38,7 @@ chart_props! {
         area: Option<bool>,
         /// Each line drawn on top of the ones before it, so the top one is the total; with
         /// `area`, each fills down to the line below. The tooltip keeps each line's own value.
+        /// A line on the right y axis is not stacked.
         #[props(default)]
         stacked: bool,
         /// The y axis' lowest value. Unset, 0 or the lowest value below it.
@@ -230,6 +231,9 @@ pub fn LineChart(props: LineChartProps) -> Element {
             ));
             if props.stacked {
                 sentences.push(labels.stacked.to_string());
+                if !right.is_empty() {
+                    sentences.push(labels.secondary_unstacked.to_string());
+                }
             }
             sentences
         }
@@ -521,8 +525,7 @@ mod tests {
         });
         assert!(html.contains("ct-band"), "{html}");
         assert!(
-            html.contains("Visits: a band shows each value")
-                && html.contains("range, 90 to 145 in all."),
+            html.contains("Visits: each value has a range, 90 to 145 in all."),
             "{html}"
         );
     }
@@ -549,6 +552,32 @@ mod tests {
         assert!(html.contains("\nRainfall\n"), "{html}");
         assert!(
             html.contains("On the right y axis: Rain.") && html.contains("Right y axis: Rainfall."),
+            "{html}"
+        );
+    }
+
+    /// A stack leaves its right axis line unstacked, and the summary says so.
+    #[test]
+    fn a_stack_says_its_right_line_is_not_stacked() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    LineChart {
+                        title: "Weather",
+                        x: ["Mon", "Tue"],
+                        stacked: true,
+                        series: vec![
+                            Series::new("North", [2.0, 3.0]),
+                            Series::new("South", [1.0, 4.0]),
+                            Series::new("Temperature", [12.0, 18.0]).secondary_axis(),
+                        ],
+                    }
+                }
+            }
+        });
+        assert!(
+            html.contains("the top one is the total.")
+                && html.contains("Lines on the right y axis are not stacked."),
             "{html}"
         );
     }

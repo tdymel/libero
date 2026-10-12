@@ -45,6 +45,30 @@ fn the_slices_carry_their_shares() {
     });
 }
 
+/// In a right-to-left page the labels stay where they are drawn left to right, beside
+/// their slices rather than flipped over them.
+#[test]
+fn the_labels_keep_their_place_right_to_left() {
+    e2e::browser::block_on(async {
+        let fixture = Fixture::open("/pie-chart", Viewport::Desktop)
+            .await
+            .unwrap();
+        wait::for_visible(&fixture.page, "#chart svg text")
+            .await
+            .unwrap();
+        const BOXES: &str = "[...document.querySelectorAll('#chart svg text')]\
+             .map(t => { const b = t.getBBox(); return [b.x, b.width]; })";
+        let ltr: Vec<[f64; 2]> = e2e::js(&fixture.page, BOXES).await;
+        let rtl: Vec<[f64; 2]> = e2e::js(
+            &fixture.page,
+            &format!("(() => {{ document.documentElement.dir = 'rtl'; return {BOXES}; }})()"),
+        )
+        .await;
+        assert_eq!(ltr, rtl);
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The centre sits over the ring's hole, which is the plot's middle.
 #[test]
 fn a_donut_s_center_sits_in_its_middle() {

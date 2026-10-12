@@ -9,14 +9,20 @@ pub struct ChartLabels {
     pub bar: &'static str,
     pub pie: &'static str,
     pub range: &'static str,
+    /// `range` of an x axis with one value, `{first}`.
+    pub range_one: &'static str,
     pub series: &'static str,
     /// A series with no value at all.
     pub series_empty: &'static str,
     /// The start of a pie's summary.
     pub total: &'static str,
     pub slice: &'static str,
+    /// A slice whose value is missing or not a number.
+    pub slice_empty: &'static str,
     /// The plot and the summary of a chart with nothing to draw.
     pub no_data: &'static str,
+    /// The plot and the summary of a chart whose legend hides every series or slice.
+    pub all_hidden: &'static str,
     /// The summary while the chart is loading.
     pub loading: &'static str,
     /// What a screen reader calls the plot the keys walk.
@@ -39,6 +45,8 @@ pub struct ChartLabels {
     pub secondary: &'static str,
     /// The summary of a stacked line chart: what its heights mean.
     pub stacked: &'static str,
+    /// After `stacked` when a line is on the right y axis, which never stacks.
+    pub secondary_unstacked: &'static str,
     /// Read after `keys` on a zoomable plot.
     pub zoom_keys: &'static str,
     /// Read after `keys` on a plot with a brush.
@@ -65,7 +73,7 @@ pub struct ChartLabels {
     pub mark_line: &'static str,
     /// A mark line in the summary, `{name}` its series.
     pub mark_line_summary: &'static str,
-    /// A line's error band in the summary: `{low}` and `{high}` its lowest and highest ends.
+    /// A series' error ranges in the summary: `{low}` and `{high}` their lowest and highest ends.
     pub band: &'static str,
     /// A marked point in the summary: `{label}` is `lowest` or `highest`, `{x}` where it is.
     pub mark_point: &'static str,
@@ -77,11 +85,14 @@ impl ChartLabels {
         bar: "Bar chart",
         pie: "Pie chart",
         range: "{kind} from {first} to {last}.",
+        range_one: "{kind} for {first}.",
         series: "{name}: {min} to {max}, highest at {x}.",
         series_empty: "{name}: no values.",
         total: "{kind}, total {total}.",
         slice: "{name}: {value}, {share}.",
+        slice_empty: "{name}: no value.",
         no_data: "No data",
+        all_hidden: "All series are hidden.",
         loading: "Loading chart",
         chart: "chart",
         keys: "Arrow keys move between points, Enter selects one.",
@@ -93,6 +104,7 @@ impl ChartLabels {
         y2_axis: "Right y axis: {title}.",
         secondary: "On the right y axis: {names}.",
         stacked: "Stacked: each line adds to the ones before it, the top one is the total.",
+        secondary_unstacked: "Lines on the right y axis are not stacked.",
         zoom_keys: "Plus and minus zoom, 0 resets the zoom.",
         brush_keys: "Shift with an arrow key selects a range, Escape clears it.",
         reset_zoom: "Reset zoom",
@@ -110,7 +122,7 @@ impl ChartLabels {
         mark_line: "{label}: {value}",
         mark_line_summary: "{name}: {label} line at {value}.",
         mark_point: "{name}: {label} marked at {x}, {value}.",
-        band: "{name}: a band shows each value's range, {low} to {high} in all.",
+        band: "{name}: each value has a range, {low} to {high} in all.",
     };
 
     pub const GERMAN: Self = Self {
@@ -118,11 +130,14 @@ impl ChartLabels {
         bar: "Balkendiagramm",
         pie: "Kreisdiagramm",
         range: "{kind} von {first} bis {last}.",
+        range_one: "{kind} für {first}.",
         series: "{name}: {min} bis {max}, am höchsten bei {x}.",
         series_empty: "{name}: keine Werte.",
         total: "{kind}, insgesamt {total}.",
         slice: "{name}: {value}, {share}.",
+        slice_empty: "{name}: kein Wert.",
         no_data: "Keine Daten",
+        all_hidden: "Alle Reihen sind ausgeblendet.",
         loading: "Diagramm wird geladen",
         chart: "Diagramm",
         keys: "Pfeiltasten wechseln zwischen den Punkten, Eingabe wählt einen aus.",
@@ -134,6 +149,7 @@ impl ChartLabels {
         y2_axis: "Rechte Y-Achse: {title}.",
         secondary: "Auf der rechten Y-Achse: {names}.",
         stacked: "Gestapelt: jede Linie addiert sich zu den vorigen, die oberste ist die Summe.",
+        secondary_unstacked: "Linien auf der rechten Y-Achse sind nicht gestapelt.",
         zoom_keys: "Plus und Minus zoomen, 0 setzt den Zoom zurück.",
         brush_keys: "Umschalt mit einer Pfeiltaste wählt einen Bereich, Escape hebt ihn auf.",
         reset_zoom: "Zoom zurücksetzen",
@@ -151,6 +167,6 @@ impl ChartLabels {
         mark_line: "{label}: {value}",
         mark_line_summary: "{name}: Linie {label} bei {value}.",
         mark_point: "{name}: {label} markiert bei {x}, {value}.",
-        band: "{name}: ein Band zeigt den Bereich jedes Werts, insgesamt {low} bis {high}.",
+        band: "{name}: jeder Wert hat einen Bereich, insgesamt {low} bis {high}.",
     };
 }
