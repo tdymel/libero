@@ -37,6 +37,12 @@ pub(crate) fn when_laid_out(run: impl FnOnce() + 'static) {
     super::backend::when_laid_out(Box::new(run));
 }
 
+/// [`when_laid_out`] for a retry that found no layout `failed` times: natively each
+/// asks a frame longer, as the zero-delay wake may come before the shell's layout.
+pub(crate) fn when_laid_out_retry(failed: u8, run: impl FnOnce() + 'static) {
+    super::backend::when_laid_out_retry(failed, Box::new(run));
+}
+
 /// Whether a [`when_laid_out`] run still waits for its wake: a native harness
 /// keeps polling until it ran, as a shell's next frame would.
 #[doc(hidden)]

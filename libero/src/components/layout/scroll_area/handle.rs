@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use super::scroll_area::UNLAID_TRIES;
 use crate::{
     hooks::{ElementHandle, use_element},
-    platform::{ElementApi, when_laid_out},
+    platform::{ElementApi, when_laid_out_retry},
 };
 
 /// Scrolls a [`ScrollArea`](super::ScrollArea) from an event handler. Unlike
@@ -94,7 +94,10 @@ fn scroll_to_percent_tried(root: ElementHandle, x: Option<f64>, y: Option<f64>, 
             return;
         };
         if viewport.width <= 0.0 && viewport.height <= 0.0 && tries > 0 {
-            return when_laid_out(move || scroll_to_percent_tried(root, x, y, tries - 1));
+            let failed = UNLAID_TRIES - tries;
+            return when_laid_out_retry(failed, move || {
+                scroll_to_percent_tried(root, x, y, tries - 1)
+            });
         }
         let x = percent_offset(x, scroll_size.width - viewport.width, inline_x(current_x));
         let _ = root.scroll_to(

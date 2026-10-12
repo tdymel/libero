@@ -1132,6 +1132,18 @@ pub(crate) fn when_laid_out(run: Box<dyn FnOnce()>) {
     run();
 }
 
+/// Only Blitz waits longer for each retry - see
+/// [`when_laid_out_retry`](crate::platform::when_laid_out_retry).
+pub(crate) fn when_laid_out_retry(failed: u8, run: Box<dyn FnOnce()>) {
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    blitz::when_laid_out_retry(failed, run);
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    {
+        let _ = failed;
+        run();
+    }
+}
+
 /// Only Blitz waits - see [`awaits_layout`](crate::platform::awaits_layout).
 pub(crate) fn awaits_layout() -> bool {
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]

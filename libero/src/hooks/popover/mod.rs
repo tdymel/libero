@@ -22,7 +22,7 @@ use crate::{
     },
     platform::{
         Dimensions, ElementApi, ScrollSubscription, VisibleBand, document, focus_is_in,
-        on_viewport_resize, reads_dom_synchronously, scroll, visible_band, when_laid_out,
+        on_viewport_resize, reads_dom_synchronously, scroll, visible_band, when_laid_out_retry,
     },
     theme::CssVar,
     utils::bump,
@@ -355,7 +355,7 @@ pub(crate) fn use_popover_on(
             let tries = waited.get();
             if floating_size.width == 0.0 && floating_size.height == 0.0 && tries < UNLAID_TRIES {
                 waited.set(tries + 1);
-                when_laid_out(move || bump(scroll_tick));
+                when_laid_out_retry(tries, move || bump(scroll_tick));
                 return;
             }
 
