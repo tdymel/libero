@@ -51,6 +51,18 @@ pub struct ChartLabels {
     /// After an export button: `{name}` the file's name.
     pub saved: &'static str,
     pub save_failed: &'static str,
+    /// A mark line's own name, unless given one: at the average, the lowest, the highest
+    /// value, or at a fixed one.
+    pub average: &'static str,
+    pub lowest: &'static str,
+    pub highest: &'static str,
+    pub mark: &'static str,
+    /// Written by a mark line: `{label}` its name, `{value}` where it sits.
+    pub mark_line: &'static str,
+    /// A mark line in the summary, `{name}` its series.
+    pub mark_line_summary: &'static str,
+    /// A marked point in the summary: `{label}` is `lowest` or `highest`, `{x}` where it is.
+    pub mark_point: &'static str,
 }
 
 impl ChartLabels {
@@ -83,6 +95,13 @@ impl ChartLabels {
         save_png: "Save as PNG",
         saved: "Saved {name}",
         save_failed: "Could not save {name}",
+        average: "Average",
+        lowest: "Lowest",
+        highest: "Highest",
+        mark: "Mark",
+        mark_line: "{label}: {value}",
+        mark_line_summary: "{name}: {label} line at {value}.",
+        mark_point: "{name}: {label} marked at {x}, {value}.",
     };
 
     pub const GERMAN: Self = Self {
@@ -114,5 +133,12 @@ impl ChartLabels {
         save_png: "Als PNG speichern",
         saved: "{name} gespeichert",
         save_failed: "{name} konnte nicht gespeichert werden",
+        average: "Durchschnitt",
+        lowest: "Tiefstwert",
+        highest: "Höchstwert",
+        mark: "Markierung",
+        mark_line: "{label}: {value}",
+        mark_line_summary: "{name}: Linie {label} bei {value}.",
+        mark_point: "{name}: {label} markiert bei {x}, {value}.",
     };
 }

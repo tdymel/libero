@@ -5,6 +5,7 @@ use dioxus::prelude::*;
 
 use super::{
     ChartColor, ChartHandle, ChartPart, ChartPoint, ChartRange, Series, ValueFormat,
+    data::{MarkLineAt, MarkPoint},
     engine::{Drawn, Plot, SeriesExtras, SeriesSpec},
     export::{ExportSource, file_name},
     legend::{ChartLegend, HiddenSeries, LegendEntry, legend_sx},
@@ -579,6 +580,8 @@ pub(super) fn series_specs(theme: &Theme, forced: bool, series: &[Series]) -> Ve
             dashed: series.dashed || (series.color.is_none() && i >= palette.len()),
             extras: SeriesExtras {
                 symbol: series.symbol.unwrap_or_default(),
+                mark_lines: Vec::new(),
+                mark_points: Vec::new(),
             },
         })
         .collect()
@@ -651,6 +654,124 @@ pub(super) fn summary(
             ),
             _ => fill(labels.series_empty, &[("name", &series.name)]),
         });
+    }
+    sentences
+}
+
+/// Each series' mark lines with a value to sit at: the value, the line's name and the value
+/// as written.
+pub(super) fn mark_lines(
+    labels: &ChartLabels,
+    series: &[Series],
+    write: impl Fn(&Series, f64) -> String,
+) -> Vec<Vec<(f64, String, String)>> {
+    series
+        .iter()
+        .map(|series| {
+            series
+                .mark_lines
+                .iter()
+                .filter_map(|line| {
+                    let value = line.resolve(&series.values)?;
+                    let name = line.label.clone().unwrap_or_else(|| {
+                        match line.at {
+                            MarkLineAt::Average => labels.average,
+                            MarkLineAt::Min => labels.lowest,
+                            MarkLineAt::Max => labels.highest,
+                            MarkLineAt::Value(_) => labels.mark,
+                        }
+                        .to_string()
+                    });
+                    Some((value, name, write(series, value)))
+                })
+                .collect()
+        })
+        .collect()
+}
+
+/// Hands the specs their mark lines' values and texts, and returns the summary's sentences.
+pub(super) fn mark_line_specs(
+    labels: &ChartLabels,
+    specs: &mut [SeriesSpec],
+    series: &[Series],
+    write: impl Fn(&Series, f64) -> String,
+) -> Vec<String> {
+    let lines = mark_lines(labels, series, write);
+    let mut sentences = Vec::new();
+    for ((spec, series), lines) in specs.iter_mut().zip(series).zip(lines) {
+        for (value, label, written) in lines {
+            let text = fill(labels.mark_line, &[("label", &label), ("value", &written)]);
+            sentences.push(fill(
+                labels.mark_line_summary,
+                &[
+                    ("name", &series.name),
+                    ("label", &label),
+                    ("value", &written),
+                ],
+            ));
+            spec.extras.mark_lines.push((value, text));
+        }
+    }
+    sentences
+}
+
+/// `specs` with the marks handed to `marked`, for a second palette of the same series.
+pub(super) fn with_extras(specs: Vec<SeriesSpec>, marked: &[SeriesSpec]) -> Vec<SeriesSpec> {
+    specs
+        .into_iter()
+        .zip(marked)
+        .map(|(spec, marked)| SeriesSpec {
+            extras: marked.extras.clone(),
+            ..spec
+        })
+        .collect()
+}
+
+/// Hands the specs each marked point's place and value as written, and returns the
+/// summary's sentences. The first of equal values is marked.
+pub(super) fn mark_point_specs(
+    labels: &ChartLabels,
+    specs: &mut [SeriesSpec],
+    series: &[Series],
+    x: &[String],
+    write: impl Fn(&Series, f64) -> String,
+) -> Vec<String> {
+    let mut sentences = Vec::new();
+    for (spec, series) in specs.iter_mut().zip(series) {
+        let values = || {
+            series
+                .values
+                .iter()
+                .enumerate()
+                .filter_map(|(i, value)| Some((i, (*value)?)).filter(|(_, v)| v.is_finite()))
+        };
+        for point in &series.mark_points {
+            let (label, found) = match point {
+                MarkPoint::Min => (
+                    labels.lowest,
+                    values().reduce(|a, b| if b.1 < a.1 { b } else { a }),
+                ),
+                MarkPoint::Max => (
+                    labels.highest,
+                    values().reduce(|a, b| if b.1 > a.1 { b } else { a }),
+                ),
+            };
+            let Some((index, value)) = found else {
+                continue;
+            };
+            let written = write(series, value);
+            let at = x.get(index).cloned().unwrap_or_default();
+            sentences.push(fill(
+                labels.mark_point,
+                &[
+                    ("name", &series.name),
+                    ("x", &at),
+                    ("value", &written),
+                    ("label", &label),
+                ],
+            ));
+            spec.extras.mark_points.push((index, written));
+        }
     }
     sentences
 }

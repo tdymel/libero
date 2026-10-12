@@ -134,13 +134,19 @@ pub(super) fn use_zoom(len: usize, enabled: bool) -> Option<Zoom> {
     enabled.then_some(Zoom { window, len })
 }
 
-/// Each series cut to `start..end`.
+/// Each series cut to `start..end`; a marked point outside it is not drawn.
 pub(super) fn windowed(specs: Vec<SeriesSpec>, window: (usize, usize)) -> Vec<SeriesSpec> {
     specs
         .into_iter()
-        .map(|spec| SeriesSpec {
-            values: cut(&spec.values, window),
-            ..spec
+        .map(|mut spec| {
+            spec.extras.mark_points = (spec.extras.mark_points.into_iter())
+                .filter(|(index, _)| (window.0..window.1).contains(index))
+                .map(|(index, text)| (index - window.0, text))
+                .collect();
+            SeriesSpec {
+                values: cut(&spec.values, window),
+                ..spec
+            }
         })
         .collect()
 }
@@ -219,6 +225,24 @@ mod tests {
         // Never narrower than two points.
         assert_eq!(zoomed((4, 6), 10, 0.1, 0.5), (4, 6));
         assert_eq!(zoomed((0, 1), 1, 0.5, 0.5), (0, 1));
+    }
+
+    /// A marked point keeps its place in the window, or leaves with the rest of the cut.
+    #[test]
+    fn a_window_moves_its_marked_points() {
+        let spec = SeriesSpec {
+            name: "A".into(),
+            values: vec![Some(1.0); 6],
+            color: crate::theme::HexColor::new(0x228BE6),
+            dashed: false,
+            extras: super::super::engine::SeriesExtras {
+                mark_points: vec![(1, "low".into()), (4, "high".into())],
+                ..Default::default()
+            },
+        };
+        let cut = windowed(vec![spec], (3, 6));
+        assert_eq!(cut[0].values.len(), 3);
+        assert_eq!(cut[0].extras.mark_points, [(1, "high".to_string())]);
     }
 
     #[test]

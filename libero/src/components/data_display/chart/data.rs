@@ -201,6 +201,10 @@ pub struct Series {
     pub negative_color: Option<ChartColor>,
     /// Each value's error range, `(low, high)` per x value; `None`, no error bar there.
     pub errors: Vec<Option<(f64, f64)>>,
+    /// Lines across the plot at a value of the series, in its colour.
+    pub mark_lines: Vec<MarkLine>,
+    /// A line's lowest or highest point, its value pinned by it.
+    pub mark_points: Vec<MarkPoint>,
 }
 
 impl Series {
@@ -218,6 +222,8 @@ impl Series {
             colors: Vec::new(),
             negative_color: None,
             errors: Vec::new(),
+            mark_lines: Vec::new(),
+            mark_points: Vec::new(),
         }
     }
 
@@ -275,6 +281,97 @@ impl Series {
             })
             .collect();
         self
+    }
+
+    /// A dashed line across the plot at the series' average, lowest, highest or a fixed
+    /// value, labelled: `Series::new("Sales", [3, 5]).mark_line(MarkLine::average())`.
+    pub fn mark_line(mut self, line: MarkLine) -> Self {
+        self.mark_lines.push(line);
+        self
+    }
+
+    /// A line's lowest or highest point with its value in a pin in the series' colour:
+    /// `.mark_point(MarkPoint::Max)`. The first of equal values is marked.
+    pub fn mark_point(mut self, point: MarkPoint) -> Self {
+        if !self.mark_points.contains(&point) {
+            self.mark_points.push(point);
+        }
+        self
+    }
+}
+
+/// Which of a line's points a [`Series::mark_point`] pins its value by.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MarkPoint {
+    Min,
+    Max,
+}
+
+/// Where a series' [`MarkLine`] sits.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) enum MarkLineAt {
+    Average,
+    Min,
+    Max,
+    Value(f64),
+}
+
+/// A labelled line across a line or vertical bar chart at a value of its series.
+///
+/// ```rust
+/// # use libero::components::{MarkLine, Series};
+/// let sales = Series::new("Sales", [120.0, 132.0, 101.0])
+///     .mark_line(MarkLine::average())
+///     .mark_line(MarkLine::value(150.0).label("Target"));
+/// # let _ = sales;
+/// ```
+#[derive(Clone, Debug, PartialEq)]
+pub struct MarkLine {
+    pub(crate) at: MarkLineAt,
+    /// Written by the line and in the summary. Unset, the localized "Average", "Lowest",
+    /// "Highest", or "Mark" for a fixed value.
+    pub(crate) label: Option<String>,
+}
+
+impl MarkLine {
+    pub fn average() -> Self {
+        Self::at(MarkLineAt::Average)
+    }
+
+    pub fn min() -> Self {
+        Self::at(MarkLineAt::Min)
+    }
+
+    pub fn max() -> Self {
+        Self::at(MarkLineAt::Max)
+    }
+
+    /// A fixed value, as a target; one outside the y axis is not drawn.
+    pub fn value(value: f64) -> Self {
+        Self::at(MarkLineAt::Value(value))
+    }
+
+    pub fn label(mut self, label: impl Into<String>) -> Self {
+        self.label = Some(label.into());
+        self
+    }
+
+    fn at(at: MarkLineAt) -> Self {
+        Self { at, label: None }
+    }
+
+    /// Its value over the series' `values`; `None` with no value to take it from.
+    pub(crate) fn resolve(&self, values: &[Option<f64>]) -> Option<f64> {
+        let known = values.iter().flatten().copied().filter(|v| v.is_finite());
+        match self.at {
+            MarkLineAt::Value(value) => value.is_finite().then_some(value),
+            MarkLineAt::Average => {
+                let (sum, count) = known.fold((0.0, 0usize), |(s, c), v| (s + v, c + 1));
+                (count > 0).then(|| sum / count as f64)
+            }
+            MarkLineAt::Min => known.reduce(f64::min),
+            MarkLineAt::Max => known.reduce(f64::max),
+        }
     }
 }
 

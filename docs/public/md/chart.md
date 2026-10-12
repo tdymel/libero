@@ -24,7 +24,7 @@ the `export_button`s.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{LineChart, Series};
+use libero::components::{LineChart, MarkLine, MarkPoint, Series};
 use libero::theme::PointSymbol;
 
 #[component]
@@ -34,7 +34,9 @@ fn Demo() -> Element {
             title: "Visitors",
             x: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
             series: vec![
-                Series::new("This week", [120.0, 132.0, 101.0, 134.0, 90.0, 230.0, 210.0]),
+                Series::new("This week", [120.0, 132.0, 101.0, 134.0, 90.0, 230.0, 210.0])
+                    .mark_line(MarkLine::average())
+                    .mark_point(MarkPoint::Max),
                 Series::new("Last week", [98.0, 110.0, 115.0, 120.0, 104.0, 170.0, 180.0])
                     .dashed()
                     .symbol(PointSymbol::Square),
@@ -222,6 +224,57 @@ fn Demo() -> Element {
             y_ticks: 4usize,
             x_title: "Day",
             y_title: "Visits",
+        }
+    }
+}
+```
+
+`.mark_line(MarkLine::average())` draws a dashed line across the plot at a
+series' average, in its colour, and writes "Average: 140" by it; `min()` and
+`max()` mark its lowest and highest value, `value(150.0)` a fixed one, and
+`.label("Target")` names it. The summary reads each one out. A line chart that is
+not `stacked` and upright, `grouped` bars draw them.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{BarChart, MarkLine, Series};
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        BarChart {
+            title: "Sales",
+            x: ["Q1", "Q2", "Q3", "Q4"],
+            series: vec![
+                Series::new("2026", [140.0, 128.0, 150.0, 162.0])
+                    .mark_line(MarkLine::average())
+                    .mark_line(MarkLine::value(150.0).label("Target")),
+            ],
+        }
+    }
+}
+```
+
+`.mark_point(MarkPoint::Max)` pins a line's highest value by its point, in a pill
+of the series' colour with black or white text, whichever reads on it; `Min` its
+lowest. A pin goes below a point too close to the top. The summary says where
+each one is.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{LineChart, MarkPoint, Series};
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        LineChart {
+            title: "Visitors",
+            x: ["Mon", "Tue", "Wed", "Thu", "Fri"],
+            series: vec![
+                Series::new("This week", [120.0, 132.0, 101.0, 134.0, 90.0])
+                    .mark_point(MarkPoint::Max)
+                    .mark_point(MarkPoint::Min),
+            ],
         }
     }
 }
@@ -494,8 +547,9 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 - The chart is a `role="figure"` named by `title`. The drawing is hidden from
   screen readers.
 - A hidden summary gives the x range and each series' lowest and highest value,
-  and where the highest is, then the axes' titles and, stacked, that the top line
-  is the total; a pie's, the total, then each
+  and where the highest is, then each mark line's name and value and each marked
+  point's place and value, the axes'
+  titles and, stacked, that the top line is the total; a pie's, the total, then each
   slice's value and share.
 - The plot is one tab stop, a `role="application"` described as a chart, so a
   screen reader hands it the arrows. Each point the keys reach is announced, as
@@ -554,6 +608,10 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 - `zoom` and `onrange` are for lines and bars; a pie exports only.
 - An export keeps the normal palette in forced colours. `png()` is `None` on
   Blitz and on the server, and the PNG button says it could not save.
+- A mark line is drawn on a line chart that is not `stacked` and on upright,
+  `grouped` bars, and only inside the y axis' ends; the summary leaves out the
+  ones not drawn, except past the ends. A marked point is drawn on a line chart
+  only.
 
 ## Theme defaults
 

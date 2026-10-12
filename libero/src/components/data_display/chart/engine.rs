@@ -1,7 +1,9 @@
 //! Props to `charts-rs` and back: it draws the static SVG, we harvest where each mark
 //! landed and strip its own tooltips, so the overlay and keyboard layers can be ours.
 
-use charts_rs::{AxisType, Color as InkColor, LineStep, Position, Symbol};
+use charts_rs::{
+    AxisType, Color as InkColor, DEFAULT_FONT_FAMILY, LineStep, MarkLineCategory, Position, Symbol,
+};
 
 use super::data::{ValueFormat, ungrouped};
 use crate::{
@@ -153,6 +155,10 @@ pub(crate) struct SeriesSpec {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct SeriesExtras {
     pub(crate) symbol: PointSymbol,
+    /// Each mark line's value and the text written by it.
+    pub(crate) mark_lines: Vec<(f64, String)>,
+    /// Each marked point's x index and the text pinned by it.
+    pub(crate) mark_points: Vec<(usize, String)>,
 }
 
 /// Everything a line chart's SVG depends on, so a memo redraws only on a change.
@@ -213,6 +219,109 @@ impl Axes {
     }
 }
 
+/// Every series' mark lines inside the value axis' ends, where unset the data's extent and
+/// 0, which the axis always spans; in the order the renderer draws them.
+fn kept_mark_lines<'a>(series: &'a [SeriesSpec], axes: &Axes) -> Vec<Vec<&'a (f64, String)>> {
+    let values = series
+        .iter()
+        .flat_map(|s| s.values.iter().flatten().copied());
+    let low = axes.min.unwrap_or(values.clone().fold(0.0, f64::min));
+    let high = axes.max.unwrap_or(values.fold(0.0, f64::max));
+    series
+        .iter()
+        .map(|series| {
+            let lines = series.extras.mark_lines.iter();
+            lines
+                .filter(|(value, _)| (low..=high).contains(value))
+                .collect()
+        })
+        .collect()
+}
+
+fn renderer_mark_line(&(value, _): &(f64, String)) -> charts_rs::MarkLine {
+    charts_rs::MarkLine {
+        category: MarkLineCategory::Value(value as f32),
+        ..Default::default()
+    }
+}
+
+/// Writes each mark line's own text, in drawing order, over the bare number the renderer
+/// puts by it: in the label ink, haloed in the surface's so the data under it cannot blur it.
+fn label_mark_lines(svg: &str, texts: &[&str], ink: &ChartInk) -> String {
+    let mut texts = texts.iter();
+    let mut out = String::with_capacity(svg.len());
+    let mut rest = svg;
+    while let Some(start) = rest.find("<text ") {
+        out.push_str(&rest[..start]);
+        let end = rest[start..]
+            .find("</text>")
+            .map_or(rest.len(), |end| start + end + "</text>".len());
+        let element = &rest[start..end];
+        rest = &rest[end..];
+        let tag = &element[..element.find('>').map_or(element.len(), |i| i + 1)];
+        let mark = tag.contains("dy=\"-6\"") && tag.contains("text-anchor=\"end\"");
+        let Some(text) = mark.then(|| texts.next()).flatten() else {
+            out.push_str(element);
+            continue;
+        };
+        let kept: String = attributes(tag)
+            .iter()
+            .map(|&(name, value)| match name {
+                "fill" => format!(" fill=\"{}\"", ink.label),
+                _ => format!(" {name}=\"{value}\""),
+            })
+            .collect();
+        let halo = format!(
+            " stroke=\"{}\" stroke-width=\"3\" stroke-linejoin=\"round\" paint-order=\"stroke\"",
+            ink.surface
+        );
+        out.push_str(&format!("<text{kept}{halo}>\n{}\n</text>", escape(text)));
+    }
+    out.push_str(rest);
+    out
+}
+
+/// Each marked point's value in a pill of its series' colour, above the point or, with no
+/// room there, below it; in black or white, whichever reads on the colour.
+fn pin_mark_points(svg: &str, spec: &LineSpec, marks: &[Mark]) -> String {
+    const HEIGHT: f32 = 20.0;
+    const GAP: f32 = 6.0;
+    const SIZE: f32 = 12.0;
+    let mut pins = String::new();
+    for (s, series) in spec.series.iter().enumerate() {
+        for (index, text) in &series.extras.mark_points {
+            let place = marks.iter().find(|m| m.series == s && m.index == *index);
+            let Some(MarkShape::Point { x, y }) = place.map(|mark| &mark.shape) else {
+                continue;
+            };
+            let width = charts_rs::measure_text_width_family(DEFAULT_FONT_FAMILY, SIZE, text)
+                .map_or(0.0, |text| text.width())
+                + HEIGHT * 0.6;
+            let left = (x - width / 2.0).clamp(1.0, (spec.width - width - 1.0).max(1.0));
+            let top = match y - GAP - HEIGHT >= 1.0 {
+                true => y - GAP - HEIGHT,
+                false => y + GAP,
+            };
+            pins.push_str(&format!(
+                "<g class=\"ct-pin\"><rect x=\"{left}\" y=\"{top}\" width=\"{width}\" height=\"{HEIGHT}\" \
+                 rx=\"{}\" fill=\"{}\"/><text x=\"{}\" y=\"{}\" font-size=\"{SIZE}\" \
+                 font-family=\"inherit\" text-anchor=\"middle\" dominant-baseline=\"central\" \
+                 fill=\"{}\">{}</text></g>",
+                HEIGHT / 2.0,
+                series.color,
+                left + width / 2.0,
+                top + HEIGHT / 2.0,
+                spec.ink.on(series.color),
+                escape(text),
+            ));
+        }
+    }
+    match svg.rfind("</svg>") {
+        Some(end) => format!("{}{pins}{}", &svg[..end], &svg[end..]),
+        None => svg.to_string(),
+    }
+}
+
 fn ink(hex: HexColor) -> InkColor {
     InkColor::from((hex.r(), hex.g(), hex.b()))
 }
@@ -230,13 +339,22 @@ fn symbol(spec: &LineSpec, series: &SeriesSpec) -> Symbol {
 }
 
 pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
+    // A stack draws its lines at their sums, not at their own values.
+    let marked = match spec.stacked {
+        true => Vec::new(),
+        false => kept_mark_lines(&spec.series, &spec.axes),
+    };
     let series = spec
         .series
         .iter()
-        .map(|series| {
+        .enumerate()
+        .map(|(i, series)| {
             let values = series.values.iter().map(|v| v.map(|v| v as f32)).collect();
             let mut drawn = charts_rs::Series::new_nullable(series.name.clone(), values);
             drawn.colors = Some(vec![Some(ink(series.color))]);
+            if let Some(lines) = marked.get(i) {
+                drawn.mark_lines = lines.iter().copied().map(renderer_mark_line).collect();
+            }
             drawn.stroke_dash_array = series.dashed.then(|| DASH.to_string());
             drawn.symbol = Some(symbol(spec, series));
             drawn.stack = spec.stacked.then(|| "stack".to_string());
@@ -306,11 +424,19 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
         spec.format.format(label, None, &x_formats)
     });
     let marks = match_marks(&expected, &triggers);
+    let texts: Vec<&str> = marked
+        .iter()
+        .flatten()
+        .map(|(_, text)| text.as_str())
+        .collect();
+    let svg = label_mark_lines(&svg, &texts, &spec.ink);
+    let plot = Plot::of(&svg, spec.width, spec.height);
+    let svg = pin_mark_points(&svg, spec, &marks);
     Some(Drawn {
         geometry: Geometry {
             width: spec.width,
             height: spec.height,
-            plot: Plot::of(&svg, spec.width, spec.height),
+            plot,
             marks,
             hole: 0.0,
         },
@@ -403,6 +529,11 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
             ..series.clone()
         })
         .collect();
+    // Upright and side by side, each bar stands at its own value.
+    let marked = match !spec.horizontal && spec.layout == BarLayout::Grouped {
+        true => kept_mark_lines(&ordered, &spec.axes),
+        false => Vec::new(),
+    };
     let bar_color = |series: usize, index: usize| {
         spec.bar_colors
             .get(series)
@@ -417,6 +548,9 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
         .map(|(s, series)| {
             let values = series.values.iter().map(|v| v.map(|v| v as f32)).collect();
             let mut drawn = charts_rs::Series::new_nullable(series.name.clone(), values);
+            if let Some(lines) = marked.get(s) {
+                drawn.mark_lines = lines.iter().copied().map(renderer_mark_line).collect();
+            }
             drawn.label_show = spec.value_labels;
             drawn.stack = (spec.layout != BarLayout::Grouped).then(|| "stack".to_string());
             drawn.colors = Some(order.iter().map(|&i| Some(ink(bar_color(s, i)))).collect());
@@ -509,6 +643,12 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
         "stroke=\"#010203\"",
         &format!("stroke=\"{}\"", spec.ink.label),
     );
+    let texts: Vec<&str> = marked
+        .iter()
+        .flatten()
+        .map(|(_, text)| text.as_str())
+        .collect();
+    let svg = label_mark_lines(&svg, &texts, &spec.ink);
     Some(Drawn {
         geometry: Geometry {
             width: spec.width,
@@ -1576,6 +1716,79 @@ mod tests {
         // At b, B's 1 is under A's 2 alone, stacked over it at 2 + 1.
         assert!(y(&alone, 3) > y(&alone, 1), "{}", alone.svg);
         assert!(y(&stacked, 3) < y(&stacked, 1), "{}", stacked.svg);
+    }
+
+    /// A mark line is drawn at its value in the series' colour and labelled in the label ink;
+    /// one past the axis' ends or in a stack is not drawn.
+    #[test]
+    fn mark_lines_are_drawn_and_labelled() {
+        let mut series = spec("A", &[Some(1.0), Some(3.0), Some(2.0)]);
+        series.extras.mark_lines = vec![(2.0, "Average: 2".into()), (9.0, "Out".into())];
+        let mut spec = line(vec![series.clone()], &["a", "b", "c"]);
+        let drawn = draw_line(&spec).expect("drawn");
+        assert_eq!(
+            drawn.svg.matches("stroke-dasharray=\"4,2\"").count(),
+            1,
+            "{}",
+            drawn.svg
+        );
+        let label = format!(
+            "fill=\"{}\" stroke=\"{}\"",
+            spec.ink.label, spec.ink.surface
+        );
+        assert!(drawn.svg.contains(&label), "{}", drawn.svg);
+        assert!(drawn.svg.contains("\nAverage: 2\n"), "{}", drawn.svg);
+        assert!(!drawn.svg.contains("Out"), "{}", drawn.svg);
+        assert_eq!(drawn.geometry.marks.len(), 3);
+        spec.stacked = true;
+        assert!(!draw_line(&spec).expect("drawn").svg.contains("Average"));
+
+        let mut bars = bars(BarLayout::Grouped, false);
+        bars.series[0].extras.mark_lines = vec![(1.0, "Target: 1".into())];
+        assert!(
+            draw_bar(&bars)
+                .expect("drawn")
+                .svg
+                .contains("\nTarget: 1\n")
+        );
+        bars.horizontal = true;
+        assert!(!draw_bar(&bars).expect("drawn").svg.contains("Target"));
+    }
+
+    /// A marked point's value sits in a pill of its colour above it, or below it at the top,
+    /// in the ink that reads on that colour.
+    #[test]
+    fn a_marked_point_is_pinned_by_its_value() {
+        let mut series = spec("A", &[Some(1.0), Some(3.0), Some(2.0)]);
+        series.extras.mark_points = vec![(0, "1 kg".into()), (1, "3 kg".into())];
+        let spec = line(vec![series.clone()], &["a", "b", "c"]);
+        let drawn = draw_line(&spec).expect("drawn");
+        assert_eq!(
+            drawn.svg.matches("class=\"ct-pin\"").count(),
+            2,
+            "{}",
+            drawn.svg
+        );
+        let ink = format!("fill=\"{}\">3 kg</text>", spec.ink.on(series.color));
+        assert!(drawn.svg.contains(&ink), "{}", drawn.svg);
+        let tops: Vec<f32> = drawn
+            .svg
+            .split("class=\"ct-pin\"><rect")
+            .skip(1)
+            .filter_map(|pin| pin.split("y=\"").nth(1)?.split('"').next()?.parse().ok())
+            .collect();
+        let ys: Vec<f32> = drawn.geometry.marks[..2]
+            .iter()
+            .map(|m| match m.shape {
+                MarkShape::Point { y, .. } => y,
+                _ => panic!(),
+            })
+            .collect();
+        assert!(
+            tops[0] < ys[0],
+            "the low point's pin is above it: {tops:?} {ys:?}"
+        );
+        assert_eq!(drawn.geometry.marks.len(), 3);
     }
 
     /// A lying bar chart's value axis is at the bottom: the y title goes there.

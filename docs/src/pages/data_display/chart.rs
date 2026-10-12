@@ -7,8 +7,8 @@ use dioxus::prelude::*;
 use libero::use_theme;
 use libero::{
     components::{
-        Anchor, BarChart, ChartRange, Code, LineChart, Orientation, PieChart, Series, Slice, Table,
-        Text, XValues, column, use_chart,
+        Anchor, BarChart, ChartRange, Code, LineChart, MarkLine, MarkPoint, Orientation, PieChart,
+        Series, Slice, Table, Text, XValues, column, use_chart,
     },
     theme::{
         BarLabelPosition, BarLayout, Curve, LegendPosition, PieLabelPosition, PieLabels,
@@ -67,6 +67,59 @@ fn axis_titles(values: &DemoValues) -> Option<(&'static str, &'static str)> {
         (true, "bar") => Some(("Quarter", "Profit")),
         (true, _) => Some(("Day", "Visitors")),
     }
+}
+
+/// The first series' mark line, in code and as built, for the chart type.
+fn mark_line(values: &DemoValues) -> Option<(String, MarkLine)> {
+    let target = match values.str("type").as_str() {
+        "bar" => 50.0,
+        _ => 200.0,
+    };
+    match values.str("mark_line").as_str() {
+        "average" => Some((
+            ".mark_line(MarkLine::average())".to_string(),
+            MarkLine::average(),
+        )),
+        "target" => Some((
+            format!(".mark_line(MarkLine::value({target:?}).label(\"Target\"))"),
+            MarkLine::value(target).label("Target"),
+        )),
+        _ => None,
+    }
+}
+
+/// A line chart's marked points, as the control says.
+fn mark_points(values: &DemoValues) -> Vec<MarkPoint> {
+    match (
+        values.str("type").as_str(),
+        values.str("mark_point").as_str(),
+    ) {
+        ("line", "max") => vec![MarkPoint::Max],
+        ("line", "min") => vec![MarkPoint::Min],
+        ("line", "both") => vec![MarkPoint::Max, MarkPoint::Min],
+        _ => vec![],
+    }
+}
+
+/// The first series' marks, as code.
+fn marks_code(values: &DemoValues) -> String {
+    let line = mark_line(values).map(|m| m.0).unwrap_or_default();
+    let points: String = mark_points(values)
+        .iter()
+        .map(|point| format!(".mark_point(MarkPoint::{point:?})"))
+        .collect();
+    line + &points
+}
+
+/// The first series, marked as the controls say.
+fn marked(values: &DemoValues, series: Series) -> Series {
+    let series = match mark_line(values) {
+        Some((_, line)) => series.mark_line(line),
+        None => series,
+    };
+    mark_points(values)
+        .into_iter()
+        .fold(series, Series::mark_point)
 }
 
 /// The type's component in place of the generated `Chart`.
@@ -203,7 +256,7 @@ pub fn ChartPage() -> Element {
                 .key(["Shift+ArrowRight", "Shift+ArrowLeft"], "With `onrange`: brushes from the keys' point to the next or previous x value.")
                 .handles([
                     "The chart is a `role=\"figure\"` named by `title`. The drawing is hidden from screen readers.",
-                    "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is, then the axes' titles and, stacked, that the top line is the total; a pie's, the total, then each slice's value and share.",
+                    "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is, then each mark line's name and value and each marked point's place and value, the axes' titles and, stacked, that the top line is the total; a pie's, the total, then each slice's value and share.",
                     "The plot is one tab stop, a `role=\"application\"` described as a chart, so a screen reader hands it the arrows. Each point the keys reach is announced, as \"This week, Tue: 132\" or \"Chrome: 62, 62%.\"",
                     "The legend's entries are toggle buttons: pressed while their series or slice shows, struck through when hidden. The last shown one's button is `aria-disabled`. A dashed line's key is a dash, as drawn; once a line sets a `symbol`, each key is its line's point shape.",
                     "On a touch screen a tap pins a point's tooltip, a second tap on it clicks; a vertical swipe still scrolls the page.",
@@ -234,6 +287,7 @@ pub fn ChartPage() -> Element {
                     "A rose's radius and a slice under `min_label_angle` are read by eye or not at all; the summary gives every value.",
                     "`zoom` and `onrange` are for lines and bars; a pie exports only.",
                     "An export keeps the normal palette in forced colours. `png()` is `None` on Blitz and on the server, and the PNG button says it could not save.",
+                    "A mark line is drawn on a line chart that is not `stacked` and on upright, `grouped` bars, and only inside the y axis' ends; the summary leaves out the ones not drawn, except past the ends. A marked point is drawn on a line chart only.",
                 ]),
             lead: rsx! {
                 Text {
@@ -273,12 +327,14 @@ pub fn ChartPage() -> Element {
                     Control::toggle("type", ["line", "bar", "pie"])
                         .default("line")
                         .labels(["LineChart", "BarChart", "PieChart"])
-                        .code(|_, values| match values.str("type").as_str() {
+                        .code(|_, values| {
+                            let mark = marks_code(values);
+                            match values.str("type").as_str() {
                             "bar" => vec![
                                 "title: \"Profit\"".to_string(),
                                 format!("x: {QUARTERS:?}"),
                                 format!(
-                                    "series: vec![Series::new(\"2025\", {PROFIT_2025:?}), Series::new(\"2026\", {PROFIT_2026:?})]"
+                                    "series: vec![Series::new(\"2025\", {PROFIT_2025:?}){mark}, Series::new(\"2026\", {PROFIT_2026:?})]"
                                 ),
                             ],
                             "pie" => vec![
@@ -289,10 +345,10 @@ pub fn ChartPage() -> Element {
                                 "title: \"Visitors\"".to_string(),
                                 format!("x: {DAYS:?}"),
                                 format!(
-                                    "series: vec![Series::new(\"This week\", {THIS_WEEK:?}), Series::new(\"Last week\", {LAST_WEEK:?}).dashed().symbol(PointSymbol::Square)]"
+                                    "series: vec![Series::new(\"This week\", {THIS_WEEK:?}){mark}, Series::new(\"Last week\", {LAST_WEEK:?}).dashed().symbol(PointSymbol::Square)]"
                                 ),
                             ],
-                        }),
+                        }}),
                     Control::select("curve", ["linear", "smooth", "step"])
                         .default(theme.chart.curve.as_str())
                         .hidden_when(is("line")),
@@ -376,6 +432,14 @@ pub fn ChartPage() -> Element {
                             _ => vec![],
                         }
                     }),
+                    Control::toggle("mark_point", ["max", "min", "both", "none"])
+                        .default("max")
+                        .hidden_when(is("line"))
+                        .code(|_, _| vec![]),
+                    Control::toggle("mark_line", ["average", "target", "none"])
+                        .default("average")
+                        .hidden_when(is("axes"))
+                        .code(|_, _| vec![]),
                     Control::select("y_range", ["fixed", "auto"]).hidden_when(is("axes")).code(
                         |_, values| match y_range(values) {
                             Some((min, max)) => vec![format!("y_min: {min:?}"), format!("y_max: {max:?}")],
@@ -435,7 +499,7 @@ pub fn ChartPage() -> Element {
                             BarChart {
                                 title: "Profit",
                                 x: QUARTERS,
-                                series: vec![Series::new("2025", PROFIT_2025), Series::new("2026", PROFIT_2026)],
+                                series: vec![marked(&values, Series::new("2025", PROFIT_2025)), Series::new("2026", PROFIT_2026)],
                                 layout: BarLayout::from(values.str("layout").as_str()),
                                 orientation: Orientation::from(values.str("orientation").as_str()),
                                 radius: values.str("radius"),
@@ -474,7 +538,7 @@ pub fn ChartPage() -> Element {
                                 title: "Visitors",
                                 x: DAYS,
                                 series: vec![
-                                    Series::new("This week", THIS_WEEK),
+                                    marked(&values, Series::new("This week", THIS_WEEK)),
                                     Series::new("Last week", LAST_WEEK).dashed().symbol(PointSymbol::Square),
                                 ],
                                 curve: Curve::from(values.str("curve").as_str()),

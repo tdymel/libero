@@ -5,8 +5,8 @@ use super::{
     engine::{self, Axes, BarSpec, SeriesSpec},
     export::ExportSource,
     frame::{
-        Frame, Interaction, axis_titles, chart_unit, hex, overlay_series, series_specs,
-        shown_places, summary, use_plot_size,
+        Frame, Interaction, axis_titles, chart_unit, hex, mark_line_specs, overlay_series,
+        series_specs, shown_places, summary, use_plot_size, with_extras,
     },
     legend::use_hidden_series,
     props::chart_props,
@@ -134,7 +134,7 @@ pub fn BarChart(props: BarChartProps) -> Element {
             })
             .collect()
     };
-    let all_specs = solid(forced);
+    let mut all_specs = solid(forced);
     let names: Vec<String> = all_specs.iter().map(|s| s.name.clone()).collect();
     let hidden = use_hidden_series(
         &props.hidden,
@@ -160,6 +160,15 @@ pub fn BarChart(props: BarChartProps) -> Element {
         };
     let palette = chart_palette(theme, forced);
     let color = |color| hex(theme, forced, &palette, 0, Some(color));
+    let write = |series: &Series, value: f64| {
+        let unit = series.unit.as_deref().or(unit.as_deref());
+        props.value_format.format(value, unit, formats)
+    };
+    // Only upright bars side by side stand at their own values.
+    let marked = match !horizontal && layout == BarLayout::Grouped {
+        true => mark_line_specs(&labels, &mut all_specs, &props.series, write),
+        false => Vec::new(),
+    };
     let spec = BarSpec {
         width,
         height,
@@ -213,7 +222,7 @@ pub fn BarChart(props: BarChartProps) -> Element {
     };
     // The file keeps the normal palette under forced colours.
     let export = {
-        let specs = solid(false);
+        let specs = with_extras(solid(false), &all_specs);
         let spec = BarSpec {
             series: windowed(shown.iter().map(|i| specs[*i].clone()).collect(), window),
             ink: ChartInk::of(theme, false),
@@ -225,15 +234,12 @@ pub fn BarChart(props: BarChartProps) -> Element {
         engine::draw_bar(&spec).map(|drawn| drawn.with_series(&shown).with_offset(window.0))
     }));
 
-    let write = |series: &Series, value: f64| {
-        let unit = series.unit.as_deref().or(unit.as_deref());
-        props.value_format.format(value, unit, formats)
-    };
     let summary = match (props.loading, empty) {
         (true, _) => vec![labels.loading.to_string()],
         (false, true) => Vec::new(),
         (false, false) => {
             let mut sentences = summary(&labels, labels.bar, &x, &props.series, write);
+            sentences.extend(marked);
             sentences.extend(axis_titles(&labels, &props.x_title, &props.y_title));
             sentences
         }

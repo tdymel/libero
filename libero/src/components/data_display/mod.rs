@@ -30,7 +30,8 @@ pub use carousel::{Carousel, CarouselAlign, CarouselPart, CarouselProps};
 #[cfg(feature = "charts")]
 pub use chart::{
     BarChart, BarChartProps, ChartColor, ChartHandle, ChartPart, ChartPoint, ChartRange, LineChart,
-    LineChartProps, PieChart, PieChartProps, Series, Slice, Value, ValueFormat, XValues, use_chart,
+    LineChartProps, MarkLine, MarkPoint, PieChart, PieChartProps, Series, Slice, Value,
+    ValueFormat, XValues, use_chart,
 };
 pub use data_list::{DataList, DataListItem, DataListItemProps, DataListProps};
 pub use icon::{Icon, IconProps};
