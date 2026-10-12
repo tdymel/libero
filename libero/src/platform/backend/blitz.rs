@@ -1453,7 +1453,7 @@ pub(super) fn when_laid_out(run: Box<dyn FnOnce()>) {
     let weak = Rc::downgrade(&doc);
     let wait = super::thread::timer().map(|timer| {
         timer.after(
-            Duration::ZERO,
+            Duration::from_millis(16),
             Box::new(move || {
                 let Some(doc) = weak.upgrade() else {
                     return;
