@@ -146,8 +146,8 @@ mod tests {
         SidebarSide, Variant,
     };
     use crate::theme::{
-        BarLayout, ChartTable, ChoiceVariant, Curve, LegendPosition, LoaderVariant, PieLabels,
-        Placement, QrRobustness, ScrollAxis, ScrollbarSize, ScrollbarVisibility,
+        BarLayout, ChoiceVariant, Curve, LegendPosition, LoaderVariant, PieLabels, Placement,
+        QrRobustness, ScrollAxis, ScrollbarSize, ScrollbarVisibility,
     };
 
     /// Add every new `str_enum!` here - the checks below iterate this list.
@@ -156,7 +156,6 @@ mod tests {
             $check!(AnchorUnderline);
             $check!(BottomNavigationPosition);
             $check!(BarLayout);
-            $check!(ChartTable);
             $check!(Curve);
             $check!(LegendPosition);
             $check!(PieLabels);

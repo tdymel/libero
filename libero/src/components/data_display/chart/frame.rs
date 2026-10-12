@@ -1,5 +1,5 @@
-//! What every chart puts around its drawing: title, toggle legend, summary, data table,
-//! and the interactive overlay on the plot.
+//! What every chart puts around its drawing: title, toggle legend, summary, and the
+//! interactive overlay on the plot.
 
 use dioxus::prelude::*;
 
@@ -21,8 +21,8 @@ use crate::{
     platform::ElementApi,
     sx::{FORCED_COLORS, StaticSx, Sx, sx},
     theme::{
-        CHART_ASPECT_RATIO, CHART_LEGEND_GAP, CHART_SWATCH_SIZE, ChartTable, HexColor,
-        LegendPosition, Theme, chart_color, chart_palette,
+        CHART_ASPECT_RATIO, CHART_LEGEND_GAP, CHART_SWATCH_SIZE, HexColor, LegendPosition, Theme,
+        chart_color, chart_palette,
     },
 };
 
@@ -42,7 +42,7 @@ static CHART_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .flex_direction("column")
         .gap("xs")
-        // The hidden summary and table sit inside, not at the page's corner.
+        // The hidden summary sits inside, not at the page's corner.
         .position("relative")
         .min_width("0")
         .selector(ChartPart::Title.selector(), sx().font_weight("600"))
@@ -132,38 +132,6 @@ static CHART_BASE_SX: StaticSx = StaticSx::new(|| {
                 .color("text-dimmed"),
         )
         .selector("& > [data-chart-summary]", visually_hidden_sx())
-        .selector(ChartPart::Table.selector(), visually_hidden_sx())
-        .when(
-            "table-visible",
-            sx().selector(
-                ChartPart::Table.selector(),
-                sx().position("static")
-                    .width("auto")
-                    .height("auto")
-                    .margin("0")
-                    .overflow("auto")
-                    .clip("auto")
-                    .white_space("normal")
-                    .opacity("1"),
-            ),
-        )
-        .selector(
-            format!("{} table", ChartPart::Table.selector()),
-            sx().border_collapse("collapse").font_size("sm"),
-        )
-        .selector(
-            format!("{} :is(th, td)", ChartPart::Table.selector()),
-            sx().padding("4px 8px").text_align("end"),
-        )
-        // The x labels' column reads as text; the values line up on their ends.
-        .selector(
-            format!("{} :is(th, td):first-child", ChartPart::Table.selector()),
-            sx().text_align("start"),
-        )
-        .selector(
-            format!("{} caption", ChartPart::Table.selector()),
-            sx().text_align("start").font_weight("600"),
-        )
         .when(
             "legend-top",
             sx().selector(ChartPart::Body.selector(), column("column-reverse")),
@@ -188,9 +156,6 @@ pub(super) fn drawing_sx() -> Sx {
     )
 }
 
-/// The table's column heads after the first, then per row its label and cells.
-pub(super) type TableRows = (Vec<String>, Vec<(String, Vec<String>)>);
-
 /// A chart's drawing and everything said about it, ready to render.
 pub(super) struct Frame {
     pub(super) id: Signal<String>,
@@ -213,8 +178,6 @@ pub(super) struct Frame {
     /// The x values as written; a pie's slice names.
     pub(super) x: Vec<String>,
     pub(super) summary: Vec<String>,
-    pub(super) table: ChartTable,
-    pub(super) rows: Option<TableRows>,
     pub(super) plot: PlotSize,
     pub(super) aspect_ratio: Option<f32>,
     pub(super) interaction: Interaction,
@@ -247,17 +210,6 @@ impl Frame {
         }
     }
 
-    /// The table, unless it is off, the chart has nothing to show or it is past the cap.
-    pub(super) fn rows(
-        table: ChartTable,
-        drawable: bool,
-        cells: usize,
-        theme: &Theme,
-        rows: impl FnOnce() -> TableRows,
-    ) -> Option<TableRows> {
-        (table != ChartTable::Off && drawable && cells <= theme.chart.table_cell_cap).then(rows)
-    }
-
     pub(super) fn render(
         self,
         class: &Input<ClassList>,
@@ -282,8 +234,6 @@ impl Frame {
             hidden,
             x,
             summary,
-            table,
-            rows,
             plot,
             aspect_ratio,
             interaction,
@@ -292,7 +242,6 @@ impl Frame {
             .clone()
             .unwrap_or_default()
             .with(legend_state(legend), legend != LegendPosition::None)
-            .with("table-visible", table == ChartTable::Visible)
             .into();
         let vars: Input<Variables> = variables()
             .with(
@@ -309,7 +258,6 @@ impl Frame {
             .flatten()
             .collect::<Vec<_>>()
             .join(" ");
-        let caption = title.clone().unwrap_or_else(|| labels.table.to_string());
         let hidden_names = hidden.get();
         let entries: Vec<LegendEntry> = series
             .iter()
@@ -357,7 +305,7 @@ impl Frame {
                             }
                         }
                     } else if let Some(svg) = svg {
-                        // The figure's summary and table speak for the drawing.
+                        // The figure's summary speaks for the drawing.
                         div { "data-chart-drawing": true, "aria-hidden": "true", dangerous_inner_html: "{svg}" }
                         if let Some(center) = center {
                             div { "data-slot": ChartPart::Center.slot(), {center} }
@@ -392,36 +340,6 @@ impl Frame {
                     }
                 }
             }
-            if let Some((head, rows)) = rows {
-                div {
-                    "data-slot": ChartPart::Table.slot(),
-                    // Visible, it scrolls: keyboard users need a stop to scroll it.
-                    role: (table == ChartTable::Visible).then_some("region"),
-                    tabindex: (table == ChartTable::Visible).then_some("0"),
-                    "aria-labelledby": (table == ChartTable::Visible).then(|| format!("{id}-caption")),
-                    table {
-                        caption { id: "{id}-caption", "{caption}" }
-                        thead {
-                            tr {
-                                th { scope: "col", "{labels.category}" }
-                                for (i, name) in head.into_iter().enumerate() {
-                                    th { key: "{i}", scope: "col", "{name}" }
-                                }
-                            }
-                        }
-                        tbody {
-                            for (i, (x, cells)) in rows.into_iter().enumerate() {
-                                tr { key: "{i}",
-                                    th { scope: "row", "{x}" }
-                                    for (j, cell) in cells.into_iter().enumerate() {
-                                        td { key: "{j}", "{cell}" }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
         };
 
         use_box()
@@ -432,7 +350,7 @@ impl Frame {
             .states(&states)
             .variables(&vars)
             .prepare()
-            // `figure`, not `img`: an image's children are presentational, the table with them.
+            // `figure`, not `img`: an image's children are presentational, the summary with them.
             .attr("role", "figure")
             .attr("id", id())
             .attr("aria-labelledby", title_id)
@@ -559,35 +477,6 @@ pub(super) fn summary(
         });
     }
     sentences
-}
-
-/// The series' names, then per x value its label and each series' value; a gap is empty.
-pub(super) fn table_rows(
-    x: &[String],
-    series: &[Series],
-    write: impl Fn(&Series, f64) -> String,
-) -> TableRows {
-    let head = series.iter().map(|series| series.name.clone()).collect();
-    let rows = x
-        .iter()
-        .enumerate()
-        .map(|(i, x)| {
-            let cells = series
-                .iter()
-                .map(|series| {
-                    series
-                        .values
-                        .get(i)
-                        .copied()
-                        .flatten()
-                        .map(|value| write(series, value))
-                        .unwrap_or_default()
-                })
-                .collect();
-            (x.clone(), cells)
-        })
-        .collect();
-    (head, rows)
 }
 
 /// The plot's size, snapped, once it is measured: by its resizes, and at mount in case

@@ -19,10 +19,6 @@ pub struct ChartLabels {
     pub no_data: &'static str,
     /// The summary while the chart is loading.
     pub loading: &'static str,
-    /// The data table's caption without a `title`.
-    pub table: &'static str,
-    /// The header of the table's first column, the x values.
-    pub category: &'static str,
     /// What a screen reader calls the plot the keys walk.
     pub chart: &'static str,
     /// How to walk the plot's points, read after its name.
@@ -33,9 +29,6 @@ pub struct ChartLabels {
     pub slices: &'static str,
     /// A point as the keys announce it: `{name}` its series, `{x}` and `{value}` its own.
     pub point: &'static str,
-    /// A pie table's column headers.
-    pub value: &'static str,
-    pub share: &'static str,
 }
 
 impl ChartLabels {
@@ -50,15 +43,11 @@ impl ChartLabels {
         slice: "{name}: {value}, {share}.",
         no_data: "No data",
         loading: "Loading chart",
-        table: "Chart data",
-        category: "Category",
         chart: "chart",
         keys: "Arrow keys move between points, Enter selects one.",
         legend: "Series",
         slices: "Slices",
         point: "{name}, {x}: {value}",
-        value: "Value",
-        share: "Share",
     };
 
     pub const GERMAN: Self = Self {
@@ -72,14 +61,10 @@ impl ChartLabels {
         slice: "{name}: {value}, {share}.",
         no_data: "Keine Daten",
         loading: "Diagramm wird geladen",
-        table: "Diagrammdaten",
-        category: "Kategorie",
         chart: "Diagramm",
         keys: "Pfeiltasten wechseln zwischen den Punkten, Eingabe wählt einen aus.",
         legend: "Reihen",
         slices: "Segmente",
         point: "{name}, {x}: {value}",
-        value: "Wert",
-        share: "Anteil",
     };
 }

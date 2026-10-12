@@ -95,6 +95,55 @@ e2e::scenario!(
     native: skip("charts are parked on Blitz")
 );
 
+/// Watches the tooltip every frame: a frame whose box is shorter than its text is counted.
+const WATCH_TIP: &str = "(() => { window.tipSqueezed = 0; const watch = () => { \
+     const tip = document.querySelector('#chart [data-slot=tooltip]'); \
+     if (tip && tip.getBoundingClientRect().height + 1 < tip.scrollHeight) window.tipSqueezed += 1; \
+     window.tipWatch = requestAnimationFrame(watch); }; watch(); return true; })()";
+const SETTLED: &str =
+    "document.querySelector('#chart [data-slot=tooltip]').getAnimations().length === 0";
+const SQUEEZED: &str =
+    "(() => { cancelAnimationFrame(window.tipWatch); return window.tipSqueezed; })()";
+
+/// Todo 3462: walking point to point, above and below the middle in turn, the tooltip
+/// keeps the height of its text in every frame.
+async fn tooltip_keeps_its_height<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(LAYER).await?;
+    d.evaluate(WATCH_TIP).await?;
+    let walk = [
+        (keyboard::ARROW_RIGHT, "This week Mon 120"),
+        (keyboard::ARROW_DOWN, "Last week Mon 20"),
+        (keyboard::ARROW_RIGHT, "Last week Tue 30"),
+        (keyboard::ARROW_UP, "This week Tue 132"),
+        (keyboard::ARROW_RIGHT, "This week Wed 101"),
+        (keyboard::ARROW_RIGHT, "This week Thu 134"),
+        (keyboard::ARROW_DOWN, "Last week Thu 25"),
+        (keyboard::ARROW_RIGHT, "Last week Fri 40"),
+        (keyboard::ARROW_UP, "This week Fri 90"),
+    ];
+    for (key, want) in walk {
+        d.press(key).await?;
+        reads(d, "#active", want, "the walk").await?;
+    }
+    eventually(d, "the tooltip to settle at Fri", async |d| {
+        Ok(d.text(TOOLTIP).await?.contains("Fri") && d.evaluate(SETTLED).await? == true)
+    })
+    .await?;
+    let squeezed = d.evaluate(SQUEEZED).await?.as_u64().unwrap_or(u64::MAX);
+    ensure!(
+        squeezed == 0,
+        "{squeezed} frames squeezed the tooltip below its text"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    the_tooltip_keeps_its_height_from_point_to_point,
+    "/line-chart",
+    tooltip_keeps_its_height,
+    native: skip("charts are parked on Blitz")
+);
+
 /// A click picks the point under it. A tap pins it, a second tap on it clicks.
 async fn clicks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let plot = d.rect(LAYER).await?;

@@ -1,11 +1,10 @@
 use crate::{
     components::common::{input_from_str, parts_enum},
-    theme::{BarLayout, ChartTable, Curve, LegendPosition, PieLabels},
+    theme::{BarLayout, Curve, LegendPosition, PieLabels},
 };
 
 input_from_str!(Curve);
 input_from_str!(LegendPosition);
-input_from_str!(ChartTable);
 input_from_str!(BarLayout);
 input_from_str!(PieLabels);
 
@@ -25,8 +24,6 @@ parts_enum! {
         Tooltip = "tooltip" => "& > [data-slot='body'] > [data-slot='plot'] > [data-slot='tooltip']",
         /// A donut's middle, holding `PieChart`'s `center`.
         Center = "center" => "& > [data-slot='body'] > [data-slot='plot'] > [data-slot='center']",
-        /// The data table's scroll box, hidden unless `table: "visible"`.
-        Table = "table" => "& > [data-slot='table']",
     }
 }
 
@@ -56,7 +53,7 @@ macro_rules! chart_props {
                 /// Horizontal guide lines. Unset, the theme's.
                 #[props(default)]
                 grid: Option<bool>,
-                /// How values are written on the axis, in the summary and in the table.
+                /// How values are written on the axis, in the tooltip and in the summary.
                 #[props(default)]
                 value_format: super::ValueFormat,
                 /// After every value, as `"kg"`.
@@ -71,9 +68,6 @@ macro_rules! chart_props {
                 /// Shown in the plot when there is no value at all.
                 #[props(default)]
                 empty: Option<Element>,
-                /// The data as a table: hidden for screen readers by default.
-                #[props(default, into)]
-                table: Input<crate::theme::ChartTable>,
                 /// A tooltip and a crosshair at the pointer's or the keys' point. Unset, the theme's.
                 #[props(default)]
                 tooltip: Option<bool>,
@@ -134,7 +128,6 @@ mod tests {
                     "center",
                     "& > [data-slot='body'] > [data-slot='plot'] > [data-slot='center']"
                 ),
-                ("table", "& > [data-slot='table']"),
             ]
         );
     }

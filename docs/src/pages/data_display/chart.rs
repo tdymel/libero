@@ -1,10 +1,16 @@
 // page-snippets: charts
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
+use crate::{
+    Route,
+    components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props},
+};
 use dioxus::prelude::*;
 use libero::use_theme;
 use libero::{
-    components::{BarChart, Code, LineChart, Orientation, PieChart, Series, Slice, Text},
-    theme::{BarLayout, ChartTable, Curve, LegendPosition, PieLabels},
+    components::{
+        Anchor, BarChart, Code, LineChart, Orientation, PieChart, Series, Slice, Table, Text,
+        XValues, column,
+    },
+    theme::{BarLayout, Curve, LegendPosition, PieLabels},
 };
 
 const DAYS: [&str; 7] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -64,12 +70,11 @@ pub fn ChartPage() -> Element {
                     prop("points", "Option<bool>").default(on(theme.chart.points)).doc("A dot on every point; never past the theme's `points_limit` points."),
                     prop("legend", "LegendPosition").default("bottom with two series or more").doc("`bottom`, `top`, `start`, `end` or `none`."),
                     prop("grid", "Option<bool>").default(on(theme.chart.grid)).doc("Horizontal guide lines."),
-                    prop("value_format", "ValueFormat").default("Auto").doc("How values are written on the axis, in the summary and in the table."),
+                    prop("value_format", "ValueFormat").default("Auto").doc("How values are written on the axis, in the tooltip and in the summary."),
                     prop("unit", "Option<String>").doc("After every value, as `\"kg\"`."),
                     prop("aspect_ratio", "Option<f32>").default("16 / 9").doc("Width over height of the plot."),
                     prop("loading", "bool").default("false").doc("A placeholder instead of the plot, and `aria-busy` on the chart."),
                     prop("empty", "Option<Element>").doc("Shown in the plot when there is no value at all. Unset, \"No data\"."),
-                    prop("table", "ChartTable").default(ChartTable::default().as_str()).doc("The data as a table: `hidden` for screen readers, `visible`, or `off`."),
                     prop("tooltip", "Option<bool>").default(on(theme.chart.tooltip)).doc("A tooltip and a crosshair at the pointer's or the keys' point."),
                     prop("tooltip_content", "Option<Callback<ChartPoint, Element>>").doc("The tooltip's content instead of the x value and each line's value there."),
                     prop("onpointclick", "Option<EventHandler<ChartPoint>>").doc("A click on a point, a second tap on a pinned one, or Enter on the keys' point."),
@@ -89,12 +94,11 @@ pub fn ChartPage() -> Element {
                     prop("value_labels", "Option<bool>").default(on(theme.chart.value_labels)).doc("Each bar's value written on it."),
                     prop("legend", "LegendPosition").default("bottom with two series or more").doc("`bottom`, `top`, `start`, `end` or `none`."),
                     prop("grid", "Option<bool>").default(on(theme.chart.grid)).doc("Guide lines across the values."),
-                    prop("value_format", "ValueFormat").default("Auto").doc("How values are written on the axis, the bars, in the summary and in the table."),
+                    prop("value_format", "ValueFormat").default("Auto").doc("How values are written on the axis, the bars, in the tooltip and in the summary."),
                     prop("unit", "Option<String>").doc("After every value, as `\"kg\"`."),
                     prop("aspect_ratio", "Option<f32>").default("16 / 9").doc("Width over height of the plot."),
                     prop("loading", "bool").default("false").doc("A placeholder instead of the plot, and `aria-busy` on the chart."),
                     prop("empty", "Option<Element>").doc("Shown in the plot when there is no value at all. Unset, \"No data\"."),
-                    prop("table", "ChartTable").default(ChartTable::default().as_str()).doc("The data as a table: `hidden` for screen readers, `visible`, or `off`."),
                     prop("tooltip", "Option<bool>").default(on(theme.chart.tooltip)).doc("A tooltip at the pointer's or the keys' bar."),
                     prop("tooltip_content", "Option<Callback<ChartPoint, Element>>").doc("The tooltip's content instead of the category and each series' value there."),
                     prop("onpointclick", "Option<EventHandler<ChartPoint>>").doc("A click on a bar, a second tap on a pinned one, or Enter on the keys' bar."),
@@ -112,13 +116,12 @@ pub fn ChartPage() -> Element {
                     prop("center", "Option<Element>").doc("In a donut's middle, as a total."),
                     prop("start_angle", "f32").default("0").doc("Where the first slice starts, in degrees clockwise from 12 o'clock."),
                     prop("legend", "LegendPosition").default("bottom with two slices or more").doc("`bottom`, `top`, `start`, `end` or `none`."),
-                    prop("value_format", "ValueFormat").default("Auto").doc("How values are written beside the slices, in the summary and in the table."),
+                    prop("value_format", "ValueFormat").default("Auto").doc("How values are written beside the slices, in the tooltip and in the summary."),
                     prop("unit", "Option<String>").doc("After every value, as `\"kg\"`."),
                     prop("grid", "Option<bool>").doc("Shared with the other charts; a pie has no grid to draw."),
                     prop("aspect_ratio", "Option<f32>").default("16 / 9").doc("Width over height of the plot."),
                     prop("loading", "bool").default("false").doc("A placeholder instead of the plot, and `aria-busy` on the chart."),
                     prop("empty", "Option<Element>").doc("Shown in the plot when the slices sum to nothing. Unset, \"No data\"."),
-                    prop("table", "ChartTable").default(ChartTable::default().as_str()).doc("The data as a table: `hidden` for screen readers, `visible`, or `off`."),
                     prop("tooltip", "Option<bool>").default(on(theme.chart.tooltip)).doc("A tooltip with the slice's value and share at the pointer's or the keys' slice."),
                     prop("tooltip_content", "Option<Callback<ChartPoint, Element>>").doc("The tooltip's content instead of the slice's name, value and share."),
                     prop("onpointclick", "Option<EventHandler<ChartPoint>>").doc("A click on a slice, a second tap on a pinned one, or Enter on the keys' slice. `index` is the slice's place in `slices`, `x` and `series_name` its name."),
@@ -138,7 +141,6 @@ pub fn ChartPage() -> Element {
                 .handles([
                     "The chart is a `role=\"figure\"` named by `title`. The drawing is hidden from screen readers.",
                     "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is; a pie's, the total, then each slice's value and share.",
-                    "A hidden table holds every value, up to the theme's `table_cell_cap` cells; a `percent` bar chart's keeps the values, not the shares; a pie's has each slice's share too.",
                     "The plot is one tab stop, a `role=\"application\"` described as a chart, so a screen reader hands it the arrows. Each point the keys reach is announced, as \"This week, Tue: 132\" or \"Chrome: 62, 62%.\"",
                     "The legend's entries are toggle buttons: pressed while their series or slice shows, struck through when hidden. The last shown one's button is `aria-disabled`. A dashed line's key is a dash, as drawn.",
                     "On a touch screen a tap pins a point's tooltip, a second tap on it clicks; a vertical swipe still scrolls the page.",
@@ -151,12 +153,13 @@ pub fn ChartPage() -> Element {
                     "Tell series apart by more than colour: `dashed()` on a line, the legend, `value_labels` on bars, `labels` on a pie.",
                     "Name every series and slice differently: the legend hides them by name.",
                     "Keep a pie to a few slices; fold the small ones into one \"Other\".",
+                    "Where every value matters, show the data in a `Table` beside the chart too.",
                 ])
                 .limits([
                     "A hex colour (`.color(\"#1e88e5\")`) is drawn as given: check its 3:1 on your page.",
                     "The tooltip is for the eye; screen readers hear the announcement instead, so `tooltip_content` reaches only sighted readers.",
                     "The drawing runs left to right in a right-to-left page too, and the arrows follow it unflipped.",
-                    "A hidden slice leaves the drawing, so the shown ones' shares grow; the summary and the table keep every slice.",
+                    "A hidden slice leaves the drawing, so the shown ones' shares grow; the summary keeps every slice.",
                     "`grid` draws nothing on a pie.",
                 ]),
             lead: rsx! {
@@ -166,7 +169,7 @@ pub fn ChartPage() -> Element {
                     Code { source: "BarChart" }
                     " and "
                     Code { source: "PieChart" }
-                    ", each drawn as an SVG that fills its width, with a tooltip, the arrow keys, a legend that hides and shows, and a summary and table for screen readers. Needs the "
+                    ", each drawn as an SVG that fills its width, with a tooltip, the arrow keys, a legend that hides and shows, and a summary for screen readers. Needs the "
                     Code { source: "charts" }
                     " feature. Web and Android."
                 }
@@ -232,13 +235,11 @@ pub fn ChartPage() -> Element {
                         }
                     }),
                     Control::select("legend", legend),
-                    Control::toggle("table", ["hidden", "visible", "off"]),
                     Control::switch("tooltip").default(on(theme.chart.tooltip)),
                     Control::switch("loading"),
                 ],
                 render: move |values: DemoValues| {
                     let legend = LegendPosition::from(values.str("legend").as_str());
-                    let table = ChartTable::from(values.str("table").as_str());
                     let tooltip = values.str("tooltip") == "true";
                     let loading = values.str("loading") == "true";
                     match values.str("type").as_str() {
@@ -251,7 +252,7 @@ pub fn ChartPage() -> Element {
                                 orientation: Orientation::from(values.str("orientation").as_str()),
                                 radius: values.str("radius"),
                                 value_labels: values.str("value_labels") == "true",
-                                legend, table, tooltip, loading,
+                                legend, tooltip, loading,
                             }
                         },
                         "pie" => rsx! {
@@ -261,7 +262,7 @@ pub fn ChartPage() -> Element {
                                 labels: PieLabels::from(values.str("labels").as_str()),
                                 donut: values.str("donut") == "true",
                                 center: rsx! { "1,204 users" },
-                                legend, table, tooltip, loading,
+                                legend, tooltip, loading,
                             }
                         },
                         _ => rsx! {
@@ -273,12 +274,58 @@ pub fn ChartPage() -> Element {
                                     Series::new("Last week", LAST_WEEK).dashed(),
                                 ],
                                 curve: Curve::from(values.str("curve").as_str()),
-                                legend, table, tooltip, loading,
+                                legend, tooltip, loading,
                             }
                         },
                     }
                 },
             }
+            DocSection { title: "With a table",
+                Text {
+                    "A chart only draws its data. Where every value matters, show the same rows in a "
+                    Anchor { to: Route::TablePage {}, "Table" }
+                    " beside it: a screen reader can read it cell by cell, and a reader can sort it."
+                }
+                SalesWithTable {}
+            }
+        }
+    }
+}
+
+#[derive(Clone, PartialEq)]
+struct Sales {
+    quarter: &'static str,
+    last: f64,
+    this: f64,
+}
+
+/// The bar chart's quarters, and the same rows as a table.
+#[component]
+fn SalesWithTable() -> Element {
+    let rows: Vec<Sales> = (0..QUARTERS.len())
+        .map(|i| Sales {
+            quarter: QUARTERS[i],
+            last: SALES_2025[i],
+            this: SALES_2026[i],
+        })
+        .collect();
+    rsx! {
+        BarChart {
+            title: "Sales",
+            x: XValues::from_rows(&rows, |row| row.quarter),
+            series: vec![
+                Series::from_rows("2025", &rows, |row| row.last),
+                Series::from_rows("2026", &rows, |row| row.this),
+            ],
+        }
+        Table {
+            caption: "Sales",
+            data: rows,
+            columns: vec![
+                column("Quarter").value(|row: &Sales| row.quarter.to_string()).row_header(),
+                column("2025").value(|row: &Sales| row.last).sortable(),
+                column("2026").value(|row: &Sales| row.this).sortable(),
+            ],
         }
     }
 }

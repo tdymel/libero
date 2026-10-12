@@ -34,63 +34,63 @@ pub(super) fn overlay_sx() -> Sx {
     .selector(
         "& > [data-chart-layer]",
         layer
-                // A vertical swipe still scrolls the page; a sideways one scrubs the points.
-                .with("touch-action", "pan-y pinch-zoom")
-                .border_radius("sm")
-                .focus_visible(focus_ring_sx()),
-        )
-        .selector(
-            "& > [data-slot='tooltip']",
-            sx().position("absolute")
-                .with("pointer-events", "none")
-                .with("z-index", "1")
-                .with("max-width", "100%")
-                .padding("4px 8px")
-                .border_radius("sm")
-                .background_color(TOOLTIP_BACKGROUND.value())
-                .color(TOOLTIP_COLOR.value())
-                .box_shadow(SizeCss::SHADOW.value(Size::Sm))
-                // Forced colours drop the shadow but paint a transparent outline.
-                .outline("1px solid transparent")
-                .font_size("sm")
-                // As wide as its rows up to the plot's width, where a long name wraps.
-                .width("max-content")
-                .with("overflow-wrap", "anywhere")
-                .with(
-                    "transition",
-                    "left 120ms ease-out, top 120ms ease-out, bottom 120ms ease-out, transform 120ms ease-out",
-                )
-                .media(REDUCED_MOTION, sx().with("transition", "none")),
-        )
-        .selector(
-            "& > [data-slot='tooltip'] [data-chart-row]",
-            sx().display("flex").align_items("center").gap("xs"),
-        )
-        .selector(
-            "& > [data-slot='tooltip'] [data-chart-row] > :last-child",
-            sx().with("margin-inline-start", "auto")
-                .with("padding-inline-start", "12px")
-                .with("flex", "none")
-                .white_space("nowrap"),
-        )
-        .selector(
-            "& > [data-slot='tooltip'] [data-active]",
-            sx().font_weight("600"),
-        )
-        .selector(
-            "& [data-chart-crosshair]",
-            sx().with("stroke", NamedColorCss::TEXT_DIMMED.value())
-                .with("stroke-dasharray", "4 4"),
-        )
-        .selector(
-            "& [data-chart-marker]",
-            sx().with("stroke", NamedColorCss::INK.value())
-                .with("stroke-width", "2"),
-        )
-        .selector(
-            "& [data-chart-dot]",
-            sx().with("stroke", NamedColorCss::SURFACE.value()),
-        )
+            // A vertical swipe still scrolls the page; a sideways one scrubs the points.
+            .with("touch-action", "pan-y pinch-zoom")
+            .border_radius("sm")
+            .focus_visible(focus_ring_sx()),
+    )
+    .selector(
+        "& > [data-slot='tooltip']",
+        sx().position("absolute")
+            .with("pointer-events", "none")
+            .with("z-index", "1")
+            .with("max-width", "100%")
+            .padding("4px 8px")
+            .border_radius("sm")
+            .background_color(TOOLTIP_BACKGROUND.value())
+            .color(TOOLTIP_COLOR.value())
+            .box_shadow(SizeCss::SHADOW.value(Size::Sm))
+            // Forced colours drop the shadow but paint a transparent outline.
+            .outline("1px solid transparent")
+            .font_size("sm")
+            // As wide as its rows up to the plot's width, where a long name wraps.
+            .width("max-content")
+            .with("overflow-wrap", "anywhere")
+            .with(
+                "transition",
+                "left 120ms ease-out, top 120ms ease-out, transform 120ms ease-out",
+            )
+            .media(REDUCED_MOTION, sx().with("transition", "none")),
+    )
+    .selector(
+        "& > [data-slot='tooltip'] [data-chart-row]",
+        sx().display("flex").align_items("center").gap("xs"),
+    )
+    .selector(
+        "& > [data-slot='tooltip'] [data-chart-row] > :last-child",
+        sx().with("margin-inline-start", "auto")
+            .with("padding-inline-start", "12px")
+            .with("flex", "none")
+            .white_space("nowrap"),
+    )
+    .selector(
+        "& > [data-slot='tooltip'] [data-active]",
+        sx().font_weight("600"),
+    )
+    .selector(
+        "& [data-chart-crosshair]",
+        sx().with("stroke", NamedColorCss::TEXT_DIMMED.value())
+            .with("stroke-dasharray", "4 4"),
+    )
+    .selector(
+        "& [data-chart-marker]",
+        sx().with("stroke", NamedColorCss::INK.value())
+            .with("stroke-width", "2"),
+    )
+    .selector(
+        "& [data-chart-dot]",
+        sx().with("stroke", NamedColorCss::SURFACE.value()),
+    )
 }
 
 /// A series as the overlay names and paints it.
@@ -175,15 +175,16 @@ impl Fit {
 
     /// Where the tooltip goes: its own share across at the point's share across, so it
     /// never leaves the plot's sides; below a point in the top half, above one lower.
+    /// Always by `top`: a `bottom` mid-transition with it would squeeze the box (3462).
     fn tip_style(self, (x, y): (f32, f32)) -> String {
         let left = (self.left + f64::from(x) * self.scale) / self.width * 100.0;
         let top = self.top + f64::from(y) * self.scale;
         let left = left.clamp(0.0, 100.0);
-        let vertical = match top <= self.height / 2.0 {
-            true => format!("top:{:.1}px", top + TIP_GAP),
-            false => format!("bottom:{:.1}px", self.height - top + TIP_GAP),
+        let (top, lift) = match top <= self.height / 2.0 {
+            true => (top + TIP_GAP, 0),
+            false => (top - TIP_GAP, 100),
         };
-        format!("left:{left:.2}%;transform:translateX(-{left:.2}%);{vertical}")
+        format!("left:{left:.2}%;top:{top:.1}px;transform:translate(-{left:.2}%,-{lift}%)")
     }
 }
 
@@ -564,11 +565,11 @@ mod tests {
         let fit = Fit::of((200.0, 100.0), None);
         assert_eq!(
             fit.tip_style((0.0, 10.0)),
-            "left:0.00%;transform:translateX(-0.00%);top:22.0px"
+            "left:0.00%;top:22.0px;transform:translate(-0.00%,-0%)"
         );
         assert_eq!(
             fit.tip_style((150.0, 80.0)),
-            "left:75.00%;transform:translateX(-75.00%);bottom:32.0px"
+            "left:75.00%;top:68.0px;transform:translate(-75.00%,-100%)"
         );
     }
 }

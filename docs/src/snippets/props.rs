@@ -273,7 +273,7 @@ const FIELD_PROPS: [&str; 9] = [
 ];
 
 /// What `chart_props!` adds to every chart's struct.
-const CHART_PROPS: [&str; 17] = [
+const CHART_PROPS: [&str; 16] = [
     "title",
     "description",
     "legend",
@@ -283,7 +283,6 @@ const CHART_PROPS: [&str; 17] = [
     "aspect_ratio",
     "loading",
     "empty",
-    "table",
     "tooltip",
     "tooltip_content",
     "onpointclick",

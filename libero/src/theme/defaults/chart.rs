@@ -38,16 +38,6 @@ str_enum! {
 }
 
 str_enum! {
-    /// The chart's data as a table: hidden for assistive technology, shown under the chart, or left out.
-    pub enum ChartTable {
-        #[default]
-        Hidden = "hidden",
-        Visible = "visible",
-        Off = "off",
-    }
-}
-
-str_enum! {
     /// How a bar chart sets its series' bars at one x value.
     pub enum BarLayout {
         /// Side by side.
@@ -98,8 +88,6 @@ pub struct ChartDefaults {
     /// A donut's ring width over the pie's radius.
     pub donut_thickness: f32,
     pub pie_labels: PieLabels,
-    /// The most cells the data table holds; a larger chart keeps only its summary.
-    pub table_cell_cap: usize,
     pub legend_gap: &'static str,
     pub swatch_size: &'static str,
 }
@@ -130,7 +118,6 @@ impl ChartDefaults {
         value_labels: false,
         donut_thickness: 0.4,
         pie_labels: PieLabels::Percent,
-        table_cell_cap: 2_000,
         legend_gap: "16px",
         swatch_size: "12px",
     };

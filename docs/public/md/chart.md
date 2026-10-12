@@ -4,12 +4,14 @@ Crate: `libero`, feature `charts`
 Import: `use libero::components::{BarChart, LineChart, PieChart, Series, Slice};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/chart>
 Index: [index.md](index.md) lists every other page
-Description: Line, bar and pie charts as SVG, with a tooltip, arrow keys, a toggle legend, and a summary and table for screen readers.
+Description: Line, bar and pie charts as SVG, with a tooltip, arrow keys, a toggle legend, and a summary for screen readers.
 
 `LineChart`, `BarChart` and `PieChart`, each drawn as an SVG that fills its
 width, with a tooltip, the arrow keys, a legend that hides and shows, and a
-summary and table for screen readers. Needs the `charts` feature. Web and
-Android.
+summary for screen readers. Needs the `charts` feature. Web and Android.
+
+A chart only draws. To show its values as a table too, put them in a
+[Table](table.md).
 
 Lines and bars take one or more `Series` over a shared x axis; a pie takes
 `Slice`s, each a name and a value.
@@ -45,7 +47,7 @@ in evenly spaced slots, whatever they say. Numbers (`vec![0.0, 1.0, 6.0]`,
 their gaps; the axis ticks at round values and writes them with `value_format`.
 `.color("success.7")` or `.color("#1e88e5")` sets a series' colour; otherwise it
 takes the theme's palette for its place. `.unit("%")` gives a series its own unit
-in the tooltip, summary and table; a unit every series shares labels the y axis.
+in the tooltip and summary; a unit every series shares labels the y axis.
 Values group their thousands as the `Formats` say: `12,500` or `12.500`.
 
 `BarChart` takes the same `Series`:
@@ -70,7 +72,7 @@ fn Demo() -> Element {
 ```
 
 `layout: "stacked"` puts a category's bars on top of each other, `"percent"`
-scales every stack to 100% so each bar is its series' share; the table and the
+scales every stack to 100% so each bar is its series' share; the tooltip and the
 summary keep the values. `orientation: "horizontal"` lays the categories down
 the side, the first at the top. `value_labels: true` writes each bar's value on
 it, inside the bar when stacked.
@@ -132,6 +134,45 @@ fn Demo() -> Element {
 }
 ```
 
+A chart only draws its data. Where every value matters, show the same rows in a
+[Table](table.md) beside it: a screen reader can read it cell by cell, and a
+reader can sort it.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{BarChart, Series, Table, XValues, column};
+
+#[derive(Clone, PartialEq)]
+struct Sales {
+    quarter: &'static str,
+    last: f64,
+    this: f64,
+}
+
+#[component]
+fn Demo(rows: Vec<Sales>) -> Element {
+    rsx! {
+        BarChart {
+            title: "Sales",
+            x: XValues::from_rows(&rows, |row| row.quarter),
+            series: vec![
+                Series::from_rows("2025", &rows, |row| row.last),
+                Series::from_rows("2026", &rows, |row| row.this),
+            ],
+        }
+        Table {
+            caption: "Sales",
+            data: rows,
+            columns: vec![
+                column("Quarter").value(|row: &Sales| row.quarter.to_string()).row_header(),
+                column("2025").value(|row: &Sales| row.last).sortable(),
+                column("2026").value(|row: &Sales| row.this).sortable(),
+            ],
+        }
+    }
+}
+```
+
 ## Props
 
 ### `LineChart`
@@ -146,12 +187,11 @@ fn Demo() -> Element {
 | `points` | `Option<bool>` | `true` | A dot on every point; never past the theme's `points_limit` points. |
 | `legend` | `LegendPosition` | bottom with two series or more | `bottom`, `top`, `start`, `end` or `none`. |
 | `grid` | `Option<bool>` | `true` | Horizontal guide lines. |
-| `value_format` | `ValueFormat` | `Auto` | How values are written on the axis, in the summary and in the table. |
+| `value_format` | `ValueFormat` | `Auto` | How values are written on the axis, in the tooltip and in the summary. |
 | `unit` | `Option<String>` | | After every value, as `"kg"`. |
 | `aspect_ratio` | `Option<f32>` | `16 / 9` | Width over height of the plot. |
 | `loading` | `bool` | `false` | A placeholder instead of the plot, and `aria-busy` on the chart. |
 | `empty` | `Option<Element>` | | Shown in the plot when there is no value at all. Unset, "No data". |
-| `table` | `ChartTable` | `hidden` | The data as a table: `hidden` for screen readers, `visible`, or `off`. |
 | `tooltip` | `Option<bool>` | `true` | A tooltip and a crosshair at the pointer's or the keys' point. |
 | `tooltip_content` | `Option<Callback<ChartPoint, Element>>` | | The tooltip's content instead of the x value and each line's value there. |
 | `onpointclick` | `Option<EventHandler<ChartPoint>>` | | A click on a point, a second tap on a pinned one, or Enter on the keys' point. |
@@ -174,12 +214,11 @@ fn Demo() -> Element {
 | `value_labels` | `Option<bool>` | `false` | Each bar's value written on it. |
 | `legend` | `LegendPosition` | bottom with two series or more | `bottom`, `top`, `start`, `end` or `none`. |
 | `grid` | `Option<bool>` | `true` | Guide lines across the values. |
-| `value_format` | `ValueFormat` | `Auto` | How values are written on the axis, the bars, in the summary and in the table. |
+| `value_format` | `ValueFormat` | `Auto` | How values are written on the axis, the bars, in the tooltip and in the summary. |
 | `unit` | `Option<String>` | | After every value, as `"kg"`. |
 | `aspect_ratio` | `Option<f32>` | `16 / 9` | Width over height of the plot. |
 | `loading` | `bool` | `false` | A placeholder instead of the plot, and `aria-busy` on the chart. |
 | `empty` | `Option<Element>` | | Shown in the plot when there is no value at all. Unset, "No data". |
-| `table` | `ChartTable` | `hidden` | The data as a table: `hidden` for screen readers, `visible`, or `off`. |
 | `tooltip` | `Option<bool>` | `true` | A tooltip at the pointer's or the keys' bar. |
 | `tooltip_content` | `Option<Callback<ChartPoint, Element>>` | | The tooltip's content instead of the category and each series' value there. |
 | `onpointclick` | `Option<EventHandler<ChartPoint>>` | | A click on a bar, a second tap on a pinned one, or Enter on the keys' bar. |
@@ -200,13 +239,12 @@ fn Demo() -> Element {
 | `center` | `Option<Element>` | | In a donut's middle, as a total. |
 | `start_angle` | `f32` | `0` | Where the first slice starts, in degrees clockwise from 12 o'clock. |
 | `legend` | `LegendPosition` | bottom with two slices or more | `bottom`, `top`, `start`, `end` or `none`. |
-| `value_format` | `ValueFormat` | `Auto` | How values are written beside the slices, in the summary and in the table. |
+| `value_format` | `ValueFormat` | `Auto` | How values are written beside the slices, in the tooltip and in the summary. |
 | `unit` | `Option<String>` | | After every value, as `"kg"`. |
 | `grid` | `Option<bool>` | | Shared with the other charts; a pie has no grid to draw. |
 | `aspect_ratio` | `Option<f32>` | `16 / 9` | Width over height of the plot. |
 | `loading` | `bool` | `false` | A placeholder instead of the plot, and `aria-busy` on the chart. |
 | `empty` | `Option<Element>` | | Shown in the plot when the slices sum to nothing. Unset, "No data". |
-| `table` | `ChartTable` | `hidden` | The data as a table: `hidden` for screen readers, `visible`, or `off`. |
 | `tooltip` | `Option<bool>` | `true` | A tooltip with the slice's value and share at the pointer's or the keys' slice. |
 | `tooltip_content` | `Option<Callback<ChartPoint, Element>>` | | The tooltip's content instead of the slice's name, value and share. |
 | `onpointclick` | `Option<EventHandler<ChartPoint>>` | | A click on a slice, a second tap on a pinned one, or Enter on the keys' slice. `index` is the slice's place in `slices`, `x` and `series_name` its name. |
@@ -238,9 +276,6 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 - A hidden summary gives the x range and each series' lowest and highest value,
   and where the highest is; a pie's, the total, then each slice's value and
   share.
-- A hidden table holds every value, up to the theme's `table_cell_cap` cells; a
-  `percent` bar chart's keeps the values, not the shares; a pie's has each
-  slice's share too.
 - The plot is one tab stop, a `role="application"` described as a chart, so a
   screen reader hands it the arrows. Each point the keys reach is announced, as
   "This week, Tue: 132" or "Chrome: 62, 62%."
@@ -264,6 +299,7 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   `value_labels` on bars, `labels` on a pie.
 - Name every series and slice differently: the legend hides them by name.
 - Keep a pie to a few slices; fold the small ones into one "Other".
+- Where every value matters, show the data in a `Table` beside the chart too.
 
 ### Limits
 
@@ -274,7 +310,7 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 - The drawing runs left to right in a right-to-left page too, and the arrows
   follow it unflipped.
 - A hidden slice leaves the drawing, so the shown ones' shares grow; the
-  summary and the table keep every slice.
+  summary keeps every slice.
 - `grid` draws nothing on a pie.
 
 ## Theme defaults
@@ -297,7 +333,6 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 | `value_labels` | `bool` | Default `value_labels`. |
 | `donut_thickness` | `f32` | A donut's ring width over the pie's radius. |
 | `pie_labels` | `PieLabels` | Default `labels`. |
-| `table_cell_cap` | `usize` | The most cells the data table holds. |
 | `legend_gap` | `&'static str` | Between the plot and the legend. |
 | `swatch_size` | `&'static str` | A legend swatch's side. |
 
@@ -312,4 +347,4 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 ## Data attributes
 
 `data-state` carries `legend-top`, `legend-start`, `legend-end` or
-`legend-bottom` while a legend shows, and `table-visible`.
+`legend-bottom` while a legend shows.

@@ -5,7 +5,7 @@ use super::{
     engine::{self, LineSpec},
     frame::{
         Frame, Interaction, chart_unit, overlay_series, series_specs, shown_places, summary,
-        table_rows, use_plot_size,
+        use_plot_size,
     },
     legend::use_hidden_series,
     props::chart_props,
@@ -34,8 +34,8 @@ chart_props! {
 
 /// One or more series of values over a shared x axis: a trend, a comparison over time.
 ///
-/// Screen readers get the title, a summary (range, lowest and highest of each line) and
-/// the values as a table. Web and Android; enable the `charts` feature.
+/// Screen readers get the title and a summary (range, lowest and highest of each line).
+/// Web and Android; enable the `charts` feature.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -119,14 +119,6 @@ pub fn LineChart(props: LineChartProps) -> Element {
         (false, true) => Vec::new(),
         (false, false) => summary(&labels, labels.line, &x, &props.series, write),
     };
-    let table = props.table.copied_or_default();
-    let rows = Frame::rows(
-        table,
-        !props.loading && !empty,
-        x.len() * (props.series.len() + 1),
-        theme,
-        || table_rows(&x, &props.series, write),
-    );
 
     Frame {
         id,
@@ -144,8 +136,6 @@ pub fn LineChart(props: LineChartProps) -> Element {
         hidden,
         x,
         summary,
-        table,
-        rows,
         plot: size,
         aspect_ratio: props.aspect_ratio,
         interaction: Interaction {
@@ -181,7 +171,7 @@ mod tests {
 
     /// The server's HTML has the drawing, the name and what a screen reader reads instead.
     #[test]
-    fn the_first_render_is_a_named_figure_with_its_summary_and_table() {
+    fn the_first_render_is_a_named_figure_with_its_summary() {
         let html = render(|| {
             rsx! {
                 LiberoProvider {
@@ -205,11 +195,8 @@ mod tests {
             html.contains("This week: 1 to 3, highest at Tue."),
             "{html}"
         );
-        assert!(html.contains("<caption"), "{html}");
-        assert!(
-            html.contains("<th scope=\"row\">Tue</th><td>3</td><td></td>"),
-            "{html}"
-        );
+        // Table rendering is the Table component's job (todo 3461).
+        assert!(!html.contains("<table"), "{html}");
         // Two series: a legend of toggles, and a plot the keys walk.
         assert!(html.contains("aria-label=\"Series\""), "{html}");
         assert_eq!(html.matches("aria-pressed=\"true\"").count(), 2, "{html}");
@@ -264,7 +251,7 @@ mod tests {
             }
         });
         assert!(
-            html.contains("<th scope=\"row\">Q1</th><td>12.500,5 EUR</td><td>12,5 %</td>"),
+            html.contains("Revenue: 12.500,5 EUR to ") && html.contains("Margin: 12,5 % to "),
             "{html}"
         );
 
@@ -334,7 +321,7 @@ mod tests {
     }
 
     #[test]
-    fn a_chart_without_values_says_so_and_has_no_table() {
+    fn a_chart_without_values_says_so() {
         let html = render(|| {
             rsx! {
                 LiberoProvider {
@@ -344,7 +331,7 @@ mod tests {
         });
 
         assert!(html.contains("No data"), "{html}");
-        assert!(!html.contains("<svg") && !html.contains("<table"), "{html}");
+        assert!(!html.contains("<svg"), "{html}");
     }
 
     #[test]
@@ -359,22 +346,5 @@ mod tests {
 
         assert!(html.contains("aria-busy=\"true\""), "{html}");
         assert!(html.contains("Loading chart"), "{html}");
-        assert!(!html.contains("<table"), "{html}");
-    }
-
-    /// Past the cell cap only the summary speaks: a 10 000-cell table is no help.
-    #[test]
-    fn a_table_past_the_cap_is_left_out() {
-        let html = render(|| {
-            let x: Vec<String> = (0..1_500).map(|i| i.to_string()).collect();
-            rsx! {
-                LiberoProvider {
-                    LineChart { title: "Many", x, series: vec![Series::new("A", (0..1_500).map(f64::from))] }
-                }
-            }
-        });
-
-        assert!(!html.contains("<table"), "{html}");
-        assert!(html.contains("A: 0 to 1,499, highest at 1499."), "{html}");
     }
 }

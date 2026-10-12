@@ -30,12 +30,17 @@ fn the_slices_carry_their_shares() {
         )
         .await;
         assert_eq!(labels, ["60%", "25%", "15%"]);
-        let shares: Vec<String> = e2e::js(
+        let summary: String = e2e::js(
             &fixture.page,
-            "[...document.querySelectorAll('#chart tbody td:last-child')].map(t => t.textContent)",
+            "document.querySelector('#chart [data-chart-summary]').textContent",
         )
         .await;
-        assert_eq!(shares, ["60%", "25%", "15%"]);
+        assert!(
+            ["60%", "25%", "15%"]
+                .iter()
+                .all(|share| summary.contains(share)),
+            "{summary}"
+        );
         fixture.close().await.unwrap();
     });
 }

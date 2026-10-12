@@ -27,38 +27,6 @@ figure "Browsers"
     StaticText "Safari: 25, 25%."
   paragraph
     StaticText "Other: 15, 15%."
-  table "Browsers"
-    caption
-      StaticText "Browsers"
-    rowgroup
-      row
-        columnheader "Category"
-          StaticText "Category"
-        columnheader "Value"
-          StaticText "Value"
-        columnheader "Share"
-          StaticText "Share"
-    row
-      rowheader "Chrome"
-        StaticText "Chrome"
-      cell "60"
-        StaticText "60"
-      cell "60%"
-        StaticText "60%"
-    row
-      rowheader "Safari"
-        StaticText "Safari"
-      cell "25"
-        StaticText "25"
-      cell "25%"
-        StaticText "25%"
-    row
-      rowheader "Other"
-        StaticText "Other"
-      cell "15"
-        StaticText "15"
-      cell "15%"
-        StaticText "15%"
 paragraph
 paragraph
 paragraph

@@ -36,12 +36,13 @@ fn the_bars_are_drawn_at_the_plot_s_width() {
         )
         .await;
         assert_eq!(bars, 5);
-        let rows: usize = e2e::js(
+        // The data is a Table's job: the chart draws none (3461).
+        let tables: usize = e2e::js(
             &fixture.page,
-            "document.querySelectorAll('#chart tbody tr').length",
+            "document.querySelectorAll('#chart table').length",
         )
         .await;
-        assert_eq!(rows, 3);
+        assert_eq!(tables, 0);
         fixture.close().await.unwrap();
     });
 }

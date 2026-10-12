@@ -5,7 +5,7 @@ use super::{
     engine::{self, BarSpec, SeriesSpec},
     frame::{
         Frame, Interaction, chart_unit, overlay_series, series_specs, shown_places, summary,
-        table_rows, use_plot_size,
+        use_plot_size,
     },
     legend::use_hidden_series,
     props::chart_props,
@@ -41,8 +41,8 @@ chart_props! {
 
 /// Values per category as bars: compare amounts side by side, or their parts stacked.
 ///
-/// Screen readers get the title, a summary (range, lowest and highest of each series) and
-/// the values as a table. Web and Android; enable the `charts` feature.
+/// Screen readers get the title and a summary (range, lowest and highest of each series).
+/// Web and Android; enable the `charts` feature.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -136,14 +136,6 @@ pub fn BarChart(props: BarChartProps) -> Element {
         (false, true) => Vec::new(),
         (false, false) => summary(&labels, labels.bar, &x, &props.series, write),
     };
-    let table = props.table.copied_or_default();
-    let rows = Frame::rows(
-        table,
-        !props.loading && !empty,
-        x.len() * (props.series.len() + 1),
-        theme,
-        || table_rows(&x, &props.series, write),
-    );
 
     Frame {
         id,
@@ -161,8 +153,6 @@ pub fn BarChart(props: BarChartProps) -> Element {
         hidden,
         x,
         summary,
-        table,
-        rows,
         plot: size,
         aspect_ratio: props.aspect_ratio,
         interaction: Interaction {
@@ -198,7 +188,7 @@ mod tests {
 
     /// The server's HTML has the bars, the name and what a screen reader reads instead.
     #[test]
-    fn the_first_render_is_a_named_figure_with_bars_a_summary_and_a_table() {
+    fn the_first_render_is_a_named_figure_with_bars_and_a_summary() {
         let html = render(|| {
             rsx! {
                 LiberoProvider {
@@ -215,13 +205,10 @@ mod tests {
         assert_eq!(html.matches("<rect").count(), 3, "{html}");
         assert!(html.contains("Bar chart from Q1 to Q2."), "{html}");
         assert!(html.contains("2025: 3 to 5, highest at Q2."), "{html}");
-        assert!(
-            html.contains("<th scope=\"row\">Q2</th><td>5</td><td></td>"),
-            "{html}"
-        );
+        assert!(!html.contains("<table"), "{html}");
     }
 
-    /// A hidden series leaves the bars, not the legend or the table; the plot takes keys.
+    /// A hidden series leaves the bars, not the legend or the summary; the plot takes keys.
     #[test]
     fn a_default_hidden_series_is_not_drawn_and_the_plot_is_walkable() {
         let html = render(|| {
@@ -244,19 +231,16 @@ mod tests {
             html.contains("aria-pressed=\"true\" aria-disabled=\"true\""),
             "{html}"
         );
-        assert!(
-            html.contains("<th scope=\"row\">Q2</th><td>5</td><td>6</td>"),
-            "{html}"
-        );
+        assert!(html.contains("2026: 4 to 6, highest at Q2."), "{html}");
         assert!(
             html.contains("role=\"application\" tabindex=\"0\""),
             "{html}"
         );
     }
 
-    /// Stacked, both series' bars are drawn and the table keeps the values, not shares.
+    /// Stacked, both series' bars are drawn and the summary keeps the values, not shares.
     #[test]
-    fn a_percent_chart_tables_its_values() {
+    fn a_percent_chart_summarises_its_values() {
         let html = render(|| {
             rsx! {
                 LiberoProvider {
@@ -274,10 +258,7 @@ mod tests {
 
         assert_eq!(html.matches("<rect").count(), 4, "{html}");
         assert!(html.contains("75%"), "{html}");
-        assert!(
-            html.contains("<th scope=\"row\">b</th><td>3</td><td>1</td>"),
-            "{html}"
-        );
+        assert!(html.contains("A: 1 to 3, highest at b."), "{html}");
     }
 
     #[test]
@@ -291,6 +272,6 @@ mod tests {
         });
 
         assert!(html.contains("No data"), "{html}");
-        assert!(!html.contains("<svg") && !html.contains("<table"), "{html}");
+        assert!(!html.contains("<svg"), "{html}");
     }
 }

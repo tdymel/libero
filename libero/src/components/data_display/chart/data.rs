@@ -188,7 +188,7 @@ pub struct Series {
     pub color: Option<ChartColor>,
     /// A dashed line: a second cue beside the colour.
     pub dashed: bool,
-    /// Written after each value in the tooltip, summary and table. Unset, the chart's `unit`.
+    /// Written after each value in the tooltip and summary. Unset, the chart's `unit`.
     pub unit: Option<String>,
 }
 
@@ -274,7 +274,7 @@ pub struct ChartPoint {
     pub value: f64,
 }
 
-/// How a chart writes its values: on the axis, in the summary, in the table.
+/// How a chart writes its values: on the axis, in the tooltip, in the summary.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 #[allow(
     unpredictable_function_pointer_comparisons,

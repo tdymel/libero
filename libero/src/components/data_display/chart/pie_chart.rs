@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use super::{
     ChartColor, Slice, ValueFormat,
     engine::{self, PieSpec, SeriesSpec},
-    frame::{Frame, Interaction, TableRows, hex, overlay_series, shown_places, use_plot_size},
+    frame::{Frame, Interaction, hex, overlay_series, shown_places, use_plot_size},
     legend::use_hidden_series,
     props::chart_props,
 };
@@ -35,9 +35,8 @@ chart_props! {
 
 /// Parts of a whole as slices of a circle, or of a ring with `donut`.
 ///
-/// Screen readers get the title, a summary (the total, then each slice's value and share)
-/// and the values as a table. `grid` draws nothing here. Web and Android; enable the
-/// `charts` feature.
+/// Screen readers get the title and a summary (the total, then each slice's value and
+/// share). `grid` draws nothing here. Web and Android; enable the `charts` feature.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -134,14 +133,6 @@ pub fn PieChart(props: PieChartProps) -> Element {
         (false, true) => Vec::new(),
         (false, false) => summary(&labels, &props.slices, write(total), write, share),
     };
-    let table = props.table.copied_or_default();
-    let rows = Frame::rows(
-        table,
-        !props.loading && !empty,
-        props.slices.len() * 3,
-        theme,
-        || table_rows(&labels, &props.slices, write, share),
-    );
 
     Frame {
         id,
@@ -159,8 +150,6 @@ pub fn PieChart(props: PieChartProps) -> Element {
         hidden,
         x: names,
         summary,
-        table,
-        rows,
         plot: size,
         aspect_ratio: props.aspect_ratio,
         interaction: Interaction {
@@ -242,26 +231,6 @@ fn summary(
     sentences
 }
 
-/// Per slice its name, value and share.
-fn table_rows(
-    labels: &ChartLabels,
-    slices: &[Slice],
-    write: impl Fn(f64) -> String,
-    share: impl Fn(f64) -> String,
-) -> TableRows {
-    let head = vec![labels.value.to_string(), labels.share.to_string()];
-    let rows = slices
-        .iter()
-        .map(|slice| {
-            (
-                slice.name.clone(),
-                vec![write(slice.value), share(slice.value)],
-            )
-        })
-        .collect();
-    (head, rows)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -275,7 +244,7 @@ mod tests {
 
     /// The server's HTML has a slice per value, the name and what a screen reader reads.
     #[test]
-    fn the_first_render_is_a_named_figure_with_slices_a_summary_and_a_table() {
+    fn the_first_render_is_a_named_figure_with_slices_and_a_summary() {
         let html = render(|| {
             rsx! {
                 LiberoProvider {
@@ -291,10 +260,8 @@ mod tests {
         assert!(html.contains("<svg"), "{html}");
         assert!(html.contains("Pie chart, total 4."), "{html}");
         assert!(html.contains("Chrome: 3, 75%."), "{html}");
-        assert!(
-            html.contains("<th scope=\"row\">Safari</th><td>1</td><td>25%</td>"),
-            "{html}"
-        );
+        assert!(html.contains("Safari: 1, 25%."), "{html}");
+        assert!(!html.contains("<table"), "{html}");
         // Labels in percent by default.
         assert!(html.contains(">75%<") || html.contains("75%\n"), "{html}");
     }
@@ -391,6 +358,6 @@ mod tests {
         });
 
         assert!(html.contains("No data"), "{html}");
-        assert!(!html.contains("<svg") && !html.contains("<table"), "{html}");
+        assert!(!html.contains("<svg"), "{html}");
     }
 }
