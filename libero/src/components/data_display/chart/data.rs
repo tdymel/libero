@@ -463,7 +463,8 @@ pub struct ChartPoint {
     reason = "`Custom` compares by address; a miss on a copied closure only re-renders"
 )]
 pub enum ValueFormat {
-    /// Up to two decimals, trailing zeros dropped.
+    /// Up to two decimals, trailing zeros dropped; two significant digits below 0.01, so
+    /// `0.0012` never reads `0`.
     #[default]
     Auto,
     /// Exactly this many decimals.
@@ -479,7 +480,7 @@ impl ValueFormat {
     pub(crate) fn format(&self, value: f64, unit: Option<&str>, formats: &Formats) -> String {
         let number = match self {
             Self::Custom(format) => return format(value),
-            Self::Auto => trim_zeros(format!("{value:.2}")),
+            Self::Auto => trim_zeros(format!("{value:.*}", auto_decimals(value))),
             Self::Fixed(decimals) => format!("{value:.*}", usize::from(*decimals)),
             Self::Percent => {
                 let share = trim_zeros(format!("{:.1}", value * 100.0));
@@ -492,6 +493,15 @@ impl ValueFormat {
             None => number,
         }
     }
+}
+
+/// `ValueFormat::Auto`'s decimals: two, or two significant digits for a value below 0.01.
+fn auto_decimals(value: f64) -> usize {
+    match value.abs() {
+        small if small > 0.0 && small < 0.01 => (-small.log10()).floor() as usize + 2,
+        _ => 2,
+    }
+    .min(15)
 }
 
 /// `formats` without a group separator, for an x axis' numbers.
@@ -530,7 +540,11 @@ mod tests {
         let auto = ValueFormat::Auto;
         assert_eq!(auto.format(2.5, Some("kg"), de), "2,5 kg");
         assert_eq!(auto.format(3.0, None, en), "3");
-        assert_eq!(auto.format(-0.001, None, en), "0");
+        // A value that is not 0 never reads 0 (3518).
+        assert_eq!(auto.format(-0.001, None, en), "-0.001");
+        assert_eq!(auto.format(0.0012, None, de), "0,0012");
+        assert_eq!(auto.format(0.00999, None, en), "0.01");
+        assert_eq!(auto.format(0.0, None, en), "0");
         assert_eq!(ValueFormat::Fixed(2).format(1.0, None, en), "1.00");
         assert_eq!(ValueFormat::Percent.format(0.425, None, de), "42,5%");
     }

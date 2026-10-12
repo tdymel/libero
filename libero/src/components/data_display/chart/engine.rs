@@ -2,8 +2,8 @@
 //! landed and strip its own tooltips, so the overlay and keyboard layers can be ours.
 
 use charts_rs::{
-    AxisType, Color as InkColor, DEFAULT_FONT_FAMILY, LineStep, MarkLineCategory, Position,
-    SeriesCategory, Symbol,
+    AxisLabelOverflow, AxisType, Color as InkColor, DEFAULT_FONT_FAMILY, LineStep,
+    MarkLineCategory, Position, SeriesCategory, Symbol,
 };
 
 use super::data::{ValueFormat, ungrouped};
@@ -207,6 +207,8 @@ pub(crate) struct Axes {
     pub(crate) y_title: Option<String>,
     /// A line chart's right y axis, read downward.
     pub(crate) y2_title: Option<String>,
+    /// The locale's million, billion and trillion suffixes for a long axis' ticks.
+    pub(crate) compact: [&'static str; 3],
 }
 
 impl Axes {
@@ -271,7 +273,8 @@ fn renderer_mark_line(&(value, _): &(f64, String)) -> charts_rs::MarkLine {
 
 /// Writes each mark line's own text, in drawing order, over the bare number the renderer
 /// puts by it: in the label ink, haloed in the surface's so the data under it cannot blur it.
-fn label_mark_lines(svg: &str, texts: &[&str], ink: &ChartInk) -> String {
+/// One wider than the plot from its `left` is left out; the summary keeps it.
+fn label_mark_lines(svg: &str, texts: &[&str], ink: &ChartInk, left: f32) -> String {
     let mut texts = texts.iter();
     let mut out = String::with_capacity(svg.len());
     let mut rest = svg;
@@ -288,7 +291,12 @@ fn label_mark_lines(svg: &str, texts: &[&str], ink: &ChartInk) -> String {
             out.push_str(element);
             continue;
         };
-        let kept: String = attributes(tag)
+        let attributes = attributes(tag);
+        let end = attribute(&attributes, "x").and_then(|x| x.parse::<f32>().ok());
+        if end.is_some_and(|end| end - text_width(&attributes, text) < left) {
+            continue;
+        }
+        let kept: String = attributes
             .iter()
             .map(|&(name, value)| match name {
                 "fill" => format!(" fill=\"{}\"", ink.label),
@@ -471,6 +479,9 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
         chart.x_axis.kind = AxisType::Value;
         chart.x_axis.values = spec.x_numbers.clone();
         chart.x_axis.formatter = Some(format!("{X_MARK}{{c}}"));
+    } else {
+        // Every label drawn, so `fit_x_labels` finds each.
+        chart.x_axis.label_overflow = AxisLabelOverflow::Ellipsis;
     }
     let unit = |unit: &Option<String>| {
         unit.as_deref()
@@ -487,19 +498,25 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
     }
     spec.axes
         .style(&mut chart.base, &mut chart.y_axis_configs, false);
-    let write = |label| {
-        spec.format
-            .format(label, spec.unit.as_deref(), spec.formats)
-    };
-    let write2 = |label| {
-        spec.format
-            .format(label, spec.y2_unit.as_deref(), spec.formats)
+    round_axes(&chart.base, &mut chart.y_axis_configs);
+    let auto = spec.format == ValueFormat::Auto;
+    let x_formats = ungrouped(spec.formats);
+    let write = |svg: &str, mark: char| {
+        let (unit, formats) = match mark {
+            X_MARK => (None, &x_formats),
+            AXIS2_MARK => (spec.y2_unit.as_deref(), spec.formats),
+            _ => (spec.unit.as_deref(), spec.formats),
+        };
+        let compact = &spec.axes.compact;
+        let plain = move |label| spec.format.format(label, unit, formats);
+        axis_write(svg, mark, auto, unit, formats, compact, plain)
     };
     let svg = fitted(&mut chart, spec.width, spec.height, |chart| {
         let mut svg = chart.svg().ok()?;
+        let exact = exact_axes(&svg, &chart.y_axis_configs, false);
         let widths = [
-            y_width(&svg, AXIS_MARK, write),
-            y_width(&svg, AXIS2_MARK, write2),
+            y_width(&svg, &exact, AXIS_MARK, write(&exact, AXIS_MARK)),
+            y_width(&svg, &exact, AXIS2_MARK, write(&exact, AXIS2_MARK)),
         ];
         if widths.iter().any(Option::is_some) {
             for (y, width) in chart.y_axis_configs.iter_mut().zip(widths) {
@@ -511,20 +528,25 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
     })?;
 
     let expected: Vec<_> = expected_marks(&spec.series);
-    let (svg, triggers) = sanitize(&pin_to_axis(&svg), write);
-    let svg = relabel(&svg, AXIS2_MARK, write2);
-    let x_formats = ungrouped(spec.formats);
-    let svg = relabel(&svg, X_MARK, |label| {
-        spec.format.format(label, None, &x_formats)
-    });
+    // Pinned by the renderer's own labels, then written in full.
+    let svg = exact_axes(&pin_to_axis(&svg), &chart.y_axis_configs, false);
+    let svg = match spec.x_numbers.is_empty() {
+        true => fit_x_labels(&svg, &spec.x, spec.width, spec.height),
+        false => svg,
+    };
+    let (svg, triggers) = sanitize(&svg, write(&svg, AXIS_MARK));
+    let svg = relabel(&svg, AXIS2_MARK, write(&svg, AXIS2_MARK));
+    let write_x = write(&svg, X_MARK);
+    let svg = pin_to_ticks(&svg, X_MARK, spec.width, &write_x);
+    let svg = relabel(&svg, X_MARK, write_x);
     let marks = match_marks(&expected, &triggers);
     let texts: Vec<&str> = marked
         .iter()
         .flatten()
         .map(|(_, text)| text.as_str())
         .collect();
-    let svg = label_mark_lines(&svg, &texts, &spec.ink);
     let plot = Plot::of(&svg, spec.width, spec.height);
+    let svg = label_mark_lines(&svg, &texts, &spec.ink, plot.left);
     let svg = pin_mark_points(&svg, &spec.series, spec.width, &spec.ink, &marks);
     Some(Drawn {
         geometry: Geometry {
@@ -649,6 +671,178 @@ fn percent_axes(axes: &Axes, series: &[SeriesSpec]) -> Axes {
         ticks: ((max - min) / STEP) as usize,
         ..axes.clone()
     }
+}
+
+/// Puts axis `index`'s unset ends on whole steps of 1, 2, 2.5 or 5 times a power of ten, the
+/// step count nearest its `split_number`, or exactly `count` steps; set ends stay.
+fn round_axis(
+    list: &[charts_rs::Series],
+    index: usize,
+    config: &mut charts_rs::YAxisConfig,
+    count: Option<usize>,
+) {
+    if config.min.is_some() && config.max.is_some() {
+        return;
+    }
+    // What the renderer spans: each value, each band's ends and each stack's sums.
+    let mut values = Vec::new();
+    let mut stacks = std::collections::BTreeMap::<(&str, usize), (f64, f64)>::new();
+    for series in list.iter().filter(|s| s.y_axis_index == index) {
+        for (i, value) in series.data.iter().enumerate() {
+            let Some(value) = value.filter(|v| v.is_finite()).map(f64::from) else {
+                continue;
+            };
+            match &series.stack {
+                None => values.push(value),
+                Some(key) => {
+                    let sums = stacks.entry((key, i + series.start_index)).or_default();
+                    match value >= 0.0 {
+                        true => sums.0 += value,
+                        false => sums.1 += value,
+                    }
+                }
+            }
+        }
+        for bounds in [&series.band, &series.error_bar].into_iter().flatten() {
+            let ends = bounds.lower.iter().chain(&bounds.upper).flatten();
+            values.extend(ends.filter(|v| v.is_finite()).map(|v| f64::from(*v)));
+        }
+    }
+    values.extend(stacks.into_values().flat_map(|(up, down)| [up, down]));
+    if values.is_empty() {
+        return;
+    }
+    let (min, max) = (config.min.map(f64::from), config.max.map(f64::from));
+    let low = min.unwrap_or(values.iter().fold(0.0, |low, v| v.min(low)));
+    let high = max.unwrap_or(values.iter().fold(0.0, |high, v| v.max(high)));
+    // Only zeros: an axis up to 1.
+    let high = match (high > low, max) {
+        (false, None) => low + 1.0,
+        _ => high,
+    };
+    if high.partial_cmp(&low) != Some(std::cmp::Ordering::Greater) {
+        return;
+    }
+    let target = count.unwrap_or(config.split_number).max(1);
+    let ends = |step: f64| {
+        let steps = |span: f64| (span / step - 1e-9).ceil() * step;
+        match (min, max) {
+            (Some(min), _) => (min, min + steps(high - min)),
+            (_, Some(max)) => (max - steps(max - low), max),
+            _ => (
+                (low / step + 1e-9).floor() * step,
+                (high / step - 1e-9).ceil() * step,
+            ),
+        }
+    };
+    let steps = |step: f64| {
+        let (low, high) = ends(step);
+        ((high - low) / step).round() as usize
+    };
+    let power = 10_f64.powf(((high - low) / target as f64).log10().floor());
+    let candidates = [0.1, 1.0, 10.0]
+        .into_iter()
+        .flat_map(|scale| [1.0, 2.0, 2.5, 5.0].map(|m| m * scale * power));
+    // Exactly `count`: the finest step that fits. Else the nearest count, then the tightest ends.
+    let step = match count {
+        Some(count) => candidates
+            .filter(|step| steps(*step) <= count)
+            .reduce(f64::min),
+        None => candidates.min_by(|a, b| {
+            let off = |step: f64| steps(step).abs_diff(target);
+            let span = |step: f64| ends(step).1 - ends(step).0;
+            let tighter = span(*a).total_cmp(&span(*b));
+            off(*a).cmp(&off(*b)).then(tighter).then(b.total_cmp(a))
+        }),
+    };
+    let Some(step) = step else { return };
+    let (low, _) = ends(step);
+    let n = count.unwrap_or(steps(step)).max(1);
+    let high = match (min, max) {
+        (_, Some(max)) => max,
+        _ => low + step * n as f64,
+    };
+    let low = match max {
+        Some(max) => max - step * n as f64,
+        None => low,
+    };
+    config.min = Some(low as f32);
+    config.max = Some(high as f32);
+    config.split_number = n;
+}
+
+/// [`round_axis`] on the left axis, and the right one cut into as many steps.
+fn round_axes(base: &charts_rs::ChartBase, y: &mut [charts_rs::YAxisConfig]) {
+    if let Some(left) = y.first_mut() {
+        round_axis(&base.series_list, 0, left, None);
+    }
+    let count = y.first().map(|left| left.split_number);
+    if let Some(right) = y.get_mut(1) {
+        round_axis(&base.series_list, 1, right, count);
+    }
+}
+
+/// [`exact_ticks`] on both value axes.
+fn exact_axes(svg: &str, y: &[charts_rs::YAxisConfig], across: bool) -> String {
+    let svg = match y.first() {
+        Some(left) => exact_ticks(svg, AXIS_MARK, left, across),
+        None => svg.to_string(),
+    };
+    match y.get(1) {
+        Some(right) => exact_ticks(&svg, AXIS2_MARK, right, false),
+        None => svg,
+    }
+}
+
+/// Writes axis `mark`'s labels in full, as `config` cuts it: the renderer keeps one decimal.
+/// `across`: the labels run along the bottom, else up the side.
+fn exact_ticks(svg: &str, mark: char, config: &charts_rs::YAxisConfig, across: bool) -> String {
+    let (Some(min), Some(max)) = (config.min, config.max) else {
+        return svg.to_string();
+    };
+    let n = config.split_number.max(1);
+    let step = (f64::from(max) - f64::from(min)) / n as f64;
+    let mut at = Vec::new();
+    let mut rest = 0;
+    while let Some(open) = svg[rest..].find("<text").map(|open| rest + open) {
+        let Some(close) = svg[open..].find('>').map(|close| open + close) else {
+            break;
+        };
+        let attributes = attributes(&svg[open..=close]);
+        let label = &svg[close + 1..];
+        let label = label[..label.find('<').unwrap_or(label.len())].trim_start();
+        if label.starts_with(mark) {
+            let number = |name| attribute(&attributes, name)?.parse::<f32>().ok();
+            let place = number(if across { "x" } else { "y" }).unwrap_or(0.0);
+            let start = svg.len() - svg[close + 1..].trim_start().len() + mark.len_utf8();
+            let length = svg[start..].find([' ', '\n', '<']).unwrap_or(0);
+            at.push((place, start, length));
+        }
+        rest = close + 1;
+    }
+    if at.len() != n + 1 {
+        return svg.to_string();
+    }
+    // Lowest first: leftmost along the bottom, lowest up the side.
+    at.sort_by(|a, b| match across {
+        true => a.0.total_cmp(&b.0),
+        false => b.0.total_cmp(&a.0),
+    });
+    let mut values: Vec<_> = at
+        .iter()
+        .enumerate()
+        .map(|(i, &(_, start, length))| (start, length, f64::from(min) + step * i as f64))
+        .collect();
+    values.sort_by_key(|value| value.0);
+    let mut out = String::with_capacity(svg.len());
+    let mut last = 0;
+    for (start, length, value) in values {
+        out.push_str(&svg[last..start]);
+        out.push_str(&format!("{value}"));
+        last = start + length;
+    }
+    out.push_str(&svg[last..]);
+    out
 }
 
 /// The value axis of bars whose ranges the renderer does not know of, stacks and lying bars:
@@ -797,6 +991,23 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
         spec.format
             .format(value, spec.y2_unit.as_deref(), spec.formats)
     };
+    let auto = spec.format == ValueFormat::Auto;
+    let (unit1, compact) = (spec.unit.as_deref(), &spec.axes.compact);
+    let axis = |svg: &str| {
+        axis_write(
+            svg,
+            AXIS_MARK,
+            auto && !percent,
+            unit1,
+            spec.formats,
+            compact,
+            write,
+        )
+    };
+    let axis2 = |svg: &str| {
+        let unit = spec.y2_unit.as_deref();
+        axis_write(svg, AXIS2_MARK, auto, unit, spec.formats, compact, write2)
+    };
     let ranged = (spec.series.iter().zip(&spec.errors))
         .any(|(series, errors)| !series.extras.line && errors.iter().any(Option::is_some));
     let axes = match (percent, ranged && !errors) {
@@ -809,24 +1020,35 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
             let mut chart = charts_rs::HorizontalBarChart::new(series, x);
             style_bars!(chart, spec, axes, unit);
             chart.stack_percent = percent;
-            fitted(&mut chart, spec.width, spec.height, |chart| {
-                Some(pin_to_ticks(&chart.svg().ok()?, spec.width, write))
-            })?
+            if !percent {
+                round_axes(&chart.base, &mut chart.y_axis_configs);
+            }
+            let svg = fitted(&mut chart, spec.width, spec.height, |chart| {
+                let svg = chart.svg().ok()?;
+                let exact = exact_axes(&svg, &chart.y_axis_configs, true);
+                Some(pin_to_ticks(&svg, AXIS_MARK, spec.width, axis(&exact)))
+            })?;
+            exact_axes(&svg, &chart.y_axis_configs, true)
         }
         false => {
-            let mut chart = charts_rs::BarChart::new(series, x);
+            let mut chart = charts_rs::BarChart::new(series, x.clone());
             style_bars!(chart, spec, axes, unit);
+            chart.x_axis.label_overflow = AxisLabelOverflow::Ellipsis;
             chart.stack_percent = percent;
             chart.series.stroke_width = spec.stroke_width;
             if spec.series.iter().any(|s| s.extras.secondary) {
                 second_axis(&mut chart.y_axis_configs, &spec.y2_unit);
                 axes.style(&mut chart.base, &mut chart.y_axis_configs, false);
             }
-            fitted(&mut chart, spec.width, spec.height, |chart| {
+            if !percent {
+                round_axes(&chart.base, &mut chart.y_axis_configs);
+            }
+            let svg = fitted(&mut chart, spec.width, spec.height, |chart| {
                 let mut svg = chart.svg().ok()?;
+                let exact = exact_axes(&svg, &chart.y_axis_configs, false);
                 let widths = [
-                    y_width(&svg, AXIS_MARK, write),
-                    y_width(&svg, AXIS2_MARK, write2),
+                    y_width(&svg, &exact, AXIS_MARK, axis(&exact)),
+                    y_width(&svg, &exact, AXIS2_MARK, axis2(&exact)),
                 ];
                 if widths.iter().any(Option::is_some) {
                     for (y, width) in chart.y_axis_configs.iter_mut().zip(widths) {
@@ -835,13 +1057,24 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
                     svg = chart.svg().ok()?;
                 }
                 Some(pin_to_axis(&svg))
-            })?
+            })?;
+            let svg = exact_axes(&svg, &chart.y_axis_configs, false);
+            fit_x_labels(&svg, &x, spec.width, spec.height)
         }
     };
 
-    let (svg, triggers) = inert(&svg, write, "");
-    let svg = relabel(&svg, AXIS2_MARK, write2);
-    let (svg, triggers) = match spec.bar_width.is_some() || spec.bar_gap != RENDERER_GAP {
+    let (svg, triggers) = inert(&svg, axis(&svg), "");
+    let svg = relabel(&svg, AXIS2_MARK, axis2(&svg));
+    // The renderer's margins would leave a narrow band's bars a sliver.
+    let narrow = {
+        let plot = Plot::of(&svg, spec.width, spec.height);
+        let span = match spec.horizontal {
+            true => plot.bottom - plot.top,
+            false => plot.right - plot.left,
+        };
+        span < 4.0 * RENDERER_MARGIN * spec.x.len() as f32
+    };
+    let (svg, triggers) = match narrow || spec.bar_width.is_some() || spec.bar_gap != RENDERER_GAP {
         true => relayout(&svg, triggers, &bar_marks(&ordered), spec),
         false => (svg, triggers),
     };
@@ -850,7 +1083,26 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
         .map(|&(_, _, value, _)| value < 0.0)
         .collect();
     let svg = round_free_ends(&svg, &triggers, &negative, spec.horizontal, spec.radius);
-    let svg = relabel(&svg, LABEL_MARK, write);
+    let svg = match spec.horizontal || spec.labels_inside {
+        true => svg,
+        false => place_outside_labels(
+            &svg,
+            Plot::of(&svg, spec.width, spec.height).bottom,
+            spec.ink.surface,
+        ),
+    };
+    // The renderer writes its f32s; a label writes the value its bar was drawn from.
+    let values: Vec<f64> = (ordered.iter().filter(|s| !s.extras.line))
+        .flat_map(|s| s.values.iter().flatten().copied())
+        .collect();
+    let exact = |label: f64| {
+        let near = |value: &f64| (value - label).abs() <= value.abs() * 1e-6;
+        values.iter().copied().find(near).unwrap_or(label)
+    };
+    let svg = relabel(&svg, LABEL_MARK, |label| match percent {
+        true => write(label),
+        false => write(exact(label)),
+    });
     let last = spec.x.len().saturating_sub(1);
     let marks = match_marks(&bar_marks(&ordered), &triggers)
         .into_iter()
@@ -879,8 +1131,8 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
         .flatten()
         .map(|(_, text)| text.as_str())
         .collect();
-    let svg = label_mark_lines(&svg, &texts, &spec.ink);
     let plot = Plot::of(&svg, spec.width, spec.height);
+    let svg = label_mark_lines(&svg, &texts, &spec.ink, plot.left);
     let svg = pin_mark_points(&svg, &spec.series, spec.width, &spec.ink, &marks);
     Some(Drawn {
         geometry: Geometry {
@@ -1210,6 +1462,53 @@ fn draw_error_bars(svg: String, marks: &[Mark], spec: &BarSpec) -> String {
         Some(end) if !lines.is_empty() => format!("{}{lines}{}", &svg[..end], &svg[end..]),
         _ => svg,
     }
+}
+
+/// The renderer writes an upright bar's label past its top, inside a falling bar. Moves a
+/// falling one's under its lower end, or just inside it in the bar's ink when the x axis is
+/// too near; a label past its bar is haloed in `surface`, so a line under it cannot blur it.
+fn place_outside_labels(svg: &str, bottom: f32, surface: HexColor) -> String {
+    const GAP: f32 = 8.0;
+    let halo = format!(
+        " stroke=\"{surface}\" stroke-width=\"3\" stroke-linejoin=\"round\" paint-order=\"stroke\""
+    );
+    let mut out = String::with_capacity(svg.len());
+    let mut rest = svg;
+    while let Some(open) = rest.find("<text") {
+        let Some(close) = rest[open..].find('>').map(|close| open + close) else {
+            break;
+        };
+        out.push_str(&rest[..open]);
+        let tag = &rest[open..=close];
+        let label = rest[close + 1..].trim_start();
+        rest = &rest[close + 1..];
+        let attributes = attributes(tag);
+        let number = |name| attribute(&attributes, name)?.parse::<f32>().ok();
+        let (Some(end), Some(value)) = (number("y"), label.strip_prefix(LABEL_MARK)) else {
+            out.push_str(tag);
+            continue;
+        };
+        let size = number("font-size").unwrap_or(14.0);
+        let below = GAP + size * 0.8;
+        let (dy, inside) = match value.starts_with('-') {
+            false => (number("dy").unwrap_or(0.0), false),
+            true if end + below + size * 0.25 <= bottom => (below, false),
+            true => (-(GAP / 2.0 + size * 0.25), true),
+        };
+        let kept: String = attributes
+            .iter()
+            .filter(|(name, _)| *name != "dy" && !(inside && *name == "fill"))
+            .map(|(name, value)| format!(" {name}=\"{value}\""))
+            .collect();
+        let ink = if inside {
+            format!(" {ON_BAR_FILL}")
+        } else {
+            halo.clone()
+        };
+        out.push_str(&format!("<text dy=\"{dy}\"{kept}{ink}>"));
+    }
+    out.push_str(rest);
+    out
 }
 
 /// Gives every label drawn on a bar the ink that reads on the bar nearest to it.
@@ -1799,14 +2098,7 @@ fn cut_labels(svg: &str, width: f32) -> String {
             out.push_str(tag);
             continue;
         }
-        let mut chars: Vec<char> = label.chars().collect();
-        let mut cut = String::from("…");
-        while chars.pop().is_some() {
-            cut = chars.iter().collect::<String>().trim_end().to_string() + "…";
-            if text_width(&attributes, &cut) <= to - from || chars.is_empty() {
-                break;
-            }
-        }
+        let cut = shorten(&attributes, &label, to - from);
         let x = match anchor {
             Some("middle") => (from + to) / 2.0,
             Some("end") => to,
@@ -1821,6 +2113,126 @@ fn cut_labels(svg: &str, width: f32) -> String {
         rest = &rest[text_end..];
     }
     out.push_str(rest);
+    out
+}
+
+/// `label` cut short with an ellipsis to at most `room` wide in the tag's font, or as is
+/// where it fits.
+fn shorten(attributes: &[(&str, &str)], label: &str, room: f32) -> String {
+    if text_width(attributes, label) <= room {
+        return label.to_string();
+    }
+    let mut chars: Vec<char> = label.chars().collect();
+    let mut cut = String::from("…");
+    while chars.pop().is_some() {
+        cut = chars.iter().collect::<String>().trim_end().to_string() + "…";
+        if text_width(attributes, &cut) <= room || chars.is_empty() {
+            break;
+        }
+    }
+    cut
+}
+
+/// Fits the category `labels` under the plot each into its band, cut with an ellipsis; where
+/// a band is too narrow for three letters and the ellipsis, only every n-th label is written.
+fn fit_x_labels(svg: &str, labels: &[String], width: f32, height: f32) -> String {
+    if labels.is_empty() {
+        return svg.to_string();
+    }
+    // Each text's tag start, its element's end, its x and y and its content.
+    let mut texts = Vec::new();
+    let mut at = 0;
+    while let Some(open) = svg[at..].find("<text ").map(|open| at + open) {
+        let Some(close) = svg[open..].find('>').map(|close| open + close) else {
+            break;
+        };
+        let end = svg[close..]
+            .find("</text>")
+            .map_or(close + 1, |end| close + end + 7);
+        let attributes = attributes(&svg[open..=close]);
+        let number = |name| attribute(&attributes, name)?.parse::<f32>().ok();
+        let content = unescape(svg[close + 1..end].trim_end_matches("</text>").trim());
+        if let (Some(x), Some(y)) = (number("x"), number("y")) {
+            texts.push((open, end, x, y, content));
+        }
+        at = close + 1;
+    }
+    // The renderer writes each one whole or cut short with its own ellipsis.
+    let drawn = |content: &str, label: &str| {
+        content == label
+            || content
+                .strip_suffix('…')
+                .is_some_and(|start| label.starts_with(start.trim_end()))
+    };
+    let Some(first) = (0..texts.len().saturating_sub(labels.len() - 1)).find(|&start| {
+        let row = &texts[start..start + labels.len()];
+        row.iter()
+            .zip(labels)
+            .all(|(text, label)| drawn(&text.4, label))
+            && row.iter().all(|text| text.3 == row[0].3)
+    }) else {
+        return svg.to_string();
+    };
+    let row = &texts[first..first + labels.len()];
+    let plot = Plot::of(svg, width, height);
+    let band = (plot.right - plot.left) / labels.len() as f32;
+    let tag = |open: usize| attributes(&svg[open..=open + svg[open..].find('>').unwrap_or(0)]);
+    // Each label's first three letters and the ellipsis, or the whole of a shorter one.
+    let least = labels.iter().fold(0.0_f32, |most, label| {
+        let start: String = label.chars().take(3).collect();
+        let shown = match start.len() < label.len() {
+            true => start + "…",
+            false => start,
+        };
+        most.max(text_width(&tag(row[0].0), &shown))
+    });
+    let fits = |least: f32| {
+        (1..=labels.len())
+            .find(|n| *n as f32 * band - EDGE >= least)
+            .unwrap_or(labels.len())
+    };
+    // Thinned anyway, they are written whole while at least three are left.
+    let widest = labels.iter().fold(0.0_f32, |most, label| {
+        most.max(text_width(&tag(row[0].0), label))
+    });
+    let every = match (fits(least), fits(widest)) {
+        (1, _) => 1,
+        (some, whole) if labels.len().div_ceil(whole) >= 3 => whole.max(some),
+        (some, _) => some,
+    };
+    let mut out = String::with_capacity(svg.len());
+    let mut last = 0;
+    // Where the label before ends.
+    let mut written = f32::MIN;
+    for (index, ((open, end, _, _, _), label)) in row.iter().zip(labels).enumerate() {
+        out.push_str(&svg[last..*open]);
+        last = *end;
+        if index % every != 0 {
+            continue;
+        }
+        let attributes = tag(*open);
+        let band_centre = plot.left + band * (index as f32 + 0.5);
+        let mut cut = shorten(&attributes, label, every as f32 * band - EDGE);
+        // Under its band, moved in from a side of the SVG, else cut to stay centred there.
+        let half = text_width(&attributes, &cut) / 2.0;
+        let mut centre = band_centre.clamp(EDGE + half, (width - EDGE - half).max(EDGE + half));
+        if centre - half < written + EDGE {
+            let side = (band_centre - EDGE).min(width - EDGE - band_centre);
+            cut = shorten(&attributes, label, 2.0 * side);
+            centre = band_centre;
+        }
+        written = centre + text_width(&attributes, &cut) / 2.0;
+        let kept: String = attributes
+            .iter()
+            .filter(|(attribute, _)| !matches!(*attribute, "x" | "text-anchor"))
+            .map(|(attribute, value)| format!(" {attribute}=\"{value}\""))
+            .collect();
+        out.push_str(&format!(
+            "<text x=\"{centre}\" text-anchor=\"middle\"{kept}>\n{}\n</text>",
+            escape(&cut)
+        ));
+    }
+    out.push_str(&svg[last..]);
     out
 }
 
@@ -2077,6 +2489,94 @@ fn root(attributes: &[(&str, &str)]) -> String {
     format!("<svg width=\"100%\" height=\"100%\" aria-hidden=\"true\" focusable=\"false\"{kept}>")
 }
 
+/// How an axis writes its ticks: under `ValueFormat::Auto` (`auto`) every tick at the one
+/// precision its step needs and, past seven digits, in the `compact` million, billion or
+/// trillion; otherwise as `plain` writes them.
+fn axis_write<'a, F: Fn(f64) -> String + 'a>(
+    svg: &str,
+    mark: char,
+    auto: bool,
+    unit: Option<&'a str>,
+    formats: &'a Formats,
+    compact: &'a [&'static str; 3],
+    plain: F,
+) -> impl Fn(f64) -> String + use<'a, F> {
+    let ticks = auto.then(|| Ticks::of(svg, mark, compact));
+    move |value| match ticks {
+        Some(ticks) => ticks.write(value, unit, formats),
+        None => plain(value),
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Ticks {
+    decimals: usize,
+    scale: f64,
+    suffix: &'static str,
+}
+
+impl Ticks {
+    fn of(svg: &str, mark: char, compact: &[&'static str; 3]) -> Self {
+        let mut values = Vec::new();
+        let mut rest = svg;
+        while let Some(at) = rest.find(mark) {
+            let label = &rest[at + mark.len_utf8()..];
+            let end = label.find(['\n', '<', ' ']).unwrap_or(label.len());
+            values.extend(scaled(label[..end].trim_end_matches('%')));
+            rest = &label[end..];
+        }
+        let largest = values.iter().fold(0.0_f64, |most, v| most.max(v.abs()));
+        let (scale, suffix) = match largest {
+            l if l >= 1e12 => (1e12, compact[2]),
+            l if l >= 1e9 => (1e9, compact[1]),
+            l if l >= 1e7 => (1e6, compact[0]),
+            _ => (1.0, ""),
+        };
+        let (low, high) = values.iter().fold((f64::MAX, f64::MIN), |(low, high), v| {
+            (low.min(*v), high.max(*v))
+        });
+        let step = (high - low) / scale / values.len().saturating_sub(1).max(1) as f64;
+        let decimals = match step > 0.0 && step.is_finite() {
+            // The step's first digit, and one more for a step like 2.5 or 0.25.
+            true => (0..=15)
+                .find(|d| {
+                    let shifted = step * 10_f64.powi(*d);
+                    shifted >= 1.0 && (shifted - shifted.round()).abs() < shifted * 1e-4
+                })
+                .unwrap_or(15) as usize,
+            false => 0,
+        };
+        Self {
+            decimals,
+            scale,
+            suffix,
+        }
+    }
+
+    fn write(&self, value: f64, unit: Option<&str>, formats: &Formats) -> String {
+        let shown = format!("{:.*}", self.decimals, value / self.scale);
+        // f32 noise round a zero tick must not read "-0".
+        let shown = match shown
+            .trim_start_matches('-')
+            .chars()
+            .all(|c| matches!(c, '0' | '.'))
+        {
+            true => shown.trim_start_matches('-').to_string(),
+            false => shown,
+        };
+        // 0 needs no million.
+        let suffix = match value == 0.0 {
+            true => "",
+            false => self.suffix,
+        };
+        let number = format!("{}{suffix}", formats.write_number(&shown));
+        match unit.filter(|unit| !unit.is_empty()) {
+            Some(unit) => format!("{number} {unit}"),
+            None => number,
+        }
+    }
+}
+
 /// Writes every label behind `mark` again with `axis`.
 fn relabel(svg: &str, mark: char, axis: impl Fn(f64) -> String) -> String {
     let mut out = String::with_capacity(svg.len());
@@ -2099,13 +2599,13 @@ fn relabel(svg: &str, mark: char, axis: impl Fn(f64) -> String) -> String {
 /// The renderer places a y label by its own text's width; written again in the locale it
 /// would leave the axis. Pins each one by the right end the renderer gave it.
 fn pin_to_axis(svg: &str) -> String {
-    pin_labels(svg, Pin::<fn(f64) -> String>::End)
+    pin_labels(svg, AXIS_MARK, Pin::<fn(f64) -> String>::End)
 }
 
-/// A lying bar chart's value labels sit under their ticks: pinned by their centre, as
-/// `axis` writes them, and kept inside the `width`.
-fn pin_to_ticks(svg: &str, width: f32, axis: impl Fn(f64) -> String) -> String {
-    pin_labels(svg, Pin::Middle { width, axis })
+/// A lying bar chart's value labels, or a numeric x axis' behind `mark`, sit under their
+/// ticks: pinned by their centre, as `axis` writes them, and kept inside the `width`.
+fn pin_to_ticks(svg: &str, mark: char, width: f32, axis: impl Fn(f64) -> String) -> String {
+    pin_labels(svg, mark, Pin::Middle { width, axis })
 }
 
 enum Pin<F> {
@@ -2113,7 +2613,7 @@ enum Pin<F> {
     Middle { width: f32, axis: F },
 }
 
-fn pin_labels<F: Fn(f64) -> String>(svg: &str, pin: Pin<F>) -> String {
+fn pin_labels<F: Fn(f64) -> String>(svg: &str, mark: char, pin: Pin<F>) -> String {
     let mut out = String::with_capacity(svg.len());
     let mut rest = svg;
     while let Some(open) = rest.find("<text") {
@@ -2127,18 +2627,18 @@ fn pin_labels<F: Fn(f64) -> String>(svg: &str, pin: Pin<F>) -> String {
         let attributes = attributes(tag);
         let x = attribute(&attributes, "x").and_then(|x| x.parse::<f32>().ok());
         match x {
-            Some(x) if label.starts_with(AXIS_MARK) => {
+            Some(x) if label.starts_with(mark) => {
                 let drawn = text_width(&attributes, label);
                 let (x, anchor) = match &pin {
                     Pin::End => (x + drawn, "end"),
                     Pin::Middle { width, axis } => {
-                        let number = label[AXIS_MARK.len_utf8()..].split(' ').next();
+                        let number = label[mark.len_utf8()..].split(' ').next();
                         let half = number
                             .and_then(scaled)
                             .map_or(drawn, |value| text_width(&attributes, &axis(value)))
                             / 2.0;
                         let centre = x + drawn / 2.0;
-                        (centre.min(width - half).max(half), "middle")
+                        (centre.min(width - EDGE - half).max(EDGE + half), "middle")
                     }
                 };
                 let kept: String = attributes
@@ -2156,11 +2656,14 @@ fn pin_labels<F: Fn(f64) -> String>(svg: &str, pin: Pin<F>) -> String {
     out
 }
 
-/// The y axis' width once `axis` writes its labels, when that is more than the renderer
-/// kept for them.
-fn y_width(svg: &str, mark: char, axis: impl Fn(f64) -> String) -> Option<f32> {
-    let mut kept = 0.0f32;
-    let mut needed = 0.0f32;
+/// The most `width` gives a label behind `mark`, handed its tag's attributes, its text and
+/// its number.
+fn widest(
+    svg: &str,
+    mark: char,
+    width: impl Fn(&[(&str, &str)], &str, &str) -> f32,
+) -> Option<f32> {
+    let mut most = 0.0f32;
     let mut rest = svg;
     while let Some(open) = rest.find("<text") {
         let close = open + rest[open..].find('>')?;
@@ -2169,20 +2672,32 @@ fn y_width(svg: &str, mark: char, axis: impl Fn(f64) -> String) -> Option<f32> {
         let label = label[..label.find('<').unwrap_or(label.len())].trim();
         if let Some(number) = label.strip_prefix(mark) {
             let number = number.split(' ').next().unwrap_or_default();
-            kept = kept.max(text_width(&attributes, label));
-            if let Some(value) = scaled(number) {
-                needed = needed.max(text_width(&attributes, &axis(value)));
-            }
+            most = most.max(width(&attributes, label, number));
         }
         rest = &rest[close + 1..];
     }
+    Some(most)
+}
+
+/// The y axis' width once `axis` writes its labels, read in full from `exact`, when that is
+/// more than the renderer kept for them in `svg`.
+fn y_width(svg: &str, exact: &str, mark: char, axis: impl Fn(f64) -> String) -> Option<f32> {
+    let kept = widest(svg, mark, |attributes, label, _| {
+        text_width(attributes, label)
+    })?;
+    let needed = widest(exact, mark, |attributes, _, number| {
+        scaled(number).map_or(0.0, |value| text_width(attributes, &axis(value)))
+    })?;
     // The renderer's own room: the label's width and 5.
     (needed > kept).then_some(needed + 5.0)
 }
 
 /// A label's width in the renderer's own measure, in the tag's font.
 fn text_width(attributes: &[(&str, &str)], text: &str) -> f32 {
-    let family = attribute(attributes, "font-family").unwrap_or(charts_rs::DEFAULT_FONT_FAMILY);
+    // `sanitize` hands the renderer's font to the page as `inherit`.
+    let family = attribute(attributes, "font-family")
+        .filter(|family| *family != "inherit")
+        .unwrap_or(charts_rs::DEFAULT_FONT_FAMILY);
     let size = attribute(attributes, "font-size")
         .and_then(|size| size.parse().ok())
         .unwrap_or(14.0);
@@ -2335,7 +2850,7 @@ mod tests {
             ticks: 4,
             x_title: Some("Quarter".to_string()),
             y_title: Some("Weight".to_string()),
-            y2_title: None,
+            ..Axes::default()
         };
         let svg = draw_line(&spec).expect("drawn").svg;
         for label in [
@@ -2351,6 +2866,87 @@ mod tests {
         }
         assert!(!svg.contains("60 kg") && !svg.contains("\n0 kg"), "{svg}");
         assert!(svg.contains("rotate(-90)"), "{svg}");
+    }
+
+    /// Unset ends land on a round step, as many as `ticks` asks or one more or fewer.
+    #[test]
+    fn an_unset_axis_end_lands_on_a_round_step() {
+        let labels = |values: &[f64], axes: Axes| {
+            let values: Vec<_> = values.iter().map(|v| Some(*v)).collect();
+            let mut spec = line(vec![spec("A", &values)], &["Q1", "Q2"]);
+            spec.axes = axes;
+            let svg = draw_line(&spec).expect("drawn").svg;
+            let ticks = texts(&svg).into_iter().map(|text| text.3);
+            ticks
+                .filter(|label| label.ends_with(" kg"))
+                .collect::<Vec<_>>()
+        };
+        let kg = |values: &[i32]| values.iter().map(|v| format!("{v} kg")).collect::<Vec<_>>();
+        assert_eq!(
+            labels(&[12.0, 31.0], axes()),
+            kg(&[35, 30, 25, 20, 15, 10, 5, 0])
+        );
+        let four = Axes { ticks: 4, ..axes() };
+        assert_eq!(
+            labels(&[3.0, 48.0], four.clone()),
+            kg(&[50, 40, 30, 20, 10, 0])
+        );
+        assert_eq!(labels(&[-7.0, 18.0], four), kg(&[20, 10, 0, -10]));
+        assert_eq!(labels(&[0.0, 0.0], axes())[0], "1,0 kg");
+        let from = Axes {
+            min: Some(10.0),
+            ..axes()
+        };
+        assert_eq!(labels(&[12.0, 31.0], from), kg(&[35, 30, 25, 20, 15, 10]));
+    }
+
+    /// Ticks past seven digits are written in the locale's millions; the rest keep theirs.
+    #[test]
+    fn a_long_axis_writes_its_ticks_in_millions() {
+        let compact = crate::localization::ChartLabels::GERMAN.compact;
+        let mut short = line(vec![spec("A", &[Some(1.0), Some(4.0)])], &["Q1", "Q2"]);
+        short.axes.compact = compact;
+        let mut long = line(
+            vec![spec("A", &[Some(12_345_678.0), Some(48_000_000.0)])],
+            &["Q1", "Q2"],
+        );
+        long.axes.compact = compact;
+        let svg = draw_line(&long).expect("drawn").svg;
+        let ticks: Vec<String> = texts(&svg)
+            .into_iter()
+            .map(|text| text.3)
+            .filter(|label| label.contains("Mio."))
+            .collect();
+        assert!(ticks.len() >= 3, "{svg}");
+        assert!(ticks.contains(&"40\u{a0}Mio. kg".to_string()), "{ticks:?}");
+        assert!(texts(&svg).iter().any(|text| text.3 == "0 kg"), "{svg}");
+        let digits = |label: &str| label.chars().filter(char::is_ascii_digit).count();
+        assert!(texts(&svg).iter().all(|text| digits(&text.3) <= 7), "{svg}");
+
+        let svg = draw_line(&short).expect("drawn").svg;
+        assert!(!svg.contains("Mio."), "{svg}");
+    }
+
+    /// Every tick of a tiny axis has the decimals its step needs, so none reads 0 but zero.
+    #[test]
+    fn a_tiny_axis_writes_every_tick_at_one_precision() {
+        let mut spec = line(vec![spec("A", &[Some(0.001), Some(0.004)])], &["Q1", "Q2"]);
+        spec.unit = None;
+        let svg = draw_line(&spec).expect("drawn").svg;
+        let ticks: Vec<String> = texts(&svg)
+            .into_iter()
+            .map(|text| text.3)
+            .filter(|label| label.starts_with("0,"))
+            .collect();
+        assert!(ticks.len() >= 3, "{svg}");
+        let decimals = |label: &String| label.len() - 2;
+        assert!(
+            ticks.iter().all(|t| decimals(t) == decimals(&ticks[0])),
+            "{ticks:?}"
+        );
+        let mut distinct = ticks.clone();
+        distinct.dedup();
+        assert_eq!(distinct, ticks);
     }
 
     /// A series on the right axis is drawn by its own scale, labelled in its unit there.
@@ -2599,7 +3195,7 @@ mod tests {
             .collect();
         assert!(ends.len() > 2, "{}", drawn.svg);
         assert!(ends.iter().all(|end| *end == ends[0]), "{ends:?}");
-        assert!(drawn.svg.contains("18.000 kg"), "{}", drawn.svg);
+        assert!(drawn.svg.contains("25.000 kg"), "{}", drawn.svg);
         let first = xs(&drawn)[0];
         assert!(
             ends[0] < first,
@@ -2852,7 +3448,7 @@ mod tests {
 
         assert_eq!(drawn.geometry.marks.len(), 8);
         // The right axis writes its unit, the left one none; its title stands beside it.
-        assert_eq!(drawn.svg.matches("%\n</text>").count(), 7, "{}", drawn.svg);
+        assert_eq!(drawn.svg.matches("%\n</text>").count(), 5, "{}", drawn.svg);
         assert!(
             drawn.svg.contains("rotate(90)\"") && drawn.svg.contains("Share"),
             "{}",
@@ -3773,7 +4369,7 @@ mod tests {
             .filter(|tag| tag.contains("text-anchor=\"middle\""))
             .filter_map(|tag| tag.split('"').next()?.parse().ok())
             .collect();
-        assert!(labels.len() > 2 && svg.contains("10.400"), "{svg}");
+        assert!(labels.len() > 2 && svg.contains("25.000"), "{svg}");
         // The last one ends at the SVG's edge rather than past it.
         let (last, inner) = labels.split_last().expect("labels");
         for label in inner {
@@ -3818,5 +4414,188 @@ mod tests {
                 .iter()
                 .all(|t| matches!(&t.shape, MarkShape::Sector { path } if path.starts_with('M')))
         );
+    }
+
+    /// Each text's `(left, right, baseline, label)`, `dx` and `dy` applied.
+    fn texts(svg: &str) -> Vec<(f32, f32, f32, String)> {
+        let mut found = Vec::new();
+        let mut rest = svg;
+        while let Some(open) = rest.find("<text") {
+            let close = open + rest[open..].find('>').expect("closed");
+            let attributes = attributes(&rest[open..=close]);
+            let label = &rest[close + 1..];
+            let label = label[..label.find('<').unwrap_or(label.len())].trim();
+            rest = &rest[close + 1..];
+            let number = |name| attribute(&attributes, name)?.parse::<f32>().ok();
+            let (Some(x), Some(y)) = (number("x"), number("y")) else {
+                continue;
+            };
+            let (x, y) = (
+                x + number("dx").unwrap_or(0.0),
+                y + number("dy").unwrap_or(0.0),
+            );
+            let drawn = text_width(&attributes, label);
+            let left = match attribute(&attributes, "text-anchor") {
+                Some("middle") => x - drawn / 2.0,
+                Some("end") => x - drawn,
+                _ => x,
+            };
+            found.push((left, left + drawn, y, label.to_string()));
+        }
+        found
+    }
+
+    #[test]
+    fn the_last_numeric_x_label_keeps_inside_the_svg() {
+        let mut numeric = line(
+            vec![spec("A", &[Some(3.0), Some(5.0), Some(4.0), Some(8.0)])],
+            &["1", "2", "10", "1000.5"],
+        );
+        numeric.x_numbers = vec![1.0, 2.0, 10.0, 1000.5];
+        (numeric.width, numeric.height) = (480.0, 272.0);
+        let drawn = draw_line(&numeric).expect("drawn");
+        assert_eq!(
+            overflow(&drawn.svg, 480.0, 272.0),
+            None,
+            "{:?}",
+            texts(&drawn.svg)
+        );
+        assert!(
+            texts(&drawn.svg).iter().any(|t| t.3 == "1000"),
+            "{}",
+            drawn.svg
+        );
+    }
+
+    #[test]
+    fn a_bar_s_label_writes_its_own_value_not_the_renderer_s() {
+        let mut huge = bars(BarLayout::Grouped, false);
+        huge.series = vec![spec("A", &[Some(1.2e9), Some(3.4e9), Some(9.9e9)])];
+        let drawn = draw_bar(&huge).expect("drawn");
+        let labels: Vec<_> = texts(&drawn.svg).into_iter().map(|t| t.3).collect();
+        assert!(labels.contains(&"9.900.000.000".to_string()), "{labels:?}");
+    }
+
+    /// A long category label is cut to its band; bands too narrow for any word show every
+    /// n-th label. Neither runs past the SVG nor over its neighbour.
+    #[test]
+    fn category_labels_keep_to_their_bands() {
+        let row = |chart: &BarSpec| {
+            let drawn = draw_bar(chart).expect("drawn");
+            let plot = drawn.geometry.plot;
+            let below = texts(&drawn.svg).into_iter();
+            let row: Vec<_> = below.filter(|t| t.2 > plot.bottom + PLOT_TICK).collect();
+            for pair in row.windows(2) {
+                assert!(pair[0].1 <= pair[1].0, "{row:?}");
+            }
+            assert!(
+                row.iter().all(|t| t.0 >= 0.0 && t.1 <= chart.width),
+                "{row:?}"
+            );
+            (row, (plot.right - plot.left) / chart.x.len() as f32)
+        };
+        let mut long = bars(BarLayout::Grouped, false);
+        long.x = ["A very long category label", "Another long one", "Short"]
+            .map(String::from)
+            .to_vec();
+        let (labels, band) = row(&long);
+        assert_eq!(labels.len(), 3, "{labels:?}");
+        assert!(
+            labels[0].3.ends_with('…') && labels[2].3 == "Short",
+            "{labels:?}"
+        );
+        assert!(
+            labels.iter().all(|t| t.1 - t.0 <= band),
+            "{labels:?} {band}"
+        );
+
+        let mut many = bars(BarLayout::Grouped, false);
+        many.x = (1..=40).map(|i| format!("Week {i}")).collect();
+        many.series = vec![spec("A", &[Some(1.0); 40])];
+        let (labels, _) = row(&many);
+        assert!(labels.len() > 1 && labels.len() < 40, "{labels:?}");
+        // Thinned, they have room to be written whole; the last may meet the SVG's side.
+        let (_, inner) = labels.split_last().expect("labels");
+        assert!(inner.iter().all(|t| t.3.starts_with("Week ")), "{labels:?}");
+    }
+
+    #[test]
+    fn a_falling_bar_s_label_sits_past_its_lower_end() {
+        let mut falling = bars(BarLayout::Grouped, false);
+        falling.series = vec![spec("A", &[Some(-10.0), Some(-200.0), Some(35.0)])];
+        let drawn = draw_bar(&falling).expect("drawn");
+        let left = drawn.geometry.plot.left;
+        let found: Vec<_> = texts(&drawn.svg)
+            .into_iter()
+            .filter(|t| t.0 > left)
+            .collect();
+        let baseline = |value: &str| found.iter().find(|t| t.3 == value).expect(value).2;
+        let ends: Vec<_> = (drawn.geometry.marks.iter())
+            .map(|mark| match mark.shape {
+                MarkShape::Rect { y, height, .. } => (y, y + height),
+                _ => panic!("{mark:?}"),
+            })
+            .collect();
+        assert!(baseline("-10") - 10.0 > ends[0].1, "{found:?} {ends:?}");
+        // The lowest bar meets the x axis: its label goes inside, on the bar's ink.
+        let lowest = baseline("-200");
+        assert!(
+            lowest > ends[1].0 && lowest < ends[1].1,
+            "{found:?} {ends:?}"
+        );
+        assert!(baseline("35") < ends[2].0, "{found:?} {ends:?}");
+        assert!(!drawn.svg.contains(ON_BAR_FILL), "{}", drawn.svg);
+        // The two labels past their bars are haloed, the one inside is not.
+        assert_eq!(
+            drawn.svg.matches("paint-order=\"stroke\"").count(),
+            2,
+            "{}",
+            drawn.svg
+        );
+    }
+
+    #[test]
+    fn a_mark_line_label_wider_than_the_plot_is_left_out() {
+        let mut series = spec("A", &[Some(1.0), Some(3.0), Some(2.0)]);
+        series.extras.mark_lines = vec![(2.0, "Average over the whole week: 2".into())];
+        let mut narrow = line(vec![series], &["a", "b", "c"]);
+        let drawn = draw_line(&narrow).expect("drawn");
+        assert!(drawn.svg.contains("Average over"), "{}", drawn.svg);
+        (narrow.width, narrow.height) = (160.0, 120.0);
+        let drawn = draw_line(&narrow).expect("drawn");
+        assert!(!drawn.svg.contains("Average over"), "{}", drawn.svg);
+        assert_eq!(drawn.svg.matches("stroke-dasharray=\"4,2\"").count(), 1);
+    }
+
+    #[test]
+    fn bars_keep_half_a_narrow_band_by_default() {
+        let mut narrow = bars(BarLayout::Grouped, false);
+        narrow.x = (0..40).map(|i| i.to_string()).collect();
+        narrow.series = vec![spec("A", &[Some(1.0); 40])];
+        (narrow.width, narrow.height) = (480.0, 272.0);
+        let drawn = draw_bar(&narrow).expect("drawn");
+        let plot = drawn.geometry.plot;
+        let unit = (plot.right - plot.left) / 40.0;
+        for [_, _, width, _] in rects(&drawn) {
+            assert!(width >= unit / 2.0 - 0.1, "{width} of {unit}");
+        }
+    }
+
+    #[test]
+    fn dense_x_labels_do_not_overlap() {
+        let x: Vec<String> = (0..200).map(|i| i.to_string()).collect();
+        let x: Vec<&str> = x.iter().map(String::as_str).collect();
+        let mut dense = line(vec![spec("A", &[Some(1.0); 200])], &x);
+        (dense.width, dense.height) = (480.0, 272.0);
+        let drawn = draw_line(&dense).expect("drawn");
+        let bottom = drawn.geometry.plot.bottom;
+        let mut labels: Vec<_> = texts(&drawn.svg)
+            .into_iter()
+            .filter(|(.., y, _)| *y > bottom)
+            .collect();
+        labels.sort_by(|a, b| a.0.total_cmp(&b.0));
+        for pair in labels.windows(2) {
+            assert!(pair[0].1 <= pair[1].0, "{pair:?}");
+        }
     }
 }

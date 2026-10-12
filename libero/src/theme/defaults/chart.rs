@@ -119,7 +119,7 @@ pub struct ChartDefaults {
     pub area: bool,
     /// How opaque an area under a line is, from 0 to 1: low, so the lines and grid show through.
     pub area_opacity: f32,
-    /// The steps a line or bar chart's value axis is cut into.
+    /// About how many steps a line or bar chart's value axis is cut into, each of a round size.
     pub y_ticks: usize,
     pub bar_layout: BarLayout,
     /// Corner radius of a bar's free end, a step on the theme's radius scale.

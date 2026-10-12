@@ -81,6 +81,8 @@ pub struct ChartLabels {
     pub band: &'static str,
     /// A marked point in the summary: `{label}` is `lowest` or `highest`, `{x}` where it is.
     pub mark_point: &'static str,
+    /// Written after a long axis' ticks in millions, billions and trillions.
+    pub compact: [&'static str; 3],
 }
 
 impl ChartLabels {
@@ -129,6 +131,7 @@ impl ChartLabels {
         mark_line_summary: "{name}: {label} line at {value}.",
         mark_point: "{name}: {label} marked at {x}, {value}.",
         band: "{name}: each value has a range, {low} to {high} in all.",
+        compact: ["M", "B", "T"],
     };
 
     pub const GERMAN: Self = Self {
@@ -176,5 +179,6 @@ impl ChartLabels {
         mark_line_summary: "{name}: Linie {label} bei {value}.",
         mark_point: "{name}: {label} markiert bei {x}, {value}.",
         band: "{name}: jeder Wert hat einen Bereich, insgesamt {low} bis {high}.",
+        compact: ["\u{a0}Mio.", "\u{a0}Mrd.", "\u{a0}Bio."],
     };
 }

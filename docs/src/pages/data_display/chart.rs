@@ -61,8 +61,8 @@ fn is(kind: &'static str) -> fn(&DemoValues) -> bool {
 fn y_range(values: &DemoValues) -> Option<(f64, f64)> {
     match (values.str("y_range").as_str(), values.str("type").as_str()) {
         ("auto", _) => None,
-        (_, "bar") => Some((-50.0, 200.0)),
-        _ if values.str("area") == "stacked" => Some((0.0, 450.0)),
+        (_, "bar") => Some((-50.0, 150.0)),
+        _ if values.str("area") == "stacked" => Some((0.0, 400.0)),
         _ => Some((50.0, 250.0)),
     }
 }
@@ -225,11 +225,13 @@ fn margin(values: &DemoValues) -> Option<(String, Series)> {
     })
 }
 
-/// The right y axis' title, when a series stands on it.
+/// The right y axis' title, when a series stands on it; a percent chart reads its line there.
 fn y2_title(values: &DemoValues) -> Option<&'static str> {
+    let percent = values.str("layout") == "percent";
     match (conversion(values), values.str("line_series").as_str()) {
         (Some(_), _) => Some("Conversion"),
         (None, "right") if values.str("type") == "bar" => Some("Margin"),
+        (None, "left") if values.str("type") == "bar" && percent => Some("Margin"),
         _ => None,
     }
 }

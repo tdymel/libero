@@ -42,15 +42,17 @@ chart_props! {
         /// Each bar's value written on it. Unset, the theme's.
         #[props(default)]
         value_labels: Option<bool>,
-        /// The value axis' lowest value. Unset, 0 or the lowest value below it. Ignored by
-        /// `percent`, which runs 0 to 100%.
+        /// The value axis' lowest value. Unset, 0 or a round number at or under the lowest
+        /// value. Ignored by `percent`, which runs 0 to 100%.
         #[props(default)]
         y_min: Option<f64>,
         /// The value axis' highest value. Unset, a round number at or over the highest value.
         /// Ignored by `percent`.
         #[props(default)]
         y_max: Option<f64>,
-        /// The steps the value axis is cut into: 4 writes 5 labels. Unset, the theme's.
+        /// About how many steps the value axis is cut into, each 1, 2, 2.5 or 5 times a power of
+        /// ten: one more or fewer may fit better. With `y_min` and `y_max` set, exactly as many:
+        /// 4 writes 5 labels. Unset, the theme's.
         #[props(default)]
         y_ticks: Option<usize>,
         /// Along the categories: what they are. Under them, or beside them when `horizontal`.
@@ -275,6 +277,7 @@ pub fn BarChart(props: BarChartProps) -> Element {
             x_title: props.x_title.clone(),
             y_title: props.y_title.clone(),
             y2_title: props.y2_title.clone(),
+            compact: labels.compact,
         },
         labels_inside,
         bar_colors: shown

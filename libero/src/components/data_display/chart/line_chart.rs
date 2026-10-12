@@ -41,13 +41,15 @@ chart_props! {
         /// A line on the right y axis is not stacked.
         #[props(default)]
         stacked: bool,
-        /// The y axis' lowest value. Unset, 0 or the lowest value below it.
+        /// The y axis' lowest value. Unset, 0 or a round number at or under the lowest value.
         #[props(default)]
         y_min: Option<f64>,
         /// The y axis' highest value. Unset, a round number at or over the highest value.
         #[props(default)]
         y_max: Option<f64>,
-        /// The steps the y axis is cut into: 4 writes 5 labels. Unset, the theme's.
+        /// About how many steps the value axis is cut into, each 1, 2, 2.5 or 5 times a power of
+        /// ten: one more or fewer may fit better. With `y_min` and `y_max` set, exactly as many:
+        /// 4 writes 5 labels. Unset, the theme's.
         #[props(default)]
         y_ticks: Option<usize>,
         /// Under the x axis: what it counts.
@@ -178,6 +180,7 @@ pub fn LineChart(props: LineChartProps) -> Element {
             x_title: props.x_title.clone(),
             y_title: props.y_title.clone(),
             y2_title: props.y2_title.clone(),
+            compact: labels.compact,
         },
         area: props
             .area
