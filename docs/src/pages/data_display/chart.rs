@@ -5,7 +5,7 @@ use libero::use_theme;
 use libero::{
     components::{
         BarChart, ChartRange, Code, LineChart, MarkLine, MarkPoint, Orientation, PieChart, Series,
-        Slice, Table, Text, column, use_chart,
+        SeriesKind, Slice, Table, Text, column, use_chart,
     },
     theme::{
         BarLabelPosition, BarLayout, Curve, LegendPosition, PieLabelPosition, PieLabels,
@@ -31,6 +31,7 @@ const PROFIT_2025: [f64; 4] = [40.0, 55.0, -25.0, 62.0];
 const PROFIT_2025_RANGE: [(f64, f64); 4] =
     [(30.0, 52.0), (44.0, 63.0), (-31.0, -19.0), (50.0, 71.0)];
 const PROFIT_2026: [f64; 4] = [30.0, -15.0, 20.0, 48.0];
+const MARGIN: [f64; 4] = [18.0, 9.0, 12.0, 24.0];
 const QUARTER_COLORS: [&str; 4] = ["success", "info", "warning", "neutral"];
 const BROWSERS: [(&str, f64); 4] = [
     ("Chrome", 62.0),
@@ -126,6 +127,12 @@ fn table(values: &DemoValues) -> (&'static str, &'static str, Vec<&'static str>,
             .collect()
     };
     match values.str("type").as_str() {
+        "bar" if margin(values).is_some() => (
+            "Profit",
+            "Quarter",
+            vec!["2025", "2026", "Margin"],
+            rows(&QUARTERS, &[&PROFIT_2025, &PROFIT_2026, &MARGIN]),
+        ),
         "bar" => (
             "Profit",
             "Quarter",
@@ -193,6 +200,38 @@ fn conversion(values: &DemoValues) -> Option<(String, Series)> {
                 .secondary_axis(),
         )
     })
+}
+
+/// The bar chart's line over its bars, on the axis the control says, in code and as built.
+fn margin(values: &DemoValues) -> Option<(String, Series)> {
+    let axis = values.str("line_series");
+    if values.str("type") != "bar" || axis == "none" {
+        return None;
+    }
+    let series = Series::new("Margin", MARGIN)
+        .unit("%")
+        .kind(SeriesKind::Line);
+    Some(match axis.as_str() {
+        "right" => (
+            format!(
+                ", Series::new(\"Margin\", {MARGIN:?}).unit(\"%\").kind(SeriesKind::Line).secondary_axis()"
+            ),
+            series.secondary_axis(),
+        ),
+        _ => (
+            format!(", Series::new(\"Margin\", {MARGIN:?}).unit(\"%\").kind(SeriesKind::Line)"),
+            series,
+        ),
+    })
+}
+
+/// The right y axis' title, when a series stands on it.
+fn y2_title(values: &DemoValues) -> Option<&'static str> {
+    match (conversion(values), values.str("line_series").as_str()) {
+        (Some(_), _) => Some("Conversion"),
+        (None, "right") if values.str("type") == "bar" => Some("Margin"),
+        _ => None,
+    }
 }
 
 /// The first series' mark line, in code and as built, for the chart type.
@@ -329,7 +368,7 @@ pub fn ChartPage() -> Element {
                 ]),
                 props("BarChart", vec![
                     prop("x", "XValues").default("required").doc("The categories, one per bar or group of bars."),
-                    prop("series", "Vec<Series>").default("required").doc("The bars' series, each with one value per x value. `None` leaves no bar."),
+                    prop("series", "Vec<Series>").default("required").doc("The bars' series, each with one value per x value. `None` leaves no bar. Upright, a `.kind(SeriesKind::Line)` one is drawn as a line over the bars."),
                     prop("title", "Option<String>").doc("Shown above the chart, and its accessible name."),
                     prop("description", "Option<String>").doc("A sentence under the title: what to read from the chart."),
                     prop("layout", "BarLayout").default(theme.chart.bar_layout.as_str()).doc("`grouped` side by side, `stacked`, or `percent`: stacked to 100%."),
@@ -341,6 +380,7 @@ pub fn ChartPage() -> Element {
                     prop("y_ticks", "Option<usize>").default(theme.chart.y_ticks.to_string()).doc("The steps the value axis is cut into: 4 writes 5 labels."),
                     prop("x_title", "Option<String>").doc("Along the categories: what they are. Under them, or beside them when `horizontal`."),
                     prop("y_title", "Option<String>").doc("Along the values: what they measure. Beside them, or under them when `horizontal`."),
+                    prop("y2_title", "Option<String>").doc("Beside the right y axis, read downward: what its `Series::secondary_axis()` series measure. An upright chart only."),
                     prop("value_label_position", "BarLabelPosition").default("chart-wide: inside on a `horizontal` chart or once any shown series has error ranges, past the end otherwise").doc("`inside` the bar, in the ink that reads on it, or `outside` past its end. A stack always writes inside."),
                     prop("bar_width", "Option<f32>").default("5 px each side of a band").doc("The share of a category's band its bars fill, clamped to `0.1..=1`."),
                     prop("bar_gap", "Option<f32>").default(theme.chart.bar_gap.to_string()).doc("Between two bars of a group, in pixels."),
@@ -406,9 +446,9 @@ pub fn ChartPage() -> Element {
                 .key(["Shift+ArrowRight", "Shift+ArrowLeft"], "With `onrange`: brushes from the keys' point to the next or previous x value.")
                 .handles([
                     "The chart is a `role=\"figure\"` named by `title`. The drawing is hidden from screen readers.",
-                    "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is, then each mark line's name and value and each marked point's place and value, each line's error band and each upright grouped series' error bars with their outer ends, the series on the right y axis, the axes' titles and, stacked, that the top line is the total; a pie's, the total, then each slice's value and share.",
+                    "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is, then each mark line's name and value and each marked point's place and value, each line's error band and each upright grouped series' error bars with their outer ends, the series drawn as a line over bars, the series on the right y axis, the axes' titles and, stacked, that the top line is the total; a pie's, the total, then each slice's value and share.",
                     "The plot is one tab stop, a `role=\"application\"` described as a chart, so a screen reader hands it the arrows. Each point the keys reach is announced, as \"This week, Tue: 132\" or \"Chrome: 62, 62%.\"",
-                    "The legend's entries are toggle buttons: pressed while their series or slice shows, struck through when hidden. The last shown one's button is `aria-disabled`. Should `hidden` or `default_hidden` name every one, the plot and the summary say \"All series are hidden.\" and the legend stays. A dashed line's key is a dash, as drawn; once a line sets a `symbol`, each key is its line's point shape.",
+                    "The legend's entries are toggle buttons: pressed while their series or slice shows, struck through when hidden. The last shown one's button is `aria-disabled`. Should `hidden` or `default_hidden` name every one, the plot and the summary say \"All series are hidden.\" and the legend stays. A dashed line's key is a dash, as drawn; once a line sets a `symbol`, each key is its line's point shape. A line among bars is keyed by a short stroke, the bars by squares.",
                     "On a touch screen a tap pins a point's tooltip, a second tap on it clicks; a vertical swipe still scrolls the page.",
                     "With `zoom`, the shown range is announced once a zoom or pan settles, as \"Showing Tue to Fri\"; the Reset zoom button stays focusable while there is nothing to reset. Ctrl or Cmd with the wheel zooms only a zoomable plot, so the page zoom works everywhere else.",
                     "A drag with `onrange` set brushes; Shift or Alt with it pans. The band is outlined as well as tinted, and announced as \"Selected Tue to Thu\".",
@@ -437,8 +477,9 @@ pub fn ChartPage() -> Element {
                     "A rose's radius and a slice under `min_label_angle` are read by eye or not at all; the summary gives every value.",
                     "`zoom` and `onrange` are for lines and bars; a pie exports only.",
                     "An export keeps the normal palette in forced colours. `png()` is `None` on Blitz and on the server, and the PNG button says it could not save.",
-                    "A mark line is drawn on a line chart that is not `stacked` and on upright, `grouped` bars, and only inside the y axis' ends; the summary leaves out the ones not drawn, except past the ends. A marked point is drawn on a line chart only.",
-                    "A right y axis is drawn on a line chart only; `y_min` and `y_max` set the left one, and a `stacked` chart stacks only the left one's lines. Give its series a `symbol` or `dashed()` and a `y2_title`, so the reader can tell which axis a line is read on.",
+                    "A mark line is drawn on a line chart that is not `stacked`, on upright, `grouped` bars and on a line among upright bars, and only inside the y axis' ends; the summary leaves out the ones not drawn, except past the ends. A marked point is drawn on a line only, in a line chart or among upright bars.",
+                    "A `SeriesKind::Line` series is drawn as a line on an upright `BarChart` only; a `horizontal` one draws it as a bar and warns in development. A line among bars never stacks, and on a `percent` chart it is read on the right y axis.",
+                    "A right y axis is drawn on a line chart and on an upright bar chart, though not for a `percent` chart's bars, which share one scale; `y_min` and `y_max` set the left one, a `stacked` line chart stacks only the left one's lines, and stacked bars stack apart on each axis. Give its series a `symbol` or `dashed()` and a `y2_title`, so the reader can tell which axis a series is read on.",
                 ]),
             lead: rsx! {
                 Text {
@@ -458,6 +499,8 @@ pub fn ChartPage() -> Element {
                     Code { source: "Slice" }
                     "s, each a name and a value. A line of another size or unit goes on a right y axis with "
                     Code { source: ".secondary_axis()" }
+                    "; in an upright bar chart, a series is drawn as a line over the bars with "
+                    Code { source: ".kind(SeriesKind::Line)" }
                     "."
                 }
                 Text {
@@ -489,8 +532,9 @@ pub fn ChartPage() -> Element {
                                 "title: \"Profit\"".to_string(),
                                 format!("x: {QUARTERS:?}"),
                                 format!(
-                                    "series: vec![Series::new(\"2025\", {PROFIT_2025:?}){}{mark}, Series::new(\"2026\", {PROFIT_2026:?})]",
-                                    profit_2025(values).0
+                                    "series: vec![Series::new(\"2025\", {PROFIT_2025:?}){}{mark}, Series::new(\"2026\", {PROFIT_2026:?}){}]",
+                                    profit_2025(values).0,
+                                    margin(values).map(|m| m.0).unwrap_or_default()
                                 ),
                             ],
                             "pie" => vec![
@@ -615,6 +659,12 @@ pub fn ChartPage() -> Element {
                         .default("true")
                         .hidden_when(is("line"))
                         .code(|_, _| vec![]),
+                    // A third series drawn as a line over the bars, on either y axis.
+                    Control::toggle("line_series", ["none", "left", "right"])
+                        .default("none")
+                        .labels(["None", "Left axis", "Right axis"])
+                        .hidden_when(is("bar"))
+                        .code(|_, _| vec![]),
                     Control::select("y_range", ["fixed", "auto"]).hidden_when(is("axes")).code(
                         |_, values| match y_range(values) {
                             Some((min, max)) => vec![format!("y_min: {min:?}"), format!("y_max: {max:?}")],
@@ -634,8 +684,8 @@ pub fn ChartPage() -> Element {
                         .code(|_, values| match axis_titles(values) {
                             Some((x, y)) => {
                                 let mut lines = vec![format!("x_title: {x:?}"), format!("y_title: {y:?}")];
-                                if conversion(values).is_some() {
-                                    lines.push("y2_title: \"Conversion\"".to_string());
+                                if let Some(title) = y2_title(values) {
+                                    lines.push(format!("y2_title: {title:?}"));
                                 }
                                 lines
                             }
@@ -670,7 +720,7 @@ pub fn ChartPage() -> Element {
                     let (y_min, y_max) = (range.map(|r| r.0), range.map(|r| r.1));
                     let y_ticks = values.str("y_ticks").parse::<usize>().ok();
                     let titles = axis_titles(&values);
-                    let y2_title = titles.and(conversion(&values)).map(|_| "Conversion".to_string());
+                    let y2_title = titles.and(y2_title(&values)).map(str::to_string);
                     let (x_title, y_title) = (
                         titles.map(|t| t.0.to_string()),
                         titles.map(|t| t.1.to_string()),
@@ -683,7 +733,8 @@ pub fn ChartPage() -> Element {
                             BarChart {
                                 title: "Profit",
                                 x: QUARTERS,
-                                series: vec![marked(&values, profit_2025(&values).1), Series::new("2026", PROFIT_2026)],
+                                series: vec![marked(&values, profit_2025(&values).1), Series::new("2026", PROFIT_2026)]
+                                    .into_iter().chain(margin(&values).map(|m| m.1)).collect::<Vec<_>>(),
                                 layout: BarLayout::from(values.str("layout").as_str()),
                                 orientation: Orientation::from(values.str("orientation").as_str()),
                                 radius: values.str("radius"),
@@ -694,7 +745,7 @@ pub fn ChartPage() -> Element {
                                     position => Some(BarLabelPosition::from(position)),
                                 },
                                 bar_width: values.str("bar_width").parse::<f32>().ok(),
-                                y_min, y_max, y_ticks, x_title, y_title,
+                                y_min, y_max, y_ticks, x_title, y_title, y2_title: y2_title.clone(),
                                                                 legend, tooltip, loading, zoom, onrange, export_button, handle: chart,
                             }
                         }),

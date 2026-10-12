@@ -37,29 +37,37 @@ pub(super) fn hit(marks: &[Mark], x: f32, y: f32) -> Option<usize> {
             .min_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
             .map(|(i, _)| i)
     };
-    match &marks.first()?.shape {
-        MarkShape::Point { .. } => by(&|mark| match mark.shape {
-            MarkShape::Point { x: mx, y: my } => Some(((mx - x).abs(), (my - y).abs())),
-            _ => None,
-        }),
-        MarkShape::Rect { .. } => by(&|mark| match mark.shape {
-            MarkShape::Rect {
-                x: left,
-                y: top,
-                width,
-                height,
-            } => Some((
-                (left - x).max(x - left - width).max(0.0),
-                (top - y).max(y - top - height).max(0.0),
-            )),
-            _ => None,
-        }),
-        MarkShape::Sector { .. } => marks.iter().position(|mark| match &mark.shape {
+    let point = |mark: &Mark| match mark.shape {
+        MarkShape::Point { x: mx, y: my } => Some(((mx - x).abs(), (my - y).abs())),
+        _ => None,
+    };
+    let rect = |mark: &Mark| match mark.shape {
+        MarkShape::Rect {
+            x: left,
+            y: top,
+            width,
+            height,
+        } => Some((
+            (left - x).max(x - left - width).max(0.0),
+            (top - y).max(y - top - height).max(0.0),
+        )),
+        _ => None,
+    };
+    if let MarkShape::Sector { .. } = marks.first()?.shape {
+        return marks.iter().position(|mark| match &mark.shape {
             MarkShape::Sector { path } => contains(&outline(path), x, y),
             _ => false,
-        }),
+        });
     }
+    if !marks.iter().any(|mark| rect(mark).is_some()) {
+        return by(&point);
+    }
+    // A line among bars wins near its points; elsewhere the bar under the pointer does.
+    by(&|mark| point(mark).filter(|(dx, dy)| dx.hypot(*dy) <= POINT_REACH)).or_else(|| by(&rect))
 }
+
+/// How far from a line's point among bars the pointer still picks it, in SVG units.
+const POINT_REACH: f32 = 12.0;
 
 /// Where a mark's tooltip and marker sit: a point itself, a bar's top centre, a slice's
 /// middle between its rims.
@@ -305,6 +313,25 @@ mod tests {
         assert_eq!(hit(&marks, 15.0, 50.0), Some(1));
         // Above both bars, nearer the first.
         assert_eq!(hit(&marks, 9.0, 5.0), Some(0));
+    }
+
+    /// A line over bars: its point wins near it, the bar under the pointer elsewhere.
+    #[test]
+    fn a_line_s_point_among_bars_wins_only_near_it() {
+        let bar = Mark {
+            series: 0,
+            index: 0,
+            value: 0.0,
+            shape: MarkShape::Rect {
+                x: 0.0,
+                y: 20.0,
+                width: 20.0,
+                height: 80.0,
+            },
+        };
+        let marks = [bar, point(1, 0, 10.0, 40.0)];
+        assert_eq!(hit(&marks, 12.0, 45.0), Some(1));
+        assert_eq!(hit(&marks, 12.0, 90.0), Some(0));
     }
 
     /// charts-rs' paths: a wedge from 12 to 3 o'clock, a donut's slice, a whole ring.

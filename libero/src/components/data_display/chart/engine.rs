@@ -2,7 +2,8 @@
 //! landed and strip its own tooltips, so the overlay and keyboard layers can be ours.
 
 use charts_rs::{
-    AxisType, Color as InkColor, DEFAULT_FONT_FAMILY, LineStep, MarkLineCategory, Position, Symbol,
+    AxisType, Color as InkColor, DEFAULT_FONT_FAMILY, LineStep, MarkLineCategory, Position,
+    SeriesCategory, Symbol,
 };
 
 use super::data::{ValueFormat, ungrouped};
@@ -163,6 +164,8 @@ pub(crate) struct SeriesExtras {
     pub(crate) mark_points: Vec<(usize, String)>,
     /// Measured on the right y axis.
     pub(crate) secondary: bool,
+    /// A line over a bar chart's bars.
+    pub(crate) line: bool,
 }
 
 /// Everything a line chart's SVG depends on, so a memo redraws only on a change.
@@ -304,12 +307,18 @@ fn label_mark_lines(svg: &str, texts: &[&str], ink: &ChartInk) -> String {
 
 /// Each marked point's value in a pill of its series' colour, above the point or, with no
 /// room there, below it; in black or white, whichever reads on the colour.
-fn pin_mark_points(svg: &str, spec: &LineSpec, marks: &[Mark]) -> String {
+fn pin_mark_points(
+    svg: &str,
+    all: &[SeriesSpec],
+    chart_width: f32,
+    ink: &ChartInk,
+    marks: &[Mark],
+) -> String {
     const HEIGHT: f32 = 20.0;
     const GAP: f32 = 6.0;
     const SIZE: f32 = 12.0;
     let mut pins = String::new();
-    for (s, series) in spec.series.iter().enumerate() {
+    for (s, series) in all.iter().enumerate() {
         for (index, text) in &series.extras.mark_points {
             let place = marks.iter().find(|m| m.series == s && m.index == *index);
             let Some(MarkShape::Point { x, y }) = place.map(|mark| &mark.shape) else {
@@ -318,7 +327,7 @@ fn pin_mark_points(svg: &str, spec: &LineSpec, marks: &[Mark]) -> String {
             let width = charts_rs::measure_text_width_family(DEFAULT_FONT_FAMILY, SIZE, text)
                 .map_or(0.0, |text| text.width())
                 + HEIGHT * 0.6;
-            let left = (x - width / 2.0).clamp(1.0, (spec.width - width - 1.0).max(1.0));
+            let left = (x - width / 2.0).clamp(1.0, (chart_width - width - 1.0).max(1.0));
             let top = match y - GAP - HEIGHT >= 1.0 {
                 true => y - GAP - HEIGHT,
                 false => y + GAP,
@@ -332,7 +341,7 @@ fn pin_mark_points(svg: &str, spec: &LineSpec, marks: &[Mark]) -> String {
                 series.color,
                 left + width / 2.0,
                 top + HEIGHT / 2.0,
-                spec.ink.on(series.color),
+                ink.on(series.color),
                 escape(text),
             ));
         }
@@ -348,9 +357,9 @@ fn ink(hex: HexColor) -> InkColor {
 }
 
 /// A point's marker, sized so every shape covers about a circle's area.
-fn symbol(spec: &LineSpec, series: &SeriesSpec) -> Symbol {
-    let (r, fill) = (spec.stroke_width + 1.0, Some(ink(series.color)));
-    match (spec.points, series.extras.symbol) {
+fn symbol(points: bool, stroke_width: f32, series: &SeriesSpec) -> Symbol {
+    let (r, fill) = (stroke_width + 1.0, Some(ink(series.color)));
+    match (points, series.extras.symbol) {
         (false, _) => Symbol::None,
         (true, PointSymbol::Circle) => Symbol::Circle(r, fill),
         (true, PointSymbol::Square) => Symbol::Rect(r * 0.9, fill),
@@ -363,7 +372,10 @@ fn symbol(spec: &LineSpec, series: &SeriesSpec) -> Symbol {
 /// would add a hover target the marks do not know. A stack draws none, its lines at sums.
 fn band(spec: &LineSpec, series: usize) -> Option<charts_rs::SeriesBand> {
     let ranges = spec.errors.get(series).filter(|_| !spec.stacked)?;
-    let values = &spec.series.get(series)?.values;
+    band_of(ranges, &spec.series.get(series)?.values)
+}
+
+fn band_of(ranges: &[Option<(f64, f64)>], values: &[Option<f64>]) -> Option<charts_rs::SeriesBand> {
     let at = |i: usize| {
         values
             .get(i)
@@ -387,6 +399,29 @@ fn band(spec: &LineSpec, series: usize) -> Option<charts_rs::SeriesBand> {
         })
 }
 
+fn bend(drawn: &mut charts_rs::Series, curve: Curve) {
+    match curve {
+        Curve::Linear => {}
+        Curve::Smooth => drawn.smooth = Some(true),
+        Curve::Step => drawn.step = Some(LineStep::End),
+    }
+}
+
+/// A right y axis like the left one, its labels behind [`AXIS2_MARK`].
+fn second_axis(y: &mut Vec<charts_rs::YAxisConfig>, unit: &Option<String>) {
+    if let Some(left) = y.first() {
+        let second = charts_rs::YAxisConfig {
+            formatter: Some(format!("{AXIS2_MARK}{{c}}{}", unit_suffix(unit.as_deref()))),
+            // `y_min` and `y_max` are the left axis' only.
+            min: None,
+            max: None,
+            ..left.clone()
+        };
+        y.truncate(1);
+        y.push(second);
+    }
+}
+
 pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
     // A stack draws its lines at their sums, not at their own values.
     let marked = match spec.stacked {
@@ -407,13 +442,9 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
             drawn.stroke_dash_array = series.dashed.then(|| DASH.to_string());
             drawn.y_axis_index = series.extras.secondary as usize;
             drawn.band = band(spec, i);
-            drawn.symbol = Some(symbol(spec, series));
+            drawn.symbol = Some(symbol(spec.points, spec.stroke_width, series));
             drawn.stack = (spec.stacked && !series.extras.secondary).then(|| "stack".to_string());
-            match spec.curve {
-                Curve::Linear => {}
-                Curve::Smooth => drawn.smooth = Some(true),
-                Curve::Step => drawn.step = Some(LineStep::End),
-            }
+            bend(&mut drawn, spec.curve);
             drawn
         })
         .collect();
@@ -451,14 +482,8 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
         y.font.color = ink(spec.ink.label);
         y.formatter = Some(format!("{AXIS_MARK}{{c}}{}", unit(&spec.unit)));
     }
-    let right = spec.series.iter().any(|series| series.extras.secondary);
-    if let Some(left) = chart.y_axis_configs.first().filter(|_| right) {
-        let second = charts_rs::YAxisConfig {
-            formatter: Some(format!("{AXIS2_MARK}{{c}}{}", unit(&spec.y2_unit))),
-            ..left.clone()
-        };
-        chart.y_axis_configs.truncate(1);
-        chart.y_axis_configs.push(second);
+    if spec.series.iter().any(|series| series.extras.secondary) {
+        second_axis(&mut chart.y_axis_configs, &spec.y2_unit);
     }
     spec.axes
         .style(&mut chart.base, &mut chart.y_axis_configs, false);
@@ -500,7 +525,7 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
         .collect();
     let svg = label_mark_lines(&svg, &texts, &spec.ink);
     let plot = Plot::of(&svg, spec.width, spec.height);
-    let svg = pin_mark_points(&svg, spec, &marks);
+    let svg = pin_mark_points(&svg, &spec.series, spec.width, &spec.ink, &marks);
     Some(Drawn {
         geometry: Geometry {
             width: spec.width,
@@ -540,7 +565,21 @@ pub(crate) struct BarSpec {
     pub(crate) ink: ChartInk,
     pub(crate) format: ValueFormat,
     pub(crate) unit: Option<String>,
+    /// The right y axis' unit, of its lines.
+    pub(crate) y2_unit: Option<String>,
+    /// The lines' look, as a line chart's.
+    pub(crate) curve: Curve,
+    pub(crate) points: bool,
+    pub(crate) stroke_width: f32,
     pub(crate) formats: &'static Formats,
+}
+
+/// The marks in the renderer's order: every bar series', then every line's.
+fn bar_marks(series: &[SeriesSpec]) -> Vec<(usize, usize, f64, &str)> {
+    let (lines, bars): (Vec<_>, Vec<_>) = expected_marks(series)
+        .into_iter()
+        .partition(|mark| series[mark.0].extras.line);
+    bars.into_iter().chain(lines).collect()
 }
 
 /// The settings a vertical and a horizontal bar chart share; both deref to the same base.
@@ -598,8 +637,8 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
             ..series.clone()
         })
         .collect();
-    // Upright and side by side, each bar stands at its own value.
-    let marked = match !spec.horizontal && spec.layout == BarLayout::Grouped {
+    // The specs carry mark lines only where a mark stands at its own value.
+    let marked = match !spec.horizontal {
         true => kept_mark_lines(&ordered, &spec.axes),
         false => Vec::new(),
     };
@@ -620,7 +659,23 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
             if let Some(lines) = marked.get(s) {
                 drawn.mark_lines = lines.iter().copied().map(renderer_mark_line).collect();
             }
+            // A line keeps out of the stacks and the bars' slots, its colour by its place.
+            if series.extras.line {
+                drawn.category = Some(SeriesCategory::Line);
+                drawn.index = Some(s);
+                drawn.stroke_dash_array = series.dashed.then(|| DASH.to_string());
+                drawn.y_axis_index = series.extras.secondary as usize;
+                drawn.symbol = Some(symbol(spec.points, spec.stroke_width, series));
+                let ranges: Vec<_> = order
+                    .iter()
+                    .map(|&i| spec.errors.get(s).and_then(|e| e.get(i).copied().flatten()))
+                    .collect();
+                drawn.band = band_of(&ranges, &series.values);
+                bend(&mut drawn, spec.curve);
+                return drawn;
+            }
             drawn.label_show = spec.value_labels;
+            drawn.y_axis_index = series.extras.secondary as usize;
             drawn.stack = (spec.layout != BarLayout::Grouped).then(|| "stack".to_string());
             drawn.colors = Some(order.iter().map(|&i| Some(ink(bar_color(s, i)))).collect());
             let ranges: Vec<Option<(f64, f64)>> = order
@@ -653,6 +708,10 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
             .format
             .format(value, spec.unit.as_deref(), spec.formats),
     };
+    let write2 = |value: f64| {
+        spec.format
+            .format(value, spec.y2_unit.as_deref(), spec.formats)
+    };
     let svg = match spec.horizontal {
         true => {
             let mut chart = charts_rs::HorizontalBarChart::new(series, x);
@@ -666,11 +725,21 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
             let mut chart = charts_rs::BarChart::new(series, x);
             style_bars!(chart, spec, unit);
             chart.stack_percent = percent;
+            chart.series.stroke_width = spec.stroke_width;
+            if spec.series.iter().any(|s| s.extras.secondary) {
+                second_axis(&mut chart.y_axis_configs, &spec.y2_unit);
+                spec.axes
+                    .style(&mut chart.base, &mut chart.y_axis_configs, false);
+            }
             fitted(&mut chart, spec.width, spec.height, |chart| {
                 let mut svg = chart.svg().ok()?;
-                if let Some(width) = y_width(&svg, AXIS_MARK, write) {
-                    if let Some(y) = chart.y_axis_configs.first_mut() {
-                        y.width = Some(width);
+                let widths = [
+                    y_width(&svg, AXIS_MARK, write),
+                    y_width(&svg, AXIS2_MARK, write2),
+                ];
+                if widths.iter().any(Option::is_some) {
+                    for (y, width) in chart.y_axis_configs.iter_mut().zip(widths) {
+                        y.width = width.or(y.width);
                     }
                     svg = chart.svg().ok()?;
                 }
@@ -680,18 +749,19 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
     };
 
     let (svg, triggers) = inert(&svg, write, "");
+    let svg = relabel(&svg, AXIS2_MARK, write2);
     let (svg, triggers) = match spec.bar_width.is_some() || spec.bar_gap != RENDERER_GAP {
-        true => relayout(&svg, triggers, &expected_marks(&ordered), spec),
+        true => relayout(&svg, triggers, &bar_marks(&ordered), spec),
         false => (svg, triggers),
     };
-    let negative: Vec<bool> = expected_marks(&ordered)
+    let negative: Vec<bool> = bar_marks(&ordered)
         .iter()
         .map(|&(_, _, value, _)| value < 0.0)
         .collect();
     let svg = round_free_ends(&svg, &triggers, &negative, spec.horizontal, spec.radius);
     let svg = relabel(&svg, LABEL_MARK, write);
     let last = spec.x.len().saturating_sub(1);
-    let marks = match_marks(&expected_marks(&ordered), &triggers)
+    let marks = match_marks(&bar_marks(&ordered), &triggers)
         .into_iter()
         .map(|mark| Mark {
             index: if spec.horizontal {
@@ -718,11 +788,13 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
         .map(|(_, text)| text.as_str())
         .collect();
     let svg = label_mark_lines(&svg, &texts, &spec.ink);
+    let plot = Plot::of(&svg, spec.width, spec.height);
+    let svg = pin_mark_points(&svg, &spec.series, spec.width, &spec.ink, &marks);
     Some(Drawn {
         geometry: Geometry {
             width: spec.width,
             height: spec.height,
-            plot: Plot::of(&svg, spec.width, spec.height),
+            plot,
             marks,
             hole: 0.0,
         },
@@ -839,7 +911,28 @@ fn relayout(
         false => (plot.left, plot.right - plot.left),
     };
     let grouped = spec.layout == BarLayout::Grouped;
-    let slots = if grouped { spec.series.len().max(1) } else { 1 };
+    // Lines take no slot; a stack takes one per y axis, as the renderer keys them.
+    let bars: Vec<usize> = (0..spec.series.len())
+        .filter(|s| !spec.series[*s].extras.line)
+        .collect();
+    let mut keys: Vec<usize> = Vec::new();
+    for &bar in &bars {
+        let key = match grouped {
+            true => bar,
+            false => spec.series[bar].extras.secondary as usize,
+        };
+        if !keys.contains(&key) {
+            keys.push(key);
+        }
+    }
+    let slot_of = |series: usize| {
+        let key = match grouped {
+            true => series,
+            false => spec.series[series].extras.secondary as usize,
+        };
+        keys.iter().position(|k| *k == key).unwrap_or(0)
+    };
+    let slots = keys.len().max(1);
     let unit = span / count as f32;
     let group = match spec.bar_width {
         Some(share) => unit * share.clamp(0.1, 1.0),
@@ -869,7 +962,7 @@ fn relayout(
             } else {
                 index
             };
-            let slot = if grouped { series } else { 0 };
+            let slot = slot_of(series);
             let from = start + unit * band as f32 + (unit - group) / 2.0;
             // Round trips through the SVG's text unchanged.
             let new: f32 = format!("{}", from + (width + gap) * slot as f32)
@@ -2300,8 +2393,121 @@ mod tests {
             ink: ChartInk::of(&Theme::DEFAULT, false),
             format: ValueFormat::Auto,
             unit: None,
+            y2_unit: None,
+            curve: Curve::Linear,
+            points: true,
+            stroke_width: 2.0,
             formats: &Formats::GERMAN,
         }
+    }
+
+    /// A line among bars: its points are marks after the bars', centred in their bands,
+    /// and it takes no slot of the group.
+    #[test]
+    fn a_line_over_bars_is_harvested_after_them() {
+        let mut spec = bars(BarLayout::Grouped, false);
+        spec.series[1].extras.line = true;
+        spec.bar_width = Some(0.6);
+        let drawn = draw_bar(&spec).expect("drawn");
+        let marks = &drawn.geometry.marks;
+
+        assert_eq!(marks.len(), 5, "{marks:?}");
+        assert!(
+            marks[..2]
+                .iter()
+                .all(|m| m.series == 0 && matches!(m.shape, MarkShape::Rect { .. }))
+        );
+        assert!(
+            marks[2..]
+                .iter()
+                .all(|m| m.series == 1 && matches!(m.shape, MarkShape::Point { .. }))
+        );
+        let plot = drawn.geometry.plot;
+        let band = (plot.right - plot.left) / 3.0;
+        for mark in &marks[2..] {
+            let MarkShape::Point { x, .. } = mark.shape else {
+                unreachable!()
+            };
+            let middle = plot.left + band * (mark.index as f32 + 0.5);
+            assert!((x - middle).abs() < 1.0, "{x} vs {middle}");
+        }
+        // The one bar series fills the whole 60% of its band.
+        let (_, _, width, _) = rect(&marks[0]);
+        assert!(
+            (width - band * 0.6).abs() < 1.0,
+            "{width} vs {}",
+            band * 0.6
+        );
+    }
+
+    /// A line on the right axis is measured by its own scale and unit.
+    #[test]
+    fn a_line_over_bars_can_take_the_right_axis() {
+        let mut chart = bars(BarLayout::Stacked, false);
+        chart.series.push(SeriesSpec {
+            extras: SeriesExtras {
+                line: true,
+                secondary: true,
+                ..Default::default()
+            },
+            ..spec("Share", &[Some(0.2), Some(0.5), Some(0.4)])
+        });
+        chart.y2_unit = Some("%".to_string());
+        chart.axes.y2_title = Some("Share".to_string());
+        let drawn = draw_bar(&chart).expect("drawn");
+
+        assert_eq!(drawn.geometry.marks.len(), 8);
+        // The right axis writes its unit, the left one none; its title stands beside it.
+        assert_eq!(drawn.svg.matches("%\n</text>").count(), 7, "{}", drawn.svg);
+        assert!(
+            drawn.svg.contains("rotate(90)\"") && drawn.svg.contains("Share"),
+            "{}",
+            drawn.svg
+        );
+    }
+
+    /// A stacked bar on the right axis is a stack of its own beside the left one, here too
+    /// when the bars are set again at their own width.
+    #[test]
+    fn a_bar_on_the_right_axis_stacks_apart() {
+        for bar_width in [None, Some(0.8)] {
+            let mut chart = bars(BarLayout::Stacked, false);
+            chart.series[1].extras.secondary = true;
+            chart.bar_width = bar_width;
+            let drawn = draw_bar(&chart).expect("drawn");
+            let marks = &drawn.geometry.marks;
+            let at = |series: usize| {
+                let mark = marks
+                    .iter()
+                    .find(|m| m.series == series && m.index == 0)
+                    .expect("a mark");
+                rect(mark)
+            };
+            let (left, right) = (at(0), at(1));
+            assert!(left.0 + left.2 <= right.0 + 0.5, "{left:?} {right:?}");
+        }
+    }
+
+    /// A line among bars pins its marked point by its value, as a line chart does.
+    #[test]
+    fn a_line_over_bars_pins_its_marked_point() {
+        let mut chart = bars(BarLayout::Grouped, false);
+        chart.series.push(SeriesSpec {
+            extras: SeriesExtras {
+                line: true,
+                mark_points: vec![(1, "Peak 7".to_string())],
+                ..Default::default()
+            },
+            ..spec("Target", &[Some(4.0), Some(7.0), Some(5.0)])
+        });
+        let drawn = draw_bar(&chart).expect("drawn");
+        assert_eq!(
+            drawn.svg.matches("class=\"ct-pin\"").count(),
+            1,
+            "{}",
+            drawn.svg
+        );
+        assert!(drawn.svg.contains("Peak 7"), "{}", drawn.svg);
     }
 
     fn rect(mark: &Mark) -> (f32, f32, f32, f32) {

@@ -43,6 +43,8 @@ pub struct ChartLabels {
     pub y2_axis: &'static str,
     /// The summary of a line chart with a right y axis: `{names}` the series it measures.
     pub secondary: &'static str,
+    /// The summary of a bar chart with lines: `{names}` the series drawn as lines.
+    pub lines: &'static str,
     /// The summary of a stacked line chart: what its heights mean.
     pub stacked: &'static str,
     /// After `stacked` when a line is on the right y axis, which never stacks.
@@ -103,6 +105,7 @@ impl ChartLabels {
         y_axis: "Y axis: {title}.",
         y2_axis: "Right y axis: {title}.",
         secondary: "On the right y axis: {names}.",
+        lines: "Drawn as a line over the bars: {names}.",
         stacked: "Stacked: each line adds to the ones before it, the top one is the total.",
         secondary_unstacked: "Lines on the right y axis are not stacked.",
         zoom_keys: "Plus and minus zoom, 0 resets the zoom.",
@@ -148,6 +151,7 @@ impl ChartLabels {
         y_axis: "Y-Achse: {title}.",
         y2_axis: "Rechte Y-Achse: {title}.",
         secondary: "Auf der rechten Y-Achse: {names}.",
+        lines: "Als Linie über den Balken: {names}.",
         stacked: "Gestapelt: jede Linie addiert sich zu den vorigen, die oberste ist die Summe.",
         secondary_unstacked: "Linien auf der rechten Y-Achse sind nicht gestapelt.",
         zoom_keys: "Plus und Minus zoomen, 0 setzt den Zoom zurück.",

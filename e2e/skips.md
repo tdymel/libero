@@ -15,6 +15,8 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `audio::the_bars_rise_with_the_decoded_tone` | native | Blitz has no Web Audio to decode with |
 | `bar_chart::a_click_on_a_bar_reports_it` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `bar_chart::a_click_on_a_bar_reports_it` | native | charts are parked on Blitz |
+| `bar_chart::a_pointer_on_a_line_s_point_picks_it` | ios | 3416: the simulator's tap or drag did not drive the page |
+| `bar_chart::a_pointer_on_a_line_s_point_picks_it` | native | charts are parked on Blitz |
 | `bar_chart::hovering_shows_the_bar_s_tooltip_and_marker` | android | a touch screen has no hover |
 | `bar_chart::hovering_shows_the_bar_s_tooltip_and_marker` | ios | a touch screen has no hover |
 | `bar_chart::hovering_shows_the_bar_s_tooltip_and_marker` | native | charts are parked on Blitz |
@@ -22,6 +24,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `bar_chart::lying_bars_zoom_and_brush_down_their_side` | native | charts are parked on Blitz |
 | `bar_chart::the_keys_follow_lying_bars` | native | charts are parked on Blitz |
 | `bar_chart::the_keys_read_a_bar_s_range` | native | charts are parked on Blitz |
+| `bar_chart::the_keys_walk_onto_a_line_among_bars` | native | charts are parked on Blitz |
 | `bar_chart::the_keys_walk_the_bars` | native | charts are parked on Blitz |
 | `bar_chart::the_legend_hides_and_shows_a_series` | native | charts are parked on Blitz |
 | `bottom_navigation::a_fixed_bar_docks_everywhere` | macos desktop | 3432: WKWebView: the fixed bar never docks |

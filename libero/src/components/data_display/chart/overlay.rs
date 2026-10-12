@@ -137,6 +137,8 @@ pub(super) struct OverlaySeries {
     pub(super) dashed: bool,
     /// The shape its points are drawn in, for its legend key; `None`, a plain swatch.
     pub(super) symbol: Option<crate::theme::PointSymbol>,
+    /// A line among bars: its legend key is a stroke.
+    pub(super) line: bool,
     /// The series' own unit; unset, the chart's.
     pub(super) unit: Option<String>,
     /// Each value's error range, written after it.

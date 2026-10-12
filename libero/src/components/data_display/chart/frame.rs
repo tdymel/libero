@@ -130,6 +130,15 @@ static CHART_BASE_SX: StaticSx = StaticSx::new(|| {
             sx().background_color("transparent")
                 .box_shadow("inset 0 0 0 2px var(--lsx-chart-swatch)"),
         )
+        // A line among bars is keyed by a stroke, the bars by squares.
+        .selector(
+            "& [data-chart-swatch][data-line]",
+            sx().height("3px").border_radius("0"),
+        )
+        .selector(
+            "& [data-chart-swatch][data-line][data-hidden]",
+            sx().box_shadow("none").opacity("0.5").background_color("var(--lsx-chart-swatch)"),
+        )
         // A dashed line's key is a dash, as drawn.
         .selector(
             "& [data-chart-swatch][data-dashed]",
@@ -355,6 +364,7 @@ impl Frame {
                 color: series.color.clone(),
                 dashed: series.dashed,
                 symbol: series.symbol,
+                line: series.line,
                 hidden: hidden_names.contains(&series.name),
             })
             .collect();
@@ -607,6 +617,7 @@ pub(super) fn series_specs(theme: &Theme, forced: bool, series: &[Series]) -> Ve
                 mark_lines: Vec::new(),
                 mark_points: Vec::new(),
                 secondary: series.secondary_axis,
+                line: false,
             },
         })
         .collect()
@@ -627,6 +638,7 @@ pub(super) fn overlay_series(
             color: spec.color.to_string(),
             dashed: spec.dashed,
             symbol: symbols.then_some(spec.extras.symbol),
+            line: spec.extras.line,
             unit: series.get(i).and_then(|series| series.unit.clone()),
             errors: series
                 .get(i)

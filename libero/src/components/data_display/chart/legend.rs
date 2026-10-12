@@ -106,6 +106,7 @@ pub(super) struct LegendEntry {
     pub(super) color: String,
     pub(super) dashed: bool,
     pub(super) symbol: Option<PointSymbol>,
+    pub(super) line: bool,
     pub(super) hidden: bool,
 }
 
@@ -135,6 +136,7 @@ pub(super) fn ChartLegend(
                             "data-chart-swatch": true,
                             "data-hidden": entry.hidden.then_some("true"),
                             "data-dashed": entry.dashed.then_some("true"),
+                            "data-line": entry.line.then_some("true"),
                             "data-symbol": entry.symbol.map(|symbol| symbol.as_str()),
                             style: "--lsx-chart-swatch:{entry.color}",
                         }

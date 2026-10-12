@@ -2,11 +2,12 @@ use dioxus::prelude::*;
 
 use super::{
     ChartRange, Series, XValues,
-    engine::{self, Axes, BarSpec, SeriesSpec},
+    engine::{self, Axes, BarSpec, SeriesExtras, SeriesSpec},
     export::ExportSource,
     frame::{
         Frame, Interaction, axis_titles, band_summary, chart_unit, hex, mark_line_specs,
-        overlay_series, series_specs, shown_places, summary, use_plot_size, with_extras,
+        mark_point_specs, overlay_series, series_specs, shown_places, summary, use_plot_size,
+        with_extras,
     },
     legend::use_hidden_series,
     props::chart_props,
@@ -15,6 +16,7 @@ use super::{
 use crate::{
     components::common::{Input, Orientation, names_itself, use_name_warning},
     hooks::{use_accessibility, use_formats, use_localization, use_root_id, use_theme},
+    localization::fill,
     theme::{BarLabelPosition, BarLayout, ChartInk, chart_palette},
     tokens::Size,
     utils::warn,
@@ -25,7 +27,8 @@ chart_props! {
         /// The categories, one per bar or group of bars.
         #[props(into)]
         x: XValues,
-        /// The bars' series, each with one value per x value.
+        /// The bars' series, each with one value per x value. Upright, a
+        /// [`SeriesKind::Line`](super::SeriesKind) one is drawn as a line over the bars.
         series: Vec<Series>,
         /// Side by side, stacked, or stacked to 100%. Unset, the theme's.
         #[props(default, into)]
@@ -56,6 +59,10 @@ chart_props! {
         /// Along the values: what they measure. Beside them, or under them when `horizontal`.
         #[props(default, into)]
         y_title: Option<String>,
+        /// Beside the right y axis, read downward: what its [`Series::secondary_axis`] series
+        /// measure. An upright chart only.
+        #[props(default, into)]
+        y2_title: Option<String>,
         /// `"inside"` the bar or `"outside"` past its end; a stack writes inside. Unset, the
         /// theme's, else chart-wide: inside on a `horizontal` chart or once any shown series
         /// has error ranges, past the end otherwise.
@@ -129,16 +136,42 @@ pub fn BarChart(props: BarChartProps) -> Element {
         .iter()
         .all(|series| series.values.iter().all(Option::is_none));
     let forced = use_accessibility().forced_colors();
-    // Bars are never dashed, so neither are their legend keys.
+    let horizontal = props.orientation.copied_or(Orientation::Vertical) == Orientation::Horizontal;
+    let layout = props.layout.copied_or(theme.chart.bar_layout);
+    // Bars are never dashed, so neither are their legend keys. A lying chart draws its
+    // lines as bars; a percent one measures them on the right axis, off the shares, and
+    // keeps its bars on the left. A lying chart has one value axis.
+    let percent = layout == BarLayout::Percent;
     let solid = |forced: bool| -> Vec<SeriesSpec> {
         series_specs(theme, forced, &props.series)
             .into_iter()
-            .map(|spec| SeriesSpec {
-                dashed: false,
-                ..spec
+            .zip(&props.series)
+            .map(|(spec, series)| {
+                let line = series.is_line() && !horizontal;
+                let right = match line {
+                    true => spec.extras.secondary || percent,
+                    false => spec.extras.secondary && !percent,
+                };
+                SeriesSpec {
+                    dashed: spec.dashed && line,
+                    extras: SeriesExtras {
+                        line,
+                        secondary: right && !horizontal,
+                        ..spec.extras
+                    },
+                    ..spec
+                }
             })
             .collect()
     };
+    let lying_lines = horizontal && props.series.iter().any(Series::is_line);
+    use_hook(move || {
+        if lying_lines {
+            warn(
+                "BarChart: a `horizontal` chart draws no lines; its `SeriesKind::Line` series are bars.",
+            );
+        }
+    });
     let mut all_specs = solid(forced);
     let names: Vec<String> = all_specs.iter().map(|s| s.name.clone()).collect();
     let hidden = use_hidden_series(
@@ -148,11 +181,8 @@ pub fn BarChart(props: BarChartProps) -> Element {
         &names,
     );
     let shown = shown_places(&all_specs, &hidden.get());
-    let horizontal = props.orientation.copied_or(Orientation::Vertical) == Orientation::Horizontal;
     let unit = chart_unit(&props.unit, &props.series);
-    let layout = props.layout.copied_or(theme.chart.bar_layout);
     // Shares run 0 to 100%: raw bounds would stretch them.
-    let percent = layout == BarLayout::Percent;
     let ignored_bounds = percent && (props.y_min.is_some() || props.y_max.is_some());
     use_hook(move || {
         if ignored_bounds {
@@ -161,6 +191,23 @@ pub fn BarChart(props: BarChartProps) -> Element {
             );
         }
     });
+    let side = |right: bool| -> Vec<Series> {
+        props
+            .series
+            .iter()
+            .zip(&all_specs)
+            .filter(|(_, spec)| spec.extras.secondary == right)
+            .map(|(series, _)| series.clone())
+            .collect()
+    };
+    let (right, left) = (side(true), side(false));
+    // Each y axis writes the unit its series share.
+    let y2_unit = chart_unit(&None, &right).or(props.unit.clone());
+    let lines: Vec<String> = all_specs
+        .iter()
+        .filter(|spec| spec.extras.line)
+        .map(|spec| spec.name.clone())
+        .collect();
     // In a stack a label sits on its own segment, never on the next one's.
     let labels_inside = layout != BarLayout::Grouped
         || match props
@@ -179,12 +226,32 @@ pub fn BarChart(props: BarChartProps) -> Element {
         let unit = series.unit.as_deref().or(unit.as_deref());
         props.value_format.format(value, unit, formats)
     };
-    // Only upright bars side by side stand at their own values.
+    // Only upright bars side by side stand at their own values; a line always does.
     let upright_grouped = !horizontal && layout == BarLayout::Grouped;
-    let marked = match upright_grouped {
-        true => mark_line_specs(&labels, &mut all_specs, &props.series, write),
-        false => Vec::new(),
-    };
+    let marking: Vec<Series> = props
+        .series
+        .iter()
+        .zip(&all_specs)
+        .map(|(series, spec)| Series {
+            mark_lines: match spec.extras.line || upright_grouped {
+                true => series.mark_lines.clone(),
+                false => Vec::new(),
+            },
+            mark_points: match spec.extras.line {
+                true => series.mark_points.clone(),
+                false => Vec::new(),
+            },
+            ..series.clone()
+        })
+        .collect();
+    let mut marked = mark_line_specs(&labels, &mut all_specs, &marking, write);
+    marked.extend(mark_point_specs(
+        &labels,
+        &mut all_specs,
+        &marking,
+        &x,
+        write,
+    ));
     let spec = BarSpec {
         width,
         height,
@@ -207,7 +274,7 @@ pub fn BarChart(props: BarChartProps) -> Element {
             ticks: props.y_ticks.unwrap_or(theme.chart.y_ticks),
             x_title: props.x_title.clone(),
             y_title: props.y_title.clone(),
-            y2_title: None,
+            y2_title: props.y2_title.clone(),
         },
         labels_inside,
         bar_colors: shown
@@ -234,7 +301,11 @@ pub fn BarChart(props: BarChartProps) -> Element {
         grid: props.grid.unwrap_or(theme.chart.grid),
         ink: ChartInk::of(theme, forced),
         format: props.value_format,
-        unit: unit.clone(),
+        unit: chart_unit(&props.unit, &left),
+        y2_unit,
+        curve: theme.chart.curve,
+        points: theme.chart.points && window.1 - window.0 <= theme.chart.points_limit,
+        stroke_width: theme.chart.stroke_width,
         formats,
     };
     // The file keeps the normal palette under forced colours.
@@ -261,7 +332,19 @@ pub fn BarChart(props: BarChartProps) -> Element {
             if upright_grouped {
                 sentences.extend(band_summary(&labels, &props.series, write));
             }
-            sentences.extend(axis_titles(&labels, &props.x_title, &props.y_title, &None));
+            if !lines.is_empty() {
+                sentences.push(fill(labels.lines, &[("names", &lines.join(", "))]));
+            }
+            if !right.is_empty() {
+                let names: Vec<&str> = right.iter().map(|series| series.name.as_str()).collect();
+                sentences.push(fill(labels.secondary, &[("names", &names.join(", "))]));
+            }
+            sentences.extend(axis_titles(
+                &labels,
+                &props.x_title,
+                &props.y_title,
+                &props.y2_title.clone().filter(|_| !right.is_empty()),
+            ));
             sentences
         }
     };
@@ -508,6 +591,81 @@ mod tests {
             auto,
             drawing(render(|| chart(Some(BarLabelPosition::Outside))))
         );
+    }
+
+    /// A line series is drawn as a line over the bars, keyed by a stroke and named in the
+    /// summary; lying, it is a bar like the rest.
+    #[test]
+    fn a_line_series_is_drawn_over_the_bars() {
+        fn chart(orientation: Orientation) -> Element {
+            rsx! {
+                LiberoProvider {
+                    BarChart {
+                        title: "Sales",
+                        x: ["Q1", "Q2"],
+                        orientation,
+                        y2_title: "Margin",
+                        series: vec![
+                            Series::new("Revenue", [3.0, 5.0]),
+                            Series::new("Margin", [12.0, 18.0])
+                                .unit("%")
+                                .kind(crate::components::data_display::SeriesKind::Line)
+                                .mark_point(crate::components::data_display::MarkPoint::Max)
+                                .secondary_axis(),
+                        ],
+                    }
+                }
+            }
+        }
+        let upright = render(|| chart(Orientation::Vertical));
+        assert_eq!(bars(&upright), 3, "{upright}");
+        assert!(upright.contains("data-line=\"true\""), "{upright}");
+        assert!(
+            upright.contains("Drawn as a line over the bars: Margin."),
+            "{upright}"
+        );
+        assert!(
+            upright.contains("On the right y axis: Margin."),
+            "{upright}"
+        );
+        assert!(upright.contains("Right y axis: Margin."), "{upright}");
+        assert!(
+            upright.contains("Margin: Highest marked at Q2"),
+            "{upright}"
+        );
+
+        let lying = render(|| chart(Orientation::Horizontal));
+        assert_eq!(bars(&lying), 4, "{lying}");
+        assert!(!lying.contains("data-line=\"true\""), "{lying}");
+        assert!(!lying.contains("On the right y axis"), "{lying}");
+        assert!(!lying.contains("marked at"), "{lying}");
+    }
+
+    /// A bar may stand on the right axis; a percent chart keeps its bars on the left.
+    #[test]
+    fn a_bar_takes_the_right_axis_unless_shares() {
+        fn chart(layout: BarLayout) -> Element {
+            rsx! {
+                LiberoProvider {
+                    BarChart {
+                        title: "Sales",
+                        x: ["Q1", "Q2"],
+                        layout,
+                        series: vec![
+                            Series::new("Revenue", [3.0, 5.0]),
+                            Series::new("Visits", [1200.0, 1800.0]).secondary_axis(),
+                        ],
+                    }
+                }
+            }
+        }
+        let grouped = render(|| chart(BarLayout::Grouped));
+        assert!(
+            grouped.contains("On the right y axis: Visits."),
+            "{grouped}"
+        );
+        let percent = render(|| chart(BarLayout::Percent));
+        assert!(!percent.contains("On the right y axis"), "{percent}");
     }
 
     #[test]

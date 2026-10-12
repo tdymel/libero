@@ -13,7 +13,8 @@ mod zoom;
 
 pub use bar_chart::{BarChart, BarChartProps};
 pub use data::{
-    ChartColor, ChartPoint, MarkLine, MarkPoint, Series, Slice, Value, ValueFormat, XValues,
+    ChartColor, ChartPoint, MarkLine, MarkPoint, Series, SeriesKind, Slice, Value, ValueFormat,
+    XValues,
 };
 pub use export::{ChartHandle, use_chart};
 pub use line_chart::{LineChart, LineChartProps};

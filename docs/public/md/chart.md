@@ -15,7 +15,8 @@ A chart only draws. To show its values as a table too, put them in a
 
 Lines and bars take one or more `Series` over a shared x axis; a pie takes
 `Slice`s, each a name and a value. A line of another size or unit goes on a
-right y axis with `.secondary_axis()`.
+right y axis with `.secondary_axis()`; in an upright bar chart, a series is
+drawn as a line over the bars with `.kind(SeriesKind::Line)`.
 
 Lines and bars zoom and pan their x axis with `zoom` and brush a range for
 `onrange`. Every chart exports as SVG or PNG through a `use_chart()` handle or
@@ -334,6 +335,37 @@ fn Demo() -> Element {
 }
 ```
 
+`.kind(SeriesKind::Line)` draws a series as a line over the bars of an upright
+`BarChart`, through the middle of each category, keyed by a stroke in the
+legend. It never joins a stack; with `.secondary_axis()` it is read on the right
+axis, titled by `y2_title`. The tooltip, the legend and the keys keep the
+series' order. A `LineChart` given the same series draws them all as lines.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{BarChart, Series, SeriesKind};
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        BarChart {
+            title: "Sales and margin",
+            x: ["Q1", "Q2", "Q3", "Q4"],
+            series: vec![
+                Series::new("2025", [120.0, 132.0, 101.0, 134.0]),
+                Series::new("2026", [140.0, 128.0, 150.0, 162.0]),
+                Series::new("Margin", [18.0, 21.0, 15.0, 24.0])
+                    .unit("%")
+                    .kind(SeriesKind::Line)
+                    .secondary_axis(),
+            ],
+            y_title: "Sales",
+            y2_title: "Margin",
+        }
+    }
+}
+```
+
 `stacked: true` draws each line on top of the ones before it, so the top one is
 the total; with `area`, each fills down to the line below. The tooltip, the keys
 and the summary keep each line's own value, and the summary says the top line is
@@ -511,7 +543,7 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `x` | `XValues` | required | The categories, one per bar or group of bars. |
-| `series` | `Vec<Series>` | required | The bars' series, each with one value per x value. `None` leaves no bar. |
+| `series` | `Vec<Series>` | required | The bars' series, each with one value per x value. `None` leaves no bar. Upright, a `.kind(SeriesKind::Line)` one is drawn as a line over the bars. |
 | `title` | `Option<String>` | | Shown above the chart, and its accessible name. |
 | `description` | `Option<String>` | | A sentence under the title: what to read from the chart. |
 | `layout` | `BarLayout` | `grouped` | `grouped` side by side, `stacked`, or `percent`: stacked to 100%. |
@@ -523,6 +555,7 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `y_ticks` | `Option<usize>` | `6` | The steps the value axis is cut into: 4 writes 5 labels. |
 | `x_title` | `Option<String>` | | Along the categories: what they are. Under them, or beside them when `horizontal`. |
 | `y_title` | `Option<String>` | | Along the values: what they measure. Beside them, or under them when `horizontal`. |
+| `y2_title` | `Option<String>` | | Beside the right y axis, read downward: what its `Series::secondary_axis()` series measure. An upright chart only. |
 | `value_label_position` | `BarLabelPosition` | chart-wide: inside on a `horizontal` chart or once any shown series has error ranges, past the end otherwise | `inside` the bar, in the ink that reads on it, or `outside` past its end. A stack always writes inside. |
 | `bar_width` | `Option<f32>` | 5 px off each side of the band | The share of a category's band its bars fill, clamped to `0.1..=1`. |
 | `bar_gap` | `Option<f32>` | `3` | Between two bars of a group, in pixels. |
@@ -604,9 +637,9 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 - A hidden summary gives the x range and each series' lowest and highest value,
   and where the highest is, then each mark line's name and value and each marked
   point's place and value, each line's error band and each upright grouped
-  series' error bars with their outer ends, the series on the right y axis, the axes'
-  titles and, stacked, that the top line is the total; a pie's, the total, then each
-  slice's value and share.
+  series' error bars with their outer ends, the series drawn as a line over
+  bars, the series on the right y axis, the axes' titles and, stacked, that the
+  top line is the total; a pie's, the total, then each slice's value and share.
 - The plot is one tab stop, a `role="application"` described as a chart, so a
   screen reader hands it the arrows. Each point the keys reach is announced, as
   "This week, Tue: 132" or "Chrome: 62, 62%."
@@ -614,8 +647,9 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   shows, struck through when hidden. The last shown one's button is
   `aria-disabled`. Should `hidden` or `default_hidden` name every one, the plot
   and the summary say "All series are hidden." and the legend stays. A dashed
-  line's key is a dash, as drawn; once a line sets a
-  `symbol`, each key is its line's point shape.
+  line's key is a dash, as drawn; once a line sets a `symbol`, each key is its
+  line's point shape. A line among bars is keyed by a short stroke, the bars by
+  squares.
 - On a touch screen a tap pins a point's tooltip, a second tap on it clicks; a
   vertical swipe still scrolls the page.
 - With `zoom`, the shown range is announced once a zoom or pan settles, as
@@ -667,14 +701,19 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 - `zoom` and `onrange` are for lines and bars; a pie exports only.
 - An export keeps the normal palette in forced colours. `png()` is `None` on
   Blitz and on the server, and the PNG button says it could not save.
-- A mark line is drawn on a line chart that is not `stacked` and on upright,
-  `grouped` bars, and only inside the y axis' ends; the summary leaves out the
-  ones not drawn, except past the ends. A marked point is drawn on a line chart
-  only.
-- A right y axis is drawn on a line chart only; `y_min` and `y_max` set the left
-  one, and a `stacked` chart stacks only the left one's lines. Give its series a
-  `symbol` or `dashed()` and a `y2_title`, so the reader can tell which axis a
-  line is read on.
+- A mark line is drawn on a line chart that is not `stacked`, on upright,
+  `grouped` bars and on a line among upright bars, and only inside the y axis'
+  ends; the summary leaves out the ones not drawn, except past the ends. A
+  marked point is drawn on a line only, in a line chart or among upright bars.
+- A `SeriesKind::Line` series is drawn as a line on an upright `BarChart` only;
+  a `horizontal` one draws it as a bar and warns in development. A line among
+  bars never stacks, and on a `percent` chart it is read on the right y axis.
+- A right y axis is drawn on a line chart and on an upright bar chart, though
+  not for a `percent` chart's bars, which share one scale; `y_min` and `y_max`
+  set the left one, a `stacked` line chart stacks only the left one's lines, and
+  stacked bars stack apart on each axis. Give its series a `symbol` or
+  `dashed()` and a `y2_title`, so the reader can tell which axis a series is
+  read on.
 
 ## Theme defaults
 

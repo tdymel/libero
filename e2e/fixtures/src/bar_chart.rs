@@ -1,8 +1,8 @@
-//! `BarChart`: grouped upright bars, and stacked lying ones with their values, with
-//! read-outs of the active bar, the clicks and the hidden series.
+//! `BarChart`: grouped upright bars, stacked lying ones with their values, and a line over
+//! bars, with read-outs of the active bar, the clicks and the hidden series.
 
 use dioxus::prelude::*;
-use libero::components::{BarChart, ChartPoint, ChartRange, Series};
+use libero::components::{BarChart, ChartPoint, ChartRange, MarkPoint, Series, SeriesKind};
 
 use crate::Routes;
 
@@ -11,6 +11,7 @@ pub const ROUTES: Routes = &[
     ("/bar-chart/stacked", || rsx! { Stacked {} }),
     ("/bar-chart/styled", || rsx! { Styled {} }),
     ("/bar-chart/zoom", || rsx! { Zoomable {} }),
+    ("/bar-chart/line", || rsx! { WithLine {} }),
 ];
 
 fn series() -> Vec<Series> {
@@ -112,5 +113,34 @@ fn Zoomable() -> Element {
             }
         }
         p { id: "range", "{range}" }
+    }
+}
+
+/// A line between two bar series, on the right axis with its highest point marked.
+#[component]
+fn WithLine() -> Element {
+    let mut active = use_signal(String::new);
+    rsx! {
+        div { max_width: "480px",
+            BarChart {
+                id: "chart",
+                title: "Sales",
+                x: ["Q1", "Q2", "Q3"],
+                y2_title: "Margin",
+                series: vec![
+                    Series::new("Revenue", [120, 132, 101]),
+                    Series::new("Margin", [12, 18, 9])
+                        .unit("%")
+                        .kind(SeriesKind::Line)
+                        .mark_point(MarkPoint::Max)
+                        .secondary_axis(),
+                    Series::new("Costs", [80, 90, 70]),
+                ],
+                onactivechange: move |point: Option<ChartPoint>| {
+                    active.set(point.as_ref().map(describe).unwrap_or_default())
+                },
+            }
+        }
+        p { id: "active", "{active}" }
     }
 }

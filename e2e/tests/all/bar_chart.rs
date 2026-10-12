@@ -342,6 +342,79 @@ e2e::scenario!(
     native: skip("charts are parked on Blitz")
 );
 
+/// A line among bars (3463): drawn over them, keyed by a stroke, its highest point pinned.
+#[test]
+fn a_line_is_drawn_over_the_bars_and_keyed_by_a_stroke() {
+    e2e::browser::block_on(async {
+        let fixture = Fixture::open("/bar-chart/line", Viewport::Desktop)
+            .await
+            .unwrap();
+        wait::for_visible(&fixture.page, "#chart [data-chart-drawing] path")
+            .await
+            .unwrap();
+        let bars: usize = e2e::js(
+            &fixture.page,
+            "[...document.querySelectorAll('#chart [data-chart-drawing] path')] \
+             .filter(p => p.getAttribute('fill') && p.getAttribute('fill') !== 'none').length",
+        )
+        .await;
+        assert_eq!(bars, 6);
+        let keys: Vec<bool> = e2e::js(
+            &fixture.page,
+            "[...document.querySelectorAll('#chart [data-chart-swatch]')] \
+             .map(s => s.hasAttribute('data-line'))",
+        )
+        .await;
+        assert_eq!(keys, [false, true, false]);
+        let pins: Vec<String> = e2e::js(
+            &fixture.page,
+            "[...document.querySelectorAll('#chart .ct-pin text')].map(t => t.textContent.trim())",
+        )
+        .await;
+        assert!(pins.len() == 1 && pins[0].starts_with("18"), "{pins:?}");
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Up and down cross the series in their written order, the line between the bars.
+async fn line_keys<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(LAYER).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    reads(d, "#active", "Revenue Q1 120", "the first ArrowRight").await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    reads(d, "#active", "Margin Q1 12", "ArrowDown onto the line").await?;
+    eventually(d, "the line's tooltip", async |d| {
+        Ok(d.exists(TOOLTIP).await? && d.text(TOOLTIP).await?.contains("Margin"))
+    })
+    .await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    reads(d, "#active", "Costs Q1 80", "ArrowDown off the line").await
+}
+
+e2e::scenario!(
+    the_keys_walk_onto_a_line_among_bars,
+    "/bar-chart/line",
+    line_keys,
+    native: skip("charts are parked on Blitz")
+);
+
+/// A pointer on the line's point picks it over the bar beneath.
+async fn line_point<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let pin = d.rect("#chart .ct-pin rect").await?;
+    // The pin stands 6 px above its point.
+    d.click_at(pin.x + pin.width / 2.0, pin.y + pin.height + 6.0)
+        .await?;
+    reads(d, "#active", "Margin Q2 18", "a click on the line's point").await
+}
+
+e2e::scenario!(
+    a_pointer_on_a_line_s_point_picks_it,
+    "/bar-chart/line",
+    line_point,
+    native: skip("charts are parked on Blitz"),
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
+);
+
 const PLUS: keyboard::Key = keyboard::Key {
     key: "+",
     code: "Equal",

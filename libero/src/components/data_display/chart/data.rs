@@ -206,8 +206,19 @@ pub struct Series {
     pub mark_lines: Vec<MarkLine>,
     /// A line's lowest or highest point, its value pinned by it.
     pub mark_points: Vec<MarkPoint>,
-    /// Measured on a line chart's second y axis, at the right.
+    /// Measured on the second y axis, at the right.
     pub secondary_axis: bool,
+    /// How the series is drawn. Unset, the chart's own kind.
+    pub kind: Option<SeriesKind>,
+}
+
+/// What a series is drawn as, where a chart can draw more than its own kind.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SeriesKind {
+    Bar,
+    /// A line over the bars of an upright [`BarChart`](super::BarChart), through each
+    /// category's middle.
+    Line,
 }
 
 impl Series {
@@ -228,6 +239,7 @@ impl Series {
             mark_lines: Vec::new(),
             mark_points: Vec::new(),
             secondary_axis: false,
+            kind: None,
         }
     }
 
@@ -304,11 +316,26 @@ impl Series {
         self
     }
 
-    /// Measured on a line chart's y axis at the right, by its own scale and unit: for a
-    /// series of another size or kind, `Series::new("Rain", [12, 30]).unit("mm").secondary_axis()`.
+    /// Measured on a y axis at the right, by its own scale and unit: for a series of
+    /// another size or kind, `Series::new("Rain", [12, 30]).unit("mm").secondary_axis()`.
+    /// A line chart's, or an upright bar chart's: a line always, a bar unless the chart is
+    /// `percent`, where the bars share one scale.
     pub fn secondary_axis(mut self) -> Self {
         self.secondary_axis = true;
         self
+    }
+
+    /// Drawn as another kind than the chart's: a line over the bars of an upright bar
+    /// chart, `Series::new("Target", [130, 140]).kind(SeriesKind::Line)`. A line chart
+    /// draws every series as a line.
+    pub fn kind(mut self, kind: SeriesKind) -> Self {
+        self.kind = Some(kind);
+        self
+    }
+
+    /// Drawn as a line in a bar chart.
+    pub(crate) fn is_line(&self) -> bool {
+        self.kind == Some(SeriesKind::Line)
     }
 }
 
