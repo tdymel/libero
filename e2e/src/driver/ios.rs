@@ -163,6 +163,9 @@ impl Ios {
             ios.keep_failure();
             return Err(error);
         }
+        // Two quick taps would zoom the page instead of making a double click (3481).
+        ios.bridge
+            .run("document.documentElement.style.touchAction = 'manipulation'")?;
         Ok(ios)
     }
 
