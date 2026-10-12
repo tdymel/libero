@@ -45,15 +45,21 @@ fn open(page: &mut Page) {
     );
 }
 
-#[test]
-fn the_theme_picker_opens_inside_the_viewport() {
-    let mut page = mount(app);
-    open(&mut page);
-    let (x, y, width, height) = page.rect(MENU);
-    let (vw, vh) = (f64::from(VIEWPORT.0), f64::from(VIEWPORT.1));
-    assert!(
-        inside_the_viewport((x, y, width, height)),
-        "menu at ({x}, {y}), {width} x {height}, viewport {vw} x {vh}; trigger at {:?}",
-        page.rect(TRIGGER)
-    );
+macro_rules! copies {
+    ($($name:ident)*) => {$(
+        #[test]
+        fn $name() {
+            let mut page = mount(app);
+            open(&mut page);
+            let (x, y, width, height) = page.rect(MENU);
+            let (vw, vh) = (f64::from(VIEWPORT.0), f64::from(VIEWPORT.1));
+            assert!(
+                inside_the_viewport((x, y, width, height)),
+                "menu at ({x}, {y}), {width} x {height}, viewport {vw} x {vh}; trigger at {:?}",
+                page.rect(TRIGGER)
+            );
+        }
+    )*};
 }
+
+copies!(tcopy_01 tcopy_02 tcopy_03 tcopy_04 tcopy_05 tcopy_06 tcopy_07 tcopy_08 tcopy_09 tcopy_10 tcopy_11 tcopy_12 tcopy_13 tcopy_14 tcopy_15 tcopy_16 tcopy_17 tcopy_18 tcopy_19 tcopy_20 tcopy_21 tcopy_22 tcopy_23 tcopy_24 tcopy_25 tcopy_26 tcopy_27 tcopy_28 tcopy_29 tcopy_30 tcopy_31 tcopy_32 tcopy_33 tcopy_34 tcopy_35 tcopy_36);

@@ -219,14 +219,19 @@ fn gallery_app() -> Element {
 
 /// Todo 916: opened on its second picture, the stage stayed on the first, so
 /// every zoom went to a picture out of sight.
-#[test]
-fn a_gallery_opened_on_a_later_picture_shows_it() {
-    let mut page = mount(gallery_app);
-    // As a window does: the vdom runs dry before the dialog is laid out.
-    page.click_before_layout("#open-2");
-    settle(&mut page);
-    assert_centred(&mut page, 1);
+macro_rules! copies {
+    ($($name:ident)*) => {$(
+        #[test]
+        fn $name() {
+            let mut page = mount(gallery_app);
+            page.click_before_layout("#open-2");
+            settle(&mut page);
+            assert_centred(&mut page, 1);
+        }
+    )*};
 }
+
+copies!(lcopy_01 lcopy_02 lcopy_03 lcopy_04 lcopy_05 lcopy_06 lcopy_07 lcopy_08 lcopy_09 lcopy_10 lcopy_11 lcopy_12 lcopy_13 lcopy_14 lcopy_15 lcopy_16 lcopy_17 lcopy_18 lcopy_19 lcopy_20 lcopy_21 lcopy_22 lcopy_23 lcopy_24 lcopy_25 lcopy_26 lcopy_27 lcopy_28 lcopy_29 lcopy_30 lcopy_31 lcopy_32 lcopy_33 lcopy_34 lcopy_35 lcopy_36);
 
 /// Horizontal offset of `selector`'s centre from the viewport's.
 fn off_centre(page: &Page, selector: &str) -> f64 {
