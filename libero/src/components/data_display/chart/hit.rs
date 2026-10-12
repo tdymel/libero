@@ -347,6 +347,7 @@ mod tests {
                 ],
                 hole: 0.0,
                 share_of: None,
+                cells: false,
             },
         };
         let marks = drawn.with_points(&[0, 1]).geometry.marks;
@@ -513,6 +514,7 @@ mod tests {
                 marks: vec![sector(0, "M0,0 Z"), sector(1, "M0,0 Z")],
                 hole: 0.0,
                 share_of: None,
+                cells: false,
             },
         };
         let indices: Vec<usize> = drawn

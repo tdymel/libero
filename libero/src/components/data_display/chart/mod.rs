@@ -4,6 +4,7 @@ mod engine;
 mod export;
 mod frame;
 mod funnel_chart;
+mod heatmap_chart;
 mod hit;
 mod legend;
 mod line_chart;
@@ -20,6 +21,7 @@ pub use data::{
 };
 pub use export::{ChartHandle, use_chart};
 pub use funnel_chart::{FunnelChart, FunnelChartProps};
+pub use heatmap_chart::{HeatmapChart, HeatmapChartProps};
 pub use line_chart::{LineChart, LineChartProps};
 pub use pie_chart::{PieChart, PieChartProps};
 pub use props::ChartPart;

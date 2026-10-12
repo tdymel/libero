@@ -25,6 +25,19 @@ pub struct ChartLabels {
     pub stage: &'static str,
     /// A stage when the first has no value to share.
     pub stage_value: &'static str,
+    pub heatmap: &'static str,
+    /// The start of a heatmap's summary: `{rows}`, `{columns}`, its lowest and highest value.
+    pub heatmap_range: &'static str,
+    /// A heatmap's `{high}` and `{low}` cell, each as `point` writes it.
+    pub cell_extremes: &'static str,
+    /// A heatmap's row in its summary: `{name}` and its `{cells}`, each `cell` or `cell_empty`.
+    pub row: &'static str,
+    pub cell: &'static str,
+    pub cell_empty: &'static str,
+    /// The key of an empty cell under a heatmap's scale.
+    pub no_value: &'static str,
+    /// Ends a large heatmap's summary in place of its rows.
+    pub cells_by_keys: &'static str,
     /// In a pie's summary while the legend hides a slice: its shares count the hidden ones.
     pub shares_of_all: &'static str,
     /// The plot and the summary of a chart with nothing to draw.
@@ -127,6 +140,14 @@ impl ChartLabels {
         slice_empty: "{name}: no value.",
         stage: "{name}: {value}, {share} of the first.",
         stage_value: "{name}: {value}.",
+        heatmap: "Heatmap",
+        heatmap_range: "{kind} of {rows} rows by {columns} columns, values {min} to {max}.",
+        cell_extremes: "Highest: {high}. Lowest: {low}.",
+        row: "{name}: {cells}.",
+        cell: "{x} {value}",
+        cell_empty: "{x} no value",
+        no_value: "No value",
+        cells_by_keys: "Use the arrow keys to read each cell.",
         shares_of_all: "Shares count the hidden slices too.",
         no_data: "No data",
         all_hidden: "All series are hidden.",
@@ -188,6 +209,14 @@ impl ChartLabels {
         slice_empty: "{name}: kein Wert.",
         stage: "{name}: {value}, {share} der ersten Stufe.",
         stage_value: "{name}: {value}.",
+        heatmap: "Heatmap",
+        heatmap_range: "{kind} mit {rows} Zeilen und {columns} Spalten, Werte von {min} bis {max}.",
+        cell_extremes: "Höchster Wert: {high}. Niedrigster Wert: {low}.",
+        row: "{name}: {cells}.",
+        cell: "{x} {value}",
+        cell_empty: "{x} kein Wert",
+        no_value: "Kein Wert",
+        cells_by_keys: "Mit den Pfeiltasten lässt sich jede Zelle lesen.",
         shares_of_all: "Die Anteile zählen die ausgeblendeten Segmente mit.",
         no_data: "Keine Daten",
         all_hidden: "Alle Reihen sind ausgeblendet.",

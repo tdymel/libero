@@ -1,12 +1,13 @@
 # Chart
 
 Crate: `libero`, feature `charts`
-Import: `use libero::components::{BarChart, ChartHandle, ChartRange, FunnelChart, LineChart, PieChart, ScatterChart, ScatterSeries, Series, Slice, Trend, use_chart};`
+Import: `use libero::components::{BarChart, ChartHandle, ChartRange, FunnelChart, HeatmapChart, LineChart, PieChart, ScatterChart, ScatterSeries, Series, Slice, Trend, use_chart};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/chart>
 Index: [index.md](index.md) lists every other page
-Description: Line, bar, pie, funnel and scatter charts as SVG, with a tooltip, arrow keys, a toggle legend, and a summary for screen readers.
+Description: Line, bar, pie, funnel, scatter and heatmap charts as SVG, with a tooltip, arrow keys, a toggle legend, and a summary for screen readers.
 
-`LineChart`, `BarChart`, `PieChart`, `FunnelChart` and `ScatterChart`, each
+`LineChart`, `BarChart`, `PieChart`, `FunnelChart`, `ScatterChart` and
+`HeatmapChart`, each
 drawn as an SVG that fills its width, with a tooltip, the arrow keys, a legend
 that hides and shows, and a summary for screen readers. Needs the `charts`
 feature. Web and Android.
@@ -16,7 +17,7 @@ A chart only draws. To show its values as a table too, put them in a
 
 Lines and bars take one or more `Series` over a shared x axis; a pie takes
 `Slice`s, each a name and a value, and a funnel takes them as its stages, top
-to bottom. A line of another size or unit goes on a
+to bottom; a heatmap takes a grid of values, a row per name in `y`. A line of another size or unit goes on a
 right y axis with `.secondary_axis()`; in an upright bar chart, a series is
 drawn as a line over the bars with `.kind(SeriesKind::Line)`. A scatter takes
 `ScatterSeries` of x and y pairs, bubbles with a size as a third value, and fits
@@ -287,6 +288,32 @@ fn Demo() -> Element {
 
 `ScatterSeries::from_rows("Sales", &rows, |r| (r.price, r.sold))` builds a series
 from your rows; `.color`, `.symbol` and `.unit` work as on `Series`.
+
+`HeatmapChart` colours a grid of values on a scale drawn under the plot, and
+never by colour alone: each cell writes its value where it fits, an empty one
+is outlined. `steps` sorts the values into classes, `colors` sets the scale.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::HeatmapChart;
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        HeatmapChart {
+            title: "Visits by hour",
+            x: ["8", "10", "12", "14", "16", "18"].map(String::from).to_vec(),
+            y: ["Mon", "Tue", "Wed"].map(String::from).to_vec(),
+            values: vec![
+                vec![12.0, 30.0, 41.0, 35.0, 22.0, 9.0],
+                vec![15.0, 34.0, 46.0, 38.0, 25.0, 11.0],
+                vec![11.0, 28.0, 52.0, 44.0, 27.0, 10.0],
+            ],
+            steps: 5,
+        }
+    }
+}
+```
 
 `y_min` and `y_max` fix the value axis' ends, `y_ticks` the steps between them.
 `x_title` and `y_title` say what each axis counts; the summary reads them out.
@@ -663,6 +690,37 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it. |
 | `export_button` | `Option<bool>` | `false` | Save as SVG and Save as PNG buttons above the plot. |
 
+### `HeatmapChart`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `x` | `Vec<String>` | required | The columns' names, left to right. |
+| `y` | `Vec<String>` | required | The rows' names, top to bottom. |
+| `values` | `Vec<Vec<f64>>` | required | A row per `y`, a value per `x`. NaN, or a value missing at a row's end, is an empty cell, outlined; a row of the wrong length warns in development. |
+| `colors` | `Vec<ChartColor>` | light to strong primary | The scale from the lowest value's colour to the highest's, two or more, as `"primary.2"` or a hex. |
+| `min` | `Option<f64>` | | The scale's low end. Unset, the lowest value. |
+| `max` | `Option<f64>` | | The scale's high end. Unset, the highest value. |
+| `steps` | `Option<usize>` | | Sorts the values into this many classes of the same width, one colour each, instead of a gradient. |
+| `cell_labels` | `Option<bool>` | `true` | Each value written in its cell, in black or white by the cell. A value wider or taller than its cell is left out; the tooltip and the summary still have it. |
+| `title` | `Option<String>` | | Shown above the chart, and its accessible name. |
+| `description` | `Option<String>` | | A sentence under the title: what to read from the chart. |
+| `legend` | `LegendPosition` | bottom | The colour scale, under the plot; `none` leaves it out. |
+| `value_format` | `ValueFormat` | `Auto` | How values are written in the cells, on the scale, in the tooltip and in the summary. |
+| `unit` | `Option<String>` | | After every value, as `"°C"`. |
+| `grid` | `Option<bool>` | | Shared with the other charts; a heatmap has no grid to draw. |
+| `hidden` | `Option<Vec<String>>` | | Shared with the other charts; a heatmap hides no rows. |
+| `default_hidden` | `Vec<String>` | `[]` | Shared with the other charts; a heatmap hides no rows. |
+| `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | Shared with the other charts; never called by a heatmap. |
+| `aspect_ratio` | `Option<f32>` | `4 / 3` | Width over height of the plot and its scale. Unset, the theme's `pie_aspect_ratio`, so rows keep room for their names. |
+| `loading` | `bool` | `false` | A placeholder instead of the plot, and `aria-busy` on the chart. |
+| `empty` | `Option<Element>` | | Shown in the plot when no cell has a value. Unset, "No data". |
+| `tooltip` | `Option<bool>` | `true` | A tooltip with the cell's column, row and value at the pointer's or the keys' cell. |
+| `tooltip_content` | `Option<Callback<ChartPoint, Element>>` | | The tooltip's content instead of the cell's column, row and value. |
+| `onpointclick` | `Option<EventHandler<ChartPoint>>` | | A click on a cell, a second tap on a pinned one, or Enter on the keys' cell. `series` and `series_name` are its row, `index` and `x` its column. |
+| `onactivechange` | `Option<EventHandler<Option<ChartPoint>>>` | | The cell under the pointer or the keys; `None` when it leaves. |
+| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it. |
+| `export_button` | `Option<bool>` | `false` | Save as SVG and Save as PNG buttons above the plot. |
+
 ### `PieChart`
 
 | Prop | Type | Default | Description |
@@ -739,9 +797,9 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 | Key | Action |
 |---|---|
 | `Tab` | Into the plot and the legend's buttons in the order drawn: a legend at the top or the start comes first. |
-| `ArrowRight` / `ArrowLeft` | Line: the next or previous point of the line, as drawn, left to right in either text direction. Bar: the next or previous category's bar of the series; `horizontal`, the next or previous series' bar in the category. Pie: the next or previous slice, clockwise. Funnel: the next or previous stage, top down. Scatter: the series' next or previous point, left to right. |
-| `ArrowDown` / `ArrowUp` | Line: the next or previous line at the same x value, or its nearest point. Bar: the next or previous series' bar in the category; `horizontal`, the next or previous category, top to bottom. Pie and funnel: the next or previous slice or stage. Scatter: the next or previous series' point nearest in x. |
-| `Home` / `End` | The line's or the series' first or last point or bar; a pie's first or last slice, a funnel's top or bottom stage; a scatter series' leftmost or rightmost point. |
+| `ArrowRight` / `ArrowLeft` | Line: the next or previous point of the line, as drawn, left to right in either text direction. Bar: the next or previous category's bar of the series; `horizontal`, the next or previous series' bar in the category. Pie: the next or previous slice, clockwise. Funnel: the next or previous stage, top down. Scatter: the series' next or previous point, left to right. Heatmap: the next or previous cell in the row, left to right. |
+| `ArrowDown` / `ArrowUp` | Line: the next or previous line at the same x value, or its nearest point. Bar: the next or previous series' bar in the category; `horizontal`, the next or previous category, top to bottom. Pie and funnel: the next or previous slice or stage. Scatter: the next or previous series' point nearest in x. Heatmap: the row below or above, at the nearest column. |
+| `Home` / `End` | The line's or the series' first or last point or bar; a pie's first or last slice, a funnel's top or bottom stage; a scatter series' leftmost or rightmost point; a heatmap row's first or last cell. |
 | `Enter` / `Space` | Calls `onpointclick` with the point, bar or slice. |
 | `Escape` | Clears the brushed band, else the point and its tooltip. A tooltip a pointer hovers closes with Escape wherever focus is, and stays closed until the pointer leaves the plot. |
 | `+` / `-` | With `zoom`: zooms the x axis, a lying bar chart's categories, in or out around the keys' point; the arrows carry the window along at its edge. |
@@ -763,10 +821,15 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   a funnel's, its first and last stage, then each stage's value and share of
   the first; a scatter's, each series' count of points and its x and y ranges,
   a bubble series' sizes and each trend line's kind and direction, as "Online:
-  linear trend, rising."
+  linear trend, rising."; a heatmap's, its rows by columns and its lowest and
+  highest value, the highest and the lowest cell, then each row's cells (above
+  12 rows or 150 cells, a pointer to the keys instead).
 - The plot is one tab stop, a `role="application"` described as a chart, so a
   screen reader hands it the arrows. Each point the keys reach is announced, as
-  "This week, Tue: 132", "Chrome: 62, 62%." or "Online: x 12, y 34, size 80".
+  "This week, Tue: 132", "Chrome: 62, 62%." "Online: x 12, y 34, size 80" or, for a heatmap's cell, "Tue, 12: 46".
+- A heatmap never tells by colour alone: each cell writes its value where it
+  fits, in black or white by the cell; an empty cell is outlined, dashed, and
+  the scale under the plot keys it as "No value".
 - The legend's entries are toggle buttons: pressed while their series or slice
   shows, struck through when hidden. The last shown one's button is
   `aria-disabled`. Should `hidden` or `default_hidden` name every one, the plot
@@ -828,11 +891,14 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   not when `stacked`.
 - A rose's radius and a slice under `min_label_angle` are read by eye or not at
   all; the summary gives every value.
-- `zoom` and `onrange` are for lines and bars; a pie, a funnel and a scatter
-  export only.
+- `zoom` and `onrange` are for lines and bars; a pie, a funnel, a scatter and a
+  heatmap export only.
 - A bubble's size and a trend line are read by eye; the tooltip, the
   announcement and the summary give the sizes and each trend's direction.
   Bubbles are drawn largest first, so a small one stays on top.
+- A heatmap's scale is drawn under the plot whatever `legend` says, but `none`;
+  in forced colours its cells keep the scale's colours and their black or white
+  values; the axes, the names and an empty cell's outline take the system's.
 - A funnel is drawn widest stage first; the keys, the summary and the legend
   keep the order of `stages`. A hidden stage leaves the drawing and the others widen to
   the largest shown; percent labels stay shares of the first stage.

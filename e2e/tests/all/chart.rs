@@ -1,6 +1,6 @@
-//! The docs Chart page's type switch: one control over a line, a bar, a pie and a funnel
-//! chart. Each chart has its own unit (`line_chart`, `bar_chart`, `pie_chart`,
-//! `funnel_chart`); here only what the switch adds. Web and Android: charts are parked on Blitz.
+//! The docs Chart page's type switch: one control over a line, a bar, a pie, a funnel chart
+//! and a heatmap. Each chart has its own unit (`line_chart`, `bar_chart`, `pie_chart`,
+//! `funnel_chart`, `heatmap_chart`); here only what the switch adds. Web and Android: charts are parked on Blitz.
 
 use anyhow::{Result, ensure};
 use e2e::Suite;
@@ -26,7 +26,8 @@ async fn switches<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         (1, "2025", "This week"),
         (2, "Chrome", "2025"),
         (3, "Visits", "Chrome"),
-        (0, "This week", "Visits"),
+        (4, "Heatmap of 2 rows", "Visits"),
+        (0, "This week", "Heatmap"),
     ] {
         d.click(&format!(
             "[role=radiogroup] label[for$=\"-segment-{segment}\"]"

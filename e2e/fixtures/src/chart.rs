@@ -1,9 +1,9 @@
-//! The docs page's type switch: one `SegmentedControl` over a line, a bar, a pie and a
-//! funnel chart.
+//! The docs page's type switch: one `SegmentedControl` over a line, a bar, a pie, a
+//! funnel chart and a heatmap.
 
 use dioxus::prelude::*;
 use libero::components::{
-    BarChart, FunnelChart, LineChart, OptionLabel, PieChart, SegmentedControl, Series, Slice,
+    BarChart, FunnelChart, HeatmapChart, LineChart, OptionLabel, PieChart, SegmentedControl, Series, Slice,
 };
 
 use crate::Routes;
@@ -22,12 +22,13 @@ fn Switch() -> Element {
                 full_width: true,
                 "aria-label": "Type",
                 value: kind(),
-                options: ["line", "bar", "pie", "funnel"].map(String::from).to_vec(),
+                options: ["line", "bar", "pie", "funnel", "heatmap"].map(String::from).to_vec(),
                 option_label: |option: String| OptionLabel::from(match option.as_str() {
                     "line" => "Line",
                     "bar" => "Bar",
                     "pie" => "Pie",
-                    _ => "Funnel",
+                    "funnel" => "Funnel",
+                    _ => "Heatmap",
                 }),
                 onchange: move |next: String| kind.set(next),
             }
@@ -55,6 +56,15 @@ fn Switch() -> Element {
                         id: "chart",
                         title: "Checkout",
                         stages: vec![Slice::new("Visits", 1200.0), Slice::new("Carts", 480.0), Slice::new("Orders", 210.0)],
+                    }
+                },
+                "heatmap" => rsx! {
+                    HeatmapChart {
+                        id: "chart",
+                        title: "Visits",
+                        x: ["9 am", "12 pm"].map(String::from).to_vec(),
+                        y: ["Mon", "Tue"].map(String::from).to_vec(),
+                        values: vec![vec![12.0, 30.0], vec![8.0, 26.0]],
                     }
                 },
                 _ => rsx! {

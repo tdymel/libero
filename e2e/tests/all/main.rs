@@ -62,6 +62,7 @@ mod funnel_chart;
 mod gradient;
 mod grid_zone;
 mod header;
+mod heatmap_chart;
 mod hit_area;
 mod home;
 mod hover_card;

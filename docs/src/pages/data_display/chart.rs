@@ -4,9 +4,9 @@ use dioxus::prelude::*;
 use libero::use_theme;
 use libero::{
     components::{
-        BarChart, ChartRange, Code, FunnelChart, LineChart, MarkLine, MarkPoint, Orientation,
-        PieChart, ScatterChart, ScatterSeries, Series, SeriesKind, Slice, Table, Text, Trend,
-        column,
+        BarChart, ChartRange, Code, FunnelChart, HeatmapChart, LineChart, MarkLine, MarkPoint,
+        Orientation, PieChart, ScatterChart, ScatterSeries, Series, SeriesKind, Slice, Table, Text,
+        Trend, column,
     },
     theme::{
         BarLabelPosition, BarLayout, Curve, LegendPosition, PieLabelPosition, PieLabels,
@@ -66,6 +66,15 @@ const STORES: [(f64, f64, f64); 7] = [
     (41.0, 55.0, 100.0),
     (48.0, 60.0, 160.0),
 ];
+const HOURS: [&str; 6] = ["8", "10", "12", "14", "16", "18"];
+const WEEKDAYS: [&str; 5] = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+const VISITS: [[f64; 6]; 5] = [
+    [12.0, 30.0, 41.0, 35.0, 22.0, 9.0],
+    [15.0, 34.0, 46.0, 38.0, 25.0, 11.0],
+    [11.0, 28.0, 52.0, 44.0, 27.0, 10.0],
+    [14.0, 31.0, 39.0, 33.0, 29.0, 16.0],
+    [10.0, 24.0, 33.0, 28.0, 31.0, 21.0],
+];
 
 fn on(value: bool) -> &'static str {
     if value { "true" } else { "false" }
@@ -79,14 +88,19 @@ fn stages() -> Vec<Slice> {
     STAGES.into_iter().map(Slice::from).collect()
 }
 
-/// Hides a control unless the type is `kind`; `axes` hides it on a pie and a funnel, `shares`
-/// shows it on both, `series` on lines and bars only.
+fn names(names: &[&str]) -> Vec<String> {
+    names.iter().map(|name| name.to_string()).collect()
+}
+
+/// Hides a control unless the type is `kind`; `axes` hides it on a pie, a funnel and a
+/// heatmap, `shares` shows it on a pie and a funnel, `series` on lines and bars only.
 fn is(kind: &'static str) -> fn(&DemoValues) -> bool {
     match kind {
         "bar" => |values| values.str("type") != "bar",
         "pie" => |values| values.str("type") != "pie",
         "scatter" => |values| values.str("type") != "scatter",
-        "axes" => |values| matches!(values.str("type").as_str(), "pie" | "funnel"),
+        "heatmap" => |values| values.str("type") != "heatmap",
+        "axes" => |values| matches!(values.str("type").as_str(), "pie" | "funnel" | "heatmap"),
         "shares" => |values| !matches!(values.str("type").as_str(), "pie" | "funnel"),
         "series" => |values| !matches!(values.str("type").as_str(), "line" | "bar"),
         _ => |values| values.str("type") != "line",
@@ -238,6 +252,16 @@ fn table(values: &DemoValues) -> (&'static str, &'static str, Vec<&'static str>,
                 .flat_map(|(name, points)| points.iter().map(|p| (*name, vec![p.0, p.1, p.2])))
                 .collect(),
         ),
+        "heatmap" => (
+            "Visits by hour",
+            "Day",
+            HOURS.to_vec(),
+            WEEKDAYS
+                .iter()
+                .zip(VISITS)
+                .map(|(day, row)| (*day, row.to_vec()))
+                .collect(),
+        ),
         _ if conversion(values).is_some() => (
             "Visitors",
             "Day",
@@ -386,6 +410,7 @@ fn component(values: &DemoValues, source: &str) -> String {
         "pie" => "PieChart",
         "funnel" => "FunnelChart",
         "scatter" => "ScatterChart",
+        "heatmap" => "HeatmapChart",
         _ => "LineChart",
     };
     let mut chart = source.replacen("Chart", name, 1);
@@ -522,6 +547,34 @@ pub fn ChartPage() -> Element {
                     prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it."),
                     prop("export_button", "Option<bool>").default(on(theme.chart.export_button)).doc("Save as SVG and Save as PNG buttons above the plot."),
                 ]),
+                props("HeatmapChart", vec![
+                    prop("x", "Vec<String>").default("required").doc("The columns' names, left to right."),
+                    prop("y", "Vec<String>").default("required").doc("The rows' names, top to bottom."),
+                    prop("values", "Vec<Vec<f64>>").default("required").doc("A row per `y`, a value per `x`. NaN, or a value missing at a row's end, is an empty cell, outlined; a row of the wrong length warns in development."),
+                    prop("colors", "Vec<ChartColor>").default("light to strong primary").doc("The scale from the lowest value's colour to the highest's, two or more, as `\"primary.2\"` or a hex."),
+                    prop("min", "Option<f64>").doc("The scale's low end. Unset, the lowest value."),
+                    prop("max", "Option<f64>").doc("The scale's high end. Unset, the highest value."),
+                    prop("steps", "Option<usize>").doc("Sorts the values into this many classes of the same width, one colour each, instead of a gradient."),
+                    prop("cell_labels", "Option<bool>").default("true").doc("Each value written in its cell, in black or white by the cell. A value wider or taller than its cell is left out; the tooltip and the summary still have it."),
+                    prop("title", "Option<String>").doc("Shown above the chart, and its accessible name."),
+                    prop("description", "Option<String>").doc("A sentence under the title: what to read from the chart."),
+                    prop("legend", "LegendPosition").default("bottom").doc("The colour scale, under the plot; `none` leaves it out."),
+                    prop("value_format", "ValueFormat").default("Auto").doc("How values are written in the cells, on the scale, in the tooltip and in the summary."),
+                    prop("unit", "Option<String>").doc("After every value, as `\"°C\"`."),
+                    prop("grid", "Option<bool>").doc("Shared with the other charts; a heatmap has no grid to draw."),
+                    prop("hidden", "Option<Vec<String>>").doc("Shared with the other charts; a heatmap hides no rows."),
+                    prop("default_hidden", "Vec<String>").default("[]").doc("Shared with the other charts; a heatmap hides no rows."),
+                    prop("onhiddenchange", "Option<EventHandler<Vec<String>>>").doc("Shared with the other charts; never called by a heatmap."),
+                    prop("aspect_ratio", "Option<f32>").default("4 / 3").doc("Width over height of the plot and its scale. Unset, the theme's `pie_aspect_ratio`, so rows keep room for their names."),
+                    prop("loading", "bool").default("false").doc("A placeholder instead of the plot, and `aria-busy` on the chart."),
+                    prop("empty", "Option<Element>").doc("Shown in the plot when no cell has a value. Unset, \"No data\"."),
+                    prop("tooltip", "Option<bool>").default(on(theme.chart.tooltip)).doc("A tooltip with the cell's column, row and value at the pointer's or the keys' cell."),
+                    prop("tooltip_content", "Option<Callback<ChartPoint, Element>>").doc("The tooltip's content instead of the cell's column, row and value."),
+                    prop("onpointclick", "Option<EventHandler<ChartPoint>>").doc("A click on a cell, a second tap on a pinned one, or Enter on the keys' cell. `series` and `series_name` are its row, `index` and `x` its column."),
+                    prop("onactivechange", "Option<EventHandler<Option<ChartPoint>>>").doc("The cell under the pointer or the keys; `None` when it leaves."),
+                    prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it."),
+                    prop("export_button", "Option<bool>").default(on(theme.chart.export_button)).doc("Save as SVG and Save as PNG buttons above the plot."),
+                ]),
                 props("PieChart", vec![
                     prop("slices", "Vec<Slice>").default("required").doc("The slices, each a share of their sum. A negative value takes no share."),
                     prop("title", "Option<String>").doc("Shown above the chart, and its accessible name."),
@@ -585,9 +638,9 @@ pub fn ChartPage() -> Element {
             ],
             accessibility: a11y()
                 .key(["Tab"], "Into the plot and the legend's buttons in the order drawn: a legend at the top or the start comes first.")
-                .key(["ArrowRight", "ArrowLeft"], "Line: the next or previous point of the line, as drawn, left to right in either text direction. Bar: the next or previous category's bar of the series; `horizontal`, the next or previous series' bar in the category. Pie: the next or previous slice, clockwise. Funnel: the next or previous stage, top down. Scatter: the series' next or previous point, left to right.")
-                .key(["ArrowDown", "ArrowUp"], "Line: the next or previous line at the same x value, or its nearest point. Bar: the next or previous series' bar in the category; `horizontal`, the next or previous category, top to bottom. Pie and funnel: the next or previous slice or stage. Scatter: the next or previous series' point nearest in x.")
-                .key(["Home", "End"], "The line's or the series' first or last point or bar; a pie's first or last slice, a funnel's top or bottom stage; a scatter series' leftmost or rightmost point.")
+                .key(["ArrowRight", "ArrowLeft"], "Line: the next or previous point of the line, as drawn, left to right in either text direction. Bar: the next or previous category's bar of the series; `horizontal`, the next or previous series' bar in the category. Pie: the next or previous slice, clockwise. Funnel: the next or previous stage, top down. Scatter: the series' next or previous point, left to right. Heatmap: the next or previous cell in the row, left to right.")
+                .key(["ArrowDown", "ArrowUp"], "Line: the next or previous line at the same x value, or its nearest point. Bar: the next or previous series' bar in the category; `horizontal`, the next or previous category, top to bottom. Pie and funnel: the next or previous slice or stage. Scatter: the next or previous series' point nearest in x. Heatmap: the row below or above, at the nearest column.")
+                .key(["Home", "End"], "The line's or the series' first or last point or bar; a pie's first or last slice, a funnel's top or bottom stage; a scatter series' leftmost or rightmost point; a heatmap row's first or last cell.")
                 .key(["Enter", "Space"], "Calls `onpointclick` with the point, bar or slice.")
                 .key(["Escape"], "Clears the brushed band, else the point and its tooltip. A tooltip a pointer hovers closes with Escape wherever focus is, and stays closed until the pointer leaves the plot.")
                 .key(["+", "-"], "With `zoom`: zooms the x axis, a lying bar chart's categories, in or out around the keys' point; the arrows carry the window along at its edge.")
@@ -596,8 +649,9 @@ pub fn ChartPage() -> Element {
                 .handles([
                     "The chart is a `role=\"figure\"` named by `title`, else by a spread `aria-label`, else \"chart\". The drawing is hidden from screen readers.",
                     "A loading chart says \"Loading chart\" in a live region when it starts, and its summary says it too.",
-                    "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is, then each mark line's name and value and each marked point's place and value, each line's error band and each bar series' error bars with their outer ends, the series drawn as a line over bars, the series on the right y axis, the axes' titles and, stacked, that the top line is the total; a pie's, the total, then each slice's value and share; a funnel's, its first and last stage, then each stage's value and share of the first; a scatter's, each series' count of points and its x and y ranges, a bubble series' sizes and each trend line's kind and direction, as \"Online: linear trend, rising.\"",
-                    "The plot is one tab stop, a `role=\"application\"` described as a chart, so a screen reader hands it the arrows. Each point the keys reach is announced, as \"This week, Tue: 132\", \"Chrome: 62, 62%.\" or \"Online: x 12, y 34, size 80\".",
+                    "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is, then each mark line's name and value and each marked point's place and value, each line's error band and each bar series' error bars with their outer ends, the series drawn as a line over bars, the series on the right y axis, the axes' titles and, stacked, that the top line is the total; a pie's, the total, then each slice's value and share; a funnel's, its first and last stage, then each stage's value and share of the first; a scatter's, each series' count of points and its x and y ranges, a bubble series' sizes and each trend line's kind and direction, as \"Online: linear trend, rising.\"; a heatmap's, its rows by columns and its lowest and highest value, the highest and the lowest cell, then each row's cells (above 12 rows or 150 cells, a pointer to the keys instead).",
+                    "The plot is one tab stop, a `role=\"application\"` described as a chart, so a screen reader hands it the arrows. Each point the keys reach is announced, as \"This week, Tue: 132\", \"Chrome: 62, 62%.\" \"Online: x 12, y 34, size 80\" or, for a heatmap's cell, \"Tue, 12: 46\".",
+                    "A heatmap never tells by colour alone: each cell writes its value where it fits, in black or white by the cell; an empty cell is outlined, dashed, and the scale under the plot keys it as \"No value\".",
                     "The legend's entries are toggle buttons: pressed while their series or slice shows, struck through when hidden. The last shown one's button is `aria-disabled`. Should `hidden` or `default_hidden` name every one, the plot and the summary say \"All series are hidden.\" and the legend stays. A dashed line's key is a dash, as drawn; once a line sets a `symbol`, each key is its line's point shape. A line among bars is keyed by a short stroke, the bars by squares.",
                     "On a touch screen a tap pins a point's tooltip, a second tap on it clicks; a vertical swipe still scrolls the page.",
                     "With `zoom`, the shown range is announced once a zoom or pan settles, as \"Showing Tue to Fri\"; the Reset zoom button stays focusable while there is nothing to reset. Ctrl or Cmd with the wheel zooms only a zoomable plot, so the page zoom works everywhere else.",
@@ -627,8 +681,9 @@ pub fn ChartPage() -> Element {
                     "`.colors` and `.negative_color` add no meaning of their own: a loss already hangs below the axis. The legend keeps the series' colour.",
                     "A percent stack draws no error bars and reads the range in its tooltip; on any other layout the value axis reaches the far end of a range unless `y_min` or `y_max` is set. A line draws its ranges as a band, only around its points and not when `stacked`.",
                     "A rose's radius and a slice under `min_label_angle` are read by eye or not at all; the summary gives every value.",
-                    "`zoom` and `onrange` are for lines and bars; a pie, a funnel and a scatter export only.",
+                    "`zoom` and `onrange` are for lines and bars; a pie, a funnel, a scatter and a heatmap export only.",
                     "A bubble's size and a trend line are read by eye; the tooltip, the announcement and the summary give the sizes and each trend's direction. Bubbles are drawn largest first, so a small one stays on top.",
+                    "A heatmap's scale is drawn under the plot whatever `legend` says, but `none`; in forced colours its cells keep the scale's colours and their black or white values; the axes, the names and an empty cell's outline take the system's.",
                     "A funnel is drawn widest stage first; the keys, the summary and the legend keep the order of `stages`. A hidden stage leaves the drawing and the others widen to the largest shown; percent labels stay shares of the first stage.",
                     "An export keeps the normal palette in forced colours. `png()` is `None` on Blitz and on the server, and the PNG button says it could not save.",
                     "A mark line is drawn on a line chart that is not `stacked`, on upright, `grouped` bars and on a line among upright bars, and only inside the y axis' ends; the summary leaves out the ones not drawn, except past the ends. A marked point is drawn on a line only, in a line chart or among upright bars.",
@@ -644,8 +699,10 @@ pub fn ChartPage() -> Element {
                     Code { source: "PieChart" }
                     ", "
                     Code { source: "FunnelChart" }
-                    " and "
+                    ", "
                     Code { source: "ScatterChart" }
+                    " and "
+                    Code { source: "HeatmapChart" }
                     ", each drawn as an SVG that fills its width, with a tooltip, the arrow keys, a legend that hides and shows, and a summary for screen readers. Needs the "
                     Code { source: "charts" }
                     " feature. Web and Android."
@@ -655,7 +712,9 @@ pub fn ChartPage() -> Element {
                     Code { source: "Series" }
                     " over a shared x axis; a pie takes "
                     Code { source: "Slice" }
-                    "s, each a name and a value, and a funnel takes them as its stages, top to bottom. A line of another size or unit goes on a right y axis with "
+                    "s, each a name and a value, and a funnel takes them as its stages, top to bottom; a heatmap takes a grid of values, a row per name in "
+                    Code { source: "y" }
+                    ". A line of another size or unit goes on a right y axis with "
                     Code { source: ".secondary_axis()" }
                     "; in an upright bar chart, a series is drawn as a line over the bars with "
                     Code { source: ".kind(SeriesKind::Line)" }
@@ -682,9 +741,9 @@ pub fn ChartPage() -> Element {
                 children_text: "",
                 wrap: Wrap(component),
                 controls: vec![
-                    Control::toggle("type", ["line", "bar", "pie", "funnel", "scatter"])
+                    Control::toggle("type", ["line", "bar", "pie", "funnel", "scatter", "heatmap"])
                         .default("line")
-                        .labels(["Line", "Bar", "Pie", "Funnel", "Scatter"])
+                        .labels(["Line", "Bar", "Pie", "Funnel", "Scatter", "Heatmap"])
                         .code(|_, values| {
                             let mark = marks_code(values);
                             match values.str("type").as_str() {
@@ -708,6 +767,12 @@ pub fn ChartPage() -> Element {
                             "scatter" => vec![
                                 "title: \"Ad spend and sales\"".to_string(),
                                 scatter_series(values).0,
+                            ],
+                            "heatmap" => vec![
+                                "title: \"Visits by hour\"".to_string(),
+                                format!("x: {HOURS:?}.map(String::from).to_vec()"),
+                                format!("y: {WEEKDAYS:?}.map(String::from).to_vec()"),
+                                format!("values: {VISITS:?}.map(|row| row.to_vec()).to_vec()"),
                             ],
                             _ => vec![
                                 "title: \"Visitors\"".to_string(),
@@ -765,6 +830,20 @@ pub fn ChartPage() -> Element {
                         .code(|_, values| match values.str("bar_width").as_str() {
                             "auto" => vec![],
                             share => vec![format!("bar_width: {share}")],
+                        }),
+                    Control::select("steps", ["gradient", "3", "5"])
+                        .default("gradient")
+                        .hidden_when(is("heatmap"))
+                        .code(|_, values| match values.str("steps").as_str() {
+                            "gradient" => vec![],
+                            steps => vec![format!("steps: {steps}")],
+                        }),
+                    Control::switch("cell_labels")
+                        .default("true")
+                        .hidden_when(is("heatmap"))
+                        .code(|_, values| match values.str("cell_labels").as_str() {
+                            "true" => vec![],
+                            _ => vec!["cell_labels: false".to_string()],
                         }),
                     Control::select("labels", ["percent", "value", "name", "none"])
                         .default(theme.chart.pie_labels.as_str())
@@ -970,6 +1049,17 @@ pub fn ChartPage() -> Element {
                                 series: scatter_series(&values).1,
                                 trend: trend(&values).map(|t| t.1),
                                 y_min, y_max, y_ticks, x_title, y_title,
+                                legend, tooltip, loading, export_button,
+                            }
+                        },
+                        "heatmap" => rsx! {
+                            HeatmapChart {
+                                title: "Visits by hour",
+                                x: names(&HOURS),
+                                y: names(&WEEKDAYS),
+                                values: VISITS.map(|row| row.to_vec()).to_vec(),
+                                steps: values.str("steps").parse::<usize>().ok(),
+                                cell_labels: values.str("cell_labels") == "true",
                                 legend, tooltip, loading, export_button,
                             }
                         },

@@ -1037,16 +1037,7 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
             let style = fit.tip_style(hit::anchor(&mark.shape));
             let body = match tooltip_content {
                 Some(content) => content.call(point_of(mark)),
-                None => tip_body(
-                    mark,
-                    geometry.map_or(&[][..], |g| &g.marks[..]),
-                    geometry.and_then(|g| g.share_of),
-                    &series,
-                    &x,
-                    &write,
-                    formats,
-                    layout,
-                ),
+                None => tip_body(mark, geometry, &series, &x, &write, formats, layout),
             };
             Some((style, body))
         }
@@ -1105,18 +1096,22 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
     }
 }
 
-/// The x value, then each drawn series' value there; a pie's slice alone, with its share.
-#[allow(clippy::too_many_arguments)]
+/// The x value, then each drawn series' value there (a heatmap's cell alone); a pie's
+/// slice alone, with its share.
 fn tip_body(
     active: &Mark,
-    marks: &[Mark],
-    share_of: Option<f64>,
+    geometry: Option<&Geometry>,
     series: &[OverlaySeries],
     x: &[String],
     write: &impl Fn(&Mark) -> String,
     formats: &Formats,
     layout: Layout,
 ) -> Element {
+    let marks = geometry.map_or(&[][..], |g| &g.marks[..]);
+    let (share_of, cells) = (
+        geometry.and_then(|g| g.share_of),
+        geometry.is_some_and(|g| g.cells),
+    );
     let name = |mark: &Mark| {
         entry(series, mark)
             .map(|series| (series.name.clone(), series.color.clone()))
@@ -1143,7 +1138,10 @@ fn tip_body(
         }
         _ => marks
             .iter()
-            .filter(|mark| mark.index == active.index)
+            .filter(|mark| match cells {
+                true => *mark == active,
+                false => mark.index == active.index,
+            })
             .map(|mark| {
                 let (name, color) = name(mark);
                 (mark == active, name, color, write(mark))
