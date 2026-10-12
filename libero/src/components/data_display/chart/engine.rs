@@ -174,6 +174,8 @@ pub(crate) struct LineSpec {
     /// Empty: `x` are categories, evenly spaced. Else each point sits at its number.
     pub(crate) x_numbers: Vec<f64>,
     pub(crate) series: Vec<SeriesSpec>,
+    /// Each series' error range per value, drawn as a band around its line.
+    pub(crate) errors: Vec<Vec<Option<(f64, f64)>>>,
     pub(crate) curve: Curve,
     /// The areas' opacity; `None`, no area.
     pub(crate) area: Option<f32>,
@@ -357,6 +359,34 @@ fn symbol(spec: &LineSpec, series: &SeriesSpec) -> Symbol {
     }
 }
 
+/// A line's error ranges as a band, only where the line has a point: elsewhere the renderer
+/// would add a hover target the marks do not know. A stack draws none, its lines at sums.
+fn band(spec: &LineSpec, series: usize) -> Option<charts_rs::SeriesBand> {
+    let ranges = spec.errors.get(series).filter(|_| !spec.stacked)?;
+    let values = &spec.series.get(series)?.values;
+    let at = |i: usize| {
+        values
+            .get(i)
+            .copied()
+            .flatten()
+            .and(ranges.get(i).copied().flatten())
+    };
+    let end = |pick: fn((f64, f64)) -> f64| -> Vec<Option<f32>> {
+        (0..values.len())
+            .map(|i| at(i).map(|range| pick(range) as f32))
+            .collect()
+    };
+    let lower = end(|range| range.0);
+    lower
+        .iter()
+        .any(Option::is_some)
+        .then(|| charts_rs::SeriesBand {
+            lower,
+            upper: end(|range| range.1),
+            stroke_width: None,
+        })
+}
+
 pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
     // A stack draws its lines at their sums, not at their own values.
     let marked = match spec.stacked {
@@ -376,6 +406,7 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
             }
             drawn.stroke_dash_array = series.dashed.then(|| DASH.to_string());
             drawn.y_axis_index = series.extras.secondary as usize;
+            drawn.band = band(spec, i);
             drawn.symbol = Some(symbol(spec, series));
             drawn.stack = (spec.stacked && !series.extras.secondary).then(|| "stack".to_string());
             match spec.curve {
@@ -1646,6 +1677,7 @@ mod tests {
             x: x.iter().map(|x| x.to_string()).collect(),
             x_numbers: Vec::new(),
             series,
+            errors: Vec::new(),
             curve: Curve::Linear,
             area: None,
             stacked: false,
@@ -1740,6 +1772,36 @@ mod tests {
             panic!("no point");
         };
         assert!(*y < (plot.top + plot.bottom) / 2.0, "{y} in {plot:?}");
+    }
+
+    /// Error ranges fill a band around a line, only where it has points, on an axis that
+    /// spans them; the marks stay its points. A stack draws none.
+    #[test]
+    fn error_ranges_draw_a_band_around_the_line() {
+        let series = spec("A", &[Some(2.0), None, Some(4.0), Some(3.0)]);
+        let mut spec = line(vec![series], &["a", "b", "c", "d"]);
+        spec.errors = vec![vec![
+            Some((1.0, 3.0)),
+            Some((1.0, 2.0)),
+            Some((3.0, 9.0)),
+            Some((2.0, 4.0)),
+        ]];
+        let drawn = draw_line(&spec).expect("drawn");
+        assert_eq!(
+            drawn.svg.matches("class=\"ct-band\"").count(),
+            1,
+            "{}",
+            drawn.svg
+        );
+        assert!(
+            drawn.svg.contains("9 kg") || drawn.svg.contains("10 kg"),
+            "{}",
+            drawn.svg
+        );
+        assert_eq!(drawn.geometry.marks.len(), 3);
+        spec.stacked = true;
+        let stacked = draw_line(&spec).expect("drawn");
+        assert!(!stacked.svg.contains("ct-band"), "{}", stacked.svg);
     }
 
     /// Each shape draws its own marker at every point, in the series' colour; the points are

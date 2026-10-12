@@ -199,7 +199,8 @@ pub struct Series {
     pub colors: Vec<Option<ChartColor>>,
     /// The colour of a bar below 0. Unset, the series' colour.
     pub negative_color: Option<ChartColor>,
-    /// Each value's error range, `(low, high)` per x value; `None`, no error bar there.
+    /// Each value's error range, `(low, high)` per x value: a bar's error bar, a band
+    /// around a line. `None`, none there.
     pub errors: Vec<Option<(f64, f64)>>,
     /// Lines across the plot at a value of the series, in its colour.
     pub mark_lines: Vec<MarkLine>,
@@ -273,8 +274,9 @@ impl Series {
         self
     }
 
-    /// An error range per value, `(low, high)` in x order; a missing or not finite end
-    /// leaves that value without one: `.errors([(110, 130), (125, 140)])`.
+    /// An error range per value, `(low, high)` in x order, drawn over a bar or as a band
+    /// around a line; a missing or not finite end leaves that value without one:
+    /// `.errors([(110, 130), (125, 140)])`.
     pub fn errors<V: Into<Value>>(mut self, errors: impl IntoIterator<Item = (V, V)>) -> Self {
         self.errors = errors
             .into_iter()

@@ -163,6 +163,10 @@ pub fn LineChart(props: LineChartProps) -> Element {
             shown.iter().map(|i| all_specs[*i].clone()).collect(),
             window,
         ),
+        errors: shown
+            .iter()
+            .map(|i| cut(&props.series[*i].errors, window))
+            .collect(),
         curve: props.curve.copied_or(theme.chart.curve),
         axes: Axes {
             min: props.y_min,
@@ -488,6 +492,26 @@ mod tests {
             html.contains("X axis: Day.") && html.contains("Y axis: Visits."),
             "{html}"
         );
+    }
+
+    /// A series' error ranges are drawn as a band around its line.
+    #[test]
+    fn error_ranges_are_drawn_as_a_band() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    LineChart {
+                        title: "Forecast",
+                        x: ["Mon", "Tue", "Wed"],
+                        series: vec![
+                            Series::new("Visits", [120.0, 132.0, 101.0])
+                                .errors([(110.0, 130.0), (120.0, 145.0), (90.0, 112.0)]),
+                        ],
+                    }
+                }
+            }
+        });
+        assert!(html.contains("ct-band"), "{html}");
     }
 
     /// A right axis series is labelled in its own unit there; the summary names it.

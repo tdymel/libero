@@ -150,6 +150,29 @@ fn Demo() -> Element {
 }
 ```
 
+On a line, `.errors(..)` draws a see-through band in the line's colour from each
+point's low to its high, as a forecast's or a measurement's range; a `stacked`
+chart reads it in the tooltip alone.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{LineChart, Series};
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        LineChart {
+            title: "Visitors",
+            x: ["Mon", "Tue", "Wed", "Thu", "Fri"],
+            series: vec![
+                Series::new("Forecast", [120.0, 132.0, 101.0, 134.0, 90.0])
+                    .errors([(110.0, 130.0), (120.0, 145.0), (90.0, 112.0), (120.0, 150.0), (78.0, 102.0)]),
+            ],
+        }
+    }
+}
+```
+
 `PieChart` takes slices:
 
 ```rust
@@ -605,8 +628,8 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   for colour-blind eyes, is skipped.
 - In forced colours the lines, bars and slices keep their colours on the system
   background; axes and labels take the system text colour.
-- A bar's error range is written after its value in the tooltip and the
-  announcement, as "120 (110–130)".
+- A bar's or a point's error range is written after its value in the tooltip
+  and the announcement, as "120 (110–130)".
 - A label on a bar or a slice takes black or white, whichever reads on it.
 
 ### You must
@@ -634,7 +657,8 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 - `.colors` and `.negative_color` add no meaning of their own: a loss already
   hangs below the axis. The legend keeps the series' colour.
 - Error bars draw on upright grouped bars only; a stack or a lying chart reads
-  the range in its tooltip alone.
+  the range in its tooltip alone. A line draws its ranges as a band, only around
+  its points and not when `stacked`.
 - A rose's radius and a slice under `min_label_angle` are read by eye or not at
   all; the summary gives every value.
 - `zoom` and `onrange` are for lines and bars; a pie exports only.

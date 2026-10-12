@@ -19,6 +19,15 @@ use libero::{
 const DAYS: [&str; 7] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const THIS_WEEK: [f64; 7] = [120.0, 132.0, 101.0, 134.0, 90.0, 230.0, 210.0];
 const LAST_WEEK: [f64; 7] = [98.0, 110.0, 115.0, 120.0, 104.0, 170.0, 180.0];
+const LAST_WEEK_RANGE: [(f64, f64); 7] = [
+    (88.0, 108.0),
+    (99.0, 121.0),
+    (104.0, 126.0),
+    (108.0, 132.0),
+    (94.0, 114.0),
+    (153.0, 187.0),
+    (162.0, 198.0),
+];
 const CONVERSION: [f64; 7] = [2.1, 2.4, 1.8, 2.6, 1.5, 3.4, 3.1];
 const QUARTERS: [&str; 4] = ["Q1", "Q2", "Q3", "Q4"];
 const SALES_2025: [f64; 4] = [120.0, 132.0, 101.0, 134.0];
@@ -67,6 +76,20 @@ fn axis_titles(values: &DemoValues) -> Option<(&'static str, &'static str)> {
         (false, _) => None,
         (true, "bar") => Some(("Quarter", "Profit")),
         (true, _) => Some(("Day", "Visitors")),
+    }
+}
+
+/// The line chart's second series, with its error band as the switch says.
+fn last_week(values: &DemoValues) -> (String, Series) {
+    let series = Series::new("Last week", LAST_WEEK)
+        .dashed()
+        .symbol(PointSymbol::Square);
+    match values.str("error_band") == "true" {
+        true => (
+            format!(".errors({LAST_WEEK_RANGE:?})"),
+            series.errors(LAST_WEEK_RANGE),
+        ),
+        false => (String::new(), series),
     }
 }
 
@@ -280,7 +303,7 @@ pub fn ChartPage() -> Element {
                     "A saved SVG is self-contained: its colours resolved, its font named, the chart's `title` as its `<title>`. The save buttons announce what they saved.",
                     "Each series' or slice's palette colour reaches 3:1 on the page and on a card, in every shipped theme and color scheme; one too close to an earlier one, also for colour-blind eyes, is skipped.",
                     "In forced colours the lines, bars and slices keep their colours on the system background; axes and labels take the system text colour.",
-                    "A bar's error range is written after its value in the tooltip and the announcement, as \"120 (110–130)\".",
+                    "A bar's or a point's error range is written after its value in the tooltip and the announcement, as \"120 (110–130)\".",
                     "A label on a bar or a slice takes black or white, whichever reads on it.",
                 ])
                 .must([
@@ -298,7 +321,7 @@ pub fn ChartPage() -> Element {
                     "A hidden slice leaves the drawing, so the shown ones' shares grow; the summary keeps every slice.",
                     "`grid` draws nothing on a pie.",
                     "`.colors` and `.negative_color` add no meaning of their own: a loss already hangs below the axis. The legend keeps the series' colour.",
-                    "Error bars draw on upright grouped bars only; a stack or a lying chart reads the range in its tooltip alone.",
+                    "Error bars draw on upright grouped bars only; a stack or a lying chart reads the range in its tooltip alone. A line draws its ranges as a band, only around its points and not when `stacked`.",
                     "A rose's radius and a slice under `min_label_angle` are read by eye or not at all; the summary gives every value.",
                     "`zoom` and `onrange` are for lines and bars; a pie exports only.",
                     "An export keeps the normal palette in forced colours. `png()` is `None` on Blitz and on the server, and the PNG button says it could not save.",
@@ -365,7 +388,8 @@ pub fn ChartPage() -> Element {
                                 "title: \"Visitors\"".to_string(),
                                 format!("x: {DAYS:?}"),
                                 format!(
-                                    "series: vec![Series::new(\"This week\", {THIS_WEEK:?}){mark}, Series::new(\"Last week\", {LAST_WEEK:?}).dashed().symbol(PointSymbol::Square){}]",
+                                    "series: vec![Series::new(\"This week\", {THIS_WEEK:?}){mark}, Series::new(\"Last week\", {LAST_WEEK:?}).dashed().symbol(PointSymbol::Square){}{}]",
+                                    last_week(values).0,
                                     conversion(values).map(|c| c.0).unwrap_or_default()
                                 ),
                             ],
@@ -460,6 +484,10 @@ pub fn ChartPage() -> Element {
                     Control::toggle("mark_line", ["average", "target", "none"])
                         .default("average")
                         .hidden_when(is("axes"))
+                        .code(|_, _| vec![]),
+                    Control::switch("error_band")
+                        .default("true")
+                        .hidden_when(is("line"))
                         .code(|_, _| vec![]),
                     Control::switch("secondary_axis")
                         .default("true")
@@ -571,7 +599,7 @@ pub fn ChartPage() -> Element {
                                 x: DAYS,
                                 series: vec![
                                     marked(&values, Series::new("This week", THIS_WEEK)),
-                                    Series::new("Last week", LAST_WEEK).dashed().symbol(PointSymbol::Square),
+                                    last_week(&values).1,
                                 ].into_iter().chain(conversion(&values).map(|c| c.1)).collect::<Vec<_>>(),
                                 curve: Curve::from(values.str("curve").as_str()),
                                 area: values.str("area") != "none",
@@ -591,7 +619,7 @@ pub fn ChartPage() -> Element {
                     Code { source: ".negative_color(..)" }
                     "; the bar's place below the axis says the same. "
                     Code { source: ".errors([(low, high), ..])" }
-                    " draws a range over each upright bar of a grouped chart, and the tooltip and the keys read it out."
+                    " draws a range over each upright bar of a grouped chart, and the tooltip and the keys read it out. On a line it is a see-through band in the line's colour."
                 }
                 ProfitRanges {}
                 Ranking {}
