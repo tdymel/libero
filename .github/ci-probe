@@ -1,0 +1,5 @@
+# ted_ci.py probe; read by .github/workflows/ci-probe.yml.
+os=linux
+tier=desktop
+filter=select::stress_a
+dev=olaf-71
