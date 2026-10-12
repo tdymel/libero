@@ -525,14 +525,14 @@ async fn open<D: Driver>(d: &mut D) -> Result<()> {
     .await?;
     // The stage's first scroll settles before a gesture lands on it: the
     // picture is centred and holds still from one idle to the next.
-    // The page's width: a classic scrollbar narrows it below the viewport's.
-    let width = d.rect("html").await?.width;
+    // Centred in the dialog, not the viewport: a classic scrollbar on a tall dialog narrows it.
     eventually(d, "the stage's first scroll to settle", async |d| {
         let before = d.rect(PICTURE).await?;
         d.idle().await;
         let after = d.rect(PICTURE).await?;
+        let dialog = d.rect("[role=dialog]").await?;
         let centre = after.x + after.width / 2.0;
-        Ok(after.x == before.x && (centre - width / 2.0).abs() < 1.0)
+        Ok(after.x == before.x && (centre - (dialog.x + dialog.width / 2.0)).abs() < 1.0)
     })
     .await
 }
