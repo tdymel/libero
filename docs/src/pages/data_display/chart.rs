@@ -319,6 +319,8 @@ pub fn ChartPage() -> Element {
                     "s."
                 }
             },
+            // snippet: let mut selected = use_signal(|| None::<ChartRange>);
+            // snippet: let chart = use_chart();
             Demo {
                 component: "Chart",
                 children_text: "",
