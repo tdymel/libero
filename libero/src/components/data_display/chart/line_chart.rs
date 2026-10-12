@@ -59,8 +59,9 @@ chart_props! {
         /// [`Series::secondary_axis`] series measure.
         #[props(default, into)]
         y2_title: Option<String>,
-        /// Zoom and pan along the x axis: Ctrl or Cmd with the wheel, a pinch, a drag,
-        /// the plus, minus and 0 keys, and a reset button. Unset, the theme's.
+        /// Zoom and pan along the x axis: Ctrl or Cmd with the wheel, a pinch, a drag
+        /// (Shift or Alt with it once `onrange` is set), the plus, minus and 0 keys, and a
+        /// reset button. Unset, the theme's.
         #[props(default)]
         zoom: Option<bool>,
         /// Set, a drag or Shift with an arrow key selects a band of x values; `None` when
@@ -219,11 +220,13 @@ pub fn LineChart(props: LineChartProps) -> Element {
                 let names: Vec<&str> = right.iter().map(|series| series.name.as_str()).collect();
                 sentences.push(fill(labels.secondary, &[("names", &names.join(", "))]));
             }
+            // The right axis, and so its title, is drawn only for a right series.
+            let y2_title = props.y2_title.clone().filter(|_| !right.is_empty());
             sentences.extend(axis_titles(
                 &labels,
                 &props.x_title,
                 &props.y_title,
-                &props.y2_title,
+                &y2_title,
             ));
             if props.stacked {
                 sentences.push(labels.stacked.to_string());
@@ -548,6 +551,25 @@ mod tests {
             html.contains("On the right y axis: Rain.") && html.contains("Right y axis: Rainfall."),
             "{html}"
         );
+    }
+
+    /// Without a right series no right axis is drawn, so the summary names no title for it.
+    #[test]
+    fn a_right_title_without_a_right_series_is_not_summarized() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    LineChart {
+                        title: "Weather",
+                        x: ["Mon", "Tue"],
+                        series: vec![Series::new("Temperature", [12.0, 18.0])],
+                        y2_title: "Rainfall",
+                    }
+                }
+            }
+        });
+        assert!(!html.contains("\nRainfall\n"), "{html}");
+        assert!(!html.contains("Right y axis"), "{html}");
     }
 
     /// Areas are see-through at the theme's opacity; a stack's summary says what its heights mean.

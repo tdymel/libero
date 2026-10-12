@@ -64,8 +64,9 @@ chart_props! {
         /// Between two bars of a group, in pixels. Unset, the theme's.
         #[props(default)]
         bar_gap: Option<f32>,
-        /// Zoom and pan along the categories: Ctrl or Cmd with the wheel, a pinch, a drag,
-        /// the plus, minus and 0 keys, and a reset button. Unset, the theme's.
+        /// Zoom and pan along the categories: Ctrl or Cmd with the wheel, a pinch, a drag
+        /// (Shift or Alt with it once `onrange` is set), the plus, minus and 0 keys, and a
+        /// reset button. Unset, the theme's.
         #[props(default)]
         zoom: Option<bool>,
         /// Set, a drag or Shift with an arrow key selects a band of categories; `None`

@@ -60,6 +60,35 @@ e2e::scenario!(
     ios: skip("a touch screen has no hover")
 );
 
+/// A pen hovers as a mouse does: its tooltip leaves with it.
+async fn pen_leaves<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.evaluate(&format!(
+        "(() => {{ const layer = document.querySelector({LAYER:?});
+           const r = layer.getBoundingClientRect();
+           const pen = (type, bubbles) => layer.dispatchEvent(new PointerEvent(type, {{
+               bubbles, pointerId: 7, isPrimary: true, pointerType: 'pen', buttons: 0,
+               clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 }}));
+           pen('pointermove', true);
+           window.penLeave = () => pen('pointerleave', false);
+           return true; }})()"
+    ))
+    .await?;
+    reads(d, "#active", "This week Wed 101", "a pen hover").await?;
+    eventually(d, "the tooltip", async |d| d.exists(TOOLTIP).await).await?;
+    d.evaluate("window.penLeave()").await?;
+    reads(d, "#active", "", "the pen leaving").await?;
+    eventually(d, "the tooltip to leave", async |d| Ok(!d.exists(TOOLTIP).await?)).await
+}
+
+e2e::scenario!(
+    a_pen_leaving_takes_its_tooltip_along,
+    "/line-chart",
+    pen_leaves,
+    android: skip("a synthetic pen hover is a browser check"),
+    native: skip("charts are parked on Blitz"),
+    ios: skip("a synthetic pen hover is a browser check")
+);
+
 /// Arrows walk a line and cross to the other at the same x; Enter clicks; Escape clears.
 async fn keys<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.focus(LAYER).await?;

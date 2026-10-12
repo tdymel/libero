@@ -728,8 +728,9 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
     let onpointerleave = {
         let mut set_active = set_active.clone();
         move |event: Event<PointerData>| {
-            // A touch leaves at every lift: its point stays pinned.
-            if event.pointer_type() == "mouse" {
+            // A touch leaves at every lift: its point stays pinned. A pen hovers, as a mouse.
+            if event.pointer_type() != "touch" {
+                pinned.set(false);
                 set_active(None);
             }
         }

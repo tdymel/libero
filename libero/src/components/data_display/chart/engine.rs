@@ -843,7 +843,8 @@ fn relayout(
     let unit = span / count as f32;
     let group = match spec.bar_width {
         Some(share) => unit * share.clamp(0.1, 1.0),
-        None => unit - 2.0 * RENDERER_MARGIN,
+        // A band narrower than the margins keeps half of it.
+        None => (unit - 2.0 * RENDERER_MARGIN).max(unit / 2.0),
     };
     let gap = spec.bar_gap.max(0.0).min(group / slots as f32 / 2.0);
     let width = ((group - gap * (slots - 1) as f32) / slots as f32).max(1.0);
@@ -2444,6 +2445,26 @@ mod tests {
         // A of b and B of b: one gap apart.
         let (a, b) = (found[1], found[3]);
         assert!((b[0] - (a[0] + a[2]) - 10.0).abs() < 0.2, "{found:?}");
+    }
+
+    /// A band narrower than the renderer's margins still holds its bars, with a gap set.
+    #[test]
+    fn bars_stay_inside_a_narrow_band() {
+        let mut narrow = bars(BarLayout::Grouped, false);
+        narrow.x = (0..40).map(|i| i.to_string()).collect();
+        narrow.series = vec![spec("A", &[Some(1.0); 40]), spec("B", &[Some(2.0); 40])];
+        narrow.bar_gap = 2.0;
+        let drawn = draw_bar(&narrow).expect("drawn");
+        let plot = drawn.geometry.plot;
+        let unit = (plot.right - plot.left) / 40.0;
+        assert!(unit < 2.0 * RENDERER_MARGIN, "the band is not narrow: {unit}");
+        let found = rects(&drawn);
+        assert_eq!(found.len(), 80, "{found:?}");
+        for [x, _, width, _] in &found {
+            let band = ((x - plot.left) / unit).floor();
+            let end = plot.left + unit * (band + 1.0);
+            assert!(*width > 1.0 && x + width <= end + 0.1, "{x}+{width} past {end}");
+        }
     }
 
     /// A bar's own colour wins over its series'; a negative one's too; its label reads on it.

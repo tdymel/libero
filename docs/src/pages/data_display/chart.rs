@@ -210,7 +210,7 @@ pub fn ChartPage() -> Element {
                     prop("hidden", "Option<Vec<String>>").doc("The names of the lines the legend hides; set, they are controlled."),
                     prop("default_hidden", "Vec<String>").default("[]").doc("Seeds the hidden lines once. Ignored when `hidden` is set."),
                     prop("onhiddenchange", "Option<EventHandler<Vec<String>>>").doc("The hidden lines a legend button asks for. The last shown line stays."),
-                    prop("zoom", "Option<bool>").default(on(theme.chart.zoom)).doc("Zoom and pan the x axis: Ctrl or Cmd with the wheel, a pinch, a drag, the keys, and a Reset zoom button."),
+                    prop("zoom", "Option<bool>").default(on(theme.chart.zoom)).doc("Zoom and pan the x axis: Ctrl or Cmd with the wheel, a pinch, a drag (Shift or Alt with it once `onrange` is set), the keys, and a Reset zoom button."),
                     prop("onrange", "Option<EventHandler<Option<ChartRange>>>").doc("Set, a drag or Shift with an arrow brushes a band of x values; Shift or Alt with a drag pans instead. `None` when Escape clears it."),
                     prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom."),
                     prop("export_button", "Option<bool>").default(on(theme.chart.export_button)).doc("Save as SVG and Save as PNG buttons above the plot."),
@@ -246,8 +246,8 @@ pub fn ChartPage() -> Element {
                     prop("hidden", "Option<Vec<String>>").doc("The names of the series the legend hides; set, they are controlled."),
                     prop("default_hidden", "Vec<String>").default("[]").doc("Seeds the hidden series once. Ignored when `hidden` is set."),
                     prop("onhiddenchange", "Option<EventHandler<Vec<String>>>").doc("The hidden series a legend button asks for. The last shown series stays."),
-                    prop("zoom", "Option<bool>").default(on(theme.chart.zoom)).doc("Zoom and pan the x axis: Ctrl or Cmd with the wheel, a pinch, a drag, the keys, and a Reset zoom button."),
-                    prop("onrange", "Option<EventHandler<Option<ChartRange>>>").doc("Set, a drag or Shift with an arrow brushes a band of x values; Shift or Alt with a drag pans instead. `None` when Escape clears it."),
+                    prop("zoom", "Option<bool>").default(on(theme.chart.zoom)).doc("Zoom and pan along the categories: Ctrl or Cmd with the wheel, a pinch, a drag (Shift or Alt with it once `onrange` is set), the keys, and a Reset zoom button."),
+                    prop("onrange", "Option<EventHandler<Option<ChartRange>>>").doc("Set, a drag or Shift with an arrow brushes a band of categories; Shift or Alt with a drag pans instead. `None` when Escape clears it."),
                     prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom."),
                     prop("export_button", "Option<bool>").default(on(theme.chart.export_button)).doc("Save as SVG and Save as PNG buttons above the plot."),
                 ]),
@@ -289,8 +289,8 @@ pub fn ChartPage() -> Element {
                 .key(["Home", "End"], "The line's or the series' first or last point or bar; a pie's first or last slice.")
                 .key(["Enter", "Space"], "Calls `onpointclick` with the point, bar or slice.")
                 .key(["Escape"], "Clears the brushed band, else the point and its tooltip.")
-                .key(["+", "-"], "With `zoom`: zooms the x axis in or out around the keys' point; the arrows carry the window along at its edge.")
-                .key(["0"], "With `zoom`: shows the whole x axis again.")
+                .key(["+", "-"], "With `zoom`: zooms the x axis, a lying bar chart's categories, in or out around the keys' point; the arrows carry the window along at its edge.")
+                .key(["0"], "With `zoom`: shows every x value or category again.")
                 .key(["Shift+ArrowRight", "Shift+ArrowLeft"], "With `onrange`: brushes from the keys' point to the next or previous x value.")
                 .handles([
                     "The chart is a `role=\"figure\"` named by `title`. The drawing is hidden from screen readers.",

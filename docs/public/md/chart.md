@@ -501,7 +501,7 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `hidden` | `Option<Vec<String>>` | | The names of the lines the legend hides; set, they are controlled. |
 | `default_hidden` | `Vec<String>` | `[]` | Seeds the hidden lines once. Ignored when `hidden` is set. |
 | `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | The hidden lines a legend button asks for. The last shown line stays. |
-| `zoom` | `Option<bool>` | `false` | Zoom and pan the x axis: Ctrl or Cmd with the wheel, a pinch, a drag, the keys, and a Reset zoom button. |
+| `zoom` | `Option<bool>` | `false` | Zoom and pan the x axis: Ctrl or Cmd with the wheel, a pinch, a drag (Shift or Alt with it once `onrange` is set), the keys, and a Reset zoom button. |
 | `onrange` | `Option<EventHandler<Option<ChartRange>>>` | | Set, a drag or Shift with an arrow brushes a band of x values; Shift or Alt with a drag pans instead. `None` when Escape clears it. |
 | `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom. |
 | `export_button` | `Option<bool>` | `false` | Save as SVG and Save as PNG buttons above the plot. |
@@ -540,8 +540,8 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `hidden` | `Option<Vec<String>>` | | The names of the series the legend hides; set, they are controlled. |
 | `default_hidden` | `Vec<String>` | `[]` | Seeds the hidden series once. Ignored when `hidden` is set. |
 | `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | The hidden series a legend button asks for. The last shown series stays. |
-| `zoom` | `Option<bool>` | `false` | Zoom and pan the x axis: Ctrl or Cmd with the wheel, a pinch, a drag, the keys, and a Reset zoom button. |
-| `onrange` | `Option<EventHandler<Option<ChartRange>>>` | | Set, a drag or Shift with an arrow brushes a band of x values; Shift or Alt with a drag pans instead. `None` when Escape clears it. |
+| `zoom` | `Option<bool>` | `false` | Zoom and pan along the categories: Ctrl or Cmd with the wheel, a pinch, a drag (Shift or Alt with it once `onrange` is set), the keys, and a Reset zoom button. |
+| `onrange` | `Option<EventHandler<Option<ChartRange>>>` | | Set, a drag or Shift with an arrow brushes a band of categories; Shift or Alt with a drag pans instead. `None` when Escape clears it. |
 | `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom. |
 | `export_button` | `Option<bool>` | `false` | Save as SVG and Save as PNG buttons above the plot. |
 
@@ -593,8 +593,8 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 | `Home` / `End` | The line's or the series' first or last point or bar; a pie's first or last slice. |
 | `Enter` / `Space` | Calls `onpointclick` with the point, bar or slice. |
 | `Escape` | Clears the brushed band, else the point and its tooltip. |
-| `+` / `-` | With `zoom`: zooms the x axis in or out around the keys' point; the arrows carry the window along at its edge. |
-| `0` | With `zoom`: shows the whole x axis again. |
+| `+` / `-` | With `zoom`: zooms the x axis, a lying bar chart's categories, in or out around the keys' point; the arrows carry the window along at its edge. |
+| `0` | With `zoom`: shows every x value or category again. |
 | `Shift+ArrowRight` / `Shift+ArrowLeft` | With `onrange`: brushes from the keys' point to the next or previous x value. |
 
 ### Libero handles
