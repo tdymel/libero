@@ -2,7 +2,7 @@
 //! read-outs of the active bar, the clicks and the hidden series.
 
 use dioxus::prelude::*;
-use libero::components::{BarChart, ChartPoint, Series};
+use libero::components::{BarChart, ChartPoint, ChartRange, Series};
 
 use crate::Routes;
 
@@ -10,6 +10,7 @@ pub const ROUTES: Routes = &[
     ("/bar-chart", || rsx! { Grouped {} }),
     ("/bar-chart/stacked", || rsx! { Stacked {} }),
     ("/bar-chart/styled", || rsx! { Styled {} }),
+    ("/bar-chart/zoom", || rsx! { Zoomable {} }),
 ];
 
 fn series() -> Vec<Series> {
@@ -89,5 +90,27 @@ fn Styled() -> Element {
                 value_label_position: "inside",
             }
         }
+    }
+}
+
+/// Lying bars that zoom down their side, with the brushed range read out.
+#[component]
+fn Zoomable() -> Element {
+    let mut range = use_signal(String::new);
+    rsx! {
+        div { max_width: "480px",
+            BarChart {
+                id: "chart",
+                title: "Sales",
+                x: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+                series: vec![Series::new("2026", [3, 5, 4, 6, 8, 7])],
+                orientation: "horizontal",
+                zoom: true,
+                onrange: move |selected: Option<ChartRange>| {
+                    range.set(selected.map(|r| format!("{} {}", r.from, r.to)).unwrap_or_default())
+                },
+            }
+        }
+        p { id: "range", "{range}" }
     }
 }

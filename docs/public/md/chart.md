@@ -1,7 +1,7 @@
 # Chart
 
 Crate: `libero`, feature `charts`
-Import: `use libero::components::{BarChart, LineChart, PieChart, Series, Slice};`
+Import: `use libero::components::{BarChart, ChartHandle, ChartRange, LineChart, PieChart, Series, Slice, use_chart};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/chart>
 Index: [index.md](index.md) lists every other page
 Description: Line, bar and pie charts as SVG, with a tooltip, arrow keys, a toggle legend, and a summary for screen readers.
@@ -15,6 +15,10 @@ A chart only draws. To show its values as a table too, put them in a
 
 Lines and bars take one or more `Series` over a shared x axis; a pie takes
 `Slice`s, each a name and a value.
+
+Lines and bars zoom and pan their x axis with `zoom` and brush a range for
+`onrange`. Every chart exports as SVG or PNG through a `use_chart()` handle or
+the `export_button`s.
 
 ## Usage
 
@@ -278,6 +282,45 @@ fn Demo() -> Element {
 }
 ```
 
+`zoom: true` lets the reader zoom the x axis with Ctrl or Cmd and the wheel, a
+pinch, a drag or `+`, `-` and `0`, and adds a Reset zoom button. With `onrange`
+set, a drag brushes a band of x values instead, and Shift or Alt with the drag
+pans. `use_chart()` gives a handle the app reads the drawing through:
+`svg()`, `png().await`, `save_svg(name)` and `save_png(name)` (through
+`save_file`: a download on the web, the share sheet on Android).
+`export_button: true` adds Save as SVG and Save as PNG buttons.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Button, ChartRange, LineChart, Series, use_chart};
+
+#[component]
+fn Demo() -> Element {
+    let chart = use_chart();
+    let mut selected = use_signal(|| None::<ChartRange>);
+    rsx! {
+        LineChart {
+            title: "Visitors",
+            x: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+            series: vec![Series::new("This week", [120, 132, 101, 134, 90, 230, 210])],
+            zoom: true,
+            onrange: move |range| selected.set(range),
+            export_button: true,
+            handle: chart,
+        }
+        if let Some(range) = selected() {
+            p { "Selected {range.from} to {range.to}" }
+        }
+        Button {
+            onclick: move |_| async move {
+                chart.save_png("visitors.png").await;
+            },
+            "Download"
+        }
+    }
+}
+```
+
 A chart only draws its data. Where every value matters, show the same rows in a
 [Table](table.md) beside it: a screen reader can read it cell by cell, and a
 reader can sort it.
@@ -350,6 +393,10 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `hidden` | `Option<Vec<String>>` | | The names of the lines the legend hides; set, they are controlled. |
 | `default_hidden` | `Vec<String>` | `[]` | Seeds the hidden lines once. Ignored when `hidden` is set. |
 | `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | The hidden lines a legend button asks for. The last shown line stays. |
+| `zoom` | `Option<bool>` | `false` | Zoom and pan the x axis: Ctrl or Cmd with the wheel, a pinch, a drag, the keys, and a Reset zoom button. |
+| `onrange` | `Option<EventHandler<Option<ChartRange>>>` | | Set, a drag or Shift with an arrow brushes a band of x values; Shift or Alt with a drag pans instead. `None` when Escape clears it. |
+| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom. |
+| `export_button` | `Option<bool>` | `false` | Save as SVG and Save as PNG buttons above the plot. |
 
 ### `BarChart`
 
@@ -385,6 +432,10 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `hidden` | `Option<Vec<String>>` | | The names of the series the legend hides; set, they are controlled. |
 | `default_hidden` | `Vec<String>` | `[]` | Seeds the hidden series once. Ignored when `hidden` is set. |
 | `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | The hidden series a legend button asks for. The last shown series stays. |
+| `zoom` | `Option<bool>` | `false` | Zoom and pan the x axis: Ctrl or Cmd with the wheel, a pinch, a drag, the keys, and a Reset zoom button. |
+| `onrange` | `Option<EventHandler<Option<ChartRange>>>` | | Set, a drag or Shift with an arrow brushes a band of x values; Shift or Alt with a drag pans instead. `None` when Escape clears it. |
+| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom. |
+| `export_button` | `Option<bool>` | `false` | Save as SVG and Save as PNG buttons above the plot. |
 
 ### `PieChart`
 
@@ -416,6 +467,8 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `hidden` | `Option<Vec<String>>` | | The names of the slices the legend hides; set, they are controlled. |
 | `default_hidden` | `Vec<String>` | `[]` | Seeds the hidden slices once. Ignored when `hidden` is set. |
 | `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | The hidden slices a legend button asks for. The last shown slice stays. |
+| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom. |
+| `export_button` | `Option<bool>` | `false` | Save as SVG and Save as PNG buttons above the plot. |
 
 Like every component, each chart also takes the shared props `sx`, `class`,
 `style`, `states`, `parts` (`ChartPart`), and any extra HTML attributes.
@@ -431,7 +484,10 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 | `ArrowDown` / `ArrowUp` | Line: the next or previous line at the same x value, or its nearest point. Bar: the next or previous series' bar in the category; `horizontal`, the next or previous category, top to bottom. Pie: the next or previous slice. |
 | `Home` / `End` | The line's or the series' first or last point or bar; a pie's first or last slice. |
 | `Enter` / `Space` | Calls `onpointclick` with the point, bar or slice. |
-| `Escape` | Clears the point and its tooltip. |
+| `Escape` | Clears the brushed band, else the point and its tooltip. |
+| `+` / `-` | With `zoom`: zooms the x axis in or out around the keys' point; the arrows carry the window along at its edge. |
+| `0` | With `zoom`: shows the whole x axis again. |
+| `Shift+ArrowRight` / `Shift+ArrowLeft` | With `onrange`: brushes from the keys' point to the next or previous x value. |
 
 ### Libero handles
 
@@ -450,6 +506,14 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   `symbol`, each key is its line's point shape.
 - On a touch screen a tap pins a point's tooltip, a second tap on it clicks; a
   vertical swipe still scrolls the page.
+- With `zoom`, the shown range is announced once a zoom or pan settles, as
+  "Showing Tue to Fri"; the Reset zoom button stays focusable while there is
+  nothing to reset. Ctrl or Cmd with the wheel zooms only a zoomable plot, so
+  the page zoom works everywhere else.
+- A drag with `onrange` set brushes; Shift or Alt with it pans. The band is
+  outlined as well as tinted, and announced as "Selected Tue to Thu".
+- A saved SVG is self-contained: its colours resolved, its font named, the
+  chart's `title` as its `<title>`. The save buttons announce what they saved.
 - Each series' or slice's palette colour reaches 3:1 on the page and on a card,
   in every shipped theme and color scheme; one too close to an earlier one, also
   for colour-blind eyes, is skipped.
@@ -487,6 +551,9 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   the range in its tooltip alone.
 - A rose's radius and a slice under `min_label_angle` are read by eye or not at
   all; the summary gives every value.
+- `zoom` and `onrange` are for lines and bars; a pie exports only.
+- An export keeps the normal palette in forced colours. `png()` is `None` on
+  Blitz and on the server, and the PNG button says it could not save.
 
 ## Theme defaults
 
@@ -517,6 +584,8 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 | `pie_label_position` | `PieLabelPosition` | Default `label_position`. |
 | `slice_gap` | `f32` | Default `slice_gap`, in pixels. |
 | `min_label_angle` | `f32` | Default `min_label_angle`, in degrees. |
+| `zoom` | `bool` | Default `zoom`. |
+| `export_button` | `bool` | Default `export_button`. |
 | `legend_gap` | `&'static str` | Between the plot and the legend. |
 | `swatch_size` | `&'static str` | A legend swatch's side. |
 

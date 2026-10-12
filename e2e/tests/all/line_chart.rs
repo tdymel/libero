@@ -270,3 +270,148 @@ e2e::scenario!(
     desktop: skip("a mouse drag scrolls nothing"),
     native: skip("charts are parked on Blitz")
 );
+
+const STATUS: &str = "#chart [role=status]";
+const RESET: &str = "#chart [data-chart-tool=reset]";
+const PLUS: keyboard::Key = keyboard::Key {
+    key: "+",
+    code: "Equal",
+    vk: 187,
+    text: Some("+"),
+};
+const ZERO: keyboard::Key = keyboard::Key {
+    key: "0",
+    code: "Digit0",
+    vk: 48,
+    text: Some("0"),
+};
+
+async fn says<D: Driver>(d: &mut D, want: &str, what: &str) -> Result<()> {
+    reads(d, STATUS, want, what).await
+}
+
+/// Plus zooms in around the middle, the arrows carry the window past its edge, 0 resets;
+/// Shift with an arrow brushes, Escape clears the brush.
+async fn zoom_keys<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let held = d.attr(RESET, "aria-disabled").await?;
+    ensure!(
+        held.as_deref() == Some("true"),
+        "a reset before a zoom: {held:?}"
+    );
+    d.focus(LAYER).await?;
+    d.press(PLUS).await?;
+    says(d, "Showing Mar to Jun", "+").await?;
+    let held = d.attr(RESET, "aria-disabled").await?;
+    ensure!(held.as_deref() != Some("true"), "no reset after a zoom");
+    d.press(keyboard::HOME).await?;
+    reads(d, "#active", "Visits Mar 4", "Home in the window").await?;
+    d.press(keyboard::ARROW_LEFT).await?;
+    reads(d, "#active", "Visits Feb 5", "ArrowLeft past the window").await?;
+    says(d, "Visits, Feb: 5", "the point the window moved to").await?;
+    d.press_shift(keyboard::ARROW_RIGHT).await?;
+    reads(d, "#range", "1 2 Feb Mar", "Shift+ArrowRight").await?;
+    ensure!(
+        d.exists("#chart [data-chart-brush]").await?,
+        "no brush band"
+    );
+    d.press(keyboard::ESCAPE).await?;
+    reads(d, "#range", "", "Escape").await?;
+    ensure!(
+        !d.exists("#chart [data-chart-brush]").await?,
+        "Escape left the band"
+    );
+    d.press(ZERO).await?;
+    says(d, "Showing Jan to Aug", "0").await
+}
+
+e2e::scenario!(
+    the_keys_zoom_pan_and_brush,
+    "/line-chart-zoom",
+    zoom_keys,
+    native: skip("charts are parked on Blitz")
+);
+
+/// A sideways drag over the plot brushes a band of x values; the hover and click stay.
+async fn brushes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let plot = d.rect(LAYER).await?;
+    d.drag(LAYER, -plot.width * 0.4, 0.0).await?;
+    eventually(d, "the brushed range", async |d| {
+        let range = d.text("#range").await?;
+        let ends: Vec<usize> = range
+            .split(' ')
+            .take(2)
+            .filter_map(|n| n.parse().ok())
+            .collect();
+        Ok(matches!(ends[..], [start, end] if start < end))
+    })
+    .await?;
+    ensure!(
+        d.exists("#chart [data-chart-brush]").await?,
+        "no brush band"
+    );
+    ensure!(
+        d.text(STATUS).await?.starts_with("Selected "),
+        "the brush was not announced"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_sideways_drag_brushes_a_range,
+    "/line-chart-zoom",
+    brushes,
+    native: skip("charts are parked on Blitz"),
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
+);
+
+/// Two fingers spread over the plot zoom it in.
+async fn pinches<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let plot = d.rect(LAYER).await?;
+    d.pinch(LAYER, plot.width * 0.2, plot.width * 0.8).await?;
+    eventually(d, "the reset to wake", async |d| {
+        Ok(d.attr(RESET, "aria-disabled").await?.as_deref() != Some("true"))
+    })
+    .await?;
+    // Said once the zoom settles.
+    eventually(d, "the zoom to be announced", async |d| {
+        Ok(d.text(STATUS).await?.starts_with("Showing "))
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_pinch_zooms_the_plot,
+    "/line-chart-zoom",
+    pinches,
+    web: skip("a mouse has no pinch"),
+    desktop: skip("a mouse has no pinch"),
+    native: skip("charts are parked on Blitz"),
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
+);
+
+const SAVED: &str = "[...document.querySelectorAll('#chart [role=status]')]\
+     .some(status => status.textContent === 'Saved visitors.svg')";
+
+/// The handle reads a titled SVG and a PNG; the built-in button saves and says so.
+async fn exports<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#read-svg").await?;
+    reads(d, "#svg", "true true", "the SVG").await?;
+    d.click("#read-png").await?;
+    reads(d, "#png", "true", "the PNG").await?;
+    // Android hands a saved file to the share sheet, which would cover the page.
+    if d.platform() == Platform::Web {
+        d.click("#chart [data-chart-tool=svg]").await?;
+        eventually(d, "the SVG button to say it saved", async |d| {
+            Ok(d.evaluate(SAVED).await? == true)
+        })
+        .await?;
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    the_chart_exports_as_svg_and_png,
+    "/line-chart-zoom",
+    exports,
+    native: skip("charts are parked on Blitz")
+);

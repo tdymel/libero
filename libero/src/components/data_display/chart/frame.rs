@@ -4,26 +4,30 @@
 use dioxus::prelude::*;
 
 use super::{
-    ChartColor, ChartPart, ChartPoint, Series, ValueFormat,
+    ChartColor, ChartHandle, ChartPart, ChartPoint, ChartRange, Series, ValueFormat,
     engine::{Drawn, Plot, SeriesExtras, SeriesSpec},
+    export::{ExportSource, file_name},
     legend::{ChartLegend, HiddenSeries, LegendEntry, legend_sx},
     overlay::{ChartOverlay, OverlaySeries, overlay_sx},
+    zoom::Zoom,
 };
 use crate::{
     components::{
-        accessibility::visually_hidden_sx,
+        accessibility::{use_announcer, visually_hidden_sx},
+        buttons::Button,
         common::{ClassList, HtmlTag, Input, Part, Parts, States, Variables, variables},
         feedback::Skeleton,
         layout::use_box,
     },
     hooks::{ElementHandle, use_element, use_resize_fallback},
     localization::{ChartLabels, Formats, fill},
-    platform::ElementApi,
+    platform::{ElementApi, SaveOutcome, save_file},
     sx::{FORCED_COLORS, StaticSx, Sx, sx},
     theme::{
         CHART_ASPECT_RATIO, CHART_LEGEND_GAP, CHART_SWATCH_SIZE, HexColor, LegendPosition, Theme,
         chart_color, chart_palette,
     },
+    tokens::Size,
 };
 
 /// Before the first measure, and on the server: the SVG scales to its box from here.
@@ -49,6 +53,13 @@ static CHART_BASE_SX: StaticSx = StaticSx::new(|| {
         .min_width("0")
         .selector(ChartPart::Title.selector(), sx().font_weight("600"))
         .selector(ChartPart::Description.selector(), sx().color("text-dimmed"))
+        .selector(
+            ChartPart::Toolbar.selector(),
+            sx().display("flex")
+                .flex_wrap("wrap")
+                .justify_content("flex-end")
+                .gap("xs"),
+        )
         .selector(
             ChartPart::Body.selector(),
             sx().display("flex")
@@ -216,6 +227,12 @@ pub(super) struct Frame {
     pub(super) plot: PlotSize,
     pub(super) aspect_ratio: Option<f32>,
     pub(super) interaction: Interaction,
+    /// A fresh drawing for the handle and the export buttons.
+    pub(super) export: ExportSource,
+    pub(super) handle: Option<ChartHandle>,
+    pub(super) export_button: bool,
+    /// Set on a line or bar chart with `zoom`.
+    pub(super) zoom: Option<Zoom>,
 }
 
 /// What the overlay needs beyond the drawing: how to write values and whom to tell.
@@ -229,6 +246,8 @@ pub(super) struct Interaction {
     pub(super) onactivechange: Option<EventHandler<Option<ChartPoint>>>,
     /// A horizontal bar chart's: up and down walk the categories, as drawn.
     pub(super) swap_axes: bool,
+    /// Set, a drag or Shift with the arrows selects a band of x values.
+    pub(super) onrange: Option<EventHandler<Option<ChartRange>>>,
 }
 
 impl Frame {
@@ -272,7 +291,25 @@ impl Frame {
             plot,
             aspect_ratio,
             interaction,
+            export,
+            handle,
+            export_button,
+            zoom,
         } = self;
+        if let Some(handle) = handle {
+            handle.attach(export.clone(), zoom);
+        }
+        let held = use_hook(|| CopyValue::new(handle));
+        if *held.peek() != handle {
+            let mut held = held;
+            held.set(handle);
+        }
+        use_drop(move || {
+            if let Some(handle) = held.try_peek().ok().and_then(|handle| *handle) {
+                handle.detach();
+            }
+        });
+        let announcer = use_announcer();
         let states: Input<States> = states
             .clone()
             .unwrap_or_default()
@@ -321,7 +358,39 @@ impl Frame {
             onpointclick,
             onactivechange,
             swap_axes,
+            onrange,
         } = interaction;
+        let tools = !loading && !empty && (zoom.is_some() || export_button);
+        let save = move |extension: &'static str| {
+            let export = export.clone();
+            let name = file_name(export.title.as_deref(), extension);
+            move |_| {
+                let (export, name) = (export.clone(), name.clone());
+                spawn(async move {
+                    let outcome = match extension {
+                        "png" => match export.png().await {
+                            Some(png) => save_file(&name, "image/png", png).await,
+                            None => SaveOutcome::Failed(String::new()),
+                        },
+                        _ => match export.svg() {
+                            Some((svg, ..)) => {
+                                save_file(&name, "image/svg+xml", svg.into_bytes()).await
+                            }
+                            None => SaveOutcome::Failed(String::new()),
+                        },
+                    };
+                    match outcome {
+                        SaveOutcome::Saved | SaveOutcome::Shared => {
+                            announcer.say(fill(labels.saved, &[("name", &name)]));
+                        }
+                        SaveOutcome::Failed(_) => {
+                            announcer.say(fill(labels.save_failed, &[("name", &name)]));
+                        }
+                        SaveOutcome::Cancelled => {}
+                    }
+                });
+            }
+        };
 
         let children = rsx! {
             if let Some(title) = title {
@@ -329,6 +398,37 @@ impl Frame {
             }
             if let Some(description) = description {
                 div { "data-slot": ChartPart::Description.slot(), id: "{id}-description", "{description}" }
+            }
+            if tools {
+                div { "data-slot": ChartPart::Toolbar.slot(),
+                    if let Some(zoom) = zoom {
+                        Button {
+                            variant: "standard",
+                            size: Size::Sm,
+                            disabled: !zoom.is_zoomed(),
+                            focusable_when_disabled: true,
+                            "data-chart-tool": "reset",
+                            onclick: move |_| zoom.reset(),
+                            "{labels.reset_zoom}"
+                        }
+                    }
+                    if export_button {
+                        Button {
+                            variant: "standard",
+                            size: Size::Sm,
+                            "data-chart-tool": "svg",
+                            onclick: save("svg"),
+                            "{labels.save_svg}"
+                        }
+                        Button {
+                            variant: "standard",
+                            size: Size::Sm,
+                            "data-chart-tool": "png",
+                            onclick: save("png"),
+                            "{labels.save_png}"
+                        }
+                    }
+                }
             }
             div { "data-slot": ChartPart::Body.slot(),
                 div {
@@ -366,12 +466,18 @@ impl Frame {
                             onpointclick,
                             onactivechange,
                             swap_axes,
+                            zoom,
+                            onrange,
                         }
                     }
                 }
                 if legend != LegendPosition::None && !loading && !empty {
                     ChartLegend { entries, label: legend_label, ontoggle }
                 }
+            }
+            // Says what the save buttons did; the plot's own speaks for the plot.
+            if tools && export_button {
+                {announcer.render()}
             }
             if !summary.is_empty() {
                 div { "data-chart-summary": true, id: "{id}-summary",

@@ -1,14 +1,16 @@
 use dioxus::prelude::*;
 
 use super::{
-    Series, XValues,
+    ChartRange, Series, XValues,
     engine::{self, Axes, BarSpec, SeriesSpec},
+    export::ExportSource,
     frame::{
         Frame, Interaction, axis_titles, chart_unit, hex, overlay_series, series_specs,
         shown_places, summary, use_plot_size,
     },
     legend::use_hidden_series,
     props::chart_props,
+    zoom::{cut, use_zoom, windowed},
 };
 use crate::{
     components::common::{Input, Orientation, names_itself, use_name_warning},
@@ -62,6 +64,14 @@ chart_props! {
         /// Between two bars of a group, in pixels. Unset, the theme's.
         #[props(default)]
         bar_gap: Option<f32>,
+        /// Zoom and pan along the categories: Ctrl or Cmd with the wheel, a pinch, a drag,
+        /// the plus, minus and 0 keys, and a reset button. Unset, the theme's.
+        #[props(default)]
+        zoom: Option<bool>,
+        /// Set, a drag or Shift with an arrow key selects a band of categories; `None`
+        /// when Escape clears it. With `zoom`, Shift or Alt with a drag pans.
+        #[props(default)]
+        onrange: Option<EventHandler<Option<ChartRange>>>,
     }
 }
 
@@ -107,19 +117,24 @@ pub fn BarChart(props: BarChartProps) -> Element {
     let (width, height) = size.get(ratio);
 
     let x = props.x.labels(&props.value_format, formats);
+    let zoom = use_zoom(x.len(), props.zoom.unwrap_or(theme.chart.zoom));
+    let window = zoom.map_or((0, x.len()), |zoom| zoom.range());
     let empty = props
         .series
         .iter()
         .all(|series| series.values.iter().all(Option::is_none));
     let forced = use_accessibility().forced_colors();
     // Bars are never dashed, so neither are their legend keys.
-    let all_specs: Vec<SeriesSpec> = series_specs(theme, forced, &props.series)
-        .into_iter()
-        .map(|spec| SeriesSpec {
-            dashed: false,
-            ..spec
-        })
-        .collect();
+    let solid = |forced: bool| -> Vec<SeriesSpec> {
+        series_specs(theme, forced, &props.series)
+            .into_iter()
+            .map(|spec| SeriesSpec {
+                dashed: false,
+                ..spec
+            })
+            .collect()
+    };
+    let all_specs = solid(forced);
     let names: Vec<String> = all_specs.iter().map(|s| s.name.clone()).collect();
     let hidden = use_hidden_series(
         &props.hidden,
@@ -148,8 +163,11 @@ pub fn BarChart(props: BarChartProps) -> Element {
     let spec = BarSpec {
         width,
         height,
-        x: x.clone(),
-        series: shown.iter().map(|i| all_specs[*i].clone()).collect(),
+        x: cut(&x, window),
+        series: windowed(
+            shown.iter().map(|i| all_specs[*i].clone()).collect(),
+            window,
+        ),
         layout,
         horizontal,
         radius: f32::from(
@@ -177,12 +195,13 @@ pub fn BarChart(props: BarChartProps) -> Element {
                         own.or(series.negative_color.filter(|_| negative))
                             .map(color)
                     })
-                    .collect()
+                    .collect::<Vec<_>>()
             })
+            .map(|colors| cut(&colors, window))
             .collect(),
         errors: shown
             .iter()
-            .map(|i| props.series[*i].errors.clone())
+            .map(|i| cut(&props.series[*i].errors, window))
             .collect(),
         bar_width: props.bar_width.or(theme.chart.bar_width),
         bar_gap: props.bar_gap.unwrap_or(theme.chart.bar_gap),
@@ -192,8 +211,18 @@ pub fn BarChart(props: BarChartProps) -> Element {
         unit: unit.clone(),
         formats,
     };
-    let drawn = use_memo(use_reactive!(|spec, shown| {
-        engine::draw_bar(&spec).map(|drawn| drawn.with_series(&shown))
+    // The file keeps the normal palette under forced colours.
+    let export = {
+        let specs = solid(false);
+        let spec = BarSpec {
+            series: windowed(shown.iter().map(|i| specs[*i].clone()).collect(), window),
+            ink: ChartInk::of(theme, false),
+            ..spec.clone()
+        };
+        ExportSource::of(theme, props.title.clone(), move || engine::draw_bar(&spec))
+    };
+    let drawn = use_memo(use_reactive!(|spec, shown, window| {
+        engine::draw_bar(&spec).map(|drawn| drawn.with_series(&shown).with_offset(window.0))
     }));
 
     let write = |series: &Series, value: f64| {
@@ -237,7 +266,12 @@ pub fn BarChart(props: BarChartProps) -> Element {
             onpointclick: props.onpointclick,
             onactivechange: props.onactivechange,
             swap_axes: horizontal,
+            onrange: props.onrange,
         },
+        export,
+        handle: props.handle,
+        export_button: props.export_button.unwrap_or(theme.chart.export_button),
+        zoom,
     }
     .render(
         &props.class,

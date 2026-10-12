@@ -67,6 +67,7 @@ Accessibility. The rest are shown on the component or guide page they belong to.
 | `use_icon` | The glyph an IconProvider sets for a slot, else your default. | [IconProvider](icon_provider.md) |
 | `use_scroll_area` | Scrolls a ScrollArea from code. | [ScrollArea](scroll_area.md) |
 | `use_scroller` | Steps a Scroller from controls of your own. | [Scroller](scroller.md) |
+| `use_chart` | Reads a chart's drawing as SVG or PNG, saves it, resets its zoom. | [Chart](chart.md) |
 | `use_form` | Controls a Form: validity, check, submit and reset. | [Form](form.md) |
 | `use_form_context` | The handle of the Form it is called inside. | [Form](form.md) |
 | `use_combobox` | Keeps a Combobox's open state in your scope. | [Combobox](combobox.md) |

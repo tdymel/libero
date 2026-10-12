@@ -278,6 +278,11 @@ fn hooks() -> Vec<HookRow> {
             Route::ScrollerPage {},
         ),
         row(
+            "use_chart",
+            "Reads a chart's drawing as SVG or PNG, saves it, resets its zoom.",
+            Route::ChartPage {},
+        ),
+        row(
             "use_form",
             "Controls a Form: validity, check, submit and reset.",
             Route::FormPage {},

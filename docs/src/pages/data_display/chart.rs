@@ -7,8 +7,8 @@ use dioxus::prelude::*;
 use libero::use_theme;
 use libero::{
     components::{
-        Anchor, BarChart, Code, LineChart, Orientation, PieChart, Series, Slice, Table, Text,
-        XValues, column,
+        Anchor, BarChart, ChartRange, Code, LineChart, Orientation, PieChart, Series, Slice, Table,
+        Text, XValues, column, use_chart,
     },
     theme::{
         BarLabelPosition, BarLayout, Curve, LegendPosition, PieLabelPosition, PieLabels,
@@ -83,6 +83,8 @@ fn component(values: &DemoValues, source: &str) -> String {
 pub fn ChartPage() -> Element {
     let theme = use_theme();
     let legend = ["bottom", "top", "start", "end", "none"];
+    let chart = use_chart();
+    let mut selected = use_signal(|| None::<ChartRange>);
     rsx! {
         DocPage {
             title: "Chart",
@@ -117,6 +119,10 @@ pub fn ChartPage() -> Element {
                     prop("hidden", "Option<Vec<String>>").doc("The names of the lines the legend hides; set, they are controlled."),
                     prop("default_hidden", "Vec<String>").default("[]").doc("Seeds the hidden lines once. Ignored when `hidden` is set."),
                     prop("onhiddenchange", "Option<EventHandler<Vec<String>>>").doc("The hidden lines a legend button asks for. The last shown line stays."),
+                    prop("zoom", "Option<bool>").default(on(theme.chart.zoom)).doc("Zoom and pan the x axis: Ctrl or Cmd with the wheel, a pinch, a drag, the keys, and a Reset zoom button."),
+                    prop("onrange", "Option<EventHandler<Option<ChartRange>>>").doc("Set, a drag or Shift with an arrow brushes a band of x values; Shift or Alt with a drag pans instead. `None` when Escape clears it."),
+                    prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom."),
+                    prop("export_button", "Option<bool>").default(on(theme.chart.export_button)).doc("Save as SVG and Save as PNG buttons above the plot."),
                 ]),
                 props("BarChart", vec![
                     prop("x", "XValues").default("required").doc("The categories, one per bar or group of bars."),
@@ -149,6 +155,10 @@ pub fn ChartPage() -> Element {
                     prop("hidden", "Option<Vec<String>>").doc("The names of the series the legend hides; set, they are controlled."),
                     prop("default_hidden", "Vec<String>").default("[]").doc("Seeds the hidden series once. Ignored when `hidden` is set."),
                     prop("onhiddenchange", "Option<EventHandler<Vec<String>>>").doc("The hidden series a legend button asks for. The last shown series stays."),
+                    prop("zoom", "Option<bool>").default(on(theme.chart.zoom)).doc("Zoom and pan the x axis: Ctrl or Cmd with the wheel, a pinch, a drag, the keys, and a Reset zoom button."),
+                    prop("onrange", "Option<EventHandler<Option<ChartRange>>>").doc("Set, a drag or Shift with an arrow brushes a band of x values; Shift or Alt with a drag pans instead. `None` when Escape clears it."),
+                    prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom."),
+                    prop("export_button", "Option<bool>").default(on(theme.chart.export_button)).doc("Save as SVG and Save as PNG buttons above the plot."),
                 ]),
                 props("PieChart", vec![
                     prop("slices", "Vec<Slice>").default("required").doc("The slices, each a share of their sum. A negative value takes no share."),
@@ -177,6 +187,8 @@ pub fn ChartPage() -> Element {
                     prop("hidden", "Option<Vec<String>>").doc("The names of the slices the legend hides; set, they are controlled."),
                     prop("default_hidden", "Vec<String>").default("[]").doc("Seeds the hidden slices once. Ignored when `hidden` is set."),
                     prop("onhiddenchange", "Option<EventHandler<Vec<String>>>").doc("The hidden slices a legend button asks for. The last shown slice stays."),
+                    prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom."),
+                    prop("export_button", "Option<bool>").default(on(theme.chart.export_button)).doc("Save as SVG and Save as PNG buttons above the plot."),
                 ]),
             ],
             accessibility: a11y()
@@ -185,13 +197,19 @@ pub fn ChartPage() -> Element {
                 .key(["ArrowDown", "ArrowUp"], "Line: the next or previous line at the same x value, or its nearest point. Bar: the next or previous series' bar in the category; `horizontal`, the next or previous category, top to bottom. Pie: the next or previous slice.")
                 .key(["Home", "End"], "The line's or the series' first or last point or bar; a pie's first or last slice.")
                 .key(["Enter", "Space"], "Calls `onpointclick` with the point, bar or slice.")
-                .key(["Escape"], "Clears the point and its tooltip.")
+                .key(["Escape"], "Clears the brushed band, else the point and its tooltip.")
+                .key(["+", "-"], "With `zoom`: zooms the x axis in or out around the keys' point; the arrows carry the window along at its edge.")
+                .key(["0"], "With `zoom`: shows the whole x axis again.")
+                .key(["Shift+ArrowRight", "Shift+ArrowLeft"], "With `onrange`: brushes from the keys' point to the next or previous x value.")
                 .handles([
                     "The chart is a `role=\"figure\"` named by `title`. The drawing is hidden from screen readers.",
                     "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is, then the axes' titles and, stacked, that the top line is the total; a pie's, the total, then each slice's value and share.",
                     "The plot is one tab stop, a `role=\"application\"` described as a chart, so a screen reader hands it the arrows. Each point the keys reach is announced, as \"This week, Tue: 132\" or \"Chrome: 62, 62%.\"",
                     "The legend's entries are toggle buttons: pressed while their series or slice shows, struck through when hidden. The last shown one's button is `aria-disabled`. A dashed line's key is a dash, as drawn; once a line sets a `symbol`, each key is its line's point shape.",
                     "On a touch screen a tap pins a point's tooltip, a second tap on it clicks; a vertical swipe still scrolls the page.",
+                    "With `zoom`, the shown range is announced once a zoom or pan settles, as \"Showing Tue to Fri\"; the Reset zoom button stays focusable while there is nothing to reset. Ctrl or Cmd with the wheel zooms only a zoomable plot, so the page zoom works everywhere else.",
+                    "A drag with `onrange` set brushes; Shift or Alt with it pans. The band is outlined as well as tinted, and announced as \"Selected Tue to Thu\".",
+                    "A saved SVG is self-contained: its colours resolved, its font named, the chart's `title` as its `<title>`. The save buttons announce what they saved.",
                     "Each series' or slice's palette colour reaches 3:1 on the page and on a card, in every shipped theme and color scheme; one too close to an earlier one, also for colour-blind eyes, is skipped.",
                     "In forced colours the lines, bars and slices keep their colours on the system background; axes and labels take the system text colour.",
                     "A bar's error range is written after its value in the tooltip and the announcement, as \"120 (110–130)\".",
@@ -214,6 +232,8 @@ pub fn ChartPage() -> Element {
                     "`.colors` and `.negative_color` add no meaning of their own: a loss already hangs below the axis. The legend keeps the series' colour.",
                     "Error bars draw on upright grouped bars only; a stack or a lying chart reads the range in its tooltip alone.",
                     "A rose's radius and a slice under `min_label_angle` are read by eye or not at all; the summary gives every value.",
+                    "`zoom` and `onrange` are for lines and bars; a pie exports only.",
+                    "An export keeps the normal palette in forced colours. `png()` is `None` on Blitz and on the server, and the PNG button says it could not save.",
                 ]),
             lead: rsx! {
                 Text {
@@ -232,6 +252,17 @@ pub fn ChartPage() -> Element {
                     " over a shared x axis; a pie takes "
                     Code { source: "Slice" }
                     "s, each a name and a value."
+                }
+                Text {
+                    "Lines and bars zoom and pan their x axis with "
+                    Code { source: "zoom" }
+                    " and brush a range for "
+                    Code { source: "onrange" }
+                    ". Every chart exports as SVG or PNG through a "
+                    Code { source: "use_chart()" }
+                    " handle or the "
+                    Code { source: "export_button" }
+                    "s."
                 }
             },
             Demo {
@@ -367,6 +398,21 @@ pub fn ChartPage() -> Element {
                         }),
                     Control::select("legend", legend),
                     Control::switch("tooltip").default(on(theme.chart.tooltip)),
+                    Control::switch("zoom").default("true").hidden_when(|values| values.str("type") == "pie").code(|_, values| {
+                        match (values.str("zoom").as_str(), values.str("type").as_str()) {
+                            ("true", "line" | "bar") => vec![
+                                "zoom: true".to_string(),
+                                "onrange: move |range| selected.set(range)".to_string(),
+                            ],
+                            _ => vec![],
+                        }
+                    }),
+                    Control::switch("export_button").default("true").code(|_, values| {
+                        match values.str("export_button").as_str() {
+                            "true" => vec!["export_button: true".to_string(), "handle: chart".to_string()],
+                            _ => vec![],
+                        }
+                    }),
                     Control::switch("loading"),
                 ],
                 render: move |values: DemoValues| {
@@ -381,8 +427,11 @@ pub fn ChartPage() -> Element {
                         titles.map(|t| t.0.to_string()),
                         titles.map(|t| t.1.to_string()),
                     );
+                    let zoom = values.str("zoom") == "true";
+                    let export_button = values.str("export_button") == "true";
+                    let onrange = zoom.then_some(EventHandler::new(move |range: Option<ChartRange>| selected.set(range)));
                     match values.str("type").as_str() {
-                        "bar" => rsx! {
+                        "bar" => brushed(zoom, selected, rsx! {
                             BarChart {
                                 title: "Profit",
                                 x: QUARTERS,
@@ -398,9 +447,9 @@ pub fn ChartPage() -> Element {
                                 },
                                 bar_width: values.str("bar_width").parse::<f32>().ok(),
                                 y_min, y_max, y_ticks, x_title, y_title,
-                                legend, tooltip, loading,
+                                                                legend, tooltip, loading, zoom, onrange, export_button, handle: chart,
                             }
-                        },
+                        }),
                         "pie" => {
                             let half = values.str("end_angle") == "half";
                             rsx! {
@@ -416,11 +465,11 @@ pub fn ChartPage() -> Element {
                                     end_angle: half.then_some(90.0),
                                     slice_gap: values.str("slice_gap").parse::<f32>().ok(),
                                     center: rsx! { "1,204 users" },
-                                    legend, tooltip, loading,
+                                    legend, tooltip, loading, export_button, handle: chart,
                                 }
                             }
                         }
-                        _ => rsx! {
+                        _ => brushed(zoom, selected, rsx! {
                             LineChart {
                                 title: "Visitors",
                                 x: DAYS,
@@ -432,9 +481,9 @@ pub fn ChartPage() -> Element {
                                 area: values.str("area") != "none",
                                 stacked: values.str("area") == "stacked",
                                 y_min, y_max, y_ticks, x_title, y_title,
-                                legend, tooltip, loading,
+                                                                legend, tooltip, loading, zoom, onrange, export_button, handle: chart,
                             }
-                        },
+                        }),
                     }
                 },
             }
@@ -537,6 +586,22 @@ fn Rose() -> Element {
             slices: slices(),
             rose: true,
             labels: "name",
+        }
+    }
+}
+
+/// The demo's `chart`, with the brushed band under it while it zooms.
+fn brushed(zoom: bool, selected: Signal<Option<ChartRange>>, chart: Element) -> Element {
+    let text = match &*selected.read() {
+        Some(range) => format!("Selected {} to {}", range.from, range.to),
+        None => "Drag across the plot to select a range.".to_string(),
+    };
+    rsx! {
+        div { width: "100%",
+            {chart}
+            if zoom {
+                Text { size: "sm", "{text}" }
+            }
         }
     }
 }

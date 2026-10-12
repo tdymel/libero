@@ -18,6 +18,8 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `bar_chart::hovering_shows_the_bar_s_tooltip_and_marker` | android | a touch screen has no hover |
 | `bar_chart::hovering_shows_the_bar_s_tooltip_and_marker` | ios | a touch screen has no hover |
 | `bar_chart::hovering_shows_the_bar_s_tooltip_and_marker` | native | charts are parked on Blitz |
+| `bar_chart::lying_bars_zoom_and_brush_down_their_side` | ios | 3416: the simulator's tap or drag did not drive the page |
+| `bar_chart::lying_bars_zoom_and_brush_down_their_side` | native | charts are parked on Blitz |
 | `bar_chart::the_keys_follow_lying_bars` | native | charts are parked on Blitz |
 | `bar_chart::the_keys_read_a_bar_s_range` | native | charts are parked on Blitz |
 | `bar_chart::the_keys_walk_the_bars` | native | charts are parked on Blitz |
@@ -166,13 +168,21 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `lightbox_zoom::a_zoomed_picture_pans_only_to_its_edge` | windows desktop | upstream: Dioxus' asset! gives a backslashed file path (D:\a\..\1.svg) off the bundle, which WebView2 cannot load, so no picture decodes |
 | `line_chart::a_click_on_a_point_reports_it` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `line_chart::a_click_on_a_point_reports_it` | native | charts are parked on Blitz |
+| `line_chart::a_pinch_zooms_the_plot` | desktop | a mouse has no pinch |
+| `line_chart::a_pinch_zooms_the_plot` | ios | 3416: the simulator's tap or drag did not drive the page |
+| `line_chart::a_pinch_zooms_the_plot` | native | charts are parked on Blitz |
+| `line_chart::a_pinch_zooms_the_plot` | web | a mouse has no pinch |
+| `line_chart::a_sideways_drag_brushes_a_range` | ios | 3416: the simulator's tap or drag did not drive the page |
+| `line_chart::a_sideways_drag_brushes_a_range` | native | charts are parked on Blitz |
 | `line_chart::a_vertical_swipe_over_the_plot_scrolls_the_page` | desktop | a mouse drag scrolls nothing |
 | `line_chart::a_vertical_swipe_over_the_plot_scrolls_the_page` | native | charts are parked on Blitz |
 | `line_chart::a_vertical_swipe_over_the_plot_scrolls_the_page` | web | a mouse drag scrolls nothing |
 | `line_chart::hovering_shows_the_point_s_tooltip_and_marker` | android | a touch screen has no hover |
 | `line_chart::hovering_shows_the_point_s_tooltip_and_marker` | ios | a touch screen has no hover |
 | `line_chart::hovering_shows_the_point_s_tooltip_and_marker` | native | charts are parked on Blitz |
+| `line_chart::the_chart_exports_as_svg_and_png` | native | charts are parked on Blitz |
 | `line_chart::the_keys_walk_the_points` | native | charts are parked on Blitz |
+| `line_chart::the_keys_zoom_pan_and_brush` | native | charts are parked on Blitz |
 | `line_chart::the_legend_hides_and_shows_a_line` | native | charts are parked on Blitz |
 | `line_chart::the_tooltip_keeps_its_height_from_point_to_point` | native | charts are parked on Blitz |
 | `menu::a_click_outside_closes_it_and_leaves_focus_where_it_went` | ios | 3416: the simulator's tap or drag did not drive the page |

@@ -48,6 +48,8 @@ mod select;
 mod share;
 mod storage;
 mod style_rules;
+#[cfg(feature = "charts")]
+mod svg_png;
 mod system_notification;
 mod table;
 mod task;
@@ -189,6 +191,8 @@ pub(crate) use storage::{MemoryStorage, StorageApi, fake_storage};
 pub(crate) use storage::{StorageArea, StorageChange, StorageSubscription, storage};
 pub use storage::{StorageError, set_storage_dir};
 pub(crate) use style_rules::{StyleRulesApi, edits_style_rules, style_rules};
+#[cfg(feature = "charts")]
+pub(crate) use svg_png::svg_png;
 pub use system_notification::{NotificationAction, SystemNotification, SystemNotificationError};
 pub(crate) use system_notification::{
     NotificationEvent, ShownNotification, raise_window, system_notification,

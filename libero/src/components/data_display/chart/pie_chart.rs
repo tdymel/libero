@@ -3,6 +3,7 @@ use dioxus::prelude::*;
 use super::{
     ChartColor, Slice, ValueFormat,
     engine::{self, PieSpec, SeriesSpec},
+    export::ExportSource,
     frame::{Frame, Interaction, hex, overlay_series, shown_places, use_plot_size},
     legend::use_hidden_series,
     props::chart_props,
@@ -91,22 +92,25 @@ pub fn PieChart(props: PieChartProps) -> Element {
     let total: f64 = props.slices.iter().map(|slice| share_of(slice.value)).sum();
     let empty = total <= 0.0;
     let forced = use_accessibility().forced_colors();
-    let palette = chart_palette(theme, forced);
-    let colors = slice_colors(&palette, &props.slices, |i, color| {
-        hex(theme, forced, &palette, i, color)
-    });
-    let all_slices: Vec<SeriesSpec> = props
-        .slices
-        .iter()
-        .zip(colors)
-        .map(|(slice, color)| SeriesSpec {
-            name: slice.name.clone(),
-            values: vec![Some(share_of(slice.value))],
-            color,
-            dashed: false,
-            extras: Default::default(),
-        })
-        .collect();
+    let specs = |forced: bool| -> Vec<SeriesSpec> {
+        let palette = chart_palette(theme, forced);
+        let colors = slice_colors(&palette, &props.slices, |i, color| {
+            hex(theme, forced, &palette, i, color)
+        });
+        props
+            .slices
+            .iter()
+            .zip(colors)
+            .map(|(slice, color)| SeriesSpec {
+                name: slice.name.clone(),
+                values: vec![Some(share_of(slice.value))],
+                color,
+                dashed: false,
+                extras: Default::default(),
+            })
+            .collect()
+    };
+    let all_slices = specs(forced);
     let names: Vec<String> = all_slices.iter().map(|s| s.name.clone()).collect();
     let hidden = use_hidden_series(
         &props.hidden,
@@ -134,6 +138,16 @@ pub fn PieChart(props: PieChartProps) -> Element {
         format: props.value_format,
         unit: props.unit.clone(),
         formats,
+    };
+    // The file keeps the normal palette under forced colours.
+    let export = {
+        let slices = specs(false);
+        let spec = PieSpec {
+            slices: shown.iter().map(|i| slices[*i].clone()).collect(),
+            ink: ChartInk::of(theme, false),
+            ..spec.clone()
+        };
+        ExportSource::of(theme, props.title.clone(), move || engine::draw_pie(&spec))
     };
     let drawn = use_memo(use_reactive!(|spec, shown| {
         // The shown slices may sum to nothing while hidden ones do not: a blank plot.
@@ -186,7 +200,12 @@ pub fn PieChart(props: PieChartProps) -> Element {
             onpointclick: props.onpointclick,
             onactivechange: props.onactivechange,
             swap_axes: false,
+            onrange: None,
         },
+        export,
+        handle: props.handle,
+        export_button: props.export_button.unwrap_or(theme.chart.export_button),
+        zoom: None,
     }
     .render(
         &props.class,

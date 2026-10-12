@@ -71,6 +71,12 @@ pub(crate) use webview::share as webview_share;
 pub(crate) use webview::square_png as webview_square_png;
 #[cfg(all(
     not(target_arch = "wasm32"),
+    not(feature = "native"),
+    feature = "charts"
+))]
+pub(crate) use webview::svg_png as webview_svg_png;
+#[cfg(all(
+    not(target_arch = "wasm32"),
     not(target_os = "android"),
     not(feature = "native")
 ))]

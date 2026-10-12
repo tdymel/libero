@@ -1,14 +1,16 @@
 use dioxus::prelude::*;
 
 use super::{
-    Series, XValues,
+    ChartRange, Series, XValues,
     engine::{self, Axes, LineSpec},
+    export::ExportSource,
     frame::{
         Frame, Interaction, axis_titles, chart_unit, overlay_series, series_specs, shown_places,
         summary, use_plot_size,
     },
     legend::use_hidden_series,
     props::chart_props,
+    zoom::{cut, use_zoom, windowed},
 };
 use crate::{
     components::common::{Input, names_itself, use_name_warning},
@@ -51,6 +53,14 @@ chart_props! {
         /// Beside the y axis, read upward: what it measures.
         #[props(default, into)]
         y_title: Option<String>,
+        /// Zoom and pan along the x axis: Ctrl or Cmd with the wheel, a pinch, a drag,
+        /// the plus, minus and 0 keys, and a reset button. Unset, the theme's.
+        #[props(default)]
+        zoom: Option<bool>,
+        /// Set, a drag or Shift with an arrow key selects a band of x values; `None` when
+        /// Escape clears it. With `zoom`, Shift or Alt with a drag pans.
+        #[props(default)]
+        onrange: Option<EventHandler<Option<ChartRange>>>,
     }
 }
 
@@ -96,11 +106,14 @@ pub fn LineChart(props: LineChartProps) -> Element {
     let (width, height) = size.get(ratio);
 
     let x = props.x.labels(&props.value_format, formats);
+    let zoom = use_zoom(x.len(), props.zoom.unwrap_or(theme.chart.zoom));
+    let window = zoom.map_or((0, x.len()), |zoom| zoom.range());
     let empty = props
         .series
         .iter()
         .all(|series| series.values.iter().all(Option::is_none));
-    let points = props.points.unwrap_or(theme.chart.points) && x.len() <= theme.chart.points_limit;
+    let points = props.points.unwrap_or(theme.chart.points)
+        && window.1 - window.0 <= theme.chart.points_limit;
     let forced = use_accessibility().forced_colors();
     let all_specs = series_specs(theme, forced, &props.series);
     let names: Vec<String> = all_specs.iter().map(|s| s.name.clone()).collect();
@@ -116,9 +129,12 @@ pub fn LineChart(props: LineChartProps) -> Element {
     let spec = LineSpec {
         width,
         height,
-        x: x.clone(),
-        x_numbers: props.x.numbers().to_vec(),
-        series: shown.iter().map(|i| all_specs[*i].clone()).collect(),
+        x: cut(&x, window),
+        x_numbers: cut(props.x.numbers(), window),
+        series: windowed(
+            shown.iter().map(|i| all_specs[*i].clone()).collect(),
+            window,
+        ),
         curve: props.curve.copied_or(theme.chart.curve),
         axes: Axes {
             min: props.y_min,
@@ -140,8 +156,18 @@ pub fn LineChart(props: LineChartProps) -> Element {
         unit: unit.clone(),
         formats,
     };
-    let drawn = use_memo(use_reactive!(|spec, shown| {
-        engine::draw_line(&spec).map(|drawn| drawn.with_series(&shown))
+    // The file keeps the normal palette under forced colours.
+    let export = {
+        let specs = series_specs(theme, false, &props.series);
+        let spec = LineSpec {
+            series: windowed(shown.iter().map(|i| specs[*i].clone()).collect(), window),
+            ink: ChartInk::of(theme, false),
+            ..spec.clone()
+        };
+        ExportSource::of(theme, props.title.clone(), move || engine::draw_line(&spec))
+    };
+    let drawn = use_memo(use_reactive!(|spec, shown, window| {
+        engine::draw_line(&spec).map(|drawn| drawn.with_series(&shown).with_offset(window.0))
     }));
 
     let write = |series: &Series, value: f64| {
@@ -193,7 +219,12 @@ pub fn LineChart(props: LineChartProps) -> Element {
             onpointclick: props.onpointclick,
             onactivechange: props.onactivechange,
             swap_axes: false,
+            onrange: props.onrange,
         },
+        export,
+        handle: props.handle,
+        export_button: props.export_button.unwrap_or(theme.chart.export_button),
+        zoom,
     }
     .render(
         &props.class,

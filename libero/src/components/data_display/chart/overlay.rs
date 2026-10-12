@@ -1,20 +1,29 @@
 //! The interactive layer over a drawn chart: pointer, keys, tooltip, crosshair, marker.
 //! It reads only the harvested marks, so every chart kind shares it.
 
-use dioxus::{html::geometry::ElementPoint, prelude::*};
+use dioxus::{
+    html::{
+        geometry::{ElementPoint, WheelDelta},
+        input_data::MouseButton,
+    },
+    prelude::*,
+};
 
 use super::{
-    ChartPart, ChartPoint, ValueFormat,
+    ChartPart, ChartPoint, ChartRange, ValueFormat,
     engine::{Drawn, Geometry, Mark, MarkShape, Plot},
     hit::{self, Step},
+    zoom::{Zoom, index_at, index_span, panned, zoomed},
 };
 use crate::{
     components::{
         accessibility::use_announcer,
         common::{Part, focus_ring_sx},
     },
+    hooks::{use_debounced_callback, use_element},
     localization::{ChartLabels, Formats, fill},
-    sx::{REDUCED_MOTION, Sx, sx},
+    platform::{ElementApi, wheel_travel_y},
+    sx::{FORCED_COLORS, REDUCED_MOTION, Sx, sx},
     theme::{Size, SizeCss, TOOLTIP_BACKGROUND, TOOLTIP_COLOR},
     tokens::NamedColorCss,
 };
@@ -23,6 +32,16 @@ use crate::{
 const TIP_GAP: f64 = 12.0;
 /// Half the marker's stroke, so all of it lies inside its bar.
 const MARKER_INSET: f32 = 1.0;
+/// How far a mouse moves, in px, before a press drags.
+const MOUSE_SLOP: f64 = 4.0;
+/// How far a touch moves along the x axis before it drags: Android's touch slop.
+const TOUCH_SLOP: f64 = 8.0;
+/// Wheel px that zoom by e: a trackpad pinch's spread or a few notches.
+const WHEEL_ZOOM: f64 = 300.0;
+/// A one-value brush's half width, in SVG units, so it shows on a line's point.
+const BRUSH_MIN: f32 = 4.0;
+/// Quiet time before the shown range is announced.
+const SHOWING_DELAY: u64 = 400;
 
 /// The overlay's rules, under the chart's plot.
 pub(super) fn overlay_sx() -> Sx {
@@ -38,6 +57,22 @@ pub(super) fn overlay_sx() -> Sx {
             .with("touch-action", "pan-y pinch-zoom")
             .border_radius("sm")
             .focus_visible(focus_ring_sx()),
+    )
+    // A sideways drag pans or brushes and two fingers zoom: only a vertical swipe stays the page's.
+    .selector(
+        "& > [data-chart-layer][data-gestures]",
+        sx().with("touch-action", "pan-y"),
+    )
+    .selector(
+        "& [data-chart-brush]",
+        sx().with("fill", NamedColorCss::INK.value())
+            .with("fill-opacity", "0.12")
+            .with("stroke", NamedColorCss::INK.value())
+            .with("stroke-width", "1")
+            .media(
+                FORCED_COLORS,
+                sx().with("fill", "Highlight").with("stroke", "Highlight"),
+            ),
     )
     .selector(
         "& > [data-slot='tooltip']",
@@ -129,6 +164,36 @@ pub(super) struct ChartOverlayProps {
     pub(super) onactivechange: Option<EventHandler<Option<ChartPoint>>>,
     /// Up and down walk the x values, left and right the series: a horizontal bar chart.
     pub(super) swap_axes: bool,
+    pub(super) zoom: Option<Zoom>,
+    pub(super) onrange: Option<EventHandler<Option<ChartRange>>>,
+}
+
+/// What a press on the plot is doing, by the pointer's id; positions in the layer's px.
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Gesture {
+    /// Not yet far enough to drag: still a tap or a click.
+    Press {
+        id: i32,
+        x: f64,
+        y: f64,
+        touch: bool,
+        pan: bool,
+    },
+    Pan {
+        id: i32,
+        from: f64,
+        window: (usize, usize),
+    },
+    Brush {
+        id: i32,
+        anchor: usize,
+    },
+    /// Two fingers: their spread and middle at the start, along the x axis.
+    Pinch {
+        spread: f64,
+        at: f64,
+        window: (usize, usize),
+    },
 }
 
 /// The series a mark belongs to; a pie's slices are its entries, one per index.
@@ -212,8 +277,50 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
         onpointclick,
         onactivechange,
         swap_axes,
+        zoom,
+        onrange,
     } = props;
     let announcer = use_announcer();
+    let layer = use_element();
+    let mut gesture = use_signal(|| None::<Gesture>);
+    // Touches down on the layer, by id, at their place along the x axis.
+    let mut touches = use_signal(Vec::<(i32, f64)>::new);
+    // A drag ended in this press: its click is no click.
+    let mut dragged = use_signal(|| false);
+    // The brush's band by x index, its anchor first.
+    let mut selection = use_signal(|| None::<(usize, usize)>);
+    // The keys moved the window under the active point: announce it once redrawn.
+    let mut follow = use_signal(|| false);
+    // The keys' pan says the point, not the range.
+    let mut quiet = use_signal(|| false);
+    let mut wheel_rest = use_signal(|| 0.0_f64);
+    let showing = {
+        let x = x.clone();
+        use_debounced_callback(
+            move |(start, end): (usize, usize)| {
+                let (Some(first), Some(last)) = (x.get(start), x.get(end.saturating_sub(1))) else {
+                    return;
+                };
+                announcer.say(fill(labels.showing, &[("first", first), ("last", last)]));
+            },
+            SHOWING_DELAY,
+        )
+    };
+    // A zoom or a pan reads out what the plot shows, once it settles; not the first draw.
+    let mut seen = use_signal(|| None::<(usize, usize)>);
+    use_effect(move || {
+        let Some(zoom) = zoom else { return };
+        let range = zoom.range();
+        let before = *seen.peek();
+        seen.set(Some(range));
+        let hush = *quiet.peek();
+        if hush {
+            quiet.set(false);
+        }
+        if before.is_some_and(|before| before != range) && !hush {
+            showing.call(range);
+        }
+    });
     // By series and x index: a redraw keeps the point while it is drawn.
     let mut active = use_signal(|| None::<(usize, usize)>);
     // A tap pinned the point; a second tap on it is the click.
@@ -292,6 +399,117 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
             }
         }
     };
+    let say_point = {
+        let point_of = point_of.clone();
+        let write = write.clone();
+        move |mark: &Mark| {
+            let point = point_of(mark);
+            let value = write(mark);
+            announcer.say(match mark.shape {
+                MarkShape::Sector { .. } => fill(
+                    labels.slice,
+                    &[
+                        ("name", &point.series_name),
+                        ("value", &value),
+                        ("share", &slice_share(mark)),
+                    ],
+                ),
+                _ => fill(
+                    labels.point,
+                    &[
+                        ("name", &point.series_name),
+                        ("x", &point.x),
+                        ("value", &value),
+                    ],
+                ),
+            });
+        }
+    };
+    // Once the keys' pan is drawn: the active point, or its series' nearest one past a gap.
+    {
+        let mut set_active = set_active.clone();
+        let say_point = say_point.clone();
+        use_effect(move || {
+            let drawn = drawn.read();
+            if !*follow.peek() {
+                return;
+            }
+            follow.set(false);
+            let Some((series, index)) = *active.peek() else {
+                return;
+            };
+            let Some(mark) = drawn.as_ref().and_then(|drawn| {
+                drawn
+                    .geometry
+                    .marks
+                    .iter()
+                    .filter(|mark| mark.series == series)
+                    .min_by_key(|mark| mark.index.abs_diff(index))
+                    .cloned()
+            }) else {
+                return;
+            };
+            // Keyed already, so `set_active` would skip the change.
+            active.set(None);
+            set_active(Some(&mark));
+            say_point(&mark);
+        });
+    }
+    let along = move |point: ElementPoint| if swap_axes { point.y } else { point.x };
+    // The plot's x axis in the layer's px: where it starts, and its length.
+    let axis_px = move || -> Option<(f64, f64)> {
+        let drawn = drawn.peek();
+        let geometry = &drawn.as_ref()?.geometry;
+        let fit = Fit::of((geometry.width, geometry.height), *box_size.peek());
+        let plot = geometry.plot;
+        let (offset, from, to) = match swap_axes {
+            true => (fit.top, plot.top, plot.bottom),
+            false => (fit.left, plot.left, plot.right),
+        };
+        Some((
+            offset + f64::from(from) * fit.scale,
+            f64::from(to - from) * fit.scale,
+        ))
+    };
+    let share_at = move |px: f64| {
+        axis_px().map_or(0.5, |(start, length)| {
+            ((px - start) / length.max(1.0)).clamp(0.0, 1.0)
+        })
+    };
+    let index_under = move |px: f64| -> Option<usize> {
+        let drawn = drawn.peek();
+        let geometry = &drawn.as_ref()?.geometry;
+        let fit = Fit::of((geometry.width, geometry.height), *box_size.peek());
+        let offset = if swap_axes { fit.top } else { fit.left };
+        index_at(
+            &geometry.marks,
+            ((px - offset) / fit.scale) as f32,
+            swap_axes,
+        )
+    };
+    // Px per x value along the axis, in `window`.
+    let step_px = move |window: (usize, usize)| {
+        axis_px().map(|(_, length)| length / (window.1 - window.0).max(1) as f64)
+    };
+    let zoomed_now = move || zoom.is_some_and(|zoom| zoom.peek() != (0, zoom.len));
+    let gestures = zoom.is_some() || onrange.is_some();
+    let range_of = {
+        let x = x.clone();
+        move |(a, b): (usize, usize)| ChartRange::of(a, b, &x)
+    };
+    let select = {
+        let range_of = range_of.clone();
+        move |band: (usize, usize)| {
+            let range = range_of(band);
+            announcer.say(fill(
+                labels.selected,
+                &[("first", &range.from), ("last", &range.to)],
+            ));
+            if let Some(onrange) = onrange {
+                onrange.call(Some(range));
+            }
+        }
+    };
     let active_mark = move || {
         let key = (*active.peek())?;
         with_marks(&|geometry| {
@@ -306,6 +524,87 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
     let onpointermove = {
         let mut set_active = set_active.clone();
         move |event: Event<PointerData>| {
+            if gestures {
+                let point = event.element_coordinates();
+                let id = event.pointer_id();
+                if let Some(touch) = touches.write().iter_mut().find(|touch| touch.0 == id) {
+                    touch.1 = along(point);
+                }
+                let current = *gesture.peek();
+                match current {
+                    Some(Gesture::Press {
+                        id: pressed,
+                        x,
+                        y,
+                        touch,
+                        pan,
+                    }) if pressed == id => {
+                        let (dx, dy) = (point.x - x, point.y - y);
+                        let (sideways, across) = if swap_axes { (dy, dx) } else { (dx, dy) };
+                        let drags = match touch {
+                            true => sideways.abs() >= TOUCH_SLOP && sideways.abs() > across.abs(),
+                            false => dx.hypot(dy) >= MOUSE_SLOP,
+                        };
+                        if !drags {
+                            // A swipe across the axis is the page's scroll.
+                            if touch && across.abs() >= TOUCH_SLOP {
+                                gesture.set(None);
+                            }
+                            return;
+                        }
+                        let from = if swap_axes { y } else { x };
+                        let next = match (pan, zoom) {
+                            (true, Some(zoom)) => Some(Gesture::Pan {
+                                id,
+                                from,
+                                window: zoom.peek(),
+                            }),
+                            _ => index_under(from).map(|anchor| {
+                                selection.set(Some((anchor, anchor)));
+                                Gesture::Brush { id, anchor }
+                            }),
+                        };
+                        gesture.set(next);
+                        if next.is_some() {
+                            dragged.set(true);
+                            pinned.set(false);
+                            set_active(None);
+                            let _ = layer.set_pointer_capture(id);
+                        }
+                        return;
+                    }
+                    Some(Gesture::Pan {
+                        id: panning,
+                        from,
+                        window,
+                    }) if panning == id => {
+                        if let (Some(zoom), Some(step)) = (zoom, step_px(window)) {
+                            let by = (-(along(point) - from) / step).round() as isize;
+                            zoom.set(panned(window, zoom.len, by));
+                        }
+                        return;
+                    }
+                    Some(Gesture::Brush {
+                        id: brushing,
+                        anchor,
+                    }) if brushing == id => {
+                        if let Some(head) = index_under(along(point))
+                            && *selection.peek() != Some((anchor, head))
+                        {
+                            selection.set(Some((anchor, head)));
+                        }
+                        return;
+                    }
+                    Some(Gesture::Pinch { spread, at, window }) => {
+                        if let (Some(zoom), [a, b]) = (zoom, touches.peek().as_slice()) {
+                            let now = (a.1 - b.1).abs().max(1.0);
+                            zoom.set(zoomed(window, zoom.len, spread / now, at));
+                        }
+                        return;
+                    }
+                    _ => {}
+                }
+            }
             if event.pointer_type() == "touch" && !*pinned.peek() {
                 return;
             }
@@ -315,6 +614,39 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
     let onpointerdown = {
         let mut set_active = set_active.clone();
         move |event: Event<PointerData>| {
+            dragged.set(false);
+            if gestures {
+                let point = event.element_coordinates();
+                let touch = event.pointer_type() == "touch";
+                if touch {
+                    touches.write().push((event.pointer_id(), along(point)));
+                }
+                if let (Some(zoom), [a, b]) = (zoom, touches.peek().as_slice()) {
+                    gesture.set(Some(Gesture::Pinch {
+                        spread: (a.1 - b.1).abs().max(1.0),
+                        at: share_at((a.1 + b.1) / 2.0),
+                        window: zoom.peek(),
+                    }));
+                    dragged.set(true);
+                    pinned.set(false);
+                    set_active(None);
+                    return;
+                }
+                let primary = !matches!(event.trigger_button(), Some(button) if button != MouseButton::Primary);
+                let modifiers = event.modifiers();
+                // With a brush, Shift or Alt pans instead.
+                let pan =
+                    zoomed_now() && (onrange.is_none() || modifiers.shift() || modifiers.alt());
+                if primary && (pan || onrange.is_some()) {
+                    gesture.set(Some(Gesture::Press {
+                        id: event.pointer_id(),
+                        x: point.x,
+                        y: point.y,
+                        touch,
+                        pan,
+                    }));
+                }
+            }
             if event.pointer_type() == "mouse" {
                 pinned.set(false);
                 return;
@@ -324,6 +656,73 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
             tap_on_active.set(*pinned.peek() && key.is_some() && key == *active.peek());
             pinned.set(mark.is_some());
             set_active(mark.as_ref());
+        }
+    };
+    let mut release = {
+        let select = select.clone();
+        move |event: Event<PointerData>| {
+            let id = event.pointer_id();
+            touches.write().retain(|touch| touch.0 != id);
+            let current = *gesture.peek();
+            match current {
+                Some(Gesture::Brush { id: brushing, .. }) if brushing == id => {
+                    gesture.set(None);
+                    if let Some(band) = *selection.peek() {
+                        select(band);
+                    }
+                }
+                Some(Gesture::Press { id: pressed, .. } | Gesture::Pan { id: pressed, .. })
+                    if pressed == id =>
+                {
+                    gesture.set(None)
+                }
+                Some(Gesture::Pinch { .. }) => gesture.set(None),
+                _ => {}
+            }
+        }
+    };
+    let onpointerup = {
+        let mut release = release.clone();
+        move |event: Event<PointerData>| release(event)
+    };
+    let onpointercancel = move |event: Event<PointerData>| release(event);
+    // Ctrl or Cmd with the wheel, and a trackpad's pinch, zoom; a sideways or Shift wheel pans.
+    let onwheel = move |event: Event<WheelData>| {
+        let Some(zoom) = zoom else {
+            return;
+        };
+        let data = event.data();
+        let modifiers = event.modifiers();
+        if modifiers.ctrl() || modifiers.meta() {
+            event.prevent_default();
+            let travel = wheel_travel_y(&data, 40.0, 10.0);
+            let at = share_at(along(event.element_coordinates()));
+            zoom.zoom((travel / WHEEL_ZOOM).exp(), at);
+            return;
+        }
+        let (dx, dy) = match data.delta() {
+            WheelDelta::Pixels(delta) => (delta.x, delta.y),
+            WheelDelta::Lines(delta) => (delta.x * 40.0, delta.y * 40.0),
+            WheelDelta::Pages(delta) => (delta.x * 400.0, delta.y * 400.0),
+        };
+        let travel = match modifiers.shift() {
+            true if dx != 0.0 => dx,
+            true => dy,
+            false if dx.abs() > dy.abs() => dx,
+            false => return,
+        };
+        if !zoomed_now() {
+            return;
+        }
+        event.prevent_default();
+        let Some(step) = step_px(zoom.peek()) else {
+            return;
+        };
+        let rest = *wheel_rest.peek() + travel / step;
+        let by = rest.trunc();
+        wheel_rest.set(rest - by);
+        if by != 0.0 {
+            zoom.pan(by as isize);
         }
     };
     let onpointerleave = {
@@ -340,6 +739,10 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
         let mut set_active = set_active.clone();
         // The point under the click: a press without a move first sets none active.
         move |event: Event<MouseData>| {
+            if *dragged.peek() {
+                dragged.set(false);
+                return;
+            }
             if *tap_on_active.peek() || !*pinned.peek() {
                 let mark = at_pointer(event.element_coordinates());
                 set_active(mark.as_ref());
@@ -349,9 +752,42 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
     };
     let onkeydown = {
         let mut set_active = set_active.clone();
-        let point_of = point_of.clone();
-        let write = write.clone();
+        let say_point = say_point.clone();
+        let select = select.clone();
         move |event: Event<KeyboardData>| {
+            if let Some(zoom) = zoom {
+                let (start, end) = zoom.peek();
+                // Around the keys' point, else the middle.
+                let at = active
+                    .peek()
+                    .filter(|(_, index)| (start..end).contains(index))
+                    .map_or(0.5, |(_, index)| {
+                        (index - start) as f64 / (end - start).saturating_sub(1).max(1) as f64
+                    });
+                let factor = match event.key() {
+                    Key::Character(ref c) if c == "+" || c == "=" => Some(0.5),
+                    Key::Character(ref c) if c == "-" || c == "_" => Some(2.0),
+                    Key::Character(ref c) if c == "0" => Some(f64::INFINITY),
+                    _ => None,
+                };
+                if let Some(factor) = factor {
+                    event.prevent_default();
+                    match factor.is_finite() {
+                        true => zoom.zoom(factor, at),
+                        false => zoom.reset(),
+                    }
+                    return;
+                }
+            }
+            if event.key() == Key::Escape && onrange.is_some() && selection.peek().is_some() {
+                event.stop_propagation();
+                selection.set(None);
+                announcer.say(labels.selection_cleared.to_string());
+                if let Some(onrange) = onrange {
+                    onrange.call(None);
+                }
+                return;
+            }
             let step = match event.key() {
                 Key::ArrowRight => Step::Next,
                 Key::ArrowLeft => Step::Previous,
@@ -382,6 +818,7 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
             event.prevent_default();
             let step = if swap_axes { step.swapped() } else { step };
             let key = *active.peek();
+            let from = active_mark();
             let Some(mark) = with_marks(&|geometry| {
                 let current = geometry
                     .marks
@@ -391,27 +828,43 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
             }) else {
                 return;
             };
+            let along = matches!(step, Step::Next | Step::Previous);
+            // Shift with an arrow drags the brush's head from where the keys stood.
+            let mut brush = |head: usize| {
+                let anchor = (*selection.peek())
+                    .map(|(anchor, _)| anchor)
+                    .or(from.as_ref().map(|from| from.index))
+                    .unwrap_or(head);
+                selection.set(Some((anchor, head)));
+                (anchor, head)
+            };
+            let extend = onrange.is_some() && along && event.modifiers().shift();
+            // At the window's edge the window moves on with the keys.
+            if let (Some(zoom), Some(from)) = (zoom, from.as_ref())
+                && along
+                && mark == *from
+            {
+                let target = match step {
+                    Step::Next => from.index + 1,
+                    _ => from.index.wrapping_sub(1),
+                };
+                if target < zoom.len && !(zoom.peek().0..zoom.peek().1).contains(&target) {
+                    quiet.set(true);
+                    follow.set(true);
+                    active.set(Some((from.series, target)));
+                    zoom.reveal(target);
+                    if extend {
+                        select(brush(target));
+                    }
+                    return;
+                }
+            }
             set_active(Some(&mark));
-            let point = point_of(&mark);
-            let value = write(&mark);
-            announcer.say(match mark.shape {
-                MarkShape::Sector { .. } => fill(
-                    labels.slice,
-                    &[
-                        ("name", &point.series_name),
-                        ("value", &value),
-                        ("share", &slice_share(&mark)),
-                    ],
-                ),
-                _ => fill(
-                    labels.point,
-                    &[
-                        ("name", &point.series_name),
-                        ("x", &point.x),
-                        ("value", &value),
-                    ],
-                ),
-            });
+            if extend {
+                select(brush(mark.index));
+            } else {
+                say_point(&mark);
+            }
         }
     };
     let onfocusout = move |_: Event<FocusData>| {
@@ -463,6 +916,37 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
             path { "data-chart-marker": true, d: "{path}", fill: "none" }
         },
     });
+    let band = (*selection.read()).and_then(|(a, b)| {
+        let geometry = geometry?;
+        let (low, high) = (a.min(b), a.max(b));
+        let (start, end) = zoom.map_or((0, usize::MAX), |zoom| zoom.range());
+        if high < start || low >= end {
+            return None;
+        }
+        let (edge_from, edge_to) = match swap_axes {
+            true => (plot.top, plot.bottom),
+            false => (plot.left, plot.right),
+        };
+        // An end out of the window runs to the plot's edge.
+        let from = match low < start {
+            true => edge_from,
+            false => index_span(&geometry.marks, low, swap_axes)?.0,
+        };
+        let to = match high >= end {
+            true => edge_to,
+            false => index_span(&geometry.marks, high, swap_axes)?.1,
+        };
+        let middle = (from + to) / 2.0;
+        let (from, to) = match to - from < 2.0 * BRUSH_MIN {
+            true => (middle - BRUSH_MIN, middle + BRUSH_MIN),
+            false => (from, to),
+        };
+        let (from, to) = (from.max(edge_from), to.min(edge_to));
+        Some(match swap_axes {
+            true => (plot.left, from, plot.right - plot.left, to - from),
+            false => (from, plot.top, to - from, plot.bottom - plot.top),
+        })
+    });
     let tip = match (tooltip, current, fit) {
         (true, Some(mark), Some(fit)) => {
             let style = fit.tip_style(hit::anchor(&mark.shape));
@@ -490,6 +974,9 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
             width: "100%",
             height: "100%",
             view_box,
+            if let Some((x, y, width, height)) = band {
+                rect { "data-chart-brush": true, x: "{x}", y: "{y}", width: "{width}", height: "{height}" }
+            }
             {marker}
         }
         if let Some((style, body)) = tip {
@@ -506,14 +993,27 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
             "aria-labelledby": title_id,
             "aria-describedby": keys_id.clone(),
             tabindex: "0",
+            "data-gestures": gestures.then_some("true"),
+            onmounted: layer.mount(),
             onpointermove,
             onpointerdown,
+            onpointerup,
+            onpointercancel,
+            onwheel,
             onpointerleave,
             onclick,
             onkeydown,
             onfocusout,
         }
-        div { id: keys_id, hidden: true, "{labels.keys}" }
+        div { id: keys_id, hidden: true,
+            "{labels.keys}"
+            if zoom.is_some() {
+                " {labels.zoom_keys}"
+            }
+            if onrange.is_some() {
+                " {labels.brush_keys}"
+            }
+        }
         {announcer.render()}
     }
 }

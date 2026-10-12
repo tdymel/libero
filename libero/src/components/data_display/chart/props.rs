@@ -15,6 +15,8 @@ parts_enum! {
     pub enum ChartPart {
         Title = "title" => "& > [data-slot='title']",
         Description = "description" => "& > [data-slot='description']",
+        /// The row above the plot: the zoom's reset, the export buttons.
+        Toolbar = "toolbar" => "& > [data-slot='toolbar']",
         /// The plot and its legend, side by side or stacked.
         Body = "body" => "& > [data-slot='body']",
         Plot = "plot" => "& > [data-slot='body'] > [data-slot='plot']",
@@ -91,6 +93,12 @@ macro_rules! chart_props {
                 /// The hidden series a legend button asks for. The last shown one stays.
                 #[props(default)]
                 onhiddenchange: Option<EventHandler<Vec<String>>>,
+                /// Reads or saves the drawing from code: made with [`use_chart`](super::use_chart).
+                #[props(default)]
+                handle: Option<super::ChartHandle>,
+                /// "Save as SVG" and "Save as PNG" buttons above the plot. Unset, the theme's.
+                #[props(default)]
+                export_button: Option<bool>,
             }
         }
     };
@@ -111,6 +119,7 @@ mod tests {
             [
                 ("title", "& > [data-slot='title']"),
                 ("description", "& > [data-slot='description']"),
+                ("toolbar", "& > [data-slot='toolbar']"),
                 ("body", "& > [data-slot='body']"),
                 ("plot", "& > [data-slot='body'] > [data-slot='plot']"),
                 ("legend", "& > [data-slot='body'] > [data-slot='legend']"),

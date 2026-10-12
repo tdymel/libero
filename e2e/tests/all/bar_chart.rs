@@ -341,3 +341,43 @@ e2e::scenario!(
     legend,
     native: skip("charts are parked on Blitz")
 );
+
+const PLUS: keyboard::Key = keyboard::Key {
+    key: "+",
+    code: "Equal",
+    vk: 187,
+    text: Some("+"),
+};
+
+async fn says<D: Driver>(d: &mut D, want: &str, what: &str) -> Result<()> {
+    eventually(
+        d,
+        &format!("{what}: the chart to say {want:?}"),
+        async |d| Ok(d.text("#chart [role=status]").await? == want),
+    )
+    .await
+}
+
+/// Lying bars zoom down their side; a drag down brushes; the reset shows them all.
+async fn zooms_down<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(LAYER).await?;
+    d.press(PLUS).await?;
+    says(d, "Showing Mar to May", "+").await?;
+    let plot = d.rect(LAYER).await?;
+    d.drag(LAYER, 0.0, plot.height * 0.4).await?;
+    eventually(d, "a brushed range", async |d| {
+        let range = d.text("#range").await?;
+        Ok(!range.is_empty() && !range.starts_with("Jan"))
+    })
+    .await?;
+    d.click("#chart [data-chart-tool=reset]").await?;
+    says(d, "Showing Jan to Jun", "the reset").await
+}
+
+e2e::scenario!(
+    lying_bars_zoom_and_brush_down_their_side,
+    "/bar-chart/zoom",
+    zooms_down,
+    native: skip("charts are parked on Blitz"),
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
+);
