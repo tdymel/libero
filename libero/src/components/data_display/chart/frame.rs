@@ -30,6 +30,8 @@ use crate::{
 pub(super) const FIRST_WIDTH: f32 = 640.0;
 /// Sizes snap to this, so a drag of the window redraws every few pixels, not every one.
 const SIZE_STEP: f32 = 8.0;
+/// Between a donut's centre and the ring.
+const CENTER_GAP: f32 = 4.0;
 
 static CHART_BASE_SX: StaticSx = StaticSx::new(|| {
     let column = |direction| sx().flex_direction(direction);
@@ -66,12 +68,21 @@ static CHART_BASE_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             ChartPart::Center.selector(),
+            // A circle inside the hole, sized by `center_style`; what does not fit is clipped.
             sx().position("absolute")
-                .with("inset", "0")
+                .left("50%")
+                .top("50%")
+                .transform("translate(-50%, -50%)")
+                .with("aspect-ratio", "1")
+                .box_sizing("border-box")
+                .border_radius("50%")
+                .overflow("hidden")
                 .display("flex")
                 .align_items("center")
                 .justify_content("center")
                 .text_align("center")
+                .line_height("1.2")
+                .overflow_wrap("break-word")
                 // The slices under it stay the pointer's.
                 .pointer_events("none"),
         )
@@ -271,6 +282,10 @@ impl Frame {
         let names: Vec<String> = series.iter().map(|series| series.name.clone()).collect();
         let ontoggle = move |name: String| hidden.toggle(&name, &names);
         let svg = drawn.read().as_ref().map(|drawn| drawn.svg.clone());
+        let center_style = drawn
+            .read()
+            .as_ref()
+            .map(|drawn| center_style(drawn.geometry.hole, drawn.geometry.width));
         let element = plot.element;
         let Interaction {
             format,
@@ -308,7 +323,7 @@ impl Frame {
                         // The figure's summary speaks for the drawing.
                         div { "data-chart-drawing": true, "aria-hidden": "true", dangerous_inner_html: "{svg}" }
                         if let Some(center) = center {
-                            div { "data-slot": ChartPart::Center.slot(), {center} }
+                            div { "data-slot": ChartPart::Center.slot(), style: center_style, {center} }
                         }
                         ChartOverlay {
                             drawn,
@@ -361,6 +376,20 @@ impl Frame {
             .attr("aria-busy", loading.then_some("true"))
             .render(HtmlTag::Div, attributes, children)
     }
+}
+
+/// A donut's centre: a circle a gap inside the hole, its content in the square within,
+/// its text shrinking with a small hole. In percent of the plot's `width`, as drawn.
+fn center_style(hole: f32, width: f32) -> String {
+    let diameter = 2.0 * (hole - CENTER_GAP).max(0.0);
+    let percent = |px: f32| px / width.max(1.0) * 100.0;
+    let padding = diameter * (1.0 - std::f32::consts::FRAC_1_SQRT_2) / 2.0;
+    let font = diameter * 0.16;
+    format!(
+        "width:{:.2}%;padding:{:.2}%;font-size:clamp(0.75rem,{font:.1}px,1em)",
+        percent(diameter),
+        percent(padding)
+    )
 }
 
 fn legend_state(legend: LegendPosition) -> &'static str {

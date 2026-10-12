@@ -113,7 +113,7 @@ pub fn ChartPage() -> Element {
                     prop("description", "Option<String>").doc("A sentence under the title: what to read from the chart."),
                     prop("donut", "bool").default("false").doc("A ring instead of a full pie, `center` in its middle."),
                     prop("labels", "PieLabels").default(theme.chart.pie_labels.as_str()).doc("Beside each slice: `percent`, `value`, `name` or `none`."),
-                    prop("center", "Option<Element>").doc("In a donut's middle, as a total."),
+                    prop("center", "Option<Element>").doc("In a donut's hole, as a total, kept off the ring; its text shrinks in a small hole, the rest is clipped."),
                     prop("start_angle", "f32").default("0").doc("Where the first slice starts, in degrees clockwise from 12 o'clock."),
                     prop("legend", "LegendPosition").default("bottom with two slices or more").doc("`bottom`, `top`, `start`, `end` or `none`."),
                     prop("value_format", "ValueFormat").default("Auto").doc("How values are written beside the slices, in the tooltip and in the summary."),
@@ -287,6 +287,20 @@ pub fn ChartPage() -> Element {
                     " beside it: a screen reader can read it cell by cell, and a reader can sort it."
                 }
                 SalesWithTable {}
+            }
+            DocSection { title: "Stacked bars",
+                Text {
+                    "A stack is rounded at its outer ends only: where two bars meet, their corners stay square. Grouped bars keep "
+                    Code { source: "radius" }
+                    " on every corner."
+                }
+                BarChart {
+                    title: "Sales",
+                    x: QUARTERS,
+                    series: vec![Series::new("2025", SALES_2025), Series::new("2026", SALES_2026)],
+                    layout: "stacked",
+                    radius: "lg",
+                }
             }
         }
     }

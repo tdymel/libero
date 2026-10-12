@@ -77,6 +77,30 @@ summary keep the values. `orientation: "horizontal"` lays the categories down
 the side, the first at the top. `value_labels: true` writes each bar's value on
 it, inside the bar when stacked.
 
+A stack is rounded at its outer ends only: where two bars meet, their corners
+stay square. Grouped bars keep `radius` on every corner.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{BarChart, Series};
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        BarChart {
+            title: "Sales",
+            x: ["Q1", "Q2", "Q3", "Q4"],
+            series: vec![
+                Series::new("2025", [120.0, 132.0, 101.0, 134.0]),
+                Series::new("2026", [140.0, 128.0, 150.0, 162.0]),
+            ],
+            layout: "stacked",
+            radius: "lg",
+        }
+    }
+}
+```
+
 `PieChart` takes slices:
 
 ```rust
@@ -236,7 +260,7 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `description` | `Option<String>` | | A sentence under the title: what to read from the chart. |
 | `donut` | `bool` | `false` | A ring instead of a full pie, `center` in its middle. |
 | `labels` | `PieLabels` | `percent` | Beside each slice: `percent`, `value`, `name` or `none`. |
-| `center` | `Option<Element>` | | In a donut's middle, as a total. |
+| `center` | `Option<Element>` | | In a donut's hole, as a total, kept off the ring; its text shrinks in a small hole, the rest is clipped. |
 | `start_angle` | `f32` | `0` | Where the first slice starts, in degrees clockwise from 12 o'clock. |
 | `legend` | `LegendPosition` | bottom with two slices or more | `bottom`, `top`, `start`, `end` or `none`. |
 | `value_format` | `ValueFormat` | `Auto` | How values are written beside the slices, in the tooltip and in the summary. |

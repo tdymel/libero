@@ -55,7 +55,8 @@ fn stacked_lying_bars_read_top_down() {
         let fixture = Fixture::open("/bar-chart/stacked", Viewport::Desktop)
             .await
             .unwrap();
-        wait::for_visible(&fixture.page, "#chart svg rect")
+        // A stack's bars are paths, rounded at its outer ends only (3466).
+        wait::for_visible(&fixture.page, "#chart [data-chart-drawing] path")
             .await
             .unwrap();
         let [q1, q3]: [f64; 2] = e2e::js(
@@ -68,12 +69,12 @@ fn stacked_lying_bars_read_top_down() {
         // The renderer draws the rows bottom up: Q1 is each series' last bar.
         let [a, b]: [[f64; 3]; 2] = e2e::js(
             &fixture.page,
-            "(() => { const r = [...document.querySelectorAll('#chart svg rect')] \
-             .map(r => [r.x.baseVal.value, r.y.baseVal.value, r.width.baseVal.value]); \
+            "(() => { const r = [...document.querySelectorAll('#chart [data-chart-drawing] path')] \
+             .map(p => p.getBBox()).map(b => [b.x, b.y, b.width]); \
              return [r[2], r[4]]; })()",
         )
         .await;
-        assert_eq!(a[1], b[1], "{a:?} {b:?}");
+        assert!((a[1] - b[1]).abs() < 0.5, "{a:?} {b:?}");
         assert!((a[0] + a[2] - b[0]).abs() < 1.0, "{a:?} {b:?}");
         let labels: Vec<String> = e2e::js(
             &fixture.page,

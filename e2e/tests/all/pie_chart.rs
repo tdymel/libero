@@ -62,6 +62,21 @@ fn a_donut_s_center_sits_in_its_middle() {
         )
         .await;
         assert!(dx.abs() < 2.0 && dy.abs() < 2.0, "{dx} {dy}");
+        // The centre's circle keeps a gap to the ring: the hole is the slices' inner arc.
+        let [half, hole]: [f64; 2] = e2e::js(
+            &fixture.page,
+            "(() => { const svg = document.querySelector('#chart svg'); \
+             const scale = svg.getBoundingClientRect().width / svg.viewBox.baseVal.width; \
+             const radii = [...svg.querySelectorAll('path')].flatMap(p => \
+               [...p.getAttribute('d').matchAll(/A([\\d.]+) /g)].map(m => +m[1])).filter(r => r > 0); \
+             const slot = document.querySelector('#chart [data-slot=center]').getBoundingClientRect(); \
+             return [Math.max(slot.width, slot.height) / 2, Math.min(...radii) * scale]; })()",
+        )
+        .await;
+        assert!(
+            half > 0.0 && half <= hole - 3.0,
+            "centre {half} in a hole of {hole}"
+        );
         let texts: usize = e2e::js(
             &fixture.page,
             "document.querySelectorAll('#chart svg text').length",

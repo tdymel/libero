@@ -24,7 +24,7 @@ chart_props! {
         /// What each slice has written beside it. Unset, the theme's.
         #[props(default, into)]
         labels: Input<PieLabels>,
-        /// In a donut's middle, as a total.
+        /// In a donut's hole, as a total; its text shrinks in a small hole, the rest is clipped.
         #[props(default)]
         center: Option<Element>,
         /// Where the first slice starts, in degrees clockwise from 12 o'clock.

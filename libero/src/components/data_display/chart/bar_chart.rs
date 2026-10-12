@@ -256,7 +256,13 @@ mod tests {
             }
         });
 
-        assert_eq!(html.matches("<rect").count(), 4, "{html}");
+        // A stack's bars are paths, rounded at its outer ends only.
+        let drawing = html
+            .split("data-chart-drawing")
+            .nth(1)
+            .and_then(|rest| rest.split("</svg>").next())
+            .unwrap_or_default();
+        assert_eq!(drawing.matches("<path").count(), 4, "{html}");
         assert!(html.contains("75%"), "{html}");
         assert!(html.contains("A: 1 to 3, highest at b."), "{html}");
     }
