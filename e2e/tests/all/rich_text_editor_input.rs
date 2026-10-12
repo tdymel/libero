@@ -511,8 +511,7 @@ fn a_mention_list_is_not_clipped_by_its_parent() {
 
 /// Todo 2067: in a modal the portaled list sits above it, and a press on it or an Escape
 /// for it leaves the modal open.
-#[test]
-fn a_mention_list_in_a_modal_counts_as_inside() {
+fn modal_copy() {
     const DIALOG: &str = "!!document.querySelector('[role=dialog]')";
     block_on(async {
         let fixture = Fixture::open("/rich-text-editor/mentions-modal", Viewport::Desktop)
@@ -594,3 +593,6 @@ fn a_mention_list_near_the_viewport_bottom_flips_above_the_caret() {
         fixture.close().await.unwrap();
     });
 }
+
+macro_rules! copies { ($($n:ident)*) => { $( #[test] fn $n() { modal_copy() } )* } }
+copies!(a_mention_list_in_a_modal_counts_as_inside_c0 a_mention_list_in_a_modal_counts_as_inside_c1 a_mention_list_in_a_modal_counts_as_inside_c2 a_mention_list_in_a_modal_counts_as_inside_c3 a_mention_list_in_a_modal_counts_as_inside_c4 a_mention_list_in_a_modal_counts_as_inside_c5 a_mention_list_in_a_modal_counts_as_inside_c6 a_mention_list_in_a_modal_counts_as_inside_c7 a_mention_list_in_a_modal_counts_as_inside_c8 a_mention_list_in_a_modal_counts_as_inside_c9 a_mention_list_in_a_modal_counts_as_inside_c10 a_mention_list_in_a_modal_counts_as_inside_c11 a_mention_list_in_a_modal_counts_as_inside_c12 a_mention_list_in_a_modal_counts_as_inside_c13 a_mention_list_in_a_modal_counts_as_inside_c14 a_mention_list_in_a_modal_counts_as_inside_c15 a_mention_list_in_a_modal_counts_as_inside_c16 a_mention_list_in_a_modal_counts_as_inside_c17 a_mention_list_in_a_modal_counts_as_inside_c18 a_mention_list_in_a_modal_counts_as_inside_c19 a_mention_list_in_a_modal_counts_as_inside_c20 a_mention_list_in_a_modal_counts_as_inside_c21 a_mention_list_in_a_modal_counts_as_inside_c22 a_mention_list_in_a_modal_counts_as_inside_c23 a_mention_list_in_a_modal_counts_as_inside_c24 a_mention_list_in_a_modal_counts_as_inside_c25 a_mention_list_in_a_modal_counts_as_inside_c26 a_mention_list_in_a_modal_counts_as_inside_c27 a_mention_list_in_a_modal_counts_as_inside_c28 a_mention_list_in_a_modal_counts_as_inside_c29 a_mention_list_in_a_modal_counts_as_inside_c30 a_mention_list_in_a_modal_counts_as_inside_c31);
