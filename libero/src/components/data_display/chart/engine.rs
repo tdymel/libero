@@ -555,7 +555,7 @@ pub(crate) struct BarSpec {
     pub(crate) labels_inside: bool,
     /// Per series, a bar's own colour per x value; `None`, the series' colour.
     pub(crate) bar_colors: Vec<Vec<Option<HexColor>>>,
-    /// Per series, each value's error range; drawn on upright grouped bars only.
+    /// Per series, each value's error range; a percent stack draws none.
     pub(crate) errors: Vec<Vec<Option<(f64, f64)>>>,
     /// The share of a category's band its bars fill; `None`, the renderer's 5 px margins.
     pub(crate) bar_width: Option<f32>,
@@ -584,7 +584,7 @@ fn bar_marks(series: &[SeriesSpec]) -> Vec<(usize, usize, f64, &str)> {
 
 /// The settings a vertical and a horizontal bar chart share; both deref to the same base.
 macro_rules! style_bars {
-    ($chart:ident, $spec:ident, $unit:expr) => {
+    ($chart:ident, $spec:ident, $axes:ident, $unit:expr) => {
         $chart.width = $spec.width;
         $chart.height = $spec.height;
         $chart.background_color = InkColor::transparent();
@@ -606,7 +606,7 @@ macro_rules! style_bars {
             y.font.color = ink($spec.ink.label);
             y.formatter = Some(format!("{AXIS_MARK}{{c}}{}", $unit));
         }
-        $spec.axes.style(
+        $axes.style(
             &mut $chart.base,
             &mut $chart.y_axis_configs,
             $spec.horizontal,
@@ -618,6 +618,91 @@ macro_rules! style_bars {
             false => ink($spec.ink.label),
         };
     };
+}
+
+/// A percent stack with losses reads each share of the stack's absolute sum, up above 0 and
+/// down below it: the axis runs to the furthest of each, in steps of 20 (else the renderer's).
+fn percent_axes(axes: &Axes, series: &[SeriesSpec]) -> Axes {
+    const STEP: f64 = 20.0;
+    let bars: Vec<_> = series.iter().filter(|s| !s.extras.line).collect();
+    let (mut up, mut down) = (0.0_f64, 0.0_f64);
+    for index in 0..bars.iter().map(|s| s.values.len()).max().unwrap_or(0) {
+        let values = bars
+            .iter()
+            .filter_map(|s| s.values.get(index).copied().flatten());
+        let (gain, loss) = values.fold((0.0, 0.0), |(gain, loss), v: f64| {
+            (gain + v.max(0.0), loss + (-v).max(0.0))
+        });
+        let total = gain + loss;
+        if total > 0.0 {
+            up = up.max(gain / total * 100.0);
+            down = down.max(loss / total * 100.0);
+        }
+    }
+    if down == 0.0 {
+        return axes.clone();
+    }
+    let (min, max) = (-(down / STEP).ceil() * STEP, (up / STEP).ceil() * STEP);
+    Axes {
+        min: Some(min),
+        max: Some(max),
+        ticks: ((max - min) / STEP) as usize,
+        ..axes.clone()
+    }
+}
+
+/// The value axis of bars whose ranges the renderer does not know of, stacks and lying bars:
+/// unset ends reach the furthest range end, on whole steps of a round size.
+fn error_axes(axes: &Axes, spec: &BarSpec) -> Axes {
+    let stacked = spec.layout != BarLayout::Grouped;
+    let (mut low, mut high) = (0.0_f64, 0.0_f64);
+    for index in 0..spec.x.len() {
+        let (mut up, mut down) = (0.0_f64, 0.0_f64);
+        for (s, series) in spec.series.iter().enumerate() {
+            let value = series.values.get(index).copied().flatten();
+            let Some(value) = value.filter(|_| !series.extras.line && !series.extras.secondary)
+            else {
+                continue;
+            };
+            let base = match (stacked, value >= 0.0) {
+                (false, _) => 0.0,
+                (true, true) => up,
+                (true, false) => down,
+            };
+            let range = spec
+                .errors
+                .get(s)
+                .and_then(|e| e.get(index).copied().flatten());
+            for end in [value]
+                .into_iter()
+                .chain(range.into_iter().flat_map(|r| [r.0, r.1]))
+            {
+                low = low.min(base + end);
+                high = high.max(base + end);
+            }
+            match value >= 0.0 {
+                true => up += value,
+                false => down += value,
+            }
+        }
+    }
+    let raw = (high - low) / axes.ticks.max(1) as f64;
+    if axes.min.is_some() || axes.max.is_some() || raw <= 0.0 || !raw.is_finite() {
+        return axes.clone();
+    }
+    let power = 10_f64.powf(raw.log10().floor());
+    let step = power
+        * [1.0, 2.0, 2.5, 5.0, 10.0]
+            .into_iter()
+            .find(|n| raw / power <= *n)
+            .unwrap_or(10.0);
+    let (min, max) = ((low / step).floor() * step, (high / step).ceil() * step);
+    Axes {
+        min: Some(min),
+        max: Some(max),
+        ticks: ((max - min) / step).round().max(1.0) as usize,
+        ..axes.clone()
+    }
 }
 
 pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
@@ -648,7 +733,7 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
             .and_then(|colors| colors.get(index).copied().flatten())
             .unwrap_or(spec.series[series].color)
     };
-    // A range on a stacked or lying bar would not read against its own segment.
+    // The renderer draws a range on upright grouped bars only; the rest are drawn after it.
     let errors = spec.layout == BarLayout::Grouped && !spec.horizontal;
     let series = ordered
         .iter()
@@ -712,10 +797,17 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
         spec.format
             .format(value, spec.y2_unit.as_deref(), spec.formats)
     };
+    let ranged = (spec.series.iter().zip(&spec.errors))
+        .any(|(series, errors)| !series.extras.line && errors.iter().any(Option::is_some));
+    let axes = match (percent, ranged && !errors) {
+        (true, _) => percent_axes(&spec.axes, &ordered),
+        (false, true) => error_axes(&spec.axes, spec),
+        (false, false) => spec.axes.clone(),
+    };
     let svg = match spec.horizontal {
         true => {
             let mut chart = charts_rs::HorizontalBarChart::new(series, x);
-            style_bars!(chart, spec, unit);
+            style_bars!(chart, spec, axes, unit);
             chart.stack_percent = percent;
             fitted(&mut chart, spec.width, spec.height, |chart| {
                 Some(pin_to_ticks(&chart.svg().ok()?, spec.width, write))
@@ -723,13 +815,12 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
         }
         false => {
             let mut chart = charts_rs::BarChart::new(series, x);
-            style_bars!(chart, spec, unit);
+            style_bars!(chart, spec, axes, unit);
             chart.stack_percent = percent;
             chart.series.stroke_width = spec.stroke_width;
             if spec.series.iter().any(|s| s.extras.secondary) {
                 second_axis(&mut chart.y_axis_configs, &spec.y2_unit);
-                spec.axes
-                    .style(&mut chart.base, &mut chart.y_axis_configs, false);
+                axes.style(&mut chart.base, &mut chart.y_axis_configs, false);
             }
             fitted(&mut chart, spec.width, spec.height, |chart| {
                 let mut svg = chart.svg().ok()?;
@@ -777,6 +868,7 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
     let svg = ink_bar_labels(&svg, &marks, |mark| {
         spec.ink.on(bar_color(mark.series, mark.index))
     });
+    let svg = draw_error_bars(svg, &marks, spec);
     // An error bar is drawn in the labels' ink; one on a bar is in the page's.
     let svg = svg.replace(
         "stroke=\"#010203\"",
@@ -1058,6 +1150,68 @@ fn relayout(
     (out, triggers)
 }
 
+/// The error ranges of the bars the renderer draws none on, lying ones and stacks: each is
+/// measured from the end of its own segment, at the scale of the segment's value.
+fn draw_error_bars(svg: String, marks: &[Mark], spec: &BarSpec) -> String {
+    let own = spec.layout == BarLayout::Grouped && !spec.horizontal;
+    if own || spec.layout == BarLayout::Percent {
+        return svg;
+    }
+    let mut lines = String::new();
+    for mark in marks {
+        let range = spec.errors.get(mark.series).and_then(|e| e.get(mark.index));
+        let (
+            Some(Some((low, high))),
+            MarkShape::Rect {
+                x,
+                y,
+                width,
+                height,
+            },
+        ) = (range, &mark.shape)
+        else {
+            continue;
+        };
+        let (x, y, width, height) = (*x, *y, *width, *height);
+        let value = mark.value;
+        if spec.series[mark.series].extras.line || value == 0.0 {
+            continue;
+        }
+        let line = |[x1, y1, x2, y2]: [f32; 4]| {
+            format!(
+                "<line stroke-width=\"1.5\" x1=\"{x1}\" y1=\"{y1}\" x2=\"{x2}\" y2=\"{y2}\" stroke=\"{}\"/>",
+                spec.ink.label
+            )
+        };
+        // Lying, the value grows to the right; upright, up the page.
+        let (across, thickness, length, reach, sign) = match spec.horizontal {
+            true => (y + height / 2.0, height, width, [x, x + width], 1.0),
+            false => (x + width / 2.0, width, height, [y + height, y], -1.0),
+        };
+        let reach = reach[(value > 0.0) as usize];
+        let scale = length / value.abs() as f32;
+        let [from, to] = [*low, *high].map(|end| reach + sign * (end - value) as f32 * scale);
+        let cap = (thickness / 4.0).clamp(2.0, 6.0);
+        let [stem, a, b] = match spec.horizontal {
+            true => [
+                [from, across, to, across],
+                [from, across - cap, from, across + cap],
+                [to, across - cap, to, across + cap],
+            ],
+            false => [
+                [across, from, across, to],
+                [across - cap, from, across + cap, from],
+                [across - cap, to, across + cap, to],
+            ],
+        };
+        lines.extend([line(stem), line(a), line(b)]);
+    }
+    match svg.rfind("</svg>") {
+        Some(end) if !lines.is_empty() => format!("{}{lines}{}", &svg[..end], &svg[end..]),
+        _ => svg,
+    }
+}
+
 /// Gives every label drawn on a bar the ink that reads on the bar nearest to it.
 fn ink_bar_labels(svg: &str, marks: &[Mark], ink: impl Fn(&Mark) -> HexColor) -> String {
     let distance = |mark: &Mark, (x, y): (f32, f32)| match mark.shape {
@@ -1120,6 +1274,8 @@ pub(crate) struct PieSpec {
     pub(crate) rose: bool,
     /// Between two slices, in pixels.
     pub(crate) slice_gap: f32,
+    /// Corner radius of a slice, in pixels; 0 keeps them square.
+    pub(crate) slice_radius: f32,
     /// Labels on their slices rather than beside them.
     pub(crate) labels_inside: bool,
     /// A slice narrower than this many degrees gets no label.
@@ -1295,6 +1451,7 @@ pub(crate) fn draw_pie(spec: &PieSpec) -> Option<Drawn> {
         },
         &edge,
     );
+    let (svg, triggers) = round_slices(svg, triggers, centre, spec.slice_radius);
     let svg = relabel(&svg, PERCENT_MARK, |share| {
         ValueFormat::Percent.format(share / 100.0, None, spec.formats)
     });
@@ -1334,6 +1491,141 @@ pub(crate) fn draw_pie(spec: &PieSpec) -> Option<Drawn> {
             hole,
         },
     })
+}
+
+/// Every slice's path drawn again with its corners rounded by `radius`, in the SVG and in
+/// the triggers; the renderer's own rounding leaves a knob at each corner.
+fn round_slices(
+    svg: String,
+    mut triggers: Vec<Trigger>,
+    centre: (f32, f32),
+    radius: f32,
+) -> (String, Vec<Trigger>) {
+    if radius <= 0.0 {
+        return (svg, triggers);
+    }
+    let mut svg = svg;
+    for trigger in &mut triggers {
+        let MarkShape::Sector { path } = &mut trigger.shape else {
+            continue;
+        };
+        if let Some(rounded) = rounded_sector(path, centre, radius) {
+            svg = svg.replace(&format!("d=\"{path}\""), &format!("d=\"{rounded}\""));
+            *path = rounded;
+        }
+    }
+    (svg, triggers)
+}
+
+/// A sector's path with its outer corners, and its inner ones when it is a ring's, filleted
+/// by `corner` pixels at most: what the thickness and the slice's angle leave of it. The
+/// sector's radii and angles are read off the path; `None` for a full circle or none.
+fn rounded_sector(path: &str, (cx, cy): (f32, f32), corner: f32) -> Option<String> {
+    let spaced: String = path
+        .chars()
+        .flat_map(|c| match c.is_ascii_alphabetic() {
+            true => vec![' ', c, ' '],
+            false => vec![c],
+        })
+        .collect();
+    let mut commands: Vec<(char, Vec<f32>)> = Vec::new();
+    for token in spaced.split([' ', ',']).filter(|t| !t.is_empty()) {
+        match token.parse::<f32>() {
+            Ok(number) => commands.last_mut()?.1.push(number),
+            Err(_) => commands.push((token.chars().next()?, Vec::new())),
+        }
+    }
+    let radii: Vec<f32> = commands
+        .iter()
+        .filter(|(c, args)| *c == 'A' && args.first().is_some_and(|r| *r > 0.5))
+        .map(|(_, args)| args[0])
+        .collect();
+    let outer = radii.iter().copied().fold(0.0, f32::max);
+    let inner = radii
+        .iter()
+        .copied()
+        .filter(|r| outer - r > 0.5)
+        .fold(0.0, f32::max);
+    let rim: Vec<(f32, f32)> = commands
+        .iter()
+        .filter_map(|(c, args)| match (c, args.len()) {
+            ('M' | 'L', 2) => Some((args[0], args[1])),
+            ('A', 7) => Some((args[5], args[6])),
+            _ => None,
+        })
+        .filter(|(x, y)| ((x - cx).hypot(y - cy) - outer).abs() < 0.6)
+        .collect();
+    let angle = |(x, y): (f32, f32)| (x - cx).atan2(cy - y).to_degrees().rem_euclid(360.0);
+    let start = angle(*rim.first()?);
+    let mut span = angle(*rim.last()?) - start;
+    if span <= 0.0 {
+        span += 360.0;
+    }
+    if outer <= 0.0 || !(0.5..359.5).contains(&span) {
+        return None;
+    }
+    // A fillet of radius `b` inside the outer arc sits `outer - b` from the centre, `b` off
+    // the edge; round the ring's inside just so, outside the inner arc.
+    let room = (span / 2.0 * 0.9).to_radians().sin();
+    let mut b = corner
+        .min((outer - inner) / 2.0)
+        .min(outer * room / (1.0 + room));
+    if inner > 0.0 {
+        b = b.min(inner * room / (1.0 - room));
+    }
+    if b <= 0.1 {
+        return None;
+    }
+    let b = (b * 100.0).floor() / 100.0;
+    let at = |radius: f32, degrees: f32| {
+        let (sin, cos) = degrees.to_radians().sin_cos();
+        (cx + radius * sin, cy - radius * cos)
+    };
+    let point = |(x, y): (f32, f32)| {
+        format!(
+            "{},{}",
+            (x * 100.0).round() / 100.0,
+            (y * 100.0).round() / 100.0
+        )
+    };
+    let end = start + span;
+    // Where a fillet touches the edge, and how far round the arc it touches.
+    let touch = |centre_radius: f32| {
+        let turn = (b / centre_radius).asin().to_degrees();
+        ((centre_radius.powi(2) - b * b).sqrt(), turn)
+    };
+    let (edge_o, turn_o) = touch(outer - b);
+    let large = |turn: f32| u8::from(span - 2.0 * turn > 180.0);
+    let d = match inner > 0.0 {
+        true => {
+            let (edge_i, turn_i) = touch(inner + b);
+            format!(
+                "M{} L{} A{b},{b} 0 0 1 {} A{outer},{outer} 0 {} 1 {} A{b},{b} 0 0 1 {} L{} A{b},{b} 0 0 1 {} A{inner},{inner} 0 {} 0 {} A{b},{b} 0 0 1 {} Z",
+                point(at(edge_i, start)),
+                point(at(edge_o, start)),
+                point(at(outer, start + turn_o)),
+                large(turn_o),
+                point(at(outer, end - turn_o)),
+                point(at(edge_o, end)),
+                point(at(edge_i, end)),
+                point(at(inner, end - turn_i)),
+                large(turn_i),
+                point(at(inner, start + turn_i)),
+                point(at(edge_i, start)),
+            )
+        }
+        false => format!(
+            "M{} L{} A{b},{b} 0 0 1 {} A{outer},{outer} 0 {} 1 {} A{b},{b} 0 0 1 {} L{} Z",
+            point((cx, cy)),
+            point(at(edge_o, start)),
+            point(at(outer, start + turn_o)),
+            large(turn_o),
+            point(at(outer, end - turn_o)),
+            point(at(edge_o, end)),
+            point((cx, cy)),
+        ),
+    };
+    Some(d)
 }
 
 /// Moves every label on a slice to the middle of its slice's band, between the hole and the
@@ -2610,6 +2902,104 @@ mod tests {
         );
     }
 
+    /// Shares of the absolute sum, so a stack with losses runs from its deepest loss to 100%,
+    /// never past it (3470).
+    #[test]
+    fn a_percent_axis_with_losses_stays_within_100() {
+        let mut spec = bars(BarLayout::Percent, false);
+        spec.x.push("d".to_string());
+        spec.height = 480.0;
+        spec.series = vec![
+            self::spec("A", &[Some(40.0), Some(55.0), Some(-25.0), Some(62.0)]),
+            self::spec("B", &[Some(30.0), Some(-15.0), Some(20.0), Some(48.0)]),
+        ];
+        let svg = draw_bar(&spec).expect("drawn").svg;
+        assert!(svg.contains("100%") && svg.contains("60%"), "{svg}");
+        assert!(!svg.contains("120%"), "{svg}");
+        let axes = percent_axes(&spec.axes, &spec.series);
+        assert_eq!(
+            (axes.min, axes.max, axes.ticks),
+            (Some(-60.0), Some(100.0), 8)
+        );
+    }
+
+    /// The `[x1, y1, x2, y2]` of every error-bar line the engine drew itself.
+    fn error_lines(svg: &str) -> Vec<[f32; 4]> {
+        svg.split("<line stroke-width=\"1.5\"")
+            .skip(1)
+            .map(|tail| {
+                let tag = format!("<line{}", &tail[..tail.find("/>").unwrap_or(tail.len())]);
+                let attributes = attributes(&tag);
+                ["x1", "y1", "x2", "y2"].map(|name| {
+                    attribute(&attributes, name)
+                        .and_then(|v| v.parse().ok())
+                        .unwrap_or(f32::NAN)
+                })
+            })
+            .collect()
+    }
+
+    /// A range on a stack or a lying bar is read from the end of its own segment (3480).
+    #[test]
+    fn a_range_on_a_stacked_or_lying_bar_starts_at_its_segment() {
+        for horizontal in [false, true] {
+            let mut spec = bars(BarLayout::Stacked, horizontal);
+            spec.series[1].values = vec![Some(3.0), Some(1.0), Some(2.0)];
+            spec.errors = vec![vec![], vec![Some((2.0, 5.0)), None, None]];
+            let drawn = draw_bar(&spec).expect("drawn");
+            let b = drawn
+                .geometry
+                .marks
+                .iter()
+                .find(|m| m.series == 1 && m.index == 0)
+                .expect("B at a");
+            let MarkShape::Rect {
+                x,
+                y,
+                width,
+                height,
+            } = &b.shape
+            else {
+                panic!("a bar")
+            };
+            let (x, y, width, height) = (*x, *y, *width, *height);
+            // The stem runs from the value 2 to the value 5, over a bar of 3.
+            let stem = error_lines(&drawn.svg)
+                .into_iter()
+                .find(|l| match horizontal {
+                    true => l[1] == l[3],
+                    false => l[0] == l[2],
+                })
+                .expect("a stem");
+            let (end, k) = match horizontal {
+                true => (x + width, width / 3.0),
+                false => (y, height / 3.0),
+            };
+            let [from, to] = match horizontal {
+                true => [stem[0], stem[2]],
+                false => [stem[1], stem[3]],
+            };
+            let (a, b) = match horizontal {
+                true => (end - k, end + 2.0 * k),
+                false => (end + k, end - 2.0 * k),
+            };
+            assert!(
+                (from - a).abs() < 0.2 && (to - b).abs() < 0.2,
+                "{stem:?} vs {a} {b}"
+            );
+            // The axis reaches the range's far end.
+            let plot = &drawn.geometry.plot;
+            let (start, stop) = match horizontal {
+                true => (plot.left, plot.right),
+                false => (plot.top, plot.bottom),
+            };
+            assert!(
+                from.min(to) >= start - 0.2 && from.max(to) <= stop + 0.2,
+                "{stem:?} outside {start}..{stop}"
+            );
+        }
+    }
+
     /// A bar rounds only its free end: A's bars sit under B's, B's are on top or alone.
     #[test]
     fn a_stack_rounds_only_its_top_segment() {
@@ -2821,8 +3211,8 @@ mod tests {
         );
     }
 
-    /// Upright grouped bars carry their error ranges, the axis reaching the highest end;
-    /// a stack carries none.
+    /// Upright grouped bars carry their error ranges, the axis reaching the highest end; a
+    /// percent stack carries none.
     #[test]
     fn error_bars_stand_on_upright_grouped_bars() {
         let mut spec = bars(BarLayout::Grouped, false);
@@ -2839,9 +3229,9 @@ mod tests {
         assert!(drawn.svg.contains("\n10\n"), "{}", drawn.svg);
         assert!(!drawn.svg.contains("#010203"), "{}", drawn.svg);
 
-        spec.layout = BarLayout::Stacked;
-        let stacked = draw_bar(&spec).expect("drawn").svg;
-        assert!(!stacked.contains("\n10\n"), "{stacked}");
+        spec.layout = BarLayout::Percent;
+        let percent = draw_bar(&spec).expect("drawn").svg;
+        assert!(!percent.contains("<line stroke-width=\"1.5\""), "{percent}");
     }
 
     /// Outside, a lying bar's label is past its end in the page's ink.
@@ -2865,6 +3255,7 @@ mod tests {
             end_angle: None,
             rose: false,
             slice_gap: 1.0,
+            slice_radius: 0.0,
             labels_inside: false,
             min_label_angle: 0.0,
             ink: ChartInk::of(&Theme::DEFAULT, false),
@@ -2872,6 +3263,47 @@ mod tests {
             unit: Some("kg".to_string()),
             formats: &Formats::GERMAN,
         }
+    }
+
+    /// A slice's corners are circular fillets of the radius, tangent to the edges and the
+    /// arcs, in the drawing and in what the pointer hits (3479).
+    #[test]
+    fn a_slice_s_corners_are_rounded_by_the_radius() {
+        for (donut, fillets) in [(None, 2), (Some(0.4), 4)] {
+            let mut spec = pie(PieLabels::None, donut);
+            spec.slice_radius = 8.0;
+            let drawn = draw_pie(&spec).expect("drawn");
+            assert_eq!(drawn.geometry.marks.len(), 2);
+            for mark in &drawn.geometry.marks {
+                let MarkShape::Sector { path } = &mark.shape else {
+                    panic!("a slice")
+                };
+                assert_eq!(path.matches("A8,8 ").count(), fillets, "{path}");
+                assert!(!path.contains("A0 0"), "{path}");
+                assert!(drawn.svg.contains(&format!("d=\"{path}\"")), "{path}");
+            }
+        }
+    }
+
+    /// A thin slice gives up corner radius rather than fold over itself.
+    #[test]
+    fn a_thin_slice_keeps_its_corners_inside_it() {
+        let mut spec = pie(PieLabels::None, None);
+        spec.slices = vec![
+            self::spec("A", &[Some(1.0)]),
+            self::spec("B", &[Some(99.0)]),
+        ];
+        spec.slice_radius = 40.0;
+        let drawn = draw_pie(&spec).expect("drawn");
+        let MarkShape::Sector { path } = &drawn.geometry.marks[0].shape else {
+            panic!("a slice")
+        };
+        let radii: Vec<f32> = path
+            .split(" A")
+            .skip(1)
+            .filter_map(|a| a.split(',').next()?.parse().ok())
+            .collect();
+        assert!(radii[0] < 4.0, "{path}");
     }
 
     /// The first slice starts at 12 o'clock and runs clockwise; the labels are in the locale.

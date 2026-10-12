@@ -126,7 +126,7 @@ error ranges writes inside, an upright one past its end. A stack always writes i
 
 A series colours its bars one by one with `.colors(["success", "primary"])`, or
 the ones below 0 with `.negative_color("error")`. `.errors([(low, high), ..])`
-gives each value a range: an upright grouped bar draws it as an error bar, and
+gives each value a range: a bar draws it as an error bar, and
 the tooltip and the keys write it after the value, as "120 (110–130)".
 
 ```rust
@@ -206,7 +206,8 @@ share is its value over the sum; a negative or missing value takes none.
 `donut` is a gauge, its `center` under the arc. `rose: true` gives every slice
 the same angle and its value as its radius. `label_position: "inside"` writes a
 label on its slice, `min_label_angle` drops the label of a slice narrower than
-that many degrees. `slice_gap` sets the pixels between two slices.
+that many degrees. `slice_gap` sets the pixels between two slices, `slice_radius`
+rounds their corners.
 
 ```rust
 use dioxus::prelude::*;
@@ -594,6 +595,7 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `label_position` | `PieLabelPosition` | `outside` | `outside` beside each slice, or `inside` on it in the ink that reads there. Inside, a label wider than its slice is left out; the summary keeps it. |
 | `min_label_angle` | `Option<f32>` | `0` | A slice narrower than this many degrees gets no label; the summary still names it. |
 | `slice_gap` | `Option<f32>` | `1` | Between two slices, in pixels, in the page's colour. |
+| `slice_radius` | `Size` | `none` | Corner radius of a slice, on the theme's radius scale; a thin slice or a thin ring takes less. Unset, square. |
 | `legend` | `LegendPosition` | bottom with two slices or more | `bottom`, `top`, `start`, `end` or `none`. |
 | `value_format` | `ValueFormat` | `Auto` | How values are written beside the slices, in the tooltip and in the summary. |
 | `unit` | `Option<String>` | | After every value, as `"kg"`. |
@@ -638,8 +640,8 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   summary says it too.
 - A hidden summary gives the x range and each series' lowest and highest value,
   and where the highest is, then each mark line's name and value and each marked
-  point's place and value, each line's error band and each upright grouped
-  series' error bars with their outer ends, the series drawn as a line over
+  point's place and value, each line's error band and each bar series'
+  error bars with their outer ends, the series drawn as a line over
   bars, the series on the right y axis, the axes' titles and, stacked, that the
   top line is the total; a pie's, the total, then each slice's value and share.
 - The plot is one tab stop, a `role="application"` described as a chart, so a
@@ -700,9 +702,10 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 - `grid` draws nothing on a pie.
 - `.colors` and `.negative_color` add no meaning of their own: a loss already
   hangs below the axis. The legend keeps the series' colour.
-- Error bars draw on upright grouped bars only; a stack or a lying chart reads
-  the range in its tooltip alone. A line draws its ranges as a band, only around
-  its points and not when `stacked`.
+- A percent stack draws no error bars and reads the range in its tooltip; on any
+  other layout the value axis reaches the far end of a range unless `y_min` or
+  `y_max` is set. A line draws its ranges as a band, only around its points and
+  not when `stacked`.
 - A rose's radius and a slice under `min_label_angle` are read by eye or not at
   all; the summary gives every value.
 - `zoom` and `onrange` are for lines and bars; a pie exports only.
@@ -750,6 +753,7 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 | `pie_labels` | `PieLabels` | Default `labels`. |
 | `pie_label_position` | `PieLabelPosition` | Default `label_position`. |
 | `slice_gap` | `f32` | Default `slice_gap`, in pixels. |
+| `slice_radius` | `Option<Size>` | Default `slice_radius`; `None` leaves the corners square. |
 | `min_label_angle` | `f32` | Default `min_label_angle`, in degrees. |
 | `zoom` | `bool` | Default `zoom`. |
 | `export_button` | `bool` | Default `export_button`. |

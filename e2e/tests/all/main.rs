@@ -21,6 +21,7 @@ mod carousel_autoplay;
 mod carousel_slide_keys;
 mod cascader;
 mod cascader_phone;
+mod chart;
 mod checkbox;
 mod chip;
 mod chrono_field;

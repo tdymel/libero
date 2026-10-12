@@ -1,5 +1,5 @@
 // page-snippets: charts
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, or_unset, prop, props};
 use dioxus::prelude::*;
 use libero::use_theme;
 use libero::{
@@ -9,7 +9,7 @@ use libero::{
     },
     theme::{
         BarLabelPosition, BarLayout, Curve, LegendPosition, PieLabelPosition, PieLabels,
-        PointSymbol,
+        PointSymbol, Size,
     },
 };
 
@@ -416,6 +416,7 @@ pub fn ChartPage() -> Element {
                     prop("label_position", "PieLabelPosition").default(theme.chart.pie_label_position.as_str()).doc("`outside` beside each slice, or `inside` on it in the ink that reads there. Inside, a label wider than its slice is left out; the summary keeps it."),
                     prop("min_label_angle", "Option<f32>").default(theme.chart.min_label_angle.to_string()).doc("A slice narrower than this many degrees gets no label; the summary still names it."),
                     prop("slice_gap", "Option<f32>").default(theme.chart.slice_gap.to_string()).doc("Between two slices, in pixels, in the page's colour."),
+                    prop("slice_radius", "Size").default(theme.chart.slice_radius.map_or("none", |size| size.as_str())).doc("Corner radius of a slice, on the theme's radius scale; a thin slice or a thin ring takes less. Unset, square."),
                     prop("legend", "LegendPosition").default("bottom with two slices or more").doc("`bottom`, `top`, `start`, `end` or `none`."),
                     prop("value_format", "ValueFormat").default("Auto").doc("How values are written beside the slices, in the tooltip and in the summary."),
                     prop("unit", "Option<String>").doc("After every value, as `\"kg\"`."),
@@ -447,7 +448,7 @@ pub fn ChartPage() -> Element {
                 .handles([
                     "The chart is a `role=\"figure\"` named by `title`, else by a spread `aria-label`, else \"chart\". The drawing is hidden from screen readers.",
                     "A loading chart says \"Loading chart\" in a live region when it starts, and its summary says it too.",
-                    "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is, then each mark line's name and value and each marked point's place and value, each line's error band and each upright grouped series' error bars with their outer ends, the series drawn as a line over bars, the series on the right y axis, the axes' titles and, stacked, that the top line is the total; a pie's, the total, then each slice's value and share.",
+                    "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is, then each mark line's name and value and each marked point's place and value, each line's error band and each bar series' error bars with their outer ends, the series drawn as a line over bars, the series on the right y axis, the axes' titles and, stacked, that the top line is the total; a pie's, the total, then each slice's value and share.",
                     "The plot is one tab stop, a `role=\"application\"` described as a chart, so a screen reader hands it the arrows. Each point the keys reach is announced, as \"This week, Tue: 132\" or \"Chrome: 62, 62%.\"",
                     "The legend's entries are toggle buttons: pressed while their series or slice shows, struck through when hidden. The last shown one's button is `aria-disabled`. Should `hidden` or `default_hidden` name every one, the plot and the summary say \"All series are hidden.\" and the legend stays. A dashed line's key is a dash, as drawn; once a line sets a `symbol`, each key is its line's point shape. A line among bars is keyed by a short stroke, the bars by squares.",
                     "On a touch screen a tap pins a point's tooltip, a second tap on it clicks; a vertical swipe still scrolls the page.",
@@ -476,7 +477,7 @@ pub fn ChartPage() -> Element {
                     "The tooltip follows the point and takes no pointer, so it is not hoverable (WCAG 1.4.13); Escape closes it and the announcement gives the same values.",
                     "`grid` draws nothing on a pie.",
                     "`.colors` and `.negative_color` add no meaning of their own: a loss already hangs below the axis. The legend keeps the series' colour.",
-                    "Error bars draw on upright grouped bars only; a stack or a lying chart reads the range in its tooltip alone. A line draws its ranges as a band, only around its points and not when `stacked`.",
+                    "A percent stack draws no error bars and reads the range in its tooltip; on any other layout the value axis reaches the far end of a range unless `y_min` or `y_max` is set. A line draws its ranges as a band, only around its points and not when `stacked`.",
                     "A rose's radius and a slice under `min_label_angle` are read by eye or not at all; the summary gives every value.",
                     "`zoom` and `onrange` are for lines and bars; a pie exports only.",
                     "An export keeps the normal palette in forced colours. `png()` is `None` on Blitz and on the server, and the PNG button says it could not save.",
@@ -527,7 +528,7 @@ pub fn ChartPage() -> Element {
                 controls: vec![
                     Control::toggle("type", ["line", "bar", "pie"])
                         .default("line")
-                        .labels(["LineChart", "BarChart", "PieChart"])
+                        .labels(["Line", "Bar", "Pie"])
                         .code(|_, values| {
                             let mark = marks_code(values);
                             match values.str("type").as_str() {
@@ -633,6 +634,13 @@ pub fn ChartPage() -> Element {
                             "1" => vec![],
                             gap => vec![format!("slice_gap: {gap}.0")],
                         }),
+                    Control::select("slice_radius", ["auto", "xs", "sm", "md", "lg"])
+                        .default("auto")
+                        .hidden_when(is("pie"))
+                        .code(|_, values| match values.str("slice_radius").as_str() {
+                            "auto" => vec![],
+                            size => vec![format!("slice_radius: \"{size}\"")],
+                        }),
                     Control::switch("donut").hidden_when(is("pie")).code(|_, values| {
                         match values.str("donut").as_str() {
                             "true" => vec![
@@ -654,7 +662,7 @@ pub fn ChartPage() -> Element {
                         .default("true")
                         .hidden_when(is("line"))
                         .code(|_, _| vec![]),
-                    // Drawn over upright grouped bars; any other layout reads them in the tooltip.
+                    // Drawn on every layout but percent, which reads them in the tooltip.
                     Control::switch("error_bars")
                         .hidden_when(is("bar"))
                         .code(|_, _| vec![]),
@@ -766,6 +774,7 @@ pub fn ChartPage() -> Element {
                                     start_angle: if half { -90.0 } else { 0.0 },
                                     end_angle: half.then_some(90.0),
                                     slice_gap: values.str("slice_gap").parse::<f32>().ok(),
+                                    slice_radius: or_unset::<Size>(values.str("slice_radius")),
                                     center: rsx! { "1,204 users" },
                                     legend, tooltip, loading, export_button, handle: chart,
                                 }

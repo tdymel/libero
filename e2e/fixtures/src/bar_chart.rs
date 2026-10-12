@@ -13,7 +13,58 @@ pub const ROUTES: Routes = &[
     ("/bar-chart/zoom", || rsx! { Zoomable {} }),
     ("/bar-chart/line", || rsx! { WithLine {} }),
     ("/bar-chart/loading", || rsx! { Loading {} }),
+    ("/bar-chart/percent", || rsx! { PercentWithLosses {} }),
+    ("/bar-chart/errors", || rsx! { RangedStacks {} }),
 ];
+
+/// Shares of a stack that has losses: the axis ends at 100%, never past it (3470).
+#[component]
+fn PercentWithLosses() -> Element {
+    rsx! {
+        div { max_width: "480px",
+            BarChart {
+                id: "chart",
+                title: "Profit",
+                x: ["Q1", "Q2", "Q3", "Q4"],
+                series: vec![
+                    Series::new("2025", [40, 55, -25, 62]),
+                    Series::new("2026", [30, -15, 20, 48]),
+                ],
+                layout: "percent",
+                aspect_ratio: 1.0,
+            }
+        }
+    }
+}
+
+/// Error ranges on a stack and on lying bars (3480).
+#[component]
+fn RangedStacks() -> Element {
+    let series = || {
+        vec![
+            Series::new("2025", [40, 55, 25]).errors([(30, 50), (45, 66), (20, 30)]),
+            Series::new("2026", [30, 15, 20]).errors([(25, 36), (10, 21), (14, 24)]),
+        ]
+    };
+    rsx! {
+        div { max_width: "480px",
+            BarChart {
+                id: "chart",
+                title: "Stacked",
+                x: ["Q1", "Q2", "Q3"],
+                series: series(),
+                layout: "stacked",
+            }
+            BarChart {
+                id: "lying",
+                title: "Lying",
+                x: ["Q1", "Q2", "Q3"],
+                series: series(),
+                orientation: "horizontal",
+            }
+        }
+    }
+}
 
 fn series() -> Vec<Series> {
     vec![

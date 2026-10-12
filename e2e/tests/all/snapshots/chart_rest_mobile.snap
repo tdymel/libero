@@ -1,0 +1,34 @@
+---
+source: e2e/src/suite.rs
+description: chart at mobile (rest)
+expression: tree
+---
+radiogroup "Type"
+  radio "Line" [checked]
+  LabelText
+    StaticText "Line"
+  radio "Bar" [checked=false]
+  LabelText
+    StaticText "Bar"
+  radio "Pie" [checked=false]
+  LabelText
+    StaticText "Pie"
+figure "Visitors"
+  description "Line chart from Mon to Wed. This week: 101 to 132, highest at Tue. Last week: 98 to 115, highest at Wed."
+  StaticText "Visitors"
+  application "Visitors" [roledescription=chart]
+    description "Arrow keys move between points, Enter selects one."
+  status [atomic] [live=polite]
+  list "Series"
+    listitem [level=1]
+      button "This week" [pressed]
+        StaticText "This week"
+    listitem [level=1]
+      button "Last week" [pressed]
+        StaticText "Last week"
+  paragraph
+    StaticText "Line chart from Mon to Wed."
+  paragraph
+    StaticText "This week: 101 to 132, highest at Tue."
+  paragraph
+    StaticText "Last week: 98 to 115, highest at Wed."

@@ -183,6 +183,67 @@ fn styled_bars_keep_their_width_colour_and_ranges() {
     });
 }
 
+/// A percent stack with losses reads shares of its absolute sum: its axis ends at 100%
+/// and stops at its deepest loss (3470).
+#[test]
+fn a_percent_axis_with_losses_ends_at_100() {
+    e2e::browser::block_on(async {
+        let fixture = Fixture::open("/bar-chart/percent", Viewport::Desktop)
+            .await
+            .unwrap();
+        wait::for_visible(&fixture.page, "#chart [data-chart-drawing] path")
+            .await
+            .unwrap();
+        let ticks: Vec<f64> = e2e::js(
+            &fixture.page,
+            "[...document.querySelectorAll('#chart svg text')] \
+             .map(t => t.textContent.trim().replace('\\u2212', '-')) \
+             .filter(t => /^-?\\d+%$/.test(t)).map(t => parseInt(t))",
+        )
+        .await;
+        let (low, high) = ticks
+            .iter()
+            .fold((f64::MAX, f64::MIN), |(l, h), t| (l.min(*t), h.max(*t)));
+        assert!(high == 100.0 && (-100.0..0.0).contains(&low), "{ticks:?}");
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A range on a stack or a lying bar is drawn, whole inside the plot (3480).
+#[test]
+fn stacked_and_lying_bars_draw_their_ranges_inside_the_plot() {
+    e2e::browser::block_on(async {
+        let fixture = Fixture::open("/bar-chart/errors", Viewport::Desktop)
+            .await
+            .unwrap();
+        wait::for_visible(&fixture.page, "#lying [data-chart-drawing] path")
+            .await
+            .unwrap();
+        for (chart, along) in [("chart", "y"), ("lying", "x")] {
+            // Per range: its stem, then a cap at each end.
+            let [stems, outside]: [usize; 2] = e2e::js(
+                &fixture.page,
+                &format!(
+                    "(() => {{ const svg = document.querySelector('#{chart} svg'); \
+                     const lines = [...svg.querySelectorAll('line[stroke-width=\"1.5\"]')]; \
+                     const box = svg.getBoundingClientRect(); \
+                     const scale = box.{size} / svg.viewBox.baseVal.{size}; \
+                     const stems = lines.filter(l => l.getAttribute('{other}1') === l.getAttribute('{other}2')); \
+                     const outside = lines.filter(l => ['{along}1', '{along}2'].some(a => \
+                       +l.getAttribute(a) < 0 || +l.getAttribute(a) * scale > box.{size})); \
+                     return [stems.length, outside.length]; }})()",
+                    size = if along == "y" { "height" } else { "width" },
+                    other = if along == "y" { "x" } else { "y" },
+                ),
+            )
+            .await;
+            assert_eq!(stems, 6, "{chart}");
+            assert_eq!(outside, 0, "{chart}");
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The keys' bar is announced and tipped with its error range.
 async fn ranges<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.focus(LAYER).await?;

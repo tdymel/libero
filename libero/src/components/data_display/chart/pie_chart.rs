@@ -13,6 +13,7 @@ use crate::{
     hooks::{use_accessibility, use_formats, use_localization, use_root_id, use_theme},
     localization::{ChartLabels, fill},
     theme::{ChartInk, HexColor, PieLabelPosition, PieLabels, chart_palette},
+    tokens::Size,
 };
 
 chart_props! {
@@ -48,6 +49,10 @@ chart_props! {
         /// Between two slices, in pixels. Unset, the theme's.
         #[props(default)]
         slice_gap: Option<f32>,
+        /// Corner radius of a slice, on the theme's radius scale. Unset, the theme's, else
+        /// square.
+        #[props(default, into)]
+        slice_radius: Input<Size>,
     }
 }
 
@@ -130,6 +135,12 @@ pub fn PieChart(props: PieChartProps) -> Element {
         end_angle: props.end_angle,
         rose: props.rose,
         slice_gap: props.slice_gap.unwrap_or(theme.chart.slice_gap),
+        slice_radius: props
+            .slice_radius
+            .as_ref()
+            .copied()
+            .or(theme.chart.slice_radius)
+            .map_or(0.0, |size| f32::from(theme.radius.get(size))),
         labels_inside: props
             .label_position
             .copied_or(theme.chart.pie_label_position)

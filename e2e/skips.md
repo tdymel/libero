@@ -39,6 +39,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `cascader::a_disabled_cascader_row_looks_disabled` | ios | a touch screen has no hover |
 | `cascader::taps_walk_the_cascader_levels` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `cascader_phone::android_back_closes_a_cascader` | all but android | 1275: no Back key off Android |
+| `chart::the_segments_swap_the_chart` | native | charts are parked on Blitz |
 | `color_field::arrow_down_enters_the_colour_dialog_and_escape_returns` | android | 958: element identity on the WebView |
 | `color_field::arrow_down_enters_the_colour_dialog_and_escape_returns` | desktop | 958: element identity on the WebView |
 | `color_field::arrow_down_enters_the_colour_dialog_and_escape_returns` | ios | 3416: the simulator's tap or drag did not drive the page |

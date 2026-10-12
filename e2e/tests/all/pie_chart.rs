@@ -148,6 +148,40 @@ fn a_gauge_s_center_sits_under_its_arc() {
     });
 }
 
+/// Each slice's corners are filleted arcs of one radius, none of the renderer's knobs (3479).
+#[test]
+fn a_slice_radius_rounds_each_corner() {
+    e2e::browser::block_on(async {
+        let fixture = Fixture::open("/pie-chart/rounded", Viewport::Desktop)
+            .await
+            .unwrap();
+        wait::for_visible(&fixture.page, "#ring svg path")
+            .await
+            .unwrap();
+        for (chart, fillets) in [("chart", 2), ("ring", 4)] {
+            let corners: Vec<usize> = e2e::js(
+                &fixture.page,
+                &format!(
+                    "[...document.querySelectorAll('#{chart} [data-chart-drawing] path[fill]:not([fill=none])')].map(p => \
+                     [...p.getAttribute('d').matchAll(/A([\\d.]+),/g)].filter(m => +m[1] > 0 && +m[1] < 30).length)"
+                ),
+            )
+            .await;
+            assert_eq!(corners, [fillets; 3], "{chart}");
+            let knobs: usize = e2e::js(
+                &fixture.page,
+                &format!(
+                    "[...document.querySelectorAll('#{chart} svg path')] \
+                     .filter(p => p.getAttribute('d').includes('A0 0')).length"
+                ),
+            )
+            .await;
+            assert_eq!(knobs, 0, "{chart}");
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
 async fn reads<D: Driver>(d: &mut D, id: &str, want: &str, what: &str) -> Result<()> {
     let label = format!("{what}: {id} to read {want:?}");
     eventually(d, &label, async |d| Ok(d.text(id).await? == want)).await

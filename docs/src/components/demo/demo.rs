@@ -232,9 +232,27 @@ pub fn indent(code: &str) -> String {
 const SEGMENT_WIDTH: usize = 88;
 
 /// A segment's width estimate per character at `sm` (14px), plus padding and border.
-/// Measured: `Standard` 92px, `Bottom start` 117.5px.
+/// Measured: `Standard` 92px, `Bottom start` 117.5px. Four options or more are sized by it.
 const SEGMENT_CHAR_WIDTH: f32 = 7.5;
 const SEGMENT_PADDING: f32 = 30.0;
+
+/// The check a selected label gains. Up to three options count it, by `label_width`:
+/// a strip of `average`, `target`, `none` needs 312px, of `Line`, `Bar`, `Pie` 234px.
+const SEGMENT_CHECK: f32 = 21.0;
+
+/// A label's width at `sm`, by what its letters measure: narrow ones, wide ones, the rest.
+fn label_width(label: &str) -> f32 {
+    label
+        .chars()
+        .map(|c| match c {
+            'i' | 'l' | 'j' | 't' | 'f' | 'r' | 'I' | '.' | ',' | ':' | ';' | '(' | ')' | '\''
+            | ' ' => 3.8,
+            'm' | 'w' | 'M' | 'W' => 10.5,
+            c if c.is_uppercase() => 9.0,
+            _ => 8.0,
+        })
+        .sum()
+}
 
 /// Everything the panel spends on padding, either side of a control.
 const PANEL_PADDING: usize = 48;
@@ -243,27 +261,29 @@ const PANEL_PADDING: usize = 48;
 /// (512px wide, see the panel's `sx` below).
 const WIDE_PANEL_CONTROL: usize = 512 - PANEL_PADDING;
 
-/// The card width a toggle's segments need, or `None` when segments fit at every width.
-/// Narrow segments ellipsize their labels, so over three options fall back to a select.
-fn segments_need(control: &Control) -> Option<usize> {
+/// The card width a toggle's segments need. Narrow segments ellipsize their labels, so a
+/// narrower card falls back to a select; the longest label sizes every segment.
+fn segments_need(control: &Control) -> usize {
     let options = control.options.len();
-    if options <= 3 {
-        return None;
-    }
-    let longest = control
+    let labels = control
         .options
         .iter()
-        .map(|option| control.label_of(option).chars().count())
-        .max()
-        .unwrap_or(0);
-    let segment = (longest as f32 * SEGMENT_CHAR_WIDTH + SEGMENT_PADDING).ceil() as usize;
+        .map(|option| control.label_of(option));
+    let segment = if options <= 3 {
+        // The longest label, checked.
+        let longest = labels.map(|label| label_width(&label)).fold(0.0, f32::max);
+        (longest + SEGMENT_PADDING + SEGMENT_CHECK).ceil() as usize
+    } else {
+        let longest = labels.map(|label| label.chars().count()).max().unwrap_or(0);
+        (longest as f32 * SEGMENT_CHAR_WIDTH + SEGMENT_PADDING).ceil() as usize
+    };
     let needed = options * SEGMENT_WIDTH.max(segment);
-    Some(if needed > WIDE_PANEL_CONTROL {
+    if needed > WIDE_PANEL_CONTROL {
         // Wider than the panel ever gets: a width no card reaches.
         99_999
     } else {
         needed + PANEL_PADDING
-    })
+    }
 }
 
 /// The segmented half of a toggle control, shared by the always-segmented
@@ -484,8 +504,8 @@ fn DemoControl(
                 },
                 // Too wide for the card, a select: a container query shows one,
                 // and `display: none` keeps the other out of tab order and a11y tree.
-                ControlKind::Toggle if segments_need(&control).is_some() => {
-                    let needed = segments_need(&control).unwrap_or_default();
+                ControlKind::Toggle => {
+                    let needed = segments_need(&control);
                     rsx! {
                         Box {
                             sx: card_query(sx().display("none"), needed, sx().display("block")),
@@ -514,15 +534,6 @@ fn DemoControl(
                                 },
                             }
                         }
-                    }
-                },
-                ControlKind::Toggle => rsx! {
-                    ToggleSegments {
-                        control: control.clone(),
-                        value: value.clone(),
-                        onchange: move |next: String| {
-                            values.write().0[index].1 = next;
-                        },
                     }
                 },
             }
@@ -747,12 +758,24 @@ mod tests {
             "Bottom end",
             "Bottom start",
         ]);
-        assert_eq!(segments_need(&placement), Some(99_999));
+        assert_eq!(segments_need(&placement), 99_999);
         let variant = Control::toggle("variant", ["f", "t", "e", "o", "s"])
             .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard"]);
-        assert_eq!(segments_need(&variant), Some(5 * 90 + 48));
+        assert_eq!(segments_need(&variant), 5 * 90 + 48);
         let sizes = Control::toggle("size", ["xs", "sm", "md", "lg", "xl"]);
-        assert_eq!(segments_need(&sizes), Some(5 * 88 + 48));
+        assert_eq!(segments_need(&sizes), 5 * 88 + 48);
+    }
+
+    /// Todo 3431: the selected label's check counts, so two or three options fall back to a
+    /// select in a phone's card too: `Line`, `Bar`, `Pie` fit 3 * 88, `average` needs more.
+    #[test]
+    fn few_options_need_their_checked_label_too() {
+        let kind = Control::toggle("type", ["line", "bar", "pie"]).labels(["Line", "Bar", "Pie"]);
+        assert_eq!(segments_need(&kind), 3 * 88 + 48);
+        let mark = Control::toggle("mark_line", ["average", "target", "none"]);
+        assert_eq!(segments_need(&mark), 3 * 103 + 48);
+        let pair = Control::toggle("orientation", ["vertical", "horizontal"]);
+        assert_eq!(segments_need(&pair), 2 * 115 + 48);
     }
 
     /// WCAG 2.5.3: a control's accessible name must contain its visible caption.

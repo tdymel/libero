@@ -10,7 +10,30 @@ pub const ROUTES: Routes = &[
     ("/pie-chart", || rsx! { Pie {} }),
     ("/pie-chart/donut", || rsx! { Donut {} }),
     ("/pie-chart/gauge", || rsx! { Gauge {} }),
+    ("/pie-chart/rounded", || rsx! { Rounded {} }),
 ];
+
+/// A pie and a donut whose slices have rounded corners (3479).
+#[component]
+fn Rounded() -> Element {
+    rsx! {
+        div { max_width: "480px",
+            PieChart {
+                id: "chart",
+                title: "Browsers",
+                slices: slices(),
+                slice_radius: "md",
+            }
+            PieChart {
+                id: "ring",
+                title: "Browsers ring",
+                slices: slices(),
+                donut: true,
+                slice_radius: "md",
+            }
+        }
+    }
+}
 
 fn slices() -> Vec<Slice> {
     vec![

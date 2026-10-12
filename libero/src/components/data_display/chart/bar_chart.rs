@@ -328,10 +328,7 @@ pub fn BarChart(props: BarChartProps) -> Element {
         (false, false) => {
             let mut sentences = summary(&labels, labels.bar, &x, &props.series, write);
             sentences.extend(marked);
-            // Error bars are drawn on these alone.
-            if upright_grouped {
-                sentences.extend(band_summary(&labels, &props.series, write));
-            }
+            sentences.extend(band_summary(&labels, &props.series, write));
             if !lines.is_empty() {
                 sentences.push(fill(labels.lines, &[("names", &lines.join(", "))]));
             }
