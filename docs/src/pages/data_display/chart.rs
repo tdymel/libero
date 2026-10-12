@@ -1,14 +1,11 @@
 // page-snippets: charts
-use crate::{
-    Route,
-    components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props},
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::use_theme;
 use libero::{
     components::{
-        Anchor, BarChart, ChartRange, Code, LineChart, MarkLine, MarkPoint, Orientation, PieChart,
-        Series, Slice, Table, Text, XValues, column, use_chart,
+        BarChart, ChartRange, Code, LineChart, MarkLine, MarkPoint, Orientation, PieChart, Series,
+        Slice, Table, Text, column, use_chart,
     },
     theme::{
         BarLabelPosition, BarLayout, Curve, LegendPosition, PieLabelPosition, PieLabels,
@@ -30,22 +27,24 @@ const LAST_WEEK_RANGE: [(f64, f64); 7] = [
 ];
 const CONVERSION: [f64; 7] = [2.1, 2.4, 1.8, 2.6, 1.5, 3.4, 3.1];
 const QUARTERS: [&str; 4] = ["Q1", "Q2", "Q3", "Q4"];
-const SALES_2025: [f64; 4] = [120.0, 132.0, 101.0, 134.0];
-const SALES_2026: [f64; 4] = [140.0, 128.0, 150.0, 162.0];
 const PROFIT_2025: [f64; 4] = [40.0, 55.0, -25.0, 62.0];
+const PROFIT_2025_RANGE: [(f64, f64); 4] =
+    [(30.0, 52.0), (44.0, 63.0), (-31.0, -19.0), (50.0, 71.0)];
 const PROFIT_2026: [f64; 4] = [30.0, -15.0, 20.0, 48.0];
+const QUARTER_COLORS: [&str; 4] = ["success", "info", "warning", "neutral"];
+const BROWSERS: [(&str, f64); 4] = [
+    ("Chrome", 62.0),
+    ("Safari", 20.0),
+    ("Firefox", 10.0),
+    ("Other", 8.0),
+];
 
 fn on(value: bool) -> &'static str {
     if value { "true" } else { "false" }
 }
 
 fn slices() -> Vec<Slice> {
-    vec![
-        Slice::new("Chrome", 62.0),
-        Slice::new("Safari", 20.0),
-        Slice::new("Firefox", 10.0),
-        Slice::new("Other", 8.0),
-    ]
+    BROWSERS.into_iter().map(Slice::from).collect()
 }
 
 fn is(kind: &'static str) -> fn(&DemoValues) -> bool {
@@ -91,6 +90,96 @@ fn last_week(values: &DemoValues) -> (String, Series) {
         ),
         false => (String::new(), series),
     }
+}
+
+/// The bar chart's first series, coloured and ranged as the controls say, in code and as built.
+fn profit_2025(values: &DemoValues) -> (String, Series) {
+    let (mut code, mut series) = (String::new(), Series::new("2025", PROFIT_2025));
+    match values.str("colors").as_str() {
+        "per_bar" => {
+            code += &format!(".colors({QUARTER_COLORS:?})");
+            series = series.colors(QUARTER_COLORS);
+        }
+        "negative" => {
+            code += ".negative_color(\"error\")";
+            series = series.negative_color("error");
+        }
+        _ => {}
+    }
+    if values.str("error_bars") == "true" {
+        code += &format!(".errors({PROFIT_2025_RANGE:?})");
+        series = series.errors(PROFIT_2025_RANGE);
+    }
+    (code, series)
+}
+
+/// A table row: what the chart's x axis or slice names it, then each series' value.
+type Row = (&'static str, Vec<f64>);
+
+/// The chart's data for a table: the caption, the first column's header, the value columns'
+/// headers and the rows.
+fn table(values: &DemoValues) -> (&'static str, &'static str, Vec<&'static str>, Vec<Row>) {
+    let rows = |x: &[&'static str], series: &[&[f64]]| {
+        x.iter()
+            .enumerate()
+            .map(|(i, x)| (*x, series.iter().map(|s| s[i]).collect()))
+            .collect()
+    };
+    match values.str("type").as_str() {
+        "bar" => (
+            "Profit",
+            "Quarter",
+            vec!["2025", "2026"],
+            rows(&QUARTERS, &[&PROFIT_2025, &PROFIT_2026]),
+        ),
+        "pie" => (
+            "Browsers",
+            "Browser",
+            vec!["Share"],
+            BROWSERS
+                .iter()
+                .map(|(name, share)| (*name, vec![*share]))
+                .collect(),
+        ),
+        _ if conversion(values).is_some() => (
+            "Visitors",
+            "Day",
+            vec!["This week", "Last week", "Conversion"],
+            rows(&DAYS, &[&THIS_WEEK, &LAST_WEEK, &CONVERSION]),
+        ),
+        _ => (
+            "Visitors",
+            "Day",
+            vec!["This week", "Last week"],
+            rows(&DAYS, &[&THIS_WEEK, &LAST_WEEK]),
+        ),
+    }
+}
+
+/// The `Table` the `table` switch puts under the chart, as code.
+fn table_code(values: &DemoValues) -> String {
+    let (caption, first, names, rows) = table(values);
+    let row = format!("&(&str{})", ", f64".repeat(names.len()));
+    let data = rows
+        .iter()
+        .map(|(x, cells)| {
+            let cells: String = cells.iter().map(|cell| format!(", {cell:?}")).collect();
+            format!("        ({x:?}{cells}),\n")
+        })
+        .collect::<String>();
+    let columns = names
+        .iter()
+        .enumerate()
+        .map(|(i, name)| {
+            format!(
+                "        column({name:?}).value(|row: {row}| row.{}).sortable(),\n",
+                i + 1
+            )
+        })
+        .collect::<String>();
+    format!(
+        "Table {{\n    caption: {caption:?},\n    data: vec![\n{data}    ],\n    columns: vec![\n        column({first:?}).value(|row: {row}| row.0.to_string()).row_header(),\n{columns}    ],\n}}"
+    )
 }
 
 /// The line chart's series on the right axis, in code and as built.
@@ -159,14 +248,37 @@ fn marked(values: &DemoValues, series: Series) -> Series {
         .fold(series, Series::mark_point)
 }
 
-/// The type's component in place of the generated `Chart`.
+/// The type's component in place of the generated `Chart`, and the table under it when shown.
 fn component(values: &DemoValues, source: &str) -> String {
     let name = match values.str("type").as_str() {
         "bar" => "BarChart",
         "pie" => "PieChart",
         _ => "LineChart",
     };
-    source.replacen("Chart", name, 1)
+    let chart = source.replacen("Chart", name, 1);
+    match values.str("table") == "true" {
+        true => format!("{chart}\n{}", table_code(values)),
+        false => chart,
+    }
+}
+
+/// The chart's data as a sortable `Table`, the first column naming each row.
+fn data_table(values: &DemoValues) -> Element {
+    let (caption, first, names, rows) = table(values);
+    let mut columns = vec![
+        column(first)
+            .value(|row: &Row| row.0.to_string())
+            .row_header(),
+    ];
+    columns.extend(
+        names
+            .into_iter()
+            .enumerate()
+            .map(|(i, name)| column(name).value(move |row: &Row| row.1[i]).sortable()),
+    );
+    rsx! {
+        Table { caption, data: rows, columns }
+    }
 }
 
 #[component]
@@ -377,7 +489,8 @@ pub fn ChartPage() -> Element {
                                 "title: \"Profit\"".to_string(),
                                 format!("x: {QUARTERS:?}"),
                                 format!(
-                                    "series: vec![Series::new(\"2025\", {PROFIT_2025:?}){mark}, Series::new(\"2026\", {PROFIT_2026:?})]"
+                                    "series: vec![Series::new(\"2025\", {PROFIT_2025:?}){}{mark}, Series::new(\"2026\", {PROFIT_2026:?})]",
+                                    profit_2025(values).0
                                 ),
                             ],
                             "pie" => vec![
@@ -412,6 +525,11 @@ pub fn ChartPage() -> Element {
                     Control::select("radius", ["xs", "sm", "md", "lg"])
                         .default(theme.chart.bar_radius.as_str())
                         .hidden_when(is("bar")),
+                    // The 2025 bars: one colour, one per quarter, or its loss in red.
+                    Control::toggle("colors", ["series", "per_bar", "negative"])
+                        .labels(["Series", "Per bar", "Losses"])
+                        .hidden_when(is("bar"))
+                        .code(|_, _| vec![]),
                     Control::switch("value_labels")
                         .default(on(theme.chart.value_labels))
                         .hidden_when(is("bar")),
@@ -489,6 +607,10 @@ pub fn ChartPage() -> Element {
                         .default("true")
                         .hidden_when(is("line"))
                         .code(|_, _| vec![]),
+                    // Drawn over upright grouped bars; any other layout reads them in the tooltip.
+                    Control::switch("error_bars")
+                        .hidden_when(is("bar"))
+                        .code(|_, _| vec![]),
                     Control::switch("secondary_axis")
                         .default("true")
                         .hidden_when(is("line"))
@@ -537,6 +659,8 @@ pub fn ChartPage() -> Element {
                         }
                     }),
                     Control::switch("loading"),
+                    // The same data in a `Table` under the chart, for a screen reader and sorting.
+                    Control::switch("table").code(|_, _| vec![]),
                 ],
                 render: move |values: DemoValues| {
                     let legend = LegendPosition::from(values.str("legend").as_str());
@@ -554,12 +678,12 @@ pub fn ChartPage() -> Element {
                     let zoom = values.str("zoom") == "true";
                     let export_button = values.str("export_button") == "true";
                     let onrange = zoom.then_some(EventHandler::new(move |range: Option<ChartRange>| selected.set(range)));
-                    match values.str("type").as_str() {
+                    let drawn = match values.str("type").as_str() {
                         "bar" => brushed(zoom, selected, rsx! {
                             BarChart {
                                 title: "Profit",
                                 x: QUARTERS,
-                                series: vec![marked(&values, Series::new("2025", PROFIT_2025)), Series::new("2026", PROFIT_2026)],
+                                series: vec![marked(&values, profit_2025(&values).1), Series::new("2026", PROFIT_2026)],
                                 layout: BarLayout::from(values.str("layout").as_str()),
                                 orientation: Orientation::from(values.str("orientation").as_str()),
                                 radius: values.str("radius"),
@@ -608,108 +732,18 @@ pub fn ChartPage() -> Element {
                                                                 legend, tooltip, loading, zoom, onrange, export_button, handle: chart,
                             }
                         }),
+                    };
+                    match values.str("table") == "true" {
+                        true => rsx! {
+                            div { width: "100%",
+                                {drawn}
+                                {data_table(&values)}
+                            }
+                        },
+                        false => drawn,
                     }
                 },
             }
-            DocSection { title: "Bar colours and error ranges",
-                Text {
-                    "A series can colour its bars one by one with "
-                    Code { source: ".colors([..])" }
-                    ", or its losses with "
-                    Code { source: ".negative_color(..)" }
-                    "; the bar's place below the axis says the same. "
-                    Code { source: ".errors([(low, high), ..])" }
-                    " draws a range over each upright bar of a grouped chart, and the tooltip and the keys read it out. On a line it is a see-through band in the line's colour."
-                }
-                ProfitRanges {}
-                Ranking {}
-            }
-            DocSection { title: "Half donut and rose",
-                Text {
-                    Code { source: "end_angle" }
-                    " ends the slices before a full turn: from -90 to 90 degrees a "
-                    Code { source: "donut" }
-                    " becomes a gauge, its "
-                    Code { source: "center" }
-                    " under the arc. "
-                    Code { source: "rose" }
-                    " gives every slice the same angle and its value as its radius."
-                }
-                Gauge {}
-                Rose {}
-            }
-            DocSection { title: "With a table",
-                Text {
-                    "A chart only draws its data. Where every value matters, show the same rows in a "
-                    Anchor { to: Route::TablePage {}, "Table" }
-                    " beside it: a screen reader can read it cell by cell, and a reader can sort it."
-                }
-                SalesWithTable {}
-            }
-        }
-    }
-}
-
-/// Losses in their own colour, a range over every bar.
-#[component]
-fn ProfitRanges() -> Element {
-    rsx! {
-        BarChart {
-            title: "Profit with its range",
-            x: QUARTERS,
-            series: vec![
-                Series::new("2025", PROFIT_2025)
-                    .negative_color("error")
-                    .errors([(30.0, 52.0), (44.0, 63.0), (-31.0, -19.0), (50.0, 71.0)]),
-            ],
-            bar_width: 0.6,
-            value_labels: true,
-        }
-    }
-}
-
-/// A colour per bar, the leader first.
-#[component]
-fn Ranking() -> Element {
-    rsx! {
-        BarChart {
-            title: "Sales per team",
-            x: ["North", "South", "East"],
-            series: vec![
-                Series::new("Sales", [162.0, 128.0, 101.0])
-                    .colors(["success", "primary", "neutral"]),
-            ],
-            orientation: "horizontal",
-            value_labels: true,
-        }
-    }
-}
-
-/// A half donut with its total under the arc.
-#[component]
-fn Gauge() -> Element {
-    rsx! {
-        PieChart {
-            title: "Storage used",
-            slices: vec![Slice::new("Used", 72.0), Slice::new("Free", 28.0).color("neutral.3")],
-            donut: true,
-            start_angle: -90.0,
-            end_angle: 90.0,
-            label_position: "inside",
-            center: rsx! { "72 GB" },
-        }
-    }
-}
-
-/// Every browser the same angle, its share as its radius.
-#[component]
-fn Rose() -> Element {
-    rsx! {
-        PieChart {
-            title: "Browsers as a rose",
-            slices: slices(),
-            rose: true,
-            labels: "name",
         }
     }
 }
@@ -726,44 +760,6 @@ fn brushed(zoom: bool, selected: Signal<Option<ChartRange>>, chart: Element) -> 
             if zoom {
                 Text { size: "sm", "{text}" }
             }
-        }
-    }
-}
-
-#[derive(Clone, PartialEq)]
-struct Sales {
-    quarter: &'static str,
-    last: f64,
-    this: f64,
-}
-
-/// The bar chart's quarters, and the same rows as a table.
-#[component]
-fn SalesWithTable() -> Element {
-    let rows: Vec<Sales> = (0..QUARTERS.len())
-        .map(|i| Sales {
-            quarter: QUARTERS[i],
-            last: SALES_2025[i],
-            this: SALES_2026[i],
-        })
-        .collect();
-    rsx! {
-        BarChart {
-            title: "Sales",
-            x: XValues::from_rows(&rows, |row| row.quarter),
-            series: vec![
-                Series::from_rows("2025", &rows, |row| row.last),
-                Series::from_rows("2026", &rows, |row| row.this),
-            ],
-        }
-        Table {
-            caption: "Sales",
-            data: rows,
-            columns: vec![
-                column("Quarter").value(|row: &Sales| row.quarter.to_string()).row_header(),
-                column("2025").value(|row: &Sales| row.last).sortable(),
-                column("2026").value(|row: &Sales| row.this).sortable(),
-            ],
         }
     }
 }
