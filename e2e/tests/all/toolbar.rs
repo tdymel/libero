@@ -289,7 +289,8 @@ e2e::scenario!(
 e2e::scenario!(
     shortcut_help_lists_the_chords,
     "/toolbar-editor",
-    the_help_lists_the_chords
+    the_help_lists_the_chords,
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     fields_join_the_arrow_order,
@@ -306,7 +307,8 @@ e2e::scenario!(
 e2e::scenario!(
     an_item_shown_later_keeps_its_dom_place,
     "/toolbar-script-focus",
-    a_late_item_keeps_its_place
+    a_late_item_keeps_its_place,
+    ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 e2e::scenario!(
     the_arrows_rove_over_every_kind_of_item,

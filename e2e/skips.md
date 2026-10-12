@@ -405,9 +405,11 @@ Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --
 | `textarea::typing_into_a_textarea_reaches_its_value` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `theme_defaults::an_unset_hover_card_align_follows_the_theme` | ios | a touch screen has no hover |
 | `theme_defaults::an_unset_hover_card_side_follows_the_theme` | ios | a touch screen has no hover |
+| `toolbar::an_item_shown_later_keeps_its_dom_place` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `toolbar::escape_stays_put_once_focus_left_the_bar` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `toolbar::fields_join_the_arrow_order` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `toolbar::fields_join_the_arrow_order` | macos desktop | 3432: WKWebView: ArrowLeft at a caret's start keeps the field |
+| `toolbar::shortcut_help_lists_the_chords` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `tooltip::a_long_press_on_a_link_trigger_opens_no_link_menu` | desktop | 1126: no touch input under Xvfb |
 | `tooltip::a_long_press_on_a_link_trigger_opens_no_link_menu` | native | 3237: the native driver reads no script |
 | `tooltip::a_long_press_opens_it_on_touch` | desktop | 1126: no touch input under Xvfb |
