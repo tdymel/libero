@@ -30,6 +30,38 @@ async fn sent_eq(page: &Page, want: &str) {
     );
 }
 
+/// Clicks the mention option `id` once its list is placed and holds still (todo 2102, 3514:
+/// on a loaded CI runner a click at a moving list missed), retrying a click that still misses.
+async fn pick(page: &Page, id: &str) {
+    let last = std::cell::RefCell::new(String::new());
+    wait::until("the list placed and still", || async {
+        let rect: String = page
+            .evaluate(
+                "(() => { const o = document.querySelector('[data-overlay]'); \
+                 return o && getComputedStyle(o).visibility === 'visible' \
+                 ? JSON.stringify(o.getBoundingClientRect()) : ''; })()",
+            )
+            .await?
+            .into_value()?;
+        let still = !rect.is_empty() && rect == *last.borrow();
+        *last.borrow_mut() = rect;
+        Ok(still)
+    })
+    .await
+    .unwrap();
+    let gone = format!("!document.getElementById({id:?})");
+    for _ in 0..3 {
+        pointer::click(page, &format!("#{id}")).await.unwrap();
+        let picked = wait::for_js_true(page, &gone, "the list gone after a pick");
+        if tokio::time::timeout(std::time::Duration::from_secs(2), picked)
+            .await
+            .is_ok()
+        {
+            break;
+        }
+    }
+}
+
 /// Pastes `text` as plain text into the editor.
 async fn paste(page: &Page, text: &str) {
     page.evaluate(format!(
@@ -451,34 +483,7 @@ fn a_mention_list_follows_the_caret_and_takes_keys_through_intercept() {
             .unwrap();
         out_eq(page, "hi \u{fffc} @g @").await;
         options(4).await.unwrap();
-        // Todo 2102: on a loaded CI runner the click missed the pick; aim at a list that holds still.
-        let last = std::cell::RefCell::new(String::new());
-        wait::until("the list placed and still", || async {
-            let rect: String = page
-                .evaluate(format!(
-                    "(() => {{ const o = {overlay}; return o && getComputedStyle(o).visibility === 'visible' \
-                     ? JSON.stringify(o.getBoundingClientRect()) : ''; }})()"
-                ))
-                .await?
-                .into_value()?;
-            let still = !rect.is_empty() && rect == *last.borrow();
-            *last.borrow_mut() = rect;
-            Ok(still)
-        })
-        .await
-        .unwrap();
-        // A click that still misses is retried while the option shows; the pick must follow one.
-        let gone = "!document.getElementById('mention-grace')";
-        for _ in 0..3 {
-            pointer::click(page, "#mention-grace").await.unwrap();
-            let picked = wait::for_js_true(page, gone, "the list gone after a pick");
-            if tokio::time::timeout(std::time::Duration::from_secs(2), picked)
-                .await
-                .is_ok()
-            {
-                break;
-            }
-        }
+        pick(page, "mention-grace").await;
         out_eq(page, "hi \u{fffc} @g \u{fffc} ").await;
         fixture.close().await.unwrap();
     });
@@ -526,7 +531,7 @@ fn a_mention_list_in_a_modal_counts_as_inside() {
         page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
         keyboard::type_text(page, "@a").await.unwrap();
         wait::for_visible(page, "#mention-alan").await.unwrap();
-        pointer::click(page, "#mention-alan").await.unwrap();
+        pick(page, "mention-alan").await;
         out_eq(page, "\u{fffc} ").await;
         assert!(
             js::<bool>(page, DIALOG).await,
