@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{Child, Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Input, Share, Text};
 use libero::use_theme;
@@ -8,8 +8,15 @@ const LABEL: &str = "Link to libero's docs";
 
 const URL: &str = "https://libero-ui.dev";
 
-/// The style controls both demos share.
-fn style_controls() -> Vec<Control> {
+/// The visible text is a child, not a prop, so a control has to decide it here.
+fn text_child(values: &DemoValues) -> String {
+    match values.str("children").as_str() {
+        "true" => "Share".to_string(),
+        _ => String::new(),
+    }
+}
+
+fn controls() -> Vec<Control> {
     vec![
         Control::toggle(
             "variant",
@@ -24,6 +31,7 @@ fn style_controls() -> Vec<Control> {
             "true" => vec![format!("label: {LABEL:?}")],
             _ => vec![],
         }),
+        Control::switch("children").code(|_, _| vec![]),
         Control::switch("disabled"),
     ]
 }
@@ -128,7 +136,7 @@ pub fn SharePage() -> Element {
                     format!("url: {URL:?}"),
                     "title: \"Libero\"".to_string(),
                 ],
-                controls: style_controls(),
+                controls: controls(),
                 render: move |values: DemoValues| rsx! {
                     Share {
                         url: URL,
@@ -139,31 +147,10 @@ pub fn SharePage() -> Element {
                         radius: values.str("radius"),
                         label: (values.str("label") == "true").then(|| LABEL.to_string()),
                         disabled: values.str("disabled") == "true",
+                        children: (values.str("children") == "true").then(|| rsx! { "Share" }),
                     }
                 },
-            }
-            Demo {
-                component: "Share",
-                title: "Labelled",
-                children_text: "Share",
-                fixed: vec![
-                    format!("url: {URL:?}"),
-                    "title: \"Libero\"".to_string(),
-                ],
-                controls: style_controls(),
-                render: move |values: DemoValues| rsx! {
-                    Share {
-                        url: URL,
-                        title: "Libero",
-                        variant: values.str("variant"),
-                        color: color(&values),
-                        size: values.str("size"),
-                        radius: values.str("radius"),
-                        label: (values.str("label") == "true").then(|| LABEL.to_string()),
-                        disabled: values.str("disabled") == "true",
-                        "Share"
-                    }
-                },
+                child: Child(text_child),
             }
         }
     }
