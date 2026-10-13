@@ -14,35 +14,24 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `accordion::the_arrows_move_focus_skip_the_disabled_and_never_toggle` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `audio::the_bars_rise_with_the_decoded_tone` | native | Blitz has no Web Audio to decode with |
 | `bar_chart::a_click_on_a_bar_reports_it` | ios | 3416: the simulator's tap or drag did not drive the page |
-| `bar_chart::a_click_on_a_bar_reports_it` | native | charts are parked on Blitz |
-| `bar_chart::a_loading_chart_says_so` | native | charts are parked on Blitz |
+| `bar_chart::a_click_on_a_bar_reports_it` | native | a click on a chart mark keeps the vdom busy past 200 polls on Blitz |
 | `bar_chart::a_pointer_on_a_line_s_point_picks_it` | ios | 3416: the simulator's tap or drag did not drive the page |
-| `bar_chart::a_pointer_on_a_line_s_point_picks_it` | native | charts are parked on Blitz |
+| `bar_chart::a_pointer_on_a_line_s_point_picks_it` | native | a click on a line's point among bars picks nothing on Blitz |
 | `bar_chart::escape_closes_a_hovered_tooltip_without_focus` | android | a touch screen has no hover |
 | `bar_chart::escape_closes_a_hovered_tooltip_without_focus` | ios | a touch screen has no hover |
-| `bar_chart::escape_closes_a_hovered_tooltip_without_focus` | native | charts are parked on Blitz |
 | `bar_chart::hovering_shows_the_bar_s_tooltip_and_marker` | android | a touch screen has no hover |
 | `bar_chart::hovering_shows_the_bar_s_tooltip_and_marker` | ios | a touch screen has no hover |
-| `bar_chart::hovering_shows_the_bar_s_tooltip_and_marker` | native | charts are parked on Blitz |
 | `bar_chart::lying_bars_zoom_and_brush_down_their_side` | ios | 3416: the simulator's tap or drag did not drive the page |
-| `bar_chart::lying_bars_zoom_and_brush_down_their_side` | native | charts are parked on Blitz |
-| `bar_chart::the_keys_follow_lying_bars` | native | charts are parked on Blitz |
-| `bar_chart::the_keys_read_a_bar_s_range` | native | charts are parked on Blitz |
-| `bar_chart::the_keys_walk_onto_a_line_among_bars` | native | charts are parked on Blitz |
-| `bar_chart::the_keys_walk_the_bars` | native | charts are parked on Blitz |
-| `bar_chart::the_legend_hides_and_shows_a_series` | native | charts are parked on Blitz |
 | `bottom_navigation::a_fixed_bar_docks_everywhere` | macos desktop | 3432: WKWebView: the fixed bar never docks |
 | `button_group::the_focused_button_is_lifted_over_its_neighbours` | ios | 3416: focus stays on the body after a Tab or a tap |
 | `candlestick_chart::a_click_on_a_candle_reports_it` | ios | 3416: the simulator's tap or drag did not drive the page |
-| `candlestick_chart::a_click_on_a_candle_reports_it` | native | charts are parked on Blitz |
-| `candlestick_chart::the_keys_walk_the_candles` | native | charts are parked on Blitz |
+| `candlestick_chart::a_click_on_a_candle_reports_it` | native | a click on a chart mark keeps the vdom busy past 200 polls on Blitz |
 | `carousel_autoplay::tab_from_pause_within_the_carousel` | android | 2652 is the desktop WebView's arm |
 | `carousel_autoplay::tab_from_pause_within_the_carousel` | native | native::carousel has the Blitz arm |
 | `carousel_autoplay::tab_from_pause_within_the_carousel` | web | tab_from_pause_to_the_track_is_no_new_entry is the web's arm |
 | `cascader::a_disabled_cascader_row_looks_disabled` | ios | a touch screen has no hover |
 | `cascader::taps_walk_the_cascader_levels` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `cascader_phone::android_back_closes_a_cascader` | all but android | 1275: no Back key off Android |
-| `chart::the_segments_swap_the_chart` | native | charts are parked on Blitz |
 | `color_field::arrow_down_enters_the_colour_dialog_and_escape_returns` | android | 958: element identity on the WebView |
 | `color_field::arrow_down_enters_the_colour_dialog_and_escape_returns` | desktop | 958: element identity on the WebView |
 | `color_field::arrow_down_enters_the_colour_dialog_and_escape_returns` | ios | 3416: the simulator's tap or drag did not drive the page |
@@ -117,12 +106,8 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `focus_trap::tab_passes_over_a_stop_that_is_not_rendered` | desktop | 958: element identity on the WebView |
 | `focus_trap::tab_passes_over_a_stop_that_is_not_rendered` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `funnel_chart::a_click_on_a_stage_reports_it` | ios | 3416: the simulator's tap or drag did not drive the page |
-| `funnel_chart::a_click_on_a_stage_reports_it` | native | charts are parked on Blitz |
-| `funnel_chart::the_keys_walk_the_stages` | native | charts are parked on Blitz |
-| `funnel_chart::the_legend_hides_and_shows_a_stage` | native | charts are parked on Blitz |
 | `heatmap_chart::a_click_on_a_cell_reports_it` | ios | 3416: the simulator's tap or drag did not drive the page |
-| `heatmap_chart::a_click_on_a_cell_reports_it` | native | charts are parked on Blitz |
-| `heatmap_chart::the_keys_walk_the_grid` | native | charts are parked on Blitz |
+| `heatmap_chart::a_click_on_a_cell_reports_it` | native | a click on a chart mark keeps the vdom busy past 200 polls on Blitz |
 | `home::arrow_down_after_typing_enters_on_the_typed_day` | android | 958: element identity on the WebView |
 | `home::arrow_down_after_typing_enters_on_the_typed_day` | desktop | 958: element identity on the WebView |
 | `home::arrow_down_after_typing_enters_on_the_typed_day` | ios | 3416: the simulator's tap or drag did not drive the page |
@@ -157,25 +142,17 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `kanban::a_filtered_key_move_lands_before_the_next_shown_card_behind_a_hidden_one` | desktop | 958: element identity on the WebView |
 | `kanban::a_handle_drag_moves_a_card_into_an_empty_column` | ios | 3416: flaky: the drop at the screen edge races the board's auto-scroll |
 | `kanban::a_handle_drag_moves_a_card_into_the_empty_last_column_of_a_right_to_left_board` | ios | 3416: flaky: the drop at the screen edge races the board's auto-scroll |
-| `kanban::a_handle_drag_moves_a_card_into_the_empty_last_column_of_a_right_to_left_board` | native | 707: Blitz has no right-to-left scroll |
-| `kanban::a_handle_drag_moves_a_card_leftwards_into_the_next_column_of_a_right_to_left_board` | native | 707: Blitz has no right-to-left scroll |
-| `kanban::a_handle_drag_reorders_a_column_of_a_right_to_left_board` | native | 707: Blitz has no right-to-left scroll |
 | `kanban::a_header_handle_drag_reorders_the_columns_of_a_right_to_left_board` | macos desktop | upstream: WebKit orders the RTL columns unlike WebKitGTK |
-| `kanban::a_header_handle_drag_reorders_the_columns_of_a_right_to_left_board` | native | 707: Blitz has no right-to-left scroll |
 | `kanban::a_move_the_app_refuses_leaves_no_focus_jump_for_a_later_card` | desktop | 958: element identity on the WebView |
 | `kanban::a_refused_move_is_void_once_the_app_removes_its_card` | desktop | 958: element identity on the WebView |
 | `kanban::a_refused_move_is_void_when_the_data_change_renders_only_a_column` | desktop | 958: element identity on the WebView |
-| `kanban::a_right_to_left_board_lays_its_columns_from_the_right` | native | 707: Blitz has no right-to-left scroll |
 | `kanban::a_same_column_key_or_button_move_the_app_refuses_is_not_announced` | desktop | 958: element identity on the WebView |
 | `kanban::left_and_right_put_a_lifted_card_in_the_next_column_of_a_right_to_left_board_mirrored` | macos desktop | upstream: WebKit orders the RTL columns unlike WebKitGTK |
-| `kanban::left_and_right_put_a_lifted_card_in_the_next_column_of_a_right_to_left_board_mirrored` | native | 707: Blitz has no right-to-left scroll |
 | `kanban::left_moves_a_lifted_column_forward_on_a_right_to_left_board` | macos desktop | upstream: WebKit orders the RTL columns unlike WebKitGTK |
-| `kanban::left_moves_a_lifted_column_forward_on_a_right_to_left_board` | native | 707: Blitz has no right-to-left scroll |
 | `kanban::left_or_right_moves_no_resting_card_and_a_refused_move_is_not_announced` | desktop | 958: element identity on the WebView |
 | `kanban::the_move_to_menu_lists_every_column_with_the_cards_own_disabled` | desktop | 958: element identity on the WebView |
 | `kanban::the_move_to_menu_lists_every_column_with_the_cards_own_disabled` | ios | 3416: focus stays on the body after a Tab or a tap |
 | `kanban::the_move_to_menu_moves_a_card_across_a_right_to_left_board` | desktop | 958: element identity on the WebView |
-| `kanban::the_move_to_menu_moves_a_card_across_a_right_to_left_board` | native | 707: Blitz has no right-to-left scroll |
 | `kanban::the_move_to_menu_moves_a_card_to_the_end_of_another_column_and_keeps_the_focus` | desktop | 958: element identity on the WebView |
 | `lightbox_zoom::a_pinch_zooms_the_picture` | desktop | 1126: no touch input under Xvfb |
 | `lightbox_zoom::a_pinch_zooms_the_picture` | ios | 3416: the simulator's tap or drag did not drive the page |
@@ -185,28 +162,22 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `lightbox_zoom::a_zoomed_picture_pans_only_to_its_edge` | native | 3386: reads the picture's size and pan by script, which Blitz has none of |
 | `lightbox_zoom::a_zoomed_picture_pans_only_to_its_edge` | windows desktop | upstream: Dioxus' asset! gives a backslashed file path (D:\a\..\1.svg) off the bundle, which WebView2 cannot load, so no picture decodes |
 | `line_chart::a_click_on_a_point_reports_it` | ios | 3416: the simulator's tap or drag did not drive the page |
-| `line_chart::a_click_on_a_point_reports_it` | native | charts are parked on Blitz |
 | `line_chart::a_pen_leaving_takes_its_tooltip_along` | android | a synthetic pen hover is a browser check |
 | `line_chart::a_pen_leaving_takes_its_tooltip_along` | ios | a synthetic pen hover is a browser check |
-| `line_chart::a_pen_leaving_takes_its_tooltip_along` | native | charts are parked on Blitz |
+| `line_chart::a_pen_leaving_takes_its_tooltip_along` | native | Blitz has no script reads |
 | `line_chart::a_pinch_zooms_the_plot` | desktop | a mouse has no pinch |
 | `line_chart::a_pinch_zooms_the_plot` | ios | 3416: the simulator's tap or drag did not drive the page |
-| `line_chart::a_pinch_zooms_the_plot` | native | charts are parked on Blitz |
+| `line_chart::a_pinch_zooms_the_plot` | native | Blitz takes no multi-touch input |
 | `line_chart::a_pinch_zooms_the_plot` | web | a mouse has no pinch |
 | `line_chart::a_sideways_drag_brushes_a_range` | ios | 3416: the simulator's tap or drag did not drive the page |
-| `line_chart::a_sideways_drag_brushes_a_range` | native | charts are parked on Blitz |
 | `line_chart::a_vertical_swipe_over_the_plot_scrolls_the_page` | desktop | a mouse drag scrolls nothing |
-| `line_chart::a_vertical_swipe_over_the_plot_scrolls_the_page` | native | charts are parked on Blitz |
+| `line_chart::a_vertical_swipe_over_the_plot_scrolls_the_page` | native | a swipe over the plot scrolls no page on Blitz |
 | `line_chart::a_vertical_swipe_over_the_plot_scrolls_the_page` | web | a mouse drag scrolls nothing |
 | `line_chart::hovering_shows_the_point_s_tooltip_and_marker` | android | a touch screen has no hover |
 | `line_chart::hovering_shows_the_point_s_tooltip_and_marker` | ios | a touch screen has no hover |
-| `line_chart::hovering_shows_the_point_s_tooltip_and_marker` | native | charts are parked on Blitz |
-| `line_chart::the_chart_exports_as_svg_and_png` | native | charts are parked on Blitz |
-| `line_chart::the_handle_resets_the_zoom_and_says_it_is_zoomed` | native | charts are parked on Blitz |
-| `line_chart::the_keys_walk_the_points` | native | charts are parked on Blitz |
-| `line_chart::the_keys_zoom_pan_and_brush` | native | charts are parked on Blitz |
-| `line_chart::the_legend_hides_and_shows_a_line` | native | charts are parked on Blitz |
-| `line_chart::the_tooltip_keeps_its_height_from_point_to_point` | native | charts are parked on Blitz |
+| `line_chart::hovering_shows_the_point_s_tooltip_and_marker` | native | the crosshair reads a 0x0 rect on Blitz |
+| `line_chart::the_chart_exports_as_svg_and_png` | native | the PNG export never lands on Blitz |
+| `line_chart::the_tooltip_keeps_its_height_from_point_to_point` | native | Blitz has no script reads |
 | `menu::a_click_outside_closes_it_and_leaves_focus_where_it_went` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `menu::a_click_outside_closes_it_and_leaves_focus_where_it_went` | macos desktop | upstream: WebKit does not focus a clicked button |
 | `menu::a_tall_menu_above_fits_the_room` | macos desktop | 3432: WKWebView: the last item never scrolls into view |
@@ -268,10 +239,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `picker_dialog::android_back_closes_a_color_field` | all but android | 1275: no Back key off Android |
 | `picker_dialog::android_back_closes_a_date_field` | all but android | 1275: no Back key off Android |
 | `pie_chart::a_click_on_a_slice_reports_it` | ios | 3416: the simulator's tap or drag did not drive the page |
-| `pie_chart::a_click_on_a_slice_reports_it` | native | charts are parked on Blitz |
-| `pie_chart::a_hidden_slice_grows_the_shares_the_eye_reads_not_the_summary` | native | charts are parked on Blitz |
-| `pie_chart::the_keys_walk_the_slices` | native | charts are parked on Blitz |
-| `pie_chart::the_legend_hides_and_shows_a_slice` | native | charts are parked on Blitz |
 | `pin_field::a_digit_retyped_without_a_key_leaves_no_drifted_cell` | desktop | 1126: no text without a key (no IME path) under xdotool |
 | `pin_field::a_digit_retyped_without_a_key_leaves_no_drifted_cell` | ios | 3416: no text without a key through AXe |
 | `pin_field::a_digit_retyped_without_a_key_leaves_no_drifted_cell` | native | no text without a key on Blitz |
@@ -287,9 +254,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `popover::android_back_closes_a_popover` | all but android | 1275: no Back key off Android |
 | `radar_chart::hovering_picks_the_nearest_point` | android | a touch screen has no hover |
 | `radar_chart::hovering_picks_the_nearest_point` | ios | a touch screen has no hover |
-| `radar_chart::hovering_picks_the_nearest_point` | native | charts are parked on Blitz |
-| `radar_chart::the_keys_walk_the_spokes` | native | charts are parked on Blitz |
-| `radar_chart::the_legend_hides_and_shows_a_series` | native | charts are parked on Blitz |
+| `radar_chart::the_legend_hides_and_shows_a_series` | native | Blitz has no script reads |
 | `rating::a_key_press_over_a_hover_draws_the_new_value` | android | a touch screen has no hover |
 | `rating::a_key_press_over_a_hover_draws_the_new_value` | ios | a touch screen has no hover |
 | `rating::hovering_previews_without_changing_the_value` | android | a touch screen has no hover |
@@ -299,12 +264,9 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `refused::tab_skips_disabled_buttons_and_an_inert_subtree` | android | 958: element identity on the WebView |
 | `save_file::android_shares_binary_bytes_as_a_file` | all but android | 2078: the share sheet is Android's |
 | `save_file::android_shares_text_through_the_share_sheet` | all but android | 2016: the share sheet is Android's |
-| `scatter_chart::bubbles_say_their_sizes` | native | charts are parked on Blitz |
 | `scatter_chart::hovering_picks_the_nearest_point` | android | a touch screen has no hover |
 | `scatter_chart::hovering_picks_the_nearest_point` | ios | a touch screen has no hover |
-| `scatter_chart::hovering_picks_the_nearest_point` | native | charts are parked on Blitz |
-| `scatter_chart::the_keys_walk_the_points` | native | charts are parked on Blitz |
-| `scatter_chart::the_legend_hides_and_shows_a_series` | native | charts are parked on Blitz |
+| `scatter_chart::the_legend_hides_and_shows_a_series` | native | Blitz has no script reads |
 | `scroll_area::a_jump_mid_list_renders_the_window_there` | android | 2177: the WebView does not follow the jump |
 | `scroll_area::rows_stay_in_view_through_a_fling` | android | 2131: rows trail a WebView fling; skeleton bars paint the gap |
 | `scroll_area::rows_stay_in_view_through_a_fling` | desktop | 2131: rows trail a WebView fling, 80px of 120; skeleton bars paint the gap |
@@ -364,7 +326,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_detail::an_animated_detail_slides_open_and_shut` | android | 958: element identity on the WebView |
 | `table_detail::pinned_toggles_push_the_checkboxes_past_them` | android | 3217: one web run guards the cascade |
 | `table_detail::pinned_toggles_push_the_checkboxes_past_them` | desktop | 3217: one web run guards the cascade |
-| `table_detail::pinned_toggles_push_the_checkboxes_past_them` | native | 3217: one web run guards the cascade |
 | `table_detail::the_keyboard_opens_a_detail_and_tabs_into_it` | android | 958: element identity on the WebView |
 | `table_filter::a_select_filter_narrows_a_table` | android | 958: element identity on the WebView |
 | `table_filter::a_select_filter_narrows_a_table` | ios | 3416: the simulator's tap or drag did not drive the page |
@@ -372,7 +333,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_grid::a_custom_editor_clears_the_error_by_changed` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::a_second_tap_opens_the_editor` | desktop | no touch input in the desktop driver |
 | `table_grid::a_second_tap_opens_the_editor` | ios | 3416: focus stays on the body after a Tab or a tap |
-| `table_grid::a_second_tap_opens_the_editor` | native | 3242: Blitz fires no pointer events for a touch |
 | `table_grid::a_sort_follows_the_apps_language` | android | 3294: the WebView app has no Intl.Collator to call |
 | `table_grid::a_sort_follows_the_apps_language` | desktop | 3400: the app sorts in Rust by accent-folded letters, only the web build has an Intl.Collator |
 | `table_grid::a_sort_follows_the_apps_language` | ios | 3416: the simulator's tap or drag did not drive the page |
@@ -434,8 +394,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_scroll::a_tabbed_header_scrolls_into_its_region` | android | 958: element identity on the WebView |
 | `table_scroll::a_tabbed_header_scrolls_into_its_region` | ios | 3416: focus stays on the body after a Tab or a tap |
 | `table_scroll::a_windowed_table_renders_the_rows_in_view` | ios | 3416: the simulator's tap or drag did not drive the page |
-| `table_scroll::a_windowed_table_renders_the_rows_in_view` | macos native | upstream: Blitz's stylo panics in resolve_map on the windowed rows (a SIGSEGV in the full run) |
-| `table_scroll::a_windowed_table_renders_the_rows_in_view` | windows native | upstream: Blitz's stylo panics in calc.rs on the windowed rows |
 | `table_scroll::end_at_the_bottom_loads_more_rows` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `table_tree::a_tree_box_selects_its_descendants_and_mixes_its_ancestors` | ios | 3416: flaky: a tap on a tree box sometimes leaves a half selection |
 | `table_tree::a_tree_with_cell_focus_moves_between_rows_and_cells` | android | 958: roving keys are inert in the emulator's WebView |
@@ -450,7 +408,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `tabs::tab_leaves_the_strip_and_shift_tab_comes_back_to_the_selected_tab` | desktop | 958: element identity on the WebView |
 | `tabs::tab_leaves_the_strip_from_a_focused_unselected_tab` | android | 958: element identity on the WebView |
 | `tabs::tab_leaves_the_strip_from_a_focused_unselected_tab` | desktop | 958: element identity on the WebView |
-| `text_field::fast_typing_into_a_rewriting_field_keeps_every_letter` | native | Blitz has no live value read; 1051 is a WebView race |
 | `text_field::fast_typing_into_a_text_field_keeps_every_letter` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `textarea::typing_into_a_textarea_reaches_its_value` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `theme_defaults::an_unset_hover_card_align_follows_the_theme` | ios | a touch screen has no hover |

@@ -28,8 +28,9 @@ static MODAL_SX: StaticSx = StaticSx::new(|| {
 
 // On the `FocusTrap` as an `sx`, to beat its `display: contents`. Scrolls when the
 // dialog outgrows the viewport; it takes pointer events, so its scrollbar works (2560).
+// `absolute` is the same box under the fixed root; Blitz misses hits in a nested `fixed` one.
 static MODAL_CONTENT_SX: StaticSx = StaticSx::new(|| {
-    sx().position("fixed")
+    sx().position("absolute")
         .inset("0")
         .z_index("1")
         .display("block")

@@ -28,6 +28,11 @@ debug = false
 [profile.dev.package."*"]
 opt-level = 3
 
+# Blitz 0.3.0-beta.3's `assert_layout_parents_consistent` panics on a stale layout
+# child its own resolve skips. Drop this once a Blitz bump fixes it.
+[profile.dev.package.blitz-dom]
+debug-assertions = false
+
 # Speed over size on every platform, wasm included: no LTO, default codegen
 # units. The wasm bundle grows and links in less time.
 [profile.release]

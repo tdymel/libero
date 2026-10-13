@@ -2,6 +2,8 @@
 //! it, indented one step past it; Enter on the focused toggle closes it again. A
 //! treegrid (TR2): its role, and the arrows on a focused row.
 
+use std::time::Duration;
+
 use dioxus::prelude::*;
 use e2e::native::{Key, Page, mount};
 use libero::components::{Table, column};
@@ -99,10 +101,10 @@ fn selectable() -> Element {
     }
 }
 
-/// The pixel at the middle of `selector`'s box.
-fn centre(page: &Page, selector: &str) -> String {
+/// The pixel at `at` of `selector`'s box, as fractions of its size.
+fn pixel(page: &Page, selector: &str, at: f64) -> String {
     let (x, y, width, height) = page.rect(selector);
-    page.painted_pixel((x + width / 2.0) as u32, (y + height / 2.0) as u32)
+    page.painted_pixel((x + width * at) as u32, (y + height * at) as u32)
 }
 
 fn select_box(row: usize) -> String {
@@ -113,7 +115,8 @@ fn select_box(row: usize) -> String {
 fn a_mixed_tree_box_paints_its_dash() {
     let mut page = mount(selectable);
     // Rows: site, design, build, launch.
-    let empty = centre(&page, &select_box(1));
+    // A corner the marks miss: the fill alone.
+    let empty = pixel(&page, &select_box(1), 0.25);
     page.click(&select_box(2));
     let aria = "tbody tr:nth-child(1) td[data-select] input";
     assert_eq!(
@@ -122,9 +125,15 @@ fn a_mixed_tree_box_paints_its_dash() {
         "{}",
         page.tree()
     );
-    let mixed = centre(&page, &select_box(1));
-    let checked = centre(&page, &select_box(2));
-    assert_ne!(mixed, empty, "the mixed box paints like an empty one");
+    // Past the fill's 150ms transition delay, which Blitz 0.3.0-beta.3 runs.
+    page.wait(Duration::from_millis(300));
+    let fill = pixel(&page, &select_box(1), 0.25);
+    assert_ne!(fill, empty, "the mixed box paints like an empty one");
+    // The middle is on the dash and off the check.
+    let (mixed, checked) = (
+        pixel(&page, &select_box(1), 0.5),
+        pixel(&page, &select_box(2), 0.5),
+    );
     assert_ne!(mixed, checked, "the mixed box paints like a checked one");
 }
 

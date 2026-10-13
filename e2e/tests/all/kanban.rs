@@ -731,7 +731,6 @@ e2e::scenario!(
     left_and_right_put_a_lifted_card_in_the_next_column_of_a_right_to_left_board_mirrored,
     "/kanban/rtl",
     left_and_right_move_a_lifted_card_across_mirrored,
-    native: skip("707: Blitz has no right-to-left scroll"),
     macos: skip("upstream: WebKit orders the RTL columns unlike WebKitGTK")
 );
 e2e::scenario!(
@@ -743,33 +742,28 @@ e2e::scenario!(
 e2e::scenario!(
     a_right_to_left_board_lays_its_columns_from_the_right,
     "/kanban/rtl",
-    an_rtl_board_lays_its_columns_right_to_left,
-    native: skip("707: Blitz has no right-to-left scroll")
+    an_rtl_board_lays_its_columns_right_to_left
 );
 e2e::scenario!(
     a_handle_drag_reorders_a_column_of_a_right_to_left_board,
     "/kanban/rtl",
-    a_drag_reorders_a_column,
-    native: skip("707: Blitz has no right-to-left scroll")
+    a_drag_reorders_a_column
 );
 e2e::scenario!(
     a_handle_drag_moves_a_card_leftwards_into_the_next_column_of_a_right_to_left_board,
     "/kanban/rtl",
-    a_drag_moves_a_card_across,
-    native: skip("707: Blitz has no right-to-left scroll")
+    a_drag_moves_a_card_across
 );
 e2e::scenario!(
     a_handle_drag_moves_a_card_into_the_empty_last_column_of_a_right_to_left_board,
     "/kanban/rtl",
     a_drag_fills_an_empty_column,
-    native: skip("707: Blitz has no right-to-left scroll"),
     ios: skip("3416: flaky: the drop at the screen edge races the board's auto-scroll")
 );
 e2e::scenario!(
     the_move_to_menu_moves_a_card_across_a_right_to_left_board,
     "/kanban/rtl",
     the_menu_moves_a_card_across,
-    native: skip("707: Blitz has no right-to-left scroll"),
     desktop: skip("958: element identity on the WebView")
 );
 
@@ -999,7 +993,6 @@ e2e::scenario!(
     left_moves_a_lifted_column_forward_on_a_right_to_left_board,
     "/kanban/column-reorder-rtl",
     left_moves_a_lifted_column_forward_right_to_left,
-    native: skip("707: Blitz has no right-to-left scroll"),
     macos: skip("upstream: WebKit orders the RTL columns unlike WebKitGTK")
 );
 
@@ -1054,7 +1047,6 @@ e2e::scenario!(
     a_header_handle_drag_reorders_the_columns_of_a_right_to_left_board,
     "/kanban/column-reorder-rtl",
     a_handle_drag_reorders_the_columns,
-    native: skip("707: Blitz has no right-to-left scroll"),
     macos: skip("upstream: WebKit orders the RTL columns unlike WebKitGTK")
 );
 

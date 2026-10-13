@@ -59,12 +59,7 @@ async fn bubbles<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     reads(d, STATUS, "Cities: x 1, y 20, size 300", "the first bubble").await
 }
 
-e2e::scenario!(
-    bubbles_say_their_sizes,
-    "/scatter-chart/bubbles",
-    bubbles,
-    native: skip("charts are parked on Blitz")
-);
+e2e::scenario!(bubbles_say_their_sizes, "/scatter-chart/bubbles", bubbles);
 
 /// The pointer picks the nearest point; the tooltip gives its own x and y, not a column.
 async fn hovers<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -86,7 +81,6 @@ e2e::scenario!(
     "/scatter-chart",
     hovers,
     android: skip("a touch screen has no hover"),
-    native: skip("charts are parked on Blitz"),
     ios: skip("a touch screen has no hover")
 );
 
@@ -114,12 +108,7 @@ async fn keys<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     Ok(())
 }
 
-e2e::scenario!(
-    the_keys_walk_the_points,
-    "/scatter-chart",
-    keys,
-    native: skip("charts are parked on Blitz")
-);
+e2e::scenario!(the_keys_walk_the_points, "/scatter-chart", keys);
 
 /// A legend button hides a series from the drawing; the last shown one stays.
 async fn legend<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -151,5 +140,5 @@ e2e::scenario!(
     the_legend_hides_and_shows_a_series,
     "/scatter-chart",
     legend,
-    native: skip("charts are parked on Blitz")
+    native: skip("Blitz has no script reads")
 );

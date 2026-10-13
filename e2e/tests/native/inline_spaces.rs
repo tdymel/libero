@@ -38,10 +38,8 @@ fn inline_components_keep_the_spaces_around_them() {
     }
 }
 
-/// A caller's own edge spaces inside an inline element still go: parley's
-/// trim, not a component's ("xspacedy").
+/// A caller's own edge spaces inside an inline element survive, no parley trim.
 #[test]
-#[ignore = "Blitz-only: parley 0.11 trims an inline element's edge whitespace"]
 fn a_callers_edge_spaces_survive() {
     let mut page = mount(app);
     page.settle();

@@ -483,7 +483,7 @@ fn flush_elements(page: &Page) -> Vec<String> {
         .collect()
 }
 
-/// Todo 872's loop guards: the redraw a flush or a baked-box rebuild asks for
+/// Todo 872's loop guards: the redraw a flush or a text re-layout asks for
 /// arms no flush of its own, so after a render the document comes to rest.
 #[test]
 fn the_document_comes_to_rest_after_a_timers_render() {
@@ -593,8 +593,8 @@ fn a_provided_glyph_paints_in_place_of_the_default() {
     );
 }
 
-/// Todo 893: a check's baked rebuild asks for a redraw arming no check (`redraw::quiet`);
-/// unguarded, an anonymous block was rebuilt for ever.
+/// Todo 893: libero's own writes ask for redraws that flush nothing (`redraw::quiet`),
+/// so it comes to rest.
 #[test]
 fn a_baked_rebuild_alone_arms_no_check() {
     let mut page = mount(timer_app);

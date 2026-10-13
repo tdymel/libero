@@ -514,7 +514,7 @@ pub fn Scroller(props: ScrollerProps) -> Element {
             }
         });
     };
-    // Blitz's Tab fires no `focusin`; its silent move is a key's or a script's,
+    // Blitz matches no `:focus-visible`; its silent move is a key's or a script's,
     // and arrives outside the document's borrow, after the focus scroll.
     use_silent_focus_in(viewport, move || {
         if let Ok(item) = viewport.query_selector(":focus") {

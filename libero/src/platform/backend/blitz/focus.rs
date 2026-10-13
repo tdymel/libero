@@ -1,5 +1,6 @@
-//! Focus moves Blitz makes without a focus event (Tab, libero's `focus()` and
-//! `blur()`), each checked at [`Outlet`]'s next flush.
+//! Focus moves Blitz makes without a focus event (libero's `focus()` and
+//! `blur()`), each checked at [`Outlet`]'s next flush. Tab too: Blitz fires its
+//! events, but handlers there miss `:focus-visible` and run before the reveal.
 //!
 //! [`Outlet`]: super::Outlet
 
@@ -12,9 +13,7 @@ use blitz_dom::BaseDocument;
 use dioxus::prelude::*;
 use dioxus_native_dom::{NodeHandle, NodeId};
 
-use super::{
-    BlitzElement, Callbacks, Doc, ancestors, anchor, baked, defer, doc, flush_soon, reveal,
-};
+use super::{BlitzElement, Callbacks, Doc, ancestors, anchor, defer, doc, flush_soon, reveal};
 use crate::platform::{
     ElementApi, FocusMove, SilentFocusApi, SilentFocusSubscription, focus::OnMove,
 };
@@ -170,7 +169,6 @@ pub(super) fn check(doc: &Doc) {
     if now == before {
         return;
     }
-    baked::check_soon();
     // Before the subscribers, which measure where it lands. `Outlet`'s mount
     // runs outside the document's borrow.
     if let Some(now) = now.filter(|&id| revealing && Some(id) != doc.wrapper_id()) {

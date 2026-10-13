@@ -12,10 +12,9 @@ enum Alignment {
     Right,
 }
 
-/// Todo 849: Blitz hoists the `z-index: 1` checked segment at the previous layout's offsets
-/// (`flush_styles_to_layout` before `resolve_layout`): one stale frame after a resize.
+/// Todo 849: the `z-index: 1` checked segment paints at the new layout's offsets
+/// right after a resize, no stale frame (Blitz 0.3.0-beta.3).
 #[test]
-#[ignore = "Blitz paints a z-indexed box at its pre-resize place for one frame"]
 fn the_checked_segment_paints_in_place_after_a_resize() {
     fn app() -> Element {
         let mut alignment = use_signal(|| Alignment::Center);

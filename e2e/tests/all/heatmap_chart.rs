@@ -94,12 +94,7 @@ async fn keys<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     Ok(())
 }
 
-e2e::scenario!(
-    the_keys_walk_the_grid,
-    "/heatmap-chart",
-    keys,
-    native: skip("charts are parked on Blitz")
-);
+e2e::scenario!(the_keys_walk_the_grid, "/heatmap-chart", keys);
 
 /// A click on a cell reports it. A tap pins it, a second tap clicks.
 async fn clicks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -122,6 +117,6 @@ e2e::scenario!(
     a_click_on_a_cell_reports_it,
     "/heatmap-chart",
     clicks,
-    native: skip("charts are parked on Blitz"),
+    native: skip("a click on a chart mark keeps the vdom busy past 200 polls on Blitz"),
     ios: skip("3416: the simulator's tap or drag did not drive the page")
 );

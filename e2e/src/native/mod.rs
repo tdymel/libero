@@ -317,7 +317,38 @@ fn client_rect(doc: &BaseDocument, id: NodeId) -> Option<(f64, f64, f64, f64)> {
     }
     let rect = doc.get_client_bounding_rect(id)?;
     let own = doc.get_node(id)?.scroll_offset();
-    Some((rect.x + own.x, rect.y + own.y, rect.width, rect.height))
+    let (x, y) = pinned_scroll(doc, id);
+    Some((
+        rect.x + own.x + x,
+        rect.y + own.y + y,
+        rect.width,
+        rect.height,
+    ))
+}
+
+/// The viewport scroll Blitz's client rect takes off a box in a `fixed` child
+/// of the root element, which Blitz paints unscrolled.
+fn pinned_scroll(doc: &BaseDocument, id: NodeId) -> (f64, f64) {
+    let root = doc.root_element().id;
+    let mut current = doc.get_node(id);
+    while let Some(node) = current {
+        let block = node.containing_block();
+        let fixed = node.primary_styles().is_some_and(|styles| {
+            styles.clone_position() == style::computed_values::position::T::Fixed
+        });
+        // libero's `sticky.rs` moved a z-indexed one back already.
+        let shifted = node.element_data().is_some_and(|data| {
+            data.attrs()
+                .iter()
+                .any(|attr| &*attr.name.local == "data-lsx-sticky-shift" && &*attr.value != "0 0")
+        });
+        if fixed && block == Some(root) && !shifted {
+            let scroll = doc.viewport_scroll();
+            return (scroll.x, scroll.y);
+        }
+        current = block.and_then(|id| doc.get_node(id));
+    }
+    (0.0, 0.0)
 }
 
 fn computed_value(doc: &BaseDocument, id: NodeId, property: &str) -> String {
@@ -407,7 +438,10 @@ fn transformed_rect(doc: &BaseDocument, node_id: NodeId) -> Option<(f64, f64, f6
             node.data,
             blitz_dom::NodeData::Element(_) | blitz_dom::NodeData::AnonymousBlock(_)
         );
-        if let Some(transform) = boxed.then(|| *node.transform()).flatten() {
+        if let Some(transform) = boxed
+            .then(|| node.transform().as_deref().copied())
+            .flatten()
+        {
             let [a, b, c, d, e, f] = transform.as_coeffs();
             for (x, y) in &mut corners {
                 (*x, *y) = (a * *x + c * *y + e / scale, b * *x + d * *y + f / scale);
@@ -415,7 +449,7 @@ fn transformed_rect(doc: &BaseDocument, node_id: NodeId) -> Option<(f64, f64, f6
             transformed = true;
         }
         let location = node.final_layout().location;
-        let parent = node.layout_parent.get().and_then(|id| doc.get_node(id));
+        let parent = node.containing_block().and_then(|id| doc.get_node(id));
         let scroll = parent.map(|parent| *parent.scroll_offset());
         for (x, y) in &mut corners {
             *x += f64::from(location.x) - scroll.map_or(0.0, |s| s.x);
@@ -426,32 +460,14 @@ fn transformed_rect(doc: &BaseDocument, node_id: NodeId) -> Option<(f64, f64, f6
     if !transformed {
         return None;
     }
-    let scroll = doc.viewport_scroll();
-    let xs = corners.map(|(x, _)| x - scroll.x);
-    let ys = corners.map(|(_, y)| y - scroll.y);
+    let (scroll, pinned) = (doc.viewport_scroll(), pinned_scroll(doc, node_id));
+    let xs = corners.map(|(x, _)| x - scroll.x + pinned.0);
+    let ys = corners.map(|(_, y)| y - scroll.y + pinned.1);
     let min_x = xs.iter().copied().fold(f64::INFINITY, f64::min);
     let min_y = ys.iter().copied().fold(f64::INFINITY, f64::min);
     let max_x = xs.iter().copied().fold(f64::NEG_INFINITY, f64::max);
     let max_y = ys.iter().copied().fold(f64::NEG_INFINITY, f64::max);
     Some((min_x, min_y, max_x - min_x, max_y - min_y))
-}
-
-/// crates.io Blitz stops marking ancestors at a stale dirty bit, freezing a tick's transition
-/// (Blitz #789, todo 880). libero heals at a flush, read or pointer move; a tick has none.
-fn heal_dirty_bits(doc: &BaseDocument) {
-    let mut dirty = Vec::new();
-    doc.visit(|id, node| {
-        if node.has_dirty_descendants() {
-            dirty.push(id);
-        }
-    });
-    for id in dirty {
-        let mut parent = doc.get_node(id).and_then(|node| node.parent);
-        while let Some(node) = parent.and_then(|id| doc.get_node(id)) {
-            node.set_dirty_descendants();
-            parent = node.parent;
-        }
-    }
 }
 
 fn viewport(scheme: ColorScheme) -> Viewport {
@@ -572,7 +588,6 @@ impl Page {
     /// Advances the animation clock, so a CSS transition reaches its end.
     pub fn advance(&mut self, seconds: f64) {
         self.time += seconds;
-        heal_dirty_bits(&self.doc.inner.borrow());
         self.settle();
     }
 
@@ -1073,6 +1088,7 @@ impl Page {
         let doc = self.doc.inner.borrow();
         doc.get_node(id)?
             .transform()
+            .as_ref()
             .map(|affine| affine.as_coeffs())
     }
 

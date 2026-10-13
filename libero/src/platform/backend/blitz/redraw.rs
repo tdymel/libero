@@ -1,8 +1,7 @@
 //! Blitz reports no render, so its `ShellProvider` is wrapped: each redraw ask
-//! flushes [`Outlet`] and arms the baked-box [`check`] (870, 872).
+//! flushes [`Outlet`].
 //!
 //! [`Outlet`]: super::Outlet
-//! [`check`]: super::baked
 
 use std::{cell::Cell, path::PathBuf, rc::Rc, sync::Arc};
 
@@ -11,14 +10,14 @@ use blitz_traits::shell::{ClipboardError, FileDialogFilter, ShellProvider};
 use cursor_icon::CursorIcon;
 use dioxus::{core::Runtime, prelude::ScopeId};
 
-use super::{DOCS, Doc, HELD, baked, flush_soon};
+use super::{DOCS, Doc, HELD, flush_soon};
 
 thread_local! {
     static QUIET: Cell<u32> = const { Cell::new(0) };
 }
 
 /// Runs `run` with the redraws it asks for unanswered: libero's own changes
-/// (a flush, a baked-box rebuild), which would otherwise arm themselves again.
+/// (a flush, a text re-layout), which would otherwise arm themselves again.
 pub(super) fn quiet<T>(run: impl FnOnce() -> T) -> T {
     struct Loud;
     impl Drop for Loud {
@@ -67,10 +66,7 @@ fn changed(runtime: usize) {
     });
     // Called after `render_immediate`, where no runtime is current.
     if let Some(runtime) = runtime {
-        runtime.in_scope(ScopeId::ROOT, || {
-            flush_soon();
-            baked::check_soon();
-        });
+        runtime.in_scope(ScopeId::ROOT, flush_soon);
     }
 }
 

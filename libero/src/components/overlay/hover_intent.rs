@@ -13,10 +13,14 @@ pub(super) static TRIGGER_WRAPPER_SX: StaticSx = StaticSx::new(|| {
         .display("inline-block")
         .width("max-content")
         .max_width("100%");
-    // Blitz reaches an inline box in a padded block only as a z-indexed one.
+    // Blitz reaches an inline box in a padded block only as a z-indexed one. Its line
+    // box sat a flex trigger on its bottom edge, a strut's depth over it (todo 3534).
     match hits_inline_boxes() {
         true => base,
-        false => base.position("relative").z_index("1"),
+        false => base
+            .position("relative")
+            .z_index("1")
+            .selector("& > *", sx().vertical_align("top")),
     }
 });
 

@@ -56,7 +56,7 @@ e2e::scenario!(
     "/line-chart",
     hovers,
     android: skip("a touch screen has no hover"),
-    native: skip("charts are parked on Blitz"),
+    native: skip("the crosshair reads a 0x0 rect on Blitz"),
     ios: skip("a touch screen has no hover")
 );
 
@@ -88,7 +88,7 @@ e2e::scenario!(
     "/line-chart",
     pen_leaves,
     android: skip("a synthetic pen hover is a browser check"),
-    native: skip("charts are parked on Blitz"),
+    native: skip("Blitz has no script reads"),
     ios: skip("a synthetic pen hover is a browser check")
 );
 
@@ -120,12 +120,7 @@ async fn keys<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     Ok(())
 }
 
-e2e::scenario!(
-    the_keys_walk_the_points,
-    "/line-chart",
-    keys,
-    native: skip("charts are parked on Blitz")
-);
+e2e::scenario!(the_keys_walk_the_points, "/line-chart", keys);
 
 /// Watches the tooltip every frame: a frame whose box is shorter than its text is counted.
 const WATCH_TIP: &str = "(() => { window.tipSqueezed = 0; const watch = () => { \
@@ -173,7 +168,7 @@ e2e::scenario!(
     the_tooltip_keeps_its_height_from_point_to_point,
     "/line-chart",
     tooltip_keeps_its_height,
-    native: skip("charts are parked on Blitz")
+    native: skip("Blitz has no script reads")
 );
 
 /// A click picks the point under it. A tap pins it, a second tap on it clicks.
@@ -196,7 +191,6 @@ e2e::scenario!(
     a_click_on_a_point_reports_it,
     "/line-chart",
     clicks,
-    native: skip("charts are parked on Blitz"),
     ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
@@ -223,12 +217,7 @@ async fn legend<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     reads(d, "#hidden", "", "a second click on Last week").await
 }
 
-e2e::scenario!(
-    the_legend_hides_and_shows_a_line,
-    "/line-chart",
-    legend,
-    native: skip("charts are parked on Blitz")
-);
+e2e::scenario!(the_legend_hides_and_shows_a_line, "/line-chart", legend);
 
 /// `[background, text fills, series strokes]` of the drawing, and `Canvas` and `CanvasText`.
 const INK: &str = "(() => { const probe = document.createElement('i'); document.body.append(probe); \
@@ -300,7 +289,7 @@ e2e::scenario!(
     swipes,
     web: skip("a mouse drag scrolls nothing"),
     desktop: skip("a mouse drag scrolls nothing"),
-    native: skip("charts are parked on Blitz")
+    native: skip("a swipe over the plot scrolls no page on Blitz")
 );
 
 const STATUS: &str = "#chart [role=status]";
@@ -356,12 +345,7 @@ async fn zoom_keys<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     says(d, "Showing Jan to Aug", "0").await
 }
 
-e2e::scenario!(
-    the_keys_zoom_pan_and_brush,
-    "/line-chart-zoom",
-    zoom_keys,
-    native: skip("charts are parked on Blitz")
-);
+e2e::scenario!(the_keys_zoom_pan_and_brush, "/line-chart-zoom", zoom_keys);
 
 /// A sideways drag over the plot brushes a band of x values; the hover and click stay.
 async fn brushes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -392,7 +376,6 @@ e2e::scenario!(
     a_sideways_drag_brushes_a_range,
     "/line-chart-zoom",
     brushes,
-    native: skip("charts are parked on Blitz"),
     ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
@@ -417,7 +400,7 @@ e2e::scenario!(
     pinches,
     web: skip("a mouse has no pinch"),
     desktop: skip("a mouse has no pinch"),
-    native: skip("charts are parked on Blitz"),
+    native: skip("Blitz takes no multi-touch input"),
     ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
@@ -454,13 +437,12 @@ async fn resets<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     the_handle_resets_the_zoom_and_says_it_is_zoomed,
     "/line-chart-zoom",
-    resets,
-    native: skip("charts are parked on Blitz")
+    resets
 );
 
 e2e::scenario!(
     the_chart_exports_as_svg_and_png,
     "/line-chart-zoom",
     exports,
-    native: skip("charts are parked on Blitz")
+    native: skip("the PNG export never lands on Blitz")
 );

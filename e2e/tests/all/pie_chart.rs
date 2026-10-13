@@ -285,12 +285,7 @@ async fn keys<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     Ok(())
 }
 
-e2e::scenario!(
-    the_keys_walk_the_slices,
-    "/pie-chart",
-    keys,
-    native: skip("charts are parked on Blitz")
-);
+e2e::scenario!(the_keys_walk_the_slices, "/pie-chart", keys);
 
 /// A click right of the middle lands on Chrome, from 12 to past 6 o'clock. A tap pins
 /// it, a second tap on it clicks.
@@ -321,7 +316,6 @@ e2e::scenario!(
     a_click_on_a_slice_reports_it,
     "/pie-chart",
     clicks,
-    native: skip("charts are parked on Blitz"),
     ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
@@ -352,8 +346,7 @@ async fn hidden_share<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_hidden_slice_grows_the_shares_the_eye_reads_not_the_summary,
     "/pie-chart",
-    hidden_share,
-    native: skip("charts are parked on Blitz")
+    hidden_share
 );
 
 /// A legend button takes its slice out of the pie: the others' shares grow.
@@ -373,9 +366,4 @@ async fn legend<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     reads(d, "#hidden", "", "a second click on Other").await
 }
 
-e2e::scenario!(
-    the_legend_hides_and_shows_a_slice,
-    "/pie-chart",
-    legend,
-    native: skip("charts are parked on Blitz")
-);
+e2e::scenario!(the_legend_hides_and_shows_a_slice, "/pie-chart", legend);

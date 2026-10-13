@@ -78,13 +78,11 @@ pub(crate) fn shadow_sx(shadow: String) -> crate::sx::Sx {
 }
 
 /// The on-state ring, `depth` of `currentColor` inside the edge (1.4.11).
-/// Offset shadows, not a spread: Blitz ignores inset spread.
 fn on_ring(depth: &str) -> String {
     inset_band(&format!("({depth})"), "currentColor")
 }
 
-/// A bordered control's ring depth. Blitz offsets inset shadows from the border
-/// box, so 1px shows there under a 1px border; the web shows 2px (Maintainer, 715).
+/// A bordered control's ring depth, 2px as the Maintainer chose (715).
 const ON_RING_BORDERED: &str = "2px";
 const ON_RING_BORDERLESS: &str = "1px";
 

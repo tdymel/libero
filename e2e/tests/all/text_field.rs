@@ -76,8 +76,7 @@ e2e::scenario!(
 e2e::scenario!(
     fast_typing_into_a_rewriting_field_keeps_every_letter,
     "/text-field/upper",
-    fast_typing_survives_a_rewrite,
-    native: skip("Blitz has no live value read; 1051 is a WebView race")
+    fast_typing_survives_a_rewrite
 );
 e2e::scenario!(
     the_reveal_button_shows_a_password,

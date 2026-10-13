@@ -155,6 +155,8 @@ const UNSIZED_FLOOR: &str = "8rem";
 
 /// The least width of a windowed table: fixed layout splits the room among the unsized
 /// columns, which would shrink to nothing on a narrow screen rather than scroll (todo 2014).
+/// Lengths only, a percentage floored as unsized: Blitz crashes on a fixed table's
+/// percentage `calc()` size (todo 3534).
 pub(super) fn windowed_min_width(
     lead: Option<&str>,
     headers: &[HeaderSpec],
@@ -165,16 +167,21 @@ pub(super) fn windowed_min_width(
         .chain(
             shown
                 .iter()
-                .map(|&index| headers[index].width.as_deref().unwrap_or(UNSIZED_FLOOR)),
+                .map(|&index| match headers[index].width.as_deref() {
+                    Some(width) if !width.contains('%') => width,
+                    _ => UNSIZED_FLOOR,
+                }),
         )
         .collect();
-    format!("max(100%, calc({}))", parts.join(" + "))
+    format!("calc({})", parts.join(" + "))
 }
 
 /// Fixed layout, so a column keeps its width as rows come and go; one line
 /// per cell and no block padding, so every row is the pitch the window assumes.
 pub(super) fn windowed_sx() -> Sx {
+    // A width, as an `auto` one gets the auto layout.
     sx().table_layout("fixed")
+        .width("100%")
         .min_width(TABLE_MIN_WIDTH_VAR.value())
         .selector(
             "& tbody > tr > *",

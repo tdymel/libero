@@ -35,8 +35,10 @@ pub(crate) fn hidden_input_centred_sx() -> Sx {
 }
 
 /// The same recipe, `fixed`, for a box with no positioned host: an absolute one
-/// would add to the page's scrollable overflow.
-pub(crate) static VISUALLY_HIDDEN_FIXED_SX: StaticSx = StaticSx::new(fixed_recipe);
+/// would add to the page's scrollable overflow. Blitz hit-tests a clipped box's
+/// overflowing text, so a status took the press on a control under it.
+pub(crate) static VISUALLY_HIDDEN_FIXED_SX: StaticSx =
+    StaticSx::new(|| fixed_recipe().pointer_events("none"));
 
 /// The fixed recipe, undone while focus is inside, for a skip link, on the float layer
 /// above a sticky `Header` (2.4.11). Never the default, or a hidden native input would pop out.

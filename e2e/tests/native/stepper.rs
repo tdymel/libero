@@ -106,7 +106,7 @@ fn switchable() -> Element {
 }
 
 /// The re-layout kept the text's min-content layout, broken per word in a
-/// one-line box; libero re-lays such text once laid out (todos 887, 888).
+/// one-line box (todos 887, 888). Blitz 0.3.0-beta.3 lays it fresh.
 #[test]
 fn switching_labels_below_keeps_the_content_text_on_one_line() {
     let mut page = mount(switchable);

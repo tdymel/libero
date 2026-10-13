@@ -113,12 +113,7 @@ async fn keys<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     Ok(())
 }
 
-e2e::scenario!(
-    the_keys_walk_the_stages,
-    "/funnel-chart",
-    keys,
-    native: skip("charts are parked on Blitz")
-);
+e2e::scenario!(the_keys_walk_the_stages, "/funnel-chart", keys);
 
 /// A click near the top middle lands on the first stage. A tap pins it, a second tap
 /// clicks.
@@ -141,7 +136,6 @@ e2e::scenario!(
     a_click_on_a_stage_reports_it,
     "/funnel-chart",
     clicks,
-    native: skip("charts are parked on Blitz"),
     ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
@@ -166,9 +160,4 @@ async fn legend<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     reads(d, "#hidden", "", "a second click on Visits").await
 }
 
-e2e::scenario!(
-    the_legend_hides_and_shows_a_stage,
-    "/funnel-chart",
-    legend,
-    native: skip("charts are parked on Blitz")
-);
+e2e::scenario!(the_legend_hides_and_shows_a_stage, "/funnel-chart", legend);

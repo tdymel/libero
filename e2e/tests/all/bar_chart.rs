@@ -258,12 +258,7 @@ async fn ranges<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     .await
 }
 
-e2e::scenario!(
-    the_keys_read_a_bar_s_range,
-    "/bar-chart/styled",
-    ranges,
-    native: skip("charts are parked on Blitz")
-);
+e2e::scenario!(the_keys_read_a_bar_s_range, "/bar-chart/styled", ranges);
 
 async fn reads<D: Driver>(d: &mut D, id: &str, want: &str, what: &str) -> Result<()> {
     let label = format!("{what}: {id} to read {want:?}");
@@ -299,7 +294,6 @@ e2e::scenario!(
     "/bar-chart",
     hovers,
     android: skip("a touch screen has no hover"),
-    native: skip("charts are parked on Blitz"),
     ios: skip("a touch screen has no hover")
 );
 
@@ -319,7 +313,6 @@ e2e::scenario!(
     "/bar-chart",
     escapes_a_hover,
     android: skip("a touch screen has no hover"),
-    native: skip("charts are parked on Blitz"),
     ios: skip("a touch screen has no hover")
 );
 
@@ -328,12 +321,7 @@ async fn loads<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     says(d, "Loading chart", "a loading chart").await
 }
 
-e2e::scenario!(
-    a_loading_chart_says_so,
-    "/bar-chart/loading",
-    loads,
-    native: skip("charts are parked on Blitz")
-);
+e2e::scenario!(a_loading_chart_says_so, "/bar-chart/loading", loads);
 
 /// Arrows walk a series and cross to the other in the same category; Enter clicks.
 async fn keys<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -359,12 +347,7 @@ async fn keys<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     Ok(())
 }
 
-e2e::scenario!(
-    the_keys_walk_the_bars,
-    "/bar-chart",
-    keys,
-    native: skip("charts are parked on Blitz")
-);
+e2e::scenario!(the_keys_walk_the_bars, "/bar-chart", keys);
 
 /// Lying, up and down walk the categories top down; left and right cross the series.
 async fn lying_keys<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -377,12 +360,7 @@ async fn lying_keys<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     reads(d, "#active", "2026 Q1 140", "ArrowRight").await
 }
 
-e2e::scenario!(
-    the_keys_follow_lying_bars,
-    "/bar-chart/stacked",
-    lying_keys,
-    native: skip("charts are parked on Blitz")
-);
+e2e::scenario!(the_keys_follow_lying_bars, "/bar-chart/stacked", lying_keys);
 
 /// A click picks the bar under it. A tap pins it, a second tap on it clicks.
 async fn clicks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -404,7 +382,7 @@ e2e::scenario!(
     a_click_on_a_bar_reports_it,
     "/bar-chart",
     clicks,
-    native: skip("charts are parked on Blitz"),
+    native: skip("a click on a chart mark keeps the vdom busy past 200 polls on Blitz"),
     ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
@@ -428,12 +406,7 @@ async fn legend<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     reads(d, "#hidden", "", "a second click on 2026").await
 }
 
-e2e::scenario!(
-    the_legend_hides_and_shows_a_series,
-    "/bar-chart",
-    legend,
-    native: skip("charts are parked on Blitz")
-);
+e2e::scenario!(the_legend_hides_and_shows_a_series, "/bar-chart", legend);
 
 /// A line among bars (3463): drawn over them, keyed by a stroke, its highest point pinned.
 #[test]
@@ -487,8 +460,7 @@ async fn line_keys<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     the_keys_walk_onto_a_line_among_bars,
     "/bar-chart/line",
-    line_keys,
-    native: skip("charts are parked on Blitz")
+    line_keys
 );
 
 /// A pointer on the line's point picks it over the bar beneath.
@@ -504,7 +476,7 @@ e2e::scenario!(
     a_pointer_on_a_line_s_point_picks_it,
     "/bar-chart/line",
     line_point,
-    native: skip("charts are parked on Blitz"),
+    native: skip("a click on a line's point among bars picks nothing on Blitz"),
     ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 
@@ -544,6 +516,5 @@ e2e::scenario!(
     lying_bars_zoom_and_brush_down_their_side,
     "/bar-chart/zoom",
     zooms_down,
-    native: skip("charts are parked on Blitz"),
     ios: skip("3416: the simulator's tap or drag did not drive the page")
 );

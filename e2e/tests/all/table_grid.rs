@@ -417,7 +417,6 @@ e2e::scenario!(
     a_second_tap_opens_the_editor,
     "/table-grid/editable",
     second_tap,
-    native: skip("3242: Blitz fires no pointer events for a touch"),
     desktop: skip("no touch input in the desktop driver"),
     ios: skip("3416: focus stays on the body after a Tab or a tap")
 );

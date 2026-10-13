@@ -336,7 +336,7 @@ fn a_contained_host_unmounting_focuses_the_control_before_it() {
     );
 }
 
-const OUTLET: &str = "[style^='position:absolute;width:100vw']";
+const OUTLET: &str = "[style^='position:fixed;inset:0']";
 
 fn tall() -> Element {
     rsx! {
@@ -345,16 +345,13 @@ fn tall() -> Element {
     }
 }
 
-/// Todo 639: an empty stack keeps its portal entry mounted; a wheel leaves the outlet
-/// alone until a drawn notification puts it back on the viewport.
+/// Todo 639: the `fixed` outlet stays on the viewport through a scrolled root.
 #[test]
-fn a_wheel_realigns_the_outlet_only_once_one_is_drawn() {
+fn a_scrolled_root_keeps_the_outlet_on_the_viewport() {
     let mut page = mount(tall);
-    let resting = page.attr(OUTLET, "style");
     page.hover(TRIGGER);
     page.wheel(TRIGGER, 250.0);
     assert!(page.rect(TRIGGER).1 < 0.0, "the root did not scroll");
-    assert_eq!(page.attr(OUTLET, "style"), resting, "realigned for nothing");
 
     page.focus(TRIGGER);
     page.press(Key::Enter);
@@ -362,7 +359,6 @@ fn a_wheel_realigns_the_outlet_only_once_one_is_drawn() {
     let (x, y, ..) = page.rect(OUTLET);
     assert!(x.abs() < 0.5 && y.abs() < 0.5, "outlet at ({x}, {y})");
 
-    // Drawn now, so the next wheel realigns at once.
     page.hover("#tall");
     page.wheel("#tall", -100.0);
     let (x, y, ..) = page.rect(OUTLET);

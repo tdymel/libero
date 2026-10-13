@@ -17,7 +17,6 @@ use dioxus_native_dom::{NodeHandle, NodeId};
 use style::properties::PropertyId;
 
 mod activate;
-mod baked;
 mod false_flags;
 mod focus;
 mod max_length;
@@ -26,7 +25,6 @@ mod redraw;
 mod refused;
 mod removed;
 mod resize;
-mod stale_text;
 mod sticky;
 mod wheel;
 
@@ -189,11 +187,6 @@ struct Doc {
     scheme_poll: RefCell<Option<Box<dyn TimerSubscription>>>,
     /// Who to tell that something scrolled. See [`BlitzScroll`].
     scroll_callbacks: Callbacks<dyn Fn()>,
-    /// Puts each [`PortalRoot`] back on the viewport's corner.
-    realign: Callbacks<dyn Fn()>,
-    /// Mounted [`PortalEntry`]s drawing something: with none, a scroll has
-    /// nothing to realign.
-    portal_entries: Cell<usize>,
     /// A `scroll_into_view` waiting for its target's first layout. See [`show`].
     show_retry: RefCell<Option<Box<dyn TimerSubscription>>>,
     /// Every [`BlitzKeyboard`] subscription: id, whether it skips text entry,
@@ -201,14 +194,11 @@ struct Doc {
     key_callbacks: RefCell<Vec<KeyCallback>>,
     focus: focus::Watch,
     resize: resize::Watch,
-    baked: baked::Watch,
     wheel: wheel::Watch,
     /// A `<style>` changed this poll. See [`SheetWatch`].
     sheets_changed: Cell<bool>,
     /// The document's shell provider is wrapped. See [`redraw`].
     redraws_watched: Cell<bool>,
-    /// See [`heal_while_animating`].
-    animation_ticks: RefCell<Option<Box<dyn TimerSubscription>>>,
 }
 
 /// A mounted [`Outlet`]: `flushes` is bumped to remount its flush element,
@@ -236,17 +226,13 @@ impl Doc {
             scheme_callbacks: Callbacks::new(),
             scheme_poll: RefCell::new(None),
             scroll_callbacks: Callbacks::new(),
-            realign: Callbacks::new(),
-            portal_entries: Cell::new(0),
             show_retry: RefCell::new(None),
             key_callbacks: RefCell::new(Vec::new()),
             focus: focus::Watch::default(),
             resize: resize::Watch::default(),
-            baked: baked::Watch::default(),
             wheel: wheel::Watch::default(),
             sheets_changed: Cell::new(false),
             redraws_watched: Cell::new(false),
-            animation_ticks: RefCell::new(None),
         }
     }
 
@@ -373,7 +359,6 @@ pub(super) fn Listener(children: Element) -> Element {
             refocus_wrapper();
         }
         resize::pressed();
-        baked::check_soon();
         placeholder::sync_soon();
     });
     // Raw too, so a nested provider's wrapper knows the press it already counted.
@@ -411,12 +396,10 @@ pub(super) fn Listener(children: Element) -> Element {
                 removed::keyed(&event);
                 refused::tab(&event);
                 activate::key_down(&event);
-                baked::check_soon();
             },
             onkeyup: |event| {
                 activate::key_up(&event);
                 resize::pressed();
-                baked::check_soon();
                 placeholder::sync_soon();
             },
             oninput: |_| {
@@ -428,9 +411,6 @@ pub(super) fn Listener(children: Element) -> Element {
                 if event.held_buttons().is_empty() {
                     HELD.set(false);
                 }
-                // Before the hover restyle this move asked for: see `heal_dirty_bits`.
-                heal_now();
-                baked::on_hover_change();
                 followed(&event, false);
             },
             onpointerup: move |event| {
@@ -439,7 +419,6 @@ pub(super) fn Listener(children: Element) -> Element {
                 focus::released();
                 refused::release(&event);
                 resize::pressed();
-                baked::check_soon();
             },
             // A wheel bubbles where its scroll does not: see `BlitzScroll`.
             onwheel: |event| {
@@ -912,82 +891,19 @@ impl Drop for BlitzKeySubscription {
     }
 }
 
-/// Blitz lays `fixed` out against the parent box, so the outlet spans the
-/// viewport. `absolute`: no stacking context; [`PortalEntry`] takes the hits.
-const PORTAL_ROOT_STYLE: &str = "position:absolute;width:100vw;height:100vh;pointer-events:none;";
-
-/// Marks the portal outlet, whose `fixed` entries `sticky.rs` leaves in place.
-const PORTAL_ROOT_ATTR: &str = "data-lsx-portal-root";
+/// The portal outlet: a hitless viewport box; [`PortalEntry`] takes the hits.
+/// No `z-index`: Blitz paints and hit-tests a z-indexed `fixed` box scrolled.
+const PORTAL_ROOT_STYLE: &str = "position:fixed;inset:0;pointer-events:none;";
 
 /// A hitless viewport-wide box: Blitz hit-tests z-indexed boxes only in their
 /// untransformed union. During a [`follow_pointer`] drag it takes the hits.
 const HIT_AREA_STYLE: &str = "position:absolute;inset:0;z-index:1;pointer-events:none;";
 
-/// The portal outlet, shifted back onto the viewport's corner on each scroll: an
-/// `absolute` box moves with a scrolled root or a collapsing margin.
 #[component]
 pub(super) fn PortalRoot(children: Element) -> Element {
-    let mut shift = use_signal(|| (0.0, 0.0));
-    let scrolled = use_signal(|| 0u64);
-    let root = use_hook(|| Rc::new(RefCell::new(None::<NodeHandle>)));
     let doc = use_hook(doc);
-    use_hook(|| {
-        let doc = doc.as_ref().map(Rc::downgrade);
-        Rc::new(SCROLL.on_scroll(Box::new(move || {
-            // An entry realigns as it mounts or starts to draw; until then a
-            // wheel costs no render.
-            let drawing = doc.as_ref().and_then(Weak::upgrade);
-            if drawing.is_none_or(|doc| doc.portal_entries.get() == 0) {
-                return;
-            }
-            crate::utils::bump(scrolled);
-        })))
-    });
-    let realign = use_callback({
-        let root = root.clone();
-        move |()| {
-            let Some(handle) = root.borrow().clone() else {
-                return;
-            };
-            let Some(doc) = handle.try_doc() else {
-                return;
-            };
-            let Some((x, y, ..)) = client_rect(&doc, handle.node_id()) else {
-                return;
-            };
-            drop(doc);
-            if x.abs() >= 0.5 || y.abs() >= 0.5 {
-                let (left, top) = *shift.peek();
-                shift.set((left - x, top - y));
-            }
-        }
-    });
-    let realigning = use_hook(|| {
-        let doc = doc.clone()?;
-        let id = doc.realign.add(Rc::new(move || realign.call(())));
-        Some((doc, id))
-    });
-    use_drop(move || {
-        if let Some((doc, id)) = realigning {
-            doc.realign.remove(id);
-        }
-    });
-    use_effect(move || {
-        scrolled();
-        realign.call(());
-    });
-    let (left, top) = shift();
     rsx! {
-        div {
-            style: "{PORTAL_ROOT_STYLE}left:{left}px;top:{top}px;",
-            "data-lsx-portal-root": true,
-            onmounted: move |event| {
-                if let Some(handle) = event.data().downcast::<NodeHandle>() {
-                    *root.borrow_mut() = Some(handle.clone());
-                }
-                // Laid out only after this poll's effects.
-                when_laid_out(Box::new(move || realign.call(())));
-            },
+        div { style: PORTAL_ROOT_STYLE,
             div {
                 style: HIT_AREA_STYLE,
                 onmounted: move |event| {
@@ -1001,53 +917,12 @@ pub(super) fn PortalRoot(children: Element) -> Element {
     }
 }
 
-/// One portaled entry, taking hits again below [`PORTAL_ROOT_STYLE`]. Counted
-/// in [`PORTAL_ENTRIES`] only while it draws: an `idle` one needs no realign.
+/// One portaled entry, taking hits again below [`PORTAL_ROOT_STYLE`].
 #[component]
-pub(super) fn PortalEntry(children: Element, idle: bool) -> Element {
-    let counted = use_hook(|| Rc::new(Cell::new(false)));
-    let doc = use_hook(doc);
-    if let Some(doc) = &doc
-        && counted.get() == idle
-    {
-        counted.set(!idle);
-        let entries = doc.portal_entries.get();
-        doc.portal_entries
-            .set(if idle { entries - 1 } else { entries + 1 });
-    }
-    use_drop({
-        let counted = counted.clone();
-        move || {
-            if let Some(doc) = doc
-                && counted.get()
-            {
-                doc.portal_entries.set(doc.portal_entries.get() - 1);
-            }
-        }
-    });
-    // Waking up, it may find the outlet moved by a scroll it skipped.
-    let mounted = use_hook(|| Rc::new(Cell::new(false)));
-    use_effect(use_reactive!(|(idle,)| {
-        if mounted.replace(true) && !idle {
-            realign_portals();
-        }
-    }));
+pub(super) fn PortalEntry(children: Element) -> Element {
     rsx! {
-        div {
-            display: "contents",
-            pointer_events: "auto",
-            // The app's layout may have moved the outlet since the last scroll.
-            onmounted: |_| realign_portals(),
-            {children}
-        }
+        div { display: "contents", pointer_events: "auto", {children} }
     }
-}
-
-fn realign_portals() {
-    let Some(doc) = doc() else {
-        return;
-    };
-    doc.realign.each(|realign| realign());
 }
 
 fn pressed(event: &Event<PointerData>) {
@@ -1353,8 +1228,6 @@ pub(super) fn Outlet() -> Element {
                             placeholder::sync(&mut anchor.doc_mut());
                             // After layout: a `bottom` box moves before any scroll.
                             sticky::sync_soon();
-                            heal_dirty_bits(&anchor.doc_mut());
-                            heal_while_animating(doc);
                             // Last: after every focus move this flush made.
                             if doc.sheets_changed.take() {
                                 snapshot_attributes(&mut anchor.doc_mut());
@@ -1506,87 +1379,6 @@ pub(super) fn when_laid_out_retry(failed: u8, run: Box<dyn FnOnce()>) {
 
 pub(super) fn awaits_layout() -> bool {
     doc().is_some_and(|doc| !doc.laid_out.borrow().is_empty() || doc.retrying.get() > 0)
-}
-
-fn heal_now() {
-    if let Some(anchor) = anchor()
-        && let Some(doc) = anchor.try_doc()
-    {
-        heal_dirty_bits(&doc);
-    }
-}
-
-/// Blitz leaves stale dirty bits under a clean ancestor, skipping a later
-/// restyle (upstream #789). Whether any bit was stale.
-fn heal_dirty_bits(doc: &BaseDocument) -> bool {
-    let mut dirty = Vec::new();
-    doc.visit(|id, node| {
-        if node.has_dirty_descendants() {
-            dirty.push(id);
-        }
-    });
-    let mut healed = false;
-    for id in dirty {
-        for id in ancestors(doc, id).skip(1) {
-            if let Some(node) = doc.get_node(id)
-                && !node.has_dirty_descendants()
-            {
-                healed = true;
-                node.set_dirty_descendants();
-            }
-        }
-    }
-    healed
-}
-
-/// How often [`heal_while_animating`] heals.
-const FRAME: Duration = Duration::from_millis(16);
-
-/// Idle frames before [`heal_while_animating`] stops: a spinner kept it at 60 Hz
-/// (892). The next flush restarts it.
-const IDLE_FRAMES: u32 = 30;
-
-/// A stale bit above an animating node skips its restyle, stopping a transition
-/// (870): heal each frame until it stops animating or [`IDLE_FRAMES`] pass.
-fn heal_while_animating(state: &Rc<Doc>) {
-    let mut ticks = state.animation_ticks.borrow_mut();
-    if ticks.is_some() {
-        return;
-    }
-    let weak = Rc::downgrade(state);
-    let idle = Rc::new(Cell::new(0u32));
-    *ticks = super::thread::timer().map(|timer| {
-        timer.every(
-            FRAME,
-            Box::new(move || {
-                let weak = weak.clone();
-                let idle = idle.clone();
-                when_free(Box::new(move || {
-                    let Some(state) = weak.upgrade() else {
-                        return;
-                    };
-                    let Some(anchor) = state.anchor() else {
-                        drop(state.animation_ticks.take());
-                        return;
-                    };
-                    let Some(doc) = anchor.try_doc() else {
-                        return;
-                    };
-                    if heal_dirty_bits(&doc) {
-                        idle.set(0);
-                        redraw::quiet(|| doc.shell_provider.request_redraw());
-                    } else {
-                        idle.set(idle.get() + 1);
-                    }
-                    let animating = doc.is_animating();
-                    drop(doc);
-                    if !animating || idle.get() >= IDLE_FRAMES {
-                        drop(state.animation_ticks.take());
-                    }
-                }));
-            }),
-        )
-    });
 }
 
 /// `run`, to run in the scope it is deferred from.
@@ -1828,7 +1620,7 @@ impl DocumentApi for BlitzDocument {
     }
 
     /// On the `<html>` `root_element()` reaches; the mutator's write restyles
-    /// it (todo 480). The theme is a colour change, so baked boxes rebuild with it.
+    /// it (todo 480).
     fn set_root_attribute(&self, name: &str, value: Option<&str>) -> bool {
         let Some(anchor) = anchor() else {
             return false;
@@ -1842,16 +1634,8 @@ impl DocumentApi for BlitzDocument {
                 Some(value) => mutator.set_attribute(root, name, &value),
                 None => mutator.clear_attribute(root, name),
             }
-            drop(mutator);
-            baked::rebuild_all(doc);
         });
         true
-    }
-
-    fn colors_changed(&self) {
-        if let Some(anchor) = anchor() {
-            run_or_defer(&anchor, baked::rebuild_all);
-        }
     }
 }
 
@@ -1878,8 +1662,6 @@ impl BlitzElement {
         let Some(doc) = self.anchor.try_doc() else {
             return Box::pin(std::future::ready(Err(PlatformError::Unsupported)));
         };
-        // A read is often followed by a write that has to restyle.
-        heal_dirty_bits(&doc);
         let answer = from(&doc, self.node_id).ok_or(PlatformError::NotFound);
         Box::pin(std::future::ready(answer))
     }
@@ -2130,7 +1912,7 @@ impl ElementApi for BlitzElement {
         Ok(element
             .attrs()
             .iter()
-            .find(|attr| attr.name.local.as_ref() == name)
+            .find(|attr| &*attr.name.local == name)
             .map(|attr| attr.value.clone()))
     }
 
@@ -2295,7 +2077,38 @@ fn client_rect(doc: &BaseDocument, node_id: NodeId) -> Option<(f64, f64, f64, f6
     }
     let rect = doc.get_client_bounding_rect(node_id)?;
     let own = doc.get_node(node_id)?.scroll_offset();
-    Some((rect.x + own.x, rect.y + own.y, rect.width, rect.height))
+    let (x, y) = pinned_scroll(doc, node_id);
+    Some((
+        rect.x + own.x + x,
+        rect.y + own.y + y,
+        rect.width,
+        rect.height,
+    ))
+}
+
+/// The viewport scroll Blitz's client rect takes off a box in a `fixed` child
+/// of the root element, which Blitz paints unscrolled.
+fn pinned_scroll(doc: &BaseDocument, id: NodeId) -> (f64, f64) {
+    let root = doc.root_element().id;
+    let mut current = doc.get_node(id);
+    while let Some(node) = current {
+        let block = node.containing_block();
+        let fixed = node.primary_styles().is_some_and(|styles| {
+            styles.clone_position() == style::computed_values::position::T::Fixed
+        });
+        // `sticky.rs` moved a z-indexed one back already.
+        let shifted = node.element_data().is_some_and(|data| {
+            data.attrs()
+                .iter()
+                .any(|attr| &*attr.name.local == sticky::SHIFT_ATTR && &*attr.value != "0 0")
+        });
+        if fixed && block == Some(root) && !shifted {
+            let scroll = doc.viewport_scroll();
+            return (scroll.x, scroll.y);
+        }
+        current = block.and_then(|id| doc.get_node(id));
+    }
+    (0.0, 0.0)
 }
 
 /// A table row or row group, which lays out no box in Blitz: the union of its
@@ -2336,7 +2149,7 @@ fn boxless_rect(doc: &BaseDocument, node_id: NodeId) -> Option<(f64, f64, f64, f
 }
 
 /// The rect with `transform`s, which Blitz's client rect leaves out: corners
-/// mapped up the layout parents. `None` when no box on the way has one.
+/// mapped up the containing blocks. `None` when no box on the way has one.
 fn transformed_rect(doc: &BaseDocument, node_id: NodeId) -> Option<(f64, f64, f64, f64)> {
     let node = doc.get_node(node_id)?;
     let size = node.unrounded_layout().size;
@@ -2351,7 +2164,10 @@ fn transformed_rect(doc: &BaseDocument, node_id: NodeId) -> Option<(f64, f64, f6
             node.data,
             blitz_dom::NodeData::Element(_) | blitz_dom::NodeData::AnonymousBlock(_)
         );
-        if let Some(transform) = boxed.then(|| *node.transform()).flatten() {
+        if let Some(transform) = boxed
+            .then(|| node.transform().as_deref().copied())
+            .flatten()
+        {
             let [a, b, c, d, e, f] = transform.as_coeffs();
             for (x, y) in &mut corners {
                 (*x, *y) = (a * *x + c * *y + e / scale, b * *x + d * *y + f / scale);
@@ -2359,7 +2175,7 @@ fn transformed_rect(doc: &BaseDocument, node_id: NodeId) -> Option<(f64, f64, f6
             transformed = true;
         }
         let location = node.final_layout().location;
-        let parent = node.layout_parent.get().and_then(|id| doc.get_node(id));
+        let parent = node.containing_block().and_then(|id| doc.get_node(id));
         let scroll = parent.map(|parent| *parent.scroll_offset());
         for (x, y) in &mut corners {
             *x += f64::from(location.x) - scroll.map_or(0.0, |s| s.x);
@@ -2370,9 +2186,9 @@ fn transformed_rect(doc: &BaseDocument, node_id: NodeId) -> Option<(f64, f64, f6
     if !transformed {
         return None;
     }
-    let scroll = doc.viewport_scroll();
-    let xs = corners.map(|(x, _)| x - scroll.x);
-    let ys = corners.map(|(_, y)| y - scroll.y);
+    let (scroll, pinned) = (doc.viewport_scroll(), pinned_scroll(doc, node_id));
+    let xs = corners.map(|(x, _)| x - scroll.x + pinned.0);
+    let ys = corners.map(|(_, y)| y - scroll.y + pinned.1);
     let min_x = xs.iter().copied().fold(f64::INFINITY, f64::min);
     let min_y = ys.iter().copied().fold(f64::INFINITY, f64::min);
     let max_x = xs.iter().copied().fold(f64::NEG_INFINITY, f64::max);

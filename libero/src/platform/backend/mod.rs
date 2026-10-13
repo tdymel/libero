@@ -465,18 +465,14 @@ pub(crate) fn PortalRoot(children: Element) -> Element {
 }
 
 /// Wraps one portaled entry; only Blitz needs a box (see `blitz::PortalEntry`).
-/// `idle`: mounted but drawing nothing.
 #[allow(non_snake_case)]
-pub(crate) fn PortalEntry(children: Element, idle: bool) -> Element {
+pub(crate) fn PortalEntry(children: Element) -> Element {
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     use dioxus::prelude::*;
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
-    return rsx! { blitz::PortalEntry { idle, {children} } };
+    return rsx! { blitz::PortalEntry { {children} } };
     #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
-    {
-        let _ = idle;
-        children
-    }
+    children
 }
 
 /// Blitz opens no picker for a `<select>`; see [`opens_select_picker`](crate::platform::opens_select_picker).

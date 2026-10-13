@@ -224,8 +224,6 @@ e2e::scenario!(
     a_windowed_table_renders_the_rows_in_view,
     "/table/windowed",
     the_window_follows_the_scroll,
-    macos_native: skip("upstream: Blitz's stylo panics in resolve_map on the windowed rows (a SIGSEGV in the full run)"),
-    windows_native: skip("upstream: Blitz's stylo panics in calc.rs on the windowed rows"),
     ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 

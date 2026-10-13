@@ -123,7 +123,6 @@ e2e::scenario!(
     pinned_toggles_push_the_checkboxes_past_them,
     "/table-detail-pinned",
     pins_the_toggles_before_the_checkboxes,
-    native: skip("3217: one web run guards the cascade"),
     android: skip("3217: one web run guards the cascade"),
     desktop: skip("3217: one web run guards the cascade")
 );

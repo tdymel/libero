@@ -45,9 +45,4 @@ async fn switches<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     Ok(())
 }
 
-e2e::scenario!(
-    the_segments_swap_the_chart,
-    "/chart",
-    switches,
-    native: skip("charts are parked on Blitz")
-);
+e2e::scenario!(the_segments_swap_the_chart, "/chart", switches);

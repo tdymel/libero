@@ -69,7 +69,6 @@ e2e::scenario!(
     "/radar-chart",
     hovers,
     android: skip("a touch screen has no hover"),
-    native: skip("charts are parked on Blitz"),
     ios: skip("a touch screen has no hover")
 );
 
@@ -103,12 +102,7 @@ async fn keys<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     Ok(())
 }
 
-e2e::scenario!(
-    the_keys_walk_the_spokes,
-    "/radar-chart",
-    keys,
-    native: skip("charts are parked on Blitz")
-);
+e2e::scenario!(the_keys_walk_the_spokes, "/radar-chart", keys);
 
 /// A legend button hides a series from the drawing; the last shown one stays.
 async fn legend<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -140,5 +134,5 @@ e2e::scenario!(
     the_legend_hides_and_shows_a_series,
     "/radar-chart",
     legend,
-    native: skip("charts are parked on Blitz")
+    native: skip("Blitz has no script reads")
 );

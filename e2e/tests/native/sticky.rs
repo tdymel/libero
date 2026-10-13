@@ -222,8 +222,8 @@ fn fixed() -> Element {
     }
 }
 
-/// Blitz places `fixed` against the parent box: the shim moves it to its insets
-/// in the window (`%` of the window), and no scroll moves it (todo 1409).
+/// A `fixed` box sits at its insets in the window (`%` of the window), and no
+/// scroll moves it (todo 1409).
 #[test]
 fn a_fixed_box_holds_at_its_insets_in_the_window() {
     let mut page = mount(fixed);
@@ -232,7 +232,13 @@ fn a_fixed_box_holds_at_its_insets_in_the_window() {
         let (corner, end) = (page.rect("#corner"), page.rect("#end"));
         (corner.0, corner.1, end.0, end.1)
     };
-    let expected = (20.0, 10.0, width - 40.0, (0.9 * height - 20.0).round());
+    // Blitz snaps a rect to 1/64 px.
+    let expected = (
+        20.0,
+        10.0,
+        width - 40.0,
+        ((0.9 * height - 20.0) * 64.0).round() / 64.0,
+    );
     page.wait_for(|page| placed(page) == expected);
     assert_eq!(placed(&page), expected, "{}", page.tree());
     let stays = top(&page, "#static");

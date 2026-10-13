@@ -132,12 +132,24 @@ pub(super) fn ColumnMenu(
     let mut opener = use_signal(move || trigger);
     let column = &columns[index];
     let shown = columns.iter().filter(|column| !column.hidden).count();
+    let current = active
+        .iter()
+        .find(|(column, _)| *column == index)
+        .map(|(_, direction)| *direction);
+    let side = pinned.read().side(&column.header);
+    // Rows a pick adds (Unpin's moves, Unsort) wait for the close: Blitz panics on a
+    // button made and dropped in one render (form owner, todo 3534).
+    let mut held = use_hook(|| CopyValue::new(None));
+    let shape = *held.peek();
+    let (current, side) = match (menu.is_open(), shape) {
+        (true, Some(shape)) => shape,
+        _ => {
+            held.set(Some((current, side)));
+            (current, side)
+        }
+    };
     let mut items: Vec<MenuEntry> = Vec::new();
     if column.sortable {
-        let current = active
-            .iter()
-            .find(|(column, _)| *column == index)
-            .map(|(_, direction)| *direction);
         let set = |direction: Option<SortDirection>| {
             let (columns, active) = (columns.clone(), active.clone());
             move |_| sort.set(sorted_by(&columns, &active, index, direction, false))
@@ -214,7 +226,6 @@ pub(super) fn ColumnMenu(
         );
         items.push(MenuEntry::Separator);
     }
-    let side = pinned.read().side(&column.header);
     // A pinned column moves by its pin; the labels are physical, as the reader sees them.
     if side.is_none() {
         let (backward, forward) = moves;

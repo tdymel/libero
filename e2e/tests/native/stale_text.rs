@@ -1,5 +1,5 @@
-//! Blitz paints text at its last min-content measure when taffy serves the layout from cache;
-//! libero re-lays it (todo 888). Real soft wraps and preserved white space stay.
+//! `Page::wrapped_text`, which pins Blitz's stale min-content text (todo 888), reports no
+//! real soft wrap or preserved white space.
 
 use std::time::Duration;
 

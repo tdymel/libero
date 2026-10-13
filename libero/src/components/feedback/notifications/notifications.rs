@@ -131,7 +131,6 @@ pub fn Notifications(
         }
     });
     let stacks = stacks.collect::<Vec<_>>();
-    let idle = drawn.iter().all(Vec::is_empty);
     let mut stored = store.drawn;
     stored.set(drawn);
     // One landmark for every stack: nine would crowd the landmark list.
@@ -156,7 +155,6 @@ pub fn Notifications(
             }
         };
     }
-    // The empty regions stay mounted; the outlet need not follow a scroll for them.
-    slot.show_idle(content, idle);
+    slot.show(Some(content));
     rsx! {}
 }
