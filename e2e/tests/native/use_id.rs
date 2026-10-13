@@ -1,5 +1,5 @@
 //! The `use_id` docs demo's Disclosure: natively `hidden: !open()` wrote
-//! `hidden="false"`, so the panel never showed (todo 943).
+//! `hidden="false"`, so the panel never showed (todo 943, fixed in dioxus #5913).
 
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};
@@ -74,6 +74,7 @@ fn raw() -> Element {
 }
 
 /// Any bool attribute, on a raw element too, as the web's interpreter does.
+/// Pins dioxus-native's own fix (#5913).
 #[test]
 fn a_raw_false_flag_is_dropped() {
     let mut page = mount(raw);

@@ -84,12 +84,6 @@ const MAX_POLLS: usize = 200;
 /// How long [`Page::wait_for`] waits for its condition.
 pub const WAIT_LIMIT: Duration = Duration::from_secs(5);
 
-// HTML bool attributes, set by presence whatever their value. Not `checked`:
-// Blitz reads `checked="false"` as unticked, and `reset` writes it.
-const FALSE_FLAGS: &str = "[disabled=false], [hidden=false], [readonly=false], \
-    [required=false], [selected=false], [multiple=false], [open=false], \
-    [autofocus=false], [inert=false]";
-
 /// Mounts `app` inside a [`LiberoProvider`] and settles the first render.
 pub fn mount(app: fn() -> Element) -> Page {
     mount_in(app, ColorScheme::Light)
@@ -558,21 +552,8 @@ impl Page {
                 thread::sleep(Duration::from_millis(1));
                 continue;
             }
-            self.assert_no_false_flags();
             self.assert_no_signal_warnings();
             return;
-        }
-    }
-
-    /// dioxus-native writes a `false` bool attribute as `disabled="false"`,
-    /// which Blitz reads as set; libero's flush drops it (todo 943).
-    fn assert_no_false_flags(&self) {
-        if let Some(id) = self.query(FALSE_FLAGS) {
-            panic!(
-                "a bool attribute written as \"false\" on {} in\n{}",
-                self.describe(id),
-                self.tree()
-            );
         }
     }
 
