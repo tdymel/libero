@@ -1,0 +1,190 @@
+# A GitHub release for a `v*` tag, with the docs app bundled for every platform as a showcase.
+# Unsigned: macOS, Windows and Android warn on install. A manual run makes a draft release.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag of the draft release (created on the run's commit when published)
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_DEV_DEBUG: 0
+  TAG: ${{ inputs.tag || github.ref_name }}
+  # linuxdeploy is an AppImage itself; the runner has no FUSE to mount it.
+  APPIMAGE_EXTRACT_AND_RUN: 1
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # `dx bundle` per OS and renderer. Every leg writes `target/dx/docs/bundle`, so each renames its own.
+  bundle:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-desktop
+            os: ubuntu-24.04
+            args: --platform desktop --renderer webview --features desktop --package-types appimage --package-types deb
+            apt: libwebkit2gtk-4.1-dev libgtk-3-dev libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev
+            cache: e2e
+          - name: linux-native
+            os: ubuntu-24.04
+            args: --platform linux --renderer native --features native-vello --package-types appimage --package-types deb
+            apt: libfontconfig1-dev libdbus-1-dev
+            cache: native
+          - name: windows-desktop
+            os: windows-2022
+            args: --platform desktop --renderer webview --features desktop --package-types nsis
+            cache: platforms-windows-desktop
+          - name: windows-native
+            os: windows-2022
+            args: --platform windows --renderer native --features native-vello --package-types nsis
+            cache: platforms-windows-native
+          - name: macos-desktop
+            os: macos-26
+            args: --platform desktop --renderer webview --features desktop --package-types dmg
+            cache: platforms-macos-desktop
+          - name: macos-native
+            os: macos-26
+            args: --platform macos --renderer native --features native-vello --package-types dmg
+            cache: platforms-macos-desktop
+    name: bundle (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    steps:
+      - if: runner.os == 'Windows'
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.longpaths true
+      - uses: actions/checkout@v7
+      - if: matrix.apt
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ${{ matrix.apt }}
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: ${{ matrix.cache }}
+          save-cache: false
+      - uses: ./.github/actions/dx
+      - working-directory: docs
+        run: |
+          rm -rf ../target/dx/docs/bundle
+          # shellcheck disable=SC2086
+          dx bundle --release --debug-symbols=false ${{ matrix.args }}
+      - run: |
+          mkdir -p out
+          find target/dx/docs/bundle -type f \( -name '*.AppImage' -o -name '*.deb' -o -name '*.exe' -o -name '*.dmg' \) |
+            while read -r f; do
+              cp "$f" "out/libero-docs-$TAG-${{ matrix.name }}.${f##*.}"
+            done
+          ls -la out
+          [ -n "$(ls out)" ]
+      - uses: actions/upload-artifact@v7
+        with:
+          name: libero-docs-${{ matrix.name }}
+          path: out/*
+          if-no-files-found: error
+          retention-days: 7
+
+  # A release APK signed with a key made for this run (`just apk-android`): sideloads, but an
+  # update from another release must uninstall first.
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      NDK_VERSION: 27.3.13750724
+      # CI has no `.cargo/config.toml`, so the target dir is `target`, not the recipe's `target/main`.
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: ./.github/actions/setup
+        with:
+          targets: aarch64-linux-android
+          cache-key: android
+          save-cache: false
+      - uses: ./.github/actions/dx
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: just
+      - run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION" "platforms;android-34" "build-tools;34.0.0"
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
+      - working-directory: docs
+        run: just apk-android
+      - run: |
+          mkdir -p out
+          apk=$(find target/android -type f -name 'libero-docs-aarch64-*.apk' | head -1)
+          cp "$apk" "out/libero-docs-$TAG-android-aarch64.apk"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: libero-docs-android
+          path: out/*
+          if-no-files-found: error
+          retention-days: 7
+
+  # A simulator build: without signing no iOS build installs on a device.
+  ios:
+    runs-on: macos-26
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          targets: aarch64-apple-ios-sim
+          cache-key: platforms-ios-e2e
+          save-cache: false
+      - uses: ./.github/actions/dx
+      - working-directory: docs
+        run: dx build --platform ios --target aarch64-apple-ios-sim --release --debug-symbols=false --features mobile
+      - run: |
+          mkdir -p out
+          app=$(find target/dx/docs/release/ios -type d -name '*.app' -prune | head -1)
+          echo "app: $app"
+          ditto -c -k --keepParent "$app" "out/libero-docs-$TAG-ios-simulator.zip"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: libero-docs-ios
+          path: out/*
+          if-no-files-found: error
+          retention-days: 7
+
+  # Attaches whatever built, so one red platform does not hold the others back.
+  release:
+    needs: [bundle, android, ios]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: libero-docs-*
+          path: dist
+          merge-multiple: true
+      - run: |
+          ls -la dist
+          draft=()
+          [ "${{ github.event_name }}" = workflow_dispatch ] && draft=(--draft --target "$GITHUB_SHA")
+          gh release create "$TAG" dist/* "${draft[@]}" --title "Libero $TAG" \
+            --notes-file .github/release-notes.md --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
