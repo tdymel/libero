@@ -59,12 +59,12 @@ See it running, with every component and its live demos, at
 
 ## Installation
 
-Libero is not on crates.io yet. Until the first release, install it from this
-repository, with dioxus from git too (libero tracks Dioxus `main`):
+Libero 0.2 pins Dioxus `=0.8.0-alpha.2`; add that exact version, or a second
+copy of dioxus would not share libero's contexts:
 
 ```shell
-cargo add dioxus --git https://github.com/DioxusLabs/dioxus
-cargo add libero --git https://github.com/tdymel/libero
+cargo add dioxus@=0.8.0-alpha.2
+cargo add libero
 ```
 
 [Getting started](https://libero-ui.dev/about/getting-started) covers the

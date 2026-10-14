@@ -94,7 +94,7 @@ pub fn Hero() -> Element {
                     }
                     CodeBlock {
                         // copy: install
-                        source: "cargo add libero --git https://github.com/tdymel/libero",
+                        source: "cargo add libero",
                         language: "shell",
                         label: "Add libero to your project",
                         header: false,
