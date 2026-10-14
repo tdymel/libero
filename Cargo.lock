@@ -4536,7 +4536,7 @@ dependencies = [
 
 [[package]]
 name = "libero"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "arboard",
  "archunit",
@@ -4582,7 +4582,7 @@ dependencies = [
 
 [[package]]
 name = "libero-macros"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "proc-macro2",
  "quote",
