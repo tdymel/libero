@@ -13,13 +13,9 @@ keywords = ["components", "ui", "design-system", "dioxus"]
 categories = ["gui", "wasm", "web-programming"]
 
 [dependencies]
-# TEMPORARY: upstream dioxus main by git, pinned by rev in Cargo.lock, instead
-# of the crates.io 0.7.10 release. `dx` must come from the same rev (see
-# ci.yml's e2e job), or CLI and app speak different wire protocols. Unwind
-# back to a crates.io version before any real release: a git dep blocks
-# publishing to crates.io. The unwind also turns the git installs in the Getting
-# started page (`getting_started.rs` and its md) and the home page back to versions.
-dioxus = { git = "https://github.com/DioxusLabs/dioxus", default-features = false, features = ["macro", "html", "signals", "hooks", "document", "mounted", "router", "logger"] }
+# Exact pin: libero reaches into dioxus-native-dom internals, which an alpha may change.
+# `dx` must be the same version (see ci.yml's e2e job), or CLI and app speak different wire protocols.
+dioxus = { version = "=0.8.0-alpha.2", default-features = false, features = ["macro", "html", "signals", "hooks", "document", "mounted", "router", "logger"] }
 fast_qr = { version = "0.13.1", default-features = false, features = ["svg"] }
 libero-macros = { path = "../libero-macros", version = "0.1.0" }
 # The date and time components hold `chrono`'s naive types. No `clock` here:
@@ -69,7 +65,7 @@ web-sys = { version = "0.3", features = ["Window", "Document", "Element", "Event
 # turns it on anyway through dioxus-desktop. Adds `serde_json` and
 # `serde_repr` to a native build; the wasm32 graph is untouched (measured
 # 2026-09-19, todo 36a).
-dioxus-html = { git = "https://github.com/DioxusLabs/dioxus", default-features = false, features = ["serialize"] }
+dioxus-html = { version = "=0.8.0-alpha.2", default-features = false, features = ["serialize"] }
 regex = "1"
 # `use_local_storage`'s directory under `native`/`desktop`. The lock's copy (wry's).
 dirs = "6"
@@ -79,7 +75,7 @@ chrono = { version = "0.4", default-features = false, features = ["std", "clock"
 # dioxus-native - the whole `platform::ElementApi` is answerable from it, DOM
 # queries included. Only pulled in by the `native` feature; without it a
 # native build still measures and focuses through dioxus's own mounted API.
-dioxus-native-dom = { git = "https://github.com/DioxusLabs/dioxus", optional = true }
+dioxus-native-dom = { version = "=0.8.0-alpha.2", optional = true }
 # `NodeHandle` hands back a `BaseDocument`, which `dioxus-native-dom` does not
 # re-export. Same crates.io version as dioxus-native's, so cargo keeps one copy.
 # `svg` (on in dioxus-native's too): `natural_size` reads an SVG picture's size.
@@ -107,7 +103,7 @@ futures-channel = { version = "0.3", optional = true }
 # The `desktop` feature's window handle, to raise it on a notification click (todo 1424).
 # Already in every desktop app's tree, defaults on (dioxus asks for them); without
 # these two it does not build alone. The same crate as Android's entry.
-dioxus-desktop = { git = "https://github.com/DioxusLabs/dioxus", default-features = false, features = ["tokio_runtime", "devtools"], optional = true }
+dioxus-desktop = { version = "=0.8.0-alpha.2", default-features = false, features = ["tokio_runtime", "devtools"], optional = true }
 
 # The desktop portal's accessibility settings, which Blitz's stylo cannot match (todo 954).
 # The lock's copy (tao's).
@@ -118,15 +114,15 @@ dbus = { version = "0.9", optional = true }
 # `dispatch`, and tao's `Opened` for a tap. Already in every dioxus mobile app's tree;
 # the two features as the desktop entry above, or a lone Android check fails (todo 1489).
 [target.'cfg(target_os = "android")'.dependencies]
-dioxus-desktop = { git = "https://github.com/DioxusLabs/dioxus", default-features = false, features = ["tokio_runtime", "devtools"] }
+dioxus-desktop = { version = "=0.8.0-alpha.2", default-features = false, features = ["tokio_runtime", "devtools"] }
 futures-channel = "0.3"
 # `#[ffi]` ships `android/share` (todo 3408) as a Gradle module into the app.
-manganis = { git = "https://github.com/DioxusLabs/dioxus", default-features = false }
+manganis = { version = "=0.8.0-alpha.2", default-features = false }
 
 # Render-to-string, for the component tests in `tests/` - the same dioxus rev
 # this crate builds against.
 [dev-dependencies]
-dioxus-ssr = { git = "https://github.com/DioxusLabs/dioxus" }
+dioxus-ssr = { version = "=0.8.0-alpha.2" }
 # Only to name `NativeFileData::byte_stream`'s return type in a fake file.
 futures-core = "0.3"
 # The layering rules in `tests/all/architecture.rs`, checked on the source files.

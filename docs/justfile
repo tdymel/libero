@@ -1,14 +1,15 @@
 root := justfile_directory() / ".."
 
-# The crates depend on upstream dioxus by git, pinned in Cargo.lock. `dx` has to
-# come from the same rev - a mismatch means wire-protocol skew - so `$DX`, else
-# `just install-dx`'s cargo copy, which a package-manager `dx` on PATH would shadow.
+# `dx` has to match the lockfile's dioxus (version, and rev for a git source) - a
+# mismatch means wire-protocol skew - so `$DX`, else `just install-dx`'s cargo
+# copy, which a package-manager `dx` on PATH would shadow.
 cargo_dx := env_var_or_default("CARGO_HOME", home_directory() / ".cargo") / "bin" / "dx"
 dx := env_var_or_default("DX", if path_exists(cargo_dx) == "true" { cargo_dx } else { "dx" })
 dioxus_version := `awk '/^name = "dioxus"$/ { getline; gsub(/"/, "", $3); print $3; exit }' ../Cargo.lock`
-dioxus_rev := `awk '/^name = "dioxus"$/ { f = 1 } f && /^source = / { n = split($3, a, "#"); gsub(/"/, "", a[n]); print a[n]; exit }' ../Cargo.lock`
-# `dx --version` of a dx built at that rev; a stale build of the same version differs only in the rev.
-dx_wanted := "dioxus " + dioxus_version + " (" + `awk '/^name = "dioxus"$/ { f = 1 } f && /^source = / { n = split($3, a, "#"); gsub(/"/, "", a[n]); print substr(a[n], 1, 7); exit }' ../Cargo.lock` + ")"
+# Empty for a crates.io dioxus.
+dioxus_rev := `awk '/^name = "dioxus"$/ { f = 1 } f && /^source = "git\+/ { n = split($3, a, "#"); gsub(/"/, "", a[n]); print a[n]; exit } f && /^$/ { exit }' ../Cargo.lock`
+# `dx --version` of a matching dx; a stale git build of the same version differs only in the rev.
+dx_wanted := "dioxus " + dioxus_version + if dioxus_rev == "" { "" } else { " (" + replace_regex(dioxus_rev, "^(.{7}).*", "$1") + ")" }
 
 import 'native.just'
 import 'desktop.just'
@@ -27,7 +28,7 @@ test:
 
 # An older `dx` (0.7.10 from a package manager) refuses the workspace.
 _dx:
-    @{{dx}} --version | grep -qxF "{{dx_wanted}}" || (echo "{{dx}} ($({{dx}} --version)) is not {{dx_wanted}} - run \`just install-dx\`" && exit 1)
+    @{{dx}} --version | {{ if dioxus_rev == "" { "grep -qE '^" + replace(dx_wanted, ".", "\\.") + "( \\(.*\\))?$'" } else { "grep -qxF '" + dx_wanted + "'" } }} || (echo "{{dx}} ($({{dx}} --version)) is not {{dx_wanted}} - run \`just install-dx\`" && exit 1)
 
 start: _dx
     {{dx}} serve --platform web --debug-symbols=false --hotpatch
@@ -68,6 +69,6 @@ build_release: _dx
 serve_dist port="8080":
     ./serve_dist.py {{public}}/release/web/public {{port}}
 
-# `dx` from the lockfile's dioxus rev, as ci.yml's e2e job installs it.
+# `dx` from the lockfile's dioxus version or rev, as ci.yml's e2e job installs it.
 install-dx:
-    cargo install dioxus-cli --git https://github.com/DioxusLabs/dioxus --rev {{dioxus_rev}} --locked --bin dx --force
+    cargo install dioxus-cli {{ if dioxus_rev == "" { "--version " + dioxus_version } else { "--git https://github.com/DioxusLabs/dioxus --rev " + dioxus_rev } }} --locked --bin dx --force

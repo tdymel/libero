@@ -7,7 +7,7 @@ publish = false
 [dependencies]
 # Same git dioxus as `libero` and `docs`, so the fixture app is built from the
 # identical dioxus the library is.
-dioxus = { git = "https://github.com/DioxusLabs/dioxus", default-features = true, features = ["router"] }
+dioxus = { version = "=0.8.0-alpha.2", default-features = true, features = ["router"] }
 # `/icon-provider`'s whole-set select (1133); `/line-chart` (3368), `/bar-chart` and `/pie-chart` (3335);
 # `/fcm` (3404).
 libero = { path = "../../libero", features = ["icons-tabler", "charts", "fcm"] }
