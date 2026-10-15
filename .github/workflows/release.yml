@@ -182,6 +182,11 @@ jobs:
           merge-multiple: true
       - run: |
           ls -la dist
+          # A rerun fills in an existing release, e.g. the platforms a first run missed.
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --clobber
+            exit 0
+          fi
           draft=()
           [ "${{ github.event_name }}" = workflow_dispatch ] && draft=(--draft --target "$GITHUB_SHA")
           gh release create "$TAG" dist/* "${draft[@]}" --title "Libero $TAG" \
