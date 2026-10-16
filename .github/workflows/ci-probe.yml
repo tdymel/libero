@@ -149,6 +149,15 @@ jobs:
             macOS) export TMPDIR="$RUNNER_TEMP" ;;
             Windows) export TMP="$RUNNER_TEMP" TEMP="$RUNNER_TEMP" ;;
           esac
+          # Load, memory and the process table every 30 s on macOS (3444: Chrome stops creating pages).
+          if [ "$RUNNER_OS" = macOS ]; then
+            sysctl kern.maxproc kern.maxprocperuid > "$logs/sampler.log"; ulimit -a >> "$logs/sampler.log"
+            (while sleep 30; do date -u +%T; sysctl -n vm.loadavg; memory_pressure -Q | tail -1
+              echo "procs $(ps -A | wc -l) zombies $(ps -A -o stat= | grep -c Z)"
+              ps -A -o comm= | sort | uniq -c | sort -rn | head -4
+              ps -A -o ppid=,stat= | awk '$2 ~ /Z/ { print $1 }' | sort | uniq -c | sort -rn | head -2 | while read -r n p; do echo "zombies of $p: $n $(ps -o comm= -p "$p")"; done
+              top -l 2 -n 4 -o cpu -stats pid,command,mem,cpu | tail -5; done) >> "$logs/sampler.log" 2>&1 &
+          fi
           case "$TIER" in
             unit)
               # As platforms.yml's unit legs: libero, then the e2e runner's own tests.

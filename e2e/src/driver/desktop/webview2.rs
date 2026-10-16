@@ -103,22 +103,50 @@ impl Cdp {
                 Ok(!browser.pages().await?.is_empty())
             })
             .await?;
-            let page = browser.pages().await?.remove(0);
-            // Focus and blur as in a foreground window, whatever the desktop's own focus.
-            page.execute(SetFocusEmulationEnabledParams::new(true))
-                .await?;
-            // The runner has Windows' animations off, so it reports reduced motion: the web tier's default.
-            page.execute(
-                SetEmulatedMediaParams::builder()
-                    .feature(MediaFeature::new("prefers-reduced-motion", "no-preference"))
-                    .build(),
-            )
-            .await?;
-            Ok(Self {
-                page,
-                _browser: browser,
-            })
+            // A fresh WebView can swap its first target, whose session then is gone
+            // ("Session with given id not found", windows-desktop 38719520651): try again.
+            let started = Instant::now();
+            loop {
+                match Self::attach(&browser).await {
+                    Ok(page) => {
+                        return Ok(Self {
+                            page,
+                            _browser: browser,
+                        });
+                    }
+                    Err(error) if started.elapsed() > LAUNCH => {
+                        return Err(error).context("attach to the WebView's page");
+                    }
+                    Err(_) => tokio::time::sleep(Duration::from_millis(100)).await,
+                }
+            }
         })
+    }
+
+    /// The first of the WebView's pages that takes the setup of a foreground window.
+    async fn attach(browser: &Browser) -> Result<Page> {
+        let mut last = anyhow::anyhow!("the WebView has no page yet");
+        for page in browser.pages().await? {
+            match Self::set_up(&page).await {
+                Ok(()) => return Ok(page),
+                Err(error) => last = error,
+            }
+        }
+        Err(last)
+    }
+
+    async fn set_up(page: &Page) -> Result<()> {
+        // Focus and blur as in a foreground window, whatever the desktop's own focus.
+        page.execute(SetFocusEmulationEnabledParams::new(true))
+            .await?;
+        // The runner has Windows' animations off, so it reports reduced motion: the web tier's default.
+        page.execute(
+            SetEmulatedMediaParams::builder()
+                .feature(MediaFeature::new("prefers-reduced-motion", "no-preference"))
+                .build(),
+        )
+        .await?;
+        Ok(())
     }
 
     async fn mouse(

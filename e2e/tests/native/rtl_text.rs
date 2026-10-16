@@ -49,28 +49,41 @@ fn rtl_text_sits_right() {
     }
 }
 
-/// Whether the counter's box is painted, and its horizontal centre relative to the textarea's.
-fn counter_side(page: &Page) -> (bool, f64) {
+/// The darkest red channel on the counter's middle row, and its horizontal centre relative to
+/// the textarea's.
+fn counter_side(page: &Page) -> (u8, f64) {
     let (left, top, width, height) = page.rect("[data-slot=counter]");
     let (frame_left, _, frame_width, _) = page.rect("textarea");
     let y = (top + height / 2.0) as u32;
     let row = (0..width as u32)
         .map(|x| (left as u32 + x, y))
         .collect::<Vec<_>>();
-    let inked = page.painted_pixels(&row).iter().any(|p| p[0] < 128);
-    (inked, left + width / 2.0 - (frame_left + frame_width / 2.0))
+    let darkest = page.painted_pixels(&row).iter().map(|p| p[0]).min();
+    (
+        darkest.unwrap_or(255),
+        left + width / 2.0 - (frame_left + frame_width / 2.0),
+    )
 }
+
+/// Windows' thin antialiased muted digits stay above 128 (Platforms 38719520651), still far from white.
+const INKED: u8 = 200;
 
 #[test]
 fn a_counter_at_the_end_sits_left_under_rtl() {
-    let (inked, offset) = counter_side(&mount(app));
-    assert!(inked && offset < 0.0, "inked={inked} offset={offset}");
+    let (darkest, offset) = counter_side(&mount(app));
+    assert!(
+        darkest < INKED && offset < 0.0,
+        "darkest={darkest} offset={offset}"
+    );
 }
 
 #[test]
 fn a_counter_at_the_end_sits_right_under_ltr() {
-    let (inked, offset) = counter_side(&mount(ltr_app));
-    assert!(inked && offset > 0.0, "inked={inked} offset={offset}");
+    let (darkest, offset) = counter_side(&mount(ltr_app));
+    assert!(
+        darkest < INKED && offset > 0.0,
+        "darkest={darkest} offset={offset}"
+    );
 }
 
 #[test]
