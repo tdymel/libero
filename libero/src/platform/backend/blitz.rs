@@ -2262,6 +2262,11 @@ fn into_view(doc: &BaseDocument, node_id: NodeId) -> Option<(Option<NodeId>, f64
     Some((Some(scroller.id), delta))
 }
 
+/// Arms the silent-focus report for a move made by hand, as [`BlitzElement::focus`] does.
+pub(super) fn watch_focus(doc: &BaseDocument) {
+    focus::watch(doc);
+}
+
 /// The web's focus scroll, which Blitz lacks: every scroller round `node_id`,
 /// innermost first, then the viewport, moves just far enough on both axes.
 pub(super) fn reveal(doc: &mut BaseDocument, node_id: NodeId) {

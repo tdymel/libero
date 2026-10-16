@@ -901,6 +901,9 @@ impl Page {
         let id = self.node(selector);
         {
             let mut doc = self.doc.inner.borrow_mut();
+            self.doc
+                .vdom
+                .in_runtime(|| libero::platform::watch_focus_in(&doc));
             doc.set_focus_to(id);
             // libero's Tab-move walk: scroll-padding and scroll-margin honoured (2863).
             self.doc

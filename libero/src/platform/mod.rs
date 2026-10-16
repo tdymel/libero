@@ -203,11 +203,11 @@ pub(crate) use table::{
     moves_table_rows, sticks_table_heads, widens_sized_tables,
 };
 pub use task::awaits_layout;
-#[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
-pub use task::reveal_in;
 pub(crate) use task::{
     fonts_ready, next_task, page_task, when_free, when_laid_out, when_laid_out_retry,
 };
+#[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+pub use task::{reveal_in, watch_focus_in};
 pub use timer::{TimerApi, TimerSubscription, timer};
 pub(crate) use transition::transition_property;
 pub(crate) use waveform::waveform;

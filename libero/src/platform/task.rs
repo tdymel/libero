@@ -58,6 +58,14 @@ pub fn reveal_in(doc: &mut blitz_dom::BaseDocument, node_id: dioxus_native_dom::
     super::backend::reveal(doc, node_id);
 }
 
+/// Before a native harness moves focus by hand, so subscribers hear the move as they
+/// do for `focus()`. Call it inside the runtime.
+#[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+#[doc(hidden)]
+pub fn watch_focus_in(doc: &blitz_dom::BaseDocument) {
+    super::backend::watch_focus(doc);
+}
+
 #[cfg(target_arch = "wasm32")]
 mod web {
     use wasm_bindgen::{JsCast, JsValue};
