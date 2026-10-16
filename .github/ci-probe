@@ -1,0 +1,5 @@
+# ted_ci.py probe; read by .github/workflows/ci-probe.yml.
+os=macos
+tier=desktop
+filter=scroll_area::diag_wheel_scroll_area
+dev=olaf-56
