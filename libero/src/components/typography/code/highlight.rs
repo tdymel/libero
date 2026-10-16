@@ -375,7 +375,7 @@ fn flatten<'a>(
 }
 
 /// The last few highlights: a remount or a demo switching back skips the regex work (todo 2148).
-const HIGHLIGHT_CACHE: usize = 32;
+const HIGHLIGHT_CACHE_LEN: usize = 32;
 
 thread_local! {
     static HIGHLIGHTED: std::cell::RefCell<std::collections::VecDeque<(Language, String, Vec<HighlightedLine>)>> =
@@ -401,7 +401,7 @@ pub(crate) fn highlight(source: &str, language: Language) -> Vec<HighlightedLine
     flatten(&tokens, &mut spans, None);
     let lines = split_into_lines(spans, source.ends_with('\n'));
     HIGHLIGHTED.with_borrow_mut(|cache| {
-        if cache.len() == HIGHLIGHT_CACHE {
+        if cache.len() == HIGHLIGHT_CACHE_LEN {
             cache.pop_front();
         }
         cache.push_back((language, source.to_string(), lines.clone()));

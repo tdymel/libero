@@ -42,7 +42,10 @@ pub(crate) fn use_name_warning(named: bool, message: &'static str) {
 /// The scheme of a link target that runs or embeds script. Browsers strip controls, tabs
 /// and newlines first, so `" Java\tScript:"` counts too.
 pub(crate) fn blocked_scheme(url: &str) -> Option<&'static str> {
-    const BLOCKED: [&str; 3] = ["javascript", "data", "vbscript"];
+    scheme_among(url, &["javascript", "data", "vbscript"])
+}
+
+fn scheme_among(url: &str, blocked: &[&'static str]) -> Option<&'static str> {
     let head: String = url
         .trim_matches(|c: char| c <= ' ')
         .chars()
@@ -51,7 +54,19 @@ pub(crate) fn blocked_scheme(url: &str) -> Option<&'static str> {
         .collect::<String>()
         .to_ascii_lowercase();
     let (scheme, _) = head.split_once(':')?;
-    BLOCKED.into_iter().find(|blocked| *blocked == scheme)
+    blocked.iter().copied().find(|blocked| *blocked == scheme)
+}
+
+/// `url` for a media element's `src`, `poster` or `<track>`, or `None` with a warning for a
+/// `javascript:` or `vbscript:` one. A `data:` file passes: media runs no script from it.
+pub(crate) fn media_url(url: &str, owner: &str) -> Option<String> {
+    let Some(scheme) = scheme_among(url, &["javascript", "vbscript"]) else {
+        return Some(url.to_string());
+    };
+    warn(&format!(
+        "{owner}: a `{scheme}:` URL is not rendered, as it is not a media file."
+    ));
+    None
 }
 
 /// Whether `url` may become an `href`. A `javascript:`, `data:` or `vbscript:` URL may
@@ -114,6 +129,35 @@ mod tests {
             ("vb\tscript:x", "vbscript"),
         ] {
             assert_eq!(blocked_scheme(url), Some(scheme), "{url:?}");
+        }
+    }
+
+    #[test]
+    fn a_media_url_blocks_script_schemes_however_they_are_spelled() {
+        for url in [
+            "javascript:alert(1)",
+            "JavaScript:alert(1)",
+            "  javascript:void(0)",
+            "java\tscript:x",
+            "jav\nascript:x",
+            "VbScript:msgbox(1)",
+            "vb\tscript:x",
+        ] {
+            assert_eq!(media_url(url, "Video"), None, "{url:?}");
+        }
+    }
+
+    #[test]
+    fn a_media_url_passes_files_and_data() {
+        for url in [
+            "",
+            "/launch.webm",
+            "https://example.com/a.mp4?q=javascript:",
+            "data:audio/wav;base64,AAAA",
+            "DATA:text/vtt,WEBVTT",
+            "blob:https://example.com/1",
+        ] {
+            assert_eq!(media_url(url, "Video").as_deref(), Some(url), "{url:?}");
         }
     }
 

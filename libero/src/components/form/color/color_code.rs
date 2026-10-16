@@ -199,24 +199,24 @@ impl ColorCode {
     /// `hsl(208, 80%, 52%)`, rounded to whole degrees and percent. Alpha is
     /// dropped.
     pub fn to_hsl(self) -> String {
-        let (h, s, l, _) = self.to_hsla_channels();
-        format!(
-            "hsl({}, {}%, {}%)",
-            h.round() as u16 % 360,
-            (s * 100.0).round(),
-            (l * 100.0).round()
-        )
+        let (h, s, l, _) = self.rounded_hsla();
+        format!("hsl({h}, {s}%, {l}%)")
     }
 
     /// `hsla(208, 80%, 52%, 0.5)`.
     pub fn to_hsla(self) -> String {
+        let (h, s, l, a) = self.rounded_hsla();
+        format!("hsla({h}, {s}%, {l}%, {})", round_alpha(a))
+    }
+
+    /// Whole degrees and whole percent, alpha as is.
+    fn rounded_hsla(self) -> (u16, f64, f64, f64) {
         let (h, s, l, a) = self.to_hsla_channels();
-        format!(
-            "hsla({}, {}%, {}%, {})",
+        (
             h.round() as u16 % 360,
             (s * 100.0).round(),
             (l * 100.0).round(),
-            round_alpha(a)
+            a,
         )
     }
 

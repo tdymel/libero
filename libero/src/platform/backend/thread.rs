@@ -4,7 +4,7 @@
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, PoisonError};
 use std::task::{Context, Poll, Waker};
 use std::thread;
 use std::time::Duration;
@@ -121,7 +121,11 @@ fn sleep(duration: Duration) -> Sleep {
     thread::spawn(move || {
         thread::sleep(duration);
         alarm.elapsed.store(true, Ordering::Release);
-        let waker = alarm.waker.lock().expect("a waker slot").take();
+        let waker = alarm
+            .waker
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .take();
         if let Some(waker) = waker {
             waker.wake();
         }
@@ -147,7 +151,11 @@ impl Future for Sleep {
             return Poll::Ready(());
         }
 
-        let mut waker = self.state.waker.lock().expect("a waker slot");
+        let mut waker = self
+            .state
+            .waker
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
         *waker = Some(context.waker().clone());
         drop(waker);
 
@@ -158,5 +166,45 @@ impl Future for Sleep {
         } else {
             Poll::Pending
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::task::Wake;
+    use std::time::Instant;
+
+    use super::*;
+
+    struct Flag(AtomicBool);
+
+    impl Wake for Flag {
+        fn wake(self: Arc<Self>) {
+            self.0.store(true, Ordering::Release);
+        }
+    }
+
+    #[test]
+    fn a_sleep_wakes_through_a_poisoned_waker_lock() {
+        let mut sleep = sleep(Duration::from_millis(30));
+        let state = sleep.state.clone();
+        let _ = thread::spawn(move || {
+            let _guard = state.waker.lock().unwrap();
+            panic!("poison the waker slot");
+        })
+        .join();
+        assert!(sleep.state.waker.is_poisoned());
+
+        let flag = Arc::new(Flag(AtomicBool::new(false)));
+        let waker = Waker::from(flag.clone());
+        let mut context = Context::from_waker(&waker);
+        let _ = Pin::new(&mut sleep).poll(&mut context);
+
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while !flag.0.load(Ordering::Acquire) && Instant::now() < deadline {
+            thread::yield_now();
+        }
+        assert!(flag.0.load(Ordering::Acquire), "the sleep never woke");
+        assert_eq!(Pin::new(&mut sleep).poll(&mut context), Poll::Ready(()));
     }
 }

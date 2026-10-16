@@ -66,7 +66,20 @@ fn caller_id(attributes: &[Attribute]) -> Option<String> {
 /// A selector for the element with `id`. An attribute selector, since `#1-faq`
 /// throws: a caller's `id` need not be a CSS identifier.
 pub(crate) fn id_selector(id: &str) -> String {
-    let escaped = id.replace('\\', "\\\\").replace('"', "\\\"");
+    let mut escaped = String::with_capacity(id.len());
+    for c in id.chars() {
+        match c {
+            '\\' | '"' => {
+                escaped.push('\\');
+                escaped.push(c);
+            }
+            // A hex escape, its space ends it: a raw line break ends a CSS string.
+            '\n' => escaped.push_str("\\a "),
+            '\r' => escaped.push_str("\\d "),
+            '\x0c' => escaped.push_str("\\c "),
+            _ => escaped.push(c),
+        }
+    }
     format!("[id=\"{escaped}\"]")
 }
 
@@ -81,6 +94,13 @@ mod tests {
         assert_eq!(id_selector("1-email"), r#"[id="1-email"]"#);
         assert_eq!(id_selector("user.email"), r#"[id="user.email"]"#);
         assert_eq!(id_selector(r#"a"b\c"#), r#"[id="a\"b\\c"]"#);
+    }
+
+    #[test]
+    fn an_id_selector_escapes_line_breaks() {
+        assert_eq!(id_selector("a\nb"), r#"[id="a\a b"]"#);
+        assert_eq!(id_selector("a\rb\x0cc"), r#"[id="a\d b\c c"]"#);
+        assert_eq!(id_selector("a\r\nf"), r#"[id="a\d \a f"]"#);
     }
 
     #[component]

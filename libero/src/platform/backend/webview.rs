@@ -243,11 +243,16 @@ impl Slot {
     /// Calls the slot's `member` with `argument`, if the script still runs.
     fn call(&self, member: &str, argument: Value) {
         if let Some(document) = self.document.upgrade() {
-            document.eval(format!(
-                "window.__lsxSlots?.[{}]?.{member}({argument});",
-                self.token
-            ));
+            document.eval(self.call_script(member, &argument));
         }
+    }
+
+    /// The argument is bound as `data`, never spliced into the call.
+    fn call_script(&self, member: &str, argument: &Value) -> String {
+        format!(
+            "const data = {argument};\nwindow.__lsxSlots?.[{}]?.{member}(data);",
+            self.token
+        )
     }
 }
 
@@ -2840,6 +2845,15 @@ mod tests {
         let server =
             VirtualDom::new(app).with_root_context(Rc::new(NoOpDocument) as Rc<dyn Document>);
         assert!(!observes(&server));
+    }
+
+    #[test]
+    fn a_slot_call_binds_its_argument_as_data() {
+        let script = Slot::new().call_script("move", &serde_json::json!("x\"); alert(1); (\""));
+        let (binding, call) = script.split_once('\n').unwrap();
+        assert_eq!(binding, r#"const data = "x\"); alert(1); (\"";"#);
+        assert!(call.ends_with("?.move(data);"), "{call}");
+        assert!(!call.contains("alert"), "{call}");
     }
 
     #[test]

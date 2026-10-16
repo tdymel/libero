@@ -10,7 +10,9 @@ use super::media_controls::{
 use crate::{
     components::{
         buttons::{ActionIcon, Button},
-        common::{Glyph, HtmlTag, Input, Part, Parts, base_props, parts_enum, use_name_warning},
+        common::{
+            Glyph, HtmlTag, Input, Part, Parts, base_props, media_url, parts_enum, use_name_warning,
+        },
         form::SliderTrack,
         layout::use_box,
     },
@@ -169,15 +171,21 @@ impl MediaSource {
 }
 
 /// `src` as the element's attribute, or with `sources` the last `<source>` after them.
+/// A script-scheme URL is left out.
 pub(super) fn media_sources(src: &str, sources: &[MediaSource]) -> (Option<String>, Element) {
+    let src = media_url(src, "Media `src`");
     if sources.is_empty() {
-        return (Some(src.to_string()), VNode::empty());
+        return (src, VNode::empty());
     }
     let list = rsx! {
         for other in sources {
-            source { src: other.src.clone(), r#type: other.mime.clone() }
+            if let Some(other_src) = media_url(&other.src, "Media `sources`") {
+                source { src: other_src, r#type: other.mime.clone() }
+            }
         }
-        source { src: src.to_string() }
+        if let Some(src) = src {
+            source { src }
+        }
     };
     (None, list)
 }
@@ -510,6 +518,7 @@ fn next_speed(rate: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::LiberoProvider;
     use crate::components::common::part_table;
 
     #[test]
@@ -520,6 +529,28 @@ mod tests {
         assert_eq!(next_speed(0.75), 1.0);
         assert_eq!(next_speed(1.25), 1.5);
         assert_eq!(next_speed(3.0), 1.0);
+    }
+
+    #[test]
+    fn a_script_url_is_not_rendered_as_a_source() {
+        let mut dom = VirtualDom::new(|| {
+            rsx! {
+                LiberoProvider {
+                    Audio {
+                        src: "javascript:alert(1)",
+                        sources: vec![
+                            MediaSource::new("vbscript:x", "audio/ogg"),
+                            MediaSource::new("data:audio/wav;base64,AAAA", "audio/wav"),
+                        ],
+                        label: "Voice",
+                    }
+                }
+            }
+        });
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert!(!html.contains("script:"), "{html}");
+        assert!(html.contains("data:audio/wav;base64,AAAA"), "{html}");
     }
 
     #[test]

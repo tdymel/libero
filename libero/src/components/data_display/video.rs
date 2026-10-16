@@ -10,7 +10,9 @@ use super::{
 };
 use crate::{
     components::{
-        common::{HtmlTag, Input, Part, Parts, base_props, parts_enum, use_name_warning},
+        common::{
+            HtmlTag, Input, Part, Parts, base_props, media_url, parts_enum, use_name_warning,
+        },
         layout::use_box,
         overlay::Shortcut,
     },
@@ -468,9 +470,14 @@ pub fn Video(props: VideoProps) -> Element {
 
     // The track the captions button shows: the one last picked in the track menu,
     // else the default text one, else the first.
-    let text_tracks: Vec<(usize, &MediaTrack)> = props
+    let tracks: Vec<&MediaTrack> = props
         .tracks
         .iter()
+        .filter(|track| media_url(&track.src, "Video `tracks`").is_some())
+        .collect();
+    let text_tracks: Vec<(usize, &MediaTrack)> = tracks
+        .iter()
+        .copied()
         .enumerate()
         .filter(|(_, t)| t.kind.shows_text())
         .collect();
@@ -508,8 +515,7 @@ pub fn Video(props: VideoProps) -> Element {
     };
 
     // The chapters track is read only when the prop lists none; a late answer for an old `src` is dropped.
-    let chapters_src = props
-        .tracks
+    let chapters_src = tracks
         .iter()
         .filter(|track| track.kind == TrackKind::Chapters)
         .min_by_key(|track| !track.default)
@@ -704,7 +710,7 @@ pub fn Video(props: VideoProps) -> Element {
         video {
             "data-slot": VideoPart::Media.slot(),
             src,
-            poster: props.poster.clone(),
+            poster: props.poster.as_deref().and_then(|poster| media_url(poster, "Video `poster`")),
             style,
             autoplay: props.autoplay,
             muted: props.muted,
@@ -724,7 +730,7 @@ pub fn Video(props: VideoProps) -> Element {
             onended: move |_| if let Some(handler) = onended { handler.call(()) },
             ..media.attributes(),
             {sources}
-            for track in props.tracks.iter() {
+            for track in tracks.iter() {
                 track {
                     src: track.src.clone(),
                     kind: track.kind.attribute(),
@@ -777,6 +783,7 @@ pub fn Video(props: VideoProps) -> Element {
 mod tests {
     use super::super::media_controls::{CHAPTER, CONTROLS, MESSAGE, SEEK, TIME, VOLUME};
     use super::*;
+    use crate::LiberoProvider;
     use crate::components::common::part_table;
 
     /// The slot names are public: a rename here is a breaking change.
@@ -808,6 +815,64 @@ mod tests {
                 VideoPart::Volume.slot(),
                 VideoPart::Message.slot(),
             ]
+        );
+    }
+
+    fn render(app: fn() -> Element) -> String {
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        dioxus_ssr::render(&dom)
+    }
+
+    #[test]
+    fn a_script_url_is_not_rendered_as_media() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    Video {
+                        src: "javascript:alert(1)",
+                        sources: vec![
+                            MediaSource::new(" VBScript:x", "video/mp4"),
+                            MediaSource::new("/ok.webm", "video/webm"),
+                        ],
+                        label: "Clip",
+                        poster: "java\tscript:alert(2)",
+                        tracks: vec![
+                            MediaTrack { src: "javascript:alert(3)".into(), ..Default::default() },
+                            MediaTrack { src: "/ok.vtt".into(), ..Default::default() },
+                        ],
+                    }
+                }
+            }
+        });
+        assert!(!html.contains("script:"), "{html}");
+        assert!(!html.contains("poster"), "{html}");
+        assert!(
+            html.contains("/ok.webm") && html.contains("/ok.vtt"),
+            "{html}"
+        );
+    }
+
+    #[test]
+    fn a_data_url_and_a_file_render_as_media() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    Video {
+                        src: "data:video/mp4;base64,AAAA",
+                        label: "Clip",
+                        poster: "data:image/gif;base64,R0lGOD",
+                    }
+                }
+            }
+        });
+        assert!(
+            html.contains(r#"src="data:video/mp4;base64,AAAA""#),
+            "{html}"
+        );
+        assert!(
+            html.contains(r#"poster="data:image/gif;base64,R0lGOD""#),
+            "{html}"
         );
     }
 
