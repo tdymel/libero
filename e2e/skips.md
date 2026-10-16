@@ -268,11 +268,8 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `share::android_shares_two_files_through_the_share_sheet` | all but android | 3361: ACTION_SEND_MULTIPLE is Android's |
 | `shortcut_help::a_narrow_list_stacks_each_row` | native | 1224: Blitz drops `@container`, so the rows stay side by side |
 | `slider::a_drag_released_past_the_end_tracks_and_ends` | ios | a touch screen has no hover |
-| `slider::a_vertical_swipe_scrolls_the_page_on_android_only_and_a_sideways_drag_or_a_tap_moves_it` | ios | 3416: the slider feels AXe's drag press but no move |
-| `slider::pressing_the_track_centre_and_dragging_right_follows_the_pointer` | ios | 3416: the slider feels AXe's drag press but no move |
 | `slider_touch_keyboard::a_touch_held_on_the_thumb_leaves_no_bubble_after_the_release` | desktop | 1126: no touch input under Xvfb |
 | `splitter::a_double_click_collapses_pane_a_and_restores_it` | ios | 3416: the simulator's tap or drag did not drive the page |
-| `splitter::a_vertical_swipe_over_a_vertical_divider_scrolls_the_page_on_android_only_and_a_sideways_drag_moves_it` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `spotlight::a_hovered_row_is_tinted_and_does_not_move_the_highlight` | ios | a touch screen has no hover |
 | `stepper::a_clicked_continue_returns_focus_horizontally` | android | 958: element identity on the WebView |
 | `stepper::a_clicked_continue_returns_focus_horizontally` | desktop | 958: element identity on the WebView |
