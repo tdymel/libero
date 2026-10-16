@@ -14,7 +14,10 @@ fn app() -> Element {
 
 fn focused_cell(page: &e2e::native::Page) -> String {
     let owner = page.focus_owner().to_string();
-    owner.split("data-pin-index=\"").nth(1).map_or(String::new(), |rest| rest[..1].to_string())
+    owner
+        .split("data-pin-index=\"")
+        .nth(1)
+        .map_or(String::new(), |rest| rest[..1].to_string())
 }
 
 #[test]
@@ -25,9 +28,18 @@ fn a_backspace_binding_does_not_undo_the_cells_own_edit() {
         page.press(Key::Character(digit.into()));
     }
     page.press_with_binding(Key::Backspace);
-    assert_eq!((page.text("#echo").as_str(), focused_cell(&page).as_str()), ("12", "1"));
+    assert_eq!(
+        (page.text("#echo").as_str(), focused_cell(&page).as_str()),
+        ("12", "1")
+    );
     page.press_with_binding(Key::Backspace);
-    assert_eq!((page.text("#echo").as_str(), focused_cell(&page).as_str()), ("1", "0"));
+    assert_eq!(
+        (page.text("#echo").as_str(), focused_cell(&page).as_str()),
+        ("1", "0")
+    );
     page.press_with_binding(Key::Backspace);
-    assert_eq!((page.text("#echo").as_str(), focused_cell(&page).as_str()), ("", "0"));
+    assert_eq!(
+        (page.text("#echo").as_str(), focused_cell(&page).as_str()),
+        ("", "0")
+    );
 }

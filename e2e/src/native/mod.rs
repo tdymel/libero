@@ -648,9 +648,7 @@ impl Page {
             modifiers,
         )));
         // macOS Blitz edits text by the shell's standard key bindings, not the key (todo 3317).
-        if binding
-            && let Some(binding) = apple_key_binding(&key, modifiers)
-        {
+        if binding && let Some(binding) = apple_key_binding(&key, modifiers) {
             self.dispatch(UiEvent::AppleStandardKeybinding(binding.into()));
         }
         self.dispatch(UiEvent::KeyUp(key_event(
