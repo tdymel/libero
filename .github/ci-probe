@@ -1,0 +1,5 @@
+# ted_ci.py probe; read by .github/workflows/ci-probe.yml.
+os=macos
+tier=ios
+filter=bottom_navigation::a_fixed_bar_docks_everywhere
+dev=olaf-55
