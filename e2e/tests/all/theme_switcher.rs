@@ -45,6 +45,54 @@ fn the_split_button_meets_the_baseline() {
         .run();
 }
 
+/// Todo 3606: under a finger the picker's 44px box no longer takes the toggle's right half.
+#[test]
+fn a_finger_on_the_toggles_right_half_hits_the_toggle() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    block_on(async {
+        let fixture = Fixture::open("/theme-switcher/small", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute(SetTouchEmulationEnabledParams::new(true))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(pointer: coarse)').matches",
+            "a coarse pointer",
+        )
+        .await
+        .unwrap();
+
+        let hits: Vec<String> = page
+            .evaluate(format!(
+                "(() => {{
+                    const t = document.querySelector({TOGGLE:?}).getBoundingClientRect();
+                    const p = document.querySelector({CHEVRON:?}).getBoundingClientRect();
+                    const y = t.y + t.height / 2;
+                    const at = x => document.elementFromPoint(x, y)?.closest('button')?.dataset.slot;
+                    return [at(t.right - 4), at(t.right + 3), at(p.x + p.width / 2)];
+                }})()"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            hits,
+            ["toggle", "toggle", "picker"],
+            "the toggle's right half, the seam and the picker's middle"
+        );
+
+        fixture
+            .console
+            .assert_clean("coarse split hit boxes")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Escape closes the theme menu and hands focus back to the chevron.
 #[test]
 fn escape_returns_focus_to_the_chevron() {

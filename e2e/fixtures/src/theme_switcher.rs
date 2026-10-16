@@ -15,7 +15,14 @@ pub const ROUTES: Routes = &[
     ("/theme-switcher/named", || rsx! { NamedPage {} }),
     ("/theme-switcher/labelled", || rsx! { LabelledPage {} }),
     ("/theme-switcher/off", || rsx! { OffPage {} }),
+    ("/theme-switcher/small", || rsx! { SmallPage {} }),
 ];
+
+/// Todo 3606: a split small enough to grow its boxes under a finger.
+#[component]
+fn SmallPage() -> Element {
+    rsx! { ThemeSwitcher { id: "split", themes: ThemeSet::CATALOGUE, size: "sm" } }
+}
 
 /// Todo 3022: the toggle alone and the split form, both disabled.
 #[component]

@@ -30,9 +30,12 @@ static SPLIT_SX: StaticSx = StaticSx::new(|| {
         .align_items("stretch")
         .selector("& button", sx().position("relative"))
         .selector("& button:focus-visible", sx().z_index("1"))
+        // Above the picker, so its coarse-pointer box wins the overlap at the seam.
         .selector(
             "& > button",
-            sx().border_start_end_radius("0").border_end_end_radius("0"),
+            sx().z_index("1")
+                .border_start_end_radius("0")
+                .border_end_end_radius("0"),
         )
         // One seam, not two borders side by side.
         .selector("& > div", sx().display("flex").margin_inline_start("-1px"))
