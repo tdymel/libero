@@ -375,6 +375,7 @@ pub(super) fn body_rows<T: Clone + PartialEq + 'static>(spec: RowsSpec<'_, T>) -
                 }),
                 focused: row_focus.focused,
                 moves: row_focus.moves,
+                reordering: row_focus.reordering,
             })
         }
         None => BodyRows::All(

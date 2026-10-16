@@ -228,7 +228,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `pin_field::a_digit_retyped_without_a_key_leaves_no_drifted_cell` | desktop | 1126: no text without a key (no IME path) under xdotool |
 | `pin_field::a_digit_retyped_without_a_key_leaves_no_drifted_cell` | ios | 3416: no text without a key through AXe |
 | `pin_field::a_digit_retyped_without_a_key_leaves_no_drifted_cell` | native | no text without a key on Blitz |
-| `pin_field::a_pin_field_takes_one_digit_per_cell_and_moves_on` | macos native | 3342: Blitz deletes twice on AppKit's Backspace binding |
 | `pin_field::the_rule_waits_for_focus_to_leave_the_cells` | android | 1564: a WebView cannot tell a move inside the field from a blur |
 | `pin_field::the_rule_waits_for_focus_to_leave_the_cells` | desktop | 1564: a WebView cannot tell a move inside the field from a blur |
 | `pin_field::the_rule_waits_for_focus_to_leave_the_cells` | ios | 1564: a WebView cannot tell a move inside the field from a blur |
@@ -353,7 +352,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_reorder::a_pin_or_hide_from_the_menu_keeps_focus_on_a_menu_button` | android | 958: element identity on the WebView |
 | `table_reorder::a_windowed_table_reorders_past_its_window` | android | 958: element identity on the WebView |
 | `table_reorder::an_early_keyboard_drop_keeps_its_focus` | android | 958: element identity on the WebView |
-| `table_reorder::an_early_keyboard_drop_keeps_its_focus` | windows desktop | a drop made before the window follows the scroll leaves the focus on the body in WebView2 |
 | `table_reorder::header_grip_drags_move_columns_twice` | ios | 3416: the header grip feels AXe's drag press but no move |
 | `table_reorder::header_grip_drags_move_its_own_columns_twice` | ios | 3416: flaky: a header grip sometimes feels AXe's drag press but no move |
 | `table_reorder::hiding_a_column_from_its_own_columns_submenu_keeps_focus` | android | 958: element identity on the WebView |
