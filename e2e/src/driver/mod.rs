@@ -27,6 +27,13 @@ pub enum Platform {
     Ios,
 }
 
+impl Platform {
+    /// A touch screen: a tap pins a chart mark and adds a sorted column, as no mouse does.
+    pub const fn is_touch(self) -> bool {
+        matches!(self, Self::Android | Self::Ios)
+    }
+}
+
 /// The OS the suite runs on: [`Platform::Desktop`]'s WebView is WebKitGTK, WKWebView or
 /// WebView2 by it, so a desktop arm branches on it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

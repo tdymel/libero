@@ -15,14 +15,12 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `accordion::the_arrows_move_focus_skip_the_disabled_and_never_toggle` | desktop | 958: element identity on the WebView |
 | `accordion::the_arrows_move_focus_skip_the_disabled_and_never_toggle` | ios | 958: element identity on the WebView |
 | `audio::the_bars_rise_with_the_decoded_tone` | native | Blitz has no Web Audio to decode with |
-| `bar_chart::a_click_on_a_bar_reports_it` | ios | 3416: the tap reaches the chart layer as a click, but no mark's click is reported |
 | `bar_chart::a_click_on_a_bar_reports_it` | native | a click on a chart mark keeps the vdom busy past 200 polls on Blitz |
 | `bar_chart::a_pointer_on_a_line_s_point_picks_it` | native | a click on a line's point among bars picks nothing on Blitz |
 | `bar_chart::escape_closes_a_hovered_tooltip_without_focus` | android | a touch screen has no hover |
 | `bar_chart::escape_closes_a_hovered_tooltip_without_focus` | ios | a touch screen has no hover |
 | `bar_chart::hovering_shows_the_bar_s_tooltip_and_marker` | android | a touch screen has no hover |
 | `bar_chart::hovering_shows_the_bar_s_tooltip_and_marker` | ios | a touch screen has no hover |
-| `candlestick_chart::a_click_on_a_candle_reports_it` | ios | 3416: the tap reaches the chart layer as a click, but no mark's click is reported |
 | `candlestick_chart::a_click_on_a_candle_reports_it` | native | a click on a chart mark keeps the vdom busy past 200 polls on Blitz |
 | `carousel_autoplay::tab_from_pause_within_the_carousel` | android | 2652 is the desktop WebView's arm |
 | `carousel_autoplay::tab_from_pause_within_the_carousel` | native | native::carousel has the Blitz arm |
@@ -92,8 +90,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `focus_trap::tab_passes_over_a_stop_that_is_not_rendered` | android | 958: element identity on the WebView |
 | `focus_trap::tab_passes_over_a_stop_that_is_not_rendered` | desktop | 958: element identity on the WebView |
 | `focus_trap::tab_passes_over_a_stop_that_is_not_rendered` | ios | 958: element identity on the WebView |
-| `funnel_chart::a_click_on_a_stage_reports_it` | ios | 3416: the tap reaches the chart layer as a click, but no mark's click is reported |
-| `heatmap_chart::a_click_on_a_cell_reports_it` | ios | 3416: the tap reaches the chart layer as a click, but no mark's click is reported |
 | `heatmap_chart::a_click_on_a_cell_reports_it` | native | a click on a chart mark keeps the vdom busy past 200 polls on Blitz |
 | `home::arrow_down_after_typing_enters_on_the_typed_day` | android | 958: element identity on the WebView |
 | `home::arrow_down_after_typing_enters_on_the_typed_day` | desktop | 958: element identity on the WebView |
@@ -145,7 +141,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `lightbox_zoom::a_pinch_zooms_the_picture` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `lightbox_zoom::a_pinch_zooms_the_picture` | native | Blitz takes no multi-touch input |
 | `lightbox_zoom::a_zoomed_picture_pans_only_to_its_edge` | native | 3386: reads the picture's size and pan by script, which Blitz has none of |
-| `line_chart::a_click_on_a_point_reports_it` | ios | 3416: the tap reaches the chart layer as a click, but no mark's click is reported |
 | `line_chart::a_pen_leaving_takes_its_tooltip_along` | android | a synthetic pen hover is a browser check |
 | `line_chart::a_pen_leaving_takes_its_tooltip_along` | ios | a synthetic pen hover is a browser check |
 | `line_chart::a_pen_leaving_takes_its_tooltip_along` | native | Blitz has no script reads |
@@ -153,7 +148,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `line_chart::a_pinch_zooms_the_plot` | ios | AXe injects no two-finger pinch |
 | `line_chart::a_pinch_zooms_the_plot` | native | Blitz takes no multi-touch input |
 | `line_chart::a_pinch_zooms_the_plot` | web | a mouse has no pinch |
-| `line_chart::a_sideways_drag_brushes_a_range` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `line_chart::a_vertical_swipe_over_the_plot_scrolls_the_page` | desktop | a mouse drag scrolls nothing |
 | `line_chart::a_vertical_swipe_over_the_plot_scrolls_the_page` | native | a swipe over the plot scrolls no page on Blitz |
 | `line_chart::a_vertical_swipe_over_the_plot_scrolls_the_page` | web | a mouse drag scrolls nothing |
@@ -219,7 +213,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `phone_field::the_country_list_fits_a_viewport_the_keyboard_shrank` | native | Blitz reports no window resize (todo 2129) |
 | `picker_dialog::android_back_closes_a_color_field` | all but android | 1275: no Back key off Android |
 | `picker_dialog::android_back_closes_a_date_field` | all but android | 1275: no Back key off Android |
-| `pie_chart::a_click_on_a_slice_reports_it` | ios | 3416: the tap reaches the chart layer as a click, but no mark's click is reported |
 | `pin_field::a_digit_retyped_without_a_key_leaves_no_drifted_cell` | desktop | 1126: no text without a key (no IME path) under xdotool |
 | `pin_field::a_digit_retyped_without_a_key_leaves_no_drifted_cell` | ios | 3416: no text without a key through AXe |
 | `pin_field::a_digit_retyped_without_a_key_leaves_no_drifted_cell` | native | no text without a key on Blitz |
@@ -273,7 +266,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `shortcut_help::a_narrow_list_stacks_each_row` | native | 1224: Blitz drops `@container`, so the rows stay side by side |
 | `slider::a_drag_released_past_the_end_tracks_and_ends` | ios | a touch screen has no hover |
 | `slider_touch_keyboard::a_touch_held_on_the_thumb_leaves_no_bubble_after_the_release` | desktop | 1126: no touch input under Xvfb |
-| `splitter::a_double_click_collapses_pane_a_and_restores_it` | ios | 3416: the simulator's tap or drag did not drive the page |
+| `splitter::a_double_click_collapses_pane_a_and_restores_it` | ios | 3416: two AXe taps are 1.6 s apart, past WebKit's double-tap window |
 | `spotlight::a_hovered_row_is_tinted_and_does_not_move_the_highlight` | ios | a touch screen has no hover |
 | `stepper::a_clicked_continue_returns_focus_horizontally` | android | 958: element identity on the WebView |
 | `stepper::a_clicked_continue_returns_focus_horizontally` | desktop | 958: element identity on the WebView |
@@ -288,7 +281,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `stepper::moving_on_returns_focus_to_the_current_step_vertically` | desktop | 958: element identity on the WebView |
 | `stepper::moving_on_returns_focus_to_the_current_step_vertically` | ios | 958: element identity on the WebView |
 | `table::a_row_click_reports_its_row` | ios | a touch screen has no hover |
-| `table::rows_select_by_box_and_keep_it_through_a_sort` | ios | 3416: a tap on a second header adds it to the sort, as Shift would |
 | `table_column_filters::a_date_filter_narrows_a_table` | android | Chromium's typed date segments only |
 | `table_column_filters::a_date_filter_narrows_a_table` | ios | the WebView's native date input opens iOS's date wheel, which typed keys do not fill |
 | `table_column_filters::a_date_filter_narrows_a_table` | windows desktop | 3422: Shift+Tab never leaves the date input on WebView2 |
@@ -351,15 +343,15 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_resize::a_header_grip_drags_the_width_within_its_limits` | ios | 3416: the phone's 402px viewport keeps Name from its declared 150px |
 | `table_resize::the_column_menu_widens_narrows_and_resets_a_width` | ios | 3416: the phone's 402px viewport keeps Name from its declared 150px |
 | `table_resize::the_keys_resize_a_column_from_its_grip` | ios | 3416: the phone's 402px viewport keeps Name from its declared 150px |
-| `table_row_groups::a_windowed_grouped_table_renders_the_rows_in_view` | ios | 3416: End reaches the page, but the windowed table does not take it |
+| `table_row_groups::a_windowed_grouped_table_renders_the_rows_in_view` | ios | 3633: End reaches the page but scrolls no region, as in Safari |
 | `table_scroll::a_capped_table_scrolls_from_its_header` | android | 958: element identity on the WebView |
 | `table_scroll::a_focused_row_control_is_not_hidden_by_the_sticky_header` | android | 958: element identity on the WebView |
 | `table_scroll::a_plain_capped_table_scrolls_as_a_named_region` | android | 958: element identity on the WebView |
 | `table_scroll::a_plain_capped_table_scrolls_as_a_named_region` | macos desktop | 3432: WKWebView: a wheel step sometimes never scrolls the capped rows |
 | `table_scroll::a_tabbed_header_scrolls_into_its_region` | android | 958: element identity on the WebView |
 | `table_scroll::a_tabbed_header_scrolls_into_its_region` | ios | 958: element identity on the WebView |
-| `table_scroll::a_windowed_table_renders_the_rows_in_view` | ios | 3416: End reaches the page, but the windowed table does not take it |
-| `table_scroll::end_at_the_bottom_loads_more_rows` | ios | 3416: End reaches the page, but the windowed table does not take it |
+| `table_scroll::a_windowed_table_renders_the_rows_in_view` | ios | 3633: End reaches the page but scrolls no region, as in Safari |
+| `table_scroll::end_at_the_bottom_loads_more_rows` | ios | 3633: End reaches the page but scrolls no region, as in Safari |
 | `table_tree::a_tree_box_selects_its_descendants_and_mixes_its_ancestors` | ios | 3604: flaky: after a tree box's tap, the WebView takes no touch at all, a held one neither (no touchstart) |
 | `table_tree::a_tree_with_cell_focus_moves_between_rows_and_cells` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_tree::the_arrows_move_and_open_the_tree_rows` | android | 958: roving keys are inert in the emulator's WebView |

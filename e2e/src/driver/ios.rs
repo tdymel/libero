@@ -42,6 +42,9 @@ const TOOL_LIMIT: Duration = Duration::from_secs(45);
 /// wins when the page reports more.
 const STATUS_BAR: f64 = 62.0;
 
+/// The pace of a scrolling drag in CSS px per second: a finger this slow leaves the page no momentum.
+const SCROLL_PACE: f64 = 120.0;
+
 /// HID usages (keyboard page 0x07) of the left modifiers.
 const SHIFT: u8 = 225;
 const CTRL: u8 = 224;
@@ -73,6 +76,14 @@ const EVENT_LOG: &str = "window.__e2eLog = []; \
       addEventListener(type, e => log(`${type} ${name(e.target)}`), true); } \
     addEventListener('scroll', e => log(`scroll ${name(e.target)}`), { capture: true, passive: true }); \
     visualViewport?.addEventListener('resize', () => log(`zoom ${visualViewport.scale.toFixed(2)}`));";
+
+/// The hardware keyboard capitalizes a field's first letter; WebKit reads the attribute when a
+/// field takes focus, so every field gets one when it mounts (3630).
+const NO_CAPITALS: &str = "const off = () => document.querySelectorAll( \
+      'input:not([autocapitalize]), textarea:not([autocapitalize])') \
+      .forEach(field => field.setAttribute('autocapitalize', 'off')); \
+    new MutationObserver(off).observe(document, { childList: true, subtree: true }); \
+    addEventListener('focusin', off, true); off();";
 
 /// The [`EVENT_LOG`] lines, a repeated one with its count and time span in ms.
 const EVENT_LINES: &str = "(window.__e2eLog ?? []).map(({ line, n, at, to }) => \
@@ -195,6 +206,7 @@ impl Ios {
         ios.bridge
             .wait_until("typeof window.__route === 'function'")?;
         ios.bridge.run(EVENT_LOG)?;
+        ios.bridge.run(NO_CAPITALS)?;
         if let Err(error) = ios.calibrate() {
             ios.keep_failure();
             return Err(error);
@@ -761,10 +773,12 @@ impl Driver for Ios {
         self.drag_by((x, y), dx, dy, 0.5)
     }
 
-    /// A slow swipe through the viewport's middle, so the page comes to rest.
+    /// A drag through the viewport's middle at a walking pace: a swipe flicks the page well
+    /// past `dy` (3631).
     async fn scroll_by(&mut self, dy: f64) -> Result<()> {
         let (vw, vh) = self.viewport().await?;
-        self.swipe((vw / 2.0, vh / 2.0 + dy / 2.0), 0.0, -dy, 0.5)
+        let secs = (dy.abs() / SCROLL_PACE).max(0.5);
+        self.drag_by((vw / 2.0, vh / 2.0 + dy / 2.0), 0.0, -dy, secs)
     }
 
     async fn long_press(&mut self, selector: &str, ms: u64) -> Result<()> {

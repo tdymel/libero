@@ -3,7 +3,7 @@
 //! on Blitz.
 
 use anyhow::{Result, ensure};
-use e2e::driver::{Driver, Platform, eventually};
+use e2e::driver::{Driver, eventually};
 use e2e::passes::keyboard;
 use e2e::{Fixture, Suite, Viewport, wait};
 
@@ -296,7 +296,7 @@ async fn clicks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         plot.y + plot.height / 2.0,
     );
     d.click_at(x, y).await?;
-    if d.platform() == Platform::Android {
+    if d.platform().is_touch() {
         reads(d, "#active", "Chrome 0 60", "a tap").await?;
         ensure!(
             d.text("#clicked").await?.is_empty(),
@@ -315,8 +315,7 @@ async fn clicks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_click_on_a_slice_reports_it,
     "/pie-chart",
-    clicks,
-    ios: skip("3416: the tap reaches the chart layer as a click, but no mark's click is reported")
+    clicks
 );
 
 /// With a slice hidden, the tooltip and the keys' announcement give the share the labels

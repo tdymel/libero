@@ -3,7 +3,7 @@
 //! on Blitz.
 
 use anyhow::{Result, ensure};
-use e2e::driver::{Driver, Platform, eventually};
+use e2e::driver::{Driver, eventually};
 use e2e::passes::keyboard;
 use e2e::{Fixture, Suite, Viewport, wait};
 
@@ -367,7 +367,7 @@ async fn clicks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let bar = d.rect("#chart [data-chart-drawing] path").await?;
     let (x, y) = (bar.x + bar.width / 2.0, bar.y + bar.height / 2.0);
     d.click_at(x, y).await?;
-    if d.platform() == Platform::Android {
+    if d.platform().is_touch() {
         reads(d, "#active", "2025 Q1 120", "a tap").await?;
         ensure!(
             d.text("#clicked").await?.is_empty(),
@@ -382,8 +382,7 @@ e2e::scenario!(
     a_click_on_a_bar_reports_it,
     "/bar-chart",
     clicks,
-    native: skip("a click on a chart mark keeps the vdom busy past 200 polls on Blitz"),
-    ios: skip("3416: the tap reaches the chart layer as a click, but no mark's click is reported")
+    native: skip("a click on a chart mark keeps the vdom busy past 200 polls on Blitz")
 );
 
 /// A legend button hides its series' bars; the last shown one stays.
