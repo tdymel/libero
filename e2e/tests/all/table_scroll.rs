@@ -6,6 +6,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text};
 use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Viewport, ax, wait};
+use std::time::{Duration, Instant};
 
 /// Todo 734: Tab scrolls the region to the last header's button. Blitz scrolled
 /// nothing on a focus move, and held the table at the region's width.
@@ -88,8 +89,17 @@ async fn scrolls_under_the_header<D: Driver>(
     for _ in 1..presses {
         let (_, before, _) = tops(d).await?;
         d.press(key).await?;
+        let mut sent = Instant::now();
         eventually(d, "a step to scroll the rows", async |d| {
-            Ok(tops(d).await?.1 < before)
+            if tops(d).await?.1 < before {
+                return Ok(true);
+            }
+            // WKWebView sometimes drops a press: send it again.
+            if d.platform() == Platform::Desktop && sent.elapsed() > Duration::from_secs(2) {
+                d.press(key).await?;
+                sent = Instant::now();
+            }
+            Ok(false)
         })
         .await?;
         // WebKit drops a press that lands while the last step still animates; Chromium
@@ -322,8 +332,7 @@ e2e::scenario!(
     a_plain_capped_table_scrolls_as_a_named_region,
     "/table/sticky-plain",
     a_plain_capped_table_is_a_named_stop,
-    android: skip("958: element identity on the WebView"),
-    macos: skip("3432: WKWebView: a wheel step sometimes never scrolls the capped rows")
+    android: skip("958: element identity on the WebView")
 );
 
 /// Todo 1455: scrolled step by step, the rendered rows always cover the area under the header.
