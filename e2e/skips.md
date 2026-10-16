@@ -29,6 +29,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `carousel_autoplay::tab_from_pause_within_the_carousel` | web | tab_from_pause_to_the_track_is_no_new_entry is the web's arm |
 | `cascader::a_disabled_cascader_row_looks_disabled` | ios | a touch screen has no hover |
 | `cascader_phone::android_back_closes_a_cascader` | all but android | 1275: no Back key off Android |
+| `chrono_field::the_moment_field_meets_the_baseline` | windows web | 3585: at mobile dark Tab cycled in an open picker and never reached the input, 1 run in 3 |
 | `color_field::arrow_down_enters_the_colour_dialog_and_escape_returns` | android | 958: element identity on the WebView |
 | `color_field::arrow_down_enters_the_colour_dialog_and_escape_returns` | desktop | 958: element identity on the WebView |
 | `color_field::arrow_down_enters_the_colour_dialog_and_escape_returns` | ios | 958: element identity on the WebView |

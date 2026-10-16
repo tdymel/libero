@@ -366,18 +366,31 @@ fn the_other_fields_meet_the_baseline() {
     for (name, route) in [
         ("chrono_field-day", "/chrono-field/day"),
         ("chrono_field-month", "/chrono-field/month"),
-        ("chrono_field-moment", "/chrono-field/moment"),
         ("chrono_field-digital", "/chrono-field/digital"),
     ] {
-        Suite::new(name, route)
-            .focusable(INPUT)
-            .state(
-                "open",
-                &[Step::TabTo(INPUT), Step::Press(keyboard::ARROW_DOWN)],
-                "[role=dialog]:focus-within",
-            )
-            .run();
+        baseline(name, route);
     }
+}
+
+/// The date-time field, apart so Windows can skip it alone.
+#[test]
+#[cfg_attr(
+    windows,
+    ignore = "3585: at mobile dark Tab cycled in an open picker and never reached the input, 1 run in 3"
+)]
+fn the_moment_field_meets_the_baseline() {
+    baseline("chrono_field-moment", "/chrono-field/moment");
+}
+
+fn baseline(name: &'static str, route: &'static str) {
+    Suite::new(name, route)
+        .focusable(INPUT)
+        .state(
+            "open",
+            &[Step::TabTo(INPUT), Step::Press(keyboard::ARROW_DOWN)],
+            "[role=dialog]:focus-within",
+        )
+        .run();
 }
 
 /// Typed units read leniently, the form gets ISO 8601, and a duration past

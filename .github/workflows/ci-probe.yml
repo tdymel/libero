@@ -139,11 +139,12 @@ jobs:
           mkdir -p "$logs"
           # `plan` validated the pairs: the unquoted expansion splits them, nothing else.
           if [ -n "$PROBE_ENV" ]; then export $PROBE_ENV; fi
-          # `shard:N:M` is the Nth of M slices of the units, as the platform legs split them.
+          # `shard:N:M` is the Nth of M slices of the units, as the platform legs split them; `smoke` the macOS web leg's.
           filters="$FILTER"
           case "$FILTER" in
             shard:*) IFS=: read -r _ n m <<< "$FILTER"
               filters=$($PY .github/scripts/shard.py units "$n" "$m" | tr -d '\r') ;;
+            smoke) filters=$($PY .github/scripts/shard.py smoke | tr -d '\r') ;;
           esac
           # The runner's artifacts go to `temp_dir()`: `$TMPDIR` on macOS, `%TMP%` on Windows.
           case "$RUNNER_OS" in
