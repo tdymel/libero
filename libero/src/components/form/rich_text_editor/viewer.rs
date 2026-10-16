@@ -26,6 +26,10 @@ base_props! {
         /// draws a plain fallback.
         #[props(default)]
         nodes: NodeViews,
+        /// Added to every heading's level, clamped at `h6`, so a comment's `#` sits below
+        /// the host page's own headings: `1` draws `h1` as `h2`.
+        #[props(default)]
+        heading_offset: u8,
     }
 }
 
@@ -64,6 +68,7 @@ pub fn RichTextView(props: RichTextViewProps) -> Element {
                     task_label: words.toggle_task,
                     views: &props.nodes,
                     fence: None,
+                    heading_offset: props.heading_offset,
                 },
             ),
         )

@@ -159,6 +159,6 @@ pub use crate::components::overlay::{
 // The sortable hooks share `Sortable`'s context and orientation, so they live beside it.
 // archunit: ignore components::data_display
 pub use crate::components::data_display::sortable::{
-    SortableHandle, SortableItemHandle, SortableMove, SortableOptions, use_sortable,
-    use_sortable_item,
+    SortableHandle, SortableItemHandle, SortableMove, SortableOptions, use_labelled_sortable_item,
+    use_sortable, use_sortable_item,
 };

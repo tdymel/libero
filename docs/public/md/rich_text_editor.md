@@ -442,7 +442,8 @@ the Bold button reads as pressed.
 - Drag and drop of text is ignored. A replacement with no word to replace (no
   target range, collapsed caret) is ignored too.
 - Headings render as `h1` to `h6` as stored, so a `RichTextView` in a comment
-  list adds them to the page's heading outline; there is no level offset.
+  list adds them to the page's heading outline; give it a `heading_offset` to
+  lower them below the page's own.
 - `spellcheck` is off by default: Chromium shows no squiggles for text the
   editor writes. Firefox and Safari are not verified.
 
@@ -492,6 +493,7 @@ HTML attributes.
 |---|---|---|---|
 | `value` | `Doc` | required | The document to show. |
 | `nodes` | `NodeViews` | `NodeViews::new()` | Your component per custom node name, as the editor's `nodes`. Built-ins take a view under their name too; `code_block` stays fixed. |
+| `heading_offset` | `u8` | `0` | Added to every heading's level, clamped at `h6`, so a comment's `#` sits below the host page's headings: `1` draws `h1` as `h2`. |
 
 `RichTextView` also takes the `<div>` HTML attributes and, like every
 component, the shared props `sx`, `class`, `style`, `states`, and any extra

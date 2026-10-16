@@ -75,8 +75,8 @@ pub fn SidebarPage() -> Element {
                     "An in-flow panel on one edge of its parent that scrolls its own "
                     "content. "
                     Code { source: "side" }
-                    " picks the border, not the position, so an end sidebar comes after "
-                    "its sibling in the DOM. For a panel that slides in over the page, see "
+                    " names the side it sits on, with the border facing the content, not "
+                    "the position, so an end sidebar comes after its sibling in the DOM. For a panel that slides in over the page, see "
                     Code { source: "use_drawer" }
                     "."
                 }

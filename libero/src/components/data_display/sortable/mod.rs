@@ -9,9 +9,8 @@ pub(crate) use sortable::{
     use_handle_name,
 };
 pub use sortable::{Sortable, SortableItem, SortableItemPart, SortableItemProps, SortableProps};
-pub(crate) use use_sortable::{
-    FixedSlots, use_fixed_sortable, use_labelled_sortable_item, use_spanning_sortable_item,
-};
+pub(crate) use use_sortable::{FixedSlots, use_fixed_sortable, use_spanning_sortable_item};
 pub use use_sortable::{
-    SortableHandle, SortableItemHandle, SortableOptions, use_sortable, use_sortable_item,
+    SortableHandle, SortableItemHandle, SortableOptions, use_labelled_sortable_item, use_sortable,
+    use_sortable_item,
 };

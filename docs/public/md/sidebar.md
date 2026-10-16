@@ -7,8 +7,8 @@ Index: [index.md](index.md) lists every other page
 Description: An in-flow panel on one edge of its parent that scrolls its own content, like a nav rail or an inspector.
 
 An in-flow panel on one edge of its parent that scrolls its own content. `side`
-picks the border, not the position, so an end sidebar comes after its sibling
-in the DOM. For a panel that slides in over the page, see
+names the side it sits on, with the border facing the content, not the
+position, so an end sidebar comes after its sibling in the DOM. For a panel that slides in over the page, see
 [`use_drawer`](drawer.md).
 
 The content sits in a [`ScrollArea`](scroll_area.md), so it scrolls apart from
@@ -88,13 +88,13 @@ With `side: "top"` or `"bottom"`, `size` is a height, so the parent needs
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `side` | `SidebarSide` | `start` | The edge that gets the border, and whether `size` is a width or a height. `start` is the right edge under `dir="rtl"`. It does not move the panel, so put it at the matching end of the DOM. |
+| `side` | `SidebarSide` | `start` | The side the panel sits on, with its border on the edge facing the content, and whether `size` is a width or a height. `start` is the right side under `dir="rtl"`. It does not move the panel, so put it at the matching end of the DOM. |
 | `size` | `ThemeAwareValue` | `md` | The panel's width, or its height on a `top` or `bottom` side. A start or end panel takes half its parent's width at most, a top or bottom one half its height, when the parent's height is set. A size word or any CSS, e.g. `size: "18rem"`. |
 | `component` | `HtmlTag` | `aside` | The element to render, such as `nav` for a navigation panel. |
 | `children` | `Element` | required | The panel's content, scrolled by an inner `ScrollArea`. |
 | `parts` | `Parts<SidebarPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
-`SidebarSide` is `start`, `end`, `top` or `bottom`. `start` and `end` follow the text direction: `start` is the right edge under `dir="rtl"`.
+`SidebarSide` is `start`, `end`, `top` or `bottom`. `start` and `end` follow the text direction: `start` is the right side under `dir="rtl"`.
 
 Like every component, `Sidebar` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.

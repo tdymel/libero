@@ -69,7 +69,7 @@ parts_enum! {
 base_props! {
     parts(SidebarPart);
     pub struct SidebarProps {
-        /// The edge it borders and the axis `size` sizes; it does not place the panel.
+        /// The side it sits on, its border facing the content, and the axis `size` sizes; it does not place the panel.
         #[props(default, into)]
         side: Input<SidebarSide>,
         /// The width (or height, on `top` or `bottom`): a size word or any CSS, as `size: "18rem"`.

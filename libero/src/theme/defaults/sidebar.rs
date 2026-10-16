@@ -5,8 +5,8 @@ use crate::theme::{Size, SizeCss, Sizes};
 pub const SIDEBAR_SIZE: SizeCss = SizeCss::new("--lsx-sidebar-size-");
 
 str_enum! {
-    /// Which edge a `Sidebar` borders. Descriptive only: it must match the
-    /// panel's DOM position. Logical: `Start` is the right under `dir="rtl"`.
+    /// The side a `Sidebar` sits on; its border faces the content. Descriptive only: it
+    /// must match the panel's DOM position. Logical: `Start` is the right under `dir="rtl"`.
     #[state_prefix = "side"]
     pub enum SidebarSide {
         #[default]

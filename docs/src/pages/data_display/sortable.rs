@@ -61,7 +61,7 @@ pub fn SortablePage() -> Element {
                     "A dropped item slides into its slot. Under reduced motion it lands at once, and the others jump instead of sliding.",
                 ])
                 .must([
-                    "Give each `SortableItem` a `label`, or its controls and the announcements name it by position (\"Item 2\").",
+                    "Give each `SortableItem` a `label`, or its controls and the announcements name it by position (\"Item 2\"). In your own markup, name each item with `use_labelled_sortable_item`, or the announcements say \"Item 2\" while your handle reads \"Reorder Apple\".",
                     "With `move_buttons: false`, give the reader another way to reorder without dragging, such as a menu.",
                 ])
                 .example("A fruit list where each `SortableItem` has `label: name`. Tab reaches \"Reorder Apple\"; Space lifts it, Down moves it, and the status region says where Apple is now; Space drops it, and focus stays on the handle.")
@@ -113,7 +113,10 @@ pub fn SortablePage() -> Element {
                     Code { source: "instructions" }
                     ", the key help to render as the grab handle's description, and "
                     Code { source: "touch_instructions" }
-                    " for a touch screen showing the move buttons. The component is those two hooks plus a grip button, two move buttons and a status region."
+                    " for a touch screen showing the move buttons. The component is those two hooks plus a grip button, two move buttons and a status region. "
+                    "The announcements name a hook item by position, \"Item 2\", unless you call "
+                    Code { source: "use_labelled_sortable_item(index, Some(name))" }
+                    " to name it as your handle does."
                 }
             }
         }

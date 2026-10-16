@@ -946,6 +946,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                     task_label: words.toggle_task,
                     views: &props.nodes,
                     fence: fence.as_ref(),
+                    heading_offset: 0,
                 },
             )
         } else {

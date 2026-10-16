@@ -53,6 +53,11 @@ fn hooks() -> Vec<HookRow> {
             Route::SortablePage {},
         ),
         row(
+            "use_labelled_sortable_item",
+            "use_sortable_item with a name for the announcements.",
+            Route::SortablePage {},
+        ),
+        row(
             "use_intersection",
             "How much of an element is visible inside a root.",
             Route::UseIntersectionPage {},

@@ -472,7 +472,7 @@ mod tests {
     }
 
     #[test]
-    fn an_area_from_another_enum_is_distinguishable() {
+    fn a_same_name_area_from_another_enum_matches_by_name_but_differs_in_source() {
         #[derive(Clone, Copy, PartialEq)]
         struct Other;
         impl GridArea for Other {

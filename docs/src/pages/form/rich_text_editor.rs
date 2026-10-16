@@ -244,6 +244,9 @@ pub fn RichTextEditorPage() -> Element {
                     prop("nodes", "NodeViews")
                         .default("NodeViews::new()")
                         .doc("Your component per custom node name, as the editor's `nodes`. Built-ins take a view under their name too; `code_block` stays fixed."),
+                    prop("heading_offset", "u8")
+                        .default("0")
+                        .doc("Added to every heading's level, clamped at `h6`, so a comment's `#` sits below the host page's headings: `1` draws `h1` as `h2`."),
                 ]).extends("div"),
             ],
             accessibility: a11y()
@@ -302,7 +305,7 @@ pub fn RichTextEditorPage() -> Element {
                     "Copy and cut write the selection as Markdown, as plain text and as `text/markdown`: a quote as `>`, a code block fenced with its language, lists, headings, rules, marks and links as written. Custom nodes write through their `NodeSpec::markdown` (pass `registry`). Cut is one undo step.",
                     "Paste reads Markdown back into formatted blocks; custom nodes stay text. Text from elsewhere is read the same way, one paragraph per line. In a code block it is pasted as is. A pasted web address alone links the selection, or becomes a link at the caret.",
                     "Drag and drop of text is ignored. A replacement with no word to replace (no target range, collapsed caret) is ignored too.",
-                    "Headings render as `h1` to `h6` as stored, so a `RichTextView` in a comment list adds them to the page's heading outline; there is no level offset.",
+                    "Headings render as `h1` to `h6` as stored, so a `RichTextView` in a comment list adds them to the page's heading outline; give it a `heading_offset` to lower them below the page's own.",
                     "`spellcheck` is off by default: Chromium shows no squiggles for text the editor writes. Firefox and Safari are not verified.",
                 ]),
             lead: rich_lead(),

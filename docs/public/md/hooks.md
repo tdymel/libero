@@ -22,6 +22,7 @@ Accessibility. The rest are shown on the component or guide page they belong to.
 | `use_drag` | Pointer capture and deltas for a drag. | [Drag](use_drag.md) |
 | `use_sortable` | A list whose items reorder by dragging their handle. | [Sortable](sortable.md) |
 | `use_sortable_item` | One item of a use_sortable list: its handle and offset. | [Sortable](sortable.md) |
+| `use_labelled_sortable_item` | use_sortable_item with a name for the announcements. | [Sortable](sortable.md) |
 | `use_intersection` | How much of an element is visible inside a root. | [Intersection](use_intersection.md) |
 | `use_in_viewport` | Whether an element is in the viewport. | [Intersection](use_intersection.md) |
 | `use_long_press` | Handlers that call back once a pointer stays down. | [Long press](use_long_press.md) |

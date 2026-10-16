@@ -1032,15 +1032,16 @@ fn trim(items: &mut Vec<Option<Registered>>) {
 ///
 /// Key the item by its data, not its index: a reorder then moves the item,
 /// focus included, instead of rebuilding it.
+///
+/// The announcements name it by position ("Item 2"); for its own name use
+/// [`use_labelled_sortable_item`].
 pub fn use_sortable_item(index: usize) -> SortableItemHandle {
     use_labelled_sortable_item(index, None)
 }
 
-/// [`use_sortable_item`], named `label` in the announcements.
-pub(crate) fn use_labelled_sortable_item(
-    index: usize,
-    label: Option<String>,
-) -> SortableItemHandle {
+/// [`use_sortable_item`], named `label` in the announcements ("Apple lifted, position 1 of 3").
+/// Pass the name your grab handle reads; `None` keeps the position, "Item 2".
+pub fn use_labelled_sortable_item(index: usize, label: Option<String>) -> SortableItemHandle {
     use_spanning_sortable_item(index, label, None)
 }
 

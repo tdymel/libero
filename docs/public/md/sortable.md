@@ -47,7 +47,9 @@ grab `handle` with its `onpointerdown`, `onkeydown` and `onblur`, and
 slide into its slot after a drop. `earlier`/`onearlier` and `later`/`onlater`
 wire your move buttons, `first` and `last` say when to disable them.
 `dragging` and `sorting` say whether this item, or any, is dragged. A hook
-item is named by position in the announcements. `instructions` is the
+item is named by position ("Item 2") in the announcements, unless you call
+`use_labelled_sortable_item(index, Some(name))` instead: it names the item as
+your grab handle does. `instructions` is the
 localized key help for the grab handle: render it in a hidden element with an
 id of yours and point the handle's `aria-describedby` at that id. Where you
 show the move buttons on a touch screen, use `touch_instructions` instead: a
@@ -57,7 +59,7 @@ tap lifts nothing, so it points to the buttons.
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Orientation, VisuallyHidden},
-    hooks::{SortableMove, SortableOptions, use_sortable, use_sortable_item},
+    hooks::{SortableMove, SortableOptions, use_labelled_sortable_item, use_sortable},
 };
 
 #[component]
@@ -85,7 +87,7 @@ fn Demo() -> Element {
 
 #[component]
 fn Fruit(index: usize, name: &'static str) -> Element {
-    let item = use_sortable_item(index);
+    let item = use_labelled_sortable_item(index, Some(name.to_string()));
     rsx! {
         Box {
             role: "listitem",
@@ -205,7 +207,9 @@ parts work.
 ### You must
 
 - Give each `SortableItem` a `label`, or its controls and the announcements
-  name it by position ("Item 2").
+  name it by position ("Item 2"). In your own markup, name each item with
+  `use_labelled_sortable_item`, or the announcements say "Item 2" while your
+  handle reads "Reorder Apple".
 - With `move_buttons: false`, give the reader another way to reorder without
   dragging, such as a menu.
 

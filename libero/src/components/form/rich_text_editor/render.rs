@@ -104,6 +104,14 @@ pub(crate) struct RenderCtx<'a> {
     pub views: &'a NodeViews,
     /// The language button on the source block's opening fence.
     pub fence: Option<&'a Element>,
+    /// Added to every heading's level, clamped at `h6`.
+    pub heading_offset: u8,
+}
+
+impl RenderCtx<'_> {
+    fn heading_level(&self, level: u8) -> u8 {
+        level.saturating_add(self.heading_offset).min(6)
+    }
 }
 
 pub(crate) fn blocks(blocks: &[Block], ctx: RenderCtx<'_>) -> Element {
@@ -123,7 +131,11 @@ fn block(block: &Block, ctx: RenderCtx<'_>) -> Element {
     }
     match &block.kind {
         BlockKind::Paragraph => paragraph(block, None, ctx),
-        BlockKind::Heading { level } => heading(*level, key, inlines(block.inlines(), ctx)),
+        BlockKind::Heading { level } => heading(
+            ctx.heading_level(*level),
+            key,
+            inlines(block.inlines(), ctx),
+        ),
         BlockKind::CodeBlock { language } => code(block, language, ctx),
         BlockKind::Quote => rsx! { blockquote { {blocks(block.children(), ctx)} } },
         BlockKind::List {
@@ -212,8 +224,9 @@ fn builtin_view(name: &str, block: &Block, key: String, ctx: RenderCtx<'_>) -> E
             rsx! { p { "data-key": key.clone(), {inlines(block.inlines(), ctx)} } }
         }
         BlockKind::Heading { level } => {
-            attrs.insert("level".into(), (*level).into());
-            heading(*level, key.clone(), inlines(block.inlines(), ctx))
+            let level = ctx.heading_level(*level);
+            attrs.insert("level".into(), level.into());
+            heading(level, key.clone(), inlines(block.inlines(), ctx))
         }
         BlockKind::Rule => VNode::empty(),
         kind => {

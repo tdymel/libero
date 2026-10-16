@@ -59,6 +59,24 @@ fn a_view_is_not_an_editing_surface() {
 }
 
 #[test]
+fn a_heading_offset_lowers_every_heading_and_stops_at_h6() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                RichTextView { value: Doc::from_markdown("# one\n\n###### six"), heading_offset: 2 }
+            }
+        }
+    }
+
+    let html = render(app);
+    let html = body(&html);
+
+    assert!(html.contains("<h3"), "{html}");
+    assert!(!html.contains("<h1"), "{html}");
+    assert!(html.contains("<h6"), "{html}");
+}
+
+#[test]
 fn a_view_draws_a_caller_node_through_its_view() {
     fn mention(props: NodeViewProps) -> Element {
         let user = props.attrs.get("user").and_then(|user| user.as_str());
