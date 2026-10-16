@@ -191,6 +191,50 @@ pub(super) fn used<V: DateValue, T>(prop: &str, value: T) -> Option<T> {
     V::USES.contains(&prop).then_some(value)
 }
 
+/// A date-time flow with the props both flows take; `extra` adds the ones only one reads.
+macro_rules! date_time_flow {
+    ($flow:ident, $args:ident, { $($extra:tt)* }) => {{
+        let onchange = $args.onchange;
+        rsx! {
+            $flow {
+                value: $args.value,
+                onpick: move |next| {
+                    if let Some(onchange) = onchange {
+                        onchange.call(next);
+                    }
+                },
+                min: $args.options.min,
+                max: $args.options.max,
+                exclude_date: $args.options.exclude_date,
+                today: $args.today,
+                size: $args.size,
+                variant: $args.options.variant,
+                with_seconds: $args.options.with_seconds,
+                step: $args.options.step,
+                twelve_hour: $args.options.twelve_hour,
+                focusable: $args.focusable,
+                name: $args.name,
+                class: $args.class,
+                sx: $args.sx,
+                parts: $args.parts,
+                states: $args.states,
+                attributes: $args.attributes,
+                $($extra)*
+            }
+        }
+    }};
+}
+
+/// The calendar's hidden form input: `name` posting the value, empty when unset.
+fn hidden_value(name: Option<String>, value: Option<impl ToString>) -> Option<(String, String)> {
+    name.map(|name| {
+        (
+            name,
+            value.map(|value| value.to_string()).unwrap_or_default(),
+        )
+    })
+}
+
 impl DateValue for NaiveDate {
     type Bound = NaiveDate;
 }
@@ -264,29 +308,29 @@ impl Sealed for NaiveDate {
             for args in std::iter::once(args) {
                 Calendar {
                     key: "{level:?}-{mini}",
-                variant: if mini { CalendarVariant::Mini } else { CalendarVariant::Full },
-                days: options.days,
-                selection: Selection::Single(value),
-                onpick,
-                columns: match level {
-                    DateLevel::Day => options.columns.unwrap_or(1),
-                    _ => 1,
-                },
-                lowest: level,
-                min: options.min,
-                max: options.max,
-                exclude_date: match level {
-                    DateLevel::Day => options.exclude_date,
-                    _ => None,
-                },
-                today: args.today,
-                size,
-                focusable: args.focusable,
-                hidden: args.name.map(|name| (name, value.map(|day| day.to_string()).unwrap_or_default())),
-                class: args.class,
-                sx: args.sx,
-                parts: args.parts,
-                states: args.states,
+                    variant: if mini { CalendarVariant::Mini } else { CalendarVariant::Full },
+                    days: options.days,
+                    selection: Selection::Single(value),
+                    onpick,
+                    columns: match level {
+                        DateLevel::Day => options.columns.unwrap_or(1),
+                        _ => 1,
+                    },
+                    lowest: level,
+                    min: options.min,
+                    max: options.max,
+                    exclude_date: match level {
+                        DateLevel::Day => options.exclude_date,
+                        _ => None,
+                    },
+                    today: args.today,
+                    size,
+                    focusable: args.focusable,
+                    hidden: hidden_value(args.name, value),
+                    class: args.class,
+                    sx: args.sx,
+                    parts: args.parts,
+                    states: args.states,
                     attributes: args.attributes,
                 }
             }
@@ -437,35 +481,10 @@ impl Sealed for NaiveDateTime {
     }
 
     fn picker(args: PickerArgs<Self>) -> Element {
-        let (options, onchange) = (args.options, args.onchange);
-        rsx! {
-            DateTimeFlow {
-                value: args.value,
-                onpick: move |next| {
-                    if let Some(onchange) = onchange {
-                        onchange.call(next);
-                    }
-                },
-                min: options.min,
-                max: options.max,
-                exclude_date: options.exclude_date,
-                today: args.today,
-                size: args.size,
-                variant: options.variant,
-                with_seconds: options.with_seconds,
-                step: options.step,
-                twelve_hour: options.twelve_hour,
-                calendar: options.calendar,
-                days: options.days,
-                focusable: args.focusable,
-                name: args.name,
-                class: args.class,
-                sx: args.sx,
-                parts: args.parts,
-                states: args.states,
-                attributes: args.attributes,
-            }
-        }
+        date_time_flow!(DateTimeFlow, args, {
+            calendar: args.options.calendar,
+            days: args.options.days,
+        })
     }
 }
 
@@ -483,8 +502,13 @@ impl Sealed for DateRange<NaiveDate> {
     ];
 
     fn accepts(self, options: &PickerOptions<NaiveDate>) -> Result<(), Refusal> {
-        self.start.accepts(options)?;
-        self.end.map_or(Ok(()), |end| end.accepts(options))
+        // A range picks days whatever `level` says.
+        let options = PickerOptions {
+            level: DateLevel::Day,
+            ..*options
+        };
+        self.start.accepts(&options)?;
+        self.end.map_or(Ok(()), |end| end.accepts(&options))
     }
 
     fn show_bound(bound: NaiveDate, formats: &Formats) -> String {
@@ -521,7 +545,7 @@ impl Sealed for DateRange<NaiveDate> {
                 today: args.today,
                 size,
                 focusable: args.focusable,
-                hidden: args.name.map(|name| (name, value.map(|range| range.to_string()).unwrap_or_default())),
+                hidden: hidden_value(args.name, value),
                 class: args.class,
                 sx: args.sx,
                 parts: args.parts,
@@ -562,32 +586,6 @@ impl Sealed for DateRange<NaiveDateTime> {
     }
 
     fn picker(args: PickerArgs<Self>) -> Element {
-        let (options, onchange) = (args.options, args.onchange);
-        rsx! {
-            DateTimeRangeFlow {
-                value: args.value,
-                onpick: move |next| {
-                    if let Some(onchange) = onchange {
-                        onchange.call(next);
-                    }
-                },
-                min: options.min,
-                max: options.max,
-                exclude_date: options.exclude_date,
-                today: args.today,
-                size: args.size,
-                variant: options.variant,
-                with_seconds: options.with_seconds,
-                step: options.step,
-                twelve_hour: options.twelve_hour,
-                focusable: args.focusable,
-                name: args.name,
-                class: args.class,
-                sx: args.sx,
-                parts: args.parts,
-                states: args.states,
-                attributes: args.attributes,
-            }
-        }
+        date_time_flow!(DateTimeRangeFlow, args, {})
     }
 }

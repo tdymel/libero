@@ -1,6 +1,6 @@
 //! The document tree: blocks with stable keys, holding blocks or inline content.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
@@ -68,6 +68,16 @@ pub enum CustomContent {
     Atom,
 }
 
+impl From<CustomContent> for ContentKind {
+    fn from(content: CustomContent) -> Self {
+        match content {
+            CustomContent::Inline => Self::Inline,
+            CustomContent::Blocks => Self::Blocks,
+            CustomContent::Atom => Self::Atom,
+        }
+    }
+}
+
 fn one() -> u64 {
     1
 }
@@ -118,11 +128,7 @@ impl BlockKind {
             Self::Paragraph | Self::Heading { .. } | Self::CodeBlock { .. } => ContentKind::Inline,
             Self::Quote | Self::List { .. } | Self::ListItem { .. } => ContentKind::Blocks,
             Self::Rule => ContentKind::Atom,
-            Self::Custom { content, .. } => match content {
-                CustomContent::Inline => ContentKind::Inline,
-                CustomContent::Blocks => ContentKind::Blocks,
-                CustomContent::Atom => ContentKind::Atom,
-            },
+            Self::Custom { content, .. } => (*content).into(),
         }
     }
 
@@ -448,7 +454,7 @@ impl Doc {
     /// Fixes what a hand-written or stored doc may get wrong: duplicate keys,
     /// split text runs, content in the wrong field, no block at all.
     pub fn normalize(&mut self) {
-        let mut seen = std::collections::HashSet::new();
+        let mut seen = HashSet::new();
         let mut max = 0;
         visit(&self.blocks, &mut |block| max = max.max(block.key.0));
         self.next_key = self.next_key.max(max + 1);
@@ -463,11 +469,17 @@ impl Doc {
         }
     }
 
-    fn normalize_block(
-        &mut self,
-        block: &mut Block,
-        seen: &mut std::collections::HashSet<NodeKey>,
-    ) {
+    fn wrap_list_children(&mut self, list: &mut Block) {
+        for child in list.children_mut() {
+            if !child.kind.is_list_item() {
+                let item = self.container(BlockKind::list_item(), Vec::new());
+                let inner = std::mem::replace(child, item);
+                child.children_mut().push(inner);
+            }
+        }
+    }
+
+    fn normalize_block(&mut self, block: &mut Block, seen: &mut HashSet<NodeKey>) {
         if !seen.insert(block.key) {
             block.key = self.key();
             seen.insert(block.key);
@@ -486,15 +498,7 @@ impl Doc {
             ContentKind::Atom => block.content = Content::Empty,
             ContentKind::Blocks => {
                 if matches!(block.kind, BlockKind::List { .. }) {
-                    for child in block.children_mut() {
-                        if !child.kind.is_list_item() {
-                            let inner = std::mem::replace(
-                                child,
-                                self.container(BlockKind::list_item(), Vec::new()),
-                            );
-                            child.children_mut().push(inner);
-                        }
-                    }
+                    self.wrap_list_children(block);
                 }
                 if block.children().is_empty() {
                     let paragraph = self.leaf(BlockKind::Paragraph, Vec::new());
@@ -574,19 +578,8 @@ impl Doc {
 
     /// The doc with keys renumbered in reading order: compares content, not identity.
     pub fn rekeyed(&self) -> Self {
-        fn renumber(blocks: &mut [Block], next: &mut u64) {
-            for block in blocks {
-                block.key = NodeKey(*next);
-                *next += 1;
-                if let Content::Blocks(children) = &mut block.content {
-                    renumber(children, next);
-                }
-            }
-        }
         let mut doc = self.clone();
-        let mut next = 1;
-        renumber(&mut doc.blocks, &mut next);
-        doc.next_key = next;
+        doc.assign_keys();
         doc
     }
 
@@ -660,23 +653,29 @@ pub fn normalize_inlines(inlines: &mut Vec<Inline>) {
     *inlines = merged;
 }
 
+/// Each inline with the char offsets where it starts and ends.
+pub fn runs(inlines: &[Inline]) -> impl Iterator<Item = (usize, usize, &Inline)> {
+    inlines.iter().scan(0, |at, inline| {
+        let start = *at;
+        *at += inline.len();
+        Some((start, *at, inline))
+    })
+}
+
 /// Splits at a char offset; a run straddling it is cut in two.
 pub fn split_inlines(inlines: &[Inline], offset: usize) -> (Vec<Inline>, Vec<Inline>) {
     let mut before = Vec::new();
     let mut after = Vec::new();
-    let mut at = 0;
-    for inline in inlines {
-        let len = inline.len();
-        if at + len <= offset {
+    for (start, end, inline) in runs(inlines) {
+        if end <= offset {
             before.push(inline.clone());
-        } else if at >= offset {
+        } else if start >= offset {
             after.push(inline.clone());
         } else if let Inline::Text { text, marks } = inline {
-            let cut = byte_index(text, offset - at);
+            let cut = byte_index(text, offset - start);
             before.push(Inline::marked(&text[..cut], marks.clone()));
             after.push(Inline::marked(&text[cut..], marks.clone()));
         }
-        at += len;
     }
     (before, after)
 }
@@ -696,18 +695,15 @@ pub fn byte_index(text: &str, chars: usize) -> usize {
 /// The marks typing at `offset` takes: the char before's, minus non-inclusive
 /// marks that end there. At the start, the first char's inclusive marks.
 pub fn marks_at(inlines: &[Inline], offset: usize) -> Marks {
-    let mut at = 0;
     let mut before: Option<&Marks> = None;
     let mut after: Option<&Marks> = None;
-    for inline in inlines {
-        let len = inline.len();
-        if at < offset && offset <= at + len {
+    for (start, end, inline) in runs(inlines) {
+        if start < offset && offset <= end {
             before = inline.marks();
         }
-        if at <= offset && offset < at + len && after.is_none() {
+        if start <= offset && offset < end && after.is_none() {
             after = inline.marks();
         }
-        at += len;
     }
     match (before, after) {
         (Some(before), after) => before
@@ -729,7 +725,7 @@ pub fn marks_at(inlines: &[Inline], offset: usize) -> Marks {
 /// Runs `change` over the marks of every text run between the offsets.
 pub fn map_marks(inlines: &mut Vec<Inline>, from: usize, to: usize, change: impl Fn(&mut Marks)) {
     let (before, rest) = split_inlines(inlines, from);
-    let (mut middle, after) = split_inlines(&rest, to - from);
+    let (mut middle, after) = split_inlines(&rest, to.saturating_sub(from));
     for inline in &mut middle {
         if let Inline::Text { marks, .. } = inline {
             change(marks);
@@ -756,21 +752,19 @@ pub fn all_marked(inlines: &[Inline], from: usize, to: usize, kind: MarkKind) ->
 
 /// The char range of the run carrying exactly this `mark` around `offset`.
 pub fn mark_range(inlines: &[Inline], offset: usize, mark: &Mark) -> Option<(usize, usize)> {
-    let mut at = 0;
     let mut range: Option<(usize, usize)> = None;
-    for inline in inlines {
-        let len = inline.len();
+    for (at, run_end, inline) in runs(inlines) {
         let carries = inline
             .marks()
             .is_some_and(|marks| marks.iter().any(|m| m == mark));
         match (carries, range) {
-            (true, Some((start, end))) if end == at => range = Some((start, at + len)),
+            (true, Some((start, end))) if end == at => range = Some((start, run_end)),
+            // A separate run starts a new range unless the current one already holds `offset`.
             (true, _) if range.is_none_or(|(start, end)| !(start <= offset && offset <= end)) => {
-                range = Some((at, at + len))
+                range = Some((at, run_end))
             }
             _ => {}
         }
-        at += len;
     }
     range.filter(|(start, end)| *start <= offset && offset <= *end)
 }

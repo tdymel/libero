@@ -20,7 +20,9 @@ mod tests;
 pub use command::{
     Action, Builtin, Chord, ChordError, CommandName, Commands, EditFn, KeyPress, Keymap, Record,
 };
-pub use doc::{Attrs, Block, BlockKind, Content, ContentKind, CustomContent, Doc, Inline, NodeKey};
+pub use doc::{
+    Attrs, Block, BlockKind, Content, ContentKind, CustomContent, Doc, Inline, NodeKey, runs,
+};
 pub use editor::{Editor, UndoStack};
 pub use mark::{Href, Mark, MarkKind, Marks, UnsafeHref};
 pub use registry::{NodeRegistry, NodeSpec, Placement, RegistryError, ToMarkdown};

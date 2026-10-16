@@ -16,7 +16,7 @@ use super::handle::{RichTextHandle, Runner, Status};
 use super::input::{EditorInput, Intent, SubmitOn, intent, split_enter, text_diff};
 use super::model::{
     Action, BlockKind, Builtin, CommandName, Commands, Doc, Editor, EditorState, Inline, KeyPress,
-    Keymap, Mark, MarkKind, NodeKey, NodeRegistry, Position, Record, Selection, UndoStack,
+    Keymap, Mark, MarkKind, NodeKey, NodeRegistry, Position, Record, Selection, UndoStack, runs,
 };
 use super::node_view::NodeViews;
 use super::offsets::{to_dom, to_model};
@@ -1596,16 +1596,11 @@ fn results_announcement(results: Option<usize>, words: &RichTextEditorLabels) ->
 /// The href of the link around the caret.
 fn link_href(state: &EditorState) -> Option<String> {
     let (key, from, _) = state.link_at_caret()?;
-    let mut at = 0;
-    let mark = state.block(key).inlines().iter().find_map(|inline| {
-        let start = at;
-        at += inline.len();
-        match inline {
-            Inline::Text { marks, .. } if start <= from && from < at => {
-                marks.get(MarkKind::Link).cloned()
-            }
-            _ => None,
+    let mark = runs(state.block(key).inlines()).find_map(|(start, end, inline)| match inline {
+        Inline::Text { marks, .. } if start <= from && from < end => {
+            marks.get(MarkKind::Link).cloned()
         }
+        _ => None,
     })?;
     match mark {
         Mark::Link { href, .. } => Some(href.as_str().to_string()),

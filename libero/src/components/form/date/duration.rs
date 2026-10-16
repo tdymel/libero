@@ -66,7 +66,7 @@ fn show_duration(span: TimeDelta, names: &DateLocale) -> String {
     if hours > 0 {
         shown.push(format!("{hours} {}", names.hours_short));
     }
-    if minutes > 0 || hours == 0 && seconds == 0 {
+    if minutes > 0 || (hours == 0 && seconds == 0) {
         shown.push(format!("{minutes} {}", names.minutes_short));
     }
     if seconds > 0 {
@@ -356,7 +356,7 @@ pub(super) fn DurationClock(props: DurationClockProps) -> Element {
                 onpick: pick,
                 ondone,
             }
-            span { "data-slot": ChronoPickerPart::Unit.slot(),"aria-hidden": "true", "{unit}" }
+            span { "data-slot": ChronoPickerPart::Unit.slot(), "aria-hidden": "true", "{unit}" }
         }
     };
     let hour_options = (0..=parts(max).0.min(MAX_HOURS))
@@ -391,12 +391,34 @@ pub(super) fn DurationClock(props: DurationClockProps) -> Element {
             15,
         )
     });
+    let hours_column = column(
+        COLUMNS[0],
+        names.hours_label,
+        names.hours_short,
+        names.hours_value,
+        hour_options,
+        place(hours, true),
+        hours,
+        false,
+        10,
+    );
+    let minutes_column = column(
+        COLUMNS[1],
+        names.minutes_label,
+        names.minutes_short,
+        names.minutes_value,
+        minute_options,
+        place(minutes / step, minutes % step == 0),
+        minutes,
+        true,
+        (15 / step).max(1) as usize,
+    );
     // A duration has no cycle to round its hours; minutes and seconds wrap
     // without carrying into the hour.
     let body = rsx! {
         div { "data-slot": ChronoPickerPart::Columns.slot(),
-            {column(COLUMNS[0], names.hours_label, names.hours_short, names.hours_value, hour_options, place(hours, true), hours, false, 10)}
-            {column(COLUMNS[1], names.minutes_label, names.minutes_short, names.minutes_value, minute_options, place(minutes / step, minutes % step == 0), minutes, true, (15 / step).max(1) as usize)}
+            {hours_column}
+            {minutes_column}
             {seconds_column}
         }
     };
@@ -418,7 +440,7 @@ pub(super) fn DurationClock(props: DurationClockProps) -> Element {
             input {
                 r#type: "hidden",
                 name,
-                value: value.map(iso_duration).unwrap_or_default(),
+                value: value.map(|_| iso_duration(base)).unwrap_or_default(),
             }
         }
     });
@@ -559,5 +581,20 @@ mod tests {
             }
         });
         assert!(html.contains(r#"aria-valuetext="999 hours""#), "{html}");
+    }
+
+    /// Todo 3675: the hidden input posts the clamped value the columns show.
+    #[test]
+    fn the_hidden_input_posts_the_clamped_value() {
+        let html = dioxus_ssr::render_element(rsx! {
+            crate::LiberoProvider {
+                super::super::ChronoPicker::<TimeDelta> {
+                    value: of(1200, 0, 0),
+                    max: of(2000, 0, 0),
+                    name: "span",
+                }
+            }
+        });
+        assert!(html.contains(r#"value="PT999H59M59S""#), "{html}");
     }
 }

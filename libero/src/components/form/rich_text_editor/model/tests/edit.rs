@@ -1,7 +1,7 @@
 use super::{check, md, show, state};
 use crate::components::form::rich_text_editor::model::{
-    Block, BlockKind, Doc, EditorState, Inline, Mark, MarkKind, NodeRegistry, NodeSpec, Position,
-    Selection,
+    Block, BlockKind, CustomContent, Doc, EditorState, Inline, Mark, MarkKind, NodeKey,
+    NodeRegistry, NodeSpec, Position, Selection,
 };
 
 #[test]
@@ -261,7 +261,7 @@ fn toggle_mark_on_a_selection() {
     check("a |bc| d", |s| s.toggle_mark(Mark::Bold), "a |**bc|** d");
     let mut s = state("**a|bc|d**");
     s.toggle_mark(Mark::Bold);
-    assert_eq!(super::md(&s.doc), "**a**bc**d**");
+    assert_eq!(md(&s.doc), "**a**bc**d**");
     check("a|b**c|**", |s| s.toggle_mark(Mark::Bold), "a|**bc|**");
 }
 
@@ -321,8 +321,21 @@ fn set_link_on_a_selection_and_at_a_caret() {
 #[test]
 fn set_link_refuses_unsafe_schemes() {
     let mut s = state("|x|");
-    assert!(s.set_link("javascript:alert(1)").is_err());
-    assert_eq!(show(&s), "|x|");
+    for href in [
+        "javascript:alert(1)",
+        "data:text/html,x",
+        "vbscript:msgbox(1)",
+    ] {
+        assert!(s.set_link(href).is_err(), "{href}");
+        assert_eq!(show(&s), "|x|");
+    }
+}
+
+#[test]
+fn map_marks_with_a_reversed_range_changes_nothing() {
+    let mut inlines = vec![Inline::text("abc")];
+    super::super::doc::map_marks(&mut inlines, 2, 1, |marks| marks.add(Mark::Bold));
+    assert_eq!(inlines, vec![Inline::text("abc")]);
 }
 
 #[test]
@@ -442,7 +455,7 @@ fn custom_atom(doc: &mut Doc) -> Block {
         BlockKind::Custom {
             name: "embed".into(),
             attrs: Default::default(),
-            content: crate::components::form::rich_text_editor::model::CustomContent::Atom,
+            content: CustomContent::Atom,
         },
         Vec::new(),
     )
@@ -463,10 +476,7 @@ fn keys_survive_edits_and_splits_get_new_ones() {
 #[test]
 fn clamp_repairs_a_stale_selection() {
     let s = state("ab|");
-    let gone = Position::new(
-        crate::components::form::rich_text_editor::model::NodeKey(999),
-        5,
-    );
+    let gone = Position::new(NodeKey(999), 5);
     let s = s.with_selection(Selection::caret(gone));
     assert_eq!(s.caret(), Position::new(s.doc.first_leaf(), 0));
     let first = s.doc.first_leaf();

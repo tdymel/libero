@@ -374,6 +374,21 @@ mod tests {
     }
 
     #[test]
+    fn a_range_checks_its_days_whatever_the_level() {
+        let day = |day| NaiveDate::from_ymd_opt(2026, 3, day).unwrap();
+        let options = PickerOptions {
+            min: Some(day(5)),
+            level: DateLevel::Month,
+            ..PickerOptions::default()
+        };
+        let range = crate::components::form::date::DateRange {
+            start: day(1),
+            end: Some(day(9)),
+        };
+        assert!(range.accepts(&options).is_err());
+    }
+
+    #[test]
     fn a_time_field_warns_about_level() {
         let warnings = warnings_of(|| {
             rsx! {
