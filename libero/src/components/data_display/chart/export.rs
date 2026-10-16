@@ -1,6 +1,9 @@
 //! A chart's drawing as a file of its own: SVG as drawn, or PNG through the page's canvas.
 
-use std::rc::Rc;
+use std::{
+    rc::Rc,
+    sync::atomic::{AtomicU64, Ordering},
+};
 
 use dioxus::prelude::*;
 
@@ -111,6 +114,8 @@ fn escape(text: &str) -> String {
 #[derive(Clone, Copy, PartialEq)]
 pub struct ChartHandle {
     source: CopyValue<Option<ExportSource>>,
+    /// The chart that attached last, so a stale drop leaves a newer one's source.
+    owner: CopyValue<Option<u64>>,
     zoom: Signal<Option<Zoom>>,
     /// The chart's zoom window, owned here so the page reads it without a warning.
     window: Signal<Option<(usize, usize)>>,
@@ -121,16 +126,39 @@ impl ChartHandle {
         self.window
     }
 
-    pub(super) fn attach(&self, source: ExportSource, zoom: Option<Zoom>) {
+    /// A fresh id for a chart that attaches.
+    pub(super) fn new_owner() -> u64 {
+        static NEXT: AtomicU64 = AtomicU64::new(0);
+        NEXT.fetch_add(1, Ordering::Relaxed)
+    }
+
+    pub(super) fn attach(&self, owner: u64, source: ExportSource, zoom: Option<Zoom>) {
         let mut slot = self.source;
         if let Ok(mut slot) = slot.try_write() {
             *slot = Some(source);
         }
+        let mut current = self.owner;
+        if current.try_peek().is_ok_and(|held| *held != Some(owner))
+            && let Ok(mut held) = current.try_write()
+        {
+            *held = Some(owner);
+        }
         set_zoom(self.zoom, zoom);
     }
 
-    /// On the chart's drop: its drawing and its zoom go with it.
-    pub(super) fn detach(&self) {
+    /// On the chart's drop: its drawing and its zoom go with it, unless a newer chart
+    /// attached since.
+    pub(super) fn detach(&self, owner: u64) {
+        let mut current = self.owner;
+        if current
+            .try_peek()
+            .is_ok_and(|held| held.is_some_and(|held| held != owner))
+        {
+            return;
+        }
+        if let Ok(mut held) = current.try_write() {
+            *held = None;
+        }
         let mut source = self.source;
         if let Ok(mut slot) = source.try_write() {
             *slot = None;
@@ -234,6 +262,7 @@ const NOTHING_DRAWN: &str = "the chart has no drawing";
 pub fn use_chart() -> ChartHandle {
     use_hook(|| ChartHandle {
         source: CopyValue::new(None),
+        owner: CopyValue::new(None),
         zoom: Signal::new(None),
         window: Signal::new(None),
     })

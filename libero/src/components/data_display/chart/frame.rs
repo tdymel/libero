@@ -324,8 +324,9 @@ impl Frame {
             handle,
             zoom,
         } = self;
+        let owner = use_hook(ChartHandle::new_owner);
         if let Some(handle) = handle {
-            handle.attach(export.clone(), zoom);
+            handle.attach(owner, export.clone(), zoom);
         }
         let held = use_hook(|| CopyValue::new(handle));
         if *held.peek() != handle {
@@ -334,7 +335,7 @@ impl Frame {
         }
         use_drop(move || {
             if let Some(handle) = held.try_peek().ok().and_then(|handle| *handle) {
-                handle.detach();
+                handle.detach(owner);
             }
         });
         let announcer = use_announcer();

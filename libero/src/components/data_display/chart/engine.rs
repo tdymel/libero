@@ -29,6 +29,8 @@ const PLOT_TICK: f32 = 10.0;
 const PIE_FILL: f32 = 0.8;
 /// The least of its full radius a pie keeps to make room for its labels.
 const PIE_MIN: f32 = 0.4;
+/// How much wider than Roboto the x labels are fitted for, as the page's font may be.
+const PAGE_FONT_SLACK: f32 = 1.15;
 /// Room between a label and the SVG's edge.
 const EDGE: f32 = 4.0;
 /// A label on a bar is drawn in this, then given the ink that reads on its bar.
@@ -277,8 +279,38 @@ fn renderer_mark_line(&(value, _): &(f64, String)) -> charts_rs::MarkLine {
 
 /// Writes each mark line's own text, in drawing order, over the bare number the renderer
 /// puts by it: in the label ink, haloed in the surface's so the data under it cannot blur it.
-/// One wider than the plot from its `left` is left out; the summary keeps it.
-fn label_mark_lines(svg: &str, texts: &[&str], ink: &ChartInk, left: f32) -> String {
+/// One wider than the plot from its `left` is left out; the summary keeps it. One over a
+/// value label or a pin goes under its line instead, if that is free.
+fn label_mark_lines(
+    svg: &str,
+    texts: &[&str],
+    ink: &ChartInk,
+    left: f32,
+    pins: &[MarkPin],
+    bars: &[[f32; 4]],
+) -> String {
+    let is_mark = |tag: &str| tag.contains("dy=\"-6\"") && tag.contains("text-anchor=\"end\"");
+    // Covering a text or a pin costs ten times covering a bar.
+    let mut crowd: Vec<([f32; 4], f32)> = pins.iter().map(|pin| (pin.rect(), 10.0)).collect();
+    crowd.extend(bars.iter().map(|bar| (*bar, 1.0)));
+    let mut scan = svg;
+    while let Some(open) = scan.find("<text ") {
+        let Some(close) = scan[open..].find('>').map(|close| open + close) else {
+            break;
+        };
+        let tag = &scan[open..=close];
+        let label = &scan[close + 1..];
+        let label = label[..label.find('<').unwrap_or(label.len())].trim();
+        scan = &scan[close + 1..];
+        let attributes = attributes(tag);
+        let number = |name| attribute(&attributes, name)?.parse::<f32>().ok();
+        if let (Some(x), Some(y)) = (number("x"), number("y"))
+            && !label.is_empty()
+            && !is_mark(tag)
+        {
+            crowd.push((text_box(&attributes, label, x, y), 10.0));
+        }
+    }
     let mut texts = texts.iter();
     let mut out = String::with_capacity(svg.len());
     let mut rest = svg;
@@ -290,20 +322,55 @@ fn label_mark_lines(svg: &str, texts: &[&str], ink: &ChartInk, left: f32) -> Str
         let element = &rest[start..end];
         rest = &rest[end..];
         let tag = &element[..element.find('>').map_or(element.len(), |i| i + 1)];
-        let mark = tag.contains("dy=\"-6\"") && tag.contains("text-anchor=\"end\"");
-        let Some(text) = mark.then(|| texts.next()).flatten() else {
+        let Some(text) = is_mark(tag).then(|| texts.next()).flatten() else {
             out.push_str(element);
             continue;
         };
         let attributes = attributes(tag);
-        let end = attribute(&attributes, "x").and_then(|x| x.parse::<f32>().ok());
+        let number = |name| attribute(&attributes, name)?.parse::<f32>().ok();
+        let end = number("x");
         if end.is_some_and(|end| end - text_width(&attributes, text) < left) {
             continue;
         }
+        // Where the renderer has it, above its line, or under it, or slid left along it:
+        // whichever covers the least, moving as little as it can.
+        let size = number("font-size").unwrap_or(14.0);
+        let (above, below) = (-6.0, 6.0 + size * 0.8);
+        let wide = text_width(&attributes, text);
+        let (dy, shift) = match (end, number("y")) {
+            (Some(x), Some(y)) => {
+                let cost = |dy: f32, shift: f32| {
+                    let (l, t) = (x - shift - wide, y + dy - size * 0.8);
+                    let (r, b) = (x - shift, y + dy + size * 0.25);
+                    let covered: f32 = crowd
+                        .iter()
+                        .map(|(c, weight)| {
+                            (r.min(c[2]) - l.max(c[0])).max(0.0)
+                                * (b.min(c[3]) - t.max(c[1])).max(0.0)
+                                * weight
+                        })
+                        .sum();
+                    covered + shift + if dy == above { 0.0 } else { 20.0 }
+                };
+                let slide = (0..=((x - wide - left).max(0.0) / 4.0) as u32).map(|n| n as f32 * 4.0);
+                slide
+                    .flat_map(|shift| [(above, shift), (below, shift)])
+                    .min_by(|a, b| cost(a.0, a.1).total_cmp(&cost(b.0, b.1)))
+                    .unwrap_or((above, 0.0))
+            }
+            _ => (above, 0.0),
+        };
         let kept: String = attributes
             .iter()
             .map(|&(name, value)| match name {
                 "fill" => format!(" fill=\"{}\"", ink.label),
+                "dy" => format!(" dy=\"{dy}\""),
+                "x" => format!(
+                    " x=\"{}\"",
+                    value
+                        .parse::<f32>()
+                        .map_or(value.to_string(), |x| (x - shift).to_string())
+                ),
                 _ => format!(" {name}=\"{value}\""),
             })
             .collect();
@@ -317,47 +384,82 @@ fn label_mark_lines(svg: &str, texts: &[&str], ink: &ChartInk, left: f32) -> Str
     out
 }
 
-/// Each marked point's value in a pill of its series' colour, above the point or, with no
-/// room there, below it; in black or white, whichever reads on the colour.
-fn pin_mark_points(
-    svg: &str,
-    all: &[SeriesSpec],
-    chart_width: f32,
-    ink: &ChartInk,
-    marks: &[Mark],
-) -> String {
-    const HEIGHT: f32 = 20.0;
-    const GAP: f32 = 6.0;
-    const SIZE: f32 = 12.0;
-    let mut pins = String::new();
+const PIN_HEIGHT: f32 = 20.0;
+const PIN_GAP: f32 = 6.0;
+const PIN_SIZE: f32 = 12.0;
+
+/// A marked point's pill: its series' colour, its text and its place.
+struct MarkPin<'a> {
+    color: HexColor,
+    text: &'a str,
+    left: f32,
+    top: f32,
+    width: f32,
+}
+
+impl MarkPin<'_> {
+    fn rect(&self) -> [f32; 4] {
+        [
+            self.left,
+            self.top,
+            self.left + self.width,
+            self.top + PIN_HEIGHT,
+        ]
+    }
+}
+
+/// Each marked point's pill, above the point or, with no room there, below it.
+fn pins_of<'a>(all: &'a [SeriesSpec], chart_width: f32, marks: &[Mark]) -> Vec<MarkPin<'a>> {
+    let mut pins = Vec::new();
     for (s, series) in all.iter().enumerate() {
         for (index, text) in &series.extras.mark_points {
             let place = marks.iter().find(|m| m.series == s && m.index == *index);
             let Some(MarkShape::Point { x, y }) = place.map(|mark| &mark.shape) else {
                 continue;
             };
-            let width = charts_rs::measure_text_width_family(DEFAULT_FONT_FAMILY, SIZE, text)
+            let width = charts_rs::measure_text_width_family(DEFAULT_FONT_FAMILY, PIN_SIZE, text)
                 .map_or(0.0, |text| text.width())
-                + HEIGHT * 0.6;
+                + PIN_HEIGHT * 0.6;
             let left = (x - width / 2.0).clamp(1.0, (chart_width - width - 1.0).max(1.0));
-            let top = match y - GAP - HEIGHT >= 1.0 {
-                true => y - GAP - HEIGHT,
-                false => y + GAP,
+            let top = match y - PIN_GAP - PIN_HEIGHT >= 1.0 {
+                true => y - PIN_GAP - PIN_HEIGHT,
+                false => y + PIN_GAP,
             };
-            pins.push_str(&format!(
-                "<g class=\"ct-pin\"><rect x=\"{left}\" y=\"{top}\" width=\"{width}\" height=\"{HEIGHT}\" \
-                 rx=\"{}\" fill=\"{}\"/><text x=\"{}\" y=\"{}\" font-size=\"{SIZE}\" \
-                 font-family=\"inherit\" text-anchor=\"middle\" dominant-baseline=\"central\" \
-                 fill=\"{}\">{}</text></g>",
-                HEIGHT / 2.0,
-                series.color,
-                left + width / 2.0,
-                top + HEIGHT / 2.0,
-                ink.on(series.color),
-                escape(text),
-            ));
+            pins.push(MarkPin {
+                color: series.color,
+                text,
+                left,
+                top,
+                width,
+            });
         }
     }
+    pins
+}
+
+/// Each marked point's value in a pill of its series' colour, above the point or, with no
+/// room there, below it; in black or white, whichever reads on the colour.
+fn pin_mark_points(svg: &str, pins: &[MarkPin], ink: &ChartInk) -> String {
+    let pins: String = pins
+        .iter()
+        .map(|pin| {
+            format!(
+                "<g class=\"ct-pin\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{PIN_HEIGHT}\" \
+                 rx=\"{}\" fill=\"{}\"/><text x=\"{}\" y=\"{}\" font-size=\"{PIN_SIZE}\" \
+                 font-family=\"inherit\" text-anchor=\"middle\" dominant-baseline=\"central\" \
+                 fill=\"{}\">{}</text></g>",
+                pin.left,
+                pin.top,
+                pin.width,
+                PIN_HEIGHT / 2.0,
+                pin.color,
+                pin.left + pin.width / 2.0,
+                pin.top + PIN_HEIGHT / 2.0,
+                ink.on(pin.color),
+                escape(pin.text),
+            )
+        })
+        .collect();
     match svg.rfind("</svg>") {
         Some(end) => format!("{}{pins}{}", &svg[..end], &svg[end..]),
         None => svg.to_string(),
@@ -483,6 +585,17 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
         chart.x_axis.kind = AxisType::Value;
         chart.x_axis.values = spec.x_numbers.clone();
         chart.x_axis.formatter = Some(format!("{X_MARK}{{c}}"));
+        // Ends on round values, so the last x is not on the plot's edge.
+        let mut span = charts_rs::YAxisConfig {
+            split_number: (spec.width / 60.0) as usize,
+            ..Default::default()
+        };
+        span.split_number = span.split_number.clamp(2, 10);
+        let xs = spec.x_numbers.iter().map(|x| *x as f32).collect();
+        let column = [charts_rs::Series::new(String::new(), xs)];
+        round_axis(&column, 0, &mut span, None, false);
+        chart.x_axis.min = span.min.map(f64::from);
+        chart.x_axis.max = span.max.map(f64::from);
     } else {
         // Every label drawn, so `fit_x_labels` finds each.
         chart.x_axis.label_overflow = AxisLabelOverflow::Ellipsis;
@@ -550,8 +663,9 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
         .map(|(_, text)| text.as_str())
         .collect();
     let plot = Plot::of(&svg, spec.width, spec.height);
-    let svg = label_mark_lines(&svg, &texts, &spec.ink, plot.left);
-    let svg = pin_mark_points(&svg, &spec.series, spec.width, &spec.ink, &marks);
+    let pins = pins_of(&spec.series, spec.width, &marks);
+    let svg = label_mark_lines(&svg, &texts, &spec.ink, plot.left, &pins, &[]);
+    let svg = pin_mark_points(&svg, &pins, &spec.ink);
     Some(Drawn {
         geometry: Geometry {
             width: spec.width,
@@ -1382,8 +1496,21 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
         .map(|(_, text)| text.as_str())
         .collect();
     let plot = Plot::of(&svg, spec.width, spec.height);
-    let svg = label_mark_lines(&svg, &texts, &spec.ink, plot.left);
-    let svg = pin_mark_points(&svg, &spec.series, spec.width, &spec.ink, &marks);
+    let pins = pins_of(&spec.series, spec.width, &marks);
+    let bars: Vec<[f32; 4]> = marks
+        .iter()
+        .filter_map(|mark| match mark.shape {
+            MarkShape::Rect {
+                x,
+                y,
+                width,
+                height,
+            } => Some([x, y, x + width, y + height]),
+            _ => None,
+        })
+        .collect();
+    let svg = label_mark_lines(&svg, &texts, &spec.ink, plot.left, &pins, &bars);
+    let svg = pin_mark_points(&svg, &pins, &spec.ink);
     Some(Drawn {
         geometry: Geometry {
             width: spec.width,
@@ -3391,7 +3518,7 @@ fn fit_x_labels(svg: &str, labels: &[String], width: f32, height: f32) -> String
             true => start + "…",
             false => start,
         };
-        most.max(text_width(&tag(row[0].0), &shown))
+        most.max(roomy(&tag(row[0].0), &shown))
     });
     let fits = |least: f32| {
         (1..=labels.len())
@@ -3400,7 +3527,7 @@ fn fit_x_labels(svg: &str, labels: &[String], width: f32, height: f32) -> String
     };
     // Thinned anyway, they are written whole while at least three are left.
     let widest = labels.iter().fold(0.0_f32, |most, label| {
-        most.max(text_width(&tag(row[0].0), label))
+        most.max(roomy(&tag(row[0].0), label))
     });
     let every = match (fits(least), fits(widest)) {
         (1, _) => 1,
@@ -3419,16 +3546,20 @@ fn fit_x_labels(svg: &str, labels: &[String], width: f32, height: f32) -> String
         }
         let attributes = tag(*open);
         let band_centre = plot.left + band * (index as f32 + 0.5);
-        let mut cut = shorten(&attributes, label, every as f32 * band - EDGE);
+        let mut cut = shorten(
+            &attributes,
+            label,
+            (every as f32 * band - EDGE) / PAGE_FONT_SLACK,
+        );
         // Under its band, moved in from a side of the SVG, else cut to stay centred there.
-        let half = text_width(&attributes, &cut) / 2.0;
+        let half = roomy(&attributes, &cut) / 2.0;
         let mut centre = band_centre.clamp(EDGE + half, (width - EDGE - half).max(EDGE + half));
         if centre - half < written + EDGE {
             let side = (band_centre - EDGE).min(width - EDGE - band_centre);
-            cut = shorten(&attributes, label, 2.0 * side);
+            cut = shorten(&attributes, label, 2.0 * side / PAGE_FONT_SLACK);
             centre = band_centre;
         }
-        written = centre + text_width(&attributes, &cut) / 2.0;
+        written = centre + roomy(&attributes, &cut) / 2.0;
         let kept: String = attributes
             .iter()
             .filter(|(attribute, _)| !matches!(*attribute, "x" | "text-anchor"))
@@ -3937,6 +4068,29 @@ fn text_width(attributes: &[(&str, &str)], text: &str) -> f32 {
     charts_rs::measure_text_width_family(family, size, text).map_or(0.0, |text| text.width())
 }
 
+/// The page's font is wider than the renderer's Roboto; its width, with that margin.
+fn roomy(attributes: &[(&str, &str)], text: &str) -> f32 {
+    text_width(attributes, text) * PAGE_FONT_SLACK
+}
+
+/// The box `[left, top, right, bottom]` of `label` written at the baseline point `x`, `y`
+/// (before the tag's `dx` and `dy`): the ascent above the baseline, the descent below.
+fn text_box(attributes: &[(&str, &str)], label: &str, x: f32, y: f32) -> [f32; 4] {
+    let number = |name| attribute(attributes, name)?.parse::<f32>().ok();
+    let (x, y) = (
+        x + number("dx").unwrap_or(0.0),
+        y + number("dy").unwrap_or(0.0),
+    );
+    let size = number("font-size").unwrap_or(14.0);
+    let drawn = text_width(attributes, label);
+    let left = match attribute(attributes, "text-anchor") {
+        Some("middle") => x - drawn / 2.0,
+        Some("end") => x - drawn,
+        _ => x,
+    };
+    [left, y - size * 0.8, left + drawn, y + size * 0.25]
+}
+
 /// Draws `chart`, then once more with a wider margin if a label left the SVG.
 fn fitted<C: std::ops::DerefMut<Target = charts_rs::ChartBase>>(
     chart: &mut C,
@@ -3975,23 +4129,12 @@ fn overflow(svg: &str, width: f32, height: f32) -> Option<[f32; 4]> {
         if label.is_empty() || attribute(&attributes, "class") == Some("ct-tip") {
             continue;
         }
-        let (x, y) = (
-            x + number("dx").unwrap_or(0.0),
-            y + number("dy").unwrap_or(0.0),
-        );
-        let size = number("font-size").unwrap_or(14.0);
-        let drawn = text_width(&attributes, label);
-        let left = match attribute(&attributes, "text-anchor") {
-            Some("middle") => x - drawn / 2.0,
-            Some("end") => x - drawn,
-            _ => x,
-        };
-        // `y` is the baseline: the ascent above it, the descent below.
+        let [left, top, right, bottom] = text_box(&attributes, label, x, y);
         let reach = [
             EDGE - left,
-            EDGE - (y - size * 0.8),
-            left + drawn - (width - EDGE),
-            y + size * 0.25 - (height - EDGE),
+            EDGE - top,
+            right - (width - EDGE),
+            bottom - (height - EDGE),
         ];
         for (over, reach) in over.iter_mut().zip(reach) {
             *over = over.max(reach);
@@ -5798,6 +5941,56 @@ mod tests {
             "{}",
             drawn.svg
         );
+    }
+
+    #[test]
+    fn a_numeric_x_axis_ends_past_the_last_x() {
+        let mut numeric = line(
+            vec![spec("A", &[Some(3.0), Some(5.0), Some(4.0), Some(8.0)])],
+            &["1", "2", "10", "1000.5"],
+        );
+        numeric.x_numbers = vec![1.0, 2.0, 10.0, 1000.5];
+        let drawn = draw_line(&numeric).expect("drawn");
+        let Some(MarkShape::Point { x, .. }) = drawn.geometry.marks.last().map(|m| &m.shape) else {
+            panic!("no point");
+        };
+        assert!(*x < drawn.geometry.plot.right - 1.0, "{x}");
+    }
+
+    #[test]
+    fn a_mark_line_label_keeps_off_the_value_labels() {
+        let mut spec = bars(BarLayout::Grouped, false);
+        spec.x = ["Q1", "Q2", "Q3", "Q4"].map(String::from).to_vec();
+        let mut series = self::spec("A", &[Some(10.0), Some(50.0), Some(30.0), Some(33.0)]);
+        series.extras.mark_lines = vec![(31.0, "Average: 31".to_string())];
+        spec.series = vec![series];
+        let found = texts(&draw_bar(&spec).expect("drawn").svg);
+        let label = found.iter().find(|t| t.3 == "Average: 31").expect("label");
+        for other in found.iter().filter(|t| t.3 != label.3) {
+            let across = label.0 < other.1 && label.1 > other.0;
+            assert!(
+                !(across && (label.2 - other.2).abs() < 12.0),
+                "{label:?} {other:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn dense_x_labels_leave_room_for_a_wider_font() {
+        let x: Vec<String> = (1..=40).map(|i| format!("Week {i}")).collect();
+        let values: Vec<_> = (1..=40).map(|i| Some(f64::from(i))).collect();
+        let spec = line(
+            vec![spec("A", &values)],
+            &x.iter().map(String::as_str).collect::<Vec<_>>(),
+        );
+        let found = texts(&draw_line(&spec).expect("drawn").svg);
+        let mut row: Vec<_> = found.iter().filter(|t| t.3.starts_with("Week")).collect();
+        row.sort_by(|a, b| a.0.total_cmp(&b.0));
+        for pair in row.windows(2) {
+            let gap = pair[1].0 - pair[0].1;
+            let widest = (pair[0].1 - pair[0].0).max(pair[1].1 - pair[1].0);
+            assert!(gap >= widest * 0.15, "{pair:?}");
+        }
     }
 
     #[test]

@@ -1,6 +1,8 @@
 //! The interactive layer over a drawn chart: pointer, keys, tooltip, crosshair, marker.
 //! It reads only the harvested marks, so every chart kind shares it.
 
+use std::cell::Cell;
+
 use dioxus::{
     html::{
         geometry::{ElementPoint, WheelDelta},
@@ -315,13 +317,18 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
     // The keys' pan says the point, not the range.
     let mut quiet = use_signal(|| false);
     let mut wheel_rest = use_signal(|| 0.0_f64);
+    // Counts the point and selection announcements, so a zoom's late range skips a newer one.
+    let spoke = use_hook(|| CopyValue::new(Cell::new(0_u32)));
     let showing = {
         let x = x.clone();
         use_debounced_callback(
-            move |(start, end): (usize, usize)| {
+            move |(start, end, spoke_then): (usize, usize, u32)| {
                 let (Some(first), Some(last)) = (x.get(start), x.get(end.saturating_sub(1))) else {
                     return;
                 };
+                if spoke.read().get() != spoke_then {
+                    return;
+                }
                 announcer.say(fill(labels.showing, &[("first", first), ("last", last)]));
             },
             SHOWING_DELAY,
@@ -339,7 +346,7 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
             quiet.set(false);
         }
         if before.is_some_and(|before| before != range) && !hush {
-            showing.call(range);
+            showing.call((range.0, range.1, spoke.read().get()));
         }
     });
     // By series and x index: a redraw keeps the point while it is drawn.
@@ -466,6 +473,7 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
             let point = point_of(mark);
             let value = write(mark);
             let own = entry(&series, mark).and_then(|series| series.points.get(mark.index));
+            spoke.read().set(spoke.read().get() + 1);
             announcer.say(match (layout, own, &mark.shape) {
                 (Layout::Free, Some(own), _) => fill(
                     labels.point_free,
@@ -580,6 +588,7 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
         let range_of = range_of.clone();
         move |band: (usize, usize)| {
             let range = range_of(band);
+            spoke.read().set(spoke.read().get() + 1);
             announcer.say(fill(
                 labels.selected,
                 &[("first", &range.from), ("last", &range.to)],
