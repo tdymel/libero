@@ -236,6 +236,17 @@ pub(super) fn use_level_focus(
         }
     }));
 
+    // A removed focused row drops focus to the page, which closes the menu: refocus the row
+    // now at its index, else the last (todo 3617).
+    use_effect(use_reactive!(|(open, len)| {
+        let Some(index) = level.active.peek().filter(|_| open && len > 0) else {
+            return;
+        };
+        if floating.mount_token().is_some() && !dismiss.holds_focus() {
+            level.focus(index.min(len - 1));
+        }
+    }));
+
     // Once placed: `focus()` on the hidden box answers `Ok` and moves nothing.
     // Only a newer request counts, so a hover-opened submenu steals no focus.
     let mut seen = use_signal(|| if open { 0 } else { request });

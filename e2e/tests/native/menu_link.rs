@@ -62,6 +62,45 @@ fn enter_on_a_link_item_opens_its_url() {
     assert_eq!(page.navigations(), [URL], "{}", page.tree());
 }
 
+fn script_app() -> Element {
+    let menu = use_menu();
+    let items: Vec<MenuEntry> = vec![
+        MenuItem::new("Script").href("javascript:alert(1)").into(),
+        MenuItem::new("Ordinary").href(URL).into(),
+    ];
+    rsx! {
+        Menu { state: menu, items,
+            Button { attributes: menu.a11y_attributes(), "TLDR" }
+        }
+    }
+}
+
+/// Todo 3626: a `javascript:` href makes the row an inert button, and a click opens nothing.
+#[test]
+fn a_script_href_item_is_an_inert_button() {
+    let mut page = mount(script_app);
+    page.click("[aria-haspopup=menu]");
+    page.advance(0.5);
+    assert!(
+        page.exists("[role=menu] a[role=menuitem]"),
+        "{}",
+        page.tree()
+    );
+    assert!(
+        page.exists("[role=menu] button[role=menuitem]"),
+        "{}",
+        page.tree()
+    );
+    assert_eq!(
+        page.query_all("[role=menu] [href]").len(),
+        1,
+        "{}",
+        page.tree()
+    );
+    page.click("[role=menu] button[role=menuitem]");
+    assert!(page.navigations().is_empty(), "{}", page.tree());
+}
+
 /// The mask keeps the inked half in the icon's color and leaves the rest of the
 /// row as it was: the docs' marks rely on it.
 #[test]

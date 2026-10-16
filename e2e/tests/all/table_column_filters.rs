@@ -1,7 +1,7 @@
 //! `Table` filters: the quick filter, the header and menu filters, the filter panel and the date filter.
 
 use super::table::{PICKER, menu_entry, pick_later};
-use anyhow::{Result, bail};
+use anyhow::{Result, bail, ensure};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text};
 use e2e::passes::keyboard;
@@ -153,6 +153,79 @@ e2e::scenario!(
     tab_leaves_the_filter,
     ios: skip("3416: focus stays on the body after a Tab or a tap")
 );
+
+/// Todo 3618: on a coarse pointer the filtered header's button takes presses in a 44px column.
+#[test]
+fn the_filtered_button_takes_a_finger_in_a_44px_box() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    block_on(async {
+        let fixture = Fixture::open("/table/column-filter", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            page.execute(SetTouchEmulationEnabledParams::new(true))
+                .await?;
+            wait::for_js_true(
+                page,
+                "matchMedia('(pointer: coarse)').matches",
+                "a coarse pointer",
+            )
+            .await?;
+            page.evaluate("document.querySelector('[aria-label=\"Name column options\"]').focus()")
+                .await?;
+            keyboard::press(page, keyboard::ENTER).await?;
+            wait::for_js_true(
+                page,
+                "!!document.activeElement?.matches('[role=menuitem]')",
+                "the opened column menu",
+            )
+            .await?;
+            keyboard::press(page, keyboard::HOME).await?;
+            keyboard::press(page, keyboard::ENTER).await?;
+            wait::for_js_true(
+                page,
+                "document.activeElement?.matches('[data-filter-popover] input')",
+                "the opened filter",
+            )
+            .await?;
+            keyboard::type_text(page, "an").await?;
+            wait::for_visible(page, "[data-filtered]").await?;
+            keyboard::press(page, keyboard::ESCAPE).await?;
+            wait::for_js_true(
+                page,
+                "!document.querySelector('[data-filter-popover]')",
+                "the closed filter",
+            )
+            .await?;
+
+            let misses: Vec<String> = page
+                .evaluate(
+                    "(() => {
+                        const el = document.querySelector('[data-filtered]');
+                        const r = el.getBoundingClientRect();
+                        const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
+                        return [-21, 0, 21].flatMap(dy => {
+                            const at = document.elementFromPoint(cx, cy + dy);
+                            return at && el.contains(at) ? [] : [String(dy)];
+                        });
+                    })()",
+                )
+                .await?
+                .into_value()?;
+            ensure!(
+                misses.is_empty(),
+                "points of the 44px column land elsewhere: {misses:?}"
+            );
+            Ok::<_, anyhow::Error>(())
+        }
+        .await;
+        let console = fixture.console.assert_clean("probing the filtered button");
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+        console.unwrap();
+    });
+}
 
 /// Todo 2048, 1.4.10: in a short viewport the filter popover caps at the room on its
 /// side and scrolls inside, rather than running off the screen.

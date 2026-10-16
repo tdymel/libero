@@ -199,14 +199,16 @@ fn escape_hides_the_hover_preview() {
         }
         let (tx, ty, tw, th) = page.rect(TRACK);
         page.hover_at((tx + tw * 0.75) as f32, (ty + th / 2.0) as f32);
+        // The thumb's own focus bubble carries an id; the hover preview does not.
+        let preview = format!("{BUBBLE}:not([id])");
         assert!(
-            page.wait_for(|page| page.exists(BUBBLE)),
+            page.wait_for(|page| page.exists(&preview)),
             "hovering opened no preview (thumb focused: {focus_thumb})\n{}",
             page.tree()
         );
         page.press(Key::Escape);
         assert!(
-            !page.exists(BUBBLE),
+            !page.exists(&preview),
             "Escape left the preview (thumb focused: {focus_thumb})\n{}",
             page.tree()
         );

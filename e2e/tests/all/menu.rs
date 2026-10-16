@@ -356,8 +356,8 @@ fn items_arriving_in_an_open_menu_show_it_and_take_focus() {
     });
 }
 
-/// Todo 3554: the focused row is past the end of a shrunk list, and the menu
-/// still has a row to Tab to.
+/// Todo 3554, 3617: the focused row is past the end of a shrunk list; the menu stays open,
+/// focus moves to the last row and it holds the tab stop.
 #[test]
 fn a_shrunk_list_keeps_a_row_with_tabindex_zero() {
     block_on(async {
@@ -384,8 +384,9 @@ fn a_shrunk_list_keeps_a_row_with_tabindex_zero() {
             wait::for_js_true(
                 page,
                 "document.querySelectorAll('[role=menuitem]').length === 1 && \
-                 document.querySelectorAll('[role=menuitem][tabindex=\"0\"]').length === 1",
-                "one item holding the tab stop",
+                 document.querySelectorAll('[role=menuitem][tabindex=\"0\"]').length === 1 && \
+                 document.activeElement === document.querySelector('[role=menuitem]')",
+                "the menu open on one item holding the tab stop and focus",
             )
             .await
         }
