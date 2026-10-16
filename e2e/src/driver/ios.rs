@@ -55,8 +55,10 @@ const EVENT_LOG: &str = "window.__e2eLog = []; \
     const name = e => e === document.body ? 'body' : e === document ? 'document' : !e?.tagName ? String(e) \
       : e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') \
       + (e.dataset?.slot ? '[' + e.dataset.slot + ']' : ''); \
-    const log = line => { const ms = Math.round(performance.now()); const last = __e2eLog.at(-1); \
-      if (last?.line === line) { last.n++; last.to = ms; return; } \
+    const log = line => { const ms = Math.round(performance.now()); \
+      const last = [__e2eLog.at(-1), __e2eLog.at(-2)].find((e, i) => e?.line === line \
+        && (i === 0 || __e2eLog.at(-1).line.includes('move'))); \
+      if (last) { last.n++; last.to = ms; return; } \
       __e2eLog.push({ line, n: 1, at: ms, to: ms }); if (__e2eLog.length > 120) __e2eLog.shift(); }; \
     window.__e2eMark = log; \
     addEventListener('keydown', e => log(`keydown ${e.key} alt=${+e.altKey} shift=${+e.shiftKey} on ${name(e.target)}`), true); \

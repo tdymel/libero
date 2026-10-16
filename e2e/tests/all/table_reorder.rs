@@ -3,7 +3,7 @@
 //! right moves the column, and its sort with it.
 
 use anyhow::{Result, bail};
-use e2e::driver::{Driver, Rect, eventually, eventually_focused, eventually_text};
+use e2e::driver::{Driver, Platform, Rect, eventually, eventually_focused, eventually_text};
 use e2e::passes::keyboard;
 
 const ORDER: &str = "#order";
@@ -667,10 +667,7 @@ e2e::scenario!(
 /// Name's header grip dropped past Origin's middle: one order change (1395). A touch's
 /// last move overshoots its end point, and a drop outside the table cancels: not at its edge.
 async fn a_grip_drag_moves_a_column<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    let grip = "th[aria-label=Name] [data-drag-handle]";
-    let (from, origin) = (d.rect(grip).await?, d.rect("th[aria-label=Origin]").await?);
-    let dx = past_middle(&origin) - (from.x + from.width / 2.0);
-    d.drag(grip, dx, 0.0).await?;
+    drag_grip_to(d, "Name", "Origin", past_middle).await?;
     eventually_text(d, "#columns", "Stock Origin Name", "a drag past Origin").await?;
     eventually(d, "Name's cells to follow, the ghost gone", async |d| {
         Ok(d.text("tbody tr:first-child th").await? == "Cherry"
@@ -683,8 +680,7 @@ async fn a_grip_drag_moves_a_column<D: Driver>(d: &mut D, _route: &str) -> Resul
 e2e::scenario!(
     a_header_grip_drag_moves_a_column,
     "/table-reorder",
-    a_grip_drag_moves_a_column,
-    ios: skip("3416: the header grip feels AXe's drag press but no move")
+    a_grip_drag_moves_a_column
 );
 
 /// A client x a tenth of `header`'s width past its middle: its end gap is the nearest, and
@@ -698,27 +694,41 @@ fn before_middle(header: &Rect) -> f64 {
     header.x + header.width * 0.25
 }
 
-/// Drags `header`'s grip so its centre lands at client `x`.
-async fn drag_grip_to<D: Driver>(d: &mut D, header: &str, x: f64) -> Result<()> {
+/// Drags `header`'s grip so its centre lands at `at(target's header)`. The target is scrolled
+/// in first and the grip not centred: a phone's 402px viewport cut Origin off (3603).
+async fn drag_grip_to<D: Driver>(
+    d: &mut D,
+    header: &str,
+    target: &str,
+    at: fn(&Rect) -> f64,
+) -> Result<()> {
+    let target = format!("th[aria-label={target}]");
+    d.evaluate(&format!(
+        "document.querySelector({target:?}).scrollIntoView({{ block: 'nearest', inline: 'nearest' }})"
+    ))
+    .await?;
     let grip = format!("th[aria-label={header}] [data-drag-handle]");
     let from = d.rect(&grip).await?;
-    d.drag(&grip, x - (from.x + from.width / 2.0), 0.0).await
+    let to = at(&d.rect(&target).await?);
+    let (x, y) = (from.x + from.width / 2.0, from.y + from.height / 2.0);
+    // The iOS driver centres a dragged element first, which would push the target off again.
+    match d.platform() {
+        Platform::Ios => d.drag_at(x, y, to - x, 0.0).await,
+        _ => d.drag(&grip, to - x, 0.0).await,
+    }
 }
 
 /// A second drag after the first, of the moved column and then another (1463).
 async fn two_grip_drags_move_columns<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    let origin = d.rect("th[aria-label=Origin]").await?;
-    drag_grip_to(d, "Name", past_middle(&origin)).await?;
+    drag_grip_to(d, "Name", "Origin", past_middle).await?;
     eventually_text(d, "#columns", "Stock Origin Name", "the first drag").await?;
     eventually(d, "the ghost gone", async |d| {
         Ok(!d.exists("[data-drag-ghost]").await?)
     })
     .await?;
-    let stock = d.rect("th[aria-label=Stock]").await?;
-    drag_grip_to(d, "Name", before_middle(&stock)).await?;
+    drag_grip_to(d, "Name", "Stock", before_middle).await?;
     eventually_text(d, "#columns", "Name Stock Origin", "Name dragged back").await?;
-    let origin = d.rect("th[aria-label=Origin]").await?;
-    drag_grip_to(d, "Stock", past_middle(&origin)).await?;
+    drag_grip_to(d, "Stock", "Origin", past_middle).await?;
     eventually_text(d, "#columns", "Name Origin Stock", "Stock past Origin").await?;
     eventually(d, "headers and cells in the new order", async |d| {
         let (name, origin, stock) = (
@@ -737,15 +747,13 @@ async fn two_grip_drags_move_columns<D: Driver>(d: &mut D, _route: &str) -> Resu
 e2e::scenario!(
     header_grip_drags_move_columns_twice,
     "/table-reorder",
-    two_grip_drags_move_columns,
-    ios: skip("3416: the header grip feels AXe's drag press but no move")
+    two_grip_drags_move_columns
 );
 
 e2e::scenario!(
     header_grip_drags_move_its_own_columns_twice,
     "/table-column-drag",
-    two_grip_drags_move_columns,
-    ios: skip("3416: flaky: a header grip sometimes feels AXe's drag press but no move")
+    two_grip_drags_move_columns
 );
 
 /// Todo 2018: the rows measure at the press, so a finger's drag moves the row soon.
