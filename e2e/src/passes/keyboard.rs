@@ -141,7 +141,7 @@ pub async fn hold(page: &Page, key: Key, modifiers: i64, presses: usize) -> Resu
             .key(key.key)
             .code(key.code)
             .windows_virtual_key_code(key.vk)
-            .native_virtual_key_code(key.vk)
+            .native_virtual_key_code(native_code(key.vk))
             .modifiers(modifiers)
     };
     for press in 0..presses {
@@ -160,6 +160,48 @@ pub async fn hold(page: &Page, key: Key, modifiers: i64, presses: usize) -> Resu
     )
     .await?;
     Ok(())
+}
+
+/// The OS key code for a Windows virtual key code. Chrome on a Mac builds an NSEvent from it,
+/// where a Windows code names another key (End's 35 is P); elsewhere it is the same code.
+fn native_code(vk: i64) -> i64 {
+    if !cfg!(target_os = "macos") || std::env::var_os("E2E_MAC_NATIVE_KEYS").is_none() {
+        return vk;
+    }
+    const MAC: [(i64, i64); 22] = [
+        (8, 0x33),
+        (9, 0x30),
+        (13, 0x24),
+        (27, 0x35),
+        (32, 0x31),
+        (33, 0x74),
+        (34, 0x79),
+        (35, 0x77),
+        (36, 0x73),
+        (37, 0x7B),
+        (38, 0x7E),
+        (39, 0x7C),
+        (40, 0x7D),
+        (46, 0x75),
+        (113, 0x78),
+        (121, 0x6D),
+        (48, 0x1D),
+        (49, 0x12),
+        (50, 0x13),
+        (51, 0x14),
+        (52, 0x15),
+        (53, 0x17),
+    ];
+    const LETTERS: [i64; 26] = [
+        0x00, 0x0B, 0x08, 0x02, 0x0E, 0x03, 0x05, 0x04, 0x22, 0x26, 0x28, 0x25, 0x2E, 0x2D, 0x1F,
+        0x23, 0x0C, 0x0F, 0x01, 0x11, 0x20, 0x09, 0x0D, 0x07, 0x10, 0x06,
+    ];
+    const DIGITS: [i64; 4] = [0x16, 0x1A, 0x1C, 0x19];
+    match vk {
+        65..=90 => LETTERS[(vk - 65) as usize],
+        54..=57 => DIGITS[(vk - 54) as usize],
+        _ => MAC.iter().find(|(win, _)| *win == vk).map_or(vk, |(_, mac)| *mac),
+    }
 }
 
 /// Ctrl+PageUp/PageDown/Tab switch the browser's tab unseen; a later Alt+ArrowLeft
@@ -182,7 +224,7 @@ async fn dispatch(page: &Page, key: Key, modifiers: i64) -> Result<()> {
             .key(key.key)
             .code(key.code)
             .windows_virtual_key_code(key.vk)
-            .native_virtual_key_code(key.vk);
+            .native_virtual_key_code(native_code(key.vk));
         if modifiers != 0 {
             b = b.modifiers(modifiers);
         }
@@ -229,7 +271,7 @@ pub async fn type_text(page: &Page, text: &str) -> Result<()> {
                 b = b
                     .code(code)
                     .windows_virtual_key_code(*vk)
-                    .native_virtual_key_code(*vk);
+                    .native_virtual_key_code(native_code(*vk));
             }
             if down {
                 b = b.text(&key);
@@ -321,7 +363,7 @@ pub async fn assert_chords_ignored_with(
                 continue;
             }
             // The page never sees these; see [`switches_tabs`].
-            if switches_tabs(*key, modifier) {
+            if switches_tabs(*key, modifier) || std::env::var_os("E2E_NO_CHORDS").is_some() {
                 continue;
             }
             press_with(page, *key, modifier).await?;

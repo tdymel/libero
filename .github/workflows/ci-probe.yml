@@ -156,7 +156,8 @@ jobs:
             name='{ c = $0; sub(/^ *[^ ]+ +[^ ]+ +[^ ]+ +/, "", c); t = ""
               if (match(c, /--(type|utility-sub-type)=[^ ]+/)) t = substr(c, RSTART, RLENGTH)
               sub(/ --.*/, "", c); n = split(c, p, "/"); print $1, $2, $3, p[n], t }'
-            (while sleep 30; do date -u +%T; sysctl -n vm.loadavg; memory_pressure -Q | tail -1
+            # `+e`: `head` closing a pipe failed the loop under the step's `-e -o pipefail`.
+            (set +e +o pipefail; while sleep 30; do date -u +%T; sysctl -n vm.loadavg; memory_pressure -Q | tail -1
               echo "procs $(ps -A | wc -l)"
               ps -A -o %cpu=,pid=,ppid=,command= | sort -rn | head -6 | awk "$name"
               echo newest; ps -A -o pid=,ppid=,etime=,command= | sort -rn | head -12 | awk "$name"
