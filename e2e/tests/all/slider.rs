@@ -51,6 +51,35 @@ async fn thumb_follows<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     .await
 }
 
+async fn value_reaches<D: Driver>(d: &mut D, what: &str, want: f64) -> Result<()> {
+    eventually(d, what, async |d| Ok(value_now(d).await? == want)).await
+}
+
+/// The docs promise arrows by one step, PageUp, PageDown and Shift+Arrow by ten.
+async fn arrows_and_pages<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(THUMB).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    value_reaches(d, "ArrowRight to step to 1", 1.0).await?;
+    d.press(keyboard::ARROW_UP).await?;
+    value_reaches(d, "ArrowUp to step to 2", 2.0).await?;
+    d.press(keyboard::ARROW_LEFT).await?;
+    value_reaches(d, "ArrowLeft to step back to 1", 1.0).await?;
+    d.press(keyboard::PAGE_UP).await?;
+    value_reaches(d, "PageUp to jump to 11", 11.0).await?;
+    d.press(keyboard::PAGE_DOWN).await?;
+    value_reaches(d, "PageDown to jump back to 1", 1.0).await?;
+    d.press_shift(keyboard::ARROW_RIGHT).await?;
+    value_reaches(d, "Shift+ArrowRight to jump to 11", 11.0).await?;
+    d.press_shift(keyboard::ARROW_LEFT).await?;
+    value_reaches(d, "Shift+ArrowLeft to jump back to 1", 1.0).await
+}
+
+e2e::scenario!(
+    the_arrows_page_keys_and_shift_arrows_step_the_value,
+    "/slider/drag",
+    arrows_and_pages
+);
+
 const SEGMENT: &str = "#segments [data-slot=segment]";
 
 /// Todo 2136: segments as wide as their spans, 2px apart; the one holding 50

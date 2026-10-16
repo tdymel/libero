@@ -27,6 +27,43 @@ async fn the_keys_move_the_focused<D: Driver>(d: &mut D, _route: &str) -> Result
     reads(d, "End to move the upper thumb to 100", |r| r == "0-100").await
 }
 
+/// The docs promise arrows by one step, PageUp, PageDown and Shift+Arrow by ten, and a thumb
+/// that stops at the other.
+async fn the_arrows_and_pages_move_the_focused<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(LOWER_THUMB).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    reads(d, "ArrowRight to step the lower thumb to 21", |r| {
+        r == "21-80"
+    })
+    .await?;
+    d.press(keyboard::PAGE_UP).await?;
+    reads(d, "PageUp to lift the lower thumb to 31", |r| r == "31-80").await?;
+    d.press_shift(keyboard::ARROW_LEFT).await?;
+    reads(d, "Shift+ArrowLeft to drop the lower thumb to 21", |r| {
+        r == "21-80"
+    })
+    .await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    d.press(keyboard::PAGE_DOWN).await?;
+    reads(d, "ArrowDown and PageDown to drop it to 10", |r| {
+        r == "10-80"
+    })
+    .await?;
+    d.focus("[role=slider][aria-valuenow=\"80\"]").await?;
+    d.press(keyboard::PAGE_DOWN).await?;
+    reads(d, "PageDown to drop the upper thumb to 70", |r| {
+        r == "10-70"
+    })
+    .await?;
+    for _ in 0..4 {
+        d.press(keyboard::PAGE_UP).await?;
+    }
+    reads(d, "PageUp to stop the upper thumb at 100", |r| {
+        r == "10-100"
+    })
+    .await
+}
+
 async fn a_drag_moves_the_grabbed<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.drag(UPPER_THUMB, -60.0, 0.0).await?;
     reads(d, "the upper thumb dragged, the lower kept", |r| {
@@ -110,6 +147,11 @@ e2e::scenario!(
     the_keys_move_the_focused_thumb,
     "/range-slider",
     the_keys_move_the_focused
+);
+e2e::scenario!(
+    the_arrows_and_page_keys_move_the_focused_thumb,
+    "/range-slider",
+    the_arrows_and_pages_move_the_focused
 );
 e2e::scenario!(
     a_drag_moves_the_grabbed_thumb_only,
