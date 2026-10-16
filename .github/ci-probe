@@ -1,0 +1,7 @@
+# ted_ci.py probe; read by .github/workflows/ci-probe.yml.
+os=macos
+tier=web
+filter=shard:1:2
+dev=olaf-15
+env=E2E_PAGES=6
+env=E2E_NAVIGATIONS=4
