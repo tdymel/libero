@@ -115,6 +115,12 @@ pub const ALT: i64 = 1;
 pub const CTRL: i64 = 2;
 pub const META: i64 = 4;
 pub const SHIFT: i64 = 8;
+/// libero's `mod`: Cmd where the browser runs on a Mac, else Ctrl.
+pub const MOD: i64 = if cfg!(target_os = "macos") {
+    META
+} else {
+    CTRL
+};
 
 /// Press and release a key.
 pub async fn press(page: &Page, key: Key) -> Result<()> {
@@ -360,18 +366,28 @@ pub async fn tab_to(page: &Page, selector: &str, max: usize) -> Result<usize> {
     // Else an unmounted control reads as a tabindex bug.
     crate::wait::for_selector(page, selector).await?;
     let sel = serde_json::to_string(selector)?;
+    let mut trail = Vec::new();
     for pressed in 1..=max {
         press(page, TAB).await?;
-        let arrived: bool = page
+        // Empty when `selector` holds focus, else a short name of what does.
+        let held: String = page
             .evaluate(format!(
-                "document.activeElement === document.querySelector({sel})"
+                "(() => {{ const el = document.activeElement; \
+                 if (el === document.querySelector({sel})) return ''; \
+                 return el ? el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') \
+                 + (el.getAttribute('role') ? '[' + el.getAttribute('role') + ']' : '') : 'none'; }})()"
             ))
             .await?
             .into_value()?;
-        if arrived {
+        if held.is_empty() {
             return Ok(pressed);
         }
+        trail.push(held);
     }
     let actual = super::focus::active_element(page).await?;
-    bail!("{selector} was not reachable within {max} tab stops; focus ended on {actual:?}");
+    bail!(
+        "{selector} was not reachable within {max} tab stops; focus ended on {actual:?} \
+         after {}",
+        trail.join(" > ")
+    );
 }

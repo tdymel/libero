@@ -7,7 +7,7 @@ use super::rich_text_editor::{
 };
 use chromiumoxide::Page;
 use e2e::browser::block_on;
-use e2e::passes::keyboard::{self, BACKSPACE, CTRL, ENTER};
+use e2e::passes::keyboard::{self, BACKSPACE, ENTER, MOD};
 use e2e::passes::{contrast, pointer};
 use e2e::{Fixture, Viewport, js, wait};
 
@@ -150,7 +150,7 @@ fn enter_sends_a_message_and_the_limit_and_handle_serve_a_chat_box() {
         })
         .await;
         sent_eq(page, "hello|again\nb|abcdefghijkl").await;
-        keyboard::press_with(page, ENTER, CTRL).await.unwrap();
+        keyboard::press_with(page, ENTER, MOD).await.unwrap();
         left_code(page).await;
         keyboard::type_text(page, "z").await.unwrap();
         keyboard::press(page, ENTER).await.unwrap();
@@ -183,14 +183,21 @@ fn mod_enter_sends_a_comment_and_the_handle_clears_and_focuses() {
         let hint: bool = js(page, &format!("{EDITOR}.hasAttribute('enterkeyhint')")).await;
         assert!(!hint, "Enter is a new paragraph here, not send");
         let keys: String = js(page, &format!("{EDITOR}.getAttribute('aria-keyshortcuts')")).await;
-        assert_eq!(keys, "Control+Enter");
+        assert_eq!(
+            keys,
+            if cfg!(target_os = "macos") {
+                "Meta+Enter"
+            } else {
+                "Control+Enter"
+            }
+        );
 
         keyboard::type_text(page, "note").await.unwrap();
         keyboard::press(page, ENTER).await.unwrap();
         keyboard::type_text(page, "more").await.unwrap();
         out_eq(page, "note\n\nmore\n").await;
         sent_eq(page, "").await;
-        keyboard::press_with(page, ENTER, CTRL).await.unwrap();
+        keyboard::press_with(page, ENTER, MOD).await.unwrap();
         sent_eq(page, "note\nmore").await;
         out_eq(page, "").await;
 

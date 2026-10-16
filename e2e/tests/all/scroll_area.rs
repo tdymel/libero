@@ -301,7 +301,6 @@ e2e::scenario!(
     the_window_follows_a_wheel_or_a_fling,
     "/scroll-area",
     the_window_follows_the_input,
-    macos: skip("3432: WKWebView: the wheel never brings the windowed list to rest"),
     ios: skip("a touch screen has no wheel")
 );
 
