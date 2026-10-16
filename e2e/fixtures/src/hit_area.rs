@@ -57,6 +57,10 @@ fn HitAreaPage() -> Element {
                     }
                 }
             }
+            Flex { gap: "lg", align: "center",
+                Switch { id: "switch-xs", aria_label: "Extra small", size: Size::Xs }
+                Switch { id: "switch-sm", aria_label: "Small", size: Size::Sm }
+            }
             div { "data-case": "tags",
                 TagsField {
                     label: "Topics",

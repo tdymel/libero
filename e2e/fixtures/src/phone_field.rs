@@ -24,7 +24,29 @@ pub const ROUTES: Routes = &[
     ("/phone-field/rtl", || rsx! { PhoneFieldRtlPage {} }),
     ("/phone-field/later", || rsx! { PhoneFieldLaterRulesPage {} }),
     ("/phone-field/reset", || rsx! { PhoneFieldResetPage {} }),
+    (
+        "/phone-field/unlisted",
+        || rsx! { PhoneFieldUnlistedPage {} },
+    ),
 ];
+
+/// A value whose dial code no country lists; the `name` posts it.
+#[component]
+fn PhoneFieldUnlistedPage() -> Element {
+    let mut value = use_signal(|| "+8001234567".to_string());
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            PhoneField {
+                label: "Phone",
+                country: "US",
+                name: "phone",
+                value: value(),
+                oninput: move |next: String| value.set(next),
+            }
+        }
+    }
+}
 
 /// Todo 2326: a typed number in a `Form`, reset by a button; the `name` posts the E.164.
 #[component]

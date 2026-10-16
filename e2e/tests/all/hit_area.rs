@@ -79,6 +79,59 @@ fn small_action_icons_take_presses_in_a_24px_box() {
     });
 }
 
+/// WCAG 2.5.8: a switch track under 24px tall takes presses 11.5px above and below its
+/// centre, drawn size unchanged.
+#[test]
+fn a_small_switch_track_takes_presses_in_a_24px_box() {
+    block_on(async {
+        let fixture = Fixture::open("/hit-area", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#switch-xs ~ [data-slot=track]")
+            .await
+            .unwrap();
+
+        for (id, drawn) in [("switch-xs", 16.0), ("switch-sm", 18.0)] {
+            let hit: Hit = page
+                .evaluate(format!(
+                    "(() => {{
+                        const el = document.querySelector('#{id} ~ [data-slot=track]');
+                        el.scrollIntoView({{ block: 'center' }});
+                        const r = el.getBoundingClientRect();
+                        const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
+                        const misses = [];
+                        for (const dx of [-r.width / 2 + 1, 0, r.width / 2 - 1])
+                            for (const dy of [-11.5, 0, 11.5]) {{
+                                const at = document.elementFromPoint(cx + dx, cy + dy);
+                                if (!at || at.closest('[data-slot=track]') !== el)
+                                    misses.push([dx, dy, at ? at.outerHTML.slice(0, 60) : null]);
+                            }}
+                        return {{ width: r.width, height: r.height, misses }};
+                    }})()"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(
+                (hit.height - drawn).abs() < 0.5,
+                "#{id} track is drawn {}px tall, not {drawn}",
+                hit.height
+            );
+            assert!(
+                hit.misses.is_empty(),
+                "#{id}: points of its 24px box land elsewhere: {:?}",
+                hit.misses
+            );
+        }
+
+        fixture
+            .console
+            .assert_clean("probing switch tracks")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 2707: on a coarse pointer a small control takes presses 21px out from its centre,
 /// its drawn size unchanged. A pagination control's sides are its neighbours' to share.
 #[test]

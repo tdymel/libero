@@ -3,6 +3,7 @@
 //! own width for a responsive span, and lays out rows and masonry spacing.
 
 use e2e::browser::block_on;
+use e2e::passes::keyboard;
 use e2e::{Fixture, Viewport, wait};
 
 /// Opens the fixture, waits for `expression`, and closes it clean.
@@ -106,4 +107,33 @@ fn a_masonry_zones_gap_spaces_its_items_vertically() {
          })()",
         "the masonry items one gap apart",
     );
+}
+
+/// `dense` backfills the row beside A with C, ahead of B in the picture, while Tab
+/// still walks the DOM: A, B, C.
+#[test]
+fn a_dense_zone_moves_an_item_up_but_tab_follows_the_dom() {
+    block_on(async {
+        let fixture = Fixture::open("/grid-zone", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            "(() => { \
+               const top = id => document.querySelector(id).getBoundingClientRect().top; \
+               return top('#dense-c') === top('#dense-a') && top('#dense-b') > top('#dense-a'); \
+             })()",
+            "C beside A and B below them",
+        )
+        .await
+        .unwrap();
+
+        keyboard::tab_to(page, "#dense-a", 10).await.unwrap();
+        keyboard::tab_to(page, "#dense-b", 1).await.unwrap();
+        keyboard::tab_to(page, "#dense-c", 1).await.unwrap();
+
+        fixture.console.assert_clean("a dense zone").unwrap();
+        fixture.close().await.unwrap();
+    });
 }

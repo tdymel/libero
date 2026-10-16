@@ -298,6 +298,26 @@ fn dimmed_text_is_the_grey_ramps_text_role() {
     assert!(dimmed.contrast_ratio(white) >= TEXT_CONTRAST);
 }
 
+/// Dimmed text keeps 4.5:1 on a dark page too, through the same role as the light one.
+#[test]
+fn dimmed_text_passes_on_a_dark_surface_too() {
+    let mut theme = Theme::DEFAULT;
+    theme.surface = HexColor::new(0x1A_1B_1E);
+    theme.ink = HexColor::new(0xE9_EC_EF);
+    let dark = Stylesheet::from(&theme).as_str().to_string();
+
+    assert_eq!(
+        root_var(&dark, NamedColorCss::TEXT_DIMMED.name()),
+        "var(--lsx-muted-text-6)"
+    );
+    let dimmed = HexColor::parse(&root_var(&dark, "--lsx-muted-text-6")).expect("a hex");
+    assert!(
+        dimmed.contrast_ratio(theme.surface) >= TEXT_CONTRAST,
+        "dimmed text is {:.2}:1 on a dark page",
+        dimmed.contrast_ratio(theme.surface)
+    );
+}
+
 /// The neutral ramp is distance from the page: `muted.1` (every hover) sits on the
 /// surface, `muted.9` against the ink. Mixed towards white, it lit up dark pages.
 #[test]

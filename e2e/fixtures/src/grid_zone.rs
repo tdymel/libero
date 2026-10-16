@@ -1,6 +1,6 @@
 //! `GridZone` on its own: two half-width items and a named gap. Then a zone
 //! filling a `Grid` area, a zone as a shrink-to-fit flex item, an item spanning
-//! rows of its own, and a masonry zone.
+//! rows of its own, a masonry zone and a dense zone.
 
 use dioxus::prelude::*;
 use libero::components::{Grid, GridArea, GridItem, GridSpan, GridTemplate, GridZone};
@@ -60,6 +60,14 @@ fn GridZonePage() -> Element {
             GridZone { masonry: true, gap: "lg",
                 GridItem { id: "stone-a", div { style: "height: 30px", "A" } }
                 GridItem { id: "stone-b", div { style: "height: 30px", "B" } }
+            }
+        }
+        // DOM order A, B, C; dense lets C fill the row beside A.
+        div { style: "width: 400px",
+            GridZone { id: "dense-zone", dense: true,
+                GridItem { span: GridSpan::Half, button { id: "dense-a", "A" } }
+                GridItem { span: GridSpan::Full, button { id: "dense-b", "B" } }
+                GridItem { span: GridSpan::Half, button { id: "dense-c", "C" } }
             }
         }
     }

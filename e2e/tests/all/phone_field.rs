@@ -317,6 +317,31 @@ fn the_country_button_is_at_least_24px_square() {
     });
 }
 
+/// A value whose dial code no country lists shows as `+digits` and posts unchanged.
+#[test]
+fn a_value_with_an_unlisted_dial_code_is_shown_and_posted() {
+    block_on(async {
+        let fixture = Fixture::open("/phone-field/unlisted", Viewport::Desktop)
+            .await
+            .unwrap();
+        wait::for_js_true(
+            &fixture.page,
+            &format!(
+                "document.querySelector({TEL:?}).value === '+8001234567' \
+                 && document.querySelector('input[type=hidden][name=phone]').value === '+8001234567'"
+            ),
+            "the unlisted number shown and posted as given",
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("an unlisted dial code")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// APG: the list opens on the current country, by key or by click, however it
 /// was left the last time.
 #[test]
