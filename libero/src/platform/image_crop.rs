@@ -328,6 +328,9 @@ mod native {
         if let Some(orientation) = orientation {
             image.apply_orientation(orientation);
         }
+        if image.width() == 0 || image.height() == 0 {
+            return None;
+        }
         let (width, height) = (f64::from(image.width()), f64::from(image.height()));
         let sx = ((x * width).round() as u32).min(image.width() - 1);
         let sy = ((y * height).round() as u32).min(image.height() - 1);

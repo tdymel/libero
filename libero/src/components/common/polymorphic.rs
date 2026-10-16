@@ -558,4 +558,24 @@ mod tests {
             ]
         );
     }
+
+    #[test]
+    fn later_describedby_attributes_join_the_first_in_order() {
+        let out = styling_attributes(
+            None,
+            None,
+            None,
+            vec![
+                text("aria-describedby", "a"),
+                text("id", "x"),
+                text("aria-describedby", "b"),
+                text("aria-describedby", "c"),
+            ],
+        );
+
+        assert_eq!(
+            named(&out),
+            [("aria-describedby", "a b c".into()), ("id", "x".into())]
+        );
+    }
 }

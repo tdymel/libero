@@ -686,7 +686,7 @@ pub(super) fn observe_content(
 /// `tag`'s `OBSERVE_ATTR` renders; each `dioxus.send` calls `callback`.
 fn observe_tagged(
     tag: u64,
-    observe: &str,
+    observe: &'static str,
     callback: Box<dyn Fn()>,
 ) -> Option<Box<dyn ContentSubscription>> {
     if !runs_scripts() {
@@ -788,7 +788,7 @@ const FIND_MEDIA: &str =
 
 impl WebViewMedia {
     /// Queued behind the edits dioxus sent before it.
-    fn command(&self, argument: Value, script: &str) -> Result<(), PlatformError> {
+    fn command(&self, argument: Value, script: &'static str) -> Result<(), PlatformError> {
         eval_with(
             json!([OBSERVE_ATTR, self.tag.to_string(), argument]),
             &format!("{FIND_MEDIA}\nconst value = data[2];\nif (media) {{ {script} }}"),
@@ -975,7 +975,7 @@ type Mounted<T> = std::pin::Pin<Box<dyn std::future::Future<Output = MountedResu
 
 impl SelectedElement {
     /// Started now, in the calling scope; answered by the returned future.
-    fn read<T: serde::de::DeserializeOwned + 'static>(&self, script: &str) -> Mounted<T> {
+    fn read<T: serde::de::DeserializeOwned + 'static>(&self, script: &'static str) -> Mounted<T> {
         let read = eval_with(
             json!([self.selector]),
             &format!("{FIND_SELECTED}\n{script}"),
@@ -987,7 +987,7 @@ impl SelectedElement {
         })
     }
 
-    fn command(&self, argument: Value, script: &str) -> Mounted<()> {
+    fn command(&self, argument: Value, script: &'static str) -> Mounted<()> {
         eval_with(
             json!([self.selector, argument]),
             &format!("{FIND_SELECTED}\nconst value = data[1];\nif (found) {{ {script} }}"),

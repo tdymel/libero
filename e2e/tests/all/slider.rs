@@ -2,9 +2,7 @@
 
 use anyhow::{Result, ensure};
 use e2e::browser::block_on;
-use e2e::driver::{
-    Driver, Platform, eventually, eventually_text, linger, swipe_scrolls_on_android,
-};
+use e2e::driver::{Driver, Platform, eventually, eventually_text, swipe_scrolls_on_android};
 use e2e::passes::target_size::MINIMUM;
 use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, wait};
@@ -32,7 +30,7 @@ async fn centre_drag<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.drag(TRACK, 100.0, 0.0).await?;
     // A touch on the track only taps (1059), iOS's too (3603).
     if matches!(d.platform(), Platform::Android | Platform::Ios) {
-        linger(d, 8).await;
+        d.settle().await?;
         let moved = value_now(d).await?;
         ensure!(moved == 0.0, "a swipe from the track moved it to {moved}");
         return Ok(());
@@ -136,7 +134,7 @@ async fn a_swipe_scrolls_on_android<D: Driver>(d: &mut D, _route: &str) -> Resul
     ] {
         swipe_scrolls_on_android(d, thumb, ended, grabbed).await?;
         if matches!(d.platform(), Platform::Android | Platform::Ios) {
-            linger(d, 8).await;
+            d.settle().await?;
             ensure!(
                 d.text(ended).await?.is_empty(),
                 "a swipe over {thumb} moved it"
