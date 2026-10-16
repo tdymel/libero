@@ -13,8 +13,8 @@ use crate::{
             VariantColors, VariantVars, aria_label_of, base_color_or, base_props,
             coarse_hit_area_sx, contrast_color, contrast_shade_color, disabled_look_sx, fill_color,
             focus_ring_sx, interactive_variant_sx, label_color, on_ring_sx, on_state_sx,
-            parts_enum, parts_under_sx, ring_overlay, ring_overlay_sx, shade_color, variables,
-            variant_colors,
+            parts_enum, parts_under_sx, ring_overlay, ring_overlay_sx, shade_color, text_color,
+            variables, variant_colors,
         },
         form::{Activation, use_bound},
         layout::{InternalAnchor, use_box},
@@ -173,8 +173,14 @@ static CHIP_TRAILING_SX: StaticSx = StaticSx::new(|| {
         .z_index("1")
 });
 
-/// Depends on `(variant, checked, color)` alone - see the `use_cache` below.
-fn chip_variables(variant: Variant, checked: bool, base: &ThemeAwareValue) -> String {
+/// Depends on `(variant, checked, color, disabled)` alone - see the `use_cache` below.
+/// A disabled label stays the quiet brand shade, not [`label_color`] (todo 3614).
+fn chip_variables(
+    variant: Variant,
+    checked: bool,
+    base: &ThemeAwareValue,
+    disabled: bool,
+) -> String {
     // One step past `Tonal`'s resting tint, or selecting a tonal chip would
     // change nothing visible.
     let colors = if checked {
@@ -190,7 +196,13 @@ fn chip_variables(variant: Variant, checked: bool, base: &ThemeAwareValue) -> St
     };
 
     variables()
-        .with(CHIP_COLOR_VAR, label_color(base))
+        .with(
+            CHIP_COLOR_VAR,
+            match disabled {
+                true => text_color(base),
+                false => label_color(base),
+            },
+        )
         .with(CHIP_FILL_VAR, fill_color(base))
         .with(
             CHIP_CONTRAST_VAR,
@@ -330,9 +342,10 @@ pub fn Chip(props: ChipProps) -> Element {
         warn("Chip: `readonly` without `onchange` or `name` has nothing to lock.");
     }
 
-    let style = use_cache((variant, checked, color), |(variant, checked, color)| {
-        chip_variables(*variant, *checked, color)
-    });
+    let style = use_cache(
+        (variant, checked, color, disabled),
+        |(variant, checked, color, disabled)| chip_variables(*variant, *checked, color, *disabled),
+    );
     let style = match radius.custom_css(SizeCss::RADIUS) {
         Some(css) => format!("{style}{}:{css};", SizeCss::RADIUS.override_var().name()),
         None => style,

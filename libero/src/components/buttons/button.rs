@@ -8,7 +8,7 @@ use crate::{
             BUTTON_VARS, HtmlTag, Input, Part, ScaleOrCss, States, TOOLBAR_ITEM, ToolbarItem,
             Variant, base_color, base_props, contrast_color, disabled_look_sx, fill_color,
             focus_ring_sx, input_from_str, interactive_variant_sx, label_color, literal_contrast,
-            parts_enum, use_button_group, use_toolbar_item, variables, variant_colors,
+            parts_enum, text_color, use_button_group, use_toolbar_item, variables, variant_colors,
             variant_selected_sx,
         },
         feedback::Loader,
@@ -149,14 +149,20 @@ fn loading_sx() -> Sx {
 
 /// The colour half of the `style` attribute. Depends on its arguments alone, so `Button` caches it.
 /// `uncolored`: no caller `color`, so a `standard` label takes a fill's around it (todo 1663).
+/// `disabled`: the label stays the quiet brand shade, not [`label_color`] (todo 3614).
 pub(crate) fn button_variables(
     variant: Variant,
     base: &ThemeAwareValue,
     uncolored: bool,
+    disabled: bool,
 ) -> String {
     let contrast = contrast_color(base);
     let colors = variant_colors(variant, base);
-    let label = label_color(base).map(|label| match variant {
+    let label = match disabled {
+        true => text_color(base),
+        false => label_color(base),
+    };
+    let label = label.map(|label| match variant {
         // The outlined border is the label colour: it follows too (todo 1833).
         Variant::Standard | Variant::Outlined if uncolored => {
             format!("var({}, {label})", SURFACE_LABEL.name())
@@ -298,8 +304,10 @@ pub fn Button(props: ButtonProps) -> Element {
     // ~790 ns uncached, and the key rarely changes between renders.
     let uncolored = color_prop.is_none();
     let style = use_cache(
-        (variant, color, uncolored),
-        |(variant, color, uncolored)| button_variables(*variant, color, *uncolored),
+        (variant, color, uncolored, disabled),
+        |(variant, color, uncolored, disabled)| {
+            button_variables(*variant, color, *uncolored, *disabled)
+        },
     );
     let gradient = use_gradient_style(
         props.gradient.as_ref(),
@@ -469,8 +477,8 @@ mod tests {
     #[test]
     fn a_filled_button_darkens_on_hover_where_an_outlined_one_tints() {
         let base = base_color(Some(&ThemeAwareValue::Color(Color::Primary)));
-        let filled = button_variables(Variant::Filled, &base, false);
-        let outlined = button_variables(Variant::Outlined, &base, false);
+        let filled = button_variables(Variant::Filled, &base, false, false);
+        let outlined = button_variables(Variant::Outlined, &base, false, false);
 
         assert!(filled.contains(&format!(
             "{}:{};",
@@ -489,7 +497,7 @@ mod tests {
     #[test]
     fn the_color_variables_are_the_base_color_in_its_two_roles() {
         let base = ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Error, ColorShade::S7));
-        let variables = button_variables(Variant::Filled, &base, false);
+        let variables = button_variables(Variant::Filled, &base, false, false);
 
         assert!(variables.starts_with(&format!(
             "{}:{};",
@@ -508,7 +516,7 @@ mod tests {
     fn an_uncolored_standard_or_outlined_label_takes_the_surface_label() {
         let base = base_color(None);
         let label = |variant, uncolored| {
-            let variables = button_variables(variant, &base, uncolored);
+            let variables = button_variables(variant, &base, uncolored, false);
             variables
                 .split(';')
                 .find_map(|declaration| {
@@ -530,7 +538,8 @@ mod tests {
     #[test]
     fn a_literal_color_publishes_a_readable_contrast() {
         for (color, contrast) in [("#ffeb3b", "#000000"), ("gold", "contrast-color(gold)")] {
-            let variables = button_variables(Variant::Filled, &ThemeAwareValue::from(color), false);
+            let variables =
+                button_variables(Variant::Filled, &ThemeAwareValue::from(color), false, false);
             assert!(
                 variables.contains(&format!("{}:{contrast};", BUTTON_CONTRAST_VAR.name())),
                 "{color}: {variables}"
@@ -566,12 +575,12 @@ mod tests {
     fn only_the_tonal_variant_emits_a_container() {
         let base = base_color(None);
 
-        let tonal = button_variables(Variant::Tonal, &base, false);
+        let tonal = button_variables(Variant::Tonal, &base, false, false);
         assert!(tonal.contains(BUTTON_CONTAINER_VAR.name()));
         assert!(tonal.contains(BUTTON_ON_CONTAINER_VAR.name()));
 
         for variant in [Variant::Elevated, Variant::Outlined] {
-            let variables = button_variables(variant, &base, false);
+            let variables = button_variables(variant, &base, false, false);
             assert!(
                 !variables.contains(BUTTON_CONTAINER_VAR.name()),
                 "{variant:?}"
@@ -584,9 +593,28 @@ mod tests {
     #[test]
     fn a_literal_color_gets_no_container() {
         let base = ThemeAwareValue::String("gold".to_string());
-        let variables = button_variables(Variant::Tonal, &base, false);
+        let variables = button_variables(Variant::Tonal, &base, false, false);
 
         assert!(!variables.contains(BUTTON_CONTAINER_VAR.name()));
         assert!(!variables.contains(BUTTON_ON_CONTAINER_VAR.name()));
+    }
+
+    /// Todo 3614: an enabled muted label takes the text role; a disabled one stays the quiet
+    /// `muted.6`, as WCAG exempts it.
+    #[test]
+    fn a_disabled_muted_label_stays_quiet() {
+        let base = base_color(Some(&ThemeAwareValue::Color(Color::Muted)));
+        let label = |disabled| {
+            let variables = button_variables(Variant::Outlined, &base, false, disabled);
+            variables
+                .split(';')
+                .find_map(|declaration| {
+                    declaration.strip_prefix(&format!("{}:", BUTTON_COLOR_VAR.name()))
+                })
+                .unwrap()
+                .to_string()
+        };
+        assert_eq!(label(false), "var(--lsx-muted-text-6)");
+        assert_eq!(label(true), "var(--lsx-muted-6)");
     }
 }
