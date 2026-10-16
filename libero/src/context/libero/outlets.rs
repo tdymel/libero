@@ -4,6 +4,7 @@ use dioxus::prelude::*;
 
 use super::{CssLayer, LiberoContext, SheetRank};
 use crate::{
+    css::style_text,
     platform::{self, A11yAnswers, answer_a11y_media, document, focus_selectors},
     theme::{physical_text_align, themed_form_controls},
 };
@@ -19,7 +20,7 @@ pub(super) fn ThemeStyle(outer: Option<Signal<Rc<str>>>) -> Element {
         let outer = outer.read();
         Rc::ptr_eq(&outer, &sheet) || **outer == *sheet
     });
-    let css = (!shared).then(|| focus_selectors(&sheet));
+    let css = (!shared).then(|| style_text(&focus_selectors(&sheet)).into_owned());
     // Bumped per rebuilt sheet, for `SheetWatch` (todo 871).
     let version = use_hook(|| Rc::new(std::cell::Cell::new((0u64, sheet.clone()))));
     let (mut count, last) = version.take();
@@ -113,7 +114,7 @@ pub(super) fn StyleOutlet() -> Element {
     }
 }
 
-/// `css` as this renderer matches it.
+/// `css` as this renderer matches it, safe as a `<style>`'s text.
 fn renderer_css(css: &str, answers: &A11yAnswers) -> String {
-    answer_a11y_media(&focus_selectors(css), answers).into_owned()
+    style_text(&answer_a11y_media(&focus_selectors(css), answers)).into_owned()
 }

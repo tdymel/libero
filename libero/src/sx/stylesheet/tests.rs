@@ -570,3 +570,50 @@ fn sx_selector_ampersand_with_space_expands_to_descendant_combinator() {
         descendant_sx.class_name()
     )));
 }
+
+/// Todo 2621: a value from user data cannot leave its declaration, its rule or the `<style>`.
+#[test]
+fn a_value_that_would_escape_its_declaration_is_dropped_with_a_warning() {
+    crate::utils::take_warnings();
+    let css = Stylesheet::from(
+        &sx()
+            .color("red}</style><script>alert(1)</script>")
+            .background("blue;x:y")
+            .with("color:red;x", "1")
+            .padding("4px"),
+    );
+    let css = css.as_str();
+
+    assert!(
+        !css.contains("red") && !css.contains("blue") && !css.contains("x:"),
+        "{css}"
+    );
+    assert!(css.contains("padding:4px;"), "{css}");
+    #[cfg(debug_assertions)]
+    assert_eq!(crate::utils::take_warnings().len(), 3);
+}
+
+#[test]
+fn a_server_rendered_page_keeps_user_css_inside_its_style_element() {
+    use dioxus::prelude::*;
+
+    #[component]
+    fn Raw() -> Element {
+        crate::hooks::use_stylesheet(".a{content:\"</style><script>alert(1)</script>\"}");
+        rsx! {
+            crate::components::Box { sx: sx().color("red}</style><script>alert(2)</script>"), "a" }
+        }
+    }
+    let mut dom = VirtualDom::new(|| rsx! { crate::LiberoProvider { Raw {} } });
+    dom.rebuild_in_place();
+    let html = dioxus_ssr::render(&dom);
+
+    assert!(
+        !html.contains("alert(2)") && !html.contains("</style><script>"),
+        "{html}"
+    );
+    assert!(
+        html.contains("<\\/style><script>alert(1)<\\/script>"),
+        "{html}"
+    );
+}

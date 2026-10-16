@@ -5,7 +5,8 @@ use std::hash::{Hash, Hasher};
 use super::css_scope::CssScope;
 
 /// A block of CSS text, scoped to one class when built from an [`Sx`](crate::sx::Sx).
-/// Raw `&str`/`String` CSS has no class.
+/// Raw `&str`/`String` CSS has no class and is used as given: never build it from user data.
+/// An `Sx` drops a value that would leave its declaration.
 ///
 /// ```
 /// # use libero::Stylesheet;

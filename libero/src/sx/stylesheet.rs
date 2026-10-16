@@ -1,4 +1,7 @@
-use crate::css::{AtRule, CssDeclaration, CssScope, Stylesheet, condition_groups, expand_selector};
+use crate::css::{
+    AtRule, CssDeclaration, CssScope, Stylesheet, condition_groups, expand_selector,
+    is_property_name, stays_in_declaration,
+};
 use crate::tokens::{FOCUS_RING_HALO, NamedColorCss, Size};
 use crate::utils::warn;
 
@@ -196,6 +199,14 @@ fn breakpoint_at_rule(size: Size) -> AtRule {
 /// rings, and itself as the ring's halo (todo 630).
 fn property_declarations(property: &SxPropertyKey, value: &ThemeAwareValue) -> Vec<CssDeclaration> {
     let css_value = to_css_value(property, value);
+    // Dropped, not escaped: a value from user data must not style the page (todo 2621).
+    if !is_property_name(property.as_str()) || !stays_in_declaration(&css_value) {
+        warn(&format!(
+            "Sx `{}: {css_value}` dropped: it would leave its declaration.",
+            property.as_str()
+        ));
+        return Vec::new();
+    }
     let mut declarations = Vec::with_capacity(1);
     if let SxPropertyKey::Known(known) = property
         && let Some(prefixed) = known.webkit_twin()

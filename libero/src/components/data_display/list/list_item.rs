@@ -14,26 +14,39 @@ use super::list::ListContext;
 // Block, so a nested `List` stacks below this item's content. The icon floats instead of
 // flexing: only a `list-item` counts in an ordered list's numbering (todo 2923).
 static LIST_ITEM_BASE_SX: StaticSx = StaticSx::new(|| {
+    // Blitz floats only among inline content, so beside the block body the icon flexes
+    // (todo 2980). Physical float: native may not parse `inline-start`.
+    let (item, icon, body) = match NATIVE {
+        true => (
+            sx().display("flex"),
+            sx().flex_shrink("0"),
+            sx().flex_grow("1").min_width("0"),
+        ),
+        false => (
+            sx(),
+            sx().with("float", "left").rtl(sx().with("float", "right")),
+            sx(),
+        ),
+    };
     sx().padding("0").when(
         "with-icon",
-        sx().list_style_type("none")
+        item.list_style_type("none")
             .selector(
                 ListItemPart::Icon.selector(),
                 // One line box tall, so the icon centres on the first line.
-                // Physical, flipped under rtl: native's engine may not parse `inline-start`.
-                sx().with("float", "left")
-                    .rtl(sx().with("float", "right"))
-                    .display("inline-flex")
+                icon.display("inline-flex")
                     .align_items("center")
                     .height("1lh")
                     .margin_inline_end(SizeCss::SPACING.value(Size::Sm)),
             )
             .selector(
                 ListItemPart::Body.selector(),
-                sx().display("flow-root").overflow_wrap("anywhere"),
+                body.display("flow-root").overflow_wrap("anywhere"),
             ),
     )
 });
+
+const NATIVE: bool = cfg!(all(not(target_arch = "wasm32"), feature = "native"));
 
 parts_enum! {
     /// [`ListItem`]'s inner parts, for its `parts` prop. Present only with an

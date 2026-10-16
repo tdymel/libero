@@ -42,6 +42,7 @@ mod inline_spaces;
 mod kanban;
 mod keyboard;
 mod lightbox;
+mod list;
 mod max_length;
 mod menu_link;
 mod menubar;
