@@ -94,7 +94,9 @@ pub fn UseSystemNotificationPage() -> Element {
                     Code { source: "Notification" }
                     ", which reads "
                     Code { source: "Prompt" }
-                    " on CI's runner, showing one is untested; WebView2 counts dioxus's page as insecure and denies it until the app marks the page secure (Getting started, Desktop). iOS's WebView defines no "
+                    " on CI's runner, and a request or a show there reads "
+                    Code { source: "Denied" }
+                    " because no prompt is answered, so a shown notification is untested; WebView2 counts dioxus's page as insecure and denies it until the app marks the page secure (Getting started, Desktop). iOS's WebView defines no "
                     Code { source: "Notification" }
                     ": "
                     Code { source: "is_supported()" }
