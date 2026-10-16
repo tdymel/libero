@@ -433,8 +433,7 @@ e2e::scenario!(
 e2e::scenario!(
     a_click_on_a_hook_handle_clicks_and_a_drag_does_not,
     "/sortable/hook",
-    a_click_stays_a_click,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    a_click_stays_a_click
 );
 e2e::scenario!(
     space_lifts_the_arrows_move_and_space_drops_with_each_step_announced,
@@ -459,8 +458,7 @@ e2e::scenario!(
 e2e::scenario!(
     a_dropped_item_settles_into_its_slot_until_the_next_lift,
     "/sortable",
-    a_dropped_item_settles_into_its_slot,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    a_dropped_item_settles_into_its_slot
 );
 /// Touch only: a mouse drag on text selects it.
 mod a_swipe_on_an_items_text_scrolls_the_page_and_moves_nothing {

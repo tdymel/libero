@@ -102,7 +102,7 @@ e2e::scenario!(
     a_hovered_row_is_tinted_and_does_not_move_the_highlight,
     "/spotlight",
     a_hovered_row_is_tinted,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("a touch screen has no hover")
 );
 
 #[test]

@@ -95,7 +95,7 @@ e2e::scenario!(
     typing_settles_a_debounced_value_and_callback,
     "/use-timers/quick",
     settles_after_typing,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: iOS's hardware-keyboard auto-capitalization types the field's first letter upper case")
 );
 e2e::scenario!(
     an_interval_ticks_until_it_is_stopped,

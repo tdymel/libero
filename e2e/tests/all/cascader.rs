@@ -147,8 +147,7 @@ pub async fn taps_walk_the_levels<D: Driver>(d: &mut D, _route: &str) -> Result<
 e2e::scenario!(
     taps_walk_the_cascader_levels,
     "/cascader",
-    taps_walk_the_levels,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    taps_walk_the_levels
 );
 
 const ASIA: &str = "[role=option][id$='-option-0-1']";

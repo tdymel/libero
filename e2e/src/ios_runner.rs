@@ -301,32 +301,12 @@ fn pick_device(json: &str, wanted: Option<&str>) -> Result<(String, String, Stri
 }
 
 /// No driver answers the permission dialogs, so grant up front, as on Android; simctl
-/// grants no camera, which the simulator lacks. The position is the Android arm's. The
-/// keyboard types as told: iOS capitalized a field's first typed letter (3605).
+/// grants no camera, which the simulator lacks. The position is the Android arm's.
 fn grant(udid: &str, bundle: &str) {
     for service in ["location", "microphone"] {
         let _ = simctl(&["privacy", udid, "grant", service, bundle]);
     }
     let _ = simctl(&["location", udid, "set", "52.52,13.405"]);
-    for key in [
-        "KeyboardAutocapitalization",
-        "KeyboardAutocorrection",
-        "KeyboardCheckSpelling",
-        "KeyboardPrediction",
-        "KeyboardPeriodShortcut",
-        "KeyboardSmartPunctuation",
-    ] {
-        let _ = simctl(&[
-            "spawn",
-            udid,
-            "defaults",
-            "write",
-            "com.apple.Preferences",
-            key,
-            "-bool",
-            "NO",
-        ]);
-    }
 }
 
 /// Whether simctl lists the simulator as booted.

@@ -22,19 +22,17 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `bar_chart::escape_closes_a_hovered_tooltip_without_focus` | ios | a touch screen has no hover |
 | `bar_chart::hovering_shows_the_bar_s_tooltip_and_marker` | android | a touch screen has no hover |
 | `bar_chart::hovering_shows_the_bar_s_tooltip_and_marker` | ios | a touch screen has no hover |
-| `button_group::the_focused_button_is_lifted_over_its_neighbours` | ios | 3416: focus stays on the body after a Tab or a tap |
 | `candlestick_chart::a_click_on_a_candle_reports_it` | ios | 3416: the tap reaches the chart layer as a click, but no mark's click is reported |
 | `candlestick_chart::a_click_on_a_candle_reports_it` | native | a click on a chart mark keeps the vdom busy past 200 polls on Blitz |
 | `carousel_autoplay::tab_from_pause_within_the_carousel` | android | 2652 is the desktop WebView's arm |
 | `carousel_autoplay::tab_from_pause_within_the_carousel` | native | native::carousel has the Blitz arm |
 | `carousel_autoplay::tab_from_pause_within_the_carousel` | web | tab_from_pause_to_the_track_is_no_new_entry is the web's arm |
 | `cascader::a_disabled_cascader_row_looks_disabled` | ios | a touch screen has no hover |
-| `cascader::taps_walk_the_cascader_levels` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `cascader_phone::android_back_closes_a_cascader` | all but android | 1275: no Back key off Android |
 | `color_field::arrow_down_enters_the_colour_dialog_and_escape_returns` | android | 958: element identity on the WebView |
 | `color_field::arrow_down_enters_the_colour_dialog_and_escape_returns` | desktop | 958: element identity on the WebView |
 | `color_field::arrow_down_enters_the_colour_dialog_and_escape_returns` | ios | 958: element identity on the WebView |
-| `combobox::typing_and_enter_add_a_tag` | ios | 3416: the simulator's tap or drag did not drive the page |
+| `combobox::typing_and_enter_add_a_tag` | ios | 3416: iOS's hardware-keyboard auto-capitalization types the field's first letter upper case |
 | `drawer::a_backdrop_click_closes_a_drawer` | ios | upstream: WebKit does not focus a clicked button |
 | `drawer::a_backdrop_click_closes_a_drawer` | macos desktop | upstream: WebKit does not focus a clicked button |
 | `drawer::a_button_in_a_drawer_closes_it_and_focus_returns` | ios | upstream: WebKit does not focus a clicked button |
@@ -43,7 +41,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `drawer::a_drawer_moves_focus_in_and_traps_tab` | desktop | 959: Shift+Tab from the first control leaves the drawer on the WebView |
 | `drawer::a_drawer_moves_focus_in_and_traps_tab` | ios | 959: Shift+Tab from the first control leaves the drawer on the WebView |
 | `drawer::a_swipe_down_closes_a_bottom_drawer` | desktop | 1126: no touch input under Xvfb |
-| `drawer::a_swipe_down_closes_a_bottom_drawer` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `drawer::android_back_closes_a_drawer` | all but android | 1275: no Back key off Android |
 | `drawer::escape_closes_a_drawer_and_returns_focus` | ios | upstream: WebKit does not focus a clicked button |
 | `drawer::escape_closes_a_drawer_and_returns_focus` | macos desktop | upstream: WebKit does not focus a clicked button |
@@ -66,8 +63,8 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `floating_window::the_title_bar_menu_resizes_and_resets` | android | 958: element identity on the WebView |
 | `floating_window::the_title_bar_menu_resizes_and_resets` | desktop | 958: element identity on the WebView |
 | `floating_window::the_title_bar_menu_resizes_and_resets` | ios | 958: element identity on the WebView |
-| `floating_window_resize::a_drag_past_the_edge_keeps_it_in_the_viewport` | ios | 3416: the simulator's tap or drag did not drive the page |
-| `floating_window_resize::a_resize_wins_over_the_callers_sx_size` | ios | 3416: the simulator's tap or drag did not drive the page |
+| `floating_window_resize::a_drag_past_the_edge_keeps_it_in_the_viewport` | ios | 3416: dragged to the top, the title bar sits under the status bar, which takes the next drag |
+| `floating_window_resize::a_resize_wins_over_the_callers_sx_size` | ios | 3416: the phone's 402px viewport leaves the window no room to grow by a key |
 | `floating_window_resize::drags_leave_their_handle_focused` | android | 958: element identity on the WebView |
 | `floating_window_resize::drags_leave_their_handle_focused` | desktop | 958: element identity on the WebView |
 | `floating_window_resize::drags_leave_their_handle_focused` | ios | 958: element identity on the WebView |
@@ -274,11 +271,9 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `slider::a_vertical_swipe_scrolls_the_page_on_android_only_and_a_sideways_drag_or_a_tap_moves_it` | ios | 3416: the slider feels AXe's drag press but no move |
 | `slider::pressing_the_track_centre_and_dragging_right_follows_the_pointer` | ios | 3416: the slider feels AXe's drag press but no move |
 | `slider_touch_keyboard::a_touch_held_on_the_thumb_leaves_no_bubble_after_the_release` | desktop | 1126: no touch input under Xvfb |
-| `sortable::a_click_on_a_hook_handle_clicks_and_a_drag_does_not` | ios | 3416: the simulator's tap or drag did not drive the page |
-| `sortable::a_dropped_item_settles_into_its_slot_until_the_next_lift` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `splitter::a_double_click_collapses_pane_a_and_restores_it` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `splitter::a_vertical_swipe_over_a_vertical_divider_scrolls_the_page_on_android_only_and_a_sideways_drag_moves_it` | ios | 3416: the simulator's tap or drag did not drive the page |
-| `spotlight::a_hovered_row_is_tinted_and_does_not_move_the_highlight` | ios | 3416: the simulator's tap or drag did not drive the page |
+| `spotlight::a_hovered_row_is_tinted_and_does_not_move_the_highlight` | ios | a touch screen has no hover |
 | `stepper::a_clicked_continue_returns_focus_horizontally` | android | 958: element identity on the WebView |
 | `stepper::a_clicked_continue_returns_focus_horizontally` | desktop | 958: element identity on the WebView |
 | `stepper::a_clicked_continue_returns_focus_horizontally` | ios | 958: element identity on the WebView |
@@ -292,15 +287,15 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `stepper::moving_on_returns_focus_to_the_current_step_vertically` | desktop | 958: element identity on the WebView |
 | `stepper::moving_on_returns_focus_to_the_current_step_vertically` | ios | 958: element identity on the WebView |
 | `table::a_row_click_reports_its_row` | ios | a touch screen has no hover |
-| `table::rows_select_by_box_and_keep_it_through_a_sort` | ios | 3416: the simulator's tap or drag did not drive the page |
+| `table::rows_select_by_box_and_keep_it_through_a_sort` | ios | 3416: a tap on a second header adds it to the sort, as Shift would |
 | `table_column_filters::a_date_filter_narrows_a_table` | android | Chromium's typed date segments only |
 | `table_column_filters::a_date_filter_narrows_a_table` | ios | the WebView's native date input opens iOS's date wheel, which typed keys do not fill |
 | `table_column_filters::a_date_filter_narrows_a_table` | windows desktop | 3422: Shift+Tab never leaves the date input on WebView2 |
 | `table_column_filters::tab_past_either_end_of_a_column_filter_closes_it` | ios | 3416: focus stays on the body after a Tab or a tap |
-| `table_column_filters::the_column_filters_narrow_a_table` | ios | 3416: the simulator's tap or drag did not drive the page |
+| `table_column_filters::the_column_filters_narrow_a_table` | ios | 3416: iOS's hardware-keyboard auto-capitalization types the field's first letter upper case |
 | `table_column_filters::the_filter_panel_edits_every_filter` | android | 958: element identity on the WebView |
-| `table_column_filters::the_filter_panel_edits_every_filter` | ios | 958: element identity on the WebView |
-| `table_column_filters::the_quick_filter_narrows_a_paged_table` | ios | 3416: the simulator's tap or drag did not drive the page |
+| `table_column_filters::the_filter_panel_edits_every_filter` | ios | 3416: iOS's hardware-keyboard auto-capitalization types the field's first letter upper case |
+| `table_column_filters::the_quick_filter_narrows_a_paged_table` | ios | 3416: iOS's hardware-keyboard auto-capitalization types the field's first letter upper case |
 | `table_detail::an_animated_detail_slides_open_and_shut` | android | 958: element identity on the WebView |
 | `table_detail::pinned_toggles_push_the_checkboxes_past_them` | android | 3217: one web run guards the cascade |
 | `table_detail::pinned_toggles_push_the_checkboxes_past_them` | desktop | 3217: one web run guards the cascade |
@@ -375,8 +370,8 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `tabs::tab_leaves_the_strip_and_shift_tab_comes_back_to_the_selected_tab` | desktop | 958: element identity on the WebView |
 | `tabs::tab_leaves_the_strip_from_a_focused_unselected_tab` | android | 958: element identity on the WebView |
 | `tabs::tab_leaves_the_strip_from_a_focused_unselected_tab` | desktop | 958: element identity on the WebView |
-| `text_field::fast_typing_into_a_text_field_keeps_every_letter` | ios | 3416: the simulator's tap or drag did not drive the page |
-| `textarea::typing_into_a_textarea_reaches_its_value` | ios | 3416: the simulator's tap or drag did not drive the page |
+| `text_field::fast_typing_into_a_text_field_keeps_every_letter` | ios | 3416: iOS's hardware-keyboard auto-capitalization types the field's first letter upper case |
+| `textarea::typing_into_a_textarea_reaches_its_value` | ios | 3416: iOS's hardware-keyboard auto-capitalization types the field's first letter upper case |
 | `theme_defaults::an_unset_hover_card_align_follows_the_theme` | ios | a touch screen has no hover |
 | `theme_defaults::an_unset_hover_card_side_follows_the_theme` | ios | a touch screen has no hover |
 | `toolbar::fields_join_the_arrow_order` | ios | 3432: WKWebView: ArrowLeft at a caret's start keeps the field |
@@ -420,26 +415,26 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `use_back::android_back_steps_down_below_a_menu` | all but android | 2003: no Back key off Android |
 | `use_back::android_back_steps_down_twice_without_a_tap` | all but android | 3322: no Back key off Android |
 | `use_back::android_back_walks_the_routes` | all but android | 3384: no Back key off Android |
-| `use_intersection::a_target_is_in_the_viewport_only_while_scrolled_to` | ios | 3416: the simulator's tap or drag did not drive the page |
-| `use_intersection::once_keeps_the_first_sighting` | ios | 3416: the simulator's tap or drag did not drive the page |
+| `use_intersection::a_target_is_in_the_viewport_only_while_scrolled_to` | ios | 3416: a swipe flings the page past the target, momentum scrolling on |
+| `use_intersection::once_keeps_the_first_sighting` | ios | 3416: a swipe flings the page past the target, momentum scrolling on |
 | `use_local_storage::the_local_area_outlives_a_relaunch` | android | no relaunch in the Android driver; its store is the files directory |
 | `use_local_storage::the_local_area_outlives_a_relaunch` | desktop | a launch gets a fresh E2E_STORAGE_DIR, so a relaunch keeps nothing |
 | `use_local_storage::the_local_area_outlives_a_relaunch` | native | Blitz has no relaunch in the driver |
 | `use_long_press::a_held_touch_fires_the_callback_once_and_swallows_the_click` | desktop | 1126: no touch input under Xvfb |
 | `use_long_press::a_short_touch_still_clicks` | desktop | 1126: no touch input under Xvfb |
 | `use_swipe::a_mouse_drag_is_never_a_swipe` | android | adb drags with a finger |
-| `use_swipe::a_mouse_drag_is_never_a_swipe` | ios | 3416: the simulator's tap or drag did not drive the page |
+| `use_swipe::a_mouse_drag_is_never_a_swipe` | ios | a touch screen has no mouse drag |
 | `use_swipe::a_touch_swipe_reports_its_direction_past_the_distance` | desktop | 1126: no touch input under Xvfb |
 | `use_swipe::an_edge_swipe_opens_from_the_right_under_rtl` | desktop | 1126: no touch input under Xvfb |
 | `use_swipe::an_edge_swipe_opens_only_from_the_band_past_the_back_zone` | desktop | 1126: no touch input under Xvfb |
 | `use_swipe::an_edge_swipe_reopens_a_drawer_five_times` | desktop | 1126: no touch input under Xvfb |
 | `use_swipe::an_edge_swipe_wins_over_a_scrolled_inner_scroller` | desktop | 1126: no touch input under Xvfb |
-| `use_timers::typing_settles_a_debounced_value_and_callback` | ios | 3416: the simulator's tap or drag did not drive the page |
+| `use_timers::typing_settles_a_debounced_value_and_callback` | ios | 3416: iOS's hardware-keyboard auto-capitalization types the field's first letter upper case |
 | `video::every_audio_source_failing_shows_the_error` | native | Blitz plays no media and shows the fallback |
 | `video::every_audio_source_failing_shows_the_error` | web | audio::every_source_failing_shows_the_error is the web's arm |
 | `video::every_video_source_failing_shows_the_error` | native | Blitz plays no media and shows the fallback |
 | `video::every_video_source_failing_shows_the_error` | web | video::every_source_failing_shows_the_error is the web's arm |
-| `video::fullscreen::the_fullscreen_button_toggles` | ios | 3416: the simulator's tap or drag did not drive the page |
+| `video::fullscreen::the_fullscreen_button_toggles` | ios | iOS's native video fullscreen does not leave on Escape |
 | `video::fullscreen::the_fullscreen_button_toggles` | macos desktop | upstream: Escape does not leave a WKWebView fullscreen |
 | `viewport_meta::a_small_field_keeps_the_page_scale` | native | Blitz has no visual viewport |
 | `viewport_meta::a_small_field_keeps_the_page_scale` | web | the web build carries its app's own index.html |

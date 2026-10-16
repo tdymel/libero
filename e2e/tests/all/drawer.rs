@@ -149,8 +149,7 @@ e2e::scenario!(
     a_swipe_down_closes_a_bottom_drawer,
     "/drawer/bottom-swipe",
     a_swipe_down_closes,
-    desktop: skip("1126: no touch input under Xvfb"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    desktop: skip("1126: no touch input under Xvfb")
 );
 
 /// Android's Back closes the drawer, and the app stays (1289).
