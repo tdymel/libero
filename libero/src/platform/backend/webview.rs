@@ -2892,64 +2892,6 @@ mod tests {
         }
     }
 
-    /// A page that keeps every script it is handed.
-    #[derive(Default)]
-    struct ScriptLog {
-        scripts: RefCell<Vec<String>>,
-        owners: RefCell<Vec<Owner<UnsyncStorage>>>,
-    }
-
-    impl Document for ScriptLog {
-        fn eval(&self, script: String) -> Eval {
-            self.scripts.borrow_mut().push(script);
-            let owner = UnsyncStorage::owner();
-            let answer = owner.insert(Box::new(Answer(None)) as Box<dyn Evaluator>);
-            self.owners.borrow_mut().push(owner);
-            Eval::new(answer)
-        }
-    }
-
-    /// The Escape listener goes in with the first open layer and out with the last (3356).
-    #[test]
-    fn the_escape_claim_spans_the_first_layer_to_the_last() {
-        #[component]
-        fn Layer() -> Element {
-            let layer = crate::hooks::use_dismiss_layer();
-            use_hook(move || Rc::new(layer.push()));
-            rsx! {}
-        }
-        fn layers() -> Element {
-            let open = use_root_context(|| Signal::new(0usize));
-            rsx! {
-                for index in 0..open() {
-                    Layer { key: "{index}" }
-                }
-            }
-        }
-        let log = Rc::new(ScriptLog::default());
-        let mut dom = VirtualDom::new(layers).with_root_context(log.clone() as Rc<dyn Document>);
-        dom.rebuild_in_place();
-        let claims = || {
-            (log.scripts.borrow().iter())
-                .filter(|script| script.contains(CLAIM_ESCAPE))
-                .map(|script| script.contains("const data = true;"))
-                .collect::<Vec<_>>()
-        };
-        let open = |dom: &mut VirtualDom, count: usize| {
-            dom.in_scope(ScopeId::ROOT, || {
-                consume_context::<Signal<usize>>().set(count)
-            });
-            settle(dom);
-            dom.render_immediate(&mut dioxus::core::NoOpMutations);
-        };
-        open(&mut dom, 2);
-        assert_eq!(claims(), [true], "only the first layer claims");
-        open(&mut dom, 1);
-        assert_eq!(claims(), [true], "a layer is still open");
-        open(&mut dom, 0);
-        assert_eq!(claims(), [true, false], "the last layer releases");
-    }
-
     fn page_dom(dark: bool) -> VirtualDom {
         let page = FakePage {
             dark,

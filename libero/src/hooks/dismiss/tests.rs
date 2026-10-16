@@ -983,3 +983,84 @@ fn one_yes_wins_and_one_unknown_blocks_a_no() {
     assert_eq!(focus_inside_of([Some(false), None]), None);
     assert_eq!(focus_inside_of([Some(false), Some(false)]), Some(false));
 }
+
+/// The WebView's Escape listener goes in with the first open layer and out with the last (3356).
+#[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+#[test]
+fn the_escape_claim_spans_the_first_layer_to_the_last() {
+    use std::cell::RefCell;
+    use std::task::{Context, Poll};
+
+    use dioxus::document::{Document, Eval, EvalError, Evaluator};
+    use dioxus::signals::{AnyStorage, Owner, UnsyncStorage};
+    use serde_json::Value;
+
+    struct Silent;
+
+    impl Evaluator for Silent {
+        fn poll_join(&mut self, _: &mut Context<'_>) -> Poll<Result<Value, EvalError>> {
+            Poll::Pending
+        }
+
+        fn poll_recv(&mut self, _: &mut Context<'_>) -> Poll<Result<Value, EvalError>> {
+            Poll::Pending
+        }
+
+        fn send(&self, _: Value) -> Result<(), EvalError> {
+            Ok(())
+        }
+    }
+
+    /// A page that keeps every script it is handed.
+    #[derive(Default)]
+    struct ScriptLog {
+        scripts: RefCell<Vec<String>>,
+        owners: RefCell<Vec<Owner<UnsyncStorage>>>,
+    }
+
+    impl Document for ScriptLog {
+        fn eval(&self, script: String) -> Eval {
+            self.scripts.borrow_mut().push(script);
+            let owner = UnsyncStorage::owner();
+            let answer = owner.insert(Box::new(Silent) as Box<dyn Evaluator>);
+            self.owners.borrow_mut().push(owner);
+            Eval::new(answer)
+        }
+    }
+
+    #[component]
+    fn Layer() -> Element {
+        let layer = use_dismiss_layer();
+        use_hook(move || Rc::new(layer.push()));
+        rsx! {}
+    }
+    fn layers() -> Element {
+        let open = use_root_context(|| Signal::new(0usize));
+        rsx! {
+            for index in 0..open() {
+                Layer { key: "{index}" }
+            }
+        }
+    }
+    let log = Rc::new(ScriptLog::default());
+    let mut dom = VirtualDom::new(layers).with_root_context(log.clone() as Rc<dyn Document>);
+    dom.rebuild_in_place();
+    let claims = || {
+        (log.scripts.borrow().iter())
+            .filter(|script| script.contains("window.__liberoEscape"))
+            .map(|script| script.contains("const data = true;"))
+            .collect::<Vec<_>>()
+    };
+    let open = |dom: &mut VirtualDom, count: usize| {
+        dom.in_scope(ScopeId::ROOT, || {
+            consume_context::<Signal<usize>>().set(count)
+        });
+        settle(dom);
+    };
+    open(&mut dom, 2);
+    assert_eq!(claims(), [true], "only the first layer claims");
+    open(&mut dom, 1);
+    assert_eq!(claims(), [true], "a layer is still open");
+    open(&mut dom, 0);
+    assert_eq!(claims(), [true, false], "the last layer releases");
+}
