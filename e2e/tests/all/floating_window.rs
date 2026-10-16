@@ -58,10 +58,6 @@ fn the_move_handle_keeps_24px_under_a_smaller_page_font() {
 }
 
 #[test]
-#[cfg_attr(
-    windows,
-    ignore = "3423: the AX value of the resize separator follows the fonts' width"
-)]
 fn it_meets_the_baseline() {
     Suite::new("floating_window", "/floating-window")
         .focusable(TRIGGER)
@@ -85,10 +81,6 @@ fn it_meets_the_baseline() {
 /// The title-bar menu, then Move's step buttons, 2.5.7's alternative to a drag (todo 1773).
 /// Apart from the rest: the open menu covers the corner grip the spacing pass measures.
 #[test]
-#[cfg_attr(
-    windows,
-    ignore = "3423: the AX value of the resize separator follows the fonts' width"
-)]
 fn the_menu_and_the_step_buttons_meet_the_baseline() {
     Suite::new("floating_window-steps", "/floating-window")
         .contrast_covers(DIALOG)

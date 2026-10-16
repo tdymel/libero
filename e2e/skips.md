@@ -68,8 +68,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `floating_window::f6_moves_focus_between_the_window_and_the_page` | android | 958: element identity on the WebView |
 | `floating_window::f6_moves_focus_between_the_window_and_the_page` | desktop | 958: element identity on the WebView |
 | `floating_window::f6_moves_focus_between_the_window_and_the_page` | ios | 3416: the simulator's tap or drag did not drive the page |
-| `floating_window::it_meets_the_baseline` | windows web | 3423: the AX value of the resize separator follows the fonts' width |
-| `floating_window::the_menu_and_the_step_buttons_meet_the_baseline` | windows web | 3423: the AX value of the resize separator follows the fonts' width |
 | `floating_window::the_title_bar_menu_resizes_and_resets` | android | 958: element identity on the WebView |
 | `floating_window::the_title_bar_menu_resizes_and_resets` | desktop | 958: element identity on the WebView |
 | `floating_window::the_title_bar_menu_resizes_and_resets` | ios | 3416: the simulator's tap or drag did not drive the page |
