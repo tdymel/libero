@@ -15,6 +15,7 @@ pub const ROUTES: Routes = &[
     ("/menu-items-late", || rsx! { MenuItemsLatePage {} }),
     ("/menu-items-shrink", || rsx! { MenuItemsShrinkPage {} }),
     ("/menu-submenu-reopen", || rsx! { MenuSubmenuReopenPage {} }),
+    ("/menu-submenu-low", || rsx! { MenuSubmenuLowPage {} }),
     ("/menu-choices", || rsx! { MenuChoicesPage {} }),
     ("/menu-row", || rsx! { MenuRowPage {} }),
     ("/menu-keep-open", || rsx! { MenuKeepOpenPage {} }),
@@ -255,6 +256,34 @@ fn MenuItemsShrinkPage() -> Element {
             state: menu,
             items,
             Button { variant: "outlined", attributes: menu.a11y_attributes(), "Actions" }
+        }
+    }
+}
+
+/// Todo 3641: a phone-wide menu near the bottom leaves its submenu no room on either side.
+#[component]
+fn MenuSubmenuLowPage() -> Element {
+    let menu = use_menu();
+    let items = vec![
+        MenuItem::new("Export every selected row as a comma separated values file")
+            .onselect(|_| {})
+            .into(),
+        MenuItem::new("Share")
+            .submenu(vec![
+                MenuItem::new("Copy link").onselect(|_| {}).into(),
+                MenuItem::new("Email").onselect(|_| {}).into(),
+                MenuItem::new("Messages").onselect(|_| {}).into(),
+            ])
+            .into(),
+    ];
+
+    rsx! {
+        div { position: "absolute", left: "16px", top: "calc(100vh - 180px)",
+            Menu {
+                state: menu,
+                items,
+                Button { variant: "outlined", attributes: menu.a11y_attributes(), "Actions" }
+            }
         }
     }
 }

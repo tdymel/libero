@@ -134,7 +134,12 @@ pub(crate) fn place(
     if options.shift {
         match side.is_vertical() {
             true => x = shift_into(x, floating.width, viewport.width, options.padding),
-            false => y = shift_into(y, floating.height, viewport.height, options.padding),
+            false => {
+                y = shift_into(y, floating.height, viewport.height, options.padding);
+                // Room on neither side: overlap the anchor, as a box past the
+                // edge shrink-wraps taller than it was measured.
+                x = shift_into(x, floating.width, viewport.width, options.padding);
+            }
         }
     }
 
@@ -368,6 +373,40 @@ mod tests {
         );
         assert_eq!(placed.x, 304.0, "anchor right plus the gap");
         assert_eq!(placed.y, 100.0, "start-aligned on the vertical axis now");
+    }
+
+    /// A phone-wide submenu (todo 3641, MENU-2): no room on either side, so it
+    /// overlaps its anchor inside the viewport instead of running off the right.
+    #[test]
+    fn a_side_box_with_room_on_neither_side_overlaps_the_anchor() {
+        let phone = Dimensions {
+            width: 320.0,
+            height: 900.0,
+        };
+        let submenu = Dimensions {
+            width: 120.0,
+            height: 178.0,
+        };
+        let row = Rect {
+            x: 46.0,
+            y: 806.0,
+            width: 180.0,
+            height: 36.0,
+        };
+        let placed = place(row, submenu, phone, &options().side(Side::End), false);
+
+        assert_eq!(placed.placement.side, Side::End, "86 right beats 38 left");
+        assert_eq!(placed.x, 192.0, "320 minus the 8px padding minus the box");
+        assert_eq!(placed.y, 714.0, "900 minus the padding minus the box");
+
+        let fits = place(
+            anchor_at(100.0, 100.0),
+            submenu,
+            viewport(),
+            &options().side(Side::End),
+            false,
+        );
+        assert_eq!(fits.x, 304.0, "with room, it still starts past the gap");
     }
 
     /// Todo 711: under RTL `Start` is the right side, and a start-aligned

@@ -624,6 +624,46 @@ fn a_long_label_wraps_inside_the_viewport() {
     });
 }
 
+/// Todo 3641: a submenu with no room on either side overlapped the viewport edge,
+/// squeezed so its rows wrapped and ran past the bottom.
+#[test]
+fn a_submenu_without_side_room_stays_whole_inside_the_viewport() {
+    block_on(async {
+        let fixture = Fixture::open("/menu-submenu-low", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            pointer::click(page, TRIGGER).await?;
+            wait::for_visible(page, MENU).await?;
+            keyboard::press(page, keyboard::END).await?;
+            keyboard::press(page, keyboard::ARROW_RIGHT).await?;
+            wait::for_js_true(
+                page,
+                "(() => { \
+                   const menus = document.querySelectorAll('[role=menu]'); \
+                   if (menus.length !== 2 || getComputedStyle(menus[1]).visibility !== 'visible') return false; \
+                   const box = menus[1].getBoundingClientRect(); \
+                   const share = document.activeElement.closest('[role=menu]') === menus[1] \
+                     && document.querySelector('[role=menuitem][aria-expanded=true]'); \
+                   const rows = [...menus[1].querySelectorAll('[role=menuitem]')] \
+                     .map(r => r.getBoundingClientRect().height); \
+                   return share && box.left >= 0 && box.right <= innerWidth \
+                     && box.top >= 0 && box.bottom <= innerHeight \
+                     && rows.length === 3 \
+                     && rows.every(h => Math.abs(h - share.getBoundingClientRect().height) < 1); \
+                 })()",
+                "the submenu inside the viewport, its rows as tall as Share",
+            )
+            .await
+        }
+        .await;
+
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+    });
+}
+
 /// A checked radio item is where the menu opens, and Space picks another.
 #[test]
 fn a_menu_of_choices_opens_on_the_checked_one() {
