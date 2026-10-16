@@ -258,7 +258,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `scroll_area::rows_stay_in_view_through_a_fling` | desktop | 2131: rows trail a WebView fling, 80px of 120; skeleton bars paint the gap |
 | `scroll_area::rows_stay_in_view_through_a_fling` | ios | 2131: rows trail a WebView fling, 80px of 120; skeleton bars paint the gap |
 | `scroll_area::the_window_follows_a_wheel_or_a_fling` | ios | a touch screen has no wheel |
-| `scroll_area::the_window_follows_a_wheel_or_a_fling` | macos desktop | 3432: WKWebView: the wheel never brings the windowed list to rest |
 | `segmented_control::the_arrows_move_focus_when_the_id_is_no_css_identifier` | android | 958: element identity on the WebView |
 | `segmented_control::the_arrows_move_focus_when_the_id_is_no_css_identifier` | desktop | 958: element identity on the WebView |
 | `segmented_control::the_arrows_move_focus_with_the_selection_and_wrap` | android | 958: element identity on the WebView |
