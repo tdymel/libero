@@ -54,6 +54,18 @@ async fn a_select_filter_narrows_the_rows<D: Driver>(d: &mut D, _route: &str) ->
 
     // The header's row now holds the picks on one line, not a checkbox column.
     eventually_text(d, SUMMARY, "Admin +1", "the header's summary").await?;
+    // Closed first: a field focused under the open popover loses the focus to the popover's late return (3467).
+    d.press(keyboard::ESCAPE).await?;
+    eventually(d, "the filter popover closed", async |d| {
+        Ok(!d.exists(POPOVER).await?)
+    })
+    .await?;
+    eventually_focused(
+        d,
+        "[aria-label=\"Role column options\"]",
+        "the closed filter",
+    )
+    .await?;
     d.focus(COMPACT).await?;
     d.press(keyboard::ARROW_DOWN).await?;
     eventually(d, "the dropdown", async |d| d.exists(LISTBOX).await).await?;

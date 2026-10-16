@@ -14,6 +14,21 @@ use e2e::{Fixture, Viewport, js, wait};
 const STILL: &str = "document.getAnimations().every(a => a.playState !== 'running' \
     || a.effect?.getComputedTiming().iterations === Infinity)";
 
+/// Axe over `body` once nothing moves; a bubble that remounted since the wait restarts its fade (3451).
+async fn clean_when_still(page: &Page) {
+    let mut outcome = Ok(());
+    for _ in 0..3 {
+        wait::for_js_true(page, STILL, "the transitions to end")
+            .await
+            .unwrap();
+        outcome = contrast::assert_clean_except(page, "body", contrast::LINE_NUMBERS).await;
+        if outcome.is_ok() {
+            return;
+        }
+    }
+    outcome.unwrap();
+}
+
 #[test]
 fn node_views_draw_caller_nodes_and_keep_their_content_editable() {
     block_on(async {
@@ -474,9 +489,7 @@ fn the_editor_overlays_keep_their_contrast_in_both_schemes() {
                 .screenshot(&format!("rte-code-source-{}", scheme.name()))
                 .await
                 .unwrap();
-            contrast::assert_clean_except(page, "body", contrast::LINE_NUMBERS)
-                .await
-                .unwrap();
+            clean_when_still(page).await;
             // The text type button names the block's mode; hovered, it keeps its contrast.
             pointer::hover(page, "[role=toolbar] button[aria-label^=\"Text type:\"]")
                 .await
