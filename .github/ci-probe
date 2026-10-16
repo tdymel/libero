@@ -1,0 +1,5 @@
+# ted_ci.py probe; read by .github/workflows/ci-probe.yml.
+os=macos
+tier=desktop
+filter=scroll_area::the_window_follows_a_wheel_or_a_fling
+dev=olaf-56
