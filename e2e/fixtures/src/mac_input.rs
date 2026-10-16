@@ -64,7 +64,7 @@ pub fn run(view: &NSView, op: &Value) -> Result<Value, String> {
             Ok(Value::Null)
         }
         "wheel" => {
-            wheel(view, &window, number("x")?, number("y")?, number("dy")?)?;
+            wheel(view, number("x")?, number("y")?, number("dy")?)?;
             Ok(Value::Null)
         }
         "key" => {
@@ -207,10 +207,10 @@ fn hid_mouse(
 }
 
 /// A pixel-unit CGEvent wheel at the point, as a trackpad would send it; `dy` > 0 scrolls down.
-fn wheel(view: &NSView, window: &NSWindow, x: f64, y: f64, dy: f64) -> Result<(), String> {
+fn wheel(view: &NSView, x: f64, y: f64, dy: f64) -> Result<(), String> {
     let at = point(view, x, y);
-    let on_screen = window.convertPointToScreen(at);
-    // CGEvent wants global coordinates from the main screen's top-left.
+    // A window-less NSEvent's `locationInWindow` is its CGEvent location, which WebKit reads as
+    // window coordinates; CGEvent wants them from the main screen's top-left.
     let mtm = MainThreadMarker::from(view);
     let top = NSScreen::screens(mtm)
         .firstObject()
@@ -224,7 +224,7 @@ fn wheel(view: &NSView, window: &NSWindow, x: f64, y: f64, dy: f64) -> Result<()
         0,
     )
     .ok_or("CGEvent refused a wheel event")?;
-    CGEvent::set_location(Some(&event), CGPoint::new(on_screen.x, top - on_screen.y));
+    CGEvent::set_location(Some(&event), CGPoint::new(at.x, top - at.y));
     let event = NSEvent::eventWithCGEvent(&event).ok_or("NSEvent refused the CGEvent wheel")?;
     target(view, at).scrollWheel(&event);
     Ok(())

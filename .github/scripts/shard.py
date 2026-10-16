@@ -16,11 +16,10 @@ from pathlib import Path
 ALL = Path(__file__).resolve().parents[2] / "e2e/tests/all"
 # Performance scenarios never run in a shard (todo 3454); `E2E_PERF=1` brings them back.
 PERF = {"perf", "table_perf"}
-# Editing, IME and pickers: the whole tier wedges headless Chrome on the 3-core macOS runner.
-# Out: `use_hotkeys` and `rich_text_editor_input`, whose Cmd chords lose their keyup and stall Chrome.
+# Editing, IME, pickers and Cmd chords: the whole tier wedges headless Chrome on the 3-core macOS runner.
 SMOKE = [
-    "chrono_field", "editor_ime_probe", "select", "shortcut_help",
-    "spotlight", "tags_field", "text_field", "theme_switcher",
+    "chrono_field", "editor_ime_probe", "rich_text_editor_input", "select", "shortcut_help",
+    "spotlight", "tags_field", "text_field", "theme_switcher", "use_hotkeys",
 ]
 
 
