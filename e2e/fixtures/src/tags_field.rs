@@ -12,7 +12,27 @@ pub const ROUTES: Routes = &[
     ("/tags-field/empty", || rsx! { TagsEmptyPage {} }),
     ("/tags-field/reject", || rsx! { TagsRejectPage {} }),
     ("/tags-field/aria-label", || rsx! { TagsAriaLabelPage {} }),
+    ("/tags-field/long", || rsx! { TagsLongPage {} }),
 ];
+
+const LONG: &str = "Versandkostenberechnungsgrundlagenverordnungsentwurfsbearbeitungsstelle";
+
+/// An unbreakable tag and a short one in a 280px column: the long chip wraps (todo 3570).
+#[component]
+fn TagsLongPage() -> Element {
+    let mut topics = use_signal(|| vec![LONG.to_string(), "rust".to_string()]);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "280px",
+            TagsField {
+                id: "long",
+                label: "Topics",
+                value: topics(),
+                onchange: move |next| topics.set(next),
+            }
+        }
+    }
+}
 
 /// No visible label, only `aria_label`: the open list must still have a name (todo 3059).
 #[component]

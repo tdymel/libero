@@ -14,18 +14,36 @@ use crate::{
     hooks::{current_localization, use_localization},
     localization::{ChipsLabels, fill},
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{CHIP_HEIGHT, Size},
+    theme::{CHIP_HEIGHT, CssVar, Size},
 };
 
-/// Shrinks below its content; the label span ellipsizes so the x stays whole.
-/// Unclipped, so the x's 24x24 hit area reaches past the pill (todo 645).
+/// The first line's height: the chip's height less its 1px borders.
+const LINE_VAR: CssVar = CssVar::new("--lsx-removable-chip-line");
+
+/// A long label wraps and the pill grows, so no text is hidden (todo 3570); the x
+/// stays on the first line. Unclipped, so the x's 24x24 hit area reaches past the pill (todo 645).
 static REMOVABLE_CHIP_SX: StaticSx = StaticSx::new(|| {
-    sx().min_width("0").overflow("visible").selector(
-        "& > [data-slot='label']",
-        sx().min_width("0")
-            .overflow("hidden")
-            .text_overflow("ellipsis"),
-    )
+    sx().min_width("0")
+        .overflow("visible")
+        .align_items("flex-start")
+        .white_space("normal")
+        .per_size(|size| {
+            sx().height("auto")
+                .min_height(CHIP_HEIGHT.value(size))
+                .var(LINE_VAR, format!("calc({} - 2px)", CHIP_HEIGHT.value(size)))
+        })
+        .selector(
+            "& > [data-slot='label']",
+            sx().min_width("0")
+                .display("flex")
+                .align_items("center")
+                .min_height(LINE_VAR.value())
+                .overflow_wrap("anywhere"),
+        )
+        .selector(
+            "& > [data-slot='chip-trailing']",
+            sx().min_height(LINE_VAR.value()),
+        )
 });
 
 /// The x. A native `<button>` inherits neither `color` nor `font-size`; the
@@ -73,8 +91,7 @@ pub(crate) fn removable_chip(
                     Glyph { slot: IconSlot::Close, icon: lucide::x::outlined }
                 }
             } },
-            // The ellipsis hides text; a hover reveals it (no keyboard or touch route).
-            span { "data-slot": "label", title: "{label}", "{label}" }
+            span { "data-slot": "label", "{label}" }
         }
     }
 }

@@ -331,3 +331,79 @@ fn the_chip_cursor_walks_and_removes_tags() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 3570: a long tag wraps inside its chip, the x stays on the first line, and nothing is cut.
+#[test]
+fn a_long_tag_wraps_and_keeps_its_x_on_the_first_line() {
+    block_on(async {
+        let fixture = Fixture::open("/tags-field/long", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let facts: Vec<f64> = page
+            .evaluate(
+                "(() => {
+                    const [long, short] = document.querySelectorAll(\"[data-slot='tag']\");
+                    const box = e => e.getBoundingClientRect();
+                    const label = long.querySelector(\"[data-slot='label']\");
+                    const x = long.querySelector(\"button[aria-label^='Remove']\");
+                    return [
+                        box(long).height, box(short).height,
+                        box(x).bottom - box(long).top,
+                        label.scrollWidth - label.clientWidth,
+                        label.hasAttribute('title') ? 1 : 0,
+                        box(long).width,
+                    ];
+                })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let [long, short, x_bottom, clipped, titled, width] = facts[..] else {
+            panic!("{facts:?}");
+        };
+        assert!(long > short * 1.5, "the long chip wraps: {facts:?}");
+        assert!(
+            x_bottom <= short + 1.0,
+            "the x sits on the first line: {facts:?}"
+        );
+        assert!(clipped <= 0.5, "no label text is cut: {facts:?}");
+        assert_eq!(titled, 0.0, "no title stands in for the text: {facts:?}");
+        assert!(
+            width <= 280.0,
+            "the chip stays inside the 280px column: {facts:?}"
+        );
+        fixture.console.assert_clean("a long tag").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 3569: Ctrl or Alt Backspace in the empty input is a word delete, not a tag removal.
+#[test]
+fn a_chorded_backspace_keeps_the_last_tag() {
+    block_on(async {
+        let fixture = Fixture::open("/tags-field/cursor", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, CURSOR, 10).await.unwrap();
+        for modifier in [keyboard::CTRL, keyboard::ALT] {
+            keyboard::press_with(page, BACKSPACE, modifier)
+                .await
+                .unwrap();
+        }
+        // A plain Backspace after them proves the chords were handled first.
+        keyboard::press(page, BACKSPACE).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelectorAll(\"[data-slot='tag']\").length === 3",
+            "only the plain Backspace to remove a tag",
+        )
+        .await
+        .unwrap();
+        assert_eq!(tags(page).await, ["rust", "dioxus", "wasm"]);
+        fixture.console.assert_clean("a chorded Backspace").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

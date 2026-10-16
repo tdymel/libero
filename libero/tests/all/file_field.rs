@@ -220,7 +220,7 @@ fn a_multiple_file_field_draws_the_shared_removable_chip() {
     let html = render(app);
     let body = body(&html);
     assert!(
-        body.contains(r#"<span data-slot="label" title="a.txt">a.txt</span>"#),
+        body.contains(r#"<span data-slot="label">a.txt</span>"#),
         "{body}"
     );
     let named = body.find(r#""Remove b.txt""#).expect("the second chip's x");

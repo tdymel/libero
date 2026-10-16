@@ -776,8 +776,10 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
                     state.set_active(None);
                 }
                 // The input edits the value, unlike `MultiSelect`'s search box;
-                // with text in it, Backspace only edits.
-                Key::Backspace if text().is_empty() && !held.is_empty() => {
+                // with text in it, or with Ctrl or Alt held, Backspace only edits.
+                Key::Backspace
+                    if text().is_empty() && !held.is_empty() && event.modifiers().is_empty() =>
+                {
                     let Some(onchange) = &onchange else {
                         return;
                     };

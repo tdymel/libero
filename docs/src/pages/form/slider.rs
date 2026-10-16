@@ -5,7 +5,7 @@ use super::slider_demo::{
 };
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
-use libero::components::SliderPart;
+use libero::components::{SliderPart, SliderValue};
 use libero::{
     components::{
         Code, FieldStatus, Flex, Slider, SliderChangeEvent, SliderSegment, SliderTrack, Text,
@@ -150,7 +150,7 @@ fn format_code(_control: &Control, values: &DemoValues) -> Vec<String> {
 /// `Change` carries each value. Printed too.
 fn wrap_readout(values: &DemoValues, code: &str) -> String {
     let (declaration, signal, last) = match discrete(values) {
-        true => (quality_code(), "quality():?", "last_quality()"),
+        true => (quality_code(), "quality().label()", "last_quality()"),
         false => (String::new(), "volume()", "last()"),
     };
     format!(
@@ -418,7 +418,7 @@ pub fn SliderPage() -> Element {
                                 }
                                 Text {
                                     size: "sm",
-                                    "value: {quality():?} - last event: {last_quality():?}"
+                                    "value: {quality().label()} - last event: {last_quality():?}"
                                 }
                             } else {
                                 Slider {
