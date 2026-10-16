@@ -41,7 +41,7 @@ impl PaginationDefaults {
         boundaries: 1,
         gap: Size::Xs,
         control_sizes: Sizes::new(22, 26, 32, 38, 44, 52),
-        font_sizes: Sizes::new(11, 12, 14, 16, 18, 20),
+        font_sizes: Sizes::new(12, 14, 16, 18, 20, 24),
         // 3:1 on the page in both schemes (WCAG 1.4.11, todo 3597).
         border: ColorValue::Shade(Color::Muted, ColorShade::S6),
     };
@@ -81,6 +81,16 @@ impl ToCssDeclarations for PaginationDefaults {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Todo 3599: md is 16px like the other dense md text, and the ladder rises.
+    #[test]
+    fn md_text_is_16px_and_the_ladder_rises() {
+        let sizes = PaginationDefaults::DEFAULT.font_sizes;
+        assert_eq!(sizes.get(Size::Md), 16);
+        for pair in Size::ALL.windows(2) {
+            assert!(sizes.get(pair[0]) < sizes.get(pair[1]), "{pair:?}");
+        }
+    }
 
     /// Todo 3593: a px box under a rem label clips it at 200% text size.
     #[test]

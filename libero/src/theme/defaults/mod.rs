@@ -453,11 +453,8 @@ mod tests {
             .iter()
             .map(|d| d.to_string())
             .collect();
-        assert!(
-            css.contains("--lsx-pagination-font-size-md:0.875rem"),
-            "{css}"
-        );
-        assert!(!css.contains("font-size-md:14px"), "{css}");
+        assert!(css.contains("--lsx-pagination-font-size-md:1rem"), "{css}");
+        assert!(!css.contains("font-size-md:16px"), "{css}");
     }
 
     #[test]

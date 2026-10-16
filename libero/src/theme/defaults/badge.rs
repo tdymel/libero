@@ -60,12 +60,12 @@ impl BadgeDefaults {
         // the label at 200% (todo 741).
         sizes: Sizes::new(
             BadgeSizeLevel {
-                font_size: "0.5625rem",
+                font_size: "0.75rem",
                 height: "1rem",
                 padding_x: "0.375rem",
             },
             BadgeSizeLevel {
-                font_size: "0.625rem",
+                font_size: "0.75rem",
                 height: "1.125rem",
                 padding_x: "0.5rem",
             },
@@ -146,6 +146,19 @@ mod tests {
             for length in [level.font_size, level.height, level.padding_x] {
                 assert!(length.ends_with("rem"), "{size:?}: {length}");
             }
+        }
+    }
+
+    /// Todo 3601: no step sets text below 12px, and the ladder never falls.
+    #[test]
+    fn no_label_is_below_12px_and_none_shrinks_going_up() {
+        let rem = |size| {
+            let font = BadgeDefaults::DEFAULT.sizes.get(size).font_size;
+            font.trim_end_matches("rem").parse::<f32>().unwrap()
+        };
+        assert!(rem(Size::Xs) >= 0.75);
+        for pair in Size::ALL.windows(2) {
+            assert!(rem(pair[0]) <= rem(pair[1]), "{pair:?}");
         }
     }
 }
