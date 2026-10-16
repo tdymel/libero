@@ -1,0 +1,5 @@
+# ted_ci.py probe; read by .github/workflows/ci-probe.yml.
+os=windows
+tier=native
+filter=rtl_text::
+dev=olaf-15
