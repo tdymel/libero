@@ -114,6 +114,15 @@ fn Coarse() -> Element {
                 ActionIcon { id: "group-first", aria_label: "First", size: "md", {glyph()} }
                 ActionIcon { id: "group-second", aria_label: "Second", size: "md", {glyph()} }
             }
+            ButtonGroup { aria_label: "Compact", size: "sm",
+                ActionIcon { id: "compact-first", aria_label: "First", {glyph()} }
+                ActionIcon { id: "compact-second", aria_label: "Second", {glyph()} }
+                ActionIcon { id: "compact-third", aria_label: "Third", {glyph()} }
+            }
+            ButtonGroup { aria_label: "Stacked", size: "sm", orientation: "vertical",
+                ActionIcon { id: "stacked-first", aria_label: "First", {glyph()} }
+                ActionIcon { id: "stacked-second", aria_label: "Second", {glyph()} }
+            }
             div { "data-case": "slider", width: "240px",
                 Slider {
                     aria_label: "Volume",

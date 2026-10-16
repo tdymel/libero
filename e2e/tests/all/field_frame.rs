@@ -400,6 +400,41 @@ fn an_empty_trigger_fills_its_frame() {
     });
 }
 
+/// Todo 3690: `click()` cannot open a native `<select>`, so the select covers the frame's
+/// vertical padding and a press there is a press on the select itself.
+#[test]
+fn a_native_select_fills_its_frames_height() {
+    block_on(async {
+        let fixture = Fixture::open("/field-frame", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        let (top, bottom): (bool, bool) = page
+            .evaluate(
+                "(() => { const f = document.querySelector('[data-case=native] [data-frame]'); \
+                 f.scrollIntoView({ block: 'center' }); const r = f.getBoundingClientRect(); \
+                 const s = f.querySelector('select'); const x = r.x + r.width / 2; \
+                 return [s.contains(document.elementFromPoint(x, r.y + 3)), \
+                 s.contains(document.elementFromPoint(x, r.bottom - 3))]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            top && bottom,
+            "the select under the frame's padding, top {top}, bottom {bottom}"
+        );
+
+        fixture
+            .console
+            .assert_clean("a native select frame")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The focus is in the frame, outside its slots. `FileField`'s Browse button
 /// is its control, in a slot of its own.
 async fn in_control(page: &Page, frame: &str) -> Result<()> {

@@ -142,13 +142,23 @@ impl FieldDefaults {
     }
 
     fn frame_size_sx(size: Size) -> Sx {
+        let padding_y = FIELD_PADDING_Y.value(size);
         sx().font_size(FIELD_FONT_SIZE.value(size))
             .and(ios_text_floor_sx(FIELD_FONT_SIZE.value(size)))
             .min_height(FIELD_HEIGHT.value(size))
-            .padding_top(FIELD_PADDING_Y.value(size))
-            .padding_bottom(FIELD_PADDING_Y.value(size))
+            .padding_top(padding_y.clone())
+            .padding_bottom(padding_y.clone())
             .padding_left(FIELD_PADDING_X.value(size))
             .padding_right(FIELD_PADDING_X.value(size))
+            // A native `<select>` fills the frame's height, so a press on the padding opens it.
+            .selector(
+                "& > select",
+                sx().align_self("stretch")
+                    .margin_top(format!("calc(-1 * {padding_y})"))
+                    .margin_bottom(format!("calc(-1 * {padding_y})"))
+                    .padding_top(padding_y.clone())
+                    .padding_bottom(padding_y),
+            )
     }
 
     fn frame_radius_sx(radius: Size) -> Sx {

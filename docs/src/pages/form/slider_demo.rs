@@ -1,7 +1,7 @@
 //! What the `Slider` and `RangeSlider` demos share: the discrete `Quality` scale and the
 //! helpers behind their controls.
 use crate::components::{Control, DemoFile, DemoValues};
-use libero::components::{SliderMark, SliderValue};
+use libero::components::{SliderChangeEvent, SliderMark, SliderValue};
 
 const FILE: DemoFile = DemoFile(include_str!("slider_demo.rs"));
 
@@ -30,9 +30,25 @@ impl Quality {
     }
 }
 
+/// The readout's event text: the phase with the value's labels, not its `Debug` names.
+// demo-code: event start
+pub(super) fn event_text<V>(event: SliderChangeEvent<V>, text: impl Fn(V) -> String) -> String {
+    match event {
+        SliderChangeEvent::Start(value) => format!("Start({})", text(value)),
+        SliderChangeEvent::Change(value) => format!("Change({})", text(value)),
+        SliderChangeEvent::End(value) => format!("End({})", text(value)),
+    }
+}
+// demo-code: event end
+
 /// Printed above the rsx in discrete mode: without the derive there is no discrete slider.
 pub(super) fn quality_code() -> String {
     FILE.section("quality").replacen("pub(super) ", "", 1) + "\n\n"
+}
+
+/// The readout's helper, printed after `quality_code` in discrete mode.
+pub(super) fn event_code() -> String {
+    FILE.section("event").replacen("pub(super) ", "", 1) + "\n\n"
 }
 
 pub(super) fn discrete(values: &DemoValues) -> bool {

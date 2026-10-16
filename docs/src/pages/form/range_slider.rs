@@ -1,6 +1,7 @@
 use super::slider_demo::{
-    Quality, bound_code, continuous, continuous_marks, discrete, discrete_marks, is_on, marks_code,
-    max_options, min_options, number, number_code, quality_code, quality_of, within,
+    Quality, bound_code, continuous, continuous_marks, discrete, discrete_marks, event_code,
+    event_text, is_on, marks_code, max_options, min_options, number, number_code, quality_code,
+    quality_of, within,
 };
 use crate::components::{
     Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls, field_props, indent,
@@ -83,16 +84,22 @@ fn format_code(_control: &Control, values: &DemoValues) -> Vec<String> {
 
 /// The readout, the other half of a controlled range, shows the thumbs never cross. Printed too.
 fn wrap_readout(values: &DemoValues, code: &str) -> String {
-    let (declaration, signal, last) = match discrete(values) {
+    let (declaration, readout) = match discrete(values) {
         true => (
-            quality_code(),
-            "{quality().0.label()}..{quality().1.label()}",
-            "last_quality()",
+            quality_code() + &event_code(),
+            r#"Text {
+        size: "sm",
+        "value: {quality().0.label()}..{quality().1.label()} - last event: "
+        {event_text(last_quality(), |(low, high)| format!("{}..{}", low.label(), high.label()))}
+    }"#,
         ),
-        false => (String::new(), "{price():?}", "last()"),
+        false => (
+            String::new(),
+            r#"Text { size: "sm", "value: {price():?} - last event: {last():?}" }"#,
+        ),
     };
     format!(
-        "{declaration}Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    sx: sx().width(\"100%\"),\n{}    Text {{ size: \"sm\", \"value: {signal} - last event: {{{last}:?}}\" }}\n}}",
+        "{declaration}Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    sx: sx().width(\"100%\"),\n{}    {readout}\n}}",
         indent(code)
     )
 }
@@ -307,7 +314,8 @@ pub fn RangeSliderPage() -> Element {
                                 }
                                 Text {
                                     size: "sm",
-                                    "value: {quality().0.label()}..{quality().1.label()} - last event: {last_quality():?}"
+                                    "value: {quality().0.label()}..{quality().1.label()} - last event: "
+                                    {event_text(last_quality(), |(low, high)| format!("{}..{}", low.label(), high.label()))}
                                 }
                             } else {
                                 RangeSlider {

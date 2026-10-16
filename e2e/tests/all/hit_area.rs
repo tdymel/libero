@@ -247,6 +247,60 @@ fn a_medium_icon_in_a_group_keeps_its_own_box_under_a_finger() {
     });
 }
 
+/// Todo 3691: a compact icon in a group takes a finger across its own width only, and keeps
+/// the 44px height, so its box does not cover the neighbours' ends.
+#[test]
+fn a_compact_icon_in_a_group_keeps_its_width_under_a_finger() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    block_on(async {
+        let fixture = Fixture::open("/hit-area", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        page.execute(SetTouchEmulationEnabledParams::new(true))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(pointer: coarse)').matches",
+            "a coarse pointer",
+        )
+        .await
+        .unwrap();
+
+        let misses: Vec<String> = page
+            .evaluate(
+                "(() => {
+                    const ids = ['first', 'second', 'third'];
+                    const icons = ids.map(id => document.querySelector('#compact-' + id));
+                    icons[0].scrollIntoView({ block: 'center' });
+                    const own = (el, x, y) => document.elementFromPoint(x, y)?.closest('button') === el;
+                    const misses = [];
+                    icons.forEach((icon, i) => {
+                        const r = icon.getBoundingClientRect(), y = r.y + r.height / 2;
+                        if (!own(icon, r.x + 3, y)) misses.push(ids[i] + ' start taken');
+                        if (!own(icon, r.right - 3, y)) misses.push(ids[i] + ' end taken');
+                        if (!own(icon, r.x + r.width / 2, r.y - 5)) misses.push(ids[i] + ' lost its height');
+                    });
+                    const stacked = ['first', 'second'].map(id => document.querySelector('#stacked-' + id));
+                    stacked.forEach((icon, i) => {
+                        const r = icon.getBoundingClientRect(), x = r.x + r.width / 2;
+                        if (!own(icon, x, r.y + 3)) misses.push('stacked ' + i + ' top taken');
+                        if (!own(icon, x, r.bottom - 3)) misses.push('stacked ' + i + ' bottom taken');
+                        if (!own(icon, r.x - 5, r.y + r.height / 2)) misses.push('stacked ' + i + ' lost its width');
+                    });
+                    return misses;
+                })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(misses.is_empty(), "{misses:?}");
+
+        fixture.console.assert_clean("grouped sm icons").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 3589: the choice controls' transitions are off under reduced motion, on without it.
 #[test]
 fn the_choice_controls_skip_their_transitions_under_reduced_motion() {

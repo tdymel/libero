@@ -3,8 +3,8 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            ButtonGroupContext, HtmlTag, Input, Orientation, States, Variant, base_props,
-            names_itself, use_name_warning, use_provide_button_group,
+            ButtonGroupContext, COARSE_POINTER, HtmlTag, Input, Orientation, States, Variant,
+            base_props, names_itself, use_name_warning, use_provide_button_group,
         },
         layout::use_box,
     },
@@ -47,6 +47,16 @@ fn pair_seam(line: Sx) -> Sx {
     )
 }
 
+/// Under a finger an item's enlarged press box grows across the group, not along it, so it takes
+/// no neighbour's end. `ends` are the two insets along the group.
+fn coarse_across(ends: Sx) -> Sx {
+    sx().media(
+        COARSE_POINTER,
+        sx().selector(format!("& > {CONTROL}::before"), ends.clone())
+            .selector(format!("& > * {CONTROL}::before"), ends),
+    )
+}
+
 // One `when` deep, so these outrank the controls' own radius and variant rules.
 static BUTTON_GROUP_SX: StaticSx = StaticSx::new(|| {
     sx().display("inline-flex")
@@ -69,7 +79,10 @@ static BUTTON_GROUP_SX: StaticSx = StaticSx::new(|| {
                 sx().margin_inline_start("-1px"),
                 sx().border_inline_start(divider()),
             ))
-            .and(pair_seam(sx().border_inline_start(divider()))),
+            .and(pair_seam(sx().border_inline_start(divider())))
+            .and(coarse_across(
+                sx().inset_inline_start("0").inset_inline_end("0"),
+            )),
         )
         .when(
             Orientation::Vertical.state_name(),
@@ -105,7 +118,8 @@ static BUTTON_GROUP_SX: StaticSx = StaticSx::new(|| {
                     sx().border_block_start(divider()),
                 ))
                 // The pair stays a row in a column.
-                .and(pair_seam(sx().border_inline_start(divider()))),
+                .and(pair_seam(sx().border_inline_start(divider())))
+                .and(coarse_across(sx().top("0").bottom("0"))),
         )
 });
 
