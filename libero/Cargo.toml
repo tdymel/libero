@@ -113,6 +113,13 @@ dioxus-desktop = { version = "=0.8.0-alpha.2", default-features = false, feature
 [target.'cfg(target_os = "linux")'.dependencies]
 dbus = { version = "0.9", optional = true }
 
+# Blitz's accessibility settings on Windows and macOS (todo 972). The lock's copies (dirs-sys', rfd's).
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.61", optional = true, features = ["Win32_UI_Accessibility", "Win32_UI_WindowsAndMessaging"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-app-kit = { version = "0.3", optional = true, default-features = false, features = ["std", "NSWorkspace", "NSAccessibility"] }
+
 # Android system notifications (todo 1348): JNI on the main thread through wry's
 # `dispatch`, and tao's `Opened` for a tap. Already in every dioxus mobile app's tree;
 # the two features as the desktop entry above, or a lone Android check fails (todo 1489).
@@ -140,7 +147,7 @@ web-time = "1.1"
 # Reach elements through Blitz directly when running under `dioxus-native`.
 # Nothing forces it on: without it `platform::backend` falls back to dioxus's
 # portable mounted handle, which cannot query a subtree or report focus.
-native = ["dep:dioxus-native-dom", "dep:blitz-dom", "dep:blitz-traits", "dep:cursor-icon", "dep:style", "dep:arboard", "dep:rfd", "dep:image", "dep:futures-channel", "dep:dbus"]
+native = ["dep:dioxus-native-dom", "dep:blitz-dom", "dep:blitz-traits", "dep:cursor-icon", "dep:style", "dep:arboard", "dep:rfd", "dep:image", "dep:futures-channel", "dep:dbus", "dep:windows-sys", "dep:objc2-app-kit"]
 # The desktop WebView (`dioxus/desktop`) on Linux: WebKitGTK denies the page's
 # `Notification`, so system notifications go over the session bus (todo 1470).
 # `save_file` opens rfd's save dialog there, as under `native` (todo 2016).

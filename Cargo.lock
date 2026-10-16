@@ -4589,6 +4589,7 @@ dependencies = [
  "js-sys",
  "libero-macros",
  "manganis",
+ "objc2-app-kit 0.3.2",
  "pictogram-core",
  "pictogram-icons-bootstrap",
  "pictogram-icons-lobe",
@@ -4608,6 +4609,7 @@ dependencies = [
  "wasm-bindgen-futures",
  "web-sys",
  "web-time",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

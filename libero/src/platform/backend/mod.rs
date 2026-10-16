@@ -26,6 +26,8 @@ pub(crate) mod manual_timer;
 mod mounted;
 #[cfg(not(target_arch = "wasm32"))]
 mod origin;
+#[cfg(all(any(target_os = "windows", target_os = "macos"), feature = "native"))]
+mod os_a11y;
 #[cfg(all(target_os = "linux", feature = "native"))]
 mod portal;
 #[cfg(not(target_arch = "wasm32"))]
@@ -1166,7 +1168,8 @@ pub(crate) fn reveal(doc: &mut blitz_dom::BaseDocument, node_id: dioxus_native_d
 pub(crate) const ANSWERS_A11Y_MEDIA: bool =
     cfg!(all(not(target_arch = "wasm32"), feature = "native"));
 
-/// The web's and a WebView's `matchMedia`, and the desktop portal for Blitz on Linux.
+/// The web's and a WebView's `matchMedia`; for Blitz the desktop portal on Linux
+/// and the system settings on Windows and macOS.
 pub(crate) fn a11y_media() -> Option<&'static dyn A11yMediaApi> {
     #[cfg(target_arch = "wasm32")]
     return web::a11y_media();
@@ -1174,7 +1177,12 @@ pub(crate) fn a11y_media() -> Option<&'static dyn A11yMediaApi> {
     return webview::a11y_media();
     #[cfg(all(target_os = "linux", feature = "native"))]
     return portal::a11y_media();
-    #[cfg(all(not(target_os = "linux"), feature = "native"))]
+    #[cfg(all(any(target_os = "windows", target_os = "macos"), feature = "native"))]
+    return os_a11y::a11y_media();
+    #[cfg(all(
+        not(any(target_os = "linux", target_os = "windows", target_os = "macos")),
+        feature = "native"
+    ))]
     return None;
 }
 
