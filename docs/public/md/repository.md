@@ -71,9 +71,9 @@ explains how parts work.
 
 ### Libero handles
 
-- The link's name is the host and repository ("GitHub tdymel/libero"), the star
-  count once it arrives, and the new-tab cue, so two buttons on one page read
-  apart. The words come from `RepositoryLabels::stars`,
+- The link's name is the host and repository ("GitHub tdymel/libero"), the exact
+  star count once it arrives ("1,234 stars", where the button shows `1.2k`), and
+  the new-tab cue, so two buttons on one page read apart. The words come from `RepositoryLabels::stars`,
   `RepositoryLabels::compact` and `AnchorLabels::new_tab` in the localization.
 - The drawn count is not read twice: the name replaces the link's content.
 - A count drawn in the accent color, which could miss 4.5:1, takes the `ink`
@@ -103,8 +103,9 @@ opens in a new tab.
 | `color` | `Color` | Default `color` when the prop is omitted (`muted`). |
 
 The count's words are `RepositoryLabels::stars` in the localization, a function
-of the count for plural forms. The shortened count on the button (`1.2k`,
-German `1,2 Tsd.`) is `RepositoryLabels::compact`. The new-tab cue is
+of the count for plural forms; it takes the exact count in the formats' digit
+groups (`1,234`). The shortened count on the button (`1.2k`, German
+`1,2 Tsd.`) is `RepositoryLabels::compact`. The new-tab cue is
 `AnchorLabels::new_tab`.
 
 ## CSS variables

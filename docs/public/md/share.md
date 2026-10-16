@@ -90,7 +90,7 @@ browser reports both the same way.
 | `color` | `ThemeAwareValue` | - | Accent color. A theme color name or any CSS color. |
 | `size` | `ThemeAwareValue` | `md` | Button size. With `children`, only a size word applies. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
-| `aria_label` | `String` | `"Share"` | The button's name, such as "Share this article". Unset, the name is the localization's `share`, or the `children` text. |
+| `aria_label` | `String` | - | The button's name, such as "Share this article". Unset, the name is the localization's `share`, or the `children` text. |
 | `label` | `String` | - | Describes what a press shares, read after the name, such as "Link to this page". |
 | `disabled` | `bool` | `false` | Disables and dims the button. |
 | `onshare` | `EventHandler<ShareOutcome>` | - | Called with the outcome once the share settled: `Shared`, `Copied`, `Cancelled`, `Unsupported` or `Failed(reason)`. |

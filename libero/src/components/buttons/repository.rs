@@ -12,6 +12,7 @@ use crate::{
         layout::use_box,
     },
     hooks::{SessionText, session_text, use_cache, use_formats, use_localization, use_theme},
+    localization::{Formats, RepositoryLabels},
     platform,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ACTION_ICON_SIZE, Color},
@@ -96,6 +97,17 @@ fn parse_stars(body: &str, field: &str) -> Option<u64> {
         .ok()?
         .get(field)?
         .as_u64()
+}
+
+/// The name's subject and the exact count, which speech reads alike, not the pill's `1,2k`.
+fn named_with_stars(
+    subject: &str,
+    count: u64,
+    labels: &RepositoryLabels,
+    formats: &Formats,
+) -> String {
+    let exact = formats.write_number(&count.to_string());
+    format!("{subject}, {}", (labels.stars)(count, &exact))
 }
 
 /// Half the button, from its size rather than its width, which a pill grows.
@@ -191,7 +203,8 @@ base_props! {
 pub fn Repository(props: RepositoryProps) -> Element {
     let theme = use_theme();
     let localization = use_localization();
-    let separator = use_formats().decimal_separator;
+    let formats = use_formats();
+    let separator = formats.decimal_separator;
     let compact = localization.repository.compact;
     let host = props.host;
     let api = host.api_url(&props.repo);
@@ -225,10 +238,7 @@ pub fn Repository(props: RepositoryProps) -> Element {
         .unwrap_or_else(|| format!("{} {}", host.name(), props.repo));
     // `ActionIcon` adds the new-tab cue to this.
     let aria_label = match count {
-        Some(count) => format!(
-            "{subject}, {}",
-            (localization.repository.stars)(count, &compact(count, separator))
-        ),
+        Some(count) => named_with_stars(&subject, count, &localization.repository, formats),
         None => subject,
     };
     // A raw `aria-label` attribute is the whole name: a blank own label lets it through unchanged.
@@ -358,6 +368,20 @@ mod tests {
             None
         );
         assert_eq!(parse_stars("<html>", "star_count"), None);
+    }
+
+    /// The name says the exact count in the formats' groups, where the pill shows `1.2k`.
+    #[test]
+    fn the_name_says_the_exact_count() {
+        let name = |count, formats| {
+            named_with_stars("GitHub a/b", count, &RepositoryLabels::ENGLISH, formats)
+        };
+        assert_eq!(name(1_234, &Formats::AMERICAN), "GitHub a/b, 1,234 stars");
+        assert_eq!(
+            name(1_234_567, &Formats::GERMAN),
+            "GitHub a/b, 1.234.567 stars"
+        );
+        assert_eq!(name(1, &Formats::AMERICAN), "GitHub a/b, 1 star");
     }
 
     /// A count fetched within the TTL is reused; an older or untimed one is fetched again.

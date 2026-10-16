@@ -73,7 +73,7 @@ fn a_count_joins_the_icon() {
     assert_eq!(asked(), ["https://api.github.com/repos/native/counted"]);
     assert_eq!(
         page.attr(LINK, "aria-label").as_deref(),
-        Some("GitHub native/counted, 1.2k stars (opens in a new tab)"),
+        Some("GitHub native/counted, 1,234 stars (opens in a new tab)"),
         "{}",
         page.tree()
     );

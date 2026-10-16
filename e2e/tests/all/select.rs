@@ -207,6 +207,11 @@ async fn a_long_list_windows<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     assert_eq!(d.attr(&row, "aria-setsize").await?.as_deref(), Some("1000"));
     let group = d.attr(&row, "aria-describedby").await?;
     let group = format!("#{}", group.unwrap_or_default());
+    // The label is a slot of its own, drawn once the window follows the scroll (todo 3573).
+    eventually(d, "the row's group label drawn", async |d| {
+        d.exists(&group).await
+    })
+    .await?;
     assert_eq!(d.text(&group).await?, "Group 7", "the row's description");
     let first = row.replace("-option-700", "-option-0");
     assert!(

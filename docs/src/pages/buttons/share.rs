@@ -70,7 +70,6 @@ pub fn SharePage() -> Element {
                     .default(theme.action_icon.radius.as_str())
                     .doc("Corner radius, independent of `size`."),
                 prop("aria_label", "String")
-                    .default("\"Share\"")
                     .doc("The button's name, such as \"Share this article\". Unset, the name is the localization's `share`, or the `children` text."),
                 prop("label", "String")
                     .doc("Describes what a press shares, read after the name, such as \"Link to this page\"."),

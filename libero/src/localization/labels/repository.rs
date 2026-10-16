@@ -5,13 +5,14 @@
     reason = "compares by address; a miss on a copied closure only re-renders"
 )]
 pub struct RepositoryLabels {
-    /// The count as heard after the host and repo: the exact count, for the
-    /// plural, and the shortened one on screen (`1.2k`). A fn, for plural forms.
+    /// The count as heard after the host and repo: the exact count, for the plural,
+    /// and the same count in the formats' digit groups (`1,234`), which a screen reader
+    /// reads alike everywhere. A fn, for plural forms.
     ///
     /// ```
     /// use libero::localization::RepositoryLabels;
     ///
-    /// assert_eq!((RepositoryLabels::ENGLISH.stars)(1_234, "1.2k"), "1.2k stars");
+    /// assert_eq!((RepositoryLabels::ENGLISH.stars)(1_234, "1,234"), "1,234 stars");
     /// assert_eq!((RepositoryLabels::GERMAN.stars)(1, "1"), "1 Stern");
     /// ```
     pub stars: fn(u64, &str) -> String,
