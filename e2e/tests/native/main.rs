@@ -51,6 +51,7 @@ mod notifications;
 mod overlays;
 mod pagination;
 mod paper;
+mod pin_field;
 mod placeholder;
 mod pointer;
 mod popover;

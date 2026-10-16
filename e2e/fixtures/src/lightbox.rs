@@ -13,7 +13,38 @@ pub const ROUTES: Routes = &[
     ("/lightbox", || rsx! { LightboxPage {} }),
     ("/lightbox-parts", || rsx! { LightboxPartsPage {} }),
     ("/lightbox-tall", || rsx! { TallLightboxPage {} }),
+    ("/lightbox-inline", || rsx! { InlineLightboxPage {} }),
 ];
+
+/// The gallery's pictures as `data:` URLs: Windows desktop's `asset!` gives file paths a WebView2 cannot load.
+#[component]
+fn InlineLightboxPage() -> Element {
+    let lightbox = use_lightbox(LightboxOptions {
+        aria_label: Some("Gallery".into()),
+        ..LightboxOptions::default()
+    });
+    let svg = include_str!("../assets/gallery/1.svg")
+        .replace('<', "%3C")
+        .replace('>', "%3E")
+        .replace('#', "%23")
+        .replace('"', "%22")
+        .replace(' ', "%20");
+    let src = format!("data:image/svg+xml,{svg}");
+
+    rsx! {
+        Button {
+            id: "open-lightbox",
+            variant: "outlined",
+            onclick: move |_| {
+                lightbox.open_with(vec![
+                    LightboxItem::new(src.clone(), "Picture 1"),
+                    LightboxItem::new(src.clone(), "Picture 2"),
+                ]);
+            },
+            "Open the gallery"
+        }
+    }
+}
 
 /// A caption long enough to outgrow the viewport: the strip below must stay reachable (todo 1307).
 #[component]

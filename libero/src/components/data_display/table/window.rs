@@ -59,6 +59,7 @@ pub(super) struct RowWindow {
     /// The row holding focus, kept rendered out of view.
     pub focused: Signal<Option<VisibleRow>>,
     pub moves: CopyValue<u64>,
+    pub reordering: CopyValue<bool>,
 }
 
 /// The row holding focus in a windowed body.
@@ -67,6 +68,9 @@ pub(super) struct RowFocus {
     pub focused: Signal<Option<VisibleRow>>,
     /// Bumped by each row `focusin`: a `focusout` clears `focused` only if none followed.
     pub moves: CopyValue<u64>,
+    /// From a reorder to the next row `focusin`: the move blurs the row and its refocus is
+    /// still to come, so a `focusout` in between must not drop the row (todo 3447).
+    pub reordering: CopyValue<bool>,
     /// The header rows and the shown rows, as last rendered.
     shown: CopyValue<(usize, Rc<[VisibleRow]>)>,
 }
@@ -76,17 +80,27 @@ pub(super) fn use_row_focus(table: ElementHandle) -> RowFocus {
     let focused = use_signal(|| None::<VisibleRow>);
     let shown = use_hook(|| CopyValue::new((0, Rc::<[VisibleRow]>::from([]))));
     let moves = use_hook(|| CopyValue::new(0u64));
+    let reordering = use_hook(|| CopyValue::new(false));
     let follow = move |at: Option<VisibleRow>| {
         let mut focused = focused;
         if *focused.peek() != at {
             focused.set(at);
         }
     };
-    use_silent_focus_in(table, move || follow(focused_row(&table, &shown.peek())));
-    use_silent_focus_out_of(table, move || follow(None));
+    use_silent_focus_in(table, move || {
+        let mut reordering = reordering;
+        reordering.set(false);
+        follow(focused_row(&table, &shown.peek()))
+    });
+    use_silent_focus_out_of(table, move || {
+        if !*reordering.peek() {
+            follow(None)
+        }
+    });
     RowFocus {
         focused,
         moves,
+        reordering,
         shown,
     }
 }
@@ -105,6 +119,7 @@ impl RowFocus {
         };
         let next = moved_index(at, step);
         if next != at {
+            self.reordering.set(true);
             self.focused.set(Some(VisibleRow::Data(next)));
         }
     }
@@ -259,6 +274,7 @@ pub(super) fn render_window(
         key,
         mut focused,
         mut moves,
+        mut reordering,
     } = window;
     let keep_rendered = focused().and_then(|focused| order.iter().position(|&at| at == focused));
     let keyed = order.clone();
@@ -274,6 +290,7 @@ pub(super) fn render_window(
                 let index = order[position];
                 let mut attributes = Vec::with_capacity(4);
                 attributes.push(listener("onfocusin", move |_: Event<FocusData>| {
+                    reordering.set(false);
                     *moves.write() += 1;
                     if *focused.peek() != Some(index) {
                         focused.set(Some(index));
@@ -292,7 +309,10 @@ pub(super) fn render_window(
                     let left = *moves.peek();
                     spawn(async move {
                         next_task().await;
-                        if *moves.peek() == left && *focused.peek() == Some(index) {
+                        if *moves.peek() == left
+                            && !*reordering.peek()
+                            && *focused.peek() == Some(index)
+                        {
                             focused.set(None);
                         }
                     });

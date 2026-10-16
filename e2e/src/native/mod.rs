@@ -638,15 +638,17 @@ impl Page {
     }
 
     pub fn press_with(&mut self, key: Key, modifiers: Modifiers) {
+        self.press_keys(key, modifiers, cfg!(target_os = "macos"));
+    }
+
+    fn press_keys(&mut self, key: Key, modifiers: Modifiers, binding: bool) {
         self.dispatch(UiEvent::KeyDown(key_event(
             key.clone(),
             KeyState::Pressed,
             modifiers,
         )));
         // macOS Blitz edits text by the shell's standard key bindings, not the key (todo 3317).
-        if cfg!(target_os = "macos")
-            && let Some(binding) = apple_key_binding(&key, modifiers)
-        {
+        if binding && let Some(binding) = apple_key_binding(&key, modifiers) {
             self.dispatch(UiEvent::AppleStandardKeybinding(binding.into()));
         }
         self.dispatch(UiEvent::KeyUp(key_event(
@@ -654,6 +656,11 @@ impl Page {
             KeyState::Released,
             modifiers,
         )));
+    }
+
+    /// [`press`](Self::press) with macOS Blitz's key binding on any OS.
+    pub fn press_with_binding(&mut self, key: Key) {
+        self.press_keys(key, Modifiers::empty(), true);
     }
 
     pub fn tab(&mut self) {
