@@ -109,6 +109,26 @@ e2e::scenario!(
     enter_clicks_the_link
 );
 
+/// Each level's label starts further in than its parent's (the indent of `List`'s nested rows).
+async fn levels_indent<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let mut starts = Vec::new();
+    for id in ["a", "a/b", "a/b/c"] {
+        let label = format!("[data-tree-id='{id}'] > [data-slot=content] [data-tree-label]");
+        starts.push(d.rect(&label).await?.x);
+    }
+    ensure!(
+        starts[0] < starts[1] && starts[1] < starts[2],
+        "label starts by level: {starts:?}"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    each_level_of_a_tree_is_indented,
+    "/tree/nested",
+    levels_indent
+);
+
 /// Todo 3382: a row whose own button had the focus and vanished leaves it on a row, not `<body>`.
 async fn button_row_vanishes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click("[data-tree-id='b.rs'] button").await?;

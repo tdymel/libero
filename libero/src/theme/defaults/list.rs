@@ -20,8 +20,10 @@ impl ListDefaults {
         indents: Sizes::new(8, 12, 16, 20, 24, 28),
     };
 
-    // Only a `List` directly under this list's items, so a raw `ul` and a deeper nest keep their own indent.
-    const NESTED: &str = "& > li > ul[role='list'], & > li > [data-slot='body'] > ul[role='list']";
+    // Only a `List` directly under this list's items, so a raw `ul` and a deeper nest keep their own
+    // indent. A `Tree`'s branch is a `group`, unless its row draws guides, which pad it themselves.
+    const NESTED: &str = "& > li > ul[role='list'], & > li > [data-slot='body'] > ul[role='list'], \
+                          & > li:not([data-state~='guides']) > ul[role='group']";
 
     fn size_sx(size: Size) -> Sx {
         sx().gap(LIST_GAP.value(size)).selector(

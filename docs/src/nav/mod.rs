@@ -198,7 +198,11 @@ pub fn DocsNav(
                             size: "xs",
                             // The tree's guide under each section's chevron marks the current page.
                             guides: true,
-                            sx: sx().gap("0").selector("& ul", sx().gap("0")),
+                            // No wrap: a list that shrinks leaves a branch label at its min-content layout natively (627).
+                            sx: sx()
+                                .gap("0")
+                                .selector("& ul", sx().gap("0"))
+                                .selector("& [data-tree-label]", sx().with("white-space", "nowrap")),
                             data,
                             expanded: expanded(),
                             onexpandedchange: move |open: HashSet<String>| expanded.set(open),

@@ -51,6 +51,21 @@ pub const ROUTES: Routes = &[
             }
         },
     ),
+    // A branch two levels down, for the indent of each level.
+    (
+        "/tree/nested",
+        || rsx! {
+            Tree {
+                aria_label: "Files",
+                data: vec![
+                    TreeNode::new("a", "a").children(vec![
+                        TreeNode::new("a/b", "b").children(vec![TreeNode::new("a/b/c", "c")]),
+                    ]),
+                ],
+                default_expanded: HashSet::from(["a".to_string(), "a/b".to_string()]),
+            }
+        },
+    ),
     ("/tree/controlled", || rsx! { ControlledTreePage {} }),
     ("/tree/chevron", || rsx! { ChevronTreePage {} }),
     ("/tree/activate", || rsx! { ActivateTreePage {} }),

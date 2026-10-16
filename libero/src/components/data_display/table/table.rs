@@ -117,7 +117,9 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     // The aggregate's name reads as a label to its value.
     .selector(
         "& [data-footer-name]",
-        sx().font_size("0.85em")
+        // Inline-block: Blitz ignores an inline box's horizontal margin.
+        sx().display("inline-block")
+            .font_size("0.85em")
             .font_weight("400")
             .color("text-dimmed")
             .with("margin-inline-end", "6px"),

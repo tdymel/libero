@@ -119,6 +119,18 @@ mod tests {
         assert!(!css.contains("] ul"), "{css}");
     }
 
+    /// A `Tree`'s branch is a `List` with `role=group`, which the indent reaches unless its row has guides.
+    #[test]
+    fn the_indent_reaches_a_trees_group_but_not_a_guided_one() {
+        let sheet = crate::css::Stylesheet::from(&LIST_BASE_SX);
+        let css = sheet.as_str();
+
+        assert!(
+            css.contains("] > li:not([data-state~='guides']) > ul[role='group']"),
+            "{css}"
+        );
+    }
+
     /// Todo 2466: an ordered list's icon item pulls back the gutter its number would have used.
     #[test]
     fn an_icon_item_of_an_ordered_list_pulls_back_the_number_gutter() {

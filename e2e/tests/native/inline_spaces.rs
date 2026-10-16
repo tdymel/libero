@@ -45,3 +45,33 @@ fn a_callers_edge_spaces_survive() {
     page.settle();
     assert_eq!(page.laid_out_text("#edge"), "x spaced y");
 }
+
+/// Blitz adds no width for a plain inline element's horizontal margin or padding, so libero
+/// sets `inline-block` where it needs the gap (`Table`'s aggregate name).
+#[test]
+fn an_inline_box_takes_no_horizontal_margin_but_an_inline_block_does() {
+    fn app() -> Element {
+        rsx! {
+            div { id: "plain", style: "width:fit-content", span { "ab" } "cd" }
+            div { id: "margin", style: "width:fit-content",
+                span { style: "margin-inline-end:6px", "ab" }
+                "cd"
+            }
+            div { id: "padding", style: "width:fit-content",
+                span { style: "padding-right:6px", "ab" }
+                "cd"
+            }
+            div { id: "block", style: "width:fit-content",
+                span { style: "display:inline-block;margin-inline-end:6px", "ab" }
+                "cd"
+            }
+        }
+    }
+    let mut page = mount(app);
+    page.settle();
+    let width = |id: &str| page.rect(id).2;
+    let plain = width("#plain");
+    assert_eq!(width("#margin"), plain, "an inline margin gained width");
+    assert_eq!(width("#padding"), plain, "an inline padding gained width");
+    assert_eq!(width("#block"), plain + 6.0, "an inline-block margin");
+}

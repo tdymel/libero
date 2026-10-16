@@ -116,6 +116,11 @@ fn a_footer_lines_up_under_its_columns_after_the_rows() {
         foot.1,
         last.1
     );
+    // Blitz gives an inline span no horizontal margin, so the gap to the value needs a box.
+    assert_eq!(
+        page.computed("tfoot [data-footer-name]", "display"),
+        "inline-block"
+    );
 }
 
 #[test]
