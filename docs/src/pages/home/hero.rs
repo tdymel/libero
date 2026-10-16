@@ -54,7 +54,7 @@ pub fn Hero() -> Element {
                     span { color: ColorCss::PRIMARY.role_value("text-", ColorShade::S6), "Focus on your game," }
                     " while "
                     span { color: ColorCss::PRIMARY.role_value("text-", ColorShade::S6), "Libero" }
-                    " has your back!"
+                    " covers your back!"
                 }
                 Text { size: "lg", sx: sx().max_width("720px"),
                     "Libero is a component library for Rust and Dioxus. Like the libero on a "

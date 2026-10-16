@@ -111,7 +111,7 @@ e2e::scenario!(
 e2e::scenario!(
     a_late_answer_hands_focus_to_the_current_page_too,
     // The caller sets the page 150 ms after `onchange`.
-        "/pagination-async",
+    "/pagination-async",
     a_disabling_arrow_hands_focus_on,
     android: skip("958: element identity on the WebView"),
     desktop: skip("958: element identity on the WebView"),

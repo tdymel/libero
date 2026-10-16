@@ -2,7 +2,7 @@
   <img src="https://raw.githubusercontent.com/tdymel/libero/main/docs/assets/logo.svg" alt="Libero" width="240">
 </p>
 
-<p align="center"><strong>Focus on your game, while Libero has your back!</strong></p>
+<p align="center"><strong>Focus on your game, while Libero covers your back!</strong></p>
 
 Libero is a component library for Rust and [Dioxus](https://dioxuslabs.com).
 Like the libero on a volleyball court, it covers the defence: accessibility,
