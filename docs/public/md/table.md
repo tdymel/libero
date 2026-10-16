@@ -1039,7 +1039,7 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `header` | `String` | required | The column's title, the argument to `column(..)`. |
-| `value` | `fn(&T) -> V` | required | Reads one cell out of a row. `V` sets the sort order and alignment. Text sorts as text and aligns left, by the app's language on the web and by accent-folded letters on desktop, Android and native; numbers sort numerically and align right, and `Option<V>` renders `None` empty and sorts it last. Your own type joins them with one `impl CellValue`. |
+| `value` | `fn(&T) -> V` | required | Reads one cell out of a row. `V` sets the sort order and alignment. Text sorts as text and aligns left, by the app's language on the web and, with the `collation` feature, on desktop, Android and native, else by accent-folded letters there; numbers sort numerically and align right, and `Option<V>` renders `None` empty and sorts it last. Your own type joins them with one `impl CellValue`. |
 | `sortable` | `bool` | `false` | Turns the header into a sort button. |
 | `render` | `fn(&T) -> Element` | `None` | Replaces the cell body. Sorting still uses `value`. Capture signals: a closure that captures a plain value redraws only rows whose data changed. |
 | `format` | `fn(&T) -> String` | `None` | Replaces the cell text, say a price with its currency. Sorting and alignment still follow `value`. |

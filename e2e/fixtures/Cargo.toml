@@ -9,8 +9,8 @@ publish = false
 # identical dioxus the library is.
 dioxus = { version = "=0.8.0-alpha.2", default-features = true, features = ["router"] }
 # `/icon-provider`'s whole-set select (1133); `/line-chart` (3368), `/bar-chart` and `/pie-chart` (3335);
-# `/fcm` (3404).
-libero = { path = "../../libero", features = ["icons-tabler", "charts", "fcm"] }
+# `/fcm` (3404); `/table-grid/collation` off the web (3420).
+libero = { path = "../../libero", features = ["icons-tabler", "charts", "fcm", "collation"] }
 pictogram-icons-lucide = "0.5"
 # The desktop driver's bridge (1126): socket thread to the eval loop.
 futures-channel = { version = "0.3", optional = true }

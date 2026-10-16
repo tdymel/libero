@@ -1,5 +1,7 @@
 # Skipped e2e scenarios
 
+Scenarios: 609
+
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
 The performance scenarios (units `perf`, `table_perf`) are no skips but run on request only: the runner leaves them out on CI and `shard.py` assigns them to no shard, unless `E2E_PERF` is set (todo 3454).
@@ -334,8 +336,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_grid::a_custom_editor_clears_the_error_by_changed` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::a_second_tap_opens_the_editor` | desktop | no touch input in the desktop driver |
 | `table_grid::a_second_tap_opens_the_editor` | ios | 3416: focus stays on the body after a Tab or a tap |
-| `table_grid::a_sort_follows_the_apps_language` | android | 3294: the WebView app has no Intl.Collator to call |
-| `table_grid::a_sort_follows_the_apps_language` | desktop | 3400: the app sorts in Rust by accent-folded letters, only the web build has an Intl.Collator |
 | `table_grid::a_sort_follows_the_apps_language` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `table_grid::a_sort_follows_the_apps_language` | native | 3386: reads the page language by script, Blitz has none and no Intl.Collator |
 | `table_grid::a_windowed_grid_scrolls_to_the_focused_cell` | android | 958: roving keys are inert in the emulator's WebView |

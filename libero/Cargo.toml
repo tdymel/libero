@@ -67,6 +67,9 @@ web-sys = { version = "0.3", features = ["Window", "Document", "Element", "Event
 # 2026-09-19, todo 36a).
 dioxus-html = { version = "=0.8.0-alpha.2", default-features = false, features = ["serialize"] }
 regex = "1"
+# The `collation` feature's Table sort by a language's rules off the web, where the browser has no `Intl.Collator`.
+icu_collator = { version = "2", optional = true }
+icu_locale_core = { version = "2", optional = true }
 # `use_local_storage`'s directory under `native`/`desktop`. The lock's copy (wry's).
 dirs = "6"
 # `Local`, for today off the web: the system time zone via `iana-time-zone`.
@@ -148,6 +151,9 @@ held-clock = []
 # `use_fcm` (todo 3404): Firebase Cloud Messaging on Android. Ships the Gradle module
 # `android/fcm` and firebase-messaging into the app, so it is off by default.
 fcm = []
+# `Table` sorts text by the app's language off the web too (todo 3420), as the browser's
+# `Intl.Collator` does. Off by default: its collation data adds to a desktop, Android or native binary.
+collation = ["dep:icu_collator", "dep:icu_locale_core"]
 # For e2e harnesses only (todo 1514): under `native`, `platform::fake_file_dialog`
 # answers the next pick in place of rfd's dialog. Never in an app build.
 fake-file-dialog = []

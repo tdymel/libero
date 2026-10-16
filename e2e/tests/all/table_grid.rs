@@ -290,8 +290,7 @@ e2e::scenario!(
     android: skip("958: roving keys are inert in the emulator's WebView")
 );
 
-/// The browser's collator sorts by the app's language, not the browser's: in Swedish
-/// "Ä" comes after "Z".
+/// The collator sorts by the app's language, not the browser's: in Swedish "Ä" comes after "Z".
 async fn sorts_by_language<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     eventually(d, "the page language", async |d| {
         Ok(d.evaluate("document.documentElement.lang").await? == "sv")
@@ -309,8 +308,6 @@ e2e::scenario!(
     "/table-grid/collation",
     sorts_by_language,
     native: skip("3386: reads the page language by script, Blitz has none and no Intl.Collator"),
-    desktop: skip("3400: the app sorts in Rust by accent-folded letters, only the web build has an Intl.Collator"),
-    android: skip("3294: the WebView app has no Intl.Collator to call"),
     ios: skip("3416: the simulator's tap or drag did not drive the page")
 );
 

@@ -211,7 +211,7 @@ fn main() {
 
 The Platforms workflow builds the docs app for iOS, macOS and Windows and runs
 the e2e scenarios on each, informational and not part of the required check. A
-scenario that flakes is fixed or skipped. About 580 scenarios exist; the last
+scenario that flakes is fixed or skipped. 609 scenarios exist; the last
 column counts the ones left out on that platform, besides 21 that exist for
 Android only.
 
@@ -237,6 +237,7 @@ Every feature is additive.
 | Flag | What it does |
 |---|---|
 | `code-lang-<name>` | One grammar for [Code](code.md) and [CodeBlock](code_block.md), 30 in all. Rust, Bash, Markdown, HTML and CSS are the default. |
+| `collation` | [Table](table.md) sorts text by the app's language on desktop, Android and native too, with ICU4X's collation data (about 1.2 MB of binary). Without it the web sorts by language and the rest by accent-folded letters. |
 | `full-polymorphism` | [Box](box.md) renders the rarer HTML elements too (metadata, media, web components). Without it they fall back to a `div`. |
 | `native` | Element access through Blitz, for apps on `dioxus-native`. |
 | `desktop` | System notifications over D-Bus in a desktop WebView on Linux, where WebKitGTK denies them. |

@@ -108,9 +108,10 @@ fn arguments(source: &str) -> Vec<&str> {
     parts
 }
 
-/// The skips of every `scenario!` in `source`, the test file of module path `module`.
-fn skips_in(source: &str, module: &str) -> Vec<Skip> {
-    let mut skips = Vec::new();
+/// The skips of every `scenario!` in `source`, the test file of module path `module`, and
+/// how many scenarios it declares.
+fn skips_in(source: &str, module: &str) -> (Vec<Skip>, usize) {
+    let (mut skips, mut scenarios) = (Vec::new(), 0);
     // Inline `mod name {` blocks, each with the brace depth it closes at.
     let mut modules: Vec<(String, usize)> = Vec::new();
     let (mut depth, mut at) = (0usize, 0);
@@ -131,6 +132,7 @@ fn skips_in(source: &str, module: &str) -> Vec<Skip> {
             }
         }
         if word_start && rest.starts_with("scenario!(") {
+            scenarios += 1;
             let args = arguments(&rest["scenario!(".len()..]);
             let path: Vec<&str> = std::iter::once(module)
                 .chain(modules.iter().map(|(name, _)| name.as_str()))
@@ -203,7 +205,7 @@ fn skips_in(source: &str, module: &str) -> Vec<Skip> {
         }
         at += rest.chars().next().map_or(1, char::len_utf8);
     }
-    skips
+    (skips, scenarios)
 }
 
 /// The `.rs` files under `dir`, sorted.
@@ -234,9 +236,10 @@ fn module_of(root: &Path, file: &Path) -> String {
     parts.join("::")
 }
 
-fn render(skips: &[Skip]) -> String {
-    let mut out = String::from(
-        "# Skipped e2e scenarios\n\n\
+fn render(skips: &[Skip], scenarios: usize) -> String {
+    let mut out = format!("# Skipped e2e scenarios\n\nScenarios: {scenarios}\n\n");
+    out.push_str(
+        "\
          Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; \
          edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or \
          the engine (revisit on their update, todo 3362), a number names the todo that removes it.\n\n\
@@ -263,15 +266,15 @@ fn render(skips: &[Skip]) -> String {
 fn skips_md_lists_every_scenario_skip() {
     let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
     let root = manifest.join("tests/all");
-    let mut skips: Vec<Skip> = sources(&root)
-        .iter()
-        .flat_map(|file| {
-            let source = std::fs::read_to_string(file).unwrap();
-            skips_in(&source, &module_of(&root, file))
-        })
-        .collect();
+    let (mut skips, mut scenarios) = (Vec::new(), 0);
+    for file in sources(&root) {
+        let source = std::fs::read_to_string(&file).unwrap();
+        let (found, count) = skips_in(&source, &module_of(&root, &file));
+        skips.extend(found);
+        scenarios += count;
+    }
     skips.sort_by(|a, b| (&a.test, a.platform).cmp(&(&b.test, b.platform)));
-    let expected = render(&skips);
+    let expected = render(&skips, scenarios);
     let file = manifest.join("skips.md");
     if std::fs::read_to_string(&file).ok().as_deref() != Some(&expected) {
         std::fs::write(&file, &expected).unwrap();
@@ -298,8 +301,10 @@ fn a_skip_is_read_with_its_module_and_reason() {
         #[cfg_attr(windows, ignore = "3423: fonts")]
         fn it_meets() {}
     "#;
+    let (skips, scenarios) = skips_in(source, "unit");
+    assert_eq!(scenarios, 2);
     assert_eq!(
-        skips_in(source, "unit"),
+        skips,
         vec![
             Skip {
                 test: "unit::inner::it_opens".into(),

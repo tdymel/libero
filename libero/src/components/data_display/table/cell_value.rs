@@ -41,9 +41,10 @@ pub enum FilterKind {
 }
 
 /// What a cell sorts by. `Text` is pre-lowercased, so a comparison during the sort
-/// allocates nothing. Off the web it is also accent-folded: a text with accents
-/// follows its folded form after a NUL and the lowercased original, which orders it
-/// after its plain twin. On the web the browser's collator orders it by the language.
+/// allocates nothing. Off the web without the `collation` feature it is also
+/// accent-folded: a text with accents follows its folded form after a NUL and the
+/// lowercased original, which orders it after its plain twin. Else a collator orders
+/// it by the language.
 #[derive(Clone, Debug, PartialEq)]
 pub enum SortKey {
     Text(String),
@@ -55,7 +56,7 @@ pub enum SortKey {
 impl SortKey {
     pub fn text(value: impl AsRef<str>) -> Self {
         let lower = value.as_ref().to_lowercase();
-        if lower.is_ascii() || cfg!(target_arch = "wasm32") {
+        if lower.is_ascii() || cfg!(any(target_arch = "wasm32", feature = "collation")) {
             return Self::Text(lower);
         }
         let mut key = String::with_capacity(lower.len() * 2 + 1);
@@ -376,6 +377,7 @@ mod tests {
         assert_eq!(<String as CellValue>::align(), CellAlign::Start);
     }
 
+    #[cfg(not(feature = "collation"))]
     #[test]
     fn accented_text_sorts_among_its_base_letters() {
         fn order<'a>(names: &[&'a str]) -> Vec<&'a str> {
@@ -393,6 +395,7 @@ mod tests {
         );
     }
 
+    #[cfg(not(feature = "collation"))]
     #[test]
     fn accents_are_a_tiebreak_after_the_folded_text() {
         let (plain, accent) = (SortKey::text("resume"), SortKey::text("résumé"));

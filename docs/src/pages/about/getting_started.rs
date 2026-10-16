@@ -10,10 +10,14 @@ use libero::{
     sx::sx,
 };
 
-const FEATURES: [(&str, &str); 8] = [
+const FEATURES: [(&str, &str); 9] = [
     (
         "code-lang-<name>",
         "One grammar for Code and CodeBlock, 30 in all. Rust, Bash, Markdown, HTML and CSS are the default.",
+    ),
+    (
+        "collation",
+        "Table sorts text by the app's language on desktop, Android and native too, with ICU4X's collation data (about 1.2 MB of binary). Without it the web sorts by language and the rest by accent-folded letters.",
     ),
     (
         "full-polymorphism",
@@ -54,6 +58,14 @@ fn skips() -> impl Iterator<Item = (&'static str, &'static str)> {
         let (_test, platform, reason) = (cells.next()?, cells.next()?, cells.next()?);
         Some((platform, reason.strip_suffix(" |")?))
     })
+}
+
+/// The scenario count `e2e/skips.md` states.
+fn scenarios() -> usize {
+    SKIPS
+        .lines()
+        .find_map(|line| line.strip_prefix("Scenarios: ")?.parse().ok())
+        .unwrap_or(0)
 }
 
 /// The skips on `platform` whose reason `matches`.
@@ -236,6 +248,7 @@ enum Environment {
 pub fn GettingStarted() -> Element {
     let mut environment = use_signal(|| Environment::Web);
     let android_only = skipped("all but android", |_| true);
+    let scenarios = scenarios();
 
     rsx! {
         DocPage {
@@ -283,7 +296,7 @@ pub fn GettingStarted() -> Element {
             DocSection {
                 title: "What CI checks",
                 Text {
-                    "The Platforms workflow builds the docs app for iOS, macOS and Windows and runs the e2e scenarios on each, informational and not part of the required check. A scenario that flakes is fixed or skipped. About 580 scenarios exist; the last column counts the ones left out on that platform, besides {android_only} that exist for Android only."
+                    "The Platforms workflow builds the docs app for iOS, macOS and Windows and runs the e2e scenarios on each, informational and not part of the required check. A scenario that flakes is fixed or skipped. {scenarios} scenarios exist; the last column counts the ones left out on that platform, besides {android_only} that exist for Android only."
                 }
                 Table {
                     aria_label: "What CI checks per platform",
@@ -524,5 +537,22 @@ fn IosPanel() -> Element {
             }
             CodeBlock { source: IOS_VIEWPORT, language: "rust" }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The markdown mirror states the counts the page derives from `e2e/skips.md`.
+    #[test]
+    fn the_markdown_mirror_states_the_scenario_counts() {
+        let md = include_str!("../../../public/md/getting_started.md");
+        let md = md.split_whitespace().collect::<Vec<_>>().join(" ");
+        let (scenarios, android_only) = (scenarios(), skipped("all but android", |_| true));
+        assert!(md.contains(&format!("{scenarios} scenarios exist;")));
+        assert!(md.contains(&format!(
+            "besides {android_only} that exist for Android only"
+        )));
     }
 }
