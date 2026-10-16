@@ -5,9 +5,9 @@
 use dioxus::prelude::*;
 use libero::{
     components::{
-        ActionIcon, Burger, Checkbox, Chip, ColorCode, ColorField, ColorSwatch, Dialog, Flex,
-        Image, NumberField, Pagination, PasswordField, Radio, Select, SliderChangeEvent, Switch,
-        TagsField, TextField,
+        ActionIcon, Burger, ButtonGroup, Checkbox, Chip, ColorCode, ColorField, ColorSwatch, Dialog, Flex,
+        Image, NumberField, Pagination, PasswordField, Radio, Select, Slider, SliderChangeEvent,
+        Switch, TagsField, TextField,
     },
     theme::Size,
 };
@@ -77,6 +77,7 @@ fn Coarse() -> Element {
     let mut vegan = use_signal(|| false);
     let mut agree = use_signal(|| false);
     let mut terrace = use_signal(|| false);
+    let mut volume = use_signal(|| 50.0f64);
     rsx! {
         Flex { direction: "column", align: "flex-start", sx: libero::sx::sx().gap("48px"),
             Chip { id: "chip-filter", checked: vegan(), onchange: move |next| vegan.set(next), "Vegan" }
@@ -100,6 +101,20 @@ fn Coarse() -> Element {
             }
             div { "data-case": "pagination",
                 Pagination { total: 5, page: 2, aria_label: "Pages", onchange: move |_: u32| {} }
+            }
+            ActionIcon { id: "coarse-icon-xs", aria_label: "Extra small", size: "16px", {glyph()} }
+            ActionIcon { id: "coarse-icon-sm", aria_label: "Small", size: "20px", {glyph()} }
+            Burger { id: "coarse-burger-xs", size: "xs", onclick: move |_| {} }
+            ButtonGroup { aria_label: "Grouped",
+                ActionIcon { id: "group-first", aria_label: "First", size: "md", {glyph()} }
+                ActionIcon { id: "group-second", aria_label: "Second", size: "md", {glyph()} }
+            }
+            div { "data-case": "slider", width: "240px",
+                Slider {
+                    aria_label: "Volume",
+                    value: volume(),
+                    oninput: move |event: SliderChangeEvent<f64>| volume.set(event.value()),
+                }
             }
         }
     }

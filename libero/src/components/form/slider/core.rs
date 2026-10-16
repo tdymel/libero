@@ -8,7 +8,7 @@ use crate::{
     CssLayer,
     components::{
         common::{
-            ClassList, HtmlTag, Input, Part, States, Variables, base_color,
+            COARSE_POINTER, ClassList, HtmlTag, Input, Part, States, Variables, base_color,
             disabled_look_within_sx, has_shortcut_modifier, shadow_sx, variables,
         },
         form::field_parts_enum,
@@ -453,6 +453,11 @@ static SLIDER_THUMB_SX: StaticSx = StaticSx::new(|| {
                 .width("24px")
                 .height("24px")
                 .transform("translate(-50%, -50%)"),
+        )
+        // 44px under a finger (todo 3589).
+        .media(
+            COARSE_POINTER,
+            sx().selector("&::before", sx().width("44px").height("44px")),
         )
 });
 

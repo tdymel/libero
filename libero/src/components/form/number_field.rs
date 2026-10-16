@@ -5,10 +5,10 @@ use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
-        buttons::ActionIcon,
+        buttons::{ACTION_ICON_COMPACT, ActionIcon},
         common::{
-            Glyph, HtmlTag, Input, NumberValue, ScaleOrCss, TOOLBAR_ITEM, ToolbarItem,
-            navigation_chord, use_no_toolbar, use_toolbar_item,
+            COARSE_POINTER, Glyph, HtmlTag, Input, NumberValue, ScaleOrCss, TOOLBAR_ITEM,
+            ToolbarItem, navigation_chord, use_no_toolbar, use_toolbar_item,
         },
         form::{
             FormScope, LiveControl, field_control_sx, field_props, slot_button_sx, slot_icon_size,
@@ -23,7 +23,7 @@ use crate::{
     },
     localization::Formats,
     platform::{ElementApi, next_task},
-    sx::{StaticSx, ThemeAwareValue, sx},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::Size,
     utils::{ascii_digit, warn},
 };
@@ -40,17 +40,35 @@ static NUMBER_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .rtl(sx().text_align("right"))
 });
 
-/// Each 24px hit area stops mid-gap so the two meet; spare width goes outwards.
-static DECREMENT_SX: StaticSx = StaticSx::new(|| {
+/// A stepper's hit area, `side` px wide, stops mid-gap so the two meet; spare width goes
+/// outwards. `towards_start` reaches left in LTR.
+fn stepper_hit_area_sx(side: u32, towards_start: bool, rtl: bool) -> Sx {
+    let reach = format!("calc(100% - {}px)", side - 1);
+    let (left, right) = match towards_start != rtl {
+        true => (reach, "-1px".to_string()),
+        false => ("-1px".to_string(), reach),
+    };
+    sx().left(left).right(right)
+}
+
+fn stepper_sx(towards_start: bool) -> Sx {
+    let area = |side, rtl| {
+        sx().selector(
+            if rtl { "&::before" } else { "::before" },
+            stepper_hit_area_sx(side, towards_start, rtl),
+        )
+    };
     slot_button_sx()
-        .selector("::before", sx().left("calc(100% - 23px)").right("-1px"))
-        .rtl(sx().selector("&::before", sx().left("-1px").right("calc(100% - 23px)")))
-});
-static INCREMENT_SX: StaticSx = StaticSx::new(|| {
-    slot_button_sx()
-        .selector("::before", sx().left("-1px").right("calc(100% - 23px)"))
-        .rtl(sx().selector("&::before", sx().left("calc(100% - 23px)").right("-1px")))
-});
+        .and(area(24, false))
+        .rtl(area(24, true))
+        .when(
+            ACTION_ICON_COMPACT,
+            sx().media(COARSE_POINTER, area(44, false).rtl(area(44, true))),
+        )
+}
+
+static DECREMENT_SX: StaticSx = StaticSx::new(|| stepper_sx(true));
+static INCREMENT_SX: StaticSx = StaticSx::new(|| stepper_sx(false));
 
 field_props! {
     extends(input);
@@ -627,8 +645,20 @@ fn Steppers(
 
 #[cfg(test)]
 mod tests {
-    use super::{Separators, Stripped, aria_number, caret_without_groups, parse};
-    use crate::localization::Formats;
+    use super::{DECREMENT_SX, Separators, Stripped, aria_number, caret_without_groups, parse};
+    use crate::{css::Stylesheet, localization::Formats};
+
+    /// Todo 3589: under a finger a stepper's box reaches 44px, still stopping mid-gap.
+    #[test]
+    fn a_stepper_box_grows_to_44px_under_a_coarse_pointer() {
+        let css = Stylesheet::from(&DECREMENT_SX);
+        let css = css.as_str();
+        let media = css
+            .find("@media (pointer: coarse)")
+            .unwrap_or_else(|| panic!("no coarse query: {css}"));
+        assert!(css[media..].contains("calc(100% - 43px)"), "{css}");
+        assert!(css[..media].contains("calc(100% - 23px)"), "{css}");
+    }
 
     /// Todo 3430: the caret keeps its digit when focus strips the separators.
     #[test]

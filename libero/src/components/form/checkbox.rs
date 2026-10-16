@@ -21,7 +21,7 @@ use crate::{
     context::IconSlot,
     hooks::{ElementHandle, use_cache, use_css, use_element, use_icon, use_theme},
     platform::{self, ElementApi, mounted_by_selector, sets_indeterminate},
-    sx::{StaticSx, ThemeAwareValue, sx},
+    sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{
         CHECKBOX_BOX, CHECKBOX_RADIUS, CheckboxDefaults, ChoiceVariant, CssVar, Size, SizeCss,
     },
@@ -80,6 +80,7 @@ static CHECKBOX_BOX_SX: StaticSx = StaticSx::new(|| {
         .background(CHECKBOX_BACKGROUND.value())
         .color(CHECKBOX_MARK.value())
         .transition("background 150ms ease, border-color 150ms ease")
+        .media(REDUCED_MOTION, sx().transition("none"))
         // Hidden by opacity: forced colours turns a transparent mark into CanvasText (todo 2088).
         .selector("& > svg", sx().width("65%").height("65%").opacity("0"))
 });

@@ -15,7 +15,7 @@ use crate::{
     },
     hooks::{use_cache, use_css, use_element, use_form_owner, use_theme},
     platform::ElementApi,
-    sx::{StaticSx, ThemeAwareValue, sx},
+    sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{
         ChoiceVariant, CssVar, NamedColorCss, SWITCH_RADIUS, SWITCH_THUMB, SWITCH_TRACK_H,
         SWITCH_TRACK_W, SizeCss, SwitchDefaults,
@@ -68,6 +68,7 @@ static SWITCH_TRACK_SX: StaticSx = StaticSx::new(|| {
         // so the track keeps its shape there. Costs no layout.
         .outline("1px solid transparent")
         .transition("background 150ms ease")
+        .media(REDUCED_MOTION, sx().transition("none"))
 });
 
 static SWITCH_THUMB_SX: StaticSx = StaticSx::new(|| {
@@ -96,6 +97,7 @@ static SWITCH_THUMB_SX: StaticSx = StaticSx::new(|| {
             SWITCH_ON.value(),
         )))
         .transition("transform 150ms ease")
+        .media(REDUCED_MOTION, sx().transition("none"))
 });
 
 /// Depends on `(checked, color)` alone - see the `use_cache` below.

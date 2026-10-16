@@ -14,7 +14,7 @@ use crate::{
     },
     hooks::{use_cache, use_css, use_element, use_theme},
     platform::ElementApi,
-    sx::{FORCED_COLORS, StaticSx, ThemeAwareValue, sx},
+    sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{ChoiceVariant, CssVar, RADIO_CIRCLE, RadioDefaults},
     utils::warn,
 };
@@ -63,6 +63,7 @@ static RADIO_CIRCLE_SX: StaticSx = StaticSx::new(|| {
         .border_radius("50%")
         .border(format!("1px solid {}", RADIO_COLOR.value()))
         .transition("border-color 150ms ease")
+        .media(REDUCED_MOTION, sx().transition("none"))
 });
 
 static RADIO_DOT_SX: StaticSx = StaticSx::new(|| {
@@ -75,6 +76,7 @@ static RADIO_DOT_SX: StaticSx = StaticSx::new(|| {
         .media(FORCED_COLORS, sx().background("CanvasText"))
         .transform(format!("scale({})", RADIO_ON.value()))
         .transition("transform 150ms ease")
+        .media(REDUCED_MOTION, sx().transition("none"))
 });
 
 /// Depends on `(checked, color)` alone - see the `use_cache` below.

@@ -105,6 +105,12 @@ fn a_finger_presses_small_controls_in_a_44px_box() {
             ("[data-case=radio] [data-slot=circle]", true),
             ("[data-case=switch] [data-slot=track]", true),
             ("[data-case=pagination] [aria-current=page]", false),
+            ("#coarse-icon-xs", true),
+            ("#coarse-icon-sm", true),
+            ("#coarse-burger-xs", true),
+            ("#dialog button[aria-label=Close]", true),
+            // Todo 3589: the thumb's 24px square grows to 44px.
+            ("[data-case=slider] [role=slider]", true),
         ];
         for (selector, sides) in cases {
             let hit: Hit = page
@@ -136,6 +142,96 @@ fn a_finger_presses_small_controls_in_a_44px_box() {
         }
 
         fixture.console.assert_clean("coarse hit areas").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 3589: a `md` icon keeps its own box on a coarse pointer, so grouped icons do not
+/// take each other's presses.
+#[test]
+fn a_medium_icon_in_a_group_keeps_its_own_box_under_a_finger() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    block_on(async {
+        let fixture = Fixture::open("/hit-area", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        page.execute(SetTouchEmulationEnabledParams::new(true))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(pointer: coarse)').matches",
+            "a coarse pointer",
+        )
+        .await
+        .unwrap();
+
+        let hit: Hit = page
+            .evaluate(
+                "(() => {
+                    const first = document.querySelector('#group-first');
+                    const second = document.querySelector('#group-second');
+                    first.scrollIntoView({ block: 'center' });
+                    const f = first.getBoundingClientRect(), s = second.getBoundingClientRect();
+                    const misses = [];
+                    const own = (el, x, y) => document.elementFromPoint(x, y)?.closest('button') === el;
+                    // 3px inside the first icon's end, and 3px above and below the second.
+                    if (!own(first, s.x - 3, s.y + s.height / 2)) misses.push('first end taken');
+                    if (own(second, s.x + s.width / 2, s.y - 3)) misses.push('second grew up');
+                    if (own(second, s.x + s.width / 2, s.bottom + 3)) misses.push('second grew down');
+                    return { width: f.width, height: f.height, misses };
+                })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(hit.misses.is_empty(), "{hit:?}");
+
+        fixture.console.assert_clean("grouped md icons").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 3589: the choice controls' transitions are off under reduced motion, on without it.
+#[test]
+fn the_choice_controls_skip_their_transitions_under_reduced_motion() {
+    block_on(async {
+        let fixture = Fixture::open("/hit-area", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let parts = [
+            "[data-case=switch] [data-slot=track]",
+            "[data-case=switch] [data-slot=thumb]",
+            "[data-case=checkbox] [data-slot=box]",
+            "[data-case=radio] [data-slot=circle]",
+            "[data-case=radio] [data-slot=dot]",
+        ];
+        let moving = format!(
+            "{:?}.filter(s => getComputedStyle(document.querySelector(s)).transitionDuration === '0s')",
+            parts
+        );
+
+        motion::set_reduced_motion(page, false).await.unwrap();
+        let still: Vec<String> = page
+            .evaluate(moving.clone())
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            still.is_empty(),
+            "no transition without the query: {still:?}"
+        );
+
+        motion::set_reduced_motion(page, true).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{moving}.length === {}", parts.len()),
+            "every transition to be off under reduced motion",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("reduced motion").unwrap();
         fixture.close().await.unwrap();
     });
 }

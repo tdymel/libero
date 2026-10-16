@@ -7,9 +7,10 @@ use crate::{
         common::{HtmlTag, Input, States, Variables, Variant, base_props, variables},
         common::{TOOLBAR_ITEM, ToolbarItem, use_toolbar_item},
         common::{
-            VariantVars, base_color, borderless_on_state_sx, contrast_color, disabled_look_sx,
-            fill_color, focus_ring_sx, interactive_variant_sx, literal_contrast, names_itself,
-            text_color, use_name_warning, variant_colors, variant_selected_sx,
+            VariantVars, base_color, borderless_on_state_sx, coarse_hit_area_sx, contrast_color,
+            disabled_look_sx, fill_color, focus_ring_sx, interactive_variant_sx, literal_contrast,
+            min_hit_area_sx, names_itself, text_color, use_name_warning, variant_colors,
+            variant_selected_sx,
         },
         data_display::{Pictogram, SvgData},
         feedback::Loader,
@@ -26,7 +27,7 @@ use crate::{
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         ACTION_ICON_GLYPH, ACTION_ICON_RADIUS, ACTION_ICON_SIZE, BUTTON_HEIGHT, CssVar, Gradient,
-        ICON_SIZE, LOADER_SIZE, SizeCss,
+        ICON_SIZE, LOADER_SIZE, Size, SizeCss,
     },
     utils::warn,
 };
@@ -40,8 +41,21 @@ const ACTION_ICON_ON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-action-icon-on-c
 const ACTION_ICON_SELECTED_VAR: CssVar = CssVar::new("--lsx-action-icon-selected");
 const ACTION_ICON_ON_STATE_VAR: CssVar = CssVar::new("--lsx-action-icon-on-state");
 
-/// Half the shortfall below 24px, out on each side of the box; `0` from 24px up.
-const HIT_AREA_INSET: &str = "min(0px, calc((100% - 24px) / 2))";
+/// Set on the `xs` and `sm` icons, the only ones whose 44px touch box does not crowd a neighbour.
+pub(crate) const ACTION_ICON_COMPACT: &str = "compact";
+
+/// An `xs` or `sm` size word, or a length up to `sm`'s 30px.
+pub(crate) fn is_compact(size: Option<&ThemeAwareValue>) -> bool {
+    match size {
+        Some(ThemeAwareValue::Size(size)) => matches!(size, Size::Xs | Size::Sm),
+        Some(ThemeAwareValue::String(text) | ThemeAwareValue::Number(text)) => text
+            .trim()
+            .trim_end_matches("px")
+            .parse::<f32>()
+            .is_ok_and(|px| px <= 30.0),
+        _ => false,
+    }
+}
 
 /// The new-tab cue's side, from the box's height, not its width, which a `Repository` pill grows.
 pub(crate) fn new_tab_cue_side() -> String {
@@ -92,13 +106,10 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
                 .height(new_tab_cue_side())
                 .pointer_events("none"),
         )
-        // WCAG 2.5.8: an invisible 24x24 press target round a smaller icon (todos 505, 566).
-        .selector(
-            "::before",
-            sx().content("\"\"")
-                .position("absolute")
-                .inset(HIT_AREA_INSET),
-        )
+        // WCAG 2.5.8: an invisible 24x24 press target round a smaller icon (todos 505, 566),
+        // 44x44 on a coarse pointer.
+        .and(min_hit_area_sx("::before"))
+        .when(ACTION_ICON_COMPACT, coarse_hit_area_sx("::before"))
         // A chromeless toggle's pressed look; the variants repeat it over their fill.
         .when(
             "checked",
@@ -232,7 +243,7 @@ base_props! {
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         /// A size word takes `Button`'s height, the glyph `Icon`'s size; a length
-        /// sizes both. Below 24px the press target stays 24x24 (WCAG 2.5.8).
+        /// sizes both. Below 24px the press target stays 24x24 (WCAG 2.5.8), 44x44 under a finger at `xs` and `sm`.
         #[props(default, into)]
         size: Input<ThemeAwareValue>,
         #[props(default, into)]
@@ -408,6 +419,12 @@ fn action_icon(mut props: ActionIconProps) -> Element {
         .with("loading", loading)
         .with("checked", selected)
         .with(variant.state_name(), has_variant_styling);
+    // Unless a wrapper (`Burger`) set it for a size it computes.
+    let states = if is_compact(props.size.as_ref()) {
+        states.with(ACTION_ICON_COMPACT, true)
+    } else {
+        states
+    };
     let states: Input<States> = match showing.as_ref() {
         Some(ripple) => states.with(ripple.state(), true),
         None => states,

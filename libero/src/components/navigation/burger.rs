@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        buttons::ActionIcon,
+        buttons::{ACTION_ICON_COMPACT, ActionIcon, is_compact},
         common::{
             HtmlTag, Input, Part, States, Variables, base_props, parts_enum, parts_under_sx,
             variables,
@@ -176,6 +176,12 @@ pub fn Burger(props: BurgerProps) -> Element {
         );
     }
 
+    // The button's size is a `calc`, so `ActionIcon` cannot tell `xs` and `sm` from it.
+    let states: Input<States> = props
+        .states
+        .unwrap_or_default()
+        .with(ACTION_ICON_COMPACT, is_compact(props.size.as_ref()))
+        .into();
     let glyph_size = props.size.resolve(Some(BURGER_SIZES));
     let button_size = button_size(glyph_size.as_ref());
 
@@ -209,7 +215,7 @@ pub fn Burger(props: BurgerProps) -> Element {
             size: button_size,
             class: props.class,
             sx: parts_under_sx(&props.parts, props.sx),
-            states: props.states,
+            states,
             attributes,
             {glyph}
         }
