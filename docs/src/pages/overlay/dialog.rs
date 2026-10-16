@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Button, Code, Dialog, DialogPart, Text};
-use libero::use_theme;
+use libero::{hooks::use_element, platform::ElementApi, use_theme};
 
 const CONTENT: &str = r#"Text { "notes.md has changes you have not saved." }"#;
 
@@ -27,11 +27,23 @@ fn wrap_open(values: &DemoValues, code: &str) -> String {
 #[component]
 fn DialogDemo(titled: bool, close_button: bool, size: String, radius: String) -> Element {
     let mut open = use_signal(|| true);
+    let reopen = use_element();
+    // The close button unmounts with the dialog, so focus goes to the button that replaces it.
+    use_effect(move || {
+        if !open() && reopen.is_mounted() {
+            let _ = reopen.focus();
+        }
+    });
 
     // Without the button the snippet has no open state, so nor does this.
     if close_button && !open() {
         return rsx! {
-            Button { variant: "outlined", onclick: move |_| open.set(true), "Reopen" }
+            Button {
+                variant: "outlined",
+                onmounted: reopen.mount(),
+                onclick: move |_| open.set(true),
+                "Reopen"
+            }
         };
     }
     rsx! {
@@ -95,6 +107,7 @@ pub fn DialogPage() -> Element {
                     "Give an `alertdialog` an `aria_describedby` pointing at its message, so a screen reader reads it on open.",
                     "Open it in a modal: the focus trap, Escape and backdrop dismissal come from the modal. A `Dialog` on its own has none of them.",
                     "Outside a modal, give a close button `onclose`, or it closes nothing.",
+                    "Move the focus somewhere sensible in `onclose`: closing removes the focused close button.",
                 ])
                 .example("A confirm dialog, `Dialog { title: \"Delete file?\", role: \"alertdialog\", aria_describedby: \"delete-message\" }` inside a modal: the title names it, the message describes it, and the modal traps focus and closes it on Escape."),
             lead: rsx! {

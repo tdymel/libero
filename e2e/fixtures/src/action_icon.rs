@@ -77,6 +77,8 @@ fn ActionIconPage() -> Element {
             ActionIcon { id: "sm", aria_label: "Small", size: "sm", {glyph()} }
             ActionIcon { id: "xs", aria_label: "Extra small", size: "xs", {glyph()} }
             ActionIcon { id: "data", aria_label: "Square", icon: SQUARE }
+            ActionIcon { id: "elevated", aria_label: "Lift", variant: "elevated", {glyph()} }
+            ActionIcon { id: "rem", aria_label: "Rem sized", size: "1.5rem", {glyph()} }
             Text { id: "clicks", "{clicks}" }
         }
     }

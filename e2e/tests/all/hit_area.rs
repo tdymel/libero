@@ -107,6 +107,8 @@ fn a_finger_presses_small_controls_in_a_44px_box() {
             ("[data-case=pagination] [aria-current=page]", false),
             ("#coarse-icon-xs", true),
             ("#coarse-icon-sm", true),
+            // Todo 3611: a length in rem is read as px.
+            ("#coarse-icon-rem", true),
             ("#coarse-burger-xs", true),
             ("#dialog button[aria-label=Close]", true),
             // Todo 3589: the thumb's 24px square grows to 44px.

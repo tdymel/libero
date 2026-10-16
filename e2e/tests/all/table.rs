@@ -629,6 +629,55 @@ fn a_column_width_and_a_rendered_header_reach_the_browser() {
     });
 }
 
+/// Todo 3598: on a coarse pointer the column menu button takes presses in a 44px column.
+#[test]
+fn the_column_menu_button_takes_a_finger_in_a_44px_box() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    block_on(async {
+        let fixture = Fixture::open("/table/menu", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute(SetTouchEmulationEnabledParams::new(true))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(pointer: coarse)').matches",
+            "a coarse pointer",
+        )
+        .await
+        .unwrap();
+
+        let misses: Vec<String> = page
+            .evaluate(
+                "(() => {
+                    const el = document.querySelector('button[aria-label=\"Name column options\"]');
+                    el.scrollIntoView({ block: 'center' });
+                    const r = el.getBoundingClientRect();
+                    const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
+                    return [-21, 0, 21].flatMap(dy => {
+                        const at = document.elementFromPoint(cx, cy + dy);
+                        return at && el.contains(at) ? [] : [String(dy)];
+                    });
+                })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            misses.is_empty(),
+            "points of the 44px column land elsewhere: {misses:?}"
+        );
+        fixture
+            .console
+            .assert_clean("probing the menu button")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// 1156-2b: the column menu sorts, adds to the sort, hides a column and shows
 /// it again from the Columns submenu.
 #[test]

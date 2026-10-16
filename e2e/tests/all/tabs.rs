@@ -569,6 +569,51 @@ fn a_lone_tab_leaves_the_keys_to_the_page() {
     });
 }
 
+/// Todo 3596: the scrolling strip clips a grown `::before`, so a small tab is 44px tall itself.
+#[test]
+fn a_small_tab_takes_a_finger_in_a_44px_box() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    block_on(async {
+        let fixture = Fixture::open("/tabs-sm", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        page.execute(SetTouchEmulationEnabledParams::new(true))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(pointer: coarse)').matches",
+            "a coarse pointer",
+        )
+        .await
+        .unwrap();
+
+        let misses: Vec<String> = page
+            .evaluate(
+                "[...document.querySelectorAll('[role=tab]')].flatMap(el => {
+                    const r = el.getBoundingClientRect();
+                    const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
+                    return [-21, 0, 21].flatMap(dy => {
+                        const at = document.elementFromPoint(cx, cy + dy);
+                        return at && el.contains(at) ? [] : [el.textContent + ' ' + dy];
+                    });
+                })",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            misses.is_empty(),
+            "points of the 44px box land elsewhere: {misses:?}"
+        );
+        fixture
+            .console
+            .assert_clean("probing the small tabs")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 3053: Home on the first tab and End on the last stay the page's.
 #[test]
 fn home_and_end_at_the_ends_leave_the_page_to_scroll() {

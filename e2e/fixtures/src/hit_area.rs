@@ -104,6 +104,7 @@ fn Coarse() -> Element {
             }
             ActionIcon { id: "coarse-icon-xs", aria_label: "Extra small", size: "16px", {glyph()} }
             ActionIcon { id: "coarse-icon-sm", aria_label: "Small", size: "20px", {glyph()} }
+            ActionIcon { id: "coarse-icon-rem", aria_label: "Rem sized", size: "1.25rem", {glyph()} }
             Burger { id: "coarse-burger-xs", size: "xs", onclick: move |_| {} }
             ButtonGroup { aria_label: "Grouped",
                 ActionIcon { id: "group-first", aria_label: "First", size: "md", {glyph()} }

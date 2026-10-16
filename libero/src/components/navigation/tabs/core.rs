@@ -4,9 +4,9 @@ use super::tabs::TabsPart;
 use crate::{
     components::{
         common::{
-            ClassList, HtmlTag, Input, Part, States, Variables, coarse_hit_area_sx, focus_ring_sx,
-            focused_disabled_sx, has_shortcut_modifier, inset_focus_ring_sx, names_itself,
-            neighbour, reveal_inline, text_color, use_name_warning, variables,
+            COARSE_POINTER, ClassList, HtmlTag, Input, Part, States, Variables, coarse_hit_area_sx,
+            focus_ring_sx, focused_disabled_sx, has_shortcut_modifier, inset_focus_ring_sx,
+            names_itself, neighbour, reveal_inline, text_color, use_name_warning, variables,
         },
         layout::use_box,
     },
@@ -55,9 +55,11 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
                 .max_width("100%")
                 .with("overflow-wrap", "anywhere")
                 .cursor("pointer")
-                // The scrolling strip clips it vertically, so it widens a narrow icon tab only.
+                // The scrolling strip clips it vertically, so it widens a narrow icon tab only;
+                // a finger gets the height from the tab itself (todo 3596).
                 .position("relative")
-                .and(coarse_hit_area_sx("::before")),
+                .and(coarse_hit_area_sx("::before"))
+                .media(COARSE_POINTER, sx().min_height("44px")),
         )
         // Replaces the UA ring `appearance: none` drops; inset, or the strip clips it.
         .selector(

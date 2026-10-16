@@ -2,7 +2,9 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Anchor, Dialog, Icon, Paper, Text, VisuallyHidden},
+    components::{Anchor, Button, Dialog, Icon, Paper, Text, VisuallyHidden},
+    hooks::use_element,
+    platform::ElementApi,
     sx::sx,
 };
 
@@ -29,6 +31,12 @@ fn LongTitlePage() -> Element {
 #[component]
 fn DialogPage() -> Element {
     let mut open = use_signal(|| true);
+    let reopen = use_element();
+    use_effect(move || {
+        if !open() && reopen.is_mounted() {
+            let _ = reopen.focus();
+        }
+    });
     rsx! {
         div { style: "position: relative",
             VisuallyHidden { sx: sx().position("absolute"),
@@ -41,6 +49,13 @@ fn DialogPage() -> Element {
                 title: "Filters",
                 onclose: move |_| open.set(false),
                 Text { "Narrow the list." }
+            }
+        } else {
+            Button {
+                id: "reopen",
+                onmounted: reopen.mount(),
+                onclick: move |_| open.set(true),
+                "Reopen"
             }
         }
         Paper { id: "paper", bordered: true, sx: sx().padding("md"), "Bordered paper" }

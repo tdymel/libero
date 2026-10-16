@@ -117,6 +117,10 @@ fn the_close_button_of_an_inline_dialog_calls_onclose() {
         )
         .await
         .unwrap();
+        // Todo 3612: the removed close button's focus goes to the button that replaces the dialog.
+        focus::wait_for_focus(page, "#reopen", "closing the dialog")
+            .await
+            .unwrap();
         fixture
             .console
             .assert_clean("closing the inline dialog")

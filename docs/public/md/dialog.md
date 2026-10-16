@@ -90,6 +90,8 @@ explains how parts work.
 - Open it in a modal: the focus trap, Escape and backdrop dismissal come from
   the modal. A `Dialog` on its own has none of them.
 - Outside a modal, give a close button `onclose`, or it closes nothing.
+- Move the focus somewhere sensible in `onclose`: closing removes the focused
+  close button.
 
 ### Example
 

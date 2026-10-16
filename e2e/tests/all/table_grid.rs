@@ -721,3 +721,56 @@ fn the_ax_tree_names_a_grid() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 3598: on a coarse pointer the cell editor's cancel button takes presses in a 44px column.
+#[test]
+fn the_cell_cancel_button_takes_a_finger_in_a_44px_box() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    use e2e::{passes::pointer, wait};
+    const CANCEL: &str = "[data-cell-editor-cancel]";
+    block_on(async {
+        let fixture = Fixture::open("/table-grid/editable", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute(SetTouchEmulationEnabledParams::new(true))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(pointer: coarse)').matches",
+            "a coarse pointer",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, &cell(2, 3)).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_visible(page, CANCEL).await.unwrap();
+
+        let misses: Vec<String> = page
+            .evaluate(format!(
+                "(() => {{
+                    const el = document.querySelector({CANCEL:?});
+                    const r = el.getBoundingClientRect();
+                    const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
+                    return [-21, 0, 21].flatMap(dy => {{
+                        const at = document.elementFromPoint(cx, cy + dy);
+                        return at && el.contains(at) ? [] : [String(dy)];
+                    }});
+                }})()"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            misses.is_empty(),
+            "points of the 44px column land elsewhere: {misses:?}"
+        );
+        fixture
+            .console
+            .assert_clean("probing the cancel button")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

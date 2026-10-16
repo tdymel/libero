@@ -44,15 +44,22 @@ const ACTION_ICON_ON_STATE_VAR: CssVar = CssVar::new("--lsx-action-icon-on-state
 /// Set on the `xs` and `sm` icons, the only ones whose 44px touch box does not crowd a neighbour.
 pub(crate) const ACTION_ICON_COMPACT: &str = "compact";
 
-/// An `xs` or `sm` size word, or a length up to `sm`'s 30px.
+/// An `xs` or `sm` size word, or a length up to `sm`'s 30px (`rem` and `em` at 16px).
 pub(crate) fn is_compact(size: Option<&ThemeAwareValue>) -> bool {
     match size {
         Some(ThemeAwareValue::Size(size)) => matches!(size, Size::Xs | Size::Sm),
-        Some(ThemeAwareValue::String(text) | ThemeAwareValue::Number(text)) => text
-            .trim()
-            .trim_end_matches("px")
-            .parse::<f32>()
-            .is_ok_and(|px| px <= 30.0),
+        Some(ThemeAwareValue::String(text) | ThemeAwareValue::Number(text)) => {
+            let text = text.trim();
+            let (number, scale) = match text.strip_suffix("rem").or_else(|| text.strip_suffix("em"))
+            {
+                Some(number) => (number, 16.0),
+                None => (text.trim_end_matches("px"), 1.0),
+            };
+            number
+                .trim()
+                .parse::<f32>()
+                .is_ok_and(|length| length * scale <= 30.0)
+        }
         _ => false,
     }
 }
@@ -144,9 +151,11 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
 
     // `:disabled` too: a disabled `Fieldset` disables the `<button>` (todo 499).
     let disabled = || disabled_look_sx("not-allowed");
+    // Last, as on `Button`: the elevated variant's shadow ties the ring's on specificity.
     base.when("disabled", disabled())
         .selector("&:disabled", disabled())
         .when("loading", loading_sx())
+        .focus_visible(focus_ring_sx())
 });
 
 /// `Button`'s loading shape; the loader takes a share of the box, not of a line height.
@@ -616,5 +625,13 @@ mod tests {
 
         assert!(variables.contains(ACTION_ICON_SIZE.override_var().name()));
         assert!(variables.contains(ACTION_ICON_COLOR_VAR.name()));
+    }
+
+    /// Todo 3611: a `rem` or `em` length is compact up to `sm`'s 30px, as a `px` one is.
+    #[test]
+    fn a_rem_or_em_length_is_compact_up_to_the_sm_box() {
+        let compact = |length: &str| is_compact(Some(&ThemeAwareValue::String(length.into())));
+        assert!(compact("24px") && compact("1.5rem") && compact("1.5em") && compact("1.875rem"));
+        assert!(!compact("31px") && !compact("2rem") && !compact("auto"));
     }
 }

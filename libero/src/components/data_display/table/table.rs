@@ -11,8 +11,8 @@ use crate::{
         accessibility::use_announcer,
         common::{
             ClassList, HtmlTag, Input, LogicalTextAlign, Parts, Sides, States, Variables, attr,
-            inset_focus_ring_sx, inset_ring_sides_sx, min_hit_area_sx, names_itself,
-            use_name_warning, variables,
+            coarse_hit_area_sx, inset_focus_ring_sx, inset_ring_sides_sx, min_hit_area_sx,
+            names_itself, use_name_warning, variables,
         },
         form::use_checkbox_look,
         layout::{scroll_area_base, use_box},
@@ -227,7 +227,9 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
             .border_radius("4px")
             .background("none")
             .color("inherit")
-            .cursor("pointer"),
+            .cursor("pointer")
+            .position("relative")
+            .and(coarse_hit_area_sx("::before")),
     )
     .selector(
         "& [data-column-menu] svg, & [data-filtered] svg",
@@ -246,7 +248,9 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
             .border_radius("4px")
             .background("none")
             .color("inherit")
-            .cursor("pointer"),
+            .cursor("pointer")
+            .position("relative")
+            .and(coarse_hit_area_sx("::before")),
     )
     .selector(
         "& [data-filtered]:focus-visible",
@@ -315,21 +319,24 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     // A finger has no Escape: only a coarse pointer gets the cancel button.
     .selector(
         "& [data-cell-editor-cancel]",
-        sx().display("none").media(
-            COARSE,
-            sx().display("inline-flex")
-                .align_items("center")
-                .justify_content("center")
-                .flex("none")
-                .width("24px")
-                .height("24px")
-                .padding("0")
-                .border("0")
-                .border_radius("4px")
-                .background("none")
-                .color("inherit")
-                .cursor("pointer"),
-        ),
+        sx().display("none")
+            .media(
+                COARSE,
+                sx().display("inline-flex")
+                    .align_items("center")
+                    .justify_content("center")
+                    .flex("none")
+                    .width("24px")
+                    .height("24px")
+                    .padding("0")
+                    .border("0")
+                    .border_radius("4px")
+                    .background("none")
+                    .color("inherit")
+                    .cursor("pointer")
+                    .position("relative"),
+            )
+            .and(coarse_hit_area_sx("::before")),
     )
     .selector(
         "& [data-cell-editor-cancel] svg",

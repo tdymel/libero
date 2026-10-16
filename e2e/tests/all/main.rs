@@ -13,6 +13,7 @@ mod bar_chart;
 mod blockquote;
 mod bottom_navigation;
 mod boundary;
+mod burger;
 mod button;
 mod button_group;
 mod calendar;

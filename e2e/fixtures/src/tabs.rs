@@ -18,7 +18,23 @@ pub const ROUTES: Routes = &[
     ("/tabs-manual", || rsx! { TabsManualPage {} }),
     ("/tabs-late", || rsx! { TabsLatePage {} }),
     ("/tabs-lone", || rsx! { TabsLonePage {} }),
+    ("/tabs-sm", || rsx! { TabsSmPage {} }),
 ];
+
+/// Todo 3596: the smallest tabs, whose strip clips a coarse hit area grown outside them.
+#[component]
+fn TabsSmPage() -> Element {
+    rsx! {
+        Tabs {
+            id: "sm",
+            aria_label: "Settings",
+            size: "sm",
+            value: Section::Account,
+            onchange: |_| {},
+            panel: |s: Section| rsx! { Text { "panel for {s.label()}" } },
+        }
+    }
+}
 
 /// Todo 2465: one enabled tab, so the arrows and Home/End are the page's.
 #[component]

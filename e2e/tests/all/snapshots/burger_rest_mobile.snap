@@ -1,0 +1,10 @@
+---
+source: e2e/src/suite.rs
+description: burger at mobile (rest)
+expression: tree
+---
+paragraph
+  StaticText "Site"
+button "Toggle navigation" [expanded=false]
+button "Toggle navigation" [disabled] [expanded=false]
+--> aria-controls [id="panel"] (not in the accessibility tree)

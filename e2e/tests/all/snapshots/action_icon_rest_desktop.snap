@@ -14,5 +14,7 @@ link "Disabled link" [disabled]
 button "Small"
 button "Extra small"
 button "Square"
+button "Lift"
+button "Rem sized"
 paragraph
   StaticText "0"

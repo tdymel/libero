@@ -2,7 +2,7 @@
 //! as a toggle, busy and disabled.
 
 use e2e::browser::block_on;
-use e2e::passes::{keyboard, pointer};
+use e2e::passes::{focus, keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, wait};
 
 /// The 16px and 20px sizes take presses in an invisible 24x24 box.
@@ -259,6 +259,52 @@ fn a_pressed_toggle_shows_the_on_state_ring_with_and_without_a_variant() {
         assert_on_in_forced_colours(page, "#bare-toggle", "#plain").await;
         assert_on_in_forced_colours(page, "#toggle", "#plain").await;
         assert_gray_in_forced_colours(page, "#disabled").await;
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todos 3609, 3610: a bare icon draws a ring, and an elevated one keeps its halo round the outline.
+#[test]
+fn a_bare_and_an_elevated_icon_draw_the_full_focus_ring() {
+    block_on(async {
+        let fixture = Fixture::open("/action-icon", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#elevated").await.unwrap();
+
+        let bare = focus::assert_focus_ring(page, "#plain", 12).await.unwrap();
+        assert!(bare.has_visible_outline(), "{bare:?}");
+        let elevated = focus::assert_focus_ring(page, "#elevated", 12)
+            .await
+            .unwrap();
+        assert!(elevated.has_visible_outline(), "{elevated:?}");
+        // The resting lift is two shadows; the halo and the stripe come on top.
+        let layers = elevated.box_shadow.matches("rgb").count();
+        assert!(layers > 2, "the halo and stripe are missing: {elevated:?}");
+
+        fixture.console.assert_clean("focusing the icons").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 3611: a `rem` length up to 30px is compact, so it gets the coarse 44px box.
+#[test]
+fn a_rem_sized_icon_is_compact() {
+    block_on(async {
+        let fixture = Fixture::open("/action-icon", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#rem").await.unwrap();
+        let state: String = page
+            .evaluate("document.getElementById('rem').getAttribute('data-state')")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(state.split(' ').any(|word| word == "compact"), "{state}");
+
         fixture.close().await.unwrap();
     });
 }
