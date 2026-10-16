@@ -403,5 +403,5 @@ e2e::scenario!(
     the_filter_panel_edits_every_filter,
     android: skip("958: element identity on the WebView"),
     macos: skip("3432: WKWebView: ArrowDown does not open a select filter's list"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("958: element identity on the WebView")
 );

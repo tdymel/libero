@@ -38,10 +38,27 @@ const LAUNCH: Duration = Duration::from_secs(90);
 /// An injector or simctl call that takes longer is wedged; the longest real one is a swipe.
 const TOOL_LIMIT: Duration = Duration::from_secs(45);
 
+/// The status bar's height in screen points on the iPhones CI picks; `env(safe-area-inset-top)`
+/// wins when the page reports more.
+const STATUS_BAR: f64 = 62.0;
+
 /// HID usages (keyboard page 0x07) of the left modifiers.
 const SHIFT: u8 = 225;
 const CTRL: u8 = 224;
 const ALT: u8 = 226;
+const CMD: u8 = 227;
+
+/// The page's last keys, presses and focus moves, printed with a red scenario: what the
+/// simulator's taps and Option+Tab reached (3455, 3456). The bubbling keydown runs after the app's.
+const EVENT_LOG: &str = "window.__e2eLog = []; \
+    const name = e => e === document.body ? 'body' : !e?.tagName ? String(e) \
+      : e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') \
+      + (e.dataset?.slot ? '[' + e.dataset.slot + ']' : ''); \
+    const log = line => { __e2eLog.push(line); if (__e2eLog.length > 120) __e2eLog.shift(); }; \
+    addEventListener('keydown', e => log(`keydown ${e.key} alt=${+e.altKey} shift=${+e.shiftKey} on ${name(e.target)}`), true); \
+    addEventListener('keydown', e => log(`  prevented=${+e.defaultPrevented}`)); \
+    for (const type of ['pointerdown', 'pointerup', 'pointercancel', 'click', 'focusin']) { \
+      addEventListener(type, e => log(`${type} ${name(e.target)}`), true); }";
 
 /// The app the last scenario finished cleanly in; the next scenario of its unit reuses it.
 static IDLE: Mutex<Option<Ios>> = Mutex::new(None);
@@ -97,7 +114,7 @@ impl Ios {
     /// Remounts the fixture on `self.route`, focus and scroll reset.
     fn mount(&mut self) -> Result<()> {
         self.bridge
-            .run("document.activeElement?.blur(); scrollTo(0, 0)")?;
+            .run("document.activeElement?.blur(); scrollTo(0, 0); window.__e2eLog = []")?;
         let generation: u64 = self
             .bridge
             .json(&format!("window.__route({:?})", self.route))?;
@@ -159,6 +176,7 @@ impl Ios {
         // `Shell` installs the route hook in an effect, after the marker mounts.
         ios.bridge
             .wait_until("typeof window.__route === 'function'")?;
+        ios.bridge.run(EVENT_LOG)?;
         if let Err(error) = ios.calibrate() {
             ios.keep_failure();
             return Err(error);
@@ -294,8 +312,44 @@ impl Ios {
         }
     }
 
-    fn tap(&self, x: f64, y: f64) -> Result<()> {
-        self.tap_screen(self.screen(x, y))
+    /// Returns once the page saw the tap end, as Android's (3268); a tap the page never felt
+    /// is sent again (3532). A touch that raised no click (a disabled target) counts once lifted.
+    fn tap(&mut self, x: f64, y: f64) -> Result<()> {
+        self.bridge.run(
+            "window.__tap?.abort(); const ac = window.__tap = new AbortController(); \
+             window.__tapped = 0; \
+             const saw = n => () => { __tapped = Math.max(__tapped, n); }; \
+             addEventListener('touchstart', saw(1), { capture: true, passive: true, signal: ac.signal }); \
+             addEventListener('touchend', saw(2), { capture: true, passive: true, signal: ac.signal }); \
+             for (const type of ['click', 'pointercancel']) { \
+               addEventListener(type, saw(3), { capture: true, signal: ac.signal }); }",
+        )?;
+        for _ in 0..3 {
+            self.tap_screen(self.screen(x, y))?;
+            let started = Instant::now();
+            let mut lifted = None;
+            while started.elapsed() < Duration::from_secs(3) {
+                match self.bridge.json::<u8>("__tapped")? {
+                    3.. => return Ok(()),
+                    // WebKit raises the click a moment after the lift.
+                    2 if lifted.get_or_insert_with(Instant::now).elapsed()
+                        > Duration::from_millis(500) =>
+                    {
+                        return Ok(());
+                    }
+                    _ => {}
+                }
+                std::thread::sleep(Duration::from_millis(25));
+            }
+            // Felt but not yet lifted: a busy page; the scenario's own wait decides.
+            if self.bridge.json::<u8>("__tapped")? > 0 {
+                return Ok(());
+            }
+            trace(&format!(
+                "! the page felt no tap at {x}, {y}: tapping again"
+            ));
+        }
+        bail!("the page felt none of three taps at {x}, {y}")
     }
 
     /// A touch from viewport point `(x, y)` by `(dx, dy)` over `secs`, clamped to the viewport:
@@ -454,6 +508,15 @@ impl Ios {
         if let Ok(text) = self.bridge.json::<String>("document.body.innerText") {
             let _ = std::fs::write(dir.join(format!("{name}-failure.txt")), text);
         }
+        if let Ok(log) = self.bridge.json::<Vec<String>>("window.__e2eLog ?? []") {
+            eprintln!(
+                "e2e ios: the page's last events, focus now on {}:\n  {}",
+                self.bridge
+                    .json::<String>("document.activeElement?.outerHTML.slice(0, 120) ?? 'nothing'")
+                    .unwrap_or_default(),
+                log.join("\n  ")
+            );
+        }
         if let Ok(tree) = self.inject_output(&["describe-ui"]) {
             let _ = std::fs::write(dir.join(format!("{name}-failure.json")), tree);
         }
@@ -583,8 +646,18 @@ impl Driver for Ios {
         self.tap(x, y)
     }
 
+    /// A point under the status bar moves just below it: the system takes taps there, so a
+    /// backdrop tap at 4,4 never reached the page (3416).
     async fn click_at(&mut self, x: f64, y: f64) -> Result<()> {
-        self.tap(x, y)
+        let inset: f64 = self.bridge.json(
+            "(() => { const e = document.createElement('div'); \
+             e.style.cssText = 'position: fixed; padding-top: env(safe-area-inset-top)'; \
+             document.body.append(e); const top = parseFloat(getComputedStyle(e).paddingTop); \
+             e.remove(); return top || 0; })()",
+        )?;
+        let bar = STATUS_BAR.max(inset * self.scale + self.origin.1);
+        let below = (bar - self.origin.1) / self.scale + 1.0;
+        self.tap(x, y.max(below))
     }
 
     async fn viewport(&mut self) -> Result<(f64, f64)> {
@@ -612,6 +685,11 @@ impl Driver for Ios {
 
     async fn press_ctrl(&mut self, key: Key) -> Result<()> {
         self.chord(&[CTRL], key)
+    }
+
+    /// Command, as on the Mac: libero reads `mod` as Meta on Apple platforms.
+    async fn press_mod(&mut self, key: Key) -> Result<()> {
+        self.chord(&[CMD], key)
     }
 
     async fn press_alt(&mut self, key: Key) -> Result<()> {

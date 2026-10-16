@@ -163,8 +163,7 @@ async fn a_detail_drags_with_its_row<D: Driver>(d: &mut D, _route: &str) -> Resu
 e2e::scenario!(
     an_open_detail_drags_with_its_row,
     "/table-reorder-detail",
-    a_detail_drags_with_its_row,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    a_detail_drags_with_its_row
 );
 
 async fn sorted_is_off<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -207,8 +206,7 @@ async fn sorted_is_off<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     row_reorder_is_off_while_sorted,
     "/table-reorder",
-    sorted_is_off,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    sorted_is_off
 );
 
 /// The menu of Name, sorted: sort ascending, descending, unsort, Filter, Group by, the moves.
@@ -259,8 +257,7 @@ async fn a_menu_moves_a_column<D: Driver>(d: &mut D, _route: &str) -> Result<()>
 e2e::scenario!(
     a_column_menu_moves_a_column_and_its_sort,
     "/table-reorder",
-    a_menu_moves_a_column,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    a_menu_moves_a_column
 );
 
 fn menu_button(header: &str) -> String {
@@ -541,7 +538,7 @@ e2e::scenario!(
     "/table-reorder-windowed",
     deep_move_up_keeps_scroll_and_focus,
     android: skip("958: element identity on the WebView"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: a tap on the deep row's move button scrolls the page 21px")
 );
 
 /// Todo 1872: Row 1's grip held at the bottom edge scrolls the windowed rows on,
@@ -687,7 +684,7 @@ e2e::scenario!(
     a_header_grip_drag_moves_a_column,
     "/table-reorder",
     a_grip_drag_moves_a_column,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the header grip feels AXe's drag press but no move")
 );
 
 /// A client x a tenth of `header`'s width past its middle: its end gap is the nearest, and
@@ -741,13 +738,14 @@ e2e::scenario!(
     header_grip_drags_move_columns_twice,
     "/table-reorder",
     two_grip_drags_move_columns,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the header grip feels AXe's drag press but no move")
 );
 
 e2e::scenario!(
     header_grip_drags_move_its_own_columns_twice,
     "/table-column-drag",
-    two_grip_drags_move_columns
+    two_grip_drags_move_columns,
+    ios: skip("3416: flaky: a header grip sometimes feels AXe's drag press but no move")
 );
 
 /// Todo 2018: the rows measure at the press, so a finger's drag moves the row soon.

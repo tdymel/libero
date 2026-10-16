@@ -113,7 +113,7 @@ e2e::scenario!(
     pressing_the_track_centre_and_dragging_right_follows_the_pointer,
     "/slider/drag",
     centre_drag,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the slider feels AXe's drag press but no move")
 );
 
 pub(super) const BUBBLE: &str = "[role=tooltip]:not([hidden])";
@@ -181,7 +181,7 @@ e2e::scenario!(
     a_vertical_swipe_scrolls_the_page_on_android_only_and_a_sideways_drag_or_a_tap_moves_it,
     "/slider/scroll",
     a_swipe_scrolls_on_android,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the slider feels AXe's drag press but no move")
 );
 
 /// Todo 1179: a drag released past the track's end still tracks to the max and
@@ -245,8 +245,7 @@ async fn a_short_drag_on_the_thumb<D: Driver>(d: &mut D, _route: &str) -> Result
 e2e::scenario!(
     a_short_drag_ending_on_the_thumb_holds_and_the_next_tap_lands,
     "/slider/scroll",
-    a_short_drag_on_the_thumb,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    a_short_drag_on_the_thumb
 );
 
 /// Todo 483: the label focuses the thumb it names by id.

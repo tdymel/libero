@@ -250,7 +250,7 @@ e2e::scenario!(
     a_field_dropdown_stays_inside,
     android: skip("1425: no synchronous containment on the WebView"),
     desktop: skip("1425: no synchronous containment on the WebView"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("1425: no synchronous containment on the WebView")
 );
 
 /// Android's Back closes the box, and the app stays (1289).

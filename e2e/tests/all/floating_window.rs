@@ -792,7 +792,7 @@ e2e::scenario!(
     f6_round_trips,
     android: skip("958: element identity on the WebView"),
     desktop: skip("958: element identity on the WebView"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("958: element identity on the WebView")
 );
 e2e::scenario!(
     an_arrow_on_the_title_bar_moves_it_by_a_step,
@@ -805,7 +805,7 @@ e2e::scenario!(
     the_menu_resizes_and_resets,
     android: skip("958: element identity on the WebView"),
     desktop: skip("958: element identity on the WebView"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("958: element identity on the WebView")
 );
 
 /// `menu_parts` reaches the labels of the portaled title-bar menu.

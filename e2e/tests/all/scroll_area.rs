@@ -153,7 +153,7 @@ e2e::scenario!(
     rows_stay_in_view,
     desktop: skip("2131: rows trail a WebView fling, 80px of 120; skeleton bars paint the gap"),
     android: skip("2131: rows trail a WebView fling; skeleton bars paint the gap"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("2131: rows trail a WebView fling, 80px of 120; skeleton bars paint the gap")
 );
 
 /// The list's scrolling box, and the lowest row index it has in the document.

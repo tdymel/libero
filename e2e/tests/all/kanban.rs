@@ -532,7 +532,7 @@ e2e::scenario!(
     "/kanban",
     the_own_column_is_disabled,
     desktop: skip("958: element identity on the WebView"),
-    ios: skip("3416: focus stays on the body after a Tab or a tap")
+    ios: skip("958: element identity on the WebView")
 );
 
 /// Lifts `card` by its handle and waits for the lift to be announced.

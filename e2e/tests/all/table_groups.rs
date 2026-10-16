@@ -290,7 +290,7 @@ e2e::scenario!(
     "/table-groups/footer-window",
     a_focused_row_clears_the_footer,
     android: skip("958: element identity on the WebView"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("958: element identity on the WebView")
 );
 
 e2e::scenario!(

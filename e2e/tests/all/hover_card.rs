@@ -266,7 +266,7 @@ e2e::scenario!(
     tab_crosses,
     android: skip("958: the Tab bridge reads the card's focusables inside a handler"),
     desktop: skip("958: the Tab bridge reads the card's focusables inside a handler"),
-    ios: skip("3416: focus stays on the body after a Tab or a tap")
+    ios: skip("958: the Tab bridge reads the card's focusables inside a handler")
 );
 e2e::scenario!(
     tab_enters_the_card_only_from_the_triggers_last_focusable,
@@ -274,7 +274,7 @@ e2e::scenario!(
     tab_crosses_a_pair,
     android: skip("958: the Tab bridge reads the card's focusables inside a handler"),
     desktop: skip("958: the Tab bridge reads the card's focusables inside a handler"),
-    ios: skip("3416: focus stays on the body after a Tab or a tap")
+    ios: skip("958: the Tab bridge reads the card's focusables inside a handler")
 );
 e2e::scenario!(
     tab_crosses_past_a_hidden_last_control_on_the_trigger_and_the_card,
@@ -282,7 +282,7 @@ e2e::scenario!(
     tab_crosses_past_hidden_last_controls,
     android: skip("958: the Tab bridge reads the card's focusables inside a handler"),
     desktop: skip("958: the Tab bridge reads the card's focusables inside a handler"),
-    ios: skip("3416: focus stays on the body after a Tab or a tap")
+    ios: skip("958: the Tab bridge reads the card's focusables inside a handler")
 );
 e2e::scenario!(
     tab_walks_the_card_in_positive_tabindex_order,
@@ -290,7 +290,7 @@ e2e::scenario!(
     tab_follows_positive_tabindex,
     android: skip("958: the Tab bridge reads the card's focusables inside a handler"),
     desktop: skip("958: the Tab bridge reads the card's focusables inside a handler"),
-    ios: skip("3416: focus stays on the body after a Tab or a tap")
+    ios: skip("958: the Tab bridge reads the card's focusables inside a handler")
 );
 e2e::scenario!(
     the_pointer_crosses_into_the_card_and_leaving_closes_it,
@@ -424,7 +424,7 @@ e2e::scenario!(
     a_scrolling_card_is_a_tab_stop,
     android: skip("958: the Tab bridge reads the card's focusables inside a handler"),
     desktop: skip("958: the Tab bridge reads the card's focusables inside a handler"),
-    ios: skip("3416: focus stays on the body after a Tab or a tap")
+    ios: skip("958: the Tab bridge reads the card's focusables inside a handler")
 );
 
 /// Hovers the trigger of the scrolling card and waits for its text stop.

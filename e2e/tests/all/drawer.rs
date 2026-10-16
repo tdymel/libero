@@ -57,21 +57,21 @@ e2e::scenario!(
     traps_tab,
     android: skip("959: Tab leaves the drawer for the body on the WebView"),
     desktop: skip("959: Shift+Tab from the first control leaves the drawer on the WebView"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("959: Shift+Tab from the first control leaves the drawer on the WebView")
 );
 e2e::scenario!(
     a_backdrop_click_closes_a_drawer,
     "/drawer",
     backdrop_closes,
     macos: skip("upstream: WebKit does not focus a clicked button"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("upstream: WebKit does not focus a clicked button")
 );
 e2e::scenario!(
     a_button_in_a_drawer_closes_it_and_focus_returns,
     "/drawer",
     close_button_closes,
     macos: skip("upstream: WebKit does not focus a clicked button"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("upstream: WebKit does not focus a clicked button")
 );
 e2e::scenario!(a_right_drawer_hugs_the_right_edge, "/drawer", hugs_the_end);
 
@@ -88,7 +88,7 @@ e2e::scenario!(
     "/drawer",
     escape_closes,
     macos: skip("upstream: WebKit does not focus a clicked button"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("upstream: WebKit does not focus a clicked button")
 );
 
 /// Todo 2600: `DrawerOptions::ondismiss` hears each dismissal and keeps a draft open;
@@ -119,7 +119,7 @@ e2e::scenario!(
     a_draft_vetoes_dismissal,
     android: skip("958: element identity on the WebView"),
     macos: skip("upstream: WebKit does not focus a clicked button"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("upstream: WebKit does not focus a clicked button")
 );
 
 /// Todo 3590: a touch swipe down on the content or up on the strip leaves the bottom

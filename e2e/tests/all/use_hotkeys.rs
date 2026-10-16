@@ -223,14 +223,12 @@ e2e::scenario!(
 e2e::scenario!(
     unmounting_one_hotkey_instance_keeps_the_other_listening,
     "/use-hotkeys",
-    unmounting_one_instance_leaves_the_other,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    unmounting_one_instance_leaves_the_other
 );
 e2e::scenario!(
     mod_k_counts_each_press_once,
     "/use-hotkeys",
-    mod_k_runs_once_per_press,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    mod_k_runs_once_per_press
 );
 e2e::scenario!(
     a_text_field_keeps_the_chord_unless_the_hotkey_includes_it,
@@ -240,6 +238,5 @@ e2e::scenario!(
 e2e::scenario!(
     unmounting_the_component_stops_the_hotkey,
     "/use-hotkeys",
-    an_unmounted_listener_stops,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    an_unmounted_listener_stops
 );

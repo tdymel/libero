@@ -32,7 +32,7 @@ e2e::scenario!(
     "/table/wide",
     the_tabbed_last_header_shows,
     android: skip("958: element identity on the WebView"),
-    ios: skip("3416: focus stays on the body after a Tab or a tap")
+    ios: skip("958: element identity on the WebView")
 );
 
 /// Todo 3204: a table capped after its mount still measures its header for the scroll padding.

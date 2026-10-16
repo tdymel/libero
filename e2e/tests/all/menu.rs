@@ -161,7 +161,7 @@ e2e::scenario!(
     "/menu-submenu-reopen",
     a_click_outside_closes,
     macos: skip("upstream: WebKit does not focus a clicked button"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("upstream: WebKit does not focus a clicked button")
 );
 
 /// APG: Escape and ArrowLeft in a submenu close that level only and focus its

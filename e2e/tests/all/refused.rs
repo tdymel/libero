@@ -83,7 +83,7 @@ e2e::scenario!(
     "/refused",
     focus_after_a_press,
     macos: skip("upstream: WebKit does not focus a clicked button"),
-    ios: skip("3416: focus stays on the body after a Tab or a tap")
+    ios: skip("upstream: WebKit does not focus a clicked button")
 );
 e2e::scenario!(
     tab_skips_disabled_buttons_and_an_inert_subtree,

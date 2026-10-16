@@ -127,7 +127,7 @@ e2e::scenario!(
     the_arrows_rove,
     android: skip("958: element identity on the WebView"),
     desktop: skip("958: element identity on the WebView"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("958: element identity on the WebView")
 );
 e2e::scenario!(
     arrow_down_opens_a_menu_and_escape_hands_focus_back,

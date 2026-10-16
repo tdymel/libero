@@ -437,5 +437,5 @@ e2e::scenario!(
     drags_leave_the_handle_focused,
     android: skip("958: element identity on the WebView"),
     desktop: skip("958: element identity on the WebView"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("958: element identity on the WebView")
 );
