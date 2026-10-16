@@ -43,6 +43,7 @@ pub struct TabsProps<T: Options> {
     /// Overrides `Options::label` during render; `OptionLabel::rich` draws rsx.
     #[props(default)]
     option_label: Option<Callback<T, OptionLabel>>,
+    /// On a coarse pointer a tab is at least 44px tall, so small sizes draw taller there.
     #[props(default, into)]
     size: Input<Size>,
     /// Indicator and selected-label colour.

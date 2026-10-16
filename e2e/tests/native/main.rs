@@ -83,6 +83,7 @@ mod table_groups;
 mod table_markup;
 mod table_row_groups;
 mod table_tree;
+mod tags_field;
 mod theme_switcher;
 mod tooltip;
 mod tour;

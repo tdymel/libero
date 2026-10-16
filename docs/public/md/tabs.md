@@ -144,7 +144,7 @@ text name for screen readers.
 | `panel` | `Callback<T, Element>` | - | The body of the selected tab. Only the selected panel is built. |
 | `options` | `OptionSource<T>` | `T::options()` | The tabs to show. A `Vec<T>` converts, and an `OptionList<T>` can disable single tabs. Groups draw flattened. A source still loading draws no tabs. |
 | `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Overrides a tab's label. Runs during render, so it can read a locale. |
-| `size` | `Size` | `md` | Tab strip size. |
+| `size` | `Size` | `md` | Tab strip size. On a touch screen a tab is at least 44px tall, so `xs` and `sm` tabs draw taller there. |
 | `color` | `ThemeAwareValue` | `primary` | Indicator and selected-label color. |
 | `full_width` | `bool` | `false` | Tabs grow to fill the row, never below their label. A crowded strip still scrolls. Not themed. |
 | `activation` | `TabsActivation` | `automatic` | `Automatic` selects as the arrows move. `Manual` moves only the focus, and Enter or Space selects. Use it for slow panels. |

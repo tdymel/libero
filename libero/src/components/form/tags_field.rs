@@ -741,6 +741,10 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
         .attr_default("autocomplete", "off")
         .event("oninput", move |event: FormEvent| {
             let raw = event.value();
+            // macOS Blitz fires one for a handled Backspace that deleted nothing (todo 3625).
+            if raw == text() {
+                return;
+            }
             let pieces: Vec<String> = split(&raw, &split_chars);
             match pieces.is_empty() {
                 // Only separators: keep them, or an already rendered `""` is not

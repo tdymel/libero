@@ -98,7 +98,7 @@ pub fn TabsPage() -> Element {
                     prop("option_label", "Callback<T, OptionLabel>")
                         .default("T::label()")
                         .doc("Overrides a tab's label. Runs during render, so it can read a locale."),
-                    prop("size", "Size").default(theme.tabs.size.as_str()).doc("Tab strip size."),
+                    prop("size", "Size").default(theme.tabs.size.as_str()).doc("Tab strip size. On a touch screen a tab is at least 44px tall, so `xs` and `sm` tabs draw taller there."),
                     prop("color", "ThemeAwareValue").default(theme.tabs.color.as_str()).doc("Indicator and selected-label color."),
                     prop("full_width", "bool").default("false").doc("Tabs grow to fill the row, never below their label. A crowded strip still scrolls. Not themed."),
                     prop("activation", "TabsActivation").default(theme.tabs.activation.as_str()).doc("`Automatic` selects as the arrows move. `Manual` moves only the focus, and Enter or Space selects. Use it for slow panels."),
