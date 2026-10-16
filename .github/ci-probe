@@ -1,0 +1,5 @@
+# ted_ci.py probe; read by .github/workflows/ci-probe.yml.
+os=macos
+tier=ios
+filter=table::rows_select_by_box_and_keep_it_through_a_sort
+dev=olaf-55
