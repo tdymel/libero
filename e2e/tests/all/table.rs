@@ -224,7 +224,7 @@ e2e::scenario!(
     rows_select_by_box_and_keep_it_through_a_sort,
     "/table/select",
     rows_select_and_sort,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: a tap on a second header adds it to the sort, as Shift would")
 );
 
 /// 1982: the light boxes keep select-all's mixed property, and under forced colours

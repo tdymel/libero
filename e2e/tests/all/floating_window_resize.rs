@@ -405,14 +405,14 @@ e2e::scenario!(
     a_resize_wins_over_the_callers_sx_size,
     "/floating-window-sized",
     a_resize_beats_the_callers_size,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the phone's 402px viewport leaves the window no room to grow by a key")
 );
 
 e2e::scenario!(
     a_drag_past_the_edge_keeps_it_in_the_viewport,
     "/floating-window",
     a_drag_past_the_edge,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: dragged to the top, the title bar sits under the status bar, which takes the next drag")
 );
 
 e2e::scenario!(

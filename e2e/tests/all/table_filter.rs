@@ -1,7 +1,7 @@
 //! `Table` select column (S1): a header filter picks one option; the menu's Filter set
 //! to Is any of lists the options as checkboxes.
 
-use anyhow::Result;
+use anyhow::{Result, ensure};
 use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::passes::keyboard;
 
@@ -14,6 +14,7 @@ async fn a_select_filter_narrows_the_rows<D: Driver>(d: &mut D, _route: &str) ->
     const COMPACT: &str = "[data-filter-cell] [role=combobox]";
     const SUMMARY: &str = "[data-filter-cell] [data-filter-summary]";
     const LISTBOX: &str = "[role=listbox]";
+    const MENU_BUTTON: &str = "[aria-label=\"Role column options\"]";
     d.focus(HEADER).await?;
     // Any, then Admin.
     pick_later(d, 1).await?;
@@ -24,7 +25,7 @@ async fn a_select_filter_narrows_the_rows<D: Driver>(d: &mut D, _route: &str) ->
     })
     .await?;
 
-    d.focus("[aria-label=\"Role column options\"]").await?;
+    d.focus(MENU_BUTTON).await?;
     d.press(keyboard::ENTER).await?;
     eventually_focused(d, "[role=menuitem]", "the opened column menu").await?;
     d.press(keyboard::HOME).await?;
@@ -54,6 +55,14 @@ async fn a_select_filter_narrows_the_rows<D: Driver>(d: &mut D, _route: &str) ->
 
     // The header's row now holds the picks on one line, not a checkbox column.
     eventually_text(d, SUMMARY, "Admin +1", "the header's summary").await?;
+    // Focus moved onto its menu button stays inside, a WebView's too (3591).
+    d.focus(MENU_BUTTON).await?;
+    d.frame().await?;
+    ensure!(
+        d.exists(POPOVER).await?,
+        "focus on the menu button closed the filter"
+    );
+    d.focus(BOXES).await?;
     // Focused under the open popover: its close must leave the focus where it moved (3551).
     d.focus(COMPACT).await?;
     eventually(d, "the filter popover closed", async |d| {
@@ -83,6 +92,5 @@ e2e::scenario!(
     "/table-filter/select",
     a_select_filter_narrows_the_rows,
     android: skip("958: element identity on the WebView"),
-    desktop: skip("958: a WebView cannot tell where focus landed, so a script's focus move closes no popover"),
     ios: skip("958: element identity on the WebView")
 );

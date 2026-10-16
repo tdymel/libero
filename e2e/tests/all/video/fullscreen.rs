@@ -170,7 +170,7 @@ e2e::scenario!(
     "/video",
     fullscreen_toggles,
     macos: skip("upstream: Escape does not leave a WKWebView fullscreen"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("iOS's native video fullscreen does not leave on Escape")
 );
 
 fn pseudo_state(fullscreen: Option<String>) -> bool {

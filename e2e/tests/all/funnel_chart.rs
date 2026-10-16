@@ -136,7 +136,7 @@ e2e::scenario!(
     a_click_on_a_stage_reports_it,
     "/funnel-chart",
     clicks,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the tap reaches the chart layer as a click, but no mark's click is reported")
 );
 
 /// A legend button takes its stage out of the funnel; the shares stay of the first stage.

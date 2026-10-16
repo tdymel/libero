@@ -48,17 +48,35 @@ const CTRL: u8 = 224;
 const ALT: u8 = 226;
 const CMD: u8 = 227;
 
-/// The page's last keys, presses and focus moves, printed with a red scenario: what the
-/// simulator's taps and Option+Tab reached (3455, 3456). The bubbling keydown runs after the app's.
+/// The page's last keys, touches, presses and focus moves, printed with a red scenario: what the
+/// simulator's taps and Option+Tab reached (3455, 3456). The bubbling keydown runs after the app's;
+/// a run of moves or scrolls is one line with its count (3603).
 const EVENT_LOG: &str = "window.__e2eLog = []; \
-    const name = e => e === document.body ? 'body' : !e?.tagName ? String(e) \
+    const name = e => e === document.body ? 'body' : e === document ? 'document' : !e?.tagName ? String(e) \
       : e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') \
       + (e.dataset?.slot ? '[' + e.dataset.slot + ']' : ''); \
-    const log = line => { __e2eLog.push(line); if (__e2eLog.length > 120) __e2eLog.shift(); }; \
+    const log = line => { const ms = Math.round(performance.now()); \
+      const last = [__e2eLog.at(-1), __e2eLog.at(-2)].find((e, i) => e?.line === line \
+        && (i === 0 || __e2eLog.at(-1).line.includes('move'))); \
+      if (last) { last.n++; last.to = ms; return; } \
+      __e2eLog.push({ line, n: 1, at: ms, to: ms }); if (__e2eLog.length > 120) __e2eLog.shift(); }; \
+    window.__e2eMark = log; \
     addEventListener('keydown', e => log(`keydown ${e.key} alt=${+e.altKey} shift=${+e.shiftKey} on ${name(e.target)}`), true); \
     addEventListener('keydown', e => log(`  prevented=${+e.defaultPrevented}`)); \
-    for (const type of ['pointerdown', 'pointerup', 'pointercancel', 'click', 'focusin']) { \
-      addEventListener(type, e => log(`${type} ${name(e.target)}`), true); }";
+    for (const type of ['pointerdown', 'pointerup', 'pointercancel', 'gotpointercapture', 'lostpointercapture']) { \
+      addEventListener(type, e => log(`${type} ${e.pointerType} ${name(e.target)} at ${Math.round(e.clientX)},${Math.round(e.clientY)}` \
+        + (type === 'pointerdown' ? ` touch-action ${getComputedStyle(e.target).touchAction}` : '')), true); } \
+    addEventListener('pointermove', e => log(`pointermove ${e.pointerType} ${name(e.target)}`), { capture: true, passive: true }); \
+    for (const type of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) { \
+      addEventListener(type, e => log(`${type} ${name(e.target)} touches=${e.touches.length}`), { capture: true, passive: true }); } \
+    for (const type of ['click', 'dblclick', 'focusin']) { \
+      addEventListener(type, e => log(`${type} ${name(e.target)}`), true); } \
+    addEventListener('scroll', e => log(`scroll ${name(e.target)}`), { capture: true, passive: true }); \
+    visualViewport?.addEventListener('resize', () => log(`zoom ${visualViewport.scale.toFixed(2)}`));";
+
+/// The [`EVENT_LOG`] lines, a repeated one with its count and time span in ms.
+const EVENT_LINES: &str = "(window.__e2eLog ?? []).map(({ line, n, at, to }) => \
+    `${at}${n > 1 ? '-' + to : ''} ${line}${n > 1 ? ' x' + n : ''}`)";
 
 /// The app the last scenario finished cleanly in; the next scenario of its unit reuses it.
 static IDLE: Mutex<Option<Ios>> = Mutex::new(None);
@@ -325,6 +343,7 @@ impl Ios {
                addEventListener(type, saw(3), { capture: true, signal: ac.signal }); }",
         )?;
         for _ in 0..3 {
+            self.mark(&format!("> tap {x},{y}"))?;
             self.tap_screen(self.screen(x, y))?;
             let started = Instant::now();
             let mut lifted = None;
@@ -349,7 +368,18 @@ impl Ios {
                 "! the page felt no tap at {x}, {y}: tapping again"
             ));
         }
-        bail!("the page felt none of three taps at {x}, {y}")
+        let under: String = self
+            .bridge
+            .json(&format!(
+                "(e => e ? e.outerHTML.slice(0, 120) : 'nothing')(document.elementFromPoint({x}, {y}))"
+            ))
+            .unwrap_or_default();
+        bail!("the page felt none of three taps at {x}, {y}, over {under}")
+    }
+
+    /// A line in the page's [`EVENT_LOG`], to place the injector's calls among the events.
+    fn mark(&mut self, line: &str) -> Result<()> {
+        self.bridge.run(&format!("window.__e2eMark?.({line:?})"))
     }
 
     /// A touch from viewport point `(x, y)` by `(dx, dy)` over `secs`, clamped to the viewport:
@@ -376,6 +406,7 @@ impl Ios {
         let (from, to) = (clamp(x, y), clamp(x + dx, y + dy));
         let [x1, y1, x2, y2] = [point(from.0), point(from.1), point(to.0), point(to.1)];
         let secs = format!("{secs:.2}");
+        self.mark(&format!("> {verb} {x1},{y1} to {x2},{y2} pt"))?;
         match self.input {
             Injector::Axe => self.inject(&[
                 verb,
@@ -508,9 +539,15 @@ impl Ios {
         if let Ok(text) = self.bridge.json::<String>("document.body.innerText") {
             let _ = std::fs::write(dir.join(format!("{name}-failure.txt")), text);
         }
-        if let Ok(log) = self.bridge.json::<Vec<String>>("window.__e2eLog ?? []") {
+        if let Ok(log) = self.bridge.json::<Vec<String>>(EVENT_LINES) {
             eprintln!(
-                "e2e ios: the page's last events, focus now on {}:\n  {}",
+                "e2e ios: the page's last events at {}, focus now on {}:\n  {}",
+                self.bridge
+                    .json::<String>(
+                        "`${Math.round(performance.now())} ms, zoom ${visualViewport?.scale}, \
+                         scroll ${scrollX},${scrollY}, page focused ${document.hasFocus()}`"
+                    )
+                    .unwrap_or_default(),
                 self.bridge
                     .json::<String>("document.activeElement?.outerHTML.slice(0, 120) ?? 'nothing'")
                     .unwrap_or_default(),

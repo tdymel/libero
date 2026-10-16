@@ -125,7 +125,7 @@ async fn a_swipe_scrolls_on_android<D: Driver>(d: &mut D, _route: &str) -> Resul
 
     let log = d.text("#row-log").await?;
     // The sideways drag's pair is the only one: the swipe before it grabbed nothing.
-    if d.platform() == Platform::Android {
+    if matches!(d.platform(), Platform::Android | Platform::Ios) {
         ensure!(
             log == "start end ",
             "a swipe over the divider grabbed it: {log:?}"
@@ -147,8 +147,7 @@ async fn a_swipe_scrolls_on_android<D: Driver>(d: &mut D, _route: &str) -> Resul
 e2e::scenario!(
     a_vertical_swipe_over_a_vertical_divider_scrolls_the_page_on_android_only_and_a_sideways_drag_moves_it,
     "/splitter/scroll",
-    a_swipe_scrolls_on_android,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    a_swipe_scrolls_on_android
 );
 
 /// Todo 1821: the horizontal divider takes ArrowDown/ArrowUp (step 1), Shift for the big

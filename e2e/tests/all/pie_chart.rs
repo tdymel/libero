@@ -316,7 +316,7 @@ e2e::scenario!(
     a_click_on_a_slice_reports_it,
     "/pie-chart",
     clicks,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the tap reaches the chart layer as a click, but no mark's click is reported")
 );
 
 /// With a slice hidden, the tooltip and the keys' announcement give the share the labels

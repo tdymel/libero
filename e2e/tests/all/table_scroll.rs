@@ -224,7 +224,7 @@ e2e::scenario!(
     a_windowed_table_renders_the_rows_in_view,
     "/table/windowed",
     the_window_follows_the_scroll,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: End reaches the page, but the windowed table does not take it")
 );
 
 /// 1156-5c: Tab walks the row checkboxes past the rendered rows and back: the
@@ -289,7 +289,7 @@ e2e::scenario!(
     end_at_the_bottom_loads_more_rows,
     "/table/infinite",
     end_loads_the_next_rows,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: End reaches the page, but the windowed table does not take it")
 );
 
 async fn row_count_is<D: Driver>(d: &mut D, rows: &str) -> Result<()> {

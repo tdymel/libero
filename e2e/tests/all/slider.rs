@@ -30,7 +30,8 @@ async fn value_now<D: Driver>(d: &mut D) -> Result<f64> {
 async fn centre_drag<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     ensure!(value_now(d).await? == 0.0, "the slider starts off 0");
     d.drag(TRACK, 100.0, 0.0).await?;
-    if d.platform() == Platform::Android {
+    // A touch on the track only taps (1059), iOS's too (3603).
+    if matches!(d.platform(), Platform::Android | Platform::Ios) {
         linger(d, 8).await;
         let moved = value_now(d).await?;
         ensure!(moved == 0.0, "a swipe from the track moved it to {moved}");
@@ -112,8 +113,7 @@ e2e::scenario!(
 e2e::scenario!(
     pressing_the_track_centre_and_dragging_right_follows_the_pointer,
     "/slider/drag",
-    centre_drag,
-    ios: skip("3416: the slider feels AXe's drag press but no move")
+    centre_drag
 );
 
 pub(super) const BUBBLE: &str = "[role=tooltip]:not([hidden])";
@@ -135,7 +135,7 @@ async fn a_swipe_scrolls_on_android<D: Driver>(d: &mut D, _route: &str) -> Resul
         (RANGE_THUMB, "#range-end", "20-80"),
     ] {
         swipe_scrolls_on_android(d, thumb, ended, grabbed).await?;
-        if d.platform() == Platform::Android {
+        if matches!(d.platform(), Platform::Android | Platform::Ios) {
             linger(d, 8).await;
             ensure!(
                 d.text(ended).await?.is_empty(),
@@ -180,8 +180,7 @@ async fn a_swipe_scrolls_on_android<D: Driver>(d: &mut D, _route: &str) -> Resul
 e2e::scenario!(
     a_vertical_swipe_scrolls_the_page_on_android_only_and_a_sideways_drag_or_a_tap_moves_it,
     "/slider/scroll",
-    a_swipe_scrolls_on_android,
-    ios: skip("3416: the slider feels AXe's drag press but no move")
+    a_swipe_scrolls_on_android
 );
 
 /// Todo 1179: a drag released past the track's end still tracks to the max and

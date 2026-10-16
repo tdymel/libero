@@ -21,7 +21,7 @@ use crate::{
     },
     platform::{
         ElementApi, KeySubscription, PRESS_MARKER_ATTR, PlatformError, PressSubscription,
-        claim_escape, document, key_taken, keyboard, next_task, press,
+        claim_escape, document, focus_lands_in, key_taken, keyboard, next_task, press,
     },
     utils::bump,
 };
@@ -334,6 +334,8 @@ pub(crate) struct DismissHandle {
     live: CopyValue<bool>,
     /// Counts the openings, so a check queued in one cannot close the next.
     opening: CopyValue<u64>,
+    /// Counts the focus-outs a task answers, so only the latest answer closes.
+    moves: CopyValue<u64>,
 }
 
 impl DismissHandle {
@@ -435,18 +437,48 @@ impl DismissHandle {
                 let early = self.focus_inside();
                 let handle = *self;
                 let opening = *self.opening.peek();
+                let mut moves = self.moves;
+                *moves.write() += 1;
+                let this_move = *moves.peek();
+                // Reopened or left again since: the answer is stale (todo 1656).
+                let current =
+                    move || *handle.opening.peek() == opening && *moves.peek() == this_move;
                 spawn(async move {
                     next_task().await;
-                    // Reopened since: this focus-out left the box that closed (todo 1656).
-                    if *handle.opening.peek() != opening {
+                    if !current() {
                         return;
                     }
-                    if handle.focus_inside().or(early) == Some(false) {
+                    let inside = match handle.focus_inside().or(early) {
+                        None => handle.page_holds_focus().await,
+                        known => known,
+                    };
+                    if inside == Some(false) && current() {
                         handle.close(Dismissal::FocusMoved);
                     }
                 });
             }
         }
+    }
+
+    /// Where the box cannot answer (a WebView): whether the page's focus is on an element
+    /// carrying its marker or one counted inside (3591). `None` without markers.
+    pub(crate) async fn page_holds_focus(&self) -> Option<bool> {
+        if !self.marker.live {
+            return None;
+        }
+        focus_lands_in(&self.marker_selector()).await.ok()
+    }
+
+    /// Matches the elements carrying this box's press marker or one counted inside, and
+    /// `<body>` holding focus: WebKit leaves a pressed button unfocused, a press's to judge.
+    fn marker_selector(&self) -> String {
+        let inside = self.inside.peek();
+        std::iter::once(self.marker.id)
+            .chain(inside.iter().map(|(_, _, marker)| *marker))
+            .map(|marker| format!("[{PRESS_MARKER_ATTR}=\"{marker}\"]"))
+            .chain(["body:not(:focus-within)".to_string()])
+            .collect::<Vec<_>>()
+            .join(", ")
     }
 
     /// The Escape listener both surfaces share.
@@ -463,7 +495,7 @@ impl DismissHandle {
 
     /// `None` when a mounted element cannot answer and none said yes. Asks
     /// `:focus` for a descendant and `is_focused()` for the element itself.
-    fn focus_inside(&self) -> Option<bool> {
+    pub(crate) fn focus_inside(&self) -> Option<bool> {
         if self.focus_in_owned_popup() {
             return Some(true);
         }
@@ -551,6 +583,7 @@ pub(crate) fn use_dismiss(
     let mut left_seen = use_hook(|| CopyValue::new(0u64));
     let mut live = use_hook(|| CopyValue::new(false));
     let mut opening = use_hook(|| CopyValue::new(0u64));
+    let moves = use_hook(|| CopyValue::new(0u64));
     // A press heard for an earlier opening must not close this one.
     if open && !*live.peek() {
         left_seen.set(*left_tick.peek());
@@ -580,6 +613,7 @@ pub(crate) fn use_dismiss(
         popups,
         live,
         opening,
+        moves,
     };
 
     use_document_escape(open && options.escape, global, move || {

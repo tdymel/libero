@@ -270,8 +270,7 @@ e2e::scenario!(
 e2e::scenario!(
     the_focused_button_is_lifted_over_its_neighbours,
     "/button-group",
-    the_ring_rises,
-    ios: skip("3416: focus stays on the body after a Tab or a tap")
+    the_ring_rises
 );
 e2e::scenario!(
     a_button_s_own_disabled_beats_the_group_s,

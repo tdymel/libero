@@ -71,7 +71,7 @@ e2e::scenario!(
     fast_typing_into_a_text_field_keeps_every_letter,
     "/text-field/echo",
     fast_typing_keeps_every_letter,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: iOS's hardware-keyboard auto-capitalization types the field's first letter upper case")
 );
 e2e::scenario!(
     fast_typing_into_a_rewriting_field_keeps_every_letter,

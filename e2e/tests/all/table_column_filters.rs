@@ -33,7 +33,7 @@ e2e::scenario!(
     the_quick_filter_narrows_a_paged_table,
     "/table/filter",
     the_quick_filter_narrows_the_rows,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: iOS's hardware-keyboard auto-capitalization types the field's first letter upper case")
 );
 
 /// 1156-3b/3c: a header filter narrows by value once typing settles; the menu's
@@ -104,7 +104,7 @@ e2e::scenario!(
     the_column_filters_narrow_a_table,
     "/table/column-filter",
     the_column_filters_narrow_the_rows,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: iOS's hardware-keyboard auto-capitalization types the field's first letter upper case")
 );
 
 /// Todo 1403: Tab past the filter dialog's last stop and Shift+Tab past its first close it,
@@ -387,7 +387,7 @@ e2e::scenario!(
     a_date_filter_narrows_the_rows,
     android: skip("Chromium's typed date segments only"),
     windows: skip("3422: Shift+Tab never leaves the date input on WebView2"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("the WebView's native date input opens iOS's date wheel, which typed keys do not fill")
 );
 
 /// 1400: the filter panel adds lines, joins them by the logic, and moves the
@@ -473,5 +473,5 @@ e2e::scenario!(
     "/table/filter-panel",
     the_filter_panel_edits_every_filter,
     android: skip("958: element identity on the WebView"),
-    ios: skip("958: element identity on the WebView")
+    ios: skip("3416: iOS's hardware-keyboard auto-capitalization types the field's first letter upper case")
 );

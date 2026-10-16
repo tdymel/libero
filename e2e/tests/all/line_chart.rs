@@ -191,7 +191,7 @@ e2e::scenario!(
     a_click_on_a_point_reports_it,
     "/line-chart",
     clicks,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the tap reaches the chart layer as a click, but no mark's click is reported")
 );
 
 /// A legend button hides its line from the drawing; the last shown one stays.
@@ -401,7 +401,7 @@ e2e::scenario!(
     web: skip("a mouse has no pinch"),
     desktop: skip("a mouse has no pinch"),
     native: skip("Blitz takes no multi-touch input"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("AXe injects no two-finger pinch")
 );
 
 /// The handle reads a titled SVG and a PNG, and saves the SVG for a button of the page's own.

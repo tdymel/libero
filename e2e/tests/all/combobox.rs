@@ -536,7 +536,7 @@ e2e::scenario!(
     typing_and_enter_add_a_tag,
     "/tags-field/echo",
     tags_typing_adds,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: iOS's hardware-keyboard auto-capitalization types the field's first letter upper case")
 );
 e2e::scenario!(
     a_suggestion_picked_by_the_keys_becomes_a_tag,

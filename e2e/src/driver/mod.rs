@@ -441,7 +441,8 @@ pub async fn swipe_scrolls_on_android<D: Driver>(
 ) -> Result<()> {
     let (_, height) = d.viewport().await?;
     d.drag(target, 0.0, -250.0).await?;
-    if d.platform() != Platform::Android {
+    // A touch screen's swipe scrolls; a mouse grabs (iOS's touch too, 3603).
+    if !matches!(d.platform(), Platform::Android | Platform::Ios) {
         return eventually_text(d, ended, grabbed, "a vertical mouse drag").await;
     }
     let at = d.rect(target).await?;
