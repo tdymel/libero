@@ -218,7 +218,7 @@ pub fn AutocompletePage() -> Element {
                     format!("{}\n\n{source}", FILE.section("cities"))
                 }),
                 fixed: vec![
-                    "sx: sx().width(\"280px\")".to_string(),
+                    "sx: sx().width(\"280px\").max_width(\"100%\")".to_string(),
                     "options: cities()".to_string(),
                     "value: value()".to_string(),
                     "oninput: move |next| value.set(next)".to_string(),
@@ -265,7 +265,7 @@ pub fn AutocompletePage() -> Element {
                     let field = field_props::<CityCopy>(&values);
                     rsx! {
                     Autocomplete {
-                        sx: sx().width("280px"),
+                        sx: sx().width("280px").max_width("100%"),
                         size: values.str("size"),
                         radius: values.str("radius"),
                         label: field.label,

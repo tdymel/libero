@@ -14,6 +14,12 @@ enum Fruit {
 }
 // demo-code: fruit end
 
+/// A trigger capped at `max-width: 100%` only gives way when every ancestor is capped too.
+fn capped() -> libero::sx::Sx {
+    sx().max_width("100%")
+        .selector("& > *", sx().max_width("100%"))
+}
+
 impl Fruit {
     fn emoji(self) -> &'static str {
         match self {
@@ -85,6 +91,7 @@ pub(super) fn SelectDemo(values: DemoValues) -> Element {
             direction: "column",
             gap: "sm",
             align: "flex-start",
+            sx: capped(),
             Combobox {
                 size: values.str("size"),
                 radius: values.str("radius"),
@@ -110,7 +117,7 @@ pub(super) fn SelectDemo(values: DemoValues) -> Element {
                 Text { id: "{label}", size: "sm", "Fruit" }
                 Button {
                     variant: "outlined",
-                    sx: sx().width("280px"),
+                    sx: sx().width("280px").max_width("100%"),
                     disabled,
                     attributes: [
                         fruit.a11y_attributes(),
@@ -185,48 +192,50 @@ pub(super) fn FetchingDemo(values: DemoValues) -> Element {
     // demo-code: fetching_state end
 
     rsx! {
-        Combobox {
-            size: values.str("size"),
-            radius: values.str("radius"),
-            disabled: disabled.then_some(true),
-            state: suggestions,
-            options: results().map(OptionList::from),
-            labelled_by: format!("{field}-label"),
-            loading_label: "Searching fruit",
-            empty_label: "No fruit matches",
-            empty: rsx! { Text { size: "sm", sx: sx().padding("xs"), "No fruit matches" } },
-            option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
-                ComboboxOption {
-                    onpick: move |_| {
-                        text.set(o.value.label());
-                        suggestions.close();
-                    },
-                    {row(&o, rich)}
-                }
-            },
-            // demo-code: fetching_trigger start
-            TextField {
-                id: field,
-                label: "Fruit",
-                sx: sx().width("280px"),
-                disabled,
-                placeholder: "Type a fruit",
-                value: text(),
-                attributes: suggestions.a11y_attributes(),
-                // An editable trigger that filters a list says so (APG, todo 2905).
-                "aria-autocomplete": "list",
-                onblur: move |_| suggestions.close(),
-                oninput: move |next: String| {
-                    text.set(next.clone());
-                    suggestions.open();
-                    results.set(None);
-                    let answer = timer().map(|timer| {
-                        timer.after(LATENCY, Box::new(move || results.set(Some(matching(&next)))))
-                    });
-                    pending.set(answer);
+        Flex { sx: capped(),
+            Combobox {
+                size: values.str("size"),
+                radius: values.str("radius"),
+                disabled: disabled.then_some(true),
+                state: suggestions,
+                options: results().map(OptionList::from),
+                labelled_by: format!("{field}-label"),
+                loading_label: "Searching fruit",
+                empty_label: "No fruit matches",
+                empty: rsx! { Text { size: "sm", sx: sx().padding("xs"), "No fruit matches" } },
+                option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
+                    ComboboxOption {
+                        onpick: move |_| {
+                            text.set(o.value.label());
+                            suggestions.close();
+                        },
+                        {row(&o, rich)}
+                    }
                 },
+                // demo-code: fetching_trigger start
+                TextField {
+                    id: field,
+                    label: "Fruit",
+                    sx: sx().width("280px").max_width("100%"),
+                    disabled,
+                    placeholder: "Type a fruit",
+                    value: text(),
+                    attributes: suggestions.a11y_attributes(),
+                    // An editable trigger that filters a list says so (APG, todo 2905).
+                    "aria-autocomplete": "list",
+                    onblur: move |_| suggestions.close(),
+                    oninput: move |next: String| {
+                        text.set(next.clone());
+                        suggestions.open();
+                        results.set(None);
+                        let answer = timer().map(|timer| {
+                            timer.after(LATENCY, Box::new(move || results.set(Some(matching(&next)))))
+                        });
+                        pending.set(answer);
+                    },
+                }
+                // demo-code: fetching_trigger end
             }
-            // demo-code: fetching_trigger end
         }
     }
 }
@@ -254,43 +263,45 @@ pub(super) fn SuggestionsDemo(values: DemoValues) -> Element {
     // demo-code: suggestions_state end
 
     rsx! {
-        Combobox {
-            size: values.str("size"),
-            radius: values.str("radius"),
-            disabled: disabled.then_some(true),
-            state: suggestions,
-            options: matches,
-            labelled_by: format!("{field}-label"),
-            option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
-                ComboboxOption {
-                    // demo-code: suggestion_wiring start
-                    onpick: move |_| {
-                        text.set(o.value.label());
-                        suggestions.close();
-                    },
-                    // demo-code: suggestion_wiring end
-                    {row(&o, rich)}
-                }
-            },
-            // demo-code: suggestions_trigger start
-            TextField {
-                id: field,
-                label: "Fruit",
-                sx: sx().width("280px"),
-                disabled,
-                placeholder: "Type a fruit",
-                value: text(),
-                attributes: suggestions.a11y_attributes(),
-                // An editable trigger that filters a list says so (APG, todo 2905).
-                "aria-autocomplete": "list",
-                onblur: move |_| suggestions.close(),
-                oninput: move |next| {
-                    text.set(next);
-                    suggestions.open();
+        Flex { sx: capped(),
+            Combobox {
+                size: values.str("size"),
+                radius: values.str("radius"),
+                disabled: disabled.then_some(true),
+                state: suggestions,
+                options: matches,
+                labelled_by: format!("{field}-label"),
+                option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
+                    ComboboxOption {
+                        // demo-code: suggestion_wiring start
+                        onpick: move |_| {
+                            text.set(o.value.label());
+                            suggestions.close();
+                        },
+                        // demo-code: suggestion_wiring end
+                        {row(&o, rich)}
+                    }
                 },
+                // demo-code: suggestions_trigger start
+                TextField {
+                    id: field,
+                    label: "Fruit",
+                    sx: sx().width("280px").max_width("100%"),
+                    disabled,
+                    placeholder: "Type a fruit",
+                    value: text(),
+                    attributes: suggestions.a11y_attributes(),
+                    // An editable trigger that filters a list says so (APG, todo 2905).
+                    "aria-autocomplete": "list",
+                    onblur: move |_| suggestions.close(),
+                    oninput: move |next| {
+                        text.set(next);
+                        suggestions.open();
+                    },
+                }
+                input { r#type: "hidden", name: "fruit", value: "{text()}" }
+                // demo-code: suggestions_trigger end
             }
-            input { r#type: "hidden", name: "fruit", value: "{text()}" }
-            // demo-code: suggestions_trigger end
         }
     }
 }

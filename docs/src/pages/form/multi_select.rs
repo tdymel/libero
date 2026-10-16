@@ -330,7 +330,7 @@ pub fn MultiSelectPage() -> Element {
                     }
                 }),
                 fixed: vec![
-                    "sx: sx().width(\"280px\")".to_string(),
+                    "sx: sx().width(\"280px\").max_width(\"100%\")".to_string(),
                     "value: value()".to_string(),
                     "onchange: move |next| value.set(next)".to_string(),
                     "placeholder: \"Pick toppings\"".to_string(),
@@ -393,7 +393,7 @@ pub fn MultiSelectPage() -> Element {
                     let field = field_props::<ToppingsCopy>(&values);
                     rsx! {
                     MultiSelect {
-                        sx: sx().width("280px"),
+                        sx: sx().width("280px").max_width("100%"),
                         size: values.str("size"),
                         radius: values.str("radius"),
                         label: field.label,

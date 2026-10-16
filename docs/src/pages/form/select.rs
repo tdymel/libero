@@ -353,7 +353,7 @@ pub fn SelectPage() -> Element {
                     false => format!("{FRUIT_ENUM}{source}"),
                 }),
                 fixed: vec![
-                    "sx: sx().width(\"280px\")".to_string(),
+                    "sx: sx().width(\"280px\").max_width(\"100%\")".to_string(),
                     "value: value()".to_string(),
                     "onchange: move |next| value.set(next)".to_string(),
                     "placeholder: \"Pick a fruit\"".to_string(),
@@ -408,7 +408,7 @@ pub fn SelectPage() -> Element {
                     let field = field_props::<FruitCopy>(&values);
                     rsx! {
                     Select {
-                        sx: sx().width("280px"),
+                        sx: sx().width("280px").max_width("100%"),
                         size: values.str("size"),
                         radius: values.str("radius"),
                         label: field.label,

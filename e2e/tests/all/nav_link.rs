@@ -306,6 +306,31 @@ fn a_new_tab_anchor_shows_an_icon_and_says_so() {
     });
 }
 
+/// Todo 3561: `new_tab_hint: false` drops the hidden text and the icon of a `_blank` Anchor.
+#[test]
+fn an_opted_out_new_tab_anchor_has_no_icon_and_no_hint() {
+    block_on(async {
+        let fixture = Fixture::open("/nav-link/states", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#quiet").await.unwrap();
+
+        let tree = e2e::ax::snapshot(page, "#quiet-prose").await.unwrap();
+        assert!(tree.contains("the quiet one"), "{tree}");
+        assert!(!tree.contains("opens in a new tab"), "{tree}");
+        let icon: bool = page
+            .evaluate("document.querySelector('#quiet svg') !== null")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(!icon, "no icon in the opted-out link");
+
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 580: the toggle beside a parent link is an APG disclosure button, named after the
 /// link, that controls the nested links' panel.
 #[test]

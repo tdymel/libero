@@ -66,6 +66,16 @@ fn NavStatesPage() -> Element {
                 Anchor { id: "external", to: "https://example.com", target: "_blank", new_tab_icon: true, "the external one" }
                 "."
             }
+            Text { id: "quiet-prose",
+                Anchor {
+                    id: "quiet",
+                    to: "https://example.com",
+                    target: "_blank",
+                    new_tab_icon: true,
+                    new_tab_hint: false,
+                    "the quiet one"
+                }
+            }
             Flex { gap: "md", align: "center",
                 for size in ["xs", "sm", "md", "lg", "xl", "xxl"] {
                     Burger { id: "burger-{size}", size, "aria-label": "Menu {size}" }
