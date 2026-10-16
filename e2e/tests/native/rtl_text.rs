@@ -65,7 +65,7 @@ fn counter_side(page: &Page) -> (u8, f64) {
     )
 }
 
-/// Windows' thin antialiased muted digits stay above 128 (3547 probes), still far from white.
+/// Windows' thin antialiased muted digits stay above 128 (Platforms 38719520651), still far from white.
 const INKED: u8 = 200;
 
 #[test]
