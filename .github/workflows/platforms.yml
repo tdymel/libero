@@ -191,19 +191,12 @@ jobs:
       - if: failure() || cancelled()
         run: python3 .github/scripts/ci_annotate.py "$RUNNER_TEMP"/{build,native,all}.log
 
-  # The browser tier on macOS: the e2e runner, dx and pinned Chrome, as ci.yml's `e2e` job.
+  # A smoke of the browser tier on macOS: the units where a Mac differs (Cmd as `mod`, editing, IME).
+  # The whole tier wedges headless Chrome on the 3-core runner after 170-350 tests (3444).
   macos-web:
     if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: ["1", "2"]
     runs-on: macos-26
-    # Until green: a hang held a macOS slot for 2 h (plans/ios-mac-win/exploration.md).
     timeout-minutes: 45
-    env:
-      # Two shards, not four: an account runs at most five macOS jobs at once.
-      SHARDS: 2
     steps:
       - uses: actions/checkout@v7
         with:
@@ -221,7 +214,7 @@ jobs:
           chrome-version: 152.0.7977.82
       - run: '"${{ steps.chrome.outputs.chrome-path }}" --version'
       - run: |
-          units=$(python3 .github/scripts/shard.py units ${{ matrix.shard }} "$SHARDS")
+          units=$(python3 .github/scripts/shard.py smoke)
           echo "units: $units"
           # shellcheck disable=SC2086
           cargo run -p e2e -- $units 2>&1 | tee "$RUNNER_TEMP/e2e.log"
@@ -234,7 +227,7 @@ jobs:
       - if: failure() || cancelled()
         uses: actions/upload-artifact@v7
         with:
-          name: macos-e2e-artifacts-${{ matrix.shard }}
+          name: macos-e2e-artifacts
           path: ${{ runner.temp }}/e2e-artifacts
           if-no-files-found: ignore
 
