@@ -3,12 +3,12 @@ use crate::components::{
     prop, props, status_prop,
 };
 use dioxus::prelude::*;
-use libero::components::rich_text::{Doc, RichTextView};
-use libero::components::{Code, FieldPart, Flex, Text};
+use libero::components::rich_text::Doc;
+use libero::components::{Code, FieldPart, Text};
 use libero::use_theme;
 
 mod demo;
-use demo::{Extensions, MessageBox, NotesEditor};
+use demo::{Extensions, MAX_LENGTH, NotesEditor};
 
 struct NotesCopy;
 
@@ -53,8 +53,6 @@ fn main() {
 ---
 
 Below the rule, the next section starts."#;
-
-const VIEW_CAPTION: &str = "Showing a document: RichTextView shows the stored Doc read-only, as a message or comment list mounts one per entry, and is what the editor shows on a renderer without an editable surface (Blitz). Below, it follows the document edited above.";
 
 /// A section of the demo file one level in, for a function body.
 fn indented(name: &str) -> String {
@@ -129,23 +127,6 @@ fn wrap_extensions(values: &DemoValues, code: &str) -> String {
     }
     items.push(code.to_string());
     items.join("\n\n")
-}
-
-/// One line per extension switch that changes what the editor does, so a reader knows what to try.
-fn captions(values: &DemoValues) -> Vec<&'static str> {
-    let on = Extensions::of(values);
-    [
-        (on.shout, "Custom command: select a word and press Ctrl+Shift+1 (Cmd on a Mac) to upper-case it, one undo step."),
-        (on.mentions, "Mentions: type @ and a name, or press the @ button. While the list is open, intercept gives it the arrow keys, Enter and Escape; overlay floats it at the caret; the handle's edit swaps the typed @name for a mention node, drawn by your own component, in one undo step. Ctrl+Shift+2 runs a node command that inserts @ada."),
-        (on.keymap, "Custom keymap: Ctrl+Shift+H makes a heading, and Ctrl+Shift+Enter no longer adds a rule. Ctrl+/ lists the live keymap."),
-        (true, "Code blocks: a code block shows its source with fences while the caret is in it; the language button on its opening fence, the toolbar's language menu or Ctrl+Shift+L change its language."),
-        (true, "Task lists: type [ ] and a space at the start of a list item, press Ctrl+Shift+9 or the toolbar's Task list button. Click a box, or press Ctrl+Alt+Enter in its item, to check it; each is one undo step."),
-        (true, "Links: a web address (http, https or mailto) followed by a space or Enter becomes a link, and undo brings the plain text back. Typing [text](address) links the text; pasting only an address links the selected text. Other schemes stay text, as does a www. address."),
-        (values.str("toolbar") != "true","No toolbar: the keymap, or your own buttons through a handle, drive the editor."),
-    ]
-    .into_iter()
-    .filter_map(|(on, caption)| on.then_some(caption))
-    .collect()
 }
 
 #[component]
@@ -366,21 +347,27 @@ pub fn RichTextEditorPage() -> Element {
                             false => vec![],
                         }
                     }),
+                    Control::toggle("onsubmit", ["off", "Enter", "ModEnter"]).code(|_, values| {
+                        let send = "onsubmit: move |_| doc.set(rich_text::Doc::default())".to_string();
+                        match values.str("onsubmit").as_str() {
+                            "Enter" => vec![send],
+                            "ModEnter" => vec![send, "submit_on: rich_text::SubmitOn::ModEnter".to_string()],
+                            _ => vec![],
+                        }
+                    }),
+                    Control::switch("max_length").code(|_, values| {
+                        match values.str("max_length").as_str() {
+                            "true" => vec![format!("max_length: {MAX_LENGTH}")],
+                            _ => vec![],
+                        }
+                    }),
                     Control::switch("required"),
                     Control::switch("disabled"),
                     Control::switch("readonly"),
                 ]].concat(),
                 wrap: Wrap(wrap_extensions),
                 render: move |values: DemoValues| rsx! {
-                    Flex { direction: "column", gap: "sm",
-                        NotesEditor { values: values.clone(), doc }
-                        MessageBox {}
-                        for caption in captions(&values) {
-                            Text { size: "sm", "{caption}" }
-                        }
-                        Text { size: "sm", {VIEW_CAPTION} }
-                        RichTextView { value: doc() }
-                    }
+                    NotesEditor { values, doc }
                 },
             }
 

@@ -3,10 +3,13 @@ use crate::components::{DemoValues, field_props};
 use dioxus::prelude::*;
 use libero::components::rich_text::{
     Attrs, Builtin, Chord, Commands, Doc, EditorInput, EditorState, Keymap, NodeRegistry, NodeSpec,
-    NodeViewProps, NodeViews, Position, RichTextTool, Selection, use_rich_text_editor,
+    NodeViewProps, NodeViews, Position, RichTextTool, Selection, SubmitOn, use_rich_text_editor,
 };
-use libero::components::{ComboboxOption, Flex, Paper, RichTextEditor, Text};
+use libero::components::{ComboboxOption, Paper, RichTextEditor};
 use libero::sx::sx;
+
+/// The `max_length` switch's cap: room to type past the sample, then the limit.
+pub const MAX_LENGTH: usize = 1000;
 
 /// The demo's extension switches: a command, mentions and a keymap.
 #[derive(Clone, Copy)]
@@ -146,6 +149,14 @@ pub fn NotesEditor(values: DemoValues, mut doc: Signal<Doc>) -> Element {
     let picked = picked.filter(|_| on.mentions);
     let mut intercept = intercept;
     let field = field_props::<NotesCopy>(&values);
+    // Sending empties the controlled document, as a chat box does.
+    let submit = values.str("onsubmit");
+    let onsubmit =
+        (submit != "off").then(|| EventHandler::new(move |_: Doc| doc.set(Doc::default())));
+    let submit_on = match submit.as_str() {
+        "ModEnter" => SubmitOn::ModEnter,
+        _ => SubmitOn::Enter,
+    };
     rsx! {
         RichTextEditor {
             size: values.str("size"),
@@ -160,6 +171,9 @@ pub fn NotesEditor(values: DemoValues, mut doc: Signal<Doc>) -> Element {
             required: (values.str("required") == "true").then_some(true),
             disabled: (values.str("disabled") == "true").then_some(true),
             readonly: (values.str("readonly") == "true").then_some(true),
+            onsubmit,
+            submit_on,
+            max_length: (values.str("max_length") == "true").then_some(MAX_LENGTH),
             commands: demo_commands(on),
             keymap: demo_keymap(on),
             handle: editor,
@@ -172,38 +186,6 @@ pub fn NotesEditor(values: DemoValues, mut doc: Signal<Doc>) -> Element {
             overlay_results: count,
             value: doc(),
             onchange: move |next| doc.set(next),
-        }
-    }
-}
-
-const MESSAGE_LIMIT: usize = 140;
-
-/// A chat box: Enter sends, `max_length` caps it and the handle clears it.
-#[component]
-pub fn MessageBox() -> Element {
-    let editor = use_rich_text_editor();
-    let mut messages = use_signal(Vec::<String>::new);
-    let left = MESSAGE_LIMIT.saturating_sub(editor.plain_text().chars().count());
-    rsx! {
-        Flex { direction: "column", gap: "sm",
-            Text { size: "sm",
-                "A chat box: onsubmit sends on Enter, max_length caps the text and the handle's clear empties the box."
-            }
-            RichTextEditor {
-                label: "Message",
-                helper: format!("Enter sends, Shift+Enter breaks the line. {left} characters left."),
-                placeholder: "Write a message",
-                toolbar: false,
-                handle: editor,
-                max_length: MESSAGE_LIMIT,
-                onsubmit: move |doc: Doc| {
-                    messages.write().push(doc.to_markdown());
-                    editor.clear();
-                },
-            }
-            for (index, message) in messages.read().iter().enumerate() {
-                Text { key: "{index}", size: "sm", white_space: "pre-wrap", "{message}" }
-            }
         }
     }
 }

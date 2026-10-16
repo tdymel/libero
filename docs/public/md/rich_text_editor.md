@@ -249,7 +249,8 @@ and the handle's `clear` empties the box after the send. Enter keeps its usual
 job in a code block, in an empty box and while an `overlay` takes it. On a
 phone the Enter key reads "send"; text the keyboard is still composing is in
 the document when it is sent, and `max_length` cuts it only once the word is
-committed.
+committed. The demo's onsubmit control sends by emptying the document, and its
+max_length switch caps the text at 1000 characters.
 
 ```rust
 use dioxus::prelude::*;
@@ -302,8 +303,8 @@ link. Other schemes stay text, as does a `www.` address without a scheme.
 `RichTextView` shows a stored `Doc` read-only, without an editor's state,
 script or history: a message or comment list mounts one per entry. It draws the
 same blocks, marks and code blocks, takes the same `nodes`, and is what the
-editor shows on a renderer without an editable surface (Blitz). On the docs
-page it follows the document edited above.
+editor shows on a renderer without an editable surface (Blitz). The demo's
+readonly switch shows the same look in the editor.
 
 ```rust
 use dioxus::prelude::*;
@@ -318,7 +319,20 @@ fn Comment(body: Doc) -> Element {
 ## Mentions
 
 The mentions switch adds an @ list at the caret, built from `intercept`,
-`overlay` and a custom node.
+`overlay` and a custom node. Type `@` and a name, or press the @ button.
+While the list is open, `intercept` gives it the arrow keys, Enter and
+Escape; the handle's `edit` swaps the typed `@name` for a mention node, drawn
+by your own component, in one undo step. `Ctrl+Shift+2` runs a node command
+that inserts `@ada`.
+
+## Custom commands and keymaps
+
+The commands switch registers a `shout` command: select a word and press
+`Ctrl+Shift+1` (Cmd on a Mac) to upper-case it, one undo step. The keymap
+switch binds `Ctrl+Shift+H` to a heading and unbinds the rule, so
+`Ctrl+Shift+Enter` no longer adds one. `Ctrl+/` lists the live keymap.
+Without the toolbar, the keymap or your own buttons through a handle drive
+the editor.
 
 ## Accessibility
 
