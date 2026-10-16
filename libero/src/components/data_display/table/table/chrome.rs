@@ -20,10 +20,10 @@ use super::{TABLE_SCROLL_SX, TableProps};
 use crate::{
     components::{
         accessibility::Announcer,
-        common::{HtmlTag, attr, names_itself},
+        common::{HtmlTag, attr, names_itself, reveal_inline},
         layout::{BoxStyle, ScrollArea, ScrollAreaBase, ScrollAreaHandle, static_skeleton_sx},
     },
-    hooks::ElementHandle,
+    hooks::{ElementHandle, listener},
     localization::labels::table::TableLabels,
     platform::{
         SCROLL_PADDING_BOTTOM_VAR, SCROLL_PADDING_LEFT_VAR, SCROLL_PADDING_RIGHT_VAR,
@@ -105,6 +105,9 @@ pub(super) fn names(
         table_label,
     }
 }
+
+/// A keyboard-focused control outside the pinned and checkbox cells.
+const UNPINNED_FOCUS: &str = ":focus-visible:not([data-pin] *, [data-select] *)";
 
 /// The table's surroundings, which `chrome` places.
 pub(super) struct Chrome<T: 'static> {
@@ -221,6 +224,12 @@ pub(super) fn chrome<T: Clone + PartialEq + 'static>(
         true => {
             let mut attributes = region_name;
             attributes.push(attr("data-table-scroll", "true"));
+            // Chrome's Tab scroll leaves a control inside the scrollport but under a pin (todo 1791).
+            if pinned_pads.iter().any(Option::is_some) {
+                attributes.push(listener("onfocusin", move |_: Event<FocusData>| {
+                    reveal_inline(region, UNPINNED_FOCUS);
+                }));
+            }
             let max_height = props.max_height.clone();
             rsx! {
                 ScrollArea {

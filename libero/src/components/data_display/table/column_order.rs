@@ -132,7 +132,7 @@ mod tests {
     fn only_the_unpinned_run_follows_the_order() {
         let mut specs = headers(&["A", "B", "C", "D", "E"]);
         let pinned = PinnedColumns::default().start(["E"]).end(["A"]);
-        let (mut order, _) = pin_columns(&mut specs, &pinned, None);
+        let (mut order, _) = pin_columns(&mut specs, &pinned, None, &Default::default());
 
         order_unpinned(&specs, &mut order, &strings(&["D", "A", "C", "E", "B"]));
 
@@ -143,7 +143,12 @@ mod tests {
     fn a_move_steps_over_hidden_and_pinned_columns() {
         let mut specs = headers(&["A", "B", "C", "D"]);
         specs[1].hidden = true;
-        pin_columns(&mut specs, &PinnedColumns::default().start(["D"]), None);
+        pin_columns(
+            &mut specs,
+            &PinnedColumns::default().start(["D"]),
+            None,
+            &Default::default(),
+        );
 
         assert_eq!(
             moved(&specs, &[], 0, true),

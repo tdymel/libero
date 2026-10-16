@@ -101,16 +101,18 @@ pub(super) fn header_layout<T: Clone + PartialEq + 'static>(
     // The leading columns stay pinned with the start pins configured, however many the room releases.
     let lead_pins = has_start_pins(&headers, &pinned);
     let tracks_area = !(pinned.start.is_empty() && pinned.end.is_empty());
+    let measured = pin_widths.read();
     let fitted = fit_pins(
         &headers,
         &pinned,
         &PinRoom {
             area: area_width(),
             lead: lead_px(),
-            widths: &pin_widths.read(),
+            widths: &measured,
         },
     );
-    let (mut layout, unknown) = pin_columns(&mut headers, &fitted, lead_width.as_deref());
+    let (mut layout, unknown) =
+        pin_columns(&mut headers, &fitted, lead_width.as_deref(), &measured);
     let column_order = state.column_order.read();
     order_unpinned(&headers, &mut layout, &column_order);
     if let Some(drag) = drag {
@@ -135,7 +137,7 @@ pub(super) fn header_layout<T: Clone + PartialEq + 'static>(
     let pins = pins_start || headers.iter().any(|spec| spec.pin.is_some());
     let edges = pin_edges();
     let mut pinned_pads = [(PinSide::Start, edges[0]), (PinSide::End, edges[1])]
-        .map(|(side, measured)| pinned_extent(&headers, side, measured));
+        .map(|(side, edge)| pinned_extent(&headers, side, edge, &measured));
     // Released start pins leave the leading columns, which a focus scroll still clears.
     let start_released = pins_start
         && !headers.iter().any(|spec| {

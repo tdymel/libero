@@ -223,12 +223,13 @@ pub(super) fn fit_pins(
 /// The shown columns in display order: start-pinned ones in `pinned` order,
 /// the rest in column order, then end-pinned ones. Sets each pinned header's
 /// [`CellPin`]; `lead_width` is the toggle and checkbox columns', held with a
-/// start group. Returns the order and the pinned headers whose inset is unknown, as a
-/// column further out has no `width`.
+/// start group; `measured` holds the pinned headers' rendered widths. Returns the order and
+/// the pinned headers whose inset is unknown, as a column further out has no `width`.
 pub(super) fn pin_columns(
     headers: &mut [HeaderSpec],
     pinned: &PinnedColumns,
     lead_width: Option<&str>,
+    measured: &HashMap<String, f64>,
 ) -> (Vec<usize>, Vec<String>) {
     let (start, mut end) = pin_groups(headers, pinned);
     let middle = (0..headers.len())
@@ -258,8 +259,8 @@ pub(super) fn pin_columns(
                 inset: sum(&widths),
                 edge: at + 1 == group.len(),
             });
-            match &headers[index].width {
-                Some(width) => widths.push(width.clone()),
+            match sized_width(&headers[index], measured) {
+                Some(width) => widths.push(width),
                 None => known = false,
             }
         }
@@ -278,20 +279,29 @@ pub(super) fn pinned_extent(
     headers: &[HeaderSpec],
     side: PinSide,
     measured: Option<f64>,
+    widths: &HashMap<String, f64>,
 ) -> Option<String> {
     headers.iter().find_map(|spec| {
         let pin = spec
             .pin
             .as_ref()
             .filter(|pin| pin.side == side && pin.edge)?;
-        let width = spec
-            .width
-            .clone()
-            .or_else(|| measured.map(|width| format!("{width}px")))?;
+        let width =
+            sized_width(spec, widths).or_else(|| measured.map(|width| format!("{width}px")))?;
         Some(match pin.inset.as_str() {
             "0" => width,
             inset => format!("calc({inset} + {width})"),
         })
+    })
+}
+
+/// A sized column's rendered width once measured, else its `width`: an unbreakable cell
+/// text grows it past the `width`, and the insets and the focus scroll must clear that.
+fn sized_width(spec: &HeaderSpec, measured: &HashMap<String, f64>) -> Option<String> {
+    let width = spec.width.as_ref()?;
+    Some(match measured.get(&spec.header) {
+        Some(px) => format!("{px}px"),
+        None => width.clone(),
     })
 }
 
@@ -345,7 +355,7 @@ mod tests {
         ]);
         let pinned = PinnedColumns::default().start(["D", "B"]).end(["A", "E"]);
 
-        let (order, unknown) = pin_columns(&mut specs, &pinned, None);
+        let (order, unknown) = pin_columns(&mut specs, &pinned, None, &HashMap::new());
 
         assert_eq!(order, vec![3, 1, 2, 0, 4]);
         assert!(unknown.is_empty());
@@ -366,7 +376,7 @@ mod tests {
         let mut specs = headers(&[("A", Some("4rem")), ("B", Some("6rem"))]);
         let pinned = PinnedColumns::default().start(["A", "B"]);
 
-        pin_columns(&mut specs, &pinned, Some("40px"));
+        pin_columns(&mut specs, &pinned, Some("40px"), &HashMap::new());
 
         assert_eq!(specs[0].pin.as_ref().unwrap().inset, "40px");
         assert_eq!(specs[1].pin.as_ref().unwrap().inset, "calc(40px + 4rem)");
@@ -376,6 +386,7 @@ mod tests {
             &mut specs,
             &PinnedColumns::default().end(["A"]),
             Some("40px"),
+            &HashMap::new(),
         );
         assert_eq!(specs[0].pin.as_ref().unwrap().inset, "0");
     }
@@ -390,21 +401,38 @@ mod tests {
             ("D", Some("3rem")),
         ]);
         let pinned = PinnedColumns::default().start(["A", "B"]).end(["D"]);
-        pin_columns(&mut specs, &pinned, Some("40px"));
+        pin_columns(&mut specs, &pinned, Some("40px"), &HashMap::new());
 
+        let none = HashMap::new();
         assert_eq!(
-            pinned_extent(&specs, PinSide::Start, Some(99.0)).as_deref(),
+            pinned_extent(&specs, PinSide::Start, Some(99.0), &none).as_deref(),
             Some("calc(calc(40px + 4rem) + 6rem)")
         );
         assert_eq!(
-            pinned_extent(&specs, PinSide::End, None).as_deref(),
+            pinned_extent(&specs, PinSide::End, None, &none).as_deref(),
             Some("3rem")
         );
 
         let mut specs = headers(&[("A", None), ("B", Some("6rem"))]);
-        pin_columns(&mut specs, &PinnedColumns::default().start(["A"]), None);
-        assert_eq!(pinned_extent(&specs, PinSide::Start, None), None);
-        assert_eq!(pinned_extent(&specs, PinSide::End, Some(80.0)), None);
+        let start = PinnedColumns::default().start(["A"]);
+        pin_columns(&mut specs, &start, None, &none);
+        assert_eq!(pinned_extent(&specs, PinSide::Start, None, &none), None);
+        assert_eq!(pinned_extent(&specs, PinSide::End, Some(80.0), &none), None);
+    }
+
+    /// A sized column grown past its `width` by its text insets and pads by the width it renders.
+    #[test]
+    fn a_sized_pin_grown_past_its_width_counts_as_rendered() {
+        let mut specs = headers(&[("A", Some("240px")), ("B", Some("240px")), ("C", None)]);
+        let measured = HashMap::from([("A".to_string(), 270.5)]);
+        let pinned = PinnedColumns::default().start(["A", "B"]);
+        pin_columns(&mut specs, &pinned, Some("40px"), &measured);
+
+        assert_eq!(specs[1].pin.as_ref().unwrap().inset, "calc(40px + 270.5px)");
+        assert_eq!(
+            pinned_extent(&specs, PinSide::Start, None, &measured).as_deref(),
+            Some("calc(calc(40px + 270.5px) + 240px)")
+        );
     }
 
     /// 1973: an innermost pinned column without `width` reaches as far as it renders.
@@ -412,14 +440,15 @@ mod tests {
     fn an_unsized_innermost_pin_reaches_its_measured_width() {
         let mut specs = headers(&[("A", Some("4rem")), ("B", None), ("C", None)]);
         let pinned = PinnedColumns::default().start(["A", "B"]).end(["C"]);
-        pin_columns(&mut specs, &pinned, None);
+        pin_columns(&mut specs, &pinned, None, &HashMap::new());
 
+        let none = HashMap::new();
         assert_eq!(
-            pinned_extent(&specs, PinSide::Start, Some(120.0)).as_deref(),
+            pinned_extent(&specs, PinSide::Start, Some(120.0), &none).as_deref(),
             Some("calc(4rem + 120px)")
         );
         assert_eq!(
-            pinned_extent(&specs, PinSide::End, Some(80.0)).as_deref(),
+            pinned_extent(&specs, PinSide::End, Some(80.0), &none).as_deref(),
             Some("80px")
         );
     }
@@ -429,7 +458,7 @@ mod tests {
         let mut specs = headers(&[("A", None), ("B", Some("6rem")), ("C", None)]);
         let pinned = PinnedColumns::default().start(["A", "B"]).end(["C"]);
 
-        let (_, unknown) = pin_columns(&mut specs, &pinned, None);
+        let (_, unknown) = pin_columns(&mut specs, &pinned, None, &HashMap::new());
 
         assert_eq!(unknown, vec!["B"]);
     }
@@ -442,7 +471,7 @@ mod tests {
             .start(["B", "X", "C", "C"])
             .end(["C", "A"]);
 
-        let (order, _) = pin_columns(&mut specs, &pinned, None);
+        let (order, _) = pin_columns(&mut specs, &pinned, None, &HashMap::new());
 
         assert_eq!(order, vec![2, 0]);
         assert_eq!(specs[1].pin, None);
@@ -535,7 +564,7 @@ mod tests {
             ("E", Some("5px")),
         ]);
         let pinned = PinnedColumns::default().start(["A", "B"]).end(["D", "E"]);
-        let (order, _) = pin_columns(&mut specs, &pinned, None);
+        let (order, _) = pin_columns(&mut specs, &pinned, None, &HashMap::new());
 
         let runs: Vec<&[usize]> = pin_runs(&specs, &order).collect();
         assert_eq!(runs, vec![&[0, 1][..], &[2], &[3, 4]]);
