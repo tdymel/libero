@@ -116,7 +116,30 @@ async fn recorded<D: Driver>(d: &mut D) -> Result<()> {
     .await?;
     record_outcome(d, "use_system_notification", &shown).await?;
     eventually_text(d, "#supported", "true", "mount").await?;
-    eventually_text(d, "#permission", "Prompt", "mount").await
+    eventually_text(d, "#permission", "Prompt", "mount").await?;
+    let asked = ["#permission", "#pending", "#error"];
+    d.click("#request").await?;
+    let _ = eventually_answered(
+        d,
+        "use_system_notification request",
+        "an answer to a request",
+        &asked,
+        async |d| {
+            Ok(d.text("#pending").await? == "false" && d.text("#permission").await? != "Prompt")
+        },
+    )
+    .await;
+    record_outcome(d, "use_system_notification request", &asked).await?;
+    d.click("#show").await?;
+    let _ = eventually_answered(
+        d,
+        "use_system_notification show",
+        "an answer to a show",
+        &asked,
+        async |d| Ok(d.text("#error").await? != "None"),
+    )
+    .await;
+    record_outcome(d, "use_system_notification show", &asked).await
 }
 
 e2e::scenario!(
