@@ -310,6 +310,12 @@ async fn launch(classic_scrollbars: bool) -> Browser {
         .arg("disable-smooth-scrolling")
         // A fake camera and microphone for `use_user_media`; the grant stays a CDP call.
         .arg("use-fake-device-for-media-stream");
+    // Comma-separated switches without dashes, to try Chrome flags in a CI probe (3444).
+    for switch in std::env::var("E2E_CHROME_ARGS").unwrap_or_default().split(',') {
+        if !switch.is_empty() {
+            config = config.arg(switch);
+        }
+    }
     if classic_scrollbars {
         // Inside the run's profile, so the runner cleans it up too.
         config = config
