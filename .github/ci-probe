@@ -1,0 +1,6 @@
+# ted_ci.py probe; read by .github/workflows/ci-probe.yml.
+os=macos
+tier=ios
+filter=slider::
+dev=olaf-44
+env=E2E_IOS_IGNORED=1
