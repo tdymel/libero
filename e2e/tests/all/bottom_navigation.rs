@@ -480,6 +480,5 @@ async fn a_fixed_bar_docks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_fixed_bar_docks_everywhere,
     "/bottom-navigation/fixed",
-    a_fixed_bar_docks,
-    macos: skip("3432: WKWebView: the fixed bar never docks")
+    a_fixed_bar_docks
 );

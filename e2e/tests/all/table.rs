@@ -4,7 +4,7 @@
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text};
+use e2e::driver::{Driver, Host, Platform, eventually, eventually_focused, eventually_text};
 use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
@@ -55,8 +55,10 @@ pub(crate) const PICKER: &str = ":is(select, [role=combobox])";
 /// Steps the focused `NativeSelect` `steps` options on. Natively the first
 /// arrow opens its listbox on the current option and Enter picks.
 pub(crate) async fn pick_later<D: Driver>(d: &mut D, steps: usize) -> Result<()> {
-    if d.platform() == Platform::Android {
-        // The WebView sometimes moves focus on ArrowDown instead of stepping the select (3257).
+    let macos_webview = d.platform() == Platform::Desktop && Host::current() == Host::Macos;
+    if d.platform() == Platform::Android || macos_webview {
+        // Android's WebView sometimes moves focus on ArrowDown instead of stepping the select
+        // (3257); WKWebView opens the system menu (3432).
         d.evaluate(&format!(
             "(() => {{ const s = document.activeElement; \
              s.selectedIndex = Math.min(s.selectedIndex + {steps}, s.options.length - 1); \
@@ -394,8 +396,7 @@ async fn the_pages_turn_sort_and_resize<D: Driver>(d: &mut D, _route: &str) -> R
 e2e::scenario!(
     a_paged_table_turns_sorts_and_resizes,
     "/table/paged",
-    the_pages_turn_sort_and_resize,
-    macos: skip("3432: WKWebView: the page range reads 7-7 of 7 after page 5")
+    the_pages_turn_sort_and_resize
 );
 
 /// 1156-0b: with `row_key`, a row prepended on top leaves the others' nodes alone.

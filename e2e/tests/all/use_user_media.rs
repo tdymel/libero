@@ -1,6 +1,6 @@
 //! `use_user_media`: mounting asks nothing; on the web Chromium's fake camera
 //! opens, shows, snapshots, records, stops and is refused. Blitz is unsupported, the iOS
-//! simulator opens; macOS and Windows desktop answer at all, recorded in `outcomes.log`.
+//! simulator opens; macOS and Windows desktop have no camera and refuse (`outcomes.log`).
 
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
@@ -17,15 +17,8 @@ use e2e::{Fixture, Viewport, wait};
 
 /// Nothing prompts or opens until asked; Blitz has no capture API.
 async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    // WKWebView on macOS and WebView2 stay pinned to a class of answers until CI's desktop
-    // legs run (todos 1236, 3193).
-    let unpinned = d.platform() == Platform::Desktop && Host::current() != Host::Linux;
-    if unpinned {
-        eventually(d, "the fixture", async |d| d.exists("#supported").await).await?;
-    } else {
-        let supported = (d.platform() != Platform::Native).to_string();
-        eventually_text(d, "#supported", &supported, "mount").await?;
-    }
+    let supported = (d.platform() != Platform::Native).to_string();
+    eventually_text(d, "#supported", &supported, "mount").await?;
     d.flush().await?;
     for (selector, expected) in [
         ("#live", "false"),
@@ -50,7 +43,7 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
             d.click("#stop").await?;
             eventually_text(d, "#live", "false", "a stop").await?;
         }
-        Platform::Desktop if unpinned => answers_at_all(d).await?,
+        Platform::Desktop if Host::current() != Host::Linux => refused_without_a_camera(d).await?,
         // wry gives WebKitGTK no permission handler, so it denies every request; Ubuntu's
         // answers `Constraint` with the camera still `Prompt` (CI outcome, 2026-10-11).
         Platform::Desktop => {
@@ -107,43 +100,27 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
     Ok(())
 }
 
-/// A start answers at all, with no prompt left hanging; a camera that opens is stopped, and
-/// a refusal is the platform's own, not a failure of the hook. The first CI outcomes pin
-/// the exact answer per OS (todos 3193, 3232).
-async fn answers_at_all<D: Driver>(d: &mut D) -> Result<()> {
+/// The camera-less runners: the macOS WKWebView answers `Constraint`, WebView2 `NotFound`,
+/// both with the camera still `Prompt` (CI outcomes, 2026-10-15, 3193).
+async fn refused_without_a_camera<D: Driver>(d: &mut D) -> Result<()> {
     d.click("#start").await?;
     let shown = ["#supported", "#camera", "#error", "#live"];
-    // A prompt nobody answers (wry 0.55.1 leaves WebView2's own) times out by name.
     eventually_answered(
         d,
         "use_user_media",
         "an answer to a start",
         &shown,
-        async |d| Ok(d.text("#error").await? != "None" || d.text("#live").await? == "true"),
+        async |d| Ok(d.text("#error").await? != "None"),
     )
     .await?;
     record_outcome(d, "use_user_media", &shown).await?;
-    if d.text("#live").await? == "true" {
-        d.click("#stop").await?;
-        return eventually_text(d, "#live", "false", "a stop").await;
-    }
-    // Refusals the engines give without a camera: no mediaDevices or insecure page, a denied
-    // grant (wry's WKWebView delegate auto-grants, then TCC may refuse), no device; the
-    // camera-less macOS runner's WKWebView answers `Constraint` (CI probe, 2026-10-11).
-    let error = d.text("#error").await?;
-    let refusals = [
-        "Some(Unsupported)",
-        "Some(Denied)",
-        "Some(NotFound)",
-        "Some(Constraint)",
-    ];
-    if !refusals.contains(&error.as_str()) {
-        bail!(
-            "{:?}: a start with no camera opened reads {error:?}, not a refusal or a missing device",
-            d.platform()
-        );
-    }
-    Ok(())
+    let error = match Host::current() {
+        Host::Macos => "Some(Constraint)",
+        _ => "Some(NotFound)",
+    };
+    eventually_text(d, "#error", error, "a start").await?;
+    eventually_text(d, "#camera", "Prompt", "a start").await?;
+    eventually_text(d, "#live", "false", "a start").await
 }
 
 /// The grant lists the emulator's two cameras with no refresh; a switch reopens

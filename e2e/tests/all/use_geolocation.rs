@@ -1,10 +1,9 @@
 //! `use_geolocation`: mounting asks nothing; on the web a granted fix, a
 //! watch that follows it and a denial, from Chromium's emulated position.
-//! Android and iOS locate from the emulator's or simulator's position, Linux desktop is
-//! denied, Blitz unsupported;
-//! macOS and Windows desktop answer at all, recorded in `outcomes.log`.
+//! Android and iOS locate from the emulator's or simulator's position, Linux and macOS desktop
+//! are denied, Windows desktop times out, Blitz is unsupported. Desktop answers land in `outcomes.log`.
 
-use anyhow::{Result, bail};
+use anyhow::Result;
 use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::browser::{
     PermissionDescriptor, PermissionSetting, SetPermissionParams,
@@ -19,14 +18,8 @@ use e2e::{Fixture, Viewport, wait};
 
 /// Nothing prompts or locates until asked; Blitz has no Geolocation API.
 async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    // WKWebView and WebView2 are unpinned until the platform probe answered (todo 1227).
-    let unpinned = d.platform() == Platform::Desktop && Host::current() != Host::Linux;
-    if unpinned {
-        eventually(d, "the fixture", async |d| d.exists("#supported").await).await?;
-    } else {
-        let supported = (d.platform() != Platform::Native).to_string();
-        eventually_text(d, "#supported", &supported, "mount").await?;
-    }
+    let supported = (d.platform() != Platform::Native).to_string();
+    eventually_text(d, "#supported", &supported, "mount").await?;
     d.flush().await?;
     for (selector, expected) in [
         ("#position", "none"),
@@ -53,11 +46,11 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
             d.click("#locate").await?;
             eventually_text(d, "#error", "Some(Unsupported)", "a request").await?;
         }
-        // A request answers at all, with no prompt left hanging; the answer lands in the log.
-        Platform::Desktop if unpinned => {
+        // WKWebView denies at once; wry 0.55.1 handles no geolocation prompt on Windows, so the
+        // request times out (CI outcomes, 2026-10-15, 3193).
+        Platform::Desktop if Host::current() != Host::Linux => {
             d.click("#locate").await?;
             let shown = ["#supported", "#permission", "#error", "#position"];
-            // wry 0.55.1 handles no geolocation prompt on Windows: a hung one times out by name.
             eventually_answered(
                 d,
                 "use_geolocation",
@@ -67,11 +60,13 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
             )
             .await?;
             record_outcome(d, "use_geolocation", &shown).await?;
-            // WKWebView and WebView2 both ship the API; exact per-OS answers wait for CI (3193).
-            eventually_text(d, "#supported", "true", "a request").await?;
-            if d.text("#error").await? == "Some(Unsupported)" {
-                bail!("{:?}: a request reads Unsupported", Host::current());
-            }
+            let (permission, error) = match Host::current() {
+                Host::Macos => ("Denied", "Some(Denied)"),
+                _ => ("Prompt", "Some(Timeout)"),
+            };
+            eventually_text(d, "#error", error, "a request").await?;
+            eventually_text(d, "#permission", permission, "a request").await?;
+            eventually_text(d, "#position", "none", "a request").await?;
         }
         // wry gives WebKitGTK no permission handler, so it denies every request.
         Platform::Desktop => {

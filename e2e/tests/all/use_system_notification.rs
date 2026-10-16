@@ -1,7 +1,7 @@
 //! `use_system_notification` and `use_push_subscription`: mounting asks nothing;
 //! on the web a granted show and close, a denial, and push registering its worker.
 //! Android's dialog, posted notification, tap (1348) and action (2126); push is web only.
-//! iOS is unsupported; macOS and Windows desktop answer at all, recorded in `outcomes.log`.
+//! iOS is unsupported; macOS and Windows desktop ask on first use (`outcomes.log`).
 
 use anyhow::Result;
 use chromiumoxide::Page;
@@ -102,12 +102,10 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
     Ok(())
 }
 
-/// The page's `Notification` in macOS's WKWebView and WebView2: a permission at all, recorded
-/// (macOS and Windows stay unpinned until the first outcomes, todos 1239, 3193); no
-/// `Notification` is unsupported as on Linux.
+/// macOS's WKWebView and WebView2 both define `Notification` and ask on first use (CI
+/// outcomes, 2026-10-15, 3193).
 async fn recorded<D: Driver>(d: &mut D) -> Result<()> {
     let shown = ["#supported", "#permission"];
-    // wry 0.55.1 leaves WebView2's own notification prompt; a hung one times out by name.
     eventually_answered(
         d,
         "use_system_notification",
@@ -117,12 +115,8 @@ async fn recorded<D: Driver>(d: &mut D) -> Result<()> {
     )
     .await?;
     record_outcome(d, "use_system_notification", &shown).await?;
-    if d.text("#supported").await? == "false" {
-        eventually_text(d, "#permission", "Unsupported", "mount").await?;
-        d.click("#show").await?;
-        eventually_text(d, "#error", "Some(Unsupported)", "a show").await?;
-    }
-    Ok(())
+    eventually_text(d, "#supported", "true", "mount").await?;
+    eventually_text(d, "#permission", "Prompt", "mount").await
 }
 
 e2e::scenario!(

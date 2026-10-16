@@ -108,13 +108,18 @@ impl Desktop {
             std::process::id(),
             LAUNCHES.fetch_add(1, Ordering::Relaxed)
         );
+        let storage = artifacts.join(format!("desktop-storage-{launch}"));
+        // A Mac's Reduce Motion reaches WKWebView and no CDP can undo it: force motion on (3432).
+        #[cfg(target_os = "macos")]
+        {
+            std::fs::create_dir_all(&storage).context("create the app's store")?;
+            std::fs::write(storage.join("lsx-reduced-motion.json"), "no-preference")
+                .context("force motion on")?;
+        }
         let mut command = Command::new(binary);
         command
             .env("E2E_BRIDGE", listener.local_addr()?.to_string())
-            .env(
-                "E2E_STORAGE_DIR",
-                artifacts.join(format!("desktop-storage-{launch}")),
-            )
+            .env("E2E_STORAGE_DIR", storage)
             .stdout(Stdio::from(log.try_clone()?))
             .stderr(Stdio::from(log));
         #[cfg(windows)]

@@ -323,7 +323,7 @@ e2e::scenario!(
     "/table/sticky-plain",
     a_plain_capped_table_is_a_named_stop,
     android: skip("958: element identity on the WebView"),
-    macos: skip("3432: WKWebView: a wheel step never scrolls the capped rows")
+    macos: skip("3432: WKWebView: a wheel step sometimes never scrolls the capped rows")
 );
 
 /// Todo 1455: scrolled step by step, the rendered rows always cover the area under the header.

@@ -906,14 +906,12 @@ e2e::scenario!(
     a_tall_menu_below_fits_the_room,
     "/menu-tall/below",
     a_tall_menu_fits_the_room,
-    macos: skip("3432: WKWebView: a wheel scroll inside the menu never lands"),
     windows: skip("3421: END scrolls by the listbox height from before the popup shrank")
 );
 e2e::scenario!(
     a_tall_menu_above_fits_the_room,
     "/menu-tall/above",
     a_tall_menu_fits_the_room,
-    macos: skip("3432: WKWebView: the last item never scrolls into view"),
     windows: skip("3421: END scrolls by the listbox height from before the popup shrank")
 );
 e2e::scenario!(

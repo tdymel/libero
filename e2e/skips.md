@@ -24,7 +24,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `bar_chart::hovering_shows_the_bar_s_tooltip_and_marker` | android | a touch screen has no hover |
 | `bar_chart::hovering_shows_the_bar_s_tooltip_and_marker` | ios | a touch screen has no hover |
 | `bar_chart::lying_bars_zoom_and_brush_down_their_side` | ios | 3416: the simulator's tap or drag did not drive the page |
-| `bottom_navigation::a_fixed_bar_docks_everywhere` | macos desktop | 3432: WKWebView: the fixed bar never docks |
 | `button_group::the_focused_button_is_lifted_over_its_neighbours` | ios | 3416: focus stays on the body after a Tab or a tap |
 | `candlestick_chart::a_click_on_a_candle_reports_it` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `candlestick_chart::a_click_on_a_candle_reports_it` | native | a click on a chart mark keeps the vdom busy past 200 polls on Blitz |
@@ -37,10 +36,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `color_field::arrow_down_enters_the_colour_dialog_and_escape_returns` | android | 958: element identity on the WebView |
 | `color_field::arrow_down_enters_the_colour_dialog_and_escape_returns` | desktop | 958: element identity on the WebView |
 | `color_field::arrow_down_enters_the_colour_dialog_and_escape_returns` | ios | 958: element identity on the WebView |
-| `combobox::a_click_on_a_multi_select_option_keeps_the_list_open` | macos desktop | 3432: WKWebView: a click on a listbox option does not register |
-| `combobox::a_click_on_a_multi_select_option_toggles_it` | macos desktop | 3432: WKWebView: a click on a listbox option does not register |
-| `combobox::a_click_on_an_autocomplete_option_picks_it` | macos desktop | 3432: WKWebView: a click on a listbox option does not register |
-| `combobox::clicks_walk_a_cascader_to_a_leaf` | macos desktop | 3432: WKWebView: a click on a listbox option does not register |
 | `combobox::typing_and_enter_add_a_tag` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `drawer::a_backdrop_click_closes_a_drawer` | ios | upstream: WebKit does not focus a clicked button |
 | `drawer::a_backdrop_click_closes_a_drawer` | macos desktop | upstream: WebKit does not focus a clicked button |
@@ -153,8 +148,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `lightbox_zoom::a_pinch_zooms_the_picture` | desktop | 1126: no touch input under Xvfb |
 | `lightbox_zoom::a_pinch_zooms_the_picture` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `lightbox_zoom::a_pinch_zooms_the_picture` | native | Blitz takes no multi-touch input |
-| `lightbox_zoom::a_tap_on_zoom_in_zooms_the_picture` | macos desktop | 3432: WKWebView: the stage's first scroll never settles |
-| `lightbox_zoom::a_zoomed_picture_pans_only_to_its_edge` | macos desktop | 3432: WKWebView: the stage's first scroll never settles |
 | `lightbox_zoom::a_zoomed_picture_pans_only_to_its_edge` | native | 3386: reads the picture's size and pan by script, which Blitz has none of |
 | `lightbox_zoom::a_zoomed_picture_pans_only_to_its_edge` | windows desktop | upstream: Dioxus' asset! gives a backslashed file path (D:\a\..\1.svg) off the bundle, which WebView2 cannot load, so no picture decodes |
 | `line_chart::a_click_on_a_point_reports_it` | ios | 3416: the simulator's tap or drag did not drive the page |
@@ -176,9 +169,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `line_chart::the_tooltip_keeps_its_height_from_point_to_point` | native | Blitz has no script reads |
 | `menu::a_click_outside_closes_it_and_leaves_focus_where_it_went` | ios | upstream: WebKit does not focus a clicked button |
 | `menu::a_click_outside_closes_it_and_leaves_focus_where_it_went` | macos desktop | upstream: WebKit does not focus a clicked button |
-| `menu::a_tall_menu_above_fits_the_room` | macos desktop | 3432: WKWebView: the last item never scrolls into view |
 | `menu::a_tall_menu_above_fits_the_room` | windows desktop | 3421: END scrolls by the listbox height from before the popup shrank |
-| `menu::a_tall_menu_below_fits_the_room` | macos desktop | 3432: WKWebView: a wheel scroll inside the menu never lands |
 | `menu::a_tall_menu_below_fits_the_room` | windows desktop | 3421: END scrolls by the listbox height from before the popup shrank |
 | `menubar::hovering_another_trigger_switches_the_open_menu` | ios | a touch screen has no hover |
 | `menubar::the_arrows_rove_along_the_bar_and_wrap` | android | 958: element identity on the WebView |
@@ -276,7 +267,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `segmented_control::the_arrows_move_focus_with_the_selection_and_wrap` | android | 958: element identity on the WebView |
 | `segmented_control::the_arrows_move_focus_with_the_selection_and_wrap` | desktop | 958: element identity on the WebView |
 | `segmented_control::the_arrows_move_focus_with_the_selection_and_wrap` | web | 1826: it_honours_the_radio_group_contract runs these keys at both viewports |
-| `select::a_click_on_a_select_option_picks_it` | macos desktop | 3432: WKWebView: a click on a listbox option does not register |
 | `select::a_hovered_select_option_tints_like_the_keyboard_s_row` | ios | a touch screen has no hover |
 | `select::a_tall_select_below_fits_the_room` | windows desktop | 3421: END scrolls by the listbox height from before the popup shrank |
 | `select::android_back_closes_a_select` | all but android | 1275: no Back key off Android |
@@ -290,7 +280,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `slider_touch_keyboard::a_touch_held_on_the_thumb_leaves_no_bubble_after_the_release` | desktop | 1126: no touch input under Xvfb |
 | `sortable::a_click_on_a_hook_handle_clicks_and_a_drag_does_not` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `sortable::a_dropped_item_settles_into_its_slot_until_the_next_lift` | ios | 3416: the simulator's tap or drag did not drive the page |
-| `sortable::the_neighbours_of_a_lifted_item_slide_and_the_lifted_item_does_not` | macos desktop | 3432: no transition runs on the runner (Reduce Motion?) |
 | `splitter::a_double_click_collapses_pane_a_and_restores_it` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `splitter::a_vertical_swipe_over_a_vertical_divider_scrolls_the_page_on_android_only_and_a_sideways_drag_moves_it` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `spotlight::a_hovered_row_is_tinted_and_does_not_move_the_highlight` | ios | 3416: the simulator's tap or drag did not drive the page |
@@ -306,19 +295,15 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `stepper::moving_on_returns_focus_to_the_current_step_vertically` | android | 958: element identity on the WebView |
 | `stepper::moving_on_returns_focus_to_the_current_step_vertically` | desktop | 958: element identity on the WebView |
 | `stepper::moving_on_returns_focus_to_the_current_step_vertically` | ios | 958: element identity on the WebView |
-| `table::a_paged_table_turns_sorts_and_resizes` | macos desktop | 3432: WKWebView: the page range reads 7-7 of 7 after page 5 |
 | `table::a_row_click_reports_its_row` | ios | a touch screen has no hover |
 | `table::rows_select_by_box_and_keep_it_through_a_sort` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `table_column_filters::a_date_filter_narrows_a_table` | android | Chromium's typed date segments only |
 | `table_column_filters::a_date_filter_narrows_a_table` | ios | 3416: the simulator's tap or drag did not drive the page |
-| `table_column_filters::a_date_filter_narrows_a_table` | macos desktop | 3432: WKWebView: ArrowDown does not open a select filter's list |
 | `table_column_filters::a_date_filter_narrows_a_table` | windows desktop | 3422: Shift+Tab never leaves the date input on WebView2 |
 | `table_column_filters::tab_past_either_end_of_a_column_filter_closes_it` | ios | 3416: focus stays on the body after a Tab or a tap |
 | `table_column_filters::the_column_filters_narrow_a_table` | ios | 3416: the simulator's tap or drag did not drive the page |
-| `table_column_filters::the_column_filters_narrow_a_table` | macos desktop | 3432: WKWebView: ArrowDown does not open a select filter's list |
 | `table_column_filters::the_filter_panel_edits_every_filter` | android | 958: element identity on the WebView |
 | `table_column_filters::the_filter_panel_edits_every_filter` | ios | 958: element identity on the WebView |
-| `table_column_filters::the_filter_panel_edits_every_filter` | macos desktop | 3432: WKWebView: ArrowDown does not open a select filter's list |
 | `table_column_filters::the_quick_filter_narrows_a_paged_table` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `table_detail::an_animated_detail_slides_open_and_shut` | android | 958: element identity on the WebView |
 | `table_detail::pinned_toggles_push_the_checkboxes_past_them` | android | 3217: one web run guards the cascade |
@@ -327,7 +312,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_filter::a_select_filter_narrows_a_table` | android | 958: element identity on the WebView |
 | `table_filter::a_select_filter_narrows_a_table` | desktop | 958: a WebView cannot tell where focus landed, so a script's focus move closes no popover |
 | `table_filter::a_select_filter_narrows_a_table` | ios | 958: element identity on the WebView |
-| `table_filter::a_select_filter_narrows_a_table` | macos desktop | 3432: WKWebView: ArrowDown does not open a select filter's list |
 | `table_grid::a_custom_editor_clears_the_error_by_changed` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::a_second_tap_opens_the_editor` | desktop | no touch input in the desktop driver |
 | `table_grid::a_second_tap_opens_the_editor` | ios | 3416: focus stays on the body after a Tab or a tap |
@@ -358,7 +342,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_groups::a_pinned_group_holds_while_the_body_scrolls_sideways` | android | 958: element identity on the WebView |
 | `table_groups::a_windowed_footer_holds_and_ends_the_rows` | android | 958: element identity on the WebView |
 | `table_groups::a_windowed_footer_holds_and_ends_the_rows` | ios | a touch screen has no wheel |
-| `table_groups::a_windowed_footer_holds_and_ends_the_rows` | macos desktop | 3432: WKWebView: the wheel never brings the windowed list to rest |
 | `table_groups::a_windowed_scrollbar_stops_above_the_footer` | android | 958: element identity on the WebView |
 | `table_groups::a_windowed_scrollbar_stops_above_the_footer` | native | 1010: Blitz paints its own bar, ours is not drawn |
 | `table_pins::narrow_areas_release_their_pins_and_wide_ones_pin_again` | desktop | its window cannot be narrowed |
@@ -384,7 +367,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_scroll::a_capped_table_scrolls_from_its_header` | android | 958: element identity on the WebView |
 | `table_scroll::a_focused_row_control_is_not_hidden_by_the_sticky_header` | android | 958: element identity on the WebView |
 | `table_scroll::a_plain_capped_table_scrolls_as_a_named_region` | android | 958: element identity on the WebView |
-| `table_scroll::a_plain_capped_table_scrolls_as_a_named_region` | macos desktop | 3432: WKWebView: a wheel step never scrolls the capped rows |
+| `table_scroll::a_plain_capped_table_scrolls_as_a_named_region` | macos desktop | 3432: WKWebView: a wheel step sometimes never scrolls the capped rows |
 | `table_scroll::a_tabbed_header_scrolls_into_its_region` | android | 958: element identity on the WebView |
 | `table_scroll::a_tabbed_header_scrolls_into_its_region` | ios | 958: element identity on the WebView |
 | `table_scroll::a_windowed_table_renders_the_rows_in_view` | ios | 3416: the simulator's tap or drag did not drive the page |
@@ -443,8 +426,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `tour::tab_stays_in_the_card` | android | 959: Tab leaves a trap for the body on the WebView |
 | `tour::tab_stays_in_the_card` | desktop | 959: Shift+Tab from the first control leaves a trap on the WebView |
 | `tour::tab_stays_in_the_card` | ios | 959: Shift+Tab from the first control leaves a trap on the WebView |
-| `transition::it_animates_a_callers_from_state` | macos desktop | 3432: no transition runs on the runner (Reduce Motion?) |
-| `transition::it_animates_in_on_mount_without_open` | macos desktop | 3432: no transition runs on the runner (Reduce Motion?) |
 | `tree::a_vanished_rows_button_hands_focus_to_the_next_row` | native | 3406: Blitz hands the vanished button's focus to a container div, parked with native |
 | `use_back::android_back_steps_down_below_a_menu` | all but android | 2003: no Back key off Android |
 | `use_back::android_back_steps_down_twice_without_a_tap` | all but android | 3322: no Back key off Android |

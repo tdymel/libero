@@ -84,6 +84,5 @@ e2e::scenario!(
     a_select_filter_narrows_the_rows,
     android: skip("958: element identity on the WebView"),
     desktop: skip("958: a WebView cannot tell where focus landed, so a script's focus move closes no popover"),
-    macos: skip("3432: WKWebView: ArrowDown does not open a select filter's list"),
     ios: skip("958: element identity on the WebView")
 );
