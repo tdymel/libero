@@ -16,18 +16,29 @@ async fn one_digit_per_cell<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.type_text("12").await?;
     eventually_text(d, "#echo", "12", "typing 12").await?;
     eventually_focused(d, "[data-pin-index='2']", "two digits").await?;
-    // The first press only moves back from the empty third cell.
-    d.press(keyboard::BACKSPACE).await?;
-    d.press(keyboard::BACKSPACE).await?;
-    eventually_text(d, "#echo", "1", "two Backspaces").await?;
-    eventually_focused(d, "[data-pin-index='0']", "two Backspaces").await
+    let mut trace = String::new();
+    for n in 0..3 {
+        d.press(keyboard::BACKSPACE).await?;
+        for round in 0..2 {
+            let mut cells = Vec::new();
+            for i in 0..3 {
+                cells.push(d.value(&format!("[data-pin-index='{i}']")).await.unwrap_or_default());
+            }
+            trace += &format!(
+                "[bs{n} r{round}: echo={:?} cells={cells:?} focus={}] ",
+                d.text("#echo").await?,
+                d.focus_owner().await?
+            );
+            d.idle().await;
+        }
+    }
+    anyhow::bail!("TRACE {trace}")
 }
 
 e2e::scenario!(
     a_pin_field_takes_one_digit_per_cell_and_moves_on,
     "/pin-field/echo",
-    one_digit_per_cell,
-    macos_native: skip("3342: Blitz deletes twice on AppKit's Backspace binding")
+    one_digit_per_cell
 );
 
 /// Todo 3033: a composing Backspace edits the IME's candidate, so it neither clears a
