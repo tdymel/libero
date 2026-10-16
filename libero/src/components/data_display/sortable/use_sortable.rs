@@ -209,6 +209,13 @@ struct Settle {
     offset: f64,
 }
 
+fn diag(msg: String) {
+    let msg = msg.replace('\'', "");
+    let _ = dioxus::document::eval(&format!(
+        "(window.__d=window.__d||[]).push(performance.now().toFixed(0)+' {msg}')"
+    ));
+}
+
 /// Which of an item's controls takes the focus back after its move.
 #[derive(Clone, Copy, PartialEq)]
 enum Refocus {
@@ -687,6 +694,7 @@ pub(crate) fn use_fixed_sortable(
                 from: ended.from,
                 to,
             };
+            diag(format!("finish id={id} {} -> {}", step.from, step.to));
             refocus.set(Some(Moved {
                 id,
                 control: Refocus::Handle,
@@ -1115,19 +1123,25 @@ pub(crate) fn use_spanning_sortable_item(
         // Moving a node in the DOM blurs it. Only for that move: after an ignored one,
         // a later unrelated change of index must not pull the focus here.
         let moved = *refocus.peek();
+        if moved.is_some() {
+            diag(format!("effect id={id} idx={index} before={before:?} moved={:?}", moved.map(|m| (m.id, m.step.from, m.step.to))));
+        }
         if let Some(Moved { control, step, .. }) = moved.filter(|moved| moved.id == id) {
             refocus.set(None);
             if (before, index) != (Some(step.from), step.to) {
+                diag("skipped".into());
                 return;
             }
-            let _ = match control {
+            let r = match control {
                 Refocus::Handle => handle.focus(),
                 Refocus::Earlier => earlier.focus(),
                 Refocus::Later => later.focus(),
             };
+            diag(format!("focus() id={id} -> {:?}", r.is_ok()));
         }
     }));
     use_drop(move || {
+        diag(format!("drop id={id}"));
         let mut live = context.live;
         if let Ok(mut live) = live.try_write() {
             *live = live.saturating_sub(1);

@@ -467,7 +467,17 @@ e2e::scenario!(
 
 /// Todo 2233: a drop right after Home, before the scroll moved the window,
 /// keeps the dropped row's node and its handle's focus.
-async fn an_early_drop_keeps_its_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+async fn an_early_drop_keeps_its_focus<D: Driver>(d: &mut D, route: &str) -> Result<()> {
+    let _ = d.evaluate("(() => { window.__d = []; const f = (k) => (e) => window.__d.push(performance.now().toFixed(0) + ' ' + k + ' ' + e.target.getAttribute?.('aria-label') + ' rel=' + e.relatedTarget?.getAttribute?.('aria-label')); document.addEventListener('focusin', f('fin'), true); document.addEventListener('focusout', f('fout'), true); return 1; })()").await;
+    let result = an_early_drop_keeps_its_focus_inner(d, route).await;
+    if let Err(error) = result {
+        let log = d.evaluate("(window.__d || []).join(' | ')").await;
+        bail!("{error:#} DIAG {log:?}");
+    }
+    Ok(())
+}
+
+async fn an_early_drop_keeps_its_focus_inner<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     const HANDLE: &str = "[aria-label=\"Reorder Row 1\"]";
     d.focus(HANDLE).await?;
     eventually_focused(d, HANDLE, "the handle").await?;
@@ -499,8 +509,7 @@ e2e::scenario!(
     an_early_keyboard_drop_keeps_its_focus,
     "/table-reorder-windowed",
     an_early_drop_keeps_its_focus,
-    android: skip("958: element identity on the WebView"),
-    windows: skip("a drop made before the window follows the scroll leaves the focus on the body in WebView2")
+    android: skip("958: element identity on the WebView")
 );
 
 /// Todo 2584: a deep windowed row's Move up keeps the scroll and the focus; with
