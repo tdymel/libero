@@ -3,7 +3,7 @@ use crate::components::{
     not_gradient_variant, prop, props,
 };
 use dioxus::prelude::*;
-use libero::components::{Button, ButtonPart, Code, Input, Text};
+use libero::components::{Button, ButtonPart, Code, Flex, Input, Text};
 use libero::use_theme;
 
 fn is_link(values: &DemoValues) -> bool {
@@ -152,41 +152,43 @@ pub fn ButtonPage() -> Element {
                     ),
                 ],
                 render: move |values: DemoValues| rsx! {
-                    Button {
-                        color: values.str("color"),
-                        variant: values.str("variant"),
-                        gradient: gradient_value(&values),
-                        size: values.str("size"),
-                        radius: values.str("radius"),
-                        full_width: values.str("full_width") == "true",
-                        selected: match values.str("selected").as_str() {
-                            _ if is_link(&values) => None,
-                            "true" => Some(true),
-                            "false" => Some(false),
-                            _ => None,
-                        },
-                        disabled: values.str("disabled") == "true",
-                        focusable_when_disabled: values.str("focusable_when_disabled") == "true",
-                        loading: values.str("loading") == "true" && !is_link(&values),
-                        r#type: values.str("type"),
-                        to: match values.str("link").as_str() {
-                            "true" => Input::from("https://dioxuslabs.com"),
-                            _ => Input::None,
-                        },
-                        target: (values.str("link") == "true").then(|| "_blank".to_string()),
-                        new_tab_icon: (values.str("new_tab_icon") == "true").then_some(true),
-                        "Save changes"
-                    }
-                    // A new-tab link beside it that opts into the icon, shown without the `link` switch.
-                    if !is_link(&values) {
+                    Flex { direction: "row", gap: "sm",
                         Button {
-                            variant: values.str("variant"),
                             color: values.str("color"),
+                            variant: values.str("variant"),
+                            gradient: gradient_value(&values),
                             size: values.str("size"),
-                            to: "https://dioxuslabs.com",
-                            target: "_blank",
-                            new_tab_icon: true,
-                            "Dioxus"
+                            radius: values.str("radius"),
+                            full_width: values.str("full_width") == "true",
+                            selected: match values.str("selected").as_str() {
+                                _ if is_link(&values) => None,
+                                "true" => Some(true),
+                                "false" => Some(false),
+                                _ => None,
+                            },
+                            disabled: values.str("disabled") == "true",
+                            focusable_when_disabled: values.str("focusable_when_disabled") == "true",
+                            loading: values.str("loading") == "true" && !is_link(&values),
+                            r#type: values.str("type"),
+                            to: match values.str("link").as_str() {
+                                "true" => Input::from("https://dioxuslabs.com"),
+                                _ => Input::None,
+                            },
+                            target: (values.str("link") == "true").then(|| "_blank".to_string()),
+                            new_tab_icon: (values.str("new_tab_icon") == "true").then_some(true),
+                            "Save changes"
+                        }
+                        // A new-tab link beside it that opts into the icon, shown without the `link` switch.
+                        if !is_link(&values) {
+                            Button {
+                                variant: values.str("variant"),
+                                color: values.str("color"),
+                                size: values.str("size"),
+                                to: "https://dioxuslabs.com",
+                                target: "_blank",
+                                new_tab_icon: true,
+                                "Dioxus"
+                            }
                         }
                     }
                 },

@@ -179,9 +179,9 @@ parts work.
   the area itself scrolls by keyboard, wheel and touch. Forced colours paint
   its thumb in the system text colour.
 - The drawn track and thumb are 8px across at `thin`, under the 24 px pointer
-  target minimum (WCAG 2.5.8). The Equivalent exception covers them: the
-  content itself scrolls under a pointer by wheel and touch, so the bar is an
-  extra handle, not the only way to scroll.
+  target minimum (WCAG 2.5.8). No exception covers them: the bar is an extra
+  handle, and the content scrolls without it by wheel, touch and the arrow
+  keys.
 
 ### You must
 

@@ -191,7 +191,7 @@ pub fn GridPage() -> Element {
                 ]),
                 props("GridZone", vec![
                     prop("area", "AreaName").doc("The `Grid` area this zone fills. Zones land by name, so their order only sets the reading and tab order. A zone with an area is a size container (`container-type: inline-size`), not a containing block: a `position: fixed` descendant, such as a `fixed` `Header`, stays on the viewport, and an absolutely positioned one needs `position: relative` on its `GridItem`. Omit it to use the zone on its own, without a `Grid`, and give it a width."),
-                    prop("dense", "bool").default("false").doc("Fills the gaps a wider item left, moving items sideways only."),
+                    prop("dense", "bool").default("false").doc("Fills the gaps a wider item left, so an item may move up or sideways out of source order."),
                     prop("masonry", "bool").default("false").doc("Packs items of different heights with no vertical gaps. The zone's height follows its items, so scroll inside a `GridItem`, not around the zone, and set no `align-self` or `margin-bottom` on an item. Keep it out of a container whose width follows its content: a scrollbar coming and going makes it measure again and again."),
                     prop("gap", "ThemeAwareValue").default("md").doc("Space between items, or any CSS, e.g. `gap: \"12px\"`. Masonry packs by a `px` or `rem` gap; other CSS packs by the theme's gap."),
                     prop("component", "HtmlTag").default("div").doc("The element to render."),

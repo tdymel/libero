@@ -128,7 +128,7 @@ pub fn MenuPage() -> Element {
                 ]).without_base_props(),
             ],
             accessibility: a11y()
-                .key(["Enter", "Space", "Down"], "On the trigger: opens the menu on its first item.")
+                .key(["Enter", "Space", "Down"], "On the trigger: opens the menu on the checked radio item, else its first item.")
                 .key(["Up"], "On the trigger: opens the menu on its last item.")
                 .key(["Down", "Up"], "In the menu: moves an item, wrapping unless `loop_focus` is off.")
                 .key(["Home", "End"], "In the menu: goes to the first or last item.")

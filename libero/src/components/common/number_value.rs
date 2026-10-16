@@ -12,7 +12,7 @@ pub trait NumberValue:
     /// The step a stepper press moves by when the caller names none.
     fn default_step() -> Self;
 
-    /// The edit buffer's value, `None` while it is not yet a number (`"-"`, `"1."`).
+    /// The edit buffer's value, `None` while it is not yet a number (`"-"`; `"1."` for an integer).
     fn parse(text: &str) -> Option<Self> {
         text.trim().parse().ok()
     }

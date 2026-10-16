@@ -76,7 +76,7 @@ field_props! {
         /// The number in the field; strictly controlled. `None` is empty.
         #[props(default)]
         value: Option<T>,
-        /// Called with the next number; `None` once emptied. Silent on `"-"` or `"1."`.
+        /// Called with the next number; `None` once emptied. Silent on `"-"`; a float `"1."` arrives as `1`.
         #[props(default)]
         onchange: Option<EventHandler<Option<T>>>,
         /// Rules over the number, shown on blur or submit.

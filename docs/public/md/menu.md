@@ -141,7 +141,7 @@ explains how parts work.
 
 | Key | Action |
 |---|---|
-| `Enter`, `Space` or `Down` | On the trigger: opens the menu on its first item. |
+| `Enter`, `Space` or `Down` | On the trigger: opens the menu on the checked radio item, else its first item. |
 | `Up` | On the trigger: opens the menu on its last item. |
 | `Down` or `Up` | In the menu: moves an item, wrapping unless `loop_focus` is off. |
 | `Home` or `End` | In the menu: goes to the first or last item. |

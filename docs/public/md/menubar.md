@@ -94,7 +94,7 @@ parts work. The menus open in a portal, outside the bar: style them with
 | `Tab` | Enters the bar, one tab stop. In an open menu: closes it and leaves the bar. |
 | `Left` or `Right` | On a trigger: moves along the bar, disabled triggers included, wrapping unless `loop_focus` is off. If a menu is open, the next one opens. |
 | `Home` or `End` | On a trigger: goes to the first or last trigger. |
-| `Enter`, `Space` or `Down` | On a trigger: opens its menu on the first item. |
+| `Enter`, `Space` or `Down` | On a trigger: opens its menu on the checked radio item, else the first item. |
 | `Up` | On a trigger: opens its menu on the last item. |
 | `Right` | In an open menu: opens a submenu item's submenu, or else moves to the next menu. |
 | `Left` | In an open menu: closes a submenu, or on the top level moves to the previous menu. |
