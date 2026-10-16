@@ -332,6 +332,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_detail::pinned_toggles_push_the_checkboxes_past_them` | desktop | 3217: one web run guards the cascade |
 | `table_detail::the_keyboard_opens_a_detail_and_tabs_into_it` | android | 958: element identity on the WebView |
 | `table_filter::a_select_filter_narrows_a_table` | android | 958: element identity on the WebView |
+| `table_filter::a_select_filter_narrows_a_table` | desktop | 958: a WebView cannot tell where focus landed, so a script's focus move closes no popover |
 | `table_filter::a_select_filter_narrows_a_table` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `table_filter::a_select_filter_narrows_a_table` | macos desktop | 3432: WKWebView: ArrowDown does not open a select filter's list |
 | `table_filter::a_select_filter_narrows_a_table` | native | Blitz keeps the filter popover open when a script moves focus out of it |
