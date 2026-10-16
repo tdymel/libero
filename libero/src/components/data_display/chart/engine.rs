@@ -1430,7 +1430,12 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
         }
     };
 
-    let (svg, triggers) = inert(&svg, axis(&svg), "", false);
+    let writer = axis(&svg);
+    let svg = match spec.horizontal {
+        true => thin_tick_labels(&svg, AXIS_MARK, &writer),
+        false => svg,
+    };
+    let (svg, triggers) = inert(&svg, writer, "", false);
     let svg = relabel(&svg, AXIS2_MARK, axis2(&svg));
     // The renderer's margins would leave a narrow band's bars a sliver.
     let narrow = {
@@ -3389,8 +3394,6 @@ fn centre_inside_labels(svg: &str, centre: (f32, f32), hole: f32) -> String {
     out
 }
 
-/// Cuts a label that leaves the SVG at a side short with an ellipsis, inside [`EDGE`]; the
-/// tooltip and the summary keep the whole text.
 /// Drops the outside labels that overlap a larger slice's, with their leader lines: the
 /// smaller slice's goes first. `values` are the slices' in drawing order.
 fn drop_colliding_labels(svg: &str, values: &[f64]) -> String {
@@ -3469,6 +3472,8 @@ fn drop_colliding_labels(svg: &str, values: &[f64]) -> String {
     out
 }
 
+/// Cuts a label that leaves the SVG at a side short with an ellipsis, inside [`EDGE`]; the
+/// tooltip and the summary keep the whole text.
 fn cut_labels(svg: &str, width: f32) -> String {
     let mut out = String::with_capacity(svg.len());
     let mut rest = svg;
@@ -4037,6 +4042,62 @@ fn pin_to_axis(svg: &str) -> String {
 /// ticks: pinned by their centre, as `axis` writes them, and kept inside the `width`.
 fn pin_to_ticks(svg: &str, mark: char, width: f32, axis: impl Fn(f64) -> String) -> String {
     pin_labels(svg, mark, Pin::Middle { width, axis })
+}
+
+/// Drops the tick labels behind `mark`, written by `axis`, that touch the one before; the
+/// last tick stays and takes the place of the ones it touches.
+fn thin_tick_labels(svg: &str, mark: char, axis: impl Fn(f64) -> String) -> String {
+    // Each label's element range and its span along x.
+    let mut labels: Vec<(std::ops::Range<usize>, f32, f32)> = Vec::new();
+    let mut at = 0;
+    while let Some(open) = svg[at..].find("<text").map(|open| at + open) {
+        let Some(close) = svg[open..].find('>').map(|close| open + close) else {
+            break;
+        };
+        let end = svg[close..]
+            .find("</text>")
+            .map_or(close + 1, |end| close + end + 7);
+        at = end;
+        let attributes = attributes(&svg[open..=close]);
+        let content = svg[close + 1..end].trim_end_matches("</text>").trim();
+        let x = attribute(&attributes, "x").and_then(|x| x.parse::<f32>().ok());
+        let (Some(x), Some(number)) = (x, content.strip_prefix(mark)) else {
+            continue;
+        };
+        let written = match number.split(' ').next().and_then(scaled) {
+            Some(value) => axis(value),
+            None => number.to_string(),
+        };
+        let width = roomy(&attributes, &written);
+        let left = match attribute(&attributes, "text-anchor") {
+            Some("middle") => x - width / 2.0,
+            Some("end") => x - width,
+            _ => x,
+        };
+        labels.push((open..end, left, left + width));
+    }
+    let mut kept: Vec<usize> = Vec::new();
+    for (i, (_, left, _)) in labels.iter().enumerate() {
+        let touches = |last: &usize| *left < labels[*last].2 + EDGE;
+        if i + 1 == labels.len() {
+            while kept.last().is_some_and(touches) {
+                kept.pop();
+            }
+        } else if kept.last().is_some_and(touches) {
+            continue;
+        }
+        kept.push(i);
+    }
+    let mut out = String::with_capacity(svg.len());
+    let mut from = 0;
+    for (i, (range, _, _)) in labels.iter().enumerate() {
+        if !kept.contains(&i) {
+            out.push_str(&svg[from..range.start]);
+            from = range.end;
+        }
+    }
+    out.push_str(&svg[from..]);
+    out
 }
 
 enum Pin<F> {
@@ -4931,6 +4992,39 @@ mod tests {
             points: true,
             stroke_width: 2.0,
             formats: &Formats::GERMAN,
+        }
+    }
+
+    #[test]
+    fn a_lying_bar_chart_keeps_its_value_labels_apart() {
+        let mut lying = bars(BarLayout::Grouped, true);
+        lying.width = 320.0;
+        lying.value_labels = false;
+        lying.axes.min = Some(-50.0);
+        lying.axes.max = Some(150.0);
+        lying.axes.ticks = 6;
+        let svg = draw_bar(&lying).expect("drawn").svg;
+        let ticks: Vec<(f32, f32)> = svg
+            .split("<text")
+            .filter(|text| text.contains("text-anchor=\"middle\""))
+            .filter_map(|text| {
+                let open = format!("<text{}", text.split('>').next()?);
+                let tag = attributes(&open);
+                let x = attribute(&tag, "x")?.parse::<f32>().ok()?;
+                let label = text.split('>').nth(1)?.split('<').next()?.trim();
+                label
+                    .chars()
+                    .all(|c| c.is_ascii_digit() || matches!(c, '.' | ',' | '-'))
+                    .then(|| (x, text_width(&tag, label)))
+            })
+            .collect();
+
+        assert!(ticks.len() >= 2, "{svg}");
+        for pair in ticks.windows(2) {
+            assert!(
+                pair[0].0 + pair[0].1 / 2.0 < pair[1].0 - pair[1].1 / 2.0,
+                "{svg}"
+            );
         }
     }
 

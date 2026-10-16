@@ -25,8 +25,8 @@ a `trend` line through each. A candlestick chart takes a `Candle` per period,
 its open, high, low and close. A radar takes `RadarAxis` spokes and one
 `Series` value per spoke.
 
-Lines and bars zoom and pan their x axis with `zoom` and brush a range for
-`onrange`. Every chart exports as SVG or PNG through a `use_chart()` handle,
+Lines, bars and candlesticks zoom and pan their x axis with `zoom` and brush a
+range for `onrange`. Every chart exports as SVG or PNG through a `use_chart()` handle,
 which also resets a zoom and says whether the chart is zoomed; the chart draws
 no buttons, render your own.
 
@@ -799,6 +799,8 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `y_ticks` | `Option<usize>` | `6` | The steps the price axis is cut into. |
 | `x_title` | `Option<String>` | | Under the periods: what they are. |
 | `y_title` | `Option<String>` | | Beside the price axis, read upward: what it measures. |
+| `zoom` | `Option<bool>` | `false` | Zoom and pan the periods: Ctrl or Cmd with the wheel, a pinch, a drag (Shift or Alt with it once `onrange` is set), the keys. Reset it from code with the `handle`. |
+| `onrange` | `Option<EventHandler<Option<ChartRange>>>` | | Set, a drag or Shift with an arrow brushes a band of periods; Shift or Alt with a drag pans instead. `None` when Escape clears it. |
 | `legend` | `LegendPosition` | bottom | The Up and Down key, under the plot; `none` leaves it out. |
 | `grid` | `Option<bool>` | `true` | Horizontal guide lines. |
 | `value_format` | `ValueFormat` | `Auto` | How prices are written on the axis, in the tooltip and in the summary. |
@@ -813,7 +815,7 @@ fn Demo(rows: Vec<Sales>) -> Element {
 | `tooltip_content` | `Option<Callback<ChartPoint, Element>>` | | The tooltip's content instead of the period and its prices. |
 | `onpointclick` | `Option<EventHandler<ChartPoint>>` | | A click on a candle, a second tap on a pinned one, or Enter on the keys' candle. `index` is its place in `candles`, `value` its close. |
 | `onactivechange` | `Option<EventHandler<Option<ChartPoint>>>` | | The candle under the pointer or the keys; `None` when it leaves. |
-| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it. |
+| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom and says whether it is zoomed. |
 
 ### `PieChart`
 
@@ -1018,8 +1020,8 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   not when `stacked`.
 - A rose's radius and a slice under `min_label_angle` are read by eye or not at
   all; the summary gives every value.
-- `zoom` and `onrange` are for lines and bars; a pie, a funnel, a scatter, a
-  heatmap, a candlestick chart and a radar export only.
+- `zoom` and `onrange` are for lines, bars and candlesticks; a pie, a funnel, a
+  scatter, a heatmap and a radar export only.
 - A radar's web writes no values on its rings; each axis may have its own rim,
   so the tooltip, the announcement and the summary give the values. A value past
   its axis' `max` is drawn at the rim.

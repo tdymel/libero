@@ -1,13 +1,14 @@
 use dioxus::prelude::*;
 
 use super::{
-    Candle, ChartColor,
+    Candle, ChartColor, ChartRange,
     engine::{self, Axes, CandleSpec},
     export::ExportSource,
     frame::{Frame, Interaction, use_plot_size},
     legend::use_hidden_series,
     overlay::{Layout, OverlaySeries},
     props::chart_props,
+    zoom::{cut, use_zoom},
 };
 use crate::{
     components::common::{Input, input_from_str, names_itself, use_name_warning},
@@ -52,6 +53,15 @@ chart_props! {
         /// Beside the price axis, read upward: what it measures.
         #[props(default, into)]
         y_title: Option<String>,
+        /// Zoom and pan along the periods: Ctrl or Cmd with the wheel, a pinch, a drag
+        /// (Shift or Alt with it once `onrange` is set), the plus, minus and 0 keys, and a
+        /// reset button. Unset, the theme's.
+        #[props(default)]
+        zoom: Option<bool>,
+        /// Set, a drag or Shift with an arrow key selects a band of periods; `None` when
+        /// Escape clears it. With `zoom`, Shift or Alt with a drag pans.
+        #[props(default)]
+        onrange: Option<EventHandler<Option<ChartRange>>>,
     }
 }
 
@@ -114,6 +124,12 @@ pub fn CandlestickChart(props: CandlestickChartProps) -> Element {
         .max(0.1);
     let size = use_plot_size();
     let (width, height) = size.get(ratio);
+    let zoom = use_zoom(
+        props.x.len(),
+        props.zoom.unwrap_or(theme.chart.zoom),
+        props.handle,
+    );
+    let window = zoom.map_or((0, props.x.len()), |zoom| zoom.range());
     let forced = use_accessibility().forced_colors();
     let name = props
         .name
@@ -150,20 +166,27 @@ pub fn CandlestickChart(props: CandlestickChartProps) -> Element {
         unit: props.unit.clone(),
         formats,
     };
+    let view = CandleSpec {
+        x: cut(&spec.x, window),
+        candles: cut(&spec.candles, window),
+        ..spec.clone()
+    };
     // The file keeps the normal palette under forced colours.
     let export = {
         let spec = CandleSpec {
             up: resolve(theme, false, props.up_color, Color::Success),
             down: resolve(theme, false, props.down_color, Color::Error),
             ink: ChartInk::of(theme, false),
-            ..spec.clone()
+            ..view.clone()
         };
         ExportSource::of(theme, props.title.clone(), move || {
             engine::draw_candles(&spec)
         })
     };
-    let drawn = use_memo(use_reactive!(|spec, empty| {
-        (!empty).then(|| engine::draw_candles(&spec)).flatten()
+    let drawn = use_memo(use_reactive!(|view, window, empty| {
+        (!empty)
+            .then(|| engine::draw_candles(&view).map(|drawn| drawn.with_offset(window.0)))
+            .flatten()
     }));
     let hidden = use_hidden_series(&None, &[], None, &[]);
 
@@ -221,12 +244,12 @@ pub fn CandlestickChart(props: CandlestickChartProps) -> Element {
             onpointclick: props.onpointclick,
             onactivechange: props.onactivechange,
             swap_axes: false,
-            onrange: None,
+            onrange: props.onrange,
             layout: Layout::Columns,
         },
         export,
         handle: props.handle,
-        zoom: None,
+        zoom,
     }
     .render(
         &props.class,

@@ -107,6 +107,33 @@ async fn clicks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     reads(d, "#clicked", "Mon 0 34", "a click on Monday's candle").await
 }
 
+const PLUS: keyboard::Key = keyboard::Key {
+    key: "+",
+    code: "Equal",
+    vk: 187,
+    text: Some("+"),
+};
+
+/// Plus zooms in around the middle and the candles keep their place on the axis; Shift with
+/// an arrow brushes, a drag brushes, the reset shows every period.
+async fn zooms<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(LAYER).await?;
+    d.press(PLUS).await?;
+    reads(d, "#chart [role=status]", "Showing Mar to May", "+").await?;
+    d.press(keyboard::HOME).await?;
+    reads(d, "#active", "Mar 2 41", "Home in the window").await?;
+    d.press_shift(keyboard::ARROW_RIGHT).await?;
+    reads(d, "#range", "Mar Apr", "Shift+ArrowRight").await?;
+    d.click("#reset").await?;
+    reads(d, "#chart [role=status]", "Showing Jan to Jun", "the reset").await
+}
+
+e2e::scenario!(
+    the_candles_zoom_and_brush_along_their_periods,
+    "/candlestick-chart/zoom",
+    zooms
+);
+
 e2e::scenario!(
     a_click_on_a_candle_reports_it,
     "/candlestick-chart",

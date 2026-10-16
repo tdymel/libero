@@ -131,6 +131,7 @@ fn is(kind: &'static str) -> fn(&DemoValues) -> bool {
         },
         "shares" => |values| !matches!(values.str("type").as_str(), "pie" | "funnel"),
         "series" => |values| !matches!(values.str("type").as_str(), "line" | "bar"),
+        "zoom" => |values| !matches!(values.str("type").as_str(), "line" | "bar" | "candlestick"),
         _ => |values| values.str("type") != "line",
     }
 }
@@ -451,7 +452,8 @@ fn marked(values: &DemoValues, series: Series) -> Series {
 
 /// Whether the chart is a line or bar chart with `zoom` on.
 fn zoomable(values: &DemoValues) -> bool {
-    values.str("zoom") == "true" && matches!(values.str("type").as_str(), "line" | "bar")
+    values.str("zoom") == "true"
+        && matches!(values.str("type").as_str(), "line" | "bar" | "candlestick")
 }
 
 /// The buttons under the chart, as code: save as SVG and PNG, and Reset zoom with `zoom`.
@@ -691,6 +693,8 @@ pub fn ChartPage() -> Element {
                     prop("y_ticks", "Option<usize>").default(theme.chart.y_ticks.to_string()).doc("The steps the price axis is cut into."),
                     prop("x_title", "Option<String>").doc("Under the periods: what they are."),
                     prop("y_title", "Option<String>").doc("Beside the price axis, read upward: what it measures."),
+                    prop("zoom", "Option<bool>").default(on(theme.chart.zoom)).doc("Zoom and pan the periods: Ctrl or Cmd with the wheel, a pinch, a drag (Shift or Alt with it once `onrange` is set), the keys. Reset it from code with the `handle`."),
+                    prop("onrange", "Option<EventHandler<Option<ChartRange>>>").doc("Set, a drag or Shift with an arrow brushes a band of periods; Shift or Alt with a drag pans instead. `None` when Escape clears it."),
                     prop("legend", "LegendPosition").default("bottom").doc("The Up and Down key, under the plot; `none` leaves it out."),
                     prop("grid", "Option<bool>").default(on(theme.chart.grid)).doc("Horizontal guide lines."),
                     prop("value_format", "ValueFormat").default("Auto").doc("How prices are written on the axis, in the tooltip and in the summary."),
@@ -705,7 +709,7 @@ pub fn ChartPage() -> Element {
                     prop("tooltip_content", "Option<Callback<ChartPoint, Element>>").doc("The tooltip's content instead of the period and its prices."),
                     prop("onpointclick", "Option<EventHandler<ChartPoint>>").doc("A click on a candle, a second tap on a pinned one, or Enter on the keys' candle. `index` is its place in `candles`, `value` its close."),
                     prop("onactivechange", "Option<EventHandler<Option<ChartPoint>>>").doc("The candle under the pointer or the keys; `None` when it leaves."),
-                    prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it."),
+                    prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom and says whether it is zoomed."),
                 ]),
                 props("PieChart", vec![
                     prop("slices", "Vec<Slice>").default("required").doc("The slices, each a share of their sum. A negative value takes no share."),
@@ -891,7 +895,7 @@ pub fn ChartPage() -> Element {
                     " value per spoke."
                 }
                 Text {
-                    "Lines and bars zoom and pan their x axis with "
+                    "Lines, bars and candlesticks zoom and pan their x axis with "
                     Code { source: "zoom" }
                     " and brush a range for "
                     Code { source: "onrange" }
@@ -1157,9 +1161,9 @@ pub fn ChartPage() -> Element {
                         }),
                     Control::select("legend", legend),
                     Control::switch("tooltip").default(on(theme.chart.tooltip)),
-                    Control::switch("zoom").default("true").hidden_when(is("series")).code(|_, values| {
+                    Control::switch("zoom").default("true").hidden_when(is("zoom")).code(|_, values| {
                         match (values.str("zoom").as_str(), values.str("type").as_str()) {
-                            ("true", "line" | "bar") => vec![
+                            ("true", "line" | "bar" | "candlestick") => vec![
                                 "zoom: true".to_string(),
                                 "onrange: move |range| selected.set(range)".to_string(),
                             ],
@@ -1262,16 +1266,16 @@ pub fn ChartPage() -> Element {
                                 legend, tooltip, loading, handle,
                             }
                         },
-                        "candlestick" => rsx! {
+                        "candlestick" => brushed(zoom, selected, rsx! {
                             CandlestickChart {
                                 title: "Share price",
                                 x: names(&MONTHS),
                                 candles: candles(),
                                 style: values.str("style"),
                                 y_min, y_max, y_ticks, x_title, y_title,
-                                legend, tooltip, loading, handle,
+                                legend, tooltip, loading, zoom, onrange, handle,
                             }
-                        },
+                        }),
                         "radar" => rsx! {
                             RadarChart {
                                 title: "Phones",
