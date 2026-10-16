@@ -28,6 +28,20 @@ async fn shares<D: Driver>(d: &mut D, button: &str) -> Result<()> {
     eventually_text(d, "#outcome", "Shared", "the share outcome").await
 }
 
+/// Todo 3548: Back as soon as frames stall, before the covered mark settles.
+async fn back_closes_the_sheet_at_once<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#save-binary").await?;
+    eventually(d, "the sheet's first stalled frames", async |d| {
+        d.exists("html[data-stalled]").await
+    })
+    .await?;
+    d.press_back().await?;
+    let shared = eventually_text(d, "#outcome", "Shared", "the share outcome").await;
+    #[cfg(feature = "android")]
+    e2e::android::remove_download("bytes.bin").await?;
+    shared
+}
+
 e2e::scenario!(
     android_shares_text_through_the_share_sheet,
     "/save-file",
@@ -39,4 +53,10 @@ e2e::scenario!(
     "/save-file",
     the_share_sheet_opens_on_a_file,
     android_only("2078: the share sheet is Android's")
+);
+e2e::scenario!(
+    android_reports_a_file_shared_when_back_closes_the_sheet_at_once,
+    "/save-file",
+    back_closes_the_sheet_at_once,
+    android_only("3548: the share sheet is Android's")
 );

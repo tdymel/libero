@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 609
+Scenarios: 610
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -264,6 +264,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `refused::a_press_on_a_disabled_button_focuses_what_holds_it` | ios | 3416: focus stays on the body after a Tab or a tap |
 | `refused::a_press_on_a_disabled_button_focuses_what_holds_it` | macos desktop | upstream: WebKit does not focus a clicked button |
 | `refused::tab_skips_disabled_buttons_and_an_inert_subtree` | android | 958: element identity on the WebView |
+| `save_file::android_reports_a_file_shared_when_back_closes_the_sheet_at_once` | all but android | 3548: the share sheet is Android's |
 | `save_file::android_shares_binary_bytes_as_a_file` | all but android | 2078: the share sheet is Android's |
 | `save_file::android_shares_text_through_the_share_sheet` | all but android | 2016: the share sheet is Android's |
 | `scatter_chart::hovering_picks_the_nearest_point` | android | a touch screen has no hover |

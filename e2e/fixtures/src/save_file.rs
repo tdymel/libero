@@ -1,7 +1,7 @@
 //! `save_file` (2016): buttons saving a small CSV and a few binary bytes, the
 //! outcome printed below.
-//! `html[data-covered]` marks frames stopping for half a second: Android's share
-//! sheet covers the activity, which draws no frame and applies no edit until it closes.
+//! `html[data-covered]` marks frames stopping for half a second (`data-stalled` for 150 ms):
+//! Android's share sheet covers the activity, which draws no frame and applies no edit until it closes.
 
 use dioxus::prelude::*;
 use libero::components::{Button, Text};
@@ -19,8 +19,10 @@ pub(crate) fn use_covered_mark() {
             const frame = () => { drawn = performance.now(); requestAnimationFrame(frame); };
             requestAnimationFrame(frame);
             setInterval(() => {
-                if (performance.now() - drawn > 500) document.documentElement.dataset.covered = '';
-            }, 100);",
+                const stalled = performance.now() - drawn;
+                if (stalled > 150) document.documentElement.dataset.stalled = '';
+                if (stalled > 500) document.documentElement.dataset.covered = '';
+            }, 50);",
         );
     });
 }
