@@ -346,6 +346,8 @@ pub fn TeamTable(values: DemoValues) -> Element {
             && !(windowed && WINDOW_HIDES.contains(&name))
             && !(server && name == "loading")
     };
+    // Pins need the scroll area to hold against.
+    let scrolls = on("scroll") || on("pinned");
     // Keyed in a loop, as a root's own key never remounts: pages, pins and grouping seed once.
     let remount = format!(
         "{}-{}-{}-{windowed}-{server}",
@@ -360,8 +362,8 @@ pub fn TeamTable(values: DemoValues) -> Element {
                 caption: "Team members",
                 size: values.str("size"),
                 striped: on("striped"),
-                scroll: on("scroll"),
-                sx: match on("scroll") {
+                scroll: scrolls,
+                sx: match scrolls {
                     true => sx().min_width(SCROLL_WIDTH),
                     false => sx(),
                 },

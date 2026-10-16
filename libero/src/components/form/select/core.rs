@@ -951,7 +951,8 @@ fn trigger_key(event: &KeyboardEvent, keys: &TriggerKeys, typed: &SelectTypeahea
             event.prevent_default();
             chips.focus(Some(chip_count - 1));
         }
-        Key::Backspace | Key::Delete if chip_count > 0 => {
+        // Like a chip and `TagsField`, a chorded Backspace or Delete keeps the selection.
+        Key::Backspace | Key::Delete if chip_count > 0 && event.modifiers().is_empty() => {
             let Some(onremove) = onremove else {
                 return;
             };

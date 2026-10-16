@@ -545,6 +545,11 @@ pub fn TablePage() -> Element {
                         false => vec![],
                     }).hidden_when(|values| !windowed(values)),
                     Control::switch("pinned").code(|_, values| match values.str("pinned") == "true" {
+                        true if values.str("scroll") != "true" => vec![
+                            PINNED.to_string(),
+                            "scroll: true".to_string(),
+                            format!("sx: sx().min_width({SCROLL_WIDTH:?})"),
+                        ],
                         true => vec![PINNED.to_string()],
                         false => vec![],
                     }),

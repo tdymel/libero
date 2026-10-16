@@ -96,6 +96,34 @@ fn enter_toggles_and_stays_open() {
     picking_keeps_the_list(keyboard::ENTER);
 }
 
+/// Todo 3579: a chorded Backspace on the trigger keeps the last chip, as on a chip and in `TagsField`.
+#[test]
+fn a_chorded_backspace_keeps_the_last_chip() {
+    block_on(async {
+        let fixture = Fixture::open("/multi-select/chips", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        for modifiers in [keyboard::CTRL, keyboard::ALT, keyboard::SHIFT] {
+            keyboard::press_with(page, keyboard::BACKSPACE, modifiers)
+                .await
+                .unwrap();
+        }
+        // A plain Backspace after them proves the chords were handled first.
+        keyboard::press(page, keyboard::BACKSPACE).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#echo').textContent.trim() === '[Apple, Banana]'",
+            "only the plain Backspace to remove a chip",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a chorded Backspace").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 async fn open_on_damson(page: &chromiumoxide::Page) {
     keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
     keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();

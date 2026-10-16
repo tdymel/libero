@@ -296,7 +296,7 @@ pub fn MultiSelectPage() -> Element {
                 .key(["Enter", "Space"], "Open: toggles the row and keeps the list open.")
                 .key(["Escape", "Tab", "Alt+Up"], "Open: close the list.")
                 .key(["Left", "Right"], "Move the focus over the chips, from the trigger to the last one and back past it.")
-                .key(["Backspace", "Delete"], "Removes the focused chip and moves the focus on, or the last chip from the trigger. Inside the search box `Backspace` only edits the query.")
+                .key(["Backspace", "Delete"], "Removes the focused chip and moves the focus on, or the last chip from the trigger; with Ctrl, Alt, Shift or Meta held it keeps the chip. Inside the search box `Backspace` only edits the query.")
                 .key(["Letter"], "Jumps to a matching label and opens the list there. Unlike on `Select`, it never changes the value in place, since a pick here toggles.")
                 .handles([
                     "Disabled options are read out but skipped.",
