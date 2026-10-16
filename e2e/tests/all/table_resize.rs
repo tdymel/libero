@@ -116,8 +116,8 @@ async fn the_keys_resize<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     eventually_text(d, WIDTHS, "Name=110", "Shift+ArrowLeft").await?;
     d.press(keyboard::END).await?;
     eventually_text(d, WIDTHS, "Name=300", "End").await?;
-    // Blitz on Windows sometimes keeps the column's old width laid out for good after End (3440).
-    if d.platform() != Platform::Native || !cfg!(windows) {
+    // Blitz sometimes keeps the column's old width laid out for good after End (3440, 3450).
+    if d.platform() != Platform::Native {
         width_near(d, 300.0, "End").await?;
     }
     eventually(d, "aria-valuenow to follow", async |d| {
