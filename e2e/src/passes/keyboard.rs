@@ -198,14 +198,24 @@ async fn dispatch(page: &Page, key: Key, modifiers: i64) -> Result<()> {
     } else {
         DispatchKeyEventType::RawKeyDown
     };
-    page.execute(base(down).build().map_err(anyhow::Error::msg)?)
-        .await?;
-    page.execute(
-        base(DispatchKeyEventType::KeyUp)
-            .build()
-            .map_err(anyhow::Error::msg)?,
+    let limit = std::time::Duration::from_secs(10);
+    let what = format!("{} with modifiers {modifiers} text {:?}", key.key, key.text);
+    tokio::time::timeout(
+        limit,
+        page.execute(base(down).build().map_err(anyhow::Error::msg)?),
     )
-    .await?;
+    .await
+    .map_err(|_| anyhow::anyhow!("DIAG: keydown of {what} never answered"))??;
+    tokio::time::timeout(
+        limit,
+        page.execute(
+            base(DispatchKeyEventType::KeyUp)
+                .build()
+                .map_err(anyhow::Error::msg)?,
+        ),
+    )
+    .await
+    .map_err(|_| anyhow::anyhow!("DIAG: keyup of {what} never answered"))??;
     Ok(())
 }
 
@@ -292,7 +302,7 @@ pub async fn assert_chords_ignored_with(
 ) -> Result<()> {
     // Chrome on a Mac sends no keyup for some chords, and the stall wedged the browser for every
     // later page (3444); Linux and Windows check the same wasm.
-    if cfg!(target_os = "macos") {
+    if cfg!(target_os = "never") {
         crate::journal::note(&format!("macOS: skipped the chord check on {probe}"));
         return Ok(());
     }
