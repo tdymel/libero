@@ -1,6 +1,7 @@
 use std::{str::FromStr, time::Duration};
 
 use anyhow::{Result, anyhow};
+use libero::platform::held_clock;
 
 use super::{Driver, Platform, Rect};
 use crate::passes::keyboard;
@@ -8,6 +9,12 @@ use crate::passes::keyboard;
 /// A fixture route mounted in a windowless Blitz document.
 pub struct Native {
     pub page: crate::native::Page,
+}
+
+impl Drop for Native {
+    fn drop(&mut self) {
+        held_clock::reset_here();
+    }
 }
 
 impl Native {
@@ -256,6 +263,20 @@ impl Driver for Native {
     async fn idle(&mut self) {
         self.page.wait(Duration::from_millis(20));
         self.page.advance(0.02);
+    }
+
+    /// libero's thread timers on this test's thread, which polls the page (2929).
+    async fn hold_timers(&mut self, delays: &[u32]) -> Result<bool> {
+        held_clock::hold_timers_here(delays);
+        Ok(true)
+    }
+
+    async fn armed(&mut self, ms: u32) -> Result<usize> {
+        Ok(held_clock::armed_here(ms))
+    }
+
+    async fn fire_timers(&mut self, ms: u32) -> Result<usize> {
+        Ok(held_clock::fire_here(ms))
     }
 
     fn budget(&self) -> Duration {

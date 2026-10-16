@@ -423,7 +423,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `tooltip::a_long_press_on_a_link_trigger_opens_no_link_menu` | native | 3237: the native driver reads no script |
 | `tooltip::a_long_press_opens_it_on_touch` | desktop | 1126: no touch input under Xvfb |
 | `tooltip::a_short_touch_cancels_the_open` | desktop | 1126: no touch input under Xvfb |
-| `tooltip::a_short_touch_cancels_the_open` | native | 2838: the native driver holds no timers, the cancel is unobservable |
 | `tooltip::escape_closes_it_under_the_pointer` | ios | a touch screen has no hover |
 | `tooltip::escape_closes_it_under_the_pointer` | web | 1760: escape_closes_it_under_the_pointer_and_on_focus covers it |
 | `tooltip::hover_opens_it_below_the_trigger_and_leaving_closes_it` | android | 996: no hover on touch; a long press opens it instead |

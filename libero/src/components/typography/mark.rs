@@ -207,12 +207,16 @@ mod tests {
     fn a_gradient_keeps_the_system_highlight_in_forced_colours() {
         let css = crate::css::Stylesheet::from(&MARK_BASE_SX);
         let css = css.as_str();
-        let forced = css
-            .split("@media (forced-colors: active)")
-            .skip(1)
-            .find(|block| block.trim_start().starts_with('{') && block.contains("gradient"))
+        // Chromium's forced colours revert a mark either way (2399), so only the CSS can tell.
+        let (before, rule) = css
+            .split_once("[data-state~=\"gradient\"]{color:MarkText;background:Mark;}")
             .unwrap_or_else(|| panic!("no forced-colours rule for the gradient: {css}"));
-        assert!(forced.contains("background:Mark"), "{css}");
+        let class = before.rsplit_once("@media (forced-colors: active){.");
+        assert!(
+            class.is_some_and(|(_, class)| !class.contains('}')),
+            "{css}"
+        );
+        assert!(rule.starts_with('}'), "{css}");
     }
 
     #[test]

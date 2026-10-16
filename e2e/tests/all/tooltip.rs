@@ -216,8 +216,7 @@ e2e::scenario!(
     a_short_touch_cancels_the_open,
     "/tooltip/quick",
     short_touch_cancels,
-    desktop: skip("1126: no touch input under Xvfb"),
-    native: skip("2838: the native driver holds no timers, the cancel is unobservable")
+    desktop: skip("1126: no touch input under Xvfb")
 );
 e2e::scenario!(
     escape_closes_it_under_the_pointer,

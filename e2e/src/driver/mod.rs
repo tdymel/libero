@@ -298,8 +298,8 @@ pub trait Driver {
         let _ = (width, height);
         bail!("{:?}: no viewport resize", self.platform())
     }
-    /// Holds the app's timers of `delays` ([`crate::clock`]; a WebView's in the app, 2144);
-    /// `false` where none can be held (Blitz), so the caller waits them out instead.
+    /// Holds the app's timers of `delays` ([`crate::clock`]; a WebView's and Blitz's in the app,
+    /// 2144, 2929); `false` where none can be held, so the caller waits them out instead.
     async fn hold_timers(&mut self, delays: &[u32]) -> Result<bool> {
         let _ = delays;
         Ok(false)
