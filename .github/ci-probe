@@ -1,0 +1,6 @@
+# ted_ci.py probe; read by .github/workflows/ci-probe.yml.
+os=macos
+tier=web
+filter=carousel_slide_keys::
+dev=olaf-30
+env=E2E_NO_CHORDS=1
