@@ -242,6 +242,36 @@ fn a_blank_button_and_action_icon_say_they_open_a_new_tab() {
     assert_eq!(html.matches("data-slot=\"new-tab\"").count(), 1, "{html}");
 }
 
+/// Todo 3620: every link built on the shared anchor path drops a script `href` and keeps the element.
+#[test]
+fn a_script_target_renders_an_anchor_without_an_href() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Anchor { to: "javascript:alert(1)", "Script" }
+                Anchor { to: " Java\tScript:alert(1)", "Spaced" }
+                Anchor { to: "data:text/html,<b>x</b>", "Data" }
+                NavLink { to: "VBScript:msgbox(1)", "Nav" }
+                Button { to: "javascript:alert(1)", "Button" }
+                ActionIcon { aria_label: "Icon", to: "javascript:alert(1)", "?" }
+                Anchor { to: "https://example.com", "Ordinary" }
+            }
+        }
+    }
+
+    let html = render(app);
+    for index in 0..6 {
+        let attributes = nth_attributes(&html, "a", index);
+        assert!(!attributes.contains_key("href"), "{index}: {attributes:?}");
+    }
+    assert_eq!(
+        nth_attributes(&html, "a", 6)["href"],
+        "https://example.com",
+        "{html}"
+    );
+    assert!(body(&html).contains("Script"), "{html}");
+}
+
 /// Todo 3054: without a router a relative path is `External`, but not a foreign origin.
 #[test]
 fn a_relative_link_without_a_router_gets_no_rel() {

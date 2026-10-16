@@ -3,31 +3,18 @@ use dioxus::{html::input_data::MouseButton, prelude::*, router::RouterContext};
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, StyleAttributes, Variables, base_props, is_javascript_url,
+            HtmlTag, Input, StyleAttributes, Variables, allowed_href, base_props,
             use_style_attributes,
         },
         layout::{BoxStyle, box_style},
     },
     sx::StaticSx,
-    utils::warn,
 };
 
 fn navigation_target_href(to: NavigationTarget) -> String {
     match to {
         NavigationTarget::Internal(url) | NavigationTarget::External(url) => url,
     }
-}
-
-/// Every library link resolves here. Warned, not blocked: the caller may mean
-/// it, and a URL from user data is theirs to check.
-fn javascript_url_warning(to: &NavigationTarget) -> Option<String> {
-    let (NavigationTarget::Internal(url) | NavigationTarget::External(url)) = to;
-    is_javascript_url(url).then(|| {
-        format!(
-            "Link to `{url}`: a `javascript:` URL runs script on click. If it comes from user \
-             data, check the scheme before passing it."
-        )
-    })
 }
 
 base_props! {
@@ -85,27 +72,29 @@ pub(crate) fn render_anchor(
     attributes: Vec<Attribute>,
     children: Element,
 ) -> Element {
-    if let Some(message) = javascript_url_warning(&to) {
-        warn(&message);
-    }
-
     let is_blank = target
         .as_deref()
         .is_some_and(|target| target.eq_ignore_ascii_case("_blank"));
     let router = (target.is_none() || is_blank).then(try_router).flatten();
 
-    // Attached only when the caller wants it: an unused listener still costs a
-    // diff every render, and on a WebView a blocking round trip (todo 2986).
     // Without a router every string is `External`, so only an absolute URL counts as one.
     let rel = matches!(&to, NavigationTarget::External(url) if url.contains("://") || url.starts_with("//"))
         .then_some("noopener noreferrer");
-    let mut anchor = match router {
-        Some(router) => routed(box_style(style_attributes), router, to, is_blank),
-        None => box_style(style_attributes)
-            .attr_default("rel", rel)
-            .attr("href", navigation_target_href(to))
-            .attr("target", target),
+    // Every library link resolves here: a blocked scheme leaves an inert `<a>`.
+    let (NavigationTarget::Internal(url) | NavigationTarget::External(url)) = &to;
+    let mut anchor = if allowed_href(url, &format!("Link to `{url}`")) {
+        match router {
+            Some(router) => routed(box_style(style_attributes), router, to, is_blank),
+            None => box_style(style_attributes)
+                .attr_default("rel", rel)
+                .attr("href", navigation_target_href(to))
+                .attr("target", target),
+        }
+    } else {
+        box_style(style_attributes)
     };
+    // Attached only when the caller wants it: an unused listener still costs a
+    // diff every render, and on a WebView a blocking round trip (todo 2986).
     if let Some(mut onmounted) = onmounted {
         anchor = anchor.event("onmounted", move |event: MountedEvent| onmounted(event));
     }
@@ -141,18 +130,4 @@ fn routed(
             event.prevent_default();
             router.push(to.clone());
         })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn only_a_javascript_target_warns() {
-        let external = |url: &str| NavigationTarget::<String>::External(url.to_string());
-
-        assert!(javascript_url_warning(&external(" JavaScript:alert(1)")).is_some());
-        assert!(javascript_url_warning(&external("https://example.com")).is_none());
-        assert!(javascript_url_warning(&NavigationTarget::Internal("/docs".to_string())).is_none());
-    }
 }

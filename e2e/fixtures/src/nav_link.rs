@@ -9,7 +9,22 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/nav-link", || rsx! { NavLinkPage {} }),
     ("/nav-link/states", || rsx! { NavStatesPage {} }),
+    ("/nav-link/blocked", || rsx! { BlockedPage {} }),
 ];
+
+/// Links whose target would run script on click, and one ordinary link.
+#[component]
+fn BlockedPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Anchor { id: "javascript", to: "javascript:window.ranScript = true", "Script" }
+            Anchor { id: "spaced", to: " Java\tScript:window.ranScript = true", "Spaced" }
+            Anchor { id: "data", to: "data:text/html,<script>window.ranScript = true</script>", "Data" }
+            NavLink { id: "vbscript", to: "VBScript:msgbox(1)", "Visual Basic" }
+            Anchor { id: "ordinary", to: "https://example.com", "Ordinary" }
+        }
+    }
+}
 
 #[component]
 fn NavLinkPage() -> Element {

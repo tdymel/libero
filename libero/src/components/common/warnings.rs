@@ -39,16 +39,31 @@ pub(crate) fn use_name_warning(named: bool, message: &'static str) {
     });
 }
 
-/// Whether a link target runs script. Browsers strip controls, tabs and newlines first,
-/// so `" Java\tScript:"` counts too.
-pub(crate) fn is_javascript_url(url: &str) -> bool {
-    let scheme: String = url
+/// The scheme of a link target that runs or embeds script. Browsers strip controls, tabs
+/// and newlines first, so `" Java\tScript:"` counts too.
+pub(crate) fn blocked_scheme(url: &str) -> Option<&'static str> {
+    const BLOCKED: [&str; 3] = ["javascript", "data", "vbscript"];
+    let head: String = url
         .trim_matches(|c: char| c <= ' ')
         .chars()
         .filter(|c| !matches!(c, '\t' | '\n' | '\r'))
         .take("javascript:".len())
-        .collect();
-    scheme.eq_ignore_ascii_case("javascript:")
+        .collect::<String>()
+        .to_ascii_lowercase();
+    let (scheme, _) = head.split_once(':')?;
+    BLOCKED.into_iter().find(|blocked| *blocked == scheme)
+}
+
+/// Whether `url` may become an `href`. A `javascript:`, `data:` or `vbscript:` URL may
+/// come from user data: it warns and the caller renders the link without an `href`.
+pub(crate) fn allowed_href(url: &str, owner: &str) -> bool {
+    let Some(scheme) = blocked_scheme(url) else {
+        return true;
+    };
+    warn(&format!(
+        "{owner}: a `{scheme}:` URL is not rendered as an href, as it would run script on click."
+    ));
+    false
 }
 
 #[cfg(test)]
@@ -84,21 +99,43 @@ mod tests {
     }
 
     #[test]
-    fn a_javascript_url_is_caught_however_it_is_spelled() {
-        assert!(is_javascript_url("javascript:alert(1)"));
-        assert!(is_javascript_url("JavaScript:alert(1)"));
-        assert!(is_javascript_url("  javascript:void(0)"));
-        assert!(is_javascript_url("\u{1}javascript:x"));
-        assert!(is_javascript_url("java\tscript:x"));
-        assert!(is_javascript_url("jav\nascript:x"));
+    fn a_blocked_scheme_is_caught_however_it_is_spelled() {
+        for (url, scheme) in [
+            ("javascript:alert(1)", "javascript"),
+            ("JavaScript:alert(1)", "javascript"),
+            ("  javascript:void(0)", "javascript"),
+            ("\u{1}javascript:x", "javascript"),
+            ("java\tscript:x", "javascript"),
+            ("jav\nascript:x", "javascript"),
+            ("jav\rascript:x", "javascript"),
+            ("DATA:text/html,<b>", "data"),
+            (" \tda\nta:text/html;base64,AAAA", "data"),
+            ("VbScript:msgbox(1)", "vbscript"),
+            ("vb\tscript:x", "vbscript"),
+        ] {
+            assert_eq!(blocked_scheme(url), Some(scheme), "{url:?}");
+        }
     }
 
     #[test]
-    fn an_ordinary_url_is_not_a_javascript_url() {
-        assert!(!is_javascript_url(""));
-        assert!(!is_javascript_url("/javascript:guide"));
-        assert!(!is_javascript_url("https://example.com/?q=javascript:"));
-        assert!(!is_javascript_url("javascript"));
-        assert!(!is_javascript_url("#section"));
+    fn an_ordinary_url_is_not_blocked() {
+        for url in [
+            "",
+            "/javascript:guide",
+            "/data:x",
+            "https://example.com/?q=javascript:",
+            "javascript",
+            "data",
+            "#section",
+            "mailto:a@b.c",
+            "tel:+4930",
+            "java script:x",
+            "java\u{1}script:x",
+            "database:x",
+            "metadata:x",
+            "x:javascript:y",
+        ] {
+            assert_eq!(blocked_scheme(url), None, "{url:?}");
+        }
     }
 }

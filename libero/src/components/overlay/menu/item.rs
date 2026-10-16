@@ -11,14 +11,13 @@ use super::{
 };
 use crate::{
     components::{
-        common::{Glyph, Part, has_shortcut_modifier, is_javascript_url},
+        common::{Glyph, Part, allowed_href, has_shortcut_modifier},
         navigation::NewTabHint,
         typography::Kbd,
     },
     context::IconSlot,
     hooks::{ElementHandle, Typeahead, current_localization, listener},
     platform::logical_key,
-    utils::warn,
 };
 
 /// What a row's handlers read when they run, rewritten on each level render, so a
@@ -86,16 +85,11 @@ pub(super) fn MenuRow(props: MenuRowProps) -> Element {
     let description_id = format!("{item_id}-description");
     let opens = (has_submenu && !disabled).then_some(index);
 
-    let href = item.href_url().map(str::to_owned);
-    if let Some(href) = &href
-        && is_javascript_url(href)
-    {
-        warn(&format!(
-            "MenuItem \"{}\": a `javascript:` href runs script on click. If it comes from user \
-             data, check the scheme before passing it.",
-            item.label
-        ));
-    }
+    // A blocked scheme renders the row as an inert button, not a link.
+    let href = item
+        .href_url()
+        .filter(|url| allowed_href(url, &format!("MenuItem \"{}\"", item.label)))
+        .map(str::to_owned);
     let is_link = href.is_some();
     let hint = is_link && item.new_tab_hint;
     // The level's state is its scope's, and a portaled row is no descendant of it.

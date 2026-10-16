@@ -274,6 +274,54 @@ fn a_spread_aria_label_names_the_burger() {
     });
 }
 
+/// Todo 3620: a `javascript:`, `data:` or `vbscript:` target renders no `href`, so a
+/// click runs nothing, and the library logs one warning for it.
+#[test]
+fn a_script_link_renders_inert() {
+    block_on(async {
+        let fixture = Fixture::open("/nav-link/blocked", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let state = "JSON.stringify(['javascript', 'spaced', 'data', 'vbscript', 'ordinary'] \
+            .map(id => { const a = document.getElementById(id); return [a.tagName, a.hasAttribute('href')]; }))";
+
+        wait::for_js_true(
+            page,
+            &format!(
+                "{state} === '[[\"A\",false],[\"A\",false],[\"A\",false],[\"A\",false],[\"A\",true]]'"
+            ),
+            "only the ordinary link to keep its href",
+        )
+        .await
+        .unwrap();
+
+        for id in ["javascript", "spaced", "data", "vbscript"] {
+            e2e::passes::pointer::click(page, &format!("#{id}"))
+                .await
+                .unwrap();
+        }
+        e2e::clock::settle(page).await.unwrap();
+        wait::for_js_true(
+            page,
+            "window.ranScript === undefined && location.pathname === '/nav-link/blocked'",
+            "no script to run and the page to stay",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.settle().await.unwrap();
+        let logged = fixture.console.drain().join("\n");
+        for scheme in ["javascript", "data", "vbscript"] {
+            assert!(
+                logged.contains(&format!("a `{scheme}:` URL is not rendered as an href")),
+                "no warning for {scheme}: {logged}"
+            );
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 579: a `_blank` Anchor draws its icon beside the text and says so in
 /// its name.
 #[test]

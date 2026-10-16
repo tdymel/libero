@@ -10,7 +10,7 @@ use crate::{
     components::{
         accessibility::VisuallyHidden,
         buttons::{ActionIcon, Button, TooltipOpenDelay},
-        common::{Glyph, HtmlTag, Input, Part, Parts, parts_enum},
+        common::{Glyph, HtmlTag, Input, Part, Parts, allowed_href, parts_enum},
         form::{HoverPreview, Slider, SliderChangeEvent, SliderSegment, SliderTrack},
         layout::{paper_sx, use_box},
         overlay::{Menu, MenuItem, Shortcut, ShortcutHelp, use_menu},
@@ -749,7 +749,10 @@ pub(super) fn MediaFallback(src: String, children: Element) -> Element {
                 {children}
             } else {
                 p { {labels.unsupported} }
-                a { href: src, {labels.download} }
+                a {
+                    href: allowed_href(&src, "Media `src`").then_some(src),
+                    {labels.download}
+                }
             }
         }
     }

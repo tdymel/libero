@@ -27,7 +27,7 @@ pub fn AnchorPage() -> Element {
                 prop("size", "Size").default(theme.anchor.size.as_str()).doc("Text size."),
                 prop("to", "NavigationTarget")
                     .default("required")
-                    .doc("A path, a URL or a typed route (`Route::Foo {}`). With a router mounted and `target` unset, an internal target navigates without a page reload; with `\"_blank\"` it opens a new tab with a full page load. A `javascript:` URL runs script on click, so check the scheme of any URL from user data."),
+                    .doc("A path, a URL or a typed route (`Route::Foo {}`). With a router mounted and `target` unset, an internal target navigates without a page reload; with `\"_blank\"` it opens a new tab with a full page load. A `javascript:`, `data:` or `vbscript:` URL is blocked, in every link `to` and in `MenuItem::href`: the element renders without an `href`, so a click does nothing, and a warning is logged."),
                 prop("target", "String").doc("The link's `target` attribute. `\"_blank\"` adds a hidden \"(opens in a new tab)\"."),
                 prop("new_tab_hint", "bool")
                     .default("true")

@@ -125,7 +125,8 @@ impl MenuItem {
     /// Opens `url` in a new tab: the item is an `<a>` with `role="menuitem"`, so
     /// middle-click and the context menu work. As on `Anchor`, the label ends in a
     /// hidden "(opens in a new tab)", and in an icon with [`new_tab_icon`](Self::new_tab_icon). Replaces an
-    /// [`onselect`](Self::onselect) or [`submenu`](Self::submenu). A disabled link has no `href`.
+    /// [`onselect`](Self::onselect) or [`submenu`](Self::submenu). A disabled link has no `href`,
+    /// nor has one to a `javascript:`, `data:` or `vbscript:` URL: that row is a plain button and logs a warning.
     ///
     /// ```no_run
     /// # use libero::components::MenuItem;
