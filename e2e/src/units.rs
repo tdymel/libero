@@ -211,7 +211,6 @@ const EXTRA_FIXTURES: &[(&str, &[&str])] = &[
         ],
     ),
     ("transition", &["collapse", "modal", "notifications"]),
-    ("tree", &["chip"]),
     ("video", &["audio"]),
 ];
 
