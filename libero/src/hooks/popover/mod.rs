@@ -15,7 +15,7 @@ use std::{cell::Cell, rc::Rc};
 use crate::{
     hooks::{
         ElementHandle,
-        dismiss::{DismissHandle, DismissOptions, use_dismiss},
+        dismiss::{DismissHandle, DismissOptions, PressMarker, use_dismiss},
         element::use_element,
         portal::{PortalSlot, use_portal_slot},
         use_subscription_slot,
@@ -153,7 +153,8 @@ impl PopoverHandle {
     /// Spread on the trigger: the press-outside check, and Escape where the
     /// document cannot be listened to, while open with `dismiss` on. On a
     /// WebView, also the link that lets [`Hotkey::within`](crate::hooks::Hotkey::within)
-    /// count focus in the box as inside the trigger's scope.
+    /// count focus in the box as inside the trigger's scope, and the mark that keeps
+    /// the box open when focus moves onto the trigger.
     pub fn anchor_events(&self) -> Vec<Attribute> {
         let mut events = self.anchor.attributes();
         if let Some(dismiss) = self.dismiss.filter(|dismiss| dismiss.active) {
@@ -210,6 +211,17 @@ impl PopoverHandle {
 /// # }
 /// ```
 pub fn use_popover(anchor: ElementHandle, open: bool, options: PopoverOptions) -> PopoverHandle {
+    use_marked_popover(anchor, open, options, None)
+}
+
+/// [`use_popover`] with the press marker of a trigger rendered outside its scope: the
+/// trigger spreads `marker.attribute()` while open (a menu's button opening a filter).
+pub(crate) fn use_marked_popover(
+    anchor: ElementHandle,
+    open: bool,
+    options: PopoverOptions,
+    marker: Option<PressMarker>,
+) -> PopoverHandle {
     let mut popover = use_popover_on(anchor, use_element(), open, options);
 
     let onclose = use_hook(|| CopyValue::new(None::<Box<dyn FnMut()>>));
@@ -229,6 +241,7 @@ pub fn use_popover(anchor: ElementHandle, open: bool, options: PopoverOptions) -
         DismissOptions {
             escape: options.dismiss,
             outside: options.dismiss,
+            marker,
             ..Default::default()
         },
     );

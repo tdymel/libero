@@ -310,7 +310,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_detail::pinned_toggles_push_the_checkboxes_past_them` | desktop | 3217: one web run guards the cascade |
 | `table_detail::the_keyboard_opens_a_detail_and_tabs_into_it` | android | 958: element identity on the WebView |
 | `table_filter::a_select_filter_narrows_a_table` | android | 958: element identity on the WebView |
-| `table_filter::a_select_filter_narrows_a_table` | desktop | 958: a WebView cannot tell where focus landed, so a script's focus move closes no popover |
 | `table_filter::a_select_filter_narrows_a_table` | ios | 958: element identity on the WebView |
 | `table_grid::a_custom_editor_clears_the_error_by_changed` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::a_second_tap_opens_the_editor` | desktop | no touch input in the desktop driver |

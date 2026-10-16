@@ -18,8 +18,8 @@ use crate::{
     },
     context::IconSlot,
     hooks::{
-        Align, ElementHandle, POPOVER_AVAILABLE_HEIGHT, PopoverOptions, Side, id_selector,
-        use_debounced_callback, use_id, use_popover, use_theme,
+        Align, ElementHandle, POPOVER_AVAILABLE_HEIGHT, PopoverOptions, PressMarker, Side,
+        id_selector, use_debounced_callback, use_id, use_marked_popover, use_theme,
     },
     localization::TableLabels,
     platform::{
@@ -544,19 +544,22 @@ pub(super) fn FilterPopover(
     /// The button that opened it, which takes the focus back on close.
     opener: Signal<ElementHandle>,
     open: Signal<bool>,
+    /// Spread on the menu button while open: focus moved there stays inside (3591).
+    marker: PressMarker,
 ) -> Element {
     let theme = use_theme();
     let mut open = open;
     let box_id = use_id();
     let editor = use_filter_editor(&target);
     let mut draft = editor.draft;
-    let popover = use_popover(
+    let popover = use_marked_popover(
         anchor,
         open(),
         PopoverOptions::new(theme.popover.gap, theme.popover.padding)
             .side(Side::Bottom)
             .align(Align::End)
             .dismiss(true),
+        Some(marker),
     );
     let FilterTarget {
         column,

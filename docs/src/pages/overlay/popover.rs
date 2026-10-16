@@ -254,7 +254,7 @@ pub fn PopoverPage() -> Element {
                     prop("on_dismiss(f)", "impl FnMut()")
                         .doc("What Escape and a press outside call, with `dismiss` on. Call it on every render."),
                     prop("anchor_events()", "Vec<Attribute>")
-                        .doc("Spread on the trigger: `dismiss`, and on a WebView the link `Hotkey::within` follows into the box."),
+                        .doc("Spread on the trigger: `dismiss`, and on a WebView the link `Hotkey::within` follows into the box. Without it, focus moved onto the trigger closes the box on a WebView."),
                     prop("floating_events()", "Vec<Attribute>")
                         .doc("Spread on the box, as `anchor_events()` on the trigger; the WebView link needs both."),
                 ]).without_base_props(),

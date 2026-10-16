@@ -23,7 +23,7 @@ use crate::{
         overlay::{Menu, MenuEntry, MenuItem, MenuPart, use_menu},
     },
     context::IconSlot,
-    hooks::{Align, ElementHandle},
+    hooks::{Align, ElementHandle, use_press_marker},
     localization::TableLabels,
     platform::{ElementApi, next_observe_tag, observes_by_tag},
     theme::Size,
@@ -128,6 +128,7 @@ pub(super) fn ColumnMenu(
     let menu = use_menu();
     let trigger = focus.trigger(index);
     let mut filter_open = use_signal(|| false);
+    let filter_marker = use_press_marker();
     let filtered_button = use_hook(ElementHandle::new);
     let mut opener = use_signal(move || trigger);
     let column = &columns[index];
@@ -351,6 +352,11 @@ pub(super) fn ColumnMenu(
         filter_of(&target.slice.read(), &target.column)
             .is_some_and(|item| CellTest::new(item, target.kind).is_some())
     });
+    let marked: Vec<Attribute> = filter_marker
+        .attribute()
+        .filter(|_| filter_open())
+        .into_iter()
+        .collect();
     rsx! {
         if filtered {
             FilteredButton {
@@ -374,11 +380,18 @@ pub(super) fn ColumnMenu(
                 onmounted: trigger.mount(),
                 ..attributes,
                 ..trigger.attributes(),
+                ..marked,
                 Glyph { slot: IconSlot::More, icon: lucide::ellipsis_vertical::outlined }
             }
         }
         if let Some(target) = filter.filter(|_| panel.is_none()) {
-            FilterPopover { target, anchor: trigger, opener, open: filter_open }
+            FilterPopover {
+                target,
+                anchor: trigger,
+                opener,
+                open: filter_open,
+                marker: filter_marker,
+            }
         }
     }
 }
