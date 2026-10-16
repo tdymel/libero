@@ -149,6 +149,11 @@ jobs:
             macOS) export TMPDIR="$RUNNER_TEMP" ;;
             Windows) export TMP="$RUNNER_TEMP" TEMP="$RUNNER_TEMP" ;;
           esac
+          # Memory and load every 30 s on macOS (3444: Chrome stalls on a 7 GB runner).
+          if [ "$RUNNER_OS" = macOS ]; then
+            (while sleep 30; do date -u +%T; sysctl -n vm.loadavg vm.swapusage; memory_pressure -Q | tail -1
+              top -l 1 -n 6 -o mem -stats pid,command,mem,cpu | tail -7; done) > "$logs/sampler.log" 2>&1 &
+          fi
           case "$TIER" in
             unit)
               # As platforms.yml's unit legs: libero, then the e2e runner's own tests.
