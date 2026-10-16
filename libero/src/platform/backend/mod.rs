@@ -680,6 +680,14 @@ pub(crate) fn keyboard() -> Option<&'static dyn KeyboardApi> {
     return webview::keyboard();
 }
 
+/// Only a WebView - see [`claim_escape`](crate::platform::claim_escape).
+pub(crate) fn claim_escape(open: bool) {
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    webview::claim_escape(open);
+    #[cfg(any(target_arch = "wasm32", feature = "native"))]
+    let _ = open;
+}
+
 /// Only Blitz moves focus without a focus event - see
 /// [`silent_focus`](crate::platform::silent_focus).
 pub(crate) fn silent_focus() -> Option<&'static dyn SilentFocusApi> {

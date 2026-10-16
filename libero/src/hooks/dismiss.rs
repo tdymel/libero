@@ -20,8 +20,8 @@ use crate::{
         use_focus_within, use_subscription_slot,
     },
     platform::{
-        ElementApi, KeySubscription, PRESS_MARKER_ATTR, PlatformError, PressSubscription, document,
-        key_taken, keyboard, next_task, press,
+        ElementApi, KeySubscription, PRESS_MARKER_ATTR, PlatformError, PressSubscription,
+        claim_escape, document, key_taken, keyboard, next_task, press,
     },
     utils::bump,
 };
@@ -101,10 +101,14 @@ impl DismissLayer {
     #[must_use = "the layer is popped when the guard is dropped"]
     pub(crate) fn push(&self) -> LayerGuard {
         let mut open = self.stack.open;
-        {
+        let first = {
             let mut layers = open.write();
             layers.retain(|id| *id != self.id);
             layers.push(self.id);
+            layers.len() == 1
+        };
+        if first {
+            claim_escape(true);
         }
         LayerGuard {
             id: self.id,
@@ -168,8 +172,16 @@ impl Drop for LayerGuard {
     /// signal, since it also runs in the dom's teardown.
     fn drop(&mut self) {
         let mut open = self.stack.open;
-        if let Ok(mut layers) = open.try_write() {
-            layers.retain(|id| *id != self.id);
+        let last = match open.try_write() {
+            Ok(mut layers) => {
+                let before = layers.len();
+                layers.retain(|id| *id != self.id);
+                before > 0 && layers.is_empty()
+            }
+            Err(_) => false,
+        };
+        if last {
+            claim_escape(false);
         }
     }
 }

@@ -3,7 +3,7 @@
 
 use anyhow::{Result, ensure};
 use e2e::browser::block_on;
-use e2e::driver::{Driver, Platform, eventually, eventually_focused};
+use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::{keyboard, pointer};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, clock, js, wait};
@@ -98,16 +98,7 @@ async fn escape_under_the_pointer<D: Driver>(d: &mut D, _route: &str) -> Result<
     d.focus("#before").await?;
     d.press(keyboard::ESCAPE).await?;
     is_open(d, false, "Escape").await?;
-    if d.platform() == Platform::Android {
-        // The FP4's WebView blurs the focused element on an unprevented Escape, tooltip or
-        // not (2218): focus may drop to the body, never onto another element.
-        let kept: bool = serde_json::from_value(
-            d.evaluate("[document.body, document.querySelector('#before')].includes(document.activeElement)")
-                .await?,
-        )?;
-        ensure!(kept, "Escape moved focus to {}", d.focus_owner().await?);
-        return Ok(());
-    }
+    // The FP4's WebView blurs on an unprevented Escape (2218): the open tooltip prevents it (3356).
     eventually_focused(d, "#before", "Escape").await
 }
 

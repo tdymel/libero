@@ -82,6 +82,12 @@ pub(crate) fn key_taken(event: &Event<KeyboardData>) -> bool {
     !event.default_action_enabled() || backend::key_taken(event)
 }
 
+/// While `open`, a WebView prevents every Escape from the first press, as the
+/// open layer takes it: Android blurs focus on one left unprevented (3356).
+pub(crate) fn claim_escape(open: bool) {
+    backend::claim_escape(open);
+}
+
 /// Whether this press landed in text entry. A root key handler acting on arrows,
 /// Home or End asks this first, so a nested field keeps its caret.
 pub(crate) fn typing_target(event: &Event<KeyboardData>) -> bool {

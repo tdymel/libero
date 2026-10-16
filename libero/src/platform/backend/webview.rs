@@ -2220,6 +2220,26 @@ const ON_KEY: &str = "const [skipTyping, clicked, seeded, observe, owner] = data
     };
     window.addEventListener('keydown', onKey);";
 
+/// The open layer's Escape, prevented from the first press: a subscription's
+/// answer comes too late for it (`ON_KEY`). Composition and repeats stay unclaimed.
+const CLAIM_ESCAPE: &str = "if (data) {
+        window.__liberoEscape ??= (event) => {
+            if (event.key !== 'Escape' || event.repeat || event.isComposing) return;
+            event.preventDefault();
+            event.liberoTaken = true;
+        };
+        addEventListener('keydown', window.__liberoEscape);
+    } else if (window.__liberoEscape) {
+        removeEventListener('keydown', window.__liberoEscape);
+        delete window.__liberoEscape;
+    }";
+
+pub(super) fn claim_escape(open: bool) {
+    if runs_scripts() {
+        eval_with(json!(open), CLAIM_ESCAPE);
+    }
+}
+
 impl WebViewKeyboard {
     fn listen(
         &self,
@@ -2870,6 +2890,64 @@ mod tests {
             self.owners.borrow_mut().push(owner);
             Eval::new(answer)
         }
+    }
+
+    /// A page that keeps every script it is handed.
+    #[derive(Default)]
+    struct ScriptLog {
+        scripts: RefCell<Vec<String>>,
+        owners: RefCell<Vec<Owner<UnsyncStorage>>>,
+    }
+
+    impl Document for ScriptLog {
+        fn eval(&self, script: String) -> Eval {
+            self.scripts.borrow_mut().push(script);
+            let owner = UnsyncStorage::owner();
+            let answer = owner.insert(Box::new(Answer(None)) as Box<dyn Evaluator>);
+            self.owners.borrow_mut().push(owner);
+            Eval::new(answer)
+        }
+    }
+
+    /// The Escape listener goes in with the first open layer and out with the last (3356).
+    #[test]
+    fn the_escape_claim_spans_the_first_layer_to_the_last() {
+        #[component]
+        fn Layer() -> Element {
+            let layer = crate::hooks::use_dismiss_layer();
+            use_hook(move || Rc::new(layer.push()));
+            rsx! {}
+        }
+        fn layers() -> Element {
+            let open = use_root_context(|| Signal::new(0usize));
+            rsx! {
+                for index in 0..open() {
+                    Layer { key: "{index}" }
+                }
+            }
+        }
+        let log = Rc::new(ScriptLog::default());
+        let mut dom = VirtualDom::new(layers).with_root_context(log.clone() as Rc<dyn Document>);
+        dom.rebuild_in_place();
+        let claims = || {
+            (log.scripts.borrow().iter())
+                .filter(|script| script.contains(CLAIM_ESCAPE))
+                .map(|script| script.contains("const data = true;"))
+                .collect::<Vec<_>>()
+        };
+        let open = |dom: &mut VirtualDom, count: usize| {
+            dom.in_scope(ScopeId::ROOT, || {
+                consume_context::<Signal<usize>>().set(count)
+            });
+            settle(dom);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        };
+        open(&mut dom, 2);
+        assert_eq!(claims(), [true], "only the first layer claims");
+        open(&mut dom, 1);
+        assert_eq!(claims(), [true], "a layer is still open");
+        open(&mut dom, 0);
+        assert_eq!(claims(), [true, false], "the last layer releases");
     }
 
     fn page_dom(dark: bool) -> VirtualDom {
