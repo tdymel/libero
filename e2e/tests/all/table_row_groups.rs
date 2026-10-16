@@ -253,7 +253,7 @@ e2e::scenario!(
     a_windowed_grouped_table_renders_the_rows_in_view,
     "/table-row-groups/windowed",
     windowed_groups,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: End reaches the page, but the windowed table does not take it")
 );
 
 /// 3303: a group closed above the focused row leaves the row where it was.

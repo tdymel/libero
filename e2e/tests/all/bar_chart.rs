@@ -383,7 +383,7 @@ e2e::scenario!(
     "/bar-chart",
     clicks,
     native: skip("a click on a chart mark keeps the vdom busy past 200 polls on Blitz"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the tap reaches the chart layer as a click, but no mark's click is reported")
 );
 
 /// A legend button hides its series' bars; the last shown one stays.
@@ -476,8 +476,7 @@ e2e::scenario!(
     a_pointer_on_a_line_s_point_picks_it,
     "/bar-chart/line",
     line_point,
-    native: skip("a click on a line's point among bars picks nothing on Blitz"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    native: skip("a click on a line's point among bars picks nothing on Blitz")
 );
 
 const PLUS: keyboard::Key = keyboard::Key {
@@ -515,6 +514,5 @@ async fn zooms_down<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     lying_bars_zoom_and_brush_down_their_side,
     "/bar-chart/zoom",
-    zooms_down,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    zooms_down
 );

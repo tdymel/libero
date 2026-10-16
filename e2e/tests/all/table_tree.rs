@@ -255,8 +255,7 @@ async fn tree_selection<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_tree_box_selects_its_descendants_and_mixes_its_ancestors,
     "/table-tree-select",
-    tree_selection,
-    ios: skip("3416: flaky: a tap on a tree box sometimes never reaches the page, three times over")
+    tree_selection
 );
 
 /// A row with `row_has_children` opens before its children load, then shows them.

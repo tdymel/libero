@@ -307,8 +307,7 @@ e2e::scenario!(
     a_sort_follows_the_apps_language,
     "/table-grid/collation",
     sorts_by_language,
-    native: skip("3386: reads the page language by script, Blitz has none and no Intl.Collator"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    native: skip("3386: reads the page language by script, Blitz has none and no Intl.Collator")
 );
 
 const EDITOR: &str = "[data-cell-editor] input";
@@ -415,7 +414,7 @@ e2e::scenario!(
     "/table-grid/editable",
     second_tap,
     desktop: skip("no touch input in the desktop driver"),
-    ios: skip("3416: focus stays on the body after a Tab or a tap")
+    ios: skip("3416: the first tap's touch end reaches the page 2.4 s late, so WebKit raises no click on the cell")
 );
 
 /// The editor opens with its text selected, so typing replaces it.

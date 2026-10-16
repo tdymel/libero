@@ -118,5 +118,5 @@ e2e::scenario!(
     "/heatmap-chart",
     clicks,
     native: skip("a click on a chart mark keeps the vdom busy past 200 polls on Blitz"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("3416: the tap reaches the chart layer as a click, but no mark's click is reported")
 );

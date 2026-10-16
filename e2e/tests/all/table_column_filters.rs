@@ -314,7 +314,7 @@ e2e::scenario!(
     a_date_filter_narrows_the_rows,
     android: skip("Chromium's typed date segments only"),
     windows: skip("3422: Shift+Tab never leaves the date input on WebView2"),
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
+    ios: skip("the WebView's native date input opens iOS's date wheel, which typed keys do not fill")
 );
 
 /// 1400: the filter panel adds lines, joins them by the logic, and moves the
