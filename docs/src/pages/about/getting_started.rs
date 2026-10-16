@@ -45,34 +45,89 @@ const FEATURES: [(&str, &str); 8] = [
     ),
 ];
 
+const SKIPS: &str = include_str!("../../../../e2e/skips.md");
+
+/// The (platform, reason) rows of `e2e/skips.md`.
+fn skips() -> impl Iterator<Item = (&'static str, &'static str)> {
+    SKIPS.lines().filter_map(|line| {
+        let mut cells = line.strip_prefix("| `")?.splitn(3, " | ");
+        let (_test, platform, reason) = (cells.next()?, cells.next()?, cells.next()?);
+        Some((platform, reason.strip_suffix(" |")?))
+    })
+}
+
+/// The skips on `platform` whose reason `matches`.
+fn skipped(platform: &str, matches: impl Fn(&str) -> bool) -> usize {
+    skips()
+        .filter(|(on, reason)| *on == platform && matches(reason))
+        .count()
+}
+
+/// A platform's skips split into those it shares with its engine and its own.
+fn shared_and_own(engine: &str, own: &str, shared: &str, own_what: &str) -> String {
+    let (shared_count, own_count) = (skipped(engine, |_| true), skipped(own, |_| true));
+    match own_count {
+        0 => format!("{shared_count}: all shared with {shared}."),
+        _ => format!(
+            "{}: {shared_count} shared with {shared} and {own_count} only here{own_what}.",
+            shared_count + own_count
+        ),
+    }
+}
+
 /// What the Platforms workflow runs per platform and the scenarios it skips there (`e2e/skips.md`).
-const CI_PLATFORMS: [(&str, &str, &str); 5] = [
-    (
-        "iOS (WKWebView)",
-        "The simulator build, and the e2e suite in an iPhone simulator, with taps and keys injected through AXe.",
-        "145: 120 because the simulator's tap, drag or Tab did not drive the page, 20 because a touch screen has no hover or wheel.",
-    ),
-    (
-        "macOS desktop (WKWebView)",
-        "The desktop build, and the e2e suite in a WKWebView window, with the app sending its own NSEvents.",
-        "128: 86 shared with every desktop WebView (the Tab bridge, element identity, touch input) and 42 only here, mostly WebKit not focusing a clicked button and WKWebView misreading list clicks, a fixed bar and wheel scrolls.",
-    ),
-    (
-        "macOS native (Blitz)",
-        "The Blitz build, and the e2e suite on a windowless CPU renderer.",
-        "57: 55 shared with Blitz on Linux (charts, right-to-left scrolling, media), a panic on a windowed table and a doubled Backspace.",
-    ),
-    (
-        "Windows desktop (WebView2)",
-        "The desktop build, and the e2e suite in a WebView2 window, driven over its DevTools port.",
-        "92: 86 shared with every desktop WebView and 6 only here (End in a tall listbox, Shift+Tab out of a date input, an early drop's focus, a picture's asset path).",
-    ),
-    (
-        "Windows native (Blitz)",
-        "The Blitz build, and the e2e suite on a windowless CPU renderer.",
-        "56: 55 shared with Blitz on Linux and a panic on a windowed table.",
-    ),
-];
+fn ci_platforms() -> Vec<(&'static str, &'static str, String)> {
+    let ios = skipped("ios", |_| true);
+    let tap = skipped("ios", |reason| {
+        reason.starts_with("3416:") || reason.contains("simulator")
+    });
+    let touch = skipped("ios", |reason| reason.contains("a touch screen has no"));
+    let other = match ios - tap - touch {
+        0 => String::new(),
+        rest => format!(" and {rest} for other reasons"),
+    };
+    let desktop = "every desktop WebView (the Tab bridge, element identity, touch input)";
+    let blitz = "Blitz on Linux (charts, scripts, media, multi-touch)";
+    vec![
+        (
+            "iOS (WKWebView)",
+            "The simulator build, and the e2e suite in an iPhone simulator, with taps and keys injected through AXe.",
+            format!(
+                "{ios}: {tap} because the simulator's tap, drag or Tab did not drive the page, {touch} because a touch screen has no hover or wheel{other}."
+            ),
+        ),
+        (
+            "macOS desktop (WKWebView)",
+            "The desktop build, and the e2e suite in a WKWebView window, with the app sending its own NSEvents.",
+            shared_and_own(
+                "desktop",
+                "macos desktop",
+                desktop,
+                ", mostly WebKit not focusing a clicked button and WKWebView misreading list clicks, a fixed bar and wheel scrolls",
+            ),
+        ),
+        (
+            "macOS native (Blitz)",
+            "The Blitz build, and the e2e suite on a windowless CPU renderer.",
+            shared_and_own("native", "macos native", blitz, " (a doubled Backspace)"),
+        ),
+        (
+            "Windows desktop (WebView2)",
+            "The desktop build, and the e2e suite in a WebView2 window, driven over its DevTools port.",
+            shared_and_own(
+                "desktop",
+                "windows desktop",
+                desktop,
+                " (End in a tall listbox, Shift+Tab out of a date input, an early drop's focus, a picture's asset path)",
+            ),
+        ),
+        (
+            "Windows native (Blitz)",
+            "The Blitz build, and the e2e suite on a windowless CPU renderer.",
+            shared_and_own("native", "windows native", blitz, ""),
+        ),
+    ]
+}
 
 // snippet: ignore - a Cargo.toml fragment, not Rust
 const FEATURES_EXAMPLE: &str = r#"libero = { version = "0.2", default-features = false, features = [
@@ -180,6 +235,7 @@ enum Environment {
 #[component]
 pub fn GettingStarted() -> Element {
     let mut environment = use_signal(|| Environment::Web);
+    let android_only = skipped("all but android", |_| true);
 
     rsx! {
         DocPage {
@@ -227,15 +283,15 @@ pub fn GettingStarted() -> Element {
             DocSection {
                 title: "What CI checks",
                 Text {
-                    "The Platforms workflow builds the docs app for iOS, macOS and Windows and runs the e2e scenarios on each, informational and not part of the required check. A scenario that flakes is fixed or skipped. About 580 scenarios exist; the last column counts the ones left out on that platform, besides 21 that exist for Android only."
+                    "The Platforms workflow builds the docs app for iOS, macOS and Windows and runs the e2e scenarios on each, informational and not part of the required check. A scenario that flakes is fixed or skipped. About 580 scenarios exist; the last column counts the ones left out on that platform, besides {android_only} that exist for Android only."
                 }
                 Table {
                     aria_label: "What CI checks per platform",
-                    data: CI_PLATFORMS.to_vec(),
+                    data: ci_platforms(),
                     columns: vec![
-                        column("Platform").value(|row: &(&str, &str, &str)| row.0),
-                        column("CI runs").value(|row: &(&str, &str, &str)| row.1),
-                        column("Skipped").value(|row: &(&str, &str, &str)| row.2),
+                        column("Platform").value(|row: &(&str, &str, String)| row.0),
+                        column("CI runs").value(|row: &(&str, &str, String)| row.1),
+                        column("Skipped").value(|row: &(&str, &str, String)| row.2.clone()),
                     ],
                 }
                 Text {

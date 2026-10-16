@@ -150,7 +150,7 @@ fn controls() -> Vec<Control> {
         // Not a prop: which of three layouts the preview shows. Only the
         // masonry wall has knobs; the other two print their whole source.
         Control::toggle("layout", ["wall", "page", "responsive"])
-            .labels(["Masonry wall", "Named areas", "Responsive spans"])
+            .labels(["Masonry", "Areas", "Responsive"])
             .code(|_, _| vec![]),
         // On at first, as the layout is labelled a masonry wall; the prop's own default is off.
         Control::switch("masonry")

@@ -11,7 +11,7 @@ keyboard support and theming are handled, so you can focus on your app.
 - 100+ components and hooks, accessible and keyboard-ready
 - A typed `sx` builder for theme-aware styling, all in Rust
 - 20+ ready-made themes, or your own
-- One codebase for the web, the desktop and Android (iOS builds, untested)
+- One codebase for the web, the desktop and Android (iOS has run in a simulator only)
 
 ## A taste
 
