@@ -355,7 +355,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_scroll::a_capped_table_scrolls_from_its_header` | android | 958: element identity on the WebView |
 | `table_scroll::a_focused_row_control_is_not_hidden_by_the_sticky_header` | android | 958: element identity on the WebView |
 | `table_scroll::a_plain_capped_table_scrolls_as_a_named_region` | android | 958: element identity on the WebView |
-| `table_scroll::a_plain_capped_table_scrolls_as_a_named_region` | macos desktop | 3432: WKWebView: a wheel step sometimes never scrolls the capped rows |
 | `table_scroll::a_tabbed_header_scrolls_into_its_region` | android | 958: element identity on the WebView |
 | `table_scroll::a_tabbed_header_scrolls_into_its_region` | ios | 958: element identity on the WebView |
 | `table_scroll::a_windowed_table_renders_the_rows_in_view` | ios | 3416: End reaches the page, but the windowed table does not take it |
@@ -378,7 +377,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `theme_defaults::an_unset_hover_card_align_follows_the_theme` | ios | a touch screen has no hover |
 | `theme_defaults::an_unset_hover_card_side_follows_the_theme` | ios | a touch screen has no hover |
 | `toolbar::fields_join_the_arrow_order` | ios | 3432: WKWebView: ArrowLeft at a caret's start keeps the field |
-| `toolbar::fields_join_the_arrow_order` | macos desktop | 3432: WKWebView: ArrowLeft at a caret's start keeps the field |
 | `tooltip::a_long_press_on_a_link_trigger_opens_no_link_menu` | desktop | 1126: no touch input under Xvfb |
 | `tooltip::a_long_press_on_a_link_trigger_opens_no_link_menu` | native | 3237: the native driver reads no script |
 | `tooltip::a_long_press_opens_it_on_touch` | desktop | 1126: no touch input under Xvfb |
