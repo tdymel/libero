@@ -281,6 +281,35 @@ fn doc_tab_js(label: &str) -> String {
     )
 }
 
+/// Todo 3584: the Usage and Style API panels hold focusable controls, so the panel is no
+/// tab stop before them; the text-only Properties panel stays one.
+#[test]
+fn only_a_text_only_doc_panel_is_a_tab_stop() {
+    block_on(async {
+        let fixture = Fixture::open_until(
+            "/navigation/tree",
+            Viewport::Desktop,
+            Scheme::Light,
+            "#docs-main [role=tabpanel] > div > *",
+        )
+        .await
+        .unwrap();
+        let page = &fixture.page;
+        let panel_stop =
+            "document.querySelector('#docs-main [role=tabpanel]').getAttribute('tabindex')";
+        wait::for_js_true(page, &format!("{panel_stop} === null"), "no stop on Usage")
+            .await
+            .unwrap();
+        for (label, stop) in [("Properties", "'0'"), ("Style API", "null")] {
+            page.evaluate(doc_tab_js(label)).await.unwrap();
+            wait::for_js_true(page, &format!("{panel_stop} === {stop}"), label)
+                .await
+                .unwrap();
+        }
+        close(fixture).await;
+    });
+}
+
 /// Todo 2182: a visited doc tab's panel stays mounted, hidden and inert; a media page's Usage
 /// panel unmounts, so its player stops.
 #[test]

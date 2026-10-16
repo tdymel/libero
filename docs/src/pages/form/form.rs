@@ -229,8 +229,9 @@ pub fn FormPage() -> Element {
                     "\"Select an item in the list.\" and \"Select one of these options.\" for a box, a select or a group of options ("
                     Code { source: "Localization::form" }
                     "), unless a rule of its own says more; a disabled or read-only one never blocks. "
-                    "The error shows only once the form was submitted, so tabbing through an empty "
-                    "form paints nothing; after that it follows the value like any rule. "
+                    "That error shows only once the form was submitted, so tabbing through an empty "
+                    "required field paints nothing; after that it follows the value like any rule. "
+                    "A field's own rules show once it loses focus. "
                     "The summary keeps the problems of that submit. A line leaves once it is fixed, "
                     "and new ones wait for the next submit. A server's answer is a field's "
                     Code { source: "status" }

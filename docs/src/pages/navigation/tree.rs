@@ -216,7 +216,7 @@ pub fn TreePage() -> Element {
                 .key(["*"], "Opens every closed sibling of the row.")
                 .handles([
                     "Typing jumps to the next row whose `tree_label` matches.",
-                    "A disabled node is still reachable, but nothing activates, expands or collapses it.",
+                    "The arrow keys reach a disabled node, but typing skips it and nothing activates, expands or collapses it.",
                     "`TreeItem` takes `args.tabindex` for you.",
                 ])
                 .must([

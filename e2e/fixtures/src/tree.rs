@@ -38,6 +38,19 @@ pub const ROUTES: Routes = &[
             }
         },
     ),
+    // Todo 3583: an enabled and a disabled row, for the press-and-focus test.
+    (
+        "/tree/disabled-row",
+        || rsx! {
+            Tree {
+                aria_label: "Rows",
+                data: vec![TreeNode::new("on", "On"), TreeNode::new("off", "Off").disabled(true)],
+                render_node: move |args: TreeNodeRenderArgs<&'static str>| rsx! {
+                    TreeItem { id: "tree-{args.id}", tabindex: args.tabindex, "{args.data}" }
+                },
+            }
+        },
+    ),
     ("/tree/controlled", || rsx! { ControlledTreePage {} }),
     ("/tree/chevron", || rsx! { ChevronTreePage {} }),
     ("/tree/activate", || rsx! { ActivateTreePage {} }),

@@ -536,7 +536,7 @@ fn it_walks_like_a_tree() {
 #[test]
 fn a_disabled_row_shows_not_allowed_and_takes_no_focus() {
     block_on(async {
-        let fixture = Fixture::open("/chip/fieldset", Viewport::Desktop)
+        let fixture = Fixture::open("/tree/disabled-row", Viewport::Desktop)
             .await
             .unwrap();
         let row = "[data-tree-id=\"off\"]";

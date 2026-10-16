@@ -225,6 +225,8 @@ pub fn DocPage(
                     },
                     size: "lg",
                     full_width: true,
+                    // Only the text-only panels are a tab stop; the others hold focusable controls.
+                    panel_focusable: matches!(current, DocTab::Properties | DocTab::Accessibility),
                     sx: tabs_sx,
                     option_label: move |selected: DocTab| OptionLabel::rich(
                         match (&selected, extra_label) {
