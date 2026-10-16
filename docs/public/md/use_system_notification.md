@@ -117,7 +117,8 @@ Web: a secure context (HTTPS or localhost). Desktop WebView on Linux: with
 libero's `desktop` feature, the desktop's notification server over D-Bus, as
 for Blitz; without it WebKitGTK denies every request. macOS and Windows
 WebViews go through the page's `Notification`, which reads `Prompt` on CI's
-runner, showing one is untested; WebView2 counts dioxus's page as insecure and
+runner, and a request or a show there reads `Denied` because no prompt is
+answered, so a shown notification is untested; WebView2 counts dioxus's page as insecure and
 denies it until the app marks the page secure (Getting started, Desktop). iOS's
 WebView defines no `Notification`: `is_supported()` stays false and calls fail
 with `Unsupported`. Push is web only.

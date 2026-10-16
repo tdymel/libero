@@ -1,7 +1,7 @@
 //! `use_system_notification` and `use_push_subscription`: mounting asks nothing;
 //! on the web a granted show and close, a denial, and push registering its worker.
 //! Android's dialog, posted notification, tap (1348) and action (2126); push is web only.
-//! iOS is unsupported; macOS and Windows desktop ask on first use (`outcomes.log`).
+//! iOS is unsupported; macOS and Windows desktop read `Prompt` and deny a request.
 
 use anyhow::Result;
 use chromiumoxide::Page;
@@ -102,8 +102,8 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
     Ok(())
 }
 
-/// macOS's WKWebView and WebView2 both define `Notification` and ask on first use (CI
-/// outcomes, 2026-10-15, 3193).
+/// macOS's WKWebView and WebView2 both define `Notification`, read `Prompt` and deny a request
+/// (CI outcomes, 2026-10-15 and 16, 3193, 1239).
 async fn recorded<D: Driver>(d: &mut D) -> Result<()> {
     let shown = ["#supported", "#permission"];
     eventually_answered(
@@ -116,7 +116,13 @@ async fn recorded<D: Driver>(d: &mut D) -> Result<()> {
     .await?;
     record_outcome(d, "use_system_notification", &shown).await?;
     eventually_text(d, "#supported", "true", "mount").await?;
-    eventually_text(d, "#permission", "Prompt", "mount").await
+    eventually_text(d, "#permission", "Prompt", "mount").await?;
+    // Neither engine's WebView shows its prompt under test, so a request and a show are denied.
+    d.click("#request").await?;
+    eventually_text(d, "#permission", "Denied", "a request").await?;
+    eventually_text(d, "#error", "Some(Denied)", "a request").await?;
+    d.click("#show").await?;
+    eventually_text(d, "#error", "Some(Denied)", "a show").await
 }
 
 e2e::scenario!(
