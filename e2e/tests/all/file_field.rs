@@ -330,6 +330,41 @@ fn home_and_end_at_the_ends_leave_the_page_to_scroll() {
     });
 }
 
+/// Todo 3577: once files are held the Browse button still shows a decorative picker glyph.
+#[test]
+fn a_held_field_keeps_a_picker_cue() {
+    block_on(async {
+        let fixture = Fixture::open("/file-field/input", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, CONTROL).await.unwrap();
+        let cue = format!("document.querySelector({CONTROL:?} + ' > svg[aria-hidden=true]')");
+        let empty: bool = page
+            .evaluate(format!("{cue} === null"))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            empty,
+            "the empty field shows its placeholder, not the glyph"
+        );
+        let disk = OnDisk::new();
+        drop_files(page, CONTROL, disk.paths()).await;
+        wait::for_selector(page, REMOVE_BETA).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{cue} !== null && {cue}.getBoundingClientRect().width > 0"),
+            "the picker glyph in the Browse button",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("picker cue").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todos 529, 530: with a chip focused the required field is axe clean, a named group of
 /// the file list and Browse, which hears "Required" and the error.
 #[test]

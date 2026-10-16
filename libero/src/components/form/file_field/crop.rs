@@ -164,6 +164,7 @@ fn CropDialog(
                     Button { variant: "outlined", onclick: move |_| close.call(()), "{words.cancel}" }
                     Button {
                         disabled: unreadable || failed() || rect().is_none(),
+                        loading: cropping(),
                         onclick: apply,
                         "{words.apply}"
                     }

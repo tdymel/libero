@@ -3,15 +3,17 @@ use std::{cell::Cell, rc::Rc};
 use dioxus::dioxus_core::AttributeValue;
 use dioxus::html::{FileData, HasFileData};
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
         accessibility::VisuallyHidden,
-        common::{HtmlTag, Input, Part, States, ring_overlay},
+        common::{Glyph, HtmlTag, Input, Part, States, ring_overlay},
         feedback::Loader,
         form::{PreparedField, clear_button, use_field_frame},
         layout::{BoxStyle, use_box},
     },
+    context::IconSlot,
     hooks::{ElementHandle, LocalState, current_localization},
     platform::nested_interactive,
     theme::Size,
@@ -381,12 +383,16 @@ pub(super) fn file_dropzone_variant(
 }
 
 /// The `Input` variant's Browse button: the placeholder while nothing is
-/// picked, and the hidden text that says what the button does.
+/// picked, the upload glyph once files are held, and the hidden text that says
+/// what the button does.
 fn browse_content(placeholder: &str, empty: bool) -> Element {
     let browse = current_localization().file_field.browse;
     rsx! {
         if empty && !placeholder.is_empty() {
             span { "data-placeholder": "true", "{placeholder}" }
+        }
+        if !empty {
+            Glyph { slot: IconSlot::Upload, icon: lucide::upload::outlined }
         }
         VisuallyHidden { "{browse}" }
     }
