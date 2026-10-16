@@ -1,0 +1,6 @@
+# ted_ci.py probe; read by .github/workflows/ci-probe.yml.
+os=macos
+tier=web
+filter=shard:1:2
+dev=olaf-30
+env=E2E_CHROME_ARGS=disable-gpu,disable-gpu-compositing,disable-audio-output
