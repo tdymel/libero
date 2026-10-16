@@ -305,6 +305,27 @@ e2e::scenario!(
     ios: skip("a touch screen has no wheel")
 );
 
+async fn diag_wheel_samples<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    measured(d).await?;
+    d.wheel("#list-pane", 600.0).await?;
+    let mut series = Vec::new();
+    for _ in 0..60 {
+        d.frame().await?;
+        let top = d.scroll_pos(LIST).await?.1;
+        let height = d.scroll_height(LIST).await?;
+        let rows = row_range(d, LIST_ROWS).await?;
+        series.push(format!("{top}/{height}/{}-{}", rows.0, rows.1));
+    }
+    anyhow::bail!("wheel samples top/height/rows: {}", series.join(" "))
+}
+
+e2e::scenario!(
+    diag_wheel_scroll_area,
+    "/scroll-area",
+    diag_wheel_samples,
+    ios: skip("diag")
+);
+
 /// Samples each frame's leading padding of the list's content box while the list scrolls.
 #[cfg_attr(not(feature = "android"), allow(dead_code))]
 const SAMPLE_LEADING: &str = r#"(() => {
