@@ -72,7 +72,7 @@ captures a fixed float, which then scrolls and clips with it.
 | `placement` | `Placement` | `center-center` | The corner or edge to anchor to, such as `"top-start"`. |
 | `offset_x` | `ThemeAwareValue` | `0px` | Shift to the right, a spacing step or a CSS length. A negative step like `"-md"` shifts left. |
 | `offset_y` | `ThemeAwareValue` | `0px` | Shift down, a spacing step or a CSS length. A negative step shifts up. |
-| `z_index` | `ThemeAwareValue` | `200` | Stacking order. |
+| `z_index` | `ThemeAwareValue` | `1` | Stacking order. The default sits below a sticky `Header`; raise it to go over one. |
 | `fixed` | `bool` | `false` | Anchors to the viewport instead of the parent, so it stays put while the page scrolls. An ancestor with a `transform`, `filter`, `contain` or `container-type` still captures it. |
 | `children` | `Element` | required | The anchored content. |
 
@@ -111,7 +111,7 @@ title in the code: a screen reader reads "Spring sale, New", in that order.
 | `offset_y` | `&'static str` | Vertical offset when the prop is omitted. |
 | `placement` | `Placement` | Default `placement` when the prop is omitted. |
 
-`z_index` falls back to the theme's `z_index.float`.
+`z_index` falls back to `1`, below a `Header`. The theme's `z_index.float` is the focused skip link's layer.
 
 ## CSS variables
 
@@ -121,7 +121,8 @@ title in the code: a screen reader reads "Spring sale, New", in that order.
 | `--lsx-float-offset-y` | Vertical offset, from `offset_y` or the theme. |
 | `--lsx-float-translate-x` | `-50%` on a horizontally centered placement. |
 | `--lsx-float-translate-y` | `-50%` on a vertically centered placement. |
-| `--lsx-z-index-float` | Theme stacking order for floats. |
+| `--lsx-z-index-float` | Theme stacking order of the focused skip link. |
+| `--lsx-z-index-float-override` | A float's own stacking order, from `z_index`. |
 
 ## Data attributes
 

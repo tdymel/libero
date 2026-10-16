@@ -17,6 +17,9 @@ input_from_str!(Placement);
 const FLOAT_TRANSLATE_X_VAR: CssVar = CssVar::new("--lsx-float-translate-x");
 const FLOAT_TRANSLATE_Y_VAR: CssVar = CssVar::new("--lsx-float-translate-y");
 
+/// Below a sticky `Header`, so a badge on a scrolled card goes under it.
+const FLOAT_DEFAULT_Z_INDEX: i32 = 1;
+
 // The per-instance vars reset to `initial` so a nested Float does not inherit them.
 static FLOAT_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().position("absolute")
@@ -25,7 +28,7 @@ static FLOAT_BASE_SX: StaticSx = StaticSx::new(|| {
         .var(FLOAT_OFFSET_X.override_var(), "initial")
         .var(FLOAT_OFFSET_Y.override_var(), "initial")
         .var(Z_INDEX_FLOAT.override_var(), "initial")
-        .z_index(Z_INDEX_FLOAT.overridable())
+        .z_index(Z_INDEX_FLOAT.override_var().value_or(FLOAT_DEFAULT_Z_INDEX))
         .transform(format!(
             "translate(calc({} + {}), calc({} + {}))",
             FLOAT_TRANSLATE_X_VAR.value_or("0%"),
@@ -220,6 +223,11 @@ mod tests {
                 SizeCss::SPACING.value(Size::Md)
             )
         );
+    }
+
+    #[test]
+    fn the_default_layer_sits_below_a_sticky_header() {
+        const { assert!(FLOAT_DEFAULT_Z_INDEX < crate::theme::ZIndexDefaults::DEFAULT.header) };
     }
 
     #[test]

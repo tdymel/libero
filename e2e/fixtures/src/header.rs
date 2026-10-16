@@ -1,7 +1,10 @@
 //! `Header`: a sticky banner with a nav, above a page that scrolls under it.
 
 use dioxus::prelude::*;
-use libero::components::{Anchor, Button, Flex, Header, Paper, Text};
+use libero::{
+    components::{Anchor, Box, Button, Flex, Float, Header, Paper, Text},
+    sx::sx,
+};
 
 use crate::Routes;
 
@@ -10,7 +13,26 @@ pub const ROUTES: Routes = &[
     ("/header-static", || rsx! { StaticPage {} }),
     ("/header-glass", || rsx! { GlassPage {} }),
     ("/header-fixed", || rsx! { FixedPage {} }),
+    ("/header-float", || rsx! { FloatPage {} }),
 ];
+
+/// A badge `Float` on a card that scrolls up under the sticky banner (todo 3540).
+#[component]
+fn FloatPage() -> Element {
+    rsx! {
+        Header { id: "banner", "Banner" }
+        Flex { direction: "column", gap: "xl", max_width: "320px",
+            Text { "Filler that makes the page scroll." }
+            Box { id: "card", sx: sx().position("relative").height("160px"),
+                Float { id: "badge", placement: "top-center", "New" }
+                Text { "Card" }
+            }
+            for index in 0..24 {
+                Text { key: "{index}", "Filler {index}" }
+            }
+        }
+    }
+}
 
 /// A fixed `lg` banner that never sets `publish_height`.
 #[component]

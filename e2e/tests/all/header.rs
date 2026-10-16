@@ -216,6 +216,34 @@ fn scroll_padding_keeps_focus_clear_of_a_sticky_header() {
     });
 }
 
+/// Todo 3540: a `Float` badge on a card scrolled under the sticky banner goes behind it.
+#[test]
+fn a_float_scrolls_under_a_sticky_header() {
+    block_on(async {
+        let fixture = Fixture::open("/header-float", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#badge").await.unwrap();
+        page.evaluate(
+            "window.scrollBy(0, document.querySelector('#card').getBoundingClientRect().top - 10)",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const r = document.querySelector('#badge').getBoundingClientRect(); \
+             const hit = document.elementFromPoint(r.left + r.width / 2, 20); \
+             return r.top < 20 && r.bottom > 20 && !!hit && !!hit.closest('#banner'); })()",
+            "the banner painting over the scrolled badge",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("the float fixture").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 2412: a dark literal fill gets a white label and link, not the page's dark text.
 #[test]
 fn a_literal_fill_gets_a_readable_label() {

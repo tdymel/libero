@@ -73,7 +73,7 @@ fn Demo() -> Element {
 | `color` | `ThemeAwareValue` | none, a neutral background | A theme color fills the header with shade 6 and a readable text color. A literal CSS color is used as given, with black or white text, links and focus rings, whichever reads better on it. With `glass`, a translucent tint of it, as on `Paper`. Under a gradient, its first stop. |
 | `glass` | `bool` | `false` | Frosted glass, as on `Paper`: content scrolling under the bar shows through, blurred. A `color` tints it, as on `Paper`. Opaque when the user reduces transparency, in forced colours, and in native windows. |
 | `gradient` | `Gradient` | - | Fills the header with a gradient from `color`, as on `Paper`: `("info", 90)` or `Gradient::default().to("info").deg(90)`; `Gradient::default()` is the theme's. The text colour and focus rings are picked to read on both stops. With `glass`, the stops turn translucent. |
-| `z_index` | `ThemeAwareValue` | `100` | Stacking order. Keep it below `Z_INDEX_FLOAT` (200), where the focused skip link sits: above it the link hides under the header (WCAG 2.4.11). |
+| `z_index` | `ThemeAwareValue` | `100` | Stacking order. Keep it below `Z_INDEX_FLOAT` (200), where the focused skip link sits: above it the link hides under the header (WCAG 2.4.11). A `Float` sits below the header by default. |
 | `publish_height` | `bool` | `false` | Publishes the height as `--lsx-header-height` and `scroll-padding-top` on `:root`, so focus scrolls clear of a sticky banner. A `fixed` header always does. Set it on the page's own banner only. |
 | `children` | `Element` | required | Nav and actions. |
 

@@ -45,7 +45,7 @@ pub fn HeaderPage() -> Element {
                     .doc("Fills the header with a gradient from `color`, as on `Paper`: `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`; `Gradient::default()` is the theme's. The text colour and focus rings are picked to read on both stops. With `glass`, the stops turn translucent."),
                 prop("z_index", "ThemeAwareValue")
                     .default("100")
-                    .doc("Stacking order. Keep it below `Z_INDEX_FLOAT` (200), where the focused skip link sits: above it the link hides under the header (WCAG 2.4.11)."),
+                    .doc("Stacking order. Keep it below `Z_INDEX_FLOAT` (200), where the focused skip link sits: above it the link hides under the header (WCAG 2.4.11). A `Float` sits below the header by default."),
                 prop("children", "Element").doc("Nav and actions."),
             ])],
             accessibility: a11y()

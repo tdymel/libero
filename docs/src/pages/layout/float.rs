@@ -42,8 +42,8 @@ pub fn FloatPage() -> Element {
                     .default("false")
                     .doc("Anchors to the viewport instead of the parent, so it stays put while the page scrolls. An ancestor with a `transform`, `filter`, `contain` or `container-type` still captures it."),
                 prop("z_index", "ThemeAwareValue")
-                    .default(theme.z_index.float.to_string())
-                    .doc("Stacking order."),
+                    .default("1")
+                    .doc("Stacking order. The default sits below a sticky `Header`; raise it to go over one."),
                 prop("children", "Element").doc("The anchored content."),
             ])],
             accessibility: a11y()

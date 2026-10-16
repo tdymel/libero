@@ -15,6 +15,7 @@ pub const Z_INDEX_NOTIFICATION: CssVar = CssVar::new("--lsx-z-index-notification
 pub struct ZIndexDefaults {
     /// Keep below `float`, where the focused skip link sits.
     pub header: i32,
+    /// The focused skip link. `Float` has its own default below `header`.
     pub float: i32,
     /// The lowest floating window; each raised one adds `window_step`, capped below `overlay`.
     pub window: i32,
@@ -64,7 +65,10 @@ mod tests {
     #[test]
     fn the_scale_is_strictly_ordered() {
         let z = Theme::DEFAULT.z_index;
-        assert!(z.header < z.float, "a dropdown must clear the header");
+        assert!(
+            z.header < z.float,
+            "a focused skip link must clear the header"
+        );
         assert!(
             z.float < z.window,
             "a floating window must clear the dropdowns on the page"
