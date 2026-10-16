@@ -98,11 +98,16 @@ impl Cdp {
                 }
             };
             tokio::spawn(async move { while handler.next().await.is_some() {} });
+            browser.fetch_targets().await?;
+            crate::wait::until("the WebView's page", || async {
+                Ok(!browser.pages().await?.is_empty())
+            })
+            .await?;
             // A fresh WebView can swap its first target, whose session then is gone
-            // ("Session with given id not found", windows-desktop 38719520651): attach again.
+            // ("Session with given id not found", windows-desktop 38719520651): try again.
             let started = Instant::now();
             loop {
-                match Self::attach(&mut browser).await {
+                match Self::attach(&browser).await {
                     Ok(page) => {
                         return Ok(Self {
                             page,
@@ -119,8 +124,7 @@ impl Cdp {
     }
 
     /// The first of the WebView's pages that takes the setup of a foreground window.
-    async fn attach(browser: &mut Browser) -> Result<Page> {
-        browser.fetch_targets().await?;
+    async fn attach(browser: &Browser) -> Result<Page> {
         let mut last = anyhow::anyhow!("the WebView has no page yet");
         for page in browser.pages().await? {
             match Self::set_up(&page).await {
