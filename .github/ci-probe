@@ -1,0 +1,5 @@
+# ted_ci.py probe; read by .github/workflows/ci-probe.yml.
+os=macos
+tier=desktop
+filter=table_scroll::a_plain_capped_table_scrolls_as_a_named_region
+dev=olaf-56
