@@ -6,8 +6,11 @@
 name: Platforms
 
 # On by default since the repo is public (standard runners are free there, macOS and Windows too).
+# On main once CI has passed on the pushed commit, so CI's jobs never queue behind these (3439).
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
   pull_request:
   workflow_dispatch:
@@ -32,10 +35,13 @@ defaults:
 
 jobs:
   web:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: ./.github/actions/setup
         with:
           targets: wasm32-unknown-unknown
@@ -54,10 +60,13 @@ jobs:
 
   # Blitz. `--platform linux` because two features map to a renderer, see docs/native.just.
   native:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libdbus-1-dev
       - uses: ./.github/actions/setup
         with:
@@ -69,6 +78,7 @@ jobs:
 
   # Whether Blitz and libero/native compile off Linux at all; a `dx build` once they do.
   native-check:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     strategy:
       fail-fast: false
       matrix:
@@ -77,6 +87,8 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: ./.github/actions/setup
         with:
           cache-key: ${{ runner.os == 'Windows' && 'platforms-windows-native' || 'platforms-macos-desktop' }}
@@ -86,6 +98,7 @@ jobs:
   # ci.yml's `test` and libero's clippy on a Mac and Windows cfg, which nothing else runs; plus
   # the iOS cfg arms on the Mac. Expect first-run reds in the tests that read sources.
   unit:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     strategy:
       fail-fast: false
       matrix:
@@ -105,6 +118,8 @@ jobs:
           git config --global core.autocrlf false
           git config --global core.longpaths true
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: ./.github/actions/setup
         with:
           targets: ${{ matrix.targets }}
@@ -127,6 +142,7 @@ jobs:
 
   # wry on the system WebView: WebKitGTK, WebView2, WKWebView.
   desktop:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     strategy:
       fail-fast: false
       matrix:
@@ -135,6 +151,8 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libgtk-3-dev libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
       - uses: ./.github/actions/setup
@@ -148,10 +166,13 @@ jobs:
   # The e2e suites on macOS (2776), informational like every leg here. Blitz first: the harness
   # is windowless with a CPU rasteriser, so it needs no display or GPU.
   macos-native:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: macos-26
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       # What the hosted VM offers: the GUI session (`Aqua`) and its Metal device, if any.
       - run: |
           sw_vers
@@ -172,6 +193,7 @@ jobs:
 
   # The browser tier on macOS: the e2e runner, dx and pinned Chrome, as ci.yml's `e2e` job.
   macos-web:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     strategy:
       fail-fast: false
       matrix:
@@ -184,6 +206,8 @@ jobs:
       SHARDS: 2
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: ./.github/actions/setup
         with:
           targets: wasm32-unknown-unknown
@@ -217,11 +241,14 @@ jobs:
   # The desktop arm on WKWebView (2782): the fixture app sends its own WebView NSEvents, so
   # no Xvfb, no xdotool, no TCC grant.
   macos-desktop:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: macos-26
     # A cold build is ~16 min, the scenarios ~13 min (2862).
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: ./.github/actions/setup
         with:
           cache-key: platforms-macos-desktop
@@ -265,6 +292,8 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: ./.github/actions/setup
         with:
           cache-key: platforms-macos-probe
@@ -286,6 +315,7 @@ jobs:
   # The e2e suites on Windows (2781), informational. The runner ends process trees with
   # `taskkill` there; `shell: bash` is Git for Windows' bash.
   windows-native:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: windows-2025
     timeout-minutes: 45
     steps:
@@ -294,6 +324,8 @@ jobs:
           git config --global core.autocrlf false
           git config --global core.longpaths true
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: ./.github/actions/setup
         with:
           cache-key: platforms-windows-native
@@ -307,6 +339,7 @@ jobs:
 
   # The browser tier on Windows: the e2e runner, dx and pinned Chrome, as ci.yml's `e2e` job.
   windows-web:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     strategy:
       fail-fast: false
       matrix:
@@ -320,6 +353,8 @@ jobs:
           git config --global core.autocrlf false
           git config --global core.longpaths true
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: ./.github/actions/setup
         with:
           targets: wasm32-unknown-unknown
@@ -365,6 +400,7 @@ jobs:
   # The desktop arm on Windows (2783): the fixture app in WebView2, driven over its DevTools
   # port (`--remote-debugging-port`), so no input injection and no screen size are involved.
   windows-desktop:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: windows-2025
     timeout-minutes: 45
     steps:
@@ -372,6 +408,8 @@ jobs:
           git config --global core.autocrlf false
           git config --global core.longpaths true
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: ./.github/actions/setup
         with:
           cache-key: platforms-windows-desktop
@@ -408,10 +446,13 @@ jobs:
   # The desktop arm on WebKitGTK (2874), as on a seat: the runner starts one Xvfb display and
   # drives the window with `xdotool`.
   linux-desktop:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       # The `desktop` leg's build packages, libero's `dbus`, and the runner's display and input.
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libgtk-3-dev libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev fonts-dejavu-core xvfb xdotool
       - uses: ./.github/actions/setup
@@ -432,6 +473,7 @@ jobs:
           retention-days: 3
 
   android:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     env:
@@ -439,6 +481,8 @@ jobs:
       NDK_VERSION: 27.3.13750724
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -472,10 +516,13 @@ jobs:
 
   # Simulator build, unsigned. Launching it is 1091.
   ios:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: macos-26
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: ./.github/actions/setup
         with:
           targets: aarch64-apple-ios-sim
@@ -488,6 +535,7 @@ jobs:
   # The scenarios' `ios` arm in a simulator (2784), informational: the fixture app answers the
   # e2e bridge over loopback and AXe injects HID touches and keys. No phone, no signing.
   ios-e2e:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     strategy:
       fail-fast: false
       matrix:
@@ -499,6 +547,8 @@ jobs:
       SHARDS: 6
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: ./.github/actions/setup
         with:
           targets: aarch64-apple-ios-sim

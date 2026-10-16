@@ -232,6 +232,10 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `pin_field::the_rule_waits_for_focus_to_leave_the_cells` | desktop | 1564: a WebView cannot tell a move inside the field from a blur |
 | `pin_field::the_rule_waits_for_focus_to_leave_the_cells` | ios | 1564: a WebView cannot tell a move inside the field from a blur |
 | `pin_field::the_rule_waits_for_focus_to_leave_the_cells` | web | the_rule_waits_until_focus_leaves_the_cells checks it after two frames |
+| `planted::select_cancelling_a_ctrl_chord_fails_the_combobox_contract` | macos web | no chords are sent on macOS (3444) |
+| `planted::tabs_cancelling_a_meta_chord_fail_the_chord_check` | macos web | no chords are sent on macOS (3444) |
+| `planted::tabs_moving_a_task_after_a_ctrl_chord_fail_the_chord_check` | macos web | no chords are sent on macOS (3444) |
+| `planted::tabs_moving_on_a_ctrl_chord_fail_the_chord_check` | macos web | no chords are sent on macOS (3444) |
 | `platform_probe::the_platform_probe_records_each_engine` | native | Blitz runs no script |
 | `popover::a_field_dropdown_opened_inside_counts_as_inside` | android | 1425: no synchronous containment on the WebView |
 | `popover::a_field_dropdown_opened_inside_counts_as_inside` | desktop | 1425: no synchronous containment on the WebView |

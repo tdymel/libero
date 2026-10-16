@@ -18,6 +18,12 @@ inputs:
 runs:
   using: composite
   steps:
+    # Spotlight indexes the restored target dir and every Chrome profile write: mdworker and
+    # mds_stores took 1-2 of the 3 cores and starved the macOS web leg (3444).
+    - if: runner.os == 'macOS'
+      shell: bash
+      run: sudo mdutil -a -i off || true
+
     - uses: dtolnay/rust-toolchain@stable
       with:
         targets: ${{ inputs.targets }}

@@ -79,8 +79,8 @@ jobs:
     if: needs.plan.outputs.tier != 'none'
     name: ${{ needs.plan.outputs.os }} ${{ needs.plan.outputs.tier }} ${{ needs.plan.outputs.filter }}
     runs-on: ${{ needs.plan.outputs.runner }}
-    # An iOS shard of skipped scenarios took 66-92 min and once hit 90 (3458).
-    timeout-minutes: ${{ needs.plan.outputs.tier == 'ios' && (contains(needs.plan.outputs.env, 'E2E_IOS_IGNORED') && 150 || 90) || 60 }}
+    # An iOS shard of skipped scenarios took 66-92 min and once hit 90 (3458); a macOS web shard runs ~50 min after a ~10 min build (3444).
+    timeout-minutes: ${{ needs.plan.outputs.tier == 'ios' && (contains(needs.plan.outputs.env, 'E2E_IOS_IGNORED') && 150 || 90) || (needs.plan.outputs.os == 'macos' && 90 || 60) }}
     # The shared `ci/probe-<os>-<tier>` branches (3407): a dev's newer push cancels only their own probe.
     concurrency:
       group: ci-probe-${{ github.ref }}-${{ needs.plan.outputs.dev }}
@@ -150,14 +150,19 @@ jobs:
             macOS) export TMPDIR="$RUNNER_TEMP" ;;
             Windows) export TMP="$RUNNER_TEMP" TEMP="$RUNNER_TEMP" ;;
           esac
-          # Load, memory and the process table every 30 s on macOS (3444: Chrome stops creating pages).
+          # Every 30 s on macOS (3444): load, the busiest processes with Chrome's process type, and
+          # the newest ones with their parent, to see what spawns. No `top`: it hung under load.
           if [ "$RUNNER_OS" = macOS ]; then
-            sysctl kern.maxproc kern.maxprocperuid > "$logs/sampler.log"; ulimit -a >> "$logs/sampler.log"
-            (while sleep 30; do date -u +%T; sysctl -n vm.loadavg; memory_pressure -Q | tail -1
-              echo "procs $(ps -A | wc -l) zombies $(ps -A -o stat= | grep -c Z)"
-              ps -A -o comm= | sort | uniq -c | sort -rn | head -4
-              ps -A -o ppid=,stat= | awk '$2 ~ /Z/ { print $1 }' | sort | uniq -c | sort -rn | head -2 | while read -r n p; do echo "zombies of $p: $n $(ps -o comm= -p "$p")"; done
-              top -l 2 -n 4 -o cpu -stats pid,command,mem,cpu | tail -5; done) >> "$logs/sampler.log" 2>&1 &
+            sysctl hw.ncpu kern.maxproc > "$logs/sampler.log"
+            name='{ c = $0; sub(/^ *[^ ]+ +[^ ]+ +[^ ]+ +/, "", c); t = ""
+              if (match(c, /--(type|utility-sub-type)=[^ ]+/)) t = substr(c, RSTART, RLENGTH)
+              sub(/ --.*/, "", c); n = split(c, p, "/"); print $1, $2, $3, p[n], t }'
+            # `+e`: `head` closing a pipe failed the loop under the step's `-e -o pipefail`.
+            (set +e +o pipefail; while sleep 30; do date -u +%T; sysctl -n vm.loadavg; memory_pressure -Q | tail -1
+              echo "procs $(ps -A | wc -l)"
+              ps -A -o %cpu=,pid=,ppid=,command= | sort -rn | head -6 | awk "$name"
+              echo newest; ps -A -o pid=,ppid=,etime=,command= | sort -rn | head -12 | awk "$name"
+            done) >> "$logs/sampler.log" 2>&1 &
           fi
           case "$TIER" in
             unit)
