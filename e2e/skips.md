@@ -284,9 +284,8 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_column_filters::a_date_filter_narrows_a_table` | ios | the WebView's native date input opens iOS's date wheel, which typed keys do not fill |
 | `table_column_filters::a_date_filter_narrows_a_table` | windows desktop | 3422: Shift+Tab never leaves the date input on WebView2 |
 | `table_column_filters::tab_past_either_end_of_a_column_filter_closes_it` | ios | 3416: focus stays on the body after a Tab or a tap |
-| `table_column_filters::the_column_filters_narrow_a_table` | ios | 3416: iOS's hardware-keyboard auto-capitalization types the field's first letter upper case |
 | `table_column_filters::the_filter_panel_edits_every_filter` | android | 958: element identity on the WebView |
-| `table_column_filters::the_filter_panel_edits_every_filter` | ios | 3416: iOS's hardware-keyboard auto-capitalization types the field's first letter upper case |
+| `table_column_filters::the_filter_panel_edits_every_filter` | ios | 3416: the first tap after a script-focused line select goes unfelt, the repeat changes the select's option |
 | `table_detail::an_animated_detail_slides_open_and_shut` | android | 958: element identity on the WebView |
 | `table_detail::pinned_toggles_push_the_checkboxes_past_them` | android | 3217: one web run guards the cascade |
 | `table_detail::pinned_toggles_push_the_checkboxes_past_them` | desktop | 3217: one web run guards the cascade |

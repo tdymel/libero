@@ -56,9 +56,9 @@ pub(crate) const PICKER: &str = ":is(select, [role=combobox])";
 /// arrow opens its listbox on the current option and Enter picks.
 pub(crate) async fn pick_later<D: Driver>(d: &mut D, steps: usize) -> Result<()> {
     let macos_webview = d.platform() == Platform::Desktop && Host::current() == Host::Macos;
-    if d.platform() == Platform::Android || macos_webview {
+    if matches!(d.platform(), Platform::Android | Platform::Ios) || macos_webview {
         // Android's WebView sometimes moves focus on ArrowDown instead of stepping the select
-        // (3257); WKWebView opens the system menu (3432).
+        // (3257); WKWebView opens the system menu (3432, iOS too).
         d.evaluate(&format!(
             "(() => {{ const s = document.activeElement; \
              s.selectedIndex = Math.min(s.selectedIndex + {steps}, s.options.length - 1); \
