@@ -5,7 +5,7 @@
 //! fn autocomplete_meets_the_baseline() {
 //!     Suite::new("autocomplete", "/autocomplete")
 //!         .focusable("[role=combobox]")
-//!         .waive(contrast::TODO_297)
+//!         .waive(contrast::LINE_NUMBERS)
 //!         .state("open", &[Step::TabTo("[role=combobox]"), Step::Press(ARROW_DOWN)], "[role=listbox]")
 //!         .run();
 //! }

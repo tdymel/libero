@@ -360,21 +360,6 @@ fn ratio_of(node: &Node) -> Option<f64> {
     rest[..end].parse().ok()
 }
 
-/// Todo 297: `success` (4.04:1) and `warning` (3.27:1) fail as text; a decision to keep them.
-pub const TODO_297_SUCCESS: Waiver = Waiver {
-    rule: "color-contrast",
-    contains: "success",
-    floor: 4.04,
-    why: "todo 297 - `success` is 4.04:1 as text, kept",
-};
-pub const TODO_297_WARNING: Waiver = Waiver {
-    rule: "color-contrast",
-    contains: "warning",
-    floor: 3.27,
-    why: "todo 297 - `warning` is 3.27:1 as text, kept",
-};
-pub const TODO_297: &[Waiver] = &[TODO_297_SUCCESS, TODO_297_WARNING];
-
 /// Todo 899: a CodeBlock line number's approved floor is 4.27:1, under the 4.5:1 this pass wants.
 pub const LINE_NUMBERS: &[Waiver] = &[Waiver {
     rule: "color-contrast",
@@ -528,13 +513,28 @@ mod tests {
         assert_eq!(ratio_of(&measured.nodes[0]), Some(1.03));
     }
 
+    const WAIVERS: &[Waiver] = &[
+        Waiver {
+            rule: "color-contrast",
+            contains: "success",
+            floor: 4.04,
+            why: "success at 4.04:1",
+        },
+        Waiver {
+            rule: "color-contrast",
+            contains: "warning",
+            floor: 3.27,
+            why: "warning at 3.27:1",
+        },
+    ];
+
     #[test]
     fn a_waiver_holds_down_to_its_floor_and_no_further() {
         let mut fired = [false; 2];
         check_violations(
             vec![contrast("<b class=\"success\">", AXE)],
             "#root",
-            TODO_297,
+            WAIVERS,
             &mut fired,
         )
         .unwrap();
@@ -545,7 +545,7 @@ mod tests {
         let error = check_violations(
             vec![contrast("<b class=\"success\">", &lower)],
             "#root",
-            TODO_297,
+            WAIVERS,
             &mut fired,
         )
         .unwrap_err();

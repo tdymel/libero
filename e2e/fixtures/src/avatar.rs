@@ -8,8 +8,7 @@ use crate::Routes;
 
 pub const ROUTES: Routes = &[("/avatar", || rsx! { AvatarPage {} })];
 
-/// Not `warning` or `success`: their text roles fall short of 4.5:1 on white,
-/// a declined library-wide limit (`codebase/styling/color-roles`).
+/// Three chromatic colours keep the sweep short.
 const COLORS: [&str; 3] = ["primary", "secondary", "error"];
 
 #[component]

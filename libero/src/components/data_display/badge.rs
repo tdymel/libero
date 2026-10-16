@@ -4,8 +4,8 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, States, Variables, Variant, VariantVars, base_color, base_props,
-            contrast_color, fill_color, literal_contrast, text_color, variables, variant_chrome_sx,
-            variant_colors,
+            contrast_color, fill_color, label_color, literal_contrast, variables,
+            variant_chrome_sx, variant_colors,
         },
         layout::use_box,
     },
@@ -70,7 +70,7 @@ fn badge_variables(props: &BadgeProps, color: &ThemeAwareValue, variant: Variant
     let colors = variant_colors(variant, &base);
 
     variables()
-        .with(BADGE_COLOR_VAR, text_color(&base))
+        .with(BADGE_COLOR_VAR, label_color(&base))
         .with(BADGE_FILL_VAR, fill_color(&base))
         .with(
             BADGE_CONTRAST_VAR,

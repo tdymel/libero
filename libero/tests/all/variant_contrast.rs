@@ -175,6 +175,15 @@ fn short_pairs(app: fn() -> Element) -> Vec<String> {
             for variant in VARIANTS {
                 let own = next_vars(&mut rest, "button", &format!("{prefix}-color:"));
 
+                // An unfilled Button's resting label sits on the page itself (todo 3614).
+                if tag == "Button" && ["elevated", "outlined", "standard"].contains(&variant) {
+                    let label = resolve(&own[&format!("{prefix}-color")], &[&own, &root]);
+                    let measured = ratio(&label, &root["--lsx-surface"]);
+                    if measured < 4.5 {
+                        short.push(format!("{tag} {color} {variant} rest {measured:.2}"));
+                    }
+                }
+
                 for state in ["hover", "selected", "pressed"] {
                     // Any other pressed fill is the selected one, measured above.
                     if state == "pressed" && variant != "tonal" {

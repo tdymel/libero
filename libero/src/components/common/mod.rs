@@ -38,8 +38,8 @@ pub(crate) use button_group_context::{
 pub(crate) use closing_focus::use_closing_focus;
 pub(crate) use color_variant::{
     base_color, base_color_or, contrast_color, contrast_shade_color, fill_color, hover_color,
-    hover_contrast_color, literal_contrast, on_tint_color, selected_color, shade_color, text_color,
-    tint_color, warning_edge,
+    hover_contrast_color, label_color, literal_contrast, on_tint_color, selected_color,
+    shade_color, text_color, tint_color, warning_edge,
 };
 pub(crate) use combobox_aria::{group_id, listbox_id, option_id};
 pub use combobox_state::{ComboboxState, use_combobox};

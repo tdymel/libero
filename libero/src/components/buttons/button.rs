@@ -7,8 +7,8 @@ use crate::{
             BUTTON_HOVER_VAR, BUTTON_ON_CONTAINER_VAR, BUTTON_ON_STATE_VAR, BUTTON_SELECTED_VAR,
             BUTTON_VARS, HtmlTag, Input, Part, ScaleOrCss, States, TOOLBAR_ITEM, ToolbarItem,
             Variant, base_color, base_props, contrast_color, disabled_look_sx, fill_color,
-            focus_ring_sx, input_from_str, interactive_variant_sx, literal_contrast, parts_enum,
-            text_color, use_button_group, use_toolbar_item, variables, variant_colors,
+            focus_ring_sx, input_from_str, interactive_variant_sx, label_color, literal_contrast,
+            parts_enum, use_button_group, use_toolbar_item, variables, variant_colors,
             variant_selected_sx,
         },
         feedback::Loader,
@@ -156,7 +156,7 @@ pub(crate) fn button_variables(
 ) -> String {
     let contrast = contrast_color(base);
     let colors = variant_colors(variant, base);
-    let label = text_color(base).map(|label| match variant {
+    let label = label_color(base).map(|label| match variant {
         // The outlined border is the label colour: it follows too (todo 1833).
         Variant::Standard | Variant::Outlined if uncolored => {
             format!("var({}, {label})", SURFACE_LABEL.name())

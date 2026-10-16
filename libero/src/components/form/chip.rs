@@ -12,8 +12,8 @@ use crate::{
             ACTIVE, COARSE_POINTER, Glyph, HtmlTag, Input, Part, ScaleOrCss, States, Variant,
             VariantColors, VariantVars, aria_label_of, base_color_or, base_props,
             coarse_hit_area_sx, contrast_color, contrast_shade_color, disabled_look_sx, fill_color,
-            focus_ring_sx, interactive_variant_sx, on_ring_sx, on_state_sx, parts_enum,
-            parts_under_sx, ring_overlay, ring_overlay_sx, shade_color, text_color, variables,
+            focus_ring_sx, interactive_variant_sx, label_color, on_ring_sx, on_state_sx,
+            parts_enum, parts_under_sx, ring_overlay, ring_overlay_sx, shade_color, variables,
             variant_colors,
         },
         form::{Activation, use_bound},
@@ -190,7 +190,7 @@ fn chip_variables(variant: Variant, checked: bool, base: &ThemeAwareValue) -> St
     };
 
     variables()
-        .with(CHIP_COLOR_VAR, text_color(base))
+        .with(CHIP_COLOR_VAR, label_color(base))
         .with(CHIP_FILL_VAR, fill_color(base))
         .with(
             CHIP_CONTRAST_VAR,

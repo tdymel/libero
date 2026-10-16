@@ -90,14 +90,18 @@ fn every_default_fill_carries_its_own_foreground() {
     }
 }
 
-/// Yellow and green reach no 4.5:1 on white within the ramp. Recorded: the only fix
-/// is a different base colour, the Maintainer's call.
+/// Yellow and green reach no 4.5:1 on white within the ramp, so their text role mixes
+/// past S9 (todo 3614, Maintainer 2026-10-16).
 #[test]
-fn the_text_role_is_the_best_the_ramp_can_do_and_two_colors_fall_short() {
+fn every_text_role_reads_on_the_light_theme_s_page() {
     assert_eq!(
         text_roles_falling_short(&Theme::DEFAULT),
-        ["warning", "success"]
+        Vec::<&str>::new()
     );
+
+    let css = Stylesheet::from(&Theme::DEFAULT).as_str().to_string();
+    assert_eq!(root_var(&css, "--lsx-warning-text-6"), "#9D6E03");
+    assert_eq!(root_var(&css, "--lsx-success-text-6"), "#2C863C");
 }
 
 /// On a dark page yellow and green have room to walk.
@@ -106,14 +110,10 @@ fn every_text_role_reads_on_the_dark_theme_s_page() {
     assert_eq!(text_roles_falling_short(&Theme::DARK), Vec::<&str>::new());
 }
 
-/// Every shipped set: ink must read on page and card, `muted.6` reach 3:1. Short text
-/// roles and `muted.6` under 4.5:1 (todo 394) are recorded: ported palettes are others' designs.
-///
-/// Every set keeps Libero's amber `warning`; the long entries are light halves keeping
-/// dark-page accents (Nord's own guidance, and the derived Vague, Osmium, kettek16).
+/// Every shipped set: ink and every text role read on page and card (text roles mix past
+/// S9, todo 3614), `muted.6` reaches 3:1; under 4.5:1 is recorded (todo 394): ported palettes are others' designs.
 #[test]
 fn every_shipped_set_reads_on_its_own_page() {
-    let mut short = Vec::new();
     let mut quiet = Vec::new();
 
     for set in ThemeSet::CATALOGUE {
@@ -133,10 +133,12 @@ fn every_shipped_set_reads_on_its_own_page() {
                 );
             }
 
-            let falling = text_roles_falling_short(theme);
-            if !falling.is_empty() {
-                short.push(format!("{} {scheme}: {}", set.name(), falling.join(" ")));
-            }
+            assert_eq!(
+                text_roles_falling_short(theme),
+                Vec::<&str>::new(),
+                "{} {scheme}: text roles short of 4.5:1",
+                set.name()
+            );
 
             let ratio = muted_on_its_page(theme);
             // Todo 1308: borders and handles are non-text, so 3:1 is a floor (WCAG 1.4.11).
@@ -153,32 +155,6 @@ fn every_shipped_set_reads_on_its_own_page() {
         }
     }
 
-    assert_eq!(
-        short,
-        [
-            "Libero light: warning success",
-            "Ayu light: warning info success",
-            "Ayu Mirage light: warning info success",
-            "Catppuccin light: warning",
-            "Dracula light: warning",
-            "Ef Night light: warning",
-            "Everforest light: warning",
-            "Flexoki light: warning",
-            "GitHub light: warning",
-            "Gruvbox light: warning",
-            "Gruvbox Classic light: warning",
-            "Gruvbox Soft light: warning",
-            "Kanagawa light: warning",
-            "Kanagawa Dragon light: warning",
-            "kettek16 light: warning",
-            "One light: warning",
-            "Osmium light: secondary warning",
-            "Rosé Pine light: warning",
-            "shadcn/ui light: warning success",
-            "Vague light: secondary warning info success",
-        ],
-        "the shipped palettes' text roles moved"
-    );
     assert_eq!(
         quiet,
         [

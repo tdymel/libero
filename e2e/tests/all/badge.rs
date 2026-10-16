@@ -2,15 +2,12 @@
 //! semantics that survive `list-style: none`, an `Indicator` dot in forced colours.
 
 use e2e::browser::block_on;
-use e2e::passes::contrast;
 use e2e::suite::Suite;
 use e2e::{Fixture, Viewport, ax, wait};
 
 #[test]
 fn it_meets_the_baseline() {
-    Suite::new("badge", "/badge")
-        .waive(contrast::TODO_297)
-        .run();
+    Suite::new("badge", "/badge").run();
 }
 
 /// Todo 741: at 200% text size a px box clipped its rem label (md: 20px text in

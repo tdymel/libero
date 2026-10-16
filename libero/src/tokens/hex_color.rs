@@ -208,9 +208,9 @@ impl HexColor {
     }
 
     /// This base (shade 6) as text: the smallest mix towards the far end that passes
-    /// [`TEXT_CONTRAST`] on the surface and every card (todo 314); a whole step overshoots.
+    /// [`TEXT_CONTRAST`] on the surface and every card (todo 314); past S9 where the ramp can't (todo 3614).
     pub(crate) fn text_base(self, ramp: ShadeRamp, ends: Ends, cards: &[Self]) -> Self {
-        self.first_mix(ramp, ends, |text| {
+        self.first_mix(ramp, ends, 100, |text| {
             text.contrast_ratio(ends.surface) >= TEXT_CONTRAST
                 && cards
                     .iter()
@@ -221,7 +221,8 @@ impl HexColor {
     /// This base as a fill: the smallest mix away from the surface on which its painted
     /// foreground passes [`TEXT_CONTRAST`] (`blue.6` + white is only 3.56:1).
     pub(crate) fn fill_base(self, ramp: ShadeRamp, ends: Ends) -> Self {
-        self.first_mix(ramp, ends, |fill| {
+        let deepest = (-mix_percent(ramp, ColorShade::S9)) as u8;
+        self.first_mix(ramp, ends, deepest, |fill| {
             fill.contrast_ratio(ends.foreground(fill.contrast())) >= TEXT_CONTRAST
         })
     }
@@ -239,14 +240,19 @@ impl HexColor {
             .unwrap_or(far)
     }
 
-    /// The first 1% mix step towards the far end, up to [`ColorShade::S9`], that `passes`.
-    fn first_mix(self, ramp: ShadeRamp, ends: Ends, passes: impl Fn(Self) -> bool) -> Self {
+    /// The first 1% mix step towards the far end, up to `limit` percent, that `passes`.
+    fn first_mix(
+        self,
+        ramp: ShadeRamp,
+        ends: Ends,
+        limit: u8,
+        passes: impl Fn(Self) -> bool,
+    ) -> Self {
         let far = far_end(ramp, ends);
-        let deepest = self.shade(ColorShade::S9, ramp, ends);
-        (0..=(-mix_percent(ramp, ColorShade::S9)) as u8)
+        (0..=limit)
             .map(|weight| self.mix(far, weight))
             .find(|&color| passes(color))
-            .unwrap_or(deepest)
+            .unwrap_or(self.mix(far, limit))
     }
 
     const fn mix(self, other: Self, weight: u8) -> Self {

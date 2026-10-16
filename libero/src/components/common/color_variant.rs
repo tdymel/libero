@@ -33,6 +33,17 @@ pub(crate) fn text_color(base: &ThemeAwareValue) -> Option<String> {
     base.in_color_role(ColorRole::Text).resolve(None)
 }
 
+/// An unfilled control's label: [`text_color`], but neutral ramps take their text role too,
+/// so a `muted` label reads at 4.5:1 (todo 3614).
+pub(crate) fn label_color(base: &ThemeAwareValue) -> Option<String> {
+    match base {
+        ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade)) => {
+            Some(ColorValue::Text(*color, *shade).value())
+        }
+        _ => text_color(base),
+    }
+}
+
 /// `base` as a background: the first step of its ramp that carries a black or
 /// white foreground. Pairs with [`contrast_color`].
 pub(crate) fn fill_color(base: &ThemeAwareValue) -> Option<String> {
@@ -248,6 +259,23 @@ mod tests {
         };
         assert_eq!(hover_color(&surface, false), layer(HOVER_LAYER));
         assert_eq!(selected_color(&surface, false), layer(SELECTED_LAYER));
+    }
+
+    /// Todo 3614: a muted control label takes the text role; a muted text colour, such as
+    /// a disabled label, stays the quiet brand grey.
+    #[test]
+    fn a_muted_label_reads_while_muted_text_stays_quiet() {
+        let muted = base_color(Some(&ThemeAwareValue::Color(Color::Muted)));
+        assert_eq!(
+            label_color(&muted).as_deref(),
+            Some("var(--lsx-muted-text-6)")
+        );
+        assert_eq!(text_color(&muted).as_deref(), Some("var(--lsx-muted-6)"));
+
+        let primary = base_color(Some(&ThemeAwareValue::Color(Color::Primary)));
+        assert_eq!(label_color(&primary), text_color(&primary));
+        let literal = ThemeAwareValue::from("#123456");
+        assert_eq!(label_color(&literal).as_deref(), Some("#123456"));
     }
 
     #[test]

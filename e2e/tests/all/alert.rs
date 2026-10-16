@@ -2,7 +2,7 @@
 //! title that wraps rather than being cut.
 
 use e2e::browser::block_on;
-use e2e::passes::{contrast, keyboard, pointer};
+use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const CLOSE: &str = "#dismissible [data-slot=close]";
@@ -10,7 +10,6 @@ const CLOSE: &str = "#dismissible [data-slot=close]";
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("alert", "/alert")
-        .waive(contrast::TODO_297)
         .focusable(CLOSE)
         // `xs`: a 24x24 box.
         .targets(CLOSE)

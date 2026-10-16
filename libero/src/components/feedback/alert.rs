@@ -6,7 +6,7 @@ use crate::{
         buttons::ActionIcon,
         common::{
             Glyph, HtmlTag, Input, Part, States, Variables, Variant, VariantVars, base_color,
-            base_props, contrast_color, fill_color, literal_contrast, parts_enum, text_color,
+            base_props, contrast_color, fill_color, label_color, literal_contrast, parts_enum,
             variables, variant_chrome_sx, variant_container_colors,
         },
         layout::{paper_sx, use_box},
@@ -146,7 +146,7 @@ fn alert_variables(props: &AlertProps, base: &ThemeAwareValue, variant: Variant)
     let (container, on_container) = variant_container_colors(variant, base);
 
     variables()
-        .with(ALERT_COLOR_VAR, text_color(base))
+        .with(ALERT_COLOR_VAR, label_color(base))
         .with(ALERT_FILL_VAR, fill_color(base))
         .with(
             ALERT_CONTRAST_VAR,

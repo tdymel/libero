@@ -55,7 +55,7 @@ Like every component, `Badge` also takes the shared props `sx`, `class`,
 
 - A badge has no role, so screen readers read its text in place and announce no
   change.
-- `filled` and `tonal` labels reach 4.5:1 in every color.
+- Every variant's label reaches 4.5:1 in every color.
 - `gradient` picks its own label, the black, white, ink or surface that reads
   best on both stops and the midpoint. Stops on which no label reaches 4.5:1
   warn in debug builds.
@@ -64,7 +64,6 @@ Like every component, `Badge` also takes the shared props `sx`, `class`,
 
 - For a badge that reports a change, wrap it in your own `role="status"`
   region.
-- Pick `filled` or `tonal` for `warning` and `success`.
 - Say what a `circle` count counts: a bare "9" reads as a number. Add the unit
   as `VisuallyHidden` text,
   `Badge { circle: true, "9", VisuallyHidden { " unread" } }`, or name it in
@@ -74,12 +73,6 @@ Like every component, `Badge` also takes the shared props `sx`, `class`,
 
 A "Paid" badge in an invoice row, `Badge { color: "success", variant: "tonal",
 "Paid" }`: read in place with the row, at 4.5:1 or more.
-
-### Limits
-
-- `elevated`, `outlined` and `standard` print the label in the color itself,
-  which stays under 4.5:1 on white for `warning` (3.27:1) and `success`
-  (4.04:1).
 
 ## Theme defaults
 
