@@ -179,6 +179,33 @@ e2e::scenario!(
     android: skip("2177: the WebView does not follow the jump")
 );
 
+/// Todos 3452, 3453: an area switched in place from a plain list to a windowed one under a
+/// handle (a new root tag) still reports its scrolls, so a jump far down moves the window.
+async fn a_scroll_after_the_switch_moves_the_window<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    const FLIP: &str = "#flip-pane > div";
+    const ROWS: &str = "#flip-pane [data-row]";
+    d.click("#flip").await?;
+    eventually(d, "the windowed list's first rows", async |d| {
+        d.exists(ROWS).await
+    })
+    .await?;
+    d.scroll_to(FLIP, 0.0, 10000.0).await?;
+    eventually(d, "the window far down the list", async |d| {
+        Ok(row_range(d, ROWS).await?.0 > 400.0)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_scroll_right_after_the_plain_to_windowed_switch_moves_the_window,
+    "/scroll-area/flip",
+    a_scroll_after_the_switch_moves_the_window,
+    android: skip("2177: the WebView does not follow the jump")
+);
+
 /// `#wrap-pane`'s list: its scroll height and offset, the px no row covers, and whether the
 /// row at the top of the view is the one the offset puts there at `pitch`.
 struct Wrap {

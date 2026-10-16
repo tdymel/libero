@@ -19,7 +19,42 @@ pub const ROUTES: Routes = &[
     ("/scroll-area/rewrap", || rsx! { RewrapPage {} }),
     ("/scroll-area/offset", || rsx! { OffsetPage {} }),
     ("/scroll-area/cover", || rsx! { CoverPage {} }),
+    ("/scroll-area/flip", || rsx! { FlipPage {} }),
 ];
+
+/// One `ScrollArea` scope that is a plain list first and, after `#flip`, a windowed one under a
+/// caller's handle: the root's tag changes in place (todos 3452, 3453).
+#[component]
+fn FlipPage() -> Element {
+    let area = use_scroll_area();
+    let mut windowed = use_signal(|| false);
+    let list = match windowed() {
+        true => rsx! {
+            ScrollArea { handle: area, "aria-label": "Flip",
+                Virtualize {
+                    count: 1000,
+                    item_size: Some(20.0),
+                    item: move |i: usize| rsx! {
+                        div { "data-row": i, style: "height: 20px", "Row {i}" }
+                    },
+                }
+            }
+        },
+        false => rsx! {
+            ScrollArea { "aria-label": "Flip",
+                for i in 0..30 {
+                    div { key: "{i}", style: "height: 20px", "Plain {i}" }
+                }
+            }
+        },
+    };
+    rsx! {
+        Flex { direction: "column", gap: "md",
+            button { id: "flip", onclick: move |_| windowed.set(true), "Window" }
+            div { id: "flip-pane", style: "height: 120px", {list} }
+        }
+    }
+}
 
 /// A windowed list of 300 rows in a `Paper`, in a container of another colour that hands the list
 /// its own cover, and in a `Combobox` dropdown (todos 3265, 3266).

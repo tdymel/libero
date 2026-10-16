@@ -19,7 +19,7 @@ use crate::{
     },
     platform::{
         ElementApi, PlatformError, element, is_measured_resize, mounted_by_selector, next_task,
-        scroll, when_laid_out,
+        scroll, when_laid_out, when_laid_out_retry,
     },
     sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{FOCUS_RING_HALO_SPREAD, SCROLLER_CONTROL, SCROLLER_FADE, ScrollerDefaults, Size},
@@ -93,7 +93,9 @@ fn measure_laid_out(
         spawn(async move {
             match (offset.await, content.await, size.await) {
                 (_, _, Ok(size)) if size.width <= 0.0 && tries > 0 => {
-                    measure_laid_out(viewport, update, tries - 1);
+                    when_laid_out_retry(UNLAID_TRIES - tries, move || {
+                        measure_laid_out(viewport, update, tries - 1)
+                    });
                 }
                 (Ok((x, _)), Ok(content), Ok(size)) => {
                     update(ScrollerEdges::measure(

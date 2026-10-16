@@ -69,6 +69,9 @@ fn caret_app() -> Element {
                 if event.key() == Key::Enter {
                     out.set(format!("{:?}", field.selection_start()));
                 }
+                if event.key() == Key::Escape {
+                    let _ = field.set_caret(1);
+                }
             },
         }
         span { id: "out", "{out}" }
@@ -89,4 +92,16 @@ fn reads_the_caret_of_a_text_input() {
     page.press(Key::ArrowLeft);
     page.press(Key::Enter);
     assert_eq!(page.text("#out"), "Some(0)");
+}
+
+/// Todo 3430: a caret put at UTF-16 unit 1 sits after the two-byte `é`, not inside it.
+#[test]
+fn puts_the_caret_of_a_text_input() {
+    let mut page = mount(caret_app);
+    page.focus("#caret");
+    page.press(Key::Character("é".into()));
+    page.press(Key::Character("b".into()));
+    page.press(Key::Escape);
+    page.press(Key::Enter);
+    assert_eq!(page.text("#out"), "Some(1)", "{}", page.tree());
 }

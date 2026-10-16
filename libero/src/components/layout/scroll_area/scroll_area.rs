@@ -18,10 +18,11 @@ use crate::{
     },
     hooks::{ElementHandle, use_content_changes, use_element, use_resize_fallback, use_theme},
     platform::{
-        Dimensions, ElementApi, OBSERVE_ATTR, PlatformError, Read, SCROLL_QUIET, TimerSubscription,
-        clips_z_indexed, draws_own_scrollbars, fires_scroll_end, fires_scroll_on_scroll_to,
-        has_match_by_tag, on_element_scroll, reserves_rows_in_tables, scroll, scroll_range,
-        scrolls_on_keys, timer, when_free, when_laid_out,
+        Dimensions, ElementApi, OBSERVE_ATTR, PlatformError, Read, SCROLL_QUIET,
+        ScrollSubscription, TimerSubscription, clips_z_indexed, draws_own_scrollbars,
+        fires_scroll_end, fires_scroll_on_scroll_to, has_match_by_tag, on_element_scroll,
+        reserves_rows_in_tables, scroll, scroll_range, scrolls_on_keys, timer, when_free,
+        when_laid_out, when_laid_out_retry,
     },
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
@@ -379,7 +380,9 @@ fn measure_area(root: ElementHandle, mut geometry: Signal<Option<ScrollGeometry>
         spawn(async move {
             let measured = match (size.await, offset.await) {
                 (Ok(size), _) if size.height <= 0.0 && tries > 0 => {
-                    return measure_area(root, geometry, tries - 1);
+                    return when_laid_out_retry(UNLAID_TRIES - tries, move || {
+                        measure_area(root, geometry, tries - 1)
+                    });
                 }
                 (Ok(size), Ok((_, top))) => ScrollGeometry {
                     offset: top,
@@ -467,7 +470,9 @@ fn check_tab_stop(
         spawn(async move {
             if let (Ok(inner), Ok(view), Ok(content)) = (inner.await, view.await, content.await) {
                 if view.height <= 0.0 && tries > 0 {
-                    return check_tab_stop(root, tag, axis, stop, tries - 1);
+                    return when_laid_out_retry(UNLAID_TRIES - tries, move || {
+                        check_tab_stop(root, tag, axis, stop, tries - 1)
+                    });
                 }
                 let next = needs_tab_stop(axis, view, content, inner);
                 if *stop.peek() != next {
@@ -784,8 +789,10 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let mut latest = use_hook(|| CopyValue::new(None::<ScrollHandler>));
     // On a WebView a `scroll` listener held the page up a round trip per step,
     // most of a fast fling's frames (todo 2131): it reports by message instead.
-    let reported = use_hook(|| {
-        Rc::new(tag.and_then(|tag| {
+    // Follows the root's tag: a reused scope can gain or lose a caller's handle.
+    let mut reporter = use_hook(|| CopyValue::new((None, None::<Box<dyn ScrollSubscription>>)));
+    if reporter.peek().0 != tag {
+        let subscription = tag.and_then(|tag| {
             on_element_scroll(
                 tag,
                 Box::new(move |data, end| {
@@ -795,9 +802,10 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
                     }
                 }),
             )
-        }))
-    })
-    .is_some();
+        });
+        reporter.set((tag, subscription));
+    }
+    let reported = reporter.peek().1.is_some();
 
     let onscrollend = move |event: Event<ScrollData>| {
         let (x_pct, y_pct, ..) = scroll_metrics(&event.data());

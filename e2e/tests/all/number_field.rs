@@ -432,6 +432,90 @@ async fn settle(page: &Page, value: &str) -> Result<()> {
     .await
 }
 
+/// Focuses the grouped amount, by a press at `1,23`'s width or by script from a caret at 4, and
+/// waits for the bare number with a caret for which the JS test `caret` holds.
+fn caret_after_focus(press: bool, caret: &str) {
+    const AMOUNT: &str = "#amount";
+    block_on(async {
+        let fixture = Fixture::open("/number-field/grouped", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector({AMOUNT:?}).value === '1,234,567.5'"),
+            "the grouped number",
+        )
+        .await
+        .unwrap();
+        let (x, y): (f64, f64) = page
+            .evaluate(format!(
+                "(() => {{ const el = document.querySelector({AMOUNT:?}); \
+                 const style = getComputedStyle(el), r = el.getBoundingClientRect(); \
+                 const ctx = document.createElement('canvas').getContext('2d'); \
+                 ctx.font = style.font; \
+                 const left = r.x + parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft); \
+                 return [left + ctx.measureText('1,23').width, r.y + r.height / 2]; }})()"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        if press {
+            pointer::click_at(page, pointer::Point { x, y })
+                .await
+                .unwrap();
+        } else {
+            page.evaluate(format!(
+                "(el => {{ el.setSelectionRange(4, 4); el.focus(); }})(document.querySelector({AMOUNT:?}))"
+            ))
+            .await
+            .unwrap();
+        }
+        // The caret settles a task after the bare text, so wait on both.
+        let settled = wait::for_js_true(
+            page,
+            &format!(
+                "(el => el.value === '1234567.5' && {caret})(document.querySelector({AMOUNT:?}))"
+            ),
+            "the bare number with the caret in place",
+        )
+        .await;
+        if let Err(error) = settled {
+            let state: (String, Option<u32>, Option<u32>) = page
+                .evaluate(format!(
+                    "(el => [el.value, el.selectionStart, el.selectionEnd])(document.querySelector({AMOUNT:?}))"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            panic!("{error:#}: value, selection start and end are {state:?}");
+        }
+        fixture
+            .console
+            .assert_clean("a grouped number's focus")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 3430: a caret set before the focus stays between the 3 and the 4 of `1,234,567.5` once
+/// the separators go, not one digit right per separator.
+#[test]
+fn a_focus_in_a_grouped_number_keeps_the_caret_between_its_digits() {
+    caret_after_focus(false, "el.selectionStart === 3 && el.selectionEnd === 3");
+}
+
+/// A press places its own caret after the rewrite, near the 3 and the 4: left alone.
+#[test]
+fn a_press_in_a_grouped_number_keeps_the_caret_it_placed() {
+    caret_after_focus(
+        true,
+        "el.selectionStart >= 2 && el.selectionStart <= 4 && el.selectionEnd === el.selectionStart",
+    );
+}
+
 /// Todo 2608: under `dir=rtl` a negative number still reads `-5`, not `5-` (UAX #9).
 async fn a_negative_number_reads_left_to_right<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let direction = d.style("#delta", "direction").await?;

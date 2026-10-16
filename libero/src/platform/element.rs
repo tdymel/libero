@@ -363,6 +363,13 @@ pub trait ElementApi {
         None
     }
 
+    /// Puts a text control's caret at `at` UTF-16 units, selecting nothing. A WebView
+    /// cannot: `Unsupported`.
+    fn set_caret(&self, at: u32) -> Result<(), PlatformError> {
+        let _ = at;
+        Err(PlatformError::Unsupported)
+    }
+
     /// The last match of `selector` before this one in document order, subtree
     /// excluded: where Shift+Tab would land without it. `Ok(None)` for none.
     fn previous_focusable(

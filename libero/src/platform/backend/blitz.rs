@@ -1941,6 +1941,32 @@ impl ElementApi for BlitzElement {
         u32::try_from(units).ok()
     }
 
+    fn set_caret(&self, at: u32) -> Result<(), PlatformError> {
+        let doc = self.anchor.try_doc().ok_or(PlatformError::Unsupported)?;
+        let editor = &doc
+            .get_node(self.node_id)
+            .and_then(|node| node.element_data())
+            .and_then(|element| element.text_input_data())
+            .ok_or(PlatformError::NotFound)?
+            .editor;
+        let text = editor.raw_text();
+        let mut units = 0;
+        let byte = text
+            .char_indices()
+            .find(|(_, char)| {
+                let reached = units >= at as usize;
+                units += char.len_utf16();
+                reached
+            })
+            .map_or(text.len(), |(byte, _)| byte);
+        drop(doc);
+        let node_id = self.node_id;
+        self.command(move |doc| {
+            doc.with_text_input(node_id, |mut driver| driver.move_to_byte(byte))
+        });
+        Ok(())
+    }
+
     /// A pre-order walk down to this node: everything it visits first comes
     /// before it, ancestors included, and its own subtree comes after.
     fn previous_focusable(

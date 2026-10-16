@@ -1156,6 +1156,17 @@ impl ElementApi for WebElement {
         }
     }
 
+    fn set_caret(&self, at: u32) -> Result<(), PlatformError> {
+        let set = if let Some(input) = self.element.dyn_ref::<web_sys::HtmlInputElement>() {
+            input.set_selection_range(at, at)
+        } else if let Some(text) = self.element.dyn_ref::<web_sys::HtmlTextAreaElement>() {
+            text.set_selection_range(at, at)
+        } else {
+            return Err(PlatformError::NotFound);
+        };
+        set.map_err(|_| PlatformError::NotFound)
+    }
+
     /// The document's matches, last first, down to one this element follows:
     /// `FOLLOWING` holds for an ancestor too, and not for a descendant.
     fn previous_focusable(

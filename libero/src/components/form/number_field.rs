@@ -22,6 +22,7 @@ use crate::{
         use_silent_focus_out_of, use_theme,
     },
     localization::Formats,
+    platform::{ElementApi, next_task},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::Size,
     utils::{ascii_digit, warn},
@@ -348,8 +349,32 @@ fn NumberFieldShell<T: NumberValue>(
         false => input,
     };
     let attributes = props.attributes;
+    // The caret of the grouped text a focus is about to strip, put right after the redraw.
+    let mut stripped = use_hook(|| CopyValue::new(None::<Stripped>));
+    let grouped_shown = use_hook(|| CopyValue::new(false));
+    use_effect(move || {
+        focused();
+        if let Some(stripped) = stripped.write().take() {
+            spawn(async move {
+                next_task().await;
+                if let Some(at) = anchor
+                    .selection_start()
+                    .and_then(|after| stripped.fix(after))
+                {
+                    let _ = anchor.set_caret(at);
+                }
+            });
+        }
+    });
     let draw = Rc::new(move || {
         let current = bound_value.unwrap_or_else(|| live.cloned());
+        let (mut stripped, mut grouped_shown) = (stripped, grouped_shown);
+        let at_rest = grouped && !focused();
+        if grouped_shown.replace(at_rest) && !at_rest {
+            let text = current.map(|value| formats.write_number(&value.format()));
+            let caret = anchor.selection_start().zip(text).zip(separator.group);
+            stripped.set(caret.map(|((at, text), group)| Stripped::of(&text, at, group)));
+        }
         let display = match &*buffer.read() {
             Some(edit) if edit.shows(current, separator) => edit.text.clone(),
             _ => current
@@ -446,6 +471,44 @@ fn ungrouped(text: &str, group: &str) -> Option<String> {
             .all(|part| part.len() == 3 && digits(part) == 3)
         && digits(last) == 3;
     grouped.then(|| format!("{sign}{}", parts.concat()))
+}
+
+/// The caret of grouped text (UTF-16 units) and where it lands once the separators go.
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Stripped {
+    before: u32,
+    mapped: u32,
+    end: u32,
+}
+
+impl Stripped {
+    fn of(text: &str, before: u32, group: &str) -> Self {
+        Self {
+            before,
+            mapped: caret_without_groups(text, before, group),
+            end: caret_without_groups(text, u32::MAX, group),
+        }
+    }
+
+    /// The caret to put once the rewrite left it at `after`: a browser keeps the index or
+    /// sends it to the end, while a press that came later placed its own.
+    fn fix(self, after: u32) -> Option<u32> {
+        let moved = self.before > 0 && (after == self.before || after == self.end);
+        (moved && after != self.mapped).then_some(self.mapped)
+    }
+}
+
+/// `caret` (UTF-16 units) in `text` moved to the same place once its group separators are gone.
+fn caret_without_groups(text: &str, caret: u32, group: &str) -> u32 {
+    let mut units = 0;
+    let before: String = text
+        .chars()
+        .take_while(|char| {
+            units += char.len_utf16() as u32;
+            units <= caret
+        })
+        .collect();
+    before.replace(group, "").encode_utf16().count() as u32
 }
 
 /// What `T` can hold, read once per field from its parse.
@@ -563,8 +626,32 @@ fn Steppers(
 
 #[cfg(test)]
 mod tests {
-    use super::{Separators, aria_number, parse};
+    use super::{Separators, Stripped, aria_number, caret_without_groups, parse};
     use crate::localization::Formats;
+
+    /// Todo 3430: the caret keeps its digit when focus strips the separators.
+    #[test]
+    fn the_caret_keeps_its_digit_when_the_separators_go() {
+        assert_eq!(caret_without_groups("1,234,567.5", 4, ","), 3);
+        assert_eq!(caret_without_groups("1,234,567.5", 2, ","), 1);
+        assert_eq!(caret_without_groups("1,234,567.5", 0, ","), 0);
+        assert_eq!(caret_without_groups("1.234.567,5", u32::MAX, "."), 9);
+    }
+
+    /// A press that placed its own caret after the rewrite is left alone.
+    #[test]
+    fn only_a_caret_the_rewrite_moved_is_put_back() {
+        let stripped = Stripped::of("1,234,567.5", 4, ",");
+        assert_eq!(stripped.fix(4), Some(3), "the index kept");
+        assert_eq!(stripped.fix(9), Some(3), "sent to the end");
+        assert_eq!(stripped.fix(6), None, "a press placed it");
+        assert_eq!(stripped.fix(3), None, "already there");
+        assert_eq!(
+            Stripped::of("1,234,567.5", 0, ",").fix(9),
+            None,
+            "tabbed in"
+        );
+    }
 
     const NONE: Separators = Separators {
         decimal: None,
