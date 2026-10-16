@@ -117,6 +117,10 @@ impl Driver for Web {
         keyboard::press_with(&self.fixture.page, key, keyboard::CTRL).await
     }
 
+    async fn press_mod(&mut self, key: keyboard::Key) -> Result<()> {
+        keyboard::press_with(&self.fixture.page, key, keyboard::MOD).await
+    }
+
     async fn press_alt(&mut self, key: keyboard::Key) -> Result<()> {
         keyboard::press_with(&self.fixture.page, key, keyboard::ALT).await
     }

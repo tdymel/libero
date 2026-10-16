@@ -115,6 +115,12 @@ pub const ALT: i64 = 1;
 pub const CTRL: i64 = 2;
 pub const META: i64 = 4;
 pub const SHIFT: i64 = 8;
+/// libero's `mod`: Cmd where the browser runs on a Mac, else Ctrl.
+pub const MOD: i64 = if cfg!(target_os = "macos") {
+    META
+} else {
+    CTRL
+};
 
 /// Press and release a key.
 pub async fn press(page: &Page, key: Key) -> Result<()> {
