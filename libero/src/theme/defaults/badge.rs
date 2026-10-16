@@ -70,12 +70,12 @@ impl BadgeDefaults {
                 padding_x: "0.5rem",
             },
             BadgeSizeLevel {
-                font_size: "0.6875rem",
+                font_size: "0.75rem",
                 height: "1.25rem",
                 padding_x: "0.625rem",
             },
             BadgeSizeLevel {
-                font_size: "0.8125rem",
+                font_size: "0.875rem",
                 height: "1.625rem",
                 padding_x: "0.75rem",
             },

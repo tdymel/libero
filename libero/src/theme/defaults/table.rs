@@ -47,32 +47,32 @@ impl TableDefaults {
         size: Size::Md,
         sizes: Sizes::new(
             TableSizeLevel {
-                font_size: "12px",
+                font_size: "0.75rem",
                 padding_x: "8px",
                 padding_y: "4px",
             },
             TableSizeLevel {
-                font_size: "13px",
+                font_size: "0.875rem",
                 padding_x: "10px",
                 padding_y: "6px",
             },
             TableSizeLevel {
-                font_size: "14px",
+                font_size: "1rem",
                 padding_x: "12px",
                 padding_y: "10px",
             },
             TableSizeLevel {
-                font_size: "16px",
+                font_size: "1.125rem",
                 padding_x: "16px",
                 padding_y: "12px",
             },
             TableSizeLevel {
-                font_size: "18px",
+                font_size: "1.25rem",
                 padding_x: "20px",
                 padding_y: "14px",
             },
             TableSizeLevel {
-                font_size: "20px",
+                font_size: "1.5rem",
                 padding_x: "24px",
                 padding_y: "16px",
             },

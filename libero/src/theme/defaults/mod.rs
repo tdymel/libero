@@ -401,3 +401,70 @@ pub use z_index::{
     Z_INDEX_FLOAT, Z_INDEX_HEADER, Z_INDEX_MODAL, Z_INDEX_NOTIFICATION, Z_INDEX_OVERLAY,
     Z_INDEX_POPOVER, Z_INDEX_WINDOW, ZIndexDefaults,
 };
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::css::ToCssDeclarations;
+    use crate::theme::Size;
+
+    /// Todo 3588: dense text is rem, so it follows the reader's text size, and 16px at md.
+    #[test]
+    fn dense_fonts_are_rem_and_1rem_at_md() {
+        let ladders: [(&str, [&str; 6]); 6] = [
+            (
+                "menu",
+                Size::ALL.map(|s| MenuDefaults::DEFAULT.sizes.get(s).font_size),
+            ),
+            (
+                "combobox",
+                Size::ALL.map(|s| ComboboxDefaults::DEFAULT.sizes.get(s).font_size),
+            ),
+            (
+                "tabs",
+                Size::ALL.map(|s| TabsDefaults::DEFAULT.sizes.get(s).font_size),
+            ),
+            (
+                "table",
+                Size::ALL.map(|s| TableDefaults::DEFAULT.sizes.get(s).font_size),
+            ),
+            (
+                "accordion",
+                Size::ALL.map(|s| AccordionDefaults::DEFAULT.sizes.get(s).font_size),
+            ),
+            (
+                "chrono",
+                Size::ALL.map(|s| ChronoPickerDefaults::DEFAULT.sizes.get(s).font_size),
+            ),
+        ];
+        for (name, fonts) in ladders {
+            assert!(
+                fonts.iter().all(|f| f.ends_with("rem")),
+                "{name}: {fonts:?}"
+            );
+            assert_eq!(fonts[2], "1rem", "{name} md");
+        }
+    }
+
+    #[test]
+    fn pagination_declares_its_fonts_in_rem() {
+        let css: String = PaginationDefaults::DEFAULT
+            .to_css_declarations()
+            .iter()
+            .map(|d| d.to_string())
+            .collect();
+        assert!(
+            css.contains("--lsx-pagination-font-size-md:0.875rem"),
+            "{css}"
+        );
+        assert!(!css.contains("font-size-md:14px"), "{css}");
+    }
+
+    #[test]
+    fn badge_md_is_at_least_12px() {
+        assert_eq!(
+            BadgeDefaults::DEFAULT.sizes.get(Size::Md).font_size,
+            "0.75rem"
+        );
+    }
+}

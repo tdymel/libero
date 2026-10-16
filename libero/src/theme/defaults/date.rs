@@ -85,27 +85,27 @@ impl ChronoPickerDefaults {
         sizes: Sizes::new(
             ChronoSizeLevel {
                 day_size: "28px",
-                font_size: "12px",
+                font_size: "0.75rem",
             },
             ChronoSizeLevel {
                 day_size: "32px",
-                font_size: "13px",
+                font_size: "0.875rem",
             },
             ChronoSizeLevel {
                 day_size: "36px",
-                font_size: "14px",
+                font_size: "1rem",
             },
             ChronoSizeLevel {
                 day_size: "40px",
-                font_size: "16px",
+                font_size: "1.125rem",
             },
             ChronoSizeLevel {
                 day_size: "44px",
-                font_size: "18px",
+                font_size: "1.25rem",
             },
             ChronoSizeLevel {
                 day_size: "48px",
-                font_size: "20px",
+                font_size: "1.5rem",
             },
         ),
     };

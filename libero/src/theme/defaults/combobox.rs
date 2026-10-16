@@ -38,27 +38,27 @@ impl ComboboxDefaults {
                 padding_x: "8px",
             },
             ComboboxSizeLevel {
-                font_size: "0.8125rem",
+                font_size: "0.875rem",
                 row_height: 32.0,
                 padding_x: "10px",
             },
             ComboboxSizeLevel {
-                font_size: "0.875rem",
+                font_size: "1rem",
                 row_height: 36.0,
                 padding_x: "12px",
             },
             ComboboxSizeLevel {
-                font_size: "0.9375rem",
+                font_size: "1.125rem",
                 row_height: 40.0,
                 padding_x: "14px",
             },
             ComboboxSizeLevel {
-                font_size: "1rem",
+                font_size: "1.25rem",
                 row_height: 44.0,
                 padding_x: "16px",
             },
             ComboboxSizeLevel {
-                font_size: "1.0625rem",
+                font_size: "1.5rem",
                 row_height: 48.0,
                 padding_x: "18px",
             },

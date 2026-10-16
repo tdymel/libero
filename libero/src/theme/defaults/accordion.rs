@@ -42,37 +42,37 @@ impl AccordionDefaults {
         size: Size::Md,
         sizes: Sizes::new(
             AccordionSizeLevel {
-                font_size: "12px",
+                font_size: "0.75rem",
                 padding_x: "8px",
                 padding_y: "6px",
                 chevron: "14px",
             },
             AccordionSizeLevel {
-                font_size: "14px",
+                font_size: "0.875rem",
                 padding_x: "12px",
                 padding_y: "8px",
                 chevron: "16px",
             },
             AccordionSizeLevel {
-                font_size: "16px",
+                font_size: "1rem",
                 padding_x: "16px",
                 padding_y: "12px",
                 chevron: "18px",
             },
             AccordionSizeLevel {
-                font_size: "18px",
+                font_size: "1.125rem",
                 padding_x: "20px",
                 padding_y: "14px",
                 chevron: "20px",
             },
             AccordionSizeLevel {
-                font_size: "20px",
+                font_size: "1.25rem",
                 padding_x: "24px",
                 padding_y: "16px",
                 chevron: "22px",
             },
             AccordionSizeLevel {
-                font_size: "24px",
+                font_size: "1.5rem",
                 padding_x: "28px",
                 padding_y: "20px",
                 chevron: "24px",

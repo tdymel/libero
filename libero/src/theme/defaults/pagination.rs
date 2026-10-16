@@ -26,6 +26,7 @@ pub struct PaginationDefaults {
     pub gap: Size,
     /// Control box, in px.
     pub control_sizes: Sizes<u16>,
+    /// In px at a 16px root; declared as rem.
     pub font_sizes: Sizes<u16>,
     /// Not a `&'static str`: a raw `"muted.4"` would be declared verbatim.
     pub border: ColorValue,
@@ -63,10 +64,11 @@ impl ToCssDeclarations for PaginationDefaults {
         let mut declarations = self
             .control_sizes
             .to_css_declarations(PAGINATION_CONTROL_SIZE, "px");
-        declarations.extend(
-            self.font_sizes
-                .to_css_declarations(PAGINATION_FONT_SIZE, "px"),
-        );
+        // Declared as rem, so the label follows the reader's text size.
+        declarations.extend(Size::ALL.into_iter().map(|size| {
+            let px = f32::from(self.font_sizes.get(size));
+            PAGINATION_FONT_SIZE.declare(size, format!("{}rem", px / 16.0))
+        }));
         declarations.push(PAGINATION_GAP.declare(SizeCss::SPACING.value(self.gap)));
         declarations.push(PAGINATION_BORDER.declare(self.border.value()));
         declarations.push(PAGINATION_ACTIVE_BACKGROUND.declare(active.value()));

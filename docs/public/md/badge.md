@@ -94,7 +94,7 @@ A "Paid" badge in an invoice row, `Badge { color: "success", variant: "tonal",
 | `text_transform` | `&'static str` | `uppercase`. Set it to `none` for a badge that carries a name. |
 | `letter_spacing` | `&'static str` | `0.25px`, which opens up the uppercase. |
 | `font_weight` | `&'static str` | `700`. |
-| `sizes` | `Sizes<BadgeSizeLevel>` | `font_size`/`height`/`padding_x` per step: `0.5625rem/1rem/0.375rem`, `0.625rem/1.125rem/0.5rem`, `0.6875rem/1.25rem/0.625rem`, `0.8125rem/1.625rem/0.75rem`, `1rem/2rem/1rem`, `1.125rem/2.375rem/1.25rem`. All rem, so the box grows with the reader's text size. |
+| `sizes` | `Sizes<BadgeSizeLevel>` | `font_size`/`height`/`padding_x` per step: `0.5625rem/1rem/0.375rem`, `0.625rem/1.125rem/0.5rem`, `0.75rem/1.25rem/0.625rem`, `0.875rem/1.625rem/0.75rem`, `1rem/2rem/1rem`, `1.125rem/2.375rem/1.25rem`. All rem, so the box grows with the reader's text size. |
 | `radii` | `Sizes<&'static str>` | The badge's own radius scale: `2px`, `4px`, `6px`, `8px`, `12px`, `9999px`. |
 
 An unset `color` takes `theme.badge.color`, `primary` shade 6 by default.

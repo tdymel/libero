@@ -105,7 +105,7 @@ bare arrow.
 | `siblings`, `boundaries` | `u8` | Defaults for the matching props. |
 | `gap` | `Size` | Space between controls. |
 | `control_sizes` | `Sizes<u16>` | Control box per size step, in px. |
-| `font_sizes` | `Sizes<u16>` | Font size per size step, in px. |
+| `font_sizes` | `Sizes<u16>` | Font size per size step, in px at a 16px root; declared as rem, so it follows the reader's text size. |
 | `border` | `ColorValue` | Control border colour. |
 
 `PaginationLabels` on `Localization::pagination`, English by default. The

@@ -1253,7 +1253,7 @@ each cell of that row, and names the row's toggle "Details for Cherry".
 | Field | Type | Description |
 |---|---|---|
 | `size` | `Size` | The size when the prop is unset, `Md`. |
-| `sizes` | `Sizes<TableSizeLevel>` | Per size: `font_size`, `padding_x` and `padding_y` of every cell. `Md` is 14px, 12px and 10px. |
+| `sizes` | `Sizes<TableSizeLevel>` | Per size: `font_size`, `padding_x` and `padding_y` of every cell. `Md` is 1rem (16px), 12px and 10px. |
 | `border_color` | `ColorValue` | Color of the header and row rules. |
 | `hover_color` | `ColorValue` | Row background while hovered, `muted.2`: one step past the stripe. |
 | `stripe_color` | `ColorValue` | Every other body row's background with `striped`, `muted.1`. |
