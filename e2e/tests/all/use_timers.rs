@@ -94,8 +94,7 @@ const FLASH_MS: u32 = 150;
 e2e::scenario!(
     typing_settles_a_debounced_value_and_callback,
     "/use-timers/quick",
-    settles_after_typing,
-    ios: skip("3416: iOS's hardware-keyboard auto-capitalization types the field's first letter upper case")
+    settles_after_typing
 );
 e2e::scenario!(
     an_interval_ticks_until_it_is_stopped,

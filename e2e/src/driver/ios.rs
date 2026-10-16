@@ -42,9 +42,6 @@ const TOOL_LIMIT: Duration = Duration::from_secs(45);
 /// wins when the page reports more.
 const STATUS_BAR: f64 = 62.0;
 
-/// The pace of a scrolling drag in CSS px per second: a finger this slow leaves the page no momentum.
-const SCROLL_PACE: f64 = 120.0;
-
 /// HID usages (keyboard page 0x07) of the left modifiers.
 const SHIFT: u8 = 225;
 const CTRL: u8 = 224;
@@ -773,12 +770,11 @@ impl Driver for Ios {
         self.drag_by((x, y), dx, dy, 0.5)
     }
 
-    /// A drag through the viewport's middle at a walking pace: a swipe flicks the page well
-    /// past `dy` (3631).
+    /// By script, as the desktop driver: a swipe flicks the page well past `dy`, and a slow
+    /// drag takes 10 s a call under load (3631).
     async fn scroll_by(&mut self, dy: f64) -> Result<()> {
-        let (vw, vh) = self.viewport().await?;
-        let secs = (dy.abs() / SCROLL_PACE).max(0.5);
-        self.drag_by((vw / 2.0, vh / 2.0 + dy / 2.0), 0.0, -dy, secs)
+        self.bridge
+            .run(&format!("scrollBy({{ top: {dy}, behavior: 'instant' }})"))
     }
 
     async fn long_press(&mut self, selector: &str, ms: u64) -> Result<()> {

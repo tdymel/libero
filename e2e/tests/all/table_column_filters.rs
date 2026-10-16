@@ -32,8 +32,7 @@ async fn the_quick_filter_narrows_the_rows<D: Driver>(d: &mut D, _route: &str) -
 e2e::scenario!(
     the_quick_filter_narrows_a_paged_table,
     "/table/filter",
-    the_quick_filter_narrows_the_rows,
-    ios: skip("3416: iOS's hardware-keyboard auto-capitalization types the field's first letter upper case")
+    the_quick_filter_narrows_the_rows
 );
 
 /// 1156-3b/3c: a header filter narrows by value once typing settles; the menu's

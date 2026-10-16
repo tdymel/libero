@@ -31,7 +31,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `color_field::arrow_down_enters_the_colour_dialog_and_escape_returns` | android | 958: element identity on the WebView |
 | `color_field::arrow_down_enters_the_colour_dialog_and_escape_returns` | desktop | 958: element identity on the WebView |
 | `color_field::arrow_down_enters_the_colour_dialog_and_escape_returns` | ios | 958: element identity on the WebView |
-| `combobox::typing_and_enter_add_a_tag` | ios | 3416: iOS's hardware-keyboard auto-capitalization types the field's first letter upper case |
 | `drawer::a_backdrop_click_closes_a_drawer` | ios | upstream: WebKit does not focus a clicked button |
 | `drawer::a_backdrop_click_closes_a_drawer` | macos desktop | upstream: WebKit does not focus a clicked button |
 | `drawer::a_button_in_a_drawer_closes_it_and_focus_returns` | ios | upstream: WebKit does not focus a clicked button |
@@ -288,7 +287,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_column_filters::the_column_filters_narrow_a_table` | ios | 3416: iOS's hardware-keyboard auto-capitalization types the field's first letter upper case |
 | `table_column_filters::the_filter_panel_edits_every_filter` | android | 958: element identity on the WebView |
 | `table_column_filters::the_filter_panel_edits_every_filter` | ios | 3416: iOS's hardware-keyboard auto-capitalization types the field's first letter upper case |
-| `table_column_filters::the_quick_filter_narrows_a_paged_table` | ios | 3416: iOS's hardware-keyboard auto-capitalization types the field's first letter upper case |
 | `table_detail::an_animated_detail_slides_open_and_shut` | android | 958: element identity on the WebView |
 | `table_detail::pinned_toggles_push_the_checkboxes_past_them` | android | 3217: one web run guards the cascade |
 | `table_detail::pinned_toggles_push_the_checkboxes_past_them` | desktop | 3217: one web run guards the cascade |
@@ -365,8 +363,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `tabs::tab_leaves_the_strip_and_shift_tab_comes_back_to_the_selected_tab` | desktop | 958: element identity on the WebView |
 | `tabs::tab_leaves_the_strip_from_a_focused_unselected_tab` | android | 958: element identity on the WebView |
 | `tabs::tab_leaves_the_strip_from_a_focused_unselected_tab` | desktop | 958: element identity on the WebView |
-| `text_field::fast_typing_into_a_text_field_keeps_every_letter` | ios | 3416: iOS's hardware-keyboard auto-capitalization types the field's first letter upper case |
-| `textarea::typing_into_a_textarea_reaches_its_value` | ios | 3416: iOS's hardware-keyboard auto-capitalization types the field's first letter upper case |
 | `theme_defaults::an_unset_hover_card_align_follows_the_theme` | ios | a touch screen has no hover |
 | `theme_defaults::an_unset_hover_card_side_follows_the_theme` | ios | a touch screen has no hover |
 | `toolbar::fields_join_the_arrow_order` | ios | 3432: WKWebView: ArrowLeft at a caret's start keeps the field |
@@ -410,8 +406,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `use_back::android_back_steps_down_below_a_menu` | all but android | 2003: no Back key off Android |
 | `use_back::android_back_steps_down_twice_without_a_tap` | all but android | 3322: no Back key off Android |
 | `use_back::android_back_walks_the_routes` | all but android | 3384: no Back key off Android |
-| `use_intersection::a_target_is_in_the_viewport_only_while_scrolled_to` | ios | 3416: a swipe flings the page past the target, momentum scrolling on |
-| `use_intersection::once_keeps_the_first_sighting` | ios | 3416: a swipe flings the page past the target, momentum scrolling on |
 | `use_local_storage::the_local_area_outlives_a_relaunch` | android | no relaunch in the Android driver; its store is the files directory |
 | `use_local_storage::the_local_area_outlives_a_relaunch` | desktop | a launch gets a fresh E2E_STORAGE_DIR, so a relaunch keeps nothing |
 | `use_local_storage::the_local_area_outlives_a_relaunch` | native | Blitz has no relaunch in the driver |
@@ -424,7 +418,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `use_swipe::an_edge_swipe_opens_only_from_the_band_past_the_back_zone` | desktop | 1126: no touch input under Xvfb |
 | `use_swipe::an_edge_swipe_reopens_a_drawer_five_times` | desktop | 1126: no touch input under Xvfb |
 | `use_swipe::an_edge_swipe_wins_over_a_scrolled_inner_scroller` | desktop | 1126: no touch input under Xvfb |
-| `use_timers::typing_settles_a_debounced_value_and_callback` | ios | 3416: iOS's hardware-keyboard auto-capitalization types the field's first letter upper case |
 | `video::every_audio_source_failing_shows_the_error` | native | Blitz plays no media and shows the fallback |
 | `video::every_audio_source_failing_shows_the_error` | web | audio::every_source_failing_shows_the_error is the web's arm |
 | `video::every_video_source_failing_shows_the_error` | native | Blitz plays no media and shows the fallback |
