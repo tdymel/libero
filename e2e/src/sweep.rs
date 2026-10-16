@@ -273,6 +273,12 @@ pub async fn check(page: &Page, viewport: Viewport, path: &str, config: &str) ->
             rule => format!("axe:{rule}"),
         };
         for node in &violation.nodes {
+            if contrast::LINE_NUMBERS
+                .iter()
+                .any(|waiver| waiver.covers(&violation.id, node))
+            {
+                continue;
+            }
             hits.push(hit(
                 &family,
                 axe_element(node),

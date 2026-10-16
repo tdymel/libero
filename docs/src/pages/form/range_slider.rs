@@ -7,7 +7,7 @@ use crate::components::{
     prop, props, readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
-use libero::components::SliderPart;
+use libero::components::{SliderPart, SliderValue};
 use libero::{
     components::{Code, Flex, RangeSlider, SliderChangeEvent, Text},
     sx::sx,
@@ -84,11 +84,15 @@ fn format_code(_control: &Control, values: &DemoValues) -> Vec<String> {
 /// The readout, the other half of a controlled range, shows the thumbs never cross. Printed too.
 fn wrap_readout(values: &DemoValues, code: &str) -> String {
     let (declaration, signal, last) = match discrete(values) {
-        true => (quality_code(), "quality():?", "last_quality()"),
-        false => (String::new(), "price():?", "last()"),
+        true => (
+            quality_code(),
+            "{quality().0.label()}..{quality().1.label()}",
+            "last_quality()",
+        ),
+        false => (String::new(), "{price():?}", "last()"),
     };
     format!(
-        "{declaration}Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    sx: sx().width(\"100%\"),\n{}    Text {{ size: \"sm\", \"value: {{{signal}}} - last event: {{{last}:?}}\" }}\n}}",
+        "{declaration}Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    sx: sx().width(\"100%\"),\n{}    Text {{ size: \"sm\", \"value: {signal} - last event: {{{last}:?}}\" }}\n}}",
         indent(code)
     )
 }
@@ -303,7 +307,7 @@ pub fn RangeSliderPage() -> Element {
                                 }
                                 Text {
                                     size: "sm",
-                                    "value: {quality():?} - last event: {last_quality():?}"
+                                    "value: {quality().0.label()}..{quality().1.label()} - last event: {last_quality():?}"
                                 }
                             } else {
                                 RangeSlider {
