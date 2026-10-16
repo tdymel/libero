@@ -702,10 +702,13 @@ async fn drag_grip_to<D: Driver>(
     at: fn(&Rect) -> f64,
 ) -> Result<()> {
     let target = format!("th[aria-label={target}]");
-    d.evaluate(&format!(
-        "document.querySelector({target:?}).scrollIntoView({{ block: 'nearest', inline: 'nearest' }})"
-    ))
-    .await?;
+    // Blitz reads no scripts, and its window shows every header.
+    if d.platform() != Platform::Native {
+        d.evaluate(&format!(
+            "document.querySelector({target:?}).scrollIntoView({{ block: 'nearest', inline: 'nearest' }})"
+        ))
+        .await?;
+    }
     let grip = format!("th[aria-label={header}] [data-drag-handle]");
     let from = d.rect(&grip).await?;
     let to = at(&d.rect(&target).await?);
