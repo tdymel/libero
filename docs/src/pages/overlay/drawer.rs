@@ -21,12 +21,16 @@ const CONTENT: &str = r#"Flex {
 /// A drawer is a hook, so the options and the trigger belong in the example.
 /// The generated props are rebuilt here as the struct literal they are.
 fn wrap_hook(values: &DemoValues, _: &str) -> String {
+    let handle = match values.str("handle").as_str() {
+        "true" => "\n        handle: true,",
+        _ => "",
+    };
     format!(
         "let nav = use_drawer(\n    \
              DrawerOptions {{\n        \
                  anchor: {:?}.into(),\n        \
                  size: {:?}.into(),\n        \
-                 title: Some(\"Temporary drawer\".into()),\n        \
+                 title: Some(\"Temporary drawer\".into()),{}\n        \
                  ..Default::default()\n    \
              }},\n    \
              |s: ModalScope<()>| rsx! {{\n{}    }},\n);\n\n\
@@ -35,6 +39,7 @@ fn wrap_hook(values: &DemoValues, _: &str) -> String {
          }}",
         values.str("anchor"),
         values.str("size"),
+        handle,
         indent(&indent(CONTENT)),
     )
 }
@@ -42,12 +47,13 @@ fn wrap_hook(values: &DemoValues, _: &str) -> String {
 /// The hook needs a scope of its own: `Demo` calls its `render` closure from
 /// its own, where a hook would be invisible to the next reader.
 #[component]
-fn DrawerDemo(anchor: String, size: String) -> Element {
+fn DrawerDemo(anchor: String, size: String, handle: bool) -> Element {
     let nav = use_drawer(
         DrawerOptions {
             anchor: anchor.into(),
             size: size.into(),
             title: Some("Temporary drawer".into()),
+            handle,
             ..Default::default()
         },
         |s: ModalScope<()>| {
@@ -89,8 +95,9 @@ pub fn DrawerPage() -> Element {
                     prop("z_index", "Input<ThemeAwareValue>").doc("Stacking order of the panel."),
                     prop("aria_label", "Option<String>").doc("Names the panel, which is a dialog. With neither this nor `title`, it warns in a debug build."),
                     prop("title", "Option<String>").doc("A visible heading at the top of the panel that names it."),
-                    prop("sx", "Input<Sx>").doc("Styles the panel. It has no inner parts: the content is yours to style."),
-                    prop("ondismiss", "Option<Callback<Dismiss, bool>>").doc("Whether Escape, the backdrop or Back may close it; `false` keeps it open, e.g. over an unsaved draft. Unset, all three close."),
+                    prop("sx", "Input<Sx>").doc("Styles the panel. The content is yours to style; a bottom drawer's swipe strip is `& > [data-slot='handle']`."),
+                    prop("ondismiss", "Option<Callback<Dismiss, bool>>").doc("Whether Escape, the backdrop, Back or a swipe may close it; `false` keeps it open, e.g. over an unsaved draft. Unset, all close."),
+                    prop("handle", "bool").default("false").doc("Docked bottom, a touch swipe down from the panel's top padding closes it; `true` draws a grab bar there. Other anchors ignore it."),
                 ]).without_base_props(),
             ],
             accessibility: a11y()
@@ -101,6 +108,7 @@ pub fn DrawerPage() -> Element {
                     "A dismissal settles the `Opening` with `None`, so a result handler runs with `None`: match `Some(answer)` to act on an answer only.",
                     "A `title` is a heading that names the panel; without it or `aria_label` the panel warns in a debug build.",
                     "Android's Back button closes the drawer, as Escape does, rather than the app.",
+                    "Docked bottom, a touch swipe down from the panel's top edge closes it. It is an extra route: Escape, Back, the backdrop and the content's own close button still work.",
                 ])
                 .must([
                     "Set `DrawerOptions::title` or `aria_label`, since the panel is a dialog with no name of its own.",
@@ -132,9 +140,15 @@ pub fn DrawerPage() -> Element {
                         .labels(["Start", "End", "Top", "Bottom"]),
                     // `24rem` is plain CSS, next to the size scale.
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl", "24rem"]).default(theme.drawer.size.as_str()),
+                    // Drawn only docked bottom.
+                    Control::switch("handle"),
                 ],
                 render: move |values: DemoValues| rsx! {
-                    DrawerDemo { anchor: values.str("anchor"), size: values.str("size") }
+                    DrawerDemo {
+                        anchor: values.str("anchor"),
+                        size: values.str("size"),
+                        handle: values.str("handle") == "true",
+                    }
                 },
                 wrap: Wrap(wrap_hook),
             }

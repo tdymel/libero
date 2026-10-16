@@ -6,11 +6,11 @@ use crate::{
         layout::{Float, Placement},
         overlay::Dialog,
     },
-    context::Dismiss,
-    hooks::{use_css, use_theme},
+    context::{Dismiss, ModalContext},
+    hooks::{SwipeDirection, SwipeEvent, SwipeOptions, listener, use_css, use_swipe, use_theme},
     str_enum::str_enum,
-    sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{DRAWER_SIZE, Size},
+    sx::{FORCED_COLORS, StaticSx, ThemeAwareValue, sx},
+    theme::{Color, ColorShade, ColorValue, DRAWER_SIZE, Size},
 };
 
 // Rides along as an extra class on `Dialog`'s own. Edge-docking is `Float`'s
@@ -32,7 +32,11 @@ static DRAWER_SX: StaticSx = StaticSx::new(|| {
         .when("anchor-end", sx().height("100%"))
         // Taller than the viewport, its far edge would sit above the scroll origin (3002).
         .when("anchor-top", sx().width("100%").max_height("100dvh"))
-        .when("anchor-bottom", sx().width("100%").max_height("100dvh"))
+        // Relative: the swipe strip lies over its top padding.
+        .when(
+            "anchor-bottom",
+            sx().width("100%").max_height("100dvh").position("relative"),
+        )
         // A drawer opened from inside one must not inherit its custom size.
         .var(DRAWER_SIZE.override_var(), "initial");
 
@@ -49,6 +53,30 @@ static DRAWER_SX: StaticSx = StaticSx::new(|| {
             sx().height(value),
         )
     })
+});
+
+// As tall as the panel's top padding, whatever sets it: no padding, no strip.
+static DRAWER_HANDLE_SX: StaticSx = StaticSx::new(|| {
+    sx().position("absolute")
+        .top("0")
+        .left("0")
+        .right("0")
+        .height("0")
+        .padding_top("inherit")
+        .box_sizing("content-box")
+        .touch_action("none")
+});
+
+static DRAWER_HANDLE_BAR_SX: StaticSx = StaticSx::new(|| {
+    sx().position("absolute")
+        .top("50%")
+        .left("50%")
+        .width("2rem")
+        .height("4px")
+        .transform("translate(-50%, -50%)")
+        .border_radius("999px")
+        .background(ColorValue::Shade(Color::Muted, ColorShade::S6).value())
+        .media(FORCED_COLORS, sx().background("CanvasText"))
 });
 
 /// A corner `Float` placement pins two sides; the third offset makes a full edge.
@@ -93,6 +121,9 @@ base_props! {
         title: Option<String>,
         #[props(default)]
         ondismiss: Option<Callback<Dismiss, bool>>,
+        /// Docked bottom: draws a grab bar in the swipe strip.
+        #[props(default)]
+        handle: bool,
         children: Element,
     }
 }
@@ -122,6 +153,40 @@ pub(crate) fn Drawer(props: DrawerProps) -> Element {
     let drawer_class = use_css(Some(&DRAWER_SX), crate::CssLayer::Framework);
     let class = props.class.clone().unwrap_or_default().with(drawer_class);
     let (placement, float_sx) = drawer_float_placement(anchor);
+    let modal = try_use_context::<ModalContext>();
+    let swipe = use_swipe(
+        use_callback(move |event: SwipeEvent| {
+            if let Some(modal) = modal
+                && event.direction == SwipeDirection::Down
+            {
+                modal.dismiss(Dismiss::Swipe);
+            }
+        }),
+        SwipeOptions::default(),
+    );
+    // A press starts on the strip, its moves are heard on the panel: Blitz sends them
+    // to the node under the finger, with no implicit touch capture.
+    let mut held = use_hook(|| CopyValue::new(None::<i32>));
+    let mut attributes = props.attributes.clone();
+    if anchor == DrawerAnchor::Bottom {
+        attributes.push(listener("onpointermove", move |event: PointerEvent| {
+            // Blitz pans the scrolling panel unless the move is prevented.
+            if *held.peek() == Some(event.pointer_id()) {
+                event.prevent_default();
+            }
+            swipe.onpointermove.call(event);
+        }));
+        let end = move |event: PointerEvent| {
+            if *held.peek() == Some(event.pointer_id()) {
+                held.set(None);
+            }
+            swipe.onpointerup.call(event);
+        };
+        attributes.push(listener("onpointerup", end));
+        attributes.push(listener("onpointercancel", end));
+    }
+    let strip_class = use_css(Some(&DRAWER_HANDLE_SX), crate::CssLayer::Framework);
+    let bar_class = use_css(Some(&DRAWER_HANDLE_BAR_SX), crate::CssLayer::Framework);
 
     rsx! {
         Float {
@@ -137,7 +202,23 @@ pub(crate) fn Drawer(props: DrawerProps) -> Element {
                 class,
                 sx,
                 states,
-                attributes: props.attributes.clone(),
+                attributes,
+                // Touch only, beside Back, Escape and the content's own close (WCAG 2.5.1).
+                if anchor == DrawerAnchor::Bottom {
+                    div {
+                        class: strip_class,
+                        "data-slot": "handle",
+                        aria_hidden: "true",
+                        onpointerdown: move |event: PointerEvent| {
+                            let touch = event.is_primary() && event.pointer_type() != "mouse";
+                            held.set(touch.then(|| event.pointer_id()));
+                            swipe.onpointerdown.call(event);
+                        },
+                        if props.handle {
+                            span { class: bar_class }
+                        }
+                    }
+                }
                 {props.children}
             }
         }

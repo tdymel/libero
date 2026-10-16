@@ -98,8 +98,8 @@ base_props! {
         /// The close button outside a modal; inside one it closes the modal.
         #[props(default)]
         onclose: Option<EventHandler<()>>,
-        /// Inside a modal: whether Escape, the backdrop or Back may close it; `false`
-        /// keeps it open. Unset, all three close, but an `alertdialog` ignores the backdrop.
+        /// Inside a modal: whether Escape, the backdrop, Back or a bottom drawer's swipe may
+        /// close it; `false` keeps it open. Unset, all close, but an `alertdialog` ignores the backdrop.
         /// The header close button is not asked.
         #[props(default)]
         ondismiss: Option<Callback<Dismiss, bool>>,

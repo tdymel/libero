@@ -82,7 +82,7 @@ pub(crate) fn Modal(props: ModalProps) -> Element {
         }
     });
     let dismiss_guard = use_hook(|| CopyValue::new(None::<Callback<Dismiss, bool>>));
-    use_context_provider(|| ModalContext {
+    let context = use_context_provider(|| ModalContext {
         onclose: Some(onclose),
         dismiss_guard: Some(dismiss_guard),
     });
@@ -98,18 +98,9 @@ pub(crate) fn Modal(props: ModalProps) -> Element {
         .with(MODAL_Z_INDEX_VAR, z_index.to_string())
         .into();
 
-    // Deferred: closing synchronously mid-bubble re-enters the same
+    // Deferred inside: closing synchronously mid-bubble re-enters the same
     // `EventHandler` and panics with `AlreadyBorrowedMut`.
-    // The inner `Dialog`'s `ondismiss` may keep it open.
-    let close = move |reason: Dismiss| {
-        let guard = *dismiss_guard.peek();
-        if guard.is_some_and(|guard| !guard.call(reason)) {
-            return;
-        }
-        spawn(async move {
-            onclose.call(());
-        });
-    };
+    let close = move |reason: Dismiss| context.dismiss(reason);
 
     // Plain divs, not `Box`: a `Box` re-renders and counts against the perf budgets (2594).
     let frame_class = use_css(Some(&MODAL_FRAME_SX), CssLayer::Framework);

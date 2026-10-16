@@ -53,6 +53,9 @@ axis is always full. Both are read on every render, so an anchor in a signal
 moves an open drawer. `start` and `end` follow the text direction: `start` is
 the right edge under `dir="rtl"`.
 
+Docked bottom, a touch swipe down from the panel's top padding closes it, after
+`ondismiss` hears `Dismiss::Swipe`. `handle: true` draws a grab bar there.
+
 A drawer takes per-opening data and returns a result like any modal. See
 [Modal](modal.md) for `open_with`, `Opening`, `onresult` and `.await`.
 
@@ -104,8 +107,9 @@ behave the same. See [Modal](modal.md).
 | `z_index` | `Input<ThemeAwareValue>` | - | Stacking order of the panel. |
 | `aria_label` | `Option<String>` | - | Names the panel, which is a dialog. With neither this nor `title`, it warns in a debug build. |
 | `title` | `Option<String>` | - | A visible heading at the top of the panel that names it. |
-| `sx` | `Input<Sx>` | - | Styles the panel. It has no inner parts: the content is yours to style. |
-| `ondismiss` | `Option<Callback<Dismiss, bool>>` | - | Whether Escape, the backdrop or Back may close it; `false` keeps it open, e.g. over an unsaved draft. Unset, all three close. |
+| `sx` | `Input<Sx>` | - | Styles the panel. The content is yours to style; a bottom drawer's swipe strip is `& > [data-slot='handle']`. |
+| `ondismiss` | `Option<Callback<Dismiss, bool>>` | - | Whether Escape, the backdrop, Back or a swipe may close it; `false` keeps it open, e.g. over an unsaved draft. Unset, all close. |
+| `handle` | `bool` | `false` | Docked bottom, a touch swipe down from the panel's top padding closes it; `true` draws a grab bar there. Other anchors ignore it. |
 
 ## Accessibility
 
@@ -125,6 +129,9 @@ behave the same. See [Modal](modal.md).
 - A `title` is a heading that names the panel; without it or `aria_label` the
   panel warns in a debug build.
 - Android's Back button closes the drawer, as Escape does, rather than the app.
+- Docked bottom, a touch swipe down from the panel's top edge closes it. It is
+  an extra route: Escape, Back, the backdrop and the content's own close button
+  still work.
 
 ### You must
 

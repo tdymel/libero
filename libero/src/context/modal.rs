@@ -67,6 +67,8 @@ pub enum Dismiss {
     Backdrop,
     /// Android's Back button or gesture; web and desktop have none.
     Back,
+    /// A downward touch swipe on a bottom drawer's top edge.
+    Swipe,
 }
 
 impl ModalContext {
@@ -90,6 +92,15 @@ impl ModalContext {
             });
         }
     }
+
+    /// Closes the modal unless the inner `Dialog`'s `ondismiss` refuses `reason`.
+    pub(crate) fn dismiss(&self, reason: Dismiss) {
+        let guard = self.dismiss_guard.and_then(|guard| *guard.peek());
+        if guard.is_some_and(|guard| !guard.call(reason)) {
+            return;
+        }
+        self.close();
+    }
 }
 
 #[cfg(test)]
@@ -99,7 +110,7 @@ mod tests {
 
     use std::cell::Cell;
 
-    use super::ModalHost;
+    use super::{Dismiss, ModalContext, ModalHost};
     use crate::context::window::ZLayers;
     use crate::theme::{Theme, ThemeSet, ZIndexDefaults};
     use crate::{LiberoContext, LiberoProvider};
@@ -162,6 +173,37 @@ mod tests {
             dom.render_immediate(&mut dioxus::dioxus_core::NoOpMutations);
         }
         assert_eq!(SHOWN.with(Cell::get), 5000);
+    }
+
+    thread_local! {
+        static CLOSED: Cell<u32> = const { Cell::new(0) };
+    }
+
+    /// A drawer's swipe asks the guard as Escape does: refused, nothing closes.
+    #[test]
+    fn a_refused_swipe_keeps_the_modal_open() {
+        fn app() -> Element {
+            let guard = use_hook(|| {
+                CopyValue::new(Some(Callback::new(|reason: Dismiss| {
+                    reason != Dismiss::Swipe
+                })))
+            });
+            let context = ModalContext {
+                onclose: Some(Callback::new(|()| CLOSED.with(|c| c.set(c.get() + 1)))),
+                dismiss_guard: Some(guard),
+            };
+            use_hook(move || {
+                context.dismiss(Dismiss::Swipe);
+                context.dismiss(Dismiss::Escape);
+            });
+            rsx! {}
+        }
+
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        dom.process_events();
+        dom.render_immediate(&mut dioxus::dioxus_core::NoOpMutations);
+        assert_eq!(CLOSED.with(Cell::get), 1, "only Escape closed");
     }
 
     #[test]

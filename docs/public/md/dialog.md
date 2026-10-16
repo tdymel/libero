@@ -46,7 +46,7 @@ fn Demo() -> Element {
 | `title` | `String` | - | Heading, and the accessible name unless `aria_label` is set. |
 | `close_button` | `bool` | in a modal, or with `onclose` | Header close button. Inside a modal it closes the modal, outside one it calls `onclose`. |
 | `onclose` | `EventHandler<()>` | - | Called by the close button outside a modal. |
-| `ondismiss` | `Callback<Dismiss, bool>` | all close, an alertdialog's backdrop does not | Inside a modal: asked before Escape, the backdrop or Back closes it. Return `false` to keep it open, such as a form with unsaved input. The close button and your own `close()` are not asked. |
+| `ondismiss` | `Callback<Dismiss, bool>` | all close, an alertdialog's backdrop does not | Inside a modal: asked before Escape, the backdrop, Back or a bottom drawer's swipe closes it. Return `false` to keep it open, such as a form with unsaved input. The close button and your own `close()` are not asked. |
 | `close_label` | `String` | `"Close"` | The close button's accessible name, such as "Close cart". Unset, the localization's `common.close`. |
 | `radius` | `ThemeAwareValue` | `md` | Corner radius from the radius scale, or any CSS, e.g. `radius: "0"`. |
 | `size` | `ThemeAwareValue` | `md` | Caps the width from the dialog scale. `md` is 510px. |

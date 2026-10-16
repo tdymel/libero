@@ -23,11 +23,15 @@ pub struct DrawerOptions {
     pub aria_label: Option<String>,
     /// A visible heading at the top of the panel that names it.
     pub title: Option<String>,
-    /// Styles the panel. It has no inner parts: its content is yours.
+    /// Styles the panel. Its content is yours; a bottom drawer's swipe strip is
+    /// `& > [data-slot='handle']`.
     pub sx: Input<Sx>,
-    /// Whether Escape, the backdrop or Back may close it; `false` keeps it open.
-    /// Unset, all three close. As [`Dialog`](crate::components::Dialog)'s.
+    /// Whether Escape, the backdrop, Back or a swipe may close it; `false` keeps it
+    /// open. Unset, all close. As [`Dialog`](crate::components::Dialog)'s.
     pub ondismiss: Option<Callback<Dismiss, bool>>,
+    /// Docked bottom, a touch swipe down from the panel's top padding closes it;
+    /// `true` draws a grab bar there. Other anchors ignore it.
+    pub handle: bool,
 }
 
 /// A drawer is [`use_modal`] with a docked panel around the content: same
@@ -72,6 +76,7 @@ where
                 title: options.title.clone(),
                 sx: options.sx.clone(),
                 ondismiss: options.ondismiss,
+                handle: options.handle,
                 {content}
             }
         }

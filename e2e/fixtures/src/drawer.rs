@@ -18,7 +18,38 @@ pub const ROUTES: Routes = &[
     ("/drawer/guarded", || rsx! { GuardedDrawerPage {} }),
     ("/drawer/long-title", || rsx! { LongTitleDrawerPage {} }),
     ("/drawer/titled", || rsx! { TitledDrawerPage {} }),
+    ("/drawer/bottom-swipe", || rsx! { BottomSwipeDrawerPage {} }),
 ];
+
+/// Todo 3590: a swipe down from the bottom drawer's top padding closes it, and says so.
+#[component]
+fn BottomSwipeDrawerPage() -> Element {
+    let mut reasons = use_signal(Vec::<String>::new);
+    let nav = use_drawer(
+        DrawerOptions {
+            anchor: "bottom".into(),
+            size: "sm".into(),
+            title: Some("Filters".into()),
+            handle: true,
+            ondismiss: Some(Callback::new(move |reason: Dismiss| {
+                reasons.push(format!("{reason:?}"));
+                true
+            })),
+            ..Default::default()
+        },
+        |s: ModalScope<()>| {
+            rsx! {
+                div { id: "drawer-body", "Swipe the bar down to close." }
+                Button { id: "drawer-close", onclick: move |_| s.close(), "Done" }
+            }
+        },
+    );
+
+    rsx! {
+        Button { id: "open-drawer", onclick: move |_| { nav.open(); }, "Open filters" }
+        div { id: "reasons", {reasons.read().join(",")} }
+    }
+}
 
 /// Todo 3004: `DrawerOptions::title` is the panel's heading and its name.
 #[component]
