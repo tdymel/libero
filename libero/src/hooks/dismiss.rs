@@ -448,28 +448,35 @@ impl DismissHandle {
                     if !current() {
                         return;
                     }
-                    match handle.focus_inside().or(early) {
-                        Some(false) => handle.close(Dismissal::FocusMoved),
-                        // A WebView: the page says whether focus landed on a marked element (3591).
-                        None if handle.marker.live => {
-                            let landed = focus_lands_in(&handle.marker_selector()).await;
-                            if current() && matches!(landed, Ok(false)) {
-                                handle.close(Dismissal::FocusMoved);
-                            }
-                        }
-                        _ => {}
+                    let inside = match handle.focus_inside().or(early) {
+                        None => handle.page_holds_focus().await,
+                        known => known,
+                    };
+                    if inside == Some(false) && current() {
+                        handle.close(Dismissal::FocusMoved);
                     }
                 });
             }
         }
     }
 
-    /// Matches the elements carrying this box's press marker or one counted inside.
+    /// Where the box cannot answer (a WebView): whether the page's focus is on an element
+    /// carrying its marker or one counted inside (3591). `None` without markers.
+    pub(crate) async fn page_holds_focus(&self) -> Option<bool> {
+        if !self.marker.live {
+            return None;
+        }
+        focus_lands_in(&self.marker_selector()).await.ok()
+    }
+
+    /// Matches the elements carrying this box's press marker or one counted inside, and
+    /// `<body>` holding focus: WebKit leaves a pressed button unfocused, a press's to judge.
     fn marker_selector(&self) -> String {
         let inside = self.inside.peek();
         std::iter::once(self.marker.id)
             .chain(inside.iter().map(|(_, _, marker)| *marker))
             .map(|marker| format!("[{PRESS_MARKER_ATTR}=\"{marker}\"]"))
+            .chain(["body:not(:focus-within)".to_string()])
             .collect::<Vec<_>>()
             .join(", ")
     }
@@ -480,15 +487,9 @@ impl DismissHandle {
         escape_listener(move || handle.close(Dismissal::FromInside))
     }
 
-    /// Whether focus is still inside this box; `false` also where the platform
-    /// cannot tell, which [`focus_inside`](Self::focus_inside) keeps apart.
-    pub(crate) fn holds_focus(&self) -> bool {
-        self.focus_inside() == Some(true)
-    }
-
     /// `None` when a mounted element cannot answer and none said yes. Asks
     /// `:focus` for a descendant and `is_focused()` for the element itself.
-    fn focus_inside(&self) -> Option<bool> {
+    pub(crate) fn focus_inside(&self) -> Option<bool> {
         if self.focus_in_owned_popup() {
             return Some(true);
         }

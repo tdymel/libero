@@ -108,7 +108,19 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
     let root = props.parents.0.first().copied();
     let (onclose, close_all) = (props.onclose, props.close_all);
     let focus_moved = use_callback(move |()| match (root, close_all) {
-        (Some(root), Some(close_all)) if !root.holds_focus() => close_all.call(false),
+        (Some(root), Some(close_all)) => match root.focus_inside() {
+            Some(true) => onclose.call(()),
+            Some(false) => close_all.call(false),
+            // A WebView asks the page (3591).
+            None => {
+                spawn(async move {
+                    match root.page_holds_focus().await {
+                        Some(true) => onclose.call(()),
+                        _ => close_all.call(false),
+                    }
+                });
+            }
+        },
         _ => onclose.call(()),
     });
     let dismiss = use_dismiss(
