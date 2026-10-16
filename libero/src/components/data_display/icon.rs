@@ -146,6 +146,7 @@ base_props! {
 }
 
 /// A sized, coloured box around an svg glyph; decorative unless given `aria_label`.
+/// As a `button`, `a` or form control it is never `aria-hidden`: name it.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -192,6 +193,8 @@ pub fn Icon(props: IconProps) -> Element {
         .with(variant.state_name(), true)
         .into();
     let named = names_itself(&props.attributes);
+    // `aria-hidden` on a focusable control leaves a Tab stop nothing announces.
+    let hideable = !named && !is_interactive(component);
     let children = match (props.src, props.svg) {
         (Some(src), _) => rsx! { IconMask { src } },
         (None, Some(icon)) => rsx! { Pictogram { icon } },
@@ -206,8 +209,15 @@ pub fn Icon(props: IconProps) -> Element {
         .style(style)
         .prepare()
         .attr_default("role", named.then_some("img"))
-        .attr_default("aria-hidden", (!named).then_some("true"))
+        .attr_default("aria-hidden", hideable.then_some("true"))
         .render(component, props.attributes, children)
+}
+
+fn is_interactive(component: HtmlTag) -> bool {
+    matches!(
+        component.as_str(),
+        "button" | "a" | "input" | "select" | "textarea"
+    )
 }
 
 #[cfg(test)]
@@ -232,6 +242,16 @@ mod tests {
             svg: None,
             children: rsx! {},
         }
+    }
+
+    /// Todo 3556: a focusable control must not be `aria-hidden`.
+    #[test]
+    fn only_a_non_focusable_component_is_decorative() {
+        assert!(is_interactive(HtmlTag::Button));
+        assert!(is_interactive(HtmlTag::A));
+        assert!(is_interactive(HtmlTag::Input));
+        assert!(!is_interactive(HtmlTag::Span));
+        assert!(!is_interactive(HtmlTag::Div));
     }
 
     #[test]

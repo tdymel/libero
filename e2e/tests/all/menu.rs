@@ -356,6 +356,46 @@ fn items_arriving_in_an_open_menu_show_it_and_take_focus() {
     });
 }
 
+/// Todo 3554: the focused row is past the end of a shrunk list, and the menu
+/// still has a row to Tab to.
+#[test]
+fn a_shrunk_list_keeps_a_row_with_tabindex_zero() {
+    block_on(async {
+        let fixture = Fixture::open("/menu-items-shrink", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            pointer::click(page, TRIGGER).await?;
+            wait::for_js_true(
+                page,
+                "document.activeElement?.textContent.trim() === 'Save'",
+                "focus on the first item",
+            )
+            .await?;
+            keyboard::press(page, keyboard::END).await?;
+            wait::for_js_true(
+                page,
+                "document.activeElement?.textContent.trim() === 'Shrink'",
+                "focus on the last item",
+            )
+            .await?;
+            keyboard::press(page, keyboard::ENTER).await?;
+            wait::for_js_true(
+                page,
+                "document.querySelectorAll('[role=menuitem]').length === 1 && \
+                 document.querySelectorAll('[role=menuitem][tabindex=\"0\"]').length === 1",
+                "one item holding the tab stop",
+            )
+            .await
+        }
+        .await;
+
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+    });
+}
+
 /// Todo 29: a closed menu unmounts its submenu levels, so a reopen starts
 /// them closed, working, and on the items changed while closed.
 #[test]

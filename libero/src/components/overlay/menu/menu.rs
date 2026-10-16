@@ -117,8 +117,8 @@ pub fn Menu(props: MenuProps) -> Element {
     let empty = props.items.is_empty();
     let open = opened && !disabled && !empty;
     use_effect(use_reactive!(|empty| state.set_empty(empty)));
-    // Disabled means closed, not hidden: `aria-expanded` stays true, and
-    // re-enabling would pop it back up.
+    // Disabled closes the menu, so `aria-expanded` reads false; re-enabling
+    // does not reopen it.
     use_effect(use_reactive!(|(disabled, opened)| {
         if disabled && opened {
             state.close();

@@ -176,7 +176,10 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
         .unwrap_or(0);
     use_level_focus(level, open, placed, props.request, props.initial, first);
     // A memo: the first focus sets `active` to `first`, which redrew every row for nothing.
-    let tabbable = use_memo(use_reactive!(|(first,)| active().unwrap_or(first)));
+    // An active row past a shrunk list falls back to `first`, so one row keeps tabindex 0.
+    let tabbable = use_memo(use_reactive!(|(first, len)| active()
+        .filter(|row| *row < len)
+        .unwrap_or(first)));
     let hover = use_hover_delay(
         level,
         Duration::from_millis(theme.menu.submenu_delay.into()),

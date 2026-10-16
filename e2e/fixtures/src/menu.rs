@@ -13,6 +13,7 @@ pub const ROUTES: Routes = &[
     ("/menu", || rsx! { MenuPage {} }),
     ("/menu-open-on-mount", || rsx! { MenuOpenOnMountPage {} }),
     ("/menu-items-late", || rsx! { MenuItemsLatePage {} }),
+    ("/menu-items-shrink", || rsx! { MenuItemsShrinkPage {} }),
     ("/menu-submenu-reopen", || rsx! { MenuSubmenuReopenPage {} }),
     ("/menu-choices", || rsx! { MenuChoicesPage {} }),
     ("/menu-row", || rsx! { MenuRowPage {} }),
@@ -223,6 +224,31 @@ fn MenuItemsLatePage() -> Element {
         ],
         false => Vec::new(),
     };
+
+    rsx! {
+        Menu {
+            state: menu,
+            items,
+            Button { variant: "outlined", attributes: menu.a11y_attributes(), "Actions" }
+        }
+    }
+}
+
+/// Todo 3554: choosing the last item, which stays open, leaves a single item.
+#[component]
+fn MenuItemsShrinkPage() -> Element {
+    let menu = use_menu();
+    let mut shrunk = use_signal(|| false);
+    let mut items: Vec<MenuEntry> = vec![MenuItem::new("Save").onselect(|_| {}).into()];
+    if !shrunk() {
+        items.push(MenuItem::new("Share").onselect(|_| {}).into());
+        items.push(
+            MenuItem::new("Shrink")
+                .keep_open()
+                .onselect(move |_| shrunk.set(true))
+                .into(),
+        );
+    }
 
     rsx! {
         Menu {

@@ -43,9 +43,10 @@ pub(crate) static VISUALLY_HIDDEN_FIXED_SX: StaticSx =
 /// The fixed recipe, undone while focus is inside, for a skip link, on the float layer
 /// above a sticky `Header` (2.4.11). Never the default, or a hidden native input would pop out.
 static VISUALLY_HIDDEN_FOCUSABLE_SX: StaticSx = StaticSx::new(|| {
-    fixed_recipe().selector(
+    fixed_recipe().pointer_events("none").selector(
         "&:focus-within",
         PaperDefaults::background_sx()
+            .pointer_events("auto")
             .z_index(Z_INDEX_FLOAT.value())
             .width("auto")
             .height("auto")
@@ -121,5 +122,16 @@ mod tests {
         let focused = &css[css.find(":focus-within{").expect(css)..];
 
         assert!(focused.contains("z-index:var(--lsx-z-index-float"), "{css}");
+    }
+
+    /// Todo 3557: Blitz hit-tests the clipped box, so only focus gives the press back.
+    #[test]
+    fn an_unfocused_skip_link_takes_no_press() {
+        let css = crate::css::Stylesheet::from(&*VISUALLY_HIDDEN_FOCUSABLE_SX);
+        let css = css.as_str();
+        let (hidden, focused) = css.split_at(css.find(":focus-within{").expect(css));
+
+        assert!(hidden.contains("pointer-events:none"), "{css}");
+        assert!(focused.contains("pointer-events:auto"), "{css}");
     }
 }

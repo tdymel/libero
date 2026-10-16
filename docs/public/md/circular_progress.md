@@ -32,8 +32,7 @@ fn Demo() -> Element {
 }
 ```
 
-`value` is required. A bare number works, and `value: None` is the spinning
-ring.
+A bare number works. Omit `value`, or pass `value: None`, for the spinning ring.
 
 ```rust,ignore
 CircularProgress { aria_label: "Connecting", value: None }
@@ -66,7 +65,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `value` | `Option<f64>` | required | Current progress, clamped into `min..=max`. `None` makes it spin. |
+| `value` | `Option<f64>` | `None` | Current progress, clamped into `min..=max`. Omitted or `None` makes it spin. |
 | `min` | `f64` | `0.0` | Range start. |
 | `max` | `f64` | `100.0` | Range end. At or below `min` the ring draws empty. |
 | `color` | `ThemeAwareValue` | `primary` | The arc. A theme color name paints its text shade, as `ProgressBar`'s fill. Any other CSS color paints as given. |

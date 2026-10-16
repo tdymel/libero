@@ -15,15 +15,13 @@ pub(crate) fn fraction(component: &str, value: f64, min: f64, max: f64) -> f64 {
     (value.clamp(min, max) - min) / (max - min)
 }
 
-/// `aria-valuenow`, clamped like the fill. A non-finite input reports `min`, as the
-/// fill draws empty; `min > max` reports the raw value, as `clamp` panics on it.
+/// `aria-valuenow`, clamped like the fill. A non-finite input or `min > max` reports
+/// `min`, as the fill draws empty (`clamp` panics on the latter).
 pub(crate) fn value_now(value: f64, min: f64, max: f64) -> f64 {
-    if !(value.is_finite() && min.is_finite() && max.is_finite()) {
-        min
-    } else if min <= max {
+    if value.is_finite() && min.is_finite() && max.is_finite() && min <= max {
         value.clamp(min, max)
     } else {
-        value
+        min
     }
 }
 
@@ -112,7 +110,8 @@ mod tests {
         assert_eq!(value_now(140.0, 0.0, 100.0), 100.0);
         assert_eq!(value_now(-5.0, 0.0, 100.0), 0.0);
         assert_eq!(value_now(42.0, 0.0, 100.0), 42.0);
-        assert_eq!(value_now(5.0, 10.0, 0.0), 5.0);
+        assert_eq!(value_now(5.0, 10.0, 0.0), 10.0);
+        assert_eq!(value_now(50.0, 10.0, 0.0), 10.0);
         assert_eq!(value_now(5.0, 10.0, 10.0), 10.0);
         assert_eq!(value_now(f64::NAN, 0.0, 100.0), 0.0);
     }
