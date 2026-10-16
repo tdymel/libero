@@ -149,7 +149,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `lightbox_zoom::a_pinch_zooms_the_picture` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `lightbox_zoom::a_pinch_zooms_the_picture` | native | Blitz takes no multi-touch input |
 | `lightbox_zoom::a_zoomed_picture_pans_only_to_its_edge` | native | 3386: reads the picture's size and pan by script, which Blitz has none of |
-| `lightbox_zoom::a_zoomed_picture_pans_only_to_its_edge` | windows desktop | upstream: Dioxus' asset! gives a backslashed file path (D:\a\..\1.svg) off the bundle, which WebView2 cannot load, so no picture decodes |
 | `line_chart::a_click_on_a_point_reports_it` | ios | 3416: the simulator's tap or drag did not drive the page |
 | `line_chart::a_pen_leaving_takes_its_tooltip_along` | android | a synthetic pen hover is a browser check |
 | `line_chart::a_pen_leaving_takes_its_tooltip_along` | ios | a synthetic pen hover is a browser check |
