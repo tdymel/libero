@@ -615,7 +615,7 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
     }
     spec.axes
         .style(&mut chart.base, &mut chart.y_axis_configs, false);
-    round_axes(&chart.base, &mut chart.y_axis_configs);
+    round_axes(&chart.base, &mut chart.y_axis_configs, false);
     let auto = spec.format == ValueFormat::Auto;
     let x_formats = ungrouped(spec.formats);
     let write = |svg: &str, mark: char| {
@@ -1004,9 +1004,9 @@ macro_rules! style_bars {
 }
 
 /// A percent stack with losses reads each share of the stack's absolute sum, up above 0 and
-/// down below it: the axis runs to the furthest of each, in steps of 20 (else the renderer's).
+/// down below it: the axis runs to the furthest of each, in `ticks` round steps (else the
+/// renderer's).
 fn percent_axes(axes: &Axes, series: &[SeriesSpec]) -> Axes {
-    const STEP: f64 = 20.0;
     let bars: Vec<_> = series.iter().filter(|s| !s.extras.line).collect();
     let (mut up, mut down) = (0.0_f64, 0.0_f64);
     for index in 0..bars.iter().map(|s| s.values.len()).max().unwrap_or(0) {
@@ -1025,13 +1025,7 @@ fn percent_axes(axes: &Axes, series: &[SeriesSpec]) -> Axes {
     if down == 0.0 {
         return axes.clone();
     }
-    let (min, max) = (-(down / STEP).ceil() * STEP, (up / STEP).ceil() * STEP);
-    Axes {
-        min: Some(min),
-        max: Some(max),
-        ticks: ((max - min) / STEP) as usize,
-        ..axes.clone()
-    }
+    round_ends(axes, -down, up)
 }
 
 /// Puts axis `index`'s unset ends on whole steps of 1, 2, 2.5 or 5 times a power of ten, the
@@ -1135,9 +1129,10 @@ fn round_axis(
     config.split_number = n;
 }
 
-/// [`round_axis`] on the left axis, and the right one cut into as many steps.
-fn round_axes(base: &charts_rs::ChartBase, y: &mut [charts_rs::YAxisConfig]) {
-    if let Some(left) = y.first_mut() {
+/// [`round_axis`] on the left axis, and the right one cut into as many steps. With `percent`
+/// the left axis stays: it reads shares.
+fn round_axes(base: &charts_rs::ChartBase, y: &mut [charts_rs::YAxisConfig], percent: bool) {
+    if let Some(left) = y.first_mut().filter(|_| !percent) {
         round_axis(&base.series_list, 0, left, None, true);
     }
     let count = y.first().map(|left| left.split_number);
@@ -1244,6 +1239,12 @@ fn error_axes(axes: &Axes, spec: &BarSpec) -> Axes {
             }
         }
     }
+    round_ends(axes, low, high)
+}
+
+/// `axes` with unset ends reaching `low` and `high` on whole steps of a round size, at most
+/// `ticks` of them.
+fn round_ends(axes: &Axes, low: f64, high: f64) -> Axes {
     let raw = (high - low) / axes.ticks.max(1) as f64;
     if axes.min.is_some() || axes.max.is_some() || raw <= 0.0 || !raw.is_finite() {
         return axes.clone();
@@ -1384,8 +1385,12 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
             let mut chart = charts_rs::HorizontalBarChart::new(series, x);
             style_bars!(chart, spec, axes, unit);
             chart.stack_percent = percent;
-            if !percent {
-                round_axes(&chart.base, &mut chart.y_axis_configs);
+            round_axes(&chart.base, &mut chart.y_axis_configs, percent);
+            // The renderer sizes the category column by its widest label.
+            let size = chart.x_axis.font.size.to_string();
+            let room = spec.width / 3.0;
+            for label in &mut chart.x_axis.data {
+                *label = shorten(&[("font-size", &size)], label, room);
             }
             let svg = fitted(&mut chart, spec.width, spec.height, |chart| {
                 let svg = chart.svg().ok()?;
@@ -1404,9 +1409,7 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
                 second_axis(&mut chart.y_axis_configs, &spec.y2_unit);
                 axes.style(&mut chart.base, &mut chart.y_axis_configs, false);
             }
-            if !percent {
-                round_axes(&chart.base, &mut chart.y_axis_configs);
-            }
+            round_axes(&chart.base, &mut chart.y_axis_configs, percent);
             let svg = fitted(&mut chart, spec.width, spec.height, |chart| {
                 let mut svg = chart.svg().ok()?;
                 let exact = exact_axes(&svg, &chart.y_axis_configs, false);
@@ -1463,10 +1466,12 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
         let near = |value: &f64| (value - label).abs() <= value.abs() * 1e-6;
         values.iter().copied().find(near).unwrap_or(label)
     };
-    let svg = relabel(&svg, LABEL_MARK, |label| match percent {
+    let written = |label: f64| match percent {
         true => write(label),
         false => write(exact(label)),
-    });
+    };
+    let svg = drop_crowded_labels(&svg, written);
+    let svg = relabel(&svg, LABEL_MARK, written);
     let last = spec.x.len().saturating_sub(1);
     let marks = match_marks(&bar_marks(&ordered), &triggers)
         .into_iter()
@@ -1887,6 +1892,68 @@ fn place_outside_labels(svg: &str, bottom: f32, surface: HexColor) -> String {
         out.push_str(&format!("<text dy=\"{dy}\"{kept}{ink}>"));
     }
     out.push_str(rest);
+    out
+}
+
+/// Drops the value labels, as `text` writes them, that overlap a larger value's.
+fn drop_crowded_labels(svg: &str, text: impl Fn(f64) -> String) -> String {
+    // Per label: its value, its box and its element's byte range.
+    let mut labels: Vec<(f64, [f32; 4], std::ops::Range<usize>)> = Vec::new();
+    let mut at = 0;
+    while let Some(open) = svg[at..].find("<text ").map(|open| at + open) {
+        let Some(close) = svg[open..].find('>').map(|close| open + close) else {
+            break;
+        };
+        let end = svg[close..]
+            .find("</text>")
+            .map_or(close + 1, |end| close + end + 7);
+        at = close + 1;
+        let attributes = attributes(&svg[open..=close]);
+        let number = |name| attribute(&attributes, name)?.parse::<f32>().ok();
+        let content = svg[close + 1..end].trim_end_matches("</text>").trim();
+        let value = content
+            .strip_prefix(LABEL_MARK)
+            .and_then(|label| scaled(label.split(' ').next()?.trim_end_matches('%')));
+        let (Some(value), Some(x), Some(y)) = (value, number("x"), number("y")) else {
+            continue;
+        };
+        let width = text_width(&attributes, &unescape(&text(value)));
+        let left = match attribute(&attributes, "text-anchor") {
+            Some("middle") => x - width / 2.0,
+            Some("end") => x - width,
+            _ => x,
+        };
+        let size = number("font-size").unwrap_or(14.0);
+        let y = y + number("dy").unwrap_or(0.0);
+        labels.push((
+            value,
+            [left, y - size * 0.75, left + width, y + size * 0.25],
+            open..end,
+        ));
+        at = end;
+    }
+    let mut order: Vec<usize> = (0..labels.len()).collect();
+    order.sort_by(|a, b| labels[*b].0.abs().total_cmp(&labels[*a].0.abs()));
+    let mut kept: Vec<[f32; 4]> = Vec::new();
+    let mut dropped = Vec::new();
+    for i in order {
+        let [left, top, right, bottom] = labels[i].1;
+        let overlaps = kept
+            .iter()
+            .any(|[l, t, r, b]| left < *r && *l < right && top < *b && *t < bottom);
+        match overlaps {
+            true => dropped.push(labels[i].2.clone()),
+            false => kept.push(labels[i].1),
+        }
+    }
+    dropped.sort_by_key(|range| range.start);
+    let mut out = String::with_capacity(svg.len());
+    let mut from = 0;
+    for range in dropped {
+        out.push_str(&svg[from..range.start]);
+        from = range.end;
+    }
+    out.push_str(&svg[from..]);
     out
 }
 
@@ -5087,6 +5154,7 @@ mod tests {
             self::spec("A", &[Some(40.0), Some(55.0), Some(-25.0), Some(62.0)]),
             self::spec("B", &[Some(30.0), Some(-15.0), Some(20.0), Some(48.0)]),
         ];
+        spec.axes.ticks = 8;
         let svg = draw_bar(&spec).expect("drawn").svg;
         assert!(svg.contains("100%") && svg.contains("60%"), "{svg}");
         assert!(!svg.contains("120%"), "{svg}");
@@ -5095,6 +5163,97 @@ mod tests {
             (axes.min, axes.max, axes.ticks),
             (Some(-60.0), Some(100.0), 8)
         );
+    }
+
+    /// The deepest loss's axis is cut into at most `y_ticks` round steps (3515).
+    #[test]
+    fn a_percent_axis_with_losses_honours_y_ticks() {
+        let mut spec = bars(BarLayout::Percent, false);
+        spec.series = vec![
+            self::spec("A", &[Some(40.0), Some(-25.0), Some(10.0)]),
+            self::spec("B", &[Some(30.0), Some(20.0), Some(5.0)]),
+        ];
+        for ticks in [2, 4, 5, 10] {
+            spec.axes.ticks = ticks;
+            let axes = percent_axes(&spec.axes, &spec.series);
+            assert_eq!(axes.max, Some(100.0));
+            assert!(axes.ticks <= ticks, "{ticks}: {axes:?}");
+            assert!(axes.ticks * 2 >= ticks, "{ticks}: {axes:?}");
+        }
+    }
+
+    /// A line on the right axis of a percent chart is cut into as many round steps as the
+    /// left axis (3526).
+    #[test]
+    fn a_percent_chart_rounds_its_right_axis() {
+        let mut chart = bars(BarLayout::Percent, false);
+        chart.axes.ticks = 5;
+        chart.series.push(SeriesSpec {
+            extras: SeriesExtras {
+                line: true,
+                secondary: true,
+                ..Default::default()
+            },
+            ..spec("Margin", &[Some(12.3), Some(25.1), Some(37.8)])
+        });
+        let svg = draw_bar(&chart).expect("drawn").svg;
+        for label in ["\n0\n", "\n10\n", "\n20\n", "\n30\n", "\n40\n", "\n50\n"] {
+            assert!(svg.contains(label), "{label}: {svg}");
+        }
+    }
+
+    /// A lying chart cuts a long category at a third of its width (3525).
+    #[test]
+    fn a_lying_chart_cuts_a_long_category() {
+        let mut chart = bars(BarLayout::Grouped, true);
+        chart.x[0] = "A category name that goes on and on and on".to_string();
+        let drawn = draw_bar(&chart).expect("drawn");
+        assert!(drawn.svg.contains("…"), "{}", drawn.svg);
+        assert!(!drawn.svg.contains("goes on and on"), "{}", drawn.svg);
+        assert!(
+            drawn.geometry.plot.left < chart.width / 3.0 + 10.0,
+            "{:?}",
+            drawn.geometry.plot
+        );
+    }
+
+    /// Of two value labels that overlap the smaller goes; one clear of both stays (3524).
+    #[test]
+    fn crowded_value_labels_keep_the_larger() {
+        let label = |x: f32, value: &str| {
+            format!("<text x=\"{x}\" y=\"20\" font-size=\"14\">\n{LABEL_MARK}{value}\n</text>")
+        };
+        let svg = format!(
+            "<svg>{}{}{}</svg>",
+            label(10.0, "5"),
+            label(12.0, "9"),
+            label(200.0, "1")
+        );
+        let kept = drop_crowded_labels(&svg, |v| v.to_string());
+        assert!(
+            kept.contains('9') && kept.contains('1') && !kept.contains('5'),
+            "{kept}"
+        );
+    }
+
+    /// Many series in a group leave fewer labels, none overlapping, in the real drawing (3524).
+    #[test]
+    fn a_crowded_group_drops_labels() {
+        let mut chart = bars(BarLayout::Grouped, false);
+        chart.series = (0..10)
+            .map(|n| {
+                spec(
+                    "S",
+                    &[Some(1000.0 + n as f64), Some(2000.0 + n as f64), None],
+                )
+            })
+            .collect();
+        chart.labels_inside = false;
+        let texts = |chart: &BarSpec| draw_bar(chart).expect("drawn").svg.matches("<text").count();
+        let with = texts(&chart);
+        chart.value_labels = false;
+        let shown = with - texts(&chart);
+        assert!(0 < shown && shown < 20, "{shown}");
     }
 
     /// The `[x1, y1, x2, y2]` of every error-bar line the engine drew itself.
