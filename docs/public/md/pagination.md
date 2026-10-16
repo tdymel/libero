@@ -104,7 +104,7 @@ bare arrow.
 | `color` | `Color` | Current-page fill. Its text takes the `-contrast` color. |
 | `siblings`, `boundaries` | `u8` | Defaults for the matching props. |
 | `gap` | `Size` | Space between controls. |
-| `control_sizes` | `Sizes<u16>` | Control box per size step, in px. |
+| `control_sizes` | `Sizes<u16>` | Control box per size step, in px at a 16px root; declared as rem, so it grows with the reader's text size. |
 | `font_sizes` | `Sizes<u16>` | Font size per size step, in px at a 16px root; declared as rem, so it follows the reader's text size. |
 | `border` | `ColorValue` | Control border colour. |
 

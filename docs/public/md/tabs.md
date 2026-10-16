@@ -184,7 +184,7 @@ explains how parts work.
 |---|---|
 | `Tab` | Enters the strip at the selected tab, the only one in the tab order. |
 | `Left` or `Right` | Moves to the previous or next tab, skipping disabled ones. With `Automatic` activation it selects the tab too; `Manual` moves only the focus. |
-| `Home` or `End` | Jumps to the first or last tab, selecting it as the arrows do. |
+| `Home` or `End` | Jumps to the first or last tab. With `Automatic` activation it selects the tab too; `Manual` moves only the focus. |
 | `Enter` or `Space` | With `activation: TabsActivation::Manual`, where the arrows move only the focus: selects the focused tab. |
 
 ### Libero handles

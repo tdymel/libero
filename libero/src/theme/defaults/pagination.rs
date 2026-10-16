@@ -24,7 +24,7 @@ pub struct PaginationDefaults {
     pub siblings: u8,
     pub boundaries: u8,
     pub gap: Size,
-    /// Control box, in px.
+    /// In px at a 16px root; declared as rem.
     pub control_sizes: Sizes<u16>,
     /// In px at a 16px root; declared as rem.
     pub font_sizes: Sizes<u16>,
@@ -42,7 +42,8 @@ impl PaginationDefaults {
         gap: Size::Xs,
         control_sizes: Sizes::new(22, 26, 32, 38, 44, 52),
         font_sizes: Sizes::new(11, 12, 14, 16, 18, 20),
-        border: ColorValue::Shade(Color::Muted, ColorShade::S4),
+        // 3:1 on the page in both schemes (WCAG 1.4.11, todo 3597).
+        border: ColorValue::Shade(Color::Muted, ColorShade::S6),
     };
 
     fn size_sx(size: Size) -> Sx {
@@ -61,18 +62,40 @@ impl ToCssDeclarations for PaginationDefaults {
         let active = ColorValue::Fill(self.color, ACTIVE_SHADE);
         let on_active = ColorValue::Contrast(self.color, ACTIVE_SHADE);
 
-        let mut declarations = self
-            .control_sizes
-            .to_css_declarations(PAGINATION_CONTROL_SIZE, "px");
-        // Declared as rem, so the label follows the reader's text size.
-        declarations.extend(Size::ALL.into_iter().map(|size| {
-            let px = f32::from(self.font_sizes.get(size));
-            PAGINATION_FONT_SIZE.declare(size, format!("{}rem", px / 16.0))
-        }));
+        // Declared as rem, so the box and its label follow the reader's text size.
+        let rem = |px: u16| format!("{}rem", f32::from(px) / 16.0);
+        let mut declarations = Vec::new();
+        for size in Size::ALL {
+            declarations
+                .push(PAGINATION_CONTROL_SIZE.declare(size, rem(self.control_sizes.get(size))));
+            declarations.push(PAGINATION_FONT_SIZE.declare(size, rem(self.font_sizes.get(size))));
+        }
         declarations.push(PAGINATION_GAP.declare(SizeCss::SPACING.value(self.gap)));
         declarations.push(PAGINATION_BORDER.declare(self.border.value()));
         declarations.push(PAGINATION_ACTIVE_BACKGROUND.declare(active.value()));
         declarations.push(PAGINATION_ACTIVE_COLOR.declare(on_active.value()));
         declarations
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Todo 3593: a px box under a rem label clips it at 200% text size.
+    #[test]
+    fn the_box_and_its_label_are_declared_in_rem() {
+        let declarations = PaginationDefaults::DEFAULT.to_css_declarations();
+        for var in [PAGINATION_CONTROL_SIZE, PAGINATION_FONT_SIZE] {
+            for size in Size::ALL {
+                let name = var.name(size);
+                let declaration = declarations.iter().find(|d| d.property() == name);
+                let value = declaration.map(|d| d.value());
+                assert!(
+                    value.is_some_and(|v| v.ends_with("rem")),
+                    "{name}: {value:?}"
+                );
+            }
+        }
     }
 }

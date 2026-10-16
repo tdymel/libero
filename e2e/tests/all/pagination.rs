@@ -46,6 +46,46 @@ fn a_page_button_takes_the_page_font() {
     });
 }
 
+/// Todo 3597: the outline of a page and of an arrow was 1.49:1 on white (1.4.11).
+#[test]
+fn a_page_and_an_arrow_outline_part_at_3_to_1() {
+    crate::boundary::assert_boundaries(
+        "/pagination",
+        "const page = document.querySelector('[aria-label=\"Go to page 3\"]');
+         const next = document.querySelector('[aria-label=\"Go to next page\"]');
+         return [
+             ['page outline', RATIO(CSS(page, 'borderTopColor'), PAGE(page))],
+             ['arrow outline', RATIO(CSS(next, 'borderTopColor'), PAGE(next))],
+         ];",
+    );
+}
+
+/// Todo 3593: the control box was px under a rem label; at 200% text it grows with it.
+#[test]
+fn the_controls_grow_with_the_text_size() {
+    block_on(async {
+        let fixture = Fixture::open("/pagination", Viewport::Desktop)
+            .await
+            .unwrap();
+        let [before, after]: [f64; 2] = fixture
+            .page
+            .evaluate(
+                "(() => { const h = () => document.querySelector('[aria-label=\"Go to page 3\"]')\
+                 .getBoundingClientRect().height; const before = h(); \
+                 document.documentElement.style.fontSize = '200%'; return [before, h()]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            after >= before * 1.9,
+            "{before}px at 100%, {after}px at 200%"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
 async fn wait_for_page(page: &Page, number: u32, route: &str) {
     wait::for_js_true(
         page,

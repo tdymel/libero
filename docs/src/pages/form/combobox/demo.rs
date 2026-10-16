@@ -62,7 +62,8 @@ fn row(o: &ComboboxOptionArgs<Fruit>, rich: bool) -> Element {
                 Text {
                     component: "span",
                     size: "xs",
-                    sx: sx().color("text-dimmed"),
+                    // `text-dimmed` reads 3.84:1 on the active row's tint (todo 3602).
+                    sx: sx().color("muted.7"),
                     "{o.value.note()}"
                 }
             }

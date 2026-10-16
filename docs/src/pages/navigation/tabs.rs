@@ -120,7 +120,7 @@ pub fn TabsPage() -> Element {
             accessibility: a11y()
                 .key(["Tab"], "Enters the strip at the selected tab, the only one in the tab order.")
                 .key(["Left", "Right"], "Moves to the previous or next tab, skipping disabled ones. With `Automatic` activation it selects the tab too; `Manual` moves only the focus.")
-                .key(["Home", "End"], "Jumps to the first or last tab, selecting it as the arrows do.")
+                .key(["Home", "End"], "Jumps to the first or last tab. With `Automatic` activation it selects the tab too; `Manual` moves only the focus.")
                 .key(["Enter", "Space"], "With `activation: TabsActivation::Manual`, where the arrows move only the focus: selects the focused tab.")
                 .handles([
                     "Only the selected tab is in the tab order. The selected panel is a tab stop too, so content that cannot take focus stays reachable by keyboard; `panel_focusable: false` drops it for a panel that holds focusable content.",
