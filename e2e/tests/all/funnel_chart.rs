@@ -3,7 +3,7 @@
 //! on Blitz.
 
 use anyhow::{Result, ensure};
-use e2e::driver::{Driver, Platform, eventually};
+use e2e::driver::{Driver, eventually};
 use e2e::passes::keyboard;
 use e2e::{Fixture, Suite, Viewport, wait};
 
@@ -121,7 +121,7 @@ async fn clicks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let plot = d.rect(LAYER).await?;
     let (x, y) = (plot.x + plot.width / 2.0, plot.y + plot.height * 0.15);
     d.click_at(x, y).await?;
-    if d.platform() == Platform::Android {
+    if d.platform().is_touch() {
         reads(d, "#active", "Visits 0 1000", "a tap").await?;
         ensure!(
             d.text("#clicked").await?.is_empty(),
@@ -132,12 +132,7 @@ async fn clicks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     reads(d, "#clicked", "Visits 0 1000", "a click on Visits").await
 }
 
-e2e::scenario!(
-    a_click_on_a_stage_reports_it,
-    "/funnel-chart",
-    clicks,
-    ios: skip("3416: the tap reaches the chart layer as a click, but no mark's click is reported")
-);
+e2e::scenario!(a_click_on_a_stage_reports_it, "/funnel-chart", clicks);
 
 /// A legend button takes its stage out of the funnel; the shares stay of the first stage.
 async fn legend<D: Driver>(d: &mut D, _route: &str) -> Result<()> {

@@ -56,9 +56,9 @@ pub(crate) const PICKER: &str = ":is(select, [role=combobox])";
 /// arrow opens its listbox on the current option and Enter picks.
 pub(crate) async fn pick_later<D: Driver>(d: &mut D, steps: usize) -> Result<()> {
     let macos_webview = d.platform() == Platform::Desktop && Host::current() == Host::Macos;
-    if d.platform() == Platform::Android || macos_webview {
+    if matches!(d.platform(), Platform::Android | Platform::Ios) || macos_webview {
         // Android's WebView sometimes moves focus on ArrowDown instead of stepping the select
-        // (3257); WKWebView opens the system menu (3432).
+        // (3257); WKWebView opens the system menu (3432, iOS too).
         d.evaluate(&format!(
             "(() => {{ const s = document.activeElement; \
              s.selectedIndex = Math.min(s.selectedIndex + {steps}, s.options.length - 1); \
@@ -199,9 +199,9 @@ async fn rows_select_and_sort<D: Driver>(d: &mut D, _route: &str) -> Result<()> 
     }
 
     d.click(NAME).await?;
-    let expected = match d.platform() {
-        Platform::Android => "Stock ascending,Name ascending",
-        _ => "Name ascending",
+    let expected = match d.platform().is_touch() {
+        true => "Stock ascending,Name ascending",
+        false => "Name ascending",
     };
     eventually_text(d, "#sort", expected, "a Name click").await?;
 
@@ -223,8 +223,7 @@ async fn rows_select_and_sort<D: Driver>(d: &mut D, _route: &str) -> Result<()> 
 e2e::scenario!(
     rows_select_by_box_and_keep_it_through_a_sort,
     "/table/select",
-    rows_select_and_sort,
-    ios: skip("3416: a tap on a second header adds it to the sort, as Shift would")
+    rows_select_and_sort
 );
 
 /// 1982: the light boxes keep select-all's mixed property, and under forced colours

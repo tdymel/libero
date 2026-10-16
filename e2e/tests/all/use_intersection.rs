@@ -47,8 +47,7 @@ async fn in_view_only_while_scrolled_to<D: Driver>(d: &mut D, _route: &str) -> R
 e2e::scenario!(
     a_target_is_in_the_viewport_only_while_scrolled_to,
     "/use-intersection/viewport",
-    in_view_only_while_scrolled_to,
-    ios: skip("3416: a swipe flings the page past the target, momentum scrolling on")
+    in_view_only_while_scrolled_to
 );
 
 async fn a_clipped_target_stays_out<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -82,8 +81,7 @@ async fn keeps_the_first_sighting<D: Driver>(d: &mut D, _route: &str) -> Result<
 e2e::scenario!(
     once_keeps_the_first_sighting,
     "/use-intersection/once",
-    keeps_the_first_sighting,
-    ios: skip("3416: a swipe flings the page past the target, momentum scrolling on")
+    keeps_the_first_sighting
 );
 
 async fn the_ratio_follows_the_threshold<D: Driver>(d: &mut D, _route: &str) -> Result<()> {

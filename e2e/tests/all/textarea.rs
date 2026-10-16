@@ -17,8 +17,7 @@ async fn typing_reaches_the_value<D: Driver>(d: &mut D, _route: &str) -> Result<
 e2e::scenario!(
     typing_into_a_textarea_reaches_its_value,
     "/textarea/echo",
-    typing_reaches_the_value,
-    ios: skip("3416: iOS's hardware-keyboard auto-capitalization types the field's first letter upper case")
+    typing_reaches_the_value
 );
 
 /// Todo 1201: WebKitGTK scrolled the nearest scroller on an arrow the caret cannot

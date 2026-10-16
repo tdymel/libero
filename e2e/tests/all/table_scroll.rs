@@ -234,7 +234,7 @@ e2e::scenario!(
     a_windowed_table_renders_the_rows_in_view,
     "/table/windowed",
     the_window_follows_the_scroll,
-    ios: skip("3416: End reaches the page, but the windowed table does not take it")
+    ios: skip("3633: End reaches the page but scrolls no region, as in Safari")
 );
 
 /// 1156-5c: Tab walks the row checkboxes past the rendered rows and back: the
@@ -299,7 +299,7 @@ e2e::scenario!(
     end_at_the_bottom_loads_more_rows,
     "/table/infinite",
     end_loads_the_next_rows,
-    ios: skip("3416: End reaches the page, but the windowed table does not take it")
+    ios: skip("3633: End reaches the page but scrolls no region, as in Safari")
 );
 
 async fn row_count_is<D: Driver>(d: &mut D, rows: &str) -> Result<()> {

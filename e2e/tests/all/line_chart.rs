@@ -176,7 +176,7 @@ async fn clicks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let plot = d.rect(LAYER).await?;
     let (x, y) = (plot.x + plot.width * 0.01, plot.y + plot.height * 0.05);
     d.click_at(x, y).await?;
-    if d.platform() == Platform::Android {
+    if d.platform().is_touch() {
         reads(d, "#active", "This week Mon 120", "a tap").await?;
         ensure!(
             d.text("#clicked").await?.is_empty(),
@@ -187,12 +187,7 @@ async fn clicks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     reads(d, "#clicked", "This week Mon 120", "a click on Mon").await
 }
 
-e2e::scenario!(
-    a_click_on_a_point_reports_it,
-    "/line-chart",
-    clicks,
-    ios: skip("3416: the tap reaches the chart layer as a click, but no mark's click is reported")
-);
+e2e::scenario!(a_click_on_a_point_reports_it, "/line-chart", clicks);
 
 /// A legend button hides its line from the drawing; the last shown one stays.
 async fn legend<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -372,12 +367,7 @@ async fn brushes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     Ok(())
 }
 
-e2e::scenario!(
-    a_sideways_drag_brushes_a_range,
-    "/line-chart-zoom",
-    brushes,
-    ios: skip("3416: the simulator's tap or drag did not drive the page")
-);
+e2e::scenario!(a_sideways_drag_brushes_a_range, "/line-chart-zoom", brushes);
 
 /// Two fingers spread over the plot zoom it in.
 async fn pinches<D: Driver>(d: &mut D, _route: &str) -> Result<()> {

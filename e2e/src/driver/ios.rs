@@ -74,6 +74,14 @@ const EVENT_LOG: &str = "window.__e2eLog = []; \
     addEventListener('scroll', e => log(`scroll ${name(e.target)}`), { capture: true, passive: true }); \
     visualViewport?.addEventListener('resize', () => log(`zoom ${visualViewport.scale.toFixed(2)}`));";
 
+/// The hardware keyboard capitalizes a field's first letter; WebKit reads the attribute when a
+/// field takes focus, so every field gets one when it mounts (3630).
+const NO_CAPITALS: &str = "const off = () => document.querySelectorAll( \
+      'input:not([autocapitalize]), textarea:not([autocapitalize])') \
+      .forEach(field => field.setAttribute('autocapitalize', 'off')); \
+    new MutationObserver(off).observe(document, { childList: true, subtree: true }); \
+    addEventListener('focusin', off, true); off();";
+
 /// The [`EVENT_LOG`] lines, a repeated one with its count and time span in ms.
 const EVENT_LINES: &str = "(window.__e2eLog ?? []).map(({ line, n, at, to }) => \
     `${at}${n > 1 ? '-' + to : ''} ${line}${n > 1 ? ' x' + n : ''}`)";
@@ -195,6 +203,7 @@ impl Ios {
         ios.bridge
             .wait_until("typeof window.__route === 'function'")?;
         ios.bridge.run(EVENT_LOG)?;
+        ios.bridge.run(NO_CAPITALS)?;
         if let Err(error) = ios.calibrate() {
             ios.keep_failure();
             return Err(error);
@@ -761,10 +770,11 @@ impl Driver for Ios {
         self.drag_by((x, y), dx, dy, 0.5)
     }
 
-    /// A slow swipe through the viewport's middle, so the page comes to rest.
+    /// By script, as the desktop driver: a swipe flicks the page well past `dy`, and a slow
+    /// drag takes 10 s a call under load (3631).
     async fn scroll_by(&mut self, dy: f64) -> Result<()> {
-        let (vw, vh) = self.viewport().await?;
-        self.swipe((vw / 2.0, vh / 2.0 + dy / 2.0), 0.0, -dy, 0.5)
+        self.bridge
+            .run(&format!("scrollBy({{ top: {dy}, behavior: 'instant' }})"))
     }
 
     async fn long_press(&mut self, selector: &str, ms: u64) -> Result<()> {
