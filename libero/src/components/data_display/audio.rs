@@ -4,8 +4,8 @@ use dioxus::prelude::*;
 
 use super::media_controls::{
     CONTROLS, MediaFallback, MediaSeek, MediaStatus, MediaVolume, SEEK, Sound, TIME, VolumePart,
-    clock, controls_sx, icon_size, seek_sx, space_toggles, times, use_late_tooltips,
-    use_media_keys, use_sound,
+    clock, controls_sx, icon_size, notify, seek_sx, space_toggles, times, use_late_tooltips,
+    use_media_keys, use_media_start, use_sound,
 };
 use crate::{
     components::{
@@ -227,17 +227,22 @@ base_props! {
         /// Starts again at the end.
         #[props(default)]
         looping: bool,
+        /// How much the browser fetches before a press.
         #[props(default)]
         preload: MediaPreload,
         /// Of the buttons and the seek slider.
         #[props(default, into)]
         size: Input<Size>,
+        /// Called when playing starts or resumes.
         #[props(default)]
         onplay: Option<EventHandler<()>>,
+        /// Called when playing pauses.
         #[props(default)]
         onpause: Option<EventHandler<()>>,
+        /// Called when playing reaches the end.
         #[props(default)]
         onended: Option<EventHandler<()>>,
+        /// Called when the file fails to load or play.
         #[props(default)]
         onerror: Option<EventHandler<MediaError>>,
         /// Styles the portaled volume menu and its slider.
@@ -287,22 +292,8 @@ pub fn Audio(props: AudioProps) -> Element {
 
     let sound = use_sound(media);
     use_media_keys(media, sound, player, []);
-    // A `muted` attribute set after parsing mutes nothing, so the property is set once mounted.
-    let start_muted = props.muted;
-    use_effect(move || {
-        if start_muted && media.supported() == Some(true) {
-            media.set_muted(true);
-        }
-    });
-    let error = media.error();
-    let onerror = props.onerror;
-    use_effect(use_reactive!(|error| {
-        if let (Some(error), Some(onerror)) = (error, onerror) {
-            onerror.call(error);
-        }
-    }));
+    use_media_start(media, props.muted, props.onerror);
 
-    let (onplay, onpause, onended) = (props.onplay, props.onpause, props.onended);
     let unsupported = media.supported() == Some(false);
 
     // Tagged, so a WebView finds the player for the hotkeys.
@@ -325,9 +316,9 @@ pub fn Audio(props: AudioProps) -> Element {
             "loop": props.looping,
             preload: props.preload.attribute(),
             onmounted: media.mount(),
-            onplay: move |_| if let Some(handler) = onplay { handler.call(()) },
-            onpause: move |_| if let Some(handler) = onpause { handler.call(()) },
-            onended: move |_| if let Some(handler) = onended { handler.call(()) },
+            onplay: notify(props.onplay),
+            onpause: notify(props.onpause),
+            onended: notify(props.onended),
             ..media.attributes(),
             {sources}
         }
@@ -551,6 +542,71 @@ mod tests {
         let html = dioxus_ssr::render(&dom);
         assert!(!html.contains("script:"), "{html}");
         assert!(html.contains("data:audio/wav;base64,AAAA"), "{html}");
+    }
+
+    fn render(app: fn() -> Element) -> String {
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        dioxus_ssr::render(&dom)
+    }
+
+    #[test]
+    fn the_sources_come_in_order_and_src_goes_last() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    Audio {
+                        src: "/main.mp3",
+                        sources: vec![
+                            MediaSource::new("/a.ogg", "audio/ogg"),
+                            MediaSource::new("/b.wav", "audio/wav"),
+                        ],
+                        label: "Voice",
+                    }
+                }
+            }
+        });
+        let at = |needle: &str| {
+            html.find(needle)
+                .unwrap_or_else(|| panic!("{needle}: {html}"))
+        };
+        assert!(
+            at("/a.ogg") < at("/b.wav") && at("/b.wav") < at("/main.mp3"),
+            "{html}"
+        );
+        assert_eq!(html.matches("/main.mp3").count(), 1, "{html}");
+        assert!(html.contains(r#"type="audio/ogg""#), "{html}");
+    }
+
+    #[test]
+    fn without_sources_src_is_the_elements_own() {
+        let html =
+            render(|| rsx! { LiberoProvider { Audio { src: "/main.mp3", label: "Voice" } } });
+        assert!(html.contains(r#"<audio src="/main.mp3""#), "{html}");
+        assert!(!html.contains("<source"), "{html}");
+    }
+
+    #[test]
+    fn the_compact_buttons_shrink_the_row_and_their_icons() {
+        let css = |size| {
+            crate::css::Stylesheet::from(&compact_buttons(size))
+                .as_str()
+                .to_string()
+        };
+        let (small, tiny) = (css(Size::Sm), css(Size::Xs));
+        for (css, size) in [(&small, Size::Sm), (&tiny, Size::Xs)] {
+            assert!(css.contains("[data-slot='controls'] button"), "{css}");
+            assert!(
+                css.contains(&format!("height:{}", BUTTON_HEIGHT.value(size))),
+                "{css}"
+            );
+            assert!(
+                css.contains(&format!("width:{}", ICON_SIZE.value(size))),
+                "{css}"
+            );
+            assert!(css.contains("span > button"), "{css}");
+        }
+        assert_ne!(small, tiny);
     }
 
     #[test]

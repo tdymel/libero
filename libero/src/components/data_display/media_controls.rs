@@ -17,9 +17,9 @@ use crate::{
     },
     context::IconSlot,
     hooks::{
-        Align, ElementHandle, FullscreenHandle, Hotkey, MediaHandle, ModalScope, PopoverOptions,
-        Side, owner_link, use_element, use_formats, use_hotkeys, use_id, use_localization,
-        use_modal, use_popover, use_theme,
+        Align, ElementHandle, FullscreenHandle, Hotkey, MediaError, MediaHandle, ModalScope,
+        PopoverOptions, Side, owner_link, use_element, use_formats, use_hotkeys, use_id,
+        use_localization, use_modal, use_popover, use_theme,
     },
     localization::fill,
     platform::{ElementApi, is_tab, key_taken},
@@ -138,6 +138,35 @@ pub(super) fn use_sound(media: MediaHandle) -> Sound {
         }
     });
     Sound { media, audible }
+}
+
+/// Mutes once mounted if `muted` (the `muted` attribute set after parsing mutes nothing),
+/// and passes each error of `media` to `onerror`.
+pub(super) fn use_media_start(
+    media: MediaHandle,
+    muted: bool,
+    onerror: Option<EventHandler<MediaError>>,
+) {
+    use_effect(move || {
+        if muted && media.supported() == Some(true) {
+            media.set_muted(true);
+        }
+    });
+    let error = media.error();
+    use_effect(use_reactive!(|error| {
+        if let (Some(error), Some(onerror)) = (error, onerror) {
+            onerror.call(error);
+        }
+    }));
+}
+
+/// An element's `onplay`, `onpause` or `onended` listener: calls `handler` if one is set.
+pub(super) fn notify(handler: Option<EventHandler<()>>) -> impl FnMut(Event<MediaData>) {
+    move |_| {
+        if let Some(handler) = handler {
+            handler.call(());
+        }
+    }
 }
 
 /// K plays and pauses, J and L jump 10 seconds, M mutes, Shift+? lists them in a

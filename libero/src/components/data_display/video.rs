@@ -2,7 +2,8 @@ use dioxus::core::{Attribute, AttributeValue};
 use dioxus::prelude::*;
 
 use super::media_controls::{
-    Captions, MediaControls, MediaFallback, VolumePart, chapter_jump, use_media_keys, use_sound,
+    Captions, MediaControls, MediaFallback, VolumePart, chapter_jump, notify, use_media_keys,
+    use_media_start, use_sound,
 };
 use super::{
     MediaPreload, MediaSource,
@@ -74,13 +75,18 @@ const CUES: &str = "::-webkit-media-text-track-container";
 /// Light tracks, as YouTube's: the theme's muted one sinks into the scrim.
 const LIGHT_TRACK: &str = "rgba(255, 255, 255, 0.5)";
 
+/// A direct-child `part` of the player while its controls are faded out.
+fn when_faded(part: VideoPart) -> String {
+    let child = part.selector().trim_start_matches("& ");
+    format!("&[{CONTROLS_ATTR}='hidden'] {child}")
+}
+
 static VIDEO_SX: StaticSx = StaticSx::new(|| {
     let controls = VideoPart::Controls.selector();
     let media = VideoPart::Media.selector();
-    let filled = sx().background_color(BLACK).selector(
-        VideoPart::Media.selector(),
-        sx().height("100%").aspect_ratio("auto"),
-    );
+    let filled = sx()
+        .background_color(BLACK)
+        .selector(media, sx().height("100%").aspect_ratio("auto"));
     let light_track = || sx().background(LIGHT_TRACK);
     sx().position("relative")
         // A size container has no content width: in a shrink-wrapping parent it collapsed (todo 1369).
@@ -89,7 +95,7 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
         .min_width("0")
         .container(PLAYER_CONTAINER)
         .selector(
-            VideoPart::Media.selector(),
+            media,
             sx().display("block")
                 .width("100%")
                 // Before the file loads too, poster or none: no jump from the browser's 2:1 (todo 1369).
@@ -110,13 +116,13 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
                 ),
         )
         .selector(
-            format!("&[{CONTROLS_ATTR}='hidden'] {}{CUES}", &media[2..]),
+            format!("{}{CUES}", when_faded(VideoPart::Media)),
             sx().transform("none"),
         )
         // YouTube's bar: over the bottom of the picture on a black scrim, white
         // text and icons, the seek track a row of its own above the buttons.
         .selector(
-            VideoPart::Controls.selector(),
+            controls,
             sx().position("absolute")
                 .inset("auto 0 0 0")
                 .display("flex")
@@ -176,7 +182,7 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
             PLAYER_CONTAINER,
             TINY,
             sx().selector(
-                VideoPart::Controls.selector(),
+                controls,
                 sx().position("static")
                     .padding_top(SizeCss::SPACING.value(Size::Xs))
                     .background_image("none")
@@ -230,8 +236,9 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(format!("&[{CONTROLS_ATTR}='hidden']"), sx().cursor("none"))
         .selector(
-            format!("&[{CONTROLS_ATTR}='hidden'] {}", &controls[2..]),
-            sx().opacity("0"),
+            when_faded(VideoPart::Controls),
+            // A tap on the bar then reaches the picture, which only shows the controls.
+            sx().opacity("0").pointer_events("none"),
         )
 });
 
@@ -354,6 +361,16 @@ pub struct MediaTrack {
     pub default: bool,
 }
 
+impl MediaTrack {
+    /// Its menu item: the label, else the language, else `fallback` and its 1-based `position`.
+    fn menu_name(&self, fallback: &str, position: usize) -> String {
+        [self.label.trim(), self.srclang.trim()]
+            .into_iter()
+            .find(|name| !name.is_empty())
+            .map_or_else(|| format!("{fallback} {position}"), str::to_string)
+    }
+}
+
 base_props! {
     parts(VideoPart);
     pub struct VideoProps {
@@ -394,17 +411,22 @@ base_props! {
         /// Starts again at the end.
         #[props(default)]
         looping: bool,
+        /// How much the browser fetches before a press.
         #[props(default)]
         preload: MediaPreload,
         /// Of the buttons and sliders.
         #[props(default, into)]
         size: Input<Size>,
+        /// Called when playing starts or resumes.
         #[props(default)]
         onplay: Option<EventHandler<()>>,
+        /// Called when playing pauses.
         #[props(default)]
         onpause: Option<EventHandler<()>>,
+        /// Called when playing reaches the end.
         #[props(default)]
         onended: Option<EventHandler<()>>,
+        /// Called when the file fails to load or play.
         #[props(default)]
         onerror: Option<EventHandler<MediaError>>,
         /// Styles the portaled volume menu and its slider.
@@ -499,19 +521,16 @@ pub fn Video(props: VideoProps) -> Element {
         picked,
     };
     // Two or more: the captions button opens a menu of them (todo 1284).
-    let caption_tracks: Vec<(usize, String)> = match text_tracks.len() {
-        0 | 1 => Vec::new(),
-        _ => text_tracks
+    // After the `PortalHost`: in fullscreen the help shows inside the player.
+    let labels = use_localization().media;
+    let caption_tracks: Vec<(usize, String)> = if text_tracks.len() < 2 {
+        Vec::new()
+    } else {
+        text_tracks
             .iter()
-            .map(|(index, t)| {
-                let name = if t.label.is_empty() {
-                    &t.srclang
-                } else {
-                    &t.label
-                };
-                (*index, name.clone())
-            })
-            .collect(),
+            .enumerate()
+            .map(|(n, (index, t))| (*index, t.menu_name(labels.captions, n + 1)))
+            .collect()
     };
 
     // The chapters track is read only when the prop lists none; a late answer for an old `src` is dropped.
@@ -555,8 +574,6 @@ pub fn Video(props: VideoProps) -> Element {
     };
 
     let sound = use_sound(media);
-    // After the `PortalHost`: in fullscreen the help shows inside the player.
-    let labels = use_localization().media;
     use_media_keys(
         media,
         sound,
@@ -582,28 +599,13 @@ pub fn Video(props: VideoProps) -> Element {
             ),
         ],
     );
-    // A `muted` attribute set after parsing mutes nothing, so the property is set once mounted.
-    let start_muted = props.muted;
-    use_effect(move || {
-        if start_muted && media.supported() == Some(true) {
-            media.set_muted(true);
-        }
-    });
+    use_media_start(media, props.muted, props.onerror);
 
-    let error = media.error();
-    let onerror = props.onerror;
-    use_effect(use_reactive!(|error| {
-        if let (Some(error), Some(onerror)) = (error, onerror) {
-            onerror.call(error);
-        }
-    }));
-
-    let (onplay, onpause, onended) = (props.onplay, props.onpause, props.onended);
     let unsupported = media.supported() == Some(false);
     // The bar's height over the picture, bar the scrim's fade: measured (todo 1389), and
     // until then a button row, a 1rem seek row and the gaps.
     let mut bar = use_signal(|| None::<f64>);
-    let mut style = match bar() {
+    let bar_style = match bar() {
         Some(height) => format!("{BAR_VAR}: calc({height}px - {SCRIM_FADE});"),
         None => {
             let button = match props.size.as_ref() {
@@ -616,9 +618,10 @@ pub fn Video(props: VideoProps) -> Element {
             )
         }
     };
-    if let Some(ratio) = &props.aspect_ratio {
-        style.push_str(&format!("aspect-ratio: {ratio};"));
-    }
+    let style = match &props.aspect_ratio {
+        Some(ratio) => format!("{bar_style}aspect-ratio: {ratio};"),
+        None => bar_style,
+    };
 
     // The controls overlay the picture and fade out while playing untouched, or
     // as a mouse leaves; a pointer or a key brings them back. A key keeps them until
@@ -641,6 +644,9 @@ pub fn Video(props: VideoProps) -> Element {
     }));
 
     let mut pressing = use_hook(|| CopyValue::new(false));
+    // A click on the picture plays or pauses, as YouTube's; a tap on hidden controls only shows
+    // them, once its click is through: the bar takes hits again as soon as it shows (todo 3660).
+    let mut tap_shows = use_hook(|| CopyValue::new(false));
     let by_key = move || {
         let mut keyboard = keyboard;
         if !*keyboard.peek() {
@@ -650,9 +656,10 @@ pub fn Video(props: VideoProps) -> Element {
     };
     // Tagged, so a WebView finds the player for fullscreen and the hotkeys.
     let mut attributes = props.attributes;
-    // Focus moved in without a press, by a key, code or AT, counts as a key (todo 1249).
+    // Focus moved in without a press, by a key, code or AT, counts as a key, also while paused
+    // (todos 1249, 3656): the bar then stays up once a Space on a focused button starts playing.
     attributes.extend(fullscreen.attributes_with_focusin(move |_| {
-        if playing && !*pressing.peek() {
+        if !*pressing.peek() {
             by_key();
         }
     }));
@@ -665,6 +672,16 @@ pub fn Video(props: VideoProps) -> Element {
         }
     };
     attributes.extend([
+        listener("onpointerdown", move |_: Event<PointerData>| {
+            pressing.set(true);
+            let mut keyboard = keyboard;
+            if *keyboard.peek() {
+                keyboard.set(false);
+            }
+            if playing && !*tap_shows.peek() {
+                wake();
+            }
+        }),
         listener("onpointerup", released),
         listener("onpointercancel", released),
         listener("onpointerleave", move |event: Event<PointerData>| {
@@ -680,21 +697,11 @@ pub fn Video(props: VideoProps) -> Element {
     if playing {
         attributes.extend([
             listener("onpointermove", move |_: Event<PointerData>| wake()),
-            listener("onpointerdown", move |_: Event<PointerData>| {
-                pressing.set(true);
-                let mut keyboard = keyboard;
-                if *keyboard.peek() {
-                    keyboard.set(false);
-                }
-                wake();
-            }),
             listener("onkeyup", move |_: Event<KeyboardData>| by_key()),
         ]);
     }
     // An error leaves the element unpaused: its alert keeps the controls up (todo 2681).
     let hidden = playing && idle() && !keyboard() && media.error().is_none();
-    // A click on the picture plays or pauses, as YouTube's; a tap on hidden controls only shows them.
-    let mut tap_shows = use_hook(|| CopyValue::new(false));
     if hidden {
         attributes.push(Attribute::new(
             CONTROLS_ATTR,
@@ -720,14 +727,16 @@ pub fn Video(props: VideoProps) -> Element {
             onmounted: media.mount(),
             onpointerdown: move |event: PointerEvent| tap_shows.set(event.pointer_type() == "touch" && hidden),
             onclick: move |_| {
-                if !*tap_shows.peek() && media.error().is_none() {
+                if *tap_shows.peek() {
+                    wake();
+                } else if media.error().is_none() {
                     media.toggle();
                 }
                 tap_shows.set(false);
             },
-            onplay: move |_| if let Some(handler) = onplay { handler.call(()) },
-            onpause: move |_| if let Some(handler) = onpause { handler.call(()) },
-            onended: move |_| if let Some(handler) = onended { handler.call(()) },
+            onplay: notify(props.onplay),
+            onpause: notify(props.onpause),
+            onended: notify(props.onended),
             ..media.attributes(),
             {sources}
             for track in tracks.iter() {
@@ -891,6 +900,39 @@ mod tests {
         assert_eq!(vtt_time("01:02:03.250"), Some(3723.25));
         assert_eq!(vtt_time("2:03"), Some(123.0));
         assert_eq!(vtt_time("3"), None);
+    }
+
+    #[test]
+    fn the_faded_selectors_target_the_direct_children() {
+        assert_eq!(
+            when_faded(VideoPart::Controls),
+            "&[data-controls='hidden'] > [data-slot='controls']"
+        );
+        assert_eq!(
+            when_faded(VideoPart::Media),
+            "&[data-controls='hidden'] > [data-slot='media']"
+        );
+    }
+
+    /// `&amp;` last, so an escaped entity stays text: `&amp;lt;` is `&lt;`, not `<`.
+    #[test]
+    fn a_cue_decodes_its_entities_with_the_ampersand_last() {
+        assert_eq!(
+            cue_text("a &lt;b&gt;&nbsp;&lrm;&rlm; &amp;lt; <i>c</i>"),
+            "a <b>\u{a0}\u{200e}\u{200f} &lt; c"
+        );
+    }
+
+    #[test]
+    fn a_track_menu_item_falls_back_to_the_language_then_a_number() {
+        let track = |label: &str, srclang: &str| MediaTrack {
+            label: label.into(),
+            srclang: srclang.into(),
+            ..Default::default()
+        };
+        assert_eq!(track("English", "en").menu_name("Captions", 2), "English");
+        assert_eq!(track("", "en").menu_name("Captions", 2), "en");
+        assert_eq!(track(" ", "").menu_name("Captions", 2), "Captions 2");
     }
 
     #[test]

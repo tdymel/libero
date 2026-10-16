@@ -9,64 +9,34 @@ use e2e::{Fixture, Viewport, clock, wait};
 
 use super::{FULLSCREEN, PLAY, reads};
 
-/// Polls `probe` for `secs`, past the driver's budget: the controls fade after 3 s.
-async fn within<D: Driver>(
-    d: &mut D,
-    secs: u64,
-    what: &str,
-    mut probe: impl AsyncFnMut(&mut D) -> Result<bool>,
-) -> Result<()> {
-    let started = std::time::Instant::now();
-    while !probe(d).await? {
-        anyhow::ensure!(
-            started.elapsed().as_secs() < secs,
-            "{:?}: gave up waiting for {what}",
-            d.platform()
-        );
-        d.idle().await;
-    }
-    Ok(())
-}
-
 /// The controls' idle timer (libero's CONTROLS_IDLE_MS).
 const IDLE_MS: u32 = 3000;
 
-/// How long the controls may take to show: 3 s, before the real idle timer fades them again;
-/// a held clock cannot, so the poll budget (a background tab's fade-in runs at ~1 frame/s).
-fn show_secs<D: Driver>(d: &D, held: bool) -> u64 {
-    match held {
-        true => d.budget().as_secs(),
-        false => 3,
-    }
+/// Holds the idle timer, so a test fires it instead of waiting 3 s.
+async fn hold_idle<D: Driver>(d: &mut D) -> Result<()> {
+    anyhow::ensure!(
+        d.hold_timers(&[IDLE_MS]).await?,
+        "{:?} cannot hold the idle timer",
+        d.platform()
+    );
+    Ok(())
 }
 
-/// Waits for the controls to fade: on a held clock fires the idle timer once it is armed,
-/// elsewhere waits out the real 3 s.
-async fn until_faded<D: Driver>(d: &mut D, held: bool, what: &str) -> Result<()> {
-    if held {
-        eventually(d, "the idle timer to arm", async |d| {
-            Ok(d.armed(IDLE_MS).await? > 0)
-        })
-        .await?;
-        d.fire_timers(IDLE_MS).await?;
-    }
-    within(d, 8, what, faded).await
+/// Fires the idle timer once it is armed and waits for the fade.
+async fn until_faded<D: Driver>(d: &mut D, what: &str) -> Result<()> {
+    eventually(d, "the idle timer to arm", async |d| {
+        Ok(d.armed(IDLE_MS).await? > 0)
+    })
+    .await?;
+    d.fire_timers(IDLE_MS).await?;
+    eventually(d, what, faded).await
 }
 
-/// The controls stay shown: on a held clock past every pending idle timer and the frame
-/// after it, elsewhere for 4 s of real time.
-async fn stay_shown<D: Driver>(d: &mut D, held: bool, why: &str) -> Result<()> {
-    if held {
-        d.fire_timers(IDLE_MS).await?;
-        d.settle().await?;
-        anyhow::ensure!(controls_shown(d).await?, "the controls faded {why}");
-        return Ok(());
-    }
-    let started = std::time::Instant::now();
-    while started.elapsed().as_secs() < 4 {
-        anyhow::ensure!(controls_shown(d).await?, "the controls faded {why}");
-        d.idle().await;
-    }
+/// The controls stay shown past every pending idle timer and the frame after it.
+async fn stay_shown<D: Driver>(d: &mut D, why: &str) -> Result<()> {
+    d.fire_timers(IDLE_MS).await?;
+    d.settle().await?;
+    anyhow::ensure!(controls_shown(d).await?, "the controls faded {why}");
     Ok(())
 }
 
@@ -111,7 +81,7 @@ async fn fullscreen_controls_fade<D: Driver>(d: &mut D, _route: &str) -> Result<
     if d.platform() == Platform::Native {
         return Ok(());
     }
-    let held = d.hold_timers(&[IDLE_MS]).await?;
+    hold_idle(d).await?;
     eventually(d, "the duration", async |d| {
         Ok(d.text("#player [data-slot=time]").await? == "0:00 / 0:15")
     })
@@ -129,7 +99,7 @@ async fn fullscreen_controls_fade<D: Driver>(d: &mut D, _route: &str) -> Result<
         "the controls are {position}, not overlaid"
     );
     d.click(PLAY).await?;
-    until_faded(d, held, "the controls to fade while playing").await?;
+    until_faded(d, "the controls to fade while playing").await?;
 
     d.click("#player video").await?;
     eventually(d, "a press on the picture to show them", controls_shown).await?;
@@ -139,17 +109,11 @@ async fn fullscreen_controls_fade<D: Driver>(d: &mut D, _route: &str) -> Result<
         d.click(PLAY).await?;
     }
     reads(d, "playing", PLAY, "aria-label", "Pause").await?;
-    until_faded(d, held, "the controls to fade again").await?;
+    until_faded(d, "the controls to fade again").await?;
 
     d.press(keyboard::TAB).await?;
-    within(
-        d,
-        show_secs(d, held),
-        "keyboard focus to show them",
-        controls_shown,
-    )
-    .await?;
-    stay_shown(d, held, "under keyboard focus").await?;
+    eventually(d, "keyboard focus to show them", controls_shown).await?;
+    stay_shown(d, "under keyboard focus").await?;
     d.press(keyboard::ESCAPE).await
 }
 
@@ -159,13 +123,13 @@ async fn inline_controls_fade<D: Driver>(d: &mut D, _route: &str) -> Result<()> 
     if d.platform() == Platform::Native {
         return Ok(());
     }
-    let held = d.hold_timers(&[IDLE_MS]).await?;
+    hold_idle(d).await?;
     eventually(d, "the duration", async |d| {
         Ok(d.text("#player [data-slot=time]").await? == "0:00 / 0:15")
     })
     .await?;
     d.click(PLAY).await?;
-    until_faded(d, held, "the controls to fade while playing").await?;
+    until_faded(d, "the controls to fade while playing").await?;
     d.click("#player video").await?;
     eventually(d, "a press on the picture to show them", controls_shown).await?;
     // A click pauses as well; a tap on faded controls only shows them (todo 1362).
@@ -173,7 +137,7 @@ async fn inline_controls_fade<D: Driver>(d: &mut D, _route: &str) -> Result<()> 
         d.click(PLAY).await?;
     }
     reads(d, "playing to pause", PLAY, "aria-label", "Play").await?;
-    stay_shown(d, held, "while paused").await
+    stay_shown(d, "while paused").await
 }
 
 e2e::scenario!(
@@ -344,6 +308,126 @@ fn focus_from_code_shows_the_faded_controls() {
             .into_value()
             .unwrap();
         assert!(!faded, "the row faded with focus in it");
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 3660: a faded bar takes no hit, so a tap on it reaches the picture and only shows the controls.
+#[test]
+fn a_tap_on_the_faded_bar_does_not_press_its_button() {
+    const MUTE: &str = "#player button[aria-label=Mute]";
+    block_on(async {
+        let fixture = Fixture::open("/video/long", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        clock::hold(page, &[IDLE_MS]).await.unwrap();
+        wait::for_js_true(page, LONG_DURATION, "the duration")
+            .await
+            .unwrap();
+        pointer::click(page, PLAY).await.unwrap();
+        wait::for_js_true(page, PLAYING, "playing").await.unwrap();
+        fade(page).await;
+        wait::for_js_true(
+            page,
+            &format!(
+                "(() => {{ const r = document.querySelector('{MUTE}').getBoundingClientRect();
+                 return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)
+                     === document.querySelector('#player video'); }})()"
+            ),
+            "the picture, not the faded button, under the tap",
+        )
+        .await
+        .unwrap();
+        let at = pointer::centre_of(page, MUTE).await.unwrap();
+        pointer::touch_drag(page, at, at, 0).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("!({})", faded_js()),
+            "a tap on the bar to show the controls",
+        )
+        .await
+        .unwrap();
+        clock::settle(page).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "!document.querySelector('#player video').muted
+                 && document.querySelector('{MUTE}') !== null && {PLAYING}"
+            ),
+            "the tap to leave the sound on",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 3656: Space on a focused button starts playing from paused, and the bar stays while focus is in it.
+#[test]
+fn a_space_on_the_focused_play_button_keeps_the_controls_shown() {
+    block_on(async {
+        let fixture = Fixture::open("/video/long", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        clock::hold(page, &[IDLE_MS]).await.unwrap();
+        wait::for_js_true(page, LONG_DURATION, "the duration")
+            .await
+            .unwrap();
+        page.evaluate(format!("document.querySelector('{PLAY}').focus()"))
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::SPACE).await.unwrap();
+        wait::for_js_true(page, PLAYING, "Space to play")
+            .await
+            .unwrap();
+        clock::until_armed(page, IDLE_MS, 1, "the idle timer")
+            .await
+            .unwrap();
+        clock::fire_all(page, IDLE_MS).await.unwrap();
+        clock::settle(page).await.unwrap();
+        let faded: bool = page
+            .evaluate(faded_js())
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(!faded, "the row faded with focus on the play button");
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 3656: a mouse press leaves a ring-less focus on its button, so a mouse leaving still fades the bar.
+#[test]
+fn a_mouse_press_then_leave_fades_the_bar_with_focus_on_the_button() {
+    block_on(async {
+        let fixture = Fixture::open("/video/long", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        clock::hold(page, &[IDLE_MS]).await.unwrap();
+        wait::for_js_true(page, LONG_DURATION, "the duration")
+            .await
+            .unwrap();
+        pointer::click(page, PLAY).await.unwrap();
+        wait::for_js_true(page, PLAYING, "playing").await.unwrap();
+        page.evaluate(format!(
+            "document.querySelector('{GROUP}').dispatchEvent(
+                 new PointerEvent('pointerleave', {{ pointerType: 'mouse' }}))"
+        ))
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "{} && document.querySelector('{BAR}').contains(document.activeElement)",
+                faded_js()
+            ),
+            "the bar to fade with focus on its button",
+        )
+        .await
+        .unwrap();
         fixture.close().await.unwrap();
     });
 }
