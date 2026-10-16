@@ -4,6 +4,8 @@
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};
 use libero::components::{ColumnFilter, FilterOperator, PinnedColumns, Table, column};
+use libero::hooks::use_direction;
+use libero::theme::Direction;
 
 #[derive(Clone, PartialEq)]
 struct Person {
@@ -727,4 +729,29 @@ fn an_unpinned_body_cell_drops_its_inset() {
         "style {:?}",
         page.attr(CELL, "style")
     );
+}
+
+/// Todo 3399: a paged table under a right-to-left provider turns its pages.
+#[test]
+fn a_paged_table_turns_its_pages_under_rtl() {
+    fn app() -> Element {
+        let direction = use_direction();
+        use_hook(|| direction.set(Direction::Rtl));
+        rsx! {
+            Table {
+                aria_label: "Paged",
+                data: (1..=7).map(|n| Person { name: "Ada", age: n }).collect::<Vec<_>>(),
+                columns: vec![column("Age").value(|p: &Person| p.age)],
+                row_key: |p: &Person| p.age.to_string(),
+                page_sizes: vec![3, 5],
+            }
+        }
+    }
+    const RANGE: &str = "[data-slot=range]";
+    let mut page = mount(app);
+    assert_eq!(page.text(RANGE), "1–3 of 7");
+    page.click("button[aria-label=\"Go to next page\"]");
+    page.wait_for(|page| page.text(RANGE) == "4–6 of 7");
+    page.click("button[aria-label=\"Go to page 3\"]");
+    page.wait_for(|page| page.text(RANGE) == "7–7 of 7");
 }

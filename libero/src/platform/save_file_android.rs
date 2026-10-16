@@ -1,6 +1,8 @@
 //! The Android WebView saves no Blob download: bytes go to the system share
 //! sheet, small text inline (todo 2016), the rest as a file in Downloads (2078).
 
+use std::{future::Future, pin::Pin};
+
 use super::super::android_share::{on_main_thread, share_file, share_text};
 use super::super::share::ShareFile;
 use super::{SaveFileApi, SaveOutcome, Saving};
@@ -37,12 +39,12 @@ impl SaveFileApi for AndroidSaveFile {
     fn save(&self, name: &str, mime: &str, bytes: Vec<u8>) -> Saving {
         let name = name.to_string();
         let payload = Payload::new(name.clone(), mime, bytes);
-        let shared = on_main_thread(move |env, activity| match &payload {
-            Payload::Text(text) => {
-                share_text(env, activity, &name, text).map_err(|error| error.to_string())
-            }
-            Payload::File(file) => share_file(env, activity, file),
-        });
+        let shared: Pin<Box<dyn Future<Output = Result<(), String>>>> = match payload {
+            Payload::Text(text) => Box::pin(on_main_thread(move |env, activity| {
+                share_text(env, activity, &name, &text).map_err(|error| error.to_string())
+            })),
+            Payload::File(file) => Box::pin(share_file(file)),
+        };
         Box::pin(async move {
             match shared.await {
                 Ok(()) => SaveOutcome::Shared,

@@ -30,6 +30,38 @@ pub(crate) fn focus_ring_sx() -> crate::sx::Sx {
 /// The ring inset into the element's own fill, with no outer halo; `offset` is negative.
 /// Inset shadows, as Blitz ignores `outline-offset`; the transparent outline serves forced colours.
 pub(crate) fn inset_focus_ring_sx(offset: &str) -> crate::sx::Sx {
+    inset_ring_sides_sx(offset, Sides::BOTH)
+}
+
+/// The sides of an inset ring a shadow draws, physical: the cells of one row each draw
+/// the top and bottom, the first and last cell their outer side, for one ring round the row.
+#[derive(Clone, Copy)]
+pub(crate) struct Sides {
+    pub(crate) left: bool,
+    pub(crate) right: bool,
+}
+
+impl Sides {
+    pub(crate) const NONE: Self = Self {
+        left: false,
+        right: false,
+    };
+    pub(crate) const LEFT: Self = Self {
+        left: true,
+        right: false,
+    };
+    pub(crate) const RIGHT: Self = Self {
+        left: false,
+        right: true,
+    };
+    pub(crate) const BOTH: Self = Self {
+        left: true,
+        right: true,
+    };
+}
+
+/// [`inset_focus_ring_sx`] with the left and right bands of `sides` only; top and bottom stay.
+pub(crate) fn inset_ring_sides_sx(offset: &str, sides: Sides) -> crate::sx::Sx {
     use crate::theme::{FOCUS_RING_COLOR, FOCUS_RING_HALO, FOCUS_RING_WIDTH, OWN_SHADOW};
     use crate::tokens::NamedColorCss;
 
@@ -42,8 +74,8 @@ pub(crate) fn inset_focus_ring_sx(offset: &str) -> crate::sx::Sx {
         .outline_offset(offset)
         .box_shadow(format!(
             "{},{},{}",
-            inset_band(&halo_depth, &FOCUS_RING_HALO.value()),
-            inset_band(&depth, &stripe),
+            inset_band(&halo_depth, &FOCUS_RING_HALO.value(), sides),
+            inset_band(&depth, &stripe, sides),
             OWN_SHADOW.value_or(NO_SHADOW)
         ))
 }
@@ -61,12 +93,21 @@ pub(crate) fn inset_outline_ring_sx(offset: &str) -> crate::sx::Sx {
     inset_focus_ring_sx(offset).outline(format!("{} solid {stripe}", FOCUS_RING_WIDTH.value()))
 }
 
-/// Four offset inset shadows: a band `depth` deep round the padding box.
-fn inset_band(depth: &str, color: &str) -> String {
-    format!(
-        "inset calc{depth} 0 0 0 {color},inset calc(-1 * {depth}) 0 0 0 {color},\
-         inset 0 calc{depth} 0 0 {color},inset 0 calc(-1 * {depth}) 0 0 {color}"
-    )
+/// Offset inset shadows: a band `depth` deep on the top, bottom and the left and right of `sides`.
+fn inset_band(depth: &str, color: &str, sides: Sides) -> String {
+    [
+        (sides.left, format!("inset calc{depth} 0 0 0 {color}")),
+        (
+            sides.right,
+            format!("inset calc(-1 * {depth}) 0 0 0 {color}"),
+        ),
+        (true, format!("inset 0 calc{depth} 0 0 {color}")),
+        (true, format!("inset 0 calc(-1 * {depth}) 0 0 {color}")),
+    ]
+    .into_iter()
+    .filter_map(|(drawn, band)| drawn.then_some(band))
+    .collect::<Vec<_>>()
+    .join(",")
 }
 
 /// A resting `box-shadow`, also published as `--lsx-own-shadow` so the focus ring,
@@ -79,7 +120,7 @@ pub(crate) fn shadow_sx(shadow: String) -> crate::sx::Sx {
 
 /// The on-state ring, `depth` of `currentColor` inside the edge (1.4.11).
 fn on_ring(depth: &str) -> String {
-    inset_band(&format!("({depth})"), "currentColor")
+    inset_band(&format!("({depth})"), "currentColor", Sides::BOTH)
 }
 
 /// A bordered control's ring depth, 2px as the Maintainer chose (715).

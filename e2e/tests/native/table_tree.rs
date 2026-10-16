@@ -160,6 +160,67 @@ fn a_focused_tree_row_paints_its_ring() {
     );
 }
 
+fn wide(rtl: bool) -> Element {
+    let tasks = vec![Task {
+        id: "site",
+        parent: "",
+    }];
+    rsx! {
+        div { width: "400px", dir: if rtl { "rtl" } else { "ltr" },
+            Table {
+                aria_label: "Tasks",
+                data: tasks,
+                columns: vec![
+                    column("Task").value(|t: &Task| t.id.to_string()).row_header(),
+                    column("Parent").value(|t: &Task| t.parent.to_string()),
+                ],
+                row_key: |t: &Task| t.id.to_string(),
+                parent_key: |t: &Task| (!t.parent.is_empty()).then(|| t.parent.to_string()),
+            }
+        }
+    }
+}
+
+/// 3341: a focused row wears one ring, with no band at the edge where two cells meet.
+fn rings_the_row(app: fn() -> Element) {
+    let mut page = mount(app);
+    let (fx, fy, fw, fh) = page.rect("tbody tr:nth-child(1) > :first-child");
+    let (lx, _, lw, _) = page.rect("tbody tr:nth-child(1) > :last-child");
+    let mid = (fy + fh / 2.0) as u32;
+    let seam = if fx < lx { fx + fw } else { lx + lw };
+    let outer = [fx.min(lx) + 1.0, (fx + fw).max(lx + lw) - 2.0];
+    let inner = [seam - 2.0, seam + 1.0];
+    let probes: Vec<(u32, u32)> = outer
+        .iter()
+        .chain(&inner)
+        .map(|x| (*x as u32, mid))
+        .collect();
+    let before = page.painted_pixels(&probes);
+    page.tab();
+    assert!(
+        page.is_focused("tbody tr:nth-child(1)"),
+        "{}",
+        page.focus_owner()
+    );
+    let after = page.painted_pixels(&probes);
+    assert_ne!(before[..2], after[..2], "no ring at the row's ends");
+    assert_eq!(
+        before[2..],
+        after[2..],
+        "a band at the seam between two cells"
+    );
+}
+
+#[test]
+fn a_focused_tree_row_is_one_ring() {
+    rings_the_row(|| wide(false));
+}
+
+#[test]
+fn a_focused_tree_row_is_one_ring_under_rtl() {
+    rings_the_row(|| wide(true));
+}
+
 /// Blitz fires no `focusin` on a `focus()`: the keys find the row by its `data-cell`.
 #[test]
 fn the_arrows_open_and_close_a_focused_row() {

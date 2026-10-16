@@ -7,10 +7,13 @@ use dioxus_desktop::wry::prelude::{
     jni::{
         self,
         errors::Result as JniResult,
-        objects::{GlobalRef, JClass, JValue},
+        objects::{GlobalRef, JClass, JString, JValue},
     },
 };
 use futures_channel::oneshot;
+use std::fs::File;
+use std::io::Write;
+use std::os::fd::{FromRawFd, RawFd};
 use std::sync::Arc;
 
 use super::share::{ShareApi, ShareData, ShareFile, ShareOutcome, Sharing, text_fields};
@@ -239,18 +242,58 @@ pub(super) fn share_text(
     choose(env, activity, &intent, Some(name))
 }
 
+/// A new Downloads entry: its `content://` URI and a descriptor to write its bytes through.
+struct Download {
+    uri: String,
+    fd: RawFd,
+}
+
 /// Writes `file` to Downloads through MediaStore (no permission, no FileProvider
 /// in the app's manifest), then shares that `content://` URI as `EXTRA_STREAM`.
-pub(super) fn share_file(
+/// The bytes go in on a worker thread, between two main-thread jobs.
+pub(super) async fn share_file(file: ShareFile) -> Result<(), String> {
+    let file = Arc::new(file);
+    let download = on_main_thread({
+        let file = Arc::clone(&file);
+        move |env, activity| create_download(env, activity, &file)
+    })
+    .await?;
+    let uri = download.uri.clone();
+    let written = write_download(download.fd, Arc::clone(&file)).await;
+    on_main_thread(move |env, activity| finish_download(env, activity, &file, &uri, written)).await
+}
+
+/// Writes `file`'s bytes through the descriptor on a worker thread, which closes it.
+async fn write_download(fd: RawFd, file: Arc<ShareFile>) -> Result<(), String> {
+    let (reply, answer) = oneshot::channel();
+    std::thread::spawn(move || {
+        // SAFETY: `detachFd` handed the descriptor over; this thread alone owns it.
+        let mut out = unsafe { File::from_raw_fd(fd) };
+        let _ = reply.send(
+            out.write_all(&file.bytes)
+                .map_err(|error| error.to_string()),
+        );
+    });
+    answer
+        .await
+        .unwrap_or_else(|_| Err("the download was not written".to_string()))
+}
+
+/// Shares the written download, or removes its entry when `written` failed.
+fn finish_download(
     env: &mut JNIEnv,
     activity: &JObject,
     file: &ShareFile,
+    uri: &str,
+    written: Result<(), String>,
 ) -> Result<(), String> {
-    if sdk(env)? < MIN_DOWNLOADS_SDK {
-        return Err("files are shared from Android 10 on".to_string());
-    }
     let jni = |error: jni::errors::Error| error.to_string();
-    let uri = download(env, activity, file).map_err(jni)?;
+    let uri = parse_uri(env, uri).map_err(jni)?;
+    if let Err(error) = written {
+        let resolver = resolver(env, activity).map_err(jni)?;
+        let _ = delete(env, &resolver, &uri);
+        return Err(error);
+    }
     let intent = send_intent(env, ACTION_SEND, mime(file)).map_err(jni)?;
     stream(env, &intent, &uri)
         .and_then(|()| put(env, &intent, EXTRA_SUBJECT, &file.name))
@@ -358,10 +401,83 @@ fn parse_uri<'a>(env: &mut JNIEnv<'a>, uri: &str) -> JniResult<JObject<'a>> {
     .l()
 }
 
-/// A new `MediaStore.Downloads` entry holding `file`; a failed write removes it.
-fn download<'a>(
-    env: &mut JNIEnv<'a>,
+fn resolver<'a>(env: &mut JNIEnv<'a>, activity: &JObject) -> JniResult<JObject<'a>> {
+    env.call_method(
+        activity,
+        "getContentResolver",
+        "()Landroid/content/ContentResolver;",
+        &[],
+    )?
+    .l()
+}
+
+/// A new, empty `MediaStore.Downloads` entry named for `file` and a descriptor opened to
+/// write it; a failure removes the entry.
+fn create_download(
+    env: &mut JNIEnv,
     activity: &JObject,
+    file: &ShareFile,
+) -> Result<Download, String> {
+    if sdk(env)? < MIN_DOWNLOADS_SDK {
+        return Err("files are shared from Android 10 on".to_string());
+    }
+    let jni = |error: jni::errors::Error| error.to_string();
+    let resolver = resolver(env, activity).map_err(jni)?;
+    let uri = insert_download(env, &resolver, file).map_err(jni)?;
+    match open_descriptor(env, &resolver, &uri) {
+        Ok(fd) => {
+            let uri = to_string(env, &uri).map_err(jni)?;
+            Ok(Download { uri, fd })
+        }
+        Err(error) => {
+            let _ = env.exception_clear();
+            let _ = delete(env, &resolver, &uri);
+            Err(jni(error))
+        }
+    }
+}
+
+fn to_string(env: &mut JNIEnv, object: &JObject) -> JniResult<String> {
+    let text = env
+        .call_method(object, "toString", "()Ljava/lang/String;", &[])?
+        .l()?;
+    Ok(env.get_string(&JString::from(text))?.into())
+}
+
+/// A descriptor to write `uri`'s entry through, which the caller owns and closes.
+fn open_descriptor(env: &mut JNIEnv, resolver: &JObject, uri: &JObject) -> JniResult<RawFd> {
+    let mode = env.new_string("w")?;
+    let pfd = env
+        .call_method(
+            resolver,
+            "openFileDescriptor",
+            "(Landroid/net/Uri;Ljava/lang/String;)Landroid/os/ParcelFileDescriptor;",
+            &[JValue::Object(uri), JValue::Object(&mode)],
+        )?
+        .l()?;
+    if pfd.is_null() {
+        return Err(jni::errors::Error::NullPtr("MediaStore gave no descriptor"));
+    }
+    env.call_method(&pfd, "detachFd", "()I", &[])?.i()
+}
+
+fn delete(env: &mut JNIEnv, resolver: &JObject, uri: &JObject) -> JniResult<()> {
+    env.call_method(
+        resolver,
+        "delete",
+        "(Landroid/net/Uri;Ljava/lang/String;[Ljava/lang/String;)I",
+        &[
+            JValue::Object(uri),
+            JValue::Object(&JObject::null()),
+            JValue::Object(&JObject::null()),
+        ],
+    )?;
+    Ok(())
+}
+
+fn insert_download<'a>(
+    env: &mut JNIEnv<'a>,
+    resolver: &JObject,
     file: &ShareFile,
 ) -> JniResult<JObject<'a>> {
     let values = env.new_object("android/content/ContentValues", "()V", &[])?;
@@ -385,17 +501,9 @@ fn download<'a>(
             "Landroid/net/Uri;",
         )?
         .l()?;
-    let resolver = env
-        .call_method(
-            activity,
-            "getContentResolver",
-            "()Landroid/content/ContentResolver;",
-            &[],
-        )?
-        .l()?;
     let uri = env
         .call_method(
-            &resolver,
+            resolver,
             "insert",
             "(Landroid/net/Uri;Landroid/content/ContentValues;)Landroid/net/Uri;",
             &[JValue::Object(&collection), JValue::Object(&values)],
@@ -406,36 +514,7 @@ fn download<'a>(
             "MediaStore refused the download",
         ));
     }
-    if let Err(error) = write(env, &resolver, &uri, &file.bytes) {
-        let _ = env.exception_clear();
-        let _ = env.call_method(
-            &resolver,
-            "delete",
-            "(Landroid/net/Uri;Ljava/lang/String;[Ljava/lang/String;)I",
-            &[
-                JValue::Object(&uri),
-                JValue::Object(&JObject::null()),
-                JValue::Object(&JObject::null()),
-            ],
-        );
-        return Err(error);
-    }
     Ok(uri)
-}
-
-fn write(env: &mut JNIEnv, resolver: &JObject, uri: &JObject, bytes: &[u8]) -> JniResult<()> {
-    let out = env
-        .call_method(
-            resolver,
-            "openOutputStream",
-            "(Landroid/net/Uri;)Ljava/io/OutputStream;",
-            &[JValue::Object(uri)],
-        )?
-        .l()?;
-    let array = env.byte_array_from_slice(bytes)?;
-    env.call_method(&out, "write", "([B)V", &[JValue::Object(&array)])?;
-    env.call_method(&out, "close", "()V", &[])?;
-    Ok(())
 }
 
 fn send_intent<'a>(env: &mut JNIEnv<'a>, action: &str, mime: &str) -> JniResult<JObject<'a>> {

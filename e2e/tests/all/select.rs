@@ -753,6 +753,30 @@ pub fn leaving_commits(route: &str, key: keyboard::Key, modifiers: i64, expected
     });
 }
 
+/// Todo 2032: a browser matches `:focus-visible` on a text field focused by script after a
+/// pointer open, so the native ring on the search box is the web's too.
+#[test]
+fn a_search_box_focused_after_a_pointer_open_matches_focus_visible() {
+    block_on(async {
+        let fixture = Fixture::open("/select/field", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, TRIGGER).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.activeElement === document.querySelector({SEARCH:?}) \
+                 && document.activeElement.matches(':focus-visible')"
+            ),
+            "the search box to take focus and match :focus-visible",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Space in the search box is typing, and in typeahead a space mid-query is
 /// part of the query: neither commits.
 #[test]

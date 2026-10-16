@@ -10,8 +10,9 @@ use crate::{
     components::{
         accessibility::use_announcer,
         common::{
-            ClassList, HtmlTag, Input, LogicalTextAlign, Parts, States, Variables, attr,
-            inset_focus_ring_sx, min_hit_area_sx, names_itself, use_name_warning, variables,
+            ClassList, HtmlTag, Input, LogicalTextAlign, Parts, Sides, States, Variables, attr,
+            inset_focus_ring_sx, inset_ring_sides_sx, min_hit_area_sx, names_itself,
+            use_name_warning, variables,
         },
         form::use_checkbox_look,
         layout::{scroll_area_base, use_box},
@@ -78,6 +79,17 @@ use visible_rows::{KeptRows, OrderedRows, keep_rows, order_rows, page_window};
 const GRIP_LANE: &str = "24px";
 
 const COARSE: &str = "(pointer: coarse)";
+
+const ROW_RING_CELLS: &str = "& tbody > tr[aria-level][data-cell-ring]:focus-visible > *";
+const ROW_RING_FIRST: &str =
+    "& tbody > tr[aria-level][data-cell-ring]:focus-visible > :first-child";
+const ROW_RING_LAST: &str = "& tbody > tr[aria-level][data-cell-ring]:focus-visible > :last-child";
+const ROW_RING_ONLY: &str = "& tbody > tr[aria-level][data-cell-ring]:focus-visible > :only-child";
+
+/// A row's cell wears its share of one ring round the row (todo 3341): its top and bottom, and `sides`.
+fn row_ring_cell_sx(sides: Sides) -> Sx {
+    inset_ring_sides_sx("-2px", sides)
+}
 
 /// Where the header filters row sticks on Blitz: the column headers' height.
 const FILTERS_TOP_VAR: CssVar = CssVar::new("--lsx-table-filters-top");
@@ -246,9 +258,14 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
          & thead th[tabindex]:focus-visible, & tbody > tr[aria-level]:focus-visible",
         inset_focus_ring_sx("-2px"),
     )
-    .selector(
-        "& tbody > tr[aria-level][data-cell-ring]:focus-visible > *",
-        inset_focus_ring_sx("-2px"),
+    .selector(ROW_RING_CELLS, row_ring_cell_sx(Sides::NONE))
+    .selector(ROW_RING_FIRST, row_ring_cell_sx(Sides::LEFT))
+    .selector(ROW_RING_LAST, row_ring_cell_sx(Sides::RIGHT))
+    .selector(ROW_RING_ONLY, row_ring_cell_sx(Sides::BOTH))
+    .rtl(
+        sx().selector(ROW_RING_FIRST, row_ring_cell_sx(Sides::RIGHT))
+            .selector(ROW_RING_LAST, row_ring_cell_sx(Sides::LEFT))
+            .selector(ROW_RING_ONLY, row_ring_cell_sx(Sides::BOTH)),
     )
     // An editing cell's field fills it, in the cell's own type.
     .selector(
