@@ -1,0 +1,5 @@
+# ted_ci.py probe; read by .github/workflows/ci-probe.yml.
+os=macos
+tier=ios
+filter=picker_dialog::
+dev=olaf-44
