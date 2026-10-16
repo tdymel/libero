@@ -52,8 +52,13 @@ fn pair_seam(line: Sx) -> Sx {
 fn coarse_across(ends: Sx) -> Sx {
     sx().media(
         COARSE_POINTER,
+        // The items themselves, one wrapper in (`Repository`), and the pair's two controls.
         sx().selector(format!("& > {CONTROL}::before"), ends.clone())
-            .selector(format!("& > * {CONTROL}::before"), ends),
+            .selector(format!("& > * > {CONTROL}::before"), ends.clone())
+            .selector(
+                format!("& > [role=\"group\"] > * > {CONTROL}::before"),
+                ends,
+            ),
     )
 }
 
