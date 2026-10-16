@@ -83,6 +83,7 @@ field_props! {
         steppers: bool,
         /// Writes the thousands grouped (`12,500`) while the field is not focused; typing
         /// sees the bare number. Built-in number types only: a custom one writes itself.
+        /// A WebView cannot read or set the caret: focusing the field may send it to the end.
         #[props(default)]
         group_digits: bool,
         /// Names the raising stepper. Defaults to `number_field.increase`.

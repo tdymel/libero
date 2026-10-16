@@ -586,7 +586,8 @@ pub(super) fn FilterPopover(
             let _ = back.peek().focus();
         }
     });
-    popover.on_dismiss(move || close.call(true));
+    // The shared focus return decides: a focus moved elsewhere stays (3551).
+    popover.on_dismiss(move || close.call(false));
     let floating = *popover.floating();
     // The value field takes focus once placed, else the operator picker.
     let mut entered = use_signal(|| false);

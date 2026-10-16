@@ -2,7 +2,7 @@ use dioxus::{html::input_data::MouseButton, prelude::*};
 
 use super::{
     handle::{inline_x, physical_x},
-    scroll_area::{SCROLLBARS_SLOT, ScrollAreaPart, thumb_color},
+    scroll_area::{SCROLLBARS_SLOT, ScrollAreaPart, UNLAID_TRIES, thumb_color},
 };
 use crate::{
     components::{
@@ -10,7 +10,7 @@ use crate::{
         layout::use_box,
     },
     hooks::{DragMove, DragOptions, ElementHandle, use_drag, use_element},
-    platform::{ElementApi, scroll_timelines, when_laid_out},
+    platform::{ElementApi, scroll_timelines, when_laid_out, when_laid_out_retry},
     sx::{FORCED_COLORS, StaticSx, sx},
     theme::{
         SCROLL_AREA_RANGE_X, SCROLL_AREA_RANGE_Y, SCROLL_AREA_THUMB_TRAVEL, ScrollAxis,
@@ -264,6 +264,11 @@ impl DrawnBars {
     /// Re-reads the geometry once laid out. A changed one is read once more:
     /// the tracks it replaced may have stretched the overflow it measured.
     pub fn measure(self, tries: u8) {
+        self.read(tries, UNLAID_TRIES);
+    }
+
+    /// A layer of no height is unlaid, not changed: asked again on the backoff (3546).
+    fn read(self, tries: u8, unlaid: u8) {
         let Self { root, layer, .. } = self;
         // Mounting the layer measures again.
         if !layer.is_mounted() {
@@ -279,6 +284,11 @@ impl DrawnBars {
                 else {
                     return;
                 };
+                if size.height <= 0.0 && unlaid > 0 {
+                    return when_laid_out_retry(UNLAID_TRIES - unlaid, move || {
+                        self.read(tries, unlaid - 1)
+                    });
+                }
                 let measured = ScrollMetrics {
                     view_width: size.width,
                     view_height: size.height,
@@ -289,7 +299,7 @@ impl DrawnBars {
                     left,
                 };
                 if self.update(measured) && tries > 0 {
-                    self.measure(tries - 1);
+                    self.read(tries - 1, UNLAID_TRIES);
                 }
             });
         });

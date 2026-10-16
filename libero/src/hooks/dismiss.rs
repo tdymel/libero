@@ -20,7 +20,7 @@ use crate::{
         use_focus_within, use_subscription_slot,
     },
     platform::{
-        ElementApi, KeySubscription, PRESS_MARKER_ATTR, PlatformError, PressSubscription,
+        ElementApi, KeySubscription, PRESS_MARKER_ATTR, PlatformError, PressSubscription, document,
         key_taken, keyboard, next_task, press,
     },
     utils::bump,
@@ -494,7 +494,7 @@ impl DismissHandle {
             && match reason {
                 Dismissal::FromInside => true,
                 // A WebView cannot tell (958): rarely pulling focus back beats dropping it to `<body>`.
-                Dismissal::FromDocument => self.focus_inside() != Some(false),
+                Dismissal::FromDocument => self.focus_inside() != Some(false) || focus_lost(),
                 Dismissal::FocusMoved => false,
             };
 
@@ -621,6 +621,13 @@ pub(crate) fn use_dismiss(
     }));
 
     handle
+}
+
+/// Whether focus rests on no element but the page itself (`<body>`, Blitz's `<html>`).
+fn focus_lost() -> bool {
+    document()
+        .and_then(|document| document.active_element())
+        .is_none_or(|active| matches!(active.matches("body, html"), Ok(true)))
 }
 
 /// Closes `handle` on a press outside it while `listen`, where [`press`] answers.

@@ -128,7 +128,7 @@ pub fn NumberFieldPage() -> Element {
                         .doc("Shows minus and plus buttons in the trailing slot. The arrow keys step the value either way."),
                     prop("group_digits", "bool")
                         .default("false")
-                        .doc("Writes the thousands grouped in the provider's `Formats`, `1,234,567.5` or `1.234.567,5`, while the field is not focused; typing sees the bare number. Built-in number types only. Grouped text typed or pasted parses either way."),
+                        .doc("Writes the thousands grouped in the provider's `Formats`, `1,234,567.5` or `1.234.567,5`, while the field is not focused; typing sees the bare number. Built-in number types only. Grouped text typed or pasted parses either way. A WebView (desktop, Android) cannot read or set the caret, so focusing the field may send it to the end of the text."),
                     prop("increment_label", "String")
                         .default("number_field.increase")
                         .doc("Names the plus button, such as \"Add a guest\". Unset, the localization's `number_field.increase`, \"Increase\" in English."),

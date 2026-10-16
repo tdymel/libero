@@ -205,7 +205,8 @@ pub(super) fn FilterPanel(
         }
     };
     let mut dismiss = close;
-    popover.on_dismiss(move || dismiss(true));
+    // The shared focus return decides: a focus moved elsewhere stays (3551).
+    popover.on_dismiss(move || dismiss(false));
     let floating = *popover.floating();
     let filters = slice.read();
     // Opened from the button: the first line, else Add. Once per opening: a
