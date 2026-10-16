@@ -35,6 +35,7 @@ fn Typing(debounce: u64, save: u64, throttle: u64) -> Element {
     rsx! {
         input {
             id: "field",
+            font_size: "16px",
             oninput: move |event| {
                 typed.set(event.value());
                 save_later.call(event.value());

@@ -97,7 +97,7 @@ fn HighlightProbePage() -> Element {
             }
             "Rust grammar"
         }
-        textarea { id: "source", aria_label: "Source", oninput: move |e| source.set(e.value()) }
+        textarea { id: "source", font_size: "16px", aria_label: "Source", oninput: move |e| source.set(e.value()) }
         div { id: "block",
             if rust() {
                 CodeBlock { language: "rust", copyable: false, source: source() }

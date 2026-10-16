@@ -149,14 +149,14 @@ fn SelectOutsidePage() -> Element {
 
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
-            input { id: "outside", "aria-label": "Note" }
+            input { id: "outside", font_size: "16px", "aria-label": "Note" }
             Select {
                 label: "Fruit",
                 searchable: true,
                 value: value(),
                 onchange: move |next| value.set(next),
             }
-            input { id: "after", "aria-label": "After" }
+            input { id: "after", font_size: "16px", "aria-label": "After" }
         }
     }
 }

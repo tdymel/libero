@@ -44,7 +44,7 @@ fn MenubarShrinkPage() -> Element {
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "420px",
             Menubar { aria_label: "Editor", menus }
-            input { id: "drop", oninput: move |_| view.toggle() }
+            input { id: "drop", font_size: "16px", oninput: move |_| view.toggle() }
         }
     }
 }

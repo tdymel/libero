@@ -34,6 +34,7 @@ fn PaginationRejectingPage() -> Element {
             }
             input {
                 id: "jump",
+                font_size: "16px",
                 "aria-label": "Jump to page",
                 oninput: move |event: FormEvent| {
                     if let Ok(next) = event.value().parse() {

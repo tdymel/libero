@@ -113,7 +113,7 @@ fn ToolbarEditorPage() -> Element {
             Button { id: "help", onclick: move |_| { help.open(); }, "Shortcuts" }
         }
         div { onmounted: editor.mount(), ..editor.attributes(),
-            textarea { id: "text", "aria-label": "Text" }
+            textarea { id: "text", font_size: "16px", "aria-label": "Text" }
         }
     }
 }

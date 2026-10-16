@@ -77,7 +77,7 @@ fn ButtonPage() -> Element {
             Button { id: "literal-named", color: "gold", "Gold" }
             Button { id: "disabled-link", to: "/button/landing", disabled: true, "Disabled link" }
             form { id: "form", "data-submits": "{submits}", onsubmit: move |event| { event.prevent_default(); submits += 1; },
-                input { id: "field", aria_label: "Field" }
+                input { id: "field", font_size: "16px", aria_label: "Field" }
                 Button { id: "busy-submit", r#type: "submit", loading: true, "Send" }
             }
             Button { id: "long", "Save every change made to this rather long document title" }

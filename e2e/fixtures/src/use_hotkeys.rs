@@ -92,10 +92,10 @@ fn Within() -> Element {
 
     rsx! {
         button { id: "outside", "Outside" }
-        input { id: "outside-field", oninput: move |event| typed.set(event.value()) }
+        input { id: "outside-field", font_size: "16px", oninput: move |event| typed.set(event.value()) }
         div { id: "scope", onmounted: scope.mount(), ..scope.attributes(),
             button { id: "inside", "Inside" }
-            input { id: "inside-field" }
+            input { id: "inside-field", font_size: "16px" }
         }
         div { id: "popup", onmounted: popup.mount(), ..popup.attributes(),
             button { id: "in-popup", "In popup" }
@@ -164,7 +164,7 @@ fn Hotkeys() -> Element {
         Sibling { count: other }
         p { id: "other", "{other}" }
         button { id: "plain", "Plain" }
-        input { id: "field" }
+        input { id: "field", font_size: "16px" }
         button { id: "remove", onclick: move |_| listening.set(false), "Remove" }
         if listening() {
             Listener { open, typing }

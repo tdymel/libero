@@ -69,7 +69,7 @@ pub fn FaintBoundary() -> Element {
         input {
             id: "faint-boundary",
             "aria-label": "Faint boundary",
-            style: "border: 1px solid #e8e8e8; background: transparent; padding: 8px; outline-offset: 2px;",
+            style: "border: 1px solid #e8e8e8; background: transparent; padding: 8px; outline-offset: 2px; font-size: 16px;",
         }
     }
 }
@@ -200,7 +200,7 @@ pub fn FaintFieldRing() -> Element {
             #faint-frame input:focus-visible ~ [data-ring] {{ outline: 2px solid #eeeeee; outline-offset: 2px; }}
         "# }
         div { id: "faint-frame",
-            input { id: "faint-input", "aria-label": "Faint ring" }
+            input { id: "faint-input", font_size: "16px", "aria-label": "Faint ring" }
             span { "data-ring": true, "aria-hidden": "true" }
         }
     }
@@ -350,6 +350,7 @@ pub fn DanglingActiveDescendant() -> Element {
     rsx! {
         input {
             id: "dangling",
+            font_size: "16px",
             role: "combobox",
             "aria-label": "Dangling",
             "aria-expanded": if open() { "true" } else { "false" },
@@ -394,6 +395,7 @@ fn FakeCombobox(id: &'static str, highlight: Option<&'static str>) -> Element {
     rsx! {
         input {
             id,
+            font_size: "16px",
             role: "combobox",
             "aria-label": "Fake combobox",
             "aria-expanded": if open() { "true" } else { "false" },

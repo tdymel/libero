@@ -656,13 +656,18 @@ async fn a_card_dropped_before_another_lifts_again<D: Driver>(
     _route: &str,
 ) -> Result<()> {
     drag_across(d, "Beta", 1, -2.0).await?;
-    eventually_text(
+    let dropped = eventually_text(
         d,
         "#order",
         "Alpha Gamma | Beta Delta | ",
         "a drag to Doing's first slot",
     )
-    .await?;
+    .await;
+    // A flake (3417) tells a cancelled drag from one never started by the status and the moves.
+    if let Err(error) = dropped {
+        let (status, moves) = (d.text(STATUS).await?, d.text("#moves").await?);
+        return Err(error.context(format!("status {status:?}, moves {moves:?}")));
+    }
     lift(d, "Beta", "1 of 2").await
 }
 
