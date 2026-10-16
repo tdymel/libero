@@ -382,6 +382,12 @@ fn the_moment_field_meets_the_baseline() {
     baseline("chrono_field-moment", "/chrono-field/moment");
 }
 
+
+macro_rules! moment_copies {
+    ($($name:ident)*) => { $( #[test] fn $name() { baseline("chrono_field-moment", "/chrono-field/moment"); } )* };
+}
+moment_copies!(moment_copy_a moment_copy_b moment_copy_c moment_copy_d moment_copy_e moment_copy_f moment_copy_g moment_copy_h moment_copy_i moment_copy_j moment_copy_k moment_copy_l);
+
 fn baseline(name: &'static str, route: &'static str) {
     Suite::new(name, route)
         .focusable(INPUT)
