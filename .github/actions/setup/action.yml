@@ -24,6 +24,14 @@ runs:
       shell: bash
       run: sudo mdutil -a -i off || true
 
+    # WKWebView animates a wheel scroll off a display link; a runner's virtual display may
+    # never tick it (3432).
+    - if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        defaults write -g NSScrollAnimationEnabled -bool NO
+        defaults write -g AppleScrollAnimationEnabled -bool NO
+
     - uses: dtolnay/rust-toolchain@stable
       with:
         targets: ${{ inputs.targets }}
