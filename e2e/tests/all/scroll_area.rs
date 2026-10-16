@@ -306,9 +306,23 @@ e2e::scenario!(
 
 async fn diag_wheel_samples<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     measured(d).await?;
+    d.evaluate(
+        "(() => { window.__w = []; addEventListener('wheel', e => window.__w.push([e.target.tagName + '#' + e.target.id, e.deltaY, e.deltaMode, e.cancelable, e.defaultPrevented]), {capture: true, passive: true}); return 1; })()",
+    )
+    .await?;
     d.wheel("#list-pane", 600.0).await?;
-    let mut series = Vec::new();
-    for _ in 0..60 {
+    let state = d
+        .evaluate(
+            "(() => { const pane = document.querySelector('#list-pane'); const list = pane.firstElementChild; \
+             const r = pane.getBoundingClientRect(); const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); \
+             const before = list.scrollTop; list.scrollBy(0, 50); \
+             return JSON.stringify({wheels: window.__w, y: window.scrollY, hit: hit && hit.tagName + '#' + hit.id + '.' + hit.className, \
+             scrolled: [...document.querySelectorAll('*')].filter(e => e.scrollTop > 0).map(e => e.tagName + '#' + e.id + ':' + e.scrollTop), \
+             list: [before, list.scrollTop, list.clientHeight, list.scrollHeight, getComputedStyle(list).overflowY, getComputedStyle(list).touchAction, getComputedStyle(list).overscrollBehaviorY]}); })()",
+        )
+        .await?;
+    let mut series = vec![state.to_string()];
+    for _ in 0..6 {
         d.frame().await?;
         let top = d.scroll_pos(LIST).await?.1;
         let height = d.scroll_height(LIST).await?;
