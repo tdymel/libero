@@ -1,4 +1,7 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
 
 use dioxus::prelude::*;
 
@@ -214,7 +217,9 @@ pub fn PinField(props: PinFieldProps) -> Element {
     // character did not change skips, and its handlers still see this render.
     let handles: CellHandles = use_hook(|| Rc::new(RefCell::new(Vec::new())));
     handles.borrow_mut().resize(length, None);
+    let handled_delete = use_hook(|| Rc::new(Cell::new(false)));
     let edit = PinEdit {
+        handled_delete,
         cells: cells.clone(),
         length,
         kind,
@@ -336,6 +341,9 @@ struct PinEdit {
     id: String,
     readonly: bool,
     report: Rc<dyn Fn(Vec<Option<char>>)>,
+    /// Set while a prevented Backspace or Delete is held: Blitz on macOS still runs its
+    /// delete binding after it, whose `oninput` would undo the key's own edit (todo 3342).
+    handled_delete: Rc<Cell<bool>>,
 }
 
 impl PinEdit {
@@ -392,6 +400,10 @@ impl PinEdit {
     /// What arrived in one cell's `oninput`: a paste, or a character a soft
     /// keyboard typed without naming its key.
     fn typed(&self, index: usize, raw: String) {
+        if self.handled_delete.get() {
+            self.show(index, self.cells[index]);
+            return;
+        }
         let mut raw: Vec<char> = raw.chars().map(fold_digit).collect();
         let emptied = raw.is_empty();
         // The cell's old character sits on whichever side the caret was not.
@@ -466,6 +478,7 @@ impl PinEdit {
     /// that are dropped before they reach the DOM.
     fn keys(&self, index: usize, event: Event<KeyboardData>) {
         let (length, readonly) = (self.length, self.readonly);
+        self.handled_delete.set(false);
         let modified = event.modifiers().ctrl() || meta_held(event.modifiers());
         // A composing key edits the IME's candidate, not the cell (todo 3033).
         // Ctrl/Alt/Meta+arrow, Home or End is the caret's or the browser's.
@@ -492,6 +505,7 @@ impl PinEdit {
             // Native `readonly` does not stop a handler clearing a cell.
             Key::Delete => {
                 event.prevent_default();
+                self.handled_delete.set(true);
                 // An empty cell reports nothing: `oninput` would see an unchanged pin.
                 if self.cells[index].is_some() && !readonly {
                     self.edit(index, None);
@@ -499,6 +513,7 @@ impl PinEdit {
             }
             Key::Backspace => {
                 event.prevent_default();
+                self.handled_delete.set(true);
                 match self.cells[index].is_some() && !readonly {
                     true => {
                         self.edit(index, None);
@@ -685,6 +700,7 @@ fn PinCell(
     }
     let typed = editor.clone();
     let pasted = editor.clone();
+    let released = editor.clone();
     let keys = editor;
     let input = control
         .element(&handle)
@@ -718,6 +734,9 @@ fn PinCell(
         })
         .event("onkeydown", move |event: Event<KeyboardData>| {
             keys.current().keys(index, event)
+        })
+        .event("onkeyup", move |_: Event<KeyboardData>| {
+            released.current().handled_delete.set(false)
         })
         .render(HtmlTag::Input, Vec::new(), ());
 
