@@ -386,6 +386,41 @@ fn the_marquee_preview_fits_its_box() {
     });
 }
 
+/// Todo 3735: no label in a demo's controls is cut with an ellipsis, the selected `Outlined` of
+/// the Variant toggle included, at 1280 and at phone width, in both schemes.
+#[test]
+fn the_demo_controls_cut_no_label() {
+    block_on(async {
+        let cut = "[...document.querySelectorAll('#docs-main *')].filter((e) => \
+            getComputedStyle(e).textOverflow === 'ellipsis' && e.scrollWidth > e.clientWidth)\
+            .map((e) => e.textContent.trim())";
+        for path in ["/buttons/theme-switcher", "/buttons/copy"] {
+            for viewport in [Viewport::Desktop, Viewport::Mobile] {
+                for scheme in [Scheme::Light, Scheme::Dark] {
+                    let fixture = Fixture::open_until(path, viewport, scheme, "#docs-main select")
+                        .await
+                        .unwrap();
+                    let page = &fixture.page;
+                    page.evaluate(
+                        "(() => { const s = document.querySelector('#docs-main select'); \
+                           s.value = 'outlined'; s.dispatchEvent(new Event('change', { bubbles: true })); })()",
+                    )
+                    .await
+                    .unwrap();
+                    wait::for_js_true(
+                        page,
+                        &format!("{cut}.length === 0"),
+                        &format!("no cut label on {path}"),
+                    )
+                    .await
+                    .unwrap();
+                    close(fixture).await;
+                }
+            }
+        }
+    });
+}
+
 /// Each label and border of the landing page's gradient cards against the gradient's two
 /// stops and their midpoint (the lowest ratio), then axe over the page. The stops are
 /// translucent tints, so each is read over the first opaque background behind the card.

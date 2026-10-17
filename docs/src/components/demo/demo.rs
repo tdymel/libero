@@ -231,13 +231,11 @@ pub fn indent(code: &str) -> String {
 /// The narrowest segment of an `sm` `SegmentedControl` we plan for.
 const SEGMENT_WIDTH: usize = 88;
 
-/// A segment's width estimate per character at `sm` (14px), plus padding and border.
-/// Measured: `Standard` 92px, `Bottom start` 117.5px. Four options or more are sized by it.
-const SEGMENT_CHAR_WIDTH: f32 = 7.5;
+/// A segment's padding and border at `sm` (14px).
 const SEGMENT_PADDING: f32 = 30.0;
 
-/// The check a selected label gains. Up to three options count it, by `label_width`:
-/// a strip of `average`, `target`, `none` needs 312px, of `Line`, `Bar`, `Pie` 234px.
+/// The check a selected label gains, by `label_width`: a strip of `average`, `target`,
+/// `none` needs 312px, of `Line`, `Bar`, `Pie` 234px, of five variants (`Outlined`, 59px) 540px.
 const SEGMENT_CHECK: f32 = 21.0;
 
 /// A label's width at `sm`, by what its letters measure: narrow ones, wide ones, the rest.
@@ -269,14 +267,9 @@ fn segments_need(control: &Control) -> usize {
         .options
         .iter()
         .map(|option| control.label_of(option));
-    let segment = if options <= 3 {
-        // The longest label, checked.
-        let longest = labels.map(|label| label_width(&label)).fold(0.0, f32::max);
-        (longest + SEGMENT_PADDING + SEGMENT_CHECK).ceil() as usize
-    } else {
-        let longest = labels.map(|label| label.chars().count()).max().unwrap_or(0);
-        (longest as f32 * SEGMENT_CHAR_WIDTH + SEGMENT_PADDING).ceil() as usize
-    };
+    // The longest label, checked.
+    let longest = labels.map(|label| label_width(&label)).fold(0.0, f32::max);
+    let segment = (longest + SEGMENT_PADDING + SEGMENT_CHECK).ceil() as usize;
     let needed = options * SEGMENT_WIDTH.max(segment);
     if needed > WIDE_PANEL_CONTROL {
         // Wider than the panel ever gets: a width no card reaches.
@@ -748,8 +741,8 @@ mod tests {
         assert_eq!(settled.str("value"), "2");
     }
 
-    /// Todo 866: the longest label sizes every segment, so four placements
-    /// never fit the side column, while short labels keep the 88px floor.
+    /// Todos 866, 3735: the longest label, checked, sizes every segment, so four placements
+    /// and five variants never fit the side column, while short labels keep the 88px floor.
     #[test]
     fn the_longest_label_sizes_the_segments() {
         let placement = Control::toggle("placement", ["a", "b", "c", "d"]).labels([
@@ -761,7 +754,7 @@ mod tests {
         assert_eq!(segments_need(&placement), 99_999);
         let variant = Control::toggle("variant", ["f", "t", "e", "o", "s"])
             .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard"]);
-        assert_eq!(segments_need(&variant), 5 * 90 + 48);
+        assert_eq!(segments_need(&variant), 99_999);
         let sizes = Control::toggle("size", ["xs", "sm", "md", "lg", "xl"]);
         assert_eq!(segments_need(&sizes), 5 * 88 + 48);
     }
