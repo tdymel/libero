@@ -22,14 +22,21 @@ async fn hold_idle<D: Driver>(d: &mut D) -> Result<()> {
     Ok(())
 }
 
-/// Fires the idle timer once it is armed and waits for the fade.
+/// Fires the idle timer once it is armed and waits for the fade; a timer armed before the
+/// play (a focus on a WebView) fires too early, so it fires again until the bar is gone.
 async fn until_faded<D: Driver>(d: &mut D, what: &str) -> Result<()> {
     eventually(d, "the idle timer to arm", async |d| {
         Ok(d.armed(IDLE_MS).await? > 0)
     })
     .await?;
-    d.fire_timers(IDLE_MS).await?;
-    eventually(d, what, faded).await
+    eventually(d, what, async |d| {
+        if faded(d).await? {
+            return Ok(true);
+        }
+        d.fire_timers(IDLE_MS).await?;
+        Ok(false)
+    })
+    .await
 }
 
 /// The controls stay shown past every pending idle timer and the frame after it.
