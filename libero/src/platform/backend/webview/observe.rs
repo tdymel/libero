@@ -53,7 +53,7 @@ pub(crate) fn computed_px(tag: u64, property: &str) -> Read<Option<f64>> {
     })
 }
 
-/// Queued, like [`focus_selector`]; nothing happens while no element carries the tag.
+/// Queued, like [`focus_selector`](super::focus_selector); nothing happens while no element carries the tag.
 pub(crate) fn command_by_tag(tag: u64, command: TagCommand) -> Result<(), PlatformError> {
     if !runs_scripts() {
         return Err(PlatformError::Unsupported);

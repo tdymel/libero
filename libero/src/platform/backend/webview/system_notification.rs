@@ -48,7 +48,7 @@ impl SystemNotificationApi for WebViewSystemNotification {
         })
     }
 
-    /// Parked like [`GeolocationApi::current`]: the prompt can outlast a `join`.
+    /// Parked like [`GeolocationApi::current`](crate::platform::geolocation::GeolocationApi::current): the prompt can outlast a `join`.
     fn request(&self) -> Answer<PermissionState> {
         let slot = Slot::new();
         let script = eval(&format!(

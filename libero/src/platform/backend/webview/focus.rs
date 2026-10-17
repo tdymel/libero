@@ -84,7 +84,7 @@ pub(crate) fn caret_edges() -> Option<(bool, bool)> {
     focused().and_then(|(.., edges)| edges)
 }
 
-/// Queued, like [`ElementApi::focus`] here: no handle names the element.
+/// Queued, like [`ElementApi::focus`](crate::platform::ElementApi::focus) here: no handle names the element.
 pub(crate) fn focus_selector(selector: &str) -> Result<(), PlatformError> {
     if !runs_scripts() {
         return Err(PlatformError::Unsupported);

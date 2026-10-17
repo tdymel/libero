@@ -88,7 +88,7 @@ fn position_options(options: GeolocationOptions) -> Value {
 
 impl GeolocationApi for WebViewGeolocation {
     /// Answers by `send` from a parked script, not `join`: a prompt can outlast
-    /// [`CHANNEL_HOLD_MS`], and the parked script keeps its channel alive.
+    /// [`CHANNEL_HOLD_MS`](super::CHANNEL_HOLD_MS), and the parked script keeps its channel alive.
     fn current(&self, options: GeolocationOptions) -> Locate {
         let slot = Slot::new();
         let script = eval_with(

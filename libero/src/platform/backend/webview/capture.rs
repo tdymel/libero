@@ -28,7 +28,7 @@ const CAPTURE_SEND: &str = "const send = (message) => dioxus.send(message);
     };";
 
 impl CaptureApi for WebViewCapture {
-    /// Parked, so a prompt or a recording may outlast [`CHANNEL_HOLD_MS`].
+    /// Parked, so a prompt or a recording may outlast [`CHANNEL_HOLD_MS`](super::CHANNEL_HOLD_MS).
     fn session(&self, tag: u64, callback: Box<dyn Fn(CaptureEvent)>) -> Box<dyn CaptureSession> {
         let slot = Rc::new(Slot::new());
         let script = eval_with(

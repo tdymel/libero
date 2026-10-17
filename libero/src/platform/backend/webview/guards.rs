@@ -69,7 +69,7 @@ pub(crate) fn guard_typed_values() {
     }
 }
 
-/// Queued like [`WebViewDocument::set_root_attribute`], so an edit dioxus sends
+/// Queued like [`WebViewDocument::set_root_attribute`](super::WebViewDocument), so an edit dioxus sends
 /// later still lands over it.
 pub(crate) fn set_value_by_id(id: &str, value: &str) -> Result<(), PlatformError> {
     if !runs_scripts() {
