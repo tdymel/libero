@@ -179,7 +179,8 @@ stop, a slider read as "3.5 of 5", and the arrows move it by half a star.
 
 `Localization.rating.value` is the spoken value, with the holes `{value}` and
 `{count}`: "{value} of {count}" in English, "{value} von {count}" in German. The
-number uses the formats' decimal separator.
+number uses the formats' decimal separator: this site runs German formats, so its
+demo reads "3,5 of 5".
 
 ## CSS variables
 

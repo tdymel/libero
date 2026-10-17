@@ -145,7 +145,7 @@ pub fn RatingPage() -> Element {
                             "heart" => vec!["icon: lucide::heart::outlined".to_string()],
                             _ => vec![],
                         }),
-                    Control::toggle("count", ["3", "5", "10"])
+                    Control::toggle("count", ["3", "5", "7"])
                         .default("5")
                         .code(|_, values| match values.str("count").as_str() {
                             "5" => vec![],

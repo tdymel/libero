@@ -5,7 +5,7 @@ use crate::components::common::Input;
 use crate::localization::CodeBlockLabels;
 use crate::platform::{PreparedText, RegexMatch, regex_api};
 
-use super::language_catalog::LANGUAGE_CATALOG;
+use super::language_catalog::{LANGUAGE_CATALOG, PLAIN_TEXT};
 
 /// A highlighting language, parsed from a name such as `"rust"`. Each needs its `code-lang-*` feature.
 #[derive(Clone, Copy)]
@@ -36,9 +36,10 @@ impl Language {
 
     /// The shown label; only plain text is localized.
     pub(crate) fn name(self, labels: &CodeBlockLabels) -> &'static str {
-        match std::ptr::eq(self.0, &LANGUAGE_CATALOG[0]) {
-            true => labels.plain_text,
-            false => self.0.label,
+        if std::ptr::eq(self.0, &LANGUAGE_CATALOG[PLAIN_TEXT]) {
+            labels.plain_text
+        } else {
+            self.0.label
         }
     }
 
@@ -46,7 +47,7 @@ impl Language {
     pub(crate) fn catalog() -> impl Iterator<Item = (&'static str, &'static str)> {
         LANGUAGE_CATALOG
             .iter()
-            .skip(1)
+            .skip(PLAIN_TEXT + 1)
             .map(|entry| (entry.label, entry.aliases[0]))
     }
 
@@ -384,8 +385,10 @@ fn flatten<'a>(
 /// The last few highlights: a remount or a demo switching back skips the regex work (todo 2148).
 const HIGHLIGHT_CACHE_LEN: usize = 32;
 
+type HighlightCache = std::collections::VecDeque<(Language, String, Vec<HighlightedLine>)>;
+
 thread_local! {
-    static HIGHLIGHTED: std::cell::RefCell<std::collections::VecDeque<(Language, String, Vec<HighlightedLine>)>> =
+    static HIGHLIGHTED: std::cell::RefCell<HighlightCache> =
         const { std::cell::RefCell::new(std::collections::VecDeque::new()) };
 }
 

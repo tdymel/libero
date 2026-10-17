@@ -185,19 +185,7 @@ pub(crate) fn styling_attributes(
             true
         }
         (name, value) if fold && attribute.namespace == Some("style") => {
-            let value = match value {
-                AttributeValue::Text(value) => value.clone(),
-                AttributeValue::Int(value) => value.to_string(),
-                AttributeValue::Float(value) => value.to_string(),
-                _ => return true,
-            };
-            // A `;` would open a second declaration from a caller's data: drop the value.
-            if value.contains(';') {
-                crate::utils::warn(&format!("style `{name}` has a `;` in its value, dropped."));
-            } else {
-                folded.push_str(&format!("{name}:{value};"));
-            }
-            false
+            !fold_style_value(&mut folded, name, value)
         }
         _ => true,
     });
@@ -208,33 +196,60 @@ pub(crate) fn styling_attributes(
             None => style = Some(folded),
         }
     }
+    if let Some(rest) = described {
+        join_into_first_describedby(&mut attributes, &rest);
+    }
+    prepend_ours(&mut attributes, class, data_state, style);
+    attributes
+}
 
-    if let Some(rest) = described
-        && let Some(first) = attributes
-            .iter_mut()
-            .find(|attribute| attribute.name == "aria-describedby")
+/// Appends a style-namespace attribute to `folded`; false when its value is no scalar.
+fn fold_style_value(folded: &mut String, name: &str, value: &AttributeValue) -> bool {
+    let value = match value {
+        AttributeValue::Text(value) => value.clone(),
+        AttributeValue::Int(value) => value.to_string(),
+        AttributeValue::Float(value) => value.to_string(),
+        _ => return false,
+    };
+    // A `;` would open a second declaration from a caller's data: drop the value.
+    if value.contains(';') {
+        crate::utils::warn(&format!("style `{name}` has a `;` in its value, dropped."));
+    } else {
+        folded.push_str(&format!("{name}:{value};"));
+    }
+    true
+}
+
+fn join_into_first_describedby(attributes: &mut [Attribute], rest: &str) {
+    if let Some(first) = attributes
+        .iter_mut()
+        .find(|attribute| attribute.name == "aria-describedby")
         && let AttributeValue::Text(value) = &mut first.value
     {
-        join(value, &rest, ' ');
+        join(value, rest, ' ');
     }
+}
 
-    // Pushed then rotated to the front: prepending in place is a memmove,
-    // where `splice` at index 0 is a generic reallocating path.
+// Pushed then rotated to the front: prepending in place is a memmove,
+// where `splice` at index 0 is a generic reallocating path.
+fn prepend_ours(
+    attributes: &mut Vec<Attribute>,
+    class: Option<String>,
+    data_state: Option<String>,
+    style: Option<String>,
+) {
     let mut ours = 0;
-    if let Some(class) = class {
-        attributes.push(super::attr("class", class));
-        ours += 1;
-    }
-    if let Some(data_state) = data_state {
-        attributes.push(super::attr("data-state", data_state));
-        ours += 1;
-    }
-    if let Some(style) = style {
-        attributes.push(super::attr("style", style));
-        ours += 1;
+    for (name, value) in [
+        ("class", class),
+        ("data-state", data_state),
+        ("style", style),
+    ] {
+        if let Some(value) = value {
+            attributes.push(super::attr(name, value));
+            ours += 1;
+        }
     }
     attributes.rotate_right(ours);
-    attributes
 }
 
 /// Appends `value`, inserting `separator` only where one is missing.

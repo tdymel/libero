@@ -19,8 +19,9 @@ use crate::{
     },
     context::{HostOutlet, PortalHost},
     hooks::{
-        FULLSCREEN_ATTR, Hotkey, MediaError, MediaHandle, listener, use_cache, use_element,
-        use_fullscreen, use_localization, use_media, use_portal_slot, use_scroll_lock, use_timeout,
+        FULLSCREEN_ATTR, Hotkey, MediaError, MediaHandle, TimeoutHandle, listener, use_cache,
+        use_element, use_fullscreen, use_localization, use_media, use_portal_slot, use_scroll_lock,
+        use_timeout,
     },
     platform,
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, sx},
@@ -371,6 +372,129 @@ impl MediaTrack {
     }
 }
 
+/// The track the captions button shows: the one last picked in the track menu,
+/// else the default one, else the first.
+fn caption_track(picked: Option<usize>, text_tracks: &[(usize, &MediaTrack)]) -> Option<usize> {
+    picked
+        .filter(|picked| text_tracks.iter().any(|(index, _)| index == picked))
+        .or_else(|| {
+            text_tracks
+                .iter()
+                .find(|(_, t)| t.default)
+                .or(text_tracks.first())
+                .map(|(index, _)| *index)
+        })
+}
+
+/// Two or more text tracks: the captions button opens a menu of them (todo 1284).
+fn caption_menu(text_tracks: &[(usize, &MediaTrack)], fallback: &str) -> Vec<(usize, String)> {
+    if text_tracks.len() < 2 {
+        return Vec::new();
+    }
+    text_tracks
+        .iter()
+        .enumerate()
+        .map(|(n, (index, t))| (*index, t.menu_name(fallback, n + 1)))
+        .collect()
+}
+
+/// The chapters track is read only when the prop lists none.
+fn chapters_src(tracks: &[&MediaTrack], listed: bool) -> Option<String> {
+    tracks
+        .iter()
+        .filter(|track| track.kind == TrackKind::Chapters)
+        .min_by_key(|track| !track.default)
+        .map(|track| track.src.clone())
+        .filter(|_| !listed)
+}
+
+/// The chapters read from `src`; a late answer for an old `src` is dropped.
+fn read_chapters(read: Option<(String, Vec<Chapter>)>, src: &str) -> Vec<Chapter> {
+    read.filter(|(read_src, _)| read_src == src)
+        .map(|(_, chapters)| chapters)
+        .unwrap_or_default()
+}
+
+/// The bar's height over the picture, bar the scrim's fade: measured (todo 1389), and
+/// until then a button row, a 1rem seek row and the gaps.
+fn bar_style(bar: Option<f64>, size: Option<Size>, aspect_ratio: Option<&str>) -> String {
+    let bar = match bar {
+        Some(height) => format!("{BAR_VAR}: calc({height}px - {SCRIM_FADE});"),
+        None => {
+            let button = match size {
+                Some(size) => BUTTON_HEIGHT.value(size),
+                None => ACTION_ICON_SIZE.value(),
+            };
+            format!(
+                "{BAR_VAR}: calc({button} + 1rem + 3 * {});",
+                SizeCss::SPACING.value(Size::Xs)
+            )
+        }
+    };
+    match aspect_ratio {
+        Some(ratio) => format!("{bar}aspect-ratio: {ratio};"),
+        None => bar,
+    }
+}
+
+/// The controls overlay the picture and fade out while playing untouched, or as a mouse
+/// leaves; a pointer or a key brings them back. A key keeps them until the next press of a
+/// pointer, so keyboard focus never sits on an unseen control.
+#[derive(Clone, Copy)]
+struct ControlsIdle {
+    idle: Signal<bool>,
+    keyboard: Signal<bool>,
+    timer: TimeoutHandle,
+}
+
+fn use_controls_idle(playing: bool) -> ControlsIdle {
+    let mut idle = use_signal(|| false);
+    let keyboard = use_signal(|| false);
+    let timer = use_timeout(move || idle.set(true), CONTROLS_IDLE_MS);
+    let controls = ControlsIdle {
+        idle,
+        keyboard,
+        timer,
+    };
+    use_effect(use_reactive!(|playing| {
+        if playing {
+            controls.wake();
+        }
+    }));
+    controls
+}
+
+impl ControlsIdle {
+    fn wake(mut self) {
+        if *self.idle.peek() {
+            self.idle.set(false);
+        }
+        self.timer.start();
+    }
+
+    fn by_key(mut self) {
+        if !*self.keyboard.peek() {
+            self.keyboard.set(true);
+        }
+        self.wake();
+    }
+
+    fn by_pointer(mut self) {
+        if *self.keyboard.peek() {
+            self.keyboard.set(false);
+        }
+    }
+
+    fn mouse_left(mut self) {
+        self.timer.stop();
+        self.idle.set(true);
+    }
+
+    fn hidden(self, playing: bool, errored: bool) -> bool {
+        playing && (self.idle)() && !(self.keyboard)() && !errored
+    }
+}
+
 base_props! {
     parts(VideoPart);
     pub struct VideoProps {
@@ -490,8 +614,6 @@ pub fn Video(props: VideoProps) -> Element {
         }
     });
 
-    // The track the captions button shows: the one last picked in the track menu,
-    // else the default text one, else the first.
     let tracks: Vec<&MediaTrack> = props
         .tracks
         .iter()
@@ -504,15 +626,7 @@ pub fn Video(props: VideoProps) -> Element {
         .filter(|(_, t)| t.kind.shows_text())
         .collect();
     let picked = use_signal(|| None::<usize>);
-    let caption_track = picked()
-        .filter(|picked| text_tracks.iter().any(|(index, _)| index == picked))
-        .or_else(|| {
-            text_tracks
-                .iter()
-                .find(|(_, t)| t.default)
-                .or(text_tracks.first())
-                .map(|(index, _)| *index)
-        });
+    let caption_track = caption_track(picked(), &text_tracks);
     let shown_at_start = text_tracks.iter().any(|(_, t)| t.default);
     let shown = use_signal(|| shown_at_start);
     let captions = Captions {
@@ -520,26 +634,11 @@ pub fn Video(props: VideoProps) -> Element {
         track: caption_track,
         picked,
     };
-    // Two or more: the captions button opens a menu of them (todo 1284).
     // After the `PortalHost`: in fullscreen the help shows inside the player.
     let labels = use_localization().media;
-    let caption_tracks: Vec<(usize, String)> = if text_tracks.len() < 2 {
-        Vec::new()
-    } else {
-        text_tracks
-            .iter()
-            .enumerate()
-            .map(|(n, (index, t))| (*index, t.menu_name(labels.captions, n + 1)))
-            .collect()
-    };
+    let caption_tracks = caption_menu(&text_tracks, labels.captions);
 
-    // The chapters track is read only when the prop lists none; a late answer for an old `src` is dropped.
-    let chapters_src = tracks
-        .iter()
-        .filter(|track| track.kind == TrackKind::Chapters)
-        .min_by_key(|track| !track.default)
-        .map(|track| track.src.clone())
-        .filter(|_| props.chapters.is_empty());
+    let chapters_src = chapters_src(&tracks, !props.chapters.is_empty());
     let mut read = use_signal(|| None::<(String, Vec<Chapter>)>);
     use_cache(chapters_src.clone(), |src| {
         if let Some(src) = src.clone() {
@@ -553,10 +652,7 @@ pub fn Video(props: VideoProps) -> Element {
         }
     });
     let chapters = sorted_chapters(match &chapters_src {
-        Some(src) => read()
-            .filter(|(read_src, _)| read_src == src)
-            .map(|(_, chapters)| chapters)
-            .unwrap_or_default(),
+        Some(src) => read_chapters(read(), src),
         None => props.chapters.clone(),
     });
     let starts: Vec<f64> = chapters.iter().map(|chapter| chapter.start).collect();
@@ -602,65 +698,27 @@ pub fn Video(props: VideoProps) -> Element {
     use_media_start(media, props.muted, props.onerror);
 
     let unsupported = media.supported() == Some(false);
-    // The bar's height over the picture, bar the scrim's fade: measured (todo 1389), and
-    // until then a button row, a 1rem seek row and the gaps.
     let mut bar = use_signal(|| None::<f64>);
-    let bar_style = match bar() {
-        Some(height) => format!("{BAR_VAR}: calc({height}px - {SCRIM_FADE});"),
-        None => {
-            let button = match props.size.as_ref() {
-                Some(size) => BUTTON_HEIGHT.value(*size),
-                None => ACTION_ICON_SIZE.value(),
-            };
-            format!(
-                "{BAR_VAR}: calc({button} + 1rem + 3 * {});",
-                SizeCss::SPACING.value(Size::Xs)
-            )
-        }
-    };
-    let style = match &props.aspect_ratio {
-        Some(ratio) => format!("{bar_style}aspect-ratio: {ratio};"),
-        None => bar_style,
-    };
+    let style = bar_style(
+        bar(),
+        props.size.as_ref().copied(),
+        props.aspect_ratio.as_deref(),
+    );
 
-    // The controls overlay the picture and fade out while playing untouched, or
-    // as a mouse leaves; a pointer or a key brings them back. A key keeps them until
-    // the next press of a pointer, so keyboard focus never sits on an unseen control.
-    let mut idle = use_signal(|| false);
-    let keyboard = use_signal(|| false);
-    let idle_timer = use_timeout(move || idle.set(true), CONTROLS_IDLE_MS);
-    let wake = move || {
-        let mut idle = idle;
-        if *idle.peek() {
-            idle.set(false);
-        }
-        idle_timer.start();
-    };
     let playing = !media.paused();
-    use_effect(use_reactive!(|playing| {
-        if playing {
-            wake();
-        }
-    }));
+    let controls = use_controls_idle(playing);
 
     let mut pressing = use_hook(|| CopyValue::new(false));
     // A click on the picture plays or pauses, as YouTube's; a tap on hidden controls only shows
     // them, once its click is through: the bar takes hits again as soon as it shows (todo 3660).
     let mut tap_shows = use_hook(|| CopyValue::new(false));
-    let by_key = move || {
-        let mut keyboard = keyboard;
-        if !*keyboard.peek() {
-            keyboard.set(true);
-        }
-        wake();
-    };
     // Tagged, so a WebView finds the player for fullscreen and the hotkeys.
     let mut attributes = props.attributes;
     // Focus moved in without a press, by a key, code or AT, counts as a key, also while paused
     // (todos 1249, 3656): the bar then stays up once a Space on a focused button starts playing.
     attributes.extend(fullscreen.attributes_with_focusin(move |_| {
         if !*pressing.peek() {
-            by_key();
+            controls.by_key();
         }
     }));
     // Every press ends here, also one released outside or paused on the way (todo 1418);
@@ -674,12 +732,9 @@ pub fn Video(props: VideoProps) -> Element {
     attributes.extend([
         listener("onpointerdown", move |_: Event<PointerData>| {
             pressing.set(true);
-            let mut keyboard = keyboard;
-            if *keyboard.peek() {
-                keyboard.set(false);
-            }
+            controls.by_pointer();
             if playing && !*tap_shows.peek() {
-                wake();
+                controls.wake();
             }
         }),
         listener("onpointerup", released),
@@ -688,20 +743,21 @@ pub fn Video(props: VideoProps) -> Element {
             released(event.clone());
             // A mouse only: a touch leaves after every tap.
             if playing && event.pointer_type() == "mouse" {
-                idle_timer.stop();
-                idle.set(true);
+                controls.mouse_left();
             }
         }),
     ]);
     // Only while playing, so a WebView sends no pointer moves across the IPC otherwise.
     if playing {
         attributes.extend([
-            listener("onpointermove", move |_: Event<PointerData>| wake()),
-            listener("onkeyup", move |_: Event<KeyboardData>| by_key()),
+            listener("onpointermove", move |_: Event<PointerData>| {
+                controls.wake()
+            }),
+            listener("onkeyup", move |_: Event<KeyboardData>| controls.by_key()),
         ]);
     }
     // An error leaves the element unpaused: its alert keeps the controls up (todo 2681).
-    let hidden = playing && idle() && !keyboard() && media.error().is_none();
+    let hidden = controls.hidden(playing, media.error().is_some());
     if hidden {
         attributes.push(Attribute::new(
             CONTROLS_ATTR,
@@ -728,7 +784,7 @@ pub fn Video(props: VideoProps) -> Element {
             onpointerdown: move |event: PointerEvent| tap_shows.set(event.pointer_type() == "touch" && hidden),
             onclick: move |_| {
                 if *tap_shows.peek() {
-                    wake();
+                    controls.wake();
                 } else if media.error().is_none() {
                     media.toggle();
                 }
@@ -933,6 +989,85 @@ mod tests {
         assert_eq!(track("English", "en").menu_name("Captions", 2), "English");
         assert_eq!(track("", "en").menu_name("Captions", 2), "en");
         assert_eq!(track(" ", "").menu_name("Captions", 2), "Captions 2");
+    }
+
+    fn track(kind: TrackKind, src: &str, default: bool) -> MediaTrack {
+        MediaTrack {
+            src: src.into(),
+            kind,
+            default,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn the_caption_track_is_the_picked_then_the_default_then_the_first() {
+        let (a, b, c) = (
+            track(TrackKind::Captions, "a", false),
+            track(TrackKind::Captions, "b", true),
+            track(TrackKind::Captions, "c", false),
+        );
+        let tracks = [(0, &a), (2, &b), (5, &c)];
+        assert_eq!(caption_track(Some(5), &tracks), Some(5));
+        assert_eq!(caption_track(None, &tracks), Some(2));
+        assert_eq!(caption_track(Some(1), &tracks), Some(2), "a stale pick");
+        assert_eq!(caption_track(None, &[(3, &a), (4, &c)]), Some(3));
+        assert_eq!(caption_track(Some(0), &[]), None);
+    }
+
+    #[test]
+    fn the_caption_menu_lists_two_or_more_tracks_numbered_among_the_text_ones() {
+        let (a, b) = (
+            track(TrackKind::Captions, "a", false),
+            MediaTrack {
+                label: "Deutsch".into(),
+                ..track(TrackKind::Subtitles, "b", false)
+            },
+        );
+        assert!(caption_menu(&[(0, &a)], "Captions").is_empty());
+        assert_eq!(
+            caption_menu(&[(1, &a), (4, &b)], "Captions"),
+            [(1, "Captions 1".to_string()), (4, "Deutsch".to_string())]
+        );
+    }
+
+    #[test]
+    fn the_chapters_track_is_read_only_when_the_prop_lists_none() {
+        let (late, first, other) = (
+            track(TrackKind::Chapters, "late.vtt", false),
+            track(TrackKind::Chapters, "first.vtt", true),
+            track(TrackKind::Captions, "c.vtt", true),
+        );
+        let tracks = [&other, &late, &first];
+        assert_eq!(chapters_src(&tracks, false).as_deref(), Some("first.vtt"));
+        assert_eq!(chapters_src(&tracks, true), None);
+        assert_eq!(chapters_src(&[&other], false), None);
+    }
+
+    #[test]
+    fn a_late_chapters_answer_for_an_old_src_is_dropped() {
+        let read = Some(("old.vtt".to_string(), vec![Chapter::new(0.0, "A")]));
+        assert_eq!(
+            read_chapters(read.clone(), "old.vtt"),
+            [Chapter::new(0.0, "A")]
+        );
+        assert!(read_chapters(read, "new.vtt").is_empty());
+        assert!(read_chapters(None, "new.vtt").is_empty());
+    }
+
+    #[test]
+    fn the_bar_style_is_measured_then_estimated_and_carries_the_ratio() {
+        assert_eq!(
+            bar_style(Some(48.0), None, None),
+            format!("{BAR_VAR}: calc(48px - {SCRIM_FADE});")
+        );
+        let estimate = bar_style(None, Some(Size::Md), Some("4 / 3"));
+        assert!(
+            estimate.starts_with(&format!("{BAR_VAR}: calc("))
+                && estimate.ends_with("aspect-ratio: 4 / 3;"),
+            "{estimate}"
+        );
+        assert!(!bar_style(None, None, None).contains("aspect-ratio"));
     }
 
     #[test]

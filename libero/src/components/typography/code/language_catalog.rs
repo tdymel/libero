@@ -11,10 +11,12 @@ pub(crate) struct LanguageEntry {
     pub(crate) grammar: fn() -> Grammar,
 }
 
+/// Plain text's place in [`LANGUAGE_CATALOG`]: first, where `Language::name` finds it to localize it.
+pub(crate) const PLAIN_TEXT: usize = 0;
+
 // Each push is feature-gated, so this can't be one `vec![...]`.
 #[allow(clippy::vec_init_then_push)]
 pub(crate) static LANGUAGE_CATALOG: LazyLock<Vec<LanguageEntry>> = LazyLock::new(|| {
-    // Plain text stays first: `Language::name` finds it there to localize it.
     #[allow(unused_mut)]
     let mut catalog = vec![LanguageEntry {
         label: "Plain text",
