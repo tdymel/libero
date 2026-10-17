@@ -435,6 +435,51 @@ fn a_native_select_fills_its_frames_height() {
     });
 }
 
+/// Todo 3704: the select cannot stretch sideways (that would move the UA chevron), so a
+/// press on its frame's left or right padding opens the picker through `showPicker()`.
+#[test]
+fn a_native_selects_horizontal_padding_opens_its_picker() {
+    block_on(async {
+        let fixture = Fixture::open("/field-frame", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        let _: i64 = js(
+            page,
+            "(() => { window.__picks = []; const real = HTMLSelectElement.prototype.showPicker; \
+             HTMLSelectElement.prototype.showPicker = function () { \
+             try { real.call(this); window.__picks.push('ok'); } \
+             catch (e) { window.__picks.push(e.name); throw e; } }; return 0; })()",
+        )
+        .await;
+        for (edge, at) in [
+            ("left", left_padding("native")),
+            ("right", right_padding("native")),
+        ] {
+            blur(page).await.unwrap();
+            press(page, &at).await.unwrap();
+            truthy(
+                page,
+                "window.__picks.length > 0",
+                &format!("showPicker after a press on the {edge} padding"),
+            )
+            .await
+            .unwrap();
+            let picks: String = js(page, "window.__picks.join()").await;
+            assert_eq!(picks, "ok", "{edge} padding press");
+            let _: i64 = js(page, "(() => { window.__picks = []; return 0; })()").await;
+            keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        }
+
+        fixture
+            .console
+            .assert_clean("a native select frame's horizontal padding")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The focus is in the frame, outside its slots. `FileField`'s Browse button
 /// is its control, in a slot of its own.
 async fn in_control(page: &Page, frame: &str) -> Result<()> {
@@ -457,6 +502,15 @@ fn left_padding(case: &str) -> String {
         "(() => {{ const f = document.querySelector('[data-case={case}] [data-frame]'); \
          f.scrollIntoView({{ block: 'center' }}); const r = f.getBoundingClientRect(); \
          return [r.x + 3, r.y + r.height / 2]; }})()"
+    )
+}
+
+/// A JS point expression: 3px inside the frame's right edge, at its middle.
+fn right_padding(case: &str) -> String {
+    format!(
+        "(() => {{ const f = document.querySelector('[data-case={case}] [data-frame]'); \
+         f.scrollIntoView({{ block: 'center' }}); const r = f.getBoundingClientRect(); \
+         return [r.right - 3, r.y + r.height / 2]; }})()"
     )
 }
 

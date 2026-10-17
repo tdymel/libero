@@ -1007,6 +1007,15 @@ impl WebElement {
             .ok_or(PlatformError::NotFound)
     }
 
+    /// `showPicker()`, which web-sys lacks for `<select>`; `false` where it is
+    /// missing or throws (no user activation, a cross-origin frame).
+    fn show_picker(&self) -> bool {
+        js_sys::Reflect::get(&self.element, &JsValue::from_str("showPicker"))
+            .ok()
+            .and_then(|method| method.dyn_into::<js_sys::Function>().ok())
+            .is_some_and(|method| method.call0(&self.element).is_ok())
+    }
+
     fn form(&self) -> Result<&web_sys::HtmlFormElement, PlatformError> {
         self.element
             .dyn_ref::<web_sys::HtmlFormElement>()
@@ -1027,7 +1036,11 @@ impl ElementApi for WebElement {
         self.html()?.blur().map_err(|_| PlatformError::NotFound)
     }
 
+    /// A `<select>` opens its picker with `showPicker()`, as a click cannot (todo 3704).
     fn click(&self) -> Result<(), PlatformError> {
+        if self.element.is_instance_of::<web_sys::HtmlSelectElement>() && self.show_picker() {
+            return Ok(());
+        }
         self.html()?.click();
         Ok(())
     }
