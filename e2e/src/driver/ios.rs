@@ -314,21 +314,25 @@ impl Ios {
             element(selector)
         ))?;
         // Momentum from the last swipe keeps the page moving under a tap, as on Android (1104).
+        // The UI process may apply the scroll after the first read (3727), so the centre must
+        // also sit in the visible band; a pan of the visual viewport moves it too (2255).
         let read = format!(
-            "(r => [r.x + r.width / 2, r.y + r.height / 2])({}.getBoundingClientRect())",
+            "((r, v) => [r.x + r.width / 2 - v.offsetLeft, r.y + r.height / 2 - v.offsetTop, \
+             v.width, v.height])({}.getBoundingClientRect(), visualViewport)",
             element(selector)
         );
-        let mut at: (f64, f64) = self.bridge.json(&read)?;
+        let mut at: [f64; 4] = self.bridge.json(&read)?;
         for _ in 0..40 {
             std::thread::sleep(Duration::from_millis(50));
-            let next: (f64, f64) = self.bridge.json(&read)?;
-            let settled = (next.0 - at.0).abs() < 0.5 && (next.1 - at.1).abs() < 0.5;
+            let next: [f64; 4] = self.bridge.json(&read)?;
+            let still = (next[0] - at[0]).abs() < 0.5 && (next[1] - at[1]).abs() < 0.5;
+            let visible = (0.0..=next[2]).contains(&next[0]) && (0.0..=next[3]).contains(&next[1]);
             at = next;
-            if settled {
+            if still && visible {
                 break;
             }
         }
-        Ok(at)
+        Ok((at[0], at[1]))
     }
 
     fn tap_screen(&self, (x, y): (f64, f64)) -> Result<()> {
