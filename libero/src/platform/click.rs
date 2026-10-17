@@ -37,6 +37,12 @@ pub(crate) fn follow_pointer(
     super::backend::follow_pointer(event, capture, onmove, onup)
 }
 
+/// Calls `onrelease` once `pointer_id` lifts or cancels anywhere on the page, so a drag
+/// ends when iOS WebKit sends a touch's release past its capture (3603). WebView only.
+pub(crate) fn on_pointer_release(pointer_id: i32, onrelease: Callback<()>) {
+    super::backend::on_pointer_release(pointer_id, onrelease)
+}
+
 /// The control a press on a frame's padding belongs to: the first tab stop in
 /// `boundary`'s child that is no `[data-slot]` but `control`, nor `[data-ring]`.
 ///

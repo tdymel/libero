@@ -256,7 +256,7 @@ e2e::scenario!(
     a_tree_box_selects_its_descendants_and_mixes_its_ancestors,
     "/table-tree-select",
     tree_selection,
-    ios: skip("3604: flaky: after a tree box's tap, the WebView takes no touch at all, a held one neither (no touchstart)")
+    ios: skip("3604: while the tapped box's input has focus, WebKit swallows a tap on the box above (no touchstart); a blur frees it")
 );
 
 /// A row with `row_has_children` opens before its children load, then shows them.

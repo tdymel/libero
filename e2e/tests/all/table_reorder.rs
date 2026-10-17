@@ -749,15 +749,67 @@ async fn two_grip_drags_move_columns<D: Driver>(d: &mut D, _route: &str) -> Resu
 e2e::scenario!(
     header_grip_drags_move_columns_twice,
     "/table-reorder",
-    two_grip_drags_move_columns,
-    ios: skip("3603: the first of two grip drags drops nothing on a reused app: its release lands on a span, uncaptured")
+    two_grip_drags_move_columns
 );
 
 e2e::scenario!(
     header_grip_drags_move_its_own_columns_twice,
     "/table-column-drag",
-    two_grip_drags_move_columns,
-    ios: skip("3603: the first of two grip drags drops nothing on a reused app: its release lands on a span, uncaptured")
+    two_grip_drags_move_columns
+);
+
+/// iOS WebKit at times sends a touch's release to the cell under it, past the grip's
+/// capture (3603): a WebView ends the drag on it all the same, and drops.
+async fn a_stray_release_ends_the_drag<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.evaluate(
+        "(() => {
+            const grip = document.querySelector('th[aria-label=Name] [data-drag-handle] svg');
+            const target = document.querySelector('th[aria-label=Origin]');
+            target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+            const [from, to] = [grip.getBoundingClientRect(), target.getBoundingClientRect()];
+            window.__stray = { y: from.y + from.height / 2, x0: from.x + from.width / 2,
+                x1: to.x + to.width * 0.6 };
+            const init = (x) => ({ bubbles: true, cancelable: true, composed: true, pointerId: 77,
+                pointerType: 'touch', isPrimary: true, clientX: x, clientY: __stray.y });
+            window.__strayInit = init;
+            grip.dispatchEvent(new PointerEvent('pointerdown', init(__stray.x0)));
+            for (let step = 1; step <= 10; step++) {
+                const x = __stray.x0 + (__stray.x1 - __stray.x0) * step / 10;
+                grip.dispatchEvent(new PointerEvent('pointermove', init(x)));
+            }
+            return true;
+        })()",
+    )
+    .await?;
+    eventually(d, "the drop line past Origin", async |d| {
+        d.exists("[data-drop-line]").await
+    })
+    .await?;
+    let stray = d
+        .evaluate(
+            "(() => {
+                const cell = document.elementFromPoint(__stray.x1, __stray.y);
+                cell.dispatchEvent(new PointerEvent('pointerup', __strayInit(__stray.x1)));
+                return cell.closest('[data-drag-handle]') === null;
+            })()",
+        )
+        .await?;
+    if stray != true {
+        bail!("the release landed on a grip, not past it");
+    }
+    eventually_text(d, "#columns", "Stock Origin Name", "the stray release").await?;
+    eventually(d, "the ghost gone", async |d| {
+        Ok(!d.exists("[data-drag-ghost]").await?)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_stray_touch_release_ends_a_grip_drag,
+    "/table-reorder",
+    a_stray_release_ends_the_drag,
+    web: skip("a browser's capture sends the release to the grip; only a WebView watches the page"),
+    native: skip("Blitz follows the pointer itself and reads no scripts")
 );
 
 /// Todo 2018: the rows measure at the press, so a finger's drag moves the row soon.

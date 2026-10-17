@@ -64,7 +64,7 @@ pub struct DragOptions {
 }
 
 /// The one pointer a drag follows, and where it went down.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 struct ActiveDrag {
     pointer_id: i32,
     start: DragPoint,
@@ -283,10 +283,11 @@ fn use_drag_inner(
     let begin = use_callback(move |(event, client): (Event<PointerData>, DragPoint)| {
         // Active before `onstart`, so a synchronous `cancel` clears it rather
         // than being overwritten.
-        active.set(Some(ActiveDrag {
+        let drag = ActiveDrag {
             pointer_id: event.pointer_id(),
             start: client,
-        }));
+        };
+        active.set(Some(drag));
         dragging.set(true);
 
         onstart.call(DragStart { client, cancel });
@@ -306,6 +307,18 @@ fn use_drag_inner(
         {
             platform::follow_pointer(&event, &within, track, end);
         }
+        // iOS WebKit at times sends the release past the capture (3603); after the handle's
+        // own release this finds the drag over.
+        platform::on_pointer_release(
+            drag.pointer_id,
+            Callback::new(move |()| {
+                if *active.peek() == Some(drag) {
+                    active.set(None);
+                    dragging.set(false);
+                    onend.call(());
+                }
+            }),
+        );
         true
     });
 

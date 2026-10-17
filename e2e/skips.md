@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 614
+Scenarios: 615
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -331,10 +331,10 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_reorder::a_move_button_moves_its_row` | android | 958: element identity on the WebView |
 | `table_reorder::a_move_to_either_end_hands_the_focus_on` | android | 958: element identity on the WebView |
 | `table_reorder::a_pin_or_hide_from_the_menu_keeps_focus_on_a_menu_button` | android | 958: element identity on the WebView |
+| `table_reorder::a_stray_touch_release_ends_a_grip_drag` | native | Blitz follows the pointer itself and reads no scripts |
+| `table_reorder::a_stray_touch_release_ends_a_grip_drag` | web | a browser's capture sends the release to the grip; only a WebView watches the page |
 | `table_reorder::a_windowed_table_reorders_past_its_window` | android | 958: element identity on the WebView |
 | `table_reorder::an_early_keyboard_drop_keeps_its_focus` | android | 958: element identity on the WebView |
-| `table_reorder::header_grip_drags_move_columns_twice` | ios | 3603: the first of two grip drags drops nothing on a reused app: its release lands on a span, uncaptured |
-| `table_reorder::header_grip_drags_move_its_own_columns_twice` | ios | 3603: the first of two grip drags drops nothing on a reused app: its release lands on a span, uncaptured |
 | `table_reorder::hiding_a_column_from_its_own_columns_submenu_keeps_focus` | android | 958: element identity on the WebView |
 | `table_reorder::the_column_menu_announces_in_german` | android | 958: element identity on the WebView |
 | `table_reorder::the_keyboard_lifts_and_moves_a_row` | android | 958: element identity on the WebView |
@@ -349,7 +349,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_scroll::a_tabbed_header_scrolls_into_its_region` | ios | 958: element identity on the WebView |
 | `table_scroll::a_windowed_table_renders_the_rows_in_view` | ios | 3633: End reaches the page but scrolls no region, as in Safari |
 | `table_scroll::end_at_the_bottom_loads_more_rows` | ios | 3633: End reaches the page but scrolls no region, as in Safari |
-| `table_tree::a_tree_box_selects_its_descendants_and_mixes_its_ancestors` | ios | 3604: flaky: after a tree box's tap, the WebView takes no touch at all, a held one neither (no touchstart) |
+| `table_tree::a_tree_box_selects_its_descendants_and_mixes_its_ancestors` | ios | 3604: while the tapped box's input has focus, WebKit swallows a tap on the box above (no touchstart); a blur frees it |
 | `table_tree::a_tree_with_cell_focus_moves_between_rows_and_cells` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_tree::the_arrows_move_and_open_the_tree_rows` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_tree::the_arrows_move_through_a_windowed_tree` | android | 958: roving keys are inert in the emulator's WebView |

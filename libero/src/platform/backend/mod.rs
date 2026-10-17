@@ -1024,6 +1024,15 @@ pub(crate) fn follow_pointer(
     let _ = (event, capture, onmove, onup);
 }
 
+/// Only a WebView watches the page for it - see
+/// [`on_pointer_release`](crate::platform::on_pointer_release).
+pub(crate) fn on_pointer_release(pointer_id: i32, onrelease: Callback<()>) {
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    webview::on_pointer_release(pointer_id, onrelease);
+    #[cfg(any(target_arch = "wasm32", feature = "native"))]
+    let _ = (pointer_id, onrelease);
+}
+
 /// Only the web can see a click's target today - see
 /// [`padding_press`](crate::platform::padding_press).
 pub(crate) fn padding_press(
