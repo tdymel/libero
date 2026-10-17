@@ -75,7 +75,8 @@ pub(crate) use capture::{
 };
 pub use capture::{MediaDevice, UserMediaError};
 pub(crate) use click::{
-    follow_pointer, hits_inline_boxes, nested_interactive, padding_press, reads_click_targets,
+    follow_pointer, hits_inline_boxes, nested_interactive, on_pointer_release, padding_press,
+    reads_click_targets,
 };
 pub(crate) use clipboard::clipboard;
 #[cfg(test)]

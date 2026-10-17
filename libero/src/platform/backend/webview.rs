@@ -2623,6 +2623,34 @@ pub(super) fn follow_pointer(event: &Event<PointerData>) {
     );
 }
 
+/// Calls `onrelease` once `pointer_id` lifts or cancels anywhere on the page, at once if it
+/// already did: iOS WebKit at times sends a touch's release past its capture (3603).
+pub(super) fn on_pointer_release(pointer_id: i32, onrelease: dioxus::prelude::Callback<()>) {
+    if !runs_scripts() {
+        return;
+    }
+    let script = eval_with(
+        json!(pointer_id),
+        "await new Promise((done) => {
+            if (window.__lsxPressed && !window.__lsxPressed.has(data)) return done();
+            const up = (event) => {
+                if (event.pointerId !== data) return;
+                window.removeEventListener('pointerup', up, true);
+                window.removeEventListener('pointercancel', up, true);
+                done();
+            };
+            window.addEventListener('pointerup', up, true);
+            window.addEventListener('pointercancel', up, true);
+        });
+        return true;",
+    );
+    spawn(async move {
+        if script.join::<bool>().await.is_ok() {
+            onrelease.call(());
+        }
+    });
+}
+
 fn focused() -> Focused {
     focus_page().and_then(|page| page.focused.borrow().clone())
 }
