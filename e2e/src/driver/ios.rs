@@ -725,24 +725,12 @@ impl Driver for Ios {
         bail!("Ios: no hover on a touch screen")
     }
 
-    /// Both taps as four raw touches in one AXe `batch` (one HID event). The CI simulator still
-    /// lands them 500 ms apart and raises no `dblclick`; a call per tap took 1.6 s (3702).
+    /// Two taps, each a click; no `dblclick` (3702). One AXe `batch` of both held the second
+    /// touch 700 ms on CI and WebKit sent it no click, so the grid opened no editor.
     async fn double_click(&mut self, selector: &str) -> Result<()> {
         let (x, y) = self.centre(selector)?;
-        if self.input != Injector::Axe {
-            self.tap(x, y)?;
-            return self.tap(x, y);
-        }
-        self.close_picker()?;
-        let (sx, sy) = self.screen(x, y);
-        let touch = |edge| format!("touch -x {} -y {} --{edge}", point(sx), point(sy));
-        let (down, up) = (touch("down"), touch("up"));
-        self.mark(&format!("> double tap {x},{y}"))?;
-        let mut args = vec!["batch"];
-        for step in [&down, &up, &down, &up] {
-            args.extend(["--step", step.as_str()]);
-        }
-        self.inject(&args)
+        self.tap(x, y)?;
+        self.tap(x, y)
     }
 
     /// A point under the status bar moves just below it: the system takes taps there, so a
