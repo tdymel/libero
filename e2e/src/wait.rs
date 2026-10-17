@@ -6,6 +6,12 @@ use std::time::{Duration, Instant};
 
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
+use chromiumoxide::cdp::browser_protocol::page::{
+    AddScriptToEvaluateOnNewDocumentParams, ScriptIdentifier,
+};
+use chromiumoxide::cdp::js_protocol::runtime::EvaluateParams;
+use chromiumoxide::js::EvaluationResult;
+use chromiumoxide::types::{Command as CdpCommand, CommandResponse};
 
 /// Everything `pipe` yields, on a thread of its own.
 fn drain(pipe: Option<impl Read + Send + 'static>) -> std::thread::JoinHandle<Vec<u8>> {
@@ -109,6 +115,58 @@ where
     }
 }
 
+/// [`Page`]'s CDP calls under [`bounded`], named by their script or method.
+pub(crate) trait PageBounded {
+    async fn evaluate_bounded(
+        &self,
+        expression: impl Into<EvaluateParams>,
+    ) -> Result<EvaluationResult>;
+
+    async fn execute_bounded<T: CdpCommand>(
+        &self,
+        command: T,
+    ) -> Result<CommandResponse<T::Response>>;
+
+    async fn evaluate_on_new_document_bounded(
+        &self,
+        script: impl Into<AddScriptToEvaluateOnNewDocumentParams>,
+    ) -> Result<ScriptIdentifier>;
+}
+
+impl PageBounded for Page {
+    async fn evaluate_bounded(
+        &self,
+        expression: impl Into<EvaluateParams>,
+    ) -> Result<EvaluationResult> {
+        let params: EvaluateParams = expression.into();
+        let what = format!("evaluating {}", excerpt(&params.expression));
+        bounded(&what, self.evaluate(params)).await
+    }
+
+    async fn execute_bounded<T: CdpCommand>(
+        &self,
+        command: T,
+    ) -> Result<CommandResponse<T::Response>> {
+        let what = format!("sending {}", command.identifier());
+        bounded(&what, self.execute(command)).await
+    }
+
+    async fn evaluate_on_new_document_bounded(
+        &self,
+        script: impl Into<AddScriptToEvaluateOnNewDocumentParams>,
+    ) -> Result<ScriptIdentifier> {
+        let params: AddScriptToEvaluateOnNewDocumentParams = script.into();
+        let what = format!("registering {}", excerpt(&params.source));
+        bounded(&what, self.evaluate_on_new_document(params)).await
+    }
+}
+
+/// The first 60 characters of `script`, enough to tell a step apart in a failure.
+fn excerpt(script: &str) -> String {
+    let head: String = script.chars().take(60).collect();
+    head.replace('\n', " ")
+}
+
 /// The journal's name for an ordinary per-assertion poll (todo 364).
 pub const READ: &str = "read";
 
@@ -194,7 +252,7 @@ where
 /// dioxus re-renders after the event returns.
 pub async fn for_js_true(page: &Page, expression: &str, what: &str) -> Result<()> {
     until(what, || async {
-        let value: bool = page.evaluate(expression).await?.into_value()?;
+        let value: bool = page.evaluate_bounded(expression).await?.into_value()?;
         Ok(value)
     })
     .await
@@ -233,7 +291,7 @@ where
 /// `expression` as a string; `None` for `null`/`undefined`, which CDP sends as no value at
 /// all, so `into_value::<Option<_>>` fails with "No value found" instead (1717).
 async fn read_string(page: &Page, expression: &str) -> Result<Option<String>> {
-    let result = page.evaluate(expression).await?;
+    let result = page.evaluate_bounded(expression).await?;
     match result.value() {
         None | Some(serde_json::Value::Null) => Ok(None),
         Some(_) => Ok(Some(result.into_value()?)),
@@ -277,7 +335,9 @@ pub(crate) async fn for_load_while_loading(
 ) -> Result<()> {
     until_kind_within(budget, kind, what, || async {
         let loaded = page
-            .evaluate("location.href !== 'about:blank' && document.readyState === 'complete'")
+            .evaluate_bounded(
+                "location.href !== 'about:blank' && document.readyState === 'complete'",
+            )
             .await
             .and_then(|result| Ok(result.into_value::<bool>()?));
         Ok(loaded.unwrap_or(false))
@@ -289,7 +349,7 @@ pub(crate) async fn for_load_while_loading(
 /// not `!is_visible`, which a card opened at opacity 0 passes (1719).
 pub async fn exists(page: &Page, selector: &str) -> Result<bool> {
     Ok(page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "!!document.querySelector({})",
             serde_json::to_string(selector)?
         ))
@@ -310,7 +370,7 @@ pub async fn for_visible(page: &Page, selector: &str) -> Result<()> {
 /// negation of `for_hidden`: opacity 0 and an empty box count as neither.
 pub async fn is_visible(page: &Page, selector: &str) -> Result<bool> {
     Ok(page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             r#"(() => {{
                 const el = document.querySelector({});
                 if (!el) return false;
@@ -329,7 +389,7 @@ pub async fn is_visible(page: &Page, selector: &str) -> Result<bool> {
 pub async fn for_hidden(page: &Page, selector: &str) -> Result<()> {
     until(&format!("{selector} to be hidden"), || async {
         let hidden: bool = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 r#"(() => {{
                     const el = document.querySelector({});
                     if (!el) return true;

@@ -1,6 +1,7 @@
 //! The APG combobox pattern: <https://www.w3.org/WAI/ARIA/apg/patterns/combobox/>.
 //! DOM focus stays on the combobox while `aria-activedescendant` names a drawn option.
 
+use crate::wait::PageBounded;
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
 
@@ -25,7 +26,7 @@ impl Combobox<'_> {
         self.assert_closed(page).await?;
 
         // Tabs to it itself, like `Overlay`: callers need no focus precondition.
-        page.evaluate("document.activeElement && document.activeElement.blur()")
+        page.evaluate_bounded("document.activeElement && document.activeElement.blur()")
             .await?;
         keyboard::tab_to(page, self.trigger, self.tab_budget).await?;
         focus::assert_focused(page, self.trigger, "tabbing to the combobox").await?;
@@ -143,7 +144,7 @@ impl Combobox<'_> {
         {
             return Ok(());
         }
-        let actual: Option<String> = page.evaluate(read).await?.into_value()?;
+        let actual: Option<String> = page.evaluate_bounded(read).await?.into_value()?;
         bail!(
             "aria-expanded on {} was {actual:?}, expected {wanted:?}",
             self.trigger
@@ -154,7 +155,7 @@ impl Combobox<'_> {
     /// must match, so a list that lost or gained rows is not walked silently.
     async fn option_ids(&self, page: &Page, listbox: &str) -> Result<Vec<String>> {
         let ids: Vec<String> = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "Array.from(document.querySelectorAll({})).map(el => el.id)",
                 serde_json::to_string(&format!("{listbox} [role=option]"))?
             ))
@@ -192,7 +193,7 @@ impl Combobox<'_> {
         let seen = std::cell::RefCell::new((None::<String>, false, false));
         let _ = wait::until("aria-activedescendant to name an option", || async {
             let reading: (Option<String>, bool, bool) =
-                page.evaluate(read.as_str()).await?.into_value()?;
+                page.evaluate_bounded(read.as_str()).await?.into_value()?;
             let done = reading.2;
             if reading.0.is_some() {
                 *seen.borrow_mut() = reading;
@@ -248,7 +249,7 @@ impl Combobox<'_> {
         );
         // A timeout falls through to the read, whose `None` is the bail below.
         let _ = wait::for_js_true(page, &format!("!!{read}"), "aria-controls").await;
-        let id: Option<String> = page.evaluate(read).await?.into_value()?;
+        let id: Option<String> = page.evaluate_bounded(read).await?.into_value()?;
         match id {
             Some(id) if !id.is_empty() => Ok(format!("#{id}")),
             _ => bail!(

@@ -1,6 +1,7 @@
 //! Live regions (WCAG 4.1.3, <https://www.w3.org/TR/wai-aria-1.2/#aria-live>): the region exists,
 //! has the right politeness, and its text changes when it should (`codebase/components/combobox`).
 
+use crate::wait::PageBounded;
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
 use serde::Deserialize;
@@ -16,7 +17,7 @@ struct Lookup {
 /// The region's current text.
 pub async fn text_of(page: &Page, selector: &str) -> Result<String> {
     let found: Lookup = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             r#"(() => {{
                 const el = document.querySelector({});
                 return {{ found: !!el, value: el ? el.textContent : '' }};
@@ -34,7 +35,7 @@ pub async fn text_of(page: &Page, selector: &str) -> Result<String> {
 /// Assert the region exists and is polite (or assertive, as given).
 pub async fn assert_politeness(page: &Page, selector: &str, expected: &str) -> Result<()> {
     let live: Lookup = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             r#"(() => {{
                 const el = document.querySelector({});
                 if (!el) return {{ found: false, value: '' }};

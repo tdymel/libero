@@ -1,6 +1,7 @@
 //! The APG tree view pattern (todo 310): the visible set changes under the walk, Right/Left
 //! expand and collapse, and the level comes from nested groups or `aria-level`. Only required keys.
 
+use crate::wait::PageBounded;
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
 
@@ -99,7 +100,7 @@ impl TreeWalk<'_> {
     async fn assert_hierarchy_is_exposed(&self, page: &Page) -> Result<()> {
         let sel = serde_json::to_string(self.rows)?;
         let verdict: String = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{ const rows = [...document.querySelectorAll({sel})]; \
                  const flat = rows.every(r => r.hasAttribute('aria-level') \
                    && r.hasAttribute('aria-setsize') && r.hasAttribute('aria-posinset')); \
@@ -320,7 +321,7 @@ impl TreeWalk<'_> {
     /// Remember the focused element itself, so a later check is identity and
     /// not an index - the indices move as rows open and close.
     async fn mark_focus(&self, page: &Page) -> Result<()> {
-        page.evaluate("window.__e2eTreeRow = document.activeElement")
+        page.evaluate_bounded("window.__e2eTreeRow = document.activeElement")
             .await?;
         Ok(())
     }
@@ -331,7 +332,7 @@ impl TreeWalk<'_> {
 
     async fn focus_is_marked(&self, page: &Page) -> Result<bool> {
         Ok(page
-            .evaluate(self.focus_is_marked_js()?)
+            .evaluate_bounded(self.focus_is_marked_js()?)
             .await?
             .into_value()?)
     }
@@ -347,7 +348,7 @@ impl TreeWalk<'_> {
 
     async fn focus_is_first_child(&self, page: &Page) -> Result<bool> {
         Ok(page
-            .evaluate(self.focus_is_first_child_js()?)
+            .evaluate_bounded(self.focus_is_first_child_js()?)
             .await?
             .into_value()?)
     }
@@ -361,14 +362,17 @@ impl TreeWalk<'_> {
 
     async fn visible_count(&self, page: &Page) -> Result<usize> {
         wait::for_selector(page, self.rows).await?;
-        Ok(page.evaluate(self.count_js()?).await?.into_value()?)
+        Ok(page
+            .evaluate_bounded(self.count_js()?)
+            .await?
+            .into_value()?)
     }
 
     /// `aria-expanded` on a row; `None` is a leaf. Absent reads as `"none"`: CDP drops
     /// a JS `null`, and deserializing it fails with "No value found".
     async fn expanded_at(&self, page: &Page, index: usize) -> Result<Option<bool>> {
         let value: String = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "[...document.querySelectorAll({})][{index}]?.getAttribute('aria-expanded') \
                  ?? 'none'",
                 serde_json::to_string(self.rows)?
@@ -395,7 +399,10 @@ impl TreeWalk<'_> {
     }
 
     async fn focused_index(&self, page: &Page) -> Result<Option<usize>> {
-        let index: i64 = page.evaluate(self.index_js()?).await?.into_value()?;
+        let index: i64 = page
+            .evaluate_bounded(self.index_js()?)
+            .await?
+            .into_value()?;
         Ok(usize::try_from(index).ok())
     }
 }

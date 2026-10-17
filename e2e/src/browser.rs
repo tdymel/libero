@@ -1,5 +1,6 @@
 //! One process-wide browser and tokio runtime; each test gets a fresh page.
 
+use crate::wait::PageBounded;
 use std::sync::OnceLock;
 use std::time::Duration;
 
@@ -92,7 +93,7 @@ pub async fn emulate_media(
         let value = if reduced { "reduce" } else { "no-preference" };
         features.push(MediaFeature::new("prefers-reduced-motion", value));
     }
-    page.execute(SetEmulatedMediaParams::builder().features(features).build())
+    page.execute_bounded(SetEmulatedMediaParams::builder().features(features).build())
         .await?;
     Ok(())
 }
@@ -101,7 +102,7 @@ pub async fn emulate_media(
 /// the emulated feature list, as [`emulate_media`] does.
 pub async fn force_colours(page: &Page) -> Result<()> {
     let features = vec![MediaFeature::new("forced-colors", "active")];
-    page.execute(SetEmulatedMediaParams::builder().features(features).build())
+    page.execute_bounded(SetEmulatedMediaParams::builder().features(features).build())
         .await?;
     crate::wait::for_js_true(
         page,
@@ -128,7 +129,7 @@ pub async fn fake_pointer(page: &Page) -> Result<()> {
             }
         });
     }";
-    page.execute(AddScriptToEvaluateOnNewDocumentParams::new(FAKE))
+    page.execute_bounded(AddScriptToEvaluateOnNewDocumentParams::new(FAKE))
         .await
         .context("install the fake pointer")?;
     page.reload()
@@ -139,7 +140,7 @@ pub async fn fake_pointer(page: &Page) -> Result<()> {
 
 /// Switches the [`fake_pointer`] lists and fires their `change` events.
 pub async fn set_coarse_pointer(page: &Page, coarse: bool) -> Result<()> {
-    page.evaluate(format!("window.__libero_set_coarse({coarse})"))
+    page.evaluate_bounded(format!("window.__libero_set_coarse({coarse})"))
         .await
         .context("switch the fake pointer")?;
     Ok(())
@@ -528,7 +529,7 @@ impl Fixture {
         crate::journal::step(format!("opening {url}: setting up the page"));
         let (width, height) = viewport.size();
         let at = std::time::Instant::now();
-        page.execute(SetDeviceMetricsOverrideParams::new(
+        page.execute_bounded(SetDeviceMetricsOverrideParams::new(
             width,
             height,
             1.0,
@@ -540,17 +541,17 @@ impl Fixture {
 
         // Every page acts focused: another test's new page would blur it and close
         // open popovers (todo 356, `isolation::a_page_keeps_focus_while_another_opens`).
-        page.execute(SetFocusEmulationEnabledParams::new(true))
+        page.execute_bounded(SetFocusEmulationEnabledParams::new(true))
             .await
             .context("emulate a focused page")?;
         // A page opened while another emulated touch started with a coarse pointer (todo 2164).
-        page.execute(SetTouchEmulationEnabledParams::new(false))
+        page.execute_bounded(SetTouchEmulationEnabledParams::new(false))
             .await
             .context("start without touch emulation")?;
 
         // chromiumoxide auto-attaches with waitForDebuggerOnStart: a new service worker in
         // this origin then waits until every open page resumes it, which can be never (todo 1354).
-        page.execute(
+        page.execute_bounded(
             SetAutoAttachParams::builder()
                 .auto_attach(true)
                 .wait_for_debugger_on_start(false)
@@ -590,7 +591,7 @@ impl Fixture {
         }
         // An unhandled Alt+ArrowLeft goes Back in the active tab, any test's page
         // once `frames::start` brought one to front: no `about:blank` to go back to.
-        page.execute(
+        page.execute_bounded(
             chromiumoxide::cdp::browser_protocol::page::ResetNavigationHistoryParams::default(),
         )
         .await
@@ -613,7 +614,11 @@ impl Fixture {
             crate::wait::for_selector_kind("fixture-ready", &fixture.page, ready).await
         {
             // A unit-only build names the module it left out on the page (1618).
-            let body: String = match fixture.page.evaluate("document.body.innerText").await {
+            let body: String = match fixture
+                .page
+                .evaluate_bounded("document.body.innerText")
+                .await
+            {
                 Ok(result) => result.into_value().unwrap_or_default(),
                 Err(_) => String::new(),
             };
@@ -638,7 +643,7 @@ impl Fixture {
     pub async fn assert_scheme(&self) -> Result<()> {
         let (matches, pinned, luminance): (bool, Option<String>, f64) = self
             .page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { \
                    const [r, g, b, a = 1] = getComputedStyle(document.body).backgroundColor \
                      .match(/[\\d.]+/g).map(Number); \

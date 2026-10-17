@@ -1,5 +1,6 @@
 //! A reorderable list's second drag still previews (todo 1438): kanban and sortable.
 
+use crate::wait::PageBounded;
 use anyhow::{Result, bail, ensure};
 use chromiumoxide::Page;
 
@@ -47,10 +48,13 @@ pub async fn second_drag(page: &Page, rounds: &[Round<'_>], still: &str, pitch: 
         )
         .await;
         if let Err(error) = stepped {
-            let state: String = page.evaluate(state_of(passed)).await?.into_value()?;
+            let state: String = page
+                .evaluate_bounded(state_of(passed))
+                .await?
+                .into_value()?;
             return Err(error.context(format!("from ({from:?}) to ({to:?}); {state}")));
         }
-        let moved: f64 = page.evaluate(shift(still)).await?.into_value()?;
+        let moved: f64 = page.evaluate_bounded(shift(still)).await?.into_value()?;
         ensure!(moved.abs() < 1.0, "drag {drag}: {still} moved by {moved}");
         pointer::release(page, to).await?;
         wait::for_js_true(
@@ -71,14 +75,17 @@ pub async fn second_drag(page: &Page, rounds: &[Round<'_>], still: &str, pitch: 
         .await?;
         // The drop's offset once stayed on the item after its slide (3039).
         let resting: bool = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "[...document.querySelector({passed:?}).parentElement.children].every(e => {{ \
                  const t = getComputedStyle(e).transform; return t === 'none' || Math.abs(new DOMMatrix(t).m42) < 1; }})"
             ))
             .await?
             .into_value()?;
         if !resting {
-            let state: String = page.evaluate(state_of(passed)).await?.into_value()?;
+            let state: String = page
+                .evaluate_bounded(state_of(passed))
+                .await?
+                .into_value()?;
             bail!("drag {drag}: an item rests off its slot after the drop: {state}");
         }
     }

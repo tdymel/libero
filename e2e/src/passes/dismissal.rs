@@ -1,6 +1,7 @@
 //! What a dismissed overlay leaves behind (WCAG 4.1.2, 1.3.1): a closing popover must not stay
 //! announced or tabbable. For the first animated popover (`codebase/use-popover`).
 
+use crate::wait::PageBounded;
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
 use serde::Deserialize;
@@ -18,7 +19,7 @@ struct Residue {
 /// `opacity: 0` and a zero-size box still expose their contents and can hold focus.
 pub async fn assert_gone_from_at(page: &Page, selector: &str) -> Result<()> {
     let residue: Residue = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             r#"(() => {{
                 const el = document.querySelector({});
                 if (!el) return {{ present: false, visible: false, inert: false, aria_hidden: false, tabbables: 0 }};

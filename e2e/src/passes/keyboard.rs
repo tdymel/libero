@@ -1,6 +1,7 @@
 //! Keyboard dispatch (WCAG 2.1.1) through CDP's `Input` domain, so the browser applies
 //! modifiers and default actions as for a real keypress. Key meanings live in `archetypes`.
 
+use crate::wait::PageBounded;
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::input::{
@@ -268,7 +269,7 @@ pub async fn type_text(page: &Page, text: &str) -> Result<()> {
 
 /// Text committed with no key event, as a soft keyboard's IME sends it.
 pub async fn insert_text(page: &Page, text: &str) -> Result<()> {
-    page.execute(InsertTextParams::new(text)).await?;
+    page.execute_bounded(InsertTextParams::new(text)).await?;
     Ok(())
 }
 
@@ -280,7 +281,7 @@ pub async fn press_composing(page: &Page, selector: &str, keys: &[&str]) -> Resu
         serde_json::to_string(keys)?,
     );
     let sent: bool = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "(() => {{ const el = document.querySelector({sel}); if (!el) return false; \
              for (const key of {keys}) el.dispatchEvent(new KeyboardEvent('keydown', \
              {{ key, code: key, isComposing: true, bubbles: true, cancelable: true }})); \
@@ -321,10 +322,10 @@ pub async fn assert_chords_ignored_with(
         return Ok(());
     }
     let read = format!("JSON.stringify({probe})");
-    let before: String = page.evaluate(read.as_str()).await?.into_value()?;
+    let before: String = page.evaluate_bounded(read.as_str()).await?.into_value()?;
     // Each chord's keyup records the probe after `clock::settle`'s two macrotasks, in the page
     // (todo 2066): past its handlers and renders; a reaction on a timer is not waited for (1631).
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "window.__chordProbe = () => {read}; window.__chordRecords = []; window.__chordCancelled = []; \
          if (!window.__chordListener) {{ window.__chordListener = true; \
          window.addEventListener('keydown', e => {{ \
@@ -351,7 +352,7 @@ pub async fn assert_chords_ignored_with(
             sent.push(format!("{name}+{}", key.key));
             // One chord at a time: under load input outruns timers, so a later chord's move or
             // cancel would land in an earlier chord's record (todo 2101).
-            let recorded = page.evaluate(format!(
+            let recorded = page.evaluate_bounded(format!(
                 "new Promise((done) => {{ const n = {}; \
                  window.__chordWake = () => {{ if (window.__chordRecords.length >= n) done(true); }}; \
                  window.__chordWake(); }})",
@@ -366,8 +367,10 @@ pub async fn assert_chords_ignored_with(
             recorded?;
         }
     }
-    let records: Vec<(String, Vec<String>)> =
-        page.evaluate("window.__chordRecords").await?.into_value()?;
+    let records: Vec<(String, Vec<String>)> = page
+        .evaluate_bounded("window.__chordRecords")
+        .await?
+        .into_value()?;
     for (chord, (after, cancelled)) in sent.iter().zip(records) {
         if after != before {
             bail!("{chord} changed {probe} from {before} to {after}");
@@ -389,7 +392,7 @@ pub async fn tab_to(page: &Page, selector: &str, max: usize) -> Result<usize> {
         press(page, TAB).await?;
         // Empty when `selector` holds focus, else a short name of what does.
         let held: String = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{ const el = document.activeElement; \
                  if (el === document.querySelector({sel})) return ''; \
                  return el ? el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') \

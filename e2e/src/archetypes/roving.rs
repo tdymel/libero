@@ -1,6 +1,7 @@
 //! The APG roving-tabindex pattern: one tab stop, arrows move within (`Tabs`, `Menubar`,
 //! `Toolbar`). Radio groups and trees have their own archetypes (todo 310).
 
+use crate::wait::PageBounded;
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
 
@@ -14,7 +15,7 @@ pub async fn count_tab_stops(page: &Page, items: &str) -> Result<usize> {
     // The widget, kept on `window` so the per-press read below is one cheap
     // expression rather than a repeated ancestor walk.
     let count: i64 = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "(() => {{ const items = [...document.querySelectorAll({sel})]; \
              if (!items.length) return -1; \
              let root = items[0]; \
@@ -40,7 +41,7 @@ pub async fn count_tab_stops(page: &Page, items: &str) -> Result<usize> {
     for _ in 0..budget {
         keyboard::press(page, keyboard::TAB).await?;
         let inside: bool = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const state = window.__e2eTabStops, el = document.activeElement; \
                  const inside = !!(el && state.root.contains(el)); \
                  if (inside && !state.stops.includes(el)) state.stops.push(el); \
@@ -56,7 +57,7 @@ pub async fn count_tab_stops(page: &Page, items: &str) -> Result<usize> {
     }
 
     let stops: usize = page
-        .evaluate("window.__e2eTabStops.stops.length")
+        .evaluate_bounded("window.__e2eTabStops.stops.length")
         .await?
         .into_value()?;
     reset_tab_position(page).await?;
@@ -66,7 +67,7 @@ pub async fn count_tab_stops(page: &Page, items: &str) -> Result<usize> {
 /// Puts the next Tab back at the top of the document. `blur()` alone keeps the
 /// focus navigation starting point, so this focuses `<body>` via a temporary `tabindex`.
 pub async fn reset_tab_position(page: &Page) -> Result<()> {
-    page.evaluate(
+    page.evaluate_bounded(
         "(() => { if (document.activeElement) document.activeElement.blur(); \
          document.body.setAttribute('tabindex', '-1'); \
          document.body.focus(); \
@@ -207,7 +208,7 @@ impl RovingTabindex<'_> {
 
     async fn item_count(&self, page: &Page) -> Result<usize> {
         Ok(page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "document.querySelectorAll({}).length",
                 serde_json::to_string(self.items)?
             ))
@@ -231,7 +232,7 @@ impl RovingTabindex<'_> {
     /// Which item the document actually has focused, by position.
     async fn focused_index(&self, page: &Page) -> Result<Option<usize>> {
         let index: i64 = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "[...document.querySelectorAll({})].indexOf(document.activeElement)",
                 serde_json::to_string(self.items)?
             ))

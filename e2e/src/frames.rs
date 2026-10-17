@@ -1,6 +1,7 @@
 //! Frame time on a page: an injected recorder (rAF deltas, long animation frames) and the
 //! stats read off it. Report only; headless numbers are machine-specific, compare ratios.
 
+use crate::wait::PageBounded;
 use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -166,7 +167,7 @@ pub async fn in_front<T>(page: &Page, work: impl Future<Output = Result<T>>) -> 
 /// brought to front first: in a background tab every input event waits out a 500 ms frame.
 pub async fn start(page: &Page) -> Result<Front> {
     let front = bring_to_front(page).await?;
-    page.evaluate(RECORDER)
+    page.evaluate_bounded(RECORDER)
         .await
         .context("inject the frame recorder")?;
     Ok(front)
@@ -188,7 +189,7 @@ pub async fn until_recorded(page: &Page, count: usize) -> Result<()> {
 /// Stops the recorder and returns what it saw.
 pub async fn stop(page: &Page) -> Result<FrameStats> {
     let json: String = page
-        .evaluate(
+        .evaluate_bounded(
             "(() => { const f = window.__frames; f.stop(); \
              return JSON.stringify({ deltas: f.deltas, long: f.long }); })()",
         )

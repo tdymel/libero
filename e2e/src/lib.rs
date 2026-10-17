@@ -24,6 +24,8 @@ pub mod timing;
 pub mod vendor;
 pub mod wait;
 
+use wait::PageBounded;
+
 pub use browser::{Fixture, Scheme, Viewport};
 // For `scenario!`'s native arm.
 pub use futures;
@@ -35,7 +37,7 @@ pub async fn js<T: serde::de::DeserializeOwned>(
     expression: impl AsRef<str>,
 ) -> T {
     let expression = expression.as_ref();
-    page.evaluate(expression)
+    page.evaluate_bounded(expression)
         .await
         .unwrap_or_else(|e| panic!("evaluate {expression}: {e}"))
         .into_value()

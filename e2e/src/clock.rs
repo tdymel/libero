@@ -1,5 +1,6 @@
 //! A clock the test holds, for the timers it names and no others.
 
+use crate::wait::PageBounded;
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
 
@@ -84,7 +85,7 @@ pub fn app_count(answer: serde_json::Value) -> Result<usize> {
 
 /// Holds the page's timers of `delays` from now on; ones armed before keep the real clock.
 pub async fn hold(page: &Page, delays: &[u32]) -> Result<()> {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "(({HELD_CLOCK})({}), true)",
         serde_json::to_string(delays)?
     ))
@@ -94,7 +95,7 @@ pub async fn hold(page: &Page, delays: &[u32]) -> Result<()> {
 
 /// Holds the timers of `delays` from the page's load on, those set at mount too: reloads.
 pub async fn hold_from_load(page: &Page, delays: &[u32]) -> Result<()> {
-    page.evaluate_on_new_document(format!(
+    page.evaluate_on_new_document_bounded(format!(
         "({HELD_CLOCK})({})",
         serde_json::to_string(delays)?
     ))
@@ -110,7 +111,7 @@ pub async fn pin_today(page: &Page, iso_date: &str) -> Result<()> {
     if parts.len() != 3 || parts.iter().any(|part| part.parse::<u32>().is_err()) {
         bail!("pin_today wants YYYY-MM-DD, got {iso_date:?}");
     }
-    page.evaluate_on_new_document(format!(
+    page.evaluate_on_new_document_bounded(format!(
         "({PINNED_TODAY})({})",
         serde_json::to_string(iso_date)?
     ))
@@ -122,7 +123,7 @@ pub async fn pin_today(page: &Page, iso_date: &str) -> Result<()> {
 /// How many held timers of `ms` are pending.
 pub async fn armed(page: &Page, ms: u32) -> Result<usize> {
     Ok(page
-        .evaluate(format!("window.__heldClock.armed({ms})"))
+        .evaluate_bounded(format!("window.__heldClock.armed({ms})"))
         .await?
         .into_value()?)
 }
@@ -140,7 +141,7 @@ pub async fn until_armed(page: &Page, ms: u32, count: usize, what: &str) -> Resu
 /// Fires the one pending timer of `ms`; fails unless exactly one is pending.
 pub async fn fire(page: &Page, ms: u32) -> Result<()> {
     let fired: usize = page
-        .evaluate(format!("window.__heldClock.fire({ms})"))
+        .evaluate_bounded(format!("window.__heldClock.fire({ms})"))
         .await?
         .into_value()?;
     if fired != 1 {
@@ -153,14 +154,16 @@ pub async fn fire(page: &Page, ms: u32) -> Result<()> {
 /// (dioxus renders on microtasks) has run. The signal a "nothing happened" check reads
 /// after, in place of a sleep. No frame: a background tab throttles rAF to 500 ms.
 pub async fn settle(page: &Page) -> Result<()> {
-    page.evaluate("new Promise((done) => setTimeout(() => setTimeout(() => done(true), 0), 0))")
-        .await?;
+    page.evaluate_bounded(
+        "new Promise((done) => setTimeout(() => setTimeout(() => done(true), 0), 0))",
+    )
+    .await?;
     Ok(())
 }
 
 /// Returns once the page drew its next frame. Up to a second in a tab not in front.
 pub async fn next_frame(page: &Page) -> Result<()> {
-    page.evaluate("new Promise((done) => requestAnimationFrame(() => done(true)))")
+    page.evaluate_bounded("new Promise((done) => requestAnimationFrame(() => done(true)))")
         .await?;
     Ok(())
 }
@@ -194,13 +197,13 @@ pub async fn finish_animations(page: &Page, budget: std::time::Duration) -> Resu
          }} return {{ finished, over }}; }})()",
         budget.as_millis()
     );
-    Ok(page.evaluate(script).await?.into_value()?)
+    Ok(page.evaluate_bounded(script).await?.into_value()?)
 }
 
 /// Fires every pending timer of `ms` (an interval stays armed); returns how many ran.
 pub async fn fire_all(page: &Page, ms: u32) -> Result<usize> {
     Ok(page
-        .evaluate(format!("window.__heldClock.fireAll({ms})"))
+        .evaluate_bounded(format!("window.__heldClock.fireAll({ms})"))
         .await?
         .into_value()?)
 }

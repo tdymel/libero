@@ -1,6 +1,7 @@
 //! WCAG 1.4.10 Reflow: at 320 CSS px wide the page scrolls in one direction only (todo 1794).
 //! 2D content (a data table, a map) is the criterion's own exception, named by the caller.
 
+use crate::wait::PageBounded;
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
@@ -36,7 +37,7 @@ pub async fn assert_reflows(page: &Page, exempt: &[&str], during: &str) -> Resul
 /// Still a mobile device: toggling the emulation's mobile flag changes text layout, and with it
 /// the later states' trees. Its layout viewport widens to overflowing content, so the screen tells.
 async fn resize(page: &Page, width: i64) -> Result<()> {
-    page.execute(SetDeviceMetricsOverrideParams::new(
+    page.execute_bounded(SetDeviceMetricsOverrideParams::new(
         width,
         Viewport::Mobile.size().1,
         1.0,
@@ -57,7 +58,7 @@ async fn resize(page: &Page, width: i64) -> Result<()> {
 /// sideways clipping scroller, a fixed layer or an exempt subtree.
 async fn overflowing(page: &Page, exempt: &[&str]) -> Result<Vec<String>> {
     Ok(page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             r#"(() => {{
                 const exempt = {};
                 const doc = document.documentElement;

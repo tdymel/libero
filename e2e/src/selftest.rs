@@ -1,5 +1,6 @@
 //! The suite's self-test: a pass must fail on a broken or planted fixture, for the reason named.
 
+use crate::wait::PageBounded;
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
 
@@ -41,7 +42,7 @@ pub async fn caught(
             .await
             .map_err(|e| anyhow::anyhow!("opening {route}: {e}"))?;
         if let Some(defect) = defect
-            && let Err(e) = fixture.page.evaluate(defect).await
+            && let Err(e) = fixture.page.evaluate_bounded(defect).await
         {
             let _ = fixture.close().await;
             bail!("planting the defect on {route}: {e}");

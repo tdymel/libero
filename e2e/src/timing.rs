@@ -1,6 +1,7 @@
 //! Main-thread time from Chromium's CDP `Performance` counters, shared by the timing
 //! reports (`perf::timing`, `table_perf`, `tests/docs_perf.rs`). Enable the domain first.
 
+use crate::wait::PageBounded;
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 
@@ -10,7 +11,7 @@ use chromiumoxide::cdp::browser_protocol::performance::GetMetricsParams;
 
 /// `name -> seconds` for the counters a rep reads.
 pub async fn metrics(page: &Page) -> Result<BTreeMap<String, f64>> {
-    let reply = page.execute(GetMetricsParams::default()).await?;
+    let reply = page.execute_bounded(GetMetricsParams::default()).await?;
     Ok(reply
         .result
         .metrics

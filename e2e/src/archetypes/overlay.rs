@@ -1,6 +1,7 @@
 //! The APG dialog / dismissible-overlay pattern: opens, focus moves inside, Escape closes,
 //! focus returns to the trigger (`principles/focus-after-removal`).
 
+use crate::wait::PageBounded;
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
 
@@ -51,7 +52,7 @@ impl Overlay<'_> {
     async fn wait_for_close_signal(&self, page: &Page) -> Result<bool> {
         let trigger = serde_json::to_string(self.trigger)?;
         let has_state: bool = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{ const t = document.querySelector({trigger}); \
                  return !!t && t.hasAttribute('aria-expanded'); }})()"
             ))
@@ -88,7 +89,7 @@ impl Overlay<'_> {
     /// `visibility: hidden` box silently does nothing (`codebase/use-popover`).
     async fn assert_focus_moved_inside(&self, page: &Page) -> Result<()> {
         let inside: bool = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 r#"(() => {{
                     const panel = document.querySelector({});
                     return !!panel && panel.contains(document.activeElement);
@@ -111,7 +112,7 @@ impl Overlay<'_> {
     /// Tabs round both ways; focus never leaves the panel. Tabbable count + 2 wraps at least once.
     async fn assert_focus_is_trapped(&self, page: &Page) -> Result<()> {
         let tabbables: usize = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 r#"(() => {{
                     const panel = document.querySelector({});
                     if (!panel) return 0;
@@ -132,7 +133,7 @@ impl Overlay<'_> {
                     keyboard::press(page, keyboard::TAB).await?;
                 }
                 let inside: bool = page
-                    .evaluate(format!(
+                    .evaluate_bounded(format!(
                         "(() => {{ const p = document.querySelector({}); return !!p && p.contains(document.activeElement); }})()",
                         serde_json::to_string(self.panel)?
                     ))

@@ -1,3 +1,4 @@
+use crate::wait::PageBounded;
 use std::time::Duration;
 
 use anyhow::Result;
@@ -40,7 +41,7 @@ pub(super) async fn json<T: serde::de::DeserializeOwned>(
     expression: &str,
 ) -> Result<T> {
     let json: String = page
-        .evaluate(format!("JSON.stringify({expression})"))
+        .evaluate_bounded(format!("JSON.stringify({expression})"))
         .await?
         .into_value()?;
     Ok(serde_json::from_str(&json)?)
@@ -52,7 +53,7 @@ pub(super) async fn evaluate(
     expression: &str,
 ) -> Result<serde_json::Value> {
     let json: String = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "(async () => JSON.stringify(await ({expression})) ?? 'null')()"
         ))
         .await?
@@ -93,7 +94,7 @@ impl Driver for Web {
         let (width, height) = (width.round() as i64, height.round() as i64);
         self.fixture
             .page
-            .execute(SetDeviceMetricsOverrideParams::new(
+            .execute_bounded(SetDeviceMetricsOverrideParams::new(
                 width, height, 1.0, false,
             ))
             .await?;
@@ -182,7 +183,7 @@ impl Driver for Web {
             .build()
             .map_err(anyhow::Error::msg)?;
         in_front(page, async {
-            page.execute(wheel).await?;
+            page.execute_bounded(wheel).await?;
             Ok(())
         })
         .await
@@ -219,7 +220,7 @@ impl Driver for Web {
     async fn focus(&mut self, selector: &str) -> Result<()> {
         self.fixture
             .page
-            .evaluate(format!("{}.focus()", element(selector)))
+            .evaluate_bounded(format!("{}.focus()", element(selector)))
             .await?;
         Ok(())
     }
@@ -328,7 +329,7 @@ impl Driver for Web {
         }
         let page = &self.fixture.page;
         let mut opened = page.event_listener::<EventFileChooserOpened>().await?;
-        page.execute(SetInterceptFileChooserDialogParams::new(true))
+        page.execute_bounded(SetInterceptFileChooserDialogParams::new(true))
             .await?;
         pointer::click(page, trigger).await?;
         let event = tokio::time::timeout(crate::wait::timeout(), opened.next())
@@ -338,7 +339,7 @@ impl Driver for Web {
         let input = event
             .backend_node_id
             .context("the chooser names no input")?;
-        page.execute(
+        page.execute_bounded(
             SetFileInputFilesParams::builder()
                 .files(paths)
                 .backend_node_id(input)
@@ -346,7 +347,7 @@ impl Driver for Web {
                 .map_err(anyhow::Error::msg)?,
         )
         .await?;
-        page.execute(SetInterceptFileChooserDialogParams::new(false))
+        page.execute_bounded(SetInterceptFileChooserDialogParams::new(false))
             .await?;
         Ok(())
     }

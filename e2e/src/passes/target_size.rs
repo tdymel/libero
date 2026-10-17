@@ -1,6 +1,7 @@
 //! WCAG 2.5.8 target size (minimum), 24x24 CSS px, and its opt-in spacing exception.
 //! The selector must name the press target (a slider's track, not its thumb), not what is drawn.
 
+use crate::wait::PageBounded;
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
 use serde::Deserialize;
@@ -77,7 +78,7 @@ const PRESS_BOX: &str = r#"const box = el => {
 /// Measure every element matching `selector`.
 pub async fn measure_all(page: &Page, selector: &str) -> Result<Vec<Size>> {
     let sizes = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             r#"(() => {{ {PRESS_BOX}
                 return [...document.querySelectorAll({})].map(box);
             }})()"#,
@@ -91,7 +92,7 @@ pub async fn measure_all(page: &Page, selector: &str) -> Result<Vec<Size>> {
 /// Measure every match of `selector`, each with the targets it has to clear.
 pub async fn measure_spacing(page: &Page, selector: &str) -> Result<Vec<Spaced>> {
     let measured = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             r#"(() => {{ {PRESS_BOX}
                 const shown = el => {{
                     const r = el.getBoundingClientRect();

@@ -2,6 +2,7 @@
 //! `E2E_WEBVIEW2_DEVTOOLS_PORT`, and input goes in over CDP's `Input` domain, as on
 //! the web tier. Reads stay on the bridge. No window lookup, focus or screen size involved.
 
+use crate::wait::PageBounded;
 use std::net::TcpListener;
 use std::process::Command;
 use std::sync::LazyLock;
@@ -137,7 +138,7 @@ impl Cdp {
 
     async fn set_up(page: &Page) -> Result<()> {
         // Focus and blur as in a foreground window, whatever the desktop's own focus.
-        page.execute(SetFocusEmulationEnabledParams::new(true))
+        page.execute_bounded(SetFocusEmulationEnabledParams::new(true))
             .await?;
         // The runner has Windows' animations off, so it reports reduced motion: the web tier's default.
         page.execute(
@@ -157,7 +158,7 @@ impl Cdp {
         clicks: i64,
     ) -> Result<()> {
         self.page
-            .execute(
+            .execute_bounded(
                 DispatchMouseEventParams::builder()
                     .r#type(kind)
                     .x(x)
@@ -258,7 +259,7 @@ impl Desktop {
         block(async {
             cdp.mouse(DispatchMouseEventType::MouseMoved, (x, y), 0, 0)
                 .await?;
-            cdp.page.execute(wheel).await?;
+            cdp.page.execute_bounded(wheel).await?;
             Ok(())
         })
     }

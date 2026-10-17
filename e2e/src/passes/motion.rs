@@ -1,5 +1,6 @@
 //! Reduced motion: emulates `prefers-reduced-motion` so a component's reduced arm is exercised.
 
+use crate::wait::PageBounded;
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
 use serde::Deserialize;
@@ -13,7 +14,7 @@ pub async fn set_reduced_motion(page: &Page, reduced: bool) -> Result<()> {
 /// The page must report `prefers-reduced-motion: reduce`, proving the emulation took.
 pub async fn assert_reduced_motion_matches(page: &Page) -> Result<()> {
     let matches: bool = page
-        .evaluate("matchMedia('(prefers-reduced-motion: reduce)').matches")
+        .evaluate_bounded("matchMedia('(prefers-reduced-motion: reduce)').matches")
         .await?
         .into_value()?;
     if !matches {
@@ -37,7 +38,7 @@ pub struct Scroll {
 /// Records every `scrollTo`/`scroll`/`scrollBy` on `selector` and whether it was smooth (the suite's
 /// Chromium scrolls instantly, todo 687). `cut_short` lands every other smooth one half-way.
 pub async fn spy_scrolls(page: &Page, selector: &str, cut_short: bool) -> Result<()> {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         r#"(() => {{
             if (window.__scrollSpy) throw new Error('spy_scrolls runs once per page');
             window.__scrollSpy = [];
@@ -73,7 +74,7 @@ pub async fn spy_scrolls(page: &Page, selector: &str, cut_short: bool) -> Result
 /// Every scroll [`spy_scrolls`] saw since it was installed, oldest first.
 pub async fn scrolls(page: &Page) -> Result<Vec<Scroll>> {
     let seen: Option<Vec<Scroll>> = page
-        .evaluate("window.__scrollSpy ?? null")
+        .evaluate_bounded("window.__scrollSpy ?? null")
         .await?
         .into_value()?;
     seen.ok_or_else(|| anyhow::anyhow!("no scroll spy on the page; call spy_scrolls first"))
@@ -83,7 +84,7 @@ pub async fn scrolls(page: &Page) -> Result<Vec<Scroll>> {
 /// (`Skeleton` and the oval `Loader` animate only their `::after`).
 pub async fn assert_still(page: &Page, selector: &str) -> Result<()> {
     let moving: Option<Vec<String>> = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             r#"(() => {{
                 const root = document.querySelector({});
                 if (!root) return null;

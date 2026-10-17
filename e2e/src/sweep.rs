@@ -1,6 +1,7 @@
 //! The a11y sweep over every docs page, both schemes and viewports (todo 760): `cargo run -p e2e -- sweep`.
 //! A report, not a gate: only harness errors fail the run, after the report is written.
 
+use crate::wait::PageBounded;
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::path::PathBuf;
@@ -170,7 +171,7 @@ pub async fn discover() -> Result<Vec<String>> {
     // The landing page is full width with the nav hidden: read it from the first page it links.
     let hidden: bool = fixture
         .page
-        .evaluate(
+        .evaluate_bounded(
             "(() => { const nav = document.querySelector('#docs-nav'); \
              return !nav || getComputedStyle(nav).visibility === 'hidden'; })()",
         )
@@ -179,7 +180,7 @@ pub async fn discover() -> Result<Vec<String>> {
     if hidden {
         let first: Option<String> = fixture
             .page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const a = [...document.querySelectorAll('a[href^=\"/\"]')] \
                  .find(a => a.getAttribute('href') !== '/'); return a ? a.getAttribute('href') : null; })()",
             )
@@ -195,7 +196,7 @@ pub async fn discover() -> Result<Vec<String>> {
     // One click per collapsed section; a closed one's row is the item's whole box.
     for _ in 0..50 {
         let before: usize = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{ const all = document.querySelectorAll({COLLAPSED:?}); \
                  if (all.length) all[0].scrollIntoView({{ block: 'center' }}); \
                  return all.length; }})()"
@@ -214,7 +215,7 @@ pub async fn discover() -> Result<Vec<String>> {
         .await?;
     }
     let links: Vec<String> = page
-        .evaluate(
+        .evaluate_bounded(
             "[...document.querySelectorAll('#docs-nav a[href]')] \
              .map(a => new URL(a.href).pathname)",
         )
@@ -562,7 +563,7 @@ pub(crate) async fn text_contrast(
         }})()"#,
         targets = serde_json::to_string(&targets)?,
     );
-    Ok(page.evaluate(script).await?.into_value()?)
+    Ok(page.evaluate_bounded(script).await?.into_value()?)
 }
 
 /// Grow the viewport by the deepest vertical scroll on the page, so every
@@ -578,12 +579,12 @@ async fn unfold(page: &Page, viewport: Viewport) -> Result<()> {
     let (width, height) = viewport.size();
     let mut tall = height;
     for _ in 0..3 {
-        let extra: f64 = page.evaluate(EXTRA).await?.into_value()?;
+        let extra: f64 = page.evaluate_bounded(EXTRA).await?.into_value()?;
         if extra < 1.0 {
             break;
         }
         tall = (tall + extra.ceil() as i64).min(30_000);
-        page.execute(SetDeviceMetricsOverrideParams::new(
+        page.execute_bounded(SetDeviceMetricsOverrideParams::new(
             width,
             tall,
             1.0,
@@ -626,8 +627,8 @@ async fn settle(page: &Page) -> Result<()> {
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
     let (mut last, mut stable) = (-2i64, 0);
     while std::time::Instant::now() < deadline {
-        let count: i64 = page.evaluate(COUNT).await?.into_value()?;
-        let running: i64 = page.evaluate(RUNNING).await?.into_value()?;
+        let count: i64 = page.evaluate_bounded(COUNT).await?.into_value()?;
+        let running: i64 = page.evaluate_bounded(RUNNING).await?.into_value()?;
         if count >= 0 && count == last && running == 0 {
             stable += 1;
             if stable >= 3 {
@@ -715,7 +716,7 @@ async fn boundaries(page: &Page) -> Result<(Vec<(String, String)>, usize)> {
             return [hits, checked];
         }})()"#
     );
-    Ok(page.evaluate(script).await?.into_value()?)
+    Ok(page.evaluate_bounded(script).await?.into_value()?)
 }
 
 /// WCAG 2.5.8 over every visible pointer target, with the spacing exception
@@ -745,7 +746,7 @@ async fn targets(page: &Page) -> Result<(Vec<(String, String)>, usize)> {
         }})()"#,
         targets = serde_json::to_string(target_size::TARGETS)?,
     );
-    let names: Vec<String> = page.evaluate(script).await?.into_value()?;
+    let names: Vec<String> = page.evaluate_bounded(script).await?.into_value()?;
     let measured = target_size::measure_spacing(page, "[data-sweep-target]").await?;
     if measured.len() != names.len() {
         bail!(
@@ -772,7 +773,7 @@ type Found = (&'static str, String, String);
 /// Tab through the page, reading each stop focused and then again once the
 /// next Tab has left it: the second reading is its unfocused baseline.
 async fn rings(page: &Page) -> Result<(Vec<Found>, usize)> {
-    page.evaluate(
+    page.evaluate_bounded(
         "document.querySelectorAll('[data-sweep-focus]').forEach(el => el.removeAttribute('data-sweep-focus')); \
          document.activeElement && document.activeElement.blur()",
     )
@@ -784,7 +785,7 @@ async fn rings(page: &Page) -> Result<(Vec<Found>, usize)> {
     for index in 0..=MAX_STOPS {
         keyboard::press(page, keyboard::TAB).await?;
         let (fresh, name): (bool, String) = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 r#"(() => {{ {DESCRIBE}
                     const el = document.activeElement;
                     if (!el || el === document.body || el.hasAttribute('data-sweep-focus')) return [false, ''];

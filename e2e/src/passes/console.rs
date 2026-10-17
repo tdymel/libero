@@ -1,6 +1,7 @@
 //! Console and page errors, recorded from fixture open to the end of the test.
 //! Both portal bugs in `codebase/use-popover` were loud here and silent in the DOM.
 
+use crate::wait::PageBounded;
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
 use chromiumoxide::cdp::js_protocol::runtime::{EventConsoleApiCalled, EventExceptionThrown};
@@ -65,7 +66,7 @@ impl Recorder {
     /// trips: chromiumoxide hands a batch's events on one handler turn after its response.
     pub async fn settle(&self) -> Result<()> {
         for _ in 0..2 {
-            self.page.evaluate("0").await?;
+            self.page.evaluate_bounded("0").await?;
         }
         Ok(())
     }

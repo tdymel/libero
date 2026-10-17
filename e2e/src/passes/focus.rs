@@ -1,6 +1,7 @@
 //! Focus management and the focus ring (WCAG 2.4.7, 1.4.11, 2.4.3, 3.2.1).
 //! Always read `document.activeElement`: `focus()` on a hidden element succeeds silently (`codebase/use-popover`).
 
+use crate::wait::PageBounded;
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
 use serde::Deserialize;
@@ -17,7 +18,7 @@ pub struct Focused {
 /// What the document actually has focused.
 pub async fn active_element(page: &Page) -> Result<Focused> {
     let value = page
-        .evaluate(
+        .evaluate_bounded(
             r#"(() => {
                 const el = document.activeElement;
                 if (!el) return { tag: 'none', role: null, label: null, id: null };
@@ -37,7 +38,7 @@ pub async fn active_element(page: &Page) -> Result<Focused> {
 /// Whether focus is on the element matching `selector` right now; one read, no wait.
 pub async fn is_focused(page: &Page, selector: &str) -> Result<bool> {
     Ok(page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "document.activeElement === document.querySelector({})",
             serde_json::to_string(selector)?
         ))
@@ -147,7 +148,7 @@ const CLIP_OF: &str = r#"const clipOf = el => {
 /// Blurs the focused element, then waits two timer tasks: `picker_field`'s `next_task` close
 /// would else trail the next Tab on a loaded runner, which then enters the open dropdown (3585).
 pub async fn blur(page: &Page) -> Result<()> {
-    page.evaluate(
+    page.evaluate_bounded(
         "(async () => { document.activeElement && document.activeElement.blur(); \
          for (let i = 0; i < 2; i++) await new Promise(r => setTimeout(r, 0)); })()",
     )
@@ -209,7 +210,7 @@ pub async fn focus_ring(page: &Page, selector: &str, tab_budget: usize) -> Resul
 /// element itself. A cover with `pointer-events: none` escapes this.
 pub async fn assert_focus_not_obscured(page: &Page, during: &str) -> Result<()> {
     let problem: String = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             r#"(() => {{ {CLIP_OF}
                 const name = el => el.tagName.toLowerCase() + (el.id ? '#' + el.id : '')
                     + (el.getAttribute('role') ? `[role=${{el.getAttribute('role')}}]` : '');
@@ -348,7 +349,7 @@ pub fn assert_ring_contrast(ring: &Ring) -> Result<()> {
 /// The ring-bearing styles of `selector`, its ancestors and their ring overlays.
 pub async fn ring_chain(page: &Page, selector: &str) -> Result<Vec<Ring>> {
     let chain = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             r#"(() => {{ {CLIP_OF}
                 const start = document.querySelector({});
                 if (!start) return [];

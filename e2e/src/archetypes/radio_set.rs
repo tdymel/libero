@@ -1,6 +1,7 @@
 //! The APG radio group pattern: selection follows focus, both arrow axes wrap, Tab enters at
 //! the checked radio. Unlike `RovingTabindex`, Home and End are not part of it (todo 310).
 
+use crate::wait::PageBounded;
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
 
@@ -43,7 +44,7 @@ impl RadioSet<'_> {
         }
 
         // Tab in: lands on the checked radio.
-        page.evaluate("document.activeElement && document.activeElement.blur()")
+        page.evaluate_bounded("document.activeElement && document.activeElement.blur()")
             .await?;
         let mut entered = None;
         for _ in 0..self.tab_budget {
@@ -206,7 +207,7 @@ impl RadioSet<'_> {
     async fn count(&self, page: &Page) -> Result<usize> {
         wait::for_selector(page, self.radios).await?;
         Ok(page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "document.querySelectorAll({}).length",
                 serde_json::to_string(self.radios)?
             ))
@@ -215,7 +216,10 @@ impl RadioSet<'_> {
     }
 
     async fn checked_index(&self, page: &Page) -> Result<Option<usize>> {
-        let index: i64 = page.evaluate(self.checked_js()?).await?.into_value()?;
+        let index: i64 = page
+            .evaluate_bounded(self.checked_js()?)
+            .await?
+            .into_value()?;
         Ok(usize::try_from(index).ok())
     }
 
@@ -230,7 +234,7 @@ impl RadioSet<'_> {
 
     async fn focused_index(&self, page: &Page) -> Result<Option<usize>> {
         let index: i64 = page
-            .evaluate(self.index_js("document.activeElement")?)
+            .evaluate_bounded(self.index_js("document.activeElement")?)
             .await?
             .into_value()?;
         Ok(usize::try_from(index).ok())

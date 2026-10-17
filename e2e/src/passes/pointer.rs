@@ -1,6 +1,7 @@
 //! Pointer and drag through real `Input.dispatchMouseEvent`, pointer capture included.
 //! SSR dispatches no pointer events, so drags are only tested here (`codebase/testing`).
 
+use crate::wait::PageBounded;
 use anyhow::Result;
 use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::input::{
@@ -24,7 +25,7 @@ struct Located {
 /// The centre of an element, in viewport coordinates.
 pub async fn centre_of(page: &Page, selector: &str) -> Result<Point> {
     let located: Located = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             r#"(() => {{
                 const el = document.querySelector({});
                 if (!el) return {{ found: false, x: 0, y: 0 }};
@@ -134,7 +135,7 @@ pub async fn long_press(page: &Page, selector: &str, ms: u64) -> Result<()> {
 pub async fn touch_down(page: &Page, selector: &str) -> Result<Point> {
     use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
     use chromiumoxide::cdp::browser_protocol::input::DispatchTouchEventType;
-    page.execute(SetTouchEmulationEnabledParams::new(true))
+    page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
         .await?;
     let at = centre_of(page, selector).await?;
     touch_at(page, DispatchTouchEventType::TouchStart, at).await?;
@@ -175,7 +176,7 @@ pub async fn touch_drag(page: &Page, from: Point, to: Point, steps: usize) -> Re
     use chromiumoxide::cdp::browser_protocol::input::{
         DispatchTouchEventParams, DispatchTouchEventType, TouchPoint,
     };
-    page.execute(SetTouchEmulationEnabledParams::new(true))
+    page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
         .await?;
     let moves = (1..=steps).map(|step| {
         let t = step as f64 / steps as f64;
@@ -199,7 +200,7 @@ pub async fn touch_drag(page: &Page, from: Point, to: Point, steps: usize) -> Re
             .touch_point(point)
             .build()
             .map_err(anyhow::Error::msg)?;
-        page.execute(event).await?;
+        page.execute_bounded(event).await?;
     }
     Ok(())
 }
@@ -211,7 +212,7 @@ pub async fn pinch(page: &Page, at: Point, from: f64, to: f64, steps: usize) -> 
     use chromiumoxide::cdp::browser_protocol::input::{
         DispatchTouchEventParams, DispatchTouchEventType, TouchPoint,
     };
-    page.execute(SetTouchEmulationEnabledParams::new(true))
+    page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
         .await?;
     let fingers = |gap: f64, count: usize| -> Result<Vec<TouchPoint>> {
         [-1.0, 1.0]
@@ -244,7 +245,7 @@ pub async fn pinch(page: &Page, at: Point, from: f64, to: f64, steps: usize) -> 
             .touch_points(points)
             .build()
             .map_err(anyhow::Error::msg)?;
-        page.execute(event).await?;
+        page.execute_bounded(event).await?;
     }
     Ok(())
 }
@@ -267,7 +268,7 @@ pub async fn click(page: &Page, selector: &str) -> Result<()> {
 /// [`click`] with CDP `modifiers` held: Alt 1, Ctrl 2, Meta 4, Shift 8.
 pub async fn click_with(page: &Page, selector: &str, modifiers: i64) -> Result<()> {
     let aimed: Aimed = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             r#"(() => {{
                 const el = document.querySelector({});
                 if (!el) return {{ found: false, x: 0, y: 0, miss: null }};
@@ -329,7 +330,7 @@ pub async fn click_with(page: &Page, selector: &str, modifiers: i64) -> Result<(
 /// viewport (todo 1756). See [`click_at_unchecked`].
 pub async fn click_at(page: &Page, at: Point) -> Result<()> {
     let hits: bool = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "document.elementFromPoint({}, {}) !== null",
             at.x, at.y
         ))

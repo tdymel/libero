@@ -1,3 +1,4 @@
+use crate::wait::PageBounded;
 use std::time::Duration;
 
 use anyhow::{Result, bail};
@@ -30,7 +31,7 @@ impl Android {
         if !webview_view_focused().await? {
             input(&["keyevent".into(), keycode("ArrowUp")?.to_string()]).await?;
         }
-        page.evaluate("document.activeElement?.blur(); scrollTo(0, 0)")
+        page.evaluate_bounded("document.activeElement?.blur(); scrollTo(0, 0)")
             .await?;
         harness.console.drain();
         let generation: u64 = json(&page, &format!("window.__route({route:?})")).await?;
@@ -81,7 +82,7 @@ impl Android {
             tokio::time::sleep(Duration::from_millis(50)).await;
         }
         self.page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "{}?.scrollIntoView({{ block: 'center', inline: 'center' }})",
                 element(selector)
             ))
@@ -212,12 +213,12 @@ impl Android {
             let mut driver = Self::open(route).await?;
             driver
                 .page
-                .execute(SetCpuThrottlingRateParams::new(8.0))
+                .execute_bounded(SetCpuThrottlingRateParams::new(8.0))
                 .await?;
             let start = driver.drag_start(selector, delta).await;
             driver
                 .page
-                .execute(SetCpuThrottlingRateParams::new(1.0))
+                .execute_bounded(SetCpuThrottlingRateParams::new(1.0))
                 .await?;
             runs.push(start?);
             driver.finish("a slow drag start").await?;
@@ -339,7 +340,7 @@ impl Android {
         pointer::move_to(&self.page, pointer::Point { x: -5.0, y: -5.0 }).await?;
         if from_top {
             self.page
-                .evaluate("document.activeElement?.blur(); scrollTo(0, 0)")
+                .evaluate_bounded("document.activeElement?.blur(); scrollTo(0, 0)")
                 .await?;
         }
         let describe = "(() => {
@@ -439,7 +440,7 @@ impl Android {
     /// tap's focus would take the next `focus()` back (3268).
     async fn tap(&self, at: pointer::Point) -> Result<()> {
         self.page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => {
                     window.__tap?.abort();
                     const ac = window.__tap = new AbortController();
@@ -569,7 +570,7 @@ impl Driver for Android {
         self.centre(selector).await?;
         // A drag's end past the screen's edge is clamped short (2255): pan it into view, sideways.
         self.page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(e => {{
                     const r = e.getBoundingClientRect();
                     const end = document.createElement('div');
@@ -641,7 +642,7 @@ impl Driver for Android {
 
     async fn focus(&mut self, selector: &str) -> Result<()> {
         self.page
-            .evaluate(format!("{}.focus()", element(selector)))
+            .evaluate_bounded(format!("{}.focus()", element(selector)))
             .await?;
         Ok(())
     }

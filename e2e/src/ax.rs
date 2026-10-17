@@ -1,6 +1,7 @@
 //! Snapshots of the browser's computed accessibility tree, not scraped ARIA attributes.
 //! Follows `aria-controls` out of the subtree, since popovers are portaled (`codebase/use-popover`).
 
+use crate::wait::PageBounded;
 use std::collections::HashMap;
 
 use anyhow::{Context, Result, bail};
@@ -15,7 +16,7 @@ use chromiumoxide::cdp::browser_protocol::dom::{
 pub async fn snapshot(page: &Page, selector: &str) -> Result<String> {
     let backend_id = backend_node_id(page, selector).await?;
     let nodes = page
-        .execute(GetFullAxTreeParams::default())
+        .execute_bounded(GetFullAxTreeParams::default())
         .await
         .context("get the accessibility tree")?
         .result
@@ -65,7 +66,7 @@ pub async fn snapshot(page: &Page, selector: &str) -> Result<String> {
 /// Whether the element at `inner` sits inside the one at `outer`.
 async fn contains(page: &Page, outer: &str, inner: &str) -> Result<bool> {
     Ok(page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "(() => {{ const o = document.querySelector({}); const i = document.querySelector({}); \
              return !!o && !!i && o.contains(i); }})()",
             serde_json::to_string(outer)?,
@@ -79,7 +80,7 @@ async fn contains(page: &Page, outer: &str, inner: &str) -> Result<bool> {
 /// are kept, so the snapshot shows them as `(missing)` (todo 101).
 async fn controlled_selectors(page: &Page, selector: &str) -> Result<Vec<String>> {
     let ids: Vec<String> = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             r#"(() => {{
                 const root = document.querySelector({});
                 if (!root) return [];
@@ -307,7 +308,7 @@ async fn current_by_node(page: &Page) -> Result<HashMap<BackendNodeId, String>> 
     }
 
     let doc = page
-        .execute(GetDocumentParams::builder().depth(-1).pierce(true).build())
+        .execute_bounded(GetDocumentParams::builder().depth(-1).pierce(true).build())
         .await
         .context("get the document")?;
     let mut out = HashMap::new();
@@ -319,7 +320,7 @@ async fn current_by_node(page: &Page) -> Result<HashMap<BackendNodeId, String>> 
 pub async fn description(page: &Page, selector: &str) -> Result<String> {
     let backend_id = backend_node_id(page, selector).await?;
     let nodes = page
-        .execute(GetFullAxTreeParams::default())
+        .execute_bounded(GetFullAxTreeParams::default())
         .await
         .context("get the accessibility tree")?
         .result
@@ -340,18 +341,18 @@ pub async fn description(page: &Page, selector: &str) -> Result<String> {
 
 async fn backend_node_id(page: &Page, selector: &str) -> Result<BackendNodeId> {
     let doc = page
-        .execute(GetDocumentParams::default())
+        .execute_bounded(GetDocumentParams::default())
         .await
         .context("get the document")?;
     let found = page
-        .execute(QuerySelectorParams::new(doc.result.root.node_id, selector))
+        .execute_bounded(QuerySelectorParams::new(doc.result.root.node_id, selector))
         .await
         .with_context(|| format!("query {selector}"))?;
     if *found.result.node_id.inner() == 0 {
         bail!("no element matches {selector}");
     }
     let described = page
-        .execute(
+        .execute_bounded(
             DescribeNodeParams::builder()
                 .node_id(found.result.node_id)
                 .build(),

@@ -13,6 +13,7 @@
 //!
 //! Behaviour contracts live in `archetypes` or the component's own test, not here.
 
+use crate::wait::PageBounded;
 use anyhow::Context as _;
 
 use crate::passes::keyboard::{self, Key};
@@ -531,7 +532,7 @@ impl Suite {
         state: &State,
     ) -> anyhow::Result<()> {
         let (has_root, outside): (bool, usize) = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{ const root = document.querySelector({}); \
                  const hits = Array.from(document.querySelectorAll({})); \
                  return [!!root, hits.filter(el => !root || !root.contains(el)).length]; }})()",
@@ -544,13 +545,12 @@ impl Suite {
             // Seen blank in full runs (todo 597): says whether the page reloaded
             // under the test rather than the component removing the app.
             let page_state: String = page
-                .evaluate(
+                .evaluate_bounded(
                     "(() => { const n = performance.getEntriesByType('navigation')[0]; \
                      return `${location.href}, ${document.readyState}, navigation ${n && n.type}, \
                      ${Math.round(performance.now())}ms since it began`; })()",
                 )
                 .await
-                .map_err(anyhow::Error::from)
                 .and_then(|value| Ok(value.into_value::<String>()?))
                 .unwrap_or_else(|error| format!("unreadable: {error}"));
             anyhow::bail!(

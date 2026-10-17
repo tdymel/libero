@@ -1,6 +1,7 @@
 //! Contrast and ARIA-validity rules through vendored, test-only `axe-core` 4.10.2 (MPL-2.0).
 //! Axe finds defects a snapshot would baseline (todo 101), and knows what text is drawn on (todo 241).
 
+use crate::wait::PageBounded;
 use anyhow::{Context, Result, bail};
 use chromiumoxide::Page;
 use serde::Deserialize;
@@ -105,11 +106,11 @@ const RELOCK: &str = "} finally { if (__style) { __style.remove(); } }";
 
 async fn inject(page: &Page) -> Result<()> {
     let injected: bool = page
-        .evaluate("typeof window.axe !== 'undefined'")
+        .evaluate_bounded("typeof window.axe !== 'undefined'")
         .await?
         .into_value()?;
     if !injected {
-        page.evaluate(axe_source()?).await?;
+        page.evaluate_bounded(axe_source()?).await?;
     }
     Ok(())
 }
@@ -272,7 +273,7 @@ async fn run_axe(page: &Page, root: &str, rules: &[&str], covers: &[&str]) -> Re
         covers = serde_json::to_string(covers)?,
     );
 
-    let audit: Audit = page.evaluate(script).await?.into_value()?;
+    let audit: Audit = page.evaluate_bounded(script).await?.into_value()?;
     if let Some(moved) = &audit.moved {
         bail!(
             "lifting the modal scroll lock for the axe run changed the layout ({moved}), \

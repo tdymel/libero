@@ -1,6 +1,7 @@
 //! The Android WebView the `android` scenario arm drives (964): the runner's
 //! forwarded DevTools socket, one shared page, input through `adb shell input`.
 
+use crate::wait::PageBounded;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::sync::{Mutex, OnceLock};
 
@@ -88,7 +89,10 @@ fn connect() -> Result<Harness> {
         )
         .await?;
         let console = Recorder::attach(&page).await?;
-        let scale: f64 = page.evaluate("devicePixelRatio").await?.into_value()?;
+        let scale: f64 = page
+            .evaluate_bounded("devicePixelRatio")
+            .await?
+            .into_value()?;
         anyhow::Ok((browser, page, console, scale))
     })?;
     Ok(Harness {
