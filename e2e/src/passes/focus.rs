@@ -144,6 +144,17 @@ const CLIP_OF: &str = r#"const clipOf = el => {
     return clipped ? box : null;
 };"#;
 
+/// Blurs the focused element, then waits two timer tasks: `picker_field`'s `next_task` close
+/// would else trail the next Tab on a loaded runner, which then enters the open dropdown (3585).
+pub async fn blur(page: &Page) -> Result<()> {
+    page.evaluate(
+        "(async () => { document.activeElement && document.activeElement.blur(); \
+         for (let i = 0; i < 2; i++) await new Promise(r => setTimeout(r, 0)); })()",
+    )
+    .await?;
+    Ok(())
+}
+
 /// Assert that tabbing (scripted focus may miss `:focus-visible`) draws a visible ring
 /// on the element, an ancestor or a ring overlay, uncut and uncovered: a field's ring sits on its frame.
 pub async fn assert_focus_ring(page: &Page, selector: &str, tab_budget: usize) -> Result<Ring> {
@@ -158,8 +169,7 @@ pub async fn assert_focus_ring(page: &Page, selector: &str, tab_budget: usize) -
 /// [`assert_focus_ring`] without its clip and cover checks, for a caller that waives them.
 pub async fn focus_ring(page: &Page, selector: &str, tab_budget: usize) -> Result<Ring> {
     // Blur first: an already focused element would make `before` the focused state.
-    page.evaluate("document.activeElement && document.activeElement.blur()")
-        .await?;
+    blur(page).await?;
     let before = ring_chain(page, selector).await?;
 
     super::keyboard::tab_to(page, selector, tab_budget).await?;

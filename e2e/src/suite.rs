@@ -470,8 +470,7 @@ impl Suite {
         for step in state.steps {
             match *step {
                 Step::TabTo(selector) => {
-                    page.evaluate("document.activeElement && document.activeElement.blur()")
-                        .await?;
+                    focus::blur(page).await?;
                     keyboard::tab_to(page, selector, self.tab_budget).await?;
                 }
                 Step::Press(key) => keyboard::press(page, key).await?,

@@ -372,7 +372,7 @@ fn the_other_fields_meet_the_baseline() {
     }
 }
 
-/// The date-time field, apart so Windows can skip it alone.
+/// The date-time field, apart to keep each test under the 20 s budget.
 #[test]
 fn the_moment_field_meets_the_baseline() {
     baseline("chrono_field-moment", "/chrono-field/moment");
