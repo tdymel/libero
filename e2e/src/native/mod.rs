@@ -485,9 +485,12 @@ fn Root(app: App) -> Element {
     }
 }
 
-// Its own scope, so `app`'s hooks see the provider's context.
+// Its own scope, so `app`'s hooks see the provider's context. Motion is pinned on, as the web
+// tier does: a host with animations off (the Windows runner) would run every `@media` arm reduced.
 #[component]
 fn Mounted(app: App) -> Element {
+    let accessibility = libero::hooks::use_accessibility();
+    use_hook(|| accessibility.set_reduced_motion(Some(false)));
     (app.0)()
 }
 
