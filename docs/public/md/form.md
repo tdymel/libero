@@ -13,7 +13,7 @@ rules and paths fit together.
 
 ## Usage
 
-```rust,ignore
+```rust
 use dioxus::prelude::*;
 use libero::components::{Button, Checkbox, Fields, Form, Rule, Text, TextField, not_empty};
 
@@ -57,6 +57,15 @@ fn SignupForm() -> Element {
         }
     }
 }
+#
+# use libero::components::{FieldName, Validators};
+# #[derive(Clone, PartialEq, Default, Fields)]
+# struct NewPassword { value: String, confirm: String }
+# #[component]
+# fn EmailField(#[props(into)] label: String, #[props(default, into)] name: FieldName<String>,
+#     #[props(default, into)] validate: Validators<String>) -> Element { rsx! {} }
+# #[component]
+# fn NewPasswordFieldset(#[props(into)] path: FieldName<NewPassword>) -> Element { rsx! {} }
 ```
 
 `use_form()` makes a handle to pass as `form`. Inside a form,
@@ -126,7 +135,15 @@ with it, so a hidden field never blocks a submit, and neither does a rule whose
 `.on(..)` names only hidden fields. Its value stays in the store, and a rule on
 the whole form that names no field still runs, so check the condition there too.
 
-```rust,ignore
+```rust
+# use dioxus::prelude::*;
+# use libero::components::{Checkbox, Fields, Form, Rule, TextField, not_empty};
+# #[derive(Clone, PartialEq, Default, Fields)]
+# struct Signup { company: bool, company_name: String }
+# #[component]
+# fn CompanyFields() -> Element {
+#     let signup = use_store(Signup::default);
+#     rsx! { Form { value: signup,
 Checkbox { label: "Sign up as a company", name: Signup::FIELDS.company() }
 // Rendered only while ticked, so its rules leave with it.
 if signup.read().company {
@@ -136,6 +153,7 @@ if signup.read().company {
         validate: not_empty.error("Enter the company name."),
     }
 }
+# } } }
 ```
 
 ## Submit
@@ -227,9 +245,18 @@ explains how parts work. The fields take their own `parts`.
 - Put the field's name into its messages when its label is markup
   (`Caption::Node`): the summary cannot read markup, so the line has no name.
 
-```rust,ignore
+```rust
+# use dioxus::prelude::*;
+# use libero::components::{Fields, Form};
+# #[derive(Clone, PartialEq, Default, Fields)]
+# struct Order { email: String }
+# #[component]
+# fn Checkout() -> Element {
+#     let order = use_store(Order::default);
+#     rsx! {
 h2 { id: "checkout-title", "Checkout" }
 Form { "aria-labelledby": "checkout-title", value: order, /* .. */ }
+# } }
 ```
 
 ### Example

@@ -48,3 +48,12 @@ around it, unless that box is a stacking context. Libero's own scrollers are
 one. Give yours `position: relative; z-index: 0`, or use `ScrollArea`. This
 covers a sticky `Header`, and a `Tooltip` or `HoverCard` trigger, which natively
 carries a `z-index` so the pointer reaches it.
+
+## Links in a WebView
+
+On desktop and Android, `http`, `https` and `mailto` links open in the system
+browser and the app stays on its page. Any other scheme, such as `tel:`, `sms:`,
+`intent:` or `file:`, navigates the WebView itself and takes the app away. Your
+app builds the WebView, not Libero, so decide there: set
+`Config::with_navigation_handler` to open those links outside the app or deny
+them.

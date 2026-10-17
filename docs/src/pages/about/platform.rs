@@ -141,6 +141,31 @@ pub fn PlatformPage() -> Element {
                     " so the pointer reaches it."
                 }
             }
+
+            DocSection {
+                title: "Links in a WebView",
+                Text {
+                    "On desktop and Android, "
+                    Code { source: "http" }
+                    ", "
+                    Code { source: "https" }
+                    " and "
+                    Code { source: "mailto" }
+                    " links open in the system browser and the app stays on its page. Any other "
+                    "scheme, such as "
+                    Code { source: "tel:" }
+                    ", "
+                    Code { source: "sms:" }
+                    ", "
+                    Code { source: "intent:" }
+                    " or "
+                    Code { source: "file:" }
+                    ", navigates the WebView itself and takes the app away. Your app builds the "
+                    "WebView, not Libero, so decide there: set "
+                    Code { source: "Config::with_navigation_handler" }
+                    " to open those links outside the app or deny them."
+                }
+            }
         }
     }
 }
