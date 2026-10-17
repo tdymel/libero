@@ -55,13 +55,12 @@ async fn the_arrows_and_pages_move_the_focused<D: Driver>(d: &mut D, _route: &st
         r == "10-70"
     })
     .await?;
-    for _ in 0..4 {
+    for (step, expected) in [(1, "10-80"), (2, "10-90"), (3, "10-100"), (4, "10-100")] {
         d.press(keyboard::PAGE_UP).await?;
+        let what = format!("PageUp {step} to take the upper thumb to {expected}");
+        reads(d, &what, |r| r == expected).await?;
     }
-    reads(d, "PageUp to stop the upper thumb at 100", |r| {
-        r == "10-100"
-    })
-    .await
+    Ok(())
 }
 
 async fn a_drag_moves_the_grabbed<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
