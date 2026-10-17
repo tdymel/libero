@@ -421,6 +421,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `video::every_audio_source_failing_shows_the_error` | web | audio::every_source_failing_shows_the_error is the web's arm |
 | `video::every_video_source_failing_shows_the_error` | native | Blitz plays no media and shows the fallback |
 | `video::every_video_source_failing_shows_the_error` | web | video::every_source_failing_shows_the_error is the web's arm |
+| `video::fade::in_fullscreen_the_controls_fade_and_come_back` | ios | the bar stays up in fullscreen while the clip plays to its end, cause unfound |
 | `video::fullscreen::the_fullscreen_button_toggles` | ios | iOS's native video fullscreen does not leave on Escape |
 | `video::fullscreen::the_fullscreen_button_toggles` | macos desktop | upstream: Escape does not leave a WKWebView fullscreen |
 | `viewport_meta::a_small_field_keeps_the_page_scale` | native | Blitz has no visual viewport |
