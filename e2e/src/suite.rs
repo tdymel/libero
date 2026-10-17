@@ -13,6 +13,8 @@
 //!
 //! Behaviour contracts live in `archetypes` or the component's own test, not here.
 
+use anyhow::Context as _;
+
 use crate::passes::keyboard::{self, Key};
 use crate::passes::{contrast, focus, motion, pointer, reflow, target_size};
 use crate::{Fixture, Scheme, Viewport, ax, browser};
@@ -467,14 +469,19 @@ impl Suite {
                 state.settled
             );
         }
+        let reaching = || format!("reaching the {:?} state", state.name);
         for step in state.steps {
             match *step {
                 Step::TabTo(selector) => {
-                    focus::blur(page).await?;
-                    keyboard::tab_to(page, selector, self.tab_budget).await?;
+                    focus::blur(page).await.with_context(reaching)?;
+                    keyboard::tab_to(page, selector, self.tab_budget)
+                        .await
+                        .with_context(reaching)?;
                 }
-                Step::Press(key) => keyboard::press(page, key).await?,
-                Step::Click(selector) => pointer::click(page, selector).await?,
+                Step::Press(key) => keyboard::press(page, key).await.with_context(reaching)?,
+                Step::Click(selector) => pointer::click(page, selector)
+                    .await
+                    .with_context(reaching)?,
             }
         }
         crate::wait::for_visible(page, state.settled)

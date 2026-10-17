@@ -81,6 +81,34 @@ pub async fn expecting_failure_in<F: std::future::Future>(share: u32, check: F) 
 
 const POLL: Duration = Duration::from_millis(25);
 
+/// Longest one CDP call may take: chromiumoxide starts its own 30 s timer only once the
+/// command is sent, so one waiting to be sent hangs for good (3733).
+const CDP_BUDGET: Duration = Duration::from_secs(60);
+
+/// `call` (a CDP command or a poll made of them) failed naming `what` if it outlives [`CDP_BUDGET`].
+pub async fn bounded<T, E, Fut>(what: &str, call: Fut) -> Result<T>
+where
+    E: Into<anyhow::Error>,
+    Fut: std::future::Future<Output = std::result::Result<T, E>>,
+{
+    let started = Instant::now();
+    match tokio::time::timeout(CDP_BUDGET, call).await {
+        Ok(done) => done.map_err(Into::into),
+        Err(_) => {
+            crate::journal::gave_up(&crate::journal::GaveUp {
+                kind: "cdp",
+                how: "expired",
+                what,
+                budget: CDP_BUDGET,
+                elapsed: started.elapsed(),
+                slowest_poll: started.elapsed(),
+                polls: 1,
+            });
+            bail!("the CDP call for {what} did not return within {CDP_BUDGET:?} [wait=cdp]")
+        }
+    }
+}
+
 /// The journal's name for an ordinary per-assertion poll (todo 364).
 pub const READ: &str = "read";
 
@@ -120,7 +148,7 @@ where
     let (mut polls, mut slowest) = (0u32, Duration::ZERO);
     loop {
         let poll_started = Instant::now();
-        let outcome = check().await;
+        let outcome = bounded(&format!("waiting for {what}"), check()).await;
         polls += 1;
         slowest = slowest.max(poll_started.elapsed());
 

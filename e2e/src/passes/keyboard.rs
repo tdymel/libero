@@ -7,6 +7,8 @@ use chromiumoxide::cdp::browser_protocol::input::{
     DispatchKeyEventParams, DispatchKeyEventParamsBuilder, DispatchKeyEventType, InsertTextParams,
 };
 
+use crate::wait;
+
 /// A key, with the virtual key code Chromium needs to apply default actions
 /// (Tab moving focus, Enter activating) rather than merely reporting the press.
 #[derive(Clone, Copy, Debug)]
@@ -150,19 +152,26 @@ pub async fn hold(page: &Page, key: Key, modifiers: i64, presses: usize) -> Resu
             .native_virtual_key_code(key.vk)
             .modifiers(modifiers)
     };
+    let what = format!("holding the {} key", key.key);
     for press in 0..presses {
-        page.execute(
-            base(DispatchKeyEventType::RawKeyDown)
-                .auto_repeat(press > 0)
-                .build()
-                .map_err(anyhow::Error::msg)?,
+        wait::bounded(
+            &what,
+            page.execute(
+                base(DispatchKeyEventType::RawKeyDown)
+                    .auto_repeat(press > 0)
+                    .build()
+                    .map_err(anyhow::Error::msg)?,
+            ),
         )
         .await?;
     }
-    page.execute(
-        base(DispatchKeyEventType::KeyUp)
-            .build()
-            .map_err(anyhow::Error::msg)?,
+    wait::bounded(
+        &what,
+        page.execute(
+            base(DispatchKeyEventType::KeyUp)
+                .build()
+                .map_err(anyhow::Error::msg)?,
+        ),
     )
     .await?;
     Ok(())
@@ -204,12 +213,20 @@ async fn dispatch(page: &Page, key: Key, modifiers: i64) -> Result<()> {
     } else {
         DispatchKeyEventType::RawKeyDown
     };
-    page.execute(base(down).build().map_err(anyhow::Error::msg)?)
-        .await?;
-    page.execute(
-        base(DispatchKeyEventType::KeyUp)
-            .build()
-            .map_err(anyhow::Error::msg)?,
+    let what = format!("the {} key down", key.key);
+    wait::bounded(
+        &what,
+        page.execute(base(down).build().map_err(anyhow::Error::msg)?),
+    )
+    .await?;
+    let what = format!("the {} key up", key.key);
+    wait::bounded(
+        &what,
+        page.execute(
+            base(DispatchKeyEventType::KeyUp)
+                .build()
+                .map_err(anyhow::Error::msg)?,
+        ),
     )
     .await?;
     Ok(())
@@ -242,8 +259,9 @@ pub async fn type_text(page: &Page, text: &str) -> Result<()> {
             }
             b.build().map_err(anyhow::Error::msg)
         };
-        page.execute(event(DispatchKeyEventType::KeyDown)?).await?;
-        page.execute(event(DispatchKeyEventType::KeyUp)?).await?;
+        let what = format!("typing {ch:?}");
+        wait::bounded(&what, page.execute(event(DispatchKeyEventType::KeyDown)?)).await?;
+        wait::bounded(&what, page.execute(event(DispatchKeyEventType::KeyUp)?)).await?;
     }
     Ok(())
 }

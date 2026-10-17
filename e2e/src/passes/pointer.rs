@@ -68,19 +68,18 @@ async fn mouse_held(
     clicks: i64,
     modifiers: i64,
 ) -> Result<()> {
-    page.execute(
-        DispatchMouseEventParams::builder()
-            .r#type(kind)
-            .x(at.x)
-            .y(at.y)
-            .button(MouseButton::Left)
-            .buttons(buttons)
-            .click_count(clicks)
-            .modifiers(modifiers)
-            .build()
-            .map_err(anyhow::Error::msg)?,
-    )
-    .await?;
+    let what = format!("the mouse {kind:?} at ({:.0}, {:.0})", at.x, at.y);
+    let event = DispatchMouseEventParams::builder()
+        .r#type(kind)
+        .x(at.x)
+        .y(at.y)
+        .button(MouseButton::Left)
+        .buttons(buttons)
+        .click_count(clicks)
+        .modifiers(modifiers)
+        .build()
+        .map_err(anyhow::Error::msg)?;
+    crate::wait::bounded(&what, page.execute(event)).await?;
     Ok(())
 }
 
@@ -159,12 +158,13 @@ async fn touch_at(
         .y(at.y)
         .build()
         .map_err(anyhow::Error::msg)?;
+    let what = format!("the touch {kind:?} at ({:.0}, {:.0})", at.x, at.y);
     let event = DispatchTouchEventParams::builder()
         .r#type(kind)
         .touch_point(point)
         .build()
         .map_err(anyhow::Error::msg)?;
-    page.execute(event).await?;
+    crate::wait::bounded(&what, page.execute(event)).await?;
     Ok(())
 }
 

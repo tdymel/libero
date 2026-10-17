@@ -509,17 +509,19 @@ impl Fixture {
         // Background plus focus emulation: foreground pages timed out on navigation
         // 1-2 times a run, background alone was 5x slower (measured 2026-09-19).
         crate::journal::step(format!("opening {url}: creating the page"));
-        let page = browser
-            .new_page(
+        let page = crate::wait::bounded(
+            &format!("opening {url}: creating the page"),
+            browser.new_page(
                 chromiumoxide::cdp::browser_protocol::target::CreateTargetParams::builder()
                     .url("about:blank")
                     .background(true)
                     .build()
                     .map_err(anyhow::Error::msg)?,
-            )
-            .await
-            .context("open a page")
-            .inspect_err(|error| stage("creating the page", navigation_started, error))?;
+            ),
+        )
+        .await
+        .context("open a page")
+        .inspect_err(|error| stage("creating the page", navigation_started, error))?;
         // Armed at once, so every `?` below closes the page too.
         let closes_on_drop = ClosesOnDrop(Some(page.clone()));
 
@@ -709,10 +711,16 @@ impl Fixture {
     async fn close_page(mut self) -> Result<()> {
         // A closed target's undelivered events are lost.
         crate::journal::step("closing the page: settling the console");
-        self.console.settle().await?;
+        crate::wait::bounded(
+            "closing the page: settling the console",
+            self.console.settle(),
+        )
+        .await?;
         self.closes_on_drop.0 = None;
         crate::journal::step("closing the page: waiting for the browser to close it");
-        self.page.close().await.context("close the page")?;
+        crate::wait::bounded("closing the page", self.page.close())
+            .await
+            .context("close the page")?;
         let messages = self.console.peek();
         let warned = crate::passes::console::signal_warnings(&messages);
         if !warned.is_empty() {
