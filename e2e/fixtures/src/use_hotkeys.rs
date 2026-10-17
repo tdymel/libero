@@ -89,6 +89,13 @@ fn Within() -> Element {
         .include_editable(true)
         .within(scope)
         .within(popup)]);
+    // After the hotkey's own effect: a press before both mounts would land out of scope.
+    let mut armed = use_signal(|| false);
+    use_effect(move || {
+        if scope.is_mounted() && popup.is_mounted() {
+            armed.set(true);
+        }
+    });
 
     rsx! {
         button { id: "outside", "Outside" }
@@ -100,7 +107,7 @@ fn Within() -> Element {
         div { id: "popup", onmounted: popup.mount(), ..popup.attributes(),
             button { id: "in-popup", "In popup" }
         }
-        p { id: "count", "{count}" }
+        p { id: "count", "data-armed": "{armed}", "{count}" }
         p { id: "typed", "{typed}" }
     }
 }

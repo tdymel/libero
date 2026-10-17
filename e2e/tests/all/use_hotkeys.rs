@@ -80,7 +80,16 @@ const X: Key = Key {
     text: Some("x"),
 };
 
+/// The fixture's ready marker trails the first render; a loaded runner pressed before the scope mounted (3715).
+async fn scope_armed<D: Driver>(d: &mut D) -> Result<()> {
+    eventually(d, "the scope to mount", async |d| {
+        Ok(d.attr("#count", "data-armed").await?.as_deref() == Some("true"))
+    })
+    .await
+}
+
 async fn within_fires_only_with_focus_in_scope<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    scope_armed(d).await?;
     d.focus("#outside").await?;
     d.press(X).await?;
     d.idle().await;
@@ -95,6 +104,7 @@ async fn within_fires_only_with_focus_in_scope<D: Driver>(d: &mut D, _route: &st
 
 /// Taken inside first, so a WebView's "taken" chord must not follow it out.
 async fn a_press_outside_keeps_its_default<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    scope_armed(d).await?;
     d.focus("#inside-field").await?;
     d.press(X).await?;
     count_is(d, "#count", "1").await?;
@@ -213,8 +223,7 @@ e2e::scenario!(
 e2e::scenario!(
     a_scoped_hotkey_fires_only_with_focus_inside_its_elements,
     "/use-hotkeys/within",
-    within_fires_only_with_focus_in_scope,
-    macos_web: skip("3715: flaky: stalls past 100 s in the smoke run on the 3-core Mac runner, passes alone")
+    within_fires_only_with_focus_in_scope
 );
 e2e::scenario!(
     a_press_outside_the_scope_keeps_its_default_action,
