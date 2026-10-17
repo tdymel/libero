@@ -1,5 +1,5 @@
 use super::paper::{GLASS_SHARE, GLASS_SHEEN, GLASS_SHEEN_MAX};
-use crate::css::CssDeclaration;
+use crate::css::{CssDeclaration, stays_in_declaration};
 use crate::sx::{ColorRole, Sx, ThemeAwareValue, sx};
 use crate::theme::{
     Color, ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, HexColor, NamedColorCss, Theme,
@@ -117,7 +117,16 @@ impl Gradient {
         } else {
             ColorRole::Fill
         };
-        let css = |stop: &ThemeAwareValue| stop.in_color_role(role).resolve(None);
+        let css = |stop: &ThemeAwareValue| {
+            let value = stop.in_color_role(role).resolve(None)?;
+            if stays_in_declaration(&value) {
+                return Some(value);
+            }
+            warn(&format!(
+                "Gradient stop `{value}` would leave its declaration and is dropped."
+            ));
+            None
+        };
         let (label, layer) = pick_label(&stops, themes, text);
         if text && cfg!(debug_assertions) {
             check_text_stops(&stops, themes);
@@ -810,5 +819,22 @@ mod tests {
             text.contains(&"--lsx-gradient-from:var(--lsx-error-text-6);".to_string()),
             "{text:?}"
         );
+    }
+
+    #[test]
+    fn a_stop_cannot_add_declarations() {
+        let gradient = Gradient::from(("red; position: fixed; inset: 0", 90));
+        let css: String = gradient
+            .declarations(
+                Some(&"blue}body{display:none".into()),
+                &[&Theme::DEFAULT],
+                false,
+            )
+            .iter()
+            .map(ToString::to_string)
+            .collect();
+        assert!(!css.contains("position"), "{css}");
+        assert!(!css.contains("display"), "{css}");
+        assert!(css.contains("--lsx-gradient-angle:90deg;"), "{css}");
     }
 }

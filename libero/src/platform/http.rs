@@ -23,10 +23,14 @@ mod native {
         }
     }
 
-    /// `None` when no provider is in reach.
+    /// `None` when no provider is in reach. A URL that is not `http(s)` fails the fetch.
     pub(super) fn fetch(url: &str) -> Option<Fetched> {
         let provider = dioxus::prelude::try_consume_context::<Arc<dyn NetProvider>>()?;
         let url = Url::parse(url).ok()?;
+        if !super::is_web_scheme(url.scheme()) {
+            crate::utils::warn(&format!("Not fetched: `{url}` is not an http(s) URL."));
+            return Some(Box::pin(async { None }));
+        }
         let (sender, receiver) = oneshot::channel();
         // The id only picks the document to redraw; the task's own wake re-renders.
         provider.fetch(0, Request::get(url), Box::new(Reply(sender)));
@@ -34,6 +38,13 @@ mod native {
             String::from_utf8(receiver.await.ok()?.to_vec()).ok()
         }))
     }
+}
+
+/// Whether the native provider may fetch `scheme`: `file:` and the like would read the disk
+/// for a URL that came from user data.
+#[cfg(any(test, all(not(target_arch = "wasm32"), feature = "native")))]
+fn is_web_scheme(scheme: &str) -> bool {
+    matches!(scheme, "http" | "https")
 }
 
 /// GETs `url` and hands back its body. Call it in a component scope: the
@@ -59,4 +70,17 @@ pub(crate) fn fetch_text(url: &str) -> Fetched {
     );
     let _ = eval.send(url);
     Box::pin(async move { eval.join::<Option<String>>().await.ok().flatten() })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_web_scheme;
+
+    #[test]
+    fn only_http_and_https_are_fetched_natively() {
+        assert!(is_web_scheme("http") && is_web_scheme("https"));
+        for scheme in ["file", "ftp", "data", "javascript", "HTTP", ""] {
+            assert!(!is_web_scheme(scheme), "{scheme}");
+        }
+    }
 }
