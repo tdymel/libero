@@ -66,7 +66,16 @@ const EVENT_LOG: &str = "window.__e2eLog = []; \
     for (const type of ['pointerdown', 'pointerup', 'pointercancel', 'gotpointercapture', 'lostpointercapture']) { \
       addEventListener(type, e => log(`${type} ${e.pointerType} ${name(e.target)} at ${Math.round(e.clientX)},${Math.round(e.clientY)}` \
         + (type === 'pointerdown' ? ` touch-action ${getComputedStyle(e.target).touchAction}` : '')), true); } \
-    addEventListener('pointermove', e => log(`pointermove ${e.pointerType} ${name(e.target)}`), { capture: true, passive: true }); \
+    addEventListener('pointerdown', e => { window.__down = e.target; \
+      log('heads ' + [...document.querySelectorAll('thead th')].map(h => { const r = h.getBoundingClientRect(); \
+        return Math.round(r.x) + '+' + Math.round(r.width); }).join(' ') + ' scroll ' + scrollX); }, true); \
+    addEventListener('pointermove', e => log(`pointermove ${e.pointerType} ${name(e.target)} same ${+(e.target === __down)} \
+      conn ${+!!__down?.isConnected} cap ${+!!__down?.hasPointerCapture?.(e.pointerId)} ghost ${!!document.querySelector('[data-drag-ghost]')}`), { capture: true, passive: true }); \
+    addEventListener('pointerup', e => log(`up: down conn ${+!!__down?.isConnected} same ${+(e.target === __down)} \
+      ghost ${document.querySelector('[data-drag-ghost]')?.style.left ?? '-'} line ${document.querySelector('[data-drop-line]')?.style.left ?? '-'}`), true); \
+    new MutationObserver(ms => { for (const m of ms) for (const n of m.removedNodes) \
+      if (window.__down && (n === __down || n.contains?.(__down))) log(`down removed via ${name(n)} from ${name(m.target)}`); }) \
+      .observe(document, { childList: true, subtree: true }); \
     for (const type of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) { \
       addEventListener(type, e => log(`${type} ${name(e.target)} touches=${e.touches.length}`), { capture: true, passive: true }); } \
     for (const type of ['click', 'dblclick', 'focusin']) { \
@@ -383,6 +392,23 @@ impl Ios {
                 "(e => e ? e.outerHTML.slice(0, 120) : 'nothing')(document.elementFromPoint({x}, {y}))"
             ))
             .unwrap_or_default();
+        // Diagnostics for 3604: does a tap elsewhere land, and does a blur free the WebView?
+        let felt = |ios: &mut Self, at: (f64, f64), label: &str| -> Result<()> {
+            ios.bridge.run("window.__tapped = 0")?;
+            ios.mark(&format!("> diag {label}"))?;
+            ios.tap_screen(ios.screen(at.0, at.1))?;
+            std::thread::sleep(Duration::from_millis(1500));
+            let seen: u8 = ios.bridge.json("__tapped")?;
+            let focus: String = ios.bridge.json("document.activeElement?.outerHTML.slice(0, 80) ?? ''")?;
+            eprintln!("e2e ios diag: {label} at {at:?}: tapped {seen}, focus {focus}");
+            Ok(())
+        };
+        let (vw, vh): (f64, f64) = self.bridge.json("[innerWidth, innerHeight]")?;
+        let _ = felt(self, (vw / 2.0, vh - 80.0), "blank");
+        let _ = felt(self, (x, y), "again");
+        let _ = self.bridge.run("document.activeElement?.blur()");
+        let _ = felt(self, (x, y), "after blur");
+        let _ = felt(self, (vw / 2.0, vh - 80.0), "blank after blur");
         bail!("the page felt none of three taps at {x}, {y}, over {under}")
     }
 

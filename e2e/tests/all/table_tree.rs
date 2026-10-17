@@ -255,9 +255,12 @@ async fn tree_selection<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_tree_box_selects_its_descendants_and_mixes_its_ancestors,
     "/table-tree-select",
-    tree_selection,
-    ios: skip("3604: flaky: after a tree box's tap, the WebView takes no touch at all, a held one neither (no touchstart)")
+    tree_selection
 );
+
+e2e::scenario!(a_tree_box_b, "/table-tree-select", tree_selection);
+e2e::scenario!(a_tree_box_c, "/table-tree-select", tree_selection);
+e2e::scenario!(a_tree_box_d, "/table-tree-select", tree_selection);
 
 /// A row with `row_has_children` opens before its children load, then shows them.
 async fn lazy_children<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
