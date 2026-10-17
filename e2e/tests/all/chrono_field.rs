@@ -372,12 +372,8 @@ fn the_other_fields_meet_the_baseline() {
     }
 }
 
-/// The date-time field, apart so Windows can skip it alone.
+/// The date-time field, apart to keep each test under the 20 s budget.
 #[test]
-#[cfg_attr(
-    windows,
-    ignore = "3585: at mobile dark Tab cycled in an open picker and never reached the input, 1 run in 3"
-)]
 fn the_moment_field_meets_the_baseline() {
     baseline("chrono_field-moment", "/chrono-field/moment");
 }

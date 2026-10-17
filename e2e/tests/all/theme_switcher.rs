@@ -30,10 +30,6 @@ const MENU: &str = "[role=menu]";
 /// The split button: both halves are 24px tab stops with a ring; the menu is checked open.
 /// Nothing is picked, so nothing persists.
 #[test]
-#[cfg_attr(
-    target_os = "macos",
-    ignore = "3715: flaky: a CDP request timed out after 100 s in the smoke run on the 3-core Mac runner, passes alone"
-)]
 fn the_split_button_meets_the_baseline() {
     Suite::new("theme_switcher_themes", "/theme-switcher/themes")
         .focusable(TOGGLE)
