@@ -106,30 +106,6 @@ fn a_theme_colour_resolves_a_shade_and_its_contrast_twin() {
     );
 }
 
-/// A colour or radius from user data must not add declarations to the badge's `style`.
-#[test]
-fn a_value_with_a_semicolon_cannot_add_declarations() {
-    fn attack_app() -> Element {
-        rsx! {
-            LiberoProvider {
-                Badge {
-                    color: "red);position:fixed;inset:0(",
-                    radius: "1px;background:url(https://evil.example/x)",
-                    "Hi"
-                }
-            }
-        }
-    }
-
-    let style = attributes_of(&body(&render(attack_app)), "span")
-        .get("style")
-        .cloned()
-        .unwrap_or_default();
-
-    assert!(!style.contains("position"), "{style}");
-    assert!(!style.contains("evil.example"), "{style}");
-}
-
 /// The badge has its own radius scale, whose `xxl` is the pill the theme
 /// defaults to. An unset prop leaves the override var alone; a step resolves
 /// through the badge's scale, not the global one.

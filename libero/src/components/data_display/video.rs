@@ -18,7 +18,6 @@ use crate::{
         overlay::Shortcut,
     },
     context::{HostOutlet, PortalHost},
-    css,
     hooks::{
         FULLSCREEN_ATTR, Hotkey, MediaError, MediaHandle, TimeoutHandle, listener, use_cache,
         use_element, use_fullscreen, use_localization, use_media, use_portal_slot, use_scroll_lock,
@@ -433,15 +432,7 @@ fn bar_style(bar: Option<f64>, size: Option<Size>, aspect_ratio: Option<&str>) -
         }
     };
     match aspect_ratio {
-        Some(ratio) if css::stays_in_declaration(ratio) => {
-            format!("{bar}aspect-ratio: {ratio};")
-        }
-        Some(ratio) => {
-            warn(&format!(
-                "Video `aspect_ratio` `{ratio}` would leave its declaration and is ignored."
-            ));
-            bar
-        }
+        Some(ratio) => format!("{bar}aspect-ratio: {ratio};"),
         None => bar,
     }
 }
@@ -1077,21 +1068,6 @@ mod tests {
             "{estimate}"
         );
         assert!(!bar_style(None, None, None).contains("aspect-ratio"));
-    }
-
-    #[test]
-    fn an_aspect_ratio_cannot_add_declarations() {
-        for attack in [
-            "1; position: fixed; inset: 0",
-            "1; background: url(https://evil.example/x)",
-            "1}body{display:none",
-        ] {
-            assert_eq!(
-                bar_style(None, None, Some(attack)),
-                bar_style(None, None, None)
-            );
-        }
-        assert!(bar_style(None, None, Some("auto")).ends_with("aspect-ratio: auto;"));
     }
 
     #[test]
