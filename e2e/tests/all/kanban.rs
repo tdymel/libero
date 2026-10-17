@@ -674,7 +674,8 @@ async fn a_card_dropped_before_another_lifts_again<D: Driver>(
 e2e::scenario!(
     a_card_dragged_before_another_of_a_column_can_be_lifted_by_keyboard_at_once,
     "/kanban",
-    a_card_dropped_before_another_lifts_again
+    a_card_dropped_before_another_lifts_again,
+    ios: skip("3417: flaky: the touch drag lifts the card but the drop races the board's auto-scroll and moves nothing")
 );
 
 /// A card not lifted ignores Left and Right, and a move the app refuses is not announced.

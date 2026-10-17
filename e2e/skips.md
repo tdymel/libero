@@ -117,6 +117,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `hover_card::the_pointer_crosses_into_the_card_and_leaving_closes_it` | ios | a touch screen has no hover |
 | `image_cropper::a_finger_beside_the_box_moves_it` | all but android | 2123: the web and Blitz arms are a_drag_or_wheel_beside_the_box_moves_or_scales_it |
 | `image_cropper::a_picked_image_is_cropped_through_the_page` | native | Blitz runs no script to stub the picker; `crop_bytes` unit tests cover the cut |
+| `kanban::a_card_dragged_before_another_of_a_column_can_be_lifted_by_keyboard_at_once` | ios | 3417: flaky: the touch drag lifts the card but the drop races the board's auto-scroll and moves nothing |
 | `kanban::a_filtered_button_move_lands_before_the_next_shown_card_behind_a_hidden_one` | desktop | 958: element identity on the WebView |
 | `kanban::a_filtered_column_moves_by_keys_and_buttons_over_the_shown_cards` | desktop | 958: element identity on the WebView |
 | `kanban::a_filtered_column_still_drags_and_move_to_lands_after_its_last_card` | desktop | 958: element identity on the WebView |
