@@ -999,3 +999,11 @@ fn the_ghost_and_the_drop_line_show_mid_drag() {
         fixture.close().await.unwrap();
     });
 }
+e2e::scenario!(header_grip_x_b, "/table-reorder", two_grip_drags_move_columns);
+e2e::scenario!(header_grip_x_c, "/table-column-drag", two_grip_drags_move_columns);
+e2e::scenario!(header_grip_x_d, "/table-reorder", two_grip_drags_move_columns);
+e2e::scenario!(header_grip_x_e, "/table-column-drag", two_grip_drags_move_columns);
+e2e::scenario!(header_grip_x_f, "/table-reorder", two_grip_drags_move_columns);
+e2e::scenario!(header_grip_x_g, "/table-column-drag", two_grip_drags_move_columns);
+e2e::scenario!(header_grip_x_h, "/table-reorder", two_grip_drags_move_columns);
+e2e::scenario!(header_grip_x_i, "/table-column-drag", two_grip_drags_move_columns);
