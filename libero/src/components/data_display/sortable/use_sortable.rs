@@ -1,3 +1,4 @@
+use std::fmt::Write as _;
 use std::rc::Rc;
 
 use dioxus::prelude::*;
@@ -120,12 +121,15 @@ impl SortableItemHandle {
             moved.set(true);
         }
         match settle {
-            Some(from) => style.push_str(&format!(
-                " {SORTABLE_SETTLE_FROM}: {}; animation: {SORTABLE_SETTLE} {} {};",
-                translate(from),
-                TRANSITION_DURATION.value(),
-                TRANSITION_EASING.value()
-            )),
+            Some(from) => {
+                let _ = write!(
+                    style,
+                    " {SORTABLE_SETTLE_FROM}: {}; animation: {SORTABLE_SETTLE} {} {};",
+                    translate(from),
+                    TRANSITION_DURATION.value(),
+                    TRANSITION_EASING.value()
+                );
+            }
             // The ended settle animation would stay, and the next identical one not replay (3105).
             None if !style.is_empty() => style.push_str(" animation: none;"),
             None => {}

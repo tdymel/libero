@@ -201,7 +201,7 @@ pub(crate) fn draw_pie(spec: &PieSpec) -> Option<Drawn> {
                 .format(label, spec.unit.as_deref(), spec.formats)
         },
         &edge,
-        false,
+        CircleTriggers::Dropped,
     );
     let (svg, triggers) = round_slices(svg, triggers, centre, spec.slice_radius);
     let svg = relabel(&svg, PERCENT_MARK, |share| {

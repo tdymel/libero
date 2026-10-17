@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use std::fmt::Write as _;
 
 use dioxus::core::AttributeValue;
 
@@ -215,7 +216,7 @@ fn fold_style_value(folded: &mut String, name: &str, value: &AttributeValue) -> 
     if value.contains(';') {
         crate::utils::warn(&format!("style `{name}` has a `;` in its value, dropped."));
     } else {
-        folded.push_str(&format!("{name}:{value};"));
+        let _ = write!(folded, "{name}:{value};");
     }
     true
 }

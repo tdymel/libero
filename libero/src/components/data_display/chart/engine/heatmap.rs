@@ -1,6 +1,7 @@
 //! A heatmap's spec and drawing, its cells' colours, labels and scale.
 
 use super::*;
+use std::fmt::Write as _;
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct HeatmapSpec {
@@ -81,7 +82,7 @@ pub(crate) fn draw_heatmap(spec: &HeatmapSpec) -> Option<Drawn> {
     chart.series.label.formatter = format!("{LABEL_MARK}{{c}}");
     let svg = chart.svg().ok()?;
     let svg = fit_x_labels(&svg, &spec.x, spec.width, spec.height);
-    let (svg, triggers) = inert(&svg, |value| value.to_string(), "", false);
+    let (svg, triggers) = inert(&svg, |value| value.to_string(), "", CircleTriggers::Dropped);
     let svg = restyle_cells(&svg, &spec.ink);
     let expected: Vec<_> = (0..rows)
         .rev()
@@ -168,10 +169,8 @@ pub(super) fn with_scale(
     let key = spec.no_value.as_ref().map_or(0.0, |name| {
         let room = SCALE_BAR + 6.0 + text_width(&[("font-size", "12")], name);
         let x = plot.right - room;
-        scale.push_str(&format!(
-            "<rect x=\"{x}\" y=\"{bar_top}\" width=\"{SCALE_BAR}\" height=\"{SCALE_BAR}\" fill=\"none\" stroke=\"{}\" stroke-dasharray=\"{EMPTY_DASH}\"/>",
-            spec.ink.axis
-        ));
+        let _ = write!(scale, "<rect x=\"{x}\" y=\"{bar_top}\" width=\"{SCALE_BAR}\" height=\"{SCALE_BAR}\" fill=\"none\" stroke=\"{}\" stroke-dasharray=\"{EMPTY_DASH}\"/>",
+            spec.ink.axis);
         scale.push_str(&label(x + SCALE_BAR + 6.0, bar_top + SCALE_BAR, "start", name));
         room + 16.0
     });
@@ -187,12 +186,13 @@ pub(super) fn with_scale(
             false => (i as f64 + 0.5) / pieces as f64,
         };
         // A hair wider, so no seam shows between two pieces.
-        scale.push_str(&format!(
+        let _ = write!(
+            scale,
             "<rect x=\"{}\" y=\"{bar_top}\" width=\"{}\" height=\"{SCALE_BAR}\" fill=\"{}\"/>",
             left + piece * i as f32,
             piece + 0.5,
             gradient(&spec.colors, position)
-        ));
+        );
     }
     let text = |x: f32, anchor: &str, value: f64| {
         label(x, bar_top + SCALE_BAR + 14.0, anchor, &write(value))
@@ -254,10 +254,11 @@ pub(super) fn restyle_cells(svg: &str, ink: &ChartInk) -> String {
                         Some(format!(" {name}=\"{}\"", attribute(&attributes, name)?))
                     })
                     .collect();
-                out.push_str(&format!(
+                let _ = write!(
+                    out,
                     "<rect{kept} fill=\"none\" stroke=\"{}\" stroke-dasharray=\"{EMPTY_DASH}\"/>",
                     ink.axis
-                ));
+                );
             }
             "rect" => {
                 let kept: String = attributes
@@ -265,7 +266,7 @@ pub(super) fn restyle_cells(svg: &str, ink: &ChartInk) -> String {
                     .filter(|(attribute, _)| *attribute != "stroke")
                     .map(|(attribute, value)| format!(" {attribute}=\"{value}\""))
                     .collect();
-                out.push_str(&format!("<rect{kept} stroke=\"{}\"/>", ink.surface));
+                let _ = write!(out, "<rect{kept} stroke=\"{}\"/>", ink.surface);
             }
             _ => out.push_str(tag),
         }
@@ -327,12 +328,13 @@ pub(super) fn write_cell_labels(
             .filter(|(attribute, _)| !matches!(*attribute, "x" | "y" | "dominant-baseline"))
             .map(|(attribute, value)| format!(" {attribute}=\"{value}\""))
             .collect();
-        out.push_str(&format!(
+        let _ = write!(
+            out,
             "<text x=\"{}\" y=\"{}\" text-anchor=\"middle\"{kept}>{}</text>",
             x + width / 2.0,
             y + height / 2.0 + size * 0.35,
             escape(&label)
-        ));
+        );
     }
     out.push_str(rest);
     out

@@ -59,7 +59,7 @@ pub(crate) fn draw_funnel(spec: &FunnelSpec) -> Option<Drawn> {
                 .format(label, spec.unit.as_deref(), spec.formats)
         },
         "",
-        false,
+        CircleTriggers::Dropped,
     );
     let svg = relabel(&svg, PERCENT_MARK, |value| match spec.first > 0.0 {
         true => ValueFormat::Percent.format(value / spec.first, None, spec.formats),

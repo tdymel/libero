@@ -1,6 +1,7 @@
 //! Label placement: measured, fitted, moved off each other or dropped, and inked.
 
 use super::*;
+use std::fmt::Write as _;
 
 /// The renderer writes an upright bar's label past its top, inside a falling bar. Moves a
 /// falling one's under its lower end, or just inside it in the bar's ink when the x axis is
@@ -43,7 +44,7 @@ pub(super) fn place_outside_labels(svg: &str, bottom: f32, surface: HexColor) ->
         } else {
             halo.clone()
         };
-        out.push_str(&format!("<text dy=\"{dy}\"{kept}{ink}>"));
+        let _ = write!(out, "<text dy=\"{dy}\"{kept}{ink}>");
     }
     out.push_str(rest);
     out
@@ -136,11 +137,12 @@ pub(super) fn centre_stage_labels(svg: &str) -> String {
             .filter(|(attribute, _)| !matches!(*attribute, "x" | "y" | "dominant-baseline"))
             .map(|(attribute, value)| format!(" {attribute}=\"{value}\""))
             .collect();
-        out.push_str(&format!(
+        let _ = write!(
+            out,
             "<text x=\"{}\" y=\"{}\" text-anchor=\"middle\"{kept}>",
             x + text_width(&attributes, label) / 2.0,
             y + size * 0.35
-        ));
+        );
     }
     out.push_str(rest);
     out
@@ -186,9 +188,10 @@ pub(super) fn centre_inside_labels(svg: &str, centre: (f32, f32), hole: f32) -> 
             .filter(|(attribute, _)| !matches!(*attribute, "x" | "y"))
             .map(|(attribute, value)| format!(" {attribute}=\"{value}\""))
             .collect();
-        out.push_str(&format!(
+        let _ = write!(
+            out,
             "<text x=\"{x}\" y=\"{y}\" text-anchor=\"middle\"{kept}>"
-        ));
+        );
     }
     out.push_str(rest);
     out
@@ -315,7 +318,7 @@ pub(super) fn cut_labels(svg: &str, width: f32) -> String {
             .filter(|(attribute, _)| *attribute != "x")
             .map(|(attribute, value)| format!(" {attribute}=\"{value}\""))
             .collect();
-        out.push_str(&format!("<text x=\"{x}\"{kept}>\n{}\n", escape(&cut)));
+        let _ = write!(out, "<text x=\"{x}\"{kept}>\n{}\n", escape(&cut));
         rest = &rest[text_end..];
     }
     out.push_str(rest);
@@ -437,10 +440,11 @@ pub(super) fn fit_x_labels(svg: &str, labels: &[String], width: f32, height: f32
             .filter(|(attribute, _)| !matches!(*attribute, "x" | "text-anchor"))
             .map(|(attribute, value)| format!(" {attribute}=\"{value}\""))
             .collect();
-        out.push_str(&format!(
+        let _ = write!(
+            out,
             "<text x=\"{centre}\" text-anchor=\"middle\"{kept}>\n{}\n</text>",
             escape(&cut)
-        ));
+        );
     }
     out.push_str(&svg[last..]);
     out

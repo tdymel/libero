@@ -1,3 +1,4 @@
+use std::fmt::Write as _;
 use std::rc::Rc;
 
 use super::{
@@ -52,10 +53,11 @@ impl From<&ThemeSet> for Stylesheet {
 
         let mut css = root_block(":root", light);
         // The system case; `:not(..)` lets an explicit choice win, as `@media` adds no specificity.
-        css.push_str(&format!(
+        let _ = write!(
+            css,
             "@media {DARK_SCHEME_QUERY}{{{}}}",
             root_block(&format!(":root:not([{THEME_ATTRIBUTE}])"), dark)
-        ));
+        );
         css.push_str(&root_block(&theme_selector(ThemeSet::LIGHT), light));
         css.push_str(&root_block(&theme_selector(ThemeSet::DARK), dark));
 

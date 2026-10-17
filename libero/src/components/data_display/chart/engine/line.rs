@@ -192,7 +192,7 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
     };
     let svg = fitted(&mut chart, spec.width, spec.height, |chart| {
         let mut svg = chart.svg().ok()?;
-        let exact = exact_axes(&svg, &chart.y_axis_configs, false);
+        let exact = exact_axes(&svg, &chart.y_axis_configs, LabelEdge::Side);
         let widths = [
             y_width(&svg, &exact, AXIS_MARK, write(&exact, AXIS_MARK)),
             y_width(&svg, &exact, AXIS2_MARK, write(&exact, AXIS2_MARK)),
@@ -208,7 +208,7 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
 
     let expected: Vec<_> = expected_marks(&spec.series);
     // Pinned by the renderer's own labels, then written in full.
-    let svg = exact_axes(&pin_to_axis(&svg), &chart.y_axis_configs, false);
+    let svg = exact_axes(&pin_to_axis(&svg), &chart.y_axis_configs, LabelEdge::Side);
     let svg = match spec.x_numbers.is_empty() {
         true => fit_x_labels(&svg, &spec.x, spec.width, spec.height),
         false => svg,

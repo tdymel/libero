@@ -1,6 +1,7 @@
 //! The value axes: their ends and steps rounded, their tick labels written and pinned.
 
 use super::*;
+use std::fmt::Write as _;
 
 /// A percent stack with losses reads each share of the stack's absolute sum, up above 0 and
 /// down below it: the axis runs to the furthest of each, in `ticks` round steps (else the
@@ -144,25 +145,31 @@ pub(super) fn round_axes(
     }
 }
 
-/// [`exact_ticks`] on both value axes.
-pub(super) fn exact_axes(svg: &str, y: &[charts_rs::YAxisConfig], across: bool) -> String {
+/// Where an axis' labels run: along the bottom, or up the side.
+#[derive(Clone, Copy, PartialEq)]
+pub(super) enum LabelEdge {
+    Bottom,
+    Side,
+}
+
+/// [`exact_ticks`] on both value axes; the right one always runs up the side.
+pub(super) fn exact_axes(svg: &str, y: &[charts_rs::YAxisConfig], edge: LabelEdge) -> String {
     let svg = match y.first() {
-        Some(left) => exact_ticks(svg, AXIS_MARK, left, across),
+        Some(left) => exact_ticks(svg, AXIS_MARK, left, edge),
         None => svg.to_string(),
     };
     match y.get(1) {
-        Some(right) => exact_ticks(&svg, AXIS2_MARK, right, false),
+        Some(right) => exact_ticks(&svg, AXIS2_MARK, right, LabelEdge::Side),
         None => svg,
     }
 }
 
 /// Writes axis `mark`'s labels in full, as `config` cuts it: the renderer keeps one decimal.
-/// `across`: the labels run along the bottom, else up the side.
 pub(super) fn exact_ticks(
     svg: &str,
     mark: char,
     config: &charts_rs::YAxisConfig,
-    across: bool,
+    edge: LabelEdge,
 ) -> String {
     let (Some(min), Some(max)) = (config.min, config.max) else {
         return svg.to_string();
@@ -180,7 +187,11 @@ pub(super) fn exact_ticks(
         let label = label[..label.find('<').unwrap_or(label.len())].trim_start();
         if label.starts_with(mark) {
             let number = |name| attribute(&attributes, name)?.parse::<f32>().ok();
-            let place = number(if across { "x" } else { "y" }).unwrap_or(0.0);
+            let place = number(match edge {
+                LabelEdge::Bottom => "x",
+                LabelEdge::Side => "y",
+            })
+            .unwrap_or(0.0);
             let start = svg.len() - svg[close + 1..].trim_start().len() + mark.len_utf8();
             let length = svg[start..].find([' ', '\n', '<']).unwrap_or(0);
             at.push((place, start, length));
@@ -191,9 +202,9 @@ pub(super) fn exact_ticks(
         return svg.to_string();
     }
     // Lowest first: leftmost along the bottom, lowest up the side.
-    at.sort_by(|a, b| match across {
-        true => a.0.total_cmp(&b.0),
-        false => b.0.total_cmp(&a.0),
+    at.sort_by(|a, b| match edge {
+        LabelEdge::Bottom => a.0.total_cmp(&b.0),
+        LabelEdge::Side => b.0.total_cmp(&a.0),
     });
     let mut values: Vec<_> = at
         .iter()
@@ -205,7 +216,7 @@ pub(super) fn exact_ticks(
     let mut last = 0;
     for (start, length, value) in values {
         out.push_str(&svg[last..start]);
-        out.push_str(&format!("{value}"));
+        let _ = write!(out, "{value}");
         last = start + length;
     }
     out.push_str(&svg[last..]);
@@ -490,7 +501,7 @@ pub(super) fn pin_labels<F: Fn(f64) -> String>(svg: &str, mark: char, pin: Pin<F
                     .filter(|(attribute, _)| *attribute != "x")
                     .map(|(attribute, value)| format!(" {attribute}=\"{value}\""))
                     .collect();
-                out.push_str(&format!("<text x=\"{x}\" text-anchor=\"{anchor}\"{kept}>"));
+                let _ = write!(out, "<text x=\"{x}\" text-anchor=\"{anchor}\"{kept}>");
             }
             _ => out.push_str(tag),
         }

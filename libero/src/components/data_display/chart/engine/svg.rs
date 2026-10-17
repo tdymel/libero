@@ -26,16 +26,23 @@ pub(crate) struct Trigger {
 /// The renderer's SVG made inert: no own tooltips, no `<title>`s, the page's font, its
 /// y labels written by `axis`, sized by its container. Returns the triggers it dropped.
 pub(crate) fn sanitize(svg: &str, axis: impl Fn(f64) -> String) -> (String, Vec<Trigger>) {
-    inert(svg, axis, "", false)
+    inert(svg, axis, "", CircleTriggers::Dropped)
 }
 
-/// [`sanitize`], with `extra` attributes on every kept mark; with `circles`, a circle trigger
-/// is a scatter's point, kept, not a line's invisible target.
+/// What a circle trigger is: a scatter's point, or a line's invisible target.
+#[derive(Clone, Copy, PartialEq)]
+pub(super) enum CircleTriggers {
+    Kept,
+    Dropped,
+}
+
+/// [`sanitize`], with `extra` attributes on every kept mark; `circles` says if a circle
+/// trigger is kept.
 pub(super) fn inert(
     svg: &str,
     axis: impl Fn(f64) -> String,
     extra: &str,
-    circles: bool,
+    circles: CircleTriggers,
 ) -> (String, Vec<Trigger>) {
     let mut out = String::with_capacity(svg.len());
     let mut triggers = Vec::new();
@@ -67,7 +74,7 @@ pub(super) fn inert(
             }
             let end = end_of(rest);
             // A line's trigger is an invisible circle; a bar or a slice is the mark itself.
-            if name != "circle" || circles {
+            if name != "circle" || circles == CircleTriggers::Kept {
                 out.push_str(&self_closing(name, &attributes, extra));
             }
             rest = &rest[end..];

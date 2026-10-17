@@ -1,6 +1,8 @@
 //! A bar chart's spec and drawing: rounded free ends, error bars and inked labels.
 
 use super::*;
+use crate::components::common::Orientation;
+use std::fmt::Write as _;
 
 /// Everything a bar chart's SVG depends on.
 #[derive(Clone, Debug, PartialEq)]
@@ -161,7 +163,7 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
     } else {
         svg
     };
-    let (svg, triggers) = inert(&svg, writer, "", false);
+    let (svg, triggers) = inert(&svg, writer, "", CircleTriggers::Dropped);
     let svg = relabel(&svg, AXIS2_MARK, axis2(&svg));
     // The renderer's margins would leave a narrow band's bars a sliver.
     let narrow = {
@@ -183,7 +185,11 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
         .iter()
         .map(|&(_, _, value, _)| value < 0.0)
         .collect();
-    let svg = round_free_ends(&svg, &triggers, &negative, spec.horizontal, spec.radius);
+    let orientation = match spec.horizontal {
+        true => Orientation::Horizontal,
+        false => Orientation::Vertical,
+    };
+    let svg = round_free_ends(&svg, &triggers, &negative, orientation, spec.radius);
     let svg = bar_value_labels(svg, spec, &ordered, write);
     let last = spec.x.len().saturating_sub(1);
     let marks = match_marks(&expected, &triggers)
@@ -316,10 +322,10 @@ fn horizontal_bars_svg<W: Fn(f64) -> String>(
     }
     let svg = fitted(&mut chart, spec.width, spec.height, |chart| {
         let svg = chart.svg().ok()?;
-        let exact = exact_axes(&svg, &chart.y_axis_configs, true);
+        let exact = exact_axes(&svg, &chart.y_axis_configs, LabelEdge::Bottom);
         Some(pin_to_ticks(&svg, AXIS_MARK, spec.width, axis(&exact)))
     })?;
-    Some(exact_axes(&svg, &chart.y_axis_configs, true))
+    Some(exact_axes(&svg, &chart.y_axis_configs, LabelEdge::Bottom))
 }
 
 /// The renderer's SVG of upright bars, its y axes as wide as their labels.
@@ -345,7 +351,7 @@ fn vertical_bars_svg<W: Fn(f64) -> String, W2: Fn(f64) -> String>(
     round_axes(&chart.base, &mut chart.y_axis_configs, percent);
     let svg = fitted(&mut chart, spec.width, spec.height, |chart| {
         let mut svg = chart.svg().ok()?;
-        let exact = exact_axes(&svg, &chart.y_axis_configs, false);
+        let exact = exact_axes(&svg, &chart.y_axis_configs, LabelEdge::Side);
         let widths = [
             y_width(&svg, &exact, AXIS_MARK, axis(&exact)),
             y_width(&svg, &exact, AXIS2_MARK, axis2(&exact)),
@@ -358,7 +364,7 @@ fn vertical_bars_svg<W: Fn(f64) -> String, W2: Fn(f64) -> String>(
         }
         Some(pin_to_axis(&svg))
     })?;
-    let svg = exact_axes(&svg, &chart.y_axis_configs, false);
+    let svg = exact_axes(&svg, &chart.y_axis_configs, LabelEdge::Side);
     Some(fit_x_labels(&svg, &x, spec.width, spec.height))
 }
 
@@ -433,9 +439,10 @@ pub(super) fn round_free_ends(
     svg: &str,
     triggers: &[Trigger],
     negative: &[bool],
-    horizontal: bool,
+    orientation: Orientation,
     radius: f32,
 ) -> String {
+    let horizontal = orientation == Orientation::Horizontal;
     let bars: Vec<[f32; 4]> = triggers
         .iter()
         .filter_map(|trigger| match trigger.shape {
@@ -511,7 +518,7 @@ pub(super) fn round_free_ends(
             .filter(|(name, _)| !matches!(*name, "x" | "y" | "width" | "height"))
             .map(|(name, value)| format!(" {name}=\"{value}\""))
             .collect();
-        out.push_str(&format!("<path d=\"{d}\"{kept}/>"));
+        let _ = write!(out, "<path d=\"{d}\"{kept}/>");
     }
     out.push_str(rest);
     out
@@ -676,7 +683,7 @@ pub(super) fn relayout(
             )
             .collect();
         let end = if tag.ends_with("/>") { "/>" } else { ">" };
-        out.push_str(&format!("<{name}{kept}{end}"));
+        let _ = write!(out, "<{name}{kept}{end}");
     }
     out.push_str(rest);
     (out, triggers)

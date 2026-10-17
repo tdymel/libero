@@ -62,10 +62,10 @@ fn SignupForm() -> Element {
 `use_form()` makes a handle to pass as `form`. Inside a form,
 `use_form_context()` returns the same handle.
 
-```rust,ignore
+```rust
 use dioxus::prelude::*;
 use libero::components::{
-    Button, Checkbox, Fields, Flex, Form, Text, not_empty, use_form, use_form_context,
+    Button, Checkbox, Fields, Flex, Form, Rule, Text, not_empty, use_form, use_form_context,
 };
 
 // Builds on Getting started's `EmailField`.
@@ -112,6 +112,11 @@ fn CheckButton() -> Element {
         }
     }
 }
+#
+# use libero::components::{FieldName, Validators};
+# #[component]
+# fn EmailField(#[props(into)] label: String, #[props(default, into)] name: FieldName<String>,
+#     #[props(default, into)] validate: Validators<String>) -> Element { rsx! {} }
 ```
 
 ## Conditional fields

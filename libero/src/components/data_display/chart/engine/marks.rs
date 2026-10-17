@@ -1,6 +1,7 @@
 //! A series' mark lines and mark point pins, over a line or a vertical bar chart.
 
 use super::*;
+use std::fmt::Write as _;
 
 /// Every series' mark lines inside its value axis' ends, where unset the data's extent and
 /// 0, which the axis always spans; in the order the renderer draws them.
@@ -138,7 +139,7 @@ pub(super) fn label_mark_lines(
             " stroke=\"{}\" stroke-width=\"3\" stroke-linejoin=\"round\" paint-order=\"stroke\"",
             ink.surface
         );
-        out.push_str(&format!("<text{kept}{halo}>\n{}\n</text>", escape(text)));
+        let _ = write!(out, "<text{kept}{halo}>\n{}\n</text>", escape(text));
     }
     out.push_str(rest);
     out

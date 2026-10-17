@@ -1,6 +1,7 @@
 //! `TimeDelta` as a date field's value: shown as `1 h 30 min`, posted as `PT1H30M`,
 //! picked on a spinbutton column per part.
 
+use std::fmt::Write as _;
 use std::sync::LazyLock;
 
 use chrono::{NaiveDate, TimeDelta};
@@ -212,7 +213,7 @@ fn iso_duration(span: TimeDelta) -> String {
     let mut iso = format!("{sign}PT");
     for (part, unit) in [(hours, 'H'), (minutes, 'M'), (seconds, 'S')] {
         if part > 0 {
-            iso.push_str(&format!("{part}{unit}"));
+            let _ = write!(iso, "{part}{unit}");
         }
     }
     iso

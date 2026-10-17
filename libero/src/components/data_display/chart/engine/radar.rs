@@ -1,6 +1,7 @@
 //! A radar chart's spec and drawing, its spokes and markers.
 
 use super::*;
+use std::fmt::Write as _;
 
 /// A radar series as drawn: one value per axis, `None` where it has none.
 #[derive(Clone, Debug, PartialEq)]
@@ -142,7 +143,12 @@ pub(crate) fn draw_radar(spec: &RadarSpec) -> Option<Drawn> {
         }
     }
     kept.push_str(rest);
-    let (svg, _) = inert(&kept, |value| value.to_string(), "", false);
+    let (svg, _) = inert(
+        &kept,
+        |value| value.to_string(),
+        "",
+        CircleTriggers::Dropped,
+    );
 
     let reach = (spec.width.min(spec.height) / 2.0 - RADAR_ROOM).max(1.0);
     let mut names = String::new();
@@ -161,11 +167,12 @@ pub(crate) fn draw_radar(spec: &RadarSpec) -> Option<Drawn> {
             c if c < -0.9 => y + RADAR_FONT * 0.8,
             _ => y + RADAR_FONT * 0.35,
         };
-        names.push_str(&format!(
+        let _ = write!(
+            names,
             "<text x=\"{x}\" y=\"{y}\" text-anchor=\"{anchor}\" font-size=\"{RADAR_FONT}\" font-family=\"inherit\" fill=\"{}\">\n{}\n</text>",
             spec.ink.label,
             escape(name)
-        ));
+        );
     }
     let mut marks = Vec::new();
     let mut markers = String::new();

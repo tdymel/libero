@@ -1,3 +1,5 @@
+use std::fmt::Write as _;
+
 /// A non-global attribute to push into a `Vec<Attribute>` by hand.
 pub(crate) fn attr<T>(
     name: &'static str,
@@ -17,7 +19,9 @@ pub(crate) fn css_string(value: &str) -> String {
                 out.push(ch);
             }
             // The space ends the escape, or the next character joins it.
-            '\0'..='\u{1f}' | '\u{7f}' => out.push_str(&format!("\\{:x} ", ch as u32)),
+            '\0'..='\u{1f}' | '\u{7f}' => {
+                let _ = write!(out, "\\{:x} ", ch as u32);
+            }
             _ => out.push(ch),
         }
     }

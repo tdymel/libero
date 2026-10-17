@@ -160,8 +160,8 @@ pub(crate) fn draw_scatter(spec: &ScatterSpec) -> Option<Drawn> {
         axis_write(svg, mark, auto, unit, formats, compact, plain)
     };
     let exact = |svg: &str, chart: &charts_rs::ScatterChart| {
-        let svg = exact_axes(svg, &chart.y_axis_configs, false);
-        exact_ticks(&svg, X_MARK, &chart.x_axis_config, true)
+        let svg = exact_axes(svg, &chart.y_axis_configs, LabelEdge::Side);
+        exact_ticks(&svg, X_MARK, &chart.x_axis_config, LabelEdge::Bottom)
     };
     let svg = fitted(&mut chart, spec.width, spec.height, |chart| {
         let svg = chart.svg().ok()?;
@@ -178,7 +178,7 @@ pub(crate) fn draw_scatter(spec: &ScatterSpec) -> Option<Drawn> {
     })?;
 
     let svg = trends_on_top(&exact(&pin_to_axis(&svg), &chart));
-    let (svg, triggers) = inert(&svg, write(&svg, AXIS_MARK), "", true);
+    let (svg, triggers) = inert(&svg, write(&svg, AXIS_MARK), "", CircleTriggers::Kept);
     let write_x = write(&svg, X_MARK);
     let svg = pin_to_ticks(&svg, X_MARK, spec.width, &write_x);
     let svg = relabel(&svg, X_MARK, write_x);

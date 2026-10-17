@@ -4,6 +4,7 @@ use crate::css::{
 };
 use crate::tokens::{FOCUS_RING_HALO, NamedColorCss, Size};
 use crate::utils::warn;
+use std::fmt::Write as _;
 
 use super::{
     Property, StaticSx, Sx, SxEntry, SxModifierKey, SxPropertyKey, ThemeAwareValue,
@@ -128,7 +129,7 @@ fn apply_modifier(context: &CssContext, modifier: &SxModifierKey) -> CssContext 
                     context.selectors.iter().map(move |selector| {
                         let mut selector = selector.clone();
                         for state in &group {
-                            selector.push_str(&format!("[data-state~=\"{state}\"]"));
+                            let _ = write!(selector, "[data-state~=\"{state}\"]");
                         }
                         selector
                     })

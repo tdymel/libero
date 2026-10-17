@@ -1,6 +1,7 @@
 //! A candlestick chart's spec and drawing, its rising candles and key.
 
 use super::*;
+use std::fmt::Write as _;
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct CandleSpec {
@@ -92,7 +93,7 @@ pub(crate) fn draw_candles(spec: &CandleSpec) -> Option<Drawn> {
     let axis = |svg: &str| axis_write(svg, AXIS_MARK, auto, unit1, spec.formats, compact, write);
     let svg = fitted(&mut chart, spec.width, spec.height, |chart| {
         let mut svg = chart.svg().ok()?;
-        let exact = exact_axes(&svg, &chart.y_axis_configs, false);
+        let exact = exact_axes(&svg, &chart.y_axis_configs, LabelEdge::Side);
         if let Some(width) = y_width(&svg, &exact, AXIS_MARK, axis(&exact)) {
             if let Some(y) = chart.y_axis_configs.first_mut() {
                 y.width = Some(width);
@@ -101,9 +102,9 @@ pub(crate) fn draw_candles(spec: &CandleSpec) -> Option<Drawn> {
         }
         Some(pin_to_axis(&svg))
     })?;
-    let svg = exact_axes(&svg, &chart.y_axis_configs, false);
+    let svg = exact_axes(&svg, &chart.y_axis_configs, LabelEdge::Side);
     let svg = fit_x_labels(&svg, &spec.x, spec.width, spec.height);
-    let (svg, triggers) = inert(&svg, axis(&svg), "", false);
+    let (svg, triggers) = inert(&svg, axis(&svg), "", CircleTriggers::Dropped);
     let expected: Vec<_> = (spec.candles.iter().enumerate())
         .filter_map(|(i, candle)| Some((0, i, candle.as_ref()?[3], spec.name.as_str())))
         .collect();
@@ -171,13 +172,14 @@ pub(super) fn with_candle_key(
                 "<rect x=\"{x}\" y=\"{y}\" width=\"{SIZE}\" height=\"{SIZE}\" fill=\"{color}\" stroke=\"{color}\"/>"
             ),
         });
-        key.push_str(&format!(
+        let _ = write!(
+            key,
             "<text x=\"{}\" y=\"{}\" font-size=\"12\" font-family=\"inherit\" fill=\"{}\">{}</text>",
             x + SIZE + 6.0,
             y + SIZE,
             spec.ink.label,
             escape(name)
-        ));
+        );
         x += room(name) + 16.0;
     }
     key.push_str("</g>");
