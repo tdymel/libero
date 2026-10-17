@@ -21,7 +21,7 @@ date_props! {
     field ChronoFieldProps<V: DateValue>(V, V::Bound): format, time_format, limits, exclude_date, today, clock, calendar, columns, close_on_change, level
 }
 
-/// One text field for every date and time value, with its [`ChronoPicker`](super::ChronoPicker) in a dropdown.
+/// One text field for every date and time value, with its [`ChronoPicker`] in a dropdown.
 ///
 /// A typed `value` alone does not name `V`: a typed `onchange` or a turbofish does.
 /// Props the type does not use warn in debug builds.

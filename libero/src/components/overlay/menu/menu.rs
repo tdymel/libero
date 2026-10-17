@@ -206,7 +206,7 @@ pub fn Menu(props: MenuProps) -> Element {
     }
 }
 
-/// The neighbour ArrowLeft or ArrowRight asked for, see [`MenuProps::onedge`].
+/// The neighbour ArrowLeft or ArrowRight asked for, see `MenuProps::onedge`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MenuEdge {
     Previous,

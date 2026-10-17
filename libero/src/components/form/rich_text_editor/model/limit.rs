@@ -1,4 +1,4 @@
-//! A length limit over the doc's plain text, counted as [`Doc::plain_text`] chars (todo 2715).
+//! A length limit over the doc's plain text, counted as `Doc::plain_text` chars (todo 2715).
 
 use super::doc::{ContentKind, NodeKey};
 use super::state::{EditorState, Position, Selection};

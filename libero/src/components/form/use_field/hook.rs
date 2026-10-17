@@ -40,7 +40,7 @@ impl FieldHook {
 }
 
 /// Resolves a field's `name` against the enclosing `Form` or `Fieldset`: its
-/// full name, and its bound value. A hook; hand it to [`FieldBuilder::bound`].
+/// full name, and its bound value. A hook; hand it to `FieldBuilder::bound`.
 pub(crate) fn use_bound<T: Clone + 'static>(name: &FieldName<T>, controlled: bool) -> Bound<T> {
     let hook = use_hook(FieldHook::new);
     let entered = use_hook(|| Signal::new(None::<T>));

@@ -328,7 +328,7 @@ base_props! {
         #[props(into)]
         aria_label: String,
         data: Vec<TreeNode<T>>,
-        /// Each row's content. Defaults to [`default_tree_render`], which a custom one can call.
+        /// Each row's content. Defaults to `default_tree_render`, which a custom one can call.
         #[props(default = Callback::new(super::tree_node::default_tree_render))]
         render_node: Callback<TreeNodeRenderArgs<T>, Element>,
         /// Seeds the open branches once. Ignored when `expanded` is set.

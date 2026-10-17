@@ -34,7 +34,7 @@ pub(crate) struct PreparedField {
 
 impl PreparedField {
     /// Size, radius, status, `disabled` and `required`, for the control's own
-    /// [`use_box`].
+    /// `use_box`.
     pub fn states(&self) -> &Input<States> {
         &self.states
     }
@@ -64,7 +64,7 @@ impl PreparedField {
     }
 
     /// The ids the frame gives its leading and trailing slot, for the slots
-    /// [`FieldBuilder::text_slots`] named; `aria-describedby` points at them.
+    /// `FieldBuilder::text_slots` named; `aria-describedby` points at them.
     pub fn slot_ids(&self) -> [Option<String>; 2] {
         let [leading, trailing] = self.text_slots;
         [
@@ -85,7 +85,7 @@ impl PreparedField {
     }
 
     /// The a11y wiring and the `control` slot, onto the control's already-prepared styling - and,
-    /// under [`FieldBuilder::activates`], the input's activation.
+    /// under `FieldBuilder::activates`, the input's activation.
     pub fn aria(&self, control: BoxStyle) -> BoxStyle {
         // An inline field's input is hidden; its visible wrapper carries the slot.
         let control = control

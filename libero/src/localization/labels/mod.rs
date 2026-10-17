@@ -1,5 +1,5 @@
 //! One group per component, plus `CommonLabels` for the words many share.
-//! Templates take named holes, filled by [`fill`](super::fill).
+//! Templates take named holes, filled by [`fill`](fn@super::fill).
 
 mod anchor;
 mod avatar;

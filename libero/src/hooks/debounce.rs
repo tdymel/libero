@@ -1,4 +1,4 @@
-//! Debounced and throttled values and callbacks, on the shared [`Scheduled`]
+//! Debounced and throttled values and callbacks, on the shared `Scheduled`
 //! timer. A change lands from an effect, so a value follows a render after its
 //! source.
 

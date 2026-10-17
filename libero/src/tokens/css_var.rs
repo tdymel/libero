@@ -56,7 +56,7 @@ impl CssVar {
         format!("var({}, {fallback})", self.name())
     }
 
-    /// This var's per-instance override twin (see [`OVERRIDE_SUFFIX`]).
+    /// This var's per-instance override twin (see `OVERRIDE_SUFFIX`).
     pub fn override_var(&self) -> Self {
         Self::Owned(format!("{}{OVERRIDE_SUFFIX}", self.name()))
     }

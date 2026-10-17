@@ -20,7 +20,7 @@ use crate::{
 };
 
 impl FieldBuilder<'_> {
-    /// Resolves the chrome. **This is the hook** - see [`use_field`].
+    /// Resolves the chrome. **This is the hook** - see `use_field`.
     pub fn prepare(self) -> PreparedField {
         let id = use_root_id(self.attributes);
         let id_value = id();

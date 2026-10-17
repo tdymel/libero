@@ -1,4 +1,4 @@
-//! Small port of https://github.com/PrismJS/prism/blob/v2/src/languages/prism-markup.js
+//! Small port of <https://github.com/PrismJS/prism/blob/v2/src/languages/prism-markup.js>
 //! (Prism calls it "markup" - HTML/XML share one grammar there too).
 
 use crate::components::typography::code::highlight::{Grammar, PatternDef, TokenRule};

@@ -212,7 +212,7 @@ fn bump_if_changed(changed: bool, context: &mut LiberoContext) {
     }
 }
 
-/// [`use_stylesheet`] on a caller-chosen layer. An `Option`, so a caller with
+/// `use_stylesheet` on a caller-chosen layer. An `Option`, so a caller with
 /// nothing to register still takes its hook slot.
 pub(crate) fn use_css(source: Option<impl CssSource>, layer: CssLayer) -> Option<String> {
     let state = use_css_registrations(1);

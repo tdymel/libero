@@ -93,7 +93,7 @@ impl PopoverHandle {
 
     /// The box's `style`: `position: fixed` in viewport coordinates, and
     /// `visibility: hidden` (measurable, unlike `display: none`) until placed.
-    /// Sets [`AVAILABLE_HEIGHT`], `100vh` until placed, which a box that can grow tall caps itself with.
+    /// Sets `AVAILABLE_HEIGHT`, `100vh` until placed, which a box that can grow tall caps itself with.
     ///
     /// Every declaration is emitted on every render: a renderer never removes
     /// one that stops being printed. The CSS width cap keeps it on a phone (todo 357).

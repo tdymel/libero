@@ -356,7 +356,7 @@ parts_enum! {
         Item = "item" => "& > [data-slot='item']",
         /// The picture's box, or its link with `ImageItem::to`.
         Media = "media" => "& > [data-slot='item'] > [data-slot='media'], & > [data-slot='item'] > figure > [data-slot='media']",
-        /// The [`ImageBar`] caption.
+        /// The `ImageBar` caption.
         Bar = "bar" => "& > [data-slot='item'] > figure > [data-slot='bar']",
     }
 }

@@ -1,4 +1,4 @@
-//! Small port of https://github.com/PrismJS/prism/blob/v2/src/languages/prism-bash.js
+//! Small port of <https://github.com/PrismJS/prism/blob/v2/src/languages/prism-bash.js>
 
 use crate::components::typography::code::highlight::{Grammar, PatternDef, TokenRule};
 

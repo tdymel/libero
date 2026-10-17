@@ -17,7 +17,7 @@ use super::{ComboboxState, core::ComboboxCore, option::ComboboxOptionArgs};
 // Hand-written rather than `base_props!`, which is not generic.
 #[derive(Props, Clone, PartialEq)]
 pub struct ComboboxProps<T: Clone + PartialEq + 'static> {
-    /// Open state and highlight, from [`use_combobox`](crate::hooks::use_combobox); wire the trigger with
+    /// Open state and highlight, from `use_combobox`; wire the trigger with
     /// `state.a11y_attributes()`. Close it on the trigger's blur: an open list takes Escape from a `Modal`.
     state: ComboboxState,
     /// The options, already filtered. A `Vec<T>`, an [`OptionList`](crate::components::OptionList)

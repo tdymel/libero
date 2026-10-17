@@ -915,7 +915,7 @@ static TABLE_SCROLL_SX: StaticSx =
 pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// One row each, in source order until a column is sorted.
     data: Vec<T>,
-    /// Built with [`column`](super::column).
+    /// Built with [`column`](fn@super::column).
     columns: Vec<Column<T>>,
     /// What every column starts from; a column's own setting wins.
     #[props(default)]

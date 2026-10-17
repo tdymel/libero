@@ -585,7 +585,7 @@ pub(crate) fn visible_band() -> super::Read<super::VisibleBand> {
     return webview::visible_band();
 }
 
-/// See [`color_scheme`](crate::platform::color_scheme).
+/// See [`color_scheme`](fn@crate::platform::color_scheme).
 pub(crate) fn color_scheme() -> Option<&'static dyn ColorSchemeApi> {
     #[cfg(target_arch = "wasm32")]
     return web::color_scheme();
@@ -699,7 +699,7 @@ pub(crate) fn silent_focus() -> Option<&'static dyn SilentFocusApi> {
     return None;
 }
 
-/// Only a WebView - see [`press`](crate::platform::press).
+/// Only a WebView - see [`press`](fn@crate::platform::press).
 pub(crate) fn press() -> Option<&'static dyn PressApi> {
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     return webview::press();
@@ -1097,7 +1097,7 @@ pub(crate) fn focus_pressed(event: &Event<PointerData>, within: &Rc<MountedData>
 }
 
 /// Only Blitz fires no `submit` - see
-/// [`emulates_submit`](crate::platform::emulates_submit).
+/// `emulates_submit` in `platform`.
 pub(crate) fn emulates_submit() -> bool {
     cfg!(all(not(target_arch = "wasm32"), feature = "native"))
 }

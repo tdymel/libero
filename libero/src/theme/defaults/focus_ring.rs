@@ -7,7 +7,7 @@ pub use crate::tokens::{
 };
 
 /// An element's resting `box-shadow`, which the ring's halo shadow composes back in.
-/// Set it on any focusable with a resting shadow; [`shadow_sx`](crate::components::common::shadow_sx) does both.
+/// Set it on any focusable with a resting shadow; `shadow_sx` does both.
 pub const OWN_SHADOW: CssVar = CssVar::new("--lsx-own-shadow");
 
 /// The library's one focus indicator: a dark stripe with a light halo. Two tones

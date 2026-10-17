@@ -19,7 +19,7 @@ use crate::{
     },
 };
 
-/// The library's surface as an `Sx`, to build a [`PaperProps::framework_sx`] on,
+/// The library's surface as an `Sx`, to build a `PaperProps::framework_sx` on,
 /// which replaces `Paper`'s own base. Chained declarations override its defaults.
 ///
 /// ```

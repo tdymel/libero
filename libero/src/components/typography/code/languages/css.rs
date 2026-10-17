@@ -1,4 +1,4 @@
-//! Small port of https://github.com/PrismJS/prism/blob/v2/src/languages/prism-css.js
+//! Small port of <https://github.com/PrismJS/prism/blob/v2/src/languages/prism-css.js>
 //! `property` is any identifier before `:`, so an unquoted `word:` in `url(...)` misfires.
 
 use crate::components::typography::code::highlight::{Grammar, PatternDef, TokenRule};

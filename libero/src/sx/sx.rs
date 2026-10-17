@@ -30,7 +30,7 @@ pub struct Sx {
 }
 
 impl Sx {
-    /// An empty style, the same as [`sx()`](crate::sx::sx).
+    /// An empty style, the same as [`sx()`](fn@crate::sx::sx).
     pub fn new() -> Self {
         Self::default()
     }

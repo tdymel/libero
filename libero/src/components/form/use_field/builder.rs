@@ -162,7 +162,7 @@ impl<'a> FieldBuilder<'a> {
         self
     }
 
-    /// The field's `name`, resolved by [`use_bound`] - its full name and the
+    /// The field's `name`, resolved by `use_bound` - its full name and the
     /// hook `use_bound` already took, so the field pays for one.
     #[inline]
     pub fn bound<T>(mut self, bound: &'a Bound<T>) -> Self {
@@ -231,7 +231,7 @@ impl<'a> FieldBuilder<'a> {
     }
 
     /// Names the control by `aria-labelledby`, for one `for` cannot name; the
-    /// ids are handed out by [`PreparedField::label_id`].
+    /// ids are handed out by `PreparedField::label_id`.
     #[inline]
     pub fn labelled_by(mut self) -> Self {
         self.labelled_by = true;
@@ -246,7 +246,7 @@ impl<'a> FieldBuilder<'a> {
         self
     }
 
-    /// Makes [`PreparedField::label_id`] available beside `for`, for a popup the
+    /// Makes `PreparedField::label_id` available beside `for`, for a popup the
     /// control owns that the label must also name - `Autocomplete`'s listbox.
     #[inline]
     pub fn label_with_id(mut self) -> Self {
