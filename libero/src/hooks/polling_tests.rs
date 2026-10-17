@@ -69,7 +69,8 @@ pub(crate) fn pump(dom: &mut VirtualDom, ms: u64) {
     });
 }
 
-/// Polls until a timer of `ms` started now has fired: one started after it has.
+/// Polls until a timer of `ms` started now has fired: one started after it has. Then renders,
+/// since a timer only bumps a signal and its effect runs in the next render.
 pub(crate) fn settle(dom: &mut VirtualDom, ms: u64) {
     SETTLED.with(|settled| settled.set(false));
     let _sentinel = dom.in_scope(ScopeId::APP, || {
@@ -79,4 +80,5 @@ pub(crate) fn settle(dom: &mut VirtualDom, ms: u64) {
         )
     });
     pump_until(dom, "the sentinel timer", |_| SETTLED.with(Cell::get));
+    flush(dom);
 }
