@@ -71,6 +71,10 @@ async fn the_column_filters_narrow_the_rows<D: Driver>(d: &mut D, _route: &str) 
     pick_later(d, 1).await?;
     eventually_text(d, "#filters", "Name DoesNotContain an", "the next operator").await?;
     eventually_text(d, "tbody th", "Fig", "Name lacks an").await?;
+    // A focused select keeps Escape from an iOS page (3700): it leaves from the value field.
+    if d.platform() == Platform::Ios {
+        d.focus(&format!("{POPOVER} input")).await?;
+    }
     d.press(keyboard::ESCAPE).await?;
     eventually(d, "the closed filter", async |d| {
         Ok(!d.exists(POPOVER).await?)
@@ -438,6 +442,10 @@ async fn the_filter_panel_edits_every_filter<D: Driver>(d: &mut D, _route: &str)
     d.click(&format!("{LINE_1} [data-filter-remove]")).await?;
     eventually_text(d, "#filters", "Name Contains e", "a removed line").await?;
     eventually_focused(d, &format!("{LINE_0} {PICKER}"), "the remove").await?;
+    // A focused select keeps Escape from an iOS page (3700): it leaves from the line's field.
+    if d.platform() == Platform::Ios {
+        d.focus(&format!("{LINE_0} input")).await?;
+    }
     d.press(keyboard::ESCAPE).await?;
     eventually(d, "the closed panel", async |d| {
         Ok(!d.exists(PANEL).await?)

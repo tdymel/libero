@@ -721,8 +721,8 @@ impl Driver for Ios {
         bail!("Ios: no hover on a touch screen")
     }
 
-    /// Both taps in one AXe `batch`: one call each lands them ~1.6 s apart, past WebKit's
-    /// double-tap window (3702).
+    /// Both taps as raw touches in one AXe `batch`: one call each lands them ~1.6 s apart and
+    /// batched `tap`s still 720 ms, past WebKit's double-tap window (3702).
     async fn double_click(&mut self, selector: &str) -> Result<()> {
         let (x, y) = self.centre(selector)?;
         if self.input != Injector::Axe {
@@ -731,9 +731,16 @@ impl Driver for Ios {
         }
         self.close_picker()?;
         let (sx, sy) = self.screen(x, y);
-        let tap = format!("tap -x {} -y {}", point(sx), point(sy));
+        let touch = |edge| format!("touch -x {} -y {} --{edge}", point(sx), point(sy));
+        let (down, up) = (touch("down"), touch("up"));
         self.mark(&format!("> double tap {x},{y}"))?;
-        self.inject(&["batch", "--step", &tap, "--step", &tap])
+        let (down, up) = (down.as_str(), up.as_str());
+        let steps = [down, "sleep 0.05", up, "sleep 0.1", down, "sleep 0.05", up];
+        let mut args = vec!["batch"];
+        for step in steps {
+            args.extend(["--step", step]);
+        }
+        self.inject(&args)
     }
 
     /// A point under the status bar moves just below it: the system takes taps there, so a
