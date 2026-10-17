@@ -213,7 +213,8 @@ e2e::scenario!(
 e2e::scenario!(
     a_scoped_hotkey_fires_only_with_focus_inside_its_elements,
     "/use-hotkeys/within",
-    within_fires_only_with_focus_in_scope
+    within_fires_only_with_focus_in_scope,
+    macos_web: skip("3715: flaky: stalls past 100 s in the smoke run on the 3-core Mac runner, passes alone")
 );
 e2e::scenario!(
     a_press_outside_the_scope_keeps_its_default_action,

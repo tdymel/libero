@@ -363,6 +363,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `tabs::tab_leaves_the_strip_from_a_focused_unselected_tab` | desktop | 958: element identity on the WebView |
 | `theme_defaults::an_unset_hover_card_align_follows_the_theme` | ios | a touch screen has no hover |
 | `theme_defaults::an_unset_hover_card_side_follows_the_theme` | ios | a touch screen has no hover |
+| `theme_switcher::the_split_button_meets_the_baseline` | macos web | 3715: flaky: a CDP request timed out after 100 s in the smoke run on the 3-core Mac runner, passes alone |
 | `toolbar::fields_join_the_arrow_order` | ios | 3432: WKWebView: ArrowLeft at a caret's start keeps the field |
 | `tooltip::a_long_press_on_a_link_trigger_opens_no_link_menu` | desktop | 1126: no touch input under Xvfb |
 | `tooltip::a_long_press_on_a_link_trigger_opens_no_link_menu` | native | 3237: the native driver reads no script |
@@ -403,6 +404,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `use_back::android_back_steps_down_below_a_menu` | all but android | 2003: no Back key off Android |
 | `use_back::android_back_steps_down_twice_without_a_tap` | all but android | 3322: no Back key off Android |
 | `use_back::android_back_walks_the_routes` | all but android | 3384: no Back key off Android |
+| `use_hotkeys::a_scoped_hotkey_fires_only_with_focus_inside_its_elements` | macos web | 3715: flaky: stalls past 100 s in the smoke run on the 3-core Mac runner, passes alone |
 | `use_local_storage::the_local_area_outlives_a_relaunch` | android | no relaunch in the Android driver; its store is the files directory |
 | `use_local_storage::the_local_area_outlives_a_relaunch` | desktop | a launch gets a fresh E2E_STORAGE_DIR, so a relaunch keeps nothing |
 | `use_local_storage::the_local_area_outlives_a_relaunch` | native | Blitz has no relaunch in the driver |
