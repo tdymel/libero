@@ -726,13 +726,16 @@ fn the_scrollbar_and_the_wheel_beside_a_tall_dialog_scroll_it() {
             .await
             .unwrap();
 
-        // Also lets a close the press spawned land first: the scroller reads need the dialog.
+        // Lets a close the press spawned land first, and a held press's paging animation
+        // run out: the top must hold over three polls (CI read 305 of 305 after a reset).
         wait::for_js_true(
             page,
             &format!(
-                "!!document.querySelector('[role=dialog]') && ({SCROLLER}.scrollTop = 0, {SCROLLER}.scrollTop === 0)"
+                "!!document.querySelector('[role=dialog]') && ({SCROLLER}.scrollTop === 0 \
+                 ? (window.__rest = (window.__rest || 0) + 1) >= 3 \
+                 : (window.__rest = 0, {SCROLLER}.scrollTop = 0, false))"
             ),
-            "the scroller back at its top",
+            "the scroller resting at its top",
         )
         .await
         .unwrap();
