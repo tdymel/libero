@@ -351,6 +351,7 @@ impl Ios {
              for (const type of ['click', 'pointercancel']) { \
                addEventListener(type, saw(3), { capture: true, signal: ac.signal }); }",
         )?;
+        self.close_picker()?;
         for _ in 0..3 {
             self.mark(&format!("> tap {x},{y}"))?;
             self.tap_screen(self.screen(x, y))?;
@@ -384,6 +385,41 @@ impl Ios {
             ))
             .unwrap_or_default();
         bail!("the page felt none of three taps at {x}, {y}, over {under}")
+    }
+
+    /// A focused select may show iOS's picker, which takes the next tap and key (3700, 3701): an
+    /// Escape closes it, swallowed at the window when no picker took it.
+    fn close_picker(&mut self) -> Result<()> {
+        if !self
+            .bridge
+            .json::<bool>("document.activeElement?.tagName === 'SELECT'")?
+        {
+            return Ok(());
+        }
+        self.bridge.run(
+            "window.__picker?.abort(); const ac = window.__picker = new AbortController(); \
+             window.__pickerFelt = 0; \
+             for (const type of ['keydown', 'keyup']) addEventListener(type, e => { \
+               if (e.key !== 'Escape') return; \
+               e.stopImmediatePropagation(); e.preventDefault(); __pickerFelt++; \
+             }, { capture: true, signal: ac.signal });",
+        )?;
+        self.mark("> close a select picker")?;
+        self.key(41)?;
+        // The page felt the keydown, so no picker was up: hold the swallow for its keyup too.
+        let started = Instant::now();
+        let felt = loop {
+            let felt: u8 = self.bridge.json("__pickerFelt")?;
+            if felt >= 2 || started.elapsed() > Duration::from_millis(300) {
+                break felt;
+            }
+            std::thread::sleep(Duration::from_millis(25));
+        };
+        self.bridge.run("window.__picker.abort()")?;
+        self.mark(match felt {
+            0 => "  a select picker took the Escape",
+            _ => "  no select picker was up",
+        })
     }
 
     /// A line in the page's [`EVENT_LOG`], to place the injector's calls among the events.
@@ -685,11 +721,19 @@ impl Driver for Ios {
         bail!("Ios: no hover on a touch screen")
     }
 
-    /// Two HID taps; whether WebKit reads them as a `dblclick` is unverified.
+    /// Both taps in one AXe `batch`: one call each lands them ~1.6 s apart, past WebKit's
+    /// double-tap window (3702).
     async fn double_click(&mut self, selector: &str) -> Result<()> {
         let (x, y) = self.centre(selector)?;
-        self.tap(x, y)?;
-        self.tap(x, y)
+        if self.input != Injector::Axe {
+            self.tap(x, y)?;
+            return self.tap(x, y);
+        }
+        self.close_picker()?;
+        let (sx, sy) = self.screen(x, y);
+        let tap = format!("tap -x {} -y {}", point(sx), point(sy));
+        self.mark(&format!("> double tap {x},{y}"))?;
+        self.inject(&["batch", "--step", &tap, "--step", &tap])
     }
 
     /// A point under the status bar moves just below it: the system takes taps there, so a
@@ -713,6 +757,7 @@ impl Driver for Ios {
     /// A Tab is Option+Tab: WebKit's own skips buttons and links on iOS, Option+Tab visits
     /// every control.
     async fn press(&mut self, key: Key) -> Result<()> {
+        self.close_picker()?;
         if key.code == "Tab" && self.input == Injector::Axe {
             return self.chord(&[ALT], key);
         }
@@ -723,6 +768,7 @@ impl Driver for Ios {
     }
 
     async fn press_shift(&mut self, key: Key) -> Result<()> {
+        self.close_picker()?;
         if key.code == "Tab" && self.input == Injector::Axe {
             return self.chord(&[ALT, SHIFT], key);
         }
@@ -730,21 +776,25 @@ impl Driver for Ios {
     }
 
     async fn press_ctrl(&mut self, key: Key) -> Result<()> {
+        self.close_picker()?;
         self.chord(&[CTRL], key)
     }
 
     /// Command, as on the Mac: libero reads `mod` as Meta on Apple platforms.
     async fn press_mod(&mut self, key: Key) -> Result<()> {
+        self.close_picker()?;
         self.chord(&[CMD], key)
     }
 
     async fn press_alt(&mut self, key: Key) -> Result<()> {
+        self.close_picker()?;
         self.chord(&[ALT], key)
     }
 
     /// One injector call per character, at about a typist's pace: one call for the lot
     /// outran PinField's move to the next cell on Android.
     async fn type_text(&mut self, text: &str) -> Result<()> {
+        self.close_picker()?;
         for ch in text.chars() {
             self.type_all(&ch.to_string())?;
         }
@@ -754,6 +804,7 @@ impl Driver for Ios {
     /// The whole text in one call, as fast as the injector types; `ms` is not kept.
     async fn type_burst(&mut self, text: &str, ms: u64) -> Result<()> {
         let _ = ms;
+        self.close_picker()?;
         self.type_all(text)
     }
 

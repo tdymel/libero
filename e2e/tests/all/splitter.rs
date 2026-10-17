@@ -90,8 +90,7 @@ e2e::scenario!(
 e2e::scenario!(
     a_double_click_collapses_pane_a_and_restores_it,
     "/splitter",
-    a_double_click_collapses,
-    ios: skip("3416: two AXe taps are 1.6 s apart, past WebKit's double-tap window")
+    a_double_click_collapses
 );
 e2e::scenario!(
     under_rtl_rightwards_shrinks_pane_a,

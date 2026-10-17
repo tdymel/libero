@@ -265,7 +265,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `shortcut_help::a_narrow_list_stacks_each_row` | native | 1224: Blitz drops `@container`, so the rows stay side by side |
 | `slider::a_drag_released_past_the_end_tracks_and_ends` | ios | a touch screen has no hover |
 | `slider_touch_keyboard::a_touch_held_on_the_thumb_leaves_no_bubble_after_the_release` | desktop | 1126: no touch input under Xvfb |
-| `splitter::a_double_click_collapses_pane_a_and_restores_it` | ios | 3416: two AXe taps are 1.6 s apart, past WebKit's double-tap window |
 | `spotlight::a_hovered_row_is_tinted_and_does_not_move_the_highlight` | ios | a touch screen has no hover |
 | `stepper::a_clicked_continue_returns_focus_horizontally` | android | 958: element identity on the WebView |
 | `stepper::a_clicked_continue_returns_focus_horizontally` | desktop | 958: element identity on the WebView |
@@ -284,9 +283,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_column_filters::a_date_filter_narrows_a_table` | ios | the WebView's native date input opens iOS's date wheel, which typed keys do not fill |
 | `table_column_filters::a_date_filter_narrows_a_table` | windows desktop | 3422: Shift+Tab never leaves the date input on WebView2 |
 | `table_column_filters::tab_past_either_end_of_a_column_filter_closes_it` | ios | 3416: focus stays on the body after a Tab or a tap |
-| `table_column_filters::the_column_filters_narrow_a_table` | ios | 3416: Escape on a Shift+Tabbed filter select never reaches the page; the select picker takes it |
 | `table_column_filters::the_filter_panel_edits_every_filter` | android | 958: element identity on the WebView |
-| `table_column_filters::the_filter_panel_edits_every_filter` | ios | 3416: the first tap after a script-focused line select goes unfelt, the repeat changes the select's option |
 | `table_detail::an_animated_detail_slides_open_and_shut` | android | 958: element identity on the WebView |
 | `table_detail::pinned_toggles_push_the_checkboxes_past_them` | android | 3217: one web run guards the cascade |
 | `table_detail::pinned_toggles_push_the_checkboxes_past_them` | desktop | 3217: one web run guards the cascade |

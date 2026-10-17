@@ -102,8 +102,7 @@ async fn the_column_filters_narrow_the_rows<D: Driver>(d: &mut D, _route: &str) 
 e2e::scenario!(
     the_column_filters_narrow_a_table,
     "/table/column-filter",
-    the_column_filters_narrow_the_rows,
-    ios: skip("3416: Escape on a Shift+Tabbed filter select never reaches the page; the select picker takes it")
+    the_column_filters_narrow_the_rows
 );
 
 /// Todo 1403: Tab past the filter dialog's last stop and Shift+Tab past its first close it,
@@ -471,6 +470,5 @@ e2e::scenario!(
     the_filter_panel_edits_every_filter,
     "/table/filter-panel",
     the_filter_panel_edits_every_filter,
-    android: skip("958: element identity on the WebView"),
-    ios: skip("3416: the first tap after a script-focused line select goes unfelt, the repeat changes the select's option")
+    android: skip("958: element identity on the WebView")
 );
