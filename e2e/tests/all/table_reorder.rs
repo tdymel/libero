@@ -761,6 +761,10 @@ e2e::scenario!(
 e2e::scenario!(header_grip_x_b, "/table-reorder", two_grip_drags_move_columns);
 e2e::scenario!(header_grip_x_c, "/table-reorder", two_grip_drags_move_columns);
 e2e::scenario!(header_grip_x_d, "/table-column-drag", two_grip_drags_move_columns);
+e2e::scenario!(header_grip_x_e, "/table-reorder", two_grip_drags_move_columns);
+e2e::scenario!(header_grip_x_f, "/table-column-drag", two_grip_drags_move_columns);
+e2e::scenario!(header_grip_x_g, "/table-reorder", two_grip_drags_move_columns);
+e2e::scenario!(header_grip_x_h, "/table-column-drag", two_grip_drags_move_columns);
 
 /// Todo 2018: the rows measure at the press, so a finger's drag moves the row soon.
 mod a_touch_drag_moves_the_row_soon_on_a_slow_phone {

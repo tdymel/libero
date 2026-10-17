@@ -66,11 +66,8 @@ const EVENT_LOG: &str = "window.__e2eLog = []; \
     for (const type of ['pointerdown', 'pointerup', 'pointercancel', 'gotpointercapture', 'lostpointercapture']) { \
       addEventListener(type, e => log(`${type} ${e.pointerType} ${name(e.target)} at ${Math.round(e.clientX)},${Math.round(e.clientY)}` \
         + (type === 'pointerdown' ? ` touch-action ${getComputedStyle(e.target).touchAction}` : '')), true); } \
-    addEventListener('pointerdown', e => { window.__down = e.target; \
-      log('heads ' + [...document.querySelectorAll('thead th')].map(h => { const r = h.getBoundingClientRect(); \
-        return Math.round(r.x) + '+' + Math.round(r.width); }).join(' ') + ' scroll ' + scrollX); }, true); \
-    addEventListener('pointermove', e => log(`pointermove ${e.pointerType} ${name(e.target)} same ${+(e.target === __down)} \
-      conn ${+!!__down?.isConnected} cap ${+!!__down?.hasPointerCapture?.(e.pointerId)} ghost ${!!document.querySelector('[data-drag-ghost]')}`), { capture: true, passive: true }); \
+    addEventListener('pointerdown', e => { window.__down = e.target; }, true); \
+    addEventListener('pointermove', e => log(`pointermove ${e.pointerType} ${name(e.target)} same ${+(e.target === __down)}`), { capture: true, passive: true }); \
     addEventListener('pointerup', e => log(`up: down conn ${+!!__down?.isConnected} same ${+(e.target === __down)} \
       ghost ${document.querySelector('[data-drag-ghost]')?.style.left ?? '-'} line ${document.querySelector('[data-drop-line]')?.style.left ?? '-'}`), true); \
     new MutationObserver(ms => { for (const m of ms) for (const n of m.removedNodes) \
@@ -404,8 +401,18 @@ impl Ios {
             Ok(())
         };
         let (vw, vh): (f64, f64) = self.bridge.json("[innerWidth, innerHeight]")?;
+        let dir = std::env::var_os("E2E_ARTIFACTS")
+            .map(PathBuf::from)
+            .unwrap_or_else(std::env::temp_dir);
+        let shot = dir.join("diag-focused.png");
+        let _ = simctl(&["io", &self.udid, "screenshot", &shot.to_string_lossy()], &[]);
+        if let Ok(tree) = self.inject_output(&["describe-ui"]) {
+            let _ = std::fs::write(dir.join("diag-focused.json"), tree);
+        }
         let _ = felt(self, (vw / 2.0, vh - 80.0), "blank");
         let _ = felt(self, (x, y), "again");
+        let _ = felt(self, (x + 150.0, y), "same row further right");
+        let _ = felt(self, (x, y), "again after right");
         let _ = self.bridge.run("document.activeElement?.blur()");
         let _ = felt(self, (x, y), "after blur");
         let _ = felt(self, (vw / 2.0, vh - 80.0), "blank after blur");
