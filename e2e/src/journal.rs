@@ -103,6 +103,20 @@ pub fn time_this_test() {
     TEST_CLOCK.with(|_| {});
 }
 
+thread_local! {
+    static STEP: std::cell::RefCell<String> = const { std::cell::RefCell::new(String::new()) };
+}
+
+/// Names what the test thread waits on now, for [`current_step`] to say where a hung test stood.
+pub fn step(what: impl Into<String>) {
+    STEP.with(|step| *step.borrow_mut() = what.into());
+}
+
+/// The last [`step`] of this thread.
+pub fn current_step() -> String {
+    STEP.with(|step| step.borrow().clone())
+}
+
 struct TestClock {
     started: Instant,
     test: String,

@@ -114,6 +114,7 @@ where
     F: FnMut() -> Fut,
     Fut: std::future::Future<Output = Result<bool>>,
 {
+    crate::journal::step(format!("waiting for {what} [wait={kind}]"));
     let started = Instant::now();
     let deadline = started + budget;
     let (mut polls, mut slowest) = (0u32, Duration::ZERO);

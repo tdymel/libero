@@ -354,10 +354,44 @@ fn harness() -> &'static Harness {
     })
 }
 
-/// Run an async body on the shared runtime. Tests are ordinary `#[test]` fns.
+/// `E2E_TEST_TIMEOUT_S`, default 5 min (30 min under `E2E_PERF`): a test past it hung.
+fn test_budget() -> Duration {
+    let default = if std::env::var_os("E2E_PERF").is_some() {
+        1800
+    } else {
+        300
+    };
+    let secs = std::env::var("E2E_TEST_TIMEOUT_S")
+        .ok()
+        .and_then(|n| n.parse().ok())
+        .unwrap_or(default);
+    Duration::from_secs(secs)
+}
+
+/// Run an async body on the shared runtime. Tests are ordinary `#[test]` fns. A body past
+/// [`test_budget`] fails naming its last step: a CDP command waiting to be sent has no timeout (3730).
 pub fn block_on<F: std::future::Future>(fut: F) -> F::Output {
     crate::journal::time_this_test();
-    harness().runtime.block_on(crate::frames::scoped(fut))
+    let budget = test_budget();
+    harness().runtime.block_on(async move {
+        let started = std::time::Instant::now();
+        match tokio::time::timeout(budget, crate::frames::scoped(fut)).await {
+            Ok(output) => output,
+            Err(_) => {
+                let step = crate::journal::current_step();
+                crate::journal::gave_up(&crate::journal::GaveUp {
+                    kind: "test-hang",
+                    how: "expired",
+                    what: &step,
+                    budget,
+                    elapsed: started.elapsed(),
+                    slowest_poll: started.elapsed(),
+                    polls: 1,
+                });
+                panic!("the test hung: still running after {budget:?}, last step: {step}");
+            }
+        }
+    })
 }
 
 /// A fixture page, open at one route and one viewport.
@@ -447,7 +481,9 @@ impl Fixture {
         // First: panicking before Chrome launches keeps a bare `cargo test` from leaking a browser.
         let url = format!("{}{}", crate::base_url(), route);
 
+        crate::journal::step(format!("opening {url}: waiting for a page permit"));
         let room = page_permit(1).await;
+        crate::journal::step(format!("opening {url}: waiting for a navigation permit"));
         let permit = harness()
             .navigations
             .acquire()
@@ -472,6 +508,7 @@ impl Fixture {
 
         // Background plus focus emulation: foreground pages timed out on navigation
         // 1-2 times a run, background alone was 5x slower (measured 2026-09-19).
+        crate::journal::step(format!("opening {url}: creating the page"));
         let page = browser
             .new_page(
                 chromiumoxide::cdp::browser_protocol::target::CreateTargetParams::builder()
@@ -486,6 +523,7 @@ impl Fixture {
         // Armed at once, so every `?` below closes the page too.
         let closes_on_drop = ClosesOnDrop(Some(page.clone()));
 
+        crate::journal::step(format!("opening {url}: setting up the page"));
         let (width, height) = viewport.size();
         let at = std::time::Instant::now();
         page.execute(SetDeviceMetricsOverrideParams::new(
@@ -670,8 +708,10 @@ impl Fixture {
 
     async fn close_page(mut self) -> Result<()> {
         // A closed target's undelivered events are lost.
+        crate::journal::step("closing the page: settling the console");
         self.console.settle().await?;
         self.closes_on_drop.0 = None;
+        crate::journal::step("closing the page: waiting for the browser to close it");
         self.page.close().await.context("close the page")?;
         let messages = self.console.peek();
         let warned = crate::passes::console::signal_warnings(&messages);
