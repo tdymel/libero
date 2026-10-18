@@ -61,12 +61,12 @@ fn matches(entry: &str, name: &str, content_type: Option<&str>, picked: bool) ->
 /// What the dropzone says it takes (`.pdf` as `PDF`, `type/*` via `any_of`),
 /// read off `accept` itself. `None` when it takes everything.
 pub(super) fn accept_hint(accept: &str, any_of: fn(&str) -> String) -> Option<String> {
-    let names: Vec<String> = accept
-        .split(',')
-        .map(str::trim)
-        .filter(|entry| !entry.is_empty() && *entry != "*/*")
-        .map(|entry| entry_name(entry, any_of))
-        .collect();
+    let entries = || accept.split(',').map(str::trim).filter(|e| !e.is_empty());
+    // `*/*` takes everything, as in `accepts()`, whatever else is listed.
+    if entries().any(|entry| entry == "*/*") {
+        return None;
+    }
+    let names: Vec<String> = entries().map(|entry| entry_name(entry, any_of)).collect();
     (!names.is_empty()).then(|| names.join(", "))
 }
 
@@ -175,6 +175,7 @@ mod tests {
         assert_eq!(english(""), None);
         assert_eq!(english("*/*"), None);
         assert_eq!(english(" , "), None);
+        assert_eq!(english("image/png, */*"), None);
     }
 
     /// A drop can carry a file the platform gave no type for, and only an

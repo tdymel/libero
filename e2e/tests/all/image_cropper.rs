@@ -535,7 +535,7 @@ fn a_touch_drags_the_box_and_two_pinch_it() {
 }
 
 /// A mouse or touch drag begun on the image outside the box moves the box, the wheel
-/// there scales it about its centre (2113).
+/// there with ctrl held scales it about its centre (2113).
 #[test]
 fn a_drag_or_wheel_beside_the_box_moves_or_scales_it() {
     use chromiumoxide::cdp::browser_protocol::input::{
@@ -578,13 +578,19 @@ fn a_drag_or_wheel_beside_the_box_moves_or_scales_it() {
             };
             pointer::touch_drag(page, from, back, 8).await?;
             wait::for_js_true(page, &format!("{crop} === '25,25,50,50'"), "a touch drag").await?;
-            for (delta_y, expected) in [(100.0, "27,27,45,45"), (-100.0, "25,25,50,50")] {
+            // A plain wheel is the page's to scroll; only ctrl+wheel scales the box.
+            for (delta_y, ctrl, expected) in [
+                (100.0, false, "25,25,50,50"),
+                (100.0, true, "27,27,45,45"),
+                (-100.0, true, "25,25,50,50"),
+            ] {
                 let event = DispatchMouseEventParams::builder()
                     .r#type(DispatchMouseEventType::MouseWheel)
                     .x(from.x)
                     .y(from.y)
                     .delta_x(0.0)
                     .delta_y(delta_y)
+                    .modifiers(if ctrl { 2 } else { 0 })
                     .build()
                     .map_err(anyhow::Error::msg)?;
                 page.execute(event).await?;

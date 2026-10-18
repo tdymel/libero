@@ -114,6 +114,7 @@ explains how parts work.
 |---|---|
 | `Arrow` | On the box: moves it, with `pan` the image, as a drag does. On a corner: moves that corner, resizing the box. |
 | `Shift+Arrow` | Ten times as far. |
+| `Home`, `End` | On the box: moves it to the left or right edge. On a corner: sets the box's width to its least or greatest. |
 | `+`, `-` | With `pan`: zoom the image in or out around the box's centre. |
 
 ### Libero handles
@@ -127,8 +128,9 @@ explains how parts work.
   there.
 - On a touch screen a finger on the image, on the box or beside it, drags the
   box without scrolling the page; a disabled cropper lets the page scroll. Two
-  fingers pinch the box larger or smaller around its centre; so do the mouse
-  wheel and a trackpad pinch over the image.
+  fingers pinch the box larger or smaller around its centre; so do Ctrl or
+  Cmd with the mouse wheel and a trackpad pinch over the image. A plain wheel
+  scrolls the page.
 - With `pan` the whole cropper takes touches: one finger pans the image, two
   zoom it around their midpoint. The mouse wheel and a trackpad pinch zoom it
   around the pointer. Its value adds the zoom: "40% by 80%, at 30%, 10%, zoom

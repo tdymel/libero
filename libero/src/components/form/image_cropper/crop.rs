@@ -289,6 +289,29 @@ impl CropRect {
         }
     }
 
+    /// The box with `grip`'s keyboard value (x for the box, width for a corner)
+    /// at its least or greatest, the Home and End keys.
+    pub(super) fn extreme(self, grip: Grip, greatest: bool, ratio: Option<f64>, min: f64) -> Self {
+        // Far past any edge: the clamps stop it.
+        let reach = if greatest { 2.0 } else { -2.0 };
+        match grip {
+            Grip::Move => self.moved(reach, 0.0),
+            _ => self.resized(grip, reach * f64::from(grip.sides().0), 0.0, ratio, min),
+        }
+    }
+
+    /// The least and greatest of `grip`'s keyboard value, fractions of the image.
+    pub(super) fn range(self, grip: Grip, ratio: Option<f64>, min: f64) -> (f64, f64) {
+        let value = |rect: Self| match grip {
+            Grip::Move => rect.x,
+            _ => rect.width,
+        };
+        (
+            value(self.extreme(grip, false, ratio, min)),
+            value(self.extreme(grip, true, ratio, min)),
+        )
+    }
+
     fn resized_free(self, grip: Grip, dx: f64, dy: f64, min: f64) -> Self {
         let (sx, sy) = grip.sides();
         let (mut left, mut top, mut right, mut bottom) =

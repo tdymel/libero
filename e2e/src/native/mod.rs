@@ -821,13 +821,18 @@ impl Page {
 
     /// [`wheel`](Self::wheel) at a viewport point, whatever is there now.
     pub fn wheel_at(&mut self, x: f32, y: f32, dy: f64) {
+        self.wheel_at_with(x, y, dy, Modifiers::empty());
+    }
+
+    /// [`wheel_at`](Self::wheel_at) with `mods` held (ctrl is a trackpad pinch).
+    pub fn wheel_at_with(&mut self, x: f32, y: f32, dy: f64, mods: Modifiers) {
         let coords = self.pointer(x, y, false).coords;
         self.dispatch(UiEvent::Wheel(BlitzWheelEvent {
             // Blitz's sign is a finger's: a negative delta scrolls down.
             delta: BlitzWheelDelta::Pixels(0.0, -dy),
             coords,
             buttons: MouseEventButtons::empty(),
-            mods: Modifiers::empty(),
+            mods,
             element: Point { x: 0.0, y: 0.0 },
         }));
     }

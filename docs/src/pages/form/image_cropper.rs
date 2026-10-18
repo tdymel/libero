@@ -98,13 +98,14 @@ pub fn ImageCropperPage() -> Element {
             accessibility: a11y()
                 .key(["Arrow"], "On the box: moves it, with `pan` the image, as a drag does. On a corner: moves that corner, resizing the box.")
                 .key(["Shift+Arrow"], "Ten times as far.")
+                .key(["Home", "End"], "On the box: moves it to the left or right edge. On a corner: sets the box's width to its least or greatest.")
                 .key(["+", "-"], "With `pan`: zoom the image in or out around the box's centre.")
                 .handles([
                     "The box is a `slider` tab stop named by `aria_label`, its value spoken as \"50% by 50%, at 25%, 25%\".",
                     "The four corners are tab stops of their own, sliders named \"Top left corner\" and so on.",
                     "Each handle is a 24px target around a 12px square.",
                     "A drag focuses the box or the corner it grabbed, so the keys carry on from there.",
-                    "On a touch screen a finger on the image, on the box or beside it, drags the box without scrolling the page; a disabled cropper lets the page scroll. Two fingers pinch the box larger or smaller around its centre; so do the mouse wheel and a trackpad pinch over the image.",
+                    "On a touch screen a finger on the image, on the box or beside it, drags the box without scrolling the page; a disabled cropper lets the page scroll. Two fingers pinch the box larger or smaller around its centre; so do Ctrl or Cmd with the mouse wheel and a trackpad pinch over the image. A plain wheel scrolls the page.",
                     "With `pan` the whole cropper takes touches: one finger pans the image, two zoom it around their midpoint. The mouse wheel and a trackpad pinch zoom it around the pointer. Its value adds the zoom: \"40% by 80%, at 30%, 10%, zoom 100%\".",
                     "With `pan` a slider named \"Zoom\" under the image zooms around the box's centre, by one pointer or its keys, so no pinch is needed (WCAG 2.5.1). Every step zooms by the same factor. Its value is the zoom, \"100%\".",
                     "Under the image a group named by `aria_label` holds buttons for every drag (WCAG 2.5.7): \"Move left\", \"Move up\", \"Move down\" and \"Move right\" move the box 5% of the image, with `pan` the image under it; \"Smaller\" and \"Larger\" scale the box around its centre, without `pan`. With `controls: false` the buttons and the zoom bar stay out of sight until focus reaches them.",

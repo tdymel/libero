@@ -4,15 +4,15 @@ description: image_cropper_disabled at desktop (rest)
 expression: tree
 ---
 image "A sun on blue"
-slider "Crop area" = 10 [disabled] [orientation=horizontal] [valuemax=100] [valuemin=0]
+slider "Crop area" = 10 [disabled] [orientation=horizontal] [valuemax=20] [valuemin=0]
   description "Arrow keys move the crop area, or resize it from a corner. Shift moves further."
-slider "Top left corner" = 80 [disabled] [orientation=horizontal] [valuemax=100] [valuemin=0]
+slider "Top left corner" = 80 [disabled] [orientation=horizontal] [valuemax=90] [valuemin=5]
   description "Arrow keys move the crop area, or resize it from a corner. Shift moves further."
-slider "Top right corner" = 80 [disabled] [orientation=horizontal] [valuemax=100] [valuemin=0]
+slider "Top right corner" = 80 [disabled] [orientation=horizontal] [valuemax=90] [valuemin=5]
   description "Arrow keys move the crop area, or resize it from a corner. Shift moves further."
-slider "Bottom right corner" = 80 [disabled] [orientation=horizontal] [valuemax=100] [valuemin=0]
+slider "Bottom right corner" = 80 [disabled] [orientation=horizontal] [valuemax=90] [valuemin=5]
   description "Arrow keys move the crop area, or resize it from a corner. Shift moves further."
-slider "Bottom left corner" = 80 [disabled] [orientation=horizontal] [valuemax=100] [valuemin=0]
+slider "Bottom left corner" = 80 [disabled] [orientation=horizontal] [valuemax=90] [valuemin=5]
   description "Arrow keys move the crop area, or resize it from a corner. Shift moves further."
 group "Crop area"
   button "Move left" [disabled]
@@ -24,7 +24,7 @@ group "Crop area"
 paragraph
   StaticText "10,10,80,80"
 image "A sun on blue, to pan"
-slider "Crop area" = 30 [disabled] [orientation=horizontal] [valuemax=100] [valuemin=0]
+slider "Crop area" = 30 [disabled] [orientation=horizontal] [valuemax=60] [valuemin=0]
   description "Arrow keys move the image, plus and minus zoom it. Shift moves further."
 slider "Zoom" = -0.003143551293760538 [disabled] [orientation=horizontal] [valuemax=2.0768563747406006] [valuemin=-0.2231435477733612]
   description "100%"

@@ -172,6 +172,30 @@ fn a_zoom_keeps_the_pinched_point_under_the_fingers() {
 }
 
 #[test]
+fn home_and_end_take_the_keyboard_value_to_its_ends() {
+    let crop = rect(0.2, 0.3, 0.4, 0.4);
+    // The box's value is x: it can travel to either edge of the image.
+    assert_close(
+        crop.extreme(Grip::Move, false, None, 0.05),
+        rect(0.0, 0.3, 0.4, 0.4),
+    );
+    assert_close(
+        crop.extreme(Grip::Move, true, None, 0.05),
+        rect(0.6, 0.3, 0.4, 0.4),
+    );
+    // A corner's value is the width, kept to `min` and the image.
+    let (least, greatest) = crop.range(Grip::NorthWest, None, 0.05);
+    assert!((least - 0.05).abs() < 1e-9 && (greatest - 0.6).abs() < 1e-9);
+    let (least, greatest) = crop.range(Grip::SouthEast, None, 0.05);
+    assert!((least - 0.05).abs() < 1e-9 && (greatest - 0.8).abs() < 1e-9);
+    // A locked ratio follows the width.
+    assert_close(
+        rect(0.2, 0.2, 0.4, 0.4).extreme(Grip::SouthEast, true, Some(1.0), 0.05),
+        rect(0.2, 0.2, 0.8, 0.8),
+    );
+}
+
+#[test]
 fn pixels_round_and_stay_inside_the_image() {
     let pixels = rect(0.5, 0.5, 0.6, 0.6).to_pixels(101, 100);
     assert_eq!((pixels.x, pixels.y), (51, 50));

@@ -2,7 +2,7 @@
 //! (2113). The browser's twin is `all/image_cropper.rs`.
 
 use dioxus::prelude::*;
-use e2e::native::{Page, mount};
+use e2e::native::{Modifiers, Page, mount};
 use libero::components::{CropRect, ImageCropper};
 
 const PICTURE: &str = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200'%3E%3Crect width='400' height='200' fill='%23339af0'/%3E%3C/svg%3E";
@@ -53,6 +53,8 @@ fn a_drag_and_the_wheel_beside_the_box_move_and_scale_it() {
     }
     page.release_at(x + dx, y + dy);
     reads(&mut page, "35,35,50,50");
+    // A plain wheel is the page's; ctrl+wheel scales, and the plain one before it proves no scale.
     page.wheel_at(x, y, 100.0);
+    page.wheel_at_with(x, y, 100.0, Modifiers::CONTROL);
     reads(&mut page, "37,37,45,45");
 }

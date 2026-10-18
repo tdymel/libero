@@ -727,6 +727,8 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                 Key::ArrowRight => shift(grabbed, step, 0.0),
                 Key::ArrowUp => shift(grabbed, 0.0, -step),
                 Key::ArrowDown => shift(grabbed, 0.0, step),
+                Key::Home => shown.extreme(grabbed, false, ratio, min),
+                Key::End => shown.extreme(grabbed, true, ratio, min),
                 Key::Character(c) if pan && (c == "+" || c == "=") => {
                     shown.zoomed(ZOOM_STEP, centre, centre, min)
                 }
@@ -742,17 +744,18 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
         }
     };
 
-    // A wheel notch scales by ZOOM_STEP, a trackpad pinch (ctrl+wheel) by its spread: pan mode
-    // zooms about the pointer, free mode scales the box about its centre, as a pinch does.
-    // Wheel events before the next render chain from the last one's rect.
+    // Pan mode: a wheel notch zooms by ZOOM_STEP about the pointer, a trackpad pinch (ctrl+wheel)
+    // by its spread. Free mode scales the box about its centre on ctrl/meta+wheel only, so a plain
+    // wheel scrolls the page. Wheel events before the next render chain from the last one's rect.
     let wheeled = use_local_state(|| None::<(CropRect, CropRect)>);
     let onwheel = move |event: Event<WheelData>| {
-        if !interactive {
+        let modifiers = event.modifiers();
+        if !interactive || (!pan && !modifiers.ctrl() && !modifiers.meta()) {
             return;
         }
         event.prevent_default();
         let travel = platform::wheel_travel_y(&event.data(), 40.0, 20.0);
-        let factor = match event.modifiers().ctrl() {
+        let factor = match pan && modifiers.ctrl() {
             true => (-travel / 100.0).exp(),
             false => ZOOM_STEP.powf(-travel / 100.0),
         };
@@ -880,7 +883,9 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
         };
         let onpointerdown = press(grabbed);
         match corner {
-            Some((element, label)) => rsx! {
+            Some((element, label)) => {
+                let (least, greatest) = shown.range(grabbed, ratio, min);
+                rsx! {
                 div {
                     key: "{grabbed.slot()}",
                     "data-slot": ImageCropperPart::Handle.slot(),
@@ -889,8 +894,8 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                     tabindex,
                     "aria-label": label,
                     "aria-describedby": keys_id(),
-                    "aria-valuemin": 0,
-                    "aria-valuemax": 100,
+                    "aria-valuemin": percent(least),
+                    "aria-valuemax": percent(greatest),
                     "aria-valuenow": percent(shown.width),
                     "aria-valuetext": valuetext.clone(),
                     "aria-disabled": (!interactive).then_some("true"),
@@ -899,7 +904,8 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                     onkeydown: key(grabbed),
                     span {}
                 }
-            },
+                }
+            }
             None => rsx! {
                 div {
                     key: "{grabbed.slot()}",
@@ -913,7 +919,8 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     });
 
     let onpointerdown_box = press(Grip::Move);
-    let onpointerdown_image = press(Grip::Move);
+    let onpointerdown_image = onpointerdown_box.clone();
+    let (box_least, box_greatest) = shown.range(Grip::Move, ratio, min);
     use_box()
         .framework_sx(&IMAGE_CROPPER_SX)
         .class(&props.class)
@@ -956,8 +963,8 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                         tabindex,
                         "aria-label": aria_label,
                         "aria-describedby": keys_id(),
-                        "aria-valuemin": 0,
-                        "aria-valuemax": 100,
+                        "aria-valuemin": percent(box_least),
+                        "aria-valuemax": percent(box_greatest),
                         "aria-valuenow": percent(shown.x),
                         "aria-valuetext": valuetext.clone(),
                         "aria-disabled": (!interactive).then_some("true"),

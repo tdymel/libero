@@ -181,7 +181,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
 
     let Intake {
         emit,
-        mut owed,
+        owed,
         take,
         pick,
     } = use_file_intake(Taking {
@@ -197,20 +197,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
 
     use_input_mirror(input_element, value.clone());
 
-    // The input's own picker, or the system dialog where the input opens none.
-    let accept = props.accept.clone().unwrap_or_default();
-    let capture = props.capture.clone();
-    let open = use_callback(move |()| {
-        platform::pick_files(
-            &accept,
-            multiple,
-            capture.as_deref(),
-            || {
-                let _ = input_element.click();
-            },
-            move |picked| pick.call(picked),
-        );
-    });
+    let open = use_picker(&props, input_element, pick);
 
     let field_sx = full_width(&props.sx);
 
@@ -278,23 +265,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
     let (labelledby, describedby, invalid) =
         (field.label_id(), field.describedby(), field.invalid());
 
-    let files = value.clone();
-    // Guarded here as well as by hiding the x: a caller's own `selection`
-    // gets `remove` too.
-    let remove_at = use_callback(move |index: usize| {
-        if !editable {
-            return;
-        }
-        owed.set(Some(FocusDebt::Removed(index)));
-        emit.call(files.without(index));
-    });
-    let files = value.clone();
-    // Backspace on the Browse button: the focus is not on the row, so it stays.
-    let drop_at = use_callback(move |index: usize| {
-        if editable {
-            emit.call(files.without(index));
-        }
-    });
+    let (remove_at, drop_at) = use_removals(&value, editable, emit, owed);
 
     let keys = ChipKeys {
         interactive,
@@ -412,6 +383,55 @@ pub fn FileField(props: FileFieldProps) -> Element {
         Some(gate) => rsx! { {field} {gate} },
         None => field,
     }
+}
+
+/// The removers: `remove_at` hands the keyboard focus on, `drop_at` leaves it.
+fn use_removals(
+    value: &Files,
+    editable: bool,
+    emit: Callback<Files>,
+    mut owed: Signal<Option<FocusDebt>>,
+) -> (Callback<usize>, Callback<usize>) {
+    let files = value.clone();
+    // Guarded here as well as by hiding the x: a caller's own `selection`
+    // gets `remove` too.
+    let remove_at = use_callback(move |index: usize| {
+        if !editable {
+            return;
+        }
+        owed.set(Some(FocusDebt::Removed(index)));
+        emit.call(files.without(index));
+    });
+    let files = value.clone();
+    // Backspace on the Browse button: the focus is not on the row, so it stays.
+    let drop_at = use_callback(move |index: usize| {
+        if editable {
+            emit.call(files.without(index));
+        }
+    });
+    (remove_at, drop_at)
+}
+
+/// The input's own picker, or the system dialog where the input opens none.
+fn use_picker(
+    props: &FileFieldProps,
+    input_element: ElementHandle,
+    pick: Callback<Vec<FileData>>,
+) -> Callback<()> {
+    let accept = props.accept.clone().unwrap_or_default();
+    let capture = props.capture.clone();
+    let multiple = props.multiple;
+    use_callback(move |()| {
+        platform::pick_files(
+            &accept,
+            multiple,
+            capture.as_deref(),
+            || {
+                let _ = input_element.click();
+            },
+            move |picked| pick.call(picked),
+        );
+    })
 }
 
 /// The caller's `sx` behind a definite width: `min-width: 0` and the rest let a
