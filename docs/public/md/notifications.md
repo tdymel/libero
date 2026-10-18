@@ -241,7 +241,7 @@ The host.
 | `limit` | `usize` | `5` | How many show at once per stack. The rest wait. |
 | `auto_close` | `AutoClose` | `After(6000)` | When a notification closes, unless it says otherwise. |
 | `contained` | `bool` | `false` | Draws the stacks in this host's own box and gives the handles below it their own queue. Read once, at mount. |
-| `hotkey` | `Key` | `F8` | Focuses the newest notification from anywhere, pressed without Ctrl, Alt or Meta. |
+| `hotkey` | `Key` | `F8` | Focuses the newest notification from anywhere, pressed without Ctrl, Alt, Meta or Shift. |
 | `children` | `Element` | - | Rendered inside a contained host. |
 
 ## Accessibility

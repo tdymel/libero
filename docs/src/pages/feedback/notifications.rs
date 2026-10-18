@@ -250,7 +250,7 @@ pub fn NotificationsPage() -> Element {
                         .doc("Draws the stacks in this host's own box and gives the handles below it their own queue. Read once, at mount."),
                     prop("hotkey", "Key")
                         .default("F8")
-                        .doc("Focuses the newest notification from anywhere, pressed without Ctrl, Alt or Meta."),
+                        .doc("Focuses the newest notification from anywhere, pressed without Ctrl, Alt, Meta or Shift."),
                     prop("children", "Element")
                         .doc("Rendered inside a contained host."),
                 ]),
@@ -268,7 +268,7 @@ pub fn NotificationsPage() -> Element {
                     prop("show(args)", "NotificationId").doc("Shows one with the host's options."),
                     prop("show_with(args, options)", "NotificationId").doc("Shows one with its own options."),
                     prop("update(id, args)", "()").doc("Redraws that one notification with new data."),
-                    prop("hide(id)", "()").doc("Fades it out, then removes it."),
+                    prop("hide(id)", "()").doc("Fades it out, then removes it. One still queued is removed at once."),
                     prop("clear()", "()").doc("Removes every notification, shown and queued."),
                 ]),
             ],

@@ -465,7 +465,7 @@ mod tests {
     }
 
     /// The arc has no text, so it needs 3:1 on the track and the page (1.4.11), as
-    /// `ProgressBar`'s fill; this pins the shipped shortfalls.
+    /// `ProgressBar`'s fill; this fails on any shipped arc under 3:1.
     #[test]
     fn every_shipped_arc_reaches_3_to_1_on_its_track_and_page() {
         use crate::{

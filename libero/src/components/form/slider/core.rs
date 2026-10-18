@@ -16,9 +16,9 @@ use crate::{
         overlay::{PressFocus, Tooltip, TooltipPinned},
     },
     hooks::{
-        DragMove, DragOptions, DragStart, ElementHandle, Rect, sideways_drag_sx, use_css,
-        use_element, use_escape_dismiss, use_formats, use_id, use_local_state, use_localization,
-        use_sideways_drag, use_theme,
+        DragMove, DragOptions, DragStart, ElementHandle, LocalState, Rect, sideways_drag_sx,
+        use_css, use_element, use_escape_dismiss, use_formats, use_id, use_local_state,
+        use_localization, use_sideways_drag, use_theme,
     },
     localization::{Formats, fill},
     platform::{Dimensions, ElementApi, logical_key, next_task},
@@ -695,22 +695,512 @@ impl ThumbTrack {
 #[derive(Clone, Copy)]
 pub(crate) struct HoverPreview;
 
+/// The value grid a drag or a key moves on.
+#[derive(Clone, Copy)]
+struct Grid {
+    min: f64,
+    max: f64,
+    step: f64,
+    min_range: f64,
+}
+
+impl Grid {
+    fn moved(&self, from: SliderCoreValue, index: usize, raw: f64) -> SliderCoreValue {
+        from.moved(index, raw, self.min, self.max, self.step, self.min_range)
+    }
+}
+
+#[derive(Clone, Copy)]
+struct Elements {
+    root: ElementHandle,
+    track: ElementHandle,
+    /// Two handles, always: a hook cannot be conditional, and a single-thumb
+    /// slider simply never mounts the second.
+    thumbs: [ElementHandle; 2],
+}
+
+/// The track's geometry, measured off the track at pointerdown, when layout is
+/// known settled.
+#[derive(Clone)]
+struct Measured {
+    left: LocalState<f64>,
+    width: LocalState<f64>,
+    thumb: LocalState<f64>,
+    /// Under RTL the minimum is at the right edge.
+    rtl: LocalState<bool>,
+}
+
+fn use_measured() -> Measured {
+    Measured {
+        left: use_local_state(|| 0.0),
+        width: use_local_state(|| 0.0),
+        thumb: use_local_state(|| 0.0),
+        rtl: use_local_state(|| false),
+    }
+}
+
+/// What a drag calls, all `Copy` so a handler can hold them.
+#[derive(Clone, Copy)]
+struct Steps {
+    emit: Callback<SliderChangeEvent<SliderCoreValue>>,
+    /// The value under a client x, unsnapped; `moved` applies the grid.
+    position_at: Callback<f64, Option<f64>>,
+    grab: Callback<(f64, f64), usize>,
+    slide: Callback<f64>,
+    /// The drag's own last value, which the parent may not have echoed yet.
+    /// Never rendered, so a write redraws nothing.
+    latest: CopyValue<SliderCoreValue>,
+    /// Which thumb the pointer grabbed. Always 0 for a single thumb. A signal:
+    /// the thumbs' scope reads it for the open bubble.
+    active: Signal<usize>,
+}
+
+/// The drag's steps, all through `use_callback` so they see this render's
+/// bounds - the handlers `use_drag` holds do not.
+fn use_steps(
+    live: Signal<Live>,
+    grid: Grid,
+    measured: &Measured,
+    oninput: Option<EventHandler<SliderChangeEvent<SliderCoreValue>>>,
+    thumbs: [ElementHandle; 2],
+    focusable: bool,
+    press_focus: &PressFocus,
+) -> Steps {
+    let mut latest = use_hook(|| CopyValue::new(live.peek().value));
+    let mut active = use_signal(|| 0_usize);
+    let emit = use_callback(move |event: SliderChangeEvent<SliderCoreValue>| {
+        latest.set(event.value());
+        if let Some(oninput) = &oninput {
+            oninput.call(event);
+        }
+    });
+    let measured = measured.clone();
+    // A `Callback`: `LocalState` is not `Copy`.
+    let position_at = use_callback(move |client_x: f64| {
+        let thumb = measured.thumb.get();
+        // The thumb's centre only travels between the two half-thumb
+        // insets, so the pointer has to be mapped over that span too.
+        let travel = measured.width.get() - thumb;
+        if travel <= 0.0 {
+            return None;
+        }
+        let along = (client_x - measured.left.get() - thumb / 2.0) / travel;
+        let along = if measured.rtl.get() {
+            1.0 - along
+        } else {
+            along
+        };
+        Some(grid.min + along * (grid.max - grid.min))
+    });
+
+    // `heading`: where the pointer already went, which picks between two
+    // thumbs on one spot. Unmoved, the press's side holds until `slide`.
+    let mut undecided = use_hook(|| CopyValue::new(None::<f64>));
+    let grab = use_callback(move |(raw, heading): (f64, f64)| {
+        let value = live.peek().value;
+        let choice = value.nearest(raw, heading);
+        undecided.set(choice.is_none().then_some(raw));
+        let index = choice.unwrap_or_else(|| usize::from(raw > value.thumb(1)));
+        active.set(index);
+        emit.call(SliderChangeEvent::Start(grid.moved(value, index, raw)));
+        index
+    });
+    let press_focus = press_focus.clone();
+    let slide = use_callback(move |raw: f64| {
+        let pressed = *undecided.peek();
+        if let Some(pressed) = pressed.filter(|pressed| *pressed != raw) {
+            undecided.set(None);
+            let index = usize::from(raw > pressed);
+            active.set(index);
+            let thumb = thumbs[index];
+            if focusable && !thumb.is_focused() {
+                let press_focus = press_focus.clone();
+                press_focus.mark();
+                let _ = thumb.focus();
+                spawn(async move {
+                    next_task().await;
+                    press_focus.clear();
+                });
+            }
+        }
+        // Copied out first: `emit` writes `latest`.
+        let (from, index) = (*latest.peek(), *active.peek());
+        emit.call(SliderChangeEvent::Change(grid.moved(from, index, raw)));
+    });
+    Steps {
+        emit,
+        position_at,
+        grab,
+        slide,
+        latest,
+        active,
+    }
+}
+
+type TrackMeasure = Pin<Box<dyn Future<Output = Option<ThumbTrack>>>>;
+
+/// The value and geometry under a hovering mouse or pen.
+#[derive(Clone, Copy)]
+struct Hover {
+    hovered: Signal<Option<(f64, ThumbTrack)>>,
+    /// Escape hid the bubble: it stays hidden till the pointer leaves (WCAG 1.4.13).
+    muted: CopyValue<bool>,
+    track: CopyValue<Option<ThumbTrack>>,
+    x: CopyValue<Option<f64>>,
+    measuring: CopyValue<Option<TrackMeasure>>,
+    refresh: Callback<()>,
+}
+
+fn use_hover(live: Signal<Live>, grid: Grid, elements: Elements) -> Hover {
+    let Grid { min, max, step, .. } = grid;
+    let mut hovered = use_signal(|| None::<(f64, ThumbTrack)>);
+    let muted = use_hook(|| CopyValue::new(false));
+    let mut track = use_hook(|| CopyValue::new(None::<ThumbTrack>));
+    let x = use_hook(|| CopyValue::new(None::<f64>));
+    let mut busy = use_hook(|| CopyValue::new(false));
+    let mut dirty = use_hook(|| CopyValue::new(false));
+    let mut measuring = use_hook(|| CopyValue::new(None::<TrackMeasure>));
+
+    // Requests coalesce into one update per task: a WebView sends each move over IPC.
+    let refresh = use_callback(move |()| {
+        dirty.set(true);
+        // The reads start here: Blitz fails one made inside a task (the document is borrowed).
+        if track.peek().is_none() && measuring.peek().is_none() {
+            let (track_size, track_offset) =
+                (elements.track.dimensions(), elements.track.client_offset());
+            let (thumb_size, thumb_offset) = (
+                elements.thumbs[0].dimensions(),
+                elements.thumbs[0].client_offset(),
+            );
+            let rtl = elements.root.is_rtl();
+            measuring.set(Some(Box::pin(async move {
+                let (Ok(track), Ok((left, _)), Ok(thumb), Ok((_, top))) = (
+                    track_size.await,
+                    track_offset.await,
+                    thumb_size.await,
+                    thumb_offset.await,
+                ) else {
+                    return None;
+                };
+                Some(ThumbTrack {
+                    left,
+                    travel: track.width - thumb.width,
+                    top,
+                    thumb,
+                    rtl,
+                    stale: false,
+                })
+            })));
+        }
+        if std::mem::replace(&mut *busy.write(), true) {
+            return;
+        }
+        spawn(async move {
+            while std::mem::replace(&mut *dirty.write(), false) {
+                let pending = measuring.write().take();
+                if let Some(pending) = pending
+                    && track.peek().is_none()
+                {
+                    track.set(pending.await);
+                }
+                next_task().await;
+                let geometry = track.peek().filter(|_| !*muted.peek());
+                let shown = geometry.zip(*x.peek()).and_then(|(track, x)| {
+                    // Over a thumb its own bubble shows the value.
+                    let on_thumb = live.peek().value.thumbs().any(|thumb| {
+                        let at = track.at(fraction(thumb, min, max));
+                        at.x <= x && x <= at.x + at.width
+                    });
+                    let value = SliderCoreValue::Single(min + track.fraction_at(x)? * (max - min))
+                        .snapped(min, max, step)
+                        .thumb(0);
+                    (!on_thumb).then_some((value, track))
+                });
+                if *hovered.peek() != shown {
+                    hovered.set(shown);
+                }
+            }
+            busy.set(false);
+        });
+    });
+    Hover {
+        hovered,
+        muted,
+        track,
+        x,
+        measuring,
+        refresh,
+    }
+}
+
+impl Hover {
+    fn clear(&self) {
+        let mut hovered = self.hovered;
+        if hovered.peek().is_some() {
+            hovered.set(None);
+        }
+    }
+
+    fn leave(&self) {
+        let (mut x, mut track, mut muted) = (self.x, self.track, self.muted);
+        x.set(None);
+        track.set(None);
+        muted.set(false);
+        self.clear();
+    }
+
+    /// A resize or fullscreen moves the track: measured again for the pointer still on it.
+    fn resize(&self) {
+        let (mut track, mut measuring) = (self.track, self.measuring);
+        track.set(None);
+        measuring.set(None);
+        if self.x.peek().is_some() {
+            self.refresh.call(());
+        }
+    }
+
+    fn pointer_moved(&self, event: &Event<PointerData>) {
+        let pointer = event.data().pointer_type();
+        if *self.muted.peek() || !matches!(pointer.as_str(), "mouse" | "pen") {
+            return;
+        }
+        let mut x = self.x;
+        x.set(Some(event.data().client_coordinates().x));
+        self.refresh.call(());
+    }
+}
+
+/// Everything a pointer drag reads and writes.
+#[derive(Clone)]
+struct DragContext {
+    editable: bool,
+    focusable: bool,
+    elements: Elements,
+    measured: Measured,
+    steps: Steps,
+    thumb_track: Signal<Option<ThumbTrack>>,
+    starting: CopyValue<Starting>,
+    press_focus: PressFocus,
+}
+
+impl DragContext {
+    /// Replays what waited, or drops it on a cancel.
+    fn settle(&self, grabbed: bool) {
+        let mut starting = self.starting;
+        let waited = *starting.peek();
+        starting.set(Starting::default());
+        if !grabbed {
+            return;
+        }
+        let steps = self.steps;
+        if let Some(raw) = waited.moved_to.and_then(|x| steps.position_at.call(x)) {
+            steps.slide.call(raw);
+        }
+        if waited.released {
+            // Copied out first: `emit` writes `latest`.
+            let last = *steps.latest.peek();
+            steps.emit.call(SliderChangeEvent::End(last));
+        }
+    }
+
+    fn start(&self, event: DragStart) {
+        if !self.editable {
+            event.cancel.call(());
+            return;
+        }
+
+        let mut starting = self.starting;
+        starting.set(Starting {
+            measuring: true,
+            ..Starting::default()
+        });
+        let elements = self.elements;
+        let rtl = elements.root.is_rtl();
+        self.measured.rtl.set(rtl);
+        let mut thumb_track = self.thumb_track;
+        let track = *thumb_track.peek();
+        if let Some(track) = track.filter(|track| !track.stale) {
+            thumb_track.set(Some(ThumbTrack {
+                stale: true,
+                ..track
+            }));
+        }
+        // Any focus till the task ends is the pointer's, the web's focus of
+        // a pressed thumb too: a touch matches `:focus-visible` (1058).
+        self.press_focus.mark();
+        // Started here, awaited in the task: Blitz locks the document
+        // while tasks drain.
+        let track_size = elements.track.dimensions();
+        let track_offset = elements.track.client_offset();
+        let thumb_size = elements.thumbs[0].dimensions();
+        let thumb_offset = elements.thumbs[0].client_offset();
+        let ctx = self.clone();
+        spawn(async move {
+            let (Ok(dimensions), Ok((left, _))) = (track_size.await, track_offset.await) else {
+                ctx.abandon(event);
+                return;
+            };
+            if dimensions.width <= 0.0 {
+                ctx.abandon(event);
+                return;
+            }
+
+            ctx.measured.left.set(left);
+            ctx.measured.width.set(dimensions.width);
+            let thumb = thumb_size.await;
+            ctx.measured
+                .thumb
+                .set(thumb.as_ref().map_or(0.0, |size| size.width));
+            if let (Ok(thumb), Ok((_, top))) = (thumb, thumb_offset.await) {
+                thumb_track.set(Some(ThumbTrack {
+                    left,
+                    travel: dimensions.width - thumb.width,
+                    top,
+                    thumb,
+                    rtl,
+                    stale: false,
+                }));
+            }
+
+            let steps = ctx.steps;
+            match steps.position_at.call(event.client.x) {
+                Some(raw) => {
+                    let heading = ctx
+                        .starting
+                        .peek()
+                        .moved_to
+                        .and_then(|x| steps.position_at.call(x))
+                        .unwrap_or(raw);
+                    // `use_drag` cancels the pointerdown and so its focus;
+                    // the grabbed thumb is focused here instead.
+                    let index = steps.grab.call((raw, heading));
+                    ctx.settle(true);
+                    let thumb = elements.thumbs[index];
+                    if ctx.focusable && !thumb.is_focused() {
+                        // A track press is outside the thumb's `Tooltip`:
+                        // tell it this focus is the pointer's (todo 476).
+                        ctx.press_focus.mark();
+                        let _ = thumb.focus();
+                    }
+                    next_task().await;
+                    ctx.press_focus.clear();
+                }
+                None => ctx.abandon(event),
+            }
+        });
+    }
+
+    /// Ends a press whose geometry could not be measured.
+    fn abandon(&self, event: DragStart) {
+        self.press_focus.clear();
+        self.settle(false);
+        event.cancel.call(());
+    }
+
+    fn drag_move(&self, event: DragMove) {
+        let waiting = *self.starting.peek();
+        if waiting.measuring {
+            let mut starting = self.starting;
+            starting.set(Starting {
+                moved_to: Some(event.client.x),
+                ..waiting
+            });
+            return;
+        }
+        if let Some(raw) = self.steps.position_at.call(event.client.x) {
+            self.steps.slide.call(raw);
+        }
+    }
+
+    fn drag_end(&self) {
+        let waiting = *self.starting.peek();
+        if waiting.measuring {
+            let mut starting = self.starting;
+            starting.set(Starting {
+                released: true,
+                ..waiting
+            });
+            return;
+        }
+        let last = *self.steps.latest.peek();
+        self.steps.emit.call(SliderChangeEvent::End(last));
+    }
+}
+
+/// The value a navigation key asks for, `None` for any other key.
+fn key_target(
+    key: Key,
+    thumb: f64,
+    grid: Grid,
+    shift: bool,
+    slider: &SliderDefaults,
+) -> Option<f64> {
+    // `step: 0` has no grid, so a key moves 1% of the range, as a native
+    // `step="any"` range input does.
+    let unit = if grid.step > 0.0 {
+        grid.step
+    } else {
+        (grid.max - grid.min) / 100.0
+    };
+    let distance = if shift { slider.big_step } else { slider.step } * unit;
+    // Under RTL ArrowLeft raises the value, as on a native range.
+    Some(match key {
+        Key::ArrowRight | Key::ArrowUp => thumb + distance,
+        Key::ArrowLeft | Key::ArrowDown => thumb - distance,
+        Key::PageUp => thumb + slider.big_step * unit,
+        Key::PageDown => thumb - slider.big_step * unit,
+        Key::Home => grid.min,
+        Key::End => grid.max,
+        _ => return None,
+    })
+}
+
+fn visible_marks(marks: &[SliderMark], min: f64, max: f64) -> Vec<SliderMark> {
+    let kept: Vec<SliderMark> = marks
+        .iter()
+        .filter(|mark| on_track(mark.value, min, max))
+        .cloned()
+        .collect();
+    if kept.len() < marks.len() {
+        warn(
+            "Slider: a mark outside `min..=max` (or past an off-grid `max`'s last step) is dropped.",
+        );
+    }
+    kept
+}
+
+/// Two thumbs are one control: a labelled group names them together. A single
+/// thumb already carries the label itself.
+fn group_naming(props: &SliderCoreProps) -> (Option<&'static str>, Option<String>, Option<String>) {
+    let range = matches!(props.value, SliderCoreValue::Range { .. });
+    let grouped = range.then(|| props.labelledby.clone()).flatten();
+    let group_label = (range && grouped.is_none())
+        .then(|| props.group_label.clone())
+        .flatten();
+    let role = (grouped.is_some() || group_label.is_some()).then_some("group");
+    (role, grouped, group_label)
+}
+
 #[component]
 fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     let props = core;
     let theme = use_theme();
-    let root_element = use_element();
-    let track_element = use_element();
-    // Two handles, always: a hook cannot be conditional, and a single-thumb
-    // slider simply never mounts the second.
-    let thumb_elements = [use_element(), use_element()];
+    let elements = Elements {
+        root: use_element(),
+        track: use_element(),
+        thumbs: [use_element(), use_element()],
+    };
     // Names each thumb's value bubble, so the thumb can point at it.
     let bubble_id = use_id();
     let press_focus = use_context_provider(PressFocus::default);
 
     let (min, max) = grid_bounds(props.min, props.max, props.step);
-    let step = props.step.max(0.0);
-    let min_range = props.min_range.max(0.0);
+    let grid = Grid {
+        min,
+        max,
+        step: props.step.max(0.0),
+        min_range: props.min_range.max(0.0),
+    };
     let size = props.size.copied_or(theme.slider.size);
     let color = props
         .color
@@ -730,347 +1220,61 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         warn("Slider: `value` without `oninput` can never change.");
     }
 
-    // Measured off the track at pointerdown, when layout is known settled.
-    let track_left = use_local_state(|| 0.0_f64);
-    let track_width = use_local_state(|| 0.0_f64);
-    let thumb_width = use_local_state(|| 0.0_f64);
-    // Under RTL the minimum is at the right edge.
-    let track_rtl = use_local_state(|| false);
-    // The drag's own last value, which the parent may not have echoed yet.
-    // Never rendered, so a write redraws nothing.
-    let mut latest = use_hook(|| CopyValue::new(live.peek().value));
-    // Which thumb the pointer grabbed. Always 0 for a single thumb. A signal:
-    // the thumbs' scope reads it for the open bubble.
-    let mut active = use_signal(|| 0_usize);
-    let mut thumb_track = use_signal(|| None::<ThumbTrack>);
+    let measured = use_measured();
+    let steps = use_steps(
+        live,
+        grid,
+        &measured,
+        props.oninput,
+        elements.thumbs,
+        focusable,
+        &press_focus,
+    );
+    let thumb_track = use_signal(|| None::<ThumbTrack>);
     // The hover preview's value and geometry, measured at the first move over the slider.
     let previews = props.preview_on_hover
         || try_use_context::<HoverPreview>().is_some() && !props.segments.is_empty();
-    let mut hovered = use_signal(|| None::<(f64, ThumbTrack)>);
-    // Escape hid the bubble: it stays hidden till the pointer leaves (WCAG 1.4.13).
-    let mut hover_muted = use_hook(|| CopyValue::new(false));
-    let mut hover_track = use_hook(|| CopyValue::new(None::<ThumbTrack>));
-    let mut hover_x = use_hook(|| CopyValue::new(None::<f64>));
-    let mut hover_busy = use_hook(|| CopyValue::new(false));
-    let mut hover_dirty = use_hook(|| CopyValue::new(false));
-    let mut hover_measuring =
-        use_hook(|| CopyValue::new(None::<Pin<Box<dyn Future<Output = Option<ThumbTrack>>>>>));
-
-    let oninput = props.oninput;
-    let emit = use_callback(move |event: SliderChangeEvent<SliderCoreValue>| {
-        latest.set(event.value());
-        if let Some(oninput) = &oninput {
-            oninput.call(event);
-        }
-    });
-
-    // A `Callback`: `LocalState` is not `Copy`. Unsnapped; `moved` applies
-    // the grid.
-    let position_at = {
-        let (track_left, track_width, thumb_width, track_rtl) = (
-            track_left.clone(),
-            track_width.clone(),
-            thumb_width.clone(),
-            track_rtl.clone(),
-        );
-        use_callback(move |client_x: f64| {
-            let thumb = thumb_width.get();
-            // The thumb's centre only travels between the two half-thumb
-            // insets, so the pointer has to be mapped over that span too.
-            let travel = track_width.get() - thumb;
-            if travel <= 0.0 {
-                return None;
-            }
-            let along = (client_x - track_left.get() - thumb / 2.0) / travel;
-            let along = if track_rtl.get() { 1.0 - along } else { along };
-            Some(min + along * (max - min))
-        })
-    };
-
-    // The drag's two steps, both through `use_callback` so they see this
-    // render's bounds - the handlers `use_drag` holds do not.
-    // `heading`: where the pointer already went, which picks between two
-    // thumbs on one spot. Unmoved, the press's side holds until `slide`.
-    let mut undecided = use_hook(|| CopyValue::new(None::<f64>));
-    let grab = use_callback(move |(raw, heading): (f64, f64)| {
-        let value = live.peek().value;
-        let choice = value.nearest(raw, heading);
-        undecided.set(choice.is_none().then_some(raw));
-        let index = choice.unwrap_or_else(|| usize::from(raw > value.thumb(1)));
-        active.set(index);
-        emit.call(SliderChangeEvent::Start(
-            value.moved(index, raw, min, max, step, min_range),
-        ));
-        index
-    });
-    let slide_focus = press_focus.clone();
-    let slide = use_callback(move |raw: f64| {
-        let pressed = *undecided.peek();
-        if let Some(pressed) = pressed.filter(|pressed| *pressed != raw) {
-            undecided.set(None);
-            let index = usize::from(raw > pressed);
-            active.set(index);
-            let thumb = thumb_elements[index];
-            if focusable && !thumb.is_focused() {
-                let press_focus = slide_focus.clone();
-                press_focus.mark();
-                let _ = thumb.focus();
-                spawn(async move {
-                    next_task().await;
-                    press_focus.clear();
-                });
-            }
-        }
-        // Copied out first: `emit` writes `latest` while the call runs.
-        let (from, index) = (*latest.peek(), *active.peek());
-        emit.call(SliderChangeEvent::Change(
-            from.moved(index, raw, min, max, step, min_range),
-        ));
-    });
+    let hover = use_hover(live, grid, elements);
 
     // Moves and a release that arrive before the measuring task has grabbed
     // (a sideways touch starts mid-move) wait for the `Start`.
-    let mut starting = use_hook(|| CopyValue::new(Starting::default()));
+    let starting = use_hook(|| CopyValue::new(Starting::default()));
     // Set by a thumb's `pointerdown`, which runs before the root's: only a
     // touch that began on a thumb drags (1059).
     let mut on_thumb = use_hook(|| CopyValue::new(false));
 
+    let ctx = DragContext {
+        editable,
+        focusable,
+        elements,
+        measured,
+        steps,
+        thumb_track,
+        starting,
+        press_focus,
+    };
+    let (on_start, on_move, on_end) = (ctx.clone(), ctx.clone(), ctx);
     let options = DragOptions {
-        capture: root_element,
-        onstart: Callback::new(move |event: DragStart| {
-            if !editable {
-                event.cancel.call(());
-                return;
-            }
-
-            starting.set(Starting {
-                measuring: true,
-                ..Starting::default()
-            });
-            // Replays what waited, or drops it on a cancel.
-            let settle = move |grabbed: bool| {
-                let mut starting = starting;
-                let waited = *starting.peek();
-                starting.set(Starting::default());
-                if !grabbed {
-                    return;
-                }
-                if let Some(raw) = waited.moved_to.and_then(|x| position_at.call(x)) {
-                    slide.call(raw);
-                }
-                if waited.released {
-                    // Copied out first: `emit` writes `latest`.
-                    let last = *latest.peek();
-                    emit.call(SliderChangeEvent::End(last));
-                }
-            };
-            let (track_left, track_width, thumb_width) =
-                (track_left.clone(), track_width.clone(), thumb_width.clone());
-            let rtl = root_element.is_rtl();
-            track_rtl.set(rtl);
-            let track = *thumb_track.peek();
-            if let Some(track) = track.filter(|track| !track.stale) {
-                thumb_track.set(Some(ThumbTrack {
-                    stale: true,
-                    ..track
-                }));
-            }
-            // Any focus till the task ends is the pointer's, the web's focus of
-            // a pressed thumb too: a touch matches `:focus-visible` (1058).
-            let press_focus = press_focus.clone();
-            press_focus.mark();
-            // Started here, awaited in the task: Blitz locks the document
-            // while tasks drain.
-            let track_size = track_element.dimensions();
-            let track_offset = track_element.client_offset();
-            let thumb_size = thumb_elements[0].dimensions();
-            let thumb_offset = thumb_elements[0].client_offset();
-            spawn(async move {
-                let (Ok(dimensions), Ok((left, _))) = (track_size.await, track_offset.await) else {
-                    press_focus.clear();
-                    settle(false);
-                    event.cancel.call(());
-                    return;
-                };
-                if dimensions.width <= 0.0 {
-                    press_focus.clear();
-                    settle(false);
-                    event.cancel.call(());
-                    return;
-                }
-
-                track_left.set(left);
-                track_width.set(dimensions.width);
-                let thumb = thumb_size.await;
-                thumb_width.set(thumb.as_ref().map_or(0.0, |size| size.width));
-                if let (Ok(thumb), Ok((_, top))) = (thumb, thumb_offset.await) {
-                    thumb_track.set(Some(ThumbTrack {
-                        left,
-                        travel: dimensions.width - thumb.width,
-                        top,
-                        thumb,
-                        rtl,
-                        stale: false,
-                    }));
-                }
-
-                match position_at.call(event.client.x) {
-                    Some(raw) => {
-                        let heading = starting
-                            .peek()
-                            .moved_to
-                            .and_then(|x| position_at.call(x))
-                            .unwrap_or(raw);
-                        // `use_drag` cancels the pointerdown and so its focus;
-                        // the grabbed thumb is focused here instead.
-                        let index = grab.call((raw, heading));
-                        settle(true);
-                        let thumb = thumb_elements[index];
-                        if focusable && !thumb.is_focused() {
-                            // A track press is outside the thumb's `Tooltip`:
-                            // tell it this focus is the pointer's (todo 476).
-                            press_focus.mark();
-                            let _ = thumb.focus();
-                        }
-                        next_task().await;
-                        press_focus.clear();
-                    }
-                    None => {
-                        press_focus.clear();
-                        settle(false);
-                        event.cancel.call(());
-                    }
-                }
-            });
-        }),
-        onmove: Callback::new(move |event: DragMove| {
-            let waiting = *starting.peek();
-            if waiting.measuring {
-                starting.set(Starting {
-                    moved_to: Some(event.client.x),
-                    ..waiting
-                });
-                return;
-            }
-            if let Some(raw) = position_at.call(event.client.x) {
-                slide.call(raw);
-            }
-        }),
-        onend: Callback::new(move |_| {
-            let waiting = *starting.peek();
-            if waiting.measuring {
-                starting.set(Starting {
-                    released: true,
-                    ..waiting
-                });
-                return;
-            }
-            let last = *latest.peek();
-            emit.call(SliderChangeEvent::End(last));
-        }),
+        capture: elements.root,
+        onstart: Callback::new(move |event: DragStart| on_start.start(event)),
+        onmove: Callback::new(move |event: DragMove| on_move.drag_move(event)),
+        onend: Callback::new(move |_| on_end.drag_end()),
     };
     let drag = use_sideways_drag(options, Callback::new(move |()| *on_thumb.peek()));
     let onpointerdown = use_callback(move |event: Event<PointerData>| {
         drag.onpointerdown.call(event);
         on_thumb.set(false);
-        if hovered.peek().is_some() {
-            hovered.set(None);
-        }
+        hover.clear();
     });
     let onthumbdown = use_callback(move |_: Event<PointerData>| on_thumb.set(true));
-
-    // Requests coalesce into one update per task: a WebView sends each move over IPC.
-    let refresh_preview = use_callback(move |()| {
-        hover_dirty.set(true);
-        // The reads start here: Blitz fails one made inside a task (the document is borrowed).
-        if hover_track.peek().is_none() && hover_measuring.peek().is_none() {
-            let (track_size, track_offset) =
-                (track_element.dimensions(), track_element.client_offset());
-            let (thumb_size, thumb_offset) = (
-                thumb_elements[0].dimensions(),
-                thumb_elements[0].client_offset(),
-            );
-            let rtl = root_element.is_rtl();
-            hover_measuring.set(Some(Box::pin(async move {
-                let (Ok(track), Ok((left, _)), Ok(thumb), Ok((_, top))) = (
-                    track_size.await,
-                    track_offset.await,
-                    thumb_size.await,
-                    thumb_offset.await,
-                ) else {
-                    return None;
-                };
-                Some(ThumbTrack {
-                    left,
-                    travel: track.width - thumb.width,
-                    top,
-                    thumb,
-                    rtl,
-                    stale: false,
-                })
-            })));
-        }
-        if std::mem::replace(&mut *hover_busy.write(), true) {
-            return;
-        }
-        spawn(async move {
-            while std::mem::replace(&mut *hover_dirty.write(), false) {
-                let measuring = hover_measuring.write().take();
-                if let Some(measuring) = measuring
-                    && hover_track.peek().is_none()
-                {
-                    hover_track.set(measuring.await);
-                }
-                next_task().await;
-                let geometry = hover_track.peek().filter(|_| !*hover_muted.peek());
-                let shown = geometry.zip(*hover_x.peek()).and_then(|(track, x)| {
-                    // Over a thumb its own bubble shows the value.
-                    let on_thumb = live.peek().value.thumbs().any(|thumb| {
-                        let at = track.at(fraction(thumb, min, max));
-                        at.x <= x && x <= at.x + at.width
-                    });
-                    let value = SliderCoreValue::Single(min + track.fraction_at(x)? * (max - min))
-                        .snapped(min, max, step)
-                        .thumb(0);
-                    (!on_thumb).then_some((value, track))
-                });
-                if *hovered.peek() != shown {
-                    hovered.set(shown);
-                }
-            }
-            hover_busy.set(false);
-        });
-    });
     let onpointermove = use_callback(move |event: Event<PointerData>| {
         drag.onpointermove.call(event.clone());
-        let pointer = event.data().pointer_type();
-        if !previews
-            || !interactive
-            || *hover_muted.peek()
-            || *drag.dragging.peek()
-            || !matches!(pointer.as_str(), "mouse" | "pen")
-        {
-            return;
+        if previews && interactive && !*drag.dragging.peek() {
+            hover.pointer_moved(&event);
         }
-        hover_x.set(Some(event.data().client_coordinates().x));
-        refresh_preview.call(());
     });
-    let onpointerleave = move |_: Event<PointerData>| {
-        hover_x.set(None);
-        hover_track.set(None);
-        hover_muted.set(false);
-        if hovered.peek().is_some() {
-            hovered.set(None);
-        }
-    };
-    // A resize or fullscreen moves the track: measured again for the pointer still on it.
-    let onresize = move |_: Event<ResizeData>| {
-        hover_track.set(None);
-        hover_measuring.set(None);
-        if hover_x.peek().is_some() {
-            refresh_preview.call(());
-        }
-    };
+    let onpointerleave = move |_: Event<PointerData>| hover.leave();
+    let onresize = move |_: Event<ResizeData>| hover.resize();
 
     // One handler for both thumbs: the focused thumb is the one the keys
     // move, so the index comes from whichever element fired.
@@ -1079,59 +1283,27 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         if !editable || has_shortcut_modifier(&event) {
             return;
         }
-        // `step: 0` has no grid, so a key moves 1% of the range, as a native
-        // `step="any"` range input does.
-        let unit = if step > 0.0 {
-            step
-        } else {
-            (max - min) / 100.0
-        };
-        let distance = if event.modifiers().shift() {
-            theme.slider.big_step
-        } else {
-            theme.slider.step
-        } * unit;
-
-        // `Change` then `End`: a key press settles at once, and callers commit
-        // on `End`.
         let value = live.peek().value;
-        let go_to = |raw: f64| {
+        let shift = event.modifiers().shift();
+        let key = logical_key(&event);
+        if let Some(raw) = key_target(key, value.thumb(index), grid, shift, &theme.slider) {
             event.prevent_default();
-            let moved = value.moved(index, raw, min, max, step, min_range);
-            emit.call(SliderChangeEvent::Change(moved));
-            emit.call(SliderChangeEvent::End(moved));
-        };
-
-        let thumb = value.thumb(index);
-        // Under RTL ArrowLeft raises the value, as on a native range.
-        match logical_key(&event) {
-            Key::ArrowRight | Key::ArrowUp => go_to(thumb + distance),
-            Key::ArrowLeft | Key::ArrowDown => go_to(thumb - distance),
-            Key::PageUp => go_to(thumb + theme.slider.big_step * unit),
-            Key::PageDown => go_to(thumb - theme.slider.big_step * unit),
-            Key::Home => go_to(min),
-            Key::End => go_to(max),
-            _ => {}
+            // `Change` then `End`: a key press settles at once, and callers commit
+            // on `End`.
+            let moved = grid.moved(value, index, raw);
+            steps.emit.call(SliderChangeEvent::Change(moved));
+            steps.emit.call(SliderChangeEvent::End(moved));
         }
     });
 
-    let marks: Vec<SliderMark> = props
-        .marks
-        .iter()
-        .filter(|mark| on_track(mark.value, min, max))
-        .cloned()
-        .collect();
-    if marks.len() < props.marks.len() {
-        warn(
-            "Slider: a mark outside `min..=max` (or past an off-grid `max`'s last step) is dropped.",
-        );
-    }
+    let marks = visible_marks(&props.marks, min, max);
     let marks_labeled = marks.iter().any(|mark| mark.label.is_some());
     let (segments, dropped) = track_segments(&props.segments, min, max);
     if dropped {
         warn("Slider: a segment starting outside `min..max`, or at another's start, is dropped.");
     }
     let segment_text = use_localization().slider.segment;
+    let (role, grouped, group_label) = group_naming(&props);
 
     let states: Input<States> = props
         .states
@@ -1160,8 +1332,8 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     let preview = previews.then(|| {
         rsx! {
             SliderHoverPreview {
-                hovered,
-                muted: hover_muted,
+                hovered: hover.hovered,
+                muted: hover.muted,
                 dragging: drag.dragging,
                 min,
                 max,
@@ -1174,15 +1346,6 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         }
     });
 
-    // Two thumbs are one control: a labelled group names them together. A
-    // single thumb already carries the label itself.
-    let range = matches!(props.value, SliderCoreValue::Range { .. });
-    let grouped = range.then(|| props.labelledby.clone()).flatten();
-    let group_label = (range && grouped.is_none())
-        .then(|| props.group_label.clone())
-        .flatten();
-    let role = (grouped.is_some() || group_label.is_some()).then_some("group");
-
     use_box()
         .framework_sx(&SLIDER_ROOT_SX)
         .class(&props.class)
@@ -1194,7 +1357,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         .attr("role", role)
         .attr("aria-labelledby", grouped)
         .attr("aria-label", group_label)
-        .element(&root_element)
+        .element(&elements.root)
         .event("onpointerdown", onpointerdown)
         .event("onpointermove", onpointermove)
         .event("onpointerup", drag.onpointerup)
@@ -1209,13 +1372,13 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
                     class: track_class,
                     "data-slot": SliderPart::Track.slot(),
                     style: track_style,
-                    onmounted: track_element.mount(),
+                    onmounted: elements.track.mount(),
                     SliderThumbs {
                         live,
                         min,
                         max,
-                        step,
-                        min_range,
+                        step: grid.step,
+                        min_range: grid.min_range,
                         size,
                         interactive,
                         disabled,
@@ -1234,11 +1397,11 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
                         group_digits: props.group_digits,
                         focusable,
                         bubble_id,
-                        thumb_elements,
+                        thumb_elements: elements.thumbs,
                         onkeydown,
                         onthumbdown,
                         dragging: drag.dragging,
-                        active,
+                        active: steps.active,
                         thumb_track,
                     }
                 }

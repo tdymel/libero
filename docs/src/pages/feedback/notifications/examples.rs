@@ -24,9 +24,10 @@ pub(super) fn Examples(
     let uploads = use_notifications_with(upload_notification);
     // Each upload's ticker. Dropped with the preview, which is what stops them.
     let tickers = use_hook(|| {
-        Rc::new(std::cell::RefCell::new(Vec::<
+        Rc::new(std::cell::RefCell::new(Vec::<(
+            Rc<Cell<bool>>,
             std::boxed::Box<dyn TimerSubscription>,
-        >::new()))
+        )>::new()))
     });
 
     let color: Input<_> = Input::from(color.as_str());
@@ -62,6 +63,8 @@ pub(super) fn Examples(
             return;
         };
         let percent = Cell::new(0.0);
+        let done = Rc::new(Cell::new(false));
+        let finished = done.clone();
         // The callback runs outside every scope, so it only writes - `update`
         // is a signal write and nothing else.
         let ticker = api.every(
@@ -76,10 +79,15 @@ pub(super) fn Examples(
                             percent: percent.get(),
                         },
                     );
+                } else {
+                    finished.set(true);
                 }
             }),
         );
-        tickers.borrow_mut().push(ticker);
+        // A finished upload's ticker is dropped on the next click, not from its own callback.
+        let mut tickers = tickers.borrow_mut();
+        tickers.retain(|(done, _)| !done.get());
+        tickers.push((done, ticker));
     };
 
     let upload = template == "upload";

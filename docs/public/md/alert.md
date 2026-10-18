@@ -83,7 +83,7 @@ fn Demo() -> Element {
 | `title` | `String` | - | The title, and the alert's accessible name. Text only. |
 | `icon` | `Option<Element>` | - | A leading icon of your own, hidden from screen readers. |
 | `color` | `ThemeAwareValue` | `info` | The tint. A theme color name or any CSS color. `error` and `warning` make the role `alert`, the rest `status`. |
-| `variant` | `Variant` | `tonal` | Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. |
+| `variant` | `Variant` | `tonal` | Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`, `gradient`. |
 | `radius` | `ThemeAwareValue` | `md` | Corner radius, a size step from `xs` to `xxl`, or any CSS, e.g. `radius: "0"`. |
 | `actions` | `Option<Element>` | - | Buttons or links beside the message, before the close button. Give each a label that says what it does: `Button { variant: "standard", color: "currentColor", size: "xs" }` reads on every variant. |
 | `onclose` | `EventHandler<()>` | - | Shows the close button and fires when it is pressed. Unmount the alert to close it. |
@@ -169,5 +169,5 @@ severity in words.
 
 | Attribute | On |
 |---|---|
-| `data-state="filled"` / `tonal` / `elevated` / `outlined` / `standard` | The root, for the `variant` in effect. |
+| `data-state="filled"` / `tonal` / `elevated` / `outlined` / `standard` / `gradient` | The root, for the `variant` in effect. |
 | `data-slot` | Each part, see [Style API](#style-api). |

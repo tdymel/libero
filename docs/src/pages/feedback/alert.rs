@@ -38,7 +38,7 @@ pub fn AlertPage() -> Element {
                     .doc("The tint. A theme color name or any CSS color. `error` and `warning` make the role `alert`, the rest `status`."),
                 prop("variant", "Variant")
                     .default(theme.alert.variant.as_str())
-                    .doc("Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`."),
+                    .doc("Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`, `gradient`."),
                 prop("radius", "ThemeAwareValue")
                     .default(theme.alert.radius.as_str())
                     .doc("Corner radius, a size step from `xs` to `xxl`, or any CSS, e.g. `radius: \"0\"`."),
@@ -96,9 +96,9 @@ pub fn AlertPage() -> Element {
                 controls: vec![
                     Control::toggle(
                         "variant",
-                        ["filled", "tonal", "elevated", "outlined", "standard"],
+                        ["filled", "tonal", "elevated", "outlined", "standard", "gradient"],
                     )
-                    .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard"])
+                    .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard", "Gradient"])
                     .default(theme.alert.variant.as_str()),
                     Control::color("color")
                     .default(theme.alert.color),

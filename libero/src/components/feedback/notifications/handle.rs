@@ -54,12 +54,21 @@ impl<T: 'static> NotificationScope<T> {
 
 impl<T: Clone + 'static> NotificationScope<T> {
     /// The data it was shown with, or last updated to.
+    ///
+    /// # Panics
+    ///
+    /// Panics once the notification was removed; use [`Self::try_args`] in a task that can outlive it.
     pub fn args(&self) -> T {
+        self.try_args()
+            .expect("NotificationScope used after its notification was removed")
+    }
+
+    /// Like [`Self::args`], but `None` once the notification was removed.
+    pub fn try_args(&self) -> Option<T> {
         self.args
             .try_read()
             .ok()
             .and_then(|args| args.downcast_ref::<T>().cloned())
-            .expect("NotificationScope used after its notification was removed")
     }
 }
 
