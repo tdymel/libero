@@ -55,6 +55,7 @@ pill without an accessible name.
 | `onclick` | `EventHandler<MouseEvent>` | - | Click handler. Not called on a link. |
 | `to` | `NavigationTarget` | - | Renders a link instead of a `<button>`. Takes a path, a URL or a typed route (`Route::Foo {}`). |
 | `target` | `String` | - | The link's `target` attribute. `"_blank"` adds a hidden "(opens in a new tab)". |
+| `new_tab_hint` | `bool` | `true` | With `target: "_blank"`, the hidden "(opens in a new tab)". `false` drops it and the icon. |
 | `new_tab_icon` | `bool` | `false` | With `target: "_blank"`, draws a small external icon after the label. Unset, the theme's `anchor.new_tab_icon`, which is off. |
 | `icon` | `Element` | - | Drawn before the label. It never shrinks. |
 | `parts` | `Parts<ButtonPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
