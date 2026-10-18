@@ -50,6 +50,27 @@ fn is_web_scheme(scheme: &str) -> bool {
     matches!(scheme, "http" | "https")
 }
 
+/// Protocols the page's `fetch` may load for an absolute URL: media may be `data:` or `blob:`,
+/// while `javascript:`, `file:` and the like stay refused. A relative URL is always fetched.
+const WEB_PROTOCOLS: [&str; 4] = ["http:", "https:", "data:", "blob:"];
+
+fn web_fetch_script() -> String {
+    let allowed = WEB_PROTOCOLS
+        .map(|protocol| format!("'{protocol}'"))
+        .join(", ");
+    format!(
+        "const url = await dioxus.recv();
+        try {{
+            const absolute = (() => {{ try {{ return new URL(url); }} catch (error) {{ return null; }} }})();
+            if (absolute && ![{allowed}].includes(absolute.protocol)) return null;
+            const response = await fetch(url);
+            return response.ok ? await response.text() : null;
+        }} catch (error) {{
+            return null;
+        }}"
+    )
+}
+
 /// GETs `url` and hands back its body. Call it in a component scope: the
 /// native provider comes from the context.
 pub(crate) fn fetch_text(url: &str) -> Fetched {
@@ -60,26 +81,27 @@ pub(crate) fn fetch_text(url: &str) -> Fetched {
             "No network provider in reach: dioxus-native fetches only with its `net` feature (on by default).",
         ),
     }
-    // The web and the WebView: the page's own `fetch`, for a relative or http(s) URL (no `file:`,
-    // `javascript:` and the like, as the native arm). Without JS the eval fails, which reads as a failed fetch.
-    let eval = dioxus::document::eval(
-        "const url = await dioxus.recv();
-        try {
-            const absolute = (() => { try { return new URL(url); } catch (error) { return null; } })();
-            if (absolute && !['http:', 'https:'].includes(absolute.protocol)) return null;
-            const response = await fetch(url);
-            return response.ok ? await response.text() : null;
-        } catch (error) {
-            return null;
-        }",
-    );
+    // The web and the WebView: the page's own `fetch`. Without JS the eval fails, which reads as a failed fetch.
+    let eval = dioxus::document::eval(&web_fetch_script());
     let _ = eval.send(url);
     Box::pin(async move { eval.join::<Option<String>>().await.ok().flatten() })
 }
 
 #[cfg(test)]
 mod tests {
-    use super::is_web_scheme;
+    use super::{is_web_scheme, web_fetch_script};
+
+    #[test]
+    fn the_web_arm_allows_data_and_blob_but_refuses_javascript() {
+        let script = web_fetch_script();
+        assert!(
+            script.contains("['http:', 'https:', 'data:', 'blob:']"),
+            "{script}"
+        );
+        for protocol in ["javascript:", "vbscript:", "file:"] {
+            assert!(!script.contains(protocol), "{protocol}");
+        }
+    }
 
     #[test]
     fn only_http_and_https_are_fetched_natively() {
