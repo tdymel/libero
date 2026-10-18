@@ -2,7 +2,7 @@
 //! touch and a plain click stay taps.
 
 use anyhow::Result;
-use e2e::driver::{Driver, eventually};
+use e2e::driver::{Driver, Platform, eventually};
 
 const TARGET: &str = "#target";
 
@@ -29,7 +29,8 @@ const PRESS_MS: u32 = 400;
 async fn past_the_delay<D: Driver>(d: &mut D, held: bool) -> Result<()> {
     if held {
         d.fire_timers(PRESS_MS).await?;
-    } else {
+    } else if d.platform() != Platform::Native {
+        // Blitz reads no script; it always holds the clock, so it never lands here.
         d.evaluate(&format!(
             "new Promise(done => setTimeout(() => done(true), {PRESS_MS}))"
         ))
