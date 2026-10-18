@@ -42,7 +42,7 @@ pub use column::{Column, ColumnDefaults, ColumnHeader, ColumnType, TypedColumnHe
 pub use crate::localization::labels::table::{Aggregate, FilterLogic, FilterOperator};
 pub use column_filter::{ColumnFilter, SelectOption};
 pub use core::{RowFn, TableSort};
-pub use csv::{table_csv, table_text};
+pub use csv::{table_csv, table_csv_raw, table_text};
 pub use edit::{EditCtx, RowUpdate};
 pub use pinning::{PinSide, PinnedColumns};
 pub use resize::ColumnWidths;

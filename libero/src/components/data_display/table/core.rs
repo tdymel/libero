@@ -522,6 +522,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         touch,
         ranked,
         sort_order,
+        grid: grid.is_some(),
     };
     let with_menu = !menus.is_empty();
     let mut menus = menus.into_iter().map(Some).collect::<Vec<_>>();
@@ -575,6 +576,8 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                                     header: spec.header.clone(),
                                     limits,
                                     resize,
+                                    // The column menu's width items are the grid's keyboard route.
+                                    untabbable: with_menu && grid.is_some(),
                                 }
                             }
                         });
@@ -882,6 +885,8 @@ struct SortContext {
     /// Whether the order badges show: two or more sorted columns.
     ranked: bool,
     sort_order: &'static str,
+    /// In a grid the `th` is the stop and sorts on Enter: the button leaves the Tab order.
+    grid: bool,
 }
 
 /// A header cell's body: the sort button or the text, then the column menu.
@@ -926,6 +931,7 @@ fn sort_button(spec: &HeaderSpec, index: usize, context: SortContext) -> Element
         touch,
         ranked,
         sort_order,
+        grid,
     } = context;
     let order = active
         .iter()
@@ -936,6 +942,7 @@ fn sort_button(spec: &HeaderSpec, index: usize, context: SortContext) -> Element
         button {
             r#type: "button",
             "data-sort-button": true,
+            tabindex: grid.then_some("-1"),
             onpointerdown: move |event: PointerEvent| {
                 if let Some(mut touch) = touch {
                     touch.set(event.pointer_type() != "mouse");

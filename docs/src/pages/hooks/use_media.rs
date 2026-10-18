@@ -84,6 +84,7 @@ pub fn UseMediaPage() -> Element {
                     }
                     Table {
                         caption: "Methods of MediaHandle",
+                        scroll: true,
                         data: METHODS.to_vec(),
                         columns: vec![
                             column("Method")

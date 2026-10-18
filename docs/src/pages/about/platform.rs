@@ -65,6 +65,7 @@ pub fn PlatformPage() -> Element {
                 title: "The APIs",
                 Table {
                     aria_label: "Platform APIs",
+                    scroll: true,
                     data: APIS.to_vec(),
                     columns: vec![
                         column("API")

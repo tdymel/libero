@@ -300,6 +300,7 @@ pub fn GettingStarted() -> Element {
                 }
                 Table {
                     aria_label: "What CI checks per platform",
+                    scroll: true,
                     data: ci_platforms(),
                     columns: vec![
                         column("Platform").value(|row: &(&str, &str, String)| row.0),
@@ -319,6 +320,7 @@ pub fn GettingStarted() -> Element {
                 Text { "Every feature is additive." }
                 Table {
                     aria_label: "Feature flags",
+                    scroll: true,
                     data: FEATURES.to_vec(),
                     columns: vec![
                         column("Flag")

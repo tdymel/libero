@@ -135,6 +135,7 @@ pub fn ThemingPage() -> Element {
                 }
                 Table {
                     aria_label: "What a theme holds",
+                    scroll: true,
                     data: PARTS.to_vec(),
                     columns: vec![
                         column("Part").value(|row: &Part| row.0),
@@ -293,6 +294,7 @@ pub fn ThemingPage() -> Element {
                 }
                 Table {
                     aria_label: "Theme fields",
+                    scroll: true,
                     data: FIELDS.to_vec(),
                     columns: vec![
                         column("Field")

@@ -126,6 +126,7 @@ pub fn CreditsPage() -> Element {
                 title: "Icons, logos and media",
                 Table {
                     aria_label: "Credits",
+                    scroll: true,
                     data: CREDITS.to_vec(),
                     columns: vec![
                         column("Name").value(|row: &Row| row.0),

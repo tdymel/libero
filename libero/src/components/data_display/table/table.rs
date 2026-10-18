@@ -938,6 +938,11 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// work only in here.
     #[props(default)]
     toolbar: Option<Element>,
+    /// The `TableExportButton` file gives a cell starting with `=`, `+`, `-`, `@`, Tab or CR
+    /// a leading `'`, so a spreadsheet reads it as text (as [`table_csv`](fn@super::table_csv)).
+    /// `false` exports cells as they are.
+    #[props(default = true)]
+    csv_formula_guard: bool,
     /// Scrolls a table wider than its parent sideways, in a `ScrollArea`.
     #[props(default)]
     scroll: bool,
@@ -1405,6 +1410,8 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
             groupable: column.row_groupable && !tree,
         })
         .collect();
+    let editable = props.columns.iter().any(|column| column.edit.is_some());
+    let cell_focus = props.cell_focus || editable;
     let tests = cell_tests(&props.columns, &state.column_filters.read());
     let active_filters = tests.len();
     if props.toolbar.is_some() {
@@ -1425,6 +1432,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
                 panel,
                 focus: menu_focus,
                 announcer,
+                grid: cell_focus,
             },
         ),
         false => Vec::new(),
@@ -1533,8 +1541,6 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
         .iter()
         .position(|column| column.row_header)
         .unwrap_or(0);
-    let editable = columns.iter().any(|column| column.edit.is_some());
-    let cell_focus = props.cell_focus || editable;
     let mut aggregates = caches.aggregates;
     let group_values = aggregates.write().values(&data, &columns, &groups);
     let current = (selection.clone(), groups.clone(), keys.clone());

@@ -346,6 +346,7 @@ fn PropRows(name: String, properties: Vec<PropDoc>, base: bool, extends: String)
     rsx! {
         Table {
             aria_label: name,
+            scroll: true,
             // Top-aligned so a wrapped name keeps its description beside it. Cells may break
             // inside words: long types pushed the auto-layout table past a 390px page.
             sx: sx().selector(
@@ -383,6 +384,7 @@ fn PartRows(name: String, parts: Vec<PartDoc>) -> Element {
     rsx! {
         Table {
             aria_label: name,
+            scroll: true,
             sx: sx().selector(
                 "& td",
                 sx().vertical_align("top").with("overflow-wrap", "anywhere"),

@@ -221,6 +221,7 @@ pub(super) fn order_rows<T: Clone + PartialEq + 'static>(
             texts.clone(),
             parents.clone(),
         );
+        let guard = props.csv_formula_guard;
         let mut export = tools.export;
         export.set(Some(Rc::new(move || {
             let rows = match (&texts, &parents) {
@@ -231,7 +232,10 @@ pub(super) fn order_rows<T: Clone + PartialEq + 'static>(
                 }
                 _ => order.clone(),
             };
-            (shown_csv(&columns, &shown, &data, &rows), order.len())
+            (
+                shown_csv(&columns, &shown, &data, &rows, guard),
+                order.len(),
+            )
         })));
     }
     let groups = match (texts, leaves) {

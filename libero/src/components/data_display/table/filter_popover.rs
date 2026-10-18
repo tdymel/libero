@@ -747,12 +747,15 @@ pub(super) fn FilteredButton(
     /// Set with `filter_panel`: opens the panel instead.
     #[props(default)]
     onopen: Option<EventHandler<()>>,
+    /// In a grid the column menu's Filter is the keyboard route: out of the Tab order.
+    grid: bool,
 ) -> Element {
     let (mut open, mut opener) = (open, opener);
     rsx! {
         button {
             r#type: "button",
             "data-filtered": true,
+            tabindex: grid.then_some("-1"),
             aria_label: (labels.filtered)(&column),
             aria_haspopup: "dialog",
             aria_expanded: "{open()}",

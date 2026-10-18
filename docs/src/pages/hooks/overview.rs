@@ -384,6 +384,7 @@ pub fn HooksPage() -> Element {
                 }
                 Table {
                     caption: "Libero's public hooks",
+                    scroll: true,
                     data: hooks(),
                     columns: vec![
                         column("Hook")

@@ -94,6 +94,7 @@ pub fn A11yPanel(doc: A11yDoc) -> Element {
                     Title { size: "lg", component: "h2", "Keyboard" }
                     Table {
                         aria_label: "Keyboard",
+                        scroll: true,
                         sx: sx().selector("& td", sx().vertical_align("top")),
                         data: doc.keys,
                         columns: vec![

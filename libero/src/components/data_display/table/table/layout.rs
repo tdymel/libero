@@ -213,6 +213,8 @@ pub(super) struct MenuSpec {
     pub panel: PanelControl,
     pub focus: MenuFocus,
     pub announcer: Announcer,
+    /// `cell_focus`: the header cell is the stop.
+    pub grid: bool,
 }
 
 /// One column menu per header, by header index.
@@ -236,6 +238,7 @@ pub(super) fn column_menus<T: Clone + PartialEq + 'static>(
         panel,
         focus,
         announcer,
+        grid,
     } = spec;
     let FilterBase {
         state,
@@ -284,6 +287,7 @@ pub(super) fn column_menus<T: Clone + PartialEq + 'static>(
                     filter: filter.target(&props.columns[index]),
                     panel: props.filter_panel.then_some(panel),
                     focus,
+                    grid,
                     neighbour,
                     announcer,
                 }

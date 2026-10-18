@@ -152,6 +152,7 @@ pub fn LocalizationPage() -> Element {
                 }
                 Table {
                     aria_label: "Shipped formats",
+                    scroll: true,
                     data: SHIPPED.to_vec(),
                     columns: vec![
                         column("Formats")

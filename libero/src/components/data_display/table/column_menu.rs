@@ -120,6 +120,8 @@ pub(super) fn ColumnMenu(
     #[props(default)]
     panel: Option<PanelControl>,
     focus: MenuFocus,
+    /// In a grid the `th` is the stop and opens this on Ctrl+Enter: the button leaves the Tab order.
+    grid: bool,
     /// The shown column whose menu button takes focus after Hide.
     neighbour: Option<usize>,
     /// Says a move, pin or hide: the menu closes on a layout the reader cannot see (todo 1428).
@@ -366,6 +368,7 @@ pub(super) fn ColumnMenu(
                 handle: filtered_button,
                 opener,
                 onopen: open_panel,
+                grid,
             }
         }
         Menu {
@@ -377,6 +380,7 @@ pub(super) fn ColumnMenu(
             button {
                 r#type: "button",
                 "data-column-menu": true,
+                tabindex: grid.then_some("-1"),
                 onmounted: trigger.mount(),
                 ..attributes,
                 ..trigger.attributes(),

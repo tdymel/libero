@@ -55,7 +55,7 @@ pub use table::{
     ColumnType, ColumnWidths, EditCtx, EditKind, EditValue, FilterKind, FilterLogic,
     FilterOperator, PinSide, PinnedColumns, RowFn, RowUpdate, SelectOption, SortDirection, SortKey,
     Table, TableColumnsButton, TableDensityButton, TableExportButton, TableFilterButton,
-    TableProps, TableSort, TypedColumnHeader, column, table_csv, table_text,
+    TableProps, TableSort, TypedColumnHeader, column, table_csv, table_csv_raw, table_text,
 };
 pub use timeline::{Timeline, TimelineEvent, TimelineLine, TimelinePart, TimelineProps};
 pub use video::{Chapter, MediaTrack, TrackKind, Video, VideoPart, VideoProps};

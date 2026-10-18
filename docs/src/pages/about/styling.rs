@@ -227,6 +227,7 @@ fn CodeTable(label: &'static str, head: [&'static str; 2], rows: Vec<Pair>) -> E
     rsx! {
         Table {
             aria_label: label,
+            scroll: true,
             data: rows,
             columns: vec![
                 column(head[0])

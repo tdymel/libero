@@ -949,6 +949,7 @@ fn Demo() -> Element {
 | `no_results` | `Option<Element>` | `None` | Shown in one full-width row when the quick filter or the column filters leave no rows, over the localized `table.no_results`. |
 | `loading` | `bool` | `false` | Rows are on their way. While no row shows, placeholder rows fill the body, a page of them when paged, else five, and the table is `aria-busy`. With rows shown, they stay usable under a thin progress bar over the table's top edge, named by the localized `table.loading`, "Loading rows". The empty row waits until loading ends. |
 | `toolbar` | `Option<Element>` | `None` | A row above the table for your own controls, say an export or add button. With `show_quick_filter` the search field joins it at the end. It wraps on a narrow screen and stays put while the table scrolls. `TableColumnsButton`, `TableDensityButton`, `TableFilterButton` and `TableExportButton` work only in here. `TableColumnsButton` opens a checklist that shows and hides the hideable columns; `TableDensityButton` picks compact, standard or comfortable rows, `size` small, medium or large. |
+| `csv_formula_guard` | `bool` | `true` | Gives a `TableExportButton` cell that starts with `=`, `+`, `-`, `@`, Tab or CR, a plain number aside, a leading `'`, so a spreadsheet reads it as text, not a formula (CSV injection, OWASP), as `table_csv` does. `false` exports every cell as it is, as `table_csv_raw` does. |
 | `scroll` | `bool` | `false` | Wraps the table in a `ScrollArea` that scrolls sideways. `class`, `sx` and `attributes` stay on the table. |
 | `max_height` | `Option<String>` | `None` | Caps the table's height, any CSS length. The rows scroll in a `ScrollArea`, both ways, under a header that stays put, with the scrollbar beside the rows only. The `caption` sits above the scrolled box. The header takes the page surface's colour: on another background, set it with `sx().selector("& thead th", ..)`. |
 | `virtual_row_height` | `Option<f64>` | `None` | With `max_height`, renders only the rows in view plus a few beyond each edge, so ten thousand rows scroll like fifty. Every body row is clipped to this height in px: one line per cell, longer text ends in an ellipsis. The table then lays out fixed, columns without a `width` sharing the rest evenly. A row holding focus stays rendered while it scrolls away. With `onrowreorder` a keyboard move scrolls to its slot, and a row dragged to the top or bottom edge scrolls the rows on. Ignored with `row_detail`, which renders every row; a debug build warns. |
@@ -1069,14 +1070,15 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `table_csv` | `fn(&[Column<T>], &[T]) -> String` | none | The header row and one line per row as CSV (RFC 4180, CRLF), each cell as its column's text, `format` applied and `render` ignored. Pass the rows and columns in the order you want; `save_file` saves it as a file. |
+| `table_csv` | `fn(&[Column<T>], &[T]) -> String` | none | The header row and one line per row as CSV (RFC 4180, CRLF), each cell as its column's text, `format` applied and `render` ignored. Pass the rows and columns in the order you want; `save_file` saves it as a file. A cell that starts with `=`, `+`, `-`, `@`, Tab or CR, a plain number aside, gets a leading `'`, so a spreadsheet reads it as text, not a formula (CSV injection, OWASP). |
+| `table_csv_raw` | `fn(&[Column<T>], &[T]) -> String` | none | `table_csv` with every cell as it is, formula starts included: for a reader that is no spreadsheet, or that neutralises them itself. |
 | `table_text` | `fn(&[Column<T>], &[T]) -> Vec<Vec<String>>` | none | The same cells unjoined, the header row first, for your own writer. |
 
 ### TableExportButton
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `onexport` | `EventHandler<String>` | required | Called with the table as CSV, as `table_csv` writes it: the filtered, sorted rows of every page, in the shown columns. `save_file` saves it as a file. `TableColumnsButton`, `TableDensityButton` and `TableFilterButton` take no props, and none of the four takes `class`, `sx` or `attributes`. |
+| `onexport` | `EventHandler<String>` | required | Called with the table as CSV, as `table_csv` writes it (`table_csv_raw` with `csv_formula_guard: false`): the filtered, sorted rows of every page, in the shown columns. `save_file` saves it as a file. `TableColumnsButton`, `TableDensityButton` and `TableFilterButton` take no props, and none of the four takes `class`, `sx` or `attributes`. |
 
 ## Accessibility
 
@@ -1100,7 +1102,7 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `Ctrl+Home` or `Ctrl+End` | With `cell_focus`: moves to the first header cell or the last row's last cell, scrolling it into view. |
 | `PageUp` or `PageDown` | With `cell_focus`: moves up or down by the rows one view shows, 10 when the view cannot be measured. |
 | `Enter` or `Space` | With `cell_focus`, on a sortable header cell itself: sorts by that column, as its button does. Focus stays on the cell. |
-| `Ctrl+Enter` | With `cell_focus` and `column_menu`, on a header cell: opens its column menu. |
+| `Ctrl+Enter` | With `cell_focus` and `column_menu`, on a header cell: opens its column menu, the keyboard way to its Filter and width items too. |
 | `Shift+Space` | With `cell_focus` and `selectable`, on a body cell: selects or deselects its row. |
 | `Right` | With `parent_key`, on a row: opens a closed row; on an open one moves to its first child, or with `cell_focus` to its first cell. |
 | `Left` | With `parent_key`, on a row: closes an open row, else moves to its parent. With `cell_focus`, on a row's first cell: moves to the row. |
@@ -1161,7 +1163,9 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
   header drag grip is pointer only and hidden from screen readers. While
   sorted or filtered the row controls stay tab stops but are `aria-disabled`
   and say why.
-- Each resize grip is a tab stop, a vertical `role="separator"` named "Resize"
+- Each resize grip is a tab stop, except in a `cell_focus` grid with
+  `column_menu`, whose width items stand in for it; it is a vertical
+  `role="separator"` named "Resize"
   plus the column, with its width and limits in `aria-valuenow`,
   `aria-valuemin` and `aria-valuemax`.
 - `loading` marks an empty table `aria-busy`. With rows shown it adds a
@@ -1177,7 +1181,11 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
   as anywhere else.
 - With `cell_focus`, the table is a `role="grid"` and one header or body cell
   is its tab stop, `tabindex="0"`, the rest `-1`, so Tab passes the grid in one
-  step. Cells, column and row headers keep their roles; in a
+  step. A header cell's sort, menu and filtered buttons, and its resize grip
+  with `column_menu`, are `tabindex="-1"` too: the cell is the one stop and its
+  keys do their work. Up and Down pass by the `header_filters` row, text fields
+  reached by Tab, whose arrows move the caret, and by group rows, whose toggles
+  are stops of their own. Cells, column and row headers keep their roles; in a
   `virtual_row_height` table the focused cell's row stays rendered. The grid is
   `aria-readonly` without an editable column, `aria-multiselectable` with
   `selectable`.
@@ -1209,9 +1217,8 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
   row is not a tab stop, so a keyboard cannot click it.
 - With `selectable` or `row_detail`, give the rows a `.row_header()` column,
   so each checkbox and toggle gets a unique name.
-- Before a CSV of text users typed goes to a spreadsheet, neutralise cells
-  that start with `=`, `+`, `-` or `@` (CSV injection, OWASP). `table_text`'s
-  docs show a three-line guard.
+- Keep `csv_formula_guard` on, and `table_csv` over `table_csv_raw`, when a
+  CSV of text users typed can reach a spreadsheet (CSV injection, OWASP).
 
 ### Example
 

@@ -176,6 +176,8 @@ pub(super) fn ResizeHandle(
     header: String,
     limits: ResizeLimits,
     resize: ColumnResize,
+    /// Out of the Tab order, still focusable.
+    untabbable: bool,
 ) -> Element {
     // Fills the header cell, to measure it.
     let cell = use_element();
@@ -284,7 +286,7 @@ pub(super) fn ResizeHandle(
             "data-resize-handle": true,
             "data-dragging": dragging.then_some(true),
             role: "separator",
-            tabindex: "0",
+            tabindex: if untabbable { "-1" } else { "0" },
             aria_orientation: "vertical",
             aria_label: (resize.labels.resize_column)(&header),
             aria_valuenow: now
