@@ -20,6 +20,10 @@ pub(crate) fn use_modal_z_index() -> i32 {
 }
 
 /// Closes the enclosing modal, for content that cannot capture its [`ModalScope`].
+///
+/// # Panics
+///
+/// Outside a modal's content, like `use_context` outside its provider.
 pub fn use_modal_close() -> Callback<()> {
     let modal = use_context::<ModalContext>();
     use_callback(move |()| modal.close())
@@ -249,13 +253,18 @@ impl<S: 'static, R: Clone + 'static> ModalHandle<S, R> {
     /// Opens with `args`, superseding whatever this modal was showing.
     pub fn open_with(&self, args: impl Into<S>) -> Opening<R> {
         let mut signal = self.resolution;
-        let (generation, focus_return, replaced) = {
+        let (generation, focus_return, replaced, superseded) = {
             let mut resolution = signal.write();
             resolution.generation += 1;
             resolution.outcome = None;
-            resolution.handlers.clear();
+            let superseded = std::mem::take(&mut resolution.handlers);
             let replaced = std::mem::take(&mut resolution.wakers);
-            (resolution.generation, resolution.focus_return, replaced)
+            (
+                resolution.generation,
+                resolution.focus_return,
+                replaced,
+                superseded,
+            )
         };
         // A task awaiting the replaced opening polls again and finds it stale.
         for waker in replaced {
@@ -274,6 +283,10 @@ impl<S: 'static, R: Clone + 'static> ModalHandle<S, R> {
         // Already open: the slot reads `args` and redraws itself.
         if opening {
             self.show.call(());
+        }
+        // The superseded opening settles as dismissed, after the lock is released.
+        for mut handler in superseded {
+            handler(None);
         }
 
         Opening {

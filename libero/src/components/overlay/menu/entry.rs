@@ -48,7 +48,7 @@ enum Action {
 /// # }
 /// ```
 ///
-/// `leading` and `trailing` sit inside a `<button>`: never interactive.
+/// `leading` and `trailing` sit inside the row's `<button>` (an `<a>` for an `href` item): never interactive.
 #[derive(Clone)]
 pub struct MenuItem {
     pub(super) label: String,
@@ -122,11 +122,9 @@ impl MenuItem {
         self
     }
 
-    /// Opens `url` in a new tab: the item is an `<a>` with `role="menuitem"`, so
-    /// middle-click and the context menu work. As on `Anchor`, the label ends in a
-    /// hidden "(opens in a new tab)", and in an icon with [`new_tab_icon`](Self::new_tab_icon). Replaces an
-    /// [`onselect`](Self::onselect) or [`submenu`](Self::submenu). A disabled link has no `href`,
-    /// nor has one to a `javascript:`, `data:` or `vbscript:` URL: that row is a plain button and logs a warning.
+    /// Opens `url` in a new tab as an `<a role="menuitem">`, with `Anchor`'s hidden new-tab
+    /// hint and [`new_tab_icon`](Self::new_tab_icon). Replaces [`onselect`](Self::onselect) or
+    /// [`submenu`](Self::submenu). Disabled, or a `javascript:`/`data:`/`vbscript:` URL: a plain button.
     ///
     /// ```no_run
     /// # use libero::components::MenuItem;

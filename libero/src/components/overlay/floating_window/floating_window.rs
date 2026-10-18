@@ -17,8 +17,9 @@ use crate::{
     },
     context::{ModalContext, WindowHost},
     hooks::{ElementHandle, escape_closes, use_element, use_focus_within, use_id},
-    localization::fill,
+    localization::{FloatingWindowLabels, fill},
     platform::{ElementApi, PlatformError},
+    sx::ThemeAwareValue,
     utils::unique_id,
 };
 
@@ -45,6 +46,107 @@ fn focus_elsewhere(root: &ElementHandle) -> bool {
         _ if root.is_focused() => false,
         Err(PlatformError::Unsupported) => false,
         Err(_) => true,
+    }
+}
+
+/// Move or Resize from the menu shows step buttons until Done or Escape.
+fn use_adjust(
+    geometry: WindowGeometry,
+    labels: FloatingWindowLabels,
+) -> (Callback<Adjust>, Option<Element>) {
+    let root = geometry.root;
+    let mut adjusting = use_signal(|| None::<Adjust>);
+    let onadjust = use_callback(move |adjust: Adjust| match adjust {
+        Adjust::Reset => {
+            adjusting.set(None);
+            geometry.reset();
+        }
+        adjust => adjusting.set(Some(adjust)),
+    });
+    let onstep = use_callback(move |(dx, dy): (f64, f64)| match *adjusting.peek() {
+        Some(Adjust::Move) => geometry.move_by(dx * geometry.move_step, dy * geometry.move_step),
+        Some(Adjust::Resize) => {
+            geometry.resize_to(Ok((dx * geometry.resize_step, dy * geometry.resize_step)))
+        }
+        _ => {}
+    });
+    let ondone = use_callback(move |()| {
+        adjusting.set(None);
+        if let Ok(trigger) = root.query_selector("[data-slot='title-bar'] [data-slot='menu']") {
+            let _ = trigger.focus();
+        }
+    });
+    let steps = adjusting().map(|adjust| {
+        rsx! {
+            WindowSteps { adjust, labels, onstep, ondone }
+        }
+    });
+    (onadjust, steps)
+}
+
+/// Where the float sits: its placement until moved, then clamped pixel offsets.
+fn float_position(
+    geometry: WindowGeometry,
+    placement: Placement,
+) -> (
+    Input<Placement>,
+    Input<ThemeAwareValue>,
+    Input<ThemeAwareValue>,
+) {
+    let Some((x, y)) = (geometry.position)() else {
+        return (Input::Value(placement), Input::None, Input::None);
+    };
+    // The new size, not the last measured one: a report reads this render (3311).
+    let measured = (geometry.size)()
+        .zip((geometry.bounds)())
+        .map(|(requested, bounds)| bounds.fit(requested))
+        .or((geometry.measured)());
+    // The offsets are physical, from the left: under RTL that corner is the end.
+    let left = match geometry.root.is_rtl() {
+        true => Placement::TopEnd,
+        false => Placement::TopStart,
+    };
+    (
+        Input::Value(left),
+        Input::from(clamped(x, measured.map(|m| m.0), "100dvw")),
+        Input::from(clamped(y, measured.map(|m| m.1), "100dvh")),
+    )
+}
+
+/// The resize separator. Its value comes from this render's own request, clamped as
+/// the CSS will clamp it; only an auto-sized window waits for `onresize`.
+fn resize_handle(geometry: WindowGeometry, labels: FloatingWindowLabels) -> Element {
+    let bounds = (geometry.bounds)();
+    let (width, height) = match ((geometry.size)(), bounds) {
+        (Some(requested), Some(bounds)) => bounds.fit(requested),
+        _ => (geometry.measured)().unwrap_or_default(),
+    };
+    let (value_min, value_max) = match bounds.filter(|b| b.max.0.is_finite()) {
+        Some(b) => (
+            Some(b.min.0.round().to_string()),
+            Some(b.max.0.max(b.min.0).round().to_string()),
+        ),
+        None => (None, None),
+    };
+    let resize_drag = geometry.resize_drag;
+    rsx! {
+        div {
+            "data-slot": FloatingWindowPart::Resize.slot(),
+            role: "separator",
+            tabindex: "0",
+            "aria-label": labels.resize_handle,
+            // The width in real pixels (ARIA's implicit 0..100 would clamp),
+            // with the whole size in words.
+            "aria-valuemin": value_min,
+            "aria-valuemax": value_max,
+            "aria-valuenow": "{width.round()}",
+            "aria-valuetext": fill(
+                labels.size,
+                &[("width", &width.round()), ("height", &height.round())],
+            ),
+            onpointerdown: move |event| resize_drag.onpointerdown.call(event),
+            onkeydown: move |event| geometry.resize_key(event),
+        }
     }
 }
 
@@ -80,6 +182,9 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
         onresize,
     } = props.options;
     let onclose = props.onclose;
+    let placement = placement.copied_or(defaults.placement);
+    // A blank one names nothing, and must not mask the title.
+    let aria_label = aria_label.filter(|label| !label.trim().is_empty());
     // Non-modal: content opened from a modal must not inherit its close.
     use_context_provider(|| ModalContext::NONE);
     let title_id = use_id();
@@ -116,48 +221,20 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
         root,
         f64::from(defaults.move_step),
         f64::from(defaults.resize_step),
-        pinned.then(|| placement.copied_or(defaults.placement)),
+        pinned.then_some(placement),
         onmove,
         onresize,
     );
     let WindowGeometry {
-        position,
         size,
         mut measured,
         bounds,
         move_drag,
-        resize_drag,
         ..
     } = geometry;
     let move_key = use_callback(move |event| geometry.handle_key(event));
 
-    // Move or Resize from the menu shows step buttons until Done or Escape.
-    let mut adjusting = use_signal(|| None::<Adjust>);
-    let onadjust = use_callback(move |adjust: Adjust| match adjust {
-        Adjust::Reset => {
-            adjusting.set(None);
-            geometry.reset();
-        }
-        adjust => adjusting.set(Some(adjust)),
-    });
-    let onstep = use_callback(move |(dx, dy): (f64, f64)| match *adjusting.peek() {
-        Some(Adjust::Move) => geometry.move_by(dx * geometry.move_step, dy * geometry.move_step),
-        Some(Adjust::Resize) => {
-            geometry.resize_to(Ok((dx * geometry.resize_step, dy * geometry.resize_step)))
-        }
-        _ => {}
-    });
-    let ondone = use_callback(move |()| {
-        adjusting.set(None);
-        if let Ok(trigger) = root.query_selector("[data-slot='title-bar'] [data-slot='menu']") {
-            let _ = trigger.focus();
-        }
-    });
-    let steps = adjusting().map(|adjust| {
-        rsx! {
-            WindowSteps { adjust, labels, onstep, ondone }
-        }
-    });
+    let (onadjust, steps) = use_adjust(geometry, labels);
 
     // Not a dismiss layer, so only presses inside it; one Escape closes one layer,
     // as in `Modal`, and a held or composing Escape closes nothing.
@@ -168,50 +245,12 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
         }
     };
 
-    let (float_placement, offset_x, offset_y) = match position() {
-        Some((x, y)) => {
-            // The new size, not the last measured one: a report reads this render (3311).
-            let measured = size()
-                .zip(bounds())
-                .map(|(requested, bounds)| bounds.fit(requested))
-                .or(measured());
-            // The offsets are physical, from the left: under RTL that corner is the end.
-            let left = match root.is_rtl() {
-                true => Placement::TopEnd,
-                false => Placement::TopStart,
-            };
-            (
-                Input::<Placement>::Value(left),
-                Input::from(clamped(x, measured.map(|m| m.0), "100dvw")),
-                Input::from(clamped(y, measured.map(|m| m.1), "100dvh")),
-            )
-        }
-        None => (
-            Input::<Placement>::Value(placement.copied_or(defaults.placement)),
-            Input::None,
-            Input::None,
-        ),
-    };
+    let (float_placement, offset_x, offset_y) = float_position(geometry, placement);
 
     // Inline, so a resize beats the caller's `sx` size (todo 922). Width capped
     // here as a caller's `max_width` replaces ours; height by the wrapper.
     let resized_style =
         size().map(|(width, height)| format!("width:min({width}px, 100dvw);height:{height}px;"));
-
-    // The separator's value comes from this render's own request, clamped as
-    // the CSS will clamp it; only an auto-sized window waits for `onresize`.
-    let bounds_now = bounds();
-    let (width, height) = match (size(), bounds_now) {
-        (Some(requested), Some(bounds)) => bounds.fit(requested),
-        _ => measured().unwrap_or_default(),
-    };
-    let (value_min, value_max) = match bounds_now.filter(|b| b.max.0.is_finite()) {
-        Some(b) => (
-            Some(b.min.0.round().to_string()),
-            Some(b.max.0.max(b.min.0).round().to_string()),
-        ),
-        None => (None, None),
-    };
 
     let resized = move |event: Event<ResizeData>| {
         if let Ok(size) = event.get_border_box_size() {
@@ -279,23 +318,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
                 {steps}
                 div { "data-slot": FloatingWindowPart::Body.slot(), {props.children} }
                 if resizable {
-                    div {
-                        "data-slot": FloatingWindowPart::Resize.slot(),
-                        role: "separator",
-                        tabindex: "0",
-                        "aria-label": labels.resize_handle,
-                        // The width in real pixels (ARIA's implicit 0..100 would
-                        // clamp), with the whole size in words.
-                        "aria-valuemin": value_min,
-                        "aria-valuemax": value_max,
-                        "aria-valuenow": "{width.round()}",
-                        "aria-valuetext": fill(
-                            labels.size,
-                            &[("width", &width.round()), ("height", &height.round())],
-                        ),
-                        onpointerdown: move |event| resize_drag.onpointerdown.call(event),
-                        onkeydown: move |event| geometry.resize_key(event),
-                    }
+                    {resize_handle(geometry, labels)}
                 }
             },
         );

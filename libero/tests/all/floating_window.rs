@@ -83,6 +83,23 @@ fn an_open_window_is_a_named_non_modal_dialog() {
 }
 
 #[test]
+fn a_blank_aria_label_does_not_mask_the_title() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Opened {
+                    options: FloatingWindowOptions { aria_label: Some("  ".into()), ..options() },
+                }
+            }
+        }
+    }
+    let html = render(app);
+    let dialog = tag_with(&html, "role=\"dialog\"");
+    assert!(!dialog.contains_key("aria-label"), "{dialog:?}");
+    assert!(dialog.contains_key("aria-labelledby"), "{dialog:?}");
+}
+
+#[test]
 fn the_window_sits_in_a_fixed_float() {
     let html = render(plain_app);
     let body = body(&html);

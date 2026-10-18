@@ -71,6 +71,37 @@ fn a_superseded_opening_no_longer_closes_the_live_modal() {
 }
 
 #[test]
+fn a_superseded_opening_settles_its_onresult_with_no_result() {
+    #[component]
+    fn Opener(outcome: Signal<::std::option::Option<::std::option::Option<bool>>>) -> Element {
+        let modal = use_modal(|_: ModalScope<(), bool>| rsx! { Dialog { "asking" } });
+        use_hook(move || {
+            let mut outcome = outcome;
+            modal
+                .open()
+                .onresult(move |result| outcome.set(Some(result)));
+            modal.open();
+        });
+
+        rsx! {}
+    }
+
+    fn app() -> Element {
+        let outcome = use_signal(|| ::std::option::Option::None);
+
+        rsx! {
+            LiberoProvider { Opener { outcome } }
+            "{outcome:?}"
+        }
+    }
+
+    let body = body(&render(app));
+
+    assert!(body.contains("Some(None)"), "got {body}");
+    assert!(body.contains("asking"), "the second opening stays: {body}");
+}
+
+#[test]
 fn dismissing_a_modal_settles_its_opening_with_no_result() {
     #[component]
     fn Opener(outcome: Signal<::std::option::Option<::std::option::Option<bool>>>) -> Element {

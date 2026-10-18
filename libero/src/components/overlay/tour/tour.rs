@@ -519,9 +519,8 @@ pub fn use_tour(options: TourOptions) -> TourHandle {
         }
     });
 
-    // Steps gone while open end the tour, or it would stay open with nothing shown.
-    // `onclose` gets the last step shown, not the clamped 0 (todo 2317). Not seen: the
-    // user neither finished nor closed it (todo 2677).
+    // Steps gone while open end the tour (todo 2677: not seen); `onclose` gets the
+    // last step shown, not the clamped 0 (todo 2317).
     let mut last_shown = use_hook(|| CopyValue::new(0usize));
     let total = options.steps.len();
     use_effect(use_reactive!(|total| {
@@ -588,10 +587,8 @@ fn TourLayer(act: Callback<Move>, index: usize, options: TourOptions) -> Element
         }
     });
 
-    // An interactive step's target sits in the Tab order beside the card: Tab off its
-    // edge goes back in. Tab inside it is walked as the card's trap walks, past a
-    // `display: none` stop (todo 2673). `true` for Tab breaks `on_key`'s rule, but only
-    // once focus moved, so the press moves no further (todo 2676).
+    // An interactive step's target is walked as the card's trap walks, and Tab off its
+    // edge goes back in (todo 2673); `true` for Tab only once focus moved (todo 2676).
     let interactive = step.interactive && step.target.is_some();
     let mut bridged = use_hook(|| CopyValue::new(None::<ElementHandle>));
     bridged.set(step.target.filter(|_| interactive));

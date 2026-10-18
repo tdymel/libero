@@ -414,7 +414,7 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
         .render(HtmlTag::Div, attributes, props.children)
 }
 
-/// A hidden placeholder inside a [`FocusTrap`] that takes initial focus, then leaves the tab order.
+/// A hidden placeholder inside a [`FocusTrap`] that takes initial focus. Never a Tab stop.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -438,7 +438,8 @@ pub fn FocusTrapInitialFocus() -> Element {
     use_box()
         .framework_sx(&VISUALLY_HIDDEN_FIXED_SX)
         .prepare()
-        .attr("tabindex", if used.get() { "-1" } else { "0" })
+        // Script-focusable, never a Tab stop: an unnamed stop would be announced as nothing.
+        .attr("tabindex", "-1")
         .attr("data-autofocus", !used.get())
         .event("onblur", move |_: Event<FocusData>| mark_used.set(true))
         .render(HtmlTag::Span, Vec::new(), ())

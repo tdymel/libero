@@ -228,6 +228,24 @@ pub fn Tooltip(props: TooltipProps) -> Element {
         }
     });
 
+    // Without `label_id` nothing describes the trigger; an `aria-label` trigger is named instead.
+    #[cfg(debug_assertions)]
+    {
+        let unwired = props.label_id.is_none();
+        use_effect(move || {
+            if unwired
+                && let Err(crate::platform::PlatformError::NotFound) =
+                    anchor.query_selector("[aria-describedby], [aria-label], [aria-labelledby]")
+            {
+                warn(
+                    "Tooltip: no `label_id` and the trigger has no `aria-describedby`, so \
+                     assistive tech never reads the label - set `label_id` and point the \
+                     trigger's `aria-describedby` at it.",
+                );
+            }
+        });
+    }
+
     // Every hook above the branch - `prepare()` is the hook.
     let wrapper = use_box().framework_sx(&TRIGGER_WRAPPER_SX).prepare();
 
