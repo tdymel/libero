@@ -208,7 +208,7 @@ impl Level {
 }
 
 /// Remembers where focus returns to, and focuses the requested item.
-/// [`MenuFocus::First`] lands on `first`: the checked item, if any.
+/// [`MenuFocus::First`] lands on `first`: the checked item, else the first enabled one.
 pub(super) fn use_level_focus(
     level: Level,
     open: bool,

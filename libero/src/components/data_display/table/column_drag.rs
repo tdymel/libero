@@ -11,8 +11,8 @@ use crate::{
     components::common::Glyph,
     context::IconSlot,
     hooks::{
-        DragMove, DragOptions, DragStart, ElementHandle, edge_scroll_step, use_drag, use_element,
-        use_escape_dismiss, use_interval,
+        DragMove, DragOptions, DragStart, ElementHandle, edge_scroll_step, use_drag_cancel,
+        use_element, use_escape_dismiss, use_interval,
     },
     platform::{ElementApi, PlatformError},
 };
@@ -257,7 +257,13 @@ pub(super) fn ColumnDragGrip(index: usize, header: String, drag: ColumnDrag) -> 
             drag.order.set(next);
         }
     });
-    let handle = use_drag(DragOptions {
+    // The OS revoked the pointer: no reorder, as Escape; a measure still running finds it gone.
+    let revoked = use_callback(move |()| {
+        if (*dragging.peek()).is_some_and(|active| active.index == index) {
+            cancel.call(());
+        }
+    });
+    let options = DragOptions {
         capture: grip,
         onstart: Callback::new(move |start: DragStart| {
             let plan = drag.plan.peek().clone();
@@ -381,7 +387,8 @@ pub(super) fn ColumnDragGrip(index: usize, header: String, drag: ColumnDrag) -> 
                 drop_at.call(gap);
             }
         }),
-    });
+    };
+    let handle = use_drag_cancel(options, revoked);
     let active = mine();
     let shown = geometry.read().clone().zip(active);
     let overlay = shown.map(|(geometry, active)| {

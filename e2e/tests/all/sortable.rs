@@ -278,10 +278,10 @@ async fn neighbours_slide_the_lifted_item_does_not<D: Driver>(
         Ok(d.style("#Beta", "transform").await? == "none")
     })
     .await?;
+    // The theme's transition duration, as the drop's settle (D12-F2).
     ensure!(
-        d.style("#Beta", "transition-duration").await? == "0.15s",
-        "a neighbour has no slide: {}",
-        d.style("#Beta", "transition-duration").await?
+        d.style("#Beta", "transition-duration").await? != "0s",
+        "a neighbour has no slide"
     );
     ensure!(
         d.style("#Alpha", "transition-duration").await? == "0s",
@@ -627,6 +627,57 @@ fn a_scroll_mid_drag_keeps_the_item_under_the_pointer() {
                 "a drop five slots down",
             )
             .await
+        }
+        .await;
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+    });
+}
+
+/// A script revoking a held mouse drag's pointer on `selector`: CDP has no mouse cancel, and
+/// Chrome's mouse is pointer 1.
+pub(crate) fn cancel_held(selector: &str) -> String {
+    format!(
+        "document.querySelector({selector:?}).dispatchEvent(new PointerEvent('pointercancel', \
+         {{bubbles: true, pointerId: 1, pointerType: 'mouse', isPrimary: true}}))"
+    )
+}
+
+/// D12-F1: a pointer the OS revokes mid-drag puts the item back, as Escape, and reorders nothing.
+#[test]
+fn a_cancelled_pointer_puts_it_back() {
+    use e2e::passes::pointer::{self, Point};
+    block_on(async {
+        let fixture = Fixture::open("/sortable/long", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            wait::for_visible(page, "#Item2 button").await?;
+            let from = pointer::centre_of(page, "#Item2 button").await?;
+            let to = Point {
+                x: from.x,
+                y: from.y + 72.0,
+            };
+            pointer::drag_held(page, from, to, 4).await?;
+            wait::for_visible(page, "#Item2[data-state~=dragging]").await?;
+            page.evaluate(cancel_held("#Item2 button")).await?;
+            wait::for_js_true(
+                page,
+                "!document.querySelector('#Item2[data-state~=dragging]')",
+                "the cancel to end the drag",
+            )
+            .await?;
+            pointer::release(page, to).await?;
+            let order: String = page
+                .evaluate("document.querySelector('#order').textContent")
+                .await?
+                .into_value()?;
+            ensure!(
+                order.starts_with("Item1 Item2 Item3 "),
+                "a cancelled drag reordered: {order}"
+            );
+            anyhow::Ok(())
         }
         .await;
         fixture.close().await.unwrap();

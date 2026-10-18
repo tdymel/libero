@@ -18,7 +18,7 @@ use crate::{
     hooks::{current_localization, drag_handle_sx, use_css, use_id, use_media_query},
     localization::fill,
     sx::{FORCED_COLORS, StaticSx, Sx, sx},
-    theme::{FOCUS_RING_HALO_SPREAD, Size, SizeCss},
+    theme::{FOCUS_RING_HALO_SPREAD, Size, SizeCss, TRANSITION_DURATION, TRANSITION_EASING},
 };
 
 static SORTABLE_BASE_SX: StaticSx = StaticSx::new(|| {
@@ -43,6 +43,15 @@ static SORTABLE_BASE_SX: StaticSx = StaticSx::new(|| {
 
 pub(crate) static SORTABLE_ITEM_SX: StaticSx = StaticSx::new(sortable_item_sx);
 
+/// A neighbour's slide while the list sorts, on the theme's motion tokens as the drop's settle.
+pub(crate) fn slide_transition() -> String {
+    format!(
+        "transform {} {}",
+        TRANSITION_DURATION.value(),
+        TRANSITION_EASING.value()
+    )
+}
+
 pub(crate) fn sortable_item_sx() -> Sx {
     sx().display("flex")
         .align_items("center")
@@ -53,7 +62,7 @@ pub(crate) fn sortable_item_sx() -> Sx {
         // the dragged item opts out below.
         .when(
             "sorting",
-            sx().transition("transform 150ms ease")
+            sx().transition(slide_transition())
                 .media("(prefers-reduced-motion: reduce)", sx().transition("none")),
         )
         // A lifted item, by pointer or key, rises: a keyed lift moves nothing until its first arrow.
@@ -419,7 +428,9 @@ mod tests {
     fn the_neighbours_slide_only_while_sorting_and_never_under_reduced_motion() {
         let css = Stylesheet::from(&SORTABLE_ITEM_SX).as_str().to_string();
 
-        assert!(css.contains("transition:transform 150ms ease"), "{css}");
+        let slide = format!("transition:{}", slide_transition());
+        assert!(css.contains(&slide), "{css}");
+        assert!(!css.contains("150ms"), "a hard-coded duration: {css}");
         assert!(
             css.contains("@media (prefers-reduced-motion: reduce)"),
             "{css}"

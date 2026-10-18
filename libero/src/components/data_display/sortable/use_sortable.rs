@@ -8,7 +8,8 @@ use crate::{
     components::common::Orientation,
     hooks::{
         DragMove, DragOptions, DragStart, ElementHandle, current_localization, edge_scroll_step,
-        use_distance_drag, use_early_measure, use_element, use_interval, use_subscription_slot,
+        use_distance_drag_cancel, use_early_measure, use_element, use_interval,
+        use_subscription_slot,
     },
     localization::fill,
     platform::{self, Dimensions, ElementApi, Read, ScrollSubscription, scroll},
@@ -511,8 +512,8 @@ pub(crate) fn use_fixed_sortable(
     let mut announcement = use_signal(String::new);
     let count = use_signal(|| 0_usize);
     let mut settle = use_signal(|| None::<Settle>);
-    // A release can land before the measure: (measuring, released).
-    let mut starting = use_hook(|| CopyValue::new((false, false)));
+    // A release or cancel can land before the measure: (measuring, Some(commit) once let go).
+    let mut starting = use_hook(|| CopyValue::new((false, None::<bool>)));
     // The drag's direction sign, read at its start so moves before the measure use it.
     let mut drag_sign = use_hook(|| CopyValue::new(1.0_f64));
     // Fixed slots: the scroller once read, the pointer's (client position, travel)
@@ -707,7 +708,16 @@ pub(crate) fn use_fixed_sortable(
         early.press(index, idle, move |started| begin(index, false, started));
     });
 
-    let drag = use_distance_drag(DragOptions {
+    let mut end = move |commit: bool| {
+        if starting.peek().0 {
+            starting.set((true, Some(commit)));
+            return;
+        }
+        if session.peek().as_ref().is_some_and(|s| s.keyed.is_none()) {
+            finish(commit);
+        }
+    };
+    let options = DragOptions {
         capture: element,
         onstart: use_callback(move |start: DragStart| {
             let cancel = start.cancel;
@@ -716,7 +726,7 @@ pub(crate) fn use_fixed_sortable(
                 cancel.call(());
                 return;
             };
-            starting.set((true, false));
+            starting.set((true, None));
             travel.set(0.0);
             let flipped = *horizontal.peek() && element.is_rtl();
             drag_sign.set(if flipped { -1.0 } else { 1.0 });
@@ -751,15 +761,15 @@ pub(crate) fn use_fixed_sortable(
                 });
             }
             let started = Callback::new(move |measured: Option<Session>| {
-                let (_, released) = starting.replace((false, false));
-                match measured {
-                    None => cancel.call(()),
+                let (_, released) = starting.replace((false, None));
+                match (measured, released) {
+                    (None, _) => cancel.call(()),
                     // A flick let go before the measure still lands where it was let go.
-                    Some(measured) if released => {
+                    (Some(measured), Some(commit)) => {
                         session.set(Some(measured));
-                        finish(true);
+                        finish(commit);
                     }
-                    Some(measured) => lift(measured),
+                    (Some(measured), None) => lift(measured),
                 }
             });
             if !early.claim(from, started) {
@@ -781,16 +791,10 @@ pub(crate) fn use_fixed_sortable(
                 _ => {}
             }
         }),
-        onend: use_callback(move |()| {
-            if starting.peek().0 {
-                starting.set((true, true));
-                return;
-            }
-            if session.peek().as_ref().is_some_and(|s| s.keyed.is_none()) {
-                finish(true);
-            }
-        }),
-    });
+        onend: use_callback(move |()| end(true)),
+    };
+    // The OS revoked the pointer: the item goes back, no reorder.
+    let drag = use_distance_drag_cancel(options, use_callback(move |()| end(false)));
 
     let onkeydown = use_callback(move |(index, event): (usize, Event<KeyboardData>)| {
         let key = event.key();
@@ -810,12 +814,12 @@ pub(crate) fn use_fixed_sortable(
                 finish(false);
             } else if lifts(&key) && session.peek().is_none() && !starting.peek().0 {
                 event.prevent_default();
-                starting.set((true, false));
+                starting.set((true, None));
                 begin(
                     index,
                     true,
                     Callback::new(move |measured: Option<Session>| {
-                        starting.set((false, false));
+                        starting.set((false, None));
                         if let Some(measured) = measured {
                             lift(measured);
                         }

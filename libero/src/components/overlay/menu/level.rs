@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc, time::Duration};
 use dioxus::prelude::*;
 
 use super::{
-    entry::{Check, MenuEntry, MenuItem, flatten},
+    entry::{MenuEntry, MenuItem, first_focus, flatten},
     hover::use_hover_delay,
     item::{MenuRow, RowEvents},
     keyboard::{Level, use_level_focus},
@@ -181,11 +181,7 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
         close_on_select: props.close_on_select,
     };
 
-    // Only a chosen radio: a toggled setting is no "choice in effect".
-    let first = flat
-        .iter()
-        .position(|item| item.check == Some(Check::Radio(true)))
-        .unwrap_or(0);
+    let first = first_focus(&flat);
     use_level_focus(level, open, placed, props.request, props.initial, first);
     // A memo: the first focus sets `active` to `first`, which redrew every row for nothing.
     // An active row past a shrunk list falls back to `first`, so one row keeps tabindex 0.

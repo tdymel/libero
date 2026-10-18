@@ -305,9 +305,31 @@ pub(super) fn flatten(entries: &[MenuEntry]) -> Vec<&MenuItem> {
     out
 }
 
+/// The row an opening menu focuses: the chosen radio, else the first enabled
+/// item, as React Aria never lands on a disabled one.
+pub(super) fn first_focus(flat: &[&MenuItem]) -> usize {
+    // Only a chosen radio: a toggled setting is no "choice in effect".
+    flat.iter()
+        .position(|item| item.check == Some(Check::Radio(true)))
+        .or_else(|| flat.iter().position(|item| !item.disabled))
+        .unwrap_or(0)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{MenuItem, MenuLabels, shortcut_hint};
+    use super::{MenuItem, MenuLabels, first_focus, shortcut_hint};
+
+    #[test]
+    fn an_opening_menu_skips_disabled_items_but_not_a_chosen_radio() {
+        let items = [
+            MenuItem::new("To do").disabled(true),
+            MenuItem::new("Doing"),
+            MenuItem::new("Done").radio(true).disabled(true),
+        ];
+        assert_eq!(first_focus(&items.iter().collect::<Vec<_>>()), 2);
+        assert_eq!(first_focus(&items[..2].iter().collect::<Vec<_>>()), 1);
+        assert_eq!(first_focus(&items[..1].iter().collect::<Vec<_>>()), 0);
+    }
 
     #[test]
     fn radio_and_checkbox_on_one_item_warn() {

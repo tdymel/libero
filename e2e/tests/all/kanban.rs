@@ -220,6 +220,13 @@ async fn the_own_column_is_disabled<D: Driver>(d: &mut D, _route: &str) -> Resul
     d.press(keyboard::ESCAPE).await?;
     eventually_focused(d, "#Delta [data-slot=move-to]", "Escape").await?;
     ensure!(d.text("#order").await? == START, "Escape moved a card");
+
+    // K11-01: a card in the first column opens on the next column, not its disabled own.
+    d.focus("#Alpha [data-slot=move-to]").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_focused(d, "[role=menuitem]:nth-child(2)", "Enter on the trigger").await?;
+    d.press(keyboard::ESCAPE).await?;
+    eventually_focused(d, "#Alpha [data-slot=move-to]", "Escape").await?;
     Ok(())
 }
 
@@ -1541,6 +1548,53 @@ fn a_dragged_card_tints_the_column_it_would_land_in() {
         .await
         .unwrap();
         fixture.console.assert_clean("a target tint").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// D12-F1: a pointer the OS revokes mid-drag puts the card back, as Escape, and moves nothing.
+#[test]
+fn a_cancelled_pointer_puts_the_card_back() {
+    use e2e::browser::{Fixture, Viewport, block_on};
+    use e2e::frames::in_front;
+    use e2e::passes::pointer;
+    use e2e::wait;
+    const HANDLE: &str = "#Alpha [data-slot=handle]";
+    block_on(async {
+        let fixture = Fixture::open("/kanban", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let (handle, doing) = (centre(page, HANDLE).await, centre(page, "#column-1").await);
+        in_front(page, pointer::drag_held(page, handle, doing, 4))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#column-1').matches('[data-state~=target]')",
+            "the held card over Doing",
+        )
+        .await
+        .unwrap();
+        page.evaluate(crate::sortable::cancel_held(HANDLE))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('[role=status]').textContent \
+             === 'Cancelled. Alpha back at position 1 of 3.'",
+            "the cancel said",
+        )
+        .await
+        .unwrap();
+        in_front(page, pointer::release(page, doing)).await.unwrap();
+        let (order, moves): (String, String) = page
+            .evaluate("[document.querySelector('#order').textContent, document.querySelector('#moves').textContent]")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(order, START, "a cancelled drag moved a card");
+        assert!(moves.is_empty(), "a cancelled drag reported {moves:?}");
+        fixture.console.assert_clean("a cancelled drag").unwrap();
         fixture.close().await.unwrap();
     });
 }

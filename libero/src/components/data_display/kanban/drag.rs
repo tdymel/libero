@@ -15,7 +15,7 @@ use crate::{
     components::accessibility::Announcer,
     hooks::{
         DragMove, DragOptions, DragStart, ElementHandle, current_localization, edge_scroll_step,
-        use_distance_drag, use_early_measure, use_element, use_interval,
+        use_distance_drag_cancel, use_early_measure, use_element, use_interval,
     },
     localization::fill,
     platform::{self, Dimensions, ElementApi, PlatformError, Read},
@@ -291,8 +291,8 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
     let mut travel = use_signal(|| (0.0_f64, 0.0_f64));
     let mut scrolled = use_signal(|| (0.0_f64, 0.0_f64));
     let mut settle = use_signal(|| None::<Settle>);
-    // A release can land before the measure: (measuring, released).
-    let mut starting = use_hook(|| CopyValue::new((false, false)));
+    // A release or cancel can land before the measure: (measuring, Some(commit) once let go).
+    let mut starting = use_hook(|| CopyValue::new((false, None::<bool>)));
 
     let target = use_memo(move || {
         let (dx, dy) = travel();
@@ -550,7 +550,14 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
         early.press(id, idle, move |started| begin(id, started));
     });
 
-    let drag = use_distance_drag(DragOptions {
+    let mut end = move |commit: bool| {
+        if starting.peek().0 {
+            starting.set((true, Some(commit)));
+            return;
+        }
+        finish(commit);
+    };
+    let options = DragOptions {
         capture: element,
         onstart: use_callback(move |start: DragStart| {
             let cancel = start.cancel;
@@ -558,18 +565,18 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
                 cancel.call(());
                 return;
             };
-            starting.set((true, false));
+            starting.set((true, None));
             travel.set((0.0, 0.0));
             let started = Callback::new(move |measured: Option<Lifted>| {
-                let (_, released) = starting.replace((false, false));
-                match measured {
-                    None => cancel.call(()),
+                let (_, released) = starting.replace((false, None));
+                match (measured, released) {
+                    (None, _) => cancel.call(()),
                     // A flick let go before the measure still lands where it was let go.
-                    Some(measured) if released => {
+                    (Some(measured), Some(commit)) => {
                         lifted.set(Some(measured));
-                        finish(true);
+                        finish(commit);
                     }
-                    Some(measured) => lift(measured),
+                    (Some(measured), None) => lift(measured),
                 }
             });
             if !early.claim(id, started) {
@@ -592,14 +599,10 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
                 _ => {}
             }
         }),
-        onend: use_callback(move |()| {
-            if starting.peek().0 {
-                starting.set((true, true));
-                return;
-            }
-            finish(true);
-        }),
-    });
+        onend: use_callback(move |()| end(true)),
+    };
+    // The OS revoked the pointer: the card goes back, no move.
+    let drag = use_distance_drag_cancel(options, use_callback(move |()| end(false)));
     let cancel = use_callback(move |()| finish(false));
     let board = BoardDrag {
         element,

@@ -2,7 +2,7 @@
 //! reorder `data`, off while sorted. Column order (4c): a column menu's Move
 //! right moves the column, and its sort with it.
 
-use anyhow::{Result, bail};
+use anyhow::{Result, bail, ensure};
 use e2e::driver::{Driver, Platform, Rect, eventually, eventually_focused, eventually_text};
 use e2e::passes::keyboard;
 
@@ -810,6 +810,53 @@ e2e::scenario!(
     a_stray_release_ends_the_drag,
     web: skip("a browser's capture sends the release to the grip; only a WebView watches the page"),
     native: skip("Blitz follows the pointer itself and reads no scripts")
+);
+
+/// D12-F1: a pointer the OS revokes mid-drag drops nothing, as Escape: the ghost goes, the
+/// order stays.
+async fn a_cancelled_pointer_moves_no_column<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let before = d.text("#columns").await?;
+    d.evaluate(
+        "(() => {
+            const grip = document.querySelector('th[aria-label=Name] [data-drag-handle] svg');
+            const target = document.querySelector('th[aria-label=Origin]');
+            target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+            const [from, to] = [grip.getBoundingClientRect(), target.getBoundingClientRect()];
+            const [y, x0, x1] = [from.y + from.height / 2, from.x + from.width / 2,
+                to.x + to.width * 0.6];
+            const init = (x) => ({ bubbles: true, cancelable: true, composed: true, pointerId: 78,
+                pointerType: 'touch', isPrimary: true, clientX: x, clientY: y });
+            window.__cancelGrip = () => grip.dispatchEvent(new PointerEvent('pointercancel', init(x1)));
+            grip.dispatchEvent(new PointerEvent('pointerdown', init(x0)));
+            for (let step = 1; step <= 10; step++) {
+                grip.dispatchEvent(new PointerEvent('pointermove', init(x0 + (x1 - x0) * step / 10)));
+            }
+            return true;
+        })()",
+    )
+    .await?;
+    eventually(d, "the drop line past Origin", async |d| {
+        d.exists("[data-drop-line]").await
+    })
+    .await?;
+    d.evaluate("window.__cancelGrip()").await?;
+    eventually(d, "the ghost gone", async |d| {
+        Ok(!d.exists("[data-drag-ghost]").await?)
+    })
+    .await?;
+    let after = d.text("#columns").await?;
+    ensure!(
+        after == before,
+        "a cancelled drag moved a column: {before} to {after}"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_cancelled_grip_drag_moves_no_column,
+    "/table-reorder",
+    a_cancelled_pointer_moves_no_column,
+    native: skip("Blitz reads no scripts")
 );
 
 /// Todo 2018: the rows measure at the press, so a finger's drag moves the row soon.

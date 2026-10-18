@@ -18,7 +18,7 @@ use crate::{
         common::{Glyph, HtmlTag, Input, Orientation, Part, States, base_props, parts_enum},
         data_display::sortable::{
             SORTABLE_CONTENT_SX, SORTABLE_HANDLE_SX, SORTABLE_MOVE_SX, SortableMove,
-            SortableOptions, item_name, sortable_item_sx, use_handle_name,
+            SortableOptions, item_name, slide_transition, sortable_item_sx, use_handle_name,
             use_labelled_sortable_item, use_sortable,
         },
         layout::use_box,
@@ -78,7 +78,7 @@ static KANBAN_COLUMN_SX: StaticSx = StaticSx::new(|| {
         .when(
             "sorting",
             sx().user_select("none")
-                .transition("transform 150ms ease")
+                .transition(slide_transition())
                 .media("(prefers-reduced-motion: reduce)", sx().transition("none")),
         )
         // A column lifted by its reorder handle rises over the others, as a lifted card.

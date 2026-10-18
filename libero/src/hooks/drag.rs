@@ -148,7 +148,18 @@ enum Activation {
 /// [`use_drag`] that drags only once the pointer moved a few px, so a click on
 /// the handle stays a click: no `onstart` or `onend` for it.
 pub(crate) fn use_distance_drag(options: DragOptions) -> Drag {
-    use_drag_inner(options, Activation::Distance, None)
+    use_drag_inner(options, Activation::Distance, None, None)
+}
+
+/// [`use_distance_drag`] whose pointer cancel calls `oncancel`, not `onend`:
+/// for a drag that commits on release, as a reorder.
+pub(crate) fn use_distance_drag_cancel(options: DragOptions, oncancel: Callback<()>) -> Drag {
+    use_drag_inner(options, Activation::Distance, None, Some(oncancel))
+}
+
+/// [`use_drag`] whose pointer cancel calls `oncancel`, not `onend`.
+pub(crate) fn use_drag_cancel(options: DragOptions, oncancel: Callback<()>) -> Drag {
+    use_drag_inner(options, Activation::Press, None, Some(oncancel))
 }
 
 /// [`use_drag`] for a horizontal control on a page that scrolls, as a native
@@ -161,7 +172,7 @@ pub(crate) fn use_distance_drag(options: DragOptions) -> Drag {
 /// A tap calls `onend` right after `onstart`: an `onstart` that measures first
 /// must hold the end back until it has run.
 pub(crate) fn use_sideways_drag(options: DragOptions, grabs: Callback<(), bool>) -> Drag {
-    use_drag_inner(options, Activation::Sideways, Some(grabs))
+    use_drag_inner(options, Activation::Sideways, Some(grabs), None)
 }
 
 /// `touch-action: pan-y` for a [`use_sideways_drag`] control: the browser
@@ -178,7 +189,7 @@ pub(crate) fn use_drag_with(options: DragOptions, sideways: bool) -> Drag {
     } else {
         Activation::Press
     };
-    use_drag_inner(options, activation, None)
+    use_drag_inner(options, activation, None, None)
 }
 
 /// A press not yet moved far enough to be a drag.
@@ -235,6 +246,7 @@ fn use_drag_inner(
     options: DragOptions,
     activation: Activation,
     grabs: Option<Callback<(), bool>>,
+    oncancel: Option<Callback<()>>,
 ) -> Drag {
     let DragOptions {
         capture,
@@ -266,7 +278,8 @@ fn use_drag_inner(
         });
     });
 
-    let end = use_callback(move |event: Event<PointerData>| {
+    // Ends the drag `event`'s pointer follows; `true` when the OS revoked it.
+    let finish = use_callback(move |(event, revoked): (Event<PointerData>, bool)| {
         let Some(drag) = active() else {
             return;
         };
@@ -275,8 +288,12 @@ fn use_drag_inner(
         }
         active.set(None);
         dragging.set(false);
-        onend.call(());
+        match oncancel {
+            Some(oncancel) if revoked => oncancel.call(()),
+            _ => onend.call(()),
+        }
     });
+    let end = use_callback(move |event: Event<PointerData>| finish.call((event, false)));
 
     // Starts the drag `event`'s pointer went down for at `client`; `false` if
     // `onstart` cancelled it.
@@ -410,7 +427,7 @@ fn use_drag_inner(
             pending.set(None);
             return;
         }
-        end.call(event);
+        finish.call((event, true));
     });
 
     Drag {
