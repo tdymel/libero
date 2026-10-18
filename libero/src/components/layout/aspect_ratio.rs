@@ -43,9 +43,8 @@ static ASPECT_RATIO_BASE_SX: StaticSx = StaticSx::new(|| {
             "& > *:focus-visible::after",
             ring_overlay_sx().content("\"\"").and(inset_ring()),
         )
-        // The box clips nothing, so a text child is not cut at 200% text (todo 2937): media
-        // and their wrappers crop themselves, to the box's corners. No `:has()`, which
-        // Blitz drops (todo 3230).
+        // The box clips nothing (todo 2937): media and their wrappers crop themselves to its
+        // corners. No `:has()`, which Blitz drops (todo 3230).
         .selector(
             format!("& > :is({REPLACED_ELEMENTS}, a, picture, span)"),
             sx().overflow("hidden").border_radius("inherit"),

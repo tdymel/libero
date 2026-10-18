@@ -15,7 +15,7 @@ use crate::{
         },
         layout::use_box,
     },
-    css::Stylesheet,
+    css::{Stylesheet, stays_in_declaration},
     hooks::{use_css, use_glass_gradient_style, use_glass_tint, use_id, use_theme},
     platform::{SCROLL_PADDING_VARS, document, draws_backdrop_filter, when_laid_out},
     str_enum::str_enum,
@@ -127,6 +127,13 @@ fn publish_css(id: &str, height: &str) -> String {
         safe_area_padding(height, "top"),
         SCROLL_PADDING_VARS[0],
     )
+}
+
+/// The size lands in a raw sheet, so one that leaves its declaration falls back to the theme's.
+fn banner_height(size: &Input<ThemeAwareValue>, theme_size: Size) -> String {
+    size.resolve(Some(HEADER_HEIGHT))
+        .filter(|height| stays_in_declaration(height))
+        .unwrap_or_else(|| HEADER_HEIGHT.value(theme_size))
 }
 
 /// A `Fixed` banner always covers the content below it, so it always publishes (2.4.11).
@@ -325,10 +332,7 @@ pub fn Header(props: HeaderProps) -> Element {
         })
     });
     let publishes = publishes_height(position, props.publish_height);
-    let height = props
-        .size
-        .resolve(Some(HEADER_HEIGHT))
-        .unwrap_or_else(|| HEADER_HEIGHT.value(theme.header.size));
+    let height = banner_height(&props.size, theme.header.size);
     use_css(
         publishes.then(|| Stylesheet::from(publish_css(&published.id, &height).as_str())),
         CssLayer::Framework,
@@ -415,6 +419,17 @@ mod tests {
     }
 
     /// Todo 1972: the browser harness cannot emulate a notch, so the rule itself.
+    #[test]
+    fn a_size_that_leaves_its_declaration_cannot_reach_the_raw_sheet() {
+        let theme = HEADER_HEIGHT.value(Size::Md);
+        for attack in ["0}body{display:none", "1px;x:y", "calc(1px"] {
+            let size: Input<ThemeAwareValue> = ThemeAwareValue::String(attack.into()).into();
+            assert_eq!(banner_height(&size, Size::Md), theme, "{attack}");
+        }
+        let size: Input<ThemeAwareValue> = ThemeAwareValue::String("72px".into()).into();
+        assert_eq!(banner_height(&size, Size::Md), "72px");
+    }
+
     #[test]
     fn a_stuck_banner_pads_the_safe_areas() {
         let css = Stylesheet::from(&HEADER_BASE_SX);

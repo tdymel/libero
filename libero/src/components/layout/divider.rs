@@ -41,6 +41,10 @@ fn divider_line() -> String {
     DIVIDER_LINE.value()
 }
 
+fn divider_border() -> String {
+    format!("{} solid {}", divider_line(), divider_color())
+}
+
 /// The caller's `spacing` if they set one, else none.
 fn divider_spacing() -> String {
     DIVIDER_SPACING_VAR.value_or(0)
@@ -54,7 +58,7 @@ static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
         .border_color(divider_color())
         .when(
             "vertical",
-            sx().border_right(format!("{} solid {}", divider_line(), divider_color()))
+            sx().border_right(divider_border())
                 .align_self("stretch")
                 .margin_left(divider_spacing())
                 .margin_right(divider_spacing())
@@ -62,7 +66,7 @@ static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
         )
         .when(
             "horizontal",
-            sx().border_bottom(format!("{} solid {}", divider_line(), divider_color()))
+            sx().border_bottom(divider_border())
                 .height(divider_line())
                 .margin_top(divider_spacing())
                 .margin_bottom(divider_spacing())
@@ -86,11 +90,7 @@ static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
                 .width("100%")
                 .selector(
                     "&::before, &::after",
-                    sx().height("0").border_top(format!(
-                        "{} solid {}",
-                        divider_line(),
-                        divider_color()
-                    )),
+                    sx().height("0").border_top(divider_border()),
                 ),
         )
         .when(
@@ -99,11 +99,7 @@ static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
                 .align_self("stretch")
                 .selector(
                     "&::before, &::after",
-                    sx().width("0").border_left(format!(
-                        "{} solid {}",
-                        divider_line(),
-                        divider_color()
-                    )),
+                    sx().width("0").border_left(divider_border()),
                 ),
         )
         // Only with "label" - out-specificities its even-flex

@@ -7,6 +7,7 @@ use crate::{
         common::{HtmlTag, Input, States, Variables, base_props, variables},
         layout::use_box,
     },
+    css::is_property_name,
     hooks::{use_presence, use_theme},
     sx::{REDUCED_MOTION, StaticSx, Sx, SxEntry, sx},
     theme::{
@@ -89,6 +90,7 @@ fn from_sx(from: &Sx) -> Sx {
             SxEntry::Nested { .. } => None,
         })
         .filter(|property| !matches!(*property, "opacity" | "transform" | "transition"))
+        .filter(|property| is_property_name(property))
         .collect();
     sx().when("closed", from.clone())
         .and(state_transitions(&extra))
@@ -381,6 +383,17 @@ mod tests {
                 "{kind:?}: {variables}"
             );
         }
+    }
+
+    #[test]
+    fn a_bad_property_name_in_from_is_not_added_to_the_transition() {
+        let from = sx().with("color:red;x", "1").with("margin-top", "4px");
+        let sheet = crate::css::Stylesheet::from(&from_sx(&from));
+        let css = sheet.as_str();
+
+        assert!(css.contains("transition:opacity "), "{css}");
+        assert!(css.contains(", margin-top "), "{css}");
+        assert!(!css.contains("color:red;x"), "{css}");
     }
 
     /// Todo 2578: an explicit `visible` would punch through a closed ancestor.

@@ -22,7 +22,10 @@ use crate::{
         scroll, when_laid_out, when_laid_out_retry,
     },
     sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{FOCUS_RING_HALO_SPREAD, SCROLLER_CONTROL, SCROLLER_FADE, ScrollerDefaults, Size},
+    theme::{
+        FOCUS_RING_HALO_SPREAD, SCROLLER_CONTROL, SCROLLER_FADE, ScrollerDefaults, Size,
+        TRANSITION_DURATION,
+    },
 };
 
 pub use crate::theme::ScrollerControls;
@@ -228,7 +231,19 @@ static SCROLLER_VIEWPORT_SX: StaticSx = StaticSx::new(|| {
             .padding(ring_room.clone())
             .margin_top(format!("calc(-1 * {ring_room})"))
             .margin_bottom(format!("calc(-1 * {ring_room})"))
-            .with("scroll-padding-inline", ring_room)
+            .with("scroll-padding-inline", ring_room.clone())
+            // Always shown, the controls keep their strips even at an end: the ends rest clear of them.
+            .when(
+                "controls-always",
+                sx().with(
+                    "padding-inline",
+                    format!("calc({ring_room} + {})", SCROLLER_CONTROL.value()),
+                )
+                .with(
+                    "scroll-padding-inline",
+                    format!("calc({ring_room} + {})", SCROLLER_CONTROL.value()),
+                ),
+            )
             .overscroll_behavior_x("contain")
             .scroll_behavior("smooth")
             // Only Firefox drops smooth scrolling under reduced motion by itself.
@@ -270,6 +285,7 @@ fn control_side_sx(fade: &str, side: &str, away: &str, turn: &str) -> Sx {
 
 static SCROLLER_CONTROL_SX: StaticSx = StaticSx::new(|| {
     let fade = SCROLLER_FADE.overridable().to_string();
+    let duration = TRANSITION_DURATION.overridable();
 
     sx().position("absolute")
         .top("0")
@@ -284,7 +300,7 @@ static SCROLLER_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .cursor("pointer")
         // `visibility` flips at once on the fade in, so a shown control takes the
         // click on any clock (Blitz's stands still between frames, todo 2593).
-        .transition("opacity 150ms")
+        .transition(format!("opacity {duration}"))
         .media(REDUCED_MOTION, sx().transition("none"))
         // The gradient is the button's own background: fade and hit target in one.
         .selector("& svg", sx().width("60%").height("60%").flex("none"))
@@ -305,10 +321,11 @@ static SCROLLER_CONTROL_SX: StaticSx = StaticSx::new(|| {
             "end",
             sx().rtl(control_side_sx(&fade, "left", "right", "90deg")),
         )
-        // The glyph dims, not the button, whose opacity would dim its focus ring.
+        // The glyph dims, not the button, whose opacity would dim its focus ring. It takes
+        // no pointer, so a press at an end reaches the item under it.
         .when(
             "disabled",
-            sx().cursor("default")
+            sx().pointer_events("none")
                 .selector("& svg", sx().opacity("0.4")),
         )
         // Under `Auto` a control at its end hides, but never from under the focus (mouse
@@ -321,7 +338,7 @@ static SCROLLER_CONTROL_SX: StaticSx = StaticSx::new(|| {
                     .visibility("hidden")
                     .pointer_events("none")
                     // and at the end of the fade out.
-                    .transition("opacity 150ms, visibility 0s 150ms")
+                    .transition(format!("opacity {duration}, visibility 0s {duration}"))
                     .media(REDUCED_MOTION, sx().transition("none")),
             ),
         )
@@ -612,6 +629,7 @@ pub fn Scroller(props: ScrollerProps) -> Element {
     let viewport_states: Input<States> = states()
         .with("draggable", draggable)
         .with("dragging", (drag.dragging)())
+        .with(controls.state_name(), true)
         .into();
 
     let root_states: Input<States> = props
@@ -834,8 +852,11 @@ mod tests {
 
         assert!(hidden.contains("opacity:0;"), "{css}");
         assert!(hidden.contains("visibility:hidden;"), "{css}");
+        let duration = TRANSITION_DURATION.overridable();
         assert!(
-            hidden.contains("transition:opacity 150ms, visibility 0s 150ms;"),
+            hidden.contains(&format!(
+                "transition:opacity {duration}, visibility 0s {duration};"
+            )),
             "{css}"
         );
     }
@@ -846,8 +867,39 @@ mod tests {
         let css = Stylesheet::from(&SCROLLER_CONTROL_SX);
         let css = css.as_str();
         let (shown, _) = css.split_once(":not(:focus)").unwrap();
-        assert!(shown.contains("transition:opacity 150ms;"), "{css}");
-        assert!(!shown.contains("visibility 150ms"), "{css}");
+        let duration = TRANSITION_DURATION.overridable();
+        assert!(
+            shown.contains(&format!("transition:opacity {duration};")),
+            "{css}"
+        );
+        assert!(!shown.contains(&format!("visibility {duration}")), "{css}");
+    }
+
+    /// A control that is always shown covers an end item, unless the strip pads past it.
+    #[test]
+    fn an_always_shown_control_has_its_strip_cleared_at_both_ends() {
+        let css = Stylesheet::from(&SCROLLER_VIEWPORT_SX);
+        let css = css.as_str();
+        let (_, always) = css
+            .split_once("controls-always")
+            .unwrap_or_else(|| panic!("no always rule: {css}"));
+        let always = &always[..always.find('}').unwrap()];
+
+        assert!(always.contains("padding-inline:calc("), "{css}");
+        assert!(always.contains("scroll-padding-inline:calc("), "{css}");
+        assert!(always.contains(&SCROLLER_CONTROL.value()), "{css}");
+    }
+
+    #[test]
+    fn a_control_at_its_end_takes_no_pointer() {
+        let css = Stylesheet::from(&SCROLLER_CONTROL_SX);
+        let css = css.as_str();
+        let (_, disabled) = css
+            .split_once("[data-state~=\"disabled\"]{")
+            .unwrap_or_else(|| panic!("no disabled rule: {css}"));
+        let disabled = &disabled[..disabled.find('}').unwrap()];
+
+        assert!(disabled.contains("pointer-events:none;"), "{css}");
     }
 
     #[test]
@@ -865,7 +917,9 @@ mod tests {
     fn smooth_scrolling_yields_to_reduced_motion_and_to_a_drag() {
         let css = Stylesheet::from(&SCROLLER_VIEWPORT_SX);
         let css = css.as_str();
-        let smooth = css.find("scroll-behavior:smooth").expect("smooth: {css}");
+        let smooth = css
+            .find("scroll-behavior:smooth")
+            .unwrap_or_else(|| panic!("no smooth scrolling: {css}"));
         let reduced = css.find(REDUCED_MOTION).expect("a reduced-motion block");
         let dragging = css
             .find("[data-state~=\"dragging\"]")

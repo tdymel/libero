@@ -243,7 +243,17 @@ fn a_clicked_control_stays_shown_at_the_end_of_the_strip() {
             if done {
                 break;
             }
-            pointer::click(page, FORWARD).await.unwrap();
+            // Ended mid-click: the control then takes no pointer, so the press reaches the item.
+            if let Err(miss) = pointer::click(page, FORWARD).await {
+                let done: bool = page
+                    .evaluate(ended.as_str())
+                    .await
+                    .unwrap()
+                    .into_value()
+                    .unwrap();
+                assert!(done, "{miss}");
+                break;
+            }
         }
         wait::for_js_true(page, &ended, "the forward control to reach the end")
             .await
