@@ -132,7 +132,7 @@ impl<T: 'static> HistoryHandle<T> {
 /// A group closes on whichever comes first: `group_ms` without a merge, its
 /// [`UndoHistory::with_group_max`] changes, or a [`seal`](HistoryHandle::seal),
 /// `push`, `undo` or `redo`. `group_ms` 0 never closes one by time, nor does a
-/// target without a timer, such as a server render.
+/// server render, whose timer never fires.
 pub fn use_history<T: 'static>(
     initial: impl FnOnce() -> UndoHistory<T>,
     group_ms: u64,

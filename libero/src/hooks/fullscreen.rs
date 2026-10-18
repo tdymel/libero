@@ -137,7 +137,8 @@ impl FullscreenHandle {
 /// Where the platform has no Fullscreen API or refuses it (a headless browser, an
 /// iframe without `allowfullscreen`), the handle draws it: it sets `data-fullscreen="drawn"`, and
 /// your CSS makes the element a fixed box over the page. Escape and focus
-/// leaving the element leave it, so the covered page is never reachable.
+/// leaving the element leave it. The page behind is not made inert: a screen reader
+/// can still reach it unless you hide it.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;

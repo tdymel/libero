@@ -127,14 +127,14 @@ pub(crate) const SHARE_SCRIPT: &str = "
         if (text != null) payload.text = text;
         if (url != null) payload.url = url;
         const checks = typeof navigator.canShare === 'function';
-        if (files.length && checks) {
-            const list = files.map(([name, type, bytes]) => new File([typeof bytes === 'string'
-                ? Uint8Array.from(atob(bytes), (char) => char.charCodeAt(0)) : bytes], name, { type }));
-            if (navigator.canShare({ files: list })) payload.files = list;
-        }
-        if (!Object.keys(payload).length) return 'unsupported';
-        if (checks && !navigator.canShare(payload)) return 'unsupported';
         try {
+            if (files.length && checks) {
+                const list = files.map(([name, type, bytes]) => new File([typeof bytes === 'string'
+                    ? Uint8Array.from(atob(bytes), (char) => char.charCodeAt(0)) : bytes], name, { type }));
+                if (navigator.canShare({ files: list })) payload.files = list;
+            }
+            if (!Object.keys(payload).length) return 'unsupported';
+            if (checks && !navigator.canShare(payload)) return 'unsupported';
             await navigator.share(payload);
             return 'shared';
         } catch (error) {

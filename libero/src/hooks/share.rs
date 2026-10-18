@@ -82,8 +82,8 @@ impl Share {
         self.outcome() == Some(ShareOutcome::Copied)
     }
 
-    /// Whether the last share failed, or had neither a share sheet nor a
-    /// text to copy. A cancelled sheet is no failure. Reactive.
+    /// Whether the last share failed, had neither a share sheet nor a text to copy, or
+    /// fell back to a clipboard that is missing or refused. A cancelled sheet is no failure. Reactive.
     pub fn failed(&self) -> bool {
         matches!(
             self.outcome(),
@@ -97,7 +97,7 @@ impl Share {
     }
 }
 
-/// The fallback's outcome: `Copied`, or `Failed` when the clipboard refused.
+/// The fallback's outcome: `Copied`, or `Failed` when there is no clipboard or it refused.
 async fn copied(text: String) -> ShareOutcome {
     let Some(clipboard) = clipboard() else {
         crate::utils::warn("share fallback on a target without a clipboard");

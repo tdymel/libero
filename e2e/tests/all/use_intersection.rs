@@ -2,7 +2,7 @@
 //! scrolling a target into view and out again.
 
 use anyhow::{Result, bail};
-use e2e::driver::{Driver, Platform, eventually, eventually_text, linger};
+use e2e::driver::{Driver, Platform, eventually, eventually_text};
 
 /// Scrolls by a quarter screen per poll (the target must stay up for a few polls) until `#state` reads `expected`.
 /// On the web and Blitz it stops scrolling once the target is in (`dy` > 0) or out of the viewport.
@@ -24,7 +24,7 @@ async fn scroll_until<D: Driver>(d: &mut D, expected: &str, dy: f64) -> Result<(
         }
         d.scroll_by(dy * height / 4.0).await?;
         // The observer reports after a frame; a scroll that does not wait overshoots it.
-        linger(d, 8).await;
+        d.frame().await?;
         Ok(false)
     })
     .await

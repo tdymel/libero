@@ -1,8 +1,6 @@
 //! `use_timeout`, `use_interval` and the debounce hooks: typing into a field
 //! with a debounced value, and an interval that starts and stops.
 
-use std::time::{Duration, Instant};
-
 use anyhow::{Result, ensure};
 use e2e::browser::block_on;
 use e2e::clock;
@@ -33,53 +31,39 @@ async fn ticks<D: Driver>(d: &mut D) -> Result<u32> {
 
 async fn interval_starts_and_stops<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     ensure!(ticks(d).await? == 0, "ticked before start");
-    let held = d.hold_timers(&[TICK_MS]).await?;
+    ensure!(
+        d.hold_timers(&[TICK_MS]).await?,
+        "the driver cannot hold timers"
+    );
 
     d.click("#toggle").await?;
     text_is(d, "#toggle", "Stop").await?;
-    if held {
-        armed_is(d, TICK_MS, 1, "start to arm the interval").await?;
-        for tick in 1..=2 {
-            ensure!(d.fire_timers(TICK_MS).await? == 1, "no interval armed");
-            text_is(d, "#ticks", &tick.to_string()).await?;
-        }
-    } else {
-        eventually(d, "two ticks", async |d| Ok(ticks(d).await? >= 2)).await?;
+    armed_is(d, TICK_MS, 1, "start to arm the interval").await?;
+    for tick in 1..=2 {
+        ensure!(d.fire_timers(TICK_MS).await? == 1, "no interval armed");
+        text_is(d, "#ticks", &tick.to_string()).await?;
     }
 
     d.click("#toggle").await?;
     text_is(d, "#toggle", "Start").await?;
-    if held {
-        // Stop clears the interval: nothing is left to fire.
-        armed_is(d, TICK_MS, 0, "stop to clear the interval").await?;
-        ensure!(ticks(d).await? == 2, "ticked without a fired timer");
-        return Ok(());
-    }
-    // One tick may already be in flight.
-    let stopped = Instant::now();
-    while stopped.elapsed() < Duration::from_millis(150) {
-        d.idle().await;
-    }
-    let at_stop = ticks(d).await?;
-    let quiet = Instant::now();
-    while quiet.elapsed() < Duration::from_millis(400) {
-        d.idle().await;
-    }
-    ensure!(ticks(d).await? == at_stop, "kept ticking after stop");
+    // Stop clears the interval: nothing is left to fire.
+    armed_is(d, TICK_MS, 0, "stop to clear the interval").await?;
+    ensure!(ticks(d).await? == 2, "ticked without a fired timer");
     Ok(())
 }
 
 async fn timeout_fires_once<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     text_is(d, "#flashing", "off").await?;
-    let held = d.hold_timers(&[FLASH_MS]).await?;
+    ensure!(
+        d.hold_timers(&[FLASH_MS]).await?,
+        "the driver cannot hold timers"
+    );
     d.click("#flash").await?;
     text_is(d, "#flashing", "on").await?;
-    if held {
-        armed_is(d, FLASH_MS, 1, "the click to arm the timeout").await?;
-        ensure!(d.text("#flashing").await? == "on", "ended before its timer");
-        ensure!(d.fire_timers(FLASH_MS).await? == 1, "no timeout armed");
-        armed_is(d, FLASH_MS, 0, "the timeout to fire once").await?;
-    }
+    armed_is(d, FLASH_MS, 1, "the click to arm the timeout").await?;
+    ensure!(d.text("#flashing").await? == "on", "ended before its timer");
+    ensure!(d.fire_timers(FLASH_MS).await? == 1, "no timeout armed");
+    armed_is(d, FLASH_MS, 0, "the timeout to fire once").await?;
     text_is(d, "#flashing", "off").await
 }
 

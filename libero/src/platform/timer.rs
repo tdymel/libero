@@ -56,6 +56,10 @@ mod tests {
             const { RefCell::new(None) };
     }
 
+    const DELAY_MS: u64 = 10;
+    /// What a later sentinel waits on top of the timer it follows: thread start jitter.
+    const MARGIN_MS: u64 = 10;
+
     fn count_one_fire() {
         FIRED.with(|fired| fired.set(fired.get() + 1));
     }
@@ -75,7 +79,7 @@ mod tests {
     fn delayed() -> Element {
         use_hook(|| {
             let api = timer().expect("a timer inside a VirtualDom");
-            keep(api.after(Duration::from_millis(20), Box::new(count_one_fire)));
+            keep(api.after(Duration::from_millis(DELAY_MS), Box::new(count_one_fire)));
         });
         rsx! {}
     }
@@ -105,7 +109,7 @@ mod tests {
         SETTLED.with(|settled| settled.set(false));
         let _sentinel = dom.in_scope(ScopeId::APP, || {
             timer().expect("a timer").after(
-                Duration::from_millis(ms + 20),
+                Duration::from_millis(ms + MARGIN_MS),
                 Box::new(|| SETTLED.with(|settled| settled.set(true))),
             )
         });
@@ -122,7 +126,7 @@ mod tests {
         assert_eq!(fires(), 1, "the callback never arrived");
 
         // And exactly once, not once per poll.
-        settle(&mut dom, 20);
+        settle(&mut dom, DELAY_MS);
         assert_eq!(fires(), 1);
 
         drop_subscription();
@@ -135,8 +139,7 @@ mod tests {
 
         drop_subscription();
 
-        // Past the 20ms it was scheduled for.
-        settle(&mut dom, 20);
+        settle(&mut dom, DELAY_MS);
         assert_eq!(fires(), 0, "a cancelled timer fired anyway");
     }
 

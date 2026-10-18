@@ -140,8 +140,7 @@ impl TimeoutHandle {
 }
 
 /// Calls `callback` once, `ms` after [`TimeoutHandle::start`]. The countdown is
-/// cancelled when the component unmounts. A target without a timer, such as a
-/// server render, never fires it.
+/// cancelled when the component unmounts. A server render's timer never fires.
 pub fn use_timeout(mut callback: impl FnMut() + 'static, ms: u64) -> TimeoutHandle {
     let active = use_signal(|| false);
     let mut slot = use_hook(|| CopyValue::new(None::<Slot<()>>));

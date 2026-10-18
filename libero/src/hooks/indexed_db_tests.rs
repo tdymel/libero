@@ -96,6 +96,21 @@ fn a_set_before_the_load_lands_wins() {
 }
 
 #[test]
+fn an_update_before_the_load_lands_starts_from_the_default() {
+    let db = seeded("10");
+    db.hold();
+    let _fake = fake(db);
+    let mut dom = started(app);
+    dom.in_runtime(|| handle(0).update(|count| *count += 1));
+    db.release();
+    wait_for_load(&mut dom);
+    pump_until(&mut dom, "the save", |_| {
+        stored_text(db).as_deref() == Some("1")
+    });
+    dom.in_runtime(|| assert_eq!(handle(0).get(), 1));
+}
+
+#[test]
 fn two_handles_share_the_key_and_the_value_shows_before_the_save() {
     let db = MemoryIndexedDb::leaked();
     let _fake = fake(db);

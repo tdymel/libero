@@ -23,7 +23,7 @@ use super::timers::{Slot, run_slot, use_latest_ms, use_scheduled};
 /// ```
 ///
 /// The first value shows at once. A change and its undo inside `ms` never
-/// shows. Without a timer, on a server render, the value never follows.
+/// shows. A server render's timer never fires, so the value never follows.
 pub fn use_debounced_value<T: Clone + PartialEq + 'static>(
     value: ReadSignal<T>,
     ms: u64,
@@ -101,8 +101,7 @@ pub fn use_debounced_callback<A: 'static>(
 /// # }
 /// ```
 ///
-/// Without a timer, on a server render, a change after the first waits for
-/// nothing and never shows.
+/// A server render's timer never fires, so a change after the first never shows.
 pub fn use_throttled_value<T: Clone + PartialEq + 'static>(
     value: ReadSignal<T>,
     ms: u64,

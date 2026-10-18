@@ -238,7 +238,8 @@ impl<T: Serialize + DeserializeOwned + Clone + PartialEq + 'static> Stored<T> {
 
     /// Stores `value`. Where the store refuses, it still holds for the session
     /// and [`error`](Self::error) says why. Each call writes: debounce a fast source.
-    /// A value that does not read back (a NaN float) is not kept and reports `Invalid`.
+    /// A value that does not read back (a NaN float) is not kept and reports `Invalid`;
+    /// in an `Option<f64>` a NaN stores as `null` and reads back as `None`.
     pub fn set(&mut self, value: T) {
         self.mount();
         let Some(text) = encode_as(self.format, &value) else {
@@ -557,7 +558,8 @@ fn encode_as<T: Serialize + DeserializeOwned>(format: StorageFormat, value: &T) 
     }
 }
 
-/// `value` as JSON text that reads back as a `T`. serde_json writes a NaN float as `null`.
+/// `value` as JSON text that reads back as a `T`. serde_json writes a NaN float as `null`,
+/// which an `Option<f64>` reads back as `None` and so passes.
 pub(super) fn encode<T: Serialize + DeserializeOwned>(value: &T) -> Option<String> {
     serde_json::to_string(value)
         .ok()

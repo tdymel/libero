@@ -167,7 +167,8 @@ impl<T: Serialize + DeserializeOwned + Clone + PartialEq + 'static> StoredAsync<
     /// A `set` before the load lands wins; the load is dropped. Where the store
     /// refuses, the value still holds for the session and [`error`](Self::error) says
     /// why. Each call writes: debounce a fast source. A value that does not read back
-    /// (a NaN float) is not kept and reports `Invalid`.
+    /// (a NaN float) is not kept and reports `Invalid`; in an `Option<f64>` a NaN stores
+    /// as `null` and reads back as `None`.
     pub fn set(&mut self, value: T) {
         let Some(text) = encode(&value) else {
             settle(self.entry, self.warned, Some(StorageError::Invalid));
@@ -181,8 +182,9 @@ impl<T: Serialize + DeserializeOwned + Clone + PartialEq + 'static> StoredAsync<
     }
 
     /// Changes the current value in place, then stores it as [`set`](Self::set) does.
-    /// Before the load lands it starts from the default; so it does while the stored
-    /// text is [`Invalid`](StorageError::Invalid), and overwrites that text.
+    /// Before the load lands it starts from the default and overwrites what is stored, so
+    /// gate it on [`is_loaded`](Self::is_loaded); so it does while the stored text is
+    /// [`Invalid`](StorageError::Invalid), and overwrites that text.
     pub fn update(&mut self, change: impl FnOnce(&mut T)) {
         // From the raw text: a memo stays stale until read, so a second update would lose the first.
         let parsed = parse(self.entry.raw.peek().as_deref());
@@ -249,7 +251,11 @@ impl<T: Serialize + DeserializeOwned + Clone + PartialEq + 'static> StoredAsync<
 /// let mut notes = use_indexed_db("notes", Vec::<String>::new);
 ///
 /// rsx! {
-///     button { onclick: move |_| notes.update(|notes| notes.push("A note".into())), "Add" }
+///     button {
+///         disabled: !notes.is_loaded(),
+///         onclick: move |_| notes.update(|notes| notes.push("A note".into())),
+///         "Add"
+///     }
 ///     p { "{notes.get().len()} notes" }
 /// }
 /// # }
