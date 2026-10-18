@@ -162,8 +162,8 @@ pub fn LightboxPage() -> Element {
                     (LightboxPart::Thumbnail, "One thumbnail button. The current one has `aria-current=\"true\"`."),
                 ]),
                 props("LightboxItem", vec![
-                    prop("src", "String").default("required").doc("The picture."),
-                    prop("thumbnail_src", "Option<String>").default("follows src").doc("A smaller source for the strip."),
+                    prop("src", "String").default("required").doc("The picture. A `javascript:` or `vbscript:` URL renders no picture and warns in debug builds; `data:` and `blob:` pass."),
+                    prop("thumbnail_src", "Option<String>").default("follows src").doc("A smaller source for the strip. A `javascript:` or `vbscript:` one follows `src`."),
                     prop("alt", "String").default("required").doc("The picture's text alternative."),
                     prop("caption", "Option<String>").doc("Shown under the stage."),
                 ]).without_base_props(),

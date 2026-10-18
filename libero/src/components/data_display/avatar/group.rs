@@ -12,7 +12,7 @@ use crate::{
         layout::use_box,
         overlay::Tooltip,
     },
-    hooks::{use_localization, use_theme},
+    hooks::{use_id, use_localization, use_theme},
     localization::fill,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{AVATAR_GROUP_INDEX, AVATAR_GROUP_SPACING, Size, SizeCss},
@@ -123,6 +123,7 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
             .into(),
         false => Input::None,
     };
+    let tip_id = use_id();
     let chip_style = use_box()
         .framework_sx(&AVATAR_CHIP_SX)
         .focus_ring(false)
@@ -182,10 +183,11 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
             .attr("aria-label", more)
             // Focusable, so the tooltip is reachable without a pointer.
             .attr("tabindex", "0")
+            .attr("aria-describedby", tip_id.cloned())
             .render(HtmlTag::Span, Vec::new(), rsx! { "{count}" });
 
         rsx! {
-            Tooltip { label: rsx! { "{names}" }, {chip} }
+            Tooltip { label: rsx! { "{names}" }, label_id: tip_id.cloned(), {chip} }
         }
     });
 
@@ -205,4 +207,37 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
                 {chip}
             },
         )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_overflow_chip_is_described_by_the_names_tooltip() {
+        let html = dioxus_ssr::render_element(rsx! {
+            crate::LiberoProvider {
+                AvatarGroup { people: vec!["Ada".into(), "Alan".into(), "Grace".into()], max: 2 }
+            }
+        });
+        let id = html
+            .split("aria-describedby=\"")
+            .nth(1)
+            .and_then(|rest| rest.split('"').next())
+            .unwrap_or_else(|| panic!("no aria-describedby: {html}"));
+        assert!(html.contains(&format!("id=\"{id}\"")), "{html}");
+    }
+
+    #[test]
+    fn a_script_src_member_falls_back() {
+        let person = AvatarSpec {
+            name: "Ada".into(),
+            src: Some("javascript:alert(1)".into()),
+            ..AvatarSpec::default()
+        };
+        let html = dioxus_ssr::render_element(rsx! {
+            crate::LiberoProvider { AvatarGroup { people: vec![person] } }
+        });
+        assert!(!html.contains("javascript"), "{html}");
+    }
 }

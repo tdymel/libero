@@ -4,7 +4,7 @@ use crate::{
     components::{
         common::{
             ClassList, HtmlTag, Input, PROBES_AFTER_MOUNT, Part, SVG_FIT, States, Variables,
-            base_props, css_string, focus_ring_sx, input_from_str, min_hit_area_sx,
+            base_props, css_string, focus_ring_sx, input_from_str, media_url, min_hit_area_sx,
             on_failed_after_mount, parts_enum, parts_under_sx, states, svg_fit, svg_fit_sx,
             svg_fit_variables, use_svg_probe, variables,
         },
@@ -203,7 +203,9 @@ pub(crate) fn LinkedImageScope(children: Element) -> Element {
 #[component]
 pub fn Image(props: ImageProps) -> Element {
     let mut errored_src = use_signal(|| None::<String>);
-    let probe = use_svg_probe(&props.src);
+    // A script URL renders as no picture; `src` below is this, never `props.src`.
+    let own_src = media_url(&props.src, "Image").unwrap_or_default();
+    let probe = use_svg_probe(&own_src);
     let in_link = use_hook(|| try_consume_context::<InLink>().is_some());
     // Once per mount, not per render.
     use_hook(|| {
@@ -234,14 +236,16 @@ pub fn Image(props: ImageProps) -> Element {
     let zoomable = props.zoomable && !in_link;
 
     // An empty fallback is no fallback, on every platform.
-    let fallback_src = props
+    let fallback_own = props
         .fallback_src
         .as_deref()
-        .filter(|fallback| !fallback.is_empty());
-    let show_fallback = errored_src.read().as_deref() == Some(props.src.as_str());
+        .filter(|fallback| !fallback.is_empty())
+        .and_then(|fallback| media_url(fallback, "Image fallback_src"));
+    let fallback_src = fallback_own.as_deref();
+    let show_fallback = errored_src.read().as_deref() == Some(own_src.as_str());
     let src = match fallback_src {
         Some(fallback) if show_fallback => fallback.to_string(),
-        _ => props.src.clone(),
+        _ => own_src.clone(),
     };
 
     let fit = props.fit.copied_or(use_theme().image.fit);
@@ -256,7 +260,7 @@ pub fn Image(props: ImageProps) -> Element {
     }
     let variables: Input<Variables> = variables.into();
 
-    let on_error_src = props.src.clone();
+    let on_error_src = own_src.clone();
 
     // No `alt` at all is left for a checker to flag, not made decorative.
     let alt = match props.decorative {
@@ -317,8 +321,9 @@ pub fn Image(props: ImageProps) -> Element {
     }
     let zoomed_src = props
         .zoomed_src
-        .clone()
+        .as_deref()
         .filter(|zoomed| !zoomed.is_empty())
+        .and_then(|zoomed| media_url(zoomed, "Image zoomed_src"))
         .unwrap_or_else(|| src.clone());
     let item = LightboxItem::new(zoomed_src, alt.clone().unwrap_or_default());
     let (img_attributes, attributes): (Vec<_>, Vec<_>) = props
@@ -448,6 +453,45 @@ mod tests {
             }
         });
         assert!(!alone.iter().any(|w| w.starts_with("Image:")), "{alone:?}");
+    }
+
+    #[test]
+    fn a_script_src_renders_no_picture_and_warns() {
+        let app = || {
+            rsx! {
+                crate::LiberoProvider {
+                    Image {
+                        src: "javascript:alert(1)",
+                        fallback_src: "vbscript:x",
+                        zoomed_src: "JavaScript:y",
+                        alt: "A",
+                        zoomable: true,
+                    }
+                    Image { src: "/a.png", fallback_src: "javascript:z", alt: "B" }
+                }
+            }
+        };
+        let warnings = warnings_of(app);
+        for owner in ["Image:", "Image fallback_src:", "Image zoomed_src:"] {
+            assert!(
+                warnings.iter().any(|w| w.starts_with(owner)),
+                "{owner} {warnings:?}"
+            );
+        }
+        let html = dioxus_ssr::render_element(app());
+        assert!(!html.to_lowercase().contains("script:"), "{html}");
+    }
+
+    #[test]
+    fn a_data_or_blob_src_stays() {
+        let html = dioxus_ssr::render_element(rsx! {
+            crate::LiberoProvider {
+                Image { src: "data:image/png;base64,AAAA", alt: "A" }
+                Image { src: "blob:https://example.com/1", alt: "B" }
+            }
+        });
+        assert!(html.contains("data:image/png"), "{html}");
+        assert!(html.contains("blob:https"), "{html}");
     }
 
     /// Todo 602: a forgotten `alt` warns; an explicit one or `decorative` does not.

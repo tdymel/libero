@@ -180,7 +180,7 @@ would.
 |---|---|---|---|
 | `value` | `Store<V>` | - | The whole form's value. `validate` checks it, and fields named by a path read and write it. `V` is inferred from it. A form with no `value` and no rules needs `Form::<()>`. |
 | `validate` | `Validators<V>` | - | Rules over `value`, one or an array. A rule with `.on(..)` shows its status on each field it names. |
-| `onsubmit` | `EventHandler<FormEvent>` | - | Fires on a submit with no errors. Without an `action`, the browser's own submit is cancelled. |
+| `onsubmit` | `EventHandler<FormEvent>` | - | Fires on a submit with no errors. Without an `action`, the browser's own submit is cancelled. A `javascript:`, `data:` or `vbscript:` `action` is dropped with a debug warning, so it counts as none. |
 | `summary_title` | `String` | - | A heading over the error summary. |
 | `form` | `FormHandle` | - | Controls the form from outside, made with `use_form()`. Taken once, on mount. Without it the form makes its own, which `use_form_context()` returns inside the form. |
 | `children` | `Element` | required | The fields, fieldsets and buttons. |

@@ -52,7 +52,7 @@ variant insets it to 60% of the box, clear of the container's edges. Set
 | `gradient` | `Gradient` | - | With `variant: "gradient"`: the second stop and the angle, as `("info", 90)` or `Gradient::default().to("info").deg(90)`. The first stop is `color`. Ignored by the other variants. |
 | `size` | `ThemeAwareValue` | `md` | Width and height. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius. |
-| `src` | `String` | - | An image URL drawn as the glyph, in the icon's color, instead of `children`. Only its shape is used: its own colors are ignored. |
+| `src` | `String` | - | An image URL drawn as the glyph, in the icon's color, instead of `children`. Only its shape is used: its own colors are ignored. A `javascript:` or `vbscript:` URL draws nothing and warns in debug builds. |
 | `svg` | `SvgData` | - | A glyph drawn as a `Pictogram`, such as `pictogram_icons_lucide::check::outlined`, instead of `children`. `src` wins over it. |
 | `children` | `Element` | - | The svg. Not needed with `src` or `svg`. |
 
@@ -64,7 +64,7 @@ Like every component, `Icon` also takes the shared props `sx`, `class`,
 ### Libero handles
 
 - An icon is hidden from screen readers (`aria-hidden="true"`).
-- `aria_label` or `aria_labelledby` makes it `role="img"`.
+- `aria_label` or `aria_labelledby` makes it `role="img"`, except as a `button`, `a` or form control, which keeps its own role.
 
 ### You must
 

@@ -1,10 +1,10 @@
 use std::{cell::Cell, rc::Rc};
 
-use dioxus::prelude::*;
+use dioxus::{dioxus_core::AttributeValue, prelude::*};
 
 use crate::{
     components::{
-        common::{FOCUSABLE_SELECTOR, HtmlTag, Input, Part, base_props, parts_enum},
+        common::{FOCUSABLE_SELECTOR, HtmlTag, Input, Part, allowed_href, base_props, parts_enum},
         feedback::Alert,
         form::{
             Binding, Source, Validators,
@@ -158,8 +158,8 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
     let form_element = handle.element;
     let summary_element = use_element();
 
-    let posts = props
-        .attributes
+    let attributes = safe_action(props.attributes);
+    let posts = attributes
         .iter()
         .any(|attribute| attribute.name == "action");
     let onsubmit = props.onsubmit;
@@ -316,13 +316,57 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         })
         .event("onclick", submit_click)
         .event("onkeydown", implicit_submit)
-        .render(HtmlTag::Form, props.attributes, children)
+        .render(HtmlTag::Form, attributes, children)
+}
+
+/// `attributes` without a text `action` whose scheme would run script on submit.
+fn safe_action(mut attributes: Vec<Attribute>) -> Vec<Attribute> {
+    attributes.retain(|attribute| match &attribute.value {
+        AttributeValue::Text(url) if attribute.name == "action" => allowed_href(url, "Form action"),
+        _ => true,
+    });
+    attributes
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::components::common::part_table;
+
+    fn action(url: &str) -> Vec<Attribute> {
+        let text = AttributeValue::Text(url.to_string());
+        vec![Attribute::new("action", text, None, false)]
+    }
+
+    #[test]
+    fn a_script_action_is_dropped_and_warned() {
+        for url in [
+            "javascript:alert(1)",
+            " Java\tScript:x",
+            "data:text/html,x",
+            "vbscript:x",
+        ] {
+            assert!(safe_action(action(url)).is_empty(), "{url:?}");
+        }
+        assert!(
+            crate::utils::take_warnings()
+                .iter()
+                .any(|w| w.starts_with("Form action:"))
+        );
+        for url in ["/save", "https://example.com/post", ""] {
+            assert_eq!(safe_action(action(url)).len(), 1, "{url:?}");
+        }
+    }
+
+    #[test]
+    fn a_form_with_a_script_action_renders_none() {
+        let html = dioxus_ssr::render_element(rsx! {
+            crate::LiberoProvider {
+                Form::<()> { action: "javascript:alert(1)", "x" }
+            }
+        });
+        assert!(!html.contains("javascript"), "{html}");
+    }
 
     /// The slot names are public: a rename here is a breaking change.
     #[test]

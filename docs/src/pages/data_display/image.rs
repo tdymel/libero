@@ -26,7 +26,7 @@ pub fn ImagePage() -> Element {
             markdown: "/md/image.md",
             properties: vec![
                 props("Image", vec![
-                    prop("src", "String").default("required").doc("The image source."),
+                    prop("src", "String").default("required").doc("The image source. A `javascript:` or `vbscript:` URL, here and in `fallback_src` and `zoomed_src`, renders no picture and warns in debug builds; `data:` and `blob:` pass."),
                     prop("fallback_src", "Option<String>")
                         .default("None")
                         .doc("Shown in place of `src` once it fails to load."),

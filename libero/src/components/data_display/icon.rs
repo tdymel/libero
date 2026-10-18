@@ -4,8 +4,8 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, States, Variables, Variant, VariantVars, base_color, base_props,
-            contrast_color, css_string, fill_color, literal_contrast, names_itself, text_color,
-            variables, variant_chrome_sx, variant_colors,
+            contrast_color, css_string, fill_color, literal_contrast, media_url, names_itself,
+            text_color, variables, variant_chrome_sx, variant_colors,
         },
         data_display::{Pictogram, SvgData},
         layout::use_box,
@@ -194,9 +194,13 @@ pub fn Icon(props: IconProps) -> Element {
         .into();
     let named = names_itself(&props.attributes);
     // `aria-hidden` on a focusable control leaves a Tab stop nothing announces.
-    let hideable = !named && !is_interactive(component);
+    let interactive = is_interactive(component);
+    let hideable = !named && !interactive;
     let children = match (props.src, props.svg) {
-        (Some(src), _) => rsx! { IconMask { src } },
+        (Some(src), _) => match media_url(&src, "Icon") {
+            Some(src) => rsx! { IconMask { src } },
+            None => rsx! {},
+        },
         (None, Some(icon)) => rsx! { Pictogram { icon } },
         (None, None) => props.children,
     };
@@ -208,7 +212,7 @@ pub fn Icon(props: IconProps) -> Element {
         .states(&states)
         .style(style)
         .prepare()
-        .attr_default("role", named.then_some("img"))
+        .attr_default("role", (named && !interactive).then_some("img"))
         .attr_default("aria-hidden", hideable.then_some("true"))
         .render(component, props.attributes, children)
 }
@@ -252,6 +256,42 @@ mod tests {
         assert!(is_interactive(HtmlTag::Input));
         assert!(!is_interactive(HtmlTag::Span));
         assert!(!is_interactive(HtmlTag::Div));
+    }
+
+    /// A named `button` keeps its own role: `role=img` would announce it as an image.
+    #[test]
+    fn a_named_interactive_icon_keeps_its_role() {
+        for tag in [HtmlTag::Button, HtmlTag::A] {
+            let html = dioxus_ssr::render_element(rsx! {
+                crate::LiberoProvider { Icon { component: tag, "aria-label": "Close", "x" } }
+            });
+            assert!(!html.contains("role="), "{html}");
+            assert!(!html.contains("aria-hidden"), "{html}");
+        }
+        let html = dioxus_ssr::render_element(rsx! {
+            crate::LiberoProvider { Icon { "aria-label": "Verified", "x" } }
+        });
+        assert!(html.contains(r#"role="img""#), "{html}");
+    }
+
+    #[test]
+    fn a_script_src_draws_no_mask_and_warns() {
+        let render = || {
+            rsx! {
+                crate::LiberoProvider {
+                    Icon { src: "javascript:alert(1)" }
+                    Icon { src: "data:image/svg+xml;base64,AAAA" }
+                }
+            }
+        };
+        let warnings = crate::utils::warnings_of(render);
+        assert!(
+            warnings.iter().any(|w| w.starts_with("Icon:")),
+            "{warnings:?}"
+        );
+        let html = dioxus_ssr::render_element(render());
+        assert!(!html.contains("javascript"), "{html}");
+        assert!(html.contains("data:image/svg+xml"), "{html}");
     }
 
     #[test]

@@ -99,8 +99,8 @@ pair. An index past the end shows the last picture.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `src` | `String` | required | The picture. |
-| `thumbnail_src` | `Option<String>` | follows `src` | A smaller source for the strip. |
+| `src` | `String` | required | The picture. A `javascript:` or `vbscript:` URL renders no picture and warns in debug builds; `data:` and `blob:` pass. |
+| `thumbnail_src` | `Option<String>` | follows `src` | A smaller source for the strip. A `javascript:` or `vbscript:` one follows `src`. |
 | `alt` | `String` | required | The picture's text alternative. |
 | `caption` | `Option<String>` | - | Shown under the stage. |
 

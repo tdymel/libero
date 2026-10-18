@@ -39,7 +39,7 @@ pub fn IconPage() -> Element {
                         .default(theme.icon.radius.as_str())
                         .doc("Corner radius."),
                     prop("src", "String")
-                        .doc("An image URL drawn as the glyph, in the icon's color, instead of `children`. Only its shape is used: its own colors are ignored."),
+                        .doc("An image URL drawn as the glyph, in the icon's color, instead of `children`. Only its shape is used: its own colors are ignored. A `javascript:` or `vbscript:` URL draws nothing and warns in debug builds."),
                     prop("svg", "SvgData")
                         .doc("A glyph drawn as a `Pictogram`, such as `pictogram_icons_lucide::check::outlined`, instead of `children`. `src` wins over it."),
                     prop("children", "Element").doc("The svg. Not needed with `src` or `svg`."),
@@ -48,7 +48,7 @@ pub fn IconPage() -> Element {
             accessibility: a11y()
                 .handles([
                     "An icon is hidden from screen readers (`aria-hidden=\"true\"`).",
-                    "`aria_label` or `aria_labelledby` makes it `role=\"img\"`.",
+                    "`aria_label` or `aria_labelledby` makes it `role=\"img\"`, except as a `button`, `a` or form control, which keeps its own role.",
                 ])
                 .must([
                     "Name an icon that means something with `aria_label` or `aria_labelledby`. A `<title>` inside the svg does not name it, since it is hidden with the rest.",

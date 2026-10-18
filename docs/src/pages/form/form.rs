@@ -132,7 +132,7 @@ pub fn FormPage() -> Element {
                     prop("validate", "Validators<V>")
                         .doc("Rules over `value`, one or an array. A rule with `.on(..)` shows its status on each field it names."),
                     prop("onsubmit", "EventHandler<FormEvent>")
-                        .doc("Fires on a submit with no errors. Without an `action`, the browser's own submit is cancelled."),
+                        .doc("Fires on a submit with no errors. Without an `action`, the browser's own submit is cancelled. A `javascript:`, `data:` or `vbscript:` `action` is dropped with a debug warning, so it counts as none."),
                     prop("summary_title", "String")
                         .doc("A heading over the error summary."),
                     prop("form", "FormHandle")

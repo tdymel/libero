@@ -77,7 +77,7 @@ Barbara Liskov, Margaret Hamilton".
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `name` | `String` | required | The person this avatar stands for, read as its accessible name. |
-| `src` | `Option<String>` | `None` | The picture. Falls back to the rest of the chain when it fails to load. |
+| `src` | `Option<String>` | `None` | The picture. Falls back to the rest of the chain when it fails to load, or for a `javascript:` or `vbscript:` URL, which also warns in debug builds. |
 | `initials` | `Option<String>` | `None` | Drawn when there is no picture. Nothing is derived from `name`. |
 | `alt` | `Option<String>` | `None` | Replaces the announced name. `alt: ""` marks the avatar decorative. |
 | `size` | `Size` | `md` | The side of the square, which also sets the placeholder's font size. |

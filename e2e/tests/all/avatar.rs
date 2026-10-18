@@ -44,7 +44,7 @@ fn the_more_chip_tooltip_names_the_hidden_people() {
         wait::for_js_true(
             page,
             &format!(
-                "[...document.querySelectorAll('[role=tooltip]')].some(t => t.textContent === {HIDDEN:?})"
+                "[...document.querySelectorAll('[role=tooltip]:not([hidden])')].some(t => t.textContent === {HIDDEN:?})"
             ),
             "focus on the chip to show the hidden names",
         )
@@ -60,7 +60,7 @@ fn the_more_chip_tooltip_names_the_hidden_people() {
         keyboard::press(page, keyboard::ESCAPE).await.unwrap();
         wait::for_js_true(
             page,
-            "!document.querySelector('[role=tooltip]')",
+            "!document.querySelector('[role=tooltip]:not([hidden])')",
             "Escape to close the bubble",
         )
         .await

@@ -5,9 +5,10 @@ use crate::{
     components::{
         common::{
             Glyph, HtmlTag, Input, PROBES_AFTER_MOUNT, Part, SVG_FIT, States, Variables, Variant,
-            VariantVars, attr, base_color, base_props, contrast_color, fill_color, names_itself,
-            on_failed_after_mount, parts_enum, svg_fit, svg_fit_sx, svg_fit_variables, text_color,
-            use_name_warning, use_svg_probe, variables, variant_chrome_sx, variant_colors,
+            VariantVars, attr, base_color, base_props, contrast_color, fill_color, media_url,
+            names_itself, on_failed_after_mount, parts_enum, svg_fit, svg_fit_sx,
+            svg_fit_variables, text_color, use_name_warning, use_svg_probe, variables,
+            variant_chrome_sx, variant_colors,
         },
         layout::{Box, use_box},
     },
@@ -177,7 +178,13 @@ base_props! {
 pub fn Avatar(props: AvatarProps) -> Element {
     let theme = use_theme();
     let mut errored_src = use_signal(|| None::<String>);
-    let probe = use_svg_probe(props.src.as_deref().unwrap_or_default());
+    // A script URL is no picture: the avatar falls back.
+    let own_src = props
+        .src
+        .as_deref()
+        .filter(|src| !src.is_empty())
+        .and_then(|src| media_url(src, "Avatar"));
+    let probe = use_svg_probe(own_src.as_deref().unwrap_or_default());
     use_name_warning(
         !props.name.trim().is_empty() || props.alt.is_some() || names_itself(&props.attributes),
         "Avatar: an empty `name` and no `alt`, so it is announced as an unnamed image. Set `alt: \"\"` if it is decorative.",
@@ -191,7 +198,7 @@ pub fn Avatar(props: AvatarProps) -> Element {
         .cloned()
         .unwrap_or_else(|| ThemeAwareValue::from(theme.avatar.color));
 
-    let src = props.src.clone().filter(|src| !src.is_empty());
+    let src = own_src;
     let failed = src.is_some() && errored_src.read().as_deref() == src.as_deref();
     // Without an `error` event the fallback waits under the picture, and shows
     // where it fails to load (todo 884).
@@ -294,6 +301,34 @@ mod tests {
             part_table::<AvatarPart>(),
             [("image", "& > [data-slot='image']")]
         );
+    }
+
+    #[test]
+    fn a_script_src_falls_back_and_warns() {
+        let app = || {
+            rsx! {
+                crate::LiberoProvider { Avatar { name: "Ada", initials: "AL", src: "javascript:alert(1)" } }
+            }
+        };
+        let warnings = crate::utils::warnings_of(app);
+        assert!(
+            warnings.iter().any(|w| w.starts_with("Avatar:")),
+            "{warnings:?}"
+        );
+        let html = dioxus_ssr::render_element(app());
+        assert!(
+            !html.contains("javascript") && !html.contains("<img"),
+            "{html}"
+        );
+        assert!(html.contains("AL"), "{html}");
+    }
+
+    #[test]
+    fn a_data_src_stays() {
+        let html = dioxus_ssr::render_element(rsx! {
+            crate::LiberoProvider { Avatar { name: "Ada", src: "data:image/png;base64,AAAA" } }
+        });
+        assert!(html.contains("data:image/png"), "{html}");
     }
 
     #[test]

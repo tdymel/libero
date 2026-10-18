@@ -101,7 +101,7 @@ pub fn AvatarPage() -> Element {
                         .doc("The person this avatar stands for, read as its accessible name."),
                     prop("src", "Option<String>")
                         .default("None")
-                        .doc("The picture. Falls back to the rest of the chain when it fails to load."),
+                        .doc("The picture. Falls back to the rest of the chain when it fails to load, or for a `javascript:` or `vbscript:` URL, which also warns in debug builds."),
                     prop("initials", "Option<String>")
                         .default("None")
                         .doc("Drawn when there is no picture. Nothing is derived from `name`."),

@@ -17,8 +17,8 @@ use super::{
 use crate::{
     components::{
         common::{
-            Input, Part, SVG_FIT, States, Variables, has_shortcut_modifier, ring_overlay, states,
-            svg_fit, svg_fit_variables, variables,
+            Input, Part, SVG_FIT, States, Variables, has_shortcut_modifier, media_url,
+            ring_overlay, states, svg_fit, svg_fit_variables, variables,
         },
         layout::Box,
     },
@@ -173,7 +173,8 @@ pub(super) fn lightbox_slide(
 
     let is_current = i == current;
     let zoomed = is_current && active.is_zoomed();
-    let fitted = svg_fit(&item.src);
+    let own_src = media_url(&item.src, "Lightbox").unwrap_or_default();
+    let fitted = svg_fit(&own_src);
     let frame_states: Input<States> = states().with(SVG_FIT, fitted).into();
     let image_states: Input<States> = states()
         .with("zoomable", zoomable && !zoomed)
@@ -282,7 +283,7 @@ pub(super) fn lightbox_slide(
                 states: image_states,
                 variables: image_variables,
                 id: image_id(&base_id(), i),
-                src: item.src.clone(),
+                src: own_src.clone(),
                 alt: item.alt.clone(),
                 loading,
                 draggable: "false",
@@ -385,6 +386,15 @@ pub(super) fn lightbox_slide(
     }
 }
 
+/// The strip's picture: `thumbnail_src`, else `src`, each without a script scheme.
+fn thumbnail_url(item: &LightboxItem) -> String {
+    item.thumbnail_src
+        .as_deref()
+        .and_then(|thumbnail| media_url(thumbnail, "Lightbox thumbnail_src"))
+        .or_else(|| media_url(&item.src, "Lightbox"))
+        .unwrap_or_default()
+}
+
 /// The strip under the stage: one roving tab stop for the whole thing, and a
 /// click or an arrow moves the picture without taking the focus off the strip.
 pub(super) fn lightbox_thumbnails(
@@ -407,10 +417,7 @@ pub(super) fn lightbox_thumbnails(
         .map(|(i, item)| {
             let is_current = i == current;
             let thumbnail_states: Input<States> = states().with("current", is_current).into();
-            let src = item
-                .thumbnail_src
-                .clone()
-                .unwrap_or_else(|| item.src.clone());
+            let src = thumbnail_url(item);
             let image_states: Input<States> = states().with(SVG_FIT, svg_fit(&src)).into();
             let image_variables: Input<Variables> =
                 svg_fit_variables(variables(), &src, "cover").into();
@@ -455,4 +462,19 @@ pub(super) fn lightbox_thumbnails(
             }
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_script_thumbnail_falls_back_to_the_source_and_data_stays() {
+        let item = LightboxItem::new("/a.png", "A").thumbnail("javascript:alert(1)");
+        assert_eq!(thumbnail_url(&item), "/a.png");
+        let item = LightboxItem::new("vbscript:x", "A").thumbnail("JavaScript:y");
+        assert_eq!(thumbnail_url(&item), "");
+        let item = LightboxItem::new("/a.png", "A").thumbnail("data:image/png;base64,AAAA");
+        assert_eq!(thumbnail_url(&item), "data:image/png;base64,AAAA");
+    }
 }

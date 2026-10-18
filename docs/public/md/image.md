@@ -60,7 +60,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `src` | `String` | required | The image source. |
+| `src` | `String` | required | The image source. A `javascript:` or `vbscript:` URL, here and in `fallback_src` and `zoomed_src`, renders no picture and warns in debug builds; `data:` and `blob:` pass. |
 | `fallback_src` | `Option<String>` | `None` | Shown in place of `src` once it fails to load. |
 | `zoomed_src` | `Option<String>` | `None` | A larger source for the zoom overlay. Falls back to `src`. |
 | `fit` | `ImageFit` | `cover` | Maps onto `object-fit`. |
