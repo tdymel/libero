@@ -391,7 +391,9 @@ shows Ctrl.
   name includes the current choice, "Code language: Rust". The language button
   on the fence is not a tab stop; `Ctrl+Shift+L` reaches it.
 - The link dialog focuses its labelled URL field and shows a refused scheme as
-  that field's error. Closing it puts the caret back in the text.
+  that field's error. Closing or saving returns focus to what opened it: the
+  text after `Ctrl+K` or a click while typing, else the Link button. A toolbar
+  menu's Escape returns the same way.
 - With `onsubmit` the text carries the send key as `aria-keyshortcuts`
   (`Enter`, or `Control+Enter`, `Meta+Enter` on Apple platforms, for
   `SubmitOn::ModEnter`), and with `SubmitOn::Enter` also
@@ -400,9 +402,9 @@ shows Ctrl.
 - With `max_length`, typing or a paste that reaches the limit says "Character
   limit reached" in the live region (`RichTextEditorLabels::limit_reached`),
   once until the text or the caret moves, so further refused keys stay quiet.
-- A task item's box is a `role="checkbox"` with `aria-checked`, named "Task
-  done" (`RichTextEditorLabels::toggle_task`) and read before the item's text.
-  It is not a tab stop and the caret never lands in it: `Ctrl+Alt+Enter`
+- A task item's box is a `role="checkbox"` with `aria-checked`, named by its
+  item's text through `aria-labelledby` (an empty item falls back to "Task
+  done", `RichTextEditorLabels::toggle_task`). It is not a tab stop and the caret never lands in it: `Ctrl+Alt+Enter`
   toggles the items at the caret, a click toggles its own item without moving
   the caret, and both say "Task done on" or "off". In `RichTextView` the box
   is `aria-readonly`.

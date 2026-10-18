@@ -305,7 +305,22 @@ impl Surface {
                 return;
             }
             eval.set(Some(script));
-            while let Ok(report) = script.recv::<Report>().await {
+            // A message that does not decode is skipped, not the end of the listener.
+            while let Ok(message) = script.recv::<serde_json::Value>().await {
+                let held_raw = message.get("input").is_some() || message.get("key").is_some();
+                let report = match serde_json::from_value::<Report>(message) {
+                    Ok(report) => report,
+                    Err(error) => {
+                        crate::utils::warn(&format!(
+                            "RichTextEditor: skipped a surface report: {error}"
+                        ));
+                        // The script holds keys until each held report is acked.
+                        if held_raw {
+                            let _ = script.send(serde_json::json!({ "ack": true }));
+                        }
+                        continue;
+                    }
+                };
                 let held = report.input.is_some() || report.key.is_some();
                 let selection = report.selection;
                 let clip = on_report(report);

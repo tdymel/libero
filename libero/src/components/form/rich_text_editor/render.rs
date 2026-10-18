@@ -53,7 +53,8 @@ pub(crate) fn content_sx(base: Sx) -> Sx {
         )
         .selector(
             "& [data-task][aria-checked='true']::before",
-            sx().content("'✓'"),
+            // Empty alt text: the mark stays out of the name the task's text gives the box.
+            sx().content("'✓' / ''"),
         )
         .selector(
             "& [data-task][aria-checked='true']",
@@ -98,8 +99,10 @@ pub(crate) struct RenderCtx<'a> {
     pub on_code: Option<EventHandler<NodeKey>>,
     /// Clicking a task item's box toggles it; `None` shows the box read-only.
     pub on_task: Option<EventHandler<NodeKey>>,
-    /// Names every task box.
+    /// Names a task box whose line is empty; others take their line's text.
     pub task_label: &'a str,
+    /// Starts the ids the task boxes point their names at; unique per editor or view.
+    pub id_prefix: &'a str,
     /// The caller's components for custom nodes.
     pub views: &'a NodeViews,
     /// The language button on the source block's opening fence.
@@ -130,7 +133,7 @@ fn block(block: &Block, ctx: RenderCtx<'_>) -> Element {
         return builtin_view(name, block, key, ctx);
     }
     match &block.kind {
-        BlockKind::Paragraph => paragraph(block, None, ctx),
+        BlockKind::Paragraph => paragraph(block, None, None, ctx),
         BlockKind::Heading { level } => heading(
             ctx.heading_level(*level),
             key,
@@ -146,14 +149,18 @@ fn block(block: &Block, ctx: RenderCtx<'_>) -> Element {
         },
         BlockKind::List { .. } => rsx! { ul { {blocks(block.children(), ctx)} } },
         BlockKind::ListItem { checked } => {
-            let task = checked.map(|checked| task_box(checked, block.key, ctx));
             let children = block.children();
             // Inside the first line's leaf, so a caret beside the box is still in the text.
             let lead = children.first().filter(|first| {
-                task.is_some()
+                checked.is_some()
                     && first.kind == BlockKind::Paragraph
                     && !ctx.views.contains("paragraph")
             });
+            // The box is named by its task's text; an empty line keeps the generic label.
+            let text_id = lead
+                .filter(|first| !first.is_empty())
+                .map(|first| format!("{}-task-{}", ctx.id_prefix, first.key.0));
+            let task = checked.map(|checked| task_box(checked, block.key, text_id.clone(), ctx));
             let rest = if lead.is_some() {
                 &children[1..]
             } else {
@@ -162,7 +169,7 @@ fn block(block: &Block, ctx: RenderCtx<'_>) -> Element {
             rsx! {
                 li { "data-checked": checked.map(|checked| checked.to_string()),
                     match lead {
-                        Some(first) => paragraph(first, task, ctx),
+                        Some(first) => paragraph(first, text_id, task, ctx),
                         None => rsx! { {task} },
                     }
                     {blocks(rest, ctx)}
@@ -247,14 +254,27 @@ fn builtin_view(name: &str, block: &Block, key: String, ctx: RenderCtx<'_>) -> E
 }
 
 /// `lead` goes before the text, skipped by the caret's offsets.
-fn paragraph(block: &Block, lead: Option<Element>, ctx: RenderCtx<'_>) -> Element {
-    rsx! { p { "data-key": block.key.0.to_string(), {lead} {inlines(block.inlines(), ctx)} } }
+fn paragraph(
+    block: &Block,
+    id: Option<String>,
+    lead: Option<Element>,
+    ctx: RenderCtx<'_>,
+) -> Element {
+    rsx! {
+        p { id, "data-key": block.key.0.to_string(), {lead} {inlines(block.inlines(), ctx)} }
+    }
 }
 
 /// A task item's box: an island the caret's offsets and the text skip (`data-skip`).
-/// Not a tab stop; the keyboard toggles with the `toggle_task` chord.
-fn task_box(checked: bool, item: NodeKey, ctx: RenderCtx<'_>) -> Element {
+/// Not a tab stop; the keyboard toggles with the `toggle_task` chord (CKEditor 5 to-do lists).
+fn task_box(
+    checked: bool,
+    item: NodeKey,
+    labelled_by: Option<String>,
+    ctx: RenderCtx<'_>,
+) -> Element {
     let on_task = ctx.on_task;
+    let label = labelled_by.is_none().then(|| ctx.task_label.to_string());
     rsx! {
         span {
             "data-task": "",
@@ -264,7 +284,8 @@ fn task_box(checked: bool, item: NodeKey, ctx: RenderCtx<'_>) -> Element {
             role: "checkbox",
             aria_checked: checked.to_string(),
             aria_readonly: on_task.is_none().then_some("true"),
-            aria_label: ctx.task_label.to_string(),
+            aria_labelledby: labelled_by,
+            aria_label: label,
             // The caret stays where it was.
             onmousedown: move |event: MouseEvent| event.prevent_default(),
             onclick: move |event: MouseEvent| {
@@ -386,4 +407,48 @@ fn marked(text: &str, marks: &Marks) -> Element {
         };
     }
     element
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::components::form::rich_text_editor::model::Doc;
+
+    fn app() -> Element {
+        let doc = Doc::from_markdown("- [x] Buy milk\n- [ ] ");
+        let views = NodeViews::default();
+        blocks(
+            &doc.blocks,
+            RenderCtx {
+                source_code: None,
+                on_code: None,
+                on_task: None,
+                task_label: "Task done",
+                id_prefix: "ed",
+                views: &views,
+                fence: None,
+                heading_offset: 0,
+            },
+        )
+    }
+
+    #[test]
+    fn a_task_box_is_named_by_its_text_and_an_empty_one_by_the_label() {
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        let id = html
+            .split("aria-labelledby=\"")
+            .nth(1)
+            .and_then(|rest| rest.split('"').next())
+            .expect("a labelled box");
+        assert!(html.contains(&format!("<p id=\"{id}\"")), "{html}");
+        assert!(html.contains("Buy milk"), "{html}");
+        assert_eq!(html.matches("aria-labelledby=").count(), 1, "{html}");
+        assert_eq!(
+            html.matches("aria-label=\"Task done\"").count(),
+            1,
+            "{html}"
+        );
+    }
 }

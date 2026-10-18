@@ -10,7 +10,7 @@ use crate::{
         common::{HtmlTag, Input, base_props},
         layout::use_box,
     },
-    hooks::use_localization,
+    hooks::{use_id, use_localization},
     sx::{StaticSx, sx},
 };
 
@@ -50,6 +50,7 @@ base_props! {
 #[component]
 pub fn RichTextView(props: RichTextViewProps) -> Element {
     let words = use_localization().rich_text_editor;
+    let id = use_id();
     use_box()
         .framework_sx(&VIEW_SX)
         .class(&props.class)
@@ -66,6 +67,7 @@ pub fn RichTextView(props: RichTextViewProps) -> Element {
                     on_code: None,
                     on_task: None,
                     task_label: words.toggle_task,
+                    id_prefix: &id.peek(),
                     views: &props.nodes,
                     fence: None,
                     heading_offset: props.heading_offset,

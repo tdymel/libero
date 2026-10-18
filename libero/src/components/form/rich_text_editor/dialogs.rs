@@ -228,7 +228,13 @@ mod tests {
             rows.iter()
                 .any(|row| *row == Shortcut::new("mod+alt+2", "Heading 2"))
         );
-        assert_eq!(rows.len(), Keymap::default().bindings().len() - 4);
+        // Only plain editing keys (no label) stay out of the list.
+        let labelled = Keymap::default()
+            .bindings()
+            .iter()
+            .filter(|(_, name)| command_label(name, &words).is_some())
+            .count();
+        assert_eq!(rows.len(), labelled);
         let help = Localization::ENGLISH.shortcut_help;
         for (chord, _) in Keymap::default().bindings() {
             let chord = chord.to_string().to_lowercase();

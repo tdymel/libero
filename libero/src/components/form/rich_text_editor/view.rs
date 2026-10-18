@@ -410,15 +410,23 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         rsx! { LinkDialog { args: scope.args(), onchoose: move |choice| scope.resolve(choice) } }
     });
     let fence_menu = use_menu();
+    let (more_menu, more_button) = (use_menu(), use_element());
     let mut fence_key = use_hook(|| CopyValue::new(false));
     let help_modal = use_modal(move |scope: ModalScope<Vec<Shortcut>>| {
         rsx! { ShortcutHelp { title: words.shortcuts, shortcuts: scope.args() } }
     });
 
-    // Opens a view command's dialog; the caret goes back to the text when it closes.
+    // Opens a view command's dialog; when it closes, the caret is placed again.
     let open_view = move |name: &CommandName| -> bool {
         if *name == Builtin::Link.into() {
             let href = link_href(editor.peek().state());
+            // Focus goes back to the invoker (APG dialog): the text by chord or a pressed
+            // button that kept focus there; the modal's own return covers a focused button.
+            let from_text = *focused.peek();
+            // From the More menu, whose item goes away: More is the invoker.
+            if !from_text && more_menu.is_open() {
+                let _ = more_button.focus();
+            }
             link_modal
                 .open_with(LinkArgs { href })
                 .onresult(move |choice| {
@@ -430,15 +438,16 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                                     state.set_link(&href).unwrap_or(false)
                                 })
                             },
-                            true,
+                            from_text,
                         ),
-                        Some(LinkChoice::Remove) => {
-                            edit(&|live| live.run(&commands.peek(), Builtin::Unlink), true)
-                        }
+                        Some(LinkChoice::Remove) => edit(
+                            &|live| live.run(&commands.peek(), Builtin::Unlink),
+                            from_text,
+                        ),
                         None => false,
                     };
                     let mut changed = changed;
-                    changed(None, true);
+                    changed(None, from_text);
                 });
             return true;
         }
@@ -933,6 +942,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             }
         }
     });
+    let task_ids = use_id();
     let content = {
         let live = editor.peek();
         // Blitz has no editable surface: the document is shown through the read-only view.
@@ -944,6 +954,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                     on_code,
                     on_task,
                     task_label: words.toggle_task,
+                    id_prefix: &task_ids.peek(),
                     views: &props.nodes,
                     fence: fence.as_ref(),
                     heading_offset: 0,
@@ -1226,6 +1237,16 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     let mut bar_width = use_signal(|| None::<f64>);
     let metrics = use_signal(|| None::<Metrics>);
     let (bold, italic, block_button) = (use_element(), use_element(), use_element());
+    let (language_button, link_button) = (use_element(), use_element());
+    // A press keeps focus in the text; with the text unfocused a menu or dialog opener takes
+    // it, so closing returns there, not to the page.
+    let opener = move |handle: ElementHandle| {
+        listener("onmousedown", move |_: MouseEvent| {
+            if !*focused.peek() {
+                let _ = handle.focus();
+            }
+        })
+    };
     // The widest language label seen, so moving between code blocks never reflows the bar.
     let mut language_width = use_signal(|| None::<f64>);
     let crowded = bar_width().map_or(0, |width| {
@@ -1282,7 +1303,6 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             }
         });
     };
-    let more_menu = use_menu();
     let hidden = &OVERFLOW[..crowded];
     let more_items: Vec<MenuEntry> = buttons
         .iter()
@@ -1325,6 +1345,10 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         let attributes = match tool.builtin {
             Builtin::Bold => sized(bold),
             Builtin::Italic => vec![listener("onmounted", italic.mount())],
+            Builtin::Link => vec![
+                listener("onmounted", link_button.mount()),
+                opener(link_button),
+            ],
             _ => Vec::new(),
         };
         let shortcut = keymap
@@ -1379,7 +1403,17 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     };
     let mut block_attributes = block_menu.a11y_attributes();
     block_attributes.extend(sized(block_button));
+    block_attributes.push(opener(block_button));
     let mut language_attributes = language_menu.a11y_attributes();
+    language_attributes.extend([
+        listener("onmounted", language_button.mount()),
+        opener(language_button),
+    ]);
+    let mut more_attributes = more_menu.a11y_attributes();
+    more_attributes.extend([
+        listener("onmounted", more_button.mount()),
+        opener(more_button),
+    ]);
     language_attributes.push(listener("onresize", move |event: Event<ResizeData>| {
         if let Ok(size) = event.get_border_box_size()
             && size.width > language_width.peek().unwrap_or(0.0)
@@ -1451,7 +1485,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                     }
                     if !more_items.is_empty() {
                         Menu { state: more_menu, items: more_items,
-                            ActionIcon { attributes: more_menu.a11y_attributes(), aria_label: words.more,
+                            ActionIcon { attributes: more_attributes, aria_label: words.more,
                                 Glyph { slot: IconSlot::More, icon: lucide::ellipsis_vertical::outlined }
                             }
                         }

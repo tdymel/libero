@@ -180,10 +180,11 @@ fn a_task_box_click_toggles_its_item_and_the_caret_skips_it() {
             page,
             &format!(
                 "(() => {{ const b = {first}; const got = [b.getAttribute('role'), b.getAttribute('aria-checked'), \
-                   b.getAttribute('aria-label'), b.getAttribute('contenteditable'), String(b.hasAttribute('tabindex'))].join(); \
-                   return got === 'checkbox,false,Task done,false,false' ? 'ok' : got; }})()"
+                   document.getElementById(b.getAttribute('aria-labelledby'))?.textContent, \
+                   b.getAttribute('contenteditable'), String(b.hasAttribute('tabindex'))].join(); \
+                   return got === 'checkbox,false,one,false,false' ? 'ok' : got; }})()"
             ),
-            "the box is a named, untabbable checkbox island",
+            "the box is an untabbable checkbox island named by its item's text",
         )
         .await;
 
