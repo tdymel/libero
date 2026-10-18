@@ -82,11 +82,13 @@ macro_rules! number_value {
                 }
 
                 fn step_up(self, by: Self) -> Self {
-                    rounded(self + by, self, by)
+                    let next = rounded(self + by, self, by);
+                    if next.is_finite() { next } else { self }
                 }
 
                 fn step_down(self, by: Self) -> Self {
-                    rounded(self - by, self, by)
+                    let next = rounded(self - by, self, by);
+                    if next.is_finite() { next } else { self }
                 }
             }
         )+
@@ -129,5 +131,11 @@ mod tests {
         assert_eq!(<f64 as NumberValue>::parse("1."), Some(1.0));
         assert_eq!(<f64 as NumberValue>::parse("-"), None);
         assert_eq!(<f64 as NumberValue>::zero(), Some(0.0));
+    }
+
+    #[test]
+    fn a_float_step_past_its_range_keeps_the_value() {
+        assert_eq!(f64::MIN.step_down(f64::MAX), f64::MIN);
+        assert_eq!(f32::MAX.step_up(f32::MAX), f32::MAX);
     }
 }

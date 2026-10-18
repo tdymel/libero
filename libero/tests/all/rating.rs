@@ -28,7 +28,7 @@ fn a_rating_is_one_slider_with_its_value_spoken() {
     let html = render(app);
     let root = root_of(&html, "slider");
     assert_eq!(root["tabindex"], "0");
-    assert_eq!(root["aria-valuemin"], "0");
+    assert_eq!(root["aria-valuemin"], "0.5");
     assert_eq!(root["aria-valuemax"], "5");
     assert_eq!(root["aria-valuenow"], "3.5");
     assert_eq!(root["aria-valuetext"], "3.5 of 5");
@@ -42,6 +42,21 @@ fn a_rating_is_one_slider_with_its_value_spoken() {
     assert_eq!(html.matches(r#"data-slot="zone""#).count(), 10);
     assert_eq!(html.matches(r#"style="width: 100%""#).count(), 3);
     assert_eq!(html.matches(r#"style="width: 50%""#).count(), 1);
+}
+
+#[test]
+fn the_slider_minimum_is_where_home_stops() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Rating { label: "Whole", onchange: move |_| {} }
+                Rating { label: "Clearable", clearable: true, onchange: move |_| {} }
+            }
+        }
+    }
+    let html = render(app);
+    assert_eq!(html.matches(r#"aria-valuemin="1""#).count(), 1, "{html}");
+    assert_eq!(html.matches(r#"aria-valuemin="0""#).count(), 1, "{html}");
 }
 
 /// Todo 3128: only the warning fill, yellow under 3:1 on white, takes the ink edge.

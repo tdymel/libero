@@ -66,9 +66,8 @@ impl FormHandle {
             .and_then(|control| control.clone())
     }
 
-    /// Checks the form as a submit does, without `onsubmit`. `true` when
-    /// nothing is an error; warnings never count. When invalid it shows the
-    /// summary and moves focus to it; [`is_valid`](Self::is_valid) does neither.
+    /// Checks the form as a submit does, without `onsubmit`; `true` when nothing is an error.
+    /// Invalid, it shows the summary and focuses it; [`is_valid`](Self::is_valid) does neither.
     pub fn validate(&self) -> bool {
         let mut scope = self.scope;
         scope.submit();
@@ -126,10 +125,8 @@ impl FormHandle {
     }
 }
 
-/// The error summary a failed submit leaves. Fixed lines drop out, a line whose
-/// field is still in error follows its message; none is
-/// added until the next submit, so it is not re-announced. After a valid submit, a
-/// field's explicit error rebuilds it once (`Form`, 2573).
+/// The error summary a failed submit leaves: fixed lines drop out, lines still in error follow
+/// their message, none is added before the next submit (todo 2573).
 #[derive(Clone)]
 pub(crate) struct Summary {
     /// Outside a signal: the form reads it while rendering and trims it there.

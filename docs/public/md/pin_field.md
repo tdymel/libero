@@ -96,8 +96,8 @@ explains how parts work.
 |---|---|
 | `Left` or `Right` | Moves to the previous or next cell. |
 | `Home` or `End` | Moves to the first or last cell. |
-| `Backspace` | Clears the cell and moves back, except from the last cell; on an empty cell, only moves back. |
-| `Delete` | Clears the cell and stays. |
+| `Backspace` | Removes the character, so the ones after it move one cell left, and moves back, except from the last cell; on an empty cell, only moves back. |
+| `Delete` | Removes the character, so the ones after it move one cell left, and stays. |
 | `Space` | Moves to the next cell without typing. |
 | `Tab` | Moves to the next cell, and past the last one leaves the field, as in any group of inputs. |
 

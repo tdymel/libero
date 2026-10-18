@@ -386,7 +386,7 @@ pub fn Rating(props: RatingProps) -> Element {
             .attr("role", "slider")
             .attr("tabindex", if disabled { "-1" } else { "0" })
             .attr("aria-orientation", "horizontal")
-            .attr("aria-valuemin", "0")
+            .attr("aria-valuemin", number_text(lowest, "."))
             .attr("aria-valuemax", count.to_string())
             .attr("aria-valuenow", number_text(value, "."))
             .attr("aria-valuetext", text)

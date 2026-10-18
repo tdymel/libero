@@ -66,8 +66,13 @@ fn caller_id(attributes: &[Attribute]) -> Option<String> {
 /// A selector for the element with `id`. An attribute selector, since `#1-faq`
 /// throws: a caller's `id` need not be a CSS identifier.
 pub(crate) fn id_selector(id: &str) -> String {
-    let mut escaped = String::with_capacity(id.len());
-    for c in id.chars() {
+    format!("[id=\"{}\"]", escape_css_string(id))
+}
+
+/// `text` as the inside of a double-quoted CSS string.
+pub(crate) fn escape_css_string(text: &str) -> String {
+    let mut escaped = String::with_capacity(text.len());
+    for c in text.chars() {
         match c {
             '\\' | '"' => {
                 escaped.push('\\');
@@ -80,7 +85,7 @@ pub(crate) fn id_selector(id: &str) -> String {
             _ => escaped.push(c),
         }
     }
-    format!("[id=\"{escaped}\"]")
+    escaped
 }
 
 #[cfg(test)]
@@ -94,6 +99,11 @@ mod tests {
         assert_eq!(id_selector("1-email"), r#"[id="1-email"]"#);
         assert_eq!(id_selector("user.email"), r#"[id="user.email"]"#);
         assert_eq!(id_selector(r#"a"b\c"#), r#"[id="a\"b\\c"]"#);
+    }
+
+    #[test]
+    fn a_css_string_escapes_its_quote_and_line_breaks() {
+        assert_eq!(super::escape_css_string("a\"]\nb"), "a\\\"]\\a b");
     }
 
     #[test]

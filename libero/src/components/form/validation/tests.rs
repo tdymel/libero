@@ -8,8 +8,8 @@ use dioxus::{core::provide_root_context, prelude::*};
 use crate::{
     LiberoProvider,
     components::{
-        FieldStatus, Fieldset, Form, FormHandle, FormScope, Rule, TextField, min_length, not_empty,
-        use_form, use_form_context,
+        FieldStatus, Fieldset, Form, FormHandle, FormScope, Rule, TextField, Textarea, min_length,
+        not_empty, use_form, use_form_context,
     },
 };
 
@@ -86,6 +86,30 @@ fn a_rule_waits_for_a_blur_or_a_submit() {
         "a submit does not reveal the rule"
     );
     assert!(after.contains(r#"aria-invalid="true""#));
+}
+
+#[test]
+fn a_field_with_a_handler_and_no_value_is_not_judged_on_nothing() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Form::<()> {
+                    Spy {}
+                    Textarea {
+                        oninput: |_| {},
+                        validate: [min_length(5).error("Too short")],
+                    }
+                }
+            }
+        }
+    }
+
+    let (mut dom, _) = mount(app);
+    let after = submit(&mut dom);
+    assert!(
+        !after.contains("Too short"),
+        "the rule judged a value the field never saw"
+    );
 }
 
 #[test]

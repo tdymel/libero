@@ -99,7 +99,7 @@ pub use hotkeys::{Hotkey, use_hotkeys};
 pub(crate) use hotkeys::{aria_keyshortcuts, chord_keys};
 pub use icons::use_icon;
 pub use id::use_id;
-pub(crate) use id::{id_selector, use_root_id};
+pub(crate) use id::{escape_css_string, id_selector, use_root_id};
 pub use indexed_db::{StoredAsync, use_indexed_db};
 pub use intersection::{
     InViewport, Intersection, IntersectionEntry, IntersectionOptions, use_in_viewport,

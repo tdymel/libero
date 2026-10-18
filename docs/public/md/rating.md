@@ -128,8 +128,10 @@ explains how parts work.
 
 ### Libero handles
 
-- One tab stop, a `slider` with `aria-valuemin` 0, `aria-valuemax` the count
-  and the value spoken as "3.5 of 5".
+- One tab stop, a `slider` with `aria-valuemin` the lowest step Home reaches
+  (0 when `clearable`), `aria-valuemax` the count and the value spoken as
+  "3.5 of 5", with the decimal separator of the active `Formats` ("3,5 of 5" in
+  German).
 - Hover only previews: `aria-valuenow` stays the picked value.
 - Filled and empty stars differ in shape as well as colour with the default
   stroked star.

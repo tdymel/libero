@@ -152,12 +152,12 @@ impl<T: Clone + 'static> Bound<T> {
     }
 
     /// The status the field's rules give `value`, else what was entered. Reads
-    /// nothing without rules, so no re-render per keystroke.
+    /// nothing without rules, so no re-render per keystroke; none for a value it cannot see.
     pub fn check(&self, rules: &Validators<T>, value: Option<T>) -> Option<FieldStatus>
     where
         T: Default,
     {
-        if rules.is_empty() {
+        if rules.is_empty() || (!self.owns && value.is_none()) {
             return None;
         }
         Some(rules.validate(&value.or_else(|| self.entered()).unwrap_or_default()))

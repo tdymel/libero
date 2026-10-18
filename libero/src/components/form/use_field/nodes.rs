@@ -114,7 +114,10 @@ pub(super) fn label_node(
 
 /// The tab stop of a control that `label_id` names through `aria-labelledby`.
 pub(in crate::components::form) fn labelled_focus_selector(label_id: &str) -> String {
-    let named = format!("[aria-labelledby~=\"{label_id}\"]");
+    let named = format!(
+        "[aria-labelledby~=\"{}\"]",
+        crate::hooks::escape_css_string(label_id)
+    );
     format!(
         "{named}[tabindex=\"0\"], {named} input:not([type=\"hidden\"]):not(:disabled):not([tabindex=\"-1\"])"
     )

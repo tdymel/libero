@@ -782,7 +782,8 @@ fn a_float_step_rounds_away_binary_noise() {
     // Ten presses of 0.1 from zero end on 1, not 0.9999999999999999.
     let ten = (0..10).fold(0.0f64, |value, _| value.step_up(0.1));
     assert_eq!(ten.to_string(), "1");
-    assert_eq!(f64::MAX.step_up(f64::MAX), f64::INFINITY);
+    // Past the range the value stays, rather than becoming `inf`.
+    assert_eq!(f64::MAX.step_up(f64::MAX), f64::MAX);
 }
 
 /// The steppers are opt-in: a number is usually typed, and two buttons are the
