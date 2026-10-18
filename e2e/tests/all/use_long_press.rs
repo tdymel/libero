@@ -1,8 +1,6 @@
 //! `use_long_press`: a held touch fires once and swallows its click, a short
 //! touch and a plain click stay taps.
 
-use std::time::{Duration, Instant};
-
 use anyhow::Result;
 use e2e::driver::{Driver, eventually};
 
@@ -27,17 +25,17 @@ async fn pressing_is<D: Driver>(d: &mut D, expected: &str) -> Result<()> {
 const PRESS_MS: u32 = 400;
 
 /// Until a wrong late callback or click would have landed: on a held clock fires every
-/// pending press timer and settles, elsewhere waits 500 ms.
+/// pending press timer, elsewhere awaits a page timer queued behind them; then settles.
 async fn past_the_delay<D: Driver>(d: &mut D, held: bool) -> Result<()> {
     if held {
         d.fire_timers(PRESS_MS).await?;
-        return d.settle().await;
+    } else {
+        d.evaluate(&format!(
+            "new Promise(done => setTimeout(() => done(true), {PRESS_MS}))"
+        ))
+        .await?;
     }
-    let started = Instant::now();
-    while started.elapsed() < Duration::from_millis(500) {
-        d.idle().await;
-    }
-    Ok(())
+    d.settle().await
 }
 
 async fn a_held_touch_fires_once<D: Driver>(d: &mut D, _route: &str) -> Result<()> {

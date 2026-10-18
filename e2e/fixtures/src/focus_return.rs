@@ -3,7 +3,7 @@
 use dioxus::prelude::*;
 use libero::{
     components::{Button, Checkbox, Dialog, Flex},
-    hooks::{ModalScope, use_focus_return, use_modal},
+    hooks::{ModalScope, use_element, use_focus_return, use_modal},
 };
 
 use crate::Routes;
@@ -12,7 +12,47 @@ pub const ROUTES: Routes = &[
     ("/focus-return", || rsx! { FiltersPage {} }),
     ("/focus-return/mounted", || rsx! { MountedPage {} }),
     ("/focus-return/modal", || rsx! { ModalPage {} }),
+    ("/focus-return/removed", || rsx! { RemovedPage {} }),
 ];
+
+/// Confirming removes the trigger's row: focus lands on the fallback list (todo 3750).
+#[component]
+fn RemovedPage() -> Element {
+    let mut rows = use_signal(|| vec!["alpha", "beta"]);
+    let mut confirming = use_signal(|| None::<&'static str>);
+    let trigger = use_focus_return();
+    let list = use_element();
+    trigger.fallback(list);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            div { id: "rows", tabindex: "-1", onmounted: list.mount(),
+                for row in rows() {
+                    button {
+                        key: "{row}",
+                        id: "delete-{row}",
+                        onclick: move |_| {
+                            trigger.remember_active();
+                            confirming.set(Some(row));
+                        },
+                        "Delete {row}"
+                    }
+                }
+            }
+            if let Some(row) = confirming() {
+                button {
+                    id: "confirm",
+                    onclick: move |_| {
+                        rows.write().retain(|other| *other != row);
+                        confirming.set(None);
+                        trigger.restore();
+                    },
+                    "Confirm"
+                }
+            }
+        }
+    }
+}
 
 /// A modal behind a click, focus parked on `#elsewhere` first (todo 262(a)).
 #[component]

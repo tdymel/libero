@@ -27,6 +27,21 @@ impl Trigger {
             Trigger::Kept(_) => true,
         }
     }
+
+    /// Whether focus moved here: connected, and the renderer took the command.
+    fn take_focus(&self) -> bool {
+        if !self.is_connected() {
+            return false;
+        }
+        match self {
+            Trigger::Mounted(data) => platform::element(data).focus().is_ok(),
+            Trigger::Active(element) => element.focus().is_ok(),
+            Trigger::Kept(token) => {
+                platform::focus_kept(*token);
+                true
+            }
+        }
+    }
 }
 
 /// Restores focus to whatever triggered an overlay, once it closes.
@@ -115,33 +130,40 @@ impl FocusReturn {
             trigger.take();
         }
 
-        // Read outside the `spawn`: Blitz locks the document while tasks drain.
-        let target = match trigger.is_connected() {
-            true => Some(trigger),
-            false => self.fallbacks.try_peek().ok().and_then(|fallbacks| {
+        // Known-gone ones dropped here: Blitz locks the document while tasks
+        // drain, so there the task's own check can only answer "not known gone".
+        let fallbacks = self
+            .fallbacks
+            .try_peek()
+            .map(|fallbacks| fallbacks.clone())
+            .unwrap_or_default();
+        let targets: Vec<Trigger> = std::iter::once(trigger)
+            .chain(
                 fallbacks
-                    .iter()
-                    .copied()
-                    .find(|element| element.is_connected())
-                    .map(|element| Trigger::Active(Rc::new(element)))
-            }),
-        };
+                    .into_iter()
+                    .map(|element| Trigger::Active(Rc::new(element))),
+            )
+            .filter(Trigger::is_connected)
+            .collect();
         // Nothing left: no blur, the browser's own pick beats `<body>`.
-        let Some(target) = target else {
+        if targets.is_empty() {
             return;
-        };
+        }
 
         // Spawned: focusing inside the closing event's dispatch panics. Through
         // the backend, not `set_focus`, which Blitz must defer (todo 189).
         spawn(Box::pin(async move {
-            let _ = match target {
-                Trigger::Mounted(data) => platform::element(&data).focus(),
-                Trigger::Active(element) => element.focus(),
-                Trigger::Kept(token) => {
-                    platform::focus_kept(token);
-                    Ok(())
-                }
-            };
+            // Now, so the closing render's effects already see focus back.
+            let landed = targets.iter().position(Trigger::take_focus);
+            // Once that render is applied, a target it removed hands over to the next one.
+            dioxus::core::queue_effect(move || {
+                let from = match landed {
+                    Some(at) if targets[at].is_connected() => return,
+                    Some(at) => at + 1,
+                    None => 0,
+                };
+                targets[from..].iter().any(Trigger::take_focus);
+            });
         }));
     }
 }

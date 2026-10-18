@@ -8,7 +8,8 @@ use crate::hooks::{
 };
 use crate::localization::ShortcutHelpLabels;
 use crate::platform::{
-    KeyChord, KeySubscription, keyboard, meta_held, mod_is_meta, warn_reserved_chord,
+    KeyChord, KeySubscription, keyboard, meta_held, mod_is_meta, warn_bare_chord, warn_once,
+    warn_reserved_chord,
 };
 use crate::utils::bump;
 
@@ -18,7 +19,13 @@ use crate::utils::bump;
 /// A chord is modifiers and a key joined by `+`: `ctrl`, `alt`, `shift`, `meta`
 /// (or `cmd`), `mod`, then the key, a character or a name like `f8`, `escape`,
 /// `space`. `mod` is Cmd on Apple platforms and Ctrl elsewhere. Modifiers must
-/// match exactly, apart from Shift on a symbol such as `?`.
+/// match exactly, apart from Shift on a symbol such as `?`. A debug build warns
+/// about a chord that does not parse, since it never fires.
+///
+/// A page-wide chord on a single character, such as `"k"` or `"?"`, fires
+/// when speech-input users dictate. WCAG 2.1.4 then asks the app for a setting
+/// that turns it off or remaps it; a debug build warns. A [`within`](Self::within)
+/// chord is exempt, as it only fires while its element has focus.
 pub struct Hotkey {
     chord: String,
     handler: Box<dyn FnMut()>,
@@ -215,7 +222,9 @@ impl Entry {
 ///
 /// Bindings are read again every render, so handlers see current state. A
 /// debug build warns once about a chord that would shadow a browser or
-/// accessibility shortcut such as Tab, Escape or Ctrl+L. Where there is no
+/// accessibility shortcut such as Tab, Escape or Ctrl+L, a page-wide chord on a
+/// single character (see [`Hotkey`] for WCAG 2.1.4), and a chord that does not
+/// parse. Where there is no
 /// keyboard, as in a server render, nothing is bound.
 ///
 /// ```rust
@@ -235,14 +244,21 @@ impl Entry {
 /// ```
 pub fn use_hotkeys(bindings: impl IntoIterator<Item = Hotkey>) {
     let apple = mod_is_meta();
+    let mut unparsed = Vec::new();
     let entries: Vec<Entry> = bindings
         .into_iter()
-        .map(|binding| Entry {
-            chord: Chord::parse(&binding.chord, apple),
-            handler: binding.handler,
-            include_editable: binding.include_editable,
-            guard: binding.guard,
-            within: binding.within,
+        .map(|binding| {
+            let chord = Chord::parse(&binding.chord, apple);
+            if chord.is_none() {
+                unparsed.push(binding.chord);
+            }
+            Entry {
+                chord,
+                handler: binding.handler,
+                include_editable: binding.include_editable,
+                guard: binding.guard,
+                within: binding.within,
+            }
         })
         .collect();
     let bound = !entries.is_empty();
@@ -261,9 +277,13 @@ pub fn use_hotkeys(bindings: impl IntoIterator<Item = Hotkey>) {
         move || listening.borrow_mut().clear()
     });
 
-    use_effect(use_reactive!(|chords| {
+    use_effect(use_reactive!(|chords, unparsed| {
         for chord in &chords {
             warn_reserved_chord(&chord.key, held_modifiers(chord));
+            warn_bare_chord(&chord.key, held_modifiers(chord));
+        }
+        for text in &unparsed {
+            warn_once(unparsed_warning(text));
         }
     }));
 
@@ -379,6 +399,13 @@ fn global_chords(entries: &[Entry]) -> Vec<Chord> {
         .filter(|entry| entry.within.is_empty())
         .filter_map(|entry| entry.chord.clone())
         .collect()
+}
+
+fn unparsed_warning(chord: &str) -> String {
+    format!(
+        "hotkey {chord:?} does not parse and never fires: write modifiers ctrl, alt, \
+         shift, meta or mod, then one key such as k, f8 or escape, joined by +"
+    )
 }
 
 fn held_modifiers(chord: &Chord) -> Modifiers {
@@ -574,6 +601,25 @@ mod tests {
             assert_eq!(warned(&[entry(Vec::new())]), 1);
             assert_eq!(warned(&[entry(vec![ElementHandle::new()])]), 0);
         });
+    }
+
+    #[test]
+    fn a_bare_global_chord_and_a_typo_are_warned_about() {
+        let warnings = crate::utils::warnings_of(|| {
+            let element = use_hook(ElementHandle::new);
+            use_hotkeys([
+                Hotkey::new("k", || {}),
+                Hotkey::new("j", || {}).within(element),
+                Hotkey::new("ctl+k", || {}),
+            ]);
+            rsx! {}
+        });
+        assert_eq!(warnings.len(), 2, "{warnings:?}");
+        assert!(warnings[0].contains("hotkey K "), "{warnings:?}");
+        assert!(
+            warnings[1].contains("\"ctl+k\" does not parse"),
+            "{warnings:?}"
+        );
     }
 
     #[test]

@@ -271,8 +271,45 @@ pub(crate) fn reserved_chord_warning(key: &Key, modifiers: Modifiers) -> Option<
     })
 }
 
+/// The dev-time warning for a global hotkey on one printable character without
+/// Ctrl, Alt or Meta, or `None`: WCAG 2.1.4 then wants an off switch or a remap.
+pub(crate) fn bare_chord_warning(key: &Key, modifiers: Modifiers) -> Option<String> {
+    let Key::Character(text) = key else {
+        return None;
+    };
+    let mut chars = text.chars();
+    let printable = chars
+        .next()
+        .is_some_and(|c| !c.is_whitespace() && !c.is_control())
+        && chars.next().is_none();
+    if !printable || modifiers.ctrl() || modifiers.alt() || meta_held(modifiers) {
+        return None;
+    }
+    let shift = if modifiers.shift() { "Shift+" } else { "" };
+    Some(format!(
+        "global hotkey {shift}{} fires on a single character key, which speech-input \
+         users trigger by accident (WCAG 2.1.4). Let users turn it off or remap it, \
+         add Ctrl/Alt, or scope it with `within`",
+        text.to_uppercase()
+    ))
+}
+
 /// Says [`reserved_chord_warning`] once per chord: hotkeys re-subscribe often.
 pub(crate) fn warn_reserved_chord(key: &Key, modifiers: Modifiers) {
+    if let Some(message) = reserved_chord_warning(key, modifiers) {
+        warn_once(message);
+    }
+}
+
+/// Says [`bare_chord_warning`] once per chord, for a chord bound page-wide.
+pub(crate) fn warn_bare_chord(key: &Key, modifiers: Modifiers) {
+    if let Some(message) = bare_chord_warning(key, modifiers) {
+        warn_once(message);
+    }
+}
+
+/// A debug-build warning, said once per message on this thread.
+pub(crate) fn warn_once(message: String) {
     if !cfg!(debug_assertions) {
         return;
     }
@@ -280,9 +317,7 @@ pub(crate) fn warn_reserved_chord(key: &Key, modifiers: Modifiers) {
         static WARNED: std::cell::RefCell<std::collections::HashSet<String>> =
             Default::default();
     }
-    if let Some(message) = reserved_chord_warning(key, modifiers)
-        && WARNED.with_borrow_mut(|warned| warned.insert(message.clone()))
-    {
+    if WARNED.with_borrow_mut(|warned| warned.insert(message.clone())) {
         crate::utils::warn(&message);
     }
 }
@@ -391,5 +426,21 @@ mod tests {
         assert!(warning.contains("Ctrl/Cmd+L"), "{warning}");
         assert!(warning.contains("address bar"), "{warning}");
         assert!(reserved_chord_warning(&Key::Character("k".into()), Modifiers::CONTROL).is_none());
+    }
+
+    #[test]
+    fn a_bare_printable_character_is_warned_about() {
+        let key = |text: &str| Key::Character(text.into());
+        let warning = bare_chord_warning(&key("k"), Modifiers::empty()).unwrap();
+        assert!(
+            warning.contains("hotkey K ") && warning.contains("2.1.4"),
+            "{warning}"
+        );
+        assert!(bare_chord_warning(&key("?"), Modifiers::SHIFT).is_some());
+        for held in [Modifiers::CONTROL, Modifiers::ALT, Modifiers::META] {
+            assert!(bare_chord_warning(&key("k"), held).is_none());
+        }
+        assert!(bare_chord_warning(&key(" "), Modifiers::empty()).is_none());
+        assert!(bare_chord_warning(&Key::F8, Modifiers::empty()).is_none());
     }
 }

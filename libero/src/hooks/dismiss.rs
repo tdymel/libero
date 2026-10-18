@@ -660,10 +660,12 @@ pub(crate) fn use_dismiss(
         if !open || !placed || !mounted || !armed {
             return;
         }
-        entering.set((open, false));
-        if let Some(target) = initial_focus {
-            let _ = target.focus();
+        // A target not mounted yet stays armed: its mount re-runs this effect.
+        if initial_focus.is_some_and(|target| target.focus().is_err() && target.mounted().is_none())
+        {
+            return;
         }
+        entering.set((open, false));
     }));
 
     handle

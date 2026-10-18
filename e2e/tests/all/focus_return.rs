@@ -105,6 +105,40 @@ fn closing_the_panel_returns_focus_to_its_trigger() {
     });
 }
 
+/// The close removes the trigger: focus goes to the fallback, not `<body>`.
+#[test]
+fn a_removed_trigger_hands_focus_to_the_fallback() {
+    block_on(async {
+        let fixture = Fixture::open("/focus-return/removed", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#delete-alpha").await.unwrap();
+        page.evaluate("document.querySelector('#delete-alpha').focus()")
+            .await
+            .unwrap();
+        keyboard::press(page, ENTER).await.unwrap();
+        wait::for_visible(page, "#confirm").await.unwrap();
+        page.evaluate("document.querySelector('#confirm').focus()")
+            .await
+            .unwrap();
+        keyboard::press(page, ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "!document.querySelector('#delete-alpha') && document.activeElement?.id === 'rows'",
+            "focus on the fallback list once the trigger's row is gone",
+        )
+        .await
+        .unwrap();
+
+        fixture
+            .console
+            .assert_clean("the removed-trigger list")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A trigger named once from `onmounted` stays armed: the second close lands on
 /// it too, with no `remember` call in between.
 #[test]
