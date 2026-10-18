@@ -198,7 +198,10 @@ mod tests {
         let flag = Arc::new(Flag(AtomicBool::new(false)));
         let waker = Waker::from(flag.clone());
         let mut context = Context::from_waker(&waker);
-        let _ = Pin::new(&mut sleep).poll(&mut context);
+        // Under load the poisoning outlasts the sleep: the first poll is then Ready.
+        if Pin::new(&mut sleep).poll(&mut context).is_ready() {
+            return;
+        }
 
         let deadline = Instant::now() + Duration::from_secs(5);
         while !flag.0.load(Ordering::Acquire) && Instant::now() < deadline {
