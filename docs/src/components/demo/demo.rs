@@ -447,10 +447,10 @@ fn DemoControl(
                         max: (control.options.len() - 1) as f64,
                         step: 1.0,
                         value: control.step_of(&value),
-                        // The bubble shows the option, not the step index.
+                        // The bubble and the valuetext show the option's label, not the step index.
                         format: {
-                            let options = control.options.clone();
-                            move |at: f64| options[at as usize].clone()
+                            let control = control.clone();
+                            move |at: f64| control.label_of(&control.options[at as usize])
                         },
                         marks: control.marks(),
                         oninput: {

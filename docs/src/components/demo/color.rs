@@ -59,6 +59,16 @@ fn fill() -> libero::sx::Sx {
 fn swatch_button() -> libero::sx::Sx {
     sx().flex("1 1 0")
         .padding("0")
+        // An invisible 24px press target (WCAG 2.5.8) for a swatch the row squeezes below it;
+        // the fill rounds itself, so the button's clip is not needed.
+        .position("relative")
+        .overflow("visible")
+        .selector(
+            "&::before",
+            sx().content("\"\"")
+                .position("absolute")
+                .inset("min(0px, calc((100% - 24px) / 2))"),
+        )
         .hover(sx().background("transparent"))
 }
 

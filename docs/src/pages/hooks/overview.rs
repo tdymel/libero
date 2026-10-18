@@ -396,7 +396,14 @@ pub fn HooksPage() -> Element {
                         column("Page")
                             .value(|row: &HookRow| page_label(&row.route).unwrap_or_default())
                             .render(|row: &HookRow| rsx! {
-                                Anchor { to: row.route.clone(),
+                                // Several hooks share a page: the hook tells the links apart.
+                                Anchor {
+                                    to: row.route.clone(),
+                                    "aria-label": format!(
+                                        "{}, {}",
+                                        page_label(&row.route).unwrap_or_default(),
+                                        row.hook,
+                                    ),
                                     {page_label(&row.route).unwrap_or_default()}
                                 }
                             }),

@@ -192,7 +192,7 @@ impl Control {
             .enumerate()
             .map(|(at, option)| {
                 if at == 0 || at == last {
-                    SliderMark::labeled(at as f64, option)
+                    SliderMark::labeled(at as f64, self.label_of(option))
                 } else {
                     SliderMark::new(at as f64)
                 }

@@ -1,3 +1,5 @@
+use std::{cell::RefCell, rc::Rc};
+
 use dioxus::prelude::*;
 use libero::{
     components::{
@@ -6,7 +8,7 @@ use libero::{
         SpotlightOptions, ThemeSwitcher, spotlight_filter, use_scroll_area, use_spotlight,
     },
     hooks::{ElementHandle, edge_swipe_sx, use_back, use_element, use_media_query},
-    platform::ElementApi,
+    platform::{ElementApi, KeySubscription, keyboard},
     sx::{Sx, sx},
     theme::{
         ACTION_ICON_RADIUS, BUTTON_HEIGHT, HEADER_HEIGHT_VAR, PAPER_BACKGROUND, Size,
@@ -64,6 +66,44 @@ fn RouteEffects(
     rsx! {}
 }
 
+/// Escape closes the open drawer from anywhere in the document, `<body>` after a Tab past it
+/// included (`main` is inert then), and returns focus to the burger. Spotlight takes its own.
+fn use_drawer_escape(mut open: Signal<bool>, burger: ElementHandle, search: SpotlightHandle) {
+    let pressed = use_signal(|| 0u64);
+    let mut seen = use_hook(|| CopyValue::new(0u64));
+    let listening: Rc<RefCell<Option<Box<dyn KeySubscription>>>> =
+        use_hook(|| Rc::new(RefCell::new(None)));
+    let slot = listening.clone();
+    use_drop(move || {
+        listening.borrow_mut().take();
+    });
+    let drawer = open();
+    // The key callback runs outside every scope: it records the press, an effect acts.
+    use_effect(use_reactive!(|drawer| {
+        *slot.borrow_mut() = keyboard().filter(|_| drawer).map(|api| {
+            api.on_key_unfiltered(Box::new(move |chord| {
+                if chord.key != Key::Escape || chord.repeat || search.is_open() {
+                    return false;
+                }
+                let next = pressed.peek().wrapping_add(1);
+                let mut presses = pressed;
+                presses.set(next);
+                true
+            }))
+        });
+    }));
+    use_effect(move || {
+        let count = pressed();
+        if count != *seen.peek() {
+            seen.set(count);
+            if *open.peek() {
+                open.set(false);
+                let _ = burger.focus();
+            }
+        }
+    });
+}
+
 #[component]
 pub(crate) fn AppShell() -> Element {
     let mut open = use_signal(|| false);
@@ -98,6 +138,7 @@ pub(crate) fn AppShell() -> Element {
     } else {
         "Ctrl"
     };
+    use_drawer_escape(open, burger, search);
     let area = use_scroll_area();
     heading_focus::use_fragment_landing(area, content);
     use_context_provider(|| heading_focus::SectionLanding { area, content });
@@ -122,13 +163,6 @@ pub(crate) fn AppShell() -> Element {
             // `lang`; portaled dropdowns sit outside and follow it (todo 2075).
             lang: "en",
             sx: sx().gap("0"),
-            // Escape closes the mobile drawer (`main` is inert then) and returns focus to the burger.
-            onkeydown: move |event: KeyboardEvent| {
-                if open() && event.key() == Key::Escape {
-                    open.set(false);
-                    let _ = burger.focus();
-                }
-            },
             RouteEffects { open, area, content, section }
             {skip_link(main)}
             {shell_header(open, burger, home, search, modifier)}

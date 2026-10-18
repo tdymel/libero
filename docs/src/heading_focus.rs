@@ -1,6 +1,5 @@
-//! After a navigation: the new page starts at the top, focus on its heading,
-//! or both on the section a [`SectionLink`](crate::components::SectionLink) named.
-//! The e2e fixture `docs_shell` keeps its own copy (todo 951), held equal by `e2e/src/docs_copy.rs`.
+//! After a navigation: the new page's top and heading, or the section a `SectionLink` named.
+//! The e2e fixture `docs_shell` copies it (todo 951), held equal by `e2e/src/docs_copy.rs`.
 
 use dioxus::prelude::*;
 use libero::{components::ScrollAreaHandle, hooks::ElementHandle, platform::ElementApi};
@@ -12,8 +11,7 @@ pub struct PendingSection(pub Signal<Option<String>>);
 /// Room above a section's heading once it is scrolled to.
 const SECTION_MARGIN: f64 = 16.0;
 
-/// Scrolls `area` back to the top whenever `location` changes, or to the pending
-/// section. The web's heading focus only scrolls as far as the heading, Blitz's not at all.
+/// Scrolls `area` to the top on a `location` change, or to the pending section.
 /// Before [`use_heading_focus`], which clears the section.
 pub fn use_scroll_reset<T: Clone + PartialEq + 'static>(
     location: T,
@@ -93,6 +91,9 @@ pub struct SectionLanding {
 impl SectionLanding {
     /// Scrolls to the section and focuses its heading.
     pub fn land(self, id: &str) {
+        if !is_plain_id(id) {
+            return;
+        }
         scroll_to_section(self.area, self.content, id);
         let _ = self
             .content
@@ -136,10 +137,8 @@ fn scroll_to_section(area: ScrollAreaHandle, content: ElementHandle, id: &str) {
     });
 }
 
-/// Focuses the `main h1` (needs `tabindex="-1"`) inside `content` whenever `location`
-/// changes, or the pending section's heading. Never on the first render: a fresh load
-/// keeps the browser's own start. `inert` is `main`'s state in this render: focus waits
-/// for the render that drops it, since an inert heading refuses focus (todo 1693).
+/// Focuses the `main h1` or the pending section's heading on a `location` change, not the
+/// first render. Waits while `inert` (main's state): an inert heading refuses focus (1693).
 pub fn use_heading_focus<T: Clone + PartialEq + 'static>(
     location: T,
     inert: bool,

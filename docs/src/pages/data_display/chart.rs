@@ -1044,6 +1044,7 @@ pub fn ChartPage() -> Element {
                         .default(theme.chart.pie_label_position.as_str())
                         .hidden_when(is("pie")),
                     Control::slider("min_label_angle", ["0", "15", "30", "45"])
+                        .labels(["0°", "15°", "30°", "45°"])
                         .default("0")
                         .hidden_when(is("pie"))
                         .code(|_, values| match values.str("min_label_angle").as_str() {
@@ -1063,6 +1064,7 @@ pub fn ChartPage() -> Element {
                             _ => vec![],
                         }),
                     Control::slider("slice_gap", ["0", "1", "2", "4", "8"])
+                        .labels(["0 px", "1 px", "2 px", "4 px", "8 px"])
                         .default("1")
                         .hidden_when(is("pie"))
                         .code(|_, values| match values.str("slice_gap").as_str() {
