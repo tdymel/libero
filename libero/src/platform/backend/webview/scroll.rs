@@ -193,6 +193,11 @@ pub(crate) fn on_element_scroll(
     }))
 }
 
+/// JSON, so a non-finite number reads as `null` instead of breaking the script.
+fn edge_pan_args(band: crate::platform::scroll::EdgeBand) -> serde_json::Value {
+    json!([band.inset, band.width, band.left, band.distance])
+}
+
 /// Injected: `preventDefault` has to answer the `touchmove` synchronously.
 pub(crate) fn hold_edge_pan(
     band: crate::platform::scroll::EdgeBand,
@@ -202,17 +207,16 @@ pub(crate) fn hold_edge_pan(
         return None;
     }
     let slot = Slot::new();
-    let script = eval(&format!(
-        "const remove = ({})({}, {}, {}, {}, (...swipe) => dioxus.send(swipe));
-        {}
-        remove();",
-        crate::platform::scroll::EDGE_PAN_JS,
-        band.inset,
-        band.width,
-        band.left,
-        band.distance,
-        slot.park("")
-    ));
+    let script = eval_with(
+        edge_pan_args(band),
+        &format!(
+            "const remove = ({})(data[0], data[1], data[2], data[3], (...swipe) => dioxus.send(swipe));
+            {}
+            remove();",
+            crate::platform::scroll::EDGE_PAN_JS,
+            slot.park("")
+        ),
+    );
     let task = spawn(async move {
         let mut script = script;
         while let Ok(swipe) = script.recv::<[f64; 4]>().await {
@@ -226,3 +230,20 @@ pub(crate) fn hold_edge_pan(
 }
 
 impl ScrollSubscription for WebViewListener {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::platform::scroll::EdgeBand;
+
+    #[test]
+    fn edge_pan_args_stay_valid_json_for_non_finite_numbers() {
+        let band = EdgeBand {
+            inset: f64::NAN,
+            width: f64::INFINITY,
+            left: true,
+            distance: 24.0,
+        };
+        assert_eq!(edge_pan_args(band).to_string(), "[null,null,true,24.0]");
+    }
+}

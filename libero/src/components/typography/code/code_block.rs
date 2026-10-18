@@ -266,14 +266,14 @@ fn strip_diff_markers(source: &str) -> String {
         .join("\n")
 }
 
-/// What a diff copies: the unmarked and `+` lines, so the result compiles.
+/// What a diff copies: the unmarked and `+` lines, so the result compiles. Line endings
+/// and the trailing newline stay as in the source, as in a plain copy.
 fn new_side(source: &str) -> String {
     source
-        .lines()
+        .split_inclusive('\n')
         .filter(|line| !line.starts_with('-'))
         .map(|line| line.strip_prefix('+').unwrap_or(line))
-        .collect::<Vec<_>>()
-        .join("\n")
+        .collect()
 }
 
 /// One classless span per line, split like `highlight` splits.
@@ -843,6 +843,12 @@ mod tests {
     fn a_diff_copies_the_new_side_only() {
         let source = "fn greet() {\n-    old();\n+    new();\n}";
         assert_eq!(new_side(source), "fn greet() {\n    new();\n}");
+    }
+
+    #[test]
+    fn a_diff_copy_keeps_the_trailing_newline_and_crlf() {
+        assert_eq!(new_side("a\n-b\n+c\n"), "a\nc\n");
+        assert_eq!(new_side("a\r\n-b\r\n+c\r\n"), "a\r\nc\r\n");
     }
 
     /// Todo 2827: the server render, and the frames before highlighting resolves, kept no marks.

@@ -49,11 +49,13 @@ pub(super) fn label_mark_lines(
     left: f32,
     pins: &[MarkPin],
     bars: &[[f32; 4]],
+    lines: &[[f32; 4]],
 ) -> String {
     let is_mark = |tag: &str| tag.contains("dy=\"-6\"") && tag.contains("text-anchor=\"end\"");
-    // Covering a text or a pin costs ten times covering a bar.
+    // Covering a text or a pin costs ten times covering a bar, a series line three times.
     let mut crowd: Vec<([f32; 4], f32)> = pins.iter().map(|pin| (pin.rect(), 10.0)).collect();
     crowd.extend(bars.iter().map(|bar| (*bar, 1.0)));
+    crowd.extend(lines.iter().map(|line| (*line, 3.0)));
     let mut scan = svg;
     while let Some(open) = scan.find("<text ") {
         let Some(close) = scan[open..].find('>').map(|close| open + close) else {
@@ -143,6 +145,32 @@ pub(super) fn label_mark_lines(
     }
     out.push_str(rest);
     out
+}
+
+/// Each series' line between neighbouring points, as small rects along it.
+pub(super) fn series_lines(marks: &[Mark]) -> Vec<[f32; 4]> {
+    let point = |mark: &Mark| match mark.shape {
+        MarkShape::Point { x, y } => Some((mark.series, mark.index, x, y)),
+        _ => None,
+    };
+    let mut points: Vec<_> = marks.iter().filter_map(point).collect();
+    points.sort_by_key(|&(series, index, ..)| (series, index));
+    let mut rects = Vec::new();
+    for pair in points.windows(2) {
+        let ((s, i, x0, y0), (t, j, x1, y1)) = (pair[0], pair[1]);
+        if s != t || j != i + 1 {
+            continue;
+        }
+        let steps = ((x1 - x0).hypot(y1 - y0) / 4.0).ceil().max(1.0) as u32;
+        rects.extend((0..=steps).map(|n| {
+            let (x, y) = (
+                x0 + (x1 - x0) * n as f32 / steps as f32,
+                y0 + (y1 - y0) * n as f32 / steps as f32,
+            );
+            [x - 1.5, y - 1.5, x + 1.5, y + 1.5]
+        }));
+    }
+    rects
 }
 
 pub(super) const PIN_HEIGHT: f32 = 20.0;

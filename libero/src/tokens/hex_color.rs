@@ -52,6 +52,9 @@ pub struct HexColor {
 }
 
 impl HexColor {
+    /// # Panics
+    ///
+    /// When `rgb` is above `0xFFFFFF`.
     pub const fn new(rgb: u32) -> Self {
         if rgb > 0xFF_FF_FF {
             panic!("hex color out of range");
@@ -104,7 +107,7 @@ impl HexColor {
 
         if has_alpha {
             let alpha: f32 = parts[3].parse().ok()?;
-            if alpha < 1.0 {
+            if alpha.is_nan() || alpha < 1.0 {
                 return None;
             }
         }
@@ -449,6 +452,7 @@ mod tests {
     #[test]
     fn hex_color_parse_rejects_translucent_rgba_and_unknown_formats() {
         assert_eq!(HexColor::parse("rgba(255, 255, 255, 0.15)"), None);
+        assert_eq!(HexColor::parse("rgba(255, 255, 255, NaN)"), None);
         assert_eq!(HexColor::parse("hsl(0, 0%, 100%)"), None);
         assert_eq!(HexColor::parse("green"), None);
     }

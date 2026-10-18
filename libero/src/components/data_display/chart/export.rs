@@ -91,7 +91,7 @@ pub(super) fn standalone(
     // Quotes would end the attribute; a `var()` means nothing outside the page.
     let font = match font.contains("var(") {
         true => "sans-serif".to_string(),
-        false => font.replace('"', "'"),
+        false => escape(&font.replace('"', "'")),
     };
     let body = svg[close + 1..].replace(
         "font-family=\"inherit\"",
@@ -303,6 +303,18 @@ mod tests {
         assert!(
             named.contains("font-family=\"'Inter', sans-serif\""),
             "{named}"
+        );
+        let markup = standalone(
+            page,
+            2.0,
+            1.0,
+            None,
+            HexColor::new(0),
+            "Fira <Sans> & \"Co\"",
+        );
+        assert!(
+            markup.contains("font-family=\"Fira &lt;Sans&gt; &amp; 'Co'\""),
+            "{markup}"
         );
     }
 

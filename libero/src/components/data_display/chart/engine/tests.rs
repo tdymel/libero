@@ -1925,6 +1925,41 @@ fn a_mark_line_label_keeps_off_the_value_labels() {
     }
 }
 
+/// Todo 3747 (F14-02): the label sat at the plot's end, over the rising series line.
+#[test]
+fn a_mark_line_label_keeps_off_the_series_lines() {
+    let mut series = spec(
+        "A",
+        &[120.0, 132.0, 101.0, 134.0, 90.0, 230.0, 210.0].map(Some),
+    );
+    series.extras.mark_lines = vec![(145.29, "Average: 145,29".to_string())];
+    let drawn = draw_line(&line(
+        vec![series],
+        &["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    ))
+    .expect("drawn");
+    let found = texts(&drawn.svg);
+    let label = found.iter().find(|t| t.3.starts_with("Average")).unwrap();
+    let points: Vec<(f32, f32)> = drawn
+        .geometry
+        .marks
+        .iter()
+        .filter_map(|mark| match mark.shape {
+            MarkShape::Point { x, y } => Some((x, y)),
+            _ => None,
+        })
+        .collect();
+    for pair in points.windows(2) {
+        for step in 0..=20 {
+            let t = step as f32 / 20.0;
+            let x = pair[0].0 + (pair[1].0 - pair[0].0) * t;
+            let y = pair[0].1 + (pair[1].1 - pair[0].1) * t;
+            let inside = x > label.0 && x < label.1 && y > label.2 - 11.0 && y < label.2 + 3.0;
+            assert!(!inside, "{label:?} crossed at ({x}, {y})");
+        }
+    }
+}
+
 #[test]
 fn dense_x_labels_leave_room_for_a_wider_font() {
     let x: Vec<String> = (1..=40).map(|i| format!("Week {i}")).collect();

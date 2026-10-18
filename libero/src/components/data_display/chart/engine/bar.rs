@@ -428,7 +428,8 @@ fn bar_mark_lines(
             _ => None,
         })
         .collect();
-    let svg = label_mark_lines(svg, &texts, &spec.ink, left, &pins, &bars);
+    let lines = series_lines(marks);
+    let svg = label_mark_lines(svg, &texts, &spec.ink, left, &pins, &bars, &lines);
     pin_mark_points(&svg, &pins, &spec.ink)
 }
 

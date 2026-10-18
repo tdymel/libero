@@ -226,7 +226,8 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
         .collect();
     let plot = Plot::of(&svg, spec.width, spec.height);
     let pins = pins_of(&spec.series, spec.width, &marks);
-    let svg = label_mark_lines(&svg, &texts, &spec.ink, plot.left, &pins, &[]);
+    let lines = series_lines(&marks);
+    let svg = label_mark_lines(&svg, &texts, &spec.ink, plot.left, &pins, &[], &lines);
     let svg = pin_mark_points(&svg, &pins, &spec.ink);
     Some(Drawn {
         geometry: Geometry {
